@@ -2,6 +2,7 @@
 """nexclash self-test: rebuild the reference games and check every output byte-for-byte.
 
     python selftest.py [FOLDER] [--human] [--no-repro] [--fast]
+    python selftest.py [FOLDER] --smoke      Chuckie Egg only, seconds: the per-change check
 
 FOLDER (default: $NEXCLASH_REFERENCE, ./reference or ../specnext/reference - the maintainers'
 private reference repo, one subfolder per game; game files are never in the public package) holds the reference inputs under any
@@ -70,12 +71,38 @@ def md5(p):
     return hashlib.md5(open(p, 'rb').read()).hexdigest()
 
 
+def smoke(src):
+    """--smoke: rebuild the simplest game (Chuckie Egg, stateless alt-ROM hooks) from its snapshot alone
+    and compare both .nex MD5s - seconds, catches any shared-code change that alters a build. The full
+    selftest (every game + recordings, ~1.5 h) is for releases."""
+    spec = RZX_GAMES['chuckie_egg']
+    z80 = next((os.path.join(d, f) for d, _, fs in os.walk(src) for f in fs
+                if md5(os.path.join(d, f)) == spec['files'][0][1]), None)
+    if z80 is None:
+        sys.exit('SMOKE: Chuckie Egg snapshot (md5 %s) not found under %s' % (spec['files'][0][1], src))
+    work = tempfile.mkdtemp(prefix='nexclash_smoke_')
+    shutil.copy(z80, os.path.join(work, 'chuckie_egg.z80'))
+    out = os.path.join(work, 'out')
+    subprocess.run([sys.executable, os.path.join(HERE, 'nexclash.py'), 'auto', os.path.join(work, 'chuckie_egg.z80'),
+                    '-o', out, '--no-record'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    bad = 0
+    for suffix, want in zip(('.nex', '_sprites.nex'), spec['nex']):
+        p = os.path.join(out, 'chuckie_egg' + suffix)
+        got = md5(p) if os.path.exists(p) else None
+        bad += got != want
+        print('%-4s chuckie_egg%s %s' % ('OK' if got == want else 'FAIL', suffix, got))
+    print('SMOKE %s' % ('PASSED' if not bad else 'FAILED'))
+    sys.exit(1 if bad else 0)
+
+
 def main():
     pos = [x for x in sys.argv[1:] if not x.startswith('--')]
     src = pos[0] if pos else next((d for d in (os.environ.get('NEXCLASH_REFERENCE'), os.path.join(HERE, 'reference'),
                                                os.path.join(HERE, '..', 'specnext', 'reference')) if d and os.path.isdir(d)), '')
     if not os.path.isdir(src):
         sys.exit(__doc__)
+    if '--smoke' in sys.argv:
+        smoke(src)
     human, repro, fast = '--human' in sys.argv, '--no-repro' not in sys.argv, '--fast' in sys.argv
     work = tempfile.mkdtemp(prefix='nexclash_selftest_')
     found = {}
