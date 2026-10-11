@@ -39,8 +39,9 @@ RZX_GAMES = {        # engine games: inputs (canonical name, md5 or None = match
                     'nex': ('ec0df71e70fae35836eaed521f300777', 'bfad6be1e7c8a2c797a6242d7f339e35')},
     'wally': {'files': [('wally.z80', 'a9eeb555a327e5794b0ba19bc80dccf0'), ('wally.rzx', '72c7d1f6c99407bc21d892d423e89964')], 'alias': {'wallyrzx.rzx': 'wally.rzx'},
               'nex': ('2e615b3e7ae995e6d6a6ed9e3f586d4d', 'f7605489c3af55b8e8c6a580c1c26150')},
-    'rainbow': {'files': [('rainbow.z80', None), ('rainbow.rzx', None), ('rainbownew.rzx', None)],
-                'nex': ('7ac543fb51c7a3c4137778eeb3cdc175', 'eb9836fe60a70df02087920603c673b4'), 'slow': True},
+    'rainbow': {'files': [('rainbow.z80', '4c98b980b1726af545fccc99665ef29b'), ('rainbow.rzx', '55046d1893bba0a4faf314ecd3a9638b'),
+                          ('rainbownew.rzx', '47bb2b163a947724c343a2bc1b039458')],
+                'nex': ('7ac543fb51c7a3c4137778eeb3cdc175', 'bffd9357d772e2df975ec5f40dc9e4cb'), 'slow': True},
 }
 OPTIONAL = {'dizzy5.z80', 'treasure_island_title.z80'}
 NO_RECORD = {'treasure_island_title'}   # reference built without a recording (dedicated builder)

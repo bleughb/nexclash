@@ -9,18 +9,15 @@
 ;   59539  26 F5 DD E9  LD H,245 / JP (IX)        -> JP e_pc
 ;   59543  A7 C2 79 E8  AND A / JP NZ,59513       -> JP e_af
 ;   59087  3A E2 E5     LD A,(58850) (render end) -> JP e_re
-; Collectables (2026-10-11): item cell shadow map (page 27) kept by three cell-drawer hooks:
-;   60853  87 6F 26 00  ADD A,A / LD L,A / LD H,0  (base tile, A = tile)  -> JP e_bt
-;   60839  3D 6F 26 00  DEC A / LD L,A / LD H,0    (full overlay >= 15)   -> JP e_ov
-;   60965  3D 87 87 87  DEC A / ADD A,A x3         (masked item, A = code) -> JP e_it
-;   59547  2A 82 E8     LD HL,(59522) (walker end of a band) -> JP e_bend
-; DE = back-buffer cell 0x9F00 + 256*k + col (k = cell row 0-21). Render start: the visible item
-; cells -> item list (page 27) + one 4-bit pattern each (page 28: item gfx + mask, ink = the cell's
-; attribute-buffer ink, black outline, palette offset ITEM_PAL). After each band's blit (walker
-; end 59547): that band's item pixels are cleared on the screen (screen AND mask AND NOT gfx) and
-; the cell's screen attribute set to its base colour, so the square never shows. Render end: the
-; same fix for every item (no-op unless a band was missed), then the item sprites are committed
-; with the LOWEST sprite numbers, the figures after them (always in front).
+; Objects (2026-10-11, tilemap build): per-cell object map (page 27) kept by three cell-drawer hooks:
+;   60853  87 6F 26 00  ADD A,A / LD L,A / LD H,0  (base tile, A = tile)      -> JP e_bt
+;   60839  3D 6F 26 00  DEC A / LD L,A / LD H,0    (opaque object tile A)     -> JP e_ov
+;   60965  3D 87 87 87  DEC A / ADD A,A x3         (masked object, A = 1-14)  -> JP e_it
+;   59547  2A 82 E8     LD HL,(59522) (walker end of a band)                  -> JP e_bend
+; Every object (rainbow pieces = codes 1-14, fruit / flowers / collectables = opaque codes >= 15) is
+; shown on the tilemap layer (bank 7, in front of the ULA, behind the sprites): one tile per object
+; cell, composed from the game's graphics with a 1-pixel black border, rainbow-group objects behind
+; the others. The ULA cell shows the cell's map tile (the background) and its colour.
 ; The walker is called once per 8-line band from inside the blit (up to 14 times a frame), so the
 ; piece counter is per render (58851 .. 59087), not per walker call.
 ;
@@ -83,66 +80,75 @@ PAGE_OVF EQU 30             ; overflow entries (never looked up): all 4 ways alr
 V_TICK  EQU 0x002E          ; interrupts since the last game frame (limiter)
 LIMIT   EQU 3               ; game frame every 3rd interrupt = the original's normal pace
 STK     EQU 0x0100          ; hook stack top (grows down into 0x00F0-0x00FF)
-; --- collectables (item sprites)
-CODES   EQU 0x3000          ; page 27 (slot 1): item code per back-buffer cell (704; 0 none, FF = ULA)
-CODES_END EQU CODES+704
-BATTR   EQU 0x3300          ; page 27: base tile colour per cell (bit 7 = known)
-EXP     EQU 0x1F00          ; page 26: nibble -> 2 bytes of 4-bit pixels, F where the bit is set
-ILIST   EQU 0x3600          ; page 27: item list, 16 bytes per item: +0 col, +1 Y0, +2 visible rows,
-                            ; +3 gfx low, +4 attr char row (FF none), +5 base colour, +6/+7 attribute-
-                            ; buffer address, +8/+9 first/last char row of its visible rows, +10 ink,
-                            ; +11 pattern entry, +12/+13 screen address of the first visible row,
-                            ; +14 first visible row j0, +15 visible rows n (rows j0..j0+n-1)
-PKEYS   EQU 0x3E00          ; page 27: pattern cache keys, 128 x (gfx low, ink, visible rows, stamp);
-                            ; the pattern of entry e is in page 28 at 0x2000 + 64*e
-IMAX    EQU 80              ; items per render (more: left on the ULA as drawn)
-RCNT    EQU 0x3D00          ; page 27: occupied cells (item or FF) per cell row k (22 bytes)
-GCOPY   EQU 0x3C00          ; page 27: copy of the item graphics 0xF600-0xF6DF (224 bytes); when
-                            ; they change, every pattern cache entry is invalidated
-IPAGE   EQU 28              ; item pattern cache, 64 bytes each at 0x2000 + 64*e (slot 1)
-ITEM_PAL EQU 0xF0           ; palette offset 15 << 4: Spectrum ink colours (Python: Config.palette)
+; --- objects on the tilemap (page 27 per-cell arrays, slot 1; cell i at base + i)
+TILES   EQU 0x2800          ; map tile (the cell's background)
+OBJO    EQU 0x2B00          ; opaque object code (60839; 0 none, FF = unsupported: cell left as drawn)
+OBJM1   EQU 0x2E00          ; masked objects (60965, codes 1-14) in draw order: nibbles m1 m2
+OBJM2   EQU 0x3100          ; m3 m4
+FLAGS   EQU 0x3400          ; bit 7 = background known, bits 0-3 = remembered item ink index
+CTILE   EQU 0x3700          ; tile assigned this render (0 none) - the band fix needs it
+KEYS    EQU 0x3A00          ; tile cache: 4-byte key (O, M1, M2, item ink << 4 | rainbow ink) per tile
+STAMP   EQU 0x3D00          ; tile cache: render stamp per tile (bit 7 set; 0 = free)
+RCNT    EQU 0x3DC0          ; occupied cells per cell row k (22)
+OCCM    EQU 0x27A0          ; occupied cells per cell row k as a 32-bit mask (4 bytes, bit 7 = column 0)
+BITS    EQU 0x1F08          ; page 26: 0x80 >> n (8 bytes)
+MCLASS  EQU 0x3DE0          ; class of masked object code 0-15 (profile)
+OCLASS  EQU 0x3E00          ; class of opaque object code 0-255 (profile): bit 0 rainbow group (behind,
+                            ; cell ink), bit 1 left on the ULA, bit 2 no border, bits 4-7 ink override
+BGOVR   EQU 0x3F00          ; map tile -> tile shown under objects (profile; identity by default)
+NTILE   EQU 176             ; tile definitions 0-175 (0 = transparent)
+PAGE_TM EQU 14              ; bank 7 first 8K: tilemap 0x0000 (40x32 x 2 bytes), tiles 0x0A00
+TDEF    EQU 0x0A00
+PAGE_SH EQU 28              ; shadow map (row kk at kk*64, 2 bytes per column) + LASTT, slot 2
+LASTT   EQU 0x4600          ; page 28 at slot 2: tile number of each cell last render (704)
+X2      EQU 0x1F00          ; page 26: 2 bits -> 2 nibbles (00 0F F0 FF)
+PBUF    EQU 0x0078          ; 8 rows of the object being drawn
 V_IA    EQU 0x0038          ; cell hooks: A at entry
-V_IBC   EQU 0x0039          ; cell hooks: BC
-V_NI    EQU 0x003B          ; render end: item sprites this render (sprites 0..NI-1)
-V_IP    EQU 0x003C          ; render end: next free pattern (figures use 0..V_S-1)
+V_IBC   EQU 0x0039
+V_TOK   EQU 0x003B          ; tilemap built this render (scroll a multiple of 8)
+V_BACK  EQU 0x003C          ; map being built: 0x00 or 0x05 (page-14 high byte)
 V_SP3   EQU 0x003D          ; render end: game SP
-V_IS    EQU 0x003F          ; (48782) = back-buffer row at the top of the play area
-V_IN    EQU 0x0040          ; (58850) = play-area rows drawn
-V_IYU   EQU 0x0041          ; item: (8k - s) mod 176
-V_IK    EQU 0x0042          ; item: cell row k
-V_IC    EQU 0x0043          ; item: column
-V_IG    EQU 0x0044          ; item: gfx+mask pointer (word)
-V_IINK  EQU 0x0046          ; item: ink pixel index
-V_IHL   EQU 0x0047          ; item: CODES pointer (word)
-V_IVIS  EQU 0x0049          ; item: visible rows (bit 7 = row 0)
-V_ICODE EQU 0x004A          ; item: code
-V_IYS   EQU 0x004B          ; item: sprite row offset (y, or y-176 when wrapped to the top)
-V_IROW  EQU 0x004C          ; item: row counter
-V_ISC   EQU 0x004D          ; item: screen row of the current pattern row
-V_ICY   EQU 0x004E          ; s_ov: carry at entry (DEC A keeps it)
-V_IHL2  EQU 0x004F          ; s_it: HL at entry (live until 60970)
-V_FMAX  EQU 0x0051          ; figure sprites allowed this render = 128 - items (Python sets 128)
-V_BR    EQU 0x0052          ; ifix: char row to fix (FF = all)
-V_IREC  EQU 0x0053          ; item record pointer (word)
-V_ICNT  EQU 0x0055          ; items left
-V_SP4   EQU 0x0056          ; render start / band hook: game SP (word)
-V_IA2   EQU 0x0058          ; ifix: Y of the current row
-V_IAB   EQU 0x0059          ; ibrec: attribute-buffer address (word)
-V_IROWS EQU 0x005B          ; ibrec: first / last char row of the visible rows (2 bytes)
-V_IAR   EQU 0x005D          ; ibrec: attribute char row
-V_IBAS  EQU 0x005E          ; ibrec: base colour
-RFIRST  EQU 0x0060          ; 24 bytes: first item touching screen char row R this render (FF none)
-RLAST   EQU 0x0078          ; 24 bytes: last item touching it (items are in cell-row order)
-V_IE    EQU 0x0090          ; ibrec: pattern entry
-V_IJ0   EQU 0x0091          ; ibrec: first visible row, V_IJ0+1 = visible rows
-V_PH    EQU 0x0093          ; pattern cache: hash
-V_IKEY  EQU 0x0094          ; pattern cache: key (gfx low, ink, vis) 3 bytes
-V_IDIRTY EQU 0x0097         ; a cell hook changed an occupied cell since the last item list
-V_LS    EQU 0x0098          ; (48782) and (58850) of the last item list
-V_LN    EQU 0x0099
-EPAT    EQU 0x0D60          ; commit: pattern number of cache entry e this render (128 bytes)
-ESTAMP  EQU 0x0E60          ; commit: 1 = EPAT[e] uploaded this render (cleared per commit, 128 bytes)
-CODE2   EQU 0x1F20          ; second code block (page 26, up to 0x1FFF)
+V_MSB   EQU 0x003F          ; scroll the shadow map / the map on screen was built with (FF none)
+V_MSD   EQU 0x0040
+V_KK    EQU 0x0041          ; screen char row - 2
+V_K     EQU 0x0042          ; cell row
+V_COL   EQU 0x0043
+V_CUR   EQU 0x0044          ; stamp of this render / the previous one
+V_PRV   EQU 0x0045
+V_INKR  EQU 0x0046          ; ink index: rainbow-class objects / item-class objects
+V_INKI  EQU 0x0047
+V_OL    EQU 0x0048          ; key: O, M1, M2, inks
+V_HAS   EQU 0x004C
+V_VICT  EQU 0x004D
+V_ICY   EQU 0x004E          ; s_ov: carry at entry
+V_IHL2  EQU 0x004F          ; s_it: HL at entry
+V_FMAX  EQU 0x0051          ; figure sprites allowed (128)
+V_OCC   EQU 0x0052
+V_PROBE EQU 0x0053
+V_NROWS EQU 0x0054
+V_CINK  EQU 0x0055
+V_SP4   EQU 0x0056          ; game SP in hooks with an own stack
+V_CMD   EQU 0x0058
+V_CQ    EQU 0x0059          ; 2 bytes
+V_PASS  EQU 0x005B
+V_CLS   EQU 0x005C
+V_FLG   EQU 0x005D
+V_TT    EQU 0x005E
+V_MAPHI EQU 0x005F
+V_OHL   EQU 0x0060
+V_CTP   EQU 0x0062
+V_ROWA  EQU 0x0064
+V_TDP   EQU 0x0066
+V_S8    EQU 0x0068
+V_SPC   EQU 0x0069          ; obuild: SP while clearing (word)
+V_LTP   EQU 0x006B          ; LASTT pointer (word)
+V_TATR  EQU 0x006D          ; map attribute (palette offset << 4)
+V_RB    EQU 0x006E          ; TILES + 32k (word)
+V_OMP   EQU 0x0070          ; OCCM pointer low byte
+V_OMB   EQU 0x0071          ; mask bits left
+CODE2   EQU 0x1F10          ; fourth code block (page 26, up to 0x1FFF)
+CODE4   EQU 0x0D60          ; third code block (page 26, up to 0x0DFF)
+CODE3   EQU 0x0E60          ; second code block (page 26, up to 0x0EFF: the tail of WBM's page)
 
         ORG 0x386E
 e_rs:   nextreg 0x50,PAGE_S
@@ -172,8 +178,12 @@ x_lskip:
         nextreg 0x50,0xFF
         jp 65274
 e_off1: nextreg 0x15,0              ; site 65076 CALL 23643 (play state ended: death, continue,
-        jp 23643                    ; round end, game over): sprites off until the next commit
+        nextreg 0x6B,0              ; round end, game over): sprites + tilemap off until the next
+        nextreg 0x7F,1              ; commit; tile cache flushed at the next render (graphics may
+        jp 23643                    ; change before play resumes)
 e_off2: nextreg 0x15,0              ; site 65029 CALL 23698 (main loop (re)start)
+        nextreg 0x6B,0
+        nextreg 0x7F,1
         jp 23698
 e_hx:   nextreg 0x07,0              ; site 65274 (POP AF / EI / RET): back to 3.5 MHz for the
         pop af                      ; main loop (its timing stays the original's)
@@ -181,9 +191,9 @@ e_hx:   nextreg 0x07,0              ; site 65274 (POP AF / EI / RET): back to 3.
         ret
 e_bt:   nextreg 0x50,PAGE_S         ; site 60853: base tile into a back-buffer cell
         jp s_bt
-e_ov:   nextreg 0x50,PAGE_S         ; site 60839: full overlay tile (code >= 15)
+e_ov:   nextreg 0x50,PAGE_S         ; site 60839: opaque object tile
         jp s_ov
-e_it:   nextreg 0x50,PAGE_S         ; site 60965: masked item overlay (code < 15)
+e_it:   nextreg 0x50,PAGE_S         ; site 60965: masked object
         jp s_it
 x_bt:   nextreg 0x50,0xFF
         jp 60857
@@ -210,7 +220,7 @@ s_rs:   ld iy,0                     ; clears V_S (and spare 0x0001) without touc
         push bc
         push de
         push hl
-        call ibuild
+        call obuild
         pop hl
         pop de
         pop bc
@@ -235,7 +245,8 @@ s_re:   ld (V_HL3),hl               ; HL and BC are live here; A and F are not (
         ld (V_DE3),de
         ld (V_SP3),sp               ; collectables: own stack (page 26) for the item routine
         ld sp,STK
-        call items
+        call rwait                  ; no sprite / tilemap changes while the beam is in the play area
+        call tcommit
         ld sp,(V_SP3)
 ; commit: every staged piece's patterns + attributes in one burst (sprite by sprite: pattern, then
 ; its attributes), so the screen never shows a half-updated figure or old sprites with new images
@@ -277,10 +288,7 @@ s_re:   ld (V_HL3),hl               ; HL and BC are live here; A and F are not (
         out (c),a
         ld bc,0x405B                ; 64 bytes (top half; the bottom stays zero)
         otir
-        ld a,(V_NI)                 ; figure sprite = item sprites + pattern number
-        ld c,a
         ld a,(V_CS)
-.fo:    add a,c                     ; (unit-test control: figures over the item sprites)
         nextreg 0x34,a
         ld a,(de)
         nextreg 0x35,a
@@ -312,10 +320,7 @@ s_re:   ld (V_HL3),hl               ; HL and BC are live here; A and F are not (
 .nop:   nextreg 0x15,1              ; sprites on (a non-play screen switched them off)
         ld a,(V_PREV)               ; hide sprites total .. prev-1 (drawn last render, not this one)
         ld h,a
-        ld a,(V_NI)                 ; total = item sprites + figure sprites
-        ld b,a
         ld a,(V_S)
-        add a,b
         ld (V_PREV),a
 .hide:  cp h
         jr nc,.done
@@ -824,177 +829,269 @@ regsdone:
         ld a,(V_TMP)
         jp x_cont
 
-; --- collectables: shadow map hooks (interrupts off at all three sites in both RZX). No stack:
-; at these sites SP is the game's stack. DE = back-buffer cell; a DE that is not a cell
-; (D outside 0x9F-0xB4 or E >= 32) is ignored; else HL = CODES + 32*(D-0x9F) + E.
+; --- objects (rainbow pieces, fruit, flowers, any object the game puts in a back-buffer cell) on the
+; tilemap layer. Cell hooks keep per cell: the map tile (background), the opaque object (60839) and up
+; to four masked objects (60965) in draw order. Render start builds the back tilemap (page 14,
+; slot 3): one tile per visible object cell, composed from the game's own graphics with a 1-pixel
+; black border (cached by content). Band end: the cell's map tile rows + its colour on the ULA, so
+; the objects never leave a square. Render end: the built map is shown (NextReg $6E), raster-synced.
+; Cell hooks: own stack (SP at these sites may be a data pointer). DE = back-buffer cell
+; 0x9F00 + 256*k + col; D outside 0x9F-0xB4 or E >= 32 = not a cell (ignored).
 
-s_bt:   ld (V_IA),a                 ; A = tile code: base colour = (0xF200 + (tile|128)) & 127
-        ld (V_IBC),bc
-        or 128
-        ld l,a
-        ld h,0xF2
+; HL = TILES + cell; V_OCC = OBJO | OBJM1 before the change. RCNT follows the cell's occupancy;
+; a tile assigned this render (CTILE) is dropped and the cell's entry cleared in both tilemaps.
+oafter: ld (V_OHL),hl
+        ld a,h
+        add a,high (OBJO-TILES)
+        ld h,a
         ld a,(hl)
-        and 127
-        or 128                      ; bit 7: colour known
-        ld c,a
-        ld a,d
-        sub 0x9F
-        cp 22
-        jr nc,.out
-        ld l,a
-        ld a,e
-        cp 32
-        jr nc,.out
-        ld a,l
-        rrca
-        rrca
-        rrca
-        ld h,a
-        and 0xE0
-        or e
-        ld l,a
-        ld a,h
-        and 0x03
-        add a,high CODES
-        ld h,a
-        nextreg 0x51,PAGE_T
-        ld a,h
-        add a,high (BATTR-CODES)
-        ld h,a
-        ld (hl),c
-        sub high (BATTR-CODES)
-        ld h,a
-        ld b,0                      ; no item in the cell any more
-        ld a,(hl)                   ; CODES = B; row count (RCNT) follows empty <-> occupied
-        ld (hl),b
-        ld c,a
-        ld a,l
-        rlca
-        rlca
-        rlca
-        and 7
-        ld l,a
-        ld a,h
-        sub high CODES
-        add a,a
-        add a,a
-        add a,a
-        or l
+        inc h
+        inc h
+        inc h
+        or (hl)
+        ld c,a                      ; occupied now
+        ld hl,(V_OHL)
+        push bc
+        call ocrow
+        pop bc
         add a,low RCNT
+        ld e,a
+        ld d,high RCNT
+        ld a,(V_OCC)
+        or a
+        jr nz,.was
+        or c
+        jr z,.ct
+        ld a,(de)
+        inc a
+        ld (de),a
+        call .tog
+        jr .ct
+.was:   ld a,c
+        or a
+        jr nz,.ct
+        ld a,(de)
+        dec a
+        ld (de),a
+        call .tog
+        jr .ct
+.tog:   ld hl,(V_OHL)               ; occupancy changed: flip the cell's bit in OCCM
+        call ocrow
+        add a,a
+        add a,a
+        ld e,a
+        ld a,l
+        and 31
+        ld c,a
+        rrca
+        rrca
+        rrca
+        and 3
+        add a,e
+        add a,low OCCM
+        ld e,a
+        ld d,high OCCM
+        ld a,c
+        and 7
+        add a,low BITS
         ld l,a
-        ld h,high RCNT
-        ld a,c
-        or b
-        jr z,.o3                    ; empty before and after: the item list is unaffected
-        ld a,1
-        ld (V_IDIRTY),a
-        ld a,c
+        ld h,high BITS
+        ld a,(de)
+.tg:    xor (hl)                    ; (unit-test control: NOP = mask not kept)
+        ld (de),a
+        ret
+.ct:    ld hl,(V_OHL)
+        ld a,h
+        add a,high (CTILE-TILES)
+        ld h,a
+        ld a,(hl)
         or a
-        jr nz,.o1
-        inc (hl)
-        jr .o3
-.o1:    ld a,b
-        or a
-        jr nz,.o3
-        dec (hl)
-.o3:
+        ret z
+        ld (hl),0                   ; stale this render: the cell is shown as drawn
+        ld hl,(V_OHL)
+        call ocrow
+        ld e,a                      ; E = k
+        ld a,l
+        and 31
+        ld d,a                      ; D = col
+        nextreg 0x52,PAGE_SH        ; shadow map being built (page 28 at slot 2, row kk at kk*64)
+        ld a,(V_MSB)
+        ld b,0
+        call .clr
+        nextreg 0x52,10
+        nextreg 0x53,PAGE_TM        ; map on screen (page 14 at slot 3, entry ((kk+6)*40+col+4)*2)
+        ld a,(V_MSD)
+        ld b,1
+        call .clr
+        nextreg 0x53,11
+        ret
+.clr:   cp 0xFF                     ; A = scroll that map was built with (FF: none); E = k, D = col
+        ret z
+        rrca
+        rrca
+        rrca
+        and 31
+        ld c,a
+        ld a,e
+        sub c
+        jr nc,.c1
+        add a,22
+.c1:    cp 20
+        ret nc                      ; off screen in that map
+        dec b
+        jr z,.dm
+        ld l,a                      ; shadow: 0x4000 + kk*64 + col*2
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld a,d
+        add a,a
+        add a,l
+        ld l,a
+        ld a,h
+        add a,0x40
+        ld h,a
+        jr .cz
+.dm:    add a,6
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld b,h
+        ld c,l
+        add hl,hl
+        add hl,hl
+        add hl,bc                   ; *40
+        ld a,d
+        add a,4
+        ld c,a
+        ld b,0
+        add hl,bc
+        add hl,hl                   ; 2 bytes per entry
+        ld a,h
+        add a,0x60
+        ld h,a
+.cz:    ld (hl),0
+        inc hl
+        ld (hl),0
+        ret
+
+s_bt:   ld (V_IA),a                 ; 60853: base tile A -> TILES = A, known, no objects
+        ld (V_SP4),sp
+        ld sp,STK
+        push bc
+        push de
+        push hl
+        call ocell
+        jr nc,.out
+        nextreg 0x51,PAGE_T
+        ld a,(V_IA)
+        ld (hl),a
+        call ocpre
+        ld (hl),0                   ; OBJO
+        inc h
+        inc h
+        inc h
+        ld (hl),0                   ; OBJM1
+        inc h
+        inc h
+        inc h
+        ld (hl),0                   ; OBJM2
+        inc h
+        inc h
+        inc h
+        ld (hl),0x80                ; FLAGS: tile known, item ink unknown
+        call ocpost
         nextreg 0x51,0xFF
-.out:   ld bc,(V_IBC)
+.out:   pop hl
+        pop de
+        pop bc
+        ld sp,(V_SP4)
         ld a,(V_IA)
         add a,a                     ; the replaced ADD A,A / LD L,A / LD H,0 (carry: JP C follows)
         ld l,a
         ld h,0
         jp x_bt
 
-s_ov:   ld (V_IA),a                 ; full 8x8 tile from 0xF700 + 8*(code-1): code 1-14 = an item
-        sbc a,a                     ; drawn OPAQUE (its tile is plain: F2 bit 7 clear), code >= 15 =
-        ld (V_ICY),a                ; another overlay (no item). Carry at entry kept for DEC A.
-        ld a,d
-        sub 0x9F
-        cp 22
-        jr nc,.out
-        ld l,a
-        ld a,e
-        cp 32
-        jr nc,.out
-        ld a,l
-        rrca
-        rrca
-        rrca
-        ld h,a
-        and 0xE0
-        or e
-        ld l,a
+; ocpre: HL = TILES + cell -> V_OCC = OBJO | OBJM1 (before), HL = OBJO + cell, (V_OHL) = TILES + cell
+ocpre:  ld (V_OHL),hl
         ld a,h
-        and 0x03
-        add a,high CODES
-        ld h,a
-        ld (V_IBC),bc
-        ld a,(V_IA)
-        ld bc,0                     ; no item, colour unknown
-        dec a
-        cp 14
-        jr nc,.st
-        inc a
-        ld b,a                      ; opaque item
-        ld a,iyh                    ; cell composition (IY = 60699): colour computed later by the
-        cp high 60699               ; game, ink irrelevant (the cell is blank once the item is
-        jr nz,.spn                  ; removed). Spawned item (other IY): the colour before it =
-        ld a,iyl                    ; the attribute buffer now
-        cp low 60699
-        jr z,.st
-.spn:   ld a,h
-        add a,high (0xB500-CODES)
+        add a,high (OBJO-TILES)
         ld h,a
         ld a,(hl)
-        or 128
-        ld c,a
-        ld a,h
-        sub high (0xB500-CODES)
-        ld h,a
-.st:    nextreg 0x51,PAGE_T
-        ld a,h
-        add a,high (BATTR-CODES)
-        ld h,a
-        ld (hl),c
-        sub high (BATTR-CODES)
-        ld h,a
-.wr:    ld a,(hl)                   ; (unit-test control: this read + write -> the code is kept)
-        ld (hl),b
-        ld c,a
-        ld a,l
-        rlca
-        rlca
-        rlca
-        and 7
-        ld l,a
-        ld a,h
-        sub high CODES
-        add a,a
-        add a,a
-        add a,a
-        or l
-        add a,low RCNT
-        ld l,a
-        ld h,high RCNT
-        ld a,c
-        or b
-        jr z,.o3                    ; empty before and after: the item list is unaffected
-        ld a,1
-        ld (V_IDIRTY),a
-        ld a,c
+        inc h
+        inc h
+        inc h
+        or (hl)
+        dec h
+        dec h
+        dec h
+        ld (V_OCC),a
+        ret
+ocpost: ld hl,(V_OHL)
+        jp oafter
+
+s_ov:   ld (V_IA),a                 ; 60839: opaque tile A (0xF700 + 8*(A-1)) over a blank cell:
+        sbc a,a                     ; TILES = the map byte at BC', the object = A alone. Carry at
+        ld (V_ICY),a                ; entry kept for the replaced DEC A.
+        ld (V_SP4),sp
+        ld sp,STK
+        push bc
+        push de
+        push hl
+        call ocell
+        jr nc,.out
+        exx                         ; map tile = the byte at BC' (all three callers)
+        ld a,(bc)
+        exx
+        nextreg 0x51,PAGE_T
+        ld (hl),a                   ; TILES
+        call ocpre
+        ld a,(V_IA)
         or a
-        jr nz,.o1
-        inc (hl)
-        jr .o3
-.o1:    ld a,b
-        or a
-        jr nz,.o3
-        dec (hl)
-.o3:
+        jr z,.uns
+        cp 0xFF
+        jr z,.uns
+        push hl
+        ld l,a
+        ld h,high OCLASS
+        ld a,(hl)
+        pop hl
+        call ocls
+        jr c,.uns                   ; class: leave the cell as drawn
+        or 0x80
+        ld (V_FLG),a
+        ld a,(V_IA)
+        jr .wr
+.uns:   ld a,0x80                   ; code 0 / 255 or class ULA -> FF (cell left as drawn)
+        ld (V_FLG),a
+        ld a,0xFF
+.wr:    ld (hl),a                   ; OBJO (unit-test control: NOP = the object is not recorded)
+        inc h
+        inc h
+        inc h
+        ld (hl),0
+        inc h
+        inc h
+        inc h
+        ld (hl),0
+        inc h
+        inc h
+        inc h
+        ld a,(V_FLG)
+        ld (hl),a                   ; FLAGS: known + the object's group bits
+        call ocpost
         nextreg 0x51,0xFF
-        ld bc,(V_IBC)
-.out:   ld a,(V_ICY)
+.out:   pop hl
+        pop de
+        pop bc
+        ld sp,(V_SP4)
+        ld a,(V_ICY)
 .rla:   rla                         ; carry back (unit-test control: removed)
         ld a,(V_IA)
         dec a                       ; the replaced DEC A / LD L,A / LD H,0
@@ -1002,97 +1099,97 @@ s_ov:   ld (V_IA),a                 ; full 8x8 tile from 0xF700 + 8*(code-1): co
         ld h,0
         jp x_ov
 
-s_it:   ld (V_IA),a                 ; A = item code: CODES = code if the cell is empty or holds
-        ld (V_IBC),bc               ; the same code, else FF (several objects / not an item: ULA)
-        ld (V_IHL2),hl
-        ld a,d
-        sub 0x9F
-        cp 22
+s_it:   ld (V_IA),a                 ; 60965: masked object A (codes 1-14: 0xF600 + 16*(A-1)) drawn
+        ld (V_IHL2),hl              ; over the cell: appended to the cell's masked list (4 max; a
+        ld (V_SP4),sp               ; fifth, or another code -> FF: the cell is left as drawn)
+        ld sp,STK
+        push bc
+        push de
+        call ocell
         jr nc,.out
-        ld l,a
-        ld a,e
-        cp 32
-        jr nc,.out
-        ld a,l
-        rrca
-        rrca
-        rrca
-        ld h,a
-        and 0xE0
-        or e
-        ld l,a
-        ld a,h
-        and 0x03
-        add a,high CODES
-        ld h,a
         nextreg 0x51,PAGE_T
+        call ocpre
+        ld a,(hl)
+        inc a
+        jp z,.done                  ; already FF
         ld a,(V_IA)
-        ld b,a
-        dec a                       ; items are codes 1-14 (0xF600 graphics); anything else the
-        cp 14                       ; masked drawer puts in a cell stays on the ULA
-        jr nc,.many
-        ld a,(hl)
-        or a
-        jr z,.new
-        cp b
-        jr z,.set
-.many:  ld b,0xFF
-        jr .set
-.new:   ld a,iyh                    ; cell composition (IY = 60720): base colour from s_bt / s_ov;
-        cp high 60720               ; item spawned into a drawn cell (other IY): its colour before
-        jr nz,.spn                  ; the item = the attribute buffer now
-        ld a,iyl
-        cp low 60720
-        jr z,.set
-.spn:   ld a,h
-        add a,high (0xB500-CODES)
-        ld h,a
-        ld a,(hl)
-        or 128
-        ld c,a
-        ld a,h
-        sub high (0xB500-CODES)
-        add a,high (BATTR-CODES)
-        ld h,a
-        ld (hl),c
-        sub high (BATTR-CODES)
-        ld h,a
-.set:
-        ld a,(hl)                   ; CODES = B; row count (RCNT) follows empty <-> occupied
-        ld (hl),b
-        ld c,a
-        ld a,l
-        rlca
-        rlca
-        rlca
-        and 7
+        dec a
+        cp 14
+        jr nc,.ff
+        inc a
+        ld c,a                      ; C = code (1-14)
+        push hl
+        add a,low MCLASS
         ld l,a
+        ld h,high MCLASS
+        ld a,(hl)
+        pop hl
+        push bc
+        call ocls
+        pop bc
+        jr c,.ff                    ; class: leave the cell as drawn
+        ld (V_FLG),a
+        inc h
+        inc h
+        inc h                       ; OBJM1
+        ld a,(hl)
+        and 0xF0
+        jr nz,.m1l
+        ld a,c
+        rlca
+        rlca
+        rlca
+        rlca
+        ld (hl),a
+        jr .ok
+.m1l:   ld a,(hl)
+        and 0x0F
+        jr nz,.m2
+        ld a,(hl)
+        or c
+        ld (hl),a
+        jr .ok
+.m2:    inc h
+        inc h
+        inc h                       ; OBJM2
+        ld a,(hl)
+        and 0xF0
+        jr nz,.m2l
+        ld a,c
+        rlca
+        rlca
+        rlca
+        rlca
+        ld (hl),a
+        jr .ok
+.m2l:   ld a,(hl)
+        and 0x0F
+        jr nz,.ff6
+        ld a,(hl)
+        or c
+        ld (hl),a
+        jr .ok
+.ff6:   dec h
+        dec h
+        dec h
+.ff:    ld hl,(V_OHL)               ; FF in OBJO
         ld a,h
-        sub high CODES
-        add a,a
-        add a,a
-        add a,a
-        or l
-        add a,low RCNT
-        ld l,a
-        ld h,high RCNT
-        ld a,c
-        or b
-        jr z,.o3                    ; empty before and after: the item list is unaffected
-        ld a,1
-        ld (V_IDIRTY),a
-        ld a,c
-        or a
-        jr nz,.o1
-        inc (hl)
-        jr .o3
-.o1:    ld a,b
-        or a
-        jr nz,.o3
-        dec (hl)
-.o3:
+        add a,high (OBJO-TILES)
+        ld h,a
+        ld (hl),0xFF
+        jr .done
+.ok:    ld hl,(V_OHL)               ; appended: the cell's FLAGS get the object's group bits
+        ld a,h
+        add a,high (FLAGS-TILES)
+        ld h,a
+        ld a,(V_FLG)
+        or (hl)
+        ld (hl),a
+.done:  call ocpost
         nextreg 0x51,0xFF
-.out:   ld bc,(V_IBC)
+.out:   pop de
+        pop bc
+        ld sp,(V_SP4)
         ld hl,(V_IHL2)
         ld a,(V_IA)
         dec a                       ; the replaced DEC A / ADD A,A x3 (60969 = the 4th ADD A,A)
@@ -1101,530 +1198,278 @@ s_it:   ld (V_IA),a                 ; A = item code: CODES = code if the cell is
         add a,a
         jp x_it
 
-; --- collectables: render start. Scan the shadow map (rows with occupied cells); every item cell
-; with rows in the play area -> record in ILIST (page 27); its pattern from the cache (page 28),
-; built only for a new key. Then the per-char-row item ranges for the band hook. Own stack (STK);
-; IY is free here (the replaced LD IY,27964 follows); IX is saved.
-ibuild: push ix
-        ld a,(V_FRM)                ; pattern cache stamp = render counter
-        ld iyh,a
+; --- render start: build the back tilemap. Own stack; IY free (LD IY,27964 follows); IX saved.
+obuild: push ix
+        ld bc,0x243B                ; cache flush requested (sprites-off hooks set NextReg $7F)?
+        ld a,0x7F
+        out (c),a
+        inc b
+        in a,(c)
+        or a
+.fj:    jr z,.nf                    ; (unit-test control: JR = flush ignored)
+        nextreg 0x7F,0
         nextreg 0x51,PAGE_T
-        ld hl,0xF600                ; item graphics changed since the last render (other island)?
-        ld de,GCOPY
-        ld b,224
-.gc:    ld a,(de)
-        cp (hl)
-        jr nz,.gchg
-        inc l
-        inc e
-        djnz .gc
-        ld a,(V_IDIRTY)             ; nothing changed since the last list (no cell hook touched an
-        or a                        ; occupied cell, same scroll and play-area height): keep it
-        jr nz,.new
-        ld a,(48782)
-        ld hl,V_LS
-        cp (hl)
-        jr nz,.new
-        ld a,(58850)
+        ld hl,STAMP
+        ld b,NTILE
+.fl:    ld (hl),0
         inc hl
-        cp (hl)
-        jr nz,.new
-        call ikeep                  ; same list: the game may still change an item's ink (51914)
-        nextreg 0x51,0xFF
-        pop ix
-        ret
-.gchg:  ld hl,0xF600                ; yes: keep a copy and invalidate every cache entry
-        ld de,GCOPY
-        ld bc,224
-        ldir
-        ld hl,PKEYS+2
-        ld de,4
-        ld b,128
-.iv:    ld (hl),0
-        add hl,de
-        djnz .iv
-.new:   xor a
-        ld (V_IDIRTY),a
+        djnz .fl
+.nf:    xor a
+        ld (V_TOK),a
         ld a,(48782)
-        ld (V_LS),a
-        ld a,(58850)
-        ld (V_LN),a
-        xor a
-        ld (V_NI),a
-        ld a,NSPR_MAX
-        ld (V_FMAX),a
-        ld a,(48782)
-        ld (V_IS),a
-        ld a,(58850)
-        ld (V_IN),a
-        ld hl,ILIST
-        ld (V_IREC),hl
-        ld hl,RFIRST                ; no band work yet
-        ld b,48
-        ld a,0xFF
-.cw:    ld (hl),a
-        inc l
-        djnz .cw
-        ld hl,CODES                 ; rows with occupied cells only
-        ld de,RCNT
-.rowk:  ld a,(de)
-        or a
-        jr z,.rnx
-        ld b,32
-.scan:  ld a,(hl)
-        or a
-        jr z,.nx
+        and 7
+        jp nz,.end                  ; scroll not a multiple of 8 (never seen): tilemap off
         inc a
-        jr z,.nx                    ; FF: left on the ULA
+        ld (V_TOK),a
+        ld a,(V_FRM)                ; stamps: this render / the previous one (bit 7 set: 0 = free)
+        or 0x80
+        ld (V_CUR),a
         dec a
-        ld (V_ICODE),a
-        ld (V_IHL),hl
-        push bc
-        push de
-        call ibrec
-        pop de
-        pop bc
-        ld hl,(V_IHL)
-.nx:    inc hl
-        djnz .scan
-        jr .rn2
-.rnx:   ld bc,32
-        add hl,bc
-.rn2:   inc e
-        ld a,e
-        cp low RCNT+22
-        jr c,.rowk
-        ld a,(V_NI)                 ; band ranges: first / last item touching each char row
-        or a
-        jr z,.end
-        ld b,a
-        ld c,0
-        ld ix,ILIST
-.br:    ld a,(ix+8)
-        call .mark
-        ld a,(ix+9)
-        call .mark
-        ld a,(ix+4)
-        cp 0xFF
-        call nz,.mark
-        ld de,16
-        add ix,de
-        inc c
-        djnz .br
-.end:   nextreg 0x51,0xFF
-        ld a,(V_NI)                 ; figures may use the sprites the items leave
-        ld b,a
-        ld a,NSPR_MAX
-        sub b
-        ld (V_FMAX),a
-        pop ix
-        ret
-.mark:  add a,low RFIRST            ; A = char row, C = item
+        or 0x80
+        ld (V_PRV),a
+        nextreg 0x51,PAGE_T
+        nextreg 0x52,PAGE_SH
+        nextreg 0x53,PAGE_TM
+        ld (V_SPC),sp               ; clear the shadow map: 20 rows x 64 bytes at 0x4000
+        ld sp,0x4000+20*64
+        ld hl,0
+        ld b,160
+.cb:    push hl                     ; (unit-test control: NOPs = map not cleared)
+        push hl
+        push hl
+        push hl
+        djnz .cb
+        ld sp,(V_SPC)
+        ld a,(48782)
+        ld (V_MSB),a
+        rrca
+        rrca
+        rrca
+        and 31
+        ld (V_S8),a
+        xor a
+        ld (V_KK),a
+.row:   ld a,(V_KK)                 ; screen char row R = kk + 2, visible while 8*kk < N
+        add a,a
+        add a,a
+        add a,a
+        ld hl,58850
+        cp (hl)
+        jp nc,.tail
+        ld a,(V_S8)                 ; k = (s/8 + kk) mod 22
+        ld hl,V_KK
+        add a,(hl)
+        cp 22
+        jr c,.k1
+        sub 22
+.k1:    ld (V_K),a
+        add a,low RCNT
         ld l,a
-        ld h,high RFIRST
+        ld h,high RCNT
         ld a,(hl)
-        inc a
-        jr nz,.m1
-        ld (hl),c
-.m1:    ld a,l
-        add a,RLAST-RFIRST
-        ld l,a
-        ld (hl),c
-        ret
-
-; list kept: stamp every item's cache entry (so none is evicted), then refresh each item's ink
-; from the attribute buffer; a changed ink gets its pattern from the cache (new key)
-ikeep:  ld a,(V_NI)
         or a
-        ret z
-        ld b,a
-        ld ix,ILIST
-.st:    ld l,(ix+11)
+        jp z,.nrow
+        ld a,(V_K)                  ; row base TILES + 32k; visit the occupied cells only (OCCM)
+        ld l,a
         ld h,0
         add hl,hl
         add hl,hl
-        ld a,h
-        add a,high PKEYS
-        ld h,a
-        inc l
-        inc l
-        inc l
-        ld a,iyh
-        ld (hl),a
-        ld de,16
-        add ix,de
-        djnz .st
-        ld a,(V_NI)
-        ld b,a
-        ld ix,ILIST
-.ik:    ld l,(ix+6)
-        ld h,(ix+7)
-        ld a,(hl)                   ; ink pixel index: ink 0 -> 1 (black), else ink+1, bright +7
-        ld c,a
-        and 7
-        ld e,1
-        jr z,.i1
-        inc a
-        ld e,a
-        bit 6,c
-        jr z,.i1
-        add a,7
-        ld e,a
-.i1:    ld a,e
-        cp (ix+10)
-.ref:   jr z,.in                    ; (unit-test control: JR = inks never refreshed)
-        ld (V_IINK),a
-        ld (ix+10),a
-        ld a,(ix+3)
-        ld (V_IG),a
-        ld a,(ix+2)
-        ld (V_IVIS),a
-        push bc
-        call ipat
-        pop bc
-        ld a,(V_IE)
-        ld (ix+11),a
-.in:    ld de,16
-        add ix,de
-        djnz .ik
-        ret
-
-ibrec:  ld a,(V_NI)
-        cp IMAX
-        ret nc                      ; list full: the item stays on the ULA as drawn
-        ld a,l
-        and 31
-        ld (V_IC),a
-        ld a,h                      ; k = (H - high CODES) * 8 + L / 32
-        sub high CODES
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,TILES
+        add hl,de
+        ld (V_RB),hl
+        ld a,(V_K)
         add a,a
         add a,a
-        add a,a
-        ld b,a
-        ld a,l
-        rlca
-        rlca
-        rlca
-        and 7
-        or b
-        ld (V_IK),a
-        add a,a                     ; y = (8k - s) mod 176
-        add a,a
-        add a,a
-        ld b,a
-        ld a,(V_IS)
-        ld c,a
-        ld a,b
-        sub c
-        jr nc,.y1
-        add a,176
-.y1:    ld (V_IYU),a
-        cp 168                      ; cell starts in the last 8 rows: its lower rows wrap to the
-        jr c,.y2                    ; top of the play area
-        sub 176
-.y2:    add a,16                    ; Y0 = screen row of pattern row 0
-        ld (V_IYS),a
-        ld a,(V_IYU)                ; usual case: all 8 rows on screen
-        cp 168
-        jr nc,.slow
-        add a,8
-        ld hl,V_IN
-        cp (hl)
-        jr z,.fast
-        jr nc,.slow
-.fast:  ld a,0xFF
-        ld (V_IVIS),a
+        add a,low OCCM
+        ld (V_OMP),a
         xor a
-        ld (V_IJ0),a
-        ld a,8
-        ld (V_IJ0+1),a
-        jr .vok
-.slow:  ld e,0                      ; visible rows: row j shows at t = (y + j) mod 176, if t < N
-        ld c,0                      ; (they are contiguous: j0 .. j0+n-1)
-        ld d,0
-        ld a,0xFF
-        ld (V_IJ0),a
-.vj:    ld a,(V_IYU)
-        add a,c
-        cp 176
-        jr c,.v1
-        sub 176
-.v1:    ld hl,V_IN
-        cp (hl)
-        rl e
-        bit 0,e
-        jr z,.v2
-        inc d
-        ld a,(V_IJ0)
-        inc a
-        jr nz,.v2
-        ld a,c
-        ld (V_IJ0),a
-.v2:    inc c
-        ld a,c
-        cp 8
-        jr c,.vj
-        ld a,e
+        ld (V_COL),a
+.q:     ld a,(V_OMP)
+        ld l,a
+        ld h,high OCCM
+        ld a,(hl)
         or a
-        ret z                       ; nothing of it on screen
-        ld (V_IVIS),a
-        ld a,d
-        ld (V_IJ0+1),a
-.vok:   ld a,(V_IYS)                ; char rows of the first and last visible row
-        ld hl,V_IJ0
-        add a,(hl)
-        ld b,a                      ; B = Y of the first visible row
-        rrca
-        rrca
-        rrca
-        and 31
-        ld (V_IROWS),a
-        inc hl
-        ld a,b
-        add a,(hl)
-        dec a
-        rrca
-        rrca
-        rrca
-        and 31
-        ld (V_IROWS+1),a
-        ld a,b                      ; screen address of row B, column
+        jr z,.qn
+.b:     add a,a
+        ld (V_OMB),a
+        call c,.cell
+        ld a,(V_COL)
+        inc a
+        ld (V_COL),a
         and 7
-        ld h,a
-        ld a,b
-        and 0xC0
-        rrca
-        rrca
-        rrca
-        or h
-        or 0x40
-        ld h,a
-        ld a,b
-        and 0x38
-        rlca
-        rlca
+        ld a,(V_OMB)
+        jr nz,.b
+        jr .qx
+.qn:    ld a,(V_COL)
+        add a,8
+        ld (V_COL),a
+.qx:    ld hl,V_OMP
+        inc (hl)
+        ld a,(V_COL)
+        cp 32
+        jr c,.q
+        jp .nrow
+.cell:  ld hl,(V_RB)
+        ld a,(V_COL)
+        add a,l
         ld l,a
-        ld a,(V_IC)
-        or l
-        ld l,a
-        ld (V_IHL2),hl
-        ld a,(V_IK)                 ; attribute-buffer address 0xB500 + 32k + col
-        ld l,a
-        ld h,0
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        ld a,(V_IC)
-        or l
-        ld l,a
+        ld (V_OHL),hl
         ld a,h
+        add a,high (OBJO-TILES)
+        ld h,a
+        ld a,(hl)
+        ld (V_OL),a                 ; O
+        inc h
+        inc h
+        inc h
+        ld c,(hl)                   ; M1
+        inc h
+        inc h
+        inc h
+        ld b,(hl)                   ; M2
+        inc h
+        inc h
+        inc h
+        ld e,(hl)                   ; FLAGS
+        inc h
+        inc h
+        inc h
+        ld (hl),0                   ; CTILE = 0 unless a tile is assigned below
+        ld (V_CTP),hl
+        or c
+        ret z                  ; no object
+        ld a,(V_OL)
+        inc a
+        ret z                  ; FF: left as drawn
+        bit 7,e
+        ret z                  ; background unknown (cell drawn before the hooks saw it)
+        ld (V_OL+1),bc              ; M1, M2
+        ld a,e
+        ld (V_FLG),a
+        ld a,(V_FLG)                ; V_HAS from the FLAGS group bits (kept by the cell hooks):
+        rrca                        ; bit 0 rainbow group, 1 item group, 3 fixed ink
+        rrca
+        rrca
+        rrca
+        and 3
+        ld c,a
+        ld a,(V_FLG)
+        and 0x40
+        rrca
+        rrca
+        rrca
+        or c
+        ld (V_HAS),a
+        ld a,(V_HAS)
+        bit 2,a
+        ret nz
+        ld hl,(V_OHL)               ; ink pixel index from the attribute buffer (0xB500 + cell)
+        ld a,h
+        sub high TILES
         add a,0xB5
         ld h,a
-        ld (V_IAB),hl
-        ld a,(hl)                   ; ink pixel index: ink 0 -> 1 (black), else ink+1, bright +7
-        ld b,a
-        and 7
-        ld c,1
-        jr z,.ik
-        inc a
+        ld a,(hl)
+        call oinkx
+        ld (V_INKR),a
         ld c,a
-        bit 6,b
-        jr z,.ik
-        add a,7
-        ld c,a
-.ik:    ld a,c
-        ld (V_IINK),a
-        ld a,(V_ICODE)              ; gfx: (mask, gfx) pairs at 0xF600 + 16 * (code - 1)
-        dec a
-        add a,a
-        add a,a
-        add a,a
-        add a,a
-        ld (V_IG),a
-        ld a,0xFF                   ; attribute: screen char row 2 + kk shows attribute-buffer row
-        ld (V_IAR),a                ; (s/8 + kk) mod 22, so kk = (k - s/8) mod 22; fixed only when
-        xor a                       ; that char row is drawn and the base colour is known
-        ld (V_IBAS),a
-        ld a,(V_IS)
-        rrca
-        rrca
-        rrca
-        and 31
-        ld b,a
-        ld a,(V_IK)
-        sub b
-        jr nc,.a1
-        add a,22
-.a1:    ld c,a
-        add a,a
-        add a,a
-        add a,a
-        ld b,a
-        ld a,(V_IN)
-        cp b
-        jr c,.na
-        jr z,.na
-        ld hl,(V_IHL)
+        ld a,(V_HAS)
+        and 3
+        cp 2
+        jr nz,.r
+        ld a,c                      ; items only: their ink, remembered for when a rainbow joins
+        ld (V_INKI),a
+        ld hl,(V_CTP)
         ld a,h
-        add a,high (BATTR-CODES)
+        sub high (CTILE-FLAGS)
         ld h,a
         ld a,(hl)
-        bit 7,a
-        jr z,.na
-        and 127
-        ld (V_IBAS),a
+        and 0xF0
+        or c
+        ld (hl),a
+        jr .k
+.r:     cp 3
         ld a,c
-        add a,2
-        ld (V_IAR),a
-.na:    call ipat                   ; pattern cache entry -> V_IE (FF: none free)
-        ld a,(V_IE)
-        inc a
-        ret z                       ; no pattern: the item stays on the ULA as drawn
-        ld hl,(V_IREC)              ; the record
-        ld a,(V_IC)
-        ld (hl),a
-        inc l
-        ld a,(V_IYS)
-        ld (hl),a
-        inc l
-        ld a,(V_IVIS)
-        ld (hl),a
-        inc l
-        ld a,(V_IG)
-        ld (hl),a
-        inc l
-        ld a,(V_IAR)
-        ld (hl),a
-        inc l
-        ld a,(V_IBAS)
-        ld (hl),a
-        inc l
-        ld a,(V_IAB)
-        ld (hl),a
-        inc l
-        ld a,(V_IAB+1)
-        ld (hl),a
-        inc l
-        ld a,(V_IROWS)
-        ld (hl),a
-        inc l
-        ld a,(V_IROWS+1)
-        ld (hl),a
-        inc l
-        ld a,(V_IINK)
-        ld (hl),a
-        inc l
-        ld a,(V_IE)
-        ld (hl),a
-        inc l
-        ld a,(V_IHL2)
-        ld (hl),a
-        inc l
-        ld a,(V_IHL2+1)
-        ld (hl),a
-        inc l
-        ld a,(V_IJ0)
-        ld (hl),a
-        inc l
-        ld a,(V_IJ0+1)
-        ld (hl),a
-        inc hl
-        ld (V_IREC),hl
-        ld hl,V_NI
-        inc (hl)
-        ret
-
-; --- pattern cache: key (gfx low, ink, visible rows); hash -> up to 8 probes for the key, else the
-; first entry not used this render (stamp IYH) from the hash on is rebuilt. Slot 1 = page 27.
-ipat:   ld a,(V_IG)
-        ld (V_IKEY),a
-        rrca
-        rrca
-        rrca
-        rrca
-        ld b,a
-        ld a,(V_IINK)
-        ld (V_IKEY+1),a
-        ld c,a
-        add a,a
-        add a,a
-        add a,a
-        add a,c
-        add a,b
-        ld b,a
-        ld a,(V_IVIS)
-        ld (V_IKEY+2),a
-        add a,b
-        and 127
-        ld (V_PH),a
-        ld c,a
-        ld b,8
-.p1:    call .ent                   ; HL = key of entry C
-        ld a,(V_IKEY)
-        cp (hl)
-        jr nz,.p2
-        inc l
-        ld a,(V_IKEY+1)
-        cp (hl)
-        jr nz,.p2
-        inc l
-        ld a,(V_IKEY+2)
-        cp (hl)
-        jr nz,.p2
-        inc l
-        ld a,iyh                    ; hit: stamp it
-        ld (hl),a
+        jr nz,.ri
+        ld a,(V_FLG)                ; rainbow + item: the item's remembered ink, else the cell's
+        and 15
+        jr nz,.ri
         ld a,c
-        ld (V_IE),a
-        ret
-.p2:    inc c
-        res 7,c
-        djnz .p1
-        ld a,(V_PH)                 ; miss: first entry not used this render
-        ld c,a
-        ld b,128
-.p3:    call .ent
-        inc l
-        inc l
-        inc l
-        ld a,iyh
-        cp (hl)
-        jr nz,.new
-        inc c
-        res 7,c
-        djnz .p3
-        ld a,0xFF                   ; every entry used this render
-        ld (V_IE),a
-        ret
-.new:   ld (hl),a                   ; stamp + key
-        dec l
-        ld a,(V_IKEY+2)
-        ld (hl),a
-        dec l
-        ld a,(V_IKEY+1)
-        ld (hl),a
-        dec l
-        ld a,(V_IKEY)
-        ld (hl),a
-        ld a,c
-        ld (V_IE),a
-.nb:    call ipbuild                ; (unit-test control: never built)
-        ret
-.ent:   ld l,c                      ; HL = PKEYS + 4*C
+.ri:    ld (V_INKI),a
+.k:     ld a,(V_HAS)                ; one ink for the whole tile (one group, no fixed ink): the
+        and 3                       ; tile holds the ink as pixel 2 and the map entry's palette
+        cp 3                        ; offset selects the colour (bank n: pixel 2 = ink index n)
+        jr z,.fix
+        ld a,(V_HAS)
+        bit 3,a
+        jr nz,.fix
+        ld a,(V_INKR)
+        rlca
+        rlca
+        rlca
+        rlca
+        ld (V_TATR),a
+.vi:    ld a,2                      ; (unit-test control: NOPs = the ink stays in the pixels)
+        ld (V_INKR),a
+        ld (V_INKI),a
+        xor a
+        jr .k2
+.fix:   xor a                       ; several inks: in the pixels, palette offset 0
+        ld (V_TATR),a
+        ld a,(V_INKI)
+        rlca
+        rlca
+        rlca
+        rlca
+        ld hl,V_INKR
+        or (hl)
+.k2:    ld (V_OL+3),a               ; key = O, M1, M2, (0 | item ink << 4 | rainbow ink)
+        ld hl,(V_OHL)               ; the cell's tile last time still holds this key?
+        ld de,LASTT-TILES
+        add hl,de
+        ld (V_LTP),hl
+        ld a,(hl)
+        or a
+        jr z,.slow
+        ld (V_PROBE),a
+        ld l,a
+        ld h,high STAMP
+        ld a,(hl)
+        or a
+        jr z,.slow
+        ld a,(V_PROBE)
+        ld l,a
         ld h,0
         add hl,hl
         add hl,hl
-        ld a,h
-        add a,high PKEYS
-        ld h,a
-        ret
-
-; pattern of the key into page 28 at 0x2000 + 64*V_IE: gfx -> ink, mask 0 -> 1 (outline), else 0;
-; rows not visible transparent. Page 27 back in slot 1 at the end.
-ipbuild:
-        ld a,(V_IE)
+        ld de,KEYS
+        add hl,de
+        ld de,V_OL
+        ld b,4
+.fc:    ld a,(de)
+        cp (hl)
+        jr nz,.slow
+        inc de
+        inc hl
+        djnz .fc
+        ld a,(V_PROBE)
+        ld l,a
+        ld h,high STAMP
+        ld a,(V_CUR)
+        ld (hl),a
+        ld a,l
+        jr .got
+.slow:  call olook                  ; A = tile number (0: no free entry)
+        ld hl,(V_LTP)
+        ld (hl),a
+.got:   ld hl,(V_CTP)
+        ld (hl),a
+        or a
+        ret z
+        ld c,a
+        ld a,(V_KK)                 ; shadow entry 0x4000 + kk*64 + col*2: tile, attribute
         ld l,a
         ld h,0
         add hl,hl
@@ -1633,125 +1478,264 @@ ipbuild:
         add hl,hl
         add hl,hl
         add hl,hl
-        ld de,0x2000
+        ld a,(V_COL)
+        add a,a
+        add a,l
+        ld l,a
+        ld a,h
+        add a,0x40
+        ld h,a
+        ld (hl),c
+        inc hl
+        ld a,(V_TATR)
+        ld (hl),a
+        ret
+.nrow:  ld a,(V_KK)
+        inc a
+        ld (V_KK),a
+        cp 20
+        jp c,.row
+.tail:  ld a,(V_KK)                 ; cell rows not on screen this render (kk 20-21, below the play
+        cp 22                       ; area): no tile assigned (unit-test control: JR = left stale)
+.tj:    jr nc,.end
+        ld a,(V_S8)
+        ld hl,V_KK
+        add a,(hl)
+        cp 22
+        jr c,.t1
+        sub 22
+.t1:    ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,CTILE
         add hl,de
-        ex de,hl                    ; DE = pattern
-        ld a,(V_IINK)               ; IYL = ink in both nibbles
-        ld b,a
-.inkx:  rlca                        ; (unit-test control: ink 1 = outline colour)
+        ld b,32
+.t2:    ld (hl),0
+        inc hl
+        djnz .t2
+        ld hl,V_KK
+        inc (hl)
+        jr .tail
+.end:   nextreg 0x51,0xFF
+        nextreg 0x52,10
+        nextreg 0x53,11
+        pop ix
+        ret
+
+; tile cache: key V_OL (4 bytes) -> A = tile number 1..NTILE-1 (0: none free). 16 probes from
+; 1 + (hash & 127). Hit: stamp = this render. Miss: the first probed entry not used this render or
+; the previous one (that one is on screen until the commit) is rebuilt.
+olook:  ld a,(V_OL)
+        ld hl,V_OL+1
+        ld b,(hl)
+        add a,b
+        add a,b
+        add a,b
+        inc hl
+        ld b,(hl)
+        add a,b
+        add a,b
+        rlca
+        inc hl
+        add a,(hl)
+        add a,(hl)
+        add a,(hl)
+        and 127
+        inc a
+        ld (V_PROBE),a
+        xor a
+        ld (V_VICT),a
+        ld b,16
+.p:     push bc
+        ld a,(V_PROBE)
+        ld l,a
+        ld h,high STAMP
+        ld a,(hl)
+        or a
+        jr z,.free
+        ld c,a
+        ld a,(V_PROBE)              ; key at KEYS + 4*e
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        ld de,KEYS
+        add hl,de
+        ld de,V_OL
+        ld b,4
+.cmp:   ld a,(de)
+        cp (hl)
+        jr nz,.ne
+        inc de
+        inc hl
+        djnz .cmp
+        pop bc                      ; hit
+        ld a,(V_PROBE)
+        ld l,a
+        ld h,high STAMP
+        ld a,(V_CUR)
+        ld (hl),a
+        ld a,l
+        ret
+.ne:    ld a,c
+        ld hl,V_CUR
+        cp (hl)
+        jr z,.nx
+        inc hl
+        cp (hl)
+.np:    jr z,.nx                    ; used last render = on screen (unit-test control: NOPs)
+.free:  ld a,(V_VICT)
+        or a
+        jr nz,.nx
+        ld a,(V_PROBE)
+        ld (V_VICT),a
+.nx:    pop bc
+        ld a,(V_PROBE)
+        inc a
+        cp NTILE
+        jr c,.p2
+        ld a,1
+.p2:    ld (V_PROBE),a
+        djnz .p
+        ld a,(V_VICT)
+        or a
+.vic:   ret z                       ; none free: the cell is left as drawn
+        ld l,a
+        ld h,high STAMP
+        ld a,(V_CUR)
+        ld (hl),a
+        ld a,l
+        ld (V_PROBE),a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        ld de,KEYS
+        add hl,de
+        ex de,hl
+        ld hl,V_OL
+        ld bc,4
+        ldir
+        call ocomp
+        ld a,(V_PROBE)
+        ret
+
+; compose tile V_PROBE (page 14 at slot 3: 0x6000 + TDEF + 32*e) from V_OL: rainbow-class objects
+; first (opaque object, then the masked ones in draw order), item-class objects on top. Each object:
+; border pixels (8-neighbours of its pixels inside the cell) -> 1 (black), its pixels -> its ink.
+ocomp:  ld a,(V_PROBE)
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,0x6000+TDEF
+        add hl,de
+        ld (V_TDP),hl
+        ld b,32
+.z:     ld (hl),0
+        inc hl
+        djnz .z
+        xor a
+        ld (V_PASS),a               ; pass 0: rainbow class, pass 1: item class
+.pass:  ld a,(V_OL)
+        or a
+        jr z,.pm
+        ld l,a
+        ld h,high OCLASS
+        ld a,(hl)
+        call .sel
+        jr nz,.pm
+        ld a,(V_OL)                 ; opaque object rows: 0xF700 + 8*(A-1)
+        dec a
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,0xF700
+        add hl,de
+        ld de,PBUF
+        ld bc,8
+        ldir
+        call odraw
+.pm:    ld a,(V_OL+1)
+        rrca
+        rrca
+        rrca
+        rrca
+        call .mo
+        ld a,(V_OL+1)
+        call .mo
+        ld a,(V_OL+2)
+        rrca
+        rrca
+        rrca
+        rrca
+        call .mo
+        ld a,(V_OL+2)
+        call .mo
+        ld a,(V_PASS)
+        inc a
+        ld (V_PASS),a
+        cp 2
+        jr c,.pass
+        ret
+.mo:    and 15
+        ret z
+        ld c,a
+        add a,low MCLASS
+        ld l,a
+        ld h,high MCLASS
+        ld a,(hl)
+        call .sel
+        ret nz
+        ld a,c                      ; masked object gfx rows: odd bytes of 0xF600 + 16*(code-1)
+        dec a
         rlca
         rlca
         rlca
-        or b
-        ld iyl,a
-        ld a,(V_IG)
-        ld (V_IKEY),a               ; (reused: gfx pointer low byte)
-        ld a,(V_IVIS)
-        ld (V_IKEY+2),a             ; (reused: rows left to rotate)
-        nextreg 0x51,IPAGE
-        ld a,8
-        ld (V_IROW),a
-.row:   ld a,(V_IKEY)
+        rlca
+        inc a
         ld l,a
         ld h,0xF6
-        ld c,(hl)                   ; mask
+        ld de,PBUF
+        ld b,8
+.mg:    ld a,(hl)
+        ld (de),a
         inc l
-        ld b,(hl)                   ; gfx
         inc l
-        ld a,l
-        ld (V_IKEY),a
-        ld a,(V_IKEY+2)
-        rlca
-        ld (V_IKEY+2),a
-        jr nc,.blank
-        ld a,c                      ; C = outline bits (mask 0 and gfx 0)
-        or b
-        cpl
-        ld c,a
-        ld h,high EXP
-        ld a,b                      ; high nibbles -> 2 bytes
-        and 0xF0
-        rrca
-        rrca
-        rrca
-        call .two
-        ld a,b                      ; low nibbles -> 2 bytes
-        and 0x0F
-        add a,a
-        rlc c                       ; (C rotated 4 left: its low nibble now in the high nibble)
-        rlc c
-        rlc c
-        rlc c
-        call .two
-        jr .rz
-.blank: xor a
-        ld (de),a
         inc de
-        ld (de),a
-        inc de
-        ld (de),a
-        inc de
-        ld (de),a
-        inc de
-.rz:    xor a
-        ld (de),a
-        inc de
-        ld (de),a
-        inc de
-        ld (de),a
-        inc de
-        ld (de),a
-        inc de
-        ld a,(V_IROW)
-        dec a
-        ld (V_IROW),a
-        jr nz,.row
-        nextreg 0x51,PAGE_T
-        ret
-; A = 2 * gfx nibble, C high nibble = outline nibble: 2 bytes (ink where gfx, 1 where outline)
-.two:   push bc
-        ld l,a
-        ld b,(hl)                   ; gfx expanded
-        inc l
-        ld a,c
-        and 0xF0
-        rrca
-        rrca
-        rrca
-        ld c,l
-        ld l,a
-        ld a,(hl)                   ; outline expanded
-        and 0x11
-        ld iyh,a
-        ld a,b
-        and iyl
-        or iyh
-        ld (de),a
-        inc de
-        inc l
-        ld a,(hl)
-        and 0x11
-        ld iyh,a
-        ld l,c
-        ld a,(hl)
-        and iyl
-        or iyh
-        ld (de),a
-        inc de
-        pop bc
-        ld a,(V_FRM)                ; IYH = the cache stamp again
-        ld iyh,a
+        djnz .mg
+        jp odraw
+; class byte A: Z if the object belongs to this pass; sets V_CLS = class byte
+.sel:   ld (V_CLS),a
+        and 1                       ; rainbow group -> pass 0
+.selx:  xor 1                       ; (unit-test control: XOR 0 = order reversed)
+        ld b,a
+        ld a,(V_PASS)
+        cp b
         ret
 
-; --- band hook (59547): the items touching the band just blitted (screen char row R from the
-; walker's band address (59522)): their rows on R -> screen AND mask AND NOT gfx; their attribute
-; on R -> base colour while the screen shows the attribute-buffer value. Then the replaced
-; LD HL,(59522). Own stack; every register kept.
+; --- band hook (59547): the visible object cells on the band just blitted (screen char row R from
+; (59522)) get their map tile's rows (only rows inside the play area) and, while the screen still
+; shows the attribute-buffer value, the tile's colour. Then the replaced LD HL,(59522).
 s_bend: ld (V_SP4),sp
         ld sp,STK
         push af
+        push bc
+        push de
         push hl
+        ld a,(V_TOK)
+        or a
+        jp z,.q
         ld hl,(59522)
+        ld (V_ROWA),hl
         ld a,l
         rlca
         rlca
@@ -1761,277 +1745,427 @@ s_bend: ld (V_SP4),sp
         ld a,h
         and 0x18
         or l                        ; A = R
-        add a,low RFIRST
-        ld l,a
-        ld h,high RFIRST
-        ld a,(hl)
-        inc a
-        jr z,.q                     ; no item on this char row
-        push bc
-        push de
-        push ix
-        call ifix
-        pop ix
-        pop de
-        pop bc
-.q:     pop hl
-        pop af
-        ld sp,(V_SP4)
-        ld hl,(59522)
-        jp x_bend
-
-; ifix: HL = RFIRST + R. Items RFIRST[R] .. RLAST[R] (page 27 records).
-ifix:   ld a,l
-        sub low RFIRST
-        ld ixh,a                    ; IXH = R
-        ld c,(hl)                   ; first
-        ld a,l
-        add a,RLAST-RFIRST
-        ld l,a
-        ld a,(hl)
+        sub 2
+        cp 20
+        jp nc,.q
+        ld (V_KK),a
+        add a,a
+        add a,a
+        add a,a
+        ld c,a
+        ld a,(58850)
         sub c
-        inc a
-        ld (V_ICNT),a               ; items in the range
-        ld l,c                      ; record pointer = ILIST + 16 * first
-        ld h,0
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        ld de,ILIST
-        add hl,de
-        nextreg 0x51,PAGE_T
-.it:    ld (V_IREC),hl
-        ld a,l
-        add a,8
-        ld l,a
-        ld a,(hl)                   ; rows of this item on R?
-        cp ixh
-        jr z,.rows
-        inc l
-        ld a,(hl)
-        cp ixh
-        jr nz,.attr
-.rows:  ld hl,(V_IREC)
-        ld a,l
-        add a,14
-        ld l,a
-        ld c,(hl)                   ; j0
-        inc l
-        ld b,(hl)                   ; n
-        ld hl,(V_IREC)
-        inc l
-        ld a,(hl)                   ; Y of row j0 = Y0 + j0
-        add a,c
-        ld (V_IA2),a
-        inc l
-        inc l
-        ld a,(hl)                   ; gfx row j0: 0xF600 + g + 2*j0
-        add a,c
-        add a,c
-        ld e,a
-        ld d,0xF6
-        ld a,l
-        add a,9
-        ld l,a
-        ld a,(hl)                   ; screen address of row j0
-        inc l
-        ld h,(hl)
-        ld l,a
-        ld a,(V_IA2)
-        ld c,a                      ; C = Y
-.fr:    ld a,c
+        jp c,.q
+        jp z,.q
+        cp 8
+        jr c,.n1
+        ld a,8
+.n1:    ld (V_NROWS),a
+        ld a,(48782)
         rrca
         rrca
         rrca
         and 31
-        cp ixh
-.rsel:  jr nz,.skip                 ; (unit-test control: NOPs = rows of other bands fixed too)
-        ld a,(de)                   ; mask
-        ld ixl,a
-        inc e
-        ld a,(de)                   ; gfx
-        dec e
-        cpl
-.mand:  and ixl                     ; (unit-test control patches this AND out)
-        and (hl)
-        ld (hl),a
-.skip:  inc e
-        inc e
-        inc c
-        inc h                       ; next screen row
-        ld a,h
-        and 7
-        jr nz,.nl
-        ld a,l
-        add a,32
+        ld hl,V_KK
+        add a,(hl)
+        cp 22
+        jr c,.k1
+        sub 22
+.k1:    ld (V_K),a
+        nextreg 0x51,PAGE_T
+        add a,low RCNT
         ld l,a
-        jr c,.nl
-        ld a,h
-        sub 8
-        ld h,a
-.nl:    djnz .fr
-.attr:  ld hl,(V_IREC)
-        ld a,l
-        add a,4
+        ld h,high RCNT
+        ld a,(hl)
+        or a
+        jp z,.qm
+        ld a,(V_K)                  ; occupied cells of the row (OCCM) with a tile this render
         ld l,a
-        ld a,(hl)                   ; attribute char row (FF: none)
-        cp ixh
-        jr nz,.an
-        ld c,a
-        inc l
-        ld b,(hl)                   ; base colour
-        inc l
-        ld e,(hl)
-        inc l
-        ld d,(hl)                   ; DE = attribute-buffer byte
-        ld l,c                      ; HL = 0x5800 + 32*row + col
         ld h,0
         add hl,hl
         add hl,hl
         add hl,hl
         add hl,hl
         add hl,hl
+        ld de,TILES
+        add hl,de
+        ld (V_RB),hl
+        ld a,(V_K)
+        add a,a
+        add a,a
+        add a,low OCCM
+        ld (V_OMP),a
+        xor a
+        ld (V_COL),a
+.oq:    ld a,(V_OMP)
+        ld l,a
+        ld h,high OCCM
+        ld a,(hl)
+        or a
+        jr z,.oqn
+.ob:    add a,a
+        ld (V_OMB),a
+        call c,.cell
+        ld a,(V_COL)
+        inc a
+        ld (V_COL),a
+        and 7
+        ld a,(V_OMB)
+        jr nz,.ob
+        jr .oqx
+.oqn:   ld a,(V_COL)
+        add a,8
+        ld (V_COL),a
+.oqx:   ld hl,V_OMP
+        inc (hl)
+        ld a,(V_COL)
+        cp 32
+        jr c,.oq
+        jp .qm
+.cell:  ld hl,(V_RB)
+        ld a,(V_COL)
+        add a,l
+        ld l,a
+        ld (V_OHL),hl
+        ld hl,(V_OHL)
+        ld a,h
+        add a,high (CTILE-TILES)
+        ld h,a
+        ld a,(hl)
+        or a
+        ret z
+        ld hl,(V_OHL)               ; tile -> background override -> source rows
+        ld l,(hl)
+        ld h,high BGOVR
+        ld a,(hl)
+        ld (V_TT),a
+        and 127
+        ld l,a
+        ld h,0x10
+        add hl,hl
+        add hl,hl
+        add hl,hl                   ; 0x8000 + 8*(t & 127)
+        ex de,hl
+        ld hl,(V_ROWA)
+        ld a,(V_COL)
+        or l
+        ld l,a
+        ld a,(V_NROWS)
+        ld b,a
+        ld a,(V_TT)
+        rla
+        jr c,.fm
+.fr:    ld a,(de)
+.wt:    ld (hl),a                   ; (unit-test control: NOP = background not drawn)
+        inc e
+        inc h
+        djnz .fr
+        jr .fa
+.fm:    ld a,(de)                   ; mirrored (as 60853: bit-reversal table page 0xF5)
         push hl
-        ld hl,(V_IREC)
+        ld h,0xF5
+        ld l,a
         ld a,(hl)
         pop hl
+        ld (hl),a
+        inc e
+        inc h
+        djnz .fm
+.fa:
+        ld a,(V_KK)                 ; attribute 0x5800 + 32R + col
+        add a,2
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld a,(V_COL)
         or l
         ld l,a
         ld a,h
         add a,0x58
         ld h,a
-        ld a,(de)                   ; only while the screen shows the attribute-buffer value
-        cp (hl)                     ; (a star may have set its own ink there)
-        jr nz,.an
-        ld (hl),b
-.an:    ld hl,(V_IREC)
-        ld de,16
-        add hl,de
-        ld a,(V_ICNT)
-        dec a
-        ld (V_ICNT),a
-        jp nz,.it
-        nextreg 0x51,0xFF
+        ex de,hl
+        ld hl,(V_OHL)               ; attribute buffer 0xB500 + cell
+        ld a,h
+        sub high TILES
+        add a,0xB5
+        ld h,a
+        ld a,(de)
+        cp (hl)
+        ret nz                   ; a star set its own ink: keep it
+        ld a,(V_TT)
+        or 128
+        ld l,a
+        ld h,0xF2
+        ld a,(hl)
+        and 127
+        ld (de),a
         ret
-
+.qm:    nextreg 0x51,0xFF
+.q:     pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP4)
+        ld hl,(59522)
+        jp x_bend
 code_end:
 
-; --- render end (called from s_re): the item sprites. Sprite j (0..NI-1); each cache entry used
-; this render is uploaded once, to the next pattern after the figures' (V_S, V_S+1, ...), and
-; items with the same entry share it. (The screen was fixed band by band.)
-        ORG CODE2
-items:  ld a,(V_NI)
-        or a
-        ret z
-        ld (V_ICNT),a
-        ld hl,ESTAMP                ; no entry uploaded yet this render
-        ld (hl),0
-        ld de,ESTAMP+1
-        ld bc,127
-        ldir
-        ld a,(V_S)
-        ld (V_IP),a
-        xor a
-        ld (V_TMP2),a               ; sprite j
-        ld hl,ILIST
-        ld (V_IREC),hl
-.u:     nextreg 0x51,PAGE_T
-        ld hl,(V_IREC)
-        ld a,(hl)
-        ld (V_IC),a
-        inc l
-        ld a,(hl)
-        ld (V_IA2),a
-        ld a,l
-        add a,10
-        ld l,a
-        ld a,(hl)                   ; entry e -> L = e + low ESTAMP (= low EPAT)
-        add a,low ESTAMP
-        ld l,a
-        ld h,high ESTAMP
-        ld a,(hl)
-        or a
-        ld h,high EPAT
-        jr nz,.have                 ; uploaded this render: its pattern number
-        ld h,high ESTAMP
-        ld (hl),1
-        ld h,high EPAT
-        ld a,(V_IP)
-        ld (hl),a
-        inc a
-        ld (V_IP),a
-        dec a
-        ld c,a                      ; pattern slot p/2, +128 bytes if p odd
-        rrca
-        and 0x80
-        ld b,a
-        ld a,c
-        srl a
-        or b
-        ld bc,0x303B
+; --- raster wait (page 26 0x0E60-0x0EFF)
+        ORG CODE3
+; rwait: the commit must not change sprites or the tilemap while the beam draws them (tearing).
+; Active video line (NextReg $1E/$1F; 0 = first pixel row): while it is in the play area (rows
+; 16-175), wait for it to pass row 175. Lines >= 176 and < 16: commit at once.
+rwait:  ld bc,0x243B
+.w:     ld a,0x1E
         out (c),a
-        push hl
-        ld a,l                      ; source 0x2000 + 64*e
-        sub low ESTAMP
-        ld l,a
-        ld h,0
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        ld a,h
-        add a,0x20
-        ld h,a
-        nextreg 0x51,IPAGE
-        ld bc,0x405B
-        otir
-        pop hl
-.have:  ld c,(hl)                   ; C = pattern number
-        ld a,(V_TMP2)
-        nextreg 0x34,a
-        inc a
-        ld (V_TMP2),a
-        ld a,(V_IC)                 ; X = col*8 + 32 (bit 8 -> attr 2 bit 0)
-        add a,a
-        add a,a
-        add a,a
-        ld l,a
-        ld a,0
-        adc a,0
-        ld h,a
-        ld a,l
-        add a,32
-        nextreg 0x35,a
-        ld a,h
-        adc a,0
-        or ITEM_PAL
-        nextreg 0x37,a
-        ld a,(V_IA2)                ; Y = Y0 + 32
-        add a,32
-        nextreg 0x36,a
-        ld a,c
-        srl a
-        or 0xC0                     ; visible, attribute 4 used
-        nextreg 0x38,a
-        ld a,c
-        rrca
-        rrca
-        and 0x40
-        or 0x80                     ; 4-bit pattern, N6 = p & 1
-        nextreg 0x39,a
-        ld hl,(V_IREC)
-        ld de,16
-        add hl,de
-        ld (V_IREC),hl
-        ld a,(V_ICNT)
+        inc b
+        in a,(c)
+        dec b
+        rra
+        ret c                       ; line >= 256
+        ld a,0x1F
+        out (c),a
+        inc b
+        in a,(c)
+        dec b
+        cp 176
+        ret nc
+        cp 16
+        ret c
+.lp:    jr .w                       ; (unit-test control: RET = no wait)
+
+; tcommit: show the map built this render (or switch the layer off), clip it to the play area
+tcommit:
+        ld a,(V_TOK)
+        or a
+        jr z,.off
+        nextreg 0x52,PAGE_SH        ; shadow rows -> map rows 6-25, columns 4-35 (2 bytes each)
+        nextreg 0x53,PAGE_TM
+        ld hl,0x4000
+        ld de,0x6000+(6*40+4)*2
+        ld a,20
+.cr:    ld bc,64
+        ldir
+        ex de,hl
+        ld bc,16                    ; to column 4 of the next map row
+        add hl,bc
+        ex de,hl
         dec a
-        ld (V_ICNT),a
-        jp nz,.u
-        nextreg 0x51,0xFF
+        jr nz,.cr
+        nextreg 0x52,10
+        nextreg 0x53,11
+        ld a,(V_MSB)
+        ld (V_MSD),a
+        nextreg 0x6E,0x80           ; map at 0x0000 in bank 7
+        nextreg 0x6F,0x80+high TDEF
+        nextreg 0x1C,8              ; tilemap clip: x 16-143 (2-pixel units), y 48 .. 47 + N
+        nextreg 0x1B,16
+        nextreg 0x1B,143
+        nextreg 0x1B,48
+        ld a,(58850)
+        add a,47
+        nextreg 0x1B,a
+        nextreg 0x6B,0x81           ; tilemap on: 40x32, 2-byte entries (palette offset per tile),
+                                    ; tilemap over the ULA (bit 0; the per-tile bit is 0 as well)
         ret
+.off:   nextreg 0x6B,0
+        ld a,0xFF
+        ld (V_MSD),a
+        ret
+code3_end:
+
+; --- third code block (page 26 0x0D60-0x0DFF: the tail of WBG's page)
+        ORG CODE4
+; A = attribute -> ink pixel index (1 black, ink+1, bright +7)
+oinkx:  ld c,a
+        and 7
+        ld a,1
+        ret z
+        ld a,c
+        and 7
+        inc a
+        bit 6,c
+        ret z
+        add a,7
+        ret
+
+; ocls: A = class byte -> A = FLAGS group bits (0x10 rainbow group / 0x20 item group, + 0x40 fixed
+; ink); carry set = leave the cell as drawn (class bit 1). Uses C.
+ocls:   ld c,a
+        bit 1,a
+        scf
+        ret nz
+        and 0xF0
+        ld a,0x20
+        jr z,.n
+        ld a,0x60
+.n:     bit 0,c
+        jr z,.i
+        xor 0x30
+.i:     or a
+        ret
+
+; HL = TILES + cell for DE (Z clear and NC if not a cell -> carry set = ok). Uses A.
+ocell:  ld a,d
+        sub 0x9F
+        cp 22
+        ret nc
+        ld l,a
+        ld a,e
+        cp 32
+        ret nc
+        ld a,l
+        rrca
+        rrca
+        rrca
+        ld h,a
+        and 0xE0
+        or e
+        ld l,a
+        ld a,h
+        and 0x03
+        add a,high TILES
+        ld h,a
+        scf
+        ret
+
+; cell HL (TILES-relative): A = row count index k = (H - high TILES)*8 + L/32
+ocrow:  ld a,l
+        rlca
+        rlca
+        rlca
+        and 7
+        ld c,a
+        ld a,h
+        sub high TILES
+        add a,a
+        add a,a
+        add a,a
+        or c
+        ret
+
+code4_end:
+
+; --- fourth code block (page 26 0x1F10-0x1FFF)
+        ORG CODE2
+; draw PBUF (8 rows) into the tile at V_TDP: ink = class override (bits 4-7) or the pass's ink;
+; border unless class bit 2.
+odraw:  ld a,(V_CLS)
+        and 0xF0
+        rrca
+        rrca
+        rrca
+        rrca
+        jr nz,.ik
+        ld a,(V_PASS)
+        or a
+        ld a,(V_INKR)
+        jr z,.ik
+        ld a,(V_INKI)
+.ik:    ld c,a                      ; ink index -> both nibbles
+        rlca
+        rlca
+        rlca
+        rlca
+        or c
+        ld (V_CINK),a
+        ld hl,(V_TDP)
+        ld de,PBUF
+        xor a
+        ld (V_CQ+1),a               ; row j
+.r:     ld a,(V_CLS)
+        and 4
+        ld b,0
+        jr nz,.nb                   ; no border
+        ld a,(V_CQ+1)               ; v = P[j-1] | P[j] | P[j+1]
+        or a
+        ld a,(de)
+        ld b,a
+        jr z,.r1
+        dec de
+        ld a,(de)
+        or b
+        ld b,a
+        inc de
+.r1:    ld a,(V_CQ+1)
+        cp 7
+        jr z,.r2
+        inc de
+        ld a,(de)
+        or b
+        ld b,a
+        dec de
+.r2:    ld a,b                      ; dilate: v | v<<1 | v>>1, minus the object's own pixels
+        add a,a
+        or b
+        ld c,a
+        ld a,b
+        srl a
+        or c
+        ld b,a
+        ld a,(de)
+        cpl
+        and b
+        ld b,a                      ; B = border
+.nb:    ld a,(de)
+        ld c,a                      ; C = pixels
+        push de
+        call cpix
+        pop de
+        inc de
+        ld a,(V_CQ+1)
+        inc a
+        ld (V_CQ+1),a
+        cp 8
+        jr c,.r
+        ret
+
+; one tile row: B = border bits, C = pixel bits, HL = 4 bytes (left pixel = high nibble). HL += 4.
+cpix:   ld a,4
+        ld (V_CQ),a
+.q:     ld a,b
+        rlca
+        rlca
+        ld b,a
+        and 3
+        add a,low X2
+        ld e,a
+        ld d,high X2
+        ld a,(de)                   ; border nibbles
+        ld (V_CMD),a
+        ld a,c
+        rlca
+        rlca
+        ld c,a
+        and 3
+        add a,low X2
+        ld e,a
+        ld a,(de)                   ; pixel nibbles
+        ld e,a
+        ld a,(V_CMD)
+        or e
+        cpl
+        and (hl)                    ; earlier objects stay where this one draws nothing
+        ld d,a
+        ld a,(V_CMD)
+.bk:    and 0x11                    ; border = index 1 (unit-test control: 0 = no border)
+        or d
+        ld d,a
+        ld a,(V_CINK)
+        and e
+        or d
+        ld (hl),a
+        inc hl
+        ld a,(V_CQ)
+        dec a
+        ld (V_CQ),a
+        jr nz,.q
+        ret
+
 code2_end:
 
 ; --- setup routine (stub bank, 0xD000): palette, transparency, hide all, clip, sprites on ----
@@ -2064,11 +2198,52 @@ setup:  nextreg 0x43,0x20           ; edit sprite palette 0, auto-increment
         nextreg 0x19,255
         nextreg 0x19,16
         nextreg 0x19,191
+        nextreg 0x43,0x30           ; tilemap palette: bank 0 = 0 transparent, 1 black, 2-8 inks,
+        nextreg 0x40,0              ; 9-15 bright inks; bank n = bank 0 but pixel 2 = ink index n
+        ld c,0                      ; (one-ink tiles: palette offset n in the map entry)
+.tb:    ld hl,tpal
+        ld b,0
+.tp:    ld a,(hl)
+        ld e,a
+        ld a,b
+        cp 2
+        jr nz,.t0
+        ld a,c
+        or a
+        jr z,.t0
+        push hl
+        ld hl,tpal
+        ld e,c
+        ld d,0
+        add hl,de
+        ld e,(hl)
+        pop hl
+.t0:    ld a,e
+        nextreg 0x41,a
+        inc hl
+        inc b
+        ld a,b
+        cp 16
+        jr nz,.tp
+        inc c
+        ld a,c
+        cp 16
+        jr nz,.tb
+        nextreg 0x4C,0              ; tilemap transparent index 0
+        nextreg 0x6C,0              ; attributes: palette offset 0, tilemap over the ULA
+        nextreg 0x6B,0              ; off until the first commit
+        nextreg 0x2F,0
+        nextreg 0x30,0
+        nextreg 0x31,0
+        nextreg 0x7F,0
         nextreg 0x15,0x01
         ret
+tpal:   db 0x00,0x00,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6,0x03,0xE0,0xE3,0x1C,0x1F,0xFC,0xFF
 pal:                                ; 256 palette bytes appended by Python
 
         SAVEBIN "rb_rom.bin",0x386E,rom_end-0x386E
         SAVEBIN "rb_page.bin",0x0100,code_end-0x0100
+        SAVEBIN "rb_page3.bin",CODE3,code3_end-CODE3
+        SAVEBIN "rb_page4.bin",CODE4,code4_end-CODE4
         SAVEBIN "rb_page2.bin",CODE2,code2_end-CODE2
         SAVEBIN "rb_setup.bin",0xD000,pal-0xD000

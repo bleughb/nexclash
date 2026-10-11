@@ -64,6 +64,16 @@ Each line is settled unless marked otherwise.
 - A dedicated 4-bit palette offset can hold the 15 Spectrum inks (index 1 black, 2-8 normal,
   9-15 bright; Next default ULA levels 0x02/A0/A2/14/16/B4/B6, bright 03/E0/E3/1C/1F/FC/FF): the
   ink becomes part of the PATTERN, one palette offset serves every ink (Rainbow offset 15).
+- Tearing: change sprite attributes only while the beam is outside the sprites' area. Active
+  video line = NextReg $1E (bit 0 = bit 8) / $1F, read via OUT 0x243B (select) + IN 0x253B; line
+  0 = first ULA pixel row, play area rows 16-175 in Rainbow; the ULA interrupt is near line 248.
+  Hook work that delays a commit into the visible area tears even if the original never did.
+- Tilemap (layer 3) for cell-aligned objects: bank 7 via $6E/$6F bit 7 (first 8K only = Next page
+  14; needs a recent core); 2-byte entries give a palette offset per tile: put a variable colour in
+  the offset (pixel value fixed in the tile) so colour changes cost no tile rebuild. Draws under the
+  sprites, over the ULA (attribute bit 0 = 0). Build the map in normal RAM and copy it at the
+  raster-synced commit (no half-built map on screen). Use it when objects are cell-aligned and too
+  many for the sprite budget (Rainbow: up to 114 object cells next to 84 figure sprites).
 
 # PART 2 - GAMES / SOFTWARE
 
@@ -118,6 +128,13 @@ Each line is settled unless marked otherwise.
 - An object's mask can INCLUDE its graphic bits (Rainbow items: (cell AND mask) OR gfx with
   gfx in the mask): "screen AND mask" then leaves the object's ink pixels; clear with
   AND (mask AND NOT gfx).
+- Look at the GRAPHICS before deciding what a code range is: Rainbow's object codes 1-14 were
+  rainbow pieces, not collectables; two verified builds turned the rainbows into sprites and left
+  the real collectables (codes 15+) alone. Differential tests prove the logic, not the naming:
+  render a contact sheet of every code the recordings use before designing around it.
+- Hook cost: scanning all cells of a row per render costs more than the work itself - keep an
+  occupancy bitmask (per row) in the cell hooks and visit set bits only; cache derived data per cell
+  (last result + key check) before hashing; summarise per-cell classes in the hooks, not per render.
 - The return address in IY (routines ending JP (IY)) tells which caller ran a shared routine
   (Rainbow: cell composition IY 60699 / 60720 vs spawning an object into a drawn cell).
 - Incremental-draw engines (no full redraw: erase = tile redraw at the old position, draw = OR /

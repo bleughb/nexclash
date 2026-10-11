@@ -39,17 +39,24 @@ SITES_ORIG = {58851: bytes.fromhex('FD213C6D'), 59539: bytes.fromhex('26F5DDE9')
               59547: bytes.fromhex('2A82E8')}                                       # walker: band done
 CLIST, ATTRB, V_NP = 0x1B00, 0x1C80, 0x01
 V_TICK, LIMIT = 0x2E, 3     # frame limiter (asm s_lim)
-# Collectables (2026-10-11): item cells of the back buffer (cell drawer 60633..60965) become sprites.
-# Shadow map in page 27 (slot 1): CODES = item code per cell (0 none, FF several objects -> ULA),
-# BATTR = base tile colour (bit 7 = known). Cell index = 32*k + col, back-buffer cell 0x9F00+256k+col.
-CODES, BATTR, NCELLS, RCNT = 0x3000, 0x3300, 704, 0x3D00
-EXP, V_NI, V_IP, V_FMAX = 0x1F00, 0x3B, 0x3C, 0x51
-ILIST, IMAX, IPAGE = 0x3600, 80, 28   # item list (page 27, 16 bytes each), max items, pattern cache page
-CODE2 = 0x1F20              # second page-26 code block (item commit), up to 0x1FFF
-ITEM_PAL = 15               # sprite palette offset of the item sprites: Spectrum ink colours
-ITEM_SITES = {60853: 60857, 60839: 60843, 60965: 60969}      # hook site -> resume address
-ITEM_GFX = 0xF600           # (mask, gfx) pairs, 16 bytes per code: 0xF600 + ((code-1)*16 & 255)
-# Spectrum ink colours (Next default ULA palette levels): normal 1-7, bright 1-7 (RRRGGGBB)
+# Objects (2026-10-11, tilemap build): every object the game puts in a back-buffer cell (rainbow
+# pieces = codes 1-14 of both drawers, fruit / flowers / collectables = opaque codes >= 15) is shown on
+# the tilemap layer (bank 7 = Next page 14, in front of the ULA, behind the sprites); the ULA cell shows
+# the cell's map tile. Per-cell arrays in page 27 (slot 1), cell i = 32k + col at base + i.
+TILES, OBJO, OBJM1, OBJM2, FLAGS, CTILE = 0x2800, 0x2B00, 0x2E00, 0x3100, 0x3400, 0x3700
+KEYS, STAMP, RCNT, MCLASS, OCLASS, BGOVR = 0x3A00, 0x3D00, 0x3DC0, 0x3DE0, 0x3E00, 0x3F00
+NCELLS, NTILE, PAGE_TM, TDEF, X2 = 704, 176, 14, 0x0A00, 0x1F00
+OCCM, BITS = 0x27A0, 0x1F08   # page 27: occupied cells per row as 32-bit masks; page 26: 0x80 >> n
+V_TOK, V_MSB, V_MSD, V_FMAX = 0x3B, 0x3F, 0x40, 0x51
+PAGE_SH, LASTT = 28, 0x0600   # shadow map (row kk at kk*64, 2 bytes per column), last tile per cell
+CODE2 = 0x1F10              # fourth page-26 code block (tile drawing), up to 0x1FFF
+CODE4 = 0x0D60              # third page-26 code block (object classes, inks), up to 0x0DFF
+CODE3 = 0x0E60              # second page-26 code block (raster wait, tilemap commit), up to 0x0EFF
+OBJ_SITES = {60853: 60857, 60839: 60843, 60965: 60969}      # hook site -> resume address
+LINE_T = 1792               # T-states per video line at 28 MHz (224 * 8)
+PLAY_TOP, PLAY_END = 16, 176   # video lines of the play area (rows 0-159 of the ULA picture + 16)
+ITEM_PAL = 15               # sprite palette offset 15: Spectrum inks (kept; objects now use the tilemap)
+TILE_PAL = (0x00, 0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x03, 0xE0, 0xE3, 0x1C, 0x1F, 0xFC, 0xFF)
 SPECTRUM_INK = (0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6)
 SPECTRUM_INK_BRIGHT = (0x03, 0xE0, 0xE3, 0x1C, 0x1F, 0xFC, 0xFF)
 SIG = None                  # walker head bytes: profile 'signature'
@@ -264,6 +271,43 @@ class Config:
         return bytes(pal)
 
 
+def _code_range(spec):
+    """'5' or '1-14' -> range of codes."""
+    a, _, b = str(spec).partition('-')
+    return range(int(a), int(b or a) + 1)
+
+
+def object_tables(objs):
+    """Profile 'objects' section -> (OCLASS 256, MCLASS 16, BGOVR 256). Per code (ranges allowed),
+    under "opaque" (60839 codes) or "masked" (60965 codes 1-14): "group": "rainbow" (drawn behind the
+    others, ink = the cell's) or "item" (default); "ula": true (the cell stays as the game draws it);
+    "border": false (no black border); "ink": 0-7 and "bright": true/false (fixed colour).
+    "background": {"tile": tile} shows another map tile under objects."""
+    tabs = {'opaque': bytearray(256), 'masked': bytearray(16)}
+    for kind, tab in tabs.items():
+        for spec, o in objs.get(kind, {}).items():
+            if spec.startswith('_'):
+                continue
+            v = 0
+            if o.get('group', 'item') == 'rainbow':
+                v |= 1
+            if o.get('ula'):
+                v |= 2
+            if o.get('border', True) is False:
+                v |= 4
+            if 'ink' in o:
+                v |= ink_index(int(o['ink']) | (64 if o.get('bright') else 0)) << 4
+            for code in _code_range(spec):
+                if code >= len(tab):
+                    raise ValueError('object code out of range: %s %d' % (kind, code))
+                tab[code] = v
+    bg = bytearray(range(256))
+    for t, u in objs.get('background', {}).items():
+        if not str(t).startswith('_'):
+            bg[int(t)] = int(u)
+    return bytes(tabs['opaque']), bytes(tabs['masked']), bytes(bg)
+
+
 def identify_rb(mem):
     """mem: 64K view with bank 0 at C000. True if the Rainbow Islands list walker is present."""
     sg = load_profile()['signature']
@@ -280,6 +324,8 @@ class RainbowPatch:
         h = self.prof['hooks']
         self.rom_code = bytes.fromhex(h['rom'])
         self.page_code = bytes.fromhex(h['page'])
+        self.page_code3 = bytes.fromhex(h.get('page3', ''))
+        self.page_code4 = bytes.fromhex(h.get('page4', ''))
         self.page_code2 = bytes.fromhex(h.get('page2', ''))
         self.setup = bytes.fromhex(h['setup'])
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
@@ -303,13 +349,22 @@ class RainbowPatch:
         self.page = bytes(page)                     # alt ROM image of 0x2000-0x3FFF (for nextboot)
         sp = bytearray(8192)
         sp[PAGE_ORG:PAGE_ORG + len(self.page_code)] = self.page_code
-        if CODE2 + len(self.page_code2) > 0x2000:
+        if CODE3 + len(self.page_code3) > 0x0F00:
             raise ValueError('second code block too long')
+        sp[CODE3:CODE3 + len(self.page_code3)] = self.page_code3
+        if CODE4 + len(self.page_code4) > 0x0E00:
+            raise ValueError('fourth code block too long')
+        sp[CODE4:CODE4 + len(self.page_code4)] = self.page_code4
+        if CODE2 + len(self.page_code2) > 0x2000:
+            raise ValueError('code block at 0x1F10 too long')
         sp[CODE2:CODE2 + len(self.page_code2)] = self.page_code2
-        if PAGE_ORG + len(self.page_code) > CODE_END_MAX or ATTRB + 5 * NSPR_MAX > EXP:
+        if PAGE_ORG + len(self.page_code) > CODE_END_MAX or ATTRB + 5 * NSPR_MAX > X2:
             raise ValueError('page code overlaps the conversion buffers')
         sp[V_FRM] = 1
-        sp[V_FMAX] = NSPR_MAX                       # figure sprite limit (render start: 128 - items)
+        sp[V_FMAX] = NSPR_MAX                       # figure sprite limit
+        sp[V_MSB] = sp[V_MSD] = 0xFF                # no tilemap built yet
+        sp[X2:X2 + 4] = b'\x00\x0F\xF0\xFF'          # 2 bits -> 2 nibbles (tile composer)
+        sp[BITS:BITS + 8] = bytes(0x80 >> n for n in range(8))
         tp = bytearray(8192)                        # page 27: layout tables (slot 1 = 0x2000)
         at = 0
         self.plot = {int(k): v for k, v in self.prof['plotters'].items()}
@@ -324,14 +379,15 @@ class RainbowPatch:
                 sp[PI + 0x500 + 0x200 * cy + (t & 255)] = a >> 8
                 tp[at:at + len(lay)] = lay
                 at += len(lay)
-        if at > CODES - 0x2000:
-            raise ValueError('layout tables overlap the item shadow map in page 27')
+        if at > OCCM - 0x2000:
+            raise ValueError('layout tables overlap the object masks in page 27')
         sp[MIRTAB:MIRTAB + 256] = bytes(int('{:08b}'.format(i)[::-1], 2) for i in range(256))
         sp[NIBTAB:NIBTAB + 512] = self.cfg.nibtab()
         sp[CLASSTAB:CLASSTAB + 256] = self.cfg.classtab()
-        for n in range(16):                         # item patterns: nibble -> 2 bytes, F per set bit
-            sp[EXP + 2 * n] = (0xF0 if n & 8 else 0) | (0x0F if n & 4 else 0)
-            sp[EXP + 2 * n + 1] = (0xF0 if n & 2 else 0) | (0x0F if n & 1 else 0)
+        ocls, mcls, bg = object_tables(self.prof.get('objects', {}))
+        tp[OCLASS - 0x2000:OCLASS - 0x2000 + 256] = ocls
+        tp[MCLASS - 0x2000:MCLASS - 0x2000 + 16] = mcls
+        tp[BGOVR - 0x2000:BGOVR - 0x2000 + 256] = bg
         self.scratch = bytes(sp)
         self.tpage = bytes(tp)
         self.extra_banks = {12: self.page + bytes(8192), 13: self.scratch + self.tpage}
@@ -367,6 +423,8 @@ class RainbowPatch:
             raise ValueError('Rainbow Islands patch needs the 128K snapshot')
         if snap.port7ffd & 0x10 == 0:
             raise ValueError('snapshot selects ROM 0; the hooks need the 48K ROM (alt image 1)')
+        if any(snap.banks[7][:8192]):
+            raise ValueError('bank 7 (first 8K) is not empty: needed for the tilemap')
         snap.banks[0] = self.patched_bank0(snap.banks[0])
 
 
@@ -447,15 +505,51 @@ class NextState:
         self.pat_writes = 0
         self.sel = 0
         self.events = []
+        self.line = 200             # video line seen by the raster wait: fixed (bottom border: no wait),
+        self.line_t = None          # or (line at T = 0) advancing LINE_T per line (unit tests)
+        self.rsel = 0
+        self.R = None               # registers of the machine running this state (T for the raster)
+        self.t34 = None             # T of the first sprite select ($34) write
+        self.t6e = None             # T of the first tilemap base ($6E) write
+        self.polls = 0
+        self.clip_tm, self.clip_i = [None] * 4, 0
+
+    def video_line(self):
+        if self.line_t is None:
+            return self.line
+        return (self.line_t + self.R[25] // LINE_T) % 312
+
+    def read(self, port):
+        if port == 0x253B:
+            if self.rsel in (0x1E, 0x1F):
+                self.polls += 1
+                v = self.video_line()
+                return (v >> 8) & 1 if self.rsel == 0x1E else v & 255
+            return self.nr.get(self.rsel, 0)
+        self.events.append(('in', port))
+        return 0xFF
 
     def nextreg(self, reg, val):
+        if reg == 0x1C and val & 8:
+            self.clip_tm, self.clip_i = [None] * 4, 0
+        elif reg == 0x1B:
+            self.clip_tm[self.clip_i & 3] = val
+            self.clip_i += 1
+        if reg in (0x6E, 0x6F):
+            val &= 0xBF                     # bit 6 reads back 0
         self.nr[reg] = val
+        if reg == 0x34 and self.t34 is None and self.R is not None:
+            self.t34 = self.R[25]
+        if reg == 0x6E and self.t6e is None and self.R is not None:
+            self.t6e = self.R[25]
         if 0x35 <= reg <= 0x39:
             self.attr[self.nr.get(0x34, 0) & 0x7F][reg - 0x35] = val
         self.events.append(('nr', reg, val))
 
     def out(self, port, val):
-        if port == 0x303B:
+        if port == 0x243B:
+            self.rsel = val
+        elif port == 0x303B:
             self.pat_ptr = (val & 0x3F) * 256 + (128 if val & 0x80 else 0)
         elif port & 0xFF == 0x5B:
             self.pat[self.pat_ptr & 0x3FFF] = val
@@ -500,157 +594,255 @@ def staged(ns, first):
     return t
 
 
-class ItemShadow:
-    """Python model of the item shadow map kept by the hooks at 60853 / 60839 / 60965 (page 27)."""
+def cell_index(d, e):
+    return (d - 0x9F) * 32 + e if 0x9F <= d <= 0xB4 and e < 32 else None
+
+
+class ObjShadow:
+    """Python model of the per-cell object map kept by the hooks at 60853 / 60839 / 60965 (page 27):
+    tiles (background map tile), objo (opaque object, FF = unsupported: left as drawn), m1/m2 (masked
+    objects, nibbles in draw order), flags (bit 7 background known, bits 0-3 remembered item ink),
+    ctile (tile assigned this render)."""
+
+    ARR = (('tiles', TILES), ('objo', OBJO), ('m1', OBJM1), ('m2', OBJM2), ('flags', FLAGS), ('ctile', CTILE))
 
     def __init__(self):
-        self.codes = bytearray(NCELLS)
-        self.battr = bytearray(NCELLS)
+        for name, _ in self.ARR:
+            setattr(self, name, bytearray(NCELLS))
 
-    @staticmethod
-    def cell(d, e):
-        return (d - 0x9F) * 32 + e if 0x9F <= d <= 0xB4 and e < 32 else None
+    def occupied(self, i):
+        return bool(self.objo[i] or self.m1[i])
 
-    def event(self, pc, a, d, e, iy, peek):
-        """60853 base tile (A = tile): no item, colour = (0xF200 + (tile|128)) & 127.
-        60839 full tile (A = code): code 1-14 = an item drawn opaque (0xF700 + 8*(code-1)), else
-        another overlay (no item); colour: a spawned item (IY != 60699) keeps the cell's colour
-        before it (attribute buffer), a composed cell's is unknown (the cell is blank anyway).
-        60965 masked item (A = code 1-14): first item in the cell; a spawned one (IY != 60720)
-        takes the attribute buffer as its cell colour; a second, different object -> FF (ULA)."""
-        i = self.cell(d, e)
+    def event(self, pc, a, d, e, peek, bc2=0, page27=None):
+        """Returns (cell, ctile before) or (None, 0). page27: the class tables (OCLASS / MCLASS)."""
+        i = cell_index(d, e)
         if i is None:
-            return None
+            return None, 0
+        ct = self.ctile[i]
+        self.ctile[i] = 0
         if pc == 60853:
-            self.codes[i], self.battr[i] = 0, (peek(0xF200 | a | 128) & 127) | 128
+            self.tiles[i], self.objo[i], self.m1[i], self.m2[i], self.flags[i] = a, 0, 0, 0, 0x80
         elif pc == 60839:
-            item = 1 <= a <= 14
-            self.codes[i] = a if item else 0
-            self.battr[i] = peek(0xB500 + i) | 128 if item and iy != 60699 else 0
-        elif not 1 <= a <= 14 or self.codes[i] not in (0, a):
-            self.codes[i] = 0xFF
-        elif self.codes[i] == 0:
-            self.codes[i] = a
-            if iy != 60720:
-                self.battr[i] = peek(0xB500 + i) | 128
-        return i
+            self.tiles[i] = peek(bc2)
+            self.m1[i] = self.m2[i] = 0
+            g = None if a in (0, 0xFF) else class_bits(page27[OCLASS - 0x2000 + a])
+            self.objo[i] = 0xFF if g is None else a
+            self.flags[i] = 0x80 | (g or 0)
+        elif self.objo[i] != 0xFF:
+            g = class_bits(page27[MCLASS - 0x2000 + a]) if 1 <= a <= 14 else None
+            if g is None:
+                self.objo[i] = 0xFF
+            elif not self.m1[i] & 0xF0:
+                self.m1[i] = a << 4
+            elif not self.m1[i] & 0x0F:
+                self.m1[i] |= a
+            elif not self.m2[i] & 0xF0:
+                self.m2[i] = a << 4
+            elif not self.m2[i] & 0x0F:
+                self.m2[i] |= a
+            else:
+                self.objo[i] = 0xFF
+                g = None
+            if g is not None:
+                self.flags[i] |= g
+        return i, ct
+
+    def fix_flags(self, page27):
+        """Unit tests: FLAGS group bits (and FF for a 'leave as drawn' class) as the hooks would
+        have set them for the objects now in each cell."""
+        for i in range(NCELLS):
+            if not self.occupied(i) or self.objo[i] == 0xFF:
+                continue
+            f = 0
+            for kind, code in self.objects(i):
+                g = class_bits(obj_class(page27, kind, code))
+                if g is None:
+                    self.objo[i] = 0xFF
+                    break
+                f |= g
+            self.flags[i] = (self.flags[i] & 0x8F) | f
 
     def rcnt(self):
-        return bytes(sum(1 for c in self.codes[32 * k:32 * k + 32] if c) for k in range(22))
+        return bytes(sum(1 for i in range(32 * k, 32 * k + 32) if self.occupied(i)) for k in range(22))
 
-    def same_as(self, page27):
-        o = CODES - 0x2000
-        r = RCNT - 0x2000
-        return bytes(page27[o:o + NCELLS]) == bytes(self.codes) and \
-            bytes(page27[o + BATTR - CODES:o + BATTR - CODES + NCELLS]) == bytes(self.battr) and \
-            bytes(page27[r:r + 22]) == self.rcnt()
+    def same_as(self, page27, which=None):
+        for name, base in self.ARR:
+            if which and name not in which:
+                continue
+            if bytes(page27[base - 0x2000:base - 0x2000 + NCELLS]) != bytes(getattr(self, name)):
+                return False
+        return bytes(page27[RCNT - 0x2000:RCNT - 0x2000 + 22]) == self.rcnt() and \
+            bytes(page27[OCCM - 0x2000:OCCM - 0x2000 + 88]) == self.occm()
+
+    def occm(self):
+        out = bytearray(88)
+        for i in range(NCELLS):
+            if self.occupied(i):
+                out[4 * (i >> 5) + ((i & 31) >> 3)] |= 0x80 >> (i & 7)
+        return bytes(out)
+
+    def load(self, page27):
+        for name, base in self.ARR:
+            page27[base - 0x2000:base - 0x2000 + NCELLS] = getattr(self, name)
+        page27[RCNT - 0x2000:RCNT - 0x2000 + 22] = self.rcnt()
+        page27[OCCM - 0x2000:OCCM - 0x2000 + 88] = self.occm()
+
+    def objects(self, i):
+        """[('O', code)] + [('M', code)...] in draw order."""
+        out = [('O', self.objo[i])] if self.objo[i] else []
+        for b in (self.m1[i], self.m2[i]):
+            for n in (b >> 4, b & 15):
+                if n:
+                    out.append(('M', n))
+        return out
 
 
-def item_index(attr):
-    """Item ink pixel index from the cell's attribute-buffer byte: 1 black, 2-8 ink, 9-15 bright ink."""
+def class_bits(cls):
+    """Class byte -> FLAGS group bits (0x10 rainbow group / 0x20 item group, + 0x40 fixed ink), None
+    for a 'leave the cell as drawn' class (asm ocls)."""
+    if cls & 2:
+        return None
+    return (0x10 if cls & 1 else 0x20) | (0x40 if cls & 0xF0 else 0)
+
+
+def obj_class(page27, kind, code):
+    return page27[(OCLASS if kind == 'O' else MCLASS) - 0x2000 + code]
+
+
+def ink_index(attr):
+    """Ink pixel index from an attribute: 1 black, 2-8 ink, 9-15 bright ink."""
     ink = attr & 7
     return 1 if ink == 0 else ink + 1 + (7 if attr & 64 else 0)
 
 
-def item_pattern(peek, code, ink, vis):
-    """64 bytes (rows 0-7 of a 4-bit pattern): gfx bit -> ink, mask 0 -> 1 (outline), else 0;
-    rows not in vis are transparent."""
-    g = ITEM_GFX | (((code - 1) * 16) & 255)
-    out = bytearray(64)
-    for j in range(8):
-        if j not in vis:
-            continue
-        m, gf = peek(g + 2 * j), peek(g + 2 * j + 1)
-        for x in range(8):
-            b = 0x80 >> x
-            v = ink if gf & b else (0 if m & b else 1)
-            out[8 * j + x // 2] |= v << (0 if x & 1 else 4)
-    return bytes(out)
+def obj_rows(peek, kind, code):
+    """The object's 8 pixel rows (opaque: 0xF700 + 8*(code-1); masked: odd bytes of 0xF600 +
+    16*(code-1))."""
+    if kind == 'O':
+        return [peek(0xF700 + 8 * (code - 1) + j) for j in range(8)]
+    return [peek(0xF600 + 16 * (code - 1) + 2 * j + 1) for j in range(8)]
 
 
-def items_list(peek, shadow):
-    """Render start (asm ibuild): every item cell with rows in the play area, in cell order, at most
-    IMAX: dict(idx, code, col, y0 (screen row of pattern row 0), vis (rows on screen), g (gfx
-    address), arow (screen char row of its attribute, None = not fixed), base, abuf, pattern)."""
+def obj_compose(peek, page27, objs, inkr, inki):
+    """32-byte 4-bit tile: rainbow-group objects first, then the others, each in draw order; per
+    object its border (8-neighbours of its pixels inside the cell, minus its pixels) -> 1, its pixels
+    -> its ink (class override, else rainbow group: inkr, others: inki)."""
+    px = [[0] * 8 for _ in range(8)]
+    for pas in (0, 1):
+        for kind, code in objs:
+            cls = obj_class(page27, kind, code)
+            if (0 if cls & 1 else 1) != pas:
+                continue
+            ink = cls >> 4 or (inkr if pas == 0 else inki)
+            P = obj_rows(peek, kind, code)
+            for j in range(8):
+                if cls & 4:
+                    B = 0
+                else:
+                    v = P[j] | (P[j - 1] if j else 0) | (P[j + 1] if j < 7 else 0)
+                    B = (v | (v << 1) | (v >> 1)) & 255 & ~P[j]
+                for x in range(8):
+                    m = 0x80 >> x
+                    if P[j] & m:
+                        px[j][x] = ink
+                    elif B & m:
+                        px[j][x] = 1
+    return bytes((px[j][2 * q] << 4) | px[j][2 * q + 1] for j in range(8) for q in range(4))
+
+
+def obj_build(peek, sh, page27):
+    """Render start (asm obuild): None if the scroll is not a multiple of 8 (tilemap off), else
+    {(kk, col): (cell, key, tile content, map attribute)} for every visible object cell, and the
+    item inks remembered (sh.flags updated in place)."""
     s, N = peek(48782), peek(58850)
-    out = []
-    for i in range(NCELLS):
-        code = shadow.codes[i]
-        if code in (0, 0xFF):
-            continue
-        if len(out) >= IMAX:
+    if s & 7:
+        return None
+    out = {}
+    for kk in range(20):
+        if 8 * kk >= N:
             break
-        k, col = i >> 5, i & 31
-        yu = 8 * k - s
-        if yu < 0:
-            yu += 176
-        ys = yu - 176 if yu >= 168 else yu
-        vis = [j for j in range(8) if (yu + j - 176 if yu + j >= 176 else yu + j) < N]
-        if not vis:
-            continue
-        kk = (k - (s >> 3)) % 22
-        b = shadow.battr[i]
-        arow = kk + 2 if kk * 8 < N and b & 128 else None
-        out.append({'idx': i, 'code': code, 'col': col, 'y0': (16 + ys) & 255, 'vis': vis,
-                    'g': ITEM_GFX | (((code - 1) * 16) & 255), 'arow': arow, 'base': b & 127 if arow else 0,
-                    'abuf': 0xB500 + i, 'ink': item_index(peek(0xB500 + i)),
-                    'pattern': item_pattern(peek, code, item_index(peek(0xB500 + i)), vis)})
+        k = (s // 8 + kk) % 22
+        for col in range(32):
+            i = 32 * k + col
+            if not sh.occupied(i) or sh.objo[i] == 0xFF or not sh.flags[i] & 0x80:
+                continue
+            objs = sh.objects(i)
+            f = sh.flags[i]
+            has = (f >> 4) & 3 | (8 if f & 0x40 else 0)     # group bits kept by the cell hooks
+            inkr = ink_index(peek(0xB500 + i))
+            if has & 3 == 2:
+                inki = inkr
+                sh.flags[i] = (f & 0xF0) | inkr
+            elif has & 3 == 3:
+                inki = sh.flags[i] & 15 or inkr
+            else:
+                inki = inkr
+            if has & 3 == 3 or has & 8:             # several inks: in the pixels, palette offset 0
+                key = bytes([sh.objo[i], sh.m1[i], sh.m2[i], inki << 4 | inkr])
+                out[(kk, col)] = (i, key, obj_compose(peek, page27, objs, inkr, inki), 0)
+            else:                                   # one ink: pixel 2 + the entry's palette offset
+                key = bytes([sh.objo[i], sh.m1[i], sh.m2[i], 0])
+                out[(kk, col)] = (i, key, obj_compose(peek, page27, objs, 2, 2), inkr << 4)
     return out
 
 
-def item_record(it):
-    """The ILIST record of an item (asm ibrec), byte 11 (pattern cache entry) as 0: the entry is
-    checked through the pattern it holds."""
-    rows = [(it['y0'] + j) >> 3 for j in it['vis']]
-    y = it['y0'] + it['vis'][0]
-    a = 0x4000 | ((y & 0xC0) << 5) | ((y & 7) << 8) | ((y & 0x38) << 2) | it['col']
-    return bytes([it['col'], it['y0'], sum(0x80 >> j for j in it['vis']), it['g'] & 255,
-                  0xFF if it['arow'] is None else it['arow'], it['base'], it['abuf'] & 255, it['abuf'] >> 8,
-                  rows[0], rows[-1], it['ink'], 0, a & 255, a >> 8, it['vis'][0], len(it['vis'])])
+def tile_row(peek, t, j):
+    """Row j of map tile t as the game's base-tile drawer 60853 draws it: 0x8000 + 8*t + j, tiles
+    >= 128 from tile t-128 mirrored through the bit-reversal table at 0xF500."""
+    b = peek(0x8000 + 8 * (t & 127) + j)
+    return peek(0xF500 | b) if t & 128 else b
 
 
-def record_ok(rec, it, page28):
-    """Record (16 bytes from page 27) = model, and its pattern cache entry holds the item's pattern."""
-    e = rec[11]
-    want = item_record(it)
-    return bytes(rec[:11]) == want[:11] and bytes(rec[12:16]) == want[12:16] and e < 128 and \
-        bytes(page28[64 * e:64 * e + 64]) == it['pattern']
-
-
-def items_fix(peek, items, row=None):
-    """Screen writes of asm ifix: item rows (on screen char row `row`, or all) -> screen AND mask AND
-    NOT gfx; attribute (on that char row) -> base colour while the screen shows the buffer value."""
+def obj_fix(peek, sh, page27, row):
+    """Screen writes of the band hook for screen char row `row`: every object cell with a tile this
+    render (CTILE) -> its background tile's rows inside the play area; its attribute -> the tile's
+    colour while the screen shows the attribute-buffer value."""
+    s, N = peek(48782), peek(58850)
     w = {}
-    for it in items:
-        for j in it['vis']:
-            y = it['y0'] + j
-            if row is not None and y >> 3 != row:
-                continue
-            a = 0x4000 | ((y & 0xC0) << 5) | ((y & 7) << 8) | ((y & 0x38) << 2) | it['col']
-            w[a] = w.get(a, peek(a)) & peek(it['g'] + 2 * j) & ~peek(it['g'] + 2 * j + 1) & 255
-        r = it['arow']
-        if r is not None and (row is None or r == row):
-            a = 0x5800 + 32 * r + it['col']
-            if w.get(a, peek(a)) == peek(it['abuf']):
-                w[a] = it['base']
+    kk = row - 2
+    if s & 7 or not 0 <= kk < 20 or 8 * kk >= N:
+        return w
+    k = (s // 8 + kk) % 22
+    n = min(8, N - 8 * kk)
+    for col in range(32):
+        i = 32 * k + col
+        if not sh.ctile[i]:
+            continue
+        t = page27[BGOVR - 0x2000 + sh.tiles[i]]
+        for j in range(n):
+            y = 8 * row + j
+            a = 0x4000 | ((y & 0xC0) << 5) | ((y & 7) << 8) | ((y & 0x38) << 2) | col
+            w[a] = tile_row(peek, t, j)
+        a = 0x5800 + 32 * row + col
+        if peek(a) == peek(0xB500 + i):
+            w[a] = peek(0xF200 | t | 128) & 127
     return w
 
 
-def item_patterns(entries, n):
-    """Pattern numbers of the item sprites (asm items): each cache entry gets the next pattern
-    after the figures' n on its first use this render; items with the same entry share it."""
-    pm, out = {}, []
-    for e in entries:
-        if e not in pm:
-            pm[e] = n + len(pm)
-        out.append(pm[e])
-    return out
+def obj_truth(peek, sh, i):
+    """The cell as the game draws it from the modelled objects: background tile (no opaque object) or
+    the opaque object over a blank cell, then each masked object (cell AND mask) OR gfx."""
+    k, col = i >> 5, i & 31
+    objs = sh.objects(i)
+    if objs and objs[0][0] == 'O':
+        rows = obj_rows(peek, 'O', objs[0][1])
+        objs = objs[1:]
+    else:
+        rows = [tile_row(peek, sh.tiles[i], j) for j in range(8)]
+    for _, code in objs:
+        g = 0xF600 + 16 * (code - 1)
+        rows = [(rows[j] & peek(g + 2 * j)) | peek(g + 2 * j + 1) for j in range(8)]
+    return rows
 
 
-def item_attrs(it, j, p):
-    """Sprite attributes 0-4 of item sprite j with 4-bit pattern p (asm items)."""
-    x = it['col'] * 8 + 32
-    return [x & 255, (it['y0'] + 32) & 255, ITEM_PAL << 4 | x >> 8, 0xC0 | p >> 1, 0x80 | (p & 1) << 6]
+def map_pos(kk, col):
+    """Byte offset of the tilemap entry (40x32, 2 bytes) of screen char row kk+2, column col."""
+    return ((kk + 6) * 40 + col + 4) * 2
+
+
+def sh_pos(kk, col):
+    """Byte offset in the shadow map (page 28) of screen char row kk+2, column col."""
+    return kk * 64 + col * 2
 
 
 def piece_plan(patch, ix, s_before, fmax=NSPR_MAX):
@@ -711,6 +903,7 @@ def _machine(Sim, mem, regs, ns):
     sim = Sim(mem, {})
     sim.registers[:] = regs
     R, ed = sim.registers, sim.after_ED
+    ns.R = R
     from skoolkit.simulator import R2
 
     def nn():
@@ -728,8 +921,7 @@ def _machine(Sim, mem, regs, ns):
 
     class Tr:
         def read_port(s, regs_, port):
-            ns.events.append(('in', port))
-            return 0xFF
+            return ns.read(port)
 
         def write_port(s, regs_, port, value, *x):
             ns.out(port, value)
@@ -769,7 +961,7 @@ def verify(patch, rzx_path, progress=None, stop=None):
             psite[a + k] = v
     site_bytes = set(psite)
     st = {'sim': None, 'frame': 0, 'afp': None, 'n': 0, 'prev_vis': set(), 'render': False, 'figw': set(),
-          'shadow': ItemShadow(), 'tmax': 0, 'tsum': 0, 'items': []}
+          'shadow': ObjShadow(), 'tmax': 0, 'tsum': 0, 'opq': {}, 'bands': set()}
     ns = NextState(patch)
     WATCH = set(range(58851, 58855)) | set(range(59539, 59547)) | {59547} | set(range(59087, 59090)) | \
         {65172, 65274, 65029, 65076} | set(range(60853, 60857)) | set(range(60839, 60843)) | \
@@ -944,40 +1136,91 @@ def verify(patch, rzx_path, progress=None, stop=None):
         return sp_
 
     def ev_render_start(real, R):
-        """Render start: original = patched (all registers), and the item list (page 27), the item
-        patterns (page 28), the item count and the figure limit equal the model of the shadow map."""
+        """Render start: original = patched (all registers); the back tilemap (page 14) = the model:
+        every visible object cell has a tile whose 32 bytes are the composed objects (or 0 when no
+        cache entry was free), every other play position 0; CTILE = the tile numbers; the tiles of
+        the map on screen are not touched. And the modelled objects = the original's back buffer."""
         peek = lambda a: MG(real, a)
         sh = st['shadow']
-        if not sh.same_as(ns.pages[PAGE_T]):
-            fail('render start: shadow map differs from the model', ())
-        items = items_list(peek, sh)
-        st['items'] = items
-        st['bands'] = set()
+        pg = ns.pages[PAGE_T]
+        if not sh.same_as(pg):
+            fail('render start: object map differs from the model', ())
+        for i in range(NCELLS):                     # the object model against the game's own cell
+            if sh.occupied(i) and sh.objo[i] != 0xFF and sh.flags[i] & 0x80:
+                k, col = i >> 5, i & 31
+                got = [peek(0x9F00 + 256 * k + col + 32 * j) for j in range(8)]
+                if got == obj_truth(peek, sh, i):
+                    c['object cells = the game\'s back buffer'] += 1
+                else:
+                    fail('object model differs from the back buffer', (i, sh.objects(i)))
+        tm = ns.pages[PAGE_TM]
+        fb = {}                                     # tiles of the map on screen
+        if ns.scratch[V_MSD] != 0xFF:
+            for kk in range(20):
+                for col in range(32):
+                    t = tm[map_pos(kk, col)]
+                    if t:
+                        fb[t] = bytes(tm[TDEF + 32 * t:TDEF + 32 * t + 32])
+        exp = obj_build(peek, sh, pg)
+        keys0 = bytes(pg[KEYS - 0x2000:KEYS - 0x2000 + 4 * NTILE])
         fx0 = st.get('fx', 0)
         sp_ = ev_simple(real, R, 58855, 'render start')
+        keys1 = bytes(pg[KEYS - 0x2000:KEYS - 0x2000 + 4 * NTILE])
+        c['tiles composed (cache misses)'] += sum(1 for t in range(NTILE) if keys0[4 * t:4 * t + 4] != keys1[4 * t:4 * t + 4])
         st['fxi'] = st.get('fxi', 0) + st.get('fx', 0) - fx0
+        st['T0'] = st.get('T0', 0) + st.get('fx', 0) - fx0
         if sp_ is not None:
             st['tsmax'] = max(st.get('tsmax', 0), sp_.registers[25] - R[25])
-        ni = ns.scratch[V_NI]
-        if ni != len(items) or ns.scratch[V_FMAX] != NSPR_MAX - len(items):
-            fail('render start: item count / figure limit', (ni, len(items), ns.scratch[V_FMAX]))
-        pg, pt = ns.pages[PAGE_T], ns.pages[IPAGE]
-        for j, it in enumerate(items[:ni]):
-            o = ILIST - 0x2000 + 16 * j
-            if not record_ok(pg[o:o + 16], it, pt):
-                fail('render start: item record / cached pattern differs from the model',
-                     (j, bytes(pg[o:o + 16]).hex(), item_record(it).hex()))
-        c['items listed'] += ni
-        if any(sh.codes[i] == 0xFF for i in range(NCELLS)):
-            c['renders with a several-object cell (left on the ULA)'] += 1
+        st['tok'] = exp is not None
+        if ns.scratch[V_TOK] != (1 if exp is not None else 0):
+            fail('render start: tilemap flag', (ns.scratch[V_TOK],))
+        if exp is None:
+            c['renders with the scroll not a multiple of 8 (tilemap off)'] += 1
+            return
+        if ns.scratch[V_MSB] != MG(real, 48782):
+            fail('render start: shadow map scroll', ())
+        shm = ns.pages[PAGE_SH]
+        nt = 0
+        for kk in range(20):
+            for col in range(32):
+                t, at = shm[sh_pos(kk, col)], shm[sh_pos(kk, col) + 1]
+                e = exp.get((kk, col))
+                if e is None:
+                    if t or at:
+                        fail('render start: tile where the model has no object', (kk, col, t))
+                    continue
+                i, key, data, attr = e
+                if pg[CTILE - 0x2000 + i] != t:
+                    fail('render start: CTILE differs from the map', (i, t, pg[CTILE - 0x2000 + i]))
+                if not t:
+                    fail('render start: object cell without a tile (cache full)', (i,))
+                    continue
+                nt += 1
+                if bytes(tm[TDEF + 32 * t:TDEF + 32 * t + 32]) != data or at != attr:
+                    fail('render start: tile differs from the composed objects', (i, key.hex(), t, at, attr))
+                if bytes(pg[KEYS - 0x2000 + 4 * t:KEYS - 0x2000 + 4 * t + 4]) != key:
+                    fail('render start: tile key', (i, t))
+        st['shadow_map'] = bytes(shm[:20 * 64])
+        for t, d in fb.items():
+            if bytes(tm[TDEF + 32 * t:TDEF + 32 * t + 32]) != d:
+                fail('render start: a tile on screen was overwritten', (t,))
+        for i in range(NCELLS):                     # CTILE only for the cells just assigned
+            if pg[CTILE - 0x2000 + i] and not any(e[0] == i for e in exp.values()):
+                fail('render start: stale CTILE', (i,))
+        sh.ctile[:] = pg[CTILE - 0x2000:CTILE - 0x2000 + NCELLS]
+        if not sh.same_as(pg, ('flags',)):
+            fail('render start: remembered item inks differ from the model', ())
+        c['object tiles shown'] += nt
+        c['max object tiles in a render'] = max(c['max object tiles in a render'], nt)
+        st['nmap'] = nt
 
     def ev_band(real, R):
         """Walker end of a band (59547): original = patched (all registers, memory), and the screen
-        changes = the item fix for this band's char row (from the walker's band address (59522))."""
+        changes = the object model's fix for this band's char row (from (59522))."""
         peek = lambda a: MG(real, a)
         ba = peek(59522) | peek(59523) << 8
         row = (ba >> 8 & 0x18) | (ba & 0xE0) >> 5
-        exp = {a: v for a, v in items_fix(peek, st['items'], row).items() if v != peek(a)}
+        exp = {a: v for a, v in obj_fix(peek, st['shadow'], ns.pages[PAGE_T], row).items() if v != peek(a)}
         o, p = OMem(real), PMem(real)
         so = _machine(Sim, o, list(R), NextState(patch))
         sp_ = _machine(Sim, p, list(R), ns)
@@ -987,6 +1230,7 @@ def verify(patch, rzx_path, progress=None, stop=None):
         fx0 = st.get('fx', 0)
         xt(so, sp_)
         st['fxi'] = st.get('fxi', 0) + st.get('fx', 0) - fx0
+        st['T1'] = st.get('T1', 0) + st.get('fx', 0) - fx0
         st['bands'].add(row)
         ro, rp = so.registers, sp_.registers
         diff = [k for k in CMP + [16, 17] if ro[k] != rp[k]]
@@ -997,27 +1241,48 @@ def verify(patch, rzx_path, progress=None, stop=None):
             fail('band: memory differs', (len(md), sorted(md)[:4]))
         got = {a: v for a, v in p.ov.items() if 0x4000 <= a < 0x5B00 and v != peek(a)}
         if got != exp:
-            fail('band: screen differs from the item model', (row, len(got), len(exp)))
+            fail('band: screen differs from the object model', (row, len(got), len(exp)))
         if ns.nr.get(0x50) != 0xFF or ns.nr.get(0x51) != 0xFF:
             fail('band: MMU not restored', ())
         c['bands checked'] += 1
-        c['item screen bytes changed at band ends'] += len(exp)
+        c['object screen bytes changed at band ends'] += len(exp)
 
     def ev_cell(real, R, pc):
-        """Item shadow hooks 60853 / 60839 / 60965: patched = original (registers incl. F, memory),
-        and the page-27 shadow map changes exactly as the Python model."""
-        i = st['shadow'].event(pc, R[0], R[4], R[5], R[10] * 256 + R[11], lambda a: MG(real, a))
+        """Cell hooks 60853 / 60839 / 60965: patched = original (registers incl. F, memory), the
+        page-27 object map changes exactly as the model, a dropped tile is cleared in both maps."""
+        sh = st['shadow']
+        i0 = cell_index(R[4], R[5])
+        if pc == 60853 and i0 is not None and sh.objo[i0] not in (0, 0xFF) and i0 in st['opq']:
+            # the game redraws an opaque object's cell with its base tile (pickup, or the cell
+            # reused, or a new round): the same map byte (BC' address) at the same scroll as when the
+            # object was drawn = the same map cell -> the tile must be TILES
+            same = st['opq'].pop(i0) == (R[18] * 256 + R[19], MG(real, 48782))
+            ok = R[0] == sh.tiles[i0]
+            c['opaque object cell redrawn: %s scroll, tile %s' % ('same' if same else 'other',
+                                                                   'as stored' if ok else 'different')] += 1
+            if same and not ok:
+                fail('opaque object: stored tile differs from the base tile the game draws', (i0, sh.tiles[i0], R[0]))
+        tm0 = bytes(ns.pages[PAGE_TM][:0x0A00])
+        sm0 = bytes(ns.pages[PAGE_SH][:20 * 64])
+        i, ct = sh.event(pc, R[0], R[4], R[5], lambda a: MG(real, a), R[18] * 256 + R[19], ns.pages[PAGE_T])
+        if pc == 60839 and i is not None:
+            st['opq'][i] = (R[18] * 256 + R[19], MG(real, 48782))
+            c['opaque object draws'] += 1
         fx0 = st.get('fx', 0)
-        ev_simple(real, R, ITEM_SITES[pc], 'cell hook %d' % pc)
+        ev_simple(real, R, OBJ_SITES[pc], 'cell hook %d' % pc)
         st['fxi'] = st.get('fxi', 0) + st.get('fx', 0) - fx0
+        st['T2'] = st.get('T2', 0) + st.get('fx', 0) - fx0
         if i is None:
             c['cell hook: not a back-buffer cell (ignored)'] += 1
-        pg = ns.pages[PAGE_T]
-        o = CODES - 0x2000
-        if i is not None and (pg[o + i] != st['shadow'].codes[i] or pg[o + BATTR - CODES + i] != st['shadow'].battr[i]):
-            fail('cell hook: shadow map differs from the model', (pc, i, pg[o + i], st['shadow'].codes[i]))
-        if ns.nr.get(0x51) != 0xFF:
-            fail('cell hook: MMU1 not restored', (pc,))
+        elif not sh.same_as(ns.pages[PAGE_T], ('tiles', 'objo', 'm1', 'm2', 'flags', 'ctile')):
+            fail('cell hook: object map differs from the model', (pc, i))
+        want, wsh = drop_tile(tm0, sm0, ns.scratch, i, ct)
+        if ct:
+            c['cell hook: tile dropped'] += 1
+        if bytes(ns.pages[PAGE_TM][:0x0A00]) != want or bytes(ns.pages[PAGE_SH][:20 * 64]) != wsh:
+            fail('cell hook: tilemaps changed other than the dropped tile', (pc, i))
+        if ns.nr.get(0x51) != 0xFF or ns.nr.get(0x52) != 10 or ns.nr.get(0x53) != 11:
+            fail('cell hook: MMU not restored', (pc,))
 
     def ev_render_end(real, R):
         n = ns.scratch[V_S]
@@ -1026,23 +1291,7 @@ def verify(patch, rzx_path, progress=None, stop=None):
             pg, hi, nsp = ns.scratch[CLIST + 3 * pi_:CLIST + 3 * pi_ + 3]
             want[pi_] = (bytes(ns.pages[pg][(hi - 0x20) * 256 + 256 - 64 * nsp:(hi - 0x20) * 256 + 256]), nsp)
         exp_attr = [list(ns.scratch[ATTRB + 5 * i:ATTRB + 5 * i + 5]) for i in range(n)]
-        peek = lambda a: MG(real, a)
-        items = st['items']
-        iw = items_fix(peek, items)
-        # the model against the ORIGINAL screen: every modelled item row shows the item's pixels,
-        # unless a figure was plotted over that byte during this render (the original draws figures
-        # into the ULA screen; the patched game shows them as sprites in front of the item sprite)
-        for it in items:
-            for j in it['vis']:
-                y = it['y0'] + j
-                a = 0x4000 | ((y & 0xC0) << 5) | ((y & 7) << 8) | ((y & 0x38) << 2) | it['col']
-                m, gf = peek(it['g'] + 2 * j), peek(it['g'] + 2 * j + 1)
-                if peek(a) & (~m | gf) & 255 == gf:
-                    c['item rows on screen as modelled'] += 1
-                elif a in st['figw']:
-                    c['item rows under a figure the original plotted at render time'] += 1
-                else:
-                    fail('item model differs from the original screen', (it['idx'], it['code'], j, hex(a)))
+        tok = ns.scratch[V_TOK]
         o, p = OMem(real), PMem(real)
         so = _machine(Sim, o, list(R), NextState(patch))
         sp_ = _machine(Sim, p, list(R), ns)
@@ -1063,27 +1312,24 @@ def verify(patch, rzx_path, progress=None, stop=None):
         if md:
             fail('render end: memory differs', (len(md), sorted(md)[:4]))
         if any(0x4000 <= a < 0x5B00 for a in o.ov) or any(0x4000 <= a < 0x5B00 for a in p.ov):
-            fail('render end: screen written here (items are fixed at band ends)', ())
-        for it in items:                    # every item row and attribute was on a band this render
-            need = {(it['y0'] + j) >> 3 for j in it['vis']} | ({it['arow']} if it['arow'] is not None else set())
-            if not need <= st['bands']:
-                fail('render end: item on a char row without a band end (not fixed)', (it['idx'], sorted(need - st['bands'])))
+            fail('render end: screen written here (objects are fixed at band ends)', ())
+        sh = st['shadow']
+        if tok:                                     # every object cell with a tile was on a band
+            s = MG(real, 48782)
+            for i in range(NCELLS):
+                if sh.ctile[i]:
+                    row = 2 + ((i >> 5) - s // 8) % 22
+                    if row not in st['bands']:
+                        fail('render end: object cell on a char row without a band end', (i, row))
+            N = MG(real, 58850)
+            errs = commit_errors(ns.pages[PAGE_TM], ns.pages[PAGE_SH], ns.nr, ns.clip_tm, N)
+            if errs or ns.scratch[V_MSD] != ns.scratch[V_MSB]:
+                fail('render end: tilemap commit', errs[:3])
+        elif ns.nr.get(0x6B) != 0 or ns.scratch[V_MSD] != 0xFF:
+            fail('render end: tilemap not switched off', (ns.nr.get(0x6B),))
         c['render end'] += 1
         if ns.nr.get(0x50) != 0xFF:
             fail('render end: slot 0 not restored', ())
-        ni = ns.scratch[V_NI]
-        if ni != len(items):
-            fail('items: sprite count differs from the model', (ni, len(items)))
-        ents = [ns.pages[PAGE_T][ILIST - 0x2000 + 16 * j + 11] for j in range(ni)]
-        for j, (it, pn) in enumerate(zip(items[:ni], item_patterns(ents, n))):
-            if ns.attr[j] != item_attrs(it, j, pn):
-                fail('items: sprite attributes differ from the model', (j, ns.attr[j], item_attrs(it, j, pn)))
-            b = (pn >> 1) * 256 + (pn & 1) * 128
-            if bytes(ns.pat[b:b + 64]) != it['pattern'] or any(ns.pat[b + 64:b + 128]):
-                fail('items: committed pattern differs from the item graphics', (j, it['idx'], it['code']))
-        c['item sprites'] += ni
-        c['max item sprites in a render'] = max(c['max item sprites in a render'], ni)
-        c['max sprites (items + figures) in a render'] = max(c['max sprites (items + figures) in a render'], ni + n)
         i = 0
         for pi_ in sorted(want):
             data, nsp = want[pi_]
@@ -1091,8 +1337,8 @@ def verify(patch, rzx_path, progress=None, stop=None):
                 b = (i >> 1) * 256 + (i & 1) * 128
                 if bytes(ns.pat[b:b + 64]) != data[64 * k:64 * k + 64] or any(ns.pat[b + 64:b + 128]):
                     fail('commit: pattern differs from the staged entry', (i,))
-                if ns.attr[ni + i] != exp_attr[i]:
-                    fail('commit: attributes differ from the staged ones', (i, ns.attr[ni + i], exp_attr[i]))
+                if ns.attr[i] != exp_attr[i]:
+                    fail('commit: attributes differ from the staged ones', (i, ns.attr[i], exp_attr[i]))
                 i += 1
         if i != n:
             fail('commit: sprite count', (i, n))
@@ -1100,9 +1346,9 @@ def verify(patch, rzx_path, progress=None, stop=None):
             fail('commit: sprites not on / MMU1 not restored', (ns.nr.get(0x15), ns.nr.get(0x51)))
         c['commits checked'] += 1
         vis = {i for i in range(128) if ns.attr[i][3] & 0x80}
-        if not vis <= set(range(ni + n)):
-            fail('render end: sprite visible that no piece drew this frame', (n, sorted(vis - set(range(ni + n)))[:6]))
-        c['max sprites in a render'] = max(c['max sprites in a render'], ni + n)
+        if not vis <= set(range(n)):
+            fail('render end: sprite visible that no piece drew this frame', (n, sorted(vis - set(range(n)))[:6]))
+        c['max sprites in a render'] = max(c['max sprites in a render'], n)
 
     def ev_end(real, R):
         c['walker calls (list ends)'] += 1
@@ -1152,9 +1398,9 @@ def verify(patch, rzx_path, progress=None, stop=None):
                             fail('interrupts enabled at a hook site', (pc,))
                         if pc == 59539:
                             ev_piece(mem, R)
-                        elif pc in ITEM_SITES:
+                        elif pc in OBJ_SITES:
                             if st['render']:
-                                fail('cell hook during a render (item list is built at render start)', (pc,))
+                                fail('cell hook during a render (the tilemap is built at render start)', (pc,))
                             ev_cell(mem, R, pc)
                         elif pc == 58851:
                             ev_render_start(mem, R)
@@ -1173,8 +1419,8 @@ def verify(patch, rzx_path, progress=None, stop=None):
                                 fail('limiter: not 28 MHz for the frame', (ns.nr.get(0x07),))
                         elif pc in (65029, 65076):
                             ev_simple(mem, R, 23698 if pc == 65029 else 23643, 'sprites off (non-play)')
-                            if ns.nr.get(0x15) != 0:
-                                fail('sprites not switched off', (pc,))
+                            if ns.nr.get(0x15) != 0 or ns.nr.get(0x6B) != 0 or ns.nr.get(0x7F) != 1:
+                                fail('sprites / tilemap not switched off, or no cache flush', (pc,))
                         elif pc == 65274:
                             if st.get('fr_on'):
                                 ft = st['facc'] + R[25] - st['f0'] + st['fx']
@@ -1235,6 +1481,8 @@ def verify(patch, rzx_path, progress=None, stop=None):
     c['render end T max (28 MHz us)'] = st['tmax'] * 1000000 // 28000000
     c['render end T avg (28 MHz us)'] = st['tsum'] * 1000000 // 28000000 // max(c['render end'], 1)
     c['render start T max (28 MHz us)'] = st.get('tsmax', 0) * 1000000 // 28000000
+    for k, name in (('T0', 'render start'), ('T1', 'bands'), ('T2', 'cell hooks')):
+        c['_T %s total (28 MHz ms)' % name] = st.get(k, 0) // 28000
     return c, dict(ex)
 
 
@@ -1256,7 +1504,8 @@ class _BankMem:
         return self.banks[b][a & 0x3FFF]
 
 
-def _pair(patch, bm, regs, n_before, scratch=None, pat=None, pages=None, stops=(59513, 59547), oregs=None):
+def _pair(patch, bm, regs, n_before, scratch=None, pat=None, pages=None, stops=(59513, 59547), oregs=None,
+          line_t=None, nr=None):
     """Run original and patched code from one dispatch state (PC 59539) on views of bm.
     Returns (orig_regs, orig_overlay, patched_regs, patched_overlay, NextState, errors)."""
     from .dizzy6 import _rw_simulator
@@ -1274,6 +1523,9 @@ def _pair(patch, bm, regs, n_before, scratch=None, pat=None, pages=None, stops=(
         for k, v in pages.items():
             ns.pages[k] = bytearray(v)
     ns.scratch[V_S] = n_before
+    ns.line_t = line_t
+    if nr:
+        ns.nr.update(nr)
     err = []
 
     class O:
@@ -1632,7 +1884,7 @@ def unit_tests(patch, rzx_path, want=40, frames=3000):
     t = staged(ns, 0)
     offs = {t.attr[i][2] >> 4 for i in range(4) if t.attr[i][3] & 0x80}
     c['class colour offset %s' % ('ok' if offs == {5} and cc.cfg.palette()[81] == 0xE0 else 'FAIL! %s' % offs)] += 1
-    item_unit_tests(patch, rstates, cstates, rom, c, rzx_path)
+    obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path)
     c['states'] = len(states)
     return c
 
@@ -1643,7 +1895,7 @@ def _with_bytes(patch, sym, old, new):
     b = copy.deepcopy(patch)
     a = patch.syms[sym]
     sc = bytearray(b.scratch)
-    if bytes(sc[a:a + len(old)]) != old:
+    if old is not None and bytes(sc[a:a + len(old)]) != old:
         raise ValueError('%s is not %s' % (sym, old.hex()))
     sc[a:a + len(new)] = new
     b.scratch = bytes(sc)
@@ -1651,13 +1903,70 @@ def _with_bytes(patch, sym, old, new):
     return b
 
 
-def item_unit_tests(patch, rstates, cstates, rom, c, rzx_path):
-    """Collectables: cell hooks (every register incl. F, shadow map = model) on synthetic cases; render
-    start (list + patterns), every band and the render end on synthetic shadow maps (wrapped top
-    rows, partial bottom, X8 columns, unknown colour, several-object cell, star-changed attribute,
-    the 64-item cap). Negative controls must be detected."""
+def drop_tile(tm0, sm0, scratch, i, ct):
+    """Expected map on screen (page 14, first 0x0A00 bytes) and shadow map (page 28, 1280 bytes) after a
+    cell hook on cell i that dropped tile ct (0: nothing dropped): the cell's entry cleared in each
+    map that shows it (scroll V_MSD / V_MSB)."""
+    want, wsh = bytearray(tm0), bytearray(sm0)
+    if ct:
+        for m, v in ((want, V_MSD), (wsh, V_MSB)):
+            s = scratch[v]
+            if s != 0xFF:
+                kk = ((i >> 5) - s // 8) % 22
+                if kk < 20:
+                    o = map_pos(kk, i & 31) if m is want else sh_pos(kk, i & 31)
+                    m[o] = m[o + 1] = 0
+    return bytes(want), bytes(wsh)
+
+
+def tilemap_errors(pg, tm, shm, exp, front_defs):
+    """Shadow map shm (page 28) and tile definitions (page 14 image tm) after render start against
+    obj_build's model `exp`; tiles of the map on screen (front_defs: tile -> 32 bytes before the
+    build) untouched. Returns a list of faults."""
+    errs = []
+    for kk in range(20):
+        for col in range(32):
+            t, at = shm[sh_pos(kk, col)], shm[sh_pos(kk, col) + 1]
+            e = exp.get((kk, col))
+            if e is None:
+                if t or at:
+                    errs.append(('tile without object', kk, col))
+                continue
+            i, key, data, attr = e
+            if pg[CTILE - 0x2000 + i] != t:
+                errs.append(('ctile', i))
+            if not t:
+                errs.append(('no tile', i))
+            elif bytes(tm[TDEF + 32 * t:TDEF + 32 * t + 32]) != data or at != attr:
+                errs.append(('content', i, key.hex()))
+    for t, d in front_defs.items():
+        if bytes(tm[TDEF + 32 * t:TDEF + 32 * t + 32]) != d:
+            errs.append(('on-screen tile overwritten', t))
+    if any(tm[TDEF:TDEF + 32]):
+        errs.append(('tile 0 written',))
+    return errs
+
+
+def commit_errors(tm, shm, nr, clip, N):
+    """Render end with the tilemap on: the shadow map copied into the map on screen (rows 6-25,
+    columns 4-35; the rest untouched = 0), NextRegs $6E/$6F/$6B and the clip window."""
+    errs = []
+    for kk in range(20):
+        if bytes(tm[map_pos(kk, 0):map_pos(kk, 0) + 64]) != bytes(shm[sh_pos(kk, 0):sh_pos(kk, 0) + 64]):
+            errs.append(('map row', kk))
+    if not (nr.get(0x6E) == 0x80 and nr.get(0x6F) == 0x80 | (TDEF >> 8) and nr.get(0x6B) == 0x81 and
+            clip == [16, 143, 48, 47 + N]):
+        errs.append(('registers', nr.get(0x6E), nr.get(0x6F), nr.get(0x6B), clip))
+    return errs
+
+
+def obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path):
+    """Objects on the tilemap: cell hooks (every register incl. F, object map = model, dropped tile
+    cleared in both maps) on random states; render paths (render start -> every band -> render
+    end) on synthetic object maps; tile cache (hit, on-screen tiles kept, flush); raster wait;
+    profile tables. Every negative control must be detected."""
     import random
-    rnd = random.Random(11)
+    rnd = random.Random(23)
 
     class Mod:
         def __init__(s, bm, ov):
@@ -1666,184 +1975,312 @@ def item_unit_tests(patch, rstates, cstates, rom, c, rzx_path):
         def __getitem__(s, a):
             return s.ov.get(a, s.bm[a])
     if not all(cstates.values()) or not rstates:
-        c['item states FAIL! (not collected: %s)' % {k: len(v) for k, v in cstates.items()}] += 1
+        c['object states FAIL! (not collected: %s)' % {k: len(v) for k, v in cstates.items()}] += 1
         return
 
+    def rnd_shadow():
+        sh = ObjShadow()
+        for i in range(NCELLS):
+            r = rnd.random()
+            if r < 0.5:
+                continue
+            sh.tiles[i] = rnd.randrange(256)
+            sh.flags[i] = rnd.choice((0, 0x80, 0x80, 0x83, 0x8C))
+            sh.objo[i] = rnd.choice((0, 0, 3, 20, 99, 0xFF))
+            sh.m1[i] = rnd.choice((0, 0, 0x50, 0x5A, 0x12))
+            sh.m2[i] = rnd.choice((0, 0x30, 0x34)) if sh.m1[i] & 0x0F else 0
+            sh.ctile[i] = rnd.choice((0, 0, 7, 150))
+        return sh
+
     def cell_cases(pt):
-        out = 0
-        bad = 0
+        out = bad = 0
         for site, sts in cstates.items():
             for banks, o7, R0 in sts:
                 bm = _BankMem(banks, o7, rom)
-                for case in range(24):
+                for case in range(30):
                     r = list(R0)
                     r[24] = site
                     if site == 60853:
                         r[0] = rnd.randrange(256)
                     else:
-                        r[0] = rnd.choice((0, 1, 2, 7, 13, 14, 15, 19, 255))
+                        r[0] = rnd.choice((0, 1, 2, 7, 13, 14, 15, 19, 99, 190, 255))
+                    if site == 60965 and case % 6 == 2:
+                        r[0] = rnd.choice((7, 13))
                     d, e = rnd.choice(((0x9F, 0), (0xB4, 31), (0xA5, 17), (0x9E, 3), (0xB5, 3), (0xA0, 32),
-                                       (0xAA, rnd.randrange(32)), (0x9F + rnd.randrange(22), rnd.randrange(32))))
+                                       (0x9F + rnd.randrange(22), rnd.randrange(32))))
                     r[4], r[5] = d, e
-                    iy = rnd.choice((60699, 60720, 0x6D3C, rnd.randrange(65536)))
-                    r[10], r[11] = iy >> 8, iy & 255
                     r[1] = (r[1] & 0xFE) | rnd.randrange(2)
-                    sh = ItemShadow()
+                    bc2 = rnd.choice((0x6000 + rnd.randrange(0x2000), 0x8000 + rnd.randrange(0x4000),
+                                      0xC000 + rnd.randrange(0x4000)))
+                    r[18], r[19] = bc2 >> 8, bc2 & 255
+                    sh = rnd_shadow()
+                    i0 = cell_index(d, e)
+                    if i0 is not None and case % 4 == 0:
+                        sh.ctile[i0] = 1 + rnd.randrange(NTILE - 1)         # a tile to drop
+                    if i0 is not None and site == 60965 and case % 5 == 1:
+                        sh.objo[i0], sh.m1[i0], sh.m2[i0] = 0, 0x12, 0x34    # list full
                     pg = bytearray(patch.tpage)
-                    for i in range(NCELLS):
-                        sh.codes[i] = rnd.choice((0, 0, 0, 3, 7, 0xFF))
-                        sh.battr[i] = rnd.randrange(256)
-                    i0 = ItemShadow.cell(d, e)
-                    if i0 is not None and site == 60965 and case % 3 == 0:
-                        sh.codes[i0] = r[0]                    # same code again
-                    o = CODES - 0x2000
-                    pg[o:o + NCELLS] = sh.codes
-                    pg[o + BATTR - CODES:o + BATTR - CODES + NCELLS] = sh.battr
-                    pg[RCNT - 0x2000:RCNT - 0x2000 + 22] = sh.rcnt()
-                    sh.event(site, r[0], d, e, iy, lambda a: bm[a])
-                    ro, ov, rp, pv, ns, err = _pair(pt, bm, r, 0, pages={PAGE_T: pg}, stops=(ITEM_SITES[site],))
+                    pg[OCLASS - 0x2000 + 99] = 2                            # leave as drawn
+                    pg[MCLASS - 0x2000 + 13] = 2
+                    pg[OCLASS - 0x2000 + 19] = 0x51                         # rainbow, fixed ink
+                    pg[MCLASS - 0x2000 + 7] = 0x30                          # item, fixed ink
+                    sh.load(pg)
+                    tm = bytearray(rnd.randrange(256) for _ in range(8192))
+                    shm = bytearray(rnd.randrange(256) for _ in range(8192))
+                    sc = bytearray(pt.scratch)
+                    sc[V_MSB] = rnd.choice((0xFF, 0, 8 * rnd.randrange(22)))
+                    sc[V_MSD] = rnd.choice((0xFF, 8 * rnd.randrange(22)))
+                    i, ct = sh.event(site, r[0], d, e, lambda a: bm[a], bc2, pg)
+                    want, wsh = drop_tile(bytes(tm[:0x0A00]), bytes(shm[:20 * 64]), sc, i, ct)
+                    ro, ov, rp, pv, ns, err = _pair(pt, bm, r, 0, scratch=sc,
+                                                    pages={PAGE_T: pg, PAGE_TM: tm, PAGE_SH: shm},
+                                                    stops=(OBJ_SITES[site],))
                     ok = not err and all(ro[k] == rp[k] for k in CMP + [16, 17]) and ov.ov == pv.ov and \
-                        sh.same_as(ns.pages[PAGE_T]) and ns.nr.get(0x50) == 0xFF and ns.nr.get(0x51) == 0xFF
+                        sh.same_as(ns.pages[PAGE_T]) and bytes(ns.pages[PAGE_TM][:0x0A00]) == want and \
+                        ns.pages[PAGE_TM][0x0A00:] == tm[0x0A00:] and \
+                        bytes(ns.pages[PAGE_SH][:20 * 64]) == wsh and ns.pages[PAGE_SH][20 * 64:] == shm[20 * 64:] and \
+                        ns.nr.get(0x50) == 0xFF and ns.nr.get(0x51) == 0xFF and ns.nr.get(0x52) == 10 and \
+                        ns.nr.get(0x53) == 11
                     out += 1
                     bad += not ok
         return out, bad
     n, bad = cell_cases(patch)
-    c['item cell hooks (registers incl. F, shadow = model) %s' % ('ok' if not bad else 'FAIL!')] += n
-    for sym, old, new, what in (('s_ov.wr', b'\x7E\x70', b'\x00\x00', 'overlay does not clear the cell'),
-                                ('s_ov.rla', b'\x17', b'\x00', 'carry not restored')):
-        n, bad = cell_cases(_with_bytes(patch, sym, old, new))
-        c['item cell hook negative control (%s) %s' % (what, 'detected' if bad else 'NOT DETECTED!')] += 1
+    c['object cell hooks (registers incl. F, object map = model, dropped tiles) %s' % ('ok' if not bad else 'FAIL!')] += n
+    for sym, new, what in (('s_ov.wr', b'\x00', 'opaque object not recorded'),
+                           ('s_ov.rla', b'\x00', 'carry not restored'),
+                           ('oafter.tg', b'\x00', 'occupancy mask not kept')):
+        n, bad = cell_cases(_with_bytes(patch, sym, None, new))
+        c['object cell hook negative control (%s) %s' % (what, 'detected' if bad else 'NOT DETECTED!')] += 1
 
-    def render_case(pt, bm, R, sh, nfig):
-        """render start -> every band -> render end on memory bm with shadow sh. Returns failures."""
+    def scen(bm, pg):
+        """Synthetic object map on real game memory: every kind of cell."""
+        s, N = 16, 155                       # cell rows wrap; the bottom char row is partial
+        ov = {48782: s, 58850: N}
+        sh = ObjShadow()
+        cells = []
+
+        def put(kk, col, tile, objo=0, m=(), flags=0x80, ink=None):
+            k = (s // 8 + kk) % 22
+            i = 32 * k + col
+            sh.tiles[i], sh.objo[i], sh.flags[i] = tile, objo, flags
+            ms = list(m) + [0] * (4 - len(m))
+            sh.m1[i], sh.m2[i] = ms[0] << 4 | ms[1], ms[2] << 4 | ms[3]
+            if ink is not None:
+                ov[0xB500 + i] = ink
+            cells.append(i)
+        put(0, 0, 0x23, 20, ink=0x42)                    # fruit alone (ink remembered)
+        put(1, 31, 0x9C, 99, ink=0x05)                   # fruit on a mirrored tile, X edge
+        put(2, 5, 0x40, 5)                               # rainbow piece drawn opaque
+        put(3, 6, 0x41, 0, (3, 4))                       # two masked rainbow pieces on the base tile
+        put(4, 7, 0x42, 22, (9,), flags=0x8B, ink=0x46)  # fruit + rainbow, remembered ink 11
+        put(5, 8, 0x43, 22, (9,), flags=0x80, ink=0x46)  # fruit + rainbow, ink not remembered
+        put(6, 9, 0x44, 0, (1, 2, 3, 4))                 # four masked
+        put(7, 10, 0x45, 0xFF)                           # unsupported: left as drawn
+        put(8, 11, 0x46, 30, flags=0)                    # background unknown: left as drawn
+        put(9, 12, 0x47, 31)                             # class: left on the ULA (profile)
+        put(10, 13, 0x48, 32)                            # class: fixed ink, no border
+        put(19, 14, 0x49, 40)                            # bottom char row, partial (N = 155)
+        put(20, 15, 0x4A, 41)                            # off screen
+        sh.ctile[cells[-1]] = 7                          # with a tile left from an earlier render
+        put(11, 4, 0x4B, 20, ink=0x42)                   # same key as the first: shared tile
+        pg[OCLASS - 0x2000 + 31] = 2
+        pg[OCLASS - 0x2000 + 32] = 4 | ink_index(0x45) << 4
+        ov[0x5800 + 32 * 12 + 9] = 0x41                  # a star changed this attribute
+        sh.fix_flags(pg)
+        return Mod(bm, ov), sh
+
+    def render_case(pt, bm, R, sh, pg, tm, shm, sc, line_t=None, nr7f=0):
+        """render start -> every band -> render end. Returns (faults, ns after render start, model,
+        ns after render end)."""
         fails = []
         peek = lambda a: bm[a]
-        pg = bytearray(patch.tpage)
-        o = CODES - 0x2000
-        pg[o:o + NCELLS] = sh.codes
-        pg[o + BATTR - CODES:o + BATTR - CODES + NCELLS] = sh.battr
-        pg[RCNT - 0x2000:RCNT - 0x2000 + 22] = sh.rcnt()
-        items = items_list(peek, sh)
+        sh.load(pg)
+        front_defs = {}
+        if sc[V_MSD] != 0xFF:
+            for kk in range(20):
+                for col in range(32):
+                    t = tm[map_pos(kk, col)]
+                    if t:
+                        front_defs[t] = bytes(tm[TDEF + 32 * t:TDEF + 32 * t + 32])
+        exp = obj_build(peek, sh, pg)
         r = list(R)
         r[24] = 58851
-        ro, ov, rp, pv, ns, err = _pair(pt, bm, r, 0, pages={PAGE_T: pg}, stops=(58855,))
+        ro, ov, rp, pv, ns, err = _pair(pt, bm, r, 0, scratch=sc, pages={PAGE_T: pg, PAGE_TM: tm, PAGE_SH: shm},
+                                        stops=(58855,), nr={0x7F: nr7f})
         if err or any(ro[k] != rp[k] for k in CMP + [16, 17]) or ov.ov != pv.ov:
             fails.append('render start registers/memory')
-        if ns.scratch[V_NI] != len(items) or ns.scratch[V_FMAX] != NSPR_MAX - len(items):
-            fails.append('count %d/%d' % (ns.scratch[V_NI], len(items)))
-        for j, it in enumerate(items):
-            q = ILIST - 0x2000 + 16 * j
-            if not record_ok(ns.pages[PAGE_T][q:q + 16], it, ns.pages[IPAGE]):
-                fails.append('record / pattern %d' % j)
-        sc, pages = bytes(ns.scratch), {k: bytes(v) for k, v in ns.pages.items()}
+        if ns.nr.get(0x51) != 0xFF or ns.nr.get(0x52) != 10 or ns.nr.get(0x53) != 11:
+            fails.append('render start MMU')
+        pg2, tm2, shm2 = ns.pages[PAGE_T], ns.pages[PAGE_TM], ns.pages[PAGE_SH]
+        fails += tilemap_errors(pg2, tm2, shm2, exp, front_defs)
+        assigned = {e[0] for e in exp.values()}
+        if any(pg2[CTILE - 0x2000 + i] and i not in assigned for i in range(NCELLS)):
+            fails.append('stale CTILE')
+        sh.ctile[:] = pg2[CTILE - 0x2000:CTILE - 0x2000 + NCELLS]
+        if not sh.same_as(pg2):
+            fails.append('object map after render start')
+        sc2, pages = bytes(ns.scratch), {k: bytes(v) for k, v in ns.pages.items()}
         for row in range(2, 24):
             ba = 0x4000 | (row & 0x18) << 8 | (row & 7) << 5
             m2 = Mod(bm, {59522: ba & 255, 59523: ba >> 8})
-            exp = {a: v for a, v in items_fix(lambda a: m2[a], items, row).items() if v != m2[a]}
+            want = {a: v for a, v in obj_fix(lambda a: m2[a], sh, pg2, row).items() if v != m2[a]}
             r = list(R)
             r[24] = 59547
-            ro, ov, rp, pv, ns2, err = _pair(pt, m2, r, sc[V_S], scratch=sc, pages=pages, stops=(59550,))
+            ro, ov, rp, pv, ns2, err = _pair(pt, m2, r, sc2[V_S], scratch=sc2, pages=pages, stops=(59550,))
             got = {a: v for a, v in pv.ov.items() if 0x4000 <= a < 0x5B00 and v != m2[a]}
-            if err or any(ro[k] != rp[k] for k in CMP + [16, 17]) or got != exp or \
+            if err or any(ro[k] != rp[k] for k in CMP + [16, 17]) or got != want or \
                     ns2.nr.get(0x50) != 0xFF or ns2.nr.get(0x51) != 0xFF:
                 fails.append('band %d' % row)
-        sc2 = bytearray(sc)
-        sc2[V_NP] = 0
+        sc3 = bytearray(sc2)
+        sc3[V_NP] = 0
         r = list(R)
         r[24] = 59087
-        ro, ov, rp, pv, ns3, err = _pair(pt, bm, r, nfig, scratch=sc2, pages=pages, stops=(59092,))
+        r[25] = 0
+        ro, ov, rp, pv, ns3, err = _pair(pt, bm, r, 0, scratch=sc3, pages=pages, stops=(59092,), line_t=line_t)
+        render_case.ns3 = ns3
         got = {a: v for a, v in pv.ov.items() if 0x4000 <= a < 0x5B00 and v != bm[a]}
         if err or any(ro[k] != rp[k] for k in CMP) or got:
             fails.append('render end screen/registers')
-        ents = [ns3.pages[PAGE_T][ILIST - 0x2000 + 16 * j + 11] for j in range(len(items))]
-        for j, (it, pn) in enumerate(zip(items, item_patterns(ents, nfig))):
-            b = (pn >> 1) * 256 + (pn & 1) * 128
-            if ns3.attr[j] != item_attrs(it, j, pn) or bytes(ns3.pat[b:b + 64]) != it['pattern']:
-                fails.append('sprite %d' % j)
-        return fails, items
+        if exp is not None:
+            e = commit_errors(ns3.pages[PAGE_TM], ns3.pages[PAGE_SH], ns3.nr, ns3.clip_tm, bm[58850])
+            if e or ns3.scratch[V_MSD] != ns3.scratch[V_MSB] or ns3.nr.get(0x52) != 10 or ns3.nr.get(0x53) != 11:
+                fails.append('tilemap commit %s' % e[:2])
+        return fails, ns, exp, ns3
 
-    def scenarios(bm):
-        """(memory, shadow): wrap/partial/edge columns/colour cases; and the 64-item cap."""
-        out = []
-        s, N = 3, 155                       # scroll not a multiple of 8, play area 155 rows
-        ov = {48782: s, 58850: N}
-        sh = ItemShadow()
-        k_wrap = ((s + 173) // 8) % 22       # 8k - s = 173 mod 176: rows 3-7 wrap to the top
-        k_part = ((s + 149) // 8) % 22       # rows crossing the bottom of the play area
-        for k, col, code, base in ((k_wrap, 0, 1, 0x47 | 128), (k_part, 31, 14, 0x0D | 128), (5, 27, 7, 0),
-                                   (6, 28, 9, 0x30 | 128), (9, 12, 3, 0x05 | 128), (11, 4, 12, 0x46 | 128)):
-            i = 32 * k + col
-            sh.codes[i], sh.battr[i] = code, base
-        sh.codes[32 * 7 + 7] = 0xFF                                  # several objects: left on the ULA
-        i = 32 * 9 + 12                                              # attribute changed by a star
-        kk = (9 - (s >> 3)) % 22
-        ov[0x5800 + 32 * (kk + 2) + 12] = 0x42
-        out.append((Mod(bm, ov), sh))
-        sh2 = ItemShadow()                                           # 90 items: IMAX (80) listed
-        for i in range(90):
-            k, col = 2 + i // 32, i % 32
-            sh2.codes[32 * k + col] = 1 + i % 14
-            sh2.battr[32 * k + col] = 0x38 | 128
-        out.append((Mod(bm, {48782: 0, 58850: 160}), sh2))
-        return out
-    nfail, ncase = [], 0
+    banks, o7, R = rstates[0]
+    bm0 = _BankMem(banks, o7, rom)
+
+    def fresh(pt=patch):
+        sc = bytearray(pt.scratch)
+        sc[V_MSB] = sc[V_MSD] = 0xFF
+        return sc, bytearray(8192), bytearray(rnd.randrange(256) for _ in range(8192))
+
+    def again(ns3, garbage=None):
+        """State for the next render after ns3 (render end): same pages, next frame, shadow map
+        overwritten (rebuilt from scratch at render start)."""
+        pg2, tm2, sc2 = bytearray(ns3.pages[PAGE_T]), bytearray(ns3.pages[PAGE_TM]), bytearray(ns3.scratch)
+        shm2 = bytearray(ns3.pages[PAGE_SH])
+        for o in range(20 * 64):
+            shm2[o] = rnd.randrange(256) if garbage is None else garbage
+        sc2[V_FRM] = (sc2[V_FRM] + 1) & 255
+        return pg2, tm2, shm2, sc2
+
+    nfail, ntiles = [], 0
     for banks, o7, R in rstates:
         bm = _BankMem(banks, o7, rom)
-        for m, sh in scenarios(bm):
-            f, items = render_case(patch, m, R, sh, 5)
-            ncase += 1
-            nfail += f
-            c['item render cases: items listed'] += len(items)
-    c['item render path (start, %d bands, end; model) %s' % (22, 'ok' if not nfail else 'FAIL! %s' % nfail[:4])] += ncase
-    banks, o7, R = rstates[0]
-    bm = _BankMem(banks, o7, rom)
-    m, sh = scenarios(bm)[0]
-    rs = patch.syms['ifix.rsel']
-    for sym, old, new, what in (('ifix.mand', b'\xDD\xA5', b'\x00\x00', 'mask not applied'),
-                                ('ipbuild.inkx', b'\x07\x07\x07\x07\xB0', b'\x3E\x11\x00\x00\x00', 'ink drawn as outline'),
-                                ('ipat.nb', patch.scratch[patch.syms['ipat.nb']:patch.syms['ipat.nb'] + 3], b'\x00\x00\x00',
-                                 'pattern never built'),
-                                ('ifix.rsel', patch.scratch[rs:rs + 2], b'\x00\x00', 'band fixes rows of other bands')):
-        bp = _with_bytes(patch, sym, old, new)
-        f, _ = render_case(bp, m, R, sh, 5)
-        c['item render negative control (%s) %s' % (what, 'detected' if f else 'NOT DETECTED!')] += 1
-    # list reuse (same scroll, no cell change): the second render start keeps the list but must
-    # pick up an ink the game changed in the attribute buffer (51914 does in the bonus scene)
-    def reuse_case(pt):
-        banks, o7, R = rstates[0]
-        bm = _BankMem(banks, o7, rom)
-        m, sh = scenarios(bm)[0]
         pg = bytearray(patch.tpage)
-        o = CODES - 0x2000
-        pg[o:o + NCELLS] = sh.codes
-        pg[o + BATTR - CODES:o + BATTR - CODES + NCELLS] = sh.battr
-        pg[RCNT - 0x2000:RCNT - 0x2000 + 22] = sh.rcnt()
-        r = list(R)
+        m, sh = scen(bm, pg)
+        sc, tm, shm = fresh()
+        f, ns, exp, ns3 = render_case(patch, m, R, sh, pg, tm, shm, sc)
+        nfail += f
+        ntiles += sum(1 for e in exp.values())
+        pg2, tm2, shm2, sc2 = again(ns3)            # second render: same objects -> cache hits
+        f, _, _, _ = render_case(patch, m, R, sh, pg2, tm2, shm2, sc2)
+        nfail += f
+    c['object render path (start, 22 bands, end; tiles, background, inks, classes) %s' % (
+        'ok' if not nfail else 'FAIL! %s' % nfail[:4])] += len(rstates)
+    c['object render cases: tiles checked'] += ntiles
+
+    def one(pt, second=False):
+        pg = bytearray(patch.tpage)
+        m, sh = scen(bm0, pg)
+        sc, tm, shm = fresh(pt)
+        f, ns, _, ns3 = render_case(pt, m, R0, sh, pg, tm, shm, sc)
+        if not second:
+            return f
+        pg2, tm2, shm2, sc2 = again(ns3, 0x55)
+        f2, _, _, _ = render_case(pt, m, R0, sh, pg2, tm2, shm2, sc2)
+        return f + f2
+    R0 = R
+    for sym, new, what, second in (('cpix.bk', b'\xE6\x00', 'no black border', False),
+                                   ('s_bend.wt', b'\x00', 'background tile not drawn', False),
+                                   ('obuild.cb', b'\x00\x00\x00\x00', 'map not cleared', True),
+                                   ('ocomp.selx', b'\xEE\x00', 'fruit behind rainbows', False),
+                                   ('obuild.tj', b'\x18', 'off-screen tile left assigned', False),
+                                   ('obuild.vi', b'\x00\x00', 'one-ink tile with the ink in its pixels', False)):
+        f = one(_with_bytes(patch, sym, None, new), second)
+        c['object render negative control (%s) %s' % (what, 'detected' if f else 'NOT DETECTED!')] += 1
+
+    # tile cache: every entry on screen (used last render), one new key -> no tile, nothing overwritten
+    def cache_case(pt):
+        pg = bytearray(patch.tpage)
+        m, sh = scen(bm0, pg)
+        sc, tm, shm = fresh(pt)
+        prv = sc[V_FRM] | 0x80                    # s_rs counts this render before obuild: the
+        for t in range(1, NTILE):                 # counter's present value = the previous render
+            pg[STAMP - 0x2000 + t] = prv
+            pg[KEYS - 0x2000 + 4 * t:KEYS - 0x2000 + 4 * t + 4] = bytes([200, 0, 0, t])
+            tm[TDEF + 32 * t:TDEF + 32 * t + 32] = bytes([t]) * 32
+            tm[map_pos((t - 1) // 32, (t - 1) % 32)] = t
+        sc[V_MSD] = 16
+        sh2 = ObjShadow()
+        i = 32 * ((16 // 8 + 3) % 22) + 3
+        sh2.tiles[i], sh2.objo[i], sh2.flags[i] = 0x20, 20, 0x80
+        sh2.fix_flags(pg)
+        sh2.load(pg)
+        r = list(R0)
         r[24] = 58851
-        ro, ov, rp, pv, ns, err = _pair(pt, m, r, 0, pages={PAGE_T: pg}, stops=(58855,))
-        items0 = items_list(lambda a: m[a], sh)
-        a0 = items0[0]['abuf']
-        m2 = Mod(m, {a0: (m[a0] & 0xF8) | ((m[a0] & 7) + 1) % 8})
-        items = items_list(lambda a: m2[a], sh)
-        sc = bytearray(ns.scratch)
-        sc[V_FRM] = (sc[V_FRM] + 1) & 255                      # next render
-        ro, ov, rp, pv, ns2, err = _pair(pt, m2, r, 0, scratch=sc, pages={k: bytes(v) for k, v in ns.pages.items()},
-                                         stops=(58855,))
-        bad = bool(err) or ns2.scratch[0x97] != 0 or ns2.scratch[V_NI] != len(items)
-        for j, it in enumerate(items):
-            q = ILIST - 0x2000 + 16 * j
-            bad |= not record_ok(ns2.pages[PAGE_T][q:q + 16], it, ns2.pages[IPAGE])
-        return bad, items0[0]['ink'] != items[0]['ink']
-    bad, changed = reuse_case(patch)
-    c['item list reuse + ink refresh %s' % ('ok' if not bad and changed else 'FAIL!')] += 1
-    bad, changed = reuse_case(_with_bytes(patch, 'ikeep.ref', b'\x28', b'\x18'))
-    c['item render negative control (inks never refreshed) %s' % ('detected' if bad else 'NOT DETECTED!')] += 1
-    # through the verifier: figures committed over the item sprite numbers must fail
-    bc = _with_bytes(patch, 's_re.fo', b'\x81', b'\x00')
-    cc, _ = verify(bc, rzx_path, stop=1500)
-    c['item commit negative control (figure sprites not after the items) %s' % (
-        'detected' if any(k.startswith(('commit: attributes', 'items: sprite attributes')) for k in cc)
-        else 'NOT DETECTED!')] += 1
+        ro, ov, rp, pv, ns, err = _pair(pt, m, r, 0, scratch=sc, pages={PAGE_T: pg, PAGE_TM: tm, PAGE_SH: shm},
+                                        stops=(58855,))
+        tm2, shm2 = ns.pages[PAGE_TM], ns.pages[PAGE_SH]
+        kept = all(tm2[TDEF + 32 * t:TDEF + 32 * t + 32] == bytes([t]) * 32 for t in range(1, NTILE))
+        return not err and kept and shm2[sh_pos(3, 3)] == 0 and ns.pages[PAGE_T][CTILE - 0x2000 + i] == 0
+    ok = cache_case(patch)
+    c['tile cache full: on-screen tiles kept, cell left as drawn %s' % ('ok' if ok else 'FAIL!')] += 1
+    ok = cache_case(_with_bytes(patch, 'olook.np', None, b'\x00\x00'))
+    c['tile cache negative control (on-screen tile reused) %s' % ('detected' if not ok else 'NOT DETECTED!')] += 1
+
+    # flush (NextReg $7F set by the sprites-off hooks): a stale entry (graphics changed) is rebuilt
+    def flush_case(pt):
+        pg = bytearray(patch.tpage)
+        m, sh = scen(bm0, pg)
+        sc, tm, shm = fresh(pt)
+        f, ns, exp, ns3 = render_case(pt, m, R0, sh, pg, tm, shm, sc)
+        pg2, tm2, shm2, sc2 = again(ns3)
+        for t in range(1, NTILE):                           # every cached tile now stale
+            if pg2[STAMP - 0x2000 + t]:
+                tm2[TDEF + 32 * t:TDEF + 32 * t + 32] = bytes(32)
+        sc2[V_MSD] = 0xFF                                   # nothing on screen to protect
+        sc2[V_FRM] = (sc2[V_FRM] + 1) & 255
+        f2, _, _, _ = render_case(pt, m, R0, sh, pg2, tm2, shm2, sc2, nr7f=1)
+        return f + f2
+    f = flush_case(patch)
+    c['tile cache flush (stale tiles rebuilt) %s' % ('ok' if not f else 'FAIL! %s' % f[:3])] += 1
+    f = flush_case(_with_bytes(patch, 'obuild.fj', b'\x28', b'\x18'))
+    c['tile cache negative control (flush ignored) %s' % ('detected' if f else 'NOT DETECTED!')] += 1
+
+    # raster-synced commit: no sprite / tilemap change while the beam is in the play area
+    def raster(pt):
+        res = {}
+        pg = bytearray(patch.tpage)
+        m, sh = scen(bm0, pg)
+        for l0 in (100, 175, 15, 176, 200, 300):
+            sc, tm, shm = fresh(pt)
+            f, _, _, ns = render_case(pt, m, R0, sh, bytearray(pg), tm, shm, sc, line_t=l0)
+            l6e = None if ns.t6e is None else (l0 + ns.t6e // LINE_T) % 312
+            res[l0] = (f, l6e)
+        ok = all(not f and l is not None for f, l in res.values())
+        if ok:
+            d = (res[200][1] - 200) % 312
+            for l0, (f, l) in res.items():
+                if PLAY_TOP <= l0 < PLAY_END:
+                    ok &= PLAY_END <= l <= PLAY_END + d
+                else:
+                    ok &= (l - l0) % 312 == d
+        return ok, res
+    ok, res = raster(patch)
+    c['commit raster wait (line at the tilemap switch %s) %s' % ({k: v[1] for k, v in res.items()},
+                                                                 'ok' if ok else 'FAIL!')] += 1
+    ok, _ = raster(_with_bytes(patch, 'rwait.lp', None, b'\xC9\x00'))
+    c['commit negative control (no raster wait) %s' % ('detected' if not ok else 'NOT DETECTED!')] += 1
+
+    # profile tables
+    o, mm, bg = object_tables({'opaque': {'1-3': {'group': 'rainbow'}, '20': {'ula': True},
+                                          '21': {'border': False, 'ink': 2, 'bright': True}},
+                               'masked': {'5': {'group': 'rainbow'}}, 'background': {'7': 9}})
+    ok = o[1:4] == b'\x01\x01\x01' and o[0] == 0 and o[4] == 0 and o[20] == 2 and o[21] == 4 | 10 << 4 and \
+        mm[5] == 1 and mm[6] == 0 and bg[7] == 9 and bg[8] == 8
+    c['profile object tables %s' % ('ok' if ok else 'FAIL!')] += 1
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1912,17 +2349,22 @@ def auto(a, z80, name, out, say):
         say('            commits checked %d (patterns + attributes = staged), non-play sprites-off %d, '
             'overflow entries %d' % (c['commits checked'], c['sprites off (non-play)'],
                                      c['overflow entries (4 ways in use)']))
-        say('            items: %d cell hooks (60853 %d / 60839 %d / 60965 %d), %d item sprites (max %d per render, '
-            'max %d sprites in all), %d bands checked, %d item screen bytes fixed at band ends; item rows: %d as '
-            'modelled on the original screen, %d under a figure' % (
+        say('            objects: %d cell hooks (60853 %d / 60839 %d / 60965 %d), %d tiles dropped by a cell change; '
+            '%d object tiles shown (max %d per render), %d bands checked, %d screen bytes set to the map tile at '
+            'band ends; object cells = the game\'s back buffer %d; max %d figure sprites' % (
                 c['cell hook 60853'] + c['cell hook 60839'] + c['cell hook 60965'], c['cell hook 60853'],
-                c['cell hook 60839'], c['cell hook 60965'], c['item sprites'], c['max item sprites in a render'],
-                c['max sprites (items + figures) in a render'], c['bands checked'],
-                c['item screen bytes changed at band ends'], c['item rows on screen as modelled'],
-                c['item rows under a figure the original plotted at render time']))
+                c['cell hook 60839'], c['cell hook 60965'], c['cell hook: tile dropped'], c['object tiles shown'],
+                c['max object tiles in a render'], c['bands checked'], c['object screen bytes changed at band ends'],
+                c["object cells = the game's back buffer"], c['max sprites in a render']))
+        say('            opaque objects: %d drawn (map tile stored); cell redrawn by the game from the same map '
+            'cell: %d with the stored tile, %d different; cell reused for another map cell: %d / %d' % (
+                c['opaque object draws'], c['opaque object cell redrawn: same scroll, tile as stored'],
+                c['opaque object cell redrawn: same scroll, tile different'],
+                c['opaque object cell redrawn: other scroll, tile as stored'],
+                c['opaque object cell redrawn: other scroll, tile different']))
         say('            timing (simulated T at 28 MHz, no wait states): render-end commit max %d us / avg %d us, '
-            'render-start item list max %d us; item hooks per game frame avg %d / max %d us; whole game frame '
-            '(original + hooks) max %d us, frames over 20 ms: %d (%d without the item hooks)'
+            'render-start tilemap build max %d us; object hooks per game frame avg %d / max %d us; whole game '
+            'frame (original + hooks) max %d us, frames over 20 ms: %d (%d without the object hooks)'
             % (c['render end T max (28 MHz us)'], c['render end T avg (28 MHz us)'],
                c['render start T max (28 MHz us)'], c['item hooks per game frame avg (28 MHz us)'],
                c['item hooks per game frame max (28 MHz us)'], c['patched game frame max (28 MHz us)'],
@@ -1938,12 +2380,13 @@ def auto(a, z80, name, out, say):
             'hit/miss/garbage (+ 2 controls) + SWAPNIB + setup + class colour -> %s' % (
                 u['states'], u['direct conversion = plotter (random streams) ok'],
                 u['left-entry 4-wide plotter ok'], 'PASS' if not uf else 'FAIL %s' % uf))
-        say('            items: %d cell-hook cases + %d render paths (start, 22 bands, end) + %d negative controls '
-            '(%d detected); figure controls detected: ink/outline %d, stale pattern %d' % (
-                u['item cell hooks (registers incl. F, shadow = model) ok'],
-                u['item render path (start, 22 bands, end; model) ok'],
-                sum(1 for k in u if k.startswith('item') and 'negative control' in k),
-                sum(v for k, v in u.items() if k.startswith('item') and 'negative control' in k and k.endswith('detected')),
+        oc = [k for k in u if 'negative control' in k and not k.startswith(('negative control', 'store '))]
+        say('            objects: %d cell-hook cases + %d render paths (start, 22 bands, end) + cache full / flush '
+            '+ raster wait + profile tables; %d negative controls (%d detected); figure controls detected: '
+            'ink/outline %d, stale pattern %d' % (
+                u['object cell hooks (registers incl. F, object map = model, dropped tiles) ok'],
+                u['object render path (start, 22 bands, end; tiles, background, inks, classes) ok'],
+                len(oc), sum(1 for k in oc if k.endswith('detected')),
                 u['negative control detected'], u['store stale-pattern negative control detected']))
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return ok
