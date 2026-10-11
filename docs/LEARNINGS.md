@@ -74,6 +74,11 @@ Each line is settled unless marked otherwise.
   sprites, over the ULA (attribute bit 0 = 0). Build the map in normal RAM and copy it at the
   raster-synced commit (no half-built map on screen). Use it when objects are cell-aligned and too
   many for the sprite budget (Rainbow: up to 114 object cells next to 84 figure sprites).
+- Hardware-only timing problems (the simulation has no raster): Fuse cannot record a .nex. Build a
+  DIAGNOSTIC variant that shows the suspect events as border colours (OUT 0xFE, EAR/MIC 0) and have
+  the tester film the TV. Overrun detection: clear NextReg $C8 bit 0 at the frame start, read it at
+  the frame end (set = an interrupt came during the frame). Hooks entered from a ROM stub inside the
+  game's handler must not use the game's stack: jump to the hook page's code and jump back.
 
 # PART 2 - GAMES / SOFTWARE
 

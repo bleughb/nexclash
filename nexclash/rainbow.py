@@ -47,6 +47,7 @@ TILES, OBJO, OBJM1, OBJM2, FLAGS, CTILE = 0x2800, 0x2B00, 0x2E00, 0x3100, 0x3400
 KEYS, STAMP, RCNT, MCLASS, OCLASS, BGOVR = 0x3A00, 0x3D00, 0x3DC0, 0x3DE0, 0x3E00, 0x3F00
 NCELLS, NTILE, PAGE_TM, TDEF, X2 = 704, 176, 14, 0x0A00, 0x1F00
 OCCM, BITS = 0x27A0, 0x1F08   # page 27: occupied cells per row as 32-bit masks; page 26: 0x80 >> n
+V_DIAG, V_FRUN = 0x72, 0x73   # diagnostic build flag; a game frame is running (diagnostic)
 V_TOK, V_MSB, V_MSD, V_FMAX = 0x3B, 0x3F, 0x40, 0x51
 PAGE_SH, LASTT = 28, 0x0600   # shadow map (row kk at kk*64, 2 bytes per column), last tile per cell
 CODE2 = 0x1F10              # fourth page-26 code block (tile drawing), up to 0x1FFF
@@ -224,7 +225,8 @@ class Config:
     entry); class_colours = {'pages': {'D6': 1, ...}, 'palettes': {'1': {'ink': .., 'outline': ..}}}
     maps graphics-address high bytes to palette offsets 1-15 (the per-class hook; off by default)."""
 
-    def __init__(self, ink='white', outline='black', class_colours=None):
+    def __init__(self, ink='white', outline='black', class_colours=None, diag=False):
+        self.diag = diag                # diagnostic build: border colours (rainbow_sprites_diag.nex)
         self.ink, self.outline = colour(ink), colour(outline)
         if self.ink is None:
             raise ValueError('ink cannot be transparent')
@@ -365,6 +367,7 @@ class RainbowPatch:
         sp[V_MSB] = sp[V_MSD] = 0xFF                # no tilemap built yet
         sp[X2:X2 + 4] = b'\x00\x0F\xF0\xFF'          # 2 bits -> 2 nibbles (tile composer)
         sp[BITS:BITS + 8] = bytes(0x80 >> n for n in range(8))
+        sp[V_DIAG] = 1 if self.cfg.diag else 0
         tp = bytearray(8192)                        # page 27: layout tables (slot 1 = 0x2000)
         at = 0
         self.plot = {int(k): v for k, v in self.prof['plotters'].items()}
@@ -537,6 +540,8 @@ class NextState:
             self.clip_i += 1
         if reg in (0x6E, 0x6F):
             val &= 0xBF                     # bit 6 reads back 0
+        if reg == 0xC8:                     # interrupt status: writing 1 clears the bit
+            val = self.nr.get(0xC8, 0) & ~val & 255
         self.nr[reg] = val
         if reg == 0x34 and self.t34 is None and self.R is not None:
             self.t34 = self.R[25]
@@ -2274,6 +2279,77 @@ def obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path):
     ok, _ = raster(_with_bytes(patch, 'rwait.lp', None, b'\xC9\x00'))
     c['commit negative control (no raster wait) %s' % ('detected' if not ok else 'NOT DETECTED!')] += 1
 
+    # diagnostic build: border colours (blue while the commit waits, red while a tile is composed,
+    # yellow after a frame with an interrupt in it); the normal build writes no border at all
+    import copy as _copy
+    dpt = _copy.deepcopy(patch)
+    dsc = bytearray(dpt.scratch)
+    dsc[V_DIAG] = 1
+    dpt.scratch = bytes(dsc)
+
+    def border(ns_):
+        return [e[2] for e in ns_.events if e[0] == 'port' and e[1] & 0xFF == 0xFE]
+
+    def diag_case(pt):
+        pg = bytearray(patch.tpage)
+        m, sh = scen(bm0, pg)
+        sc, tm, shm = fresh(pt)
+        f, ns, exp, ns3 = render_case(pt, m, R0, sh, pg, tm, shm, sc, line_t=100)
+        f2, _, _, ns4 = render_case(pt, m, R0, sh, bytearray(patch.tpage), bytearray(8192),
+                                    bytearray(8192), fresh(pt)[0], line_t=200)
+        return f + f2, border(ns), border(ns3), border(ns4)
+
+    def frame_case(pt):
+        """dfst at a frame start, then dfend with / without an interrupt during the frame."""
+        from .dizzy6 import _rw_simulator
+        Sim = _rw_simulator()
+        out = []
+        for irq in (1, 0):
+            ns = NextState(pt)
+            ns.nr[0xC8] = 1                         # the interrupt that started this frame
+            mem = bytearray(65536)
+
+            class M:
+                def __getitem__(s, a):
+                    return ns.scratch[a] if a < 0x2000 else mem[a]
+
+                def __setitem__(s, a, v):
+                    if a < 0x2000:
+                        ns.scratch[a] = v
+                    else:
+                        mem[a] = v
+
+                def __len__(s):
+                    return 65536
+            res = []
+            for sym in ('dfst', 'dfend'):
+                if sym == 'dfend' and irq:
+                    ns.nr[0xC8] |= 1                # another interrupt came during the frame
+                mem[0xFEFE], mem[0xFEFF] = 0xF0, 0xFF  # return address 0xFFF0
+                regs = list(R0)
+                regs[12], regs[24] = 0xFEFE, pt.syms[sym]
+                sim = _machine(Sim, M(), regs, ns)
+                ns.events = []
+                okr = _run(sim, (pt.syms['x_lrun' if sym == 'dfst' else 'x_hx'],), 2000) and \
+                    sim.registers[12] == 0xFEFE        # jumped back to the ROM stub, no stack use
+                res.append((okr, border(ns), ns.scratch[V_FRUN]))
+            out.append(res)
+        return out
+    f, rs, re_, re2 = diag_case(dpt)
+    fr = frame_case(dpt)
+    ok = not f and rs and rs[-1] == 0 and set(rs) == {0, 2} and re_ and re_[0] == 1 and re_[-1] == 0 and \
+        set(re_) == {0, 1} and re2 == [0] and \
+        fr[0] == [(True, [0], 1), (True, [6], 0)] and fr[1] == [(True, [0], 1), (True, [], 0)]
+    c['diagnostic border (wait blue, tile red, overrun yellow; %d / %d / %d writes) %s' % (
+        len(rs), len(re_), len(re2), 'ok' if ok else 'FAIL! %s' % ((f[:2], rs[:4], re_[:4], re2, fr),))] += 1
+    f, rs, re_, re2 = diag_case(patch)
+    fr = frame_case(patch)
+    ok = not f and not rs and not re_ and not re2 and fr[0] == [(True, [], 0), (True, [], 0)]
+    c['diagnostic border off in the normal build %s' % ('ok' if ok else 'FAIL!')] += 1
+    f, rs, re_, re2 = diag_case(_with_bytes(dpt, 'dcol.o', b'\xD3\xFE', b'\x00\x00'))
+    c['diagnostic negative control (no colour shown) %s' % ('detected' if not rs or set(rs) != {0, 2} or not re_ or re_[0] != 1
+                                                           else 'NOT DETECTED!')] += 1
+
     # profile tables
     o, mm, bg = object_tables({'opaque': {'1-3': {'group': 'rainbow'}, '20': {'ula': True},
                                           '21': {'border': False, 'ink': 2, 'bright': True}},
@@ -2321,6 +2397,15 @@ def auto(a, z80, name, out, say):
     say('Sprites   : %s  %s  boot %s' % (os.path.basename(spr), md5(spr),
                                           'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200]))
     ok = not bad and not bad2
+    dpatch = RainbowPatch(Config(getattr(a, 'ink', None) or 'white', getattr(a, 'outline', None) or 'black',
+                                 cls, diag=True))
+    dspr = os.path.join(out, name + '_sprites_diag.nex')
+    zt.convert(z80, dspr, quiet=True, patch=dpatch)
+    bad3 = boot_check(dspr, z80, dpatch)
+    say('Diagnostic: %s  %s  boot %s  (border: blue = commit waits for the beam, red = tile built, '
+        'yellow = frame overran)' % (os.path.basename(dspr), md5(dspr),
+                                     'OK' if not bad3 else 'MISMATCH %s' % str(bad3[:3])[:200]))
+    ok = ok and not bad3
     rzxs = list(a.rzx or [])
     for r in rzxs:
         segs = RZ.read_segments(r)
@@ -2371,7 +2456,12 @@ def auto(a, z80, name, out, say):
                c['game frames over 20 ms at 28 MHz'], c['game frames over 20 ms at 28 MHz without the item hooks']))
         for k, v in ex.items():
             say('            %s: %s' % (k, str(v)[:200]))
-    if rzxs:
+    if rzxs:                                    # the diagnostic build changes nothing but the border
+        cd, _ = verify(dpatch, r, stop=min(getattr(a, 'quick', None) or 1500, 1500))
+        fd = {k: v for k, v in cd.items() if k.endswith('!')}
+        ok = ok and not fd
+        say('            diagnostic build: %s first %d frames, %d renders -> %s' % (
+            os.path.basename(r), cd['frames'], cd['render start'], 'IDENTICAL' if not fd else 'FAILED %s' % fd))
         u = unit_tests(patch, r)
         uf = {k: v for k, v in u.items() if k.endswith('!')}
         ok = ok and not uf
