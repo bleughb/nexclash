@@ -1,0 +1,26 @@
+# Push a tag vX.Y.Z (matching VERSION) -> builds dist/nexclash-X.Y.Z.zip and publishes the release.
+name: release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check tag = VERSION
+        run: test "v$(cat VERSION)" = "${GITHUB_REF_NAME}"
+      - name: Build package (refuses game data)
+        run: python tools/make_package.py -o dist
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/nexclash-*.zip \
+            --title "nexclash ${GITHUB_REF_NAME#v}" \
+            --notes "Download nexclash-${GITHUB_REF_NAME#v}.zip, unzip, \`pip install skoolkit\`, then \`python nexclash.py patch MyGame.z80\`. Supported games: STATUS.md. No game files included - bring your own snapshot. GPL-3.0-or-later."
