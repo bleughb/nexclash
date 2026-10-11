@@ -6,8 +6,9 @@
    The zip holds only files the session added or changed in the toolkit (code, .asm, profile,
    docs) plus the nexclash report. Game data (.z80/.rzx/.nex/.tap/...) is refused.
 3. Upload `nexclash_contribution_MyGame.zip`:
-   - **No GitHub account:** the upload link in docs/contribute.json (`upload_url`) - anyone can
-     upload there, no sign-in. Add your name/handle to the file name if you want credit.
+   - **No GitHub account:** https://www.dropbox.com/request/7zanmicpbn5oafod24qs - anyone can
+     upload there, no sign-in (uploads are visible only to the maintainers). Add your name/handle
+     to the file name if you want credit.
    - **GitHub users:** open a pull request with the same files instead.
 
 ## What happens next (maintainers)

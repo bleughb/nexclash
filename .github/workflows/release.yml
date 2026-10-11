@@ -21,6 +21,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/nexclash-*.zip \
-            --title "nexclash ${GITHUB_REF_NAME#v}" \
-            --notes "Download nexclash-${GITHUB_REF_NAME#v}.zip, unzip, \`pip install skoolkit\`, then \`python nexclash.py patch MyGame.z80\`. Supported games: STATUS.md. No game files included - bring your own snapshot. GPL-3.0-or-later."
+          NOTES="Download nexclash-${GITHUB_REF_NAME#v}.zip, unzip, \`pip install skoolkit\`, then \`python nexclash.py patch MyGame.z80\`. Supported games: STATUS.md. No game files included - bring your own snapshot. GPL-3.0-or-later."
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            # release made in the GitHub UI (it creates the tag): just attach the zip
+            gh release upload "$GITHUB_REF_NAME" dist/nexclash-*.zip --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" dist/nexclash-*.zip --title "nexclash ${GITHUB_REF_NAME#v}" --notes "$NOTES"
+          fi
