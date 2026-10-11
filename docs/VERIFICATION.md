@@ -38,7 +38,7 @@ Default builds (strategy `altrom` where proven; dedicated builders are printer-o
 - `dizzy2_title_sprites.nex` 85e054fe4bce8e4b3a8e336aac432f58 (dedicated, printer; re-checked 2026-09-28), `dizzy2.nex` (title, no recording) 70890aba7d821fba8a41e63636eb58be
 - `dizzy1_sprites.nex` 05d2bce99f4d7654d4e1c9c9c04dc391 (dedicated, printer), `dizzy1.nex` 7892b2e0f1f3f9f19165516db307cbe0
 - Dizzy 6 (`tid_mirror`): stays slot1 (self-modifying plotter copy in the RAM page); not in selftest
-- `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_sprites.nex` eb9836fe60a70df02087920603c673b4 (2026-10-11)
+- `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_sprites.nex` bffd9357d772e2df975ec5f40dc9e4cb (2026-10-11, objects on the tilemap)
 - `Chuckie_Egg.nex` ec0df71e70fae35836eaed521f300777, `Chuckie_Egg_sprites.nex` bfad6be1e7c8a2c797a6242d7f339e35 (2026-10-11)
 
 `--strategy` reproductions of the pre-altrom builds (same recordings):
@@ -55,6 +55,76 @@ Default builds (strategy `altrom` where proven; dedicated builders are printer-o
 - `--outline transparent` on rainbow.rzx - IDENTICAL (outline pixels counted as expected drops)
 - unit tests: edge columns, last slot, passthrough at 32 pieces, negative control, class colour - PASS
 - Hardware: runs (Dean, 2026-09-28); detailed visual checklist results not reported
+
+## Rainbow Islands - 2026-10-11 objects on the tilemap
+RELEASE level. Changed: rainbow.py, rainbow_hooks.asm, rainbow_islands.json (hook hex, code blocks
+page2 0x1F10 / page3 0x0E60 / page4 0x0D60, symbols, new `objects` section); new
+nexclash/rainbow_objects.py. Same patch sites as before (no new ones).
+- `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175 - UNCHANGED, boot sim OK
+- `rainbow_sprites.nex` bffd9357d772e2df975ec5f40dc9e4cb - boot sim OK
+- rainbow.rzx: 7178 frames, 11865 pieces, 2215 commits; 26528 cell hooks (60853 25770 / 60839
+  717 / 60965 41), 606 tiles dropped by a cell change, 36119 object tiles shown (max 114 per
+  render), 43621 band ends (297462 screen bytes set to the map tile) - IDENTICAL. Object model =
+  the game's back-buffer cell 36773 times, 0 differences. Opaque objects 717; redraw from the same
+  map byte: 300 with the stored tile, 0 different (cell reused for another map cell: 159 / 88).
+- rainbownew.rzx: 11799 frames, 29314 pieces, 3530 commits, overflow entries 2; 49707 cell hooks
+  (45886 / 3152 / 669), 2660 tiles dropped, 139988 object tiles (max 110), 70579 band ends - IDENTICAL.
+  Object model = back buffer 149087 times. Opaque objects 3152; same-map redraws 677 / 0 different.
+- Timing (simulated T, 28 MHz, no wait states): render-start tilemap build max 12.0 / 12.8 ms;
+  object hooks per game frame avg 2.8 / 5.4 ms; commit avg 1.6 / 2.0 ms; whole game frame max 21.5
+  / 24.8 ms; frames over 20 ms 9 / 17 (0 without the object hooks; ab97c76a: 9 / 15). The raster
+  wait is not in these numbers.
+- Checked per event: cell hooks = original (all registers incl. F, memory) + object map (TILES,
+  OBJO, OBJM1/2, FLAGS, CTILE, RCNT, OCCM) = model + a dropped tile cleared exactly in the shadow map
+  and the map on screen; at every redraw of an opaque object's cell from the same map byte the
+  game's tile = the stored tile; render start: the modelled objects reproduce the game's back-buffer
+  cell (map tile or opaque object, then each masked object), the shadow map = the model (tile +
+  palette offset per visible object cell, 0 elsewhere), each tile's 32 bytes = the composed
+  objects and its key, tiles on screen untouched, no stale CTILE, remembered inks = model; band
+  ends: screen writes = the model's map-tile rows + colours for that char row; render end: map rows
+  = the shadow map, $6E/$6F/$6B/clip, or the layer off; sprites-off hooks: $15 = 0, $6B = 0, $7F = 1.
+- Unit tests (both RZX states): 270 cell-hook cases (random object maps, map bytes, scroll of each
+  map, dropped tiles, full lists, 'leave as drawn' and fixed-ink classes); 2 render paths on a
+  synthetic map of every cell kind (fruit alone, on a mirrored tile, rainbow opaque, two / four
+  masked, fruit + rainbow with and without a remembered ink, FF, unknown background, ULA class,
+  fixed ink + no border, partial bottom row, off-screen row with a stale tile, shared key, star
+  attribute) twice (second render from the cache); cache full (every tile on screen); cache flush;
+  raster wait (lines 100/175/15/176/200/300); profile tables. 17 negative controls detected: carry
+  not restored, opaque object not recorded, occupancy mask not kept, no black border, background
+  tile not drawn, map not cleared, fruit behind rainbows, off-screen tile left assigned, one-ink
+  tile with the ink in its pixels, on-screen tile reused, flush ignored, no raster wait, + the
+  figure / store / limiter controls.
+- ITERATE (rainbow.rzx 2912 frames incl. the bonus scene) PASSED before the RELEASE.
+
+## Rainbow Islands - 2026-10-11 opaque-item base tile + raster-synced commit
+RELEASE level. Changed: rainbow.py, rainbow_hooks.asm, rainbow_islands.json (hook hex, new `page3`
+block 0x0E60, symbols). No new patch sites.
+- `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175 - UNCHANGED, boot sim OK
+- `rainbow_sprites.nex` ab97c76ae0edd3937e3149b0dac5e52f - boot sim OK
+- rainbow.rzx: 7178 frames, 11865 pieces, 2215 commits; 26528 cell hooks (60853 25770 / 60839
+  717 / 60965 41), 43621 band ends, 13558 item sprites (max 67 per render, 104 sprites in all) -
+  IDENTICAL. Item rows 105453 as modelled, 3011 under a figure, 0 other. Opaque items 289; the
+  game's redraw of such a cell at the same scroll: 179 with the stored tile, 0 different (other
+  scroll = cell reused: 61 / 27).
+- rainbownew.rzx: 11799 frames, 29314 pieces, 3530 commits, overflow entries 2; 49707 cell hooks
+  (45886 / 3152 / 669), 70579 band ends, 67570 item sprites (max 72, 116 in all) - IDENTICAL.
+  Item rows 528330 / 12178 / 0. Opaque items 1412; same-scroll redraws 376 stored / 0 different
+  (other scroll 657 / 93).
+- Item sprite and item-row counts equal eb9836fe's (the first ITERATE showed 119 fewer sprites:
+  a masked draw of the same code over an opaque item went to FF; fixed before the RELEASE).
+- Timing (simulated T, 28 MHz, no wait states): commit avg 1.0 / 2.0 ms, max 5.4 / 6.2 ms; item
+  hooks per game frame avg 1.2 / 2.8 ms; game frames over 20 ms 9 / 15 (0 without item hooks).
+  The raster wait itself is not in these numbers (the verifier's video line is fixed at 200).
+- New checks in the verifier: TILES (page 27) = model at every cell hook; at every 60853 redraw of
+  an opaque item's cell at the same scroll the game's tile = the stored tile (fail otherwise);
+  band-end screen writes for opaque items = the tile rows of the model.
+- New unit tests: cell hooks with random BC' (map byte) and random TILES; same code over an opaque
+  item; render paths with 3 opaque items (tile < 128, tile >= 128 mirrored, one crossing the
+  bottom of the play area); raster wait: video line at render end 100 / 175 / 176 / 15 / 200 / 300
+  -> first sprite write at line 178 / 178 / 178 / 17 / 202 / 302 (waits for 176 only inside the
+  play area, never longer). New controls detected: opaque tile rows not drawn; raster wait
+  removed. 10/10 item controls detected.
+- ITERATE (rainbow.rzx, 2912 frames incl. the bonus scene) PASSED before the RELEASE.
 
 ## Rainbow Islands - 2026-10-11 collectables as sprites
 RELEASE level. Changed: rainbow.py, rainbow_hooks.asm, rainbow_islands.json (hook hex + new `page2`

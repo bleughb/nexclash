@@ -5,7 +5,7 @@ One row per game. Details, decisions and checklists: games/<file>. MD5s: docs/VE
 | Game | Engine (file) | Sprite build | Software | Hardware | Next |
 |---|---|---|---|---|---|
 | Chuckie Egg | chuckie (chuckie_egg.md) | Chuckie_Egg_sprites.nex bfad6be1 | RZX IDENTICAL, unit PASS | untested | hardware test |
-| Rainbow Islands (128K) | rainbow (rainbow_islands.md) | rainbow_sprites.nex eb9836fe (collectables) | RZX IDENTICAL x2, unit PASS | bddea69e runs smooth; eb9836fe untested | hardware test; later islands RZX |
+| Rainbow Islands (128K) | rainbow (rainbow_islands.md) | rainbow_sprites.nex bffd9357 (objects on the tilemap) | RZX IDENTICAL x2, unit PASS (17 controls) | bddea69e smooth; eb9836fe / ab97c76a faulty (codes 1-14 = rainbows); bffd9357 untested (needs a recent core) | hardware test; layer B (dark-blue partial tiles, mask sheet review); later-islands RZX |
 | Everyone's a Wally | wally (everyones_a_wally.md) | wally_sprites.nex f7605489 | RZX IDENTICAL, unit PASS | boots and runs | detailed checklist |
 | Spellbound Dizzy (Dizzy V) | dizzy5 (dizzy5_spellbound.md) | Dizzy_V_sprites.nex 1f33c467 (altrom) | verified (2 RZX) | untested | hardware test |
 | Prince of the Yolkfolk (Dizzy 6) | tid_mirror (dizzy6_yolkfolk.md) | Dizzy6_sprites.nex f491e1f6 (slot1) | verified (try1.rzx + mirror selftest) | untested | hardware test; mirror-room RZX |

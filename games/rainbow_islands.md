@@ -7,17 +7,32 @@ pattern store + sprites per piece 7559f940 (hardware: still slower than the orig
 slows). 2026-10-01: FRAME LIMITER + TURBO cbb5a1d4 (hardware: very smooth; minor tearing /
 ghosting; sprites stay on the death/continue screens). 2026-10-02: RENDER-END COMMIT + sprites
 off on non-play screens bddea69e (hardware: smooth, runs). 2026-10-11: COLLECTABLES AS SPRITES
-(below) - hardware test pending.
+(below) eb9836fe (hardware 2026-10-11: enemy tearing; item squares on opaque items; rainbows
+partly black; dark-blue squares on partial tiles). 2026-10-11: OPAQUE-ITEM BASE TILE + RASTER-SYNCED
+COMMIT ab97c76a (hardware 2026-10-11: rainbows with black edges/blocks, fruit and flowers on full
+squares - analysis: codes 1-14 are RAINBOW pieces, the collectables are codes >= 15). 2026-10-11:
+OBJECTS ON THE TILEMAP bffd9357 (below) - hardware test pending. Needs a core with the tilemap in bank 7
+(Dean: most recent core).
 
-Reference: reference/rainbow.z80, rainbow.rzx, rainbownew.rzx (Dean's; to be uploaded).
-Tools: nexclash/rainbow_catalogue.py (figure catalogue for colours; fixed 2026-10-11 to read the
-profile's `plotters` table - it still read the removed `stream_len`); tools/rainbow_items_proto.py
-(the collectables prototype, kept for reference).
+Reference: rainbow.z80, rainbow.rzx, rainbownew.rzx in the private repo (to be uploaded: the
+bffd9357 MD5 has not been reproduced from the repo yet). Review images from the sessions (mask
+contact sheet rainbow_B_mask_sheet.png, objects.png) belong in the private repo too (they show game
+graphics). Tools: nexclash/rainbow_objects.py (object/tile catalogue -> profile `objects`),
+nexclash/rainbow_catalogue.py (figure catalogue for colours; fixed 2026-10-11 to read `plotters`),
+tools/rainbow_items_proto.py (the collectables prototype, superseded).
+
+## Dean's decisions (current)
+Player white with black outline; stars as now (ULA); fruit / collectables keep their own colours;
+rainbows and objects with a 1-pixel black border, in front of the scenery and behind all figures;
+background never removed; steady speed (frame limiter); object handling automatic with manual
+overrides (profile `objects`). Dean has the most recent core (tilemap in bank 7).
 
 ## Deliverables
 | File | MD5 |
 |---|---|
-| rainbow_sprites.nex (collectables as sprites + everything below) | eb9836fe60a70df02087920603c673b4 |
+| rainbow_sprites.nex (objects on the tilemap + everything below) | bffd9357d772e2df975ec5f40dc9e4cb |
+| (opaque-item base tile + raster-synced commit; rainbows as sprites) | ab97c76ae0edd3937e3149b0dac5e52f |
+| (collectables as sprites; HW: tearing, item squares, black in rainbows) | eb9836fe60a70df02087920603c673b4 |
 | (limiter + render-end commit + sprites off on non-play screens; runs on HW) | bddea69edaf6cf0a83dba8633c8f6618 |
 | (limiter build, tearing) | cbb5a1d4ba4e84cec40191d3a3259f5a |
 | (speed build without limiter) | 7559f940bb72211456b3ec53a0bdff60 |
@@ -27,11 +42,15 @@ profile's `plotters` table - it still read the removed `stream_len`); tools/rain
 | (previous, spider column missing) | 0c191d94d5c3291e96f282cc6b1e4984 |
 | rainbow.nex (plain, tail 0x9F00) | 7ac543fb51c7a3c4137778eeb3cdc175 |
 
-Rebuild (RELEASE, ~51 min): `python nexclash.py auto rainbow.z80 --rzx rainbow.rzx --rzx rainbownew.rzx --no-record`
+Rebuild (RELEASE, ~52 min): `python nexclash.py auto rainbow.z80 --rzx rainbow.rzx --rzx rainbownew.rzx --no-record`
 Iterate (~15 min): `python nexclash.py auto rainbow.z80 --rzx rainbow_stripped.rzx --no-record --quick 2000`
-(2008 frames, 4518 pieces, 1996 item sprites + unit tests; levels: docs/BRIEFING.md C3b)
+(levels: docs/BRIEFING.md C3b; --quick 2900 on rainbow.rzx covers the bonus scene, ~15 min)
 Options: `--ink white|#RRGGBB`, `--outline black|blue|transparent|#RRGGBB`, `--class-colours map.json`
-(class palette offsets 0-14; offset 15 is reserved for the item sprites).
+(class palette offsets 0-14; offset 15 is reserved).
+Objects catalogue (tilemap settings): `python -m nexclash.rainbow_objects rainbow.z80 rainbow_stripped.rzx
+rainbownew_stripped.rzx -o objects.png` -> every object code seen (game graphic | tile shown) and the
+map tiles under them, + objects.json: an "objects" section with every code and its settings, to
+edit and paste into rainbow_islands.json (see "Objects on the tilemap").
 Catalogue (colours): `python -m nexclash.rainbow_catalogue rainbow.z80 rainbow_stripped.rzx
 rainbownew_stripped.rzx -o catalogue.png` -> every figure seen, grouped by graphics page set, +
 catalogue.json. Page keys go into the class-colours map.
@@ -47,28 +66,73 @@ catalogue.json. Page keys go into the class-colours map.
 - Next sprites: 4-bit anchors, attr4 0x80/0xC0 = slot half 0-127/128-255; 0x303B + port 0x5B
   pattern upload; $34-$39 attributes; $4B=0; palette via $43/$40/$41; clip via $1C/$19.
 - Sprite priority: NextReg $15 bit 6 = 0 (reset value, never set): the HIGHER sprite number is drawn
-  on top (guide r3 p.89). Items take the lowest numbers, figures follow: figures always in front.
+  on top (guide r3 p.89).
+- Next tilemap (layer 3): 40x32 entries over 320x256 (ULA at +32,+32: screen char row R, column c =
+  entry (R+4)*40 + c+4); 2-byte entries (tile, attribute: palette offset bits 7-4, bit 0 = 0 tile
+  over the ULA); $6E/$6F bit 7 = bank 7 (first 8K only, Next page 14; core 3.1.x+); $6B bit 7 on, bit 0 tilemap over the ULA,
+  bit 5 = 1-byte entries; $4C transparent index; $43 0x30 = tilemap palette; clip $1C bit 3 + $1B
+  (x in 2-pixel units). Sprites are drawn over it (SLU), so figures stay in front of objects.
 
 ## Next resources used
 | Resource | Use |
 |---|---|
 | Alt ROM image 1, 0x386E-0x3903 | entry/exit stubs + register block (all $FF in the 48K ROM; game never reads it) |
 | RAM page 24 (bank 12) | alt ROM copy source (stub fills alt ROM at boot) |
-| RAM page 26 (bank 13), slot 0 during hooks | state 0x0000 (vars to 0x99; RFIRST 0x60 / RLAST 0x78 per char row), stack down from 0x0100, code 0x0100-0x0CAB, conversion buffers G 0x0D00 / MG 0x0E00 (row*6+col; EPAT 0x0D60 / ESTAMP 0x0E60 in their free tails), bit-reversal table 0x0F00, nibble table 0x1000, class table 0x1200, plotter info 0x1300-0x1AFF (8 pages by IXl), CLIST 0x1B00, ATTRB 0x1C80, item nibble expansion EXP 0x1F00 (32 bytes), second code block 0x1F20-0x1FF4 (item commit) |
-| RAM page 27 (bank 13 upper, in the .nex), slot 1 | plotter layout tables 0x2000 (1812 bytes, from profile `plotters`); ITEM SHADOW MAP: CODES 0x3000 (704 cells), BATTR 0x3300, item list ILIST 0x3600 (80 x 16), item graphics copy GCOPY 0x3C00 (224), row counts RCNT 0x3D00 (22), pattern cache keys PKEYS 0x3E00 (128 x 4) |
-| RAM page 28 (not in the .nex), slot 1 | item pattern cache, 128 x 64 bytes (entry e at 0x2000 + 64*e; written before read) |
+| RAM page 26 (bank 13), slot 0 during hooks | state 0x0000 (vars to 0x7F, PBUF 0x78), stack down from 0x0100, code 0x0100-0x0CF5, conversion buffers G 0x0D00 / MG 0x0E00 (row*6+col; code blocks in their free tails: 0x0D60-0x0DAF ocls/ocell/ocrow/oinkx, 0x0E60-0x0EDD raster wait + tilemap commit), bit-reversal table 0x0F00, nibble table 0x1000, class table 0x1200, plotter info 0x1300-0x1AFF (8 pages by IXl), CLIST 0x1B00, ATTRB 0x1C80, X2 0x1F00 (2 bits -> 2 nibbles), BITS 0x1F08, code block 0x1F10-0x1FBA (tile drawing odraw/cpix) |
+| RAM page 27 (bank 13 upper, in the .nex), slot 1 | plotter layout tables 0x2000 (1812 bytes, from profile `plotters`); OCCM 0x27A0 (occupied cells per cell row, 22 x 32-bit masks); per back-buffer cell (704 each): TILES 0x2800 (map tile), OBJO 0x2B00 (opaque object code, FF = cell left as drawn), OBJM1/OBJM2 0x2E00/0x3100 (masked object codes as nibbles in draw order), FLAGS 0x3400 (bit 7 map tile known, 6 fixed ink, 5 item group, 4 rainbow group, 0-3 remembered item ink), CTILE 0x3700 (tile assigned this render); tile cache KEYS 0x3A00 (176 x 4), STAMP 0x3D00 (176); RCNT 0x3DC0 (22); classes MCLASS 0x3DE0 (16) / OCLASS 0x3E00 (256) and background override BGOVR 0x3F00 (256), all from the profile `objects` section |
+| RAM page 14 (bank 7 first 8K) | TILEMAP: map 0x0000 (40x32 x 2 bytes), tile definitions 0x0A00 (176 x 32 bytes, tile 0 = transparent); zero in the snapshot (checked); slot 3 while hooks write it |
+| RAM page 28 (not in the .nex), slot 2 during hooks | shadow map built at render start (20 rows x 64 bytes at 0x0000, copied into the tilemap at the commit) + LASTT 0x0600 (tile number of each cell last render, 704) |
 | RAM page 29, slot 2 during the register run | canvas the original plotter draws into (discarded) |
 | RAM page 30 (not in the .nex), slot 1 | overflow entries (this render only) |
 | RAM pages 32-63 (256K, not in the .nex), slot 1 during lookup | pattern store: 256 sets x 4 ways x 256 bytes; garbage at boot is harmless (a hit needs IX + carry + the whole stream to match) |
+| NextReg $1E/$1F (via ports 0x243B / 0x253B) | active video line, read by the raster wait before the commit |
 | NextReg $07 | 3 (28 MHz) for the game frame (limiter), 0 on handler exit |
-| NextReg $51 (MMU1) | store / layout / shadow / item page while a hook works, back to $FF (alt ROM) before returning |
-| Sprites 0-127, pattern RAM 16K | per render: item sprites 0..NI-1 (one pattern per distinct cache entry, numbered from V_S), then figure sprites NI.. (patterns 0..V_S-1); figures limited to 128 - NI (V_FMAX), the rest passes through to the ULA |
-| Sprite palette | offsets 0-14: figures (ink 1, outline 2); offset 15: item sprites (1 black, 2-8 ink 1-7, 9-15 bright ink 1-7, Next default ULA levels) |
-| Setup (stub, 0xD000) | sprite palette, $4B=0, zero all 16K pattern RAM, hide all, clip Y 16-191, $15=1 |
+| NextReg $51/$52/$53 (MMU1-3) | store / layout / object pages while a hook works ($51 page 27, $52 page 28, $53 page 14), back to $FF / 10 / 11 before returning |
+| NextReg $6B/$6C/$6E/$6F, $1B/$1C, $4C, $2F-$31 | tilemap: on ($6B = 0x81) at each render-end commit, off (0) on non-play screens and when a render's scroll is not a multiple of 8; clip x 16-143, y 48 .. 47 + (58850) |
+| NextReg $7F (user register) | cache flush request: set to 1 by the sprites-off hooks (graphics may change between rounds), cleared by the next render start |
+| Tilemap palette | bank 0: 0 transparent, 1 black, 2-8 inks 1-7, 9-15 bright inks 1-7 (Next default ULA levels); bank n (1-15) = bank 0 with pixel 2 = ink index n (one-ink tiles: the map entry's palette offset is the ink) |
+| Sprites 0-127, pattern RAM 16K | figures only (patterns 0..V_S-1), up to 128 (V_FMAX) |
+| Sprite palette | offsets 0-14: figures (ink 1, outline 2); offset 15 unused |
+| Setup (stub, 0xD000) | sprite palette, $4B=0, zero all 16K pattern RAM, hide all, clip Y 16-191, $15=1, tilemap palette (16 banks), $4C=0, $6C=0, $6B=0, tilemap offsets 0 |
 | Z80N SWAPNIB (ED 23) | nibble swap in the pixel converter (simulated by rainbow._swapnib; exhaustive self-test) |
 
 ## Hardware status
 - Runs on the Next (2026-09-28); limiter + commit build bddea69e runs smooth (Dean).
+
+## Hardware checklist - objects on the tilemap bffd9357 (2026-10-11)
+1. RAINBOWS: yellow with a thin black border, NO black blocks under the arch; the sky / bricks show
+   around and under them. Two crossing rainbows: one picture, no square.
+2. FRUIT and COLLECTABLES (cakes, flowers, fruit from crushed enemies): in their own colour with a
+   black border, on the real background - the four flowers in the castle show the red bricks
+   behind them (as after collecting them); no square anywhere.
+3. Fruit inside a rainbow: the fruit in front of the rainbow, both visible, no square.
+4. Enemies and player in front of everything; stars as before.
+5. Pickups: the object disappears, the background stays.
+6. Bonus scene (colours cycle): objects change colour with the game, no flicker.
+7. Scrolling: objects move with the scenery; nothing over the HUD or below the play area (also while
+   the water rises); top and bottom rows clean.
+8. Death / continue / round end / game over / title: no objects left over from the play screen;
+   they come back when play resumes. A new round / island: objects correct (cache flushed).
+9. Enemy tearing: still gone (raster-synced commit as in ab97c76a).
+10. Smoothness and music: as in ab97c76a (simulation: 8 long frames in the bonus scene of
+    rainbow.rzx, fewer than before).
+11. Still open: dark-blue squares on partial tiles (layer B - mask sheet), unchanged here.
+12. Faults: Fuse "Record from snapshot" on rainbow.z80, autosave off, send the RZX (+ where).
+
+## Hardware checklist - opaque-item / raster build ab97c76a (2026-10-11)
+1. ENEMY TEARING (Dean's three "bugs" photos): enemies and player moving fast left/right, turning,
+   jumping: no split or sheared sprites. Watch the busy bonus scene too.
+2. Items on SKY / plain background (the red cakes, the four flowers on the castle): no black or
+   coloured square - the background of that cell (green curve, castle pattern, sky) shows around
+   the item.
+3. Items on bricks / on a rainbow: as in eb9836fe (no square; bricks / rainbow pixels kept).
+4. Pickups: item disappears, the cell shows its background, no leftover square or sprite.
+5. Smoothness and music: as in eb9836fe. In the busiest bonus scenes (60+ items) an occasional
+   frame may run long (see timing below) - report if the music or game visibly stutters there.
+6. Still OPEN in this build (next build): rainbows partly black; dark-blue squares on partial
+   tiles (needs layer B - see the mask contact sheet). Please say whether the black in rainbows
+   was also in bddea69e (the build before items).
+7. Faults: Fuse "Record from snapshot" on rainbow.z80, autosave off, send the RZX (+ where).
 
 ## Hardware checklist - collectables build eb9836fe (2026-10-11)
 1. Items on CASTLE BRICKS / platforms: item as a sprite in its own colour with a black outline;
@@ -139,20 +203,99 @@ build).
   JP (IX); every plotter ends JP 59543. Erase = next blit.
 - Plotter row control lives in AF'. Stars 60176/60180 overwrite a cell and set its attribute.
 - No game logic reads screen pixels (collision uses the attr buffer): no virtual read needed.
-- Collectables are back-buffer CELL objects (detail below): masked items 60965 (codes 1-14, gfx +
-  mask at 0xF600), opaque items 60839 (same codes, 0xF700 tiles), base tiles 60853. Per band the
+- Rainbows and collectables are back-buffer CELL objects (detail below): masked objects 60965
+  (codes 1-14 = rainbow pieces, gfx + mask at 0xF600), opaque objects 60839 (codes 1-14 = the same
+  rainbow pictures at 0xF700, codes 15-190 = fruit / cakes / flowers), base tiles 60853. Per band the
   blit copies 8 pixel rows + the attribute row, then the walker runs and ends at 59547 with the
   band's screen address in (59522).
 
 ## Code (additive)
 - nexclash/rainbow.py: Config (colours/tables), RainbowPatch, boot_check (128K), verify,
-  unit_tests (+ item_unit_tests), auto, is_rainbow; item model: ItemShadow, items_list,
-  items_fix, item_record, item_attrs, item_pattern.
-- docs/profiles/rainbow_islands.json: signature (59504-59521), hook bytes + symbols.
+  unit_tests (+ obj_unit_tests), auto, is_rainbow; object model: ObjShadow, object_tables,
+  obj_build, obj_compose, obj_fix, obj_truth, tile_row, drop_tile, commit_errors.
+- nexclash/rainbow_objects.py: object/tile catalogue for the profile `objects` section.
+- docs/profiles/rainbow_islands.json: signature (59504-59521), hook bytes (rom, page, page2-4,
+  setup) + symbols, plotter layouts, `objects` classes.
 - asm/rainbow_hooks.asm: source; `sjasmplus --zxnext --sym=rb.sym`, then regenerate the profile hex
-  (rom/page/setup bins + the `syms` the Python uses, incl. the unit-test control labels).
+  (rom/page/page2/page3/page4/setup bins + the `syms` the Python uses, incl. the unit-test control
+  labels). 2026-10-12: reassembled = profile hex for all six blocks and 56 symbols.
 - nexclash.py: dispatch in cmd_auto, flags --ink/--outline/--class-colours; convert --tail.
-- z80tonex.py: 128K tail guard. 
+- z80tonex.py: 128K tail guard.
+
+## Objects on the tilemap (2026-10-11, bffd9357)
+Dean's report on ab97c76a: rainbows with black edges and black blocks, fruit / flowers on full
+squares; he likes the rainbow border. Survey (both RZX, every cell-drawer call): the object codes
+1-14 (masked 60965 AND opaque 60839) are the RAINBOW pieces (arc segments; the 0xF600 masked set
+and 0xF700 opaque tiles 1-14 are the same pictures); fruit, cakes, flowers, big 2x2 objects are
+OPAQUE overlay codes 15-190 (0xF700 + 8*(code-1)); the previous builds turned the rainbows into
+sprites (black outline = the mask-cleared pixels painted black) and never touched the collectables.
+Up to 114 object cells (137 objects) on screen at once: too many for sprites next to up to 84
+figure sprites -> the Next TILEMAP (cell-aligned 8x8 tiles, in front of the ULA, behind sprites).
+Composition order in the game (60633): the first object with code >= 15 opaque (or, if all are
+rainbow pieces, the first one opaque when the tile's table bit 7 is clear, else the base tile),
+then every further object masked; up to 4 objects in a cell seen (crossing rainbows).
+- CELL HOOKS (60853 / 60839 / 60965, own stack): per cell TILES (60853: A; 60839: the map byte at
+  BC' - the base tile the game draws after a pickup; verified at every same-map redraw: 0
+  different), OBJO (60839 code; codes 0 / 255 or a 'leave as drawn' class -> FF), OBJM1/2 (60965
+  codes appended, 4 max, else FF), FLAGS group bits from the class tables, RCNT + OCCM (occupancy),
+  CTILE cleared on any change (with the cell's entry in the shadow map and the map on screen).
+- RENDER START (obuild): shadow map cleared; every occupied visible cell (OCCM bits; rows 8*kk <
+  (58850)) with a known map tile and no FF gets a tile number: KEY = (O, M1, M2, inks). One-ink
+  tiles (one group, no fixed ink): pixels 2 = ink, 1 = border, key ink byte 0, the map entry's
+  palette offset = the cell's ink index (so the bonus scene's ink cycling (51914) costs no tile
+  rebuild). Two groups (rainbow + item): inks in the pixels (rainbow group = the cell's ink, item
+  group = the ink remembered while the item was alone in the cell, else the cell's). Tile cache:
+  176 entries (KEYS / STAMP, stamps = render counter | 0x80); first the cell's tile of last time
+  (LASTT), else 16 probes from 1 + (hash & 127); a miss rebuilds the first probed entry not used
+  this render or the previous one (that map is on screen until the commit); none -> CTILE 0, the
+  cell stays as drawn. Cells not on screen get CTILE 0.
+- TILE (ocomp / odraw / cpix): rainbow-group objects first (opaque, then masked in draw order),
+  item-group objects on top; each object: border = 8-neighbours of its pixels inside the cell minus
+  its pixels -> 1 (black), pixels -> its ink; earlier objects stay where it draws nothing.
+- BAND END (s_bend): the band's object cells with CTILE: the map tile's rows (BGOVR applied; tiles
+  >= 128 mirrored through 0xF5xx as 60853) on rows inside the play area, the tile's colour
+  (0xF200 + (t|128)) & 127 while the screen attribute = the attribute buffer (a star keeps its ink).
+- RENDER END (tcommit, after the raster wait): shadow rows copied into the map (rows 6-25, columns
+  4-35), $6E/$6F, clip y 48 .. 47 + N, $6B = 0x81; tilemap off when the scroll was not a multiple
+  of 8 (never seen). Sprites-off hooks: $6B = 0 and $7F = 1 (cache flush at the next render start).
+- PROFILE `objects` (rainbow_islands.json; tables built by RainbowPatch): per code or range under
+  "opaque" / "masked": "group": "rainbow" | "item" (default item), "ula": true (cell left as the game
+  draws it), "border": false, "ink": 0-7 + "bright": true (fixed colour); "background": {"tile":
+  tile} draws another map tile under objects. Default: opaque 1-14 and masked 1-14 = rainbow.
+  New islands: run the objects catalogue on a recording; codes that look wrong get an entry.
+- Visual approximations (logic exact): a border pixel is drawn only inside the object's own cell
+  (an object touching the cell edge has no border on the neighbouring cell's side); an object
+  cell already in the back buffer when the snapshot starts stays as drawn until the game redraws
+  it; the item ink in a mixed cell is the one last seen while the item was alone.
+- Speed (simulated, 28 MHz): render start avg 2.3 ms (rainbow.rzx 2900 frames), band ends avg 1.4 ms
+  per render, commit avg 2.0 ms (incl. the 1280-byte map copy); first attempt (one map per render,
+  inks in the tiles) took up to 23 ms per render start - see docs/LEARNINGS.md (hook cost).
+
+## Opaque-item base tile + raster-synced commit (2026-10-11, ab97c76a)
+NOTE (later the same day): the "opaque items" here were rainbow pieces; superseded by the tilemap
+build above. The raster wait stays.
+Dean's hardware report on eb9836fe -> fixes for (1) enemy tearing and (2)/(3) item squares.
+- SQUARES: items the game draws OPAQUE (60839, codes 1-14) have no base tile under them - the game
+  draws the item tile over a blank cell. Clearing the item's pixels left the blank square. Survey
+  (both RZX, 1701 opaque draws): the cell's map tile is the byte at BC' at 60839 for both callers
+  (60577: L = tile|128, 60696: C = tile|128), its table bit 7 is always clear; when the game later
+  redraws that cell with 60853 at the same scroll the tile is that byte (verifier: 179 / 179 on
+  rainbow.rzx, 376 / 376 on rainbownew.rzx; the "other scroll" redraws are cells reused for another map
+  row). Now: TILES[cell] = tile at every 60853 / 60839; an opaque item gets CODES = code | 0x40 and
+  BATTR = its tile's colour (as 60853 would); the band fix writes the tile's rows (0x8000 + 8*tile,
+  tiles >= 128 mirrored through 0xF5xx, exactly as 60853) instead of clearing pixels (ifixo, third
+  code block). Record +3 = gfx | 1 for opaque. A masked draw of the same code over an opaque item
+  keeps it opaque; anything else -> FF (ULA) as before.
+- TEARING: the commit (item + figure sprite writes) ran while the beam was in the play area
+  because the hooks lengthen the frame (original handler -> render end: median 0.5-0.9 ms, max 2.4
+  ms at 28 MHz; with hooks the commit starts later). Now rwait before the commit reads the active
+  video line ($1E/$1F): lines 16-175 (the play area) -> wait until line 176; otherwise commit at
+  once. Interrupts stay off. Cost: up to one play-area scan (~10 ms) per render when the render ends
+  mid-screen; the commit (avg 1.0 ms, max 5.4 ms) starting at line 176 can run past the interrupt
+  (~line 248) in the busiest bonus scenes -> that frame waits one more interrupt (the music keeps
+  time from the interrupt; hardware to judge).
+- Also: ESTAMP removed (EPAT filled with FF per commit) to free 0x0E60-0x0EFF for the third code
+  block; page 27 layout tables now limited to 0x2800 (1812 bytes used).
 
 ## Collectables as sprites (2026-10-11)
 Dean's decisions: masked sprites with the game's own graphic + mask, the item's own ink, black
@@ -277,6 +420,20 @@ drawn on top.
   cache (hits 48-67%: vertical scrolling changes every piece's band split -> misses).
 
 ## Verification (software)
+- Objects-on-tilemap build bffd9357 (2026-10-11, RELEASE): rainbow.rzx 7178 frames, 11865 pieces,
+  26528 cell hooks, 36119 object tiles (max 114 per render), 43621 band ends, opaque objects 717
+  (same-map redraws 300 = stored tile / 0 different) -> IDENTICAL; rainbownew.rzx 11799 frames, 29314
+  pieces, 49707 cell hooks, 139988 object tiles (max 110), 70579 band ends, opaque objects 3152
+  (677 / 0) -> IDENTICAL; object model = the game's back buffer for 36773 / 149087 object cells;
+  unit tests PASS (17 negative controls detected); boot OK both .nex. Timing: whole game frame max
+  21.5 / 24.8 ms, frames over 20 ms 9 / 17 (ab97c76a: 9 / 15).
+- Opaque-item / raster build ab97c76a (2026-10-11, RELEASE): rainbow.rzx 7178 frames, 11865 pieces,
+  26528 cell hooks, 13558 item sprites, 289 opaque items, same-scroll redraws 179 = stored tile /
+  0 different -> IDENTICAL; rainbownew.rzx 11799 frames, 29314 pieces, 49707 cell hooks, 67570
+  item sprites, 1412 opaque items, same-scroll redraws 376 / 0 -> IDENTICAL; unit tests PASS incl.
+  opaque render paths, raster wait (6 start lines) and 10/10 item controls; boot OK both .nex.
+  Timing: commit avg 1.0 / 2.0 ms, max 5.4 / 6.2 ms; game frames over 20 ms 9 / 15 (0 without the
+  item hooks) - the raster wait adds to these on hardware (not simulated).
 - Collectables build eb9836fe (2026-10-11, RELEASE): rainbow.rzx 7178 frames, 11865 pieces,
   26528 cell hooks, 43621 band ends, 13558 item sprites (max 67 per render, 104 sprites in all) ->
   IDENTICAL; rainbownew.rzx 11799 frames, 29314 pieces, 49707 cell hooks, 70579 band ends, 67570
@@ -327,6 +484,14 @@ drawn on top.
   pixels unless the original plotted a figure there during that render.
 
 ## Open - game / software
+0. NEXT (Dean's eb9836fe report item 5): (a) rainbows partly black: done in bffd9357 (rainbow pieces
+   were the codes 1-14; now tiles with a 1-pixel border). (b) dark-blue squares on partial tiles = tiles with NON-bright blue paper (colours 0x0A red,
+   0x0C green, 0x0F white ink; 31 distinct tiles in both RZX) next to bright-blue sky (0x4F):
+   layer B = a tilemap (or sprites) behind the ULA showing the sky, ULA paper made transparent
+   on those cells, paper INSIDE the object black. Proposed inside masks: rainbow_B_mask_sheet.png
+   (rule: paper between ink pixels in its row or column) - waiting for Dean's review. The tilemap
+   now exists: B tiles can go into the same map with attribute bit 0 = 1 (ULA over the tile) and
+   ULA paper made transparent there - needs a free tile budget (176 shared) and a palette plan.
 1. Revisions/optimisations: wait for Dean's list; re-verify both RZX, compare MD5s.
 2. Later islands: banks 3/4/6 never paged in either RZX; need a recording past island 1 (item
    graphics change there: GCOPY invalidation is unit-proven only through the model).
@@ -343,6 +508,7 @@ drawn on top.
 5. identify.py / signatures.json entry (auto detects via rainbow.is_rainbow; `identify` says unknown).
 7. A pickups RZX (castle bricks, rainbow, sky; enemies turned to fruit and collected) would put
    the spawn paths (60543 -> 60839 / 60965) through more cases; both RZX already reach them.
+
 
 ## Game facts (detail)
 - Code in bank 0 at C000; bank 1 = music (0xD4DE-0xD86A) via trampoline 0x5C70 (7FFD 17 then 16
@@ -379,12 +545,29 @@ drawn on top.
 - Cell drawer 60633 (composition, DI) and 60543 (spawn into a drawn cell), both end JP (IY):
   a back-buffer cell = 0x9F00 + 256*k + col (k = 0-21), 8 rows at +32. Base tile 60853 (A = tile;
   gfx 0x80xx, codes >= 128 mirrored via 245); full tile 60839 (0xF700 + 8*(A-1)): codes 1-14 there
-  are ITEMS drawn opaque (base tile's table bit 7 clear = plain background), >= 15 other overlays;
-  masked item 60965 ((cell AND mask) OR gfx, (mask, gfx) pairs at 0xF600 + 16*(A-1), codes 1-14
+  are RAINBOW pieces drawn opaque (base tile's table bit 7 clear = plain background), >= 15 the
+  collectables (see CELL OBJECT CODES below); masked object 60965 ((cell AND mask) OR gfx, (mask, gfx) pairs at 0xF600 + 16*(A-1), codes 1-14
   seen; the masks contain the gfx bits; 0xF700 tiles = the 0xF600 gfx). Object lists: pages
   0x71 (next) / 0x72 / 0x73 (code). No other writer of the back buffer in either RZX.
 - Cell attribute (attr buffer 0xB500 + 32k + col): no objects -> (0xF200 + (tile|128)) & 127;
   composed with objects -> paper/bright of that entry + ink 6 (codes < 19) or table 50823 (>= 19),
   ink = paper -> 7; spawned object (60583) -> old paper + ink 0 (7 on black paper). Item inks seen:
   yellow / bright yellow, white, a few others.
+- CELL OBJECT CODES: 1-14 (masked 60965 = 0xF600 pairs, and opaque 60839 = 0xF700 tiles 1-14, the
+  same pictures) are RAINBOW pieces; collectables (fruit, cakes, flowers, 2x2 objects) are opaque
+  60839 codes 15-190 (0xF700 + 8*(code-1)). Look at the graphics before naming a code range - two
+  builds turned the rainbows into sprites and left the collectables alone.
+- Composition (60633): the first object with code >= 15 drawn opaque (or, all rainbow pieces: the
+  first opaque on a plain tile (F2 bit 7 clear), else the base tile), then every further object
+  masked; up to 4 objects per cell seen. Cell attribute: from the LAST object (ink 6 for codes < 19,
+  else table 50823 by object slot). Spawn (60543) draws one object into a drawn cell (60583 colour).
+- Opaque objects are drawn over a BLANK cell: no base tile under them. The cell's map tile is the
+  byte at BC' at that moment (all callers 60550 / 60577 / 60696); 60853 redraws the cell with that
+  tile from the same map byte (BC' address + scroll; a new round can reuse the scroll value with a
+  new map address). Keep a tile per cell to restore the background under an object.
+- Up to 114 object cells (137 objects) on screen at once (rainbow.rzx bonus scene / rainbownew):
+  too many for sprites next to the figures; the cell-aligned tilemap layer fits.
+- Map tile colours (both RZX): sky 0x4F (bright blue paper); full bricks 0x42 (bright red on
+  black); PARTIAL tiles 0x0A / 0x0C / 0x0F have NON-bright blue paper -> the dark-blue squares
+  next to the bright sky (original behaviour). Red/yellow-paper tiles (0x16, 0x56) are scenery.
 - After a death (65076) routines at 23309 / 24678 / 23304 write the screen before the next render.

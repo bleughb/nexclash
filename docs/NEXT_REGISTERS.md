@@ -25,12 +25,19 @@ top byte where OTIR must work (0x57, 0x5B). The ULA answers on any even port (A0
 | $08 | Peripheral 3 Setting Register | contention; bit 7 write 1 = clear the 7FFD lock (0 does nothing; read 1 = unlocked) | tail, altrom stub |
 | $15 | Sprite and Layers System Register | bit 0 sprites visible; bits 4:2 layer order (default SLU, global) | hooks, setup |
 | $19 / $1C | Clip Window Sprites / Clip Window Control | $1C bit 1 resets the sprite clip index, then X1,X2,Y1,Y2 to $19 | Rainbow / Wally setup |
+| $1B | Clip Window Tilemap | $1C bit 3 resets its index, then X1,X2 (2-pixel units), Y1,Y2 | Rainbow commit (x 16-143, y 48..47+N) |
+| $1E / $1F | Active Video Line MSB / LSB | read via 0x243B/0x253B; line 0 = first ULA pixel row; commit waits while the beam is in the play area | Rainbow raster wait |
+| $2F-$31 | Tilemap Offset X MSB/LSB, Y | 0 | Rainbow setup |
+| $4C | Tilemap Transparency Index | 0 | Rainbow setup |
+| $6B | Tilemap Control | 0x81 = on, 40x32, 2-byte entries, tilemap over the ULA; 0 = off | Rainbow commit / sprites-off stubs |
+| $6C | Default Tilemap Attribute | 0 | Rainbow setup |
+| $6E / $6F | Tilemap Base Address / Tile Definitions Base | bit 7 = bank 7 (first 8K only = page 14; recent core), low bits = offset in 256-byte units ($6E 0x80, $6F 0x80 + 0x0A) | Rainbow commit |
 | $34 | Sprite port-mirror Index Register | selects the sprite for $35-$39 | all hooks |
 | $35-$39 | Sprite Attribute 0-4 Registers | X, Y, flags (X8, mirror), pattern + visible, 4-bit/anchor; no auto-increment ($75-$79 would) | all hooks |
-| $40 / $41 / $43 | Palette Index / Palette Value (8-bit) / ULA Palette Control | $43=$20 selects sprite palette 0 with auto-increment | setup templates |
+| $40 / $41 / $43 | Palette Index / Palette Value (8-bit) / ULA Palette Control | $43=$20 selects sprite palette 0 with auto-increment; $43=$30 the tilemap palette | setup templates, Rainbow setup |
 | $4B | Sprite Transparency Index Register | 0 = index 0 transparent (reset value $E3; 4-bit uses the low nibble) | setup |
 | $50-$57 | MMU slot 0-7 Registers | 8K page per slot; $FF in slot 0/1 = ROM (or the alt ROM) | stub, tail, hooks |
-| $7F | User Storage 0 Register | "player drawn" flag (slot1/altrom TID hooks) | hooks |
+| $7F | User Storage 0 Register | "player drawn" flag (slot1/altrom TID hooks); Rainbow: tile-cache flush request | hooks |
 | $8C | Alternate ROM Register | $C0 write mode (fill), $80 enable read-only; hardware-tested 2026-09-27 | altrom stub, tail |
 | $C0 | Interrupt Control Register | 0 = pulse interrupt mode (Next IM2 hardware vectors off) | z80tonex stub |
 | $8E | Memory Mapping Register | not used; writes act like 7FFD/DFFD/1FFD port writes | - |

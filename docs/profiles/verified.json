@@ -1,5 +1,5 @@
 {
- "_note": "Snapshots whose sprite build was differentially verified against a recording. nex = MD5s `nexclash.py patch` reproduces (None = not baselined yet). Rainbow Islands: snapshot MD5 to be pinned (outputs plain 7ac543fb51c7a3c4137778eeb3cdc175, sprites eb9836fe60a70df02087920603c673b4).",
+ "_note": "Snapshots whose sprite build was differentially verified against a recording. nex = MD5s `nexclash.py patch` reproduces (None = not baselined yet). Rainbow Islands: snapshot MD5 to be pinned (outputs plain 7ac543fb51c7a3c4137778eeb3cdc175, sprites bffd9357d772e2df975ec5f40dc9e4cb).",
  "snapshots": {
   "cddc0cfea8259d0c497b50fae0acd27e": {
    "game": "Chuckie Egg",
