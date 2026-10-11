@@ -14,8 +14,8 @@ squares - analysis: codes 1-14 are RAINBOW pieces, the collectables are codes >=
 OBJECTS ON THE TILEMAP bffd9357 (below) - hardware test pending. Needs a core with the tilemap in bank 7
 (Dean: most recent core).
 
-Reference: rainbow.z80, rainbow.rzx, rainbownew.rzx in the private repo (to be uploaded: the
-bffd9357 MD5 has not been reproduced from the repo yet). Review images from the sessions (mask
+Reference: rainbow.z80 (4c98b980), rainbow.rzx (55046d18), rainbownew.rzx (47bb2b16) in the
+private repo. 2026-10-12: `selftest.py` rebuilt bffd9357 from the repo; both RZX IDENTICAL. Review images from the sessions (mask
 contact sheet rainbow_B_mask_sheet.png, objects.png) belong in the private repo too (they show game
 graphics). Tools: nexclash/rainbow_objects.py (object/tile catalogue -> profile `objects`),
 nexclash/rainbow_catalogue.py (figure catalogue for colours; fixed 2026-10-11 to read `plotters`),

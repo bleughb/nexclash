@@ -95,6 +95,9 @@ nexclash/rainbow_objects.py. Same patch sites as before (no new ones).
   tile with the ink in its pixels, on-screen tile reused, flush ignored, no raster wait, + the
   figure / store / limiter controls.
 - ITERATE (rainbow.rzx 2912 frames incl. the bonus scene) PASSED before the RELEASE.
+- 2026-10-12, from the public repo (selftest.py, Dean's rainbow.z80 4c98b980 / rainbow.rzx 55046d18
+  / rainbownew.rzx 47bb2b16): rainbow.nex 7ac543fb and rainbow_sprites.nex bffd9357 reproduced, both
+  RZX IDENTICAL with the same counts as above, unit tests PASS (17/17 controls), boot OK.
 
 ## Rainbow Islands - 2026-10-11 opaque-item base tile + raster-synced commit
 RELEASE level. Changed: rainbow.py, rainbow_hooks.asm, rainbow_islands.json (hook hex, new `page3`
