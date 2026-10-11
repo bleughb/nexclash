@@ -34,9 +34,11 @@ clone it OUTSIDE the package).
   games/ file, a dispatch line in nexclash.py cmd_auto, a verified.json entry).
 - Ask the user before decisions that change what they see (which figures become sprites,
   colours, anything left on the ULA).
-- Do not change another game's output. If you touch shared code (nexclash.py, z80tonex, build,
-  verify, nextboot, ...) the maintainers' selftest must reproduce every MD5 in
-  docs/VERIFICATION.md - say so in the contribution note so they run it.
+- Do not change another game's output. Regression check = `python selftest.py --smoke` (rebuilds
+  Chuckie Egg only, under a second; needs the private references) after touching shared code
+  (nexclash.py, z80tonex, build, verify, nextboot, ...). Do NOT run the full selftest or other
+  games' verifications in a game session: the full selftest (~1.5 h) runs only for releases.
+  Without the references, say in the contribution note that shared code changed.
 - Never run `pkill -f <name>` when your own command line contains <name>.
 - 128K start-up tail must end below 0xC000.
 - Shell heredocs that write docs: quote the delimiter (`<<'EOF'`).
@@ -50,8 +52,10 @@ clone it OUTSIDE the package).
 - Release (maintainers): bump VERSION, merge, then publish a release with tag v<VERSION> in the
   GitHub UI: the release workflow builds the zip (tools/make_package.py; version = the tag) and
   attaches it. Missing zip: Actions -> release -> Run workflow with the tag.
-- Maintainers: commit on a branch, push, open a PR (message = what changed + verification);
-  before merging shared-code changes run `python selftest.py` with the private reference repo.
+  Before a release (not per game): full `python selftest.py` must reproduce every MD5.
+- Maintainers: commit on a branch, push, open a PR (message = what changed + verification). New
+  game's files go in the private repo: specnext/reference/<game>/ (snapshot, recordings, and the
+  built <game>.nex + <game>_sprites.nex), listed in its reference/README.md.
 - Reply: results, the .nex files, a short hardware checklist.
 
 ## Layout
