@@ -4,7 +4,7 @@
     python selftest.py [FOLDER] [--human] [--no-repro] [--fast]
 
 FOLDER (default: $NEXCLASH_REFERENCE, ./reference or ../specnext/reference - the maintainers'
-private reference repo; game files are never in the public package) holds the reference inputs under any
+private reference repo, one subfolder per game; game files are never in the public package) holds the reference inputs under any
 names (recognised by MD5; the engine games below also by their canonical name). Runs
 `nexclash.py auto` on each snapshot (auto recording, deterministic seed) and
 checks the .nex MD5s (default strategy = altrom where proven) and that every
@@ -79,8 +79,10 @@ def main():
     human, repro, fast = '--human' in sys.argv, '--no-repro' not in sys.argv, '--fast' in sys.argv
     work = tempfile.mkdtemp(prefix='nexclash_selftest_')
     found = {}
-    for f in os.listdir(src):
-        p = os.path.join(src, f)
+    files = [(f, os.path.join(d, f)) for d, _, fs in os.walk(src) for f in fs]   # reference/<game>/...
+    for f, p in files:
+        if f.lower().endswith('.nex'):
+            continue                            # built games kept next to the references
         if os.path.isfile(p) and os.path.getsize(p) < 2_000_000:
             h = md5(p)
             n = INPUTS.get(h)
