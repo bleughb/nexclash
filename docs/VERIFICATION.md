@@ -38,7 +38,7 @@ Default builds (strategy `altrom` where proven; dedicated builders are printer-o
 - `dizzy2_title_sprites.nex` 85e054fe4bce8e4b3a8e336aac432f58 (dedicated, printer; re-checked 2026-09-28), `dizzy2.nex` (title, no recording) 70890aba7d821fba8a41e63636eb58be
 - `dizzy1_sprites.nex` 05d2bce99f4d7654d4e1c9c9c04dc391 (dedicated, printer), `dizzy1.nex` 7892b2e0f1f3f9f19165516db307cbe0
 - Dizzy 6 (`tid_mirror`): stays slot1 (self-modifying plotter copy in the RAM page); not in selftest
-- `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_sprites.nex` bffd9357d772e2df975ec5f40dc9e4cb (2026-10-11, objects on the tilemap)
+- `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_sprites.nex` e50733b2b7e2db32f004c1436a2e0461, `rainbow_sprites_diag.nex` 8f25bc6146b9d7f7ae1f12a1d227447e (2026-10-12, collectables without border + diagnostic build)
 - `Chuckie_Egg.nex` ec0df71e70fae35836eaed521f300777, `Chuckie_Egg_sprites.nex` bfad6be1e7c8a2c797a6242d7f339e35 (2026-10-11)
 
 `--strategy` reproductions of the pre-altrom builds (same recordings):
@@ -55,6 +55,31 @@ Default builds (strategy `altrom` where proven; dedicated builders are printer-o
 - `--outline transparent` on rainbow.rzx - IDENTICAL (outline pixels counted as expected drops)
 - unit tests: edge columns, last slot, passthrough at 32 pieces, negative control, class colour - PASS
 - Hardware: runs (Dean, 2026-09-28); detailed visual checklist results not reported
+
+## Rainbow Islands - 2026-10-12 collectables without border + diagnostic build
+RELEASE level. Changed: rainbow.py, rainbow_hooks.asm, rainbow_islands.json (objects: opaque 15-255
+border false; hook hex; symbols). Patch sites unchanged; ROM stubs e_hx (now maps page 26 and jumps
+to dfend) and the limiter run path (jumps to dfst) changed.
+- `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175 - UNCHANGED, boot sim OK
+- `rainbow_sprites.nex` e50733b2b7e2db32f004c1436a2e0461 - boot sim OK
+- `rainbow_sprites_diag.nex` 8f25bc6146b9d7f7ae1f12a1d227447e - boot sim OK
+- rainbow.rzx: 7178 frames, 11865 pieces, 2215 commits; 26528 cell hooks, 606 tiles dropped,
+  36119 object tiles (max 114 per render), 43621 band ends - IDENTICAL; same-map redraws of opaque
+  objects 300 with the stored tile, 0 different.
+- rainbownew.rzx: 11799 frames, 29314 pieces, 3530 commits, overflow entries 2; 49707 cell hooks,
+  2660 tiles dropped, 139988 object tiles (max 110), 70579 band ends - IDENTICAL; same-map redraws
+  677 / 0 different.
+- Diagnostic build: first 1506 frames of each recording - IDENTICAL (border writes only).
+- Timing (simulated, 28 MHz, no raster wait): whole game frame max 21.4 / 24.8 ms, frames over 20 ms
+  9 / 16 (bffd9357: 9 / 17).
+- New unit tests: diagnostic build - render with a cold cache and the beam at line 100 (red around
+  every tile built, blue while waiting, black at the end), beam at line 200 (no wait: one black
+  write), frame start / end with and without an interrupt during the frame (yellow only with), no
+  stack use (SP unchanged when jumping back); normal build: no border write at all. Control: the
+  OUT removed -> detected.
+- ITERATE (rainbow.rzx 2912 frames) PASSED before the RELEASE.
+- 2026-10-12 (merge into the repo): reassembled = profile hex (6 blocks, 63 symbols); the repo
+  rebuilds all three .nex byte-identical, boot OK.
 
 ## Rainbow Islands - 2026-10-11 objects on the tilemap
 RELEASE level. Changed: rainbow.py, rainbow_hooks.asm, rainbow_islands.json (hook hex, code blocks

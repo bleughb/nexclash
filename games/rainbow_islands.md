@@ -11,11 +11,14 @@ off on non-play screens bddea69e (hardware: smooth, runs). 2026-10-11: COLLECTAB
 partly black; dark-blue squares on partial tiles). 2026-10-11: OPAQUE-ITEM BASE TILE + RASTER-SYNCED
 COMMIT ab97c76a (hardware 2026-10-11: rainbows with black edges/blocks, fruit and flowers on full
 squares - analysis: codes 1-14 are RAINBOW pieces, the collectables are codes >= 15). 2026-10-11:
-OBJECTS ON THE TILEMAP bffd9357 (below) - hardware test pending. Needs a core with the tilemap in bank 7
-(Dean: most recent core).
+OBJECTS ON THE TILEMAP bffd9357 (below; hardware 2026-10-12: black lines around collectables not
+wanted; sprite corruption and slowdowns seemingly at random). 2026-10-12: COLLECTABLES WITHOUT
+BORDER + DIAGNOSTIC BUILD e50733b2 / diagnostic 8f25bc61 - hardware test pending. Needs a core with
+the tilemap in bank 7 (Dean: most recent core).
 
 Reference: rainbow.z80 (4c98b980), rainbow.rzx (55046d18), rainbownew.rzx (47bb2b16) in the
-private repo. 2026-10-12: `selftest.py` rebuilt bffd9357 from the repo; both RZX IDENTICAL. Review images from the sessions (mask
+private repo. 2026-10-12: the repo rebuilds e50733b2 / 8f25bc61 / plain 7ac543fb byte-identical (boot OK);
+bffd9357 was rebuilt by `selftest.py` with both RZX IDENTICAL. Review images from the sessions (mask
 contact sheet rainbow_B_mask_sheet.png, objects.png) belong in the private repo too (they show game
 graphics). Tools: nexclash/rainbow_objects.py (object/tile catalogue -> profile `objects`),
 nexclash/rainbow_catalogue.py (figure catalogue for colours; fixed 2026-10-11 to read `plotters`),
@@ -23,14 +26,19 @@ tools/rainbow_items_proto.py (the collectables prototype, superseded).
 
 ## Dean's decisions (current)
 Player white with black outline; stars as now (ULA); fruit / collectables keep their own colours;
-rainbows and objects with a 1-pixel black border, in front of the scenery and behind all figures;
+black 1-pixel border on rainbows (and on player / creature sprites) only - collectables (codes
+15+: fruit, cakes, flowers, stars) have NO border and are see-through (background shows around them
+and through their gaps; filling enclosed gaps black is the alternative, not chosen); objects in front
+of the scenery and behind all figures;
 background never removed; steady speed (frame limiter); object handling automatic with manual
 overrides (profile `objects`). Dean has the most recent core (tilemap in bank 7).
 
 ## Deliverables
 | File | MD5 |
 |---|---|
-| rainbow_sprites.nex (objects on the tilemap + everything below) | bffd9357d772e2df975ec5f40dc9e4cb |
+| rainbow_sprites.nex (collectables without border + everything below) | e50733b2b7e2db32f004c1436a2e0461 |
+| rainbow_sprites_diag.nex (the same + border colours: blue = commit waits for the beam, red = tile built, yellow = frame overran) | 8f25bc6146b9d7f7ae1f12a1d227447e |
+| (objects on the tilemap, black border on every object) | bffd9357d772e2df975ec5f40dc9e4cb |
 | (opaque-item base tile + raster-synced commit; rainbows as sprites) | ab97c76ae0edd3937e3149b0dac5e52f |
 | (collectables as sprites; HW: tearing, item squares, black in rainbows) | eb9836fe60a70df02087920603c673b4 |
 | (limiter + render-end commit + sprites off on non-play screens; runs on HW) | bddea69edaf6cf0a83dba8633c8f6618 |
@@ -98,6 +106,21 @@ catalogue.json. Page keys go into the class-colours map.
 
 ## Hardware status
 - Runs on the Next (2026-09-28); limiter + commit build bddea69e runs smooth (Dean).
+
+## Hardware checklist - collectables without border + diagnostic build e50733b2 / 8f25bc61 (2026-10-12)
+1. Collectables (fruit, cakes, flowers, stars): own colour, NO black line; the background shows around
+   them and through their gaps. Rainbows keep the thin black border; player / creatures keep theirs.
+2. DIAGNOSTIC build (rainbow_sprites_diag.nex), for the random corruption / slowdowns - film the TV
+   (border visible) when it happens:
+   - BLUE border band: the commit was waiting for the beam to leave the play area (raster wait);
+   - RED band: a new object tile was being built;
+   - YELLOW: the last game frame overran (an interrupt came during it: that frame took 4 interrupts
+     instead of 3 = a slowdown), until the next frame starts;
+   - black: nothing special. The bands show where in the frame it happens (top / bottom border).
+   Note per glitch: which colour was showing, and where on screen the corruption was.
+3. Compare: does the normal build show the same corruption / slowdowns as the diagnostic one (the
+   diagnostic build adds only the border writes)?
+4. Everything else as in the bffd9357 checklist below.
 
 ## Hardware checklist - objects on the tilemap bffd9357 (2026-10-11)
 1. RAINBOWS: yellow with a thin black border, NO black blocks under the arch; the sky / bricks show
@@ -221,6 +244,26 @@ build).
   labels). 2026-10-12: reassembled = profile hex for all six blocks and 56 symbols.
 - nexclash.py: dispatch in cmd_auto, flags --ink/--outline/--class-colours; convert --tail.
 - z80tonex.py: 128K tail guard.
+
+## Collectables without border + diagnostic build (2026-10-12, e50733b2 / 8f25bc61)
+- Dean: black border on rainbow pieces, characters and creatures only. Profile `objects`: opaque
+  15-255 {"border": false} (codes 1-14 stay "rainbow" with border). Collectables: their pixels in
+  their ink, everything else in the cell transparent (the map tile shows, also through gaps inside
+  the object - Dean chose see-through for now; filling enclosed gaps black is the alternative).
+- Dean's report on bffd9357: sprite corruption and slowdowns seemingly at random, not tied to the
+  amount on screen; Fuse cannot record the Next build. Suspects: (1) the raster wait (0-10 ms per
+  render depending only on where the beam is when the render ends; can push a frame past the next
+  interrupt = 4 interrupts instead of 3); (2) bursts of tile composition (up to ~12 ms per render);
+  (3) a render ending at lines 0-15 commits at once and can tear the top play rows. Not simulated.
+- DIAGNOSTIC BUILD (same code, V_DIAG = 1 set by Python; auto builds rainbow_sprites_diag.nex and
+  verifies it on the first 1500 frames): OUT (0xFE) border colour: blue (1) in the raster-wait loop,
+  black after it; red (2) around each tile composition (ocompd); frame start (s_lim run -> dfst):
+  NextReg $C8 bit 0 cleared, black; frame end (e_hx -> dfend): $C8 bit 0 set = an interrupt came
+  during the frame = overrun -> yellow (6) until the next frame start. dfst / dfend are jumped to
+  from the ROM stubs and jump back (x_lrun / x_hx): no stack use. Normal build: V_DIAG = 0, no port
+  writes (unit-tested).
+- Next steps depending on what the video shows: smarter raster wait (wait only when the commit could
+  meet the beam; treat a late end at lines 0-15 as "wait"), and/or a limit on new tiles per render.
 
 ## Objects on the tilemap (2026-10-11, bffd9357)
 Dean's report on ab97c76a: rainbows with black edges and black blocks, fruit / flowers on full
@@ -420,6 +463,11 @@ drawn on top.
   cache (hits 48-67%: vertical scrolling changes every piece's band split -> misses).
 
 ## Verification (software)
+- No-border + diagnostic build e50733b2 / 8f25bc61 (2026-10-12, RELEASE): rainbow.rzx 7178 frames, 11865 pieces,
+  26528 cell hooks, 36119 object tiles -> IDENTICAL; rainbownew.rzx 11799 frames, 29314 pieces, 49707
+  cell hooks, 139988 object tiles -> IDENTICAL; diagnostic build IDENTICAL on the first 1506 frames of
+  each; unit tests PASS (18 negative controls detected); boot OK all three .nex. Frames over 20 ms
+  9 / 16, max 21.4 / 24.8 ms.
 - Objects-on-tilemap build bffd9357 (2026-10-11, RELEASE): rainbow.rzx 7178 frames, 11865 pieces,
   26528 cell hooks, 36119 object tiles (max 114 per render), 43621 band ends, opaque objects 717
   (same-map redraws 300 = stored tile / 0 different) -> IDENTICAL; rainbownew.rzx 11799 frames, 29314

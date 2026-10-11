@@ -42,7 +42,7 @@ RZX_GAMES = {        # engine games: inputs (canonical name, md5 or None = match
               'nex': ('2e615b3e7ae995e6d6a6ed9e3f586d4d', 'f7605489c3af55b8e8c6a580c1c26150')},
     'rainbow': {'files': [('rainbow.z80', '4c98b980b1726af545fccc99665ef29b'), ('rainbow.rzx', '55046d1893bba0a4faf314ecd3a9638b'),
                           ('rainbownew.rzx', '47bb2b163a947724c343a2bc1b039458')],
-                'nex': ('7ac543fb51c7a3c4137778eeb3cdc175', 'bffd9357d772e2df975ec5f40dc9e4cb'), 'slow': True},
+                'nex': ('7ac543fb51c7a3c4137778eeb3cdc175', 'e50733b2b7e2db32f004c1436a2e0461', '8f25bc6146b9d7f7ae1f12a1d227447e'), 'slow': True},
 }
 OPTIONAL = {'dizzy5.z80', 'treasure_island_title.z80'}
 NO_RECORD = {'treasure_island_title'}   # reference built without a recording (dedicated builder)
@@ -182,7 +182,7 @@ def main():
         for cn, _ in spec['files']:
             if dict(spec['files'])[cn] is None:
                 print('     %s md5 %s (pin it in RZX_GAMES)' % (cn, md5(os.path.join(work, cn))))
-        for suffix, want in zip(('.nex', '_sprites.nex'), spec['nex']):
+        for suffix, want in zip(('.nex', '_sprites.nex', '_sprites_diag.nex'), spec['nex']):
             p = os.path.join(out, g + suffix)
             ok = os.path.exists(p) and md5(p) == want
             fails += not ok

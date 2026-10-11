@@ -146,6 +146,9 @@ V_TATR  EQU 0x006D          ; map attribute (palette offset << 4)
 V_RB    EQU 0x006E          ; TILES + 32k (word)
 V_OMP   EQU 0x0070          ; OCCM pointer low byte
 V_OMB   EQU 0x0071          ; mask bits left
+V_DIAG  EQU 0x0072          ; 1 = diagnostic build (border colours)
+V_FRUN  EQU 0x0073          ; diagnostic: a game frame is running
+V_DBC   EQU 0x0074          ; diagnostic: BC (word)
 CODE2   EQU 0x1F10          ; fourth code block (page 26, up to 0x1FFF)
 CODE4   EQU 0x0D60          ; third code block (page 26, up to 0x0DFF)
 CODE3   EQU 0x0E60          ; second code block (page 26, up to 0x0EFF: the tail of WBM's page)
@@ -186,7 +189,10 @@ e_off2: nextreg 0x15,0              ; site 65029 CALL 23698 (main loop (re)start
         nextreg 0x7F,1
         jp 23698
 e_hx:   nextreg 0x07,0              ; site 65274 (POP AF / EI / RET): back to 3.5 MHz for the
-        pop af                      ; main loop (its timing stays the original's)
+        nextreg 0x50,PAGE_S         ; main loop (its timing stays the original's). A is free here.
+        jp dfend                    ; diagnostic build: frame end (then x_hx; no stack use)
+x_hx:   nextreg 0x50,0xFF
+        pop af
         ei
         ret
 e_bt:   nextreg 0x50,PAGE_S         ; site 60853: base tile into a back-buffer cell
@@ -236,7 +242,7 @@ s_lim:  ld a,(V_TICK)
         xor a
         ld (V_TICK),a
         nextreg 0x07,3              ; 28 MHz for the game frame
-        jp x_lrun
+        jp dfst                     ; diagnostic build: frame start (then x_lrun; no stack use)
 .skip:  ld (V_TICK),a
         jp x_lskip
 
@@ -1619,7 +1625,7 @@ olook:  ld a,(V_OL)
         ld hl,V_OL
         ld bc,4
         ldir
-        call ocomp
+        call ocompd
         ld a,(V_PROBE)
         ret
 
@@ -1919,7 +1925,10 @@ code_end:
 ; rwait: the commit must not change sprites or the tilemap while the beam draws them (tearing).
 ; Active video line (NextReg $1E/$1F; 0 = first pixel row): while it is in the play area (rows
 ; 16-175), wait for it to pass row 175. Lines >= 176 and < 16: commit at once.
-rwait:  ld bc,0x243B
+rwait:  call .w0
+        xor a                       ; diagnostic build: border back to black
+        jp dcol
+.w0:    ld bc,0x243B
 .w:     ld a,0x1E
         out (c),a
         inc b
@@ -1936,6 +1945,8 @@ rwait:  ld bc,0x243B
         ret nc
         cp 16
         ret c
+        ld a,1                      ; diagnostic build: blue border while waiting
+        call dcol
 .lp:    jr .w                       ; (unit-test control: RET = no wait)
 
 ; tcommit: show the map built this render (or switch the layer off), clip it to the play area
@@ -1976,6 +1987,12 @@ tcommit:
         ld a,0xFF
         ld (V_MSD),a
         ret
+; diagnostic build: red border while a tile is composed
+ocompd: ld a,2
+        call dcol
+        call ocomp
+        xor a
+        jp dcol
 code3_end:
 
 ; --- third code block (page 26 0x0D60-0x0DFF: the tail of WBG's page)
@@ -2048,6 +2065,44 @@ ocrow:  ld a,l
         or c
         ret
 
+; --- diagnostic build (V_DIAG = 1, set by Python for rainbow_sprites_diag.nex): border colour =
+; blue while the commit waits for the beam, red while a tile is composed, yellow from the end of a
+; game frame that overran (an interrupt came during it) to the next frame start; else black.
+; OUT (0xFE) with EAR/MIC 0. Normal build: V_DIAG = 0, no port writes.
+dcol:   push af                     ; A = border colour (kept)
+        ld a,(V_DIAG)
+        or a
+        jr z,.x
+        pop af
+.o:     out (0xFE),a                ; (unit-test control: NOPs = no colour shown)
+        ret
+.x:     pop af
+        ret
+dfst:   ld a,(V_DIAG)               ; frame start: clear the ULA interrupt flag ($C8 bit 0), black
+        or a                        ; (jumped to from s_lim: the game's stack is not touched)
+        jp z,x_lrun
+        ld (V_FRUN),a
+        nextreg 0xC8,1
+        xor a
+        out (0xFE),a
+        jp x_lrun
+dfend:  ld a,(V_FRUN)               ; frame end (after a frame that ran): an interrupt during it =
+        or a                        ; the frame overran -> yellow until the next frame start
+        jp z,x_hx                   ; (jumped to from e_hx: no stack use)
+        xor a
+        ld (V_FRUN),a
+        ld (V_DBC),bc
+        ld bc,0x243B
+        ld a,0xC8
+        out (c),a
+        inc b
+        in a,(c)
+        ld bc,(V_DBC)
+        and 1
+        jp z,x_hx
+        ld a,6
+        out (0xFE),a
+        jp x_hx
 code4_end:
 
 ; --- fourth code block (page 26 0x1F10-0x1FFF)
