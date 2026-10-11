@@ -1,0 +1,78 @@
+{
+ "engine": "tid_mirror",
+ "plotter": 38351,
+ "eraser": 38667,
+ "eraser_spsave": 38724,
+ "eraser_cont": 38672,
+ "plotter_writes": [
+  38473,
+  38484,
+  38495,
+  38611,
+  38622,
+  38633,
+  38647
+ ],
+ "eraser_writes": [
+  38696,
+  38700,
+  38705,
+  38709
+ ],
+ "plot_site": 38974,
+ "plot_site_kind": "JP",
+ "frame_table": 25849,
+ "frame_base": 25927,
+ "wipe": 36389,
+ "box": 36988,
+ "isr_hide_call": 61507,
+ "pixel_test": 39792,
+ "plot_site2": 33741,
+ "mirror_note": "second player copy plotted at 33741 (own undo buffer): needs the dizzy6 builder",
+ "wipe_ix": 23848,
+ "wipe_cont": 36393,
+ "box_var": 38348,
+ "box_cont": 36991,
+ "sound_tick": 37108,
+ "undo_ptr": 38731,
+ "undo_buffer": 23552,
+ "notes": [],
+ "ok": true,
+ "game": "Dizzy 6 / Prince of the Yolkfolk (48K)",
+ "z80_md5": "dd6cd7a3af47a520a260376c6ad4b459",
+ "undo_buffer_mirror": 23652,
+ "undo_size": 88,
+ "mirror_frame_map": 33757,
+ "mirror_erase_call": 33680,
+ "copy_range": [
+  38351,
+  38721
+ ],
+ "copy_org": 8192,
+ "copy_relocations": [
+  38503,
+  38652,
+  38679
+ ],
+ "mirror_actor_handlers": {
+  "33655": "first draw (no erase), ref at 32597",
+  "33669": "erase+draw, refs at 32653, 40735, 40787"
+ },
+ "snapshot": {
+  "pc": 65021,
+  "sp": 40085,
+  "im": 2,
+  "i": 254,
+  "isr": 61478
+ },
+ "strategy": "slot1 (printer buffer used; ROM unused; dead stack only 48 bytes) + tail in undo buffer 23552",
+ "verified": {
+  "try1.rzx (Dean, autosave stripped)": "PASSED 1537 plots",
+  "Dizzy6_auto.rzx": "PASSED 29 plots",
+  "mirror selftest": "780 cases identical, negative control fails"
+ },
+ "md5": {
+  "Dizzy6.nex": "e02faca34df9504cc1f2f162e0ef791e",
+  "Dizzy6_sprites.nex": "f491e1f6621559ccc4d36de3535ff5d0"
+ }
+}

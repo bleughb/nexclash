@@ -1,0 +1,48 @@
+{
+ "game": "Chuckie Egg (A&F Software, 1983, 48K)",
+ "engine": "chuckie",
+ "player_duck_plotter": 39500,
+ "hen_plotter": 37532,
+ "hen_table": 29527,
+ "player_pos": 29400,
+ "duck_pos": 29512,
+ "gfx": {
+  "player_duck": "36336 + 32*A (16 rows x 2 bytes, top down)",
+  "hen": "36878 + 32*A' (16 rows x 2 bytes, bottom up)"
+ },
+ "signature": {
+  "addr": 39500,
+  "bytes": "f5c5d5dde5e54d21f08d5fafcb1317cb1317cb1317cb1317cb1317571911a0720610af"
+ },
+ "colours": {
+  "player": "yellow (attr 6)",
+  "duck": "yellow (attr 6)",
+  "hens": "cyan (attr 5)"
+ },
+ "hooks": {
+  "source": "asm/chuckie_hooks.asm",
+  "rom": "f5c5d5e5210800395e235606067bfe1620057afea1280a7bfe9120077afea12002060578ed9234210700394ee1e579fe2030197dc620ed92353e00ce00ed92373edf94ed923679cd7a391804ed913800e1d1c1f1f5c5d5c34f9af5c5d5e5cd8d393847ed9234210400397efe02203721f26f197cfe02302e7d070707e6074f7c070707b1c6204fe1e57de6f8c620ed92353e00ce00f610ed92373ed094ed923679cd7a391804ed913800e1d1c1f1c30494f5c5d5e5210c0039cd91393807ed9234ed913800e1d1c1f1dd2e02c36293cd6a3921ff5ac3a1abcd6a3921ff5ac39faecd6a39210040c3a6a5cd6a39210040c3c5a7cd6a39010018c3b5a9f5afed9234ed9138003cfe0720f4f1c947cb3ff6c0ed923878e6010f0ff680ed9239c9211000397e23666f01a98c097cb7200b7dfe1430060f0fe607b7c937c9",
+  "setup": "ed915716013b30afed792100e01618015b00edb31520f8ed915715ed914320ed914001ed9141b4ed914011ed914116ed914b00afed9234ed9138003cfe8020f4ed911501c9",
+  "syms": {
+   "HENTAB": "0x7357",
+   "PAT_HEN": "0x0020",
+   "SPR_DUCK": "0x0005",
+   "SPR_PLAY": "0x0006",
+   "e_c1": "0x393D",
+   "e_c2": "0x3946",
+   "e_c3": "0x394F",
+   "e_c4": "0x3958",
+   "e_c5": "0x3961",
+   "e_hd": "0x38C8",
+   "e_he": "0x391F",
+   "e_pl": "0x386E",
+   "henid2": "0x3991",
+   "henidx": "0x398D",
+   "hideall": "0x396A",
+   "rom_end": "0x39AA",
+   "setpat": "0x397A",
+   "setup": "0xD000",
+   "setup_end": "0xD045"
+  }
+ }
+}

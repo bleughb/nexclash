@@ -1,0 +1,33 @@
+# Status (2026-10-11)
+
+One row per game. Details, decisions and checklists: games/<file>. MD5s: docs/VERIFICATION.md.
+
+| Game | Engine (file) | Sprite build | Software | Hardware | Next |
+|---|---|---|---|---|---|
+| Chuckie Egg | chuckie (chuckie_egg.md) | Chuckie_Egg_sprites.nex bfad6be1 | RZX IDENTICAL, unit PASS | untested | hardware test |
+| Rainbow Islands (128K) | rainbow (rainbow_islands.md) | rainbow_sprites.nex eb9836fe (collectables) | RZX IDENTICAL x2, unit PASS | bddea69e runs smooth; eb9836fe untested | hardware test; later islands RZX |
+| Everyone's a Wally | wally (everyones_a_wally.md) | wally_sprites.nex f7605489 | RZX IDENTICAL, unit PASS | boots and runs | detailed checklist |
+| Spellbound Dizzy (Dizzy V) | dizzy5 (dizzy5_spellbound.md) | Dizzy_V_sprites.nex 1f33c467 (altrom) | verified (2 RZX) | untested | hardware test |
+| Prince of the Yolkfolk (Dizzy 6) | tid_mirror (dizzy6_yolkfolk.md) | Dizzy6_sprites.nex f491e1f6 (slot1) | verified (try1.rzx + mirror selftest) | untested | hardware test; mirror-room RZX |
+| Fantasy World Dizzy | tid generic (tid_engine.md) | dizzy3_sprites.nex 9182f2f8 (altrom) | verified | untested | hardware test |
+| Magicland Dizzy | tid generic (tid_engine.md) | dizzy4_sprites.nex bf137d41 (altrom) | verified | untested | hardware test |
+| Treasure Island Dizzy | dedicated (tid_engine.md) | dizzy2_game_sprites.nex 8b4d0847 | verified | plain build runs | recorder start/keys |
+| Dizzy 1 | dedicated XOR (dizzy1.md) | dizzy1_sprites.nex 05d2bce9 | verified | untested | - |
+| Crystal Kingdom Dizzy (128K) | plain only (crystal_kingdom_dizzy.md) | - | - | plain runs | sprites deferred |
+
+Platform on hardware: alt ROM ($8C) PASS 2026-09-27; plain 48K and 128K conversion run.
+
+## Open work (toolkit)
+1. Maintainers: pin the Rainbow snapshot MD5 (verified.json, selftest RZX_GAMES) once rainbow.z80 +
+   both RZX are in the private reference repo; add Treasure Island in-game (dizzy2_game.z80) and
+   Dizzy6.z80 there too.
+2. Engine registry: each engine registers identify/auto instead of a dispatch block in
+   nexclash.py (do it once selftest covers every game).
+3. `identify` reports unknown for Rainbow and Chuckie Egg (auto dispatches by signature): add
+   signatures.json / identify entries.
+4. Generic builder covers the TID engine only; next: XOR-parity template (generalise
+   dizzy1_patch.py), then non-Codemasters engines (PLAYBOOK "unknown").
+5. Virtual read is not in the generic template (the tool refuses and hands over).
+6. Explorer is random + room novelty (no puzzles): rare paths need a human RZX.
+7. analyse/recorder are 48K-only.
+8. Later: tail inside the alt ROM; alt image 0 for 128K games that select ROM 0.

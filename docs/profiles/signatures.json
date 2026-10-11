@@ -1,0 +1,22 @@
+{
+  "_note": "hex byte patterns; '??' = any byte. Search the whole 64K snapshot.",
+  "tid_engine": {
+    "masked_plot": "A1 A8 D9 47 AE 12 70",
+    "eraser_xor_undo": "7E A9 77 23 7E A8",
+    "eraser_entry": "F3 ED 73 ?? ??",
+    "pixel_test": "4F 06 00 CB 39 38",
+    "wipe": "DD 21 ?? ?? 3E 88 11 01 00",
+    "box": "3A ?? ?? C6 04 CB 3F 32",
+    "games": [
+      "Treasure Island Dizzy",
+      "Fantasy World Dizzy",
+      "Magicland Dizzy"
+    ]
+  },
+  "dizzy1_xor_engine": {
+    "xor_loop": "1A AE 77 23 13",
+    "games": [
+      "Dizzy: The Ultimate Cartoon Adventure"
+    ]
+  }
+}

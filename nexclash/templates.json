@@ -1,0 +1,80 @@
+{
+ "printer": {
+  "tramp": "00f3ed915015cd0000ed9150ffc381ddf5af32005bf1f3ed73f4dec3c1def5af32005bed911500f1dd21a462c3adf1f53a005bb72004ed911500f1c37661ed9115003acaf3c38af3",
+  "fix": {
+   "PLOTTER": [
+    14
+   ],
+   "ERASER_CONT": [
+    28
+   ],
+   "ERASER_SPSAVE": [
+    25
+   ],
+   "WIPE_CONT": [
+    45
+   ],
+   "WIPE_IX": [
+    42
+   ],
+   "SOUND_TICK": [
+    60
+   ],
+   "BOX_CONT": [
+    70
+   ],
+   "BOX_VAR": [
+    67
+   ]
+  },
+  "syms": {
+   "T_PLOT": 23297,
+   "T_ERASE": 23312,
+   "T_WIPE": 23326,
+   "T_ISR": 23343,
+   "T_BOX": 23358
+  },
+  "hooks": "c30300f5c5d5e5556f2600292929017300094b0600cb21cb10cb21cb1079c6204f300104afcd570079c6104f3001043e01cd57007ac610573e02cd570079d6104f3001053e03cd5700ed9115013e0132005be1d1c1f1c9ed923479ed92357aed923678e601ed92377e23ed92387e23ed9239c9"
+ },
+ "slot1": {
+  "patch": "f3f5c5d5e5556f2600292929011d39094b0600cb21cb10cb21cb1079c6204f300104afcdc43879c6104f3001043e01cdc4387ac610573e02cdc43879d6104f3001053e03cdc438ed911501ed917f01e1d1c1f1c3409bed923479ed92357aed923678e601ed92377e23ed92387e23ed9239c9f3ed917f00ed73b39cc3809ced917f00ed911500dd21c45cc3e790f5c5013b243e7fed7904ed78b72004ed911500c1f1c3b293ed9115003a3d9bc33d93",
+  "fix": {
+   "PLOTTER": [
+    84
+   ],
+   "ERASER_CONT": [
+    124
+   ],
+   "ERASER_SPSAVE": [
+    121
+   ],
+   "WIPE_CONT": [
+    139
+   ],
+   "WIPE_IX": [
+    136
+   ],
+   "SOUND_TICK": [
+    163
+   ],
+   "BOX_CONT": [
+    173
+   ],
+   "BOX_VAR": [
+    170
+   ]
+  },
+  "syms": {
+   "T_PLOT": 14446,
+   "T_ERASE": 14560,
+   "T_WIPE": 14572,
+   "T_ISR": 14587,
+   "T_BOX": 14611,
+   "table": 14621
+  },
+  "org": 14446,
+  "page": 24,
+  "regblock": 16352
+ },
+ "setup": "ed911500af013b30ed79ed9157162100e01e20cd56d0ed9157172100e03a5fd05fcd56d0ed915715ed914320ed914000ed914100ed914100ed9141b6ed914300ed914b000604afed9234ed913800ed9139003c10f2c9015b00edb31d20fbc900"
+}

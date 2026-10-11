@@ -1,0 +1,73 @@
+{
+  "engine": "tid",
+  "template": "masked_undo",
+  "snapshot_notes": "game snapshot dizzy2_game.z80 and title snapshot both supported",
+  "plot_site": {
+    "addr": 61578,
+    "orig": "CD 5E 9B",
+    "kind": "CALL plotter"
+  },
+  "plotter": 39774,
+  "plotter_writes": [
+    39895,
+    39906,
+    39917,
+    40032,
+    40043,
+    40054,
+    40068
+  ],
+  "eraser": {
+    "addr": 40087,
+    "orig": "F3 ED 73",
+    "spsave": 40142
+  },
+  "eraser_writes": [
+    40115,
+    40119,
+    40124,
+    40128
+  ],
+  "workspace": 40139,
+  "undo_buffer": 40149,
+  "frame_table": 40249,
+  "frame_base": 40327,
+  "row_table": 29729,
+  "frames": 39,
+  "patterns": 103,
+  "player_xyf": [
+    61392,
+    61394,
+    61397
+  ],
+  "game_isr": 61339,
+  "isr_hide_call": {
+    "addr": 61362,
+    "orig": "CD 02 72"
+  },
+  "wipe": {
+    "addr": 44931,
+    "orig": "DD 21 81 74"
+  },
+  "pixel_test": 62333,
+  "virtual_read_sites": [
+    {
+      "addr": 63000,
+      "orig": "CD 7D F3",
+      "why": "bubble collision reads Dizzy's pixels"
+    }
+  ],
+  "do_not_hook": {
+    "title_isr": 63328,
+    "why": "beeper music timing; self-modifies 63340"
+  },
+  "memory": {
+    "trampolines": "0x5B00 (printer buffer, empty)",
+    "hook_page": "bank 10 upper page, paged into slot 0 with DI"
+  },
+  "cheat": {
+    "poke": "29289,201",
+    "effect": "immunity (death countdown)",
+    "caveat": "scripted death at 60937 may hang"
+  }
+}

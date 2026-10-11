@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*_nexclash/
+*_out/
+selftest.log
+dist/
+contrib_reports/
+MANIFEST.json

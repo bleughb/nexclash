@@ -1,0 +1,95 @@
+{
+  "engine": "tid",
+  "template": "masked_undo",
+  "memory_strategy": "slot1_page",
+  "plot_site": {
+    "addr": 40445,
+    "orig": "C3 40 9B",
+    "kind": "JP plotter"
+  },
+  "plotter": 39744,
+  "plotter_writes": [
+    39865,
+    39876,
+    39887,
+    40003,
+    40014,
+    40025,
+    40039
+  ],
+  "eraser": {
+    "addr": 40059,
+    "orig": "F3 ED 73",
+    "spsave": 40115,
+    "cont": 40064
+  },
+  "eraser_writes": [
+    40087,
+    40091,
+    40096,
+    40100
+  ],
+  "undo_buffer": 23552,
+  "row_table": 23652,
+  "frame_table": 24644,
+  "frame_base": 24722,
+  "frames": 39,
+  "patterns": 103,
+  "player_xyf": [
+    40205,
+    40206,
+    40210
+  ],
+  "game_isr": 65344,
+  "isr_hide_call": {
+    "addr": 65380,
+    "orig": "CD B2 93"
+  },
+  "wipe": {
+    "addr": 37091,
+    "orig": "DD 21 C4 5C",
+    "cont": 37095
+  },
+  "box": {
+    "addr": 37690,
+    "orig": "3A 3D 9B",
+    "cont": 37693
+  },
+  "pixel_test": 41268,
+  "virtual_read_sites": [],
+  "why_no_virtual_read": "33,294 tests, none depend",
+  "object_plotter": {
+    "write": 36776,
+    "self_modified": {
+      "36775": "00 or AE (XOR (HL))",
+      "36772": "00 or C3 -> JP 36795 mirror path via bit-reverse table at 0x5B00"
+    }
+  },
+  "xor_writers_over_player": [
+    36916,
+    36924,
+    37015,
+    37023
+  ],
+  "nibble_replace": {
+    "low": [
+      36961,
+      37072
+    ],
+    "high": [
+      36975,
+      37086
+    ]
+  },
+  "overwriters": {
+    "37113": "wipe",
+    "37732": "box clear"
+  },
+  "memory": {
+    "printer_buffer": "IN USE (bit-reverse table)",
+    "patch": "RAM page 24 at MMU slot 1, code at 0x386E (ROM's unused block); game never uses ROM",
+    "flag": "NextReg $7F",
+    "tail": "compact, 53 bytes at 0xA2BD (dead stack; low-water 0xA2BD)",
+    "regblock": "0x3FE0 in the patch page"
+  }
+}

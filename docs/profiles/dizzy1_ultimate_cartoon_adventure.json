@@ -1,0 +1,49 @@
+{
+  "engine": "dizzy1_xor",
+  "template": "xor_parity",
+  "plotter": 58113,
+  "entered_from": {
+    "erase": 59488,
+    "draw": 59515
+  },
+  "draw_hook": {
+    "addr": 58159,
+    "orig": "3A 75 E1",
+    "cont": 58162
+  },
+  "plotter_write": {
+    "addr": 58184,
+    "orig": "77"
+  },
+  "vars": {
+    "frame": 57709,
+    "col": 57712,
+    "width_halfbytes": 57716,
+    "height": 57717
+  },
+  "frame_table": 24134,
+  "frame_base": 24290,
+  "frames": 39,
+  "preshifted": "frame+39 = same image 4px right",
+  "patterns": 88,
+  "row_table": {
+    "addr": 23750,
+    "note": "index 0 = screen line 191 (Y counts up from the bottom)"
+  },
+  "collision": {
+    "addr": 60228,
+    "orig": "C5 E5 3A",
+    "virtual_read": true,
+    "why": "falling objects land on Dizzy (472 of 736 tests depend)"
+  },
+  "wipe": {
+    "addr": 58634,
+    "orig": "DD 21 D6 5C",
+    "cont": 58638
+  },
+  "memory": {
+    "trampolines": "0x5B00-0x5B80 (stack stays above 23503)",
+    "tail": "0x5B81-0x5BD0; plain build uses --tail 0x5B00 (default would hit the font at 0xFF9E)"
+  },
+  "controls": "Z/X walk, Space/7 jump"
+}

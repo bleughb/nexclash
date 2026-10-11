@@ -1,0 +1,78 @@
+{
+  "engine": "tid",
+  "template": "masked_undo",
+  "snapshot": "use the (a) snapshot: byte 62569=0 (keyboard); 255 enables Kempston",
+  "plot_site": {
+    "addr": 63940,
+    "orig": "C3 81 DD",
+    "kind": "JP plotter (plotter ends EI/RET)"
+  },
+  "plotter": 56705,
+  "plotter_writes": [
+    56826,
+    56837,
+    56848,
+    56964,
+    56975,
+    56986,
+    57000
+  ],
+  "eraser": {
+    "addr": 57020,
+    "orig": "F3 ED 73",
+    "spsave": 57076,
+    "cont": 57025
+  },
+  "eraser_writes": [
+    57048,
+    57052,
+    57057,
+    57061
+  ],
+  "workspace": 57073,
+  "undo_buffer": 57083,
+  "frame_table": 57183,
+  "frame_base": 57261,
+  "row_table": 25156,
+  "frames": 39,
+  "patterns": 103,
+  "player_xyf": [
+    63754,
+    63756,
+    63759
+  ],
+  "game_isr": 63702,
+  "isr_hide_call": {
+    "addr": 63725,
+    "orig": "CD 76 61"
+  },
+  "wipe": {
+    "addr": 61865,
+    "orig": "DD 21 A4 62",
+    "cont": 61869
+  },
+  "box": {
+    "addr": 62343,
+    "orig": "3A CA F3",
+    "cont": 62346,
+    "caller": 62187
+  },
+  "pixel_test": 64672,
+  "virtual_read_sites": [],
+  "why_no_virtual_read": "30,976 tests, none depend; boxes overwrite Dizzy",
+  "xor_writers_over_player": [
+    48574,
+    48714,
+    48813
+  ],
+  "overwriters": {
+    "62385": "box clear",
+    "48759": "low nibble",
+    "48773": "high nibble",
+    "61887": "wipe"
+  },
+  "memory": {
+    "trampolines": "0x5B00 (72 bytes, printer buffer empty)",
+    "tail": "below SP (0x5F92)"
+  }
+}

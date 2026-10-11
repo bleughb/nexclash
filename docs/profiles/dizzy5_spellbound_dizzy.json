@@ -1,0 +1,42 @@
+{
+ "game": "Spellbound Dizzy (Dizzy V), 48K, snapshot Dizzy_V.z80 md5 703c934aa64c1c1d37d5041dd28cf9c7",
+ "snapshot": "BASIC loader stage (PAUSE 0 before RANDOMIZE USR 24180); 45725 LDIRs 21501 bytes 24192->23296, Kempston check 45807, IM2 I=149 -> ISR 38036, game 51202",
+ "start_state": "loader.prerun: frame 26 of the auto RZX, PC 45737 (after the LDIR, before the Kempston check)",
+ "isr": "38036: if req(44748) != state(44749): req 0 -> JP plotter, else JP eraser (one action per interrupt)",
+ "rom": "reads the ROM font 0x3D00+ only; no ROM code after start",
+ "writes_while_drawn": "37671 scenery blitter (overwrite), 52211-52222 energy bar: visual only; 52104 room clear only while erased",
+ "engine": "dizzy5",
+ "plotter": 40060,
+ "eraser": 40386,
+ "player_end": 40448,
+ "req": 44748,
+ "state": 44749,
+ "frame_table": 61194,
+ "frame_var": 44767,
+ "frame_flag": 44772,
+ "frame_default": 36,
+ "num_frames": 37,
+ "y_var": 44736,
+ "flip_var": 44739,
+ "x_var": 44737,
+ "undo_buffer": 46088,
+ "plot_site": 40065,
+ "plot_cont": 40068,
+ "erase_site": 40392,
+ "erase_cont": 40395,
+ "plotter_writes": [
+  40333,
+  40344,
+  40355,
+  40367
+ ],
+ "eraser_writes": [
+  40427,
+  40431,
+  40436,
+  40440
+ ],
+ "undo_size": 96,
+ "notes": [],
+ "ok": true
+}

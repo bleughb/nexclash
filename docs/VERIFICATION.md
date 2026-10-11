@@ -1,0 +1,201 @@
+# Verification record
+
+One section per game/build, newest first within a game. `python selftest.py` reproduces the
+MD5s from reference/ (selftest.py EXPECTED / REPRO / RZX_GAMES must match this file).
+
+All tests: exact RZX playback in SkoolKit; at every patched routine the
+original and patched code were run from the same real state and compared
+(registers except R/T, all non-screen memory, patched-screen model, sprite
+pixels). Start-up tails simulated: all registers restored, no game memory touched.
+
+| Game | Recording | Plots | Erases | Other | Result |
+|---|---|---|---|---|---|
+| Treasure Island Dizzy | dizzy2 RZX + 29 underwater checkpoints | 6,338 | 6,326 | 25,299 ISR, 18 wipes, 7,436 bubble tests (340 Dizzy-dependent) | all identical |
+| Dizzy 1 | dizzy1rzx, 6,345 frames | 2,364 | (XOR) | 40,881 collision tests, 24 wipes | all identical (A after erase is dead) |
+| Fantasy World Dizzy | dizzy3rzx, 8,761 frames | 1,613 | 1,591 | 3,319 ISR, 44 wipes, 40 boxes; 30,976 pixel tests unaffected | all identical |
+| Magicland Dizzy | dizzy4rzx, 10,074 frames | 1,690 | 1,670 | 3,486 ISR, 51 wipes, 44 boxes; 33,294 pixel tests unaffected | identical except 4 undo-buffer-only diffs (original's ghost pixels; nothing else reads it) |
+| Spellbound Dizzy (Dizzy V) | Dean's dzzy5rzx (7,051 frames, dialogue boxes; autosave stripped) | 1,400 | 1,399 | slot-1 page = ROM at all 240 font bytes read | all identical (8 erases: A/F dead) |
+| Spellbound Dizzy (Dizzy V) | auto RZX, 4,018 frames (from the loader snapshot) | 470 | 470 | 0 logic reads of player pixels; 1,098 visual-only overwrites while drawn | all identical (7 erases: A/F differ at return, overwritten before use) |
+| Chuckie Egg | Dean's RZX, 8,626 frames (levels 1-2; autosave stripped) | 7,854 player/duck + 878 hen | 881 hen | 15 screen clears, 549,345 sprite pixels | all identical |
+
+| Spellbound Dizzy (Dizzy V), altrom | auto RZX, 6,227 frames, 16 segments (from the loader snapshot) | 1,479 | 1,463 | ROM view = ROM at all 136 ROM bytes read in 0x2000-0x3FFF; per-segment resync | all identical (6 erases: A/F differ at return, overwritten before use); `--strategy slot1` identical results |
+
+Simulated boot (nextboot.py, every sprite build since 2026-09-28): stub + alt ROM fill + tail on a
+model Next (launch state ROM 0 selected) -> all registers, RAM 0x4000-0xFFFF (except the tail),
+slots 0/1 view (ROM3, + hook bytes and register block for altrom), paging lock, MMU, $8C = $80.
+Negative controls caught: no 1FFD write (ROM1 copied), 7FFD locked without the $08 unlock, hook
+bytes not copied. Structural altrom build of the TID-engine TidPatch (TID title snapshot, generic
+profile): boot OK; printer/slot1/plain outputs of that build byte-identical to the pre-altrom toolkit.
+
+## Output checksums (MD5) - the toolkit must reproduce these
+Default builds (strategy `altrom` where proven; dedicated builders are printer-only):
+- `Dizzy_V_sprites.nex` 1f33c467e6aa55585cea79cfbb24bcfe (altrom; NOT yet hardware-tested)
+- `Dizzy_V.nex` c99189f3274a4803f0b25b0217206bdb
+- `dizzy3_sprites.nex` (Fantasy World, altrom) 9182f2f8b4b0dc55b59a69728568b403 (baselined 2026-10-11: selftest, auto RZX verification PASSED, boot OK)
+- `dizzy4_sprites.nex` (Magicland, altrom) bf137d41d3cc08221bf6fdda153c9de2 (baselined 2026-10-11: as above)
+- `dizzy3.nex` cd620010e2f61af0002e76718945716f, `dizzy4.nex` 09eb18496cff334ea17bfc0b0c94585d (plain: unchanged)
+- `dizzy2_game_sprites.nex` 8b4d0847d68fce3215bd43a0e116e682 (dedicated, printer)
+- `dizzy2_title_sprites.nex` 85e054fe4bce8e4b3a8e336aac432f58 (dedicated, printer; re-checked 2026-09-28), `dizzy2.nex` (title, no recording) 70890aba7d821fba8a41e63636eb58be
+- `dizzy1_sprites.nex` 05d2bce99f4d7654d4e1c9c9c04dc391 (dedicated, printer), `dizzy1.nex` 7892b2e0f1f3f9f19165516db307cbe0
+- Dizzy 6 (`tid_mirror`): stays slot1 (self-modifying plotter copy in the RAM page); not in selftest
+- `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_sprites.nex` eb9836fe60a70df02087920603c673b4 (2026-10-11)
+- `Chuckie_Egg.nex` ec0df71e70fae35836eaed521f300777, `Chuckie_Egg_sprites.nex` bfad6be1e7c8a2c797a6242d7f339e35 (2026-10-11)
+
+`--strategy` reproductions of the pre-altrom builds (same recordings):
+- `dizzy3_sprites.nex --strategy printer` c09213beaec1572c0228985dae89bd77
+- `dizzy4_sprites.nex --strategy slot1` d3b37c05d4c47ada07294fa2d7c1ae76
+- `Dizzy_V_sprites.nex --strategy slot1` a59c1fd91ec5c32e549526dbc08d2e69 (re-checked 2026-09-28; 00a7c496... had an EMPTY font page: dialogue text blank on hardware)
+
+## Rainbow Islands (128K, engine `rainbow`) - 2026-09-28
+`nexclash.py auto rainbow.z80 --rzx rainbow.rzx --rzx rainbownew.rzx --no-record` (defaults: ink white, outline black)
+- `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175 (plain, tail 0x9F00) - boot sim OK
+- `rainbow_sprites.nex` 0c191d94d5c3291e96f282cc6b1e4984 (altrom stubs + RAM pages 26/28/29) - boot sim OK
+- rainbow.rzx: 7178 frames, 11865 pieces, max 27/frame, 257 stars on the ULA - IDENTICAL
+- rainbownew.rzx: 11799 frames, 29314 pieces, max 30/frame, 613 stars on the ULA - IDENTICAL
+- `--outline transparent` on rainbow.rzx - IDENTICAL (outline pixels counted as expected drops)
+- unit tests: edge columns, last slot, passthrough at 32 pieces, negative control, class colour - PASS
+- Hardware: runs (Dean, 2026-09-28); detailed visual checklist results not reported
+
+## Rainbow Islands - 2026-10-11 collectables as sprites
+RELEASE level. Changed: rainbow.py, rainbow_hooks.asm, rainbow_islands.json (hook hex + new `page2`
+block + symbols; 4 new sites: 60853 / 60839 / 60965 cell drawers, 59547 band end).
+- `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175 - UNCHANGED, boot sim OK
+- `rainbow_sprites.nex` eb9836fe60a70df02087920603c673b4 - boot sim OK
+- rainbow.rzx: 7178 frames, 11865 pieces, 2215 commits; 26528 cell hooks, 2216 render starts,
+  43621 band ends, 13558 item sprites (max 67 per render, max 104 sprites in all) - IDENTICAL.
+  Item rows: 105453 shown as modelled on the original screen, 3011 under a figure the original
+  plotted at render time, 0 other.
+- rainbownew.rzx: 11799 frames, 29314 pieces, 3530 commits, overflow entries 2; 49707 cell hooks,
+  70579 band ends, 67570 item sprites (max 72 per render, max 116 sprites in all) - IDENTICAL.
+  Item rows: 528330 as modelled, 12178 under a figure, 0 other.
+- Checked per event: cell hooks = original (all registers incl. F, memory) + page-27 shadow map
+  = model; render start = original, item records + cached patterns + count + figure limit =
+  model; band ends = original + screen writes = the model's for that char row; render end: no
+  screen writes, every item row/attribute was on a band, item sprites = model (attributes,
+  committed pattern = item graphics), figures at NI.. = staged; entry-point proofs for the four
+  new sites.
+- Timing (simulated T at 28 MHz, no wait states; the verifier now measures it): render-end commit
+  avg 1.0 / 2.0 ms, max 5.4 / 6.3 ms; item hooks per game frame avg 1.2 / 2.7 ms, max 13.3 / 14.8
+  ms (full item rebuild in the bonus scene); whole game frame max 23.4 / 25.2 ms; game frames over
+  20 ms: 8 / 13 (0 without the item hooks) - each costs one extra interrupt.
+- Unit tests PASS (states from rainbownew.rzx): all earlier tests + 216 item cell-hook cases, 4
+  item render paths (render start, 22 band ends, render end) on synthetic shadow maps (scroll 3
+  with wrapped top rows and a partial bottom at 155 rows, X8 columns, unknown colour, a
+  several-object cell, a star-changed attribute, 90 cells -> the 80-item cap), list reuse + ink
+  refresh (the cap case was raised from 70 to 90 cells after the RELEASE run and the item unit
+  tests re-run: PASS; .nex unchanged); 8 item
+  negative controls detected (overlay does not clear the cell, carry not restored, mask not
+  applied, ink drawn as outline, pattern never built, band fixes rows of other bands, inks never
+  refreshed, figures committed over the item sprite numbers). The figure "negative control" and
+  "store stale-pattern control" read the committed attributes and had been n/a on every state
+  since bddea69e; now read from the staged state: detected 39/40 each.
+- Prototype's 58 mismatches (rainbow.rzx 2500 frames, replicated: 485 ok / 58): 36 figures plotted
+  over the item, 16 items overwritten by the untracked full-tile drawer 60839, 6 rows below the
+  160-row play area.
+- Before any change the toolkit (hand-transcribed into the sandbox) reproduced plain 7ac543fb and
+  sprites bddea69e byte for byte.
+
+## Rainbow Islands - 2026-10-02 render-end commit + sprites off on non-play screens
+RELEASE level. Changed: rainbow.py, rainbow_hooks.asm, rainbow_islands.json (hook hex, sites 65029 /
+65076).
+- `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175 - UNCHANGED, boot sim OK
+- `rainbow_sprites.nex` bddea69edaf6cf0a83dba8633c8f6618 - boot sim OK
+- rainbow.rzx: 11865 pieces, 2215 commits checked (patterns + attributes = staged), sprites-off
+  path 3 times - IDENTICAL
+- rainbownew.rzx: 29314 pieces, max 84 sprites/render, store hits 96%, 3530 commits, sprites-off
+  5, overflow entries 2 - IDENTICAL (an earlier run of the build without overflow entries FAILED
+  on exactly those 2 pieces: ULA fallback; fixed)
+- unit tests PASS; new control: commit writing attribute 4 to the wrong register -> detected
+  (2026-10-11: the figure "negative control" and "store stale-pattern control" were n/a on every
+  state of this build - see the 2026-10-11 entry)
+
+## Rainbow Islands - 2026-10-01 frame limiter + turbo
+RELEASE level. Changed: rainbow.py, rainbow_hooks.asm, rainbow_islands.json (hook hex, 2 new sites).
+- `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175 - UNCHANGED, boot sim OK
+- `rainbow_sprites.nex` cbb5a1d4ba4e84cec40191d3a3259f5a - boot sim OK
+- rainbow.rzx: 11865 pieces, 2216 game frames (limiter + handler exit each) - IDENTICAL
+- rainbownew.rzx: 29314 pieces, 3530 game frames, max 84 sprites/render, store hits 94% - IDENTICAL
+  (re-run alone after the sandbox killed the first run)
+- unit tests PASS: limiter skip path = original POP AF/EI/RET (tick counted, 3.5 MHz), run path =
+  original at 65175 (F dead: CP 3 next) with 28 MHz, control (skip jump removed) detected; plus
+  all earlier tests
+
+## Rainbow Islands - 2026-10-01 speed build (direct conversion + 256K store + sprites per piece)
+RELEASE level. Changed: rainbow.py, rainbow_hooks.asm, rainbow_islands.json (hook hex + `plotters`
+layout table, replaces `stream_len`).
+- `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175 - UNCHANGED, boot sim OK
+- `rainbow_sprites.nex` 7559f940bb72211456b3ec53a0bdff60 - boot sim OK
+- rainbow.rzx: 7178 frames, 11865 pieces, max 62 sprites/render, store hits 93% - IDENTICAL
+- rainbownew.rzx: 11799 frames, 29314 pieces, max 84 sprites/render, store hits 94% - IDENTICAL
+- unit tests PASS: direct conversion = original plotter on random streams (66 plotter/carry
+  cases), corrupted layout detected; page 245 = bit reversal; store hit / changed-stream miss /
+  garbage store never hits; controls detected: stream compare removed, stale stored patterns;
+  LEFT4, edge columns, last sprites, passthrough, ink/outline swap control, SWAPNIB, setup
+- 28 MHz hook T per piece: store hit ~9.2k, miss ~36k; average ~11.6k (4dce14af: 28.1k)
+
+## Rainbow Islands - 2026-09-30 pattern cache
+Same command (RELEASE level). Changed: rainbow.py, rainbow_hooks.asm, rainbow_islands.json (hook
+hex + stream_len table); new nexclash/rainbow_catalogue.py.
+- `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175 - UNCHANGED, boot sim OK
+- `rainbow_sprites.nex` 78b9ed99ab714ef77024f84558987441 - boot sim OK
+- rainbow.rzx: 11865 pieces, max 27/render, cache hits 67% - IDENTICAL
+- rainbownew.rzx: 11799 frames, 29314 pieces, max 30/render, cache hits 48% - IDENTICAL
+- unit tests PASS incl. cache: repeat piece hits (no upload, registers, pixels), changed stream
+  misses; controls detected: stream compare removed (39/39, 1 n/a: flipped byte draws the same),
+  stale cached patterns (39/39, 1 n/a: no pixels)
+- per piece (28 MHz hook T): hit 6.3k, miss 35.6k (previous build 28.1k every piece)
+
+## Rainbow Islands - 2026-09-29 boss-spider fix + pattern-upload optimisation
+Same command. Changed: rainbow.py, rainbow_hooks.asm, rainbow_islands.json (hook hex regenerated).
+- `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175 - UNCHANGED, boot sim OK
+- `rainbow_sprites.nex` 4dce14afce8977fe39086923328a5e12 (fix + optimisation) - boot sim OK
+  (boot check now also runs setup: pattern RAM zeroed)
+- rainbow.rzx: 7178 frames, 11865 pieces, max 27/frame - IDENTICAL
+- rainbownew.rzx: 11799 frames, 29314 pieces, max 30/frame, 613 stars - IDENTICAL
+- unit tests PASS: previous set + window vs 35 plotter extents (control: old window misses exactly
+  the 4 LEFT4 entries - detected), 96 synthetic LEFT4 pieces (control detected 76/76 with pixels),
+  SWAPNIB exhaustive self-test + SWAPNIB-as-NOP control detected, setup zeroing + control detected
+- fix-only build 4132ae00ce87b2e046859cd89344ecd3: boot OK, rainbow.rzx IDENTICAL, unit tests PASS
+  (rainbownew run stopped; the final build contains the same fix and passed it)
+- worst hook T per render (32 pieces): 1,122,492 previous / 1,132,924 fixed / 909,084 final
+- not reached by any RZX: the boss (LEFT4 plotters proven by unit tests only); hardware pending
+
+## Everyone's a Wally (128K snapshot, engine `wally`) - 2026-09-28
+`nexclash.py auto wally.z80 --rzx wallyrzx.rzx` (wally.z80 = World of Spectrum snapshot)
+- `wally.nex` 2e615b3e7ae995e6d6a6ed9e3f586d4d (plain, tail 0x6B00) - boot sim OK
+- `wally_sprites.nex` f7605489c3af55b8e8c6a580c1c26150 (altrom stubs + RAM page 26) - boot sim OK
+- wallyrzx.rzx (11 autosave snapshots stripped): 15225 frames, A 4299 / B 1058 plots converted
+  (0 passthrough), 3938 commits, max 12 sprites, 1,913,362 sprite pixels - IDENTICAL
+- unit tests: 2664 plot cases (1626 converted, 1038 guard/full-table passthrough), 3 commit cases,
+  negative control (ink/outline swapped NIBTAB) detected 12/12 - PASS
+- Hardware: boots and runs (Dean, 2026-09-29); detailed visual checklist results not reported
+- 2026-10-11 selftest (Dean's wally.z80 a9eeb555 + wallyrzx.rzx 72c7d1f6): both MD5s reproduced, RZX
+  IDENTICAL, unit PASS; the report said FAILED only because Rainbow's pattern-RAM zero check had been
+  applied to Wally's boot check (Wally uploads full patterns) - check scoped to Rainbow.
+
+## Chuckie Egg (48K, engine `chuckie`) - 2026-10-11
+`nexclash.py auto Chuckie_Egg.z80 --rzx Chuckie_Egg.rzx --no-record`
+(Chuckie_Egg_1983_A__F_Software_a.z80, title screen; Dean's RZX: 9 autosave snapshots stripped,
+8626 frames, levels 1-2, game over, high-score entry; lifts and the free duck not reached)
+- `Chuckie_Egg.nex` ec0df71e70fae35836eaed521f300777 (plain, tail 0x5B00) - boot sim OK
+- `Chuckie_Egg_sprites.nex` bfad6be1e7c8a2c797a6242d7f339e35 (altrom, stateless hooks) - boot sim OK;
+  setup simulated: 6144 pattern bytes uploaded = the 48 built patterns, palette 1 = 0xB4 / 17 = 0x16,
+  $4B = 0, 128 sprites hidden, $15 = 1
+- RZX: 7854 player/duck plots, 878 hen draws, 881 hen erases, 15 screen clears, 549,345 sprite
+  pixels - IDENTICAL. Per event: all registers (AF' included), all memory except the screen, the
+  player buffer 29344-29391 (write-first, read only by the plotter) and dead stack below the final
+  SP; sprite pixels = the original's own pixels from a canvas run (screen zeroed for hens, tile
+  graphics zeroed for player/duck); player/duck screen block = background | figure; no attribute
+  writes; hen erase and clears write exactly the original's screen bytes and leave the right sprites
+  hidden; entry-point proof for every patched instruction; no game write to a patch site.
+- Unit tests PASS: player/duck 1560 cases (frames 0-31 x 10 positions x player/duck), hens 1764
+  (A' 0-15 x x 0/8/100/240/249/255 x 3 heights x 2 table entries), 1008 hen guard cases (no table
+  entry -> no sprite), hen erase 12, clears 3, negative control (patterns shifted one pixel)
+  detected 5/5 (1 n/a: blank duck frame 12). Edge cases classified, not game cases (the RZX never
+  reaches them; any occurrence with pixels would fail its pixel check): player/duck at x > 240
+  (360) and hens at x = 248 (252) - the ULA wraps the last byte into the next column, the sprite
+  clips.
+- Shared code: nexclash.py gained one dispatch block (before the 48K identify). Wally / Rainbow /
+  Dizzy MD5s not re-run in that session (their reference files were not there): `selftest.py`
+  covers them once reference/ holds them (STATUS open work 1).
+- Hardware: untested.
