@@ -1,8 +1,14 @@
-# Push a tag vX.Y.Z (matching VERSION) -> builds dist/nexclash-X.Y.Z.zip and publishes the release.
+# Publishing a release in the GitHub UI (tag vX.Y.Z, any v/V) builds nexclash-X.Y.Z.zip and attaches
+# it. To (re)attach the zip to an existing release: Actions -> release -> Run workflow -> its tag.
 name: release
 on:
   push:
-    tags: ['v*']
+    tags: ['v*', 'V*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag to attach the zip to (e.g. v0.1.2)'
+        required: true
 permissions:
   contents: write
 jobs:
@@ -13,18 +19,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Check tag = VERSION
-        run: test "v$(cat VERSION)" = "${GITHUB_REF_NAME}"
+      - name: Version from the tag
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "${TAG#[vV]}" > VERSION
       - name: Build package (refuses game data)
         run: python tools/make_package.py -o dist
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          NOTES="Download nexclash-${GITHUB_REF_NAME#v}.zip, unzip, \`pip install skoolkit\`, then \`python nexclash.py patch MyGame.z80\`. Supported games: STATUS.md. No game files included - bring your own snapshot. GPL-3.0-or-later."
-          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
-            # release made in the GitHub UI (it creates the tag): just attach the zip
-            gh release upload "$GITHUB_REF_NAME" dist/nexclash-*.zip --clobber
+          NOTES="Download nexclash-$(cat VERSION).zip, unzip, \`pip install skoolkit\`, then \`python nexclash.py patch MyGame.z80\`. Supported games: STATUS.md. No game files included - bring your own snapshot. GPL-3.0-or-later."
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" dist/nexclash-*.zip --clobber
           else
-            gh release create "$GITHUB_REF_NAME" dist/nexclash-*.zip --title "nexclash ${GITHUB_REF_NAME#v}" --notes "$NOTES"
+            gh release create "$TAG" dist/nexclash-*.zip --title "nexclash $(cat VERSION)" --notes "$NOTES"
           fi

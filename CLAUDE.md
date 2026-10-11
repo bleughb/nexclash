@@ -47,8 +47,9 @@ clone it OUTSIDE the package).
   output MD5s), docs/LEARNINGS.md (GENERAL lessons only). History lives in git.
 - Add-a-game session: `python nexclash.py contribute <game> --report <the _report.txt>` and give
   the user the zip + the upload step from CONTRIBUTING.md.
-- Release (maintainers): bump VERSION, merge, then push tag v<VERSION>: the release workflow
-  builds the zip (tools/make_package.py) and publishes it.
+- Release (maintainers): bump VERSION, merge, then publish a release with tag v<VERSION> in the
+  GitHub UI: the release workflow builds the zip (tools/make_package.py; version = the tag) and
+  attaches it. Missing zip: Actions -> release -> Run workflow with the tag.
 - Maintainers: commit on a branch, push, open a PR (message = what changed + verification);
   before merging shared-code changes run `python selftest.py` with the private reference repo.
 - Reply: results, the .nex files, a short hardware checklist.
