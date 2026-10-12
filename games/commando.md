@@ -147,7 +147,9 @@ DivMMC; all earlier builds kept code below 0x3D00). d601385e: code at 0x3600-0x3
   RAMTOP 25087, PROG 23755-24163. The RZX starts later (its own SZX: menu loop PC 64764, IM 2).
 - Boot simulation (keys SPACE then N): USR 25088 at frame 41 (DI, pages bank 1 at C000 and back,
   JP 25630), IM 2 + first full clear 30597 at frame 52, menu loop 64764 at frame 53. After the USR
-  nothing reads or writes 0x5B00-0x5E1F or the tail (300 frames).
+  nothing reads or writes 0x5B00-0x5E1F or the tail (300 frames). `scan --frames 400 --keys
+  "5-14:SPACE; 30-:N" --after 25088`: 0x5C00-0x61CF untouched from the game entry on (the hook RAM
+  0x5C00-0x60FF included; selftest --tools checks it).
 - One plotter, 39120 (JP 39202), IX = descriptor: +0/+4 old/new column, +1/+5 old/new y (2-line
   units), +2/+6 old/new frame, +3/+7 old/new page (gfx (page+0xA0)*256 + byte at 0x98E2 + 2*frame
   (+1 if flags bit 2)), +8/+9 window (y 4..95), +10 row pairs (image 2*(+10) lines x 24 pixels,
@@ -225,8 +227,6 @@ negative controls. Report: auto's commando_report.txt.
 
 ## Open
 - Hardware: d601385e runs (Dean, 2026-10-12); checklist items not yet reported.
-- Boot path (entry -> menu) proven untouched only to 0x5E1F; the hooks use 0x5C00-0x60FF (play is
-  proven by the RZX access check). BRIEFING C2 #12.
 - RZX covers area 1 (menu, play, deaths); later areas use the same plotter and descriptors, and
   the depth table covers every type in the map, but only unit tests cover types not in area 1:
   an RZX of later areas (INFY LIVES = Y makes it easy; autosave off) would verify them.

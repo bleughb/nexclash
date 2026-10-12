@@ -271,8 +271,8 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    (T-states per plot vs the original plot). Wanted: an `auto` line with hook T-states per call
    (median / max) and a documented budget per game frame.
 12. Boot-path RAM check (entry -> menu, not in any RZX): the checked range must be the WHOLE hook
-   RAM of the engine; Commando's documented boot check covered only to 0x5E1F while the hooks use
-   0x5C00-0x60FF (the RZX access scan covers play). Make the boot check use the engine's RAM range.
+   RAM of the engine. Tool: `scan --frames N --keys K --after ENTRY --range ...` (C4); Commando
+   done 2026-10-12. Not yet automatic in `auto`.
 13. Wanted, from the Commando post-mortem (PLAYBOOK 3b / 6b):
    a. Preview renderer: still frames / a GIF of ULA + sprites (the World's sprite state composed
       over the screen) at chosen RZX frames, for design approval before building.
@@ -280,6 +280,7 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
       instructions and require identical results (would have caught the IY bug directly; the
       per-instruction invariant check is the current stand-in).
    c. Hook speed report (see 11): T-states per hook call, median / max, against the budget.
+      (The original's side exists: `cost`, C4.)
    d. Emulator smoke test: boot the .nex headless in a Next emulator for ~30 s (would have caught
       the ROM 0 and 0x3D00 crashes); feasibility in the sandbox (CSpect needs .NET/mono) not yet
       checked.
@@ -291,6 +292,25 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
 Summaries <= 40 lines; disassemble only routines the analysis flags; one simulator pass
 per question; long jobs in background + poll; verify original bytes at every patch site;
 keep selftest byte-identical; commit changed files to the repo; terse replies.
+
+### C4. Shared analysis commands (any game; Dean 2026-10-12: harness stays per engine)
+`nexclash.py inspect | scan | isr | cost` (modules snapinfo, memscan, isrinfo, drawcost on the
+runner simrun.py). Game-independent: game facts come in as arguments (addresses, ranges, keys).
+- simrun: plays an RZX (autosave snapshots stripped to a temp copy) or free-runs a snapshot with
+  a key schedule ("5-14:SPACE; 30-:N", K:LEFT... = Kempston); hooks before/after every
+  instruction, on every memory access, interrupt and frame. 128K memory hooks swap the Memory
+  object's class (rzxplay tests isinstance(memory, Memory)); 48K memory is wrapped.
+- inspect: machine, 7FFD/ROM, where PC is (ROM routine names), BASIC listing + USR targets, IM /
+  I / vector chain, stack; warnings (loader, 128K BASIC = ROM 0, ROM 0 selected).
+- scan: read / write / exec per address (128K: C000-FFFF per bank), untouched spans, first
+  access PC, write-first spans; `--after PC` counts from a PC on (e.g. the game entry).
+- isr: per accepted interrupt until it returns: instructions run, IX/IY reads of the
+  INTERRUPTED value (PUSH/POP-aware), stack depth and stack switches, ports, modes seen.
+- cost: T per call of a routine entered by CALL (interrupt time excluded), calls per frame,
+  share of frame time, per register value at entry. A routine reached by JP has no return
+  address on the stack: time its caller instead.
+Improving them is welcome: keep existing report lines and arguments (add, don't rename), add a
+golden check for the new behaviour to selftest.py tools_check, run `python selftest.py --tools`.
 
 ### C3b. Two verification levels (agreed with Dean 2026-09-29)
 - ITERATE (per change): original bytes at every site, boot check, unit tests (with negative

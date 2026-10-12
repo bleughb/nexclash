@@ -12,6 +12,12 @@ Copyright (C) 2026 the nexclash contributors. GPL-3.0-or-later (see LICENSE).
   python nexclash.py convert GAME.z80 [--rzx R]         plain .nex only (tail placement checked)
   python nexclash.py verify GAME.z80 --rzx R            differential test of the patched build
   python nexclash.py rzx info FILE | rzx merge A B -o C
+Analysis (any game; PLAYBOOK 0b / 3 / 3b):
+  python nexclash.py inspect GAME.z80                   snapshot kind: loader?, 48K/128K, ROM, IM, stack
+  python nexclash.py scan GAME.z80 [--rzx R] [--range LO-HI] [--after PC]   memory read/written/run
+  python nexclash.py isr GAME.z80 [--rzx R]             interrupt handler: what hooks must keep intact
+  python nexclash.py cost GAME.z80 --rzx R --at ADDR [--group IX]   a routine's cost per call / frame
+  (no --rzx: free run of the snapshot, --frames N --keys "5-14:SPACE; 30-:N"; --stop N frames)
 
 Recording options (record and auto):
   --start "SPACE"            keys that start the game, e.g. "4 5, wait 20, 0 5"
@@ -435,8 +441,34 @@ def main():
     p.add_argument('--strategy', choices=B.STRATEGIES)
     p = sub.add_parser('rzx'); p.add_argument('action', choices=['info', 'merge', 'strip']); p.add_argument('files', nargs='+')
     p.add_argument('-o', '--output')
+    for cmd in ('inspect', 'scan', 'isr', 'cost'):
+        p = sub.add_parser(cmd); p.add_argument('z80')
+        if cmd == 'inspect':
+            continue
+        p.add_argument('--rzx', action='append', help='recording(s) to play (default: free run)')
+        p.add_argument('--frames', type=int, help='free run: frames (default 500)')
+        p.add_argument('--keys', help='free run: key schedule, e.g. "5-14:SPACE; 30-:N" (K:LEFT... = Kempston)')
+        p.add_argument('--stop', type=int, help='RZX: stop after N frames')
+        if cmd == 'scan':
+            p.add_argument('--range', action='append', help='LO-HI or bankN:0xC000-0xFFFF (repeatable)')
+            p.add_argument('--after', type=lambda v: int(v, 0), help='count only once PC reaches this address')
+        if cmd == 'cost':
+            p.add_argument('--at', type=lambda v: int(v, 0), required=True, help='routine entry address')
+            p.add_argument('--group', choices=['A', 'BC', 'DE', 'HL', 'IX', 'IY'], help='break down by register at entry')
     a = ap.parse_args()
-    if a.cmd == 'auto':
+    if a.cmd == 'inspect':
+        from nexclash import snapinfo
+        print(snapinfo.report(a.z80))
+    elif a.cmd == 'scan':
+        from nexclash import memscan
+        print(memscan.scan(a.z80, a.rzx, a.frames, a.keys, a.range, a.stop, a.after)[0])
+    elif a.cmd == 'isr':
+        from nexclash import isrinfo
+        print(isrinfo.isr(a.z80, a.rzx, a.frames, a.keys, a.stop)[0])
+    elif a.cmd == 'cost':
+        from nexclash import drawcost
+        print(drawcost.cost(a.z80, a.at, a.rzx, a.frames, a.keys, a.stop, a.group)[0])
+    elif a.cmd == 'auto':
         cmd_auto(a)
     elif a.cmd in ('patch', 'new', 'contribute'):
         from nexclash import userflow as U
