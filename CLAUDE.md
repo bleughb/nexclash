@@ -39,7 +39,8 @@ clone it OUTSIDE the package).
   (nexclash.py, z80tonex, build, verify, nextboot, ...). Do NOT run the full selftest or other
   games' verifications in a game session: the full selftest (~1.5 h) runs only for releases.
   Without the references, say in the contribution note that shared code changed.
-- Never run `pkill -f <name>` when your own command line contains <name>.
+- Never `pkill -f` / kill by `pgrep -f` pattern: it matches your own shell whenever the pattern
+  appears anywhere in that command line (it has, twice). Find the PID, kill the PID.
 - 128K start-up tail must end below 0xC000.
 - Shell heredocs that write docs: quote the delimiter (`<<'EOF'`).
 
@@ -47,6 +48,16 @@ clone it OUTSIDE the package).
 - Update games/<game>.md (facts, decisions, status, hardware checklist), STATUS.md (one row),
   docs/VERIFICATION.md (results + output MD5s), docs/profiles/verified.json (snapshot MD5 ->
   output MD5s), docs/LEARNINGS.md (GENERAL lessons only). History lives in git.
+- Capture (before the commit; nothing learned may stay only in the chat). Answer each, write
+  every "yes" to the file named, then say in the reply which lines were added:
+  1. Did I need a fact or rule the docs did not give (my own knowledge, a source, trial and
+     error)? -> BRIEFING (platform / toolkit fact) or LEARNINGS (lesson).
+  2. Did a doc give a rule WITHOUT its reason, or a wrong / incomplete one? -> fix it there,
+     with the reason (an unexplained limit gets broken).
+  3. Did hardware or an emulator fail where the toolkit passed? -> LEARNINGS lesson + BRIEFING
+     A1 "simulator blind spots", and a check in the toolkit if one is possible.
+  4. Did a mistake recur that a doc already warns about? -> make that warning sharper.
+  5. Something not done or not proven? -> games/<game>.md Open, or BRIEFING C2 if general.
 - Add-a-game session: `python nexclash.py contribute <game> --report <the _report.txt>` and give
   the user the zip + the upload step from CONTRIBUTING.md.
 - Release (maintainers): bump VERSION, merge, then publish a release with tag v<VERSION> in the

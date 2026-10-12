@@ -224,7 +224,9 @@ negative controls. Report: auto's commando_report.txt.
 11. Moving figures no longer leave holes in trees / rocks behind them.
 
 ## Open
-- Hardware untested.
+- Hardware: d601385e runs (Dean, 2026-10-12); checklist items not yet reported.
+- Boot path (entry -> menu) proven untouched only to 0x5E1F; the hooks use 0x5C00-0x60FF (play is
+  proven by the RZX access check). BRIEFING C2 #12.
 - RZX covers area 1 (menu, play, deaths); later areas use the same plotter and descriptors, and
   the depth table covers every type in the map, but only unit tests cover types not in area 1:
   an RZX of later areas (INFY LIVES = Y makes it easy; autosave off) would verify them.

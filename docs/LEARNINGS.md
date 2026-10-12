@@ -4,6 +4,9 @@ Two parts: PART 1 = MACHINE / HARDWARE (Z80, Spectrum 48K/128K, Spectrum Next).
 PART 2 = GAMES / SOFTWARE (game engines, our toolkit, host tools, method).
 General lessons only: facts about one game live in games/<game>.md, hardware results in STATUS.md.
 Each line is settled unless marked otherwise.
+Filled by the "Capture" step in CLAUDE.md (End of every task): every fact a session had to bring
+in from outside the docs, every unexplained rule, every hardware-only failure ends up here or in
+BRIEFING - with its reason.
 
 # PART 1 - MACHINE / HARDWARE
 
@@ -378,6 +381,11 @@ Each line is settled unless marked otherwise.
   (`setsid nohup sh script.sh &`, or chain: `setsid nohup sh -c 'a; b' ... &`) and poll inside the turn. A `( a; b ) &` subshell dies silently.
 - `pkill -f script.py` kills the tool shell when its own command line contains the name (mid-edit:
   re-check files after); use pgrep, then kill by PID.
+- A limit written without its reason gets broken: BRIEFING said alt-ROM hooks end < 0x3D00 next
+  to the font, so a game that never reads the font looked exempt - the real reason (DivMMC
+  automap on fetch) crashed it. Write the WHY with every limit.
+- `pkill -f` / `pgrep -f` patterns match your own shell when its command line contains them -
+  including a directory name like `out5` used elsewhere in the same command. Kill by PID only.
 - Name scratch scripts uniquely: a file called dis.py shadows the stdlib and breaks SkoolKit.
 - Do all analyses in one simulator pass; poll background jobs.
 - Never run per-instruction Python work in an analysis hook (a dict scan per opcode turned a
