@@ -84,6 +84,14 @@ Each line is settled unless marked otherwise.
   the tester film the TV. Overrun detection: clear NextReg $C8 bit 0 at the frame start, read it at
   the frame end (set = an interrupt came during the frame). Hooks entered from a ROM stub inside the
   game's handler must not use the game's stack: jump to the hook page's code and jump back.
+- Flicker: never hide a figure's sprites at plot entry and show them at exit (hidden for the
+  whole call, often across the beam). Keep them visible, build the new image in OTHER pattern
+  memory, then rewrite the attributes in one go (Commando).
+- Pattern RAM as a content cache: a figure shows far fewer distinct frames than plots (Commando:
+  ~110 frames in 4,300 plots). Key each pattern slot by (graphics page, frame offset, lines);
+  reuse = attributes only, no build, no upload. Evict only slots no visible sprite references
+  (round robin); never share an image that was masked (depth). Negative control: a lookup that
+  ignores one key field must fail the pixel check.
 
 # PART 2 - GAMES / SOFTWARE
 
@@ -171,6 +179,15 @@ Each line is settled unless marked otherwise.
 - Depth from a game's collision boxes: use the point the game's own walk test checks (log the
   test routine's arguments in the RZX: Commando y + 6), not the figure's feet - with the feet a
   figure stopped above a small box came out in front.
+- Hooks that run with interrupts on must leave everything the game's ISR reads intact at EVERY
+  instruction: IX, IY, I, IFF, and SP on a stack with room. Commando's IM 2 handler tests IY+7
+  flags; a hook that borrowed IY made the handler draw the menu's spinning logo in-game and leave
+  stray dots. Check it statically (disassemble the hook blocks: no IX/IY writes) and per
+  instruction in the simulator, with a negative control (LD IY in a hook).
+- Solid sprites: a body fill from the frame itself (a pixel inside the ink both on its line and
+  in its column) reads as a filled figure; objects that hide a figure need their SOLID shape (the
+  game's draw mask with holes filled), not their ink, or the figure shows through paper-coloured
+  parts.
 
 ## 2.2 Memory proofs (analysis method)
 - Prove free memory with an access scan over the recording, not by zero-check.
@@ -348,6 +365,9 @@ Each line is settled unless marked otherwise.
   Make every counted effect also show up in a negative control.
 - States captured early in an RZX are often a figure's FIRST plot (no sprite yet): force the
   steady state (old image already a sprite) in unit cases that test steady-state behaviour.
+- A 'buffer is non-empty' flag that lets later code skip work must be set on EVERY path that
+  writes the buffer: Commando's lazily cleared depth mask missed the rectangle-shape path (found
+  by the depth unit cases, which the RZX alone had not hit).
 
 ## 2.6 Process / tokens (this sandbox)
 - One CPU; background jobs die when the turn ends: run long jobs sequentially

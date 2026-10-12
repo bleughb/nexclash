@@ -45,7 +45,7 @@ RZX_GAMES = {        # engine games: inputs (canonical name, md5 or None = match
                 'nex': ('7ac543fb51c7a3c4137778eeb3cdc175', 'e50733b2b7e2db32f004c1436a2e0461', '8f25bc6146b9d7f7ae1f12a1d227447e'), 'slow': True},
     'commando': {'files': [('commando.z80', 'c9af5668191462d77c5859900268c24b'),
                            ('commando.rzx', 'b3350a66a14db07add43c878eb872169')],
-                 'nex': ('a206f950c12f58a8e7f26b366f5a2480', '5c1081b73765978a7f3e055a66578542'), 'slow': True},
+                 'nex': ('a206f950c12f58a8e7f26b366f5a2480', '541e34e2c14a4be5000ad9ed0636b94d'), 'slow': True},
 }
 OPTIONAL = {'dizzy5.z80', 'treasure_island_title.z80'}
 NO_RECORD = {'treasure_island_title'}   # reference built without a recording (dedicated builder)

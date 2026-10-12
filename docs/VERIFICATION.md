@@ -340,4 +340,22 @@ starts in game from its own SZX: 8 autosave snapshots stripped, 3,279 frames, ar
 - Shared code: nexclash.py gained one dispatch block (before the 48K identify); selftest.py gained
   a `commando` RZX_GAMES entry (slow). `selftest.py --smoke` (Chuckie Egg) PASSED; other games
   not re-run (game session).
+- Solid build (541e34e2, after Dean's hardware report on 5c1081b7: flicker, menu ELITE logo and
+  stray dots in play, soldier visible through a rock). Root causes: sprites hidden at plot entry
+  (flicker); svsave/svrest/occl borrowed IY, which the game's IM 2 handler reads (IY+7 flags ->
+  menu logo routine 26826). Same RZX: IDENTICAL (4,332 converted, 507 on the ULA, 887 other, 11
+  clears, max 6 figures), 676,249 sprite pixels compared exactly with the model (ink 1 / yellow
+  fill 2 / hidden by solid scenery), 31,132 figure pixels hidden behind solid shapes, 136,956
+  fill pixels; scenery restore 4,287 plots.
+  New checks: Static (1,425 hook instructions disassembled, no IX/IY write); Interrupt (47.1M hook
+  instructions: IX, IY, I, IFF unchanged, SP on the hook or game stack, only NextRegs 7/0x34-0x39
+  and ports 0x5B/0x303B; negative control LD IY in e_ent detected); Depth (table + 144 solid shape
+  variants, 4,196 bytes, re-derived from the game = the profile); Cache (2,764 of 4,332 converted
+  plots reused a pattern slot; negative control - lookup ignores the frame offset - caught within
+  400 frames); unit tests 16,128 position + 12 table-full + 12 slot-full (11 entries show slots,
+  every slot keyed: the plot takes the free one) + 12 other-descriptor + 12 page-guard, negative
+  control 6/6 (cold slot cache: a broken patch builds with its own tables); depth unit 315 (138
+  behind), negative 138/138; restore negative 6/6; e_init 16 cases, negative control (slot keys not
+  emptied) 16/16. Hook RAM now 0x5C00-0x60FF: no game access in the RZX (checked per access).
+- Shared code unchanged (commando.py, its .asm and profile only); `selftest.py --smoke` PASSED.
 - Hardware: untested.
