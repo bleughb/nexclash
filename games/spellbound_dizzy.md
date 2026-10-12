@@ -1,8 +1,9 @@
 # Spellbound Dizzy (Dizzy V) - engine `dizzy5`
 
 48K, BASIC loader-stage snapshot. Code: nexclash/dizzy5.py, nexclash/loader.py (REQUIRED),
-asm/dizzy5_hooks.asm. Profile: docs/profiles/dizzy5_spellbound_dizzy.json. Reference: dizzy5.z80
-(Dizzy_V.z80, md5 703c934aa64c1c1d37d5041dd28cf9c7; optional selftest input).
+asm/dizzy5_hooks.asm. Profile: docs/profiles/dizzy5_spellbound_dizzy.json. Reference files (private repo,
+specnext/reference/spellbound_dizzy/): Dizzy_V.z80 (md5 703c934a; optional selftest input dizzy5.z80)
+and Dizzy_V_auto.rzx.
 
 | Output | MD5 | Status |
 |---|---|---|
@@ -30,7 +31,7 @@ EXX / EX AF,AF' parity must stay even (the ISR restores registers by set). Needs
 (inventory, dialogue, a lost life) and a hardware test. Built by dizzy5.py + loader.py (loader.prerun replays the RZX until
 the engine is live, writes GAME_start.z80). Slot-1 page = ROM copy (from skoolkit.ROM48) with hooks at
 0x3800-0x3CFF (altrom default: the same bytes 0x3800-0x3A1E into alt image 1); tail in the undo buffer (0xB408); 102 patterns. Verified: auto RZX (470 plots) and
-Dean's RZX (1,400 plots, dialogue boxes) - all identical. Output MD5s in docs/results/VERIFICATION.md.
+Dean's RZX (1,400 plots, dialogue boxes) - all identical. Output MD5s in docs/VERIFICATION.md.
 FIRST HARDWARE BUILD HAD BLANK DIALOGUE TEXT: the slot-1 page had been built from
 Snapshot.memory[0:0x4000], which is ZEROS for .z80 files - always take ROM bytes from skoolkit.ROM48.
 
