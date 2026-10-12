@@ -387,3 +387,6 @@ interrupted IY (BIT 1 / SET 0 / RES 2 (IY+7)), not IX, stack switch at 25177; ch
 the earlier one-off measurement), 10.4 % of frame time. Negative control: a data-flow model that
 treats every IY use as a write fails the isr check. Inspect also checked by eye on Wally, Rainbow,
 Spellbound (loader flagged), Crystal Kingdom. `selftest.py --smoke` PASSED; no .nex changes.
+- 2026-10-12: asm/dizzy5_hooks.asm (no profile hooks section) assembled by the pinned sjasmplus =
+  dizzy5.hook_code() for the Dizzy V profile, 227 bytes identical; now part of `selftest.py --tools`
+  (negative check: one changed instruction -> FAIL).

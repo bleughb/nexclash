@@ -1,6 +1,6 @@
-; Dizzy V engine hooks (slot-1 hook page). Assemble: sjasmplus --zxnext dizzy5_hooks.asm
-; Values below are the Dizzy V profile (nexclash/dizzy5.py derives them per game and emits the
-; same bytes; selftest compares).
+; Dizzy V engine hooks (slot-1 hook page). Not in a profile: nexclash/dizzy5.py emits these bytes
+; itself (hook_code, values derived per game). Values below are the Dizzy V profile's; the pinned
+; sjasmplus output must equal hook_code() for it: `python selftest.py --tools` checks that.
         DEVICE NOSLOT64K
 STATE   EQU 44749
 FLAG    EQU 44772
