@@ -1,8 +1,10 @@
 # Agent instructions - nexclash (Spectrum Next colour-clash remover, GPL-3.0-or-later)
 
 `.z80` -> `.nex` with game figures as Next hardware sprites; game logic proven identical by
-differential tests against real recordings. Two kinds of session use this file:
+differential tests against real recordings. Three kinds of session use this file:
 - **Add a game** (a user ran `nexclash.py new`): their SESSION.md has the game, snapshot and RZX.
+- **New game, maintainer** (the prompt names a game and attaches its snapshot + RZX): see
+  "New game (maintainer session)" below.
 - **Maintain** (the maintainers): toolkit work, releases, merging contributions.
 
 Never put game data (.z80/.rzx/.nex/.tap/...) in this repo or a contribution: the user's files
@@ -13,8 +15,24 @@ stay on their machine; the maintainers' reference files live in the private repo
 pinned: `python tools/asm2profile.py <engine>` assembles and updates the profile (never build
 or download another version; tools/sjasmplus/README.md).
 
+## New game (maintainer session)
+The short prompt is enough; these are the steps it relies on (all other rules below apply):
+1. Clone bleughb/nexclash and bleughb/specnext side by side (`<work>/nexclash`,
+   `<work>/specnext`): selftest finds the private references in `../specnext/reference`. Either
+   unreachable: stop and say so. Work on a new branch in each.
+2. Copy the attached snapshot + RZX into `specnext/reference/<game>/` (`<game>` = lower-case
+   snake case, e.g. midnight_resistance; the same name for games/<game>.md and
+   docs/records/<game>.json), keep the file names, list them in specnext's reference/README.md.
+3. Setup check: `python selftest.py --smoke` and `--tools` PASS before you change anything.
+4. Build and verify as for "Add a game" (reading order below, Rules, PLAYBOOK).
+5. Finish with "End of every task" plus: `python selftest.py --game <game> --verify --stamp` and
+   `python selftest.py --affected` (rebuilds the games your shared-code changes reach, seconds;
+   leave the re-verifications it lists as due - they run when the PR is merged); copy the built
+   `<game>.nex` + `<game>_sprites.nex` into `specnext/reference/<game>/`; push both branches and
+   open a PR in each repo; do not merge, no release. No `contribute` zip (that is for users).
+
 ## Read only what the task needs (start: ~150 lines)
-- Add a game: this file -> docs/PLAYBOOK.md -> the nearest engine as a template (simplest:
+- Add a game / new game (maintainer): this file -> docs/PLAYBOOK.md -> the nearest engine as a template (simplest:
   nexclash/chuckie.py + asm/chuckie_hooks.asm + games/chuckie_egg.md; full-redraw / 128K:
   rainbow; back-buffer composer: wally; Codemasters TID engine: generic builder). Look things up
   in docs/BRIEFING.md (platform, toolkit) and docs/LEARNINGS.md (lessons) by section when a
@@ -37,10 +55,10 @@ or download another version; tools/sjasmplus/README.md).
   colours, anything left on the ULA).
 - Do not change another game's output. After touching shared code (anything outside your engine's
   module / .asm / profile) run `python selftest.py --smoke` (Chuckie Egg rebuild, under a second;
-  needs the private references). Do NOT rebuild or verify other games in a game session: the
-  maintainers' `selftest.py --affected` finds every game a change reaches (docs/records keep the
-  hashes of each game's dependencies) and rebuilds those. Without the references, say in the
-  contribution note that shared code changed.
+  needs the private references). Do NOT verify other games in a game session; only a maintainer
+  session also runs `selftest.py --affected` (it rebuilds every game a change reaches - docs/records
+  keep the hashes of each game's dependencies - and lists the re-verifications due at merge).
+  Without the references, say in the contribution note that shared code changed.
 - Never `pkill -f` / kill by `pgrep -f` pattern: it matches your own shell whenever the pattern
   appears anywhere in that command line (it has, twice). Find the PID, kill the PID.
 - 128K start-up tail must end below 0xC000.
@@ -69,8 +87,8 @@ or download another version; tools/sjasmplus/README.md).
      A1 "simulator blind spots", and a check in the toolkit if one is possible.
   4. Did a mistake recur that a doc already warns about? -> make that warning sharper.
   5. Something not done or not proven? -> games/<game>.md Open, or BRIEFING C2 if general.
-- Add-a-game session: `python nexclash.py contribute <game> --report <the _report.txt>` and give
-  the user the zip + the upload step from CONTRIBUTING.md.
+- Add-a-game session (users): `python nexclash.py contribute <game> --report <the _report.txt>` and
+  give the user the zip + the upload step from CONTRIBUTING.md. Maintainer session: see "New game".
 - Release (maintainers): bump VERSION, merge, then publish a release with tag v<VERSION> in the
   GitHub UI: the release workflow builds the zip (tools/make_package.py; version = the tag) and
   attaches it. Missing zip: Actions -> release -> Run workflow with the tag.
