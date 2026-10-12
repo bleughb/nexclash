@@ -1,22 +1,11 @@
 # TID engine (Oliver Twins, Codemasters): Treasure Island Dizzy, Fantasy World Dizzy, Magicland Dizzy
 
-48K. Generic builder (nexclash/build.py, identify.py, templates.json) for Fantasy World and
-Magicland (altrom default); dedicated builder nexclash/dizzy_patch.py for Treasure Island (bubble
-virtual read; printer only). Profiles: docs/profiles/tid_treasure_island_dizzy.json,
-dizzy3_fantasy_world_dizzy.json, dizzy4_magicland_dizzy.json; signatures.json.
-Reference inputs (selftest INPUTS, by MD5): treasure_island_dizzy.z80 (dizzy2_game.z80),
-treasure_island_title.z80 (dizzy2.z80), fantasy_world_dizzy.z80 ("(a)" keyboard snapshot) + .rzx,
-magicland_dizzy.z80 + .rzx.
-
-| Output | MD5 | Status |
-|---|---|---|
-| dizzy2_game_sprites.nex (Treasure Island, printer) | 8b4d0847d68fce3215bd43a0e116e682 | verified |
-| dizzy2_title_sprites.nex / dizzy2.nex (title) | 85e054fe4bce8e4b3a8e336aac432f58 / 70890aba7d821fba8a41e63636eb58be | verified |
-| dizzy3.nex / dizzy4.nex (plain) | cd620010e2f61af0002e76718945716f / 09eb18496cff334ea17bfc0b0c94585d | verified |
-| dizzy3_sprites.nex / dizzy4_sprites.nex (altrom) | 9182f2f8b4b0dc55b59a69728568b403 / bf137d41d3cc08221bf6fdda153c9de2 (baselined 2026-10-11) | hardware untested |
-| `--strategy printer` dizzy3 / `--strategy slot1` dizzy4 (old builds) | c09213beaec1572c0228985dae89bd77 / d3b37c05d4c47ada07294fa2d7c1ae76 | verified |
-
-Plain TID build runs on hardware.
+48K. The engine shared by the three games; per-game files (outputs, references, facts, status,
+hardware checklist): games/treasure_island_dizzy.md, games/fantasy_world_dizzy.md,
+games/magicland_dizzy.md. Prince of the Yolkfolk (games/prince_of_the_yolkfolk.md) uses a variant
+(`tid_mirror`). Builders: generic (nexclash/build.py, identify.py, templates.json; altrom default)
+for Fantasy World and Magicland; dedicated nexclash/dizzy_patch.py for Treasure Island (bubble
+virtual read; printer only). Signature: signatures.json `tid_engine`.
 
 ## Engine and per-game facts
 - Player = 39 frames, 24 px wide, <= 21 rows; masked plot; pre-shifts not stored.
@@ -51,9 +40,3 @@ Per game (all verified; full maps in the *_dizzy*.json profiles):
 Game quirks: Fantasy World byte 62569=255 enables Kempston (use the keyboard snapshot);
 Fantasy World and Dizzy 1 execute `LD R,A`; Magicland's object plotter self-modifies
 36775 (NOP/XOR (HL)) and 36772 (JP 36795 = mirrored path via 0x5B00 table).
-
-## Open
-- Treasure Island's game snapshot: the auto-recorder gets no response to input (start/controls
-  not found) - needs --start/--keys or a user RZX.
-- Hardware-test the Fantasy World / Magicland altrom builds.
-- TID `--poke` cheat option (immunity 29289,201) not built.

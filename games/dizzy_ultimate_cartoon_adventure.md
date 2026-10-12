@@ -1,7 +1,9 @@
 # Dizzy: The Ultimate Cartoon Adventure (Dizzy 1) - XOR engine
 
 48K. Dedicated builder nexclash/dizzy1_patch.py (printer only). Profile:
-docs/profiles/dizzy1_ultimate_cartoon_adventure.json. Reference: dizzy1.z80 + dizzy1.rzx.
+docs/profiles/dizzy1_ultimate_cartoon_adventure.json. Reference files (private repo,
+specnext/reference/dizzy_ultimate_cartoon_adventure/): the snapshot (md5 0659328f; selftest input
+dizzy1.z80) and dizzy1rzx (selftest input dizzy1.rzx).
 
 | Output | MD5 |
 |---|---|
