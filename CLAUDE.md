@@ -5,6 +5,12 @@ differential tests against real recordings. Two kinds of session use this file:
 - **Add a game** (a user ran `nexclash.py new`): their SESSION.md has the game, snapshot and RZX.
 - **Maintain** (the maintainers): toolkit work, releases, merging contributions.
 
+A maintainer session that adds a game is an add-a-game session for the engine work (engine files
+only, `--canary` after shared changes, no rebuilding other games while developing) and a maintainer
+session at the end: the game's files go to specnext, then branch + PR, and before the merge
+`selftest.py --affected --verify --stamp` (re-verifies every game the change reaches; hours: run it
+in a separate worktree, LEARNINGS 2.6). Contributors never run that step; maintainers always do.
+
 Never put game data (.z80/.rzx/.nex/.tap/...) in this repo or a contribution: the user's files
 stay on their machine; the maintainers' reference files live in the private repo bleughb/specnext.
 
