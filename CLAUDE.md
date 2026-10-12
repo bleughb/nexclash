@@ -36,8 +36,13 @@ or download another version; tools/sjasmplus/README.md).
 - Ask the user before decisions that change what they see (which figures become sprites,
   colours, anything left on the ULA).
 - Do not change another game's output. After touching shared code (anything outside your engine's
-  module / .asm / profile) run `python selftest.py --smoke` (Chuckie Egg rebuild, under a second;
-  needs the private references). Do NOT rebuild or verify other games in a game session: the
+  module / .asm / profile) run `python selftest.py --canary` (needs the private references). Two
+  stages (Dean, 2026-10-13): stage 1 = Chuckie Egg rebuilt, MD5s, under a second - it validates the
+  tool chain. If it fails, stage 2 runs by itself: Midnight Resistance rebuilt + a 300-frame
+  differential verify (~1 min; 128K, alt ROM, interrupts on, paged hook RAM, pattern cache) and
+  says whether the TOOL CHAIN is broken (fix that first) or the fault is Chuckie Egg's. Any selftest
+  run that fails a game runs stage 2 the same way. The canaries are the records marked "canary":
+  1 / 2; keep both on the latest tools (never pinned), adapt them in the same PR as a tool change. Do NOT rebuild or verify other games in a game session: the
   maintainers' `selftest.py --affected` finds every game a change reaches (docs/records keep the
   hashes of each game's dependencies) and rebuilds those. Without the references, say in the
   contribution note that shared code changed.
