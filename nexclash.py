@@ -158,6 +158,11 @@ def cmd_auto(a):
         ok = _ce.auto(a, z80, name, out, say)
         _finish(out, name, rep)
         return ok
+    from nexclash import commando as _co                      # Commando (128K)
+    if _co.is_commando(s):
+        ok = _co.auto(a, z80, name, out, say)
+        _finish(out, name, rep)
+        return ok
     if s.machine != '48K' and len(s.ram()) > 49152:
         say('128K snapshot: sprite patching supports 48K games only; plain conversion only.')
     prof = identify(s.memory[0:65536])

@@ -1,4 +1,4 @@
-# Status (2026-10-11)
+# Status (2026-10-12)
 
 One row per game. Details, decisions and checklists: games/<file>. MD5s: docs/VERIFICATION.md.
 
@@ -13,6 +13,7 @@ One row per game. Details, decisions and checklists: games/<file>. MD5s: docs/VE
 | Magicland Dizzy | tid generic (tid_engine.md) | dizzy4_sprites.nex bf137d41 (altrom) | verified | untested | hardware test |
 | Treasure Island Dizzy | dedicated (tid_engine.md) | dizzy2_game_sprites.nex 8b4d0847 | verified | plain build runs | recorder start/keys |
 | Dizzy 1 | dedicated XOR (dizzy1.md) | dizzy1_sprites.nex 05d2bce9 | verified | untested | - |
+| Commando (128K) | commando (commando.md) | commando_sprites.nex f22a9452 (altrom + e_init) | RZX IDENTICAL, init + unit PASS | untested | hardware test |
 | Crystal Kingdom Dizzy (128K) | plain only (crystal_kingdom_dizzy.md) | - | - | plain runs | sprites deferred |
 
 Platform on hardware: alt ROM ($8C) PASS 2026-09-27; plain 48K and 128K conversion run.

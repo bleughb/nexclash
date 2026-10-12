@@ -152,6 +152,13 @@ Each line is settled unless marked otherwise.
 - A plotter that composes figure + background in a buffer and then overwrites the screen: swap the
   compose (LD A,(DE) / OR (HL) -> LD A,(HL) / NOP) so the blit writes background only; prove the
   buffer is write-first and read only by that plotter (Chuckie 29344-29391).
+- Hook state must not be baked into RAM the LOADER still owns: Commando's .z80 is the BASIC
+  loader (sysvars + program at 0x5C00) and the build overwrote it with the hook tables. Init the
+  state from a hook at the game entry (the USR target), unit-tested from the loader's real RAM.
+- Entry tables keyed by an object's position leak when the game retires the object without a
+  last plot (Commando soldiers leaving at the bottom: invisible entries filled the table). Keep no
+  entry for an invisible frame; in verify, max entries = table size is a red flag - count the
+  plots that fell back because the table was full.
 
 ## 2.2 Memory proofs (analysis method)
 - Prove free memory with an access scan over the recording, not by zero-check.
@@ -224,6 +231,9 @@ Each line is settled unless marked otherwise.
 - One recording per game, following RECORDING_CHECKLIST.md, avoids a second round.
 - What a recording covers is quickest to see on a contact sheet: rzxplay `--stop N` with an output
   .z80 at 10 points, render the screens side by side (Chuckie Egg: levels 1-2 only, no lifts).
+- An RZX carries its own start snapshot and can start later than the .z80 (Commando: .z80 = BASIC
+  loader, RZX = in-game SZX). Nothing between them is verified: compare the two start states and
+  simulate .z80 -> game entry (keys) checking hook RAM / tail / sites / interrupt mode.
 
 ## 2.5 Verification method
 - Lockstep RZX replay cannot prove equivalence once cycle counts change (input
@@ -318,6 +328,9 @@ Each line is settled unless marked otherwise.
   unless a figure was plotted there) validates the model itself, not just the hook against it.
 - A hook that calls a helper must reload every register the helper clobbers before using it
   (Chuckie e_hd first used C after henidx had set BC): found by reading, before the first run.
+- A unit sweep must stay inside states the game can produce (Commando: old/new column differ by
+  -1/0/+1; the draw loops ignore +4 otherwise) and test the guard on the rest separately. Check
+  that a sweep converts something: an all-passthrough sweep proves nothing.
 
 ## 2.6 Process / tokens (this sandbox)
 - One CPU; background jobs die when the turn ends: run long jobs sequentially

@@ -81,6 +81,14 @@
     "sprites": "e50733b2b7e2db32f004c1436a2e0461",
     "diagnostic": "8f25bc6146b9d7f7ae1f12a1d227447e"
    }
+  },
+  "c9af5668191462d77c5859900268c24b": {
+   "game": "Commando",
+   "doc": "commando.md",
+   "nex": {
+    "plain": "5642e4b4d2a4b3f53cb7311eebeedecf",
+    "sprites": "f22a9452822b52163023de897f3358aa"
+   }
   }
  }
 }

@@ -40,6 +40,7 @@ Default builds (strategy `altrom` where proven; dedicated builders are printer-o
 - Dizzy 6 (`tid_mirror`): stays slot1 (self-modifying plotter copy in the RAM page); not in selftest
 - `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_sprites.nex` e50733b2b7e2db32f004c1436a2e0461, `rainbow_sprites_diag.nex` 8f25bc6146b9d7f7ae1f12a1d227447e (2026-10-12, collectables without border + diagnostic build)
 - `Chuckie_Egg.nex` ec0df71e70fae35836eaed521f300777, `Chuckie_Egg_sprites.nex` bfad6be1e7c8a2c797a6242d7f339e35 (2026-10-11)
+- `commando.nex` 5642e4b4d2a4b3f53cb7311eebeedecf, `commando_sprites.nex` f22a9452822b52163023de897f3358aa (2026-10-12)
 
 `--strategy` reproductions of the pre-altrom builds (same recordings):
 - `dizzy3_sprites.nex --strategy printer` c09213beaec1572c0228985dae89bd77
@@ -296,4 +297,33 @@ Same command. Changed: rainbow.py, rainbow_hooks.asm, rainbow_islands.json (hook
 - Shared code: nexclash.py gained one dispatch block (before the 48K identify). Wally / Rainbow /
   Dizzy MD5s not re-run in that session (their reference files were not there): `selftest.py`
   covers them once reference/ holds them (STATUS open work 1).
+- Hardware: untested.
+
+## Commando (128K, engine `commando`) - 2026-10-12
+`nexclash.py auto commando.z80 --rzx commando.rzx --no-record`
+(Commando_1985_Elite_Systems_t_128K.z80 = BASIC loader at line 30, trainer version; Dean's RZX
+starts in game from its own SZX: 8 autosave snapshots stripped, 3,279 frames, area 1, deaths)
+- `commando.nex` 5642e4b4d2a4b3f53cb7311eebeedecf (plain, tail 0x6D00) - boot sim OK
+- `commando_sprites.nex` f22a9452822b52163023de897f3358aa (altrom hooks + bank-5 state set up by
+  e_init at the game entry) - boot sim OK; patched snapshot = original except the 7 sites (25
+  bytes); alt ROM = 48K ROM except its $FF area 0x386E-0x3C98
+- Boot path (not in the RZX): the .z80 simulated with SPACE, N: USR 25088 at frame 41, IM 2 at 52,
+  menu at 53; after the USR nothing touches 0x5B00-0x5E1F or the tail (300 frames)
+- RZX: 4,332 converted plots, 507 figure plots on the ULA (edge / top clip; 0 for a full table),
+  887 other plots, 11 clears, max 6 figures, 570,425 sprite pixels - IDENTICAL. Per call: all
+  registers (AF' included), all memory except the screen and the hook RAM; patched screen = the
+  original minus the new frame's bits, which the sprite shows exactly (clip window 0-191); no game
+  access to the hook RAM, tail, patch sites or alt-ROM hook range; 7FFD always selects ROM 1;
+  25630 never re-entered; patched instruction interiors never executed.
+- e_init: 16 cases (random registers/flags, the loader's own RAM in the hook area, all sprites
+  visible) - registers as the original JP 27090, no memory outside the hook RAM written, hook RAM =
+  the model's start state, sprites 0-47 hidden; negative control (swapped nibble table) 16/16.
+- Unit tests PASS: 16,128 position cases (8 columns incl. edges 28-31/255 x column step -1/0/+1/+2 x 7 rows incl. 4/5/95/96 x 2 heights x row step -1/+1/= row pairs; 3,744 converted, 12,384 passthrough, 8,064 step-guard cases), 12 table-full, 12 other-descriptor (explosion slot), 12 page-guard (page 32), negative control (swapped nibble table, its own tables) 6/6 - every case: converted iff the guard says so, registers + memory as the original, sprite pixels = the original's new-frame bits
+- First build (earlier session) failed three ways, all fixed here: it wrote the hook state over
+  the BASIC loader's RAM (would not have reached the game), kept invisible entries for soldiers
+  leaving at the bottom (table full in 239 plots), and converted column/row steps the game never
+  makes (the plotter draws past its frame there; guarded now).
+- Shared code: nexclash.py gained one dispatch block (before the 48K identify); selftest.py gained
+  a `commando` RZX_GAMES entry (slow). `selftest.py --smoke` (Chuckie Egg) PASSED; other games
+  not re-run (game session).
 - Hardware: untested.
