@@ -66,6 +66,6 @@ clone it OUTSIDE the package).
 | nexclash/ | toolkit modules + engines (chuckie, dizzy5, dizzy6, rainbow, wally, ...); userflow.py = patch/new/contribute |
 | asm/ | hook sources (sjasmplus --zxnext); regenerate the profile hex after any edit |
 | docs/profiles/ | per-game profiles (hook hex read by the engines), signatures.json, verified.json |
-| games/ | one file per game/engine: facts, decisions, status, open items, checklist |
+| games/ | one file per game, named like its folder in specnext/reference/ (facts, decisions, status, open items, checklist); tid_engine.md = shared TID engine facts |
 | docs/ | BRIEFING, LEARNINGS, VERIFICATION, PLAYBOOK, RECORDING_CHECKLIST, NEXT_REGISTERS, contribute.json |
 | tools/ | make_package.py (release zip), merge_contribution.py, prototypes |

@@ -2,7 +2,9 @@
 
 48K. Code: nexclash/dizzy6.py (TidPatch slot1 + unpatched plotter/eraser copy at 0x2000 for the
 mirror calls; nexclash.py _auto_dizzy6). Profile: docs/profiles/dizzy6_prince_of_the_yolkfolk.json.
-Not in selftest (Dizzy6.z80 + try1.rzx to be uploaded to reference/).
+Reference files (private repo,
+specnext/reference/prince_of_the_yolkfolk/): Dizzy6.z80 (md5 dd6cd7a3), try1.rzx, try2.rzx, try3.rzx.
+Not in selftest yet.
 
 | Output | MD5 | Status |
 |---|---|---|
