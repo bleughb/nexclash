@@ -29,9 +29,10 @@ at entry, IX/IY never written by a hook (static check + per-instruction check), 
 solid objects.
 
 Hardware + CSpect 2026-10-12, 541e34e2: crash when the first figure is drawn (the game screen is
-up). Cause: hook code at 0x3D00-0x3DFF (pat/pix/occl) - an instruction fetch there is the
-DivMMC/TR-DOS automap trap, which pages DivMMC over 0x0000-0x3FFF (the simulator does not model
-DivMMC; all earlier builds kept code below 0x3D00). d601385e: code at 0x3600-0x3CDB and
+up). Hook code sat at 0x3D00-0x3DFF (pat/pix/occl); all earlier builds kept code below 0x3D00.
+Probable cause (not confirmed, BRIEFING A1 / C2 #14): the DivMMC/TR-DOS automap on an instruction
+fetch at 0x3Dxx, which pages DivMMC over 0x0000-0x3FFF - although the stub clears NextReg $06
+bit 4 (the simulator does not model DivMMC). d601385e: code at 0x3600-0x3CDB and
 0x3F00-0x3F96, only the pixel-pair tables in 0x3D00-0x3EFF; runs on hardware (Dean).
 
 ## Dean's decisions (2026-10-12)
@@ -77,7 +78,8 @@ DivMMC; all earlier builds kept code below 0x3D00). d601385e: code at 0x3600-0x3
   type a table of 8 variants (x bits 5-7) -> shape pointer + first-line offset; shape = flags
   (rectangle / absolute column), first column, width, height, bitmap) are derived by Python from
   the game: the drawer run on a 0x00 and a 0xFF screen gives its mask, holes filled by the body-fill
-  rule; identical variants share one shape. `auto` re-derives them and compares with the profile.
+  rule; identical variants share one shape. `auto` re-derives them and compares with the profile;
+  `python -m nexclash.commando depth GAME.rzx [--check]` writes them into the profile.
 - svsave / svrest: the plotter's erase clears the OLD frame's bits from the screen - for a converted
   figure those bits were never on the ULA, so the erase cuts holes in the scenery, which the game
   redraws only in some frames (RZX: ~900 of 2,000 frames redraw no scenery). e_ent saves the 3 x
@@ -93,7 +95,7 @@ DivMMC; all earlier builds kept code below 0x3D00). d601385e: code at 0x3600-0x3
 - Alt ROM image 1, whole 0x2000-0x3FFF (the game reads only ROM page 0x00 and never runs ROM
   code): shapes 0x2000, body fill (build/fm) 0x3080, smear tables SR/SL 0x3200/0x3300, depth
   table 0x3400, scenery save/restore 0x3550, main hooks 0x3600-0x3CDB, pixel-pair tables PT0/PT1
-  0x3D00/0x3E00 (data only: 0x3D00-0x3DFF is the DivMMC automap trap for instruction fetches),
+  0x3D00/0x3E00 (data only: code at 0x3D00-0x3DFF crashed 541e34e2, probably the DivMMC automap),
   main hooks part 2 (called routines) 0x3F00-0x3F96 + register block. `auto` Static and the
   per-instruction check fail on any code in 0x3D00-0x3DFF. State in bank-5 RAM 0x5C00-0x60FF: vars + 12-entry table + hook stack
   (0x5C00-0x5CFF), zero page 0x5D00, scratch 0x5E20-0x607F (MASK / INKB / FILB share the low

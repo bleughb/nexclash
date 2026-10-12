@@ -105,7 +105,8 @@ SR_T    EQU 0x3200              ; smear right / left (fill)
 SL_T    EQU 0x3300
 PT0     EQU 0x3D00              ; (ink nibble << 4 | fill nibble) -> 2 bytes of 4-bit pixels
 PT1     EQU 0x3E00                  ; (DATA only in 0x3D00-0x3DFF: an instruction fetch there is
-                                    ; the DivMMC/TR-DOS automap trap - never put code there)
+                                    ; code there crashed 541e34e2; probable cause the DivMMC
+                                    ; automap on fetch, BRIEFING A1 - never put code there)
 
         ORG 0x3600
 ; ---- 39120: every plot. Note the object's current sprite entry; save the scenery it will cut ----
@@ -1132,7 +1133,7 @@ occl:   xor a                       ; MASK is cleared when the first object over
         jp .obj
 
 rom_end:
-        ASSERT rom_end <= 0x3D00        ; DivMMC automap trap at 0x3D00-0x3DFF (fetch)
+        ASSERT rom_end <= 0x3D00        ; no code at 0x3D00-0x3DFF (BRIEFING A1: probable DivMMC trap)
 
 ; ---- main hooks, part 2 (called routines only; after the pair tables) ----
         ORG 0x3F00

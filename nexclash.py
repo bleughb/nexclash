@@ -11,7 +11,7 @@ Copyright (C) 2026 the nexclash contributors. GPL-3.0-or-later (see LICENSE).
   python nexclash.py record GAME.z80 [-o OUT.rzx]       automatic (or scripted) RZX recording
   python nexclash.py convert GAME.z80 [--rzx R]         plain .nex only (tail placement checked)
   python nexclash.py verify GAME.z80 --rzx R            differential test of the patched build
-  python nexclash.py rzx info FILE | rzx merge A B -o C
+  python nexclash.py rzx info FILE | rzx merge A B -o C | rzx strip A -o B
 Analysis (any game; PLAYBOOK 0b / 3 / 3b):
   python nexclash.py inspect GAME.z80                   snapshot kind: loader?, 48K/128K, ROM, IM, stack
   python nexclash.py scan GAME.z80 [--rzx R] [--range LO-HI] [--after PC]   memory read/written/run

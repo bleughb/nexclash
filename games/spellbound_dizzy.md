@@ -27,11 +27,14 @@ units, mirrored when bit 7 of 44739 is clear; undo buffer 46088, size 4 x max fr
 (96 bytes; variables follow at 46192+, so do not assume 128); 37 frames (48K). Visual-only
 overwrites while drawn: 37671, 52211-52222. Room wipe 52104 runs only while Dizzy is erased.
 Reads only the ROM font. At the plot hook AF, BC, DE, HL and the alternate set are dead, but
-EXX / EX AF,AF' parity must stay even (the ISR restores registers by set). Needs Dean's RZX
-(inventory, dialogue, a lost life) and a hardware test. Built by dizzy5.py + loader.py (loader.prerun replays the RZX until
+EXX / EX AF,AF' parity must stay even (the ISR restores registers by set). Verified against
+Dean's RZX (below); still wanted: a recording with the inventory and a lost life, and a hardware
+test. Built by dizzy5.py + loader.py (loader.prerun replays the RZX until
 the engine is live, writes GAME_start.z80). Slot-1 page = ROM copy (from skoolkit.ROM48) with hooks at
 0x3800-0x3CFF (altrom default: the same bytes 0x3800-0x3A1E into alt image 1); tail in the undo buffer (0xB408); 102 patterns. Verified: auto RZX (470 plots) and
-Dean's RZX (1,400 plots, dialogue boxes) - all identical. Output MD5s in docs/VERIFICATION.md.
+Dean's RZX (dzzy5rzx, 1,400 plots, dialogue boxes) - all identical. Output MD5s in
+docs/VERIFICATION.md. Dean's RZX is NOT in specnext/reference (only Dizzy_V_auto.rzx): upload it so
+selftest can repeat that verification.
 FIRST HARDWARE BUILD HAD BLANK DIALOGUE TEXT: the slot-1 page had been built from
 Snapshot.memory[0:0x4000], which is ZEROS for .z80 files - always take ROM bytes from skoolkit.ROM48.
 

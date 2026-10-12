@@ -1,9 +1,9 @@
 # Everyone's a Wally (Mikro-Gen) - engine `wally`
 
 48K game in a 128K snapshot. Code: nexclash/wally.py, asm/wally_hooks.asm,
-docs/profiles/everyones_a_wally.json (regenerate the hook hex after any .asm edit).
-Reference: reference/wally.z80 (World of Spectrum snapshot) + wally.rzx (Dean's wallyrzx.rzx;
-to be uploaded).
+docs/profiles/everyones_a_wally.json (after any .asm edit: `python tools/asm2profile.py everyones_a_wally`).
+Reference (private repo, specnext/reference/everyones_a_wally/): wally.z80 (World of Spectrum
+snapshot) + wallyrzx.rzx (Dean's recording; selftest input wally.rzx).
 
     python nexclash.py auto wally.z80 --rzx wallyrzx.rzx
 

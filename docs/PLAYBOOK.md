@@ -95,7 +95,8 @@ Hooks: asm/<engine>_hooks.asm with `SAVEBIN "<prefix>_<key>.bin"` per block and
 `"hooks": {"source": "asm/<engine>_hooks.asm", ...}` in the profile; after every edit
 `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex + symbols).
 Copy the nearest builder (TID-engine: build.py TidPatch;
-XOR: dizzy1_patch.py; non-Codemasters: chuckie.py (simplest), wally.py, rainbow.py), change the profile block and site list, rebuild the asm.
+XOR: dizzy1_patch.py; non-Codemasters: chuckie.py (simplest), wally.py, rainbow.py, commando.py
+(128K BASIC loader, front end, depth, cached solid sprites)), change the profile block and site list, rebuild the asm.
 Every site keeps its original-byte check.
 
 ## 6. Verify (differential test)
