@@ -20,8 +20,8 @@ top byte where OTIR must work (0x57, 0x5B). The ULA answers on any even port (A0
 |---|---|---|---|
 | $03 | Machine Type Register | display timing 48K/128K (bits 6:4, bit 7 = allow change); written last in the tail. Does NOT stop 7FFD decoding | z80tonex tail |
 | $05 | Peripheral 1 Setting Register | bit 2 cleared = 50 Hz (unless --allow-60hz) | z80tonex stub |
-| $06 | Peripheral 2 Setting Register | bit 4 cleared = divMMC automap / DRIVE-button NMI off (the A1 table used to say $0A) | z80tonex stub |
-| $07 | CPU Speed Register | 0 = 3.5 MHz for games; 3 = 28 MHz inside Rainbow hooks, 0 on exit | stub, rainbow_hooks |
+| $06 | Peripheral 2 Setting Register | bit 4 cleared = divMMC automap / DRIVE-button NMI off (the A1 table used to say $0A). Yet code at 0x3D00-0x3DFF crashed Commando: probably not every automap entry point (BRIEFING A1, C2 #14) | z80tonex stub |
+| $07 | CPU Speed Register | 0 = 3.5 MHz for games; 3 = 28 MHz inside the Rainbow and Commando hooks, 0 on exit | stub, rainbow_hooks, commando_hooks |
 | $08 | Peripheral 3 Setting Register | contention; bit 7 write 1 = clear the 7FFD lock (0 does nothing; read 1 = unlocked) | tail, altrom stub |
 | $15 | Sprite and Layers System Register | bit 0 sprites visible; bits 4:2 layer order (default SLU, global) | hooks, setup |
 | $19 / $1C | Clip Window Sprites / Clip Window Control | $1C bit 1 resets the sprite clip index, then X1,X2,Y1,Y2 to $19 | Rainbow / Wally setup |
@@ -66,8 +66,10 @@ References:
 - Descriptions, T-states and errata: SpecNext Wiki "Extended_Z80_instruction_set"
   https://wiki.specnext.dev/Extended_Z80_instruction_set ; matrix mirror: https://table.specnext.dev/
 
-What nexclash uses: ONLY `NEXTREG n,n` (ED 91 reg val, 20 T) and `NEXTREG n,A` (ED 92 reg, 17 T)
-in every hook, stub and tail (checked 2026-09-29: asm sources + all hex blobs). Nothing else.
+What nexclash uses: `NEXTREG n,n` (ED 91 reg val, 20 T) and `NEXTREG n,A` (ED 92 reg, 17 T) in
+every hook, stub and tail, and SWAPNIB (ED 23) in the Rainbow hooks only (since 4dce14af; simulated
+by rainbow._swapnib, exhaustive self-test + a SWAPNIB-as-NOP control). Nothing else (asm sources:
+`grep -i -E "swapnib|mirror|mul |outinb|pixel|ldirx|ldix|test |bs[lr]"` asm/*.asm).
 
 SIMULATOR TRAP (tested): SkoolKit's Simulator executes any Z80N ED opcode as a 2-byte NOP without
 an error (e.g. ED 24 MIRROR A leaves A unchanged). nextboot and the hook verifiers handle ED 91/92
@@ -78,7 +80,7 @@ Z80N instructions worth using in future hooks (all 2 bytes unless noted):
 | Instruction | Encoding | T | Use for us | Caveat |
 |---|---|---|---|---|
 | MIRROR A | ED 24 | 8 | bit-reverse a graphics byte (mirrored frames without a 256-byte table) | - |
-| SWAPNIB | ED 23 | 8 | nibble swap when packing 4-bit sprite pixels | - |
+| SWAPNIB | ED 23 | 8 | nibble swap when packing 4-bit sprite pixels (USED by Rainbow) | - |
 | MUL D,E | ED 30 | 8 | DE = D*E (table offsets, frame*size) | flags unchanged |
 | ADD HL/DE/BC,A | ED 31/32/33 | 8 | pointer + unsigned A | carry NOT preserved (undefined/reset, wiki notes 3.1.5 / 3.02) |
 | ADD HL/DE/BC,nn | ED 34/35/36 lo hi | 16 | pointer + constant | 4 bytes |

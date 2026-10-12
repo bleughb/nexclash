@@ -1,5 +1,5 @@
 # Rainbow Islands (Ocean, 128K) - engine `rainbow`
-Date 2026-10-11. Engine `rainbow`. Status: RZX-verified identical; RUNS ON HARDWARE (Dean,
+Updated 2026-10-12. Engine `rainbow`. Status: RZX-verified identical; RUNS ON HARDWARE (Dean,
 2026-09-28). 2026-09-29: boss-spider fix + pattern-upload optimisation (hardware: runs, better;
 busy scenes slower than the original). 2026-09-30: pattern cache 78b9ed99 (hardware: no visible
 gain, slow when moving with enemies). 2026-10-01: SPEED BUILD - direct conversion + 256K
@@ -551,9 +551,9 @@ drawn on top.
    that copies enemy graphics into 0x9500 and key the colour on its source.
 4. Headroom: 84 figure sprites, 67 items, 104 sprites in all seen; figures beyond 128 - items fall
    back to the ULA, items beyond 80 stay on the ULA as drawn.
+5. identify.py / signatures.json entry (auto detects via rainbow.is_rainbow; `identify` says unknown).
 6. Boss RZX wanted (Fuse "Record from snapshot", autosave off): would verify LEFT4 against real
    play and the boss's rows/piece count.
-5. identify.py / signatures.json entry (auto detects via rainbow.is_rainbow; `identify` says unknown).
 7. A pickups RZX (castle bricks, rainbow, sky; enemies turned to fruit and collected) would put
    the spawn paths (60543 -> 60839 / 60965) through more cases; both RZX already reach them.
 

@@ -14,7 +14,7 @@ pixels). Start-up tails simulated: all registers restored, no game memory touche
 | Dizzy 1 | dizzy1rzx, 6,345 frames | 2,364 | (XOR) | 40,881 collision tests, 24 wipes | all identical (A after erase is dead) |
 | Fantasy World Dizzy | dizzy3rzx, 8,761 frames | 1,613 | 1,591 | 3,319 ISR, 44 wipes, 40 boxes; 30,976 pixel tests unaffected | all identical |
 | Magicland Dizzy | dizzy4rzx, 10,074 frames | 1,690 | 1,670 | 3,486 ISR, 51 wipes, 44 boxes; 33,294 pixel tests unaffected | identical except 4 undo-buffer-only diffs (original's ghost pixels; nothing else reads it) |
-| Spellbound Dizzy (Dizzy V) | Dean's dzzy5rzx (7,051 frames, dialogue boxes; autosave stripped) | 1,400 | 1,399 | slot-1 page = ROM at all 240 font bytes read | all identical (8 erases: A/F dead) |
+| Spellbound Dizzy (Dizzy V) | Dean's dzzy5rzx (7,051 frames, dialogue boxes; autosave stripped; NOT in specnext/reference, so selftest cannot repeat it) | 1,400 | 1,399 | slot-1 page = ROM at all 240 font bytes read | all identical (8 erases: A/F dead) |
 | Spellbound Dizzy (Dizzy V) | auto RZX, 4,018 frames (from the loader snapshot) | 470 | 470 | 0 logic reads of player pixels; 1,098 visual-only overwrites while drawn | all identical (7 erases: A/F differ at return, overwritten before use) |
 | Chuckie Egg | Dean's RZX, 8,626 frames (levels 1-2; autosave stripped) | 7,854 player/duck + 878 hen | 881 hen | 15 screen clears, 549,345 sprite pixels | all identical |
 
@@ -28,19 +28,23 @@ bytes not copied. Structural altrom build of the TID-engine TidPatch (TID title 
 profile): boot OK; printer/slot1/plain outputs of that build byte-identical to the pre-altrom toolkit.
 
 ## Output checksums (MD5) - the toolkit must reproduce these
-Default builds (strategy `altrom` where proven; dedicated builders are printer-only):
+Default builds (strategy `altrom` where proven; dedicated builders are printer-only). File names are
+the selftest's canonical ones (dizzy3 = Fantasy World, dizzy4 = Magicland, dizzy2 = Treasure Island,
+Dizzy_V = Spellbound); `nexclash.py auto` names its outputs after the input file, and the private
+repo keeps them under the games/ folder names (e.g. fantasy_world_dizzy_sprites.nex).
 - `Dizzy_V_sprites.nex` 1f33c467e6aa55585cea79cfbb24bcfe (altrom; NOT yet hardware-tested)
 - `Dizzy_V.nex` c99189f3274a4803f0b25b0217206bdb
 - `dizzy3_sprites.nex` (Fantasy World, altrom) 9182f2f8b4b0dc55b59a69728568b403 (baselined 2026-10-11: selftest, auto RZX verification PASSED, boot OK)
 - `dizzy4_sprites.nex` (Magicland, altrom) bf137d41d3cc08221bf6fdda153c9de2 (baselined 2026-10-11: as above)
 - `dizzy3.nex` cd620010e2f61af0002e76718945716f, `dizzy4.nex` 09eb18496cff334ea17bfc0b0c94585d (plain: unchanged)
-- `dizzy2_game_sprites.nex` 8b4d0847d68fce3215bd43a0e116e682 (dedicated, printer)
+- `dizzy2_game_sprites.nex` 8b4d0847d68fce3215bd43a0e116e682 (dedicated, printer), `dizzy2_game.nex` (in game, plain) 4dae1a3a15b2158642a5d5b82de92ef7
 - `dizzy2_title_sprites.nex` 85e054fe4bce8e4b3a8e336aac432f58 (dedicated, printer; re-checked 2026-09-28), `dizzy2.nex` (title, no recording) 70890aba7d821fba8a41e63636eb58be
 - `dizzy1_sprites.nex` 05d2bce99f4d7654d4e1c9c9c04dc391 (dedicated, printer), `dizzy1.nex` 7892b2e0f1f3f9f19165516db307cbe0
-- Dizzy 6 (`tid_mirror`): stays slot1 (self-modifying plotter copy in the RAM page); not in selftest
 - `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_sprites.nex` e50733b2b7e2db32f004c1436a2e0461, `rainbow_sprites_diag.nex` 8f25bc6146b9d7f7ae1f12a1d227447e (2026-10-12, collectables without border + diagnostic build)
 - `Chuckie_Egg.nex` ec0df71e70fae35836eaed521f300777, `Chuckie_Egg_sprites.nex` bfad6be1e7c8a2c797a6242d7f339e35 (2026-10-11)
-- `commando.nex` a206f950c12f58a8e7f26b366f5a2480, `commando_sprites.nex` 5c1081b73765978a7f3e055a66578542 (2026-10-12)
+- `commando.nex` a206f950c12f58a8e7f26b366f5a2480, `commando_sprites.nex` d601385ee4aeb7f3d7c0771bdc27df6b (2026-10-12; runs on hardware)
+- `wally.nex` 2e615b3e7ae995e6d6a6ed9e3f586d4d, `wally_sprites.nex` f7605489c3af55b8e8c6a580c1c26150
+- Dizzy 6 (not in selftest yet): `Dizzy6.nex` e02faca34df9504cc1f2f162e0ef791e, `Dizzy6_sprites.nex` (slot1) f491e1f6621559ccc4d36de3535ff5d0
 
 `--strategy` reproductions of the pre-altrom builds (same recordings):
 - `dizzy3_sprites.nex --strategy printer` c09213beaec1572c0228985dae89bd77
@@ -357,13 +361,13 @@ starts in game from its own SZX: 8 autosave snapshots stripped, 3,279 frames, ar
   control 6/6 (cold slot cache: a broken patch builds with its own tables); depth unit 315 (138
   behind), negative 138/138; restore negative 6/6; e_init 16 cases, negative control (slot keys not
   emptied) 16/16. Hook RAM now 0x5C00-0x60FF: no game access in the RZX (checked per access).
-- d601385e (2026-10-12): 541e34e2 crashed on hardware and in CSpect at the first figure: hook code
-  at 0x3D00-0x3DFF, the DivMMC automap trap. Hooks moved to 0x3600-0x3CDB + 0x3F00-0x3F96, the
+- d601385e (2026-10-12): 541e34e2 crashed on hardware and in CSpect at the first figure with hook
+  code at 0x3D00-0x3DFF (probable cause the DivMMC automap on fetch; BRIEFING A1, not confirmed). Hooks moved to 0x3600-0x3CDB + 0x3F00-0x3F96, the
   pair tables to 0x3D00/0x3E00. Static check and per-instruction check now fail on code fetched
   in 0x3D00-0x3DFF. Same results as above (RZX IDENTICAL, 676,249 sprite pixels, cache 2,764,
   every test and negative control PASS). Runs on hardware (Dean).
 - Shared code unchanged (commando.py, its .asm and profile only); `selftest.py --smoke` PASSED.
-- Hardware: untested.
+- Hardware: d601385e runs (Dean, 2026-10-12); checklist items not yet reported.
 
 ## Toolkit: pinned sjasmplus + asm2profile (2026-10-12)
 `python tools/asm2profile.py --check --all` with the pinned sjasmplus 1.24.0 (tag v1.24.0, commit

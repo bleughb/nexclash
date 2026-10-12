@@ -1,7 +1,7 @@
 # Chuckie Egg (A&F Software, 1983) - engine `chuckie`
 
-48K. Code: nexclash/chuckie.py, asm/chuckie_hooks.asm, docs/profiles/chuckie_egg.json (regenerate
-the profile hex after any .asm edit). Dispatch: nexclash.py cmd_auto, by signature at 39500.
+48K. Code: nexclash/chuckie.py, asm/chuckie_hooks.asm, docs/profiles/chuckie_egg.json (after any
+.asm edit: `python tools/asm2profile.py chuckie_egg`). Dispatch: nexclash.py cmd_auto, by signature at 39500.
 Reference: reference/Chuckie_Egg.z80 (Chuckie_Egg_1983_A__F_Software_a.z80, title screen) +
 reference/Chuckie_Egg.rzx (Dean, 2026-10-11).
 

@@ -32,7 +32,7 @@ ALT_PAGE = 24
 PAGE_LO = 0x2000                            # alt ROM image 1 page we own (the game never executes ROM
                                             # and reads only page 0x00 - RZX scan)
 ROM_ORG, ROM2_ORG = 0x3600, 0x3F00          # hooks: part 1 (< 0x3D00), part 2 (+ register block, < 0x4000)
-TRAP_LO, TRAP_HI = 0x3D00, 0x3E00            # DivMMC automap on an instruction fetch here: data only
+TRAP_LO, TRAP_HI = 0x3D00, 0x3E00            # no code here (code there crashed 541e34e2; probable DivMMC automap, BRIEFING A1)
 FILL_LO, SVR_LO = 0x3080, 0x3550            # body fill code; scenery save / restore
 DT, NTYPES = 0x3400, 41                     # depth table (41 x 8, + variant table pointers)
 RAM_LO, RAM_HI = 0x5C00, 0x6100             # hook state (never read/written by the game once it runs)
@@ -75,6 +75,37 @@ def _profile_path():
 
 def load_profile():
     return json.load(open(_profile_path()))
+
+
+def _derive_depth(snap):
+    """(depth table with variant pointers, shape blob, model) from a game-state snapshot (the RZX's
+    start snapshot): the game's own drawer + box builder per type and variant."""
+    ram = snap.ram(-1)
+    bks = [ram[k:k + 0x4000] for k in range(0, 0x20000, 0x4000)]
+    return derive_shapes(bks, snap.out7ffd, derive_table(bks, snap.out7ffd))
+
+
+def depth_profile(rzx, check=False):
+    """Re-derive depth_table + shapes from the RZX's start state and compare with / write them into
+    docs/profiles/commando.json (hooks untouched: those come from tools/asm2profile.py).
+    Returns (same_as_profile, message)."""
+    from skoolkit.rzxplay import parse_rzx
+    from skoolkit.snapshot import Snapshot as SS
+    s0 = [b.obj for b in parse_rzx(rzx) if isinstance(b.obj, SS)][0]
+    dtab, blob, model = _derive_depth(s0)
+    path = _profile_path()
+    text = open(path).read()
+    prof = json.loads(text)
+    same = prof.get('depth_table', '').upper() == dtab.hex().upper() and prof.get('shapes', '').upper() == blob.hex().upper()
+    msg = 'depth table %d bytes, %d shape variants, shapes %d bytes: %s' % (
+        len(dtab), len(model), len(blob), 'same as the profile' if same else 'DIFFERENT from the profile')
+    if not same and not check:
+        if SHAPES_LO + len(blob) > FILL_LO:
+            raise ValueError('shape data %d bytes does not fit 0x%04X-0x%04X' % (len(blob), SHAPES_LO, FILL_LO))
+        prof['depth_table'], prof['shapes'] = dtab.hex().upper(), blob.hex().upper()
+        open(path, 'w').write(json.dumps(prof, indent=1))
+        msg += ' -> written to %s' % path
+    return same, msg
 
 
 def identify_commando(mem):
@@ -842,7 +873,7 @@ def _isafe(sim, regs0, err):
             elif not (0x5C70 <= R[12] <= 0x5D00 or R[12] >= sp0 - 4):
                 bad = 'SP outside the hook stack and the game stack'
             elif TRAP_LO <= pc < TRAP_HI:
-                bad = 'instruction fetch in 0x3D00-0x3DFF (DivMMC automap trap)'
+                bad = 'instruction fetch in 0x3D00-0x3DFF (crashed on hardware; probable DivMMC automap)'
             if bad and not seen:
                 seen.append(bad)
                 err.append(('interrupt-unsafe hook: %s' % bad, pc))
@@ -1528,7 +1559,7 @@ def static_checks(patch):
                    (FILL_LO, FILL_LO + len(patch.fill_code)),
                    (SVR_LO, SVR_LO + len(patch.svr_code))):
         if lo < TRAP_HI and hi > TRAP_LO:
-            bad.append((lo, 'hook code in 0x3D00-0x3DFF (DivMMC automap trap)'))
+            bad.append((lo, 'hook code in 0x3D00-0x3DFF (crashed on hardware; probable DivMMC automap)'))
         a = lo
         while a < hi:
             i = d.disassemble(a, a + 1, 'n')[0]
@@ -1595,16 +1626,15 @@ def auto(a, z80, name, out, say):
         from skoolkit.rzxplay import parse_rzx
         from skoolkit.snapshot import Snapshot as SS
         s0 = [b.obj for b in parse_rzx(r) if isinstance(b.obj, SS)][0]
-        ram = s0.ram(-1)
-        bks = [ram[k:k + 0x4000] for k in range(0, 0x20000, 0x4000)]
-        dt0 = derive_table(bks, s0.out7ffd)
-        dtab, blob, model = derive_shapes(bks, s0.out7ffd, dt0)
+        dtab, blob, model = _derive_depth(s0)
         dok = dtab == patch.dtab and blob == patch.shapes
         ok = ok and dok
         say('Depth     : table + solid shapes re-derived from the game (RZX start state: drawer 37302 + '
             'box builder 60754 per type and variant) %s the profile; %d types with walk boxes, %d '
             'shape variants, %d bytes -> %s' % ('=' if dok else '!=', sum(dtab[8 * k] & 1 for k in range(NTYPES)),
                                               len(model), len(blob), 'PASS' if dok else 'FAIL'))
+        if not dok:
+            say('            update the profile: python -m nexclash.commando depth %s  (then re-run auto)' % r)
     for r in list(a.rzx or []):
         from skoolkit.rzxplay import parse_rzx
         from skoolkit.snapshot import Snapshot as SS
@@ -1686,3 +1716,13 @@ def auto(a, z80, name, out, say):
             say('            %s: %s' % (k, str(v)[:200]))
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return ok
+
+
+if __name__ == '__main__':
+    # python -m nexclash.commando depth GAME.rzx [--check]
+    import sys
+    if len(sys.argv) >= 3 and sys.argv[1] == 'depth':
+        same, msg = depth_profile(sys.argv[2], '--check' in sys.argv)
+        print(msg)
+        sys.exit(0 if same or '--check' not in sys.argv else 1)
+    sys.exit('usage: python -m nexclash.commando depth GAME.rzx [--check]')

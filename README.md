@@ -3,13 +3,14 @@
 Turns a ZX Spectrum `.z80` snapshot of a game into Spectrum Next `.nex` files: a plain conversion
 and a sprite build in which the game's figures are Next hardware sprites (no attribute clash).
 Every supported game was proven to play exactly like the original by replaying real recordings
-through the original and the patched code side by side.
+through the original and the patched code side by side (paths no recording reaches are covered by
+unit tests; per-game details in games/).
 
 No game files are included or ever uploaded: you bring your own snapshot, and the patched `.nex`
 is built on your machine. GPL-3.0-or-later (LICENSE). Status of every game: STATUS.md.
 
 ## Install (once)
-1. Python 3.10+ and SkoolKit: `pip install skoolkit`.
+1. Python 3.10+ and SkoolKit 10.x (tested with 10.1): `pip install skoolkit`.
 2. Download the latest nexclash zip from the Releases page and unzip it (or `git clone` this repo).
 
 ## Patch your game
@@ -83,6 +84,7 @@ rzxplay and in Fuse (frame boundaries are defined by instruction counts).
 | Treasure Island Dizzy (TID + bubble virtual read) | Treasure Island Dizzy | dedicated builder |
 | Dizzy 1 XOR engine | Dizzy: The Ultimate Cartoon Adventure | dedicated builder |
 | Dizzy V engine (ISR-driven masked sprite + undo buffer) | Spellbound Dizzy, also from a BASIC-loader snapshot | generic, automatic, verified per run |
+| TID engine with a mirrored second figure (`tid_mirror`) | Prince of the Yolkfolk (Dizzy 6) | automatic; mirror path proven by unit tests only (no recording reaches it yet) |
 | Rainbow Islands (128K) | Rainbow Islands | dedicated engine `rainbow`, verified per run |
 | Everyone's a Wally (48K game, 128K snapshot) | Everyone's a Wally | dedicated engine `wally`, verified per run |
 | Chuckie Egg | Chuckie Egg | dedicated engine `chuckie`, verified per run |
