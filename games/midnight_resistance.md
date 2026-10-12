@@ -1,7 +1,8 @@
 # Midnight Resistance (Ocean 1990, 128K) - engine `midres`
 Updated 2026-10-13. Engine `midres` (nexclash/midres.py, asm/midres_hooks.asm,
 docs/profiles/midnight_resistance.json; after any .asm edit `python tools/asm2profile.py
-midnight_resistance`). Status: RZX IDENTICAL, unit + interrupt checks PASS; hardware untested.
+midnight_resistance`). Status: RZX IDENTICAL, unit + interrupt checks PASS; e8f0ece9 RUNS ON A REAL NEXT (Dean,
+2026-10-13; detailed checklist not yet reported).
 
 Reference (private repo, specnext/reference/midnight_resistance/):
 Midnight_Resistance_1990_Ocean_128K.z80 (67bf05d356d51b2b402d88c5f0cdfb21),
@@ -15,7 +16,7 @@ Selftest names them midnight_resistance.z80 / .rzx (docs/records/midnight_resist
 | Output | MD5 | Status |
 |---|---|---|
 | midnight_resistance.nex (plain, tail 0x7B7E) | 17239acaaf67b0f8011478053e17829d | built; hardware untested |
-| midnight_resistance_sprites.nex (altrom + page 26 at slot 5, pattern-slot cache) | e8f0ece9e41c314d76471c96f4595854 | RZX IDENTICAL; hardware untested |
+| midnight_resistance_sprites.nex (altrom + page 26 at slot 5, pattern-slot cache) | e8f0ece9e41c314d76471c96f4595854 | RZX IDENTICAL; runs on hardware (Dean, 2026-10-13) |
 
 ## Snapshot (0b)
 128K, 7FFD=0x10 (ROM 1, bank 0, normal screen), PC 0x739E (RAM, title/attract), IM 2 I=0xFE ->
@@ -138,7 +139,7 @@ instruction (IX, IY, I, IFF, stack room, 0x3D00 fetches), negative control (LD I
 - Converted figures appear when the commit runs (after the screen copy), not as the copy passes.
 
 ## Open
-- Hardware test (CSpect first: new memory layout - alt ROM + page 26 at slot 5).
+- Hardware: runs (2026-10-13); checklist items 2-7 not yet reported item by item.
 - Later levels (banks 1/3/4/6) not in the RZX: need a later-levels recording; their figures may
   use other callers (stay on the ULA) or graphics in 0xA000-0xBFFF (guard: stay on the ULA).
 - Tank scenes: cache thrash (16 entries); 32 entries need more page room (SIG area).

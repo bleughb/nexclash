@@ -47,7 +47,8 @@ BRIEFING - with its reason.
 - A RAM page for hook state can stay mapped with interrupts ON if it sits in a slot the game's ISR
   never touches: an unlocked 7FFD write in the ISR resets only slots 0/1 and 6/7, so 2-5 survive.
   Prove it per game (full-RZX scan of the ISR's reads/writes/fetches per 8K slot) and map only
-  while the hook runs (Midnight Resistance: page 26 at slot 5, ISR uses slots 0/3/7 only).
+  while the hook runs (Midnight Resistance: page 26 at slot 5, ISR uses slots 0/3/7 only; runs on
+  hardware 2026-10-13 with interrupts on through every hook).
 - A 128K BASIC loader snapshot cannot run on the Next: 128K BASIC pages ROM 0 (the 128K editor)
   on every statement (Commando: plain = corruption, altrom = crash at the first key; alt image 0 is
   unfilled). Run the loader in SkoolKit (real 128K ROMs) to the game's USR entry, build from there,
