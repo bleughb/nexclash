@@ -6,7 +6,9 @@ Runs the game (RZX or free run), and from every accepted interrupt until it retu
 the interrupted address with SP restored) records the instructions executed, then reports:
 handler entry chain, registers it READS (IX, IY + offsets, I, alternate set), stack use on the
 interrupted stack and any stack switch (LD SP), ports written (7FFD paging), memory it writes
-outside its own stack, interrupts that never returned. Game-independent; extend freely (keep
+outside its own stack, interrupts that never returned, and which 8K slots it reads / writes / runs
+(a RAM page may stay mapped with interrupts on only in a slot the handler never touches).
+Game-independent; extend freely (keep
 existing report lines; add new ones) and run `python selftest.py --tools`.
 """
 import collections
@@ -48,6 +50,7 @@ class IsrTracker:
         self.mem = None
         self.dep = {'IX': {}, 'IY': {}}          # reads of the INTERRUPTED code's value: pc -> text
         self.modes = collections.Counter()      # (IM, I) at each accepted interrupt
+        self.slots = collections.defaultdict(set)   # 8K slot -> {'r', 'w', 'x'}
 
     def on_sim(self, sim):
         self.sim = sim
@@ -72,6 +75,7 @@ class IsrTracker:
         if pc == self.cur[0] and R[12] == self.cur[1]:
             self.cur = None
             return
+        self.slots[pc >> 13].add('x')
         if pc not in self.ins:
             m = self.sim.memory
             buf = [0] * 65536
@@ -108,8 +112,14 @@ class IsrTracker:
             self.switch[pc] += 1
 
     def on_write(self, a, v, pc, mem):
-        if self.cur is not None and a >= 0x4000:
-            self.writes.add(a)
+        if self.cur is not None:
+            self.slots[a >> 13].add('w')
+            if a >= 0x4000:
+                self.writes.add(a)
+
+    def on_read(self, a, pc, mem):
+        if self.cur is not None and not pc <= a <= pc + 3:      # data reads, not instruction bytes
+            self.slots[a >> 13].add('r')
 
 
 def isr(z80, rzx=None, frames=None, keys=None, stop=None):
@@ -160,10 +170,16 @@ def isr(z80, rzx=None, frames=None, keys=None, stop=None):
         lines.append('Ports     : ' + '; '.join('%s at %d' % (x, pc) for pc, x in pg[:4]) +
                      ' (7FFD writes page memory at C000 / ROM)')
     lines.append('Writes    : %d distinct RAM addresses (incl. its stacks)' % len(t.writes))
+    free = [k for k in range(2, 6) if k not in t.slots]
+    lines.append('Slots     : %s; never touched: %s%s' % (
+        ', '.join('%d (0x%04X) %s' % (k, k << 13, ''.join(c for c in 'rwx' if c in t.slots[k])) for k in sorted(t.slots)),
+        ', '.join(str(k) for k in range(8) if k not in t.slots) or 'none',
+        ' -> a hook may keep a RAM page mapped in slot %s with interrupts on (LEARNINGS 1.3)' % '/'.join(map(str, free))
+        if free else ''))
     keep = ['SP must point at a stack with >= %d free bytes' % (t.depth + 2)] + \
         ['%s unchanged' % x for x in need if x not in ("alternate set (EXX)", "AF'", 'R')]
     if any(x in need for x in ("alternate set (EXX)", "AF'")):
         keep.append('the alternate set is used by the handler (it saves/restores it? check the listing)')
     lines.append('A hook running with interrupts ON must keep: ' + '; '.join(keep))
     return '\n'.join(lines), {'uses': dict(uses), 'reads_entry': {k: dict(v) for k, v in t.dep.items()}, 'depth': t.depth, 'switch': sw, 'count': t.count,
-                              'entries': dict(t.entries)}
+                              'entries': dict(t.entries), 'slots': {k: ''.join(sorted(v)) for k, v in t.slots.items()}}

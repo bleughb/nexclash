@@ -291,8 +291,11 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    measured with scratch scripts (T-states per plot / commit from the pair runs, original vs
    patched; the simulator ignores the 28 MHz turbo). Wanted: an `auto` line with hook T-states per
    call (median / max) and a documented budget per game frame.
-13. ISR memory map per 8K slot (which slots the interrupt handler reads/writes/runs) is a scratch
-   script (Midnight Resistance); belongs in `isr` as an extra report line.
+13. Done 2026-10-13: `isr` Slots line, `scan --writers`, `preview` (from the Midnight Resistance
+   scratch scripts). Still scratch-only: hook cost per game frame (#11).
+14. Every edit to nexclash.py (records ALWAYS) makes every game's representative due for
+   re-verification (hours), even one that only adds an analysis option. Moving the analysis
+   commands' CLI out of nexclash.py, or the engine registry (#5), would stop that.
 12. Boot-path RAM check (entry -> menu, not in any RZX): the checked range must be the WHOLE hook
    RAM of the engine. Tool: `scan --frames N --keys K --after ENTRY --range ...` (C4); Commando
    done 2026-10-12. Not yet automatic in `auto`.
@@ -330,7 +333,7 @@ keep every record's MD5s reproduced (selftest); commit changed files to the repo
 Logic must be exact at both levels; visuals "good enough" where Dean agreed (games/ list them).
 
 ### C4. Shared analysis commands (any game; Dean 2026-10-12: harness stays per engine)
-`nexclash.py inspect | scan | isr | cost` (modules snapinfo, memscan, isrinfo, drawcost on the
+`nexclash.py inspect | scan | isr | cost | preview` (modules snapinfo, memscan, isrinfo, drawcost, preview on the
 runner simrun.py). Game-independent: game facts come in as arguments (addresses, ranges, keys).
 - simrun: plays an RZX (autosave snapshots stripped to a temp copy) or free-runs a snapshot with
   a key schedule ("5-14:SPACE; 30-:N", K:LEFT... = Kempston); hooks before/after every
@@ -342,6 +345,16 @@ runner simrun.py). Game-independent: game facts come in as arguments (addresses,
   access PC, write-first spans; `--after PC` counts from a PC on (e.g. the game entry).
 - isr: per accepted interrupt until it returns: instructions run, IX/IY reads of the
   INTERRUPTED value (PUSH/POP-aware), stack depth and stack switches, ports, modes seen.
+- scan --writers: per --range, the instructions that write it and that read it as data (counts) -
+  who draws into a screen / back buffer and whether game logic reads it back.
+- isr: also "Slots": which 8K slots the handler reads / writes / runs; slots 2-5 it never touches
+  may hold a hook RAM page with interrupts on (LEARNINGS 1.3).
+- preview: contact sheet of the screen at chosen frames (PLAYBOOK 3b); --plot ENTRY colours what each
+  plot routine draws per caller (= per figure kind), --buffer ADDR:STRIDE:LINES shows a back buffer
+  next to the screen; prints each group's calls, bytes and x/y range. Colours = the last plot that
+  wrote a byte, so a shot taken between a background copy and the plots shows no figures: pick
+  other frames. True pixels of masked figures (plot run on a 0x00 and a 0xFF buffer) stay
+  engine-specific (midres.truth).
 - cost: T per call of a routine entered by CALL (interrupt time excluded), calls per frame,
   share of frame time, per register value at entry. A routine reached by JP has no return
   address on the stack: time its caller instead.

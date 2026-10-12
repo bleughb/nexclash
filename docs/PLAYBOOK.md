@@ -69,6 +69,9 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
 - writes to any intended patch site (self-modifying code)
 
 ## 3b. Visual survey and preview (design approval BEFORE building)
+- `preview GAME.z80 --rzx R --at F,F,... --plot ENTRY ... [--buffer A:S:L] -o sheet.png` shows
+  what each plot routine draws per caller (the figure kinds to ask about); `scan --range BUF
+  --writers` lists every routine that draws into the screen / buffer first.
 - Render still frames (ULA + planned sprites) from the RZX at several points and, where the
   recording does not reach them, from later levels: figures against every kind of scenery they
   overlap. Use the frames to settle with the user in ONE round: which figures, colours, solid or
