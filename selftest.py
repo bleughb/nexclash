@@ -3,6 +3,7 @@
 
     python selftest.py [FOLDER] [--human] [--no-repro] [--fast]
     python selftest.py [FOLDER] --smoke      Chuckie Egg only, seconds: the per-change check
+    python selftest.py [FOLDER] --tools      the analysis commands (inspect/scan/isr/cost), ~1 min
 
 FOLDER (default: $NEXCLASH_REFERENCE, ./reference or ../specnext/reference - the maintainers'
 private reference repo, one subfolder per game; game files are never in the public package) holds the reference inputs under any
@@ -74,6 +75,62 @@ def md5(p):
     return hashlib.md5(open(p, 'rb').read()).hexdigest()
 
 
+def _find(src, want):
+    return next((os.path.join(d, f) for d, _, fs in os.walk(src) for f in fs
+                 if os.path.getsize(os.path.join(d, f)) < 2_000_000 and md5(os.path.join(d, f)) == want), None)
+
+
+def tools_check(src):
+    """The shared analysis commands (inspect / scan / isr / cost) against facts known from the
+    Commando and Chuckie Egg references (~1 min). Returns the number of failures. A session that
+    improves a command keeps these passing and adds a check for what it added."""
+    import io
+    sys.path.insert(0, HERE)
+    from nexclash import snapinfo, memscan, isrinfo, drawcost
+    cz = _find(src, RZX_GAMES['commando']['files'][0][1])
+    cr = _find(src, RZX_GAMES['commando']['files'][1][1])
+    ez = _find(src, RZX_GAMES['chuckie_egg']['files'][0][1])
+    er = _find(src, RZX_GAMES['chuckie_egg']['files'][1][1]) if len(RZX_GAMES['chuckie_egg']['files']) > 1 else None
+    checks = []
+
+    def ok(name, cond, info=''):
+        checks.append(cond)
+        print('%-4s tools: %s%s' % ('OK' if cond else 'FAIL', name, '' if cond else ' (%s)' % str(info)[:200]))
+    old = sys.stderr
+    sys.stderr = io.StringIO()                  # SkoolKit's SZX warnings
+    try:
+        if cz:
+            facts, warn = snapinfo.inspect(cz)
+            txt = '\n'.join(v for k, v in facts)
+            ok('inspect commando: 128K BASIC loader, USR 25088 / 25630',
+               '128K' in txt and 'USR targets: 25088' in txt and '25630' in txt
+               and any('128K BASIC' in w for w in warn), (txt, warn))
+            _, r = memscan.scan(cz, None, 400, '5-14:SPACE; 30-:N', ['0x5C00-0x60FF'], after=25088)
+            ok('scan commando start-up (after USR 25088, 400 frames): hook RAM 0x5C00-0x60FF untouched',
+               memscan.touched_count(r, '0x5C00-0x60FF') == 0, r['ranges'])
+        if cz and cr:
+            _, r = memscan.scan(cz, [cr], ranges=['0x5C00-0x60FF'], stop=300)
+            ok('scan commando RZX (300 frames): hook RAM untouched', memscan.touched_count(r, '0x5C00-0x60FF') == 0)
+            _, r = isrinfo.isr(cz, [cr], stop=200)
+            ok('isr commando: reads the interrupted IY (BIT 1,(IY+7) at 29547), not IX',
+               29547 in r['reads_entry']['IY'] and not r['reads_entry']['IX'], r['reads_entry'])
+            _, r = drawcost.cost(cz, 39120, [cr], stop=1500)
+            ok('cost commando plotter 39120 (1500 frames): 2577 calls, median 4477 T',
+               r['calls'] == 2577 and r['median'] == 4477, r)
+        if ez:
+            facts, warn = snapinfo.inspect(ez)
+            txt = '\n'.join(v for k, v in facts)
+            ok('inspect chuckie: 48K, IM 2, no loader warning', '48K' in txt and 'IM 2' in txt and not warn, (txt, warn))
+        if ez and er:
+            _, r = isrinfo.isr(ez, [er], stop=150)
+            ok('isr chuckie: handler 40092, no IX/IY reads', 40092 in r['entries'] and not any(r['reads_entry'].values()), r)
+    finally:
+        sys.stderr = old
+    if not checks:
+        print('tools: reference files not found, nothing checked')
+    return checks.count(False)
+
+
 def smoke(src):
     """--smoke: rebuild the simplest game (Chuckie Egg, stateless alt-ROM hooks) from its snapshot alone
     and compare both .nex MD5s - seconds, catches any shared-code change that alters a build. The full
@@ -106,6 +163,10 @@ def main():
         sys.exit(__doc__)
     if '--smoke' in sys.argv:
         smoke(src)
+    if '--tools' in sys.argv:
+        bad = tools_check(src)
+        print('TOOLS %s' % ('PASSED' if not bad else 'FAILED'))
+        sys.exit(1 if bad else 0)
     human, repro, fast = '--human' in sys.argv, '--no-repro' not in sys.argv, '--fast' in sys.argv
     work = tempfile.mkdtemp(prefix='nexclash_selftest_')
     found = {}
@@ -127,6 +188,7 @@ def main():
     if missing:
         print('missing reference files (those games are skipped): %s' % ', '.join(missing))
     fails = pending = 0
+    fails += tools_check(src)
     # every hook profile must be exactly what the pinned sjasmplus makes of its asm/ source
     r = subprocess.run([sys.executable, os.path.join(HERE, 'tools', 'asm2profile.py'), '--check', '--all'],
                        capture_output=True, text=True)

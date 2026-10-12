@@ -15,6 +15,7 @@ Why: Commando took five hardware rounds, each finding something a step below now
 - RZX recording made per RECORDING_CHECKLIST.md.
 
 ## 0b. Snapshot check (before anything else, ~10 min)
+`python nexclash.py inspect GAME.z80` answers most of it (and lists a loader's BASIC + USR targets).
 Is it in-game, the title screen, or a LOADER (BASIC program running, PC in ROM)? 48K or 128K?
 Which ROM is selected, which interrupt mode, where is the stack? A 128K BASIC loader pages
 ROM 0, which the Next does not have (Commando's first builds crashed on the first key). Record
@@ -42,7 +43,10 @@ volume, classify the inner loop (masked AND/XOR/OR, pure XOR, LDIR/stack blit,
 attribute-cell), extract frames, then continue from step 3.
 
 ## 3. One analysis pass over the RZX
-Track "player drawn" from the plotter's/eraser's own screen writes. Report:
+Shared commands first: `isr GAME.z80 --rzx R` (what hooks must keep intact for the interrupt
+handler: IY/IX reads, stack, paging), `scan GAME.z80 --rzx R --range LO-HI` (free memory for hook
+state; also `--frames N --keys K --after ENTRY` for the start-up path no recording covers).
+Then, per engine, track "player drawn" from the plotter's/eraser's own screen writes. Report:
 - plot/erase/wipe/box/ISR counts, split by drawn/not drawn (double draws? erase
   while not drawn?)
 - every non-player routine that READS or WRITES bytes containing the player's
@@ -62,8 +66,8 @@ Track "player drawn" from the plotter's/eraser's own screen writes. Report:
   see-through, and the overlap (depth) rule - the game's own rule, always in front, or another.
   (Commando: depth, solid bodies and solid objects were settled across three hardware rounds
   from Dean's photos; preview frames would have settled them first.)
-- Speed budget: measure the original's cost per draw (T-states) and how many draws per frame
-  the RZX shows; set the allowed hook cost per draw now, and design to it (caching, fewer
+- Speed budget: `cost GAME.z80 --rzx R --at PLOTTER --group IX` gives the original's cost per
+  draw (T-states), draws per frame and per object; set the allowed hook cost per draw now, and design to it (caching, fewer
   uploads). Commando's first solid hooks cost ~18x the original draw and were redesigned.
 
 ## 4. Decide the design (decision table)

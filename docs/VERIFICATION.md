@@ -373,3 +373,13 @@ build of the tag. Negative checks: one extra NOP in wally_hooks.asm -> DIFFERS (
 symbols named); an unknown --add-sym -> DIFFERS. Profiles gained only "assembled_with" (Commando
 also "source"); no .nex changes (`selftest.py --smoke` PASSED). The full selftest now runs the
 check first.
+
+## Toolkit: analysis commands inspect / scan / isr / cost (2026-10-12)
+`python selftest.py --tools` (~30 s) PASSED: inspect commando = 128K BASIC loader, USR 25088 /
+25630, ROM 0 warning; chuckie = 48K, IM 2, no warning. scan commando start-up (free run SPACE, N,
+from USR 25088, 400 frames) and RZX (300 frames): 0x5C00-0x60FF untouched. isr commando: reads the
+interrupted IY (BIT 1 / SET 0 / RES 2 (IY+7)), not IX, stack switch at 25177; chuckie: handler
+40092, no index-register reads. cost commando 39120 (1500 frames): 2577 calls, median 4477 T (=
+the earlier one-off measurement), 10.4 % of frame time. Negative control: a data-flow model that
+treats every IY use as a write fails the isr check. Inspect also checked by eye on Wally, Rainbow,
+Spellbound (loader flagged), Crystal Kingdom. `selftest.py --smoke` PASSED; no .nex changes.
