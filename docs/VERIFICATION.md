@@ -364,3 +364,12 @@ starts in game from its own SZX: 8 autosave snapshots stripped, 3,279 frames, ar
   every test and negative control PASS). Runs on hardware (Dean).
 - Shared code unchanged (commando.py, its .asm and profile only); `selftest.py --smoke` PASSED.
 - Hardware: untested.
+
+## Toolkit: pinned sjasmplus + asm2profile (2026-10-12)
+`python tools/asm2profile.py --check --all` with the pinned sjasmplus 1.24.0 (tag v1.24.0, commit
+d379eeac): chuckie_egg, commando, everyones_a_wally, rainbow_islands IDENTICAL (every hook block
+byte-for-byte, every exported symbol) - with the bundled static binary and with a fresh source
+build of the tag. Negative checks: one extra NOP in wally_hooks.asm -> DIFFERS (blocks + 6
+symbols named); an unknown --add-sym -> DIFFERS. Profiles gained only "assembled_with" (Commando
+also "source"); no .nex changes (`selftest.py --smoke` PASSED). The full selftest now runs the
+check first.

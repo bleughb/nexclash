@@ -11,9 +11,10 @@ Layers - never mix their facts:
   PART C  The nexclash toolkit (our Python + our Z80 patch code).
 
 ## 0. Environment (do not rediscover)
-- Setup: CLAUDE.md. `pip install skoolkit --break-system-packages`; sjasmplus only for .asm edits:
-  `git clone https://github.com/z00m128/sjasmplus && cd sjasmplus && make USE_LUA=0` -> `--zxnext`
-  (clone it OUTSIDE the repo).
+- Setup: CLAUDE.md. `pip install skoolkit --break-system-packages`. sjasmplus is pinned and bundled
+  (tools/sjasmplus: static 1.24.0 for Linux x86-64, else built from the pinned tag into
+  ~/.cache/nexclash). Assemble hooks ONLY with `python tools/asm2profile.py <engine>`; it refuses
+  any other version. `--check --all` proves every profile = its source (full selftest runs it).
 - Background jobs: `setsid nohup python X > log 2>&1 < /dev/null &` then poll (a plain
   `nohup ... &` dies when the tool call returns). One CPU: run long jobs one at a time. A tool
   call is capped at 10 minutes: poll with sleeps under that.

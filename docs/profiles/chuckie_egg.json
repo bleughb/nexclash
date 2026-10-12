@@ -43,6 +43,7 @@
    "setpat": "0x397A",
    "setup": "0xD000",
    "setup_end": "0xD045"
-  }
+  },
+  "assembled_with": "sjasmplus 1.24.0"
  }
 }

@@ -9,8 +9,9 @@ Never put game data (.z80/.rzx/.nex/.tap/...) in this repo or a contribution: th
 stay on their machine; the maintainers' reference files live in the private repo bleughb/specnext.
 
 ## Setup
-`pip install skoolkit --break-system-packages`. sjasmplus only for .asm edits (docs/BRIEFING.md 0;
-clone it OUTSIDE the package).
+`pip install skoolkit --break-system-packages`. sjasmplus (only for .asm edits) is bundled and
+pinned: `python tools/asm2profile.py <engine>` assembles and updates the profile (never build
+or download another version; tools/sjasmplus/README.md).
 
 ## Read only what the task needs (start: ~150 lines)
 - Add a game: this file -> docs/PLAYBOOK.md -> the nearest engine as a template (simplest:
@@ -75,8 +76,8 @@ clone it OUTSIDE the package).
 | nexclash.py | CLI: patch / new / contribute (users), auto / identify / record / convert / verify / rzx |
 | selftest.py | maintainers' acceptance test (needs the private reference files) |
 | nexclash/ | toolkit modules + engines (chuckie, dizzy5, dizzy6, rainbow, wally, ...); userflow.py = patch/new/contribute |
-| asm/ | hook sources (sjasmplus --zxnext); regenerate the profile hex after any edit |
+| asm/ | hook sources; after any edit `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex) |
 | docs/profiles/ | per-game profiles (hook hex read by the engines), signatures.json, verified.json |
 | games/ | one file per game, named like its folder in specnext/reference/ (facts, decisions, status, open items, checklist); tid_engine.md = shared TID engine facts |
 | docs/ | BRIEFING, LEARNINGS, VERIFICATION, PLAYBOOK, RECORDING_CHECKLIST, NEXT_REGISTERS, contribute.json |
-| tools/ | make_package.py (release zip), merge_contribution.py, prototypes |
+| tools/ | asm2profile.py (asm -> profile hex, --check --all), sjasmplus/ (pinned assembler), make_package.py (release zip), merge_contribution.py, prototypes |
