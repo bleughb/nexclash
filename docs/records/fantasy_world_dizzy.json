@@ -1,0 +1,127 @@
+{
+ "name": "fantasy_world_dizzy",
+ "order": 6,
+ "game": "Fantasy World Dizzy",
+ "doc": "fantasy_world_dizzy.md",
+ "engine": "tid",
+ "representative": true,
+ "reference": "fantasy_world_dizzy",
+ "inputs": {
+  "snapshot": {
+   "name": "fantasy_world_dizzy.z80",
+   "md5": "876f474b3441c08ed8ff25bd43d616a3",
+   "path": "fantasy_world_dizzy/Dizzy III - Fantasy World Dizzy (1989)(Codemasters)[a].z80"
+  },
+  "recordings": [
+   {
+    "name": "fantasy_world_dizzy.rzx",
+    "md5": "8005fece5a6d6f8792417b592d6b8df1",
+    "path": "fantasy_world_dizzy/dizzy3rzx"
+   }
+  ]
+ },
+ "modules": [
+  "build",
+  "identify",
+  "analyse",
+  "verify",
+  "nextboot",
+  "recorder",
+  "machine",
+  "rzx"
+ ],
+ "own_modules": [],
+ "data": [],
+ "shared_data": [
+  "nexclash/templates.json",
+  "nexclash/evidence.json"
+ ],
+ "rebuild": {
+  "args": [],
+  "rzx": [],
+  "decisions": {
+   "stack_low_water": 24526,
+   "rom_used": false,
+   "printer_buffer_touched": false,
+   "pb_5b00_5b50_touched": false,
+   "altrom_hooks_read": false
+  }
+ },
+ "verify": {
+  "args": [],
+  "rzx": [],
+  "auto_record": true,
+  "minutes": 8,
+  "auto_rzx_md5": "47eb7c4b48d21b6b4938e0bd76f49b02",
+  "human_rzx": [
+   "fantasy_world_dizzy.rzx"
+  ]
+ },
+ "outputs": {
+  "plain": {
+   "file": "fantasy_world_dizzy.nex",
+   "md5": "cd620010e2f61af0002e76718945716f"
+  },
+  "sprites": {
+   "file": "fantasy_world_dizzy_sprites.nex",
+   "md5": "9182f2f8b4b0dc55b59a69728568b403"
+  }
+ },
+ "repro": [
+  {
+   "strategy": "printer",
+   "file": "fantasy_world_dizzy_sprites.nex",
+   "md5": "c09213beaec1572c0228985dae89bd77"
+  }
+ ],
+ "status": {
+  "title": "Fantasy World Dizzy",
+  "engine_col": "tid generic (fantasy_world_dizzy.md)",
+  "build": "fantasy_world_dizzy_sprites.nex 9182f2f8 (altrom)",
+  "software": "verified",
+  "hardware": "untested",
+  "next": "hardware test"
+ },
+ "checked": {
+  "deps": {
+   "nexclash.py": "e643a6a71253b504",
+   "nexclash/analyse.py": "5bdd8b073cc95624",
+   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/evidence.json": "a6c823114223e2c3",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/recorder.py": "8b959db3b8dc838b",
+   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/templates.json": "e93f585833e72628",
+   "nexclash/verify.py": "3dcc48bdab8bd67b",
+   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-13"
+ },
+ "verified": {
+  "deps": {
+   "nexclash.py": "e643a6a71253b504",
+   "nexclash/analyse.py": "5bdd8b073cc95624",
+   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/evidence.json": "a6c823114223e2c3",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/recorder.py": "8b959db3b8dc838b",
+   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/templates.json": "e93f585833e72628",
+   "nexclash/verify.py": "3dcc48bdab8bd67b",
+   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-13"
+ }
+}

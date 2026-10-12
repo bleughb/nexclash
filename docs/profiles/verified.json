@@ -1,5 +1,5 @@
 {
- "_note": "Snapshots whose sprite build was differentially verified against a recording. nex = MD5s `nexclash.py patch` reproduces (None = not baselined yet).",
+ "_note": "GENERATED from docs/records by `python -m nexclash.records views` - do not edit. Snapshots whose sprite build was differentially verified against a recording. nex = MD5s `nexclash.py patch` reproduces.",
  "snapshots": {
   "cddc0cfea8259d0c497b50fae0acd27e": {
    "game": "Chuckie Egg",
@@ -9,28 +9,12 @@
     "sprites": "bfad6be1e7c8a2c797a6242d7f339e35"
    }
   },
-  "a9eeb555a327e5794b0ba19bc80dccf0": {
-   "game": "Everyone's a Wally",
-   "doc": "everyones_a_wally.md",
+  "c9af5668191462d77c5859900268c24b": {
+   "game": "Commando",
+   "doc": "commando.md",
    "nex": {
-    "plain": "2e615b3e7ae995e6d6a6ed9e3f586d4d",
-    "sprites": "f7605489c3af55b8e8c6a580c1c26150"
-   }
-  },
-  "7578947fcc8dbc4ba822e2c565499d54": {
-   "game": "Treasure Island Dizzy (in game)",
-   "doc": "treasure_island_dizzy.md",
-   "nex": {
-    "plain": "4dae1a3a15b2158642a5d5b82de92ef7",
-    "sprites": "8b4d0847d68fce3215bd43a0e116e682"
-   }
-  },
-  "9443f0cc4c32415849b0419750f1bff3": {
-   "game": "Treasure Island Dizzy (title)",
-   "doc": "treasure_island_dizzy.md",
-   "nex": {
-    "plain": "70890aba7d821fba8a41e63636eb58be",
-    "sprites": "85e054fe4bce8e4b3a8e336aac432f58"
+    "plain": "a206f950c12f58a8e7f26b366f5a2480",
+    "sprites": "d601385ee4aeb7f3d7c0771bdc27df6b"
    }
   },
   "0659328fd54fd446e39d1740bafd02e7": {
@@ -39,22 +23,6 @@
    "nex": {
     "plain": "7892b2e0f1f3f9f19165516db307cbe0",
     "sprites": "05d2bce99f4d7654d4e1c9c9c04dc391"
-   }
-  },
-  "876f474b3441c08ed8ff25bd43d616a3": {
-   "game": "Fantasy World Dizzy",
-   "doc": "fantasy_world_dizzy.md",
-   "nex": {
-    "plain": "cd620010e2f61af0002e76718945716f",
-    "sprites": "9182f2f8b4b0dc55b59a69728568b403"
-   }
-  },
-  "53078ac60141cd808b609600b85f4094": {
-   "game": "Magicland Dizzy",
-   "doc": "magicland_dizzy.md",
-   "nex": {
-    "plain": "09eb18496cff334ea17bfc0b0c94585d",
-    "sprites": "bf137d41d3cc08221bf6fdda153c9de2"
    }
   },
   "703c934aa64c1c1d37d5041dd28cf9c7": {
@@ -73,6 +41,22 @@
     "sprites": "f491e1f6621559ccc4d36de3535ff5d0"
    }
   },
+  "876f474b3441c08ed8ff25bd43d616a3": {
+   "game": "Fantasy World Dizzy",
+   "doc": "fantasy_world_dizzy.md",
+   "nex": {
+    "plain": "cd620010e2f61af0002e76718945716f",
+    "sprites": "9182f2f8b4b0dc55b59a69728568b403"
+   }
+  },
+  "53078ac60141cd808b609600b85f4094": {
+   "game": "Magicland Dizzy",
+   "doc": "magicland_dizzy.md",
+   "nex": {
+    "plain": "09eb18496cff334ea17bfc0b0c94585d",
+    "sprites": "bf137d41d3cc08221bf6fdda153c9de2"
+   }
+  },
   "4c98b980b1726af545fccc99665ef29b": {
    "game": "Rainbow Islands (128K)",
    "doc": "rainbow_islands.md",
@@ -82,12 +66,28 @@
     "diagnostic": "8f25bc6146b9d7f7ae1f12a1d227447e"
    }
   },
-  "c9af5668191462d77c5859900268c24b": {
-   "game": "Commando",
-   "doc": "commando.md",
+  "7578947fcc8dbc4ba822e2c565499d54": {
+   "game": "Treasure Island Dizzy (in game)",
+   "doc": "treasure_island_dizzy.md",
    "nex": {
-    "plain": "a206f950c12f58a8e7f26b366f5a2480",
-    "sprites": "d601385ee4aeb7f3d7c0771bdc27df6b"
+    "plain": "4dae1a3a15b2158642a5d5b82de92ef7",
+    "sprites": "8b4d0847d68fce3215bd43a0e116e682"
+   }
+  },
+  "9443f0cc4c32415849b0419750f1bff3": {
+   "game": "Treasure Island Dizzy (title)",
+   "doc": "treasure_island_dizzy.md",
+   "nex": {
+    "plain": "70890aba7d821fba8a41e63636eb58be",
+    "sprites": "85e054fe4bce8e4b3a8e336aac432f58"
+   }
+  },
+  "a9eeb555a327e5794b0ba19bc80dccf0": {
+   "game": "Everyone's a Wally",
+   "doc": "everyones_a_wally.md",
+   "nex": {
+    "plain": "2e615b3e7ae995e6d6a6ed9e3f586d4d",
+    "sprites": "f7605489c3af55b8e8c6a580c1c26150"
    }
   }
  }

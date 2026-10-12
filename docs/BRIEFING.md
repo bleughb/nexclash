@@ -15,10 +15,13 @@ Layers - never mix their facts:
 - Setup: CLAUDE.md. `pip install skoolkit --break-system-packages`. sjasmplus is pinned and bundled
   (tools/sjasmplus: static 1.24.0 for Linux x86-64, else built from the pinned tag into
   ~/.cache/nexclash). Assemble hooks ONLY with `python tools/asm2profile.py <engine>`; it refuses
-  any other version. `--check --all` proves every profile = its source (full selftest runs it).
+  any other version. `--check <profile>` proves a profile = its source (each hook game's record runs it
+  with every rebuild); `--check --all` is for assembler upgrades (tools/sjasmplus/README.md).
 - Background jobs: `setsid nohup python X > log 2>&1 < /dev/null &` then poll (a plain
   `nohup ... &` dies when the tool call returns). One CPU: run long jobs one at a time. A tool
-  call is capped at 10 minutes: poll with sleeps under that.
+  call is capped at 10 minutes: poll with sleeps under that. Start the job on its own: in
+  `a && b && setsid nohup job &` the `&` backgrounds the WHOLE chain, so a failed `a` silently
+  skips the job and its output is lost.
 - Shell heredocs that write docs: quote the delimiter (`<<'EOF'`) or the shell runs every
   backticked example in the text (2026-10-11: it cloned sjasmplus into the repo and ran a pkill).
 - Next dev guide r3 (Tomaz Kragelj): github.com/tomaz/zx-next-dev-guide (PDF; `pdftotext` it, then grep).
@@ -38,7 +41,13 @@ Layers - never mix their facts:
   the input file name.
 - Reference inputs (game snapshots + recordings) live in the maintainers' PRIVATE repo
   bleughb/specnext (reference/), never in this public one; selftest finds them via
-  $NEXCLASH_REFERENCE or ../specnext/reference and recognises them by MD5 (INPUTS / RZX_GAMES).
+  $NEXCLASH_REFERENCE or ../specnext/reference; each game's evidence record (docs/records/<game>.json)
+  names its files (path under reference/ + MD5) and selftest refuses a file whose MD5 differs.
+- What a build reads (records `modules` / `data`): engines read their own docs/profiles/<game>.json
+  (chuckie, wally, rainbow, commando); the TID / Dizzy profiles in docs/profiles are documentation
+  of identify()'s result (builds recompute them; dizzy5_spellbound_dizzy.json feeds only the Dizzy V
+  asm check); build.py reads nexclash/templates.json; nexclash.py reads nexclash/evidence.json
+  (TID stack evidence) only when analysing, not in a `--decisions` rebuild.
 - `pkill -f PATTERN` (and a `kill $(pgrep -f PATTERN)`) also kills the tool's own shell when
   PATTERN is in its command line: list with `pgrep -fa` in one command, kill the PID in the next.
 - Rebuilding one game with another strategy: `nexclash.py auto G.z80 --no-record --rzx
@@ -188,7 +197,8 @@ sprite .nex -> verify (each RZX) -> report. Refuses instead of guessing.
 | simrun / snapinfo / memscan / isrinfo / drawcost | see C4 | shared analysis commands inspect / scan / isr / cost |
 | loader.py | prerun(rzx, test, out_z80) -> (path, frame, pc) | loader-stage snapshots: replay until test(mem) (engine live), finish LDIR, save state. MUST be present |
 | nextboot.py | boot(nex, pc), check(nex, z80, patch, tail) | simulated Next boot of a built .nex (MMU, legacy paging, $8C alt ROM, NEXTREG); run by every sprite build (`Boot` line; MISMATCH fails selftest) |
-| selftest.py | selftest.py [FOLDER=reference/] [--human] [--no-repro] [--fast] [--smoke] [--tools] | --smoke: Chuckie Egg rebuild (<1 s, per change); --tools: analysis-command golden checks (~30 s); default: tools + asm2profile check + (altrom) outputs + `--strategy` reproductions of the old builds (REPRO) + verifications + boot; engine games (Chuckie Egg, Wally, Rainbow, Commando) rebuilt from Dean's RZX and MD5-checked (RZX_GAMES; --fast skips Rainbow ~50 min and Commando ~55 min); games with missing inputs are skipped (exit 2); EXPECTED None = not baselined yet |
+| selftest.py | selftest.py [FOLDER] --smoke / --tools / --affected [--verify] / (release) / --full / --game G [--verify] / --plan; --stamp --jobs N --human | driven by docs/records: --smoke Chuckie Egg rebuild (<1 s); --tools analysis-command golden checks on Chuckie Egg (~15 s); --affected rebuilds the games whose dependencies changed since their last check and lists due re-verifications (records.plan: own files changed -> that game; shared files -> one representative per engine); release = every game rebuilt + due re-verifications; --full re-verifies every game. Rebuild = snapshot + stored build decisions (`auto --decisions`), seconds; MD5s + boot + the record's checks. Views (STATUS table, VERIFICATION checksums, verified.json) must be current. |
+| records.py | `python -m nexclash.records plan / views [--check] / deps G` | evidence records: dependency closure (AST imports + data files), per-file hash stamps (checked / verified), plan(), generated views |
 
 Templates: Z80 sources were tramp.asm/hooks.asm/setup.asm (printer) and patch.asm (slot1);
 to change them rebuild with sjasmplus and regenerate relocations (assemble twice with each
@@ -260,13 +270,12 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    fix) and slot-1 surviving a game that writes 7FFD every interrupt (see A1 "7FFD lock").
 
 8. Dizzy 6: mirror path proven only by the unit selftest - wants an RZX through the mirror
-   room. evidence.json is not updated for 'tid_mirror' (_auto_dizzy6 skips _learn). Not in
-   selftest yet although Dizzy6.z80 + try1-3.rzx are now in specnext/reference/prince_of_the_yolkfolk:
-   add them to selftest INPUTS / its run list.
+   room. evidence.json is not updated for 'tid_mirror' (_auto_dizzy6 skips _learn). In selftest
+   since 2026-10-13 (docs/records/dizzy6.json: try1.rzx verify, ~3 min).
    Hardware: first sprite build to test on the Next alongside Magicland.
 9. `altrom` strategy: DONE 2026-09-28 (default; `--strategy printer|slot1|altrom`). Dizzy V
    verified (auto RZX) + boot-simulated -> hardware test next (Dizzy_V_sprites.nex 1f33c467...).
-   Fantasy World / Magicland altrom builds baselined 2026-10-11 (selftest EXPECTED, verified.json).
+   Fantasy World / Magicland altrom builds baselined 2026-10-11 (now in docs/records).
    Dizzy 6 stays slot1 (possible later:
    hooks in the alt ROM + plotter copy in a slot-0 RAM page, IM2 game - needs the relocation
    moved and a re-verify). Later: tail inside the alt ROM (same address in both images -> no game
@@ -292,12 +301,19 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    d. Emulator smoke test: boot the .nex headless in a Next emulator for ~30 s (would have caught
       the ROM 0 and 0x3D00 crashes); feasibility in the sandbox (CSpect needs .NET/mono) not yet
       checked; ZEsarUX (open source, GitHub) is the candidate.
+15. Dependency smell (records.py deps): nextboot.py imports dizzy6._rw_simulator, so every game
+   depends on dizzy6.py and a Dizzy 6 change counts as shared (rebuild all + representatives).
+   Move _rw_simulator into a shared module.
+16. Dizzy 1 and Treasure Island (dedicated builders) are not re-verified differentially by any
+   tool: their sprite builds were verified during development; selftest re-proves only the plain
+   tail (access scan) and the boot (records: verify.differential false). Port them to a verify
+   path to close it.
 14. Confirm the 0x3D00 cause (A1): a test build with one harmless routine at 0x3D00 (emulator with
    DivMMC, or hardware); then record the confirmed reason in A1 / LEARNINGS 1.4.
 ### C3. Working rules (token budget)
 Summaries <= 40 lines; disassemble only routines the analysis flags; one simulator pass
 per question; long jobs in background + poll; verify original bytes at every patch site;
-keep selftest byte-identical; commit changed files to the repo; terse replies.
+keep every record's MD5s reproduced (selftest); commit changed files to the repo; terse replies.
 
 ### C3b. Two verification levels (agreed with Dean 2026-09-29)
 - ITERATE (per change): original bytes at every site, boot check, unit tests (with negative

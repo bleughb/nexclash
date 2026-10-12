@@ -1,0 +1,144 @@
+{
+ "name": "dizzy5",
+ "order": 4,
+ "game": "Spellbound Dizzy (Dizzy V)",
+ "doc": "spellbound_dizzy.md",
+ "engine": "dizzy5",
+ "representative": true,
+ "reference": "spellbound_dizzy",
+ "inputs": {
+  "snapshot": {
+   "name": "dizzy5.z80",
+   "md5": "703c934aa64c1c1d37d5041dd28cf9c7",
+   "path": "spellbound_dizzy/Dizzy_V.z80"
+  },
+  "recordings": [
+   {
+    "name": "dizzy5_auto.rzx",
+    "md5": "9768b55b1f115db9b5989ac7f12090ec",
+    "path": "spellbound_dizzy/Dizzy_V_auto.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "build",
+  "identify",
+  "analyse",
+  "verify",
+  "nextboot",
+  "recorder",
+  "machine",
+  "rzx",
+  "dizzy5",
+  "loader"
+ ],
+ "own_modules": [
+  "dizzy5",
+  "loader"
+ ],
+ "data": [
+  "asm/dizzy5_hooks.asm",
+  "docs/profiles/dizzy5_spellbound_dizzy.json"
+ ],
+ "shared_data": [
+  "nexclash/templates.json",
+  "nexclash/evidence.json"
+ ],
+ "rebuild": {
+  "args": [],
+  "rzx": [
+   "dizzy5_auto.rzx"
+  ],
+  "decisions": {
+   "stack_low_water": 23296,
+   "rom_used": true,
+   "printer_buffer_touched": true,
+   "pb_5b00_5b50_touched": true,
+   "altrom_hooks_read": false
+  }
+ },
+ "verify": {
+  "args": [],
+  "rzx": [],
+  "auto_record": true,
+  "minutes": 10,
+  "auto_rzx_md5": "9768b55b1f115db9b5989ac7f12090ec"
+ },
+ "outputs": {
+  "plain": {
+   "file": "dizzy5.nex",
+   "md5": "c99189f3274a4803f0b25b0217206bdb"
+  },
+  "sprites": {
+   "file": "dizzy5_sprites.nex",
+   "md5": "1f33c467e6aa55585cea79cfbb24bcfe"
+  }
+ },
+ "repro": [
+  {
+   "strategy": "slot1",
+   "file": "dizzy5_sprites.nex",
+   "md5": "a59c1fd91ec5c32e549526dbc08d2e69",
+   "note": "re-checked 2026-09-28; 00a7c496... had an EMPTY font page: dialogue text blank on hardware"
+  }
+ ],
+ "status": {
+  "title": "Spellbound Dizzy (Dizzy V)",
+  "engine_col": "dizzy5 (spellbound_dizzy.md)",
+  "build": "Dizzy_V_sprites.nex 1f33c467 (altrom)",
+  "software": "verified (2 RZX)",
+  "hardware": "untested",
+  "next": "hardware test"
+ },
+ "checks": [
+  "dizzy5_asm"
+ ],
+ "checked": {
+  "deps": {
+   "asm/dizzy5_hooks.asm": "f9520d5b520e1025",
+   "docs/profiles/dizzy5_spellbound_dizzy.json": "7e526e8e7910b5b8",
+   "nexclash.py": "e643a6a71253b504",
+   "nexclash/analyse.py": "5bdd8b073cc95624",
+   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/evidence.json": "a6c823114223e2c3",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/loader.py": "69bd417e450ab5f8",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/recorder.py": "8b959db3b8dc838b",
+   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/templates.json": "e93f585833e72628",
+   "nexclash/verify.py": "3dcc48bdab8bd67b",
+   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-13"
+ },
+ "verified": {
+  "deps": {
+   "asm/dizzy5_hooks.asm": "f9520d5b520e1025",
+   "docs/profiles/dizzy5_spellbound_dizzy.json": "7e526e8e7910b5b8",
+   "nexclash.py": "e643a6a71253b504",
+   "nexclash/analyse.py": "5bdd8b073cc95624",
+   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/evidence.json": "a6c823114223e2c3",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/loader.py": "69bd417e450ab5f8",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/recorder.py": "8b959db3b8dc838b",
+   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/templates.json": "e93f585833e72628",
+   "nexclash/verify.py": "3dcc48bdab8bd67b",
+   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-13"
+ }
+}

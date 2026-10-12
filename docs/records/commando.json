@@ -1,0 +1,107 @@
+{
+ "name": "commando",
+ "order": 10,
+ "game": "Commando",
+ "doc": "commando.md",
+ "engine": "commando",
+ "representative": true,
+ "reference": "commando",
+ "inputs": {
+  "snapshot": {
+   "name": "commando.z80",
+   "md5": "c9af5668191462d77c5859900268c24b",
+   "path": "commando/Commando_1985_Elite_Systems_t_128K.z80"
+  },
+  "recordings": [
+   {
+    "name": "commando.rzx",
+    "md5": "b3350a66a14db07add43c878eb872169",
+    "path": "commando/Commando_1985_Elite_Systems_t_128K.RZX"
+   }
+  ]
+ },
+ "modules": [
+  "commando"
+ ],
+ "own_modules": [
+  "commando"
+ ],
+ "data": [
+  "docs/profiles/commando.json",
+  "asm/commando_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "commando.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 55
+ },
+ "outputs": {
+  "plain": {
+   "file": "commando.nex",
+   "md5": "a206f950c12f58a8e7f26b366f5a2480"
+  },
+  "sprites": {
+   "file": "commando_sprites.nex",
+   "md5": "d601385ee4aeb7f3d7c0771bdc27df6b"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Commando (128K)",
+  "engine_col": "commando (commando.md)",
+  "build": "commando_sprites.nex d601385e (altrom + e_init + front end; solid figures (yellow body), solid objects hide figures by the walk-box depth rule, pattern-slot cache, no flicker, IX/IY-safe hooks)",
+  "software": "RZX IDENTICAL, static + interrupt + cache + front end + init + unit + depth + restore PASS",
+  "hardware": "f22a9452 / 5642e4b4 crashed (ROM 0); 5ab928e9 runs; 5c1081b7: flicker, menu logo + dots (hook used IY), figures seen through rocks (Dean) - fixed in 541e34e2, which crashed at the first figure (code at 0x3D00-0x3DFF; probable DivMMC automap); d601385e runs (Dean)",
+  "next": "hardware test (checklist); later-areas RZX"
+ },
+ "checks": [
+  "asm2profile:commando"
+ ],
+ "checked": {
+  "deps": {
+   "asm/commando_hooks.asm": "25ca7e598b097b04",
+   "docs/profiles/commando.json": "bbe5a6767f4ef85f",
+   "nexclash.py": "e643a6a71253b504",
+   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/commando.py": "a5f254ced8e01d44",
+   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/rainbow.py": "a2baff9fb4790cca",
+   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-13"
+ },
+ "verified": {
+  "deps": {
+   "asm/commando_hooks.asm": "25ca7e598b097b04",
+   "docs/profiles/commando.json": "bbe5a6767f4ef85f",
+   "nexclash.py": "e643a6a71253b504",
+   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/commando.py": "a5f254ced8e01d44",
+   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/rainbow.py": "a2baff9fb4790cca",
+   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-13"
+ }
+}

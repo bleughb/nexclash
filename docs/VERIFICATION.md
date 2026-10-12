@@ -1,7 +1,8 @@
 # Verification record
 
-One section per game/build, newest first within a game. `python selftest.py` reproduces the
-MD5s from reference/ (selftest.py EXPECTED / REPRO / RZX_GAMES must match this file).
+One section per game/build, newest first within a game. The checksum list below is generated
+from the evidence records (docs/records/<game>.json); `python selftest.py` reproduces those MD5s
+from the private reference files.
 
 All tests: exact RZX playback in SkoolKit; at every patched routine the
 original and patched code were run from the same real state and compared
@@ -28,28 +29,44 @@ bytes not copied. Structural altrom build of the TID-engine TidPatch (TID title 
 profile): boot OK; printer/slot1/plain outputs of that build byte-identical to the pre-altrom toolkit.
 
 ## Output checksums (MD5) - the toolkit must reproduce these
-Default builds (strategy `altrom` where proven; dedicated builders are printer-only). File names are
-the selftest's canonical ones (dizzy3 = Fantasy World, dizzy4 = Magicland, dizzy2 = Treasure Island,
-Dizzy_V = Spellbound); `nexclash.py auto` names its outputs after the input file, and the private
-repo keeps them under the games/ folder names (e.g. fantasy_world_dizzy_sprites.nex).
-- `Dizzy_V_sprites.nex` 1f33c467e6aa55585cea79cfbb24bcfe (altrom; NOT yet hardware-tested)
-- `Dizzy_V.nex` c99189f3274a4803f0b25b0217206bdb
-- `dizzy3_sprites.nex` (Fantasy World, altrom) 9182f2f8b4b0dc55b59a69728568b403 (baselined 2026-10-11: selftest, auto RZX verification PASSED, boot OK)
-- `dizzy4_sprites.nex` (Magicland, altrom) bf137d41d3cc08221bf6fdda153c9de2 (baselined 2026-10-11: as above)
-- `dizzy3.nex` cd620010e2f61af0002e76718945716f, `dizzy4.nex` 09eb18496cff334ea17bfc0b0c94585d (plain: unchanged)
-- `dizzy2_game_sprites.nex` 8b4d0847d68fce3215bd43a0e116e682 (dedicated, printer), `dizzy2_game.nex` (in game, plain) 4dae1a3a15b2158642a5d5b82de92ef7
-- `dizzy2_title_sprites.nex` 85e054fe4bce8e4b3a8e336aac432f58 (dedicated, printer; re-checked 2026-09-28), `dizzy2.nex` (title, no recording) 70890aba7d821fba8a41e63636eb58be
-- `dizzy1_sprites.nex` 05d2bce99f4d7654d4e1c9c9c04dc391 (dedicated, printer), `dizzy1.nex` 7892b2e0f1f3f9f19165516db307cbe0
-- `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_sprites.nex` e50733b2b7e2db32f004c1436a2e0461, `rainbow_sprites_diag.nex` 8f25bc6146b9d7f7ae1f12a1d227447e (2026-10-12, collectables without border + diagnostic build)
-- `Chuckie_Egg.nex` ec0df71e70fae35836eaed521f300777, `Chuckie_Egg_sprites.nex` bfad6be1e7c8a2c797a6242d7f339e35 (2026-10-11)
-- `commando.nex` a206f950c12f58a8e7f26b366f5a2480, `commando_sprites.nex` d601385ee4aeb7f3d7c0771bdc27df6b (2026-10-12; runs on hardware)
-- `wally.nex` 2e615b3e7ae995e6d6a6ed9e3f586d4d, `wally_sprites.nex` f7605489c3af55b8e8c6a580c1c26150
-- Dizzy 6 (not in selftest yet): `Dizzy6.nex` e02faca34df9504cc1f2f162e0ef791e, `Dizzy6_sprites.nex` (slot1) f491e1f6621559ccc4d36de3535ff5d0
+Default builds (strategy `altrom` where proven; dedicated builders are printer-only); file names
+are the records' canonical ones (`nexclash.py auto` names its outputs after the input file).
+`--strategy` lines reproduce the pre-altrom builds from the same recordings.
+<!-- generated from docs/records by `python -m nexclash.records views`: do not edit by hand -->
+Every game's verified outputs (`selftest.py` rebuilds them; the record says how):
 
-`--strategy` reproductions of the pre-altrom builds (same recordings):
-- `dizzy3_sprites.nex --strategy printer` c09213beaec1572c0228985dae89bd77
-- `dizzy4_sprites.nex --strategy slot1` d3b37c05d4c47ada07294fa2d7c1ae76
-- `Dizzy_V_sprites.nex --strategy slot1` a59c1fd91ec5c32e549526dbc08d2e69 (re-checked 2026-09-28; 00a7c496... had an EMPTY font page: dialogue text blank on hardware)
+- Chuckie Egg (chuckie_egg): `chuckie_egg.nex` ec0df71e70fae35836eaed521f300777, `chuckie_egg_sprites.nex` bfad6be1e7c8a2c797a6242d7f339e35; verified 2026-10-13
+- Rainbow Islands (128K) (rainbow): `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_sprites.nex` e50733b2b7e2db32f004c1436a2e0461, `rainbow_sprites_diag.nex` 8f25bc6146b9d7f7ae1f12a1d227447e; verified 2026-10-13
+- Everyone's a Wally (wally): `wally.nex` 2e615b3e7ae995e6d6a6ed9e3f586d4d, `wally_sprites.nex` f7605489c3af55b8e8c6a580c1c26150; verified 2026-10-13
+- Spellbound Dizzy (Dizzy V) (dizzy5): `dizzy5.nex` c99189f3274a4803f0b25b0217206bdb, `dizzy5_sprites.nex` 1f33c467e6aa55585cea79cfbb24bcfe, `dizzy5_sprites.nex --strategy slot1` a59c1fd91ec5c32e549526dbc08d2e69 (re-checked 2026-09-28; 00a7c496... had an EMPTY font page: dialogue text blank on hardware); verified 2026-10-13
+- Prince of the Yolkfolk (Dizzy 6) (dizzy6): `Dizzy6.nex` e02faca34df9504cc1f2f162e0ef791e, `Dizzy6_sprites.nex` f491e1f6621559ccc4d36de3535ff5d0; verified 2026-10-13
+- Fantasy World Dizzy (fantasy_world_dizzy): `fantasy_world_dizzy.nex` cd620010e2f61af0002e76718945716f, `fantasy_world_dizzy_sprites.nex` 9182f2f8b4b0dc55b59a69728568b403, `fantasy_world_dizzy_sprites.nex --strategy printer` c09213beaec1572c0228985dae89bd77; verified 2026-10-13
+- Magicland Dizzy (magicland_dizzy): `magicland_dizzy.nex` 09eb18496cff334ea17bfc0b0c94585d, `magicland_dizzy_sprites.nex` bf137d41d3cc08221bf6fdda153c9de2, `magicland_dizzy_sprites.nex --strategy slot1` d3b37c05d4c47ada07294fa2d7c1ae76; verified 2026-10-13
+- Treasure Island Dizzy (treasure_island_dizzy): `treasure_island_dizzy.nex` 4dae1a3a15b2158642a5d5b82de92ef7, `treasure_island_dizzy_sprites.nex` 8b4d0847d68fce3215bd43a0e116e682; verified 2026-10-13
+- Treasure Island Dizzy (title screen) (treasure_island_title): `treasure_island_title.nex` 70890aba7d821fba8a41e63636eb58be, `treasure_island_title_sprites.nex` 85e054fe4bce8e4b3a8e336aac432f58; verified 2026-10-13
+- Dizzy: The Ultimate Cartoon Adventure (dizzy1): `dizzy1.nex` 7892b2e0f1f3f9f19165516db307cbe0, `dizzy1_sprites.nex` 05d2bce99f4d7654d4e1c9c9c04dc391; verified 2026-10-13
+- Commando (commando): `commando.nex` a206f950c12f58a8e7f26b366f5a2480, `commando_sprites.nex` d601385ee4aeb7f3d7c0771bdc27df6b; verified 2026-10-13
+- Crystal Kingdom Dizzy (128K) (crystal_kingdom_dizzy): `crystal_kingdom_dizzy.nex` 99975f65172dc86ecefbac07db2c0c00; verified never
+<!-- end generated -->
+
+## Evidence records + selective selftest - 2026-10-13
+Toolkit change: docs/records (one per game), nexclash/records.py, `auto --decisions`, selftest
+driven by the records. No game output changed.
+- Baseline before the change (main 32ad905, old full selftest): Fantasy World, Magicland, Dizzy 1,
+  Treasure Island (+ title), Dizzy V, Chuckie Egg all OK (run stopped after Chuckie Egg; the
+  remaining games were re-verified on the branch below). Those results seeded the records'
+  `verified` stamps (tree main 32ad905).
+- Rebuild from snapshot + stored decisions, every game (`selftest.py --affected`, before stamps):
+  all 27 outputs incl. the three `--strategy` builds byte-identical, 19.5 s total.
+- Branch run `selftest.py --affected --verify --stamp --jobs 2` (about 1.5 h, Rainbow the longest): re-verified Chuckie Egg,
+  Commando, Wally, Rainbow (both RZX), Fantasy World (+ printer), Dizzy V (+ slot1), Dizzy 6
+  (try1.rzx; first time in selftest), Dizzy 1 and Treasure Island (analysis + boot: dedicated
+  builders, not differential); rebuilt Magicland, Treasure Island title, Crystal Kingdom. All MD5s
+  as listed above; every verification PASSED, boots OK; the build decisions each verification
+  derives equal the stored ones; auto recordings deterministic (MD5s in the records).
+- Plan checks: `python -m nexclash.records selfcheck` (in `--tools`) passes and catches three broken
+  plan() variants; real tree: an engine file change -> that game only; z80tonex.py -> every game
+  rebuilt, representatives re-verified.
 
 ## Rainbow Islands (128K, engine `rainbow`) - 2026-09-28
 `nexclash.py auto rainbow.z80 --rzx rainbow.rzx --rzx rainbownew.rzx --no-record` (defaults: ink white, outline black)
