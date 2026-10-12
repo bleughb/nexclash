@@ -69,7 +69,10 @@ def cmd_patch(a, cmd_auto):
     if 'FAILED' in rep or 'MISMATCH' in rep:
         print('Sprite build FAILED its checks - do not use it. Start a session: python nexclash.py new %s' % z80)
         return 1
-    if known:
+    if known and getattr(a, 'allow_60hz', False):
+        print('VERIFIED snapshot: %s (games/%s), built with --allow-60hz: the .nex differs from the verified '
+              'build only by the video setting.' % (known['game'], known.get('doc', '?')))
+    elif known:
         want = known.get('nex', {})
         got = {'plain': md5(plain) if os.path.exists(plain) else None, 'sprites': md5(spr)}
         same = all(want.get(k) in (None, got[k]) for k in got)

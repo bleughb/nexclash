@@ -26,7 +26,9 @@ The last lines tell you how far it is proven:
   `python nexclash.py verify MyGame.z80 --rzx MyGame.rzx`.
 - **not supported yet** - see the next section.
 
-Snapshot tips: taken at the title screen, controls set to keyboard.
+Snapshot tips: taken at the title screen, controls set to keyboard. The .nex forces 50 Hz video (as
+the verified builds); `--allow-60hz` keeps the Next's own setting (then the report cannot match the
+verified MD5s).
 
 ## Your game is not supported yet: add it with Claude
 ```

@@ -19,7 +19,7 @@ top byte where OTIR must work (0x57, 0x5B). The ULA answers on any even port (A0
 | Reg | Wiki page | What we use it for | Where |
 |---|---|---|---|
 | $03 | Machine Type Register | display timing 48K/128K (bits 6:4, bit 7 = allow change); written last in the tail. Does NOT stop 7FFD decoding | z80tonex tail |
-| $05 | Peripheral 1 Setting Register | bit 2 cleared = 50 Hz (unless --allow-60hz) | z80tonex stub |
+| $05 | Peripheral 1 Setting Register | bit 2 cleared = 50 Hz (unless `nexclash.py ... --allow-60hz`) | z80tonex stub |
 | $06 | Peripheral 2 Setting Register | bit 4 cleared = divMMC automap / DRIVE-button NMI off (the A1 table used to say $0A). Yet code at 0x3D00-0x3DFF crashed Commando: probably not every automap entry point (BRIEFING A1, C2 #14) | z80tonex stub |
 | $07 | CPU Speed Register | 0 = 3.5 MHz for games; 3 = 28 MHz inside the Rainbow and Commando hooks, 0 on exit | stub, rainbow_hooks, commando_hooks |
 | $08 | Peripheral 3 Setting Register | contention; bit 7 write 1 = clear the 7FFD lock (0 does nothing; read 1 = unlocked) | tail, altrom stub |
