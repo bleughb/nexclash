@@ -7,6 +7,7 @@ Copyright (C) 2026 the nexclash contributors. GPL-3.0-or-later (see LICENSE).
   python nexclash.py contribute NAME [--report R]       zip what a session added, for upload
   python nexclash.py auto GAME.z80 [--rzx MY.rzx ...]   everything: plain + patched .nex + report
       --strategy altrom|printer|slot1   patch memory (default: altrom where proven; old builds: printer/slot1)
+      --allow-60hz                      keep the Next's video rate (default: 50 Hz forced, as verified)
   python nexclash.py identify GAME.z80                  which engine (and the derived profile)
   python nexclash.py record GAME.z80 [-o OUT.rzx]       automatic (or scripted) RZX recording
   python nexclash.py convert GAME.z80 [--rzx R]         plain .nex only (tail placement checked)
@@ -430,6 +431,7 @@ def main():
         p.add_argument('--ink', help="rainbow engine: sprite ink colour (white, black, blue, #RRGGBB)")
         p.add_argument('--outline', help="rainbow engine: mask-only pixels (black, blue, transparent, #RRGGBB)")
         p.add_argument('--class-colours', help='rainbow engine: JSON {"pages": {"D6": 1}, "palettes": {"1": {"ink": "#00FF00"}}}')
+        p.add_argument('--allow-60hz', action='store_true', help='do not force 50 Hz video (outputs then differ from the verified MD5s)')
     p = sub.add_parser('contribute'); p.add_argument('name', help='game name (zip name)')
     p.add_argument('--report', action='append', help='nexclash report(s) to include (GAME_report.txt)')
     p.add_argument('--note', help='one line for the maintainers'); p.add_argument('-o', '--output')
@@ -437,7 +439,9 @@ def main():
     p = sub.add_parser('record'); p.add_argument('z80'); p.add_argument('-o', '--output'); rec_args(p)
     p = sub.add_parser('convert'); p.add_argument('z80'); p.add_argument('--rzx', action='append'); p.add_argument('-o', '--output')
     p.add_argument('--tail', type=lambda v: int(v, 0), help='start-up tail address (128K: must end below 0xC000)')
+    p.add_argument('--allow-60hz', action='store_true', help='do not force 50 Hz video')
     p = sub.add_parser('verify'); p.add_argument('z80'); p.add_argument('--rzx', action='append', required=True)
+    p.add_argument('--allow-60hz', action='store_true', help='do not force 50 Hz video')
     p.add_argument('--strategy', choices=B.STRATEGIES)
     p = sub.add_parser('rzx'); p.add_argument('action', choices=['info', 'merge', 'strip']); p.add_argument('files', nargs='+')
     p.add_argument('-o', '--output')
@@ -456,6 +460,9 @@ def main():
             p.add_argument('--at', type=lambda v: int(v, 0), required=True, help='routine entry address')
             p.add_argument('--group', choices=['A', 'BC', 'DE', 'HL', 'IX', 'IY'], help='break down by register at entry')
     a = ap.parse_args()
+    if getattr(a, 'allow_60hz', False):
+        zt.ALLOW_60HZ = True
+        print('Video     : --allow-60hz: 50 Hz is NOT forced; the .nex MD5s differ from the verified builds')
     if a.cmd == 'inspect':
         from nexclash import snapinfo
         print(snapinfo.report(a.z80))

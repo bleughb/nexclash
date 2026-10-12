@@ -30,7 +30,8 @@ How it starts:
 Usage:
   python z80tonex.py game.z80 [-o game.nex] [--tail ADDR] [--allow-60hz]
 
-Tested target: 48K snapshots. 128K snapshots are handled, but less tested.
+48K and 128K snapshots (128K builds run on hardware: Crystal Kingdom Dizzy, Rainbow Islands,
+Everyone's a Wally, Commando). The main CLI is `python nexclash.py convert` (same options).
 """
 
 import argparse
@@ -450,6 +451,9 @@ def write_nex(path, snap, banks):
     return len(out)
 
 
+ALLOW_60HZ = False          # set by `nexclash.py ... --allow-60hz`: no build forces 50 Hz then
+
+
 def convert(src, dst, tail_req=None, force50=True, quiet=False, patch=None):
     """patch (optional) is an object with:
          apply(snap)         modify snap.banks (pokes) before conversion
@@ -459,6 +463,7 @@ def convert(src, dst, tail_req=None, force50=True, quiet=False, patch=None):
          extra_banks         {bank: bytes}
          uses_printer_buffer True if the tail must not go at 0x5B00
     """
+    force50 = force50 and not ALLOW_60HZ
     snap = Z80Snapshot(src)
     if patch is not None:
         patch.apply(snap)
