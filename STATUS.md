@@ -20,6 +20,9 @@ folder in the private repo; shared TID engine facts: games/tid_engine.md). MD5s:
 Platform on hardware: alt ROM ($8C) PASS 2026-09-27; plain 48K and 128K conversion run.
 
 ## Open work (toolkit)
+0. Release: the latest release zip (v0.1.3, 2026-10-12 morning) predates Commando, the pinned
+   sjasmplus, asm2profile and the analysis commands - zip users get "not supported" for Commando.
+   Publish v0.1.4 after a full `python selftest.py` (CLAUDE.md, End of every task). v0.1.0 has no zip.
 1. selftest: add Dizzy 6 (Dizzy6.z80 + try1.rzx, now in specnext/reference) - BRIEFING C2 #8.
 2. Engine registry: each engine registers identify/auto instead of a dispatch block in
    nexclash.py (do it once selftest covers every game).

@@ -581,7 +581,7 @@ def auto(a, z80, name, out, say):
     plain = os.path.join(out, name + '.nex')
     zt.convert(z80, plain, TAIL_ADDR, quiet=True)
     bad = boot_check(plain, z80)
-    say('Plain     : %s  %s  boot %s  (tail 0x%04X = back buffer, write-first in the RZX)' % (
+    say('Plain     : %s  %s  boot %s  (tail 0x%04X = back buffer, write-first in the reference RZX)' % (
         os.path.basename(plain), md5(plain), 'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:200], TAIL_ADDR))
     patch = WallyPatch()
     spr = os.path.join(out, name + '_sprites.nex')
