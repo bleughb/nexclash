@@ -272,6 +272,16 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
 12. Boot-path RAM check (entry -> menu, not in any RZX): the checked range must be the WHOLE hook
    RAM of the engine; Commando's documented boot check covered only to 0x5E1F while the hooks use
    0x5C00-0x60FF (the RZX access scan covers play). Make the boot check use the engine's RAM range.
+13. Wanted, from the Commando post-mortem (PLAYBOOK 3b / 6b):
+   a. Preview renderer: still frames / a GIF of ULA + sprites (the World's sprite state composed
+      over the screen) at chosen RZX frames, for design approval before building.
+   b. Interrupt injection: in verify / unit tests, run the game's ISR at random hook
+      instructions and require identical results (would have caught the IY bug directly; the
+      per-instruction invariant check is the current stand-in).
+   c. Hook speed report (see 11): T-states per hook call, median / max, against the budget.
+   d. Emulator smoke test: boot the .nex headless in a Next emulator for ~30 s (would have caught
+      the ROM 0 and 0x3D00 crashes); feasibility in the sandbox (CSpect needs .NET/mono) not yet
+      checked.
 10. selftest was broken after the Dizzy 6 session (fixed 2026-09-28): identify() had lost its
    Dizzy V dispatch, and dizzy5 analysis did not resync per RZX segment (the recorder now writes
    16 segments). Keep identify5 called from identify().

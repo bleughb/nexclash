@@ -3,10 +3,22 @@
 Budget rule: known engine -> aim for 4 tool runs and one short report.
 Only disassemble routines the tools flag as unclassified.
 
+Phases (a long game may be one session per phase; each starts from games/<game>.md, never from
+chat history): A = steps 0-4 + design approval by Dean; B = steps 5-6 (toolkit PASS);
+C = hardware rounds and fixes. Write decisions and open questions to games/<game>.md as they
+happen, so a new session can pick up any phase.
+Why: Commando took five hardware rounds, each finding something a step below now covers.
+
 ## 0. Inputs (ask once, up front)
 - `.z80` snapshot: 48K, title screen, keyboard controls (not joystick mode -
   e.g. Fantasy World Dizzy byte 62569=255 enables Kempston and caused phantom input).
 - RZX recording made per RECORDING_CHECKLIST.md.
+
+## 0b. Snapshot check (before anything else, ~10 min)
+Is it in-game, the title screen, or a LOADER (BASIC program running, PC in ROM)? 48K or 128K?
+Which ROM is selected, which interrupt mode, where is the stack? A 128K BASIC loader pages
+ROM 0, which the Next does not have (Commando's first builds crashed on the first key). Record
+the answers in games/<game>.md.
 
 ## 1. Plain conversion
 `python z80tonex.py game.z80` -> ask Dean to test on the Next.
@@ -43,6 +55,17 @@ Track "player drawn" from the plotter's/eraser's own screen writes. Report:
 - memory never read or written, ROM use, stack low-water mark
 - writes to any intended patch site (self-modifying code)
 
+## 3b. Visual survey and preview (design approval BEFORE building)
+- Render still frames (ULA + planned sprites) from the RZX at several points and, where the
+  recording does not reach them, from later levels: figures against every kind of scenery they
+  overlap. Use the frames to settle with Dean in ONE round: which figures, colours, solid or
+  see-through, and the overlap (depth) rule - the game's own rule, always in front, or another.
+  (Commando: depth, solid bodies and solid objects were settled across three hardware rounds
+  from Dean's photos; preview frames would have settled them first.)
+- Speed budget: measure the original's cost per draw (T-states) and how many draws per frame
+  the RZX shows; set the allowed hook cost per draw now, and design to it (caching, fewer
+  uploads). Commando's first solid hooks cost ~18x the original draw and were redesigned.
+
 ## 4. Decide the design (decision table)
 | Finding | Action |
 |---|---|
@@ -55,6 +78,9 @@ Track "player drawn" from the plotter's/eraser's own screen writes. Report:
 | Printer buffer free (access scan) | trampolines at 0x5B00 |
 | No free RAM but game never uses ROM | patch in RAM page at MMU slot 1 (0x386E-0x3CFF), flag in NextReg $7F, compact tail in dead stack |
 | Hooks page memory in slot 0 | DI around paging; read IFF with LD A,I twice (NMOS quirk) |
+| Interrupts on at the hook sites | hooks never write IX/IY/I or IFF and keep SP on a stack with room, at EVERY instruction (the game's ISR may read them: Commando IY+7) |
+| Figure moves (redraw) | never hide at entry and show at exit (flicker): build the new image in other pattern memory, switch the attributes last |
+| Hook code in the alt ROM / slot-1 page | never at 0x3D00-0x3DFF (DivMMC automap trap on fetch); data there is fine |
 
 ## 5. Build
 Copy the nearest builder (TID-engine: build.py TidPatch;
@@ -68,6 +94,16 @@ original and the patched routine to their return, compare all registers
 the patched screen against the model, and the sprite pixels against the
 player's pixels. Every mismatch must be explained or fixed.
 Also simulate the start-up tail: registers restored, no game memory touched.
+
+Iterate fast: while developing use `--quick N` (a few hundred frames) and the unit tests on 1-2
+captured states (minutes). Run the full `auto` ONCE, on the build that goes to Dean (Commando ran
+the ~55 min full check five or six times).
+
+## 6b. Hardware risk review (before every build Dean tests)
+Go through BRIEFING A1 "Simulator blind spots" item by item for what changed since the last
+hardware round (DivMMC trap, interrupts inside hooks, raster/tearing, speed, emulator
+differences); each item must be covered by a toolkit check or named in the hardware checklist.
+Ask Dean to try CSpect first if a build changes memory layout or start-up.
 
 ## 7. Deliver
 `<game>_sprites.nex`, `<game>.nex`, builder, asm sources; a short results
