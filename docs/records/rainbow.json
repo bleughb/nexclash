@@ -84,7 +84,7 @@
   "deps": {
    "asm/rainbow_hooks.asm": "7c07f23c99abef87",
    "docs/profiles/rainbow_islands.json": "9bccf0fde403fff9",
-   "nexclash.py": "e643a6a71253b504",
+   "nexclash.py": "d8e099fa553cffa9",
    "nexclash/build.py": "a60e4d3c5945c94a",
    "nexclash/dizzy6.py": "89c8ba59fc762962",
    "nexclash/nextboot.py": "c71aaed434e73ef1",

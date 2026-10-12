@@ -74,7 +74,7 @@
   "deps": {
    "asm/wally_hooks.asm": "d1cc8962818a5806",
    "docs/profiles/everyones_a_wally.json": "6914cb754839ce43",
-   "nexclash.py": "e643a6a71253b504",
+   "nexclash.py": "d8e099fa553cffa9",
    "nexclash/build.py": "a60e4d3c5945c94a",
    "nexclash/dizzy6.py": "89c8ba59fc762962",
    "nexclash/nextboot.py": "c71aaed434e73ef1",

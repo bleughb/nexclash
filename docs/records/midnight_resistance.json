@@ -1,0 +1,109 @@
+{
+ "name": "midnight_resistance",
+ "order": 12,
+ "game": "Midnight Resistance (128K)",
+ "doc": "midnight_resistance.md",
+ "engine": "midres",
+ "representative": true,
+ "reference": "midnight_resistance",
+ "inputs": {
+  "snapshot": {
+   "name": "midnight_resistance.z80",
+   "md5": "67bf05d356d51b2b402d88c5f0cdfb21",
+   "path": "midnight_resistance/Midnight_Resistance_1990_Ocean_128K.z80"
+  },
+  "recordings": [
+   {
+    "name": "midnight_resistance.rzx",
+    "md5": "b75ecd5f60c3ec67fe463a0aa606f6a1",
+    "path": "midnight_resistance/Midnight_Resistance_1990_Ocean_128K.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "midres"
+ ],
+ "own_modules": [
+  "midres"
+ ],
+ "data": [
+  "docs/profiles/midnight_resistance.json",
+  "asm/midres_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "midnight_resistance.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 20
+ },
+ "outputs": {
+  "plain": {
+   "file": "midnight_resistance.nex",
+   "md5": "17239acaaf67b0f8011478053e17829d"
+  },
+  "sprites": {
+   "file": "midnight_resistance_sprites.nex",
+   "md5": "e8f0ece9e41c314d76471c96f4595854"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Midnight Resistance (128K)",
+  "engine_col": "midres (midnight_resistance.md)",
+  "build": "midnight_resistance_sprites.nex e8f0ece9 (altrom + page 26 at slot 5; player green, soldiers white, jeep / tank in their cell colours; pattern-slot cache)",
+  "software": "RZX IDENTICAL, unit + interrupt PASS",
+  "hardware": "e8f0ece9 runs on a real Next (Dean, 2026-10-13)",
+  "next": "detailed checklist (speed at the jeep / tank, colours); later-levels RZX"
+ },
+ "checks": [
+  "asm2profile:midnight_resistance"
+ ],
+ "checked": {
+  "deps": {
+   "asm/midres_hooks.asm": "c27ad70af4af669f",
+   "docs/profiles/midnight_resistance.json": "7cea5d1b13236010",
+   "nexclash.py": "d8e099fa553cffa9",
+   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/midres.py": "06b65a2db695ad6e",
+   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/rainbow.py": "a2baff9fb4790cca",
+   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/simrun.py": "eb1a51a360fea4b4",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-13"
+ },
+ "verified": {
+  "deps": {
+   "asm/midres_hooks.asm": "c27ad70af4af669f",
+   "docs/profiles/midnight_resistance.json": "7cea5d1b13236010",
+   "nexclash.py": "d8e099fa553cffa9",
+   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/midres.py": "06b65a2db695ad6e",
+   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/rainbow.py": "a2baff9fb4790cca",
+   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/simrun.py": "eb1a51a360fea4b4",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-13"
+ }
+}

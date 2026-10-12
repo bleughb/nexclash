@@ -132,6 +132,7 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 | printer | trampolines at 0x5B00 (game RAM, must be free); hook code in bank 10 upper page, paged into slot 0 per hook | byte 0x5B00 | DI + page slot 0 in/out |
 | slot1 | everything in RAM page 24 permanently at 0x2000-0x3FFF, code at 0x386E (48K ROM's unused block); needs "game never reads ROM" | NextReg $7F | direct calls, no paging |
 | altrom (DEFAULT since 2026-09-28) | alt ROM image 1 = exact copy of ROM3 (48K) + slot1 hook code + frame table + register block (TID: 0x386E-, all $FF in the 48K ROM, must end < 0x3D00; Dizzy V: 0x3800-; NO code may ever sit in 0x3D00-0x3DFF - Commando crashed with code there, probable cause DivMMC automap on fetch (A1); Commando: data there, code also 0x3F00+); stub fills it in write mode, tail sets $8C=$80; RAM page 24 in bank 12 is only the copy source | NextReg $7F (Dizzy V: none) | direct calls, no paging, no DI; the game may read every ROM byte the patch leaves as ROM (an engine that replaces more, like Commando's whole 0x2000-0x3FFF, must prove by verify that the game never reads it); writes ignored; survives 7FFD |
+| slot5 (Midnight Resistance; runs on hardware 2026-10-13) | code + tables in alt ROM 0x2000-0x3CFF (game reads ROM 0x0000 + font only); state, hook stack and a scratch copy of the back buffer in RAM page 26 mapped at MMU slot 5 only while a hook runs | page variables | interrupts ON: slot 5 is never touched by the ISR (full-RZX slot scan), and the ISR's unlocked 7FFD writes reset only slots 0/1/6/7 |
 Choice rule (build.choose_tid_strategy, returns strategy/reason/tail): altrom if no recording
 reads 0x386E-0x3CFF AND (printer buffer free -> tail at 0x5B00, else dead stack >= 54 -> tail
 at the low-water mark); else the old rule: printer if 0x5B00 is zero in the snapshot AND never
@@ -264,7 +265,9 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
 5. Wanted: engine registry (each engine registers identify/auto instead of a dispatch block in
    nexclash.py) + behaviour flags in profiles. Do it once reference/ holds every game (selftest).
 6. 128K: plain conversion runs on hardware (Crystal Kingdom Dizzy); 128K sprite engines: Rainbow
-   Islands, Everyone's a Wally and Commando (all run on hardware). analyse/recorder are 48K-only.
+   Islands, Everyone's a Wally and Commando (all run on hardware), Midnight Resistance (runs, 2026-10-13).
+   analyse/recorder are 48K-only: `convert --rzx` with a 128K RZX stops with "N port reading(s)
+   left for frame 0" (analyse wraps 48K memory; simrun-based scan/isr/cost work).
    Dizzy V / Magicland / Dizzy 6 sprite builds: hardware untested.
 7. Dizzy V: works in the toolkit and is verified; hardware to confirm: dialogue text (font-page
    fix) and slot-1 surviving a game that writes 7FFD every interrupt (see A1 "7FFD lock").
@@ -284,9 +287,12 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    Dizzy V dispatch, and dizzy5 analysis did not resync per RZX segment (the recorder now writes
    16 segments). Keep identify5 called from identify().
    (closed; kept as a warning)
-11. No hook speed budget and no profiler: Commando's hook cost was measured with scratch scripts
-   (T-states per plot vs the original plot). Wanted: an `auto` line with hook T-states per call
-   (median / max) and a documented budget per game frame.
+11. No hook speed budget and no profiler: Commando's and Midnight Resistance's hook costs were
+   measured with scratch scripts (T-states per plot / commit from the pair runs, original vs
+   patched; the simulator ignores the 28 MHz turbo). Wanted: an `auto` line with hook T-states per
+   call (median / max) and a documented budget per game frame.
+13. ISR memory map per 8K slot (which slots the interrupt handler reads/writes/runs) is a scratch
+   script (Midnight Resistance); belongs in `isr` as an extra report line.
 12. Boot-path RAM check (entry -> menu, not in any RZX): the checked range must be the WHOLE hook
    RAM of the engine. Tool: `scan --frames N --keys K --after ENTRY --range ...` (C4); Commando
    done 2026-10-12. Not yet automatic in `auto`.

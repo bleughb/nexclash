@@ -44,6 +44,11 @@ BRIEFING - with its reason.
 - Hooks that keep no state need no RAM page at all: code in the alt ROM, scratch on the game's
   own stack, output only through NEXTREG. Then interrupts may stay ON (IM2 handler in RAM; an
   interrupt between two NEXTREGs is harmless) - Chuckie Egg (hardware to confirm).
+- A RAM page for hook state can stay mapped with interrupts ON if it sits in a slot the game's ISR
+  never touches: an unlocked 7FFD write in the ISR resets only slots 0/1 and 6/7, so 2-5 survive.
+  Prove it per game (full-RZX scan of the ISR's reads/writes/fetches per 8K slot) and map only
+  while the hook runs (Midnight Resistance: page 26 at slot 5, ISR uses slots 0/3/7 only; runs on
+  hardware 2026-10-13 with interrupts on through every hook).
 - A 128K BASIC loader snapshot cannot run on the Next: 128K BASIC pages ROM 0 (the 128K editor)
   on every statement (Commando: plain = corruption, altrom = crash at the first key; alt image 0 is
   unfilled). Run the loader in SkoolKit (real 128K ROMs) to the game's USR entry, build from there,
@@ -192,6 +197,21 @@ BRIEFING - with its reason.
   flags; a hook that borrowed IY made the handler draw the menu's spinning logo in-game and leave
   stray dots. Check it statically (disassemble the hook blocks: no IX/IY writes) and per
   instruction in the simulator, with a negative control (LD IY in a hook).
+- Back-buffer composer with many plot routines that share one address helper: replace the TARGET
+  of their CALL to it (same return address, same stack bytes) and return the address of a scratch
+  copy of the buffer, so the game's own loops run unchanged into the copy; copy the buffer bytes
+  under the figure into the scratch first and the loop ends with the original's registers. Patch
+  the loop exits to map the address back with a flag-free table lookup (LD D,(HL)), and redo the
+  last ADD HL on the real address where the loop ends with one: H, C and flag bits 3/5 depend on
+  the address (Midnight Resistance: 17 flag mismatches until then).
+- Hook code that returns into the game's own loop must not write below the game's SP (no CALL, no
+  PUSH on the game stack): the original's dead-stack bytes (pushed BC etc.) differ otherwise. Use
+  a macro, or the hook stack in the hook's page.
+- Pattern slots with a cache: mark each slot "on show" (last commit) and "used by this commit"
+  (two bits, shifted at each commit) instead of commit stamps; stamps wrap, and with <= 64 sprites
+  per commit and on show a free slot always exists. Key cells-coloured images by the attributes
+  under them (and Y & 7), fixed-colour ones by graphic + colour; mirror by the sprite bit, not in
+  the key.
 - Solid sprites: a body fill from the frame itself (a pixel inside the ink both on its line and
   in its column) reads as a filled figure; objects that hide a figure need their SOLID shape (the
   game's draw mask with holes filled), not their ink, or the figure shows through paper-coloured
@@ -378,6 +398,16 @@ BRIEFING - with its reason.
 - A counter that can never be non-zero proves nothing: Commando's first 'pixels hidden' metric
   was (original bits missing on the patched screen) & (scenery ink) - empty by construction.
   Make every counted effect also show up in a negative control.
+- "Never a PC" for patched bytes holds for instruction INTERIORS only. When a patch covers several
+  instructions (DJNZ + RET), the later ones run in the original by falling through - and an
+  interrupt may arrive between them, so the check must accept "resumed there after an interrupt
+  taken right after the previous instruction" (Midnight Resistance 0x9FB9, once in 4,709 frames).
+- A negative control case is informative only if the broken table can change the result: an
+  ink/outline swap is invisible where ink and paper are the same colour (black on black cells).
+  Count only informative cases.
+- Speed: the simulator's T-states ignore the 28 MHz turbo; time hook code by T per game frame
+  (pair runs) and divide the turbo part by ~7-8. Midnight Resistance's commit cost dropped from
+  837K to 15-60K T per frame with a pattern-slot cache.
 - States captured early in an RZX are often a figure's FIRST plot (no sprite yet): force the
   steady state (old image already a sprite) in unit cases that test steady-state behaviour.
 - A 'buffer is non-empty' flag that lets later code skip work must be set on EVERY path that
