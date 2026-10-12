@@ -29,13 +29,18 @@ import os
 from .rainbow import NextState, _machine, _run, boot_check as _rb_boot_check, mem64
 
 ALT_PAGE = 24
-ROM_ORG = 0x386E
-RAM_LO, RAM_HI = 0x5C00, 0x5F60             # hook state (never read/written by the game once it runs)
-DEPTH_LO, DT, NTYPES = 0x3000, 0x3400, 41      # alt ROM: depth code, depth table (game never reads ROM there)
-DEPTH_HI = DT + 8 * NTYPES
-SCRATCH_LO = 0x5E20                          # occlusion mask + depth temps: written before read
+PAGE_LO = 0x2000                            # alt ROM image 1 page we own (the game never executes ROM
+                                            # and reads only page 0x00 - RZX scan)
+ROM_ORG, ROM2_ORG = 0x3600, 0x3F00          # hooks: part 1 (< 0x3D00), part 2 (+ register block, < 0x4000)
+TRAP_LO, TRAP_HI = 0x3D00, 0x3E00            # DivMMC automap on an instruction fetch here: data only
+FILL_LO, SVR_LO = 0x3080, 0x3550            # body fill code; scenery save / restore
+DT, NTYPES = 0x3400, 41                     # depth table (41 x 8, + variant table pointers)
+RAM_LO, RAM_HI = 0x5C00, 0x6100             # hook state (never read/written by the game once it runs)
+SCRATCH_LO = 0x5E20                          # mask, temps, save buffer, ink / fill rows: written before read
 ZP = 0x5D00                                 # zero page (new frame source while converted)
-NIBT = 0x5E00
+INKB, FILB, MASK = 0x5F20, 0x6020, 0x5E20
+V_CLK = 0x5C0E                                # last pattern slot allocated
+SLOTK, NSLOT = 0x6080, 32                     # pattern-slot keys (persistent, like the entries)
 ENT, NENT = 0x5C10, 12
 V_ON, V_FREED, V_CNT = 0x5C04, 0x5C05, 0x5C06
 TAIL_ADDR = 0x6D00                          # 0x6CB5-0x70F7: never read or written in the RZX
@@ -44,12 +49,16 @@ PLAYER, POW = 23514, 64975
 SITES_ORIG = {39120: bytes.fromhex('C32299'), 39366: bytes.fromhex('7A93EBE1'),
               39529: bytes.fromhex('ED7B82FDC9'), 40955: bytes.fromhex('ED7B82FDC9'),
               27468: bytes.fromhex('CB21CB21'), 30597: bytes.fromhex('210040'),
-              25630: bytes.fromhex('C3D269')}
+              25630: bytes.fromhex('C3D269'),
+              39777: bytes.fromhex('D5E5B7'), 40733: bytes.fromhex('E5ED7382FD'),
+              40926: bytes.fromhex('DDCB0BAE'), 40930: bytes.fromhex('DD7E06')}
 SITE_SYM = {39120: 'e_ent', 39366: 'e_main', 39529: 'e_x', 40955: 'e_x', 27468: 'e_rect',
-            30597: 'e_cls', 25630: 'e_init'}
+            30597: 'e_cls', 25630: 'e_init', 39777: 'e_p1', 40733: 'e_p2', 40926: 'e_p3',
+            40930: 'e_p4'}
 INIT, INIT_TO = 25630, 27090                 # game entry (JP 27090) -> e_init
 # bytes of patched instructions that must never be a PC (interiors behind each 3-byte JP)
-INTERIORS = (39369, 39532, 39533, 40958, 40959, 27471, 25631, 25632)
+INTERIORS = (39369, 39532, 39533, 40958, 40959, 27471, 25631, 25632, 39778, 39779,
+             40734, 40735, 40736, 40737, 40927, 40928, 40929, 40931, 40932)
 # Next default ULA colours (RRRGGGBB): ink 0-7 normal, then bright
 SPECCY = [0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x00, 0x03, 0xE0, 0xE7, 0x1C, 0x1F, 0xFC, 0xFF]
 
@@ -81,36 +90,28 @@ def is_commando(snap):
         return False
 
 
-def nibt(swap=False):
-    """nibble -> 2 bytes of 4-bit pixels (ink index 1, 0 = transparent). swap: negative control."""
-    t = bytearray(32)
-    on, off = (0, 1) if swap else (1, 0)
-    for n in range(16):
-        px = [on if n & b else off for b in (8, 4, 2, 1)]
-        t[2 * n] = px[0] << 4 | px[1]
-        t[2 * n + 1] = px[2] << 4 | px[3]
-    return bytes(t)
+YELLOW = 0xB4                               # body fill: the play area's paper (Dean)
 
 
 def palette():
     pal = bytearray(256)
     for k in range(16):
         pal[16 * k + 1] = SPECCY[k]
+        pal[16 * k + 2] = YELLOW
     return bytes(pal)
 
 
 class CommandoPatch:
     name = 'Commando figures (player, soldiers, POWs) -> hardware sprites (altrom + bank-5 state)'
 
-    def __init__(self, prof=None, swap_nibt=False, dtab=None):
+    def __init__(self, prof=None, swap_pairs=False, dtab=None, edit=None):
+        """swap_pairs / dtab / edit (ROM address -> bytes): negative controls with their own data."""
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         self.rom_code = bytes.fromhex(h['rom'])
-        nb = int(h['syms']['nibrom'], 16) - ROM_ORG
-        if self.rom_code[nb:nb + 32] != nibt():
-            raise ValueError('profile nibble table differs from nibt()')
-        if swap_nibt:                           # negative control: its own (broken) table
-            self.rom_code = self.rom_code[:nb] + nibt(True) + self.rom_code[nb + 32:]
+        self.rom2_code = bytes.fromhex(h['rom2'])
+        self.fill_code = bytes.fromhex(h['fill'])
+        self.svr_code = bytes.fromhex(h['svr'])
         self.setup = bytes.fromhex(h['setup'])
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
         self.stub_extra = self.setup + palette()
@@ -120,27 +121,32 @@ class CommandoPatch:
         self.tail_addr = TAIL_ADDR
         self.max_tail = 80
         self.scratch = bytes(8192)              # (rainbow.NextState wants one; unused here)
-        self.regblock = ROM_ORG + len(self.rom_code)
-        if self.regblock + 20 > 0x3D00:
+        self.regblock = ROM2_ORG + len(self.rom2_code)
+        if self.regblock + 20 > 0x4000 or ROM_ORG + len(self.rom_code) > TRAP_LO:
             raise ValueError('ROM hooks too long')
-        self.depth = bytes.fromhex(h['depth'])
         self.dtab = bytes.fromhex(self.prof['depth_table']) if dtab is None else dtab
-        if DEPTH_LO + len(self.depth) > DT or len(self.dtab) != 8 * NTYPES:
-            raise ValueError('depth code / table size')
+        self.shapes = bytes.fromhex(self.prof['shapes'])
+        if len(self.dtab) != 8 * NTYPES or SHAPES_LO + len(self.shapes) > FILL_LO:
+            raise ValueError('depth table / shape data size')
+        if FILL_LO + len(self.fill_code) > SR_T or SVR_LO + len(self.svr_code) > ROM_ORG or DT + 8 * NTYPES > SVR_LO:
+            raise ValueError('alt ROM block overlap')
         self.slot1 = (ALT_PAGE, self.regblock)
-        self.altrom = (DEPTH_LO, self.regblock + 20)
+        self.altrom = (PAGE_LO, self.regblock + 20)
         from .build import rom48
-        rom = rom48()
-        if any(b != 0xFF for b in rom[ROM_ORG:self.regblock + 20]):
-            raise ValueError('alt ROM hook range is not free ($FF) in the 48K ROM')
-        page = bytearray(rom[0x2000:0x4000])
-        page[ROM_ORG - 0x2000:ROM_ORG - 0x2000 + len(self.rom_code)] = self.rom_code
-        page[DEPTH_LO - 0x2000:DEPTH_LO - 0x2000 + len(self.depth)] = self.depth
-        page[DT - 0x2000:DT - 0x2000 + len(self.dtab)] = self.dtab
+        page = bytearray(rom48()[0x2000:0x4000])
+        sr, sl = smear_tables()
+        p0, p1 = pair_tables(swap_pairs)
+        for a, data in ((SHAPES_LO, self.shapes), (FILL_LO, self.fill_code), (SR_T, sr), (SL_T, sl),
+                        (DT, self.dtab), (SVR_LO, self.svr_code), (PT0, p0), (PT1, p1),
+                        (ROM_ORG, self.rom_code), (ROM2_ORG, self.rom2_code)):
+            page[a - 0x2000:a - 0x2000 + len(data)] = data
+        for a, data in (edit or {}).items():
+            page[a - 0x2000:a - 0x2000 + len(data)] = data
         self.page = bytes(page)
+        self.shape_model = shapes_from_blob(self.dtab, self.shapes)
         ram = bytearray(RAM_HI - RAM_LO)        # zeros: V_*, entry table, stack, zero page
         ram[V_FREED - RAM_LO] = 0xFF
-        ram[NIBT - RAM_LO:NIBT - RAM_LO + 32] = nibt(swap_nibt)
+        ram[SLOTK - RAM_LO:SLOTK - RAM_LO + 4 * NSLOT] = b'\xFF' * (4 * NSLOT)
         self.ram = bytes(ram)                   # = the state e_init leaves (unit-tested)
         self.extra_banks = {12: self.page + bytes(8192)}
         self.sites = [(a, old, (b'\xC3' + self.syms[SITE_SYM[a]].to_bytes(2, 'little')).ljust(len(old), b'\x00'))
@@ -405,16 +411,242 @@ def derive_table(banks, o7ffd, y=80):
     return bytes(tab)
 
 
-def occluded(get, scr, ix, dtab):
-    """Model of the rule for a converted plot (descriptor after the plot): the set of screen pixels
-    (x, line) inside the figure's 24 x rows box that belong to objects it is behind. scr(a) = the
-    screen as the hook sees it (after the plot)."""
+# Alt ROM image 1, page 0x2000-0x3FFF (the game never executes ROM and reads only page 0x00):
+SHAPES_LO = 0x2000                               # per-type variant tables + shape bitmaps
+SR_T, SL_T = 0x3200, 0x3300                      # smear right / left (body fill)
+PT0, PT1 = 0x3D00, 0x3E00                        # (ink nibble, fill nibble) -> 2 bytes of 4-bit pixels
+SHAPES_HI = SR_T
+
+
+def _run_obj(base, o7ffd, t, x, y, entry, scr_fill=0):
+    """One scenery object (type t, x byte, y) alone in the list; run the game's routine at entry
+    (37302 drawer / 60754 box builder) from base RAM with the screen filled with scr_fill."""
+    from skoolkit.simulator import Simulator
+    from skoolkit.simutils import from_memory
+    from skoolkit.pagingtracer import Memory as PM
+    mem = PM([list(b) for b in base], o7ffd, '128K')
+    sim = from_memory(Simulator, mem, {'IY': 64896, 'SP': 0x5EFE, 'PC': entry}, {'iff': 0, 'im': 2},
+                      {'int_active': 0})
+    R = sim.registers
+    R[15] = 0x80                                # masked scenery drawing (the game's play mode)
+
+    class Tr:
+        border = outfe = outfffd = 0
+        ay = [0] * 16
+
+        def read_port(self, r, port):
+            return 0xFF
+
+        def write_port(self, r, port, v, o=0):
+            if port & 0x8002 == 0:
+                mem.out7ffd(v)
+    sim.set_tracer(Tr())
+    for i in range(0x4000, 0x5800):
+        mem[i] = scr_fill
+    mem[0xFF00] = 0x08
+    for k, v in enumerate((0x08, 0, t, x, y, 0, 0, 0)):
+        mem[0xFF08 + k] = v
+    mem[64904] = 0x08
+    mem[0x5EFE], mem[0x5EFF] = ENTRY & 255, ENTRY >> 8
+    n = 0
+    while R[24] != ENTRY and n < 300000:
+        sim.opcodes[mem[R[24]]]()
+        n += 1
+    return mem
+
+
+def _shape_bits(base, o7ffd, t, x, y):
+    """{(column, line): mask byte} of the object's solid shape: per byte the drawer wrote, all 8
+    bits if the result does not depend on the background (opaque block), else the bits it drew or
+    masked out (ink | ~AND-mask)."""
+    a = _run_obj(base, o7ffd, t, x, y, 37302, 0x00)
+    b = _run_obj(base, o7ffd, t, x, y, 37302, 0xFF)
+    out = {}
+    for o in range(6144):
+        va, vb = a[0x4000 + o], b[0x4000 + o]
+        if va or vb != 0xFF:
+            m = 0xFF if va == vb else (va | (~vb & 0xFF))
+            if m:
+                out[(o & 31, ((o >> 8) & 7) | ((o >> 2) & 0x38) | ((o >> 5) & 0xC0))] = m
+    return out
+
+
+def body_fill(rows, nbits):
+    """Reference body fill (the Z80 code computes exactly this for figures): rows = list of ints
+    (bit nbits-1 = leftmost pixel). A pixel is fill when it is not ink and the row has ink at or
+    left of it and at or right of it, and its column has ink in some row above and some row below.
+    Returns the fill rows."""
+    full = (1 << nbits) - 1
+    above, acc = [], 0
+    for r in rows:
+        above.append(acc)
+        acc |= r
+    below, acc = [0] * len(rows), 0
+    for i in range(len(rows) - 1, -1, -1):
+        below[i] = acc
+        acc |= rows[i]
+    out = []
+    for i, r in enumerate(rows):
+        if not r:
+            out.append(0)
+            continue
+        hi, lo = r.bit_length() - 1, (r & -r).bit_length() - 1
+        span = ((1 << (hi + 1)) - 1) & ~((1 << lo) - 1) & full
+        out.append(span & above[i] & below[i] & ~r & full)
+    return out
+
+
+def _solid(bits, w, h):
+    """Shape bitmap {(byte col, line): byte} -> the same with enclosed holes filled (body_fill)."""
+    rows = []
+    for ll in range(h):
+        v = 0
+        for cc in range(w):
+            v = v << 8 | bits.get((cc, ll), 0)
+        rows.append(v)
+    fill = body_fill(rows, 8 * w)
+    out = {}
+    for ll in range(h):
+        v = rows[ll] | fill[ll]
+        for cc in range(w):
+            m = v >> (8 * (w - 1 - cc)) & 255
+            if m:
+                out[(cc, ll)] = m
+    return out
+
+
+def derive_shapes(banks, o7ffd, dtab):
+    """Solid shapes of the depth objects (types with a walk box in dtab) for every x variant (x
+    bits 5-7), derived from the game's own drawer: per byte it writes, all 8 bits if the result does
+    not depend on the background (opaque block), else ink | ~AND-mask. Variants of a type differ
+    only by a line offset, so each distinct shape is stored once.
+    Returns (dtab with +6/+7 = variant table pointer, blob for SHAPES_LO, model).
+    Variant table: 8 x (shape pointer lo, hi, l0 = first line relative to 2y, signed); pointer 0 =
+    no shape. Shape: flags (bit 0 rectangle, bit 1 absolute column), c0 (signed, relative to the
+    object column x & 31, or absolute), w (bytes), h (lines), then w*h bytes unless a rectangle.
+    model[(t, v)] = (absolute, c0, l0, w, h, {(byte column, line): mask byte})."""
+    base = [bytes(b) for b in banks]
+    m0 = _BankMemLite(base, o7ffd)
+    first_e, a = {}, m0[32778] | m0[32779] << 8
+    for _ in range(4000):
+        t, e = m0[a] & 0x7F, m0[a + 1]
+        a += 2
+        if t == 127:
+            break
+        if 1 <= t <= 40 and t != 34:
+            first_e.setdefault(t, e)
+    dt = bytearray(dtab)
+    types = [t for t in range(1, NTYPES) if dt[8 * t] & 1]
+    blob = bytearray(24 * len(types))                # variant tables first
+    shapes, model = {}, {}
+    for k, t in enumerate(types):
+        vt = SHAPES_LO + 24 * k
+        dt[8 * t + 6], dt[8 * t + 7] = vt & 255, vt >> 8
+        c = min(first_e.get(t, 16) & 31, 20)
+        best = None
+        for y in range(30, 150, 4):                 # fully visible position: most pixels
+            bits = _shape_bits(base, o7ffd, t, c, y)
+            n = sum(bin(v).count('1') for v in bits.values())
+            if best is None or n > best[0]:
+                best = (n, y)
+        y = best[1]
+        for v in range(8):
+            bits = _shape_bits(base, o7ffd, t, (v << 5) | c, y)
+            if not bits:
+                continue
+            bits2 = _shape_bits(base, o7ffd, t, (v << 5) | (c + 2), y)
+            absolute = {q for q in bits} == {q for q in bits2}
+            cols, lines = [q[0] for q in bits], [q[1] for q in bits]
+            c0, c1, l0, l1 = min(cols), max(cols), min(lines), max(lines)
+            w, h = c1 - c0 + 1, l1 - l0 + 1
+            rel = _solid({(cc - c0, ll - l0): mm for (cc, ll), mm in bits.items()}, w, h)
+            bits = {(cc + c0, ll + l0): mm for (cc, ll), mm in rel.items()}      # solid: holes filled
+            rect = all(bits.get((cc, ll), 0) == 0xFF for cc in range(c0, c1 + 1) for ll in range(l0, l1 + 1))
+            rc0 = c0 if absolute else c0 - c
+            body = b'' if rect else bytes(bits.get((cc, ll), 0) for ll in range(l0, l1 + 1)
+                                          for cc in range(c0, c1 + 1))
+            rec = bytes([(1 if rect else 0) | (2 if absolute else 0), rc0 & 255, w, h]) + body
+            if rec not in shapes:
+                shapes[rec] = SHAPES_LO + len(blob)
+                blob += rec
+            ptr, rl0 = shapes[rec], l0 - 2 * y
+            if not -128 <= rl0 < 128:
+                raise ValueError('shape line offset out of range (type %d)' % t)
+            blob[24 * k + 3 * v:24 * k + 3 * v + 3] = bytes([ptr & 255, ptr >> 8, rl0 & 255])
+            model[(t, v)] = (absolute, rc0, rl0, w, h,
+                             {(cc - c0, ll - l0): mm for (cc, ll), mm in bits.items()})
+    if SHAPES_LO + len(blob) > SHAPES_HI:
+        raise ValueError('shape data too long (%d bytes)' % len(blob))
+    return bytes(dt), bytes(blob), model
+
+
+def shapes_from_blob(dtab, blob):
+    """Model dict from the ROM data (the verifier uses exactly what the hooks read)."""
+    model = {}
+    rd = lambda a: blob[a - SHAPES_LO]
+    for t in range(1, NTYPES):
+        if not dtab[8 * t] & 1:
+            continue
+        vt = dtab[8 * t + 6] | dtab[8 * t + 7] << 8
+        for v in range(8):
+            ptr = rd(vt + 3 * v) | rd(vt + 3 * v + 1) << 8
+            if not ptr:
+                continue
+            rl0 = _signed(rd(vt + 3 * v + 2))
+            fl, c0, w, h = (rd(ptr + k) for k in range(4))
+            bits = {}
+            for ll in range(h):
+                for cc in range(w):
+                    mm = 0xFF if fl & 1 else rd(ptr + 4 + ll * w + cc)
+                    if mm:
+                        bits[(cc, ll)] = mm
+            model[(t, v)] = (bool(fl & 2), _signed(c0), rl0, w, h, bits)
+    return model
+
+
+class _BankMemLite:
+    def __init__(self, banks, o7ffd):
+        self.banks, self.o7 = banks, o7ffd
+
+    def __getitem__(self, a):
+        return self.banks[(5, 2, self.o7 & 7)[(a >> 14) - 1]][a & 0x3FFF] if a >= 0x4000 else 0
+
+
+def smear_tables():
+    sr, sl = bytearray(256), bytearray(256)
+    for x in range(256):
+        r = l = 0
+        for k in range(8):
+            r |= x >> k
+            l |= (x << k) & 0xFF
+        sr[x], sl[x] = r, l
+    return bytes(sr), bytes(sl)
+
+
+def pair_tables(swap=False):
+    """n = ink nibble << 4 | fill nibble -> two bytes of 4-bit pixels (ink 1, fill 2, else 0).
+    swap: negative control (ink and fill exchanged)."""
+    p0, p1 = bytearray(256), bytearray(256)
+    a, b_ = (2, 1) if swap else (1, 2)
+    for n in range(256):
+        ink, fil = n >> 4, n & 15
+        px = [a if ink & b else b_ if fil & b else 0 for b in (8, 4, 2, 1)]
+        p0[n], p1[n] = px[0] << 4 | px[1], px[2] << 4 | px[3]
+    return bytes(p0), bytes(p1)
+
+
+def occluded(get, ix, dtab, shapes):
+    """Model of occl for a converted plot (descriptor after the plot): the set of screen pixels
+    (x, line) inside the figure's box (3 columns x rows, lines <= 191) covered by the solid shape of
+    an object the figure is behind - for every list object with a walk box (dtab +0 bit 0): behind
+    when y + box middle + 64 >= y_figure + 6 + 64 (the game's walk-test point), shape = shapes[(type,
+    x >> 5)] at column (x & 31) + c0 (or c0 if absolute) and line 2y + l0."""
     out = set()
     last = get(64904)
     if not last:
         return out
     col, fy, pairs = get(ix + 0), get(ix + 1), get(ix + 10)
-    feet, fl0 = fy + 6, 2 * fy                  # the game's walk-test point (y + 6), not the feet
+    f64, fl0 = fy + 70, 2 * fy
     fl1 = min(191, fl0 + 2 * pairs - 1)
     e, n = get(0xFF00), 0
     while n < 64:
@@ -422,21 +654,59 @@ def occluded(get, scr, ix, dtab):
         a = 0xFF00 + e
         t = get(a + 2) & 0x7F
         if 1 <= t < NTYPES and dtab[8 * t] & 1:
-            ox, oy = get(a + 3) & 31, get(a + 4)
-            c0, c1, l0, l1 = (_signed(dtab[8 * t + k]) for k in (1, 2, 3, 4))
-            mid = dtab[8 * t + 5] - 64
-            if feet <= oy + mid:                    # reached from above: figure behind
-                for line in range(max(fl0, 2 * oy + l0), min(fl1, 2 * oy + l1) + 1):
-                    for cx in range(max(col, ox + c0), min(col + 2, ox + c1) + 1):
-                        ad = 0x4000 | ((line & 0xC0) << 5) | ((line & 7) << 8) | ((line & 0x38) << 2) | cx
-                        v = scr(ad)
+            x, y = get(a + 3), get(a + 4)
+            if y + dtab[8 * t + 5] >= f64 and (t, x >> 5) in shapes:
+                ab, c0, l0, w, h, bits = shapes[(t, x >> 5)]
+                sc = c0 if ab else _signed(((x & 31) + c0) & 255)
+                sl = 2 * y + l0
+                for line in range(max(sl, fl0), min(sl + h - 1, fl1) + 1):
+                    for cx in range(max(sc, col), min(sc + w - 1, col + 2) + 1):
+                        m = bits.get((cx - sc, line - sl), 0)
                         for b in range(8):
-                            if v & (128 >> b):
+                            if m & (128 >> b):
                                 out.add((cx * 8 + b, line))
         if e == last:
             break
         e = get(a)
     return out
+
+
+def frame_rows(get, ix):
+    """The figure's new frame as the plotter's own stream gives it (descriptor after the plot):
+    rows = 2 * (+10) lines of 24 bits (bit 23 = leftmost); graphics page (+3) + 0xA0, offset at
+    0x98E2 + 2 * frame (+1 if flags bit 2), even rows c0 c1 c2, odd rows c2 c1 c0."""
+    pg = (get(ix + 3) + 0xA0) & 255
+    l0 = get(0x98E2 + 2 * get(ix + 2) + ((get(ix + 11) >> 2) & 1))
+    rows = []
+    for r in range(2 * get(ix + 10)):
+        bs = [get(pg * 256 + ((l0 + 3 * r + k) & 255)) for k in range(3)]
+        if r & 1:
+            bs = bs[::-1]
+        rows.append(bs[0] << 16 | bs[1] << 8 | bs[2])
+    return rows
+
+
+def expected_pixels(get, ix, dtab, shapes):
+    """{(x, line): 1 ink / 2 fill} the converted figure's sprite must show (lines <= 191)."""
+    rows = frame_rows(get, ix)
+    fill = body_fill(rows, 24)
+    occ = occluded(get, ix, dtab, shapes)
+    col, fy = get(ix + 0), get(ix + 1)
+    out = {}
+    for r, (ink, fl) in enumerate(zip(rows, fill)):
+        line = 2 * fy + r
+        if line > 191:
+            break
+        for k in range(24):
+            m = 1 << (23 - k)
+            p = (col * 8 + k, line)
+            if p in occ:
+                continue
+            if ink & m:
+                out[p] = 1
+            elif fl & m:
+                out[p] = 2
+    return out, rows, occ
 
 
 def boot_check(nex, z80, patch=None):
@@ -457,6 +727,7 @@ class World:
     def __init__(self, patch):
         self.ram = bytearray(patch.ram)
         self.ns = NextState(patch)
+        self.dtab, self.shapes = patch.dtab, patch.shape_model
 
     def entries(self):
         out = []
@@ -525,9 +796,17 @@ def _pair(patch, world, get, regs, stop, rom_img, sp_ret=None):
     ns.events = []
     so = _machine(Sim, o, list(regs), NextState(patch))
     sp_ = _machine(Sim, p, list(regs), ns)
-    for sim in (so, sp_):
-        if not _run_to(sim, stop, sp_ret):
-            err.append('did not return')
+    if not _run_to(so, stop, sp_ret):
+        err.append('did not return')
+    if not _run_to(sp_, stop, sp_ret, check=_isafe(sp_, regs, err)):
+        err.append('did not return')
+    for e in ns.events:
+        if e[0] == 'nr' and e[1] not in NR_OK:
+            err.append(('hook writes NextReg', e[1]))
+            break
+        if e[0] == 'port' and e[1] & 0xFF != 0x5B and e[1] != 0x303B:
+            err.append(('hook writes port', e[1]))
+            break
     if ns.nr.get(0x07, 0) != 0:
         err.append(('speed not restored', ns.nr.get(0x07)))
     if any(e[0] == 'in' for e in ns.events):
@@ -535,11 +814,49 @@ def _pair(patch, world, get, regs, stop, rom_img, sp_ret=None):
     return so, o, sp_, p, err
 
 
-def _run_to(sim, stop, sp_ret, limit=400000):
+NEG_CACHE_FRAMES = 400
+NR_OK = {0x07, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39}  # speed + sprite attributes: all a hook may write
+ISAFE = {'checked': 0}
+
+
+def _isafe(sim, regs0, err):
+    """Interrupt safety, checked after every instruction of hook code (alt ROM page): an IM2
+    interrupt may arrive there and the game's handler needs IY (flags at IY+7), IX, I, its interrupt
+    state and room on the stack it lands on. SP must be on the hook stack (0x5C70..0x5D00) or at or
+    above the game's own SP at the hook site."""
+    R = sim.registers
+    iy, ix, i, iff = (regs0[10], regs0[11]), (regs0[8], regs0[9]), regs0[14], regs0[26]
+    sp0 = regs0[12]
+    seen = []
+
+    def chk(pc):
+        if 0x2000 <= pc < 0x4000:
+            ISAFE['checked'] += 1
+            bad = None
+            if (R[10], R[11]) != iy:
+                bad = 'IY changed'
+            elif (R[8], R[9]) != ix:
+                bad = 'IX changed'
+            elif R[14] != i or R[26] != iff:
+                bad = 'I / interrupt state changed'
+            elif not (0x5C70 <= R[12] <= 0x5D00 or R[12] >= sp0 - 4):
+                bad = 'SP outside the hook stack and the game stack'
+            elif TRAP_LO <= pc < TRAP_HI:
+                bad = 'instruction fetch in 0x3D00-0x3DFF (DivMMC automap trap)'
+            if bad and not seen:
+                seen.append(bad)
+                err.append(('interrupt-unsafe hook: %s' % bad, pc))
+    return chk
+
+
+def _run_to(sim, stop, sp_ret, limit=400000, check=None):
     R, ops, mem = sim.registers, sim.opcodes, sim.memory
     n = 0
     while not (R[24] == stop and (sp_ret is None or R[12] == sp_ret)):
-        ops[mem[R[24]]]()
+        pc = R[24]
+        ops[mem[pc]]()
+        if check is not None:
+            check(pc)
         n += 1
         if n > limit:
             return False
@@ -551,7 +868,7 @@ def _scr_xy(a):
     return (o & 31), ((o >> 8) & 7) | ((o >> 2) & 0x38) | ((o >> 5) & 0xC0)
 
 
-def check_plot(get, o, p, world, ix, conv, n_before_ent, dtab=None):
+def check_plot(get, o, p, world, ix, conv, n_before_ent, dtab=None, shapes=None):
     """Screen and sprite checks for one plot call. Returns ([failures], pixels compared)."""
     f = []
     keys = set(o.ov) | set(p.ov)
@@ -576,6 +893,11 @@ def check_plot(get, o, p, world, ix, conv, n_before_ent, dtab=None):
     if extra:
         f.append(('patched screen has bits the original lacks', sorted(extra)[:4]))
     d = {a: o[a] & ~p[a] for a in scr if o[a] & ~p[a]}
+    had = any(e[1] == ix and e[2] == pc0 and e[3] == py0 for e in (n_before_ent or ()))
+    now = world.entries()
+    if had and any(e[1] == ix and e[2] == pc0 and e[3] == py0 for e in now) and \
+            not (conv and (o[ix + 0], o[ix + 1]) == (pc0, py0)):
+        f.append(('old sprite still shown after the plot', pc0, py0))
     if not conv:
         if d:
             f.append(('passthrough plot differs on screen', sorted(d)[:4]))
@@ -593,37 +915,44 @@ def check_plot(get, o, p, world, ix, conv, n_before_ent, dtab=None):
         f.append(('no sprite entry for the converted plot', col, y))
         return f, 0
     i = ents[0][0]
-    lit = set()
+    shown = {}
     for k in range(4):
         px = world.ns.sprite_pixels(4 * i + k)
         if px is None:
             f.append(('sprite hidden', 4 * i + k))
             continue
-        lit |= {(x, yy) for x, yy, v in px if v and 0 <= x < 256 and 0 <= yy < 192}   # clip window
-    box = lambda x, yy: col * 8 <= x < col * 8 + 24 and 2 * y <= yy < 2 * y + rows
+        for x, yy, v in px:
+            if v and 0 <= x < 256 and 0 <= yy < 192:          # clip window
+                shown[(x, yy)] = v
+    exp, frows, occ = expected_pixels(lambda a: o[a], ix, dtab if dtab is not None else world.dtab,
+                                      world.shapes if shapes is None else shapes)
+    # the frame model against the original: its ink is on the original screen, and everything
+    # the original drew (bits missing from the patched screen) belongs to it
+    ink = {(col * 8 + k, 2 * y + r) for r, v in enumerate(frows) if 2 * y + r <= 191
+           for k in range(24) if v >> (23 - k) & 1}
+    for x, yy in ink:
+        a = 0x4000 | ((yy & 0xC0) << 5) | ((yy & 7) << 8) | ((yy & 0x38) << 2) | (x >> 3)
+        if not o[a] & (128 >> (x & 7)):
+            f.append(('frame model pixel not on the original screen', x, yy))
+            break
     want = set()
     for a, bits in d.items():
         cx, ly = _scr_xy(a)
         for b in range(8):
             if bits & (128 >> b):
                 want.add((cx * 8 + b, ly))
-    if any(not box(x, yy) for x, yy in want):
-        f.append(('missing bits outside the new frame', sorted(want)[:3]))
-    occ = occluded(lambda a: o[a], lambda a: p[a], ix, dtab) if dtab is not None else set()
-    if (want - occ) - lit:
-        f.append(('pixels drawn by the original but not by the sprite', len((want - occ) - lit)))
-    if lit & occ:
-        f.append(('sprite shows pixels of scenery it is behind', len(lit & occ)))
-    world.occluded = getattr(world, 'occluded', 0) + len(occ)    # scenery pixels in front of it
-    for x, yy in lit:
-        if not box(x, yy):
-            f.append(('sprite pixel outside the frame', x, yy))
-            break
-        a = 0x4000 | ((yy & 0xC0) << 5) | ((yy & 7) << 8) | ((yy & 0x38) << 2) | (x >> 3)
-        if not o[a] & (128 >> (x & 7)):
-            f.append(('sprite pixel not in the original plot', x, yy))
-            break
-    return f, len(lit)
+    if want - ink:
+        f.append(('original drew bits outside the frame model', sorted(want - ink)[:3]))
+    if shown != exp:
+        behind = [q for q in shown if q in occ]
+        if behind:
+            f.append(('sprite shows pixels of scenery it is behind', len(behind)))
+        bad = [q for q in set(shown) | set(exp) if shown.get(q) != exp.get(q) and q not in occ]
+        if bad:
+            f.append(('sprite pixels differ from the model (ink 1 / fill 2)', len(bad), sorted(bad)[:3]))
+    world.occluded = getattr(world, 'occluded', 0) + len([q for q in occ if q in ink])
+    world.filled = getattr(world, 'filled', 0) + sum(1 for v in exp.values() if v == 2)
+    return f, len(shown)
 
 
 def _visible_ok(world):
@@ -691,6 +1020,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, dtab=None):
                 states.append((list(R), [bytes(b) for b in real.banks], real.o7ffd, bytes(world.ram),
                                [list(a) for a in world.ns.attr], bytes(world.ns.pat)))
             nb = world.entries()
+            pw0 = world.ns.pat_writes
             full0 = world.ram[V_CNT - RAM_LO] >= NENT
             so, o, sp_, p, err = _pair(patch, world, get, R, ret, rom_img, (sp0 + 2) & 0xFFFF)
             for e in err:
@@ -714,6 +1044,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, dtab=None):
             if conv:
                 c['converted'] += 1
                 c['sprite pixels compared'] += npx
+                if world.ns.pat_writes == pw0:
+                    c['converted, image reused from a pattern slot'] += 1
             elif ix in CONV:
                 c['figure plot on the ULA (edge/clip path or table full)'] += 1
                 if full0 and world.ram[V_FREED - RAM_LO] >= NENT:
@@ -808,6 +1140,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, dtab=None):
             c['%d reached other than from %d!' % (b, a)] += 1
     c['frames'] = st['frame']
     c['occluded pixels'] = getattr(world, 'occluded', 0)
+    c['fill pixels'] = getattr(world, 'filled', 0)
     c.update(ghost)
     return (c, dict(ex), states) if collect else (c, dict(ex))
 
@@ -827,6 +1160,8 @@ def _restore(patch, saved_ram, attrs, pat):
     nibble table) from the patch itself (so a broken patch is tested with its own tables)."""
     w = World(patch)
     w.ram[:RUN_HI - RAM_LO] = saved_ram[:RUN_HI - RAM_LO]
+    if len(saved_ram) >= RAM_HI - RAM_LO:       # pattern-slot keys (states captured by this layout)
+        w.ram[SLOTK - RAM_LO:SLOTK - RAM_LO + 4 * NSLOT] = saved_ram[SLOTK - RAM_LO:SLOTK - RAM_LO + 4 * NSLOT]
     w.ns.attr = [list(a) for a in attrs]
     w.ns.pat = bytearray(pat)
     return w
@@ -886,7 +1221,10 @@ def _with_entry(ram, attrs, ix, col, y, pairs):
     return bytes(r), a2
 
 
-def unit_tests(patch, states, neg=None, dtab=None, neg_depth=None, neg_restore=None):
+LAST_WORLD = [None]
+
+
+def unit_tests(patch, states, neg=None, dtab=None, neg_depth=None, neg_restore=None, neg_iy=None):
     from .rainbow import _BankMem
     from .build import rom48
     rom = rom48()
@@ -909,20 +1247,24 @@ def unit_tests(patch, states, neg=None, dtab=None, neg_depth=None, neg_restore=N
         sp0 = regs[12]
         ret = get(sp0) | get((sp0 + 1) & 0xFFFF) << 8
         w = _restore(pt, ram, attrs, pat)
+        if pt is not patch:                         # a broken patch builds with its own tables:
+            w.ram[SLOTK - RAM_LO:SLOTK - RAM_LO + 4 * NSLOT] = pt.ram[SLOTK - RAM_LO:SLOTK - RAM_LO + 4 * NSLOT]
+        LAST_WORLD[0] = w                           # no images cached by the good patch
         nb = w.entries()
         so, o, sp_, p, err = _pair(pt, w, get, regs, ret, pt.rom_image(), (sp0 + 2) & 0xFFFF)
         f = list(err)
         diff = [i for i in CMP if so.registers[i] != sp_.registers[i]]
         if diff:
             f.append(('registers differ', diff))
-        cf, npx = check_plot(get, o, p, w, ix, p.conv, nb, dtab)
+        cf, npx = check_plot(get, o, p, w, ix, p.conv, nb, dtab, patch.shape_model)
         c['occluded'] += getattr(w, 'occluded', 0)
         f += cf
         vb = _visible_ok(w)
         if vb:
             f.append(('visibility', vb[:2]))
         main = _main_visited(get, regs, ret, (sp0 + 2) & 0xFFFF)
-        full = ram[V_CNT - RAM_LO] >= NENT
+        own = any(e[1] == ix and e[2] == get(ix + 0) and e[3] == get(ix + 1) for e in nb)
+        full = ram[V_CNT - RAM_LO] >= NENT and not own
         step = (get(ix + 4) - get(ix + 0)) & 0xFF
         dy = abs(get(ix + 5) - get(ix + 1))
         want = ix in CONV and main and not full and get(ix + 7) < 32 and step in (0, 1, 0xFF) \
@@ -933,6 +1275,8 @@ def unit_tests(patch, states, neg=None, dtab=None, neg_depth=None, neg_restore=N
 
     for si, (R, banks, o7, ram, attrs, pat) in enumerate(states):
         ix = R[8] * 256 + R[9]
+        if len(ram) < RAM_HI - RAM_LO:                  # state captured before the slot table
+            ram = bytes(ram) + patch.ram[len(ram):]
         # 1. sweep the new position / height (edges, window, off-screen), the column step (old
         #    column = new - step: -1/0/+1 are the game's, 2 must stay on the ULA) and the row step
         #    (old y = new - dy: |dy| < row pairs is the game's, dy = row pairs must stay on the ULA)
@@ -966,6 +1310,31 @@ def unit_tests(patch, states, neg=None, dtab=None, neg_depth=None, neg_restore=N
             fail('table full: converted', (si,))
         for k in f:
             fail('full: %s' % (k[0],), (si,) + tuple(k[1:]))
+        # 2b. pattern slots: 11 entries in use show slots 0-10, every slot holds another image, the
+        #     round robin points at slot 0: the plot must take slot 11 (never a shown slot)
+        r2 = bytearray(ram)
+        for i in range(NENT):
+            r2[ENT - RAM_LO + 8 * i:ENT - RAM_LO + 8 * i + 8] = bytes(8)
+        for i in range(NENT - 1):
+            r2[ENT - RAM_LO + 8 * i:ENT - RAM_LO + 8 * i + 8] = bytes([1, 0x34, 0x12, 200, 200, i, 20, 0])
+        r2[V_CNT - RAM_LO] = NENT - 1
+        r2[V_FREED - RAM_LO] = 0xFF
+        r2[V_CLK - RAM_LO] = NSLOT - 1
+        r2[SLOTK - RAM_LO:SLOTK - RAM_LO + 4 * NSLOT] = bytes(x for k in range(NSLOT) for x in (0xA0, k, 2, 0))
+        a2 = [list(a) for a in attrs]
+        for s_ in range(4 * NENT):
+            a2[s_][3] = (a2[s_][3] | 0x80) if s_ < 4 * (NENT - 1) else (a2[s_][3] & 0x7F)
+        bm = _BankMem(banks, o7, rom)
+        ed = {ix + 0: bm[ix + 4], ix + 1: bm[ix + 5]}       # no column / row step: converted
+        f, conv, _ = one(patch, R, banks, o7, bytes(r2), a2, pat, ed, 'slots')
+        c['slot-full cases'] += 1
+        c['slot-full cases converted'] += bool(conv)    # (one() checks conv against the guard)
+        for k in f:
+            fail('slots: %s' % (k[0],), (si,) + tuple(k[1:]))
+        if conv:
+            used = [e for e in LAST_WORLD[0].entries() if e[1] == ix]
+            if not used or used[0][4] != NENT - 1:
+                fail('slots full: wrong slot', (si, used[:1]))
         # 3. a descriptor outside the list (explosion slot 63574 with this descriptor's bytes)
         bm = _BankMem(banks, o7, rom)
         ed = {63574 + k: bm[ix + k] for k in range(20)}
@@ -1040,6 +1409,11 @@ def unit_tests(patch, states, neg=None, dtab=None, neg_depth=None, neg_restore=N
                 f7, _, _ = one(neg_restore, R, banks, o7, ram7, attrs7, pat, ink7, 'negr')
                 if any('not restored' in str(k[0]) for k in f7):
                     c['restore negative control detected'] += 1
+        # 8. interrupt safety: the broken e_ent (LD IY) must be caught by the per-instruction check
+        if neg_iy is not None and si == 0:
+            f8, _, _ = one(neg_iy, R, banks, o7, ram, attrs, pat, None, 'negi')
+            if any('interrupt-unsafe' in str(k) for k in f8):
+                c['interrupt negative control detected'] += 1
     return c, dict(ex)
 
 
@@ -1058,7 +1432,8 @@ def init_tests(patch, z80, neg=None, n=16, seed=1):
     rnd = random.Random(seed)
     c = collections.Counter()
     ex = []
-    loose = set(range(V_SP_LO, V_SP_LO + 2)) | set(range(STK_LO, RUN_HI)) | set(range(SCRATCH_LO, RAM_HI))
+    # 0x5E00-0x5E1F: the front end's prompt data, never used by the hooks; scratch: written first
+    loose = set(range(V_SP_LO, V_SP_LO + 2)) | set(range(STK_LO, RUN_HI)) | set(range(F_ATT, SLOTK))
 
     def run(pt, regs):
         w = World(pt)
@@ -1110,16 +1485,70 @@ def negative_depth_patch():
 def negative_restore_patch():
     """Broken copy: svrest returns at once (scenery cut by the erase is not restored): caught."""
     pt = CommandoPatch()
-    off = int(load_profile()['hooks']['syms']['svrest'], 16) - 0x2000
-    page = bytearray(pt.page)
-    page[off] = 0xC9
-    pt.page = bytes(page)
-    return pt
+    return CommandoPatch(edit={pt.syms['svrest']: b'\xC9'})
+
+
+def negative_init_patch():
+    """Broken copy: e_init does not empty the pattern-slot keys (stale loader bytes would be taken
+    for cached images): caught by init_tests (hook RAM differs from the start state)."""
+    pt = CommandoPatch()
+    a = pt.syms['e_init'] - 0x2000
+    loop = bytes([0x21, SLOTK & 255, SLOTK >> 8, 0x06, 4 * NSLOT, 0x77, 0x2C, 0x10, 0xFC])
+    k = pt.page.index(loop, a, a + 64)
+    return CommandoPatch(edit={0x2000 + k + 5: b'\x00'})
+
+
+def negative_cache_patch():
+    """Broken copy: the pattern-slot lookup ignores the frame offset (any image of the same page and
+    height is reused): caught by the RZX verify (sprite pixels differ from the model)."""
+    pt = CommandoPatch()
+    a = pt.syms['show.lk'] + 10
+    if pt.page[a - 0x2000] != 0xBE:
+        raise ValueError('show.lk + 10 is not CP (HL)')
+    return CommandoPatch(edit={a: b'\xBF'})
+
+
+def static_checks(patch):
+    """Disassemble every hook block: no instruction may write IX or IY (the game's interrupt
+    handler needs them at any instruction). Returns [(address, instruction)] of offenders and the
+    number of instructions read."""
+    import re
+    from types import SimpleNamespace
+    from skoolkit.disassembler import Disassembler
+    mem = [0] * 65536
+    img = patch.rom_image()
+    mem[0:0x4000] = list(img)
+    cfg = SimpleNamespace(defb_size=8, defm_size=65, defw_size=1, handle_rst=False, wrap=False,
+                          opcodes='', asm_hex=False, asm_lower=False,
+                          imaker=lambda a, o, b: SimpleNamespace(address=a, operation=o, bytes=b))
+    d = Disassembler(mem, cfg)
+    bad, n = [], 0
+    wr = re.compile(r'^(LD I[XY][HL]?,|POP I[XY]|INC I[XY][HL]?$|DEC I[XY][HL]?$|ADD I[XY],|EX \(SP\),I[XY])')
+    for lo, hi in ((ROM_ORG, ROM_ORG + len(patch.rom_code)), (ROM2_ORG, ROM2_ORG + len(patch.rom2_code)),
+                   (FILL_LO, FILL_LO + len(patch.fill_code)),
+                   (SVR_LO, SVR_LO + len(patch.svr_code))):
+        if lo < TRAP_HI and hi > TRAP_LO:
+            bad.append((lo, 'hook code in 0x3D00-0x3DFF (DivMMC automap trap)'))
+        a = lo
+        while a < hi:
+            i = d.disassemble(a, a + 1, 'n')[0]
+            n += 1
+            if wr.match(i.operation.upper()):
+                bad.append((a, i.operation))
+            a += len(i.bytes)
+    return bad, n
+
+
+def negative_iy_patch():
+    """Broken copy: e_ent starts with LD IY,0x5C00 instead of LD (V_SP),SP - an interrupt there
+    would run the game's handler with the wrong IY. The interrupt-safety check must catch it."""
+    pt = CommandoPatch()
+    return CommandoPatch(edit={pt.syms['e_ent']: bytes.fromhex('FD21005C')})
 
 
 def negative_patch():
-    """Broken copy: nibble table with ink and transparent swapped (pixel check must fail)."""
-    return CommandoPatch(swap_nibt=True)
+    """Broken copy: pixel-pair tables with ink and fill exchanged (pixel check must fail)."""
+    return CommandoPatch(swap_pairs=True)
 
 
 def auto(a, z80, name, out, say):
@@ -1155,6 +1584,11 @@ def auto(a, z80, name, out, say):
     say('Sprites   : %s  %s  boot %s' % (os.path.basename(spr), md5(spr),
                                           'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200]))
     ok = not bad and not bad2 and ok_front
+    sbad, sn = static_checks(patch)
+    ok = ok and not sbad
+    say('Static    : %d hook instructions disassembled; IX/IY writes, code in 0x3D00-0x3DFF (DivMMC trap): %s -> %s' % (
+        sn, sbad or 'none', 'PASS' if not sbad else 'FAIL'))
+    ISAFE['checked'] = 0
     states = []
     dtab = None
     for r in list(a.rzx or [])[:1]:
@@ -1162,12 +1596,15 @@ def auto(a, z80, name, out, say):
         from skoolkit.snapshot import Snapshot as SS
         s0 = [b.obj for b in parse_rzx(r) if isinstance(b.obj, SS)][0]
         ram = s0.ram(-1)
-        dtab = derive_table([ram[k:k + 0x4000] for k in range(0, 0x20000, 0x4000)], s0.out7ffd)
-        dok = dtab == patch.dtab
+        bks = [ram[k:k + 0x4000] for k in range(0, 0x20000, 0x4000)]
+        dt0 = derive_table(bks, s0.out7ffd)
+        dtab, blob, model = derive_shapes(bks, s0.out7ffd, dt0)
+        dok = dtab == patch.dtab and blob == patch.shapes
         ok = ok and dok
-        say('Depth     : table re-derived from the game (RZX start state: drawer 37302 + box builder '
-            '60754 per type) %s the profile; %d types with walk boxes -> %s' % (
-                '=' if dok else '!=', sum(dtab[8 * k] & 1 for k in range(NTYPES)), 'PASS' if dok else 'FAIL'))
+        say('Depth     : table + solid shapes re-derived from the game (RZX start state: drawer 37302 + '
+            'box builder 60754 per type and variant) %s the profile; %d types with walk boxes, %d '
+            'shape variants, %d bytes -> %s' % ('=' if dok else '!=', sum(dtab[8 * k] & 1 for k in range(NTYPES)),
+                                              len(model), len(blob), 'PASS' if dok else 'FAIL'))
     for r in list(a.rzx or []):
         from skoolkit.rzxplay import parse_rzx
         from skoolkit.snapshot import Snapshot as SS
@@ -1191,13 +1628,21 @@ def auto(a, z80, name, out, say):
                 'IDENTICAL' if not fails else 'FAILED %s' % fails))
         say('            %d converted plots put back the scenery their erase cut (ULA unchanged by the plot)'
             % c['converted, scenery restored (old image a sprite)'])
-        say('            scenery pixels drawn in front of figures (depth rule): %d' % c['occluded pixels'])
+        say('            figure pixels hidden behind solid scenery (depth rule): %d; yellow body-fill pixels: %d'
+            % (c['occluded pixels'], c['fill pixels']))
         say('            sprite-frames %d, mostly covered/erased on the original %d (scenery/bullets '
             'drawn over a figure)' % (c['sprite-frames'],
                                       c['sprite-frames mostly covered/erased on the original']))
         for k, v in ex.items():
             say('            %s: %s' % (k, str(v)[:200]))
-    ic, iex = init_tests(patch, z80, negative_patch())
+        nc, nex = verify(negative_cache_patch(), r, stop=NEG_CACHE_FRAMES, dtab=dtab)
+        cneg = any('sprite pixels differ' in k for k in nc if k.endswith('!'))
+        ok = ok and cneg and c['converted, image reused from a pattern slot'] > 0
+        say('Cache     : %d of %d converted plots reused an image already in a pattern slot (no upload); '
+            'negative control (lookup ignores the frame) over %d frames %s -> %s' % (
+                c['converted, image reused from a pattern slot'], c['converted'], NEG_CACHE_FRAMES,
+                'detected' if cneg else 'NOT detected', 'PASS' if cneg else 'FAIL'))
+    ic, iex = init_tests(patch, z80, negative_init_patch())
     iok = not ic['init failures!'] and ic['init negative control detected'] == ic['init negative control cases']
     ok = ok and iok
     say('Init      : e_init (25630) from the loader RAM, %d cases, negative control %d/%d -> %s' % (
@@ -1205,14 +1650,14 @@ def auto(a, z80, name, out, say):
         'PASS' if iok else 'FAIL %s' % str(iex)[:300]))
     if states:
         u, uex = unit_tests(patch, states, negative_patch(), dtab, negative_depth_patch(),
-                            negative_restore_patch())
+                            negative_restore_patch(), negative_iy_patch())
         uf = {k: v for k, v in u.items() if k.endswith('!')}
         neg_ok = u['negative control cases'] and u['negative control detected'] == u['negative control cases']
         ok = ok and not uf and neg_ok
         say('Unit      : %d position cases (%d converted, %d passthrough, %d step guard), %d '
-            'table-full, %d other-descriptor, %d page-guard, negative control %d/%d -> %s' % (
+            'table-full, %d slot-full, %d other-descriptor, %d page-guard, negative control %d/%d -> %s' % (
                 u['cases'], u['converted'], u['passthrough'], u['step guard cases'],
-                u['table-full cases'],
+                u['table-full cases'], u['slot-full cases'],
                 u['other-descriptor cases'], u['page-guard cases'], u['negative control detected'],
                 u['negative control cases'], 'PASS' if not uf and neg_ok else 'FAIL %s' % uf))
         dneg = u['depth negative control cases'] and \
@@ -1231,6 +1676,12 @@ def auto(a, z80, name, out, say):
             'back); negative control (restore disabled) %d/%d -> %s' % (
                 u['restore negative control detected'], u['restore negative control cases'],
                 'PASS' if rneg else 'FAIL'))
+        ineg = u['interrupt negative control detected'] == 1
+        ok = ok and ineg
+        say('Interrupt : %d hook instructions checked (IY, IX, I, interrupt state, stack, NextRegs, '
+            'ports, no paging); negative control (LD IY in e_ent) %s -> %s' % (
+                ISAFE['checked'], 'detected' if ineg else 'NOT detected',
+                'PASS' if ineg and not any('interrupt-unsafe' in k for k in uf) else 'FAIL'))
         for k, v in uex.items():
             say('            %s: %s' % (k, str(v)[:200]))
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))

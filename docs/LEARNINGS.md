@@ -4,6 +4,9 @@ Two parts: PART 1 = MACHINE / HARDWARE (Z80, Spectrum 48K/128K, Spectrum Next).
 PART 2 = GAMES / SOFTWARE (game engines, our toolkit, host tools, method).
 General lessons only: facts about one game live in games/<game>.md, hardware results in STATUS.md.
 Each line is settled unless marked otherwise.
+Filled by the "Capture" step in CLAUDE.md (End of every task): every fact a session had to bring
+in from outside the docs, every unexplained rule, every hardware-only failure ends up here or in
+BRIEFING - with its reason.
 
 # PART 1 - MACHINE / HARDWARE
 
@@ -84,6 +87,18 @@ Each line is settled unless marked otherwise.
   the tester film the TV. Overrun detection: clear NextReg $C8 bit 0 at the frame start, read it at
   the frame end (set = an interrupt came during the frame). Hooks entered from a ROM stub inside the
   game's handler must not use the game's stack: jump to the hook page's code and jump back.
+- Never put hook CODE at 0x3D00-0x3DFF in an alt ROM / slot-1 page: an instruction fetch there is
+  the DivMMC (TR-DOS) automap trap and pages DivMMC over 0x0000-0x3FFF - crash on hardware and in
+  CSpect, invisible to the simulator (Commando 541e34e2 crashed at its first figure). Data there is
+  fine (only M1 fetches trap). Check it statically and per instruction.
+- Flicker: never hide a figure's sprites at plot entry and show them at exit (hidden for the
+  whole call, often across the beam). Keep them visible, build the new image in OTHER pattern
+  memory, then rewrite the attributes in one go (Commando).
+- Pattern RAM as a content cache: a figure shows far fewer distinct frames than plots (Commando:
+  ~110 frames in 4,300 plots). Key each pattern slot by (graphics page, frame offset, lines);
+  reuse = attributes only, no build, no upload. Evict only slots no visible sprite references
+  (round robin); never share an image that was masked (depth). Negative control: a lookup that
+  ignores one key field must fail the pixel check.
 
 # PART 2 - GAMES / SOFTWARE
 
@@ -171,6 +186,15 @@ Each line is settled unless marked otherwise.
 - Depth from a game's collision boxes: use the point the game's own walk test checks (log the
   test routine's arguments in the RZX: Commando y + 6), not the figure's feet - with the feet a
   figure stopped above a small box came out in front.
+- Hooks that run with interrupts on must leave everything the game's ISR reads intact at EVERY
+  instruction: IX, IY, I, IFF, and SP on a stack with room. Commando's IM 2 handler tests IY+7
+  flags; a hook that borrowed IY made the handler draw the menu's spinning logo in-game and leave
+  stray dots. Check it statically (disassemble the hook blocks: no IX/IY writes) and per
+  instruction in the simulator, with a negative control (LD IY in a hook).
+- Solid sprites: a body fill from the frame itself (a pixel inside the ink both on its line and
+  in its column) reads as a filled figure; objects that hide a figure need their SOLID shape (the
+  game's draw mask with holes filled), not their ink, or the figure shows through paper-coloured
+  parts.
 
 ## 2.2 Memory proofs (analysis method)
 - Prove free memory with an access scan over the recording, not by zero-check.
@@ -348,12 +372,20 @@ Each line is settled unless marked otherwise.
   Make every counted effect also show up in a negative control.
 - States captured early in an RZX are often a figure's FIRST plot (no sprite yet): force the
   steady state (old image already a sprite) in unit cases that test steady-state behaviour.
+- A 'buffer is non-empty' flag that lets later code skip work must be set on EVERY path that
+  writes the buffer: Commando's lazily cleared depth mask missed the rectangle-shape path (found
+  by the depth unit cases, which the RZX alone had not hit).
 
 ## 2.6 Process / tokens (this sandbox)
 - One CPU; background jobs die when the turn ends: run long jobs sequentially
   (`setsid nohup sh script.sh &`, or chain: `setsid nohup sh -c 'a; b' ... &`) and poll inside the turn. A `( a; b ) &` subshell dies silently.
 - `pkill -f script.py` kills the tool shell when its own command line contains the name (mid-edit:
   re-check files after); use pgrep, then kill by PID.
+- A limit written without its reason gets broken: BRIEFING said alt-ROM hooks end < 0x3D00 next
+  to the font, so a game that never reads the font looked exempt - the real reason (DivMMC
+  automap on fetch) crashed it. Write the WHY with every limit.
+- `pkill -f` / `pgrep -f` patterns match your own shell when its command line contains them -
+  including a directory name like `out5` used elsewhere in the same command. Kill by PID only.
 - Name scratch scripts uniquely: a file called dis.py shadows the stdlib and breaks SkoolKit.
 - Do all analyses in one simulator pass; poll background jobs.
 - Never run per-instruction Python work in an analysis hook (a dict scan per opcode turned a
