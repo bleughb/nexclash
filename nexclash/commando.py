@@ -31,7 +31,8 @@ from .rainbow import NextState, _machine, _run, boot_check as _rb_boot_check, me
 ALT_PAGE = 24
 PAGE_LO = 0x2000                            # alt ROM image 1 page we own (the game never executes ROM
                                             # and reads only page 0x00 - RZX scan)
-ROM_ORG = 0x3800                            # hooks (+ register block after them, below 0x4000)
+ROM_ORG, ROM2_ORG = 0x3600, 0x3F00          # hooks: part 1 (< 0x3D00), part 2 (+ register block, < 0x4000)
+TRAP_LO, TRAP_HI = 0x3D00, 0x3E00            # DivMMC automap on an instruction fetch here: data only
 FILL_LO, SVR_LO = 0x3080, 0x3550            # body fill code; scenery save / restore
 DT, NTYPES = 0x3400, 41                     # depth table (41 x 8, + variant table pointers)
 RAM_LO, RAM_HI = 0x5C00, 0x6100             # hook state (never read/written by the game once it runs)
@@ -108,6 +109,7 @@ class CommandoPatch:
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         self.rom_code = bytes.fromhex(h['rom'])
+        self.rom2_code = bytes.fromhex(h['rom2'])
         self.fill_code = bytes.fromhex(h['fill'])
         self.svr_code = bytes.fromhex(h['svr'])
         self.setup = bytes.fromhex(h['setup'])
@@ -119,14 +121,14 @@ class CommandoPatch:
         self.tail_addr = TAIL_ADDR
         self.max_tail = 80
         self.scratch = bytes(8192)              # (rainbow.NextState wants one; unused here)
-        self.regblock = ROM_ORG + len(self.rom_code)
-        if self.regblock + 20 > 0x4000:
+        self.regblock = ROM2_ORG + len(self.rom2_code)
+        if self.regblock + 20 > 0x4000 or ROM_ORG + len(self.rom_code) > TRAP_LO:
             raise ValueError('ROM hooks too long')
         self.dtab = bytes.fromhex(self.prof['depth_table']) if dtab is None else dtab
         self.shapes = bytes.fromhex(self.prof['shapes'])
         if len(self.dtab) != 8 * NTYPES or SHAPES_LO + len(self.shapes) > FILL_LO:
             raise ValueError('depth table / shape data size')
-        if FILL_LO + len(self.fill_code) > SR_T or SVR_LO + len(self.svr_code) > PT0 or DT + 8 * NTYPES > SVR_LO:
+        if FILL_LO + len(self.fill_code) > SR_T or SVR_LO + len(self.svr_code) > ROM_ORG or DT + 8 * NTYPES > SVR_LO:
             raise ValueError('alt ROM block overlap')
         self.slot1 = (ALT_PAGE, self.regblock)
         self.altrom = (PAGE_LO, self.regblock + 20)
@@ -136,7 +138,7 @@ class CommandoPatch:
         p0, p1 = pair_tables(swap_pairs)
         for a, data in ((SHAPES_LO, self.shapes), (FILL_LO, self.fill_code), (SR_T, sr), (SL_T, sl),
                         (DT, self.dtab), (SVR_LO, self.svr_code), (PT0, p0), (PT1, p1),
-                        (ROM_ORG, self.rom_code)):
+                        (ROM_ORG, self.rom_code), (ROM2_ORG, self.rom2_code)):
             page[a - 0x2000:a - 0x2000 + len(data)] = data
         for a, data in (edit or {}).items():
             page[a - 0x2000:a - 0x2000 + len(data)] = data
@@ -412,7 +414,7 @@ def derive_table(banks, o7ffd, y=80):
 # Alt ROM image 1, page 0x2000-0x3FFF (the game never executes ROM and reads only page 0x00):
 SHAPES_LO = 0x2000                               # per-type variant tables + shape bitmaps
 SR_T, SL_T = 0x3200, 0x3300                      # smear right / left (body fill)
-PT0, PT1 = 0x3600, 0x3700                        # (ink nibble, fill nibble) -> 2 bytes of 4-bit pixels
+PT0, PT1 = 0x3D00, 0x3E00                        # (ink nibble, fill nibble) -> 2 bytes of 4-bit pixels
 SHAPES_HI = SR_T
 
 
@@ -839,6 +841,8 @@ def _isafe(sim, regs0, err):
                 bad = 'I / interrupt state changed'
             elif not (0x5C70 <= R[12] <= 0x5D00 or R[12] >= sp0 - 4):
                 bad = 'SP outside the hook stack and the game stack'
+            elif TRAP_LO <= pc < TRAP_HI:
+                bad = 'instruction fetch in 0x3D00-0x3DFF (DivMMC automap trap)'
             if bad and not seen:
                 seen.append(bad)
                 err.append(('interrupt-unsafe hook: %s' % bad, pc))
@@ -1520,8 +1524,11 @@ def static_checks(patch):
     d = Disassembler(mem, cfg)
     bad, n = [], 0
     wr = re.compile(r'^(LD I[XY][HL]?,|POP I[XY]|INC I[XY][HL]?$|DEC I[XY][HL]?$|ADD I[XY],|EX \(SP\),I[XY])')
-    for lo, hi in ((ROM_ORG, ROM_ORG + len(patch.rom_code)), (FILL_LO, FILL_LO + len(patch.fill_code)),
+    for lo, hi in ((ROM_ORG, ROM_ORG + len(patch.rom_code)), (ROM2_ORG, ROM2_ORG + len(patch.rom2_code)),
+                   (FILL_LO, FILL_LO + len(patch.fill_code)),
                    (SVR_LO, SVR_LO + len(patch.svr_code))):
+        if lo < TRAP_HI and hi > TRAP_LO:
+            bad.append((lo, 'hook code in 0x3D00-0x3DFF (DivMMC automap trap)'))
         a = lo
         while a < hi:
             i = d.disassemble(a, a + 1, 'n')[0]
@@ -1579,7 +1586,7 @@ def auto(a, z80, name, out, say):
     ok = not bad and not bad2 and ok_front
     sbad, sn = static_checks(patch)
     ok = ok and not sbad
-    say('Static    : %d hook instructions disassembled, IX/IY writes: %s -> %s' % (
+    say('Static    : %d hook instructions disassembled; IX/IY writes, code in 0x3D00-0x3DFF (DivMMC trap): %s -> %s' % (
         sn, sbad or 'none', 'PASS' if not sbad else 'FAIL'))
     ISAFE['checked'] = 0
     states = []

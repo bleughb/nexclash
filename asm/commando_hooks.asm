@@ -103,10 +103,11 @@ DT      EQU 0x3400              ; depth table (41 x 8; Python): +0 bit 0 walk bo
                                 ; +6/+7 variant table (8 x: shape pointer, first line offset)
 SR_T    EQU 0x3200              ; smear right / left (fill)
 SL_T    EQU 0x3300
-PT0     EQU 0x3600              ; (ink nibble << 4 | fill nibble) -> 2 bytes of 4-bit pixels
-PT1     EQU 0x3700
+PT0     EQU 0x3D00              ; (ink nibble << 4 | fill nibble) -> 2 bytes of 4-bit pixels
+PT1     EQU 0x3E00                  ; (DATA only in 0x3D00-0x3DFF: an instruction fetch there is
+                                    ; the DivMMC/TR-DOS automap trap - never put code there)
 
-        ORG 0x3800
+        ORG 0x3600
 ; ---- 39120: every plot. Note the object's current sprite entry; save the scenery it will cut ----
 e_ent:  ld (V_SP),sp
         ld sp,STK
@@ -755,101 +756,6 @@ show:   ld a,(ix+1)                 ; frame starts below line 191 (walked off th
         jr c,.at
         ret
 
-; mclr: MASK = 0 (B, C, D, E kept)
-mclr:   ld hl,MASK
-        xor a
-.l:     ld (hl),a
-        inc l
-        ld (hl),a
-        inc l
-        ld (hl),a
-        inc l
-        ld (hl),a
-        inc l
-        ld (hl),a
-        inc l
-        ld (hl),a
-        inc l
-        ld (hl),a
-        inc l
-        ld (hl),a
-        inc l
-        ld a,l
-        cp low MASK+96
-        ld a,0
-        jr c,.l
-        ret
-
-; alloc: C = the next pattern slot (round robin) that no entry in use shows. At most NENT of
-; NSLOT are in use, so one is always found.
-alloc:  ld a,(V_CLK)
-.try:   inc a
-        and NSLOT-1
-        ld c,a
-        ld hl,ENT+5
-        ld b,NENT
-.chk:   ld a,(hl)
-        cp c
-        jr nz,.nx
-        ld a,l
-        sub 5
-        ld e,a
-        ld d,h
-        ld a,(de)
-        or a
-        jr nz,.busy
-.nx:    ld a,l
-        add a,8
-        ld l,a
-        djnz .chk
-        ld a,c
-        ld (V_CLK),a
-        ret
-.busy:  ld a,c
-        jr .try
-
-; A = palette offset << 4: player black (0), POW the ink painted under its centre if red/magenta
-; (else red), enemies blue (1)
-colour: ld a,ixh
-        cp 0xFD
-        jr z,.pow
-        ld a,ixl
-        cp 0xDA
-        ld a,0x00
-        ret z
-        ld a,0x10
-        ret
-.pow:   ld a,(ix+1)                 ; centre line = 2y + rows/2 -> cell row = line / 8
-        add a,a
-        ld l,a
-        ld a,(V_ROW)
-        srl a
-        add a,l
-        and 0xF8
-        ld l,a
-        ld h,0
-        add hl,hl
-        add hl,hl                   ; row * 32
-        ld a,(ix+0)
-        inc a
-        add a,l
-        ld l,a
-        ld a,h
-        adc a,0x58
-        ld h,a
-        ld a,(hl)
-        and 7
-        cp 2
-        jr z,.ok
-        cp 3
-        jr z,.ok
-        ld a,2
-.ok:    rlca
-        rlca
-        rlca
-        rlca
-        ret
-
 ; upload 16 rows (D = first row) of byte group C (0: bytes 0,1; 2: byte 2 + 8 clear pixels)
 pat:    push de
         push bc
@@ -1225,6 +1131,106 @@ occl:   xor a                       ; MASK is cleared when the first object over
         ld l,(hl)
         jp .obj
 
+rom_end:
+        ASSERT rom_end <= 0x3D00        ; DivMMC automap trap at 0x3D00-0x3DFF (fetch)
+
+; ---- main hooks, part 2 (called routines only; after the pair tables) ----
+        ORG 0x3F00
+; mclr: MASK = 0 (B, C, D, E kept)
+mclr:   ld hl,MASK
+        xor a
+.l:     ld (hl),a
+        inc l
+        ld (hl),a
+        inc l
+        ld (hl),a
+        inc l
+        ld (hl),a
+        inc l
+        ld (hl),a
+        inc l
+        ld (hl),a
+        inc l
+        ld (hl),a
+        inc l
+        ld (hl),a
+        inc l
+        ld a,l
+        cp low MASK+96
+        ld a,0
+        jr c,.l
+        ret
+
+; alloc: C = the next pattern slot (round robin) that no entry in use shows. At most NENT of
+; NSLOT are in use, so one is always found.
+alloc:  ld a,(V_CLK)
+.try:   inc a
+        and NSLOT-1
+        ld c,a
+        ld hl,ENT+5
+        ld b,NENT
+.chk:   ld a,(hl)
+        cp c
+        jr nz,.nx
+        ld a,l
+        sub 5
+        ld e,a
+        ld d,h
+        ld a,(de)
+        or a
+        jr nz,.busy
+.nx:    ld a,l
+        add a,8
+        ld l,a
+        djnz .chk
+        ld a,c
+        ld (V_CLK),a
+        ret
+.busy:  ld a,c
+        jr .try
+
+; A = palette offset << 4: player black (0), POW the ink painted under its centre if red/magenta
+; (else red), enemies blue (1)
+colour: ld a,ixh
+        cp 0xFD
+        jr z,.pow
+        ld a,ixl
+        cp 0xDA
+        ld a,0x00
+        ret z
+        ld a,0x10
+        ret
+.pow:   ld a,(ix+1)                 ; centre line = 2y + rows/2 -> cell row = line / 8
+        add a,a
+        ld l,a
+        ld a,(V_ROW)
+        srl a
+        add a,l
+        and 0xF8
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl                   ; row * 32
+        ld a,(ix+0)
+        inc a
+        add a,l
+        ld l,a
+        ld a,h
+        adc a,0x58
+        ld h,a
+        ld a,(hl)
+        and 7
+        cp 2
+        jr z,.ok
+        cp 3
+        jr z,.ok
+        ld a,2
+.ok:    rlca
+        rlca
+        rlca
+        rlca
+        ret
+
 scr:    ld l,a                      ; HL = screen address of line A (0..191), column C
         and 7
         or 0x40
@@ -1244,8 +1250,8 @@ scr:    ld l,a                      ; HL = screen address of line A (0..191), co
         ld l,a
         ret
 
-rom_end:
-        ASSERT rom_end <= 0x3FEC        ; + 20-byte register block
+rom2_end:
+        ASSERT rom2_end <= 0x3FEC       ; + 20-byte register block
 
 ; --- body fill (alt ROM 0x3080, after the shapes) -------------------------------------------
         ORG 0x3080
@@ -1558,7 +1564,7 @@ down:   inc h
         ld h,a
         ret
 svr_end:
-        ASSERT svr_end <= 0x3600
+        ASSERT svr_end <= 0x3600        ; main hooks from 0x3600
 
 ; --- setup routine (stub bank, 0xD000): palette, transparency, hide all, clip, sprites on ----
         ORG 0xD000
@@ -1651,5 +1657,6 @@ ENTRY1  EQU 25089
         SAVEBIN "commando_front.bin",0x5D00,front_end-0x5D00
         SAVEBIN "commando_fill.bin",0x3080,fill_end-0x3080
         SAVEBIN "commando_svr.bin",0x3550,svr_end-0x3550
-        SAVEBIN "commando_rom.bin",0x3800,rom_end-0x3800
+        SAVEBIN "commando_rom.bin",0x3600,rom_end-0x3600
+        SAVEBIN "commando_rom2.bin",0x3F00,rom2_end-0x3F00
         SAVEBIN "commando_setup.bin",0xD000,pal-0xD000

@@ -11,7 +11,7 @@ stripped by `auto`).
 | Output | MD5 | Status |
 |---|---|---|
 | commando.nex (plain, tail 0x6D00, starts in the front end) | a206f950c12f58a8e7f26b366f5a2480 | boot sim OK, front end PASS |
-| commando_sprites.nex (altrom + bank-5 state) | 541e34e2c14a4be5000ad9ed0636b94d | solid figures + solid objects + pattern cache: RZX IDENTICAL, all tests PASS; hardware untested |
+| commando_sprites.nex (altrom + bank-5 state) | d601385ee4aeb7f3d7c0771bdc27df6b | solid figures + solid objects + pattern cache: RZX IDENTICAL, all tests PASS; runs on hardware (Dean) |
 
 Hardware 2026-10-12, first builds (5642e4b4 plain / f22a9452 sprites, started in the 128K BASIC
 loader): a key at the loading screen -> plain: minor corruption, screen stays (no game); sprites:
@@ -27,6 +27,12 @@ whole call); (2) svsave/svrest and occl borrowed IY - the game's IM 2 handler (6
 (screen 0x482D) and other flag-driven code that leaves dots. Fixed in 541e34e2 (below): no hide
 at entry, IX/IY never written by a hook (static check + per-instruction check), solid figures and
 solid objects.
+
+Hardware + CSpect 2026-10-12, 541e34e2: crash when the first figure is drawn (the game screen is
+up). Cause: hook code at 0x3D00-0x3DFF (pat/pix/occl) - an instruction fetch there is the
+DivMMC/TR-DOS automap trap, which pages DivMMC over 0x0000-0x3FFF (the simulator does not model
+DivMMC; all earlier builds kept code below 0x3D00). d601385e: code at 0x3600-0x3CDB and
+0x3F00-0x3F96, only the pixel-pair tables in 0x3D00-0x3EFF; runs on hardware (Dean).
 
 ## Dean's decisions (2026-10-12)
 - One-stop fix after the depth build: solid (non-transparent) figure sprites with a yellow body
@@ -86,8 +92,10 @@ solid objects.
 ## Patch design
 - Alt ROM image 1, whole 0x2000-0x3FFF (the game reads only ROM page 0x00 and never runs ROM
   code): shapes 0x2000, body fill (build/fm) 0x3080, smear tables SR/SL 0x3200/0x3300, depth
-  table 0x3400, scenery save/restore 0x3550, pixel-pair tables PT0/PT1 0x3600/0x3700, main hooks
-  0x3800-0x3F72. State in bank-5 RAM 0x5C00-0x60FF: vars + 12-entry table + hook stack
+  table 0x3400, scenery save/restore 0x3550, main hooks 0x3600-0x3CDB, pixel-pair tables PT0/PT1
+  0x3D00/0x3E00 (data only: 0x3D00-0x3DFF is the DivMMC automap trap for instruction fetches),
+  main hooks part 2 (called routines) 0x3F00-0x3F96 + register block. `auto` Static and the
+  per-instruction check fail on any code in 0x3D00-0x3DFF. State in bank-5 RAM 0x5C00-0x60FF: vars + 12-entry table + hook stack
   (0x5C00-0x5CFF), zero page 0x5D00, scratch 0x5E20-0x607F (MASK / INKB / FILB share the low
   byte), pattern-slot keys 0x6080-0x60FF (access scan: the game never touches 0x5C00-0x61BF; its
   stack is at 0x61C0+). No paging in the hooks: interrupts are ON at every site and the game's ISR
@@ -176,7 +184,7 @@ erase cut (ULA unchanged, checked per call); 66,170 scenery pixels drawn in fron
 depth unit 315 cases (150 behind), negative control (no walk boxes) 150/150; restore negative
 control 6/6; depth table re-derived from the game = the profile.
 
-Solid build (541e34e2): same RZX IDENTICAL, 676,249 sprite pixels = the model (ink / yellow
+Solid build (541e34e2 / d601385e, same verification): same RZX IDENTICAL, 676,249 sprite pixels = the model (ink / yellow
 fill / hidden by solid shapes; 31,132 hidden, 136,956 fill); 2,764 of 4,332 converted plots reuse
 a pattern slot (negative control caught); static IX/IY check + 47.1M hook instructions
 interrupt-safe (negative control caught); unit, slot-full, depth, restore, init PASS with their
@@ -193,7 +201,7 @@ negative controls. Report: auto's commando_report.txt.
   sprite-frames in the RZX).
 - With 12 figures already shown a further one would stay on the ULA (never in the RZX: max 6).
 
-## Hardware checklist (commando_sprites.nex 541e34e2)
+## Hardware checklist (commando_sprites.nex d601385e)
 1. Boots to the loading screen; any key -> flashing "INFY LIVES(Y/N)?" top left -> Y or N -> game
    menu (the first builds crashed here). Try both commando.nex and commando_sprites.nex; Y should
    give infinite lives.

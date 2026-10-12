@@ -357,5 +357,10 @@ starts in game from its own SZX: 8 autosave snapshots stripped, 3,279 frames, ar
   control 6/6 (cold slot cache: a broken patch builds with its own tables); depth unit 315 (138
   behind), negative 138/138; restore negative 6/6; e_init 16 cases, negative control (slot keys not
   emptied) 16/16. Hook RAM now 0x5C00-0x60FF: no game access in the RZX (checked per access).
+- d601385e (2026-10-12): 541e34e2 crashed on hardware and in CSpect at the first figure: hook code
+  at 0x3D00-0x3DFF, the DivMMC automap trap. Hooks moved to 0x3600-0x3CDB + 0x3F00-0x3F96, the
+  pair tables to 0x3D00/0x3E00. Static check and per-instruction check now fail on code fetched
+  in 0x3D00-0x3DFF. Same results as above (RZX IDENTICAL, 676,249 sprite pixels, cache 2,764,
+  every test and negative control PASS). Runs on hardware (Dean).
 - Shared code unchanged (commando.py, its .asm and profile only); `selftest.py --smoke` PASSED.
 - Hardware: untested.

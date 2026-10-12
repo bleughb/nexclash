@@ -84,6 +84,10 @@ Each line is settled unless marked otherwise.
   the tester film the TV. Overrun detection: clear NextReg $C8 bit 0 at the frame start, read it at
   the frame end (set = an interrupt came during the frame). Hooks entered from a ROM stub inside the
   game's handler must not use the game's stack: jump to the hook page's code and jump back.
+- Never put hook CODE at 0x3D00-0x3DFF in an alt ROM / slot-1 page: an instruction fetch there is
+  the DivMMC (TR-DOS) automap trap and pages DivMMC over 0x0000-0x3FFF - crash on hardware and in
+  CSpect, invisible to the simulator (Commando 541e34e2 crashed at its first figure). Data there is
+  fine (only M1 fetches trap). Check it statically and per instruction.
 - Flicker: never hide a figure's sprites at plot entry and show them at exit (hidden for the
   whole call, often across the beam). Keep them visible, build the new image in OTHER pattern
   memory, then rewrite the attributes in one go (Commando).
