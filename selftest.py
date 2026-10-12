@@ -19,7 +19,7 @@ Games whose snapshot is missing are skipped and listed. Exit code 0 = all good;
 (the new MD5 is printed: paste it into EXPECTED and VERIFICATION.md).
 Engine games verified against Dean's recordings (RZX_GAMES: Chuckie Egg, Everyone's a Wally,
 Rainbow Islands, Commando) run `auto --no-record --rzx ...` and check both .nex MD5s and the report;
-Rainbow Islands takes ~50 min, Commando ~45 min (--fast skips both).
+Rainbow Islands takes ~50 min, Commando ~55 min (--fast skips both).
 """
 import hashlib, os, shutil, subprocess, sys, tempfile
 

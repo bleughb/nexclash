@@ -1,8 +1,9 @@
 # Briefing - settled facts: Spectrum Next platform and the nexclash toolkit
 
-Everything here was established and verified (differential tests against real recordings;
-outputs byte-identical). Treat it as settled. Re-open a fact only if `selftest.py` fails or Dean
-reports a hardware problem. Read code only in the modules you are about to change.
+Established facts (differential tests against real recordings, boot simulation, hardware tests).
+Treat them as settled unless marked otherwise: "documented" (from the guide / wiki / VHDL, not yet
+tested), "hardware to confirm", or "probable" (inferred from a fix). Re-open a fact only if
+`selftest.py` fails or a hardware test contradicts it. Read code only in the modules you are about to change.
 Facts about one game: games/<game>.md. General lessons: docs/LEARNINGS.md. Status: STATUS.md.
 
 Layers - never mix their facts:
@@ -38,8 +39,8 @@ Layers - never mix their facts:
 - Reference inputs (game snapshots + recordings) live in the maintainers' PRIVATE repo
   bleughb/specnext (reference/), never in this public one; selftest finds them via
   $NEXCLASH_REFERENCE or ../specnext/reference and recognises them by MD5 (INPUTS / RZX_GAMES).
-- `pkill -f PATTERN` also kills the tool's own shell when PATTERN is in its command line: use
-  pgrep, then kill by PID.
+- `pkill -f PATTERN` (and a `kill $(pgrep -f PATTERN)`) also kills the tool's own shell when
+  PATTERN is in its command line: list with `pgrep -fa` in one command, kill the PID in the next.
 - Rebuilding one game with another strategy: `nexclash.py auto G.z80 --no-record --rzx
   OUT/G_auto.rzx --strategy X` gives the same .nex as a full run (recorder deterministic; Dizzy V
   prerun reads the same RZX).
@@ -81,7 +82,7 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 | CPU speed | NextReg $07 = 0 (3.5 MHz) |
 | Video | 50Hz forced (NextReg $05) unless `--allow-60hz` |
 | 48K fidelity | NextReg $03 = 48K timing (written after the legacy paging writes; VHDL: this does NOT stop 7FFD/1FFD decoding - with 48K/128K timing 7FFD decodes as A15=0, A1:0=01, A14 ignored; timing only changes contention); NextReg $08 contention on; 7FFD lock via the tail's own 7FFD write (bit 5) |
-| DivMMC | auto-paging off (NextReg $06 bit 4 cleared by the stub; not $0A). This does NOT make 0x3D00-0x3DFF safe: an instruction fetch there still crashed Commando 541e34e2 on hardware and in CSpect (DivMMC/TR-DOS automap trap) - never put code there; data is fine |
+| DivMMC | auto-paging off (NextReg $06 bit 4 cleared by the stub, z80tonex.build_stub; not $0A). Yet Commando 541e34e2, with hook code at 0x3D00-0x3DFF, crashed at its first figure on hardware and in CSpect, and d601385e (the same code moved out of that range; only tables there) runs. PROBABLE cause: the DivMMC/TR-DOS automap on an instruction fetch at 0x3Dxx is not switched off by $06 bit 4 on current cores (entry points may be set by NextRegs $B8-$BB) - NOT confirmed (C2 #14). Rule regardless: never put code at 0x3D00-0x3DFF; data there worked |
 | Simulator blind spots | The toolkit's simulator does not model: DivMMC (automap traps, see above), an interrupt arriving in the middle of a hook (so the game's ISR never sees hook register/stack state - covered only by the per-instruction interrupt-safety check), the raster (tearing, overruns), real-machine speed (28 MHz wait states, contention), CSpect differences. Anything in this list needs a static/invariant check or a hardware test |
 | MMU | slots 0-7 = NextReg $50-$57, 8K pages; 16K bank n = pages 2n, 2n+1; $FF in slot 0/1 = ROM |
 | Legacy paging | legacy and MMU paging are interchangeable, most recent change wins (guide 3.2.6): an UNLOCKED 7FFD/1FFD write remaps slot 0/1 (ROM) and 6/7 - so the tail maps slot-1 RAM AFTER its own paging writes |
@@ -94,7 +95,7 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 | NMOS quirk | `LD A,I` P/V reads 0 if an interrupt is accepted during it: read twice (`ld a,i / jp pe,ok / ld a,i`) |
 
 ### A2. .nex conversion (nexclash/z80tonex.py) - how every file starts
-- NEX V1.2 header (verified against ped7g NEXLOAD2). Game RAM = banks 5,2,0 (48K).
+- NEX V1.2 header (verified against ped7g NEXLOAD2). Game RAM = banks 5,2,0 (48K); 128K: all 8 banks.
 - Bank 10 = our stub, entered at C000 with SP DFFE. Stub: speed/video/DivMMC/sprites
   off, optional patch setup at 0xD000 (pattern upload from bank 11), then copies a
   small TAIL into game RAM and jumps to it.
@@ -121,7 +122,7 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 |---|---|---|---|
 | printer | trampolines at 0x5B00 (game RAM, must be free); hook code in bank 10 upper page, paged into slot 0 per hook | byte 0x5B00 | DI + page slot 0 in/out |
 | slot1 | everything in RAM page 24 permanently at 0x2000-0x3FFF, code at 0x386E (48K ROM's unused block); needs "game never reads ROM" | NextReg $7F | direct calls, no paging |
-| altrom (DEFAULT since 2026-09-28) | alt ROM image 1 = exact copy of ROM3 (48K) + slot1 hook code + frame table + register block (TID: 0x386E-, all $FF in the 48K ROM, must end < 0x3D00; Dizzy V: 0x3800-; NO code may ever sit in 0x3D00-0x3DFF - DivMMC automap trap on fetch; Commando: data there, code also 0x3F00+); stub fills it in write mode, tail sets $8C=$80; RAM page 24 in bank 12 is only the copy source | NextReg $7F (Dizzy V: none) | direct calls, no paging, no DI; game may read ROM/font; writes ignored; survives 7FFD |
+| altrom (DEFAULT since 2026-09-28) | alt ROM image 1 = exact copy of ROM3 (48K) + slot1 hook code + frame table + register block (TID: 0x386E-, all $FF in the 48K ROM, must end < 0x3D00; Dizzy V: 0x3800-; NO code may ever sit in 0x3D00-0x3DFF - Commando crashed with code there, probable cause DivMMC automap on fetch (A1); Commando: data there, code also 0x3F00+); stub fills it in write mode, tail sets $8C=$80; RAM page 24 in bank 12 is only the copy source | NextReg $7F (Dizzy V: none) | direct calls, no paging, no DI; the game may read every ROM byte the patch leaves as ROM (an engine that replaces more, like Commando's whole 0x2000-0x3FFF, must prove by verify that the game never reads it); writes ignored; survives 7FFD |
 Choice rule (build.choose_tid_strategy, returns strategy/reason/tail): altrom if no recording
 reads 0x386E-0x3CFF AND (printer buffer free -> tail at 0x5B00, else dead stack >= 54 -> tail
 at the low-water mark); else the old rule: printer if 0x5B00 is zero in the snapshot AND never
@@ -183,9 +184,11 @@ sprite .nex -> verify (each RZX) -> report. Refuses instead of guessing.
 | dizzy_patch.py / dizzy1_patch.py | DizzyPatch / Dizzy1Patch | dedicated builders (TID bubbles; XOR engine) |
 | dizzy5.py | identify5, analyse5, patch class, verify5 (+ _converges) | Dizzy V engine (ISR-driven masked sprite); nexclash.py _auto_dizzy5 drives it |
 | dizzy6.py | layout, relocated_copy, Dizzy6Patch(prof, mem, tail, undo_size), first_access(rzx, lo, hi), mirror_selftest | 'tid_mirror' (Dizzy 6): TidPatch slot1 + unpatched plotter/eraser copy at 0x2000 for the mirror calls; nexclash.py _auto_dizzy6 drives it (analysis + first-access pass per RZX, tail in undo buffer, verify, 780-case mirror selftest) |
+| chuckie.py / wally.py / rainbow.py / commando.py | engine modules: patch class, verify, unit tests, auto(...) | dedicated engines, one games/<game>.md each; harnesses stay per engine (C4) |
+| simrun / snapinfo / memscan / isrinfo / drawcost | see C4 | shared analysis commands inspect / scan / isr / cost |
 | loader.py | prerun(rzx, test, out_z80) -> (path, frame, pc) | loader-stage snapshots: replay until test(mem) (engine live), finish LDIR, save state. MUST be present |
 | nextboot.py | boot(nex, pc), check(nex, z80, patch, tail) | simulated Next boot of a built .nex (MMU, legacy paging, $8C alt ROM, NEXTREG); run by every sprite build (`Boot` line; MISMATCH fails selftest) |
-| selftest.py | selftest.py [FOLDER=reference/] [--human] [--no-repro] [--fast] | default (altrom) outputs + `--strategy` reproductions of the old builds (REPRO) + verifications + boot; engine games (Chuckie Egg, Wally, Rainbow, Commando) rebuilt from Dean's RZX and MD5-checked (RZX_GAMES; --fast skips Rainbow ~50 min and Commando ~45 min); games with missing inputs are skipped (exit 2); EXPECTED None = not baselined yet |
+| selftest.py | selftest.py [FOLDER=reference/] [--human] [--no-repro] [--fast] [--smoke] [--tools] | --smoke: Chuckie Egg rebuild (<1 s, per change); --tools: analysis-command golden checks (~30 s); default: tools + asm2profile check + (altrom) outputs + `--strategy` reproductions of the old builds (REPRO) + verifications + boot; engine games (Chuckie Egg, Wally, Rainbow, Commando) rebuilt from Dean's RZX and MD5-checked (RZX_GAMES; --fast skips Rainbow ~50 min and Commando ~55 min); games with missing inputs are skipped (exit 2); EXPECTED None = not baselined yet |
 
 Templates: Z80 sources were tramp.asm/hooks.asm/setup.asm (printer) and patch.asm (slot1);
 to change them rebuild with sjasmplus and regenerate relocations (assemble twice with each
@@ -250,23 +253,28 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    nibble writers matched the keep-mask rule; not re-proven generally).
 5. Wanted: engine registry (each engine registers identify/auto instead of a dispatch block in
    nexclash.py) + behaviour flags in profiles. Do it once reference/ holds every game (selftest).
-6. 128K: plain conversion runs on hardware (Crystal Kingdom Dizzy); sprite engines exist only for
-   Rainbow Islands and Everyone's a Wally (both run on hardware). analyse/recorder are 48K-only.
+6. 128K: plain conversion runs on hardware (Crystal Kingdom Dizzy); 128K sprite engines: Rainbow
+   Islands, Everyone's a Wally and Commando (all run on hardware). analyse/recorder are 48K-only.
    Dizzy V / Magicland / Dizzy 6 sprite builds: hardware untested.
 7. Dizzy V: works in the toolkit and is verified; hardware to confirm: dialogue text (font-page
    fix) and slot-1 surviving a game that writes 7FFD every interrupt (see A1 "7FFD lock").
 
 8. Dizzy 6: mirror path proven only by the unit selftest - wants an RZX through the mirror
    room. evidence.json is not updated for 'tid_mirror' (_auto_dizzy6 skips _learn). Not in
-   selftest (Dizzy6.z80 + try1.rzx not among the reference inputs).
+   selftest yet although Dizzy6.z80 + try1-3.rzx are now in specnext/reference/prince_of_the_yolkfolk:
+   add them to selftest INPUTS / its run list.
    Hardware: first sprite build to test on the Next alongside Magicland.
 9. `altrom` strategy: DONE 2026-09-28 (default; `--strategy printer|slot1|altrom`). Dizzy V
    verified (auto RZX) + boot-simulated -> hardware test next (Dizzy_V_sprites.nex 1f33c467...).
-   Fantasy World / Magicland altrom builds NOT yet baselined (reference files not supplied):
-   run selftest.py with them and record the NEW MD5s. Dizzy 6 stays slot1 (possible later:
+   Fantasy World / Magicland altrom builds baselined 2026-10-11 (selftest EXPECTED, verified.json).
+   Dizzy 6 stays slot1 (possible later:
    hooks in the alt ROM + plotter copy in a slot-0 RAM page, IM2 game - needs the relocation
    moved and a re-verify). Later: tail inside the alt ROM (same address in both images -> no game
    RAM needed; needs a hardware test) and alt image 0 for 128K games.
+10. selftest was broken after the Dizzy 6 session (fixed 2026-09-28): identify() had lost its
+   Dizzy V dispatch, and dizzy5 analysis did not resync per RZX segment (the recorder now writes
+   16 segments). Keep identify5 called from identify().
+   (closed; kept as a warning)
 11. No hook speed budget and no profiler: Commando's hook cost was measured with scratch scripts
    (T-states per plot vs the original plot). Wanted: an `auto` line with hook T-states per call
    (median / max) and a documented budget per game frame.
@@ -283,15 +291,21 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
       (The original's side exists: `cost`, C4.)
    d. Emulator smoke test: boot the .nex headless in a Next emulator for ~30 s (would have caught
       the ROM 0 and 0x3D00 crashes); feasibility in the sandbox (CSpect needs .NET/mono) not yet
-      checked.
-10. selftest was broken after the Dizzy 6 session (fixed 2026-09-28): identify() had lost its
-   Dizzy V dispatch, and dizzy5 analysis did not resync per RZX segment (the recorder now writes
-   16 segments). Keep identify5 called from identify().
-
+      checked; ZEsarUX (open source, GitHub) is the candidate.
+14. Confirm the 0x3D00 cause (A1): a test build with one harmless routine at 0x3D00 (emulator with
+   DivMMC, or hardware); then record the confirmed reason in A1 / LEARNINGS 1.4.
 ### C3. Working rules (token budget)
 Summaries <= 40 lines; disassemble only routines the analysis flags; one simulator pass
 per question; long jobs in background + poll; verify original bytes at every patch site;
 keep selftest byte-identical; commit changed files to the repo; terse replies.
+
+### C3b. Two verification levels (agreed with Dean 2026-09-29)
+- ITERATE (per change): original bytes at every site, boot check, unit tests (with negative
+  controls), `--quick N` on one RZX (a few hundred frames for a first check, 2000 before handing a
+  build over; Rainbow 2000 frames ~13-15 min).
+- RELEASE (once per delivered .nex): every RZX in full, one job at a time (1 CPU), boot check,
+  unit tests; record the MD5s in docs/VERIFICATION.md.
+Logic must be exact at both levels; visuals "good enough" where Dean agreed (games/ list them).
 
 ### C4. Shared analysis commands (any game; Dean 2026-10-12: harness stays per engine)
 `nexclash.py inspect | scan | isr | cost` (modules snapinfo, memscan, isrinfo, drawcost on the
@@ -311,10 +325,3 @@ runner simrun.py). Game-independent: game facts come in as arguments (addresses,
   address on the stack: time its caller instead.
 Improving them is welcome: keep existing report lines and arguments (add, don't rename), add a
 golden check for the new behaviour to selftest.py tools_check, run `python selftest.py --tools`.
-
-### C3b. Two verification levels (agreed with Dean 2026-09-29)
-- ITERATE (per change): original bytes at every site, boot check, unit tests (with negative
-  controls), `--quick 2000` on one RZX (Rainbow ~15 min).
-- RELEASE (once per delivered .nex): every RZX in full, one job at a time (1 CPU), boot check,
-  unit tests; record the MD5s in docs/VERIFICATION.md.
-Logic must be exact at both levels; visuals "good enough" where Dean agreed (games/ list them).

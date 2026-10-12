@@ -227,6 +227,10 @@ negative controls. Report: auto's commando_report.txt.
 
 ## Open
 - Hardware: d601385e runs (Dean, 2026-10-12); checklist items not yet reported.
+- Hook RAM 0x5E20-0x60FF is not zero in the snapshot (BASIC workspace below RAMTOP 25087, under the
+  game's stack at 0x61C8+; no game code references it). Untouched in the RZX (area 1) and the
+  start-up path (400 frames); later areas not yet scanned: `scan --rzx <later-areas RZX> --range
+  0x5C00-0x60FF` when Dean records one (LEARNINGS 2.2).
 - RZX covers area 1 (menu, play, deaths); later areas use the same plotter and descriptors, and
   the depth table covers every type in the map, but only unit tests cover types not in area 1:
   an RZX of later areas (INFY LIVES = Y makes it easy; autosave off) would verify them.

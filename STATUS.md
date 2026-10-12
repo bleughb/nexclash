@@ -20,13 +20,11 @@ folder in the private repo; shared TID engine facts: games/tid_engine.md). MD5s:
 Platform on hardware: alt ROM ($8C) PASS 2026-09-27; plain 48K and 128K conversion run.
 
 ## Open work (toolkit)
-1. Maintainers: pin the Rainbow snapshot MD5 (verified.json, selftest RZX_GAMES) once rainbow.z80 +
-   both RZX are in the private reference repo; add Treasure Island in-game (dizzy2_game.z80) and
-   Dizzy6.z80 there too.
+1. selftest: add Dizzy 6 (Dizzy6.z80 + try1.rzx, now in specnext/reference) - BRIEFING C2 #8.
 2. Engine registry: each engine registers identify/auto instead of a dispatch block in
    nexclash.py (do it once selftest covers every game).
-3. `identify` reports unknown for Rainbow and Chuckie Egg (auto dispatches by signature): add
-   signatures.json / identify entries.
+3. `identify` reports unknown for Rainbow, Chuckie Egg, Wally and Commando (auto dispatches by
+   signature in cmd_auto): add signatures.json / identify entries.
 4. Generic builder covers the TID engine only; next: XOR-parity template (generalise
    dizzy1_patch.py), then non-Codemasters engines (PLAYBOOK "unknown").
 5. Virtual read is not in the generic template (the tool refuses and hands over).

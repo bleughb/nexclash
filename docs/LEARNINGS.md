@@ -87,15 +87,16 @@ BRIEFING - with its reason.
   the tester film the TV. Overrun detection: clear NextReg $C8 bit 0 at the frame start, read it at
   the frame end (set = an interrupt came during the frame). Hooks entered from a ROM stub inside the
   game's handler must not use the game's stack: jump to the hook page's code and jump back.
-- Never put hook CODE at 0x3D00-0x3DFF in an alt ROM / slot-1 page: an instruction fetch there is
-  the DivMMC (TR-DOS) automap trap and pages DivMMC over 0x0000-0x3FFF - crash on hardware and in
-  CSpect, invisible to the simulator (Commando 541e34e2 crashed at its first figure). Data there is
-  fine (only M1 fetches trap). Check it statically and per instruction.
+- Never put hook CODE at 0x3D00-0x3DFF in an alt ROM / slot-1 page: Commando 541e34e2 crashed at
+  its first figure on hardware and in CSpect with code there, and ran once the code moved out
+  (tables stayed there). Probable cause: the DivMMC (TR-DOS) automap on an instruction fetch at
+  0x3Dxx, despite the stub clearing NextReg $06 bit 4 - not confirmed (BRIEFING A1, C2 #14).
+  Invisible to the simulator; `auto` checks it statically and per instruction (Commando).
 - Flicker: never hide a figure's sprites at plot entry and show them at exit (hidden for the
   whole call, often across the beam). Keep them visible, build the new image in OTHER pattern
   memory, then rewrite the attributes in one go (Commando).
-- Pattern RAM as a content cache: a figure shows far fewer distinct frames than plots (Commando:
-  ~110 frames in 4,300 plots). Key each pattern slot by (graphics page, frame offset, lines);
+- Pattern RAM as a content cache (when the working set fits; else Next RAM, 2.5): a figure shows
+  far fewer distinct frames than plots (Commando: ~110 frames in 4,300 plots). Key each pattern slot by (graphics page, frame offset, lines);
   reuse = attributes only, no build, no upload. Evict only slots no visible sprite references
   (round robin); never share an image that was masked (depth). Negative control: a lookup that
   ignores one key field must fail the pixel check.
@@ -199,7 +200,9 @@ BRIEFING - with its reason.
 ## 2.2 Memory proofs (analysis method)
 - Prove free memory with an access scan over the recording, not by zero-check.
   Also require zero content for persistent code (untouched may just mean
-  "room not visited").
+  "room not visited"), or explain the non-zero bytes. Commando's hook RAM 0x5E20-0x60FF holds
+  non-zero bytes: BASIC workspace below RAMTOP (CLEAR 25087), below the game's own stack; no game
+  code references it; untouched in area 1 + start-up - later areas not yet scanned (commando.md).
 - The printer buffer is not always free: Dizzy 1 keeps its stack above it,
   Dizzy 4 keeps a bit-reverse table there, Rainbow Islands keeps code there,
   Everyone's a Wally uses it (0x5B00-0x7AFF write-first).
@@ -231,16 +234,19 @@ BRIEFING - with its reason.
   boxes on hardware. Verify the page against ROM48 at every ROM byte the game reads.
 - SkoolKit's Simulator silently drops writes below 0x4000; on the Next a slot-1 RAM page takes
   them. Check for ROM writes with dizzy6._rw_simulator() (guards removed).
-- SkoolKit snap.ram() is a 48K view even for 128K; test snap.machine.
+- SkoolKit snap.ram() (no argument) is a 48K view even for 128K; snap.ram(-1) returns all 8 banks
+  (0x20000 bytes, bank order 0-7). Test snap.machine or len(snap.ram(-1)).
 - 128K Python-sim hooks: in a Simulator subclass set memory.__class__ to a pagingtracer.Memory
   subclass; wrap opcode-table entries for exec hooks; set rzxplay.Simulator, CSimulator=None.
 - Boot simulation needs writes below 0x4000 (alt ROM write mode): dizzy6._rw_simulator();
   NEXTREG via after_ED[0x91/0x92], ports via the tracer.
 - Hand-assembled hooks: cross-check against sjasmplus (caught a JR out of range).
-  sjasmplus: git clone z00m128/sjasmplus && make USE_LUA=0 (Lua submodule missing; ~1 min); use
-  --zxnext. `pair` is a reserved word (label error). Local labels inside MACROs are macro-local:
+  sjasmplus: use the bundled, pinned one via `tools/asm2profile.py` (never build or download
+  another version; tools/sjasmplus/README.md). `pair` is a reserved word (label error). Local labels inside MACROs are macro-local:
   inline the text instead when the macro jumps to the enclosing routine's label.
-- The repo (github.com/bleughb/specnext) is the only master copy (2026-10-11). Before it, Project
+- The toolkit's master copy is github.com/bleughb/nexclash; the private github.com/bleughb/specnext
+  holds the reference game files (it held everything until the public repo was split off). Before
+  the repos (2026-10-11), Project
   files had to be retyped into each sandbox (no /mnt/project): slow, and old same-name uploads
   resurfaced stale facts. The move was checked by extracting every Project read verbatim from the
   session transcript (40/48 files = the handover MD5s; the 8 others = known later edits) and by
@@ -300,7 +306,9 @@ BRIEFING - with its reason.
   Keep one original plotter run per piece for the register state (logic stays exact).
 - A key that includes the vertical phase (D&7) misses on every scroll step. Put the phase in the
   sprite Y instead (sprites are pixel-positioned) and key only what shapes the pixels.
-- Big caches belong in Next RAM, not pattern RAM: a 256K store (pages 32-63) mapped at MMU1
+- Cache size decides where it lives. Pattern RAM (16K = 128 4-bit patterns) is enough when the
+  working set is small: Commando's figures show ~110 distinct images, 32 slots of 4 patterns hit
+  64 % with zero uploads (1.4). A big working set needs Next RAM: a 256K store (pages 32-63) mapped at MMU1
   while the hook works, patterns OTIR'd to per-render sprite slots. Garbage at boot needs no
   clearing when a hit requires the full key + stream to match. Rainbow: 91% hits.
 - Before optimising hooks in a CPU-paced game, find WHERE the frame is paced. Rainbow runs its
@@ -320,8 +328,8 @@ BRIEFING - with its reason.
   2026-10-11 with a shadow map, 2.1).
 - Colour by graphics page works only for graphics at fixed addresses; a runtime graphics buffer
   (Rainbow 0x9500) holds different objects per level - key those on the copy source.
-- Two verification levels (docs/BRIEFING.md C3b): ITERATE (sites, boot, unit tests, `--quick 2000`
-  on one RZX, ~13 min for Rainbow now) per change; RELEASE (all RZX in full, one job at a time)
+- Two verification levels (docs/BRIEFING.md C3b): ITERATE (sites, boot, unit tests, `--quick N`
+  on one RZX) per change; RELEASE (all RZX in full, one job at a time)
   once per delivered .nex. Logic exact, visuals good enough. Parallel full runs on the 1-CPU
   sandbox cost a whole extra turn (2026-09-29).
 - For a Z80N opcode in hooks (Rainbow SWAPNIB): install it in every simulator that runs hooks,
@@ -379,17 +387,17 @@ BRIEFING - with its reason.
 ## 2.6 Process / tokens (this sandbox)
 - One CPU; background jobs die when the turn ends: run long jobs sequentially
   (`setsid nohup sh script.sh &`, or chain: `setsid nohup sh -c 'a; b' ... &`) and poll inside the turn. A `( a; b ) &` subshell dies silently.
-- `pkill -f script.py` kills the tool shell when its own command line contains the name (mid-edit:
-  re-check files after); use pgrep, then kill by PID.
 - A limit written without its reason gets broken: BRIEFING said alt-ROM hooks end < 0x3D00 next
-  to the font, so a game that never reads the font looked exempt - the real reason (DivMMC
-  automap on fetch) crashed it. Write the WHY with every limit.
+  to the font, so a game that never reads the font looked exempt - and code at 0x3Dxx crashed it
+  (probably the DivMMC automap). Write the WHY with every limit, and mark an inferred why as such.
 - `pkill -f` / `pgrep -f` patterns match your own shell when its command line contains them -
-  including a directory name like `out5` used elsewhere in the same command. Kill by PID only.
+  including a directory name like `out5` used elsewhere in the same command (mid-edit: re-check
+  files after). Find the PID first (`pgrep -fa`, read the list, in a SEPARATE command), then
+  `kill PID`.
 - Name scratch scripts uniquely: a file called dis.py shadows the stdlib and breaks SkoolKit.
 - Do all analyses in one simulator pass; poll background jobs.
-- Never run per-instruction Python work in an analysis hook (a dict scan per opcode turned a
-  2-minute pass into a 10-minute timeout).
+- Keep per-instruction work in an analysis hook O(1) (a dict SCAN per opcode turned a 2-minute pass
+  into a 10-minute timeout); simple per-instruction hooks are fine (simrun: 1,500 frames ~15 s).
 - Print summaries, not listings. Disassemble only flagged routines.
 - Keep the user's answers terse; explain only new findings.
 - A single tool call is capped at 10 minutes: poll a background job with sleeps under that
