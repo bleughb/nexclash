@@ -80,7 +80,7 @@ or download another version; tools/sjasmplus/README.md).
 | nexclash.py | CLI: patch / new / contribute (users), auto / identify / record / convert / verify / rzx, analysis: inspect / scan / isr / cost |
 | selftest.py | maintainers' acceptance test (needs the private reference files) |
 | nexclash/ | toolkit modules + engines (chuckie, dizzy5, dizzy6, rainbow, wally, ...); userflow.py = patch/new/contribute; simrun + snapinfo/memscan/isrinfo/drawcost = the analysis commands |
-| asm/ | hook sources; after any edit `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex) |
+| asm/ | hook sources; after any edit `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex); dizzy5_hooks.asm is the exception: dizzy5.py emits the bytes, `selftest.py --tools` checks they match |
 | docs/profiles/ | per-game profiles (hook hex read by the engines), signatures.json, verified.json |
 | games/ | one file per game, named like its folder in specnext/reference/ (facts, decisions, status, open items, checklist); tid_engine.md = shared TID engine facts |
 | docs/ | BRIEFING, LEARNINGS, VERIFICATION, PLAYBOOK, RECORDING_CHECKLIST, NEXT_REGISTERS, contribute.json |

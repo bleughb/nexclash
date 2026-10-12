@@ -96,6 +96,24 @@ def tools_check(src):
     def ok(name, cond, info=''):
         checks.append(cond)
         print('%-4s tools: %s%s' % ('OK' if cond else 'FAIL', name, '' if cond else ' (%s)' % str(info)[:200]))
+    # asm/dizzy5_hooks.asm has no profile hooks section (dizzy5.py emits the bytes itself): the
+    # pinned sjasmplus must produce exactly what dizzy5.hook_code() emits for the Dizzy V profile
+    try:
+        import json as _json
+        sys.path.insert(0, os.path.join(HERE, 'tools', 'sjasmplus'))
+        import sjasm
+        from nexclash import dizzy5
+        with tempfile.TemporaryDirectory() as tmp:
+            r = subprocess.run([sjasm.find(), '--zxnext', '--msg=war', os.path.join(HERE, 'asm', 'dizzy5_hooks.asm')],
+                               cwd=tmp, capture_output=True, text=True)
+            got = open(os.path.join(tmp, 'dizzy5_hooks.bin'), 'rb').read() if not r.returncode else b''
+        prof = _json.load(open(os.path.join(HERE, 'docs', 'profiles', 'dizzy5_spellbound_dizzy.json')))
+        code = dizzy5.hook_code(prof)
+        code = bytes(code[0] if isinstance(code, tuple) else code)
+        ok('asm/dizzy5_hooks.asm (pinned sjasmplus) = dizzy5.hook_code() (%d bytes)' % len(code),
+           got == code, (r.stdout + r.stderr)[-200:] or (len(got), len(code)))
+    except Exception as e:                      # noqa: BLE001
+        ok('asm/dizzy5_hooks.asm check ran', False, e)
     old = sys.stderr
     sys.stderr = io.StringIO()                  # SkoolKit's SZX warnings
     try:
