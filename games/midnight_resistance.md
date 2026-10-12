@@ -1,8 +1,10 @@
 # Midnight Resistance (Ocean 1990, 128K) - engine `midres`
 Updated 2026-10-13. Engine `midres` (nexclash/midres.py, asm/midres_hooks.asm,
 docs/profiles/midnight_resistance.json; after any .asm edit `python tools/asm2profile.py
-midnight_resistance`). Status: RZX IDENTICAL, unit + interrupt checks PASS; e8f0ece9 RUNS ON A REAL NEXT (Dean,
-2026-10-13; detailed checklist not yet reported).
+midnight_resistance`). Tool-chain canary stage 2 (`selftest.py --canary`; record "canary": 2,
+quick verify 300 frames): keep it building and passing on the latest tools. Status: RZX
+IDENTICAL, unit + interrupt checks PASS; e8f0ece9 RUNS ON A REAL NEXT (Dean, 2026-10-13; detailed
+checklist not yet reported).
 
 Reference (private repo, specnext/reference/midnight_resistance/):
 Midnight_Resistance_1990_Ocean_128K.z80 (67bf05d356d51b2b402d88c5f0cdfb21),

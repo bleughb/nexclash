@@ -417,6 +417,13 @@ SZX: 8 autosave snapshots stripped, 4,709 frames: title, level 1 to the end-of-l
 - Shared code: nexclash.py gained one dispatch block (before the 48K identify).
   `selftest.py --smoke` and `--tools` PASSED; `--affected` rebuild: see the PR.
 
+## Toolkit: two-stage tool-chain canary (2026-10-13)
+`selftest.py --canary`: stage 1 Chuckie Egg rebuild (both MD5s) PASSED in 0.6 s. Negative control
+(stage-1 MD5s forced wrong): stage 1 FAILED -> stage 2 ran (Midnight Resistance: profile = pinned
+assembler output, both rebuild MD5s, 300-frame differential verify PASSED, 56 s) -> verdict "tool
+chain works; the stage-1 fault is specific to chuckie_egg", exit 1. Full selftest runs with a
+failed game call the same stage 2 (diagnose()).
+
 ## Toolkit: pinned sjasmplus + asm2profile (2026-10-12)
 `python tools/asm2profile.py --check --all` with the pinned sjasmplus 1.24.0 (tag v1.24.0, commit
 d379eeac): chuckie_egg, commando, everyones_a_wally, rainbow_islands IDENTICAL (every hook block
