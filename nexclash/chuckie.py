@@ -629,7 +629,7 @@ def auto(a, z80, name, out, say):
     plain = os.path.join(out, name + '.nex')
     conv = zt.convert(z80, plain, TAIL_ADDR, True, quiet=True)
     bad = check(plain, z80, None, (conv[1], conv[1] + len(conv[2])))
-    say('Plain     : %s  %s  boot %s  (tail 0x%04X = printer buffer, never touched in the RZX)' % (
+    say('Plain     : %s  %s  boot %s  (tail 0x%04X = printer buffer, never touched in the reference RZX)' % (
         os.path.basename(plain), md5(plain), 'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:200], TAIL_ADDR))
     patch = ChuckiePatch()
     spr = os.path.join(out, name + '_sprites.nex')

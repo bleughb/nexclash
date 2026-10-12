@@ -31,7 +31,10 @@ Check where the tail went (the converter prints it). It must be in memory the
 game never touches (step 3 proves this: `scan`); override with `--tail ADDR`.
 
 ## 2. Identify the engine
-Search the snapshot for the byte signatures in docs/profiles/signatures.json.
+`python nexclash.py identify GAME.z80` covers the TID and Dizzy 1 engines (docs/profiles/
+signatures.json); the dedicated engines (Chuckie Egg, Wally, Rainbow, Commando) are recognised by
+their own checks in `auto` (is_chuckie / is_wally / is_rainbow / is_commando, profile `signature`),
+so `identify` says unknown for them. Search the snapshot for these byte signatures.
 If a known engine matches, align its plotter/eraser instruction-by-instruction
 against the known game's (normalise 4-5 digit operands to N; where the opcode
 text matches, the numbers map old->new). Then locate by pattern:

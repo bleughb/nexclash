@@ -1606,7 +1606,7 @@ def auto(a, z80, name, out, say):
     plain = os.path.join(out, name + '.nex')
     zt.convert(z80, plain, TAIL_ADDR, quiet=True)
     bad = boot_check(plain, z80)
-    say('Plain     : %s  %s  boot %s  (tail 0x%04X, never read or written in the RZX)' % (
+    say('Plain     : %s  %s  boot %s  (tail 0x%04X: never read or written in the reference RZX; with --rzx checked per access)' % (
         os.path.basename(plain), md5(plain), 'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:200], TAIL_ADDR))
     patch = CommandoPatch()
     spr = os.path.join(out, name + '_sprites.nex')
@@ -1617,7 +1617,7 @@ def auto(a, z80, name, out, say):
     ok = not bad and not bad2 and ok_front
     sbad, sn = static_checks(patch)
     ok = ok and not sbad
-    say('Static    : %d hook instructions disassembled; IX/IY writes, code in 0x3D00-0x3DFF (DivMMC trap): %s -> %s' % (
+    say('Static    : %d hook instructions disassembled; IX/IY writes, code in 0x3D00-0x3DFF (probable DivMMC trap): %s -> %s' % (
         sn, sbad or 'none', 'PASS' if not sbad else 'FAIL'))
     ISAFE['checked'] = 0
     states = []

@@ -101,6 +101,7 @@ record an RZX in Fuse (autosave OFF) showing it and send it with the report.
 (edit the CSPECT path at the top).
 
 ## Per-game options (maintainers rebuild with their recordings)
+Dedicated engines (below) never auto-record: they only use the recordings you pass with `--rzx`.
 ### Everyone's a Wally (128K snapshot)
     python nexclash.py auto wally.z80 --rzx my_play.rzx
 Outputs wally.nex (plain) and wally_sprites.nex (gang members and masked objects as sprites).

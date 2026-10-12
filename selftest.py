@@ -206,7 +206,7 @@ def main():
             print('FAIL %s verification (see %s)' % (label, out))
             return 1
         print('OK   %s verification (%d PASSED, boot %s)' % (label, rep.count('PASSED'),
-              'OK' if 'Boot      : simulated' in rep else 'not simulated'))
+              'OK' if ('Boot      : simulated' in rep or 'boot OK' in rep) else 'not simulated'))
         return 0
 
     for g in games:
