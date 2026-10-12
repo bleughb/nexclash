@@ -90,11 +90,13 @@ rzxplay and in Fuse (frame boundaries are defined by instruction counts).
 | anything else | - | plain `.nex` only, plus a report to guide the next step |
 
 ## Testing on the Next (details per game: games/)
-Copy `GAME_sprites.nex` to the SD card and run it. Check: it starts; the player is
-visible and animates; the player hides in inventory/dialogue boxes and room
-changes; the title music is unchanged. If something is wrong, record an RZX in
-Fuse (autosave OFF) showing it and send it with the report.
-`run_cspect.bat` converts and launches CSpect (edit the CSPECT path at the top).
+Copy `GAME_sprites.nex` to the SD card and run it. Check: it starts; every converted figure is
+visible, animates and is never left behind on screen; figures disappear where the original hides
+or covers them (boxes, dialogue, room changes, screen clears, scenery in front); music and speed
+are as the plain `.nex`. Each game's own checklist is in games/<game>.md. If something is wrong,
+record an RZX in Fuse (autosave OFF) showing it and send it with the report.
+`run_cspect.bat` (Windows) makes the plain `.nex` and launches CSpect, or launches a `.nex` you drop on it
+(edit the CSPECT path at the top).
 
 ## Per-game options (maintainers rebuild with their recordings)
 ### Everyone's a Wally (128K snapshot)
