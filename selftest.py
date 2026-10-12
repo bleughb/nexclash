@@ -17,8 +17,8 @@ Games whose snapshot is missing are skipped and listed. Exit code 0 = all good;
 1 = a failure; 2 = no failure but games skipped or outputs not baselined yet
 (the new MD5 is printed: paste it into EXPECTED and VERIFICATION.md).
 Engine games verified against Dean's recordings (RZX_GAMES: Chuckie Egg, Everyone's a Wally,
-Rainbow Islands) run `auto --no-record --rzx ...` and check both .nex MD5s and the report;
-Rainbow Islands takes ~50 min (--fast skips it).
+Rainbow Islands, Commando) run `auto --no-record --rzx ...` and check both .nex MD5s and the report;
+Rainbow Islands takes ~50 min, Commando ~45 min (--fast skips both).
 """
 import hashlib, os, shutil, subprocess, sys, tempfile
 
@@ -43,6 +43,9 @@ RZX_GAMES = {        # engine games: inputs (canonical name, md5 or None = match
     'rainbow': {'files': [('rainbow.z80', '4c98b980b1726af545fccc99665ef29b'), ('rainbow.rzx', '55046d1893bba0a4faf314ecd3a9638b'),
                           ('rainbownew.rzx', '47bb2b163a947724c343a2bc1b039458')],
                 'nex': ('7ac543fb51c7a3c4137778eeb3cdc175', 'e50733b2b7e2db32f004c1436a2e0461', '8f25bc6146b9d7f7ae1f12a1d227447e'), 'slow': True},
+    'commando': {'files': [('commando.z80', 'c9af5668191462d77c5859900268c24b'),
+                           ('commando.rzx', 'b3350a66a14db07add43c878eb872169')],
+                 'nex': ('5642e4b4d2a4b3f53cb7311eebeedecf', 'f22a9452822b52163023de897f3358aa'), 'slow': True},
 }
 OPTIONAL = {'dizzy5.z80', 'treasure_island_title.z80'}
 NO_RECORD = {'treasure_island_title'}   # reference built without a recording (dedicated builder)

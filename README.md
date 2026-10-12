@@ -86,6 +86,7 @@ rzxplay and in Fuse (frame boundaries are defined by instruction counts).
 | Rainbow Islands (128K) | Rainbow Islands | dedicated engine `rainbow`, verified per run |
 | Everyone's a Wally (48K game, 128K snapshot) | Everyone's a Wally | dedicated engine `wally`, verified per run |
 | Chuckie Egg | Chuckie Egg | dedicated engine `chuckie`, verified per run |
+| Commando (128K) | Commando (Elite, BASIC-loader snapshot) | dedicated engine `commando`, verified per run |
 | anything else | - | plain `.nex` only, plus a report to guide the next step |
 
 ## Testing on the Next (details per game: games/)
@@ -103,6 +104,11 @@ Outputs wally.nex (plain) and wally_sprites.nex (gang members and masked objects
 ### Chuckie Egg
     python nexclash.py auto Chuckie_Egg.z80 --rzx Chuckie_Egg.rzx --no-record
 Outputs Chuckie_Egg.nex (plain) and Chuckie_Egg_sprites.nex (player, hens, duck as sprites).
+
+### Commando (128K)
+    python nexclash.py auto commando.z80 --rzx commando.rzx --no-record
+Outputs commando.nex (plain) and commando_sprites.nex (player, enemy soldiers, POWs as sprites).
+The snapshot is the BASIC loader; the RZX may start in game.
 
 ### Rainbow Islands (128K)
     python nexclash.py auto rainbow.z80 --rzx my_play.rzx --no-record [--ink white] [--outline black|blue|transparent|#RRGGBB] [--class-colours map.json]

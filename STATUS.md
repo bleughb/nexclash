@@ -1,4 +1,4 @@
-# Status (2026-10-11)
+# Status (2026-10-12)
 
 One row per game. Details, decisions and checklists: games/<game>.md (named like the game's
 folder in the private repo; shared TID engine facts: games/tid_engine.md). MD5s: docs/VERIFICATION.md.
@@ -14,6 +14,7 @@ folder in the private repo; shared TID engine facts: games/tid_engine.md). MD5s:
 | Magicland Dizzy | tid generic (magicland_dizzy.md) | magicland_dizzy_sprites.nex bf137d41 (altrom) | verified | untested | hardware test |
 | Treasure Island Dizzy | dedicated (treasure_island_dizzy.md) | treasure_island_dizzy_sprites.nex 8b4d0847 | verified | plain build runs | recorder start/keys |
 | Dizzy: The Ultimate Cartoon Adventure (Dizzy 1) | dedicated XOR (dizzy_ultimate_cartoon_adventure.md) | dizzy1_sprites.nex 05d2bce9 | verified | untested | - |
+| Commando (128K) | commando (commando.md) | commando_sprites.nex f22a9452 (altrom + e_init) | RZX IDENTICAL, init + unit PASS | untested | hardware test |
 | Crystal Kingdom Dizzy (128K) | plain only (crystal_kingdom_dizzy.md) | - | - | plain runs | sprites deferred |
 
 Platform on hardware: alt ROM ($8C) PASS 2026-09-27; plain 48K and 128K conversion run.

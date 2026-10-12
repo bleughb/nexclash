@@ -147,7 +147,7 @@ every plot writes before the erase reads it; (3) dead stack between SP and the l
 --------------------------------------------------------------------------------
 ## PART B - ORIGINAL GAMES: rules for every engine
 Per engine / per game: games/ (TID engine, Dizzy 1, Dizzy V, Dizzy 6, Rainbow Islands,
-Everyone's a Wally, Chuckie Egg, Crystal Kingdom Dizzy).
+Everyone's a Wally, Chuckie Egg, Commando, Crystal Kingdom Dizzy).
 
 ### B2b. Engine identification rule (all engines)
 Require evidence the matched copy is LIVE (the ISR or a caller jumps into it). Relocating
@@ -183,7 +183,7 @@ sprite .nex -> verify (each RZX) -> report. Refuses instead of guessing.
 | dizzy6.py | layout, relocated_copy, Dizzy6Patch(prof, mem, tail, undo_size), first_access(rzx, lo, hi), mirror_selftest | 'tid_mirror' (Dizzy 6): TidPatch slot1 + unpatched plotter/eraser copy at 0x2000 for the mirror calls; nexclash.py _auto_dizzy6 drives it (analysis + first-access pass per RZX, tail in undo buffer, verify, 780-case mirror selftest) |
 | loader.py | prerun(rzx, test, out_z80) -> (path, frame, pc) | loader-stage snapshots: replay until test(mem) (engine live), finish LDIR, save state. MUST be present |
 | nextboot.py | boot(nex, pc), check(nex, z80, patch, tail) | simulated Next boot of a built .nex (MMU, legacy paging, $8C alt ROM, NEXTREG); run by every sprite build (`Boot` line; MISMATCH fails selftest) |
-| selftest.py | selftest.py [FOLDER=reference/] [--human] [--no-repro] [--fast] | default (altrom) outputs + `--strategy` reproductions of the old builds (REPRO) + verifications + boot; engine games (Chuckie Egg, Wally, Rainbow) rebuilt from Dean's RZX and MD5-checked (RZX_GAMES; --fast skips Rainbow, ~50 min); games with missing inputs are skipped (exit 2); EXPECTED None = not baselined yet |
+| selftest.py | selftest.py [FOLDER=reference/] [--human] [--no-repro] [--fast] | default (altrom) outputs + `--strategy` reproductions of the old builds (REPRO) + verifications + boot; engine games (Chuckie Egg, Wally, Rainbow, Commando) rebuilt from Dean's RZX and MD5-checked (RZX_GAMES; --fast skips Rainbow ~50 min and Commando ~45 min); games with missing inputs are skipped (exit 2); EXPECTED None = not baselined yet |
 
 Templates: Z80 sources were tramp.asm/hooks.asm/setup.asm (printer) and patch.asm (slot1);
 to change them rebuild with sjasmplus and regenerate relocations (assemble twice with each
