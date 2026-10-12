@@ -40,7 +40,7 @@ Default builds (strategy `altrom` where proven; dedicated builders are printer-o
 - Dizzy 6 (`tid_mirror`): stays slot1 (self-modifying plotter copy in the RAM page); not in selftest
 - `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_sprites.nex` e50733b2b7e2db32f004c1436a2e0461, `rainbow_sprites_diag.nex` 8f25bc6146b9d7f7ae1f12a1d227447e (2026-10-12, collectables without border + diagnostic build)
 - `Chuckie_Egg.nex` ec0df71e70fae35836eaed521f300777, `Chuckie_Egg_sprites.nex` bfad6be1e7c8a2c797a6242d7f339e35 (2026-10-11)
-- `commando.nex` 5642e4b4d2a4b3f53cb7311eebeedecf, `commando_sprites.nex` f22a9452822b52163023de897f3358aa (2026-10-12)
+- `commando.nex` a206f950c12f58a8e7f26b366f5a2480, `commando_sprites.nex` 5c1081b73765978a7f3e055a66578542 (2026-10-12)
 
 `--strategy` reproductions of the pre-altrom builds (same recordings):
 - `dizzy3_sprites.nex --strategy printer` c09213beaec1572c0228985dae89bd77
@@ -303,12 +303,18 @@ Same command. Changed: rainbow.py, rainbow_hooks.asm, rainbow_islands.json (hook
 `nexclash.py auto commando.z80 --rzx commando.rzx --no-record`
 (Commando_1985_Elite_Systems_t_128K.z80 = BASIC loader at line 30, trainer version; Dean's RZX
 starts in game from its own SZX: 8 autosave snapshots stripped, 3,279 frames, area 1, deaths)
-- `commando.nex` 5642e4b4d2a4b3f53cb7311eebeedecf (plain, tail 0x6D00) - boot sim OK
-- `commando_sprites.nex` f22a9452822b52163023de897f3358aa (altrom hooks + bank-5 state set up by
+- Start-up: the loader is run in SkoolKit (real 128K ROMs, SPACE, N) to the game entry 25089; the
+  .nex starts in a front end that redoes PAUSE 0 + "INFY LIVES(Y/N)?" + the POKE. front_tests: N
+  and Y reach 25089 with all registers (R aside) and RAM = the loader's entry state (Y: + 27653 =
+  182) except 0x5D00-0x5E1F; negative controls (register, POKE) caught. First builds 5642e4b4 /
+  f22a9452 started in 128K BASIC: hardware corruption / crash on the first key (ROM 0).
+- `commando.nex` a206f950c12f58a8e7f26b366f5a2480 (plain, tail 0x6D00) - boot sim OK
+- `commando_sprites.nex` 5c1081b73765978a7f3e055a66578542 (altrom hooks + bank-5 state set up by
   e_init at the game entry) - boot sim OK; patched snapshot = original except the 7 sites (25
   bytes); alt ROM = 48K ROM except its $FF area 0x386E-0x3C98
 - Boot path (not in the RZX): the .z80 simulated with SPACE, N: USR 25088 at frame 41, IM 2 at 52,
-  menu at 53; after the USR nothing touches 0x5B00-0x5E1F or the tail (300 frames)
+  menu at 53; after the USR nothing touches 0x5B00-0x5E1F or the tail, and 7FFD is only ever
+  0x10 / 0x11 (ROM 1) - the loader before it writes 0x00 (ROM 0) 1,378 times (300 frames)
 - RZX: 4,332 converted plots, 507 figure plots on the ULA (edge / top clip; 0 for a full table),
   887 other plots, 11 clears, max 6 figures, 570,425 sprite pixels - IDENTICAL. Per call: all
   registers (AF' included), all memory except the screen and the hook RAM; patched screen = the
@@ -323,6 +329,14 @@ starts in game from its own SZX: 8 autosave snapshots stripped, 3,279 frames, ar
   the BASIC loader's RAM (would not have reached the game), kept invisible entries for soldiers
   leaving at the bottom (table full in 239 plots), and converted column/row steps the game never
   makes (the plotter draws past its frame there; guarded now).
+- Depth + scenery restore (5c1081b7): RZX IDENTICAL as above with 4,287 of the 4,332 converted
+  plots putting back the scenery their erase cut (ULA unchanged by the plot - checked per call),
+  66,170 scenery pixels drawn in front of figures by the rule, 543,349 sprite pixels; depth table
+  re-derived from the game = the profile (18 types with walk boxes); depth unit 315 cases (150
+  behind), negative control (no walk boxes) 150/150; restore negative control (svrest = RET) 6/6.
+  Boot path: nothing touches 0x5C00-0x5F5F after the game entry (300 frames); RZX: the game only
+  touches 0x5B11-0x5BFF and its stack (>= 0x61C4) in 0x5B00-0x61FF. 5ab928e9 (start-up fix only)
+  runs on hardware (Dean).
 - Shared code: nexclash.py gained one dispatch block (before the 48K identify); selftest.py gained
   a `commando` RZX_GAMES entry (slow). `selftest.py --smoke` (Chuckie Egg) PASSED; other games
   not re-run (game session).

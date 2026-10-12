@@ -108,7 +108,8 @@ Outputs Chuckie_Egg.nex (plain) and Chuckie_Egg_sprites.nex (player, hens, duck 
 ### Commando (128K)
     python nexclash.py auto commando.z80 --rzx commando.rzx --no-record
 Outputs commando.nex (plain) and commando_sprites.nex (player, enemy soldiers, POWs as sprites).
-The snapshot is the BASIC loader; the RZX may start in game.
+The snapshot is the 128K BASIC loader: `auto` runs it to the game entry and the .nex starts in a
+small front end that repeats its key wait and "INFY LIVES(Y/N)?" (no 128K BASIC on the Next).
 
 ### Rainbow Islands (128K)
     python nexclash.py auto rainbow.z80 --rzx my_play.rzx --no-record [--ink white] [--outline black|blue|transparent|#RRGGBB] [--class-colours map.json]
