@@ -226,7 +226,7 @@ BRIEFING - with its reason.
 - The recorder writes one RZX segment per episode; per-segment state must reset (new Simulator).
   Symptom: refusals a few frames after a segment start (stale screen model, stale drawn flag).
 - An uploaded snapshot with the right game but a different MD5 is another snapshot of it
-  (dizzy2.z80 = TID title): check selftest INPUTS before assuming references are complete.
+  (dizzy2.z80 = TID title): check docs/records (inputs.path) before assuming references are complete.
 - TID altrom hook range 0x386E-0x3A69 (+ register block); the builder refuses a range that is not
   all $FF in the 48K ROM.
 - SkoolKit `Snapshot.get(...).memory[0:0x4000]` is ZEROS for .z80 files: take ROM bytes from
@@ -383,6 +383,19 @@ BRIEFING - with its reason.
 - A 'buffer is non-empty' flag that lets later code skip work must be set on EVERY path that
   writes the buffer: Commando's lazily cleared depth mask missed the rectangle-shape path (found
   by the depth unit cases, which the RZX alone had not hit).
+
+- A verification is evidence about exact inputs, not about a game: key it to the hashes of
+  everything the build reads (docs/records stamps). Re-proving every game at every release does
+  not scale; re-prove what the changed files reach (own files -> that game; shared files ->
+  rebuild all dependents + one representative per engine). Rebuilds must not need the
+  recording: store the few analysis facts a build uses (`_decisions.json`) and rebuild from
+  those in seconds.
+- An "OK ... verification" line must say what it proved. selftest printed "dizzy1 verification
+  (0 PASSED)" as a pass: the dedicated Dizzy 1 / Treasure Island builders are not verified by
+  any run, only their plain tail is. Zero PASSED is not a verification - count it, and let the
+  record say which games are not differentially verified (verify.differential false).
+- Hand-kept duplicate lists drift (selftest INPUTS / EXPECTED, STATUS, VERIFICATION, verified.json
+  all held the same MD5s). Keep one source (the record) and generate the rest.
 
 ## 2.6 Process / tokens (this sandbox)
 - One CPU; background jobs die when the turn ends: run long jobs sequentially

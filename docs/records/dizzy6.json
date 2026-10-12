@@ -1,0 +1,141 @@
+{
+ "name": "dizzy6",
+ "order": 5,
+ "game": "Prince of the Yolkfolk (Dizzy 6)",
+ "doc": "prince_of_the_yolkfolk.md",
+ "engine": "tid_mirror",
+ "representative": true,
+ "reference": "prince_of_the_yolkfolk",
+ "inputs": {
+  "snapshot": {
+   "name": "Dizzy6.z80",
+   "md5": "dd6cd7a3af47a520a260376c6ad4b459",
+   "path": "prince_of_the_yolkfolk/Dizzy6.z80"
+  },
+  "recordings": [
+   {
+    "name": "try1.rzx",
+    "md5": "60f0d2157d7da48e3e1b038455ebd9e8",
+    "path": "prince_of_the_yolkfolk/try1.rzx"
+   },
+   {
+    "name": "try2.rzx",
+    "md5": "2bb26be393be7a1117d820513d868667",
+    "path": "prince_of_the_yolkfolk/try2.rzx"
+   },
+   {
+    "name": "try3.rzx",
+    "md5": "285581685fd15c3e096e85999984b245",
+    "path": "prince_of_the_yolkfolk/try3.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "build",
+  "identify",
+  "analyse",
+  "verify",
+  "nextboot",
+  "recorder",
+  "machine",
+  "rzx",
+  "dizzy6"
+ ],
+ "own_modules": [
+  "dizzy6"
+ ],
+ "data": [],
+ "shared_data": [
+  "nexclash/templates.json",
+  "nexclash/evidence.json"
+ ],
+ "rebuild": {
+  "args": [],
+  "rzx": [],
+  "decisions": {
+   "stack_low_water": 40039,
+   "rom_used": false,
+   "printer_buffer_touched": true,
+   "pb_5b00_5b50_touched": true,
+   "altrom_hooks_read": false,
+   "tail_proven": true,
+   "virtual_read_needed": false,
+   "self_modified_sites": false
+  }
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "try1.rzx"
+  ],
+  "human_rzx": [
+   "try2.rzx",
+   "try3.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 2
+ },
+ "outputs": {
+  "plain": {
+   "file": "Dizzy6.nex",
+   "md5": "e02faca34df9504cc1f2f162e0ef791e"
+  },
+  "sprites": {
+   "file": "Dizzy6_sprites.nex",
+   "md5": "f491e1f6621559ccc4d36de3535ff5d0"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Prince of the Yolkfolk (Dizzy 6)",
+  "engine_col": "tid_mirror (prince_of_the_yolkfolk.md)",
+  "build": "Dizzy6_sprites.nex f491e1f6 (slot1)",
+  "software": "verified (try1.rzx + mirror selftest)",
+  "hardware": "untested",
+  "next": "hardware test; mirror-room RZX"
+ },
+ "checked": {
+  "deps": {
+   "nexclash.py": "e643a6a71253b504",
+   "nexclash/analyse.py": "5bdd8b073cc95624",
+   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/evidence.json": "a6c823114223e2c3",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/recorder.py": "8b959db3b8dc838b",
+   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/templates.json": "e93f585833e72628",
+   "nexclash/verify.py": "3dcc48bdab8bd67b",
+   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-13"
+ },
+ "verified": {
+  "deps": {
+   "nexclash.py": "e643a6a71253b504",
+   "nexclash/analyse.py": "5bdd8b073cc95624",
+   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/evidence.json": "a6c823114223e2c3",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/recorder.py": "8b959db3b8dc838b",
+   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/templates.json": "e93f585833e72628",
+   "nexclash/verify.py": "3dcc48bdab8bd67b",
+   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-13"
+ }
+}

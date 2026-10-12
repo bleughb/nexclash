@@ -1,0 +1,113 @@
+{
+ "name": "treasure_island_title",
+ "order": 8.5,
+ "game": "Treasure Island Dizzy (title screen)",
+ "verified_json_game": "Treasure Island Dizzy (title)",
+ "doc": "treasure_island_dizzy.md",
+ "engine": "tid_legacy",
+ "representative": false,
+ "reference": "treasure_island_dizzy",
+ "in_status": false,
+ "inputs": {
+  "snapshot": {
+   "name": "treasure_island_title.z80",
+   "md5": "9443f0cc4c32415849b0419750f1bff3",
+   "path": "treasure_island_dizzy/dizzy2.z80"
+  },
+  "recordings": []
+ },
+ "modules": [
+  "build",
+  "identify",
+  "analyse",
+  "verify",
+  "nextboot",
+  "recorder",
+  "machine",
+  "rzx",
+  "dizzy_patch"
+ ],
+ "own_modules": [
+  "dizzy_patch"
+ ],
+ "data": [],
+ "shared_data": [
+  "nexclash/templates.json",
+  "nexclash/evidence.json"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "auto_record": false,
+  "minutes": 1,
+  "differential": false,
+  "note": "dedicated builder, sprite build verified during development; no recording (title screen); selftest re-proves the simulated boot"
+ },
+ "outputs": {
+  "plain": {
+   "file": "treasure_island_title.nex",
+   "md5": "70890aba7d821fba8a41e63636eb58be"
+  },
+  "sprites": {
+   "file": "treasure_island_title_sprites.nex",
+   "md5": "85e054fe4bce8e4b3a8e336aac432f58"
+  }
+ },
+ "repro": [],
+ "status": {},
+ "checked": {
+  "deps": {
+   "nexclash.py": "e643a6a71253b504",
+   "nexclash/analyse.py": "5bdd8b073cc95624",
+   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/dizzy_patch.py": "27472fb03d88fcfb",
+   "nexclash/evidence.json": "a6c823114223e2c3",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/recorder.py": "8b959db3b8dc838b",
+   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/templates.json": "e93f585833e72628",
+   "nexclash/verify.py": "3dcc48bdab8bd67b",
+   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-13"
+ },
+ "verified": {
+  "deps": {
+   "nexclash.py": "3492e0974aa538d2",
+   "nexclash/analyse.py": "5bdd8b073cc95624",
+   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/dizzy_patch.py": "27472fb03d88fcfb",
+   "nexclash/evidence.json": "a6c823114223e2c3",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/recorder.py": "8b959db3b8dc838b",
+   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/templates.json": "e93f585833e72628",
+   "nexclash/verify.py": "3dcc48bdab8bd67b",
+   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-13",
+  "tree": "main 32ad905",
+  "run": "selftest.py full run (before records)"
+ }
+}

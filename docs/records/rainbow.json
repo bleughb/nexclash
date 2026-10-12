@@ -1,0 +1,115 @@
+{
+ "name": "rainbow",
+ "order": 2,
+ "game": "Rainbow Islands (128K)",
+ "doc": "rainbow_islands.md",
+ "engine": "rainbow",
+ "representative": true,
+ "reference": "rainbow_islands",
+ "inputs": {
+  "snapshot": {
+   "name": "rainbow.z80",
+   "md5": "4c98b980b1726af545fccc99665ef29b",
+   "path": "rainbow_islands/rainbow.z80"
+  },
+  "recordings": [
+   {
+    "name": "rainbow.rzx",
+    "md5": "55046d1893bba0a4faf314ecd3a9638b",
+    "path": "rainbow_islands/rainbow.rzx"
+   },
+   {
+    "name": "rainbownew.rzx",
+    "md5": "47bb2b163a947724c343a2bc1b039458",
+    "path": "rainbow_islands/rainbownew.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "rainbow"
+ ],
+ "own_modules": [
+  "rainbow"
+ ],
+ "data": [
+  "docs/profiles/rainbow_islands.json",
+  "asm/rainbow_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "rainbow.rzx",
+   "rainbownew.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 50
+ },
+ "outputs": {
+  "plain": {
+   "file": "rainbow.nex",
+   "md5": "7ac543fb51c7a3c4137778eeb3cdc175"
+  },
+  "sprites": {
+   "file": "rainbow_sprites.nex",
+   "md5": "e50733b2b7e2db32f004c1436a2e0461"
+  },
+  "diagnostic": {
+   "file": "rainbow_sprites_diag.nex",
+   "md5": "8f25bc6146b9d7f7ae1f12a1d227447e"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Rainbow Islands (128K)",
+  "engine_col": "rainbow (rainbow_islands.md)",
+  "build": "rainbow_sprites.nex e50733b2 (collectables without border) + rainbow_sprites_diag.nex 8f25bc61",
+  "software": "RZX IDENTICAL x2, unit PASS (18 controls)",
+  "hardware": "bddea69e smooth; bffd9357: border on collectables unwanted, random corruption / slowdowns; e50733b2 / 8f25bc61 untested",
+  "next": "film the diagnostic build; then smarter raster wait / tile-build limit; layer B (dark-blue partial tiles); later-islands RZX"
+ },
+ "checks": [
+  "asm2profile:rainbow_islands"
+ ],
+ "checked": {
+  "deps": {
+   "asm/rainbow_hooks.asm": "7c07f23c99abef87",
+   "docs/profiles/rainbow_islands.json": "9bccf0fde403fff9",
+   "nexclash.py": "e643a6a71253b504",
+   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/rainbow.py": "a2baff9fb4790cca",
+   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-13"
+ },
+ "verified": {
+  "deps": {
+   "asm/rainbow_hooks.asm": "7c07f23c99abef87",
+   "docs/profiles/rainbow_islands.json": "9bccf0fde403fff9",
+   "nexclash.py": "e643a6a71253b504",
+   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/rainbow.py": "a2baff9fb4790cca",
+   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-13"
+ }
+}

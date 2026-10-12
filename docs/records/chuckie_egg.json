@@ -1,0 +1,105 @@
+{
+ "name": "chuckie_egg",
+ "order": 1,
+ "game": "Chuckie Egg",
+ "doc": "chuckie_egg.md",
+ "engine": "chuckie",
+ "representative": true,
+ "reference": "chuckie_egg",
+ "inputs": {
+  "snapshot": {
+   "name": "chuckie_egg.z80",
+   "md5": "cddc0cfea8259d0c497b50fae0acd27e",
+   "path": "chuckie_egg/Chuckie_Egg.z80"
+  },
+  "recordings": [
+   {
+    "name": "chuckie_egg.rzx",
+    "md5": "7697943d44c33dbef1c073332e36dfc0",
+    "path": "chuckie_egg/Chuckie_Egg.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "chuckie"
+ ],
+ "own_modules": [
+  "chuckie"
+ ],
+ "data": [
+  "docs/profiles/chuckie_egg.json",
+  "asm/chuckie_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "chuckie_egg.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 15
+ },
+ "outputs": {
+  "plain": {
+   "file": "chuckie_egg.nex",
+   "md5": "ec0df71e70fae35836eaed521f300777"
+  },
+  "sprites": {
+   "file": "chuckie_egg_sprites.nex",
+   "md5": "bfad6be1e7c8a2c797a6242d7f339e35"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Chuckie Egg",
+  "engine_col": "chuckie (chuckie_egg.md)",
+  "build": "Chuckie_Egg_sprites.nex bfad6be1",
+  "software": "RZX IDENTICAL, unit PASS",
+  "hardware": "untested",
+  "next": "hardware test"
+ },
+ "checks": [
+  "asm2profile:chuckie_egg"
+ ],
+ "checked": {
+  "deps": {
+   "asm/chuckie_hooks.asm": "5fed61c8f674f78b",
+   "docs/profiles/chuckie_egg.json": "8cfb95560319426a",
+   "nexclash.py": "e643a6a71253b504",
+   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/chuckie.py": "92e0990c7a70a175",
+   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-13"
+ },
+ "verified": {
+  "deps": {
+   "asm/chuckie_hooks.asm": "5fed61c8f674f78b",
+   "docs/profiles/chuckie_egg.json": "8cfb95560319426a",
+   "nexclash.py": "e643a6a71253b504",
+   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/chuckie.py": "92e0990c7a70a175",
+   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-13"
+ }
+}

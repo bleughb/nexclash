@@ -16,7 +16,8 @@ version is refused. Both paths give byte-identical output (checked 2026-10-12, a
 engines).
 
 Dizzy V (`asm/dizzy5_hooks.asm`) has no hooks section: dizzy5.py emits the bytes itself and
-`python selftest.py --tools` checks the pinned assembler's output equals them.
+selftest (the Dizzy V record's `dizzy5_asm` check, run with every Dizzy V rebuild) checks the
+pinned assembler's output equals them.
 
 ## New engine convention
 - `SAVEBIN "<prefix>_<key>.bin",...` for each block: the tool stores it as hooks[<key>].
@@ -31,6 +32,7 @@ Dizzy V (`asm/dizzy5_hooks.asm`) has no hooks section: dizzy5.py emits the bytes
 3. IDENTICAL for every engine: commit the new binary + pin.json, delete the old binary, and
    `python tools/asm2profile.py --all` (updates assembled_with). Note it in docs/VERIFICATION.md.
 4. Any DIFFERS: the assembler changed meaning. Keep the old pin, or regenerate the affected
-   profiles - that changes those games' .nex MD5s: full selftest, re-baseline, hardware retest.
+   profiles - that changes those games' .nex MD5s: re-verify them (`selftest.py --game G --verify`),
+   update their records, hardware retest.
 
 Licence: sjasmplus is BSD-3-Clause (LICENSE-sjasmplus.md); redistributed unmodified.

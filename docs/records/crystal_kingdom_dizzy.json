@@ -1,0 +1,56 @@
+{
+ "name": "crystal_kingdom_dizzy",
+ "order": 11,
+ "game": "Crystal Kingdom Dizzy (128K)",
+ "doc": "crystal_kingdom_dizzy.md",
+ "engine": "plain",
+ "representative": true,
+ "reference": "crystal_kingdom_dizzy",
+ "verified_json": false,
+ "inputs": {
+  "snapshot": {
+   "name": "crystal_kingdom_dizzy.z80",
+   "md5": "0cb1cb260b2f17305ef41c30af0e1f8f",
+   "path": "crystal_kingdom_dizzy/dizzy7128k.z80"
+  },
+  "recordings": []
+ },
+ "modules": [
+  "build"
+ ],
+ "own_modules": [],
+ "data": [],
+ "shared_data": [],
+ "rebuild": {
+  "cmd": "convert",
+  "args": [],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": null,
+ "outputs": {
+  "plain": {
+   "file": "crystal_kingdom_dizzy.nex",
+   "md5": "99975f65172dc86ecefbac07db2c0c00"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Crystal Kingdom Dizzy (128K)",
+  "engine_col": "plain only (crystal_kingdom_dizzy.md)",
+  "build": "-",
+  "software": "-",
+  "hardware": "plain runs",
+  "next": "sprites deferred"
+ },
+ "checked": {
+  "deps": {
+   "nexclash.py": "e643a6a71253b504",
+   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-13"
+ }
+}

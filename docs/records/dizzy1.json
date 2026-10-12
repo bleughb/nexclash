@@ -1,0 +1,125 @@
+{
+ "name": "dizzy1",
+ "order": 9,
+ "game": "Dizzy: The Ultimate Cartoon Adventure",
+ "doc": "dizzy_ultimate_cartoon_adventure.md",
+ "engine": "dizzy1_xor",
+ "representative": true,
+ "reference": "dizzy_ultimate_cartoon_adventure",
+ "inputs": {
+  "snapshot": {
+   "name": "dizzy1.z80",
+   "md5": "0659328fd54fd446e39d1740bafd02e7",
+   "path": "dizzy_ultimate_cartoon_adventure/Dizzy_The_Ultimate_Cartoon_Adventure_1987_Codemasters.z80"
+  },
+  "recordings": [
+   {
+    "name": "dizzy1.rzx",
+    "md5": "99d9c4c086d06a46ba7a781e5321dc3e",
+    "path": "dizzy_ultimate_cartoon_adventure/dizzy1rzx"
+   }
+  ]
+ },
+ "modules": [
+  "build",
+  "identify",
+  "analyse",
+  "verify",
+  "nextboot",
+  "recorder",
+  "machine",
+  "rzx",
+  "dizzy1_patch"
+ ],
+ "own_modules": [
+  "dizzy1_patch"
+ ],
+ "data": [],
+ "shared_data": [
+  "nexclash/templates.json",
+  "nexclash/evidence.json"
+ ],
+ "rebuild": {
+  "args": [],
+  "rzx": [],
+  "decisions": {
+   "stack_low_water": 65518,
+   "rom_used": true,
+   "printer_buffer_touched": true,
+   "pb_5b00_5b50_touched": false,
+   "altrom_hooks_read": false
+  }
+ },
+ "verify": {
+  "args": [],
+  "rzx": [],
+  "auto_record": true,
+  "minutes": 5,
+  "auto_rzx_md5": "0d21674bfed3e6f261e6a0c1f6e44c59",
+  "differential": false,
+  "note": "dedicated builder, sprite build verified during development; selftest re-proves the plain tail (access scan of the auto recording) and the simulated boot"
+ },
+ "outputs": {
+  "plain": {
+   "file": "dizzy1.nex",
+   "md5": "7892b2e0f1f3f9f19165516db307cbe0"
+  },
+  "sprites": {
+   "file": "dizzy1_sprites.nex",
+   "md5": "05d2bce99f4d7654d4e1c9c9c04dc391"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Dizzy: The Ultimate Cartoon Adventure (Dizzy 1)",
+  "engine_col": "dedicated XOR (dizzy_ultimate_cartoon_adventure.md)",
+  "build": "dizzy1_sprites.nex 05d2bce9",
+  "software": "verified",
+  "hardware": "untested",
+  "next": "-"
+ },
+ "checked": {
+  "deps": {
+   "nexclash.py": "e643a6a71253b504",
+   "nexclash/analyse.py": "5bdd8b073cc95624",
+   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/dizzy1_patch.py": "2c2af16354bc80d3",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/evidence.json": "a6c823114223e2c3",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/recorder.py": "8b959db3b8dc838b",
+   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/templates.json": "e93f585833e72628",
+   "nexclash/verify.py": "3dcc48bdab8bd67b",
+   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-13"
+ },
+ "verified": {
+  "deps": {
+   "nexclash.py": "e643a6a71253b504",
+   "nexclash/analyse.py": "5bdd8b073cc95624",
+   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/dizzy1_patch.py": "2c2af16354bc80d3",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/evidence.json": "a6c823114223e2c3",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/recorder.py": "8b959db3b8dc838b",
+   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/templates.json": "e93f585833e72628",
+   "nexclash/verify.py": "3dcc48bdab8bd67b",
+   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-13"
+ }
+}

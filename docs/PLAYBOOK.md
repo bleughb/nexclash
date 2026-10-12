@@ -123,4 +123,9 @@ Ask the user to try CSpect first if a build changes memory layout or start-up.
 ## 7. Deliver
 `<game>_sprites.nex`, `<game>.nex`, builder, asm sources; a short results
 table; a hardware checklist. Add the new profile (and signature if a new
-engine) to docs/profiles/, and games/<game>.md + a STATUS.md row.
+engine) to docs/profiles/, games/<game>.md, and the evidence record docs/records/<game>.json
+(copy the nearest engine's record; `modules` = the modules your build imports, `own_modules` /
+`data` = your engine's files, `rebuild.decisions` = the run's <name>_decisions.json, `status` =
+the STATUS row), then `python -m nexclash.records views` (regenerates STATUS / VERIFICATION
+checksums / verified.json). Check it: `python -m nexclash.records deps <game>` lists what your
+game's evidence depends on; the maintainers' selftest stamps it.

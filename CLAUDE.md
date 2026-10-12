@@ -32,14 +32,15 @@ or download another version; tools/sjasmplus/README.md).
   match the guard), table-full cases, and a negative control. The negative control must use the
   broken patch's own tables (restore only run-time state from captured states).
 - Keep changes additive and limited to the new engine (one module, one .asm, one profile, one
-  games/ file, a dispatch line in nexclash.py cmd_auto, a verified.json entry).
+  games/ file, a dispatch line in nexclash.py cmd_auto, an evidence record docs/records/<game>.json).
 - Ask the user before decisions that change what they see (which figures become sprites,
   colours, anything left on the ULA).
-- Do not change another game's output. Regression check = `python selftest.py --smoke` (rebuilds
-  Chuckie Egg only, under a second; needs the private references) after touching shared code
-  (nexclash.py, z80tonex, build, verify, nextboot, ...). Do NOT run the full selftest or other
-  games' verifications in a game session: the full selftest (~1.5 h) runs only for releases.
-  Without the references, say in the contribution note that shared code changed.
+- Do not change another game's output. After touching shared code (anything outside your engine's
+  module / .asm / profile) run `python selftest.py --smoke` (Chuckie Egg rebuild, under a second;
+  needs the private references). Do NOT rebuild or verify other games in a game session: the
+  maintainers' `selftest.py --affected` finds every game a change reaches (docs/records keep the
+  hashes of each game's dependencies) and rebuilds those. Without the references, say in the
+  contribution note that shared code changed.
 - Never `pkill -f` / kill by `pgrep -f` pattern: it matches your own shell whenever the pattern
   appears anywhere in that command line (it has, twice). Find the PID, kill the PID.
 - 128K start-up tail must end below 0xC000.
@@ -50,9 +51,14 @@ or download another version; tools/sjasmplus/README.md).
   it into the engine. Verification harnesses stay per engine (Dean's decision).
 
 ## End of every task
-- Update games/<game>.md (facts, decisions, status, hardware checklist), STATUS.md (one row),
-  docs/VERIFICATION.md (results + output MD5s), docs/profiles/verified.json (snapshot MD5 ->
-  output MD5s), docs/LEARNINGS.md (GENERAL lessons only). History lives in git.
+- Update games/<game>.md (facts, decisions, status, hardware checklist); the game's evidence
+  record docs/records/<game>.json (copy the nearest one: inputs + MD5s (`path` under the private
+  reference repo: maintainers fill it), modules, data, rebuild
+  recipe with the build decisions from the run's <name>_decisions.json, verify recipe, outputs,
+  status row), then `python -m nexclash.records views` - it writes STATUS.md's table,
+  VERIFICATION.md's checksum list and verified.json (never edit those by hand; selftest fails
+  when they are stale); docs/VERIFICATION.md (your verification results section);
+  docs/LEARNINGS.md (GENERAL lessons only). History lives in git.
 - Capture (before the commit; nothing learned may stay only in the chat). Answer each, write
   every "yes" to the file named, then say in the reply which lines were added:
   1. Did I need a fact or rule the docs did not give (my own knowledge, a source, trial and
@@ -68,7 +74,9 @@ or download another version; tools/sjasmplus/README.md).
 - Release (maintainers): bump VERSION, merge, then publish a release with tag v<VERSION> in the
   GitHub UI: the release workflow builds the zip (tools/make_package.py; version = the tag) and
   attaches it. Missing zip: Actions -> release -> Run workflow with the tag.
-  Before a release (not per game): full `python selftest.py` must reproduce every MD5.
+  Before a release: `python selftest.py --stamp` (every game rebuilt + the re-verifications
+  due) must PASS. Before merging a PR: `python selftest.py --affected --verify --stamp`.
+  `--full` (every game re-verified, ~2.5 h) only when verification code changed throughout.
 - Maintainers: commit on a branch, push, open a PR (message = what changed + verification). New
   game's files go in the private repo: specnext/reference/<game>/ (snapshot, recordings, and the
   built <game>.nex + <game>_sprites.nex), listed in its reference/README.md.
@@ -78,10 +86,11 @@ or download another version; tools/sjasmplus/README.md).
 | Path | What |
 |---|---|
 | nexclash.py | CLI: patch / new / contribute (users), auto / identify / record / convert / verify / rzx, analysis: inspect / scan / isr / cost |
-| selftest.py | maintainers' acceptance test (needs the private reference files) |
+| selftest.py | maintainers' acceptance test, driven by docs/records (needs the private reference files) |
 | nexclash/ | toolkit modules + engines (chuckie, dizzy5, dizzy6, rainbow, wally, ...); userflow.py = patch/new/contribute; simrun + snapinfo/memscan/isrinfo/drawcost = the analysis commands |
-| asm/ | hook sources; after any edit `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex); dizzy5_hooks.asm is the exception: dizzy5.py emits the bytes, `selftest.py --tools` checks they match |
-| docs/profiles/ | per-game profiles (hook hex read by the engines), signatures.json, verified.json |
+| asm/ | hook sources; after any edit `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex); dizzy5_hooks.asm is the exception: dizzy5.py emits the bytes, selftest (Dizzy V record check) compares them |
+| docs/profiles/ | per-game profiles (hook hex read by the engines), signatures.json, verified.json (generated) |
+| docs/records/ | one evidence record per game: inputs, dependencies, rebuild / verify recipes, outputs, status, check stamps (nexclash/records.py) |
 | games/ | one file per game, named like its folder in specnext/reference/ (facts, decisions, status, open items, checklist); tid_engine.md = shared TID engine facts |
 | docs/ | BRIEFING, LEARNINGS, VERIFICATION, PLAYBOOK, RECORDING_CHECKLIST, NEXT_REGISTERS, contribute.json |
 | tools/ | asm2profile.py (asm -> profile hex, --check --all), sjasmplus/ (pinned assembler), make_package.py (release zip), merge_contribution.py, prototypes |

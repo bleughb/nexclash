@@ -4,7 +4,7 @@
 mirror calls; nexclash.py _auto_dizzy6). Profile: docs/profiles/dizzy6_prince_of_the_yolkfolk.json.
 Reference files (private repo,
 specnext/reference/prince_of_the_yolkfolk/): Dizzy6.z80 (md5 dd6cd7a3), try1.rzx, try2.rzx, try3.rzx.
-Not in selftest yet.
+In selftest (docs/records/dizzy6.json): rebuild from stored decisions; verify against try1.rzx (~3 min).
 
 | Output | MD5 | Status |
 |---|---|---|

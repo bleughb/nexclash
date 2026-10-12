@@ -72,19 +72,19 @@ class _SnapInfo:
 
 
 
-def _auto_dizzy6(a, s, z80, name, out, rzxs, prof, say, rep):
+def _auto_dizzy6(a, s, z80, name, out, rzxs, prof, say, rep, dec=None):
     """TID engine + mirrored player copy (Dizzy 6): one analysis + one first-access pass per RZX,
     tail in the player's undo buffer (proven write-first), plain + sprite build, verify, mirror selftest."""
     from nexclash.analyse import analyse
     from nexclash.verify import verify
     from nexclash import dizzy6 as D6
-    if not rzxs:
+    if not rzxs and dec is None:
         say('Sprites   : not built - needs a recording'); return _finish(out, name, rep)
     mem = list(s.memory[0:65536])
     tprof = dict(prof, engine='tid')
     U, USZ = tprof['undo_buffer'], 88
     proven, analyses = True, []
-    for r in rzxs:
+    for r in ([] if dec is not None else rzxs):
         t = time.time()
         an = analyse(tprof, r, s.sp, stop=a.quick)
         fa = D6.first_access(r, U, U + USZ)
@@ -95,7 +95,15 @@ def _auto_dizzy6(a, s, z80, name, out, rzxs, prof, say, rep):
             ev.get('box (drawn)', 0) + ev.get('box (not drawn)', 0), ev.get('pixel tests', 0),
             ev.get('PIXEL TESTS THAT DEPEND ON THE PLAYER', 0), 'write' if set(fa) == {'w'} else 'NOT write-first: ' + fa))
         proven &= set(fa) == {'w'}
-    an = _combine([x for _, x in analyses])
+    if dec is not None:
+        an, proven = _an_from_decisions(dec), dec['tail_proven']
+        vread, smod = dec['virtual_read_needed'], dec['self_modified_sites']
+    else:
+        an = _combine([x for _, x in analyses])
+        vread = any(x['virtual_read_needed'] for _, x in analyses)
+        smod = any(bool(x['self_modified_sites']) for _, x in analyses)
+        _write_decisions(out, name, an, {'tail_proven': proven, 'virtual_read_needed': vread,
+                                         'self_modified_sites': smod})
     tail = U if proven else None
     plain = os.path.join(out, name + '.nex')
     zt.convert(z80, plain, tail, True, quiet=True)
@@ -107,9 +115,9 @@ def _auto_dizzy6(a, s, z80, name, out, rzxs, prof, say, rep):
         why.append('undo buffer not proven write-first')
     if an['rom_used']:
         why.append('game reads the ROM (slot-1 page would hide it)')
-    if any(x['virtual_read_needed'] for _, x in analyses):
+    if vread:
         why.append("game logic reads the player's pixels")
-    if any(x['self_modified_sites'] for _, x in analyses):
+    if smod:
         why.append('the game writes to a patch site')
     if a.strategy not in (None, 'slot1'):
         why.append('--strategy %s: Dizzy 6 keeps its self-modifying plotter copy in the slot-1 RAM page (slot1 only)'
@@ -119,7 +127,10 @@ def _auto_dizzy6(a, s, z80, name, out, rzxs, prof, say, rep):
     patch = D6.Dizzy6Patch(tprof, mem, U, USZ)
     conv = zt.convert(z80, sprites, None, True, quiet=True, patch=patch)
     _boot(say, z80, sprites, patch, conv)
-    say('Sprites   : %s  (slot1 + mirror copy at 0x%04X; %d patterns)' % (os.path.basename(sprites), D6.COPY_ORG, patch.num_patterns))
+    say('Sprites   : %s  (slot1 + mirror copy at 0x%04X; %d patterns%s)' % (
+        os.path.basename(sprites), D6.COPY_ORG, patch.num_patterns, '; rebuilt, not re-verified' if dec else ''))
+    if dec is not None:
+        return _finish(out, name, rep)
     ok = True
     for r, _ in analyses:
         t = time.time()
@@ -182,6 +193,11 @@ def cmd_auto(a):
         say('            ' + prof['hint'])
     json.dump({k: v for k, v in prof.items()}, open(os.path.join(out, name + '_profile.json'), 'w'), indent=1)
     rzxs = list(a.rzx or [])
+    dec = json.load(open(a.decisions)) if getattr(a, 'decisions', None) else None
+    if dec is not None:
+        a.no_record = True
+        say('Rebuild   : from stored build decisions %s - no analysis, no verification (the evidence '
+            'record holds those)' % os.path.basename(a.decisions))
     if not a.no_record:
         t = time.time()
         auto = os.path.join(out, name + '_auto.rzx')
@@ -191,15 +207,15 @@ def cmd_auto(a):
         if r['inputs'].startswith('none') or r['start'] == 'none detected':
             say('            weak recording: try --start/--keys, or send your own RZX (--rzx)')
         rzxs.insert(0, auto)
-    if not rzxs:
+    if not rzxs and dec is None:
         say('No recording: plain conversion uses the converter default tail (unchecked).')
     if eng in ('dizzy5', 'dizzy5_like'):
-        return _auto_dizzy5(a, s, z80, name, out, rzxs, say, rep)
+        return _auto_dizzy5(a, s, z80, name, out, rzxs, say, rep, dec)
     if eng == 'tid_mirror' and prof.get('ok'):
-        return _auto_dizzy6(a, s, z80, name, out, rzxs, prof, say, rep)
+        return _auto_dizzy6(a, s, z80, name, out, rzxs, prof, say, rep, dec)
     tid = eng == 'tid' and prof.get('ok')
     analyses = []
-    for r in rzxs:
+    for r in ([] if dec is not None else rzxs):
         t = time.time()
         an = analyse(prof if tid else None, r, s.sp, stop=a.quick)
         analyses.append((r, an))
@@ -209,7 +225,7 @@ def cmd_auto(a):
                 ev.get('plot (not drawn)', 0) + ev.get('plot (drawn)', 0), ev.get('box (drawn)', 0) + ev.get('box (not drawn)', 0),
                 ev.get('pixel tests', 0), ev.get('PIXEL TESTS THAT DEPEND ON THE PLAYER', 0))) if tid else 'access scan'))
     an = _combine([x for _, x in analyses]) if analyses else None
-    fp = _fingerprint(s.memory, prof) if tid else None
+    fp = _fingerprint(s.memory, prof) if tid and dec is None else None
     if fp:
         for r, x in analyses:
             if not r.endswith('_auto.rzx'):
@@ -218,6 +234,10 @@ def cmd_auto(a):
         if an is not None and ev.get('stack_low_water', 65536) < an['stack_low_water']:
             an['stack_low_water'] = ev['stack_low_water']
             say('Evidence  : stack used down to 0x%04X (proven by %s)' % (ev['stack_low_water'], ev.get('source')))
+    if dec is not None:
+        an = _an_from_decisions(dec)
+    elif an is not None:
+        _write_decisions(out, name, an)
     plain = os.path.join(out, name + '.nex')
     why = B.plain(z80, plain, an)
     say('Plain     : %s  %s' % (os.path.basename(plain), why))
@@ -240,6 +260,13 @@ def cmd_auto(a):
                 say('            the recordings prove only %d bytes of dead stack below SP 0x%04X (54 needed).'
                     % (s.sp - an['stack_low_water'], s.sp))
                 say('            Record a longer RZX (open the inventory, talk, lose a life) and rerun with --rzx.')
+            return _finish(out, name, rep)
+        if dec is not None:
+            patch = B.TidPatch(prof, strat, tail)
+            conv = zt.convert(z80, sprites, None, True, quiet=True, patch=patch)
+            _boot(say, z80, sprites, patch, conv)
+            say('Sprites   : %s  (%s: %s; %d patterns; rebuilt, not re-verified)' % (
+                os.path.basename(sprites), strat, reason, patch.num_patterns))
             return _finish(out, name, rep)
         if any(x['virtual_read_needed'] for _, x in analyses):
             say('Sprites   : not built - game logic reads the player\'s pixels (needs a virtual read;')
@@ -267,14 +294,16 @@ def cmd_auto(a):
     _finish(out, name, rep)
 
 
-def _auto_dizzy5(a, s, z80, name, out, rzxs, say, rep):
+def _auto_dizzy5(a, s, z80, name, out, rzxs, say, rep, dec=None):
     """Dizzy V engine: optional loader pre-run, one analysis pass per RZX, plain + sprite build,
     differential verify."""
     from nexclash import dizzy5 as D5
     from nexclash.loader import prerun
     if not rzxs:
-        say('Plain     : %s  %s' % (name + '.nex', B.plain(z80, os.path.join(out, name + '.nex'), None)))
-        say('Sprites   : not built - needs a recording to prove the patch is safe')
+        say('Plain     : %s  %s' % (name + '.nex', B.plain(z80, os.path.join(out, name + '.nex'),
+                                                     _an_from_decisions(dec) if dec else None)))
+        say('Sprites   : not built - needs a recording (%s)' % (
+            'the loader start state is replayed from it' if dec else 'to prove the patch is safe'))
         return _finish(out, name, rep)
     src = z80
     prof = D5.identify5(s.memory[0:65536])
@@ -294,6 +323,15 @@ def _auto_dizzy5(a, s, z80, name, out, rzxs, say, rep):
         say('Sprites   : not built - profile incomplete: ' + '; '.join(prof.get('notes', [])))
         return _finish(out, name, rep)
     smem = Snapshot.get(src).memory[0:65536]
+    if dec is not None:                        # rebuild: start state from the recording, facts stored
+        plain = os.path.join(out, name + '.nex')
+        say('Plain     : %s  %s' % (os.path.basename(plain), B.plain(z80, plain, _an_from_decisions(dec))))
+        patch = D5.D5Patch(prof, prof['undo_buffer'], prof['undo_size'], strategy=a.strategy or 'altrom')
+        sprites = os.path.join(out, name + '_sprites.nex')
+        conv = zt.convert(src, sprites, None, True, quiet=True, patch=patch)
+        _boot(say, src, sprites, patch, conv)
+        say('Sprites   : %s  (%s; rebuilt, not re-verified)' % (os.path.basename(sprites), patch.strategy))
+        return _finish(out, name, rep)
     ans = []
     for r in rzxs:
         t = time.time()
@@ -307,6 +345,7 @@ def _auto_dizzy5(a, s, z80, name, out, rzxs, say, rep):
     an = _combine([x for _, x in ans])
     an['fa'] = bytes(min(v for v in col if v) if any(col) else 0 for col in zip(*[x['fa'] for _, x in ans])) \
         if len(ans) > 1 else ans[0][1]['fa']
+    _write_decisions(out, name, an)
     plain = os.path.join(out, name + '.nex')
     say('Plain     : %s  %s' % (os.path.basename(plain), B.plain(z80, plain, an)))
     why = [w for _, x in ans for w in D5.refusals(prof, x, smem)]
@@ -410,6 +449,39 @@ def _combine(ans):
     return c
 
 
+DECISION_KEYS = ('stack_low_water', 'rom_used', 'printer_buffer_touched', 'pb_5b00_5b50_touched', 'altrom_hooks_read')
+
+
+def _decisions(an):
+    """The few analysis facts the plain / sprite builds depend on (build.plain, choose_tid_strategy):
+    stored per game (docs/records) so a rebuild needs no recording (`auto --decisions FILE`)."""
+    rd, wr = an['rd'], an['wr']
+    return {'stack_low_water': an['stack_low_water'], 'rom_used': bool(an['rom_used']),
+            'printer_buffer_touched': bool(an['printer_buffer_touched']),
+            'pb_5b00_5b50_touched': any(rd[q] or wr[q] for q in range(0x5B00, 0x5B50)),
+            'altrom_hooks_read': any(rd[B.ALTROM_HOOKS[0]:B.ALTROM_HOOKS[1]])}
+
+
+def _an_from_decisions(d):
+    """An analysis stand-in with exactly the stored facts (what build.plain and choose_tid_strategy read)."""
+    missing = [k for k in DECISION_KEYS if k not in d]
+    if missing:
+        raise ValueError('decisions file lacks %s' % missing)
+    rd, wr = bytearray(65536), bytearray(65536)
+    if d['pb_5b00_5b50_touched']:
+        rd[0x5B00] = 1
+    if d['altrom_hooks_read']:
+        rd[B.ALTROM_HOOKS[0]] = 1
+    return {'rd': rd, 'wr': wr, 'stack_low_water': d['stack_low_water'], 'rom_used': d['rom_used'],
+            'printer_buffer_touched': d['printer_buffer_touched']}
+
+
+def _write_decisions(out, name, an, extra=None):
+    d = dict(_decisions(an), **(extra or {}))
+    json.dump(d, open(os.path.join(out, name + '_decisions.json'), 'w'), indent=1)
+    return d
+
+
 def _finish(out, name, rep):
     rep.append('')
     rep.append('Hardware checklist: starts; player visible and animating; hidden in boxes/room changes;')
@@ -432,6 +504,7 @@ def main():
         p.add_argument('--outline', help="rainbow engine: mask-only pixels (black, blue, transparent, #RRGGBB)")
         p.add_argument('--class-colours', help='rainbow engine: JSON {"pages": {"D6": 1}, "palettes": {"1": {"ink": "#00FF00"}}}')
         p.add_argument('--allow-60hz', action='store_true', help='do not force 50 Hz video (outputs then differ from the verified MD5s)')
+        p.add_argument('--decisions', help='rebuild from stored build decisions (docs/records); no recording, no verification')
     p = sub.add_parser('contribute'); p.add_argument('name', help='game name (zip name)')
     p.add_argument('--report', action='append', help='nexclash report(s) to include (GAME_report.txt)')
     p.add_argument('--note', help='one line for the maintainers'); p.add_argument('-o', '--output')

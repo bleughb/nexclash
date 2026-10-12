@@ -13,9 +13,10 @@
 
 ## What happens next (maintainers)
 `python tools/merge_contribution.py nexclash_contribution_MyGame.zip` puts the files on a new
-branch and lists them. The maintainers review against CLAUDE.md's rules, re-run the verification
-with their own copy of the game where they have one, run `selftest.py --smoke` (and `--tools` if
-an analysis command changed) when shared code changed - the full `selftest.py` runs before each
-release - and merge. The game is in the next release.
+branch and lists them. The maintainers review against CLAUDE.md's rules, put their own copy of
+the game in the private reference repo (the game's record, docs/records/<game>.json, names it),
+re-verify it (`selftest.py --game <game> --verify --stamp`), run `selftest.py --affected --verify
+--stamp` (every other game the change reaches; nothing else) and merge. The game is in the next
+release.
 
 By contributing you agree your contribution is licensed GPL-3.0-or-later.

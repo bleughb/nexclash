@@ -1,105 +1,129 @@
 #!/usr/bin/env python3
-"""nexclash self-test: rebuild the reference games and check every output byte-for-byte.
+"""nexclash self-test, driven by the evidence records (docs/records/<game>.json; nexclash/records.py).
 
-    python selftest.py [FOLDER] [--human] [--no-repro] [--fast]
-    python selftest.py [FOLDER] --smoke      Chuckie Egg only, seconds: the per-change check
-    python selftest.py [FOLDER] --tools      the analysis commands (inspect/scan/isr/cost), ~1 min
+    python selftest.py --smoke             Chuckie Egg rebuilt from its snapshot, MD5s: under a second.
+                                           Game sessions run this after touching shared code.
+    python selftest.py --affected          maintainers, per change: rebuild the games whose dependencies
+                                           changed since their last check (MD5s); list the re-verifications
+                                           now due (--verify runs them)
+    python selftest.py                     release: rebuild EVERY game (MD5s) + run the due re-verifications
+    python selftest.py --full              every game rebuilt AND re-verified against its recordings (~2.5 h)
+    python selftest.py --game NAME [--verify]   one game
+    python selftest.py --plan              what --affected would do, without running anything
+    python selftest.py --tools             the analysis commands (inspect/scan/isr/cost) on Chuckie Egg,
+                                           and records.plan() on synthetic stamps
+  options: [FOLDER] (default $NEXCLASH_REFERENCE, ./reference, ../specnext/reference), --stamp (write the
+  passed results into the records: 'checked' after a rebuild, 'verified' after a re-verification),
+  --jobs N (games in parallel), --human (also verify against the extra recordings a record lists).
 
-FOLDER (default: $NEXCLASH_REFERENCE, ./reference or ../specnext/reference - the maintainers'
-private reference repo, one subfolder per game; game files are never in the public package) holds the reference inputs under any
-names (recognised by MD5; the engine games below also by their canonical name). Runs
-`nexclash.py auto` on each snapshot (auto recording, deterministic seed) and
-checks the .nex MD5s (default strategy = altrom where proven) and that every
-verification and simulated boot PASSED; then rebuilds the old builds with
-`--strategy printer|slot1` from the same recordings (REPRO) and checks their
-MD5s too (--no-repro skips that). --human also verifies the Fantasy World /
-Magicland builds against Dean's own recordings (slower).
-Games whose snapshot is missing are skipped and listed. Exit code 0 = all good;
-1 = a failure; 2 = no failure but games skipped or outputs not baselined yet
-(the new MD5 is printed: paste it into EXPECTED and VERIFICATION.md).
-Engine games verified against Dean's recordings (RZX_GAMES: Chuckie Egg, Everyone's a Wally,
-Rainbow Islands, Commando) run `auto --no-record --rzx ...` and check both .nex MD5s and the report;
-Rainbow Islands takes ~50 min, Commando ~55 min (--fast skips both).
+Rebuild = the record's recipe: snapshot (+ the recordings it names) + the stored build decisions, no
+analysis, no verification - seconds per game. Re-verify = the record's verify recipe: auto recording or
+the reference recordings, differential verification, simulated boot, the old-strategy builds (repro).
+Which games need which is plan() in nexclash/records.py: own files changed -> re-verify that game;
+shared files changed -> rebuild everything that depends on them + re-verify one representative per
+engine. Exit 0 = all good; 1 = a failure; 2 = no failure but games skipped (reference files missing).
 """
-import hashlib, os, shutil, subprocess, sys, tempfile
+import concurrent.futures
+import datetime
+import hashlib
+import io
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-INPUTS = {  # md5 -> canonical name
-    '7578947fcc8dbc4ba822e2c565499d54': 'treasure_island_dizzy.z80',   # dizzy2_game.z80 (in-game)
-    '0659328fd54fd446e39d1740bafd02e7': 'dizzy1.z80',
-    '876f474b3441c08ed8ff25bd43d616a3': 'fantasy_world_dizzy.z80',     # the "(a)" keyboard snapshot
-    '53078ac60141cd808b609600b85f4094': 'magicland_dizzy.z80',
-    '99d9c4c086d06a46ba7a781e5321dc3e': 'dizzy1.rzx',
-    '8005fece5a6d6f8792417b592d6b8df1': 'fantasy_world_dizzy.rzx',
-    'b4620286854e67b13fb5590476fa17af': 'magicland_dizzy.rzx',
-    '703c934aa64c1c1d37d5041dd28cf9c7': 'dizzy5.z80',                  # Dizzy_V.z80 (BASIC loader stage; optional)
-    '9443f0cc4c32415849b0419750f1bff3': 'treasure_island_title.z80',   # dizzy2.z80 (title screen; optional)
-}
-RZX_GAMES = {        # engine games: inputs (canonical name, md5 or None = match by name), outputs
-    'chuckie_egg': {'files': [('chuckie_egg.z80', 'cddc0cfea8259d0c497b50fae0acd27e'),
-                              ('chuckie_egg.rzx', '7697943d44c33dbef1c073332e36dfc0')],
-                    'nex': ('ec0df71e70fae35836eaed521f300777', 'bfad6be1e7c8a2c797a6242d7f339e35')},
-    'wally': {'files': [('wally.z80', 'a9eeb555a327e5794b0ba19bc80dccf0'), ('wally.rzx', '72c7d1f6c99407bc21d892d423e89964')], 'alias': {'wallyrzx.rzx': 'wally.rzx'},
-              'nex': ('2e615b3e7ae995e6d6a6ed9e3f586d4d', 'f7605489c3af55b8e8c6a580c1c26150')},
-    'rainbow': {'files': [('rainbow.z80', '4c98b980b1726af545fccc99665ef29b'), ('rainbow.rzx', '55046d1893bba0a4faf314ecd3a9638b'),
-                          ('rainbownew.rzx', '47bb2b163a947724c343a2bc1b039458')],
-                'nex': ('7ac543fb51c7a3c4137778eeb3cdc175', 'e50733b2b7e2db32f004c1436a2e0461', '8f25bc6146b9d7f7ae1f12a1d227447e'), 'slow': True},
-    'commando': {'files': [('commando.z80', 'c9af5668191462d77c5859900268c24b'),
-                           ('commando.rzx', 'b3350a66a14db07add43c878eb872169')],
-                 'nex': ('a206f950c12f58a8e7f26b366f5a2480', 'd601385ee4aeb7f3d7c0771bdc27df6b'), 'slow': True},
-}
-OPTIONAL = {'dizzy5.z80', 'treasure_island_title.z80'}
-NO_RECORD = {'treasure_island_title'}   # reference built without a recording (dedicated builder)
-EXPECTED = {           # default build (altrom era); None = not baselined yet (needs Dean's reference files)
-    'treasure_island_dizzy.nex': '4dae1a3a15b2158642a5d5b82de92ef7',
-    'treasure_island_dizzy_sprites.nex': '8b4d0847d68fce3215bd43a0e116e682',
-    'dizzy1.nex': '7892b2e0f1f3f9f19165516db307cbe0',
-    'dizzy1_sprites.nex': '05d2bce99f4d7654d4e1c9c9c04dc391',
-    'fantasy_world_dizzy.nex': 'cd620010e2f61af0002e76718945716f',
-    'fantasy_world_dizzy_sprites.nex': '9182f2f8b4b0dc55b59a69728568b403',   # altrom (was printer); baselined 2026-10-11
-    'magicland_dizzy.nex': '09eb18496cff334ea17bfc0b0c94585d',
-    'magicland_dizzy_sprites.nex': 'bf137d41d3cc08221bf6fdda153c9de2',       # altrom (was slot1); baselined 2026-10-11
-    'dizzy5.nex': 'c99189f3274a4803f0b25b0217206bdb',
-    'treasure_island_title.nex': '70890aba7d821fba8a41e63636eb58be',
-    'treasure_island_title_sprites.nex': '85e054fe4bce8e4b3a8e336aac432f58',   # = dizzy2_title_sprites.nex
-    'dizzy5_sprites.nex': '1f33c467e6aa55585cea79cfbb24bcfe',                # altrom (was slot1)
-}
-REPRO = {              # old builds: game -> (--strategy, sprites .nex MD5)
-    'fantasy_world_dizzy': ('printer', 'c09213beaec1572c0228985dae89bd77'),
-    'magicland_dizzy': ('slot1', 'd3b37c05d4c47ada07294fa2d7c1ae76'),
-    'dizzy5': ('slot1', 'a59c1fd91ec5c32e549526dbc08d2e69'),
-}
+sys.path.insert(0, HERE)
+from nexclash import records as R   # noqa: E402
+
+NEXCLASH = os.path.join(HERE, 'nexclash.py')
 
 
 def md5(p):
     return hashlib.md5(open(p, 'rb').read()).hexdigest()
 
 
-def _find(src, want):
-    return next((os.path.join(d, f) for d, _, fs in os.walk(src) for f in fs
-                 if os.path.getsize(os.path.join(d, f)) < 2_000_000 and md5(os.path.join(d, f)) == want), None)
+def reference_dir(pos):
+    return pos[0] if pos else next((d for d in (os.environ.get('NEXCLASH_REFERENCE'), os.path.join(HERE, 'reference'),
+                                                os.path.join(HERE, '..', 'specnext', 'reference')) if d and os.path.isdir(d)), '')
 
 
-def tools_check(src):
-    """The shared analysis commands (inspect / scan / isr / cost) against facts known from the
-    Commando and Chuckie Egg references (~1 min). Returns the number of failures. A session that
-    improves a command keeps these passing and adds a check for what it added."""
-    import io
-    sys.path.insert(0, HERE)
-    from nexclash import snapinfo, memscan, isrinfo, drawcost
-    cz = _find(src, RZX_GAMES['commando']['files'][0][1])
-    cr = _find(src, RZX_GAMES['commando']['files'][1][1])
-    ez = _find(src, RZX_GAMES['chuckie_egg']['files'][0][1])
-    er = _find(src, RZX_GAMES['chuckie_egg']['files'][1][1]) if len(RZX_GAMES['chuckie_egg']['files']) > 1 else None
-    checks = []
+def stage(rec, src, work):
+    """Copy the record's inputs from the reference folder under their canonical names; MD5-checked.
+    -> (dir, None) or (None, why)."""
+    d = os.path.join(work, rec['name'])
+    os.makedirs(d, exist_ok=True)
+    for it in [rec['inputs']['snapshot']] + rec['inputs']['recordings']:
+        p = os.path.join(src, it.get('path', ''))
+        if not it.get('path') or not os.path.isfile(p):
+            return None, 'missing %s' % (it.get('path') or it['name'])
+        if it.get('md5') and md5(p) != it['md5']:
+            return None, '%s md5 %s, record says %s' % (it['path'], md5(p), it['md5'])
+        shutil.copy(p, os.path.join(d, it['name']))
+    return d, None
 
-    def ok(name, cond, info=''):
-        checks.append(cond)
-        print('%-4s tools: %s%s' % ('OK' if cond else 'FAIL', name, '' if cond else ' (%s)' % str(info)[:200]))
-    # asm/dizzy5_hooks.asm has no profile hooks section (dizzy5.py emits the bytes itself): the
-    # pinned sjasmplus must produce exactly what dizzy5.hook_code() emits for the Dizzy V profile
+
+def _run(cmd):
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def _report(out, name):
+    p = os.path.join(out, name + '_report.txt')
+    return open(p).read() if os.path.exists(p) else ''
+
+
+def _snapname(rec):
+    return os.path.splitext(rec['inputs']['snapshot']['name'])[0]
+
+
+def _check_outputs(rec, out, lines, want=None, stage_='rebuild'):
+    bad = 0
+    for k, o in (want or rec['outputs']).items():
+        p = os.path.join(out, o['file'])
+        got = md5(p) if os.path.exists(p) else None
+        ok = got == o['md5']
+        bad += not ok
+        lines.append('%-4s %s %s %s%s%s' % ('OK' if ok else 'FAIL', rec['name'], stage_, o['file'],
+                                            ' --strategy %s' % o['strategy'] if o.get('strategy') else '',
+                                            '' if ok else ' (got %s)' % got))
+    return bad
+
+
+def _boot_ok(rep, lines, label):
+    if 'Boot      :' in rep and 'MISMATCH' in rep.split('Boot      :', 1)[1].split('\n', 1)[0]:
+        lines.append('FAIL %s simulated boot' % label)
+        return 1
+    return 0
+
+
+def checks(rec, lines):
+    """Per-game quick checks of the game's own source files (run with every rebuild)."""
+    bad = 0
+    for c in rec.get('checks', []):
+        if c.startswith('asm2profile:'):
+            prof = c.split(':', 1)[1]
+            r = subprocess.run([sys.executable, os.path.join(HERE, 'tools', 'asm2profile.py'), '--check', prof],
+                               capture_output=True, text=True)
+            ok = r.returncode == 0
+            lines.append('%-4s %s hook profile %s = pinned sjasmplus output of its .asm%s' % (
+                'OK' if ok else 'FAIL', rec['name'], prof, '' if ok else ' (%s)' % (r.stdout + r.stderr).strip()[-200:]))
+        elif c == 'dizzy5_asm':
+            ok, info = dizzy5_asm()
+            lines.append('%-4s %s asm/dizzy5_hooks.asm (pinned sjasmplus) = dizzy5.hook_code()%s' % (
+                'OK' if ok else 'FAIL', rec['name'], '' if ok else ' (%s)' % info))
+        else:
+            ok = False
+            lines.append('FAIL %s unknown check %r' % (rec['name'], c))
+        bad += not ok
+    return bad
+
+
+def dizzy5_asm():
+    """asm/dizzy5_hooks.asm has no profile hooks section (dizzy5.py emits the bytes itself): the pinned
+    sjasmplus must produce exactly what dizzy5.hook_code() emits for the Dizzy V profile."""
     try:
-        import json as _json
         sys.path.insert(0, os.path.join(HERE, 'tools', 'sjasmplus'))
         import sjasm
         from nexclash import dizzy5
@@ -107,183 +131,241 @@ def tools_check(src):
             r = subprocess.run([sjasm.find(), '--zxnext', '--msg=war', os.path.join(HERE, 'asm', 'dizzy5_hooks.asm')],
                                cwd=tmp, capture_output=True, text=True)
             got = open(os.path.join(tmp, 'dizzy5_hooks.bin'), 'rb').read() if not r.returncode else b''
-        prof = _json.load(open(os.path.join(HERE, 'docs', 'profiles', 'dizzy5_spellbound_dizzy.json')))
+        prof = json.load(open(os.path.join(HERE, 'docs', 'profiles', 'dizzy5_spellbound_dizzy.json')))
         code = dizzy5.hook_code(prof)
         code = bytes(code[0] if isinstance(code, tuple) else code)
-        ok('asm/dizzy5_hooks.asm (pinned sjasmplus) = dizzy5.hook_code() (%d bytes)' % len(code),
-           got == code, (r.stdout + r.stderr)[-200:] or (len(got), len(code)))
+        return got == code, (r.stdout + r.stderr)[-200:] or (len(got), len(code))
     except Exception as e:                      # noqa: BLE001
-        ok('asm/dizzy5_hooks.asm check ran', False, e)
+        return False, e
+
+
+def rebuild(rec, d, lines):
+    """The record's rebuild recipe -> outputs (+ repro builds) compared with the verified MD5s."""
+    rb = rec['rebuild']
+    z80 = os.path.join(d, rec['inputs']['snapshot']['name'])
+    out = os.path.join(d, 'rebuild')
+    os.makedirs(out, exist_ok=True)
+    bad = checks(rec, lines)
+    if rb.get('cmd') == 'convert':
+        o = next(iter(rec['outputs'].values()))['file']
+        _run([sys.executable, NEXCLASH, 'convert', z80, '-o', os.path.join(out, o)] + rb.get('args', []))
+        return bad + _check_outputs(rec, out, lines)
+    cmd = [sys.executable, NEXCLASH, 'auto', z80, '--no-record'] + rb.get('args', [])
+    cmd = [c for i, c in enumerate(cmd) if c != '--no-record' or i == cmd.index('--no-record')]
+    for r in rb.get('rzx', []):
+        cmd += ['--rzx', os.path.join(d, r)]
+    if rb.get('decisions'):
+        dp = os.path.join(d, rec['name'] + '_decisions.json')
+        json.dump(rb['decisions'], open(dp, 'w'))
+        cmd += ['--decisions', dp]
+    _run(cmd + ['-o', out])
+    rep = _report(out, _snapname(rec))
+    bad += _check_outputs(rec, out, lines) + _boot_ok(rep, lines, rec['name'])
+    for x in rec.get('repro', []):
+        ro = os.path.join(d, 'rebuild_' + x['strategy'])
+        _run(cmd + ['-o', ro, '--strategy', x['strategy']])
+        bad += _check_outputs(rec, ro, lines, {'repro': x}) + _boot_ok(_report(ro, _snapname(rec)), lines, rec['name'])
+    return bad
+
+
+def _verify_report(rep, label, lines, rec=None):
+    if not rep or 'FAILED' in rep or 'MISMATCH' in rep:
+        lines.append('FAIL %s verification' % label)
+        return 1
+    n = rep.count('PASSED')
+    boot = 'OK' if 'Boot      : simulated' in rep or 'boot OK' in rep else 'not simulated'
+    if n == 0 and rec and rec['verify'].get('differential') is False:
+        lines.append('OK   %s analysis + boot %s (no differential verification: %s)' % (label, boot, rec['verify']['note']))
+        return 0
+    if n == 0:
+        lines.append('FAIL %s verification: nothing PASSED (record says it is verified differentially)' % label)
+        return 1
+    lines.append('OK   %s verification (%d PASSED, boot %s)' % (label, n, boot))
+    return 0
+
+
+def reverify(rec, d, lines, human=False):
+    """The record's verify recipe: full analysis + differential verification (+ repro builds verified
+    from the same recording). Also checks the build decisions it derives equal the stored ones."""
+    v = rec['verify']
+    z80 = os.path.join(d, rec['inputs']['snapshot']['name'])
+    out = os.path.join(d, 'verify')
+    cmd = [sys.executable, NEXCLASH, 'auto', z80] + v.get('args', [])
+    rz = list(v.get('rzx', [])) + (list(v.get('human_rzx', [])) if human else [])
+    for r in rz:
+        cmd += ['--rzx', os.path.join(d, r)]
+    _run(cmd + ['-o', out])
+    name = _snapname(rec)
+    bad = _check_outputs(rec, out, lines, stage_='verify') + _verify_report(_report(out, name), rec['name'], lines, rec)
+    dec_p = os.path.join(out, name + '_decisions.json')
+    stored = (rec.get('rebuild') or {}).get('decisions')
+    if stored is not None:
+        got = json.load(open(dec_p)) if os.path.exists(dec_p) else None
+        ok = got == stored
+        bad += not ok
+        lines.append('%-4s %s build decisions = stored%s' % ('OK' if ok else 'FAIL', rec['name'], '' if ok else ' (got %s)' % got))
+    auto = os.path.join(out, name + '_auto.rzx')
+    if v.get('auto_rzx_md5') and os.path.exists(auto) and md5(auto) != v['auto_rzx_md5']:
+        lines.append('NOTE %s auto recording %s differs from the recorded one %s (recorder or explorer changed)'
+                     % (rec['name'], md5(auto), v['auto_rzx_md5']))
+    for x in rec.get('repro', []):
+        ro = os.path.join(d, 'verify_' + x['strategy'])
+        rcmd = [sys.executable, NEXCLASH, 'auto', z80, '--no-record', '--strategy', x['strategy'], '-o', ro]
+        for r in ([auto] if os.path.exists(auto) else []) + [os.path.join(d, r) for r in rz]:
+            rcmd += ['--rzx', r]
+        _run(rcmd)
+        bad += _check_outputs(rec, ro, lines, {'repro': x}, 'verify')
+        bad += _verify_report(_report(ro, name), '%s --strategy %s' % (rec['name'], x['strategy']), lines)
+    return bad
+
+
+def run_one(rec, action, src, work, human):
+    """-> (record, action, failures, lines, skipped-why)"""
+    lines = []
+    d, why = stage(rec, src, work)
+    if d is None:
+        return rec, action, 0, lines, why
+    bad = rebuild(rec, d, lines)
+    if action == 'reverify' and rec.get('verify'):
+        bad += reverify(rec, d, lines, human)
+    else:
+        action = 'rebuild'                      # no verify recipe: only a rebuild was proven
+    return rec, action, bad, lines, None
+
+
+def tools_check(src):
+    """The shared analysis commands (inspect / scan / isr / cost) against known Chuckie Egg facts
+    (~1 min). Returns the number of failures. A session that improves a command keeps these passing
+    and adds a check for what it added (one easy game is enough: the commands are game-independent)."""
+    from nexclash import snapinfo, memscan, isrinfo, drawcost
+    bad = R.selfcheck()
+    print('%-4s tools: records plan() on synthetic stamps%s' % ('OK' if not bad else 'FAIL', '' if not bad else ' (%s)' % bad[:3]))
+    rec = R.load('chuckie_egg')
+    work = tempfile.mkdtemp(prefix='nexclash_tools_')
+    d, why = stage(rec, src, work)
+    if d is None:
+        print('tools: Chuckie Egg reference not found (%s), nothing checked' % why)
+        return 1
+    ez, er = os.path.join(d, 'chuckie_egg.z80'), os.path.join(d, 'chuckie_egg.rzx')
+    checks_ = []
+
+    def ok(name, cond, info=''):
+        checks_.append(cond)
+        print('%-4s tools: %s%s' % ('OK' if cond else 'FAIL', name, '' if cond else ' (%s)' % str(info)[:200]))
     old = sys.stderr
     sys.stderr = io.StringIO()                  # SkoolKit's SZX warnings
     try:
-        if cz:
-            facts, warn = snapinfo.inspect(cz)
-            txt = '\n'.join(v for k, v in facts)
-            ok('inspect commando: 128K BASIC loader, USR 25088 / 25630',
-               '128K' in txt and 'USR targets: 25088' in txt and '25630' in txt
-               and any('128K BASIC' in w for w in warn), (txt, warn))
-            _, r = memscan.scan(cz, None, 400, '5-14:SPACE; 30-:N', ['0x5C00-0x60FF'], after=25088)
-            ok('scan commando start-up (after USR 25088, 400 frames): hook RAM 0x5C00-0x60FF untouched',
-               memscan.touched_count(r, '0x5C00-0x60FF') == 0, r['ranges'])
-        if cz and cr:
-            _, r = memscan.scan(cz, [cr], ranges=['0x5C00-0x60FF'], stop=300)
-            ok('scan commando RZX (300 frames): hook RAM untouched', memscan.touched_count(r, '0x5C00-0x60FF') == 0)
-            _, r = isrinfo.isr(cz, [cr], stop=200)
-            ok('isr commando: reads the interrupted IY (BIT 1,(IY+7) at 29547), not IX',
-               29547 in r['reads_entry']['IY'] and not r['reads_entry']['IX'], r['reads_entry'])
-            _, r = drawcost.cost(cz, 39120, [cr], stop=1500)
-            ok('cost commando plotter 39120 (1500 frames): 2577 calls, median 4477 T',
-               r['calls'] == 2577 and r['median'] == 4477, r)
-        if ez:
-            facts, warn = snapinfo.inspect(ez)
-            txt = '\n'.join(v for k, v in facts)
-            ok('inspect chuckie: 48K, IM 2, no loader warning', '48K' in txt and 'IM 2' in txt and not warn, (txt, warn))
-        if ez and er:
-            _, r = isrinfo.isr(ez, [er], stop=150)
-            ok('isr chuckie: handler 40092, no IX/IY reads', 40092 in r['entries'] and not any(r['reads_entry'].values()), r)
+        facts, warn = snapinfo.inspect(ez)
+        txt = '\n'.join(v for k, v in facts)
+        ok('inspect: 48K, IM 2, no loader warning', '48K' in txt and 'IM 2' in txt and not warn, (txt, warn))
+        _, r = isrinfo.isr(ez, [er], stop=150)
+        ok('isr: handler 40092, no IX/IY reads', 40092 in r['entries'] and not any(r['reads_entry'].values()), r)
+        _, r = memscan.scan(ez, [er], ranges=['0x5B00-0x5BFF', '0x4000-0x57FF'], stop=300)
+        ok('scan RZX (300 frames): printer buffer 0x5B00-0x5BFF untouched, screen written',
+           memscan.touched_count(r, '0x5B00-0x5BFF') == 0 and memscan.touched_count(r, '0x4000-0x57FF') > 0, r['ranges'])
+        _, r = drawcost.cost(ez, 39500, [er], stop=1500)
+        ok('cost plotter 39500 (1500 frames): 1402 calls, median 19535 T',
+           r['calls'] == 1402 and r['median'] == 19535, r)
     finally:
         sys.stderr = old
-    if not checks:
-        print('tools: reference files not found, nothing checked')
-    return checks.count(False)
+    shutil.rmtree(work, ignore_errors=True)
+    return checks_.count(False) + len(bad)
 
 
 def smoke(src):
     """--smoke: rebuild the simplest game (Chuckie Egg, stateless alt-ROM hooks) from its snapshot alone
-    and compare both .nex MD5s - seconds, catches any shared-code change that alters a build. The full
-    selftest (every game + recordings, ~1.5 h) is for releases."""
-    spec = RZX_GAMES['chuckie_egg']
-    z80 = next((os.path.join(d, f) for d, _, fs in os.walk(src) for f in fs
-                if md5(os.path.join(d, f)) == spec['files'][0][1]), None)
-    if z80 is None:
-        sys.exit('SMOKE: Chuckie Egg snapshot (md5 %s) not found under %s' % (spec['files'][0][1], src))
+    and compare both .nex MD5s - seconds, catches any shared-code change that alters a build."""
+    rec = R.load('chuckie_egg')
     work = tempfile.mkdtemp(prefix='nexclash_smoke_')
-    shutil.copy(z80, os.path.join(work, 'chuckie_egg.z80'))
-    out = os.path.join(work, 'out')
-    subprocess.run([sys.executable, os.path.join(HERE, 'nexclash.py'), 'auto', os.path.join(work, 'chuckie_egg.z80'),
-                    '-o', out, '--no-record'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    bad = 0
-    for suffix, want in zip(('.nex', '_sprites.nex'), spec['nex']):
-        p = os.path.join(out, 'chuckie_egg' + suffix)
-        got = md5(p) if os.path.exists(p) else None
-        bad += got != want
-        print('%-4s chuckie_egg%s %s' % ('OK' if got == want else 'FAIL', suffix, got))
+    d, why = stage(rec, src, work)
+    if d is None:
+        sys.exit('SMOKE: %s under %s' % (why, src))
+    lines = []
+    bad = rebuild(dict(rec, checks=[]), d, lines)
+    print('\n'.join(lines))
     print('SMOKE %s' % ('PASSED' if not bad else 'FAILED'))
+    shutil.rmtree(work, ignore_errors=True)
     sys.exit(1 if bad else 0)
 
 
+def _arg(name, default=None):
+    return sys.argv[sys.argv.index(name) + 1] if name in sys.argv[:-1] else default
+
+
 def main():
-    pos = [x for x in sys.argv[1:] if not x.startswith('--')]
-    src = pos[0] if pos else next((d for d in (os.environ.get('NEXCLASH_REFERENCE'), os.path.join(HERE, 'reference'),
-                                               os.path.join(HERE, '..', 'specnext', 'reference')) if d and os.path.isdir(d)), '')
+    vals = {_arg(x) for x in ('--game', '--jobs')}
+    pos = [x for x in sys.argv[1:] if not x.startswith('--') and x not in vals]
+    src = reference_dir(pos)
+    flags = set(x for x in sys.argv[1:] if x.startswith('--'))
+    if '--plan' in flags:
+        items, _ = R.plan(full='--full' in flags)
+        for r, act, why in items:
+            print('%-9s %-24s %s' % (act, r['name'], why))
+        return 0
     if not os.path.isdir(src):
         sys.exit(__doc__)
-    if '--smoke' in sys.argv:
+    if '--smoke' in flags:
         smoke(src)
-    if '--tools' in sys.argv:
+    if '--tools' in flags:
         bad = tools_check(src)
         print('TOOLS %s' % ('PASSED' if not bad else 'FAILED'))
-        sys.exit(1 if bad else 0)
-    human, repro, fast = '--human' in sys.argv, '--no-repro' not in sys.argv, '--fast' in sys.argv
+        return 1 if bad else 0
+    items, now_all = R.plan(full='--full' in flags)
+    game = _arg('--game')
+    if game:
+        items = [(r, 'reverify' if '--verify' in flags else 'rebuild', 'requested') for r, _, _ in items if r['name'] == game]
+        if not items:
+            sys.exit('no record docs/records/%s.json' % game)
+    elif '--affected' in flags:
+        due = [(r, why) for r, act, why in items if act == 'reverify']
+        if '--verify' not in flags:
+            items = [(r, 'rebuild' if act == 'reverify' else act, why) for r, act, why in items]
+            for r, why in due:
+                print('DUE  re-verify %s: %s (--verify runs it)' % (r['name'], why))
+        items = [x for x in items if x[1] not in ('skip',)]
+    else:                                       # release: every game at least rebuilt
+        items = [(r, 'rebuild' if act == 'skip' else act, why) for r, act, why in items]
+    todo = [x for x in items if x[1] in ('rebuild', 'reverify')]
+    for r, act, why in items:
+        if act == 'none':
+            print('--   %s: %s' % (r['name'], why))
     work = tempfile.mkdtemp(prefix='nexclash_selftest_')
-    found = {}
-    files = [(f, os.path.join(d, f)) for d, _, fs in os.walk(src) for f in fs]   # reference/<game>/...
-    for f, p in files:
-        if f.lower().endswith('.nex'):
-            continue                            # built games kept next to the references
-        if os.path.isfile(p) and os.path.getsize(p) < 2_000_000:
-            h = md5(p)
-            n = INPUTS.get(h)
-            for g, spec in RZX_GAMES.items():
-                for cn, want in spec['files']:
-                    if h == want or (want is None and spec.get('alias', {}).get(f.lower(), f.lower()) == cn):
-                        n = cn
-            if n:
-                shutil.copy(p, os.path.join(work, n))
-                found[n] = f
-    missing = sorted(set(INPUTS.values()) - set(found) - OPTIONAL)
-    if missing:
-        print('missing reference files (those games are skipped): %s' % ', '.join(missing))
-    fails = pending = 0
-    fails += tools_check(src)
-    # every hook profile must be exactly what the pinned sjasmplus makes of its asm/ source
-    r = subprocess.run([sys.executable, os.path.join(HERE, 'tools', 'asm2profile.py'), '--check', '--all'],
-                       capture_output=True, text=True)
-    print((r.stdout + r.stderr).strip())
-    fails += r.returncode != 0
-    print('%-4s hook profiles = pinned sjasmplus output' % ('OK' if r.returncode == 0 else 'FAIL'))
-    games = ['fantasy_world_dizzy', 'magicland_dizzy', 'dizzy1', 'treasure_island_dizzy', 'dizzy5', 'treasure_island_title']
-    skipped = [g for g in games if g + '.z80' not in found]
-    games = [g for g in games if g + '.z80' in found]
-    nexclash = os.path.join(HERE, 'nexclash.py')
-
-    def check_report(label, out, g):
-        rep = open(os.path.join(out, g + '_report.txt')).read() if os.path.exists(os.path.join(out, g + '_report.txt')) else ''
-        if 'FAILED' in rep or 'MISMATCH' in rep or not rep:
-            print('FAIL %s verification (see %s)' % (label, out))
-            return 1
-        print('OK   %s verification (%d PASSED, boot %s)' % (label, rep.count('PASSED'),
-              'OK' if ('Boot      : simulated' in rep or 'boot OK' in rep) else 'not simulated'))
-        return 0
-
-    for g in games:
-        out = os.path.join(work, g + '_out')
-        cmd = [sys.executable, nexclash, 'auto', os.path.join(work, g + '.z80'), '-o', out]
-        cmd += ['--no-record'] if g in NO_RECORD else []
-        extra = []
-        if human and g in ('fantasy_world_dizzy', 'magicland_dizzy') and (g + '.rzx') in found:
-            extra = ['--rzx', os.path.join(work, g + '.rzx')]
-        subprocess.run(cmd + extra, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        for suffix in ('.nex', '_sprites.nex'):
-            n = g + suffix
-            p = os.path.join(out, n)
-            got = md5(p) if os.path.exists(p) else None
-            if EXPECTED[n] is None and got:
-                pending += 1
-                print('NEW  %s %s (not baselined: record it in EXPECTED / VERIFICATION.md)' % (n, got))
-            else:
-                ok = got is not None and got == EXPECTED[n]
-                fails += not ok
-                print('%-4s %s' % ('OK' if ok else 'FAIL', n))
-        fails += check_report(g, out, g)
-        if repro and g in REPRO:
-            strat, want = REPRO[g]
-            ro = os.path.join(work, g + '_' + strat)
-            rcmd = [sys.executable, nexclash, 'auto', os.path.join(work, g + '.z80'), '-o', ro, '--no-record',
-                    '--rzx', os.path.join(out, g + '_auto.rzx'), '--strategy', strat]
-            subprocess.run(rcmd + extra, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            p = os.path.join(ro, g + '_sprites.nex')
-            ok = os.path.exists(p) and md5(p) == want
-            fails += not ok
-            print('%-4s %s_sprites.nex --strategy %s (old build reproduced)' % ('OK' if ok else 'FAIL', g, strat))
-            fails += check_report('%s --strategy %s' % (g, strat), ro, g)
-    for g, spec in RZX_GAMES.items():
-        names = [cn for cn, _ in spec['files']]
-        if not all(cn in found for cn in names) or (fast and spec.get('slow')):
-            skipped.append(g + (' (--fast)' if fast and spec.get('slow') else ''))
-            continue
-        out = os.path.join(work, g + '_out')
-        cmd = [sys.executable, nexclash, 'auto', os.path.join(work, names[0]), '-o', out, '--no-record']
-        for cn in names[1:]:
-            cmd += ['--rzx', os.path.join(work, cn)]
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        for cn, _ in spec['files']:
-            if dict(spec['files'])[cn] is None:
-                print('     %s md5 %s (pin it in RZX_GAMES)' % (cn, md5(os.path.join(work, cn))))
-        for suffix, want in zip(('.nex', '_sprites.nex', '_sprites_diag.nex'), spec['nex']):
-            p = os.path.join(out, g + suffix)
-            ok = os.path.exists(p) and md5(p) == want
-            fails += not ok
-            print('%-4s %s%s' % ('OK' if ok else 'FAIL', g + suffix, '' if ok else ' (got %s)' % (md5(p) if os.path.exists(p) else 'nothing')))
-        fails += check_report(g, out, g)
+    fails, skipped, passed = 0, [], []
+    human = '--human' in flags
+    jobs = int(_arg('--jobs', '1'))
+    print('plan: %s' % (', '.join('%s %s' % (act, r['name']) for r, act, _ in todo) or 'nothing to do'))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as ex:
+        futs = [ex.submit(run_one, r, act, src, work, human) for r, act, _ in todo]
+        for f in concurrent.futures.as_completed(futs):
+            rec, act, bad, lines, why = f.result()
+            if why:
+                skipped.append('%s (%s)' % (rec['name'], why))
+                continue
+            print('\n'.join(lines), flush=True)
+            fails += bad
+            if not bad:
+                passed.append((rec, act))
+    if '--stamp' not in flags:                 # --stamp regenerates them below
+        stale = R.views(check=True)
+        for s in stale:
+            print('FAIL %s is out of date: run `python -m nexclash.records views`' % s)
+        fails += len(stale)
+    if '--stamp' in flags:
+        today = datetime.date.today().isoformat()
+        for rec, act in passed:
+            r = R.load(rec['name'])
+            R.stamp(r, 'verified' if act == 'reverify' else 'checked', now_all[rec['name']], today)
+            R.save(r)
+        print('stamped: %s' % ', '.join('%s (%s)' % (r['name'], 'verified' if a == 'reverify' else 'checked')
+                                        for r, a in passed) or 'nothing')
+        R.views()
     if skipped:
-        print('SKIPPED (snapshot not supplied): %s' % ', '.join(skipped))
-    res = 'FAILED: %d problem(s)' % fails if fails else 'PASSED' if not (skipped or pending) else \
-        'PASSED for the games run (%d skipped, %d not baselined)' % (len(skipped), pending)
+        print('SKIPPED: %s' % '; '.join(skipped))
+    res = 'FAILED: %d problem(s)' % fails if fails else 'PASSED' if not skipped else \
+        'PASSED for the games run (%d skipped)' % len(skipped)
     print('SELFTEST %s (%s)' % (res, work))
-    sys.exit(1 if fails else 2 if (skipped or pending) else 0)
+    return 1 if fails else 2 if skipped else 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
