@@ -46,6 +46,22 @@ V_C1    EQU 0x5C0D              ; rect clear: column after
 ENT     EQU 0x5C10              ; NENT x 8: used, ix lo, ix hi, col, y, bank, lines, spare
 STK     EQU 0x5D00              ; hook stack top (0x5C70-0x5CFF)
 NIBT    EQU 0x5E00              ; 16 x 2 bytes: nibble -> two 4-bit pixel bytes (ink index 1)
+MASK    EQU 0x5E20              ; 32 rows x 3 bytes: scenery pixels in front of the figure
+D_F64   EQU 0x5E80              ; depth temps: walk-test point y + 6 (2-line units) + 64
+D_FL0   EQU 0x5E81              ; figure first line
+D_FL1   EQU 0x5E82              ; figure last line (<= 191)
+D_FC    EQU 0x5E83              ; figure first column
+D_OBJ   EQU 0x5E84              ; object list entry (2 bytes)
+D_A0    EQU 0x5E86              ; overlap lines / columns
+D_A1    EQU 0x5E87
+D_B0    EQU 0x5E88
+D_B1    EQU 0x5E89
+D_N     EQU 0x5E8A              ; list walk limit
+V_SVN   EQU 0x5E8B              ; scenery save: lines saved (0 = nothing to restore)
+V_SVL   EQU 0x5E8C              ; scenery save: first line
+V_SVC   EQU 0x5E8D              ; scenery save: first column
+SAVE    EQU 0x5F00              ; scenery save: up to 32 lines x 3 bytes (game never touches it)
+DT      EQU 0x3400              ; depth table (alt ROM): 41 x 8, derived from the game by Python
 
         ORG 0x386E
 ; ---- 39120: every plot. Converted object -> hide the sprite of the image it will erase ----
@@ -57,6 +73,8 @@ e_ent:  ld (V_SP),sp
         push hl
         ld a,0xFF
         ld (V_FREED),a
+        xor a
+        ld (V_SVN),a
         call isconv
         jr nz,.out
         ld e,(ix+0)
@@ -66,6 +84,9 @@ e_ent:  ld (V_SP),sp
         ld a,b
         ld (V_FREED),a
         call hide
+        nextreg 0x07,3              ; the old image was a sprite: save the scenery its erase will cut
+        call svsave
+        nextreg 0x07,0
 .out:   pop hl
         pop de
         pop bc
@@ -163,6 +184,7 @@ e_x:    ld sp,(64898)
         push de
         push hl
         nextreg 0x07,3
+        call svrest                 ; scenery the erase cut back first: the ULA is as before the plot
         call show
         nextreg 0x07,0
         pop hl
@@ -482,6 +504,7 @@ show:   ld a,(ix+1)                 ; frame starts below line 191 (walked off th
         ld h,0x98
         ld a,(hl)
         ld (V_L0),a
+        call occl                   ; depth: mask of scenery in front of this figure
         ld a,b                      ; first pattern = 8 * index + 4 * bank
         add a,a
         add a,c
@@ -643,7 +666,17 @@ pat:    push de
 
 ; A = graphics byte at row D, column A (stream: even row c0 c1 c2, odd row c2 c1 c0)
 fetch:  push hl
+        push bc
+        ld c,a                      ; logical (screen) column 0..2
+        ld a,d                      ; B = occlusion mask byte at (row D, column C)
+        add a,a
+        add a,d
+        add a,c
+        add a,low MASK
         ld l,a
+        ld h,high MASK
+        ld b,(hl)
+        ld l,c
         bit 0,d
         jr z,.ev
         ld a,2
@@ -659,7 +692,10 @@ fetch:  push hl
         ld l,a
         ld a,(V_PG)
         ld h,a
-        ld a,(hl)
+        ld a,b                      ; graphics byte AND NOT mask
+        cpl
+        and (hl)
+        pop bc
         pop hl
         ret
 
@@ -715,6 +751,378 @@ setup:  nextreg 0x43,0x20
         nextreg 0x15,0x01
         ret
 pal:                                ; 256 palette bytes appended by Python
+
+; --- start-up front end (RAM 0x5D00, both builds): the loader's PAUSE 0 + "INFY LIVES(Y/N)?" ---
+; The .nex starts here instead of in 128K BASIC (which pages ROM 0, absent on the Next). State =
+; the game entry (after DI at 25088) as the real loader leaves it, with the prompt cells of row 0
+; restored to the loading screen. Wait for a new key (PAUSE 0), show the prompt (pixels + FLASH
+; attributes copied from the loader's own PRINT), wait for Y or N (Y: POKE 27653,182 = infinite
+; lives), restore every register, JP 25089. The game never touches 0x5C00-0x5E1F after the entry;
+; the sprite build's e_init clears it later.
+F_PIX   EQU 0x5D80              ; 8 lines x 16 bytes of row 0 (prompt), appended by Python
+F_ATT   EQU 0x5E00              ; 16 attributes of row 0 (prompt)
+F_SP    EQU 0x5E10
+F_STK   EQU 0x5E20
+        ORG 0x5D00
+front:  ld (F_SP),sp
+        ld sp,F_STK
+        push af
+        push bc
+        push de
+        push hl
+.rel:   xor a                       ; wait until no key is held
+        in a,(0xFE)
+        and 0x1F
+        cp 0x1F
+        jr nz,.rel
+.key:   xor a                       ; PAUSE 0: any key
+        in a,(0xFE)
+        and 0x1F
+        cp 0x1F
+        jr z,.key
+        ld hl,F_PIX                 ; PRINT AT 0,0; INK 7; FLASH 1; "INFY LIVES(Y/N)?"
+        ld de,0x4000
+        ld b,8
+.pl:    push bc
+        push de
+        ld bc,16
+        ldir
+        pop de
+        inc d
+        pop bc
+        djnz .pl
+        ld hl,F_ATT
+        ld de,0x5800
+        ld bc,16
+        ldir
+.yn:    ld a,0xDF                   ; Y: row P O I U Y, bit 4
+        in a,(0xFE)
+        bit 4,a
+        jr z,.yes
+        ld a,0x7F                   ; N: row SPACE SYM M N B, bit 3
+        in a,(0xFE)
+        bit 3,a
+        jr z,.no
+        jr .yn
+.yes:   ld a,182                    ; POKE 27653,182
+        ld (27653),a
+.no:    pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(F_SP)
+        jp ENTRY1
+front_end:
+ENTRY1  EQU 25089
+        SAVEBIN "commando_front.bin",0x5D00,front_end-0x5D00
+
+; --- depth (alt ROM 0x3000: ROM bytes the game never reads or executes) -----------------------
+; The game's scenery is an object list (0xFF00: +0 next, +2 type, +3 x (column = bits 0-4), +4 y =
+; base line / 2). Per type, the game's own walk-blocking boxes (the collision list 0xF900 it builds)
+; and the object's pixel extent are in DT (Python derives them by running the game's draw and box
+; routines): +0 bit 0 = has a walk box, +1/+2 first/last column, +3/+4 first/last line (signed,
+; relative to column x & 31 and line 2y), +5 = middle of the boxes (2-line units, relative to y) + 64.
+; Dean's rule: a figure that reaches a box from below (test point y + 6 below the box middle) is in
+; front of the object; from above (test point at or above the middle) it is behind it - the game
+; stops the point at the box bottom / top, so this holds for every box height: the sprite loses the pixels where
+; that object's ink is on the screen inside its extent (the ULA scenery shows through).
+        ORG 0x3000
+occl:   push bc
+        push de
+        push hl
+        push iy
+        ld hl,MASK
+        ld b,96
+        xor a
+.cl:    ld (hl),a
+        inc l
+        djnz .cl
+        ld a,(64904)                ; last list entry (0: empty list)
+        or a
+        jp z,.done
+        ld a,(ix+1)                 ; test point = y + 6 (+64): the point the game's own walk test
+        add a,6                     ; (57139, from 57371) checks against the boxes - not the feet
+        add a,64
+        ld (D_F64),a
+        ld a,(ix+1)
+        add a,a
+        ld (D_FL0),a
+        ld e,a
+        ld a,(ix+10)
+        add a,a
+        dec a
+        add a,e
+        cp 192
+        jr c,.l1
+        ld a,191
+.l1:    ld (D_FL1),a
+        ld a,(ix+0)
+        ld (D_FC),a
+        ld a,64
+        ld (D_N),a
+        ld hl,0xFF00
+        ld l,(hl)
+.obj:   ld (D_OBJ),hl
+        inc l
+        inc l
+        ld a,(hl)
+        and 127
+        jp z,.next
+        cp 41
+        jp nc,.next
+        push hl
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,DT
+        add hl,de
+        push hl
+        pop iy
+        pop hl
+        bit 0,(iy+0)
+        jp z,.next
+        inc l
+        ld a,(hl)
+        and 31
+        ld c,a                      ; C = object column
+        inc l
+        ld b,(hl)                   ; B = object y
+        ld a,b
+        add a,(iy+5)
+        ld e,a                      ; E = box middle + 64
+        ld a,(D_F64)
+        cp e
+        jr z,.behind
+        jp nc,.next                 ; feet below the middle: figure in front
+.behind:
+        ld l,b                      ; first line = 2y + l0 (16-bit signed)
+        ld h,0
+        add hl,hl
+        push hl
+        ld a,(iy+3)
+        call adds
+        ld a,h                      ; A0 = max(first line, figure first line)
+        or a
+        jp m,.a0f
+        jp nz,.skip1
+        ld a,(D_FL0)
+        cp l
+        jr nc,.a0s
+        ld a,l
+        jr .a0s
+.a0f:   ld a,(D_FL0)
+.a0s:   ld (D_A0),a
+        pop hl
+        ld a,(iy+4)                 ; last line = 2y + l1
+        call adds
+        ld a,h                      ; A1 = min(last line, figure last line)
+        or a
+        jp m,.next
+        jr nz,.a1f
+        ld a,(D_FL1)
+        cp l
+        jr c,.a1s
+        ld a,l
+        jr .a1s
+.a1f:   ld a,(D_FL1)
+.a1s:   ld (D_A1),a
+        ld e,a
+        ld a,(D_A0)
+        cp e
+        jr z,.cols
+        jp nc,.next
+.cols:  ld a,(D_FC)                 ; B0 = max(x + c0, figure column) (all + 64)
+        add a,64
+        ld e,a
+        ld a,c
+        add a,(iy+1)
+        add a,64
+        cp e
+        jr nc,.b0
+        ld a,e
+.b0:    sub 64
+        ld (D_B0),a
+        ld a,(D_FC)                 ; B1 = min(x + c1, figure column + 2)
+        add a,66
+        ld e,a
+        ld a,c
+        add a,(iy+2)
+        add a,64
+        cp e
+        jr c,.b1
+        ld a,e
+.b1:    sub 64
+        ld (D_B1),a
+        ld e,a
+        ld a,(D_B0)
+        cp e
+        jr z,.rows
+        jp nc,.next
+.rows:  ld a,(D_A0)                 ; for each line A0..A1, column B0..B1: mask |= screen
+        ld d,a
+.row:   ld a,(D_B0)
+        ld c,a
+        ld a,d
+        call scr                    ; HL = screen byte (line D, column C)
+        push hl
+        ld a,(D_FL0)                ; DE' = MASK + 3 * (line - FL0) + (B0 - FC)
+        ld e,a
+        ld a,d
+        sub e
+        ld e,a
+        add a,a
+        add a,e
+        ld e,a
+        ld a,(D_FC)
+        ld b,a
+        ld a,c
+        sub b
+        add a,e
+        add a,low MASK
+        ld e,a
+        pop hl
+        push de
+        ld d,high MASK
+        ld a,(D_B1)
+        sub c
+        inc a
+        ld b,a
+.col:   ld a,(de)
+        or (hl)
+        ld (de),a
+        inc e
+        inc l
+        djnz .col
+        pop de
+        ld a,(D_A1)
+        cp d
+        jr z,.next
+        inc d
+        jr .row
+.skip1: pop hl
+.next:  ld hl,D_N
+        dec (hl)
+        jr z,.done
+        ld hl,(D_OBJ)
+        ld a,(64904)
+        cp l
+        jr z,.done
+        ld l,(hl)
+        jp .obj
+.done:  pop iy
+        pop hl
+        pop de
+        pop bc
+        ret
+
+adds:   ld e,a                      ; HL += sign-extended A (DE clobbered)
+        add a,a
+        sbc a,a
+        ld d,a
+        add hl,de
+        ret
+
+scr:    ld l,a                      ; HL = screen address of line A (0..191), column C
+        and 7
+        or 0x40
+        ld h,a
+        ld a,l
+        rra
+        rra
+        rra
+        and 0x18
+        or h
+        ld h,a
+        ld a,l
+        rla
+        rla
+        and 0xE0
+        or c
+        ld l,a
+        ret
+; ---- scenery save / restore: a converted plot whose old image was a sprite leaves the ULA as it
+; was. The plotter's erase clears the old frame's bits (never on the ULA: it was a sprite) out of
+; the scenery, and the game redraws scenery only in some frames. e_ent saves the 3 x lines bytes
+; under the old frame (svsave); e_x ORs them back (svrest): the new frame was not drawn, so the
+; screen equals the screen before the plot - no bitten scenery, and an exact depth mask.
+svsave: xor a                       ; IX = descriptor before the plot (+0 col, +1 y, +10 pairs)
+        ld (V_SVN),a
+        ld a,(ix+0)
+        cp 30
+        ret nc
+        ld c,a
+        ld (V_SVC),a
+        ld a,(ix+10)
+        add a,a
+        ret z
+        ld d,a                      ; D = lines
+        ld a,(ix+1)
+        add a,a
+        ld (V_SVL),a
+        ld e,a                      ; E = line
+        push iy
+        ld iy,SAVE
+.lp:    ld a,e
+        cp 192
+        jr nc,.end
+        call scr
+        ld a,(hl)
+        ld (iy+0),a
+        inc l
+        ld a,(hl)
+        ld (iy+1),a
+        inc l
+        ld a,(hl)
+        ld (iy+2),a
+        inc iy
+        inc iy
+        inc iy
+        ld a,(V_SVN)
+        inc a
+        ld (V_SVN),a
+        inc e
+        dec d
+        jr nz,.lp
+.end:   pop iy
+        ret
+
+svrest: ld a,(V_SVN)                ; OR the saved bytes back (erase cleared only old-frame bits)
+        or a
+        ret z
+        ld d,a
+        ld a,(V_SVC)
+        ld c,a
+        ld a,(V_SVL)
+        ld e,a
+        push iy
+        ld iy,SAVE
+.lp:    ld a,e
+        call scr
+        ld a,(iy+0)
+        or (hl)
+        ld (hl),a
+        inc l
+        ld a,(iy+1)
+        or (hl)
+        ld (hl),a
+        inc l
+        ld a,(iy+2)
+        or (hl)
+        ld (hl),a
+        inc iy
+        inc iy
+        inc iy
+        inc e
+        dec d
+        jr nz,.lp
+        xor a
+        ld (V_SVN),a
+        pop iy
+        ret
+depth_end:
+        SAVEBIN "commando_depth.bin",0x3000,depth_end-0x3000
 
         SAVEBIN "commando_rom.bin",0x386E,rom_end-0x386E
         SAVEBIN "commando_setup.bin",0xD000,pal-0xD000

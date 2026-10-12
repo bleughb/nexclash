@@ -41,6 +41,11 @@ Each line is settled unless marked otherwise.
 - Hooks that keep no state need no RAM page at all: code in the alt ROM, scratch on the game's
   own stack, output only through NEXTREG. Then interrupts may stay ON (IM2 handler in RAM; an
   interrupt between two NEXTREGs is harmless) - Chuckie Egg (hardware to confirm).
+- A 128K BASIC loader snapshot cannot run on the Next: 128K BASIC pages ROM 0 (the 128K editor)
+  on every statement (Commando: plain = corruption, altrom = crash at the first key; alt image 0 is
+  unfilled). Run the loader in SkoolKit (real 128K ROMs) to the game's USR entry, build from there,
+  and redo any prompt the loader asks (Commando front end: PAUSE 0 + Y/N + POKE). Check the game
+  itself never selects ROM 0 (7FFD bit 4) in the boot simulation and the RZX.
 
 ## 1.4 Spectrum Next: sprites and palette
 - 4-bit anchor sprite, attr4: 0x80 = pattern-slot bytes 0-127, 0xC0 = bytes 128-255 (the guide's
@@ -159,6 +164,13 @@ Each line is settled unless marked otherwise.
   last plot (Commando soldiers leaving at the bottom: invisible entries filled the table). Keep no
   entry for an invisible frame; in verify, max entries = table size is a red flag - count the
   plots that fell back because the table was full.
+- A differential plotter's erase (clear old frame, OR new) also cuts the scenery under a figure
+  that is now a sprite (its old bits were never on the ULA); games that redraw scenery only on
+  scroll frames then show bitten scenery. Save the bytes under the old frame at entry and OR them
+  back at exit: a converted plot leaves the ULA unchanged (Commando svsave/svrest).
+- Depth from a game's collision boxes: use the point the game's own walk test checks (log the
+  test routine's arguments in the RZX: Commando y + 6), not the figure's feet - with the feet a
+  figure stopped above a small box came out in front.
 
 ## 2.2 Memory proofs (analysis method)
 - Prove free memory with an access scan over the recording, not by zero-check.
@@ -331,6 +343,11 @@ Each line is settled unless marked otherwise.
 - A unit sweep must stay inside states the game can produce (Commando: old/new column differ by
   -1/0/+1; the draw loops ignore +4 otherwise) and test the guard on the rest separately. Check
   that a sweep converts something: an all-passthrough sweep proves nothing.
+- A counter that can never be non-zero proves nothing: Commando's first 'pixels hidden' metric
+  was (original bits missing on the patched screen) & (scenery ink) - empty by construction.
+  Make every counted effect also show up in a negative control.
+- States captured early in an RZX are often a figure's FIRST plot (no sprite yet): force the
+  steady state (old image already a sprite) in unit cases that test steady-state behaviour.
 
 ## 2.6 Process / tokens (this sandbox)
 - One CPU; background jobs die when the turn ends: run long jobs sequentially

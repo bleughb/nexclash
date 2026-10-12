@@ -30,7 +30,10 @@ from .rainbow import NextState, _machine, _run, boot_check as _rb_boot_check, me
 
 ALT_PAGE = 24
 ROM_ORG = 0x386E
-RAM_LO, RAM_HI = 0x5C00, 0x5E20             # hook state (never read/written by the game once it runs)
+RAM_LO, RAM_HI = 0x5C00, 0x5F60             # hook state (never read/written by the game once it runs)
+DEPTH_LO, DT, NTYPES = 0x3000, 0x3400, 41      # alt ROM: depth code, depth table (game never reads ROM there)
+DEPTH_HI = DT + 8 * NTYPES
+SCRATCH_LO = 0x5E20                          # occlusion mask + depth temps: written before read
 ZP = 0x5D00                                 # zero page (new frame source while converted)
 NIBT = 0x5E00
 ENT, NENT = 0x5C10, 12
@@ -99,7 +102,7 @@ def palette():
 class CommandoPatch:
     name = 'Commando figures (player, soldiers, POWs) -> hardware sprites (altrom + bank-5 state)'
 
-    def __init__(self, prof=None, swap_nibt=False):
+    def __init__(self, prof=None, swap_nibt=False, dtab=None):
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         self.rom_code = bytes.fromhex(h['rom'])
@@ -120,14 +123,20 @@ class CommandoPatch:
         self.regblock = ROM_ORG + len(self.rom_code)
         if self.regblock + 20 > 0x3D00:
             raise ValueError('ROM hooks too long')
+        self.depth = bytes.fromhex(h['depth'])
+        self.dtab = bytes.fromhex(self.prof['depth_table']) if dtab is None else dtab
+        if DEPTH_LO + len(self.depth) > DT or len(self.dtab) != 8 * NTYPES:
+            raise ValueError('depth code / table size')
         self.slot1 = (ALT_PAGE, self.regblock)
-        self.altrom = (ROM_ORG, self.regblock + 20)
+        self.altrom = (DEPTH_LO, self.regblock + 20)
         from .build import rom48
         rom = rom48()
         if any(b != 0xFF for b in rom[ROM_ORG:self.regblock + 20]):
             raise ValueError('alt ROM hook range is not free ($FF) in the 48K ROM')
         page = bytearray(rom[0x2000:0x4000])
         page[ROM_ORG - 0x2000:ROM_ORG - 0x2000 + len(self.rom_code)] = self.rom_code
+        page[DEPTH_LO - 0x2000:DEPTH_LO - 0x2000 + len(self.depth)] = self.depth
+        page[DT - 0x2000:DT - 0x2000 + len(self.dtab)] = self.dtab
         self.page = bytes(page)
         ram = bytearray(RAM_HI - RAM_LO)        # zeros: V_*, entry table, stack, zero page
         ram[V_FREED - RAM_LO] = 0xFF
@@ -166,6 +175,268 @@ class CommandoPatch:
         img = bytearray(rom48())
         img[0x2000:0x4000] = self.page
         return img
+
+
+# ---------------------------------------------------------------------------------------------
+# The reference .z80 is the 128K BASIC loader (line 30). 128K BASIC pages ROM 0 (the 128K editor)
+# on every statement; a Next has no such ROM 0 (and alt ROM image 0 is not filled), so a .nex
+# made from the loader crashes once a key is pressed. The game itself only selects ROM 1. So the
+# loader is run here, with the real 128K ROMs and the keys of Dean's recording (SPACE for PAUSE 0,
+# N for "INFY LIVES"), up to the game entry 25088 after its DI, and the .nex is built from there.
+# ---------------------------------------------------------------------------------------------
+
+ENTRY = 25088                                   # USR target: DI / page bank 1 / JP 25630
+LOADER_PC = 7997                                # ROM PAUSE in the loader snapshot
+
+
+def is_loader(snap):
+    return snap.pc < 0x4000 and snap.memory[ENTRY] == 0xF3
+
+
+def advance_loader(z80, out_path, lives='N', max_frames=400):
+    """Run the loader snapshot to PC ENTRY+1 (after the DI) and write that state as a .z80.
+    Keys: SPACE frames 5-14 (PAUSE 0), then `lives` (N/Y) from frame 30 until the game entry.
+    Returns (frame, registers dict). Deterministic (fixed key schedule, Python simulator)."""
+    from skoolkit.snapshot import Snapshot, write_snapshot
+    from skoolkit.simulator import Simulator
+    from skoolkit.simutils import from_snapshot, get_state, PC, T, IFF
+    ft = 70908                                  # 128K frame
+    rows = {0x7F: ' \x00MNB', 0xDF: 'POIUY', 0xBF: '\nLKJH', 0xFE: '\x01ZXCV'}
+    s = Snapshot.get(z80)
+    if not is_loader(s) or s.pc != LOADER_PC:
+        raise ValueError('not the Commando BASIC-loader snapshot (PC %d)' % s.pc)
+    sim = from_snapshot(Simulator, s, config={'int_active': 0})
+    mem, R, ops = sim.memory, sim.registers, sim.opcodes
+    st = {'held': ''}
+
+    class Tr:
+        border, outfe, outfffd, ay = s.border, s.border, 0, [0] * 16
+        out7ffd = mem.o7ffd
+
+        def read_port(self, regs, port):
+            v = 0xFF
+            if port & 1 == 0:
+                for row, ks in rows.items():
+                    if (port >> 8) & (row ^ 0xFF) == 0:
+                        for i, ch in enumerate(ks):
+                            if ch in st['held']:
+                                v &= ~(1 << i)
+            return v
+
+        def write_port(self, regs, port, value, offset=0):
+            if port & 1 == 0:
+                self.border, self.outfe = value & 7, value
+            if port & 0x8002 == 0 and self.out7ffd & 32 == 0:
+                mem.out7ffd(value)
+                self.out7ffd = value
+    sim.set_tracer(Tr())
+    for f in range(max_frames):
+        st['held'] = ' ' if 5 <= f < 15 else (lives.upper() if f >= 30 else '')
+        while R[T] < ft:
+            if R[PC] == ENTRY + 1:
+                entry = ([bytes(b) for b in mem.banks], list(R))
+                make_front(s, mem, R)
+                ram, regs, state, machine = get_state(sim)
+                write_snapshot(out_path, ram, regs, state, machine)
+                return f, {'pc': ENTRY + 1, 'sp': R[12], 'iff': R[IFF], 'im': R[27], '7ffd': mem.o7ffd,
+                           'entry': entry}
+            ops[mem[R[PC]]]()
+        R[T] -= ft
+        if R[IFF]:
+            if mem[R[PC]] == 0x76:
+                R[PC] = (R[PC] + 1) & 0xFFFF
+            sim.accept_interrupt(R, mem, 0)
+    raise ValueError('the loader did not reach the game entry %d in %d frames' % (ENTRY, max_frames))
+
+
+FRONT, F_PIX, F_ATT, F_END = 0x5D00, 0x5D80, 0x5E00, 0x5E20
+
+
+def make_front(orig, mem, R):
+    """Entry state -> start state: the prompt cells (row 0, columns 0-15) back to the loading
+    screen, their printed pixels/attributes stored for the front end, front end at 0x5D00, PC there."""
+    code = bytes.fromhex(load_profile()['hooks']['front'])
+    cells = {0x4000 + 256 * k + c for k in range(8) for c in range(16)} | {0x5800 + c for c in range(16)}
+    diff = [a for a in range(0x4000, 0x5B00) if mem[a] != orig.memory[a]]
+    if any(a not in cells for a in diff):
+        raise ValueError('the loader changed the screen outside the prompt: %s' % diff[:4])
+    pix = bytes(mem[0x4000 + 256 * k + c] for k in range(8) for c in range(16))
+    att = bytes(mem[0x5800 + c] for c in range(16))
+    for a in cells:
+        mem[a] = orig.memory[a]
+    for i, v in enumerate(code + bytes(F_PIX - FRONT - len(code)) + pix + att):
+        mem[FRONT + i] = v
+    R[24] = FRONT
+
+
+def front_tests(start_z80, entry):
+    """Run the front end from the start snapshot with N and with Y (after a key for PAUSE 0):
+    it must reach 25089 with every register (R aside) and all RAM as the loader's entry state,
+    except 0x5D00-0x5E1F (front end, never used by the game) and, for Y, 27653 = 182."""
+    from skoolkit.snapshot import Snapshot
+    from skoolkit.simulator import Simulator
+    from skoolkit.simutils import from_snapshot, PC
+    banks0, regs0 = entry
+    out = {}
+    for key, row, bit in (('N', 0x7F, 3), ('Y', 0xDF, 4)):
+        sim = from_snapshot(Simulator, Snapshot.get(start_z80), config={'int_active': 0})
+        R, mem, ops = sim.registers, sim.memory, sim.opcodes
+        n = [0]
+
+        class Tr:
+            border = outfe = outfffd = 0
+            ay = [0] * 16
+
+            def read_port(self, regs, port):
+                n[0] += 1
+                if n[0] < 20 or port & 1:
+                    return 0xFF                     # nothing held at first
+                if n[0] < 40:
+                    return 0xFF & ~(1 if (port >> 8) & 0x7F == 0 else 0)   # SPACE (all-rows read)
+                if (port >> 8) == row:
+                    return 0xFF & ~(1 << bit)
+                return 0xFF
+
+            def write_port(self, regs, port, value, offset=0):
+                pass
+        sim.set_tracer(Tr())
+        steps = 0
+        while R[PC] != ENTRY + 1 and steps < 200000:
+            ops[mem[R[PC]]]()
+            steps += 1
+        bad = []
+        if R[PC] != ENTRY + 1:
+            bad.append('did not reach 25089')
+        bad += ['register %d' % i for i in CMP if i != 24 and R[i] != regs0[i]]
+        want = {27653: 182} if key == 'Y' else {}
+        for b in range(8):
+            base = {5: 0x4000, 2: 0x8000}.get(b)
+            for i in range(16384):
+                a = (base + i) if base else None
+                v = mem.banks[b][i]
+                exp = want.get(a, banks0[b][i]) if a is not None else banks0[b][i]
+                if v != exp and not (a is not None and FRONT <= a < F_END):
+                    bad.append(('ram', b, i))
+                    break
+        out[key] = bad
+    return out
+
+
+# ---------------------------------------------------------------------------------------------
+# Depth (Dean's rule): the game's walk-blocking boxes decide whether a figure is in front of or
+# behind a scenery object. The table is derived from the game by running its own object drawer
+# (37302) and box builder (60754) on one object of each type, from an in-game state.
+# ---------------------------------------------------------------------------------------------
+
+def _signed(v):
+    return v - 256 if v > 127 else v
+
+
+def derive_table(banks, o7ffd, y=80):
+    """41 x 8 bytes: per type +0 bit 0 has a walk box, +1/+2 first/last column, +3/+4 first/last
+    line (signed, relative to column x&31 and line 2y), +5 box middle (2-line units, rel. y) + 64.
+    Walk boxes = collision entries the game tests when walking (57143/57139: bit 7 clear = box,
+    0x82 = box with a counter, 0x84 = sloped box (57278); 0x81 only in a non-walking mode)."""
+    from skoolkit.simulator import Simulator
+    from skoolkit.simutils import from_memory
+    from skoolkit.pagingtracer import Memory as PM
+    base = [bytes(b) for b in banks]
+    m0 = PM([list(b) for b in base], o7ffd, '128K')
+    p = m0[32778] | m0[32779] << 8
+    first_e, a = {}, p
+    for _ in range(4000):
+        t, e = m0[a] & 0x7F, m0[a + 1]
+        a += 2
+        if t == 127:
+            break
+        if 1 <= t <= 40 and t != 34:
+            first_e.setdefault(t, e)
+    stop = ENTRY
+
+    def run(t, x, entry):
+        mem = PM([list(b) for b in base], o7ffd, '128K')
+        sim = from_memory(Simulator, mem, {'IY': 64896, 'SP': 0x5EFE, 'PC': entry},
+                          {'iff': 0, 'im': 2}, {'int_active': 0})
+        R = sim.registers
+
+        class Tr:
+            border = outfe = outfffd = 0
+            ay = [0] * 16
+
+            def read_port(self, r, port):
+                return 0xFF
+
+            def write_port(self, r, port, v, o=0):
+                if port & 0x8002 == 0:
+                    mem.out7ffd(v)
+        sim.set_tracer(Tr())
+        for i in range(0x4000, 0x5800):
+            mem[i] = 0
+        mem[0xFF00] = 0x08
+        for k, v in enumerate((0x08, 0, t, x, y, 0, 0, 0)):
+            mem[0xFF08 + k] = v
+        mem[64904] = 0x08
+        mem[0x5EFE], mem[0x5EFF] = stop & 255, stop >> 8
+        n = 0
+        while R[24] != stop and n < 300000:
+            sim.opcodes[mem[R[24]]]()
+            n += 1
+        return mem
+    tab = bytearray(8 * NTYPES)
+    for t in range(1, NTYPES):
+        x = first_e.get(t, 16)
+        mem = run(t, x, 37302)
+        pts = [(o & 31, ((o >> 8) & 7) | ((o >> 2) & 0x38) | ((o >> 5) & 0xC0))
+               for o in range(6144) if mem[0x4000 + o]]
+        mem2 = run(t, x, 60754)
+        boxes, a = [], 0xF900
+        while mem2[a] != 0x80 and a < 0xF9F0:
+            c, w, by, h = (mem2[a + k] for k in range(4))
+            a += 4
+            if c & 0x80 and not c & 6:              # 0x81 entries: tested only in a non-walking mode
+                continue
+            boxes.append((by - y - h, by - y))
+        if not pts or not boxes:
+            continue
+        top, bot = min(b[0] for b in boxes), max(b[1] for b in boxes)
+        ent = (1, min(q[0] for q in pts) - (x & 31), max(q[0] for q in pts) - (x & 31),
+               min(q[1] for q in pts) - 2 * y, max(q[1] for q in pts) - 2 * y, (top + bot) // 2 + 64)
+        tab[8 * t:8 * t + 6] = bytes(v & 255 for v in ent)
+    return bytes(tab)
+
+
+def occluded(get, scr, ix, dtab):
+    """Model of the rule for a converted plot (descriptor after the plot): the set of screen pixels
+    (x, line) inside the figure's 24 x rows box that belong to objects it is behind. scr(a) = the
+    screen as the hook sees it (after the plot)."""
+    out = set()
+    last = get(64904)
+    if not last:
+        return out
+    col, fy, pairs = get(ix + 0), get(ix + 1), get(ix + 10)
+    feet, fl0 = fy + 6, 2 * fy                  # the game's walk-test point (y + 6), not the feet
+    fl1 = min(191, fl0 + 2 * pairs - 1)
+    e, n = get(0xFF00), 0
+    while n < 64:
+        n += 1
+        a = 0xFF00 + e
+        t = get(a + 2) & 0x7F
+        if 1 <= t < NTYPES and dtab[8 * t] & 1:
+            ox, oy = get(a + 3) & 31, get(a + 4)
+            c0, c1, l0, l1 = (_signed(dtab[8 * t + k]) for k in (1, 2, 3, 4))
+            mid = dtab[8 * t + 5] - 64
+            if feet <= oy + mid:                    # reached from above: figure behind
+                for line in range(max(fl0, 2 * oy + l0), min(fl1, 2 * oy + l1) + 1):
+                    for cx in range(max(col, ox + c0), min(col + 2, ox + c1) + 1):
+                        ad = 0x4000 | ((line & 0xC0) << 5) | ((line & 7) << 8) | ((line & 0x38) << 2) | cx
+                        v = scr(ad)
+                        for b in range(8):
+                            if v & (128 >> b):
+                                out.add((cx * 8 + b, line))
+        if e == last:
+            break
+        e = get(a)
+    return out
 
 
 def boot_check(nex, z80, patch=None):
@@ -280,7 +551,7 @@ def _scr_xy(a):
     return (o & 31), ((o >> 8) & 7) | ((o >> 2) & 0x38) | ((o >> 5) & 0xC0)
 
 
-def check_plot(get, o, p, world, ix, conv, n_before_ent):
+def check_plot(get, o, p, world, ix, conv, n_before_ent, dtab=None):
     """Screen and sprite checks for one plot call. Returns ([failures], pixels compared)."""
     f = []
     keys = set(o.ov) | set(p.ov)
@@ -288,7 +559,20 @@ def check_plot(get, o, p, world, ix, conv, n_before_ent):
     other = [a for a in keys if not 0x4000 <= a < 0x5800 and o[a] != p[a]]
     if other:
         f.append(('memory differs', sorted(other)[:4]))
-    extra = [a for a in scr if p[a] & ~o[a]]
+    # converted plot whose old image was a sprite: svsave/svrest leave the ULA exactly as before the
+    # plot; the original's erase holes (old-frame bits) may then exceed it inside the old frame only
+    pc0, py0, pp = get(ix + 0), get(ix + 1), 2 * get(ix + 10)
+    found = conv and pc0 < 30 and any(e[1] == ix and e[2] == pc0 and e[3] == py0
+                                      for e in (n_before_ent or ()))
+    if found:
+        changed = [a for a in scr if p[a] != get(a)]
+        if changed:
+            f.append(('converted plot changed the ULA (scenery not restored)', sorted(changed)[:4]))
+
+    def in_old(a):
+        cx, ly = _scr_xy(a)
+        return pc0 <= cx < pc0 + 3 and 2 * py0 <= ly < 2 * py0 + pp
+    extra = [a for a in scr if p[a] & ~o[a] and not (found and in_old(a))]
     if extra:
         f.append(('patched screen has bits the original lacks', sorted(extra)[:4]))
     d = {a: o[a] & ~p[a] for a in scr if o[a] & ~p[a]}
@@ -325,8 +609,12 @@ def check_plot(get, o, p, world, ix, conv, n_before_ent):
                 want.add((cx * 8 + b, ly))
     if any(not box(x, yy) for x, yy in want):
         f.append(('missing bits outside the new frame', sorted(want)[:3]))
-    if want - lit:
-        f.append(('pixels drawn by the original but not by the sprite', len(want - lit)))
+    occ = occluded(lambda a: o[a], lambda a: p[a], ix, dtab) if dtab is not None else set()
+    if (want - occ) - lit:
+        f.append(('pixels drawn by the original but not by the sprite', len((want - occ) - lit)))
+    if lit & occ:
+        f.append(('sprite shows pixels of scenery it is behind', len(lit & occ)))
+    world.occluded = getattr(world, 'occluded', 0) + len(occ)    # scenery pixels in front of it
     for x, yy in lit:
         if not box(x, yy):
             f.append(('sprite pixel outside the frame', x, yy))
@@ -352,7 +640,7 @@ def _visible_ok(world):
     return bad
 
 
-def verify(patch, rzx_path, stop=None, collect=0, progress=None):
+def verify(patch, rzx_path, stop=None, collect=0, progress=None, dtab=None):
     import skoolkit.rzxplay as rzxplay
     from skoolkit.simulator import Simulator
     from skoolkit.pagingtracer import Memory
@@ -388,7 +676,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             if st['sim'] is not None:
                 if RAM_LO <= a < RAM_HI or TAIL_ADDR <= a < TAIL_ADDR + 80:
                     fail('game read hook RAM / tail', (a,))
-                elif ROM_ORG <= a < patch.altrom[1]:
+                elif patch.altrom[0] <= a < patch.altrom[1]:
                     fail('game read the alt-ROM hook range', (a, st['sim'].registers[24]))
             return MG(s, a)
 
@@ -414,7 +702,10 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             conv = p.conv                   # the patched side set V_ON (main path, converted)
             if conv and ix not in CONV:
                 fail('plot: converted a descriptor outside the list', (ix,))
-            f, npx = check_plot(get, o, p, world, ix, conv, nb)
+            f, npx = check_plot(get, o, p, world, ix, conv, nb, dtab)
+            if conv and get(ix + 0) < 30 and any(e[1] == ix and e[2] == get(ix + 0) and e[3] == get(ix + 1)
+                                               for e in nb):
+                c['converted, scenery restored (old image a sprite)'] += 1
             for k in f:
                 fail('plot: %s' % k[0], k[1:])
             vb = _visible_ok(world)
@@ -516,6 +807,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         if cnt[b] and cnt[a] != cnt[b] and a != 27468:
             c['%d reached other than from %d!' % (b, a)] += 1
     c['frames'] = st['frame']
+    c['occluded pixels'] = getattr(world, 'occluded', 0)
     c.update(ghost)
     return (c, dict(ex), states) if collect else (c, dict(ex))
 
@@ -574,7 +866,27 @@ def _main_visited(get, regs, ret, sp_ret):
     return seen
 
 
-def unit_tests(patch, states, neg=None):
+def _with_entry(ram, attrs, ix, col, y, pairs):
+    """Run-time state with a sprite entry for (ix, col, y) - the old image already a sprite - if
+    there is none (captured states are often a figure's first plot)."""
+    r = bytearray(ram)
+    a2 = [list(a) for a in attrs]
+    for i in range(NENT):
+        e = r[ENT - RAM_LO + 8 * i:ENT - RAM_LO + 8 * i + 8]
+        if e[0] and e[1] | e[2] << 8 == ix and e[3] == col and e[4] == y:
+            return bytes(r), a2
+    for i in range(NENT):
+        if not r[ENT - RAM_LO + 8 * i]:
+            r[ENT - RAM_LO + 8 * i:ENT - RAM_LO + 8 * i + 8] = bytes([1, ix & 255, ix >> 8, col, y, 0,
+                                                                     2 * pairs, 0])
+            r[V_CNT - RAM_LO] += 1
+            for k in range(4):
+                a2[4 * i + k][3] |= 0x80
+            return bytes(r), a2
+    return bytes(r), a2
+
+
+def unit_tests(patch, states, neg=None, dtab=None, neg_depth=None, neg_restore=None):
     from .rainbow import _BankMem
     from .build import rom48
     rom = rom48()
@@ -603,7 +915,8 @@ def unit_tests(patch, states, neg=None):
         diff = [i for i in CMP if so.registers[i] != sp_.registers[i]]
         if diff:
             f.append(('registers differ', diff))
-        cf, npx = check_plot(get, o, p, w, ix, p.conv, nb)
+        cf, npx = check_plot(get, o, p, w, ix, p.conv, nb, dtab)
+        c['occluded'] += getattr(w, 'occluded', 0)
         f += cf
         vb = _visible_ok(w)
         if vb:
@@ -678,6 +991,55 @@ def unit_tests(patch, states, neg=None):
                 c['negative control cases'] += 1
                 if any('pixels' in str(k[0]) or 'sprite pixel' in str(k[0]) for k in f):
                     c['negative control detected'] += 1
+        # 6. depth: one object of a solid type over the figure's new box, its box middle swept around
+        #    the figure's walk-test point (y + 6); ink in the overlap so 'behind' has pixels to hide.
+        #    Negative control: the same case with no walk boxes must show scenery-covered pixels.
+        bm = _BankMem(banks, o7, rom)
+        col, fy, pairs = bm[ix + 4], bm[ix + 5], bm[ix + 10]
+        if col < 30 and 4 <= fy < 96 and ix in CONV and dtab is not None:
+            ram6, attrs6 = _with_entry(ram, attrs, ix, bm[ix + 0], bm[ix + 1], pairs)
+            ink = {}
+            for line in range(2 * fy, min(192, 2 * fy + 2 * pairs)):
+                for cx in range(col, col + 3):
+                    ink[0x4000 | ((line & 0xC0) << 5) | ((line & 7) << 8) | ((line & 0x38) << 2) | cx] = 0x5A
+            for t in (1, 2, 3, 7, 9, 11, 20, 24, 35):
+                mid = dtab[8 * t + 5] - 64
+                for rel in (-6, -1, 0, 1, 6):
+                    oy = (fy + 6 - mid + rel) & 0xFF
+                    ed = dict(ink)
+                    ed.update({0xFF00: 0x08, 0xFF08: 0x08, 0xFF0A: t, 0xFF0B: (col + 1) & 31, 0xFF0C: oy,
+                               64904: 0x08})
+                    w0 = c['occluded']
+                    f, conv, npx = one(patch, R, banks, o7, ram6, attrs6, pat, ed, ('depth', t, rel))
+                    c['depth cases'] += 1
+                    if conv:
+                        c['depth cases converted'] += 1
+                        if c['occluded'] > w0:
+                            c['depth cases behind (pixels hidden)'] += 1
+                    for k in f:
+                        fail('depth: %s' % (k[0],), (si, t, rel) + tuple(k[1:]))
+                    if neg_depth is not None and conv and c['occluded'] > w0:
+                        f2, _, _ = one(neg_depth, R, banks, o7, ram6, attrs6, pat, ed, 'negd')
+                        c['depth negative control cases'] += 1
+                        if any('behind' in str(k[0]) for k in f2):
+                            c['depth negative control detected'] += 1
+        # 7. scenery restore: on the captured state itself, svrest disabled must be caught wherever
+        #    the plot is converted and its old image was a sprite
+        if neg_restore is not None and ix in CONV:
+            bm7 = _BankMem(banks, o7, rom)
+            ram7, attrs7 = _with_entry(ram, attrs, ix, bm7[ix], bm7[ix + 1], bm7[ix + 10])
+            ink7 = {}                               # scenery under the old image for the erase to cut
+            for line in range(2 * bm7[ix + 1], min(192, 2 * bm7[ix + 1] + 2 * bm7[ix + 10])):
+                for cx in range(bm7[ix], min(32, bm7[ix] + 3)):
+                    ink7[0x4000 | ((line & 0xC0) << 5) | ((line & 7) << 8) | ((line & 0x38) << 2) | cx] = 0xA5
+            f0, conv0, _ = one(patch, R, banks, o7, ram7, attrs7, pat, ink7, 'restore')
+            for k in f0:
+                fail('restore: %s' % (k[0],), (si,) + tuple(k[1:]))
+            if conv0 and bm7[ix] < 30:
+                c['restore negative control cases'] += 1
+                f7, _, _ = one(neg_restore, R, banks, o7, ram7, attrs7, pat, ink7, 'negr')
+                if any('not restored' in str(k[0]) for k in f7):
+                    c['restore negative control detected'] += 1
     return c, dict(ex)
 
 
@@ -696,7 +1058,7 @@ def init_tests(patch, z80, neg=None, n=16, seed=1):
     rnd = random.Random(seed)
     c = collections.Counter()
     ex = []
-    loose = set(range(V_SP_LO, V_SP_LO + 2)) | set(range(STK_LO, RUN_HI))
+    loose = set(range(V_SP_LO, V_SP_LO + 2)) | set(range(STK_LO, RUN_HI)) | set(range(SCRATCH_LO, RAM_HI))
 
     def run(pt, regs):
         w = World(pt)
@@ -737,6 +1099,24 @@ def init_tests(patch, z80, neg=None, n=16, seed=1):
     return c, ex
 
 
+def negative_depth_patch():
+    """Broken copy: depth table with no walk boxes (figures never behind): must be caught."""
+    t = bytearray(bytes.fromhex(load_profile()['depth_table']))
+    for k in range(NTYPES):
+        t[8 * k] = 0
+    return CommandoPatch(dtab=bytes(t))
+
+
+def negative_restore_patch():
+    """Broken copy: svrest returns at once (scenery cut by the erase is not restored): caught."""
+    pt = CommandoPatch()
+    off = int(load_profile()['hooks']['syms']['svrest'], 16) - 0x2000
+    page = bytearray(pt.page)
+    page[off] = 0xC9
+    pt.page = bytes(page)
+    return pt
+
+
 def negative_patch():
     """Broken copy: nibble table with ink and transparent swapped (pixel check must fail)."""
     return CommandoPatch(swap_nibt=True)
@@ -748,6 +1128,21 @@ def auto(a, z80, name, out, say):
     say('Game      : %s' % name)
     say('Engine    : commando (Commando: differential OR plotter, player/soldiers/POWs -> sprites)')
     md5 = lambda p: hashlib.md5(open(p, 'rb').read()).hexdigest()
+    from skoolkit.snapshot import Snapshot as _S
+    if is_loader(_S.get(z80)):
+        ent = os.path.join(out, name + '_entry.z80')
+        fr, info = advance_loader(z80, ent)
+        say('Loader    : 128K BASIC loader run to the game entry (SPACE, N): frame %d, PC %d, SP %d, '
+            'IM %d, IFF %d, 7FFD 0x%02X -> %s starts in the front end (no 128K BASIC on the Next)' % (fr, info['pc'], info['sp'], info['im'], info['iff'], info['7ffd'],
+                           os.path.basename(ent)))
+        ft = front_tests(ent, info['entry'])
+        fok = not ft['N'] and not ft['Y']
+        ok_front = fok
+        say('Front end : loading screen -> any key -> "INFY LIVES(Y/N)?" -> Y/N -> game entry 25089 '
+            '(N: state = the loader\'s; Y: also 27653 = 182) -> %s' % ('PASS' if fok else 'FAIL %s' % ft))
+        z80 = ent
+    else:
+        ok_front = True
     plain = os.path.join(out, name + '.nex')
     zt.convert(z80, plain, TAIL_ADDR, quiet=True)
     bad = boot_check(plain, z80)
@@ -759,8 +1154,20 @@ def auto(a, z80, name, out, say):
     bad2 = boot_check(spr, z80, patch)
     say('Sprites   : %s  %s  boot %s' % (os.path.basename(spr), md5(spr),
                                           'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200]))
-    ok = not bad and not bad2
+    ok = not bad and not bad2 and ok_front
     states = []
+    dtab = None
+    for r in list(a.rzx or [])[:1]:
+        from skoolkit.rzxplay import parse_rzx
+        from skoolkit.snapshot import Snapshot as SS
+        s0 = [b.obj for b in parse_rzx(r) if isinstance(b.obj, SS)][0]
+        ram = s0.ram(-1)
+        dtab = derive_table([ram[k:k + 0x4000] for k in range(0, 0x20000, 0x4000)], s0.out7ffd)
+        dok = dtab == patch.dtab
+        ok = ok and dok
+        say('Depth     : table re-derived from the game (RZX start state: drawer 37302 + box builder '
+            '60754 per type) %s the profile; %d types with walk boxes -> %s' % (
+                '=' if dok else '!=', sum(dtab[8 * k] & 1 for k in range(NTYPES)), 'PASS' if dok else 'FAIL'))
     for r in list(a.rzx or []):
         from skoolkit.rzxplay import parse_rzx
         from skoolkit.snapshot import Snapshot as SS
@@ -771,7 +1178,7 @@ def auto(a, z80, name, out, say):
             say('RZX       : %s had %d autosave snapshots -> %s' % (os.path.basename(r), nsnap - 1,
                                                                    os.path.basename(s2)))
             r = s2
-        c, ex, st = verify(patch, r, stop=getattr(a, 'quick', None), collect=12)
+        c, ex, st = verify(patch, r, stop=getattr(a, 'quick', None), collect=12, dtab=dtab)
         states += st
         fails = {k: v for k, v in c.items() if k.endswith('!')}
         ok = ok and not fails
@@ -782,6 +1189,9 @@ def auto(a, z80, name, out, say):
                 c['figure plot on the ULA: table full'], c['other plot (unchanged)'],
                 c['clear 27468'] + c['clear 30597'], c['max entries'], c['sprite pixels compared'],
                 'IDENTICAL' if not fails else 'FAILED %s' % fails))
+        say('            %d converted plots put back the scenery their erase cut (ULA unchanged by the plot)'
+            % c['converted, scenery restored (old image a sprite)'])
+        say('            scenery pixels drawn in front of figures (depth rule): %d' % c['occluded pixels'])
         say('            sprite-frames %d, mostly covered/erased on the original %d (scenery/bullets '
             'drawn over a figure)' % (c['sprite-frames'],
                                       c['sprite-frames mostly covered/erased on the original']))
@@ -794,7 +1204,8 @@ def auto(a, z80, name, out, say):
         ic['init cases'], ic['init negative control detected'], ic['init negative control cases'],
         'PASS' if iok else 'FAIL %s' % str(iex)[:300]))
     if states:
-        u, uex = unit_tests(patch, states, negative_patch())
+        u, uex = unit_tests(patch, states, negative_patch(), dtab, negative_depth_patch(),
+                            negative_restore_patch())
         uf = {k: v for k, v in u.items() if k.endswith('!')}
         neg_ok = u['negative control cases'] and u['negative control detected'] == u['negative control cases']
         ok = ok and not uf and neg_ok
@@ -804,6 +1215,22 @@ def auto(a, z80, name, out, say):
                 u['table-full cases'],
                 u['other-descriptor cases'], u['page-guard cases'], u['negative control detected'],
                 u['negative control cases'], 'PASS' if not uf and neg_ok else 'FAIL %s' % uf))
+        dneg = u['depth negative control cases'] and \
+            u['depth negative control detected'] == u['depth negative control cases']
+        ok = ok and dneg and u['depth cases behind (pixels hidden)'] > 0
+        say('Depth unit: %d cases (%d converted, %d behind with pixels hidden), negative control (no '
+            'walk boxes) %d/%d -> %s' % (u['depth cases'], u['depth cases converted'],
+                                         u['depth cases behind (pixels hidden)'],
+                                         u['depth negative control detected'],
+                                         u['depth negative control cases'],
+                                         'PASS' if dneg and not any(k.startswith('depth') for k in uf) else 'FAIL'))
+        rneg = u['restore negative control cases'] and \
+            u['restore negative control detected'] == u['restore negative control cases']
+        ok = ok and rneg
+        say('Restore   : converted plots leave the ULA as before the plot (scenery the erase cuts is put '
+            'back); negative control (restore disabled) %d/%d -> %s' % (
+                u['restore negative control detected'], u['restore negative control cases'],
+                'PASS' if rneg else 'FAIL'))
         for k, v in uex.items():
             say('            %s: %s' % (k, str(v)[:200]))
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
