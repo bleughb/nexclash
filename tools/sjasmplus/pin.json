@@ -1,0 +1,10 @@
+{
+ "_note": "The ONE sjasmplus version nexclash assembles hooks with. Change it only by the upgrade procedure in tools/sjasmplus/README.md (asm2profile.py --check --all must stay identical).",
+ "version": "1.24.0",
+ "tag": "v1.24.0",
+ "commit": "d379eeac9ad3857fb48fd3a3929175d0a56038ce",
+ "repo": "https://github.com/z00m128/sjasmplus",
+ "make": "make USE_LUA=0 LDFLAGS=\"-static -s\"",
+ "binary": "sjasmplus-1.24.0-linux-x86_64",
+ "binary_sha256": "9dd415406e0a4a5a0e85bafc8e41bc2d8e3a051ca563cd3772332e342bede19e"
+}

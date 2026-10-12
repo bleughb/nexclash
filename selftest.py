@@ -127,6 +127,12 @@ def main():
     if missing:
         print('missing reference files (those games are skipped): %s' % ', '.join(missing))
     fails = pending = 0
+    # every hook profile must be exactly what the pinned sjasmplus makes of its asm/ source
+    r = subprocess.run([sys.executable, os.path.join(HERE, 'tools', 'asm2profile.py'), '--check', '--all'],
+                       capture_output=True, text=True)
+    print((r.stdout + r.stderr).strip())
+    fails += r.returncode != 0
+    print('%-4s hook profiles = pinned sjasmplus output' % ('OK' if r.returncode == 0 else 'FAIL'))
     games = ['fantasy_world_dizzy', 'magicland_dizzy', 'dizzy1', 'treasure_island_dizzy', 'dizzy5', 'treasure_island_title']
     skipped = [g for g in games if g + '.z80' not in found]
     games = [g for g in games if g + '.z80' in found]

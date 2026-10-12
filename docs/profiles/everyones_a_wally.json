@@ -55,6 +55,7 @@
    "x_p": "0x38B7",
    "x_ret": "0x3892",
    "xcol": "0x0361"
-  }
+  },
+  "assembled_with": "sjasmplus 1.24.0"
  }
 }

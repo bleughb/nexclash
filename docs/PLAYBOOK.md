@@ -83,6 +83,9 @@ Track "player drawn" from the plotter's/eraser's own screen writes. Report:
 | Hook code in the alt ROM / slot-1 page | never at 0x3D00-0x3DFF (DivMMC automap trap on fetch); data there is fine |
 
 ## 5. Build
+Hooks: asm/<engine>_hooks.asm with `SAVEBIN "<prefix>_<key>.bin"` per block and
+`"hooks": {"source": "asm/<engine>_hooks.asm", ...}` in the profile; after every edit
+`python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex + symbols).
 Copy the nearest builder (TID-engine: build.py TidPatch;
 XOR: dizzy1_patch.py; non-Codemasters: chuckie.py (simplest), wally.py, rainbow.py), change the profile block and site list, rebuild the asm.
 Every site keeps its original-byte check.
