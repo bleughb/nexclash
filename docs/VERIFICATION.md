@@ -47,6 +47,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Dizzy: The Ultimate Cartoon Adventure (dizzy1): `dizzy1.nex` 7892b2e0f1f3f9f19165516db307cbe0, `dizzy1_sprites.nex` 05d2bce99f4d7654d4e1c9c9c04dc391; verified 2026-10-13
 - Commando (commando): `commando.nex` a206f950c12f58a8e7f26b366f5a2480, `commando_sprites.nex` d601385ee4aeb7f3d7c0771bdc27df6b; verified 2026-10-13
 - Crystal Kingdom Dizzy (128K) (crystal_kingdom_dizzy): `crystal_kingdom_dizzy.nex` 99975f65172dc86ecefbac07db2c0c00; verified never
+- Midnight Resistance (128K) (midnight_resistance): `midnight_resistance.nex` 17239acaaf67b0f8011478053e17829d, `midnight_resistance_sprites.nex` e8f0ece9e41c314d76471c96f4595854; verified 2026-10-13
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
@@ -385,6 +386,36 @@ starts in game from its own SZX: 8 autosave snapshots stripped, 3,279 frames, ar
   every test and negative control PASS). Runs on hardware (Dean).
 - Shared code unchanged (commando.py, its .asm and profile only); `selftest.py --smoke` PASSED.
 - Hardware: d601385e runs (Dean, 2026-10-12); checklist items not yet reported.
+
+## Midnight Resistance (128K, engine `midres`) - 2026-10-13
+`nexclash.py auto midnight_resistance.z80 --rzx midnight_resistance.rzx --no-record` (~20 min)
+(Midnight_Resistance_1990_Ocean_128K.z80 67bf05d3 at the title; Dean's RZX b75ecd5f from its own
+SZX: 8 autosave snapshots stripped, 4,709 frames: title, level 1 to the end-of-level tank, game over)
+- `midnight_resistance.nex` 17239acaaf67b0f8011478053e17829d (plain, tail 0x7B7E-0x7BCD below SP:
+  write-first in the RZX, untouched in a 600-frame free run of the .z80) - boot sim OK
+- `midnight_resistance_sprites.nex` e8f0ece9e41c314d76471c96f4595854 (alt ROM hooks 0x2000-0x2EA1
+  + page 26 at slot 5 during hooks) - boot sim OK; 12 patch sites (5 CALL operands, 5 loop exits,
+  commit 0x8950, loop exit test 0x8993), original bytes checked
+- RZX: 4,463 converted plots (97E1 1,138 / 9813 143 / 7DC5 870 / 9E3F 1,799 + mirrored 513), 3,065
+  passed through (bullets, explosions, small objects, 4 player plots before the first commit), 758
+  commits (max 36 sprites), 1,656,090 sprite pixels, 1 game-over exit (sprites hidden) - IDENTICAL.
+  Per plot: all registers (AF' included), all memory except the buffer bytes the original drew
+  (dead stack included); per commit: registers + memory, sprite layer = the original plots' pixels
+  (each plot re-run on a 0x00 and a 0xFF buffer) in plot order, expected colours, clip window;
+  MMU5 = 5 and 3.5 MHz after every hook; interiors of the patched blocks never executed
+  (fall-throughs DJNZ -> RET / EXX checked, interrupts between them allowed).
+- Unit: 2,103 guard cases (positions incl. edges, widths, line pairs 1-33, OR opcode NOP / XOR,
+  figure / sprite budget at and past the limits, game-loop flag, foreign caller, graphics in slot 5
+  / wrapping) - converted iff the Python model says so, registers + memory as the original, FIG
+  entry and sprite count as the model; 15 single-figure commits; negative control (ink and
+  outline swapped, its own tables) 12/12 informative cases.
+- Interrupt safety: after every hook instruction (22.9M): IX, IY, I, IFF unchanged, SP on the
+  hook stack with 24 bytes of room or at/above the game's SP - 4, no fetch at 0x3D00-0x3DFF;
+  negative control (LD IY at every CALL hook) 15/15. Static: no DD/FD/DI/EI/LD I/IM in the hook
+  code. ISR slot scan (full RZX): the handler reads slot 0 (0x0000), reads/writes/runs slots 3
+  and 7 only.
+- Shared code: nexclash.py gained one dispatch block (before the 48K identify).
+  `selftest.py --smoke` and `--tools` PASSED; `--affected` rebuild: see the PR.
 
 ## Toolkit: pinned sjasmplus + asm2profile (2026-10-12)
 `python tools/asm2profile.py --check --all` with the pinned sjasmplus 1.24.0 (tag v1.24.0, commit

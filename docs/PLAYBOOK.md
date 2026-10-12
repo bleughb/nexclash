@@ -27,6 +27,8 @@ the answers in games/<game>.md.
 
 ## 1. Plain conversion
 `python nexclash.py convert GAME.z80 [--rzx R]` -> ask the user to test it on the Next.
+(128K recordings: leave out --rzx - analyse() wraps 48K memory only and stops with "N port
+reading(s) left for frame 0"; prove the tail with `scan --range` instead.)
 Check where the tail went (the converter prints it). It must be in memory the
 game never touches (step 3 proves this: `scan`); override with `--tail ADDR`.
 
@@ -92,6 +94,8 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
 | Interrupts on at the hook sites | hooks never write IX/IY/I or IFF and keep SP on a stack with room, at EVERY instruction (the game's ISR may read them: Commando IY+7) |
 | Figure moves (redraw) | never hide at entry and show at exit (flicker): build the new image in other pattern memory, switch the attributes last |
 | Hook code in the alt ROM / slot-1 page | never at 0x3D00-0x3DFF (Commando crashed with code there; probable cause DivMMC automap on fetch - BRIEFING A1); data there was fine |
+| Hook state needs RAM, interrupts on, game uses all RAM | a Next page in a slot the ISR never touches (2-5; isr slot scan), mapped only while a hook runs (Midnight Resistance slot 5) |
+| Back-buffer composer, plotters share an address helper | replace the CALL target; plot into a scratch copy of the buffer; patch loop exits to map back (LEARNINGS 2.1) |
 
 ## 5. Build
 Hooks: asm/<engine>_hooks.asm with `SAVEBIN "<prefix>_<key>.bin"` per block and

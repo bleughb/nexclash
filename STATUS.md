@@ -19,6 +19,7 @@ facts: games/tid_engine.md). MD5s: docs/VERIFICATION.md.
 | Dizzy: The Ultimate Cartoon Adventure (Dizzy 1) | dedicated XOR (dizzy_ultimate_cartoon_adventure.md) | dizzy1_sprites.nex 05d2bce9 | verified | untested | - |
 | Commando (128K) | commando (commando.md) | commando_sprites.nex d601385e (altrom + e_init + front end; solid figures (yellow body), solid objects hide figures by the walk-box depth rule, pattern-slot cache, no flicker, IX/IY-safe hooks) | RZX IDENTICAL, static + interrupt + cache + front end + init + unit + depth + restore PASS | f22a9452 / 5642e4b4 crashed (ROM 0); 5ab928e9 runs; 5c1081b7: flicker, menu logo + dots (hook used IY), figures seen through rocks (Dean) - fixed in 541e34e2, which crashed at the first figure (code at 0x3D00-0x3DFF; probable DivMMC automap); d601385e runs (Dean) | hardware test (checklist); later-areas RZX |
 | Crystal Kingdom Dizzy (128K) | plain only (crystal_kingdom_dizzy.md) | - | - | plain runs | sprites deferred |
+| Midnight Resistance (128K) | midres (midnight_resistance.md) | midnight_resistance_sprites.nex e8f0ece9 (altrom + page 26 at slot 5; player green, soldiers white, jeep / tank in their cell colours; pattern-slot cache) | RZX IDENTICAL, unit + interrupt PASS | untested | hardware test (CSpect first); later-levels RZX |
 <!-- end generated -->
 
 Platform on hardware: alt ROM ($8C) PASS 2026-09-27; plain 48K and 128K conversion run.

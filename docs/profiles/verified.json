@@ -57,6 +57,14 @@
     "sprites": "bf137d41d3cc08221bf6fdda153c9de2"
    }
   },
+  "67bf05d356d51b2b402d88c5f0cdfb21": {
+   "game": "Midnight Resistance (128K)",
+   "doc": "midnight_resistance.md",
+   "nex": {
+    "plain": "17239acaaf67b0f8011478053e17829d",
+    "sprites": "e8f0ece9e41c314d76471c96f4595854"
+   }
+  },
   "4c98b980b1726af545fccc99665ef29b": {
    "game": "Rainbow Islands (128K)",
    "doc": "rainbow_islands.md",

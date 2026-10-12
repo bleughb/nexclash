@@ -97,7 +97,7 @@
   "deps": {
    "asm/dizzy5_hooks.asm": "f9520d5b520e1025",
    "docs/profiles/dizzy5_spellbound_dizzy.json": "7e526e8e7910b5b8",
-   "nexclash.py": "e643a6a71253b504",
+   "nexclash.py": "d8e099fa553cffa9",
    "nexclash/analyse.py": "5bdd8b073cc95624",
    "nexclash/build.py": "a60e4d3c5945c94a",
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
