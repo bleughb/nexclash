@@ -441,7 +441,10 @@ BRIEFING - with its reason.
   (attach with push access first; a 403 "not in this session's authorized repository set" says
   so); the gh token may be invalid - use `env -u GH_TOKEN gh api ...`; GraphQL is blocked, so
   `gh pr create` fails: open PRs with `gh api repos/OWNER/REPO/pulls -f title=... -f head=...
-  -f base=... -f body=...`. A PR stacked on an unmerged one: base = that PR's branch.
+  -f base=... -f body=...`. A PR stacked on an unmerged one: base = that PR's branch - and if the
+  base PR merges first, retarget the stacked PR to main (`gh api -X PATCH repos/O/R/pulls/N -f
+  base=main`): merged into the old branch it never reaches main (the canary, PR #21, had to come
+  in again with #23).
 - A limit written without its reason gets broken: BRIEFING said alt-ROM hooks end < 0x3D00 next
   to the font, so a game that never reads the font looked exempt - and code at 0x3Dxx crashed it
   (probably the DivMMC automap). Write the WHY with every limit, and mark an inferred why as such.
