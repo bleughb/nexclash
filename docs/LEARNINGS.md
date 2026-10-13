@@ -114,6 +114,17 @@ BRIEFING - with its reason.
 # PART 2 - GAMES / SOFTWARE
 
 ## 2.1 Game-engine lessons (all engines)
+- Hide the sprites on EVERY way out of the game loop, not only the one the RZX shows: list the
+  loop's exits (JP / RET / jumps to another loop) from the code. Midnight Resistance hid them on
+  game over (0x8993) only; the RZX ends at game over, so the end-of-level exit (0x8988 JP Z,0xB7E0
+  -> shop -> level 2) was never run, and on hardware the player's last sprite stayed on screen
+  through the shop (Dean, 2026-10-13). A path the RZX does not reach needs a unit test from a
+  collected state (midres: "level exit" cases) - and say so in the game file's Open list.
+- Graphics under the hook page: a figure whose graphics live in the slot the hook page maps over
+  can still be converted by copying them into the page first (midres keys at 0xAB88: page 5 seen
+  at slot 4 for the copy, the stacked pointer moved to the copy, the end pointer put back at the
+  loop exit). Slot 4 may be remapped by a hook only because the ISR never touches 0x8000-0x9FFF
+  (isr scan) and no hook code or stack lives there.
 - Never hook timing-critical code: title-screen ISRs playing beeper music
   (TID 63328) broke the music when hooked.
 - Games self-modify: check patch sites for writes during play (TID title ISR

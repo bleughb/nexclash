@@ -5,8 +5,10 @@ The game composes each game frame in a back buffer (0x5B00-0x6AFF, attrs 0x6B00)
 the screen. The patch replaces the target of the CALL 0x7EC1 (buffer address) in five figure
 plotters: a converted figure is recorded and its plot runs into a scratch copy of the buffer
 (Next RAM page 26 at 0xA000 = buffer + 0x4500); the commit after the screen copy builds the sprites.
-Converted: the player (green), enemy soldiers / gun turrets (white), black outline; the jeep and
-the end-of-level tank in the colours of their attribute cells. Everything else stays on the ULA.
+Converted: the player (green), enemy soldiers / gun turrets (white), keys (yellow), black outline;
+the jeep and the end-of-level tank in the colours of their attribute cells; a colour map
+(docs/profiles/midnight_resistance_colours.json, painted on a sheet: see _main) recolours any pixel.
+Everything else stays on the ULA.
 """
 import collections
 import copy
@@ -27,17 +29,20 @@ CLIP = (24, 231, 0, 127)         # sprite clip window (ULA x 24-231, y 0-127)
 # page 26 (0xA000-0xBFFF while a hook runs): variables at 0xB000 (offsets in the page)
 P_NF, P_NT, P_PREV, P_PAR, P_N, P_LIVE = 0x1004, 0x1005, 0x1006, 0x1007, 0x1008, 0x100A
 P_FIG, P_SPR = 0x1100, 0x1300
+P_NRL, P_PT0, P_PT1 = 0x1030, 0x1580, 0x15C0
+REL, NREL = 0xBF00, 4
+STORE_PAGE = 28                  # colour store: Next pages 28.. (banks 14..), 8-byte entries
 
 # CALL 0x7EC1 sites (operand bytes replaced) and loop exits (JP to ROM)
 CALL_SITES = {0x97E5: 'c_m', 0x981E: 'c_mf', 0x7DC6: 'c_o', 0x9EF0: 'c_p', 0x9F45: 'c_pm'}
 EXIT_SITES = {0x980F: ('C2EA97', 'x_m'), 0x9861: ('C22898', 'x_mf'), 0x7DE5: ('C2CA7D', 'x_o'),
               0x9F3D: ('10B8C9', 'x_p'), 0x9FB7: ('1096D9', 'x_pm'),
-              0x8950: ('ED5BEE', 'e_cm'), 0x8993: ('3A70FF', 'e_q')}
+              0x8950: ('ED5BEE', 'e_cm'), 0x8993: ('3A70FF', 'e_q'), 0x8988: ('CAE0B7', 'e_lv')}
 KIND = {0x97E5: 0, 0x981E: 1, 0x7DC6: 2, 0x9EF0: 4, 0x9F45: 5}
 # patched blocks (JP over these bytes): an address inside a block other than its start may be a PC
 # in the ORIGINAL run only as the next instruction of the same block (DJNZ falling through to RET /
 # EXX); instruction interiors never
-BLOCKS = {0x980F: 3, 0x9861: 3, 0x7DE5: 3, 0x9F3D: 3, 0x9FB7: 3, 0x8950: 4, 0x8993: 3}
+BLOCKS = {0x980F: 3, 0x9861: 3, 0x7DE5: 3, 0x9F3D: 3, 0x9FB7: 3, 0x8950: 4, 0x8993: 3, 0x8988: 3}
 FALLTHROUGH = {0x9F3F: 0x9F3D, 0x9FB9: 0x9FB7}           # instruction start -> previous instruction
 INTERIORS = tuple(a + k for a, n in BLOCKS.items() for k in range(1, n) if a + k not in FALLTHROUGH)
 PLAYER, SOLDIERS, TANK_P = (0x9E04, 0x9E0C), (0xA4F2, 0xA504), (0xDEB2,)
@@ -129,9 +134,9 @@ def static_check(code, org, data_ranges=()):
 
 
 class MidresPatch:
-    name = 'Midnight Resistance figures (player, soldiers, vehicles) -> hardware sprites (altrom + page 26 at slot 5)'
+    name = 'Midnight Resistance figures (player, soldiers, keys, vehicles) -> hardware sprites (altrom + page 26 at slot 5)'
 
-    def __init__(self, prof=None, swap=False, edit=None):
+    def __init__(self, prof=None, swap=False, edit=None, colours=None):
         """swap: negative control (ink and outline codes swapped in NIBTAB); edit: {ROM address:
         bytes} written over the hook code (negative control of the interrupt-safety check)."""
         self.prof = prof or load_profile()
@@ -158,8 +163,14 @@ class MidresPatch:
         for a, d in (edit or {}).items():
             page[a - 0x2000:a - 0x2000 + len(d)] = d
         self.page = bytes(page)
-        self.scratch = bytes(8192)              # page 26: all state zero at start
+        self.colours = load_colours() if colours is None else colours
+        self.cpages, scratch = store_pages(self.colours)
+        self.scratch = bytes(scratch)           # page 26: state zero at start, page tables filled
         self.extra_banks = {12: self.page + bytes(8192), 13: self.scratch + bytes(8192)}
+        for pg in sorted(self.cpages):
+            b = self.extra_banks.setdefault(pg // 2, bytes(16384))
+            k = (pg & 1) * 8192
+            self.extra_banks[pg // 2] = b[:k] + bytes(self.cpages[pg]) + b[k + 8192:]
         self.sites = [(a, bytes.fromhex('CDC17E'), b'\xCD' + self.syms[s].to_bytes(2, 'little'))
                       for a, s in CALL_SITES.items()]
         self.sites += [(a, bytes.fromhex(o), b'\xC3' + self.syms[s].to_bytes(2, 'little'))
@@ -217,6 +228,25 @@ def build_tail_range(s, patch):
 # Python model of the hook's decision (unit tests compare against it)
 # ---------------------------------------------------------------------------------------------
 
+def store_pages(colours):
+    """colours {(set, p): [check, kind, nibbles]} -> ({Next page: 8K entries}, page 26 image with the
+    page tables PT0 / PT1 (one byte per 1K of the address space: store page or 0)."""
+    page26 = bytearray(8192)
+    pages, alloc = {}, {}
+    for (st, p), (chk, kind, nib) in sorted(colours.items()):
+        blk = (st, p >> 10)
+        if blk not in alloc:
+            alloc[blk] = STORE_PAGE + len(alloc)
+            pages[alloc[blk]] = bytearray(8192)
+            page26[(P_PT1 if st else P_PT0) + (p >> 10)] = alloc[blk]
+        o = (p & 0x3FF) * 8
+        e = pages[alloc[blk]]
+        for i in range(4):
+            e[o + i] = nib[2 * i] << 4 | nib[2 * i + 1]
+        e[o + 4], e[o + 5] = chk, kind
+    return pages, page26
+
+
 def model_decide(kind, get, R, sp, page):
     """-> None (pass) or dict(W, R, X, Y, fl, col, gfx). get(a) = game memory, R = registers at the
     CALL site, sp = SP at the CALL site (before the CALL), page = page-26 bytes."""
@@ -230,6 +260,7 @@ def model_decide(kind, get, R, sp, page):
     if d >= 128:
         return None
     gfx, caller = w16(sp), w16(sp + 2)
+    rel = False
     if kind & 4:
         if caller in PLAYER:
             col = 12
@@ -250,9 +281,12 @@ def model_decide(kind, get, R, sp, page):
             return None
         fl = (kind & 1) | (4 if op == 0 else 0)
     else:
-        if caller not in VEHICLES:
+        if caller in VEHICLES:
+            col = 0
+        elif caller in KEYS and kind == 0:
+            col = KEY_COL
+        else:
             return None
-        col = 0
         if b == 0 or b > 8 or c == 0 or c > 24:
             return None
         w, rows, fl = b, 2 * c, kind & 3
@@ -272,12 +306,21 @@ def model_decide(kind, get, R, sp, page):
         return None
     ln = rows * w * (1 if fl & 2 else 2)
     end = gfx + ln
-    if end > 0xFFFF or (end > 0xA000 and gfx < 0xC000):
+    if end > 0xFFFF:
         return None
+    if end > 0xA000 and gfx < 0xC000:
+        # under the page: keys only, inside 0xA000-0xBFFF, <= 64 bytes, a free relocation slot
+        if col != KEY_COL or gfx < 0xA000 or end > 0xC000 or ln > 64 or page[P_NRL] >= NREL:
+            return None
+        rel = True
     tiles = ((w + 1) >> 1) * ((rows + 15) >> 4)
     if nt + tiles > MAXT:
         return None
-    return dict(W=w, R=rows, X=x, Y=d, fl=fl, col=col, gfx=gfx, a0=a0, tiles=tiles)
+    if col == 12:
+        fl |= 8
+    if rel:
+        fl |= 0x40 | page[P_NRL] << 4
+    return dict(W=w, R=rows, X=x, Y=d, fl=fl, col=col, gfx=gfx, a0=a0, tiles=tiles, rel=rel)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -307,14 +350,32 @@ class _Orig:
 class _Patched(_Orig):
     def __init__(s, get, patch, ns, alt, psite, err):
         super().__init__(get)
-        s.ns, s.alt, s.psite, s.err = ns, alt, psite, err
+        s.ns, s.alt, s.psite, s.err, s.patch = ns, alt, psite, err, patch
 
     def _paged(s, a):
         return 0xA000 <= a < 0xC000 and s.ns.nr.get(0x55) == PAGE_S
 
+    def _slot4(s, a):
+        """slot 4 remapped: page 5 (the game's 0xA000-0xBFFF) or a colour store page."""
+        pg = s.ns.nr.get(0x54, 4)
+        if not 0x8000 <= a < 0xA000 or pg == 4:
+            return None
+        if pg == 5:
+            return ('game', a + 0x2000)
+        return ('store', pg)
+
     def __getitem__(s, a):
         if a < 0x4000:
             return s.alt[a]
+        m = s._slot4(a)
+        if m is not None:
+            if m[0] == 'game':
+                return _Orig.__getitem__(s, m[1])
+            st = s.patch.cpages.get(m[1])
+            if st is None:
+                s.err.append(('slot 4: unknown page', m[1]))
+                return 0
+            return st[a - 0x8000]
         if s._paged(a):
             return s.ns.scratch[a - 0xA000]
         v = s.psite.get(a)
@@ -326,6 +387,8 @@ class _Patched(_Orig):
         if a < 0x4000:
             if s.ns.R is not None and s.ns.R[24] < 0x4000:
                 s.err.append(('hook wrote ROM', a))
+        elif s._slot4(a) is not None:
+            s.err.append(('write while slot 4 is remapped', a))
         elif s._paged(a):
             s.ns.scratch[a - 0xA000] = v
         else:
@@ -360,8 +423,8 @@ def pair(patch, get, regs, ns, stop, alt, psite, run_orig=True):
     sp_ = _machine(Sim, p, list(regs), ns)
     if not _run_until(sp_, stop, check=_isafe(sp_, regs, ns, err)):
         err.append('patched did not return')
-    if ns.nr.get(0x55) != 5 or ns.nr.get(0x07, 0) != 0:
-        err.append(('MMU5 / speed not restored', ns.nr.get(0x55), ns.nr.get(0x07)))
+    if ns.nr.get(0x55) != 5 or ns.nr.get(0x07, 0) != 0 or ns.nr.get(0x54, 4) != 4:
+        err.append(('MMU4 / MMU5 / speed not restored', ns.nr.get(0x54), ns.nr.get(0x55), ns.nr.get(0x07)))
     if any(e[0] == 'in' for e in ns.events):
         err.append('port read in hook')
     return so, o, sp_, p, err
@@ -474,14 +537,42 @@ def _sprite_pixels(ns, i):
     return out
 
 
-def expected_layer(figs, get):
-    """figs: [(pixels, col)] in plot order; colours from the attribute buffer at commit (cells)."""
+def map_colour(m, x, y, get, colours):
+    """Colour-map nibble for buffer pixel (x, y) of figure m (model_decide's dict), 0 = default."""
+    if not colours or m['fl'] & 4:
+        return 0
+    W, over, mir = m['W'], bool(m['fl'] & 2), m['fl'] & 1
+    r = y - m['Y']
+    c = (x - m['X'] * 8) & 255
+    if mir:
+        c = 8 * W - 1 - c
+    k, b = c >> 3, c & 7
+    i = k if r % 2 == 0 else W - 1 - k
+    j = r * W + i
+    p = (m['gfx'] + j * (1 if over else 2)) & 0xFFFF
+    e = colours.get((1 if m['fl'] & 8 else 0, p))
+    if e is None:
+        return 0
+    mm, g = (0, get(p)) if over else (get(p), get((p + 1) & 0xFFFF))
+    if e[0] != entry_check(mm, g) or e[1] != (2 if over else 1):
+        return 0
+    return e[2][b]
+
+
+def expected_layer(figs, get, colours=None):
+    """figs: [(pixels, col, model)] in plot order; colours from the attribute buffer at commit (cells)
+    unless the colour map gives one."""
     out = {}
-    for px, col in figs:
+    for f in figs:
+        px, col = f[0], f[1]
+        m = f[2] if len(f) > 2 else None
         for (x, y), code in px.items():
             if not (CLIP[0] <= x <= CLIP[1] and CLIP[2] <= y <= CLIP[3]):
                 continue
-            if col:
+            nib = map_colour(m, x, y, get, colours) if m else 0
+            if nib:
+                c = nib
+            elif col:
                 c = col if code == 1 else CBLACK
             else:
                 at = get(ATTR + (y >> 3) * 32 + (x >> 3))
@@ -561,7 +652,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             if any(BUF[0] <= a < BUF[1] for a in p.ov):
                 fail('plot: patched wrote the buffer', (hex(pc),))
             px = truth(get, R, stopf)
-            figs.append((px, model['col'] if model else 0))
+            figs.append((px, model['col'] if model else 0, model))
             c['converted %s' % CALL_SITES[pc]] += 1
         else:
             md = [a for a in keys if o[a] != p[a]]
@@ -582,7 +673,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         d = _cmp_regs(so, sp_)
         if d or o.ov != p.ov:
             fail('commit: registers/memory differ', (d, len(set(o.ov) ^ set(p.ov))))
-        exp = expected_layer(figs, get)
+        exp = expected_layer(figs, get, patch.colours)
         got = sprite_layer(ns)
         bad = len(set(exp) ^ set(got)) + sum(1 for k in exp if k in got and exp[k] != got[k])
         c['commits'] += 1
@@ -606,6 +697,20 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                 fail('loop exit: sprites still visible')
             figs.clear()
 
+    def level_event(real, R):
+        get = lambda a: MG(real, a)
+        so, o, sp_, p, err = pair(patch, get, R, ns, lambda r: r[24] in (0xB7E0, 0x898B), alt, psite)
+        for e in err:
+            fail('level exit: %s' % (e,))
+        d = _cmp_regs(so, sp_)
+        if d or o.ov != p.ov:
+            fail('level exit: registers/memory differ', (d,))
+        if sp_.registers[24] == 0xB7E0:
+            c['level exits (sprites hidden)'] += 1
+            if any(a[3] & 0x80 for a in ns.attr) or ns.scratch[0x100A]:
+                fail('level exit: sprites still visible / still live')
+            figs.clear()
+
     def event(pc, real, R):
         if pc in CALL_SITES:
             plot_event(pc, real, R)
@@ -613,6 +718,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             commit_event(real, R)
         elif pc == 0x8993:
             quit_event(real, R)
+        elif pc == 0x8988:
+            level_event(real, R)
 
     class S(Simulator):
         def __init__(self, memory, registers=None, state_=None, config=None):
@@ -756,6 +863,8 @@ def unit_tests(patch, states, neg=None, neg_int=None):
         for nf, nt in ((MAXF - 1, 0), (MAXF, 0), (0, MAXT - 6), (0, MAXT - 1), (0, MAXT)):
             base.append(({}, {}, {0x1004: nf, 0x1005: nt}))
         base.append(({}, {}, {0x100A: 0}))
+        for nrl in (NREL - 1, NREL):
+            base.append(({}, {}, {P_NRL: nrl}))
         # caller not a converted figure
         sp = R[12]
         base.append(({sp + 2: 0x00, sp + 3: 0x80}, {}, {}))
@@ -778,7 +887,7 @@ def unit_tests(patch, states, neg=None, neg_int=None):
             r = _one_commit(pt, pc, s)
             if r is None:
                 continue
-            r, informative = r
+            r, informative = r[:2]
             if label == 'negative' and not informative:
                 continue
             c['%s cases' % label] += 1
@@ -786,14 +895,83 @@ def unit_tests(patch, states, neg=None, neg_int=None):
                 c['commit: sprite pixels differ!'] += 1
             if label == 'negative':
                 c['negative control detected' if r else 'negative control NOT detected!'] += 1
+    # end-of-level exit 0x8988 (shop / next level; not in the RZX): after a commit, JP Z taken ->
+    # every sprite hidden, the loop no longer live, registers / memory as the original; NZ -> no change
+    for kind, pc, s in states:
+        if kind != 'commit':
+            continue
+        bm, R, ns = _restore(patch, s)
+        get = lambda a: bm[a]
+        alt, psite = patch.alt_image(), _site_maps(patch)
+        pair(patch, get, list(R), ns, lambda r: r[24] == 0x8954, alt, psite, run_orig=False)
+        shown = sum(1 for x in ns.attr if x[3] & 0x80)
+        if not shown:
+            continue                    # nothing on show: not informative
+        for z in (1, 0):
+            ns2 = copy.deepcopy(ns)
+            R2 = list(R)
+            R2[24] = 0x8988
+            R2[1] = (R2[1] | 0x40) if z else (R2[1] & ~0x40)
+            so, o, sp_, p, err = pair(patch, get, R2, ns2, lambda r: r[24] in (0xB7E0, 0x898B), alt, psite)
+            c['level exit cases'] += 1
+            bad = [str(e) for e in err] + ['regs %s' % _cmp_regs(so, sp_)] * bool(_cmp_regs(so, sp_)) + \
+                ['memory'] * (o.ov != p.ov)
+            vis = sum(1 for x in ns2.attr if x[3] & 0x80)
+            if z and (sp_.registers[24] != 0xB7E0 or vis or ns2.scratch[0x100A]):
+                bad.append('not hidden')
+            if not z and (sp_.registers[24] != 0x898B or vis != shown):
+                bad.append('changed')
+            if bad:
+                c['level exit: %s!' % '; '.join(bad[:2])] += 1
+    # colour map: a synthetic map over each converted figure's graphics must show (map cases), and
+    # a build without it must be caught (map negative control); a wrong check byte must be ignored
+    for kind, pc, s in states:
+        if kind != 'plot':
+            continue
+        bm, R, _ = _restore(patch, s)
+        m = model_decide(KIND[pc], lambda a: bm[a], R, R[12], patch.scratch[:0x100A] + b'\x01' +
+                         patch.scratch[0x100B:])
+        if m is None:
+            continue
+        cols = synthetic_colours(lambda a: bm[a], m)
+        bad = {k: [v[0] ^ 0x55, v[1], v[2]] for k, v in cols.items()}
+        for label, pt, want_ok in (('map', MidresPatch(colours=cols), True),
+                                   ('map wrong check', MidresPatch(colours=bad), True)):
+            r = _one_commit(pt, pc, s)
+            if r is None:
+                continue
+            c['%s cases' % label] += 1
+            if r[0]:
+                c['%s: sprite pixels differ!' % label] += 1
+        neg = MidresPatch(colours={})
+        neg.colours = cols
+        r = _one_commit(neg, pc, s)
+        if r is not None and r[2]:
+            c['map negative cases'] += 1
+            c['map negative control detected' if r[0] else 'map negative control NOT detected!'] += 1
     return c
+
+
+def synthetic_colours(get, m, seed=1):
+    """A colour map over figure m's graphics bytes (unit tests): random nibbles, some left 0."""
+    import random
+    rnd = random.Random(seed + m['gfx'])
+    over, W = bool(m['fl'] & 2), m['W']
+    st = 1 if m['fl'] & 8 else 0
+    out = {}
+    for j in range(m['R'] * W):
+        p = (m['gfx'] + j * (1 if over else 2)) & 0xFFFF
+        mm, g = (0, get(p)) if over else (get(p), get((p + 1) & 0xFFFF))
+        out[(st, p)] = [entry_check(mm, g), 2 if over else 1,
+                        [rnd.randint(1, 15) if rnd.random() < 0.7 else 0 for _ in range(8)]]
+    return out
 
 
 def _one_commit(patch, pc, s):
     """Fresh page (live, empty), one plot, then a commit at a synthetic 0x8950 state. -> pixel
     mismatches (0 = identical) or None if the plot was not converted."""
     bm, R, ns0 = _restore(patch, s)
-    page = bytearray(8192)
+    page = bytearray(patch.scratch)         # page tables kept
     page[0x100A] = 1
     page[0x1006] = 0
     f, conv, model, ns, (get, R2, stopf) = _plot_case(patch, pc, s[:3] + (bytes(page),) + s[4:])
@@ -807,19 +985,22 @@ def _one_commit(patch, pc, s):
     Rc[12] = 0x7BD0
     so, o, sp_, p, err = pair(patch, get, Rc, ns, lambda r: r[24] == 0x8954, patch.alt_image(),
                               _site_maps(patch), run_orig=False)
-    exp = expected_layer([(px, model['col'])], get)
+    exp = expected_layer([(px, model['col'], model)], get, patch.colours)
     got = sprite_layer(ns)
     # informative for the negative control: a visible pixel whose ink and paper colours differ
     inf = any((model['col'] or ink_of(get(ATTR + (y >> 3) * 32 + (x >> 3)))) !=
               (CBLACK if model['col'] else paper_of(get(ATTR + (y >> 3) * 32 + (x >> 3)))) for x, y in exp)
-    return len(set(exp) ^ set(got)) + sum(1 for k in exp if k in got and exp[k] != got[k]) + len(err), inf
+    inf_map = expected_layer([(px, model['col'], model)], get) != exp   # the map changes a pixel
+    return len(set(exp) ^ set(got)) + sum(1 for k in exp if k in got and exp[k] != got[k]) + len(err), inf, inf_map
 
 
 def auto(a, z80, name, out, say):
     import hashlib
     from . import z80tonex as zt, rzx as RZ
     say('Game      : %s' % name)
-    say('Engine    : midres (Midnight Resistance: back-buffer composer; player, soldiers, vehicles -> sprites)')
+    say('Engine    : midres (Midnight Resistance: back-buffer composer; player, soldiers, keys, vehicles -> sprites)')
+    say('Colours   : %s' % ('%d colour-map entries (docs/profiles/midnight_resistance_colours.json)' % len(load_colours())
+                             if load_colours() else 'no colour map: default colours'))
     md5 = lambda p: hashlib.md5(open(p, 'rb').read()).hexdigest()
     plain = os.path.join(out, name + '.nex')
     zt.convert(z80, plain, quiet=True)
@@ -869,6 +1050,11 @@ def auto(a, z80, name, out, say):
         say('Unit      : %d cases (%d converted, %d passthrough), %d commit cases, negative control %d/%d -> %s' % (
             u['cases'], u['converted'], u['passthrough'], u['commit cases'], u['negative control detected'],
             u['negative cases'], 'PASS' if not uf else 'FAIL %s' % uf))
+        say('Level exit: %d cases (0x8988 JP Z,0xB7E0, shop / next level: sprites hidden; not in the RZX)'
+            % u['level exit cases'])
+        say('Map tests : synthetic map %d cases, wrong check byte %d cases, negative control (map left out) '
+            '%d/%d' % (u['map cases'], u['map wrong check cases'], u['map negative control detected'],
+                       u['map negative cases']))
         say('Interrupt : %d hook instructions checked (IX, IY, I, interrupt state, stack, 0x3D00 fetches); '
             'negative control (LD IY in every CALL hook) %d/%d' % (
                 ISAFE['checked'], u['interrupt negative control detected'], u['interrupt negative cases']))
@@ -879,3 +1065,369 @@ def auto(a, z80, name, out, say):
 def negative_int_patch(patch):
     """Broken copy: every CALL hook starts with LD IY,0xB000 (4 bytes over NEXTREG's 4)."""
     return MidresPatch(edit={patch.syms[k]: bytes.fromhex('FD2100B0') for k in CALL_SITES.values()})
+
+
+# ---------------------------------------------------------------------------------------------
+# Per-pixel figure colours: a sheet to paint (PNG) and its read-back (colour map per graphics byte)
+# ---------------------------------------------------------------------------------------------
+# Every converted plotter reads its graphics the same way: lines of W entries, even lines left to
+# right, odd lines right to left (zig-zag); an entry is a (mask, graphic) byte pair, or one graphic
+# byte for the overwrite plotter 7DC5. A colour map therefore belongs to a graphics BYTE: the entry
+# at key address p (the mask byte; overwrite: the graphic byte) holds 8 colour nibbles, pixels left
+# to right as stored (the sprite mirror bit mirrors them with the image). Nibble 0 = the figure's
+# default colour (ink: its colour or the cell's ink; outline: black or the cell's paper).
+# A check byte of the entry's graphics bytes guards against other graphics at the same address
+# (later levels): no match -> default colours.
+
+KEYS = (0x97A4,)                  # rotating keys (collectables): 97E1, 2 bytes x 16 lines, 0xAB88-0xAC87
+KEY_COL = 14                      # default: bright yellow (as the HUD's key icon), black outline
+GROUPS = (('Player', PLAYER, 12), ('Soldiers / gun turrets', SOLDIERS, 15), ('Keys', KEYS, KEY_COL),
+          ('Tank turret', TANK_P, 0), ('Vehicles (jeep, tank)', VEHICLES, 0))
+COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', 'midnight_resistance_colours.json')
+TRANSP_RGB = (100, 100, 100)      # sheet: transparent pixels (not a palette colour)
+
+
+def rgb(idx):
+    """Palette index -> sheet RGB (the Next's 9-bit colour: blue's third bit = B1 OR B0)."""
+    v = PALETTE[idx]
+    b3 = ((v & 3) << 1) | (1 if v & 3 else 0)
+    return (((v >> 5) & 7) * 255 // 7, ((v >> 2) & 7) * 255 // 7, b3 * 255 // 7)
+
+
+def rotl(v):
+    return ((v << 1) | (v >> 7)) & 255
+
+
+def entry_check(m, g):
+    return m ^ rotl(g)
+
+
+def group_of(caller):
+    for name, callers, col in GROUPS:
+        if caller in callers:
+            return name, col
+    return None, None
+
+
+def fig_pixels(W, R, over):
+    """Staging pixels of a figure (rows R, bytes W) -> [(r, c, j, bit)]: line r, column c (0..8W-1,
+    as stored), entry index j (key address = gfx + j * (1 if over else 2)), bit 0-7 (0 = 0x80)."""
+    out = []
+    for r in range(R):
+        for k in range(W):
+            i = k if r % 2 == 0 else W - 1 - k
+            for b in range(8):
+                out.append((r, k * 8 + b, r * W + i, b))
+    return out
+
+
+def pixel_code(data, j, b, over):
+    """1 ink, 2 opaque non-ink (outline / overwrite paper), 0 clear."""
+    bit = 0x80 >> b
+    if over:
+        return 1 if data[j] & bit else 2
+    m, g = data[2 * j], data[2 * j + 1]
+    return 1 if g & bit else (0 if m & bit else 2)
+
+
+def capture(rzx_path, stop=None, progress=None):
+    """Replay the RZX (original game) and collect the figures the commit could convert, AS DRAWN:
+    the parts of one figure (player legs + body, soldier halves, jeep / tank parts) are plotted
+    one after another and touch, so each game frame's plots are joined into composites. -> (list of
+    composites [{'count', 'parts': [part dict, offsets dx/dy and dmir = shown mirrored]}], max R per
+    part key (set, gfx, overwrite))."""
+    import skoolkit.rzxplay as rzxplay
+    from skoolkit.simulator import Simulator
+    from skoolkit.pagingtracer import Memory
+    MG = Memory.__getitem__
+    st = {'f': 0}
+    frame, comps, maxr = [], {}, {}
+
+    def ev(pc, mem, R):
+        get = lambda a: MG(mem, a)
+        sp = R[12]
+        gfx, caller = get(sp) | get(sp + 1) << 8, get(sp + 2) | get(sp + 3) << 8
+        name, col = group_of(caller)
+        if name is None:
+            return
+        kind = KIND[pc]
+        if kind & 4:
+            W, Rr, fl = 4, 2 * get(0x9F4E if kind & 1 else 0x9EF6), kind & 1
+        else:
+            W, Rr, fl = R[2], 2 * R[3], kind & 3
+        if not (1 <= W <= 8 and 2 <= Rr <= 48):
+            return
+        over = bool(fl & 2)
+        ln = Rr * W * (1 if over else 2)
+        col0 = (R[5] >> 3) & 31
+        X = col0 - (W - 1) if fl & 1 else col0
+        if X > 28:
+            X -= 32                     # wrapped into the left margin
+        st_ = int(caller in PLAYER)
+        k = (st_, gfx, over)
+        maxr[k] = max(maxr.get(k, 0), Rr)
+        frame.append(dict(set=st_, gfx=gfx, W=W, R=Rr, over=over, mir=fl & 1, group=name, col=col,
+                          caller=caller, X=X, Y=R[4], data=bytes(get((gfx + i) & 0xFFFF) for i in range(ln)),
+                          attrs=bytes(get(ATTR + i) for i in range(512))))
+
+    def family(d):
+        return 'Keys %d' % id(d) if d['group'] == 'Keys' else (
+            'Vehicles' if d['group'] in ('Tank turret', 'Vehicles (jeep, tank)') else d['group'])
+
+    def end_frame():
+        groups = []
+        for d in frame:
+            box = (d['X'] * 8, d['Y'], d['X'] * 8 + d['W'] * 8, d['Y'] + d['R'])
+            g = groups[-1] if groups else None
+            if g and g['fam'] == family(d) and box[0] <= g['box'][2] + 1 and g['box'][0] <= box[2] + 1 \
+                    and box[1] <= g['box'][3] + 1 and g['box'][1] <= box[3] + 1:
+                g['parts'].append(d)
+                g['box'] = (min(g['box'][0], box[0]), min(g['box'][1], box[1]),
+                            max(g['box'][2], box[2]), max(g['box'][3], box[3]))
+            else:
+                groups.append(dict(fam=family(d), parts=[d], box=box))
+        for g in groups:
+            x0, y0, x1, _ = g['box']
+            flip = sum(p['mir'] for p in g['parts']) * 2 > len(g['parts'])
+            parts = []
+            for p in g['parts']:
+                dx = (x1 - (p['X'] * 8 + p['W'] * 8)) if flip else p['X'] * 8 - x0
+                parts.append(dict(p, dx=dx, dy=p['Y'] - y0, dmir=int(bool(p['mir']) != flip)))
+            sig = tuple((p['set'], p['gfx'], p['over'], p['W'], p['R'], p['dx'], p['dy'], p['dmir'])
+                        for p in parts)
+            if sig in comps:
+                comps[sig]['count'] += 1
+            else:
+                comps[sig] = dict(count=1, group=g['parts'][0]['group'], parts=parts)
+        frame.clear()
+
+    class S(Simulator):
+        def __init__(self, memory, registers=None, state_=None, config=None):
+            super().__init__(memory, registers, state_, config)
+            R, mem, ops = self.registers, self.memory, self.opcodes
+
+            def mk(f):
+                def g():
+                    pc = R[24]
+                    if pc in CALL_SITES:
+                        ev(pc, mem, R)
+                    elif pc == 0x8950:
+                        end_frame()
+                    f()
+                return g
+            for i in range(256):
+                ops[i] = mk(ops[i])
+    _nf = rzxplay.RZXTracer.next_frame
+
+    def next_frame(self):
+        st['f'] += 1
+        if progress and st['f'] % 500 == 0:
+            progress(st['f'])
+        return _nf(self)
+    old = (rzxplay.RZXTracer.next_frame, rzxplay.Simulator, rzxplay.CSimulator)
+    rzxplay.RZXTracer.next_frame, rzxplay.Simulator, rzxplay.CSimulator = next_frame, S, None
+    try:
+        rzxplay.main(['--python', '--quiet', '--no-screen', '--fps', '0'] +
+                     (['--stop', str(stop)] if stop else []) + [rzx_path])
+    except SystemExit:
+        pass
+    finally:
+        rzxplay.RZXTracer.next_frame, rzxplay.Simulator, rzxplay.CSimulator = old
+    return choose(list(comps.values()), maxr)
+
+
+def choose(comps, maxr):
+    """Fewest composites that show every part key at its longest drawing (greedy; most often drawn
+    first). Keys that never appear whole in a composite are added on their own."""
+    need = set(maxr)
+    have = lambda c: {(p['set'], p['gfx'], p['over']) for p in c['parts'] if p['R'] == maxr[(p['set'], p['gfx'], p['over'])]}
+    out = []
+    order = [g[0] for g in GROUPS]
+    pool = sorted(comps, key=lambda c: -c['count'])
+    while need:
+        best = max(pool, key=lambda c: (len(have(c) & need), c['count']))
+        got = have(best) & need
+        if not got:
+            break
+        out.append(best)
+        need -= got
+    out.sort(key=lambda c: (order.index(c['group']), c['parts'][0]['gfx']))
+    return out
+
+
+def default_colour(d, r, c, code):
+    """Colour the figure has today (sheet default): fixed colour, or the cells at its sample plot."""
+    if d['col']:
+        return d['col'] if code == 1 else CBLACK
+    k = c >> 3
+    dcol = d['X'] + (d['W'] - 1 - k if d['mir'] else k)
+    at = d['attrs'][(((d['Y'] + r) >> 3) & 15) * 32 + (dcol & 31)]
+    return ink_of(at) if code == 1 else paper_of(at)
+
+
+SHEET_W, BG_RGB, SW = 160, (150, 150, 175), 8          # sheet width, background, swatch size
+
+
+def _owners(comp):
+    """Composite pixels as drawn (later parts on top, transparent pixels draw nothing) ->
+    {(x, y): (part index, r, c, j, bit, code)}."""
+    own = {}
+    for n, p in enumerate(comp['parts']):
+        for r, c, j, b in fig_pixels(p['W'], p['R'], p['over']):
+            code = pixel_code(p['data'], j, b, p['over'])
+            if code:
+                x = p['dx'] + (8 * p['W'] - 1 - c if p['dmir'] else c)
+                own[(x, p['dy'] + r)] = (n, r, c, j, b, code)
+    return own
+
+
+def sheet(comps, png, layout_path, colours=None):
+    """Sheet to paint at 1:1 (one image pixel = one Spectrum pixel): a row of 8x8 palette swatches
+    (1-15, left to right), then every composite on transparent grey; layout JSON to read it back."""
+    from PIL import Image
+    cmap = colours or {}
+    boxes, x, y, rowh, last = [], 1, SW + 4, 0, None
+    for comp in comps:
+        own = _owners(comp)
+        w = max(px for px, _ in own) + 1
+        h = max(py for _, py in own) + 1
+        if comp['group'] != last and last is not None:
+            x, y, rowh = 1, y + rowh + 4, 0           # each group starts a new row
+        last = comp['group']
+        if x + w > SHEET_W - 1:
+            x, y, rowh = 1, y + rowh + 2, 0
+        boxes.append((comp, own, x, y, w, h))
+        x += w + 2
+        rowh = max(rowh, h)
+    H = y + rowh + 2
+    img = Image.new('RGB', (SHEET_W, H), BG_RGB)
+    for i in range(1, 16):
+        for yy in range(1, 1 + SW):
+            for xx in range(SW):
+                img.putpixel((1 + (i - 1) * (SW + 2) + xx, yy), rgb(i))
+    lay = []
+    for comp, own, bx, by, w, h in boxes:
+        for yy in range(h):
+            for xx in range(w):
+                img.putpixel((bx + xx, by + yy), TRANSP_RGB)
+        for (px, py), (n, r, c, j, b, code) in own.items():
+            p = comp['parts'][n]
+            step = 1 if p['over'] else 2
+            nib = (cmap.get((p['set'], p['gfx'] + j * step)) or [0, 0, [0] * 8])[2][b]
+            img.putpixel((bx + px, by + py), rgb(nib or default_colour(p, r, c, code)))
+        lay.append(dict(group=comp['group'], x=bx, y=by, w=w, h=h, count=comp['count'],
+                        parts=[dict(set=p['set'], gfx=p['gfx'], W=p['W'], R=p['R'], over=p['over'],
+                                    dx=p['dx'], dy=p['dy'], dmir=p['dmir'], data=p['data'].hex(),
+                                    defaults=[default_colour(p, r, c, pixel_code(p['data'], j, b, p['over']))
+                                              if pixel_code(p['data'], j, b, p['over']) else 0
+                                              for r, c, j, b in fig_pixels(p['W'], p['R'], p['over'])])
+                               for p in comp['parts']]))
+    img.save(png)
+    json.dump(dict(size=[SHEET_W, H], swatches=[[1 + (i - 1) * (SW + 2), 1, i] for i in range(1, 16)],
+                   composites=lay), open(layout_path, 'w'))
+    return len(lay)
+
+
+def nearest(c):
+    best = None
+    for i in range(1, 16):
+        p = rgb(i)
+        dd = sum((a - b) ** 2 for a, b in zip(c, p))
+        if best is None or dd < best[0]:
+            best = (dd, i)
+    dt = sum((a - b) ** 2 for a, b in zip(c, TRANSP_RGB))
+    return (0, dt) if dt < best[0] else (best[1], best[0])
+
+
+def read_sheet(png, layout_path):
+    """Painted sheet -> (entries {(set, key address): [check, kind, 8 nibbles]}, report). Only the
+    pixels a part shows (not covered by a later part) are read; a pixel in today's colour keeps its
+    default (nibble 0); transparent pixels cannot be painted. A part shown in two composites:
+    a painted colour beats an unpainted one; two different painted colours -> the first, reported."""
+    from PIL import Image
+    lay = json.load(open(layout_path))
+    img = Image.open(png).convert('RGB')
+    if list(img.size) != lay['size']:
+        raise ValueError('sheet is %dx%d, expected %dx%d (save at the same size, no scaling)'
+                         % (img.size + tuple(lay['size'])))
+    rep = collections.Counter()
+    ent = {}
+    for comp in lay['composites']:
+        parts = [dict(p, data=bytes.fromhex(p['data'])) for p in comp['parts']]
+        own = _owners(dict(parts=parts))
+        for yy in range(comp['h']):
+            for xx in range(comp['w']):
+                if (xx, yy) not in own and nearest(img.getpixel((comp['x'] + xx, comp['y'] + yy)))[0]:
+                    rep['painted transparent pixels (ignored)'] += 1
+        for (px, py), (n, r, c, j, b, code) in own.items():
+            p = parts[n]
+            dflt = p['defaults'][r * 8 * p['W'] + c]          # fig_pixels order
+            idx, dist = nearest(img.getpixel((comp['x'] + px, comp['y'] + py)))
+            if dist > 3 * 40 ** 2:
+                rep['pixels not near a palette colour (kept default)'] += 1
+                continue
+            if idx == 0:
+                rep['opaque pixels painted grey (kept default)'] += 1
+                continue
+            step = 1 if p['over'] else 2
+            q = p['gfx'] + j * step
+            m, g = (0, p['data'][j]) if p['over'] else (p['data'][2 * j], p['data'][2 * j + 1])
+            e = ent.setdefault((p['set'], q), [entry_check(m, g), 2 if p['over'] else 1, [0] * 8])
+            if idx == dflt:
+                continue
+            if e[2][b] and e[2][b] != idx:
+                rep['pixels painted differently in two places (first kept)'] += 1
+                continue
+            if not e[2][b]:
+                e[2][b] = idx
+                rep['pixels recoloured'] += 1
+    ent = {k: e for k, e in ent.items() if any(e[2])}
+    rep['graphics bytes with colours'] = len(ent)
+    return ent, rep
+
+
+def save_colours(ent, path=COLOURS):
+    json.dump({'note': 'Midnight Resistance figure colours (python -m nexclash.midres colours): "set:key address" '
+                       '(set 1 = the player, 0 = every other figure: the soldiers share the player\'s leg graphics) '
+                       '-> [check byte, kind 1 masked / 2 overwrite, 8 nibbles (0 = default colour)]',
+               'entries': {'%d:%04X' % k: [e[0], e[1], ''.join('%X' % n for n in e[2])] for k, e in sorted(ent.items())}},
+              open(path, 'w'), indent=0)
+
+
+def load_colours(path=COLOURS):
+    if not os.path.exists(path):
+        return {}
+    d = json.load(open(path))['entries']
+    return {(int(k[0]), int(k[2:], 16)): [v[0], v[1], [int(ch, 16) for ch in v[2]]] for k, v in d.items()}
+
+
+def _main(argv=None):
+    import argparse
+    ap = argparse.ArgumentParser(prog='python -m nexclash.midres',
+                                 description='Midnight Resistance figure colours: sheet to paint / read it back')
+    sub = ap.add_subparsers(dest='cmd', required=True)
+    p = sub.add_parser('sheet', help='RZX -> sheet PNG + layout JSON (game graphics: keep private)')
+    p.add_argument('rzx')
+    p.add_argument('-o', '--output', default='mr_colours.png')
+    p.add_argument('--stop', type=int)
+    p = sub.add_parser('colours', help='painted sheet -> docs/profiles/midnight_resistance_colours.json')
+    p.add_argument('png')
+    p.add_argument('--layout')
+    p.add_argument('-o', '--output', default=COLOURS)
+    a = ap.parse_args(argv)
+    if a.cmd == 'sheet':
+        comps = capture(a.rzx, a.stop)
+        lay = os.path.splitext(a.output)[0] + '_layout.json'
+        n = sheet(comps, a.output, lay, load_colours())
+        print('%d figures -> %s (+ %s; keep both: the layout reads the painted sheet back)' % (n, a.output, lay))
+    else:
+        lay = a.layout or os.path.splitext(a.png)[0] + '_layout.json'
+        ent, rep = read_sheet(a.png, lay)
+        save_colours(ent, a.output)
+        for k, v in sorted(rep.items()):
+            print('%s: %d' % (k, v))
+        print('-> %s' % a.output)
+
+
+if __name__ == '__main__':
+    _main()
