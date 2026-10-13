@@ -84,7 +84,7 @@
   "deps": {
    "asm/rainbow_hooks.asm": "7c07f23c99abef87",
    "docs/profiles/rainbow_islands.json": "9bccf0fde403fff9",
-   "nexclash.py": "d8e099fa553cffa9",
+   "nexclash.py": "5eeaaae9ae6e4a3c",
    "nexclash/build.py": "a60e4d3c5945c94a",
    "nexclash/dizzy6.py": "89c8ba59fc762962",
    "nexclash/nextboot.py": "c71aaed434e73ef1",
@@ -100,7 +100,7 @@
   "deps": {
    "asm/rainbow_hooks.asm": "7c07f23c99abef87",
    "docs/profiles/rainbow_islands.json": "9bccf0fde403fff9",
-   "nexclash.py": "e643a6a71253b504",
+   "nexclash.py": "5eeaaae9ae6e4a3c",
    "nexclash/build.py": "a60e4d3c5945c94a",
    "nexclash/dizzy6.py": "89c8ba59fc762962",
    "nexclash/nextboot.py": "c71aaed434e73ef1",
@@ -111,5 +111,6 @@
    "skoolkit": "10.1"
   },
   "date": "2026-10-13"
- }
+ },
+ "excluded": "Dean 2026-10-13: too slow (~52 min verify) and being reworked; run it explicitly with selftest.py --game rainbow [--verify]"
 }

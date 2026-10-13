@@ -67,7 +67,7 @@ python nexclash.py rzx strip fuse_autosave.rzx -o clean.rzx      (Fuse recording
 python nexclash.py auto GAME.z80 --no-record --rzx both.rzx
 python nexclash.py auto GAME.z80 --quick 2000          (analyse/verify first 2000 frames only)
 python nexclash.py identify GAME.z80                     (engine + derived addresses)
-python nexclash.py convert GAME.z80 --rzx MY.rzx         (plain .nex only)
+python nexclash.py convert GAME.z80 --rzx MY.rzx         (plain .nex only; 48K recordings - for 128K leave out --rzx)
 ```
 Script format (`--script`, one step per line; `--start` uses the same steps, comma-separated):
 ```
@@ -91,6 +91,7 @@ rzxplay and in Fuse (frame boundaries are defined by instruction counts).
 | Everyone's a Wally (48K game, 128K snapshot) | Everyone's a Wally | dedicated engine `wally`, verified per run |
 | Chuckie Egg | Chuckie Egg | dedicated engine `chuckie`, verified per run |
 | Commando (128K) | Commando (Elite, BASIC-loader snapshot) | dedicated engine `commando`, verified per run |
+| Midnight Resistance (128K) | Midnight Resistance (Ocean 1990) | dedicated engine `midres`, verified per run |
 | anything else | - | plain `.nex` only, plus a report to guide the next step |
 
 ## Testing on the Next (details per game: games/)
@@ -117,6 +118,12 @@ Outputs Chuckie_Egg.nex (plain) and Chuckie_Egg_sprites.nex (player, hens, duck 
 Outputs commando.nex (plain) and commando_sprites.nex (player, enemy soldiers, POWs as sprites).
 The snapshot is the 128K BASIC loader: `auto` runs it to the game entry and the .nex starts in a
 small front end that repeats its key wait and "INFY LIVES(Y/N)?" (no 128K BASIC on the Next).
+
+### Midnight Resistance (128K)
+    python nexclash.py auto midnight_resistance.z80 --rzx my_play.rzx --no-record
+Outputs midnight_resistance.nex (plain) and midnight_resistance_sprites.nex (player green, soldiers /
+gun turrets white, jeep and end-of-level tank in their own colours; bullets and explosions stay on the
+ULA). Snapshot at the title screen; Fuse autosave snapshots in the RZX are stripped automatically.
 
 ### Rainbow Islands (128K)
     python nexclash.py auto rainbow.z80 --rzx my_play.rzx --no-record [--ink white] [--outline black|blue|transparent|#RRGGBB] [--class-colours map.json]

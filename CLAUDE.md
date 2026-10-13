@@ -22,7 +22,8 @@ or download another version; tools/sjasmplus/README.md).
 ## Read only what the task needs (start: ~150 lines)
 - Add a game: this file -> docs/PLAYBOOK.md -> the nearest engine as a template (simplest:
   nexclash/chuckie.py + asm/chuckie_hooks.asm + games/chuckie_egg.md; full-redraw / 128K:
-  rainbow; back-buffer composer: wally; Codemasters TID engine: generic builder). Look things up
+  rainbow; back-buffer composer: wally (interrupts off) or midres (interrupts on, all RAM used: hook
+  page at slot 5, scratch-buffer redirect, cached sprites); Codemasters TID engine: generic builder). Look things up
   in docs/BRIEFING.md (platform, toolkit) and docs/LEARNINGS.md (lessons) by section when a
   question comes up - do not read them end to end.
 - Maintain: STATUS.md, then games/<game>.md for the game in hand.
@@ -48,7 +49,9 @@ or download another version; tools/sjasmplus/README.md).
   differential verify (~1 min; 128K, alt ROM, interrupts on, paged hook RAM, pattern cache) and
   says whether the TOOL CHAIN is broken (fix that first) or the fault is Chuckie Egg's. Any selftest
   run that fails a game runs stage 2 the same way. The canaries are the records marked "canary":
-  1 / 2; keep both on the latest tools (never pinned), adapt them in the same PR as a tool change. Do NOT rebuild or verify other games in a game session: the
+  1 / 2; keep both on the latest tools (never pinned), adapt them in the same PR as a tool change.
+  Rainbow Islands is EXCLUDED from every automatic check (record "excluded"; Dean, 2026-10-13: too
+  slow, being reworked): never re-verify it unless asked; `--game rainbow` runs it explicitly. Do NOT rebuild or verify other games in a game session: the
   maintainers' `selftest.py --affected` finds every game a change reaches (docs/records keep the
   hashes of each game's dependencies) and rebuilds those. Without the references, say in the
   contribution note that shared code changed.

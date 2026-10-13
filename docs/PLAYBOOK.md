@@ -34,8 +34,9 @@ game never touches (step 3 proves this: `scan`); override with `--tail ADDR`.
 
 ## 2. Identify the engine
 `python nexclash.py identify GAME.z80` covers the TID and Dizzy 1 engines (docs/profiles/
-signatures.json); the dedicated engines (Chuckie Egg, Wally, Rainbow, Commando) are recognised by
-their own checks in `auto` (is_chuckie / is_wally / is_rainbow / is_commando, profile `signature`),
+signatures.json); the dedicated engines (Chuckie Egg, Wally, Rainbow, Commando, Midnight Resistance)
+are recognised by their own checks in `auto` (is_chuckie / is_wally / is_rainbow / is_commando /
+is_midres, profile `signature`),
 so `identify` says unknown for them. Search the snapshot for these byte signatures.
 If a known engine matches, align its plotter/eraser instruction-by-instruction
 against the known game's (normalise 4-5 digit operands to N; where the opcode
@@ -47,9 +48,12 @@ SRL A / LD (nn),A), ISR (IM2 vector -> handler; the CALL after the logic-tick
 CALL is the hide slot), pixel test (LD C,A / LD B,0 / SRL C / JR C).
 Verify every site's original bytes before building.
 
-Unknown engine: run a code map (`rzxplay.py --map`), rank screen writers by
-volume, classify the inner loop (masked AND/XOR/OR, pure XOR, LDIR/stack blit,
-attribute-cell), extract frames, then continue from step 3.
+Unknown engine: `scan GAME.z80 --rzx R --range 0x4000-0x5AFF --writers` ranks the screen writers
+(and finds a back buffer: a big LDI/LDIR/stack writer copying from RAM; scan that range --writers
+too), `preview --plot ENTRY` shows what each plot routine draws per caller; classify the inner
+loop (masked AND/XOR/OR, pure XOR, LDIR/stack blit, attribute-cell), then continue from step 3.
+Classify the RENDERING MODEL first - it picks the hook pattern (BRIEFING A3, decision table 4):
+XOR to screen, masked + undo buffer, back-buffer composer, full redraw / tilemap, differential OR.
 
 ## 3. One analysis pass over the RZX
 Shared commands first: `isr GAME.z80 --rzx R` (what hooks must keep intact for the interrupt
@@ -81,6 +85,10 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
 - Speed budget: `cost GAME.z80 --rzx R --at PLOTTER --group IX` gives the original's cost per
   draw (T-states), draws per frame and per object; set the allowed hook cost per draw now, and design to it (caching, fewer
   uploads). Commando's first solid hooks cost ~18x the original draw and were redesigned.
+  Measure the HOOK cost too, before the user tests: T per game frame of the patched runs in the
+  verifier's pair runs (no tool yet, BRIEFING C2 #11); code under NEXTREG $07=3 runs ~7-8x faster
+  than the simulator's T suggests. Midnight Resistance's first commit cost ~1.5 TV frames per game
+  frame; a pattern-slot cache brought it to 15-60K T.
 
 ## 4. Decide the design (decision table)
 | Finding | Action |
@@ -106,15 +114,21 @@ Hooks: asm/<engine>_hooks.asm with `SAVEBIN "<prefix>_<key>.bin"` per block and
 `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex + symbols).
 Copy the nearest builder (TID-engine: build.py TidPatch;
 XOR: dizzy1_patch.py; non-Codemasters: chuckie.py (simplest), wally.py, rainbow.py, commando.py
-(128K BASIC loader, front end, depth, cached solid sprites)), change the profile block and site list, rebuild the asm.
+(128K BASIC loader, front end, depth, cached solid sprites), midres.py (interrupts on, hook page at
+slot 5, CALL-target redirect into a scratch buffer, sprites built at a commit with a pattern-slot
+cache, per-cell colours)), change the profile block and site list, rebuild the asm.
 Every site keeps its original-byte check.
 
 ## 6. Verify (differential test)
 At every patched routine in the real recording: copy the machine state, run the
 original and the patched routine to their return, compare all registers
-(except R/T), all non-screen memory (excluding patch area, sites, dead stack),
-the patched screen against the model, and the sprite pixels against the
-player's pixels. Every mismatch must be explained or fixed.
+(except R/T/MEMPTR; AF' included), all memory outside the never-read draw buffers (patch area
+and sites excluded; dead stack only where a documented convergence check applies - a hook that
+returns into the game's own loop must leave it identical), the patched screen against the
+model, and the sprite pixels against the original plot (masked figures: run the plot on a 0x00
+and a 0xFF buffer for ink / paper / transparent, midres.truth). With interrupts on at the hooks,
+also check interrupt safety after every hook instruction (IX, IY, I, IFF, stack room; Commando,
+midres) with a negative control. Every mismatch must be explained or fixed.
 Also simulate the start-up tail: registers restored, no game memory touched.
 
 Iterate fast (BRIEFING C3b ITERATE): while developing use `--quick N` (a few hundred frames for a
@@ -135,4 +149,5 @@ engine) to docs/profiles/, games/<game>.md, and the evidence record docs/records
 `data` = your engine's files, `rebuild.decisions` = the run's <name>_decisions.json, `status` =
 the STATUS row), then `python -m nexclash.records views` (regenerates STATUS / VERIFICATION
 checksums / verified.json). Check it: `python -m nexclash.records deps <game>` lists what your
-game's evidence depends on; the maintainers' selftest stamps it.
+game's evidence depends on; the maintainers' selftest stamps it. Touched shared code (e.g. the
+dispatch line in nexclash.py)? `python selftest.py --canary`.

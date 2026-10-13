@@ -74,7 +74,7 @@
   "deps": {
    "asm/midres_hooks.asm": "c27ad70af4af669f",
    "docs/profiles/midnight_resistance.json": "7cea5d1b13236010",
-   "nexclash.py": "d8e099fa553cffa9",
+   "nexclash.py": "5eeaaae9ae6e4a3c",
    "nexclash/build.py": "a60e4d3c5945c94a",
    "nexclash/dizzy6.py": "89c8ba59fc762962",
    "nexclash/midres.py": "06b65a2db695ad6e",
@@ -92,7 +92,7 @@
   "deps": {
    "asm/midres_hooks.asm": "c27ad70af4af669f",
    "docs/profiles/midnight_resistance.json": "7cea5d1b13236010",
-   "nexclash.py": "d8e099fa553cffa9",
+   "nexclash.py": "5eeaaae9ae6e4a3c",
    "nexclash/build.py": "a60e4d3c5945c94a",
    "nexclash/dizzy6.py": "89c8ba59fc762962",
    "nexclash/midres.py": "06b65a2db695ad6e",
