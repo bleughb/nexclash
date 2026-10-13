@@ -45,7 +45,7 @@
  },
  "checked": {
   "deps": {
-   "nexclash.py": "d8e099fa553cffa9",
+   "nexclash.py": "5eeaaae9ae6e4a3c",
    "nexclash/build.py": "a60e4d3c5945c94a",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80tonex.py": "7b5a0d633ccf369d",
