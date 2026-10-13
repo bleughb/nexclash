@@ -5,6 +5,9 @@
 ; attrs 0xE980-0xEBFF), plots the figures into it and copies it to the screen (blit 53293).
 ; Interrupts are OFF at every hook site (the game runs DI in play; checked over the whole RZX).
 ;
+; Look (Dean, 2026-10-13, option A): ink pixels in the cell's ink, the 4-px outline the mask cuts
+; in the cell's paper (attr 0: white ink, blue paper), everything else transparent.
+;
 ; Method: the game's OWN plotter runs unchanged, but with MMU slot 7 (0xE000-0xFFFF) mapped to
 ; Next RAM page PG, whose 0xE980-0xFFFF is a scratch copy of the back buffer: every register,
 ; flag and self-modified operand comes out as the original's, the real buffer keeps the plain
@@ -53,7 +56,10 @@ V_Y     EQU 0xE016
 V_PAT   EQU 0xE017
 V_A2    EQU 0xE018              ; attr2 extra bits (mirror)
 KEY     EQU 0xE020              ; 12 bytes: graphic pointer, size (0 = 24x24, 1 = 8x8), attribute bytes
-V_CC    EQU 0xE030              ; 9 colours * 4 (pixel table bases) of the figure's cells
+V_T2    EQU 0xE01C
+V_CC    EQU 0xE030              ; per cell of the figure: (ink XOR paper) colour * 4
+V_PC    EQU 0xE800              ; per cell: paper colour * 4 (outline pixels)
+PAPER4  EQU 0xE700              ; attribute byte -> paper colour index * 4 (attr 0 = blue)
 CACHE   EQU 0xE040              ; 32 x 16: +0 flags (bit 0 used since the commit, bit 1 on show), +1 key
 SPRTAB  EQU 0xE240              ; 128 x 5 sprite attribute bytes
 ATTR4   EQU 0xE500              ; attribute byte -> colour index * 4 (attr 0 = white)
@@ -298,7 +304,7 @@ decide: ld (V_K),a
 .pass:  xor a
         ret
 
-; key24 / key8: KEY = size, pointer, attribute bytes (24x24: 9, 8x8: 1, rest 0); V_CC = colours
+; key24 / key8: KEY = pointer, size, attribute bytes (24x24: 9, 8x8: 1, rest 0); cell colours
 key24:  ld a,(V_L)
         ld l,a
         ld h,0
@@ -320,21 +326,36 @@ key24:  ld a,(V_L)
         ld bc,72
         add hl,bc
         ld b,9
-        ld c,low V_CC
+        ld c,0
 .a:     ld a,(hl)
         ld (de),a
-        push hl
-        ld l,a
-        ld h,high ATTR4
-        ld a,(hl)
-        ld l,c
-        ld h,high V_CC
-        ld (hl),a
-        pop hl
+        call setcol
         inc hl
         inc de
         inc c
         djnz .a
+        ret
+
+; setcol: A = attribute byte of cell C -> V_PC[C] = paper*4, V_CC[C] = (ink XOR paper)*4
+setcol: push hl
+        push de
+        ld l,a
+        ld h,high PAPER4
+        ld d,(hl)
+        ld h,high ATTR4
+        ld a,(hl)
+        xor d
+        ld e,a
+        ld h,high V_PC
+        ld l,c
+        ld (hl),d
+        ld a,c
+        add a,low V_CC
+        ld l,a
+        ld h,high V_CC
+        ld (hl),e
+        pop de
+        pop hl
         ret
 
 key8:   ld a,(V_L)
@@ -359,10 +380,8 @@ key8:   ld a,(V_L)
         add hl,bc
         ld a,(hl)
         ld (de),a
-        ld l,a
-        ld h,high ATTR4
-        ld a,(hl)
-        ld (V_CC),a
+        ld c,0
+        call setcol
         ex de,hl
         ld b,8
 .z:     inc hl
@@ -456,15 +475,15 @@ up24:   call selslot
         ld hl,(V_P)
         ld b,h
         ld c,l
-        ld a,(V_CC+0)               ; TL: rows 0-15, bytes 0-1
+        ld a,0               ; TL: rows 0-15, bytes 0-1
         ld (V_E0),a
-        ld a,(V_CC+1)
+        ld a,1
         ld (V_E1),a
         ld a,8
         call rows2
-        ld a,(V_CC+3)
+        ld a,3
         ld (V_E0),a
-        ld a,(V_CC+4)
+        ld a,4
         ld (V_E1),a
         ld a,8
         call rows2
@@ -473,11 +492,11 @@ up24:   call selslot
         inc hl
         ld b,h
         ld c,l
-        ld a,(V_CC+2)
+        ld a,2
         ld (V_E0),a
         ld a,8
         call rows1
-        ld a,(V_CC+5)
+        ld a,5
         ld (V_E0),a
         ld a,8
         call rows1
@@ -486,9 +505,9 @@ up24:   call selslot
         add hl,de
         ld b,h
         ld c,l
-        ld a,(V_CC+6)
+        ld a,6
         ld (V_E0),a
-        ld a,(V_CC+7)
+        ld a,7
         ld (V_E1),a
         ld a,8
         call rows2
@@ -499,7 +518,7 @@ up24:   call selslot
         add hl,de
         ld b,h
         ld c,l
-        ld a,(V_CC+8)
+        ld a,8
         ld (V_E0),a
         ld a,8
         call rows1
@@ -510,7 +529,7 @@ up8:    call selslot                ; TL only: rows 0-7, then 8 empty rows
         ld hl,(V_P)
         ld b,h
         ld c,l
-        ld a,(V_CC)
+        xor a
         ld (V_E0),a
         ld a,8
         ld (V_CNT),a
@@ -569,15 +588,49 @@ zeros:  ld d,a
         jr nz,.z
         ret
 
-nib:    ld d,a                      ; A = graphic byte, E = colour*4 -> 4 pattern bytes
+nib:    push bc                     ; A = graphic byte, E = cell -> 4 pattern bytes: ink pixels in
+        ld d,a                      ; the cell's ink, outline (mask cleared, no ink) in its paper,
+        ld h,0x7E                   ; the rest transparent: PT[paper][covered] XOR PT[ink^paper][ink]
+        ld l,a
+        ld a,(hl)
+        cpl
+        ld c,a                      ; covered = NOT mask (ink is inside it)
+        ld h,high V_PC
+        ld l,e
+        ld b,(hl)                   ; B = paper*4
+        ld a,e
+        add a,low V_CC
+        ld l,a
+        ld h,high V_CC
+        ld e,(hl)                   ; E = (ink XOR paper)*4
         ld h,high PT
+        ld a,c
+        rlca
+        rlca
+        and 3
+        or b
+        ld l,a
+        ld a,(hl)
+        ld (V_T2),a
+        ld a,d
         rlca
         rlca
         and 3
         or e
         ld l,a
-        ld a,(hl)
+        ld a,(V_T2)
+        xor (hl)
         out (0x5B),a
+        ld a,c
+        rrca
+        rrca
+        rrca
+        rrca
+        and 3
+        or b
+        ld l,a
+        ld a,(hl)
+        ld (V_T2),a
         ld a,d
         rrca
         rrca
@@ -586,22 +639,40 @@ nib:    ld d,a                      ; A = graphic byte, E = colour*4 -> 4 patter
         and 3
         or e
         ld l,a
-        ld a,(hl)
+        ld a,(V_T2)
+        xor (hl)
         out (0x5B),a
+        ld a,c
+        rrca
+        rrca
+        and 3
+        or b
+        ld l,a
+        ld a,(hl)
+        ld (V_T2),a
         ld a,d
         rrca
         rrca
         and 3
         or e
         ld l,a
-        ld a,(hl)
+        ld a,(V_T2)
+        xor (hl)
         out (0x5B),a
+        ld a,c
+        and 3
+        or b
+        ld l,a
+        ld a,(hl)
+        ld (V_T2),a
         ld a,d
         and 3
         or e
         ld l,a
-        ld a,(hl)
+        ld a,(V_T2)
+        xor (hl)
         out (0x5B),a
+        pop bc
         ret
 
 ; ---- emit: append this figure's sprites (plot order = sprite order: later figures on top) ----

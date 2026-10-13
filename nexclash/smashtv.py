@@ -13,7 +13,8 @@ Game facts (analysis passes over Smash_TV.z80 and Dean's RZX; details in games/s
   C = buffer column, B = line (row tables 0xC800 / 0xCA00 point at ROM 0x2000 off the buffer).
 Hooks (asm/smashtv_hooks.asm, alt ROM 0x2100- + Next page 26 at MMU slot 7 while a hook runs):
 the game's own plotter runs into a scratch copy of the buffer (page 26), so registers and
-self-modified operands are the original's; the figure becomes 4-bit sprites (24x24 = 2x2,
+self-modified operands are the original's; the figure becomes 4-bit sprites (ink in the cell's
+ink, the mask's outline in the cell's paper, Dean's option A; 24x24 = 2x2,
 8x8 = 1) from a 32-group pattern cache; the restore runs twice (real buffer + scratch); the blit
 loop end commits the sprites; 53868 hides them all. The front end at 0x5D00 replaces the BASIC
 prompt (the .nex starts from the loader's state at its USR, run in the simulator with N).
@@ -45,7 +46,7 @@ RS_CODE = (59506, 59644)    # the restore routine (slot 7): copied into PG at th
 RS_OPER = (59641, 59642)    # its self-modified operand
 # page PG layout (offsets from 0xE000; asm/smashtv_hooks.asm)
 V_N, V_PREV = 0x000, 0x001
-CACHE, SPRTAB, ATTR4, PT = 0x040, 0x240, 0x500, 0x600
+CACHE, SPRTAB, ATTR4, PT, PAPER4 = 0x040, 0x240, 0x500, 0x600, 0x700
 HSTK_LOW = 0x940            # lowest hook stack byte allowed (above the restore copy 0x872-0x8FB)
 STATE_END = 0x980           # 0xE980-0xFFFF of PG = scratch copy of the back buffer
 NGRP, MAXSPR = 32, 128
@@ -90,6 +91,17 @@ def colour(attr):
     return 1 + ink
 
 
+def paper(attr):
+    """Sprite colour of a figure cell's outline pixels (the 4-px outline the mask clears): the
+    cell's paper (+ bright); attribute 0 -> blue, the arena's paper (Dean, 2026-10-13: option A)."""
+    if attr == 0:
+        return 2
+    p = (attr >> 3) & 7
+    if attr & 0x40:
+        return 8 + p if p else 1
+    return 1 + p
+
+
 def hook_page():
     """Initial contents of page PG (8K at 0xE000)."""
     p = bytearray(8192)
@@ -97,6 +109,7 @@ def hook_page():
         p[CACHE + 16 * g + 3] = 0xFF                 # no key (size byte 0xFF never matches)
     for a in range(256):
         p[ATTR4 + a] = colour(a) * 4
+        p[PAPER4 + a] = paper(a) * 4
     for c in range(16):
         for pair in range(4):
             p[PT + 4 * c + pair] = ((c << 4) if pair & 2 else 0) | (c if pair & 1 else 0)
@@ -442,29 +455,37 @@ def _pair(patch, get, regs, ns, stops, alt):
     return so, o, sp_, p, err, so.registers[25] - t0, sp_.registers[25] - t1, t3
 
 
-def figure_model(get, kind, L, C, B):
+def figure_model(get, kind, L, C, B, outline=False):
     """Expected sprite pixels of one plot: {(x, y): colour} in ULA coordinates, clipped to the play
-    area. Ink = the graphic's set bits (mirrored: columns and bits reversed), colour = the cell's
-    attribute byte from the graphic (0 = white)."""
+    area. Ink = the graphic's set bits (mirrored: columns and bits reversed) in the cell's ink;
+    outline = bits the mask table 0x7E00 clears without ink, in the cell's paper. outline=True
+    returns (ink set, outline set) instead."""
     w = lambda a: get(a) | get(a + 1) << 8
     small = kind & 2
     p = w((0x5C00 if small else 0x5B00) + 2 * L)
     nb, nr = (1, 8) if small else (3, 24)
-    out = {}
+    out, ink, ol = {}, set(), set()
     for r in range(nr):
         for k in range(nb):
             g = get((p + r * nb + k) & 0xFFFF)
+            m = get(0x7E00 + g)
             at = get((p + nb * nr + (r // 8) * nb + k) & 0xFFFF)
-            c = colour(at)
             for b in range(8):
-                if g & (0x80 >> b):
-                    fx = 8 * k + b
-                    if kind & 1:
-                        fx = 8 * nb - 1 - fx
-                    x, y = 8 * C + fx, B - 24 + r
-                    if CLIP[0] <= x <= CLIP[1] and CLIP[2] <= y <= CLIP[3]:
-                        out[(x, y)] = c
-    return out
+                bit = 0x80 >> b
+                if g & bit:
+                    c, s_ = colour(at), ink
+                elif not m & bit:
+                    c, s_ = paper(at), ol
+                else:
+                    continue
+                fx = 8 * k + b
+                if kind & 1:
+                    fx = 8 * nb - 1 - fx
+                x, y = 8 * C + fx, B - 24 + r
+                if CLIP[0] <= x <= CLIP[1] and CLIP[2] <= y <= CLIP[3]:
+                    out[(x, y)] = c
+                    s_.add((x, y))
+    return (ink, ol) if outline else out
 
 
 def attr_bytes(kind, C, B):
@@ -547,9 +568,14 @@ def check_plot(pc, R, get, o, p, ns, page0, so, sp_):
         got.update(ns.sprite_pixels(list(ns.page[SPRTAB + 5 * i:SPRTAB + 5 * i + 5])))
     if got != want:
         f.append(('sprite pixels differ from the model', len(set(got.items()) ^ set(want.items()))))
-    for (x, y) in want:                    # the model against the original's own plot
+    ink, ol = figure_model(get, kind, L, C, B, outline=True)   # the model against the original's plot
+    for (x, y) in ink:
         if not _buf_bit(o, x, y):
             f.append(('model ink not drawn by the original', x, y))
+            break
+    for (x, y) in ol:
+        if _buf_bit(o, x, y):
+            f.append(('model outline not cleared by the original', x, y))
             break
     attr_w = attr_bytes(kind, C, B)
     for a, v in o.ov.items():
@@ -558,7 +584,7 @@ def check_plot(pc, R, get, o, p, ns, page0, so, sp_):
             new = v & ~get(a)
             for k in range(8):
                 x = ((a - 0xEC00) % 32) * 8 + k
-                if CLIP[0] <= x <= CLIP[1] and (new >> (7 - k)) & 1 and (x, y) not in want:
+                if CLIP[0] <= x <= CLIP[1] and (new >> (7 - k)) & 1 and (x, y) not in ink:
                     f.append(('original drew ink the model misses', x, y))
                     break
     return f, dec, len(got)
@@ -751,7 +777,8 @@ def _mem_get(mem64):
     return lambda a: mem64[a & 0xFFFF]
 
 
-RUNTIME = (0x000, 0x4C0)     # vars, cache keys/flags, sprite table: the run-time part of PG
+RUNTIME = (0x000, 0x4C0)     # vars, cache keys/flags, sprite table: the run-time part of PG (tables,
+                             # V_PC 0x800 and the restore copy come from the patch)
 
 
 def _plot_case(patch, pc, R, mem64, page, pat, C=None, B=None, L=None, n=None, full=False, fresh=False,
@@ -823,13 +850,17 @@ def unit_tests(patch, states, negs=()):
 
 
 def negative_patches(patch):
-    """Broken copies that the checks must catch: colours shifted (ATTR4), guard column 31 instead of
+    """Broken copies that the checks must catch: ink colours shifted (ATTR4), guard column 31 instead of
     30 (decide's CP 30), the restore copy missing (scratch run executes zeros)."""
     import copy
     a = copy.copy(patch)
     a.hpage = bytearray(patch.hpage)
     for i in range(256):
         a.hpage[ATTR4 + i] = (patch.hpage[ATTR4 + i] + 4) & 0x3C
+    o = copy.copy(patch)                            # outline drawn transparent (look B)
+    o.hpage = bytearray(patch.hpage)
+    for i in range(256):
+        o.hpage[PAPER4 + i] = 0
     b = copy.copy(patch)
     rom = bytearray(patch.rom_code)
     d = patch.syms['decide'] - ROM_ORG
@@ -839,7 +870,7 @@ def negative_patches(patch):
     pg = bytearray(patch.page)
     pg[ROM_ORG - 0x2000:ROM_ORG - 0x2000 + len(rom)] = rom
     b.page = bytes(pg)
-    return [('colour', a), ('guard', b)]
+    return [('colour', a), ('outline', o), ('guard', b)]
 
 
 def static_checks(patch):

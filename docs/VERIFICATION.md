@@ -48,7 +48,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Commando (commando): `commando.nex` a206f950c12f58a8e7f26b366f5a2480, `commando_sprites.nex` d601385ee4aeb7f3d7c0771bdc27df6b; verified 2026-10-13
 - Crystal Kingdom Dizzy (128K) (crystal_kingdom_dizzy): `crystal_kingdom_dizzy.nex` 99975f65172dc86ecefbac07db2c0c00; verified never
 - Midnight Resistance (128K) (midnight_resistance): `midnight_resistance.nex` 17239acaaf67b0f8011478053e17829d, `midnight_resistance_sprites.nex` e8f0ece9e41c314d76471c96f4595854; verified 2026-10-13
-- Smash TV (smash_tv): `smash_tv.nex` c72ea298486b14036ac1a87ac89c3f0e, `smash_tv_sprites.nex` 03979d5438cf55410ecec8aac76f05ec; verified 2026-10-13
+- Smash TV (smash_tv): `smash_tv.nex` c72ea298486b14036ac1a87ac89c3f0e, `smash_tv_sprites.nex` 6227481f8f2514faa0d9648b6bc972e8; verified 2026-10-13
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
@@ -426,18 +426,19 @@ arenas 1-2, game over, title; N pressed)
 - `smash_tv.nex` c72ea298486b14036ac1a87ac89c3f0e (plain: the loader as it is; tail 0x5B00:
   zero in the snapshot, write-first by the entry code 59823 in the RZX and in a 1,500-frame free
   run) - boot sim OK
-- `smash_tv_sprites.nex` 03979d5438cf55410ecec8aac76f05ec (alt ROM hooks 0x2100-0x27E6 + page 26
+- `smash_tv_sprites.nex` 6227481f8f2514faa0d9648b6bc972e8 (look A: outline in the cell paper; alt ROM hooks 0x2100- + page 26
   at slot 7 during hooks; built from the start snapshot = the loader run with N to USR 59776 +
   front end 0x5D00 + prompt row) - boot sim OK; 7 patch sites, original bytes checked.
 - Front end: N / Y / SYM+Y (ignored, then N) reach 59776 with every register (R, IFF aside: 59776
   is DI) and all RAM equal to the loader's own entry state except 0x5D00-0x5D6C (Y: 33465 = 201).
 - RZX: 7,010 converted plots (24x24 3,680 / mirrored 3,091, 8x8 227 / mirrored 12), 3 invisible
   (converted, no sprites), 0 on the ULA; 669 restores (real + scratch); 683 commits (max 25
-  figures / 100 sprites); 8 hide-all (53868); 1,183,835 sprite pixels - IDENTICAL. Per plot: all
+  figures / 100 sprites); 8 hide-all (53868); 2,056,946 sprite pixels (ink + outline) - IDENTICAL. Per plot: all
   registers (AF' included), all memory except the back buffer, the hook's decision = an
   independent Python model (column, visibility, sprite table, cache lookup), sprite pixels = the
-  model of the graphic (ink bits, mirror, cell inks, clip) AND the model = the ink the original
-  plot drew (its attr-painter bytes aside); per restore: registers + all memory identical incl. the
+  model of the graphic (ink bits in the cell ink, mask outline in the cell paper, mirror, clip)
+  AND the model = what the original plot drew (ink set, outline cleared; its attr-painter bytes
+  aside); per restore: registers + all memory identical incl. the
   real buffer, scratch = the restored buffer; per blit loop end: registers + memory; per commit:
   the shown sprite layer = the figures plotted since the last commit, in plot order; per 53868:
   every sprite hidden; slot 7 = page 1 and 3.5 MHz after every hook; game code never writes the
@@ -446,10 +447,11 @@ arenas 1-2, game over, title; N pressed)
 - Unit (12 captured plot states, 4 plotters): 840 position cases (columns 0-2 / 28-31, lines at
   every edge; conv 420 / invisible 180 / ULA 240 incl. the double real + scratch run), 48
   sprite-table cases at and past 128, 12 cache-full cases (ULA path); decision = model, registers
-  + memory as the original; negative controls (colour table shifted; guard column 31) 24/24.
-- Static: 886 hook instructions: no DI/EI/IM/LD I/RETI/RETN, no IX/IY, nothing at 0x3D00-0x3DFF;
+  + memory as the original; negative controls (ink colours shifted; outline transparent; guard
+  column 31) 36/36.
+- Static: 949 hook instructions: no DI/EI/IM/LD I/RETI/RETN, no IX/IY, nothing at 0x3D00-0x3DFF;
   alt image = ROM at 0x0000-0x20FF and 0x3800-0x3FFF (0x386E check byte, font).
-- Speed (simulated, 28 MHz parts / 8): +14,475 T per game frame (~5.8% of ~250K T).
+- Speed (simulated, 28 MHz parts / 8): +15,840 T per game frame (~6.3% of ~250K T).
 - Shared code: nexclash.py gained one dispatch block; selftest.py prints its usage on an unknown
   flag (it started a release run). `selftest.py --canary`: see the PR.
 

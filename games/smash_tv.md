@@ -14,16 +14,18 @@ Reference (private repo, specnext/reference/smash_tv/): Smash_TV.z80
 | Output | MD5 | Status |
 |---|---|---|
 | smash_tv.nex (plain: the BASIC loader as it is, tail 0x5B00) | c72ea298486b14036ac1a87ac89c3f0e | boot sim OK; hardware untested |
-| smash_tv_sprites.nex (altrom 0x2100- + page 26 at slot 7, front end) | 03979d5438cf55410ecec8aac76f05ec | RZX IDENTICAL; hardware untested |
+| smash_tv_sprites.nex (altrom 0x2100- + page 26 at slot 7, front end) | 6227481f8f2514faa0d9648b6bc972e8 | RZX IDENTICAL; hardware untested |
 
 ## Dean's decisions (2026-10-13, from design.png: original | A | B)
 - Sprites: ALL figures drawn by the four masked plotters (player, shield, enemies, snake, mines,
   grunts, pickups, prizes, explosions, bullets); a plot stays on the ULA only when the sprite
   table (128) or the pattern cache is full, or at buffer column >= 30 (off screen).
-- Look: B = SEE-THROUGH outline: only ink pixels are sprite pixels (the 4-px paper outline the
-  mask cuts is not drawn; grid lines show up to the ink). Each 8x8 cell of a figure in its own
-  attribute ink (+ bright) as the game defines it.
-- Cells with attribute 0 (the game leaves the cell's colour: player's gun, shield ring): white.
+- Look: A (changed from B the same day, after the first build): ink pixels in the cell's own
+  attribute ink (+ bright), the 4-px outline the mask clears in the cell's PAPER (+ bright), the
+  rest transparent = the original's look without the clash. (B = see-through outline: build
+  03979d54, superseded.)
+- Cells with attribute 0 (the game leaves the cell's colour: player's gun, shield ring): ink white,
+  outline blue (the arena's paper).
 - Keep the trainer prompt "DO YOU WANT TO BE INVULNERABLE ?" (front end; Y = POKE 33465,201).
 
 ## Snapshot (0b)
@@ -85,7 +87,7 @@ bullets = 8x8 frame 0. Not reached: frames 12-15, 17-18, 20, 23-28, 41-53, 57, 5
 commit, <= 18 with those still on show.
 
 ## Patch (phase B)
-Hooks in alt ROM image 1 at 0x2100-0x27E6 (+ register block); 0x2000-0x20FF (clipped plot rows
+Hooks in alt ROM image 1 at 0x2100-0x2837 (+ register block); 0x2000-0x20FF (clipped plot rows
 read it), 0x386E (the 48K check) and 0x3800-0x3FFF stay ROM. State: Next page 26 mapped at MMU
 slot 7 (0xE000) while a hook runs: vars 0xE000, cache 0xE040 (32 x 16), sprite table 0xE240
 (128 x 5), ATTR4 0xE500 (attr -> colour*4), PT 0xE600 (colour*4 + pixel pair -> pattern byte),
@@ -111,7 +113,9 @@ the back buffer at 0xE980-0xFFFF. Interrupts stay off (the game's DI).
 - 53868 (game start, after game over, before every EI): all 128 sprites hidden, cache flags 0.
 - Sprites: 16x16 4-bit, palette 0 offset 0: index 0 transparent, 1 black, 2-8 normal, 9-15 bright
   (Next default ULA levels); colour = the cell's ink (bright: 8 + ink, bright black 1), attr 0 ->
-  8 (white); clip window = play area x 16-239, y 24-183.
+  8 (white); outline = the cell's paper the same way (attr 0 -> 2, blue): per pixel pair
+  PT[paper][NOT mask] XOR PT[ink XOR paper][ink] (PAPER4 table 0xE700, cell colours V_CC / V_PC
+  0xE800); clip window = play area x 16-239, y 24-183.
 - Front end (0x5D00-0x5D68, write-first game RAM): DI; waits for Y or N without SYMBOL SHIFT
   (Y: POKE 33465,201); clears row 23; sets every register to the loader's state at USR 59776
   (BC 59776, DE 24291, HL 11563, IX 978, IY 23610, SP 24976, I 63, AF 0x8054, AF' 0x0044, BC'
@@ -120,15 +124,16 @@ the back buffer at 0xE980-0xFFFF. Interrupts stay off (the game's DI).
   row (pixels and attrs 0x4F).
 - Speed: game bodies (plotters, both restores' real run) at 3.5 MHz like the original, hook work at
   28 MHz. Per game frame (simulated, 28 MHz parts / 8): plots 57,778 -> 65,555 T, restore 42,071
-  -> 47,493 T, commit +1,277 T: +14,475 T = ~5.8% of a ~250K T game frame (the game is that much
+  -> 47,493 T, commit +1,277 T, plots 57,778 -> 66,920: +15,840 T = ~6.3% of a ~250K T game frame (the game is that much
   slower in play; mostly the per-plot decide/lookup ~750 T and the scratch restore ~5.4K T).
 
 ## Verification (2026-10-13; detail docs/VERIFICATION.md)
 RZX (4,085 frames played, autosave stripped): 7,010 converted plots (24x24 3,680 + mirrored 3,091,
 8x8 227 + mirrored 12), 3 invisible (converted, no sprites), 0 on the ULA, 669 double restores,
-683 commits (max 25 figures / 100 sprites), 8 hide-all, 1,183,835 sprite pixels - IDENTICAL.
+683 commits (max 25 figures / 100 sprites), 8 hide-all, 2,056,946 sprite pixels (ink + outline) -
+IDENTICAL.
 Unit: 840 position cases, 48 sprite-table cases, 12 cache-full cases (ULA path), negative
-controls (colours shifted; guard column 31) 24/24. Front end N / Y / SYM+Y PASS. Static PASS.
+controls (ink colours shifted; outline transparent; guard column 31) 36/36. Front end N / Y / SYM+Y PASS. Static PASS.
 
 ## Known differences
 - Sprites are in front of the text messages ("GO FOR IT", "GAME OVER"); the original draws the
@@ -155,11 +160,11 @@ controls (colours shifted; guard column 31) 24/24. Front end N / Y / SYM+Y PASS.
 1. Boots to the prompt "DO YOU WANT TO BE INVULNERABLE ?" (bottom row); N starts normally, Y
    gives invulnerability; the menu / key definition / title as the plain build.
 2. Arena: player, shield ring, snake rings, mines, grunts, pickups, explosions, bullets are
-   sprites in their own colours; no colour clash on the grid; grid lines visible right up to the
-   figures (see-through outline); player's gun white.
+   sprites in their own colours with their paper-coloured outline (as the original); no colour
+   clash on the grid; player's gun white.
 3. Mirrored figures (facing left) correct; figures at the arena edges / doors clipped to the play area.
 4. Busy scenes (snake + many enemies): no missing or flickering figures, no stale sprites.
-5. Speed close to the plain build (expect ~6% slower in busy scenes).
+5. Speed close to the plain build (expect ~6% slower in play).
 6. "GO FOR IT" / "GAME OVER" text: figures in front (expected).
 7. Game over -> title: all sprites gone; a second game works.
 8. Faults: Fuse "Record from snapshot" on Smash_TV.z80, autosave OFF, send the RZX.

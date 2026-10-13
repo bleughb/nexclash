@@ -55,14 +55,14 @@
   },
   "sprites": {
    "file": "smash_tv_sprites.nex",
-   "md5": "03979d5438cf55410ecec8aac76f05ec"
+   "md5": "6227481f8f2514faa0d9648b6bc972e8"
   }
  },
  "repro": [],
  "status": {
   "title": "Smash TV",
   "engine_col": "smashtv (smash_tv.md)",
-  "build": "smash_tv_sprites.nex 03979d54 (altrom + page 26 at slot 7: the game's own plotters into a scratch buffer; every figure 4-bit sprites in its cell inks, see-through outline; pattern cache; prompt front end)",
+  "build": "smash_tv_sprites.nex 6227481f (altrom + page 26 at slot 7: the game's own plotters into a scratch buffer; every figure 4-bit sprites in its cell inks, outline in the cell paper; pattern cache; prompt front end)",
   "software": "RZX IDENTICAL, front end + static + unit PASS",
   "hardware": "untested",
   "next": "hardware test (checklist); longer RZX (later arenas, bosses; Y = invulnerable)"
@@ -72,15 +72,15 @@
  ],
  "checked": {
   "deps": {
-   "asm/smashtv_hooks.asm": "af5aaf8e40849b45",
-   "docs/profiles/smash_tv.json": "236925de0c48ec19",
+   "asm/smashtv_hooks.asm": "6bbf1487c5ea2e73",
+   "docs/profiles/smash_tv.json": "b61c1645ddf5389b",
    "nexclash.py": "5de628af10ee7456",
    "nexclash/build.py": "a60e4d3c5945c94a",
    "nexclash/dizzy6.py": "89c8ba59fc762962",
    "nexclash/nextboot.py": "c71aaed434e73ef1",
    "nexclash/rzx.py": "e3e783e4cc235d85",
    "nexclash/simrun.py": "eb1a51a360fea4b4",
-   "nexclash/smashtv.py": "bdc8a57c1385380b",
+   "nexclash/smashtv.py": "352729ef3943b058",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80tonex.py": "7b5a0d633ccf369d",
    "skoolkit": "10.1"
@@ -89,15 +89,15 @@
  },
  "verified": {
   "deps": {
-   "asm/smashtv_hooks.asm": "af5aaf8e40849b45",
-   "docs/profiles/smash_tv.json": "236925de0c48ec19",
+   "asm/smashtv_hooks.asm": "6bbf1487c5ea2e73",
+   "docs/profiles/smash_tv.json": "b61c1645ddf5389b",
    "nexclash.py": "5de628af10ee7456",
    "nexclash/build.py": "a60e4d3c5945c94a",
    "nexclash/dizzy6.py": "89c8ba59fc762962",
    "nexclash/nextboot.py": "c71aaed434e73ef1",
    "nexclash/rzx.py": "e3e783e4cc235d85",
    "nexclash/simrun.py": "eb1a51a360fea4b4",
-   "nexclash/smashtv.py": "bdc8a57c1385380b",
+   "nexclash/smashtv.py": "352729ef3943b058",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80tonex.py": "7b5a0d633ccf369d",
    "skoolkit": "10.1"
