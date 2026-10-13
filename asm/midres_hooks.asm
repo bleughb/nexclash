@@ -18,12 +18,22 @@
 ; and drop the CPU speed. Unconverted plots run exactly as before (the exit FIX is the identity).
 ; The commit (0x8950, after the screen copy) builds the sprite patterns of the recorded figures
 ; (into the pattern half not on show) and writes the sprite attributes; 0x8993 hides the sprites
-; when the game loop ends (game over).
+; when the game loop ends (game over), 0x8988 when it leaves for the end of the level.
 ;
 ; Interrupt safety: interrupts are ENABLED at every hook site (IM 2, ISR pages 7FFD for the AY).
 ; Hooks never touch IX, IY, I or IFF; nothing is paged in slots 0/1/6/7 (an unlocked 7FFD write in
 ; the ISR resets them); the page is mapped at slot 5 only (the ISR never reads, writes or runs
 ; 0x4000-0x5FFF / 0x8000-0xBFFF; isr scan); hook stacks have room for the ISR (22 bytes).
+;
+; Keys (collectables, 97E1 from 0x97A4) have their graphics at 0xAB88-0xAC87, under the page: a key
+; plot copies them (via page 5 mapped at slot 4 for the copy) into a relocation slot of the page
+; (REL, 4 x 64 bytes), points the stacked graphics pointer (popped at 0x97E9) at the copy, and the
+; 0x980F exit adds V_HLD back to HL (the original's end pointer).
+; Colour maps (docs/profiles/midnight_resistance_colours.json): Next pages of 8-byte entries, one per
+; key graphics byte p (masked: the mask byte; overwrite: the graphic byte): 4 bytes of colour
+; nibbles (0 = default), a check byte (mask XOR graphic rotated left), the kind (1 masked, 2
+; overwrite). PT0 / PT1 (sets: 0 = all but the player, 1 = the player) give the page for p >> 10
+; (0 = none); the commit maps it at slot 4 (the ISR never touches 0x8000-0x9FFF).
 ; Code and tables live in alt ROM image 1 (0x2000-0x3CFF; the game reads only ROM 0x0000 and the
 ; font 0x3D00-0x3FFF).
 
@@ -80,10 +90,25 @@ SIG     EQU 0xBC00              ; NCACHE x 32: cells figures: the attributes und
 V_SIG   EQU 0xB0C0              ; this figure's attribute signature (32)
 V_SL    EQU 0xB02C              ; its length (0 = cells figure too large to cache)
 V_Y7    EQU 0xB02D              ; Y & 7 (cells), 0 (fixed colour)
+V_HLD   EQU 0xB02E              ; (2) HL correction at the 97E1 exit (key graphics relocated), else 0
+V_NRL   EQU 0xB030              ; relocation slots used this frame (0..4)
+V_SRC   EQU 0xB031              ; (2) build: where the figure's graphics are read
+V_DELTA EQU 0xB033              ; (2) build: original graphics address - V_SRC
+V_CPG   EQU 0xB035              ; colour store page mapped at slot 4 (0 = page 4, the game's)
+V_MAP   EQU 0xB036              ; build: 1 = apply the colour map
+V_PTL   EQU 0xB037              ; build: low byte of the set's page table
+V_RELF  EQU 0xB038              ; decide: 1 = relocate the graphics (key)
+V_LEN   EQU 0xB039              ; (2) decide: graphics length
+V_TP    EQU 0xB03B              ; (2) conv: source address of the current entry
 FIG     EQU 0xB100              ; MAXF x 8: gfx lo, gfx hi, W, R, X, Y, flags, colour
 STK     EQU 0xB300              ; hook stack top (0xB200-0xB2FF)
 SPR     EQU 0xB300              ; MAXT x 5 sprite attributes (0xB300-0xB43F)
 CT      EQU 0xB500              ; pixel codes (0 clear, 1 ink, 2 paper; 2 per byte) -> colours
+PT0     EQU 0xB580              ; colour store page per 1K of graphics, set 0 (64; Python fills)
+PT1     EQU 0xB5C0              ; set 1 (the player)
+REL     EQU 0xBF00              ; 4 x 64 bytes: relocated key graphics
+NREL    EQU 4
+KEY_COL EQU 14                  ; keys: bright yellow, black outline
 STG     EQU 0xB600              ; staging: 48 lines x 32 bytes (4-bit pixels) 0xB600-0xBBFF
 
 ; ---- alt ROM tables (Python fills them) ----
@@ -130,6 +155,8 @@ c_go:   ld (V_KIND),a
         push bc
         push de
         push hl
+        ld hl,0
+        ld (V_HLD),hl               ; no relocation unless decide says so
         call decide                 ; NC = convert (scratch prepared, figure recorded)
         pop hl
         pop de
@@ -175,6 +202,16 @@ m7ec1:  srl e
         nextreg 0x07,0
         ENDM
 x_m:    jp nz,0x97EA
+        nextreg 0x55,PAGE_S         ; HL += V_HLD (relocated key graphics), flags kept
+        ld (V_SP),sp
+        ld sp,STK
+        push af
+        push de
+        ld de,(V_HLD)
+        add hl,de
+        pop de
+        pop af
+        ld sp,(V_SP)
         FIXDE
         jp 0x9812
 x_mf:   jp nz,0x9828
@@ -216,7 +253,9 @@ x_pm:   djnz .b
 ; In: V_KIND, game stack (V_SP): +0 return, +2 graphics pointer, +4 the plotter's caller.
 ; B = bytes, C = line pairs (97E1 / 9813 / 7DC5), D = line, E = x pixel.
 ; Out: carry = pass. NC = recorded + scratch box prepared.
-decide: ld a,(V_LIVE)
+decide: xor a
+        ld (V_RELF),a
+        ld a,(V_LIVE)
         or a
         jp z,dpass
         ld a,(V_NF)
@@ -242,13 +281,23 @@ decide: ld a,(V_LIVE)
         ld a,(V_KIND)
         bit 2,a
         jp nz,.p
-        ; ---- 97E1 / 9813 / 7DC5: vehicles only (cell colours), stride +32, OR opcodes ----
+        ; ---- 97E1 / 9813 / 7DC5: vehicles (cell colours), keys (97E1 only), stride +32, OR opcodes ----
         push de
         ld de,vcall
         call inlist
+        ld e,0
+        jr z,.vk
+        ld de,kcall
+        call inlist
+        jr nz,.vk
+        ld a,(V_KIND)
+        or a
+        ld e,KEY_COL
+        jr z,.vk
+        or 1                        ; a key from another plotter: NZ (pass)
+.vk:    ld a,e
         pop de
         jp nz,dpass
-        xor a
         ld (V_COL),a
         ld a,b
         or a
@@ -348,7 +397,13 @@ decide: ld a,(V_LIVE)
         jr .pf
 .nop:   ld a,l
         or 4
-.pf:    ld (V_FL),a
+.pf:    ld l,a
+        ld a,(V_COL)
+        cp 12                       ; the player: colour set 1
+        ld a,l
+        jr nz,.pf2
+        or 8
+.pf2:   ld (V_FL),a
         ; ---- box: columns, buffer range, graphics range, sprite budget ----
 dbox:   ld a,e
         rrca
@@ -434,7 +489,8 @@ dbox:   ld a,e
         and 2
         jr nz,.g1
         add hl,hl
-.g1:    ld de,(V_GFX)
+.g1:    ld (V_LEN),hl
+        ld de,(V_GFX)
         add hl,de
         jp c,dpass                  ; wraps past 0xFFFF
         ld a,h
@@ -446,7 +502,33 @@ dbox:   ld a,e
         jr z,.gok
 .g2:    ld a,d
         cp 0xC0
-        jp c,dpass                  ; starts below 0xC000 and ends above 0xA000
+        jr nc,.gok                  ; starts at or above 0xC000
+        ; under the page: only a key (97E1) inside 0xA000-0xBFFF, <= 64 bytes, a free slot
+        ld a,(V_COL)
+        cp KEY_COL
+        jp nz,dpass
+        ld a,d
+        cp 0xA0
+        jp c,dpass
+        ld a,h                      ; end <= 0xC000
+        cp 0xC0
+        jr c,.g3
+        jp nz,dpass
+        ld a,l
+        or a
+        jp nz,dpass
+.g3:    ld hl,(V_LEN)
+        ld a,h
+        or a
+        jp nz,dpass
+        ld a,l
+        cp 65
+        jp nc,dpass
+        ld a,(V_NRL)
+        cp NREL
+        jp nc,dpass
+        ld a,1
+        ld (V_RELF),a
 .gok:   ; sprites: ((W+1)/2) * ((R+15)/16) <= MAXT - NT
         ld a,(V_W)
         inc a
@@ -503,6 +585,9 @@ dbox:   ld a,e
         inc hl
         ld a,(V_COL)
         ld (hl),a
+        ld a,(V_RELF)
+        or a
+        call nz,reloc
         ; ---- scratch box = buffer box (the loop then reads what it would have read) ----
         ld hl,(V_A0)
         ld a,(V_R)
@@ -526,6 +611,47 @@ dbox:   ld a,e
         or a                        ; NC: convert
         ret
 dpass:  scf
+        ret
+
+; key graphics -> REL slot V_NRL; HL = the FIG entry's colour byte (flags at HL-1)
+reloc:  dec hl
+        ld a,(V_NRL)
+        ld c,a
+        inc a
+        ld (V_NRL),a
+        ld a,c
+        rlca
+        rlca
+        rlca
+        rlca
+        and 0x30
+        or (hl)
+        or 0x40                     ; flags: relocated, slot in bits 4-5
+        ld (hl),a
+        ld a,c                      ; DE = REL + slot * 64
+        rrca
+        rrca
+        and 0xC0
+        ld e,a
+        ld d,high REL
+        ld hl,(V_GFX)               ; V_HLD = original - copy
+        or a
+        sbc hl,de
+        ld (V_HLD),hl
+        ld hl,(V_SP)                ; the stacked graphics pointer (popped at 0x97E9) -> the copy
+        inc hl
+        inc hl
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        ld hl,(V_GFX)               ; source: page 5 (0xA000-0xBFFF) seen at slot 4
+        ld a,h
+        sub 0x20
+        ld h,a
+        ld bc,(V_LEN)
+        nextreg 0x54,5
+        ldir
+        nextreg 0x54,4
         ret
 
 is32:   ld a,h                      ; Z if HL = 32
@@ -565,6 +691,7 @@ inlist: push hl                     ; Z if HL is in the 0-terminated word list a
 pcall:  dw 0x9E04,0x9E0C,0         ; player (legs, body)
 scall:  dw 0xA4F2,0xA504,0         ; soldiers / gun turrets
 tcall:  dw 0xDEB2,0                ; tank part drawn by 9EEF
+kcall:  dw 0x97A4,0                ; keys
 vcall:  dw 0xE395,0xE3AE,0xE3A1    ; jeep
         dw 0xDEDF,0xDEEA,0xDEF9,0xDF28,0xDF34,0   ; tank
 
@@ -597,6 +724,9 @@ e_cm:   nextreg 0x55,PAGE_S
         add hl,de
         pop bc
         djnz .f
+        nextreg 0x54,4              ; colour store page off slot 4
+        xor a
+        ld (V_CPG),a
 .att:   ld a,(V_N)
         ld d,a
         ld e,0
@@ -636,6 +766,7 @@ e_cm:   nextreg 0x55,PAGE_S
         xor a
         ld (V_NF),a
         ld (V_NT),a
+        ld (V_NRL),a
         ld a,1
         ld (V_LIVE),a
         nextreg 0x07,0
@@ -662,6 +793,20 @@ e_q:    nextreg 0x55,PAGE_S
         ld a,(0xFF70)
         jp 0x8996
 
+; ================= 0x8988: JP Z,0xB7E0 (the loop's other exit: end of level) =================
+; Never reached in the RZX (it ends in level 1); without this the last commit's sprites stayed on
+; show through the shop and into level 2 (Dean, 2026-10-13: "an enemy stays stuck").
+e_lv:   jp nz,0x898B
+        nextreg 0x55,PAGE_S
+        ld (V_SP),sp
+        ld sp,STK
+        push af
+        call hideall
+        pop af
+        ld sp,(V_SP)
+        nextreg 0x55,5
+        jp 0xB7E0
+
 hideall: push bc
         ld a,(V_PREV)
         ld b,a
@@ -677,6 +822,7 @@ hideall: push bc
         ld (V_PREV),a
         ld (V_NF),a
         ld (V_NT),a
+        ld (V_NRL),a
         ld (V_LIVE),a
         pop bc
         ret
@@ -706,6 +852,31 @@ build:  ld a,(hl)
         inc hl
         ld a,(hl)
         ld (V_COL),a
+        ld hl,(V_GFX)               ; graphics source: the relocation slot or the graphics
+        ld a,(V_FL)
+        bit 6,a
+        jr z,.s1
+        and 0x30
+        rlca
+        rlca
+        ld l,a
+        ld h,high REL
+.s1:    ld (V_SRC),hl
+        ex de,hl
+        ld hl,(V_GFX)
+        or a
+        sbc hl,de
+        ld (V_DELTA),hl
+        ld a,(V_FL)                 ; colour map: not for the mask-only (flashing) image
+        and 4
+        xor 4
+        ld (V_MAP),a
+        ld a,(V_FL)
+        and 8
+        ld a,low PT0
+        jr z,.s2
+        ld a,low PT1
+.s2:    ld (V_PTL),a
         ld a,(V_W)
         inc a
         srl a
@@ -1192,7 +1363,7 @@ conv:   ld a,(V_NR)
         call setct
 .c5:    xor a
         ld (V_RR),a
-        ld hl,(V_GFX)
+        ld hl,(V_SRC)
         ; ---- lines (zig-zag: even lines left to right, odd lines right to left) ----
 .line:  push hl
         ld a,(V_RR)
@@ -1251,6 +1422,7 @@ conv:   ld a,(V_NR)
         ld a,(V_W)
         ld b,a
 .byte:  push bc
+        ld (V_TP),hl
         ld a,(V_FL)
         bit 1,a
         jr nz,.ov
@@ -1292,6 +1464,7 @@ conv:   ld a,(V_NR)
         add a,(hl)
         ld (hl),a
 .cv:    call cbyte                  ; 4 bytes at DE, DE += 4
+        call ovl                    ; colour map over them
         pop hl
         ld a,(V_BACK)
         or a
@@ -1448,6 +1621,109 @@ setct:  push hl
         ld (hl),a
         pop de
         pop hl
+        ret
+
+; colour map entry of the byte just converted (C = mask, B = graphic, DE = 4 past its staging
+; bytes) over the staging bytes: a non-zero nibble replaces an opaque pixel's colour
+ovl:    ld a,(V_MAP)
+        or a
+        ret z
+        push bc
+        push de
+        ld hl,(V_TP)
+        ld de,(V_DELTA)
+        add hl,de                   ; key address p
+        ld a,h
+        rrca
+        rrca
+        and 0x3F
+        ld e,a
+        ld a,(V_PTL)
+        add a,e
+        ld e,a
+        ld d,high PT0
+        ld a,(de)
+        or a
+        jr z,.x
+        ld e,a
+        ld a,(V_CPG)
+        cp e
+        jr z,.m
+        ld a,e
+        ld (V_CPG),a
+        nextreg 0x54,a
+.m:     ld a,h                      ; entry = 0x8000 + (p & 0x3FF) * 8
+        and 3
+        ld h,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        set 7,h
+        ld a,b
+        rlca
+        xor c
+        ld e,a                      ; check byte
+        ld a,l
+        or 4
+        ld l,a
+        ld a,(hl)
+        cp e
+        jr nz,.x
+        inc l
+        ld a,(V_FL)
+        and 2
+        ld a,1
+        jr z,.k
+        inc a
+.k:     cp (hl)
+        jr nz,.x
+        ld a,l
+        and 0xF8
+        ld l,a                      ; colour bytes
+        pop de
+        push de
+        dec de
+        dec de
+        dec de
+        dec de
+        ld b,4
+.o:     push bc
+        ld a,(de)
+        ld c,a
+        ld b,(hl)
+        and 0xF0
+        jr z,.h0
+        ld a,b
+        and 0xF0
+        jr z,.h0
+        ld a,c
+        and 0x0F
+        ld c,a
+        ld a,b
+        and 0xF0
+        or c
+        ld c,a
+.h0:    ld a,c
+        and 0x0F
+        jr z,.l0
+        ld a,b
+        and 0x0F
+        jr z,.l0
+        ld a,c
+        and 0xF0
+        ld c,a
+        ld a,b
+        and 0x0F
+        or c
+        ld c,a
+.l0:    ld a,c
+        ld (de),a
+        inc de
+        inc hl
+        pop bc
+        djnz .o
+.x:     pop de
+        pop bc
         ret
 
 ; C = mask, B = graphic -> 4 staging bytes at DE

@@ -55,17 +55,17 @@
   },
   "sprites": {
    "file": "midnight_resistance_sprites.nex",
-   "md5": "e8f0ece9e41c314d76471c96f4595854"
+   "md5": "bd0d4d3e9042ca55ce84b553799527e9"
   }
  },
  "repro": [],
  "status": {
   "title": "Midnight Resistance (128K)",
   "engine_col": "midres (midnight_resistance.md)",
-  "build": "midnight_resistance_sprites.nex e8f0ece9 (altrom + page 26 at slot 5; player green, soldiers white, jeep / tank in their cell colours; pattern-slot cache)",
-  "software": "RZX IDENTICAL, unit + interrupt PASS",
-  "hardware": "e8f0ece9 runs on a real Next (Dean, 2026-10-13)",
-  "next": "detailed checklist (speed at the jeep / tank, colours); later-levels RZX"
+  "build": "midnight_resistance_sprites.nex bd0d4d3e (altrom + page 26 at slot 5; player green, soldiers white, keys yellow (new), jeep / tank in their cell colours; colour map support; sprites hidden at the end-of-level exit; pattern-slot cache)",
+  "software": "RZX IDENTICAL (also with a repainted colour map), unit + interrupt + level-exit + map PASS",
+  "hardware": "e8f0ece9 runs on a real Next (Dean, 2026-10-13): keys clashed, player sprite stuck through the shop; bd0d4d3e untested",
+  "next": "hardware test bd0d4d3e (keys, shop / level 2); Dean paints the colour sheet; level 2 RZX"
  },
  "checks": [
   "asm2profile:midnight_resistance"

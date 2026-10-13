@@ -82,6 +82,12 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   see-through, and the overlap (depth) rule - the game's own rule, always in front, or another.
   (Commando: depth, solid bodies and solid objects were settled across three hardware rounds
   from the user's photos; preview frames would have settled them first.)
+- Colour choices the user paints (Dean, 2026-10-13): a sheet at 1:1 (one PNG pixel = one Spectrum
+  pixel; an enlarged sheet is too big to paint), figures ASSEMBLED as drawn (multi-part figures
+  joined), a row of 8x8 palette swatches at the top, no text needed; the tool keeps the layout
+  (which part / byte each pixel is) in a JSON beside the PNG and reads the painted PNG back.
+  Template: `python -m nexclash.midres sheet RZX -o x.png` / `colours x.png` (engine-specific today,
+  BRIEFING C2). Game graphics: the PNG stays private.
 - Speed budget: `cost GAME.z80 --rzx R --at PLOTTER --group IX` gives the original's cost per
   draw (T-states), draws per frame and per object; set the allowed hook cost per draw now, and design to it (caching, fewer
   uploads). Commando's first solid hooks cost ~18x the original draw and were redesigned.

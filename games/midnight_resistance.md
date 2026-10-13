@@ -65,7 +65,7 @@ BASIC area holds the loader line only). The RZX starts from a different moment (
 | End-of-level tank (several masked + overwrite parts, mirrored part; turret via 9EEF from DEAF) | DEDF..DF34 (DD15/DF02/DF0D), DEB2 | 153 |
 | Explosions (overwrite + masked, own attrs red/white) | A059 / A065 / A072 (89DB) | ~110 |
 | Bullets / shots (8x8 overwrite + attr paint 0x7D6C) | 7D7B, 9A36, 9A74 (89D5) | ~600 |
-| Small masked objects | 97A4 (974D) | 886 |
+| Keys (rotating collectables; 4 frames 0xAB88/ABC8/AC08/AC48, 2 bytes x 16 lines) | 97E1 from 97A4 (974D) | 897 |
 Max 32 plots in one game frame. Original figure colours: player and soldiers take the cell
 attribute (clash); explosions, bullets and the tank (0x7D84 after its turret) paint their own
 attrs; the jeep's colours are tile-map attributes (0x7A00 map: written by the scroller 0x8D06 /
@@ -78,6 +78,11 @@ graphics: private repo only): original | player green + soldiers white, black ou
 ink of their cell | everything in the ink of its cell.
 
 ## Dean's decisions (2026-10-13)
+- Round 2 (hardware photos): the three rotating figures in front of the player are the KEYS:
+  sprites with their own colour, not the background's. Proposed: bright yellow (14, like the HUD
+  key icon), black outline - Dean to confirm or repaint on the colour sheet.
+- Colours per pixel: Dean paints a sheet; the PNG comes back and becomes the colour map. Sheet
+  rules (Dean): 1:1 pixels, multi-part figures joined, 8x8 palette swatches.
 - Sprites: player, enemy soldiers + gun turrets, vehicles (jeep, end-of-level tank).
   Explosions, bullets and small objects stay on the ULA (they keep their own painted colours).
 - Colours: "keep the colours the game defines" (explosions are excellent). The player and soldiers
@@ -102,6 +107,10 @@ touches slots 2, 4, 5 (full-RZX isr slot scan). Interrupts stay ON in every hook
   table maps D back (identity outside 0xA0-0xB1, so passthrough plots are untouched), unmap, 3.5
   MHz. The 32-px loops end with ADD HL,BC on the address: its flags (H, C, bits 3/5) are redone
   on the real address (FIXDEF).
+- 0x8988 (JP Z,0xB7E0: the loop's end-of-level exit -> shop -> next level): hide every sprite, loop
+  no longer live. Missing until 2026-10-13: the last frame's player sprite stayed on through the
+  shop / level 2 ("stuck enemy", Dean's photo). The shop code (0xB890) calls the frame routine
+  0x8F48 but never the commit.
 - 0x8950 (after the screen copy): commit - builds the recorded figures' sprites, writes the
   attributes, hides the rest. 0x8993 (loop exit test): game over -> all sprites hidden.
 - Sprites: 16x16 4-bit, one palette (0 transparent, 1-7 colours, 8 black, 9-15 bright); each
@@ -114,8 +123,31 @@ touches slots 2, 4, 5 (full-RZX isr slot scan). Interrupts stay ON in every hook
   and wrapping only into the margins, graphics outside 0xA000-0xBFFF, strides +32 and OR opcodes
   as expected (9E3F: OR or NOP), caller in the lists (player 9E04/9E0C, soldiers A4F2/A504, tank
   turret DEB2; vehicles E395/E3AE/E3A1, DEDF/DEEA/DEF9/DF28/DF34).
-- Colours: player bright green (12), soldiers / turrets bright white (15), black outline; vehicles
-  and the tank turret: per byte the ink / paper of the attribute cell at commit time.
+- Colours: player bright green (12), soldiers / turrets bright white (15), keys bright yellow (14),
+  black outline; vehicles and the tank turret: per byte the ink / paper of the attribute cell at
+  commit time. Then the colour map (below) per pixel.
+- Keys: graphics at 0xAB88-0xAC87 lie under page 26. Converted only from 97E1 (caller 97A4), <= 64
+  bytes, 4 relocation slots per frame (REL 0xBF00): the hook copies the graphics (page 5 mapped at
+  slot 4 for the LDIR), writes the copy's address over the stacked pointer the plotter pops at
+  0x97E9 (the loop's PUSH BC then overwrites that stack word, as in the original), and the 0x980F
+  exit adds V_HLD back to HL (flags kept). FIG flags: bit 3 player set, bit 6 relocated, bits 4-5
+  slot.
+- Colour map (docs/profiles/midnight_resistance_colours.json; none yet = default colours). All five
+  plotters read the graphics the same way: lines of W entries, even lines left to right, odd lines
+  right to left; an entry is (mask, graphic), or one graphic byte (7DC5). So colours belong to a
+  graphics byte: per key address p (mask byte / overwrite byte) an 8-byte entry in Next pages 28..
+  (4 bytes of colour nibbles, 0 = default; check byte mask XOR rotl(graphic); kind 1 / 2). Two sets:
+  1 = the player, 0 = the rest (the soldiers share the player's leg graphics). PT0 / PT1 (page 26
+  at 0xB580 / 0xB5C0) give the page per 1K of addresses. The commit maps the page at slot 4 (the
+  ISR never touches 0x8000-0x9FFF) and overlays non-zero nibbles on opaque pixels (ovl); a check
+  byte that does not match (other graphics at that address in a later level) leaves the defaults.
+  The mask-only (flashing) image is never mapped.
+- Sheet: `python -m nexclash.midres sheet RZX -o mr_colours.png` (1:1, figures assembled from the
+  parts drawn together in one frame, fewest figures that show every part at its longest drawing,
+  8x8 swatches 1-15 at the top; layout in mr_colours_layout.json) and `python -m nexclash.midres
+  colours painted.png` -> the colour map. Today's colours = no entry. A part shown twice: a painted
+  colour beats an unpainted one; two different paints -> the first, reported. Both files hold game
+  graphics: private repo (specnext/reference/midnight_resistance/).
 - 9E3F's OR opcode is NOP while the player flashes (re-spawn): the sprite then shows the mask only
   (black silhouette), as the original.
 - Speed (simulated T at 3.5 MHz; hooks run at 28 MHz): plot hooks + shadow loop ~87K per game frame
@@ -134,6 +166,12 @@ control (ink/outline swapped) 12/12 informative cases; interrupt safety checked 
 instruction (IX, IY, I, IFF, stack room, 0x3D00 fetches), negative control (LD IY in each CALL hook)
 15/15. Static: no DD/FD/DI/EI/LD I/IM in the hook code.
 
+## Verification (2026-10-13, keys + colour map + level exit)
+See VERIFICATION.md. Full RZX with no map and with a map read back from a randomly repainted sheet
+(every opaque pixel, 60 %): IDENTICAL; keys add ~840 converted plots (97E1 1,978). Unit: level exit
+(0x8988 Z / NZ after a commit; not in the RZX), keys relocation slots full (NRL 3 / 4), colour map
+(synthetic map per figure, wrong check byte ignored, negative control: map left out of the build).
+
 ## Known differences
 - Sprites are always in front of the ULA: bullets, explosions and small objects (ULA) are drawn
   behind converted figures (the original draws by call order).
@@ -141,6 +179,10 @@ instruction (IX, IY, I, IFF, stack room, 0x3D00 fetches), negative control (LD I
 - Converted figures appear when the commit runs (after the screen copy), not as the copy passes.
 
 ## Open
+- Colour sheet: Dean to paint mr_colours.png (keys yellow is a proposal) -> colours json -> rebuild
+  + full verify. Add docs/profiles/midnight_resistance_colours.json to the record's data list then.
+- Level exit 0x8988 is proven by unit tests only: the shop and level 2 need a recording (Dean).
+  Level 2's figures (callers, graphics) are unknown: the sheet covers level 1 only.
 - Hardware: runs (2026-10-13); checklist items 2-7 not yet reported item by item.
 - Later levels (banks 1/3/4/6) not in the RZX: need a later-levels recording; their figures may
   use other callers (stay on the ULA) or graphics in 0xA000-0xBFFF (guard: stay on the ULA).
@@ -156,7 +198,9 @@ instruction (IX, IY, I, IFF, stack room, 0x3D00 fetches), negative control (LD I
 3. Soldiers and gun turrets: white with a black outline; jeep at the start and the end-of-level
    tank: their own colours.
 4. Nothing drawn outside the play area (columns 3-28, top 16 rows); no stale sprites after scrolling.
-5. Bullets / explosions still visible (on the ULA, behind figures).
+5. Bullets / explosions still visible (on the ULA, behind figures). Keys: yellow sprites with a
+   black outline, rotating, no clash; picked up as before.
+5b. End of level 1 -> shop -> level 2: no sprite left behind (the stuck green figure is gone).
 6. Speed vs the plain build: normal play, the jeep at the start, the tank at the end of level 1.
 7. Game over: sprites gone from the game-over / high-score screens.
 8. Faults: Fuse "Record from snapshot" on the .z80, autosave off, send the RZX.
