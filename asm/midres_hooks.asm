@@ -8,6 +8,7 @@
 ;   0x97E5  97E1 masked (zig-zag rows, B bytes x 2C lines)        c_m
 ;   0x981E  9813 masked, mirrored (E = right byte)                 c_mf
 ;   0x7DC6  7DC5 overwrite (no mask)                               c_o
+;   0x7E0E  7E06 overwrite, mirrored (bit-reverse table 0xFDxx)    c_om
 ;   0x9EF0  9E3F/9EEF 32-px masked (count 0x9EF6, op 0x9EFA)       c_p
 ;   0x9F45  9E3F 32-px masked, mirrored (count 0x9F4E, op 0x9F55)  c_pm
 ; A figure the patch converts is RECORDED (FIG table) and its plot is redirected: the hook copies
@@ -25,10 +26,12 @@
 ; the ISR resets them); the page is mapped at slot 5 only (the ISR never reads, writes or runs
 ; 0x4000-0x5FFF / 0x8000-0xBFFF; isr scan); hook stacks have room for the ISR (22 bytes).
 ;
-; Keys (collectables, 97E1 from 0x97A4) have their graphics at 0xAB88-0xAC87, under the page: a key
-; plot copies them (via page 5 mapped at slot 4 for the copy) into a relocation slot of the page
-; (REL, 4 x 64 bytes), points the stacked graphics pointer (popped at 0x97E9) at the copy, and the
-; 0x980F exit adds V_HLD back to HL (the original's end pointer).
+; Figures whose graphics lie under the page (0xA000-0xBFFF: keys, shots, explosions at
+; 0xAB88-0xB2C0) plot into a second scratch, page PAGE_U mapped at SLOT 2 (0x4000-0x5FFF = buffer -
+; 0x1B00; the ISR never touches 0x4000-0x5FFF and the ULA shows bank 5 whatever slot 2 holds), with
+; slot 5 back on the game's page 5 so the loop reads the graphics where they are. The buffer box is
+; copied into PAGE_U through slot 4 first; the loop exits map slot 2 back (FIX also maps 0x40-0x51).
+; The commit reads such graphics through slot 4 = page 5 into TMPG.
 ; Colour maps (docs/profiles/midnight_resistance_colours.json): Next pages of 8-byte entries, one per
 ; key graphics byte p (masked: the mask byte; overwrite: the graphic byte): 4 bytes of colour
 ; nibbles (0 = default), a check byte (mask XOR graphic rotated left), the kind (1 masked, 2
@@ -90,24 +93,24 @@ SIG     EQU 0xBC00              ; NCACHE x 32: cells figures: the attributes und
 V_SIG   EQU 0xB0C0              ; this figure's attribute signature (32)
 V_SL    EQU 0xB02C              ; its length (0 = cells figure too large to cache)
 V_Y7    EQU 0xB02D              ; Y & 7 (cells), 0 (fixed colour)
-V_HLD   EQU 0xB02E              ; (2) HL correction at the 97E1 exit (key graphics relocated), else 0
-V_NRL   EQU 0xB030              ; relocation slots used this frame (0..4)
+V_UND   EQU 0xB02E              ; decide: 1 = graphics under the page (scratch at slot 2)
 V_SRC   EQU 0xB031              ; (2) build: where the figure's graphics are read
 V_DELTA EQU 0xB033              ; (2) build: original graphics address - V_SRC
 V_CPG   EQU 0xB035              ; colour store page mapped at slot 4 (0 = page 4, the game's)
 V_MAP   EQU 0xB036              ; build: 1 = apply the colour map
 V_PTL   EQU 0xB037              ; build: low byte of the set's page table
-V_RELF  EQU 0xB038              ; decide: 1 = relocate the graphics (key)
 V_LEN   EQU 0xB039              ; (2) decide: graphics length
 V_TP    EQU 0xB03B              ; (2) conv: source address of the current entry
+V_VF    EQU 0xB03D              ; decide: 0x80 = drawn vertically flipped (strides -32, D = bottom line)
 FIG     EQU 0xB100              ; MAXF x 8: gfx lo, gfx hi, W, R, X, Y, flags, colour
 STK     EQU 0xB300              ; hook stack top (0xB200-0xB2FF)
 SPR     EQU 0xB300              ; MAXT x 5 sprite attributes (0xB300-0xB43F)
 CT      EQU 0xB500              ; pixel codes (0 clear, 1 ink, 2 paper; 2 per byte) -> colours
 PT0     EQU 0xB580              ; colour store page per 1K of graphics, set 0 (64; Python fills)
 PT1     EQU 0xB5C0              ; set 1 (the player)
-REL     EQU 0xBF00              ; 4 x 64 bytes: relocated key graphics
-NREL    EQU 4
+TMPG    EQU 0xBF00              ; build: copy of a figure's graphics from under the page (<= 255)
+PAGE_U  EQU 27                  ; scratch for under-page figures, at slot 2 while their loop runs
+OFS2    EQU 0x2500              ; buffer -> PAGE_U seen at slot 4 (0x5B00 -> 0x8000)
 KEY_COL EQU 14                  ; keys: bright yellow, black outline
 STG     EQU 0xB600              ; staging: 48 lines x 32 bytes (4-bit pixels) 0xB600-0xBBFF
 
@@ -139,6 +142,12 @@ c_o:    nextreg 0x55,PAGE_S
         push af
         ld a,2
         jr c_go
+c_om:   nextreg 0x55,PAGE_S
+        ld (V_SP),sp
+        ld sp,STK
+        push af
+        ld a,3
+        jr c_go
 c_p:    nextreg 0x55,PAGE_S
         ld (V_SP),sp
         ld sp,STK
@@ -155,16 +164,24 @@ c_go:   ld (V_KIND),a
         push bc
         push de
         push hl
-        ld hl,0
-        ld (V_HLD),hl               ; no relocation unless decide says so
+        xor a
+        ld (V_UND),a
         call decide                 ; NC = convert (scratch prepared, figure recorded)
         pop hl
         pop de
         pop bc
         jr c,.pass
+        ld a,(V_UND)
+        or a
+        jr nz,.und
         pop af
         ld sp,(V_SP)
         jp m7ec1                    ; scratch address; the page stays mapped for the loop
+.und:   pop af                      ; graphics under the page: slot 5 = the game's, scratch at slot 2
+        ld sp,(V_SP)
+        nextreg 0x55,5
+        nextreg 0x52,PAGE_U
+        jp m7ec2
 .pass:  pop af
         ld sp,(V_SP)
         nextreg 0x55,5
@@ -172,10 +189,12 @@ c_go:   ld (V_KIND),a
         jp 0x7EC1
 
 ; 0x7EC1 with the scratch base (flags at RET: OR A with A = 0, as the original)
-m7ec1:  srl e
+m7ec2:  ld hl,0x4000                ; slot-2 scratch (buffer - 0x1B00)
+        jr m7c
+m7ec1:  ld hl,0x5B00+OFS
+m7c:    srl e
         srl e
         srl e
-        ld hl,0x5B00+OFS
         ld a,d
         ld d,0
         add hl,de
@@ -199,19 +218,10 @@ m7ec1:  srl e
         ld d,(hl)
         ld hl,(V_HL)
         nextreg 0x55,5
+        nextreg 0x52,10
         nextreg 0x07,0
         ENDM
 x_m:    jp nz,0x97EA
-        nextreg 0x55,PAGE_S         ; HL += V_HLD (relocated key graphics), flags kept
-        ld (V_SP),sp
-        ld sp,STK
-        push af
-        push de
-        ld de,(V_HLD)
-        add hl,de
-        pop de
-        pop af
-        ld sp,(V_SP)
         FIXDE
         jp 0x9812
 x_mf:   jp nz,0x9828
@@ -223,6 +233,11 @@ x_o:    jp nz,0x7DCA
         FIXDE
         ex de,hl
         jp 0x7DE8
+x_om:   jp nz,0x7E16
+        ex de,hl
+        FIXDE
+        ex de,hl
+        jp 0x7E3C
         MACRO FIXDEF                ; FIXDE, then the 32-px loop's last ADD HL,BC (DE - 32 + 32) again
         nextreg 0x55,PAGE_S         ; on the real address: H, N, C and flag bits 3/5 as the original
         ld (V_HL),hl                ; (S, Z, P/V are the loop's, unchanged by ADD HL)
@@ -237,6 +252,7 @@ x_o:    jp nz,0x7DCA
         ld bc,(V_BC)
         ld hl,(V_HL)
         nextreg 0x55,5
+        nextreg 0x52,10
         nextreg 0x07,0
         ENDM
 x_p:    djnz .b
@@ -254,7 +270,7 @@ x_pm:   djnz .b
 ; B = bytes, C = line pairs (97E1 / 9813 / 7DC5), D = line, E = x pixel.
 ; Out: carry = pass. NC = recorded + scratch box prepared.
 decide: xor a
-        ld (V_RELF),a
+        ld (V_VF),a
         ld a,(V_LIVE)
         or a
         jp z,dpass
@@ -281,23 +297,19 @@ decide: xor a
         ld a,(V_KIND)
         bit 2,a
         jp nz,.p
-        ; ---- 97E1 / 9813 / 7DC5: vehicles (cell colours), keys (97E1 only), stride +32, OR opcodes ----
+        ; ---- 97E1 / 9813 / 7DC5 / 7E06: every caller (Dean, 2026-10-13: every figure a sprite);
+        ;      keys yellow, the rest in its cell colours; stride +32, OR opcodes ----
         push de
-        ld de,vcall
-        call inlist
-        ld e,0
-        jr z,.vk
         ld de,kcall
         call inlist
-        jr nz,.vk
-        ld a,(V_KIND)
-        or a
-        ld e,KEY_COL
+        ld a,KEY_COL
         jr z,.vk
-        or 1                        ; a key from another plotter: NZ (pass)
-.vk:    ld a,e
-        pop de
-        jp nz,dpass
+        ld de,acall
+        call inlist
+        ld a,12                     ; the player's add-on piece: the player's colour (and set)
+        jr z,.vk
+        xor a
+.vk:    pop de
         ld (V_COL),a
         ld a,b
         or a
@@ -312,18 +324,23 @@ decide: xor a
         jp nc,dpass
         add a,a
         ld (V_R),a
+        ld a,(V_COL)
+        cp 12
         ld a,(V_KIND)
-        and 3
+        jr nz,.fk
+        or 8                        ; colour set 1 (the player)
+.fk:    and 0x0B
         ld (V_FL),a
+        and 3
         cp 1
         jr z,.mf
         cp 2
         jr z,.o
-        ld hl,(0x97F7)              ; 97E1: strides and OR opcodes
-        call is32
-        jp nz,dpass
-        ld hl,(0x9809)
-        call is32
+        cp 3
+        jr z,.om
+        ld hl,(0x97F7)              ; 97E1: strides (+32, or -32 = flipped via 97A7) and OR opcodes
+        ld bc,(0x9809)
+        call strd
         jp nz,dpass
         ld a,(0x97EE)
         cp 0xB6
@@ -333,10 +350,8 @@ decide: xor a
         jp nz,dpass
         jp dbox
 .mf:    ld hl,(0x983E)
-        call is32
-        jp nz,dpass
-        ld hl,(0x9859)
-        call is32
+        ld bc,(0x9859)
+        call strd
         jp nz,dpass
         ld a,(0x982F)
         cp 0xB6
@@ -346,10 +361,13 @@ decide: xor a
         jp nz,dpass
         jp dbox
 .o:     ld hl,(0x7DD3)
-        call is32
+        ld bc,(0x7DE0)
+        call strd
         jp nz,dpass
-        ld hl,(0x7DE0)
-        call is32
+        jp dbox
+.om:    ld hl,(0x7E23)              ; 7E06: strides (7DF2 sets them to -32 for a flipped draw)
+        ld bc,(0x7E34)
+        call strd
         jp nz,dpass
         jp dbox
         ; ---- 9E3F: player (green), soldiers (white), tank turret (cells) ----
@@ -362,11 +380,8 @@ decide: xor a
         call inlist
         ld b,15
         jr z,.pc
-        ld de,tcall
-        call inlist
-        ld b,0
+        ld b,0                      ; any other caller: its cell colours
 .pc:    pop de
-        jp nz,dpass
         ld a,b
         ld (V_COL),a
         ld a,4
@@ -405,7 +420,20 @@ decide: xor a
         or 8
 .pf2:   ld (V_FL),a
         ; ---- box: columns, buffer range, graphics range, sprite budget ----
-dbox:   ld a,e
+dbox:   ld a,(V_VF)             ; flipped: D is the bottom line -> V_Y = the top line
+        or a
+        jr z,.nv
+        ld a,(V_R)
+        dec a
+        ld b,a
+        ld a,(V_Y)
+        sub b
+        jp c,dpass
+        ld (V_Y),a
+        ld a,(V_FL)
+        or 0x80
+        ld (V_FL),a
+.nv:    ld a,e
         rrca
         rrca
         rrca
@@ -503,13 +531,10 @@ dbox:   ld a,e
 .g2:    ld a,d
         cp 0xC0
         jr nc,.gok                  ; starts at or above 0xC000
-        ; under the page: only a key (97E1) inside 0xA000-0xBFFF, <= 64 bytes, a free slot
-        ld a,(V_COL)
-        cp KEY_COL
-        jp nz,dpass
+        ; under the page: inside 0xA000-0xBFFF and < 256 bytes (the commit's copy area TMPG)
         ld a,d
         cp 0xA0
-        jp c,dpass
+        jp c,dpass                  ; starts below 0xA000, ends above it
         ld a,h                      ; end <= 0xC000
         cp 0xC0
         jr c,.g3
@@ -521,14 +546,8 @@ dbox:   ld a,e
         ld a,h
         or a
         jp nz,dpass
-        ld a,l
-        cp 65
-        jp nc,dpass
-        ld a,(V_NRL)
-        cp NREL
-        jp nc,dpass
         ld a,1
-        ld (V_RELF),a
+        ld (V_UND),a
 .gok:   ; sprites: ((W+1)/2) * ((R+15)/16) <= MAXT - NT
         ld a,(V_W)
         inc a
@@ -585,16 +604,22 @@ dbox:   ld a,e
         inc hl
         ld a,(V_COL)
         ld (hl),a
-        ld a,(V_RELF)
+        ld a,(V_UND)
         or a
-        call nz,reloc
+        ld de,OFS
+        jr z,.c0
+        dec hl
+        set 6,(hl)                  ; flags: graphics under the page
+        nextreg 0x54,PAGE_U         ; the slot-2 scratch, filled through slot 4
+        ld de,OFS2
+.c0:    ld (V_TMP),de
         ; ---- scratch box = buffer box (the loop then reads what it would have read) ----
         ld hl,(V_A0)
         ld a,(V_R)
         ld c,a
 .cp:    push hl
         push bc
-        ld de,OFS
+        ld de,(V_TMP)
         ex de,hl
         add hl,de
         ex de,hl                    ; DE = HL + OFS
@@ -608,50 +633,38 @@ dbox:   ld a,e
         add hl,de
         dec c
         jr nz,.cp
+        nextreg 0x54,4
         or a                        ; NC: convert
         ret
 dpass:  scf
         ret
 
-; key graphics -> REL slot V_NRL; HL = the FIG entry's colour byte (flags at HL-1)
-reloc:  dec hl
-        ld a,(V_NRL)
-        ld c,a
-        inc a
-        ld (V_NRL),a
-        ld a,c
-        rlca
-        rlca
-        rlca
-        rlca
-        and 0x30
-        or (hl)
-        or 0x40                     ; flags: relocated, slot in bits 4-5
-        ld (hl),a
-        ld a,c                      ; DE = REL + slot * 64
-        rrca
-        rrca
-        and 0xC0
-        ld e,a
-        ld d,high REL
-        ld hl,(V_GFX)               ; V_HLD = original - copy
+strd:   ld a,h                      ; Z if HL = BC = 32 (V_VF 0) or HL = BC = -32 (V_VF 0x80)
         or a
-        sbc hl,de
-        ld (V_HLD),hl
-        ld hl,(V_SP)                ; the stacked graphics pointer (popped at 0x97E9) -> the copy
-        inc hl
-        inc hl
-        ld (hl),e
-        inc hl
-        ld (hl),d
-        ld hl,(V_GFX)               ; source: page 5 (0xA000-0xBFFF) seen at slot 4
-        ld a,h
-        sub 0x20
-        ld h,a
-        ld bc,(V_LEN)
-        nextreg 0x54,5
-        ldir
-        nextreg 0x54,4
+        jr nz,.n
+        ld a,l
+        cp 32
+        ret nz
+        ld a,b
+        or a
+        ret nz
+        ld a,c
+        cp 32
+        ret
+.n:     inc a
+        ret nz
+        ld a,l
+        cp 0xE0
+        ret nz
+        ld a,b
+        inc a
+        ret nz
+        ld a,c
+        cp 0xE0
+        ret nz
+        ld a,0x80
+        ld (V_VF),a
+        xor a
         ret
 
 is32:   ld a,h                      ; Z if HL = 32
@@ -690,10 +703,9 @@ inlist: push hl                     ; Z if HL is in the 0-terminated word list a
 
 pcall:  dw 0x9E04,0x9E0C,0         ; player (legs, body)
 scall:  dw 0xA4F2,0xA504,0         ; soldiers / gun turrets
-tcall:  dw 0xDEB2,0                ; tank part drawn by 9EEF
 kcall:  dw 0x97A4,0                ; keys
-vcall:  dw 0xE395,0xE3AE,0xE3A1    ; jeep
-        dw 0xDEDF,0xDEEA,0xDEF9,0xDF28,0xDF34,0   ; tank
+acall:  dw 0x9DFC,0x9DEF,0         ; the player's add-on piece (97E1 / 9813)
+; (any other caller: cell colours; the tank turret 0xDEB2, vehicles, shots, explosions)
 
 ; ================= commit (0x8950: after the screen copy) =================
 e_cm:   nextreg 0x55,PAGE_S
@@ -703,7 +715,61 @@ e_cm:   nextreg 0x55,PAGE_S
         push bc
         push de
         push hl
-        nextreg 0x07,3
+        call commit
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
+        nextreg 0x55,5
+        ld de,(0xDCEE)
+        jp 0x8954
+
+; ================= the shop's loop (0xB879-0xB8B3; reached by the end-of-level exit) =================
+; It runs the same frame routine (0x8F48, screen copy) without the game loop's commit: commit after it
+; at 0xB893, and hide everything on its two exits (0xB89F RET NZ on 0xFF70, 0xB8AA RET Z on x = 200).
+e_cs:   nextreg 0x55,PAGE_S
+        ld (V_SP),sp
+        ld sp,STK
+        push af
+        push bc
+        push de
+        push hl
+        call commit
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
+        nextreg 0x55,5
+        xor a
+        ld (0x93D8),a
+        jp 0xB897
+; leaving the shop: hide every sprite, loop no longer live (no CALL on the game's stack: its dead
+; stack must stay as the original's)
+        MACRO SHIDE
+        nextreg 0x55,PAGE_S
+        ld (V_SP),sp
+        ld sp,STK
+        push af
+        call hideall
+        pop af
+        ld sp,(V_SP)
+        nextreg 0x55,5
+        ENDM
+e_s2:   ld a,(0xFF70)               ; 0xB89B: LD A,(0xFF70) / OR A / RET NZ
+        or a
+        jp z,0xB8A0
+        SHIDE
+        ret
+e_sx:   ld a,(0x9DFD)               ; 0xB8A5: LD A,(0x9DFD) / CP 200 / RET Z
+        cp 200
+        jp nz,0xB8AB
+        SHIDE
+        ret
+
+; commit body (game loop and shop): the recorded figures -> patterns + sprite attributes
+commit: nextreg 0x07,3
         ld hl,SLOTST                ; slots: "used by the last commit" becomes "on show"
         ld b,128
 .ag:    srl (hl)
@@ -766,18 +832,10 @@ e_cm:   nextreg 0x55,PAGE_S
         xor a
         ld (V_NF),a
         ld (V_NT),a
-        ld (V_NRL),a
         ld a,1
         ld (V_LIVE),a
         nextreg 0x07,0
-        pop hl
-        pop de
-        pop bc
-        pop af
-        ld sp,(V_SP)
-        nextreg 0x55,5
-        ld de,(0xDCEE)
-        jp 0x8954
+        ret
 
 ; ================= 0x8993: the game loop's exit test =================
 e_q:    nextreg 0x55,PAGE_S
@@ -822,7 +880,6 @@ hideall: push bc
         ld (V_PREV),a
         ld (V_NF),a
         ld (V_NT),a
-        ld (V_NRL),a
         ld (V_LIVE),a
         pop bc
         ret
@@ -852,16 +909,11 @@ build:  ld a,(hl)
         inc hl
         ld a,(hl)
         ld (V_COL),a
-        ld hl,(V_GFX)               ; graphics source: the relocation slot or the graphics
+        ld hl,(V_GFX)               ; graphics source: the graphics, or a copy (under the page)
         ld a,(V_FL)
         bit 6,a
-        jr z,.s1
-        and 0x30
-        rlca
-        rlca
-        ld l,a
-        ld h,high REL
-.s1:    ld (V_SRC),hl
+        call nz,gcopy
+        ld (V_SRC),hl
         ex de,hl
         ld hl,(V_GFX)
         or a
@@ -1390,11 +1442,22 @@ conv:   ld a,(V_NR)
 .ev:    ld a,(V_COL)
         or a
         jr nz,.nc
-        ; cells: attribute line 0x6B00 + ((Y + r) & 0xF8) * 4, display column of the first byte
-        ld a,(V_Y)
+        ; cells: attribute line 0x6B00 + ((Y + r) & 0xF8) * 4 (flipped: Y + R - 1 - r), display
+        ; column of the first byte
+        ld a,(V_FL)
+        bit 7,a
+        jr z,.cy
+        ld a,(V_R)
+        dec a
+        ld hl,V_RR
+        sub (hl)
+        ld hl,V_Y
+        add a,(hl)
+        jr .cy2
+.cy:    ld a,(V_Y)
         ld hl,V_RR
         add a,(hl)
-        and 0xF8
+.cy2:   and 0xF8
         ld l,a
         ld h,0
         add hl,hl
@@ -1487,13 +1550,14 @@ conv:   ld a,(V_NR)
         ret
 
 ; SPR[N] for tile (TX, TY), pattern V_PAT; N += 1
-addspr: ld a,(V_N)
-        ld l,a
-        add a,a
-        add a,a
-        add a,l
+addspr: ld a,(V_N)                  ; HL = SPR + N * 5 (16 bits: N * 5 passes 255 from N = 52)
         ld l,a
         ld h,0
+        ld e,l
+        ld d,h
+        add hl,hl
+        add hl,hl
+        add hl,de
         ld de,SPR
         add hl,de
         push hl
@@ -1543,7 +1607,10 @@ addspr: ld a,(V_N)
         pop hl
         ld (hl),e                   ; attr 0: x
         inc hl
-        ld a,(V_TY)                 ; attr 1: y = Y + TY*16 + 32
+        ld a,(V_FL)                 ; attr 1: y = Y + TY*16 + 32 (flipped: Y + R - 16*(TY+1) + 32)
+        bit 7,a
+        ld a,(V_TY)
+        jr nz,.yf
         add a,a
         add a,a
         add a,a
@@ -1551,15 +1618,36 @@ addspr: ld a,(V_N)
         ld b,a
         ld a,(V_Y)
         add a,b
-        add a,32
+        jr .yd
+.yf:    inc a
+        add a,a
+        add a,a
+        add a,a
+        add a,a
+        ld b,a
+        ld a,(V_R)
+        ld c,a
+        ld a,(V_Y)
+        add a,c
+        sub b
+.yd:    add a,32
         ld (hl),a
         inc hl
-        ld a,(V_FL)                 ; attr 2: palette 0, X mirror, X8
+        ld a,(V_FL)                 ; attr 2: palette 0, X mirror, Y mirror (flipped), X8
         and 1
         rlca
         rlca
         rlca
         or d
+        ld c,a
+        ld a,(V_FL)
+        and 0x80
+        rrca
+        rrca
+        rrca
+        rrca
+        rrca
+        or c
         ld (hl),a
         inc hl
         ld a,(V_PAT)                ; attr 3: visible, attr 4 on, pattern >> 1
@@ -1621,6 +1709,34 @@ setct:  push hl
         ld (hl),a
         pop de
         pop hl
+        ret
+
+; graphics under the page -> TMPG (through slot 4 = page 5), HL = TMPG
+gcopy:  ld a,(V_R)
+        ld e,a
+        ld d,0
+        ld hl,0
+        ld a,(V_W)
+        ld b,a
+.m:     add hl,de
+        djnz .m
+        ld a,(V_FL)
+        and 2
+        jr nz,.o
+        add hl,hl
+.o:     ld b,h
+        ld c,l
+        ld hl,(V_GFX)
+        ld a,h
+        sub 0x20
+        ld h,a
+        ld de,TMPG
+        nextreg 0x54,5
+        ldir
+        nextreg 0x54,4
+        xor a
+        ld (V_CPG),a                ; slot 4 holds page 4 again
+        ld hl,TMPG
         ret
 
 ; colour map entry of the byte just converted (C = mask, B = graphic, DE = 4 past its staging

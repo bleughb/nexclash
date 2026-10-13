@@ -114,17 +114,34 @@ BRIEFING - with its reason.
 # PART 2 - GAMES / SOFTWARE
 
 ## 2.1 Game-engine lessons (all engines)
+- A hook never CALLs on the game's stack, not even one call deep: the return address it leaves
+  below SP is dead stack the original never wrote, and the memory compare catches it (midres shop
+  exit 0xB8A5, 2026-10-13). Switch to the hook stack first, or inline (a MACRO).
+- A game may run its frame routine (plots + screen copy) from more than one loop: Midnight
+  Resistance's shop has its own loop and no commit, so its figures stayed on the ULA (or, while
+  the loop still counted as live, went into the scratch and were not shown at all). Find every caller of the frame routine / screen copy and give each loop a
+  commit and hide-on-exit (midres 0xB893 / 0xB89B / 0xB8A5).
 - Hide the sprites on EVERY way out of the game loop, not only the one the RZX shows: list the
   loop's exits (JP / RET / jumps to another loop) from the code. Midnight Resistance hid them on
   game over (0x8993) only; the RZX ends at game over, so the end-of-level exit (0x8988 JP Z,0xB7E0
   -> shop -> level 2) was never run, and on hardware the player's last sprite stayed on screen
   through the shop (Dean, 2026-10-13). A path the RZX does not reach needs a unit test from a
   collected state (midres: "level exit" cases) - and say so in the game file's Open list.
-- Graphics under the hook page: a figure whose graphics live in the slot the hook page maps over
-  can still be converted by copying them into the page first (midres keys at 0xAB88: page 5 seen
-  at slot 4 for the copy, the stacked pointer moved to the copy, the end pointer put back at the
-  loop exit). Slot 4 may be remapped by a hook only because the ISR never touches 0x8000-0x9FFF
+- Graphics under the hook page: run that plot into a scratch in ANOTHER slot the ISR never
+  touches, with the game's page back where the graphics are (midres: page 27 at slot 2 =
+  0x4000-0x5FFF, loop exits map it back). A per-plot copy of the graphics into the hook page also
+  works but runs out of room (midres keys first did that; shots + explosions need up to 880 bytes
+  a frame). Slot 4 / slot 2 may be remapped by a hook only because the ISR never touches them
   (isr scan) and no hook code or stack lives there.
+- Raising what a hook handles raises the table sizes it reaches: test every table at its budget,
+  not at the RZX's peak. Midnight Resistance's sprite table index N * 5 was 8-bit; the RZX peaked at
+  38 sprites until shots / explosions became sprites, then 57 and the 52nd wrapped onto the first.
+  A unit commit with the table full (64) fails on the old code (negative control) and passes now.
+- The RZX shows a fraction of the figures (Midnight Resistance level 1: 19 of 28 plotter callers;
+  Dean saw more sprites on later levels at once). List every caller of the plotters statically
+  (scan the code for CALL / JP to each plotter entry) and convert by default, unknown callers in
+  their cell colours, instead of a whitelist of the callers the RZX showed; derive unit states for
+  plotters the RZX never ran from recorded ones with the same stack shape.
 - Never hook timing-critical code: title-screen ISRs playing beeper music
   (TID 63328) broke the music when hooked.
 - Games self-modify: check patch sites for writes during play (TID title ISR

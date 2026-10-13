@@ -323,10 +323,12 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    path to close it.
 14. Confirm the 0x3D00 cause (A1): a test build with one harmless routine at 0x3D00 (emulator with
    DivMMC, or hardware); then record the confirmed reason in A1 / LEARNINGS 1.4.
-17. Per-pixel colour sheets (paint a PNG, read it back into a colour map per graphics byte) exist
-   for Midnight Resistance only (nexclash/midres.py: capture / sheet / read_sheet; hooks: ovl in
-   asm/midres_hooks.asm). Generalise the sheet side (composites from the plots, 1:1 PNG, layout
-   JSON) into a shared command when a second game wants it.
+17. Colour sheets are part of every game from Midnight Resistance on (PLAYBOOK 3b / 5 / 6). The
+   sheet side is shared (nexclash/coloursheet.py); each engine still writes its own parts
+   (capture) and its own per-pixel colour map in the sprite builder (midres: sheet_part, asm
+   `ovl`). Games converted before Midnight Resistance have neither; add them when one is reworked.
+   Golden check: `selftest.py --tools` (coloursheet on synthetic parts). Not done: a
+   `nexclash.py sheet` command dispatching to the engine (today `python -m nexclash.<engine> sheet`).
 ### C3. Working rules (token budget)
 Summaries <= 40 lines; disassemble only routines the analysis flags; one simulator pass
 per question; long jobs in background + poll; verify original bytes at every patch site;

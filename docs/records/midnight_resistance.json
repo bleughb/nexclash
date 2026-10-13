@@ -17,6 +17,11 @@
     "name": "midnight_resistance.rzx",
     "md5": "b75ecd5f60c3ec67fe463a0aa606f6a1",
     "path": "midnight_resistance/Midnight_Resistance_1990_Ocean_128K.rzx"
+   },
+   {
+    "name": "midnight_resistance_v2.rzx",
+    "md5": "3e0fa52ae2fbf9fbae62cebb70b83190",
+    "path": "midnight_resistance/Midnight_Resistance_1990_Ocean_128K_V2RZX.rzx"
    }
   ]
  },
@@ -28,7 +33,8 @@
  ],
  "data": [
   "docs/profiles/midnight_resistance.json",
-  "asm/midres_hooks.asm"
+  "asm/midres_hooks.asm",
+  "docs/profiles/midnight_resistance_colours.json"
  ],
  "shared_data": [],
  "rebuild": {
@@ -43,10 +49,11 @@
    "--no-record"
   ],
   "rzx": [
-   "midnight_resistance.rzx"
+   "midnight_resistance.rzx",
+   "midnight_resistance_v2.rzx"
   ],
   "auto_record": false,
-  "minutes": 20
+  "minutes": 60
  },
  "outputs": {
   "plain": {
@@ -55,29 +62,31 @@
   },
   "sprites": {
    "file": "midnight_resistance_sprites.nex",
-   "md5": "bd0d4d3e9042ca55ce84b553799527e9"
+   "md5": "670f94034af175ed56df97f8cdb1ef29"
   }
  },
  "repro": [],
  "status": {
   "title": "Midnight Resistance (128K)",
   "engine_col": "midres (midnight_resistance.md)",
-  "build": "midnight_resistance_sprites.nex bd0d4d3e (altrom + page 26 at slot 5; player green, soldiers white, keys yellow (new), jeep / tank in their cell colours; colour map support; sprites hidden at the end-of-level exit; pattern-slot cache)",
-  "software": "RZX IDENTICAL (also with a repainted colour map), unit + interrupt + level-exit + map PASS",
-  "hardware": "e8f0ece9 runs on a real Next (Dean, 2026-10-13): keys clashed, player sprite stuck through the shop; bd0d4d3e untested",
-  "next": "hardware test bd0d4d3e (keys, shop / level 2); Dean paints the colour sheet; level 2 RZX"
+  "build": "midnight_resistance_sprites.nex 670f9403 (every figure a sprite, also flipped and in the shop; Dean's painted colours: 444 graphics bytes; altrom + page 26 at slot 5, page 27 at slot 2; sprites hidden on every loop exit)",
+  "software": "2 RZX IDENTICAL with the painted colour map, unit + interrupt + level / shop exit + full table + flipped + map PASS",
+  "hardware": "670f9403 tests OK on a real Next (Dean, 2026-10-14)",
+  "next": "further painting on the PAINTING_SPRITES sheet (optional); level 2 RZX"
  },
  "checks": [
   "asm2profile:midnight_resistance"
  ],
  "checked": {
   "deps": {
-   "asm/midres_hooks.asm": "64a1c72836373f18",
-   "docs/profiles/midnight_resistance.json": "175c61b1cc619422",
+   "asm/midres_hooks.asm": "447dac862a009234",
+   "docs/profiles/midnight_resistance.json": "5a95242b03f1aa7d",
+   "docs/profiles/midnight_resistance_colours.json": "3ad5490830c3d01a",
    "nexclash.py": "5de628af10ee7456",
    "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/coloursheet.py": "51fd281fbfb39e67",
    "nexclash/dizzy6.py": "89c8ba59fc762962",
-   "nexclash/midres.py": "e2be0c24c0b0d769",
+   "nexclash/midres.py": "5f0fcc3cb9f5b1d5",
    "nexclash/nextboot.py": "c71aaed434e73ef1",
    "nexclash/rainbow.py": "a2baff9fb4790cca",
    "nexclash/rzx.py": "e3e783e4cc235d85",
@@ -86,16 +95,18 @@
    "nexclash/z80tonex.py": "7b5a0d633ccf369d",
    "skoolkit": "10.1"
   },
-  "date": "2026-10-13"
+  "date": "2026-10-14"
  },
  "verified": {
   "deps": {
-   "asm/midres_hooks.asm": "64a1c72836373f18",
-   "docs/profiles/midnight_resistance.json": "175c61b1cc619422",
+   "asm/midres_hooks.asm": "447dac862a009234",
+   "docs/profiles/midnight_resistance.json": "5a95242b03f1aa7d",
+   "docs/profiles/midnight_resistance_colours.json": "3ad5490830c3d01a",
    "nexclash.py": "5de628af10ee7456",
    "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/coloursheet.py": "51fd281fbfb39e67",
    "nexclash/dizzy6.py": "89c8ba59fc762962",
-   "nexclash/midres.py": "e2be0c24c0b0d769",
+   "nexclash/midres.py": "5f0fcc3cb9f5b1d5",
    "nexclash/nextboot.py": "c71aaed434e73ef1",
    "nexclash/rainbow.py": "a2baff9fb4790cca",
    "nexclash/rzx.py": "e3e783e4cc235d85",
@@ -104,7 +115,7 @@
    "nexclash/z80tonex.py": "7b5a0d633ccf369d",
    "skoolkit": "10.1"
   },
-  "date": "2026-10-13"
+  "date": "2026-10-14"
  },
  "canary": 2,
  "canary_quick": 300

@@ -246,12 +246,13 @@ def tools_check(src):
     from nexclash import snapinfo, memscan, isrinfo, drawcost
     bad = R.selfcheck()
     print('%-4s tools: records plan() on synthetic stamps%s' % ('OK' if not bad else 'FAIL', '' if not bad else ' (%s)' % bad[:3]))
+    cbad = coloursheet_check()
     rec = R.load('chuckie_egg')
     work = tempfile.mkdtemp(prefix='nexclash_tools_')
     d, why = stage(rec, src, work)
     if d is None:
         print('tools: Chuckie Egg reference not found (%s), nothing checked' % why)
-        return 1
+        return 1 + cbad
     ez, er = os.path.join(d, 'chuckie_egg.z80'), os.path.join(d, 'chuckie_egg.rzx')
     checks_ = []
 
@@ -289,7 +290,85 @@ def tools_check(src):
     finally:
         sys.stderr = old
     shutil.rmtree(work, ignore_errors=True)
-    return checks_.count(False) + len(bad)
+    return checks_.count(False) + len(bad) + cbad
+
+
+def coloursheet_check():
+    """nexclash/coloursheet.py on synthetic parts (no game data): a two-part figure drawn normally
+    and mirrored is ONE composite, 1:1 sheet with the 8x8 swatches, read-back of one painted pixel,
+    a painted clear pixel ignored, a resized sheet refused."""
+    from nexclash import coloursheet as cs
+    from PIL import Image
+    work = tempfile.mkdtemp(prefix='nexclash_sheet_')
+    pal = cs.palette_rgb([0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x00, 0x03, 0xE0, 0xE7, 0x1C, 0x1F,
+                          0xFC, 0xFF])
+
+    def part(pid, x, y, mir, w=8, h=4):
+        px = [(c, r, '%s%d' % (pid, r), c, 1 if (c + r) % 3 else 0, 12 if (c + r) % 3 else 0)
+              for r in range(h) for c in range(w)]
+        return dict(id=pid, size=h, w=w, h=h, x=x, y=y, mir=mir, group='Fig', pixels=px,
+                    entries={'%s%d' % (pid, r): [r, 1] for r in range(h)})
+    col = cs.Collector()
+    col.add_frame([part('B', 40, 10, 0), part('L', 40, 14, 0), part('K', 90, 10, 0)])
+    # same role twice (two overlapping explosions): two figures, not one
+    col2 = cs.Collector()
+    col2.add_frame([dict(part('E', 10, 10, 0), role=1), dict(part('F', 12, 11, 0), role=1)])
+    col2.add_frame([dict(part('W', 10, 60, 0), role=2, repeat=True), dict(part('W', 18, 60, 0), role=2, repeat=True)])
+    col.add_frame([part('B', 70, 20, 1), part('L', 70, 24, 1)])
+    comps = col.composites(['Fig'])
+    png, lay = os.path.join(work, 's.png'), os.path.join(work, 's_layout.json')
+    cs.write(comps, png, lay, pal)
+    img = Image.open(png).convert('RGB')
+    L = json.load(open(lay))
+    res = []
+    res.append(('2 figures (body + legs joined, mirrored copy the same one), 1:1', len(comps) == 2 and
+                sorted(len(c['parts']) for c in comps) == [1, 2] and comps[0]['count'] + comps[1]['count'] == 3))
+    res.append(('same role again -> two figures; a repeating role (wheels) -> one',
+                sorted(len(c['parts']) for c in col2.comps.values()) == [1, 1, 2]))
+    res.append(('8x8 swatches 1-15 in palette order', all(img.getpixel((1 + (i - 1) * 10 + 7, 8)) == pal[i]
+                                                          for i in range(1, 16))))
+    c0 = [c for c in L['composites'] if len(c['parts']) == 2][0]
+    img.putpixel((c0['x'] + 1, c0['y']), pal[10])           # body line 0, column 1: ink -> red
+    img.putpixel((c0['x'], c0['y']), pal[10])               # column 0 line 0: clear -> ignored
+    img.save(png)
+    ent, rep = cs.read(png, lay)
+    res.append(('read-back: 1 key, bit 1 = 10, clear pixel ignored', ent == {'B0': [0, 1, [0, 10, 0, 0, 0, 0, 0, 0]]}
+                and rep['painted transparent pixels (ignored)'] == 1))
+    res.append(('read-back: no copy-spread reported for a figure shown once',
+                not any(k.startswith('pixels left unpainted') for k in rep)))
+    # painting sheet (unique): a figure sharing graphics shows only its new pixels; an untouched
+    # sheet drawn with a map reads back to that same map; a repaint edits only what changed
+    col3 = cs.Collector()
+    col3.add_frame([part('B', 40, 10, 0), part('L', 40, 14, 0)])
+    col3.add_frame([part('B', 70, 10, 0), part('M', 70, 14, 0)])
+    pp, pl = os.path.join(work, 'p.png'), os.path.join(work, 'p_layout.json')
+    cmap = {'B0': [0, 1, [0, 10, 0, 0, 0, 0, 0, 0]]}
+    cs.write(col3.composites(['Fig']), pp, pl, pal, cmap, unique=True)
+    P = json.load(open(pl))
+    res.append(('painting sheet: shared body once (2 figures, the second only its new legs)',
+                len(P['composites']) == 2 and sorted(c['h'] for c in P['composites']) == [4, 8]))
+    e2, _ = cs.read(pp, pl)
+    res.append(('painting sheet: untouched -> the same map', e2 == cmap))
+    im2 = Image.open(pp).convert('RGB')
+    c1 = [c for c in P['composites'] if c['h'] == 8][0]
+    im2.putpixel((c1['x'] + 1, c1['y']), pal[13])             # repaint the painted pixel: 10 -> 13
+    im2.save(pp)
+    e3, _ = cs.read(pp, pl)
+    res.append(('painting sheet: repaint edits only that pixel', e3 == {'B0': [0, 1, [0, 13, 0, 0, 0, 0, 0, 0]]}))
+    im2.putpixel((c1['x'] + 1, c1['y']), pal[12])             # back to its default (12): entry gone
+    im2.save(pp)
+    e4, _ = cs.read(pp, pl)
+    res.append(('painting sheet: painted back to the default -> no entry', e4 == {}))
+    img.resize((img.size[0] * 2, img.size[1] * 2)).save(png)
+    try:
+        cs.read(png, lay)
+        res.append(('resized sheet refused', False))
+    except ValueError:
+        res.append(('resized sheet refused', True))
+    shutil.rmtree(work, ignore_errors=True)
+    for name, cond in res:
+        print('%-4s tools: coloursheet: %s' % ('OK' if cond else 'FAIL', name))
+    return sum(1 for _, cond in res if not cond)
 
 
 def smoke(src):
