@@ -131,6 +131,8 @@ also check interrupt safety after every hook instruction (IX, IY, I, IFF, stack 
 midres) with a negative control. Every mismatch must be explained or fixed.
 Also simulate the start-up tail: registers restored, no game memory touched.
 
+Long runs (the full `auto` with verification, selftest): start them with `setsid nohup ... &` and
+poll - a plain background job dies silently when the turn ends (LEARNINGS 2.6).
 Iterate fast (BRIEFING C3b ITERATE): while developing use `--quick N` (a few hundred frames for a
 first check, 2000 before handing over) and the unit tests on 1-2 captured states (minutes). Run the full `auto` ONCE, on the build that goes to the user (Commando ran
 the ~55 min full check five or six times).

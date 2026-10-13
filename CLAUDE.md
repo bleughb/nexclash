@@ -14,6 +14,25 @@ in a separate worktree, LEARNINGS 2.6). Contributors never run that step; mainta
 Never put game data (.z80/.rzx/.nex/.tap/...) in this repo or a contribution: the user's files
 stay on their machine; the maintainers' reference files live in the private repo bleughb/specnext.
 
+## New game: the whole job (the user's prompt only names the game and attaches its files)
+1. Setup: clone bleughb/nexclash and bleughb/specnext side by side (maintainers; a contributor has
+   the package). Cloud session: attach both repos with push access first (LEARNINGS 2.6).
+2. Inputs: the attached .z80 + .rzx -> specnext/reference/<game>/ (maintainers). Folder and
+   games/<game>.md named after the game (lower case, underscores). The game may already have
+   notes and files (STATUS.md, games/<game>.md, specnext/reference/<game>/): read them first.
+   No usable recording (none, or one that desyncs: the tools print a WARNING with the frame) ->
+   ask the user for a Fuse recording (docs/RECORDING_CHECKLIST.md) before phase A.
+3. Follow docs/PLAYBOOK.md phases A-C. Phase A ends with ONE question to the user, with preview
+   frames: which figures become sprites, their colours, what stays on the ULA, depth. Never guess
+   these; if the prompt already says, confirm with the preview.
+4. Long runs (full verify, selftest): `setsid nohup` + poll (LEARNINGS 2.6) - plain `&` dies.
+5. While developing: engine files only, `selftest.py --canary` after any shared change.
+6. End: "End of every task" below - games/<game>.md, record, views, VERIFICATION, capture
+   questions; references + built .nex files to specnext; PRs in both repos (maintainers) or
+   `contribute` (contributors); maintainers: `selftest.py --affected --verify --stamp` in a
+   separate worktree before the merge (Rainbow Islands stays excluded).
+7. Reply: results, the .nex files, a short hardware checklist.
+
 ## Setup
 `pip install skoolkit --break-system-packages`. sjasmplus (only for .asm edits) is bundled and
 pinned: `python tools/asm2profile.py <engine>` assembles and updates the profile (never build
