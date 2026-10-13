@@ -18,7 +18,10 @@ stay on their machine; the maintainers' reference files live in the private repo
 1. Setup: clone bleughb/nexclash and bleughb/specnext side by side (maintainers; a contributor has
    the package). Cloud session: attach both repos with push access first (LEARNINGS 2.6).
 2. Inputs: the attached .z80 + .rzx -> specnext/reference/<game>/ (maintainers). Folder and
-   games/<game>.md named after the game (lower case, underscores).
+   games/<game>.md named after the game (lower case, underscores). The game may already have
+   notes and files (STATUS.md, games/<game>.md, specnext/reference/<game>/): read them first.
+   No usable recording (none, or one that desyncs: the tools print a WARNING with the frame) ->
+   ask the user for a Fuse recording (docs/RECORDING_CHECKLIST.md) before phase A.
 3. Follow docs/PLAYBOOK.md phases A-C. Phase A ends with ONE question to the user, with preview
    frames: which figures become sprites, their colours, what stays on the ULA, depth. Never guess
    these; if the prompt already says, confirm with the preview.

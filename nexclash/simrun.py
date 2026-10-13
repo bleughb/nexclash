@@ -137,7 +137,7 @@ def play_rzx(path, hooks, stop=None):
     import skoolkit.rzxplay as rz
     from skoolkit.snapshot import Snapshot
     from . import rzx as RZ
-    tmp = None
+    tmp, name = None, os.path.basename(path)
     if sum(1 for b in rz.parse_rzx(path) if isinstance(b.obj, Snapshot)) > 1:
         fd, tmp = tempfile.mkstemp(suffix='.rzx')
         os.close(fd)
@@ -158,6 +158,13 @@ def play_rzx(path, hooks, stop=None):
                 (['--stop', str(stop)] if stop else []) + [path])
     except SystemExit:
         pass
+    except Exception as e:                      # SkoolKitError: the replay lost sync with the recording
+        if 'port reading' not in str(e):
+            raise
+        import sys
+        print('WARNING   : %s desyncs at frame %d (%s): the results below cover frames 1-%d only. '
+              'Use --stop %d, or record it again in Fuse (docs/RECORDING_CHECKLIST.md); the built-in '
+              'recorder is 48K-only.' % (name, n[0], e, n[0] - 1, n[0] - 1), file=sys.stderr)
     finally:
         rz.Simulator, rz.CSimulator, rz.RZXTracer.next_frame = old
         if tmp:
