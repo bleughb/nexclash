@@ -119,13 +119,39 @@ def owners(comp):
     return own
 
 
-def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH):
-    """The sheet (png) and its layout (json). colours: an existing map, shown instead of defaults."""
+def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=False):
+    """The sheet (png) and its layout (json). colours: an existing map, shown instead of defaults.
+    unique (the PAINTING sheet, Dean 2026-10-14): every graphics pixel (key, bit) once - a figure
+    sharing graphics with one before it shows only its new pixels (box cropped to them), a figure
+    with nothing new is left out; the largest figure of a group comes first, so shared pieces are
+    shown on a whole figure. Without unique (the REFERENCE sheet): every figure whole."""
     from PIL import Image
     cmap = colours or {}
+    if unique:
+        order = []
+        for c in comps:
+            if c['group'] not in order:
+                order.append(c['group'])
+        comps = sorted(comps, key=lambda c: (order.index(c['group']), -len(owners(c))))
+    shown = set()
     boxes, x, y, rowh, last = [], 1, SW + 4, 0, None
     for comp in comps:
         own = owners(comp)
+        if unique:
+            new = {}
+            for pos, (n, i) in own.items():
+                q = comp['parts'][n]['pixels'][i]
+                if (q[2], q[3]) not in shown:
+                    new[pos] = (n, i)
+            for n, i in new.values():
+                q = comp['parts'][n]['pixels'][i]
+                shown.add((q[2], q[3]))
+            if not new:
+                continue
+            ox, oy = min(px for px, _ in new), min(py for _, py in new)
+            own = {(px - ox, py - oy): v for (px, py), v in new.items()}
+        else:
+            ox = oy = 0
         w = max(px for px, _ in own) + 1
         h = max(py for _, py in own) + 1
         if comp['group'] != last and last is not None:
@@ -133,7 +159,7 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH):
         last = comp['group']
         if x + w > width - 1:
             x, y, rowh = 1, y + rowh + 2, 0
-        boxes.append((comp, own, x, y, w, h))
+        boxes.append((comp, own, x, y, w, h, ox, oy))
         x += w + 2
         rowh = max(rowh, h)
     H = y + rowh + 2
@@ -143,7 +169,7 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH):
             for xx in range(SW):
                 img.putpixel((1 + (i - 1) * (SW + 2) + xx, yy), rgb16[i])
     lay = []
-    for comp, own, bx, by, w, h in boxes:
+    for comp, own, bx, by, w, h, ox, oy in boxes:
         for yy in range(h):
             for xx in range(w):
                 img.putpixel((bx + xx, by + yy), TRANSP_RGB)
@@ -159,9 +185,11 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH):
                               vmir=p.get('vmir', 0),
                               keys=keys, entries={k: p['entries'][k] for k in keys},
                               pixels=[v for q in p['pixels'] for v in (q[0], q[1], ki[q[2]], q[3], q[4], q[5])]))
-        lay.append(dict(group=comp['group'], x=bx, y=by, w=w, h=h, count=comp['count'], parts=parts))
+        lay.append(dict(group=comp['group'], x=bx, y=by, w=w, h=h, ox=ox, oy=oy, count=comp['count'], parts=parts,
+                        show=sorted([px + ox, py + oy] for px, py in own) if unique else None))
     img.save(png)
     json.dump(dict(size=[width, H], palette=[list(c) for c in rgb16],
+                   colours={k: [v[0], v[1], list(v[2])] for k, v in cmap.items()},   # the map it shows
                    swatches=[[1 + (i - 1) * (SW + 2), 1, i] for i in range(1, 16)], composites=lay),
               open(layout_path, 'w'))
     return len(lay)
@@ -186,8 +214,9 @@ def nearest(c, rgb16):
 def read(png, layout_path):
     """Painted sheet -> (colour map {key: [check, kind, 8 nibbles]}, report). Only the pixels a part
     shows are read; a pixel in today's colour keeps its default (nibble 0); clear pixels cannot be
-    painted. A key shown twice: a painted colour beats an unpainted one; two different paints ->
-    the first, reported."""
+    painted. The layout holds the map the sheet was drawn with; a pixel edits it only when its colour
+    differs from what the sheet showed. A key shown twice: a changed colour beats an unchanged one
+    (reported, with the figures that take it); two different changes -> the first, reported."""
     from PIL import Image
     lay = json.load(open(layout_path))
     rgb16 = [tuple(c) for c in lay['palette']]
@@ -196,17 +225,27 @@ def read(png, layout_path):
         raise ValueError('sheet is %dx%d, expected %dx%d (save at the same size, no scaling)'
                          % (tuple(img.size) + tuple(lay['size'])))
     rep = collections.Counter()
-    ent = {}
-    for comp in lay['composites']:
+    # start from the map the sheet was drawn with: only pixels whose colour CHANGED edit it (a shared
+    # pixel may have a different default in each copy, so "looks unpainted" is not "default")
+    base = {k: [v[0], v[1], list(v[2])] for k, v in lay.get('colours', {}).items()}
+    ent = {k: [v[0], v[1], list(v[2])] for k, v in base.items()}
+    changed = set()
+    kept = collections.defaultdict(list)     # (key, bit) -> figures where it was left unpainted
+    for ci, comp in enumerate(lay['composites']):
         parts = _parts_of(comp)
         own = owners(dict(parts=parts))
+        ox, oy = comp.get('ox', 0), comp.get('oy', 0)
+        if comp.get('show') is not None:             # painting sheet: only the pixels shown there
+            keep = {tuple(p) for p in comp['show']}
+            own = {k: v for k, v in own.items() if k in keep}
         for yy in range(comp['h']):
             for xx in range(comp['w']):
-                if (xx, yy) not in own and nearest(img.getpixel((comp['x'] + xx, comp['y'] + yy)), rgb16)[0]:
+                if (xx + ox, yy + oy) not in own and \
+                        nearest(img.getpixel((comp['x'] + xx, comp['y'] + yy)), rgb16)[0]:
                     rep['painted transparent pixels (ignored)'] += 1
         for (px, py), (n, i) in own.items():
             c, r, key, bit, code, dflt = parts[n]['pixels'][i]
-            idx, dist = nearest(img.getpixel((comp['x'] + px, comp['y'] + py)), rgb16)
+            idx, dist = nearest(img.getpixel((comp['x'] + px - ox, comp['y'] + py - oy)), rgb16)
             if dist > 3 * 40 ** 2:
                 rep['pixels not near a palette colour (kept default)'] += 1
                 continue
@@ -214,14 +253,26 @@ def read(png, layout_path):
                 rep['opaque pixels painted grey (kept default)'] += 1
                 continue
             e = ent.setdefault(key, list(parts[n]['entries'][key]) + [[0] * 8])
-            if idx == dflt:
+            shown = (base.get(key) or [0, 0, [0] * 8])[2][bit] or dflt
+            if idx == shown:
+                kept[(key, bit)].append(ci)
                 continue
-            if e[2][bit] and e[2][bit] != idx:
-                rep['pixels painted differently in two places (first kept)'] += 1
+            if (key, bit) in changed:
+                if e[2][bit] != (0 if idx == dflt else idx):
+                    rep['pixels painted differently in two places (first kept)'] += 1
                 continue
-            if not e[2][bit]:
-                e[2][bit] = idx
-                rep['pixels recoloured'] += 1
+            changed.add((key, bit))
+            e[2][bit] = 0 if idx == dflt else idx
+            rep['pixels recoloured' if idx != dflt else 'pixels painted back to the default'] += 1
+    # the same graphics shown in several figures and painted in only some: the paint applies to all
+    spread = {ci for (key, bit), cis in kept.items() if (key, bit) in changed for ci in cis}
+    for (key, bit), cis in kept.items():
+        if (key, bit) in changed:
+            rep['pixels left unpainted in a figure but painted in another copy (paint applies to all)'] += len(cis)
+    if spread:
+        rep['figures that take paint from another copy: %s' % ', '.join(
+            '%s at %d,%d' % (lay['composites'][ci]['group'], lay['composites'][ci]['x'], lay['composites'][ci]['y'])
+            for ci in sorted(spread))] = len(spread)
     ent = {k: e for k, e in ent.items() if any(e[2])}
     rep['graphics bytes with colours'] = len(ent)
     return ent, rep

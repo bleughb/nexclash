@@ -88,8 +88,11 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   The sheet still shows only what the recording drew: ask for a recording that reaches every
   level, weapon and collectable the user can, before the sheet goes out.
 - COLOUR SHEET - every game from Midnight Resistance on (Dean, 2026-10-13). Colours are not
-  settled in words: the user paints them. With the phase-A question, send `<game>_colours.png`:
-  every figure that becomes sprites, from the RZX, in the colours the first build would give it.
+  settled in words: the user paints them. With the phase-A question, send the two sheets
+  (Dean, 2026-10-14): `<game>_PAINTING_SPRITES.png` - every graphic ONCE (a figure that shares
+  graphics with one before it shows only its new pixels; the largest figure of a group first) - and
+  `<game>_REFERENCE_ALL_SPRITES.png` - every figure whole, to see the result; both in the colours
+  the build gives them now (`coloursheet.write(..., unique=True / False)`).
   Rules (Dean): 1:1 (one PNG pixel = one Spectrum pixel; an enlarged sheet is too big to paint),
   multi-part figures JOINED as the game draws them, a row of 8x8 swatches of the sprite palette
   (1-15) at the top, no text. The user paints, keeps the size, sends it back; the read-back is the
@@ -99,7 +102,12 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   the parts: per plot its staging pixels, each with a colour-map key (one graphics byte = 8 pixels),
   bit, ink / outline / clear code and today's colour (template: midres.sheet_part / capture, CLI
   `python -m nexclash.<engine> sheet RZX` / `colours painted.png`). The PNG and its
-  `_layout.json` hold game graphics: specnext/reference/<game>/ only. Later levels the RZX does not
+  `_layout.json` hold game graphics: specnext/reference/<game>/ only. Colours belong to graphics
+  bytes, so every figure drawn from the same graphics takes the same paint - why the painting sheet
+  shows each graphic once (Midnight Resistance's first sheet showed the tank three times and Dean
+  painted one copy, 2026-10-14). The painting layout keeps the map it was drawn with: a repaint
+  changes only the pixels whose colour changed, and painting a pixel back to its default removes
+  its entry. Re-send both sheets after each read-back. Later levels the RZX does not
   reach: a second sheet from a later recording, read into the same colours file.
 - Speed budget: `cost GAME.z80 --rzx R --at PLOTTER --group IX` gives the original's cost per
   draw (T-states), draws per frame and per object; set the allowed hook cost per draw now, and design to it (caching, fewer

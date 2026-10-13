@@ -20,7 +20,7 @@ Selftest names them midnight_resistance.z80 / .rzx / _v2.rzx (docs/records/midni
 | Output | MD5 | Status |
 |---|---|---|
 | midnight_resistance.nex (plain, tail 0x7B7E) | 17239acaaf67b0f8011478053e17829d | built; hardware untested |
-| midnight_resistance_sprites.nex (altrom + pages 26 / 27, every figure, shop, colour map) | a4fb69a2c8eaa820bf69da2edd589be1 | 2 RZX IDENTICAL; tests OK on hardware (Dean, 2026-10-14) |
+| midnight_resistance_sprites.nex (altrom + pages 26 / 27, every figure, shop, Dean's painted colours) | 670f94034af175ed56df97f8cdb1ef29 | 2 RZX IDENTICAL; tests OK on hardware (Dean, 2026-10-14; a4fb69a2 before it also OK) |
 
 ## Snapshot (0b)
 128K, 7FFD=0x10 (ROM 1, bank 0, normal screen), PC 0x739E (RAM, title/attract), IM 2 I=0xFE ->
@@ -98,6 +98,11 @@ ink of their cell | everything in the ink of its cell.
   key icon), black outline - Dean to confirm or repaint on the colour sheet.
 - Colours per pixel: Dean paints a sheet; the PNG comes back and becomes the colour map. Sheet
   rules (Dean): 1:1 pixels, multi-part figures joined, 8x8 palette swatches.
+- Painted (Dean, 2026-10-14; specnext mr_colours_painted.png): 1,196 pixels changed in 25 figures
+  (soldiers, keys, shots, the tank and turret, the jeep, shop items, figures from the code) ->
+  docs/profiles/midnight_resistance_colours.json, 444 graphics bytes. The tank is on the sheet
+  three times (same graphics): the cyan Dean added on the second copy's dome applies to all three
+  (one colour per graphics byte; painted beats unpainted). Keys: as painted (proposal superseded).
 - Sprites: player, enemy soldiers + gun turrets, vehicles (jeep, end-of-level tank).
   Explosions, bullets and small objects stay on the ULA (they keep their own painted colours).
 - Colours: "keep the colours the game defines" (explosions are excellent). The player and soldiers
@@ -175,6 +180,11 @@ touches slots 2, 4, 5 (full-RZX isr slot scan). Interrupts stay ON in every hook
   ISR never touches 0x8000-0x9FFF) and overlays non-zero nibbles on opaque pixels (ovl); a check
   byte that does not match (other graphics at that address in a later level) leaves the defaults.
   The mask-only (flashing) image is never mapped.
+- Two sheets (Dean, 2026-10-14): `python -m nexclash.midres sheet RZX RZX --z80 Z80 -o
+  midnight_resistance` -> midnight_resistance_PAINTING_SPRITES.png (+ _layout.json; every graphic
+  once) and midnight_resistance_REFERENCE_ALL_SPRITES.png (every figure whole); `colours
+  midnight_resistance_PAINTING_SPRITES.png` reads the painting back. Both drawn with the current
+  colours file, so the next painting continues from Dean's first.
 - Sheet sources: every recording given (`sheet RZX RZX ...`, plots only inside the game loop / shop
   loop, as the patch converts them) and, with `--z80`, the STATIC list: figures the code can draw
   that no recording has (shown white with a black outline; unpainted they keep their cell colours).
@@ -213,8 +223,6 @@ also with a repainted colour map; unit + interrupt + exits + full table + flippe
 - Converted figures appear when the commit runs (after the screen copy), not as the copy passes.
 
 ## Open
-- Colour sheet: Dean to paint mr_colours.png (keys yellow is a proposal) -> colours json -> rebuild
-  + full verify. Add docs/profiles/midnight_resistance_colours.json to the record's data list then.
 - The second RZX covers the shop and more of level 1 (0x89AB object, player add-on, more poses)
   but not every weapon / collectable / level 2: still unseen callers 9AC7 / 9AD7 / 9AF1 / A142 /
   9D67 and 7E06 (static scan; converted, proven by derived states only). A level 2 RZX (Dean)
@@ -224,7 +232,7 @@ also with a repainted colour map; unit + interrupt + exits + full table + flippe
 - Speed: more figures per commit (shots, explosions); no hardware timing yet.
 - Level exit 0x8988 is proven by unit tests only: the shop and level 2 need a recording (Dean).
   Level 2's figures (callers, graphics) are unknown: the sheet covers level 1 only.
-- Hardware: a4fb69a2 tests OK (Dean, 2026-10-14; overall verdict, items not reported one by one).
+- Hardware: a4fb69a2 and 670f9403 (painted colours) test OK (Dean, 2026-10-14; overall verdict, items not reported one by one).
 - Later levels (banks 1/3/4/6) not in the RZX: need a later-levels recording; their figures may
   use other callers (stay on the ULA) or graphics in 0xA000-0xBFFF (guard: stay on the ULA).
 - Tank scenes: cache thrash (16 entries); 32 entries need more page room (SIG area).

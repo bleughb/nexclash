@@ -334,6 +334,31 @@ def coloursheet_check():
     ent, rep = cs.read(png, lay)
     res.append(('read-back: 1 key, bit 1 = 10, clear pixel ignored', ent == {'B0': [0, 1, [0, 10, 0, 0, 0, 0, 0, 0]]}
                 and rep['painted transparent pixels (ignored)'] == 1))
+    res.append(('read-back: no copy-spread reported for a figure shown once',
+                not any(k.startswith('pixels left unpainted') for k in rep)))
+    # painting sheet (unique): a figure sharing graphics shows only its new pixels; an untouched
+    # sheet drawn with a map reads back to that same map; a repaint edits only what changed
+    col3 = cs.Collector()
+    col3.add_frame([part('B', 40, 10, 0), part('L', 40, 14, 0)])
+    col3.add_frame([part('B', 70, 10, 0), part('M', 70, 14, 0)])
+    pp, pl = os.path.join(work, 'p.png'), os.path.join(work, 'p_layout.json')
+    cmap = {'B0': [0, 1, [0, 10, 0, 0, 0, 0, 0, 0]]}
+    cs.write(col3.composites(['Fig']), pp, pl, pal, cmap, unique=True)
+    P = json.load(open(pl))
+    res.append(('painting sheet: shared body once (2 figures, the second only its new legs)',
+                len(P['composites']) == 2 and sorted(c['h'] for c in P['composites']) == [4, 8]))
+    e2, _ = cs.read(pp, pl)
+    res.append(('painting sheet: untouched -> the same map', e2 == cmap))
+    im2 = Image.open(pp).convert('RGB')
+    c1 = [c for c in P['composites'] if c['h'] == 8][0]
+    im2.putpixel((c1['x'] + 1, c1['y']), pal[13])             # repaint the painted pixel: 10 -> 13
+    im2.save(pp)
+    e3, _ = cs.read(pp, pl)
+    res.append(('painting sheet: repaint edits only that pixel', e3 == {'B0': [0, 1, [0, 13, 0, 0, 0, 0, 0, 0]]}))
+    im2.putpixel((c1['x'] + 1, c1['y']), pal[12])             # back to its default (12): entry gone
+    im2.save(pp)
+    e4, _ = cs.read(pp, pl)
+    res.append(('painting sheet: painted back to the default -> no entry', e4 == {}))
     img.resize((img.size[0] * 2, img.size[1] * 2)).save(png)
     try:
         cs.read(png, lay)

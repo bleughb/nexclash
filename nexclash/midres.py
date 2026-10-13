@@ -1404,10 +1404,22 @@ def _snap(z80):
     return o
 
 
-def sheet(comps, png, layout_path, colours=None):
+def sheet(comps, png, layout_path, colours=None, unique=False):
     from . import coloursheet as cs
     cmap = {ckey(*k): v for k, v in (colours or {}).items()}
-    return cs.write(comps, png, layout_path, [rgb(i) for i in range(16)], cmap)
+    return cs.write(comps, png, layout_path, [rgb(i) for i in range(16)], cmap, unique=unique)
+
+
+def sheets(comps, prefix, colours=None):
+    """The two sheets (Dean, 2026-10-14): <prefix>_PAINTING_SPRITES.png (every graphic once; paint
+    this, + its _layout.json) and <prefix>_REFERENCE_ALL_SPRITES.png (every figure whole, in the
+    colours the build uses; not read back). -> [(path, figures)]."""
+    out = []
+    for name, unique in (('PAINTING_SPRITES', True), ('REFERENCE_ALL_SPRITES', False)):
+        png = '%s_%s.png' % (prefix, name)
+        n = sheet(comps, png, os.path.splitext(png)[0] + '_layout.json', colours, unique)
+        out.append((png, n))
+    return out
 
 
 def read_sheet(png, layout_path):
@@ -1439,7 +1451,8 @@ def _main(argv=None):
     sub = ap.add_subparsers(dest='cmd', required=True)
     p = sub.add_parser('sheet', help='RZX(s) -> sheet PNG + layout JSON (game graphics: keep private)')
     p.add_argument('rzx', nargs='+', help='recordings (autosaves stripped); every figure any of them draws')
-    p.add_argument('-o', '--output', default='mr_colours.png')
+    p.add_argument('-o', '--output', default='midnight_resistance',
+                   help='prefix: writes PREFIX_PAINTING_SPRITES.png (+ _layout.json) and PREFIX_REFERENCE_ALL_SPRITES.png')
     p.add_argument('--z80', help='the snapshot: adds the figures no recording drew yet, from the code (STATIC)')
     p.add_argument('--stop', type=int)
     p = sub.add_parser('colours', help='painted sheet -> docs/profiles/midnight_resistance_colours.json')
@@ -1449,9 +1462,9 @@ def _main(argv=None):
     a = ap.parse_args(argv)
     if a.cmd == 'sheet':
         comps = capture(a.rzx, a.stop, z80=a.z80)
-        lay = os.path.splitext(a.output)[0] + '_layout.json'
-        n = sheet(comps, a.output, lay, load_colours())
-        print('%d figures -> %s (+ %s; keep both: the layout reads the painted sheet back)' % (n, a.output, lay))
+        for png, n in sheets(comps, a.output, load_colours()):
+            print('%d figures -> %s' % (n, png))
+        print('paint the _PAINTING_SPRITES sheet; keep its _layout.json (it reads the painted sheet back)')
     else:
         lay = a.layout or os.path.splitext(a.png)[0] + '_layout.json'
         ent, rep = read_sheet(a.png, lay)
