@@ -38,6 +38,8 @@ Record fields (docs/records/<name>.json; copy the nearest record, then edit):
   repro           extra builds (old strategies) with their own outputs
   status          STATUS.md columns: title, engine_col, build, software, hardware, next
   checks          quick per-game checks run with every rebuild (e.g. "asm2profile:<profile>")
+  excluded        reason string: plan() never rebuilds or re-verifies this game (--affected, release,
+                  --full); `selftest.py --game NAME [--verify]` still runs it explicitly
   canary          1 = tool-chain canary stage 1, 2 = stage 2 (selftest --canary); canary_quick =
                   frames of the stage-2 quick verify
   checked / verified   stamps written by selftest --stamp (dependency hashes, date); never by hand
@@ -163,7 +165,9 @@ def plan(recs=None, full=False):
         shared = [p for p in ch_verified if p not in own(r)]
         if shared:
             shared_hit.setdefault(r['engine'], set()).update(shared)
-        if not r.get('rebuild'):
+        if r.get('excluded'):
+            out.append([r, 'none', 'excluded: %s' % r['excluded']])
+        elif not r.get('rebuild'):
             out.append([r, 'none', 'no automated rebuild recipe yet'])
         elif full and r.get('verify'):
             out.append([r, 'reverify', '--full'])
@@ -189,9 +193,10 @@ def plan(recs=None, full=False):
 def selfcheck():
     """plan() on synthetic stamps (no reference files needed): an unchanged tree skips everything; an
     engine file re-verifies its game only; a shared file rebuilds every dependent and re-verifies
-    only the representative; a re-verification left due survives a rebuild-only stamp. -> failures"""
+    only the representative; a re-verification left due survives a rebuild-only stamp; an excluded
+    record is never planned. -> failures"""
     import copy
-    recs = [r for r in all_records() if r.get('rebuild')]
+    recs = [r for r in all_records() if r.get('rebuild') and not r.get('excluded')]
     base = {r['name']: hashes(deps(r)) for r in recs}
 
     def run(edit=None, verified_edit=None):
@@ -225,6 +230,13 @@ def selfcheck():
         want = 'reverify' if r.get('representative') and r.get('verify') else 'skip'
         if p[r['name']] != want:
             bad.append('due re-verification after a rebuild stamp: %s %s, want %s' % (r['name'], p[r['name']], want))
+    # exclusion: a record marked "excluded" stays 'none' even when its own and shared files changed
+    ex = copy.deepcopy(recs[0])
+    ex['excluded'] = 'selfcheck'
+    ex['checked'] = ex['verified'] = {'deps': {k: 'old' for k in base[ex['name']]}}
+    acts = [a for r, a, _ in plan([ex])[0]]
+    if acts != ['none']:
+        bad.append('excluded record planned: %s' % acts)
     return bad
 
 

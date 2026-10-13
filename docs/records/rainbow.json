@@ -111,5 +111,6 @@
    "skoolkit": "10.1"
   },
   "date": "2026-10-13"
- }
+ },
+ "excluded": "Dean 2026-10-13: too slow (~52 min verify) and being reworked; run it explicitly with selftest.py --game rainbow [--verify]"
 }
