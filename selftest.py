@@ -12,6 +12,12 @@
     python selftest.py --plan              what --affected would do, without running anything
     python selftest.py --tools             the analysis commands (inspect/scan/isr/cost) on Chuckie Egg,
                                            and records.plan() on synthetic stamps
+    python selftest.py --canary            two-stage tool-chain check (Dean, 2026-10-13): stage 1 = the
+                                           record marked "canary": 1 (Chuckie Egg) rebuilt, MD5s, seconds;
+                                           if it fails, stage 2 = "canary": 2 (Midnight Resistance) rebuilt
+                                           + quick differential verify (~2 min) to tell a broken tool chain
+                                           from a game-specific fault. Every selftest run that FAILS a game
+                                           runs stage 2 too and says which it is.
   options: [FOLDER] (default $NEXCLASH_REFERENCE, ./reference, ../specnext/reference), --stamp (write the
   passed results into the records: 'checked' after a rebuild, 'verified' after a re-verification),
   --jobs N (games in parallel), --human (also verify against the extra recordings a record lists).
@@ -260,9 +266,23 @@ def tools_check(src):
         ok('inspect: 48K, IM 2, no loader warning', '48K' in txt and 'IM 2' in txt and not warn, (txt, warn))
         _, r = isrinfo.isr(ez, [er], stop=150)
         ok('isr: handler 40092, no IX/IY reads', 40092 in r['entries'] and not any(r['reads_entry'].values()), r)
+        ok('isr: slots touched 0 r, 3 r, 4 x, 5 r, 7 rw (slot 2 free for a hook page)',
+           r['slots'] == {0: 'r', 3: 'r', 4: 'x', 5: 'r', 7: 'rw'}, r['slots'])
         _, r = memscan.scan(ez, [er], ranges=['0x5B00-0x5BFF', '0x4000-0x57FF'], stop=300)
         ok('scan RZX (300 frames): printer buffer 0x5B00-0x5BFF untouched, screen written',
            memscan.touched_count(r, '0x5B00-0x5BFF') == 0 and memscan.touched_count(r, '0x4000-0x57FF') > 0, r['ranges'])
+        _, r = memscan.scan(ez, [er], ranges=['0x4000-0x57FF'], stop=300, writers=True)
+        w = r['ranges']['0x4000-0x57FF']
+        ok('scan --writers (300 frames): screen writers 43909 x141017, 43916 x42204, 42409, 40068; 3 readers',
+           w['writers'].get(43909) == 141017 and w['writers'].get(43916) == 42204 and
+           set(w['writers']) == {43909, 43916, 42409, 40068} and len(w['readers']) == 3, w)
+        from nexclash import preview
+        pv = os.path.join(work, 'preview.png')
+        _, r = preview.preview(ez, [er], pv, at=[400, 800], plots=[39500])
+        g = r['groups']
+        ok('preview: 2 shots, plotter 39500 in 4 caller groups (40385: 184 calls, 8832 bytes)',
+           r['shots'] == [400, 800] and len(g) == 4 and g.get((39500, 40385), {}).get('calls') == 184 and
+           g[(39500, 40385)]['bytes'] == 8832 and os.path.getsize(pv) > 1000, g)
         _, r = drawcost.cost(ez, 39500, [er], stop=1500)
         ok('cost plotter 39500 (1500 frames): 1402 calls, median 19535 T',
            r['calls'] == 1402 and r['median'] == 19535, r)
@@ -288,6 +308,75 @@ def smoke(src):
     sys.exit(1 if bad else 0)
 
 
+def _canary_rec(stage_):
+    return next((r for r in R.all_records() if r.get('canary') == stage_), None)
+
+
+def canary2(src):
+    """Stage 2: the canary-2 game (128K, alt ROM, interrupts on, paged hook RAM, pattern cache) rebuilt
+    (MD5s) and verified differentially against the first `canary_quick` frames of its recording.
+    -> (failures, lines); failures None if the references are missing."""
+    rec = _canary_rec(2)
+    lines = []
+    if rec is None:
+        return None, ['canary 2: no record marked "canary": 2']
+    work = tempfile.mkdtemp(prefix='nexclash_canary2_')
+    d, why = stage(rec, src, work)
+    if d is None:
+        return None, ['canary 2 (%s): %s' % (rec['name'], why)]
+    bad = rebuild(rec, d, lines)
+    v = rec['verify']
+    out = os.path.join(d, 'canary')
+    cmd = [sys.executable, NEXCLASH, 'auto', os.path.join(d, rec['inputs']['snapshot']['name'])] + \
+        v.get('args', []) + ['--quick', str(rec.get('canary_quick', 300)), '-o', out]
+    for r in v.get('rzx', []):
+        cmd += ['--rzx', os.path.join(d, r)]
+    _run(cmd)
+    bad += _verify_report(_report(out, _snapname(rec)), '%s quick (%d frames)' % (rec['name'], rec.get('canary_quick', 300)),
+                          lines, rec)
+    shutil.rmtree(work, ignore_errors=True)
+    return bad, lines
+
+
+def canary(src):
+    """--canary: stage 1 (seconds); stage 2 only when stage 1 fails."""
+    rec = _canary_rec(1)
+    work = tempfile.mkdtemp(prefix='nexclash_canary1_')
+    d, why = stage(rec, src, work)
+    if d is None:
+        sys.exit('CANARY 1 (%s): %s under %s' % (rec['name'], why, src))
+    lines = []
+    bad = rebuild(dict(rec, checks=[]), d, lines)
+    shutil.rmtree(work, ignore_errors=True)
+    print('\n'.join(lines))
+    if not bad:
+        print('CANARY PASSED (stage 1: %s)' % rec['name'])
+        return 0
+    print('CANARY stage 1 FAILED (%s) - running stage 2' % rec['name'])
+    b2, l2 = canary2(src)
+    print('\n'.join(l2))
+    if b2 is None:
+        print('CANARY FAILED: stage 2 could not run - treat the tool chain as broken')
+    elif b2:
+        print('CANARY FAILED: stage 2 failed too - the TOOL CHAIN is broken (fix it before any game work)')
+    else:
+        print('CANARY: stage 2 PASSED - the tool chain works; the stage-1 fault is specific to %s' % rec['name'])
+    return 1
+
+
+def diagnose(src, failed):
+    """After a selftest run with failures: stage 2 tells a broken tool chain from game faults."""
+    print('DIAGNOSE: %d problem(s) in %s - running canary stage 2' % (len(failed), ', '.join(sorted(failed))))
+    b2, l2 = canary2(src)
+    print('\n'.join(l2))
+    if b2 is None:
+        print('DIAGNOSE: canary stage 2 could not run - cause unknown')
+    elif b2:
+        print('DIAGNOSE: canary stage 2 FAILED - the TOOL CHAIN is broken; fix it first')
+    else:
+        print('DIAGNOSE: canary stage 2 PASSED - the tool chain works; the failures are specific to those games')
+
+
 def _arg(name, default=None):
     return sys.argv[sys.argv.index(name) + 1] if name in sys.argv[:-1] else default
 
@@ -306,6 +395,8 @@ def main():
         sys.exit(__doc__)
     if '--smoke' in flags:
         smoke(src)
+    if '--canary' in flags:
+        return canary(src)
     if '--tools' in flags:
         bad = tools_check(src)
         print('TOOLS %s' % ('PASSED' if not bad else 'FAILED'))
@@ -330,7 +421,7 @@ def main():
         if act == 'none':
             print('--   %s: %s' % (r['name'], why))
     work = tempfile.mkdtemp(prefix='nexclash_selftest_')
-    fails, skipped, passed = 0, [], []
+    fails, skipped, passed, failed = 0, [], [], []
     human = '--human' in flags
     jobs = int(_arg('--jobs', '1'))
     print('plan: %s' % (', '.join('%s %s' % (act, r['name']) for r, act, _ in todo) or 'nothing to do'))
@@ -343,6 +434,8 @@ def main():
                 continue
             print('\n'.join(lines), flush=True)
             fails += bad
+            if bad:
+                failed.append(rec['name'])
             if not bad:
                 passed.append((rec, act))
     if '--stamp' not in flags:                 # --stamp regenerates them below
@@ -359,6 +452,8 @@ def main():
         print('stamped: %s' % ', '.join('%s (%s)' % (r['name'], 'verified' if a == 'reverify' else 'checked')
                                         for r, a in passed) or 'nothing')
         R.views()
+    if failed and not (len(failed) == 1 and failed[0] == (_canary_rec(2) or {}).get('name')):
+        diagnose(src, failed)
     if skipped:
         print('SKIPPED: %s' % '; '.join(skipped))
     res = 'FAILED: %d problem(s)' % fails if fails else 'PASSED' if not skipped else \

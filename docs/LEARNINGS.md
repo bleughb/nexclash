@@ -428,8 +428,20 @@ BRIEFING - with its reason.
   all held the same MD5s). Keep one source (the record) and generate the rest.
 
 ## 2.6 Process / tokens (this sandbox)
-- One CPU; background jobs die when the turn ends: run long jobs sequentially
-  (`setsid nohup sh script.sh &`, or chain: `setsid nohup sh -c 'a; b' ... &`) and poll inside the turn. A `( a; b ) &` subshell dies silently.
+- Background jobs die when the turn ends (or the shell resets) unless started in their OWN session:
+  `setsid nohup sh -c 'cd DIR && a; b' > log 2>&1 < /dev/null &`, then poll inside the turn. Plain
+  `nohup cmd &` and `( a; b ) &` die silently - the log just stops (Midnight Resistance session:
+  a 20-min `selftest --verify` lost twice). Check with `ps -eo pid,sid,args`: the job's SID must
+  be its own PID. 1-2 CPUs: `--jobs 2` at most.
+- Run a stamping selftest in a separate git worktree (`git worktree add ../nexclash-verify BRANCH`)
+  so its record stamps do not collide with edits in the main checkout; commit them from there.
+- `cd X; cmd` runs cmd in the OLD directory when X does not exist - use `cd X && cmd` (a selftest
+  with --stamp started in the wrong checkout).
+- GitHub from a cloud session: the git proxy pushes only to repositories attached to the session
+  (attach with push access first; a 403 "not in this session's authorized repository set" says
+  so); the gh token may be invalid - use `env -u GH_TOKEN gh api ...`; GraphQL is blocked, so
+  `gh pr create` fails: open PRs with `gh api repos/OWNER/REPO/pulls -f title=... -f head=...
+  -f base=... -f body=...`. A PR stacked on an unmerged one: base = that PR's branch.
 - A limit written without its reason gets broken: BRIEFING said alt-ROM hooks end < 0x3D00 next
   to the font, so a game that never reads the font looked exempt - and code at 0x3Dxx crashed it
   (probably the DivMMC automap). Write the WHY with every limit, and mark an inferred why as such.

@@ -1,4 +1,5 @@
 # Chuckie Egg (A&F Software, 1983) - engine `chuckie`
+Tool-chain canary stage 1 (`selftest.py --canary`; record "canary": 1): rebuilt on every session that touches shared code.
 
 48K. Code: nexclash/chuckie.py, asm/chuckie_hooks.asm, docs/profiles/chuckie_egg.json (after any
 .asm edit: `python tools/asm2profile.py chuckie_egg`). Dispatch: nexclash.py cmd_auto, by signature at 39500.

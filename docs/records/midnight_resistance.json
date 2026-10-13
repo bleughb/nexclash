@@ -105,5 +105,7 @@
    "skoolkit": "10.1"
   },
   "date": "2026-10-13"
- }
+ },
+ "canary": 2,
+ "canary_quick": 300
 }
