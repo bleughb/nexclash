@@ -131,7 +131,8 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 |---|---|---|---|
 | printer | trampolines at 0x5B00 (game RAM, must be free); hook code in bank 10 upper page, paged into slot 0 per hook | byte 0x5B00 | DI + page slot 0 in/out |
 | slot1 | everything in RAM page 24 permanently at 0x2000-0x3FFF, code at 0x386E (48K ROM's unused block); needs "game never reads ROM" | NextReg $7F | direct calls, no paging |
-| altrom (DEFAULT since 2026-09-28) | alt ROM image 1 = exact copy of ROM3 (48K) + slot1 hook code + frame table + register block (TID: 0x386E-, all $FF in the 48K ROM, must end < 0x3D00; Dizzy V: 0x3800-; NO code may ever sit in 0x3D00-0x3DFF - Commando crashed with code there, probable cause DivMMC automap on fetch (A1); Commando: data there, code also 0x3F00+); stub fills it in write mode, tail sets $8C=$80; RAM page 24 in bank 12 is only the copy source | NextReg $7F (Dizzy V: none) | direct calls, no paging, no DI; the game may read every ROM byte the patch leaves as ROM (an engine that replaces more, like Commando's whole 0x2000-0x3FFF, must prove by verify that the game never reads it); writes ignored; survives 7FFD |
+| altrom (DEFAULT since 2026-09-28) | alt ROM image 1 = exact copy of ROM3 (48K) + slot1 hook code + frame table + register block (TID: 0x386E-, all $FF in the 48K ROM, must end < 0x3D00 - but a game may test 0x386E = $FF as a 48K-ROM check: Smash TV does, so its hooks sit at 0x2100-; list the ROM bytes the game reads first, LEARNINGS 1.3; Dizzy V: 0x3800-; NO code may ever sit in 0x3D00-0x3DFF - Commando crashed with code there, probable cause DivMMC automap on fetch (A1); Commando: data there, code also 0x3F00+); stub fills it in write mode, tail sets $8C=$80; RAM page 24 in bank 12 is only the copy source | NextReg $7F (Dizzy V: none) | direct calls, no paging, no DI; the game may read every ROM byte the patch leaves as ROM (an engine that replaces more, like Commando's whole 0x2000-0x3FFF, must prove by verify that the game never reads it); writes ignored; survives 7FFD |
+| slot7 scratch (Smash TV, 2026-10-13) | code in alt ROM 0x2100-; state + a scratch copy of the back buffer in RAM page 26 mapped at MMU slot 7 (where the game's buffer is) while a hook runs: the game's own plotters draw into the scratch (LEARNINGS 2.1) | page variables | interrupts OFF (the game's DI; its IM 2 handler lives in slot 7) |
 | slot5 (Midnight Resistance; runs on hardware 2026-10-13) | code + tables in alt ROM 0x2000-0x3CFF (game reads ROM 0x0000 + font only); state, hook stack and a scratch copy of the back buffer in RAM page 26 mapped at MMU slot 5 only while a hook runs | page variables | interrupts ON: slot 5 is never touched by the ISR (full-RZX slot scan), and the ISR's unlocked 7FFD writes reset only slots 0/1/6/7 |
 Choice rule (build.choose_tid_strategy, returns strategy/reason/tail): altrom if no recording
 reads 0x386E-0x3CFF AND (printer buffer free -> tail at 0x5B00, else dead stack >= 54 -> tail
@@ -290,7 +291,10 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
 11. No hook speed budget and no profiler: Commando's and Midnight Resistance's hook costs were
    measured with scratch scripts (T-states per plot / commit from the pair runs, original vs
    patched; the simulator ignores the 28 MHz turbo). Wanted: an `auto` line with hook T-states per
-   call (median / max) and a documented budget per game frame.
+   call (median / max) and a documented budget per game frame. Smash TV's `auto` has a per-engine
+   `Speed` line (T per game frame, original vs patched, 28 MHz parts / 8, from the verifier's pair
+   runs) - the pattern to lift into a shared helper. It matters most for games without frame sync,
+   where hook cost changes the game's speed (LEARNINGS 2.1).
 13. Done 2026-10-13: `isr` Slots line, `scan --writers`, `preview` (from the Midnight Resistance
    scratch scripts). Still scratch-only: hook cost per game frame (#11).
 14. Every edit to nexclash.py (records ALWAYS) makes every game's representative due for

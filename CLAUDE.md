@@ -37,7 +37,8 @@ or download another version; tools/sjasmplus/README.md).
   sprite pixels against the original plot, and no jumps into the middle of a patched instruction.
 - Cover paths the RZX does not reach with unit tests: guard edges (converted vs passthrough must
   match the guard), table-full cases, and a negative control. The negative control must use the
-  broken patch's own tables (restore only run-time state from captured states).
+  broken patch's own tables: restore only the run-time byte ranges of captured states (a copy of
+  the whole state area silently puts the good tables back and the control passes - Smash TV).
 - Keep changes additive and limited to the new engine (one module, one .asm, one profile, one
   games/ file, a dispatch line in nexclash.py cmd_auto, an evidence record docs/records/<game>.json).
 - Ask the user before decisions that change what they see (which figures become sprites,
