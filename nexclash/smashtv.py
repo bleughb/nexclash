@@ -52,7 +52,8 @@ STATE_END = 0x980           # 0xE980-0xFFFF of PG = scratch copy of the back buf
 NGRP, MAXSPR = 32, 128
 # sprite palette 0: index 0 transparent, 1 black, 2-8 normal blue..white, 9-15 bright blue..white
 PALETTE = [0x00, 0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x03, 0xE0, 0xE3, 0x1C, 0x1F, 0xFC, 0xFF]
-CLIP = (16, 239, 24, 183)   # play area (buffer columns 2-29, lines 48-207)
+CLIP = (16, 239, 24, 183)
+SPRITES_SUFFIX = '_sprites_outline_cell_paper.nex'   # look A (Dean, 2026-10-13): outline in the cell paper   # play area (buffer columns 2-29, lines 48-207)
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -962,7 +963,7 @@ def auto(a, z80, name, out, say):
         'that state + front end 0x%04X + the prompt row' % (ENTRY, fr, os.path.basename(start), FRONT))
     say('Front end : "DO YOU WANT TO BE INVULNERABLE ?" -> N / Y / SYM+Y: state = the loader\'s at '
         'its USR (Y: 33465 = 201) -> %s' % ('PASS' if fok else 'FAIL %s' % ft))
-    spr = os.path.join(out, name + '_sprites.nex')
+    spr = os.path.join(out, name + SPRITES_SUFFIX)
     conv = zt.convert(start, spr, None, True, quiet=True, patch=patch)
     bad2 = check(spr, start, patch, (conv[1], conv[1] + len(conv[2])))
     say('Sprites   : %s  %s  boot %s  (tail 0x%04X, %d bytes)' % (

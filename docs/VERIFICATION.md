@@ -48,7 +48,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Commando (commando): `commando.nex` a206f950c12f58a8e7f26b366f5a2480, `commando_sprites.nex` d601385ee4aeb7f3d7c0771bdc27df6b; verified 2026-10-13
 - Crystal Kingdom Dizzy (128K) (crystal_kingdom_dizzy): `crystal_kingdom_dizzy.nex` 99975f65172dc86ecefbac07db2c0c00; verified never
 - Midnight Resistance (128K) (midnight_resistance): `midnight_resistance.nex` 17239acaaf67b0f8011478053e17829d, `midnight_resistance_sprites.nex` e8f0ece9e41c314d76471c96f4595854; verified 2026-10-13
-- Smash TV (smash_tv): `smash_tv.nex` c72ea298486b14036ac1a87ac89c3f0e, `smash_tv_sprites.nex` 6227481f8f2514faa0d9648b6bc972e8; verified 2026-10-13
+- Smash TV (smash_tv): `smash_tv.nex` c72ea298486b14036ac1a87ac89c3f0e, `smash_tv_sprites_outline_cell_paper.nex` 6227481f8f2514faa0d9648b6bc972e8; verified 2026-10-13
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
@@ -426,7 +426,7 @@ arenas 1-2, game over, title; N pressed)
 - `smash_tv.nex` c72ea298486b14036ac1a87ac89c3f0e (plain: the loader as it is; tail 0x5B00:
   zero in the snapshot, write-first by the entry code 59823 in the RZX and in a 1,500-frame free
   run) - boot sim OK
-- `smash_tv_sprites.nex` 6227481f8f2514faa0d9648b6bc972e8 (look A: outline in the cell paper; alt ROM hooks 0x2100- + page 26
+- `smash_tv_sprites_outline_cell_paper.nex` 6227481f8f2514faa0d9648b6bc972e8 (look A: outline in the cell paper; alt ROM hooks 0x2100- + page 26
   at slot 7 during hooks; built from the start snapshot = the loader run with N to USR 59776 +
   front end 0x5D00 + prompt row) - boot sim OK; 7 patch sites, original bytes checked.
 - Front end: N / Y / SYM+Y (ignored, then N) reach 59776 with every register (R, IFF aside: 59776

@@ -14,7 +14,7 @@ Reference (private repo, specnext/reference/smash_tv/): Smash_TV.z80
 | Output | MD5 | Status |
 |---|---|---|
 | smash_tv.nex (plain: the BASIC loader as it is, tail 0x5B00) | c72ea298486b14036ac1a87ac89c3f0e | boot sim OK; hardware untested |
-| smash_tv_sprites.nex (altrom 0x2100- + page 26 at slot 7, front end) | 6227481f8f2514faa0d9648b6bc972e8 | RZX IDENTICAL; hardware untested |
+| smash_tv_sprites_outline_cell_paper.nex (altrom 0x2100- + page 26 at slot 7, front end) | 6227481f8f2514faa0d9648b6bc972e8 | RZX IDENTICAL; hardware untested |
 
 ## Dean's decisions (2026-10-13, from design.png: original | A | B)
 - Sprites: ALL figures drawn by the four masked plotters (player, shield, enemies, snake, mines,
