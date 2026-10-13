@@ -70,10 +70,13 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   apply their delta; overwriters/nibble-replacers apply their rule; any
   UNCLASSIFIED write to a byte where the screens differ must be reported
 - memory never read or written, ROM use, stack low-water mark
-- writes to any intended patch site (self-modifying code)
+- writes to any intended patch site (self-modifying code) - and to the bytes AROUND it that a hook
+  would emulate or jump back into: list every LD (nn),A / LD (nn),HL into the routine's code first
+  (Dizzy 1 rewrites 58079 and 58709 next to its write sites; the first site at 58707 covered 58709)
 
 ## 3b. Visual survey and preview (design approval BEFORE building)
 - `preview GAME.z80 --rzx R --at F,F,... --plot ENTRY ... [--buffer A:S:L] -o sheet.png` shows
+  (with --rzx, `--every N` needs `--stop` too: without it the run ends after 500 frames)
   what each plot routine draws per caller (the figure kinds to ask about); `scan --range BUF
   --writers` lists every routine that draws into the screen / buffer first.
 - Render still frames (ULA + planned sprites) from the RZX at several points and, where the
@@ -134,13 +137,16 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
 | Hook code in the alt ROM / slot-1 page | never at 0x3D00-0x3DFF (Commando crashed with code there; probable cause DivMMC automap on fetch - BRIEFING A1); data there was fine |
 | Hook state needs RAM, interrupts on, game uses all RAM | a Next page in a slot the ISR never touches (2-5; isr slot scan), mapped only while a hook runs (Midnight Resistance slot 5) |
 | Back-buffer composer, plotters share an address helper | replace the CALL target; plot into a scratch copy of the buffer; patch loop exits to map back (LEARNINGS 2.1) |
+| Pure XOR to the screen, many figure kinds / partial draws / thin pieces (Dizzy 1) | 1-bit shadow screen: converted writes XOR the shadow, ULA ^ shadow = original; figures on Layer 2; non-XOR writers put the change into shadow or ULA; effects fold the shadow back (LEARNINGS 2.1) |
+| Game has no frame sync (no HALT, FRAMES unread) | hook time = slowdown: run whole plots at 28 MHz (entry hook + return-address trampoline), measure the Speed line |
+| The game rewrites bytes in or next to a site | move the site off them; read the rewritten instruction at run time in the hook |
 
 ## 5. Build
 Hooks: asm/<engine>_hooks.asm with `SAVEBIN "<prefix>_<key>.bin"` per block and
 `"hooks": {"source": "asm/<engine>_hooks.asm", ...}` in the profile; after every edit
 `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex + symbols).
 Copy the nearest builder (TID-engine: build.py TidPatch;
-XOR: dizzy1_patch.py; non-Codemasters: chuckie.py (simplest), wally.py, rainbow.py, commando.py
+XOR: dizzy1.py (shadow screen + Layer 2); non-Codemasters: chuckie.py (simplest), wally.py, rainbow.py, commando.py
 (128K BASIC loader, front end, depth, cached solid sprites), midres.py (interrupts on, hook page at
 slot 5, CALL-target redirect into a scratch buffer, sprites built at a commit with a pattern-slot
 cache, per-cell colours, per-pixel colour map)), change the profile block and site list, rebuild the asm.

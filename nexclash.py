@@ -253,11 +253,16 @@ def cmd_auto(a):
     why = B.plain(z80, plain, an)
     say('Plain     : %s  %s' % (os.path.basename(plain), why))
     sprites = os.path.join(out, name + '_sprites.nex')
-    if eng in ('tid_legacy', 'dizzy1_xor'):
+    if eng == 'dizzy1_xor':                                    # Dizzy 1: every figure on Layer 2
+        from nexclash import dizzy1 as _d1
+        if a.strategy not in (None, 'altrom'):
+            say('            note: the Dizzy 1 engine is altrom-only; --strategy %s ignored' % a.strategy)
+        _d1.auto(a, z80, sprites, say, rzxs if dec is None else [], _boot)
+    elif eng == 'tid_legacy':
         if a.strategy not in (None, 'printer'):
             say('            note: dedicated builder is printer-only; --strategy %s ignored' % a.strategy)
-        mod = __import__('dizzy_patch' if eng == 'tid_legacy' else 'dizzy1_patch')
-        p = mod.DizzyPatch() if eng == 'tid_legacy' else mod.Dizzy1Patch()
+        mod = __import__('dizzy_patch')
+        p = mod.DizzyPatch()
         conv = zt.convert(z80, sprites, None, True, quiet=True, patch=p)
         _boot(say, z80, sprites, p, conv)
         say('Sprites   : %s  (dedicated builder; verified during development)' % os.path.basename(sprites))

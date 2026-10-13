@@ -263,6 +263,31 @@ BRIEFING - with its reason.
   game's draw mask with holes filled), not their ink, or the figure shows through paper-coloured
   parts.
 
+- Pure-XOR engines (no masks, no undo buffers): move every converted screen write into a 1-bit
+  SHADOW screen instead of the ULA. ULA XOR shadow == the original screen at every moment (XOR is
+  linear), so every caller, partial draw, overlap and XOR-parity cancel is exact without modelling
+  figures; a figure layer (Layer 2) shows the shadow. Writers that are not XOR keep it exact by
+  computing the original's new byte from the virtual old one (ULA ^ shadow) and putting the CHANGE
+  into the shadow (converted) or the ULA (kept); overwriters and in-place effects fold the shadow
+  back into the ULA first; logic reads get ULA ^ shadow (Dizzy 1, 2026-10-14). Hardware sprites
+  would have needed ~80 at once and patterns built on the fly for clipped draws.
+- The game may rewrite instructions INSIDE or NEXT TO a hook site to switch modes (Dizzy 1: 58079
+  XOR C / OR C / LD A,C and 58709 XOR (HL) / NOP for the room tiles - the old site at 58707 would
+  have had its JP target overwritten). Before choosing a site, list every writer into the routine's
+  code bytes (static LD (nn),A / LD (nn),HL scan + the verifier's "game wrote a patch site"); a hook
+  that emulates such an instruction reads it at run time and handles every value the game stores.
+- No frame sync (no HALT in play, nothing but the ROM reads FRAMES): every T-state a hook adds slows
+  the game 1:1 (Dizzy 1's first build: +22K T per 69,888-T frame = a third slower). Check it before
+  designing (scan for HALT / FRAMES readers). Fix that keeps memory exact: the plot ENTRY hook
+  switches to 28 MHz and swaps the return address for a ROM trampoline that writes the original
+  address back into the (now dead) slot, switches back and returns - the game's own plot loop and
+  every per-byte hook then run at 28 MHz. Measure it: Speed line (T per frame, patched - original,
+  28 MHz parts / 8) from the verifier's pair runs.
+- A game's interrupt handler can change the interrupted code's registers (Dizzy 1's title-music
+  handler DECs B and C and sets carry): an interrupt inside a hook would corrupt the hook. Check
+  which handler is installed at EVERY hook site in the recording (verify asserts it) - the in-game
+  one here is the ROM's 0x0038, which keeps every register.
+
 ## 2.2 Memory proofs (analysis method)
 - Prove free memory with an access scan over the recording, not by zero-check.
   Also require zero content for persistent code (untouched may just mean

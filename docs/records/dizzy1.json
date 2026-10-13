@@ -29,12 +29,15 @@
   "recorder",
   "machine",
   "rzx",
-  "dizzy1_patch"
+  "dizzy1"
  ],
  "own_modules": [
-  "dizzy1_patch"
+  "dizzy1"
  ],
- "data": [],
+ "data": [
+  "docs/profiles/dizzy1_ultimate_cartoon_adventure.json",
+  "asm/dizzy1_hooks.asm"
+ ],
  "shared_data": [
   "nexclash/templates.json",
   "nexclash/evidence.json"
@@ -51,13 +54,15 @@
   }
  },
  "verify": {
-  "args": [],
-  "rzx": [],
-  "auto_record": true,
-  "minutes": 5,
-  "auto_rzx_md5": "0d21674bfed3e6f261e6a0c1f6e44c59",
-  "differential": false,
-  "note": "dedicated builder, sprite build verified during development; selftest re-proves the plain tail (access scan of the auto recording) and the simulated boot"
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "dizzy1.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 20,
+  "note": "auto: full differential verify of dizzy1.rzx (every hooked routine, Layer 2 against the shadow model) + unit tests with negative controls"
  },
  "outputs": {
   "plain": {
@@ -66,17 +71,17 @@
   },
   "sprites": {
    "file": "dizzy1_sprites.nex",
-   "md5": "05d2bce99f4d7654d4e1c9c9c04dc391"
+   "md5": "a0622431da321709695abf2fbe97f09e"
   }
  },
  "repro": [],
  "status": {
   "title": "Dizzy: The Ultimate Cartoon Adventure (Dizzy 1)",
-  "engine_col": "dedicated XOR (dizzy_ultimate_cartoon_adventure.md)",
-  "build": "dizzy1_sprites.nex 05d2bce9",
-  "software": "verified",
+  "engine_col": "dizzy1 (dizzy_ultimate_cartoon_adventure.md)",
+  "build": "dizzy1_sprites.nex a0622431 (every figure on Layer 2 via a 1-bit shadow screen, default colours; HUD and room tiles on the ULA; altrom + shadow page 26 at slot 3; plots at 28 MHz)",
+  "software": "RZX IDENTICAL (registers, memory, ULA ^ shadow, Layer 2), unit + 6 negative controls PASS",
   "hardware": "untested",
-  "next": "-"
+  "next": "hardware test (CSpect first); Dean paints dizzy1_PAINTING_SPRITES.png"
  },
  "checked": {
   "deps": {
@@ -121,5 +126,8 @@
    "skoolkit": "10.1"
   },
   "date": "2026-10-13"
- }
+ },
+ "checks": [
+  "asm2profile:dizzy1_ultimate_cartoon_adventure"
+ ]
 }

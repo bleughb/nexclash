@@ -92,7 +92,8 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 | Video | 50Hz forced (NextReg $05) unless `--allow-60hz` (nexclash.py convert / auto / patch / new / verify: sets z80tonex.ALLOW_60HZ, every build path; outputs then differ from the verified MD5s) |
 | 48K fidelity | NextReg $03 = 48K timing (written after the legacy paging writes; VHDL: this does NOT stop 7FFD/1FFD decoding - with 48K/128K timing 7FFD decodes as A15=0, A1:0=01, A14 ignored; timing only changes contention); NextReg $08 contention on; 7FFD lock via the tail's own 7FFD write (bit 5) |
 | DivMMC | auto-paging off (NextReg $06 bit 4 cleared by the stub, z80tonex.build_stub; not $0A). Yet Commando 541e34e2, with hook code at 0x3D00-0x3DFF, crashed at its first figure on hardware and in CSpect, and d601385e (the same code moved out of that range; only tables there) runs. PROBABLE cause: the DivMMC/TR-DOS automap on an instruction fetch at 0x3Dxx is not switched off by $06 bit 4 on current cores (entry points may be set by NextRegs $B8-$BB) - NOT confirmed (C2 #14). Rule regardless: never put code at 0x3D00-0x3DFF; data there worked |
-| Simulator blind spots | The toolkit's simulator does not model: DivMMC (automap traps, see above), an interrupt arriving in the middle of a hook (so the game's ISR never sees hook register/stack state - covered only by the per-instruction interrupt-safety check), the raster (tearing, overruns), real-machine speed (28 MHz wait states, contention), CSpect differences. Anything in this list needs a static/invariant check or a hardware test |
+| Simulator blind spots | The toolkit's simulator does not model: DivMMC (automap traps, see above), an interrupt arriving in the middle of a hook (so the game's ISR never sees hook register/stack state - covered only by the per-instruction interrupt-safety check), the raster (tearing, overruns), real-machine speed (28 MHz wait states, contention), CSpect differences, the VIDEO output of Layer 2 (nextboot / verify model its bank register, port 0x123B, palette writes and pixel pages, not what the screen shows: palette entry 0xE3 as transparency, layer order; Dizzy 1, 2026-10-14, hardware to confirm). Anything in this list needs a static/invariant check or a hardware test |
+| Layer 2 (Dizzy 1, hardware to confirm) | 256x192, 8-bit pixels, banks via NextReg $12 (16K bank; 3 consecutive banks = 6 pages, page = first + y/32, offset (y%32)*256+x); visible = port 0x123B bit 1 (the stub writes 0x123B = 0 BEFORE the patch setup, so setup turns it on); palette NextReg $43 = $10 (Layer 2 palette 0, auto-increment) then $40 index, $41 RRRGGGBB; transparency = global $14 (default $E3) compared with the palette RGB, so entry 0 = $E3 makes pixel 0 transparent; order SLU default ($15 = 0): Layer 2 over the ULA. Zero banks in the .nex start it clear (NEXLOAD leaves banks it does not load with old contents) |
 | MMU | slots 0-7 = NextReg $50-$57, 8K pages; 16K bank n = pages 2n, 2n+1; $FF in slot 0/1 = ROM |
 | Legacy paging | legacy and MMU paging are interchangeable, most recent change wins (guide 3.2.6): an UNLOCKED 7FFD/1FFD write remaps slot 0/1 (ROM) and 6/7 - so the tail maps slot-1 RAM AFTER its own paging writes |
 | 7FFD lock | The lock IS 7FFD bit 5 (the 48K tail writes 7FFD=$30). NextReg $08 bit 7: write 1 = clear the lock; write 0 = no effect (does NOT lock); read 1 = unlocked. VHDL (core 3.01.09): while locked, writes to 7FFD, 1FFD and DFFD are ignored and trigger NO MMU remap (port_memory_change needs 'not port_7ffd_locked'), so a RAM slot-1 page survives a locked game's 7FFD writes (documented from source; hardware still to confirm for Dizzy 6). UNLOCKED writes to 7FFD/DFFD/1FFD/EFF7 set MMU0/1=$FF (ROM) and MMU6/7 to the selected bank (ports.txt). At NEX launch paging is UNLOCKED (all hardware-tested builds page with legacy writes without unlocking); the altrom stub still sets $08 bit 7 before its own 1FFD/7FFD writes. |
@@ -134,12 +135,14 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 | altrom (DEFAULT since 2026-09-28) | alt ROM image 1 = exact copy of ROM3 (48K) + slot1 hook code + frame table + register block (TID: 0x386E-, all $FF in the 48K ROM, must end < 0x3D00 - but a game may test 0x386E = $FF as a 48K-ROM check: Smash TV does, so its hooks sit at 0x2100-; list the ROM bytes the game reads first, LEARNINGS 1.3; Dizzy V: 0x3800-; NO code may ever sit in 0x3D00-0x3DFF - Commando crashed with code there, probable cause DivMMC automap on fetch (A1); Commando: data there, code also 0x3F00+); stub fills it in write mode, tail sets $8C=$80; RAM page 24 in bank 12 is only the copy source | NextReg $7F (Dizzy V: none) | direct calls, no paging, no DI; the game may read every ROM byte the patch leaves as ROM (an engine that replaces more, like Commando's whole 0x2000-0x3FFF, must prove by verify that the game never reads it); writes ignored; survives 7FFD |
 | slot7 scratch (Smash TV, 2026-10-13) | code in alt ROM 0x2100-; state + a scratch copy of the back buffer in RAM page 26 mapped at MMU slot 7 (where the game's buffer is) while a hook runs: the game's own plotters draw into the scratch (LEARNINGS 2.1) | page variables | interrupts OFF (the game's DI; its IM 2 handler lives in slot 7) |
 | slot5 (Midnight Resistance; runs on hardware 2026-10-13) | code + tables in alt ROM 0x2000-0x3CFF (game reads ROM 0x0000 + font only); state, hook stack and a scratch copy of the back buffer in RAM page 26 mapped at MMU slot 5 only while a hook runs | page variables | interrupts ON: slot 5 is never touched by the ISR (full-RZX slot scan), and the ISR's unlocked 7FFD writes reset only slots 0/1/6/7 |
+| slot3 shadow + Layer 2 (Dizzy 1, 2026-10-14; hardware untested) | code in alt ROM 0x2000-; variables + hook stack in game RAM the game never touches (printer buffer 0x5B40-0x5BC0); slot 3 (never touched by the ISR) switches inside a hook between the shadow page 26, the Layer 2 pages and the colour-plane pages, and is the game's page 11 at every exit (so the hook stack cannot live there) | variables in game RAM | interrupts ON (ROM 0x0038 handler) |
 Choice rule (build.choose_tid_strategy, returns strategy/reason/tail): altrom if no recording
 reads 0x386E-0x3CFF AND (printer buffer free -> tail at 0x5B00, else dead stack >= 54 -> tail
 at the low-water mark); else the old rule: printer if 0x5B00 is zero in the snapshot AND never
 touched; else slot1 if ROM unused AND dead stack >= 54; else refuse. `--strategy X` checks X only.
-Per game: TID engine generic (Fantasy World, Magicland) and Dizzy V -> altrom; dedicated builders
-(Treasure Island, Dizzy 1) -> printer only (writable state in 0x5B00); Dizzy 6 -> slot1 only
+Per game: TID engine generic (Fantasy World, Magicland) and Dizzy V -> altrom; Treasure Island
+(dedicated builder) -> printer only (writable state in 0x5B00); Dizzy 1 -> slot3 shadow + Layer 2
+(engine dizzy1, its own strategy); Dizzy 6 -> slot1 only
 (self-modifying plotter copy needs RAM at 0x2000, and it never reads the ROM). Engine builders may instead put the slot1 compact tail (53 bytes; plain tail 79)
 in a player undo buffer proven write-first per RZX (Dizzy 6: 88-byte buffer at 23552).
 The slot1 page may also hold relocated GAME code at 0x2000 (below the template at 0x386E):
@@ -192,7 +195,8 @@ sprite .nex -> verify (each RZX) -> report. Refuses instead of guessing.
 | build.py | TidPatch(prof, strategy, low_water), plain(), choose_tid_strategy() | templates.json = assembled templates + relocation offsets (8 symbols) |
 | verify.py | verify(prof, patch, rzx) | per-routine differential test; emulates NEXTREG, slot-0 paging, slot-1 page, $7F ports |
 | sprites.py | patterns_for(peek, table, base) | frames -> 4-bit patterns + attribute table |
-| dizzy_patch.py / dizzy1_patch.py | DizzyPatch / Dizzy1Patch | dedicated builders (TID bubbles; XOR engine) |
+| dizzy_patch.py | DizzyPatch | dedicated builder (TID bubbles: Treasure Island) |
+| dizzy1.py | Dizzy1Patch, verify, unit_tests, auto, capture / sheet / preview | Dizzy 1 XOR engine: every figure on Layer 2 via a 1-bit shadow screen (ULA ^ shadow = the original); the template for pure-XOR engines |
 | dizzy5.py | identify5, analyse5, patch class, verify5 (+ _converges) | Dizzy V engine (ISR-driven masked sprite); nexclash.py _auto_dizzy5 drives it |
 | dizzy6.py | layout, relocated_copy, Dizzy6Patch(prof, mem, tail, undo_size), first_access(rzx, lo, hi), mirror_selftest | 'tid_mirror' (Dizzy 6): TidPatch slot1 + unpatched plotter/eraser copy at 0x2000 for the mirror calls; nexclash.py _auto_dizzy6 drives it (analysis + first-access pass per RZX, tail in undo buffer, verify, 780-case mirror selftest) |
 | chuckie.py / wally.py / rainbow.py / commando.py / midres.py | engine modules: patch class, verify, unit tests, auto(...) | dedicated engines, one games/<game>.md each; harnesses stay per engine (C4) |
@@ -231,6 +235,8 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
 - Multi-segment RZX (the recorder writes one segment per episode, each with its own snapshot):
   rzxplay builds a NEW Simulator per segment - reset any sync state in the Simulator subclass's
   __init__ (dizzy5 analyse5/verify5 do: without it a stale screen model gave false refusals).
+- SkoolKit's disassembler does not know Z80N NEXTREG (ED 91 nn n = 4 bytes, ED 92 nn = 3): a
+  linear decode of hook code must step over them itself or it misaligns (dizzy1.static_check).
 - Hand-assembled hooks: keep an asm source and assert sjasmplus output == the Python emitter
   (JR out of range is silent in hand assembly); use JP for long branches.
 - SkoolKit's Python Simulator does block instructions (LDIR etc.) with per-byte int indexing of
@@ -317,10 +323,11 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
 15. Dependency smell (records.py deps): nextboot.py imports dizzy6._rw_simulator, so every game
    depends on dizzy6.py and a Dizzy 6 change counts as shared (rebuild all + representatives).
    Move _rw_simulator into a shared module.
-16. Dizzy 1 and Treasure Island (dedicated builders) are not re-verified differentially by any
-   tool: their sprite builds were verified during development; selftest re-proves only the plain
-   tail (access scan) and the boot (records: verify.differential false). Port them to a verify
-   path to close it.
+16. Treasure Island (dedicated builder) is not re-verified differentially by any tool: its sprite
+   build was verified during development; selftest re-proves only the plain tail (access scan) and
+   the boot (record: verify.differential false). Port it to a verify path to close it. Dizzy 1:
+   closed 2026-10-14 (engine dizzy1: `auto --rzx` runs the full differential verify + unit tests,
+   selftest's verify recipe repeats it).
 14. Confirm the 0x3D00 cause (A1): a test build with one harmless routine at 0x3D00 (emulator with
    DivMMC, or hardware); then record the confirmed reason in A1 / LEARNINGS 1.4.
 17. Colour sheets are part of every game from Midnight Resistance on (PLAYBOOK 3b / 5 / 6). The
@@ -359,7 +366,8 @@ runner simrun.py). Game-independent: game facts come in as arguments (addresses,
   who draws into a screen / back buffer and whether game logic reads it back.
 - isr: also "Slots": which 8K slots the handler reads / writes / runs; slots 2-5 it never touches
   may hold a hook RAM page with interrupts on (LEARNINGS 1.3).
-- preview: contact sheet of the screen at chosen frames (PLAYBOOK 3b); --plot ENTRY colours what each
+- preview: contact sheet of the screen at chosen frames (PLAYBOOK 3b; with --rzx, --every N needs
+  --stop as well, or the run ends after 500 frames); --plot ENTRY colours what each
   plot routine draws per caller (= per figure kind), --buffer ADDR:STRIDE:LINES shows a back buffer
   next to the screen; prints each group's calls, bytes and x/y range. Colours = the last plot that
   wrote a byte, so a shot taken between a background copy and the plots shows no figures: pick
