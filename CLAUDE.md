@@ -22,7 +22,8 @@ or download another version; tools/sjasmplus/README.md).
 ## Read only what the task needs (start: ~150 lines)
 - Add a game: this file -> docs/PLAYBOOK.md -> the nearest engine as a template (simplest:
   nexclash/chuckie.py + asm/chuckie_hooks.asm + games/chuckie_egg.md; full-redraw / 128K:
-  rainbow; back-buffer composer: wally; Codemasters TID engine: generic builder). Look things up
+  rainbow; back-buffer composer: wally (interrupts off) or midres (interrupts on, all RAM used: hook
+  page at slot 5, scratch-buffer redirect, cached sprites); Codemasters TID engine: generic builder). Look things up
   in docs/BRIEFING.md (platform, toolkit) and docs/LEARNINGS.md (lessons) by section when a
   question comes up - do not read them end to end.
 - Maintain: STATUS.md, then games/<game>.md for the game in hand.

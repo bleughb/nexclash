@@ -25,12 +25,13 @@ facts: games/tid_engine.md). MD5s: docs/VERIFICATION.md.
 Platform on hardware: alt ROM ($8C) PASS 2026-09-27; plain 48K and 128K conversion run.
 
 ## Open work (toolkit)
-0. Release: the latest release zip (v0.1.3, 2026-10-12 morning) predates Commando, the pinned
-   sjasmplus, asm2profile and the analysis commands - zip users get "not supported" for Commando.
+0. Release: the latest release zip (v0.1.3, 2026-10-12 morning) predates Commando, Midnight
+   Resistance, the pinned sjasmplus, asm2profile, the analysis commands and the canary - zip users
+   get "not supported" for Commando and Midnight Resistance.
    Publish v0.1.4 after `python selftest.py --stamp` passes (CLAUDE.md, End of every task). v0.1.0 has no zip.
 1. Engine registry: each engine registers identify/auto instead of a dispatch block in
    nexclash.py (selftest now covers every game: docs/records).
-2. `identify` reports unknown for Rainbow, Chuckie Egg, Wally and Commando (auto dispatches by
+2. `identify` reports unknown for Rainbow, Chuckie Egg, Wally, Commando and Midnight Resistance (auto dispatches by
    signature in cmd_auto): add signatures.json / identify entries.
 3. Generic builder covers the TID engine only; next: XOR-parity template (generalise
    dizzy1_patch.py), then non-Codemasters engines (PLAYBOOK "unknown").
@@ -38,5 +39,7 @@ Platform on hardware: alt ROM ($8C) PASS 2026-09-27; plain 48K and 128K conversi
 5. Explorer is random + room novelty (no puzzles): rare paths need a human RZX.
 6. analyse/recorder are 48K-only.
 7. Later: tail inside the alt ROM; alt image 0 for 128K games that select ROM 0.
-8. Not done: run `selftest.py --affected` automatically on each PR (GitHub Action with the
+8. Rainbow Islands is excluded from every automatic check (record "excluded"; Dean 2026-10-13:
+   too slow, being reworked) - `selftest.py --game rainbow --verify` when its work lands.
+9. Not done: run `selftest.py --affected` automatically on each PR (GitHub Action with the
    private references via a secret); today a maintainer runs it before merging.

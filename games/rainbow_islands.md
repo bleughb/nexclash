@@ -1,4 +1,5 @@
 # Rainbow Islands (Ocean, 128K) - engine `rainbow`
+EXCLUDED from automatic selftest checks (Dean, 2026-10-13: too slow, being reworked): run it with `selftest.py --game rainbow [--verify]`.
 Updated 2026-10-12. Engine `rainbow`. Status: RZX-verified identical; RUNS ON HARDWARE (Dean,
 2026-09-28). 2026-09-29: boss-spider fix + pattern-upload optimisation (hardware: runs, better;
 busy scenes slower than the original). 2026-09-30: pattern cache 78b9ed99 (hardware: no visible
