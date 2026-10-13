@@ -72,12 +72,12 @@
  ],
  "checked": {
   "deps": {
-   "asm/midres_hooks.asm": "c27ad70af4af669f",
-   "docs/profiles/midnight_resistance.json": "7cea5d1b13236010",
-   "nexclash.py": "5eeaaae9ae6e4a3c",
+   "asm/midres_hooks.asm": "64a1c72836373f18",
+   "docs/profiles/midnight_resistance.json": "175c61b1cc619422",
+   "nexclash.py": "5de628af10ee7456",
    "nexclash/build.py": "a60e4d3c5945c94a",
    "nexclash/dizzy6.py": "89c8ba59fc762962",
-   "nexclash/midres.py": "06b65a2db695ad6e",
+   "nexclash/midres.py": "e2be0c24c0b0d769",
    "nexclash/nextboot.py": "c71aaed434e73ef1",
    "nexclash/rainbow.py": "a2baff9fb4790cca",
    "nexclash/rzx.py": "e3e783e4cc235d85",
@@ -90,12 +90,12 @@
  },
  "verified": {
   "deps": {
-   "asm/midres_hooks.asm": "c27ad70af4af669f",
-   "docs/profiles/midnight_resistance.json": "7cea5d1b13236010",
-   "nexclash.py": "5eeaaae9ae6e4a3c",
+   "asm/midres_hooks.asm": "64a1c72836373f18",
+   "docs/profiles/midnight_resistance.json": "175c61b1cc619422",
+   "nexclash.py": "5de628af10ee7456",
    "nexclash/build.py": "a60e4d3c5945c94a",
    "nexclash/dizzy6.py": "89c8ba59fc762962",
-   "nexclash/midres.py": "06b65a2db695ad6e",
+   "nexclash/midres.py": "e2be0c24c0b0d769",
    "nexclash/nextboot.py": "c71aaed434e73ef1",
    "nexclash/rainbow.py": "a2baff9fb4790cca",
    "nexclash/rzx.py": "e3e783e4cc235d85",
