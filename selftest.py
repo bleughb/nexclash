@@ -386,6 +386,12 @@ def main():
     pos = [x for x in sys.argv[1:] if not x.startswith('--') and x not in vals]
     src = reference_dir(pos)
     flags = set(x for x in sys.argv[1:] if x.startswith('--'))
+    known = {'--plan', '--full', '--smoke', '--canary', '--tools', '--game', '--affected', '--verify',
+             '--stamp', '--jobs', '--human'}
+    if '-h' in sys.argv[1:] or flags - known:   # an unknown flag used to start a release run
+        print(__doc__)
+        bad = sorted(flags - known - {'--help'})
+        return 2 if bad else 0
     if '--plan' in flags:
         items, _ = R.plan(full='--full' in flags)
         for r, act, why in items:

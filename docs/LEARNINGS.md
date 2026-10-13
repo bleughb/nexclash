@@ -49,6 +49,11 @@ BRIEFING - with its reason.
   Prove it per game (full-RZX scan of the ISR's reads/writes/fetches per 8K slot) and map only
   while the hook runs (Midnight Resistance: page 26 at slot 5, ISR uses slots 0/3/7 only; runs on
   hardware 2026-10-13 with interrupts on through every hook).
+- A game may READ the ROM as a machine check: Smash TV's entry does `LD A,(14446): CP 255` (0x386E
+  is 0xFF only in the 48K ROM) and takes another path otherwise - hook code at 0x386E (the TID /
+  Wally default) would have changed the game. List the ROM bytes a game reads as data after its
+  entry (scan the RZX: reads below 0x4000 with PC >= 0x4000, LDIR copies aside) before placing
+  hooks; keep every byte it reads as ROM (Smash TV: hooks at 0x2100-, 0x386E and the font kept).
 - A 128K BASIC loader snapshot cannot run on the Next: 128K BASIC pages ROM 0 (the 128K editor)
   on every statement (Commando: plain = corruption, altrom = crash at the first key; alt image 0 is
   unfilled). Run the loader in SkoolKit (real 128K ROMs) to the game's USR entry, build from there,
@@ -204,6 +209,19 @@ BRIEFING - with its reason.
   the loop exits to map the address back with a flag-free table lookup (LD D,(HL)), and redo the
   last ADD HL on the real address where the loop ends with one: H, C and flag bits 3/5 depend on
   the address (Midnight Resistance: 17 flag mismatches until then).
+- Back-buffer composer whose buffer fills one 8K MMU slot: run the game's OWN plotter with that slot
+  mapped to a scratch page (CALL a trampoline = the displaced first instruction + JP into the body):
+  registers, flags and self-modified operands come out as the original's with no address mapping
+  at all (Smash TV: slot 7 = page 26). Needs: (1) the scratch holds what the original buffer would
+  hold - run the background restore twice (real, then scratch) and send converted plots to the
+  scratch only; (2) game code that LIVES in the remapped slot is copied into the scratch page at
+  the same address (Smash TV's restore 0xE872-0xE8FB: without it the scratch run executed zeros),
+  and its self-modified operands are written back on the game's page; (3) the trampoline's CALL
+  uses two bytes under the game's SP - put them back; (4) interrupts off (the IM 2 handler may live
+  in that slot).
+- A game without frame sync (interrupts off, no HALT) runs at the speed of its CPU time: hook cost
+  IS game speed. Keep the game's own bodies at 3.5 MHz (same cost and contention as the original)
+  and only the hook work at 28 MHz; report T per game frame original vs patched (Smash TV ~+6%).
 - Hook code that returns into the game's own loop must not write below the game's SP (no CALL, no
   PUSH on the game stack): the original's dead-stack bytes (pushed BC etc.) differ otherwise. Use
   a macro, or the hook stack in the hook's page.
@@ -274,6 +292,10 @@ BRIEFING - with its reason.
 - A toolkit zip from Dean can be a side branch, not an old copy: the 2026-09-28 zip held a 128K
   variant of machine.py / analyse.py / recorder.py (+ selftest128.py) that never reached the
   master copy. Ask before mixing.
+- SkoolKit get_state(sim) needs a tracer with border / outfe / outfffd / ay (a bare
+  Simulator from from_snapshot() has none: AttributeError 'border'); set a dummy one.
+- `selftest.py` parses its own flags: before 2026-10-13 an unknown one (even --help) started a
+  RELEASE run (every game rebuilt); it now prints the usage and exits.
 - `rzxplay.py --map FILE` + `sna2ctl.py -m FILE` + `sna2skool.py -c` give a routine-split
   disassembly of everything an RZX executed in ~1 minute: the fastest way into an unknown engine.
 
@@ -312,9 +334,16 @@ BRIEFING - with its reason.
   plotter that composes background - its writes are then exactly the figure (Chuckie Egg:
   sprite set == canvas set at every event; screen block = background | figure).
 - Entry-point proof: interior bytes of patched instructions never executed as instruction starts.
+  A 3-byte JP over TWO instructions covers a real instruction start (Smash TV 53868 XOR A /
+  53869 LD (nn),A): check that it is only ever executed right after the site's first byte
+  (previous PC), not by comparing counts (an RZX segment boundary skews them by one).
 - A code path no RZX reaches can be proven by a unit differential test (original vs patched code
   from the same state) plus a negative control that must fail.
 - Unit tests must include a negative control (e.g. a broken nibble table) or they prove nothing.
+  Restoring a captured hook-page state must copy the RUN-TIME byte ranges only (vars, cache keys,
+  sprite table) - Smash TV's first unit run copied the whole state area, which put the correct
+  colour table back over the negative control's broken one: 5 of 6 'not detected'. With cache keys
+  copied, carry the pattern RAM too, or every cache hit shows an empty sprite.
 - Pattern cache key = everything the patterns depend on, compared in FULL (Rainbow: IX, start row,
   AF' carry, the whole graphics stream): a content key cannot go stale when graphics are rewritten
   at the same address. Keep running the plotter once on a hit: the register state it leaves is
