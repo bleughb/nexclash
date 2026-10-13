@@ -18,6 +18,7 @@ Analysis (any game; PLAYBOOK 0b / 3 / 3b):
   python nexclash.py scan GAME.z80 [--rzx R] [--range LO-HI] [--after PC]   memory read/written/run
   python nexclash.py isr GAME.z80 [--rzx R]             interrupt handler: what hooks must keep intact
   python nexclash.py cost GAME.z80 --rzx R --at ADDR [--group IX]   a routine's cost per call / frame
+  python nexclash.py preview GAME.z80 --rzx R [--at F,F] [--plot ADDR] [--buffer A:S:L] -o x.png   contact sheet
   (no --rzx: free run of the snapshot, --frames N --keys "5-14:SPACE; 30-:N"; --stop N frames)
 
 Recording options (record and auto):
@@ -523,7 +524,7 @@ def main():
     p.add_argument('--strategy', choices=B.STRATEGIES)
     p = sub.add_parser('rzx'); p.add_argument('action', choices=['info', 'merge', 'strip']); p.add_argument('files', nargs='+')
     p.add_argument('-o', '--output')
-    for cmd in ('inspect', 'scan', 'isr', 'cost'):
+    for cmd in ('inspect', 'scan', 'isr', 'cost', 'preview'):
         p = sub.add_parser(cmd); p.add_argument('z80')
         if cmd == 'inspect':
             continue
@@ -534,9 +535,16 @@ def main():
         if cmd == 'scan':
             p.add_argument('--range', action='append', help='LO-HI or bankN:0xC000-0xFFFF (repeatable)')
             p.add_argument('--after', type=lambda v: int(v, 0), help='count only once PC reaches this address')
+            p.add_argument('--writers', action='store_true', help='per --range: the instructions that write / read it, with counts')
         if cmd == 'cost':
             p.add_argument('--at', type=lambda v: int(v, 0), required=True, help='routine entry address')
             p.add_argument('--group', choices=['A', 'BC', 'DE', 'HL', 'IX', 'IY'], help='break down by register at entry')
+        if cmd == 'preview':
+            p.add_argument('--at', help='frames to show, e.g. 100,600,1200 (default: 8 evenly spaced)')
+            p.add_argument('--every', type=int, help='a shot every N frames (max 24)')
+            p.add_argument('--plot', action='append', type=lambda v: int(v, 0), help='plot routine entry: colour what it draws, per caller (repeatable)')
+            p.add_argument('--buffer', help='back buffer ADDR:STRIDE:LINES (e.g. 0x5B00:32:128) drawn next to the screen')
+            p.add_argument('-o', '--out', default='preview.png', help='contact sheet (PNG)')
     a = ap.parse_args()
     if getattr(a, 'allow_60hz', False):
         zt.ALLOW_60HZ = True
@@ -546,13 +554,18 @@ def main():
         print(snapinfo.report(a.z80))
     elif a.cmd == 'scan':
         from nexclash import memscan
-        print(memscan.scan(a.z80, a.rzx, a.frames, a.keys, a.range, a.stop, a.after)[0])
+        print(memscan.scan(a.z80, a.rzx, a.frames, a.keys, a.range, a.stop, a.after, a.writers)[0])
     elif a.cmd == 'isr':
         from nexclash import isrinfo
         print(isrinfo.isr(a.z80, a.rzx, a.frames, a.keys, a.stop)[0])
     elif a.cmd == 'cost':
         from nexclash import drawcost
         print(drawcost.cost(a.z80, a.at, a.rzx, a.frames, a.keys, a.stop, a.group)[0])
+    elif a.cmd == 'preview':
+        from nexclash import preview
+        buf = tuple(int(x, 0) for x in a.buffer.split(':')) if a.buffer else None
+        at = [int(x) for x in a.at.split(',')] if a.at else None
+        print(preview.preview(a.z80, a.rzx, a.out, at, a.every, a.plot, buf, a.frames, a.keys, a.stop)[0])
     elif a.cmd == 'auto':
         cmd_auto(a)
     elif a.cmd in ('patch', 'new', 'contribute'):

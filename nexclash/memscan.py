@@ -8,22 +8,33 @@ cover (e.g. loader -> game entry -> menu). Run both when the patch uses memory a
 Addresses are CPU addresses; 128K: 0xC000-0xFFFF is counted per RAM bank (bank n at C000).
 Report: per range, the untouched spans (never read, written or executed), the first access of
 each touched span (PC), spans whose first access is a WRITE (write-first: candidate scratch),
-the lowest SP seen. Game-independent; extend freely (keep existing report lines; add new ones)
+the lowest SP seen. With `--writers`: per range, the instructions (PC) that write it and that read
+it as data, with counts - who draws into a screen or back buffer, and who reads it back (logic that
+depends on pixels). Game-independent; extend freely (keep existing report lines; add new ones)
 and run `python selftest.py --tools`.
 """
+import collections
 from .simrun import run
 
 READ, WRITE, EXEC = 1, 2, 4
 
 
 class Scanner:
-    def __init__(self, after=None):
+    def __init__(self, after=None, watch=None):
         self.after_pc = after                               # count only once PC reaches this
         self.active = after is None
         self.flags = bytearray(0xC000 + 8 * 0x4000)       # flat CPU 0..BFFF + 8 banks of C000
         self.first = {}                                     # index -> (kind, pc) of the first access
         self.sp_min = 0x10000
         self.sim = None
+        self.watch = watch                                  # [(name, set of indexes)] for --writers
+        self.wr = collections.defaultdict(collections.Counter)
+        self.rd = collections.defaultdict(collections.Counter)
+
+    def _who(self, i, pc, table):
+        for name, idx in self.watch:
+            if i in idx:
+                table[name][pc] += 1
 
     def _idx(self, a, mem):
         if a < 0xC000:
@@ -42,6 +53,8 @@ class Scanner:
                 return
         i = self._idx(a, mem)
         k = EXEC if a == pc else READ
+        if self.watch and k == READ and not pc < a <= pc + 3:
+            self._who(i, pc, self.rd)
         if not self.flags[i] & k:
             self.flags[i] |= k
             self.first.setdefault(i, (k, pc))
@@ -50,6 +63,8 @@ class Scanner:
         if not self.active:
             return
         i = self._idx(a, mem)
+        if self.watch:
+            self._who(i, pc, self.wr)
         if not self.flags[i] & WRITE:
             self.flags[i] |= WRITE
             self.first.setdefault(i, (WRITE, pc))
@@ -102,10 +117,11 @@ def parse_range(r, is128):
     return [0xC000 + bank * 0x4000 + (a - 0xC000) for a in range(max(lo, 0xC000), hi + 1)]
 
 
-def scan(z80, rzx=None, frames=None, keys=None, ranges=None, stop=None, after=None):
+def scan(z80, rzx=None, frames=None, keys=None, ranges=None, stop=None, after=None, writers=False):
     from skoolkit.snapshot import Snapshot
     is128 = len(Snapshot.get(z80).ram(-1)) == 0x20000
-    sc = Scanner(after)
+    watch = [(r, set(parse_range(r, is128))) for r in ranges] if writers and ranges else None
+    sc = Scanner(after, watch)
     n = run(z80, rzx, sc, frames=frames, keys=keys, stop=stop)
     if not ranges:
         ranges = ['0x4000-0xBFFF'] + (['bank%d:0xC000-0xFFFF' % b for b in range(8)] if is128 else ['0xC000-0xFFFF'])
@@ -136,6 +152,13 @@ def scan(z80, rzx=None, frames=None, keys=None, ranges=None, stop=None, after=No
         for a, b in [w for w in wfirst if w[1] - w[0] >= 15][:6]:
             lines.append('  write-first %s-%s (%d bytes)' % (_label(a, is128), _label(b, is128), b - a + 1))
         result['ranges'][r] = {'untouched': [(a, b) for a, b in free], 'touched': used}
+        if watch:
+            for what, tab in (('writers', sc.wr[r]), ('readers', sc.rd[r])):
+                top = tab.most_common(10)
+                lines.append('  %-9s %d instructions%s%s' % (what, len(tab), ': ' if top else '', ', '.join(
+                    '%d (0x%04X) x%d' % (pc, pc, n) for pc, n in top)))
+            result['ranges'][r]['writers'] = dict(sc.wr[r])
+            result['ranges'][r]['readers'] = dict(sc.rd[r])
     return '\n'.join(lines), result
 
 

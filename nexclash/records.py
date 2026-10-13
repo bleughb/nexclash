@@ -18,6 +18,29 @@ views`), so a game session edits only its own record.
     python -m nexclash.records views [--check] regenerate (or check) the generated views
     python -m nexclash.records deps GAME       the files GAME's build depends on
     python -m nexclash.records selfcheck       plan() on synthetic stamps (selftest --tools runs it)
+
+Record fields (docs/records/<name>.json; copy the nearest record, then edit):
+  name            file stem; selftest's work folder
+  order           STATUS.md row order (unique; next free number)
+  game, doc       STATUS title source / games/<doc>
+  engine          engine key; games sharing one form a group for "representative" re-verification
+  representative  true = the game re-verified when shared files change (one per engine)
+  reference       folder under specnext/reference/
+  inputs          snapshot + recordings: name (canonical name selftest copies to), md5, path (under
+                  the reference folder; maintainers fill it)
+  modules         nexclash modules the build imports (closure computed); own_modules = the engine's
+  data            own data files (profile, .asm, ...); shared_data = data shared with other games
+  rebuild         auto args (no recording), rzx used by the build, decisions (stored analysis facts)
+                  or {"cmd": "convert"} for plain-only games
+  verify          auto args, rzx (recordings verified against), auto_record, minutes (rough cost),
+                  differential false + note for games verified only by analysis
+  outputs         {plain|sprites: {file, md5}} the rebuild must reproduce
+  repro           extra builds (old strategies) with their own outputs
+  status          STATUS.md columns: title, engine_col, build, software, hardware, next
+  checks          quick per-game checks run with every rebuild (e.g. "asm2profile:<profile>")
+  canary          1 = tool-chain canary stage 1, 2 = stage 2 (selftest --canary); canary_quick =
+                  frames of the stage-2 quick verify
+  checked / verified   stamps written by selftest --stamp (dependency hashes, date); never by hand
 """
 import ast
 import glob

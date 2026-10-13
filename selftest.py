@@ -266,9 +266,23 @@ def tools_check(src):
         ok('inspect: 48K, IM 2, no loader warning', '48K' in txt and 'IM 2' in txt and not warn, (txt, warn))
         _, r = isrinfo.isr(ez, [er], stop=150)
         ok('isr: handler 40092, no IX/IY reads', 40092 in r['entries'] and not any(r['reads_entry'].values()), r)
+        ok('isr: slots touched 0 r, 3 r, 4 x, 5 r, 7 rw (slot 2 free for a hook page)',
+           r['slots'] == {0: 'r', 3: 'r', 4: 'x', 5: 'r', 7: 'rw'}, r['slots'])
         _, r = memscan.scan(ez, [er], ranges=['0x5B00-0x5BFF', '0x4000-0x57FF'], stop=300)
         ok('scan RZX (300 frames): printer buffer 0x5B00-0x5BFF untouched, screen written',
            memscan.touched_count(r, '0x5B00-0x5BFF') == 0 and memscan.touched_count(r, '0x4000-0x57FF') > 0, r['ranges'])
+        _, r = memscan.scan(ez, [er], ranges=['0x4000-0x57FF'], stop=300, writers=True)
+        w = r['ranges']['0x4000-0x57FF']
+        ok('scan --writers (300 frames): screen writers 43909 x141017, 43916 x42204, 42409, 40068; 3 readers',
+           w['writers'].get(43909) == 141017 and w['writers'].get(43916) == 42204 and
+           set(w['writers']) == {43909, 43916, 42409, 40068} and len(w['readers']) == 3, w)
+        from nexclash import preview
+        pv = os.path.join(work, 'preview.png')
+        _, r = preview.preview(ez, [er], pv, at=[400, 800], plots=[39500])
+        g = r['groups']
+        ok('preview: 2 shots, plotter 39500 in 4 caller groups (40385: 184 calls, 8832 bytes)',
+           r['shots'] == [400, 800] and len(g) == 4 and g.get((39500, 40385), {}).get('calls') == 184 and
+           g[(39500, 40385)]['bytes'] == 8832 and os.path.getsize(pv) > 1000, g)
         _, r = drawcost.cost(ez, 39500, [er], stop=1500)
         ok('cost plotter 39500 (1500 frames): 1402 calls, median 19535 T',
            r['calls'] == 1402 and r['median'] == 19535, r)
