@@ -20,7 +20,7 @@ Selftest names them midnight_resistance.z80 / .rzx / _v2.rzx (docs/records/midni
 | Output | MD5 | Status |
 |---|---|---|
 | midnight_resistance.nex (plain, tail 0x7B7E) | 17239acaaf67b0f8011478053e17829d | built; hardware untested |
-| midnight_resistance_sprites.nex (altrom + pages 26 / 27, every figure, shop, colour map) | a4fb69a2c8eaa820bf69da2edd589be1 | 2 RZX IDENTICAL; hardware untested (e8f0ece9 ran) |
+| midnight_resistance_sprites.nex (altrom + pages 26 / 27, every figure, shop, colour map) | a4fb69a2c8eaa820bf69da2edd589be1 | 2 RZX IDENTICAL; tests OK on hardware (Dean, 2026-10-14) |
 
 ## Snapshot (0b)
 128K, 7FFD=0x10 (ROM 1, bank 0, normal screen), PC 0x739E (RAM, title/attract), IM 2 I=0xFE ->
@@ -224,7 +224,7 @@ also with a repainted colour map; unit + interrupt + exits + full table + flippe
 - Speed: more figures per commit (shots, explosions); no hardware timing yet.
 - Level exit 0x8988 is proven by unit tests only: the shop and level 2 need a recording (Dean).
   Level 2's figures (callers, graphics) are unknown: the sheet covers level 1 only.
-- Hardware: runs (2026-10-13); checklist items 2-7 not yet reported item by item.
+- Hardware: a4fb69a2 tests OK (Dean, 2026-10-14; overall verdict, items not reported one by one).
 - Later levels (banks 1/3/4/6) not in the RZX: need a later-levels recording; their figures may
   use other callers (stay on the ULA) or graphics in 0xA000-0xBFFF (guard: stay on the ULA).
 - Tank scenes: cache thrash (16 entries); 32 entries need more page room (SIG area).

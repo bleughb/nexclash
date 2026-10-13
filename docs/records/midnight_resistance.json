@@ -70,8 +70,8 @@
   "engine_col": "midres (midnight_resistance.md)",
   "build": "midnight_resistance_sprites.nex a4fb69a2 (altrom + page 26 at slot 5, page 27 at slot 2 for figures whose graphics are under it; every figure through the six plotters, also flipped, in the game loop and the shop: player green, soldiers white, keys yellow, the rest in its cell colours; colour map support; sprites hidden on every loop exit)",
   "software": "2 RZX IDENTICAL (also with a repainted colour map), unit + interrupt + level / shop exit + full table + flipped + map PASS",
-  "hardware": "e8f0ece9 runs (Dean, 2026-10-13): keys clashed, player sprite stuck through the shop; a4fb69a2 untested",
-  "next": "hardware test a4fb69a2; Dean paints the colour sheet (57 figures); level 2 RZX"
+  "hardware": "a4fb69a2 tests OK on a real Next (Dean, 2026-10-14)",
+  "next": "Dean paints the colour sheet (57 figures); level 2 RZX"
  },
  "checks": [
   "asm2profile:midnight_resistance"
