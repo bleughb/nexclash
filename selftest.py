@@ -310,6 +310,10 @@ def coloursheet_check():
                     entries={'%s%d' % (pid, r): [r, 1] for r in range(h)})
     col = cs.Collector()
     col.add_frame([part('B', 40, 10, 0), part('L', 40, 14, 0), part('K', 90, 10, 0)])
+    # same role twice (two overlapping explosions): two figures, not one
+    col2 = cs.Collector()
+    col2.add_frame([dict(part('E', 10, 10, 0), role=1), dict(part('F', 12, 11, 0), role=1)])
+    col2.add_frame([dict(part('W', 10, 60, 0), role=2, repeat=True), dict(part('W', 18, 60, 0), role=2, repeat=True)])
     col.add_frame([part('B', 70, 20, 1), part('L', 70, 24, 1)])
     comps = col.composites(['Fig'])
     png, lay = os.path.join(work, 's.png'), os.path.join(work, 's_layout.json')
@@ -319,6 +323,8 @@ def coloursheet_check():
     res = []
     res.append(('2 figures (body + legs joined, mirrored copy the same one), 1:1', len(comps) == 2 and
                 sorted(len(c['parts']) for c in comps) == [1, 2] and comps[0]['count'] + comps[1]['count'] == 3))
+    res.append(('same role again -> two figures; a repeating role (wheels) -> one',
+                sorted(len(c['parts']) for c in col2.comps.values()) == [1, 1, 2]))
     res.append(('8x8 swatches 1-15 in palette order', all(img.getpixel((1 + (i - 1) * 10 + 7, 8)) == pal[i]
                                                           for i in range(1, 16))))
     c0 = [c for c in L['composites'] if len(c['parts']) == 2][0]

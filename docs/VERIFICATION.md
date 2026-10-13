@@ -47,7 +47,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Dizzy: The Ultimate Cartoon Adventure (dizzy1): `dizzy1.nex` 7892b2e0f1f3f9f19165516db307cbe0, `dizzy1_sprites.nex` 05d2bce99f4d7654d4e1c9c9c04dc391; verified 2026-10-13
 - Commando (commando): `commando.nex` a206f950c12f58a8e7f26b366f5a2480, `commando_sprites.nex` d601385ee4aeb7f3d7c0771bdc27df6b; verified 2026-10-13
 - Crystal Kingdom Dizzy (128K) (crystal_kingdom_dizzy): `crystal_kingdom_dizzy.nex` 99975f65172dc86ecefbac07db2c0c00; verified never
-- Midnight Resistance (128K) (midnight_resistance): `midnight_resistance.nex` 17239acaaf67b0f8011478053e17829d, `midnight_resistance_sprites.nex` bd0d4d3e9042ca55ce84b553799527e9; verified 2026-10-13
+- Midnight Resistance (128K) (midnight_resistance): `midnight_resistance.nex` 17239acaaf67b0f8011478053e17829d, `midnight_resistance_sprites.nex` a4fb69a2c8eaa820bf69da2edd589be1; verified 2026-10-13
 - Smash TV (smash_tv): `smash_tv.nex` c72ea298486b14036ac1a87ac89c3f0e, `smash_tv_sprites.nex` 03979d5438cf55410ecec8aac76f05ec; verified 2026-10-13
 <!-- end generated -->
 
@@ -418,20 +418,23 @@ SZX: 8 autosave snapshots stripped, 4,709 frames: title, level 1 to the end-of-l
 - Shared code: nexclash.py gained one dispatch block (before the 48K identify).
   `selftest.py --smoke` and `--tools` PASSED; `--affected` rebuild: see the PR.
 
-### Midnight Resistance round 2 - keys, colour map, level exit (2026-10-13)
-- `midnight_resistance_sprites.nex` bd0d4d3e9042ca55ce84b553799527e9 (hook code 2,915 bytes;
-  13 patch sites: + 0x8988 end-of-level exit) - boot sim OK, static PASS.
-- RZX (same recording): 5,303 converted plots (97E1 1,978: the keys added, 9813 143, 7DC5 870, 9E3F
-  1,799 + mirrored 513), 2,225 passed through, 758 commits (max 38 sprites), 1,743,625 sprite
-  pixels - IDENTICAL. Also IDENTICAL with a colour map read back from a randomly repainted sheet
-  (60 % of the opaque pixels; 2,415 graphics bytes in 13 store pages) and with a synthetic map
-  (2,642 entries). Keys: relocated graphics, HL put back at 0x980F, stack word as the original.
-- MMU4 = 4, MMU5 = 5, 3.5 MHz after every hook; hooks never write while slot 4 is remapped.
-- Unit: + relocation slots at / past the limit; level exit 0x8988 (Z: every sprite hidden, loop
-  not live; NZ: nothing changes; registers + memory as the original; not in the RZX); colour map
-  per figure (synthetic map, wrong check byte ignored, negative control: map left out of the build,
-  informative cases only).
-- Interrupt safety: 29.8M hook instructions checked, negative control 15/15.
+### Midnight Resistance round 2-4 - every figure a sprite, shop, colour map (2026-10-13)
+- `midnight_resistance_sprites.nex` a4fb69a2c8eaa820bf69da2edd589be1 (hook code 3,168 bytes; sites:
+  6 CALL operands, 6 loop exits, commit 0x8950, loop exits 0x8993 / 0x8988, shop 0xB893 / 0xB89B /
+  0xB8A5) - boot sim OK, static PASS.
+- RZX 1 (4,709 frames): 7,499 converted plots, 29 passed through (before the first commit / after
+  game over), 758 commits (max 58 sprites), 1,847,906 sprite pixels - IDENTICAL.
+- RZX 2 (Dean, 11,804 frames, the shop): 18,028 converted, 146 passed through (outside the loops),
+  2,264 commits incl. 477 in the shop (max 57 sprites), 4,040,431 sprite pixels, 1 level exit, 1
+  shop exit (sprites hidden) - IDENTICAL; also IDENTICAL with a colour map read back from a
+  randomly repainted sheet (60 % of the opaque pixels).
+- MMU2 = 10, MMU4 = 4, MMU5 = 5, 3.5 MHz after every hook; the shop-exit hooks leave the game's dead
+  stack as the original (a first version CALLed on it and was caught).
+- Unit: 8,856 guard cases, 60 single-figure commits, negative control 48/48; derived states for
+  0x7E06 and vertically flipped draws (not in either RZX); full sprite table (64 sprites; fails on
+  the old 8-bit N * 5 - negative control 3/3); level exit 0x8988; colour map (synthetic, wrong
+  check byte ignored, negative control 48/48).
+- Interrupt safety: 110M hook instructions checked, negative control 60/60.
 
 ## Smash TV (48K, engine `smashtv`) - 2026-10-13
 `nexclash.py auto smash_tv.z80 --rzx smash_tv.rzx --no-record` (~5 min)

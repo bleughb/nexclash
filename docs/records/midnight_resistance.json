@@ -17,6 +17,11 @@
     "name": "midnight_resistance.rzx",
     "md5": "b75ecd5f60c3ec67fe463a0aa606f6a1",
     "path": "midnight_resistance/Midnight_Resistance_1990_Ocean_128K.rzx"
+   },
+   {
+    "name": "midnight_resistance_v2.rzx",
+    "md5": "3e0fa52ae2fbf9fbae62cebb70b83190",
+    "path": "midnight_resistance/Midnight_Resistance_1990_Ocean_128K_V2RZX.rzx"
    }
   ]
  },
@@ -43,10 +48,11 @@
    "--no-record"
   ],
   "rzx": [
-   "midnight_resistance.rzx"
+   "midnight_resistance.rzx",
+   "midnight_resistance_v2.rzx"
   ],
   "auto_record": false,
-  "minutes": 20
+  "minutes": 60
  },
  "outputs": {
   "plain": {
@@ -55,17 +61,17 @@
   },
   "sprites": {
    "file": "midnight_resistance_sprites.nex",
-   "md5": "bd0d4d3e9042ca55ce84b553799527e9"
+   "md5": "a4fb69a2c8eaa820bf69da2edd589be1"
   }
  },
  "repro": [],
  "status": {
   "title": "Midnight Resistance (128K)",
   "engine_col": "midres (midnight_resistance.md)",
-  "build": "midnight_resistance_sprites.nex bd0d4d3e (altrom + page 26 at slot 5; player green, soldiers white, keys yellow (new), jeep / tank in their cell colours; colour map support; sprites hidden at the end-of-level exit; pattern-slot cache)",
-  "software": "RZX IDENTICAL (also with a repainted colour map), unit + interrupt + level-exit + map PASS",
-  "hardware": "e8f0ece9 runs on a real Next (Dean, 2026-10-13): keys clashed, player sprite stuck through the shop; bd0d4d3e untested",
-  "next": "hardware test bd0d4d3e (keys, shop / level 2); Dean paints the colour sheet; level 2 RZX"
+  "build": "midnight_resistance_sprites.nex a4fb69a2 (altrom + page 26 at slot 5, page 27 at slot 2 for figures whose graphics are under it; every figure through the six plotters, also flipped, in the game loop and the shop: player green, soldiers white, keys yellow, the rest in its cell colours; colour map support; sprites hidden on every loop exit)",
+  "software": "2 RZX IDENTICAL (also with a repainted colour map), unit + interrupt + level / shop exit + full table + flipped + map PASS",
+  "hardware": "e8f0ece9 runs (Dean, 2026-10-13): keys clashed, player sprite stuck through the shop; a4fb69a2 untested",
+  "next": "hardware test a4fb69a2; Dean paints the colour sheet (57 figures); level 2 RZX"
  },
  "checks": [
   "asm2profile:midnight_resistance"

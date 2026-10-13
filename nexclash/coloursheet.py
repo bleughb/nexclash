@@ -3,8 +3,7 @@ a colour map. Every game from Midnight Resistance on (Dean, 2026-10-13; PLAYBOOK
 
 The engine supplies PARTS (what one plot draws) grouped into COMPOSITES (the parts drawn together
 as one figure in a game frame: legs + body, the halves of a vehicle). This module joins the plots
-of a frame into composites, picks the fewest composites that show every part at its largest
-drawing, writes the sheet and reads the painted copy back. Sheet rules (Dean): one PNG pixel = one
+of a frame into composites, picks the fewest composites that show every graphics byte drawn, writes the sheet and reads the painted copy back. Sheet rules (Dean): one PNG pixel = one
 Spectrum pixel, multi-part figures joined, a row of 8x8 swatches of the sprite palette (indices
 1-15, left to right) at the top, no text; the layout JSON beside it says which part, colour-map key
 and bit each pixel is, so the PNG needs nothing else.
@@ -15,6 +14,10 @@ Part dict (engine-built):
   w, h     staging size in pixels (as stored, unmirrored)
   x, y     screen position of this drawing (pixels; composites are found from these)
   mir      1 = drawn mirrored on screen
+  vmir     optional: 1 = drawn upside down (shown as drawn; staging line r at h - 1 - r)
+  role     optional: which piece of a figure this is (e.g. the plotting routine's caller); a
+           role seen again starts a new figure (two explosions or two soldiers that touch stay two)
+  repeat   optional: True = this role may appear several times in one figure (a tank's wheels)
   pixels   [(c, r, key, bit, code, default)]: staging column / line, colour-map key (str: one
            graphics byte = 8 pixels), bit 0-7 (0 = leftmost as stored), code 1 ink / 2 opaque
            non-ink / 0 clear, default = today's palette index (0 for clear)
@@ -54,7 +57,8 @@ class Collector:
             g = groups[-1] if groups else None
             fam = self.family(d)
             # joined: plotted right after a part of the same family, boxes touching (gap <= 1)
-            if g and fam is not None and g['fam'] == fam and box[0] <= g['box'][2] + 1 and \
+            if g and fam is not None and g['fam'] == fam and not _same_role_overlap(d, box, g) and \
+                    box[0] <= g['box'][2] + 1 and \
                     g['box'][0] <= box[2] + 1 and box[1] <= g['box'][3] + 1 and g['box'][1] <= box[3] + 1:
                 g['parts'].append(d)
                 g['box'] = (min(g['box'][0], box[0]), min(g['box'][1], box[1]),
@@ -65,8 +69,8 @@ class Collector:
             x0, y0, x1, _ = g['box']
             flip = sum(p['mir'] for p in g['parts']) * 2 > len(g['parts'])     # shown unmirrored
             parts = [dict(p, dx=(x1 - (p['x'] + p['w'])) if flip else p['x'] - x0, dy=p['y'] - y0,
-                          dmir=int(bool(p['mir']) != flip)) for p in g['parts']]
-            key = tuple((self.sig(p), p['size'], p['dx'], p['dy'], p['dmir']) for p in parts)
+                          dmir=int(bool(p['mir']) != flip), vmir=p.get('vmir', 0)) for p in g['parts']]
+            key = tuple((self.sig(p), p['size'], p['dx'], p['dy'], p['dmir'], p['vmir']) for p in parts)
             if key in self.comps:
                 self.comps[key]['count'] += 1
             else:
@@ -76,15 +80,24 @@ class Collector:
         return choose(list(self.comps.values()), self.maxsize, group_order)
 
 
+def _same_role_overlap(d, box, g):
+    """True = d cannot join g: its role is already in g (unless the role repeats in one figure)."""
+    if d.get('role') is None or d.get('repeat'):
+        return False
+    return any(p.get('role') == d['role'] for p in g['parts'])
+
+
 def choose(comps, maxsize, group_order=()):
-    """Fewest composites that show every part id at its largest drawing (greedy: most new ids,
-    then most often drawn), sorted by group then first part."""
-    need = set(maxsize)
-    have = lambda c: {p['id'] for p in c['parts'] if p['size'] == maxsize[p['id']]}
+    """Fewest composites that show every colour-map key (graphics byte) any drawing showed (greedy:
+    most keys not yet shown, then most parts at their largest drawing, then most often drawn), so a
+    partial drawing of a graphic already shown whole adds nothing. Sorted by group, then first part."""
+    keys = lambda c: {q[2] for p in c['parts'] for q in p['pixels'] if q[4]}
+    full = lambda c: sum(1 for p in c['parts'] if p['size'] == maxsize.get(p['id'], p['size']))
+    need = set().union(*[keys(c) for c in comps]) if comps else set()
     out = []
     while need:
-        best = max(comps, key=lambda c: (len(have(c) & need), c['count']))
-        got = have(best) & need
+        best = max(comps, key=lambda c: (len(keys(c) & need), full(c), c['count']))
+        got = keys(best) & need
         if not got:
             break
         out.append(best)
@@ -101,7 +114,8 @@ def owners(comp):
     for n, p in enumerate(comp['parts']):
         for i, (c, r, key, bit, code, dflt) in enumerate(p['pixels']):
             if code:
-                own[(p['dx'] + (p['w'] - 1 - c if p['dmir'] else c), p['dy'] + r)] = (n, i)
+                own[(p['dx'] + (p['w'] - 1 - c if p['dmir'] else c),
+                     p['dy'] + (p['h'] - 1 - r if p.get('vmir') else r))] = (n, i)
     return own
 
 
@@ -142,6 +156,7 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH):
             keys = sorted({q[2] for q in p['pixels']})
             ki = {k: n for n, k in enumerate(keys)}
             parts.append(dict(id=str(p['id']), w=p['w'], h=p['h'], dx=p['dx'], dy=p['dy'], dmir=p['dmir'],
+                              vmir=p.get('vmir', 0),
                               keys=keys, entries={k: p['entries'][k] for k in keys},
                               pixels=[v for q in p['pixels'] for v in (q[0], q[1], ki[q[2]], q[3], q[4], q[5])]))
         lay.append(dict(group=comp['group'], x=bx, y=by, w=w, h=h, count=comp['count'], parts=parts))

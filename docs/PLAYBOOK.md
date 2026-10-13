@@ -82,6 +82,11 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   see-through, and the overlap (depth) rule - the game's own rule, always in front, or another.
   (Commando: depth, solid bodies and solid objects were settled across three hardware rounds
   from the user's photos; preview frames would have settled them first.)
+- Every figure is a sprite by default (Dean, 2026-10-13: "make everything possible a sprite"): list
+  every caller of each plotter from the code (not only those the RZX shows) and convert them all;
+  what stays on the ULA (scenery, HUD, text, cases the hooks cannot do) is the question to ask.
+  The sheet still shows only what the recording drew: ask for a recording that reaches every
+  level, weapon and collectable the user can, before the sheet goes out.
 - COLOUR SHEET - every game from Midnight Resistance on (Dean, 2026-10-13). Colours are not
   settled in words: the user paints them. With the phase-A question, send `<game>_colours.png`:
   every figure that becomes sprites, from the RZX, in the colours the first build would give it.
