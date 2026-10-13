@@ -1,3 +1,12 @@
+# nexclash - BASIC USE FOR CLAUDE AI
+
+# Put the below two line prompt into a claude chat and hit enter
+
+Add GAME NAME to nexclash. Snapshot and my RZX are attached.
+Clone bleughb/nexclash and bleughb/specnext side by side and follow nexclash/CLAUDE.md
+
+
+
 # nexclash - colour-clash-free ZX Spectrum games on the Spectrum Next
 
 Turns a ZX Spectrum `.z80` snapshot of a game into Spectrum Next `.nex` files: a plain conversion
