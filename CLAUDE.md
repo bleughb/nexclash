@@ -23,12 +23,16 @@ stay on their machine; the maintainers' reference files live in the private repo
    No usable recording (none, or one that desyncs: the tools print a WARNING with the frame) ->
    ask the user for a Fuse recording (docs/RECORDING_CHECKLIST.md) before phase A.
 3. Follow docs/PLAYBOOK.md phases A-C. Phase A ends with ONE question to the user, with preview
-   frames: which figures become sprites, their colours, what stays on the ULA, depth. Never guess
+   frames: which figures become sprites, what stays on the ULA, depth - and the COLOUR SHEET
+   (every game, Dean 2026-10-13; PLAYBOOK 3b): `<game>_colours.png` at 1:1, multi-part figures
+   joined, 8x8 palette swatches, built with nexclash/coloursheet.py; the painted sheet comes back
+   and becomes docs/profiles/<game>_colours.json, which the engine applies per pixel. Never guess
    these; if the prompt already says, confirm with the preview.
 4. Long runs (full verify, selftest): `setsid nohup` + poll (LEARNINGS 2.6) - plain `&` dies.
 5. While developing: engine files only, `selftest.py --canary` after any shared change.
 6. End: "End of every task" below - games/<game>.md, record, views, VERIFICATION, capture
-   questions; references + built .nex files to specnext; PRs in both repos (maintainers) or
+   questions; references + built .nex files + the colour sheet and its _layout.json to specnext
+   (the colours json, once painted, goes in the record's data list); PRs in both repos (maintainers) or
    `contribute` (contributors); maintainers: `selftest.py --affected --verify --stamp` in a
    separate worktree before the merge (Rainbow Islands stays excluded).
 7. Reply: results, the .nex files, a short hardware checklist.

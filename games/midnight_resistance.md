@@ -142,7 +142,8 @@ touches slots 2, 4, 5 (full-RZX isr slot scan). Interrupts stay ON in every hook
   ISR never touches 0x8000-0x9FFF) and overlays non-zero nibbles on opaque pixels (ovl); a check
   byte that does not match (other graphics at that address in a later level) leaves the defaults.
   The mask-only (flashing) image is never mapped.
-- Sheet: `python -m nexclash.midres sheet RZX -o mr_colours.png` (1:1, figures assembled from the
+- Sheet (the first game with the colour-sheet process; sheet side shared: nexclash/coloursheet.py,
+  this engine's parts: sheet_part / capture): `python -m nexclash.midres sheet RZX -o mr_colours.png` (1:1, figures assembled from the
   parts drawn together in one frame, fewest figures that show every part at its longest drawing,
   8x8 swatches 1-15 at the top; layout in mr_colours_layout.json) and `python -m nexclash.midres
   colours painted.png` -> the colour map. Today's colours = no entry. A part shown twice: a painted

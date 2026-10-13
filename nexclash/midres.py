@@ -1084,14 +1084,16 @@ KEY_COL = 14                      # default: bright yellow (as the HUD's key ico
 GROUPS = (('Player', PLAYER, 12), ('Soldiers / gun turrets', SOLDIERS, 15), ('Keys', KEYS, KEY_COL),
           ('Tank turret', TANK_P, 0), ('Vehicles (jeep, tank)', VEHICLES, 0))
 COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', 'midnight_resistance_colours.json')
-TRANSP_RGB = (100, 100, 100)      # sheet: transparent pixels (not a palette colour)
+RGB16 = None
 
 
 def rgb(idx):
-    """Palette index -> sheet RGB (the Next's 9-bit colour: blue's third bit = B1 OR B0)."""
-    v = PALETTE[idx]
-    b3 = ((v & 3) << 1) | (1 if v & 3 else 0)
-    return (((v >> 5) & 7) * 255 // 7, ((v >> 2) & 7) * 255 // 7, b3 * 255 // 7)
+    """Palette index -> sheet RGB."""
+    from . import coloursheet as cs
+    global RGB16
+    if RGB16 is None:
+        RGB16 = cs.palette_rgb(PALETTE)
+    return RGB16[idx]
 
 
 def rotl(v):
@@ -1130,24 +1132,55 @@ def pixel_code(data, j, b, over):
     return 1 if g & bit else (0 if m & bit else 2)
 
 
+def default_colour(d, r, c, code):
+    """Colour the figure has today (sheet default): fixed colour, or the cells at its sample plot."""
+    if d['col']:
+        return d['col'] if code == 1 else CBLACK
+    k = c >> 3
+    dcol = d['X'] + (d['W'] - 1 - k if d['mir'] else k)
+    at = d['attrs'][(((d['Y'] + r) >> 3) & 15) * 32 + (dcol & 31)]
+    return ink_of(at) if code == 1 else paper_of(at)
+
+
+def ckey(st, p):
+    return '%d:%04X' % (st, p)
+
+
+def sheet_part(d):
+    """A plot (capture) -> a coloursheet part: staging pixels with colour-map keys and defaults."""
+    step = 1 if d['over'] else 2
+    pixels, entries = [], {}
+    for r, c, j, b in fig_pixels(d['W'], d['R'], d['over']):
+        code = pixel_code(d['data'], j, b, d['over'])
+        k = ckey(d['set'], (d['gfx'] + j * step) & 0xFFFF)
+        if k not in entries:
+            m, g = (0, d['data'][j]) if d['over'] else (d['data'][2 * j], d['data'][2 * j + 1])
+            entries[k] = [entry_check(m, g), 2 if d['over'] else 1]
+        pixels.append((c, r, k, b, code, default_colour(d, r, c, code) if code else 0))
+    return dict(id=(d['set'], d['gfx'], d['over']), size=d['R'], w=8 * d['W'], h=d['R'], x=d['X'] * 8,
+                y=d['Y'], mir=d['mir'], group=d['group'], pixels=pixels, entries=entries)
+
+
 def capture(rzx_path, stop=None, progress=None):
-    """Replay the RZX (original game) and collect the figures the commit could convert, AS DRAWN:
-    the parts of one figure (player legs + body, soldier halves, jeep / tank parts) are plotted
-    one after another and touch, so each game frame's plots are joined into composites. -> (list of
-    composites [{'count', 'parts': [part dict, offsets dx/dy and dmir = shown mirrored]}], max R per
-    part key (set, gfx, overwrite))."""
+    """Replay the RZX (original game), collect every plot the commit could convert, frame by frame
+    (frames end at the commit 0x8950), and join them into the sheet's composites (coloursheet:
+    the parts drawn together - player legs + body, soldier halves, jeep / tank parts)."""
     import skoolkit.rzxplay as rzxplay
     from skoolkit.simulator import Simulator
     from skoolkit.pagingtracer import Memory
+    from . import coloursheet as cs
     MG = Memory.__getitem__
     st = {'f': 0}
-    frame, comps, maxr = [], {}, {}
+    frame = []
+    family = lambda p: None if p['group'] == 'Keys' else (
+        'Vehicles' if p['group'] in ('Tank turret', 'Vehicles (jeep, tank)') else p['group'])
+    col = cs.Collector(family=family)
 
     def ev(pc, mem, R):
         get = lambda a: MG(mem, a)
         sp = R[12]
         gfx, caller = get(sp) | get(sp + 1) << 8, get(sp + 2) | get(sp + 3) << 8
-        name, col = group_of(caller)
+        name, colr = group_of(caller)
         if name is None:
             return
         kind = KIND[pc]
@@ -1163,43 +1196,10 @@ def capture(rzx_path, stop=None, progress=None):
         X = col0 - (W - 1) if fl & 1 else col0
         if X > 28:
             X -= 32                     # wrapped into the left margin
-        st_ = int(caller in PLAYER)
-        k = (st_, gfx, over)
-        maxr[k] = max(maxr.get(k, 0), Rr)
-        frame.append(dict(set=st_, gfx=gfx, W=W, R=Rr, over=over, mir=fl & 1, group=name, col=col,
-                          caller=caller, X=X, Y=R[4], data=bytes(get((gfx + i) & 0xFFFF) for i in range(ln)),
-                          attrs=bytes(get(ATTR + i) for i in range(512))))
-
-    def family(d):
-        return 'Keys %d' % id(d) if d['group'] == 'Keys' else (
-            'Vehicles' if d['group'] in ('Tank turret', 'Vehicles (jeep, tank)') else d['group'])
-
-    def end_frame():
-        groups = []
-        for d in frame:
-            box = (d['X'] * 8, d['Y'], d['X'] * 8 + d['W'] * 8, d['Y'] + d['R'])
-            g = groups[-1] if groups else None
-            if g and g['fam'] == family(d) and box[0] <= g['box'][2] + 1 and g['box'][0] <= box[2] + 1 \
-                    and box[1] <= g['box'][3] + 1 and g['box'][1] <= box[3] + 1:
-                g['parts'].append(d)
-                g['box'] = (min(g['box'][0], box[0]), min(g['box'][1], box[1]),
-                            max(g['box'][2], box[2]), max(g['box'][3], box[3]))
-            else:
-                groups.append(dict(fam=family(d), parts=[d], box=box))
-        for g in groups:
-            x0, y0, x1, _ = g['box']
-            flip = sum(p['mir'] for p in g['parts']) * 2 > len(g['parts'])
-            parts = []
-            for p in g['parts']:
-                dx = (x1 - (p['X'] * 8 + p['W'] * 8)) if flip else p['X'] * 8 - x0
-                parts.append(dict(p, dx=dx, dy=p['Y'] - y0, dmir=int(bool(p['mir']) != flip)))
-            sig = tuple((p['set'], p['gfx'], p['over'], p['W'], p['R'], p['dx'], p['dy'], p['dmir'])
-                        for p in parts)
-            if sig in comps:
-                comps[sig]['count'] += 1
-            else:
-                comps[sig] = dict(count=1, group=g['parts'][0]['group'], parts=parts)
-        frame.clear()
+        frame.append(sheet_part(dict(set=int(caller in PLAYER), gfx=gfx, W=W, R=Rr, over=over, mir=fl & 1,
+                                     group=name, col=colr, X=X, Y=R[4],
+                                     data=bytes(get((gfx + i) & 0xFFFF) for i in range(ln)),
+                                     attrs=bytes(get(ATTR + i) for i in range(512)))))
 
     class S(Simulator):
         def __init__(self, memory, registers=None, state_=None, config=None):
@@ -1212,7 +1212,8 @@ def capture(rzx_path, stop=None, progress=None):
                     if pc in CALL_SITES:
                         ev(pc, mem, R)
                     elif pc == 0x8950:
-                        end_frame()
+                        col.add_frame(frame)
+                        frame.clear()
                     f()
                 return g
             for i in range(256):
@@ -1233,172 +1234,35 @@ def capture(rzx_path, stop=None, progress=None):
         pass
     finally:
         rzxplay.RZXTracer.next_frame, rzxplay.Simulator, rzxplay.CSimulator = old
-    return choose(list(comps.values()), maxr)
-
-
-def choose(comps, maxr):
-    """Fewest composites that show every part key at its longest drawing (greedy; most often drawn
-    first). Keys that never appear whole in a composite are added on their own."""
-    need = set(maxr)
-    have = lambda c: {(p['set'], p['gfx'], p['over']) for p in c['parts'] if p['R'] == maxr[(p['set'], p['gfx'], p['over'])]}
-    out = []
-    order = [g[0] for g in GROUPS]
-    pool = sorted(comps, key=lambda c: -c['count'])
-    while need:
-        best = max(pool, key=lambda c: (len(have(c) & need), c['count']))
-        got = have(best) & need
-        if not got:
-            break
-        out.append(best)
-        need -= got
-    out.sort(key=lambda c: (order.index(c['group']), c['parts'][0]['gfx']))
-    return out
-
-
-def default_colour(d, r, c, code):
-    """Colour the figure has today (sheet default): fixed colour, or the cells at its sample plot."""
-    if d['col']:
-        return d['col'] if code == 1 else CBLACK
-    k = c >> 3
-    dcol = d['X'] + (d['W'] - 1 - k if d['mir'] else k)
-    at = d['attrs'][(((d['Y'] + r) >> 3) & 15) * 32 + (dcol & 31)]
-    return ink_of(at) if code == 1 else paper_of(at)
-
-
-SHEET_W, BG_RGB, SW = 160, (150, 150, 175), 8          # sheet width, background, swatch size
-
-
-def _owners(comp):
-    """Composite pixels as drawn (later parts on top, transparent pixels draw nothing) ->
-    {(x, y): (part index, r, c, j, bit, code)}."""
-    own = {}
-    for n, p in enumerate(comp['parts']):
-        for r, c, j, b in fig_pixels(p['W'], p['R'], p['over']):
-            code = pixel_code(p['data'], j, b, p['over'])
-            if code:
-                x = p['dx'] + (8 * p['W'] - 1 - c if p['dmir'] else c)
-                own[(x, p['dy'] + r)] = (n, r, c, j, b, code)
-    return own
+    return col.composites([g[0] for g in GROUPS])
 
 
 def sheet(comps, png, layout_path, colours=None):
-    """Sheet to paint at 1:1 (one image pixel = one Spectrum pixel): a row of 8x8 palette swatches
-    (1-15, left to right), then every composite on transparent grey; layout JSON to read it back."""
-    from PIL import Image
-    cmap = colours or {}
-    boxes, x, y, rowh, last = [], 1, SW + 4, 0, None
-    for comp in comps:
-        own = _owners(comp)
-        w = max(px for px, _ in own) + 1
-        h = max(py for _, py in own) + 1
-        if comp['group'] != last and last is not None:
-            x, y, rowh = 1, y + rowh + 4, 0           # each group starts a new row
-        last = comp['group']
-        if x + w > SHEET_W - 1:
-            x, y, rowh = 1, y + rowh + 2, 0
-        boxes.append((comp, own, x, y, w, h))
-        x += w + 2
-        rowh = max(rowh, h)
-    H = y + rowh + 2
-    img = Image.new('RGB', (SHEET_W, H), BG_RGB)
-    for i in range(1, 16):
-        for yy in range(1, 1 + SW):
-            for xx in range(SW):
-                img.putpixel((1 + (i - 1) * (SW + 2) + xx, yy), rgb(i))
-    lay = []
-    for comp, own, bx, by, w, h in boxes:
-        for yy in range(h):
-            for xx in range(w):
-                img.putpixel((bx + xx, by + yy), TRANSP_RGB)
-        for (px, py), (n, r, c, j, b, code) in own.items():
-            p = comp['parts'][n]
-            step = 1 if p['over'] else 2
-            nib = (cmap.get((p['set'], p['gfx'] + j * step)) or [0, 0, [0] * 8])[2][b]
-            img.putpixel((bx + px, by + py), rgb(nib or default_colour(p, r, c, code)))
-        lay.append(dict(group=comp['group'], x=bx, y=by, w=w, h=h, count=comp['count'],
-                        parts=[dict(set=p['set'], gfx=p['gfx'], W=p['W'], R=p['R'], over=p['over'],
-                                    dx=p['dx'], dy=p['dy'], dmir=p['dmir'], data=p['data'].hex(),
-                                    defaults=[default_colour(p, r, c, pixel_code(p['data'], j, b, p['over']))
-                                              if pixel_code(p['data'], j, b, p['over']) else 0
-                                              for r, c, j, b in fig_pixels(p['W'], p['R'], p['over'])])
-                               for p in comp['parts']]))
-    img.save(png)
-    json.dump(dict(size=[SHEET_W, H], swatches=[[1 + (i - 1) * (SW + 2), 1, i] for i in range(1, 16)],
-                   composites=lay), open(layout_path, 'w'))
-    return len(lay)
-
-
-def nearest(c):
-    best = None
-    for i in range(1, 16):
-        p = rgb(i)
-        dd = sum((a - b) ** 2 for a, b in zip(c, p))
-        if best is None or dd < best[0]:
-            best = (dd, i)
-    dt = sum((a - b) ** 2 for a, b in zip(c, TRANSP_RGB))
-    return (0, dt) if dt < best[0] else (best[1], best[0])
+    from . import coloursheet as cs
+    cmap = {ckey(*k): v for k, v in (colours or {}).items()}
+    return cs.write(comps, png, layout_path, [rgb(i) for i in range(16)], cmap)
 
 
 def read_sheet(png, layout_path):
-    """Painted sheet -> (entries {(set, key address): [check, kind, 8 nibbles]}, report). Only the
-    pixels a part shows (not covered by a later part) are read; a pixel in today's colour keeps its
-    default (nibble 0); transparent pixels cannot be painted. A part shown in two composites:
-    a painted colour beats an unpainted one; two different painted colours -> the first, reported."""
-    from PIL import Image
-    lay = json.load(open(layout_path))
-    img = Image.open(png).convert('RGB')
-    if list(img.size) != lay['size']:
-        raise ValueError('sheet is %dx%d, expected %dx%d (save at the same size, no scaling)'
-                         % (img.size + tuple(lay['size'])))
-    rep = collections.Counter()
-    ent = {}
-    for comp in lay['composites']:
-        parts = [dict(p, data=bytes.fromhex(p['data'])) for p in comp['parts']]
-        own = _owners(dict(parts=parts))
-        for yy in range(comp['h']):
-            for xx in range(comp['w']):
-                if (xx, yy) not in own and nearest(img.getpixel((comp['x'] + xx, comp['y'] + yy)))[0]:
-                    rep['painted transparent pixels (ignored)'] += 1
-        for (px, py), (n, r, c, j, b, code) in own.items():
-            p = parts[n]
-            dflt = p['defaults'][r * 8 * p['W'] + c]          # fig_pixels order
-            idx, dist = nearest(img.getpixel((comp['x'] + px, comp['y'] + py)))
-            if dist > 3 * 40 ** 2:
-                rep['pixels not near a palette colour (kept default)'] += 1
-                continue
-            if idx == 0:
-                rep['opaque pixels painted grey (kept default)'] += 1
-                continue
-            step = 1 if p['over'] else 2
-            q = p['gfx'] + j * step
-            m, g = (0, p['data'][j]) if p['over'] else (p['data'][2 * j], p['data'][2 * j + 1])
-            e = ent.setdefault((p['set'], q), [entry_check(m, g), 2 if p['over'] else 1, [0] * 8])
-            if idx == dflt:
-                continue
-            if e[2][b] and e[2][b] != idx:
-                rep['pixels painted differently in two places (first kept)'] += 1
-                continue
-            if not e[2][b]:
-                e[2][b] = idx
-                rep['pixels recoloured'] += 1
-    ent = {k: e for k, e in ent.items() if any(e[2])}
-    rep['graphics bytes with colours'] = len(ent)
-    return ent, rep
+    """Painted sheet -> ({(set, key address): [check, kind, 8 nibbles]}, report)."""
+    from . import coloursheet as cs
+    ent, rep = cs.read(png, layout_path)
+    return {(int(k[0]), int(k[2:], 16)): v for k, v in ent.items()}, rep
+
+
+NOTE = ('Midnight Resistance figure colours (python -m nexclash.midres colours): "set:key address" (set 1 = '
+        'the player, 0 = every other figure: the soldiers share the player\'s leg graphics) -> [check byte, '
+        'kind 1 masked / 2 overwrite, 8 nibbles (0 = default colour)]')
 
 
 def save_colours(ent, path=COLOURS):
-    json.dump({'note': 'Midnight Resistance figure colours (python -m nexclash.midres colours): "set:key address" '
-                       '(set 1 = the player, 0 = every other figure: the soldiers share the player\'s leg graphics) '
-                       '-> [check byte, kind 1 masked / 2 overwrite, 8 nibbles (0 = default colour)]',
-               'entries': {'%d:%04X' % k: [e[0], e[1], ''.join('%X' % n for n in e[2])] for k, e in sorted(ent.items())}},
-              open(path, 'w'), indent=0)
+    from . import coloursheet as cs
+    cs.save({ckey(*k): v for k, v in ent.items()}, path, NOTE)
 
 
 def load_colours(path=COLOURS):
-    if not os.path.exists(path):
-        return {}
-    d = json.load(open(path))['entries']
-    return {(int(k[0]), int(k[2:], 16)): [v[0], v[1], [int(ch, 16) for ch in v[2]]] for k, v in d.items()}
+    from . import coloursheet as cs
+    return {(int(k[0]), int(k[2:], 16)): v for k, v in cs.load(path).items()}
 
 
 def _main(argv=None):

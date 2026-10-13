@@ -82,12 +82,20 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   see-through, and the overlap (depth) rule - the game's own rule, always in front, or another.
   (Commando: depth, solid bodies and solid objects were settled across three hardware rounds
   from the user's photos; preview frames would have settled them first.)
-- Colour choices the user paints (Dean, 2026-10-13): a sheet at 1:1 (one PNG pixel = one Spectrum
-  pixel; an enlarged sheet is too big to paint), figures ASSEMBLED as drawn (multi-part figures
-  joined), a row of 8x8 palette swatches at the top, no text needed; the tool keeps the layout
-  (which part / byte each pixel is) in a JSON beside the PNG and reads the painted PNG back.
-  Template: `python -m nexclash.midres sheet RZX -o x.png` / `colours x.png` (engine-specific today,
-  BRIEFING C2). Game graphics: the PNG stays private.
+- COLOUR SHEET - every game from Midnight Resistance on (Dean, 2026-10-13). Colours are not
+  settled in words: the user paints them. With the phase-A question, send `<game>_colours.png`:
+  every figure that becomes sprites, from the RZX, in the colours the first build would give it.
+  Rules (Dean): 1:1 (one PNG pixel = one Spectrum pixel; an enlarged sheet is too big to paint),
+  multi-part figures JOINED as the game draws them, a row of 8x8 swatches of the sprite palette
+  (1-15) at the top, no text. The user paints, keeps the size, sends it back; the read-back is the
+  colour map `docs/profiles/<game>_colours.json` (none = the defaults). Shared module
+  nexclash/coloursheet.py does the sheet side (joining a frame's plots into figures, the fewest
+  figures that show every part, PNG, layout JSON, read-back, the colours file); the engine supplies
+  the parts: per plot its staging pixels, each with a colour-map key (one graphics byte = 8 pixels),
+  bit, ink / outline / clear code and today's colour (template: midres.sheet_part / capture, CLI
+  `python -m nexclash.<engine> sheet RZX` / `colours painted.png`). The PNG and its
+  `_layout.json` hold game graphics: specnext/reference/<game>/ only. Later levels the RZX does not
+  reach: a second sheet from a later recording, read into the same colours file.
 - Speed budget: `cost GAME.z80 --rzx R --at PLOTTER --group IX` gives the original's cost per
   draw (T-states), draws per frame and per object; set the allowed hook cost per draw now, and design to it (caching, fewer
   uploads). Commando's first solid hooks cost ~18x the original draw and were redesigned.
@@ -122,8 +130,14 @@ Copy the nearest builder (TID-engine: build.py TidPatch;
 XOR: dizzy1_patch.py; non-Codemasters: chuckie.py (simplest), wally.py, rainbow.py, commando.py
 (128K BASIC loader, front end, depth, cached solid sprites), midres.py (interrupts on, hook page at
 slot 5, CALL-target redirect into a scratch buffer, sprites built at a commit with a pattern-slot
-cache, per-cell colours)), change the profile block and site list, rebuild the asm.
+cache, per-cell colours, per-pixel colour map)), change the profile block and site list, rebuild the asm.
 Every site keeps its original-byte check.
+Colour map (every game, PLAYBOOK 3b): the sprite builder applies `<game>_colours.json` per pixel -
+key = the graphics byte the pixel comes from, a non-zero nibble replaces the default colour of an
+opaque pixel, and a check of the graphics bytes stored with the entry (other graphics at that
+address in a later level -> defaults). Store it where the build can read it at sprite-build time
+(midres: Next pages 28.. at slot 4 during the commit, page tables in the hook page, MidresPatch
+store_pages / asm `ovl`). A build with no colours file = today's defaults.
 
 ## 6. Verify (differential test)
 At every patched routine in the real recording: copy the machine state, run the
@@ -135,6 +149,10 @@ model, and the sprite pixels against the original plot (masked figures: run the 
 and a 0xFF buffer for ink / paper / transparent, midres.truth). With interrupts on at the hooks,
 also check interrupt safety after every hook instruction (IX, IY, I, IFF, stack room; Commando,
 midres) with a negative control. Every mismatch must be explained or fixed.
+Colour map: the expected sprite layer uses the map too (midres.expected_layer / map_colour); unit
+cases with a synthetic map per figure, a wrong check byte (must be ignored) and a negative control
+(the map left out of the build, informative cases only); once the user's colours file exists, the
+full RZX run uses it.
 Also simulate the start-up tail: registers restored, no game memory touched.
 
 Long runs (the full `auto` with verification, selftest): start them with `setsid nohup ... &` and
