@@ -74,7 +74,7 @@
   "deps": {
    "asm/commando_hooks.asm": "25ca7e598b097b04",
    "docs/profiles/commando.json": "bbe5a6767f4ef85f",
-   "nexclash.py": "d8e099fa553cffa9",
+   "nexclash.py": "5eeaaae9ae6e4a3c",
    "nexclash/build.py": "a60e4d3c5945c94a",
    "nexclash/commando.py": "a5f254ced8e01d44",
    "nexclash/dizzy6.py": "89c8ba59fc762962",
@@ -91,7 +91,7 @@
   "deps": {
    "asm/commando_hooks.asm": "25ca7e598b097b04",
    "docs/profiles/commando.json": "bbe5a6767f4ef85f",
-   "nexclash.py": "e643a6a71253b504",
+   "nexclash.py": "5eeaaae9ae6e4a3c",
    "nexclash/build.py": "a60e4d3c5945c94a",
    "nexclash/commando.py": "a5f254ced8e01d44",
    "nexclash/dizzy6.py": "89c8ba59fc762962",
