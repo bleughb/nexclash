@@ -380,6 +380,32 @@ def coloursheet_check():
     im3.save(pp)
     e8, _ = cs.read(pp, pl, clear=True)
     res.append(('transparent pixel painted back to its default -> no entry', e8 == {}))
+    # outlines (paint_clear, Dizzy 1 2026-10-14): clear pixels inside the box are paintable
+    qp, ql = os.path.join(work, 'q.png'), os.path.join(work, 'q_layout.json')
+    cs.write(col3.composites(['Fig']), pp, pl, pal, unique=True)
+    cs.write(col3.composites(['Fig']), qp, ql, pal, unique=True, paint_clear=True)
+    Q = json.load(open(ql))
+    a_, b_ = Image.open(pp).convert('RGB'), Image.open(qp).convert('RGB')
+    res.append(('paint_clear: same PNG, same boxes, layout marked',
+                list(a_.getdata()) == list(b_.getdata()) and Q.get('paint_clear') is True and
+                [(c['x'], c['y'], c['w'], c['h']) for c in Q['composites']] ==
+                [(c['x'], c['y'], c['w'], c['h']) for c in json.load(open(pl))['composites']]))
+    q1 = [c for c in Q['composites'] if c['h'] == 8][0]
+    b_.putpixel((q1['x'], q1['y']), pal[8])                      # B0 bit 0 (clear) -> black outline
+    b_.save(qp)
+    e9, r9 = cs.read(qp, ql, clear=True)
+    res.append(('paint_clear: a clear pixel painted -> its nibble', e9 == {'B0': [0, 1, [8, 0, 0, 0, 0, 0, 0, 0]]}
+                and r9['clear pixels painted opaque (outline)'] == 1 and not any('ignored' in k for k in r9)))
+    cs.write(col3.composites(['Fig']), qp, ql, pal, e9, unique=True, paint_clear=True)
+    e10, _ = cs.read(qp, ql, clear=True)
+    b2 = Image.open(qp).convert('RGB')
+    res.append(('paint_clear: sheet drawn with it shows it, re-read -> the same map',
+                b2.getpixel((q1['x'], q1['y'])) == pal[8] and e10 == e9))
+    b2.putpixel((q1['x'], q1['y']), cs.TRANSP_RGB)               # grey again: transparent, entry gone
+    b2.save(qp)
+    e11, r11 = cs.read(qp, ql, clear=True)
+    res.append(('paint_clear: painted grey again -> no entry', e11 == {} and
+                r11['painted clear pixels set back to transparent'] == 1))
     img.resize((img.size[0] * 2, img.size[1] * 2)).save(png)
     try:
         cs.read(png, lay)

@@ -507,6 +507,26 @@ objects -> this build.
 - Speed (no frame sync in the game): median frame -1,069 T (faster than the original), worst frame
   (room change) +168,970 T, 28 MHz parts counted / 8.
 
+### Outlines (painted paper bits, coloursheet paint_clear) - 2026-10-14
+Dean's outlined painting (2,471 outline pixels, 118 recolours) -> dizzy1_sprites_painted.nex
+79218527 (map 1,633 bytes; 233 outline bits on Layer 2 figures, the rest on Dizzy; 95 patterns).
+- Defaults unchanged: recolour with no map -> 83ea050d (the recorded build). Dean's previous map
+  -> 166 bytes differ, all Dizzy shifted-copy colour nibbles on PAPER bits (now 0) + their
+  has-colours flags: the dz_keys right-edge wrap fixed (never drawn: not ink, not in a fill mask);
+  patterns unchanged. Profile colour_inputs 14,571 -> 14,532 bytes (the 39 wrapped bytes no longer
+  read; recomputed from the snapshot = the .nex's).
+- Sheets regenerated with the reference map: both PNGs pixel-identical, figure boxes identical;
+  the sheet drawn with the new map = Dean's painting pixel for pixel, re-read -> the same map.
+- Midnight Resistance (the other coloursheet user): old vs new coloursheet on its reference layout:
+  write (painting + reference) byte-identical, read (its sheet + a 4,000-pixel random repaint, clear
+  on / off) the same maps and reports.
+- Differential verify of dizzy1.rzx with Dean's map: PASSED (6,346 frames, 7,086 converted +
+  1,356 kept plotter-2 calls, 2,364 Dizzy calls, 2,050,536 figure pixels, 2,395 sprite checks).
+- Unit: 55 cases PASSED; synthetic map now with 11,379 outline pixels (random paper colours on
+  plotter-2 graphics, a black outline on Dizzy). Negative controls 11/11: + outlines left out of the
+  plane, + outlines left out of Dizzy's patterns.
+- `selftest.py --tools` PASSED (+ 4 paint_clear golden checks), `--canary` PASSED (stage 1).
+
 ## Toolkit: two-stage tool-chain canary (2026-10-13)
 `selftest.py --canary`: stage 1 Chuckie Egg rebuild (both MD5s) PASSED in 0.6 s. Negative control
 (stage-1 MD5s forced wrong): stage 1 FAILED -> stage 2 ran (Midnight Resistance: profile = pinned

@@ -363,6 +363,14 @@ BRIEFING - with its reason.
   RELEASE run (every game rebuilt); it now prints the usage and exits.
 - `rzxplay.py --map FILE` + `sna2ctl.py -m FILE` + `sna2skool.py -c` give a routine-split
   disassembly of everything an RZX executed in ~1 minute: the fastest way into an unknown engine.
+- Colour sheets, outlines (Dizzy 1, 2026-10-14): the user painted a 1-pixel black border round
+  every figure inside the figure's box and the read-back IGNORED all 2,471 pixels: the map had a
+  colour only for ink / interior bits, the PNG gave no hint. Users think in boxes, the engine in
+  bits: say on the sheet's rules what is paintable, and report ignored paint loudly. Fix kept general
+  (coloursheet paint_clear: every bit of the graphics bytes, paper as code 0). Also: giving paper a
+  colour exposed a latent key bug (Dizzy's 4-px-shifted frames wrapped their right edge onto the
+  next row's byte) that was harmless while paper was never drawn - when a pixel class starts to
+  matter, re-check every map from pixels to keys for that class (bounds, wraps, mirrors).
 
 ## 2.4 Recordings (Fuse / RZX)
 - Autosave snapshots: `nexclash.py rzx strip A.rzx -o B.rzx` (keeps the first snapshot; replay

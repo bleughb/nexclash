@@ -155,25 +155,28 @@ def part_from_writes(peek, dizzy, frame, writes, group, ret, b, c):
     pid, x0, y0 = None, None, None
     dflt = default_colour(dizzy, b, c)
     inter = interior_masks(peek)
+    W = 8 * frame_info(peek, frame % 39 if dizzy else frame, dizzy)[1]
     for sa, ga in writes:
         g = peek(ga)
         im = inter.get(ga, 0)
         cx, sy = scr_xy(sa)
         for bit in range(8):
             ink = g >> (7 - bit) & 1
-            if not ink and not im >> (7 - bit) & 1:
-                continue
             pid, col, row, key, kb, chk = pixel_key(peek, dizzy, frame, ga, bit)
+            if not 0 <= col < W:
+                continue                       # a shifted copy's edge: no key (dz_keys)
             px = cx * 8 + bit
             if x0 is None:
                 x0, y0 = px - col, sy - row
             entries[key] = [chk, 1]
-            # ink: code 1, today's colour; enclosed paper: code 2 (opaque), black by default
-            pixels.append((col, row, key, kb, 1, dflt) if ink else (col, row, key, kb, 2, 8))
-    if not pixels:
+            # ink: code 1, today's colour; enclosed paper: code 2 (opaque), black by default; other
+            # paper: code 0, transparent unless painted (an outline: fill_mask)
+            pixels.append((col, row, key, kb, 1, dflt) if ink else
+                          (col, row, key, kb, 2, 8) if im >> (7 - bit) & 1 else (col, row, key, kb, 0, 0))
+    if not any(q[4] for q in pixels):
         return None
     ds, wb, h = frame_info(peek, frame % 39 if dizzy else frame, dizzy)
-    rows = len({p[1] for p in pixels})
+    rows = len({p[1] for p in pixels if p[4]})    # as before clear pixels were listed (figure choice)
     return dict(id=pid, size=rows, w=8 * wb, h=h, x=x0, y=y0, mir=0, group=group, role=ret,
                 pixels=pixels, entries=entries)
 
@@ -340,7 +343,8 @@ def sheets(comps, prefix, colours=None):
     out = []
     for suffix, uniq in (('_PAINTING_SPRITES', True), ('_REFERENCE_ALL_SPRITES', False)):
         png = prefix + suffix + '.png'
-        n = cs.write(comps, png, os.path.splitext(png)[0] + '_layout.json', rgb16, colours, unique=uniq)
+        n = cs.write(comps, png, os.path.splitext(png)[0] + '_layout.json', rgb16, colours, unique=uniq,
+                     paint_clear=True)          # outlines: paper bits are paintable (fill_mask)
         out.append((png, n))
     return out
 
@@ -475,6 +479,20 @@ def clear_entry(cmap, peek, dizzy, ga, bit):
     return bool(e and len(e) > 3 and e[0] == k[2] and e[3] & (0x80 >> k[1]))
 
 
+def fill_mask(cmap, peek, dizzy, ga):
+    """Bit mask (0x80 = bit 0) of graphics byte ga's opaque NON-ink pixels: the enclosed paper
+    (interior_masks), plus every paper bit painted a colour and not transparent (an outline, Dean
+    2026-10-14). The hooks draw these through the fill shadow (plane byte 4), which toggles with the
+    ink, in the bit's colour (black by default)."""
+    m = interior_masks(peek).get(ga, 0)
+    if cmap:
+        cand = sum(0x80 >> b for b in range(8) if colour_entry(cmap, peek, dizzy, ga, b) and
+                   not clear_entry(cmap, peek, dizzy, ga, b))
+        if cand:                    # (reads ga only then: colour_inputs_md5 lists the bytes read)
+            m |= cand & ~peek(ga) & 255
+    return m
+
+
 DZ_KEYS = {}
 
 
@@ -484,18 +502,23 @@ def dz_keys(peek):
         return DZ_KEYS
     for f in range(78):
         ds, wb, h = frame_info(peek, f, True)
+        W0 = 8 * frame_info(peek, f % 39, True)[1]
         for j in range(wb * h):
             for bit in range(8):
+                # a shifted copy (f >= 39, 4 px right) is wider than its frame: its first and last 4
+                # columns have no key (they are paper; before outlines the right edge wrapped onto
+                # the next row's first byte, harmless while paper had no colour)
+                if not 0 <= (j % wb) * 8 + bit - (4 if f >= 39 else 0) < W0:
+                    continue
                 _, c, r, key, kb, chk = pixel_key(peek, True, f, ds + j, bit)
-                if c >= 0:
-                    DZ_KEYS[(ds + j, bit)] = (key, kb, chk)
+                DZ_KEYS[(ds + j, bit)] = (key, kb, chk)
     return DZ_KEYS
 
 
 def plane_pages(cmap, peek):
     """-> {page: 8K}: the plane, 8 bytes per graphics byte (plotter-2 graphics, then Dizzy's): 8 colour
-    nibbles (0 = default), the interior mask, the transparent mask, 1 = has colours. Always built."""
-    inter = interior_masks(peek)
+    nibbles (0 = default), the fill mask (interior + painted paper), the transparent mask, 1 = has
+    colours. Always built."""
     if cmap:
         dz_keys(peek)
     plane = bytearray(NPL * 8192)
@@ -509,14 +532,14 @@ def plane_pages(cmap, peek):
                 plane[e + k] = nib[2 * k] << 4 | nib[2 * k + 1]
             plane[e + 5] = sum(0x80 >> b for b in range(8) if clear_entry(cmap, peek, dizzy, ga, b))
             plane[e + 6] = 1 if any(nib) else 0         # colours to expand (else the defaults)
-        plane[e + 4] = inter.get(ga, 0)
+        plane[e + 4] = fill_mask(cmap, peek, dizzy, ga)
     return {PLPG + p: bytes(plane[p * 8192:(p + 1) * 8192]) for p in range(NPL)}
 
 
 def dz_image(peek, cmap, f):
     """Dizzy frame f (0-38) as drawn by the build: {(column, row): colour} - ink white (15) or
-    painted, enclosed paper black (8) or painted, painted-transparent pixels left out."""
-    inter = interior_masks(peek)
+    painted, enclosed paper black (8) or painted, paper painted a colour (outline) in it,
+    painted-transparent pixels left out."""
     ds, wb, h = frame_info(peek, f, True)
     img = {}
     for r in range(h):
@@ -524,7 +547,7 @@ def dz_image(peek, cmap, f):
             a, b = ds + r * wb + c // 8, c % 8
             m = 0x80 >> b
             ink = peek(a) & m
-            if not ink and not inter.get(a, 0) & m:
+            if not ink and not fill_mask(cmap, peek, True, a) & m:
                 continue
             if clear_entry(cmap, peek, True, a, b):
                 continue
@@ -717,7 +740,7 @@ class Model:
         pix = [colour_entry(self.cmap, self.peek, dizzy, ga, b) or (dflt if g >> (7 - b) & 1 else 8)
                for b in range(8)]
         cl = sum(0x80 >> b for b in range(8) if clear_entry(self.cmap, self.peek, dizzy, ga, b))
-        return pix, self.inter.get(ga, 0), cl
+        return pix, fill_mask(self.cmap, self.peek, dizzy, ga), cl
 
     def exp_write(self, o, new, fx, w=None):
         """As setsh: ink shadow byte o becomes `new`, fill ^= fx; pixels whose ink or uncovered fill
@@ -1437,6 +1460,21 @@ def unit_tests(patch, states, z80=None):
         for n, ((ga, bit), (key, kb, chk)) in enumerate(list(DZ_KEYS.items())[::5]):
             cmap.setdefault(key, [chk, 1, [rnd.randrange(16) for _ in range(8)]] +
                             ([rnd.randrange(1, 256)] if n % 3 == 0 else []))
+        # Dizzy's paper: a black outline (paper next to ink), as painted; random colours on all his
+        # paper need more than the 128 patterns (138), a real outline far fewer (Dean's: 95)
+        im1 = interior_masks(peek)
+        for f in range(39):
+            ds, wb, h = frame_info(peek, f, True)
+            W = wb * 8
+            ink = lambda c_, r_: 0 <= c_ < W and 0 <= r_ < h and peek(ds + r_ * wb + c_ // 8) >> (7 - c_ % 8) & 1
+            for r in range(h):
+                for col in range(W):
+                    a = ds + r * wb + col // 8
+                    m = 0x80 >> (col % 8)
+                    if (peek(a) | im1.get(a, 0)) & m:
+                        continue
+                    e = cmap.setdefault('D%04X' % a, [peek(a), 1, [0] * 8])
+                    e[2][col % 8] = 8 if any(ink(col + dx, r + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))) else 0
         bad = 'G%04X' % (P2_BASE + 1)
         cmap[bad] = [peek(P2_BASE + 1) ^ 0xFF, 1, [5] * 8]      # wrong check byte
         pm = Dizzy1Patch(colours=cmap, peek=peek)
@@ -1452,6 +1490,29 @@ def unit_tests(patch, states, z80=None):
         nomap_c = Dizzy1Patch(colours=cmap, peek=peek)
         nomap_c.plane = plane_pages({}, peek)
         run('colour map left out of the build', p2c, p=nomap_c, want_fail=True)
+        # outlines (painted paper bits, fill_mask): the random map paints paper bits too. Negative
+        # controls: the plane's fill masks back to the interiors only (Layer 2 figures), and Dizzy's
+        # patterns built from the map without its paper colours (the model expects the outlines)
+        im0 = interior_masks(peek)
+        nout = sum(bin(fill_mask(cmap, peek, False, P2_BASE + i) & ~im0.get(P2_BASE + i, 0)).count('1')
+                   for i in range(P2LEN))
+        c['outline pixels in the colour map: %d' % nout] += 1
+        noout = Dizzy1Patch(colours=cmap, peek=peek)
+        pl = {k: bytearray(v) for k, v in noout.plane.items()}
+        for idx in range(P2LEN + DZLEN):
+            ga = DZ_BASE + idx - P2LEN if idx >= P2LEN else P2_BASE + idx
+            pl[PLPG + idx // 1024][(idx % 1024) * 8 + 4] = im0.get(ga, 0)
+        noout.plane = {k: bytes(v) for k, v in pl.items()}
+        run('outlines left out of the plane', p2c, p=noout, want_fail=True)
+
+        def paper(key, kb):
+            a = int(key[1:], 16)
+            return not (peek(a) | im0.get(a, 0)) & (0x80 >> kb)
+        cmap2 = {k: [e[0], e[1], [0 if paper(k, b) else v for b, v in enumerate(e[2])]] + list(e[3:])
+                 for k, e in cmap.items()}
+        nodz = Dizzy1Patch(colours=cmap2, peek=peek)
+        nodz.colours = cmap                      # the model expects the map's outlines on Dizzy
+        run('outlines left out of Dizzy\'s patterns', dz, p=nodz, want_fail=True)
         noint = Dizzy1Patch(colours={}, peek=peek)
         pl = {k: bytearray(v) for k, v in noint.plane.items()}
         for idx in range(P2LEN + DZLEN):
@@ -1618,8 +1679,15 @@ def recolour(nex, cmap):
     for pg in range(NPL):
         a = bank(PLPG // 2 + pg // 2)[(pg & 1) * 8192:(pg & 1) * 8192 + 8192]
         e = p0.plane[PLPG + pg]
-        if any(a[i] != e[i] for i in range(4, 8192, 8)):
-            raise ValueError('interior masks differ (plane page %d)' % (PLPG + pg))
+        for i in range(4, 8192, 8):
+            idx = pg * 1024 + i // 8
+            if idx >= P2LEN + DZLEN:
+                ok = a[i] == e[i]
+            else:                                   # the interiors, + painted paper (an outline)
+                ga = DZ_BASE + idx - P2LEN if idx >= P2LEN else P2_BASE + idx
+                ok = a[i] & e[i] == e[i] and not a[i] & ~e[i] & peek(ga)
+            if not ok:
+                raise ValueError('interior masks differ (plane page %d)' % (PLPG + pg))
     p = Dizzy1Patch(prof, colours=cmap)
     p.prepare(peek)
     changed = []
@@ -1687,6 +1755,14 @@ def auto(a, z80, sprites, say, rzxs, boot):
     return ok
 
 
+def _warn_ignored(rep):
+    """Paint the map cannot hold: say so (Dean's outlines were silently dropped once, 2026-10-14)."""
+    n = sum(v for k, v in rep.items() if '(ignored)' in k or 'kept default' in k)
+    if n:
+        print('WARNING: %d painted pixels were NOT used (lines above); paint only on a figure\'s pixels or '
+              'the paper inside its graphic\'s bytes, with the sheet\'s current _layout.json' % n)
+
+
 def _main(argv=None):
     import argparse
     ap = argparse.ArgumentParser(prog='python -m nexclash.dizzy1', description='Dizzy 1: colour sheets / preview / colours / recolour')
@@ -1736,6 +1812,7 @@ def _main(argv=None):
                 raise SystemExit('recolour refused: %s' % e)
             for k, v in sorted(rep.items()):
                 print('%s: %d' % (k, v))
+            _warn_ignored(rep)
             cs.save(ent, cj, NOTE)
         else:
             cs.save(cs.load(a.colours), cj, NOTE)
@@ -1756,6 +1833,7 @@ def _main(argv=None):
         cs.save(ent, a.output, NOTE)
         for k, v in sorted(rep.items()):
             print('%s: %d' % (k, v))
+        _warn_ignored(rep)
         print('-> %s' % a.output)
 
 

@@ -26,6 +26,12 @@ Colour map: {key: [check, kind, [8 nibbles]]}; nibble 0 = the default colour. En
 user paint pixels TRANSPARENT (read(..., clear=True); Dizzy 1, Dean 2026-10-14: an enclosed area that
 should show the scenery, e.g. inside a handle) add a 4th element: a bit mask (bit 0 =
 0x80, as the nibbles) of the key's pixels painted transparent; the sheet shows them grey.
+Engines that draw PAINTED CLEAR pixels opaque (write(..., paint_clear=True); Dizzy 1, Dean 2026-10-14:
+outlines, "required in MANY future games") give every bit of a plot's graphics bytes, clear bits as
+code 0: the sheet shows them grey (transparent) inside the figure's box; a clear bit with a colour
+nibble shows and draws in that colour, and painting it grey again sets the nibble back to 0. Only
+bits of the graphics bytes a plot draws can be painted (an outline beyond a graphic's byte span needs
+a wider graphic in the engine); the read-back reports paint outside them. The layout records it.
 """
 import collections
 import json
@@ -110,24 +116,28 @@ def choose(comps, maxsize, group_order=()):
     return out
 
 
-def owners(comp):
+def owners(comp, clear=False):
     """Composite pixels as drawn (later parts on top, clear pixels draw nothing) ->
-    {(x, y): (part index, pixel index)}."""
+    {(x, y): (part index, pixel index)}. clear (paint_clear): the clear pixels too, under every
+    opaque pixel (a clear pixel never hides another part's ink or opaque pixel)."""
     own = {}
-    for n, p in enumerate(comp['parts']):
-        for i, (c, r, key, bit, code, dflt) in enumerate(p['pixels']):
-            if code:
-                own[(p['dx'] + (p['w'] - 1 - c if p['dmir'] else c),
-                     p['dy'] + (p['h'] - 1 - r if p.get('vmir') else r))] = (n, i)
+    for want in ((False, True) if clear else (True,)):
+        for n, p in enumerate(comp['parts']):
+            for i, (c, r, key, bit, code, dflt) in enumerate(p['pixels']):
+                if bool(code) == want:
+                    own[(p['dx'] + (p['w'] - 1 - c if p['dmir'] else c),
+                         p['dy'] + (p['h'] - 1 - r if p.get('vmir') else r))] = (n, i)
     return own
 
 
-def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=False):
+def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=False, paint_clear=False):
     """The sheet (png) and its layout (json). colours: an existing map, shown instead of defaults.
     unique (the PAINTING sheet, Dean 2026-10-14): every graphics pixel (key, bit) once - a figure
     sharing graphics with one before it shows only its new pixels (box cropped to them), a figure
     with nothing new is left out; the largest figure of a group comes first, so shared pieces are
-    shown on a whole figure. Without unique (the REFERENCE sheet): every figure whole."""
+    shown on a whole figure. Without unique (the REFERENCE sheet): every figure whole.
+    paint_clear: the clear pixels (code 0) inside each figure's box are listed too, paintable (the box
+    is still the opaque pixels' box: the PNG only differs where a clear pixel has a colour)."""
     from PIL import Image
     cmap = colours or {}
     if unique:
@@ -140,6 +150,7 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
     boxes, x, y, rowh, last = [], 1, SW + 4, 0, None
     for comp in comps:
         own = owners(comp)
+        allown = owners(comp, clear=True) if paint_clear else own
         if unique:
             new = {}
             for pos, (n, i) in own.items():
@@ -152,11 +163,21 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
             if not new:
                 continue
             ox, oy = min(px for px, _ in new), min(py for _, py in new)
+            x1, y1 = max(px for px, _ in new) + 1, max(py for _, py in new) + 1
+            if paint_clear:                       # clear pixels in the box not shown before
+                for (px, py), (n, i) in allown.items():
+                    q = comp['parts'][n]['pixels'][i]
+                    if not q[4] and ox <= px < x1 and oy <= py < y1 and (q[2], q[3]) not in shown:
+                        new[(px, py)] = (n, i)
+                        shown.add((q[2], q[3]))
             own = {(px - ox, py - oy): v for (px, py), v in new.items()}
+            w, h = x1 - ox, y1 - oy
         else:
             ox = oy = 0
-        w = max(px for px, _ in own) + 1
-        h = max(py for _, py in own) + 1
+            w = max(px for px, _ in own) + 1
+            h = max(py for _, py in own) + 1
+            if paint_clear:
+                own = {(px, py): v for (px, py), v in allown.items() if 0 <= px < w and 0 <= py < h}
         if comp['group'] != last and last is not None:
             x, y, rowh = 1, y + rowh + 4, 0            # each group starts a new row
         last = comp['group']
@@ -181,7 +202,9 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
             e = cmap.get(key) or [0, 0, [0] * 8]
             if len(e) > 3 and e[3] & (0x80 >> bit):
                 continue                                  # painted transparent: stays grey
-            img.putpixel((bx + px, by + py), rgb16[e[2][bit] or dflt])
+            v = e[2][bit] or dflt
+            if v:                                         # (a clear pixel without a colour: grey)
+                img.putpixel((bx + px, by + py), rgb16[v])
         parts = []
         for p in comp['parts']:
             keys = sorted({q[2] for q in p['pixels']})
@@ -193,10 +216,12 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
         lay.append(dict(group=comp['group'], x=bx, y=by, w=w, h=h, ox=ox, oy=oy, count=comp['count'], parts=parts,
                         show=sorted([px + ox, py + oy] for px, py in own) if unique else None))
     img.save(png)
-    json.dump(dict(size=[width, H], palette=[list(c) for c in rgb16],
-                   colours={k: [v[0], v[1], list(v[2])] + list(v[3:4]) for k, v in cmap.items()},   # the map it shows
-                   swatches=[[1 + (i - 1) * (SW + 2), 1, i] for i in range(1, 16)], composites=lay),
-              open(layout_path, 'w'))
+    out = dict(size=[width, H], palette=[list(c) for c in rgb16],
+               colours={k: [v[0], v[1], list(v[2])] + list(v[3:4]) for k, v in cmap.items()},   # the map it shows
+               swatches=[[1 + (i - 1) * (SW + 2), 1, i] for i in range(1, 16)], composites=lay)
+    if paint_clear:
+        out['paint_clear'] = True
+    json.dump(out, open(layout_path, 'w'))
     return len(lay)
 
 
@@ -237,23 +262,43 @@ def read(png, layout_path, clear=False):
     clr = lambda e, bit: len(e) > 3 and bool(e[3] & (0x80 >> bit))
     changed = set()
     kept = collections.defaultdict(list)     # (key, bit) -> figures where it was left unpainted
+    pclear = bool(lay.get('paint_clear'))
     for ci, comp in enumerate(lay['composites']):
         parts = _parts_of(comp)
-        own = owners(dict(parts=parts))
+        own = owners(dict(parts=parts), clear=pclear)
         ox, oy = comp.get('ox', 0), comp.get('oy', 0)
         if comp.get('show') is not None:             # painting sheet: only the pixels shown there
             keep = {tuple(p) for p in comp['show']}
             own = {k: v for k, v in own.items() if k in keep}
+        elif pclear:                                 # whole figures: the clear pixels in the box
+            own = {(x, y): v for (x, y), v in own.items()
+                   if ox <= x < ox + comp['w'] and oy <= y < oy + comp['h']}
         for yy in range(comp['h']):
             for xx in range(comp['w']):
                 if (xx + ox, yy + oy) not in own and \
                         nearest(img.getpixel((comp['x'] + xx, comp['y'] + yy)), rgb16)[0]:
-                    rep['painted transparent pixels (ignored)'] += 1
+                    rep['paint on pixels no graphic draws (ignored)' if pclear else
+                        'painted transparent pixels (ignored)'] += 1
         for (px, py), (n, i) in own.items():
             c, r, key, bit, code, dflt = parts[n]['pixels'][i]
             idx, dist = nearest(img.getpixel((comp['x'] + px - ox, comp['y'] + py - oy)), rgb16)
             if dist > 3 * 40 ** 2:
                 rep['pixels not near a palette colour (kept default)'] += 1
+                continue
+            if not code:                             # a clear pixel (paint_clear): colour nibble or 0
+                e = ent.setdefault(key, list(parts[n]['entries'][key]) + [[0] * 8])
+                b0 = base.get(key) or [0, 0, [0] * 8]
+                if idx == b0[2][bit]:
+                    kept[(key, bit)].append(ci)
+                    continue
+                if (key, bit) in changed:
+                    if e[2][bit] != idx:
+                        rep['pixels painted differently in two places (first kept)'] += 1
+                    continue
+                changed.add((key, bit))
+                e[2][bit] = idx
+                rep['clear pixels painted opaque (outline)' if idx else
+                    'painted clear pixels set back to transparent'] += 1
                 continue
             if idx == 0 and not clear:
                 rep['opaque pixels painted grey (kept default)'] += 1
