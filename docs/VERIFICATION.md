@@ -527,6 +527,14 @@ Dean's outlined painting (2,471 outline pixels, 118 recolours) -> dizzy1_sprites
   plane, + outlines left out of Dizzy's patterns.
 - `selftest.py --tools` PASSED (+ 4 paint_clear golden checks), `--canary` PASSED (stage 1).
 
+## Toolkit: colour sheets show only the paintable pixels (2026-10-14)
+coloursheet.write greys only the pixels the read-back uses; the rest of a box keeps the background
+colour, which the read-back ignores. Old vs new code on the same figures: Midnight Resistance
+painting sheet 14,818 pixels grey -> background (only those; the old code reproduces the reference
+sheet pixel for pixel), reference sheet 17,866 (the same), layouts identical, untouched read-back =
+the map with no ignored paint; Dizzy 1 sheets unchanged (every pixel in its boxes is paintable).
+`selftest.py --tools` PASSED (+ 2 golden checks), `--canary` PASSED.
+
 ## Toolkit: two-stage tool-chain canary (2026-10-13)
 `selftest.py --canary`: stage 1 Chuckie Egg rebuild (both MD5s) PASSED in 0.6 s. Negative control
 (stage-1 MD5s forced wrong): stage 1 FAILED -> stage 2 ran (Midnight Resistance: profile = pinned

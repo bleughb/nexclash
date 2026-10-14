@@ -223,6 +223,10 @@ also with a repainted colour map; unit + interrupt + exits + full table + flippe
 - Converted figures appear when the commit runs (after the screen copy), not as the copy passes.
 
 ## Open
+- `python -m nexclash.midres sheet RZX RZX --z80 Z80` fails at RZX frame 251 ("7 port reading(s)
+  left", midres next_frame), also on main (2026-10-14, SkoolKit 10.1): the painting sheet in specnext
+  was redrawn from its layout instead (the old code reproduces it pixel for pixel); the reference
+  sheet still shows whole grey boxes.
 - The second RZX covers the shop and more of level 1 (0x89AB object, player add-on, more poses)
   but not every weapon / collectable / level 2: still unseen callers 9AC7 / 9AD7 / 9AF1 / A142 /
   9D67 and 7E06 (static scan; converted, proven by derived states only). A level 2 RZX (Dean)

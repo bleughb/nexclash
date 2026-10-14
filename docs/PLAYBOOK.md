@@ -108,7 +108,10 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   `coloursheet.write(..., paint_clear=True)`; a paper bit with a colour nibble is then opaque in that
   colour (Dizzy 1: fill_mask). The rule is per PIXEL, not per 8x8 cell: only bits of the graphics
   bytes a plot draws exist in the map, so paint outside them (beyond a graphic's byte span) is
-  reported and ignored - an engine whose graphics have no spare paper column needs wider staging. Shared module
+  reported and ignored - an engine whose graphics have no spare paper column needs wider staging.
+  The sheet shows the rule (Dean 2026-10-14, "paintable only"): inside a figure's box only the
+  pixels the read-back uses are grey (or coloured); a part's gap, paper the engine cannot draw, a
+  pixel already shown on an earlier figure keep the background colour (read back as no paint). Shared module
   nexclash/coloursheet.py does the sheet side (joining a frame's plots into figures, the fewest
   figures that show every part, PNG, layout JSON, read-back, the colours file); the engine supplies
   the parts: per plot its staging pixels, each with a colour-map key (one graphics byte = 8 pixels),

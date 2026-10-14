@@ -137,7 +137,9 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
     with nothing new is left out; the largest figure of a group comes first, so shared pieces are
     shown on a whole figure. Without unique (the REFERENCE sheet): every figure whole.
     paint_clear: the clear pixels (code 0) inside each figure's box are listed too, paintable (the box
-    is still the opaque pixels' box: the PNG only differs where a clear pixel has a colour)."""
+    is still the opaque pixels' box).
+    Inside a box only the paintable pixels are grey (or coloured); the rest keeps the background
+    colour (Dean 2026-10-14: the sheet shows exactly what can be painted)."""
     from PIL import Image
     cmap = colours or {}
     if unique:
@@ -194,9 +196,10 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
                 img.putpixel((1 + (i - 1) * (SW + 2) + xx, yy), rgb16[i])
     lay = []
     for comp, own, bx, by, w, h, ox, oy in boxes:
-        for yy in range(h):
-            for xx in range(w):
-                img.putpixel((bx + xx, by + yy), TRANSP_RGB)
+        # grey only where painting is read back: the box's other pixels keep the background colour
+        # (a part's gap, a pixel shown on an earlier figure; Dean 2026-10-14: "paintable only")
+        for (px, py) in own:
+            img.putpixel((bx + px, by + py), TRANSP_RGB)
         for (px, py), (n, i) in own.items():
             c, r, key, bit, code, dflt = comp['parts'][n]['pixels'][i]
             e = cmap.get(key) or [0, 0, [0] * 8]
@@ -232,6 +235,11 @@ def _parts_of(comp):
         px = [(f[k], f[k + 1], keys[f[k + 2]], f[k + 3], f[k + 4], f[k + 5]) for k in range(0, len(f), 6)]
         out.append(dict(p, pixels=px))
     return out
+
+
+def background(c):
+    """True = the sheet's background colour (nothing to paint there), not paint."""
+    return sum((a - b) ** 2 for a, b in zip(c, BG_RGB)) <= 3 * 12 ** 2
 
 
 def nearest(c, rgb16):
@@ -275,8 +283,8 @@ def read(png, layout_path, clear=False):
                    if ox <= x < ox + comp['w'] and oy <= y < oy + comp['h']}
         for yy in range(comp['h']):
             for xx in range(comp['w']):
-                if (xx + ox, yy + oy) not in own and \
-                        nearest(img.getpixel((comp['x'] + xx, comp['y'] + yy)), rgb16)[0]:
+                v = img.getpixel((comp['x'] + xx, comp['y'] + yy))
+                if (xx + ox, yy + oy) not in own and not background(v) and nearest(v, rgb16)[0]:
                     rep['paint on pixels no graphic draws (ignored)' if pclear else
                         'painted transparent pixels (ignored)'] += 1
         for (px, py), (n, i) in own.items():

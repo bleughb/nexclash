@@ -386,11 +386,21 @@ def coloursheet_check():
     cs.write(col3.composites(['Fig']), qp, ql, pal, unique=True, paint_clear=True)
     Q = json.load(open(ql))
     a_, b_ = Image.open(pp).convert('RGB'), Image.open(qp).convert('RGB')
-    res.append(('paint_clear: same PNG, same boxes, layout marked',
-                list(a_.getdata()) == list(b_.getdata()) and Q.get('paint_clear') is True and
+    q1 = [c for c in Q['composites'] if c['h'] == 8][0]
+    res.append(('paint_clear: same boxes, layout marked', Q.get('paint_clear') is True and
                 [(c['x'], c['y'], c['w'], c['h']) for c in Q['composites']] ==
                 [(c['x'], c['y'], c['w'], c['h']) for c in json.load(open(pl))['composites']]))
-    q1 = [c for c in Q['composites'] if c['h'] == 8][0]
+    # only paintable pixels are grey: B0 bit 0 is clear -> background without paint_clear, grey with
+    # it; the PNGs differ exactly at the clear pixels; an untouched sheet reports no ignored paint
+    allpx = [(x, y) for y in range(a_.size[1]) for x in range(a_.size[0])]
+    diff = [q for q in allpx if a_.getpixel(q) != b_.getpixel(q)]
+    res.append(('paintable only: clear pixel background without paint_clear, grey with it; PNGs '
+                'differ only there', a_.getpixel((q1['x'], q1['y'])) == cs.BG_RGB and
+                b_.getpixel((q1['x'], q1['y'])) == cs.TRANSP_RGB and diff and
+                all(a_.getpixel(q) == cs.BG_RGB and b_.getpixel(q) == cs.TRANSP_RGB for q in diff)))
+    _, ra = cs.read(pp, pl, clear=True)
+    res.append(('paintable only: untouched sheet -> no ignored paint (background is not paint)',
+                not any('ignored' in k for k in ra)))
     b_.putpixel((q1['x'], q1['y']), pal[8])                      # B0 bit 0 (clear) -> black outline
     b_.save(qp)
     e9, r9 = cs.read(qp, ql, clear=True)
