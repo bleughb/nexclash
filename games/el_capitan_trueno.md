@@ -213,8 +213,10 @@ back and the tail vanishes (choose_tail_addr refuses >0xC000 only for 128K; next
 - Preview frames and the contributor's decisions (which figures, colours, depth).
 
 ## Maintainer check (2026-10-14)
-- Archive received; reference files in specnext/reference/el_capitan_trueno/ (contributor's project
-  in its contributor/ folder, rebuild steps in contributor/REBUILD.md).
+- Archive received; reference files were in specnext/reference/el_capitan_trueno/ (contributor's
+  project in its contributor/ folder, rebuild steps in contributor/REBUILD.md). Dean removed that
+  folder from specnext main (2026-10-14 12:28); the files remain on specnext branch
+  contrib-el-capitan-trueno (commit 309eabf) - restore from there to work on this game.
 - Every sprite build rebuilds byte-identical, with tk 0.1.4 and with nexclash main.
 - Plain: `--tail 0xA6C9` gives ca49e0f4 (boot sim OK); the earlier listed 4b415b4c was the
   default-tail build, which does not boot (docs/VERIFICATION.md).
