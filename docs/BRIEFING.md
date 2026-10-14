@@ -12,7 +12,8 @@ Layers - never mix their facts:
   PART C  The nexclash toolkit (our Python + our Z80 patch code).
 
 ## 0. Environment (do not rediscover)
-- Setup: CLAUDE.md. `pip install skoolkit --break-system-packages`. sjasmplus is pinned and bundled
+- Setup: CLAUDE.md. `pip install -r requirements.txt --break-system-packages` (SkoolKit + Pillow; a
+  fresh cloud container has neither). sjasmplus is pinned and bundled
   (tools/sjasmplus: static 1.24.0 for Linux x86-64, else built from the pinned tag into
   ~/.cache/nexclash). Assemble hooks ONLY with `python tools/asm2profile.py <engine>`; it refuses
   any other version. `--check <profile>` proves a profile = its source (each hook game's record runs it

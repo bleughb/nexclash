@@ -167,11 +167,37 @@ def rebuild(rec, d, lines):
     _run(cmd + ['-o', out])
     rep = _report(out, _snapname(rec))
     bad += _check_outputs(rec, out, lines) + _boot_ok(rep, lines, rec['name'])
+    bad += recolour_guard(rec, out, lines, cmd, d)
     for x in rec.get('repro', []):
         ro = os.path.join(d, 'rebuild_' + x['strategy'])
         _run(cmd + ['-o', ro, '--strategy', x['strategy']])
         bad += _check_outputs(rec, ro, lines, {'repro': x}) + _boot_ok(_report(ro, _snapname(rec)), lines, rec['name'])
     return bad
+
+
+def recolour_guard(rec, out, lines, cmd, d):
+    """Engines with recolour (nexclash/recolour.py guard): the game built again with an empty colour
+    map; recolour must turn each build into the other byte for byte, so it never drifts from the builder."""
+    from nexclash import recolour as rc
+    from nexclash import coloursheet as cs
+    mod = rc.engines().get(rec['name'])
+    if not mod:
+        return 0
+    o = rec['outputs'][mod.RECOLOUR['output']]['file']
+    bo = os.path.join(d, 'rebuild_nocolours')
+    os.makedirs(bo, exist_ok=True)
+    empty = os.path.join(d, 'empty_colours.json')
+    cs.save({}, empty, 'selftest: empty colour map')
+    subprocess.run(cmd + ['-o', bo], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                   env=dict(os.environ, NEXCLASH_COLOURS=empty))
+    p, pb = os.path.join(out, o), os.path.join(bo, o)
+    if not (os.path.exists(p) and os.path.exists(pb)):
+        lines.append('FAIL %s recolour: %s not built %s' % (rec['name'], o, 'with an empty map' if os.path.exists(p)
+                                                                 else 'with its map'))
+        return 1
+    ok, info = rc.guard(open(p, 'rb').read(), open(pb, 'rb').read(), mod)
+    lines.append('%-4s %s recolour %s: %s' % ('OK' if ok else 'FAIL', rec['name'], o, info))
+    return 0 if ok else 1
 
 
 def _verify_report(rep, label, lines, rec=None):
@@ -247,6 +273,11 @@ def tools_check(src):
     bad = R.selfcheck()
     print('%-4s tools: records plan() on synthetic stamps%s' % ('OK' if not bad else 'FAIL', '' if not bad else ' (%s)' % bad[:3]))
     cbad = coloursheet_check()
+    from nexclash import recolour as rc
+    rbad = rc.selfcheck()
+    print('%-4s tools: recolour .nex offsets / splice / refusals on a synthetic .nex%s' % (
+        'OK' if not rbad else 'FAIL', '' if not rbad else ' (%s)' % rbad))
+    cbad += len(rbad)
     rec = R.load('chuckie_egg')
     work = tempfile.mkdtemp(prefix='nexclash_tools_')
     d, why = stage(rec, src, work)

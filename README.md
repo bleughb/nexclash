@@ -20,7 +20,7 @@ No game files are included or ever uploaded: you bring your own snapshot, and th
 is built on your machine. GPL-3.0-or-later (LICENSE). Status of every game: STATUS.md.
 
 ## Install (once)
-1. Python 3.10+ and SkoolKit 10.x (tested with 10.1): `pip install skoolkit`.
+1. Python 3.10+, SkoolKit 10.x (tested with 10.1) and Pillow: `pip install -r requirements.txt`.
 2. Download the latest nexclash zip from the Releases page and unzip it (or `git clone` this repo).
 
 ## Patch your game

@@ -12,6 +12,7 @@ Copyright (C) 2026 the nexclash contributors. GPL-3.0-or-later (see LICENSE).
   python nexclash.py record GAME.z80 [-o OUT.rzx]       automatic (or scripted) RZX recording
   python nexclash.py convert GAME.z80 [--rzx R]         plain .nex only (tail placement checked)
   python nexclash.py verify GAME.z80 --rzx R            differential test of the patched build
+  python nexclash.py recolour GAME_sprites.nex PAINTED.png   painted colour sheet -> GAME_sprites_painted.nex
   python nexclash.py rzx info FILE | rzx merge A B -o C | rzx strip A -o B
 Analysis (any game; PLAYBOOK 0b / 3 / 3b):
   python nexclash.py inspect GAME.z80                   snapshot kind: loader?, 48K/128K, ROM, IM, stack
@@ -532,6 +533,10 @@ def main():
     p = sub.add_parser('verify'); p.add_argument('z80'); p.add_argument('--rzx', action='append', required=True)
     p.add_argument('--allow-60hz', action='store_true', help='do not force 50 Hz video')
     p.add_argument('--strategy', choices=B.STRATEGIES)
+    p = sub.add_parser('recolour', help='painted colour sheet -> <build>_painted.nex in a second (nexclash/recolour.py)')
+    p.add_argument('nex', help='the built <game>_sprites.nex'); p.add_argument('colours', help='the painted <game>_PAINTING_SPRITES.png, or a colours .json')
+    p.add_argument('--layout', help='painting layout json (default: next to the PNG)')
+    p.add_argument('--game', help='record name (default: the engine that recognises the .nex)'); p.add_argument('-o', '--output')
     p = sub.add_parser('rzx'); p.add_argument('action', choices=['info', 'merge', 'strip']); p.add_argument('files', nargs='+')
     p.add_argument('-o', '--output')
     for cmd in ('inspect', 'scan', 'isr', 'cost', 'preview'):
@@ -606,6 +611,12 @@ def main():
         a.start = a.script = a.keys = None
         a.strategy = getattr(a, 'strategy', None)
         cmd_auto(a)
+    elif a.cmd == 'recolour':
+        from nexclash import recolour
+        try:
+            recolour.run(a.nex, a.colours, a.layout, a.game, a.output)
+        except ValueError as e:
+            sys.exit('recolour refused: %s' % e)
     elif a.cmd == 'rzx':
         if a.action == 'info':
             for f in a.files:

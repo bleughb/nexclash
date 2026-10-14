@@ -126,6 +126,22 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   changes only the pixels whose colour changed, and painting a pixel back to its default removes
   its entry. Re-send both sheets after each read-back. Later levels the RZX does not
   reach: a second sheet from a later recording, read into the same colours file.
+- RECOLOUR - every engine with a colour sheet (Dean, 2026-10-14: "ALL games have this easy
+  ability"). A repaint must not need a rebuild + re-verify: `python nexclash.py recolour
+  <game>_sprites.nex PAINTED.png` writes `<game>_sprites_painted.nex` + its `_colours.json` in about
+  a second (layout found next to the PNG, `X_painted.png` -> `X_layout.json`; the engine is found by
+  the .nex). Shared half: nexclash/recolour.py. The engine adds two names (template: dizzy1.py):
+  `RECOLOUR = {'game', 'output', 'colours', 'clear', 'note'}` and `recolour(nex_bytes, cmap) ->
+  (bytes, info)`, built on `recolour.banks()` / `splice()`. Design rule that makes it safe: put every
+  colour-dependent byte (sprite patterns, Layer 2 pixels, palettes, per-figure colour tables) in banks
+  the GAME never reads, so a colour change cannot change the logic the verification proved; the
+  engine's recolour checks everything else in the .nex is its own build of the expected snapshot
+  (patch sites, hook code, the MD5 of the graphics bytes the colours come from) and refuses
+  otherwise. The engine loads its map through `recolour.build_colours_path(COLOURS)` (honours
+  $NEXCLASH_COLOURS), because the selftest guard builds the game a second time with an empty map and
+  requires recolour to turn each build into the other byte for byte (dizzy1: a recolour that forgot
+  bank 27 failed it). A painting becomes the build default only by copying its `_colours.json` to
+  docs/profiles/<game>_colours.json, then rebuild + verify + stamp as usual.
 - Speed budget: `cost GAME.z80 --rzx R --at PLOTTER --group IX` gives the original's cost per
   draw (T-states), draws per frame and per object; set the allowed hook cost per draw now, and design to it (caching, fewer
   uploads). Commando's first solid hooks cost ~18x the original draw and were redesigned.

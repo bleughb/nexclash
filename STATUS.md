@@ -44,3 +44,6 @@ Platform on hardware: alt ROM ($8C) PASS 2026-09-27; plain 48K and 128K conversi
    too slow, being reworked) - `selftest.py --game rainbow --verify` when its work lands.
 9. Not done: run `selftest.py --affected` automatically on each PR (GitHub Action with the
    private references via a secret); today a maintainer runs it before merging.
+10. Recolour for every game (Dean, 2026-10-14; PLAYBOOK 3b "RECOLOUR"): shared command, guard and
+   skill done; engines with recolour: dizzy1. Midnight Resistance has the sheet but no recolour
+   (a repaint = rebuild + verify); the other engines have neither sheet nor recolour yet.
