@@ -151,6 +151,7 @@ def run(nex_path, colours, layout=None, game=None, output=None, say=print):
         ent, rep = cs.read(colours, lay, clear=mod.RECOLOUR.get('clear', False))
         for k, v in sorted(rep.items()):
             say('%s: %d' % (k, v))
+        warn_ignored(rep, say)
     else:
         ent = cs.load(colours)
     cs.save(ent, cj, mod.RECOLOUR.get('note', ''))
@@ -161,6 +162,15 @@ def run(nex_path, colours, layout=None, game=None, output=None, say=print):
     say('-> %s (copy it to %s to make it the build default; then rebuild + verify)'
         % (cj, mod.RECOLOUR['colours']))
     return output
+
+
+def warn_ignored(rep, say=print):
+    """Paint the colour map cannot hold (a coloursheet.read report): say so loudly (Dean's outlines
+    were silently dropped once, Dizzy 1 2026-10-14)."""
+    n = sum(v for k, v in rep.items() if '(ignored)' in k or 'kept default' in k)
+    if n:
+        say('WARNING: %d painted pixels were NOT used (lines above): paint only the grey and coloured '
+            'pixels of a figure, on the sheet that goes with this _layout.json' % n)
 
 
 def guard(nex, blank, mod):

@@ -43,11 +43,20 @@ dizzy1rzx (selftest input dizzy1.rzx), the colour sheets + painting layout, Dean
   ignored: black on paper OPEN to the outside of a figure (the door's gaps, one "from the code"
   figure, edge pixels of 13 Dizzy frames). Outside paper is see-through by design; making it solid
   would need the reader to mark painted outside paper as fill (engine change: ask Dean first).
+  Done the same day (Dean: outlines): outside paper is now paintable (Colours below); the earlier
+  painting's 264 pixels would apply if re-read with a paint_clear layout - Dean's outlined painting
+  (79218527) supersedes it.
   Dizzy now takes 92 sprite patterns (88 with default colours).
 - Colours: per pixel the painted colour of its graphics bit (plane pages 40-54, 8 bytes per graphics
   byte: 8 colour nibbles, interior mask, transparent mask, has-colours flag; keys: G = plotter 2
   graphics address, D = Dizzy frame 0-38 byte, the shifted copies 39-77 share them). Painting sheet:
-  interior pixels are paintable (black by default); painting an opaque pixel (ink or interior) the
+  interior pixels are paintable (black by default), and so is every other PAPER pixel of a graphic's
+  bytes (OUTLINES, Dean 2026-10-14: "borders will be required in MANY future games"): a paper bit
+  painted a colour is drawn opaque in it (fill_mask = interior | painted paper: plane byte 4, the
+  fill shadow and Dizzy's patterns), painting it grey again makes it transparent. Only bits of the
+  graphics bytes are paintable (paint beyond a graphic's byte span is reported, ignored); on Layer 2
+  an outline follows the fill rule above (two figures' outlines on the same pixel cancel by XOR
+  parity, another figure's outline over a fill shows black, ink always wins). Painting an opaque pixel (ink or interior) the
   sheet's GREY (RGB 100,100,100, the box background) makes it TRANSPARENT (e.g. inside the grease
   gun's handle), painting a colour back over it undoes that. Else the default: Dizzy bright white; plotter 2 figures that paint their cells
   (B bit 0/1) the bright ink of C ^ 7 (the colour they show on the rooms' white-ink cells; their
@@ -79,7 +88,9 @@ dizzy1rzx (selftest input dizzy1.rzx), the colour sheets + painting layout, Dean
 `--layout`) writes dizzy1_sprites_painted.nex + its _colours.json next to the input in about a second.
 dizzy1.nex and dizzy1_sprites.nex stay untouched (the command refuses to overwrite them). Only the
 colour banks are rewritten: bank 12's Dizzy sprite table (0x2000 + dztab, 351 bytes), bank 15 (Dizzy's
-patterns), banks 20-27 (the plane). The game never reads them, so the build's verification holds; no
+patterns), banks 20-27 (the plane). The painting layout must be the paint_clear one (sheets
+from 2026-10-14 16:00 on; an older layout lists no paper pixels, so outlines read as "painted
+transparent pixels (ignored)"). The game never reads them, so the build's verification holds; no
 further checks (Dean). It refuses a .nex that is not this engine's build of the expected game: patch
 site jumps, FACTS, hook and set-up code, interiors, and the MD5 of every game byte the colours are
 built from (profile `colour_inputs`). Checked once (2026-10-14): a test painting gave the same bytes as
@@ -151,14 +162,19 @@ converted, hook stack too deep, colour map left out. Results: docs/VERIFICATION.
 
 ## Open
 - Hardware test of 38e1a491 (checklist above).
-- Painted black on see-through paper (264 pixels, see Build) is ignored: ask Dean whether those
-  areas (e.g. the door's gaps) should become solid.
 - Repainting: paint the new dizzy1_PAINTING_SPRITES.png (drawn with the current map; its layout
   carries the map, so only changed pixels edit it) -> `nexclash.py recolour` (see Recolour), no
   rebuild needed.
 - `python -m nexclash.dizzy1 preview` draws figures in the DEFAULT colours (Dizzy plain white), not
   the colour map: the 2026-10-14 painted previews came from a one-off script (per pixel: the
   graphics byte that drew it -> colour_entry / clear_entry). Fold that into `preview`.
+- Dean's outlined painting (2026-10-14, 2,471 outline pixels): dizzy1_sprites_painted.nex 79218527 -
+  differential verify + unit tests with that map PASS (VERIFICATION.md); hardware check by Dean.
+- Outlines beyond a graphic's byte span (a graphic whose ink reaches the edge of its last byte) are
+  not paintable: none in Dean's painting; a wider staging graphic would be needed.
+- Dizzy's sprite patterns: 128 4-bit patterns fit (bank 15); Dean's outlined painting needs 95, a
+  dense random painting of all his paper 138 (recolour / auto then refuse with "Dizzy needs N
+  4-bit sprite patterns, 128 fit"). More room: a second pattern bank or 8-bit patterns (not done).
 - A recording that reaches later rooms (the sheet's "from the code" group shows the figures no
   recording drew yet).
 - Generalise into a generic XOR-parity template (STATUS open work 3).

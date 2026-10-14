@@ -44,7 +44,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Magicland Dizzy (magicland_dizzy): `magicland_dizzy.nex` 09eb18496cff334ea17bfc0b0c94585d, `magicland_dizzy_sprites.nex` bf137d41d3cc08221bf6fdda153c9de2, `magicland_dizzy_sprites.nex --strategy slot1` d3b37c05d4c47ada07294fa2d7c1ae76; verified 2026-10-13
 - Treasure Island Dizzy (treasure_island_dizzy): `treasure_island_dizzy.nex` 4dae1a3a15b2158642a5d5b82de92ef7, `treasure_island_dizzy_sprites.nex` 8b4d0847d68fce3215bd43a0e116e682; verified 2026-10-13
 - Treasure Island Dizzy (title screen) (treasure_island_title): `treasure_island_title.nex` 70890aba7d821fba8a41e63636eb58be, `treasure_island_title_sprites.nex` 85e054fe4bce8e4b3a8e336aac432f58; verified 2026-10-13
-- Dizzy: The Ultimate Cartoon Adventure (dizzy1): `dizzy1.nex` 7892b2e0f1f3f9f19165516db307cbe0, `dizzy1_sprites.nex` 38e1a4916eaf8548d9ba8886861ca147; verified 2026-10-13
+- Dizzy: The Ultimate Cartoon Adventure (dizzy1): `dizzy1.nex` 7892b2e0f1f3f9f19165516db307cbe0, `dizzy1_sprites.nex` fb4cb1482b3e337374ca99c3ff58edad; verified 2026-10-13
 - Commando (commando): `commando.nex` a206f950c12f58a8e7f26b366f5a2480, `commando_sprites.nex` d601385ee4aeb7f3d7c0771bdc27df6b; verified 2026-10-13
 - Crystal Kingdom Dizzy (128K) (crystal_kingdom_dizzy): `crystal_kingdom_dizzy.nex` 99975f65172dc86ecefbac07db2c0c00; verified never
 - Midnight Resistance (128K) (midnight_resistance): `midnight_resistance.nex` 17239acaaf67b0f8011478053e17829d, `midnight_resistance_sprites.nex` 670f94034af175ed56df97f8cdb1ef29; verified 2026-10-14
@@ -521,6 +521,40 @@ section above; 2,050,456 Layer 2 pixels against the model in the painted colours
 PASSED, negative controls 9/9 (incl. colour map left out); build decisions = stored. Dizzy: 92
 patterns (88 before: painted frames no longer share patterns). dizzy1_sprites.nex 38e1a491, plain
 dizzy1.nex unchanged (7892b2e0). Speed: median -989 T, worst +168,970 T.
+
+### Outlines (painted paper bits, coloursheet paint_clear) - 2026-10-14
+Dean's outlined painting (2,471 outline pixels, 118 recolours) -> dizzy1_sprites_painted.nex
+79218527 (map 1,633 bytes; 233 outline bits on Layer 2 figures, the rest on Dizzy; 95 patterns).
+- Defaults unchanged: recolour with no map -> 83ea050d (the recorded build). Dean's previous map
+  -> 166 bytes differ, all Dizzy shifted-copy colour nibbles on PAPER bits (now 0) + their
+  has-colours flags: the dz_keys right-edge wrap fixed (never drawn: not ink, not in a fill mask);
+  patterns unchanged. Profile colour_inputs 14,571 -> 14,532 bytes (the 39 wrapped bytes no longer
+  read; recomputed from the snapshot = the .nex's).
+- Sheets regenerated with the reference map: both PNGs pixel-identical, figure boxes identical;
+  the sheet drawn with the new map = Dean's painting pixel for pixel, re-read -> the same map.
+- Midnight Resistance (the other coloursheet user): old vs new coloursheet on its reference layout:
+  write (painting + reference) byte-identical, read (its sheet + a 4,000-pixel random repaint, clear
+  on / off) the same maps and reports.
+- Differential verify of dizzy1.rzx with Dean's map: PASSED (6,346 frames, 7,086 converted +
+  1,356 kept plotter-2 calls, 2,364 Dizzy calls, 2,050,536 figure pixels, 2,395 sprite checks).
+- Unit: 55 cases PASSED; synthetic map now with 11,379 outline pixels (random paper colours on
+  plotter-2 graphics, a black outline on Dizzy). Negative controls 11/11: + outlines left out of the
+  plane, + outlines left out of Dizzy's patterns.
+- `selftest.py --tools` PASSED (+ 4 paint_clear golden checks), `--canary` PASSED (stage 1).
+- After merging main (Dean's map = the build default, shared recolour): `auto dizzy1.z80 --no-record
+  --rzx dizzy1.rzx` -> dizzy1_sprites.nex fb4cb148 (was 38e1a491: 127 bytes of Dizzy shifted-copy
+  PAPER nibbles -> 0 + 41 has-colours flags, nothing drawn changes; 92 patterns), plain 7892b2e0
+  unchanged; dizzy1.rzx PASSED (6,346 frames, 2,050,456 figure pixels), unit 55 cases, negative
+  controls 11/11 PASSED; `selftest.py --game dizzy1` PASSED (rebuild MD5s + recolour guard both
+  ways); `nexclash.py recolour` on Dean's outlined painting -> 79218527 (as above).
+
+## Toolkit: colour sheets show only the paintable pixels (2026-10-14)
+coloursheet.write greys only the pixels the read-back uses; the rest of a box keeps the background
+colour, which the read-back ignores. Old vs new code on the same figures: Midnight Resistance
+painting sheet 14,818 pixels grey -> background (only those; the old code reproduces the reference
+sheet pixel for pixel), reference sheet 17,866 (the same), layouts identical, untouched read-back =
+the map with no ignored paint; Dizzy 1 sheets unchanged (every pixel in its boxes is paintable).
+`selftest.py --tools` PASSED (+ 2 golden checks), `--canary` PASSED.
 
 ## Toolkit: two-stage tool-chain canary (2026-10-13)
 `selftest.py --canary`: stage 1 Chuckie Egg rebuild (both MD5s) PASSED in 0.6 s. Negative control

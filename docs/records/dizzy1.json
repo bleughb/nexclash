@@ -73,17 +73,17 @@
   },
   "sprites": {
    "file": "dizzy1_sprites.nex",
-   "md5": "38e1a4916eaf8548d9ba8886861ca147"
+   "md5": "fb4cb1482b3e337374ca99c3ff58edad"
   }
  },
  "repro": [],
  "status": {
   "title": "Dizzy: The Ultimate Cartoon Adventure (Dizzy 1)",
   "engine_col": "dizzy1 (dizzy_ultimate_cartoon_adventure.md)",
-  "build": "dizzy1_sprites.nex 38e1a491 (Dizzy = hardware sprites in front; every other figure on Layer 2 via a 1-bit shadow screen; solid: enclosed paper black; Dean's painted colours (633 graphics bytes), items pulse as the original; HUD and room tiles on the ULA; altrom + shadow pages at slot 3; plots at 28 MHz)",
-  "software": "RZX IDENTICAL with the painted colour map (registers, memory, ULA ^ shadows, Layer 2, Dizzy sprite vs plotter), 53 unit cases + 9 negative controls PASS",
-  "hardware": "83ea050d (default colours) works on a real Next, looks perfect (Dean, 2026-10-14); 38e1a491 untested",
-  "next": "hardware test of 38e1a491 (painted colours)"
+  "build": "dizzy1_sprites.nex fb4cb148 (Dizzy = hardware sprites in front; every other figure on Layer 2 via a 1-bit shadow screen; solid: enclosed paper black; Dean's painted colours (633 graphics bytes; paper paintable: outlines), items pulse as the original; HUD and room tiles on the ULA; altrom + shadow pages at slot 3; plots at 28 MHz)",
+  "software": "RZX IDENTICAL with the painted colour map (registers, memory, ULA ^ shadows, Layer 2, Dizzy sprite vs plotter), 55 unit cases + 11 negative controls PASS",
+  "hardware": "83ea050d (default colours) works on a real Next, looks perfect (Dean, 2026-10-14); fb4cb148 = 38e1a491 drawn identically (only never-drawn paper nibbles differ), untested",
+  "next": "hardware test of fb4cb148 and of the outlined painting (dizzy1_sprites_painted.nex 79218527, verify + unit PASS)"
  },
  "checked": {
   "deps": {

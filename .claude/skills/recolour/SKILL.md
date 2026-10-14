@@ -21,7 +21,10 @@ nothing else (no rebuild, no verify, no doc edits unless something fails).
 4. Work in the scratchpad on COPIES: the built .nex, the `_PAINTING_SPRITES_layout.json`, the PNG.
    `python nexclash/nexclash.py recolour <game>_sprites.nex PAINTED.png`
    (add `--layout` if the PNG's name does not lead to the layout). Grey 100,100,100 =
-   transparent where the engine allows it.
+   transparent where the engine allows it. Only the sheet's grey and coloured pixels are read
+   (engines with outlines - Dizzy 1 - also grey the paper inside a graphic's bytes); a `WARNING: N
+   painted pixels were NOT used` line means paint landed elsewhere (or the layout is older than
+   the sheet): tell the user how many and where, in one line.
 5. A refusal is the answer: relay its reason (wrong .nex version, wrong sheet, ...). Do not work
    around it.
 6. Send the user `<game>_sprites_painted.nex` and `<game>_sprites_painted_colours.json`
