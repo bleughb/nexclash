@@ -22,6 +22,7 @@ dizzy1rzx (selftest input dizzy1.rzx), the colour sheets + painting layout.
   (fixed: sprite in front); collectables change colour - that is the game's own pulse (the item
   handler cycles IX+15 through 1-7, 56418 / 57625), KEPT by Dean's choice (painted pixels stay
   fixed).
+- Hardware round 2 (83ea050d, Dean 2026-10-14): works on hardware, "looks to be perfect".
 - Stay on the ULA: room tiles (58546), score digits / lives (62670 / 62691 / 62736), item name
   (60746). Figure pixels inside an effect strip (types 3 / 7: scrolling / rotating rectangles) are
   folded back to the ULA before the effect runs (the original garbles them there too).
@@ -128,7 +129,7 @@ converted, hook stack too deep, colour map left out. Results: docs/VERIFICATION.
 9. Lose all lives -> title -> new game: everything resets.
 
 ## Open
-- Hardware test (checklist above); Dean's painting of dizzy1_PAINTING_SPRITES.png -> `python -m
+- Dean's painting (optional) of dizzy1_PAINTING_SPRITES.png -> `python -m
   nexclash.dizzy1 colours PAINTED.png` -> dizzy1_colours.json -> rebuild + re-verify.
 - A recording that reaches later rooms (the sheet's "from the code" group shows the figures no
   recording drew yet).
