@@ -131,9 +131,9 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   bit, ink / outline / clear code and today's colour (template: midres.sheet_part / capture, CLI
   `python -m nexclash.<engine> sheet RZX` / `colours painted.png`; for OUTLINES the template is
   dizzy1: part_from_writes lists every bit of the bytes drawn - paper as code 0 - and fill_mask
-  turns painted paper into opaque pixels in the plane, the sprite patterns and the verify model.
-  Midnight Resistance's `sheet` currently fails at RZX frame 251 - games/midnight_resistance.md
-  Open - so copy its part building, not its command run). The PNG and its
+  turns painted paper into opaque pixels in the plane, the sprite patterns and the verify model;
+  a capture must strip Fuse autosave snapshots from the RZX first, as auto does before verify -
+  midres.capture does, rzxplay desyncs on them otherwise). The PNG and its
   `_layout.json` hold game graphics: specnext/reference/<game>/ only. Colours belong to graphics
   bytes, so every figure drawn from the same graphics takes the same paint - why the painting sheet
   shows each graphic once (Midnight Resistance's first sheet showed the tank three times and Dean
