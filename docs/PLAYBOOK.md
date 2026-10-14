@@ -110,7 +110,9 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   Rules (Dean): 1:1 (one PNG pixel = one Spectrum pixel; an enlarged sheet is too big to paint),
   multi-part figures JOINED as the game draws them, a row of 8x8 swatches of the sprite palette
   (1-15) at the top, no text. The user paints, keeps the size, sends it back; the read-back is the
-  colour map `docs/profiles/<game>_colours.json` (none = the defaults). Engines may draw opaque
+  colour map `docs/profiles/<record>_colours.json` (<record> = the evidence record's name, e.g.
+  dizzy1_colours.json, NOT the reference folder's name: the engine's COLOURS constant loads exactly
+  that path and another name is silently never read; none = the defaults). Engines may draw opaque
   non-ink pixels (code 2: an outline, or Dizzy 1's enclosed paper, black by default) and may let the
   user paint pixels TRANSPARENT: `coloursheet.read(..., clear=True)` reads the sheet's grey on an
   opaque pixel as transparent (Dean 2026-10-14: "there will always be items that need them"), and
@@ -122,12 +124,16 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   reported and ignored - an engine whose graphics have no spare paper column needs wider staging.
   The sheet shows the rule (Dean 2026-10-14, "paintable only"): inside a figure's box only the
   pixels the read-back uses are grey (or coloured); a part's gap, paper the engine cannot draw, a
-  pixel already shown on an earlier figure keep the background colour (read back as no paint). Shared module
-  nexclash/coloursheet.py does the sheet side (joining a frame's plots into figures, the fewest
+  pixel already shown on an earlier figure keep the background colour (read back as no paint).
+  Shared module nexclash/coloursheet.py does the sheet side (joining a frame's plots into figures, the fewest
   figures that show every part, PNG, layout JSON, read-back, the colours file); the engine supplies
   the parts: per plot its staging pixels, each with a colour-map key (one graphics byte = 8 pixels),
   bit, ink / outline / clear code and today's colour (template: midres.sheet_part / capture, CLI
-  `python -m nexclash.<engine> sheet RZX` / `colours painted.png`). The PNG and its
+  `python -m nexclash.<engine> sheet RZX` / `colours painted.png`; for OUTLINES the template is
+  dizzy1: part_from_writes lists every bit of the bytes drawn - paper as code 0 - and fill_mask
+  turns painted paper into opaque pixels in the plane, the sprite patterns and the verify model.
+  Midnight Resistance's `sheet` currently fails at RZX frame 251 - games/midnight_resistance.md
+  Open - so copy its part building, not its command run). The PNG and its
   `_layout.json` hold game graphics: specnext/reference/<game>/ only. Colours belong to graphics
   bytes, so every figure drawn from the same graphics takes the same paint - why the painting sheet
   shows each graphic once (Midnight Resistance's first sheet showed the tank three times and Dean
@@ -150,7 +156,7 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   $NEXCLASH_COLOURS), because the selftest guard builds the game a second time with an empty map and
   requires recolour to turn each build into the other byte for byte (dizzy1: a recolour that forgot
   bank 27 failed it). A painting becomes the build default only by copying its `_colours.json` to
-  docs/profiles/<game>_colours.json, then rebuild + verify + stamp as usual.
+  docs/profiles/<record>_colours.json, then rebuild + verify + stamp as usual.
 - Speed budget: `cost GAME.z80 --rzx R --at PLOTTER --group IX` gives the original's cost per
   draw (T-states), draws per frame and per object; set the allowed hook cost per draw now, and design to it (caching, fewer
   uploads). Commando's first solid hooks cost ~18x the original draw and were redesigned.
@@ -201,9 +207,11 @@ XOR: dizzy1.py (shadow screen + Layer 2); non-Codemasters: chuckie.py (simplest)
 slot 5, CALL-target redirect into a scratch buffer, sprites built at a commit with a pattern-slot
 cache, per-cell colours, per-pixel colour map)), change the profile block and site list, rebuild the asm.
 Every site keeps its original-byte check.
-Colour map (every game, PLAYBOOK 3b): the sprite builder applies `<game>_colours.json` per pixel -
+Colour map (every game, PLAYBOOK 3b): the sprite builder applies `<record>_colours.json` per pixel -
 key = the graphics byte the pixel comes from, a non-zero nibble replaces the default colour of an
-opaque pixel, and a check of the graphics bytes stored with the entry (other graphics at that
+opaque pixel - and, in an engine with outlines (paint_clear), makes a PAPER pixel opaque in that
+colour (Dizzy 1: fill_mask; its verify model and negative controls must cover it) - and a check of
+the graphics bytes stored with the entry (other graphics at that
 address in a later level -> defaults). Store it where the build can read it at sprite-build time
 (midres: Next pages 28.. at slot 4 during the commit, page tables in the hook page, MidresPatch
 store_pages / asm `ovl`). A build with no colours file = today's defaults.

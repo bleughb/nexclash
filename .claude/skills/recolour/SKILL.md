@@ -33,5 +33,6 @@ nothing else (no rebuild, no verify, no doc edits unless something fails).
    commit ("<Game>: Dean's repainted sprite sheet (<date>)" + the md5) and push to main
    (fetch + rebase first).
 8. Reply in two or three lines. Making the painting the build default (copy the colours json to
-   docs/profiles/<game>_colours.json, rebuild, verify, stamp, PR) is a separate task: offer it,
+   docs/profiles/<record>_colours.json - the record's name, e.g. dizzy1_colours.json - rebuild,
+   verify, stamp, PR) is a separate task: offer it,
    do not do it.

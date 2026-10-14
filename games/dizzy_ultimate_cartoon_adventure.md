@@ -84,8 +84,9 @@ dizzy1rzx (selftest input dizzy1.rzx), the colour sheets + painting layout, Dean
   original; a room change pauses up to about two frames longer: the wipe folds three shadows).
 
 ## Recolour (a painting -> dizzy1_sprites_painted.nex, Dean 2026-10-14)
-`python -m nexclash.dizzy1 recolour dizzy1_sprites.nex PAINTED.png` (layout json next to the PNG, or
-`--layout`) writes dizzy1_sprites_painted.nex + its _colours.json next to the input in about a second.
+`python nexclash.py recolour dizzy1_sprites.nex PAINTED.png` (the shared command, nexclash/recolour.py;
+`python -m nexclash.dizzy1 recolour` does the same; layout json next to the PNG, or `--layout`)
+writes dizzy1_sprites_painted.nex + its _colours.json next to the input in about a second.
 dizzy1.nex and dizzy1_sprites.nex stay untouched (the command refuses to overwrite them). Only the
 colour banks are rewritten: bank 12's Dizzy sprite table (0x2000 + dztab, 351 bytes), bank 15 (Dizzy's
 patterns), banks 20-27 (the plane). The painting layout must be the paint_clear one (sheets
@@ -93,9 +94,11 @@ from 2026-10-14 16:00 on; an older layout lists no paper pixels, so outlines rea
 transparent pixels (ignored)"). The game never reads them, so the build's verification holds; no
 further checks (Dean). It refuses a .nex that is not this engine's build of the expected game: patch
 site jumps, FACTS, hook and set-up code, interiors, and the MD5 of every game byte the colours are
-built from (profile `colour_inputs`). Checked once (2026-10-14): a test painting gave the same bytes as
-a full `auto` build with that map; recolouring back with no map gave 83ea050d again. To make a painting
-the build default, copy the _colours.json to docs/profiles/dizzy1_colours.json and rebuild + verify.
+built from (profile `colour_inputs`). Checked (2026-10-14): a test painting gave the same bytes as a
+full `auto` build with that map; the selftest recolour guard checks it on every rebuild, both ways
+(recolour with no map = the empty-map build; with Dean's map = the default build, fb4cb148). To make a
+painting the build default, copy its _colours.json to docs/profiles/dizzy1_colours.json and rebuild +
+verify + stamp.
 
 ## Facts
 - Snapshot: PC 63496 (title), IM 2 (I 0xFE; vector JP at 65021, rewritten by the game: 63578 =
