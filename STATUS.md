@@ -16,7 +16,7 @@ facts: games/tid_engine.md). MD5s: docs/VERIFICATION.md.
 | Fantasy World Dizzy | tid generic (fantasy_world_dizzy.md) | fantasy_world_dizzy_sprites.nex 9182f2f8 (altrom) | verified | untested | hardware test |
 | Magicland Dizzy | tid generic (magicland_dizzy.md) | magicland_dizzy_sprites.nex bf137d41 (altrom) | verified | untested | hardware test |
 | Treasure Island Dizzy | dedicated (treasure_island_dizzy.md) | treasure_island_dizzy_sprites.nex 8b4d0847 | verified | plain build runs | recorder start/keys |
-| Dizzy: The Ultimate Cartoon Adventure (Dizzy 1) | dedicated XOR (dizzy_ultimate_cartoon_adventure.md) | dizzy1_sprites.nex 05d2bce9 | verified | untested | - |
+| Dizzy: The Ultimate Cartoon Adventure (Dizzy 1) | dizzy1 (dizzy_ultimate_cartoon_adventure.md) | dizzy1_sprites.nex 83ea050d (Dizzy = hardware sprites in front; every other figure on Layer 2 via a 1-bit shadow screen; solid: enclosed paper black; default colours, items pulse as the original; HUD and room tiles on the ULA; altrom + shadow pages at slot 3; plots at 28 MHz) | RZX IDENTICAL (registers, memory, ULA ^ shadows, Layer 2, Dizzy sprite vs plotter), 53 unit cases + 9 negative controls PASS | 16a00451 runs well (Dean, 2026-10-14): Dizzy mixed with objects (fixed: sprite in front); 83ea050d untested | hardware test of 83ea050d; Dean paints dizzy1_PAINTING_SPRITES.png |
 | Commando (128K) | commando (commando.md) | commando_sprites.nex d601385e (altrom + e_init + front end; solid figures (yellow body), solid objects hide figures by the walk-box depth rule, pattern-slot cache, no flicker, IX/IY-safe hooks) | RZX IDENTICAL, static + interrupt + cache + front end + init + unit + depth + restore PASS | f22a9452 / 5642e4b4 crashed (ROM 0); 5ab928e9 runs; 5c1081b7: flicker, menu logo + dots (hook used IY), figures seen through rocks (Dean) - fixed in 541e34e2, which crashed at the first figure (code at 0x3D00-0x3DFF; probable DivMMC automap); d601385e runs (Dean) | hardware test (checklist); later-areas RZX |
 | Crystal Kingdom Dizzy (128K) | plain only (crystal_kingdom_dizzy.md) | - | - | plain runs | sprites deferred |
 | Midnight Resistance (128K) | midres (midnight_resistance.md) | midnight_resistance_sprites.nex 670f9403 (every figure a sprite, also flipped and in the shop; Dean's painted colours: 444 graphics bytes; altrom + page 26 at slot 5, page 27 at slot 2; sprites hidden on every loop exit) | 2 RZX IDENTICAL with the painted colour map, unit + interrupt + level / shop exit + full table + flipped + map PASS | 670f9403 tests OK on a real Next (Dean, 2026-10-14) | further painting on the PAINTING_SPRITES sheet (optional); level 2 RZX |
@@ -34,8 +34,8 @@ Platform on hardware: alt ROM ($8C) PASS 2026-09-27; plain 48K and 128K conversi
    nexclash.py (selftest now covers every game: docs/records).
 2. `identify` reports unknown for Rainbow, Chuckie Egg, Wally, Commando and Midnight Resistance (auto dispatches by
    signature in cmd_auto): add signatures.json / identify entries.
-3. Generic builder covers the TID engine only; next: XOR-parity template (generalise
-   dizzy1_patch.py), then non-Codemasters engines (PLAYBOOK "unknown").
+3. Generic builder covers the TID engine only; next: XOR template (generalise nexclash/dizzy1.py:
+   1-bit shadow screen + Layer 2), then non-Codemasters engines (PLAYBOOK "unknown").
 4. Virtual read is not in the generic template (the tool refuses and hands over).
 5. Explorer is random + room novelty (no puzzles): rare paths need a human RZX.
 6. analyse/recorder are 48K-only.

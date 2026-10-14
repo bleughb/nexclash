@@ -22,7 +22,10 @@ Part dict (engine-built):
            graphics byte = 8 pixels), bit 0-7 (0 = leftmost as stored), code 1 ink / 2 opaque
            non-ink / 0 clear, default = today's palette index (0 for clear)
   entries  {key: [check, kind]}: what the engine stores with the key's colours (check bytes etc.)
-Colour map: {key: [check, kind, [8 nibbles]]}; nibble 0 = the default colour.
+Colour map: {key: [check, kind, [8 nibbles]]}; nibble 0 = the default colour. Engines that let the
+user paint pixels TRANSPARENT (read(..., clear=True); Dizzy 1, Dean 2026-10-14: an enclosed area that
+should show the scenery, e.g. inside a handle) add a 4th element: a bit mask (bit 0 =
+0x80, as the nibbles) of the key's pixels painted transparent; the sheet shows them grey.
 """
 import collections
 import json
@@ -175,8 +178,10 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
                 img.putpixel((bx + xx, by + yy), TRANSP_RGB)
         for (px, py), (n, i) in own.items():
             c, r, key, bit, code, dflt = comp['parts'][n]['pixels'][i]
-            nib = (cmap.get(key) or [0, 0, [0] * 8])[2][bit]
-            img.putpixel((bx + px, by + py), rgb16[nib or dflt])
+            e = cmap.get(key) or [0, 0, [0] * 8]
+            if len(e) > 3 and e[3] & (0x80 >> bit):
+                continue                                  # painted transparent: stays grey
+            img.putpixel((bx + px, by + py), rgb16[e[2][bit] or dflt])
         parts = []
         for p in comp['parts']:
             keys = sorted({q[2] for q in p['pixels']})
@@ -189,7 +194,7 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
                         show=sorted([px + ox, py + oy] for px, py in own) if unique else None))
     img.save(png)
     json.dump(dict(size=[width, H], palette=[list(c) for c in rgb16],
-                   colours={k: [v[0], v[1], list(v[2])] for k, v in cmap.items()},   # the map it shows
+                   colours={k: [v[0], v[1], list(v[2])] + list(v[3:4]) for k, v in cmap.items()},   # the map it shows
                    swatches=[[1 + (i - 1) * (SW + 2), 1, i] for i in range(1, 16)], composites=lay),
               open(layout_path, 'w'))
     return len(lay)
@@ -211,7 +216,7 @@ def nearest(c, rgb16):
     return (0, dt) if dt < best[0] else (best[1], best[0])
 
 
-def read(png, layout_path):
+def read(png, layout_path, clear=False):
     """Painted sheet -> (colour map {key: [check, kind, 8 nibbles]}, report). Only the pixels a part
     shows are read; a pixel in today's colour keeps its default (nibble 0); clear pixels cannot be
     painted. The layout holds the map the sheet was drawn with; a pixel edits it only when its colour
@@ -227,8 +232,9 @@ def read(png, layout_path):
     rep = collections.Counter()
     # start from the map the sheet was drawn with: only pixels whose colour CHANGED edit it (a shared
     # pixel may have a different default in each copy, so "looks unpainted" is not "default")
-    base = {k: [v[0], v[1], list(v[2])] for k, v in lay.get('colours', {}).items()}
-    ent = {k: [v[0], v[1], list(v[2])] for k, v in base.items()}
+    base = {k: [v[0], v[1], list(v[2])] + list(v[3:4]) for k, v in lay.get('colours', {}).items()}
+    ent = {k: [v[0], v[1], list(v[2])] + list(v[3:4]) for k, v in base.items()}
+    clr = lambda e, bit: len(e) > 3 and bool(e[3] & (0x80 >> bit))
     changed = set()
     kept = collections.defaultdict(list)     # (key, bit) -> figures where it was left unpainted
     for ci, comp in enumerate(lay['composites']):
@@ -249,19 +255,30 @@ def read(png, layout_path):
             if dist > 3 * 40 ** 2:
                 rep['pixels not near a palette colour (kept default)'] += 1
                 continue
-            if idx == 0:
+            if idx == 0 and not clear:
                 rep['opaque pixels painted grey (kept default)'] += 1
                 continue
             e = ent.setdefault(key, list(parts[n]['entries'][key]) + [[0] * 8])
-            shown = (base.get(key) or [0, 0, [0] * 8])[2][bit] or dflt
+            b0 = base.get(key) or [0, 0, [0] * 8]
+            shown = 0 if clr(b0, bit) else (b0[2][bit] or dflt)        # 0 = shown transparent
             if idx == shown:
                 kept[(key, bit)].append(ci)
                 continue
+            want = ('clear', 0) if idx == 0 else ('', 0 if idx == dflt else idx)
             if (key, bit) in changed:
-                if e[2][bit] != (0 if idx == dflt else idx):
+                if (('clear', 0) if clr(e, bit) else ('', e[2][bit])) != want:
                     rep['pixels painted differently in two places (first kept)'] += 1
                 continue
             changed.add((key, bit))
+            if idx == 0:
+                while len(e) < 4:
+                    e.append(0)
+                e[3] |= 0x80 >> bit
+                e[2][bit] = 0
+                rep['pixels painted transparent'] += 1
+                continue
+            if clr(e, bit):
+                e[3] &= ~(0x80 >> bit)
             e[2][bit] = 0 if idx == dflt else idx
             rep['pixels recoloured' if idx != dflt else 'pixels painted back to the default'] += 1
     # the same graphics shown in several figures and painted in only some: the paint applies to all
@@ -273,20 +290,22 @@ def read(png, layout_path):
         rep['figures that take paint from another copy: %s' % ', '.join(
             '%s at %d,%d' % (lay['composites'][ci]['group'], lay['composites'][ci]['x'], lay['composites'][ci]['y'])
             for ci in sorted(spread))] = len(spread)
-    ent = {k: e for k, e in ent.items() if any(e[2])}
+    ent = {k: (e if len(e) > 3 and e[3] else e[:3]) for k, e in ent.items() if any(e[2]) or (len(e) > 3 and e[3])}
     rep['graphics bytes with colours'] = len(ent)
     return ent, rep
 
 
 def save(ent, path, note):
     json.dump({'note': note, 'entries': {k: [e[0], e[1], ''.join('%X' % n for n in e[2])]
+                                         + (['%02X' % e[3]] if len(e) > 3 and e[3] else [])
                                          for k, e in sorted(ent.items())}}, open(path, 'w'), indent=0)
 
 
 def load(path):
-    """-> {key: [check, kind, [8 nibbles]]}; {} when the file does not exist (default colours)."""
+    """-> {key: [check, kind, [8 nibbles](, transparent mask)]}; {} when the file does not exist."""
     import os
     if not os.path.exists(path):
         return {}
     d = json.load(open(path))['entries']
-    return {k: [v[0], v[1], [int(ch, 16) for ch in v[2]]] for k, v in d.items()}
+    return {k: [v[0], v[1], [int(ch, 16) for ch in v[2]]] + ([int(v[3], 16)] if len(v) > 3 else [])
+            for k, v in d.items()}

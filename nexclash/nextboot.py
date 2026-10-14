@@ -37,7 +37,7 @@ def boot(nex, pc_stop, limit=5_000_000):
         pages[2 * b + 1] = bytearray(data[8192:16384])
     rom = rom48()
     st = {'mmu': [0xFF, 0xFF, 10, 11, 4, 5, 20, 21], 'nr': {0x8C: 0, 0x08: 0}, 'p7ffd': 0x00, 'p1ffd': 0,
-          'alt': [bytearray(16384), bytearray(16384)], 'bad': [], 'sel': 0}
+          'alt': [bytearray(16384), bytearray(16384)], 'bad': [], 'sel': 0, 'ports': {}, 'nrlog': []}
 
     def page(n):
         return pages.setdefault(n, bytearray(8192))
@@ -73,6 +73,7 @@ def boot(nex, pc_stop, limit=5_000_000):
 
     def nextreg(reg, val):
         st['nr'][reg] = val
+        st['nrlog'].append((reg, val))         # every NEXTREG write in order (palette uploads)
         if 0x50 <= reg <= 0x57:
             st['mmu'][reg - 0x50] = val
         elif reg == 0x08 and val & 0x80:
@@ -94,6 +95,7 @@ def boot(nex, pc_stop, limit=5_000_000):
             return st['nr'].get(st['sel'], 0) if port == 0x253B else 0xFF
 
         def write_port(s, regs, port, value, *x):
+            st['ports'][port] = value          # last value written to each port (e.g. 0x123B)
             if port == 0x243B:
                 st['sel'] = value
             elif port in (0x7FFD, 0x1FFD) and not st['p7ffd'] & 0x20:

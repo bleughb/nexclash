@@ -359,6 +359,27 @@ def coloursheet_check():
     im2.save(pp)
     e4, _ = cs.read(pp, pl)
     res.append(('painting sheet: painted back to the default -> no entry', e4 == {}))
+    # transparent painting (opt-in, Dizzy 1): grey on an opaque pixel
+    im2.putpixel((c1['x'] + 2, c1['y']), cs.TRANSP_RGB)         # B0 bit 2 -> transparent
+    im2.save(pp)
+    e5, r5 = cs.read(pp, pl)
+    res.append(('grey on an opaque pixel without clear=True: kept default', e5 == {} and
+                r5['opaque pixels painted grey (kept default)'] == 1))
+    e6, r6 = cs.read(pp, pl, clear=True)
+    res.append(('clear=True: grey -> transparent mask bit', e6 == {'B0': [0, 1, [0] * 8, 0x20]} and
+                r6['pixels painted transparent'] == 1))
+    cf = os.path.join(work, 'c.json')
+    cs.save(e6, cf, 'test')
+    res.append(('clear mask survives save / load', cs.load(cf) == e6))
+    cs.write(col3.composites(['Fig']), pp, pl, pal, e6, unique=True)
+    e7, _ = cs.read(pp, pl, clear=True)
+    im3 = Image.open(pp).convert('RGB')
+    res.append(('sheet drawn with the mask: that pixel grey, re-read -> the same map',
+                im3.getpixel((c1['x'] + 2, c1['y'])) == cs.TRANSP_RGB and e7 == e6))
+    im3.putpixel((c1['x'] + 2, c1['y']), pal[12])               # painted back to its default
+    im3.save(pp)
+    e8, _ = cs.read(pp, pl, clear=True)
+    res.append(('transparent pixel painted back to its default -> no entry', e8 == {}))
     img.resize((img.size[0] * 2, img.size[1] * 2)).save(png)
     try:
         cs.read(png, lay)
