@@ -329,6 +329,14 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    `ovl`). Games converted before Midnight Resistance have neither; add them when one is reworked.
    Golden check: `selftest.py --tools` (coloursheet on synthetic parts). Not done: a
    `nexclash.py sheet` command dispatching to the engine (today `python -m nexclash.<engine> sheet`).
+18. z80tonex.choose_tail_addr refuses a tail above 0xC000 only for 128K (snap.is128): a 48K tail
+   there vanishes when the tail's OUT 0x7FFD maps bank 0 back (El Capitan Trueno). Apply the rule to
+   48K too; until then nextboot.check catches it ('boot did not reach PC ...').
+19. nextboot.check models the alt ROM with rom48(), but the Next copies the system ROM3 (NextZXOS,
+   data at 0x3B00-0x3CFF): check against the real ROM3, or make the builder copy every ROM area a
+   patch relies on (LEARNINGS 1.3).
+20. A shared fast mode for frame-level questions (C simulator + RZXTracer.next_frame, seconds per
+   RZX) next to the per-instruction simrun commands (LEARNINGS 2.3).
 ### C3. Working rules (token budget)
 Summaries <= 40 lines; disassemble only routines the analysis flags; one simulator pass
 per question; long jobs in background + poll; verify original bytes at every patch site;

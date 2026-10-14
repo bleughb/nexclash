@@ -84,7 +84,10 @@ or download another version; tools/sjasmplus/README.md).
   contribution note that shared code changed.
 - Never `pkill -f` / kill by `pgrep -f` pattern: it matches your own shell whenever the pattern
   appears anywhere in that command line (it has, twice). Find the PID, kill the PID.
-- 128K start-up tail must end below 0xC000.
+- The start-up tail must end below 0xC000, 48K too: the stub runs with its own bank 10 at
+  0xC000-0xFFFF and the tail's OUT 0x7FFD maps bank 0 back under the PC (El Capitan Trueno: tail
+  below SP at 0xFF97, boot never reached the game). choose_tail_addr checks it only for 128K;
+  run nextboot.check on plain builds too.
 - Shell heredocs that write docs: quote the delimiter (`<<'EOF'`).
 - Analysis: use the shared commands (`inspect`, `scan`, `isr`, `cost`; BRIEFING C4) before writing a
   one-off script. If one falls short, IMPROVE IT (keep its existing output lines and arguments, add
