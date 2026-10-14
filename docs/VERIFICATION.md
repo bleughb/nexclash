@@ -49,6 +49,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Crystal Kingdom Dizzy (128K) (crystal_kingdom_dizzy): `crystal_kingdom_dizzy.nex` 99975f65172dc86ecefbac07db2c0c00; verified never
 - Midnight Resistance (128K) (midnight_resistance): `midnight_resistance.nex` 17239acaaf67b0f8011478053e17829d, `midnight_resistance_sprites.nex` 670f94034af175ed56df97f8cdb1ef29; verified 2026-10-14
 - Smash TV (smash_tv): `smash_tv.nex` c72ea298486b14036ac1a87ac89c3f0e, `smash_tv_sprites.nex` 03979d5438cf55410ecec8aac76f05ec; verified 2026-10-13
+- Target Renegade (128K) (target_renegade): `target_renegade.nex` a0be8dc03a1be8c6d67dc3e0229abc35, `target_renegade_sprites.nex` e0b246e35d028c34170e1d1c52f00f5f; verified never
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
@@ -473,6 +474,49 @@ arenas 1-2, game over, title; N pressed)
 - Speed (simulated, 28 MHz parts / 8): +14,475 T per game frame (~5.8% of ~250K T).
 - Shared code: nexclash.py gained one dispatch block; selftest.py prints its usage on an unknown
   flag (it started a release run). `selftest.py --canary`: see the PR.
+
+## Target Renegade (128K, engine `renegade`) - 2026-10-14
+`nexclash.py auto target_renegade.z80 --rzx target_renegade.rzx --no-record` (~12 min)
+(Renegade_II_Target_Renegade_1988_Imagine_Software_128K.z80 1895877d = the 128K BASIC loader at its
+last PAUSE 0; Dean's RZX 464d4eea from its own SZX at the game menu, 9 autosaves stripped, 7,039
+frames: level 1 (car park), bikers, the motorbike, the floor weapon)
+- `target_renegade.nex` a0be8dc03a1be8c6d67dc3e0229abc35 (plain; start = the loader run in the toolkit
+  to 23340, after the entry code's OUT (0x1FFD),4: 7FFD = 4, ROM 0; front end 0x6480; tail 0x6400,
+  write-first in the RZX and a free run) - boot sim OK (registers, banks, RAM, 7FFD 4 / 1FFD 0, MMU).
+- `target_renegade_sprites.nex` e0b246e35d028c34170e1d1c52f00f5f (hooks 0x2200-0x2902 in alt ROM
+  images 0 AND 1; page 26 (H) at slot 2 during hooks, page 27 (Q) at slot 2 during the game's copy;
+  colour store pages 28-39) - boot sim OK incl. both alt images and $8C; 9 patch sites, original bytes
+  checked; static check: no DD/FD, DI/EI, IM, LD I, RETI/RETN in 1,774 hook bytes.
+- Front end: 9 cases (a key in each keyboard row; a key held at start must be released first): every
+  register (R aside) and all RAM = the loader's own state at 23340, except 0x6480-0x64FF.
+- RZX: 24,670 plots (12,234 / 12,436 mirrored), 2,258 draw-alls, 2,257 commits + copies (max 33
+  sprites), 2,256 restores, 3 scenery redraws, 106 text prints, 1 screen clear (with ROM 1 selected)
+  - IDENTICAL. Per event: original vs patched from the same state to the same point (the copy: to its
+  return, the patched copy writing page Q): all registers (AF' included), all memory (the screen only
+  at the draw-all and the copy, checked by the model instead); interrupt safety after every hook
+  instruction (IX, IY, I, IFF, SP: hook stack or the site SP minus the displaced PUSHes, no fetch at
+  0x3D00-0x3DFF); MMU slots 2/3/7 and 3.5 MHz restored; no port read, no OUT but NextReg / sprite ports.
+  Per commit: (1) the patched ULA play area = the clean buffer (scenery); (2) the sprite layer = the
+  plots of the frame, each the ORIGINAL plotter run on a 0x00 and a 0xFF buffer (ink / body / clear;
+  3,735 runs, cached per unclipped graphic), composed in plot order, coloured ink 8 / body 7 or by the
+  map: 3,849,290 pixels; (3) end to end: the original screen after its copy = ULA + sprites (ink where
+  the top sprite pixel is ink, else the ULA bit). No jump into a patched instruction; the game never
+  changes a site's bytes; every site reached with bank 0 at 0xC000 (the clear: ROM 1, bank 0).
+- Plot model (renegade.plot_params / plot_writes) = every written address and byte of all 24,669
+  plots (separate check, phase A).
+- Unit (3 captured commits): 215 commit cases (267 parts converted, 140 not by the guard: W 0/7,
+  R 0/65, record or graphic below 0x6000; widths 1/2/6, clipped left / right, line 127 wrap, a graphic
+  in bank 0, mirrored with bytes 58 - the mirror table's one non-reverse entry), the same commits again
+  from the cache, 4 plot-hook cases (the 64th part logged, the 65th dropped; registers / memory as the
+  original), log full (65 parts), patterns full (40 four-pattern parts: 32 shown, 8 dropped), a
+  synthetic colour map (219 entries, transparent and outline pixels) and the same map with wrong check
+  bytes (ignored). Negative controls 5/5 detected: the map left out, ink / body swapped (3), LD IY
+  in a hook.
+- Recolour: recolour(build, map) = the build made with that map (NEXCLASH_COLOURS) and
+  recolour(that, {}) = the build, byte for byte (banks 13, 16-18 changed).
+- Speed (simulated): +145K simulator T per 3-frame game frame in the 28 MHz hooks (~18K T at 3.5 MHz)
+  + 3.8K T in the plot hooks; the game HALTs ~35K T per game frame (RZX).
+- Shared code: nexclash.py gained one dispatch block. `selftest.py --canary`: see the PR.
 
 ## Dizzy: The Ultimate Cartoon Adventure (48K, engine `dizzy1`) - 2026-10-14
 Objects on Layer 2 through a 1-bit shadow screen, solid (enclosed paper black, display-only fill
