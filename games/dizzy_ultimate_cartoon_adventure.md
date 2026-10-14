@@ -14,8 +14,14 @@ dizzy1rzx (selftest input dizzy1.rzx), the colour sheets + painting layout.
 
 ## Build (2026-10-14, Midnight Resistance standard)
 - Every figure the game draws leaves the ULA: Dizzy, creatures, items, carts, clouds, the wizard,
-  spider threads, egg + rope dots (every caller of both plotters from the code). They show on
+  spider threads, egg + rope dots (every caller of both plotters from the code). Objects show on
   LAYER 2 (Dean 2026-10-14, chosen over hardware sprites): per-pixel colour, exact for every path.
+  DIZZY is hardware sprites 0-3, always in front of every object (Dean 2026-10-14, after the first
+  hardware test: on one shared XOR layer Dizzy and the grease gun cancelled each other's pixels).
+- Hardware round 1 (16a00451, Dean 2026-10-14): runs well; Dizzy mixed with objects he touched
+  (fixed: sprite in front); collectables change colour - that is the game's own pulse (the item
+  handler cycles IX+15 through 1-7, 56418 / 57625), KEPT by Dean's choice (painted pixels stay
+  fixed).
 - Stay on the ULA: room tiles (58546), score digits / lives (62670 / 62691 / 62736), item name
   (60746). Figure pixels inside an effect strip (types 3 / 7: scrolling / rotating rectangles) are
   folded back to the ULA before the effect runs (the original garbles them there too).
@@ -39,9 +45,17 @@ dizzy1rzx (selftest input dizzy1.rzx), the colour sheets + painting layout.
   (B bit 0/1) the bright ink of C ^ 7 (the colour they show on the rooms' white-ink cells; their
   attribute XOR goes to the shadow attributes, so they no longer recolour the scenery); others
   bright white.
-- Logic reads stay the original's: collision 60244 / 60251 read ULA ^ shadow (virtual read), the
-  attribute read 58712 reads ULA ^ shadow attributes.
-- Hooks: alt ROM image 1 at 0x2000- (1,379 bytes) (the game reads no ROM byte above 0x0369); variables +
+- Dizzy: his writes go to his own shadow (page 28; ULA ^ objects ^ Dizzy == the original), not to
+  Layer 2. Sprites 0-3 (2x2, 4-bit; 88 patterns built from frames 0-38 with the interiors black and
+  the painted colours / transparency; the shifted copies are the same frames 4 px right) at x = 4E,
+  y = 192 - L - rows. The sprite follows the XOR parity: a plot of the image shown = the erase, which
+  only marks it pending (the draw follows at once in all 1,175 RZX cases, often across an
+  interrupt: hiding there would flicker); any other plot = the draw. A pending erase is hidden at the
+  next plotter-2 call or room wipe (death / room change). A plot the original skips (y + rows >= 200,
+  8 bits) changes nothing.
+- Logic reads stay the original's: collision 60244 / 60251 read ULA ^ objects ^ Dizzy (virtual
+  read), the attribute read 58712 reads ULA ^ shadow attributes.
+- Hooks: alt ROM image 1 at 0x2000- (1,984 bytes incl. the sprite table) (the game reads no ROM byte above 0x0369); variables +
   hook stack 0x5B40-0x5BC0 (printer buffer: never touched by the game, RZX scan; the interrupt
   handler's own stack is 0x5BCF-0x5BFE); tail at 0x5B00. Interrupts stay on: the in-game handler is
   the ROM's 0x0038 (keeps every register, reads IY) at every hook site in the RZX (verify checks it).
@@ -49,9 +63,8 @@ dizzy1rzx (selftest input dizzy1.rzx), the colour sheets + painting layout.
   time slows it directly. Both plotter entries switch to 28 MHz for the whole plot and swap the
   return address for a ROM trampoline (t_p2 / t_dz: dead slot rewritten with the original value,
   back to 3.5 MHz); the small hooks switch speed at their first / last instruction. Measured over
-  the RZX: plots of objects get faster, Dizzy's slower; the median frame is ~2.5K T FASTER than the
-  original (of 69,888), a room change up to ~126K T slower (the wipe's fold of both shadows; about
-  35 ms), see the auto Speed line.
+  the RZX: see the auto Speed line and docs/VERIFICATION.md (the median frame is faster than the
+  original; a room change pauses up to about two frames longer: the wipe folds three shadows).
 
 ## Facts
 - Snapshot: PC 63496 (title), IM 2 (I 0xFE; vector JP at 65021, rewritten by the game: 63578 =
@@ -97,10 +110,13 @@ converted, hook stack too deep, colour map left out. Results: docs/VERIFICATION.
 
 ## Hardware checklist (Dizzy1 sprite build, CSpect first: new memory layout + Layer 2)
 1. Boots to the title; title music plays normally; any key starts the game.
-2. Dizzy walks / jumps without flicker or trails; no Dizzy pixels left on the scenery.
+2. Dizzy walks / jumps without flicker or trails; no Dizzy pixels left on the scenery; he is
+   always in front of items and creatures (e.g. standing at the grease gun: no mixed pixels).
 3. Creatures, items, clouds, carts: no attribute colour blocks around them any more (the clash is
    gone); they show in their own colours over the scenery.
 3a. Figures are solid: Dizzy's eyes and mouth are black, scenery does not show through them.
+3b. Collectables pulse their colour (as the original); painted pixels would stay fixed.
+3c. Dizzy disappears cleanly when he dies / changes room (no frozen Dizzy left behind).
 4. Spider threads and the egg-and-rope dots draw and disappear cleanly.
 5. Objects fall and land on Dizzy as before (collision); picking items up works; the item name
    line and score / lives update.

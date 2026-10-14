@@ -45,6 +45,8 @@
 
 PG      EQU 26                  ; shadow page (slot 3 during hooks): ink shadow + shadow attributes
 PG2     EQU 27                  ; fill shadow (figures' enclosed paper, display only)
+PG3     EQU 28                  ; Dizzy's shadow (his XOR bits; he is shown as hardware sprites 0-3)
+SPP     EQU 30                  ; sprite patterns: pages 30-31 (uploaded once by setup)
 GPG     EQU 11                  ; the game's page at slot 3 (48K: bank 5 upper half)
 L2B     EQU 16                  ; Layer 2 16K bank -> 8K pages L2PG..L2PG+5
 L2PG    EQU 32
@@ -74,6 +76,13 @@ V_FX    EQU 0x5B5A              ; fill bits to XOR in setsh
 V_NI    EQU 0x5B5B              ; new ink shadow byte (setsh)
 V_NF    EQU 0x5B5C              ; new fill shadow byte (setsh)
 V_HAS   EQU 0x5B5D              ; 1 = V_PIX holds painted colours, 0 = defaults (ink V_COL, fill black)
+V_SF    EQU 0x5B5E              ; Dizzy sprite: frame, x, y of the image shown (the stamp)
+V_SX    EQU 0x5B5F
+V_SY    EQU 0x5B60
+V_VIS   EQU 0x5B61              ; 1 = shown
+V_PEND  EQU 0x5B62              ; 1 = erased, hide unless the next Dizzy draw comes first
+V_YY    EQU 0x5B63              ; sprite Y (+32)
+V_XX    EQU 0x5B64              ; sprite X (+32, 16 bits)
 HSTK    EQU 0x5BC0              ; hook stack top (grows down; the variables end at 0x5B58)
 
 SH      EQU 0x6000              ; shadow screen in PG (offset = screen address - 0x4000)
@@ -91,6 +100,9 @@ e_p2:   nextreg 0x07,3          ; the whole plot at 28 MHz (the game has no fram
         push af
         push hl
         push de
+        ld a,(V_PEND)
+        or a
+        call nz,hidedz          ; Dizzy erased and something else drawn first: hide him now
         ld hl,(V_SP)
         ld a,(hl)
         inc hl
@@ -154,6 +166,18 @@ t_dz:   push hl
 ; Dizzy plotter entry 58113: LD (57709),A -> JP e_dz (same speed-up, return via t_dz)
 e_dz:   nextreg 0x07,3
         ld (57709),a
+        ld (V_SP),sp
+        ld sp,HSTK
+        push af
+        push bc
+        push de
+        push hl
+        call dzspr              ; the sprite follows the XOR parity of Dizzy's draws
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
         ld (V_T),hl
         ld (V_PIX),de           ; (scratch: V_PIX is refilled per byte)
         ld (V_SP),sp
@@ -202,10 +226,13 @@ e_p2w:  ld (V_SP),sp
         ld d,a
         ld e,l                  ; DE = its shadow byte
         ld a,(de)
-        ld b,a                  ; B = shadow
-        ld a,(hl)
+        ld b,a                  ; B = objects' shadow
+        nextreg 0x53,PG3
+        ld a,(de)
+        xor (hl)
         xor b
-        ld c,a                  ; C = V, the original's screen byte
+        ld c,a                  ; C = V = ULA ^ objects ^ Dizzy: the original's screen byte
+        nextreg 0x53,PG
         ld a,(XMODE)            ; the game's instruction at 58079
         cp 0xA9
         jr nz,.m1
@@ -277,28 +304,27 @@ e_dw:   ld (V_SP),sp
         push de
         push bc
         ld a,(de)               ; the graphics byte (slot 2/3: read before slot 3 changes)
-        ld (V_G),a
-        ex de,hl
-        call fillpix
-        ex de,hl
-        nextreg 0x53,PG
+        ld c,a
+        ld b,(hl)               ; ULA
         ld a,h
         add a,0x20
-        ld d,a
-        ld e,l
-        ld a,(de)
-        ld b,a                  ; shadow
-        xor (hl)                ; the original's screen byte
-        ld c,a
-        ld a,(V_G)
-        xor c
-        ld (V_RES),a
-        ld a,(V_IM)
-        ld (V_FX),a
-        ld a,(V_G)
+        ld h,a                  ; offset in the shadow pages
+        nextreg 0x53,PG
+        ld a,(hl)
         xor b
-        call setsh
+        ld b,a                  ; ULA ^ objects
+        nextreg 0x53,PG3
+        ld a,(hl)
+        ld d,a                  ; Dizzy's shadow
+        xor b
+        ld b,a                  ; V = the original's screen byte
+        ld a,d
+        xor c
+        ld (hl),a               ; Dizzy's shadow ^= g (no Layer 2: he is the sprite)
         nextreg 0x53,GPG
+        ld a,c
+        xor b
+        ld (V_RES),a            ; the original's A
         pop bc
         pop de
         pop hl
@@ -469,16 +495,20 @@ e_c2:   nextreg 0x07,3
         nextreg 0x07,0
         jp 60254
 
-virt:   ld a,h                  ; HL -> A = ULA ^ shadow (the screen) / (HL) (elsewhere)
+virt:   ld a,h                  ; HL -> A = ULA ^ objects ^ Dizzy (the screen) / (HL) (elsewhere)
         sub 0x40
         cp 0x18
         jr nc,.raw
         push bc
         ld b,(hl)
-        nextreg 0x53,PG
         ld a,h
         add a,0x20
         ld h,a
+        nextreg 0x53,PG
+        ld a,(hl)
+        xor b
+        ld b,a
+        nextreg 0x53,PG3
         ld a,(hl)
         xor b
         ld b,a
@@ -501,6 +531,7 @@ e_wipe: nextreg 0x07,3
         push bc
         push de
         push hl
+        call hidedz             ; room wipe: Dizzy is redrawn afterwards
         ld hl,LTAB + 16
         ld b,144
         ld de,0x011E            ; D = first column 1, E = 30 columns
@@ -648,7 +679,17 @@ fold:   nextreg 0x53,PG
         add a,0x60
         ld d,a
         ld e,l                  ; DE = the byte's offset in the shadow pages
-        nextreg 0x53,PG2
+        nextreg 0x53,PG3
+        ld a,(de)
+        or a
+        jr z,.nd
+        ld b,a
+        xor a
+        ld (de),a               ; Dizzy's bits to the ULA, his shadow byte 0
+        ld a,b
+        xor (hl)
+        ld (hl),a
+.nd:    nextreg 0x53,PG2
         ld a,(de)
         ld (V_FX),a             ; fill bits (cleared by setsh)
         nextreg 0x53,PG
@@ -874,6 +915,122 @@ fillpix: push hl
         pop hl
         ret
 
+; ------------------------------------------------------------------------------------------
+; Dizzy sprite (entry of a Dizzy plot: A = frame 0-38, E = x in 4-pixel units, L = y from the
+; bottom). The original draws nothing when y + rows >= 200 (no parity change). The same image as
+; the one shown, shown and not pending = the erase: keep it on screen (the draw follows: no
+; flicker), pending; anything else = a draw: show it there.
+dzspr:  ld c,a                  ; frame
+        ld b,l                  ; y
+        ld d,e                  ; x
+        ld h,0
+        ld l,a
+        push de
+        ld d,h
+        ld e,l
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,de               ; frame * 9
+        ld de,dztab
+        add hl,de
+        pop de
+        ld a,(hl)               ; rows
+        add a,b                 ; (8 bits, carry ignored: as the plotter's ADD A,B / CP 200)
+        cp 200
+        ret nc
+        ld a,(V_VIS)
+        or a
+        jr z,.draw
+        ld a,(V_PEND)
+        or a
+        jr nz,.draw
+        ld a,(V_SF)
+        cp c
+        jr nz,.draw
+        ld a,(V_SX)
+        cp d
+        jr nz,.draw
+        ld a,(V_SY)
+        cp b
+        jr nz,.draw
+        ld a,1
+        ld (V_PEND),a           ; the erase
+        ret
+.draw:  ld a,c
+        ld (V_SF),a
+        ld a,d
+        ld (V_SX),a
+        ld a,b
+        ld (V_SY),a
+        ld a,1
+        ld (V_VIS),a
+        xor a
+        ld (V_PEND),a
+        ld a,(hl)
+        add a,b
+        ld e,a
+        ld a,224
+        sub e
+        ld (V_YY),a             ; 192 - y - rows + 32
+        push hl
+        ld h,0
+        ld l,d
+        add hl,hl
+        add hl,hl
+        ld de,32
+        add hl,de
+        ld (V_XX),hl            ; 4x + 32
+        pop hl
+        inc hl                  ; 4 x (attribute 3, attribute 4): TL, TR, BL, BR
+        ld c,0
+.q:     ld a,c
+        nextreg 0x34,a
+        push hl
+        ld hl,(V_XX)
+        bit 0,c
+        jr z,.x0
+        ld de,16
+        add hl,de
+.x0:    ld a,l
+        nextreg 0x35,a
+        ld a,h
+        and 1
+        nextreg 0x37,a          ; X bit 8, no mirror / rotation
+        ld a,(V_YY)
+        bit 1,c
+        jr z,.y0
+        add a,16
+.y0:    nextreg 0x36,a
+        pop hl
+        ld a,(hl)
+        inc hl
+        nextreg 0x38,a          ; visible + pattern (0: an empty quarter, hidden)
+        ld a,(hl)
+        inc hl
+        nextreg 0x39,a
+        inc c
+        ld a,c
+        cp 4
+        jr nz,.q
+        ret
+
+hidedz: push af                 ; hide Dizzy's sprites (keeps every register and flag)
+        nextreg 0x34,0
+        nextreg 0x38,0
+        nextreg 0x34,1
+        nextreg 0x38,0
+        nextreg 0x34,2
+        nextreg 0x38,0
+        nextreg 0x34,3
+        nextreg 0x38,0
+        xor a
+        ld (V_VIS),a
+        ld (V_PEND),a
+        pop af
+        ret
+
+dztab:  ds 39 * 9               ; per frame: rows, then 4 x (attr 3, attr 4) - filled by dizzy1.py
 rom_end:
 
 ; ---- setup (stub bank, 0xD000): Layer 2 bank, palette, visible -----------------------------
@@ -890,8 +1047,39 @@ setup:  nextreg 0x12,L2B        ; Layer 2 at banks 16-18 (zero in the .nex)
         ld bc,0x123B
         ld a,2                  ; Layer 2 visible, no write mapping
         out (c),a
+        nextreg 0x43,0x20       ; sprite palette 0: the same 16 colours (index 0 transparent)
+        nextreg 0x40,0
+        ld hl,pal
+        ld b,16
+.s:     ld a,(hl)
+        nextreg 0x41,a
+        inc hl
+        djnz .s
+        nextreg 0x4B,0          ; sprite transparency index 0
+        nextreg 0x54,SPP        ; patterns: pages 30-31 at slots 4-5 for the upload
+        nextreg 0x55,SPP + 1
+        ld bc,0x303B
+        xor a
+        out (c),a               ; pattern slot 0
+        ld hl,0x8000
+        ld c,0x5B
+        ld d,64                 ; 64 x 256 bytes = 128 4-bit patterns
+.u:     ld b,0
+        otir
+        dec d
+        jr nz,.u
+        nextreg 0x54,4          ; game pages back
+        nextreg 0x55,5
+        xor a
+.h:     nextreg 0x34,a          ; every sprite hidden
+        nextreg 0x38,0
+        inc a
+        cp 128
+        jr nz,.h
+        nextreg 0x15,0x01       ; sprites on, order SLU: Dizzy over Layer 2 over the ULA
         ret
-pal:                            ; 16 palette bytes appended by dizzy1.py (index 0 = 0xE3)
+pal:                            ; 16 palette bytes appended by dizzy1.py (index 0 = 0xE3: Layer 2
+                                ; transparent; as a sprite colour index 0 is transparent anyway)
 
         SAVEBIN "d1_rom.bin",0x2000,rom_end-0x2000
         SAVEBIN "d1_setup.bin",0xD000,pal-0xD000

@@ -71,17 +71,17 @@
   },
   "sprites": {
    "file": "dizzy1_sprites.nex",
-   "md5": "16a0045114aaad95297a64c5f862223e"
+   "md5": "83ea050d2ae5b07a9321a67d73a1a6f3"
   }
  },
  "repro": [],
  "status": {
   "title": "Dizzy: The Ultimate Cartoon Adventure (Dizzy 1)",
   "engine_col": "dizzy1 (dizzy_ultimate_cartoon_adventure.md)",
-  "build": "dizzy1_sprites.nex 16a00451 (every figure on Layer 2 via a 1-bit shadow screen, solid: enclosed paper black; default colours, transparent painting; HUD and room tiles on the ULA; altrom + shadow pages 26/27 at slot 3; plots at 28 MHz)",
-  "software": "RZX IDENTICAL (registers, memory, ULA ^ shadow, ink + fill shadows, Layer 2), 47 unit cases + 7 negative controls PASS",
-  "hardware": "untested",
-  "next": "hardware test (CSpect first); Dean paints dizzy1_PAINTING_SPRITES.png"
+  "build": "dizzy1_sprites.nex 83ea050d (Dizzy = hardware sprites in front; every other figure on Layer 2 via a 1-bit shadow screen; solid: enclosed paper black; default colours, items pulse as the original; HUD and room tiles on the ULA; altrom + shadow pages at slot 3; plots at 28 MHz)",
+  "software": "RZX IDENTICAL (registers, memory, ULA ^ shadows, Layer 2, Dizzy sprite vs plotter), 53 unit cases + 9 negative controls PASS",
+  "hardware": "16a00451 runs well (Dean, 2026-10-14): Dizzy mixed with objects (fixed: sprite in front); 83ea050d untested",
+  "next": "hardware test of 83ea050d; Dean paints dizzy1_PAINTING_SPRITES.png"
  },
  "checked": {
   "deps": {

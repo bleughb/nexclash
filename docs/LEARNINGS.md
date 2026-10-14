@@ -276,6 +276,13 @@ BRIEFING - with its reason.
   the figure's XOR parity; the user can paint any opaque pixel transparent (Dizzy 1, 2026-10-14).
   The per-byte lookup made Dizzy's plot ~3x dearer until unpainted bytes took a fast path (flag in
   the plane entry): keep per-byte hook work proportional to what is painted.
+- One XOR figure layer mixes figures exactly as the original did - where two touch, their pixels
+  cancel (Dizzy at the grease gun, hardware 2026-10-14). The player needs his own shadow and his
+  own display (hardware sprites in front); logic still reads ULA ^ every shadow. A sprite that
+  follows XOR parity must not hide at the erase when the draw follows (it does, across an
+  interrupt): mark the erase pending and hide only if something else happens first.
+- A colour that changes every redraw may be the game's own (Dizzy 1's items cycle their colour
+  field): find the writer of the colour before calling it a bug, and ask whether to keep it.
 - The game may rewrite instructions INSIDE or NEXT TO a hook site to switch modes (Dizzy 1: 58079
   XOR C / OR C / LD A,C and 58709 XOR (HL) / NOP for the room tiles - the old site at 58707 would
   have had its JP target overwritten). Before choosing a site, list every writer into the routine's
