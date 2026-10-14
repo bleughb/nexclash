@@ -1,5 +1,9 @@
 # Everyone's a Wally (Mikro-Gen) - engine `wally`
 
+FROZEN (Dean 2026-10-14): superseded by everyones_a_wally_updated (engine wally2,
+games/everyones_a_wally_updated.md); record wally is "excluded", this engine and its builds stay as
+they are.
+
 48K game in a 128K snapshot. Code: nexclash/wally.py, asm/wally_hooks.asm,
 docs/profiles/everyones_a_wally.json (after any .asm edit: `python tools/asm2profile.py everyones_a_wally`).
 Reference (private repo, specnext/reference/everyones_a_wally/): wally.z80 (World of Spectrum

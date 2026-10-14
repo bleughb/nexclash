@@ -157,9 +157,30 @@ def scan(z80, rzx=None, frames=None, keys=None, ranges=None, stop=None, after=No
                 top = tab.most_common(10)
                 lines.append('  %-9s %d instructions%s%s' % (what, len(tab), ': ' if top else '', ', '.join(
                     '%d (0x%04X) x%d' % (pc, pc, n) for pc, n in top)))
+                rest = rest_spans(tab, {pc for pc, _ in top})
+                if rest:
+                    # the top 10 are often one unrolled copy loop; the routines that matter (plotters,
+                    # text) were hidden below it (Everyone's a Wally, 2026-10-14)
+                    lines.append('  %-9s %d more instructions in %d routine span(s): %s%s' % (
+                        what + '+', sum(len(s[3]) for s in rest), len(rest), ', '.join(
+                            '%d-%d (0x%04X) x%d' % (a, b, a, n) for a, b, n, _ in rest[:20]),
+                        ' ...' if len(rest) > 20 else ''))
             result['ranges'][r]['writers'] = dict(sc.wr[r])
             result['ranges'][r]['readers'] = dict(sc.rd[r])
     return '\n'.join(lines), result
+
+
+def rest_spans(tab, skip, gap=8):
+    """The instructions of tab {pc: count} outside skip, joined into spans (next PC within gap bytes:
+    one routine) -> [(first pc, last pc, total count, [pcs])], sorted by PC."""
+    out = []
+    for pc in sorted(p for p in tab if p not in skip):
+        if out and pc - out[-1][1] <= gap:
+            a, _, n, pcs = out[-1]
+            out[-1] = (a, pc, n + tab[pc], pcs + [pc])
+        else:
+            out.append((pc, pc, tab[pc], [pc]))
+    return out
 
 
 def touched_count(result, r):

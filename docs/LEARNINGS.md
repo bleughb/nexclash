@@ -181,6 +181,11 @@ BRIEFING - with its reason.
   PUSH, self-modified operands, (43067)). Simpler than Rainbow's two canvas runs; verified exactly.
 - Put the sprite commit AFTER the pixel copy (Wally 47637), not at blit start: the LDI copy takes
   ~1 frame.
+- A back-buffer composer can RESTORE the buffer again before any copy: those plots never reach the
+  screen. Drop the pending sprites at every restore entry (hooks, verification, the colour-sheet
+  capture) or they appear for one render / on the sheet. Find it by tracing the call order of
+  restore / plot / copy / commit across a room change (Wally: intro-walk plots at 61544/61560, then
+  the room changes and 61090 restores before the commit; 2026-10-14).
 - Measure the write extent of EVERY dispatch target statically (run each original plotter from a
   mid-screen address, record written columns/rows), not only the ones the recordings reach: bosses
   use entries normal play never does. Rainbow's 4-wide leftward entries write E-3 (window started

@@ -389,7 +389,10 @@ runner simrun.py). Game-independent: game facts come in as arguments (addresses,
 - isr: per accepted interrupt until it returns: instructions run, IX/IY reads of the
   INTERRUPTED value (PUSH/POP-aware), stack depth and stack switches, ports, modes seen.
 - scan --writers: per --range, the instructions that write it and that read it as data (counts) -
-  who draws into a screen / back buffer and whether game logic reads it back.
+  who draws into a screen / back buffer and whether game logic reads it back. The first line lists
+  the top 10 by count; the `writers+` / `readers+` line lists the rest joined into routine spans
+  (PCs within 8 bytes). Read it: an unrolled copy loop fills the whole top 10 and hides every
+  plotter (Everyone's a Wally, 2026-10-14: the top 10 were all LDIs of 47653).
 - isr: also "Slots": which 8K slots the handler reads / writes / runs; slots 2-5 it never touches
   may hold a hook RAM page with interrupts on (LEARNINGS 1.3).
 - preview: contact sheet of the screen at chosen frames (PLAYBOOK 3b; with --rzx, --every N needs
