@@ -27,8 +27,9 @@ stay on their machine; the maintainers' reference files live in the private repo
    (every game, Dean 2026-10-13/14; PLAYBOOK 3b), built with nexclash/coloursheet.py, 1:1, 8x8
    palette swatches: `<game>_PAINTING_SPRITES.png` (every graphic once, multi-part figures joined;
    the user paints it) and `<game>_REFERENCE_ALL_SPRITES.png` (every figure whole, as the build
-   colours it; not read back). The painted sheet becomes docs/profiles/<game>_colours.json, which
-   the engine applies per pixel. Never guess
+   colours it; not read back). The painted sheet becomes the engine's colours json (docs/profiles/
+   <record name>_colours.json, e.g. dizzy1_colours.json: the path the engine's COLOURS constant
+   loads; another name is never read), which the engine applies per pixel. Never guess
    these; if the prompt already says, confirm with the preview.
 4. Long runs (full verify, selftest): `setsid nohup` + poll (LEARNINGS 2.6) - plain `&` dies.
 5. While developing: engine files only, `selftest.py --canary` after any shared change.
