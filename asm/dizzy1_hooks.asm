@@ -43,11 +43,13 @@
 
         DEVICE ZXSPECTRUMNEXT
 
-PG      EQU 26                  ; shadow page (slot 3 during hooks)
+PG      EQU 26                  ; shadow page (slot 3 during hooks): ink shadow + shadow attributes
+PG2     EQU 27                  ; fill shadow (figures' enclosed paper, display only)
 GPG     EQU 11                  ; the game's page at slot 3 (48K: bank 5 upper half)
 L2B     EQU 16                  ; Layer 2 16K bank -> 8K pages L2PG..L2PG+5
 L2PG    EQU 32
-PLPG    EQU 40                  ; colour plane pages 40-47 (4 bytes per graphics byte)
+PLPG    EQU 40                  ; plane pages 40-54: 8 bytes per graphics byte = 8 colour nibbles (0 =
+                                ; default), interior mask (enclosed paper), transparent mask
 P2BASE  EQU 43485               ; plotter 2 graphics (frame data) start; plane index 0
 P2LEN   EQU 9663                ; up to the frame table at 53148
 DZBASE  EQU 24290               ; Dizzy graphics start; plane index P2LEN
@@ -66,6 +68,12 @@ V_FM    EQU 0x5B48              ; 1 = exit with the XOR's flags, 0 = keep the en
 V_R2    EQU 0x5B4A              ; plotter 2's caller (its return address, swapped for t_p2)
 V_R1    EQU 0x5B4C              ; Dizzy plotter's caller (swapped for t_dz)
 V_PIX   EQU 0x5B50              ; 8 colours of the byte being written (bit 0 = leftmost)
+V_IM    EQU 0x5B58              ; its interior mask (enclosed paper bits)
+V_CL    EQU 0x5B59              ; its transparent mask (painted transparent)
+V_FX    EQU 0x5B5A              ; fill bits to XOR in setsh
+V_NI    EQU 0x5B5B              ; new ink shadow byte (setsh)
+V_NF    EQU 0x5B5C              ; new fill shadow byte (setsh)
+V_HAS   EQU 0x5B5D              ; 1 = V_PIX holds painted colours, 0 = defaults (ink V_COL, fill black)
 HSTK    EQU 0x5BC0              ; hook stack top (grows down; the variables end at 0x5B58)
 
 SH      EQU 0x6000              ; shadow screen in PG (offset = screen address - 0x4000)
@@ -120,7 +128,6 @@ e_p2:   nextreg 0x07,3          ; the whole plot at 28 MHz (the game has no fram
         and 7
         or 8                    ; bright ink of C ^ 7 (8 = black)
 .w:     ld (V_COL),a
-        call fill8              ; the plot's colour row (per byte only with a colour map)
         pop de
         pop hl
         pop af
@@ -162,8 +169,7 @@ e_dz:   nextreg 0x07,3
         ld de,(V_PIX)
         ld a,15
         ld (V_COL),a
-        call fill8              ; (A, F: the plotter sets both before using them: 58116 SRL E,
-        ld a,(57709)            ;  58122 LD A,(57709) - A restored anyway, F rebuilt by SRL)
+        ld a,(57709)            ; A as on entry (just stored there); flags untouched
         ld hl,(V_T)
         jp 58116
 
@@ -188,9 +194,7 @@ e_p2w:  ld (V_SP),sp
         push bc
         ld a,(hl)
         ld (V_G),a
-        ld a,(mapon)
-        or a
-        call nz,fillpix         ; colours of this graphics byte (maps a plane page)
+        call fillpix            ; colours / interior / transparent bits of this graphics byte
         nextreg 0x53,PG
         ex de,hl                ; HL = screen
         ld a,h
@@ -226,6 +230,8 @@ e_p2w:  ld (V_SP),sp
         ld a,(V_CONV)
         or a
         jr z,.ula
+        ld a,(V_IM)
+        ld (V_FX),a             ; the figure's interior toggles with it (fill shadow)
         ld a,e
         xor b
         call setsh              ; converted: the change goes to the shadow (Layer 2 follows)
@@ -272,13 +278,9 @@ e_dw:   ld (V_SP),sp
         push bc
         ld a,(de)               ; the graphics byte (slot 2/3: read before slot 3 changes)
         ld (V_G),a
-        ld a,(mapon)
-        or a
-        jr z,.nm
         ex de,hl
         call fillpix
         ex de,hl
-.nm:
         nextreg 0x53,PG
         ld a,h
         add a,0x20
@@ -291,6 +293,8 @@ e_dw:   ld (V_SP),sp
         ld a,(V_G)
         xor c
         ld (V_RES),a
+        ld a,(V_IM)
+        ld (V_FX),a
         ld a,(V_G)
         xor b
         call setsh
@@ -639,21 +643,26 @@ fold:   nextreg 0x53,PG
         sub 0x40
         cp 0x18
         jr nc,.skip
-        add a,0x60              ; shadow byte at H + 0x20
-        push de
-        ld d,a
-        ld e,l
-        ld a,(de)
-        pop de
-        or a
-        jr z,.skip
-        xor (hl)
-        ld (hl),a               ; the ULA takes the figure's bits
         push bc
         push de
+        add a,0x60
+        ld d,a
+        ld e,l                  ; DE = the byte's offset in the shadow pages
+        nextreg 0x53,PG2
+        ld a,(de)
+        ld (V_FX),a             ; fill bits (cleared by setsh)
+        nextreg 0x53,PG
+        ld a,(de)
+        ld c,a                  ; ink bits
+        ld a,(V_FX)
+        or c
+        jr z,.s2
+        ld a,c
+        xor (hl)
+        ld (hl),a               ; the ULA takes the figure's ink bits
         xor a
-        call setsh              ; shadow byte 0, its Layer 2 pixels cleared
-        pop de
+        call setsh              ; ink and fill 0, Layer 2 cleared
+.s2:    pop de
         pop bc
 .skip:  inc hl
         djnz .byte
@@ -666,20 +675,36 @@ fold:   nextreg 0x53,PG
         ret
 
 ; ------------------------------------------------------------------------------------------
-; setsh: PG mapped; HL = screen address, A = the new shadow byte. Writes it and redraws the
-; Layer 2 pixels of the changed bits (colour V_PIX[bit] where set, 0 = transparent where clear).
-; Keeps HL; PG mapped again at exit. Clobbers AF, BC, DE.
+; setsh: PG mapped; HL = screen address, A = the new ink shadow byte, V_FX = fill bits to XOR.
+; Redraws the Layer 2 pixels whose ink or (visible) fill changed: ink -> V_PIX[bit]; else fill ->
+; V_PIX[bit] when it is this graphic's own interior, else black; else 0 (transparent); a bit in
+; V_CL (painted transparent) -> 0. Keeps HL; PG mapped again at exit. Clobbers AF, BC, DE.
 setsh:  push hl
-        ld e,a
+        ld e,a                  ; new ink
         ld a,h
         add a,0x20
         ld h,a
         ld a,(hl)
         ld (hl),e
-        pop hl
         xor e
-        ret z
-        ld d,a                  ; D = changed bits, E = new bits
+        ld d,a                  ; ink changes
+        ld a,e
+        ld (V_NI),a
+        nextreg 0x53,PG2
+        ld a,(V_FX)
+        ld c,a
+        xor (hl)
+        ld (hl),a               ; fill ^= V_FX
+        ld (V_NF),a
+        ld a,e
+        cpl
+        and c                   ; fill changes not covered by ink
+        or d
+        pop hl
+        jr nz,.go
+        nextreg 0x53,PG
+        ret
+.go:    ld d,a                  ; D = pixels to redraw
         push hl
         ld a,h                  ; H = 010 y7 y6 y2 y1 y0, L = y5 y4 y3 x4..x0
         and 0x18
@@ -708,18 +733,44 @@ setsh:  push hl
         add a,a
         ld c,a                  ; x of the byte's first pixel
         ld hl,V_PIX
-.bit:   xor a
-        sla e
-        jr nc,.z
+        ld e,0x80
+.bit:   ld a,d
+        and e
+        jr z,.next
+        ld a,(V_NI)
+        and e
+        jr z,.nf
+        ld a,(V_CL)             ; ink
+        and e
+        jr nz,.zero
+        ld a,(V_HAS)
+        or a
+        ld a,(V_COL)            ; default: the plot's colour
+        jr z,.w
         ld a,(hl)
-.z:     sla d
-        jr nc,.s
-        ld (bc),a
-.s:     inc hl
+        jr .w
+.nf:    ld a,(V_NF)
+        and e
+        jr z,.zero
+        ld a,(V_IM)             ; fill: this graphic's interior?
+        and e
+        jr z,.blk
+        ld a,(V_CL)
+        and e
+        jr nz,.zero
+        ld a,(V_HAS)
+        or a
+        jr z,.blk               ; default: black
+        ld a,(hl)
+        jr .w
+.blk:   ld a,8                  ; another figure's interior: black
+        jr .w
+.zero:  xor a
+.w:     ld (bc),a
+.next:  inc hl
         inc c
-        ld a,c
-        and 7
-        jr nz,.bit
+        rrc e
+        jr nc,.bit
         nextreg 0x53,PG
         pop hl
         ret
@@ -727,26 +778,17 @@ setsh:  push hl
 ; fillpix: HL = graphics address -> V_PIX[0..7] = V_COL, or the painted colour of each bit
 ; (colour plane: 4 bytes per graphics byte, bit 0 in the high nibble of the first byte).
 ; Leaves a plane page at slot 3 when the map is on (the caller maps PG next). Keeps HL.
-fill8:  push af                 ; V_PIX[0..7] = V_COL (keeps every register and flag)
-        ld a,(V_COL)
-        ld (V_PIX),a
-        ld (V_PIX+1),a
-        ld (V_PIX+2),a
-        ld (V_PIX+3),a
-        ld (V_PIX+4),a
-        ld (V_PIX+5),a
-        ld (V_PIX+6),a
-        ld (V_PIX+7),a
-        pop af
-        ret
-
+; fillpix: HL = graphics address, V_G = its byte, V_COL = the plot's ink default -> V_IM, V_CL and
+; V_HAS from the plane (8 bytes per graphics byte; plotter-2 graphics first, then Dizzy's: 4 colour
+; bytes, interior, transparent, has-colours); with colours V_PIX[0..7] (painted nibble, else V_COL
+; for ink bits, black for the others). Leaves a plane page at slot 3 (the caller maps PG next).
 fillpix: push hl
         push de
         push bc
-        call fill8
-        ld a,(mapon)
-        or a
-        jr z,.ret
+        xor a
+        ld (V_IM),a
+        ld (V_CL),a
+        ld (V_HAS),a
         ld de,P2BASE
         or a
         sbc hl,de
@@ -769,19 +811,46 @@ fillpix: push hl
         jr nc,.ret
         ld de,DZLEN + P2LEN     ; index = P2LEN + address - DZBASE
         add hl,de
-.idx:   add hl,hl
-        add hl,hl               ; offset = 4 * index (< 0x10000)
-        ld a,h
-        rlca
-        rlca
-        rlca
-        and 7
+.idx:   ld a,h
+        rrca
+        rrca
+        and 0x3F
         add a,PLPG
-        nextreg 0x53,a
+        nextreg 0x53,a          ; page = PLPG + index / 1024
         ld a,h
-        and 0x1F
-        or 0x60
+        and 3
         ld h,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld a,h
+        or 0x60
+        ld h,a                  ; 0x6000 + (index % 1024) * 8
+        push hl
+        ld de,4
+        add hl,de
+        ld a,(hl)
+        ld (V_IM),a
+        inc hl
+        ld a,(hl)
+        ld (V_CL),a
+        inc hl
+        ld a,(hl)               ; 1 = painted colours in this entry
+        pop hl
+        or a
+        jr z,.ret               ; none: setsh uses the defaults
+        ld (V_HAS),a
+        ld a,(V_G)
+        ld c,a
+        ld de,V_PIX
+        ld b,8
+.d:     ld a,8                  ; not ink: black (fill default)
+        sla c
+        jr nc,.d1
+        ld a,(V_COL)
+.d1:    ld (de),a
+        inc de
+        djnz .d
         ld de,V_PIX
         ld b,4
 .e:     ld a,(hl)
@@ -805,7 +874,6 @@ fillpix: push hl
         pop hl
         ret
 
-mapon:  db 0                    ; 1 = a colour map is in the plane pages (set by dizzy1.py)
 rom_end:
 
 ; ---- setup (stub bank, 0xD000): Layer 2 bank, palette, visible -----------------------------

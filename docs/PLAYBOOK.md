@@ -99,7 +99,10 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   Rules (Dean): 1:1 (one PNG pixel = one Spectrum pixel; an enlarged sheet is too big to paint),
   multi-part figures JOINED as the game draws them, a row of 8x8 swatches of the sprite palette
   (1-15) at the top, no text. The user paints, keeps the size, sends it back; the read-back is the
-  colour map `docs/profiles/<game>_colours.json` (none = the defaults). Shared module
+  colour map `docs/profiles/<game>_colours.json` (none = the defaults). Engines may draw opaque
+  non-ink pixels (code 2: an outline, or Dizzy 1's enclosed paper, black by default) and may let the
+  user paint pixels TRANSPARENT: `coloursheet.read(..., clear=True)` reads the sheet's grey on an
+  opaque pixel as transparent (Dean 2026-10-14: "there will always be items that need them"). Shared module
   nexclash/coloursheet.py does the sheet side (joining a frame's plots into figures, the fewest
   figures that show every part, PNG, layout JSON, read-back, the colours file); the engine supplies
   the parts: per plot its staging pixels, each with a colour-map key (one graphics byte = 8 pixels),

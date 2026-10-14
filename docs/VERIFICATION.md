@@ -44,7 +44,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Magicland Dizzy (magicland_dizzy): `magicland_dizzy.nex` 09eb18496cff334ea17bfc0b0c94585d, `magicland_dizzy_sprites.nex` bf137d41d3cc08221bf6fdda153c9de2, `magicland_dizzy_sprites.nex --strategy slot1` d3b37c05d4c47ada07294fa2d7c1ae76; verified 2026-10-13
 - Treasure Island Dizzy (treasure_island_dizzy): `treasure_island_dizzy.nex` 4dae1a3a15b2158642a5d5b82de92ef7, `treasure_island_dizzy_sprites.nex` 8b4d0847d68fce3215bd43a0e116e682; verified 2026-10-13
 - Treasure Island Dizzy (title screen) (treasure_island_title): `treasure_island_title.nex` 70890aba7d821fba8a41e63636eb58be, `treasure_island_title_sprites.nex` 85e054fe4bce8e4b3a8e336aac432f58; verified 2026-10-13
-- Dizzy: The Ultimate Cartoon Adventure (dizzy1): `dizzy1.nex` 7892b2e0f1f3f9f19165516db307cbe0, `dizzy1_sprites.nex` a0622431da321709695abf2fbe97f09e; verified 2026-10-13
+- Dizzy: The Ultimate Cartoon Adventure (dizzy1): `dizzy1.nex` 7892b2e0f1f3f9f19165516db307cbe0, `dizzy1_sprites.nex` 16a0045114aaad95297a64c5f862223e; verified 2026-10-13
 - Commando (commando): `commando.nex` a206f950c12f58a8e7f26b366f5a2480, `commando_sprites.nex` d601385ee4aeb7f3d7c0771bdc27df6b; verified 2026-10-13
 - Crystal Kingdom Dizzy (128K) (crystal_kingdom_dizzy): `crystal_kingdom_dizzy.nex` 99975f65172dc86ecefbac07db2c0c00; verified never
 - Midnight Resistance (128K) (midnight_resistance): `midnight_resistance.nex` 17239acaaf67b0f8011478053e17829d, `midnight_resistance_sprites.nex` 670f94034af175ed56df97f8cdb1ef29; verified 2026-10-14
@@ -475,30 +475,35 @@ arenas 1-2, game over, title; N pressed)
   flag (it started a release run). `selftest.py --canary`: see the PR.
 
 ## Dizzy: The Ultimate Cartoon Adventure (48K, engine `dizzy1`) - 2026-10-14
-Every figure on Layer 2 through a 1-bit shadow screen (games/dizzy_ultimate_cartoon_adventure.md).
+Every figure on Layer 2 through a 1-bit shadow screen, solid (enclosed paper black, display-only
+fill shadow), transparent painting (games/dizzy_ultimate_cartoon_adventure.md).
 `nexclash.py auto dizzy1.z80 --no-record --rzx dizzy1.rzx` (the record's verify recipe):
-- Static: hook code 1,272 bytes at 0x2000-0x24F7, no EXX / EX AF / IY / I / IM / DI / EI, nothing at
+- Static: hook code 1,379 bytes at 0x2000-0x2562, no EXX / EX AF / IY / I / IM / DI / EI, nothing at
   0x3D00. Boot (nextboot): registers, RAM, ROM view, paging, $8C OK; Layer 2 bank 16, port 0x123B =
   2, palette 0-15 (0 = $E3), banks 16-18 zero. Plain dizzy1.nex unchanged (7892b2e0), build
-  decisions = stored.
+  decisions = stored. Interior masks: 3,888 graphics bytes, 7,921 pixels, no byte in two frames,
+  Dizzy's shifted copies identical to frames 0-38 shifted.
 - dizzy1.rzx, 6,346 frames: PASSED. Forked at every hooked routine from the real state - 7,086
   converted + 1,356 kept plotter-2 calls (76 with the clipped-row helper), 2,364 Dizzy calls (whole
   calls to their return), 7,030 attribute reads, 21,686 + 19,195 collision reads, 425 type-3 and
   1,192 type-7 effect folds, 24 + 24 wipes: all registers (AF' included), all memory, screen and
-  attributes as ULA ^ shadow == the original, 2,050,456 Layer 2 pixels against the independent
-  shadow / colour model; per hook instruction IY / I / IFF / IM / alternate set unchanged, hook
-  stack room >= 18 bytes, nothing pushed below the game SP, slot 3 and 3.5 MHz restored; ROM 0x0038
-  handler installed at every site; no unhooked read / write of a figure byte or cell; no game write
-  to a patch site; site interiors entered only sequentially (or by an interrupt's return).
-- Unit: 46 cases PASSED (every plotter mode XOR / OR / LD x attribute XOR / NOP, converted and kept;
+  attributes as ULA ^ shadow == the original, the ink and fill shadows and 2,050,456 Layer 2 pixels
+  against the independent model (pixel rule: ink colour / own interior fill / other interior black /
+  transparent); per hook instruction IY / I / IFF / IM / alternate set unchanged, hook stack room
+  >= 18 bytes, nothing pushed below the game SP, slot 3 and 3.5 MHz restored; ROM 0x0038 handler
+  installed at every site; no unhooked read / write of a figure byte or cell; no game write to a
+  patch site; site interiors entered only sequentially (or by an interrupt's return).
+- Unit: 47 cases PASSED (every plotter mode XOR / OR / LD x attribute XOR / NOP, converted and kept;
   kept, HUD, converted and Dizzy draws over figure bits; rows past line 191; attribute and
   collision reads off the screen; type-3 effects 0 / 1 / 2 / 3 and the type-7 rotator with figures
-  inside, run to the effect's end; wipes with figures everywhere; synthetic colour map of 5,325
-  entries incl. Dizzy's shifted copies, wrong check byte ignored). Negative controls 6/6 detected:
-  no virtual read (A / F differ), no fold (rotator, wipe), room renderer converted, hook stack too
-  deep, colour map left out.
-- Speed (no frame sync in the game): median frame 1,382 T faster than the original, worst frame
-  (room change) +91,896 T, 28 MHz parts counted / 8.
+  inside, run to the effect's end; wipes with figures everywhere; synthetic colour map incl.
+  transparent masks and Dizzy's shifted copies, wrong check byte ignored). Negative controls 7/7
+  detected: no virtual read (A / F differ), no fold (rotator, wipe), room renderer converted, hook
+  stack too deep, colour map left out, interiors left out.
+- coloursheet (`selftest.py --tools`): transparent painting golden checks (opt-in read(clear=True);
+  default unchanged) PASSED.
+- Speed (no frame sync in the game): median frame +2,187 T (of 69,888; ~3% slower), worst frame
+  (room change) +155,193 T, 28 MHz parts counted / 8. (Without the solid fill: -1,382 / +91,896.)
 
 ## Toolkit: two-stage tool-chain canary (2026-10-13)
 `selftest.py --canary`: stage 1 Chuckie Egg rebuild (both MD5s) PASSED in 0.6 s. Negative control

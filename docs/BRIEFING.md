@@ -334,7 +334,8 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    sheet side is shared (nexclash/coloursheet.py); each engine still writes its own parts
    (capture) and its own per-pixel colour map in the sprite builder (midres: sheet_part, asm
    `ovl`). Games converted before Midnight Resistance have neither; add them when one is reworked.
-   Golden check: `selftest.py --tools` (coloursheet on synthetic parts). Not done: a
+   Golden check: `selftest.py --tools` (coloursheet on synthetic parts, incl. the opt-in transparent
+   painting `read(..., clear=True)`: 4th map element = transparent bit mask; Dizzy 1 uses it). Not done: a
    `nexclash.py sheet` command dispatching to the engine (today `python -m nexclash.<engine> sheet`).
 ### C3. Working rules (token budget)
 Summaries <= 40 lines; disassemble only routines the analysis flags; one simulator pass

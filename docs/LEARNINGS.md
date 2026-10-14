@@ -271,6 +271,11 @@ BRIEFING - with its reason.
   into the shadow (converted) or the ULA (kept); overwriters and in-place effects fold the shadow
   back into the ULA first; logic reads get ULA ^ shadow (Dizzy 1, 2026-10-14). Hardware sprites
   would have needed ~80 at once and patterns built on the fly for clipped draws.
+- Solid figures on an XOR engine: the frame's enclosed paper (flood fill from outside, 4-connected)
+  per graphics byte, XORed into a second, display-only fill shadow with the ink, so the fill keeps
+  the figure's XOR parity; the user can paint any opaque pixel transparent (Dizzy 1, 2026-10-14).
+  The per-byte lookup made Dizzy's plot ~3x dearer until unpainted bytes took a fast path (flag in
+  the plane entry): keep per-byte hook work proportional to what is painted.
 - The game may rewrite instructions INSIDE or NEXT TO a hook site to switch modes (Dizzy 1: 58079
   XOR C / OR C / LD A,C and 58709 XOR (HL) / NOP for the room tiles - the old site at 58707 would
   have had its JP target overwritten). Before choosing a site, list every writer into the routine's

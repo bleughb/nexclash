@@ -71,15 +71,15 @@
   },
   "sprites": {
    "file": "dizzy1_sprites.nex",
-   "md5": "a0622431da321709695abf2fbe97f09e"
+   "md5": "16a0045114aaad95297a64c5f862223e"
   }
  },
  "repro": [],
  "status": {
   "title": "Dizzy: The Ultimate Cartoon Adventure (Dizzy 1)",
   "engine_col": "dizzy1 (dizzy_ultimate_cartoon_adventure.md)",
-  "build": "dizzy1_sprites.nex a0622431 (every figure on Layer 2 via a 1-bit shadow screen, default colours; HUD and room tiles on the ULA; altrom + shadow page 26 at slot 3; plots at 28 MHz)",
-  "software": "RZX IDENTICAL (registers, memory, ULA ^ shadow, Layer 2), unit + 6 negative controls PASS",
+  "build": "dizzy1_sprites.nex 16a00451 (every figure on Layer 2 via a 1-bit shadow screen, solid: enclosed paper black; default colours, transparent painting; HUD and room tiles on the ULA; altrom + shadow pages 26/27 at slot 3; plots at 28 MHz)",
+  "software": "RZX IDENTICAL (registers, memory, ULA ^ shadow, ink + fill shadows, Layer 2), 47 unit cases + 7 negative controls PASS",
   "hardware": "untested",
   "next": "hardware test (CSpect first); Dean paints dizzy1_PAINTING_SPRITES.png"
  },

@@ -97,6 +97,41 @@ def scr_xy(a):
     return (o & 31), ((o >> 8) & 7) | ((o >> 2) & 0x38) | ((o >> 5) & 0xC0)
 
 
+INTERIOR = {}
+
+
+def interior_masks(peek):
+    """Graphics address -> bit mask (0x80 = bit 0) of the frame's ENCLOSED paper: paper pixels that
+    cannot be reached from outside the frame through paper (4-connected) - Dizzy's eyes, the inside
+    of a bottle (Dean 2026-10-14: figures solid by default). Every frame of both plotters (Dizzy's
+    shifted copies give the same pixels shifted; no graphics byte belongs to two frames)."""
+    if INTERIOR:
+        return INTERIOR
+    for dizzy, n in ((True, 78), (False, 256)):
+        for f in range(n):
+            fi = frame_info(peek, f, dizzy)
+            if fi is None:
+                continue
+            ds, wb, h = fi
+            W = wb * 8
+            ink = [[peek(ds + r * wb + c // 8) >> (7 - c % 8) & 1 for c in range(W)] for r in range(h)]
+            seen, st = {(-1, -1)}, [(-1, -1)]
+            while st:
+                x, y = st.pop()
+                for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                    if -1 <= nx <= W and -1 <= ny <= h and (nx, ny) not in seen:
+                        if 0 <= nx < W and 0 <= ny < h and ink[ny][nx]:
+                            continue
+                        seen.add((nx, ny))
+                        st.append((nx, ny))
+            for r in range(h):
+                for c in range(W):
+                    if not ink[r][c] and (c, r) not in seen:
+                        a = ds + r * wb + c // 8
+                        INTERIOR[a] = INTERIOR.get(a, 0) | 0x80 >> (c % 8)
+    return INTERIOR
+
+
 def pixel_key(peek, dizzy, frame, gaddr, bit):
     """Graphics byte gaddr, bit -> (part id, staging column, row, colour-map key, key bit, check)."""
     if not dizzy:
@@ -119,18 +154,22 @@ def part_from_writes(peek, dizzy, frame, writes, group, ret, b, c):
     pixels, entries = [], {}
     pid, x0, y0 = None, None, None
     dflt = default_colour(dizzy, b, c)
+    inter = interior_masks(peek)
     for sa, ga in writes:
         g = peek(ga)
+        im = inter.get(ga, 0)
         cx, sy = scr_xy(sa)
         for bit in range(8):
-            if not g >> (7 - bit) & 1:
+            ink = g >> (7 - bit) & 1
+            if not ink and not im >> (7 - bit) & 1:
                 continue
             pid, col, row, key, kb, chk = pixel_key(peek, dizzy, frame, ga, bit)
             px = cx * 8 + bit
             if x0 is None:
                 x0, y0 = px - col, sy - row
             entries[key] = [chk, 1]
-            pixels.append((col, row, key, kb, 1, dflt))
+            # ink: code 1, today's colour; enclosed paper: code 2 (opaque), black by default
+            pixels.append((col, row, key, kb, 1, dflt) if ink else (col, row, key, kb, 2, 8))
     if not pixels:
         return None
     ds, wb, h = frame_info(peek, frame % 39 if dizzy else frame, dizzy)
@@ -174,6 +213,7 @@ class Capture:
         self.frame_parts = []
         self.frames = []           # per RZX frame: [part]
         self.shadow = bytearray(6144)
+        self.fill = bytearray(6144)
         self.sattr = bytearray(768)
         self.shots = {}
         self.want = set()
@@ -190,7 +230,7 @@ class Capture:
         if n in self.want:
             m = self.sim.memory
             self.shots[n] = (bytes(m[0x4000 + i] for i in range(6912)), bytes(self.shadow), bytes(self.sattr),
-                             dict(self.colour))
+                             dict(self.colour), bytes(self.fill))
 
     def before(self, pc):
         R, m = self.sim.registers, self.sim.memory
@@ -226,6 +266,9 @@ class Capture:
             else:
                 sa, ga = R[6] << 8 | R[7], R[4] << 8 | R[5]
             self.cur[6].append((sa, ga))
+            o = sa - 0x4000
+            if 0 <= o < 6144:                  # the figure's interior toggles with its ink
+                self.fill[o] ^= interior_masks(lambda a: m[a]).get(ga, 0)
         elif pc == WIPE:
             self.parity.clear()
 
@@ -245,6 +288,7 @@ class Capture:
                         self.colour[(o, bit)] = col
             elif pc == 58654:
                 self.shadow[o] = 0
+                self.fill[o] = 0
         elif 0x5800 <= a < 0x5B00:
             o = a - 0x5800
             if self.cur is not None and pc == P2_ATTR:
@@ -328,18 +372,20 @@ def preview(z80, rzx, at, out):
 
     tiles = []
     for n in sorted(cap.shots):
-        scr, sh, sa, colr = cap.shots[n]
+        scr, sh, sa, colr, fl = cap.shots[n]
         # the simulation runs the ORIGINAL game: its screen holds the figures; the build's ULA is the
         # screen without them (XOR the shadow out), its attributes without the figures' cell colours
         o = ula(scr)
         p = ula(bytes(scr[i] ^ sh[i] for i in range(6144)) + bytes(scr[6144 + i] ^ sa[i] for i in range(768)))
         pp = p.load()
         for a in range(6144):
-            if sh[a]:
+            if sh[a] or fl[a]:
                 cx, y = scr_xy(0x4000 + a)
                 for b in range(8):
                     if sh[a] >> (7 - b) & 1:
                         pp[cx * 8 + b, y] = cs_rgb[colr.get((a, b), WHITE)]
+                    elif fl[a] >> (7 - b) & 1:
+                        pp[cx * 8 + b, y] = cs_rgb[8]          # enclosed paper: solid black
         t = Image.new('RGB', (520, 196), (40, 40, 40))
         t.paste(o, (2, 2))
         t.paste(p, (262, 2))
@@ -359,7 +405,8 @@ ROM_ORG = 0x2000
 ALT_PAGE = 24                      # alt ROM copy source (bank 12)
 PG, GPG = 26, 11                   # shadow page; the game's page at slot 3
 L2B, L2PG = 16, 32                 # Layer 2 banks 16-18 = pages 32-37
-PLPG, NPL = 40, 8                  # colour plane pages 40-47 (banks 20-23)
+PLPG, NPL = 40, 15                 # plane pages 40-54 (banks 20-27): colours, interiors, transparent
+PG2 = 27                           # fill shadow (enclosed paper of the drawn figures; display only)
 P2LEN, DZLEN = 9663, 4760          # plane: plotter 2 graphics 43485-53147, Dizzy 24290-29049
 HOOK_RAM = (0x5B40, 0x5BC0)        # variables + hook stack (printer buffer, never touched by the game)
 HSTK_MIN = 0x5B58 + 18             # lowest SP allowed in a hook (variables end + an interrupt's room)
@@ -402,6 +449,18 @@ def colour_entry(cmap, peek, dizzy, ga, bit):
     return e[2][k[1]] if e and e[0] == k[2] else 0
 
 
+def clear_entry(cmap, peek, dizzy, ga, bit):
+    """True when graphics bit (ga, bit) was painted transparent (entry's 4th element)."""
+    if not cmap:
+        return False
+    if not dizzy:
+        e = cmap.get('G%04X' % ga)
+        return bool(e and len(e) > 3 and e[0] == peek(ga) and e[3] & (0x80 >> bit))
+    k = DZ_KEYS.get((ga, bit))
+    e = cmap.get(k[0]) if k else None
+    return bool(e and len(e) > 3 and e[0] == k[2] and e[3] & (0x80 >> k[1]))
+
+
 DZ_KEYS = {}
 
 
@@ -420,21 +479,24 @@ def dz_keys(peek):
 
 
 def plane_pages(cmap, peek):
-    """Colour map -> {page: 8K} of the colour plane (4 bytes per graphics byte; empty: no map)."""
-    if not cmap:
-        return {}
-    dz_keys(peek)
+    """-> {page: 8K}: the plane, 8 bytes per graphics byte (plotter-2 graphics, then Dizzy's): 8 colour
+    nibbles (0 = default), the interior mask, the transparent mask, 1 = has colours. Always built."""
+    inter = interior_masks(peek)
+    if cmap:
+        dz_keys(peek)
     plane = bytearray(NPL * 8192)
-    n = 0
     for idx in range(P2LEN + DZLEN):
         dizzy = idx >= P2LEN
         ga = DZ_BASE + idx - P2LEN if dizzy else P2_BASE + idx
-        nib = [colour_entry(cmap, peek, dizzy, ga, b) for b in range(8)]
-        if any(nib):
-            n += 1
+        e = 8 * idx
+        if cmap:
+            nib = [colour_entry(cmap, peek, dizzy, ga, b) for b in range(8)]
             for k in range(4):
-                plane[4 * idx + k] = nib[2 * k] << 4 | nib[2 * k + 1]
-    return {PLPG + p: bytes(plane[p * 8192:(p + 1) * 8192]) for p in range(NPL)} if n else {}
+                plane[e + k] = nib[2 * k] << 4 | nib[2 * k + 1]
+            plane[e + 5] = sum(0x80 >> b for b in range(8) if clear_entry(cmap, peek, dizzy, ga, b))
+            plane[e + 6] = 1 if any(nib) else 0         # colours to expand (else the defaults)
+        plane[e + 4] = inter.get(ga, 0)
+    return {PLPG + p: bytes(plane[p * 8192:(p + 1) * 8192]) for p in range(NPL)}
 
 
 class Dizzy1Patch:
@@ -451,8 +513,7 @@ class Dizzy1Patch:
         code = bytearray.fromhex(h['rom'])
         self.colours = load_colours() if colours is None else colours
         self.peek = peek
-        self.plane = plane_pages(self.colours, peek) if (self.colours and peek) else {}
-        code[self.syms['mapon'] - ROM_ORG] = 1 if self.plane else 0
+        self.plane = {}
         for a, d in (edit or {}).items():
             code[a - ROM_ORG:a - ROM_ORG + len(d)] = d
         self.rom_code = bytes(code)
@@ -472,7 +533,14 @@ class Dizzy1Patch:
         self.tail_addr = TAIL_ADDR
         self.max_tail = HOOK_RAM[0] - TAIL_ADDR
         self.sites = [(a, bytes.fromhex(old), b'\xC3' + self.syms[s].to_bytes(2, 'little')) for a, old, s in SITES]
-        self.extra_banks = {12: self.page + bytes(8192), 13: bytes(16384)}
+        if peek is not None:
+            self.prepare(peek)
+
+    def prepare(self, peek):
+        """Plane (interiors + colour map) from the game's graphics; the .nex banks."""
+        self.peek = peek
+        self.plane = plane_pages(self.colours, peek)
+        self.extra_banks = {12: self.page + bytes(8192), 13: bytes(16384)}   # pages 26 / 27: shadows
         for b in range(L2B, L2B + 3):
             self.extra_banks[b] = bytes(16384)            # Layer 2 starts transparent
         for pg, data in self.plane.items():
@@ -497,6 +565,8 @@ class Dizzy1Patch:
             raise ValueError('this patch is for the 48K version')
         ram = bytearray(snap.banks[5] + snap.banks[2] + snap.banks[0])
         self.check(lambda a: ram[a - 0x4000])
+        mem = bytes(16384) + bytes(ram)
+        self.prepare(mem.__getitem__)
         for a, old, new in self.sites:
             ram[a - 0x4000:a - 0x4000 + len(new)] = new
         snap.banks[5], snap.banks[2], snap.banks[0] = bytes(ram[0:16384]), bytes(ram[16384:32768]), bytes(ram[32768:])
@@ -509,7 +579,7 @@ class Dizzy1Patch:
 
 
 def static_check(code, syms, org=ROM_ORG):
-    """Decode the hook code instruction by instruction (data blocks 'keep' and 'mapon' skipped):
+    """Decode the hook code instruction by instruction (the data block 'keep' skipped):
     no EXX / EX AF,AF' / IY / LD I / IM / DI / EI / RETN, and nothing at 0x3D00-0x3DFF (DivMMC trap,
     LEARNINGS 1.4). Returns a list of findings."""
     from .simrun import disasm
@@ -518,7 +588,7 @@ def static_check(code, syms, org=ROM_ORG):
         bad.append(('code reaches 0x3D00', org + len(code)))
     mem = bytearray(65536)
     mem[org:org + len(code)] = code
-    skip = {(syms['keep'], syms['keep'] + 12), (syms['mapon'], syms['mapon'] + 1)}
+    skip = {(syms['keep'], syms['keep'] + 12)}
     a = org
     while a < org + len(code):
         blk = next((e for s, e in skip if s <= a < e), None)
@@ -545,40 +615,60 @@ CODE_END = None
 
 class Model:
     """The patched machine's state that the original's memory does not hold: shadow page PG (screen
-    0-6143, attributes 0x1800-), Layer 2 pages, hook RAM; and the independent expectation of the
-    shadow and Layer 2 (Python, from the original's writes)."""
+    0-6143, attributes 0x1800-), fill shadow PG2, Layer 2 pages, hook RAM; and the independent
+    expectation of the ink / fill shadows and Layer 2 (Python, from the original's writes)."""
 
     def __init__(self, patch, peek):
-        self.pages = {PG: bytearray(8192)}
+        self.pages = {PG: bytearray(8192), PG2: bytearray(8192)}
         for k in range(6):
             self.pages[L2PG + k] = bytearray(8192)
         for p, d in patch.plane.items():
             self.pages[p] = bytearray(d)
         self.hram = None                          # filled from the first state (snapshot bytes)
         self.exp_sh = bytearray(6144)
-        self.exp_sa = bytearray(768)
+        self.exp_fs = bytearray(6144)
         self.exp_l2 = bytearray(256 * 192)
-        self.cmap = patch.colours if patch.plane else {}
+        self.cmap = patch.colours
         self.peek = peek
+        self.inter = interior_masks(peek)
         if self.cmap:
             dz_keys(peek)
 
-    def l2(self, x, y):
-        return self.pages[L2PG + (y >> 5)][(y & 31) * 256 + x]
+    def writer(self, dizzy, ga, dflt):
+        """(colours per bit, interior mask, transparent mask) of a graphics byte, as fillpix."""
+        g = self.peek(ga)
+        pix = [colour_entry(self.cmap, self.peek, dizzy, ga, b) or (dflt if g >> (7 - b) & 1 else 8)
+               for b in range(8)]
+        cl = sum(0x80 >> b for b in range(8) if clear_entry(self.cmap, self.peek, dizzy, ga, b))
+        return pix, self.inter.get(ga, 0), cl
 
-    def colour(self, dizzy, ga, bit, dflt):
-        return colour_entry(self.cmap, self.peek, dizzy, ga, bit) or dflt
+    def exp_write(self, o, new, fx, w=None):
+        """As setsh: ink shadow byte o becomes `new`, fill ^= fx; pixels whose ink or uncovered fill
+        changed: ink -> colour (0 if painted transparent); fill of this graphic's interior ->
+        colour (0 if transparent), another's -> black; else 0."""
+        pix, im, cl = w or ([0] * 8, 0, 0)
+        oi, of = self.exp_sh[o], self.exp_fs[o]
+        nf = of ^ fx
+        self.exp_sh[o], self.exp_fs[o] = new, nf
+        ch = (oi ^ new) | (fx & ~new & 255)
+        if not ch:
+            return
+        cx, y = scr_xy(0x4000 + o)
+        for b in range(8):
+            m = 0x80 >> b
+            if not ch & m:
+                continue
+            if new & m:
+                v = 0 if cl & m else pix[b]
+            elif nf & m:
+                v = (0 if cl & m else pix[b]) if im & m else 8
+            else:
+                v = 0
+            self.exp_l2[y * 256 + cx * 8 + b] = v
 
-    def exp_set(self, o, new, cols=None):
-        """Expected shadow byte o becomes `new`; bits that changed take cols[bit] (set) or 0."""
-        old = self.exp_sh[o]
-        self.exp_sh[o] = new
-        d = old ^ new
-        if d:
-            cx, y = scr_xy(0x4000 + o)
-            for b in range(8):
-                if d >> (7 - b) & 1:
-                    self.exp_l2[y * 256 + cx * 8 + b] = cols[b] if new >> (7 - b) & 1 else 0
+    def exp_fold(self, o):
+        if self.exp_sh[o] or self.exp_fs[o]:
+            self.exp_write(o, 0, self.exp_fs[o])
 
 
 class _Mem(list):
@@ -769,7 +859,9 @@ def compare(so, sp_, om_w, pm, mem_after_orig, model):
                 break
         elif pg == PG and off >= 0x1B00:
             f.append(('wrote the shadow page outside shadow', off))
-        elif pg not in range(L2PG, L2PG + 6) and pg != PG:
+        elif pg == PG2 and off >= 6144:
+            f.append(('wrote the fill page outside the fill shadow', off))
+        elif pg not in range(L2PG, L2PG + 6) and pg not in (PG, PG2):
             f.append(('wrote page %d' % pg, off))
     return f
 
@@ -783,15 +875,15 @@ def expect(model, site, regs, mem0, om_w, so, conv, dflt):
             o = sa - 0x4000
             if not 0 <= o < 6144 or not conv:
                 continue                   # kept: the change goes to the ULA, the shadow stays
-            cols = [model.colour(dizzy, ga, b, dflt) for b in range(8)]
-            model.exp_set(o, model.exp_sh[o] ^ d, cols)
+            w = model.writer(dizzy, ga, dflt)
+            model.exp_write(o, model.exp_sh[o] ^ d, w[1], w)     # ink change + its interior
     elif site == WIPE:
         for i in range(8, 152):
             la = mem0[23750 + 2 * i] | mem0[23751 + 2 * i] << 8
             for c in range(1, 31):
                 a = la + c - 0x4000
                 if 0 <= a < 6144:
-                    model.exp_set(a, 0)
+                    model.exp_fold(a)
     elif site in (55935, 57095):
         ix = regs[8] << 8 | regs[9]
         g = lambda k: mem0[(ix + k) & 0xFFFF]
@@ -809,7 +901,7 @@ def expect(model, site, regs, mem0, om_w, so, conv, dflt):
             for c in range(nc):
                 a = (la + c0 + c) & 0xFFFF
                 if 0x4000 <= a < 0x5800:
-                    model.exp_set(a - 0x4000, 0)
+                    model.exp_fold(a - 0x4000)
 
 
 def check_l2(model, f, full=False, bytes_=None):
@@ -827,6 +919,9 @@ def check_l2(model, f, full=False, bytes_=None):
         sh = pages[PG][o]
         if sh != model.exp_sh[o]:
             f.append(('shadow differs from the expected figures', 0x4000 + o, sh, model.exp_sh[o]))
+            return
+        if pages[PG2][o] != model.exp_fs[o]:
+            f.append(('fill shadow differs from the expected figures', 0x4000 + o, pages[PG2][o], model.exp_fs[o]))
             return
 
 
@@ -854,6 +949,8 @@ def verify(patch, rzx, z80, stop=None, collect=0, progress=None):
         model = st['model']
         if model is None:
             mem0 = bytes(mem)
+            if not patch.plane:
+                patch.prepare(lambda a: mem0[a])
             model = st['model'] = Model(patch, lambda a: mem0[a])
             model.hram = mem0[HOOK_RAM[0]:HOOK_RAM[1]]
             try:
@@ -882,7 +979,7 @@ def verify(patch, rzx, z80, stop=None, collect=0, progress=None):
         ck = '%d %d' % (pc, (mem0[sp0] | mem0[sp0 + 1] << 8) if pc == P2_ENTRY else regs[5] & 1 if pc == DZ_ENTRY else 0)
         if collect and c['collected ' + ck] < collect:    # per caller (plotter 2) / shift (Dizzy)
             c['collected ' + ck] += 1
-            states.append((pc, regs, bytes(mem0), bytes(model.pages[PG]), model.hram))
+            states.append((pc, regs, bytes(mem0), bytes(model.pages[PG]), model.hram, bytes(model.pages[PG2])))
         so, sp_, fl, om_w, pm = run_pair(patch, alt, mem0, regs, model, pc)
         tf[st['f']] += sp_.t - so.t
         c['T extra at %d' % pc] += sp_.t - so.t
@@ -891,7 +988,7 @@ def verify(patch, rzx, z80, stop=None, collect=0, progress=None):
         for k in compare(so, sp_, om_w, pm, None, model):
             fail('%d: %s' % (pc, k[0]), k[1:])
         expect(model, pc, regs, mem0, om_w, so, conv, dflt)
-        touched = {off for pg, off in pm.wp if pg == PG and off < 6144}
+        touched = {off for pg, off in pm.wp if pg in (PG, PG2) and off < 6144}
         for pg, off in pm.wp:
             if L2PG <= pg < L2PG + 6:
                 y = (pg - L2PG) * 32 + (off >> 8)
@@ -995,37 +1092,46 @@ EFFECT_END = 54710                 # every type-3 / type-7 branch ends with JP 5
 
 
 def _model_from(patch, st):
-    pc, regs, mem, pg, hram = st
+    """A Model in the captured state: shadows from it, Layer 2 consistent with them (ink white,
+    uncovered fill black), the expectation equal to it."""
+    pc, regs, mem, pg, hram = st[:5]
+    pg2 = st[5] if len(st) > 5 else bytes(8192)
     model = Model(patch, lambda a: mem[a])
     model.pages[PG][:] = pg
+    model.pages[PG2][:] = pg2
     model.hram = hram
     for o in range(6144):
-        if pg[o]:
-            model.exp_set(o, pg[o], [WHITE] * 8)       # expected + actual Layer 2 from the shadow
-            cx, y = scr_xy(0x4000 + o)
-            for b in range(8):
-                if pg[o] >> (7 - b) & 1:
-                    model.pages[L2PG + (y >> 5)][(y & 31) * 256 + cx * 8 + b] = WHITE
+        if pg[o] or pg2[o]:
+            model.exp_sh[o], model.exp_fs[o] = pg[o], pg2[o]
+            _l2_both(model, o, 0xFF)
     return model
+
+
+def _l2_both(model, o, mask):
+    """Layer 2 + expectation of byte o's pixels in `mask` from the shadows: ink white, fill black."""
+    cx, y = scr_xy(0x4000 + o)
+    for b in range(8):
+        m = 0x80 >> b
+        if mask & m:
+            v = WHITE if model.exp_sh[o] & m else 8 if model.exp_fs[o] & m else 0
+            model.exp_l2[y * 256 + cx * 8 + b] = v
+            model.pages[L2PG + (y >> 5)][(y & 31) * 256 + cx * 8 + b] = v
 
 
 def _seed(model, o, v):
     """Make byte o of the original screen hold figure bits v (they move to the shadow)."""
     model.pages[PG][o] ^= v
-    new = model.exp_sh[o] ^ v
-    cx, y = scr_xy(0x4000 + o)
-    old = model.exp_sh[o]
-    model.exp_set(o, new, [WHITE] * 8)
-    for b in range(8):
-        if (old ^ new) >> (7 - b) & 1:
-            model.pages[L2PG + (y >> 5)][(y & 31) * 256 + cx * 8 + b] = WHITE if new >> (7 - b) & 1 else 0
+    model.exp_sh[o] ^= v
+    _l2_both(model, o, v)
 
 
 def case(patch, st, prep=None, stop_at=None):
     """One state through run_pair + compare + expectation + Layer 2 check -> failures."""
-    pc, regs, mem, pg, hram = st
+    pc, regs, mem, pg, hram = st[:5]
     mem, regs = list(mem), list(regs)
-    model = _model_from(patch, (pc, regs, mem, pg, hram))
+    if not patch.plane:
+        patch.prepare(lambda a: mem[a])          # interiors (+ colours) from the game's graphics
+    model = _model_from(patch, (pc, regs, mem, pg, hram) + tuple(st[5:]))
     if prep:
         prep(mem, regs, model)
     sp0 = regs[12]
@@ -1037,7 +1143,7 @@ def case(patch, st, prep=None, stop_at=None):
     so, sp_, fl, om_w, pm = run_pair(patch, alt, mem, regs, model, pc, stop_at=stop_at)
     f = list(fl) + compare(so, sp_, om_w, pm, None, model)
     expect(model, pc, regs, mem, om_w, so, conv, dflt)
-    touched = {off for p_, off in pm.wp if p_ == PG and off < 6144}
+    touched = {off for p_, off in pm.wp if p_ in (PG, PG2) and off < 6144}
     for p_, off in pm.wp:
         if L2PG <= p_ < L2PG + 6:
             y = (p_ - L2PG) * 32 + (off >> 8)
@@ -1155,27 +1261,33 @@ def unit_tests(patch, states, z80=None):
         cmap = {}
         import random
         rnd = random.Random(1)
-        for ga in list(range(P2_BASE, P2_BASE + P2LEN, 3)):
-            cmap['G%04X' % ga] = [peek(ga), 1, [rnd.randrange(16) for _ in range(8)]]
-        for (ga, bit), (key, kb, chk) in list(DZ_KEYS.items())[::5]:
-            cmap.setdefault(key, [chk, 1, [rnd.randrange(16) for _ in range(8)]])
+        for n, ga in enumerate(range(P2_BASE, P2_BASE + P2LEN, 3)):
+            cmap['G%04X' % ga] = [peek(ga), 1, [rnd.randrange(16) for _ in range(8)]] + \
+                ([rnd.randrange(1, 256)] if n % 4 == 0 else [])              # some painted transparent
+        for n, ((ga, bit), (key, kb, chk)) in enumerate(list(DZ_KEYS.items())[::5]):
+            cmap.setdefault(key, [chk, 1, [rnd.randrange(16) for _ in range(8)]] +
+                            ([rnd.randrange(1, 256)] if n % 3 == 0 else []))
         bad = 'G%04X' % (P2_BASE + 1)
         cmap[bad] = [peek(P2_BASE + 1) ^ 0xFF, 1, [5] * 8]      # wrong check byte
         pm = Dizzy1Patch(colours=cmap, peek=peek)
         c['map entries'] = len(cmap)
-        if not pm.plane or any(pm.plane[PLPG][4:8]):            # index 1 = the wrong-check entry
+        if any(pm.plane[PLPG][8:12]) or pm.plane[PLPG][13]:      # index 1 = the wrong-check entry
             c['wrong check byte used by the plane!'] += 1
         else:
             c['wrong check byte ignored'] += 1
         for name, s in (('converted', p2c), ('Dizzy', dz), ('Dizzy (shifted copy)', _pick(states, DZ_ENTRY, lambda s: s[1][5] & 1))):
             run('colour map: ' + name, s, p=pm)
-        # negative control: the build without the map, checked against the map's colours
-        nomap = Dizzy1Patch(colours={})
-        nomap_c = Dizzy1Patch(colours={})
-        nomap_c.colours, nomap_c.plane = cmap, pm.plane      # the model expects the map ...
-        nomap_c.rom_code, nomap_c.page = nomap.rom_code, nomap.page   # ... the hooks do not use it
-        nomap_c.alt_image = nomap.alt_image
+        # negative controls: the plane without the map (the model expects the map's colours), and
+        # the plane without the interiors (the model expects solid figures)
+        nomap_c = Dizzy1Patch(colours=cmap)
+        nomap_c.plane = plane_pages({}, peek)
         run('colour map left out of the build', p2c, p=nomap_c, want_fail=True)
+        noint = Dizzy1Patch(colours={}, peek=peek)
+        pl = {k: bytearray(v) for k, v in noint.plane.items()}
+        for idx in range(P2LEN + DZLEN):
+            pl[PLPG + idx // 1024][(idx % 1024) * 8 + 4] = 0
+        noint.plane = {k: bytes(v) for k, v in pl.items()}
+        run('interiors left out of the build', dz, p=noint, want_fail=True)
 
     # 6. negative controls on the hooks
     S = patch.syms
@@ -1230,8 +1342,9 @@ def auto(a, z80, sprites, say, rzxs, boot):
     md5 = lambda p: hashlib.md5(open(p, 'rb').read()).hexdigest()
     mem0 = _mem(z80)
     p = Dizzy1Patch(peek=mem0.__getitem__)
-    say('Colours   : %s' % ('%d colour-map entries (docs/profiles/dizzy1_colours.json)' % len(p.colours)
-                             if p.plane else 'no colour map: default colours'))
+    say('Colours   : %s; enclosed paper solid black unless painted' % (
+        '%d colour-map entries (docs/profiles/dizzy1_colours.json)' % len(p.colours) if p.colours
+        else 'no colour map: default colours'))
     sc = static_check(p.rom_code, p.syms)
     say('Static    : hook code %d bytes at 0x%04X-0x%04X (alt ROM), no EXX / EX AF / IY / I / IM / DI / EI, '
         'nothing at 0x3D00: %s' % (len(p.rom_code), ROM_ORG, ROM_ORG + len(p.rom_code) - 1,
@@ -1308,7 +1421,7 @@ def _main(argv=None):
     else:
         from . import coloursheet as cs
         lay = a.layout or os.path.splitext(a.png)[0] + '_layout.json'
-        ent, rep = cs.read(a.png, lay)
+        ent, rep = cs.read(a.png, lay, clear=True)       # grey on an opaque pixel = transparent
         cs.save(ent, a.output, NOTE)
         for k, v in sorted(rep.items()):
             print('%s: %d' % (k, v))

@@ -23,15 +23,25 @@ dizzy1rzx (selftest input dizzy1.rzx), the colour sheets + painting layout.
   a hook) instead of the ULA, so ULA XOR shadow == the original screen at every moment (XOR is
   linear). Layer 2 shows the shadow: pixel set = the figure's colour, clear = transparent. XOR
   parity (double draws cancel) is therefore the original's by construction.
-- Colours: per pixel the painted colour of its graphics bit (colour plane pages 40-47, 4 bytes per
-  graphics byte; keys: G = plotter 2 graphics address, D = Dizzy frame 0-38 byte, the shifted copies
-  39-77 share them), else the default: Dizzy bright white; plotter 2 figures that paint their cells
+- Solid figures (Dean 2026-10-14): a figure's ENCLOSED paper (paper pixels not reachable from
+  outside the frame through paper, 4-connected - Dizzy's eyes and mouth, the inside of a bottle) is
+  opaque black by default, for every figure. A fill shadow (page 27) is XORed with the interior
+  bits of each converted write, so the fill appears and disappears with the figure's ink (same XOR
+  parity); display only - logic never sees it. Pixel rule: ink -> its colour; else this graphic's
+  own interior -> its fill colour (another figure's interior -> black); else transparent; a pixel
+  painted transparent shows nothing.
+- Colours: per pixel the painted colour of its graphics bit (plane pages 40-54, 8 bytes per graphics
+  byte: 8 colour nibbles, interior mask, transparent mask, has-colours flag; keys: G = plotter 2
+  graphics address, D = Dizzy frame 0-38 byte, the shifted copies 39-77 share them). Painting sheet:
+  interior pixels are paintable (black by default); painting an opaque pixel (ink or interior) the
+  sheet's GREY (RGB 100,100,100, the box background) makes it TRANSPARENT (e.g. inside the grease
+  gun's handle), painting a colour back over it undoes that. Else the default: Dizzy bright white; plotter 2 figures that paint their cells
   (B bit 0/1) the bright ink of C ^ 7 (the colour they show on the rooms' white-ink cells; their
   attribute XOR goes to the shadow attributes, so they no longer recolour the scenery); others
   bright white.
 - Logic reads stay the original's: collision 60244 / 60251 read ULA ^ shadow (virtual read), the
   attribute read 58712 reads ULA ^ shadow attributes.
-- Hooks: alt ROM image 1 at 0x2000-0x24F7 (the game reads no ROM byte above 0x0369); variables +
+- Hooks: alt ROM image 1 at 0x2000- (1,379 bytes) (the game reads no ROM byte above 0x0369); variables +
   hook stack 0x5B40-0x5BC0 (printer buffer: never touched by the game, RZX scan; the interrupt
   handler's own stack is 0x5BCF-0x5BFE); tail at 0x5B00. Interrupts stay on: the in-game handler is
   the ROM's 0x0038 (keeps every register, reads IY) at every hook site in the RZX (verify checks it).
@@ -40,7 +50,8 @@ dizzy1rzx (selftest input dizzy1.rzx), the colour sheets + painting layout.
   return address for a ROM trampoline (t_p2 / t_dz: dead slot rewritten with the original value,
   back to 3.5 MHz); the small hooks switch speed at their first / last instruction. Measured over
   the RZX: plots of objects get faster, Dizzy's slower; the median frame is ~2.5K T FASTER than the
-  original (of 69,888), a room change up to ~70K T slower (the wipe's fold), see the auto Speed line.
+  original (of 69,888), a room change up to ~126K T slower (the wipe's fold of both shadows; about
+  35 ms), see the auto Speed line.
 
 ## Facts
 - Snapshot: PC 63496 (title), IM 2 (I 0xFE; vector JP at 65021, rewritten by the game: 63578 =
@@ -89,6 +100,7 @@ converted, hook stack too deep, colour map left out. Results: docs/VERIFICATION.
 2. Dizzy walks / jumps without flicker or trails; no Dizzy pixels left on the scenery.
 3. Creatures, items, clouds, carts: no attribute colour blocks around them any more (the clash is
    gone); they show in their own colours over the scenery.
+3a. Figures are solid: Dizzy's eyes and mouth are black, scenery does not show through them.
 4. Spider threads and the egg-and-rope dots draw and disappear cleanly.
 5. Objects fall and land on Dizzy as before (collision); picking items up works; the item name
    line and score / lives update.
