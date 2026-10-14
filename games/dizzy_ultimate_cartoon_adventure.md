@@ -3,13 +3,14 @@
 48K. Engine nexclash/dizzy1.py (`dizzy1_xor`; replaces the old printer-buffer builder
 dizzy1_patch.py, which moved only Dizzy to a sprite), hooks asm/dizzy1_hooks.asm, profile
 docs/profiles/dizzy1_ultimate_cartoon_adventure.json, colours docs/profiles/dizzy1_colours.json
-(none yet = default colours). Reference files (private repo, specnext/reference/
+(Dean's painted sheet, 2026-10-14). Reference files (private repo, specnext/reference/
 dizzy_ultimate_cartoon_adventure/): the snapshot (md5 0659328f; selftest input dizzy1.z80),
-dizzy1rzx (selftest input dizzy1.rzx), the colour sheets + painting layout.
+dizzy1rzx (selftest input dizzy1.rzx), the colour sheets + painting layout, Dean's painted sheet
+(dizzy1_PAINTING_SPRITES_painted.png).
 
 | Output | MD5 |
 |---|---|
-| dizzy1_sprites.nex | a0622431da321709695abf2fbe97f09e (default colours; altrom + Layer 2) |
+| dizzy1_sprites.nex | 38e1a4916eaf8548d9ba8886861ca147 (Dean's painted colours; altrom + Layer 2) |
 | dizzy1.nex | 7892b2e0f1f3f9f19165516db307cbe0 (unchanged) |
 
 ## Build (2026-10-14, Midnight Resistance standard)
@@ -36,6 +37,12 @@ dizzy1rzx (selftest input dizzy1.rzx), the colour sheets + painting layout.
   parity); display only - logic never sees it. Pixel rule: ink -> its colour; else this graphic's
   own interior -> its fill colour (another figure's interior -> black); else transparent; a pixel
   painted transparent shows nothing.
+- Painted colours (Dean 2026-10-14): his painted sheet -> dizzy1_colours.json (1,846 pixels
+  recoloured, 109 transparent, 633 graphics bytes; nothing ambiguous). 264 painted pixels were
+  ignored: black on paper OPEN to the outside of a figure (the door's gaps, one "from the code"
+  figure, edge pixels of 13 Dizzy frames). Outside paper is see-through by design; making it solid
+  would need the reader to mark painted outside paper as fill (engine change: ask Dean first).
+  Dizzy now takes 92 sprite patterns (88 with default colours).
 - Colours: per pixel the painted colour of its graphics bit (plane pages 40-54, 8 bytes per graphics
   byte: 8 colour nibbles, interior mask, transparent mask, has-colours flag; keys: G = plotter 2
   graphics address, D = Dizzy frame 0-38 byte, the shifted copies 39-77 share them). Painting sheet:
@@ -115,7 +122,9 @@ converted, hook stack too deep, colour map left out. Results: docs/VERIFICATION.
 3. Creatures, items, clouds, carts: no attribute colour blocks around them any more (the clash is
    gone); they show in their own colours over the scenery.
 3a. Figures are solid: Dizzy's eyes and mouth are black, scenery does not show through them.
-3b. Collectables pulse their colour (as the original); painted pixels would stay fixed.
+3b. Painted colours: Dizzy's red gloves and boots, objects as on the reference sheet; pixels
+    painted grey are see-through. Collectables still pulse (the original's pulse; painted pixels
+    stay fixed).
 3c. Dizzy disappears cleanly when he dies / changes room (no frozen Dizzy left behind).
 4. Spider threads and the egg-and-rope dots draw and disappear cleanly.
 5. Objects fall and land on Dizzy as before (collision); picking items up works; the item name
@@ -128,8 +137,14 @@ converted, hook stack too deep, colour map left out. Results: docs/VERIFICATION.
 9. Lose all lives -> title -> new game: everything resets.
 
 ## Open
-- Hardware test (checklist above); Dean's painting of dizzy1_PAINTING_SPRITES.png -> `python -m
-  nexclash.dizzy1 colours PAINTED.png` -> dizzy1_colours.json -> rebuild + re-verify.
+- Hardware test of 38e1a491 (checklist above).
+- Painted black on see-through paper (264 pixels, see Build) is ignored: ask Dean whether those
+  areas (e.g. the door's gaps) should become solid.
+- Repainting: paint the new dizzy1_PAINTING_SPRITES.png (drawn with the current map; its layout
+  carries the map, so only changed pixels edit it) -> `colours` -> rebuild + re-verify.
+- `python -m nexclash.dizzy1 preview` draws figures in the DEFAULT colours (Dizzy plain white), not
+  the colour map: the 2026-10-14 painted previews came from a one-off script (per pixel: the
+  graphics byte that drew it -> colour_entry / clear_entry). Fold that into `preview`.
 - A recording that reaches later rooms (the sheet's "from the code" group shows the figures no
   recording drew yet).
 - Generalise into a generic XOR-parity template (STATUS open work 3).

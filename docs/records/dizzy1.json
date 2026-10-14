@@ -36,7 +36,8 @@
  ],
  "data": [
   "docs/profiles/dizzy1_ultimate_cartoon_adventure.json",
-  "asm/dizzy1_hooks.asm"
+  "asm/dizzy1_hooks.asm",
+  "docs/profiles/dizzy1_colours.json"
  ],
  "shared_data": [
   "nexclash/templates.json",
@@ -71,17 +72,17 @@
   },
   "sprites": {
    "file": "dizzy1_sprites.nex",
-   "md5": "83ea050d2ae5b07a9321a67d73a1a6f3"
+   "md5": "38e1a4916eaf8548d9ba8886861ca147"
   }
  },
  "repro": [],
  "status": {
   "title": "Dizzy: The Ultimate Cartoon Adventure (Dizzy 1)",
   "engine_col": "dizzy1 (dizzy_ultimate_cartoon_adventure.md)",
-  "build": "dizzy1_sprites.nex 83ea050d (Dizzy = hardware sprites in front; every other figure on Layer 2 via a 1-bit shadow screen; solid: enclosed paper black; default colours, items pulse as the original; HUD and room tiles on the ULA; altrom + shadow pages at slot 3; plots at 28 MHz)",
-  "software": "RZX IDENTICAL (registers, memory, ULA ^ shadows, Layer 2, Dizzy sprite vs plotter), 53 unit cases + 9 negative controls PASS",
-  "hardware": "16a00451 runs well (Dean, 2026-10-14): Dizzy mixed with objects (fixed: sprite in front); 83ea050d untested",
-  "next": "hardware test of 83ea050d; Dean paints dizzy1_PAINTING_SPRITES.png"
+  "build": "dizzy1_sprites.nex 38e1a491 (Dizzy = hardware sprites in front; every other figure on Layer 2 via a 1-bit shadow screen; solid: enclosed paper black; Dean's painted colours (633 graphics bytes), items pulse as the original; HUD and room tiles on the ULA; altrom + shadow pages at slot 3; plots at 28 MHz)",
+  "software": "RZX IDENTICAL with the painted colour map (registers, memory, ULA ^ shadows, Layer 2, Dizzy sprite vs plotter), 53 unit cases + 9 negative controls PASS",
+  "hardware": "16a00451 runs well (Dean, 2026-10-14): Dizzy mixed with objects (fixed: sprite in front); 83ea050d / 38e1a491 untested",
+  "next": "hardware test of 38e1a491 (painted colours)"
  },
  "checked": {
   "deps": {
