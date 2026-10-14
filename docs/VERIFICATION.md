@@ -44,7 +44,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Magicland Dizzy (magicland_dizzy): `magicland_dizzy.nex` 09eb18496cff334ea17bfc0b0c94585d, `magicland_dizzy_sprites.nex` bf137d41d3cc08221bf6fdda153c9de2, `magicland_dizzy_sprites.nex --strategy slot1` d3b37c05d4c47ada07294fa2d7c1ae76; verified 2026-10-13
 - Treasure Island Dizzy (treasure_island_dizzy): `treasure_island_dizzy.nex` 4dae1a3a15b2158642a5d5b82de92ef7, `treasure_island_dizzy_sprites.nex` 8b4d0847d68fce3215bd43a0e116e682; verified 2026-10-13
 - Treasure Island Dizzy (title screen) (treasure_island_title): `treasure_island_title.nex` 70890aba7d821fba8a41e63636eb58be, `treasure_island_title_sprites.nex` 85e054fe4bce8e4b3a8e336aac432f58; verified 2026-10-13
-- Dizzy: The Ultimate Cartoon Adventure (dizzy1): `dizzy1.nex` 7892b2e0f1f3f9f19165516db307cbe0, `dizzy1_sprites.nex` 83ea050d2ae5b07a9321a67d73a1a6f3; verified 2026-10-13
+- Dizzy: The Ultimate Cartoon Adventure (dizzy1): `dizzy1.nex` 7892b2e0f1f3f9f19165516db307cbe0, `dizzy1_sprites.nex` fb4cb1482b3e337374ca99c3ff58edad; verified 2026-10-13
 - Commando (commando): `commando.nex` a206f950c12f58a8e7f26b366f5a2480, `commando_sprites.nex` d601385ee4aeb7f3d7c0771bdc27df6b; verified 2026-10-13
 - Crystal Kingdom Dizzy (128K) (crystal_kingdom_dizzy): `crystal_kingdom_dizzy.nex` 99975f65172dc86ecefbac07db2c0c00; verified never
 - Midnight Resistance (128K) (midnight_resistance): `midnight_resistance.nex` 17239acaaf67b0f8011478053e17829d, `midnight_resistance_sprites.nex` 670f94034af175ed56df97f8cdb1ef29; verified 2026-10-14
@@ -507,6 +507,21 @@ objects -> this build.
 - Speed (no frame sync in the game): median frame -1,069 T (faster than the original), worst frame
   (room change) +168,970 T, 28 MHz parts counted / 8.
 
+## Dizzy 1: Dean's painted colours (2026-10-14)
+Painted sheet (160x486 = layout) read back with `python -m nexclash.dizzy1 colours PNG --layout
+LAYOUT` -> docs/profiles/dizzy1_colours.json (new; no earlier map to merge): 1,846 pixels recoloured,
+109 painted transparent, 633 graphics bytes with colours, 0 painted differently in two places, 0 off
+the palette; 264 painted pixels ignored (black on paper open to the outside of a figure: the door's
+gaps, one "from the code" figure, edge pixels of 13 Dizzy frames - outside paper is see-through by
+design). Sheets redrawn from the map: the PAINTING sheet equals the painted one except exactly those
+264 pixels (round trip exact).
+Verify recipe (`auto dizzy1.z80 --no-record --rzx dizzy1.rzx`) with the map in use ("Colours: 633
+colour-map entries"): static, boot, Layer 2 OK; dizzy1.rzx 6,346 frames PASSED (same counts as the
+section above; 2,050,456 Layer 2 pixels against the model in the painted colours); unit 53 cases
+PASSED, negative controls 9/9 (incl. colour map left out); build decisions = stored. Dizzy: 92
+patterns (88 before: painted frames no longer share patterns). dizzy1_sprites.nex 38e1a491, plain
+dizzy1.nex unchanged (7892b2e0). Speed: median -989 T, worst +168,970 T.
+
 ### Outlines (painted paper bits, coloursheet paint_clear) - 2026-10-14
 Dean's outlined painting (2,471 outline pixels, 118 recolours) -> dizzy1_sprites_painted.nex
 79218527 (map 1,633 bytes; 233 outline bits on Layer 2 figures, the rest on Dizzy; 95 patterns).
@@ -526,6 +541,12 @@ Dean's outlined painting (2,471 outline pixels, 118 recolours) -> dizzy1_sprites
   plotter-2 graphics, a black outline on Dizzy). Negative controls 11/11: + outlines left out of the
   plane, + outlines left out of Dizzy's patterns.
 - `selftest.py --tools` PASSED (+ 4 paint_clear golden checks), `--canary` PASSED (stage 1).
+- After merging main (Dean's map = the build default, shared recolour): `auto dizzy1.z80 --no-record
+  --rzx dizzy1.rzx` -> dizzy1_sprites.nex fb4cb148 (was 38e1a491: 127 bytes of Dizzy shifted-copy
+  PAPER nibbles -> 0 + 41 has-colours flags, nothing drawn changes; 92 patterns), plain 7892b2e0
+  unchanged; dizzy1.rzx PASSED (6,346 frames, 2,050,456 figure pixels), unit 55 cases, negative
+  controls 11/11 PASSED; `selftest.py --game dizzy1` PASSED (rebuild MD5s + recolour guard both
+  ways); `nexclash.py recolour` on Dean's outlined painting -> 79218527 (as above).
 
 ## Toolkit: colour sheets show only the paintable pixels (2026-10-14)
 coloursheet.write greys only the pixels the read-back uses; the rest of a box keeps the background
@@ -563,3 +584,31 @@ Spellbound (loader flagged), Crystal Kingdom. `selftest.py --smoke` PASSED; no .
 - 2026-10-12: asm/dizzy5_hooks.asm (no profile hooks section) assembled by the pinned sjasmplus =
   dizzy5.hook_code() for the Dizzy V profile, 227 bytes identical; now part of `selftest.py --tools`
   (negative check: one changed instruction -> FAIL).
+
+## El Capitan Trueno (48K, contributor's prototype outside the toolkit) - 2026-10-14
+Built by `trueno/build/make_nex.py` (the contributor's project, sent with this file; not a toolkit
+engine yet: no profile and no evidence record - a record would make selftest rebuild it through the
+toolkit). Recipe and facts: games/el_capitan_trueno.md.
+- Inputs: `Capitan Trueno, El (1990)(Dinamic)(ES).z80` 15e128b05c471678d2f0fae2fbb8cedc (CRC32
+  320337B0, title screen), `trueno1.rzx` d07fcc914f385aabfe42c4a5cbaf1bba (the contributor's play).
+- `Trueno.nex` ca49e0f4c92da6fe96d71062c2ed15a3 (plain, `--tail 0xA6C9`) - boot sim OK (maintainer
+  re-check 2026-10-14; v0.1.4 and main give the same file). SUPERSEDED: the contributor listed
+  4b415b4c19cb4ff0c820fd2f79216cc7 here, but that is the DEFAULT-tail build (`auto` output, tail
+  below SP above 0xC000), which fails the boot sim ('boot did not reach PC 61166').
+- `Trueno_sprites.nex` a9befbb250a040734555ce80aea208b8 (altrom hooks + hook page 26, 328,192 bytes)
+  - nextboot.check (boot sim) OK. Options (2026-10-14): `--en` (English texts) da3f1b0a1ba8226573c638bc06cb34d5, `--immortal` deaf4577f982991774d7aa17f60d1aab,
+  both 867bda87225d060964772b36c0ed2aeb (--immortal changes one byte, 0x7A1F; --en the texts and the title redraw).
+- Whole-RZX checks (build/check_*.py, C simulator): render order (no plot while a render waits for
+  the copy), cover (every figure pixel the game changes lies under an opaque sprite pixel: 10,508
+  renders, 0 uncovered), screen reads and buffer reads (no logic reads figure pixels), no-draw
+  (RAM differs only in generated row code, unread restore-list bytes and dead stack).
+- NOT done: the per-call differential verification of the hooks (registers + memory), unit tests,
+  negative control (games/el_capitan_trueno.md recipe step 6).
+- [MAME] MAME 0.289 (not hardware): the contributor played part 1 to the end with and without the immortality cheat
+  (2026-10-13/14): sprites, depth, bushes and fix cells, pause menu, the dragon's energy bar, the
+  access code screen, title menu, explosions, game over - all as wanted.
+- Hardware: untested (the contributor expects no problems).
+- Maintainer re-check (2026-10-14, from the contributor's archive): `build_all.py` rebuilds
+  `Trueno_sprites.nex` a9befbb250a040734555ce80aea208b8 byte for byte, with their tk 0.1.4 AND with
+  nexclash main; `make_nex.py --en / --immortal / --en --immortal` reproduce da3f1b0a / deaf4577 /
+  867bda87. Inputs' MD5s as above. Files: specnext/reference/el_capitan_trueno/.

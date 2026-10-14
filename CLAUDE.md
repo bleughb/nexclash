@@ -27,9 +27,13 @@ stay on their machine; the maintainers' reference files live in the private repo
    (every game, Dean 2026-10-13/14; PLAYBOOK 3b), built with nexclash/coloursheet.py, 1:1, 8x8
    palette swatches: `<game>_PAINTING_SPRITES.png` (every graphic once, multi-part figures joined;
    the user paints it) and `<game>_REFERENCE_ALL_SPRITES.png` (every figure whole, as the build
-   colours it; not read back). The painted sheet becomes docs/profiles/<game>_colours.json, which
-   the engine applies per pixel. Never guess
+   colours it; not read back). The painted sheet becomes the engine's colours json (docs/profiles/
+   <record name>_colours.json, e.g. dizzy1_colours.json: the path the engine's COLOURS constant
+   loads; another name is never read), which the engine applies per pixel. Never guess
    these; if the prompt already says, confirm with the preview.
+   Every engine with a colour sheet also gets `recolour` (PLAYBOOK 3b "RECOLOUR"): colours only
+   in banks the game never reads, `RECOLOUR` + `recolour()` on nexclash/recolour.py, so a repaint
+   is `python nexclash.py recolour <game>_sprites.nex PAINTED.png` - seconds, no rebuild.
 4. Long runs (full verify, selftest): `setsid nohup` + poll (LEARNINGS 2.6) - plain `&` dies.
 5. While developing: engine files only, `selftest.py --canary` after any shared change.
 6. End: "End of every task" below - games/<game>.md, record, views, VERIFICATION, capture
@@ -41,7 +45,8 @@ stay on their machine; the maintainers' reference files live in the private repo
 7. Reply: results, the .nex files, a short hardware checklist.
 
 ## Setup
-`pip install skoolkit --break-system-packages`. sjasmplus (only for .asm edits) is bundled and
+`pip install -r requirements.txt --break-system-packages` (SkoolKit + Pillow; a fresh cloud
+container has neither - the first `python -m nexclash.<engine>` fails without them). sjasmplus (only for .asm edits) is bundled and
 pinned: `python tools/asm2profile.py <engine>` assembles and updates the profile (never build
 or download another version; tools/sjasmplus/README.md).
 
@@ -52,6 +57,7 @@ or download another version; tools/sjasmplus/README.md).
   page at slot 5, scratch-buffer redirect, cached sprites); Codemasters TID engine: generic builder). Look things up
   in docs/BRIEFING.md (platform, toolkit) and docs/LEARNINGS.md (lessons) by section when a
   question comes up - do not read them end to end.
+- Testing in MAME (many users do): `grep -n '\[MAME\]' docs/*.md` (LEARNINGS 2.7).
 - Maintain: STATUS.md, then games/<game>.md for the game in hand.
 - Read code only in modules you will change.
 
@@ -84,7 +90,10 @@ or download another version; tools/sjasmplus/README.md).
   contribution note that shared code changed.
 - Never `pkill -f` / kill by `pgrep -f` pattern: it matches your own shell whenever the pattern
   appears anywhere in that command line (it has, twice). Find the PID, kill the PID.
-- 128K start-up tail must end below 0xC000.
+- The start-up tail must end below 0xC000, 48K too: the stub runs with its own bank 10 at
+  0xC000-0xFFFF and the tail's OUT 0x7FFD maps bank 0 back under the PC (El Capitan Trueno: tail
+  below SP at 0xFF97, boot never reached the game). choose_tail_addr checks it only for 128K;
+  run nextboot.check on plain builds too.
 - Shell heredocs that write docs: quote the delimiter (`<<'EOF'`).
 - Analysis: use the shared commands (`inspect`, `scan`, `isr`, `cost`; BRIEFING C4) before writing a
   one-off script. If one falls short, IMPROVE IT (keep its existing output lines and arguments, add

@@ -349,9 +349,10 @@ def sheets(comps, prefix, colours=None):
     return out
 
 
-def load_colours(path=COLOURS):
+def load_colours(path=None):
     from . import coloursheet as cs
-    return cs.load(path)
+    from .recolour import build_colours_path
+    return cs.load(path or build_colours_path(COLOURS))
 
 
 def preview(z80, rzx, at, out):
@@ -1627,27 +1628,19 @@ def colour_inputs_md5(peek):
     return hashlib.md5(bytes(peek(a) for a in sorted(seen))).hexdigest(), len(seen)
 
 
-def _nex_offsets(d):
-    """.nex bytes -> {bank: file offset} (nexclash/z80tonex.write_nex layout)."""
-    from . import z80tonex as zt
-    if d[0:4] != b'Next':
-        raise ValueError('not a .nex file')
-    off, res = 512, {}
-    for b in zt.BANK_FILE_ORDER:
-        if d[18 + b]:
-            res[b] = off
-            off += 16384
-    if off != len(d):
-        raise ValueError('.nex size %d, banks say %d' % (len(d), off))
-    return res
+# The shared half (sheet read-back, .nex layout, outputs, refusals, the selftest guard) is
+# nexclash/recolour.py: `python nexclash.py recolour dizzy1_sprites.nex PAINTED.png`.
+RECOLOUR = {'game': 'dizzy1', 'output': 'sprites', 'colours': 'docs/profiles/dizzy1_colours.json',
+            'clear': True, 'note': NOTE}
 
 
 def recolour(nex, cmap):
     """Built dizzy1_sprites.nex bytes + colour map -> (new .nex bytes, info). Refuses a .nex that is
     not this engine's build of the expected snapshot (patch sites, hook code, set-up code, game
     graphics, interiors)."""
+    from .recolour import nex_offsets
     d = bytearray(nex)
-    off = _nex_offsets(d)
+    off = nex_offsets(d)
     need = set(COLOUR_BANKS) | {5, 2, 0, 10}
     if not need <= set(off):
         raise ValueError('not a Dizzy 1 sprite build: banks %s missing' % sorted(need - set(off)))
@@ -1755,14 +1748,6 @@ def auto(a, z80, sprites, say, rzxs, boot):
     return ok
 
 
-def _warn_ignored(rep):
-    """Paint the map cannot hold: say so (Dean's outlines were silently dropped once, 2026-10-14)."""
-    n = sum(v for k, v in rep.items() if '(ignored)' in k or 'kept default' in k)
-    if n:
-        print('WARNING: %d painted pixels were NOT used (lines above); paint only on a figure\'s pixels or '
-              'the paper inside its graphic\'s bytes, with the sheet\'s current _layout.json' % n)
-
-
 def _main(argv=None):
     import argparse
     ap = argparse.ArgumentParser(prog='python -m nexclash.dizzy1', description='Dizzy 1: colour sheets / preview / colours / recolour')
@@ -1798,34 +1783,11 @@ def _main(argv=None):
         shots = preview(a.z80, a.rzx, [int(x) for x in a.at.split(',')], a.output)
         print('%d shots -> %s' % (len(shots), a.output))
     elif a.cmd == 'recolour':
-        import hashlib
-        from . import coloursheet as cs
-        a.output = a.output or os.path.splitext(a.nex)[0] + '_painted.nex'
-        if os.path.abspath(a.output) in (os.path.abspath(a.nex), os.path.abspath(a.nex).replace('_sprites', '')):
-            raise SystemExit('recolour refused: the output would overwrite an original build')
-        cj = os.path.splitext(a.output)[0] + '_colours.json'
-        if a.colours.lower().endswith('.png'):
-            lay = a.layout or os.path.splitext(a.colours)[0] + '_layout.json'
-            try:
-                ent, rep = cs.read(a.colours, lay, clear=True)
-            except ValueError as e:
-                raise SystemExit('recolour refused: %s' % e)
-            for k, v in sorted(rep.items()):
-                print('%s: %d' % (k, v))
-            _warn_ignored(rep)
-            cs.save(ent, cj, NOTE)
-        else:
-            cs.save(cs.load(a.colours), cj, NOTE)
-        cmap = cs.load(cj)
+        from . import recolour as rc
         try:
-            out, info = recolour(open(a.nex, 'rb').read(), cmap)
+            rc.run(a.nex, a.colours, a.layout, 'dizzy1', a.output)
         except ValueError as e:
             raise SystemExit('recolour refused: %s' % e)
-        open(a.output, 'wb').write(out)
-        print('%d map entries, %d Dizzy sprite patterns, banks changed %s' % (
-            info['map entries'], info['patterns'], info['banks changed'] or 'none'))
-        print('-> %s  %s' % (a.output, hashlib.md5(out).hexdigest()))
-        print('-> %s (put it in docs/profiles/dizzy1_colours.json to make it the build default)' % cj)
     else:
         from . import coloursheet as cs
         lay = a.layout or os.path.splitext(a.png)[0] + '_layout.json'
@@ -1833,7 +1795,8 @@ def _main(argv=None):
         cs.save(ent, a.output, NOTE)
         for k, v in sorted(rep.items()):
             print('%s: %d' % (k, v))
-        _warn_ignored(rep)
+        from .recolour import warn_ignored
+        warn_ignored(rep)
         print('-> %s' % a.output)
 
 

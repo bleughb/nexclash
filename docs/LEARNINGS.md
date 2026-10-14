@@ -28,6 +28,11 @@ BRIEFING - with its reason.
 - Selecting ROM3 = 1FFD bit 2 + 7FFD bit 4 = alt image 1; LDIR 0000->0000 in write mode copies it.
 - 0x386E-0x3CFF is all $FF in the 48K ROM (hook range). Register block goes after the hooks, not
   at 0x3FE0 (font).
+- The alt ROM image is copied from the SYSTEM ROM3 (NextZXOS), not from Sinclair's 48K ROM, and
+  NextZXOS has data at 0x3B00-0x3CFF. A patch that relies on 48K ROM bytes there must write them
+  into the alt ROM itself (El Capitan Trueno: a 'map of 0xFF bytes' at 0x3B00 let the plotter draw
+  into the ULA until the build copied 0xFF over 0x3B00-0x3CFF). nextboot.check uses rom48() for
+  ROM3, so it cannot see this (BRIEFING C2).
 - A legacy 1FFD/7FFD write from the stub remaps slots 6/7, where the stub runs: page the stub into
   slot 4 as an alias and run the paging + copy there (no stack), restore 6/7, jump back.
 - UNLOCKED legacy paging writes (7FFD/1FFD) remap MMU slots (most recent change wins); map
@@ -262,6 +267,48 @@ BRIEFING - with its reason.
   in its column) reads as a filled figure; objects that hide a figure need their SOLID shape (the
   game's draw mask with holes filled), not their ink, or the figure shows through paper-coloured
   parts.
+- Back-buffer games (El Capitan Trueno): leave the plotter untouched and point its 'behind the
+  foreground' map at bytes that say every cell is foreground: it saves the scenery as usual but
+  draws no figure pixel and paints no attribute, so game memory stays as the original's and the
+  verification is simple. Clean attributes at the copy (the scenery copy, not the work buffer),
+  sprites with the game's mask. Depth: the game's own foreground cells copied into Layer 2 with
+  the palette priority bit (in front of the sprites) - an alternative to per-sprite masking.
+- A figure's exact ink and mask: call the game's own plotter in the simulator on a buffer of 0x00
+  (ink) and of 0xFF (cleared pixels = mask). No drawing code to read, no guessed body.
+- Capture each shape from ONE consistent state: a game that mirrors graphics in place flips the
+  trailing mask bytes too; a catalogue graphic written over a mirrored state got a mirrored mask
+  (Trueno frame 98: figure pixels left uncovered = white flashes).
+- Graphics catalogue of a game that mirrors in place: hash every graphic at each frame end; the
+  mirroring leaves transient half-mirrored states (1-6 frames each, never plotted). Group each
+  graphic with its exact bit mirror and keep the real ones (Trueno: 167 real shapes).
+- A game that already toggles a hit bit flashes by itself: do not add your own blinking (in phase,
+  the two cancel out; Trueno).
+- Redrawn figures (a human's cleaner drawing) no longer cover the game's whole mask: either keep the
+  sprite's opaque area >= the mask, or stop the figure reaching the ULA first (Trueno: no-draw map
+  patch / pre-copy restore), or the mask shows round the new drawing.
+- A sprite shape's patterns never cross an 8K page (64 4-bit patterns per page): the upload and the
+  pattern index assume one page per shape (Trueno patterns.py).
+- Screen shake: offset Layer 2 (NextReg $17) and the sprites for the shaken copy only, from a hook
+  on the game's shake (Trueno 0x887D: NextReg $7F bit 6 -> the commit moves both 8 lines).
+- The scenery BEHIND an object (for fix cells or a wall behind bushes): build the screen in the
+  simulator twice, with and without the frames that hide it - the background is then the game's
+  own, not a guess (Trueno bush_walls.py, fix_cells.py).
+- A human's edits on a sheet: keep the sheet exactly as handed out, diff the returned one against
+  it, and give each edited cell to every cell drawn from the same game tile (and its mirror). A
+  later round on the same tile overwrites cells the human drew unlike their tile: say so first
+  (Trueno bush_round.py).
+- Translating a game's texts: find its letter codes and item format; a list read only from its
+  head (one LD HL, no other reference into it) can be rebuilt whole, single strings only in place
+  and never longer; check every old byte against the snapshot. A snapshot with the title already
+  drawn: wipe the old words and print the new ones with the game's own print routines in the
+  simulator (Trueno texts_en.py).
+- Menus and windows the game draws in the ULA over the play area are covered by Layer 2 and the
+  sprites: find them all (PLAYBOOK 0) and wrap each one (PLAYBOOK 4).
+- A hook on the plotter's entry does not see code that enters it further in: list every CALL/JP
+  to the plotter's addresses (Trueno: 0x82DF hooked, the dragon's bar called 0x82E4).
+- Every path that shows a screen without the normal build (a clear mode, an end screen) must
+  clear or hide Layer 2 and the sprites; a deferred Layer 2 rebuild 'until the mode ends' left the
+  previous screen's foreground on the dragon's screen.
 
 - Pure-XOR engines (no masks, no undo buffers): move every converted screen write into a 1-bit
   SHADOW screen instead of the ULA. ULA XOR shadow == the original screen at every moment (XOR is
@@ -322,6 +369,14 @@ BRIEFING - with its reason.
   tail ending above 0xBFFF (even with --tail) and never picks one; SP >= 0xC000 -> error asking
   for --tail. 48K output byte-identical to before.
 - nextboot.check is 48K-only; rainbow.boot_check is the 128K version (reuses nextboot.boot).
+- Frame-level questions over a whole RZX (what changed by the end of each frame): SkoolKit's C
+  simulator with a patched RZXTracer.next_frame replays 53,543 frames in 4-8 s; the simrun /
+  analysis commands run per-instruction Python hooks, ~100x slower (BRIEFING C2).
+- [MAME] MAME 0.289 (specnext driver) runs the .nex (loading, quirks: 2.7). From its Lua console: switch the layers off one by
+  one (ports 243B/253B: NextReg $15 bit 0 sprites, $68 bit 7 ULA off, $69 bit 7 Layer 2; while
+  paused, emu.step() renders one frame) and snapshot each - the user names the guilty layer at
+  once; sprite attributes read from manager.machine.memory.shares[':sprites:attr_ram']. Main RAM
+  pages are not readable from Lua (only the CPU's 64K view).
 - analyse.py / recorder / machine.py are 48K-only (recorder: Machine has no ay; analyse desyncs at
   frame 49 on 128K).
 - A module restored from an older copy can silently drop another engine's hook (identify() lost
@@ -397,6 +452,16 @@ BRIEFING - with its reason.
   sampling shifts). Use per-routine differential tests from real states.
 - Per event: original and patched from the same state on private overlays; compare all registers
   except R/T/MEMPTR and all memory.
+- Cover check (any game whose figures still reach the ULA or a buffer): at every screen copy,
+  every pixel the figures changed (buffer before the copy vs scenery after the restore) must lie
+  under an opaque sprite pixel of the hooks' model, pattern memory and flushes included. It found
+  two real bugs in Trueno that whole-recording play missed (check_cover.py: 10,508 renders).
+- Invariant checks over the whole RZX are cheap and catch design errors early: never a plot while
+  a render waits for its copy, every copy follows a render, interrupts accepted at the hook sites
+  (Trueno check_order.py); a memory-neutral patch compared over one whole render cycle (all RAM
+  but the screen: check_nodraw.py, check_prerestore.py); mirrored shapes vs the game's own mirrored
+  plot (check_mirror.py); who reads screen / buffer bytes, by PC (check_screen_reads.py,
+  check_buffer_reads.py). These do not replace the per-call differential test.
 - Registers differing at a routine's return (e.g. A, AF' read from the screen) are fine only if
   they are overwritten before any use: step both copies until they converge (fail if read).
 - Verify sprite pixels against the screen BEFORE the plot (transparent = unchanged), not the
@@ -554,7 +619,9 @@ BRIEFING - with its reason.
   including a directory name like `out5` used elsewhere in the same command (mid-edit: re-check
   files after). Find the PID first (`pgrep -fa`, read the list, in a SEPARATE command), then
   `kill PID`.
-- Name scratch scripts uniquely: a file called dis.py shadows the stdlib and breaks SkoolKit.
+- Name scratch scripts uniquely, NEVER after a stdlib module (dis, code, io, json, types, ...):
+  Python imports the script's own directory first, so a dis.py shadows the stdlib and breaks
+  SkoolKit (happened twice, the second time with this line already here).
 - Do all analyses in one simulator pass; poll background jobs.
 - Keep per-instruction work in an analysis hook O(1) (a dict SCAN per opcode turned a 2-minute pass
   into a 10-minute timeout); simple per-instruction hooks are fine (simrun: 1,500 frames ~15 s).
@@ -562,3 +629,40 @@ BRIEFING - with its reason.
 - Keep the user's answers terse; explain only new findings.
 - A single tool call is capped at 10 minutes: poll a background job with sleeps under that
   (Chuckie Egg RELEASE run ~15 min: verify 8626 frames ~5 min, unit tests ~10 min).
+- Merging a contribution sent as a plain diff (not the `contribute` zip): it is against the release
+  it was made from, not main, and may carry CRLF files. `git apply --check` first; apply the hunks
+  that fit, insert the rest by their context lines into today's text (renumber lists such as
+  BRIEFING C2 that grew since), convert CRLF to LF, and diff a whole-file rewrite with `tr -d '\r'`
+  before trusting it (El Capitan Trueno: VERIFICATION.md showed as fully replaced; the only change
+  was one appended section). Never take the contributor's copy of a generated block.
+- Re-derive every MD5 a contribution lists from the command it states before indexing it: Trueno's
+  plain `Trueno.nex` was listed under `--tail 0xA6C9` but was the default-tail `auto` build that
+  does not boot. Rebuild, boot-sim, then index.
+
+## 2.7 Emulators: MAME [MAME]
+Every MAME fact carries the tag: `grep -n '\[MAME\]' docs/*.md`. MAME is not the reference:
+hardware is. Record each MAME-only result as such (Trueno: MAME 0.289 only, hardware untested).
+- [MAME] MAME 0.289, driver `specnext`, runs a .nex from a NextZXOS SD image. Put the file in the
+  image with HDFMonkey (`HDFMonkey mkdir IMG /dir`, `HDFMonkey put IMG local.nex /dir/name.nex`)
+  while MAME is NOT running (the image is open while it runs); then Browser -> the file, or
+  NextBASIC (`n` at the NextZXOS menu): `CD "/dir"`, Enter, `.nexload name.nex`. Scripted typing:
+  the first key after "0 OK" is eaten - send an extra Enter.
+- [MAME] Lua console: screen snapshot `manager.machine.screens[":screen"]:snapshot("name.png")` (MAME's
+  snapshot folder); layer by layer (NextReg $15 bit 0 sprites, $68 bit 7 ULA off, $69 bit 7 Layer 2,
+  via ports 243B/253B; while paused `emu.step()` renders one frame) - the user names the guilty layer
+  at once; sprite attributes in `manager.machine.memory.shares[':sprites:attr_ram']`; main RAM pages
+  are NOT readable from Lua (only the CPU's 64K view). (Also LEARNINGS 2.3.)
+- [MAME] Sprite palette OFFSET: in MAME 0.289 a 4-bit sprite's index 0 under a non-zero palette offset
+  is drawn opaque (whole 16x16 boxes). Not checked on hardware, so not a Next rule: until it is, use
+  palette offset 0 (Trueno: one 16-colour block for every sprite). BRIEFING A1.
+- [MAME] MAME models the alt ROM as a copy of the system ROM3 (NextZXOS, data at 0x3B00-0x3CFF): the
+  Trueno map at 0x3B00 failed in MAME exactly as the analysis predicted, and MAME showed 512 bytes
+  0xFF after the fix. nextboot.check does not (rom48(); BRIEFING C2 #19) - MAME caught what the boot
+  sim could not.
+- [MAME] Play-test rounds: the user walks far into the game for each place; never restart MAME unasked,
+  collect the whole list in one pass (PLAYBOOK phase C). Run the game at normal speed (throttled) for
+  play, unthrottled only for scripted snapshots.
+- [MAME] A scripted MAME run (contributor's run_nex.py, in their archive: Windows paths, its own
+  Lua helper): put the file, start MAME, wait for the Browser text, type the load, snapshot after
+  fixed delays. Worth a toolkit command (BRIEFING C2 #25); CSpect is the other route (run_cspect.bat).
+

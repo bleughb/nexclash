@@ -12,7 +12,8 @@ Layers - never mix their facts:
   PART C  The nexclash toolkit (our Python + our Z80 patch code).
 
 ## 0. Environment (do not rediscover)
-- Setup: CLAUDE.md. `pip install skoolkit --break-system-packages`. sjasmplus is pinned and bundled
+- Setup: CLAUDE.md. `pip install -r requirements.txt --break-system-packages` (SkoolKit + Pillow; a
+  fresh cloud container has neither). sjasmplus is pinned and bundled
   (tools/sjasmplus: static 1.24.0 for Linux x86-64, else built from the pinned tag into
   ~/.cache/nexclash). Assemble hooks ONLY with `python tools/asm2profile.py <engine>`; it refuses
   any other version. `--check <profile>` proves a profile = its source (each hook game's record runs it
@@ -93,6 +94,7 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 | 48K fidelity | NextReg $03 = 48K timing (written after the legacy paging writes; VHDL: this does NOT stop 7FFD/1FFD decoding - with 48K/128K timing 7FFD decodes as A15=0, A1:0=01, A14 ignored; timing only changes contention); NextReg $08 contention on; 7FFD lock via the tail's own 7FFD write (bit 5) |
 | DivMMC | auto-paging off (NextReg $06 bit 4 cleared by the stub, z80tonex.build_stub; not $0A). Yet Commando 541e34e2, with hook code at 0x3D00-0x3DFF, crashed at its first figure on hardware and in CSpect, and d601385e (the same code moved out of that range; only tables there) runs. PROBABLE cause: the DivMMC/TR-DOS automap on an instruction fetch at 0x3Dxx is not switched off by $06 bit 4 on current cores (entry points may be set by NextRegs $B8-$BB) - NOT confirmed (C2 #14). Rule regardless: never put code at 0x3D00-0x3DFF; data there worked |
 | Simulator blind spots | The toolkit's simulator does not model: DivMMC (automap traps, see above), an interrupt arriving in the middle of a hook (so the game's ISR never sees hook register/stack state - covered only by the per-instruction interrupt-safety check), the raster (tearing, overruns), real-machine speed (28 MHz wait states, contention), CSpect differences, the VIDEO output of Layer 2 (nextboot / verify model its bank register, port 0x123B, palette writes and pixel pages, not what the screen shows: palette entry 0xE3 as transparency, layer order; Dizzy 1, 2026-10-14, hardware to confirm). Anything in this list needs a static/invariant check or a hardware test |
+| Emulators [MAME] | MAME 0.289 (`specnext`) runs .nex files and is how many users will test (loading, Lua, quirks: LEARNINGS 2.7). It models the alt ROM as NextZXOS ROM3 (it caught Trueno's 0x3B00 bug, the boot sim did not). Known MAME-only behaviour: sprite index 0 under a palette offset drawn opaque (hardware unchecked). A MAME pass is not a hardware pass: record which one a result is |
 | Layer 2 (Dizzy 1, hardware to confirm) | 256x192, 8-bit pixels, banks via NextReg $12 (16K bank; 3 consecutive banks = 6 pages, page = first + y/32, offset (y%32)*256+x); visible = port 0x123B bit 1 (the stub writes 0x123B = 0 BEFORE the patch setup, so setup turns it on); palette NextReg $43 = $10 (Layer 2 palette 0, auto-increment) then $40 index, $41 RRRGGGBB; transparency = global $14 (default $E3) compared with the palette RGB, so entry 0 = $E3 makes pixel 0 transparent; order SLU default ($15 = 0): Layer 2 over the ULA. Zero banks in the .nex start it clear (NEXLOAD leaves banks it does not load with old contents) |
 | MMU | slots 0-7 = NextReg $50-$57, 8K pages; 16K bank n = pages 2n, 2n+1; $FF in slot 0/1 = ROM |
 | Legacy paging | legacy and MMU paging are interchangeable, most recent change wins (guide 3.2.6): an UNLOCKED 7FFD/1FFD write remaps slot 0/1 (ROM) and 6/7 - so the tail maps slot-1 RAM AFTER its own paging writes |
@@ -337,6 +339,29 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    Golden check: `selftest.py --tools` (coloursheet on synthetic parts, incl. the opt-in transparent
    painting `read(..., clear=True)`: 4th map element = transparent bit mask; Dizzy 1 uses it). Not done: a
    `nexclash.py sheet` command dispatching to the engine (today `python -m nexclash.<engine> sheet`).
+18. z80tonex.choose_tail_addr refuses a tail above 0xC000 only for 128K (snap.is128): a 48K tail
+   there vanishes when the tail's OUT 0x7FFD maps bank 0 back (El Capitan Trueno). Apply the rule to
+   48K too; until then nextboot.check catches it ('boot did not reach PC ...').
+19. nextboot.check models the alt ROM with rom48(), but the Next copies the system ROM3 (NextZXOS,
+   data at 0x3B00-0x3CFF): check against the real ROM3, or make the builder copy every ROM area a
+   patch relies on (LEARNINGS 1.3).
+20. A shared fast mode for frame-level questions (C simulator + RZXTracer.next_frame, seconds per
+   RZX) next to the per-instruction simrun commands (LEARNINGS 2.3).
+21. `nexclash.py patch` (the users' command) writes the plain .nex WITHOUT nextboot.check: El Capitan
+   Trueno's first plain build crashed at once for its user (48K tail above 0xC000, #18); the boot
+   sim says so in a second. Run it in `patch` and refuse or warn.
+22. `patch --rzx` with a long recording (Trueno: 18 min, 53,542 frames) printed nothing within the
+   contributor's time limit: add progress output (frames done / total) to the long passes.
+23. A key log from a recording (contributor's rzx_keys.py, in their archive: keys held per frame
+   range from the port 0xFE reads) finds when the user did something - worth an `rzx keys` command.
+24. nexpatch (contributor's proposal, in their archive):
+   a .nex delivered as an HTML page that rebuilds it from the user's own .z80 (CRC32 match, own
+   bytes ChaCha20-encrypted under SHA-256 of the .z80). Checked 2026-10-14: `apply` and the page's
+   own JS give the four Trueno builds byte-identical, a changed .z80 is refused; no network code.
+   Maintainers' decision pending (public tool or not). Its AI_GUIDE points to a nexpatch/CLAUDE.md
+   that is not in the archive.
+25. [MAME] A scripted MAME run (put the .nex in the SD image, load, snapshot) next to run_cspect.bat
+   (LEARNINGS 2.7).
 ### C3. Working rules (token budget)
 Summaries <= 40 lines; disassemble only routines the analysis flags; one simulator pass
 per question; long jobs in background + poll; verify original bytes at every patch site;

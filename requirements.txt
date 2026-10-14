@@ -1,0 +1,4 @@
+# nexclash dependencies: pip install -r requirements.txt (add --break-system-packages on a managed Python)
+# SkoolKit: Z80 snapshots, ROM, emulation (every command). Pillow: colour sheets, recolour, previews.
+skoolkit>=10.1,<11
+Pillow>=9
