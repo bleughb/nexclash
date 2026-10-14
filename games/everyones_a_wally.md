@@ -51,6 +51,9 @@ wallyrzx.rzx (11 autosave snapshots stripped): 15,225 frames, A 4,299 / B 1,058 
 3 commit cases, negative control detected 12/12.
 
 ## Known differences / open
+- Found 2026-10-14 (not fixed: frozen): a B plot that passes through after a converted one leaves
+  V_LAST set, so a following 61329 recolours the converted sprite and skips painting the ULA cells.
+  Not seen in the RZX. wally2 clears it on every passthrough.
 - Sprites always in front of C objects and ULA scenery (the original draws by call order).
 - B colour for unpainted objects is an approximation (the original mixes cell inks).
 - Outline black even on non-black paper.

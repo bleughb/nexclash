@@ -33,14 +33,18 @@
  "shared_data": [],
  "rebuild": {
   "args": [
-   "--no-record"
+   "--no-record",
+   "--engine",
+   "wally"
   ],
   "rzx": [],
   "decisions": null
  },
  "verify": {
   "args": [
-   "--no-record"
+   "--no-record",
+   "--engine",
+   "wally"
   ],
   "rzx": [
    "wally.rzx"

@@ -181,6 +181,11 @@ BRIEFING - with its reason.
   PUSH, self-modified operands, (43067)). Simpler than Rainbow's two canvas runs; verified exactly.
 - Put the sprite commit AFTER the pixel copy (Wally 47637), not at blit start: the LDI copy takes
   ~1 frame.
+- Graphics the game mirrors IN PLACE (Wally: 33251 flips a gang member's frames whenever he turns):
+  do not track the facing state. Key the colours to the snapshot's orientation and let the hook
+  identify the bytes as plotted by a 16-bit check against the stored and the mirrored check; no match
+  = run the original plotter. The same check makes precomputed per-graphic data (canvases) safe
+  against any graphics the game rewrites.
 - A back-buffer composer can RESTORE the buffer again before any copy: those plots never reach the
   screen. Drop the pending sprites at every restore entry (hooks, verification, the colour-sheet
   capture) or they appear for one render / on the sheet. Find it by tracing the call order of
@@ -453,6 +458,10 @@ BRIEFING - with its reason.
   simulate .z80 -> game entry (keys) checking hook RAM / tail / sites / interrupt mode.
 
 ## 2.5 Verification method
+- "Never jump into a patched instruction" needs the ORIGINAL instruction boundaries under each JP:
+  a byte that starts an original instruction must be reached only through the site, a byte inside
+  one must never be a PC. Counting every byte of the 3 bytes as "must equal the site's count" fails
+  every site whose first instruction is longer than one byte (wally2 STARTS / INTERIORS, 2026-10-14).
 - Lockstep RZX replay cannot prove equivalence once cycle counts change (input
   sampling shifts). Use per-routine differential tests from real states.
 - Per event: original and patched from the same state on private overlays; compare all registers
