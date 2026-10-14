@@ -28,6 +28,11 @@ BRIEFING - with its reason.
 - Selecting ROM3 = 1FFD bit 2 + 7FFD bit 4 = alt image 1; LDIR 0000->0000 in write mode copies it.
 - 0x386E-0x3CFF is all $FF in the 48K ROM (hook range). Register block goes after the hooks, not
   at 0x3FE0 (font).
+- The alt ROM image is copied from the SYSTEM ROM3 (NextZXOS), not from Sinclair's 48K ROM, and
+  NextZXOS has data at 0x3B00-0x3CFF. A patch that relies on 48K ROM bytes there must write them
+  into the alt ROM itself (El Capitan Trueno: a 'map of 0xFF bytes' at 0x3B00 let the plotter draw
+  into the ULA until the build copied 0xFF over 0x3B00-0x3CFF). nextboot.check uses rom48() for
+  ROM3, so it cannot see this (BRIEFING C2).
 - A legacy 1FFD/7FFD write from the stub remaps slots 6/7, where the stub runs: page the stub into
   slot 4 as an alias and run the paging + copy there (no stack), restore 6/7, jump back.
 - UNLOCKED legacy paging writes (7FFD/1FFD) remap MMU slots (most recent change wins); map
@@ -262,6 +267,24 @@ BRIEFING - with its reason.
   in its column) reads as a filled figure; objects that hide a figure need their SOLID shape (the
   game's draw mask with holes filled), not their ink, or the figure shows through paper-coloured
   parts.
+- Back-buffer games (El Capitan Trueno): leave the plotter untouched and point its 'behind the
+  foreground' map at bytes that say every cell is foreground: it saves the scenery as usual but
+  draws no figure pixel and paints no attribute, so game memory stays as the original's and the
+  verification is simple. Clean attributes at the copy (the scenery copy, not the work buffer),
+  sprites with the game's mask. Depth: the game's own foreground cells copied into Layer 2 with
+  the palette priority bit (in front of the sprites) - an alternative to per-sprite masking.
+- A figure's exact ink and mask: call the game's own plotter in the simulator on a buffer of 0x00
+  (ink) and of 0xFF (cleared pixels = mask). No drawing code to read, no guessed body.
+- Capture each shape from ONE consistent state: a game that mirrors graphics in place flips the
+  trailing mask bytes too; a catalogue graphic written over a mirrored state got a mirrored mask
+  (Trueno frame 98: figure pixels left uncovered = white flashes).
+- Menus and windows the game draws in the ULA over the play area are covered by Layer 2 and the
+  sprites: find them all (PLAYBOOK 0) and wrap each one (PLAYBOOK 4).
+- A hook on the plotter's entry does not see code that enters it further in: list every CALL/JP
+  to the plotter's addresses (Trueno: 0x82DF hooked, the dragon's bar called 0x82E4).
+- Every path that shows a screen without the normal build (a clear mode, an end screen) must
+  clear or hide Layer 2 and the sprites; a deferred Layer 2 rebuild 'until the mode ends' left the
+  previous screen's foreground on the dragon's screen.
 
 ## 2.2 Memory proofs (analysis method)
 - Prove free memory with an access scan over the recording, not by zero-check.
@@ -285,6 +308,14 @@ BRIEFING - with its reason.
   tail ending above 0xBFFF (even with --tail) and never picks one; SP >= 0xC000 -> error asking
   for --tail. 48K output byte-identical to before.
 - nextboot.check is 48K-only; rainbow.boot_check is the 128K version (reuses nextboot.boot).
+- Frame-level questions over a whole RZX (what changed by the end of each frame): SkoolKit's C
+  simulator with a patched RZXTracer.next_frame replays 53,543 frames in 4-8 s; the simrun /
+  analysis commands run per-instruction Python hooks, ~100x slower (BRIEFING C2).
+- MAME 0.289 (specnext driver) runs the .nex. From its Lua console: switch the layers off one by
+  one (ports 243B/253B: NextReg $15 bit 0 sprites, $68 bit 7 ULA off, $69 bit 7 Layer 2; while
+  paused, emu.step() renders one frame) and snapshot each - the user names the guilty layer at
+  once; sprite attributes read from manager.machine.memory.shares[':sprites:attr_ram']. Main RAM
+  pages are not readable from Lua (only the CPU's 64K view).
 - analyse.py / recorder / machine.py are 48K-only (recorder: Machine has no ay; analyse desyncs at
   frame 49 on 128K).
 - A module restored from an older copy can silently drop another engine's hook (identify() lost
@@ -509,7 +540,9 @@ BRIEFING - with its reason.
   including a directory name like `out5` used elsewhere in the same command (mid-edit: re-check
   files after). Find the PID first (`pgrep -fa`, read the list, in a SEPARATE command), then
   `kill PID`.
-- Name scratch scripts uniquely: a file called dis.py shadows the stdlib and breaks SkoolKit.
+- Name scratch scripts uniquely, NEVER after a stdlib module (dis, code, io, json, types, ...):
+  Python imports the script's own directory first, so a dis.py shadows the stdlib and breaks
+  SkoolKit (happened twice, the second time with this line already here).
 - Do all analyses in one simulator pass; poll background jobs.
 - Keep per-instruction work in an analysis hook O(1) (a dict SCAN per opcode turned a 2-minute pass
   into a 10-minute timeout); simple per-instruction hooks are fine (simrun: 1,500 frames ~15 s).
@@ -517,3 +550,12 @@ BRIEFING - with its reason.
 - Keep the user's answers terse; explain only new findings.
 - A single tool call is capped at 10 minutes: poll a background job with sleeps under that
   (Chuckie Egg RELEASE run ~15 min: verify 8626 frames ~5 min, unit tests ~10 min).
+- Merging a contribution sent as a plain diff (not the `contribute` zip): it is against the release
+  it was made from, not main, and may carry CRLF files. `git apply --check` first; apply the hunks
+  that fit, insert the rest by their context lines into today's text (renumber lists such as
+  BRIEFING C2 that grew since), convert CRLF to LF, and diff a whole-file rewrite with `tr -d '\r'`
+  before trusting it (El Capitan Trueno: VERIFICATION.md showed as fully replaced; the only change
+  was one appended section). Never take the contributor's copy of a generated block.
+- Re-derive every MD5 a contribution lists from the command it states before indexing it: Trueno's
+  plain `Trueno.nex` was listed under `--tail 0xA6C9` but was the default-tail `auto` build that
+  does not boot. Rebuild, boot-sim, then index.

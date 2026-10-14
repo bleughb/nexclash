@@ -8,6 +8,10 @@ chat history): A = steps 0-4 + design approval by the user; B = steps 5-6 (toolk
 C = hardware rounds and fixes. Write decisions and open questions to games/<game>.md as they
 happen, so a new session can pick up any phase.
 Why: Commando took five hardware rounds, each finding something a step below now covers.
+Rounds on a long game (phase C): offer to collect the user's whole list in one pass through the
+game, fix all of it, then check everything in ONE new pass; never restart the emulator unasked.
+Why: the places are far from the start, and every restart costs the user the walk there
+(El Capitan Trueno, 2026-10-13).
 
 ("The user" below = whoever runs the session: Dean in maintainer sessions, the contributor in an
 add-a-game session.)
@@ -17,6 +21,13 @@ add-a-game session.)
   joystick mode - e.g. Fantasy World Dizzy byte 62569=255 enables Kempston and caused phantom
   input). A loader snapshot works but needs extra steps (0b).
 - RZX recording made per RECORDING_CHECKLIST.md, from that same snapshot.
+- Menus and windows: ask whether the game opens a pause, menus or message windows over the play
+  area (and the screens without play: end of a part, codes). They are drawn in the ULA, so Layer 2
+  and the sprites cover them (step 4). If the user does not know, offer to find them in the code:
+  PC and stack while one is up, the key poll that leads there (Trueno: pause menu, access code).
+- A test cheat: offer to find one now (immortality: the store of the reduced energy -> NOP),
+  marked TEMPORARY in games/<game>.md; remove it before delivery and check the game over.
+  Why: rounds reach far into the game only with it (Trueno).
 
 ## 0b. Snapshot check (before anything else, ~10 min)
 `python nexclash.py inspect GAME.z80` answers most of it (and lists a loader's BASIC + USR targets).
@@ -117,6 +128,11 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   than the simulator's T suggests. Midnight Resistance's first commit cost ~1.5 TV frames per game
   frame; a pattern-slot cache brought it to 15-60K T.
 
+- Pixel art is the user's. Say so: an AI is not a good pixel artist (it sees a pixel grid
+  coarsely). The AI prepares the sheets - cells or frames copied exactly as the game draws them,
+  each distinct look once - and builds the user's drawing in; it does not draw drafts by rules.
+  (Trueno: automatic drafts cost many rounds; a copied sheet and the user's hand took minutes.)
+
 ## 4. Decide the design (decision table)
 | Finding | Action |
 |---|---|
@@ -131,6 +147,12 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
 | Hooks page memory in slot 0 | DI around paging; read IFF with LD A,I twice (NMOS quirk) |
 | Interrupts on at the hook sites | hooks never write IX/IY/I or IFF and keep SP on a stack with room, at EVERY instruction (the game's ISR may read them: Commando IY+7) |
 | Figure moves (redraw) | never hide at entry and show at exit (flicker): build the new image in other pattern memory, switch the attributes last |
+| Menu, pause or message window drawn in the ULA over the play area | wrap its routine: Layer 2 and sprites off (NEXTREG $69 / $15) while it is up, on at its return; NEXTREG keeps every register and flag (Trueno e_mnu). Switching them off also hides whatever the hooks removed from the ULA: plan what the user sees there |
+| A screen shown without the normal screen build (end of a part, a special or clear mode) | clear or hide Layer 2 and the sprites on that path, or the old screen's layers stay over it (Trueno: access code screen, the dragon's screen) |
+| Code reaches the plotter past the hooked entry | search every CALL/JP to every plotter address: such figures bypass the hook and keep the original drawing path (Trueno: the dragon's energy bar via 0x82E4, its colours lost with the clean-attribute copy) |
+| Snapshot taken with the title or menu already on screen | a patch to drawing code does not show the first time: patch the snapshot's screen memory too (Trueno: a menu item removed) |
+| Scenery clash: the original cut the scenery along cell edges (black cells), or an object painted the wall around it in its colour | fix cells: those cells redrawn in Layer 2 WITHOUT the palette priority bit (figures stay in front), per screen, from a sheet the user draws; the ULA stays original; mark them so a screen change clears them |
+| Per-screen Layer 2 tables | count the pages: one 8K page per screen adds up (Trueno: pages 60-83); check the highest page against an unexpanded Next, pack screens per page when many |
 | Hook code in the alt ROM / slot-1 page | never at 0x3D00-0x3DFF (Commando crashed with code there; probable cause DivMMC automap on fetch - BRIEFING A1); data there was fine |
 | Hook state needs RAM, interrupts on, game uses all RAM | a Next page in a slot the ISR never touches (2-5; isr slot scan), mapped only while a hook runs (Midnight Resistance slot 5) |
 | Back-buffer composer, plotters share an address helper | replace the CALL target; plot into a scratch copy of the buffer; patch loop exits to map back (LEARNINGS 2.1) |
