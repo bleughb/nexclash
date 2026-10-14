@@ -509,7 +509,10 @@ engine yet: no profile and no evidence record - a record would make selftest reb
 toolkit). Recipe and facts: games/el_capitan_trueno.md.
 - Inputs: `Capitan Trueno, El (1990)(Dinamic)(ES).z80` 15e128b05c471678d2f0fae2fbb8cedc (CRC32
   320337B0, title screen), `trueno1.rzx` d07fcc914f385aabfe42c4a5cbaf1bba (the contributor's play).
-- `Trueno.nex` 4b415b4c19cb4ff0c820fd2f79216cc7 (plain, `--tail 0xA6C9`) - boot sim OK.
+- `Trueno.nex` ca49e0f4c92da6fe96d71062c2ed15a3 (plain, `--tail 0xA6C9`) - boot sim OK (maintainer
+  re-check 2026-10-14; v0.1.4 and main give the same file). SUPERSEDED: the contributor listed
+  4b415b4c19cb4ff0c820fd2f79216cc7 here, but that is the DEFAULT-tail build (`auto` output, tail
+  below SP above 0xC000), which fails the boot sim ('boot did not reach PC 61166').
 - `Trueno_sprites.nex` a9befbb250a040734555ce80aea208b8 (altrom hooks + hook page 26, 328,192 bytes)
   - nextboot.check (boot sim) OK. Options (2026-10-14): `--en` (English texts) da3f1b0a1ba8226573c638bc06cb34d5, `--immortal` deaf4577f982991774d7aa17f60d1aab,
   both 867bda87225d060964772b36c0ed2aeb (--immortal changes one byte, 0x7A1F; --en the texts and the title redraw).
@@ -523,3 +526,7 @@ toolkit). Recipe and facts: games/el_capitan_trueno.md.
   (2026-10-13/14): sprites, depth, bushes and fix cells, pause menu, the dragon's energy bar, the
   access code screen, title menu, explosions, game over - all as wanted.
 - Hardware: untested (the contributor expects no problems).
+- Maintainer re-check (2026-10-14, from the contributor's archive): `build_all.py` rebuilds
+  `Trueno_sprites.nex` a9befbb250a040734555ce80aea208b8 byte for byte, with their tk 0.1.4 AND with
+  nexclash main; `make_nex.py --en / --immortal / --en --immortal` reproduce da3f1b0a / deaf4577 /
+  867bda87. Inputs' MD5s as above. Files: specnext/reference/el_capitan_trueno/.

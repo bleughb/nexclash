@@ -211,3 +211,13 @@ back and the tail vanishes (choose_tail_addr refuses >0xC000 only for 128K; next
 - Plotter internals: gfx format, widths, what (DE) is (save-under?), frame -> gfx address.
 - isr / scan for hook state; who reads the buffer bytes of figures (collision).
 - Preview frames and the contributor's decisions (which figures, colours, depth).
+
+## Maintainer check (2026-10-14)
+- Archive received; reference files in specnext/reference/el_capitan_trueno/ (contributor's project
+  in its contributor/ folder, rebuild steps in contributor/REBUILD.md).
+- Every sprite build rebuilds byte-identical, with tk 0.1.4 and with nexclash main.
+- Plain: `--tail 0xA6C9` gives ca49e0f4 (boot sim OK); the earlier listed 4b415b4c was the
+  default-tail build, which does not boot (docs/VERIFICATION.md).
+- Still open: engine module + profile + record (recipe step 6), per-call differential verification,
+  unit tests, negative control, hardware. nexpatch: maintainers' decision pending (private for now).
+

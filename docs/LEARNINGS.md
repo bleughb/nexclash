@@ -556,3 +556,6 @@ BRIEFING - with its reason.
   BRIEFING C2 that grew since), convert CRLF to LF, and diff a whole-file rewrite with `tr -d '\r'`
   before trusting it (El Capitan Trueno: VERIFICATION.md showed as fully replaced; the only change
   was one appended section). Never take the contributor's copy of a generated block.
+- Re-derive every MD5 a contribution lists from the command it states before indexing it: Trueno's
+  plain `Trueno.nex` was listed under `--tail 0xA6C9` but was the default-tail `auto` build that
+  does not boot. Rebuild, boot-sim, then index.
