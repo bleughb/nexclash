@@ -1,0 +1,73 @@
+{
+ "name": "everyones_a_wally_updated",
+ "order": 3.5,
+ "game": "Everyone's a Wally (updated)",
+ "doc": "everyones_a_wally_updated.md",
+ "engine": "wally2",
+ "representative": true,
+ "reference": "everyones_a_wally_updated",
+ "inputs": {
+  "snapshot": {
+   "name": "everyones_a_wally_updated.z80",
+   "md5": "a9eeb555a327e5794b0ba19bc80dccf0",
+   "path": "everyones_a_wally/wally.z80"
+  },
+  "recordings": [
+   {
+    "name": "everyones_a_wally_updated.rzx",
+    "md5": "72c7d1f6c99407bc21d892d423e89964",
+    "path": "everyones_a_wally/wallyrzx.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "wally2"
+ ],
+ "own_modules": [
+  "wally2"
+ ],
+ "data": [
+  "docs/profiles/everyones_a_wally_updated.json",
+  "asm/wally2_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "everyones_a_wally_updated.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 30
+ },
+ "outputs": {
+  "plain": {
+   "file": "everyones_a_wally_updated.nex",
+   "md5": "2e615b3e7ae995e6d6a6ed9e3f586d4d"
+  },
+  "sprites": {
+   "file": "everyones_a_wally_updated_sprites.nex",
+   "md5": "31c3ef131330d26238b01a69b35c647e"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Everyone's a Wally (updated)",
+  "engine_col": "wally2 (everyones_a_wally_updated.md)",
+  "build": "everyones_a_wally_updated_sprites.nex 31c3ef13 (every figure - gang, masked and OR objects - on a double-buffered Layer 2 in plot order; one colour per figure, black 4-neighbour outline; default colours (nothing painted yet); recolour; altrom + pages 26/27)",
+  "software": "RZX IDENTICAL (registers, memory, Layer 2 image at every commit vs the model), 930 + 921 graphic + joined / commit / restore unit cases, negative control PASS",
+  "hardware": "untested",
+  "next": "hardware test (checklist); Dean paints the PAINTING_SPRITES sheet; longer RZX (16 B / 7 C callers not reached)"
+ },
+ "checks": [
+  "asm2profile:everyones_a_wally_updated"
+ ]
+}

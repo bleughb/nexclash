@@ -33,14 +33,18 @@
  "shared_data": [],
  "rebuild": {
   "args": [
-   "--no-record"
+   "--no-record",
+   "--engine",
+   "wally"
   ],
   "rzx": [],
   "decisions": null
  },
  "verify": {
   "args": [
-   "--no-record"
+   "--no-record",
+   "--engine",
+   "wally"
   ],
   "rzx": [
    "wally.rzx"
@@ -65,11 +69,12 @@
   "build": "wally_sprites.nex f7605489",
   "software": "RZX IDENTICAL, unit PASS",
   "hardware": "boots and runs",
-  "next": "detailed checklist"
+  "next": "frozen: superseded by everyones_a_wally_updated"
  },
  "checks": [
   "asm2profile:everyones_a_wally"
  ],
+ "excluded": "frozen (Dean 2026-10-14): superseded by everyones_a_wally_updated; wally.py, asm/wally_hooks.asm, its profile and builds are kept unchanged; run it explicitly with selftest.py --game wally [--verify]",
  "checked": {
   "deps": {
    "asm/wally_hooks.asm": "d1cc8962818a5806",
