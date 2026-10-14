@@ -1536,6 +1536,101 @@ def layer2_boot(nex, z80):
     return bad
 
 
+# ---------------------------------------------------------------------------------------------
+# Recolour (Dean 2026-10-14): a painted sheet -> dizzy1_sprites_painted.nex, a copy of the built
+# dizzy1_sprites.nex with only its colour banks rewritten, in about a second; dizzy1.nex and
+# dizzy1_sprites.nex stay untouched. The colours are display data only (the game never reads the
+# sprite table in bank 12, bank 15 or banks 20-27; only the hooks' Layer 2 and sprite writes do), so
+# the logic proof of the build stands; no further checks (Dean). Same map -> same bytes as a full
+# build with it (checked once, 2026-10-14).
+# ---------------------------------------------------------------------------------------------
+COLOUR_BANKS = (12, SPB) + tuple(range(PLPG // 2, (PLPG + NPL + 1) // 2))   # 12, 15, 20-27
+
+
+def colour_inputs_md5(peek):
+    """MD5 + count of every game byte the colour banks are built from (graphics, frame tables),
+    in address order. The profile keeps the snapshot's value: recolour refuses another game version."""
+    import hashlib
+    seen = set()
+
+    def rec(a):
+        seen.add(a)
+        return peek(a)
+    INTERIOR.clear()
+    DZ_KEYS.clear()
+    dummy = {'G0000': [0, 1, [0] * 8]}             # non-empty: walks Dizzy's keys too
+    plane_pages(dummy, rec)
+    dz_sprites(rec, dummy)
+    INTERIOR.clear()
+    DZ_KEYS.clear()
+    return hashlib.md5(bytes(peek(a) for a in sorted(seen))).hexdigest(), len(seen)
+
+
+def _nex_offsets(d):
+    """.nex bytes -> {bank: file offset} (nexclash/z80tonex.write_nex layout)."""
+    from . import z80tonex as zt
+    if d[0:4] != b'Next':
+        raise ValueError('not a .nex file')
+    off, res = 512, {}
+    for b in zt.BANK_FILE_ORDER:
+        if d[18 + b]:
+            res[b] = off
+            off += 16384
+    if off != len(d):
+        raise ValueError('.nex size %d, banks say %d' % (len(d), off))
+    return res
+
+
+def recolour(nex, cmap):
+    """Built dizzy1_sprites.nex bytes + colour map -> (new .nex bytes, info). Refuses a .nex that is
+    not this engine's build of the expected snapshot (patch sites, hook code, set-up code, game
+    graphics, interiors)."""
+    d = bytearray(nex)
+    off = _nex_offsets(d)
+    need = set(COLOUR_BANKS) | {5, 2, 0, 10}
+    if not need <= set(off):
+        raise ValueError('not a Dizzy 1 sprite build: banks %s missing' % sorted(need - set(off)))
+    bank = lambda b: bytes(d[off[b]:off[b] + 16384])
+    ram = bank(5) + bank(2) + bank(0)
+    peek = lambda a: ram[a - 0x4000] if a >= 0x4000 else 0
+    prof = load_profile()
+    want = prof.get('colour_inputs', {})
+    got = colour_inputs_md5(peek)
+    if [want.get('md5'), want.get('bytes')] != list(got):
+        raise ValueError('game graphics differ from the expected snapshot (%s / %d bytes, expected %s)'
+                         % (got[0], got[1], want))
+    p0 = Dizzy1Patch(prof, colours={})
+    for a, old, new in p0.sites:
+        if bytes(peek(a + k) for k in range(len(new))) != new:
+            raise ValueError('patch site %d does not hold this build\'s hook jump' % a)
+    for a, hx in FACTS:
+        w = bytes.fromhex(hx)
+        if bytes(peek(a + k) for k in range(len(w))) != w:
+            raise ValueError('unexpected code at %d - not the expected version of the game' % a)
+    p0.prepare(peek)
+    t0, t1 = p0.syms['dztab'] - 0x2000, p0.syms['dztab'] - 0x2000 + 39 * 9
+    b12, e12 = bank(12), p0.extra_banks[12]
+    if b12[:t0] != e12[:t0] or b12[t1:] != e12[t1:]:
+        raise ValueError('hook code differs from this version\'s (rebuild with nexclash.py auto)')
+    s10 = bank(10)[0x1000:0x1000 + len(p0.stub_extra)]
+    if s10 != p0.stub_extra:
+        raise ValueError('set-up code differs from this version\'s (rebuild with nexclash.py auto)')
+    for pg in range(NPL):
+        a = bank(PLPG // 2 + pg // 2)[(pg & 1) * 8192:(pg & 1) * 8192 + 8192]
+        e = p0.plane[PLPG + pg]
+        if any(a[i] != e[i] for i in range(4, 8192, 8)):
+            raise ValueError('interior masks differ (plane page %d)' % (PLPG + pg))
+    p = Dizzy1Patch(prof, colours=cmap)
+    p.prepare(peek)
+    changed = []
+    for b in COLOUR_BANKS:
+        new = p.extra_banks[b]
+        if bank(b) != new:
+            changed.append(b)
+        d[off[b]:off[b] + 16384] = new
+    return bytes(d), {'banks changed': changed, 'patterns': p.num_patterns, 'map entries': len(cmap)}
+
+
 def auto(a, z80, sprites, say, rzxs, boot):
     """Sprite build (Layer 2) + boot checks + differential verification of each RZX + unit tests.
     `boot` = nexclash.py's _boot (the shared Boot line). Returns True when everything passed."""
@@ -1594,7 +1689,7 @@ def auto(a, z80, sprites, say, rzxs, boot):
 
 def _main(argv=None):
     import argparse
-    ap = argparse.ArgumentParser(prog='python -m nexclash.dizzy1', description='Dizzy 1: colour sheets / preview')
+    ap = argparse.ArgumentParser(prog='python -m nexclash.dizzy1', description='Dizzy 1: colour sheets / preview / colours / recolour')
     sub = ap.add_subparsers(dest='cmd', required=True)
     p = sub.add_parser('sheet', help='RZX -> PAINTING / REFERENCE sheets (game graphics: keep private)')
     p.add_argument('rzx', nargs='+')
@@ -1610,6 +1705,11 @@ def _main(argv=None):
     p.add_argument('png')
     p.add_argument('--layout')
     p.add_argument('-o', '--output', default=COLOURS)
+    p = sub.add_parser('recolour', help='painted sheet -> <input>_painted.nex (the input stays untouched)')
+    p.add_argument('nex', help='dizzy1_sprites.nex as built by nexclash.py auto')
+    p.add_argument('colours', help='the painted dizzy1_PAINTING_SPRITES.png, or a colours .json')
+    p.add_argument('--layout', help='the painting layout (default: next to the PNG)')
+    p.add_argument('-o', '--output', help='default: dizzy1_sprites_painted.nex next to the input')
     a = ap.parse_args(argv)
     if a.cmd == 'sheet':
         comps, cap = capture(a.rzx, a.z80, a.stop)
@@ -1621,6 +1721,34 @@ def _main(argv=None):
     elif a.cmd == 'preview':
         shots = preview(a.z80, a.rzx, [int(x) for x in a.at.split(',')], a.output)
         print('%d shots -> %s' % (len(shots), a.output))
+    elif a.cmd == 'recolour':
+        import hashlib
+        from . import coloursheet as cs
+        a.output = a.output or os.path.splitext(a.nex)[0] + '_painted.nex'
+        if os.path.abspath(a.output) in (os.path.abspath(a.nex), os.path.abspath(a.nex).replace('_sprites', '')):
+            raise SystemExit('recolour refused: the output would overwrite an original build')
+        cj = os.path.splitext(a.output)[0] + '_colours.json'
+        if a.colours.lower().endswith('.png'):
+            lay = a.layout or os.path.splitext(a.colours)[0] + '_layout.json'
+            try:
+                ent, rep = cs.read(a.colours, lay, clear=True)
+            except ValueError as e:
+                raise SystemExit('recolour refused: %s' % e)
+            for k, v in sorted(rep.items()):
+                print('%s: %d' % (k, v))
+            cs.save(ent, cj, NOTE)
+        else:
+            cs.save(cs.load(a.colours), cj, NOTE)
+        cmap = cs.load(cj)
+        try:
+            out, info = recolour(open(a.nex, 'rb').read(), cmap)
+        except ValueError as e:
+            raise SystemExit('recolour refused: %s' % e)
+        open(a.output, 'wb').write(out)
+        print('%d map entries, %d Dizzy sprite patterns, banks changed %s' % (
+            info['map entries'], info['patterns'], info['banks changed'] or 'none'))
+        print('-> %s  %s' % (a.output, hashlib.md5(out).hexdigest()))
+        print('-> %s (put it in docs/profiles/dizzy1_colours.json to make it the build default)' % cj)
     else:
         from . import coloursheet as cs
         lay = a.layout or os.path.splitext(a.png)[0] + '_layout.json'

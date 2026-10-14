@@ -67,6 +67,18 @@ dizzy1rzx (selftest input dizzy1.rzx), the colour sheets + painting layout.
   the RZX: see the auto Speed line and docs/VERIFICATION.md (the median frame is faster than the
   original; a room change pauses up to about two frames longer: the wipe folds three shadows).
 
+## Recolour (a painting -> dizzy1_sprites_painted.nex, Dean 2026-10-14)
+`python -m nexclash.dizzy1 recolour dizzy1_sprites.nex PAINTED.png` (layout json next to the PNG, or
+`--layout`) writes dizzy1_sprites_painted.nex + its _colours.json next to the input in about a second.
+dizzy1.nex and dizzy1_sprites.nex stay untouched (the command refuses to overwrite them). Only the
+colour banks are rewritten: bank 12's Dizzy sprite table (0x2000 + dztab, 351 bytes), bank 15 (Dizzy's
+patterns), banks 20-27 (the plane). The game never reads them, so the build's verification holds; no
+further checks (Dean). It refuses a .nex that is not this engine's build of the expected game: patch
+site jumps, FACTS, hook and set-up code, interiors, and the MD5 of every game byte the colours are
+built from (profile `colour_inputs`). Checked once (2026-10-14): a test painting gave the same bytes as
+a full `auto` build with that map; recolouring back with no map gave 83ea050d again. To make a painting
+the build default, copy the _colours.json to docs/profiles/dizzy1_colours.json and rebuild + verify.
+
 ## Facts
 - Snapshot: PC 63496 (title), IM 2 (I 0xFE; vector JP at 65021, rewritten by the game: 63578 =
   title music handler, which DECs the interrupted B / C and sets carry; 0x0038 = ROM handler in
@@ -129,8 +141,7 @@ converted, hook stack too deep, colour map left out. Results: docs/VERIFICATION.
 9. Lose all lives -> title -> new game: everything resets.
 
 ## Open
-- Dean's painting (optional) of dizzy1_PAINTING_SPRITES.png -> `python -m
-  nexclash.dizzy1 colours PAINTED.png` -> dizzy1_colours.json -> rebuild + re-verify.
+- Dean's painting (optional) of dizzy1_PAINTING_SPRITES.png (see Recolour).
 - A recording that reaches later rooms (the sheet's "from the code" group shows the figures no
   recording drew yet).
 - Generalise into a generic XOR-parity template (STATUS open work 3).

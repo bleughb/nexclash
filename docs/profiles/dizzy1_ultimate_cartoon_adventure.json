@@ -87,5 +87,10 @@
    "58010": "row helper 57771 / 57797 (clipped)"
   },
   "keep_callers": "58549 room renderer, 62673 / 62694 score digits, 62739 lives, 60749 item name (return addresses)"
+ },
+ "colour_inputs": {
+  "md5": "20a2f4dccd267c98ee4c1285d35092e8",
+  "bytes": 14571,
+  "note": "MD5 of every game byte the colour banks are built from (address order); recolour refuses a .nex whose game differs"
  }
 }
