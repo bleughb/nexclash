@@ -52,6 +52,7 @@ or download another version; tools/sjasmplus/README.md).
   page at slot 5, scratch-buffer redirect, cached sprites); Codemasters TID engine: generic builder). Look things up
   in docs/BRIEFING.md (platform, toolkit) and docs/LEARNINGS.md (lessons) by section when a
   question comes up - do not read them end to end.
+- Testing in MAME (many users do): `grep -n '\[MAME\]' docs/*.md` (LEARNINGS 2.7).
 - Maintain: STATUS.md, then games/<game>.md for the game in hand.
 - Read code only in modules you will change.
 
