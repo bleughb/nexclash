@@ -29,7 +29,8 @@
   "recorder",
   "machine",
   "rzx",
-  "dizzy1"
+  "dizzy1",
+  "recolour"
  ],
  "own_modules": [
   "dizzy1"
@@ -81,7 +82,7 @@
   "engine_col": "dizzy1 (dizzy_ultimate_cartoon_adventure.md)",
   "build": "dizzy1_sprites.nex 38e1a491 (Dizzy = hardware sprites in front; every other figure on Layer 2 via a 1-bit shadow screen; solid: enclosed paper black; Dean's painted colours (633 graphics bytes), items pulse as the original; HUD and room tiles on the ULA; altrom + shadow pages at slot 3; plots at 28 MHz)",
   "software": "RZX IDENTICAL with the painted colour map (registers, memory, ULA ^ shadows, Layer 2, Dizzy sprite vs plotter), 53 unit cases + 9 negative controls PASS",
-  "hardware": "16a00451 runs well (Dean, 2026-10-14): Dizzy mixed with objects (fixed: sprite in front); 83ea050d / 38e1a491 untested",
+  "hardware": "83ea050d (default colours) works on a real Next, looks perfect (Dean, 2026-10-14); 38e1a491 untested",
   "next": "hardware test of 38e1a491 (painted colours)"
  },
  "checked": {

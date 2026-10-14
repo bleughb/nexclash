@@ -31,6 +31,9 @@ stay on their machine; the maintainers' reference files live in the private repo
    <record name>_colours.json, e.g. dizzy1_colours.json: the path the engine's COLOURS constant
    loads; another name is never read), which the engine applies per pixel. Never guess
    these; if the prompt already says, confirm with the preview.
+   Every engine with a colour sheet also gets `recolour` (PLAYBOOK 3b "RECOLOUR"): colours only
+   in banks the game never reads, `RECOLOUR` + `recolour()` on nexclash/recolour.py, so a repaint
+   is `python nexclash.py recolour <game>_sprites.nex PAINTED.png` - seconds, no rebuild.
 4. Long runs (full verify, selftest): `setsid nohup` + poll (LEARNINGS 2.6) - plain `&` dies.
 5. While developing: engine files only, `selftest.py --canary` after any shared change.
 6. End: "End of every task" below - games/<game>.md, record, views, VERIFICATION, capture
@@ -42,7 +45,8 @@ stay on their machine; the maintainers' reference files live in the private repo
 7. Reply: results, the .nex files, a short hardware checklist.
 
 ## Setup
-`pip install skoolkit --break-system-packages`. sjasmplus (only for .asm edits) is bundled and
+`pip install -r requirements.txt --break-system-packages` (SkoolKit + Pillow; a fresh cloud
+container has neither - the first `python -m nexclash.<engine>` fails without them). sjasmplus (only for .asm edits) is bundled and
 pinned: `python tools/asm2profile.py <engine>` assembles and updates the profile (never build
 or download another version; tools/sjasmplus/README.md).
 

@@ -13,7 +13,11 @@ ALTROM_END = 0x3D00                              # hooks + table + register bloc
 
 def rom48():
     """The real 48K ROM (Snapshot.memory holds ZEROS below 0x4000 for .z80 files)."""
-    from skoolkit import ROM48, read_bin_file
+    try:
+        from skoolkit import ROM48, read_bin_file
+    except ImportError:
+        raise ImportError('nexclash needs SkoolKit 10.x: pip install -r requirements.txt '
+                          '(add --break-system-packages on a managed Python)') from None
     return bytes(read_bin_file(ROM48, 16384))
 
 
