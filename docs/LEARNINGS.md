@@ -20,6 +20,13 @@ BRIEFING - with its reason.
   (e.g. a start-up tail) disappears from under the PC -> a 128K tail must end below 0xC000.
 - 48K timing (NextReg $03) does NOT stop 7FFD/1FFD decoding (VHDL 3.01.09; the old belief was wrong and
   harmless). The lock that protects 48K games is 7FFD bit 5, written by the tail itself.
+- On a 128K (toastrack) an OUT to 0x1FFD is a 7FFD write (A15 = 0, A1 = 0): Target Renegade's entry code
+  does OUT (0x1FFD),4 and so pages bank 4 + ROM 0 on a 128K. Whether the Next (128K timing) sees it as
+  7FFD, 1FFD or both is not known: build from the state AFTER such a write (the tail then writes 7FFD
+  and 1FFD itself) - games/target_renegade.md.
+- A game may run with ROM 0 selected in play (Target Renegade: 7FFD = 0). The alt ROM image the hooks
+  live in is the one the game selects: fill image 0 too (setup: 1FFD = 0, 7FFD = 0, write mode, LDIR
+  0000->0000, hook bytes over it) and keep the bytes the game reads (scan --range 0x0000-0x3FFF).
 
 ## 1.3 Spectrum Next: MMU, legacy paging, alt ROM, NextRegs
 - `$8C alt ROM verified on hardware 2026-09-27: write-mode copy, read-only, 7FFD b4 switch, MMU $FF, IM1, font - all PASS; $8C=00 at NEX launch.`
@@ -119,6 +126,16 @@ BRIEFING - with its reason.
 # PART 2 - GAMES / SOFTWARE
 
 ## 2.1 Game-engine lessons (all engines)
+- Redirect a back-buffer game's screen copy without touching its code: map the copy's destination slot
+  (MMU 2) to a dummy page while it runs and put the scenery on the screen yourself (Target Renegade:
+  scenery copied at the draw-all entry, when the buffer holds no figure; the copy's exit maps the
+  screen back). Its registers, memory, timing and beeper OUTs stay the original's.
+- Copy the scenery only when it changed (a dirty flag set by the scenery redraw, the screen clear and
+  the text printer): Target Renegade's 4K copy every game frame cost ~105K simulator T, more than the
+  game's whole slack (it HALTs ~35K T per 3-frame game frame).
+- Guard limits come from the ORIGINAL's capacity, found by running it, not from the data format:
+  Target Renegade's graphic header allows 255 bytes per row, but the plotter's unrolled row code takes
+  at most 6 (W = 7 or 8 never returns); the converted / passthrough guard says W <= 6.
 - A hook never CALLs on the game's stack, not even one call deep: the return address it leaves
   below SP is dead stack the original never wrote, and the memory compare catches it (midres shop
   exit 0xB8A5, 2026-10-13). Switch to the hook stack first, or inline (a MACRO).
@@ -365,6 +382,8 @@ BRIEFING - with its reason.
   dead stack and rescues slot1 when dead stack < 54 (Dizzy 6: 48 bytes; Rainbow: back buffer).
 
 ## 2.3 Our toolkit (nexclash) and host tools
+- nextboot.check is a 48K check (expects 7FFD = 0x30 locked, bank 0): a 128K plain build needs its
+  engine's boot check (rainbow / midres / renegade.boot_check: the snapshot's 7FFD and MMU 6/7).
 - z80tonex 128K: leaves 7FFD unlocked; 1FFD=4 when 7FFD bit 4. Since 2026-09-28 it refuses a 128K
   tail ending above 0xBFFF (even with --tail) and never picks one; SP >= 0xC000 -> error asking
   for --tail. 48K output byte-identical to before.
@@ -428,6 +447,9 @@ BRIEFING - with its reason.
   matter, re-check every map from pixels to keys for that class (bounds, wraps, mirrors).
 
 ## 2.4 Recordings (Fuse / RZX)
+- A recording need not start from the attached snapshot (Target Renegade's started at the game menu,
+  its own SZX): usable when the code at every patch site is the snapshot's (verify checks the site
+  bytes at every event); the start-up path is then proven by the boot / front-end checks only.
 - Autosave snapshots: `nexclash.py rzx strip A.rzx -o B.rzx` (keeps the first snapshot; replay
   continues from the simulated state, as rzxplay --flags 4). Unstripped RZX desyncs.
 - Autosave was on in both Rainbow recordings, the Wally one (12 snapshots) and the Chuckie Egg one

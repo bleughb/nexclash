@@ -193,6 +193,11 @@ def cmd_auto(a):
         ok = _st.auto(a, z80, name, out, say)
         _finish(out, name, rep)
         return ok
+    from nexclash import renegade as _tr                      # Target Renegade (128K, BASIC loader)
+    if _tr.is_renegade(s):
+        ok = _tr.auto(a, z80, name, out, say)
+        _finish(out, name, rep)
+        return ok
     if s.machine != '48K' and len(s.ram()) > 49152:
         say('128K snapshot: sprite patching supports 48K games only; plain conversion only.')
     prof = identify(s.memory[0:65536])
