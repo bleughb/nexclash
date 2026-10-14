@@ -555,7 +555,7 @@ toolkit). Recipe and facts: games/el_capitan_trueno.md.
   (RAM differs only in generated row code, unread restore-list bytes and dead stack).
 - NOT done: the per-call differential verification of the hooks (registers + memory), unit tests,
   negative control (games/el_capitan_trueno.md recipe step 6).
-- MAME 0.289: the contributor played part 1 to the end with and without the immortality cheat
+- [MAME] MAME 0.289 (not hardware): the contributor played part 1 to the end with and without the immortality cheat
   (2026-10-13/14): sprites, depth, bushes and fix cells, pause menu, the dragon's energy bar, the
   access code screen, title menu, explosions, game over - all as wanted.
 - Hardware: untested (the contributor expects no problems).
