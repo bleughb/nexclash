@@ -128,6 +128,22 @@ copper, im1, im2, im2safe, im2hw, layer2-256x192/320x256/640x256, sound, sprites
 material as their chapters (findings above). Extra confirmations: DMA fill with port A fixed
 (layer2 clear in copper/), SAVENEX CFG "preserve next registers 0 = set to defaults".
 
+## Follow-up: opcode tables (same day)
+Ped7g's Z80N table (table.specnext.dev / ped.7gods.org; source on GitHub, ZXSpectrumNextMisc
+Z80_ISA_tools/web_table) and the wiki's Extended_Z80_instruction_set compared with the above;
+clrhome.org/table is the Z80-only original (undocumented opcodes in red).
+- CORRECTED [LEARNINGS 1.1, BRIEFING A1, NEXT_REGISTERS]: after block I/O only ZF is reliable. The
+  guide's "NF = 1, CF unchanged" is contradicted by the wiki errata (2022: carry IS modified) and
+  the table (all flags but Z unknown).
+- SETTLED [NEXT_REGISTERS]: LDIX/LDDX/LDIRX/LDDRX change flags like LDI etc. - wiki note 2025, tested
+  on core 3.02.x; guide and table predate the test. LDPIRX untested: assume changed.
+- TEST n NF: table 0, wiki and guide unknown - do not rely on it. ADD rr,A carry: wiki 2025 "most
+  probably always reset" - still treated as undefined.
+- NEW [NEXT_REGISTERS]: NEXTREG leaves the port 0x243B selection alone; barrel-shift masks (B&31,
+  BRLC B&15); PIXELAD undefined for D >= 192.
+- NEW [LEARNINGS 1.1]: the 29 Z80N opcodes are 2-byte NOPs on a stock Z80 - a game executing one
+  behaves differently on the Next only.
+
 ## Open after this review
 - Which NextRegs NEXLOAD resets (NEX byte 134 = 0) - decides BRIEFING C2 #26.
 - $C4 soft-reset value (core $83 vs guide).

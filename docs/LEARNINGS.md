@@ -14,10 +14,12 @@ BRIEFING - with its reason.
 - LD A,I: on NMOS Z80s P/V reads 0 if an interrupt is accepted during it.
   Read twice (`ld a,i / jp pe,ok / ld a,i`). SkoolKit models this.
 - A hook inside an ISR must keep the EXX/EX AF,AF' parity: the handler restores by set.
-- Block I/O flags differ on the Next (guide r3 instruction reference, documented): INI/IND/INIR/
-  INDR/OUTI/OUTD/OTIR/OTDR leave SF, HF, PV undefined, set NF = 1 and leave CF unchanged; a real
-  Z80 - and SkoolKit, Fuse, the recordings - sets CF/HF from the data + L, NF = data bit 7, PV =
-  parity. So the differential verify cannot prove any flag after one of these. Rule: a hook must
+- Block I/O flags differ on the Next (documented): after INI/IND/INIR/INDR/OUTI/OUTD/OTIR/OTDR
+  only ZF (B reached 0) is reliable. Sources disagree on the rest - guide r3: SF/HF/PV undefined,
+  NF = 1, CF unchanged; wiki Extended_Z80_instruction_set: C, S, H, P/V destroyed (errata 2022:
+  carry IS modified); Ped7g's opcode table: every flag but Z unknown. A real Z80 - and SkoolKit,
+  Fuse, the recordings - sets CF/HF from the data + L, NF = data bit 7, PV = parity. So the
+  differential verify cannot prove any flag but Z after one of these. Rule: a hook must
   overwrite F (or POP AF) after a block I/O instruction before any branch on S/H/PV/N/C, and
   before returning to game code. Checked 2026-10-19: every hook complies (Trueno's `ensure`
   returns with OTIR flags, its only caller does OR A first). A GAME that tests those flags runs
@@ -29,6 +31,13 @@ BRIEFING - with its reason.
   (copy protection does) misbehaves on older cores; check for ED 7E when a hardware report from
   an older core differs from the emulator. OUT (C),0 (ED 71) outputs 0 on the Next (NMOS
   behaviour; CMOS Z80s output $FF).
+- On a stock Z80 an undefined ED-prefixed opcode is a 2-byte NOP; on the Next 29 of them are Z80N
+  instructions (ED 23, 24, 27, 28-2C, 30-36, 8A, 90-95, 98, A4, A5, AC, B4, B7, BC; full list in
+  NEXT_REGISTERS). A game that EXECUTES one (protection padding, a sloppy assembler, data run as
+  code) changes behaviour on the Next only, and Fuse plus our simulator (which runs them as NOPs,
+  NEXT_REGISTERS "SIMULATOR TRAP") never show it. Cheap check when a hardware report differs from
+  the emulator: scan the RZX's executed addresses for those opcodes (`rzxplay.py --map` + the
+  bytes; BRIEFING 0). Undocumented Z80 opcodes in general: clrhome.org/table (red cells).
 
 ## 1.2 Spectrum 48K/128K memory and paging
 - 128K: an UNLOCKED 7FFD/1FFD write remaps the top 16K (C000-FFFF) at once. Code running there

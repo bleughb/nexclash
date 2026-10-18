@@ -79,15 +79,22 @@ References:
   opcode): https://ped.7gods.org/Z80N_table_ClrHome.html (Ped7g; he also maintains sjasmplus).
 - Descriptions, T-states and errata: SpecNext Wiki "Extended_Z80_instruction_set"
   https://wiki.specnext.dev/Extended_Z80_instruction_set ; matrix mirror: https://table.specnext.dev/
+- The matrix's SOURCE is on GitHub (reachable from the sandbox, unlike the two sites above):
+  github.com/ped7g/ZXSpectrumNextMisc Z80_ISA_tools/web_table/Z80N_table_ClrHome.html - each cell's
+  `axis` attribute = "flags|size|T|description", flag characters in order C N P/V H Z S ('-'
+  unaffected, '+' as defined, P parity, V overflow, 0/1, '*' exceptional, blank unknown); the 29
+  Z80N cells have class "nn". Original Z80-only table (undocumented opcodes in red):
+  https://clrhome.org/table/ . Guide r3 + wiki + this table compared 2026-10-19 (GUIDE_R3_REVIEW).
 
-What nexclash uses: `NEXTREG n,n` (ED 91 reg val, 20 T) and `NEXTREG n,A` (ED 92 reg, 17 T) in
+What nexclash uses (NEXTREG does NOT change the register selected on port 0x243B, so a hook's
+NEXTREGs never disturb a game's own 0x243B/0x253B access): `NEXTREG n,n` (ED 91 reg val, 20 T) and `NEXTREG n,A` (ED 92 reg, 17 T) in
 every hook, stub and tail, and SWAPNIB (ED 23) in the Rainbow hooks only (since 4dce14af; simulated
 by rainbow._swapnib, exhaustive self-test + a SWAPNIB-as-NOP control). Nothing else (asm sources:
 `grep -i -E "swapnib|mirror|mul |outinb|pixel|ldirx|ldix|test |bs[lr]"` asm/*.asm).
 
-BLOCK I/O FLAGS (guide r3, documented): on the Next INI/IND/INIR/INDR/OUTI/OUTD/OTIR/OTDR leave SF/HF/PV
-undefined, NF = 1, CF unchanged; SkoolKit computes real-Z80 flags. Never leave those flags live in a
-hook (LEARNINGS 1.1).
+BLOCK I/O FLAGS (documented): on the Next only ZF is reliable after INI/IND/INIR/INDR/OUTI/OUTD/OTIR/
+OTDR (guide r3, wiki errata 2022 and Ped7g's table disagree on the rest); SkoolKit computes real-Z80
+flags. Never leave those flags live in a hook (LEARNINGS 1.1).
 
 SIMULATOR TRAP (tested): SkoolKit's Simulator executes any Z80N ED opcode as a 2-byte NOP without
 an error (e.g. ED 24 MIRROR A leaves A unchanged). nextboot and the hook verifiers handle ED 91/92
@@ -104,13 +111,13 @@ Z80N instructions worth using in future hooks (all 2 bytes unless noted):
 | ADD HL/DE/BC,nn | ED 34/35/36 lo hi | 16 | pointer + constant | 4 bytes |
 | PUSH nn | ED 8A hi lo | 23 | push a constant | operand is BIG-endian (only one) |
 | OUTINB | ED 90 | 16 | OUTI without decrementing B: pattern uploads to 0x5B with a fixed port | flags undefined |
-| PIXELAD / PIXELDN / SETAE | ED 94 / 93 / 95 | 8 each | ULA pixel address from D=y, E=x; next line; pixel mask | - |
-| LDIX / LDIRX | ED A4 / B4 | 16 / 21 | copy skipping bytes equal to A (transparent blit) | flags change like LDI/LDIR on 3.02 (wiki); guide r3 says flags unchanged (older): assume CHANGED |
+| PIXELAD / PIXELDN / SETAE | ED 94 / 93 / 95 | 8 each | ULA pixel address from D=y, E=x; next line; pixel mask (A = $80 >> (E&7)) | PIXELAD undefined for D >= 192; flags unchanged |
+| LDIX / LDIRX | ED A4 / B4 | 16 / 21 | copy skipping bytes equal to A (transparent blit) | flags change like LDI/LDIR - wiki note 2025, TESTED on core 3.02.x; the guide r3 and Ped7g's table still say unchanged (written before that test): assume CHANGED |
 | LDDX / LDDRX | ED AC / BC | 16 / 21 | like LDD/LDDR but DE INCREMENTS while HL decrements, skipping bytes = A: horizontally MIRRORED transparent copy of 8-bit pixels (Layer 2 figures) | flags as LDIX |
-| LDPIRX | ED B7 | 16 / 21 | pattern fill: source = (HL & $FFF8) + (E & 7), HL fixed, DE incrementing, skip bytes = A | 8-byte aligned table; flags as LDIX |
+| LDPIRX | ED B7 | 16 / 21 | pattern fill: source = (HL & $FFF8) + (E & 7), HL fixed, DE incrementing, skip bytes = A | 8-byte aligned table; flags untested on 3.02 (the 2025 test did not cover it): assume changed |
 | LDWS | ED A5 | 14 | (DE) <- (HL), INC L, INC D: copy down a Layer 2 column (256x192: D = row) | source stays in one 256-byte block; flags like INC D |
 | JP (C) | ED 98 | 13 | PC[13:0] = IN(C) << 6 (streamed code) | flags undefined; never needed by hooks |
-| TEST n | ED 27 n | 11 | AND flags, A kept | 3 bytes; NF undefined (guide r3) |
-| BSLA/BSRA/BSRL/BSRF/BRLC DE,B | ED 28-2C | 8 | barrel shifts of DE by B | - |
+| TEST n | ED 27 n | 11 | AND flags, A kept | 3 bytes; NF: 0 in Ped7g's table, unknown in the wiki and guide - do not rely on it |
+| BSLA/BSRA/BSRL/BSRF/BRLC DE,B | ED 28-2C | 8 | barrel shifts of DE by B: BSLA/BSRA/BSRL/BSRF shift by B&31 (BSRA copies bit 15, BSRF fills 1s), BRLC rotates left by B&15 | flags unchanged |
 Timings on the wiki are marked as from limited testing. At 28 MHz (Rainbow hooks) the CPU also adds
 wait states; do not count cycles for timing-critical code.
