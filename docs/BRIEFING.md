@@ -80,10 +80,23 @@ Layers - never mix their facts:
    Z80N instructions: Extended_Z80_instruction_set (wiki) + opcode matrix
    https://ped.7gods.org/Z80N_table_ClrHome.html (NEXT_REGISTERS.md, section Z80N).
    Wiki_TODO_list flags pages that may be outdated. Pages are https://wiki.specnext.dev/<Name>.
+4. Code examples / timing notes: the guide r3 LaTeX source (`git clone --depth 1
+   https://github.com/tomaz/zx-next-dev-guide`: chapter-next-*.tex, greppable, no pdftotext) and its
+   companion code; github.com/varmfskii/zxnext_code (zx_next_notes = LaTeX source of a Next notes
+   book incl. KevB's copper/display timing tables per machine and video mode; demo/ = small sprite,
+   layer 2, lores examples, e.g. joyspr.asm: attributes by OTIR to port 0x57);
+   github.com/stevemonks/ZXSpectrumNextMachineCodeGuides (2020, Zeus assembler: commented readmes for
+   sprites, Layer 2, tilemap with per-tile palette / mirror / rotate, pixel scroll, RLE maps; its
+   "tilemap must sit in 0x4000-0x7FFF" predates the bank-7 option we use);
+   github.com/breakintoprogram/lib-spectrum-next (sjasmplus, Dean Belfield: lib/dma.z80 = copy and
+   FILL with the full WR6 command list, lib/math.z80 = MUL D,E multiplies). Examples, not authority.
+Full review of guide r3 (every chapter + its companion code) against these docs, chapter by chapter
+with where each finding was filed: docs/GUIDE_R3_REVIEW.md (2026-10-19).
 Rules: a new fact from the guide or wiki is "documented", not "verified", until a boot sim, RZX
-test or hardware test backs it; record its source (page name) where you file it. Known gaps to
-look up first: copper / DMA as faster alternatives for sprite attribute or pattern uploads (not
-used yet). Resolved 2026-09-29 from docs/VHDL: per-line sprite limit, locked 7FFD vs MMU, NextReg
+test or hardware test backs it; record its source (page name) where you file it. Faster I/O
+(port 0x57 / $75-$79 sprite attributes, relative sprites, zxnDMA, copper, $64 line offset,
+line interrupt): researched 2026-10-19, documented, none used yet - LEARNINGS 1.5 (with the
+reasons each can break a game) and NEXT_REGISTERS "Not used yet". Resolved 2026-09-29 from docs/VHDL: per-line sprite limit, locked 7FFD vs MMU, NextReg
 $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 
 ### A1. What we rely on
@@ -93,7 +106,7 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 | Video | 50Hz forced (NextReg $05) unless `--allow-60hz` (nexclash.py convert / auto / patch / new / verify: sets z80tonex.ALLOW_60HZ, every build path; outputs then differ from the verified MD5s) |
 | 48K fidelity | NextReg $03 = 48K timing (written after the legacy paging writes; VHDL: this does NOT stop 7FFD/1FFD decoding - with 48K/128K timing 7FFD decodes as A15=0, A1:0=01, A14 ignored; timing only changes contention); NextReg $08 contention on; 7FFD lock via the tail's own 7FFD write (bit 5) |
 | DivMMC | auto-paging off (NextReg $06 bit 4 cleared by the stub, z80tonex.build_stub; not $0A). Yet Commando 541e34e2, with hook code at 0x3D00-0x3DFF, crashed at its first figure on hardware and in CSpect, and d601385e (the same code moved out of that range; only tables there) runs. PROBABLE cause: the DivMMC/TR-DOS automap on an instruction fetch at 0x3Dxx is not switched off by $06 bit 4 on current cores (entry points may be set by NextRegs $B8-$BB) - NOT confirmed (C2 #14). Rule regardless: never put code at 0x3D00-0x3DFF; data there worked |
-| Simulator blind spots | The toolkit's simulator does not model: DivMMC (automap traps, see above), an interrupt arriving in the middle of a hook (so the game's ISR never sees hook register/stack state - covered only by the per-instruction interrupt-safety check), the raster (tearing, overruns), real-machine speed (28 MHz wait states, contention), CSpect differences, the VIDEO output of Layer 2 (nextboot / verify model its bank register, port 0x123B, palette writes and pixel pages, not what the screen shows: palette entry 0xE3 as transparency, layer order; Dizzy 1, 2026-10-14, hardware to confirm). Anything in this list needs a static/invariant check or a hardware test |
+| Simulator blind spots | The toolkit's simulator does not model: DivMMC (automap traps, see above), an interrupt arriving in the middle of a hook (so the game's ISR never sees hook register/stack state - covered only by the per-instruction interrupt-safety check), the raster (tearing, overruns), real-machine speed (28 MHz wait states, contention), CSpect differences, the VIDEO output of Layer 2 (nextboot / verify model its bank register, port 0x123B, palette writes and pixel pages, not what the screen shows: palette entry 0xE3 as transparency, layer order; Dizzy 1, 2026-10-14, hardware to confirm), the Next's own flag results after block I/O instructions (OTIR/OUTI/INIR...: only ZF is reliable on the Next; the simulator computes real-Z80 flags - LEARNINGS 1.1). Anything in this list needs a static/invariant check or a hardware test |
 | Emulators [MAME] | MAME 0.289 (`specnext`) runs .nex files and is how many users will test (loading, Lua, quirks: LEARNINGS 2.7). It models the alt ROM as NextZXOS ROM3 (it caught Trueno's 0x3B00 bug, the boot sim did not). Known MAME-only behaviour: sprite index 0 under a palette offset drawn opaque (hardware unchecked). A MAME pass is not a hardware pass: record which one a result is |
 | Layer 2 (Dizzy 1, hardware to confirm) | 256x192, 8-bit pixels, banks via NextReg $12 (16K bank; 3 consecutive banks = 6 pages, page = first + y/32, offset (y%32)*256+x); visible = port 0x123B bit 1 (the stub writes 0x123B = 0 BEFORE the patch setup, so setup turns it on); palette NextReg $43 = $10 (Layer 2 palette 0, auto-increment) then $40 index, $41 RRRGGGBB; transparency = global $14 (default $E3) compared with the palette RGB, so entry 0 = $E3 makes pixel 0 transparent; order SLU default ($15 = 0): Layer 2 over the ULA. Zero banks in the .nex start it clear (NEXLOAD leaves banks it does not load with old contents) |
 | MMU | slots 0-7 = NextReg $50-$57, 8K pages; 16K bank n = pages 2n, 2n+1; $FF in slot 0/1 = ROM |
@@ -362,6 +375,22 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    that is not in the archive.
 25. [MAME] A scripted MAME run (put the .nex in the SD image, load, snapshot) next to run_cspect.bat
    (LEARNINGS 2.7).
+26. State a previous program may leave behind (2026-10-19, documented, not seen on hardware): the
+   stub resets speed, video, DivMMC, sprites, $C0, 0x123B, and the NEX header asks NEXLOAD to
+   reset NextRegs (byte 134 = 0: "reset machine state" - wiki NEX_file_format lists no registers),
+   so what that reset covers is not confirmed. Not written by the stub, and each would break games
+   if left non-default: a running copper ($62 mode; MOVEs to any NextReg 0x01-0x7F every frame); the
+   line offset $64 (core 3.1.5+; shifts $1E/$1F, which the Rainbow raster wait reads); ULA interrupt
+   off ($22 bit 2 or $C4 bit 0: stops every IM1/IM2 game) or line interrupt on ($22 bit 1);
+   ULA output off ($68 bit 7), ULA scroll ($26/$27) and clip ($1A); Layer 2 resolution ($70), scroll
+   ($16/$17/$71) and clip ($18) - Dizzy 1 sets only $12; palette state ($43 active palettes,
+   ULANext bit 0, $14 transparency, $4A). Also left ON: the F3 (50/60 Hz) and F8 (CPU speed) keys
+   ($06 bits 5/7), so a player can undo the forced 50 Hz or change the speed the hooks and the
+   Rainbow frame limiter assume. Cheap guard: NEXTREG $62,0 / $64,0 / $22,0 / $C4 bit 0 set (soft reset $83 per
+   nextreg.txt, where bit 1 = line interrupt; the guide says bit 1 resets to 0 - unresolved) / $68,0 /
+   $26,0 / $27,0 + $06 AND $5F in the stub (Dizzy 1: its Layer 2 registers in its own setup) -
+   changes every game's .nex bytes, so it is a maintainer decision with a full
+   `selftest.py --stamp`. Check NEXLOAD's reset list first (ped7g NEXLOAD2 source).
 ### C3. Working rules (token budget)
 Summaries <= 40 lines; disassemble only routines the analysis flags; one simulator pass
 per question; long jobs in background + poll; verify original bytes at every patch site;
