@@ -119,7 +119,8 @@ BRIEFING - with its reason.
 ## 1.5 Spectrum Next: faster sprite / tilemap I/O, DMA, copper, raster (DOCUMENTED, none used yet)
 Researched 2026-10-19 (guide r3 chapters Sprites / DMA / Copper / Interrupts, core 3.01.09
 nextreg.txt + ports.txt + changelog, KevB's copper timing notes in github.com/varmfskii/zxnext_code
-zx_next_notes/copper; github.com/stevemonks/ZXSpectrumNextMachineCodeGuides). Nothing here is simulated or hardware-tested: the first engine that uses one
+zx_next_notes/copper; github.com/stevemonks/ZXSpectrumNextMachineCodeGuides;
+github.com/breakintoprogram/lib-spectrum-next lib/dma.z80). Nothing here is simulated or hardware-tested: the first engine that uses one
 implements it in the simulator (NEXT_REGISTERS "SIMULATOR TRAP") and records the hardware result.
 Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5 MHz T-states.
 - Sprite attributes in bulk: write port 0x303B = first sprite, then the 5 bytes per sprite
@@ -145,7 +146,13 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   fixed port (0x5B patterns, 0x57 attributes, 0x253B with a NextReg selected on 0x243B). With
   port cycle length 2 a byte costs ~4 cycles vs LDIR 21 / OTIR 21 T; program upload (~15-25 bytes
   by OTIR) costs ~400 T, so it pays from ~30 bytes. Continuous mode (WR4 bits 6:5 = 01) holds the
-  bus to the end.
+  bus to the end. FILL = port A FIXED memory (WR1 %00100100) pointing at one byte holding the value,
+  port B incrementing: clears a shadow / map / buffer at DMA speed (lib-spectrum-next FillDMA).
+  Fixed memory -> fixed port 0x5B fills pattern RAM the same way (Rainbow setup zeroes 16K with an
+  OUT loop). Library code wraps the program OTIR in DI/EI because an ISR that also programs the
+  DMA would interleave its bytes with ours; hooks may skip the DI only when neither the game's ISR
+  nor a hook called from it writes port 0x6B / 0x0B (original Spectrum games never do; check any
+  128K/Next-aware title's port writes first).
   WHY it can break: the CPU cannot see a pulse-mode interrupt while the DMA owns the bus, and the
   ULA pulse lasts ~30 T at 3.5 MHz, so a transfer across the interrupt LOSES the game's frame
   interrupt (DI does not help; the pulse is gone). Engines with interrupts ON (midres, dizzy1,

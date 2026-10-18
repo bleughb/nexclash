@@ -87,7 +87,9 @@ Layers - never mix their facts:
    layer 2, lores examples, e.g. joyspr.asm: attributes by OTIR to port 0x57);
    github.com/stevemonks/ZXSpectrumNextMachineCodeGuides (2020, Zeus assembler: commented readmes for
    sprites, Layer 2, tilemap with per-tile palette / mirror / rotate, pixel scroll, RLE maps; its
-   "tilemap must sit in 0x4000-0x7FFF" predates the bank-7 option we use). Examples, not authority.
+   "tilemap must sit in 0x4000-0x7FFF" predates the bank-7 option we use);
+   github.com/breakintoprogram/lib-spectrum-next (sjasmplus, Dean Belfield: lib/dma.z80 = copy and
+   FILL with the full WR6 command list, lib/math.z80 = MUL D,E multiplies). Examples, not authority.
 Rules: a new fact from the guide or wiki is "documented", not "verified", until a boot sim, RZX
 test or hardware test backs it; record its source (page name) where you file it. Faster I/O
 (port 0x57 / $75-$79 sprite attributes, relative sprites, zxnDMA, copper, $64 line offset,

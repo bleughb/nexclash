@@ -62,7 +62,7 @@ timing (github.com/varmfskii/zxnext_code, zx_next_notes/copper). Researched 2026
 | $09 bit 4 | lockstep $34 with 0x303B | off by default: $34 and 0x303B are separate sprite indices |
 | $75-$79 | $35-$39 with sprite number post-increment | each write increments (nextreg.txt); `NEXTREG $78,0` per sprite = hide a run |
 | $37 bit 0 / $39 bits 7:6 (relative sprites) | anchor + composite / unified relatives | relatives: 8-bit X/Y offsets, visibility ANDed with the anchor, optional pattern / palette offset from the anchor; unified = mirror/rotate/scale as one image |
-| port 0x6B | zxnDMA (core 3.1.2+; 0x0B = Zilog DMA) | WR0-WR6 program by OTIR; WR1/WR2 timing byte = cycle length 2..4; WR4 bits 6:5 = 01 continuous, 10 burst; WR6 $CF load, $87 enable, $83 disable. Holds the bus: pulse interrupts are lost |
+| port 0x6B | zxnDMA (core 3.1.2+; 0x0B = Zilog DMA) | WR0-WR6 program by OTIR; WR1/WR2 timing byte = cycle length 2..4; WR4 bits 6:5 = 01 continuous, 10 burst; WR6 $CF load, $87 enable, $83 disable, $D3 continue (repeat from current pointers), $C3 reset, $BB + mask / $BF / $A7 read status; WR1 %00100100 = port A fixed memory (fill). Holds the bus: pulse interrupts are lost |
 | $60 / $63 | copper data upload (byte / whole instruction) | $63 commits only after both bytes: no half instruction runs |
 | $61 / $62 | copper upload index (11 bits) + mode $62 bits 7:6 | 00 stop, 01 reset+run, 10 resume, 11 reset+run + restart each frame; same mode again = index change only |
 | copper WAIT / MOVE | `1HHHHHHV VVVVVVVV` / `0RRRRRRR DDDDDDDD`, HALT = $FFFF, NOOP = 0 | MOVE reaches NextRegs 0x01-0x7F only; WAIT H 0-55 in 8-pixel steps (max usable 52-55 by timing); stored big-endian |
