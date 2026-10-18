@@ -176,6 +176,23 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   $34 write also moves the PATTERN pointer (bit 7 = +128 bytes), so finish a pattern upload before
   selecting the next sprite. Same demo uploads patterns with an unrolled OUTINB (DUP 128: 16 T/byte
   vs OTIR 21 T/byte, B untouched).
+- Happy Next Year 2026 (Leonis, source supplied by Dean 2026-10-19) confirms and adds:
+  * 4-byte attribute records: with byte 3 bit 6 = 0 a sprite takes 4 bytes on port 0x57, so
+    "hide all" = one 0x303B select + 4 x OUT 0 per sprite (the 5-byte-stream trap above does not
+    apply to an all-4-byte stream). Only for 8-bit patterns: our 4-bit sprites need byte 4.
+  * Double-buffered PATTERN slots: upload the next frame's images by DMA (0x303B + memory ->
+    port 0x5B) into the slot set NOT on screen, spread over two frames (4 + 5 patterns), then flip
+    which set the attributes use - no half-updated sprite is ever displayed (generalises the
+    Commando flicker rule in 1.4 and the pattern cache).
+  * Per-frame copper rebuild: patch the list in RAM, stop the copper ($62/$61 = 0), DMA the list to
+    port 0x253B with $60 selected, restart in mode 11 - all done after a $1E/$1F wait for line
+    192, so the list is never half-written while the beam uses it. A per-line WAIT + MOVE
+    $16 pair gives a per-scanline Layer 2 X offset (raster wobble).
+  * DMA fill by overlap: memory -> memory with destination = source + 1 (the LDIR fill idiom)
+    fills a block, e.g. a 257-byte IM2 vector table; alternative to fixed-port-A fill.
+  * UNVERIFIED claim in its Copper.asm: copper MOVEs to NextReg $15 "reset clipping values", so the
+    demo uses a second list without $15 while clip windows animate. Not in the core spec; test
+    before driving $15 from a copper list that coexists with $19/$1A/$1B clips.
 - NextReg $34 and port 0x303B are SEPARATE sprite indices unless NextReg $09 bit 4 (lockstep) is
   set. Never mix $34/$35-$39 writes and 0x57 writes on one assumption of "the current sprite";
   hooks that only use NEXTREG keep working whatever 0x57 did, and the reverse.
