@@ -542,6 +542,19 @@ drawn on top.
    now exists: B tiles can go into the same map with attribute bit 0 = 1 (ULA over the tile) and
    ULA paper made transparent there - needs a free tile budget (176 shared) and a palette plan.
 1. Revisions/optimisations: wait for Dean's list; re-verify both RZX, compare MD5s.
+   Candidates from the 2026-10-19 research (LEARNINGS 1.5; all documented, untested; each needs the
+   simulator taught first and a hardware A/B):
+   (a) piece loop: 5 NEXTREGs + $34 per sprite (~180 T) -> two passes, patterns then ONE 0x303B +
+       OTIR/OUTI of all attributes to port 0x57 (~105 / 80 T per sprite; up to 84 figure sprites).
+   (b) hide loop (.hide): NEXTREG $34 once, then NEXTREG $78,0 per sprite.
+   (c) tcommit's 20 x 64-byte LDIR (~27,000 T): keep full 80-byte rows in the shadow and copy the
+       1,600 bytes with one zxnDMA transfer (~6,400 cycles); place it away from the ULA interrupt
+       (~line 248) because a DMA hides the interrupt pulse.
+   (d) rwait busy-polls up to 160 lines: double-buffer the map in bank 7 (two 2,560-byte maps +
+       tile definitions must fit page 14) and let a copper list (WAIT 176 / MOVE $6E / HALT, mode
+       11) flip the base each frame; the CPU only rewrites the MOVE's value byte.
+   (e) tilemap switched off when the scroll is not a multiple of 8: follow it with $31 (pixel
+       scroll) instead; (f) dedupe tile definitions by mirror / rotation (attribute bits 3:1).
 2. Later islands: banks 3/4/6 never paged in either RZX; need a recording past island 1 (item
    graphics change there: GCOPY invalidation is unit-proven only through the model).
 3. Colours - Dean's decisions (2026-09-30): player stays WHITE (black outline); stars stay as

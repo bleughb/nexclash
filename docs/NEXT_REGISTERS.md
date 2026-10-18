@@ -53,11 +53,22 @@ top byte where OTIR must work (0x57, 0x5B). The ULA answers on any even port (A0
 | 0xDFFD | Next Memory Bank Select | not used (bank MSBs) |
 | 0xFE | ULA Control Port | border (restored by the tail) |
 
-## Not used yet, candidates (see docs/BRIEFING.md A0)
-- Copper ($60-$64): could write sprite attributes at fixed raster lines without the CPU.
-- zxnDMA (port 0x6B): fast pattern uploads from RAM to port 0x5B.
-- Line interrupt ($22/$23): per-line timing.
-- Sprite attribute auto-increment registers ($75-$79).
+## Not used yet: documented, untested (why / when to use: LEARNINGS 1.5)
+Sources: core 3.01.09 nextreg.txt / ports.txt, guide r3 (Sprites, DMA, Copper, Interrupts), KevB copper
+timing (github.com/varmfskii/zxnext_code, zx_next_notes/copper). Researched 2026-10-19.
+| Reg / port | What | Notes |
+|---|---|---|
+| port 0x57 | sprite attributes, 4 or 5 bytes per sprite in $35..$39 order | index set by port 0x303B write (which also sets the pattern slot); advances after each sprite, wraps 127 -> 0; OTIR / OUTI / DMA friendly |
+| $09 bit 4 | lockstep $34 with 0x303B | off by default: $34 and 0x303B are separate sprite indices |
+| $75-$79 | $35-$39 with sprite number post-increment | each write increments (nextreg.txt); `NEXTREG $78,0` per sprite = hide a run |
+| $37 bit 0 / $39 bits 7:6 (relative sprites) | anchor + composite / unified relatives | relatives: 8-bit X/Y offsets, visibility ANDed with the anchor, optional pattern / palette offset from the anchor; unified = mirror/rotate/scale as one image |
+| port 0x6B | zxnDMA (core 3.1.2+; 0x0B = Zilog DMA) | WR0-WR6 program by OTIR; WR1/WR2 timing byte = cycle length 2..4; WR4 bits 6:5 = 01 continuous, 10 burst; WR6 $CF load, $87 enable, $83 disable. Holds the bus: pulse interrupts are lost |
+| $60 / $63 | copper data upload (byte / whole instruction) | $63 commits only after both bytes: no half instruction runs |
+| $61 / $62 | copper upload index (11 bits) + mode $62 bits 7:6 | 00 stop, 01 reset+run, 10 resume, 11 reset+run + restart each frame; same mode again = index change only |
+| copper WAIT / MOVE | `1HHHHHHV VVVVVVVV` / `0RRRRRRR DDDDDDDD`, HALT = $FFFF, NOOP = 0 | MOVE reaches NextRegs 0x01-0x7F only; WAIT H 0-55 in 8-pixel steps (max usable 52-55 by timing); stored big-endian |
+| $64 | vertical line offset (core 3.1.5+) | added to copper, line interrupt and $1E/$1F line numbers; 0 = ULA row 0 is line 0 |
+| $22 / $23 | line interrupt: $22 bit 1 enable, bit 0 + $23 = line, bit 2 = ULA interrupt OFF, bit 7 (read) = /INT asserted | fires as the previous line's pixels end; shares /INT with the ULA in pulse mode (never enable under a game) |
+| $C0 bit 0, $C4-$CE | hardware IM2 mode, interrupt enables / status / which may break a DMA | vectors: line 0 (highest), CTC 3-10, ULA 11; we stay in pulse mode ($C0 = 0, stub) |
 
 ## Z80N (extended Z80) instructions
 References:

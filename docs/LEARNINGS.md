@@ -116,6 +116,70 @@ BRIEFING - with its reason.
   (round robin); never share an image that was masked (depth). Negative control: a lookup that
   ignores one key field must fail the pixel check.
 
+## 1.5 Spectrum Next: faster sprite / tilemap I/O, DMA, copper, raster (DOCUMENTED, none used yet)
+Researched 2026-10-19 (guide r3 chapters Sprites / DMA / Copper / Interrupts, core 3.01.09
+nextreg.txt + ports.txt + changelog, KevB's copper timing notes in github.com/varmfskii/zxnext_code
+zx_next_notes/copper; github.com/stevemonks/ZXSpectrumNextMachineCodeGuides). Nothing here is simulated or hardware-tested: the first engine that uses one
+implements it in the simulator (NEXT_REGISTERS "SIMULATOR TRAP") and records the hardware result.
+Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5 MHz T-states.
+- Sprite attributes in bulk: write port 0x303B = first sprite, then the 5 bytes per sprite
+  (= $35..$39 in order) to port 0x57; the sprite index advances after each sprite's last byte
+  (4 bytes when byte 3 bit 6 = 0), wraps 127 -> 0. OTIR 21 T/byte = ~105 T/sprite, unrolled OUTI
+  16 T/byte; our hooks pay ~180 T/sprite ($34 select + 5 x LD A,(DE) / NEXTREG / INC DE).
+  WHY it can break: 0x303B ALSO sets the pattern-upload slot (same write, bits 6:0 + bit 7), so a
+  loop that uploads a pattern then writes that sprite's attributes (Rainbow piece loop) must
+  become two passes - all patterns first, then one 0x303B + all attributes.
+- NextReg $34 and port 0x303B are SEPARATE sprite indices unless NextReg $09 bit 4 (lockstep) is
+  set. Never mix $34/$35-$39 writes and 0x57 writes on one assumption of "the current sprite";
+  hooks that only use NEXTREG keep working whatever 0x57 did, and the reverse.
+- $75-$79 = $35-$39 with sprite-number post-increment on EACH write (nextreg.txt). Useful where a
+  run of sprites gets one attribute: hide sprites a..b = NEXTREG $34,a then NEXTREG $78,0 per
+  sprite (20 T) instead of $34 + $38 per sprite (37 T + loop) - every hook's hide loop.
+- Relative sprites: an anchor followed by relatives (byte 4 bits 7:6 = 01; anchor byte 4 bit 5 = 1
+  makes them unified, 0 composite; guide r3 Sprites example) moves,
+  hides, mirrors and (unified) scales the whole group with ONE anchor write; relatives hold 8-bit
+  offsets and can take the anchor's pattern number as a base. Candidate for multi-sprite figures
+  (2x2 boxes) - but a mirrored unified group mirrors as one image, so the per-engine "swap the left
+  and right quads" logic (BRIEFING A1) must go, and the pixel check must cover it.
+- zxnDMA (port 0x6B since core 3.1.2; 0x0B = Zilog-compatible DMA): memory -> memory, memory ->
+  fixed port (0x5B patterns, 0x57 attributes, 0x253B with a NextReg selected on 0x243B). With
+  port cycle length 2 a byte costs ~4 cycles vs LDIR 21 / OTIR 21 T; program upload (~15-25 bytes
+  by OTIR) costs ~400 T, so it pays from ~30 bytes. Continuous mode (WR4 bits 6:5 = 01) holds the
+  bus to the end.
+  WHY it can break: the CPU cannot see a pulse-mode interrupt while the DMA owns the bus, and the
+  ULA pulse lasts ~30 T at 3.5 MHz, so a transfer across the interrupt LOSES the game's frame
+  interrupt (DI does not help; the pulse is gone). Engines with interrupts ON (midres, dizzy1,
+  chuckie; BRIEFING A3) may only DMA where the interrupt cannot fall (raster known, A1:
+  interrupt near line 248) or in pieces shorter than the gap. Hardware IM2 mode ($C0 bit 0 +
+  $CC-$CE) can let interrupts break into a DMA, but we run pulse mode and the game's own IM/ISR.
+- Copper (NextRegs $60-$63, $64): 1024 16-bit instructions in its own 2K write-only RAM, WAIT
+  line 0-311 + horizontal 0-55 (8-pixel steps), MOVE value -> NextReg 0x01-0x7F ONLY (7-bit field:
+  $8C, $C0-$CE, $B8+ are out of reach), mode 11 restarts the list every frame, so `WAIT 176 / MOVE
+  $6E,x / HALT` re-applies x every frame at line 176. No CPU or DMA time is taken.
+  Uses for us: apply a finished tilemap (base $6E, clip $1B, $6B on/off) or a sprite attribute
+  list at a fixed safe line instead of a CPU raster busy-wait; the CPU only flips one byte of the
+  list ($61/$62 = byte index, $60 = data; $62 with an unchanged mode only moves the index).
+  WHY it can break: copper MOVEs to $34 change the CPU's selected sprite between two of its
+  NEXTREGs - with copper-driven sprites, the CPU must not use $34-$39 (use 0x57: separate index).
+  A list that holds two maps / two attribute sets needs both to be complete before the flip byte
+  changes (the copper reads it at its line, any frame).
+- Raster numbering: Active Video Line ($1E/$1F), line interrupt ($22/$23) and copper WAIT all
+  count from ULA pixel row 0 UNLESS NextReg $64 (core 3.1.5+) is non-zero: it offsets all three
+  (changelog 3.01.05). Frame length differs by timing: 48K 312 lines, 128K 311, HDMI 312 (60 Hz:
+  262/261); display rows 0-191, then border + blanking. A raster wait that assumes 312 lines or
+  offset 0 is a hardware-only fault (BRIEFING C2 #26).
+- Tilemap attribute byte (2-byte entries): bits 7:4 palette offset (used), bit 3 X mirror, bit 2 Y
+  mirror, bit 1 rotate 90 clockwise (with the mirrors: 0/90/180/270), bit 0 ULA over the tile.
+  A tile that is another's mirror or rotation needs NO definition of its own: dedupe tile
+  definitions by orientation before running out of the shared budget (Rainbow: 176). Tilemap
+  scroll is per pixel ($2F/$30 X 0-319, $31 Y 0-255, wraps; stevemonks guide SimpleTileMap):
+  a map can follow a pixel scroll by offsetting $30/$31 instead of switching the layer off - the
+  clip window ($1B) stays fixed, so rows that wrap in must be built too.
+- Line interrupt: do NOT enable it ($22 bit 1 / $C4 bit 1) under a game in pulse mode: it raises the
+  same /INT, so the GAME's ISR runs a second time per frame (frame counters, music, input). The
+  ULA interrupt can also be disabled there ($22 bit 2) - never under a game. For hook timing use
+  the copper or a $1E/$1F poll.
+
 # PART 2 - GAMES / SOFTWARE
 
 ## 2.1 Game-engine lessons (all engines)

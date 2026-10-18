@@ -80,10 +80,19 @@ Layers - never mix their facts:
    Z80N instructions: Extended_Z80_instruction_set (wiki) + opcode matrix
    https://ped.7gods.org/Z80N_table_ClrHome.html (NEXT_REGISTERS.md, section Z80N).
    Wiki_TODO_list flags pages that may be outdated. Pages are https://wiki.specnext.dev/<Name>.
+4. Code examples / timing notes: the guide r3 LaTeX source (`git clone --depth 1
+   https://github.com/tomaz/zx-next-dev-guide`: chapter-next-*.tex, greppable, no pdftotext) and its
+   companion code; github.com/varmfskii/zxnext_code (zx_next_notes = LaTeX source of a Next notes
+   book incl. KevB's copper/display timing tables per machine and video mode; demo/ = small sprite,
+   layer 2, lores examples, e.g. joyspr.asm: attributes by OTIR to port 0x57);
+   github.com/stevemonks/ZXSpectrumNextMachineCodeGuides (2020, Zeus assembler: commented readmes for
+   sprites, Layer 2, tilemap with per-tile palette / mirror / rotate, pixel scroll, RLE maps; its
+   "tilemap must sit in 0x4000-0x7FFF" predates the bank-7 option we use). Examples, not authority.
 Rules: a new fact from the guide or wiki is "documented", not "verified", until a boot sim, RZX
-test or hardware test backs it; record its source (page name) where you file it. Known gaps to
-look up first: copper / DMA as faster alternatives for sprite attribute or pattern uploads (not
-used yet). Resolved 2026-09-29 from docs/VHDL: per-line sprite limit, locked 7FFD vs MMU, NextReg
+test or hardware test backs it; record its source (page name) where you file it. Faster I/O
+(port 0x57 / $75-$79 sprite attributes, relative sprites, zxnDMA, copper, $64 line offset,
+line interrupt): researched 2026-10-19, documented, none used yet - LEARNINGS 1.5 (with the
+reasons each can break a game) and NEXT_REGISTERS "Not used yet". Resolved 2026-09-29 from docs/VHDL: per-line sprite limit, locked 7FFD vs MMU, NextReg
 $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 
 ### A1. What we rely on
@@ -362,6 +371,14 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    that is not in the archive.
 25. [MAME] A scripted MAME run (put the .nex in the SD image, load, snapshot) next to run_cspect.bat
    (LEARNINGS 2.7).
+26. State a previous program may leave behind (2026-10-19, documented, not seen on hardware): the
+   stub resets speed, video, DivMMC, sprites, $C0, and the NEX header asks NEXLOAD to reset NextRegs
+   (byte 134 = 0), but which registers that reset covers is not confirmed. Not reset by the stub: a
+   running copper ($62 mode; MOVEs to any NextReg 0x01-0x7F every frame), the line offset $64 (core
+   3.1.5+; shifts $1E/$1F, which the Rainbow raster wait reads), the line interrupt / ULA-interrupt
+   disable ($22: a disabled ULA interrupt would stop every IM1/IM2 game). Cheap guard: NEXTREG $62,0
+   / $64,0 / $22,0 in the stub - changes every game's .nex bytes, so it is a maintainer decision
+   with a full `selftest.py --stamp`. Check NEXLOAD's reset list first (ped7g NEXLOAD2 source).
 ### C3. Working rules (token budget)
 Summaries <= 40 lines; disassemble only routines the analysis flags; one simulator pass
 per question; long jobs in background + poll; verify original bytes at every patch site;
