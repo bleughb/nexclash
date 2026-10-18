@@ -144,6 +144,13 @@ clrhome.org/table is the Z80-only original (undocumented opcodes in red).
 - NEW [LEARNINGS 1.1]: the 29 Z80N opcodes are 2-byte NOPs on a stock Z80 - a game executing one
   behaves differently on the Next only.
 
+## Follow-up: open-source Next titles (itch.io playlist, same day)
+Of the itch.io "Complete ZX Spectrum Next Playlist" (64 of 174 pages checked), full source was
+offered by 4: ZxNext Studio TechDemo (GitHub, read: lockstep $09 + OUT to $57 attributes, unrolled
+OUTINB pattern upload -> LEARNINGS 1.5), CosmoScroll (page claims the port source is in
+github.com/abodelot/cosmoscroll - neither branch holds Next code), Happy Next Year 2026 and
+Z-machine Loader (itch.io downloads, unreachable from the sandbox).
+
 ## Open after this review
 - Which NextRegs NEXLOAD resets (NEX byte 134 = 0) - decides BRIEFING C2 #26.
 - $C4 soft-reset value (core $83 vs guide).

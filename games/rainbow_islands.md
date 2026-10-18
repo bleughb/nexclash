@@ -549,8 +549,10 @@ drawn on top.
 1. Revisions/optimisations: wait for Dean's list; re-verify both RZX, compare MD5s.
    Candidates from the 2026-10-19 research (LEARNINGS 1.5; all documented, untested; each needs the
    simulator taught first and a hardware A/B):
-   (a) piece loop: 5 NEXTREGs + $34 per sprite (~180 T) -> two passes, patterns then ONE 0x303B +
-       OTIR/OUTI of all attributes to port 0x57 (~105 / 80 T per sprite; up to 84 figure sprites).
+   (a) piece loop: 5 NEXTREGs + $34 per sprite (~180 T) -> simplest: NextReg $09 bit 4 (lockstep)
+       in setup, keep the loop, replace the 5 NEXTREGs by OUT (C),r to port $57 (~77 T per sprite;
+       LEARNINGS 1.5); or two passes + one OTIR of all attributes (~105 T). Pattern OTIR -> unrolled
+       OUTINB (16 vs 21 T/byte, 64 bytes per piece).
    (b) hide loop (.hide): NEXTREG $34 once, then NEXTREG $78,0 per sprite.
    (c) tcommit's 20 x 64-byte LDIR (~27,000 T): keep full 80-byte rows in the shadow and copy the
        1,600 bytes with one zxnDMA transfer (~6,400 cycles); place it away from the ULA interrupt

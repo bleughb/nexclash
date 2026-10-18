@@ -169,6 +169,13 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   byte 3 has bit 6 = 0 takes only 4 bytes: a HIDE record written as byte 3 = 0 inside a
   5-bytes-per-sprite stream shifts every later sprite by one byte. Hide with byte 3 = $40 (no
   pattern, byte 4 follows) in a 5-byte stream.
+- Random-access fast attributes (github.com/serdjukdev/ZxNextStudio-TechDemo code/render/sprite.asm):
+  set NextReg $09 bit 4 (lockstep) ONCE in setup; then `NEXTREG $34,n` also moves port 0x57's index,
+  and a sprite costs NEXTREG $34 (17 T) + 5 x OUT (C),r (12 T, C = $57) = ~77 T instead of ~180 T,
+  in any order, without restructuring a pattern-then-attributes loop. Caveat: with lockstep every
+  $34 write also moves the PATTERN pointer (bit 7 = +128 bytes), so finish a pattern upload before
+  selecting the next sprite. Same demo uploads patterns with an unrolled OUTINB (DUP 128: 16 T/byte
+  vs OTIR 21 T/byte, B untouched).
 - NextReg $34 and port 0x303B are SEPARATE sprite indices unless NextReg $09 bit 4 (lockstep) is
   set. Never mix $34/$35-$39 writes and 0x57 writes on one assumption of "the current sprite";
   hooks that only use NEXTREG keep working whatever 0x57 did, and the reverse.
