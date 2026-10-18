@@ -20,9 +20,9 @@ top byte where OTIR must work (0x57, 0x5B). The ULA answers on any even port (A0
 |---|---|---|---|
 | $03 | Machine Type Register | display timing 48K/128K (bits 6:4, bit 7 = allow change); written last in the tail. Does NOT stop 7FFD decoding | z80tonex tail |
 | $05 | Peripheral 1 Setting Register | bit 2 cleared = 50 Hz (unless `nexclash.py ... --allow-60hz`) | z80tonex stub |
-| $06 | Peripheral 2 Setting Register | bit 4 cleared = divMMC automap / DRIVE-button NMI off (the A1 table used to say $0A). Yet code at 0x3D00-0x3DFF crashed Commando: probably not every automap entry point (BRIEFING A1, C2 #14) | z80tonex stub |
+| $06 | Peripheral 2 Setting Register | bit 4 cleared = divMMC automap / DRIVE-button NMI off (the A1 table used to say $0A). Yet code at 0x3D00-0x3DFF crashed Commando: probably not every automap entry point (BRIEFING A1, C2 #14). NOT cleared: bit 7 = F8 CPU-speed key, bit 5 = F3 50/60 Hz key (both 1 after soft reset: a player can change speed / refresh mid-game, C2 #26); bits 1:0 audio chip mode | z80tonex stub |
 | $07 | CPU Speed Register | 0 = 3.5 MHz for games; 3 = 28 MHz inside the Rainbow and Commando hooks, 0 on exit | stub, rainbow_hooks, commando_hooks |
-| $08 | Peripheral 3 Setting Register | contention; bit 7 write 1 = clear the 7FFD lock (0 does nothing; read 1 = unlocked) | tail, altrom stub |
+| $08 | Peripheral 3 Setting Register | bit 7 write 1 = clear the 7FFD lock (0 does nothing; read 1 = unlocked); bit 6 = 1 DISABLES contention (the tail's AND $30 clears it: contention on); bit 5 ABC/ACB, 4 speaker, 3 DACs, 2 port FF read, 1 TurboSound, 0 = Issue 2 keyboard (an early game that reads EAR on port FE may need it; not used) | tail, altrom stub |
 | $15 | Sprite and Layers System Register | bit 0 sprites visible; bits 4:2 layer order (default SLU, global) | hooks, setup |
 | $19 / $1C | Clip Window Sprites / Clip Window Control | $1C bit 1 resets the sprite clip index, then X1,X2,Y1,Y2 to $19 | Rainbow / Wally setup |
 | $1B | Clip Window Tilemap | $1C bit 3 resets its index, then X1,X2 (2-pixel units), Y1,Y2 | Rainbow commit (x 16-143, y 48..47+N) |
@@ -34,21 +34,24 @@ top byte where OTIR must work (0x57, 0x5B). The ULA answers on any even port (A0
 | $6E / $6F | Tilemap Base Address / Tile Definitions Base | bit 7 = bank 7 (first 8K only = page 14; recent core), low bits = offset in 256-byte units ($6E 0x80, $6F 0x80 + 0x0A) | Rainbow commit |
 | $34 | Sprite port-mirror Index Register | selects the sprite for $35-$39 | all hooks |
 | $35-$39 | Sprite Attribute 0-4 Registers | X, Y, flags (X8, mirror), pattern + visible, 4-bit/anchor; no auto-increment ($75-$79 would) | all hooks |
-| $40 / $41 / $43 | Palette Index / Palette Value (8-bit) / ULA Palette Control | $43=$20 selects sprite palette 0 with auto-increment; $43=$30 the tilemap palette | setup templates, Rainbow setup |
+| $40 / $41 / $43 | Palette Index / Palette Value (8-bit) / ULA Palette Control | $43=$20 selects sprite palette 0 with auto-increment; $43=$30 the tilemap palette. $43 bit 7 = 1 turns auto-increment OFF; bits 3:1 select the DISPLAYED second palette (sprites / Layer 2 / ULA), bit 0 ULANext - every $43 write sets them too (LEARNINGS 1.5) | setup templates, Rainbow setup |
 | $4B | Sprite Transparency Index Register | 0 = index 0 transparent (reset value $E3; 4-bit uses the low nibble) | setup |
 | $50-$57 | MMU slot 0-7 Registers | 8K page per slot; $FF in slot 0/1 = ROM (or the alt ROM) | stub, tail, hooks |
 | $7F | User Storage 0 Register | "player drawn" flag (slot1/altrom TID hooks); Rainbow: tile-cache flush request | hooks |
 | $8C | Alternate ROM Register | $C0 write mode (fill), $80 enable read-only; hardware-tested 2026-09-27 | altrom stub, tail |
-| $C0 | Interrupt Control Register | 0 = pulse interrupt mode (Next IM2 hardware vectors off) | z80tonex stub |
+| $C0 | Interrupt Control Register | 0 = pulse interrupt mode (Next IM2 hardware vectors off; bit 3 stackless NMI off) | z80tonex stub |
+| $14 | Global Transparency Colour | Layer 2 / ULA / LoRes transparency, a COLOUR compared with the top 8 bits of the 9-bit colour (guide r3 calls it an index - core nextreg.txt is right); soft reset $E3 | (Dizzy 1 Layer 2 relies on the default) |
+| $C8 | INT Status 0 | bit 0 ULA, bit 1 line interrupt happened since cleared; WRITE 1 clears | Rainbow diagnostic build |
 | $8E | Memory Mapping Register | not used; writes act like 7FFD/DFFD/1FFD port writes | - |
 
 ## Ports
 | Port | Wiki page | Use |
 |---|---|---|
 | 0x243B / 0x253B | TBBlue Register Select / Access | read NextRegs ($7F, $08, $05, $06) |
-| 0x303B | Sprite Status/Slot Select | write: pattern slot (bits 5:0, bit 7 = +128 bytes); read: bit 1 = too many sprites on a line, bit 0 = collision (the read clears both) |
+| 0x303B | Sprite Status/Slot Select | write: pattern slot for 0x5B (bits 5:0, bit 7 = +128 bytes) AND, from the same write, the attribute index for 0x57 (bits 6:0, sprite 0-127); read: bit 1 = too many sprites on a line, bit 0 = collision (the read clears both) |
 | 0x5B | Sprite Pattern Upload | pattern bytes; auto-advance (256-byte blocks by OTIR) |
-| 0x7FFD | Memory Paging Control | bit 5 = lock; unlocked writes also reset MMU0/1 to ROM and MMU6/7 to the bank |
+| 0x7FFD | Memory Paging Control | bit 5 = lock; unlocked writes also reset MMU0/1 to ROM and MMU6/7 to the bank; bit 3 = ULA shows bank 7 (shadow screen) |
+| 0x123B | Layer 2 Access Port | bit 1 visible (alias $69 bit 7); bit 0 write-paging / bit 2 read-paging of Layer 2 into 0x0000-0x3FFF, bits 7:6 which 16K (11 = all 48K over slots 0-2), bit 3 shadow banks ($13), bit 4 = offset form (core 3.0.7+). The stub writes 0 (no paging into ROM space) |
 | 0x1FFD | Plus 3 Memory Paging Control | bit 2 + 7FFD bit 4 select the ROM (ROM3 = 48K = alt image 1) |
 | 0xDFFD | Next Memory Bank Select | not used (bank MSBs) |
 | 0xFE | ULA Control Port | border (restored by the tail) |
@@ -82,6 +85,10 @@ every hook, stub and tail, and SWAPNIB (ED 23) in the Rainbow hooks only (since 
 by rainbow._swapnib, exhaustive self-test + a SWAPNIB-as-NOP control). Nothing else (asm sources:
 `grep -i -E "swapnib|mirror|mul |outinb|pixel|ldirx|ldix|test |bs[lr]"` asm/*.asm).
 
+BLOCK I/O FLAGS (guide r3, documented): on the Next INI/IND/INIR/INDR/OUTI/OUTD/OTIR/OTDR leave SF/HF/PV
+undefined, NF = 1, CF unchanged; SkoolKit computes real-Z80 flags. Never leave those flags live in a
+hook (LEARNINGS 1.1).
+
 SIMULATOR TRAP (tested): SkoolKit's Simulator executes any Z80N ED opcode as a 2-byte NOP without
 an error (e.g. ED 24 MIRROR A leaves A unchanged). nextboot and the hook verifiers handle ED 91/92
 through `after_ED`. If hook code ever uses another Z80N instruction, implement it in the simulator
@@ -98,8 +105,12 @@ Z80N instructions worth using in future hooks (all 2 bytes unless noted):
 | PUSH nn | ED 8A hi lo | 23 | push a constant | operand is BIG-endian (only one) |
 | OUTINB | ED 90 | 16 | OUTI without decrementing B: pattern uploads to 0x5B with a fixed port | flags undefined |
 | PIXELAD / PIXELDN / SETAE | ED 94 / 93 / 95 | 8 each | ULA pixel address from D=y, E=x; next line; pixel mask | - |
-| LDIX / LDIRX | ED A4 / B4 | 16 / 21 | copy skipping bytes equal to A (transparent blit) | flags change like LDI/LDIR on 3.02 (wiki) |
-| TEST n | ED 27 n | 11 | AND flags, A kept | 3 bytes |
+| LDIX / LDIRX | ED A4 / B4 | 16 / 21 | copy skipping bytes equal to A (transparent blit) | flags change like LDI/LDIR on 3.02 (wiki); guide r3 says flags unchanged (older): assume CHANGED |
+| LDDX / LDDRX | ED AC / BC | 16 / 21 | like LDD/LDDR but DE INCREMENTS while HL decrements, skipping bytes = A: horizontally MIRRORED transparent copy of 8-bit pixels (Layer 2 figures) | flags as LDIX |
+| LDPIRX | ED B7 | 16 / 21 | pattern fill: source = (HL & $FFF8) + (E & 7), HL fixed, DE incrementing, skip bytes = A | 8-byte aligned table; flags as LDIX |
+| LDWS | ED A5 | 14 | (DE) <- (HL), INC L, INC D: copy down a Layer 2 column (256x192: D = row) | source stays in one 256-byte block; flags like INC D |
+| JP (C) | ED 98 | 13 | PC[13:0] = IN(C) << 6 (streamed code) | flags undefined; never needed by hooks |
+| TEST n | ED 27 n | 11 | AND flags, A kept | 3 bytes; NF undefined (guide r3) |
 | BSLA/BSRA/BSRL/BSRF/BRLC DE,B | ED 28-2C | 8 | barrel shifts of DE by B | - |
 Timings on the wiki are marked as from limited testing. At 28 MHz (Rainbow hooks) the CPU also adds
 wait states; do not count cycles for timing-critical code.

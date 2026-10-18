@@ -142,5 +142,5 @@ or download another version; tools/sjasmplus/README.md).
 | docs/profiles/ | per-game profiles (hook hex read by the engines), signatures.json, verified.json (generated) |
 | docs/records/ | one evidence record per game: inputs, dependencies, rebuild / verify recipes, outputs, status, check stamps (nexclash/records.py) |
 | games/ | one file per game, named like its folder in specnext/reference/ (facts, decisions, status, open items, checklist); tid_engine.md = shared TID engine facts |
-| docs/ | BRIEFING, LEARNINGS, VERIFICATION, PLAYBOOK, RECORDING_CHECKLIST, NEXT_REGISTERS, contribute.json |
+| docs/ | BRIEFING, LEARNINGS, VERIFICATION, PLAYBOOK, RECORDING_CHECKLIST, NEXT_REGISTERS, GUIDE_R3_REVIEW (dev guide r3 checked against these docs), contribute.json |
 | tools/ | asm2profile.py (asm -> profile hex, --check --all), sjasmplus/ (pinned assembler), make_package.py (release zip), merge_contribution.py, prototypes |

@@ -541,6 +541,11 @@ drawn on top.
    (rule: paper between ink pixels in its row or column) - waiting for Dean's review. The tilemap
    now exists: B tiles can go into the same map with attribute bit 0 = 1 (ULA over the tile) and
    ULA paper made transparent there - needs a free tile budget (176 shared) and a palette plan.
+   Guide r3 review 2026-10-19 (LEARNINGS 1.5): per-tile "ULA over" (attribute bit 0) is ignored
+   while $6B bit 0 = 1, and tcommit writes $6B = $81 - layer B needs $6B = $80 (the current tiles
+   all have bit 0 = 0, so the picture is otherwise unchanged). Alternative for "paper made
+   transparent": ULA paper palette entries (16-31) are separate from inks, so the one paper colour
+   to see through can be set equal to the global transparency $14 without touching inks.
 1. Revisions/optimisations: wait for Dean's list; re-verify both RZX, compare MD5s.
    Candidates from the 2026-10-19 research (LEARNINGS 1.5; all documented, untested; each needs the
    simulator taught first and a hardware A/B):
@@ -550,11 +555,13 @@ drawn on top.
    (c) tcommit's 20 x 64-byte LDIR (~27,000 T): keep full 80-byte rows in the shadow and copy the
        1,600 bytes with one zxnDMA transfer (~6,400 cycles); place it away from the ULA interrupt
        (~line 248) because a DMA hides the interrupt pulse.
-   (d) rwait busy-polls up to 160 lines: double-buffer the map in bank 7 (two 2,560-byte maps +
-       tile definitions must fit page 14) and let a copper list (WAIT 176 / MOVE $6E / HALT, mode
-       11) flip the base each frame; the CPU only rewrites the MOVE's value byte.
+   (d) rwait busy-polls up to 160 lines: double-buffer the map in bank 7 and let a copper list
+       (WAIT 176 / MOVE $6E / HALT, mode 11) flip the base each frame; the CPU only rewrites the
+       MOVE's value byte. COST: bank 7 holds only 8K, so a second 2,560-byte map takes 80 of the 176
+       tile definitions (96 left) - only worth it with (f) or if fewer tiles suffice.
    (e) tilemap switched off when the scroll is not a multiple of 8: follow it with $31 (pixel
-       scroll) instead; (f) dedupe tile definitions by mirror / rotation (attribute bits 3:1).
+       scroll) instead; (f) dedupe tile definitions by mirror / rotation (attribute bits 3:1);
+       512-tile mode does NOT help (the limit is bank 7's 8K, not the 256 index range).
 2. Later islands: banks 3/4/6 never paged in either RZX; need a recording past island 1 (item
    graphics change there: GCOPY invalidation is unit-proven only through the model).
 3. Colours - Dean's decisions (2026-09-30): player stays WHITE (black outline); stars stay as
