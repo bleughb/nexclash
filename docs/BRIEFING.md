@@ -391,6 +391,11 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    $26,0 / $27,0 + $06 AND $5F in the stub (Dizzy 1: its Layer 2 registers in its own setup) -
    changes every game's .nex bytes, so it is a maintainer decision with a full
    `selftest.py --stamp`. Check NEXLOAD's reset list first (ped7g NEXLOAD2 source).
+27. Live A/B switch (idea from Mercenary Next, LEARNINGS 1.5): a key that swaps every hook site
+   between JP hook and the saved original bytes (and sprites/Layer 2 off) would give Dean a
+   one-file hardware A/B instead of two builds (Rainbow's speed tests). Needs RAM patch sites,
+   the toggle key read where the game reads keys, and verify proof that "off" equals the original;
+   not built.
 ### C3. Working rules (token budget)
 Summaries <= 40 lines; disassemble only routines the analysis flags; one simulator pass
 per question; long jobs in background + poll; verify original bytes at every patch site;
