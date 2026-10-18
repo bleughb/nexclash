@@ -149,7 +149,10 @@ Of the itch.io "Complete ZX Spectrum Next Playlist" (64 of 174 pages checked), f
 offered by 4: ZxNext Studio TechDemo (GitHub, read: lockstep $09 + OUT to $57 attributes, unrolled
 OUTINB pattern upload -> LEARNINGS 1.5), CosmoScroll (page claims the port source is in
 github.com/abodelot/cosmoscroll - neither branch holds Next code), Happy Next Year 2026 and
-Z-machine Loader (itch.io downloads, unreachable from the sandbox).
+Z-machine Loader (itch.io downloads, unreachable from the sandbox). Happy Next Year 2026's .asm
+files were then supplied by Dean and read in full -> LEARNINGS 1.5 (4-byte attribute records,
+double-buffered pattern slots, per-frame copper rebuild by DMA, DMA overlap fill, unverified
+$15-resets-clip claim).
 
 ## Open after this review
 - Which NextRegs NEXLOAD resets (NEX byte 134 = 0) - decides BRIEFING C2 #26.
