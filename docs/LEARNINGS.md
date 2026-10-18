@@ -176,6 +176,23 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   $34 write also moves the PATTERN pointer (bit 7 = +128 bytes), so finish a pattern upload before
   selecting the next sprite. Same demo uploads patterns with an unrolled OUTINB (DUP 128: 16 T/byte
   vs OTIR 21 T/byte, B untouched).
+- Mercenary Next (Mike Dailly, github.com/mikedailly/MercenaryDisassembly, 2025): a 48K game
+  disassembled with SkoolKit (sna2skool -c ctl) whose line draw is patched to Layer 2 - the closest
+  published relative of nexclash. Techniques:
+  * Runtime-switchable patches: a table of (site, hook, 3 saved original bytes); Apply writes
+    JP hook at each site, Remove puts the saved bytes back, and the key G toggles enhanced <->
+    original (plus CPU 14 <-> 3.5 MHz) while playing. One .nex gives a live hardware A/B
+    (BRIEFING C2 #27). Sites must be RAM (alt-ROM sites cannot be switched back).
+  * Layer 2 drawn by the CPU through port 0x123B instead of MMU paging: %11001011 maps all 48K of
+    the SHADOW Layer 2 ($13) for read+write over 0x0000-0xBFFF (the stack included: DI, no
+    calls), so a pixel is LD (HL),c with H = y, L = x; %00000010 unmaps (display stays on).
+  * Double buffering = draw into $13 via 0x123B bit 3, flip = swap $12 / $13 (two NEXTREGs).
+  * The Layer 2 scroll offset ($16/$17) moves the game's window origin to Layer 2 (0,0) and the
+    clip ($18) trims it, so game coordinates need no adds per pixel.
+  * Line colour by self-modifying the immediate operand of every plotter (`ld (hl),n`) from a
+    table of patch addresses - one write per colour change, nothing in the inner loop.
+  * Boot: game RAM loaded into high banks, copied down by the .nex start code; the ULA picture is
+    left running underneath (Layer 2 over it, SLU).
 - Happy Next Year 2026 (Leonis, source supplied by Dean 2026-10-19) confirms and adds:
   * 4-byte attribute records: with byte 3 bit 6 = 0 a sprite takes 4 bytes on port 0x57, so
     "hide all" = one 0x303B select + 4 x OUT 0 per sprite (the 5-byte-stream trap above does not
