@@ -107,6 +107,9 @@ LASTT   EQU 0x4600          ; page 28 at slot 2: tile number of each cell last r
 X2      EQU 0x1F00          ; page 26: 2 bits -> 2 nibbles (00 0F F0 FF)
 PBUF    EQU 0x0EF0          ; 8 rows of the object being drawn at PBUF+1..+8; PBUF+0 / +9 stay 0
 X8T     EQU 0x4C00          ; page 28 at slot 2 (render start): nibble-expansion tables, 4 x 256
+V_CLRF  EQU 0x0089          ; diagnostic: the frame-start clear of $C8 bit 0 did not take (read back 1)
+V_BCOL  EQU 0x008A
+V_DCNT  EQU 0x008B          ; diagnostic: poll counter          ; diagnostic: the border colour of this frame (restored after a deferred commit)
 V_X8    EQU 0x0088          ; 1 = X8T built (page 28 is not in the .nex: built at the first render)
 V_IA    EQU 0x0038          ; cell hooks: A at entry
 V_IBC   EQU 0x0039
@@ -440,7 +443,7 @@ dcom:   ld bc,0x243B
 .c:     ld a,1                      ; diagnostic build: blue border during a deferred commit
         call dcol
         call commit
-        xor a
+        ld a,(V_BCOL)               ; back to this frame's colour (yellow / magenta stay until the next frame)
         jp dcol
 
 ; rsafe: carry set = commit now: the beam (active video line, NextReg $1E/$1F; 0 = first pixel row)
@@ -505,6 +508,65 @@ x8bld:  nextreg 0x52,PAGE_SH
         ld a,1
         ld (V_X8),a
         ret
+; --- diagnostic build, frame start / end (alt ROM; jumped to from s_lim / e_hx, no stack use).
+; Frame start: wait (up to 255 polls) until the INT signal ($22 bit 7) has dropped, then clear the
+; ULA interrupt flag ($C8 bit 0) and read it back: still 1 = the clear did not take (V_CLRF).
+; Frame end: $C8 bit 0 set = an interrupt came during the frame = overrun -> YELLOW, or MAGENTA when
+; the frame-start clear had not taken (the flag then proves nothing). Black otherwise. The colour
+; stays until the next frame start (a deferred commit shows blue, then restores it).
+dfst:   ld a,(V_DIAG)
+        or a
+        jp z,x_lrun
+        ld (V_FRUN),a
+        ld (V_DBC),bc
+        ld bc,0x243B
+        ld a,0x22
+        out (c),a
+        inc b
+        ld a,255
+        ld (V_DCNT),a
+.w:     in a,(c)                    ; (A and F are dead here: x_lrun reloads A, CP 3 follows)
+        rla
+        jr nc,.lo
+        ld a,(V_DCNT)
+        dec a
+        ld (V_DCNT),a
+        jr nz,.w
+.lo:    nextreg 0xC8,1
+        dec b
+        ld a,0xC8
+        out (c),a
+        inc b
+        in a,(c)
+        and 1
+        ld (V_CLRF),a
+        ld bc,(V_DBC)
+        xor a
+        ld (V_BCOL),a
+        out (0xFE),a
+        jp x_lrun
+dfend:  ld a,(V_FRUN)
+        or a
+        jp z,x_hx
+        xor a
+        ld (V_FRUN),a
+        ld (V_DBC),bc
+        ld bc,0x243B
+        ld a,0xC8
+        out (c),a
+        inc b
+        in a,(c)
+        ld bc,(V_DBC)
+        and 1
+        jp z,x_hx
+        ld a,(V_CLRF)
+        or a
+        ld a,6                      ; yellow: overran
+        jr z,.y
+        ld a,3                      ; magenta: flag unreliable this frame
+.y:     ld (V_BCOL),a
+        out (0xFE),a
+        jp x_hx
 rom_end:
 
         ORG 0x0100
@@ -2345,31 +2407,6 @@ dcol:   push af                     ; A = border colour (kept)
         ret
 .x:     pop af
         ret
-dfst:   ld a,(V_DIAG)               ; frame start: clear the ULA interrupt flag ($C8 bit 0), black
-        or a                        ; (jumped to from s_lim: the game's stack is not touched)
-        jp z,x_lrun
-        ld (V_FRUN),a
-        nextreg 0xC8,1
-        xor a
-        out (0xFE),a
-        jp x_lrun
-dfend:  ld a,(V_FRUN)               ; frame end (after a frame that ran): an interrupt during it =
-        or a                        ; the frame overran -> yellow until the next frame start
-        jp z,x_hx                   ; (jumped to from e_hx: no stack use)
-        xor a
-        ld (V_FRUN),a
-        ld (V_DBC),bc
-        ld bc,0x243B
-        ld a,0xC8
-        out (c),a
-        inc b
-        in a,(c)
-        ld bc,(V_DBC)
-        and 1
-        jp z,x_hx
-        ld a,6
-        out (0xFE),a
-        jp x_hx
 code4_end:
 
 ; --- fourth code block (page 26 0x1F10-0x1FFF)

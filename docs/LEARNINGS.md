@@ -150,6 +150,12 @@ BRIEFING - with its reason.
   (`nextreg 0xC8,1`); writing 0 does nothing, and in hardware IM2 mode with interrupts on writes
   do not clear at all (guide r3 Interrupts). Hooks entered from a ROM stub inside the
   game's handler must not use the game's stack: jump to the hook page's code and jump back.
+- A diagnostic must not be able to lie: clear NextReg $C8 bit 0 (ULA interrupt seen) at a frame start
+  only once the INT signal has dropped (poll $22 bit 7) and READ IT BACK; report "unknown" when the
+  clear did not take. Rainbow 2026-10-19: the diagnostic showed "overrun" yellow solid on screens
+  whose frames do almost nothing - most likely the clear ran while the frame's own interrupt was
+  still asserted (hypothesis; the read-back build tells). Keep an alarm colour up until the next
+  frame start; another colour written in between (a deferred commit's band) hides it on video.
 - Never put hook CODE at 0x3D00-0x3DFF in an alt ROM / slot-1 page: Commando 541e34e2 crashed at
   its first figure on hardware and in CSpect with code there, and ran once the code moved out
   (tables stayed there). Probable cause: the DivMMC (TR-DOS) automap on an instruction fetch at

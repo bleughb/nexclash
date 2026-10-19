@@ -43,8 +43,9 @@ offered, not chosen.
 ## Deliverables
 | File | MD5 |
 |---|---|
-| rainbow_sprites.nex (no raster wait, music queue, faster tiles + commit; everything below) | c5e1823de3a66b3c468961ebb72d383d |
-| rainbow_sprites_diag.nex (the same + border colours: blue = deferred commit at the interrupt, red = tile built, yellow = frame overran) | 712221059d9351bece24629e3ae7a77d |
+| rainbow_sprites.nex (the same as c5e1823d; diagnostic code moved to the alt ROM) | fe34236c476290cfec10183ef90d6141 |
+| rainbow_sprites_diag.nex (blue = deferred commit, red = tile built, yellow = overrun, magenta = flag unreliable; colour held to the next frame) | 60bda66413c381ba918bf39e7b70b5b7 |
+| (no raster wait, music queue, faster tiles + commit; diagnostic 712221059d9351bece24629e3ae7a77d - its yellow was unreliable) | c5e1823de3a66b3c468961ebb72d383d |
 | (collectables without border; diagnostic 8f25bc6146b9d7f7ae1f12a1d227447e) | e50733b2b7e2db32f004c1436a2e0461 |
 | (objects on the tilemap, black border on every object) | bffd9357d772e2df975ec5f40dc9e4cb |
 | (opaque-item base tile + raster-synced commit; rainbows as sprites) | ab97c76ae0edd3937e3149b0dac5e52f |
@@ -132,8 +133,10 @@ catalogue.json. Page keys go into the class-colours map.
    objects move with the scenery, no lag of a frame against the background while scrolling.
 5. Death / continue / round end / game over / title: no sprites or objects left over.
 6. DIAGNOSTIC build (rainbow_sprites_diag.nex): border BLUE band = the deferred commit at the
-   interrupt (expected every game frame, short, at the bottom); RED = tiles being built; YELLOW = the
-   frame overran (shows from the frame end to the next interrupt). Film it if slowdowns remain.
+   interrupt (expected most game frames, short, at the TOP of the border); RED = tiles being built;
+   YELLOW = the frame overran; MAGENTA = the frame-start clear of the overrun flag did not take (the
+   reading proves nothing that frame). Yellow / magenta stay until the next frame start. Film it if
+   slowdowns remain.
 7. The earlier random corruption (bffd9357): still there? Where, which border colour.
 8. Faults: Fuse "Record from snapshot" on rainbow.z80, autosave off, send the RZX (+ where).
 
@@ -311,6 +314,16 @@ scrolling would not help (the blit is inside the game's 1.2 ms).
   original's chip state (after each tick sent the chip = the original's registers at that tick's
   close); bank-1 sites with entry-point proofs. Failure keys now always END with '!' (four unit
   checks had 'FAIL! detail' keys that the '!' suffix test could never see).
+- Dean's video of diagnostic 71222105 (2026-10-19): blue band short, at the top of the border
+  (deferred commit at the interrupt, done well before line 16). YELLOW in long stretches - solid on
+  the ROUND 1 READY screen (frames that do almost nothing) and in calm play mostly where no blue
+  band shows: taken as a FALSE overrun signal - probably the frame-start clear of $C8 bit 0 ran while
+  the ULA INT was still asserted (frames without a deferred commit reach dfst within microseconds of
+  the interrupt), so the flag set itself again. Hypothesis, not confirmed. Diagnostic since then:
+  dfst (now in the alt ROM, with dfend) waits up to 255 polls for $22 bit 7 = 0, clears $C8, reads it
+  back (V_CLRF); dfend shows yellow only when that clear took, magenta otherwise; a deferred commit
+  restores the frame's colour (V_BCOL) instead of black. The collected-diamond row below the play
+  area in the video is the game's own HUD.
 - Not done: tile-build cap per render (offered); DMA (pattern / map copies; must stay clear of the
   interrupt); copper (no); render start fixed cost per tile.
 - Approximation: the verifier's beam model runs 1792 T (224 x 8) per line and wraps at 312 lines

@@ -61,21 +61,21 @@
   },
   "sprites": {
    "file": "rainbow_sprites.nex",
-   "md5": "c5e1823de3a66b3c468961ebb72d383d"
+   "md5": "fe34236c476290cfec10183ef90d6141"
   },
   "diagnostic": {
    "file": "rainbow_sprites_diag.nex",
-   "md5": "712221059d9351bece24629e3ae7a77d"
+   "md5": "60bda66413c381ba918bf39e7b70b5b7"
   }
  },
  "repro": [],
  "status": {
   "title": "Rainbow Islands (128K)",
   "engine_col": "rainbow (rainbow_islands.md)",
-  "build": "rainbow_sprites.nex c5e1823d (no raster wait, music one AY tick per interrupt, faster tiles + OUTI/0x57 commit) + rainbow_sprites_diag.nex 71222105",
+  "build": "rainbow_sprites.nex fe34236c (no raster wait, music one AY tick per interrupt, faster tiles + OUTI/0x57 commit) + rainbow_sprites_diag.nex 60bda664 (overrun flag read back: yellow real, magenta unknown)",
   "software": "RZX IDENTICAL x2, AY chip = original per tick, unit PASS (19 object controls + AY + commit controls)",
-  "hardware": "bddea69e smooth; bffd9357: random corruption / slowdowns; e50733b2 never tested; c5e1823d untested",
-  "next": "hardware test c5e1823d (speed, music, tearing; diagnostic build if slowdowns remain); layer B (dark-blue partial tiles); later-islands RZX"
+  "hardware": "bddea69e smooth; diag 71222105 video: blue band fine, yellow taken as a false overrun signal (diagnostic fixed); fe34236c / 60bda664 untested",
+  "next": "hardware test fe34236c + film diag 60bda664 (yellow = real overrun, magenta = flag unreliable); layer B; later-islands RZX"
  },
  "checks": [
   "asm2profile:rainbow_islands"

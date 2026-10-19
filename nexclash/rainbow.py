@@ -533,6 +533,7 @@ class NextState:
         self.t6e = None             # T of the first tilemap base ($6E) write
         self.polls = 0
         self.last_line = None
+        self.int_until = 0          # T until which the INT signal reads as held ($22 bit 7)
         self.clip_tm, self.clip_i = [None] * 4, 0
 
     def video_line(self):
@@ -547,6 +548,9 @@ class NextState:
                 v = self.video_line()
                 self.last_line = v
                 return (v >> 8) & 1 if self.rsel == 0x1E else v & 255
+            if self.rsel == 0x22:                   # bit 7 = the INT signal (held until int_until T)
+                return (0x80 if self.R is not None and self.R[25] < self.int_until else 0) | \
+                    (self.nr.get(0x22, 0) & 0x7F)
             return self.nr.get(self.rsel, 0)
         self.events.append(('in', port))
         return 0xFF
@@ -559,8 +563,10 @@ class NextState:
             self.clip_i += 1
         if reg in (0x6E, 0x6F):
             val &= 0xBF                     # bit 6 reads back 0
-        if reg == 0xC8:                     # interrupt status: writing 1 clears the bit
-            val = self.nr.get(0xC8, 0) & ~val & 255
+        if reg == 0xC8:                     # interrupt status: writing 1 clears the bit (not while
+            val = self.nr.get(0xC8, 0) & ~val & 255     # the INT signal is still held: model)
+            if self.R is not None and self.R[25] < self.int_until:
+                val |= self.nr.get(0xC8, 0) & 1
         self.nr[reg] = val
         if reg == 0x34 and self.t34 is None and self.R is not None:
             self.t34 = self.R[25]
@@ -2657,51 +2663,66 @@ def obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path):
         return f + f2 + ([] if okd else ['deferred commit']), border(ns), border(ns3) + border(nsd), border(ns4)
 
     def frame_case(pt):
-        """dfst at a frame start, then dfend with / without an interrupt during the frame."""
+        """dfst at a frame start, then dfend: (interrupt during the frame, T the INT signal is held
+        after the frame's own interrupt): an overrun -> yellow; none -> no colour; INT never drops
+        (the frame-start clear cannot take) -> magenta when the flag is set at the end."""
         from .dizzy6 import _rw_simulator
         Sim = _rw_simulator()
         out = []
-        for irq in (1, 0):
+        for irq, hold in ((1, 300), (0, 300), (0, 10 ** 9)):
             ns = NextState(pt)
             ns.nr[0xC8] = 1                         # the interrupt that started this frame
+            ns.int_until = hold
             mem = bytearray(65536)
 
             class M:
                 def __getitem__(s, a):
-                    return ns.scratch[a] if a < 0x2000 else mem[a]
+                    if a < 0x2000:
+                        return ns.scratch[a]
+                    return pt.page[a - 0x2000] if a < 0x4000 else mem[a]
 
                 def __setitem__(s, a, v):
                     if a < 0x2000:
                         ns.scratch[a] = v
-                    else:
+                    elif a >= 0x4000:
                         mem[a] = v
 
                 def __len__(s):
                     return 65536
             res = []
+            t = 0
             for sym in ('dfst', 'dfend'):
                 if sym == 'dfend' and irq:
                     ns.nr[0xC8] |= 1                # another interrupt came during the frame
                 mem[0xFEFE], mem[0xFEFF] = 0xF0, 0xFF  # return address 0xFFF0
                 regs = list(R0)
-                regs[12], regs[24] = 0xFEFE, pt.syms[sym]
+                regs[12], regs[24], regs[25] = 0xFEFE, pt.syms[sym], t
                 sim = _machine(Sim, M(), regs, ns)
                 ns.events = []
-                okr = _run(sim, (pt.syms['x_lrun' if sym == 'dfst' else 'x_hx'],), 2000) and \
-                    sim.registers[12] == 0xFEFE        # jumped back to the ROM stub, no stack use
+                okr = _run(sim, (pt.syms['x_lrun' if sym == 'dfst' else 'x_hx'],), 20000) and \
+                    sim.registers[12] == 0xFEFE and sim.registers[2:4] == list(R0[2:4])   # no stack, BC kept
+                t = sim.registers[25] + 100000
                 res.append((okr, border(ns), ns.scratch[V_FRUN]))
             out.append(res)
         return out
+    W = [[(True, [0], 1), (True, [6], 0)], [(True, [0], 1), (True, [], 0)], [(True, [0], 1), (True, [3], 0)]]
     f, rs, re_, re2 = diag_case(dpt)
     fr = frame_case(dpt)
-    ok = not f and rs and rs[-1] == 0 and set(rs) == {0, 2} and re_ == [1, 0, 0] and re2 == [] and \
-        fr[0] == [(True, [0], 1), (True, [6], 0)] and fr[1] == [(True, [0], 1), (True, [], 0)]
-    c['diagnostic border (deferred commit blue, tile red, overrun yellow; %d / %d / %d writes) %s' % (
+    ok = not f and rs and rs[-1] == 0 and set(rs) == {0, 2} and re_ == [1, 0, 0] and re2 == [] and fr == W
+    c['diagnostic border (deferred commit blue, tile red, overrun yellow / magenta; %d / %d / %d writes) %s' % (
         len(rs), len(re_), len(re2), 'ok' if ok else '%s FAIL!' % ((f[:2], rs[:4], re_[:4], re2, fr),))] += 1
     f, rs, re_, re2 = diag_case(patch)
     fr = frame_case(patch)
-    ok = not f and not rs and not re_ and not re2 and fr[0] == [(True, [], 0), (True, [], 0)]
+    ok = not f and not rs and not re_ and not re2 and all(r == [(True, [], 0), (True, [], 0)] for r in fr)
     c['diagnostic border off in the normal build %s' % ('ok' if ok else '%s FAIL!' % ((f[:2], rs[:4], re_[:4], re2, fr),))] += 1
+    k = bytes(dpt.page).find(b'\x3E\xFF\x32', patch.syms['dfst'] - 0x2000)  # dfst poll limit 255 -> 1
+    nw = _with_rom_bytes(dpt, 'dfst', None, b'')                           # (a copy)
+    pgw = bytearray(nw.page)
+    pgw[k + 1] = 1                                                          # no wait for the INT
+    nw.page = bytes(pgw)
+    nw.extra_banks = {12: nw.page + bytes(8192), 13: nw.scratch + nw.tpage}
+    c['diagnostic negative control (no wait for the INT to drop) %s' % (
+        'detected' if frame_case(nw) != W else 'NOT DETECTED!')] += 1
     f, rs, re_, re2 = diag_case(_with_bytes(dpt, 'dcol.o', b'\xD3\xFE', b'\x00\x00'))
     c['diagnostic negative control (no colour shown) %s' % ('detected' if not rs or set(rs) != {0, 2} or re_ != [1, 0, 0]
                                                            else 'NOT DETECTED!')] += 1
