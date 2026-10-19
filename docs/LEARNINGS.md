@@ -709,6 +709,42 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   before choosing Next hardware: Rainbow's game logic was 1.2 ms of a 9 ms frame - the hooks,
   not the game, were the cost, so hardware scrolling would not have helped.
 
+- NextMasterSystem (github.com/StalePixels/NextMasterSystem, 2026-10; NO licence file: ideas only,
+  no code) runs Master System games' own Z80 code on the Next by patching every I/O site into a
+  call to a runtime that drives tilemap, sprites, copper and AY - our method on another machine,
+  with per-game "overlays" (patch lists + switches + native code pages) matched by cart CRC32.
+  Ideas that carry over (design notes docs/design.md there):
+  * Runtime owns ONE slot (7) for the whole game; parts 2-4 BORROW a game slot only while they run,
+    with written rules (which part may call which, who restores slot N from `cur_mmu`) and a
+    build-time page-end check (tools/check-layout). Our hook-page rules (midres slot 5) are the
+    same idea, kept less formally.
+  * Interrupts while a borrowed page is mapped: the IM2 entry first maps the GAME's page back under
+    the handler and puts its own trampoline in the handler's return slot; the trampoline maps the
+    borrowed page again and resumes. So the game's ISR always sees its own memory, whatever slot
+    the runtime borrowed - the alternative when no slot is free of the ISR (BRIEFING C2 #36).
+  * Every exit from runtime to game code carries a label prefix (`mx_`); a MAME script puts entry
+    breakpoints on every handler and exit breakpoints on every `mx_` label and reports runtime
+    cycles per frame vs game cycles on the real core model (BRIEFING C2 #11: our missing hook-cost
+    measure).
+  * Costed features are per-game switches applied by patching CALL targets at start: switched off,
+    the frame runs exactly the instructions it ran without the feature (zero cost, nothing to
+    verify for games that do not use it). A rare check is ARMED only when needed: a JP written
+    over an exit for ~5 s after the rare event, written back after.
+  * A run of patched OUTs in a row is compiled once into one block transfer and cached by site
+    address + mapped pages (code copied to RAM is never cached: it can change under the same page).
+  * Static site scanner (sitescan.py): recursive-descent disassembly from the reset / interrupt
+    vectors, following proven jumps, plus emulator PC logs as extra entry points, unreached byte
+    patterns rated by how code-like their neighbours are, a per-routine cost model, and "pattern
+    rules" - code shapes that broke or slowed earlier games. Our `scan` is dynamic only (what the
+    RZX ran); a static pass would find the plot callers no recording reaches (PLAYBOOK 3b "list
+    every caller from the code"; BRIEFING C2 #37).
+  * Converted graphics prepared ahead: the whole cart is converted to Next tile rows at start
+    (~1.1 s per 256K) and tiles written whole from ROM are COPIED, not converted. nexclash builds
+    offline, so the same pre-conversion can happen in Python at build time (Next RAM store, 1.4).
+  * A display-off / display-on pair the original did inside the vertical blank can land in the
+    picture on the slower machine: they HOLD the off-write until the matching on-write or a
+    timeout, so the screen does not flash. Same class of fault as our hide/show flicker rule (1.4).
+
 ## 2.2 Memory proofs (analysis method)
 - Prove free memory with an access scan over the recording, not by zero-check.
   Also require zero content for persistent code (untouched may just mean

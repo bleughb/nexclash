@@ -315,7 +315,10 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
 11. No hook speed budget and no profiler: Commando's and Midnight Resistance's hook costs were
    measured with scratch scripts (T-states per plot / commit from the pair runs, original vs
    patched; the simulator ignores the 28 MHz turbo). Wanted: an `auto` line with hook T-states per
-   call (median / max) and a documented budget per game frame. Smash TV's `auto` has a per-engine
+   call (median / max) and a documented budget per game frame. Candidate on the real core model:
+   MAME breakpoints on every hook entry and every exit back to the game (label prefix, as
+   NextMasterSystem's `mx_` labels and tools/mame/run.py --measure), cycles per frame split hook /
+   game (LEARNINGS 2.1 "NextMasterSystem"). Smash TV's `auto` has a per-engine
    `Speed` line (T per game frame, original vs patched, 28 MHz parts / 8, from the verifier's pair
    runs) - the pattern to lift into a shared helper. It matters most for games without frame sync,
    where hook cost changes the game's speed (LEARNINGS 2.1).
@@ -443,6 +446,16 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    core nextreg.txt ($15 / $68 wording); then it is a design option for cell-aligned foregrounds
    (doorways, trees, walls a figure walks behind). Ped7g's Graphics/LayersMixing* tests cover the
    six basic orders only, not the blend modes.
+36. Hook page with interrupts on when the game's ISR touches every slot (no free slot for midres'
+   slot-5 trick): NextMasterSystem's trampoline (LEARNINGS 2.1 "NextMasterSystem") - the IM2 entry
+   maps the game's page back under the ISR and puts a trampoline in the ISR's return slot that maps
+   the hook page again. Needs: verify models the interrupt mid-hook (BRIEFING A1 blind spot), and
+   the game's ISR must not read its own return address. Use it the first time a game needs it.
+37. Static caller scan: `scan` sees only what the RZX ran, but PLAYBOOK 3b wants every caller of
+   every plotter. A recursive-descent pass from the game's entry and ISR (proven jumps, RZX PCs as
+   extra seeds, unreached CALL patterns rated by code-likeness), as in NextMasterSystem's
+   sitescan.py, would list the callers no recording reaches. Add as `scan --static` (keep the
+   existing output; golden check in tools_check).
 
 ### C3. Working rules (token budget)
 Summaries <= 40 lines; disassemble only routines the analysis flags; one simulator pass
