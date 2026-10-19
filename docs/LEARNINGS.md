@@ -198,7 +198,7 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   * Runtime-switchable patches: a table of (site, hook, 3 saved original bytes); Apply writes
     JP hook at each site, Remove puts the saved bytes back, and the key G toggles enhanced <->
     original (plus CPU 14 <-> 3.5 MHz) while playing. One .nex gives a live hardware A/B
-    (BRIEFING C2 #27). Sites must be RAM (alt-ROM sites cannot be switched back).
+    (BRIEFING C2 #28). Sites must be RAM (alt-ROM sites cannot be switched back).
   * Layer 2 drawn by the CPU through port 0x123B instead of MMU paging: %11001011 maps all 48K of
     the SHADOW Layer 2 ($13) for read+write over 0x0000-0xBFFF (the stack included: DI, no
     calls), so a pixel is LD (HL),c with H = y, L = x; %00000010 unmaps (display stays on).
