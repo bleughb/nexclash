@@ -353,6 +353,16 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   PUSH, self-modified operands, (43067)). Simpler than Rainbow's two canvas runs; verified exactly.
 - Put the sprite commit AFTER the pixel copy (Wally 47637), not at blit start: the LDI copy takes
   ~1 frame.
+- Graphics the game mirrors IN PLACE (Wally: 33251 flips a gang member's frames whenever he turns):
+  do not track the facing state. Key the colours to the snapshot's orientation and let the hook
+  identify the bytes as plotted by a 16-bit check against the stored and the mirrored check; no match
+  = run the original plotter. The same check makes precomputed per-graphic data (canvases) safe
+  against any graphics the game rewrites.
+- A back-buffer composer can RESTORE the buffer again before any copy: those plots never reach the
+  screen. Drop the pending sprites at every restore entry (hooks, verification, the colour-sheet
+  capture) or they appear for one render / on the sheet. Find it by tracing the call order of
+  restore / plot / copy / commit across a room change (Wally: intro-walk plots at 61544/61560, then
+  the room changes and 61090 restores before the commit; 2026-10-14).
 - Measure the write extent of EVERY dispatch target statically (run each original plotter from a
   mid-screen address, record written columns/rows), not only the ones the recordings reach: bosses
   use entries normal play never does. Rainbow's 4-wide leftward entries write E-3 (window started
@@ -610,7 +620,11 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
 
 ## 2.4 Recordings (Fuse / RZX)
 - Autosave snapshots: `nexclash.py rzx strip A.rzx -o B.rzx` (keeps the first snapshot; replay
-  continues from the simulated state, as rzxplay --flags 4). Unstripped RZX desyncs.
+  continues from the simulated state, as rzxplay --flags 4). Unstripped RZX desyncs ("N port
+  reading(s) left" / "Port readings exhausted" at the first autosave, ~frame 250). EVERY replay path
+  of an engine strips - not only auto's verify: Midnight Resistance's `sheet` capture did not and
+  failed on both recordings until 2026-10-14. 13 of the reference recordings have autosaves; a new
+  replay command (sheet, preview, analysis) is tested on one of them.
 - Autosave was on in both Rainbow recordings, the Wally one (12 snapshots) and the Chuckie Egg one
   (10) despite "off": count snapshots in every RZX.
 - Wally: Dean could not switch character in play; all five descriptors were still plotted (other
@@ -629,6 +643,10 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   simulate .z80 -> game entry (keys) checking hook RAM / tail / sites / interrupt mode.
 
 ## 2.5 Verification method
+- "Never jump into a patched instruction" needs the ORIGINAL instruction boundaries under each JP:
+  a byte that starts an original instruction must be reached only through the site, a byte inside
+  one must never be a PC. Counting every byte of the 3 bytes as "must equal the site's count" fails
+  every site whose first instruction is longer than one byte (wally2 STARTS / INTERIORS, 2026-10-14).
 - Lockstep RZX replay cannot prove equivalence once cycle counts change (input
   sampling shifts). Use per-routine differential tests from real states.
 - Per event: original and patched from the same state on private overlays; compare all registers
