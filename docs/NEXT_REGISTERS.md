@@ -19,7 +19,7 @@ top byte where OTIR must work (0x57, 0x5B). The ULA answers on any even port (A0
 | Reg | Wiki page | What we use it for | Where |
 |---|---|---|---|
 | $03 | Machine Type Register | display timing 48K/128K (bits 6:4, bit 7 = allow change); written last in the tail. Does NOT stop 7FFD decoding | z80tonex tail |
-| $05 | Peripheral 1 Setting Register | bit 2 cleared = 50 Hz (unless `nexclash.py ... --allow-60hz`) | z80tonex stub |
+| $05 | Peripheral 1 Setting Register | bit 2 cleared = 50 Hz (unless `nexclash.py ... --allow-60hz`); a new rate takes effect at the NEXT frame and $05 reads back the OLD rate until then - work from the value written, not a read (NextMasterSystem design notes) | z80tonex stub |
 | $06 | Peripheral 2 Setting Register | bit 4 cleared = divMMC automap / DRIVE-button NMI off (the A1 table used to say $0A). Yet code at 0x3D00-0x3DFF crashed Commando: probably not every automap entry point (BRIEFING A1, C2 #14). NOT cleared: bit 7 = F8 CPU-speed key, bit 5 = F3 50/60 Hz key (both 1 after soft reset: a player can change speed / refresh mid-game, C2 #26); bits 1:0 audio chip mode | z80tonex stub |
 | $07 | CPU Speed Register | 0 = 3.5 MHz for games; 3 = 28 MHz inside the Rainbow and Commando hooks, 0 on exit | stub, rainbow_hooks, commando_hooks |
 | $08 | Peripheral 3 Setting Register | bit 7 write 1 = clear the 7FFD lock (0 does nothing; read 1 = unlocked); bit 6 = 1 DISABLES contention (the tail's AND $30 clears it: contention on); bit 5 ABC/ACB, 4 speaker, 3 DACs, 2 port FF read, 1 TurboSound, 0 = Issue 2 keyboard (an early game that reads EAR on port FE may need it; not used) | tail, altrom stub |
@@ -111,7 +111,7 @@ Z80N instructions worth using in future hooks (all 2 bytes unless noted):
 | ADD HL/DE/BC,nn | ED 34/35/36 lo hi | 16 | pointer + constant | 4 bytes |
 | PUSH nn | ED 8A hi lo | 23 | push a constant | operand is BIG-endian (only one) |
 | OUTINB | ED 90 | 16 | OUTI without decrementing B: pattern uploads to 0x5B with a fixed port | flags undefined |
-| PIXELAD / PIXELDN / SETAE | ED 94 / 93 / 95 | 8 each | ULA pixel address from D=y, E=x; next line; pixel mask (A = $80 >> (E&7)) | PIXELAD undefined for D >= 192; flags unchanged |
+| PIXELAD / PIXELDN / SETAE | ED 94 / 93 / 95 | 8 each | ULA pixel address from D=y, E=x; next line; pixel mask (A = $80 >> (E&7)) | PIXELAD undefined for D >= 192; flags unchanged. PIXELAD always returns a 0x4000-based address: retarget H for a screen or shadow copy elsewhere (OR $A0 for 0xE000, lemmings.info 'Advanced programming'); PIXELDN works at any base |
 | LDIX / LDIRX | ED A4 / B4 | 16 / 21 | copy skipping bytes equal to A (transparent blit) | flags change like LDI/LDIR - wiki note 2025, TESTED on core 3.02.x; the guide r3 and Ped7g's table still say unchanged (written before that test): assume CHANGED |
 | LDDX / LDDRX | ED AC / BC | 16 / 21 | like LDD/LDDR but DE INCREMENTS while HL decrements, skipping bytes = A: horizontally MIRRORED transparent copy of 8-bit pixels (Layer 2 figures) | flags as LDIX |
 | LDPIRX | ED B7 | 16 / 21 | pattern fill: source = (HL & $FFF8) + (E & 7), HL fixed, DE incrementing, skip bytes = A | 8-byte aligned table; flags untested on 3.02 (the 2025 test did not cover it): assume changed |
