@@ -873,7 +873,11 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   `setsid nohup sh -c 'cd DIR && a; b' > log 2>&1 < /dev/null &`, then poll inside the turn. Plain
   `nohup cmd &` and `( a; b ) &` die silently - the log just stops (Midnight Resistance session:
   a 20-min `selftest --verify` lost twice). Check with `ps -eo pid,sid,args`: the job's SID must
-  be its own PID. 1-2 CPUs: `--jobs 2` at most.
+  be its own PID. 1-2 CPUs: `--jobs 2` at most; one long job at a time.
+- Start the job on its own: in `a && b && setsid nohup job &` the `&` backgrounds the WHOLE chain,
+  so a failed `a` silently skips the job and its output is lost.
+- A single tool call is capped at 10 minutes: poll a background job with sleeps under that
+  (Chuckie Egg RELEASE run ~15 min: verify 8626 frames ~5 min, unit tests ~10 min).
 - Run a stamping selftest in a separate git worktree (`git worktree add ../nexclash-verify BRANCH`)
   so its record stamps do not collide with edits in the main checkout; commit them from there.
 - `cd X; cmd` runs cmd in the OLD directory when X does not exist - use `cd X && cmd` (a selftest
@@ -896,13 +900,11 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
 - Name scratch scripts uniquely, NEVER after a stdlib module (dis, code, io, json, types, ...):
   Python imports the script's own directory first, so a dis.py shadows the stdlib and breaks
   SkoolKit (happened twice, the second time with this line already here).
-- Do all analyses in one simulator pass; poll background jobs.
+- Do all analyses in one simulator pass.
 - Keep per-instruction work in an analysis hook O(1) (a dict SCAN per opcode turned a 2-minute pass
   into a 10-minute timeout); simple per-instruction hooks are fine (simrun: 1,500 frames ~15 s).
 - Print summaries, not listings. Disassemble only flagged routines.
 - Keep the user's answers terse; explain only new findings.
-- A single tool call is capped at 10 minutes: poll a background job with sleeps under that
-  (Chuckie Egg RELEASE run ~15 min: verify 8626 frames ~5 min, unit tests ~10 min).
 - Merging a contribution sent as a plain diff (not the `contribute` zip): it is against the release
   it was made from, not main, and may carry CRLF files. `git apply --check` first; apply the hunks
   that fit, insert the rest by their context lines into today's text (renumber lists such as

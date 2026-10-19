@@ -102,45 +102,46 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   The sheet still shows only what the recording drew: ask for a recording that reaches every
   level, weapon and collectable the user can, before the sheet goes out.
 - COLOUR SHEET - every game from Midnight Resistance on (Dean, 2026-10-13). Colours are not
-  settled in words: the user paints them. With the phase-A question, send the two sheets
-  (Dean, 2026-10-14): `<game>_PAINTING_SPRITES.png` - every graphic ONCE (a figure that shares
-  graphics with one before it shows only its new pixels; the largest figure of a group first) - and
-  `<game>_REFERENCE_ALL_SPRITES.png` - every figure whole, to see the result; both in the colours
-  the build gives them now (`coloursheet.write(..., unique=True / False)`).
-  Rules (Dean): 1:1 (one PNG pixel = one Spectrum pixel; an enlarged sheet is too big to paint),
-  multi-part figures JOINED as the game draws them, a row of 8x8 swatches of the sprite palette
-  (1-15) at the top, no text. The user paints, keeps the size, sends it back; the read-back is the
-  colour map `docs/profiles/<record>_colours.json` (<record> = the evidence record's name, e.g.
-  dizzy1_colours.json, NOT the reference folder's name: the engine's COLOURS constant loads exactly
-  that path and another name is silently never read; none = the defaults). Engines may draw opaque
-  non-ink pixels (code 2: an outline, or Dizzy 1's enclosed paper, black by default) and may let the
-  user paint pixels TRANSPARENT: `coloursheet.read(..., clear=True)` reads the sheet's grey on an
-  opaque pixel as transparent (Dean 2026-10-14: "there will always be items that need them"), and
-  should let the user paint OUTLINES (Dean 2026-10-14: "borders will be required in MANY future
-  games"): give every bit of a plot's graphics bytes, paper bits as code 0, and write the sheets with
-  `coloursheet.write(..., paint_clear=True)`; a paper bit with a colour nibble is then opaque in that
-  colour (Dizzy 1: fill_mask). The rule is per PIXEL, not per 8x8 cell: only bits of the graphics
-  bytes a plot draws exist in the map, so paint outside them (beyond a graphic's byte span) is
-  reported and ignored - an engine whose graphics have no spare paper column needs wider staging.
-  The sheet shows the rule (Dean 2026-10-14, "paintable only"): inside a figure's box only the
-  pixels the read-back uses are grey (or coloured); a part's gap, paper the engine cannot draw, a
-  pixel already shown on an earlier figure keep the background colour (read back as no paint).
-  Shared module nexclash/coloursheet.py does the sheet side (joining a frame's plots into figures, the fewest
-  figures that show every part, PNG, layout JSON, read-back, the colours file); the engine supplies
-  the parts: per plot its staging pixels, each with a colour-map key (one graphics byte = 8 pixels),
-  bit, ink / outline / clear code and today's colour (template: midres.sheet_part / capture, CLI
-  `python -m nexclash.<engine> sheet RZX` / `colours painted.png`; for OUTLINES the template is
-  dizzy1: part_from_writes lists every bit of the bytes drawn - paper as code 0 - and fill_mask
-  turns painted paper into opaque pixels in the plane, the sprite patterns and the verify model;
-  a capture must strip Fuse autosave snapshots from the RZX first, as auto does before verify -
-  midres.capture does, rzxplay desyncs on them otherwise). The PNG and its
-  `_layout.json` hold game graphics: specnext/reference/<game>/ only. Colours belong to graphics
-  bytes, so every figure drawn from the same graphics takes the same paint - why the painting sheet
-  shows each graphic once (Midnight Resistance's first sheet showed the tank three times and Dean
-  painted one copy, 2026-10-14). The painting layout keeps the map it was drawn with: a repaint
-  changes only the pixels whose colour changed, and painting a pixel back to its default removes
-  its entry. Re-send both sheets after each read-back. Later levels the RZX does not
-  reach: a second sheet from a later recording, read into the same colours file.
+  settled in words: the user paints them.
+  - What to send (with the phase-A question; Dean, 2026-10-14), both in the colours the build gives
+    now: `<game>_PAINTING_SPRITES.png` (`coloursheet.write(..., unique=True)`) - every graphic ONCE:
+    a figure that shares graphics with one before it shows only its new pixels, the largest figure
+    of a group first. Why: colours belong to graphics bytes, so every figure drawn from the same
+    graphics takes the same paint (Midnight Resistance's first sheet showed the tank three times and
+    Dean painted one copy). `<game>_REFERENCE_ALL_SPRITES.png` (`unique=False`) - every figure whole,
+    to see the result; not read back.
+  - Sheet rules (Dean): 1:1 (one PNG pixel = one Spectrum pixel; an enlarged sheet is too big to
+    paint), multi-part figures JOINED as the game draws them, a row of 8x8 swatches of the sprite
+    palette (1-15) at the top, no text. "Paintable only" (2026-10-14): inside a figure's box only
+    the pixels the read-back uses are grey (or coloured); a part's gap, paper the engine cannot draw
+    and a pixel already shown on an earlier figure keep the background colour (read back as no paint).
+  - Read-back: the user paints, keeps the size, sends it back -> the colour map
+    `docs/profiles/<record>_colours.json`. <record> = the evidence record's name (dizzy1_colours.json),
+    NOT the reference folder's name: the engine's COLOURS constant loads exactly that path and any
+    other name is silently never read; no file = the defaults. The rule is per PIXEL, not per 8x8
+    cell: only bits of the graphics bytes a plot draws exist in the map, so paint outside them
+    (beyond a graphic's byte span) is reported and ignored - graphics with no spare paper column
+    need wider staging. The painting layout keeps the map it was drawn with: a repaint changes only
+    the pixels whose colour changed; painting a pixel back to its default removes its entry.
+    Re-send both sheets after each read-back. Later levels the RZX does not reach: a second sheet
+    from a later recording, read into the same colours file.
+  - Transparent and outline pixels: engines may draw opaque non-ink pixels (code 2: an outline, or
+    Dizzy 1's enclosed paper, black by default). TRANSPARENT: `coloursheet.read(..., clear=True)`
+    reads the sheet's grey on an opaque pixel as transparent (Dean 2026-10-14: "there will always be
+    items that need them"). OUTLINES (Dean 2026-10-14: "borders will be required in MANY future
+    games"): give every bit of a plot's graphics bytes, paper bits as code 0, and write the sheets
+    with `coloursheet.write(..., paint_clear=True)`; a paper bit with a colour nibble is then opaque
+    in that colour (Dizzy 1: fill_mask).
+  - Code: shared nexclash/coloursheet.py does the sheet side (joining a frame's plots into figures,
+    the fewest figures that show every part, PNG, layout JSON, read-back, the colours file). The
+    engine supplies the parts: per plot its staging pixels, each with a colour-map key (one graphics
+    byte = 8 pixels), bit, ink / outline / clear code and today's colour. Templates: midres.sheet_part
+    / capture, CLI `python -m nexclash.<engine> sheet RZX` / `colours painted.png`; for OUTLINES
+    dizzy1 (part_from_writes lists every bit of the bytes drawn, paper as code 0; fill_mask turns
+    painted paper into opaque pixels in the plane, the sprite patterns and the verify model). A
+    capture must strip Fuse autosave snapshots from the RZX first, as auto does before verify
+    (midres.capture does; rzxplay desyncs on them otherwise).
+  - Where: the PNG and its `_layout.json` hold game graphics: specnext/reference/<game>/ only.
 - RECOLOUR - every engine with a colour sheet (Dean, 2026-10-14: "ALL games have this easy
   ability"). A repaint must not need a rebuild + re-verify: `python nexclash.py recolour
   <game>_sprites.nex PAINTED.png` writes `<game>_sprites_painted.nex` + its `_colours.json` in about
@@ -232,8 +233,7 @@ cases with a synthetic map per figure, a wrong check byte (must be ignored) and 
 full RZX run uses it.
 Also simulate the start-up tail: registers restored, no game memory touched.
 
-Long runs (the full `auto` with verification, selftest): start them with `setsid nohup ... &` and
-poll - a plain background job dies silently when the turn ends (LEARNINGS 2.6).
+Long runs (the full `auto` with verification, selftest): detached + polled, LEARNINGS 2.6.
 Iterate fast (BRIEFING C3b ITERATE): while developing use `--quick N` (a few hundred frames for a
 first check, 2000 before handing over) and the unit tests on 1-2 captured states (minutes). Run the full `auto` ONCE, on the build that goes to the user (Commando ran
 the ~55 min full check five or six times).
