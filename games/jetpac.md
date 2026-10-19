@@ -33,7 +33,14 @@ real recording is OPEN until one exists.
 - Other screen writers (scan, frames 0-530): 29023, 29119 (clear), 29171, 29060, 25038, 28829,
   28708/28717 - lasers, platforms, HUD/text: not classified yet.
 
-## Phase A question (sent 2026-10-19) - awaiting Dean
+## Dean's decisions (2026-10-19)
+- Split APPROVED: Jetman, aliens, rocket parts, fuel pod, bonus items, explosions -> sprites;
+  lasers, platforms, HUD, text -> ULA. Sprites in front of the ULA.
+- Colours: the game's own (the ULA ink each figure gets in play: Jetman/rockets white, aliens
+  their per-object attribute colour, etc.) - no painted sheet; the colours json is generated
+  from the game's attributes. Sheets regenerated in those colours before delivery.
+
+## Phase A question (sent 2026-10-19)
 Proposed: Jetman, aliens, rocket parts, fuel pod, bonus items, explosions -> sprites; lasers,
 platforms, HUD, text -> ULA. Depth: sprites over the ULA. Colours: Dean paints
 jetpac_PAINTING_SPRITES.png (sheets in specnext reference/jetpac/; built by the phase-A script,
