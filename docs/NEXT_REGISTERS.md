@@ -111,7 +111,7 @@ Z80N instructions worth using in future hooks (all 2 bytes unless noted):
 | ADD HL/DE/BC,nn | ED 34/35/36 lo hi | 16 | pointer + constant | 4 bytes |
 | PUSH nn | ED 8A hi lo | 23 | push a constant | operand is BIG-endian (only one) |
 | OUTINB | ED 90 | 16 | OUTI without decrementing B: pattern uploads to 0x5B with a fixed port | flags undefined |
-| PIXELAD / PIXELDN / SETAE | ED 94 / 93 / 95 | 8 each | ULA pixel address from D=y, E=x; next line; pixel mask (A = $80 >> (E&7)) | PIXELAD undefined for D >= 192; flags unchanged |
+| PIXELAD / PIXELDN / SETAE | ED 94 / 93 / 95 | 8 each | ULA pixel address from D=y, E=x; next line; pixel mask (A = $80 >> (E&7)) | PIXELAD undefined for D >= 192; flags unchanged. PIXELAD always returns a 0x4000-based address: retarget H for a screen or shadow copy elsewhere (OR $A0 for 0xE000, lemmings.info 'Advanced programming'); PIXELDN works at any base |
 | LDIX / LDIRX | ED A4 / B4 | 16 / 21 | copy skipping bytes equal to A (transparent blit) | flags change like LDI/LDIR - wiki note 2025, TESTED on core 3.02.x; the guide r3 and Ped7g's table still say unchanged (written before that test): assume CHANGED |
 | LDDX / LDDRX | ED AC / BC | 16 / 21 | like LDD/LDDR but DE INCREMENTS while HL decrements, skipping bytes = A: horizontally MIRRORED transparent copy of 8-bit pixels (Layer 2 figures) | flags as LDIX |
 | LDPIRX | ED B7 | 16 / 21 | pattern fill: source = (HL & $FFF8) + (E & 7), HL fixed, DE incrementing, skip bytes = A | 8-byte aligned table; flags untested on 3.02 (the 2025 test did not cover it): assume changed |
