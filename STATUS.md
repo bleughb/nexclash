@@ -10,7 +10,8 @@ facts: games/tid_engine.md). MD5s: docs/VERIFICATION.md.
 |---|---|---|---|---|---|
 | Chuckie Egg | chuckie (chuckie_egg.md) | Chuckie_Egg_sprites.nex bfad6be1 | RZX IDENTICAL, unit PASS | untested | hardware test |
 | Rainbow Islands (128K) | rainbow (rainbow_islands.md) | rainbow_sprites.nex c5e1823d (no raster wait, music one AY tick per interrupt, faster tiles + OUTI/0x57 commit) + rainbow_sprites_diag.nex 71222105 | RZX IDENTICAL x2, AY chip = original per tick, unit PASS (19 object controls + AY + commit controls) | bddea69e smooth; bffd9357: random corruption / slowdowns; e50733b2 never tested; c5e1823d untested | hardware test c5e1823d (speed, music, tearing; diagnostic build if slowdowns remain); layer B (dark-blue partial tiles); later-islands RZX |
-| Everyone's a Wally | wally (everyones_a_wally.md) | wally_sprites.nex f7605489 | RZX IDENTICAL, unit PASS | boots and runs | detailed checklist |
+| Everyone's a Wally | wally (everyones_a_wally.md) | wally_sprites.nex f7605489 | RZX IDENTICAL, unit PASS | boots and runs | frozen: superseded by everyones_a_wally_updated |
+| Everyone's a Wally (updated) | wally2 (everyones_a_wally_updated.md) | everyones_a_wally_updated_sprites.nex 31c3ef13 (every figure - gang, masked and OR objects - on a double-buffered Layer 2 in plot order; one colour per figure, black 4-neighbour outline; default colours (nothing painted yet); recolour; altrom + pages 26/27) | RZX IDENTICAL (registers, memory, Layer 2 image at every commit vs the model), 930 + 921 graphic + joined / commit / restore unit cases, negative control PASS | untested | hardware test (checklist); Dean paints the PAINTING_SPRITES sheet; longer RZX (16 B / 7 C callers not reached) |
 | Spellbound Dizzy (Dizzy V) | dizzy5 (spellbound_dizzy.md) | Dizzy_V_sprites.nex 1f33c467 (altrom) | verified (2 RZX) | untested | hardware test |
 | Prince of the Yolkfolk (Dizzy 6) | tid_mirror (prince_of_the_yolkfolk.md) | Dizzy6_sprites.nex f491e1f6 (slot1) | verified (try1.rzx + mirror selftest) | untested | hardware test; mirror-room RZX |
 | Fantasy World Dizzy | tid generic (fantasy_world_dizzy.md) | fantasy_world_dizzy_sprites.nex 9182f2f8 (altrom) | verified | untested | hardware test |
@@ -45,5 +46,5 @@ Platform on hardware: alt ROM ($8C) PASS 2026-09-27; plain 48K and 128K conversi
 9. Not done: run `selftest.py --affected` automatically on each PR (GitHub Action with the
    private references via a secret); today a maintainer runs it before merging.
 10. Recolour for every game (Dean, 2026-10-14; PLAYBOOK 3b "RECOLOUR"): shared command, guard and
-   skill done; engines with recolour: dizzy1. Midnight Resistance has the sheet but no recolour
+   skill done; engines with recolour: dizzy1, wally2 (Everyone's a Wally updated). Midnight Resistance has the sheet but no recolour
    (a repaint = rebuild + verify); the other engines have neither sheet nor recolour yet.

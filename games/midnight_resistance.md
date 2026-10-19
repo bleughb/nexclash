@@ -181,8 +181,9 @@ touches slots 2, 4, 5 (full-RZX isr slot scan). Interrupts stay ON in every hook
   byte that does not match (other graphics at that address in a later level) leaves the defaults.
   The mask-only (flashing) image is never mapped.
 - Two sheets (Dean, 2026-10-14): `python -m nexclash.midres sheet RZX RZX --z80 Z80 -o
-  midnight_resistance` -> midnight_resistance_PAINTING_SPRITES.png (+ _layout.json; every graphic
-  once) and midnight_resistance_REFERENCE_ALL_SPRITES.png (every figure whole); `colours
+  midnight_resistance` (autosave snapshots in the recordings are stripped first, as auto
+  does; until 2026-10-14 the command desynced at RZX frame ~250 on both recordings) ->
+  midnight_resistance_PAINTING_SPRITES.png (+ _layout.json; every graphic once) and midnight_resistance_REFERENCE_ALL_SPRITES.png (every figure whole); `colours
   midnight_resistance_PAINTING_SPRITES.png` reads the painting back. Both drawn with the current
   colours file, so the next painting continues from Dean's first.
 - Sheet sources: every recording given (`sheet RZX RZX ...`, plots only inside the game loop / shop
@@ -223,10 +224,6 @@ also with a repainted colour map; unit + interrupt + exits + full table + flippe
 - Converted figures appear when the commit runs (after the screen copy), not as the copy passes.
 
 ## Open
-- `python -m nexclash.midres sheet RZX RZX --z80 Z80` fails at RZX frame 251 ("7 port reading(s)
-  left", midres next_frame), also on main (2026-10-14, SkoolKit 10.1): the painting sheet in specnext
-  was redrawn from its layout instead (the old code reproduces it pixel for pixel); the reference
-  sheet still shows whole grey boxes.
 - The second RZX covers the shop and more of level 1 (0x89AB object, player add-on, more poses)
   but not every weapon / collectable / level 2: still unseen callers 9AC7 / 9AD7 / 9AF1 / A142 /
   9D67 and 7E06 (static scan; converted, proven by derived states only). A level 2 RZX (Dean)
