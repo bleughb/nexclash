@@ -40,6 +40,16 @@ real recording is OPEN until one exists.
   their per-object attribute colour, etc.) - no painted sheet; the colours json is generated
   from the game's attributes. Sheets regenerated in those colours before delivery.
 
+## Colours (game's own; measured at 29160 = LD D,(IX+3), the attr 29135 paints after each draw)
+- Jetman 71 (bright white), rocket parts 71 (filled: 67 bright magenta, 26524), aliens 2-5 by
+  object slot (27204: ((IX>>3)&3)+2 -> red, magenta, green, cyan), explosion cycles 66/67/70/71.
+- Items (code, 25794 table by (IX+6)&15): offset 32 -> 70 yellow, 34/36 -> 69 cyan (0 when
+  (24012)&31 >= 24: flashing), 38 -> 68 green, 40 and fuel (24) -> 25870: ((24012)>>2)&7 | 64
+  (cycling bright colour). Fuel/items never reached in a free run: from code, not measured.
+- The engine applies the object's (IX+3) ink per sprite (palette offset) at run time, so
+  per-slot and cycling colours stay the game's. Sheets show the first/default colour.
+- Sheet builder: tools/prototypes/jetpac_sheets.py (moves into nexclash/jetpac.py in phase B).
+
 ## Phase A question (sent 2026-10-19)
 Proposed: Jetman, aliens, rocket parts, fuel pod, bonus items, explosions -> sprites; lasers,
 platforms, HUD, text -> ULA. Depth: sprites over the ULA. Colours: Dean paints
