@@ -32,6 +32,10 @@ block (row 5) its detail byte in hex. Border green = nothing failed, red = somet
 Board results:
 - v1 (2026-10-20, Dean): T1-T3 green, T4 white, T5 + T6 red. T5 / T6 ran right after T4: suspected
   cause, T4's never-acknowledged interrupt blocks the next ones (v2 runs T4 late and adds T7).
+- v2 (2026-10-20, Dean, board photo): ALL PASS, border green. Details T1-T7: 01 01 00 01 06 06 06.
+  T4 = 01: a handler ending EI;RET runs once and no interrupt comes after it - RET does NOT
+  acknowledge, and the unacknowledged interrupt BLOCKS every later one (so v1's T5 / T6 saw 0).
+  T7 = 06: one dummy RETI with interrupts off clears it. (6 in "5 frames": the count starts mid-frame.)
 
 If the screen stays black with a black border after a few seconds, a test hung: note the border
 colour and which blocks are drawn (none are drawn until the end) and report it.
