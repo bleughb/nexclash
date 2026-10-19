@@ -125,6 +125,18 @@ BRIEFING - with its reason.
   video line = NextReg $1E (bit 0 = bit 8) / $1F, read via OUT 0x243B (select) + IN 0x253B; line
   0 = first ULA pixel row, play area rows 16-175 in Rainbow; the ULA interrupt is near line 248.
   Hook work that delays a commit into the visible area tears even if the original never did.
+- Never WAIT for the beam inside a limiter-paced game frame (interrupts off): the wait is paid in
+  every frame whose render ends mid-screen. Rainbow 2026-10-19: half of all renders, 3.4 ms average,
+  10 ms worst, typical frame 17 of 20 ms. Defer the commit to the next interrupt instead (line 248,
+  bottom border): the same displayed frame as a commit at the bottom of the play area, outside the
+  game frame; commit at once only when the frame will miss that interrupt anyway (or has just
+  started after it) and the commit fits before line 16 (311 lines at 128K timing). Drop a deferred
+  commit when a non-play screen came in between, or its sprites come back.
+- Ports 0x5B (patterns) and 0x57 (attributes) decode the LOW byte only, so OUTI works with any B:
+  64 pattern bytes by unrolled OUTI (16 T) instead of OTIR (21 T) with no Z80N opcode, and a sprite's
+  5 attributes by 0x303B = sprite + 5 x OUTI to 0x57 instead of $34 + 5 NEXTREGs. 0x303B also moves
+  the pattern pointer: write it for the attributes only after that sprite's pattern upload. No $09
+  lockstep needed (that only couples $34). Rainbow 2026-10-19 (simulated; hardware to confirm).
 - Tilemap (layer 3) for cell-aligned objects: bank 7 via $6E/$6F bit 7 (first 8K only = Next page
   14; needs a recent core); 2-byte entries give a palette offset per tile: put a variable colour in
   the offset (pixel value fixed in the tile) so colour changes cost no tile rebuild. Draws under the
@@ -138,6 +150,12 @@ BRIEFING - with its reason.
   (`nextreg 0xC8,1`); writing 0 does nothing, and in hardware IM2 mode with interrupts on writes
   do not clear at all (guide r3 Interrupts). Hooks entered from a ROM stub inside the
   game's handler must not use the game's stack: jump to the hook page's code and jump back.
+- A diagnostic must not be able to lie: clear NextReg $C8 bit 0 (ULA interrupt seen) at a frame start
+  only once the INT signal has dropped (poll $22 bit 7) and READ IT BACK; report "unknown" when the
+  clear did not take. Rainbow 2026-10-19: the diagnostic showed "overrun" yellow solid on screens
+  whose frames do almost nothing - most likely the clear ran while the frame's own interrupt was
+  still asserted (hypothesis; the read-back build tells). Keep an alarm colour up until the next
+  frame start; another colour written in between (a deferred commit's band) hides it on video.
 - Never put hook CODE at 0x3D00-0x3DFF in an alt ROM / slot-1 page: Commando 541e34e2 crashed at
   its first figure on hardware and in CSpect with code there, and ran once the code moved out
   (tables stayed there). Probable cause: the DivMMC (TR-DOS) automap on an instruction fetch at
@@ -152,7 +170,7 @@ BRIEFING - with its reason.
   (round robin); never share an image that was masked (depth). Negative control: a lookup that
   ignores one key field must fail the pixel check.
 
-## 1.5 Spectrum Next: faster sprite / tilemap I/O, DMA, copper, raster (DOCUMENTED, none used yet)
+## 1.5 Spectrum Next: faster sprite / tilemap I/O, DMA, copper, raster (DOCUMENTED; used so far: port 0x57 + OUTI in Rainbow, 2026-10-19)
 Researched 2026-10-19 (guide r3 chapters Sprites / DMA / Copper / Interrupts, core 3.01.09
 nextreg.txt + ports.txt + changelog, KevB's copper timing notes in github.com/varmfskii/zxnext_code
 zx_next_notes/copper; github.com/stevemonks/ZXSpectrumNextMachineCodeGuides;
@@ -510,6 +528,15 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   handler DECs B and C and sets carry): an interrupt inside a hook would corrupt the hook. Check
   which handler is installed at EVERY hook site in the recording (verify asserts it) - the in-game
   one here is the ROM's 0x0038, which keeps every register.
+- Turbo (28 MHz frame + limiter) compresses whatever the game spreads across its frame. A music
+  player ticked several times per game frame (Rainbow: 3, i.e. ~50 Hz at 3.5 MHz) then plays its
+  ticks within a few ms and is silent for the rest of the frame: choppy music, and every overrun
+  frame a hitch. Do not move the player (its timing against the game's sound requests is game
+  state): capture the chip writes at the player's own output routine (Rainbow: one routine for
+  every AY register write) into a per-tick queue and send one tick per interrupt. Memory and logic
+  stay identical; verify the chip state after each tick sent against the original's. Profile
+  before choosing Next hardware: Rainbow's game logic was 1.2 ms of a 9 ms frame - the hooks,
+  not the game, were the cost, so hardware scrolling would not have helped.
 
 ## 2.2 Memory proofs (analysis method)
 - Prove free memory with an access scan over the recording, not by zero-check.
@@ -763,6 +790,9 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   (0 PASSED)" as a pass: the dedicated Dizzy 1 / Treasure Island builders are not verified by
   any run, only their plain tail is. Zero PASSED is not a verification - count it, and let the
   record say which games are not differentially verified (verify.differential false).
+- A check whose failure key does not END with '!' can never fail: auto / selftest test
+  `k.endswith('!')`. Four Rainbow unit checks were written 'FAIL! <detail>' (found 2026-10-19 when a
+  new check failed silently). Write '<detail> FAIL!'; read the failure list, not just 'PASSED'.
 - Hand-kept duplicate lists drift (selftest INPUTS / EXPECTED, STATUS, VERIFICATION, verified.json
   all held the same MD5s). Keep one source (the record) and generate the rest.
 

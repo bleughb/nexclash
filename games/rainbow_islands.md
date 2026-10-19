@@ -1,6 +1,6 @@
 # Rainbow Islands (Ocean, 128K) - engine `rainbow`
 EXCLUDED from automatic selftest checks (Dean, 2026-10-13: too slow, being reworked): run it with `selftest.py --game rainbow [--verify]`.
-Updated 2026-10-12. Engine `rainbow`. Status: RZX-verified identical; RUNS ON HARDWARE (Dean,
+Updated 2026-10-19. Engine `rainbow`. Status: RZX-verified identical; RUNS ON HARDWARE (Dean,
 2026-09-28). 2026-09-29: boss-spider fix + pattern-upload optimisation (hardware: runs, better;
 busy scenes slower than the original). 2026-09-30: pattern cache 78b9ed99 (hardware: no visible
 gain, slow when moving with enemies). 2026-10-01: SPEED BUILD - direct conversion + 256K
@@ -14,8 +14,9 @@ COMMIT ab97c76a (hardware 2026-10-11: rainbows with black edges/blocks, fruit an
 squares - analysis: codes 1-14 are RAINBOW pieces, the collectables are codes >= 15). 2026-10-11:
 OBJECTS ON THE TILEMAP bffd9357 (below; hardware 2026-10-12: black lines around collectables not
 wanted; sprite corruption and slowdowns seemingly at random). 2026-10-12: COLLECTABLES WITHOUT
-BORDER + DIAGNOSTIC BUILD e50733b2 / diagnostic 8f25bc61 - hardware test pending. Needs a core with
-the tilemap in bank 7 (Dean: most recent core).
+BORDER + DIAGNOSTIC BUILD e50733b2 / diagnostic 8f25bc61 - not hardware-tested (superseded).
+2026-10-19: NO RASTER WAIT + MUSIC QUEUE + FASTER TILES AND COMMIT (below) c5e1823d / diagnostic 71222105 - hardware test
+pending. Needs a core with the tilemap in bank 7 (Dean: most recent core).
 
 Reference: rainbow.z80 (4c98b980), rainbow.rzx (55046d18), rainbownew.rzx (47bb2b16) in the
 private repo. 2026-10-12: the repo rebuilds e50733b2 / 8f25bc61 / plain 7ac543fb byte-identical (boot OK);
@@ -33,12 +34,19 @@ and through their gaps; filling enclosed gaps black is the alternative, not chos
 of the scenery and behind all figures;
 background never removed; steady speed (frame limiter); object handling automatic with manual
 overrides (profile `objects`). Dean has the most recent core (tilemap in bank 7).
+2026-10-19 (Dean asked for speed + "sound slowdowns"; plan agreed in chat): the commit never waits
+for the beam (at the next interrupt instead); music = one AY tick per interrupt; faster tile
+composer; Next techniques from his research (OUT/OUTI sprite writes). No copper (CPU/copper
+NextReg-pair conflict, LEARNINGS 1.5). Tile-build cap per render ((b): items briefly on the ULA)
+offered, not chosen.
 
 ## Deliverables
 | File | MD5 |
 |---|---|
-| rainbow_sprites.nex (collectables without border + everything below) | e50733b2b7e2db32f004c1436a2e0461 |
-| rainbow_sprites_diag.nex (the same + border colours: blue = commit waits for the beam, red = tile built, yellow = frame overran) | 8f25bc6146b9d7f7ae1f12a1d227447e |
+| rainbow_sprites.nex (the same as c5e1823d; diagnostic code moved to the alt ROM) | fe34236c476290cfec10183ef90d6141 |
+| rainbow_sprites_diag.nex (blue = deferred commit, red = tile built, yellow = overrun, magenta = flag unreliable; colour held to the next frame) | 60bda66413c381ba918bf39e7b70b5b7 |
+| (no raster wait, music queue, faster tiles + commit; diagnostic 712221059d9351bece24629e3ae7a77d - its yellow was unreliable) | c5e1823de3a66b3c468961ebb72d383d |
+| (collectables without border; diagnostic 8f25bc6146b9d7f7ae1f12a1d227447e) | e50733b2b7e2db32f004c1436a2e0461 |
 | (objects on the tilemap, black border on every object) | bffd9357d772e2df975ec5f40dc9e4cb |
 | (opaque-item base tile + raster-synced commit; rainbows as sprites) | ab97c76ae0edd3937e3149b0dac5e52f |
 | (collectables as sprites; HW: tearing, item squares, black in rainbows) | eb9836fe60a70df02087920603c673b4 |
@@ -85,7 +93,8 @@ catalogue.json. Page keys go into the class-colours map.
 ## Next resources used
 | Resource | Use |
 |---|---|
-| Alt ROM image 1, 0x386E-0x3903 | entry/exit stubs + register block (all $FF in the 48K ROM; game never reads it) |
+| Alt ROM image 1, 0x386E-0x3B05 (+ register block) | entry/exit stubs; since 2026-10-19 also code that never remaps slot 1: render-end control s_re / rsafe, interrupt work s_int / dcom, the AY queue (s_ay, s_ps, aywr, ayopen, aytick, ayplay, ayslot), x8bld (all $FF in the 48K ROM; game never reads it) |
+| Bank 1 sites (music) | 0xD4DE `21 59 5C` -> JP e_ps (AY player entry = a tick starts); 0xD6D4 `01 FD FF` -> JP e_ay (the one AY register-write routine: A = register, D = value) |
 | RAM page 24 (bank 12) | alt ROM copy source (stub fills alt ROM at boot) |
 | RAM page 26 (bank 13), slot 0 during hooks | state 0x0000 (vars to 0x7F, PBUF 0x78), stack down from 0x0100, code 0x0100-0x0CF5, conversion buffers G 0x0D00 / MG 0x0E00 (row*6+col; code blocks in their free tails: 0x0D60-0x0DAF ocls/ocell/ocrow/oinkx, 0x0E60-0x0EDD raster wait + tilemap commit), bit-reversal table 0x0F00, nibble table 0x1000, class table 0x1200, plotter info 0x1300-0x1AFF (8 pages by IXl), CLIST 0x1B00, ATTRB 0x1C80, X2 0x1F00 (2 bits -> 2 nibbles), BITS 0x1F08, code block 0x1F10-0x1FBA (tile drawing odraw/cpix) |
 | RAM page 27 (bank 13 upper, in the .nex), slot 1 | plotter layout tables 0x2000 (1812 bytes, from profile `plotters`); OCCM 0x27A0 (occupied cells per cell row, 22 x 32-bit masks); per back-buffer cell (704 each): TILES 0x2800 (map tile), OBJO 0x2B00 (opaque object code, FF = cell left as drawn), OBJM1/OBJM2 0x2E00/0x3100 (masked object codes as nibbles in draw order), FLAGS 0x3400 (bit 7 map tile known, 6 fixed ink, 5 item group, 4 rainbow group, 0-3 remembered item ink), CTILE 0x3700 (tile assigned this render); tile cache KEYS 0x3A00 (176 x 4), STAMP 0x3D00 (176); RCNT 0x3DC0 (22); classes MCLASS 0x3DE0 (16) / OCLASS 0x3E00 (256) and background override BGOVR 0x3F00 (256), all from the profile `objects` section |
@@ -94,7 +103,11 @@ catalogue.json. Page keys go into the class-colours map.
 | RAM page 29, slot 2 during the register run | canvas the original plotter draws into (discarded) |
 | RAM page 30 (not in the .nex), slot 1 | overflow entries (this render only) |
 | RAM pages 32-63 (256K, not in the .nex), slot 1 during lookup | pattern store: 256 sets x 4 ways x 256 bytes; garbage at boot is harmless (a hit needs IX + carry + the whole stream to match) |
-| NextReg $1E/$1F (via ports 0x243B / 0x253B) | active video line, read by the raster wait before the commit |
+| NextReg $1E/$1F (via ports 0x243B / 0x253B) | active video line, read once at the render end (rsafe): commit at once or at the next interrupt |
+| Page 26 0x0080-0x0088, 0x0EF0-0x0EF9, 0x1FC0-0x1FFF | V_PEND (commit pending), V_N58 ((58850) at the render end), AY queue state V_AYR/N/O/W, V_AYSP, V_X8; PBUF (object rows +1..+8, +0/+9 zero); AYQ (4 ticks x 16: R0-R13, mask) |
+| Page 28 0x0C00-0x0FFF (slot 2 at render start) | X8T: nibble-expansion tables for the tile composer (4 x 256), built at the first render (page 28 is not in the .nex) |
+| Ports 0x303B / 0x5B / 0x57 | commit: 0x303B = pattern slot, 64 pattern bytes by OUTI to 0x5B; 0x303B = sprite, 5 attribute bytes by OUTI to 0x57 (low-byte decoded ports: B is free). No NextReg $09 lockstep |
+| AY ports 0xFFFD / 0xBFFD | queued player ticks sent one per interrupt (s_int); registers >= 14 straight through |
 | NextReg $07 | 3 (28 MHz) for the game frame (limiter), 0 on handler exit |
 | NextReg $51/$52/$53 (MMU1-3) | store / layout / object pages while a hook works ($51 page 27, $52 page 28, $53 page 14), back to $FF / 10 / 11 before returning |
 | NextReg $6B/$6C/$6E/$6F, $1B/$1C, $4C, $2F-$31 | tilemap: on ($6B = 0x81) at each render-end commit, off (0) on non-play screens and when a render's scroll is not a multiple of 8; clip x 16-143, y 48 .. 47 + (58850) |
@@ -107,6 +120,25 @@ catalogue.json. Page keys go into the class-colours map.
 
 ## Hardware status
 - Runs on the Next (2026-09-28); limiter + commit build bddea69e runs smooth (Dean).
+
+## Hardware checklist - no raster wait + music queue c5e1823d (2026-10-19)
+1. Speed: game pace steady everywhere incl. the bonus scene (60+ items) and busy rounds; compare
+   with the plain rainbow.nex at the start of round 1 (same pace).
+2. Music: steady tempo, notes and effects smooth (no bursts / stutter), also while scrolling with
+   many enemies; sound effects (jump, rainbow, pickups) still play. Death / round end silence as
+   the original.
+3. Tearing: none on figures or objects (the commit now happens at the interrupt, bottom border).
+   Watch the top play rows in very busy scenes (80+ sprites: the commit then runs into line 16).
+4. Objects / collectables / rainbows as in e50733b2 (no border on collectables, border on rainbows);
+   objects move with the scenery, no lag of a frame against the background while scrolling.
+5. Death / continue / round end / game over / title: no sprites or objects left over.
+6. DIAGNOSTIC build (rainbow_sprites_diag.nex): border BLUE band = the deferred commit at the
+   interrupt (expected most game frames, short, at the TOP of the border); RED = tiles being built;
+   YELLOW = the frame overran; MAGENTA = the frame-start clear of the overrun flag did not take (the
+   reading proves nothing that frame). Yellow / magenta stay until the next frame start. Film it if
+   slowdowns remain.
+7. The earlier random corruption (bffd9357): still there? Where, which border colour.
+8. Faults: Fuse "Record from snapshot" on rainbow.z80, autosave off, send the RZX (+ where).
 
 ## Hardware checklist - collectables without border + diagnostic build e50733b2 / 8f25bc61 (2026-10-12)
 1. Collectables (fruit, cakes, flowers, stars): own colour, NO black line; the background shows around
@@ -234,8 +266,9 @@ build).
   band's screen address in (59522).
 
 ## Code (additive)
-- nexclash/rainbow.py: Config (colours/tables), RainbowPatch, boot_check (128K), verify,
-  unit_tests (+ obj_unit_tests), auto, is_rainbow; object model: ObjShadow, object_tables,
+- nexclash/rainbow.py: Config (colours/tables), RainbowPatch (bank-0 sites + bank-1 music sites
+  `sites1`), boot_check (128K), verify (beam model, deferred commits, AYModel), unit_tests (+
+  obj_unit_tests, ay_unit_tests), auto, is_rainbow; object model: ObjShadow, object_tables,
   obj_build, obj_compose, obj_fix, obj_truth, tile_row, drop_tile, commit_errors.
 - nexclash/rainbow_objects.py: object/tile catalogue for the profile `objects` section.
 - docs/profiles/rainbow_islands.json: signature (59504-59521), hook bytes (rom, page, page2-4,
@@ -245,6 +278,57 @@ build).
   labels). 2026-10-12: reassembled = profile hex for all six blocks and 56 symbols.
 - nexclash.py: dispatch in cmd_auto, flags --ink/--outline/--class-colours; convert --tail.
 - z80tonex.py: 128K tail guard.
+
+## No raster wait + music queue + faster tiles and commit (2026-10-19, c5e1823d)
+Profile first (rainbow.rzx 2900 frames, 838 game frames, simulated at 28 MHz, beam modelled from the
+frame start at the interrupt, line 248): game itself 1.2 ms avg / 2.4 max per game frame; hooks:
+pieces 2.0 / 9.8, render start 2.3 / 10.1, band ends 1.4 / 4.9, render-end commit 2.0 / 4.7, and the
+RASTER WAIT 3.4 avg / 10.2 max (in 439 of 838 frames: renders mostly end with the beam in the play
+area) - typical frame ~17 ms of the 20 ms budget before real-hardware wait states. Hardware
+scrolling would not help (the blit is inside the game's 1.2 ms).
+- COMMIT (s_re, alt ROM): never waits. rsafe reads the line L once: commit at once only when L >=
+  240 (the frame will miss the interrupt at 248, or the render ended in the first ~4 ms after it) AND
+  L + sprites <= 307 (311-line 128K frame: the commit fits before line 16; one line per sprite + 17 for
+  the map + margin); otherwise V_PEND = 1 and s_int commits at the next interrupt (line 248, bottom
+  border) at 28 MHz - the same displayed frame as a commit at line 176, outside the game frame.
+  dcom drops a pending commit when a non-play screen came after the render ($7F set by the
+  sprites-off stubs). (58850) is captured at the render end (V_N58) for the clip. Pieces are
+  committed top to bottom, so a commit the beam catches up with has done the top rows first.
+- COMMIT I/O: patterns by OUTI x 64 (8 x 8 unrolled; 0x5B decodes the low byte, so B is free) instead
+  of OTIR; attributes by 0x303B = sprite (bits 6:0; the pattern upload is done) + 5 x OUTI to 0x57
+  instead of $34 + 5 NEXTREGs. No $09 lockstep (it would also be needed only for $34 -> 0x57).
+- MUSIC: the game ticks its AY player (bank 1 0xD4DE via trampoline 0x5C70) up to 3 times per game
+  frame (65225, 65249 via 5C61, 65255): about 50 Hz at 3.5 MHz, but bunched into a few ms at 28 MHz
+  then ~50 ms of nothing. All its register writes go through 0xD6D4 (LD BC,FFFD / OUT / LD BC,BFFD /
+  OUT / RET; also the silence routine 0xD6F7). Hooks: 0xD4DE opens a tick slot, 0xD6D4 stores the
+  write in the slot (registers >= 14 straight out); s_int sends the oldest tick each interrupt (a
+  second one when 3+ are queued); a full queue (4) sends its oldest at once. The player still runs
+  exactly where it did - game logic and memory untouched; the player has no IN / alternate
+  registers / IY (checked by disassembly). In the verifier only one interrupt per game frame
+  exists (the RZX's), so most ticks go out early there - the unit test covers the 3-per-frame case.
+- TILE COMPOSER (odraw): nibble-expansion tables X8T (page 28, built at the first render) replace the
+  bit loop: out = old & ~(m|b) | b & 0x11 | ink & m per byte, empty rows skipped. Same tiles,
+  11.4k -> 7.0k T for a dense one-object tile (3.4k fixed cost per tile remains: clear + passes).
+- Verifier: beam model (frame start = line 248, then patched T); commits checked where they happen
+  (render end or the next 65172 event), dropped commits checked; AYModel = the queue + the
+  original's chip state (after each tick sent the chip = the original's registers at that tick's
+  close); bank-1 sites with entry-point proofs. Failure keys now always END with '!' (four unit
+  checks had 'FAIL! detail' keys that the '!' suffix test could never see).
+- Dean's video of diagnostic 71222105 (2026-10-19): blue band short, at the top of the border
+  (deferred commit at the interrupt, done well before line 16). YELLOW in long stretches - solid on
+  the ROUND 1 READY screen (frames that do almost nothing) and in calm play mostly where no blue
+  band shows: taken as a FALSE overrun signal - probably the frame-start clear of $C8 bit 0 ran while
+  the ULA INT was still asserted (frames without a deferred commit reach dfst within microseconds of
+  the interrupt), so the flag set itself again. Hypothesis, not confirmed. Diagnostic since then:
+  dfst (now in the alt ROM, with dfend) waits up to 255 polls for $22 bit 7 = 0, clears $C8, reads it
+  back (V_CLRF); dfend shows yellow only when that clear took, magenta otherwise; a deferred commit
+  restores the frame's colour (V_BCOL) instead of black. The collected-diamond row below the play
+  area in the video is the game's own HUD.
+- Not done: tile-build cap per render (offered); DMA (pattern / map copies; must stay clear of the
+  interrupt); copper (no); render start fixed cost per tile.
+- Approximation: the verifier's beam model runs 1792 T (224 x 8) per line and wraps at 312 lines
+  (48K timing); 128K timing is 228 T x 311 lines. It only picks which commit path each render takes
+  in the replay (both are checked); the asm's room test uses 311 lines.
 
 ## Collectables without border + diagnostic build (2026-10-12, e50733b2 / 8f25bc61)
 - Dean: black border on rainbow pieces, characters and creatures only. Profile `objects`: opaque
@@ -464,6 +548,15 @@ drawn on top.
   cache (hits 48-67%: vertical scrolling changes every piece's band split -> misses).
 
 ## Verification (software)
+- No raster wait + music queue + faster tiles / commit c5e1823d / diagnostic 71222105 (2026-10-19,
+  RELEASE): rainbow.rzx 7178 frames, 11865 pieces, 2212 commits (716 at once / 1499 deferred / 3
+  dropped on a non-play screen), 34673 AY writes, 6681 ticks queued, 36119 object tiles -> IDENTICAL;
+  rainbownew.rzx 11799 frames, 29314 pieces, 3525 commits (170 / 3360 / 4), 16473 AY writes, 10757
+  ticks, 139988 object tiles, overflow entries 2 -> IDENTICAL; chip = original after every tick sent;
+  diagnostic build IDENTICAL on the first 1506 frames; unit tests PASS (19 object controls + AY queue
+  1040 ticks + its control + commit at once / deferred + its control); boot OK all three .nex. Whole
+  game frame max 18.1 / 22.9 ms, frames over 20 ms 0 / 2 (e50733b2: max 21.4 / 24.8, 9 / 16 - and
+  those figures did not yet include the raster wait, avg 3.4 ms).
 - No-border + diagnostic build e50733b2 / 8f25bc61 (2026-10-12, RELEASE): rainbow.rzx 7178 frames, 11865 pieces,
   26528 cell hooks, 36119 object tiles -> IDENTICAL; rainbownew.rzx 11799 frames, 29314 pieces, 49707
   cell hooks, 139988 object tiles -> IDENTICAL; diagnostic build IDENTICAL on the first 1506 frames of
@@ -546,8 +639,8 @@ drawn on top.
    all have bit 0 = 0, so the picture is otherwise unchanged). Alternative for "paper made
    transparent": ULA paper palette entries (16-31) are separate from inks, so the one paper colour
    to see through can be set equal to the global transparency $14 without touching inks.
-1. Revisions/optimisations: wait for Dean's list; re-verify both RZX, compare MD5s.
-   Candidates from the 2026-10-19 research (LEARNINGS 1.5; all documented, untested; each needs the
+1. Revisions/optimisations: 2026-10-19 build done: no raster wait (instead of (d)), OUT/OUTI commit
+   ((a) without lockstep), faster tile composer, music queue. Remaining candidates from the 2026-10-19 research (LEARNINGS 1.5; all documented, untested; each needs the
    simulator taught first and a hardware A/B):
    (a) piece loop: 5 NEXTREGs + $34 per sprite (~180 T) -> simplest: NextReg $09 bit 4 (lockstep)
        in setup, keep the loop, replace the 5 NEXTREGs by OUT (C),r to port $57 (~77 T per sprite;

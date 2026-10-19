@@ -36,7 +36,7 @@ are the records' canonical ones (`nexclash.py auto` names its outputs after the 
 Every game's verified outputs (`selftest.py` rebuilds them; the record says how):
 
 - Chuckie Egg (chuckie_egg): `chuckie_egg.nex` ec0df71e70fae35836eaed521f300777, `chuckie_egg_sprites.nex` bfad6be1e7c8a2c797a6242d7f339e35; verified 2026-10-13
-- Rainbow Islands (128K) (rainbow): `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_sprites.nex` e50733b2b7e2db32f004c1436a2e0461, `rainbow_sprites_diag.nex` 8f25bc6146b9d7f7ae1f12a1d227447e; verified 2026-10-13
+- Rainbow Islands (128K) (rainbow): `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_sprites.nex` fe34236c476290cfec10183ef90d6141, `rainbow_sprites_diag.nex` 60bda66413c381ba918bf39e7b70b5b7; verified 2026-10-13
 - Everyone's a Wally (wally): `wally.nex` 2e615b3e7ae995e6d6a6ed9e3f586d4d, `wally_sprites.nex` f7605489c3af55b8e8c6a580c1c26150; verified 2026-10-13
 - Everyone's a Wally (updated) (everyones_a_wally_updated): `everyones_a_wally_updated.nex` 2e615b3e7ae995e6d6a6ed9e3f586d4d, `everyones_a_wally_updated_sprites.nex` 31c3ef131330d26238b01a69b35c647e; verified never
 - Spellbound Dizzy (Dizzy V) (dizzy5): `dizzy5.nex` c99189f3274a4803f0b25b0217206bdb, `dizzy5_sprites.nex` 1f33c467e6aa55585cea79cfbb24bcfe, `dizzy5_sprites.nex --strategy slot1` a59c1fd91ec5c32e549526dbc08d2e69 (re-checked 2026-09-28; 00a7c496... had an EMPTY font page: dialogue text blank on hardware); verified 2026-10-13
@@ -80,6 +80,33 @@ driven by the records. No game output changed.
 - `--outline transparent` on rainbow.rzx - IDENTICAL (outline pixels counted as expected drops)
 - unit tests: edge columns, last slot, passthrough at 32 pieces, negative control, class colour - PASS
 - Hardware: runs (Dean, 2026-09-28); detailed visual checklist results not reported
+
+## Rainbow Islands - 2026-10-19 no raster wait + music queue + faster tiles and commit
+RELEASE level (`auto rainbow.z80 --rzx rainbow.rzx --rzx rainbownew.rzx --no-record`). Changed:
+rainbow.py, rainbow_hooks.asm, rainbow_islands.json (hook hex, symbols); two new bank-1 sites (music).
+- `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175 - UNCHANGED, boot sim OK
+- `rainbow_sprites.nex` c5e1823de3a66b3c468961ebb72d383d - boot sim OK
+- `rainbow_sprites_diag.nex` 712221059d9351bece24629e3ae7a77d - boot sim OK
+- rainbow.rzx: 7178 frames, 11865 pieces; commits 2212 checked where they happened (716 at the render
+  end, 1499 at the next interrupt, 3 dropped after a non-play screen); 34673 AY writes, 6681 player
+  ticks queued, chip = the original's registers after every tick sent; 36119 object tiles - IDENTICAL.
+- rainbownew.rzx: 11799 frames, 29314 pieces; commits 3525 (170 / 3360 / 4); 16473 AY writes, 10757
+  ticks; 139988 object tiles; overflow entries 2 - IDENTICAL.
+- Diagnostic build: first 1506 frames - IDENTICAL.
+- Timing (simulated, 28 MHz, beam modelled from the interrupt at line 248): whole game frame max
+  18.1 / 22.9 ms, frames over 20 ms 0 / 2 (e50733b2: 9 / 16 before its raster wait, avg 3.4 ms, was
+  counted). Render-end hook avg 0.45 / 0.08 ms (commit mostly at the interrupt).
+- New checks: render end commits at once exactly when the line read is >= 240 and line + sprites
+  <= 307, else defers with no sprite / tilemap / pattern writes; the deferred commit = the staged
+  state at the next interrupt, or dropped (no writes) after a non-play screen; bank-1 sites: patched
+  = original (registers incl. F, memory), entry-point proofs for both; AYModel (queue + chip vs the
+  original's chip state).
+- New unit tests: AY queue against the model on 400 frames of play-shaped sequences (1040 ticks
+  sent, overruns, writes outside a tick, registers >= 14, full queue) + control (value OUT removed:
+  detected); commit at once / deferred at lines 100 / 175 / 15 / 176 / 200 / 239 / 240 / 300 / 309 with
+  the deferred commit run at line 248 and dropped with $7F set + control (CALL C -> CALL: detected);
+  diagnostic border (blue = deferred commit). Four older unit checks whose failure key could never
+  fail ('FAIL! detail') fixed.
 
 ## Rainbow Islands - 2026-10-12 collectables without border + diagnostic build
 RELEASE level. Changed: rainbow.py, rainbow_hooks.asm, rainbow_islands.json (objects: opaque 15-255

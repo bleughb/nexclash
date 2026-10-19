@@ -49,7 +49,8 @@ top byte where OTIR must work (0x57, 0x5B). The ULA answers on any even port (A0
 |---|---|---|
 | 0x243B / 0x253B | TBBlue Register Select / Access | read NextRegs ($7F, $08, $05, $06) |
 | 0x303B | Sprite Status/Slot Select | write: pattern slot for 0x5B (bits 5:0, bit 7 = +128 bytes) AND, from the same write, the attribute index for 0x57 (bits 6:0, sprite 0-127); read: bit 1 = too many sprites on a line, bit 0 = collision (the read clears both) |
-| 0x5B | Sprite Pattern Upload | pattern bytes; auto-advance (256-byte blocks by OTIR) |
+| 0x5B | Sprite Pattern Upload | pattern bytes; auto-advance (256-byte blocks by OTIR). Low byte decoded only: Rainbow (2026-10-19) uploads by unrolled OUTI with any B |
+| 0x57 | Sprite Attribute Upload | 4 or 5 bytes per sprite in $35..$39 order (4 when byte 3 bit 6 = 0); index set by a 0x303B write (which also sets the pattern slot); advances after each sprite, wraps 127 -> 0. Low byte decoded only. Rainbow commit (2026-10-19): 0x303B = sprite, 5 x OUTI; NextState models it (simulated; hardware to confirm) |
 | 0x7FFD | Memory Paging Control | bit 5 = lock; unlocked writes also reset MMU0/1 to ROM and MMU6/7 to the bank; bit 3 = ULA shows bank 7 (shadow screen) |
 | 0x123B | Layer 2 Access Port | bit 1 visible (alias $69 bit 7); bit 0 write-paging / bit 2 read-paging of Layer 2 into 0x0000-0x3FFF, bits 7:6 which 16K (11 = all 48K over slots 0-2), bit 3 shadow banks ($13), bit 4 = offset form (core 3.0.7+). The stub writes 0 (no paging into ROM space) |
 | 0x1FFD | Plus 3 Memory Paging Control | bit 2 + 7FFD bit 4 select the ROM (ROM3 = 48K = alt image 1) |
@@ -61,7 +62,6 @@ Sources: core 3.01.09 nextreg.txt / ports.txt, guide r3 (Sprites, DMA, Copper, I
 timing (github.com/varmfskii/zxnext_code, zx_next_notes/copper). Researched 2026-10-19.
 | Reg / port | What | Notes |
 |---|---|---|
-| port 0x57 | sprite attributes, 4 or 5 bytes per sprite in $35..$39 order | index set by port 0x303B write (which also sets the pattern slot); advances after each sprite, wraps 127 -> 0; OTIR / OUTI / DMA friendly |
 | $09 bit 4 | lockstep $34 with 0x303B | off by default: $34 and 0x303B are separate sprite indices |
 | $75-$79 | $35-$39 with sprite number post-increment | each write increments (nextreg.txt); `NEXTREG $78,0` per sprite = hide a run |
 | $37 bit 0 / $39 bits 7:6 (relative sprites) | anchor + composite / unified relatives | relatives: 8-bit X/Y offsets, visibility ANDed with the anchor, optional pattern / palette offset from the anchor; unified = mirror/rotate/scale as one image |
