@@ -583,7 +583,11 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
 
 ## 2.4 Recordings (Fuse / RZX)
 - Autosave snapshots: `nexclash.py rzx strip A.rzx -o B.rzx` (keeps the first snapshot; replay
-  continues from the simulated state, as rzxplay --flags 4). Unstripped RZX desyncs.
+  continues from the simulated state, as rzxplay --flags 4). Unstripped RZX desyncs ("N port
+  reading(s) left" / "Port readings exhausted" at the first autosave, ~frame 250). EVERY replay path
+  of an engine strips - not only auto's verify: Midnight Resistance's `sheet` capture did not and
+  failed on both recordings until 2026-10-14. 13 of the reference recordings have autosaves; a new
+  replay command (sheet, preview, analysis) is tested on one of them.
 - Autosave was on in both Rainbow recordings, the Wally one (12 snapshots) and the Chuckie Egg one
   (10) despite "off": count snapshots in every RZX.
 - Wally: Dean could not switch character in play; all five descriptors were still plotted (other
