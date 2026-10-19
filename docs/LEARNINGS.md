@@ -237,6 +237,16 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
     the SHADOW Layer 2 ($13) for read+write over 0x0000-0xBFFF (the stack included: DI, no
     calls), so a pixel is LD (HL),c with H = y, L = x; %00000010 unmaps (display stays on).
   * Double buffering = draw into $13 via 0x123B bit 3, flip = swap $12 / $13 (two NEXTREGs).
+  * WRITE-only mapping splits reads from writes (em00k Tilemap_with_data_at_0000, 2023): 0x123B bit 0
+    set and bit 2 clear sends WRITES to 0x0000-0x3FFF into Layer 2 (bits 7:6 = which 16K), while
+    READS and instruction fetches still come from what MMU slots 0/1 hold (his tile data page:
+    `LDI` copies data page -> Layer 2 at the same address). For us, a CANDIDATE (not tested): hook
+    code in the alt ROM (slot 0) could write Layer 2 directly, with no MMU slot to free and no page
+    to map back - Layer 2 plots without touching slots 2-7 (dizzy1 / wally2 map pages today). To
+    check first: that write-mapping wins over the alt ROM ($8C) at 0x0000-0x3FFF on hardware, that
+    the game's ISR never writes 0x0000-0x3FFF while it is on (turn it off before any EI), and that
+    nextboot / verify model a write-only 0x123B (they model the port; whether reads stay on the
+    ROM is unchecked).
   * The Layer 2 scroll offset ($16/$17) moves the game's window origin to Layer 2 (0,0) and the
     clip ($18) trims it, so game coordinates need no adds per pixel.
   * Ring-buffer scrolling (em00k L2TopDownWorldScroll, 320x256 Layer 2, 16x16 tiles, 2026-10-20):
