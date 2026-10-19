@@ -1,0 +1,79 @@
+{
+ "name": "lode_runner",
+ "order": 16,
+ "game": "Lode Runner",
+ "doc": "lode_runner.md",
+ "engine": "loderunner",
+ "representative": true,
+ "reference": "lode_runner",
+ "inputs": {
+  "snapshot": {
+   "name": "lode_runner.z80",
+   "md5": "47c265e30f51a9b7eb5c98db6cd994c5",
+   "path": "lode_runner/lode_runner.z80"
+  },
+  "recordings": [
+   {
+    "name": "lode_runner.rzx",
+    "md5": "d491e25234e137d244121ba656f310c7",
+    "path": "lode_runner/LODERUNN.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "loderunner"
+ ],
+ "own_modules": [
+  "loderunner"
+ ],
+ "data": [
+  "docs/profiles/lode_runner.json",
+  "asm/loderunner_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": {
+   "engine": "loderunner",
+   "strategy": "RAM hooks 0xA460 (alt ROM read by the fade)",
+   "tail": "0xA400",
+   "colours": "docs/profiles/lode_runner_colours.json (none = defaults)"
+  }
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "lode_runner.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 15,
+  "note": "auto: differential verify of lode_runner.rzx + a 6000-frame free run (loderunner.free_keys: to game over) - every patch site, sprite pixels vs the plotter, frame-by-frame model of the patched screen / attributes, every screen / attribute read - + unit tests with 3 negative controls"
+ },
+ "outputs": {
+  "plain": {
+   "file": "lode_runner.nex",
+   "md5": "cd0c1659c8569b2fa80da74962af90d2"
+  },
+  "sprites": {
+   "file": "lode_runner_sprites.nex",
+   "md5": "85fe6afd593679bf59c787230ba0eaca"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Lode Runner",
+  "engine_col": "loderunner (lode_runner.md)",
+  "build": "lode_runner_sprites.nex 85fe6afd (runner + guards = 4-bit sprites in the game's colours, scenery cells keep their colour, sprites hidden at the fade; hooks in RAM 0xA460, tail 0xA400)",
+  "software": "PENDING",
+  "hardware": "untested",
+  "next": "hardware test (checklist); Dean paints the PAINTING_SPRITES sheet (optional); longer RZX (level complete, guard trapped)"
+ },
+ "checks": [
+  "asm2profile:lode_runner"
+ ]
+}

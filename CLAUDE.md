@@ -17,7 +17,8 @@ stay on their machine; the maintainers' reference files live in the private repo
 ## New game: the whole job (the user's prompt only names the game and attaches its files)
 1. Setup: clone bleughb/nexclash and bleughb/specnext side by side (maintainers; a contributor has
    the package). Cloud session: attach both repos with push access first (LEARNINGS 2.6).
-2. Inputs: the attached .z80 + .rzx -> specnext/reference/<game>/ (maintainers). Folder and
+2. Inputs: the attached .z80 + .rzx -> specnext/reference/<game>/ (maintainers); no .z80 but a Fuse
+   RZX -> its first snapshot is the .z80 (LEARNINGS 2.4). Folder and
    games/<game>.md named after the game (lower case, underscores). The game may already have
    notes and files (STATUS.md, games/<game>.md, specnext/reference/<game>/): read them first.
    No usable recording (none, or one that desyncs: the tools print a WARNING with the frame) ->
@@ -138,7 +139,7 @@ or download another version; tools/sjasmplus/README.md).
 |---|---|
 | nexclash.py | CLI: patch / new / contribute (users), auto / identify / record / convert / verify / rzx, analysis: inspect / scan / isr / cost |
 | selftest.py | maintainers' acceptance test, driven by docs/records (needs the private reference files) |
-| nexclash/ | toolkit modules + engines (chuckie, commando, dizzy1, dizzy5, dizzy6, midres, rainbow, renegade, smashtv, wally, wally2; build.py = TID generic); userflow.py = patch/new/contribute; simrun + snapinfo/memscan/isrinfo/drawcost = the analysis commands |
+| nexclash/ | toolkit modules + engines (chuckie, commando, dizzy1, dizzy5, dizzy6, jetpac, loderunner, midres, rainbow, renegade, smashtv, wally, wally2; build.py = TID generic); userflow.py = patch/new/contribute; simrun + snapinfo/memscan/isrinfo/drawcost = the analysis commands |
 | asm/ | hook sources; after any edit `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex); dizzy5_hooks.asm is the exception: dizzy5.py emits the bytes, selftest (Dizzy V record check) compares them |
 | docs/profiles/ | per-game profiles (hook hex read by the engines), signatures.json, verified.json (generated) |
 | docs/records/ | one evidence record per game: inputs, dependencies, rebuild / verify recipes, outputs, status, check stamps (nexclash/records.py) |

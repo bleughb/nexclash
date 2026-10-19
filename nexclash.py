@@ -188,6 +188,11 @@ def cmd_auto(a):
         ok = _jp.auto(a, z80, name, out, say)
         _finish(out, name, rep)
         return ok
+    from nexclash import loderunner as _lr                    # Lode Runner (48K)
+    if _lr.is_loderunner(s):
+        ok = _lr.auto(a, z80, name, out, say)
+        _finish(out, name, rep)
+        return ok
     from nexclash import commando as _co                      # Commando (128K)
     if _co.is_commando(s):
         ok = _co.auto(a, z80, name, out, say)

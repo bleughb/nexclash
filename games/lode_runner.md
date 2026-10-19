@@ -1,7 +1,45 @@
 # Lode Runner (Software Projects, 1984; 48K) - engine `loderunner`
 
-Code: nexclash/loderunner.py (phase A: facts, colour-sheet capture, preview). Reference: specnext
-reference/lode_runner/ (Dean, 2026-10-19).
+Code: nexclash/loderunner.py (facts, colour sheet, preview, patch, verify, unit tests, recolour),
+asm/loderunner_hooks.asm, docs/profiles/lode_runner.json, docs/records/lode_runner.json. Dispatch:
+nexclash.py cmd_auto, by signature at 0x9712 (the plotter). Reference: specnext reference/lode_runner/.
+
+    python nexclash.py auto lode_runner.z80 --rzx LODERUNN.rzx --no-record
+    python -m nexclash.loderunner sheet LODERUNN.rzx --z80 lode_runner.z80      (colour sheets)
+    python nexclash.py recolour lode_runner_sprites.nex lode_runner_PAINTING_SPRITES_painted.png
+
+## Patch design (build 2026-10-20)
+- Hooks: asm/loderunner_hooks.asm, 273 bytes in GAME RAM at 0xA460 (strategy "ram", BRIEFING A3):
+  0xA33C-0xA9FF is zero and never read or written (RZX; free runs: play to game over x2, key
+  redefinition, editor menus), no code points into it. Not the alt ROM / printer buffer: the fade
+  reads both as masks. Tail 0xA400-0xA44E (plain and sprite builds). Stateless: no hook RAM.
+- Sites (original bytes checked): 0x9A5C / 0x970C CALL e_draw (IX record -> slot), 0x9E1B CALL
+  e_drawr (runner slot), 0x96B6 CALL e_hide, 0x8E5F / 0x8E74 CALL e_trun / e_tgrd (sprite + tile 32
+  printed instead of tile 30; guard slot from HL in the list 0x919D), 0x854F JP e_fade, 0x8541 JP
+  e_cls (hide slots 0-7). 0x975B / 0x9761 77 -> 00 (the plotter keeps running: game state stays
+  the original's). Figure paints 0x9EDB, 0x978C, 0x8E64, 0x8E79, 0x966E: CALL 0x856E -> FE FF 00
+  (CP 255 / NOP = the flags 0x856E leaves). Erases 0x9A47 / 0x9E03 untouched: straight-line before
+  their draws, so the sprite moves without hiding.
+- Sprites: slot 0 runner, 1-7 guards (records 0xA183 + 17 k; the guard count is stored AND 7);
+  30 4-bit patterns in bank 11 (runner 16-30, guard 16-30), 8x8 at the pattern's top left, x = B
+  + 32, y = C + 32, palette offset 0 (index n = Spectrum colour n: 8 black, 9-15 bright; 0
+  transparent). Colours per pixel from docs/profiles/lode_runner_colours.json (none yet: runner 15,
+  guards 11); recolour rewrites bank 11 only.
+- Stack: deepest site SP 0xAB27 (0x9A5C); verify measures the patched code's lowest SP and fails
+  below 0xAB03 (IM 2 table 0xAA00-0xAB00, interrupt = 2 bytes).
+
+## Hardware checklist (first test)
+- Boots to the key definition screen; menu, start, play as the plain build.
+- Runner (bright white) and guards (bright magenta) are sprites; no colour clash: ladders, bars,
+  bricks and empty cells keep their colours when figures pass; figures in front of ladders.
+- Level start: no inverted / doubled figure on the first move (start-position prints replaced).
+- Digging, guards falling into holes, a guard trapped by a refilling brick and respawning at the
+  top (proven by unit tests only), gold collection, escape ladder.
+- Death / level end: the sprites vanish as the fade starts; no sprite left on the menu, editor or
+  hall of fame.
+- Two figures on the same spot both show (the original's XOR made them cancel).
+- Speed as the plain .nex.
+
 
 ## Inputs
 - Dean sent LODERUNN.TAP (48K, cracked: "Cracked by Zeljko Robert", BASIC "LODE part1") and
@@ -69,6 +107,11 @@ reference/lode_runner/ (Dean, 2026-10-19).
 - Hook memory: alt ROM; hook state (if any) in 0xA33C-0xA9FF (zero, untouched; to prove for the
   menus / editor / load-save paths by free runs in phase B).
 
+## Dean's decision (2026-10-20)
+- "make the build": the phase A proposal APPROVED as written - runner + guards sprites, the rest on
+  the ULA, scenery cells keep their colour, figures in front, paper see-through, sprites hidden at the
+  fade, default colours (runner bright white 15, guards bright magenta 11; sheet not painted).
+
 ## Colour sheets (2026-10-19)
 lode_runner_PAINTING_SPRITES.png (30 graphics: runner 15 frames - 13 from the RZX, 2 from the code -
 and guards 15 frames), lode_runner_REFERENCE_ALL_SPRITES.png, _layout.json beside each: specnext
@@ -76,8 +119,8 @@ reference/lode_runner/. Key = R/G + graphics byte address; colours file
 docs/profiles/lode_runner_colours.json (record name lode_runner).
 
 ## Open
-- Dean's answer to the phase A question.
 - Longer recording (level complete, guard trapped + respawn, game over) - optional; unit tests can
   cover 0x96B6 / 0x970C.
-- Phase B: attribute reads 0x80E0 / 0x9668 vs removed figure colours; tail / hook-state RAM proven by
-  free runs of the menus (load / save / edit screens).
+- Not proven: tape LOAD / SAVE SCREENS (the toolkit cannot run a tape), hall of fame name entry,
+  level 2+ (same code paths; graphics 16-30 unit-tested), a guard trapped + respawned in a real
+  recording (unit tests only: 0x96B6 / 0x970C).
