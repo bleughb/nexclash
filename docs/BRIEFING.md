@@ -69,7 +69,8 @@ Layers - never mix their facts:
    gitlab.com/SpectrumNext/ZX_Spectrum_Next_FPGA. Dean's core may be newer - note the version.
    Register reference: tbblue docs/extra-hw/io-port-system/registers.txt (nextreg list).
 3. SpecNext Wiki https://wiki.specnext.dev/Main_Page - use when the guide is silent or thin.
-   Read it with the chat's web_fetch tool (the sandbox network blocks the wiki, so scripts
+   Read it with the chat's WebFetch tool (itch.io, table.specnext.dev and ped.7gods.org are blocked
+   from the sandbox too: use their GitHub copies, e.g. ped7g/ZXSpectrumNextMisc for the opcode table; the sandbox network blocks the wiki, so scripts
    cannot download it). Pages most relevant here:
    - Memory_map (+ switching mechanics), Next_Memory_Bank_Select, Reference_machines (timing),
      Boot_Sequence, Board_feature_control (all NextRegs + port list), Interrupts
@@ -135,7 +136,9 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
   7FFD=$10 (ROM3), $8C=$C0, LDIR 0000->0000 (16K), LDIR the patch bytes lo..hi from page 24,
   $8C=0, restores slots 6/7, jumps back, restores slots 4/5. No stack use in between.
 - nextboot.py simulates that boot on a Next model (every sprite build prints a `Boot` line).
-- 128K: the tail must end below 0xC000 (its own 7FFD write remaps C000-FFFF); z80tonex refuses it.
+- 48K and 128K: the tail must end below 0xC000. The stub runs with its own bank 10 at C000-FFFF and
+  the tail's OUT 0x7FFD maps bank 0 back under the PC (El Capitan Trueno: a 48K tail at 0xFF97
+  never reached the game); z80tonex refuses it, nextboot.check catches it too.
 - The tail's location must be memory the game never uses (proved by access scan):
   printer buffer 0x5B00, or dead stack below SP (between SP and the stack low-water
   mark). The converter prints where it went; the toolkit checks it.
@@ -352,9 +355,9 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    Golden check: `selftest.py --tools` (coloursheet on synthetic parts, incl. the opt-in transparent
    painting `read(..., clear=True)`: 4th map element = transparent bit mask; Dizzy 1 uses it). Not done: a
    `nexclash.py sheet` command dispatching to the engine (today `python -m nexclash.<engine> sheet`).
-18. z80tonex.choose_tail_addr refuses a tail above 0xC000 only for 128K (snap.is128): a 48K tail
-   there vanishes when the tail's OUT 0x7FFD maps bank 0 back (El Capitan Trueno). Apply the rule to
-   48K too; until then nextboot.check catches it ('boot did not reach PC ...').
+18. Done (2026-10-19): z80tonex.choose_tail_addr refuses a tail ending above 0xC000 for 48K too (a 48K
+   tail there vanishes when the tail's OUT 0x7FFD maps bank 0 back: El Capitan Trueno);
+   nextboot.check still catches it ('boot did not reach PC ...').
 19. nextboot.check models the alt ROM with rom48(), but the Next copies the system ROM3 (NextZXOS,
    data at 0x3B00-0x3CFF): check against the real ROM3, or make the builder copy every ROM area a
    patch relies on (LEARNINGS 1.3).

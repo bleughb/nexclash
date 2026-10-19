@@ -50,7 +50,7 @@ container has neither - the first `python -m nexclash.<engine>` fails without th
 pinned: `python tools/asm2profile.py <engine>` assembles and updates the profile (never build
 or download another version; tools/sjasmplus/README.md).
 
-## Read only what the task needs (start: ~150 lines)
+## Read only what the task needs (start: this file + PLAYBOOK, ~400 lines)
 - Add a game: this file -> docs/PLAYBOOK.md -> the nearest engine as a template (simplest:
   nexclash/chuckie.py + asm/chuckie_hooks.asm + games/chuckie_egg.md; full-redraw / 128K:
   rainbow; back-buffer composer: wally (interrupts off) or midres (interrupts on, all RAM used: hook
@@ -74,7 +74,8 @@ or download another version; tools/sjasmplus/README.md).
 - Keep changes additive and limited to the new engine (one module, one .asm, one profile, one
   games/ file, a dispatch line in nexclash.py cmd_auto, an evidence record docs/records/<game>.json).
 - Ask the user before decisions that change what they see (which figures become sprites,
-  colours, anything left on the ULA).
+  colours, anything left on the ULA). Phase A settles them in one question; a new one that comes up
+  later (phase C, a figure the first recording never showed) gets its own question - never decide it.
 - Do not change another game's output. After touching shared code (anything outside your engine's
   module / .asm / profile) run `python selftest.py --canary` (needs the private references). Two
   stages (Dean, 2026-10-13): stage 1 = Chuckie Egg rebuilt, MD5s, under a second - it validates the
@@ -137,7 +138,7 @@ or download another version; tools/sjasmplus/README.md).
 |---|---|
 | nexclash.py | CLI: patch / new / contribute (users), auto / identify / record / convert / verify / rzx, analysis: inspect / scan / isr / cost |
 | selftest.py | maintainers' acceptance test, driven by docs/records (needs the private reference files) |
-| nexclash/ | toolkit modules + engines (chuckie, dizzy5, dizzy6, rainbow, wally, ...); userflow.py = patch/new/contribute; simrun + snapinfo/memscan/isrinfo/drawcost = the analysis commands |
+| nexclash/ | toolkit modules + engines (chuckie, commando, dizzy1, dizzy5, dizzy6, midres, rainbow, renegade, smashtv, wally, wally2; build.py = TID generic); userflow.py = patch/new/contribute; simrun + snapinfo/memscan/isrinfo/drawcost = the analysis commands |
 | asm/ | hook sources; after any edit `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex); dizzy5_hooks.asm is the exception: dizzy5.py emits the bytes, selftest (Dizzy V record check) compares them |
 | docs/profiles/ | per-game profiles (hook hex read by the engines), signatures.json, verified.json (generated) |
 | docs/records/ | one evidence record per game: inputs, dependencies, rebuild / verify recipes, outputs, status, check stamps (nexclash/records.py) |

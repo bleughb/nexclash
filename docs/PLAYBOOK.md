@@ -1,6 +1,7 @@
 # Playbook: one game
 
-Budget rule: known engine -> aim for 4 tool runs and one short report.
+Budget rule: a game the tools already convert (`auto` PASS) -> a few tool runs and one short report.
+A new engine is phases A-C below; keep each phase to one session where possible.
 Only disassemble routines the tools flag as unclassified.
 
 Phases (a long game may be one session per phase; each starts from games/<game>.md, never from
@@ -45,9 +46,10 @@ game never touches (step 3 proves this: `scan`); override with `--tail ADDR`.
 
 ## 2. Identify the engine
 `python nexclash.py identify GAME.z80` covers the TID and Dizzy 1 engines (docs/profiles/
-signatures.json); the dedicated engines (Chuckie Egg, Wally, Rainbow, Commando, Midnight Resistance)
-are recognised by their own checks in `auto` (is_chuckie / is_wally / is_rainbow / is_commando /
-is_midres, profile `signature`),
+signatures.json); the dedicated engines
+(Chuckie Egg, Wally / wally2, Rainbow, Commando, Midnight Resistance, Smash TV, Target Renegade)
+are recognised by their own checks in `auto` (is_<engine>, profile `signature`; the list is
+nexclash.py cmd_auto),
 so `identify` says unknown for them. Search the snapshot for these byte signatures.
 If a known engine matches, align its plotter/eraser instruction-by-instruction
 against the known game's (normalise 4-5 digit operands to N; where the opcode
@@ -205,7 +207,10 @@ Copy the nearest builder (TID-engine: build.py TidPatch;
 XOR: dizzy1.py (shadow screen + Layer 2); non-Codemasters: chuckie.py (simplest), wally.py, rainbow.py, commando.py
 (128K BASIC loader, front end, depth, cached solid sprites), midres.py (interrupts on, hook page at
 slot 5, CALL-target redirect into a scratch buffer, sprites built at a commit with a pattern-slot
-cache, per-cell colours, per-pixel colour map)), change the profile block and site list, rebuild the asm.
+cache, per-cell colours, per-pixel colour map), smashtv.py (game's own plotters into a scratch buffer
+at slot 7, see-through outline), renegade.py (alt ROM images 0 + 1, loading-screen front end),
+wally2.py (every figure on a double-buffered Layer 2, outline)), change the profile block and site
+list, rebuild the asm. STATUS.md lists every engine with its games/ file.
 Every site keeps its original-byte check.
 Colour map (every game, PLAYBOOK 3b): the sprite builder applies `<record>_colours.json` per pixel -
 key = the graphics byte the pixel comes from, a non-zero nibble replaces the default colour of an
