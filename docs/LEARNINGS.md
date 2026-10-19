@@ -27,6 +27,22 @@ BRIEFING - with its reason.
 - R changes with every M1 (prefixed opcodes +2, an accepted interrupt +1, bit 7 kept), so hook
   code always changes R. A game that reads R (LD A,R) for randomness diverges from the recording
   after the first hook: `isr` flags LD A,R; the engine simulators advance R for NEXTREG.
+- Beam-racing ("multicolour" / rainbow) code - reference: Dominic Robinson's 1987 Rainbow
+  Processor, decompiled and cycle-annotated at github.com/mcphail/rainbow_processor_decompilation:
+  an IM 2 handler burns a fixed delay to the first visible line (48K: 224 T/line, 312 lines, 64
+  lines = 14336 T before the picture; 128K: 228 T, 311 lines, 63 lines = 14364 T), then each
+  224 T loop PUSHes a row of new attributes (SP pointed at the row's end) just after the beam has
+  drawn one pixel line and before the next - 8 colour pairs per 8x8 cell, no clash. It is timed to
+  the T-state INCLUDING contention (each PUSH into the attribute area can wait up to 6 T), and it
+  self-corrects only slightly (measured ~223.9 T per loop).
+  Consequences for us: (1) a game or loader using this is broken by anything that changes its
+  T-state count or contention - a hook inside the timed loop, NextReg $07 turbo, $08 bit 6
+  (contention off), 60 Hz, the wrong machine timing in $03 - while the differential verify, which
+  counts instructions not beam position, still passes (simulator blind spot, BRIEFING A1). How to
+  spot one: IM 2 handler -> long fixed delay -> loop of PUSHes/LDs into 0x5800-0x5AFF that rewrites
+  the same attribute row every ~224 T. Leave such code unhooked and at 3.5 MHz. (2) On the Next the
+  same picture needs no timing: a copper list can rewrite ULA palette entries per scanline, or
+  the figure can become a sprite / Layer 2 - the route if a multicolour game is ever converted.
 - ED 7E (undocumented IM 2) sets IM 2 only from core 3.01.08 on (core changelog). A game using it
   (copy protection does) misbehaves on older cores; check for ED 7E when a hardware report from
   an older core differs from the emulator. OUT (C),0 (ED 71) outputs 0 on the Next (NMOS
@@ -201,6 +217,40 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   $34 write also moves the PATTERN pointer (bit 7 = +128 bytes), so finish a pattern upload before
   selecting the next sprite. Same demo uploads patterns with an unrolled OUTINB (DUP 128: 16 T/byte
   vs OTIR 21 T/byte, B untouched).
+- Mercenary Next (Mike Dailly, github.com/mikedailly/MercenaryDisassembly, 2025): a 48K game
+  disassembled with SkoolKit (sna2skool -c ctl) whose line draw is patched to Layer 2 - the closest
+  published relative of nexclash. Techniques:
+  * Runtime-switchable patches: a table of (site, hook, 3 saved original bytes); Apply writes
+    JP hook at each site, Remove puts the saved bytes back, and the key G toggles enhanced <->
+    original (plus CPU 14 <-> 3.5 MHz) while playing. One .nex gives a live hardware A/B
+    (BRIEFING C2 #28). Sites must be RAM (alt-ROM sites cannot be switched back).
+  * Layer 2 drawn by the CPU through port 0x123B instead of MMU paging: %11001011 maps all 48K of
+    the SHADOW Layer 2 ($13) for read+write over 0x0000-0xBFFF (the stack included: DI, no
+    calls), so a pixel is LD (HL),c with H = y, L = x; %00000010 unmaps (display stays on).
+  * Double buffering = draw into $13 via 0x123B bit 3, flip = swap $12 / $13 (two NEXTREGs).
+  * The Layer 2 scroll offset ($16/$17) moves the game's window origin to Layer 2 (0,0) and the
+    clip ($18) trims it, so game coordinates need no adds per pixel.
+  * Line colour by self-modifying the immediate operand of every plotter (`ld (hl),n`) from a
+    table of patch addresses - one write per colour change, nothing in the inner loop.
+  * Boot: game RAM loaded into high banks, copied down by the .nex start code; the ULA picture is
+    left running underneath (Layer 2 over it, SLU).
+- Happy Next Year 2026 (Leonis, source supplied by Dean 2026-10-19) confirms and adds:
+  * 4-byte attribute records: with byte 3 bit 6 = 0 a sprite takes 4 bytes on port 0x57, so
+    "hide all" = one 0x303B select + 4 x OUT 0 per sprite (the 5-byte-stream trap above does not
+    apply to an all-4-byte stream). Only for 8-bit patterns: our 4-bit sprites need byte 4.
+  * Double-buffered PATTERN slots: upload the next frame's images by DMA (0x303B + memory ->
+    port 0x5B) into the slot set NOT on screen, spread over two frames (4 + 5 patterns), then flip
+    which set the attributes use - no half-updated sprite is ever displayed (generalises the
+    Commando flicker rule in 1.4 and the pattern cache).
+  * Per-frame copper rebuild: patch the list in RAM, stop the copper ($62/$61 = 0), DMA the list to
+    port 0x253B with $60 selected, restart in mode 11 - all done after a $1E/$1F wait for line
+    192, so the list is never half-written while the beam uses it. A per-line WAIT + MOVE
+    $16 pair gives a per-scanline Layer 2 X offset (raster wobble).
+  * DMA fill by overlap: memory -> memory with destination = source + 1 (the LDIR fill idiom)
+    fills a block, e.g. a 257-byte IM2 vector table; alternative to fixed-port-A fill.
+  * UNVERIFIED claim in its Copper.asm: copper MOVEs to NextReg $15 "reset clipping values", so the
+    demo uses a second list without $15 while clip windows animate. Not in the core spec; test
+    before driving $15 from a copper list that coexists with $19/$1A/$1B clips.
 - NextReg $34 and port 0x303B are SEPARATE sprite indices unless NextReg $09 bit 4 (lockstep) is
   set. Never mix $34/$35-$39 writes and 0x57 writes on one assumption of "the current sprite";
   hooks that only use NEXTREG keep working whatever 0x57 did, and the reverse.
