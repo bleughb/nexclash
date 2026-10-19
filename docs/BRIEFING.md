@@ -413,8 +413,10 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    with hooks, ~20x the Python simulator) could also speed their capture and verify passes.
 31. Layer 2 written straight from alt-ROM hooks via 0x123B WRITE-only mapping (bit 0 set, bit 2
    clear; LEARNINGS 1.5 "WRITE-only mapping"): no RAM slot or page mapping in the plot hooks
-   (dizzy1 / wally2 map pages today). Prove first: (a) CSpect, then hardware - write-mapping wins
-   over the alt ROM ($8C) at 0x0000-0x3FFF while fetches and reads stay on the ROM image; (b)
+   (dizzy1 / wally2 map pages today). Write-only Layer 2 over RAM paged into slots 0/1 is proven
+   on hardware (Mike Dailly's ray caster); over the ALT ROM it is not. Prove first: (a) CSpect, then
+   hardware - write-mapping wins over the alt ROM ($8C) at 0x0000-0x3FFF while fetches and reads
+   stay on the ROM image; (b)
    nextboot / verify model write-only 0x123B (reads from the ROM, writes to Layer 2); (c) the hook
    turns it off before any EI (the game's ISR must not write 0x0000-0x3FFF into Layer 2).
 32. zxnDMA re-arm per pattern (5 OUTs, ~87 T; LEARNINGS 1.5 zxnDMA): measure the midres / renegade

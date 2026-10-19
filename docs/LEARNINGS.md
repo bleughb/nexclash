@@ -240,7 +240,10 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   * WRITE-only mapping splits reads from writes (em00k Tilemap_with_data_at_0000, 2023): 0x123B bit 0
     set and bit 2 clear sends WRITES to 0x0000-0x3FFF into Layer 2 (bits 7:6 = which 16K), while
     READS and instruction fetches still come from what MMU slots 0/1 hold (his tile data page:
-    `LDI` copies data page -> Layer 2 at the same address). For us, a CANDIDATE (not tested): hook
+    `LDI` copies data page -> Layer 2 at the same address). Shipped use: Mike Dailly's Next ray
+    caster (blog part 4, 2023) maps the whole 48K Layer 2 WRITE-only over 0x0000-0xBFFF and pages
+    its generated span renderers into the ROM slots for READ, so D = screen row with no paging in
+    the inner loop (LDWS / LDIX straight from texture to screen). For us, a CANDIDATE (not tested): hook
     code in the alt ROM (slot 0) could write Layer 2 directly, with no MMU slot to free and no page
     to map back - Layer 2 plots without touching slots 2-7 (dizzy1 / wally2 map pages today). To
     check first: that write-mapping wins over the alt ROM ($8C) at 0x0000-0x3FFF on hardware, that
