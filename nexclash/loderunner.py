@@ -1184,6 +1184,86 @@ def negative_patches(patch):
     return out
 
 
+def setup_check(nex_bytes, pats):
+    """Simulate the set-up routine (0xD000, stub bank 10 at 0xC000) from the built .nex's own banks:
+    every port and NEXTREG write. -> list of problems (empty = OK)."""
+    from .recolour import banks
+    from skoolkit.simulator import R2
+    bk = banks(nex_bytes)
+    pages = {}
+    for b, d in bk.items():
+        pages[2 * b], pages[2 * b + 1] = bytearray(d[:8192]), bytearray(d[8192:])
+    mmu = [0xFF, 0xFF, 10, 11, 4, 5, 20, 21]
+    log, stream = [], bytearray()
+
+    class Mem(list):
+        def __getitem__(s, a):
+            m = mmu[a >> 13]
+            return 0 if m == 0xFF else pages.setdefault(m, bytearray(8192))[a & 0x1FFF]
+
+        def __setitem__(s, a, v):
+            m = mmu[a >> 13]
+            if m != 0xFF:
+                pages.setdefault(m, bytearray(8192))[a & 0x1FFF] = v
+    sim = _rw()(Mem([0] * 65536), {'PC': 0xD000, 'SP': 0xDFF0})
+    R, ed, mem = sim.registers, sim.after_ED, sim.memory
+    mem[0xDFF0], mem[0xDFF1] = 0xFE, 0xFF                  # return address 0xFFFE = done
+
+    def nr(reg, val):
+        log.append(('nr', reg, val))
+        if 0x50 <= reg <= 0x57:
+            mmu[reg - 0x50] = val
+
+    def nn():
+        q = R[24]
+        nr(mem[q + 2], mem[q + 3])
+        R[15] = R2[R[15]]
+        R[24] = q + 4
+
+    def na():
+        q = R[24]
+        nr(mem[q + 2], R[0])
+        R[15] = R2[R[15]]
+        R[24] = q + 3
+    ed[0x91], ed[0x92] = nn, na
+
+    class Tr:
+        def read_port(s, regs, port):
+            return 0xFF
+
+        def write_port(s, regs, port, value, *x):
+            if port & 0xFF == 0x5B:
+                stream.append(value)
+            else:
+                log.append(('out', port, value))
+    sim.set_tracer(Tr())
+    n = 0
+    while R[24] != 0xFFFE:
+        sim.opcodes[mem[R[24]]]()
+        n += 1
+        if n > 200000:
+            return ['set-up did not return']
+    bad = []
+    if bytes(stream) != bytes(pats):
+        bad.append('pattern upload != the built patterns (%d bytes sent, %d expected)' % (len(stream), len(pats)))
+    if ('out', 0x303B, 0) not in log:
+        bad.append('pattern slot not set to 0')
+    regs = [(r, v) for k, r, v in log if k == 'nr']
+    i = regs.index((0x40, 1)) if (0x40, 1) in regs else -1
+    if i < 0 or [v for r, v in regs[i + 1:] if r == 0x41][:15] != PALETTE[1:]:
+        bad.append('sprite palette indices 1-15 are not the Spectrum colours')
+    if (0x43, 0x20) not in regs or (0x4B, 0) not in regs:
+        bad.append('palette select / transparency index not set')
+    hidden = {v for r, v in regs if r == 0x34}
+    if hidden != set(range(128)):
+        bad.append('not every sprite hidden at set-up')
+    if regs[-1] != (0x15, 1):
+        bad.append('sprites not switched on last')
+    if mmu[7] != 21:
+        bad.append('MMU slot 7 not restored (%d)' % mmu[7])
+    return bad
+
+
 # ---------------------------------------------------------------------------------------------
 # auto: plain + sprite build, boot checks, verification of each RZX + a free run, unit tests
 # ---------------------------------------------------------------------------------------------
@@ -1226,7 +1306,10 @@ def auto(a, z80, name, out, say):
     say('Sprites   : %s  %s  boot %s  (%d patterns, colour map %d entries)' % (
         os.path.basename(spr), md5(spr), 'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200],
         patch.num_patterns, len(patch.colours)))
-    ok = not bad and not bad2
+    sb = setup_check(open(spr, 'rb').read(), patch.pats)
+    say('Set-up    : pattern upload (%d bytes = the built patterns), palette 1-15, transparency 0, 128 '
+        'sprites hidden, sprites on, MMU restored -> %s' % (len(patch.pats), 'OK' if not sb else 'FAILED %s' % sb))
+    ok = not bad and not bad2 and not sb
     json.dump(DECISIONS, open(os.path.join(out, name + '_decisions.json'), 'w'))
     if getattr(a, 'decisions', None):           # selftest rebuild: build only
         say('Result    : %s (rebuild from stored decisions, no verification)' % ('PASSED' if ok else 'FAILED'))

@@ -69,7 +69,7 @@
   "title": "Lode Runner",
   "engine_col": "loderunner (lode_runner.md)",
   "build": "lode_runner_sprites.nex 85fe6afd (runner + guards = 4-bit sprites in the game's colours, scenery cells keep their colour, sprites hidden at the fade; hooks in RAM 0xA460, tail 0xA400)",
-  "software": "PENDING",
+  "software": "RZX IDENTICAL + free run 6000 frames IDENTICAL (registers, memory, sprite pixels vs the plotter, frame-by-frame ULA difference = the sprites, every screen / attribute read, hook stack >= 0xAB17), 6061 unit cases + 3 negative controls PASS; recolour round trip",
   "hardware": "untested",
   "next": "hardware test (checklist); Dean paints the PAINTING_SPRITES sheet (optional); longer RZX (level complete, guard trapped)"
  },

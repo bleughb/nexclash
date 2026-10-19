@@ -28,6 +28,15 @@ nexclash.py cmd_auto, by signature at 0x9712 (the plotter). Reference: specnext 
 - Stack: deepest site SP 0xAB27 (0x9A5C); verify measures the patched code's lowest SP and fails
   below 0xAB03 (IM 2 table 0xAA00-0xAB00, interrupt = 2 bytes).
 
+## Outputs and verification (2026-10-20)
+| Output | MD5 | Status |
+|---|---|---|
+| lode_runner.nex (plain, tail 0xA400) | cd0c1659c8569b2fa80da74962af90d2 | boot sim OK |
+| lode_runner_sprites.nex (runner + guards sprites, default colours) | 85fe6afd593679bf59c787230ba0eaca | RZX + free run IDENTICAL, unit PASS; hardware untested |
+
+RZX 4567 frames and free run 6000 frames IDENTICAL; 6061 unit cases, 3 negative controls detected;
+set-up simulation, recolour round trip, boot OK (docs/VERIFICATION.md "Lode Runner").
+
 ## Hardware checklist (first test)
 - Boots to the key definition screen; menu, start, play as the plain build.
 - Runner (bright white) and guards (bright magenta) are sprites; no colour clash: ladders, bars,

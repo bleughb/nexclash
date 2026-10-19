@@ -52,6 +52,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Smash TV (smash_tv): `smash_tv.nex` c72ea298486b14036ac1a87ac89c3f0e, `smash_tv_sprites.nex` 03979d5438cf55410ecec8aac76f05ec; verified 2026-10-13
 - Target Renegade (128K) (target_renegade): `target_renegade.nex` a0be8dc03a1be8c6d67dc3e0229abc35, `target_renegade_sprites.nex` e0b246e35d028c34170e1d1c52f00f5f; verified never
 - Jetpac (jetpac): `jetpac.nex` feff51b7038606d21c03c260055481e4, `jetpac_sprites.nex` c963b42f0e685d648d552656fde4d6f9; verified never
+- Lode Runner (lode_runner): `lode_runner.nex` cd0c1659c8569b2fa80da74962af90d2, `lode_runner_sprites.nex` 85fe6afd593679bf59c787230ba0eaca; verified never
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
@@ -664,6 +665,39 @@ sprite colour = the object's ink, no other sprite changed, NEXTREG only $07 (lef
 | selftest --game jetpac (rebuild, MD5s, asm2profile) | PASSED |
 Not proven: the game's own paths beyond the free run (rocket build, fuel, items, levels 2+, two
 players) - hooks covered by unit tests only; hardware untested.
+
+## Lode Runner (48K, engine `loderunner`) - 2026-10-20
+Dean's Fuse RZX (LODERUNN.rzx: 8 autosaves stripped; key definition, level 1, two lives lost; the
+.z80 is its own first snapshot) + a 6000-frame free run (`loderunner.free_keys`: play to game over).
+At every patch site (draws 0x9A5C / 0x970C / 0x9E1B, guard death 0x96B6, level-start prints 0x8E5F /
+0x8E74, fade 0x854F, clear 0x8541, the five figure paints, and the untouched erases 0x9A47 / 0x9E03
+whose plotter writes are removed) original and patched code run from the same state to the site's
+end: all registers but R/T/MEMPTR, all memory outside the screen / attributes and 64 bytes of dead
+stack, no screen / attribute write by the patched code (level-start prints: the blank tile exactly
+over the figure's cell), sprite pixels and colours = the original's figure drawn on a zero screen,
+no other sprite changed, NEXTREG only $34-$39, the patched code's lowest SP >= 0xAB03 (IM 2 table
+below). Over the whole run, a model of the patched game's screen and attributes: at every frame end
+(outside a fade) ULA difference = the XOR of the visible sprites' graphics; every screen / attribute
+read by game code sees the same value in both (classified: the plotter's and the cell XOR's own
+reads, the fade's mask / target reads - always followed by the full clear - and 0x9665's attribute
+read, whose result only selects a figure paint the build removes; A and F are overwritten at
+0x9671-0x9674); no game write to a patch site or hook byte; no jump into a patched instruction.
+
+| Check | Result |
+|---|---|
+| lode_runner.rzx, 4567 frames | 3254 draws, 3254 erases, 10 level-start prints, 8303 paints, 7 fades + clears, 59003 sprite pixels, 4352 frame checks, 3 harmless attribute reads, lowest hook SP 0xAB17: IDENTICAL |
+| free run, 6000 frames (play to game over) | 1006 draws, 1006 erases, 25 level-start prints, 3002 paints, 9 fades + clears, 18885 sprite pixels, 5779 frame checks, lowest SP 0xAB19: IDENTICAL |
+| unit: graphics 16-30 x 8 slots x 48 positions (edges 0 / 248, 0 / 175) at 0x9A5C; respawn 0x970C x 7 guards; runner 0x9E1B | 5760 + 105 + 45 PASS |
+| unit: guard death (7), level-start prints (runner 4, guards 28), fade, clear, paints (5 sites x 3 colours x 4 cells) | PASS |
+| unit guards: IX not a figure record (6), graphic outside 16-30 (4), print outside the guard list (4: the original print) | PASS |
+| unit: synthetic colour map (every graphics byte of both kinds, transparent pixels, a wrong check byte ignored), expected colours computed independently | 30 PASS |
+| negative controls: patterns shifted 1 px / paints as NOP NOP NOP (flags) / fade without its hook | 6/6, 6/6, 6/6 detected |
+| set-up simulated from the .nex: pattern upload = the built patterns (3840 bytes), palette, transparency, 128 sprites hidden, sprites on, MMU restored (negative: one pattern byte changed -> detected) | OK |
+| recolour: {} -> the build byte for byte; synthetic map -> bank 11 only, back to {} -> the build; plain .nex refused | OK |
+| boot simulation, plain + sprites (tail 0xA400) | OK |
+| hook RAM 0xA33C-0xAAFE untouched: RZX + free runs to game over and through the editor / key redefinition (30000 frames each) | OK |
+Not proven: tape LOAD / SAVE SCREENS, hall of fame name entry, level 2+ in a recording, a guard
+trapped and respawned in a recording (unit tests only); hardware untested.
 
 ## Toolkit: colour sheets show only the paintable pixels (2026-10-14)
 coloursheet.write greys only the pixels the read-back uses; the rest of a box keeps the background
