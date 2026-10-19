@@ -9,6 +9,9 @@
 ;   59539  26 F5 DD E9  LD H,245 / JP (IX)        -> JP e_pc
 ;   59543  A7 C2 79 E8  AND A / JP NZ,59513       -> JP e_af
 ;   59087  3A E2 E5     LD A,(58850) (render end) -> JP e_re
+; Music (bank 1, 2026-10-19):
+;   0xD4DE  21 59 5C  LD HL,0x5C59 (AY player entry: a tick starts)  -> JP e_ps
+;   0xD6D4  01 FD FF  LD BC,0xFFFD (AY register write: A = reg, D = value; then OUT, OUT, RET) -> JP e_ay
 ; Objects (2026-10-11, tilemap build): per-cell object map (page 27) kept by three cell-drawer hooks:
 ;   60853  87 6F 26 00  ADD A,A / LD L,A / LD H,0  (base tile, A = tile)      -> JP e_bt
 ;   60839  3D 6F 26 00  DEC A / LD L,A / LD H,0    (opaque object tile A)     -> JP e_ov
@@ -102,7 +105,9 @@ TDEF    EQU 0x0A00
 PAGE_SH EQU 28              ; shadow map (row kk at kk*64, 2 bytes per column) + LASTT, slot 2
 LASTT   EQU 0x4600          ; page 28 at slot 2: tile number of each cell last render (704)
 X2      EQU 0x1F00          ; page 26: 2 bits -> 2 nibbles (00 0F F0 FF)
-PBUF    EQU 0x0078          ; 8 rows of the object being drawn
+PBUF    EQU 0x0EF0          ; 8 rows of the object being drawn at PBUF+1..+8; PBUF+0 / +9 stay 0
+X8T     EQU 0x4C00          ; page 28 at slot 2 (render start): nibble-expansion tables, 4 x 256
+V_X8    EQU 0x0088          ; 1 = X8T built (page 28 is not in the .nex: built at the first render)
 V_IA    EQU 0x0038          ; cell hooks: A at entry
 V_IBC   EQU 0x0039
 V_TOK   EQU 0x003B          ; tilemap built this render (scroll a multiple of 8)
@@ -149,6 +154,19 @@ V_OMB   EQU 0x0071          ; mask bits left
 V_DIAG  EQU 0x0072          ; 1 = diagnostic build (border colours)
 V_FRUN  EQU 0x0073          ; diagnostic: a game frame is running
 V_DBC   EQU 0x0074          ; diagnostic: BC (word)
+RS_LINE EQU 240             ; render end at or past this line: commit at once (if it fits before line 16)
+V_PEND  EQU 0x0080          ; 1 = this render's commit is still to do (deferred to the next interrupt)
+V_N58   EQU 0x0081          ; (58850) at the render end (play-area rows; the deferred commit clips with it)
+; music (2026-10-19): the game's AY player runs up to 3 times per game frame; at 28 MHz those ticks came
+; within a few ms. Its register writes (the one AY routine 0xD6D4 in bank 1) are queued per tick
+; (a tick starts at the player entry 0xD4DE) and sent to the chip one tick per interrupt.
+V_AYR   EQU 0x0082          ; oldest queued tick (slot 0-3)
+V_AYN   EQU 0x0083          ; ticks queued (0-4)
+V_AYO   EQU 0x0084          ; 1 = the newest queued tick is open for writes
+V_AYW   EQU 0x0085          ; slot being written
+V_AYSP  EQU 0x0086          ; game SP in the AY hooks (word)
+AYQ     EQU 0x1FC0          ; page 26: 4 slots x 16 bytes: R0-R13 values, mask regs 0-7, mask regs 8-13
+                            ; (bit 7 = the lowest register)
 CODE2   EQU 0x1F10          ; fourth code block (page 26, up to 0x1FFF)
 CODE4   EQU 0x0D60          ; third code block (page 26, up to 0x0DFF)
 CODE3   EQU 0x0E60          ; second code block (page 26, up to 0x0EFF: the tail of WBM's page)
@@ -173,7 +191,17 @@ x_cont: nextreg 0x50,0xFF
 ; LD A,(48768) ...; exit 65274: POP AF / EI / RET). Original: one frame per 3 interrupts (4 when
 ; busy: the frame overran). Here: the frame runs at 28 MHz, once every LIMIT interrupts.
 e_lim:  nextreg 0x50,PAGE_S         ; site 65172 (LD A,(48768)): AF is already pushed
-        jp s_lim
+        jp s_limp
+e_ay:   nextreg 0x50,PAGE_S         ; site 0xD6D4 (bank 1, interrupts off): queue the AY write
+        jp s_ay
+e_ps:   nextreg 0x50,PAGE_S         ; site 0xD4DE (bank 1): the AY player starts a tick
+        jp s_ps
+x_ay:   nextreg 0x50,0xFF
+        ld bc,0xBFFD                ; BC as the original routine leaves it
+        ret
+x_ps:   nextreg 0x50,0xFF
+        ld hl,0x5C59                ; the replaced LD HL,0x5C59
+        jp 0xD4E1
 x_lrun: nextreg 0x50,0xFF
         ld a,(48768)
         jp 65175
@@ -211,6 +239,272 @@ e_bend: nextreg 0x50,PAGE_S         ; site 59547: the walker finished a band
         jp s_bend
 x_bend: nextreg 0x50,0xFF
         jp 59550
+; --- render-end / deferred commit control (2026-10-19): read-only code in the alt ROM (slot 1);
+; slot 0 = page 26 here. commit (page 26) maps store pages at slot 1 but leaves it as $FF before
+; returning, so it can be called from here.
+; render end: commit now if the beam is below the play area with room for the whole commit, else
+; at the next interrupt (s_lim, line 248: bottom border) - never wait for the beam (2026-10-19: the
+; raster wait cost 3.4 ms per game frame on average, up to 10 ms).
+s_re:   ld (V_HL3),hl               ; HL and BC are live here; A and F are not (SUB 160 follows)
+        ld (V_BC3),bc
+        ld (V_DE3),de
+        ld (V_SP3),sp               ; own stack (page 26)
+        ld sp,STK
+        ld a,(58850)
+        ld (V_N58),a
+        ld a,1
+        ld (V_PEND),a
+        call rsafe
+.rs:    call c,commit               ; (unit-test control: CALL = commit at once wherever the beam is)
+        ld sp,(V_SP3)
+        ld hl,(V_HL3)
+        ld bc,(V_BC3)
+        ld de,(V_DE3)
+        ld a,(58850)
+        jp x_re
+
+; s_int: every interrupt (site 65172, AF already pushed): own stack, the interrupted code's BC DE HL
+; kept. A commit deferred from the render end runs now (line 248, bottom border) at 28 MHz; then one
+; queued AY tick goes to the chip (two when 3+ are queued: catching up after a frame overran).
+s_int:  ld (V_SP4),sp
+        ld sp,STK
+        push bc
+        push de
+        push hl
+        ld a,(V_PEND)
+        or a
+        jr z,.nc
+        nextreg 0x07,3
+        call dcom
+        nextreg 0x07,0
+.nc:    call aytick
+        pop hl
+        pop de
+        pop bc
+        ld sp,(V_SP4)
+        jp s_lim
+
+; AY write hook (A = register, D = value; interrupts off): every register kept; BC = 0xBFFD on return.
+s_ay:   ld (V_AYSP),sp
+        ld sp,STK
+        push af
+        push bc
+        push de
+        push hl
+        call aywr
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_AYSP)
+        jp x_ay
+; player entry: a new tick (slot) opens
+s_ps:   ld (V_AYSP),sp
+        ld sp,STK
+        push af
+        push bc
+        push de
+        call ayopen
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_AYSP)
+        jp x_ps
+
+aywr:   cp 14
+        jr c,.q
+        ld bc,0xFFFD                ; not a sound register: to the chip at once, as the original
+        out (c),a
+        ld b,0xBF
+        out (c),d
+        ret
+.q:     ld e,a
+        ld a,(V_AYO)
+        or a
+        call z,ayopen               ; a write outside a tick (e.g. the silence routine): its own slot
+        ld a,(V_AYW)
+        call ayslot
+        ld a,l
+        add a,e
+        ld l,a
+        ld (hl),d
+        ld a,l                      ; mask byte: slot + 14 (+1 for registers 8-13)
+        sub e
+        add a,14
+        ld l,a
+        ld a,e
+        cp 8
+        jr c,.m
+        inc l
+        sub 8
+.m:     add a,low BITS
+        ld c,a
+        ld b,high BITS
+        ld a,(bc)
+        or (hl)
+        ld (hl),a
+        ret
+
+ayopen: ld a,(V_AYN)
+        cp 4
+.fl:    call z,ayplay               ; queue full: the oldest tick to the chip now
+        ld a,(V_AYR)
+        ld hl,V_AYN
+        add a,(hl)
+        and 3
+        ld (V_AYW),a
+        inc (hl)
+        call ayslot
+        ld a,l
+        add a,14
+        ld l,a
+        xor a
+        ld (hl),a
+        inc l
+        ld (hl),a
+        inc a
+        ld (V_AYO),a
+        ret
+
+aytick: ld a,(V_AYN)
+        or a
+        ret z
+        call ayplay
+        ld a,(V_AYN)
+        cp 3
+        call nc,ayplay
+        ld a,(V_AYN)
+        or a
+        ret nz
+        ld (V_AYO),a                ; queue empty: nothing open
+        ret
+
+; the oldest queued tick to the chip: its written registers in order 0-13
+ayplay: ld a,(V_AYR)
+        call ayslot
+        ld a,l
+        add a,14
+        ld l,a
+        ld d,(hl)
+        inc l
+        ld e,(hl)
+        ld a,l
+        sub 15
+        ld l,a
+        xor a
+.lp:    sla e
+        rl d
+        jr nc,.n
+        ld bc,0xFFFD
+        out (c),a
+        ld b,0xBF
+        ld c,(hl)
+        push af
+        ld a,c
+        ld c,0xFD
+.o:     out (c),a                   ; (unit-test control: NOPs = nothing reaches the chip)
+        pop af
+.n:     inc l
+        inc a
+        cp 14
+        jr c,.lp
+        ld a,(V_AYR)
+        inc a
+        and 3
+        ld (V_AYR),a
+        ld hl,V_AYN
+        dec (hl)
+        ret
+
+ayslot: add a,a                     ; A = slot -> HL = AYQ + 16 * slot
+        add a,a
+        add a,a
+        add a,a
+        add a,low AYQ
+        ld l,a
+        ld h,high AYQ
+        ret
+
+; dcom: the deferred commit (from s_lim). Dropped when a non-play screen came since the render (the
+; sprites-off stubs set NextReg $7F; render start clears it): its sprites must not come back on.
+dcom:   ld bc,0x243B
+        ld a,0x7F
+        out (c),a
+        inc b
+        in a,(c)
+        or a
+        jr z,.c
+        xor a
+        ld (V_PEND),a
+        ret
+.c:     ld a,1                      ; diagnostic build: blue border during a deferred commit
+        call dcol
+        call commit
+        xor a
+        jp dcol
+
+; rsafe: carry set = commit now: the beam (active video line, NextReg $1E/$1F; 0 = first pixel row)
+; is at or past line RS_LINE - this frame will miss the interrupt at line 248 (interrupts are off
+; until the frame ends; RS_LINE leaves 8 lines for the rest of the frame), or the render ended in the
+; first ~4 ms after it - and the lines left before line 16 of the next frame (311 + 16 - L, 128K
+; timing) exceed what the commit needs (under one line per sprite + 17 for the map copy: V_S + 20). Otherwise NC: the commit runs at the next interrupt (line 248, bottom
+; border) - the same displayed frame as a commit below the play area, but outside the game frame.
+rsafe:  ld bc,0x243B
+        ld a,0x1E
+        out (c),a
+        inc b
+        in a,(c)
+        dec b
+        and 1
+        ld h,a
+        ld a,0x1F
+        out (c),a
+        inc b
+        in a,(c)
+        ld l,a
+        ld de,RS_LINE
+        or a
+        sbc hl,de
+        jr c,.no                    ; L < RS_LINE: the interrupt comes first
+        ex de,hl
+        ld hl,327-20-RS_LINE        ; 128K timing: 311 lines a frame
+        or a
+        sbc hl,de
+        jr c,.no
+        ld a,(V_S)
+        ld e,a
+        ld d,0
+        or a
+        sbc hl,de
+        jr c,.no
+        scf
+        ret
+.no:    or a
+        ret
+
+; X8T (page 28, mapped at slot 2 here): X8T + 256k + v = nibbles of bits 7-2k (high) / 6-2k (low)
+; of v, 0xF per set bit. Built once at the first render start (page 28 is not in the .nex).
+x8bld:  nextreg 0x52,PAGE_SH
+        ld hl,X8T
+.v:     ld c,l                      ; v = L
+        ld b,4
+.kk:    xor a
+        sla c
+        jr nc,.h
+        or 0xF0
+.h:     sla c
+        jr nc,.l
+        or 0x0F
+.l:     ld (hl),a
+        inc h
+        djnz .kk
+        ld h,high X8T
+        inc l
+        jr nz,.v
+        nextreg 0x52,10
+        ld a,1
+        ld (V_X8),a
+        ret
 rom_end:
 
         ORG 0x0100
@@ -226,6 +520,9 @@ s_rs:   ld iy,0                     ; clears V_S (and spare 0x0001) without touc
         push bc
         push de
         push hl
+        ld a,(V_X8)
+        or a
+        call z,x8bld
         call obuild
         pop hl
         pop de
@@ -235,6 +532,7 @@ s_rs:   ld iy,0                     ; clears V_S (and spare 0x0001) without touc
         ld iy,27964
         jp x_rs
 
+s_limp: jp s_int                     ; every interrupt: deferred commit, one AY tick (alt ROM code)
 s_lim:  ld a,(V_TICK)
         inc a
         cp LIMIT
@@ -246,16 +544,12 @@ s_lim:  ld a,(V_TICK)
 .skip:  ld (V_TICK),a
         jp x_lskip
 
-s_re:   ld (V_HL3),hl               ; HL and BC are live here; A and F are not (SUB 160 follows)
-        ld (V_BC3),bc
-        ld (V_DE3),de
-        ld (V_SP3),sp               ; collectables: own stack (page 26) for the item routine
-        ld sp,STK
-        call rwait                  ; no sprite / tilemap changes while the beam is in the play area
+; commit: the tilemap, then every staged piece's patterns + attributes in one burst (sprite by
+; sprite: pattern, then its attributes; pieces top to bottom, so a commit that the beam catches up
+; with has done the rows the beam reaches first), then hide the sprites of the previous render
+commit: xor a
+        ld (V_PEND),a
         call tcommit
-        ld sp,(V_SP3)
-; commit: every staged piece's patterns + attributes in one burst (sprite by sprite: pattern, then
-; its attributes), so the screen never shows a half-updated figure or old sprites with new images
         ld a,(V_NP)
         or a
         jp z,.nop
@@ -292,25 +586,29 @@ s_re:   ld (V_HL3),hl               ; HL and BC are live here; A and F are not (
         or b
         ld bc,0x303B
         out (c),a
-        ld bc,0x405B                ; 64 bytes (top half; the bottom stays zero)
-        otir
-        ld a,(V_CS)
-        nextreg 0x34,a
-        ld a,(de)
-        nextreg 0x35,a
-        inc de
-        ld a,(de)
-        nextreg 0x36,a
-        inc de
-        ld a,(de)
-        nextreg 0x37,a
-        inc de
-        ld a,(de)
-        nextreg 0x38,a
-        inc de
-        ld a,(de)
-        nextreg 0x39,a
-        inc de
+        ld c,0x5B                   ; 64 bytes (top half; the bottom stays zero) by OUTI: ports 0x5B
+        ld a,8                      ; and 0x57 decode the low byte only, so B is free (16 T a byte
+.pt:    outi                        ; instead of OTIR's 21; 2026-10-19)
+        outi
+        outi
+        outi
+        outi
+        outi
+        outi
+        outi
+        dec a
+        jr nz,.pt
+        ld a,(V_CS)                 ; 0x303B bits 6:0 = the sprite for port 0x57 (the same write moves
+        ld bc,0x303B                ; the pattern pointer: its upload is done)
+        out (c),a
+        ld c,0x57                   ; its 5 attribute bytes ($35-$39 order) from ATTRB
+        ex de,hl
+        outi
+        outi
+        outi
+        outi
+.a5:    outi                        ; (unit-test control: NOPs = attribute 4 not written)
+        ex de,hl
         ld a,(V_CS)
         inc a
         ld (V_CS),a
@@ -334,11 +632,7 @@ s_re:   ld (V_HL3),hl               ; HL and BC are live here; A and F are not (
         nextreg 0x38,0
         inc a
         jr .hide
-.done:  ld hl,(V_HL3)
-        ld bc,(V_BC3)
-        ld de,(V_DE3)
-        ld a,(58850)
-        jp x_re
+.done:  ret
 
 s_pc:
         ld (V_IY),iy                ; IY = the walker's list pointer
@@ -1666,7 +1960,7 @@ ocomp:  ld a,(V_PROBE)
         add hl,hl
         ld de,0xF700
         add hl,de
-        ld de,PBUF
+        ld de,PBUF+1
         ld bc,8
         ldir
         call odraw
@@ -1710,7 +2004,7 @@ ocomp:  ld a,(V_PROBE)
         inc a
         ld l,a
         ld h,0xF6
-        ld de,PBUF
+        ld de,PBUF+1
         ld b,8
 .mg:    ld a,(hl)
         ld (de),a
@@ -1922,33 +2216,6 @@ code_end:
 
 ; --- raster wait (page 26 0x0E60-0x0EFF)
         ORG CODE3
-; rwait: the commit must not change sprites or the tilemap while the beam draws them (tearing).
-; Active video line (NextReg $1E/$1F; 0 = first pixel row): while it is in the play area (rows
-; 16-175), wait for it to pass row 175. Lines >= 176 and < 16: commit at once.
-rwait:  call .w0
-        xor a                       ; diagnostic build: border back to black
-        jp dcol
-.w0:    ld bc,0x243B
-.w:     ld a,0x1E
-        out (c),a
-        inc b
-        in a,(c)
-        dec b
-        rra
-        ret c                       ; line >= 256
-        ld a,0x1F
-        out (c),a
-        inc b
-        in a,(c)
-        dec b
-        cp 176
-        ret nc
-        cp 16
-        ret c
-        ld a,1                      ; diagnostic build: blue border while waiting
-        call dcol
-.lp:    jr .w                       ; (unit-test control: RET = no wait)
-
 ; tcommit: show the map built this render (or switch the layer off), clip it to the play area
 tcommit:
         ld a,(V_TOK)
@@ -1977,7 +2244,7 @@ tcommit:
         nextreg 0x1B,16
         nextreg 0x1B,143
         nextreg 0x1B,48
-        ld a,(58850)
+        ld a,(V_N58)
         add a,47
         nextreg 0x1B,a
         nextreg 0x6B,0x81           ; tilemap on: 40x32, 2-byte entries (palette offset per tile),
@@ -2108,7 +2375,10 @@ code4_end:
 ; --- fourth code block (page 26 0x1F10-0x1FFF)
         ORG CODE2
 ; draw PBUF (8 rows) into the tile at V_TDP: ink = class override (bits 4-7) or the pass's ink;
-; border unless class bit 2.
+; border unless class bit 2. 2026-10-19: table version (X8 in page 28 at slot 2: 4 tables of 256,
+; X8 + 256k + v = the nibbles of bits 7-2k / 6-2k of v, 0xF per set bit): per tile byte
+; out = old AND NOT (m OR b) OR (b AND 0x11) OR (ink AND m), m = pixel nibbles, b = border
+; nibbles; rows without pixels or border skipped. 2.6x faster than the bit loop.
 odraw:  ld a,(V_CLS)
         and 0xF0
         rrca
@@ -2127,98 +2397,66 @@ odraw:  ld a,(V_CLS)
         rlca
         rlca
         or c
-        ld (V_CINK),a
-        ld hl,(V_TDP)
-        ld de,PBUF
-        xor a
-        ld (V_CQ+1),a               ; row j
-.r:     ld a,(V_CLS)
+        ld iyh,a
+        ld a,(V_CLS)
         and 4
-        ld b,0
-        jr nz,.nb                   ; no border
-        ld a,(V_CQ+1)               ; v = P[j-1] | P[j] | P[j+1]
+        ld iyl,a                    ; 4 = no border
+        ld hl,(V_TDP)
+        ld ix,PBUF+1
+.r:     ld a,iyl
         or a
-        ld a,(de)
-        ld b,a
-        jr z,.r1
-        dec de
-        ld a,(de)
-        or b
-        ld b,a
-        inc de
-.r1:    ld a,(V_CQ+1)
-        cp 7
-        jr z,.r2
-        inc de
-        ld a,(de)
-        or b
-        ld b,a
-        dec de
-.r2:    ld a,b                      ; dilate: v | v<<1 | v>>1, minus the object's own pixels
+        ld a,0
+        jr nz,.nb
+        ld a,(ix-1)                 ; v = P[j-1] | P[j] | P[j+1] (PBUF[0] and PBUF[9] stay 0)
+        or (ix+0)
+        or (ix+1)
+        ld c,a                      ; dilate: v | v<<1 | v>>1, minus the object's own pixels
         add a,a
-        or b
-        ld c,a
-        ld a,b
-        srl a
         or c
         ld b,a
-        ld a,(de)
+        ld a,c
+        srl a
+        or b
+        ld b,a
+        ld a,(ix+0)
         cpl
         and b
-        ld b,a                      ; B = border
-.nb:    ld a,(de)
-        ld c,a                      ; C = pixels
-        push de
-        call cpix
-        pop de
-        inc de
-        ld a,(V_CQ+1)
-        inc a
-        ld (V_CQ+1),a
-        cp 8
-        jr c,.r
-        ret
-
-; one tile row: B = border bits, C = pixel bits, HL = 4 bytes (left pixel = high nibble). HL += 4.
-cpix:   ld a,4
-        ld (V_CQ),a
-.q:     ld a,b
-        rlca
-        rlca
-        ld b,a
-        and 3
-        add a,low X2
-        ld e,a
-        ld d,high X2
-        ld a,(de)                   ; border nibbles
-        ld (V_CMD),a
-        ld a,c
-        rlca
-        rlca
-        ld c,a
-        and 3
-        add a,low X2
-        ld e,a
-        ld a,(de)                   ; pixel nibbles
-        ld e,a
-        ld a,(V_CMD)
+.nb:    ld c,a                      ; C = border bits, E = pixel bits
+        ld e,(ix+0)
         or e
+        jr z,.skip                  ; nothing in this row
+        ld b,high X8T
+        ld d,b
+.k:     ex de,hl                    ; old AND NOT (m OR b)
+        ld a,(bc)
+        or (hl)
+        ex de,hl
         cpl
-        and (hl)                    ; earlier objects stay where this one draws nothing
-        ld d,a
-        ld a,(V_CMD)
-.bk:    and 0x11                    ; border = index 1 (unit-test control: 0 = no border)
-        or d
-        ld d,a
-        ld a,(V_CINK)
-        and e
-        or d
+        and (hl)
+        ld (hl),a
+        ld a,(bc)                   ; OR border (index 1)
+.bk:    and 0x11                    ; (unit-test control: 0 = no border)
+        or (hl)
+        ld (hl),a
+        ld a,(de)                   ; OR ink AND m
+        and iyh
+        or (hl)
         ld (hl),a
         inc hl
-        ld a,(V_CQ)
-        dec a
-        ld (V_CQ),a
-        jr nz,.q
+        inc b
+        inc d
+        ld a,d
+        cp high X8T+4
+        jr c,.k
+        jr .nx
+.skip:  inc hl
+        inc hl
+        inc hl
+        inc hl
+.nx:    inc ix
+        ld a,ixl
+        cp low (PBUF+9)
+        jr c,.r
         ret
 
 code2_end:

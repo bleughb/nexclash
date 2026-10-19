@@ -37,6 +37,9 @@ SITES_ORIG = {58851: bytes.fromhex('FD213C6D'), 59539: bytes.fromhex('26F5DDE9')
               60853: bytes.fromhex('876F2600'), 60839: bytes.fromhex('3D6F2600'),  # cell drawer: base tile,
               60965: bytes.fromhex('3D878787'),                                     # full overlay, masked item
               59547: bytes.fromhex('2A82E8')}                                       # walker: band done
+# music (bank 1, 2026-10-19): AY player entry (a tick starts) and the one AY register-write routine
+SITES1_ORIG = {0xD4DE: bytes.fromhex('21595C'), 0xD6D4: bytes.fromhex('01FDFF')}
+V_AYR, V_AYN, V_AYO, V_AYW, AYQ = 0x82, 0x83, 0x84, 0x85, 0x1FC0
 CLIST, ATTRB, V_NP = 0x1B00, 0x1C80, 0x01
 V_TICK, LIMIT = 0x2E, 3     # frame limiter (asm s_lim)
 # Objects (2026-10-11, tilemap build): every object the game puts in a back-buffer cell (rainbow
@@ -48,6 +51,8 @@ KEYS, STAMP, RCNT, MCLASS, OCLASS, BGOVR = 0x3A00, 0x3D00, 0x3DC0, 0x3DE0, 0x3E0
 NCELLS, NTILE, PAGE_TM, TDEF, X2 = 704, 176, 14, 0x0A00, 0x1F00
 OCCM, BITS = 0x27A0, 0x1F08   # page 27: occupied cells per row as 32-bit masks; page 26: 0x80 >> n
 V_DIAG, V_FRUN = 0x72, 0x73   # diagnostic build flag; a game frame is running (diagnostic)
+PBUF = 0x0EF0                 # page 26: rows of the object being drawn (+1..+8; +0 / +9 stay 0)
+V_PEND, V_N58 = 0x80, 0x81    # commit deferred to the next interrupt; (58850) at the render end
 V_TOK, V_MSB, V_MSD, V_FMAX = 0x3B, 0x3F, 0x40, 0x51
 PAGE_SH, LASTT = 28, 0x0600   # shadow map (row kk at kk*64, 2 bytes per column), last tile per cell
 CODE2 = 0x1F10              # fourth page-26 code block (tile drawing), up to 0x1FFF
@@ -351,13 +356,13 @@ class RainbowPatch:
         self.page = bytes(page)                     # alt ROM image of 0x2000-0x3FFF (for nextboot)
         sp = bytearray(8192)
         sp[PAGE_ORG:PAGE_ORG + len(self.page_code)] = self.page_code
-        if CODE3 + len(self.page_code3) > 0x0F00:
+        if CODE3 + len(self.page_code3) > PBUF:
             raise ValueError('second code block too long')
         sp[CODE3:CODE3 + len(self.page_code3)] = self.page_code3
         if CODE4 + len(self.page_code4) > 0x0E00:
             raise ValueError('fourth code block too long')
         sp[CODE4:CODE4 + len(self.page_code4)] = self.page_code4
-        if CODE2 + len(self.page_code2) > 0x2000:
+        if CODE2 + len(self.page_code2) > AYQ:
             raise ValueError('code block at 0x1F10 too long')
         sp[CODE2:CODE2 + len(self.page_code2)] = self.page_code2
         if PAGE_ORG + len(self.page_code) > CODE_END_MAX or ATTRB + 5 * NSPR_MAX > X2:
@@ -407,6 +412,8 @@ class RainbowPatch:
                       (60839, SITES_ORIG[60839], b'\xC3' + s['e_ov'].to_bytes(2, 'little') + b'\x00'),
                       (60965, SITES_ORIG[60965], b'\xC3' + s['e_it'].to_bytes(2, 'little')),
                       (59547, SITES_ORIG[59547], b'\xC3' + s['e_bend'].to_bytes(2, 'little'))]
+        self.sites1 = [(0xD4DE, SITES1_ORIG[0xD4DE], b'\xC3' + s['e_ps'].to_bytes(2, 'little')),
+                       (0xD6D4, SITES1_ORIG[0xD6D4], b'\xC3' + s['e_ay'].to_bytes(2, 'little'))]
 
     def check_sites(self, bank0):
         for a, old, new in self.sites:
@@ -421,6 +428,14 @@ class RainbowPatch:
             b[a - 0xC000:a - 0xC000 + len(new)] = new
         return bytes(b)
 
+    def patched_bank1(self, bank1):
+        b = bytearray(bank1)
+        for a, old, new in self.sites1:
+            if bytes(b[a - 0xC000:a - 0xC000 + len(old)]) != old:
+                raise ValueError('unexpected code at bank 1 0x%04X' % a)
+            b[a - 0xC000:a - 0xC000 + len(new)] = new
+        return bytes(b)
+
     def apply(self, snap):
         if not snap.is128:
             raise ValueError('Rainbow Islands patch needs the 128K snapshot')
@@ -429,6 +444,7 @@ class RainbowPatch:
         if any(snap.banks[7][:8192]):
             raise ValueError('bank 7 (first 8K) is not empty: needed for the tilemap')
         snap.banks[0] = self.patched_bank0(snap.banks[0])
+        snap.banks[1] = self.patched_bank1(snap.banks[1])
 
 
 # ---------------------------------------------------------------------------------------------
@@ -505,6 +521,7 @@ class NextState:
         self.attr = [[0, 0, 0, 0, 0] for _ in range(128)]
         self.pat = bytearray(16384)
         self.pat_ptr = 0
+        self.a57, self.a57_pos = 0, 0
         self.pat_writes = 0
         self.sel = 0
         self.events = []
@@ -515,6 +532,7 @@ class NextState:
         self.t34 = None             # T of the first sprite select ($34) write
         self.t6e = None             # T of the first tilemap base ($6E) write
         self.polls = 0
+        self.last_line = None
         self.clip_tm, self.clip_i = [None] * 4, 0
 
     def video_line(self):
@@ -527,6 +545,7 @@ class NextState:
             if self.rsel in (0x1E, 0x1F):
                 self.polls += 1
                 v = self.video_line()
+                self.last_line = v
                 return (v >> 8) & 1 if self.rsel == 0x1E else v & 255
             return self.nr.get(self.rsel, 0)
         self.events.append(('in', port))
@@ -554,8 +573,18 @@ class NextState:
     def out(self, port, val):
         if port == 0x243B:
             self.rsel = val
-        elif port == 0x303B:
+        elif port == 0x303B:                # pattern slot for 0x5B AND sprite index for 0x57
             self.pat_ptr = (val & 0x3F) * 256 + (128 if val & 0x80 else 0)
+            self.a57, self.a57_pos = val & 0x7F, 0
+        elif port & 0xFF == 0x57:           # attributes in $35-$39 order; 4 bytes if byte 3 bit 6 = 0
+            a = self.attr[self.a57]
+            a[self.a57_pos] = val
+            self.a57_pos += 1
+            if self.a57_pos == 4 and not a[3] & 0x40:
+                a[4] = 0
+                self.a57_pos = 5
+            if self.a57_pos == 5:
+                self.a57, self.a57_pos = (self.a57 + 1) & 0x7F, 0
         elif port & 0xFF == 0x5B:
             self.pat[self.pat_ptr & 0x3FFF] = val
             self.pat_ptr += 1
@@ -945,6 +974,88 @@ def _run(sim, stops, limit=200000):
     return True
 
 
+class AYModel:
+    """The AY queue of the hooks (asm aywr / ayopen / aytick / ayplay), with the original's chip
+    state as the reference: `truth` = the registers as the original game has written them so far;
+    each queued tick keeps the truth at its close; after a replay the chip (= every write the
+    patched build sent) must equal the truth at the close of the tick just sent."""
+
+    def __init__(self):
+        self.q = []                 # [values(14), mask set, truth at close or None while open]
+        self.r = 0
+        self.open_ = False
+        self.chip = [None] * 16
+        self.truth = [None] * 16
+        self.check = None
+        self.opened = self.flushed = 0
+
+    def _play(self):
+        vals, mask, _ = self.q.pop(0)
+        out = []
+        for reg in range(14):
+            if reg in mask:
+                out += [(0xFFFD, reg), (0xBFFD, vals[reg])]
+                self.chip[reg] = vals[reg]
+        self.r = (self.r + 1) & 3
+        return out
+
+    def open(self):
+        out = []
+        if len(self.q) == 4:
+            out = self._play()
+            self.flushed += 1
+        if self.q and self.q[-1][2] is None:
+            self.q[-1][2] = list(self.truth)
+        self.q.append([[0] * 14, set(), None])
+        self.open_ = True
+        self.opened += 1
+        return out
+
+    def write(self, reg, val):
+        self.truth[reg & 15] = val
+        if reg >= 14:
+            self.chip[reg & 15] = val
+            return [(0xFFFD, reg), (0xBFFD, val)]
+        out = []
+        if not self.open_:
+            out = self.open()
+        self.q[-1][0][reg] = val
+        self.q[-1][1].add(reg)
+        return out
+
+    def tick(self):
+        """One interrupt: the oldest tick to the chip, a second one when 3+ remain (asm aytick).
+        Sets `check` = the original's registers at the close of the last tick sent (None: none sent)."""
+        out, self.check = [], None
+        if self.q:
+            for _ in range(2 if len(self.q) >= 4 else 1):
+                last = self.q[0][2] if self.q[0][2] is not None else list(self.truth)
+                out += self._play()
+            if not self.q:
+                self.open_ = False
+            self.check = last[:14]
+        return out
+
+    def same(self, sc):
+        if sc[V_AYN] != len(self.q) or sc[V_AYR] != self.r or bool(sc[V_AYO]) != (self.open_ and bool(self.q)):
+            return False
+        for k, (vals, mask, _) in enumerate(self.q):
+            a = AYQ + 16 * ((self.r + k) & 3)
+            m = 0
+            for reg in mask:
+                m |= 0x8000 >> reg
+            if sc[a + 14] != m >> 8 or sc[a + 15] != m & 255:
+                return False
+            if any(sc[a + reg] != vals[reg] for reg in mask):
+                return False
+        return True
+
+
+RS_LINE = 240                # render end at or past this line: commit at once (asm rsafe)
+INT_LINE = 248               # video line of the ULA interrupt (50 Hz; Next manual ch. 17)
+PROF_KEYS = ('Tp', 'T0', 'T1', 'T2', 'Tre')   # pieces, render start, band ends, cell hooks, render end
+
+
 def verify(patch, rzx_path, progress=None, stop=None):
     """Replay the RZX (original game). At every walker event run the original and the patched code
     from the same state and compare. Returns a Counter of results (keys ending in '!' = failures)."""
@@ -965,6 +1076,8 @@ def verify(patch, rzx_path, progress=None, stop=None):
         for k, v in enumerate(new):
             psite[a + k] = v
     site_bytes = set(psite)
+    psite1 = {a + k: v for a, old, new in patch.sites1 for k, v in enumerate(new)}
+    site_bytes1 = set(psite1)
     st = {'sim': None, 'frame': 0, 'afp': None, 'n': 0, 'prev_vis': set(), 'render': False, 'figw': set(),
           'shadow': ObjShadow(), 'tmax': 0, 'tsum': 0, 'opq': {}, 'bands': set()}
     ns = NextState(patch)
@@ -972,6 +1085,8 @@ def verify(patch, rzx_path, progress=None, stop=None):
         {65172, 65274, 65029, 65076} | set(range(60853, 60857)) | set(range(60839, 60843)) | \
         set(range(60965, 60969)) | {59548, 59549}
     cnt = collections.Counter()
+    WATCH1 = {0xD4DE, 0xD4DF, 0xD4E0, 0xD4E1, 0xD6D4, 0xD6D5, 0xD6D6, 0xD6D7}
+    ay = AYModel()
 
     def fail(k, info):
         c[k + '!'] += 1
@@ -1007,6 +1122,9 @@ def verify(patch, rzx_path, progress=None, stop=None):
                     return ns.pages[pg][a & 0x1FFF]
             v = psite.get(a)
             if v is not None and (s.real.o7ffd & 7) == 0:
+                return v
+            v = psite1.get(a)
+            if v is not None and (s.real.o7ffd & 7) == 1:
                 return v
             v = s.ov.get(a)
             return MG(s.real, a) if v is None else v
@@ -1056,6 +1174,8 @@ def verify(patch, rzx_path, progress=None, stop=None):
             return
         ro, rp = so.registers, sp_.registers
         xt(so, sp_)
+        if st.get('fr_on'):
+            st['Tp'] = st.get('Tp', 0) + sp_.registers[25] - so.registers[25]
         c['pieces'] += 1
         st['ix'] = (R[8] * 256 + R[9], R[12])
         plan, nspr = piece_plan(patch, R[8] * 256 + R[9], n_before, ns.scratch[V_FMAX])
@@ -1139,6 +1259,46 @@ def verify(patch, rzx_path, progress=None, stop=None):
         if ns.nr.get(0x50) != 0xFF:
             fail(what + ': slot 0 not restored', ())
         return sp_
+
+    def ay_writes(ns_):
+        return [(e[1], e[2]) for e in ns_.events if e[0] == 'port' and e[1] & 0xC002 == 0xC000 or
+                e[0] == 'port' and e[1] & 0xC002 == 0x8000]
+
+    def ev_ay(real, R):
+        """0xD6D4 (A = register, D = value): patched = original (registers incl. F, memory); the
+        write goes into the queue (registers 0-13) or straight to the chip (others), as the model."""
+        ret = MG(real, R[12]) | MG(real, R[12] + 1) << 8
+        o, p = OMem(real), PMem(real)
+        nso = NextState(patch)
+        so = _machine(Sim, o, list(R), nso)
+        sp_ = _machine(Sim, p, list(R), ns)
+        ns.events = []
+        if not (_run(so, (ret,)) and _run(sp_, (ret,))):
+            fail('AY write: did not return', ())
+            return
+        xt(so, sp_)
+        compare(o, p, so.registers, sp_.registers, 'AY write')
+        if ns.nr.get(0x50) != 0xFF:
+            fail('AY write: slot 0 not restored', ())
+        orig = ay_writes(nso)
+        if orig != [(0xFFFD, R[0]), (0xBFFD, R[4])]:
+            fail('AY write: original not as expected', (orig[:4],))
+        want = ay.write(R[0], R[4])
+        if ay_writes(ns) != want:
+            fail('AY write: chip writes differ from the model', (ay_writes(ns)[:4], want[:4]))
+        if not ay.same(ns.scratch):
+            fail('AY write: queue differs from the model', ())
+        c['AY writes (music)'] += 1
+
+    def ev_ps(real, R):
+        """0xD4DE (AY player entry): patched = original at 0xD4E1; a new tick opens in the queue."""
+        ns.events = []
+        ev_simple(real, R, 0xD4E1, 'AY player ticks')
+        want = ay.open()
+        if ay_writes(ns) != want:
+            fail('AY tick: chip writes differ from the model', (ay_writes(ns)[:4], want[:4]))
+        if not ay.same(ns.scratch):
+            fail('AY tick: queue differs from the model', ())
 
     def ev_render_start(real, R):
         """Render start: original = patched (all registers); the back tilemap (page 14) = the model:
@@ -1296,17 +1456,27 @@ def verify(patch, rzx_path, progress=None, stop=None):
             pg, hi, nsp = ns.scratch[CLIST + 3 * pi_:CLIST + 3 * pi_ + 3]
             want[pi_] = (bytes(ns.pages[pg][(hi - 0x20) * 256 + 256 - 64 * nsp:(hi - 0x20) * 256 + 256]), nsp)
         exp_attr = [list(ns.scratch[ATTRB + 5 * i:ATTRB + 5 * i + 5]) for i in range(n)]
+        pw0 = ns.pat_writes
+        st['tre_at'] = 0
+        if st.get('fr_on'):                 # patched T from the frame start to the render end (raster model)
+            st['tre_at'] = st['facc'] + R[25] - st['f0'] + st['fx']
         tok = ns.scratch[V_TOK]
         o, p = OMem(real), PMem(real)
         so = _machine(Sim, o, list(R), NextState(patch))
         sp_ = _machine(Sim, p, list(R), ns)
         ns.events = []
+        if st.get('fr_on'):                 # the beam: the frame starts at the interrupt (line INT_LINE);
+            ns.line_t = INT_LINE + st['tre_at'] // LINE_T - R[25] // LINE_T   # patched T since then
         t0 = sp_.registers[25]
-        if not (_run(so, (59092,), 400000) and _run(sp_, (59092,), 400000)):
+        ok_run = _run(so, (59092,), 400000) and _run(sp_, (59092,), 400000)
+        ns.line_t = None
+        if not ok_run:
             fail('render end: did not return', ())
             return
         t = sp_.registers[25] - t0
         xt(so, sp_)
+        if st.get('fr_on'):
+            st['Tre'] = st.get('Tre', 0) + sp_.registers[25] - so.registers[25]
         st['tmax'] = max(st['tmax'], t)
         st['tsum'] += t
         ro, rp = so.registers, sp_.registers
@@ -1326,15 +1496,31 @@ def verify(patch, rzx_path, progress=None, stop=None):
                     row = 2 + ((i >> 5) - s // 8) % 22
                     if row not in st['bands']:
                         fail('render end: object cell on a char row without a band end', (i, row))
-            N = MG(real, 58850)
+        c['render end'] += 1
+        if ns.nr.get(0x50) != 0xFF:
+            fail('render end: slot 0 not restored', ())
+        N = MG(real, 58850)
+        line0 = ns.last_line                        # the beam as the render end read it
+        now = line0 >= RS_LINE and 327 - line0 - 20 >= n
+        if ns.scratch[V_PEND] == (0 if now else 1) and ns.scratch[V_N58] == N:
+            c['render end: commit %s' % ('at once' if now else 'deferred to the next interrupt')] += 1
+        else:
+            fail('render end: commit now / deferred', (line0, n, ns.scratch[V_PEND]))
+        if ns.scratch[V_PEND]:
+            if any(e[0] == 'nr' and (0x34 <= e[1] <= 0x39 or e[1] in (0x15, 0x6B, 0x6E, 0x6F, 0x1B))
+                   for e in ns.events) or any(e[0] == 'port' for e in ns.events) or ns.pat_writes != pw0:
+                fail('render end: deferred commit changed sprites / tilemap', ())
+            st['pend'] = (want, exp_attr, n, tok, N)
+            return
+        check_commit(want, exp_attr, n, tok, N)
+
+    def check_commit(want, exp_attr, n, tok, N):
+        if tok:
             errs = commit_errors(ns.pages[PAGE_TM], ns.pages[PAGE_SH], ns.nr, ns.clip_tm, N)
             if errs or ns.scratch[V_MSD] != ns.scratch[V_MSB]:
                 fail('render end: tilemap commit', errs[:3])
         elif ns.nr.get(0x6B) != 0 or ns.scratch[V_MSD] != 0xFF:
             fail('render end: tilemap not switched off', (ns.nr.get(0x6B),))
-        c['render end'] += 1
-        if ns.nr.get(0x50) != 0xFF:
-            fail('render end: slot 0 not restored', ())
         i = 0
         for pi_ in sorted(want):
             data, nsp = want[pi_]
@@ -1383,6 +1569,8 @@ def verify(patch, rzx_path, progress=None, stop=None):
         def __setitem__(s, a, v):
             if a in site_bytes and (s.o7ffd & 7) == 0 and st['sim'] is not None:
                 fail('game wrote a patch site', (a,))
+            if a in site_bytes1 and (s.o7ffd & 7) == 1 and st['sim'] is not None:
+                fail('game wrote a bank-1 patch site', (a,))
             if st['render'] and 0x4000 <= a < 0x5800 and 59567 <= st['sim'].registers[24] < 60221:
                 st['figw'].add(a)
             MS(s, a, v)
@@ -1397,6 +1585,14 @@ def verify(patch, rzx_path, progress=None, stop=None):
             def mk(f):
                 def g():
                     pc = R[24]
+                    if pc in WATCH1 and (mem.o7ffd & 7) == 1:
+                        cnt[('b1', pc)] += 1
+                        if R[26]:
+                            fail('interrupts enabled at a music hook', (pc,))
+                        if pc == 0xD6D4:
+                            ev_ay(mem, R)
+                        elif pc == 0xD4DE:
+                            ev_ps(mem, R)
                     if pc in WATCH and (mem.o7ffd & 7) == 0:
                         cnt[pc] += 1
                         if R[26] and pc not in (65029, 65076):
@@ -1417,9 +1613,39 @@ def verify(patch, rzx_path, progress=None, stop=None):
                             ev_end(mem, R)
                             ev_band(mem, R)
                         elif pc == 65172:
-                            st['fr_on'], st['f0'], st['facc'], st['fx'], st['fxi'] = True, R[25], 0, 0, 0
+                            pend = st.pop('pend', None)
+                            if (ns.scratch[V_PEND] != 0) != (pend is not None):
+                                fail('limiter: commit pending flag', (ns.scratch[V_PEND],))
+                            f7f = ns.nr.get(0x7F, 0)
                             ns.scratch[V_TICK] = LIMIT - 1          # the recording ran this frame
+                            ns.line_t = INT_LINE - R[25] // LINE_T  # the interrupt: line 248
+                            pw0, ns.events = ns.pat_writes, []
+                            st['fr_on'] = False
+                            fx0 = st.get('fx', 0)
                             ev_simple(mem, R, 65175, 'limiter: frame runs', dead=(1,))   # F: CP 3 next
+                            ns.line_t = None
+                            want = ay.tick()
+                            if ay_writes(ns) != want:
+                                fail('AY replay at the interrupt differs from the model', (ay_writes(ns)[:4], want[:4]))
+                            if not ay.same(ns.scratch):
+                                fail('AY queue after the interrupt differs from the model', ())
+                            if ay.check is not None:
+                                c['AY ticks sent at interrupts'] += 1
+                                if ay.chip[:14] != ay.check:
+                                    fail('AY chip after the replay differs from the original after that tick', ())
+                            if pend is not None:
+                                if ns.scratch[V_PEND]:
+                                    fail('deferred commit: still pending', ())
+                                elif f7f:               # a non-play screen came after the render: dropped
+                                    if any(e[0] == 'nr' and 0x34 <= e[1] <= 0x39 for e in ns.events) or \
+                                            ns.pat_writes != pw0 or ns.nr.get(0x15) or ns.nr.get(0x6B):
+                                        fail('deferred commit: not dropped on a non-play screen', ())
+                                    c['deferred commits dropped (non-play screen)'] += 1
+                                else:
+                                    check_commit(*pend)
+                                    c['deferred commits checked'] += 1
+                            st['fr_on'], st['f0'], st['facc'], st['fx'], st['fxi'] = True, R[25], 0, 0, 0
+                            st['pf0'] = tuple(st.get(k, 0) for k in PROF_KEYS)
                             if ns.nr.get(0x07) != 3:
                                 fail('limiter: not 28 MHz for the frame', (ns.nr.get(0x07),))
                         elif pc in (65029, 65076):
@@ -1430,6 +1656,10 @@ def verify(patch, rzx_path, progress=None, stop=None):
                             if st.get('fr_on'):
                                 ft = st['facc'] + R[25] - st['f0'] + st['fx']
                                 st['fr_on'] = False
+                                st.setdefault('prof', []).append(
+                                    (st['frame'], ft, ft - st['fx']) + tuple(st.get(k, 0) - v for k, v in
+                                                                              zip(PROF_KEYS, st['pf0']))
+                                    + (st.pop('tre_at', None),))
                                 st['ftmax'] = max(st.get('ftmax', 0), ft)
                                 c['game frames over 20 ms at 28 MHz'] += ft > 560000
                                 c['game frames over 20 ms at 28 MHz without the item hooks'] += ft - st['fxi'] > 560000
@@ -1478,6 +1708,12 @@ def verify(patch, rzx_path, progress=None, stop=None):
     for a in (58852, 58853, 58854, 59088, 59089, 59540, 59542, 59545, 59546, 60856, 60842, 59548, 59549):
         if cnt[a]:
             c['jump into a patched instruction (%d)!' % a] += 1
+    for a, b in ((0xD4DF, None), (0xD4E0, None), (0xD6D5, None), (0xD6D6, None), (0xD4E1, 0xD4DE),
+                 (0xD6D7, 0xD6D4)):
+        if cnt[('b1', a)] != (cnt[('b1', b)] if b else 0):
+            c['bank 1 0x%04X reached other than by fall-through!' % a] += 1
+    c['AY ticks queued'] = ay.opened
+    c['AY queue full: oldest tick sent early'] = ay.flushed
     for site, inner in ((60853, (60854, 60855)), (60839, (60840, 60841)), (60965, (60966, 60967, 60968))):
         for a in inner:                     # instruction starts inside a JP: only by fall-through
             if cnt[a] != cnt[site]:
@@ -1488,6 +1724,7 @@ def verify(patch, rzx_path, progress=None, stop=None):
     c['render start T max (28 MHz us)'] = st.get('tsmax', 0) * 1000000 // 28000000
     for k, name in (('T0', 'render start'), ('T1', 'bands'), ('T2', 'cell hooks')):
         c['_T %s total (28 MHz ms)' % name] = st.get(k, 0) // 28000
+    verify.profile = st.get('prof', [])     # per game frame: (frame, total T, original T, extra T per PROF_KEYS)
     return c, dict(ex)
 
 
@@ -1851,8 +2088,10 @@ def unit_tests(patch, rzx_path, want=40, frames=3000):
     # commit writing attribute 4 to the wrong register must fail the commit check)
     bc = copy.deepcopy(patch)
     sc = bytearray(bc.scratch)
-    k = sc.find(b'\xED\x92\x39', patch.syms['s_re'])
-    sc[k + 2] = 0x3A
+    k = patch.syms['commit.a5']
+    if sc[k:k + 2] != b'\xED\xA3':
+        raise ValueError('commit.a5 is not OUTI')
+    sc[k:k + 2] = b'\x00\x00'
     bc.scratch = bytes(sc)
     bc.extra_banks = {12: bc.page + bytes(8192), 13: bc.scratch + bc.tpage}
     cc, _ = verify(bc, rzx_path, stop=1500)
@@ -1888,10 +2127,106 @@ def unit_tests(patch, rzx_path, want=40, frames=3000):
     ro, o, rp, p, ns, err = _pair(cc, _BankMem(banks, o7, rom), R, 0)
     t = staged(ns, 0)
     offs = {t.attr[i][2] >> 4 for i in range(4) if t.attr[i][3] & 0x80}
-    c['class colour offset %s' % ('ok' if offs == {5} and cc.cfg.palette()[81] == 0xE0 else 'FAIL! %s' % offs)] += 1
+    c['class colour offset %s' % ('ok' if offs == {5} and cc.cfg.palette()[81] == 0xE0 else '%s FAIL!' % offs)] += 1
+    ay_unit_tests(patch, c)
     obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path)
     c['states'] = len(states)
     return c
+
+
+def _ay_writes(ns_):
+    return [(e[1], e[2]) for e in ns_.events if e[0] == 'port' and e[1] & 0x8002 == 0x8000]
+
+
+def ay_unit_tests(patch, c):
+    """The AY queue routines (alt ROM) against AYModel on long random sequences shaped like play:
+    per game frame an interrupt that runs it, 3 player ticks (1-4 register writes each), then the
+    skip interrupts; with overrun frames (an interrupt lost), writes outside a tick (the silence
+    routine) and non-sound registers (straight to the chip). Every step: the chip writes and the
+    queue = the model, and after each interrupt the chip = the original's registers at the close of
+    the tick sent. Negative control: the OUT of the value removed."""
+    import random
+    from .dizzy6 import _rw_simulator
+    Sim = _rw_simulator()
+
+    def ops_for(seed, frames):
+        rnd = random.Random(seed)
+        ops = []
+        for f in range(frames):
+            ops.append(('int',))
+            for t in range(3):
+                ops.append(('open',))
+                for w in range(rnd.randrange(1, 5)):
+                    ops.append(('w', rnd.choice((0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 13)), rnd.randrange(256)))
+            if rnd.random() < 0.05:
+                ops.append(('w', rnd.randrange(14), 0))            # silence routine, no tick
+            if rnd.random() < 0.03:
+                ops.append(('w', 14 + rnd.randrange(2), rnd.randrange(256)))
+            for k in range(0 if rnd.random() < 0.1 else rnd.choice((1, 2, 2, 2, 3))):
+                ops.append(('int',))
+        return ops
+
+    def run_case(pt, ops):
+        ns = NextState(pt)
+        ns.nr[0x50] = PAGE_S
+        ram = bytearray(65536)
+
+        class M:
+            def __getitem__(s_, a):
+                if a < 0x2000:
+                    return ns.scratch[a]
+                if a < 0x4000:
+                    return pt.page[a - 0x2000]
+                return ram[a]
+
+            def __setitem__(s_, a, v):
+                if a < 0x2000:
+                    ns.scratch[a] = v
+                elif a >= 0x4000:
+                    ram[a] = v
+
+            def __len__(s_):
+                return 65536
+        model = AYModel()
+        bad = sent = 0
+        for op in ops:
+            regs = [0] * 29
+            regs[12], regs[24] = 0xF000, pt.syms[{'int': 'aytick', 'open': 'ayopen', 'w': 'aywr'}[op[0]]]
+            ram[0xF000], ram[0xF001] = 0xF0, 0xFF
+            if op[0] == 'w':
+                regs[0], regs[4] = op[1], op[2]
+                want = model.write(op[1], op[2])
+            elif op[0] == 'open':
+                want = model.open()
+            else:
+                want = model.tick()
+            sim = _machine(Sim, M(), regs, ns)
+            ns.events = []
+            ok = _run(sim, (0xFFF0,), 20000) and _ay_writes(ns) == want and model.same(ns.scratch)
+            if op[0] == 'int' and model.check is not None:
+                sent += 1
+                ok &= model.chip[:14] == model.check
+            bad += not ok
+        return bad, sent, model.flushed
+    bad, sent, fl = run_case(patch, ops_for(5, 400))
+    c['AY queue: %d ticks sent at interrupts (%d sent early, queue full) %s' % (
+        sent, fl, 'ok' if not bad and sent and fl else '%d steps FAIL!' % bad)] += 1
+    bad, _, _ = run_case(_with_rom_bytes(patch, 'ayplay.o', b'\xED\x79', b'\x00\x00'), ops_for(5, 40))
+    c['AY queue negative control (values not sent) %s' % ('detected' if bad else 'NOT DETECTED!')] += 1
+
+
+def _with_rom_bytes(patch, sym, old, new):
+    """A copy of the patch whose alt-ROM code has `old` at symbol `sym` replaced by `new`."""
+    import copy
+    b = copy.deepcopy(patch)
+    a = patch.syms[sym] - 0x2000
+    pg = bytearray(b.page)
+    if old is not None and bytes(pg[a:a + len(old)]) != old:
+        raise ValueError('%s is not %s' % (sym, old.hex()))
+    pg[a:a + len(new)] = new
+    b.page = bytes(pg)
+    b.extra_banks = {12: b.page + bytes(8192), 13: b.scratch + b.tpage}
+    return b
 
 
 def _with_bytes(patch, sym, old, new):
@@ -2146,7 +2481,7 @@ def obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path):
         got = {a: v for a, v in pv.ov.items() if 0x4000 <= a < 0x5B00 and v != bm[a]}
         if err or any(ro[k] != rp[k] for k in CMP) or got:
             fails.append('render end screen/registers')
-        if exp is not None:
+        if exp is not None and not ns3.scratch[V_PEND]:     # (a deferred commit is checked by defer_case)
             e = commit_errors(ns3.pages[PAGE_TM], ns3.pages[PAGE_SH], ns3.nr, ns3.clip_tm, bm[58850])
             if e or ns3.scratch[V_MSD] != ns3.scratch[V_MSB] or ns3.nr.get(0x52) != 10 or ns3.nr.get(0x53) != 11:
                 fails.append('tilemap commit %s' % e[:2])
@@ -2183,7 +2518,7 @@ def obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path):
         f, _, _, _ = render_case(patch, m, R, sh, pg2, tm2, shm2, sc2)
         nfail += f
     c['object render path (start, 22 bands, end; tiles, background, inks, classes) %s' % (
-        'ok' if not nfail else 'FAIL! %s' % nfail[:4])] += len(rstates)
+        'ok' if not nfail else '%s FAIL!' % nfail[:4])] += len(rstates)
     c['object render cases: tiles checked'] += ntiles
 
     def one(pt, second=False):
@@ -2197,7 +2532,7 @@ def obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path):
         f2, _, _, _ = render_case(pt, m, R0, sh, pg2, tm2, shm2, sc2)
         return f + f2
     R0 = R
-    for sym, new, what, second in (('cpix.bk', b'\xE6\x00', 'no black border', False),
+    for sym, new, what, second in (('odraw.bk', b'\xE6\x00', 'no black border', False),
                                    ('s_bend.wt', b'\x00', 'background tile not drawn', False),
                                    ('obuild.cb', b'\x00\x00\x00\x00', 'map not cleared', True),
                                    ('ocomp.selx', b'\xEE\x00', 'fruit behind rainbows', False),
@@ -2250,34 +2585,55 @@ def obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path):
         f2, _, _, _ = render_case(pt, m, R0, sh, pg2, tm2, shm2, sc2, nr7f=1)
         return f + f2
     f = flush_case(patch)
-    c['tile cache flush (stale tiles rebuilt) %s' % ('ok' if not f else 'FAIL! %s' % f[:3])] += 1
+    c['tile cache flush (stale tiles rebuilt) %s' % ('ok' if not f else '%s FAIL!' % f[:3])] += 1
     f = flush_case(_with_bytes(patch, 'obuild.fj', b'\x28', b'\x18'))
     c['tile cache negative control (flush ignored) %s' % ('detected' if f else 'NOT DETECTED!')] += 1
 
-    # raster-synced commit: no sprite / tilemap change while the beam is in the play area
+    # render-end commit (2026-10-19): at once only when the frame will miss the interrupt (L >= 240)
+    # and the commit fits before line 16 (L + sprites <= 308), else at the next interrupt (s_int, line
+    # 248) - never a wait. The deferred commit is dropped after a non-play screen ($7F set).
+    def defer_case(pt, ns3, nr7f=0):
+        """s_lim at the interrupt (line INT_LINE) with ns3's state (a commit pending): original =
+        patched at 65175 (F dead: CP 3 next), BC DE HL SP kept. Returns (ok, ns)."""
+        r = list(R0)
+        r[24], r[25] = 65172, 0
+        sc = bytearray(ns3.scratch)
+        sc[V_TICK] = LIMIT - 1
+        ro, ov, rp, pv, ns, err = _pair(pt, bm0, r, ns3.scratch[V_S], scratch=sc,
+                                        pages={k: bytes(v) for k, v in ns3.pages.items()},
+                                        stops=(65175,), line_t=INT_LINE, nr={0x7F: nr7f})
+        ok = not err and all(ro[k] == rp[k] for k in CMP if k != 1) and ov.ov == pv.ov and \
+            rp[24] == 65175 and ns.scratch[V_PEND] == 0 and ns.nr.get(0x07) == 3 and ns.nr.get(0x50) == 0xFF
+        return ok, ns
+
     def raster(pt):
         res = {}
         pg = bytearray(patch.tpage)
         m, sh = scen(bm0, pg)
-        for l0 in (100, 175, 15, 176, 200, 300):
+        ok = True
+        for l0 in (100, 175, 15, 176, 200, 239, 240, 300, 307, 308):
             sc, tm, shm = fresh(pt)
-            f, _, _, ns = render_case(pt, m, R0, sh, bytearray(pg), tm, shm, sc, line_t=l0)
-            l6e = None if ns.t6e is None else (l0 + ns.t6e // LINE_T) % 312
-            res[l0] = (f, l6e)
-        ok = all(not f and l is not None for f, l in res.values())
-        if ok:
-            d = (res[200][1] - 200) % 312
-            for l0, (f, l) in res.items():
-                if PLAY_TOP <= l0 < PLAY_END:
-                    ok &= PLAY_END <= l <= PLAY_END + d
-                else:
-                    ok &= (l - l0) % 312 == d
+            f, _, exp, ns = render_case(pt, m, R0, sh, bytearray(pg), tm, shm, sc, line_t=l0)
+            now = l0 >= RS_LINE and l0 + ns.scratch[V_S] <= 307
+            if now:
+                l6e = None if ns.t6e is None else (l0 + ns.t6e // LINE_T) % 312
+                ok &= not f and ns.scratch[V_PEND] == 0 and l6e is not None and l6e - l0 < 30
+            else:
+                ok &= ns.t6e is None and ns.scratch[V_PEND] == 1 and not any(
+                    e[1] in (0x6B, 0x6E, 0x15) or 0x34 <= e[1] <= 0x39 for e in ns.events if e[0] == 'nr')
+                okd, nsd = defer_case(pt, ns)
+                l6e = None if nsd.t6e is None else (INT_LINE + nsd.t6e // LINE_T) % 312
+                e = commit_errors(nsd.pages[PAGE_TM], nsd.pages[PAGE_SH], nsd.nr, nsd.clip_tm, m[58850])
+                ok &= okd and not e and l6e is not None and INT_LINE <= l6e < INT_LINE + 30
+                okx, nsx = defer_case(pt, ns, nr7f=1)            # a non-play screen came: dropped
+                ok &= okx and nsx.t6e is None and not nsx.nr.get(0x6B)
+            res[l0] = ('now' if now else 'deferred', l6e)
         return ok, res
     ok, res = raster(patch)
-    c['commit raster wait (line at the tilemap switch %s) %s' % ({k: v[1] for k, v in res.items()},
-                                                                 'ok' if ok else 'FAIL!')] += 1
-    ok, _ = raster(_with_bytes(patch, 'rwait.lp', None, b'\xC9\x00'))
-    c['commit negative control (no raster wait) %s' % ('detected' if not ok else 'NOT DETECTED!')] += 1
+    c['commit at once / deferred to the interrupt (line at the tilemap switch %s) %s' % (
+        res, 'ok' if ok else 'FAIL!')] += 1
+    ok, _ = raster(_with_rom_bytes(patch, 's_re.rs', b'\xDC', b'\xCD'))
+    c['commit negative control (committed in the play area) %s' % ('detected' if not ok else 'NOT DETECTED!')] += 1
 
     # diagnostic build: border colours (blue while the commit waits, red while a tile is composed,
     # yellow after a frame with an interrupt in it); the normal build writes no border at all
@@ -2295,9 +2651,10 @@ def obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path):
         m, sh = scen(bm0, pg)
         sc, tm, shm = fresh(pt)
         f, ns, exp, ns3 = render_case(pt, m, R0, sh, pg, tm, shm, sc, line_t=100)
+        okd, nsd = defer_case(pt, ns3)                  # (border: blue, black; then the frame start's black)
         f2, _, _, ns4 = render_case(pt, m, R0, sh, bytearray(patch.tpage), bytearray(8192),
                                     bytearray(8192), fresh(pt)[0], line_t=200)
-        return f + f2, border(ns), border(ns3), border(ns4)
+        return f + f2 + ([] if okd else ['deferred commit']), border(ns), border(ns3) + border(nsd), border(ns4)
 
     def frame_case(pt):
         """dfst at a frame start, then dfend with / without an interrupt during the frame."""
@@ -2337,17 +2694,16 @@ def obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path):
         return out
     f, rs, re_, re2 = diag_case(dpt)
     fr = frame_case(dpt)
-    ok = not f and rs and rs[-1] == 0 and set(rs) == {0, 2} and re_ and re_[0] == 1 and re_[-1] == 0 and \
-        set(re_) == {0, 1} and re2 == [0] and \
+    ok = not f and rs and rs[-1] == 0 and set(rs) == {0, 2} and re_ == [1, 0, 0] and re2 == [] and \
         fr[0] == [(True, [0], 1), (True, [6], 0)] and fr[1] == [(True, [0], 1), (True, [], 0)]
-    c['diagnostic border (wait blue, tile red, overrun yellow; %d / %d / %d writes) %s' % (
-        len(rs), len(re_), len(re2), 'ok' if ok else 'FAIL! %s' % ((f[:2], rs[:4], re_[:4], re2, fr),))] += 1
+    c['diagnostic border (deferred commit blue, tile red, overrun yellow; %d / %d / %d writes) %s' % (
+        len(rs), len(re_), len(re2), 'ok' if ok else '%s FAIL!' % ((f[:2], rs[:4], re_[:4], re2, fr),))] += 1
     f, rs, re_, re2 = diag_case(patch)
     fr = frame_case(patch)
     ok = not f and not rs and not re_ and not re2 and fr[0] == [(True, [], 0), (True, [], 0)]
-    c['diagnostic border off in the normal build %s' % ('ok' if ok else 'FAIL!')] += 1
+    c['diagnostic border off in the normal build %s' % ('ok' if ok else '%s FAIL!' % ((f[:2], rs[:4], re_[:4], re2, fr),))] += 1
     f, rs, re_, re2 = diag_case(_with_bytes(dpt, 'dcol.o', b'\xD3\xFE', b'\x00\x00'))
-    c['diagnostic negative control (no colour shown) %s' % ('detected' if not rs or set(rs) != {0, 2} or not re_ or re_[0] != 1
+    c['diagnostic negative control (no colour shown) %s' % ('detected' if not rs or set(rs) != {0, 2} or re_ != [1, 0, 0]
                                                            else 'NOT DETECTED!')] += 1
 
     # profile tables
@@ -2402,7 +2758,7 @@ def auto(a, z80, name, out, say):
     dspr = os.path.join(out, name + '_sprites_diag.nex')
     zt.convert(z80, dspr, quiet=True, patch=dpatch)
     bad3 = boot_check(dspr, z80, dpatch)
-    say('Diagnostic: %s  %s  boot %s  (border: blue = commit waits for the beam, red = tile built, '
+    say('Diagnostic: %s  %s  boot %s  (border: blue = commit deferred to the interrupt, red = tile built, '
         'yellow = frame overran)' % (os.path.basename(dspr), md5(dspr),
                                      'OK' if not bad3 else 'MISMATCH %s' % str(bad3[:3])[:200]))
     ok = ok and not bad3
@@ -2431,9 +2787,16 @@ def auto(a, z80, name, out, say):
                                          'IDENTICAL' if not fails else 'FAILED %s' % fails))
         say('            limiter: %d game frames checked (entry + exit), 28 MHz inside, 3.5 MHz outside' %
             c['limiter: frame runs'])
-        say('            commits checked %d (patterns + attributes = staged), non-play sprites-off %d, '
-            'overflow entries %d' % (c['commits checked'], c['sprites off (non-play)'],
-                                     c['overflow entries (4 ways in use)']))
+        say('            commits checked %d (patterns + attributes = staged): at once %d, deferred to the next '
+            'interrupt %d (dropped on a non-play screen %d); non-play sprites-off %d, overflow entries %d' % (
+                c['commits checked'], c['render end: commit at once'],
+                c['render end: commit deferred to the next interrupt'],
+                c['deferred commits dropped (non-play screen)'], c['sprites off (non-play)'],
+                c['overflow entries (4 ways in use)']))
+        say('            music: %d AY writes, %d player ticks queued, %d sent at interrupts (%d sent early: queue '
+            'full - the replay sees one interrupt per game frame), chip = original after each tick sent' % (
+                c['AY writes (music)'], c['AY ticks queued'], c['AY ticks sent at interrupts'],
+                c['AY queue full: oldest tick sent early']))
         say('            objects: %d cell hooks (60853 %d / 60839 %d / 60965 %d), %d tiles dropped by a cell change; '
             '%d object tiles shown (max %d per render), %d bands checked, %d screen bytes set to the map tile at '
             'band ends; object cells = the game\'s back buffer %d; max %d figure sprites' % (
