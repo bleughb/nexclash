@@ -36,7 +36,7 @@ are the records' canonical ones (`nexclash.py auto` names its outputs after the 
 Every game's verified outputs (`selftest.py` rebuilds them; the record says how):
 
 - Chuckie Egg (chuckie_egg): `chuckie_egg.nex` ec0df71e70fae35836eaed521f300777, `chuckie_egg_sprites.nex` bfad6be1e7c8a2c797a6242d7f339e35; verified 2026-10-13
-- Rainbow Islands (128K) (rainbow): `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_sprites.nex` fe34236c476290cfec10183ef90d6141, `rainbow_sprites_diag.nex` 60bda66413c381ba918bf39e7b70b5b7; verified 2026-10-13
+- Rainbow Islands (128K) (rainbow): `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_sprites.nex` cf017271dfc01bdd0c7cf2f599b03628, `rainbow_sprites_diag.nex` c16751b0255ee3d83a4e342bf9a8c411; verified 2026-10-13
 - Everyone's a Wally (wally): `wally.nex` 2e615b3e7ae995e6d6a6ed9e3f586d4d, `wally_sprites.nex` f7605489c3af55b8e8c6a580c1c26150; verified 2026-10-13
 - Everyone's a Wally (updated) (everyones_a_wally_updated): `everyones_a_wally_updated.nex` 2e615b3e7ae995e6d6a6ed9e3f586d4d, `everyones_a_wally_updated_sprites.nex` 31c3ef131330d26238b01a69b35c647e; verified never
 - Spellbound Dizzy (Dizzy V) (dizzy5): `dizzy5.nex` c99189f3274a4803f0b25b0217206bdb, `dizzy5_sprites.nex` 1f33c467e6aa55585cea79cfbb24bcfe, `dizzy5_sprites.nex --strategy slot1` a59c1fd91ec5c32e549526dbc08d2e69 (re-checked 2026-09-28; 00a7c496... had an EMPTY font page: dialogue text blank on hardware); verified 2026-10-13
@@ -80,6 +80,17 @@ driven by the records. No game output changed.
 - `--outline transparent` on rainbow.rzx - IDENTICAL (outline pixels counted as expected drops)
 - unit tests: edge columns, last slot, passthrough at 32 pieces, negative control, class colour - PASS
 - Hardware: runs (Dean, 2026-09-28); detailed visual checklist results not reported
+
+## Rainbow Islands - 2026-10-19 no rainbow border + collectable insides (cf017271 / diag c16751b0)
+- RELEASE `auto rainbow.z80 --rzx rainbow.rzx --rzx rainbownew.rzx --no-record`, profile class colours
+  (C3 no outline): rainbow_stripped 7178 frames, 11865 pieces -> IDENTICAL; rainbownew_stripped 11799
+  frames, 29314 pieces -> IDENTICAL; diagnostic 1506 frames IDENTICAL; unit PASS, 22 object negative
+  controls detected (new: 'collectables' inside pixels not drawn'; 'no black border' now on a profile
+  copy with borders on, its base PASS).
+- Found on the way: with the class colours the pixel check failed (62 ink pixels of thrown-rainbow
+  pieces, IX 60130, not covered): attr2 took CLASSTAB's bit 0 (no-outline flag) as X8. Registers and
+  memory matched; only the per-pixel check against the original plot saw it.
+- Bookmark verify (playthrough rounds, boss rounds of islands 7..1): see games/rainbow_islands.md.
 
 ## Rainbow Islands - 2026-10-19 no raster wait + music queue + faster tiles and commit
 RELEASE level (`auto rainbow.z80 --rzx rainbow.rzx --rzx rainbownew.rzx --no-record`). Changed:

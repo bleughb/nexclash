@@ -107,6 +107,27 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   graphics with one before it shows only its new pixels; the largest figure of a group first) - and
   `<game>_REFERENCE_ALL_SPRITES.png` - every figure whole, to see the result; both in the colours
   the build gives them now (`coloursheet.write(..., unique=True / False)`).
+  Dean 2026-10-19 (Rainbow Islands; for this and ALL FUTURE games):
+  - The painting sheet shows WHOLE figures: the fewest figures that show every graphics byte
+    (`coloursheet.choose`, then `write(..., unique=False)`). "Only the new pixels" of a figure that
+    shares graphics with an earlier one looked like CORRUPTED characters to him. A pixel shown in two
+    figures is one colour-map entry: `read` takes a changed copy over an unchanged one and reports
+    two different paints. (Engines before Rainbow still write unique=True: Open, BRIEFING C2.)
+  - Default colours on the painting sheet: what the build draws today. Items with their own colours
+    (collectables, fruit) are on the sheet too, ONE COPY PER COLOUR the game draws them in, each
+    colour painted apart (its own keys).
+  - Many figures -> split: one sheet per level, one for the collectables, one for the player
+    (`<game>_<PART>_PAINTING_SPRITES.png` / `_REFERENCE_ALL_SPRITES.png`, PART = PLAYER, ISLAND1..,
+    LEVEL1.., COLLECTABLES).
+  - Join a figure's pieces by the GAME's own object (the routine that builds one object's draw
+    list: a hook there tags every piece it allocates), not by boxes that touch: two figures side by
+    side, or a figure next to a thrown weapon, were merged into one ("overlapping sprites").
+  - "Every level": the recordings must reach every level, boss and collectable. A whole-game
+    playthrough (Rainbow: rainbowislands_LeeBee.rzx, 195k frames) is cut into BOOKMARKS, one RZX per
+    level (`rzx.scan` finds the frames where the level variable changes, `rzx.cut` writes an RZX that
+    starts there); the full file is never replayed again. Replays use `rzx.trace` (C simulator with
+    hooks: the whole playthrough in ~10 min; the Python simulator takes hours). Report coverage per
+    level: graphics bytes drawn vs the level's graphics data, so a gap is visible, not guessed.
   Rules (Dean): 1:1 (one PNG pixel = one Spectrum pixel; an enlarged sheet is too big to paint),
   multi-part figures JOINED as the game draws them, a row of 8x8 swatches of the sprite palette
   (1-15) at the top, no text. The user paints, keeps the size, sends it back; the read-back is the

@@ -391,6 +391,12 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    $26,0 / $27,0 + $06 AND $5F in the stub (Dizzy 1: its Layer 2 registers in its own setup) -
    changes every game's .nex bytes, so it is a maintainer decision with a full
    `selftest.py --stamp`. Check NEXLOAD's reset list first (ped7g NEXLOAD2 source).
+27. Colour sheets before Rainbow (2026-10-19) still write the painting sheet with unique=True (only
+   the new pixels of each figure) and join pieces by touching boxes; Dean's 2026-10-19 rules (PLAYBOOK
+   3b: whole figures, split per level / collectables / player, default colours, one copy per item
+   colour, join by the game's object) apply to them at their next sheet. `rzx.trace` (C simulator
+   with hooks, ~20x the Python simulator) could also speed their capture and verify passes.
+
 ### C3. Working rules (token budget)
 Summaries <= 40 lines; disassemble only routines the analysis flags; one simulator pass
 per question; long jobs in background + poll; verify original bytes at every patch site;
