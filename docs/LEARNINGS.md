@@ -27,6 +27,22 @@ BRIEFING - with its reason.
 - R changes with every M1 (prefixed opcodes +2, an accepted interrupt +1, bit 7 kept), so hook
   code always changes R. A game that reads R (LD A,R) for randomness diverges from the recording
   after the first hook: `isr` flags LD A,R; the engine simulators advance R for NEXTREG.
+- Beam-racing ("multicolour" / rainbow) code - reference: Dominic Robinson's 1987 Rainbow
+  Processor, decompiled and cycle-annotated at github.com/mcphail/rainbow_processor_decompilation:
+  an IM 2 handler burns a fixed delay to the first visible line (48K: 224 T/line, 312 lines, 64
+  lines = 14336 T before the picture; 128K: 228 T, 311 lines, 63 lines = 14364 T), then each
+  224 T loop PUSHes a row of new attributes (SP pointed at the row's end) just after the beam has
+  drawn one pixel line and before the next - 8 colour pairs per 8x8 cell, no clash. It is timed to
+  the T-state INCLUDING contention (each PUSH into the attribute area can wait up to 6 T), and it
+  self-corrects only slightly (measured ~223.9 T per loop).
+  Consequences for us: (1) a game or loader using this is broken by anything that changes its
+  T-state count or contention - a hook inside the timed loop, NextReg $07 turbo, $08 bit 6
+  (contention off), 60 Hz, the wrong machine timing in $03 - while the differential verify, which
+  counts instructions not beam position, still passes (simulator blind spot, BRIEFING A1). How to
+  spot one: IM 2 handler -> long fixed delay -> loop of PUSHes/LDs into 0x5800-0x5AFF that rewrites
+  the same attribute row every ~224 T. Leave such code unhooked and at 3.5 MHz. (2) On the Next the
+  same picture needs no timing: a copper list can rewrite ULA palette entries per scanline, or
+  the figure can become a sprite / Layer 2 - the route if a multicolour game is ever converted.
 - ED 7E (undocumented IM 2) sets IM 2 only from core 3.01.08 on (core changelog). A game using it
   (copy protection does) misbehaves on older cores; check for ED 7E when a hardware report from
   an older core differs from the emulator. OUT (C),0 (ED 71) outputs 0 on the Next (NMOS
