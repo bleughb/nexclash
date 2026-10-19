@@ -2864,3 +2864,187 @@ def auto(a, z80, name, out, say):
                 u['negative control detected'], u['store stale-pattern negative control detected']))
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return ok
+
+
+# ---------------------------------------------------------------------------------------------
+# Colour sheet (PLAYBOOK 3b, Dean 2026-10-19): every figure the sprite hooks draw, on a PNG to paint
+# ---------------------------------------------------------------------------------------------
+# Paint palette = the 15 Spectrum inks (sprite palette offset ITEM_PAL): 1 black, 2-8 inks 1-7,
+# 9-15 bright inks 1-7. Today's colours: ink = bright white (15), outline = black (1).
+SHEET_PAL = (0x00, 0x00) + SPECTRUM_INK + SPECTRUM_INK_BRIGHT
+SHEET_INK, SHEET_OUTLINE = 15, 1       # bright white (Config ink 'white' = 0xFF), black
+COLOURS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'docs', 'profiles',
+                            'rainbow_colours.json')
+
+
+def figure_family(gfx):
+    """Graphics address -> sheet group (Rainbow figures by graphics page; LEARNINGS 2.2)."""
+    h = gfx >> 8
+    if 0xD6 <= h <= 0xDA:
+        return 'Player'
+    if 0xDC <= h <= 0xDE:
+        return 'Creatures (fixed graphics)'
+    if 0x95 <= h <= 0x98:
+        return 'Creatures (level graphics 0x9500)'
+    return 'Other figures'
+
+
+def sheet_piece(prof, ix, carry, gfx, de, peek):
+    """One walker piece (59539 state) -> a coloursheet part in SCREEN orientation: per window pixel
+    the colour-map key = the graphics byte it comes from ('%04X'; ink byte for ink and clear pixels,
+    mask byte for outline pixels), its bit as stored, code 1 ink / 2 outline / 0 clear. None for
+    pieces the hooks leave on the ULA (stars, unknown plotters)."""
+    pi = prof['plotters'].get(str(ix))
+    if pi is None or ix in (60176, 60180):
+        return None
+    lay = bytes.fromhex(pi['layout'][carry])
+    ink, mask = {}, {}
+    for i, t in enumerate(lay):
+        a = (gfx + i) & 0xFFFF
+        (mask if t & 0x80 else ink)[t & 0x3F] = (peek(a), a, bool(t & 0x40))
+    rows = max(p // 6 for p in set(ink) | set(mask)) + 1
+    pixels, entries = [], {}
+    for pos in range(6 * rows):
+        r, col = divmod(pos, 6)
+        g, m = ink.get(pos), mask.get(pos)
+        if g is None and m is None:
+            continue
+        for b in range(8):
+            def src(e):
+                v, a, mir = e
+                sb = 7 - b if mir else b
+                return a, sb, v >> (7 - sb) & 1
+            gi = src(g) if g else None
+            mi = src(m) if m else None
+            if gi and gi[2]:
+                key, bit, code, d = gi[0], gi[1], 1, SHEET_INK
+            elif mi and not mi[2]:
+                key, bit, code, d = mi[0], mi[1], 2, SHEET_OUTLINE
+            else:
+                key, bit, code, d = (gi or mi)[0], (gi or mi)[1], 0, 0
+            k = '%04X' % key
+            entries.setdefault(k, [peek(key), 1])
+            pixels.append((col * 8 + b, r, k, bit, code, d))
+    e, d = de & 255, de >> 8
+    x = ((e & 31) - pi['off']) * 8
+    y = ((e & 0xE0) >> 2 | (d & 0x18) << 3) + (d & 7)
+    return dict(id=(ix, carry, gfx), size=rows, w=48, h=rows, x=x, y=y, mir=0, group=figure_family(gfx),
+                pixels=pixels, entries=entries)
+
+
+def sheet_capture(rzx_paths, prof=None, stop=None):
+    """Replay the RZX(s) (original game); per render, every converted piece -> parts; the pieces of
+    one figure (same graphics family, boxes touching) are joined -> coloursheet composites."""
+    import shutil
+    import tempfile
+    import skoolkit.rzxplay as rzxplay
+    from skoolkit.simulator import Simulator
+    from skoolkit.pagingtracer import Memory
+    from skoolkit.rzxplay import parse_rzx
+    from skoolkit.snapshot import Snapshot as SS
+    from . import coloursheet as cs, rzx as RZ
+    prof = prof or json.load(open(_profile_path()))
+    MG = Memory.__getitem__
+    col = cs.Collector(family=lambda p: p['group'])
+    frame = []
+
+    def flush():
+        n = len(frame)
+        par = list(range(n))
+
+        def find(i):
+            while par[i] != i:
+                par[i] = par[par[i]]
+                i = par[i]
+            return i
+        box = []
+        for q in frame:                     # drawn pixels' box (a piece's window is 6 bytes wide)
+            cs_ = [c for c, r, k, bt, code, d in q['pixels'] if code]
+            box.append((q['x'] + min(cs_), q['x'] + max(cs_)) if cs_ else (q['x'], q['x']))
+        for i in range(n):                  # one figure: same group, pieces on consecutive bands (one
+            a = frame[i]                    # ends where the other starts, +-1) overlapping by 4+ pixels
+            for j in range(i):
+                b = frame[j]
+                if a['group'] == b['group'] and min(box[i][1], box[j][1]) - max(box[i][0], box[j][0]) >= 3 and \
+                        (abs(a['y'] - (b['y'] + b['h'])) <= 1 or abs(b['y'] - (a['y'] + a['h'])) <= 1):
+                    par[find(i)] = find(j)
+        groups = collections.defaultdict(list)
+        for i in range(n):
+            groups[find(i)].append(frame[i])
+        for g in sorted(groups.values(), key=lambda g: (g[0]['y'], g[0]['x'])):
+            col.add_frame(sorted(g, key=lambda p: (p['y'], p['x'])))
+        frame.clear()
+
+    class S(Simulator):
+        def __init__(self, memory, registers=None, state_=None, config=None):
+            super().__init__(memory, registers, state_, config)
+            R, mem, ops = self.registers, self.memory, self.opcodes
+
+            def mk(f):
+                def g():
+                    pc = R[24]
+                    if (mem.o7ffd & 7) == 0:
+                        if pc == 59539:
+                            p = sheet_piece(prof, R[8] * 256 + R[9], R[17] & 1, R[12], R[4] * 256 + R[5],
+                                            lambda a: MG(mem, a))
+                            if p and p['pixels']:
+                                frame.append(p)
+                        elif pc == 59087:
+                            flush()
+                    f()
+                return g
+            for i in range(256):
+                ops[i] = mk(ops[i])
+    tmp = tempfile.mkdtemp(prefix='nexclash_sheet_')
+    old = (rzxplay.Simulator, rzxplay.CSimulator)
+    rzxplay.Simulator, rzxplay.CSimulator = S, None
+    try:
+        for k, r in enumerate([rzx_paths] if isinstance(rzx_paths, str) else rzx_paths):
+            if sum(1 for b in parse_rzx(r) if isinstance(b.obj, SS)) > 1:      # Fuse autosaves
+                s2 = os.path.join(tmp, '%d_%s' % (k, os.path.basename(r)))
+                RZ.strip(r, s2)
+                r = s2
+            frame.clear()
+            try:
+                rzxplay.main(['--python', '--quiet', '--no-screen', '--fps', '0'] +
+                             (['--stop', str(stop)] if stop else []) + [r])
+            except SystemExit:
+                pass
+    finally:
+        rzxplay.Simulator, rzxplay.CSimulator = old
+        shutil.rmtree(tmp, ignore_errors=True)
+    return col.composites(['Player', 'Creatures (fixed graphics)', 'Creatures (level graphics 0x9500)',
+                           'Other figures'])
+
+
+def sheets(comps, prefix, colours=None):
+    """<prefix>_PAINTING_SPRITES.png (every graphic once; + _layout.json) and
+    <prefix>_REFERENCE_ALL_SPRITES.png (every figure whole). -> [(path, figures)]."""
+    from . import coloursheet as cs
+    rgb = cs.palette_rgb(SHEET_PAL)
+    out = []
+    for name, unique in (('PAINTING_SPRITES', True), ('REFERENCE_ALL_SPRITES', False)):
+        png = '%s_%s.png' % (prefix, name)
+        n = cs.write(comps, png, os.path.splitext(png)[0] + '_layout.json', rgb, colours, unique=unique,
+                     paint_clear=True)
+        out.append((png, n))
+    return out
+
+
+def _main(argv=None):
+    import argparse
+    ap = argparse.ArgumentParser(prog='python -m nexclash.rainbow',
+                                 description='Rainbow Islands figure colours: sheet to paint')
+    sub = ap.add_subparsers(dest='cmd', required=True)
+    p = sub.add_parser('sheet', help='RZX(s) -> sheet PNGs + layout JSON (game graphics: keep private)')
+    p.add_argument('rzx', nargs='+')
+    p.add_argument('-o', '--output', default='rainbow_islands')
+    p.add_argument('--stop', type=int)
+    a = ap.parse_args(argv)
+    comps = sheet_capture(a.rzx, stop=a.stop)
+    for png, n in sheets(comps, a.output):
+        print('%d figures -> %s' % (n, png))
+
+
+if __name__ == '__main__':
+    _main()
