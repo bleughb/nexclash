@@ -18,11 +18,8 @@ Layers - never mix their facts:
   ~/.cache/nexclash). Assemble hooks ONLY with `python tools/asm2profile.py <engine>`; it refuses
   any other version. `--check <profile>` proves a profile = its source (each hook game's record runs it
   with every rebuild); `--check --all` is for assembler upgrades (tools/sjasmplus/README.md).
-- Background jobs: `setsid nohup python X > log 2>&1 < /dev/null &` then poll (a plain
-  `nohup ... &` dies when the tool call returns). One CPU: run long jobs one at a time. A tool
-  call is capped at 10 minutes: poll with sleeps under that. Start the job on its own: in
-  `a && b && setsid nohup job &` the `&` backgrounds the WHOLE chain, so a failed `a` silently
-  skips the job and its output is lost.
+- Background jobs, the 10-minute tool-call cap, worktrees for stamping runs: LEARNINGS 2.6 (the one
+  place for these rules).
 - Shell heredocs that write docs: quote the delimiter (`<<'EOF'`) or the shell runs every
   backticked example in the text (2026-10-11: it cloned sjasmplus into the repo and ran a pkill).
 - Next dev guide r3 (Tomaz Kragelj): github.com/tomaz/zx-next-dev-guide (PDF; `pdftotext` it, then grep).
