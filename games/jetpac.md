@@ -13,15 +13,17 @@ every graphic. A real Fuse RZX would add the game's own paths (rocket build, fue
 | Output | MD5 | Status |
 |---|---|---|
 | jetpac.nex (plain, tail 0x5B00) | feff51b7038606d21c03c260055481e4 | boot sim OK |
-| jetpac_sprites.nex (altrom, stateless hooks, 82 patterns) | 2db185f7bf2a515898389f14e0f1651b | free run IDENTICAL, unit PASS; hardware untested |
+| jetpac_sprites.nex (altrom, stateless hooks, 82 patterns) | 1a41d0312677ad9ae8fc9b9af1b77679 | free run IDENTICAL, unit PASS; hardware untested |
 
 Verification (2026-10-19): free run 6000 frames: 20433 draws, 100 erases, 23192 colour paints,
 5 screen clears, 2193166 sprite pixels = the original plot; unit: 5712 graphic cases (every graphic
 incl. all 8 levels' aliens and the 12 carried rocket parts x 8 positions incl. both edges x 3 inks x
-first/last object), erase 12 (incl. the flame erase with the rocket visible; the round-1 build fails those 6), clear 1, guard 1, negative control 40/40.
+first/last object); stacked rocket: 128 whole-routine cases (4 rockets x 1-3 pieces x fuel
+0-6 x flash, 2 frames: sprites = the whole rocket in its painted band colours) + flame 6, negative
+controls round-2 pieces / no paint detected; erase 12 (incl. the flame erase with the rocket visible; the round-1 build fails those 6), clear 1, guard 1, negative control 40/40.
 
 ## Patch design
-- Alt ROM only (hooks + tables 0x386E-0x3C4F, 993 bytes): no RAM page, no state. 82 4-bit patterns
+- Alt ROM hooks 0x386E-0x3B45 (727 bytes) + RAM tables and hook state at 0x8000-0x830B (below). 82 4-bit patterns
   (bank 11, uploaded at setup across both 8K pages), sprite palette offset n index 1 = Spectrum
   colour n (8-15 bright). Tail 0x5B00 (0x5B00-0x5B7F zero; a loader leftover at 0x5B80-0x5B8D is
   never touched).
@@ -37,18 +39,35 @@ first/last object), erase 12 (incl. the flame erase with the rocket visible; the
 - Rocket flame (26217-26308): drawn and erased on the rocket BASE object (y + 21); with the rocket on
   the ground both flames are erased every frame. Own sprite group 102-107 for draw and erase
   (Dean's hardware video 2026-10-19: rocket pieces flickered - the erase hid the rocket each frame).
-- e_cls at 24717 (CALL 29112, every new screen): hide sprites 0-107.
+- Stacked rocket (round 3; Dean 2026-10-20: still flickering with 2+ pieces): ONE object (the base,
+  23864) draws every piece per frame (26419-26470: CALL 29278 per piece, y - 16 each, C = 4 * piece
+  on the stack), then paints 8-line bands (26488-26560): magenta (67) up to the fuel level (IX+5),
+  white (71) above, all flashing 67/71 when full. Pieces 2 / 3 get sprites 108-113 / 114-119 (piece
+  from the stack when the caller is 26449). Rocket piece patterns: bottom 8 lines value 2, top 8
+  value 1; bank 8 = white (1) over magenta (2).
+- e_at at 29157 (LD D,(IX+3) in the colour paint 29135, replayed): the object's sprites take the
+  painted colour (attr2 rewritten from a shadow at 0x8000-0x807F, X8 kept): rocket bands per piece
+  half (bottom painted first; a white top over a magenta bottom -> bank 8), the flame paint (26272)
+  on the flame's sprites, everything else on the object's sprites (fixes a one-frame colour lag
+  where the colour is set after the draw: explosions 26849).
+- e_nw and e_at run on their own stack 0x8082-0x80FF (SP saved at 0x8080): the game stack has only
+  ~30 bytes above the code at 23728 at the deepest paint. Lookup tables in RAM 0x8100 (524 bytes;
+  zero in the snapshot, checked like a patch site). Hooks' RAM 0x8000-0x80FF: never touched by the
+  game (scan: 0x7D37-0xFFFF untouched).
+- e_cls at 24717 (CALL 29112, every new screen): hide sprites 0-119.
 - Screen-write removals: 30532 77 -> 00 (erase AND), 30561 77 -> 00 (draw OR), 29171 72 -> 00
   (object colour over its cells). The plotter keeps running: all game state stays the original's.
-- Stack: lowest SP inside the hooks 23762 (sites >= 23782); + the ROM ISR's 16 bytes = 23746, above
-  the code the game runs at 23728-23730 (the game alone reaches 23742).
+- Stack: lowest game SP inside the hooks 23768 (sites >= 23772); + the ROM ISR's 16 bytes = 23752,
+  above the code the game runs at 23728-23730 (the game alone reaches 23742). Own stack lowest
+  0x80E8 (+ ISR 0x80D8).
 
 ## Hardware checklist (first test)
 - Boots to the menu (1, 3, 5) and plays; Jetman, aliens, rocket parts, fuel, items, explosions are
   sprites in their game colours (aliens red / magenta / green / cyan by slot, items cycling).
 - No colour clash: platforms and lasers keep their own colours where figures pass.
 - Aliens wrapping across the left/right edge show on both sides like the original.
-- Rocket assembly, fuel filling (parts turn magenta), take-off, level 2+ aliens (not reached by the
+- Rocket with 2 and 3 pieces steady; fuel filling magenta from the bottom in half-piece steps,
+  flashing when full; take-off flame; level 2+ aliens (not reached by the
   toolkit's free run: proven by unit tests only).
 - Speed: the same as the plain .nex (hooks at 28 MHz).
 - Game over / new game: no sprites left on the menu.

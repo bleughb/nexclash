@@ -352,6 +352,17 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
 # PART 2 - GAMES / SOFTWARE
 
 ## 2.1 Game-engine lessons (all engines)
+- One object can draw SEVERAL figures per frame: Jetpac's stacked rocket is one object whose loop
+  (26419) draws every piece through the same plotter entry; giving each draw the object's sprites
+  showed one piece at a time (flicker on hardware, round 2, Dean 2026-10-20) while every per-draw
+  check passed - each draw was right on its own. Find per-object loops over the plotter (the same
+  CALL in a DJNZ, a y step between draws) before choosing sprite groups, and test the WHOLE routine:
+  after it, the object's sprites = the whole figure the original drew (jetpac.figure_check).
+- Colour painted AFTER the draw (Jetpac 29135: the object's attribute over its cells; the rocket in
+  8-line bands by fuel level; the explosion's colour set after its draw) is the colour to show: hook
+  the paint, not the draw, and check at every paint that the object's sprite pixels in the painted
+  cells have exactly that colour. Two colours in one 16x16 sprite: pattern values 1 / 2 and a
+  palette bank whose index 1 and 2 differ (Jetpac bank 8 = white over magenta).
 - An erase-only hook must check WHAT is erased, not only which object: Jetpac erases the take-off
   flame (its own graphics, 32652/32687) on the rocket base object every frame while the rocket is
   on the ground; hiding the object's sprites there made the rocket flicker on hardware (Dean,
@@ -738,6 +749,10 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   simulate .z80 -> game entry (keys) checking hook RAM / tail / sites / interrupt mode.
 
 ## 2.5 Verification method
+- Hook state in RAM must persist between events in the model: the event runner throws the patched
+  run's memory away after each event, so a hook that reads what an earlier hook wrote (Jetpac's
+  attr2 shadow at 0x8000) saw zeros and the split colour never showed - in the model only; the test
+  failed, the hooks were right (2026-10-20). Carry the hook RAM in the Next-side state (ns.hram).
 - "Never jump into a patched instruction" needs the ORIGINAL instruction boundaries under each JP:
   a byte that starts an original instruction must be reached only through the site, a byte inside
   one must never be a PC. Counting every byte of the 3 bytes as "must equal the site's count" fails

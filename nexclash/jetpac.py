@@ -32,15 +32,18 @@ OBJ0, NOBJ, SPO = 23808, 17, 6  # object table, objects, sprites per object
 JET_TAB, ITEM_TAB = 30458, 26563
 EXPLO = (31692, 31743, 31794)
 FLAME = (32652, 32687)          # rocket flame: drawn/erased on the rocket base object -> own sprites
-GROUPS = NOBJ + 1               # group NOBJ = the flame (sprites 102-107)
+GROUPS = NOBJ + 3               # groups: 0-16 objects, 17 the flame, 18/19 rocket pieces 2/3
+ROCKET = 23864                  # rocket base object: draws every stacked piece (26419-26470)
+RLOOP, RPAINT, FPAINT = 26449, 26549, 26275     # returns of the rocket loop's draw / band paint, flame paint
+HOOKRAM = (0x8000, 0x8100)      # hooks' RAM: attr2 shadow, saved SP, own stack (game never touches 0x7D37-0xFFFF)
 ALIEN_BUF = (24064, 24115, 24166, 24217)
 CARRY_BUF = (24268, 24319, 24370, 24421)
 LEVEL, PART = 24048, 23860
-SITES_ORIG = {29263: '1a4732', 29344: 'cd2772', 29349: 'cd2472', 24717: 'cdb871'}
-SITE_SYM = {29263: 'e_nw', 29344: 'e_e1', 29349: 'e_e2', 24717: 'e_cls'}
-SITE_OP = {29263: 0xC3, 29344: 0xCD, 29349: 0xCD, 24717: 0xCD}
+SITES_ORIG = {29263: '1a4732', 29344: 'cd2772', 29349: 'cd2472', 24717: 'cdb871', 29157: 'dd5603'}
+SITE_SYM = {29263: 'e_nw', 29344: 'e_e1', 29349: 'e_e2', 24717: 'e_cls', 29157: 'e_at'}
+SITE_OP = {29263: 0xC3, 29344: 0xCD, 29349: 0xCD, 24717: 0xCD, 29157: 0xCD}
 SCREEN_PATCHES = [(30532, '77', '00'), (30561, '77', '00'), (29171, '72', '00')]
-INTERIORS = (29264, 29265, 29345, 29346, 29350, 29351, 24718, 24719)
+INTERIORS = (29264, 29265, 29345, 29346, 29350, 29351, 24718, 24719, 29158, 29159)
 SITE_KIND = {29263: 'nw', 29344: 'er', 29349: 'er', 24717: 'cls', 29135: 'at'}
 SPECCY = [0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6,
           0x00, 0x03, 0xE0, 0xE7, 0x1C, 0x1F, 0xFC, 0xFF]
@@ -155,7 +158,11 @@ def build(m0):
     pats = bytearray()
     first = {}
     ent = {}
-    for k, img in graphics(m0).items():
+    g_all = graphics(m0)
+    # rocket pieces: bottom 8 lines nibble 2, top 8 nibble 1 (bank 8 = white over magenta: a
+    # half-fuelled piece); the other banks give both nibbles the same colour
+    split = {layout(g_all[('s', w16(m0, ITEM_TAB + 2 * i))])[0] for i in range(12)}
+    for k, img in g_all.items():
         if img is None:
             continue
         lo = layout(img)
@@ -171,8 +178,9 @@ def build(m0):
                     for j in range(16):             # pattern line j (top down) of row rr
                         r = 16 * rows - 1 - (16 * rr + j)      # data row (0 = bottom)
                         for x in range(16 * cc, 16 * cc + 16, 2):
-                            hi = 1 if (x, r) in t else 0
-                            lo_ = 1 if (x + 1, r) in t else 0
+                            ink = 2 if t in split and r < 8 else 1
+                            hi = ink if (x, r) in t else 0
+                            lo_ = ink if (x + 1, r) in t else 0
                             pats.append(hi << 4 | lo_)
         ent[k] = (first[(t, rows)], cols, rows, x0)
     if len(pats) > 128 * 128:
@@ -211,20 +219,26 @@ def tables_text(pats, ent):
     return tables_asm(ent) + 'NPAT256 EQU %d\n' % ((len(pats) + 255) // 256)
 
 
+def colour(bank, nib):
+    """Sprite palette (setup): bank n index 1 and 2 = Spectrum colour n; bank 8 = white / magenta."""
+    return (15 if nib == 1 else 11) if bank == 8 else bank
+
+
 def sprite_pixels(attr, pat):
-    """Visible 4-bit sprite -> {(x, y)} ink pixels in ULA coordinates."""
+    """Visible 4-bit sprite -> {(x, y): pixel value} in ULA coordinates."""
     a0, a1, a2, a3, a4 = attr
     if not a3 & 0x80:
-        return set()
+        return {}
     x = a0 + (a2 & 1) * 256 - 32
     y = a1 + (a4 & 1) * 256 - 32
     n = (a3 & 0x3F) * 2 + (1 if a4 & 0x40 else 0)
-    out = set()
+    out = {}
     for j in range(16):
         for k in range(16):
             b = pat[n * 128 + j * 8 + k // 2] if n * 128 + j * 8 + k // 2 < len(pat) else 0
-            if (b >> 4) if k % 2 == 0 else (b & 15):
-                out.add((x + k, y + j))
+            v = (b >> 4) if k % 2 == 0 else (b & 15)
+            if v:
+                out[(x + k, y + j)] = v
     return out
 
 
@@ -281,6 +295,10 @@ class JetpacPatch:
                                bytes([SITE_OP[a]]) + self.syms[SITE_SYM[a]].to_bytes(2, 'little')))
         for a, old, new in SCREEN_PATCHES:
             self.sites.append((a, bytes.fromhex(old), bytes.fromhex(new)))
+        # lookup tables: RAM 0x8100 (zero in the snapshot, never touched by the game: checked like a
+        # patch site, and verify fails on any game write to them)
+        tab = bytes.fromhex(h['tab'])
+        self.sites.append((self.syms['tab'], bytes(len(tab)), tab))
         self.extra_banks = {}
         self.pats = None
         self.num_patterns = 0
@@ -322,6 +340,7 @@ class NextState:
         self.attr = [[0, 0, 0, 0, 0] for _ in range(128)]
         self.pat = bytes(pats)
         self.events = []
+        self.hram = {}              # the hooks' RAM (HOOKRAM): persists between events, as on the Next
 
     def nextreg(self, reg, val):
         self.nr[reg] = val
@@ -330,13 +349,13 @@ class NextState:
         self.events.append(('nr', reg, val))
 
     def obj_pixels(self, i):
-        """{(x, y): palette offset} of sprite group i (object i; NOBJ = the flame), ULA area."""
+        """{(x, y): colour 0-15} of sprite group i (object i, NOBJ flame, NOBJ+1/2 rocket pieces)."""
         out = {}
         for s in range(SPO * i, SPO * i + SPO):
             a = self.attr[s]
-            for x, y in sprite_pixels(a, self.pat):
+            for (x, y), v in sprite_pixels(a, self.pat).items():
                 if 0 <= x < 256 and 0 <= y < 192:
-                    out[(x, y)] = a[2] >> 4
+                    out[(x, y)] = colour(a[2] >> 4, v)
         return out
 
 
@@ -450,12 +469,23 @@ def event(patch, kind, get, R, ns, alt, Sim):
 
     def stop(r):
         return r[24] == ret and r[12] == end
-    obj = obj_index(R[8] << 8 | R[9])
+    ix = R[8] << 8 | R[9]
+    obj = obj_index(ix)
     de = R[4] << 8 | R[5]
+    groups = [obj] if obj is not None else []
     if obj is not None and ((kind == 'nw' and de - 1 in FLAME) or (kind == 'er' and R[24] == 29344 and de in FLAME)):
         obj = NOBJ                          # the flame's own sprite group
+        groups = [obj]
+    elif kind == 'nw' and ix == ROCKET and w(sp0 + 2) == RLOOP and get(sp0 + 4) >> 2 & 3:
+        obj = NOBJ + (get(sp0 + 4) >> 2 & 3)    # stacked rocket piece 2 / 3
+        groups = [obj]
+    elif ix == ROCKET and kind == 'er':
+        groups = [obj, NOBJ + 1, NOBJ + 2]      # its stacked pieces go with it (the flame has its own erase)
+    elif ix == ROCKET and kind == 'at':
+        groups = [obj, NOBJ, NOBJ + 1, NOBJ + 2]
     O, P = _overlays(get, alt, psite)
     o, p = O(), P()
+    p.ov.update(getattr(ns, 'hram', {}))
     so = _machine(Sim, o, list(R), NextState(b''))
     before = [list(a) for a in ns.attr]
     ns.events = []
@@ -463,6 +493,8 @@ def event(patch, kind, get, R, ns, alt, Sim):
     if not (_run(so, stop) and _run(sp_, stop)):
         return ['did not return'], 0
     ro, rp = so.registers, sp_.registers
+    if hasattr(ns, 'hram'):
+        ns.hram.update({a: v for a, v in p.ov.items() if HOOKRAM[0] <= a < HOOKRAM[1]})
     diff = [i for i in CMP if ro[i] != rp[i]]
     if diff:
         f.append(('registers differ', diff, [ro[i] for i in diff], [rp[i] for i in diff]))
@@ -477,12 +509,13 @@ def event(patch, kind, get, R, ns, alt, Sim):
     dead = range(ro[12] - 64, ro[12])
     keys = set(o.ov) | set(p.ov)
     scr = (0x4000, 0x5B00) if kind != 'cls' else (0, 0)
-    md = [a for a in keys if not scr[0] <= a < scr[1] and a not in dead and o[a] != p[a]]
+    md = [a for a in keys if not scr[0] <= a < scr[1] and a not in dead and o[a] != p[a]
+          and not HOOKRAM[0] <= a < HOOKRAM[1]]
     if md:
         f.append(('memory differs', len(md), sorted(md)[:4]))
     npx = 0
     changed = [i for i in range(128) if ns.attr[i] != before[i]]
-    mine = set(range(SPO * obj, SPO * obj + SPO)) if obj is not None else set()
+    mine = {s_ for g in groups for s_ in range(SPO * g, SPO * g + SPO)}
     if kind == 'cls':
         if any(ns.attr[i][3] & 0x80 for i in range(128)):
             f.append(('sprite visible after screen clear',))
@@ -490,8 +523,20 @@ def event(patch, kind, get, R, ns, alt, Sim):
     if any(0x4000 <= a < 0x5B00 for a in p.ov):
         f.append(('patched code wrote the screen',))
     if kind == 'at':
-        if changed:
-            f.append(('sprites changed by the colour paint',))
+        # the colour paint: only attr2 of the object's own sprites changes, and every pixel of
+        # them inside a painted cell has exactly the painted colour (ink + 8 * bright)
+        if any(i not in mine or [a for k_, a in enumerate(ns.attr[i]) if k_ != 2] !=
+               [a for k_, a in enumerate(before[i]) if k_ != 2] for i in changed):
+            f.append(('the colour paint changed more than its own sprites\' palette',))
+        cells = {(a - 0x5800) % 32 + 32 * ((a - 0x5800) // 32): o.ov[a] for a in o.ov if 0x5800 <= a < 0x5B00}
+        bad = 0
+        for g in groups:
+            for (x, y), c in ns.obj_pixels(g).items():
+                v = cells.get(x // 8 + 32 * (y // 8))
+                if v is not None and c != (v & 7) | ((v >> 3) & 8):
+                    bad += 1
+        if bad:
+            f.append(('sprite pixels not in the painted colour', bad))
         return f, 0
     if set(changed) - mine:
         f.append(('other sprites changed', sorted(set(changed) - mine)[:4]))
@@ -514,11 +559,7 @@ def event(patch, kind, get, R, ns, alt, Sim):
     npx = len(drawn)
     if set(got) != drawn:
         f.append(('sprite pixels differ from the original plot', len(set(got) ^ drawn)))
-    a3 = get((R[8] << 8 | R[9]) + 3)
-    want = (a3 & 7) | ((a3 >> 3) & 8)
-    if any(v != want for v in got.values()):
-        f.append(('sprite colour is not the object ink',))
-    return f, npx
+    return f, npx       # colour: checked at the paint (kind 'at') that follows every draw
 
 
 def _alt(patch):
@@ -783,7 +824,21 @@ def auto(a, z80, name, out, say):
         for k, v in ex.items():
             say('            %s: %s' % (k, str(v)[:200]))
     if states:
-        u = unit_tests(patch, states, negative_patch(patch), list(get_snapshot(z80)))
+        m0 = list(get_snapshot(z80))
+        nws = [s_ for s_ in states if s_[0] == 'nw']
+        if nws:
+            rt = rocket_tests(patch, nws[0], m0)
+            rf = {k: v for k, v in rt.items() if k.endswith('!') and v}
+            neg = {w_: rocket_tests(broken_rocket(patch, w_), nws[0], m0) for w_ in ('pieces', 'paint')}
+            caught = {w_: sum(v for k, v in c_.items() if k.endswith('FAIL!')) > 0 for w_, c_ in neg.items()}
+            ok = ok and not rf and all(caught.values())
+            say('Rocket    : stacked rocket 4 rockets x 1-3 pieces x fuel x flash, 2 frames: figure %d/%d, '
+                'events %d; flame %d; negative controls (round-2 pieces, no paint) %s -> %s' % (
+                    rt['rocket figure ok'], rt['rocket figure ok'] + rt['rocket figure FAIL!'], rt['events ok'],
+                    rt['flame figure ok'] + rt['flame hidden on the ground ok'] + rt['flame: rocket sprites unchanged ok'],
+                    ' / '.join('detected' if v else 'NOT DETECTED' for v in caught.values()),
+                    'PASS' if not rf and all(caught.values()) else 'FAIL %s' % rf))
+        u = unit_tests(patch, states, negative_patch(patch), m0)
         uf = {k: v for k, v in u.items() if k.endswith('!') and v}
         ok = ok and not uf
         say('Unit      : graphics %d (every graphic, all levels, carried parts x positions x colours), '
@@ -794,3 +849,146 @@ def auto(a, z80, name, out, say):
                 'PASS' if not uf else 'FAIL %s' % uf))
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return ok
+
+
+# ---------------------------------------------------------------------------------------------
+# Whole-routine cases: the stacked rocket (26419: one object draws every piece, then paints them
+# in 8-line bands) and the flame (26217). Per-event checks cannot see one object's draws replacing
+# each other (round 2 on hardware, Dean 2026-10-20): after each routine the union of the object's
+# sprites must be the whole figure the original drew, in the colours it painted.
+# ---------------------------------------------------------------------------------------------
+
+def drive(patch, mem, R, ns, pc0, alt, Sim, c):
+    """Run the original from pc0 (sentinel return 0) with every hook event checked; -> registers."""
+    r = list(R)
+    sp = r[12] - 2
+    mem[sp], mem[sp + 1] = 0, 0
+    r[12], r[24] = sp, pc0
+    sim = Sim(mem, {})
+    sim.registers[:] = r
+    RR, ops = sim.registers, sim.opcodes
+    n = 0
+    while RR[24] != 0:
+        pc = RR[24]
+        kind = SITE_KIND.get(pc)
+        if kind:
+            fl, _ = event(patch, kind, mem.__getitem__, list(RR), ns, alt, Sim)
+            for k in fl:
+                c['  %s: %s' % (kind, k[0] if isinstance(k, tuple) else k)] += 1
+            c['events %s' % ('ok' if not fl else 'FAIL!')] += 1
+        ops[mem[pc]]()
+        n += 1
+        if n > 2000000:
+            c['routine did not return FAIL!'] += 1
+            return None
+    return RR
+
+
+def figure_check(patch, mem0, R, pc0, groups, ns, alt, Sim):
+    """The original routine on a zero screen -> its figure; the groups' sprites must equal it, in
+    the colour of each pixel's cell after the routine. -> failure list."""
+    m = bytearray(mem0)
+    for a in range(0x4000, 0x5800):
+        m[a] = 0
+    c0 = collections.Counter()
+    pseudo = NextState(b'')
+    r = list(R)
+    sp = r[12] - 2
+    m[sp], m[sp + 1] = 0, 0
+    r[12], r[24] = sp, pc0
+    sim = Sim(m, {})
+    sim.registers[:] = r
+    n = 0
+    while sim.registers[24] != 0 and n < 2000000:
+        sim.opcodes[m[sim.registers[24]]]()
+        n += 1
+    want = {}
+    for a in range(0x4000, 0x5800):
+        v = m[a]
+        if v:
+            y = ((a >> 5) & 0xC0) | ((a >> 8) & 7) | ((a >> 2) & 0x38)
+            at = m[0x5800 + (y // 8) * 32 + (a & 31)]
+            for k in range(8):
+                if v & (0x80 >> k):
+                    want[((a & 31) * 8 + k, y)] = (at & 7) | ((at >> 3) & 8)
+    got = {}
+    for g in groups:
+        got.update(ns.obj_pixels(g))
+    f = []
+    if set(got) != set(want):
+        f.append(('figure: sprite pixels != the whole figure the original drew', len(set(got) ^ set(want))))
+    elif any(got[p_] != want[p_] for p_ in want):
+        f.append(('figure: sprite colours != the painted cells', sum(got[p_] != want[p_] for p_ in want)))
+    return f
+
+
+def rocket_tests(patch, state, m0):
+    """state: a captured 'nw' state (registers, memory) to borrow a stack from."""
+    kind, R, mem0, attrs = state
+    c = collections.Counter()
+    alt = _alt(patch)
+    Sim = _rw()
+    rk = ROCKET
+    for rocket in range(4):
+        for pieces in (1, 2, 3):
+            for fuel in ((0,) if pieces < 3 else (0, 1, 2, 3, 5, 6)):
+                for flash in (0, 16):
+                    mem = bytearray(mem0)
+                    mem[LEVEL] = rocket << 2
+                    mem[24012] = flash
+                    mem[rk + 1], mem[rk + 2], mem[rk + 3] = 168, 183, 71
+                    mem[rk + 4], mem[rk + 5] = pieces, fuel
+                    mem[24000], mem[24001] = 168, 183
+                    r = list(R)
+                    r[8], r[9] = rk >> 8, rk & 255
+                    ns = NextState(patch.pats)
+                    for frame in (1, 2):
+                        before = bytes(mem)
+                        out = drive(patch, mem, r, ns, 26419, alt, Sim, c)
+                        if out is None:
+                            break
+                        fl = figure_check(patch, before, r, 26419, (NOBJ - NOBJ + obj_index(rk), NOBJ + 1, NOBJ + 2),
+                                          ns, alt, Sim)
+                        c['rocket figure %s' % ('ok' if not fl else 'FAIL!')] += 1
+                        if fl and c['  rocket fail example'] < 3:
+                            c['  rocket fail example'] += 1
+                            c['  rocket %d pieces %d fuel %d flash %d frame %d: %s' % (
+                                rocket, pieces, fuel, flash, frame, str(fl)[:120])] += 1
+    # the flame: drawn (y + 21 < 184) or both erased (on the ground) - the rocket stays
+    for y, flash in ((150, 0), (150, 4), (163, 0)):
+        mem = bytearray(mem0)
+        mem[LEVEL] = 0
+        mem[24012] = flash
+        mem[rk + 1], mem[rk + 2], mem[rk + 3], mem[rk + 4], mem[rk + 5] = 168, y, 71, 3, 6
+        mem[24000], mem[24001] = 168, y
+        r = list(R)
+        r[8], r[9] = rk >> 8, rk & 255
+        ns = NextState(patch.pats)
+        drive(patch, mem, r, ns, 26419, alt, Sim, c)           # the rocket, then its flame
+        before = bytes(mem)
+        rocket_px = {g: ns.obj_pixels(g) for g in (obj_index(rk), NOBJ + 1, NOBJ + 2)}
+        drive(patch, mem, r, ns, 26217, alt, Sim, c)
+        same = all(ns.obj_pixels(g) == v for g, v in rocket_px.items())
+        c['flame: rocket sprites unchanged %s' % ('ok' if same else 'FAIL!')] += 1
+        if y + 21 < 184:
+            fl = figure_check(patch, before, r, 26217, (NOBJ,), ns, alt, Sim)
+            c['flame figure %s' % ('ok' if not fl else 'FAIL!')] += 1
+        else:
+            vis = any(ns.attr[i][3] & 0x80 for i in range(SPO * NOBJ, SPO * NOBJ + SPO))
+            c['flame hidden on the ground %s' % ('ok' if not vis else 'FAIL!')] += 1
+    return c
+
+
+def broken_rocket(patch, what):
+    """Negative controls for rocket_tests: 'pieces' = the round-2 build (every stacked piece on the
+    base object's sprites: rpiece -> SCF / RET), 'paint' = no colour from the paint (paint -> RET)."""
+    import copy
+    q = copy.copy(patch)
+    rom = bytearray(patch.rom_code)
+    a = patch.syms['rpiece' if what == 'pieces' else 'paint'] - ROM_ORG
+    rom[a:a + 2] = b'\x37\xC9' if what == 'pieces' else b'\xC9\x00'
+    q.rom_code = bytes(rom)
+    page = bytearray(patch.page)
+    page[ROM_ORG - 0x2000:ROM_ORG - 0x2000 + len(rom)] = rom
+    q.page = bytes(page)
+    return q

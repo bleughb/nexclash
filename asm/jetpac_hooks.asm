@@ -10,6 +10,7 @@
 ;   29344  CD 27 72   CALL 29223 (erase only, graphic in DE)                    -> CALL e_e1
 ;   29349  CD 24 72   CALL 29220 (erase only)                                   -> CALL e_e2
 ;   24717  CD B8 71   CALL 29112 (screen clear, every new screen)              -> CALL e_cls
+;   29157  DD 56 03   LD D,(IX+3) (the colour paint 29135)                      -> CALL e_at
 ; Screen-write patches (no hook): 30532 77 -> 00 (erase AND), 30561 77 -> 00 (draw OR),
 ;   29171 72 -> 00 (object colour over its cells).
 ; Sprites: object i = (IX - 23808) / 8 (0-16) owns sprites 6i .. 6i+5: 2 rows x (2 columns + a copy
@@ -24,11 +25,24 @@ LEVEL   EQU 24048
 FLAME1  EQU 32652               ; rocket flame graphics: drawn / erased on the rocket base object
 FLAME2  EQU 32687               ; (26217-26308) -> their own sprites, never the rocket's
 FLAMES  EQU NOBJ*6              ; sprites 102-107
+PIECES  EQU FLAMES+6            ; assembled rocket pieces 2 and 3: sprites 108-113, 114-119
+NSPR    EQU PIECES+12           ; sprites used: 0-119
+ROCKET  EQU 23864               ; the rocket base object: draws every stacked piece (26419-26470)
+RLOOP   EQU 26449               ; return of its CALL 29278 per piece (C on the stack = 4 * piece)
+RPAINT  EQU 26549               ; return of its CALL 29135 per 8-line band (26545-26560)
+FPAINT  EQU 26275               ; return of the flame's CALL 29135 (26272)
+HOOKRAM EQU 0x8000              ; attr2 shadow per sprite (0x8000-0x807F; tables at 0x8100)
+GSP     EQU 0x8080              ; the game's SP at e_nw / e_at entry
+HSTACK  EQU 0x8100              ; the hooks' own stack 0x8082-0x80FF (the game stack has ~30 bytes
+                                ; above its code at 23728 at the deepest paint: no room for the hooks) (X8 + palette): the game never touches
+                                ; 0x7D37-0xFFFF (scan)
 PART    EQU 23860
 
         ORG 0x386E
 ; ---- new frame of an object ----
-e_nw:   push af
+e_nw:   ld (GSP),sp
+        ld sp,HSTACK
+        push af
         push bc
         push de
         push hl
@@ -39,10 +53,28 @@ e_nw:   push af
         pop de
         pop bc
         pop af
+        ld sp,(GSP)
         ld a,(de)
         ld b,a
         ld (24004),a
         jp 29268
+
+; ---- the colour paint 29135 (LD D,(IX+3) at 29157): the object's sprites take the colour the game
+; paints - the rocket per 8-line band (piece = band / 2; a white top over a magenta bottom = bank 8)
+e_at:   ld (GSP),sp
+        ld sp,HSTACK
+        push af
+        push bc
+        push de
+        push hl
+        call paint
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(GSP)
+        ld d,(ix+3)
+        ret
 
 ; ---- erase-only entries: hide the object's sprites ----
 e_e1:   push af
@@ -66,7 +98,7 @@ e_cls:  push af
 .h:     nextreg 0x34,a
         nextreg 0x38,0
         inc a
-        cp NOBJ*6+6
+        cp NSPR
         jr nz,.h
         pop af
         jp 29112
@@ -97,8 +129,15 @@ hideobj:
         push af
         push bc
         call objbase
-        call nc,hide6
-        pop bc
+        jr c,.out
+        call hide6
+        ld a,ixl
+        cp low ROCKET
+        jr nz,.out
+        ld a,PIECES             ; the rocket: its stacked pieces too
+        call hide6
+        call hide6
+.out:   pop bc
         pop af
         ret
 
@@ -108,6 +147,141 @@ hide6:  ld b,6
         nextreg 0x38,0
         inc a
         djnz .h
+        ret
+
+; carry clear + A = piece (0-2) when the rocket loop draws (IX = ROCKET, caller RLOOP); carry set
+; otherwise. Game stack at e_nw (GSP): +0 29287, +2 RLOOP, +4 the loop's BC (C = 4 * piece).
+rpiece: ld a,ixl
+        cp low ROCKET
+        jr nz,.no2
+        push hl
+        ld hl,(GSP)
+        inc hl
+        inc hl
+        ld a,(hl)
+        cp low RLOOP
+        jr nz,.no
+        inc hl
+        ld a,(hl)
+        cp high RLOOP
+        jr nz,.no
+        inc hl
+        ld a,(hl)
+        rrca
+        rrca
+        and 3
+        pop hl
+        or a
+        ret
+.no:    pop hl
+.no2:   scf
+        ret
+
+; paint: IX = object, (IX+3) = the colour being painted. Game stack at e_at (GSP): +0 29160,
+; +2 29135's caller.
+paint:  call objbase
+        ret c
+        ld c,a                  ; C = first sprite of the group
+        ld a,(ix+3)
+        ld e,a
+        and 7
+        ld b,a
+        ld a,e
+        and 0x40
+        rrca
+        rrca
+        rrca
+        or b
+        ld b,a                  ; B = bank (ink + 8 * bright)
+        ld hl,(GSP)
+        inc hl
+        inc hl
+        ld e,(hl)
+        inc hl
+        ld d,(hl)               ; DE = caller of 29135
+        ld a,e
+        cp low FPAINT
+        jr nz,.r
+        ld a,d
+        cp high FPAINT
+        jr nz,.r
+        ld c,FLAMES
+        jr setgrp
+.r:     ld a,e
+        cp low RPAINT
+        jr nz,setgrp
+        ld a,d
+        cp high RPAINT
+        jr nz,setgrp
+        ld a,(24016)            ; band line (H of (24015))
+        ld e,a
+        ld a,(ix+2)
+        sub e
+        rrca
+        rrca
+        rrca
+        and 31
+        ld e,a                  ; E = band (0 = bottom)
+        srl a                   ; piece
+        cp 3
+        ret nc
+        or a
+        jr z,.p0
+        dec a
+        ld d,a
+        add a,a
+        add a,d
+        add a,a
+        add a,PIECES
+        ld c,a
+.p0:    bit 0,e
+        jr z,setgrp             ; bottom half (painted first): the whole piece
+        ld h,high HOOKRAM
+        ld l,c
+        ld a,(hl)
+        rrca
+        rrca
+        rrca
+        rrca
+        and 15                  ; the bottom half's bank
+        cp b
+        ret z
+        cp 11
+        jr nz,setgrp
+        ld a,b
+        cp 15
+        jr nz,setgrp
+        ld b,8                  ; white top over a magenta bottom
+; bank B for sprites C .. C+5 (attr2 from the shadow: X8 kept)
+setgrp: ld a,b
+        rlca
+        rlca
+        rlca
+        rlca
+        ld b,a
+        ld e,6
+.s:     ld h,high HOOKRAM
+        ld l,c
+        ld a,(hl)
+        and 0x0F
+        or b
+        ld (hl),a
+        ld d,a
+        ld a,c
+        nextreg 0x34,a
+        ld a,d
+        nextreg 0x37,a
+        inc c
+        dec e
+        jr nz,.s
+        ret
+
+; attr2 A of sprite D -> shadow (keeps A)
+shadow: push hl
+        ld h,high HOOKRAM
+        ld l,d
+        ld (hl),a
+        pop hl
         ret
 
 ; Z if DE = a flame graphic (uses A)
@@ -129,13 +303,24 @@ isflame:
 draw:   call objbase
         ret c
         dec de                  ; DE = graphic
-        push af
+        ld c,a                  ; C = the object's sprites
         call isflame
         jr nz,.nf
-        pop af
-        ld a,FLAMES             ; the flame's own sprites
-        push af
-.nf:                            ; [base]
+        ld c,FLAMES             ; the flame's own sprites
+        jr .bs
+.nf:    call rpiece
+        jr c,.bs
+        or a
+        jr z,.bs                ; piece 1 (base): the object's sprites
+        dec a
+        ld b,a
+        add a,a
+        add a,b
+        add a,a
+        add a,PIECES
+        ld c,a
+.bs:    ld a,c
+        push af                 ; [base]
         push hl
         ld hl,gtab
 .lk:    ld c,(hl)
@@ -322,6 +507,7 @@ place:  ld a,h
         adc a,0
         or b
         nextreg 0x37,a
+        call shadow
         ld a,e
         nextreg 0x36,a
         call setpat
@@ -335,6 +521,7 @@ place:  ld a,h
         nextreg 0x35,a
         ld a,b
         nextreg 0x37,a
+        call shadow
         ld a,e
         nextreg 0x36,a
 setpat: ld a,c
@@ -350,8 +537,13 @@ setpat: ld a,c
         inc d
         ret
 
-        INCLUDE "jetpac_tables.asm"
 rom_end:
+
+; --- lookup tables in RAM 0x8100 (zero in the snapshot, never touched by the game; read-only) ---
+        ORG 0x8100
+tab:
+        INCLUDE "jetpac_tables.asm"
+tab_end:
 
 ; --- setup routine (stub bank, 0xD000): patterns from bank 11, palette, hide all, sprites on ---
         ORG 0xD000
@@ -379,11 +571,20 @@ setup:  nextreg 0x57,22             ; bank 11 lower page at 0xE000
         nextreg 0x40,a
         ld a,(hl)
         nextreg 0x41,a              ; offset n index 1 = Spectrum colour n (8-15 bright)
+        ld a,c
+        inc a
+        nextreg 0x40,a
+        ld a,(hl)
+        nextreg 0x41,a              ; index 2 (rocket pieces' bottom half) = the same colour
         inc hl
         ld a,c
         add a,16
         ld c,a
         djnz .p
+        nextreg 0x40,0x81
+        nextreg 0x41,0xFF           ; bank 8: white top (1) ...
+        nextreg 0x40,0x82
+        nextreg 0x41,0xE7           ; ... over a magenta bottom (2): a half-fuelled piece
         nextreg 0x4B,0
         xor a
 .h:     nextreg 0x34,a
@@ -398,3 +599,4 @@ setup_end:
 
         SAVEBIN "jp_rom.bin",0x386E,rom_end-0x386E
         SAVEBIN "jp_setup.bin",0xD000,setup_end-0xD000
+        SAVEBIN "jp_tab.bin",0x8100,tab_end-0x8100
