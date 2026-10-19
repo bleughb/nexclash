@@ -123,6 +123,10 @@ BRIEFING - with its reason.
   it to 9-11, shadow 11-13) - only relevant when a build relies on those defaults (none do).
 
 ## 1.4 Spectrum Next: sprites and palette
+- A setup that uploads patterns from a bank mapped at one 8K slot (0xE000) reads past 0xFFFF into
+  ROM when the patterns exceed 8K (64 4-bit patterns): HL wraps to 0x0000. Map the bank's second
+  page when HL wraps (Jetpac, 80 patterns, 2026-10-19; nextboot caught it as "read of ROM 0" at
+  0, 1, 2). Check the uploaded bytes against the built patterns, not only the boot.
 - 4-bit anchor sprite, attr4: 0x80 = pattern-slot bytes 0-127, 0xC0 = bytes 128-255 (the guide's
   relative-sprite table reads the other way; matches sprites.py). Rainbow build runs on HW.
 - Port 0x303B write = pattern slot (bits 5-0, bit 7 = +128 bytes); 256-byte uploads to 0x5B
@@ -348,6 +352,13 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
 # PART 2 - GAMES / SOFTWARE
 
 ## 2.1 Game-engine lessons (all engines)
+- Before a colour sheet or patterns, read the row order from the plotter's line step: a plotter
+  that steps UP a line per row (DEC H / 29422 in Jetpac) stores graphics bottom line first. Jetpac's
+  first sheets went out upside down (Dean, 2026-10-19).
+- Graphics built at run time (per level, or pre-shifted copies of the carried object) live at fixed
+  buffer addresses: key their patterns by (address, the variables the builder reads), build them
+  at build time by CALLING the game's own builder in the simulator per value (Jetpac: 26921 with
+  (24048) = level, 28409 with (23860) = part), and cover every value in the unit tests.
 - Redirect a back-buffer game's screen copy without touching its code: map the copy's destination slot
   (MMU 2) to a dummy page while it runs and put the scenery on the screen yourself (Target Renegade:
   scenery copied at the draw-all entry, when the buffer holds no figure; the copy's exit maps the
@@ -688,6 +699,11 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   matter, re-check every map from pixels to keys for that class (bounds, wraps, mirrors).
 
 ## 2.4 Recordings (Fuse / RZX)
+- No recording at all (Jetpac, Dean 2026-10-19: "no rzx this time"): the differential test ran on a
+  free run with a key schedule (simrun) - same code paths, synthetic input - and the content a free
+  run never reaches (rocket build, fuel, items, later levels) came from the game's own graphic
+  tables into unit tests over every graphic. It proves the hooks, not the game's own paths through
+  later content; the record says "free run" until a real recording exists.
 - A recording need not start from the attached snapshot (Target Renegade's started at the game menu,
   its own SZX): usable when the code at every patch site is the snapshot's (verify checks the site
   bytes at every event); the start-up path is then proven by the boot / front-end checks only.
