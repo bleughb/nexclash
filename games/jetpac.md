@@ -18,14 +18,15 @@ real recording is OPEN until one exists.
   and draw the NEW one with OR (30559-30561), line by line, wrapping within the 32-byte row;
   29422 = next pixel line up. Old frame from (24000-24006), new from IX (+0 type/dir/flags,
   +1 x, +2 y). Entries: 29290 (move), 29278, 29339/29344/29349/29365 (draw / erase only).
-- Graphic: [y offset, W bytes, H lines, W*H bytes]. Pre-shifted: 4 shifts by x&6, direction =
+- Graphic: [y offset, W bytes, H lines, W*H bytes], rows stored BOTTOM line first (the plotter
+  steps up a line, 29422; first sheets were upside down - Dean, 2026-10-19). Pre-shifted: 4 shifts by x&6, direction =
   bit 6 of (IX+0); table 30458 word index (type-1)*8 + dir*4 + (x&6)/2:
   type 1 Jetman walking, type 2 Jetman flying (ROM data 30614-31640), type 3/4 = RAM buffers
   24064-24470 (aliens, explosion).
 - Aliens: built per level into 24064/24166 by 26921 from table 26949 [(24048) & 7] (8 types;
   calling 26921 with 24048 = L builds level L's aliens - used for the colour sheet).
 - Rockets, fuel, items: graphic pointer from table 26563 (+(IX+6)): words 0-11 = 4 rockets x 3
-  parts (rocket r = words r, r+4, r+8, top = r+8), 12-15 fuel pod, 16-20 five bonus items.
+  parts (rocket r = words r, r+4, r+8; r+8 = nose, r = base), 12-15 fuel pod, 16-20 five bonus items.
 - Plot callers (code): 25685, 25778, 25823, 25925, 25940, 25950, 26052, 26255, 26261, 26265,
   26299, 26305, 26403, 26446, 26846, 26871, 28037, 28146, 29895. Seen in free runs: 28149
   aliens, 29898 Jetman, 26449/25943/25928 rocket parts, 26849/26874 explosion.
