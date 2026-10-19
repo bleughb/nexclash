@@ -384,6 +384,15 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   Rainbow tile budget (games/rainbow_islands.md Open 1). Stencil mode ($68 bit 0): pixel = ULA AND
   tilemap colour, transparent if either is. Tilemap transparency $4C is compared before the
   palette offset (soft reset $0F; our setups write 0).
+- Sprites BETWEEN the ULA and the tilemap (Mike Dailly, lemmings.info "Putting sprites between ULA
+  and tilemap"; NOT tested, bit meanings from his post): the tilemap belongs to the ULA layer, so
+  the normal $15 orders can only put both above or both below the sprites. Layer order $15 bits
+  4:2 = %110 (the first blend mode) with $68 bits 6:5 = %01 (no blending) gives (U|T) S (T|U): ULA
+  and tilemap BOTH in front of the sprites, then the per-tile attribute bit 0 ("ULA over this
+  tile"; $6C for 1-byte maps, and $6B bit 0 must be 0) moves that tile BEHIND the sprites. So depth
+  per 8x8 cell: foreground scenery as tiles (or the ULA) in front of figures, the rest behind -
+  an alternative to masked sprites for a depth rule (Commando masks, LEARNINGS 1.4) when the
+  foreground is cell-aligned. BRIEFING C2 #35.
 - Palette control $43 is TWO things at once: bits 6:4 pick the palette to EDIT, bits 3:1 the ACTIVE
   second/first palette for sprites / Layer 2 / ULA and bit 0 ULANext; bit 7 = 1 turns
   auto-increment OFF. Every $43 write therefore also re-selects the displayed palettes (fine while

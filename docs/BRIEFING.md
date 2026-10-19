@@ -428,6 +428,11 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
 34. Copper facts to confirm before an engine relies on the copper: a WAIT for a line already passed
    holds the rest of the list until the next frame (inferred from guide r3, not tested); $64 = 33
    aligns copper line 0 with the top of 320x256 Layer 2 (em00k demos; check KevB's tables).
+35. Per-cell depth with no masking (LEARNINGS 1.5 "Sprites BETWEEN the ULA and the tilemap"): $15
+   layer mode %110 + $68 bits 6:5 = %01 should put ULA + tilemap in front of the sprites, and tile
+   attribute bit 0 should send single tiles behind them. Confirm in CSpect, then hardware, against
+   core nextreg.txt ($15 / $68 wording); then it is a design option for cell-aligned foregrounds
+   (doorways, trees, walls a figure walks behind).
 
 ### C3. Working rules (token budget)
 Summaries <= 40 lines; disassemble only routines the analysis flags; one simulator pass
