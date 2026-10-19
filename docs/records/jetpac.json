@@ -53,16 +53,16 @@
   },
   "sprites": {
    "file": "jetpac_sprites.nex",
-   "md5": "c963b42f0e685d648d552656fde4d6f9"
+   "md5": "2db185f7bf2a515898389f14e0f1651b"
   }
  },
  "repro": [],
  "status": {
   "title": "Jetpac",
   "engine_col": "jetpac (jetpac.md)",
-  "build": "jetpac_sprites.nex c963b42f",
+  "build": "jetpac_sprites.nex 2db185f7",
   "software": "free run IDENTICAL (no RZX), unit PASS",
-  "hardware": "untested",
+  "hardware": "round 1: rocket flicker (fixed 2026-10-19, retest)",
   "next": "hardware test; a real RZX"
  },
  "checks": [

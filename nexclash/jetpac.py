@@ -31,6 +31,8 @@ TAIL_ADDR = 0x5B00              # printer buffer: zero, never touched (scan)
 OBJ0, NOBJ, SPO = 23808, 17, 6  # object table, objects, sprites per object
 JET_TAB, ITEM_TAB = 30458, 26563
 EXPLO = (31692, 31743, 31794)
+FLAME = (32652, 32687)          # rocket flame: drawn/erased on the rocket base object -> own sprites
+GROUPS = NOBJ + 1               # group NOBJ = the flame (sprites 102-107)
 ALIEN_BUF = (24064, 24115, 24166, 24217)
 CARRY_BUF = (24268, 24319, 24370, 24421)
 LEVEL, PART = 24048, 23860
@@ -121,7 +123,7 @@ def graphics(m0):
     for i in range(21):
         a = w16(m0, ITEM_TAB + 2 * i)
         g[('s', a)] = image(m0, a)
-    for a in EXPLO:
+    for a in EXPLO + FLAME:
         g[('s', a)] = image(m0, a)
     for L in range(8):
         mm = alien_mem(m0, L)
@@ -328,7 +330,7 @@ class NextState:
         self.events.append(('nr', reg, val))
 
     def obj_pixels(self, i):
-        """{(x, y): palette offset} of object i's sprites, inside the ULA area."""
+        """{(x, y): palette offset} of sprite group i (object i; NOBJ = the flame), ULA area."""
         out = {}
         for s in range(SPO * i, SPO * i + SPO):
             a = self.attr[s]
@@ -449,6 +451,9 @@ def event(patch, kind, get, R, ns, alt, Sim):
     def stop(r):
         return r[24] == ret and r[12] == end
     obj = obj_index(R[8] << 8 | R[9])
+    de = R[4] << 8 | R[5]
+    if obj is not None and ((kind == 'nw' and de - 1 in FLAME) or (kind == 'er' and R[24] == 29344 and de in FLAME)):
+        obj = NOBJ                          # the flame's own sprite group
     O, P = _overlays(get, alt, psite)
     o, p = O(), P()
     so = _machine(Sim, o, list(R), NextState(b''))
@@ -572,8 +577,8 @@ def verify(patch, z80, rzx=None, frames=6000, keys=None, stop=None, collect=0, p
             R, mem = sim.registers, sim.memory
             get = mem.__getitem__
             kind = SITE_KIND[pc]
-            if collect and c['collected ' + kind] < collect:
-                c['collected ' + kind] += 1
+            if collect and c['collected %s %d' % (kind, pc)] < collect:
+                c['collected %s %d' % (kind, pc)] += 1
                 states.append((kind, list(R), bytes(get(a) for a in range(65536)),
                                [list(x) for x in ns.attr]))
             fl, npx = event(patch, kind, get, R, ns, alt, _rw())
@@ -652,9 +657,9 @@ def unit_tests(patch, states, neg=None, m0=None):
 
     done = set()
     for kind, R, mem0, attrs in states:
-        if kind in done:
+        if (kind, R[24]) in done:
             continue
-        done.add(kind)
+        done.add((kind, R[24]))
         if kind == 'nw':
             negd = []
             for key in gk:
@@ -684,17 +689,26 @@ def unit_tests(patch, states, neg=None, m0=None):
             ok = all(k[0] == 'figure drawn but no object slot' for k in fl)
             c['IX outside the object table (guard: no sprite) %s' % ('ok' if ok else 'FAIL!')] += 1
         elif kind == 'er':
-            for ix in (OBJ0, OBJ0 + 8 * (NOBJ - 1)):
-                r = list(R)
-                r[8], r[9] = ix >> 8, ix & 255
-                at = [list(a) for a in attrs]
-                for i in range(128):
-                    at[i][3] |= 0x80
-                fl, _ = one(patch, kind, r, bytearray(mem0), at)
-                c['erase cases %s' % ('ok' if not fl else 'FAIL!')] += 1
+            # 29344 erases the graphic in DE: the object's own one hides the object, a flame only the
+            # flame's sprites (the rocket stays: Dean's flicker, 2026-10-19); 29349 always the object
+            # a 29349 state also yields 29344 cases (same CALL-from-game stack): DE = a flame, a
+            # rocket part
+            cases = [(R[24], None)] + [(29344, d) for d in FLAME + (w16(mem0, ITEM_TAB),)]
+            for ix in (OBJ0, OBJ0 + 8 * 6, OBJ0 + 8 * (NOBJ - 1)):
+                for pc, de in cases:
+                    r = list(R)
+                    r[24] = pc
+                    r[8], r[9] = ix >> 8, ix & 255
+                    if de is not None:
+                        r[4], r[5] = de >> 8, de & 255
+                    at = [list(a) for a in attrs]
+                    for i in range(SPO * GROUPS):
+                        at[i][3] |= 0x80
+                    fl, _ = one(patch, kind, r, bytearray(mem0), at)
+                    c['erase cases %s' % ('ok' if not fl else 'FAIL!')] += 1
         elif kind == 'cls':
             at = [list(a) for a in attrs]
-            for i in range(SPO * NOBJ):     # sprites the hooks use; 102-127 stay hidden from setup
+            for i in range(SPO * GROUPS):   # sprites the hooks use; 108-127 stay hidden from setup
                 at[i][3] |= 0x80
             fl, _ = one(patch, kind, list(R), bytearray(mem0), at)
             c['screen clear cases %s' % ('ok' if not fl else 'FAIL!')] += 1

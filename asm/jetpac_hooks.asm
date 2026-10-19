@@ -21,6 +21,9 @@
 OBJ0    EQU 23808
 NOBJ    EQU 17
 LEVEL   EQU 24048
+FLAME1  EQU 32652               ; rocket flame graphics: drawn / erased on the rocket base object
+FLAME2  EQU 32687               ; (26217-26308) -> their own sprites, never the rocket's
+FLAMES  EQU NOBJ*6              ; sprites 102-107
 PART    EQU 23860
 
         ORG 0x386E
@@ -42,7 +45,17 @@ e_nw:   push af
         jp 29268
 
 ; ---- erase-only entries: hide the object's sprites ----
-e_e1:   call hideobj
+e_e1:   push af
+        call isflame            ; DE = the graphic being erased
+        jr z,.fl
+        pop af
+        call hideobj
+        jp 29223
+.fl:    push bc
+        ld a,FLAMES
+        call hide6
+        pop bc
+        pop af
         jp 29223
 e_e2:   call hideobj
         jp 29220
@@ -53,7 +66,7 @@ e_cls:  push af
 .h:     nextreg 0x34,a
         nextreg 0x38,0
         inc a
-        cp NOBJ*6
+        cp NOBJ*6+6
         jr nz,.h
         pop af
         jp 29112
@@ -84,20 +97,45 @@ hideobj:
         push af
         push bc
         call objbase
-        jr c,.out
-        ld b,6
+        call nc,hide6
+        pop bc
+        pop af
+        ret
+
+; hide sprites A .. A+5 (uses A, B)
+hide6:  ld b,6
 .h:     nextreg 0x34,a
         nextreg 0x38,0
         inc a
         djnz .h
-.out:   pop bc
-        pop af
+        ret
+
+; Z if DE = a flame graphic (uses A)
+isflame:
+        ld a,e
+        cp low FLAME1
+        jr nz,.b
+        ld a,d
+        cp high FLAME1
+        ret
+.b:     ld a,e
+        cp low FLAME2
+        ret nz
+        ld a,d
+        cp high FLAME2
         ret
 
 ; HL = screen address (bottom line), DE -> W (graphic + 1), IX = object. Uses all but IX/IY.
 draw:   call objbase
         ret c
         dec de                  ; DE = graphic
+        push af
+        call isflame
+        jr nz,.nf
+        pop af
+        ld a,FLAMES             ; the flame's own sprites
+        push af
+.nf:                            ; [base]
         push hl
         ld hl,gtab
 .lk:    ld c,(hl)
@@ -205,8 +243,11 @@ draw:   call objbase
         add a,a
         or b
         ld b,a                  ; B = palette offset (ink + 8 * bright) << 4
-        call objbase
-        ld d,a                  ; D = next sprite
+        push hl
+        ld hl,7
+        add hl,sp
+        ld d,(hl)               ; D = next sprite = base (A of [base], under [HL][x][pattern/layout])
+        pop hl
         pop hl
         ex (sp),hl
         ld c,l                  ; C = pattern
@@ -245,12 +286,12 @@ draw:   call objbase
         call add16
         call place              ; row 1, column 1
 .done:  pop hl
+        pop af                  ; A = base
         jr .hide
 .none:  pop hl
-        call objbase
+        pop af
         ld d,a
-.hide:  call objbase
-        add a,6
+.hide:  add a,6
         ld b,a
 .hd:    ld a,d
         cp b

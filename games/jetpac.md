@@ -13,15 +13,15 @@ every graphic. A real Fuse RZX would add the game's own paths (rocket build, fue
 | Output | MD5 | Status |
 |---|---|---|
 | jetpac.nex (plain, tail 0x5B00) | feff51b7038606d21c03c260055481e4 | boot sim OK |
-| jetpac_sprites.nex (altrom, stateless hooks, 80 patterns) | c963b42f0e685d648d552656fde4d6f9 | free run IDENTICAL, unit PASS; hardware untested |
+| jetpac_sprites.nex (altrom, stateless hooks, 82 patterns) | 2db185f7bf2a515898389f14e0f1651b | free run IDENTICAL, unit PASS; hardware untested |
 
 Verification (2026-10-19): free run 6000 frames: 20433 draws, 100 erases, 23192 colour paints,
-5 screen clears, 2193166 sprite pixels = the original plot; unit: 5616 graphic cases (every graphic
+5 screen clears, 2193166 sprite pixels = the original plot; unit: 5712 graphic cases (every graphic
 incl. all 8 levels' aliens and the 12 carried rocket parts x 8 positions incl. both edges x 3 inks x
-first/last object), erase 2, clear 1, guard 1, negative control 40/40.
+first/last object), erase 12 (incl. the flame erase with the rocket visible; the round-1 build fails those 6), clear 1, guard 1, negative control 40/40.
 
 ## Patch design
-- Alt ROM only (hooks + tables 0x386E-0x3C15, 935 bytes): no RAM page, no state. 80 4-bit patterns
+- Alt ROM only (hooks + tables 0x386E-0x3C4F, 993 bytes): no RAM page, no state. 82 4-bit patterns
   (bank 11, uploaded at setup across both 8K pages), sprite palette offset n index 1 = Spectrum
   colour n (8-15 bright). Tail 0x5B00 (0x5B00-0x5B7F zero; a loader leftover at 0x5B80-0x5B8D is
   never touched).
@@ -32,8 +32,12 @@ first/last object), erase 2, clear 1, guard 1, negative control 40/40.
   crossing x = 256 copied at x - 256 (the ULA row wrap); colour = (IX+3) ink + 8 * bright as the
   palette offset; unused sprites of the object hidden. Runs at 28 MHz (NEXTREG $07 3 -> 0): ~4K T
   per draw in the simulator.
-- e_e1 / e_e2 at 29344 / 29349 (CALL 29223 / 29220, erase only): hide the object's 6 sprites.
-- e_cls at 24717 (CALL 29112, every new screen): hide sprites 0-101.
+- e_e1 / e_e2 at 29344 / 29349 (CALL 29223 / 29220, erase only): hide the object's 6 sprites; at
+  29344 a FLAME graphic in DE (32652 / 32687) hides only the flame's sprites 102-107.
+- Rocket flame (26217-26308): drawn and erased on the rocket BASE object (y + 21); with the rocket on
+  the ground both flames are erased every frame. Own sprite group 102-107 for draw and erase
+  (Dean's hardware video 2026-10-19: rocket pieces flickered - the erase hid the rocket each frame).
+- e_cls at 24717 (CALL 29112, every new screen): hide sprites 0-107.
 - Screen-write removals: 30532 77 -> 00 (erase AND), 30561 77 -> 00 (draw OR), 29171 72 -> 00
   (object colour over its cells). The plotter keeps running: all game state stays the original's.
 - Stack: lowest SP inside the hooks 23762 (sites >= 23782); + the ROM ISR's 16 bytes = 23746, above
@@ -106,7 +110,5 @@ defaults all white until painted).
   hooks take from (IX+3) at run time; a painted sheet would need per-pixel nibbles in the patterns.
 - Two-player games: the alien lookup assumes (24048) is the level the aliens were built for
   (26921 runs at each level start); not exercised (the free run is 1 player).
-- Erase-then-draw in one frame (a rocket part changing graphic, 26255-26265) hides and re-shows
-  its sprites within the frame: check for a one-frame flicker on hardware.
 - Lasers, platforms, HUD and text stay on the ULA (decision); their writers (29023, 29060, 28708 /
   28717, 28829) are untouched.

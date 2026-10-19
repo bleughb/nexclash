@@ -352,6 +352,13 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
 # PART 2 - GAMES / SOFTWARE
 
 ## 2.1 Game-engine lessons (all engines)
+- An erase-only hook must check WHAT is erased, not only which object: Jetpac erases the take-off
+  flame (its own graphics, 32652/32687) on the rocket base object every frame while the rocket is
+  on the ground; hiding the object's sprites there made the rocket flicker on hardware (Dean,
+  2026-10-19) while the toolkit passed - the free run never assembled the rocket. List every
+  erase/draw call per object with its graphic (grep the CALLs and their LD DE,nn) before giving an
+  object one sprite group; a second figure on the same object gets its own group, and the unit
+  tests erase each such graphic with the object's figure visible.
 - Before a colour sheet or patterns, read the row order from the plotter's line step: a plotter
   that steps UP a line per row (DEC H / 29422 in Jetpac) stores graphics bottom line first. Jetpac's
   first sheets went out upside down (Dean, 2026-10-19).
