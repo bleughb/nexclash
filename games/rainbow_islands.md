@@ -721,6 +721,10 @@ drawn on top.
        definitions in bank 7's 8K. Check first that every cell the tilemap shows is ONE colour on
        paper (Spectrum cells are 1-bit + ink, but the build's cell colours / outlines may use more).
        NOT 1-byte map entries ($6B bit 5): they drop the per-tile palette offset Rainbow uses.
+1b. rsafe reads the raster line ONCE ($1E then $1F): a board with core 3.1.0 at 3.5 MHz has read
+   wrong $1F values (Ped7g's ScanlineReadingAndInterrupt test), and a 255 -> 256 crossing between
+   the two reads is 256 lines off. Read the pair until two consecutive reads agree (LEARNINGS 1.5
+   "Hardware ground truth"); a wrong read here commits during the visible frame (tearing).
 2. Later islands: banks 3/4/6 never paged in either RZX; need a recording past island 1 (item
    graphics change there: GCOPY invalidation is unit-proven only through the model).
 3. Colours - Dean's decisions (2026-09-30): player stays WHITE (black outline); stars stay as

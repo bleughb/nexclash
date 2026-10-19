@@ -416,7 +416,8 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    (dizzy1 / wally2 map pages today). Write-only Layer 2 over RAM paged into slots 0/1 is proven
    on hardware (Mike Dailly's ray caster); over the ALT ROM it is not. Prove first: (a) CSpect, then
    hardware - write-mapping wins over the alt ROM ($8C) at 0x0000-0x3FFF while fetches and reads
-   stay on the ROM image; (b)
+   stay on the ROM image (template: Ped7g's Tests/Graphics/Layer2Port, which proves it over the
+   normal ROM on a board; add $8C alt ROM cases); (b)
    nextboot / verify model write-only 0x123B (reads from the ROM, writes to Layer 2); (c) the hook
    turns it off before any EI (the game's ISR must not write 0x0000-0x3FFF into Layer 2).
 32. zxnDMA re-arm per pattern (5 OUTs, ~87 T; LEARNINGS 1.5 zxnDMA): measure the midres / renegade
@@ -425,14 +426,16 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
 33. selftest has no dependency check: without SkoolKit every rebuild prints "got None" and the
    canary says "the TOOL CHAIN is broken" (2026-10-19, fresh container). Check the imports
    (skoolkit, PIL) first and say which is missing; golden check in tools_check.
-34. Copper facts to confirm before an engine relies on the copper: a WAIT for a line already passed
-   holds the rest of the list until the next frame (inferred from guide r3, not tested); $64 = 33
+34. Copper facts to confirm before an engine relies on the copper: a WAIT for a LINE already passed
+   holds the rest of the list until the next frame (inferred from guide r3, not tested; an h passed
+   on the CURRENT line does not wait - hardware-tested, LEARNINGS 1.5 "Hardware ground truth"); $64 = 33
    aligns copper line 0 with the top of 320x256 Layer 2 (em00k demos; check KevB's tables).
 35. Per-cell depth with no masking (LEARNINGS 1.5 "Sprites BETWEEN the ULA and the tilemap"): $15
    layer mode %110 + $68 bits 6:5 = %01 should put ULA + tilemap in front of the sprites, and tile
    attribute bit 0 should send single tiles behind them. Confirm in CSpect, then hardware, against
    core nextreg.txt ($15 / $68 wording); then it is a design option for cell-aligned foregrounds
-   (doorways, trees, walls a figure walks behind).
+   (doorways, trees, walls a figure walks behind). Ped7g's Graphics/LayersMixing* tests cover the
+   six basic orders only, not the blend modes.
 
 ### C3. Working rules (token budget)
 Summaries <= 40 lines; disassemble only routines the analysis flags; one simulator pass

@@ -384,6 +384,28 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   Rainbow tile budget (games/rainbow_islands.md Open 1). Stencil mode ($68 bit 0): pixel = ULA AND
   tilemap colour, transparent if either is. Tilemap transparency $4C is compared before the
   palette offset (soft reset $0F; our setups write 0).
+- Hardware ground truth: github.com/MrKWatkins/ZXSpectrumNextTests (Ped7g's Next test suite, .snx
+  per test with board photos + emulator screenshots, 2026-10-20). Run the matching test before
+  trusting an emulator for a feature. Results that bear on us:
+  * Copper: CSpect 2.11.1 and ZEsarUX 8.0 BAD, MAME 0.282 OK, board core 3.01.5 OK. Copper WAIT
+    compares the horizontal position as >= on the current line: a WAIT for an h already passed ON
+    THE SAME LINE does not wait (no roll-over into the next frame). Rewriting $61/$62 with the same
+    mode bits does not disturb a running list (already 1.5; the test proves it on hardware).
+  * Sprites (Sprites/ScanlineDelay, core 3.0.7+): the sprite engine swaps its line buffer at sprite
+    X = -1, so an attribute change shows ONE scanline later; to change a sprite from line N on,
+    write it before copper WAIT(line N-2, h ~50). A commit racing the beam tears by whole lines.
+  * Raster line read (Timing/ScanlineReadingAndInterrupt): a board with core 3.1.0 at 3.5 MHz
+    sometimes READ A WRONG VALUE from $1F (a wait for line 224 fired near 192). $1E and $1F are
+    also two reads: crossing line 255 -> 256 between them gives a value 256 lines off. Read the
+    pair until two consecutive reads agree (games/rainbow_islands.md Open 0b: rsafe reads once).
+  * Layer 2 over ROM (Graphics/Layer2Port, board core 3.1.5 + MAME OK): write-over-ROM and
+    read-over-ROM (data, CODE, even the IM1 handler fetched from Layer 2) for 16K / 48K, visible
+    and shadow; bank offset form (0x123B bit 4). It does NOT test the alt ROM ($8C): the template
+    for BRIEFING C2 #31.
+  * NextReg defaults: CSpect 2.9.2 and ZEsarUX 8.0 BAD, MAME 0.282 OK.
+  * Also there: ZX48_ZX128/Z80IntSkip (EI / DD / FD blocks inhibit interrupts; LD A,I / LD A,R
+    IFF2 bug - we read it twice anyway, PLAYBOOK 4), Interrupts/HaltAfterDisable, Timing/
+    Changing8kBank (cost of an MMU swap), DMA, Z80N opcodes.
 - Sprites BETWEEN the ULA and the tilemap (Mike Dailly, lemmings.info "Putting sprites between ULA
   and tilemap"; NOT tested, bit meanings from his post): the tilemap belongs to the ULA layer, so
   the normal $15 orders can only put both above or both below the sprites. Layer order $15 bits
@@ -1014,7 +1036,10 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
 
 ## 2.7 Emulators: MAME [MAME]
 Every MAME fact carries the tag: `grep -n '\[MAME\]' docs/*.md`. MAME is not the reference:
-hardware is. Record each MAME-only result as such (Trueno: MAME 0.289 only, hardware untested).
+hardware is.
+- [MAME] MAME 0.282 passes Ped7g's Copper, NextReg-defaults and Layer2Port hardware tests where
+  CSpect 2.11.1 / 2.9.2 and ZEsarUX 8.0 fail Copper and NextReg defaults (LEARNINGS 1.5 "Hardware
+  ground truth"): prefer MAME over CSpect for a copper build. Record each MAME-only result as such (Trueno: MAME 0.289 only, hardware untested).
 - [MAME] MAME 0.289, driver `specnext`, runs a .nex from a NextZXOS SD image. Put the file in the
   image with HDFMonkey (`HDFMonkey mkdir IMG /dir`, `HDFMonkey put IMG local.nex /dir/name.nex`)
   while MAME is NOT running (the image is open while it runs); then Browser -> the file, or
