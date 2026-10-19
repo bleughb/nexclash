@@ -9,6 +9,11 @@
 ;  T5 tramp      the RETI-to-handler trampoline: vector -> RETI into a game-style EI;RET handler,
 ;                5 frames -> 4..6 handler runs, and the interrupted code carries on
 ;  T6 uniform    a game-style uniform 257-byte IM2 table works unchanged in hardware mode
+;  T7 recover    after T4 (a handler that never RETIs), does one dummy RETI with interrupts off
+;                let interrupts come again? (uniform table, 5 frames -> 4..6 runs)
+; Order: T1 T2 T3 T5 T6 T4 T7 - T4 runs late because a non-acknowledged interrupt may block the
+; rest (version 1 on a board, 2026-10-20: T1-T3 green, T5 + T6 red right after T4).
+; Version 2 prints each test's detail byte in hex under its block (character row 5).
 ;
 ; Results table at RESULTS ($7E00): "NXHT", version, test count, then per test 2 bytes:
 ;   status (0 not run, 1 pass, 2 fail, 3 info) and a detail byte (an interrupt count).
@@ -20,7 +25,7 @@
         OPT --zxnext
 
 RESULTS     equ $7E00
-NTESTS      equ 6
+NTESTS      equ 7
 CNT         equ $7DF0           ; interrupt counter (handlers increment it)
 RIGHT       equ $7DF1           ; T1: the right handler ran
 WRONG       equ $7DF2           ; T1: a wrong vector's handler ran
@@ -36,7 +41,7 @@ start:
         ; results header
         ld hl,RESULTS
         ld (hl),'N' : inc hl : ld (hl),'X' : inc hl : ld (hl),'H' : inc hl : ld (hl),'T' : inc hl
-        ld (hl),1 : inc hl      ; version
+        ld (hl),2 : inc hl      ; version
         ld (hl),NTESTS : inc hl
         ld b,NTESTS*2
 .clr:   ld (hl),0 : inc hl : djnz .clr
@@ -48,9 +53,10 @@ start:
         call t1_vector
         call t2_held
         call t3_pulse
-        call t4_retack
         call t5_tramp
         call t6_uniform
+        call t4_retack
+        call t7_recover
 
         ; back to the boot state: pulse mode, ULA interrupt only, IM 1
         di
@@ -155,6 +161,22 @@ t6_uniform:
         call in_4_6
         ld b,6 : jp result
 
+; T7: after T4, one dummy RETI (interrupts off), then the uniform table count again.
+t7_recover:
+        call hw_mode
+        call do_reti            ; RETI as a plain return: the controller sees the acknowledge
+        ld a,UTAB>>8 : ld i,a
+        im 2
+        xor a : ld (CNT),a
+        call frame_start
+        ei
+        ld b,5 : call frames_ei
+        di
+        ld a,(CNT) : ld c,a
+        call in_4_6
+        ld b,7 : jp result
+do_reti: reti
+
 ; A = 1 when C is 4..6, else 2
 in_4_6: ld a,c : cp 4 : jr c,.n : cp 7 : jr nc,.n
         ld a,1 : ret
@@ -234,6 +256,17 @@ result: push af
         ld (hl),a : inc hl : ld (hl),c
         ret
 
+; A in hex at DE (two characters, ROM font at $3D00)
+hex2:   push af : rrca : rrca : rrca : rrca : call hex1 : pop af
+hex1:   and 15 : add a,'0' : cp '9'+1 : jr c,.d : add a,7
+.d:     push de
+        sub 32 : ld l,a : ld h,0 : add hl,hl : add hl,hl : add hl,hl
+        ld bc,$3D00 : add hl,bc
+        ld b,8
+.l:     ld a,(hl) : ld (de),a : inc hl : inc d : djnz .l
+        pop de : inc de
+        ret
+
 cls:    ld hl,$4000 : ld de,$4001 : ld bc,6143 : ld (hl),0 : ldir
         ld hl,$5800 : ld de,$5801 : ld bc,767 : ld (hl),0 : ldir
         xor a : out ($FE),a
@@ -261,6 +294,14 @@ show:   ld ix,RESULTS+6
         push hl : ld de,32 : add hl,de : pop de : ex de,hl
         ld a,(hl) : ld (de),a : inc de : ld (de),a ; row 3 = row 2
         inc hl : inc hl : inc hl
+        push bc : push hl
+        ld a,(ix+1)             ; detail byte in hex at character row 5, under the block
+        ld de,32*3-3 : add hl,de ; HL had moved 3 columns on: back to this block, row 2 -> row 5
+        ld (hl),$47 : inc hl : ld (hl),$47 : dec hl
+        ld de,$5800 : or a : sbc hl,de ; HL = 5*32 + column
+        ld de,$4000 : add hl,de : ex de,hl ; DE = pixel address of row 5, line 0
+        ld a,(ix+1) : call hex2
+        pop hl : pop bc
         inc ix : inc ix
         djnz .t
         ld a,c : or a : ld a,4 : jr z,.b

@@ -15,8 +15,9 @@ border is green or red.
 
 ## im2hold - BRIEFING C2 #38 (hardware IM2 mode holds interrupts)
 
-Final screen: six 2x2 blocks on character rows 2-3 (columns 2, 5, 8, 11, 14, 17), in this order.
-Green pass, red fail, white info, black not run. Border green = nothing failed, red = something did.
+Final screen: seven 2x2 blocks on character rows 2-3 (columns 2, 5, 8, ..., 20), numbered by test
+(run order T1 T2 T3 T5 T6 T4 T7). Green pass, red fail, white info, black not run. Under each
+block (row 5) its detail byte in hex. Border green = nothing failed, red = something did.
 
 | # | Test | Pass means | Detail byte |
 |---|---|---|---|
@@ -26,6 +27,11 @@ Green pass, red fail, white info, black not run. Border green = nothing failed, 
 | 4 | ret-ack (info, white) | - | handler runs in one frame when it ends EI;RET instead of RETI: 1 = RET acknowledges too, 200 = never acknowledged (re-fires; the test stops it) |
 | 5 | trampoline | vector -> push game handler -> RETI (acknowledge) -> game handler ending EI;RET: 4-6 runs in 5 frames, foreground keeps running | handler runs |
 | 6 | uniform table | a game-style 257-byte IM2 table (all $A1 -> handler at $A1A1) works unchanged in hardware mode: 4-6 runs in 5 frames | handler runs |
+| 7 | recover | after test 4, one dummy RETI with interrupts off lets the interrupts come again: 4-6 runs in 5 frames | handler runs |
+
+Board results:
+- v1 (2026-10-20, Dean): T1-T3 green, T4 white, T5 + T6 red. T5 / T6 ran right after T4: suspected
+  cause, T4's never-acknowledged interrupt blocks the next ones (v2 runs T4 late and adds T7).
 
 If the screen stays black with a black border after a few seconds, a test hung: note the border
 colour and which blocks are drawn (none are drawn until the end) and report it.
