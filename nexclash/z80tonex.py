@@ -395,22 +395,23 @@ def build_stub(snap, tail, tail_addr, p3_off, force50, setup_call=None, slot1=No
 # --------------------------------------------------------------------------
 
 def choose_tail_addr(snap, length, requested, avoid_printer_buffer=False):
-    """128K: the tail must end below 0xC000. The stub copies it while its own bank is at C000, and
-    the tail's first 7FFD write remaps slots 6/7, so a tail at 0xC000-0xFFFF vanishes from under
-    the PC. Refused even with --tail; never chosen by default (boot simulation confirmed the failure)."""
+    """48K and 128K: the tail must end below 0xC000. The stub copies it while its own bank 10 is at
+    C000, and the tail's first 7FFD write remaps slots 6/7, so a tail at 0xC000-0xFFFF vanishes from
+    under the PC (48K too: El Capitan Trueno, tail at 0xFF97). Refused even with --tail; never chosen
+    by default (boot simulation confirmed the failure)."""
     if requested is not None:
-        if snap.is128 and requested + length > 0xC000:
-            raise ValueError('--tail 0x%04X: a 128K start-up tail must end below 0xC000 (the paged top 16K '
+        if requested + length > 0xC000:
+            raise ValueError('--tail 0x%04X: the start-up tail must end below 0xC000 (the top 16K '
                              'is swapped out by the tail\'s own 7FFD write); %s' % (requested, _TAIL_HINT))
         return requested, 'requested with --tail'
     if not avoid_printer_buffer and (not snap.is128 or 0x5B00 + length <= 0x5C00):
         if all(snap.read(a) == 0 for a in range(0x5B00, 0x5B00 + length)):
             return 0x5B00, 'printer buffer (0x5B00), all zero in the snapshot'
     addr = snap.sp - length - 16
-    if addr >= 0x4000 + 6912 and (not snap.is128 or addr + length <= 0xC000):
+    if addr >= 0x4000 + 6912 and addr + length <= 0xC000:
         return addr, 'below the stack pointer (0x%04X)' % snap.sp
-    if snap.is128 and snap.sp >= 0xC000:
-        raise ValueError('128K snapshot with SP=0x%04X in the paged top 16K: no automatic place for the '
+    if snap.sp >= 0xC000:
+        raise ValueError('snapshot with SP=0x%04X in the paged top 16K: no automatic place for the '
                          'start-up tail; %s' % (snap.sp, _TAIL_HINT))
     raise ValueError('could not find a place for the start-up tail; use --tail ADDR')
 
