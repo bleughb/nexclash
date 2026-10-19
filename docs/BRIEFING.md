@@ -18,11 +18,8 @@ Layers - never mix their facts:
   ~/.cache/nexclash). Assemble hooks ONLY with `python tools/asm2profile.py <engine>`; it refuses
   any other version. `--check <profile>` proves a profile = its source (each hook game's record runs it
   with every rebuild); `--check --all` is for assembler upgrades (tools/sjasmplus/README.md).
-- Background jobs: `setsid nohup python X > log 2>&1 < /dev/null &` then poll (a plain
-  `nohup ... &` dies when the tool call returns). One CPU: run long jobs one at a time. A tool
-  call is capped at 10 minutes: poll with sleeps under that. Start the job on its own: in
-  `a && b && setsid nohup job &` the `&` backgrounds the WHOLE chain, so a failed `a` silently
-  skips the job and its output is lost.
+- Background jobs, the 10-minute tool-call cap, worktrees for stamping runs: LEARNINGS 2.6 (the one
+  place for these rules).
 - Shell heredocs that write docs: quote the delimiter (`<<'EOF'`) or the shell runs every
   backticked example in the text (2026-10-11: it cloned sjasmplus into the repo and ran a pkill).
 - Next dev guide r3 (Tomaz Kragelj): github.com/tomaz/zx-next-dev-guide (PDF; `pdftotext` it, then grep).
@@ -69,7 +66,8 @@ Layers - never mix their facts:
    gitlab.com/SpectrumNext/ZX_Spectrum_Next_FPGA. Dean's core may be newer - note the version.
    Register reference: tbblue docs/extra-hw/io-port-system/registers.txt (nextreg list).
 3. SpecNext Wiki https://wiki.specnext.dev/Main_Page - use when the guide is silent or thin.
-   Read it with the chat's web_fetch tool (the sandbox network blocks the wiki, so scripts
+   Read it with the chat's WebFetch tool (itch.io, table.specnext.dev and ped.7gods.org are blocked
+   from the sandbox too: use their GitHub copies, e.g. ped7g/ZXSpectrumNextMisc for the opcode table; the sandbox network blocks the wiki, so scripts
    cannot download it). Pages most relevant here:
    - Memory_map (+ switching mechanics), Next_Memory_Bank_Select, Reference_machines (timing),
      Boot_Sequence, Board_feature_control (all NextRegs + port list), Interrupts
@@ -106,13 +104,13 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 | Video | 50Hz forced (NextReg $05) unless `--allow-60hz` (nexclash.py convert / auto / patch / new / verify: sets z80tonex.ALLOW_60HZ, every build path; outputs then differ from the verified MD5s) |
 | 48K fidelity | NextReg $03 = 48K timing (written after the legacy paging writes; VHDL: this does NOT stop 7FFD/1FFD decoding - with 48K/128K timing 7FFD decodes as A15=0, A1:0=01, A14 ignored; timing only changes contention); NextReg $08 contention on; 7FFD lock via the tail's own 7FFD write (bit 5) |
 | DivMMC | auto-paging off (NextReg $06 bit 4 cleared by the stub, z80tonex.build_stub; not $0A). Yet Commando 541e34e2, with hook code at 0x3D00-0x3DFF, crashed at its first figure on hardware and in CSpect, and d601385e (the same code moved out of that range; only tables there) runs. PROBABLE cause: the DivMMC/TR-DOS automap on an instruction fetch at 0x3Dxx is not switched off by $06 bit 4 on current cores (entry points may be set by NextRegs $B8-$BB) - NOT confirmed (C2 #14). Rule regardless: never put code at 0x3D00-0x3DFF; data there worked |
-| Simulator blind spots | The toolkit's simulator does not model: DivMMC (automap traps, see above), an interrupt arriving in the middle of a hook (so the game's ISR never sees hook register/stack state - covered only by the per-instruction interrupt-safety check), the raster (tearing, overruns), real-machine speed (28 MHz wait states, contention), CSpect differences, the VIDEO output of Layer 2 (nextboot / verify model its bank register, port 0x123B, palette writes and pixel pages, not what the screen shows: palette entry 0xE3 as transparency, layer order; Dizzy 1, 2026-10-14, hardware to confirm), the Next's own flag results after block I/O instructions (OTIR/OUTI/INIR...: only ZF is reliable on the Next; the simulator computes real-Z80 flags - LEARNINGS 1.1). Anything in this list needs a static/invariant check or a hardware test |
+| Simulator blind spots | The toolkit's simulator does not model: DivMMC (automap traps, see above), an interrupt arriving in the middle of a hook (so the game's ISR never sees hook register/stack state - covered only by the per-instruction interrupt-safety check), the raster (tearing, overruns), real-machine speed (28 MHz wait states, contention), CSpect differences, the VIDEO output of Layer 2 (nextboot / verify model its bank register, port 0x123B, palette writes and pixel pages, not what the screen shows: palette entry 0xE3 as transparency, layer order; Dizzy 1, 2026-10-14, hardware to confirm), beam-racing (multicolour) timing - code that rewrites attributes per scanline works only at the original T-state count and contention (LEARNINGS 1.1), the Next's own flag results after block I/O instructions (OTIR/OUTI/INIR...: only ZF is reliable on the Next; the simulator computes real-Z80 flags - LEARNINGS 1.1). Anything in this list needs a static/invariant check or a hardware test |
 | Emulators [MAME] | MAME 0.289 (`specnext`) runs .nex files and is how many users will test (loading, Lua, quirks: LEARNINGS 2.7). It models the alt ROM as NextZXOS ROM3 (it caught Trueno's 0x3B00 bug, the boot sim did not). Known MAME-only behaviour: sprite index 0 under a palette offset drawn opaque (hardware unchecked). A MAME pass is not a hardware pass: record which one a result is |
 | Layer 2 (Dizzy 1, hardware to confirm) | 256x192, 8-bit pixels, banks via NextReg $12 (16K bank; 3 consecutive banks = 6 pages, page = first + y/32, offset (y%32)*256+x); visible = port 0x123B bit 1 (the stub writes 0x123B = 0 BEFORE the patch setup, so setup turns it on); palette NextReg $43 = $10 (Layer 2 palette 0, auto-increment) then $40 index, $41 RRRGGGBB; transparency = global $14 (default $E3) compared with the palette RGB, so entry 0 = $E3 makes pixel 0 transparent; order SLU default ($15 = 0): Layer 2 over the ULA. Zero banks in the .nex start it clear (NEXLOAD leaves banks it does not load with old contents). NextReg $69 bit 7 is the same visible bit as 0x123B bit 1 and, written with NEXTREG, keeps every register and flag ($69 bits 6-0 = ULA shadow screen + Timex mode: write 0 there for a game that uses neither). Double buffering (Wally 2026-10-14, hardware to confirm): draw into the bank not on show, then write $12 - the switch is not raster-synced (a frame may show the top of one buffer and the bottom of the other) |
 | MMU | slots 0-7 = NextReg $50-$57, 8K pages; 16K bank n = pages 2n, 2n+1; $FF in slot 0/1 = ROM |
 | Legacy paging | legacy and MMU paging are interchangeable, most recent change wins (guide 3.2.6): an UNLOCKED 7FFD/1FFD write remaps slot 0/1 (ROM) and 6/7 - so the tail maps slot-1 RAM AFTER its own paging writes |
 | 7FFD lock | The lock IS 7FFD bit 5 (the 48K tail writes 7FFD=$30). NextReg $08 bit 7: write 1 = clear the lock; write 0 = no effect (does NOT lock); read 1 = unlocked. VHDL (core 3.01.09): while locked, writes to 7FFD, 1FFD and DFFD are ignored and trigger NO MMU remap (port_memory_change needs 'not port_7ffd_locked'), so a RAM slot-1 page survives a locked game's 7FFD writes (documented from source; hardware still to confirm for Dizzy 6). UNLOCKED writes to 7FFD/DFFD/1FFD/EFF7 set MMU0/1=$FF (ROM) and MMU6/7 to the selected bank (ports.txt). At NEX launch paging is UNLOCKED (all hardware-tested builds page with legacy writes without unlocking); the altrom stub still sets $08 bit 7 before its own 1FFD/7FFD writes. |
-| Alt ROM ($8C) | Whole 0x2000-0x3FFF of image 1 usable when the game never reads that ROM range (Commando d601385e: data + code from 0x2000, runs on hardware 2026-10-12; no code at 0x3D00-0x3DFF). $8C alt ROM verified on hardware 2026-09-27: write-mode copy, read-only, 7FFD b4 switch, MMU $FF, IM1, font — all PASS; $8C=00 at NEX launch. Bits: 7 enable, 6 visible only during writes (write mode), 5/4 lock ROM1/ROM0; low nibble = same after soft reset (leave 0). 32K = two 16K images (ROM0 128K, ROM1 48K), selected by the normal ROM select: with 1FFD=$04, 7FFD bit 4 = 0/1 selects ROM2/ROM3 = image 0/1 (hardware test used exactly this). Write mode: reads come from the real ROM, so LDIR 0000->0000 copies the selected ROM into its image. MMU0/1 = $FF shows the alt ROM. |
+| Alt ROM ($8C) | Whole 0x2000-0x3FFF of image 1 usable when the game never reads that ROM range (Commando d601385e: data + code from 0x2000, runs on hardware 2026-10-12; no code at 0x3D00-0x3DFF). $8C alt ROM verified on hardware 2026-09-27: write-mode copy, read-only, 7FFD b4 switch, MMU $FF, IM1, font — all PASS; $8C=00 at NEX launch. Bits: 7 enable, 6 visible only during writes (write mode), 5/4 lock ROM1/ROM0; low nibble = same after soft reset (leave 0). 32K = two 16K images (ROM0 128K, ROM1 48K), selected by the normal ROM select: with 1FFD=$04, 7FFD bit 4 = 0/1 selects ROM2/ROM3 = image 0/1 (hardware test used exactly this); a game that selects ROM 0 in play sees image 0, which the stub does not fill (Target Renegade's setup fills it; C2 #27). Write mode: reads come from the real ROM, so LDIR 0000->0000 copies the selected ROM into its image. MMU0/1 = $FF shows the alt ROM. |
 | Hardware sprites | 16x16, 4-bit patterns (128 bytes each), attributes via NextReg $34 (select) then $35 X low, $36 Y, $37 = bit0 X8, bit3 X-mirror, bit2 Y-mirror, $38/$39 pattern+visible; sprites on NextReg $15 bit 0; coords = screen + 32. A mirrored 2x2 box needs left/right quads swapped, and a frame narrower than 32 px an x offset (Dizzy V: -8) |
 | Setup template (0xD000) | sprites off; uploads N x 256 bytes of patterns from bank 11 via port 0x5B; sprite palette 0 = 0, 1 = 0 (black), 2 = $B6 (white, the player colour); NextReg $4B = 0; sprites 0-3 cleared. Stub leaves $15 = 0; hooks show with NEXTREG $15,1 |
 | User register | NextReg $7F: free 8-bit storage; write with NEXTREG, read via ports 243B (select) / 253B (data) |
@@ -135,7 +133,9 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
   7FFD=$10 (ROM3), $8C=$C0, LDIR 0000->0000 (16K), LDIR the patch bytes lo..hi from page 24,
   $8C=0, restores slots 6/7, jumps back, restores slots 4/5. No stack use in between.
 - nextboot.py simulates that boot on a Next model (every sprite build prints a `Boot` line).
-- 128K: the tail must end below 0xC000 (its own 7FFD write remaps C000-FFFF); z80tonex refuses it.
+- 48K and 128K: the tail must end below 0xC000. The stub runs with its own bank 10 at C000-FFFF and
+  the tail's OUT 0x7FFD maps bank 0 back under the PC (El Capitan Trueno: a 48K tail at 0xFF97
+  never reached the game); z80tonex refuses it, nextboot.check catches it too.
 - The tail's location must be memory the game never uses (proved by access scan):
   printer buffer 0x5B00, or dead stack below SP (between SP and the stack low-water
   mark). The converter prints where it went; the toolkit checks it.
@@ -228,6 +228,9 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
 (clash-remover-handover.zip tools/builders/), not in the repo - ask Dean if needed.
 
 ### C0b. Analysis / verification internals (for writing new engine code)
+- SkoolKit Simulator.registers indices: A 0, F 1, B 2, C 3, D 4, E 5, H 6, L 7, IXh 8, IXl 9, IYh 10,
+  IYl 11, SP 12, I 14, A'F'B'C'D'E'H'L' 16-23, PC 24, T 25 (skoolkit.simulator has the names). A
+  one-off script that guessed IX = 14/15 read garbage (Jetpac, 2026-10-19).
 - rzxplay hook points: subclass the memory list (`__getitem__`/`__setitem__`); `registers[24]`
   is the current instruction's PC during its memory accesses; monkeypatch
   `RZXTracer.next_frame` for frame boundaries (called BEFORE interrupt acceptance); force the
@@ -352,9 +355,9 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    Golden check: `selftest.py --tools` (coloursheet on synthetic parts, incl. the opt-in transparent
    painting `read(..., clear=True)`: 4th map element = transparent bit mask; Dizzy 1 uses it). Not done: a
    `nexclash.py sheet` command dispatching to the engine (today `python -m nexclash.<engine> sheet`).
-18. z80tonex.choose_tail_addr refuses a tail above 0xC000 only for 128K (snap.is128): a 48K tail
-   there vanishes when the tail's OUT 0x7FFD maps bank 0 back (El Capitan Trueno). Apply the rule to
-   48K too; until then nextboot.check catches it ('boot did not reach PC ...').
+18. Done (2026-10-19): z80tonex.choose_tail_addr refuses a tail ending above 0xC000 for 48K too (a 48K
+   tail there vanishes when the tail's OUT 0x7FFD maps bank 0 back: El Capitan Trueno);
+   nextboot.check still catches it ('boot did not reach PC ...').
 19. nextboot.check models the alt ROM with rom48(), but the Next copies the system ROM3 (NextZXOS,
    data at 0x3B00-0x3CFF): check against the real ROM3, or make the builder copy every ROM area a
    patch relies on (LEARNINGS 1.3).
@@ -391,7 +394,19 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    $26,0 / $27,0 + $06 AND $5F in the stub (Dizzy 1: its Layer 2 registers in its own setup) -
    changes every game's .nex bytes, so it is a maintainer decision with a full
    `selftest.py --stamp`. Check NEXLOAD's reset list first (ped7g NEXLOAD2 source).
-27. Colour sheets before Rainbow (2026-10-19) still write the painting sheet with unique=True (only
+27. Alt ROM image 0 (the game selects ROM 0 in play; Target Renegade's setup fills image 0 from ROM 0
+   in write mode): not yet confirmed on hardware; also whether the Next decodes OUT (0x1FFD) as 7FFD in
+   128K timing (LEARNINGS 1.2). The ROM 0 bytes a game reads come from the Next's ROM 0, not the
+   Sinclair 128 ROM 0 the RZX model uses (Target Renegade: 9 bytes of sound data).
+28. Live A/B switch (idea from Mercenary Next, LEARNINGS 1.5): a key that swaps every hook site
+   between JP hook and the saved original bytes (and sprites/Layer 2 off) would give Dean a
+   one-file hardware A/B instead of two builds (Rainbow's speed tests). Needs RAM patch sites,
+   the toggle key read where the game reads keys, and verify proof that "off" equals the original;
+   not built.
+29. `auto` on an unknown engine made Jetpac's synthetic _auto.rzx (6410 frames), but `scan` / `preview`
+   on it stop with "Port readings exhausted for frame 532" (2026-10-19): the recorder and the replay
+   disagree on one frame's port reads. Not investigated; Jetpac used free runs (--frames/--keys).
+30. Colour sheets before Rainbow (2026-10-19) still write the painting sheet with unique=True (only
    the new pixels of each figure) and join pieces by touching boxes; Dean's 2026-10-19 rules (PLAYBOOK
    3b: whole figures, split per level / collectables / player, default colours, one copy per item
    colour, join by the game's object) apply to them at their next sheet. `rzx.trace` (C simulator

@@ -8,7 +8,8 @@ description: Recolour a game from a painted <game>_PAINTING_SPRITES.png - gives 
 The user's whole prompt is usually just "recolour <game>" plus the painted PNG. Do exactly this,
 nothing else (no rebuild, no verify, no doc edits unless something fails).
 
-1. Setup (cloud session): attach bleughb/nexclash (read) and bleughb/specnext (push), clone both
+1. Setup (cloud session): attach bleughb/nexclash (read; push only if step 8's follow-up is taken - it ends in a nexclash PR)
+   and bleughb/specnext (push), clone both
    side by side; `pip install -r nexclash/requirements.txt --break-system-packages`.
    specnext is large: a sparse checkout of `reference/<folder>` is enough.
 2. Find the game: docs/records/<game>.json (one per game; match the title); its `reference` is
@@ -30,8 +31,8 @@ nothing else (no rebuild, no verify, no doc edits unless something fails).
 6. Send the user `<game>_sprites_painted.nex` and `<game>_sprites_painted_colours.json`
    (SendUserFile) with the md5 the command printed and its counts (pixels recoloured, banks).
 7. Put the painted PNG in specnext/reference/<folder>/<game>_PAINTING_SPRITES_painted.png,
-   commit ("<Game>: Dean's repainted sprite sheet (<date>)" + the md5) and push to main
-   (fetch + rebase first).
+   commit ("<Game>: Dean's repainted sprite sheet (<date>)" + the md5) on a branch, push and open a
+   PR in specnext (CLAUDE.md: maintainers commit on a branch); say in the reply it is ready to merge.
 8. Reply in two or three lines. Making the painting the build default (copy the colours json to
    docs/profiles/<record>_colours.json - the record's name, e.g. dizzy1_colours.json - rebuild,
    verify, stamp, PR) is a separate task: offer it,

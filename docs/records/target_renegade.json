@@ -1,0 +1,73 @@
+{
+ "name": "target_renegade",
+ "order": 14,
+ "game": "Target Renegade (128K)",
+ "doc": "target_renegade.md",
+ "engine": "renegade",
+ "representative": true,
+ "reference": "target_renegade",
+ "inputs": {
+  "snapshot": {
+   "name": "target_renegade.z80",
+   "md5": "1895877d638a4a5f37a9402bed18f59a",
+   "path": "target_renegade/Renegade_II_Target_Renegade_1988_Imagine_Software_128K.z80"
+  },
+  "recordings": [
+   {
+    "name": "target_renegade.rzx",
+    "md5": "464d4eeaa005e2d16fb1d65737325285",
+    "path": "target_renegade/Renegade_II_Target_Renegade_1988_Imagine_Software_128K.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "renegade"
+ ],
+ "own_modules": [
+  "renegade"
+ ],
+ "data": [
+  "docs/profiles/target_renegade.json",
+  "asm/renegade_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "target_renegade.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 15
+ },
+ "outputs": {
+  "plain": {
+   "file": "target_renegade.nex",
+   "md5": "a0be8dc03a1be8c6d67dc3e0229abc35"
+  },
+  "sprites": {
+   "file": "target_renegade_sprites.nex",
+   "md5": "e0b246e35d028c34170e1d1c52f00f5f"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Target Renegade (128K)",
+  "engine_col": "renegade (target_renegade.md)",
+  "build": "target_renegade_sprites.nex e0b246e3 (every figure a sprite, ink black, body grey 7 (Dean); alt ROM images 0 + 1, page 26 at slot 2, copy into page 27; loading-screen front end)",
+  "software": "RZX IDENTICAL (level 1), unit + guard + cache / log full + map + 5 negative controls PASS; recolour round trip",
+  "hardware": "untested",
+  "next": "hardware test (ROM 0 alt image, speed); recordings of levels 2-5; paint the colour sheet"
+ },
+ "checks": [
+  "asm2profile:target_renegade"
+ ]
+}

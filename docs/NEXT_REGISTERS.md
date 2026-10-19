@@ -9,7 +9,7 @@ the GitHub mirror of core 3.01.09 instead:
 `git clone --depth 1 https://github.com/avlixa/zx_spectrum_next_03.01.09` (files nextreg.txt,
 ports.txt, src/zxnext.vhd). Dean's core may be newer; record the core version with any new fact.
 There is also a searchable view of the spec at https://explorer.specnext.dev/ (under development).
-Wiki pages are read with web_fetch (search first: the fetch tool only opens URLs seen in results).
+Wiki pages are read with WebFetch (search first: the fetch tool only opens URLs seen in results).
 
 Partial decoding (wiki note): legacy devices test only some address bits. Next ports ignore the
 top byte where OTIR must work (0x57, 0x5B). The ULA answers on any even port (A0=0). With 48K or

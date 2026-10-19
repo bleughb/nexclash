@@ -1,0 +1,71 @@
+{
+ "name": "jetpac",
+ "order": 15,
+ "game": "Jetpac",
+ "doc": "jetpac.md",
+ "engine": "jetpac",
+ "representative": true,
+ "reference": "jetpac",
+ "inputs": {
+  "snapshot": {
+   "name": "jetpac.z80",
+   "md5": "5875d535442974a0de82737652854f1f",
+   "path": "jetpac/Jetpac_1983_Ultimate_Play_The_Game_a_16K.z80"
+  },
+  "recordings": []
+ },
+ "modules": [
+  "jetpac"
+ ],
+ "own_modules": [
+  "jetpac"
+ ],
+ "data": [
+  "docs/profiles/jetpac.json",
+  "asm/jetpac_hooks.asm",
+  "asm/jetpac_tables.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": {
+   "engine": "jetpac",
+   "strategy": "altrom",
+   "verify": "free run 6000 frames (no recording)"
+  }
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "auto_record": false,
+  "minutes": 12,
+  "note": "no recording: differential test on a 6000-frame free run (jetpac.free_keys) + unit tests over every graphic"
+ },
+ "outputs": {
+  "plain": {
+   "file": "jetpac.nex",
+   "md5": "feff51b7038606d21c03c260055481e4"
+  },
+  "sprites": {
+   "file": "jetpac_sprites.nex",
+   "md5": "c963b42f0e685d648d552656fde4d6f9"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Jetpac",
+  "engine_col": "jetpac (jetpac.md)",
+  "build": "jetpac_sprites.nex c963b42f",
+  "software": "free run IDENTICAL (no RZX), unit PASS",
+  "hardware": "untested",
+  "next": "hardware test; a real RZX"
+ },
+ "checks": [
+  "asm2profile:jetpac"
+ ]
+}

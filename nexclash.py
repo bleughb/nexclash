@@ -183,6 +183,11 @@ def cmd_auto(a):
         ok = _ce.auto(a, z80, name, out, say)
         _finish(out, name, rep)
         return ok
+    from nexclash import jetpac as _jp                        # Jetpac (16K)
+    if _jp.is_jetpac(s):
+        ok = _jp.auto(a, z80, name, out, say)
+        _finish(out, name, rep)
+        return ok
     from nexclash import commando as _co                      # Commando (128K)
     if _co.is_commando(s):
         ok = _co.auto(a, z80, name, out, say)
@@ -196,6 +201,11 @@ def cmd_auto(a):
     from nexclash import smashtv as _st                       # Smash TV (48K, BASIC loader)
     if _st.is_smashtv(s):
         ok = _st.auto(a, z80, name, out, say)
+        _finish(out, name, rep)
+        return ok
+    from nexclash import renegade as _tr                      # Target Renegade (128K, BASIC loader)
+    if _tr.is_renegade(s):
+        ok = _tr.auto(a, z80, name, out, say)
         _finish(out, name, rep)
         return ok
     if s.machine != '48K' and len(s.ram()) > 49152:

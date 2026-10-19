@@ -20,7 +20,8 @@ No game files are included or ever uploaded: you bring your own snapshot, and th
 is built on your machine. GPL-3.0-or-later (LICENSE). Status of every game: STATUS.md.
 
 ## Install (once)
-1. Python 3.10+, SkoolKit 10.x (tested with 10.1) and Pillow: `pip install -r requirements.txt`.
+1. Python 3.10+, SkoolKit 10.x (tested with 10.1) and Pillow: `pip install -r requirements.txt`
+   (add `--break-system-packages` on a managed Python: Debian/Ubuntu, Homebrew, cloud containers).
 2. Download the latest nexclash zip from the Releases page and unzip it (or `git clone` this repo).
 
 ## Patch your game
@@ -97,11 +98,14 @@ rzxplay and in Fuse (frame boundaries are defined by instruction counts).
 | Dizzy 1 XOR engine | Dizzy: The Ultimate Cartoon Adventure | dedicated builder |
 | Dizzy V engine (ISR-driven masked sprite + undo buffer) | Spellbound Dizzy, also from a BASIC-loader snapshot | generic, automatic, verified per run |
 | TID engine with a mirrored second figure (`tid_mirror`) | Prince of the Yolkfolk (Dizzy 6) | automatic; mirror path proven by unit tests only (no recording reaches it yet) |
-| Rainbow Islands (128K) | Rainbow Islands | dedicated engine `rainbow`, verified per run |
+| Rainbow Islands (128K) | Rainbow Islands | dedicated engine `rainbow`, verified per run (being reworked) |
 | Everyone's a Wally (48K game, 128K snapshot) | Everyone's a Wally | dedicated engine `wally`, verified per run |
 | Chuckie Egg | Chuckie Egg | dedicated engine `chuckie`, verified per run |
 | Commando (128K) | Commando (Elite, BASIC-loader snapshot) | dedicated engine `commando`, verified per run |
 | Midnight Resistance (128K) | Midnight Resistance (Ocean 1990) | dedicated engine `midres`, verified per run |
+| Everyone's a Wally (updated) | Everyone's a Wally (every figure on Layer 2) | dedicated engine `wally2`, verified per run (supersedes `wally`) |
+| Smash TV | Smash TV | dedicated engine `smashtv`, verified per run |
+| Target Renegade (128K) | Target Renegade | dedicated engine `renegade`, verified per run |
 | anything else | - | plain `.nex` only, plus a report to guide the next step |
 
 ## Testing on the Next (details per game: games/)
