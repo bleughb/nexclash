@@ -313,6 +313,9 @@ scrolling would not help (the blit is inside the game's 1.2 ms).
   checks had 'FAIL! detail' keys that the '!' suffix test could never see).
 - Not done: tile-build cap per render (offered); DMA (pattern / map copies; must stay clear of the
   interrupt); copper (no); render start fixed cost per tile.
+- Approximation: the verifier's beam model runs 1792 T (224 x 8) per line and wraps at 312 lines
+  (48K timing); 128K timing is 228 T x 311 lines. It only picks which commit path each render takes
+  in the replay (both are checked); the asm's room test uses 311 lines.
 
 ## Collectables without border + diagnostic build (2026-10-12, e50733b2 / 8f25bc61)
 - Dean: black border on rainbow pieces, characters and creatures only. Profile `objects`: opaque
