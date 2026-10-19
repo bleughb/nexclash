@@ -51,7 +51,7 @@ KEYS, STAMP, RCNT, MCLASS, OCLASS, BGOVR = 0x3A00, 0x3D00, 0x3DC0, 0x3DE0, 0x3E0
 NCELLS, NTILE, PAGE_TM, TDEF, X2 = 704, 176, 14, 0x0A00, 0x1F00
 OCCM, BITS = 0x27A0, 0x1F08   # page 27: occupied cells per row as 32-bit masks; page 26: 0x80 >> n
 V_DIAG, V_FRUN = 0x72, 0x73   # diagnostic build flag; a game frame is running (diagnostic)
-PBUF = 0x0EF0                 # page 26: rows of the object being drawn (+1..+8; +0 / +9 stay 0)
+PBUF = 0x0EE6                 # page 26: rows of the object being drawn (+1..+8; +0 / +9 stay 0)
 V_PEND, V_N58 = 0x80, 0x81    # commit deferred to the next interrupt; (58850) at the render end
 V_TOK, V_MSB, V_MSD, V_FMAX = 0x3B, 0x3F, 0x40, 0x51
 PAGE_SH, LASTT = 28, 0x0600   # shadow map (row kk at kk*64, 2 bytes per column), last tile per cell
@@ -238,8 +238,17 @@ class Config:
         self.cls = class_colours or {'pages': {}, 'palettes': {}}
         self.transparent_outline = self.outline is None
         for k, p in self.cls.get('palettes', {}).items():
-            if 'outline' in p and (colour(p['outline']) is None) != self.transparent_outline:
-                raise ValueError('outline transparency must be the same for every class (one table)')
+            if 'outline' in p and self.transparent_outline and colour(p['outline']) is not None:
+                raise ValueError('with outline transparent everywhere, a class cannot have one')
+
+    def no_outline(self, page):
+        """True = figures from this graphics page are drawn without outline (their class's palette
+        says outline transparent; the piece hook drops outline pixels, CLASSTAB bit 0)."""
+        if self.transparent_outline:
+            return True
+        off = self.cls.get('pages', {}).get('%02X' % page)
+        p = self.cls.get('palettes', {}).get(str(off), {}) if off is not None else {}
+        return 'outline' in p and colour(p['outline']) is None
 
     def nibtab(self):
         """(G nibble << 4 | MG nibble) -> 2 bytes of 4-bit pixels: 1 ink, 0 transparent, 2 outline."""
@@ -260,8 +269,23 @@ class Config:
             off = int(off)
             if not 0 <= off <= 14:
                 raise ValueError('palette offset must be 0-14 (15 = item sprites)')
-            t[int(page, 16)] = off << 4
+            t[int(page, 16)] = off << 4 | (1 if self.no_outline(int(page, 16)) and not self.transparent_outline
+                                            else 0)
         return bytes(t)
+
+    def tile_palette(self):
+        """Tilemap palette, 16 banks of 16 (setup): bank 0 = 0 transparent, 1 black, 2-8 inks 1-7, 9-15
+        bright inks 1-7; bank n = bank 0 with pixel 2 = ink index n (one-ink tiles: the map entry's
+        palette offset is the ink) and pixel 3 = the contrast colour of ink n (collectables' insides):
+        bright white for black / blue / red / magenta, black for the others."""
+        out = bytearray()
+        for n in range(16):
+            b = bytearray(TILE_PAL)
+            if n:
+                b[2] = TILE_PAL[n]
+                b[3] = 0xFF if fill_white(n) else 0x00
+            out += b
+        return bytes(out)
 
     def palette(self):
         pal = bytearray(256)
@@ -315,6 +339,45 @@ def object_tables(objs):
     return bytes(tabs['opaque']), bytes(tabs['masked']), bytes(bg)
 
 
+PAGE_F, FILLM, FILLC = 25, 0x0000, 0x0600     # page 25 offsets (slot 1: 0x2000 / 0x2600)
+FILL_CODES = range(15, 191)
+
+
+def fill_white(ink):
+    """Ink index (1 black, 2-8 inks 1-7, 9-15 bright) -> True = white inside (dark ink)."""
+    return (ink - 7 if ink >= 8 else ink) < 5
+
+
+def fill_page(prof):
+    """Page 25: FILLM per opaque code 15-190 (8 bytes: the enclosed paper, profile `fills`), FILLC per
+    code (inside colour as a pixel byte; 0 = automatic, from the profile `objects` "fill": "white" /
+    "black" / "none")."""
+    pg = bytearray(8192)
+    for code, m in prof.get('fills', {}).items():
+        if not str(code).startswith('_'):
+            c = int(code)
+            if c in FILL_CODES:
+                pg[FILLM + 8 * (c - 15):FILLM + 8 * (c - 15) + 8] = bytes.fromhex(m)
+    for spec, o in prof.get('objects', {}).get('opaque', {}).items():
+        if str(spec).startswith('_') or 'fill' not in o:
+            continue
+        for c in _code_range(spec):
+            if o['fill'] == 'none':
+                if c in FILL_CODES:
+                    pg[FILLM + 8 * (c - 15):FILLM + 8 * (c - 15) + 8] = bytes(8)
+            else:
+                pg[FILLC + c] = {'white': 0xFF, 'black': 0x11}[o['fill']]
+    return bytes(pg)
+
+
+def obj_fill(fpage, code):
+    """(inside mask rows, FILLC byte) of an opaque code, or None."""
+    if code not in FILL_CODES:
+        return None
+    m = fpage[FILLM + 8 * (code - 15):FILLM + 8 * (code - 15) + 8]
+    return (list(m), fpage[FILLC + code]) if any(m) else None
+
+
 def identify_rb(mem):
     """mem: 64K view with bank 0 at C000. True if the Rainbow Islands list walker is present."""
     sg = load_profile()['signature']
@@ -336,7 +399,7 @@ class RainbowPatch:
         self.page_code2 = bytes.fromhex(h.get('page2', ''))
         self.setup = bytes.fromhex(h['setup'])
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
-        self.stub_extra = self.setup + self.cfg.palette()
+        self.stub_extra = self.setup + self.cfg.palette() + self.cfg.tile_palette()
         self.setup_call = 0xD000
         self.hook_page_data = b''
         self.uses_printer_buffer = True
@@ -398,7 +461,8 @@ class RainbowPatch:
         tp[BGOVR - 0x2000:BGOVR - 0x2000 + 256] = bg
         self.scratch = bytes(sp)
         self.tpage = bytes(tp)
-        self.extra_banks = {12: self.page + bytes(8192), 13: self.scratch + self.tpage}
+        self.fpage = fill_page(self.prof)
+        self.extra_banks = {12: self.page + self.fpage, 13: self.scratch + self.tpage}
         s = self.syms
         self.sites = [(58851, SITES_ORIG[58851], b'\xC3' + s['e_rs'].to_bytes(2, 'little') + b'\x00'),
                       (59539, SITES_ORIG[59539], b'\xC3' + s['e_pc'].to_bytes(2, 'little') + b'\x00'),
@@ -517,6 +581,7 @@ class NextState:
         self.no_swapnib = getattr(patch, 'no_swapnib', False)     # negative control only
         self.pages = collections.defaultdict(lambda: bytearray(8192))
         self.pages[PAGE_T] = bytearray(getattr(patch, 'tpage', bytes(8192)))
+        self.pages[PAGE_F] = bytearray(getattr(patch, 'fpage', bytes(8192)))
         self.nr = {0x50: 0xFF, 0x51: 0xFF, 0x07: 0, 0x52: 10, 0x53: 11}
         self.attr = [[0, 0, 0, 0, 0] for _ in range(128)]
         self.pat = bytearray(16384)
@@ -763,7 +828,7 @@ def obj_rows(peek, kind, code):
     return [peek(0xF600 + 16 * (code - 1) + 2 * j + 1) for j in range(8)]
 
 
-def obj_compose(peek, page27, objs, inkr, inki):
+def obj_compose(peek, page27, objs, inkr, inki, fpage=None, one_ink=False):
     """32-byte 4-bit tile: rainbow-group objects first, then the others, each in draw order; per
     object its border (8-neighbours of its pixels inside the cell, minus its pixels) -> 1, its pixels
     -> its ink (class override, else rainbow group: inkr, others: inki)."""
@@ -787,10 +852,18 @@ def obj_compose(peek, page27, objs, inkr, inki):
                         px[j][x] = ink
                     elif B & m:
                         px[j][x] = 1
+            fl = obj_fill(fpage, code) if fpage is not None and kind == 'O' else None
+            if fl:                                  # collectables: the inside pixels (asm ofill / odraw)
+                mask, fc = fl
+                v = fc & 15 if fc else (3 if one_ink else (15 if fill_white(inki) else 1))
+                for j in range(8):
+                    for x in range(8):
+                        if mask[j] & ~P[j] & (0x80 >> x):
+                            px[j][x] = v
     return bytes((px[j][2 * q] << 4) | px[j][2 * q + 1] for j in range(8) for q in range(4))
 
 
-def obj_build(peek, sh, page27):
+def obj_build(peek, sh, page27, fpage=None):
     """Render start (asm obuild): None if the scroll is not a multiple of 8 (tilemap off), else
     {(kk, col): (cell, key, tile content, map attribute)} for every visible object cell, and the
     item inks remembered (sh.flags updated in place)."""
@@ -819,10 +892,10 @@ def obj_build(peek, sh, page27):
                 inki = inkr
             if has & 3 == 3 or has & 8:             # several inks: in the pixels, palette offset 0
                 key = bytes([sh.objo[i], sh.m1[i], sh.m2[i], inki << 4 | inkr])
-                out[(kk, col)] = (i, key, obj_compose(peek, page27, objs, inkr, inki), 0)
+                out[(kk, col)] = (i, key, obj_compose(peek, page27, objs, inkr, inki, fpage), 0)
             else:                                   # one ink: pixel 2 + the entry's palette offset
                 key = bytes([sh.objo[i], sh.m1[i], sh.m2[i], 0])
-                out[(kk, col)] = (i, key, obj_compose(peek, page27, objs, 2, 2), inkr << 4)
+                out[(kk, col)] = (i, key, obj_compose(peek, page27, objs, 2, 2, fpage, True), inkr << 4)
     return out
 
 
@@ -1244,12 +1317,12 @@ def verify(patch, rzx_path, progress=None, stop=None):
                     if (x, y) in cov:
                         continue
                     if after != before:
-                        if patch.cfg.transparent_outline and after == 0:
+                        if patch.cfg.no_outline(R[12] >> 8) and after == 0:
                             c['outline pixels dropped (transparent mode)'] += 1
                         else:
                             bad_px += 1
         if bad_px:
-            fail('piece: sprite pixels differ from the original plot', (bad_px,))
+            fail('piece: sprite pixels differ from the original plot', (bad_px, st.get('ix')))
 
     def ev_simple(real, R, stop_at, what, dead=()):
         o, p = OMem(real), PMem(real)
@@ -1332,7 +1405,7 @@ def verify(patch, rzx_path, progress=None, stop=None):
                     t = tm[map_pos(kk, col)]
                     if t:
                         fb[t] = bytes(tm[TDEF + 32 * t:TDEF + 32 * t + 32])
-        exp = obj_build(peek, sh, pg)
+        exp = obj_build(peek, sh, pg, ns.pages[PAGE_F])
         keys0 = bytes(pg[KEYS - 0x2000:KEYS - 0x2000 + 4 * NTILE])
         fx0 = st.get('fx', 0)
         sp_ = ev_simple(real, R, 58855, 'render start')
@@ -2099,7 +2172,7 @@ def unit_tests(patch, rzx_path, want=40, frames=3000):
         raise ValueError('commit.a5 is not OUTI')
     sc[k:k + 2] = b'\x00\x00'
     bc.scratch = bytes(sc)
-    bc.extra_banks = {12: bc.page + bytes(8192), 13: bc.scratch + bc.tpage}
+    bc.extra_banks = {12: bc.page + bc.fpage, 13: bc.scratch + bc.tpage}
     cc, _ = verify(bc, rzx_path, stop=1500)
     c['commit negative control (attr 4 not written) %s' % (
         'detected' if any(k.startswith('commit: attributes') for k in cc) else 'NOT DETECTED!')] += 1
@@ -2134,6 +2207,31 @@ def unit_tests(patch, rzx_path, want=40, frames=3000):
     t = staged(ns, 0)
     offs = {t.attr[i][2] >> 4 for i in range(4) if t.attr[i][3] & 0x80}
     c['class colour offset %s' % ('ok' if offs == {5} and cc.cfg.palette()[81] == 0xE0 else '%s FAIL!' % offs)] += 1
+    # a class without outline (the thrown rainbow, 2026-10-19): its patterns hold ink and transparent
+    # pixels only, the others keep their outline; control: the drop of outline pixels removed
+    pg0 = '%02X' % (states[0][2][12] >> 8)
+    nc = RainbowPatch(Config(class_colours={'pages': {pg0: 5}, 'palettes': {'5': {'outline': 'transparent'}}}),
+                      patch.prof)
+
+    def outl(pt):
+        n2 = n1 = 0
+        for banks_, o7_, R_ in states:
+            if '%02X' % (R_[12] >> 8) != pg0:
+                continue
+            _, o_, _, _, ns_, err_ = _pair(pt, _BankMem(banks_, o7_, rom), R_, 0)
+            t_ = staged(ns_, 0)
+            for i_ in range(4):
+                if t_.attr[i_][3] & 0x80:
+                    px_ = t_.sprite_pixels(i_) or []
+                    n2 += sum(1 for x_, y_, v_ in px_ if v_ == 2)
+                    n1 += sum(1 for x_, y_, v_ in px_ if v_ == 1)
+        return n1, n2
+    a1, a2 = outl(nc)
+    b1, b2 = outl(_with_bytes(nc, 'nooutl.w', b'\x71', b'\x00'))
+    p1, p2 = outl(patch)
+    c['class without outline (ink %d, outline %d; normal class outline %d) %s' % (
+        a1, a2, p2, 'ok' if a1 and not a2 and p2 else 'FAIL!')] += 1
+    c['class without outline negative control (outline kept) %s' % ('detected' if b2 else 'NOT DETECTED!')] += 1
     ay_unit_tests(patch, c)
     obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path)
     c['states'] = len(states)
@@ -2231,7 +2329,7 @@ def _with_rom_bytes(patch, sym, old, new):
         raise ValueError('%s is not %s' % (sym, old.hex()))
     pg[a:a + len(new)] = new
     b.page = bytes(pg)
-    b.extra_banks = {12: b.page + bytes(8192), 13: b.scratch + b.tpage}
+    b.extra_banks = {12: b.page + b.fpage, 13: b.scratch + b.tpage}
     return b
 
 
@@ -2245,7 +2343,7 @@ def _with_bytes(patch, sym, old, new):
         raise ValueError('%s is not %s' % (sym, old.hex()))
     sc[a:a + len(new)] = new
     b.scratch = bytes(sc)
-    b.extra_banks = {12: b.page + bytes(8192), 13: b.scratch + b.tpage}
+    b.extra_banks = {12: b.page + b.fpage, 13: b.scratch + b.tpage}
     return b
 
 
@@ -2448,7 +2546,7 @@ def obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path):
                     t = tm[map_pos(kk, col)]
                     if t:
                         front_defs[t] = bytes(tm[TDEF + 32 * t:TDEF + 32 * t + 32])
-        exp = obj_build(peek, sh, pg)
+        exp = obj_build(peek, sh, pg, pt.fpage)
         r = list(R)
         r[24] = 58851
         ro, ov, rp, pv, ns, err = _pair(pt, bm, r, 0, scratch=sc, pages={PAGE_T: pg, PAGE_TM: tm, PAGE_SH: shm},
@@ -2528,7 +2626,7 @@ def obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path):
     c['object render cases: tiles checked'] += ntiles
 
     def one(pt, second=False):
-        pg = bytearray(patch.tpage)
+        pg = bytearray(pt.tpage)
         m, sh = scen(bm0, pg)
         sc, tm, shm = fresh(pt)
         f, ns, _, ns3 = render_case(pt, m, R0, sh, pg, tm, shm, sc)
@@ -2538,12 +2636,25 @@ def obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path):
         f2, _, _, _ = render_case(pt, m, R0, sh, pg2, tm2, shm2, sc2)
         return f + f2
     R0 = R
-    for sym, new, what, second in (('odraw.bk', b'\xE6\x00', 'no black border', False),
+    # border control: the profile has no object with a border (Dean, 2026-10-19), so it runs on a
+    # copy whose objects all keep theirs (the base copy must pass first, or the control proves nothing)
+    import copy
+    bprof = copy.deepcopy(patch.prof)
+    for kind in ('opaque', 'masked'):
+        for v in bprof.get('objects', {}).get(kind, {}).values():
+            v['border'] = True
+    bpatch = RainbowPatch(patch.cfg, bprof)
+    f = one(bpatch)
+    c['object render path with borders (control base) %s' % ('ok' if not f else '%s FAIL!' % f[:4])] += 1
+    f = one(_with_bytes(bpatch, 'odraw.bk', None, b'\xE6\x00'))
+    c['object render negative control (no black border) %s' % ('detected' if f else 'NOT DETECTED!')] += 1
+    for sym, new, what, second in (
                                    ('s_bend.wt', b'\x00', 'background tile not drawn', False),
                                    ('obuild.cb', b'\x00\x00\x00\x00', 'map not cleared', True),
                                    ('ocomp.selx', b'\xEE\x00', 'fruit behind rainbows', False),
                                    ('obuild.tj', b'\x18', 'off-screen tile left assigned', False),
-                                   ('obuild.vi', b'\x00\x00', 'one-ink tile with the ink in its pixels', False)):
+                                   ('obuild.vi', b'\x00\x00', 'one-ink tile with the ink in its pixels', False),
+                                   ('odraw.fc', b'\xAF', "collectables' inside pixels not drawn", False)):
         f = one(_with_bytes(patch, sym, None, new), second)
         c['object render negative control (%s) %s' % (what, 'detected' if f else 'NOT DETECTED!')] += 1
 
@@ -2720,7 +2831,7 @@ def obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path):
     pgw = bytearray(nw.page)
     pgw[k + 1] = 1                                                          # no wait for the INT
     nw.page = bytes(pgw)
-    nw.extra_banks = {12: nw.page + bytes(8192), 13: nw.scratch + nw.tpage}
+    nw.extra_banks = {12: nw.page + nw.fpage, 13: nw.scratch + nw.tpage}
     c['diagnostic negative control (no wait for the INT to drop) %s' % (
         'detected' if frame_case(nw) != W else 'NOT DETECTED!')] += 1
     f, rs, re_, re2 = diag_case(_with_bytes(dpt, 'dcol.o', b'\xD3\xFE', b'\x00\x00'))
@@ -2754,13 +2865,15 @@ def auto(a, z80, name, out, say):
     """Plain + sprite .nex, boot checks, differential verification per RZX, unit tests."""
     import hashlib
     from . import z80tonex as zt, rzx as RZ
-    cls = json.load(open(a.class_colours)) if getattr(a, 'class_colours', None) else None
+    cls = json.load(open(a.class_colours)) if getattr(a, 'class_colours', None) else \
+        load_profile().get('colours', {}).get('class_colours')       # default: the profile's
     cfg = Config(getattr(a, 'ink', None) or 'white', getattr(a, 'outline', None) or 'black', cls)
     say('Game      : %s' % name)
     say('Engine    : rainbow (Rainbow Islands 128K: sprite-list walker, full-redraw renderer)')
     say('Colours   : ink %s, outline %s%s' % (getattr(a, 'ink', None) or 'white',
                                               getattr(a, 'outline', None) or 'black',
-                                              ', class colours from %s' % a.class_colours if cls else ''))
+                                              ', class colours from %s' % (getattr(a, 'class_colours', None) or
+                                                                             'the profile') if cls else ''))
     md5 = lambda p: hashlib.md5(open(p, 'rb').read()).hexdigest()
     plain = os.path.join(out, name + '.nex')
     zt.convert(z80, plain, TAIL_ADDR, quiet=True)
@@ -2864,3 +2977,408 @@ def auto(a, z80, name, out, say):
                 u['negative control detected'], u['store stale-pattern negative control detected']))
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return ok
+
+
+# ---------------------------------------------------------------------------------------------
+# Colour sheet (PLAYBOOK 3b, Dean 2026-10-19): every figure the sprite hooks draw, on a PNG to paint
+# ---------------------------------------------------------------------------------------------
+# Paint palette = the 15 Spectrum inks (sprite palette offset ITEM_PAL): 1 black, 2-8 inks 1-7,
+# 9-15 bright inks 1-7. Today's colours: ink = bright white (15), outline = black (1).
+SHEET_PAL = (0x00, 0x00) + SPECTRUM_INK + SPECTRUM_INK_BRIGHT
+SHEET_INK, SHEET_OUTLINE = 15, 1       # bright white (Config ink 'white' = 0xFF), black
+COLOURS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'docs', 'profiles',
+                            'rainbow_colours.json')
+
+
+LEVEL_PAGES = (0x94, 0x9E)         # the island's figure graphics: buffer 0x9400-0x9EFF, loaded per island
+BOSS_PAGES = (0x78, 0x7E)          # the island's boss graphics: 0x7800-0x7EFF, loaded per island
+ISLAND_VAR = 0x636E                # island 0-6 (round var 0x636F = 4 * island + round in island)
+
+
+def gfx_key(a, island):
+    """Colour-map key of a graphics byte: the island buffer's bytes per island ('I3:9A12'; the same
+    address holds another island's creature there), every other byte by address ('D612')."""
+    return 'I%d:%04X' % (island + 1, a) if island_page(a >> 8) else '%04X' % a
+
+
+def island_page(h):
+    return LEVEL_PAGES[0] <= h <= LEVEL_PAGES[1] or BOSS_PAGES[0] <= h <= BOSS_PAGES[1]
+
+
+def figure_family(gfx, island=0):
+    """Graphics address -> sheet group: the player (0xD6-0xDA), the thrown rainbow (0xC3), 'Island n'
+    (the island's creature and boss buffers), other fixed graphics ('Items': power-ups and bonus
+    items drawn as figures, shown with the collectables)."""
+    h = gfx >> 8
+    if island_page(h):
+        return 'Island %d' % (island + 1)
+    if 0xD6 <= h <= 0xDA:
+        return 'Player'
+    if h == 0xC3:
+        return 'Rainbow'
+    return 'Items'
+
+
+SHIFT_SET, SHIFT_GFX = 60332, 60342   # shifter (60300): LD (HL),D = new shift / LD SP,HL = graphic start
+SHIFT_ROWS, SHIFT_ROW = 24, 6        # a shifted graphic: 24 rows x (mask, gfx) x 3 bytes
+SHIFT_AREA = (0xD662, 0xD662 + 8 * 144)   # the 8 shifted graphics seen (whole playthrough, 2026-10-19)
+
+
+def shifted_key(a, sb, shifts):
+    """A byte of a graphic the game shifts IN PLACE (the player's 8 frames 0xD662 + 144 k: 60300
+    rotates mask and gfx right / left to the figure's x & 6, so the same address holds other pixels
+    after a move) -> (key, bit) of the UNSHIFTED pixel ('G<start>.<row>.<byte>'), None outside such a
+    graphic (False: a pixel the shift moved in from outside the picture)."""
+    for st, sh in shifts.items():
+        if st <= a < st + SHIFT_ROWS * SHIFT_ROW:
+            off = a - st
+            ux = 8 * ((off % SHIFT_ROW) // 2) + sb - sh
+            if ux < 0:                  # moved in from the left: never ink, shown clear
+                return 'G%04X.%d.L' % (st, off // SHIFT_ROW), ux & 7
+            return 'G%04X.%d.%d' % (st, off // SHIFT_ROW, ux >> 3), ux & 7
+    return None
+
+
+def sheet_piece(prof, ix, carry, gfx, de, peek, no_outline=False, island=0, shifts=None):
+    """One walker piece (59539 state) -> a coloursheet part in SCREEN orientation: per window pixel
+    the colour-map key (gfx_key of the graphics byte it comes from: the ink byte for ink and clear
+    pixels, the mask byte for outline pixels), its bit as stored, code 1 ink / 2 outline / 0 clear.
+    None for pieces the hooks leave on the ULA (stars, unknown plotters)."""
+    pi = prof['plotters'].get(str(ix))
+    if pi is None or ix in (60176, 60180):
+        return None
+    lay = bytes.fromhex(pi['layout'][carry])
+    ink, mask = {}, {}
+    for i, t in enumerate(lay):
+        a = (gfx + i) & 0xFFFF
+        (mask if t & 0x80 else ink)[t & 0x3F] = (peek(a), a, bool(t & 0x40))
+    rows = max(p // 6 for p in set(ink) | set(mask)) + 1
+    pixels, entries = [], {}
+    for pos in range(6 * rows):
+        r, col = divmod(pos, 6)
+        g, m = ink.get(pos), mask.get(pos)
+        if g is None and m is None:
+            continue
+        for b in range(8):
+            def src(e):
+                v, a, mir = e
+                sb = 7 - b if mir else b
+                return a, sb, v >> (7 - sb) & 1
+            gi = src(g) if g else None
+            mi = src(m) if m else None
+            if gi and gi[2]:
+                key, bit, code, d = gi[0], gi[1], 1, SHEET_INK
+            elif mi and not mi[2] and not no_outline:
+                key, bit, code, d = mi[0], mi[1], 2, SHEET_OUTLINE
+            else:
+                key, bit, code, d = (gi or mi)[0], (gi or mi)[1], 0, 0
+            sk = shifted_key(key, bit, shifts) if shifts else None
+            if sk is False:
+                continue
+            if sk:
+                k, bit = sk
+                entries.setdefault(k, [0, 3])
+            else:
+                k = gfx_key(key, island)
+                entries.setdefault(k, [peek(key), 1])
+            pixels.append((col * 8 + b, r, k, bit, code, d))
+    e, d = de & 255, de >> 8
+    x = ((e & 31) - pi['off']) * 8
+    y = ((e & 0xE0) >> 2 | (d & 0x18) << 3) + (d & 7)
+    sk = shifted_key(gfx, 0, shifts) if shifts else None
+    gid = gfx_key(gfx, island)
+    if sk:                                  # the graphic's row, at its shift now
+        st = next(a for a in shifts if a <= gfx < a + SHIFT_ROWS * SHIFT_ROW)
+        gid = '%s>%d' % (sk[0].rsplit('.', 1)[0], shifts[st])
+    return dict(id=(ix, carry, gid), size=rows, w=48, h=rows, x=x, y=y, mir=0,
+                group=figure_family(gfx, island), pixels=pixels, entries=entries, gfx=gfx, len=len(lay))
+
+
+def fill_mask(rows, w):
+    """Enclosed paper of a picture (rows: ints, w bits wide, bit w-1 = leftmost): the paper pixels a
+    4-connected flood through paper from outside the picture does not reach."""
+    h = len(rows)
+    ink = lambda x, y: rows[y] >> (w - 1 - x) & 1
+    seen = set()
+    todo = [(x, y) for x in range(-1, w + 1) for y in (-1, h)] + [(x, y) for y in range(h) for x in (-1, w)]
+    while todo:
+        x, y = todo.pop()
+        if (x, y) in seen:
+            continue
+        seen.add((x, y))
+        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if -1 <= nx <= w and -1 <= ny <= h and (nx, ny) not in seen and \
+                    (not (0 <= nx < w and 0 <= ny < h) or not ink(nx, ny)):
+                todo.append((nx, ny))
+    return [sum(1 << (w - 1 - x) for x in range(w) if not ink(x, y) and (x, y) not in seen) for y in range(h)]
+
+
+class ObjectFills:
+    """Collectables (opaque codes >= 15) as the game draws them into back-buffer cells: at each render
+    start the cells holding a 2x2 group (codes c, c+1 / c+2, c+3 on the four cells) are joined into
+    one 16x16 picture, the others are single 8x8 pictures; fill_mask of each picture -> per cell
+    graphic (its 8 rows) the inside pixels. inks: per code, the cell inks seen. pictures: every
+    (codes, cell attributes) drawn -> [rows per cell, times seen] (the collectables sheet)."""
+
+    def __init__(self):
+        self.cells, self.fills, self.inks, self.codes = {}, {}, collections.defaultdict(collections.Counter), {}
+        self.pictures = {}
+
+    def on_pc(self, pc, mem, R):
+        if (mem.o7ffd & 7) != 0:
+            return
+        if pc in (60839, 60853):
+            i = cell_index(R[4], R[5])
+            if i is None:
+                return
+            if pc == 60853 or R[0] < 15:
+                self.cells.pop(i, None)
+            else:
+                from skoolkit.pagingtracer import Memory
+                peek = lambda a: Memory.__getitem__(mem, a)
+                self.cells[i] = (R[0], bytes(obj_rows(peek, 'O', R[0])))
+        elif pc == 58851:
+            from skoolkit.pagingtracer import Memory
+            att = {i: Memory.__getitem__(mem, 0xB500 + i) for i in self.cells}
+            for i, (c, g) in list(self.cells.items()):
+                self.inks[c][att[i] & 0x47] += 1
+            self.render(att)
+
+    def render(self, att=None):
+        cells, done = self.cells, set()
+        for i, (c, g) in cells.items():
+            k, col = i >> 5, i & 31
+            q = [i, 32 * k + (col + 1) % 32, 32 * ((k + 1) % 22) + col, 32 * ((k + 1) % 22) + (col + 1) % 32]
+            if all(cells.get(q[n], (None,))[0] == c + n for n in range(4)):
+                rows = [cells[q[0 if y < 8 else 2]][1][y % 8] << 8 | cells[q[1 if y < 8 else 3]][1][y % 8]
+                        for y in range(16)]
+                m = fill_mask(rows, 16)
+                for n in range(4):
+                    part = [(m[y + 8 * (n >> 1)] >> (8 * (1 - (n & 1)))) & 255 for y in range(8)]
+                    self._add(cells[q[n]], part, True)
+                    done.add(q[n])
+                if att is not None:
+                    self._pic(tuple(c + n for n in range(4)), tuple(att[q[n]] & 0x47 for n in range(4)),
+                              tuple(cells[q[n]][1] for n in range(4)))
+        for i, cg in cells.items():
+            if i not in done:
+                self._add(cg, fill_mask(list(cg[1]), 8), False)
+                if att is not None:
+                    self._pic((cg[0],), (att[i] & 0x47,), (cg[1],))
+
+    def _pic(self, codes, attrs, rows):
+        e = self.pictures.setdefault((codes, attrs), [rows, 0])
+        e[1] += 1
+
+    def _add(self, cg, mask, grouped):
+        c, g = cg
+        self.codes.setdefault(g, set()).add(c)
+        old = self.fills.get(g)
+        if old is None or (grouped and not old[1]):
+            self.fills[g] = (bytes(mask), grouped)
+
+
+def ink_index(attr):
+    """Cell attribute -> sheet / tile palette index as the build draws a collectable's ink
+    (oinkx: 1 black, 2-8 inks 1-7, 9-15 bright inks 1-7)."""
+    ink = attr & 7
+    return 1 if not ink else ink + 1 + (7 if attr & 0x40 else 0)
+
+
+def collectable_comps(pictures, prof):
+    """ObjectFills.pictures -> coloursheet composites, one per (collectable, colour) the game drew, in
+    the build's colours: ink in the cell's ink, the inside (profile `fills`) black or white, paper clear
+    (paintable). Key per cell row and colour: 'C<code>.<attr>:<row>' (each colour paints apart)."""
+    fpage = fill_page(prof)
+    comps = []
+    whole = {(c, a) for (codes, attrs) in pictures if len(codes) == 4 for c, a in zip(codes, attrs)}
+    for (codes, attrs), (rows, n) in sorted(pictures.items()):
+        if len(codes) == 1 and (codes[0], attrs[0]) in whole:
+            continue                    # one cell of a 2x2 collectable (the rest off screen): shown whole
+        w = 16 if len(codes) == 4 else 8
+        pixels, entries = [], {}
+        for ci, (c, a) in enumerate(zip(codes, attrs)):
+            ox, oy = 8 * (ci & 1), 8 * (ci >> 1)
+            idx = ink_index(a)
+            f = obj_fill(fpage, c)
+            fm, fc = (f[0], f[1]) if f else ([0] * 8, 0)
+            fidx = {0xFF: 15, 0x11: 1}.get(fc) or (15 if fill_white(idx) else 1)
+            for y in range(8):
+                k = 'C%d.%02X:%d' % (c, a, y)
+                entries[k] = [rows[ci][y], 2]
+                for b in range(8):
+                    if rows[ci][y] >> (7 - b) & 1:
+                        pixels.append((ox + b, oy + y, k, b, 1, idx))
+                    elif fm[y] >> (7 - b) & 1:
+                        pixels.append((ox + b, oy + y, k, b, 2, fidx))
+                    else:
+                        pixels.append((ox + b, oy + y, k, b, 0, 0))
+        part = dict(id=('C', codes, attrs), size=w, w=w, h=w, x=0, y=0, mir=0, group='Collectables',
+                    pixels=pixels, entries=entries, dx=0, dy=0, dmir=0, vmir=0)
+        comps.append(dict(count=n, group='Collectables', parts=[part]))
+    return comps
+
+
+class SheetCapture:
+    """Hooks for rzx.trace (C simulator): every figure piece -> a coloursheet part, the pieces of one
+    game object joined (a boss's objects - its graphics in BOSS_PAGES - are one figure; the object's builder call: 54533 per creature / player record IX, 50614 the
+    thrown rainbow, 53318 single pieces; the descriptor code each allocates (54574 / 50635 / 53318) ->
+    that object; the walker reads the code at 59513 and dispatches at 59539), flushed per render
+    (59087); collectables per render start (ObjectFills)."""
+    PCS = (54533, 54574, 50614, 50635, 53318, 59513, 59539, 59087, 60839, 60853, 58851, SHIFT_SET, SHIFT_GFX)
+
+    def __init__(self, prof):
+        from . import coloursheet as cs
+        self.prof = prof
+        self.cfg = Config(class_colours=prof.get('colours', {}).get('class_colours'))
+        self.col = cs.Collector(family=lambda p: p['group'])
+        self.fills = ObjectFills()
+        self.obj, self.objs, self.code, self.n, self.frame = None, {}, 0, 0, []
+        self.shifts, self.newshift = {}, 0               # shifted graphic start -> its shift now
+        self.drawn = collections.defaultdict(set)       # island -> island-buffer addresses drawn
+        self.buffers = {}                               # island -> its buffer 0x9400-0x9EFF (first seen)
+
+    def on_pc(self, pc, sim):
+        from skoolkit.pagingtracer import Memory
+        mem, R = sim.memory, sim.registers
+        if (mem.o7ffd & 7) != 0:
+            return
+        if pc in (60839, 60853, 58851):
+            self.fills.on_pc(pc, mem, R)
+        elif pc == 59513:
+            self.code = R[0]
+        elif pc == SHIFT_SET:
+            self.newshift = R[4]
+        elif pc == SHIFT_GFX:
+            self.shifts[R[6] * 256 + R[7]] = self.newshift
+        elif pc == 59539:
+            peek = lambda a: Memory.__getitem__(mem, a)
+            isl = peek(ISLAND_VAR) % 7
+            gfx = R[12]
+            if SHIFT_AREA[0] <= gfx < SHIFT_AREA[1] and shifted_key(gfx, 0, self.shifts) is None:
+                return                          # shifted graphic whose shift is not known yet
+            p = sheet_piece(self.prof, R[8] * 256 + R[9], R[17] & 1, gfx, R[4] * 256 + R[5], peek,
+                            self.cfg.no_outline(gfx >> 8), isl, self.shifts)
+            if p and p['pixels']:
+                o = self.objs.get(self.code)
+                if o is None:
+                    self.n += 1
+                    o = ('?', self.n)
+                self.frame.append((o, p))
+                if island_page(gfx >> 8):
+                    reg = LEVEL_PAGES if LEVEL_PAGES[0] <= gfx >> 8 <= LEVEL_PAGES[1] else BOSS_PAGES
+                    self.drawn[isl].update(range(gfx, gfx + p['len']))
+                    if (isl, reg) not in self.buffers:
+                        self.buffers[(isl, reg)] = (reg[0] << 8, bytes(peek(a) for a in range(reg[0] << 8,
+                                                                                          reg[1] + 1 << 8)))
+        elif pc == 54533:
+            self.obj = ('M', R[8] * 256 + R[9])
+        elif pc == 50614:
+            self.n += 1
+            self.obj = ('R', self.n)
+        elif pc in (54574, 50635):
+            self.objs[R[0]] = self.obj
+        elif pc == 53318:
+            self.n += 1
+            self.objs[R[0]] = ('S', self.n)
+        elif pc == 59087:
+            groups = collections.OrderedDict()
+            for o, p in self.frame:                     # a boss is several objects (one per part)
+                if BOSS_PAGES[0] <= p['gfx'] >> 8 <= BOSS_PAGES[1]:
+                    o = ('boss',)
+                groups.setdefault(o, []).append(p)
+            for g in groups.values():
+                self.col.add_frame(sorted(g, key=lambda p: (p['y'], p['x'])))
+            self.frame.clear()
+            self.objs.clear()
+
+    def coverage(self):
+        """Per (island, 'creatures' / 'boss'): graphics bytes of its buffer drawn / non-zero bytes in it,
+        the buffer read when its first figure was drawn (a gap = figures the recordings never showed,
+        or data in the buffer that is not figure graphics)."""
+        out = {}
+        for (isl, reg), (base, buf) in sorted(self.buffers.items()):
+            nz = {base + i for i, v in enumerate(buf) if v}
+            out[(isl + 1, 'boss' if reg == BOSS_PAGES else 'creatures')] = (len(self.drawn[isl] & nz), len(nz))
+        return out
+
+
+SHEET_SPLIT = (('PLAYER', ('Player', 'Rainbow')),) + tuple(
+    ('ISLAND%d' % i, ('Island %d' % i,)) for i in range(1, 8)) + (('COLLECTABLES', ('Items', 'Collectables')),)
+
+
+def sheet_capture(rzx_paths, prof=None, progress=None):
+    """Replay the RZX(s) (original game, C simulator) with SheetCapture's hooks. Fuse autosave
+    snapshots are stripped first. -> the SheetCapture (desyncs are reported, not fatal)."""
+    import shutil
+    import tempfile
+    from skoolkit.rzxplay import parse_rzx
+    from skoolkit.snapshot import Snapshot as SS
+    from . import rzx as RZ
+    prof = prof or json.load(open(_profile_path()))
+    cap = SheetCapture(prof)
+    tmp = tempfile.mkdtemp(prefix='nexclash_sheet_')
+    try:
+        for k, r in enumerate([rzx_paths] if isinstance(rzx_paths, str) else rzx_paths):
+            src = r
+            if sum(1 for b in parse_rzx(r) if isinstance(b.obj, SS)) > 1:      # Fuse autosaves
+                r = os.path.join(tmp, '%d_%s' % (k, os.path.basename(r)))
+                RZ.strip(src, r)
+            cap.frame.clear()
+            n, err = RZ.trace(r, SheetCapture.PCS, cap.on_pc)
+            if progress:
+                progress(src, n, err)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return cap
+
+
+def sheets(cap, prefix, colours=None):
+    """Per SHEET_SPLIT name (players, each island, collectables; Dean 2026-10-19: one sheet per level +
+    collectables + player when there are many figures): <prefix>_<NAME>_PAINTING_SPRITES.png (the
+    fewest WHOLE figures that show every graphics byte once at least; + _layout.json, read back) and
+    <prefix>_<NAME>_REFERENCE_ALL_SPRITES.png (every distinct figure drawn whole - not clipped at the
+    play area's edge - and every collectable colour). -> [(path, figures)]."""
+    from . import coloursheet as cs
+    rgb = cs.palette_rgb(SHEET_PAL)
+    order = [g for _, gs in SHEET_SPLIT for g in gs]
+    fig_paint = cs.choose(list(cap.col.comps.values()), cap.col.maxsize, order)
+    full = lambda c: all(p['size'] == cap.col.maxsize.get(p['id'], p['size']) for p in c['parts'])
+    fig_all = sorted([c for c in cap.col.comps.values() if full(c)], key=lambda c: (order.index(c['group']) if c['group'] in order else 99,
+                                                           str(c['parts'][0]['id'])))
+    coll = collectable_comps(cap.fills.pictures, cap.prof)
+    out = []
+    for name, groups in SHEET_SPLIT:
+        paint = [c for c in fig_paint if c['group'] in groups] + (coll if 'Collectables' in groups else [])
+        allc = [c for c in fig_all if c['group'] in groups] + (coll if 'Collectables' in groups else [])
+        opaque = lambda c: any(q[4] for p in c['parts'] for q in p['pixels'])
+        paint, allc = [c for c in paint if opaque(c)], [c for c in allc if opaque(c)]
+        if not paint:
+            continue
+        for kind, comps in (('PAINTING_SPRITES', paint), ('REFERENCE_ALL_SPRITES', allc)):
+            png = '%s_%s_%s.png' % (prefix, name, kind)
+            n = cs.write(comps, png, os.path.splitext(png)[0] + '_layout.json', rgb, colours, unique=False,
+                         paint_clear=True)
+            out.append((png, n))
+    return out
+
+
+def _main(argv=None):
+    import argparse
+    ap = argparse.ArgumentParser(prog='python -m nexclash.rainbow',
+                                 description='Rainbow Islands figure colours: sheets to paint')
+    sub = ap.add_subparsers(dest='cmd', required=True)
+    p = sub.add_parser('sheet', help='RZX(s) -> sheet PNGs + layout JSON (game graphics: keep private)')
+    p.add_argument('rzx', nargs='+', help='recordings (e.g. the playthrough bookmarks, one per round)')
+    p.add_argument('-o', '--output', default='rainbow_islands')
+    a = ap.parse_args(argv)
+    cap = sheet_capture(a.rzx, progress=lambda r, n, err: print('%s: %d frames%s' % (
+        os.path.basename(r), n, ' (WARNING: desync: %s)' % err if err else ''), flush=True))
+    for (isl, what), (d, nz) in cap.coverage().items():
+        print('island %d %s: %d of %d non-zero buffer bytes drawn (%.0f%%)' % (isl, what, d, nz, 100.0 * d / max(nz, 1)))
+    for png, n in sheets(cap, a.output):
+        print('%d figures -> %s' % (n, png))
+
+
+if __name__ == '__main__':
+    _main()

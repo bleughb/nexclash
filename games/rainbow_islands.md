@@ -15,11 +15,16 @@ squares - analysis: codes 1-14 are RAINBOW pieces, the collectables are codes >=
 OBJECTS ON THE TILEMAP bffd9357 (below; hardware 2026-10-12: black lines around collectables not
 wanted; sprite corruption and slowdowns seemingly at random). 2026-10-12: COLLECTABLES WITHOUT
 BORDER + DIAGNOSTIC BUILD e50733b2 / diagnostic 8f25bc61 - not hardware-tested (superseded).
-2026-10-19: NO RASTER WAIT + MUSIC QUEUE + FASTER TILES AND COMMIT (below) c5e1823d / diagnostic 71222105 - hardware test
-pending. Needs a core with the tilemap in bank 7 (Dean: most recent core).
+2026-10-19: NO RASTER WAIT + MUSIC QUEUE + FASTER TILES AND COMMIT (below) c5e1823d / diagnostic 71222105 (Dean:
+"this seems better"). 2026-10-19: NO RAINBOW BORDER + COLLECTABLE INSIDES + PLAYTHROUGH SHEETS (below)
+cf017271 / diagnostic c16751b0 - RUNS ON HARDWARE (Dean, 2026-10-19: "seems to work ok"). Needs a core with the tilemap in bank 7 (Dean: most recent core).
 
 Reference: rainbow.z80 (4c98b980), rainbow.rzx (55046d18), rainbownew.rzx (47bb2b16) in the
-private repo. 2026-10-12: the repo rebuilds e50733b2 / 8f25bc61 / plain 7ac543fb byte-identical (boot OK);
+private repo. Whole-game playthrough rainbowislands_LeeBee.rzx (92bbaa0a, 195,356 frames, all 7 islands
+and bosses, same game version; Dean 2026-10-19: "should not be referred to in full") -> BOOKMARKS:
+reference/rainbow_islands/leebee/ = one RZX per round (leebee_rNN_islandI_roundR.rzx, 4.5k-11k frames,
+starting at the frame the round variable 0x636F changes) + leebee_ending.rzx + leebee_bookmarks.json
+(frame numbers). Use those, never the full file (`rzx.cut` rebuilds them in ~5 min). 2026-10-12: the repo rebuilds e50733b2 / 8f25bc61 / plain 7ac543fb byte-identical (boot OK);
 bffd9357 was rebuilt by `selftest.py` with both RZX IDENTICAL. Review images from the sessions (mask
 contact sheet rainbow_B_mask_sheet.png, objects.png) belong in the private repo too (they show game
 graphics). Tools: nexclash/rainbow_objects.py (object/tile catalogue -> profile `objects`),
@@ -39,12 +44,20 @@ for the beam (at the next interrupt instead); music = one AY tick per interrupt;
 composer; Next techniques from his research (OUT/OUTI sprite writes). No copper (CPU/copper
 NextReg-pair conflict, LEARNINGS 1.5). Tile-build cap per render ((b): items briefly on the ULA)
 offered, not chosen.
+2026-10-19 (after c5e1823d): rainbows WITHOUT border - all of them (tile pieces codes 1-14 and the
+thrown rainbow sprite, class C3 outline transparent); collectables' INSIDE pixels (enclosed paper)
+a fixed colour: white inside dark-ink items (black, blue, red, magenta), black inside the others
+(automatic; per-code override `"fill": "white" | "black" | "none"` in the profile's objects, preview
+collectables_inside_preview.png sent, no flips named yet). Colour SHEETS for every figure, split per
+island + player + collectables, whole figures, default colours, collectables once per colour
+(PLAYBOOK 3b); his painting becomes the per-pixel colours (not built yet).
 
 ## Deliverables
 | File | MD5 |
 |---|---|
-| rainbow_sprites.nex (the same as c5e1823d; diagnostic code moved to the alt ROM) | fe34236c476290cfec10183ef90d6141 |
-| rainbow_sprites_diag.nex (blue = deferred commit, red = tile built, yellow = overrun, magenta = flag unreliable; colour held to the next frame) | 60bda66413c381ba918bf39e7b70b5b7 |
+| rainbow_sprites.nex (no rainbow border, collectable insides black / white, thrown rainbow without outline) | cf017271dfc01bdd0c7cf2f599b03628 |
+| rainbow_sprites_diag.nex (same + diagnostic border) | c16751b0255ee3d83a4e342bf9a8c411 |
+| (the same as c5e1823d; diagnostic code moved to the alt ROM; diagnostic 60bda664: blue = deferred commit, red = tile built, yellow = overrun, magenta = flag unreliable) | fe34236c476290cfec10183ef90d6141 |
 | (no raster wait, music queue, faster tiles + commit; diagnostic 712221059d9351bece24629e3ae7a77d - its yellow was unreliable) | c5e1823de3a66b3c468961ebb72d383d |
 | (collectables without border; diagnostic 8f25bc6146b9d7f7ae1f12a1d227447e) | e50733b2b7e2db32f004c1436a2e0461 |
 | (objects on the tilemap, black border on every object) | bffd9357d772e2df975ec5f40dc9e4cb |
@@ -120,6 +133,15 @@ catalogue.json. Page keys go into the class-colours map.
 
 ## Hardware status
 - Runs on the Next (2026-09-28); limiter + commit build bddea69e runs smooth (Dean).
+
+## Hardware checklist - no rainbow border + collectable insides cf017271 (2026-10-19) - Dean: works ok
+1. Rainbows (standing and while thrown): no black edge anywhere; fruit and items still in front of
+   the scenery, behind every figure.
+2. Collectables: the enclosed inside pixels white (dark items) or black (light items), not the sky;
+   name any item that should flip, or stay see-through.
+3. Thrown rainbow: drawn where it is thrown (a bug drew it 256 px to the right in an unreleased build:
+   check the left half of the screen).
+4. Speed and music as in c5e1823d; the diagnostic's colours as before.
 
 ## Hardware checklist - no raster wait + music queue c5e1823d (2026-10-19)
 1. Speed: game pace steady everywhere incl. the bonus scene (60+ items) and busy rounds; compare
@@ -278,6 +300,43 @@ build).
   labels). 2026-10-12: reassembled = profile hex for all six blocks and 56 symbols.
 - nexclash.py: dispatch in cmd_auto, flags --ink/--outline/--class-colours; convert --tail.
 - z80tonex.py: 128K tail guard.
+
+## No rainbow border + collectable insides + playthrough sheets (2026-10-19, cf017271)
+- BORDER: profile objects "1-14" (rainbow pieces, opaque and masked) and "15-255" border false.
+  Thrown rainbow (graphics page 0xC3, OR-only plotters 60105-60130): class colours default
+  {"pages": {"C3": 1}, "palettes": {"1": {"outline": "transparent"}}}; CLASSTAB bit 0 = class without
+  outline -> store key bit 1 (V_KEY) and nooutl turns the entry's outline pixels (2) into 0. BUG found
+  by the verifier's pixel check (sprite pixels vs the original plot; registers and memory passed):
+  attr2 was CLASSTAB's byte, so bit 0 (the new flag) became X8 and every thrown-rainbow sprite sat
+  256 px to the right. Fix: AND 0xF0 (LEARNINGS 1.4).
+- INSIDES: page 25 (in the .nex as bank 12's upper half): FILLM = per opaque code 15-190 the enclosed
+  paper (8 rows; profile `fills`, from the game's island graphics, identical on all 7 islands: the 2x2
+  groups c..c+3 from 23 joined before the flood), FILLC = per-code override. ocomp's opaque path
+  calls ofill: V_FPIX = the fill pixel pair (0x33 = palette pixel 3 of the tile's bank: the contrast
+  colour of that ink, Config.tile_palette; 0x11 black / 0xFF white for overrides); odraw ORs it
+  under the mask. Unit control: odraw.fc NOP -> inside not drawn, detected.
+- Unit control 'no black border' runs on a profile copy with every border on (no object has one
+  now; a control that cannot fail proves nothing); its base must pass first.
+- SHEETS (PLAYBOOK 3b, Dean 2026-10-19): `python -m nexclash.rainbow sheet RZX... -o PREFIX` ->
+  PREFIX_{PLAYER, ISLAND1-7, COLLECTABLES}_{PAINTING_SPRITES, REFERENCE_ALL_SPRITES}.png + layouts.
+  Capture by `rzx.trace` (C simulator, the 28 bookmarks + both RZX in ~12 min). Game facts used:
+  - objects: 54533 (creature / player record IX, builder D4A8; allocates codes at 54574), 50614
+    (the thrown rainbow, C5A8; codes at 50635), 53318 (single pieces); the band lists at 0x6D3C
+    are linked through the descriptors (0xB800 + code - 6: gfx, screen offset, next code + plotter);
+    the walker reads the code at 59513. Pieces of one object = one figure; a boss's objects
+    (graphics in 0x7800-0x7EFF) = one figure.
+  - graphics buffers per island: creatures 0x9400-0x9EFF, boss 0x7800-0x7EFF (constant within an
+    island) -> colour keys 'I<island>:<addr>'. Fixed: player 0xD662 + 144 k (k 0-7, 24 rows x 6 bytes:
+    mask / gfx interleaved, 3 bytes wide), items 0xDB-0xDE, thrown rainbow 0xC3xx.
+  - The PLAYER's graphics are SHIFTED IN PLACE (60300: rotate mask + gfx right/left to x & 6; the
+    shift now at 0xC676 + n): an address holds other pixels after a move - the old sheet keyed them
+    by address and showed corrupted players. Keys 'G<start>.<row>.<byte>' of the unshifted pixel
+    (shifted_key); the engine must do the same when it applies painted colours.
+  - Coverage (graphics bytes drawn / non-zero bytes of the island's buffer): creatures 53-88%, boss
+    14-29%; the rest is either never drawn in the playthrough or not figure graphics (not resolved).
+- Not done: read-back of the painted sheets -> rainbow_colours.json, per-pixel colours in the
+  piece conversion (keys per island, shifted player keys, per collectable colour in the tile
+  composer), `recolour`; verify of islands 3-7 (bookmark verify of the boss rounds running).
 
 ## No raster wait + music queue + faster tiles and commit (2026-10-19, c5e1823d)
 Profile first (rainbow.rzx 2900 frames, 838 game frames, simulated at 28 MHz, beam modelled from the
@@ -657,6 +716,15 @@ drawn on top.
    (e) tilemap switched off when the scroll is not a multiple of 8: follow it with $31 (pixel
        scroll) instead; (f) dedupe tile definitions by mirror / rotation (attribute bits 3:1);
        512-tile mode does NOT help (the limit is bank 7's 8K, not the 256 index range).
+   (g) tilemap TEXT mode ($6B bit 3; LEARNINGS 1.5, wiki, not tested): 1-bit tile definitions, 8
+       bytes instead of 32, colour = a 7-bit palette offset per tile (attribute bits 7:1) - 4x the
+       definitions in bank 7's 8K. Check first that every cell the tilemap shows is ONE colour on
+       paper (Spectrum cells are 1-bit + ink, but the build's cell colours / outlines may use more).
+       NOT 1-byte map entries ($6B bit 5): they drop the per-tile palette offset Rainbow uses.
+1b. rsafe reads the raster line ONCE ($1E then $1F): a board with core 3.1.0 at 3.5 MHz has read
+   wrong $1F values (Ped7g's ScanlineReadingAndInterrupt test), and a 255 -> 256 crossing between
+   the two reads is 256 lines off. Read the pair until two consecutive reads agree (LEARNINGS 1.5
+   "Hardware ground truth"); a wrong read here commits during the visible frame (tearing).
 2. Later islands: banks 3/4/6 never paged in either RZX; need a recording past island 1 (item
    graphics change there: GCOPY invalidation is unit-proven only through the model).
 3. Colours - Dean's decisions (2026-09-30): player stays WHITE (black outline); stars stay as

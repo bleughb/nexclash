@@ -23,7 +23,13 @@
     "md5": "47bb2b163a947724c343a2bc1b039458",
     "path": "rainbow_islands/rainbownew.rzx"
    }
-  ]
+  ],
+  "bookmarks": {
+   "name": "rainbowislands_LeeBee.rzx",
+   "md5": "92bbaa0a24102b3e5169d5c6432e4928",
+   "path": "rainbow_islands/leebee/leebee_bookmarks.json",
+   "note": "whole playthrough cut into one RZX per round (rzx.cut); used for the colour sheets and bookmark verifies, never replayed in full"
+  }
  },
  "modules": [
   "rainbow"
@@ -61,21 +67,21 @@
   },
   "sprites": {
    "file": "rainbow_sprites.nex",
-   "md5": "fe34236c476290cfec10183ef90d6141"
+   "md5": "cf017271dfc01bdd0c7cf2f599b03628"
   },
   "diagnostic": {
    "file": "rainbow_sprites_diag.nex",
-   "md5": "60bda66413c381ba918bf39e7b70b5b7"
+   "md5": "c16751b0255ee3d83a4e342bf9a8c411"
   }
  },
  "repro": [],
  "status": {
   "title": "Rainbow Islands (128K)",
   "engine_col": "rainbow (rainbow_islands.md)",
-  "build": "rainbow_sprites.nex fe34236c (no raster wait, music one AY tick per interrupt, faster tiles + OUTI/0x57 commit) + rainbow_sprites_diag.nex 60bda664 (overrun flag read back: yellow real, magenta unknown)",
-  "software": "RZX IDENTICAL x2, AY chip = original per tick, unit PASS (19 object controls + AY + commit controls)",
-  "hardware": "bddea69e smooth; diag 71222105 video: blue band fine, yellow taken as a false overrun signal (diagnostic fixed); fe34236c / 60bda664 untested",
-  "next": "hardware test fe34236c + film diag 60bda664 (yellow = real overrun, magenta = flag unreliable); layer B; later-islands RZX"
+  "build": "rainbow_sprites.nex cf017271 (no rainbow border, collectable insides black / white, thrown rainbow without outline) + rainbow_sprites_diag.nex c16751b0",
+  "software": "RZX IDENTICAL x2, unit PASS (22 object controls incl. border control on a bordered profile copy, inside fill control)",
+  "hardware": "cf017271 works on hardware (Dean, 2026-10-19: \"seems to work ok\")",
+  "next": "Dean paints the split colour sheets -> per-pixel colours + recolour; bookmark verify of the boss rounds (islands 7..1)"
  },
  "checks": [
   "asm2profile:rainbow_islands"

@@ -105,7 +105,13 @@ TDEF    EQU 0x0A00
 PAGE_SH EQU 28              ; shadow map (row kk at kk*64, 2 bytes per column) + LASTT, slot 2
 LASTT   EQU 0x4600          ; page 28 at slot 2: tile number of each cell last render (704)
 X2      EQU 0x1F00          ; page 26: 2 bits -> 2 nibbles (00 0F F0 FF)
-PBUF    EQU 0x0EF0          ; 8 rows of the object being drawn at PBUF+1..+8; PBUF+0 / +9 stay 0
+PBUF    EQU 0x0EE6          ; 8 rows of the object being drawn at PBUF+1..+8; PBUF+0 / +9 stay 0
+FBUF    EQU PBUF+10         ; its inside pixels (enclosed paper; collectables), 8 rows
+PAGE_F  EQU 25              ; bank 12 upper (in the .nex): FILLM 0x2000 (8 bytes per opaque code
+FILLM   EQU 0x2000          ; 15-190: the enclosed paper of the object, from profile `fills`),
+FILLC   EQU 0x2600          ; FILLC per code: inside colour as a pixel byte (0 = automatic)
+V_HASF  EQU 0x008C          ; the object being drawn has inside pixels (ofill; odraw clears it)
+V_FPIX  EQU 0x008D          ; their pixel byte (both nibbles)
 X8T     EQU 0x4C00          ; page 28 at slot 2 (render start): nibble-expansion tables, 4 x 256
 V_CLRF  EQU 0x0089          ; diagnostic: the frame-start clear of $C8 bit 0 did not take (read back 1)
 V_BCOL  EQU 0x008A
@@ -567,6 +573,45 @@ dfend:  ld a,(V_FRUN)
 .y:     ld (V_BCOL),a
         out (0xFE),a
         jp x_hx
+; (tcommit only maps slots 2 / 3: it runs from the alt ROM, called by commit with slot 1 = $FF)
+; tcommit: show the map built this render (or switch the layer off), clip it to the play area
+tcommit:
+        ld a,(V_TOK)
+        or a
+        jr z,.off
+        nextreg 0x52,PAGE_SH        ; shadow rows -> map rows 6-25, columns 4-35 (2 bytes each)
+        nextreg 0x53,PAGE_TM
+        ld hl,0x4000
+        ld de,0x6000+(6*40+4)*2
+        ld a,20
+.cr:    ld bc,64
+        ldir
+        ex de,hl
+        ld bc,16                    ; to column 4 of the next map row
+        add hl,bc
+        ex de,hl
+        dec a
+        jr nz,.cr
+        nextreg 0x52,10
+        nextreg 0x53,11
+        ld a,(V_MSB)
+        ld (V_MSD),a
+        nextreg 0x6E,0x80           ; map at 0x0000 in bank 7
+        nextreg 0x6F,0x80+high TDEF
+        nextreg 0x1C,8              ; tilemap clip: x 16-143 (2-pixel units), y 48 .. 47 + N
+        nextreg 0x1B,16
+        nextreg 0x1B,143
+        nextreg 0x1B,48
+        ld a,(V_N58)
+        add a,47
+        nextreg 0x1B,a
+        nextreg 0x6B,0x81           ; tilemap on: 40x32, 2-byte entries (palette offset per tile),
+                                    ; tilemap over the ULA (bit 0; the per-tile bit is 0 as well)
+        ret
+.off:   nextreg 0x6B,0
+        ld a,0xFF
+        ld (V_MSD),a
+        ret
 rom_end:
 
         ORG 0x0100
@@ -758,6 +803,15 @@ s_pc:
         inc h
         ld a,(hl)
         ld (V_LT+1),a
+        ld a,(V_SP+1)               ; class without outline (CLASSTAB bit 0, e.g. the thrown rainbow):
+        ld l,a                      ; part of the store key (bit 1), so a stream drawn from another
+        ld h,high CLASSTAB          ; class never shares its patterns
+        ld a,(hl)
+        and 1
+        add a,a
+        ld hl,V_KEY
+        or (hl)
+        ld (hl),a
 ; --- store lookup. Key = IX + AF' carry + the WHOLE stream (compared in full). Hash of IXl,
 ; carry and the first <= 16 stream bytes -> set (512 sets x 2 ways, 256 bytes per entry).
         ld a,(V_LEN)
@@ -960,6 +1014,7 @@ miss:   ld a,h
         ld hl,V_NS
         cp (hl)
         jr c,.spr
+        call nooutl                 ; classes without outline: outline pixels (2) -> transparent (0)
         ld hl,(V_ENT)               ; header: IXl IXh key stamp vis0-2 nspr, stream at +8
         ld a,(V_IX)
         ld (hl),a
@@ -1130,6 +1185,7 @@ regsdone:
         ld e,a
         ld d,high CLASSTAB
         ld a,(de)
+        and 0xF0                    ; bit 0 = no-outline flag, not attr2's X8
         ld b,a
         ld a,(V_S)                  ; IY = ATTRB + 5 * V_S
         ld e,a
@@ -2025,6 +2081,7 @@ ocomp:  ld a,(V_PROBE)
         ld de,PBUF+1
         ld bc,8
         ldir
+        call ofill                  ; collectables: their inside pixels (FBUF, V_HASF, V_FPIX)
         call odraw
 .pm:    ld a,(V_OL+1)
         rrca
@@ -2278,50 +2335,64 @@ code_end:
 
 ; --- raster wait (page 26 0x0E60-0x0EFF)
         ORG CODE3
-; tcommit: show the map built this render (or switch the layer off), clip it to the play area
-tcommit:
-        ld a,(V_TOK)
-        or a
-        jr z,.off
-        nextreg 0x52,PAGE_SH        ; shadow rows -> map rows 6-25, columns 4-35 (2 bytes each)
-        nextreg 0x53,PAGE_TM
-        ld hl,0x4000
-        ld de,0x6000+(6*40+4)*2
-        ld a,20
-.cr:    ld bc,64
-        ldir
-        ex de,hl
-        ld bc,16                    ; to column 4 of the next map row
-        add hl,bc
-        ex de,hl
-        dec a
-        jr nz,.cr
-        nextreg 0x52,10
-        nextreg 0x53,11
-        ld a,(V_MSB)
-        ld (V_MSD),a
-        nextreg 0x6E,0x80           ; map at 0x0000 in bank 7
-        nextreg 0x6F,0x80+high TDEF
-        nextreg 0x1C,8              ; tilemap clip: x 16-143 (2-pixel units), y 48 .. 47 + N
-        nextreg 0x1B,16
-        nextreg 0x1B,143
-        nextreg 0x1B,48
-        ld a,(V_N58)
-        add a,47
-        nextreg 0x1B,a
-        nextreg 0x6B,0x81           ; tilemap on: 40x32, 2-byte entries (palette offset per tile),
-                                    ; tilemap over the ULA (bit 0; the per-tile bit is 0 as well)
-        ret
-.off:   nextreg 0x6B,0
-        ld a,0xFF
-        ld (V_MSD),a
-        ret
 ; diagnostic build: red border while a tile is composed
 ocompd: ld a,2
         call dcol
         call ocomp
         xor a
         jp dcol
+; ofcol: C = the code's inside colour (FILLC; 0 = automatic) -> V_FPIX. Automatic: one-ink tile
+; (palette offset = the ink): pixel 3 = that palette bank's contrast colour; inks in the pixels:
+; bright white inside black / blue / red / magenta items, black inside the others.
+ofcol:  ld a,c
+        or a
+        jr nz,.s
+        ld a,(V_TATR)
+        or a
+        ld a,0x33
+        jr nz,.s
+        ld a,(V_INKI)
+        cp 8
+        jr c,.n
+        sub 7
+.n:     cp 5
+        ld a,0xFF
+        jr c,.s
+        ld a,0x11
+.s:     ld (V_FPIX),a
+        ret
+; nooutl: the entry's new patterns (entry + 256 - 64 * nspr .. + 255, store page at slot 1): every
+; outline pixel (2) -> transparent (0) when the piece's class has no outline (V_KEY bit 1).
+nooutl: ld a,(V_KEY)
+        and 2
+        ret z
+        ld a,(V_NS)
+        ld b,a
+        xor a
+.s:     sub 64
+        djnz .s
+        ld l,a
+        ld a,(V_ENT+1)
+        ld h,a
+.p:     ld a,(hl)
+        ld c,a
+        and 0xF0
+        cp 0x20
+        jr nz,.h
+        ld a,c
+        and 0x0F
+        ld c,a
+.h:     ld a,c
+        and 0x0F
+        cp 0x02
+        jr nz,.w
+        ld a,c
+        and 0xF0
+        ld c,a
+.w:     ld (hl),c                   ; (unit-test control: NOP = outline kept)
+        inc l
+        jr nz,.p
+        ret
 code3_end:
 
 ; --- third code block (page 26 0x0D60-0x0DFF: the tail of WBG's page)
@@ -2407,6 +2478,41 @@ dcol:   push af                     ; A = border colour (kept)
         ret
 .x:     pop af
         ret
+; ofill: the opaque object V_OL (codes 15-190): FBUF = its inside pixels (FILLM, page 25 at slot 1
+; for the copy, page 27 back), V_HASF = any; V_FPIX = their colour (ofcol). Uses A, BC, DE, HL.
+ofill:  xor a
+        ld (V_HASF),a
+        ld a,(V_OL)
+        sub 15
+        ret c
+        cp 176
+        ret nc
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,FILLM
+        add hl,de
+        nextreg 0x51,PAGE_F
+        ld de,FBUF
+        ld bc,8
+        ldir
+        ld a,(V_OL)
+        ld l,a
+        ld h,high FILLC
+        ld c,(hl)
+        nextreg 0x51,PAGE_T
+        ld hl,FBUF
+        ld b,8
+        xor a
+.o:     or (hl)
+        inc hl
+        djnz .o
+        ld (V_HASF),a
+        or a
+        ret z
+        jp ofcol
 code4_end:
 
 ; --- fourth code block (page 26 0x1F10-0x1FFF)
@@ -2490,10 +2596,40 @@ odraw:  ld a,(V_CLS)
         inc hl
         inc hl
         inc hl
-.nx:    inc ix
+.nx:    ld a,(V_HASF)               ; inside pixels of a collectable (not its own pixels): V_FPIX
+        or a
+        jr z,.nf
+        ld a,(ix+0)
+        cpl
+        and (ix+9)                  ; FBUF row = PBUF+10+j = IX+9
+        jr z,.nf
+        ld e,a
+        dec hl
+        dec hl
+        dec hl
+        dec hl
+        ld d,high X8T
+        ld a,(V_FPIX)
+        ld c,a
+.fk:    ld a,(de)
+        cpl
+        and (hl)
+        ld (hl),a
+        ld a,(de)
+.fc:    and c                       ; (unit-test control: AND 0 = inside pixels not drawn)
+        or (hl)
+        ld (hl),a
+        inc hl
+        inc d
+        ld a,d
+        cp high X8T+4
+        jr c,.fk
+.nf:    inc ix
         ld a,ixl
         cp low (PBUF+9)
         jr c,.r
+        xor a
+        ld (V_HASF),a
         ret
 
 code2_end:
@@ -2528,37 +2664,14 @@ setup:  nextreg 0x43,0x20           ; edit sprite palette 0, auto-increment
         nextreg 0x19,255
         nextreg 0x19,16
         nextreg 0x19,191
-        nextreg 0x43,0x30           ; tilemap palette: bank 0 = 0 transparent, 1 black, 2-8 inks,
-        nextreg 0x40,0              ; 9-15 bright inks; bank n = bank 0 but pixel 2 = ink index n
-        ld c,0                      ; (one-ink tiles: palette offset n in the map entry)
-.tb:    ld hl,tpal
-        ld b,0
+        nextreg 0x43,0x30           ; tilemap palette (256 bytes after the sprite palette, built by
+        nextreg 0x40,0              ; Python: bank 0 = 0 transparent, 1 black, 2-8 inks, 9-15 bright;
+        ld hl,pal+256               ; bank n = bank 0 but pixel 2 = ink index n and pixel 3 = its
+        ld b,0                      ; contrast colour for collectables' insides)
 .tp:    ld a,(hl)
-        ld e,a
-        ld a,b
-        cp 2
-        jr nz,.t0
-        ld a,c
-        or a
-        jr z,.t0
-        push hl
-        ld hl,tpal
-        ld e,c
-        ld d,0
-        add hl,de
-        ld e,(hl)
-        pop hl
-.t0:    ld a,e
         nextreg 0x41,a
         inc hl
-        inc b
-        ld a,b
-        cp 16
-        jr nz,.tp
-        inc c
-        ld a,c
-        cp 16
-        jr nz,.tb
+        djnz .tp
         nextreg 0x4C,0              ; tilemap transparent index 0
         nextreg 0x6C,0              ; attributes: palette offset 0, tilemap over the ULA
         nextreg 0x6B,0              ; off until the first commit
