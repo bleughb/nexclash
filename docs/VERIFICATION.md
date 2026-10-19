@@ -38,6 +38,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Chuckie Egg (chuckie_egg): `chuckie_egg.nex` ec0df71e70fae35836eaed521f300777, `chuckie_egg_sprites.nex` bfad6be1e7c8a2c797a6242d7f339e35; verified 2026-10-13
 - Rainbow Islands (128K) (rainbow): `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_sprites.nex` e50733b2b7e2db32f004c1436a2e0461, `rainbow_sprites_diag.nex` 8f25bc6146b9d7f7ae1f12a1d227447e; verified 2026-10-13
 - Everyone's a Wally (wally): `wally.nex` 2e615b3e7ae995e6d6a6ed9e3f586d4d, `wally_sprites.nex` f7605489c3af55b8e8c6a580c1c26150; verified 2026-10-13
+- Everyone's a Wally (updated) (everyones_a_wally_updated): `everyones_a_wally_updated.nex` 2e615b3e7ae995e6d6a6ed9e3f586d4d, `everyones_a_wally_updated_sprites.nex` 31c3ef131330d26238b01a69b35c647e; verified never
 - Spellbound Dizzy (Dizzy V) (dizzy5): `dizzy5.nex` c99189f3274a4803f0b25b0217206bdb, `dizzy5_sprites.nex` 1f33c467e6aa55585cea79cfbb24bcfe, `dizzy5_sprites.nex --strategy slot1` a59c1fd91ec5c32e549526dbc08d2e69 (re-checked 2026-09-28; 00a7c496... had an EMPTY font page: dialogue text blank on hardware); verified 2026-10-13
 - Prince of the Yolkfolk (Dizzy 6) (dizzy6): `Dizzy6.nex` e02faca34df9504cc1f2f162e0ef791e, `Dizzy6_sprites.nex` f491e1f6621559ccc4d36de3535ff5d0; verified 2026-10-13
 - Fantasy World Dizzy (fantasy_world_dizzy): `fantasy_world_dizzy.nex` cd620010e2f61af0002e76718945716f, `fantasy_world_dizzy_sprites.nex` 9182f2f8b4b0dc55b59a69728568b403, `fantasy_world_dizzy_sprites.nex --strategy printer` c09213beaec1572c0228985dae89bd77; verified 2026-10-13
@@ -295,6 +296,29 @@ Same command. Changed: rainbow.py, rainbow_hooks.asm, rainbow_islands.json (hook
 - 2026-10-11 selftest (Dean's wally.z80 a9eeb555 + wallyrzx.rzx 72c7d1f6): both MD5s reproduced, RZX
   IDENTICAL, unit PASS; the report said FAILED only because Rainbow's pattern-RAM zero check had been
   applied to Wally's boot check (Wally uploads full patterns) - check scoped to Rainbow.
+
+## Everyone's a Wally, updated (128K snapshot, engine `wally2`) - 2026-10-14
+The first version above is frozen (record wally "excluded"; `--engine wally` rebuilds it: both MD5s
+reproduced 2026-10-14). `nexclash.py auto wally.z80 --rzx wallyrzx.rzx` (wally2 is the default):
+- `everyones_a_wally_updated.nex` 2e615b3e7ae995e6d6a6ed9e3f586d4d (plain, tail 0x6B00) - boot sim OK
+- `everyones_a_wally_updated_sprites.nex` 31c3ef131330d26238b01a69b35c647e (altrom stubs + pages
+  26/27, Layer 2 banks 16-21, 14 canvas pages 44-57; no colours painted yet) - boot sim OK (set-up:
+  $15 = 0, $69 = $80, $12/$13 = 16/19, $14 = $E3, Layer 2 pages empty)
+- wallyrzx.rzx (11 autosave snapshots stripped): 15225 frames; A 4299, B 1058, C 3003 plots
+  converted (0 passthrough), 3938 commits (max 9 plots), 3900 restores, 36 clears, 2,219,552 Layer 2
+  pixels - IDENTICAL: at every hook site registers (AF' included) and memory outside the back /
+  attribute buffers vs the original, each plot's staged entry (canvas, position, colour, orientation,
+  joined) and canvas ink vs the original's graphics bytes, the whole Layer 2 image on show after every
+  commit vs the model (wally2.Model), restore drops the list, clear hides Layer 2, no PC inside a JP
+- unit tests: 930 position / guard cases (543 converted, 387 passthrough), 921 graphic cases (every
+  graphic as stored, mirrored in place, and with a changed byte = passthrough), joined pairs B and C +
+  their commits, 4 commit rounds (box clearing: no stale pixels), restore; negative control (ink /
+  outline codes swapped in the canvas pages) detected 3/3 - PASS
+- recolour: {} = the build byte for byte; a synthetic map = the build made with that map; and back
+- speed (simulator T, hooks at 28 MHz ~1/8): plots A/B/C original 61.6M / 7.5M / 8.0M T, hooks
+  50.4M / 7.6M / 14.1M; commit hook mean 156,896 T, max 736,534 T per render (~0.3 / ~1.3 frames of
+  3.5 MHz time at 28 MHz) - the plots' saved time roughly pays for the mean commit
+- Hardware: untested
 
 ## Chuckie Egg (48K, engine `chuckie`) - 2026-10-11
 `nexclash.py auto Chuckie_Egg.z80 --rzx Chuckie_Egg.rzx --no-record`

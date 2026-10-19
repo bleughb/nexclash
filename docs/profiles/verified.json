@@ -41,6 +41,14 @@
     "sprites": "f491e1f6621559ccc4d36de3535ff5d0"
    }
   },
+  "a9eeb555a327e5794b0ba19bc80dccf0": {
+   "game": "Everyone's a Wally",
+   "doc": "everyones_a_wally.md",
+   "nex": {
+    "plain": "2e615b3e7ae995e6d6a6ed9e3f586d4d",
+    "sprites": "f7605489c3af55b8e8c6a580c1c26150"
+   }
+  },
   "876f474b3441c08ed8ff25bd43d616a3": {
    "game": "Fantasy World Dizzy",
    "doc": "fantasy_world_dizzy.md",
@@ -104,14 +112,6 @@
    "nex": {
     "plain": "70890aba7d821fba8a41e63636eb58be",
     "sprites": "85e054fe4bce8e4b3a8e336aac432f58"
-   }
-  },
-  "a9eeb555a327e5794b0ba19bc80dccf0": {
-   "game": "Everyone's a Wally",
-   "doc": "everyones_a_wally.md",
-   "nex": {
-    "plain": "2e615b3e7ae995e6d6a6ed9e3f586d4d",
-    "sprites": "f7605489c3af55b8e8c6a580c1c26150"
    }
   }
  }

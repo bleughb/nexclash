@@ -14,6 +14,30 @@ BRIEFING - with its reason.
 - LD A,I: on NMOS Z80s P/V reads 0 if an interrupt is accepted during it.
   Read twice (`ld a,i / jp pe,ok / ld a,i`). SkoolKit models this.
 - A hook inside an ISR must keep the EXX/EX AF,AF' parity: the handler restores by set.
+- Block I/O flags differ on the Next (documented): after INI/IND/INIR/INDR/OUTI/OUTD/OTIR/OTDR
+  only ZF (B reached 0) is reliable. Sources disagree on the rest - guide r3: SF/HF/PV undefined,
+  NF = 1, CF unchanged; wiki Extended_Z80_instruction_set: C, S, H, P/V destroyed (errata 2022:
+  carry IS modified); Ped7g's opcode table: every flag but Z unknown. A real Z80 - and SkoolKit,
+  Fuse, the recordings - sets CF/HF from the data + L, NF = data bit 7, PV = parity. So the
+  differential verify cannot prove any flag but Z after one of these. Rule: a hook must
+  overwrite F (or POP AF) after a block I/O instruction before any branch on S/H/PV/N/C, and
+  before returning to game code. Checked 2026-10-19: every hook complies (Trueno's `ensure`
+  returns with OTIR flags, its only caller does OR A first). A GAME that tests those flags runs
+  differently on the Next than in its Fuse recording - invisible to the toolkit.
+- R changes with every M1 (prefixed opcodes +2, an accepted interrupt +1, bit 7 kept), so hook
+  code always changes R. A game that reads R (LD A,R) for randomness diverges from the recording
+  after the first hook: `isr` flags LD A,R; the engine simulators advance R for NEXTREG.
+- ED 7E (undocumented IM 2) sets IM 2 only from core 3.01.08 on (core changelog). A game using it
+  (copy protection does) misbehaves on older cores; check for ED 7E when a hardware report from
+  an older core differs from the emulator. OUT (C),0 (ED 71) outputs 0 on the Next (NMOS
+  behaviour; CMOS Z80s output $FF).
+- On a stock Z80 an undefined ED-prefixed opcode is a 2-byte NOP; on the Next 29 of them are Z80N
+  instructions (ED 23, 24, 27, 28-2C, 30-36, 8A, 90-95, 98, A4, A5, AC, B4, B7, BC; full list in
+  NEXT_REGISTERS). A game that EXECUTES one (protection padding, a sloppy assembler, data run as
+  code) changes behaviour on the Next only, and Fuse plus our simulator (which runs them as NOPs,
+  NEXT_REGISTERS "SIMULATOR TRAP") never show it. Cheap check when a hardware report differs from
+  the emulator: scan the RZX's executed addresses for those opcodes (`rzxplay.py --map` + the
+  bytes; BRIEFING 0). Undocumented Z80 opcodes in general: clrhome.org/table (red cells).
 
 ## 1.2 Spectrum 48K/128K memory and paging
 - 128K: an UNLOCKED 7FFD/1FFD write remaps the top 16K (C000-FFFF) at once. Code running there
@@ -71,6 +95,16 @@ BRIEFING - with its reason.
   unfilled). Run the loader in SkoolKit (real 128K ROMs) to the game's USR entry, build from there,
   and redo any prompt the loader asks (Commando front end: PAUSE 0 + Y/N + POKE). Check the game
   itself never selects ROM 0 (7FFD bit 4) in the boot simulation and the RZX.
+- Next ports that decode the LOW byte only (guide r3 port table): 0x0B (Zilog DMA), 0x1F (Kempston),
+  0x37, 0x57 (sprite attributes), 0x5B (sprite patterns), 0x6B (zxnDMA), 0xDF (SpecDrum), 0xFF
+  (Timex). An original game's OUT to ANY address ending in one of these reaches Next hardware (a
+  stray OUT to xx57 moves sprites, xx0B/xx6B programs the DMA). The ULA answers any even port.
+  When a hardware run shows sprite or memory corruption the emulator does not, list the game's
+  OUT targets first. NextRegs $82-$85 can switch internal port decoding off (core spec) - not used.
+- Memory size: an unexpanded Next has 1024K = 8K pages 0-95 (16K banks 0-47); 2048K = pages 0-223.
+  Keep every page a build uses below 96 (Rainbow: highest 63). Bank 7 (pages 14/15) is the ULA
+  shadow screen and NextZXOS workspace; the default Layer 2 sits at 16K banks 8-10 (NextZXOS moves
+  it to 9-11, shadow 11-13) - only relevant when a build relies on those defaults (none do).
 
 ## 1.4 Spectrum Next: sprites and palette
 - 4-bit anchor sprite, attr4: 0x80 = pattern-slot bytes 0-127, 0xC0 = bytes 128-255 (the guide's
@@ -107,7 +141,9 @@ BRIEFING - with its reason.
 - Hardware-only timing problems (the simulation has no raster): Fuse cannot record a .nex. Build a
   DIAGNOSTIC variant that shows the suspect events as border colours (OUT 0xFE, EAR/MIC 0) and have
   the tester film the TV. Overrun detection: clear NextReg $C8 bit 0 at the frame start, read it at
-  the frame end (set = an interrupt came during the frame). Hooks entered from a ROM stub inside the
+  the frame end (set = an interrupt came during the frame). Clearing = WRITING 1 to the bit
+  (`nextreg 0xC8,1`); writing 0 does nothing, and in hardware IM2 mode with interrupts on writes
+  do not clear at all (guide r3 Interrupts). Hooks entered from a ROM stub inside the
   game's handler must not use the game's stack: jump to the hook page's code and jump back.
 - Never put hook CODE at 0x3D00-0x3DFF in an alt ROM / slot-1 page: Commando 541e34e2 crashed at
   its first figure on hardware and in CSpect with code there, and ran once the code moved out
@@ -122,6 +158,124 @@ BRIEFING - with its reason.
   reuse = attributes only, no build, no upload. Evict only slots no visible sprite references
   (round robin); never share an image that was masked (depth). Negative control: a lookup that
   ignores one key field must fail the pixel check.
+
+## 1.5 Spectrum Next: faster sprite / tilemap I/O, DMA, copper, raster (DOCUMENTED, none used yet)
+Researched 2026-10-19 (guide r3 chapters Sprites / DMA / Copper / Interrupts, core 3.01.09
+nextreg.txt + ports.txt + changelog, KevB's copper timing notes in github.com/varmfskii/zxnext_code
+zx_next_notes/copper; github.com/stevemonks/ZXSpectrumNextMachineCodeGuides;
+github.com/breakintoprogram/lib-spectrum-next lib/dma.z80; full guide r3 review: GUIDE_R3_REVIEW.md). Nothing here is simulated or hardware-tested: the first engine that uses one
+implements it in the simulator (NEXT_REGISTERS "SIMULATOR TRAP") and records the hardware result.
+Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5 MHz T-states.
+- Sprite attributes in bulk: write port 0x303B = first sprite, then the 5 bytes per sprite
+  (= $35..$39 in order) to port 0x57; the sprite index advances after each sprite's last byte
+  (4 bytes when byte 3 bit 6 = 0), wraps 127 -> 0. OTIR 21 T/byte = ~105 T/sprite, unrolled OUTI
+  16 T/byte; our hooks pay ~180 T/sprite ($34 select + 5 x LD A,(DE) / NEXTREG / INC DE).
+  WHY it can break: 0x303B ALSO sets the pattern-upload slot (same write, bits 6:0 + bit 7), so a
+  loop that uploads a pattern then writes that sprite's attributes (Rainbow piece loop) must
+  become two passes - all patterns first, then one 0x303B + all attributes. And a sprite whose
+  byte 3 has bit 6 = 0 takes only 4 bytes: a HIDE record written as byte 3 = 0 inside a
+  5-bytes-per-sprite stream shifts every later sprite by one byte. Hide with byte 3 = $40 (no
+  pattern, byte 4 follows) in a 5-byte stream.
+- Random-access fast attributes (github.com/serdjukdev/ZxNextStudio-TechDemo code/render/sprite.asm):
+  set NextReg $09 bit 4 (lockstep) ONCE in setup; then `NEXTREG $34,n` also moves port 0x57's index,
+  and a sprite costs NEXTREG $34 (17 T) + 5 x OUT (C),r (12 T, C = $57) = ~77 T instead of ~180 T,
+  in any order, without restructuring a pattern-then-attributes loop. Caveat: with lockstep every
+  $34 write also moves the PATTERN pointer (bit 7 = +128 bytes), so finish a pattern upload before
+  selecting the next sprite. Same demo uploads patterns with an unrolled OUTINB (DUP 128: 16 T/byte
+  vs OTIR 21 T/byte, B untouched).
+- NextReg $34 and port 0x303B are SEPARATE sprite indices unless NextReg $09 bit 4 (lockstep) is
+  set. Never mix $34/$35-$39 writes and 0x57 writes on one assumption of "the current sprite";
+  hooks that only use NEXTREG keep working whatever 0x57 did, and the reverse.
+- $75-$79 = $35-$39 with sprite-number post-increment on EACH write (nextreg.txt). Useful where a
+  run of sprites gets one attribute: hide sprites a..b = NEXTREG $34,a then NEXTREG $78,0 per
+  sprite (20 T) instead of $34 + $38 per sprite (37 T + loop) - every hook's hide loop.
+- Relative sprites: an anchor followed by relatives (byte 4 bits 7:6 = 01; anchor byte 4 bit 5 = 1
+  makes them unified, 0 composite; guide r3 Sprites example) moves,
+  hides, mirrors and (unified) scales the whole group with ONE anchor write; relatives hold 8-bit
+  offsets and can take the anchor's pattern number as a base. Candidate for multi-sprite figures
+  (2x2 boxes) - but a mirrored unified group mirrors as one image, so the per-engine "swap the left
+  and right quads" logic (BRIEFING A1) must go, and the pixel check must cover it.
+- zxnDMA (port 0x6B since core 3.1.2; 0x0B = Zilog-compatible DMA): memory -> memory, memory ->
+  fixed port (0x5B patterns, 0x57 attributes, 0x253B with a NextReg selected on 0x243B). With
+  port cycle length 2 a byte costs ~4 cycles vs LDIR 21 / OTIR 21 T - but only with the timing
+  byte sent for BOTH ports (WR1/WR2 bit 6 + byte %00000010); without it the DMA uses standard Z80
+  cycle timing. Program upload (~15-25 bytes by OTIR) costs ~400 T, so it pays from ~30 bytes;
+  registers persist between transfers, so a repeat with a new address needs only WR0 (+ WR4) +
+  $CF load + $87 enable. Continuous mode (WR4 bits 6:5 = 01) holds the bus to the end; never use
+  WR4 mode 00 or WR0 operation 10/11 (they act as continuous / transfer today but are Zilog byte /
+  search modes and may change). FILL = port A FIXED memory (WR1 %00100100) pointing at one byte holding the value,
+  port B incrementing: clears a shadow / map / buffer at DMA speed (lib-spectrum-next FillDMA).
+  Fixed memory -> fixed port 0x5B fills pattern RAM the same way (Rainbow setup zeroes 16K with an
+  OUT loop). Library code wraps the program OTIR in DI/EI because an ISR that also programs the
+  DMA would interleave its bytes with ours; hooks may skip the DI only when neither the game's ISR
+  nor a hook called from it writes port 0x6B / 0x0B (original Spectrum games never do; check any
+  128K/Next-aware title's port writes first).
+  WHY it can break: the CPU cannot see a pulse-mode interrupt while the DMA owns the bus, and the
+  ULA pulse lasts ~30 T at 3.5 MHz, so a transfer across the interrupt LOSES the game's frame
+  interrupt (DI does not help; the pulse is gone). Engines with interrupts ON (midres, dizzy1,
+  chuckie; BRIEFING A3) may only DMA where the interrupt cannot fall (raster known, A1:
+  interrupt near line 248) or in pieces shorter than the gap. Pieces are cheap: WR6 $D3
+  (Continue) resets the byte counter and keeps the pointers, so after the first program each
+  further chunk is `$D3, $87` (2 OUTs) continuing where the last ended. Burst mode + prescaler
+  (WR2 timing byte bit 5 + prescaler byte; rate = 875 kHz / prescaler, scaled by video timing $11)
+  hands the bus back to the CPU between bytes, so the pulse interrupt is seen - slow, but safe for
+  background copies (specnext.com/the-zxndma; hardware to confirm). Hardware IM2 mode ($C0 bit 0 +
+  $CC-$CE) can let interrupts break into a DMA, but we run pulse mode and the game's own IM/ISR.
+- Copper (NextRegs $60-$63, $64): 1024 16-bit instructions in its own 2K write-only RAM, WAIT
+  line 0-311 + horizontal 0-55 (8-pixel steps), MOVE value -> NextReg 0x01-0x7F ONLY (7-bit field:
+  $8C, $C0-$CE, $B8+ are out of reach), mode 11 restarts the list every frame, so `WAIT 176 / MOVE
+  $6E,x / HALT` re-applies x every frame at line 176. No CPU or DMA time is taken.
+  Uses for us: apply a finished tilemap (base $6E, clip $1B, $6B on/off) or a sprite attribute
+  list at a fixed safe line instead of a CPU raster busy-wait; the CPU only flips one byte of the
+  list ($61/$62 = byte index, $60 = data; $62 with an unchanged mode only moves the index).
+  WHY it can break: copper MOVEs to $34 change the CPU's selected sprite between two of its
+  NEXTREGs - with copper-driven sprites, the CPU must not use $34-$39 (use 0x57: separate index).
+  The same holds for EVERY register pair with an internal index: $40/$41/$44 (palette index), $1C
+  with $18/$19/$1A/$1B (clip index), $34/$35-$39, $61/$62 with $60/$63: the copper and the CPU must
+  never both drive one pair. A list that holds two maps / two attribute sets needs both to be
+  complete before the flip byte changes (the copper reads it at its line, any frame). Patching a
+  live list byte: $61/$62 = byte index with the SAME mode bits (11), then ONE write to $60 ($63
+  commits only pairs); guide r3 companion code copper/ does exactly this. Uploading a list by DMA:
+  select $63 on port 0x243B, then DMA memory -> fixed port 0x253B. A .nex can also carry a
+  2048-byte copper block (NEX format, wiki NEX_file_format; how the loader applies it is not
+  documented there).
+- Raster numbering: Active Video Line ($1E/$1F), line interrupt ($22/$23) and copper WAIT all
+  count from ULA pixel row 0 UNLESS NextReg $64 (core 3.1.5+) is non-zero: it offsets all three
+  (changelog 3.01.05). Frame length differs by timing: 48K 312 lines, 128K 311, HDMI 312 (60 Hz:
+  262/261); display rows 0-191, then border + blanking. A raster wait that assumes 312 lines or
+  offset 0 is a hardware-only fault (BRIEFING C2 #26).
+- Tilemap attribute byte (2-byte entries): bits 7:4 palette offset (used), bit 3 X mirror, bit 2 Y
+  mirror, bit 1 rotate 90 clockwise (with the mirrors: 0/90/180/270), bit 0 ULA over the tile.
+  A tile that is another's mirror or rotation needs NO definition of its own: dedupe tile
+  definitions by orientation before running out of the shared budget (Rainbow: 176). Tilemap
+  scroll is per pixel ($2F/$30 X 0-319, $31 Y 0-255, wraps; stevemonks guide SimpleTileMap):
+  a map can follow a pixel scroll by offsetting $30/$31 instead of switching the layer off - the
+  clip window ($1B) stays fixed, so rows that wrap in must be built too.
+  $6B bit 0 = 1 FORCES the whole tilemap over the ULA and overrides the per-tile bit 0 (core
+  nextreg.txt): per-tile "ULA over this tile" only works with $6B bit 0 = 0 (Rainbow writes $6B =
+  $81 today; its tiles all have bit 0 = 0, so $80 would show the same picture). 512-tile mode ($6B
+  bit 1) turns attribute bit 0 into tile bit 8 (no per-tile ULA priority); it does not help when
+  the limit is memory (bank 7 = 8K for map + definitions). Stencil mode ($68 bit 0): pixel = ULA AND
+  tilemap colour, transparent if either is. Tilemap transparency $4C is compared before the
+  palette offset (soft reset $0F; our setups write 0).
+- Palette control $43 is TWO things at once: bits 6:4 pick the palette to EDIT, bits 3:1 the ACTIVE
+  second/first palette for sprites / Layer 2 / ULA and bit 0 ULANext; bit 7 = 1 turns
+  auto-increment OFF. Every $43 write therefore also re-selects the displayed palettes (fine while
+  everything uses first palettes, as all our builds do). Each layer has two palettes: flipping
+  bits 3:1 recolours a whole layer in one write (cheap colour animation, e.g. pulsing items).
+- Layer 2 per-colour priority (guide r3 Palette/Layer 2): the second $44 write for a LAYER 2
+  palette entry has bit 7 = priority - pixels in that colour draw above ALL layers, sprites
+  included, whatever $15 says. Candidate for depth: Layer 2 foreground pieces in front of a
+  hardware-sprite player (Dizzy 1 draws figures on Layer 2; the "sprites cannot sit behind some
+  objects" limit in 1.4 is about the ULA). Needs the colour twice (one entry with, one without).
+- ULA palette: classic ULA uses indices 0-7 ink, 8-15 bright ink, 16-23 paper, 24-31 bright paper
+  (border from paper). Paper and ink entries are separate, so ONE paper colour can be set equal to
+  the global transparency $14 (compared with the colour, not an index) to see the layer behind
+  wherever that paper shows, without touching inks. Candidate for Rainbow layer B.
+- Line interrupt: do NOT enable it ($22 bit 1 / $C4 bit 1) under a game in pulse mode: it raises the
+  same /INT, so the GAME's ISR runs a second time per frame (frame counters, music, input). The
+  ULA interrupt can also be disabled there ($22 bit 2) - never under a game. For hook timing use
+  the copper or a $1E/$1F poll.
 
 # PART 2 - GAMES / SOFTWARE
 
@@ -198,6 +352,16 @@ BRIEFING - with its reason.
   PUSH, self-modified operands, (43067)). Simpler than Rainbow's two canvas runs; verified exactly.
 - Put the sprite commit AFTER the pixel copy (Wally 47637), not at blit start: the LDI copy takes
   ~1 frame.
+- Graphics the game mirrors IN PLACE (Wally: 33251 flips a gang member's frames whenever he turns):
+  do not track the facing state. Key the colours to the snapshot's orientation and let the hook
+  identify the bytes as plotted by a 16-bit check against the stored and the mirrored check; no match
+  = run the original plotter. The same check makes precomputed per-graphic data (canvases) safe
+  against any graphics the game rewrites.
+- A back-buffer composer can RESTORE the buffer again before any copy: those plots never reach the
+  screen. Drop the pending sprites at every restore entry (hooks, verification, the colour-sheet
+  capture) or they appear for one render / on the sheet. Find it by tracing the call order of
+  restore / plot / copy / commit across a room change (Wally: intro-walk plots at 61544/61560, then
+  the room changes and 61090 restores before the commit; 2026-10-14).
 - Measure the write extent of EVERY dispatch target statically (run each original plotter from a
   mid-screen address, record written columns/rows), not only the ones the recordings reach: bosses
   use entries normal play never does. Rainbow's 4-wide leftward entries write E-3 (window started
@@ -451,7 +615,11 @@ BRIEFING - with its reason.
   its own SZX): usable when the code at every patch site is the snapshot's (verify checks the site
   bytes at every event); the start-up path is then proven by the boot / front-end checks only.
 - Autosave snapshots: `nexclash.py rzx strip A.rzx -o B.rzx` (keeps the first snapshot; replay
-  continues from the simulated state, as rzxplay --flags 4). Unstripped RZX desyncs.
+  continues from the simulated state, as rzxplay --flags 4). Unstripped RZX desyncs ("N port
+  reading(s) left" / "Port readings exhausted" at the first autosave, ~frame 250). EVERY replay path
+  of an engine strips - not only auto's verify: Midnight Resistance's `sheet` capture did not and
+  failed on both recordings until 2026-10-14. 13 of the reference recordings have autosaves; a new
+  replay command (sheet, preview, analysis) is tested on one of them.
 - Autosave was on in both Rainbow recordings, the Wally one (12 snapshots) and the Chuckie Egg one
   (10) despite "off": count snapshots in every RZX.
 - Wally: Dean could not switch character in play; all five descriptors were still plotted (other
@@ -470,6 +638,10 @@ BRIEFING - with its reason.
   simulate .z80 -> game entry (keys) checking hook RAM / tail / sites / interrupt mode.
 
 ## 2.5 Verification method
+- "Never jump into a patched instruction" needs the ORIGINAL instruction boundaries under each JP:
+  a byte that starts an original instruction must be reached only through the site, a byte inside
+  one must never be a PC. Counting every byte of the 3 bytes as "must equal the site's count" fails
+  every site whose first instruction is longer than one byte (wally2 STARTS / INTERIORS, 2026-10-14).
 - Lockstep RZX replay cannot prove equivalence once cycle counts change (input
   sampling shifts). Use per-routine differential tests from real states.
 - Per event: original and patched from the same state on private overlays; compare all registers

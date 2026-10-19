@@ -103,7 +103,7 @@ Reference (specnext/reference/target_renegade/):
 
 ## Hardware checklist (e0b246e3)
 1. Loads and shows the loading screen; a key starts the game menu (plain build too). A crash at the
-   start: alt ROM image 0 (BRIEFING C2 #26) - report it.
+   start: alt ROM image 0 (BRIEFING C2 #27) - report it.
 2. Menu, 1 player, level 1: figures grey with black outlines, in front of / behind each other as in
    the original; no black figure ghosts on the scenery; scenery and HUD unchanged.
 3. Figures walking off the left / right edge, the motorbike, knocked-down enemies, the floor weapon.

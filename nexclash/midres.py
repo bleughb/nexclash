@@ -1366,10 +1366,25 @@ def capture(rzx_paths, stop=None, progress=None, z80=None):
         if progress and st['f'] % 500 == 0:
             progress(st['f'])
         return _nf(self)
+    # Fuse autosave snapshots inside an RZX make rzxplay desync (both recordings: "port reading(s)
+    # left" at frame ~250); strip them as auto does before verify (2026-10-14: sheet failed on main)
+    import shutil
+    import tempfile
+    from skoolkit.rzxplay import parse_rzx
+    from skoolkit.snapshot import Snapshot as SS
+    from . import rzx as RZ
+    tmp = tempfile.mkdtemp(prefix='nexclash_sheet_')
+    paths = []
+    for r in rzx_paths:
+        if sum(1 for b in parse_rzx(r) if isinstance(b.obj, SS)) > 1:
+            s2 = os.path.join(tmp, '%d_%s' % (len(paths), os.path.basename(r)))
+            RZ.strip(r, s2)
+            r = s2
+        paths.append(r)
     old = (rzxplay.RZXTracer.next_frame, rzxplay.Simulator, rzxplay.CSimulator)
     rzxplay.RZXTracer.next_frame, rzxplay.Simulator, rzxplay.CSimulator = next_frame, S, None
     try:
-        for rzx_path in rzx_paths:
+        for rzx_path in paths:
             st['live'] = False
             frame.clear()
             try:
@@ -1379,6 +1394,7 @@ def capture(rzx_paths, stop=None, progress=None, z80=None):
                 pass
     finally:
         rzxplay.RZXTracer.next_frame, rzxplay.Simulator, rzxplay.CSimulator = old
+        shutil.rmtree(tmp, ignore_errors=True)
     if z80:
         mem = mem64(_snap(z80))
         for name, plots in STATIC:
