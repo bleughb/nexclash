@@ -270,9 +270,12 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
     which set the attributes use - no half-updated sprite is ever displayed (generalises the
     Commando flicker rule in 1.4 and the pattern cache).
   * Per-frame copper rebuild: patch the list in RAM, stop the copper ($62/$61 = 0), DMA the list to
-    port 0x253B with $60 selected, restart in mode 11 - all done after a $1E/$1F wait for line
-    192, so the list is never half-written while the beam uses it. A per-line WAIT + MOVE
-    $16 pair gives a per-scanline Layer 2 X offset (raster wobble).
+    port 0x253B with $60 selected, restart in mode 11 - all done after a $1E/$1F wait for the line
+    AFTER THE LIST'S LAST WAIT (192 only when the list ends above it), so the list is never
+    half-written while the beam uses it. em00k's zx-next-copper-wobble (2021) has WAITs down to
+    line 255 and glitched in CSpect until the rewrite waited for line 250+. A per-line WAIT + MOVE
+    $16 pair gives a per-scanline Layer 2 X offset (raster wobble); MOVE $17 per line does the same
+    vertically (a line repeated or skipped = stretch / squash).
   * Static WAIT skeleton (Dean's copper-bar demos, ZX Basic, 2026-10-20): build the list ONCE with
     one WAIT per scanline (+ two MOVE $44 per line), then per frame rewrite only the MOVE data bytes
     and DMA the list up. WHY: WAITs must appear in increasing raster order - a WAIT for a line the
