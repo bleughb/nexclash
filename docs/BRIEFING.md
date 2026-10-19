@@ -467,8 +467,15 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    Needs: our own vector page (I) for IM1 games - the game's LD A,I / LD I,A then need hooks too -
    or, for IM2 games with a uniform 257-byte table, the game's own table as is (every vector reads
    the same address); a RETI-to-handler entry; the game's interrupt timing moves (later, never
-   lost) - check against the original where the game counts interrupts. Prove on hardware first
-   (C2 test recipe above): held interrupt during a long DI, RETI ack, EI;RET handlers.
+   lost) - check against the original where the game counts interrupts. PROVEN on a board
+   (2026-10-20, tools/hwtests/im2hold v2, all pass): vector = I*256 + $16 for the ULA interrupt;
+   an interrupt during a 3-frame DI is taken at the EI (pulse mode loses it); a RETI trampoline into
+   an EI;RET handler and a game's uniform 257-byte table both give one run per frame. RULE: a
+   handler that ends with a plain RET does NOT acknowledge, and the unacknowledged interrupt BLOCKS
+   every later one (no further interrupts at all) - so every game handler is entered through the
+   RETI trampoline unless it is proven to end with RETI; a dummy RETI with interrupts off clears a
+   stuck state. Still open: the engine design (vector page, game's LD A,I / LD I,A, interrupt
+   timing vs the original) and MAME / CSpect agreement with the board.
 
 ### C3. Working rules (token budget)
 Summaries <= 40 lines; disassemble only routines the analysis flags; one simulator pass

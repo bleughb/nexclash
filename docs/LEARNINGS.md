@@ -753,7 +753,10 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
     on the stack, so the game's handler (ending in EI; RET or RETI) is unchanged. A frame event that
     arrives while the game's handler still runs is held and delivered from the handler's return
     slot (`isr_tramp`). The runtime owns I, so the game's `LD A,I` / `LD I,A` are trapped and served
-    from a shadow I (Wonder Boy III keeps flags in I). For us: BRIEFING C2 #38.
+    from a shadow I (Wonder Boy III keeps flags in I). For us: BRIEFING C2 #38. Board-tested
+    2026-10-20 (tools/hwtests/im2hold): held over a 3-frame DI; vector $16; and a handler ending
+    plain RET leaves the interrupt unacknowledged and NO later interrupt arrives until a RETI runs
+    - why their RETI goes first and the game's handler after it.
   * Trap frame: entry = `EX (SP),HL; PUSH AF; LD A,I; DI`, then the game's IFF2 decides whether an
     `EI` or a `NOP` is written into the exit just before its `RET` (EI's one-instruction delay
     means no interrupt lands before the RET). Then it switches to its own stack and keeps the game's
