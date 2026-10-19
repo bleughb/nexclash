@@ -345,7 +345,14 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   nextreg.txt): per-tile "ULA over this tile" only works with $6B bit 0 = 0 (Rainbow writes $6B =
   $81 today; its tiles all have bit 0 = 0, so $80 would show the same picture). 512-tile mode ($6B
   bit 1) turns attribute bit 0 into tile bit 8 (no per-tile ULA priority); it does not help when
-  the limit is memory (bank 7 = 8K for map + definitions). Stencil mode ($68 bit 0): pixel = ULA AND
+  the limit is memory (bank 7 = 8K for map + definitions). When memory IS the limit, two $6B bits
+  shrink it (em00k's "Hardware Tilemaps", NextBuild Patreon, 2026-10-20; text mode bits per the wiki
+  Tilemap page, NOT tested): bit 5 = 1-byte map entries (every tile takes the $6C default attribute,
+  so no per-tile palette offset or mirror): a 40x32 map is 1280 bytes instead of 2560. Bit 3 = text
+  mode: 1-bit tile definitions, 8 bytes instead of 32, and the attribute's bits 7:1 are a 7-bit
+  palette offset that colours the set bits. Spectrum cell graphics are 1-bit already, so text mode
+  holds 4x the definitions in the same 8K, coloured per tile like ULA ink - a candidate for the
+  Rainbow tile budget (games/rainbow_islands.md Open 1). Stencil mode ($68 bit 0): pixel = ULA AND
   tilemap colour, transparent if either is. Tilemap transparency $4C is compared before the
   palette offset (soft reset $0F; our setups write 0).
 - Palette control $43 is TWO things at once: bits 6:4 pick the palette to EDIT, bits 3:1 the ACTIVE
