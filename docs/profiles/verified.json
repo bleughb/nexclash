@@ -65,6 +65,14 @@
     "sprites": "c963b42f0e685d648d552656fde4d6f9"
    }
   },
+  "47c265e30f51a9b7eb5c98db6cd994c5": {
+   "game": "Lode Runner",
+   "doc": "lode_runner.md",
+   "nex": {
+    "plain": "cd0c1659c8569b2fa80da74962af90d2",
+    "sprites": "85fe6afd593679bf59c787230ba0eaca"
+   }
+  },
   "53078ac60141cd808b609600b85f4094": {
    "game": "Magicland Dizzy",
    "doc": "magicland_dizzy.md",

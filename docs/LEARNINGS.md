@@ -798,6 +798,13 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
     with its CONTRACT (the routine it replaces, the scanner rule that finds it, each entry's
     registers in and out, flags and interrupt state, what it needs from the game), and the build
     fails when two games' copies differ.
+- XOR figures PRINTED as tiles at level start (Lode Runner, 2026-10-20): the level draw puts each
+  figure on the screen with the tile printer (overwrite), and the first XOR erase removes that print.
+  Hook the print too (sprite + a blank tile) or the first move leaves an inverted figure. Found in
+  phase A because an XOR-parity count by (graphic, x, y) showed twice the figures the screen had.
+- Erase-then-draw pairs that run straight-line for the same figure (Lode Runner 0x9A47 -> 0x9A5C):
+  hook only the draw - the sprite moves, never hides - and prove the pair is straight-line (code) and
+  that the sprite equals the screen at every frame end (verify's frame model); no flicker risk.
 
 ## 2.2 Memory proofs (analysis method)
 - Prove free memory with an access scan over the recording, not by zero-check.
@@ -815,6 +822,11 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   hooks only where the game never reads (prefer `altrom`: the alt ROM is that copy, read-only).
 - An undo buffer (or back buffer) written before read in every RZX is a stronger tail site than
   dead stack and rescues slot1 when dead stack < 54 (Dizzy 6: 48 bytes; Rainbow: back buffer).
+
+- A screen effect that uses MEMORY AS MASKS reads all of it (Lode Runner's fade: screen AND bytes
+  0x0000-0x6BFF, 4 passes): the alt ROM hook area and the printer buffer then change what the effect
+  draws, so neither is free. Look at what a reader reads (scan --range ROM range, readers by PC)
+  before choosing altrom; Lode Runner's hooks went into game RAM proven never touched (A3 "ram").
 
 ## 2.3 Our toolkit (nexclash) and host tools
 - nextboot.check is a 48K check (expects 7FFD = 0x30 locked, bank 0): a 128K plain build needs its
@@ -917,6 +929,11 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
 - An RZX carries its own start snapshot and can start later than the .z80 (Commando: .z80 = BASIC
   loader, RZX = in-game SZX). Nothing between them is verified: compare the two start states and
   simulate .z80 -> game entry (keys) checking hook RAM / tail / sites / interrupt mode.
+
+- No .z80, only a Fuse RZX (Lode Runner, 2026-10-20: a TAP + an RZX): the RZX's first snapshot (SZX)
+  IS the start state - convert it (SkoolKit Snapshot.get -> simutils.from_snapshot -> get_state ->
+  write_snapshot; check RAM and registers equal) and the recording starts exactly at the .z80 (the
+  "Record from snapshot" case: nothing unverified between them).
 
 ## 2.5 Verification method
 - "Never jump into a patched instruction" needs the ORIGINAL instruction boundaries under each JP:
