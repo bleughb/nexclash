@@ -80,8 +80,8 @@
   "engine_col": "rainbow (rainbow_islands.md)",
   "build": "rainbow_sprites.nex cf017271 (no rainbow border, collectable insides black / white, thrown rainbow without outline) + rainbow_sprites_diag.nex c16751b0",
   "software": "RZX IDENTICAL x2, unit PASS (22 object controls incl. border control on a bordered profile copy, inside fill control)",
-  "hardware": "c5e1823d: \"this seems better\" (Dean); cf017271 untested",
-  "next": "hardware test cf017271; Dean paints the split colour sheets (playthrough, all islands) -> per-pixel colours + recolour; bookmark verify of islands 3-7"
+  "hardware": "cf017271 works on hardware (Dean, 2026-10-19: \"seems to work ok\")",
+  "next": "Dean paints the split colour sheets -> per-pixel colours + recolour; bookmark verify of the boss rounds (islands 7..1)"
  },
  "checks": [
   "asm2profile:rainbow_islands"

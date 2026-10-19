@@ -17,7 +17,7 @@ wanted; sprite corruption and slowdowns seemingly at random). 2026-10-12: COLLEC
 BORDER + DIAGNOSTIC BUILD e50733b2 / diagnostic 8f25bc61 - not hardware-tested (superseded).
 2026-10-19: NO RASTER WAIT + MUSIC QUEUE + FASTER TILES AND COMMIT (below) c5e1823d / diagnostic 71222105 (Dean:
 "this seems better"). 2026-10-19: NO RAINBOW BORDER + COLLECTABLE INSIDES + PLAYTHROUGH SHEETS (below)
-cf017271 / diagnostic c16751b0 - hardware test pending. Needs a core with the tilemap in bank 7 (Dean: most recent core).
+cf017271 / diagnostic c16751b0 - RUNS ON HARDWARE (Dean, 2026-10-19: "seems to work ok"). Needs a core with the tilemap in bank 7 (Dean: most recent core).
 
 Reference: rainbow.z80 (4c98b980), rainbow.rzx (55046d18), rainbownew.rzx (47bb2b16) in the
 private repo. Whole-game playthrough rainbowislands_LeeBee.rzx (92bbaa0a, 195,356 frames, all 7 islands
@@ -134,7 +134,7 @@ catalogue.json. Page keys go into the class-colours map.
 ## Hardware status
 - Runs on the Next (2026-09-28); limiter + commit build bddea69e runs smooth (Dean).
 
-## Hardware checklist - no rainbow border + collectable insides cf017271 (2026-10-19)
+## Hardware checklist - no rainbow border + collectable insides cf017271 (2026-10-19) - Dean: works ok
 1. Rainbows (standing and while thrown): no black edge anywhere; fruit and items still in front of
    the scenery, behind every figure.
 2. Collectables: the enclosed inside pixels white (dark items) or black (light items), not the sky;
