@@ -255,6 +255,19 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
     port 0x253B with $60 selected, restart in mode 11 - all done after a $1E/$1F wait for line
     192, so the list is never half-written while the beam uses it. A per-line WAIT + MOVE
     $16 pair gives a per-scanline Layer 2 X offset (raster wobble).
+  * Static WAIT skeleton (Dean's copper-bar demos, ZX Basic, 2026-10-20): build the list ONCE with
+    one WAIT per scanline (+ two MOVE $44 per line), then per frame rewrite only the MOVE data bytes
+    and DMA the list up. WHY: WAITs must appear in increasing raster order - a WAIT for a line the
+    beam has passed holds the rest of the list until the next frame (inferred from the guide's
+    WAIT description, not tested) - so lists rebuilt per frame from moving objects must be sorted;
+    a fixed per-line skeleton never needs sorting, and overlaps resolve by write order. Cost: 6
+    bytes per line (192 lines = 1154 bytes of the 2048).
+  * Per-line palette colour: $43 = $90 (Layer 2 palette 1st, auto-increment OFF), $40 = index once,
+    then per line MOVE $44 x2 (9-bit colour) recolours that one entry down the screen - copper bars
+    behind a Layer 2 cleared to that index. The changed entry stops matching $14 (a COLOUR
+    compare), so 'transparent' pixels become visible: a game layer whose entry the copper rewrites
+    loses its see-through pixels. Same demos: $64 = 33 aligns copper line 0 with the 320x256 Layer 2
+    top (not checked against KevB's tables).
   * DMA fill by overlap: memory -> memory with destination = source + 1 (the LDIR fill idiom)
     fills a block, e.g. a 257-byte IM2 vector table; alternative to fixed-port-A fill.
   * UNVERIFIED claim in its Copper.asm: copper MOVEs to NextReg $15 "reset clipping values", so the
