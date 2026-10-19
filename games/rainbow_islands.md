@@ -716,6 +716,11 @@ drawn on top.
    (e) tilemap switched off when the scroll is not a multiple of 8: follow it with $31 (pixel
        scroll) instead; (f) dedupe tile definitions by mirror / rotation (attribute bits 3:1);
        512-tile mode does NOT help (the limit is bank 7's 8K, not the 256 index range).
+   (g) tilemap TEXT mode ($6B bit 3; LEARNINGS 1.5, wiki, not tested): 1-bit tile definitions, 8
+       bytes instead of 32, colour = a 7-bit palette offset per tile (attribute bits 7:1) - 4x the
+       definitions in bank 7's 8K. Check first that every cell the tilemap shows is ONE colour on
+       paper (Spectrum cells are 1-bit + ink, but the build's cell colours / outlines may use more).
+       NOT 1-byte map entries ($6B bit 5): they drop the per-tile palette offset Rainbow uses.
 2. Later islands: banks 3/4/6 never paged in either RZX; need a recording past island 1 (item
    graphics change there: GCOPY invalidation is unit-proven only through the model).
 3. Colours - Dean's decisions (2026-09-30): player stays WHITE (black outline); stars stay as

@@ -411,6 +411,21 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    3b: whole figures, split per level / collectables / player, default colours, one copy per item
    colour, join by the game's object) apply to them at their next sheet. `rzx.trace` (C simulator
    with hooks, ~20x the Python simulator) could also speed their capture and verify passes.
+31. Layer 2 written straight from alt-ROM hooks via 0x123B WRITE-only mapping (bit 0 set, bit 2
+   clear; LEARNINGS 1.5 Happy Next Year block): no RAM slot or page mapping in the plot hooks
+   (dizzy1 / wally2 map pages today). Prove first: (a) CSpect, then hardware - write-mapping wins
+   over the alt ROM ($8C) at 0x0000-0x3FFF while fetches and reads stay on the ROM image; (b)
+   nextboot / verify model write-only 0x123B (reads from the ROM, writes to Layer 2); (c) the hook
+   turns it off before any EI (the game's ISR must not write 0x0000-0x3FFF into Layer 2).
+32. zxnDMA re-arm per pattern (5 OUTs, ~87 T; LEARNINGS 1.5 zxnDMA): measure the midres / renegade
+   commit with it against today's OUTI / OTIR pattern loops; only where the source pattern is
+   linear in memory (the pattern caches).
+33. selftest has no dependency check: without SkoolKit every rebuild prints "got None" and the
+   canary says "the TOOL CHAIN is broken" (2026-10-19, fresh container). Check the imports
+   (skoolkit, PIL) first and say which is missing; golden check in tools_check.
+34. Copper facts to confirm before an engine relies on the copper: a WAIT for a line already passed
+   holds the rest of the list until the next frame (inferred from guide r3, not tested); $64 = 33
+   aligns copper line 0 with the top of 320x256 Layer 2 (em00k demos; check KevB's tables).
 
 ### C3. Working rules (token budget)
 Summaries <= 40 lines; disassemble only routines the analysis flags; one simulator pass
