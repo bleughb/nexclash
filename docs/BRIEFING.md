@@ -104,7 +104,7 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 | Video | 50Hz forced (NextReg $05) unless `--allow-60hz` (nexclash.py convert / auto / patch / new / verify: sets z80tonex.ALLOW_60HZ, every build path; outputs then differ from the verified MD5s) |
 | 48K fidelity | NextReg $03 = 48K timing (written after the legacy paging writes; VHDL: this does NOT stop 7FFD/1FFD decoding - with 48K/128K timing 7FFD decodes as A15=0, A1:0=01, A14 ignored; timing only changes contention); NextReg $08 contention on; 7FFD lock via the tail's own 7FFD write (bit 5) |
 | DivMMC | auto-paging off (NextReg $06 bit 4 cleared by the stub, z80tonex.build_stub; not $0A). Yet Commando 541e34e2, with hook code at 0x3D00-0x3DFF, crashed at its first figure on hardware and in CSpect, and d601385e (the same code moved out of that range; only tables there) runs. PROBABLE cause: the DivMMC/TR-DOS automap on an instruction fetch at 0x3Dxx is not switched off by $06 bit 4 on current cores (entry points may be set by NextRegs $B8-$BB) - NOT confirmed (C2 #14). Rule regardless: never put code at 0x3D00-0x3DFF; data there worked |
-| Simulator blind spots | The toolkit's simulator does not model: DivMMC (automap traps, see above), an interrupt arriving in the middle of a hook (so the game's ISR never sees hook register/stack state - covered only by the per-instruction interrupt-safety check), the raster (tearing, overruns), real-machine speed (28 MHz wait states, contention), CSpect differences, the VIDEO output of Layer 2 (nextboot / verify model its bank register, port 0x123B, palette writes and pixel pages, not what the screen shows: palette entry 0xE3 as transparency, layer order; Dizzy 1, 2026-10-14, hardware to confirm), beam-racing (multicolour) timing - code that rewrites attributes per scanline works only at the original T-state count and contention (LEARNINGS 1.1), the Next's own flag results after block I/O instructions (OTIR/OUTI/INIR...: only ZF is reliable on the Next; the simulator computes real-Z80 flags - LEARNINGS 1.1). Anything in this list needs a static/invariant check or a hardware test |
+| Simulator blind spots | The toolkit's simulator does not model: DivMMC (automap traps, see above), an interrupt arriving in the middle of a hook (so the game's ISR never sees hook register/stack state - covered only by the per-instruction interrupt-safety check), the raster (tearing, overruns), real-machine speed (28 MHz wait states, contention), CSpect differences, the VIDEO output of Layer 2 (nextboot / verify model its bank register, port 0x123B, palette writes and pixel pages, not what the screen shows: palette entry 0xE3 as transparency, layer order; Dizzy 1, 2026-10-14, hardware to confirm), beam-racing (multicolour) timing - code that rewrites attributes per scanline works only at the original T-state count and contention (LEARNINGS 1.1), the Next's own flag results after block I/O instructions (OTIR/OUTI/INIR...: only ZF is reliable on the Next; the simulator computes real-Z80 flags - LEARNINGS 1.1), WHERE INTERRUPTS LAND once hooks change the time between game instructions: a value the game writes twice before its interrupt handler reads and clears it (a "mailbox") can be lost only on the Next (NextMasterSystem's My Hero, LEARNINGS 2.1) - the differential check runs each routine to its return and never moves an interrupt. Anything in this list needs a static/invariant check or a hardware test |
 | Emulators [MAME] | MAME 0.289 (`specnext`) runs .nex files and is how many users will test (loading, Lua, quirks: LEARNINGS 2.7). It models the alt ROM as NextZXOS ROM3 (it caught Trueno's 0x3B00 bug, the boot sim did not). Known MAME-only behaviour: sprite index 0 under a palette offset drawn opaque (hardware unchecked). A MAME pass is not a hardware pass: record which one a result is |
 | Layer 2 (Dizzy 1, hardware to confirm) | 256x192, 8-bit pixels, banks via NextReg $12 (16K bank; 3 consecutive banks = 6 pages, page = first + y/32, offset (y%32)*256+x); visible = port 0x123B bit 1 (the stub writes 0x123B = 0 BEFORE the patch setup, so setup turns it on); palette NextReg $43 = $10 (Layer 2 palette 0, auto-increment) then $40 index, $41 RRRGGGBB; transparency = global $14 (default $E3) compared with the palette RGB, so entry 0 = $E3 makes pixel 0 transparent; order SLU default ($15 = 0): Layer 2 over the ULA. Zero banks in the .nex start it clear (NEXLOAD leaves banks it does not load with old contents). NextReg $69 bit 7 is the same visible bit as 0x123B bit 1 and, written with NEXTREG, keeps every register and flag ($69 bits 6-0 = ULA shadow screen + Timex mode: write 0 there for a game that uses neither). Double buffering (Wally 2026-10-14, hardware to confirm): draw into the bank not on show, then write $12 - the switch is not raster-synced (a frame may show the top of one buffer and the bottom of the other) |
 | MMU | slots 0-7 = NextReg $50-$57, 8K pages; 16K bank n = pages 2n, 2n+1; $FF in slot 0/1 = ROM |
@@ -318,7 +318,8 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    call (median / max) and a documented budget per game frame. Candidate on the real core model:
    MAME breakpoints on every hook entry and every exit back to the game (label prefix, as
    NextMasterSystem's `mx_` labels and tools/mame/run.py --measure), cycles per frame split hook /
-   game (LEARNINGS 2.1 "NextMasterSystem"). Smash TV's `auto` has a per-engine
+   game (LEARNINGS 2.1 "NextMasterSystem"). Without MAME: 28 MHz cycles = T-states + 1 per memory
+   read (their MAME measurement), not T / 8 - a static estimate the simulator can count. Smash TV's `auto` has a per-engine
    `Speed` line (T per game frame, original vs patched, 28 MHz parts / 8, from the verifier's pair
    runs) - the pattern to lift into a shared helper. It matters most for games without frame sync,
    where hook cost changes the game's speed (LEARNINGS 2.1).
@@ -455,7 +456,19 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    every plotter. A recursive-descent pass from the game's entry and ISR (proven jumps, RZX PCs as
    extra seeds, unreached CALL patterns rated by code-likeness), as in NextMasterSystem's
    sitescan.py, would list the callers no recording reaches. Add as `scan --static` (keep the
-   existing output; golden check in tools_check).
+   existing output; golden check in tools_check). Port from sitescan.py's design (LEARNINGS 2.1
+   "NextMasterSystem"): object handler fields (`LD L,(IX+d)/LD H,(IX+d+1)/JP (HL)`) and the stores
+   into them give the per-object update routines; a byte scan for `CD/C3/CA.. lo hi` with the
+   target = a plotter entry, rated by code-likeness, gives callers no path reaches.
+38. Hardware IM2 mode for interrupts-on games (LEARNINGS 2.1 "NextMasterSystem", INTERRUPTS):
+   with $C0 bit 0 the Next holds an interrupt until RETI acknowledges it, so hooks could run with
+   interrupts OFF (no per-instruction interrupt-safety rule, no IX/IY/stack constraints at every
+   step - Commando, midres) and a long hook would delay the game's interrupt instead of losing it.
+   Needs: our own vector page (I) for IM1 games - the game's LD A,I / LD I,A then need hooks too -
+   or, for IM2 games with a uniform 257-byte table, the game's own table as is (every vector reads
+   the same address); a RETI-to-handler entry; the game's interrupt timing moves (later, never
+   lost) - check against the original where the game counts interrupts. Prove on hardware first
+   (C2 test recipe above): held interrupt during a long DI, RETI ack, EI;RET handlers.
 
 ### C3. Working rules (token budget)
 Summaries <= 40 lines; disassemble only routines the analysis flags; one simulator pass

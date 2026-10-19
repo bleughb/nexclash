@@ -744,6 +744,57 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   * A display-off / display-on pair the original did inside the vertical blank can land in the
     picture on the slower machine: they HOLD the off-write until the matching on-write or a
     timeout, so the screen does not flash. Same class of fault as our hide/show flicker rule (1.4).
+  Deeper (source read 2026-10-20: src/runtime/fw*.asm, tools/sitescan.py, docs/*.md):
+  * INTERRUPTS - hardware IM2 mode, not pulse: `NEXTREG $C0,1` (+ $C4/$C5/$C6 enables, I = table
+    page) makes the Next HOLD each interrupt until it is acknowledged (RETI), so runtime code may
+    run with interrupts OFF for as long as it likes and no frame interrupt is lost - unlike pulse
+    mode, where a DI longer than the INT pulse drops the interrupt. Their IM2 vector does the
+    acknowledging RETI itself, straight into the game's own handler ($0038) with the interrupted PC
+    on the stack, so the game's handler (ending in EI; RET or RETI) is unchanged. A frame event that
+    arrives while the game's handler still runs is held and delivered from the handler's return
+    slot (`isr_tramp`). The runtime owns I, so the game's `LD A,I` / `LD I,A` are trapped and served
+    from a shadow I (Wonder Boy III keeps flags in I). For us: BRIEFING C2 #38.
+  * Trap frame: entry = `EX (SP),HL; PUSH AF; LD A,I; DI`, then the game's IFF2 decides whether an
+    `EI` or a `NOP` is written into the exit just before its `RET` (EI's one-instruction delay
+    means no interrupt lands before the RET). Then it switches to its own stack and keeps the game's
+    BC / DE / AF at fixed addresses, so handlers may use every register. One LD A,I read only: that
+    relies on the Next's LD A,I being safe (Ped7g Z80IntSkip v5.0 tests exactly this; we read twice,
+    PLAYBOOK 4, until that test is photographed on a board).
+  * Patch form for a 2-byte site: `RST v` + one inline byte (the operation / port code) = exactly
+    the bytes of `OUT (n),A` / `IN A,(n)`, so no neighbour is touched. The vector is a free RST of
+    the game, or the game's own `DI; IM 1` bytes at $0000-$0002 (start moved to $0003, the runtime
+    does DI + IM 2). For us: the alt ROM holds every RST target, so an RST that neither the game nor
+    any ROM routine it calls ever runs (proved by `scan`) can carry a hook dispatcher - a 2-byte
+    site where a 3-byte CALL would cross into bytes the game rewrites (Dizzy 1, 2.1). Not used yet.
+  * Speed rule at 28 MHz (MAME tbblue, measured with breakpoints printing totalcycles [MAME]): a
+    native instruction costs its Z80 T-states + 1 cycle per MEMORY READ (its own opcode / operand
+    bytes and the data it reads; writes and I/O add nothing). 311 lines x 1,824 = 567,264 cycles a
+    50 Hz frame. A hook cost estimate from the simulator's T-states becomes T + reads, not T / 8
+    (BRIEFING C2 #11). A single trapped I/O instruction cost them ~1,000-2,100 cycles, which is why
+    loops of OUTs are compiled into one trace call.
+  * Static scan design worth copying (sitescan.py, ~5,600 lines, stdlib only): per routine a
+    data-flow pass with abstract values (constant / value at entry / table base + index / stack
+    bytes relative to entry SP), routine summaries (returns? skips inline bytes? keeps which
+    registers?), repeated to a fixed point; jump tables read until an entry stops looking like code;
+    `PUSH nn; RET` and `EX (SP),HL` inline-argument calls; task switches (`LD SP,x; RET`) listed, not
+    followed; OBJECT HANDLER FIELDS: a `LD L,(IX+d) / LD H,(IX+d+1) / JP (HL)` dispatcher marks field
+    d, and every store of a constant, table word or caller-passed pair into (IX+d) becomes an entry -
+    exactly how most games reach their plot calls (per-object update routines). Byte scans rate
+    unreached patterns: a setter just before, a JP/CALL that targets it, 32 bytes before decoding
+    as a chain ending exactly there, valid code after; NOP / RST-heavy neighbourhoods rate low
+    (tile data). BRIEFING C2 #37.
+  * Pattern rule "mailbox race": a RAM byte the interrupt handler reads and clears, written twice
+    by the foreground with different values before the handler runs; on the slower machine the
+    handler can land between the two stores and one value is lost (My Hero, checked in MAME). Our
+    hooks also change where interrupts land (BRIEFING A1 blind spot).
+  * Frame cost model per routine (costliest path, loop counts from DJNZ / DEC r / DEC rr + OR
+    pattern with B or rr known from the caller), split interrupt / foreground, flags "TEAR RISK"
+    when the interrupt handler keeps interrupts off past the Next's ULA interrupt line. Our `cost`
+    measures from the RZX instead; the static model would rate routines no recording reaches.
+  * Library pages: a replacement routine shared by several games is one source file that starts
+    with its CONTRACT (the routine it replaces, the scanner rule that finds it, each entry's
+    registers in and out, flags and interrupt state, what it needs from the game), and the build
+    fails when two games' copies differ.
 
 ## 2.2 Memory proofs (analysis method)
 - Prove free memory with an access scan over the recording, not by zero-check.
