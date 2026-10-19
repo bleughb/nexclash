@@ -412,7 +412,7 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    colour, join by the game's object) apply to them at their next sheet. `rzx.trace` (C simulator
    with hooks, ~20x the Python simulator) could also speed their capture and verify passes.
 31. Layer 2 written straight from alt-ROM hooks via 0x123B WRITE-only mapping (bit 0 set, bit 2
-   clear; LEARNINGS 1.5 Happy Next Year block): no RAM slot or page mapping in the plot hooks
+   clear; LEARNINGS 1.5 "WRITE-only mapping"): no RAM slot or page mapping in the plot hooks
    (dizzy1 / wally2 map pages today). Prove first: (a) CSpect, then hardware - write-mapping wins
    over the alt ROM ($8C) at 0x0000-0x3FFF while fetches and reads stay on the ROM image; (b)
    nextboot / verify model write-only 0x123B (reads from the ROM, writes to Layer 2); (c) the hook
