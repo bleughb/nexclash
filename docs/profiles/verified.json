@@ -90,6 +90,14 @@
     "sprites": "03979d5438cf55410ecec8aac76f05ec"
    }
   },
+  "1895877d638a4a5f37a9402bed18f59a": {
+   "game": "Target Renegade (128K)",
+   "doc": "target_renegade.md",
+   "nex": {
+    "plain": "a0be8dc03a1be8c6d67dc3e0229abc35",
+    "sprites": "e0b246e35d028c34170e1d1c52f00f5f"
+   }
+  },
   "7578947fcc8dbc4ba822e2c565499d54": {
    "game": "Treasure Island Dizzy (in game)",
    "doc": "treasure_island_dizzy.md",
