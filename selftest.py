@@ -308,6 +308,9 @@ def tools_check(src):
         ok('scan --writers (300 frames): screen writers 43909 x141017, 43916 x42204, 42409, 40068; 3 readers',
            w['writers'].get(43909) == 141017 and w['writers'].get(43916) == 42204 and
            set(w['writers']) == {43909, 43916, 42409, 40068} and len(w['readers']) == 3, w)
+        sp = memscan.rest_spans({100: 5, 104: 1, 120: 2, 200: 9}, {200})
+        ok('scan --writers: writers outside the top 10 joined into routine spans (100-104 x6, 120 x2)',
+           [s[:3] for s in sp] == [(100, 104, 6), (120, 120, 2)], sp)
         from nexclash import preview
         pv = os.path.join(work, 'preview.png')
         _, r = preview.preview(ez, [er], pv, at=[400, 800], plots=[39500])
