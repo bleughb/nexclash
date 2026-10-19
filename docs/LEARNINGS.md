@@ -299,7 +299,12 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   byte sent for BOTH ports (WR1/WR2 bit 6 + byte %00000010); without it the DMA uses standard Z80
   cycle timing. Program upload (~15-25 bytes by OTIR) costs ~400 T, so it pays from ~30 bytes;
   registers persist between transfers, so a repeat with a new address needs only WR0 (+ WR4) +
-  $CF load + $87 enable. Continuous mode (WR4 bits 6:5 = 01) holds the bus to the end; never use
+  $CF load + $87 enable. Exact form (em00k ninja-sprite-dma, per 256-byte sprite pattern): program
+  everything ONCE (port B = 0x5B, length 256), then per pattern `OUT (0x6B)` x5: $1D (WR0: transfer
+  A->B, port-A address bytes follow, no length), address low, address high, $CF, $87 - ~87 T with
+  the pattern slot already set on 0x303B. So a re-armed DMA pays from a few bytes, not ~30: worth it
+  for the per-commit pattern uploads (midres / renegade caches) when the source is linear in memory.
+  Continuous mode (WR4 bits 6:5 = 01) holds the bus to the end; never use
   WR4 mode 00 or WR0 operation 10/11 (they act as continuous / transfer today but are Zilog byte /
   search modes and may change). FILL = port A FIXED memory (WR1 %00100100) pointing at one byte holding the value,
   port B incrementing: clears a shadow / map / buffer at DMA speed (lib-spectrum-next FillDMA).
