@@ -239,6 +239,14 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   * Double buffering = draw into $13 via 0x123B bit 3, flip = swap $12 / $13 (two NEXTREGs).
   * The Layer 2 scroll offset ($16/$17) moves the game's window origin to Layer 2 (0,0) and the
     clip ($18) trims it, so game coordinates need no adds per pixel.
+  * Ring-buffer scrolling (em00k L2TopDownWorldScroll, 320x256 Layer 2, 16x16 tiles, 2026-10-20):
+    the screen buffer wraps (X 0-319 via $16 + $71 bit 0, Y 0-255 via $17), so a scroll moves only
+    the offsets, and ONE new column (16 tiles) or row (20 tiles) is drawn when a tile edge is
+    crossed - not the whole screen. The new column / row lands just past the right / bottom edge,
+    and the Layer 2 clip ($18) hides it while it is drawn. For us: a game that scrolls by redrawing
+    its whole screen could have the redraw replaced like this ONLY where the game never reads the
+    picture back. Not for Rainbow: its blit is inside the game's own 1.2 ms per frame
+    (games/rainbow_islands.md), so the hooks would save nothing.
   * Line colour by self-modifying the immediate operand of every plotter (`ld (hl),n`) from a
     table of patch addresses - one write per colour change, nothing in the inner loop.
   * Boot: game RAM loaded into high banks, copied down by the .nex start code; the ULA picture is
