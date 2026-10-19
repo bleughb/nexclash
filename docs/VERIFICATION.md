@@ -51,6 +51,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Midnight Resistance (128K) (midnight_resistance): `midnight_resistance.nex` 17239acaaf67b0f8011478053e17829d, `midnight_resistance_sprites.nex` 670f94034af175ed56df97f8cdb1ef29; verified 2026-10-14
 - Smash TV (smash_tv): `smash_tv.nex` c72ea298486b14036ac1a87ac89c3f0e, `smash_tv_sprites.nex` 03979d5438cf55410ecec8aac76f05ec; verified 2026-10-13
 - Target Renegade (128K) (target_renegade): `target_renegade.nex` a0be8dc03a1be8c6d67dc3e0229abc35, `target_renegade_sprites.nex` e0b246e35d028c34170e1d1c52f00f5f; verified never
+- Jetpac (jetpac): `jetpac.nex` feff51b7038606d21c03c260055481e4, `jetpac_sprites.nex` c963b42f0e685d648d552656fde4d6f9; verified never
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
@@ -642,6 +643,27 @@ Dean's outlined painting (2,471 outline pixels, 118 recolours) -> dizzy1_sprites
   unchanged; dizzy1.rzx PASSED (6,346 frames, 2,050,456 figure pixels), unit 55 cases, negative
   controls 11/11 PASSED; `selftest.py --game dizzy1` PASSED (rebuild MD5s + recolour guard both
   ways); `nexclash.py recolour` on Dean's outlined painting -> 79218527 (as above).
+
+## Jetpac (48K / 16K game, engine `jetpac`) - 2026-10-19
+No recording (Dean): differential test on a free run (`jetpac.free_keys`, 6000 frames), same method
+as an RZX run - at every hook site (29263 draw, 29344/29349 erase, 24717 clear) and at the colour
+paint 29135 the original and the patched code run from the same state to the routine's return:
+all registers but R/T/MEMPTR, all memory outside the screen (and 64 bytes of dead stack), no screen
+or attribute write by the patched code, sprite pixels = the original's figure drawn on a zero screen,
+sprite colour = the object's ink, no other sprite changed, NEXTREG only $07 (left at 0) and $34-$39.
+
+| Check | Result |
+|---|---|
+| free run 6000 frames | 20433 draws, 100 erases, 23192 colour paints, 5 clears, 2193166 sprite pixels: IDENTICAL |
+| 29264/29265 reached only after 29263; CALL-site interiors never | OK |
+| unit: every graphic (static, 8 levels' aliens, 12 carried parts) x 8 positions (both edges) x 3 inks x objects 0/16 | 5616 PASS |
+| unit: erase, clear, IX outside the object table (no sprite) | PASS |
+| negative control (patterns shifted 1 px) | detected 40/40 |
+| setup pattern upload (simulated: 10240 bytes across both pages of bank 11 = the built patterns), palette | OK |
+| boot simulation, plain + sprites | OK |
+| selftest --game jetpac (rebuild, MD5s, asm2profile) | PASSED |
+Not proven: the game's own paths beyond the free run (rocket build, fuel, items, levels 2+, two
+players) - hooks covered by unit tests only; hardware untested.
 
 ## Toolkit: colour sheets show only the paintable pixels (2026-10-14)
 coloursheet.write greys only the pixels the read-back uses; the rest of a box keeps the background

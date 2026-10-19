@@ -228,6 +228,9 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
 (clash-remover-handover.zip tools/builders/), not in the repo - ask Dean if needed.
 
 ### C0b. Analysis / verification internals (for writing new engine code)
+- SkoolKit Simulator.registers indices: A 0, F 1, B 2, C 3, D 4, E 5, H 6, L 7, IXh 8, IXl 9, IYh 10,
+  IYl 11, SP 12, I 14, A'F'B'C'D'E'H'L' 16-23, PC 24, T 25 (skoolkit.simulator has the names). A
+  one-off script that guessed IX = 14/15 read garbage (Jetpac, 2026-10-19).
 - rzxplay hook points: subclass the memory list (`__getitem__`/`__setitem__`); `registers[24]`
   is the current instruction's PC during its memory accesses; monkeypatch
   `RZXTracer.next_frame` for frame boundaries (called BEFORE interrupt acceptance); force the
@@ -400,6 +403,10 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    one-file hardware A/B instead of two builds (Rainbow's speed tests). Needs RAM patch sites,
    the toggle key read where the game reads keys, and verify proof that "off" equals the original;
    not built.
+29. `auto` on an unknown engine made Jetpac's synthetic _auto.rzx (6410 frames), but `scan` / `preview`
+   on it stop with "Port readings exhausted for frame 532" (2026-10-19): the recorder and the replay
+   disagree on one frame's port reads. Not investigated; Jetpac used free runs (--frames/--keys).
+
 ### C3. Working rules (token budget)
 Summaries <= 40 lines; disassemble only routines the analysis flags; one simulator pass
 per question; long jobs in background + poll; verify original bytes at every patch site;

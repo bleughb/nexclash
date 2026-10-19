@@ -183,6 +183,11 @@ def cmd_auto(a):
         ok = _ce.auto(a, z80, name, out, say)
         _finish(out, name, rep)
         return ok
+    from nexclash import jetpac as _jp                        # Jetpac (16K)
+    if _jp.is_jetpac(s):
+        ok = _jp.auto(a, z80, name, out, say)
+        _finish(out, name, rep)
+        return ok
     from nexclash import commando as _co                      # Commando (128K)
     if _co.is_commando(s):
         ok = _co.auto(a, z80, name, out, say)

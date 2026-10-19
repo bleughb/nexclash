@@ -57,6 +57,14 @@
     "sprites": "9182f2f8b4b0dc55b59a69728568b403"
    }
   },
+  "5875d535442974a0de82737652854f1f": {
+   "game": "Jetpac",
+   "doc": "jetpac.md",
+   "nex": {
+    "plain": "feff51b7038606d21c03c260055481e4",
+    "sprites": "c963b42f0e685d648d552656fde4d6f9"
+   }
+  },
   "53078ac60141cd808b609600b85f4094": {
    "game": "Magicland Dizzy",
    "doc": "magicland_dizzy.md",
