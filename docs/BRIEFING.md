@@ -406,6 +406,11 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
 29. `auto` on an unknown engine made Jetpac's synthetic _auto.rzx (6410 frames), but `scan` / `preview`
    on it stop with "Port readings exhausted for frame 532" (2026-10-19): the recorder and the replay
    disagree on one frame's port reads. Not investigated; Jetpac used free runs (--frames/--keys).
+30. Colour sheets before Rainbow (2026-10-19) still write the painting sheet with unique=True (only
+   the new pixels of each figure) and join pieces by touching boxes; Dean's 2026-10-19 rules (PLAYBOOK
+   3b: whole figures, split per level / collectables / player, default colours, one copy per item
+   colour, join by the game's object) apply to them at their next sheet. `rzx.trace` (C simulator
+   with hooks, ~20x the Python simulator) could also speed their capture and verify passes.
 
 ### C3. Working rules (token budget)
 Summaries <= 40 lines; disassemble only routines the analysis flags; one simulator pass

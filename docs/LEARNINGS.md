@@ -134,6 +134,11 @@ BRIEFING - with its reason.
   zero pattern RAM once at setup, then per sprite select slot|(+128) and write only 64 bytes
   (Rainbow, 2026-09-29; hardware to confirm).
 - NextReg $35-$39 set one attribute of the sprite selected by $34 (no increment); $38=0 hides.
+- Sprite attr2 = palette offset (7:4) | X mirror | Y mirror | rotate | X8 (bit 0). A lookup table
+  whose byte is OR-ed into attr2 must keep bits 3:0 free or be masked (AND 0xF0) where it is used:
+  Rainbow (2026-10-19) packed a 'no outline' flag into bit 0 of its palette-offset table and every
+  thrown-rainbow sprite moved 256 px right (X8). Only the verifier's per-pixel check against the
+  original plot caught it (62 ink pixels missing); register / memory comparison passed.
 - NextReg $4B defaults to E3: set 0 for 4-bit transparency (low nibble is used).
 - NextReg $43=0x20 = edit sprite palette 0 with auto-increment; $40 index, $41 RRRGGGBB.
 - NextReg $19 clip: reset the index with $1C bit 1, then write X1,X2,Y1,Y2; ULA-relative when
@@ -369,6 +374,14 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
 - Guard limits come from the ORIGINAL's capacity, found by running it, not from the data format:
   Target Renegade's graphic header allows 255 bytes per row, but the plotter's unrolled row code takes
   at most 6 (W = 7 or 8 never returns); the converted / passthrough guard says W <= 6.
+- Graphics an address does NOT identify: before keying colours (or a cache) by graphics address,
+  check the bytes never change while drawn (`rzx.trace` at the plot: values seen per address). Rainbow
+  shifts the player's frames IN PLACE to the figure's x (60300), and loads each island's creatures
+  and boss into the same buffers: an address-keyed sheet showed broken players and mixed islands
+  (Dean 2026-10-19). Key such pixels by (island, address) or by the unshifted position.
+- A figure is the game's OBJECT, not touching boxes: hook the routine that builds one object's
+  draw list and tag what it allocates (Rainbow 54533 / 50614 / 53318). Bosses can be several
+  objects (Rainbow: one per quarter) - join those by their graphics area.
 - A hook never CALLs on the game's stack, not even one call deep: the return address it leaves
   below SP is dead stack the original never wrote, and the memory compare catches it (midres shop
   exit 0xB8A5, 2026-10-13). Switch to the hook stack first, or inline (a MACRO).
@@ -636,6 +649,11 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
 ## 2.3 Our toolkit (nexclash) and host tools
 - nextboot.check is a 48K check (expects 7FFD = 0x30 locked, bank 0): a 128K plain build needs its
   engine's boot check (rainbow / midres / renegade.boot_check: the snapshot's 7FFD and MMU 6/7).
+- Long replays: `rzx.trace(path, pcs, on_pc)` runs SkoolKit's C simulator with a Python hook at
+  chosen PCs (~400 frames/s with Rainbow's 13 hooks; the Python simulator ~20x slower): the whole
+  195k-frame playthrough in ~12 min. `rzx.scan` (a callback per frame, ~8,500 frames/s) finds
+  bookmarks; `rzx.cut(path, start, frames, out)` writes an RZX that starts at a frame (SkoolKit's
+  write_rzx: the machine state there as its snapshot). A recording that desyncs is reported, not fatal.
 - z80tonex 128K: leaves 7FFD unlocked; 1FFD=4 when 7FFD bit 4. Since 2026-09-28 it refuses a 128K
   tail ending above 0xBFFF (even with --tail) and never picks one; SP >= 0xC000 -> error asking
   for --tail. 48K output byte-identical to before.

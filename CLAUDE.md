@@ -25,8 +25,10 @@ stay on their machine; the maintainers' reference files live in the private repo
 3. Follow docs/PLAYBOOK.md phases A-C. Phase A ends with ONE question to the user, with preview
    frames: which figures become sprites, what stays on the ULA, depth - and the COLOUR SHEETS
    (every game, Dean 2026-10-13/14; PLAYBOOK 3b), built with nexclash/coloursheet.py, 1:1, 8x8
-   palette swatches: `<game>_PAINTING_SPRITES.png` (every graphic once, multi-part figures joined;
-   the user paints it) and `<game>_REFERENCE_ALL_SPRITES.png` (every figure whole, as the build
+   palette swatches: `<game>_PAINTING_SPRITES.png` (the fewest WHOLE figures that show every graphic,
+   multi-part figures joined by the game's own object, today's colours, items once per colour they
+   take; the user paints it; many figures -> one pair per level + collectables + player, Dean
+   2026-10-19) and `<game>_REFERENCE_ALL_SPRITES.png` (every figure whole, as the build
    colours it; not read back). The painted sheet becomes the engine's colours json (docs/profiles/
    <record name>_colours.json, e.g. dizzy1_colours.json: the path the engine's COLOURS constant
    loads; another name is never read), which the engine applies per pixel. Never guess

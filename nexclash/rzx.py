@@ -67,3 +67,97 @@ def info(path):
     segs = read_segments(path)
     frames = sum(len(r.frames) for _, r, _ in segs)
     return '%s: %d segment(s), %d frames (%.1f s at 50Hz)' % (path, len(segs), frames, frames / 50)
+
+
+# --- bookmarks: long recordings (a whole playthrough) are cut into short RZX files that start at
+# a known point (Dean, 2026-10-19: "it should not be referred to in full"). C simulator replay.
+def _replay(path, on_frame=None, stop=None):
+    """Replay `path` (SkoolKit rzxplay, C simulator when built). on_frame(frame, memory) after
+    every frame (before the frame's interrupt); a true result stops there. stop: stop after that
+    many frames (interrupt accepted, as rzxplay --stop). -> (context, remaining RZX blocks)."""
+    from types import SimpleNamespace
+    import skoolkit.rzxplay as rp
+    blocks = parse_rzx(path)
+    while blocks and isinstance(blocks[-1].obj, Snapshot):
+        blocks.pop()
+    ctx = rp.RZXContext(None)
+
+    class Hook:
+        def draw(self, scr, frame, border):
+            return not (on_frame and on_frame(frame, ctx.simulator.memory))
+    if on_frame:
+        ctx.screen = Hook()
+    for b in blocks:
+        if isinstance(b.obj, InputRecording):
+            ctx.total_frames += len(b.obj.frames)
+    if stop:
+        ctx.total_frames = min(stop, ctx.total_frames)
+    opts = SimpleNamespace(cmio=False, python=False, quiet=True, stop=stop or 0, force=False)
+    while blocks:
+        rp.process_block(blocks.pop(0).obj, opts, 0, ctx)
+        if ctx.stop:
+            break
+    return ctx, blocks
+
+
+def scan(path, on_frame):
+    """Call on_frame(frame, memory) after every frame of the whole recording; -> frames replayed.
+    Raises SkoolKitError (with the frame) where the recording desyncs."""
+    ctx, _ = _replay(path, on_frame)
+    return ctx.frame_count
+
+
+def cut(path, start, frames, out):
+    """Write `out`: an RZX starting at frame `start` of `path` (the machine state there as its
+    snapshot) with the next `frames` frames (fewer at the end of the recording). -> frames written."""
+    import skoolkit.rzxplay as rp
+    ctx, _ = _replay(path, stop=start) if start else _replay(path, stop=1)
+    if not start:
+        raise ValueError('start must be >= 1 (use the recording itself from frame 0)')
+    tr = ctx.simulator.tracer
+    tr.frames = tr.frames[:tr.frame_index + frames]
+    n = len(tr.frames) - tr.frame_index
+    rp.write_rzx(out, ctx, [])
+    return n
+
+
+def trace(path, pcs, on_pc, stop=None):
+    """Replay `path` with the C simulator (rzxplay; ~400 frames/s with a hook) and call
+    on_pc(pc, simulator) before every instruction whose address is in `pcs`. A recording that
+    desyncs does not stop the caller: -> (frames replayed, None or the desync message)."""
+    import skoolkit.rzxplay as rp
+    from types import SimpleNamespace
+    from skoolkit import SkoolKitError
+    blocks = parse_rzx(path)
+    while blocks and isinstance(blocks[-1].obj, Snapshot):
+        blocks.pop()
+    ctx = rp.RZXContext(None)
+    for b in blocks:
+        if isinstance(b.obj, InputRecording):
+            ctx.total_frames += len(b.obj.frames)
+    if stop:
+        ctx.total_frames = min(stop, ctx.total_frames)
+
+    class Sink:
+        def write(self, s):
+            pass
+    ctx.tracefile = Sink()
+    pcs = frozenset(pcs)
+
+    def hook(tf, context, fc, pc):
+        if pc in pcs:
+            on_pc(pc, context.simulator)
+    old = rp.trace_exec
+    rp.trace_exec = hook
+    err = None
+    try:
+        opts = SimpleNamespace(cmio=False, python=False, quiet=True, stop=stop or 0, force=False)
+        while blocks:
+            rp.process_block(blocks.pop(0).obj, opts, 0, ctx)
+            if ctx.stop:
+                break
+    except SkoolKitError as e:
+        err = str(e)
+    finally:
+        rp.trace_exec = old
+    return ctx.frame_count, err
