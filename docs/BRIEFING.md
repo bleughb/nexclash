@@ -430,6 +430,13 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
    holds the rest of the list until the next frame (inferred from guide r3, not tested; an h passed
    on the CURRENT line does not wait - hardware-tested, LEARNINGS 1.5 "Hardware ground truth"); $64 = 33
    aligns copper line 0 with the top of 320x256 Layer 2 (em00k demos; check KevB's tables).
+    How to test #31 / #35 (and any hardware fact we rely on): one test .nex per question, built
+    like MikeDX/next-testsuite - results table in fixed RAM (magic, version, count, then one byte
+    per test: 0 not run / 1 pass / 2 fail / 3 visual + a detail byte), each visual phase held on
+    screen ~2 s, final screen = one coloured block per test (green pass, red fail, white visual).
+    Dean runs it once on the Next and photographs the final screen; MAME runs the same file
+    headless and a script reads the table (LEARNINGS 2.7). Cases come from Ped7g's tests
+    (LEARNINGS 1.5 "Hardware ground truth") plus ours (alt ROM, blend-mode order).
 35. Per-cell depth with no masking (LEARNINGS 1.5 "Sprites BETWEEN the ULA and the tilemap"): $15
    layer mode %110 + $68 bits 6:5 = %01 should put ULA + tilemap in front of the sprites, and tile
    attribute bit 0 should send single tiles behind them. Confirm in CSpect, then hardware, against
