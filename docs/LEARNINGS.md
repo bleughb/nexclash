@@ -838,7 +838,7 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   at the same address. Keep running the plotter once on a hit: the register state it leaves is
   what the game logic needs. Size the cache from a key-reuse analysis first (Rainbow: 32 LRU ->
   63%, 64 -> 83%).
-  LRU in O(1) (Mike Dailly, Paradroid Next blog, 2026-10-20): slots on a doubly linked list; a hit
+  LRU in O(1) (Mike Dailly's C64-to-Next conversion blog, supplied by Dean 2026-10-20): slots on a doubly linked list; a hit
   unlinks the slot and puts it at the front, a miss takes the slot at the END (least recently used)
   - no scan, no stamps. His caveat: within one frame, one-off figures can push a common image down;
   harmless while the pool is larger than the images one frame needs. Still keep our rule: never
