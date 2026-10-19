@@ -397,7 +397,7 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   * Raster line read (Timing/ScanlineReadingAndInterrupt): a board with core 3.1.0 at 3.5 MHz
     sometimes READ A WRONG VALUE from $1F (a wait for line 224 fired near 192). $1E and $1F are
     also two reads: crossing line 255 -> 256 between them gives a value 256 lines off. Read the
-    pair until two consecutive reads agree (games/rainbow_islands.md Open 0b: rsafe reads once).
+    pair until two consecutive reads agree (games/rainbow_islands.md Open 1b: rsafe reads once).
   * Layer 2 over ROM (Graphics/Layer2Port, board core 3.1.5 + MAME OK): write-over-ROM and
     read-over-ROM (data, CODE, even the IM1 handler fetched from Layer 2) for 16K / 48K, visible
     and shadow; bank offset form (0x123B bit 4). It does NOT test the alt ROM ($8C): the template
