@@ -77,6 +77,12 @@ or download another version; tools/sjasmplus/README.md).
   maintainers' `selftest.py --affected` finds every game a change reaches (docs/records keep the
   hashes of each game's dependencies) and rebuilds those. Without the references, say in the
   contribution note that shared code changed.
+- WITHOUT PUSH ACCESS to bleughb/nexclash (other people's sessions; Dean 2026-10-21) the only other
+  game you ever run is ONE canary: `selftest.py --canary` (stage 1, Chuckie Egg MD5s; stage 2 is
+  skipped). Your own new game: `selftest.py --game <record> --verify`. selftest.py enforces it: it
+  probes `git push --dry-run` once and refuses --affected / --full / release runs / --game on an
+  existing game with exit 3 (NEXCLASH_MAINTAINER=1 only for maintainers working offline). Why: those
+  runs rebuild and re-verify every game a change reaches - hours, the maintainers' job before a merge.
 - Never `pkill -f` / kill by `pgrep -f` pattern: it matches your own shell whenever the pattern
   appears anywhere in that command line, even as part of a directory name (it has, twice). List
   with `pgrep -fa` in one command, read it, kill the PID in the next.
