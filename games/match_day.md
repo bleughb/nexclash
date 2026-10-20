@@ -3,9 +3,11 @@
 48K. Code: nexclash/matchday.py (phase A: facts, shadow model, colour-sheet capture, preview).
 Reference (specnext/reference/match_day/): Match_Day_1985_Ocean.z80 + Match_Day_1985_Ocean.rzx
 (Dean, 2026-10-20; 6210 frames, 124 s: title, menu, walk-on scene, the first ~6 match minutes with
-a goal and a keeper dive). Manual: gamesdatabase.org scan (image only, no text layer).
+a goal and a keeper dive) + Match_Day_spectrumcomputing.rzx (50403 frames, 1008 s; from
+spectrumcomputing.co.uk entry 3067, supplied by Dean 2026-10-20; its own start snapshot: code
+identical at every plotter / line writer, 13 bytes of game state differ). Manual: gamesdatabase.org scan (image only, no text layer).
 
-    python -m nexclash.matchday sheet   Match_Day_1985_Ocean.z80 Match_Day_1985_Ocean.rzx -o match_day
+    python -m nexclash.matchday sheet   Match_Day_1985_Ocean.z80 Match_Day_1985_Ocean.rzx Match_Day_spectrumcomputing.rzx -o match_day
     python -m nexclash.matchday preview Match_Day_1985_Ocean.z80 Match_Day_1985_Ocean.rzx --at 2200,3760,5400,6100
 
 ## Status
@@ -45,11 +47,12 @@ Phase A done (analysis, shadow model, sheets, preview); waiting for Dean's desig
 - Ball: 0x9FCF: shadow (B=1) then ball (5 rows) through 0xA046 (XOR old + new, 2 bytes a row);
   graphics 0xA111 + 14 * (x & 7) (pre-shifted); off screen = address 0x2000 (a ROM write).
 - Scenery writers, all stay on the ULA: XOR line / block writers (pitch lines, boxes, goals, net):
-  0xE73B-0xE956, 0xEC50-0xECB1, 0xEF3F-0xEF74, 0xF049-0xF0BA, 0xF198-0xF1C9; overwriters: screen
+  0x5F2A / 0x5F2E, 0x62D3 / 0x62DB, 0xE73B-0xEBED, 0xEC50-0xECB1, 0xEF3F-0xEF74, 0xF049-0xF0BA, 0xF198-0xF1C9; overwriters: screen
   clears 0x87DF / 0xEFAD, crowd copier 0x9936-0x9987 + 0x99DF attrs, the walk-on scene's 2x plotter
   0x95A6 (overwrites), text 0x5F2B.., 0x6136.., HUD.
-- Pixel readers (an2 pass over the whole RZX): only the XOR writers themselves read figure bytes;
-  no collision or logic reads the screen -> no virtual reads needed.
+- Pixel readers (an2 pass over BOTH recordings, 56k frames): every read of a figure byte is a writer
+  reading the byte it rewrites (XOR writers, overwriters, the crowd LDI once); no collision or logic
+  reads the screen -> no virtual reads needed.
 - Shadow model (matchday.Capture): figure XOR writes into a 1-bit shadow, overwriters clear the
   shadow at the bytes they write; ULA XOR shadow = scenery only, checked by eye on 5 frames
   (preview) and by the per-figure footprints (XOR of the footprints == the shadow).
@@ -60,11 +63,10 @@ Phase A done (analysis, shadow model, sheets, preview); waiting for Dean's desig
   "Start Second Half", "Begin Extra Time", "MATCH TO BE DECIDED BY REPLAY" (strings at 0x5Fxx-0x7Exx).
   Team colours come from the menu at run time -> sprites must take IX+0x0E / IX+0x0F live.
 
-## Coverage (sheet)
-- Frames drawn: 0-71, 73, 84-86, 88-93; upper bodies 0, 1, 3, 5, 6, 7, 9, 11, 13, 15, 16; ball all
-  8 shifts. The rest of the tables (frames 72, 74-83, 87, 94-119; uppers 2, 4, 8, 10, 12, 14, 17)
-  are on the sheet as "From the code (not in the recording yet)" (single frames; dive frames as
-  left/right pairs; uppers alone).
+## Coverage (sheet, both recordings)
+- Frames drawn 0-115 (of 120), upper bodies 0-17 (all), ball all 8 shifts. Frames 116-119 (one dive
+  pair look-alike + two halves) only "From the code" (2 figures). Dive halves are joined on the
+  sheet only as matching pairs (2k left + 2k+1 right): the alternate-frame lag mixes steps.
 
 ## Dean's decisions (2026-10-20)
 - Players SOLID: the see-through pixels (paper enclosed by the figure, `matchday.enclosed`) in the
@@ -78,8 +80,8 @@ Phase A done (analysis, shadow model, sheets, preview); waiting for Dean's desig
   shifted by (camera x at its draw - camera x at the keeper half's draw) (camera = 0xE60B), so
   both halves sit where they would at the same camera position; the shadow model and the logic
   unchanged. Preview: match_day_PREVIEW_dive.png (top original, bottom planned, frames 3746-3790).
-- No further recording (14:08): the frames the RZX does not reach stay on the sheet "from the code"
-  (single frames, dive pairs); the build must cover them by unit tests.
+- No further recording of his own (14:08); then supplied the spectrumcomputing.co.uk RZX (14:13),
+  which covers all but frames 116-119 (unit tests for those).
 - Sheet: Dean paints it later; build with the defaults (roles) until then, recolour afterwards.
 
 ## Phase A proposal (sent to Dean 2026-10-20)

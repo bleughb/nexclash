@@ -38,7 +38,7 @@ CELL_PAINT = (0x934E, 0x938A)        # the figure cell paints
 # scenery writers that XOR (pitch lines, goals, markers): leave the figures' bits alone; every other
 # non-figure screen write OVERWRITES (screen clears 0x87DF / 0xEFB3, crowd 0x9936.., text): the
 # shadow model clears the figure bits of that byte (original byte = the written value)
-SCENERY_XOR = ((0xE73B, 0xEBEE), (0xEC50, 0xECB2), (0xEF3F, 0xEF75), (0xF049, 0xF0BB), (0xF198, 0xF1CA))
+SCENERY_XOR = ((0x5F2A, 0x5F30), (0x62D3, 0x62DD), (0xE73B, 0xEBEE), (0xEC50, 0xECB2), (0xEF3F, 0xEF75), (0xF049, 0xF0BB), (0xF198, 0xF1CA))
 OBJ0, OBJ_N, OBJ_SIZE, WALKON = 0xB4FC, 16, 27, 0xB6AC
 FRAMES, FRAME_TAB, UPPERS, UPPER_TAB = 120, 0xC460, 18, 0xDDC0   # 28-row frames, 18-row upper bodies
 DIVE0 = 72                           # frames 72..: the keeper's dive, drawn in two halves (2k left, 2k+1 right)
