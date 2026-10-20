@@ -430,12 +430,25 @@ Grouped by question; add a new lesson to its group.
   own display (hardware sprites in front); logic still reads ULA ^ every shadow. A sprite that
   follows XOR parity must not hide at the erase when the draw follows (it does, across an
   interrupt): mark the erase pending and hide only if something else happens first.
+- XOR engine that erases and redraws in ONE pass (old XOR new per byte; Match Day, 2026-10-20), and
+  nothing reads the screen: NOP the figure screen writes (registers and game memory stay the
+  original's, the ULA keeps only scenery) and take each sprite's image from the game's own image
+  BUILDS, not from a shadow (a shadow mixes overlapping figures). Record every build / clear into a
+  per-figure ring (dest, graphics row, shift, sequence) and rebuild the shown image row by row from
+  the newest entry covering each buffer row: the game reuses buffers, rebuilds only part of an image
+  and clears rows of a buffer it has just drawn. Identify a figure by something that moves with it
+  (its buffer pair): a depth sort that swaps whole records changes its IX every frame.
 - XOR figures PRINTED as tiles at level start (Lode Runner, 2026-10-20): the level draw puts each
   figure on the screen with the tile printer (overwrite), and the first XOR erase removes that print.
   Hook the print too (sprite + a blank tile) or the first move leaves an inverted figure. Found in
   phase A because an XOR-parity count by (graphic, x, y) showed twice the figures the screen had.
 
 ### 2.1e Sprites, patterns, colours, depth
+- A figure the game draws as TWO objects (Match Day's diving keeper: the keeper + a spare object 16
+  px to its right) joins on the colour sheet only by the game's own pairing (frames 2k + 2k+1), and
+  on screen it TEARS in the original: the halves update on alternate frames while the camera scrolls.
+  Locking the second half's sprite to the first half's camera position (shift by the camera
+  difference at their draws) removes the tear without touching the logic (Dean, 2026-10-20).
 - Graphics the game mirrors IN PLACE (Wally: 33251 flips a gang member's frames whenever he turns):
   do not track the facing state. Key the colours to the snapshot's orientation and let the hook
   identify the bytes as plotted by a 16-bit check against the stored and the mirrored check; no match
@@ -634,6 +647,10 @@ Grouped by question; add a new lesson to its group.
   sampling shifts). Use per-routine differential tests from real states.
 - Per event: original and patched from the same state on private overlays; compare all registers
   except R/T/MEMPTR and all memory.
+- Model what a routine USES at the moment it uses it (capture the inputs at the inner call, e.g.
+  the draw loop's entry), not from memory after the event returns: code later in the same event may
+  change them. Match Day 0x8D63 clears the top rows of the image buffer it has just drawn from; the
+  verifier read the buffer after the call and reported 5 correct sprites as wrong (2026-10-20).
 - Cover check (any game whose figures still reach the ULA or a buffer): at every screen copy,
   every pixel the figures changed (buffer before the copy vs scenery after the restore) must lie
   under an opaque sprite pixel of the hooks' model, pattern memory and flushes included. It found
@@ -810,6 +827,9 @@ Grouped by question; add a new lesson to its group.
 - Name scratch scripts uniquely, NEVER after a stdlib module (dis, code, io, json, types, ...):
   Python imports the script's own directory first, so a dis.py shadows the stdlib and breaks
   SkoolKit (happened twice, the second time with this line already here).
+- Before starting a long run, `pgrep -fa` for one already running with the same output folder:
+  Match Day 2026-10-20 had two identical full `auto` runs writing one folder for 76 minutes, both on
+  code that had been edited since they started (their results were stale). Kill by PID, never -f.
 - Do all analyses in one simulator pass.
 - Profile a slow run before redesigning it (`python -m cProfile -s tottime nexclash.py auto ...
   --quick 300`). 2026-10-20: two thirds of Lode Runner's and Jetpac's verify time was BUILDING
