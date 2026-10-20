@@ -77,5 +77,49 @@
  },
  "checks": [
   "asm2profile:match_day"
- ]
+ ],
+ "checked": {
+  "deps": {
+   "asm/matchday_hooks.asm": "a6684de2576b7dda",
+   "docs/profiles/match_day.json": "8508cc0cb162c2d1",
+   "nexclash.py": "d727de919fb5b21e",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "bc87a441d6f36e56",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "ea2caa409f90ba5a",
+   "nexclash/matchday.py": "6a35adbcdb07e218",
+   "nexclash/nextboot.py": "a6e46fbbe842b376",
+   "nexclash/recolour.py": "a5744dcf6e6c059c",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "cfe7f2701eddfe6e",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-20"
+ },
+ "verified": {
+  "deps": {
+   "asm/matchday_hooks.asm": "a6684de2576b7dda",
+   "docs/profiles/match_day.json": "8508cc0cb162c2d1",
+   "nexclash.py": "d727de919fb5b21e",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "bc87a441d6f36e56",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "ea2caa409f90ba5a",
+   "nexclash/matchday.py": "6a35adbcdb07e218",
+   "nexclash/nextboot.py": "a6e46fbbe842b376",
+   "nexclash/recolour.py": "a5744dcf6e6c059c",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "cfe7f2701eddfe6e",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-20"
+ }
 }
