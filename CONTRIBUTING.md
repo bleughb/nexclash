@@ -7,8 +7,10 @@
    The zip holds only files the session added or changed in the toolkit (code, .asm, profile,
    docs) plus the nexclash report. Game data (.z80/.rzx/.nex/.tap/...) is refused.
    Changed anything outside your own engine (shared modules, shared
-   docs)? Say so in the note: `selftest.py --canary` needs the maintainers' private reference
-   files, so you cannot run it; the maintainers run it, and `--affected`, before merging.
+   docs)? Say so in the note. Without push access the only check of other games you run is the
+   single canary, `python selftest.py --canary` (Chuckie Egg, if you have its reference files);
+   selftest.py refuses `--affected`, `--full` and release runs for you (exit 3). The maintainers
+   run those, which rebuild and re-verify every game a change reaches, before merging.
 3. Upload `nexclash_contribution_MyGame.zip`:
    - **No GitHub account:** https://www.dropbox.com/request/7zanmicpbn5oafod24qs - anyone can
      upload there, no sign-in (uploads are visible only to the maintainers). Add your name/handle

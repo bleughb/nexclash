@@ -28,6 +28,14 @@ the reference recordings, differential verification, simulated boot, the old-str
 Which games need which is plan() in nexclash/records.py: own files changed -> re-verify that game;
 shared files changed -> rebuild everything that depends on them + re-verify one representative per
 engine. Exit 0 = all good; 1 = a failure; 2 = no failure but games skipped (reference files missing).
+
+WITHOUT PUSH ACCESS to the nexclash repo (contributors, other users; Dean 2026-10-21) only ONE game
+other than your own is ever run: --canary stage 1 (Chuckie Egg rebuilt, MD5s; stage 2 is a maintainer
+diagnosis and is skipped). Allowed: --canary, --smoke, --tools, --plan, and --game NAME [--verify]
+[--stamp] for a record that is NOT on origin/main yet (your own new game). Everything else - --affected,
+--full, a release run, --game for an existing game - stops with exit 3: the maintainers run those.
+Push access = `git push --dry-run` to origin succeeds (checked once, ~1-2 s; no git checkout, e.g.
+the release zip = no push access). Offline maintainers: NEXCLASH_MAINTAINER=1 skips the check.
 """
 import concurrent.futures
 import datetime
@@ -272,6 +280,18 @@ def tools_check(src):
     from nexclash import snapinfo, memscan, isrinfo, drawcost
     bad = R.selfcheck()
     print('%-4s tools: records plan() on synthetic stamps%s' % ('OK' if not bad else 'FAIL', '' if not bad else ' (%s)' % bad[:3]))
+    global _PUSH
+    keep, _PUSH = _PUSH, False                  # the no-push-access gate (Dean 2026-10-21)
+    try:
+        g = [contributor_gate(f, n) is None for f, n in (
+            ({'--affected'}, None), (set(), None), ({'--full'}, None), ({'--game', '--verify'}, 'chuckie_egg'),
+            ({'--canary', '--affected'}, None), ({'--canary'}, None), ({'--tools'}, None), ({'--plan'}, None),
+            ({'--game', '--verify', '--stamp'}, 'no_such_record_selftest'))]
+    finally:
+        _PUSH = keep
+    gate_ok = g == [False] * 5 + [True] * 4
+    print('%-4s tools: no-push-access gate (refuses other games, allows --canary / own new game)' % ('OK' if gate_ok else 'FAIL'))
+    bad = list(bad) + ([] if gate_ok else ['contributor_gate'])
     cbad = coloursheet_check()
     from nexclash import recolour as rc
     rbad = rc.selfcheck()
@@ -522,6 +542,10 @@ def canary(src):
     if not bad:
         print('CANARY PASSED (stage 1: %s)' % rec['name'])
         return 0
+    if not push_access():
+        print('CANARY FAILED (stage 1: %s). Stage 2 (tool chain vs game) is a maintainer check: report '
+              'this failure in your contribution note.' % rec['name'])
+        return 1
     print('CANARY stage 1 FAILED (%s) - running stage 2' % rec['name'])
     b2, l2 = canary2(src)
     print('\n'.join(l2))
@@ -536,6 +560,9 @@ def canary(src):
 
 def diagnose(src, failed):
     """After a selftest run with failures: stage 2 tells a broken tool chain from game faults."""
+    if not push_access():
+        print('DIAGNOSE: skipped (canary stage 2 is a maintainer check; no push access)')
+        return
     print('DIAGNOSE: %d problem(s) in %s - running canary stage 2' % (len(failed), ', '.join(sorted(failed))))
     b2, l2 = canary2(src)
     print('\n'.join(l2))
@@ -545,6 +572,56 @@ def diagnose(src, failed):
         print('DIAGNOSE: canary stage 2 FAILED - the TOOL CHAIN is broken; fix it first')
     else:
         print('DIAGNOSE: canary stage 2 PASSED - the tool chain works; the failures are specific to those games')
+
+
+_PUSH = None
+
+
+def push_access():
+    """True when this checkout can push to its origin (the maintainers). Cached."""
+    global _PUSH
+    if _PUSH is None:
+        if os.environ.get('NEXCLASH_MAINTAINER') == '1':
+            _PUSH = True
+        elif not os.path.isdir(os.path.join(HERE, '.git')):
+            _PUSH = False
+        else:
+            try:
+                r = subprocess.run(['git', 'push', '--dry-run', '--porcelain', 'origin',
+                                    'HEAD:refs/heads/selftest-push-probe'], cwd=HERE,
+                                   capture_output=True, text=True, timeout=30)
+                _PUSH = r.returncode == 0
+            except (OSError, subprocess.TimeoutExpired):
+                _PUSH = False
+    return _PUSH
+
+
+def record_is_new(name):
+    """True when docs/records/<name>.json is not on origin/main (or in the release MANIFEST): the
+    caller's own new game."""
+    rel = 'docs/records/%s.json' % name
+    man = os.path.join(HERE, 'MANIFEST.json')
+    if os.path.exists(man):
+        return rel not in json.load(open(man)).get('files', {})
+    r = subprocess.run(['git', 'cat-file', '-e', 'origin/main:' + rel], cwd=HERE, capture_output=True)
+    return r.returncode != 0
+
+
+def contributor_gate(flags, game):
+    """None when the run is allowed, else the reason it is not (no push access)."""
+    if flags & {'--plan', '--canary', '--smoke', '--tools'} and not flags & {'--affected', '--full'}:
+        return None
+    if game and record_is_new(game) and not flags & {'--affected', '--full'}:
+        return None
+    if push_access():
+        return None
+    what = ('--game %s (a game already in the repo)' % game) if game else \
+        ' '.join(sorted(flags & {'--affected', '--full', '--verify', '--stamp'})) or 'a release run (every game)'
+    return ('selftest: %s needs push access to the nexclash repo - it rebuilds or re-verifies OTHER games, '
+            'which the maintainers do before merging. Without push access run only:\n'
+            '  python selftest.py --canary                   (one other game: Chuckie Egg, MD5s)\n'
+            '  python selftest.py --game <your new record> --verify\n'
+            'and say in your contribution note that shared code changed (CONTRIBUTING.md).' % what)
 
 
 def _arg(name, default=None):
@@ -567,6 +644,10 @@ def main():
         for r, act, why in items:
             print('%-9s %-24s %s' % (act, r['name'], why))
         return 0
+    gate = contributor_gate(flags, _arg('--game'))
+    if gate:
+        print(gate)
+        return 3
     if not os.path.isdir(src):
         sys.exit(__doc__)
     if '--smoke' in flags:
