@@ -49,8 +49,9 @@ game never touches (step 3 proves this: `scan`); override with `--tail ADDR`.
 signatures.json); the dedicated engines
 (Chuckie Egg, Wally / wally2, Rainbow, Commando, Midnight Resistance, Smash TV, Target Renegade)
 are recognised by their own checks in `auto` (is_<engine>, profile `signature`; the list is
-nexclash.py cmd_auto),
-so `identify` says unknown for them. Search the snapshot for these byte signatures.
+nexclash/engines.py),
+so `identify` says unknown for them. Search the snapshot for these byte signatures. A new engine
+adds one line to nexclash/engines.py.
 If a known engine matches, align its plotter/eraser instruction-by-instruction
 against the known game's (normalise 4-5 digit operands to N; where the opcode
 text matches, the numbers map old->new). Then locate by pattern:
@@ -105,24 +106,16 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   level, weapon and collectable the user can, before the sheet goes out.
 - COLOUR SHEET - every game from Midnight Resistance on (Dean, 2026-10-13). Colours are not
   settled in words: the user paints them.
-  - What to send (with the phase-A question; Dean, 2026-10-14), both in the colours the build gives
-    now: `<game>_PAINTING_SPRITES.png` (`coloursheet.write(..., unique=True)`; superseded 2026-10-19,
-    see the next point) - every graphic ONCE:
-    a figure that shares graphics with one before it shows only its new pixels, the largest figure
-    of a group first. Why: colours belong to graphics bytes, so every figure drawn from the same
-    graphics takes the same paint (Midnight Resistance's first sheet showed the tank three times and
-    Dean painted one copy). `<game>_REFERENCE_ALL_SPRITES.png` (`unique=False`) - every figure whole,
-    to see the result; not read back.
-  - Dean 2026-10-19 (Rainbow Islands; for this and ALL FUTURE games; replaces "every graphic ONCE"
-    above for new sheets):
-    - The painting sheet shows WHOLE figures: the fewest figures that show every graphics byte
-      (`coloursheet.choose`, then `write(..., unique=False)`). "Only the new pixels" of a figure that
-      shares graphics with an earlier one looked like CORRUPTED characters to him. A pixel shown in two
-      figures is one colour-map entry: `read` takes a changed copy over an unchanged one and reports
-      two different paints. (Engines before Rainbow still write unique=True: Open, BRIEFING C2.)
-    - Default colours on the painting sheet: what the build draws today. Items with their own colours
-      (collectables, fruit) are on the sheet too, ONE COPY PER COLOUR the game draws them in, each
-      colour painted apart (its own keys).
+  - What to send (with the phase-A question; Dean 2026-10-14, rules of 2026-10-19 for ALL games):
+    - `<game>_PAINTING_SPRITES.png`: the fewest WHOLE figures that show every graphics byte
+      (`coloursheet.choose`, then `write(..., unique=False)`), in the colours the build draws today.
+      Why whole: "only the new pixels" of a figure that shares graphics with an earlier one looked
+      like corrupted characters to Dean. A pixel shown in two figures is one colour-map entry: `read`
+      takes a changed copy over an unchanged one and reports two different paints. (Engines written
+      before Rainbow still write unique=True: BRIEFING C2.)
+    - `<game>_REFERENCE_ALL_SPRITES.png` (`unique=False`, every figure): to see the result; not read back.
+    - Items with their own colours (collectables, fruit): ONE COPY PER COLOUR the game draws them in,
+      each painted apart (its own keys).
     - Many figures -> split: one sheet per level, one for the collectables, one for the player
       (`<game>_<PART>_PAINTING_SPRITES.png` / `_REFERENCE_ALL_SPRITES.png`, PART = PLAYER, ISLAND1..,
       LEVEL1.., COLLECTABLES).
@@ -261,10 +254,21 @@ cases with a synthetic map per figure, a wrong check byte (must be ignored) and 
 full RZX run uses it.
 Also simulate the start-up tail: registers restored, no game memory touched.
 
-Long runs (the full `auto` with verification, selftest): detached + polled, LEARNINGS 2.6.
-Iterate fast (BRIEFING C3b ITERATE): while developing use `--quick N` (a few hundred frames for a
-first check, 2000 before handing over) and the unit tests on 1-2 captured states (minutes). Run the full `auto` ONCE, on the build that goes to the user (Commando ran
-the ~55 min full check five or six times).
+Long runs (the full verification, selftest): detached + polled, LEARNINGS 2.6.
+Iterate fast (BRIEFING C3b ITERATE): while developing use `--quick N` and the unit tests on 1-2
+captured states (minutes). N must reach the first call of every hook the unit tests capture
+states from, or the run FAILS for lack of a state (Lode Runner at 300 frames: "no captured draw
+state"; Commando: "no plot reused a cached image"): start at 2000. One quick run per change; read
+its counters before changing anything else.
+The full verification runs ONCE, on the build that goes to the user, and it is the stamping run:
+write the evidence record first (step 7), commit, then `python selftest.py --game <record> --verify
+--stamp` (the record's verify recipe + the rebuild MD5s; it stamps the record, so the maintainers'
+`--affected` before the merge has nothing left to do for this game). Never a separate full `auto`
+as well (Commando ran the ~55 min full check five or six times).
+Unit cases: cross only the inputs that interact. Every graphic x every position edge is one
+product; colours, slots and similar independent inputs need each value once, on a few graphics -
+not every combination (Jetpac's 5,616 graphic cases are 117 graphics x 8 positions x 3 inks x 2
+slots; 117 x 8 + the inks and slots once each covers the same guard edges).
 
 ## 6b. Hardware risk review (before every build the user tests)
 Go through BRIEFING A1 "Simulator blind spots" item by item for what changed since the last
@@ -280,5 +284,6 @@ engine) to docs/profiles/, games/<game>.md, and the evidence record docs/records
 `data` = your engine's files, `rebuild.decisions` = the run's <name>_decisions.json, `status` =
 the STATUS row), then `python -m nexclash.records views` (regenerates STATUS / VERIFICATION
 checksums / verified.json). Check it: `python -m nexclash.records deps <game>` lists what your
-game's evidence depends on; the maintainers' selftest stamps it. Touched shared code (e.g. the
-dispatch line in nexclash.py)? `python selftest.py --canary`.
+game's evidence depends on; the one full verification (step 6) stamps it. The engine's line in
+nexclash/engines.py is not shared code (rebuild-only); anything else outside your engine is:
+`python selftest.py --canary`.

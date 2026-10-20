@@ -54,7 +54,13 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RECORDS = os.path.join(ROOT, 'docs', 'records')
 PKG = os.path.join(ROOT, 'nexclash')
-ALWAYS = ['nexclash.py']                                   # dispatch: every build goes through it
+ALWAYS = ['nexclash.py', 'nexclash/engines.py']            # dispatch: every build goes through them
+# Shared files whose change needs a REBUILD only, never a re-verification: they run no verification
+# code, and any effect they can have on a game shows in its rebuilt MD5s. Keep this list short and
+# give the reason; a file that runs verification code never belongs here.
+REBUILD_ONLY = {
+    'nexclash/engines.py': 'engine registry: a table + a loop that picks the module (engines.py docstring)',
+}
 
 
 # ------------------------------------------------------------------------------------ records
@@ -162,7 +168,7 @@ def plan(recs=None, full=False):
         ch_checked = changed(r.get('checked', {}).get('deps'), now)
         ch_verified = changed(r.get('verified', {}).get('deps'), now)
         mine = [p for p in ch_verified if p in own(r)]
-        shared = [p for p in ch_verified if p not in own(r)]
+        shared = [p for p in ch_verified if p not in own(r) and p not in REBUILD_ONLY]
         if shared:
             shared_hit.setdefault(r['engine'], set()).update(shared)
         if r.get('excluded'):
@@ -183,7 +189,8 @@ def plan(recs=None, full=False):
     for item in out:
         r, act = item[0], item[1]
         if r.get('representative') and act in ('rebuild', 'skip') and shared_hit.get(r['engine']) and r.get('verify'):
-            sh = sorted(p for p in changed(r.get('verified', {}).get('deps'), now_all[r['name']]) if p not in own(r))
+            sh = sorted(p for p in changed(r.get('verified', {}).get('deps'), now_all[r['name']])
+                        if p not in own(r) and p not in REBUILD_ONLY)
             if sh:
                 item[1], item[2] = 'reverify', 'representative of engine %s; shared files changed: %s' % (
                     r['engine'], ', '.join(sh[:4]))
@@ -223,6 +230,9 @@ def selfcheck():
         want = 'reverify' if r.get('representative') and r.get('verify') else 'rebuild'
         if p[r['name']] != want:
             bad.append('shared file: %s %s, want %s' % (r['name'], p[r['name']], want))
+    p = run('nexclash/engines.py')            # rebuild-only shared file: no re-verification anywhere
+    if any(a != 'rebuild' for a in p.values()):
+        bad.append('rebuild-only file (engines.py): %s' % {n: a for n, a in p.items() if a != 'rebuild'})
     if len(tid) < 2:
         bad.append('need two tid records to test a non-representative')
     p = run(verified_edit='nexclash/z80tonex.py')

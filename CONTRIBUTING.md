@@ -6,7 +6,7 @@
    (the report `new`/`auto` wrote; same path as README.md).
    The zip holds only files the session added or changed in the toolkit (code, .asm, profile,
    docs) plus the nexclash report. Game data (.z80/.rzx/.nex/.tap/...) is refused.
-   Changed anything outside your own engine (shared modules, nexclash.py's dispatch line, shared
+   Changed anything outside your own engine (shared modules, shared
    docs)? Say so in the note: `selftest.py --canary` needs the maintainers' private reference
    files, so you cannot run it; the maintainers run it, and `--affected`, before merging.
 3. Upload `nexclash_contribution_MyGame.zip`:

@@ -884,9 +884,9 @@ def _sim_class():
     return _rw_simulator()
 
 
-def _machine(Sim, mem, regs, ns):
+def _machine(Sim, mem, regs, ns, slot=None):
     from .rainbow import _machine as m
-    return m(Sim, mem, regs, ns)
+    return m(Sim, mem, regs, ns, slot)
 
 
 def _run_until(sim, stop, limit=4000000, each=None):
@@ -946,7 +946,7 @@ def truth(get, regs, pc):
     outs = []
     for fill in (0x00, 0xFF):
         m = _OrigView(get, fill)
-        s = _machine(Sim, m, list(regs), _NS(_Dummy))
+        s = _machine(Sim, m, list(regs), _NS(_Dummy), 'm')
         if not _run_until(s, _stop_for(pc, get, regs) if pc not in (PLOT, PLOT_M) else
                           (lambda r, sp0=regs[12]: r[24] in PLOT_RET and r[12] == sp0)):
             return None
@@ -1051,14 +1051,14 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         stop_ = _stop_for(pc, get, R)
         err = []
         o = _OrigView(get)
-        so = _machine(Sim, o, list(regs), _NS(_Dummy))
+        so = _machine(Sim, o, list(regs), _NS(_Dummy), 'o')
         if not _run_until(so, stop_):
             fail('original did not return', (pc,))
             return None
         alt = patch.alt_view(get)
         p = _PatchedView(get, ns, alt, psite, pscreen, patch.store, err)
         ns.events = []
-        sp_ = _machine(Sim, p, list(regs), ns)
+        sp_ = _machine(Sim, p, list(regs), ns, 'p')
         t0 = sp_.registers[25]
         if not _run_until(sp_, stop_, each=lambda r, b=[]: _safe(r, regs, ns, err, b, PUSHES.get(pc, 0))):
             fail('patched did not return', (pc,))
@@ -1272,7 +1272,7 @@ def run_commit(patch, st, log, mem_edit=None, ns=None, H=None):
     err = []
     p = _PatchedView(get, ns, patch.alt_view(get), psite, {}, patch.store, err)
     R = list(st['R'])
-    s = _machine(_sim_class(), p, R, ns)
+    s = _machine(_sim_class(), p, R, ns, 'commit')
     if not _run_until(s, _stop_for(62565, get, R), each=lambda r, b=[]: _safe(r, R, ns, err, b, 0)):
         err.append(('did not return',))
     return ns, ns.H, err
@@ -1400,9 +1400,9 @@ def unit_tests(patch, states, swapped=None, int_patch=None):
             psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
             pv = _PatchedView(get, ns, patch.alt_view(get), psite, {}, patch.store, err)
             ov = _OrigView(get)
-            so = _machine(_sim_class(), ov, list(R), _NS(_Dummy))
+            so = _machine(_sim_class(), ov, list(R), _NS(_Dummy), 'o')
             _run_until(so, lambda r: r[24] == pc + 3)
-            sp_ = _machine(_sim_class(), pv, list(R), ns)
+            sp_ = _machine(_sim_class(), pv, list(R), ns, 'p')
             _run_until(sp_, lambda r: r[24] == pc + 3, each=lambda r, b=[]: _safe(r, R, ns, err, b, 4))
             u['plot hook cases'] += 1
             ok = not err and all(so.registers[i] == sp_.registers[i] for i in CMP) and ov.ov == pv.ov

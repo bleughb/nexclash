@@ -2,7 +2,7 @@
 
 48K (16K game). Code: nexclash/jetpac.py, asm/jetpac_hooks.asm, asm/jetpac_tables.asm (GENERATED:
 `python -m nexclash.jetpac tables GAME.z80`, then `python tools/asm2profile.py jetpac`),
-docs/profiles/jetpac.json. Dispatch: nexclash.py cmd_auto, by signature at 30522 (the plotter).
+docs/profiles/jetpac.json. Dispatch: nexclash/engines.py, by signature at 30522 (the plotter).
 Reference: specnext reference/jetpac/Jetpac_1983_Ultimate_Play_The_Game_a_16K.z80 (Dean, 2026-10-19).
 NO RECORDING (Dean, 2026-10-19: "no rzx this time"): the differential test runs on a 6000-frame free
 run (jetpac.free_keys: menu 1/3/5, then Jetman walks, flies and fires both ways) + unit tests over

@@ -630,8 +630,8 @@ def _pair(patch, get, regs, ns, stops, alt):
     o, p = O(), P()
     ns.events = []
     from .rainbow import NextState
-    so = _machine(Sim, o, list(regs), NextState(patch))
-    sp_ = _machine(Sim, p, list(regs), ns)
+    so = _machine(Sim, o, list(regs), NextState(patch), 'o')
+    sp_ = _machine(Sim, p, list(regs), ns, 'p')
     if not (_run(so, stops, 400000) and _run(sp_, stops, 4000000)):
         err.append('did not return')
     for reg, want in ((0x50, 0xFF), (0x51, 0xFF), (0x52, 10), (0x07, 0)):

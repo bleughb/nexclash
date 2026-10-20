@@ -2,7 +2,7 @@
 Tool-chain canary stage 1 (`selftest.py --canary`; record "canary": 1): rebuilt on every session that touches shared code.
 
 48K. Code: nexclash/chuckie.py, asm/chuckie_hooks.asm, docs/profiles/chuckie_egg.json (after any
-.asm edit: `python tools/asm2profile.py chuckie_egg`). Dispatch: nexclash.py cmd_auto, by signature at 39500.
+.asm edit: `python tools/asm2profile.py chuckie_egg`). Dispatch: nexclash/engines.py, by signature at 39500.
 Reference: reference/Chuckie_Egg.z80 (Chuckie_Egg_1983_A__F_Software_a.z80, title screen) +
 reference/Chuckie_Egg.rzx (Dean, 2026-10-11).
 

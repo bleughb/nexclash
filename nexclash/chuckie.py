@@ -191,10 +191,10 @@ class NextState:
         return sprite_pixels(self.attr[i], self.pat)
 
 
-def _machine(Sim, mem, regs, ns):
+def _machine(Sim, mem, regs, ns, slot='o'):
     from skoolkit.simulator import R2
-    sim = Sim(mem, {})
-    sim.registers[:] = regs
+    from .simpool import machine
+    sim = machine(Sim, mem, regs, slot)
     R, ed = sim.registers, sim.after_ED
 
     def nn():
@@ -328,7 +328,7 @@ def event(patch, kind, get, R, ns, alt, Sim):
     so = _machine(Sim, o, list(R), NextState(b''))
     before = [list(a) for a in ns.attr]
     ns.events = []
-    sp_ = _machine(Sim, p, list(R), ns)
+    sp_ = _machine(Sim, p, list(R), ns, 'p')
     if not (_run(so, stop) and _run(sp_, stop)):
         return ['did not return'], 0
     ro, rp = so.registers, sp_.registers
@@ -359,7 +359,7 @@ def event(patch, kind, get, R, ns, alt, Sim):
         # canvas run: original with background (player) / screen (hens) zero -> its exact pixels
         Oc, _ = _overlays(pair, canvas)
         oc = Oc()
-        sc = _machine(Sim, oc, list(R), NextState(b''))
+        sc = _machine(Sim, oc, list(R), NextState(b''), 'c')
         if not _run(sc, stop):
             return f + ['canvas run did not return'], 0
         if kind == 'pl':

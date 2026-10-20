@@ -825,8 +825,8 @@ def _pair(patch, world, get, regs, stop, rom_img, sp_ret=None):
     p.conv = False
     ns = world.ns
     ns.events = []
-    so = _machine(Sim, o, list(regs), NextState(patch))
-    sp_ = _machine(Sim, p, list(regs), ns)
+    so = _machine(Sim, o, list(regs), NextState(patch), 'o')
+    sp_ = _machine(Sim, p, list(regs), ns, 'p')
     if not _run_to(so, stop, sp_ret):
         err.append('did not return')
     if not _run_to(sp_, stop, sp_ret, check=_isafe(sp_, regs, err)):
@@ -1218,7 +1218,7 @@ def _main_visited(get, regs, ret, sp_ret):
 
         def __len__(s):
             return 65536
-    sim = _machine(Sim, M(), list(regs), NextState(type('P', (), {'scratch': bytes(8192)})()))
+    sim = _machine(Sim, M(), list(regs), NextState(type('P', (), {'scratch': bytes(8192)})()), 'main')
     R, ops, mem = sim.registers, sim.opcodes, sim.memory
     seen = False
     n = 0
@@ -1671,7 +1671,9 @@ def auto(a, z80, name, out, say):
         say('Cache     : %d of %d converted plots reused an image already in a pattern slot (no upload); '
             'negative control (lookup ignores the frame) over %d frames %s -> %s' % (
                 c['converted, image reused from a pattern slot'], c['converted'], NEG_CACHE_FRAMES,
-                'detected' if cneg else 'NOT detected', 'PASS' if cneg else 'FAIL'))
+                'detected' if cneg else 'NOT detected',
+                'PASS' if cneg and c['converted, image reused from a pattern slot'] > 0 else
+                'FAIL (no plot reused a cached image: run more frames)' if cneg else 'FAIL'))
     ic, iex = init_tests(patch, z80, negative_init_patch())
     iok = not ic['init failures!'] and ic['init negative control detected'] == ic['init negative control cases']
     ok = ok and iok

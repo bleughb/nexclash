@@ -554,10 +554,10 @@ class NextState:
         return out
 
 
-def _machine(Sim, mem, regs, ns):
+def _machine(Sim, mem, regs, ns, slot='o'):
     from skoolkit.simulator import R2
-    sim = Sim(mem, {})
-    sim.registers[:] = regs
+    from .simpool import machine
+    sim = machine(Sim, mem, regs, slot)
     R, ed = sim.registers, sim.after_ED
 
     def nn():
@@ -703,7 +703,7 @@ def event(patch, get, R, ns, Sim, cmap):
     so = _machine(Sim, o, list(R), NextState(b''))
     before = [list(a) for a in ns.attr]
     ns.events = []
-    sp_ = _machine(Sim, p, list(R), ns)
+    sp_ = _machine(Sim, p, list(R), ns, 'p')
     low0 = LOW_SP[0]
     LOW_SP[0] = 0x10000
     if not (_run(so, stop) and _run(sp_, stop, track=True)):
@@ -773,7 +773,7 @@ def event(patch, get, R, ns, Sim, cmap):
     # the original's figure drawn on a zero screen, against the slot's sprite
     Oc, _ = _overlays(get, psite, (0x4000, 0x5800))
     oc = Oc()
-    sc = _machine(Sim, oc, list(R), NextState(b''))
+    sc = _machine(Sim, oc, list(R), NextState(b''), 'c')
     if not _run(sc, stop):
         return f + ['canvas run did not return'], 0
     drawn = _screen_set(oc.ov)

@@ -100,13 +100,33 @@ def _call(mem, pc, regs=None):
     return mem
 
 
+_BUILT = {}
+
+
+def _memo(m0, *key):
+    """alien_mem / carry_mem results per (snapshot memory, key): the unit tests ask for the same
+    level / part thousands of times (Jetpac: 4,008 builder runs -> a few dozen)."""
+    k = (hash(bytes(m0)),) + key
+    if k not in _BUILT:
+        _BUILT[k] = (alien_mem_ if key[0] == 'a' else carry_mem_)(m0, *key[1:])
+    return _BUILT[k]
+
+
 def alien_mem(m0, level):
+    return _memo(m0, 'a', level)
+
+
+def carry_mem(m0, level, part):
+    return _memo(m0, 'c', level, part)
+
+
+def alien_mem_(m0, level):
     mm = list(m0)
     mm[LEVEL] = level
     return _call(mm, 26921)
 
 
-def carry_mem(m0, level, part):
+def carry_mem_(m0, level, part):
     mm = list(m0)
     mm[LEVEL], mm[PART] = level, part
     return _call(mm, 28409, {'A': (part << 3) & 56})
@@ -338,10 +358,10 @@ class NextState:
         return out
 
 
-def _machine(Sim, mem, regs, ns):
+def _machine(Sim, mem, regs, ns, slot='o'):
     from skoolkit.simulator import R2
-    sim = Sim(mem, {})
-    sim.registers[:] = regs
+    from .simpool import machine
+    sim = machine(Sim, mem, regs, slot)
     R, ed = sim.registers, sim.after_ED
 
     def nn():
@@ -454,7 +474,7 @@ def event(patch, kind, get, R, ns, alt, Sim):
     so = _machine(Sim, o, list(R), NextState(b''))
     before = [list(a) for a in ns.attr]
     ns.events = []
-    sp_ = _machine(Sim, p, list(R), ns)
+    sp_ = _machine(Sim, p, list(R), ns, 'p')
     if not (_run(so, stop) and _run(sp_, stop)):
         return ['did not return'], 0
     ro, rp = so.registers, sp_.registers
@@ -497,7 +517,7 @@ def event(patch, kind, get, R, ns, alt, Sim):
     # nw: the original's new figure, drawn on a zero screen, against the object's sprites
     Oc, _ = _overlays(get, alt, psite, (0x4000, 0x5800))
     oc = Oc()
-    sc = _machine(Sim, oc, list(R), NextState(b''))
+    sc = _machine(Sim, oc, list(R), NextState(b''), 'c')
     if not _run(sc, stop):
         return f + ['canvas run did not return'], 0
     drawn = _screen_set(oc.ov)
@@ -632,9 +652,11 @@ def _to_site(R, mem, gaddr, x, y, ink, ix):
     r[24] = 29247
     r[4], r[5] = gaddr >> 8, gaddr & 255
     r[8], r[9] = ix >> 8, ix & 255
-    sim = Sim(mem, {})
-    sim.registers[:] = r
-    if not _run(sim, lambda q: q[24] == 29263, 5000):
+    from .simpool import machine, copy_back
+    sim = machine(Sim, mem, r, 'site', copy=True)
+    done = _run(sim, lambda q: q[24] == 29263, 5000)
+    copy_back(sim, mem)
+    if not done:
         return None
     return list(sim.registers)
 

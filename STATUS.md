@@ -34,8 +34,9 @@ Platform on hardware: alt ROM ($8C) PASS 2026-09-27; plain 48K and 128K conversi
    Resistance, the pinned sjasmplus, asm2profile, the analysis commands and the canary - zip users
    get "not supported" for Commando and Midnight Resistance.
    Publish v0.1.4 after `python selftest.py --stamp` passes (CLAUDE.md, End of every task). v0.1.0 has no zip.
-1. Engine registry: each engine registers identify/auto instead of a dispatch block in
-   nexclash.py (selftest now covers every game: docs/records).
+1. Engine registry: auto's dispatch is nexclash/engines.py (2026-10-20; rebuild-only in
+   records.plan(), so a new game no longer re-verifies every engine). Still to do: identify / patch
+   through the same table.
 2. `identify` reports unknown for Rainbow, Chuckie Egg, Wally, Commando and Midnight Resistance (auto dispatches by
    signature in cmd_auto): add signatures.json / identify entries.
 3. Generic builder covers the TID engine only; next: XOR template (generalise nexclash/dizzy1.py:
@@ -51,3 +52,8 @@ Platform on hardware: alt ROM ($8C) PASS 2026-09-27; plain 48K and 128K conversi
 10. Recolour for every game (Dean, 2026-10-14; PLAYBOOK 3b "RECOLOUR"): shared command, guard and
    skill done; engines with recolour: dizzy1, wally2 (Everyone's a Wally updated). Midnight Resistance has the sheet but no recolour
    (a repaint = rebuild + verify); the other engines have neither sheet nor recolour yet.
+11. Stamps are stale on main (2026-10-20): `python -m nexclash.records plan` wants a re-verification
+   of every engine (own files of dizzy1, wally2, jetpac, lode runner, renegade, midres changed after
+   their last stamp; shared files for the rest), so each `--affected --verify` re-ran all of them.
+   Clear it once with `selftest.py --affected --verify --stamp` and keep stamping in the game's own
+   PR (PLAYBOOK 6: the one full verification is the stamping run).
