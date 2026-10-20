@@ -46,12 +46,10 @@ game never touches (step 3 proves this: `scan`); override with `--tail ADDR`.
 
 ## 2. Identify the engine
 `python nexclash.py identify GAME.z80` covers the TID and Dizzy 1 engines (docs/profiles/
-signatures.json); the dedicated engines
-(Chuckie Egg, Wally / wally2, Rainbow, Commando, Midnight Resistance, Smash TV, Target Renegade)
-are recognised by their own checks in `auto` (is_<engine>, profile `signature`; the list is
-nexclash/engines.py),
-so `identify` says unknown for them. Search the snapshot for these byte signatures. A new engine
-adds one line to nexclash/engines.py.
+signatures.json); the dedicated engines are recognised by their own checks in `auto`
+(is_<engine>, profile `signature`; the table is nexclash/engines.py), so `identify` says unknown
+for them (BRIEFING C2 #18). Search the snapshot for their byte signatures. A new engine adds one
+line to nexclash/engines.py.
 If a known engine matches, align its plotter/eraser instruction-by-instruction
 against the known game's (normalise 4-5 digit operands to N; where the opcode
 text matches, the numbers map old->new). Then locate by pattern:
@@ -180,8 +178,8 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   draw (T-states), draws per frame and per object; set the allowed hook cost per draw now, and design to it (caching, fewer
   uploads). Commando's first solid hooks cost ~18x the original draw and were redesigned.
   Measure the HOOK cost too, before the user tests: T per game frame of the patched runs in the
-  verifier's pair runs (no tool yet, BRIEFING C2 #11); code under NEXTREG $07=3 runs ~7-8x faster
-  than the simulator's T suggests. Midnight Resistance's first commit cost ~1.5 TV frames per game
+  verifier's pair runs (no tool yet, BRIEFING C2 #1); code under NEXTREG $07=3 costs (T + memory reads)
+  / 8 in 3.5 MHz T - about 6x faster, not 8x (LEARNINGS 2.1f). Midnight Resistance's first commit cost ~1.5 TV frames per game
   frame; a pattern-slot cache brought it to 15-60K T.
 
 - Pixel art is the user's. Say so: an AI is not a good pixel artist (it sees a pixel grid
@@ -220,14 +218,21 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
 Hooks: asm/<engine>_hooks.asm with `SAVEBIN "<prefix>_<key>.bin"` per block and
 `"hooks": {"source": "asm/<engine>_hooks.asm", ...}` in the profile; after every edit
 `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex + symbols).
-Copy the nearest builder (TID-engine: build.py TidPatch;
-XOR: dizzy1.py (shadow screen + Layer 2); non-Codemasters: chuckie.py (simplest), wally.py, rainbow.py, commando.py
-(128K BASIC loader, front end, depth, cached solid sprites), midres.py (interrupts on, hook page at
-slot 5, CALL-target redirect into a scratch buffer, sprites built at a commit with a pattern-slot
-cache, per-cell colours, per-pixel colour map), smashtv.py (game's own plotters into a scratch buffer
-at slot 7, see-through outline), renegade.py (alt ROM images 0 + 1, loading-screen front end),
-wally2.py (every figure on a double-buffered Layer 2, outline)), change the profile block and site
-list, rebuild the asm. STATUS.md lists every engine with its games/ file.
+Copy the nearest engine (module + asm + profile + games/ file; STATUS.md lists every engine):
+| Engine | Template for |
+|---|---|
+| build.py TidPatch | Codemasters TID engine (generic builder) |
+| chuckie.py | the simplest: 48K, stateless alt-ROM hooks (no RAM page), interrupts on |
+| jetpac.py | 16K game, run-time graphics buffers, no RZX (free runs with a key schedule) |
+| loderunner.py | XOR plotter, hooks in RAM (the game reads the alt ROM), figures printed as tiles |
+| dizzy1.py | pure XOR to the screen: 1-bit shadow screen + Layer 2, outlines, plots at 28 MHz |
+| wally.py / wally2.py | back-buffer composer, interrupts off / every figure on a double-buffered Layer 2 |
+| midres.py | interrupts on, all RAM used: hook page at slot 5, CALL-target redirect into a scratch buffer, pattern-slot cache, per-pixel colour map |
+| smashtv.py | the game's own plotters into a scratch buffer at slot 7, no frame sync, see-through outline |
+| commando.py | 128K BASIC loader, front end, depth from walk boxes, cached solid sprites |
+| renegade.py | alt ROM images 0 + 1, loading-screen front end |
+| rainbow.py | full redraw / tile composer, 128K (large; excluded from automatic checks) |
+Change the profile block and site list, rebuild the asm.
 Every site keeps its original-byte check.
 Colour map (every game, PLAYBOOK 3b): the sprite builder applies `<record>_colours.json` per pixel -
 key = the graphics byte the pixel comes from, a non-zero nibble replaces the default colour of an
@@ -255,7 +260,7 @@ full RZX run uses it.
 Also simulate the start-up tail: registers restored, no game memory touched.
 
 Long runs (the full verification, selftest): detached + polled, LEARNINGS 2.6.
-Iterate fast (BRIEFING C3b ITERATE): while developing use `--quick N` and the unit tests on 1-2
+Iterate fast (the two levels: BRIEFING C3b): while developing use `--quick N` and the unit tests on 1-2
 captured states (minutes). N must reach the first call of every hook the unit tests capture
 states from, or the run FAILS for lack of a state (Lode Runner at 300 frames: "no captured draw
 state"; Commando: "no plot reused a cached image"): start at 2000. One quick run per change; read

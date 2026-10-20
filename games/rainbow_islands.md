@@ -42,7 +42,7 @@ overrides (profile `objects`). Dean has the most recent core (tilemap in bank 7)
 2026-10-19 (Dean asked for speed + "sound slowdowns"; plan agreed in chat): the commit never waits
 for the beam (at the next interrupt instead); music = one AY tick per interrupt; faster tile
 composer; Next techniques from his research (OUT/OUTI sprite writes). No copper (CPU/copper
-NextReg-pair conflict, LEARNINGS 1.5). Tile-build cap per render ((b): items briefly on the ULA)
+NextReg-pair conflict, TECHNIQUES 1). Tile-build cap per render ((b): items briefly on the ULA)
 offered, not chosen.
 2026-10-19 (after c5e1823d): rainbows WITHOUT border - all of them (tile pieces codes 1-14 and the
 thrown rainbow sprite, class C3 outline transparent); collectables' INSIDE pixels (enclosed paper)
@@ -693,17 +693,17 @@ drawn on top.
    (rule: paper between ink pixels in its row or column) - waiting for Dean's review. The tilemap
    now exists: B tiles can go into the same map with attribute bit 0 = 1 (ULA over the tile) and
    ULA paper made transparent there - needs a free tile budget (176 shared) and a palette plan.
-   Guide r3 review 2026-10-19 (LEARNINGS 1.5): per-tile "ULA over" (attribute bit 0) is ignored
+   Guide r3 review 2026-10-19 (TECHNIQUES 1): per-tile "ULA over" (attribute bit 0) is ignored
    while $6B bit 0 = 1, and tcommit writes $6B = $81 - layer B needs $6B = $80 (the current tiles
    all have bit 0 = 0, so the picture is otherwise unchanged). Alternative for "paper made
    transparent": ULA paper palette entries (16-31) are separate from inks, so the one paper colour
    to see through can be set equal to the global transparency $14 without touching inks.
 1. Revisions/optimisations: 2026-10-19 build done: no raster wait (instead of (d)), OUT/OUTI commit
-   ((a) without lockstep), faster tile composer, music queue. Remaining candidates from the 2026-10-19 research (LEARNINGS 1.5; all documented, untested; each needs the
+   ((a) without lockstep), faster tile composer, music queue. Remaining candidates from the 2026-10-19 research (TECHNIQUES 1; all documented, untested; each needs the
    simulator taught first and a hardware A/B):
    (a) piece loop: 5 NEXTREGs + $34 per sprite (~180 T) -> simplest: NextReg $09 bit 4 (lockstep)
        in setup, keep the loop, replace the 5 NEXTREGs by OUT (C),r to port $57 (~77 T per sprite;
-       LEARNINGS 1.5); or two passes + one OTIR of all attributes (~105 T). Pattern OTIR -> unrolled
+       TECHNIQUES 1); or two passes + one OTIR of all attributes (~105 T). Pattern OTIR -> unrolled
        OUTINB (16 vs 21 T/byte, 64 bytes per piece).
    (b) hide loop (.hide): NEXTREG $34 once, then NEXTREG $78,0 per sprite.
    (c) tcommit's 20 x 64-byte LDIR (~27,000 T): keep full 80-byte rows in the shadow and copy the
@@ -716,14 +716,14 @@ drawn on top.
    (e) tilemap switched off when the scroll is not a multiple of 8: follow it with $31 (pixel
        scroll) instead; (f) dedupe tile definitions by mirror / rotation (attribute bits 3:1);
        512-tile mode does NOT help (the limit is bank 7's 8K, not the 256 index range).
-   (g) tilemap TEXT mode ($6B bit 3; LEARNINGS 1.5, wiki, not tested): 1-bit tile definitions, 8
+   (g) tilemap TEXT mode ($6B bit 3; TECHNIQUES 1, wiki, not tested): 1-bit tile definitions, 8
        bytes instead of 32, colour = a 7-bit palette offset per tile (attribute bits 7:1) - 4x the
        definitions in bank 7's 8K. Check first that every cell the tilemap shows is ONE colour on
        paper (Spectrum cells are 1-bit + ink, but the build's cell colours / outlines may use more).
        NOT 1-byte map entries ($6B bit 5): they drop the per-tile palette offset Rainbow uses.
 1b. rsafe reads the raster line ONCE ($1E then $1F): a board with core 3.1.0 at 3.5 MHz has read
    wrong $1F values (Ped7g's ScanlineReadingAndInterrupt test), and a 255 -> 256 crossing between
-   the two reads is 256 lines off. Read the pair until two consecutive reads agree (LEARNINGS 1.5
+   the two reads is 256 lines off. Read the pair until two consecutive reads agree (TECHNIQUES 1
    "Hardware ground truth"); a wrong read here commits during the visible frame (tearing).
 2. Later islands: banks 3/4/6 never paged in either RZX; need a recording past island 1 (item
    graphics change there: GCOPY invalidation is unit-proven only through the model).

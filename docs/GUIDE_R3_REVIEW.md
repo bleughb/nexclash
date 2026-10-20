@@ -28,9 +28,9 @@ Tooling (sjasmplus 1.18.2, CSpect 2.13, DeZog), changelog, licence. Nothing for 
   [NEXT_REGISTERS ports].
 
 ## DMA (read in full)
-- OK with LEARNINGS 1.5 / NEXT_REGISTERS: WR0-WR6, command bytes, continuous mode, port 0x6B since
+- OK with TECHNIQUES 1 / NEXT_REGISTERS: WR0-WR6, command bytes, continuous mode, port 0x6B since
   core 3.1.2, interrupts lost while the DMA owns the bus.
-- NEW [LEARNINGS 1.5]: the ~4 cycles/byte figure needs the timing byte on BOTH ports (default =
+- NEW [TECHNIQUES 1]: the ~4 cycles/byte figure needs the timing byte on BOTH ports (default =
   Z80 cycle timing); registers persist (repeat = WR0 + load + enable); WR6 $D3 Continue makes
   chunked transfers 2 OUTs each; burst mode + prescaler leaves the CPU able to take interrupts;
   WR4 mode 00 / WR0 op 10-11 must not be used (Zilog modes, may change); read mask / status byte
@@ -41,12 +41,12 @@ Tooling (sjasmplus 1.18.2, CSpect 2.13, DeZog), changelog, licence. Nothing for 
 
 ## Palette
 - OK: $40/$41/$43, auto-increment values $10/$20/$30.
-- NEW [LEARNINGS 1.5, NEXT_REGISTERS $43]: $43 bit 7 = 1 turns auto-increment OFF; bits 3:1 select
+- NEW [TECHNIQUES 1, NEXT_REGISTERS $43]: $43 bit 7 = 1 turns auto-increment OFF; bits 3:1 select
   the DISPLAYED palette per layer and bit 0 ULANext, so every $43 write also sets them; two
   palettes per layer (one-write recolour).
-- NEW [LEARNINGS 1.5]: Layer 2 per-colour PRIORITY (second $44 write, bit 7) draws that colour above
+- NEW [TECHNIQUES 1]: Layer 2 per-colour PRIORITY (second $44 write, bit 7) draws that colour above
   every layer, sprites included - a depth tool for Layer 2 builds (Dizzy 1).
-- NEW [LEARNINGS 1.5, games/rainbow_islands.md Open 0]: classic ULA palette = ink 0-15, paper
+- NEW [TECHNIQUES 1, games/rainbow_islands.md Open 0]: classic ULA palette = ink 0-15, paper
   16-31, separately editable - one paper colour can be made transparent via $14.
 
 ## ULA layer
@@ -63,23 +63,23 @@ OK throughout (layout, attributes, PIXELAD/PIXELDN/SETAE, shadow screen 7FFD bit
 ## Tilemap (+ core nextreg.txt)
 - OK: 2-byte entries, palette offset per tile, $4C before the offset, $1B clip (X doubled), bank 7
   via $6E/$6F bit 7 (core 3.01.08; the guide predates it and says bank 5 only).
-- NEW / CONFLICT WITH A PLAN [LEARNINGS 1.5, rainbow Open 0]: $6B bit 0 = 1 forces the tilemap over
+- NEW / CONFLICT WITH A PLAN [TECHNIQUES 1, rainbow Open 0]: $6B bit 0 = 1 forces the tilemap over
   the ULA and overrides the per-tile ULA-over bit; Rainbow writes $81, so its layer-B plan needs $80.
-- NEW [LEARNINGS 1.5, rainbow Open 1]: 512-tile mode (attribute bit 0 becomes tile bit 8) does not
+- NEW [TECHNIQUES 1, rainbow Open 1]: 512-tile mode (attribute bit 0 becomes tile bit 8) does not
   help Rainbow (the limit is bank 7's 8K); double-buffering the map there costs 80 of 176 tiles.
-- NEW [LEARNINGS 1.5]: stencil mode ($68 bit 0), text mode ($6B bit 3), $68 bit 7 ULA off.
+- NEW [TECHNIQUES 1]: stencil mode ($68 bit 0), text mode ($6B bit 3), $68 bit 7 ULA off.
 
 ## Sprites (read in full)
 - OK: pattern RAM, 4-bit anchor halves (the guide's relative-sprite N6 row reads the other way -
   already flagged in LEARNINGS 1.4), $4B, 0x303B status, $15 bit 6, $19 clip, $75-$79 increment on
   each write, composite vs unified inheritance.
-- NEW [LEARNINGS 1.5]: in a 0x57 stream, a hide record with byte 3 = 0 is 4 bytes long and shifts
+- NEW [TECHNIQUES 1]: in a 0x57 stream, a hide record with byte 3 = 0 is 4 bytes long and shifts
   every later sprite - hide with $40.
 - NEW [NEXT_REGISTERS 0x303B]: the same write selects the attribute index (bits 6:0) for 0x57.
 
 ## Copper (read in full, plus companion code copper/)
-- OK with LEARNINGS 1.5 (instructions, modes, $63 pairs, MOVE range 0x01-0x7F, line 0 = ULA row 0).
-- NEW [LEARNINGS 1.5]: every index-sharing register pair ($40/$41/$44, $1C with $18-$1B, $34 with
+- OK with TECHNIQUES 1 (instructions, modes, $63 pairs, MOVE range 0x01-0x7F, line 0 = ULA row 0).
+- NEW [TECHNIQUES 1]: every index-sharing register pair ($40/$41/$44, $1C with $18-$1B, $34 with
   $35-$39, $61/$62 with $60/$63) must not be driven by both copper and CPU; live patch = same-mode
   $61/$62 + one $60 write; DMA upload = $63 selected on 0x243B, DMA to 0x253B; NEX files can carry
   a 2048-byte copper block (wiki NEX_file_format).
@@ -147,15 +147,15 @@ clrhome.org/table is the Z80-only original (undocumented opcodes in red).
 ## Follow-up: open-source Next titles (itch.io playlist, same day)
 Of the itch.io "Complete ZX Spectrum Next Playlist" (64 of 174 pages checked), full source was
 offered by 4: ZxNext Studio TechDemo (GitHub, read: lockstep $09 + OUT to $57 attributes, unrolled
-OUTINB pattern upload -> LEARNINGS 1.5), CosmoScroll (page claims the port source is in
+OUTINB pattern upload -> TECHNIQUES 1), CosmoScroll (page claims the port source is in
 github.com/abodelot/cosmoscroll - neither branch holds Next code), Happy Next Year 2026 and
 Z-machine Loader (itch.io downloads, unreachable from the sandbox). Happy Next Year 2026's .asm
-files were then supplied by Dean and read in full -> LEARNINGS 1.5 (4-byte attribute records,
+files were then supplied by Dean and read in full -> TECHNIQUES 1 (4-byte attribute records,
 double-buffered pattern slots, per-frame copper rebuild by DMA, DMA overlap fill, unverified
 $15-resets-clip claim).
 
 ## Open after this review
 - Which NextRegs NEXLOAD resets (NEX byte 134 = 0) - decides BRIEFING C2 #26.
 - $C4 soft-reset value (core $83 vs guide).
-- Everything in LEARNINGS 1.5: untested; the first engine to use a technique teaches the simulator
+- Everything in TECHNIQUES 1: untested; the first engine to use a technique teaches the simulator
   and records the hardware result.
