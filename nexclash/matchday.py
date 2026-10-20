@@ -287,6 +287,23 @@ def footprint_pixels(fp):
     return out
 
 
+def enclosed(px):
+    """Paper pixels of a figure not reachable from outside its box through paper (4-connected):
+    the gaps the original shows the pitch through."""
+    ink = set(px)
+    x0, x1 = min(x for x, _ in px) - 1, max(x for x, _ in px) + 1
+    y0, y1 = min(y for _, y in px) - 1, max(y for _, y in px) + 1
+    seen, st = {(x0, y0)}, [(x0, y0)]
+    while st:
+        x, y = st.pop()
+        for q in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if x0 <= q[0] <= x1 and y0 <= q[1] <= y1 and q not in seen and q not in ink:
+                seen.add(q)
+                st.append(q)
+    return [(x, y) for x in range(x0, x1 + 1) for y in range(y0, y1 + 1)
+            if (x, y) not in ink and (x, y) not in seen and 0 <= x < 256 and 0 <= y < 192]
+
+
 def preview(z80, rzx, frames, out):
     """Original | planned: the ULA without the figures (ULA XOR shadow, figure cells left in the pitch
     colours) + every figure as a sprite, solid colours by role: STRIP above the bottom 8 rows of the
@@ -314,16 +331,23 @@ def preview(z80, rzx, frames, out):
                     px = footprint_pixels(fp)
                     if px:
                         figs.append((max(y for _, y in px), who, px))
+                strips = collections.Counter(c[0] for w, c in cols.items() if objs.get(w))
                 for bottom, who, px in sorted(figs, key=lambda t: t[0]):
-                    top = min(y for _, y in px)
+                    if who == 'ball':
+                        for (x, y) in px:
+                            im.putpixel((x, y), (255, 255, 255))
+                        continue
+                    strip, socks = cols.get(who, (7, 7))
+                    # solid (Dean 2026-10-20): the enclosed paper in the opposite team's colours
+                    opp = [c for c in strips if c != strip]
+                    ostrip = opp[0] if opp else strip
+                    osocks = next((c[1] for w, c in cols.items() if c[0] == ostrip and c[1] != c[0]), ostrip)
+                    for (x, y) in enclosed(px):
+                        c = SPEC_RGB[osocks if y > bottom - 8 else ostrip]
+                        im.putpixel((x, y), tuple(min(255, v + 50) for v in c))
                     for (x, y) in px:
-                        if who == 'ball':
-                            c = (255, 255, 255)
-                        else:
-                            strip, socks = cols.get(who, (7, 7))
-                            c = SPEC_RGB[socks if y > bottom - 8 else strip]
-                            c = tuple(min(255, v + 50) for v in c)
-                        im.putpixel((x, y), c)
+                        c = SPEC_RGB[socks if y > bottom - 8 else strip]
+                        im.putpixel((x, y), tuple(min(255, v + 50) for v in c))
             img.paste(im.resize((512, 384), Image.NEAREST), (side * 520, n * 392))
     img.save(out)
     return sorted(cap.shots), cap

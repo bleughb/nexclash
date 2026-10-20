@@ -66,7 +66,18 @@ Phase A done (analysis, shadow model, sheets, preview); waiting for Dean's desig
   are on the sheet as "From the code (not in the recording yet)" (single frames; dive frames as
   left/right pairs; uppers alone).
 
-## Phase A proposal (sent to Dean 2026-10-20, answer pending)
+## Dean's decisions (2026-10-20)
+- Players SOLID: the see-through pixels (paper enclosed by the figure, `matchday.enclosed`) in the
+  OPPOSITE team's colours (strip rows: its strip colour, socks rows: its socks colour). Preview:
+  match_day_PREVIEW_solid.png (sent for confirmation).
+- Bottom edge: as the original (figures drawn over the score line, no clipping).
+- Keeper dive "torn in half" (Dean, from the preview): the ORIGINAL tears the same way - the keeper
+  and the spare object 0xB6AC are drawn on alternate frames, so while the camera scrolls one half
+  lags one update (~4 px; RZX frame 3760: halves 12 px apart instead of 8 by ink, frames 92/93 fit
+  exactly 16 px apart). Proposed fix (told to Dean): the spare half's sprite placed at the keeper
+  half's position + 16 px, not where the game drew it; the shadow model and the logic unchanged.
+
+## Phase A proposal (sent to Dean 2026-10-20)
 - Sprites: every player (both teams, keepers, the dive joined), ball, ball shadow. ULA: pitch,
   lines, goals, crowd, clock, score, menus, the walk-on scene (2x overwriting plotter, no clash
   problem on a still screen).
@@ -78,8 +89,8 @@ Phase A done (analysis, shadow model, sheets, preview); waiting for Dean's desig
   every player.
 
 ## Open (ask, do not decide)
-1. The phase A design question above (figures, colours / roles, see-through or solid, depth, the
-   bottom HUD row: figures drawn over the score line or clipped at the pitch).
+1. Still unanswered from the phase A question: which figures (proposal above), the colour roles
+   + painting the sheet, depth rule. (Solid / opposite-team fill and bottom edge: answered.)
 2. A recording that reaches the rest of the frames (corners, throw-ins at both ends, more keeper
    dives, half time, extra time / replay, 2-player, the cup), so the sheet is from the game.
 3. Does any message window appear OVER the pitch (pause, goal)? Not seen in the RZX.
