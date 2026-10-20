@@ -25,6 +25,7 @@ ENGINES = [
     ('midres', 'is_midres', None),                                        # Midnight Resistance (128K)
     ('smashtv', 'is_smashtv', None),                                      # Smash TV (48K, BASIC loader)
     ('renegade', 'is_renegade', None),                                    # Target Renegade (128K, BASIC loader)
+    ('matchday', 'is_matchday', None),                                    # Match Day (48K)
 ]
 
 

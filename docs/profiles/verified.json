@@ -81,6 +81,14 @@
     "sprites": "bf137d41d3cc08221bf6fdda153c9de2"
    }
   },
+  "d5ea19e487141ce922d0e96c02fd9054": {
+   "game": "Match Day",
+   "doc": "match_day.md",
+   "nex": {
+    "plain": "5bda1d7890043f2ad09b7a58706bbb34",
+    "sprites": "6188bacdeb14ff291b2843a6774f3a3f"
+   }
+  },
   "67bf05d356d51b2b402d88c5f0cdfb21": {
    "game": "Midnight Resistance (128K)",
    "doc": "midnight_resistance.md",

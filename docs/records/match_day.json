@@ -1,0 +1,85 @@
+{
+ "name": "match_day",
+ "order": 17,
+ "game": "Match Day",
+ "doc": "match_day.md",
+ "engine": "matchday",
+ "representative": true,
+ "reference": "match_day",
+ "inputs": {
+  "snapshot": {
+   "name": "match_day.z80",
+   "md5": "d5ea19e487141ce922d0e96c02fd9054",
+   "path": "match_day/Match_Day_1985_Ocean.z80"
+  },
+  "recordings": [
+   {
+    "name": "match_day.rzx",
+    "md5": "79427a4aa442948ff7d8f6f15e178512",
+    "path": "match_day/Match_Day_1985_Ocean.rzx"
+   },
+   {
+    "name": "match_day_spectrumcomputing.rzx",
+    "md5": "04fd855b05d1849c117a91ee1199b9a3",
+    "path": "match_day/Match_Day_spectrumcomputing.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "matchday"
+ ],
+ "own_modules": [
+  "matchday"
+ ],
+ "data": [
+  "docs/profiles/match_day.json",
+  "asm/matchday_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": {
+   "engine": "matchday",
+   "strategy": "altrom hooks 0x2300-0x2C51 (ROM 0x22CB-0x3BFE never read), state page 26 at slot 6 while a hook runs",
+   "tail": "converter default (0xBD5D plain / 0xBD77 sprites)",
+   "colours": "docs/profiles/match_day_colours.json (none = role defaults: strip / socks from the game, fill pitch green)"
+  }
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "match_day.rzx",
+   "match_day_spectrumcomputing.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 90,
+  "note": "auto: differential verify of both recordings (56k frames) at every hook event - registers, game memory, screen writes, sprite pixels vs each figure's own XOR footprint on the original screen, depth order, the dive lock, per-instruction interrupt safety - + unit tests (every frame / upper body, edge walks, guards, full palette banks) with 2 negative controls"
+ },
+ "outputs": {
+  "plain": {
+   "file": "match_day.nex",
+   "md5": "5bda1d7890043f2ad09b7a58706bbb34"
+  },
+  "sprites": {
+   "file": "match_day_sprites.nex",
+   "md5": "6188bacdeb14ff291b2843a6774f3a3f"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Match Day",
+  "engine_col": "matchday (match_day.md)",
+  "build": "match_day_sprites.nex 6188bacd",
+  "software": "RZX IDENTICAL (2 recordings), unit PASS",
+  "hardware": "untested",
+  "next": "hardware test; Dean paints the sheet"
+ },
+ "checks": [
+  "asm2profile:match_day"
+ ]
+}

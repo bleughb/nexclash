@@ -53,6 +53,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Target Renegade (128K) (target_renegade): `target_renegade.nex` a0be8dc03a1be8c6d67dc3e0229abc35, `target_renegade_sprites.nex` e0b246e35d028c34170e1d1c52f00f5f; verified never
 - Jetpac (jetpac): `jetpac.nex` feff51b7038606d21c03c260055481e4, `jetpac_sprites.nex` c963b42f0e685d648d552656fde4d6f9; verified never
 - Lode Runner (lode_runner): `lode_runner.nex` cd0c1659c8569b2fa80da74962af90d2, `lode_runner_sprites.nex` 85fe6afd593679bf59c787230ba0eaca; verified never
+- Match Day (match_day): `match_day.nex` 5bda1d7890043f2ad09b7a58706bbb34, `match_day_sprites.nex` 6188bacdeb14ff291b2843a6774f3a3f; verified never
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

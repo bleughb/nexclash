@@ -7,7 +7,10 @@ Only disassemble routines the tools flag as unclassified.
 Phases (a long game may be one session per phase; each starts from games/<game>.md, never from
 chat history): A = steps 0-4 + design approval by the user; B = steps 5-6 (toolkit PASS);
 C = hardware rounds and fixes. Write decisions and open questions to games/<game>.md as they
-happen, so a new session can pick up any phase.
+happen, so a new session can pick up any phase - and in phase B the build's DESIGN too (sites,
+memory used, how each figure becomes a sprite, what the verify checks), before the first quick run.
+Why: Match Day (2026-10-20) lost the session's context mid-phase-B; the whole build existed only as
+code and a running job, and the next turn had to rediscover it from files and the process list.
 Why: Commando took five hardware rounds, each finding something a step below now covers.
 Rounds on a long game (phase C): offer to collect the user's whole list in one pass through the
 game, fix all of it, then check everything in ONE new pass; never restart the emulator unasked.

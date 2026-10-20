@@ -1,6 +1,9 @@
-# Match Day (Ocean, 1985; Jon Ritman / Chris Clarke) - engine `matchday` (phase A)
+# Match Day (Ocean, 1985; Jon Ritman / Chris Clarke) - engine `matchday`
 
-48K. Code: nexclash/matchday.py (phase A: facts, shadow model, colour-sheet capture, preview).
+48K. Code: nexclash/matchday.py (facts, shadow model, sheets, preview, build, verify, unit tests,
+recolour), asm/matchday_hooks.asm, docs/profiles/match_day.json (after any .asm edit:
+`python tools/asm2profile.py match_day`). Dispatch: nexclash/engines.py, `is_matchday` (profile
+signature).
 Reference (specnext/reference/match_day/): Match_Day_1985_Ocean.z80 + Match_Day_1985_Ocean.rzx
 (Dean, 2026-10-20; 6210 frames, 124 s: title, menu, walk-on scene, the first ~6 match minutes with
 a goal and a keeper dive) + Match_Day_spectrumcomputing.rzx (50403 frames, 1008 s; from
@@ -9,10 +12,10 @@ identical at every plotter / line writer, 13 bytes of game state differ). Manual
 
     python -m nexclash.matchday sheet   Match_Day_1985_Ocean.z80 Match_Day_1985_Ocean.rzx Match_Day_spectrumcomputing.rzx -o match_day
     python -m nexclash.matchday preview Match_Day_1985_Ocean.z80 Match_Day_1985_Ocean.rzx --at 2200,3760,5400,6100
+    python nexclash.py auto Match_Day_1985_Ocean.z80 --rzx Match_Day_1985_Ocean.rzx --rzx Match_Day_spectrumcomputing.rzx --no-record
 
 ## Status
-Phase A done (analysis, shadow model, sheets, preview); waiting for Dean's design answer
-(Open, below). No build yet.
+Phase A done and agreed (2026-10-20 16:43). Phase B (build) in progress.
 
 ## Snapshot (0b)
 - 48K, PC 0x0038 (in the ROM IM 1 handler), DI, IM 1, I=0x3F, SP 0xBDBC, border 0. Title/menu.
@@ -84,7 +87,7 @@ Phase A done (analysis, shadow model, sheets, preview); waiting for Dean's desig
   which covers all but frames 116-119 (unit tests for those).
 - Sheet: Dean paints it later; build with the defaults (roles) until then, recolour afterwards.
 
-## Phase A proposal (sent to Dean 2026-10-20)
+## Phase A proposal - AGREED by Dean 2026-10-20 16:43 ("1-3, i agree"; no messages over the pitch)
 - Sprites: every player (both teams, keepers, the dive joined), ball, ball shadow. ULA: pitch,
   lines, goals, crowd, clock, score, menus, the walk-on scene (2x overwriting plotter, no clash
   problem on a still screen).
@@ -96,9 +99,56 @@ Phase A done (analysis, shadow model, sheets, preview); waiting for Dean's desig
   every player.
 
 ## Open (ask, do not decide)
-1. Still unanswered from the phase A question: which figures (proposal above), the colour roles,
-   depth rule.
-2. Does any message window appear OVER the pitch (pause, goal)? Not seen in the RZX.
+(none from phase A; Dean found no message window over the pitch either)
+
+## Patch design (phase B)
+- Every plotter keeps running; its 42 screen / attribute writes become NOPs (matchday.SCREEN_NOPS:
+  the player XOR loops 0x8EF9..0x914E, the cell paints 0x9356..0x9385, the ball 0xA048..0xA05F),
+  so registers and game memory stay the original's and the ULA keeps only the scenery.
+- Hooks in alt ROM image 1 at 0x2300-0x2C51 (ROM 0x22CB-0x3BFE is never read: scan, both
+  recordings; 0x3BFF/0x3C00 = the game's IM 2 vector FF FF stays ROM; nothing at 0x3D00-0x3DFF).
+  Sites (original bytes checked): 0x8DEC e_bd (image build), 0x8D63 e_clr (the 4-row clear),
+  0x8B5C e_pl (CALL 0x8ECE, the XOR draw), 0x9D15 e_ball (CALL 0x9FCF), 0x817F e_frame (match
+  loop pass), 0xE62C e_cls (screen clear at match set-up), 0x819D e_exit (match loop exit).
+- State: RAM page 26 at MMU slot 6 only while a hook runs (slot 6 = the only slot the IM 2 handler
+  never touches -> interrupts stay ON); row tables (4-bit nibbles per graphics row, colours and
+  the green fill baked in) pages 28-31, one row's page at slot 6 while a pattern is built. Hook
+  stack 0x5BA8-0x5BFF (printer buffer bytes the game never touches). Hooks run at 28 MHz.
+- Images: each figure keeps a ring of its last builds / clears (dest, graphics row, shift, seq);
+  e_pl rebuilds the shown image row by row from the newest entry covering each buffer row (the
+  game reuses, partly rebuilds and clears its two buffers per figure). Figure k = buffer pair
+  index (IX+0x14 - 0xB736) / 192 (the depth sort swaps records). Patterns double buffered (built
+  while the other shows, switched in e_frame).
+- Colours: per-sprite palette offset per (strip, socks) pair (index 1 = IX+0x0E, 2 = IX+0x0F;
+  16 banks, allocated on demand), fixed colours 3-15, fill = palette index 7 (pitch green 0x14).
+- e_frame: sprites in depth order (shadow first, then players and ball by bottom y: lower =
+  in front), the dive's spare half 0xB6AC shifted by the camera difference (Dean's tear fix).
+- Recolour: RECOLOUR / recolour() (no rebuild); colours file docs/profiles/match_day_colours.json
+  (none yet = the role defaults).
+
+## Verification notes
+- The verify models the new image AS AT THE DRAW (0x8ECE): 0x8D63 clears the top 4 rows of the
+  buffer just drawn later in the same call (RZX frame 3882: an arm-up figure at the right edge;
+  the model read the buffer after the call and reported the hand as "sprite differs").
+- Explained notes (original behaviour): "edge-dispatch debris" (the game dispatches its XOR loop
+  on old + new column counts at the screen edge and leaves stray columns) and "sprite shows the
+  image column the original culls at the screen edge" (2 columns drawn of a 3-column shifted image);
+  both exercised by the unit walks off / onto both edges.
+
+## Hardware risk review (6b, 2026-10-20)
+- DivMMC: no hook code at 0x3D00-0x3DFF (code ends 0x2C51).
+- Interrupts in hooks: per-instruction interrupt-safety check + negative control (state page at
+  slot 3 detected).
+- Raster: sprites switch in e_frame, not raster-synced: possible tearing of a moving figure -> checklist.
+- Speed: hooks ~14,900 T per TV frame at 28 MHz (quick run, 4500 frames; the match loop runs one
+  pass per ~3 frames) -> compare game speed with the plain build.
+- IM 2 vector at 0x3BFF read from the alt ROM image: left FF FF (the build refuses longer hooks).
 
 ## Hardware checklist
-(none yet)
+- Plain match_day.nex and match_day_sprites.nex both start (title, menu, match).
+- Players, ball and shadow as sprites; no clash; pitch lines hidden behind players (green fill).
+- Team colours from the Colours menu; the controlled player's socks indicator.
+- Keeper dive joined (no tear); depth: nearer players in front, ball by its shadow.
+- Bottom edge: figures over the score line as in the original; both side edges while scrolling.
+- Half time, full time, replay / extra time screens: no sprites left over.
+- Game speed equal to the plain build; any tearing.
