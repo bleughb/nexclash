@@ -28,13 +28,22 @@ def load_nex(path):
     return banks, d[12] | d[13] << 8, d[14] | d[15] << 8
 
 
-def boot(nex, pc_stop, limit=5_000_000):
-    """Run the NEX from its entry point until PC == pc_stop. Returns the machine state dict."""
+# What NEXLOAD leaves in the 48K printer buffer before the stub runs (NextZXOS paging routines and
+# system variables live at 0x5B00-0x5BFF; hardware 2026-10-20, Match Day): modelled as a pattern no
+# game data matches, so a check with nexload=True shows every byte the stub does not put back.
+NEXLOAD_PRINTER = bytes((0xA5 ^ k) for k in range(256))
+
+
+def boot(nex, pc_stop, limit=5_000_000, nexload=False):
+    """Run the NEX from its entry point until PC == pc_stop. Returns the machine state dict.
+    nexload: start with the printer buffer overwritten as NEXLOAD leaves it (NEXLOAD_PRINTER)."""
     banks, sp, pc = load_nex(nex)
     pages = {}
     for b, data in banks.items():
         pages[2 * b] = bytearray(data[0:8192])
         pages[2 * b + 1] = bytearray(data[8192:16384])
+    if nexload and 10 in pages:
+        pages[10][0x1B00:0x1C00] = NEXLOAD_PRINTER
     rom = rom48()
     st = {'mmu': [0xFF, 0xFF, 10, 11, 4, 5, 20, 21], 'nr': {0x8C: 0, 0x08: 0}, 'p7ffd': 0x00, 'p1ffd': 0,
           'alt': [bytearray(16384), bytearray(16384)], 'bad': [], 'sel': 0, 'ports': {}, 'nrlog': []}
@@ -114,16 +123,17 @@ def boot(nex, pc_stop, limit=5_000_000):
     return st
 
 
-def check(nex, z80, patch=None, tail=None):
+def check(nex, z80, patch=None, tail=None, nexload=False):
     """Boot the NEX and compare with the snapshot: registers (except R), RAM 0x4000-0xFFFF (patched
     RAM from the NEX's own banks 5/2/0, except the tail bytes), what slots 0/1 show (ROM3 or
-    ROM3 + alt ROM patch bytes), paging lock, $8C. Returns a list of problems (empty = OK)."""
+    ROM3 + alt ROM patch bytes), paging lock, $8C. Returns a list of problems (empty = OK).
+    nexload=True: the printer buffer starts as NEXLOAD leaves it (a build must put it back)."""
     import copy
     s = zt.Z80Snapshot(z80)
     if patch is not None:
         patch = copy.deepcopy(patch)          # apply() again on a fresh snapshot, caller's object untouched
         patch.apply(s)
-    st = boot(nex, s.pc)
+    st = boot(nex, s.pc, nexload=nexload)
     R, mem, bad = st['R'], st['mem'], list(st['bad'])
     w = lambda h, l: R[h] * 256 + R[l]
     got = {'BC': w(2, 3), 'DE': w(4, 5), 'HL': w(6, 7), 'AF': w(0, 1), 'IX': w(8, 9), 'IY': w(10, 11),

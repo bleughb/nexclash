@@ -313,7 +313,8 @@ def altrom_fill(org, page, lo, hi):
     return bytes(c)
 
 
-def build_stub(snap, tail, tail_addr, p3_off, force50, setup_call=None, slot1=None, regs=None, altrom=None):
+def build_stub(snap, tail, tail_addr, p3_off, force50, setup_call=None, slot1=None, regs=None, altrom=None,
+               printer=None):
     code = bytearray()
     code += b'\xF3'                          # DI
     code += b'\x31' + w16(STUB_SP)           # LD SP,$FFFE
@@ -372,6 +373,18 @@ def build_stub(snap, tail, tail_addr, p3_off, force50, setup_call=None, slot1=No
         extra |= 0x80
     code += read_nextreg(0x08) + b'\xE6\x30' + bytes([0xF6, extra])   # AND $30 / OR extra
 
+    # printer (opt-in, 48K): put the snapshot's printer buffer 0x5B00-0x5BFF back. NextZXOS keeps
+    # its paging routines and system variables there (SWAP 0x5B00.., BANKM 0x5B5C, BANK678 0x5B67,
+    # OLDSP / TSTACK) and the .nex loader writes them AFTER loading bank 5, so a 48K game that keeps
+    # data there (Match Day: icons, team names) starts with it overwritten (hardware 2026-10-20).
+    prn_fix = None
+    if printer is not None:
+        prn_fix = len(code) + 1
+        code += b'\x21\x00\x00'                  # LD HL,copy (patched)
+        code += b'\x11' + w16(0x5B00)             # LD DE,0x5B00
+        code += b'\x01' + w16(len(printer))       # LD BC,256
+        code += b'\xED\xB0'                      # LDIR
+
     # copy tail into place, then patch the $08 value
     src_label_fix = len(code) + 1
     code += b'\x21\x00\x00'                      # LD HL,tail source (patched)
@@ -387,6 +400,9 @@ def build_stub(snap, tail, tail_addr, p3_off, force50, setup_call=None, slot1=No
     if slot1 is not None:
         code[regs_src_fix:regs_src_fix + 2] = w16(STUB_ORG + len(code))
         code += regs
+    if printer is not None:
+        code[prn_fix:prn_fix + 2] = w16(STUB_ORG + len(code))
+        code += printer
     return bytes(code)
 
 
@@ -455,7 +471,7 @@ def write_nex(path, snap, banks):
 ALLOW_60HZ = False          # set by `nexclash.py ... --allow-60hz`: no build forces 50 Hz then
 
 
-def convert(src, dst, tail_req=None, force50=True, quiet=False, patch=None):
+def convert(src, dst, tail_req=None, force50=True, quiet=False, patch=None, keep_printer_buffer=False):
     """patch (optional) is an object with:
          apply(snap)         modify snap.banks (pokes) before conversion
          stub_extra          bytes placed in the stub bank at STUB_ORG+0x1000 (setup routine)
@@ -463,12 +479,14 @@ def convert(src, dst, tail_req=None, force50=True, quiet=False, patch=None):
          hook_page_data      bytes for the stub bank's upper 8K page (or b'')
          extra_banks         {bank: bytes}
          uses_printer_buffer True if the tail must not go at 0x5B00
+         keep_printer_buffer (optional) True: the stub restores the snapshot's 0x5B00-0x5BFF after
+                             NEXLOAD (48K games that keep data there; build_stub `printer`)
     """
     force50 = force50 and not ALLOW_60HZ
     snap = Z80Snapshot(src)
     if patch is not None:
         patch.apply(snap)
-    avoid = bool(patch is not None and patch.uses_printer_buffer)
+    avoid = bool(patch is not None and patch.uses_printer_buffer) or keep_printer_buffer
     slot1 = getattr(patch, 'slot1', None) if patch is not None else None
     altrom = getattr(patch, 'altrom', None) if patch is not None else None
     probe = build_tail(snap, 0x8000, slot1, altrom is not None)[0]
@@ -479,8 +497,13 @@ def convert(src, dst, tail_req=None, force50=True, quiet=False, patch=None):
     if max_tail is not None and len(probe) > max_tail:
         raise ValueError('start-up tail is %d bytes but only %d are free' % (len(probe), max_tail))
     tail, p3_off, restore_off, regs = build_tail(snap, tail_addr, slot1, altrom is not None)
+    printer = None
+    if keep_printer_buffer or getattr(patch, 'keep_printer_buffer', False):
+        if snap.is128:
+            raise ValueError('keep_printer_buffer is for 48K snapshots')
+        printer = bytes(snap.banks[5][0x1B00:0x1C00])
     stub = build_stub(snap, tail, tail_addr, p3_off, force50,
-                      patch.setup_call if patch is not None else None, slot1, regs, altrom)
+                      patch.setup_call if patch is not None else None, slot1, regs, altrom, printer)
     if len(stub) > 0x1000:
         raise ValueError('stub too long')
 

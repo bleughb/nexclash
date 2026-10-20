@@ -488,6 +488,15 @@ Grouped by question; add a new lesson to its group.
   field): find the writer of the colour before calling it a bug, and ask whether to keep it.
 
 ### 2.1f Speed and timing
+- A game with NO frame sync (Match Day: no HALT, no FRAMES wait in the match loop) loses exactly the
+  hook time: +25 % in round 1. Pay for it by running the game's own now-silent drawing at 28 MHz (its
+  screen writes are NOPs, the loops still run): the image builds, the XOR draw and the ball routine at
+  28 MHz brought it to +2.3-3.5 % (2026-10-20). Count 28 MHz T / 6 in the verify's speed line.
+- 28 MHz code with interrupts ON runs the game's interrupt handler at 28 MHz too. A handler that
+  plays beeper sound with timed loops then plays 8x fast (Match Day 0xB381..). Wrap the handler
+  without adding stack depth: point the IM 2 vector (alt ROM word at I*256+0xFF) at a stub that
+  saves the speed in NextReg 0x7F, sets 3.5 MHz and JUMPS to the handler; patch the handler's exit
+  to restore it. Check the game's deepest interrupted SP first (Match Day: variables 18 bytes below).
 - Hook cost: scanning all cells of a row per render costs more than the work itself - keep an
   occupancy bitmask (per row) in the cell hooks and visit set bits only; cache derived data per cell
   (last result + key check) before hashing; summarise per-cell classes in the hooks, not per render.

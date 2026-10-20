@@ -91,7 +91,7 @@ def part(gfx, rows, data, dy, group, family, socks_from):
                 dflt = WHITE if group not in ('Players', STATIC_GROUP) else (SOCKS if dy + r >= socks_from else STRIP)
                 pixels.append((c, r, k, c % 8, 1, dflt))
             elif fm[r] >> (15 - c) & 1:
-                pixels.append((c, r, k, c % 8, 2, 7))
+                pixels.append((c, r, k, c % 8, 2, GREEN))
             else:
                 pixels.append((c, r, k, c % 8, 0, 0))
     return dict(id=(gfx, rows), size=rows, w=16, h=rows, x=0, y=dy, mir=0, group=group, fam=family,
@@ -435,9 +435,6 @@ def _main(argv=None):
         print('-> %s' % a.output)
 
 
-if __name__ == '__main__':
-    _main()
-
 
 # =============================================================================================
 # The build (phase B): screen writes -> NOP, hooks in alt ROM image 1 (asm/matchday_hooks.asm)
@@ -445,7 +442,7 @@ if __name__ == '__main__':
 import json as _json
 
 ROM_ORG = 0x2300                     # alt ROM: 0x22CB-0x3BFE never read (scan, both recordings);
-                                     # 0x3BFF/0x3C00 = the IM 2 vector (FF FF) stays ROM
+VECTOR = 0x3BFF                      # 0x3BFF/0x3C00 = the IM 2 vector: FF FF (0xFFFF) -> isr_w
 ALT_PAGE = 24
 STATE_BANK, NIB_BANKS = 13, (14, 15)  # state page 26 (+27 unused), row tables pages 28-31
 STATE_PG, NIB_PG = 26, 28
@@ -454,11 +451,13 @@ BALL0, BALLEND = 0xA108, 0xA188
 FRAMEEND = 0xE048                    # end of the upper bodies (0xDDC0 + 36 * 18)
 NFIG = 17
 F_VIS, F_X, F_YT, F_BANK, F_SLOT, F_N, F_YB, F_FR, F_CAM, F_NEW, F_XS = 0, 1, 3, 5, 6, 7, 8, 9, 10, 12, 13   # asm records
-GREEN = 7                            # fill: the pitch green (palette index 7 = 0x14 = ULA green paper)
+GREEN = 13                           # fill: the pitch paper, BRIGHT green (attr 0x67; palette index 13 = 0x1C;
+                                     # Dean 2026-10-20: index 7 = 0x14 showed dark green on hardware)
 FILL_ROWS_SOCKS = 20                 # frame rows 20-27 default SOCKS
 SITES = {0x8DEC: ('e606fe', 'e_bd', 0xC3), 0x8D63: ('ddcb00', 'e_clr', 0xC3), 0x8B5C: ('cdce8e', 'e_pl', 0xCD),
          0x9D15: ('cdcf9f', 'e_ball', 0xCD), 0x817F: ('cd9898', 'e_frame', 0xCD),
-         0xE62C: ('cdadef', 'e_cls', 0xCD), 0x819D: ('f33e00', 'e_exit', 0xC3)}
+         0xE62C: ('cdadef', 'e_cls', 0xCD), 0x819D: ('f33e00', 'e_exit', 0xC3),
+         0x8A20: ('e1fbc9', 'isr_x', 0xC3)}  # the IM 2 handler's exit POP HL / EI / RET (isr_w / isr_x)
 # the figure / ball XOR screen writes and the figure cell paints: LD (DE),A / LD (HL),A -> NOP
 SCREEN_NOPS = [0x8EF9, 0x8F02, 0x8F0B, 0x8F3F, 0x8F44, 0x8F49, 0x8F61, 0x8F66, 0x8F6B, 0x8FB9, 0x8FBE,
                0x8FC3, 0x8FDB, 0x8FE0, 0x9000, 0x9009, 0x9013, 0x9036, 0x9040, 0x9045, 0x9068, 0x9072,
@@ -607,6 +606,7 @@ class MatchDayPatch:
         self.setup_call = 0xD000
         self.hook_page_data = b''
         self.uses_printer_buffer = True          # the game reads 0x5B00-0x5B72
+        self.keep_printer_buffer = True          # icons + team names at 0x5B00-0x5BFF: put back after NEXLOAD
         self.tail_addr = None
         self.max_tail = None
         self.regblock = ROM_ORG + len(self.rom_code)
@@ -618,7 +618,12 @@ class MatchDayPatch:
         rom = rom48()
         page = bytearray(rom[0x2000:0x4000])
         page[ROM_ORG - 0x2000:ROM_ORG - 0x2000 + len(self.rom_code)] = self.rom_code
+        # IM 2 vector (I = 0x3B, the word at 0x3BFF): isr_w, which runs the game's handler (0xFFFF)
+        # at 3.5 MHz whatever the speed of the interrupted code (its beeper sound is timed)
+        isr = self.syms['isr_w']
+        page[VECTOR - 0x2000], page[VECTOR + 1 - 0x2000] = isr & 255, isr >> 8
         self.page = bytes(page)
+        self.altrom = (ROM_ORG, VECTOR + 2)
         self.cmap = load_colours() if colours is None else colours
         self.sites = []
         for a, (old, sym, op) in SITES.items():
@@ -977,19 +982,27 @@ class Verifier:
     # ---- the per-instruction interrupt-safety check of the patched run ----
     def _safety(s, R0):
         ns = s.ns
+        s.tsp = {'t': R0[25], 'spd': ns.nr.get(0x07, 0), 0: 0, 3: 0}
         ix, iy, i0, iff = R0[8:12], None, R0[14], R0[26]
         regs0 = tuple(R0[8:12])
 
+        # e_exit replays the instructions its site replaced (DI / LD A,0; JP 0x81A0): after that
+        # DI the IFF is 0 exactly as in the original (RZX frames 25787, 50110 of the long recording)
+        k = s.patch.rom_code.find(bytes.fromhex('f33e00c3a081'))
+        replay = (ROM_ORG + k + 1, ROM_ORG + k + 3) if k >= 0 else ()
+
         def each(R):
-            if R[24] < 0x4000 or R[24] >= 0x2000 and False:
-                pass
+            ts = s.tsp                       # T by CPU speed (NextReg 7) before this instruction
+            ts[3 if ts['spd'] else 0] += R[25] - ts['t']
+            ts['t'], ts['spd'] = R[25], ns.nr.get(0x07, 0)
             if 0x2000 <= R[24] < 0x4000:
-                if tuple(R[8:12]) != regs0 or R[14] != i0 or R[26] != iff:
+                iff_ok = R[26] == iff or (R[24] in replay and R[26] == 0)
+                if tuple(R[8:12]) != regs0 or R[14] != i0 or not iff_ok:
                     s.fail('interrupt safety: IX / IY / I / IFF changed inside a hook', (hex(R[24]),))
                 sp = R[12]
                 if HSTACK[0] <= sp <= HSTACK[1]:
-                    if sp - 26 < HSTACK[0]:
-                        s.fail('interrupt safety: hook stack has < 26 free bytes', (hex(R[24]), hex(sp)))
+                    if sp - 32 < HSTACK[0]:   # the handler's 24 + isr_w's 6 (+2 spare)
+                        s.fail('interrupt safety: hook stack has < 32 free bytes', (hex(R[24]), hex(sp)))
                 elif 0xC000 <= sp < 0xE000 and ns.nr[0x56] != 0:
                     s.fail('interrupt safety: stack in slot 6 while a Next page is mapped', (hex(R[24]),))
                 if ns.nr[0x53] != 11:
@@ -1025,6 +1038,10 @@ class Verifier:
         ro, rp = so.registers, sp_.registers
         s.c['T %s original' % kind] += ro[25] - R[25]
         s.c['T %s patched' % kind] += rp[25] - R[25]
+        ts = s.tsp
+        ts[3 if ts['spd'] else 0] += rp[25] - ts['t']
+        s.c['T %s patched at 3.5 MHz' % kind] += ts[0]
+        s.c['T %s patched at 28 MHz' % kind] += ts[3]
         diff = [i for i in CMP if ro[i] != rp[i]]
         if diff:
             s.fail('%s: registers differ' % kind, (diff, [ro[i] for i in diff], [rp[i] for i in diff]))
@@ -1039,12 +1056,15 @@ class Verifier:
             s.fail('%s: NEXTREG outside the allowed set' % kind)
         if kind not in ('frame', 'cls', 'exit') and any(e[0] == 'nr' and 0x34 <= e[1] <= 0x39 for e in evs):
             s.fail('%s: sprite attributes written outside e_frame / e_cls / e_exit' % kind)
-        if s.ns.nr[0x53] != 11 or s.ns.nr[0x56] != 0 or s.ns.nr[0x07] != 0:
+        # speed after the event: 3.5 MHz, except a figure's image build (e_bd leaves 28 MHz on for
+        # the build; the draw's e_plp - or any next hook - sets 3.5 MHz again)
+        spd_ok = s.ns.nr[0x07] == 0 or (kind == 'bd' and s.ns.nr[0x07] == 3 and figk_of(get, R[8] << 8 | R[9]) is not None)
+        if s.ns.nr[0x53] != 11 or s.ns.nr[0x56] != 0 or not spd_ok:
             s.fail('%s: hook left a page mapped / the speed up' % kind)
         dead = range(ro[12] - DEAD, ro[12])
         keys = set(o.ov) | set(p.ov)
-        md = [a for a in keys if not 0x4000 <= a < 0x5B00 and a not in dead and o[a] != p[a]
-              and not HSTACK[0] <= a < HSTACK[1]]
+        # (the hook stack 0x5BA8-0x5BFF included: every hook puts the game's bytes back)
+        md = [a for a in keys if not 0x4000 <= a < 0x5B00 and a not in dead and o[a] != p[a]]
         if md:
             s.fail('%s: game memory differs' % kind, (len(md), [hex(a) for a in sorted(md)[:4]]))
         # screen: every write the patched run makes equals the original's; the original's other
@@ -1286,6 +1306,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
     st = {'busy': None, 'on': False}
     site_bytes = {a + k for a, old, new in patch.sites for k in range(len(new))}
     interiors = {a + k for a, old, new in patch.sites if len(new) == 3 for k in (1, 2)} | {0x8D66}
+    site_starts = {a for a, old, new in patch.sites}
     states = []
     scen = SCENERY_XOR
 
@@ -1295,7 +1316,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                 if a in site_bytes:
                     v.fail('game wrote a patch site', (hex(a),))
                 if HSTACK[0] <= a < HSTACK[1]:
-                    v.fail('game wrote the hook stack (printer buffer 0x5BA8-0x5BFF)', (hex(a),))
+                    v.note('game wrote the hook stack area (cup team names; hooks save / restore it)')
                 if 0x4000 <= a < 0x5800 and st['busy'] is None:
                     pc = st['R'][24]
                     if not any(lo <= pc < hi for lo, hi in scen):
@@ -1319,7 +1340,10 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                         st['busy'] = b = None
                     prev, st['prev'] = st.get('prev'), pc
                     if b is None:
-                        if pc in interiors and not (prev is not None and 0 < pc - prev <= 2 and prev in EV_SITES):
+                        # an interior byte is fine only right after the site's start or a previous
+                        # interior byte of it (0x8A20 POP HL / EI / RET: three 1-byte instructions)
+                        if pc in interiors and not (prev is not None and 0 < pc - prev <= 2 and
+                                                    (prev in EV_SITES or prev in site_starts or prev in interiors)):
                             v.fail('jump into a patched instruction', (hex(pc),))
                         kind = EV_SITES.get(pc)
                         if kind:
@@ -1388,14 +1412,15 @@ def auto(a, z80, name, out, say):
     say('Engine    : matchday (Match Day: players 0x8B45, ball 0x9FCF -> sprites; XOR screen writes removed)')
     md5 = lambda p: hashlib.md5(open(p, 'rb').read()).hexdigest()
     plain = os.path.join(out, name + '.nex')
-    conv = zt.convert(z80, plain, None, True, quiet=True)
-    bad = check(plain, z80, None, (conv[1], conv[1] + len(conv[2])))
+    conv = zt.convert(z80, plain, None, True, quiet=True, keep_printer_buffer=True)
+    bad = check(plain, z80, None, (conv[1], conv[1] + len(conv[2])), nexload=True)
+    say('Boot      : printer buffer 0x5B00-0x5BFF overwritten as NEXLOAD leaves it; both builds must put it back')
     say('Plain     : %s  %s  boot %s  (tail 0x%04X)' % (os.path.basename(plain), md5(plain),
                                                        'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:200], conv[1]))
     patch = MatchDayPatch()
     spr = os.path.join(out, name + '_sprites.nex')
     conv = zt.convert(z80, spr, None, True, quiet=True, patch=patch)
-    bad2 = check(spr, z80, patch, (conv[1], conv[1] + len(conv[2])))
+    bad2 = check(spr, z80, patch, (conv[1], conv[1] + len(conv[2])), nexload=True)
     say('Sprites   : %s  %s  boot %s  (tail 0x%04X; colours: %d map entries)' % (
         os.path.basename(spr), md5(spr), 'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200], conv[1],
         len(patch.cmap)))
@@ -1423,14 +1448,22 @@ def auto(a, z80, name, out, say):
             if not k.endswith('!') and ':' in k:
                 say('            %s: %d' % (k, n))
         if c['frames']:
+            real = sum(c['T %s patched at 3.5 MHz' % k] + c['T %s patched at 28 MHz' % k] // 6 - c['T %s original' % k]
+                       for k in EV_SITES.values())
+            say('Speed     : patched game vs original, real time (28 MHz T / 6): %+d T per game frame (%+.1f %% of '
+                'a 69,888 T frame; negative = faster); the game has no frame sync' % (
+                    real // c['frames'], 100.0 * real / c['frames'] / 69888))
             extra = sum(c['T %s patched' % k] - c['T %s original' % k] for k in EV_SITES.values())
             say('Speed     : hooks add %d T per game frame at 3.5 MHz rates (%d T total); they run at 28 MHz '
                 '(NextReg 7 = 3): about %d T of a 69,888 T frame' % (extra // c['frames'], extra, extra // c['frames'] // 6))
+            say('            per event (3.5 MHz rates, per game frame): ' + ', '.join(
+                '%s %d (x%d)' % (k, (c['T %s patched' % k] - c['T %s original' % k]) // c['frames'], c[k])
+                for k in EV_SITES.values()))
         for k, e in ex.items():
             say('            %s: %s' % (k, str(e)[:240]))
     if states:
         neg, negsafe = negative_patches(patch)
-        u = unit_tests(patch, states, neg, negsafe)
+        u = unit_tests(patch, states, neg, negsafe, negative_stack(patch))
         uf = {k: n for k, n in u.items() if k.endswith('!')}
         ok = ok and not uf
         say('Unit      : %d cases, %d states -> %s' % (sum(n for k, n in u.items() if k.endswith(' ok')), len(states),
@@ -1476,7 +1509,7 @@ def _case(patch, state, edit=None, ns_edit=None):
     return fl, v.c, after
 
 
-def unit_tests(patch, states, neg=None, negsafe=None):
+def unit_tests(patch, states, neg=None, negsafe=None, negstack=None):
     c = collections.Counter()
     sts = [st for st in states]
     if not sts:
@@ -1582,6 +1615,10 @@ def unit_tests(patch, states, neg=None, negsafe=None):
         f, _, _ = _case(negsafe, base)
         hit = any('interrupt safety' in k for k in f)
         c['negative control (interrupt safety: state page at slot 3) %s' % ('detected' if hit else 'NOT DETECTED!')] += 1
+    if negstack is not None:
+        f, _, _ = _case(negstack, base)
+        hit = any('game memory differs' in k for k in f)
+        c['negative control (hook stack bytes not put back) %s' % ('detected' if hit else 'NOT DETECTED!')] += 1
     return c
 
 
@@ -1616,9 +1653,33 @@ def negative_patches(patch):
     code = patch.rom_code
     if code[:12] != enter:                  # e_bd is the first routine: its ENTERST
         raise ValueError('negative control enter: e_bd does not start with ENTERST')
-    bad = bytes([0xED, 0x91, 0x07, 0x03, 0xED, 0x91, 0x53, STATE_PG]) + code[8:12]
-    q = _rom_variant(patch, code[:20], bad + code[12:20], 'enter')
+    # ENTERST is the same in every hook: take e_bd's entry up to its first own instructions (unique)
+    n = 12
+    while code.find(code[:n], 1) >= 0:
+        n += 1
+    bad = bytearray(code[:n])
+    bad[6] = 0x53
+    q = _rom_variant(patch, code[:n], bytes(bad), 'enter')
     return neg, q
+
+
+def negative_stack(patch):
+    """3. every LEAVEST skips putting the game's bytes back at 0x5BA8-0x5BFF (the cup team names
+    under the hook stack): LDIR -> NOP NOP in the copy PBSAVE -> 0x5BA8."""
+    import copy
+    seq = bytes([0x21, 0x00, 0xDC, 0x11, 0xA8, 0x5B, 0x01, 0x58, 0x00, 0xED, 0xB0])
+    code = patch.rom_code
+    n = code.count(seq)
+    if n < 7:                               # one per LEAVEST use (7 in the source, +1 per copy)
+        raise ValueError('negative control stack: only %d LEAVEST copies found' % n)
+    q = copy.copy(patch)
+    q.rom_code = code.replace(seq, seq[:-2] + b'\x00\x00')
+    page = bytearray(patch.page)
+    page[ROM_ORG - 0x2000:ROM_ORG - 0x2000 + len(q.rom_code)] = q.rom_code
+    q.page = bytes(page)
+    q.extra_banks = dict(patch.extra_banks)
+    q.extra_banks[12] = q.page + bytes(8192)
+    return q
 
 
 # =============================================================================================
@@ -1656,3 +1717,7 @@ def recolour(nex, cmap):
         raise ValueError('set-up code differs from this version\'s (rebuild with nexclash.py auto)')
     out, changed = splice(nex, table_banks(peek, cmap, state_init()))
     return out, {'banks changed': changed, 'entries': len(cmap)}
+
+
+if __name__ == '__main__':
+    _main()

@@ -41,12 +41,8 @@
    "--no-record"
   ],
   "rzx": [],
-  "decisions": {
-   "engine": "matchday",
-   "strategy": "altrom hooks 0x2300-0x2C51 (ROM 0x22CB-0x3BFE never read), state page 26 at slot 6 while a hook runs",
-   "tail": "converter default (0xBD5D plain / 0xBD77 sprites)",
-   "colours": "docs/profiles/match_day_colours.json (none = role defaults: strip / socks from the game, fill pitch green)"
-  }
+  "decisions": null,
+  "note": "altrom hooks 0x2300- (ROM 0x22CB-0x3BFE never read) + the IM 2 vector at 0x3BFF -> isr_w; state page 26 at slot 6 while a hook runs; printer buffer restored by the stub (keep_printer_buffer); colours docs/profiles/match_day_colours.json (none = role defaults)"
  },
  "verify": {
   "args": [
@@ -63,23 +59,67 @@
  "outputs": {
   "plain": {
    "file": "match_day.nex",
-   "md5": "5bda1d7890043f2ad09b7a58706bbb34"
+   "md5": "612761ec2772c5a7dcd27f939588d227"
   },
   "sprites": {
    "file": "match_day_sprites.nex",
-   "md5": "6188bacdeb14ff291b2843a6774f3a3f"
+   "md5": "f0aecd138d1668ff057318c2545f539d"
   }
  },
  "repro": [],
  "status": {
   "title": "Match Day",
   "engine_col": "matchday (match_day.md)",
-  "build": "match_day_sprites.nex 6188bacd",
+  "build": "match_day_sprites.nex f0aecd13",
   "software": "RZX IDENTICAL (2 recordings), unit PASS",
-  "hardware": "untested",
-  "next": "hardware test; Dean paints the sheet"
+  "hardware": "round 1 (6188bacd): printer buffer overwritten by NEXLOAD (both builds), slowdown, dark fill - fixed in round 2, untested",
+  "next": "hardware round 2"
  },
  "checks": [
   "asm2profile:match_day"
- ]
+ ],
+ "checked": {
+  "deps": {
+   "asm/matchday_hooks.asm": "a6684de2576b7dda",
+   "docs/profiles/match_day.json": "8508cc0cb162c2d1",
+   "nexclash.py": "d727de919fb5b21e",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "bc87a441d6f36e56",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "ea2caa409f90ba5a",
+   "nexclash/matchday.py": "6a35adbcdb07e218",
+   "nexclash/nextboot.py": "a6e46fbbe842b376",
+   "nexclash/recolour.py": "a5744dcf6e6c059c",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "cfe7f2701eddfe6e",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-20"
+ },
+ "verified": {
+  "deps": {
+   "asm/matchday_hooks.asm": "a6684de2576b7dda",
+   "docs/profiles/match_day.json": "8508cc0cb162c2d1",
+   "nexclash.py": "d727de919fb5b21e",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "bc87a441d6f36e56",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "ea2caa409f90ba5a",
+   "nexclash/matchday.py": "6a35adbcdb07e218",
+   "nexclash/nextboot.py": "a6e46fbbe842b376",
+   "nexclash/recolour.py": "a5744dcf6e6c059c",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "cfe7f2701eddfe6e",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-20"
+ }
 }

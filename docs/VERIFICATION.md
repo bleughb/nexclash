@@ -53,7 +53,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Target Renegade (128K) (target_renegade): `target_renegade.nex` a0be8dc03a1be8c6d67dc3e0229abc35, `target_renegade_sprites.nex` e0b246e35d028c34170e1d1c52f00f5f; verified never
 - Jetpac (jetpac): `jetpac.nex` feff51b7038606d21c03c260055481e4, `jetpac_sprites.nex` c963b42f0e685d648d552656fde4d6f9; verified never
 - Lode Runner (lode_runner): `lode_runner.nex` cd0c1659c8569b2fa80da74962af90d2, `lode_runner_sprites.nex` 85fe6afd593679bf59c787230ba0eaca; verified never
-- Match Day (match_day): `match_day.nex` 5bda1d7890043f2ad09b7a58706bbb34, `match_day_sprites.nex` 6188bacdeb14ff291b2843a6774f3a3f; verified never
+- Match Day (match_day): `match_day.nex` 612761ec2772c5a7dcd27f939588d227, `match_day_sprites.nex` f0aecd138d1668ff057318c2545f539d; verified 2026-10-20
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
@@ -677,6 +677,31 @@ sprite colour = the object's ink, no other sprite changed, NEXTREG only $07 (lef
 | selftest --game jetpac (rebuild, MD5s, asm2profile) | PASSED |
 Not proven: the game's own paths beyond the free run (rocket build, fuel, items, levels 2+, two
 players) - hooks covered by unit tests only; hardware untested.
+
+## Match Day (48K, engine `matchday`) - 2026-10-20
+Dean's Fuse RZX (Match_Day_1985_Ocean.rzx: 1 autosave stripped; title, menu, walk-on, ~6 match
+minutes, a goal, a keeper dive) + the spectrumcomputing.co.uk RZX (50,404 frames, its own start
+snapshot, same code). At every hook event (image build 0x8DEC, 4-row clear 0x8D63, player draw
+0x8B45 including the XOR draw 0x8ECE, ball 0x9D15, match loop pass 0x817F, screen clear 0xE62C,
+loop exit 0x819D) original and patched code run from the same state to the event's end: all
+registers but R/T/MEMPTR, all memory outside the screen / attributes and 64 bytes of dead stack (the
+hook stack 0x5BA8-0x5BFF included: every hook puts the cup team names back), every patched screen
+write equal to the original's and the original's other screen writes exactly the removed figure
+writes; sprite pixels = each figure's own XOR footprint on the original screen (the image as it is
+AT the draw), depth order by bottom y, the dive's spare half locked to the keeper half's camera
+position; per instruction inside a hook: IX / IY / I / IFF unchanged (IFF = 0 only after e_exit's
+replayed DI), >= 32 free bytes of hook stack, slot 3 untouched, slot 6 only the state / row pages;
+no game write to a patch site; no jump into a patched instruction. Boot: both builds booted with the
+printer buffer overwritten as NEXLOAD leaves it (nextboot `nexload`): every RAM byte equals the
+snapshot.
+
+| Check | Result |
+|---|---|
+| match_day.rzx, 6211 frames | 36,605 draws, 92 builds, 2,299 ball, 2,301 passes, 2 clears, 1,797,409 sprite pixels: IDENTICAL; speed +1,584 T per frame (+2.3 %) |
+| match_day_spectrumcomputing.rzx, 50,404 frames | 376,695 draws, 186 builds, 24,230 ball, 24,251 passes, 23 clears, 2 exits, 20,597,211 sprite pixels: IDENTICAL; speed +2,431 T per frame (+3.5 %) |
+| explained notes (the original's behaviour) | edge-dispatch debris 71 / 678, column culled at the screen edge 18 / 114, overwriter debris 6 + ball 5 |
+| unit: every frame 0-115, every upper body 0-17, dive across the left edge, walks off / onto both edges and the bottom, x shifts 0-6, full palette banks, object outside the table (guard), 80 captured states | 461 PASS |
+| negative controls: x shift ignored / state page at slot 3 (interrupt safety) / hook stack bytes not put back | 3/3 detected |
 
 ## Lode Runner (48K, engine `loderunner`) - 2026-10-20
 Dean's Fuse RZX (LODERUNN.rzx: 8 autosaves stripped; key definition, level 1, two lives lost; the
