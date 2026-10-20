@@ -379,9 +379,9 @@ def _main(argv=None):
     import argparse
     ap = argparse.ArgumentParser(prog='python -m nexclash.matchday')
     sub = ap.add_subparsers(dest='cmd', required=True)
-    p = sub.add_parser('sheet', help='Z80 + RZX -> PAINTING / REFERENCE sheets (game graphics: keep private)')
+    p = sub.add_parser('sheet', help='Z80 + RZX(s) -> PAINTING / REFERENCE sheets (game graphics: keep private)')
     p.add_argument('z80')
-    p.add_argument('rzx')
+    p.add_argument('rzx', nargs='+')
     p.add_argument('-o', '--output', default='match_day')
     p.add_argument('--stop', type=int)
     p = sub.add_parser('preview')
@@ -401,6 +401,7 @@ def _main(argv=None):
     if a.cmd == 'sheet':
         from . import coloursheet as cs
         cap = run_capture(a.z80, a.rzx, stop=a.stop)
+        print('frames played: %d' % cap.frame)
         if cap.pending:
             cap.col.add_frame(cap.pending)
         add_static(cap.col, snapshot_memory(a.z80))
