@@ -41,12 +41,8 @@
    "--no-record"
   ],
   "rzx": [],
-  "decisions": {
-   "engine": "matchday",
-   "strategy": "altrom hooks 0x2300-0x2C51 (ROM 0x22CB-0x3BFE never read), state page 26 at slot 6 while a hook runs",
-   "tail": "converter default (0xBD5D plain / 0xBD77 sprites)",
-   "colours": "docs/profiles/match_day_colours.json (none = role defaults: strip / socks from the game, fill pitch green)"
-  }
+  "decisions": null,
+  "note": "altrom hooks 0x2300-0x2C51 (ROM 0x22CB-0x3BFE never read), state page 26 at slot 6 while a hook runs; tail = converter default; colours docs/profiles/match_day_colours.json (none = role defaults)"
  },
  "verify": {
   "args": [

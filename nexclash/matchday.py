@@ -435,9 +435,6 @@ def _main(argv=None):
         print('-> %s' % a.output)
 
 
-if __name__ == '__main__':
-    _main()
-
 
 # =============================================================================================
 # The build (phase B): screen writes -> NOP, hooks in alt ROM image 1 (asm/matchday_hooks.asm)
@@ -980,11 +977,15 @@ class Verifier:
         ix, iy, i0, iff = R0[8:12], None, R0[14], R0[26]
         regs0 = tuple(R0[8:12])
 
+        # e_exit replays the instructions its site replaced (DI / LD A,0; JP 0x81A0): after that
+        # DI the IFF is 0 exactly as in the original (RZX frames 25787, 50110 of the long recording)
+        k = s.patch.rom_code.find(bytes.fromhex('f33e00c3a081'))
+        replay = (ROM_ORG + k + 1, ROM_ORG + k + 3) if k >= 0 else ()
+
         def each(R):
-            if R[24] < 0x4000 or R[24] >= 0x2000 and False:
-                pass
             if 0x2000 <= R[24] < 0x4000:
-                if tuple(R[8:12]) != regs0 or R[14] != i0 or R[26] != iff:
+                iff_ok = R[26] == iff or (R[24] in replay and R[26] == 0)
+                if tuple(R[8:12]) != regs0 or R[14] != i0 or not iff_ok:
                     s.fail('interrupt safety: IX / IY / I / IFF changed inside a hook', (hex(R[24]),))
                 sp = R[12]
                 if HSTACK[0] <= sp <= HSTACK[1]:
@@ -1656,3 +1657,7 @@ def recolour(nex, cmap):
         raise ValueError('set-up code differs from this version\'s (rebuild with nexclash.py auto)')
     out, changed = splice(nex, table_banks(peek, cmap, state_init()))
     return out, {'banks changed': changed, 'entries': len(cmap)}
+
+
+if __name__ == '__main__':
+    _main()
