@@ -67,9 +67,8 @@ Phase A done (analysis, shadow model, sheets, preview); waiting for Dean's desig
   left/right pairs; uppers alone).
 
 ## Dean's decisions (2026-10-20)
-- Players SOLID: the see-through pixels (paper enclosed by the figure, `matchday.enclosed`) in the
-  OPPOSITE team's colours (strip rows: its strip colour, socks rows: its socks colour). Preview:
-  match_day_PREVIEW_solid.png (sent for confirmation).
+- Players SOLID: the see-through pixels (paper enclosed by the figure, `matchday.enclosed`) BLACK
+  (14:05; replaces his 14:01 answer "the opposite team's colours"). Preview: match_day_PREVIEW_solid.png.
 - Bottom edge: as the original (figures drawn over the score line, no clipping).
 - Keeper dive "torn in half" (Dean, from the preview): the ORIGINAL tears the same way - the keeper
   and the spare object 0xB6AC are drawn on alternate frames, so while the camera scrolls one half

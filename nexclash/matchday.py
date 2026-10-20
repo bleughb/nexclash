@@ -331,20 +331,15 @@ def preview(z80, rzx, frames, out):
                     px = footprint_pixels(fp)
                     if px:
                         figs.append((max(y for _, y in px), who, px))
-                strips = collections.Counter(c[0] for w, c in cols.items() if objs.get(w))
                 for bottom, who, px in sorted(figs, key=lambda t: t[0]):
                     if who == 'ball':
                         for (x, y) in px:
                             im.putpixel((x, y), (255, 255, 255))
                         continue
                     strip, socks = cols.get(who, (7, 7))
-                    # solid (Dean 2026-10-20): the enclosed paper in the opposite team's colours
-                    opp = [c for c in strips if c != strip]
-                    ostrip = opp[0] if opp else strip
-                    osocks = next((c[1] for w, c in cols.items() if c[0] == ostrip and c[1] != c[0]), ostrip)
+                    # solid (Dean 2026-10-20, second answer): the enclosed paper BLACK
                     for (x, y) in enclosed(px):
-                        c = SPEC_RGB[osocks if y > bottom - 8 else ostrip]
-                        im.putpixel((x, y), tuple(min(255, v + 50) for v in c))
+                        im.putpixel((x, y), (0, 0, 0))
                     for (x, y) in px:
                         c = SPEC_RGB[socks if y > bottom - 8 else strip]
                         im.putpixel((x, y), tuple(min(255, v + 50) for v in c))
