@@ -11,8 +11,7 @@ identical at every plotter / line writer, 13 bytes of game state differ). Manual
     python -m nexclash.matchday preview Match_Day_1985_Ocean.z80 Match_Day_1985_Ocean.rzx --at 2200,3760,5400,6100
 
 ## Status
-Phase A done (analysis, shadow model, sheets, preview); waiting for Dean's design answer
-(Open, below). No build yet.
+Phase A done and agreed (2026-10-20 16:43). Phase B (build) in progress.
 
 ## Snapshot (0b)
 - 48K, PC 0x0038 (in the ROM IM 1 handler), DI, IM 1, I=0x3F, SP 0xBDBC, border 0. Title/menu.
@@ -84,7 +83,7 @@ Phase A done (analysis, shadow model, sheets, preview); waiting for Dean's desig
   which covers all but frames 116-119 (unit tests for those).
 - Sheet: Dean paints it later; build with the defaults (roles) until then, recolour afterwards.
 
-## Phase A proposal (sent to Dean 2026-10-20)
+## Phase A proposal - AGREED by Dean 2026-10-20 16:43 ("1-3, i agree"; no messages over the pitch)
 - Sprites: every player (both teams, keepers, the dive joined), ball, ball shadow. ULA: pitch,
   lines, goals, crowd, clock, score, menus, the walk-on scene (2x overwriting plotter, no clash
   problem on a still screen).
@@ -96,9 +95,7 @@ Phase A done (analysis, shadow model, sheets, preview); waiting for Dean's desig
   every player.
 
 ## Open (ask, do not decide)
-1. Still unanswered from the phase A question: which figures (proposal above), the colour roles,
-   depth rule.
-2. Does any message window appear OVER the pitch (pause, goal)? Not seen in the RZX.
+(none from phase A; Dean found no message window over the pitch either)
 
 ## Hardware checklist
 (none yet)
