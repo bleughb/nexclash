@@ -1006,11 +1006,16 @@ class Verifier:
         s.ns.events = []
         sp_ = _machine(p, list(R), s.ns, 'p')
         s.at_draw = None
+        s.draw_mem = {}
 
         def grab(r):
             if r[24] == 0x8ECE and s.at_draw is None:
                 s.at_draw = list(r)
                 s.flag93a2 = o[0x93A2]
+                # the image as it is AT the draw: the same call may change the buffer afterwards
+                # (0x8D63 clears the top 4 rows of the buffer it just drew from: RZX frame 3882)
+                hl = r[6] << 8 | r[7]
+                s.draw_mem = {a & 0xFFFF: o[a & 0xFFFF] for a in range(hl - 3 * r[2] - 3, hl + 3)}
         if not _run(so, stop, each=grab if kind == 'obj' else None):
             s.fail('%s: original did not return' % kind)
             return None
@@ -1091,9 +1096,11 @@ class Verifier:
         if jforce is not None:
             j = jforce
         px = set()
+        dm = s.draw_mem if R8 is s.at_draw else {}
         for r in range(b):
             for c in range(3):
-                v = o[(hl - 3 * r - (j - c)) & 0xFFFF]
+                a = (hl - 3 * r - (j - c)) & 0xFFFF
+                v = dm[a] if a in dm else o[a]
                 sc = col - (j - c)
                 for bit in range(8):
                     if v >> (7 - bit) & 1:
