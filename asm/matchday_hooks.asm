@@ -9,7 +9,7 @@
 ; take slot 6 one row at a time while a pattern is built. Slot 6 is the only slot the game's IM 2
 ; handler never touches (isr scans, both recordings; it reads the user-defined key table at 0x67xx
 ; in slot 3), so interrupts stay ON. Every hook runs on its own stack in the printer buffer
-; 0x5BA8-0x5BFF (never read or written by the game: scans; the game's match stack is only 56 bytes
+; 0x5BA8-0x5BFF (saved and restored by every hook: the cup team names live there; the game's match stack is only 56 bytes
 ; deep), at 28 MHz, and never writes IX, IY, I, the alternate registers or the game's memory.
 ;
 ; Sites (original bytes checked by matchday.py):
@@ -21,6 +21,8 @@
 ;   0x817F  CD 98 98   CALL 0x9898 (match main loop, once per pass)                   -> CALL e_frame
 ;   0xE62C  CD AD EF   CALL 0xEFAD (screen clear at match set-up)                     -> CALL e_cls
 ;   0x819D  F3 3E 00   DI / LD A,0 (match loop exit)                                  -> JP e_exit
+;   0x8A20  E1 FB C9   POP HL / EI / RET (the IM 2 handler's exit)                    -> JP isr_x
+;   alt ROM 0x3BFF/0x3C00 (the IM 2 vector word, FF FF = 0xFFFF)                      -> isr_w
 ; e_pl / e_ball replace their own return address with the post-hook (EX (SP),HL) and JP to the
 ; game routine, so the game routine runs at exactly the original stack depth.
 ; Sprites: slot order = depth (higher slot on top): ball shadow first, then players and the ball
@@ -97,7 +99,12 @@ ROWSH     EQU ST+0x7C0            ; 32 bytes: row shift - the bottom row's shift
 CAND      EQU ST+0x7E0            ; up to 8 candidate ring entries (pointers)
 SEQ       EQU ST+0x7F0            ; global build counter
 RING      EQU ST+0x800            ; 17 x 128: 16 builds x (dest, src, rows, shift, seq)
-HSTACK    EQU 0x5C00              ; hook stack: printer buffer 0x5BA8-0x5BFF (never read or written by the game)
+HSTACK    EQU 0x5C00              ; hook stack: printer buffer 0x5BA8-0x5BFF (saved / restored by ENTERST / LEAVEST)
+HSTKLO    EQU 0x5BA8
+PBSAVE    EQU ST+0x1C00           ; 88 bytes: what the game keeps at 0x5BA8-0x5BFF (cup team names)
+SV_HL     EQU ST+0x1C60
+SV_DE     EQU ST+0x1C62
+SV_BC     EQU ST+0x1C64
 BALLTAB   EQU ST+0x1800           ; ball rows: (src - BALL0) * 4 -> 8 nibble bytes
 LASTIMG   EQU ST+0x1100           ; 17 x 96: ROWSRC + ROWSH of the image last built per figure
 V_LEFT    EQU ST+0x6DE            ; rows not yet resolved
@@ -115,14 +122,42 @@ DIVE0     EQU 72
 SPARE     EQU 16                  ; figure index of the spare object 0xB6AC (keeper's second half)
 SLOT_BALL EQU 34
 
+        ; The hook stack 0x5BA8-0x5BFF holds the cup team names (OCEAN UNITED .. WOODS ATHLETIC):
+        ; never read while a hook runs (the game is stopped there; its IM 2 handler never reads it),
+        ; so ENTERST saves the 88 bytes to the state page and LEAVEST puts them back. Registers and
+        ; flags are kept: HL/DE/BC through the state page, AF on the game stack (2 bytes).
         MACRO ENTERST                 ; state page in, 28 MHz, hook stack (no register / flag change)
         nextreg 0x07,3
         nextreg 0x56,STATE_PG
         ld (SAVSP),sp
+        ld (SV_HL),hl
+        ld (SV_DE),de
+        ld (SV_BC),bc
+        push af
+        ld hl,HSTKLO
+        ld de,PBSAVE
+        ld bc,HSTACK-HSTKLO
+        ldir
+        pop af
+        ld hl,(SV_HL)
+        ld de,(SV_DE)
+        ld bc,(SV_BC)
         ld sp,HSTACK
         ENDM
         MACRO LEAVEST
         ld sp,(SAVSP)
+        ld (SV_HL),hl
+        ld (SV_DE),de
+        ld (SV_BC),bc
+        push af
+        ld hl,PBSAVE
+        ld de,HSTKLO
+        ld bc,HSTACK-HSTKLO
+        ldir
+        pop af
+        ld hl,(SV_HL)
+        ld de,(SV_DE)
+        ld bc,(SV_BC)
         nextreg 0x56,GAME_P6
         nextreg 0x07,0
         ENDM
@@ -165,6 +200,15 @@ e_bd:   ENTERST
         jr c,.out
         call setk
         call ringadd
+        pop hl
+        pop de
+        pop bc
+        pop af
+        LEAVEST
+        nextreg 0x07,3              ; a figure's image build at 28 MHz until the draw's e_plp
+        and 6                       ; (every hook's LEAVEST sets 3.5 MHz; never for the walk-on
+        cp 4                        ; scene's 2x plotter, which is not a figure)
+        jp 0x8DF0
 .out:   pop hl
         pop de
         pop bc
@@ -257,6 +301,10 @@ e_pl:   nextreg 0x56,STATE_PG
         ex (sp),hl                  ; 0x8ECE returns to e_plp instead of 0x8B5F
         ld hl,(TMP)
         nextreg 0x56,GAME_P6
+        nextreg 0x07,3              ; the game's XOR draw (its screen writes are NOPs) at 28 MHz: the
+                                    ; game has no frame sync, so this pays for the hooks (e_plp's
+                                    ; LEAVEST sets 3.5 MHz again); an interrupt meanwhile goes
+                                    ; through isr_w, which runs the handler at 3.5 MHz
         jp 0x8ECE
 e_plp:  ENTERST
         push af
@@ -959,7 +1007,8 @@ e_ball: nextreg 0x56,STATE_PG
         ex (sp),hl
         ld hl,(TMP)
         nextreg 0x56,GAME_P6
-        jp 0x9FCF
+        nextreg 0x07,3              ; the ball / shadow routine (screen writes NOPs) at 28 MHz;
+        jp 0x9FCF                   ; e_bpost's LEAVEST sets 3.5 MHz again
 e_bpost:
         ENTERST
         push af
@@ -1443,6 +1492,43 @@ e_exit: ENTERST
         ld a,0
         jp 0x81A0
 
+; =============================================================================================
+; isr_w / isr_x: the game's IM 2 handler (0xFFFF -> 0xFFF4 -> 0x89F0 .. 0x8A22) plays its beeper
+; sound with timed loops (0xB381..0xB3C4: OUT (0xFE) per bit), so it must run at 3.5 MHz even
+; when the interrupt lands in 28 MHz code (a hook, or the game's XOR draw). The IM 2 vector (alt
+; ROM word at 0x3BFF, set by matchday.py) points at isr_w: it keeps the interrupted speed in
+; NextReg 0x7F (the free user register: no RAM), sets 3.5 MHz and JUMPS to 0xFFFF; the handler's
+; one exit 0x8A20 POP HL / EI / RET is JP isr_x, which restores the speed. No stack depth is added
+; to the handler's own (24 bytes): isr_w / isr_x use 4 bytes at its shallow ends (the match stack
+; has game variables 18 bytes below its deepest point, 0x89A8; RZX scan 2026-10-20).
+; =============================================================================================
+isr_w:  push af
+        push bc
+        ld bc,0x243B
+        ld a,7
+        out (c),a
+        inc b
+        in a,(c)                    ; NextReg 7: bits 1-0 = the speed set
+        nextreg 0x7F,a
+        pop bc
+        pop af
+        nextreg 0x07,0
+        jp 0xFFFF
+isr_x:  pop hl                      ; (the replaced POP HL)
+        push af
+        push bc
+        ld bc,0x243B
+        ld a,0x7F
+        out (c),a
+        inc b
+        in a,(c)
+        and 3
+        nextreg 0x07,a
+        pop bc
+        pop af
+        ei
+        ret
+
 hideall:
         xor a
 .h:     nextreg 0x34,a
@@ -1497,7 +1583,7 @@ setup:  nextreg 0x43,0x20           ; sprite palette 0, auto-increment
         jr nz,.h
         nextreg 0x15,0x01
         ret
-PALROW: db 0xE3,0xB6,0xB6,0x00,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6,0x03,0xE0,0x1C,0xFC,0xFF
+PALROW: db 0xE3,0xB6,0xB6,0x00,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6,0x03,0xE0,0x1C,0xFC,0xFF   ; fill = 13 (bright green 0x1C, the pitch paper: attr 0x67)
 setup_end:
 
         SAVEBIN "md_rom.bin",ROM_ORG,rom_end-ROM_ORG

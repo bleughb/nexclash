@@ -144,6 +144,31 @@ Phase A done and agreed (2026-10-20 16:43). Phase B (build) in progress.
   pass per ~3 frames) -> compare game speed with the plain build.
 - IM 2 vector at 0x3BFF read from the alt ROM image: left FF FF (the build refuses longer hooks).
 
+## Hardware round 1 (Dean, 2026-10-20 18:42; builds 5bda1d78 plain / 6188bacd sprites)
+- Title (loader) screen bottom third garbage, menu key icons solid yellow, team names missing - in
+  BOTH builds. Cause: the game keeps icons / picture data (0x5B00-0x5B72) and team names
+  (0x5B90-0x5BFF: RITMAN ROVERS, CLARKE P R, the cup teams) in the 48K printer buffer, and NextZXOS
+  keeps its paging routines + system variables there (manual ch. 24: SWAP 0x5B00.., BANKM 0x5B5C,
+  BANK678 0x5B67, TSTACK): the .nex loader writes them after loading bank 5. The boot simulator
+  did not model it (all-OK boot). Fix: z80tonex `keep_printer_buffer` (opt-in; the stub copies the
+  snapshot's 256 bytes back before the tail), nextboot `nexload=True` (the boot check starts with the
+  buffer overwritten). Both Match Day builds use them.
+- The hook stack 0x5BA8-0x5BFF (round 1) sat on the cup team names (never read in either RZX): now
+  every hook saves the 88 bytes on entry and puts them back on exit (ENTERST / LEAVEST); verify
+  compares them; negative control (no restore) detected.
+- Slowdown: the match loop has NO frame sync (no HALT / FRAMES wait), so hook time = lost speed
+  (~+25 % in round 1). The game's own player draw (0x8B45) is 38.6 % of all frame time; round 2 runs
+  the figure image builds (e_bd), the XOR draw loop (e_pl -> 0x8ECE, writes NOPed) and the ball
+  routine (e_ball) at 28 MHz: +2.7 % real time per frame vs the original (verify's Speed line counts
+  28 MHz T / 6).
+- 28 MHz and the sound: the IM 2 handler (0x89F0..0x8A22, via 0xFFFF / 0xFFF4) plays beeper sound
+  with timed loops (0xB381..). An interrupt landing in 28 MHz code (round 1: inside a hook) ran it at
+  28 MHz. Round 2: the alt ROM's IM 2 vector word (0x3BFF) -> isr_w (speed into NextReg 0x7F, 3.5
+  MHz, JP 0xFFFF), the handler's exit 0x8A20 POP HL / EI / RET -> JP isr_x (speed back). No stack
+  depth added: the match stack's deepest point 0x89A8 has game variables 18 bytes below (0x898A..),
+  and the game takes interrupts with SP inside its 0xFFB8 copy buffer (shift-6 copy builder).
+- See-through fill dark green (0x14): the pitch is attr 0x67 = BRIGHT green; fill = 0x1C (index 13).
+
 ## Hardware checklist
 - Plain match_day.nex and match_day_sprites.nex both start (title, menu, match).
 - Players, ball and shadow as sprites; no clash; pitch lines hidden behind players (green fill).
@@ -151,4 +176,6 @@ Phase A done and agreed (2026-10-20 16:43). Phase B (build) in progress.
 - Keeper dive joined (no tear); depth: nearer players in front, ball by its shadow.
 - Bottom edge: figures over the score line as in the original; both side edges while scrolling.
 - Half time, full time, replay / extra time screens: no sprites left over.
-- Game speed equal to the plain build; any tearing.
+- Game speed equal to the plain build (round 2: +2.7 % measured); match sound / music at its normal
+  pitch and tempo; any tearing.
+- Title picture, menu icons, team names (and the cup's team names) intact in both builds.
