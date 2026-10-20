@@ -117,8 +117,19 @@ def first_access(rzx_path, lo, hi):
     return ''.join('.rw'[x] for x in FA)
 
 
+_RW = []
+
+
 def _rw_simulator():
-    """SkoolKit Simulator whose writes below 0x4000 are NOT dropped (slot-1 RAM page)."""
+    """SkoolKit Simulator whose writes below 0x4000 are NOT dropped (slot-1 RAM page). Built once per
+    process: compiling the patched simulator source costs ~30 ms, and some verifiers asked for it per
+    patched call (Target Renegade: twice per event). No engine modifies the class."""
+    if not _RW:
+        _RW.append(_rw_simulator_())
+    return _RW[0]
+
+
+def _rw_simulator_():
     import skoolkit.simulator as sm
     import types
     src = open(sm.__file__).read().replace('> 0x3FFF', '>= 0')

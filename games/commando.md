@@ -1,7 +1,7 @@
 # Commando (Elite Systems, 1985; 128K) - engine `commando`
 
 128K. Code: nexclash/commando.py, asm/commando_hooks.asm, docs/profiles/commando.json (after any
-.asm edit: `python tools/asm2profile.py commando`; depth table + shapes: `python -m nexclash.commando depth GAME.rzx`). Dispatch: nexclash.py cmd_auto, by signature at 39202.
+.asm edit: `python tools/asm2profile.py commando`; depth table + shapes: `python -m nexclash.commando depth GAME.rzx`). Dispatch: nexclash/engines.py, by signature at 39202.
 Reference (specnext/reference/commando/): Commando_1985_Elite_Systems_t_128K.z80 (BASIC loader,
 trainer version) + Commando_1985_Elite_Systems_t_128K.RZX (Dean, 2026-10-12; 8 autosave snapshots,
 stripped by `auto`).

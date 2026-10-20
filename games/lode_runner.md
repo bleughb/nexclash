@@ -2,7 +2,7 @@
 
 Code: nexclash/loderunner.py (facts, colour sheet, preview, patch, verify, unit tests, recolour),
 asm/loderunner_hooks.asm, docs/profiles/lode_runner.json, docs/records/lode_runner.json. Dispatch:
-nexclash.py cmd_auto, by signature at 0x9712 (the plotter). Reference: specnext reference/lode_runner/.
+nexclash/engines.py, by signature at 0x9712 (the plotter). Reference: specnext reference/lode_runner/.
 
     python nexclash.py auto lode_runner.z80 --rzx LODERUNN.rzx --no-record
     python -m nexclash.loderunner sheet LODERUNN.rzx --z80 lode_runner.z80      (colour sheets)

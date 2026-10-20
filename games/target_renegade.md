@@ -3,7 +3,7 @@
 Status: PHASE C (hardware) - sprite build e0b246e3 verified in the toolkit (RZX IDENTICAL, unit PASS),
 waiting for Dean's hardware test.
 Code: nexclash/renegade.py, asm/renegade_hooks.asm, docs/profiles/target_renegade.json (after an .asm
-edit: `python tools/asm2profile.py target_renegade`). Dispatch: nexclash.py cmd_auto (is_renegade:
+edit: `python tools/asm2profile.py target_renegade`). Dispatch: nexclash/engines.py (is_renegade:
 plotter bytes at 55276 + the entry code at 40576). Record: docs/records/target_renegade.json.
 
     python nexclash.py auto target_renegade.z80 --rzx target_renegade.rzx --no-record   (~12 min)

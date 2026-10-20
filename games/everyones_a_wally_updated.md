@@ -19,7 +19,7 @@ files as the frozen version, not copied. Sheets and previews: specnext/reference
 
 Code: nexclash/wally2.py, asm/wally2_hooks.asm, docs/profiles/everyones_a_wally_updated.json
 (after any .asm edit: `python tools/asm2profile.py everyones_a_wally_updated`), record
-docs/records/everyones_a_wally_updated.json, dispatch in nexclash.py cmd_auto (wally2 first;
+docs/records/everyones_a_wally_updated.json, dispatch: nexclash/engines.py (wally2 first;
 `--engine wally` = the frozen engine, the frozen record's recipe passes it).
 
 | Output | MD5 | Status |

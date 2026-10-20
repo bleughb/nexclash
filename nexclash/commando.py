@@ -1671,7 +1671,9 @@ def auto(a, z80, name, out, say):
         say('Cache     : %d of %d converted plots reused an image already in a pattern slot (no upload); '
             'negative control (lookup ignores the frame) over %d frames %s -> %s' % (
                 c['converted, image reused from a pattern slot'], c['converted'], NEG_CACHE_FRAMES,
-                'detected' if cneg else 'NOT detected', 'PASS' if cneg else 'FAIL'))
+                'detected' if cneg else 'NOT detected',
+                'PASS' if cneg and c['converted, image reused from a pattern slot'] > 0 else
+                'FAIL (no plot reused a cached image: run more frames)' if cneg else 'FAIL'))
     ic, iex = init_tests(patch, z80, negative_init_patch())
     iok = not ic['init failures!'] and ic['init negative control detected'] == ic['init negative control cases']
     ok = ok and iok

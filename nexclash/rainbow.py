@@ -1012,9 +1012,13 @@ def setup_zeroes_patterns(patch):
     return 'pattern RAM not zeroed (%d bytes)' % nz if nz else None
 
 
-def _machine(Sim, mem, regs, ns):
-    sim = Sim(mem, {})
-    sim.registers[:] = regs
+def _machine(Sim, mem, regs, ns, slot=None):
+    if slot is None:                # Rainbow's own callers: a fresh simulator (unchanged)
+        sim = Sim(mem, {})
+        sim.registers[:] = regs
+    else:                           # pooled (nexclash/simpool.py): one live simulator per slot
+        from .simpool import machine
+        sim = machine(Sim, mem, regs, slot)
     R, ed = sim.registers, sim.after_ED
     ns.R = R
     from skoolkit.simulator import R2

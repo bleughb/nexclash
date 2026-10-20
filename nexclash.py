@@ -163,54 +163,10 @@ def cmd_auto(a):
     rep = []
     say = lambda s='': (rep.append(s), print(s))
     s = Snapshot.get(z80)
-    from nexclash import rainbow as _rb                       # Rainbow Islands (128K) engine
-    if _rb.is_rainbow(s):
-        ok = _rb.auto(a, z80, name, out, say)
-        _finish(out, name, rep)
-        return ok
-    from nexclash import wally2 as _w2                        # Everyone's a Wally, updated (default)
-    if _w2.is_wally2(s) and getattr(a, 'engine', None) != 'wally':
-        ok = _w2.auto(a, z80, name, out, say)
-        _finish(out, name, rep)
-        return ok
-    from nexclash import wally as _wa                         # Everyone's a Wally, first version (frozen: --engine wally)
-    if _wa.is_wally(s):
-        ok = _wa.auto(a, z80, name, out, say)
-        _finish(out, name, rep)
-        return ok
-    from nexclash import chuckie as _ce                       # Chuckie Egg (48K)
-    if _ce.is_chuckie(s):
-        ok = _ce.auto(a, z80, name, out, say)
-        _finish(out, name, rep)
-        return ok
-    from nexclash import jetpac as _jp                        # Jetpac (16K)
-    if _jp.is_jetpac(s):
-        ok = _jp.auto(a, z80, name, out, say)
-        _finish(out, name, rep)
-        return ok
-    from nexclash import loderunner as _lr                    # Lode Runner (48K)
-    if _lr.is_loderunner(s):
-        ok = _lr.auto(a, z80, name, out, say)
-        _finish(out, name, rep)
-        return ok
-    from nexclash import commando as _co                      # Commando (128K)
-    if _co.is_commando(s):
-        ok = _co.auto(a, z80, name, out, say)
-        _finish(out, name, rep)
-        return ok
-    from nexclash import midres as _mr                        # Midnight Resistance (128K)
-    if _mr.is_midres(s):
-        ok = _mr.auto(a, z80, name, out, say)
-        _finish(out, name, rep)
-        return ok
-    from nexclash import smashtv as _st                       # Smash TV (48K, BASIC loader)
-    if _st.is_smashtv(s):
-        ok = _st.auto(a, z80, name, out, say)
-        _finish(out, name, rep)
-        return ok
-    from nexclash import renegade as _tr                      # Target Renegade (128K, BASIC loader)
-    if _tr.is_renegade(s):
-        ok = _tr.auto(a, z80, name, out, say)
+    from nexclash.engines import find                       # dedicated engines: nexclash/engines.py
+    eng_mod = find(s, a)
+    if eng_mod is not None:
+        ok = eng_mod.auto(a, z80, name, out, say)
         _finish(out, name, rep)
         return ok
     if s.machine != '48K' and len(s.ram()) > 49152:

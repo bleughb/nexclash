@@ -315,10 +315,10 @@ class NextState:
         return out
 
 
-def _machine(Sim, mem, regs, ns):
+def _machine(Sim, mem, regs, ns, slot='o'):
     from skoolkit.simulator import R2
-    sim = Sim(mem, {})
-    sim.registers[:] = regs
+    from .simpool import machine
+    sim = machine(Sim, mem, regs, slot)
     R, ed = sim.registers, sim.after_ED
 
     def nn():
@@ -425,9 +425,9 @@ def _pair(patch, get, regs, ns, stops, alt):
         def out(s, port, v):
             pass
         events = []
-    so = _machine(Simulator, o, list(regs), NS0())
+    so = _machine(Simulator, o, list(regs), NS0(), 'o')
     ns.events = []
-    sp_ = _machine(Simulator, p, list(regs), ns)
+    sp_ = _machine(Simulator, p, list(regs), ns, 'p')
     rp[0] = sp_.registers
     t0 = so.registers[25]
     ok1, _ = _run(so, stops)
@@ -966,7 +966,7 @@ def auto(a, z80, name, out, say):
                 c['plot 29704 conv'], c['plot 29777 conv'], inv_n, ula_n, c['restores (real + scratch)'],
                 c['commits'], c['max figures in a commit'], c['max sprites shown'], c['hide all (53868)'],
                 c['sprite pixels compared'], 'IDENTICAL' if not fails else 'FAILED %s' % fails))
-        tm = c['_time']
+        tm = collections.Counter(c['_time'])     # quick runs may end before the first plot
         gf = max(1, tm.get('game frames', 1))
         say('Speed     : per game frame (T at 3.5 MHz, 28 MHz parts / 8): plots %d -> %d, restore %d -> %d, '
             'commit +%d: hooks add %d T (the game has no frame sync: ~%.1f%% slower at ~250K T per game frame)' % (

@@ -24,27 +24,20 @@ stay on their machine; the maintainers' reference files live in the private repo
    No usable recording (none, or one that desyncs: the tools print a WARNING with the frame) ->
    ask the user for a Fuse recording (docs/RECORDING_CHECKLIST.md) before phase A.
 3. Follow docs/PLAYBOOK.md phases A-C. Phase A ends with ONE question to the user, with preview
-   frames: which figures become sprites, what stays on the ULA, depth - and the COLOUR SHEETS
-   (every game, Dean 2026-10-13/14; PLAYBOOK 3b), built with nexclash/coloursheet.py, 1:1, 8x8
-   palette swatches: `<game>_PAINTING_SPRITES.png` (the fewest WHOLE figures that show every graphic,
-   multi-part figures joined by the game's own object, today's colours, items once per colour they
-   take; the user paints it; many figures -> one pair per level + collectables + player, Dean
-   2026-10-19) and `<game>_REFERENCE_ALL_SPRITES.png` (every figure whole, as the build
-   colours it; not read back). The painted sheet becomes the engine's colours json (docs/profiles/
-   <record name>_colours.json, e.g. dizzy1_colours.json: the path the engine's COLOURS constant
-   loads; another name is never read), which the engine applies per pixel. Never guess
-   these; if the prompt already says, confirm with the preview.
-   Every engine with a colour sheet also gets `recolour` (PLAYBOOK 3b "RECOLOUR"): colours only
-   in banks the game never reads, `RECOLOUR` + `recolour()` on nexclash/recolour.py, so a repaint
-   is `python nexclash.py recolour <game>_sprites.nex PAINTED.png` - seconds, no rebuild.
+   frames and the colour sheets (PLAYBOOK 3b is the one place for the sheet rules): which figures
+   become sprites, what stays on the ULA, depth, colours. Never guess these; if the prompt already
+   says, confirm with the preview. Every engine with a sheet also gets `recolour` (PLAYBOOK 3b).
 4. Long runs (full verify, selftest): `setsid nohup` + poll (LEARNINGS 2.6) - plain `&` dies.
-5. While developing: engine files only, `selftest.py --canary` after any shared change.
+5. While developing: engine files only, `selftest.py --canary` after any shared change. Iterate with
+   `--quick 2000` (PLAYBOOK 6); the full `auto` runs ONCE, on the build that goes to the user.
 6. End: "End of every task" below - games/<game>.md, record, views, VERIFICATION, capture
    questions; references + built .nex files + both colour sheets and the painting sheet's
    _layout.json to specnext
    (the colours json, once painted, goes in the record's data list); PRs in both repos (maintainers) or
-   `contribute` (contributors); maintainers: `selftest.py --affected --verify --stamp` in a
-   separate worktree before the merge (Rainbow Islands stays excluded).
+   `contribute` (contributors). The game's one full verification is `selftest.py --game <record>
+   --verify --stamp` on the committed record (PLAYBOOK 6); maintainers: `selftest.py --affected
+   --verify --stamp` in a separate worktree before the merge then re-verifies only what else the
+   change reached (Rainbow Islands stays excluded).
 7. Reply: results, the .nex files, a short hardware checklist.
 
 ## Setup
@@ -75,18 +68,21 @@ or download another version; tools/sjasmplus/README.md).
   broken patch's own tables: restore only the run-time byte ranges of captured states (a copy of
   the whole state area silently puts the good tables back and the control passes - Smash TV).
 - Keep changes additive and limited to the new engine (one module, one .asm, one profile, one
-  games/ file, a dispatch line in nexclash.py cmd_auto, an evidence record docs/records/<game>.json).
+  games/ file, one line in nexclash/engines.py, an evidence record docs/records/<game>.json).
+  engines.py is rebuild-only in records.plan() (it only picks the module), so a new game's PR
+  re-verifies the new game alone - never put other code there (engines.py docstring).
+- Speed: every simulator a verifier builds per event comes from `simpool.machine(Sim, mem, regs,
+  slot)` (one slot per simulator alive at once: 'o', 'p', 'c'); building one costs ~3 ms, more than
+  the code it runs (Lode Runner verify 112 s -> 35 s, identical output). Profile before guessing:
+  `python -m cProfile -s tottime nexclash.py auto ... --quick 300 | head -30`.
 - Ask the user before decisions that change what they see (which figures become sprites,
   colours, anything left on the ULA). Phase A settles them in one question; a new one that comes up
   later (phase C, a figure the first recording never showed) gets its own question - never decide it.
 - Do not change another game's output. After touching shared code (anything outside your engine's
-  module / .asm / profile) run `python selftest.py --canary` (needs the private references). Two
-  stages (Dean, 2026-10-13): stage 1 = Chuckie Egg rebuilt, MD5s, under a second - it validates the
-  tool chain. If it fails, stage 2 runs by itself: Midnight Resistance rebuilt + a 300-frame
-  differential verify (~1 min; 128K, alt ROM, interrupts on, paged hook RAM, pattern cache) and
-  says whether the TOOL CHAIN is broken (fix that first) or the fault is Chuckie Egg's. Any selftest
-  run that fails a game runs stage 2 the same way. The canaries are the records marked "canary":
-  1 / 2; keep both on the latest tools (never pinned), adapt them in the same PR as a tool change.
+  module / .asm / profile) run `python selftest.py --canary` (needs the private references; stage 1
+  = Chuckie Egg rebuilt, MD5s, ~1 s; only if it fails, stage 2 = Midnight Resistance rebuilt + a
+  300-frame verify, ~2 min, says whether the TOOL CHAIN or Chuckie Egg is at fault; selftest.py
+  --help). The canaries are the records marked "canary": 1 / 2; keep both on the latest tools.
   Rainbow Islands is EXCLUDED from every automatic check (record "excluded"; Dean, 2026-10-13: too
   slow, being reworked): never re-verify it unless asked; `--game rainbow` runs it explicitly. Do NOT rebuild or verify other games in a game session: the
   maintainers' `selftest.py --affected` finds every game a change reaches (docs/records keep the

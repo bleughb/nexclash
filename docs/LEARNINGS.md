@@ -1127,6 +1127,14 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   Python imports the script's own directory first, so a dis.py shadows the stdlib and breaks
   SkoolKit (happened twice, the second time with this line already here).
 - Do all analyses in one simulator pass.
+- Profile a slow run before redesigning it (`python -m cProfile -s tottime nexclash.py auto ...
+  --quick 300`). 2026-10-20: two thirds of Lode Runner's and Jetpac's verify time was BUILDING
+  SkoolKit simulators (~3 ms each, two or three per patched call), and Target Renegade compiled the
+  whole patched simulator module (~30 ms) twice per call via `_rw_simulator()`. Fixes: the class is
+  built once per process, per-event simulators come from nexclash/simpool.py (same output, 3-4x
+  faster), and deterministic helper runs are memoised (Jetpac's graphic builders: 4,008 runs ->
+  a few dozen). Check a speed-up with the same quick run before and after: the reports must match
+  line for line apart from elapsed times.
 - Keep per-instruction work in an analysis hook O(1) (a dict SCAN per opcode turned a 2-minute pass
   into a 10-minute timeout); simple per-instruction hooks are fine (simrun: 1,500 frames ~15 s).
 - Print summaries, not listings. Disassemble only flagged routines.
