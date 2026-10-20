@@ -5,11 +5,8 @@ differential tests against real recordings. Two kinds of session use this file:
 - **Add a game** (a user ran `nexclash.py new`): their SESSION.md has the game, snapshot and RZX.
 - **Maintain** (the maintainers): toolkit work, releases, merging contributions.
 
-A maintainer session that adds a game is an add-a-game session for the engine work (engine files
-only, `--canary` after shared changes, no rebuilding other games while developing) and a maintainer
-session at the end: the game's files go to specnext, then branch + PR, and before the merge
-`selftest.py --affected --verify --stamp` (re-verifies every game the change reaches; hours: run it
-in a separate worktree, LEARNINGS 2.6). Contributors never run that step; maintainers always do.
+A maintainer session that adds a game works like an add-a-game session until the end, then takes
+the maintainer steps in "End of every task" (specnext, PRs, the merge check).
 
 Never put game data (.z80/.rzx/.nex/.tap/...) in this repo or a contribution: the user's files
 stay on their machine; the maintainers' reference files live in the private repo bleughb/specnext.
@@ -30,15 +27,8 @@ stay on their machine; the maintainers' reference files live in the private repo
 4. Long runs (full verify, selftest): `setsid nohup` + poll (LEARNINGS 2.6) - plain `&` dies.
 5. While developing: engine files only, `selftest.py --canary` after any shared change. Iterate with
    `--quick 2000` (PLAYBOOK 6); the full `auto` runs ONCE, on the build that goes to the user.
-6. End: "End of every task" below - games/<game>.md, record, views, VERIFICATION, capture
-   questions; references + built .nex files + both colour sheets and the painting sheet's
-   _layout.json to specnext
-   (the colours json, once painted, goes in the record's data list); PRs in both repos (maintainers) or
-   `contribute` (contributors). The game's one full verification is `selftest.py --game <record>
-   --verify --stamp` on the committed record (PLAYBOOK 6); maintainers: `selftest.py --affected
-   --verify --stamp` in a separate worktree before the merge then re-verifies only what else the
-   change reached (Rainbow Islands stays excluded).
-7. Reply: results, the .nex files, a short hardware checklist.
+6. End: "End of every task" below. The game's one full verification is `selftest.py --game
+   <record> --verify --stamp` on the committed record (PLAYBOOK 6).
 
 ## Setup
 `pip install -r requirements.txt --break-system-packages` (SkoolKit + Pillow; a fresh cloud
@@ -47,12 +37,11 @@ pinned: `python tools/asm2profile.py <engine>` assembles and updates the profile
 or download another version; tools/sjasmplus/README.md).
 
 ## Read only what the task needs (start: this file + PLAYBOOK, ~400 lines)
-- Add a game: this file -> docs/PLAYBOOK.md -> the nearest engine as a template (simplest:
-  nexclash/chuckie.py + asm/chuckie_hooks.asm + games/chuckie_egg.md; full-redraw / 128K:
-  rainbow; back-buffer composer: wally (interrupts off) or midres (interrupts on, all RAM used: hook
-  page at slot 5, scratch-buffer redirect, cached sprites); Codemasters TID engine: generic builder). Look things up
-  in docs/BRIEFING.md (platform, toolkit) and docs/LEARNINGS.md (lessons) by section when a
-  question comes up - do not read them end to end.
+- Add a game: this file -> docs/PLAYBOOK.md -> the nearest engine as a template (PLAYBOOK 5 has
+  the table; simplest: nexclash/chuckie.py + asm/chuckie_hooks.asm + games/chuckie_egg.md). Look things up
+  in docs/BRIEFING.md (platform and toolkit facts, C2 = the backlog), docs/LEARNINGS.md (lessons,
+  2.1 grouped by question) and docs/TECHNIQUES.md (Next techniques, other projects) by section
+  when a question comes up - do not read them end to end.
 - Testing in MAME (many users do): `grep -n '\[MAME\]' docs/*.md` (LEARNINGS 2.7).
 - Maintain: STATUS.md, then games/<game>.md for the game in hand.
 - Read code only in modules you will change.
@@ -89,12 +78,15 @@ or download another version; tools/sjasmplus/README.md).
   hashes of each game's dependencies) and rebuilds those. Without the references, say in the
   contribution note that shared code changed.
 - Never `pkill -f` / kill by `pgrep -f` pattern: it matches your own shell whenever the pattern
-  appears anywhere in that command line (it has, twice). Find the PID, kill the PID.
+  appears anywhere in that command line, even as part of a directory name (it has, twice). List
+  with `pgrep -fa` in one command, read it, kill the PID in the next.
 - The start-up tail must end below 0xC000, 48K too: the stub runs with its own bank 10 at
   0xC000-0xFFFF and the tail's OUT 0x7FFD maps bank 0 back under the PC (El Capitan Trueno: tail
-  below SP at 0xFF97, boot never reached the game). choose_tail_addr checks it only for 128K;
-  run nextboot.check on plain builds too.
-- Shell heredocs that write docs: quote the delimiter (`<<'EOF'`).
+  below SP at 0xFF97, boot never reached the game). z80tonex.choose_tail_addr refuses such a tail
+  (48K and 128K) and nextboot.check catches it; `nexclash.py patch` skips nextboot.check (BRIEFING
+  C2 #6), so run it on plain builds.
+- Shell heredocs that write docs: quote the delimiter (`<<'EOF'`), or the shell runs every
+  backticked example in the text (2026-10-11: it cloned sjasmplus into the repo and ran a pkill).
 - Analysis: use the shared commands (`inspect`, `scan`, `isr`, `cost`; BRIEFING C4) before writing a
   one-off script. If one falls short, IMPROVE IT (keep its existing output lines and arguments, add
   a golden check in selftest.py tools_check, run `python selftest.py --tools`) instead of copying
@@ -125,11 +117,14 @@ or download another version; tools/sjasmplus/README.md).
   GitHub UI: the release workflow builds the zip (tools/make_package.py; version = the tag) and
   attaches it. Missing zip: Actions -> release -> Run workflow with the tag.
   Before a release: `python selftest.py --stamp` (every game rebuilt + the re-verifications
-  due) must PASS. Before merging a PR: `python selftest.py --affected --verify --stamp`.
-  `--full` (every game re-verified, ~2.5 h) only when verification code changed throughout.
+  due) must PASS. `--full` (every game re-verified, hours) only when verification code changed
+  throughout.
 - Maintainers: commit on a branch, push, open a PR (message = what changed + verification). New
-  game's files go in the private repo: specnext/reference/<game>/ (snapshot, recordings, and the
-  built <game>.nex + <game>_sprites.nex), listed in its reference/README.md.
+  game's files go in the private repo: specnext/reference/<game>/ (snapshot, recordings, the built
+  <game>.nex + <game>_sprites.nex, both colour sheets + the painting sheet's _layout.json; the
+  colours json, once painted, goes in the record's data list), listed in its reference/README.md.
+  Before the merge: `selftest.py --affected --verify --stamp` in a separate worktree (LEARNINGS
+  2.6) - it re-verifies only what else the change reached. Contributors never run it.
 - Reply: results, the .nex files, a short hardware checklist.
 
 ## Layout
@@ -137,10 +132,10 @@ or download another version; tools/sjasmplus/README.md).
 |---|---|
 | nexclash.py | CLI: patch / new / contribute (users), auto / identify / record / convert / verify / rzx, analysis: inspect / scan / isr / cost |
 | selftest.py | maintainers' acceptance test, driven by docs/records (needs the private reference files) |
-| nexclash/ | toolkit modules + engines (chuckie, commando, dizzy1, dizzy5, dizzy6, jetpac, loderunner, midres, rainbow, renegade, smashtv, wally, wally2; build.py = TID generic); userflow.py = patch/new/contribute; simrun + snapinfo/memscan/isrinfo/drawcost = the analysis commands |
+| nexclash/ | toolkit modules + engines (chuckie, commando, dizzy1, dizzy5, dizzy6, jetpac, loderunner, midres, rainbow, renegade, smashtv, wally, wally2; build.py = TID generic); engines.py = auto's engine table; simpool.py = reusable verify simulators; userflow.py = patch/new/contribute; simrun + snapinfo/memscan/isrinfo/drawcost = the analysis commands |
 | asm/ | hook sources; after any edit `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex); dizzy5_hooks.asm is the exception: dizzy5.py emits the bytes, selftest (Dizzy V record check) compares them |
 | docs/profiles/ | per-game profiles (hook hex read by the engines), signatures.json, verified.json (generated) |
 | docs/records/ | one evidence record per game: inputs, dependencies, rebuild / verify recipes, outputs, status, check stamps (nexclash/records.py) |
 | games/ | one file per game, named like its folder in specnext/reference/ (facts, decisions, status, open items, checklist); tid_engine.md = shared TID engine facts |
-| docs/ | BRIEFING, LEARNINGS, VERIFICATION, PLAYBOOK, RECORDING_CHECKLIST, NEXT_REGISTERS, GUIDE_R3_REVIEW (dev guide r3 checked against these docs), contribute.json |
+| docs/ | PLAYBOOK (the steps), BRIEFING (facts + backlog C2), LEARNINGS (lessons), TECHNIQUES (Next techniques, other projects), VERIFICATION (results log), RECORDING_CHECKLIST, NEXT_REGISTERS, GUIDE_R3_REVIEW (dev guide r3 checked against these docs), contribute.json |
 | tools/ | asm2profile.py (asm -> profile hex, --check --all), sjasmplus/ (pinned assembler), hwtests/ (hardware test .nex sources + build.py), make_package.py (release zip), merge_contribution.py, prototypes |

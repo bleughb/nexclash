@@ -30,7 +30,7 @@ solid objects.
 
 Hardware + CSpect 2026-10-12, 541e34e2: crash when the first figure is drawn (the game screen is
 up). Hook code sat at 0x3D00-0x3DFF (pat/pix/occl); all earlier builds kept code below 0x3D00.
-Probable cause (not confirmed, BRIEFING A1 / C2 #14): the DivMMC/TR-DOS automap on an instruction
+Probable cause (not confirmed, BRIEFING A1 / C2 #24): the DivMMC/TR-DOS automap on an instruction
 fetch at 0x3Dxx, which pages DivMMC over 0x0000-0x3FFF - although the stub clears NextReg $06
 bit 4 (the simulator does not model DivMMC). d601385e: code at 0x3600-0x3CDB and
 0x3F00-0x3F96, only the pixel-pair tables in 0x3D00-0x3EFF; runs on hardware (Dean).

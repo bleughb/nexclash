@@ -1,7 +1,10 @@
 # Hardware tests
 
 Small .nex programs that answer one hardware question each, for facts the toolkit's simulator does
-not model (BRIEFING A1 blind spots). Recipe: BRIEFING C2 "How to test #31 / #35". Build:
+not model (BRIEFING A1 blind spots). Recipe (after MikeDX/next-testsuite): one question per .nex,
+cases from Ped7g's tests (docs/TECHNIQUES.md "Hardware ground truth") plus ours; each visual phase
+held on screen ~2 s; the final screen is one coloured block per test (green pass, red fail, white
+visual). Build:
 
     python tools/hwtests/build.py im2hold -o OUTDIR
 
@@ -13,7 +16,7 @@ Every test writes a results table at $7E00: `NXHT`, version, test count, then tw
 status (0 not run, 1 pass, 2 fail, 3 info) and a detail byte. A MAME script can read it once the
 border is green or red.
 
-## im2hold - BRIEFING C2 #38 (hardware IM2 mode holds interrupts)
+## im2hold - BRIEFING C2 #34 (hardware IM2 mode holds interrupts)
 
 Final screen: seven 2x2 blocks on character rows 2-3 (columns 2, 5, 8, ..., 20), numbered by test
 (run order T1 T2 T3 T5 T6 T4 T7). Green pass, red fail, white info, black not run. Under each
@@ -40,6 +43,6 @@ Board results:
 If the screen stays black with a black border after a few seconds, a test hung: note the border
 colour and which blocks are drawn (none are drawn until the end) and report it.
 
-Reading the results: tests 2, 5 and 6 passing = C2 #38's design works (hooks may run with
+Reading the results: tests 2, 5 and 6 passing = C2 #34's design works (hooks may run with
 interrupts off; the game's handler is reached through a RETI trampoline or the game's own uniform
 table). Test 4 says whether a game handler that ends EI;RET needs the trampoline at all.
