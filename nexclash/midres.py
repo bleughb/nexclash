@@ -456,10 +456,10 @@ def pair(patch, get, regs, ns, stop, alt, psite, run_orig=True):
     ns.events = []
     so = None
     if run_orig:
-        so = _machine(Sim, o, list(regs), NextState(patch))
+        so = _machine(Sim, o, list(regs), NextState(patch), 'o')
         if not _run_until(so, stop):
             err.append('original did not return')
-    sp_ = _machine(Sim, p, list(regs), ns)
+    sp_ = _machine(Sim, p, list(regs), ns, 'p')
     if not _run_until(sp_, stop, check=_isafe(sp_, regs, ns, err)):
         err.append('patched did not return')
     if ns.nr.get(0x55) != 5 or ns.nr.get(0x07, 0) != 0 or ns.nr.get(0x54, 4) != 4 or ns.nr.get(0x52, 10) != 10:
@@ -527,7 +527,7 @@ def truth(get, regs, stop):
     outs = []
     for fill in (0x00, 0xFF):
         m = _Orig(get, fill)
-        s = _machine(Sim, m, list(regs), NextState(_Dummy))
+        s = _machine(Sim, m, list(regs), NextState(_Dummy), 'm')
         _run_until(s, stop)
         outs.append({a: v for a, v in m.ov.items() if BUF[0] <= a < BUF[1]})
     z, f = outs
