@@ -20,7 +20,7 @@ top byte where OTIR must work (0x57, 0x5B). The ULA answers on any even port (A0
 |---|---|---|---|
 | $03 | Machine Type Register | display timing 48K/128K (bits 6:4, bit 7 = allow change); written last in the tail. Does NOT stop 7FFD decoding | z80tonex tail |
 | $05 | Peripheral 1 Setting Register | bit 2 cleared = 50 Hz (unless `nexclash.py ... --allow-60hz`); a new rate takes effect at the NEXT frame and $05 reads back the OLD rate until then - work from the value written, not a read (NextMasterSystem design notes) | z80tonex stub |
-| $06 | Peripheral 2 Setting Register | bit 4 cleared = divMMC automap / DRIVE-button NMI off (the A1 table used to say $0A). Yet code at 0x3D00-0x3DFF crashed Commando: probably not every automap entry point (BRIEFING A1, C2 #14). NOT cleared: bit 7 = F8 CPU-speed key, bit 5 = F3 50/60 Hz key (both 1 after soft reset: a player can change speed / refresh mid-game, C2 #26); bits 1:0 audio chip mode | z80tonex stub |
+| $06 | Peripheral 2 Setting Register | bit 4 cleared = divMMC automap / DRIVE-button NMI off (the A1 table used to say $0A). Yet code at 0x3D00-0x3DFF crashed Commando: probably not every automap entry point (BRIEFING A1, C2 #24). NOT cleared: bit 7 = F8 CPU-speed key, bit 5 = F3 50/60 Hz key (both 1 after soft reset: a player can change speed / refresh mid-game, C2 #26); bits 1:0 audio chip mode | z80tonex stub |
 | $07 | CPU Speed Register | 0 = 3.5 MHz for games; 3 = 28 MHz inside the Rainbow and Commando hooks, 0 on exit | stub, rainbow_hooks, commando_hooks |
 | $08 | Peripheral 3 Setting Register | bit 7 write 1 = clear the 7FFD lock (0 does nothing; read 1 = unlocked); bit 6 = 1 DISABLES contention (the tail's AND $30 clears it: contention on); bit 5 ABC/ACB, 4 speaker, 3 DACs, 2 port FF read, 1 TurboSound, 0 = Issue 2 keyboard (an early game that reads EAR on port FE may need it; not used) | tail, altrom stub |
 | $15 | Sprite and Layers System Register | bit 0 sprites visible; bits 4:2 layer order (default SLU, global) | hooks, setup |
@@ -34,7 +34,7 @@ top byte where OTIR must work (0x57, 0x5B). The ULA answers on any even port (A0
 | $6E / $6F | Tilemap Base Address / Tile Definitions Base | bit 7 = bank 7 (first 8K only = page 14; recent core), low bits = offset in 256-byte units ($6E 0x80, $6F 0x80 + 0x0A) | Rainbow commit |
 | $34 | Sprite port-mirror Index Register | selects the sprite for $35-$39 | all hooks |
 | $35-$39 | Sprite Attribute 0-4 Registers | X, Y, flags (X8, mirror), pattern + visible, 4-bit/anchor; no auto-increment ($75-$79 would) | all hooks |
-| $40 / $41 / $43 | Palette Index / Palette Value (8-bit) / ULA Palette Control | $43=$20 selects sprite palette 0 with auto-increment; $43=$30 the tilemap palette. $43 bit 7 = 1 turns auto-increment OFF; bits 3:1 select the DISPLAYED second palette (sprites / Layer 2 / ULA), bit 0 ULANext - every $43 write sets them too (LEARNINGS 1.5) | setup templates, Rainbow setup |
+| $40 / $41 / $43 | Palette Index / Palette Value (8-bit) / ULA Palette Control | $43=$20 selects sprite palette 0 with auto-increment; $43=$30 the tilemap palette. $43 bit 7 = 1 turns auto-increment OFF; bits 3:1 select the DISPLAYED second palette (sprites / Layer 2 / ULA), bit 0 ULANext - every $43 write sets them too (TECHNIQUES 1) | setup templates, Rainbow setup |
 | $4B | Sprite Transparency Index Register | 0 = index 0 transparent (reset value $E3; 4-bit uses the low nibble) | setup |
 | $50-$57 | MMU slot 0-7 Registers | 8K page per slot; $FF in slot 0/1 = ROM (or the alt ROM) | stub, tail, hooks |
 | $7F | User Storage 0 Register | "player drawn" flag (slot1/altrom TID hooks); Rainbow: tile-cache flush request | hooks |
@@ -57,7 +57,7 @@ top byte where OTIR must work (0x57, 0x5B). The ULA answers on any even port (A0
 | 0xDFFD | Next Memory Bank Select | not used (bank MSBs) |
 | 0xFE | ULA Control Port | border (restored by the tail) |
 
-## Not used yet: documented, untested (why / when to use: LEARNINGS 1.5)
+## Not used yet: documented, untested (why / when to use: TECHNIQUES 1)
 Sources: core 3.01.09 nextreg.txt / ports.txt, guide r3 (Sprites, DMA, Copper, Interrupts), KevB copper
 timing (github.com/varmfskii/zxnext_code, zx_next_notes/copper). Researched 2026-10-19.
 | Reg / port | What | Notes |

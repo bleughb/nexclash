@@ -57,7 +57,7 @@ BRIEFING - with its reason.
 
 ## 1.2 Spectrum 48K/128K memory and paging
 - 128K: an UNLOCKED 7FFD/1FFD write remaps the top 16K (C000-FFFF) at once. Code running there
-  (e.g. a start-up tail) disappears from under the PC -> a 128K tail must end below 0xC000.
+  (e.g. a start-up tail) disappears from under the PC -> a tail (48K and 128K) must end below 0xC000.
 - 48K timing (NextReg $03) does NOT stop 7FFD/1FFD decoding (VHDL 3.01.09; the old belief was wrong and
   harmless). The lock that protects 48K games is 7FFD bit 5, written by the tail itself.
 - On a 128K (toastrack) an OUT to 0x1FFD is a 7FFD write (A15 = 0, A1 = 0): Target Renegade's entry code
@@ -191,7 +191,7 @@ BRIEFING - with its reason.
 - Never put hook CODE at 0x3D00-0x3DFF in an alt ROM / slot-1 page: Commando 541e34e2 crashed at
   its first figure on hardware and in CSpect with code there, and ran once the code moved out
   (tables stayed there). Probable cause: the DivMMC (TR-DOS) automap on an instruction fetch at
-  0x3Dxx, despite the stub clearing NextReg $06 bit 4 - not confirmed (BRIEFING A1, C2 #14).
+  0x3Dxx, despite the stub clearing NextReg $06 bit 4 - not confirmed (BRIEFING A1, C2 #24).
   Invisible to the simulator; `auto` checks it statically and per instruction (Commando).
 - Flicker: never hide a figure's sprites at plot entry and show them at exit (hidden for the
   whole call, often across the beam). Keep them visible, build the new image in OTHER pattern
@@ -202,241 +202,14 @@ BRIEFING - with its reason.
   (round robin); never share an image that was masked (depth). Negative control: a lookup that
   ignores one key field must fail the pixel check.
 
-## 1.5 Spectrum Next: faster sprite / tilemap I/O, DMA, copper, raster (DOCUMENTED; used so far: port 0x57 + OUTI in Rainbow, 2026-10-19)
-Researched 2026-10-19 (guide r3 chapters Sprites / DMA / Copper / Interrupts, core 3.01.09
-nextreg.txt + ports.txt + changelog, KevB's copper timing notes in github.com/varmfskii/zxnext_code
-zx_next_notes/copper; github.com/stevemonks/ZXSpectrumNextMachineCodeGuides;
-github.com/breakintoprogram/lib-spectrum-next lib/dma.z80; full guide r3 review: GUIDE_R3_REVIEW.md). Nothing here is simulated or hardware-tested: the first engine that uses one
-implements it in the simulator (NEXT_REGISTERS "SIMULATOR TRAP") and records the hardware result.
-Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5 MHz T-states.
-- Sprite attributes in bulk: write port 0x303B = first sprite, then the 5 bytes per sprite
-  (= $35..$39 in order) to port 0x57; the sprite index advances after each sprite's last byte
-  (4 bytes when byte 3 bit 6 = 0), wraps 127 -> 0. OTIR 21 T/byte = ~105 T/sprite, unrolled OUTI
-  16 T/byte; our hooks pay ~180 T/sprite ($34 select + 5 x LD A,(DE) / NEXTREG / INC DE).
-  WHY it can break: 0x303B ALSO sets the pattern-upload slot (same write, bits 6:0 + bit 7), so a
-  loop that uploads a pattern then writes that sprite's attributes (Rainbow piece loop) must
-  become two passes - all patterns first, then one 0x303B + all attributes. And a sprite whose
-  byte 3 has bit 6 = 0 takes only 4 bytes: a HIDE record written as byte 3 = 0 inside a
-  5-bytes-per-sprite stream shifts every later sprite by one byte. Hide with byte 3 = $40 (no
-  pattern, byte 4 follows) in a 5-byte stream.
-- Random-access fast attributes (github.com/serdjukdev/ZxNextStudio-TechDemo code/render/sprite.asm):
-  set NextReg $09 bit 4 (lockstep) ONCE in setup; then `NEXTREG $34,n` also moves port 0x57's index,
-  and a sprite costs NEXTREG $34 (17 T) + 5 x OUT (C),r (12 T, C = $57) = ~77 T instead of ~180 T,
-  in any order, without restructuring a pattern-then-attributes loop. Caveat: with lockstep every
-  $34 write also moves the PATTERN pointer (bit 7 = +128 bytes), so finish a pattern upload before
-  selecting the next sprite. Same demo uploads patterns with an unrolled OUTINB (DUP 128: 16 T/byte
-  vs OTIR 21 T/byte, B untouched).
-- Mercenary Next (Mike Dailly, github.com/mikedailly/MercenaryDisassembly, 2025): a 48K game
-  disassembled with SkoolKit (sna2skool -c ctl) whose line draw is patched to Layer 2 - the closest
-  published relative of nexclash. Techniques:
-  * Runtime-switchable patches: a table of (site, hook, 3 saved original bytes); Apply writes
-    JP hook at each site, Remove puts the saved bytes back, and the key G toggles enhanced <->
-    original (plus CPU 14 <-> 3.5 MHz) while playing. One .nex gives a live hardware A/B
-    (BRIEFING C2 #28). Sites must be RAM (alt-ROM sites cannot be switched back).
-  * Layer 2 drawn by the CPU through port 0x123B instead of MMU paging: %11001011 maps all 48K of
-    the SHADOW Layer 2 ($13) for read+write over 0x0000-0xBFFF (the stack included: DI, no
-    calls), so a pixel is LD (HL),c with H = y, L = x; %00000010 unmaps (display stays on).
-  * Double buffering = draw into $13 via 0x123B bit 3, flip = swap $12 / $13 (two NEXTREGs).
-  * WRITE-only mapping splits reads from writes (em00k Tilemap_with_data_at_0000, 2023): 0x123B bit 0
-    set and bit 2 clear sends WRITES to 0x0000-0x3FFF into Layer 2 (bits 7:6 = which 16K), while
-    READS and instruction fetches still come from what MMU slots 0/1 hold (his tile data page:
-    `LDI` copies data page -> Layer 2 at the same address). Shipped use: Mike Dailly's Next ray
-    caster (blog part 4, 2023) maps the whole 48K Layer 2 WRITE-only over 0x0000-0xBFFF and pages
-    its generated span renderers into the ROM slots for READ, so D = screen row with no paging in
-    the inner loop (LDWS / LDIX straight from texture to screen). For us, a CANDIDATE (not tested): hook
-    code in the alt ROM (slot 0) could write Layer 2 directly, with no MMU slot to free and no page
-    to map back - Layer 2 plots without touching slots 2-7 (dizzy1 / wally2 map pages today). To
-    check first: that write-mapping wins over the alt ROM ($8C) at 0x0000-0x3FFF on hardware, that
-    the game's ISR never writes 0x0000-0x3FFF while it is on (turn it off before any EI), and that
-    nextboot / verify model a write-only 0x123B (they model the port; whether reads stay on the
-    ROM is unchecked).
-  * The Layer 2 scroll offset ($16/$17) moves the game's window origin to Layer 2 (0,0) and the
-    clip ($18) trims it, so game coordinates need no adds per pixel.
-  * Ring-buffer scrolling (em00k L2TopDownWorldScroll, 320x256 Layer 2, 16x16 tiles, 2026-10-20):
-    the screen buffer wraps (X 0-319 via $16 + $71 bit 0, Y 0-255 via $17), so a scroll moves only
-    the offsets, and ONE new column (16 tiles) or row (20 tiles) is drawn when a tile edge is
-    crossed - not the whole screen. The new column / row lands just past the right / bottom edge,
-    and the Layer 2 clip ($18) hides it while it is drawn. For us: a game that scrolls by redrawing
-    its whole screen could have the redraw replaced like this ONLY where the game never reads the
-    picture back. Not for Rainbow: its blit is inside the game's own 1.2 ms per frame
-    (games/rainbow_islands.md), so the hooks would save nothing.
-  * Line colour by self-modifying the immediate operand of every plotter (`ld (hl),n`) from a
-    table of patch addresses - one write per colour change, nothing in the inner loop.
-  * Boot: game RAM loaded into high banks, copied down by the .nex start code; the ULA picture is
-    left running underneath (Layer 2 over it, SLU).
-- Happy Next Year 2026 (Leonis, source supplied by Dean 2026-10-19) confirms and adds:
-  * 4-byte attribute records: with byte 3 bit 6 = 0 a sprite takes 4 bytes on port 0x57, so
-    "hide all" = one 0x303B select + 4 x OUT 0 per sprite (the 5-byte-stream trap above does not
-    apply to an all-4-byte stream). Only for 8-bit patterns: our 4-bit sprites need byte 4.
-  * Double-buffered PATTERN slots: upload the next frame's images by DMA (0x303B + memory ->
-    port 0x5B) into the slot set NOT on screen, spread over two frames (4 + 5 patterns), then flip
-    which set the attributes use - no half-updated sprite is ever displayed (generalises the
-    Commando flicker rule in 1.4 and the pattern cache).
-  * Per-frame copper rebuild: patch the list in RAM, stop the copper ($62/$61 = 0), DMA the list to
-    port 0x253B with $60 selected, restart in mode 11 - all done after a $1E/$1F wait for the line
-    AFTER THE LIST'S LAST WAIT (192 only when the list ends above it), so the list is never
-    half-written while the beam uses it. em00k's zx-next-copper-wobble (2021) has WAITs down to
-    line 255 and glitched in CSpect until the rewrite waited for line 250+. A per-line WAIT + MOVE
-    $16 pair gives a per-scanline Layer 2 X offset (raster wobble); MOVE $17 per line does the same
-    vertically (a line repeated or skipped = stretch / squash).
-  * Static WAIT skeleton (Dean's copper-bar demos, ZX Basic, 2026-10-20): build the list ONCE with
-    one WAIT per scanline (+ two MOVE $44 per line), then per frame rewrite only the MOVE data bytes
-    and DMA the list up. WHY: WAITs must appear in increasing raster order - a WAIT for a line the
-    beam has passed holds the rest of the list until the next frame (inferred from the guide's
-    WAIT description, not tested) - so lists rebuilt per frame from moving objects must be sorted;
-    a fixed per-line skeleton never needs sorting, and overlaps resolve by write order. Cost: 6
-    bytes per line (192 lines = 1154 bytes of the 2048).
-  * Per-line palette colour: $43 = $90 (Layer 2 palette 1st, auto-increment OFF), $40 = index once,
-    then per line MOVE $44 x2 (9-bit colour) recolours that one entry down the screen - copper bars
-    behind a Layer 2 cleared to that index. The changed entry stops matching $14 (a COLOUR
-    compare), so 'transparent' pixels become visible: a game layer whose entry the copper rewrites
-    loses its see-through pixels. Same demos: $64 = 33 aligns copper line 0 with the 320x256 Layer 2
-    top (not checked against KevB's tables).
-  * DMA fill by overlap: memory -> memory with destination = source + 1 (the LDIR fill idiom)
-    fills a block, e.g. a 257-byte IM2 vector table; alternative to fixed-port-A fill.
-  * UNVERIFIED claim in its Copper.asm: copper MOVEs to NextReg $15 "reset clipping values", so the
-    demo uses a second list without $15 while clip windows animate. Not in the core spec; test
-    before driving $15 from a copper list that coexists with $19/$1A/$1B clips.
-- NextReg $34 and port 0x303B are SEPARATE sprite indices unless NextReg $09 bit 4 (lockstep) is
-  set. Never mix $34/$35-$39 writes and 0x57 writes on one assumption of "the current sprite";
-  hooks that only use NEXTREG keep working whatever 0x57 did, and the reverse.
-- $75-$79 = $35-$39 with sprite-number post-increment on EACH write (nextreg.txt). Useful where a
-  run of sprites gets one attribute: hide sprites a..b = NEXTREG $34,a then NEXTREG $78,0 per
-  sprite (20 T) instead of $34 + $38 per sprite (37 T + loop) - every hook's hide loop.
-- Relative sprites: an anchor followed by relatives (byte 4 bits 7:6 = 01; anchor byte 4 bit 5 = 1
-  makes them unified, 0 composite; guide r3 Sprites example) moves,
-  hides, mirrors and (unified) scales the whole group with ONE anchor write; relatives hold 8-bit
-  offsets and can take the anchor's pattern number as a base. Candidate for multi-sprite figures
-  (2x2 boxes) - but a mirrored unified group mirrors as one image, so the per-engine "swap the left
-  and right quads" logic (BRIEFING A1) must go, and the pixel check must cover it.
-- zxnDMA (port 0x6B since core 3.1.2; 0x0B = Zilog-compatible DMA): memory -> memory, memory ->
-  fixed port (0x5B patterns, 0x57 attributes, 0x253B with a NextReg selected on 0x243B). With
-  port cycle length 2 a byte costs ~4 cycles vs LDIR 21 / OTIR 21 T - but only with the timing
-  byte sent for BOTH ports (WR1/WR2 bit 6 + byte %00000010); without it the DMA uses standard Z80
-  cycle timing. Program upload (~15-25 bytes by OTIR) costs ~400 T, so it pays from ~30 bytes;
-  registers persist between transfers, so a repeat with a new address needs only WR0 (+ WR4) +
-  $CF load + $87 enable. Exact form (em00k ninja-sprite-dma, per 256-byte sprite pattern): program
-  everything ONCE (port B = 0x5B, length 256), then per pattern `OUT (0x6B)` x5: $1D (WR0: transfer
-  A->B, port-A address bytes follow, no length), address low, address high, $CF, $87 - ~87 T with
-  the pattern slot already set on 0x303B. So a re-armed DMA pays from a few bytes, not ~30: worth it
-  for the per-commit pattern uploads (midres / renegade caches) when the source is linear in memory.
-  Continuous mode (WR4 bits 6:5 = 01) holds the bus to the end; never use
-  WR4 mode 00 or WR0 operation 10/11 (they act as continuous / transfer today but are Zilog byte /
-  search modes and may change). FILL = port A FIXED memory (WR1 %00100100) pointing at one byte holding the value,
-  port B incrementing: clears a shadow / map / buffer at DMA speed (lib-spectrum-next FillDMA).
-  Fixed memory -> fixed port 0x5B fills pattern RAM the same way (Rainbow setup zeroes 16K with an
-  OUT loop). Library code wraps the program OTIR in DI/EI because an ISR that also programs the
-  DMA would interleave its bytes with ours; hooks may skip the DI only when neither the game's ISR
-  nor a hook called from it writes port 0x6B / 0x0B (original Spectrum games never do; check any
-  128K/Next-aware title's port writes first).
-  WHY it can break: the CPU cannot see a pulse-mode interrupt while the DMA owns the bus, and the
-  ULA pulse lasts ~30 T at 3.5 MHz, so a transfer across the interrupt LOSES the game's frame
-  interrupt (DI does not help; the pulse is gone). Engines with interrupts ON (midres, dizzy1,
-  chuckie; BRIEFING A3) may only DMA where the interrupt cannot fall (raster known, A1:
-  interrupt near line 248) or in pieces shorter than the gap. Pieces are cheap: WR6 $D3
-  (Continue) resets the byte counter and keeps the pointers, so after the first program each
-  further chunk is `$D3, $87` (2 OUTs) continuing where the last ended. Burst mode + prescaler
-  (WR2 timing byte bit 5 + prescaler byte; rate = 875 kHz / prescaler, scaled by video timing $11)
-  hands the bus back to the CPU between bytes, so the pulse interrupt is seen - slow, but safe for
-  background copies (specnext.com/the-zxndma; hardware to confirm). Hardware IM2 mode ($C0 bit 0 +
-  $CC-$CE) can let interrupts break into a DMA, but we run pulse mode and the game's own IM/ISR.
-- Copper (NextRegs $60-$63, $64): 1024 16-bit instructions in its own 2K write-only RAM, WAIT
-  line 0-311 + horizontal 0-55 (8-pixel steps), MOVE value -> NextReg 0x01-0x7F ONLY (7-bit field:
-  $8C, $C0-$CE, $B8+ are out of reach), mode 11 restarts the list every frame, so `WAIT 176 / MOVE
-  $6E,x / HALT` re-applies x every frame at line 176. No CPU or DMA time is taken.
-  Uses for us: apply a finished tilemap (base $6E, clip $1B, $6B on/off) or a sprite attribute
-  list at a fixed safe line instead of a CPU raster busy-wait; the CPU only flips one byte of the
-  list ($61/$62 = byte index, $60 = data; $62 with an unchanged mode only moves the index).
-  WHY it can break: copper MOVEs to $34 change the CPU's selected sprite between two of its
-  NEXTREGs - with copper-driven sprites, the CPU must not use $34-$39 (use 0x57: separate index).
-  The same holds for EVERY register pair with an internal index: $40/$41/$44 (palette index), $1C
-  with $18/$19/$1A/$1B (clip index), $34/$35-$39, $61/$62 with $60/$63: the copper and the CPU must
-  never both drive one pair. A list that holds two maps / two attribute sets needs both to be
-  complete before the flip byte changes (the copper reads it at its line, any frame). Patching a
-  live list byte: $61/$62 = byte index with the SAME mode bits (11), then ONE write to $60 ($63
-  commits only pairs); guide r3 companion code copper/ does exactly this. Uploading a list by DMA:
-  select $63 on port 0x243B, then DMA memory -> fixed port 0x253B. A .nex can also carry a
-  2048-byte copper block (NEX format, wiki NEX_file_format; how the loader applies it is not
-  documented there).
-- Raster numbering: Active Video Line ($1E/$1F), line interrupt ($22/$23) and copper WAIT all
-  count from ULA pixel row 0 UNLESS NextReg $64 (core 3.1.5+) is non-zero: it offsets all three
-  (changelog 3.01.05). Frame length differs by timing: 48K 312 lines, 128K 311, HDMI 312 (60 Hz:
-  262/261); display rows 0-191, then border + blanking. A raster wait that assumes 312 lines or
-  offset 0 is a hardware-only fault (BRIEFING C2 #26).
-- Tilemap attribute byte (2-byte entries): bits 7:4 palette offset (used), bit 3 X mirror, bit 2 Y
-  mirror, bit 1 rotate 90 clockwise (with the mirrors: 0/90/180/270), bit 0 ULA over the tile.
-  A tile that is another's mirror or rotation needs NO definition of its own: dedupe tile
-  definitions by orientation before running out of the shared budget (Rainbow: 176). Tilemap
-  scroll is per pixel ($2F/$30 X 0-319, $31 Y 0-255, wraps; stevemonks guide SimpleTileMap):
-  a map can follow a pixel scroll by offsetting $30/$31 instead of switching the layer off - the
-  clip window ($1B) stays fixed, so rows that wrap in must be built too.
-  $6B bit 0 = 1 FORCES the whole tilemap over the ULA and overrides the per-tile bit 0 (core
-  nextreg.txt): per-tile "ULA over this tile" only works with $6B bit 0 = 0 (Rainbow writes $6B =
-  $81 today; its tiles all have bit 0 = 0, so $80 would show the same picture). 512-tile mode ($6B
-  bit 1) turns attribute bit 0 into tile bit 8 (no per-tile ULA priority); it does not help when
-  the limit is memory (bank 7 = 8K for map + definitions). When memory IS the limit, two $6B bits
-  shrink it (em00k's "Hardware Tilemaps", NextBuild Patreon, 2026-10-20; text mode bits per the wiki
-  Tilemap page, NOT tested): bit 5 = 1-byte map entries (every tile takes the $6C default attribute,
-  so no per-tile palette offset or mirror): a 40x32 map is 1280 bytes instead of 2560. Bit 3 = text
-  mode: 1-bit tile definitions, 8 bytes instead of 32, and the attribute's bits 7:1 are a 7-bit
-  palette offset that colours the set bits. Spectrum cell graphics are 1-bit already, so text mode
-  holds 4x the definitions in the same 8K, coloured per tile like ULA ink - a candidate for the
-  Rainbow tile budget (games/rainbow_islands.md Open 1). Stencil mode ($68 bit 0): pixel = ULA AND
-  tilemap colour, transparent if either is. Tilemap transparency $4C is compared before the
-  palette offset (soft reset $0F; our setups write 0).
-- Hardware ground truth: github.com/MrKWatkins/ZXSpectrumNextTests (Ped7g's Next test suite, .snx
-  per test with board photos + emulator screenshots, 2026-10-20). Run the matching test before
-  trusting an emulator for a feature. Results that bear on us:
-  * Copper: CSpect 2.11.1 and ZEsarUX 8.0 BAD, MAME 0.282 OK, board core 3.01.5 OK. Copper WAIT
-    compares the horizontal position as >= on the current line: a WAIT for an h already passed ON
-    THE SAME LINE does not wait (no roll-over into the next frame). Rewriting $61/$62 with the same
-    mode bits does not disturb a running list (already 1.5; the test proves it on hardware).
-  * Sprites (Sprites/ScanlineDelay, core 3.0.7+): the sprite engine swaps its line buffer at sprite
-    X = -1, so an attribute change shows ONE scanline later; to change a sprite from line N on,
-    write it before copper WAIT(line N-2, h ~50). A commit racing the beam tears by whole lines.
-  * Raster line read (Timing/ScanlineReadingAndInterrupt): a board with core 3.1.0 at 3.5 MHz
-    sometimes READ A WRONG VALUE from $1F (a wait for line 224 fired near 192). $1E and $1F are
-    also two reads: crossing line 255 -> 256 between them gives a value 256 lines off. Read the
-    pair until two consecutive reads agree (games/rainbow_islands.md Open 1b: rsafe reads once).
-  * Layer 2 over ROM (Graphics/Layer2Port, board core 3.1.5 + MAME OK): write-over-ROM and
-    read-over-ROM (data, CODE, even the IM1 handler fetched from Layer 2) for 16K / 48K, visible
-    and shadow; bank offset form (0x123B bit 4). It does NOT test the alt ROM ($8C): the template
-    for BRIEFING C2 #31.
-  * NextReg defaults: CSpect 2.9.2 and ZEsarUX 8.0 BAD, MAME 0.282 OK.
-  * Also there: ZX48_ZX128/Z80IntSkip (EI / DD / FD blocks inhibit interrupts; LD A,I / LD A,R
-    IFF2 bug - we read it twice anyway, PLAYBOOK 4), Interrupts/HaltAfterDisable, Timing/
-    Changing8kBank (cost of an MMU swap), DMA, Z80N opcodes.
-- Sprites BETWEEN the ULA and the tilemap (Mike Dailly, lemmings.info "Putting sprites between ULA
-  and tilemap"; NOT tested, bit meanings from his post): the tilemap belongs to the ULA layer, so
-  the normal $15 orders can only put both above or both below the sprites. Layer order $15 bits
-  4:2 = %110 (the first blend mode) with $68 bits 6:5 = %01 (no blending) gives (U|T) S (T|U): ULA
-  and tilemap BOTH in front of the sprites, then the per-tile attribute bit 0 ("ULA over this
-  tile"; $6C for 1-byte maps, and $6B bit 0 must be 0) moves that tile BEHIND the sprites. So depth
-  per 8x8 cell: foreground scenery as tiles (or the ULA) in front of figures, the rest behind -
-  an alternative to masked sprites for a depth rule (Commando masks, LEARNINGS 1.4) when the
-  foreground is cell-aligned. BRIEFING C2 #35.
-- Palette control $43 is TWO things at once: bits 6:4 pick the palette to EDIT, bits 3:1 the ACTIVE
-  second/first palette for sprites / Layer 2 / ULA and bit 0 ULANext; bit 7 = 1 turns
-  auto-increment OFF. Every $43 write therefore also re-selects the displayed palettes (fine while
-  everything uses first palettes, as all our builds do). Each layer has two palettes: flipping
-  bits 3:1 recolours a whole layer in one write (cheap colour animation, e.g. pulsing items).
-- Layer 2 per-colour priority (guide r3 Palette/Layer 2): the second $44 write for a LAYER 2
-  palette entry has bit 7 = priority - pixels in that colour draw above ALL layers, sprites
-  included, whatever $15 says. Candidate for depth: Layer 2 foreground pieces in front of a
-  hardware-sprite player (Dizzy 1 draws figures on Layer 2; the "sprites cannot sit behind some
-  objects" limit in 1.4 is about the ULA). Needs the colour twice (one entry with, one without).
-- ULA palette: classic ULA uses indices 0-7 ink, 8-15 bright ink, 16-23 paper, 24-31 bright paper
-  (border from paper). Paper and ink entries are separate, so ONE paper colour can be set equal to
-  the global transparency $14 (compared with the colour, not an index) to see the layer behind
-  wherever that paper shows, without touching inks. Candidate for Rainbow layer B.
-- Line interrupt: do NOT enable it ($22 bit 1 / $C4 bit 1) under a game in pulse mode: it raises the
-  same /INT, so the GAME's ISR runs a second time per frame (frame counters, music, input). The
-  ULA interrupt can also be disabled there ($22 bit 2) - never under a game. For hook timing use
-  the copper or a $1E/$1F poll.
+## 1.5 Spectrum Next techniques (DMA, copper, fast sprite I/O, palettes): docs/TECHNIQUES.md
 
 # PART 2 - GAMES / SOFTWARE
 
 ## 2.1 Game-engine lessons (all engines)
+Grouped by question; add a new lesson to its group.
+
+### 2.1a Finding the code and the figures (analysis)
 - Before a colour sheet or patterns, read the row order from the plotter's line step: a plotter
   that steps UP a line per row (DEC H / 29422 in Jetpac) stores graphics bottom line first. Jetpac's
   first sheets went out upside down (Dean, 2026-10-19).
@@ -444,16 +217,6 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   buffer addresses: key their patterns by (address, the variables the builder reads), build them
   at build time by CALLING the game's own builder in the simulator per value (Jetpac: 26921 with
   (24048) = level, 28409 with (23860) = part), and cover every value in the unit tests.
-- Redirect a back-buffer game's screen copy without touching its code: map the copy's destination slot
-  (MMU 2) to a dummy page while it runs and put the scenery on the screen yourself (Target Renegade:
-  scenery copied at the draw-all entry, when the buffer holds no figure; the copy's exit maps the
-  screen back). Its registers, memory, timing and beeper OUTs stay the original's.
-- Copy the scenery only when it changed (a dirty flag set by the scenery redraw, the screen clear and
-  the text printer): Target Renegade's 4K copy every game frame cost ~105K simulator T, more than the
-  game's whole slack (it HALTs ~35K T per 3-frame game frame).
-- Guard limits come from the ORIGINAL's capacity, found by running it, not from the data format:
-  Target Renegade's graphic header allows 255 bytes per row, but the plotter's unrolled row code takes
-  at most 6 (W = 7 or 8 never returns); the converted / passthrough guard says W <= 6.
 - Graphics an address does NOT identify: before keying colours (or a cache) by graphics address,
   check the bytes never change while drawn (`rzx.trace` at the plot: values seen per address). Rainbow
   shifts the player's frames IN PLACE to the figure's x (60300), and loads each island's creatures
@@ -462,6 +225,64 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
 - A figure is the game's OBJECT, not touching boxes: hook the routine that builds one object's
   draw list and tag what it allocates (Rainbow 54533 / 50614 / 53318). Bosses can be several
   objects (Rainbow: one per quarter) - join those by their graphics area.
+- The RZX shows a fraction of the figures (Midnight Resistance level 1: 19 of 28 plotter callers;
+  Dean saw more sprites on later levels at once). List every caller of the plotters statically
+  (scan the code for CALL / JP to each plotter entry) and convert by default, unknown callers in
+  their cell colours, instead of a whitelist of the callers the RZX showed; derive unit states for
+  plotters the RZX never ran from recorded ones with the same stack shape.
+- Games self-modify: check patch sites for writes during play (TID title ISR
+  writes 63340). Dizzy 4's object plotter rewrites its own operation byte
+  (NOP / XOR (HL)) and even a JP into a mirror path - model the op in force.
+- Screen-reading logic is the main source of behaviour change: TID bubbles read
+  Dizzy's pixels; Dizzy 1 falling objects land on him (472 of 736 tests). Only
+  add a virtual read where the data shows a dependency: in Dizzy 3/4 it would
+  be WRONG (boxes overwrite the player, so "screen XOR undo" no longer holds).
+- Loader-stage snapshots (BASIC PAUSE before USR, code relocated by LDIR): identify finds an
+  inert source copy. Require the ISR's dispatch to the engine; start from the post-relocation
+  state (loader.prerun), stopping BEFORE hardware detection (Kempston check) so it runs live.
+- An engine can plot more than one figure through the player plotter (Dizzy 6: mirrored copy via
+  a second call site and a switched undo-buffer pointer). Identify every call site of the plotter
+  and eraser and the undo pointer's writers before hooking the routine entry.
+- Measure "once per frame": Rainbow's sprite walker ran up to 14x per render (once per band).
+- A 128K snapshot may be a 48K game in 128 mode: count 7FFD writes, AY ports, ROM reads and
+  non-empty banks 1/3/4/6 first. Wally: none -> build from the 128K file as-is (Rainbow path).
+- Measure the write extent of EVERY dispatch target statically (run each original plotter from a
+  mid-screen address, record written columns/rows), not only the ones the recordings reach: bosses
+  use entries normal play never does. Rainbow's 4-wide leftward entries write E-3 (window started
+  at E-2): the spider lost a column on hardware although both RZX were IDENTICAL.
+- A hardware video can replace a missing RZX for a geometric bug: "left column missing only when
+  facing left" pointed straight at the leftward (mirrored) plotter entries.
+- Look at the GRAPHICS before deciding what a code range is: Rainbow's object codes 1-14 were
+  rainbow pieces, not collectables; two verified builds turned the rainbows into sprites and left
+  the real collectables (codes 15+) alone. Differential tests prove the logic, not the naming:
+  render a contact sheet of every code the recordings use before designing around it.
+- The return address in IY (routines ending JP (IY)) tells which caller ran a shared routine
+  (Rainbow: cell composition IY 60699 / 60720 vs spawning an object into a drawn cell).
+- Tell figures apart without hook state: the caller's RETURN ADDRESS on the stack at the plotter
+  entry (Chuckie Egg 39500: 41238/41361 = duck, else player), or a register the routine pushed
+  (hen plotter: caller DE = hen table entry -> sprite number).
+- Graphics catalogue of a game that mirrors in place: hash every graphic at each frame end; the
+  mirroring leaves transient half-mirrored states (1-6 frames each, never plotted). Group each
+  graphic with its exact bit mirror and keep the real ones (Trueno: 167 real shapes).
+- Translating a game's texts: find its letter codes and item format; a list read only from its
+  head (one LD HL, no other reference into it) can be rebuilt whole, single strings only in place
+  and never longer; check every old byte against the snapshot. A snapshot with the title already
+  drawn: wipe the old words and print the new ones with the game's own print routines in the
+  simulator (Trueno texts_en.py).
+- Menus and windows the game draws in the ULA over the play area are covered by Layer 2 and the
+  sprites: find them all (PLAYBOOK 0) and wrap each one (PLAYBOOK 4).
+- A hook on the plotter's entry does not see code that enters it further in: list every CALL/JP
+  to the plotter's addresses (Trueno: 0x82DF hooked, the dragon's bar called 0x82E4).
+- The game may rewrite instructions INSIDE or NEXT TO a hook site to switch modes (Dizzy 1: 58079
+  XOR C / OR C / LD A,C and 58709 XOR (HL) / NOP for the room tiles - the old site at 58707 would
+  have had its JP target overwritten). Before choosing a site, list every writer into the routine's
+  code bytes (static LD (nn),A / LD (nn),HL scan + the verifier's "game wrote a patch site"); a hook
+  that emulates such an instruction reads it at run time and handles every value the game stores.
+
+### 2.1b Hook design and safety
+- Guard limits come from the ORIGINAL's capacity, found by running it, not from the data format:
+  Target Renegade's graphic header allows 255 bytes per row, but the plotter's unrolled row code takes
+  at most 6 (W = 7 or 8 never returns); the converted / passthrough guard says W <= 6.
 - A hook never CALLs on the game's stack, not even one call deep: the return address it leaves
   below SP is dead stack the original never wrote, and the memory compare catches it (midres shop
   exit 0xB8A5, 2026-10-13). Switch to the hook stack first, or inline (a MACRO).
@@ -485,61 +306,56 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   not at the RZX's peak. Midnight Resistance's sprite table index N * 5 was 8-bit; the RZX peaked at
   38 sprites until shots / explosions became sprites, then 57 and the 52nd wrapped onto the first.
   A unit commit with the table full (64) fails on the old code (negative control) and passes now.
-- The RZX shows a fraction of the figures (Midnight Resistance level 1: 19 of 28 plotter callers;
-  Dean saw more sprites on later levels at once). List every caller of the plotters statically
-  (scan the code for CALL / JP to each plotter entry) and convert by default, unknown callers in
-  their cell colours, instead of a whitelist of the callers the RZX showed; derive unit states for
-  plotters the RZX never ran from recorded ones with the same stack shape.
 - Never hook timing-critical code: title-screen ISRs playing beeper music
   (TID 63328) broke the music when hooked.
-- Games self-modify: check patch sites for writes during play (TID title ISR
-  writes 63340). Dizzy 4's object plotter rewrites its own operation byte
-  (NOP / XOR (HL)) and even a JP into a mirror path - model the op in force.
-- Screen-reading logic is the main source of behaviour change: TID bubbles read
-  Dizzy's pixels; Dizzy 1 falling objects land on him (472 of 736 tests). Only
-  add a virtual read where the data shows a dependency: in Dizzy 3/4 it would
-  be WRONG (boxes overwrite the player, so "screen XOR undo" no longer holds).
-- XOR engines: model visibility as parity. Dizzy 1 had 7 double draws that cancel.
-- Plotter return registers may differ when the player is not on screen (Dizzy 1
-  A after erase). Check whether callers use them before "fixing".
-- Overwriters (boxes, wipes, nibble text) can make the original leave ghost
-  pixels; the patched game won't. Diffs confined to the undo buffer are fine if
-  nothing else reads it (check references).
-- Collision often uses attribute BRIGHT: leave the background/attributes alone.
-- Loader-stage snapshots (BASIC PAUSE before USR, code relocated by LDIR): identify finds an
-  inert source copy. Require the ISR's dispatch to the engine; start from the post-relocation
-  state (loader.prerun), stopping BEFORE hardware detection (Kempston check) so it runs live.
-- An engine can plot more than one figure through the player plotter (Dizzy 6: mirrored copy via
-  a second call site and a switched undo-buffer pointer). Identify every call site of the plotter
-  and eraser and the undo pointer's writers before hooking the routine entry.
-- Measure "once per frame": Rainbow's sprite walker ran up to 14x per render (once per band).
 - Loop control can live in AF' (Rainbow plotters: EX AF,AF' / JP NC per row pair). Before
   re-running game code, restore AF' (and every register) to the dispatch value.
 - Re-run a plotter at its REAL address with a RAM page mapped over the screen; re-basing DE to a
   private canvas broke plotters that save D, run leftwards or are 6 bytes wide.
-- A 128K snapshot may be a 48K game in 128 mode: count 7FFD writes, AY ports, ROM reads and
-  non-empty banks 1/3/4/6 first. Wally: none -> build from the 128K file as-is (Rainbow path).
+- Hook state must not be baked into RAM the LOADER still owns: Commando's .z80 is the BASIC
+  loader (sysvars + program at 0x5C00) and the build overwrote it with the hook tables. Init the
+  state from a hook at the game entry (the USR target), unit-tested from the loader's real RAM.
+- Entry tables keyed by an object's position leak when the game retires the object without a
+  last plot (Commando soldiers leaving at the bottom: invisible entries filled the table). Keep no
+  entry for an invisible frame; in verify, max entries = table size is a red flag - count the
+  plots that fell back because the table was full.
+- Hooks that run with interrupts on must leave everything the game's ISR reads intact at EVERY
+  instruction: IX, IY, I, IFF, and SP on a stack with room. Commando's IM 2 handler tests IY+7
+  flags; a hook that borrowed IY made the handler draw the menu's spinning logo in-game and leave
+  stray dots. Check it statically (disassemble the hook blocks: no IX/IY writes) and per
+  instruction in the simulator, with a negative control (LD IY in a hook).
+- Hook code that returns into the game's own loop must not write below the game's SP (no CALL, no
+  PUSH on the game stack): the original's dead-stack bytes (pushed BC etc.) differ otherwise. Use
+  a macro, or the hook stack in the hook's page.
+- Every path that shows a screen without the normal build (a clear mode, an end screen) must
+  clear or hide Layer 2 and the sprites; a deferred Layer 2 rebuild 'until the mode ends' left the
+  previous screen's foreground on the dragon's screen.
+- A game's interrupt handler can change the interrupted code's registers (Dizzy 1's title-music
+  handler DECs B and C and sets carry): an interrupt inside a hook would corrupt the hook. Check
+  which handler is installed at EVERY hook site in the recording (verify asserts it) - the in-game
+  one here is the ROM's 0x0038, which keeps every register.
+- Erase-then-draw pairs that run straight-line for the same figure (Lode Runner 0x9A47 -> 0x9A5C):
+  hook only the draw - the sprite moves, never hides - and prove the pair is straight-line (code) and
+  that the sprite equals the screen at every frame end (verify's frame model); no flicker risk.
+
+### 2.1c Screen models: back buffers, incremental draws, screen copies
+- Redirect a back-buffer game's screen copy without touching its code: map the copy's destination slot
+  (MMU 2) to a dummy page while it runs and put the scenery on the screen yourself (Target Renegade:
+  scenery copied at the draw-all entry, when the buffer holds no figure; the copy's exit maps the
+  screen back). Its registers, memory, timing and beeper OUTs stay the original's.
+- Copy the scenery only when it changed (a dirty flag set by the scenery redraw, the screen clear and
+  the text printer): Target Renegade's 4K copy every game frame cost ~105K simulator T, more than the
+  game's whole slack (it HALTs ~35K T per 3-frame game frame).
 - When a plotter reads only its gfx and a back buffer the game never reads, REPLACE it: convert the
   gfx straight to patterns and emulate its end state (alt regs, flags via the same OR/ADD, stack
   PUSH, self-modified operands, (43067)). Simpler than Rainbow's two canvas runs; verified exactly.
 - Put the sprite commit AFTER the pixel copy (Wally 47637), not at blit start: the LDI copy takes
   ~1 frame.
-- Graphics the game mirrors IN PLACE (Wally: 33251 flips a gang member's frames whenever he turns):
-  do not track the facing state. Key the colours to the snapshot's orientation and let the hook
-  identify the bytes as plotted by a 16-bit check against the stored and the mirrored check; no match
-  = run the original plotter. The same check makes precomputed per-graphic data (canvases) safe
-  against any graphics the game rewrites.
 - A back-buffer composer can RESTORE the buffer again before any copy: those plots never reach the
   screen. Drop the pending sprites at every restore entry (hooks, verification, the colour-sheet
   capture) or they appear for one render / on the sheet. Find it by tracing the call order of
   restore / plot / copy / commit across a room change (Wally: intro-walk plots at 61544/61560, then
   the room changes and 61090 restores before the commit; 2026-10-14).
-- Measure the write extent of EVERY dispatch target statically (run each original plotter from a
-  mid-screen address, record written columns/rows), not only the ones the recordings reach: bosses
-  use entries normal play never does. Rainbow's 4-wide leftward entries write E-3 (window started
-  at E-2): the spider lost a column on hardware although both RZX were IDENTICAL.
-- A hardware video can replace a missing RZX for a geometric bug: "left column missing only when
-  facing left" pointed straight at the leftward (mirrored) plotter entries.
 - Background objects that live in a back buffer (Rainbow collectables) become sprites without
   decoding the level map: keep a SHADOW MAP of the buffer cells from hooks at every routine that
   writes a cell (all of them: a full-tile writer the prototype missed caused 16 stale records),
@@ -550,44 +366,17 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
 - An object's mask can INCLUDE its graphic bits (Rainbow items: (cell AND mask) OR gfx with
   gfx in the mask): "screen AND mask" then leaves the object's ink pixels; clear with
   AND (mask AND NOT gfx).
-- Look at the GRAPHICS before deciding what a code range is: Rainbow's object codes 1-14 were
-  rainbow pieces, not collectables; two verified builds turned the rainbows into sprites and left
-  the real collectables (codes 15+) alone. Differential tests prove the logic, not the naming:
-  render a contact sheet of every code the recordings use before designing around it.
-- Hook cost: scanning all cells of a row per render costs more than the work itself - keep an
-  occupancy bitmask (per row) in the cell hooks and visit set bits only; cache derived data per cell
-  (last result + key check) before hashing; summarise per-cell classes in the hooks, not per render.
-- The return address in IY (routines ending JP (IY)) tells which caller ran a shared routine
-  (Rainbow: cell composition IY 60699 / 60720 vs spawning an object into a drawn cell).
 - Incremental-draw engines (no full redraw: erase = tile redraw at the old position, draw = OR /
   overwrite at the new one; Chuckie Egg) need no staging: ONE sprite per object, set at its plot,
   hidden at its erase and at every screen clear. Keep the plotters running and remove only their
   screen pixel and attribute writes (NOPs), so all game state stays the original's.
-- Tell figures apart without hook state: the caller's RETURN ADDRESS on the stack at the plotter
-  entry (Chuckie Egg 39500: 41238/41361 = duck, else player), or a register the routine pushed
-  (hen plotter: caller DE = hen table entry -> sprite number).
 - A plotter that composes figure + background in a buffer and then overwrites the screen: swap the
   compose (LD A,(DE) / OR (HL) -> LD A,(HL) / NOP) so the blit writes background only; prove the
   buffer is write-first and read only by that plotter (Chuckie 29344-29391).
-- Hook state must not be baked into RAM the LOADER still owns: Commando's .z80 is the BASIC
-  loader (sysvars + program at 0x5C00) and the build overwrote it with the hook tables. Init the
-  state from a hook at the game entry (the USR target), unit-tested from the loader's real RAM.
-- Entry tables keyed by an object's position leak when the game retires the object without a
-  last plot (Commando soldiers leaving at the bottom: invisible entries filled the table). Keep no
-  entry for an invisible frame; in verify, max entries = table size is a red flag - count the
-  plots that fell back because the table was full.
 - A differential plotter's erase (clear old frame, OR new) also cuts the scenery under a figure
   that is now a sprite (its old bits were never on the ULA); games that redraw scenery only on
   scroll frames then show bitten scenery. Save the bytes under the old frame at entry and OR them
   back at exit: a converted plot leaves the ULA unchanged (Commando svsave/svrest).
-- Depth from a game's collision boxes: use the point the game's own walk test checks (log the
-  test routine's arguments in the RZX: Commando y + 6), not the figure's feet - with the feet a
-  figure stopped above a small box came out in front.
-- Hooks that run with interrupts on must leave everything the game's ISR reads intact at EVERY
-  instruction: IX, IY, I, IFF, and SP on a stack with room. Commando's IM 2 handler tests IY+7
-  flags; a hook that borrowed IY made the handler draw the menu's spinning logo in-game and leave
-  stray dots. Check it statically (disassemble the hook blocks: no IX/IY writes) and per
-  instruction in the simulator, with a negative control (LD IY in a hook).
 - Back-buffer composer with many plot routines that share one address helper: replace the TARGET
   of their CALL to it (same return address, same stack bytes) and return the address of a scratch
   copy of the buffer, so the game's own loops run unchanged into the copy; copy the buffer bytes
@@ -605,64 +394,24 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   and its self-modified operands are written back on the game's page; (3) the trampoline's CALL
   uses two bytes under the game's SP - put them back; (4) interrupts off (the IM 2 handler may live
   in that slot).
-- A game without frame sync (interrupts off, no HALT) runs at the speed of its CPU time: hook cost
-  IS game speed. Keep the game's own bodies at 3.5 MHz (same cost and contention as the original)
-  and only the hook work at 28 MHz; report T per game frame original vs patched (Smash TV ~+6%).
-- Hook code that returns into the game's own loop must not write below the game's SP (no CALL, no
-  PUSH on the game stack): the original's dead-stack bytes (pushed BC etc.) differ otherwise. Use
-  a macro, or the hook stack in the hook's page.
-- Pattern slots with a cache: mark each slot "on show" (last commit) and "used by this commit"
-  (two bits, shifted at each commit) instead of commit stamps; stamps wrap, and with <= 64 sprites
-  per commit and on show a free slot always exists. Key cells-coloured images by the attributes
-  under them (and Y & 7), fixed-colour ones by graphic + colour; mirror by the sprite bit, not in
-  the key.
-- Solid sprites: a body fill from the frame itself (a pixel inside the ink both on its line and
-  in its column) reads as a filled figure; objects that hide a figure need their SOLID shape (the
-  game's draw mask with holes filled), not their ink, or the figure shows through paper-coloured
-  parts.
 - Back-buffer games (El Capitan Trueno): leave the plotter untouched and point its 'behind the
   foreground' map at bytes that say every cell is foreground: it saves the scenery as usual but
   draws no figure pixel and paints no attribute, so game memory stays as the original's and the
   verification is simple. Clean attributes at the copy (the scenery copy, not the work buffer),
   sprites with the game's mask. Depth: the game's own foreground cells copied into Layer 2 with
   the palette priority bit (in front of the sprites) - an alternative to per-sprite masking.
-- A figure's exact ink and mask: call the game's own plotter in the simulator on a buffer of 0x00
-  (ink) and of 0xFF (cleared pixels = mask). No drawing code to read, no guessed body.
-- Capture each shape from ONE consistent state: a game that mirrors graphics in place flips the
-  trailing mask bytes too; a catalogue graphic written over a mirrored state got a mirrored mask
-  (Trueno frame 98: figure pixels left uncovered = white flashes).
-- Graphics catalogue of a game that mirrors in place: hash every graphic at each frame end; the
-  mirroring leaves transient half-mirrored states (1-6 frames each, never plotted). Group each
-  graphic with its exact bit mirror and keep the real ones (Trueno: 167 real shapes).
-- A game that already toggles a hit bit flashes by itself: do not add your own blinking (in phase,
-  the two cancel out; Trueno).
-- Redrawn figures (a human's cleaner drawing) no longer cover the game's whole mask: either keep the
-  sprite's opaque area >= the mask, or stop the figure reaching the ULA first (Trueno: no-draw map
-  patch / pre-copy restore), or the mask shows round the new drawing.
-- A sprite shape's patterns never cross an 8K page (64 4-bit patterns per page): the upload and the
-  pattern index assume one page per shape (Trueno patterns.py).
-- Screen shake: offset Layer 2 (NextReg $17) and the sprites for the shaken copy only, from a hook
-  on the game's shake (Trueno 0x887D: NextReg $7F bit 6 -> the commit moves both 8 lines).
 - The scenery BEHIND an object (for fix cells or a wall behind bushes): build the screen in the
   simulator twice, with and without the frames that hide it - the background is then the game's
   own, not a guess (Trueno bush_walls.py, fix_cells.py).
-- A human's edits on a sheet: keep the sheet exactly as handed out, diff the returned one against
-  it, and give each edited cell to every cell drawn from the same game tile (and its mirror). A
-  later round on the same tile overwrites cells the human drew unlike their tile: say so first
-  (Trueno bush_round.py).
-- Translating a game's texts: find its letter codes and item format; a list read only from its
-  head (one LD HL, no other reference into it) can be rebuilt whole, single strings only in place
-  and never longer; check every old byte against the snapshot. A snapshot with the title already
-  drawn: wipe the old words and print the new ones with the game's own print routines in the
-  simulator (Trueno texts_en.py).
-- Menus and windows the game draws in the ULA over the play area are covered by Layer 2 and the
-  sprites: find them all (PLAYBOOK 0) and wrap each one (PLAYBOOK 4).
-- A hook on the plotter's entry does not see code that enters it further in: list every CALL/JP
-  to the plotter's addresses (Trueno: 0x82DF hooked, the dragon's bar called 0x82E4).
-- Every path that shows a screen without the normal build (a clear mode, an end screen) must
-  clear or hide Layer 2 and the sprites; a deferred Layer 2 rebuild 'until the mode ends' left the
-  previous screen's foreground on the dragon's screen.
 
+### 2.1d XOR engines
+- XOR engines: model visibility as parity. Dizzy 1 had 7 double draws that cancel.
+- Plotter return registers may differ when the player is not on screen (Dizzy 1
+  A after erase). Check whether callers use them before "fixing".
+- Overwriters (boxes, wipes, nibble text) can make the original leave ghost
+  pixels; the patched game won't. Diffs confined to the undo buffer are fine if
+  nothing else reads it (check references).
+- Collision often uses attribute BRIGHT: leave the background/attributes alone.
 - Pure-XOR engines (no masks, no undo buffers): move every converted screen write into a 1-bit
   SHADOW screen instead of the ULA. ULA XOR shadow == the original screen at every moment (XOR is
   linear), so every caller, partial draw, overlap and XOR-parity cancel is exact without modelling
@@ -681,24 +430,64 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   own display (hardware sprites in front); logic still reads ULA ^ every shadow. A sprite that
   follows XOR parity must not hide at the erase when the draw follows (it does, across an
   interrupt): mark the erase pending and hide only if something else happens first.
+- XOR figures PRINTED as tiles at level start (Lode Runner, 2026-10-20): the level draw puts each
+  figure on the screen with the tile printer (overwrite), and the first XOR erase removes that print.
+  Hook the print too (sprite + a blank tile) or the first move leaves an inverted figure. Found in
+  phase A because an XOR-parity count by (graphic, x, y) showed twice the figures the screen had.
+
+### 2.1e Sprites, patterns, colours, depth
+- Graphics the game mirrors IN PLACE (Wally: 33251 flips a gang member's frames whenever he turns):
+  do not track the facing state. Key the colours to the snapshot's orientation and let the hook
+  identify the bytes as plotted by a 16-bit check against the stored and the mirrored check; no match
+  = run the original plotter. The same check makes precomputed per-graphic data (canvases) safe
+  against any graphics the game rewrites.
+- Depth from a game's collision boxes: use the point the game's own walk test checks (log the
+  test routine's arguments in the RZX: Commando y + 6), not the figure's feet - with the feet a
+  figure stopped above a small box came out in front.
+- Pattern slots with a cache: mark each slot "on show" (last commit) and "used by this commit"
+  (two bits, shifted at each commit) instead of commit stamps; stamps wrap, and with <= 64 sprites
+  per commit and on show a free slot always exists. Key cells-coloured images by the attributes
+  under them (and Y & 7), fixed-colour ones by graphic + colour; mirror by the sprite bit, not in
+  the key.
+- Solid sprites: a body fill from the frame itself (a pixel inside the ink both on its line and
+  in its column) reads as a filled figure; objects that hide a figure need their SOLID shape (the
+  game's draw mask with holes filled), not their ink, or the figure shows through paper-coloured
+  parts.
+- A figure's exact ink and mask: call the game's own plotter in the simulator on a buffer of 0x00
+  (ink) and of 0xFF (cleared pixels = mask). No drawing code to read, no guessed body.
+- Capture each shape from ONE consistent state: a game that mirrors graphics in place flips the
+  trailing mask bytes too; a catalogue graphic written over a mirrored state got a mirrored mask
+  (Trueno frame 98: figure pixels left uncovered = white flashes).
+- A game that already toggles a hit bit flashes by itself: do not add your own blinking (in phase,
+  the two cancel out; Trueno).
+- Redrawn figures (a human's cleaner drawing) no longer cover the game's whole mask: either keep the
+  sprite's opaque area >= the mask, or stop the figure reaching the ULA first (Trueno: no-draw map
+  patch / pre-copy restore), or the mask shows round the new drawing.
+- A sprite shape's patterns never cross an 8K page (64 4-bit patterns per page): the upload and the
+  pattern index assume one page per shape (Trueno patterns.py).
+- Screen shake: offset Layer 2 (NextReg $17) and the sprites for the shaken copy only, from a hook
+  on the game's shake (Trueno 0x887D: NextReg $7F bit 6 -> the commit moves both 8 lines).
+- A human's edits on a sheet: keep the sheet exactly as handed out, diff the returned one against
+  it, and give each edited cell to every cell drawn from the same game tile (and its mirror). A
+  later round on the same tile overwrites cells the human drew unlike their tile: say so first
+  (Trueno bush_round.py).
 - A colour that changes every redraw may be the game's own (Dizzy 1's items cycle their colour
   field): find the writer of the colour before calling it a bug, and ask whether to keep it.
-- The game may rewrite instructions INSIDE or NEXT TO a hook site to switch modes (Dizzy 1: 58079
-  XOR C / OR C / LD A,C and 58709 XOR (HL) / NOP for the room tiles - the old site at 58707 would
-  have had its JP target overwritten). Before choosing a site, list every writer into the routine's
-  code bytes (static LD (nn),A / LD (nn),HL scan + the verifier's "game wrote a patch site"); a hook
-  that emulates such an instruction reads it at run time and handles every value the game stores.
-- No frame sync (no HALT in play, nothing but the ROM reads FRAMES): every T-state a hook adds slows
-  the game 1:1 (Dizzy 1's first build: +22K T per 69,888-T frame = a third slower). Check it before
-  designing (scan for HALT / FRAMES readers). Fix that keeps memory exact: the plot ENTRY hook
-  switches to 28 MHz and swaps the return address for a ROM trampoline that writes the original
-  address back into the (now dead) slot, switches back and returns - the game's own plot loop and
-  every per-byte hook then run at 28 MHz. Measure it: Speed line (T per frame, patched - original,
-  28 MHz parts / 8) from the verifier's pair runs.
-- A game's interrupt handler can change the interrupted code's registers (Dizzy 1's title-music
-  handler DECs B and C and sets carry): an interrupt inside a hook would corrupt the hook. Check
-  which handler is installed at EVERY hook site in the recording (verify asserts it) - the in-game
-  one here is the ROM's 0x0038, which keeps every register.
+
+### 2.1f Speed and timing
+- Hook cost: scanning all cells of a row per render costs more than the work itself - keep an
+  occupancy bitmask (per row) in the cell hooks and visit set bits only; cache derived data per cell
+  (last result + key check) before hashing; summarise per-cell classes in the hooks, not per render.
+- No frame sync (interrupts off or no HALT in play, nothing but the ROM reads FRAMES): the game runs
+  at the speed of its CPU time, so every T-state a hook adds slows it 1:1 (Dizzy 1's first build:
+  +22K T per 69,888-T frame = a third slower). Check it before designing (scan for HALT / FRAMES
+  readers). Two fixes, both memory-exact: keep the game's own bodies at 3.5 MHz and run only the hook
+  work at 28 MHz (Smash TV, ~+6%); or let the plot ENTRY hook switch to 28 MHz and swap the return
+  address for a ROM trampoline that writes the original address back into the (now dead) slot,
+  switches back and returns, so the game's plot loop and every per-byte hook run at 28 MHz (Dizzy 1).
+  Measure it: Speed line (T per game frame, original vs patched) from the verifier's pair runs. A
+  28 MHz part costs T + 1 per memory read in 28 MHz cycles, i.e. (T + reads) / 8 at 3.5 MHz - not
+  T / 8 (TECHNIQUES "NextMasterSystem", speed rule; BRIEFING C2 #1).
 - Turbo (28 MHz frame + limiter) compresses whatever the game spreads across its frame. A music
   player ticked several times per game frame (Rainbow: 3, i.e. ~50 Hz at 3.5 MHz) then plays its
   ticks within a few ms and is silent for the rest of the frame: choppy music, and every overrun
@@ -709,102 +498,9 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   before choosing Next hardware: Rainbow's game logic was 1.2 ms of a 9 ms frame - the hooks,
   not the game, were the cost, so hardware scrolling would not have helped.
 
-- NextMasterSystem (github.com/StalePixels/NextMasterSystem, 2026-10; NO licence file: ideas only,
-  no code) runs Master System games' own Z80 code on the Next by patching every I/O site into a
-  call to a runtime that drives tilemap, sprites, copper and AY - our method on another machine,
-  with per-game "overlays" (patch lists + switches + native code pages) matched by cart CRC32.
-  Ideas that carry over (design notes docs/design.md there):
-  * Runtime owns ONE slot (7) for the whole game; parts 2-4 BORROW a game slot only while they run,
-    with written rules (which part may call which, who restores slot N from `cur_mmu`) and a
-    build-time page-end check (tools/check-layout). Our hook-page rules (midres slot 5) are the
-    same idea, kept less formally.
-  * Interrupts while a borrowed page is mapped: the IM2 entry first maps the GAME's page back under
-    the handler and puts its own trampoline in the handler's return slot; the trampoline maps the
-    borrowed page again and resumes. So the game's ISR always sees its own memory, whatever slot
-    the runtime borrowed - the alternative when no slot is free of the ISR (BRIEFING C2 #36).
-  * Every exit from runtime to game code carries a label prefix (`mx_`); a MAME script puts entry
-    breakpoints on every handler and exit breakpoints on every `mx_` label and reports runtime
-    cycles per frame vs game cycles on the real core model (BRIEFING C2 #11: our missing hook-cost
-    measure).
-  * Costed features are per-game switches applied by patching CALL targets at start: switched off,
-    the frame runs exactly the instructions it ran without the feature (zero cost, nothing to
-    verify for games that do not use it). A rare check is ARMED only when needed: a JP written
-    over an exit for ~5 s after the rare event, written back after.
-  * A run of patched OUTs in a row is compiled once into one block transfer and cached by site
-    address + mapped pages (code copied to RAM is never cached: it can change under the same page).
-  * Static site scanner (sitescan.py): recursive-descent disassembly from the reset / interrupt
-    vectors, following proven jumps, plus emulator PC logs as extra entry points, unreached byte
-    patterns rated by how code-like their neighbours are, a per-routine cost model, and "pattern
-    rules" - code shapes that broke or slowed earlier games. Our `scan` is dynamic only (what the
-    RZX ran); a static pass would find the plot callers no recording reaches (PLAYBOOK 3b "list
-    every caller from the code"; BRIEFING C2 #37).
-  * Converted graphics prepared ahead: the whole cart is converted to Next tile rows at start
-    (~1.1 s per 256K) and tiles written whole from ROM are COPIED, not converted. nexclash builds
-    offline, so the same pre-conversion can happen in Python at build time (Next RAM store, 1.4).
-  * A display-off / display-on pair the original did inside the vertical blank can land in the
-    picture on the slower machine: they HOLD the off-write until the matching on-write or a
-    timeout, so the screen does not flash. Same class of fault as our hide/show flicker rule (1.4).
-  Deeper (source read 2026-10-20: src/runtime/fw*.asm, tools/sitescan.py, docs/*.md):
-  * INTERRUPTS - hardware IM2 mode, not pulse: `NEXTREG $C0,1` (+ $C4/$C5/$C6 enables, I = table
-    page) makes the Next HOLD each interrupt until it is acknowledged (RETI), so runtime code may
-    run with interrupts OFF for as long as it likes and no frame interrupt is lost - unlike pulse
-    mode, where a DI longer than the INT pulse drops the interrupt. Their IM2 vector does the
-    acknowledging RETI itself, straight into the game's own handler ($0038) with the interrupted PC
-    on the stack, so the game's handler (ending in EI; RET or RETI) is unchanged. A frame event that
-    arrives while the game's handler still runs is held and delivered from the handler's return
-    slot (`isr_tramp`). The runtime owns I, so the game's `LD A,I` / `LD I,A` are trapped and served
-    from a shadow I (Wonder Boy III keeps flags in I). For us: BRIEFING C2 #38. Board-tested
-    2026-10-20 (tools/hwtests/im2hold): held over a 3-frame DI; vector $16; and a handler ending
-    plain RET leaves the interrupt unacknowledged and NO later interrupt arrives until a RETI runs
-    - why their RETI goes first and the game's handler after it.
-  * Trap frame: entry = `EX (SP),HL; PUSH AF; LD A,I; DI`, then the game's IFF2 decides whether an
-    `EI` or a `NOP` is written into the exit just before its `RET` (EI's one-instruction delay
-    means no interrupt lands before the RET). Then it switches to its own stack and keeps the game's
-    BC / DE / AF at fixed addresses, so handlers may use every register. One LD A,I read only: that
-    relies on the Next's LD A,I being safe (Ped7g Z80IntSkip v5.0 tests exactly this; we read twice,
-    PLAYBOOK 4, until that test is photographed on a board).
-  * Patch form for a 2-byte site: `RST v` + one inline byte (the operation / port code) = exactly
-    the bytes of `OUT (n),A` / `IN A,(n)`, so no neighbour is touched. The vector is a free RST of
-    the game, or the game's own `DI; IM 1` bytes at $0000-$0002 (start moved to $0003, the runtime
-    does DI + IM 2). For us: the alt ROM holds every RST target, so an RST that neither the game nor
-    any ROM routine it calls ever runs (proved by `scan`) can carry a hook dispatcher - a 2-byte
-    site where a 3-byte CALL would cross into bytes the game rewrites (Dizzy 1, 2.1). Not used yet.
-  * Speed rule at 28 MHz (MAME tbblue, measured with breakpoints printing totalcycles [MAME]): a
-    native instruction costs its Z80 T-states + 1 cycle per MEMORY READ (its own opcode / operand
-    bytes and the data it reads; writes and I/O add nothing). 311 lines x 1,824 = 567,264 cycles a
-    50 Hz frame. A hook cost estimate from the simulator's T-states becomes T + reads, not T / 8
-    (BRIEFING C2 #11). A single trapped I/O instruction cost them ~1,000-2,100 cycles, which is why
-    loops of OUTs are compiled into one trace call.
-  * Static scan design worth copying (sitescan.py, ~5,600 lines, stdlib only): per routine a
-    data-flow pass with abstract values (constant / value at entry / table base + index / stack
-    bytes relative to entry SP), routine summaries (returns? skips inline bytes? keeps which
-    registers?), repeated to a fixed point; jump tables read until an entry stops looking like code;
-    `PUSH nn; RET` and `EX (SP),HL` inline-argument calls; task switches (`LD SP,x; RET`) listed, not
-    followed; OBJECT HANDLER FIELDS: a `LD L,(IX+d) / LD H,(IX+d+1) / JP (HL)` dispatcher marks field
-    d, and every store of a constant, table word or caller-passed pair into (IX+d) becomes an entry -
-    exactly how most games reach their plot calls (per-object update routines). Byte scans rate
-    unreached patterns: a setter just before, a JP/CALL that targets it, 32 bytes before decoding
-    as a chain ending exactly there, valid code after; NOP / RST-heavy neighbourhoods rate low
-    (tile data). BRIEFING C2 #37.
-  * Pattern rule "mailbox race": a RAM byte the interrupt handler reads and clears, written twice
-    by the foreground with different values before the handler runs; on the slower machine the
-    handler can land between the two stores and one value is lost (My Hero, checked in MAME). Our
-    hooks also change where interrupts land (BRIEFING A1 blind spot).
-  * Frame cost model per routine (costliest path, loop counts from DJNZ / DEC r / DEC rr + OR
-    pattern with B or rr known from the caller), split interrupt / foreground, flags "TEAR RISK"
-    when the interrupt handler keeps interrupts off past the Next's ULA interrupt line. Our `cost`
-    measures from the RZX instead; the static model would rate routines no recording reaches.
-  * Library pages: a replacement routine shared by several games is one source file that starts
-    with its CONTRACT (the routine it replaces, the scanner rule that finds it, each entry's
-    registers in and out, flags and interrupt state, what it needs from the game), and the build
-    fails when two games' copies differ.
-- XOR figures PRINTED as tiles at level start (Lode Runner, 2026-10-20): the level draw puts each
-  figure on the screen with the tile printer (overwrite), and the first XOR erase removes that print.
-  Hook the print too (sprite + a blank tile) or the first move leaves an inverted figure. Found in
-  phase A because an XOR-parity count by (graphic, x, y) showed twice the figures the screen had.
-- Erase-then-draw pairs that run straight-line for the same figure (Lode Runner 0x9A47 -> 0x9A5C):
-  hook only the draw - the sprite moves, never hides - and prove the pair is straight-line (code) and
-  that the sprite equals the screen at every frame end (verify's frame model); no flicker risk.
+### 2.1g Elsewhere
+- Other projects worth reading for design ideas (NextMasterSystem: IM2 hold mode, slot borrowing,
+  static caller scan, cost model): docs/TECHNIQUES.md 2.
 
 ## 2.2 Memory proofs (analysis method)
 - Prove free memory with an access scan over the recording, not by zero-check.
@@ -843,11 +539,7 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
 - Frame-level questions over a whole RZX (what changed by the end of each frame): SkoolKit's C
   simulator with a patched RZXTracer.next_frame replays 53,543 frames in 4-8 s; the simrun /
   analysis commands run per-instruction Python hooks, ~100x slower (BRIEFING C2).
-- [MAME] MAME 0.289 (specnext driver) runs the .nex (loading, quirks: 2.7). From its Lua console: switch the layers off one by
-  one (ports 243B/253B: NextReg $15 bit 0 sprites, $68 bit 7 ULA off, $69 bit 7 Layer 2; while
-  paused, emu.step() renders one frame) and snapshot each - the user names the guilty layer at
-  once; sprite attributes read from manager.machine.memory.shares[':sprites:attr_ram']. Main RAM
-  pages are not readable from Lua (only the CPU's 64K view).
+- [MAME] MAME runs the .nex; loading, the Lua console (layer-by-layer snapshots) and quirks: 2.7.
 - analyse.py / recorder / machine.py are 48K-only (recorder: Machine has no ay; analyse desyncs at
   frame 49 on 128K).
 - A module restored from an older copy can silently drop another engine's hook (identify() lost
@@ -887,8 +579,6 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   Simulator from from_snapshot() has none: AttributeError 'border'); set a dummy one.
 - `selftest.py` parses its own flags: before 2026-10-13 an unknown one (even --help) started a
   RELEASE run (every game rebuilt); it now prints the usage and exits.
-- `rzxplay.py --map FILE` + `sna2ctl.py -m FILE` + `sna2skool.py -c` give a routine-split
-  disassembly of everything an RZX executed in ~1 minute: the fastest way into an unknown engine.
 - Colour sheets, outlines (Dizzy 1, 2026-10-14): the user painted a 1-pixel black border round
   every figure inside the figure's box and the read-back IGNORED all 2,471 pixels: the map had a
   colour only for ink / interior bits, the PNG gave no hint. Users think in boxes, the engine in
@@ -1012,10 +702,8 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
   2026-10-11 with a shadow map, 2.1).
 - Colour by graphics page works only for graphics at fixed addresses; a runtime graphics buffer
   (Rainbow 0x9500) holds different objects per level - key those on the copy source.
-- Two verification levels (docs/BRIEFING.md C3b): ITERATE (sites, boot, unit tests, `--quick N`
-  on one RZX) per change; RELEASE (all RZX in full, one job at a time)
-  once per delivered .nex. Logic exact, visuals good enough. Parallel full runs on the 1-CPU
-  sandbox cost a whole extra turn (2026-09-29).
+- Full verification runs one at a time (BRIEFING C3b): parallel full runs on the 1-2 CPU sandbox
+  cost a whole extra turn (2026-09-29).
 - For a Z80N opcode in hooks (Rainbow SWAPNIB): install it in every simulator that runs hooks,
   test it exhaustively, and add a control that runs the hooks with it as SkoolKit's silent NOP -
   that control must fail.
@@ -1119,10 +807,6 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
 - A limit written without its reason gets broken: BRIEFING said alt-ROM hooks end < 0x3D00 next
   to the font, so a game that never reads the font looked exempt - and code at 0x3Dxx crashed it
   (probably the DivMMC automap). Write the WHY with every limit, and mark an inferred why as such.
-- `pkill -f` / `pgrep -f` patterns match your own shell when its command line contains them -
-  including a directory name like `out5` used elsewhere in the same command (mid-edit: re-check
-  files after). Find the PID first (`pgrep -fa`, read the list, in a SEPARATE command), then
-  `kill PID`.
 - Name scratch scripts uniquely, NEVER after a stdlib module (dis, code, io, json, types, ...):
   Python imports the script's own directory first, so a dis.py shadows the stdlib and breaks
   SkoolKit (happened twice, the second time with this line already here).
@@ -1153,7 +837,7 @@ Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5
 Every MAME fact carries the tag: `grep -n '\[MAME\]' docs/*.md`. MAME is not the reference:
 hardware is.
 - [MAME] MAME 0.282 passes Ped7g's Copper, NextReg-defaults and Layer2Port hardware tests where
-  CSpect 2.11.1 / 2.9.2 and ZEsarUX 8.0 fail Copper and NextReg defaults (LEARNINGS 1.5 "Hardware
+  CSpect 2.11.1 / 2.9.2 and ZEsarUX 8.0 fail Copper and NextReg defaults (TECHNIQUES 1 "Hardware
   ground truth"): prefer MAME over CSpect for a copper build. Record each MAME-only result as such (Trueno: MAME 0.289 only, hardware untested).
 - [MAME] MAME 0.289, driver `specnext`, runs a .nex from a NextZXOS SD image. Put the file in the
   image with HDFMonkey (`HDFMonkey mkdir IMG /dir`, `HDFMonkey put IMG local.nex /dir/name.nex`)
@@ -1164,18 +848,18 @@ hardware is.
   snapshot folder); layer by layer (NextReg $15 bit 0 sprites, $68 bit 7 ULA off, $69 bit 7 Layer 2,
   via ports 243B/253B; while paused `emu.step()` renders one frame) - the user names the guilty layer
   at once; sprite attributes in `manager.machine.memory.shares[':sprites:attr_ram']`; main RAM pages
-  are NOT readable from Lua (only the CPU's 64K view). (Also LEARNINGS 2.3.)
+  are NOT readable from Lua (only the CPU's 64K view).
 - [MAME] Sprite palette OFFSET: in MAME 0.289 a 4-bit sprite's index 0 under a non-zero palette offset
   is drawn opaque (whole 16x16 boxes). Not checked on hardware, so not a Next rule: until it is, use
   palette offset 0 (Trueno: one 16-colour block for every sprite). BRIEFING A1.
 - [MAME] MAME models the alt ROM as a copy of the system ROM3 (NextZXOS, data at 0x3B00-0x3CFF): the
   Trueno map at 0x3B00 failed in MAME exactly as the analysis predicted, and MAME showed 512 bytes
-  0xFF after the fix. nextboot.check does not (rom48(); BRIEFING C2 #19) - MAME caught what the boot
+  0xFF after the fix. nextboot.check does not (rom48(); BRIEFING C2 #5) - MAME caught what the boot
   sim could not.
 - [MAME] Play-test rounds: the user walks far into the game for each place; never restart MAME unasked,
   collect the whole list in one pass (PLAYBOOK phase C). Run the game at normal speed (throttled) for
   play, unthrottled only for scripted snapshots.
 - [MAME] A scripted MAME run (contributor's run_nex.py, in their archive: Windows paths, its own
   Lua helper): put the file, start MAME, wait for the Browser text, type the load, snapshot after
-  fixed delays. Worth a toolkit command (BRIEFING C2 #25); CSpect is the other route (run_cspect.bat).
+  fixed delays. Worth a toolkit command (BRIEFING C2 #21); CSpect is the other route (run_cspect.bat).
 
