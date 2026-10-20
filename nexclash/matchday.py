@@ -42,6 +42,8 @@ SCENERY_XOR = ((0xE73B, 0xE957), (0xEC50, 0xECB2), (0xEF3F, 0xEF75), (0xF049, 0x
 OBJ0, OBJ_N, OBJ_SIZE, WALKON = 0xB4FC, 16, 27, 0xB6AC
 FRAMES, FRAME_TAB, UPPERS, UPPER_TAB = 120, 0xC460, 18, 0xDDC0   # 28-row frames, 18-row upper bodies
 DIVE0 = 72                           # frames 72..: the keeper's dive, drawn in two halves (2k left, 2k+1 right)
+CAMERA = 0xE60B                      # camera x (16 bit): screen x = world x - camera
+PITCH_RGB = (0, 205, 0)              # the pitch's paper (green, not bright)
 STATIC_GROUP = 'From the code (not in the recording yet)'
 STRIP, SOCKS = 1, 2                  # palette roles: the object's IX+0x0E / IX+0x0F colour
 
@@ -101,6 +103,7 @@ class Capture:
         s.sh = bytearray(0x1800)
         s.objs = {}                     # ix -> {screen address: its figure bits} (XOR footprint, exact)
         s.cols = {}                     # ix -> (strip, socks) of its last draw
+        s.drawn = {}                    # figure -> (IX, camera x 0xE60B at its last draw)
         s.ball = {}
         s.want = set(want_frames)
         s.shots = {}
@@ -118,7 +121,7 @@ class Capture:
             s.pending = []
         if n in s.want:
             ula = bytes(s.M[0x4000:0x5B00])
-            s.shots[n] = (ula, bytes(s.sh), {k: dict(v) for k, v in s.objs.items()}, dict(s.cols))
+            s.shots[n] = (ula, bytes(s.sh), {k: dict(v) for k, v in s.objs.items()}, dict(s.cols), dict(s.drawn))
 
     def before(s, pc):
         R, M = s.R, s.M
@@ -210,6 +213,7 @@ class Capture:
             if who != 'ball':
                 ix = s.cur['ix']
                 s.cols[who] = (s.M[ix + 0x0E] & 7, s.M[ix + 0x0F] & 7)
+                s.drawn[who] = (ix, s.M[CAMERA] | s.M[CAMERA + 1] << 8, s.M[ix + 3])
 
 
 def run_capture(z80, rzx, want=(), stop=None):
@@ -313,7 +317,7 @@ def preview(z80, rzx, frames, out):
     cap = run_capture(z80, rzx, frames, stop=max(frames) + 1)
     img = Image.new('RGB', (2 * 512 + 8, 392 * len(cap.shots)), (40, 40, 40))
     for n, f in enumerate(sorted(cap.shots)):
-        ula, sh, objs, cols = cap.shots[f]
+        ula, sh, objs, cols, drawn = cap.shots[f]
         for side in (0, 1):
             im = Image.new('RGB', (256, 192))
             for y in range(192):
@@ -330,16 +334,25 @@ def preview(z80, rzx, frames, out):
                 for who, fp in objs.items():
                     px = footprint_pixels(fp)
                     if px:
-                        figs.append((max(y for _, y in px), who, px))
+                        figs.append([max(y for _, y in px), who, px])
+                # keeper dive (Dean 2026-10-20: "torn in half"): the halves are drawn on alternate
+                # frames; the spare half 0xB6AC goes where it would be at the keeper half's camera x
+                spare = [g for g in figs if g[1] != 'ball' and drawn.get(g[1], (0,))[0] == WALKON]
+                keeper = [g for g in figs if g[1] != 'ball' and drawn.get(g[1], (0,))[0] != WALKON
+                          and drawn.get(g[1], (0, 0, 0))[2] >= DIVE0]
+                if spare and keeper and drawn[spare[0][1]][2] >= DIVE0:
+                    dx = drawn[spare[0][1]][1] - drawn[keeper[0][1]][1]
+                    spare[0][2] = [(x + dx, y) for x, y in spare[0][2] if 0 <= x + dx < 256]
                 for bottom, who, px in sorted(figs, key=lambda t: t[0]):
                     if who == 'ball':
                         for (x, y) in px:
                             im.putpixel((x, y), (255, 255, 255))
                         continue
                     strip, socks = cols.get(who, (7, 7))
-                    # solid (Dean 2026-10-20, second answer): the enclosed paper BLACK
+                    # solid (Dean 2026-10-20, third answer): the enclosed paper in the pitch
+                    # green - opaque (hides the lines behind), the colour of the background
                     for (x, y) in enclosed(px):
-                        im.putpixel((x, y), (0, 0, 0))
+                        im.putpixel((x, y), PITCH_RGB)
                     for (x, y) in px:
                         c = SPEC_RGB[socks if y > bottom - 8 else strip]
                         im.putpixel((x, y), tuple(min(255, v + 50) for v in c))
@@ -353,7 +366,7 @@ def check_model(z80, rzx, frames):
     overlap (same byte) are the places where the original's figures cut into each other."""
     cap = run_capture(z80, rzx, frames, stop=max(frames) + 1)
     res = {}
-    for f, (ula, sh, objs, cols) in sorted(cap.shots.items()):
+    for f, (ula, sh, objs, cols, drawn) in sorted(cap.shots.items()):
         m = bytearray(0x1800)
         for fp in objs.values():
             for a, bits in fp.items():

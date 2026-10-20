@@ -67,14 +67,20 @@ Phase A done (analysis, shadow model, sheets, preview); waiting for Dean's desig
   left/right pairs; uppers alone).
 
 ## Dean's decisions (2026-10-20)
-- Players SOLID: the see-through pixels (paper enclosed by the figure, `matchday.enclosed`) BLACK
-  (14:05; replaces his 14:01 answer "the opposite team's colours"). Preview: match_day_PREVIEW_solid.png.
+- Players SOLID: the see-through pixels (paper enclosed by the figure, `matchday.enclosed`) in the
+  PITCH GREEN, opaque (14:08; replaces "opposite team's colours" 14:01 and "black" 14:05): the
+  lines behind a player no longer show through. Preview: match_day_PREVIEW_solid.png.
 - Bottom edge: as the original (figures drawn over the score line, no clipping).
 - Keeper dive "torn in half" (Dean, from the preview): the ORIGINAL tears the same way - the keeper
   and the spare object 0xB6AC are drawn on alternate frames, so while the camera scrolls one half
   lags one update (~4 px; RZX frame 3760: halves 12 px apart instead of 8 by ink, frames 92/93 fit
-  exactly 16 px apart). Proposed fix (told to Dean): the spare half's sprite placed at the keeper
-  half's position + 16 px, not where the game drew it; the shadow model and the logic unchanged.
+  exactly 16 px apart). Fix (Dean 14:08: "still has a tear" = fix it): the spare half's sprite is
+  shifted by (camera x at its draw - camera x at the keeper half's draw) (camera = 0xE60B), so
+  both halves sit where they would at the same camera position; the shadow model and the logic
+  unchanged. Preview: match_day_PREVIEW_dive.png (top original, bottom planned, frames 3746-3790).
+- No further recording (14:08): the frames the RZX does not reach stay on the sheet "from the code"
+  (single frames, dive pairs); the build must cover them by unit tests.
+- Sheet: Dean paints it later; build with the defaults (roles) until then, recolour afterwards.
 
 ## Phase A proposal (sent to Dean 2026-10-20)
 - Sprites: every player (both teams, keepers, the dive joined), ball, ball shadow. ULA: pitch,
@@ -88,11 +94,9 @@ Phase A done (analysis, shadow model, sheets, preview); waiting for Dean's desig
   every player.
 
 ## Open (ask, do not decide)
-1. Still unanswered from the phase A question: which figures (proposal above), the colour roles
-   + painting the sheet, depth rule. (Solid / opposite-team fill and bottom edge: answered.)
-2. A recording that reaches the rest of the frames (corners, throw-ins at both ends, more keeper
-   dives, half time, extra time / replay, 2-player, the cup), so the sheet is from the game.
-3. Does any message window appear OVER the pitch (pause, goal)? Not seen in the RZX.
+1. Still unanswered from the phase A question: which figures (proposal above), the colour roles,
+   depth rule.
+2. Does any message window appear OVER the pitch (pause, goal)? Not seen in the RZX.
 
 ## Hardware checklist
 (none yet)
