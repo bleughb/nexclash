@@ -685,7 +685,7 @@ def event(patch, kind, site, get, R, ns, model, alt, Sim, keep=None):
             d = set(got.items()) ^ set(want.items())
             f.append(('sprite pixels differ from the model', len(d), sorted(d)[:4]))
         if keep is not None:
-            keep.append((bytes(p[a] for a in range(0x4000, 0x5B00)), bytes(get(a) for a in range(0x4000, 0x5B00)),
+            keep.append((bytes(p[a] for a in range(0x4000, 0x5B00)), bytes(o[a] for a in range(0x4000, 0x5B00)),
                          dict(got), ro[25], rp[25]))
         info['px'] = len(want)
         info['mask miss'] = int(page[0x1485] != ns.page[0x1485])     # cache round robin moved
@@ -914,6 +914,13 @@ def negative_patch(patch):
     return q
 
 
+DECISIONS = {'engine': 'cyclone',
+             'strategy': 'alt ROM stubs 0x386E + hook page 26 at slot 6 (render-time hooks)',
+             'tail': '0x5D24 (0x5C78-0x5FDB untouched in the whole-game RZX); printer buffer put back '
+                     '(main loop at 0x5B00)',
+             'colours': 'defaults (sprite palette 1 = black ink, 2 = white mask); no colours file yet'}
+
+
 def auto(a, z80, name, out, say):
     import hashlib
     from . import z80tonex as zt, rzx as RZ
@@ -933,6 +940,10 @@ def auto(a, z80, name, out, say):
     say('Sprites   : %s  %s  boot %s' % (os.path.basename(spr), md5(spr),
                                           'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200]))
     ok = not bad and not bad2
+    json.dump(DECISIONS, open(os.path.join(out, name + '_decisions.json'), 'w'))
+    if getattr(a, 'decisions', None):           # selftest rebuild: build only
+        say('Result    : %s (rebuild from stored decisions, no verification)' % ('PASSED' if ok else 'FAILED'))
+        return ok
     states = []
     for r in list(a.rzx or []):
         from skoolkit.rzxplay import parse_rzx
