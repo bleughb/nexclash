@@ -99,5 +99,47 @@
  },
  "checks": [
   "asm2profile:cyclone"
- ]
+ ],
+ "checked": {
+  "deps": {
+   "asm/cyclone_hooks.asm": "3ca11c399bb27c79",
+   "docs/profiles/cyclone.json": "3261d4df27c9642d",
+   "nexclash.py": "d727de919fb5b21e",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "bc87a441d6f36e56",
+   "nexclash/cyclone.py": "2929d1aa326df6ec",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "b3179b2ff568156f",
+   "nexclash/nextboot.py": "a6e46fbbe842b376",
+   "nexclash/recolour.py": "a5744dcf6e6c059c",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "cfe7f2701eddfe6e",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-21"
+ },
+ "verified": {
+  "deps": {
+   "asm/cyclone_hooks.asm": "3ca11c399bb27c79",
+   "docs/profiles/cyclone.json": "3261d4df27c9642d",
+   "nexclash.py": "d727de919fb5b21e",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "bc87a441d6f36e56",
+   "nexclash/cyclone.py": "2929d1aa326df6ec",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "b3179b2ff568156f",
+   "nexclash/nextboot.py": "a6e46fbbe842b376",
+   "nexclash/recolour.py": "a5744dcf6e6c059c",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "cfe7f2701eddfe6e",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-21"
+ }
 }

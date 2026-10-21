@@ -54,7 +54,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Jetpac (jetpac): `jetpac.nex` feff51b7038606d21c03c260055481e4, `jetpac_sprites.nex` c963b42f0e685d648d552656fde4d6f9; verified never
 - Lode Runner (lode_runner): `lode_runner.nex` cd0c1659c8569b2fa80da74962af90d2, `lode_runner_sprites.nex` 85fe6afd593679bf59c787230ba0eaca; verified never
 - Match Day (match_day): `match_day.nex` 612761ec2772c5a7dcd27f939588d227, `match_day_sprites.nex` f0aecd138d1668ff057318c2545f539d; verified 2026-10-20
-- Cyclone (cyclone): `cyclone.nex` 390516396ca4d385c94b7f7bd2315d31, `cyclone_sprites.nex` 25c1b1e070b07565fe4d1a38f69e3024; verified never
+- Cyclone (cyclone): `cyclone.nex` 390516396ca4d385c94b7f7bd2315d31, `cyclone_sprites.nex` 25c1b1e070b07565fe4d1a38f69e3024; verified 2026-10-21
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
