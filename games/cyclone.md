@@ -1,6 +1,7 @@
 # Cyclone (Vortex Software, 1985; 48K) - engine `cyclone` (phase A)
 
-Reference: specnext reference/cyclone/. Status: phase B done 2026-10-21 (sprite build verified in software, default colours); hardware untested.
+Reference: specnext reference/cyclone/. Status: phase B done 2026-10-21 (sprite build verified in software, default colours). Hardware
+(user, 2026-10-21): 25c1b1e0 loads, runs and plays for a few minutes; full checklist not yet done.
 Code: nexclash/cyclone.py (sheets, patch, verify, model, unit tests), asm/cyclone_hooks.asm,
 docs/profiles/cyclone.json, docs/records/cyclone.json. Dispatch: nexclash/engines.py (signature at 0x762C).
 
@@ -171,7 +172,7 @@ what the render shows changes, plus snapshots in a private Next page.
 | Output | MD5 | Status |
 |---|---|---|
 | cyclone.nex (plain, tail 0x5D24, printer buffer put back) | 390516396ca4d385c94b7f7bd2315d31 | boot sim OK (nexload) |
-| cyclone_sprites.nex (default colours) | 25c1b1e070b07565fe4d1a38f69e3024 | verify IDENTICAL, unit PASS; hardware untested |
+| cyclone_sprites.nex (default colours) | 25c1b1e070b07565fe4d1a38f69e3024 | verify IDENTICAL, unit PASS; hardware: loads, runs, plays a few minutes |
 
 Verified (quick runs while building, then `selftest.py --game cyclone --verify --stamp`):
 cyclone.rzx (4700 frames), aircraft bookmarks 167000 (22 renders with an aircraft) and 24500,
