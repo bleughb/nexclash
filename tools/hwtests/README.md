@@ -86,6 +86,11 @@ Board results:
 - v2 (2026-10-21, same board, core 3.02.00): all green except LDPIRX0 / LDPIRXF (red M, F $00 /
   $C1 again - expected on 3.02.00). LDWS7F $94 and LDWSFF $51: LDWS's flags are ADD D,1's, CF set
   when D was $FF - the module's fix confirmed. TIME all green again (LDWS 13.9, NEG 8.0).
+- CSpect 3.3.1.0 (2026-10-21, reports core 4.00.00; emulator, not ground truth): differs from the
+  board in ADD rr,A (CF kept: ADDHLAF / ADDDEAF $FF, ADDBCA $A5), LDIX / LDIRX / LDDX / LDDRX from
+  F = $FF (bits 5 / 3 kept: $ED / $E9), LDWS (INC D flags: 7F -> $95, FF -> $50), JP (C) (IN-style
+  flags, F $05; target right) and PUSH nn timing (19.0 T, board 23). LDPIRX: memory as the 3.02.02+
+  model (no M), F $00 / $E9. Everything else, all other T-states, as the board.
 
 Checked before any board (2026-10-21): the .nex run in SkoolKit + z80n with a modelled raster
 (224 T x 312 lines, 228 x 311, 224 x 262): 77/77 green, T within 0.1; with ADD HL,A keeping CF,

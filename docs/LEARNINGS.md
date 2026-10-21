@@ -887,6 +887,10 @@ hardware is.
 - [MAME] MAME 0.282 passes Ped7g's Copper, NextReg-defaults and Layer2Port hardware tests where
   CSpect 2.11.1 / 2.9.2 and ZEsarUX 8.0 fail Copper and NextReg defaults (TECHNIQUES 1 "Hardware
   ground truth"): prefer MAME over CSpect for a copper build. Record each MAME-only result as such (Trueno: MAME 0.289 only, hardware untested).
+- CSpect 3.3.1.0 gets Z80N details wrong that the board (core 3.02.00) gets right (tools/hwtests
+  z80ntest, 2026-10-21): ADD rr,A keeps CF, the LDIX family keeps flag bits 5/3, LDWS uses INC D's
+  flags, JP (C) sets IN-style flags, PUSH nn takes 19 T instead of 23. A hook that reads none of those
+  flags behaves the same; a timing measured in CSpect around PUSH nn is 4 T short per PUSH.
 - [MAME] MAME 0.289, driver `specnext`, runs a .nex from a NextZXOS SD image. Put the file in the
   image with HDFMonkey (`HDFMonkey mkdir IMG /dir`, `HDFMonkey put IMG local.nex /dir/name.nex`)
   while MAME is NOT running (the image is open while it runs); then Browser -> the file, or
