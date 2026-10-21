@@ -407,6 +407,13 @@ Designs not built yet (use when a game needs them)
    the unacknowledged interrupt BLOCKS every later one - so every game handler is entered through the
    RETI trampoline unless proven to end with RETI. Open: the engine design (vector page, the game's
    LD A,I / LD I,A, interrupt timing vs the original) and MAME / CSpect agreement with the board.
+35. `inspect` misreports an IM 2 vector table in ROM (Cyclone: I = 0x3A, vector 0x3AFF/0x3B00 = FF FF
+   in the 48K ROM -> 0xFFFF, a JR into RAM): it reads the vector from zeroed ROM and warns "IM 2 handler
+   in ROM (0x0000)". It should read the 48K ROM (build.rom48) and name the RAM target. Engines that use
+   the alt ROM must then keep those vector bytes (Cyclone: hooks end below 0x3AFF).
+36. `inspect` should warn when CODE runs in the printer buffer (0x5B00-0x5BFF): NEXLOAD overwrites it,
+   so the build needs keep_printer_buffer (Match Day: data; Cyclone: the main loop - its first plain
+   build, without it, would not run on hardware). An access scan (`scan --range 0x5B00-0x5BFF`) shows it.
 
 ### C3b. Two verification levels (agreed with Dean 2026-09-29; how to run them: PLAYBOOK 6)
 - ITERATE (per change): original bytes at every site, boot check, unit tests (with negative

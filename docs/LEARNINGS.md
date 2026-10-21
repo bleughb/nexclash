@@ -547,6 +547,18 @@ Grouped by question; add a new lesson to its group.
   before choosing altrom; Lode Runner's hooks went into game RAM proven never touched (A3 "ram").
 
 ## 2.3 Our toolkit (nexclash) and host tools
+- Z80N instructions in hooks (ADD HL,A, MUL D,E, ... ; the user asked for them, Cyclone 2026-10-21):
+  SkoolKit's simulator does not know them, so the engine's verifier adds a handler per opcode it uses
+  to sim.after_ED, as for NEXTREG (cyclone._machine: ED 31 ADD HL,A, ED 30 MUL D,E; flags unaffected,
+  8 T). An unknown ED opcode runs as a 2-byte NOP in SkoolKit - a hook that uses one without a handler
+  is mis-simulated silently, so list every Z80N opcode the .asm uses next to its handler.
+- Profile hooks per routine before optimising (cyclone.PROF: T per PC from the patched run, mapped to
+  the .asm labels via the sjasmplus symbol / listing file). Cyclone's render hook went 1.9M -> 310K T
+  (28 MHz T) by: skipping empty sprites (row-occupancy table instead of scanning), only strip cells the
+  figures changed, a fast path for empty pattern rows, Z80N ADD HL,A / MUL D,E, CPIR / CPDR to jump to
+  the pixels a dilation / flood fill must visit, and a 1-pixel "outside" ring around byte planes (no
+  edge checks, no seeding pass). A cache of computed masks did NOT pay: 157 distinct helicopter images
+  in 682 renders, 27 % misses even with 26 entries - measure the key distribution before caching.
 - nextboot.check is a 48K check (expects 7FFD = 0x30 locked, bank 0): a 128K plain build needs its
   engine's boot check (rainbow / midres / renegade.boot_check: the snapshot's 7FFD and MMU 6/7).
 - Long replays: `rzx.trace(path, pcs, on_pc)` runs SkoolKit's C simulator with a Python hook at
@@ -629,6 +641,9 @@ Grouped by question; add a new lesson to its group.
   (10) despite "off": count snapshots in every RZX.
 - Wally: Dean could not switch character in play; all five descriptors were still plotted (other
   rooms/character art), so plotter A covered all five.
+- A .z80 saved MID TAPE LOAD (PC in ROM LD-BYTES, Cyclone 2026-10-21) is not a start state: a .nex of
+  it waits in LD-BYTES forever. `inspect` says "ROM LD-BYTES (tape load)"; take the RZX's first snapshot
+  instead (the next point).
 - Fuse RZX first snapshot is SZX ("ZXPR" warning harmless) and is a later moment than the .z80
   unless recorded with "Record from snapshot".
 - Auto-recorder: rooms are matched by attribute SIMILARITY (<=25% cells differ = same room);
