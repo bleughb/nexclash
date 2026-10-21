@@ -19,6 +19,7 @@ core VHDL > dev guide > wiki / MAME):
   [MAME]  mamedev/mame src/devices/cpu/z80/z80.lst, section "Z80N" (commit df241e3a,
           2026-10-22) - cross-check only.
   Encodings checked with the pinned sjasmplus 1.24.0 --zxnext (2026-10-21).
+  Hardware check: tools/hwtests/z80ntest (every handler's result + T-states on a board).
 
 Where the sources disagree the handler follows the VHDL (3.02.05):
   - LDIX / LDIRX / LDDX / LDDRX / LDPIRX flags: VHDL sets them like LDI (I_BT: H = N = 0,
