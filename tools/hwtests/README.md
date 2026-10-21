@@ -46,3 +46,52 @@ colour and which blocks are drawn (none are drawn until the end) and report it.
 Reading the results: tests 2, 5 and 6 passing = C2 #34's design works (hooks may run with
 interrupts off; the game's handler is reached through a RETI trampoline or the game's own uniform
 table). Test 4 says whether a game handler that ends EI;RET needs the trampoline at all.
+
+## z80ntest - every Z80N instruction against nexclash/z80n.py
+
+    python tools/hwtests/build.py z80ntest -o OUTDIR
+
+build.py first runs `z80ntest_gen.py`, which takes each case's expected result from the shared
+module's handlers (SkoolKit + `z80n.install`) - so the board checks exactly what the toolkit's
+verifiers assume. Runs ~10 s (blue border), then shows page 1; ANY KEY flips between the pages.
+Photograph both pages and the border.
+
+Page 1, FUNC (46 cases): one Z80N instruction from a known A F BC DE HL, SP = $6200 and a 1 KB
+window at $6000; A..L, SP and a checksum of the window compared. Flag-changing instructions run
+from F = 0 and F = $FF (last character of the name 0 / F), the rest from F = $A5. Columns: name,
+F on the board, F expected, code. Green all equal; YELLOW only F differs (the flag question the
+module had to guess - write down both values); red R = a register or SP, M = memory differs.
+NEXTRGn / NEXTRGA / OUTINB write NextReg $7F and read it back. JPC: JP (C) with IN = 5 must land
+on $C140; JPCedge runs from $BFFE, so A = $FF (red) means the base came from the instruction's own
+address instead of the next one.
+
+Page 2, TIME: T-states at 3.5 MHz from the raster line counter (2048 runs per instruction,
+4 measurements a quarter line apart, scaled by 2048 x LD A,(IX+0) = 19 T). Columns: name,
+measured T, expected T; green within 0.5. NEG / LDI / LDIR are Z80 controls (8 / 16 / 21): if
+they are red the method failed on that machine, not the Z80N rows. Timing code and data stay in
+uncontended RAM; any video timing (48K / 128K, 50 / 60 Hz) works.
+
+Border: green all pass, yellow only flag differences, red a failure. The harness itself uses
+NEXTREG (speed, NextReg $7F): if NEXTREG were broken every page would be wrong.
+
+Results table at $7E00 as above (status 4 = flags only; detail = F on page 1, T * 10 on page 2),
+then the calibration line count (word); per FUNC case the registers at $7000 + 16 * (n-1):
+F A C B E D L H, SP, checksum.
+
+Board results:
+- v1 (2026-10-21, core 3.02.00): TIME all green (LDWS 13.9, NEXTREG 20.0 / 17.0, PUSHnn 23.0;
+  controls 8.1 / 16.0 / 20.9). FUNC all green except LDWSF yellow (F $94, module said $95: LDWS's
+  CF comes from ADD D,1 - module fixed, v2 expects $94) and LDPIRX0 / LDPIRXF red M (memory) with
+  F $00 / $C1 instead of $08 / $C9: core changelog 3.02.02 fixes LDPIRX - re-run on 3.02.02+.
+- v2 (2026-10-21, same board, core 3.02.00): all green except LDPIRX0 / LDPIRXF (red M, F $00 /
+  $C1 again - expected on 3.02.00). LDWS7F $94 and LDWSFF $51: LDWS's flags are ADD D,1's, CF set
+  when D was $FF - the module's fix confirmed. TIME all green again (LDWS 13.9, NEG 8.0).
+- CSpect 3.3.1.0 (2026-10-21, reports core 4.00.00; emulator, not ground truth): differs from the
+  board in ADD rr,A (CF kept: ADDHLAF / ADDDEAF $FF, ADDBCA $A5), LDIX / LDIRX / LDDX / LDDRX from
+  F = $FF (bits 5 / 3 kept: $ED / $E9), LDWS (INC D flags: 7F -> $95, FF -> $50), JP (C) (IN-style
+  flags, F $05; target right) and PUSH nn timing (19.0 T, board 23). LDPIRX: memory as the 3.02.02+
+  model (no M), F $00 / $E9. Everything else, all other T-states, as the board.
+
+Checked before any board (2026-10-21): the .nex run in SkoolKit + z80n with a modelled raster
+(224 T x 312 lines, 228 x 311, 224 x 262): 77/77 green, T within 0.1; with ADD HL,A keeping CF,
+LDWS at 16 T and a wrong MUL result: ADDHLAF yellow, MUL red R, LDWS red (15.9).

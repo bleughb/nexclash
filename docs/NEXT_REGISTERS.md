@@ -118,8 +118,8 @@ Z80N instructions worth using in future hooks (all 2 bytes unless noted):
 | PIXELAD / PIXELDN / SETAE | ED 94 / 93 / 95 | 8 each | ULA pixel address from D=y, E=x; next line; pixel mask (A = $80 >> (E&7)) | PIXELAD undefined for D >= 192; flags unchanged. PIXELAD always returns a 0x4000-based address: retarget H for a screen or shadow copy elsewhere (OR $A0 for 0xE000, lemmings.info 'Advanced programming'); PIXELDN works at any base |
 | LDIX / LDIRX | ED A4 / B4 | 16 / 21 | copy skipping bytes equal to A (transparent blit) | flags change like LDI/LDIR - wiki note 2025, TESTED on core 3.02.x; the guide r3 and Ped7g's table still say unchanged (written before that test): assume CHANGED |
 | LDDX / LDDRX | ED AC / BC | 16 / 21 | like LDD/LDDR but DE INCREMENTS while HL decrements, skipping bytes = A: horizontally MIRRORED transparent copy of 8-bit pixels (Layer 2 figures) | flags as LDIX |
-| LDPIRX | ED B7 | 16 / 21 | pattern fill: source = (HL & $FFF8) + (E & 7), HL fixed, DE incrementing, skip bytes = A | 8-byte aligned table; flags untested on 3.02 (the 2025 test did not cover it): assume changed |
-| LDWS | ED A5 | 14 | (DE) <- (HL), INC L, INC D: copy down a Layer 2 column (256x192: D = row) | source stays in one 256-byte block; flags like INC D |
+| LDPIRX | ED B7 | 16 / 21 | pattern fill: source = (HL & $FFF8) + (E & 7), HL fixed, DE incrementing, skip bytes = A | 8-byte aligned table; WRONG RESULT on core 3.02.00 (board 2026-10-21, z80ntest), fixed in 3.02.02 per the core changelog: needs core 3.02.02+ |
+| LDWS | ED A5 | 14 | (DE) <- (HL), INC L, INC D: copy down a Layer 2 column (256x192: D = row) | source stays in one 256-byte block; flags of ADD D,1 (CF = D was $FF; board 2026-10-21, not INC D's kept CF) |
 | JP (C) | ED 98 | 13 | PC[13:0] = IN(C) << 6 (streamed code) | flags undefined; never needed by hooks |
 | TEST n | ED 27 n | 11 | AND flags, A kept | 3 bytes; NF: 0 in Ped7g's table, unknown in the wiki and guide - do not rely on it |
 | BSLA/BSRA/BSRL/BSRF/BRLC DE,B | ED 28-2C | 8 | barrel shifts of DE by B: BSLA/BSRA/BSRL/BSRF shift by B&31 (BSRA copies bit 15, BSRF fills 1s), BRLC rotates left by B&15 | flags unchanged |

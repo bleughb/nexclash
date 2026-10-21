@@ -27,6 +27,9 @@ def main(argv=None):
     exe = sjasm.find()
     with tempfile.TemporaryDirectory() as tmp:
         shutil.copy(src, tmp)
+        gen = os.path.join(HERE, a.name + '_gen.py')
+        if os.path.exists(gen):                 # a test whose cases are generated (z80ntest)
+            subprocess.run([sys.executable, gen, tmp], check=True, stdout=subprocess.DEVNULL)
         r = subprocess.run([exe, '--zxnext', '--nologo', os.path.basename(src)], cwd=tmp,
                            capture_output=True, text=True)
         if r.returncode:

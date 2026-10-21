@@ -19,6 +19,7 @@ core VHDL > dev guide > wiki / MAME):
   [MAME]  mamedev/mame src/devices/cpu/z80/z80.lst, section "Z80N" (commit df241e3a,
           2026-10-22) - cross-check only.
   Encodings checked with the pinned sjasmplus 1.24.0 --zxnext (2026-10-21).
+  Hardware check: tools/hwtests/z80ntest (every handler's result + T-states on a board).
 
 Where the sources disagree the handler follows the VHDL (3.02.05):
   - LDIX / LDIRX / LDDX / LDDRX / LDPIRX flags: VHDL sets them like LDI (I_BT: H = N = 0,
@@ -26,7 +27,10 @@ Where the sources disagree the handler follows the VHDL (3.02.05):
     on core 3.02 (GUIDE_R3_REVIEW). Repeats: t80n sets the LDI flags every step (no PC-based
     X/Y, unlike SkoolKit's LDIR). LDPIRX: t80n_mcode leaves the ALU's A input unassigned in M2,
     so bits 5/3 are a guess (A + byte, as LDI).
-  - LDWS T-states: 14 (VHDL: ED 4 + M1 4 + M2 3 + M3 3; MAME the same); guide table: 16.
+  - LDWS T-states: 14 (VHDL: ED 4 + M1 4 + M2 3 + M3 3; MAME the same; board); guide table: 16.
+  - LDWS flags: the VHDL's "INC D" step is ALU op 0000 = ADD D,1, so CF = (D was $FF), not kept
+    (board 2026-10-21: D = $7F, F = $FF -> $94; D = $FF, F = 0 -> $51); guide "like INC D",
+    MAME inc(D).
   - ADD rr,A carry: guide "undefined"; t80n.vhd writes CF from bit 16 of a 16-bit sum, i.e. 0
     (reg_temp_t is cleared at T3 and never sets bit 16); MAME: unchanged. Handler: CF = 0.
   - OUTINB flags: guide "destroyed"; VHDL skips the B decrement, the only flag write on the OUTI
@@ -35,13 +39,20 @@ Where the sources disagree the handler follows the VHDL (3.02.05):
   - NEXTREG n,A T-states: 17 (VHDL 4 M-cycles after ED, guide); MAME's list gives 14.
   Hooks must not read a flag the guide calls undefined, whatever the handler leaves there.
 
+Board results (tools/hwtests/z80ntest v1, a Next on core 3.02.00, 2026-10-21): every handler and
+every T-state above confirmed - LDIX family flags like LDI, ADD rr,A CF = 0, OUTINB flags kept,
+JP (C) from the next address, LDWS 14 T, NEXTREG 20 / 17 T - except LDWS's CF (fixed above) and
+LDPIRX: memory written and flag bit 3 differ on 3.02.00. Core changelog 3.02.02: "LDPIRX
+instruction works properly at all cpu speeds" - the handler models the fixed core. LDPIRX in a
+hook needs core 3.02.02+ (set the .nex header's core version) until a newer board run says more.
+
 Not modelled, as for every SkoolKit instruction: contention, 28 MHz wait states (BRIEFING A1).
 Memory writes skip 0x0000-0x3FFF, the same ROM guard as every SkoolKit write.
 ED B6 is in the core's decoder as "LDIRSCALE" with its scaling part commented out (unfinished,
 undocumented): it always raises Z80NError.
 """
 from skoolkit.simulator import R2
-from skoolkit.simtables import AND, INC
+from skoolkit.simtables import ADD, AND
 
 A, F, B, C, D, E, H, L, SP, PC, T = 0, 1, 2, 3, 4, 5, 6, 7, 12, 24, 25
 
@@ -235,7 +246,7 @@ def install(sim, nextreg=None, strict=True):
         if de > 0x3FFF:
             mem[de] = mem[hl]
         R[L] = (R[L] + 1) & 255
-        R[D], R[F] = INC[R[F] & 1][R[D]]            # flags of INC D
+        R[D], R[F] = ADD[R[D]][1]                   # flags of ADD D,1: CF = (D was $FF)
         done(2, 14)
 
     def bad(op, why):
@@ -361,7 +372,9 @@ def selfcheck():
     chk('LDPIRX', ([m[0xA006 + i] for i in range(4)], r[H] << 8 | r[L], r[PC]),
         ([0x16, 0, 0x10, 0x11], 0x9005, 0x8002))
     r, m, _ = run([0xED, 0xA5], {H: 0x90, L: 0xFF, D: 0x7F, E: 0x10, F: 0x01}, {0x90FF: 0x5A})
-    chk('LDWS', (m[0x7F10], r[H], r[L], r[D], r[F] & 0xD7, r[T]), (0x5A, 0x90, 0x00, 0x80, 0x95, 14))
+    chk('LDWS', (m[0x7F10], r[H], r[L], r[D], r[F] & 0xD7, r[T]), (0x5A, 0x90, 0x00, 0x80, 0x94, 14))
+    r, m, _ = run([0xED, 0xA5], {D: 0xFF})
+    chk('LDWS D=FF', (r[D], r[F] & 0xD7), (0x00, 0x51))           # Z H C: ADD, not INC
     for code, name in (([0xED, 0x00], 'ED 00 strict'), ([0xED, 0xB6], 'LDIRSCALE'),
                        ([0xED, 0x91, 1, 2], 'NEXTREG without a model')):
         try:
