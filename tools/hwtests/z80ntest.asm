@@ -52,7 +52,7 @@ main:   di
         nextreg $07,0           ; 3.5 MHz: TIME counts 3.5 MHz T-states
         ld hl,RESULTS
         ld (hl),'N' : inc hl : ld (hl),'X' : inc hl : ld (hl),'H' : inc hl : ld (hl),'T' : inc hl
-        ld (hl),1 : inc hl      ; version
+        ld (hl),2 : inc hl      ; version
         ld (hl),NTESTS : inc hl
         ld b,NTESTS*2+2
 .clr:   ld (hl),0 : inc hl : djnz .clr
@@ -417,7 +417,7 @@ key:
 .p:     xor a : in a,($FE) : cpl : and $1F : jr z,.p
         ret
 
-title:  db "Z80N v1 core ",0
+title:  db "Z80N v2 core ",0
 pfunc:  db "  FUNC 1/2",0
 ptime:  db "  TIME 2/2",0
 crow:   db 0

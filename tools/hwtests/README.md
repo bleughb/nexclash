@@ -78,6 +78,12 @@ Results table at $7E00 as above (status 4 = flags only; detail = F on page 1, T 
 then the calibration line count (word); per FUNC case the registers at $7000 + 16 * (n-1):
 F A C B E D L H, SP, checksum.
 
+Board results:
+- v1 (2026-10-21, core 3.02.00): TIME all green (LDWS 13.9, NEXTREG 20.0 / 17.0, PUSHnn 23.0;
+  controls 8.1 / 16.0 / 20.9). FUNC all green except LDWSF yellow (F $94, module said $95: LDWS's
+  CF comes from ADD D,1 - module fixed, v2 expects $94) and LDPIRX0 / LDPIRXF red M (memory) with
+  F $00 / $C1 instead of $08 / $C9: core changelog 3.02.02 fixes LDPIRX - re-run on 3.02.02+.
+
 Checked before any board (2026-10-21): the .nex run in SkoolKit + z80n with a modelled raster
 (224 T x 312 lines, 228 x 311, 224 x 262): 77/77 green, T within 0.1; with ADD HL,A keeping CF,
 LDWS at 16 T and a wrong MUL result: ADDHLAF yellow, MUL red R, LDWS red (15.9).
