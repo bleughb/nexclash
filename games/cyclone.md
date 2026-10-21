@@ -1,6 +1,7 @@
 # Cyclone (Vortex Software, 1985; 48K) - engine `cyclone` (phase A)
 
-Reference: specnext reference/cyclone/. Status: phase A (analysis); design question to the user open.
+Reference: specnext reference/cyclone/. Status: phase A done 2026-10-21 (decisions below); colour sheets sent, waiting for the painted sheet.
+Code so far: nexclash/cyclone.py (colour sheets only).
 
 ## Inputs (2026-10-21)
 - User sent Cyclone_1985_Vortex_Software_a.z80 + .rzx (Fuse 1.x, Windows).
@@ -47,12 +48,15 @@ Reference: specnext reference/cyclone/. Status: phase A (analysis); design quest
   map cells at 0xF7CB (columns 10-12, rows 5-15) into 33 dynamic tiles 0x5F-0x7F (graphics
   0xFCF8-0xFDFF, attributes 0xFE5F-0xFE7F), then CALL NZ 0x7ADC (helicopter) at 0x7F77, then the
   shadow (0x86AF), then writes the dynamic tile numbers into the map (table 0x7F98).
-- Helicopter 0x7ADC: 3 x 3 cells from 0xED68 + 72 * frame (frame from heading 0x7507 and rotor
-  0x7504), with ISOMETRIC OCCLUSION: per cell, by the scenery tile in front (0x7AC1 height table,
+- (Corrected 2026-10-21: 0x7ADC draws the SHADOW, 0x86AF the HELICOPTER.)
+- Helicopter SHADOW 0x7ADC: 3 x 3 cells from 0xED68 + 72 * (b + 1) (b from heading 0x7507, +8 RES 4
+  with 0x7504; cells column-major, bottom up; a cell starting 0xFF is not drawn), with ISOMETRIC OCCLUSION: per cell, by the scenery tile in front (0x7AC1 height table,
   masks at 0xFB18): plain cell -> LDIR (opaque cell), others OR or AND-masked OR; attribute ink
   set to 0 (AND 248) or set to 0x60 / 0x68.
-- Shadow 0x86AF: 24 x 24 px at 0x6950 (rotor animation XORed in by 0x8CD2 from 0x6700), drawn
-  0x750D pixels below (altitude), OR / AND-NOT into the dynamic tiles, occluded by scenery too.
+- HELICOPTER 0x86AF: 24 x 24 px buffer 0x6950 (3 columns of 24 bytes, top down): body copied by
+  0x8CCD from 0xE8E8 + 72 * (b + 1), rotor XORed in per frame by 0x8CD2 (deltas 0x6700.., crash /
+  break-up deltas 0x7000..); drawn 0x750D pixels offset (altitude), OR / AND-NOT into the dynamic
+  tiles, occluded by scenery too.
 - No game logic reads the composited figure pixels (readers of 0xFCF8-0xFDFF are the renderer and
   the compositors only); screen readers are the map-screen text printer (0x8E34) and the HUD.
 - Map screen: 0x8D0E clears the play area and prints the island map (ULA): sprites must hide.
@@ -73,6 +77,23 @@ Reference: specnext reference/cyclone/. Status: phase A (analysis); design quest
 Helicopter cells take ink 0 over the scenery: over a red roof the whole 8x8 cell turns black on
 red; over the grey yard the shadow cuts grey cells. Over the sea it is fine (black on cyan).
 
-## Open (phase A question to the user)
-- Which figures become sprites (helicopter, shadow; others once seen), depth (the game's own
-  occlusion behind scenery, or always in front), colours (colour sheet after the recording).
+## Decisions (user, 2026-10-21)
+- Sprites: helicopter, its shadow, the aircraft, the aircraft's shadow. Survivors and crates stay
+  map cells (ULA).
+- Depth: as the original - helicopter and shadow behind the scenery in front (the game's own
+  occlusion masks).
+- Shadows: dithered see-through, as drawn.
+- Colours: painted by the user (sheets below); defaults black (palette index 8).
+
+## Colour sheets (2026-10-21)
+`python -m nexclash.cyclone sheet cyclone.rzx cyclone_scc_aircraft_24500.rzx
+cyclone_scc_aircraft_167000.rzx --z80 cyclone.z80 -o cyclone` (12 s): PAINTING 71 figures, REFERENCE
+102 (56 helicopter drawings incl. crash frames, 16 shadow headings, 3 aircraft headings seen +
+13 from the code, aircraft shadows likewise). Keys: H/S/A/a + graphics byte; rotor pixels R + offset
+in 0x6950 (one colour per rotor pixel position). Files: specnext reference/cyclone/.
+
+## Open
+- Painted sheet -> docs/profiles/cyclone_colours.json; then phase B (hooks, verify).
+- Phase B design: hook the compositors (0x7ADC, 0x86AF, aircraft 0x89B2 / its map writes) so the
+  tiles keep only scenery and the figures become sprites masked by the same occlusion; check the
+  "BEWARE" / map screen / crash paths hide them.
