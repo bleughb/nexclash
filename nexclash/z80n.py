@@ -29,7 +29,8 @@ Where the sources disagree the handler follows the VHDL (3.02.05):
     so bits 5/3 are a guess (A + byte, as LDI).
   - LDWS T-states: 14 (VHDL: ED 4 + M1 4 + M2 3 + M3 3; MAME the same; board); guide table: 16.
   - LDWS flags: the VHDL's "INC D" step is ALU op 0000 = ADD D,1, so CF = (D was $FF), not kept
-    (board 2026-10-21: F = $FF in -> $94 out); guide "like INC D", MAME inc(D).
+    (board 2026-10-21: D = $7F, F = $FF -> $94; D = $FF, F = 0 -> $51); guide "like INC D",
+    MAME inc(D).
   - ADD rr,A carry: guide "undefined"; t80n.vhd writes CF from bit 16 of a 16-bit sum, i.e. 0
     (reg_temp_t is cleared at T3 and never sets bit 16); MAME: unchanged. Handler: CF = 0.
   - OUTINB flags: guide "destroyed"; VHDL skips the B decrement, the only flag write on the OUTI

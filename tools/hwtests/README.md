@@ -83,6 +83,9 @@ Board results:
   controls 8.1 / 16.0 / 20.9). FUNC all green except LDWSF yellow (F $94, module said $95: LDWS's
   CF comes from ADD D,1 - module fixed, v2 expects $94) and LDPIRX0 / LDPIRXF red M (memory) with
   F $00 / $C1 instead of $08 / $C9: core changelog 3.02.02 fixes LDPIRX - re-run on 3.02.02+.
+- v2 (2026-10-21, same board, core 3.02.00): all green except LDPIRX0 / LDPIRXF (red M, F $00 /
+  $C1 again - expected on 3.02.00). LDWS7F $94 and LDWSFF $51: LDWS's flags are ADD D,1's, CF set
+  when D was $FF - the module's fix confirmed. TIME all green again (LDWS 13.9, NEG 8.0).
 
 Checked before any board (2026-10-21): the .nex run in SkoolKit + z80n with a modelled raster
 (224 T x 312 lines, 228 x 311, 224 x 262): 77/77 green, T within 0.1; with ADD HL,A keeping CF,
