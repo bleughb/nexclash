@@ -95,8 +95,57 @@ cyclone_scc_aircraft_167000.rzx --z80 cyclone.z80 -o cyclone` (12 s): PAINTING 7
 13 from the code, aircraft shadows likewise). Keys: H/S/A/a + graphics byte; rotor pixels R + offset
 in 0x6950 (one colour per rotor pixel position). Files: specnext reference/cyclone/.
 
+## Phase B design (2026-10-21, before the first build)
+User: "start the build" with the sheets' defaults (no painting yet): ink black, mask white.
+
+Main loop (0x5B3C..0x5B86): 0x76D2 map build, 0x7E10 map translate + strip copy (0x7F21) + shadow
+(CALL NZ 0x7ADC at 0x7F77), 0x86AF helicopter, 0xF39A, 0x8A7A, 0x85D4 FRONT PASS (redraws scenery
+in front of the helicopter, and an aircraft in front, over the dynamic tiles: this is the
+original's occlusion), then 0x762C renders the map (~ every 11 frames). Aircraft are in the map at
+render time as tiles 0x3C-0x44 (aircraft, column-major 3 x 3, top down) and 0x33-0x3B (shadow).
+Renders also at 0x9246 / 0x9284 (crash). Screen clears: 0x84D6 (whole screen), 0x8D0E (play area,
+map screen).
+
+Principle: the game's compositing runs UNCHANGED (all game memory identical by construction); only
+what the render shows changes, plus snapshots in a private Next page.
+- Hook page: Next page 26 (bank 13 low) at slot 6 (0xC000-0xDFFF) only while a hook runs (the ISR
+  never touches slot 6: `isr`); code + data + private stack there. ROM stubs (alt ROM image 1 at
+  0x386E, below 0x3AFF: the IM 2 vector bytes 0x3AFF/0x3B00 stay FF FF) map / unmap it. MMU6 is
+  restored to page 0 before any game code runs. Hooks never touch IX / IY / I / IFF; SP is either
+  the game's or the private stack in the mapped page. Turbo (NEXTREG 7 = 3) only around hook work,
+  never while game code (the renderer) runs: the game has no frame sync, render speed = game speed.
+- Sites (original bytes checked):
+  0x7F72 `3A 05 75` LD A,(29957) -> JP e_s0: S0 = dynamic tiles 0xFCF8-0xFDFF (264) + attributes
+          0xFE5F-0xFE7F (33) = the scenery of the strip (map rows 5-15, columns 10-12).
+  0x7F7A `00 00 00` -> CALL e_s1: S1 = the tiles after the shadow.
+  0x5B4E, 0x9281 `CD AF 86` -> CALL e_h: CALL 0x86AF, then HB = 0x6950 (72) and A = (0x750D):
+          helicopter column c (0-2) rows 0-23 drawn at strip column c, line 62 - A (checked: 100 %
+          of HB's ink bits are set in the rendered tiles at that place; A = 0..60 in the RZXs).
+  0x762C `1E 00 DD` -> JP e_r (render): pre = build the sprite canvas from S0 / S1 / HB / the final
+          tiles F, save F + the strip attributes + aircraft tile graphics (0xFB98-0xFC27), put S0
+          (tiles + attributes) in place and zero the aircraft tiles; run the game's renderer (LD E,0;
+          LD IX,0xF74E; JP 0x7632) at the original speed; post = restore everything, set sprites.
+  0x84D6 `21 00 40`, 0x8D0E `21 00 58` -> hide all sprites (whole / play-area clear).
+- Sprite canvas (strip + border): x 72-119, y 32-143 = 3 x 7 sprites of 16 (slots 4-24,
+  4-bit patterns 4-24). Per strip cell whose map entry at render is its own dynamic tile
+  (0x5F + 11 c + r; else the cell shows something else, e.g. an aircraft): shadow SH = S1 & ~S0 & F;
+  helicopter HE = within the helicopter box only: (F & ~S1) | (F & S1 & HB); other diffs outside the
+  box -> ink too. Mask (helicopter only) = HE dilated by 4-neighbours, plus every pixel of its
+  26 x 26 window not 4-connected to the window border; pixel = 1 (ink, black) for HE / SH / other,
+  2 (white) for mask, 0 transparent.
+- Aircraft (slots 25-28, mask as above) and its shadow (slots 0-3, no mask): from the map cells
+  holding 0x3C-0x44 / 0x33-0x3B at render (visible cells only = the original's occlusion), ink =
+  those tiles' graphics; the ULA cells show only the tiles' attribute (graphics zeroed during the
+  render). Everything clipped to the play area (x < 184, y < 176).
+- Approximations (to tell the user): the mask is drawn around VISIBLE helicopter ink, so where
+  front scenery cuts the helicopter the 1 px outline can lie over that scenery; shadow pixels that
+  coincide with scenery ink are not separable (they are ink either way); where the original's
+  opaque shadow cell erased scenery ink, the scenery ink now shows through the shadow's gaps.
+- Verify: at every hook site, original vs patched from the same state (registers, all memory
+  outside the screen and the hook page, interrupt safety); at renders, the patched screen = the
+  original renderer on S0 / zeroed aircraft tiles (model), sprite pixels = the Python model of the
+  canvas / aircraft rules from the verifier's own S0 / S1 / HB / F.
+
 ## Open
-- Painted sheet -> docs/profiles/cyclone_colours.json; then phase B (hooks, verify).
-- Phase B design: hook the compositors (0x7ADC, 0x86AF, aircraft 0x89B2 / its map writes) so the
-  tiles keep only scenery and the figures become sprites masked by the same occlusion; check the
-  "BEWARE" / map screen / crash paths hide them.
+- Painted sheet -> docs/profiles/cyclone_colours.json; per-pixel colour map + recolour (today:
+  defaults only, palette entries 1 = black, 2 = white).
