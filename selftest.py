@@ -298,6 +298,11 @@ def tools_check(src):
     print('%-4s tools: recolour .nex offsets / splice / refusals on a synthetic .nex%s' % (
         'OK' if not rbad else 'FAIL', '' if not rbad else ' (%s)' % rbad))
     cbad += len(rbad)
+    from nexclash import z80n
+    zbad = z80n.selfcheck()
+    print('%-4s tools: z80n - every Z80N instruction against worked results (core 3.02.05 / guide r3)%s' % (
+        'OK' if not zbad else 'FAIL', '' if not zbad else ' (%s)' % zbad[:3]))
+    cbad += len(zbad)
     rec = R.load('chuckie_egg')
     work = tempfile.mkdtemp(prefix='nexclash_tools_')
     d, why = stage(rec, src, work)

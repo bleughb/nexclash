@@ -116,7 +116,8 @@ Standard Z80 rows scanned for Next-specific notes; every Z80N row compared with 
 - NEW [NEXT_REGISTERS Z80N]: LDDX/LDDRX (mirrored transparent copy), LDPIRX (pattern fill), LDWS
   (column copy for Layer 2), JP (C); TEST n leaves NF undefined.
 - CONFLICT [NEXT_REGISTERS]: guide - LDIX family leaves flags unchanged; wiki - flags change like
-  LDI on core 3.02. Keep "assume changed".
+  LDI on core 3.02. Keep "assume changed". RESOLVED 2026-10-21: core 3.02.05 t80n VHDL sets them
+  like LDI (shared I_BT path); nexclash/z80n.py follows it.
 - NEW, IMPORTANT [LEARNINGS 1.1, BRIEFING A1 blind spots, NEXT_REGISTERS]: on the Next the block
   I/O instructions (INI..OTDR) leave SF/HF/PV undefined, NF = 1, CF unchanged; the simulator
   computes real-Z80 flags, so verify cannot prove flags after them. All hooks checked: none

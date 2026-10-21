@@ -99,7 +99,11 @@ flags. Never leave those flags live in a hook (LEARNINGS 1.1).
 SIMULATOR TRAP (tested): SkoolKit's Simulator executes any Z80N ED opcode as a 2-byte NOP without
 an error (e.g. ED 24 MIRROR A leaves A unchanged). nextboot and the hook verifiers handle ED 91/92
 through `after_ED`. If hook code ever uses another Z80N instruction, implement it in the simulator
-first (after_ED[op]) or every differential test silently runs the wrong code.
+first (after_ED[op]) or every differential test silently runs the wrong code. Since 2026-10-21
+`nexclash/z80n.install(sim, nextreg)` does that for all 29 from the core 3.02.05 VHDL (t80n_mcode.vhd,
+t80n.vhd; guide r3 4.15; MAME z80.lst as a cross-check). Where the VHDL settles a caveat below:
+ADD rr,A sets CF = 0; OUTINB and JP (C) leave the flags unchanged; LDPIRX flags as LDIX (bits 5/3
+unsure). Hooks still must not read a flag the guide calls undefined.
 
 Z80N instructions worth using in future hooks (all 2 bytes unless noted):
 | Instruction | Encoding | T | Use for us | Caveat |
