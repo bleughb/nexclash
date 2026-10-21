@@ -14,6 +14,14 @@ Reference: specnext reference/cyclone/. Status: phase A (analysis); design quest
   sea, the map screen (twice), "BEWARE AIRCRAFT" at the end. NOT covered: the cyclone, crates,
   survivors, aircraft, landing / pick-up, refuelling, losing a life, game over, the menu.
 
+- 2026-10-21: second recording cyclone_scc.rzx = the user's download of the spectrumcomputing.co.uk
+  RZX (entry 1206): ONE segment, 179928 frames (60 min), no autosaves, starts at the menu (.z80
+  snapshot inside, PC 0xFFFF IM 2). Same game: every routine checked (renderer, compositors,
+  ISR, helicopter graphics, 0x6000-0x6950) is byte-identical to cyclone.z80; only data differs.
+  Replays to the end with the C simulator in < 1 min (rzx.scan), no desync. Reaches score 11752,
+  aircraft, survivors, crates, landings at base, lives lost. Bookmarks (rzx.cut, 2000 frames):
+  cyclone_scc_aircraft_24500.rzx, cyclone_scc_aircraft_167000.rzx.
+
 ## Snapshot facts (PLAYBOOK 0b)
 - 48K, ROM 48K BASIC, IM 2 with I = 0x3A: the vector is read from the ROM (0x3AFF/0x3B00 = FF FF)
   -> 0xFFFF: JR 0xF3 (ROM byte 0x0000) -> 0xFFF4: JP 0x83C2 (the handler). Hook code in the alt ROM
@@ -50,13 +58,21 @@ Reference: specnext reference/cyclone/. Status: phase A (analysis); design quest
 - Map screen: 0x8D0E clears the play area and prints the island map (ULA): sprites must hide.
 - HUD: wind bar 0x9149, view / altitude / fuel gauges, "BEWARE AIRCRAFT" messages.
 
+## Other figures (cyclone_scc.rzx; tile census of the map at 0xF74E every 5 frames)
+- Aircraft (0x88FF): placed IN THE MAP as a 3 x 3 cell block (map codes 0xF6-0xFE, cell steps);
+  graphics copied per frame from 0xDDB8 + 72 * (heading/4 [+8 with 0x7504]) to tiles 60-68
+  (0xFBE0), its shadow = the same graphic dithered (AND 0xAA / 0x55) in tiles 51-59 (0xFB98),
+  placed 0x7524 / 0x7525 away (altitude). No direct screen plotter (screen writers in the
+  bookmarks = the same set as the short RZX).
+- Survivors (0x8C53 writes map codes 0-3): single map cells, cell aligned, scenery-like.
+- Crates: single map cells (yellow) on the coast.
+- The cyclone itself: not seen as an in-play figure in the hour (only the red spiral on the map
+  screen and the wind gauge); every tile first seen late in the run is scenery.
+
 ## Clash today (preview frames)
 Helicopter cells take ink 0 over the scenery: over a red roof the whole 8x8 cell turns black on
 red; over the grey yard the shadow cuts grey cells. Over the sea it is fine (black on cyan).
 
 ## Open (phase A question to the user)
-- A longer recording reaching the cyclone, crates, survivors, aircraft, landing / pick-up,
-  refuelling, a lost life and game over (other figures may be composited the same way or be map
-  tiles: not yet seen).
 - Which figures become sprites (helicopter, shadow; others once seen), depth (the game's own
   occlusion behind scenery, or always in front), colours (colour sheet after the recording).
