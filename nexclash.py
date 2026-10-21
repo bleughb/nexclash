@@ -498,7 +498,8 @@ def main():
         p.add_argument('--class-colours', help='rainbow engine: JSON {"pages": {"D6": 1}, "palettes": {"1": {"ink": "#00FF00"}}}')
         p.add_argument('--allow-60hz', action='store_true', help='do not force 50 Hz video (outputs then differ from the verified MD5s)')
         p.add_argument('--decisions', help='rebuild from stored build decisions (docs/records); no recording, no verification')
-        p.add_argument('--engine', choices=['wally'], help="Everyone's a Wally: the frozen first version (record wally) instead of wally2")
+        p.add_argument('--engine', choices=['wally', 'rainbow'], help="the frozen / deprecated first version instead of its successor: "
+                       "wally (record wally) instead of wally2, rainbow (record rainbow) instead of rainbow_z80n")
     p = sub.add_parser('contribute'); p.add_argument('name', help='game name (zip name)')
     p.add_argument('--report', action='append', help='nexclash report(s) to include (GAME_report.txt)')
     p.add_argument('--note', help='one line for the maintainers'); p.add_argument('-o', '--output')

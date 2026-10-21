@@ -1,4 +1,8 @@
 # Rainbow Islands (Ocean, 128K) - engine `rainbow`
+DEPRECATED (user, 2026-10-21): superseded by engine / record `rainbow_z80n` (games/rainbow_z80n.md),
+the version going forward. This engine, its .asm, profile and builds stay unchanged for reference;
+`nexclash.py auto rainbow.z80 --engine rainbow` builds it. The facts, decisions and history below
+still hold for rainbow_z80n unless games/rainbow_z80n.md says otherwise.
 EXCLUDED from automatic selftest checks (Dean, 2026-10-13: too slow, being reworked): run it with `selftest.py --game rainbow [--verify]`.
 Updated 2026-10-19. Engine `rainbow`. Status: RZX-verified identical; RUNS ON HARDWARE (Dean,
 2026-09-28). 2026-09-29: boss-spider fix + pattern-upload optimisation (hardware: runs, better;

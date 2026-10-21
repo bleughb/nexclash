@@ -44,14 +44,18 @@
  "shared_data": [],
  "rebuild": {
   "args": [
-   "--no-record"
+   "--no-record",
+   "--engine",
+   "rainbow"
   ],
   "rzx": [],
   "decisions": null
  },
  "verify": {
   "args": [
-   "--no-record"
+   "--no-record",
+   "--engine",
+   "rainbow"
   ],
   "rzx": [
    "rainbow.rzx",
@@ -81,7 +85,7 @@
   "build": "rainbow_sprites.nex cf017271 (no rainbow border, collectable insides black / white, thrown rainbow without outline) + rainbow_sprites_diag.nex c16751b0",
   "software": "RZX IDENTICAL x2, unit PASS (22 object controls incl. border control on a bordered profile copy, inside fill control)",
   "hardware": "cf017271 works on hardware (Dean, 2026-10-19: \"seems to work ok\")",
-  "next": "Dean paints the split colour sheets -> per-pixel colours + recolour; bookmark verify of the boss rounds (islands 7..1)"
+  "next": "deprecated: superseded by rainbow_z80n (user 2026-10-21); kept unchanged for reference"
  },
  "checks": [
   "asm2profile:rainbow_islands"
@@ -118,5 +122,5 @@
   },
   "date": "2026-10-13"
  },
- "excluded": "Dean 2026-10-13: too slow (~52 min verify) and being reworked; run it explicitly with selftest.py --game rainbow [--verify]"
+ "excluded": "deprecated (user 2026-10-21): superseded by rainbow_z80n; rainbow.py (also the shared NextState / _machine library), asm/rainbow_hooks.asm, its profile and builds are kept unchanged; run it explicitly with selftest.py --game rainbow [--verify] (--engine rainbow)"
 }
