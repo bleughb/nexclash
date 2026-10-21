@@ -36,7 +36,14 @@ renegade import its NextState / _machine / _run / _BankMem.
    Page 26 code 32 bytes shorter. Not changed: the x64 / x8 address multiplications (a barrel shift
    would clobber DE / B that the code still uses; a plain-Z80 rewrite is faster anyway), OUTI
    pattern writes (OUTINB is the same 16 T), MIRTAB (still built; unused by the hooks now).
-3. Unit tests: the Z80N self-test is z80n.selfcheck; `Z80N_USED` (rainbow_z80n.py) must equal the
+3. Raster read fixed (rainbow_islands.md Open 1b): `rsafe` reads the line pair ($1E, $1F) until two
+   consecutive pairs agree. The deprecated engine read it once; a 255 -> 256 crossing between the two
+   reads gives line 0. With NEXTREG timed, the first quick verify (2000 frames of rainbow.rzx) landed on
+   that crossing once in 1416 renders ("render end: commit now / deferred"): the hook deferred a
+   commit the model said could run at once. On hardware the same race defers a commit (no tearing,
+   one frame later) - or, at the 511 -> 0 wrap, can commit inside the visible frame. Alt ROM block 25
+   bytes longer (911 of the free 0x386E-0x3CFF).
+4. Unit tests: the Z80N self-test is z80n.selfcheck; `Z80N_USED` (rainbow_z80n.py) must equal the
    .asm's Z80N instructions; one negative control PER instruction (that one ED xx run as SkoolKit's
    silent NOP must be detected) instead of the SWAPNIB-only one.
 

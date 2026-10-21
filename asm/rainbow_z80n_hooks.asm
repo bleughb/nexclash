@@ -458,8 +458,11 @@ dcom:   ld bc,0x243B
 ; first ~4 ms after it - and the lines left before line 16 of the next frame (311 + 16 - L, 128K
 ; timing) exceed what the commit needs (under one line per sprite + 17 for the map copy: V_S + 20). Otherwise NC: the commit runs at the next interrupt (line 248, bottom
 ; border) - the same displayed frame as a commit below the play area, but outside the game frame.
+; The line is read as a pair ($1E, $1F) until two consecutive pairs agree (rainbow_islands.md Open
+; 1b): a 255 -> 256 crossing between the two reads gives line 0 (256 lines off). rainbow_z80n's
+; NEXTREG timings made the verifier land on that crossing (2026-10-21).
 rsafe:  ld bc,0x243B
-        ld a,0x1E
+.rd:    ld a,0x1E
         out (c),a
         inc b
         in a,(c)
@@ -470,7 +473,23 @@ rsafe:  ld bc,0x243B
         out (c),a
         inc b
         in a,(c)
+        dec b
         ld l,a
+        ld a,0x1E
+        out (c),a
+        inc b
+        in a,(c)
+        dec b
+        and 1
+        cp h
+        jr nz,.rd
+        ld a,0x1F
+        out (c),a
+        inc b
+        in a,(c)
+        dec b
+        cp l
+        jr nz,.rd
         ld de,RS_LINE
         or a
         sbc hl,de
