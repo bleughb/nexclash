@@ -17,6 +17,14 @@
     "sprites": "d601385ee4aeb7f3d7c0771bdc27df6b"
    }
   },
+  "745cb8f59f865db5118e6dc98d09e385": {
+   "game": "Cyclone",
+   "doc": "cyclone.md",
+   "nex": {
+    "plain": "390516396ca4d385c94b7f7bd2315d31",
+    "sprites": "25c1b1e070b07565fe4d1a38f69e3024"
+   }
+  },
   "0659328fd54fd446e39d1740bafd02e7": {
    "game": "Dizzy: The Ultimate Cartoon Adventure",
    "doc": "dizzy_ultimate_cartoon_adventure.md",

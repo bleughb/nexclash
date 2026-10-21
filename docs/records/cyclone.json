@@ -1,0 +1,103 @@
+{
+ "name": "cyclone",
+ "order": 18,
+ "game": "Cyclone",
+ "doc": "cyclone.md",
+ "engine": "cyclone",
+ "representative": true,
+ "reference": "cyclone",
+ "inputs": {
+  "snapshot": {
+   "name": "cyclone.z80",
+   "md5": "745cb8f59f865db5118e6dc98d09e385",
+   "path": "cyclone/cyclone.z80"
+  },
+  "recordings": [
+   {
+    "name": "cyclone.rzx",
+    "md5": "77010f7b6d806fbe44bf6c5dcfc7bec8",
+    "path": "cyclone/cyclone.rzx"
+   },
+   {
+    "name": "cyclone_scc_aircraft_167000.rzx",
+    "md5": "6044da5a8458ad042f9e0cb55bc5e38d",
+    "path": "cyclone/cyclone_scc_aircraft_167000.rzx"
+   },
+   {
+    "name": "cyclone_scc_aircraft_24500.rzx",
+    "md5": "c737e6252c1a7a8457263e151b2a4448",
+    "path": "cyclone/cyclone_scc_aircraft_24500.rzx"
+   },
+   {
+    "name": "cyclone_scc_crash_17800.rzx",
+    "md5": "1e29775cc6df7f289dd2094169a410ba",
+    "path": "cyclone/cyclone_scc_crash_17800.rzx"
+   },
+   {
+    "name": "cyclone_scc_gameover_179500.rzx",
+    "md5": "5f792e811ed695461f950e87b30bb567",
+    "path": "cyclone/cyclone_scc_gameover_179500.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "cyclone"
+ ],
+ "own_modules": [
+  "cyclone"
+ ],
+ "data": [
+  "docs/profiles/cyclone.json",
+  "asm/cyclone_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": {
+   "engine": "cyclone",
+   "strategy": "alt ROM stubs 0x386E + hook page 26 at slot 6 (render-time hooks)",
+   "tail": "0x5D24 (0x5C78-0x5FDB untouched in the whole-game RZX); printer buffer put back (main loop at 0x5B00)",
+   "colours": "defaults (sprite palette 1 = black ink, 2 = white mask); no colours file yet"
+  }
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "cyclone.rzx",
+   "cyclone_scc_aircraft_167000.rzx",
+   "cyclone_scc_aircraft_24500.rzx",
+   "cyclone_scc_crash_17800.rzx",
+   "cyclone_scc_gameover_179500.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 10,
+  "note": "auto: differential verify at every hook site (registers, memory outside the screen and the hook page, interrupt safety per patched instruction: IY / I / IFF, SP and MMU6), every render: screen = the original renderer on the strip's scenery with aircraft tiles blank, sprite pixels = the Python model (helicopter ink + 4-neighbour mask with holes filled, shadows, aircraft + mask) - + unit tests (altitudes, flags, aircraft at the edges / partly hidden) with a negative control. RZXs: cyclone.rzx (the user's, 4700 frames) + 4 bookmarks of the whole-game recording (aircraft x2, crash, game over)"
+ },
+ "outputs": {
+  "plain": {
+   "file": "cyclone.nex",
+   "md5": "390516396ca4d385c94b7f7bd2315d31"
+  },
+  "sprites": {
+   "file": "cyclone_sprites.nex",
+   "md5": "25c1b1e070b07565fe4d1a38f69e3024"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Cyclone",
+  "engine_col": "cyclone (cyclone.md)",
+  "build": "cyclone_sprites.nex 25c1b1e0 (helicopter + aircraft = 4-bit sprites, black with a white 4-neighbour mask, behind scenery as the original; shadows dithered; strip shows its scenery; hooks: alt ROM stubs + page 26 at slot 6, 28 MHz inside hooks)",
+  "software": "RZX + 4 whole-game bookmarks IDENTICAL (registers, memory, interrupt safety, screen vs model, sprite pixels vs model), unit cases + negative control PASS",
+  "hardware": "untested",
+  "next": "hardware test (checklist); user paints the PAINTING_SPRITES sheet; per-pixel colour map + recolour; speed (~10 % slower than the plain build)"
+ },
+ "checks": [
+  "asm2profile:cyclone"
+ ]
+}

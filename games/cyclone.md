@@ -1,7 +1,13 @@
 # Cyclone (Vortex Software, 1985; 48K) - engine `cyclone` (phase A)
 
-Reference: specnext reference/cyclone/. Status: phase A done 2026-10-21 (decisions below); colour sheets sent, waiting for the painted sheet.
-Code so far: nexclash/cyclone.py (colour sheets only).
+Reference: specnext reference/cyclone/. Status: phase B done 2026-10-21 (sprite build verified in software, default colours); hardware untested.
+Code: nexclash/cyclone.py (sheets, patch, verify, model, unit tests), asm/cyclone_hooks.asm,
+docs/profiles/cyclone.json, docs/records/cyclone.json. Dispatch: nexclash/engines.py (signature at 0x762C).
+
+    python nexclash.py auto cyclone.z80 --rzx cyclone.rzx --rzx cyclone_scc_aircraft_167000.rzx \
+        --rzx cyclone_scc_aircraft_24500.rzx --rzx cyclone_scc_crash_17800.rzx \
+        --rzx cyclone_scc_gameover_179500.rzx --no-record
+    python -m nexclash.cyclone sheet cyclone.rzx ... --z80 cyclone.z80 -o cyclone    (colour sheets)
 
 ## Inputs (2026-10-21)
 - User sent Cyclone_1985_Vortex_Software_a.z80 + .rzx (Fuse 1.x, Windows).
@@ -31,9 +37,12 @@ Code so far: nexclash/cyclone.py (colour sheets only).
   bug, not fixed here).
 - ISR (`isr`): 109 instructions, saves IX before use, up to 14 bytes of stack; border OUTs;
   slots 5, 6 never touched by it.
-- Plain build: tail 79 bytes at 0x5D24 (`convert --tail 0x5D24`): 0x5C78-0x5FDB is never read or
-  written in the RZX (old BASIC area); 0x5D21-0x5D89 is zero. nextboot.check OK.
-  cyclone.nex MD5 (tail 0x5D24) recorded in specnext reference/README.md.
+- THE MAIN LOOP RUNS IN THE PRINTER BUFFER (0x5B00-0x5BE7): NEXLOAD overwrites 0x5B00-0x5BFF, so
+  every build needs keep_printer_buffer (the stub puts the snapshot's bytes back). The first plain
+  .nex sent to the user (6071b59c, 2026-10-21) lacked it and would not run on hardware.
+- Tail at 0x5D24 (with the printer copy ~350 bytes): 0x5C78-0x5FDB is never read or written in the
+  whole-game RZX (scan of cyclone_scc.rzx from the menu, 179929 frames). nextboot.check with
+  nexload=True OK (plain and sprites).
 - Free / untouched RAM (RZX): 0xDDCA-0xE27F (1206), 0x5C78-0x5FDB (868), 0x6BE9-0x6EFF (791),
   0xE436-0xE6FF (714), 0xB73F-0xB8D9 (411), 0x78F2-0x7A80 (399). Lowest SP 0xFFCE.
 
@@ -95,7 +104,7 @@ cyclone_scc_aircraft_167000.rzx --z80 cyclone.z80 -o cyclone` (12 s): PAINTING 7
 13 from the code, aircraft shadows likewise). Keys: H/S/A/a + graphics byte; rotor pixels R + offset
 in 0x6950 (one colour per rotor pixel position). Files: specnext reference/cyclone/.
 
-## Phase B design (2026-10-21, before the first build)
+## Phase B design (2026-10-21; as built - changes from the first plan marked BUILT)
 User: "start the build" with the sheets' defaults (no painting yet): ink black, mask white.
 
 Main loop (0x5B3C..0x5B86): 0x76D2 map build, 0x7E10 map translate + strip copy (0x7F21) + shadow
@@ -137,6 +146,18 @@ what the render shows changes, plus snapshots in a private Next page.
   holding 0x3C-0x44 / 0x33-0x3B at render (visible cells only = the original's occlusion), ink =
   those tiles' graphics; the ULA cells show only the tiles' attribute (graphics zeroed during the
   render). Everything clipped to the play area (x < 184, y < 176).
+- BUILT: a strip cell counts only if the figures changed it (F != S1 or S1 != S0); helicopter ink only
+  in cells the helicopter changed (F != S1) - so helicopter pixels over its own shadow stay ink.
+- BUILT: mask = cache (3 entries, key = the helicopter ink rows) or the slow path: 28 x 28 byte plane
+  with a ring of "outside", CPIR dilation from the ink pixels, row-end marking + CPIR / CPDR sweeps.
+  Cost per render (simulator T at 28 MHz; /6 ~ 3.5 MHz time): hit ~310K, miss ~550K; misses 14-50 %
+  (157 distinct images in 682 renders: a bigger cache does not help). The game has no frame sync and
+  renders every ~8 frames, so the build runs ~10-13 % slower than the plain .nex.
+- BUILT: empty sprites are hidden, not uploaded (row-occupancy table); aircraft tiles are blanked only
+  when the map holds some (one quick scan); Z80N ADD HL,A and MUL D,E (the verifier simulates them).
+- BUILT page layout (page 26 at 0xC000): code 0xC000-0xCAA7, byte plane 0xCB00-0xCF84, snapshots /
+  variables 0xD000-0xD4FF, canvas ink 0xD500, aircraft planes 0xD7A0-0xD920, mask cache 0xD920-0xDCC8,
+  nibble table 0xDD00, white rows 0xDD10, VIS 0xDE00, PH 0xDE40, ROWOCC 0xDEE0, stack 0xDF50-0xDFF0.
 - Approximations (to tell the user): the mask is drawn around VISIBLE helicopter ink, so where
   front scenery cuts the helicopter the 1 px outline can lie over that scenery; shadow pixels that
   coincide with scenery ink are not separable (they are ink either way); where the original's
@@ -146,6 +167,30 @@ what the render shows changes, plus snapshots in a private Next page.
   original renderer on S0 / zeroed aircraft tiles (model), sprite pixels = the Python model of the
   canvas / aircraft rules from the verifier's own S0 / S1 / HB / F.
 
+## Outputs and verification (2026-10-21)
+| Output | MD5 | Status |
+|---|---|---|
+| cyclone.nex (plain, tail 0x5D24, printer buffer put back) | 390516396ca4d385c94b7f7bd2315d31 | boot sim OK (nexload) |
+| cyclone_sprites.nex (default colours) | 25c1b1e070b07565fe4d1a38f69e3024 | verify IDENTICAL, unit PASS; hardware untested |
+
+Verified (quick runs while building, then `selftest.py --game cyclone --verify --stamp`):
+cyclone.rzx (4700 frames), aircraft bookmarks 167000 (22 renders with an aircraft) and 24500,
+crash 17800, game over 179500: every hook event IDENTICAL (registers, memory, interrupt safety),
+every render's screen = the model, sprite pixels = the model. Unit: altitudes 0-62, flags, aircraft
+and shadow at the map edges and with a cell hidden; negative control (ink / mask swapped) detected.
+
+## Hardware checklist (first test)
+- Boots to the menu; keys, start, flying, map screen (M), landing at base: as the plain build.
+- Helicopter: black with a white outline, no black cells over roofs / yards / trees; rotor animates;
+  goes behind trees and buildings in front as in the original; its shadow dithered on the ground.
+- Aircraft ("BEWARE AIRCRAFT"): black with a white outline, its dithered shadow; over land the cells
+  under it show their plain colour (as the original's block).
+- Map screen and game over / menu: no sprite left on screen.
+- Speed: the sprite build is ~10 % slower than the plain .nex (CPU-bound game); hiccups on turns?
+- Crash sequence: helicopter break-up frames shown, then the next life.
+
 ## Open
 - Painted sheet -> docs/profiles/cyclone_colours.json; per-pixel colour map + recolour (today:
-  defaults only, palette entries 1 = black, 2 = white).
+  defaults only, sprite palette 1 = black, 2 = white). PLAYBOOK 3b requires recolour: not built yet.
+- Speed: ~10-13 % slower; candidates: zxnDMA fills / copies, fewer swaps, a smaller window.
+- The cyclone itself never appeared in play in the recordings.
