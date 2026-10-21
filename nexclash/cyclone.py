@@ -51,6 +51,36 @@ def _part(group, pid, pixels, x=0, y=0):
                 pixels=pixels, entries={})
 
 
+MASK_COL = 15                                # default colour of mask pixels (bright white)
+
+
+def add_mask(p, fid):
+    """User 2026-10-21: helicopter and aircraft get a mask - every pixel 4-adjacent (no diagonals)
+    to ink, plus every pixel the mask encloses (no transparent pixel inside it), opaque (code 2).
+    The part grows by 1 px on each side (26 x 26). Mask keys: M + figure id + line + byte."""
+    ink = {(c + 1, r + 1) for c, r, *_ in p['pixels']}
+    w = h = 26
+    mask = set(ink)
+    for x, y in ink:
+        mask |= {(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)}
+    out, todo = set(), [(x, y) for x in range(w) for y in (0, h - 1)] + [(x, y) for y in range(h) for x in (0, w - 1)]
+    while todo:                                  # outside = transparent pixels reachable from the edge
+        q = todo.pop()
+        if q in out or q in mask or not (0 <= q[0] < w and 0 <= q[1] < h):
+            continue
+        out.add(q)
+        x, y = q
+        todo += [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+    px = [(c + 1, r + 1, k, b, code, d) for c, r, k, b, code, d in p['pixels']]
+    for y in range(h):
+        for x in range(w):
+            if (x, y) not in out and (x, y) not in ink:
+                key = 'M%s:%02d:%d' % (fid, y, x // 8)
+                px.append((x, y, key, x % 8, 2, MASK_COL))
+                p['entries'][key] = [0, 'M']
+    return dict(p, w=w, h=h, pixels=px)
+
+
 def block_part(peek, kind, b):
     """Shadow ('S'), aircraft ('A') or aircraft shadow ('a') block b (0-15) -> part."""
     base = (SHADOW if kind == 'S' else AIRCRAFT) + 72 * (b + 1)
@@ -71,7 +101,7 @@ def block_part(peek, kind, b):
     group = {'S': GROUPS[1], 'A': GROUPS[2], 'a': GROUPS[3]}[kind]
     p = _part(group, (kind, b), pixels)
     p['entries'] = entries
-    return p
+    return add_mask(p, 'A%04X' % base) if kind == 'A' else p
 
 
 def heli_part(peek, body, buf):
@@ -92,7 +122,7 @@ def heli_part(peek, body, buf):
                     pixels.append((c * 8 + bit, line, key, bit, 1, BLACK))
     p = _part(GROUPS[0], ('H', body, bytes(buf)), pixels)
     p['entries'] = entries
-    return p
+    return add_mask(p, 'H%04X' % body)
 
 
 def capture(rzxs):

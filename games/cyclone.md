@@ -83,6 +83,9 @@ red; over the grey yard the shadow cuts grey cells. Over the sea it is fine (bla
 - Depth: as the original - helicopter and shadow behind the scenery in front (the game's own
   occlusion masks).
 - Shadows: dithered see-through, as drawn.
+- Mask (user, 2026-10-21): helicopter and aircraft (not the shadows) get an opaque mask: every
+  pixel 4-adjacent to ink (no diagonals) plus everything it encloses (no transparent pixel inside);
+  default bright white (15), paintable (keys M + figure + line + byte; cyclone.add_mask).
 - Colours: painted by the user (sheets below); defaults black (palette index 8).
 
 ## Colour sheets (2026-10-21)
