@@ -56,8 +56,10 @@ Layers - never mix their facts:
 2. Next dev guide r3 (github.com/tomaz/zx-next-dev-guide; text copy in the private reference repo). Cite as "guide r3 p.N".
 2b. Core VHDL = ground truth for behaviour: `git clone --depth 1
    https://github.com/avlixa/zx_spectrum_next_03.01.09` works in the sandbox (GitHub mirror of core
-   3.01.09; src/zxnext.vhd, ports.txt). Official repo (GitLab, blocked in the sandbox):
-   gitlab.com/SpectrumNext/ZX_Spectrum_Next_FPGA. Dean's core may be newer - note the version.
+   3.01.09; src/zxnext.vhd, ports.txt). Official repo: gitlab.com/SpectrumNext/ZX_Spectrum_Next_FPGA
+   (`git clone --depth 1 -b 30205` worked from a cloud session 2026-10-21; it was blocked before):
+   one branch per core version (30205 = 3.02.05), CPU in cores/zxnext/src/cpu/t80n/ (t80n_mcode.vhd
+   decode + T-states, t80n.vhd Z80N execution + flags). Dean's core may be newer - note the version.
    Register reference: tbblue docs/extra-hw/io-port-system/registers.txt (nextreg list).
 3. SpecNext Wiki https://wiki.specnext.dev/Main_Page - use when the guide is silent or thin.
    Read it with the chat's WebFetch tool (itch.io, table.specnext.dev and ped.7gods.org are blocked
@@ -259,6 +261,8 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
   memory, so a list subclass with __getitem__/__setitem__ can model paging (nextboot.py relies on it).
   NEXTREG (ED 91/ED 92) is not a SkoolKit opcode: install handlers in sim.after_ED. SkoolKit runs
   ANY Z80N ED opcode as a silent 2-byte NOP (tested with MIRROR A): implement before using one.
+  `nexclash/z80n.install(sim, nextreg)` installs all 29 (sources per handler in its docstring;
+  `python -m nexclash.z80n` / selftest --tools check them); engines older than it keep their own.
 - Structural test of the GENERIC TID builder without a generic-game snapshot: clear
   identify.KNOWN and identify the Treasure Island title snapshot (dizzy2.z80) -> ok 'tid' profile;
   TidPatch builds for all strategies, nextboot.check passes. Not a verification (no RZX).

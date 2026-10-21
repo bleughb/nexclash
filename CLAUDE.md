@@ -49,6 +49,8 @@ or download another version; tools/sjasmplus/README.md).
 ## Rules (the maintainers' standing rules - contributions are checked against them)
 - Style: terse. Results, decisions and files first.
 - Verify the original bytes at every patch site (the engine refuses a snapshot that differs).
+- Z80N instructions may always be used in hooks; a verifier gets them from `z80n.install(sim,
+  nextreg)` (all 29, sources in its docstring) - never write another per-engine copy.
 - Test every change differentially against the RZX: all registers (AF' included unless a
   documented convergence check applies) and all memory outside the never-read draw buffers,
   sprite pixels against the original plot, and no jumps into the middle of a patched instruction.

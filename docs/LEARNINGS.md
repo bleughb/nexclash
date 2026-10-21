@@ -547,11 +547,15 @@ Grouped by question; add a new lesson to its group.
   before choosing altrom; Lode Runner's hooks went into game RAM proven never touched (A3 "ram").
 
 ## 2.3 Our toolkit (nexclash) and host tools
-- Z80N instructions in hooks (ADD HL,A, MUL D,E, ... ; the user asked for them, Cyclone 2026-10-21):
-  SkoolKit's simulator does not know them, so the engine's verifier adds a handler per opcode it uses
-  to sim.after_ED, as for NEXTREG (cyclone._machine: ED 31 ADD HL,A, ED 30 MUL D,E; flags unaffected,
-  8 T). An unknown ED opcode runs as a 2-byte NOP in SkoolKit - a hook that uses one without a handler
-  is mis-simulated silently, so list every Z80N opcode the .asm uses next to its handler.
+- Z80N instructions in hooks: always allowed in .nex builds (maintainers, 2026-10-21). SkoolKit's
+  simulator does not know them (an unknown ED opcode runs as a silent 2-byte NOP), so a verifier
+  calls `z80n.install(sim, nextreg)` after simpool.machine(): all 29, NEXTREG through the engine's
+  own model, other ED NOPs and ED B6 raise Z80NError (strict=False for game code that runs ED NOPs).
+  Handlers follow core 3.02.05's VHDL where the guide disagrees (z80n docstring: LDIX-family flags
+  like LDI, ADD rr,A clears CF, LDWS 14 T). Engines written before it (cyclone._machine ED 31 / ED 30,
+  rainbow SWAPNIB, the NEXTREG copies) keep their own handlers until moved - moving them changes a
+  shared dependency of every game (full selftest --affected), and ADD rr,A's CF and most engines'
+  0-T NEXTREG differ from the old copies.
 - Profile hooks per routine before optimising (cyclone.PROF: T per PC from the patched run, mapped to
   the .asm labels via the sjasmplus symbol / listing file). Cyclone's render hook went 1.9M -> 310K T
   (28 MHz T) by: skipping empty sprites (row-occupancy table instead of scanning), only strip cells the
