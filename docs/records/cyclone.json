@@ -94,8 +94,8 @@
   "engine_col": "cyclone (cyclone.md)",
   "build": "cyclone_sprites.nex 25c1b1e0 (helicopter + aircraft = 4-bit sprites, black with a white 4-neighbour mask, behind scenery as the original; shadows dithered; strip shows its scenery; hooks: alt ROM stubs + page 26 at slot 6, 28 MHz inside hooks)",
   "software": "RZX + 4 whole-game bookmarks IDENTICAL (registers, memory, interrupt safety, screen vs model, sprite pixels vs model), unit cases + negative control PASS",
-  "hardware": "untested",
-  "next": "hardware test (checklist); user paints the PAINTING_SPRITES sheet; per-pixel colour map + recolour; speed (~10 % slower than the plain build)"
+  "hardware": "25c1b1e0 loads, runs and plays for a few minutes (user, 2026-10-21; not fully tested)",
+  "next": "full hardware pass (checklist: aircraft, map screen, crash, game over, speed); user paints the PAINTING_SPRITES sheet; per-pixel colour map + recolour"
  },
  "checks": [
   "asm2profile:cyclone"
