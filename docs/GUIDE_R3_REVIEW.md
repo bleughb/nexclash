@@ -29,12 +29,12 @@ Tooling (sjasmplus 1.18.2, CSpect 2.13, DeZog), changelog, licence. Nothing for 
 
 ## DMA (read in full)
 - OK with TECHNIQUES 1 / NEXT_REGISTERS: WR0-WR6, command bytes, continuous mode, port 0x6B since
-  core 3.1.2, interrupts lost while the DMA owns the bus.
+  core 3.01.02, interrupts lost while the DMA owns the bus.
 - NEW [TECHNIQUES 1]: the ~4 cycles/byte figure needs the timing byte on BOTH ports (default =
   Z80 cycle timing); registers persist (repeat = WR0 + load + enable); WR6 $D3 Continue makes
   chunked transfers 2 OUTs each; burst mode + prescaler leaves the CPU able to take interrupts;
   WR4 mode 00 / WR0 op 10-11 must not be used (Zilog modes, may change); read mask / status byte
-  00E1101T (byte counter bytes swapped on core 3.0.5).
+  00E1101T (byte counter bytes swapped on core 3.00.05).
 - CONFLICT (inside the guide): WR4 text names port B address bits as both 3/2 and 3/4; all
   examples set bits 3 and 2 ($AD). Use the examples.
 - The old wiki claim "DMA slows above 7 MHz with Layer 2 on" is outdated (guide).

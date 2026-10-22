@@ -380,7 +380,7 @@ Hardware to confirm
    "Raster numbering": the freeze trap).
    How to test any of these: tools/hwtests/README.md (one test .nex per question, a results table in
    fixed RAM, one coloured block per test; Dean photographs the board, MAME runs the same file).
-35. NEXLOAD overwrites the 48K printer buffer (0x5B00-0x5BFF: NextZXOS paging routines + system
+38. NEXLOAD overwrites the 48K printer buffer (0x5B00-0x5BFF: NextZXOS paging routines + system
    variables) after loading bank 5 (Match Day, hardware 2026-10-20: icons and team names lost, plain
    build too). Fixed per game by z80tonex `keep_printer_buffer` (opt-in, so no other output changed).
    Other 48K references with non-zero bytes there, untested for this: dizzy1 (90 bytes; runs "perfect"

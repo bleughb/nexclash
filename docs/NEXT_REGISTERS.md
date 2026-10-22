@@ -52,7 +52,7 @@ top byte where OTIR must work (0x57, 0x5B). The ULA answers on any even port (A0
 | 0x5B | Sprite Pattern Upload | pattern bytes; auto-advance (256-byte blocks by OTIR). Low byte decoded only: Rainbow (2026-10-19) uploads by unrolled OUTI with any B |
 | 0x57 | Sprite Attribute Upload | 4 or 5 bytes per sprite in $35..$39 order (4 when byte 3 bit 6 = 0); index set by a 0x303B write (which also sets the pattern slot); advances after each sprite, wraps 127 -> 0. Low byte decoded only. Rainbow commit (2026-10-19): 0x303B = sprite, 5 x OUTI; NextState models it (simulated; hardware to confirm) |
 | 0x7FFD | Memory Paging Control | bit 5 = lock; unlocked writes also reset MMU0/1 to ROM and MMU6/7 to the bank; bit 3 = ULA shows bank 7 (shadow screen) |
-| 0x123B | Layer 2 Access Port | bit 1 visible (alias $69 bit 7); bit 0 write-paging / bit 2 read-paging of Layer 2 into 0x0000-0x3FFF, bits 7:6 which 16K (11 = all 48K over slots 0-2), bit 3 shadow banks ($13), bit 4 = offset form (core 3.0.7+). The stub writes 0 (no paging into ROM space) |
+| 0x123B | Layer 2 Access Port | bit 1 visible (alias $69 bit 7); bit 0 write-paging / bit 2 read-paging of Layer 2 into 0x0000-0x3FFF, bits 7:6 which 16K (11 = all 48K over slots 0-2), bit 3 shadow banks ($13), bit 4 = offset form (core 3.00.07+). The stub writes 0 (no paging into ROM space) |
 | 0x1FFD | Plus 3 Memory Paging Control | bit 2 + 7FFD bit 4 select the ROM (ROM3 = 48K = alt image 1) |
 | 0xDFFD | Next Memory Bank Select | not used (bank MSBs) |
 | 0xFE | ULA Control Port | border (restored by the tail) |
@@ -65,11 +65,11 @@ timing (github.com/varmfskii/zxnext_code, zx_next_notes/copper). Researched 2026
 | $09 bit 4 | lockstep $34 with 0x303B | off by default: $34 and 0x303B are separate sprite indices |
 | $75-$79 | $35-$39 with sprite number post-increment | each write increments (nextreg.txt); `NEXTREG $78,0` per sprite = hide a run |
 | $37 bit 0 / $39 bits 7:6 (relative sprites) | anchor + composite / unified relatives | relatives: 8-bit X/Y offsets, visibility ANDed with the anchor, optional pattern / palette offset from the anchor; unified = mirror/rotate/scale as one image |
-| port 0x6B | zxnDMA (core 3.1.2+; 0x0B = Zilog DMA) | WR0-WR6 program by OTIR; WR1/WR2 timing byte = cycle length 2..4; WR4 bits 6:5 = 01 continuous, 10 burst; WR6 $CF load, $87 enable, $83 disable, $D3 continue (repeat from current pointers), $C3 reset, $BB + mask / $BF / $A7 read status; WR1 %00100100 = port A fixed memory (fill). Holds the bus: pulse interrupts are lost |
+| port 0x6B | zxnDMA (core 3.01.02+; 0x0B = Zilog DMA) | WR0-WR6 program by OTIR; WR1/WR2 timing byte = cycle length 2..4; WR4 bits 6:5 = 01 continuous, 10 burst; WR6 $CF load, $87 enable, $83 disable, $D3 continue (repeat from current pointers), $C3 reset, $BB + mask / $BF / $A7 read status; WR1 %00100100 = port A fixed memory (fill). Holds the bus: pulse interrupts are lost |
 | $60 / $63 | copper data upload (byte / whole instruction) | $63 commits only after both bytes: no half instruction runs |
 | $61 / $62 | copper upload index (11 bits) + mode $62 bits 7:6 | 00 stop, 01 reset+run, 10 resume, 11 reset+run + restart each frame; same mode again = index change only |
 | copper WAIT / MOVE | `1HHHHHHV VVVVVVVV` / `0RRRRRRR DDDDDDDD`, HALT = $FFFF, NOOP = 0 | MOVE reaches NextRegs 0x01-0x7F only; WAIT H 0-55 in 8-pixel steps (max usable 52-55 by timing); stored big-endian |
-| $64 | vertical line offset (core 3.1.5+) | added to copper, line interrupt and $1E/$1F line numbers; 0 = ULA row 0 is line 0 |
+| $64 | vertical line offset (core 3.01.05+) | added to copper, line interrupt and $1E/$1F line numbers; 0 = ULA row 0 is line 0 |
 | $22 / $23 | line interrupt: $22 bit 1 enable, bit 0 + $23 = line, bit 2 = ULA interrupt OFF, bit 7 (read) = /INT asserted | fires as the previous line's pixels end; shares /INT with the ULA in pulse mode (never enable under a game) |
 | $C0 bit 0, $C4-$CE | hardware IM2 mode, interrupt enables / status / which may break a DMA | vectors: line 0 (highest), CTC 3-10, ULA 11; we stay in pulse mode ($C0 = 0, stub) |
 
@@ -111,7 +111,7 @@ Z80N instructions worth using in future hooks (all 2 bytes unless noted):
 | MIRROR A | ED 24 | 8 | bit-reverse a graphics byte (mirrored frames without a 256-byte table) | - |
 | SWAPNIB | ED 23 | 8 | nibble swap when packing 4-bit sprite pixels (USED by Rainbow) | - |
 | MUL D,E | ED 30 | 8 | DE = D*E (table offsets, frame*size) | flags unchanged |
-| ADD HL/DE/BC,A | ED 31/32/33 | 8 | pointer + unsigned A | carry NOT preserved (undefined/reset, wiki notes 3.1.5 / 3.02) |
+| ADD HL/DE/BC,A | ED 31/32/33 | 8 | pointer + unsigned A | carry NOT preserved (undefined/reset, wiki notes 3.01.05 / 3.02) |
 | ADD HL/DE/BC,nn | ED 34/35/36 lo hi | 16 | pointer + constant | 4 bytes |
 | PUSH nn | ED 8A hi lo | 23 | push a constant | operand is BIG-endian (only one) |
 | OUTINB | ED 90 | 16 | OUTI without decrementing B: pattern uploads to 0x5B with a fixed port | flags undefined |

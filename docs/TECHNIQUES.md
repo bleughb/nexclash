@@ -30,13 +30,13 @@ HARDWARE-MEASURED; the estimates in the rest of this section are not. 28 MHz = t
 | | program only (no ENABLE) | 94.3 | 13.5 | |
 | fill 256 B | LDIR / PUSH / DMA | 1539.7 / 419.0 / 395.1 WRONG | 220.2 / 57.4 / 60.2 | 0.860 / 0.224 / ~0.18 |
 | sprite pattern 256 B -> 0x5B | OTIR / OUTI unrolled / OUTINB / DMA | 1546.4 / 1252.4 / 1255.8 / 402.8 | 221.3 / 186.7 / 186.7 / 61.6 | 0.864 / 0.729 / 0.729 / 0.184 |
-| one sprite's 4 attributes | port 0x57 / NEXTREG $34-$38 | 30.5 / 28.6 | 4.5 / 4.5 | |
+| one sprite's 4 attributes | port 0x57 / NEXTREG $34-$38 (constant values) | 30.5 / 28.6 | 4.5 / 4.5 | |
 | one register | NEXTREG n,v / NEXTREG n,A / OUT 243B + 253B | 5.7 / 6.8 / 14.9 | 0.9 / 1.0 / 2.2 | |
 | paging | NEXTREG $56 / OUT 0x7FFD | 5.5 / 8.2 | 0.9 / 1.2 | |
 | one 8x8 cell | ULA (8 B + attr) / tilemap entry / Layer 2 (64 B) | 61.6 / 7.3 / 360.9 | 9.4 / 1.1 / 53.8 | |
 | scroll | tilemap or Layer 2 offset regs / copy one 256 B screen band | 11.4 / 1538.9 | 1.6 / 220.5 | |
 | palette entry | NEXTREG $43 / $40 / $41 | 17.1 | 2.7 | |
-| copper list 32 instructions | NEXTREG $60 / OUT $253B loop | 800.7 / 773.2 | 123.4 / 115.7 | |
+| copper list 32 instructions | NEXTREG $60 / OUT $253B loop (DJNZ count) | 800.7 / 773.2 | 123.4 / 115.7 | |
 
 What it says:
 - DMA set-up is ~14.5 us at 28 MHz (~13.5 of it writing the 16-byte program); after that 0.18 us a
@@ -49,11 +49,16 @@ What it says:
 - 28 MHz is ~6.3-7x 3.5 MHz, not 8x: each memory read adds a wait state, so (T + reads) / 8
   (LEARNINGS 2.1f): LDIR 21 T + 3 reads -> 3.0 T a byte at 3.5 MHz terms = 0.857 us (measured 0.861).
 - Sprite pattern upload: DMA is ~3x OUTI for a 256-byte pattern and ~1.8x for a 64-byte one
-  (14.5 + 64 x 0.18 = 26 us vs 47 us). OUTINB = OUTI. Sprite attributes: port and NEXTREG the same.
-- NEXTREG is 2.4x the port pair; MMU paging (NEXTREG) a little faster than OUT 0x7FFD.
+  (14.5 + 64 x 0.18 = 26 us vs 47 us). OUTINB = OUTI. Sprite attributes: port and NEXTREG the
+  same here only because v1's NEXTREG side wrote constants (`NEXTREG $35,32`); with values loaded
+  from memory, as hooks do (`LD A,(HL) : NEXTREG $35,A : INC HL`), NEXTREG is slower: 1.0b, 4.6 vs
+  6.7 us.
+- NEXTREG is 2.4x faster than the port pair; MMU paging (NEXTREG) a little faster than OUT 0x7FFD.
 - An 8x8 cell: a tilemap entry is ~8x cheaper than the ULA cell and ~50x cheaper than a Layer 2
   cell; hardware scroll costs 1.6 us against 220 us per 256 bytes copied.
-- Copper upload: the port loop is slightly faster than NEXTREG $60 per byte at 28 MHz.
+- Copper upload: the port loop is slightly faster than NEXTREG $60 per byte at 28 MHz. v1 counted
+  the 64 bytes with DJNZ (~3.9 us an instruction by NEXTREG $60); 1.0b's loop counts with a 16-bit
+  DE (it also loads 256 instructions), hence its higher 160.7 us for the same 32 instructions.
 
 ### 1.0b Sizes, reuse and the copper (tools/hwtests/nextbench v2, core 3.02.00, 2026-10-22)
 Same board, same method; R chosen per row. Microseconds per call at 28 MHz (3.5 MHz on the photos,
@@ -80,7 +85,7 @@ technique is a reliable figure on a given core. DMA at 3.5 MHz (still wrong copi
 |---|---|
 | fill LDIR / PUSH / DMA | 16: 14.4 / 7.6 / 17.5; 256: 220.5 / 59.1 / 60.4; 2048: 1759.6 / 459.5 / 380.9 |
 | sprite pattern OTIR / OUTI / DMA | 64: 56.8 / 45.9 / 27.2; 128: 111.7 / 89.3 / 38.7; 256: 221.7 / 176.5 / 61.7; 2048: 1766.6 / 1409.6 / 382.3 |
-| sprite attributes port 0x57 / NEXTREG $34-$38 | 1 sprite: 4.6 / 6.7; 32 sprites: 111.7 / 243.4 |
+| sprite attributes (4 bytes, values from memory) port 0x57 / NEXTREG $34-$38 | 1 sprite: 4.6 / 6.7; 32 sprites: 111.7 / 243.4 |
 | hide 128 sprites: NEXTREG $78 post-increment / port 0x57 records / $15 off | 188.7 / 441.9 / 0.9 |
 | NEXTREG n,v / n,A / port pair / read a NextReg | 0.9 / 1.0 / 2.3 / 1.9 |
 | MMU 1 slot / 4 slots / OUT 0x7FFD | 0.9 / 3.6 / 1.2 |
@@ -105,13 +110,13 @@ What v2 adds:
   (retarget), vs a stack copy ~9 / ~26. Burst mode = continuous here (no prescaler).
 - Copy below ~37 bytes with a fresh DMA program: stack copy (needs fixed addresses / SP games),
   else unrolled LDI. Fills up to ~300 bytes: PUSH.
-- Sprite attributes in bulk: port 0x57 (OTIR) is 2.2x NEXTREG per sprite; hiding a run of sprites:
-  NEXTREG $78 with post-increment is 2.3x the port.
+- Sprite attributes in bulk: port 0x57 (OTIR) is 2.2x faster than NEXTREG per sprite; hiding a run
+  of sprites: NEXTREG $78 with post-increment is 2.3x faster than the port.
 - The copper does NOT slow CPU memory work and does NOT disturb CPU NEXTREG / port-pair access to
   other registers (CP APART 0): it is usable next to the hooks as long as the two never drive one
   register pair (CP SHARE confirms that rule). Its WAIT lines are the CPU's raster lines.
-- Copper lists: the port loop is ~12 % faster than NEXTREG $60; ~2.2 us an instruction at 28 MHz,
-  so reload only what changed.
+- Copper lists: the port loop is ~12 % faster than NEXTREG $60; ~2.2 us a byte = ~4.4 us an
+  instruction at 28 MHz by the port loop (~5.0 by NEXTREG $60), so reload only what changed.
 - Sprite attributes in bulk: write port 0x303B = first sprite, then the 5 bytes per sprite
   (= $35..$39 in order) to port 0x57; the sprite index advances after each sprite's last byte
   (4 bytes when byte 3 bit 6 = 0), wraps 127 -> 0. OTIR 21 T/byte = ~105 T/sprite, unrolled OUTI
@@ -174,7 +179,7 @@ What v2 adds:
   * Double-buffered PATTERN slots: upload the next frame's images by DMA (0x303B + memory ->
     port 0x5B) into the slot set NOT on screen, spread over two frames (4 + 5 patterns), then flip
     which set the attributes use - no half-updated sprite is ever displayed (generalises the
-    Commando flicker rule in 1.4 and the pattern cache).
+    Commando flicker rule in LEARNINGS 1.4 and the pattern cache).
   * Per-frame copper rebuild: patch the list in RAM, stop the copper ($62/$61 = 0), DMA the list to
     port 0x253B with $60 selected, restart in mode 11 - all done after a $1E/$1F wait for the line
     AFTER THE LIST'S LAST WAIT (192 only when the list ends above it), so the list is never
@@ -212,7 +217,7 @@ What v2 adds:
   offsets and can take the anchor's pattern number as a base. Candidate for multi-sprite figures
   (2x2 boxes) - but a mirrored unified group mirrors as one image, so the per-engine "swap the left
   and right quads" logic (BRIEFING A1) must go, and the pixel check must cover it.
-- zxnDMA (port 0x6B since core 3.1.2; 0x0B = Zilog-compatible DMA): memory -> memory, memory ->
+- zxnDMA (port 0x6B since core 3.01.02; 0x0B = Zilog-compatible DMA): memory -> memory, memory ->
   fixed port (0x5B patterns, 0x57 attributes, 0x253B with a NextReg selected on 0x243B). With
   port cycle length 2 a byte costs ~4 cycles vs LDIR 21 / OTIR 21 T - but only with the timing
   byte sent for BOTH ports (WR1/WR2 bit 6 + byte %00000010); without it the DMA uses standard Z80
@@ -262,7 +267,7 @@ What v2 adds:
   2048-byte copper block (NEX format, wiki NEX_file_format; how the loader applies it is not
   documented there).
 - Raster numbering: Active Video Line ($1E/$1F), line interrupt ($22/$23) and copper WAIT all
-  count from ULA pixel row 0 UNLESS NextReg $64 (core 3.1.5+) is non-zero: it offsets all three
+  count from ULA pixel row 0 UNLESS NextReg $64 (core 3.01.05+) is non-zero: it offsets all three
   (changelog 3.01.05). Frame length differs by timing: 48K 312 lines, 128K 311, HDMI 312 (60 Hz:
   262/261); display rows 0-191, then border + blanking. A raster wait that assumes 312 lines or
   offset 0 is a hardware-only fault (BRIEFING C2 #26).
@@ -300,14 +305,14 @@ What v2 adds:
 - Hardware ground truth: github.com/MrKWatkins/ZXSpectrumNextTests (Ped7g's Next test suite, .snx
   per test with board photos + emulator screenshots, 2026-10-20). Run the matching test before
   trusting an emulator for a feature. Results that bear on us:
-  * Copper: CSpect 2.11.1 and ZEsarUX 8.0 BAD, MAME 0.282 OK, board core 3.01.5 OK. Copper WAIT
+  * Copper: CSpect 2.11.1 and ZEsarUX 8.0 BAD, MAME 0.282 OK, board core 3.01.05 OK. Copper WAIT
     compares the horizontal position as >= on the current line: a WAIT for an h already passed ON
     THE SAME LINE does not wait (no roll-over into the next frame). Rewriting $61/$62 with the same
-    mode bits does not disturb a running list (already 1.5; the test proves it on hardware).
-  * Sprites (Sprites/ScanlineDelay, core 3.0.7+): the sprite engine swaps its line buffer at sprite
+    mode bits does not disturb a running list (already in the Copper bullet above; the test proves it on hardware).
+  * Sprites (Sprites/ScanlineDelay, core 3.00.07+): the sprite engine swaps its line buffer at sprite
     X = -1, so an attribute change shows ONE scanline later; to change a sprite from line N on,
     write it before copper WAIT(line N-2, h ~50). A commit racing the beam tears by whole lines.
-  * Raster line read (Timing/ScanlineReadingAndInterrupt): a board with core 3.1.0 at 3.5 MHz
+  * Raster line read (Timing/ScanlineReadingAndInterrupt): a board with core 3.01.00 at 3.5 MHz
     sometimes READ A WRONG VALUE from $1F (a wait for line 224 fired near 192). $1E and $1F are
     also two reads: crossing line 255 -> 256 between them gives a value 256 lines off. For a beam
     test read the pair until two consecutive reads agree (rainbow_z80n rsafe); for TIMING that loop
@@ -316,7 +321,7 @@ What v2 adds:
   * DMA (base/DMA) runs at 28 MHz only (NextReg 7 = 3): it never covered 3.5 MHz, where nextbench
     found wrong copies on 3.02.00. Its "short init" also restarts with CONTINUE ($D3: length reset,
     addresses kept) instead of LOAD - a cheaper re-run than our rrun (LOAD + ENABLE), not measured.
-  * Layer 2 over ROM (Graphics/Layer2Port, board core 3.1.5 + MAME OK): write-over-ROM and
+  * Layer 2 over ROM (Graphics/Layer2Port, board core 3.01.05 + MAME OK): write-over-ROM and
     read-over-ROM (data, CODE, even the IM1 handler fetched from Layer 2) for 16K / 48K, visible
     and shadow; bank offset form (0x123B bit 4). It does NOT test the alt ROM ($8C): the template
     for BRIEFING C2 #30.
@@ -342,7 +347,7 @@ What v2 adds:
   palette entry has bit 7 = priority - pixels in that colour draw above ALL layers, sprites
   included, whatever $15 says. Candidate for depth: Layer 2 foreground pieces in front of a
   hardware-sprite player (Dizzy 1 draws figures on Layer 2; the "sprites cannot sit behind some
-  objects" limit in 1.4 is about the ULA). Needs the colour twice (one entry with, one without).
+  objects" limit in LEARNINGS 1.4 is about the ULA). Needs the colour twice (one entry with, one without).
 - ULA palette: classic ULA uses indices 0-7 ink, 8-15 bright ink, 16-23 paper, 24-31 bright paper
   (border from paper). Paper and ink entries are separate, so ONE paper colour can be set equal to
   the global transparency $14 (compared with the colour, not an index) to see the layer behind
@@ -393,10 +398,10 @@ What v2 adds:
   NOT run by us): a 256x192 Layer 2 picture wobbled by the copper writing the Layer 2 X ($16) and Y
   ($17) offsets on every line (WAIT line n / MOVE $16 / MOVE $17, from a sine table) - the Y offset
   per line picks which picture row a screen line shows (stretch / wave with no redraw). Each frame
-  the CPU rewrites all 256 x 3 instructions by NEXTREG $60 (~1.5 KB; by 1.0b COP NR ~5 us an
+  the CPU rewrites all 256 x 3 instructions by NEXTREG $60 (~1.5 KB; by 1.0b's copper load by NEXTREG $60, ~5 us an
   instruction = ~3.8 ms at 28 MHz - DMA would take ~0.3 ms), into the list the copper is RUNNING (after the
   writes it sets $61 = 0 / $62 = mode 11 every frame: the index goes back to 0, and rewriting the
-  same mode bits does not restart a running list - 1.5): it tolerates a frame that mixes old and
+  same mode bits does not restart a running list - section 1, Copper): it tolerates a frame that mixes old and
   new values. The
   list ends with WAIT line 511 (%10000001,255), a line that never comes, = HALT until the restart.
   The CPU paces itself on $1F LSB = 250 (a line every mode has); the README's "now works in CSpect
@@ -442,7 +447,7 @@ What v2 adds:
     at the 8K boundary, acknowledges (NEXTREG $C9,1: CTC 0 status) and RETIs. Cost: roughly 200-350
     T per interrupt with both channels playing (estimated from the code, not counted), 16,000 a
     second = a tenth to a sixth of 28 MHz - against nothing per sample for the
-    copper-DAC player (zxnext-copper-samples above). CTC channel 1 runs a second timer (palette
+    copper-DAC player (zxnext-copper-samples below). CTC channel 1 runs a second timer (palette
     fade steps).
   * Gotchas in its comments: change $C0 read-modify-write (NextZXOS since core 3.01.10 runs the
     stackless NMI, $C0 bit 3); clear the status registers $C8-$CA with $FF before enabling; CTC
@@ -567,7 +572,8 @@ What v2 adds:
   Facts and tricks:
   * Copper raster counters follow the machine type (NextReg $03) and 50 / 60 Hz only, not the
     VGA / HDMI mode: 896 dots a line at 48K timing, 912 at 128K / Next, 312 / 311 lines (264 at
-    60 Hz); WAIT h = dot / 16.
+    60 Hz by their notes; Gen4 / DynaTile and "Raster numbering" in section 1 say 262 / 261 - not
+    checked on a board); WAIT h = dot / 16.
   * The last ~128 dots of a line are never matched by a WAIT (commit "Handle copper matching near
     end of lines"): a WAIT for an h there waits until that line comes round next FRAME. Wait for
     (line + 1, 0) instead.
@@ -576,7 +582,7 @@ What v2 adds:
     (one compare register, two calls a frame); the $61 / $62 write includes the mode bits, so
     setting the write index does not stop the list.
   * Copper list upload by DMA to port $253B (NextReg $60 selected, port B fixed I/O): by our port
-    figures (1.0b PAT DMA) ~14.5 us + 0.36 us an instruction at 28 MHz vs 4.4 us for an OUT loop -
+    figures (1.0b, sprite pattern by DMA) ~14.5 us + 0.36 us an instruction at 28 MHz vs 4.4 us for an OUT loop -
     ~10x for long lists (not measured as such).
   * Hardware IM2 mode ($C0 = 1) with the ULA interrupt off and the line interrupt on: vector table
     entry 0 = line interrupt (our NEXT_REGISTERS $C0 note: line = highest priority).
@@ -613,10 +619,10 @@ What v2 adds:
     every caller from the code"; BRIEFING C2 #11).
   * Converted graphics prepared ahead: the whole cart is converted to Next tile rows at start
     (~1.1 s per 256K) and tiles written whole from ROM are COPIED, not converted. nexclash builds
-    offline, so the same pre-conversion can happen in Python at build time (Next RAM store, 1.4).
+    offline, so the same pre-conversion can happen in Python at build time (Next RAM store, LEARNINGS 2.5).
   * A display-off / display-on pair the original did inside the vertical blank can land in the
     picture on the slower machine: they HOLD the off-write until the matching on-write or a
-    timeout, so the screen does not flash. Same class of fault as our hide/show flicker rule (1.4).
+    timeout, so the screen does not flash. Same class of fault as our hide/show flicker rule (LEARNINGS 1.4).
   Deeper (source read 2026-10-20: src/runtime/fw*.asm, tools/sitescan.py, docs/*.md):
   * INTERRUPTS - hardware IM2 mode, not pulse: `NEXTREG $C0,1` (+ $C4/$C5/$C6 enables, I = table
     page) makes the Next HOLD each interrupt until it is acknowledged (RETI), so runtime code may
@@ -645,8 +651,8 @@ What v2 adds:
   * Speed rule at 28 MHz (MAME tbblue, measured with breakpoints printing totalcycles [MAME]): a
     native instruction costs its Z80 T-states + 1 cycle per MEMORY READ (its own opcode / operand
     bytes and the data it reads; writes and I/O add nothing). 311 lines x 1,824 = 567,264 cycles a
-    50 Hz frame. A hook cost estimate from the simulator's T-states becomes T + reads, not T / 8
-    (BRIEFING C2 #1). A single trapped I/O instruction cost them ~1,000-2,100 cycles, which is why
+    50 Hz frame. A hook cost estimate from the simulator's T-states becomes T + reads in 28 MHz cycles
+    (= (T + reads) / 8 in 3.5 MHz T-states, as in 1.0), not T / 8 (BRIEFING C2 #1). A single trapped I/O instruction cost them ~1,000-2,100 cycles, which is why
     loops of OUTs are compiled into one trace call.
   * Static scan design worth copying (sitescan.py, ~5,600 lines, stdlib only): per routine a
     data-flow pass with abstract values (constant / value at entry / table base + index / stack
