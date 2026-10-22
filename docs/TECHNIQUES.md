@@ -368,8 +368,9 @@ What v2 adds:
     same instruction draws a tile column. Tiles are stored once; the 8 orientations are 8 unrolled
     routines, picked per resolution (a 256x192 "normal" tile is the 320x256 "rotated + mirrored"
     one, drawn with LDI). LDWS 14 T a byte vs LDI 16 T, and the source stays in one 256-byte page.
-    Our Rainbow note says LDWS is not useful there (per-nibble transparency); a Layer 2 engine that
-    copies opaque 8x8 blocks (wally2, dizzy1: TECHNIQUES 1.0 L2 CELL 54 us) is where it fits.
+    Our Rainbow note says LDWS is not useful there (per-nibble transparency); it fits wherever an
+    engine copies whole OPAQUE blocks into Layer 2 (TECHNIQUES 1.0: an 8x8 Layer 2 cell by LDI 54 us
+    at 28 MHz) - wally2 / dizzy1 draw figures with transparency, so not there as they stand.
   * Layer 2 16K banks mapped as two MMU slots (bank_set_16k) at the 64-line / 64-column boundary.
 
 - Next Point (github.com/vmorilla/next-point, GPL-3.0, z88dk C + asm, read 2026-10-22; a released
