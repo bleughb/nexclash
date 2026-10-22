@@ -491,6 +491,11 @@ Grouped by question; add a new lesson to its group.
 - Measure a technique's set-up before choosing it (TECHNIQUES 1.0, nextbench on a board 2026-10-22):
   DMA costs ~14.5 us to start at 28 MHz, so it only beats LDIR above ~21 bytes, a stack copy above
   ~37 and a PUSH fill above ~330; and on core 3.02.00 DMA at 3.5 MHz copies WRONG (fixed in 3.02.02).
+  Most of that is writing the program: re-running a programmed DMA (LOAD + ENABLE) costs ~3.5 us,
+  so keep the ports programmed and only retarget / re-run (nextbench v2, TECHNIQUES 1.0b).
+- The copper can run next to the hooks: on the board (nextbench v2) a copper looping MOVEs to one
+  register neither slowed the CPU's LDIR nor disturbed its NEXTREG / port-pair palette writes (0 of
+  256 wrong); only a SHARED register pair corrupts (255 of 256). Its WAIT lines = $1E / $1F lines.
 - A game with NO frame sync (Match Day: no HALT, no FRAMES wait in the match loop) loses exactly the
   hook time: +25 % in round 1. Pay for it by running the game's own now-silent drawing at 28 MHz (its
   screen writes are NOPs, the loops still run): the image builds, the XOR draw and the ball routine at

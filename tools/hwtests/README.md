@@ -137,6 +137,11 @@ MHz as dwords in tenths, R at 3.5 / 28 MHz), then a flag byte per row (bit 0 / 1
 v1 (commit 0b51cc9, 32 rows, one size each, fixed R) is the run the board results below were taken
 with; TECHNIQUES 1.0 holds its table.
 
+v2 board run (2026-10-22, core 3.02.00): all 88 rows; every 3.5 MHz CPU row matched its T-state
+count; DMA "!" at 3.5 MHz only (border red), right at 28 MHz; CP WAIT 122 / 120, CP APART 0 / 0,
+CP SHARE 255 / 255. Table and conclusions: docs/TECHNIQUES.md 1.0b. Photos: specnext
+reference/hwtests/nextbench/ (board_v2_p1..p5).
+
 v2 checked before any board (2026-10-22): in SkoolKit + z80n with a modelled raster (no DMA, copper
 or CPU speed change) every CPU row at 3.5 MHz matches its T-state count (LDIR 64 390.7 for 391.1 us,
 LDI unr 64 300.2 for 304, L2 CELL 359.5 for 360.6, NR v 5.7 for 5.7); the R probe needed three
