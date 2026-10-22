@@ -354,6 +354,18 @@ What v2 adds:
 
 ## 2. Other projects
 
+- zx-next-copper-wobble (github.com/em00k/zx-next-copper-wobble, GPL-3.0, 200 lines, read 2026-10-22;
+  NOT run by us): a 256x192 Layer 2 picture wobbled by the copper writing the Layer 2 X ($16) and Y
+  ($17) offsets on every line (WAIT line n / MOVE $16 / MOVE $17, from a sine table) - the Y offset
+  per line picks which picture row a screen line shows (stretch / wave with no redraw). Each frame
+  the CPU rewrites all 256 x 3 instructions by NEXTREG $60 (~1.5 KB; by 1.0b ~2.2 us an instruction
+  = ~1.7 ms at 28 MHz - DMA would take ~0.3 ms), into the list the copper is RUNNING (mode 11,
+  restart every frame; index 0 set once): it tolerates a frame that mixes old and new values. The
+  list ends with WAIT line 511 (%10000001,255), a line that never comes, = HALT until the restart.
+  The CPU paces itself on $1F LSB = 250 (a line every mode has); the README's "now works in CSpect
+  after correctly waiting for the last line" and a commented-out $64 = 31 are the same top-border
+  numbering issue as the freeze trap ("Raster numbering" above).
+
 - zxnext_layer2_tilemap (github.com/vmorilla/zxnext_layer2_tilemap, a copy of benbaker76's demo,
   MIT, z88dk C + asm, read 2026-10-22; NOT run by us): a SOFTWARE tilemap drawn into Layer 2
   (full-colour 8x8 tiles, 512 of them in two 8K pages, map + per-tile attributes rotate / X / Y
