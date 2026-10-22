@@ -60,7 +60,11 @@ Layers - never mix their facts:
    (`git clone --depth 1 -b 30205` worked from a cloud session 2026-10-21; it was blocked before):
    one branch per core version (30205 = 3.02.05), CPU in cores/zxnext/src/cpu/t80n/ (t80n_mcode.vhd
    decode + T-states, t80n.vhd Z80N execution + flags). Dean's core may be newer - note the version.
-   Register reference: tbblue docs/extra-hw/io-port-system/registers.txt (nextreg list).
+   Register reference: tbblue docs/extra-hw/io-port-system/registers.txt (nextreg list); in the
+   official repo cores/zxnext/nextreg.txt (fetch it alone: `git clone --depth 1 -b 30205
+   --filter=blob:none --sparse <repo>` then `git sparse-checkout set --no-cone
+   /cores/zxnext/nextreg.txt`, 2026-10-22). Registers changed after core 3.01.05 (guide r3's last)
+   must be checked there: guide r3's $06 bit 4 (DivMMC automap) is NMI-only from 3.01.10 (A1).
 3. SpecNext Wiki https://wiki.specnext.dev/Main_Page - use when the guide is silent or thin.
    Read it with the chat's WebFetch tool (itch.io, table.specnext.dev and ped.7gods.org are blocked
    from the sandbox too: use their GitHub copies, e.g. ped7g/ZXSpectrumNextMisc for the opcode table; the sandbox network blocks the wiki, so scripts
@@ -77,7 +81,11 @@ Layers - never mix their facts:
 4. Code examples / timing notes: the guide r3 LaTeX source (`git clone --depth 1
    https://github.com/tomaz/zx-next-dev-guide`: chapter-next-*.tex, greppable, no pdftotext) and its
    companion code; github.com/varmfskii/zxnext_code (zx_next_notes = LaTeX source of a Next notes
-   book incl. KevB's copper/display timing tables per machine and video mode; demo/ = small sprite,
+   book that complements guide r3: a page per NextReg and port with the core version that added it
+   (3.01.10+ included: $0A, $B8-$BB), zxnDMA, copper, CTC, interrupts, memory, NextZXOS chapters,
+   and KevB's copper/display timing tables per machine and video mode (copper/*.csv: lines and
+   clocks per frame, ULA interrupt line, max WAIT h - used in TECHNIQUES 1 "Raster numbering");
+   its prose can lag its register pages (memory_management.tex still says $06 enables automap); demo/ = small sprite,
    layer 2, lores examples, e.g. joyspr.asm: attributes by OTIR to port 0x57);
    github.com/stevemonks/ZXSpectrumNextMachineCodeGuides (2020, Zeus assembler: commented readmes for
    sprites, Layer 2, tilemap with per-tile palette / mirror / rotate, pixel scroll, RLE maps; its
@@ -97,9 +105,9 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 | Item | Setting / fact |
 |---|---|
 | CPU speed | NextReg $07 = 0 (3.5 MHz) |
-| Video | 50Hz forced (NextReg $05) unless `--allow-60hz` (nexclash.py convert / auto / patch / new / verify: sets z80tonex.ALLOW_60HZ, every build path; outputs then differ from the verified MD5s) |
+| Video | 50Hz forced (NextReg $05) unless `--allow-60hz` (nexclash.py convert / auto / patch / new / verify: sets z80tonex.ALLOW_60HZ, every build path; outputs then differ from the verified MD5s). "50 Hz" is exact only at VGA timing 0 and HDMI: VGA timings 1-6 (NextReg $11, the user's setting) run the frame at up to 58.93 Hz, so a converted game runs up to ~18 % fast there (TECHNIQUES 2.6, clock table: clk28 per mode from the register notes, frame rate = clk28 / clocks per frame; not measured on a board). Ask for the video mode with any "runs too fast" hardware report |
 | 48K fidelity | NextReg $03 = 48K timing (written after the legacy paging writes; VHDL: this does NOT stop 7FFD/1FFD decoding - with 48K/128K timing 7FFD decodes as A15=0, A1:0=01, A14 ignored; timing only changes contention); NextReg $08 contention on; 7FFD lock via the tail's own 7FFD write (bit 5) |
-| DivMMC | auto-paging off (NextReg $06 bit 4 cleared by the stub, z80tonex.build_stub; not $0A). Yet Commando 541e34e2, with hook code at 0x3D00-0x3DFF, crashed at its first figure on hardware and in CSpect, and d601385e (the same code moved out of that range; only tables there) runs. PROBABLE cause: the DivMMC/TR-DOS automap on an instruction fetch at 0x3Dxx is not switched off by $06 bit 4 on current cores (entry points may be set by NextRegs $B8-$BB) - NOT confirmed (C2 #24). Rule regardless: never put code at 0x3D00-0x3DFF; data there worked |
+| DivMMC | The stub clears NextReg $06 bit 4 and unmaps DivMMC memory (OUT $E3,0; z80tonex.build_stub). That bit turned DivMMC automap off only up to core 3.01.05: from core 3.01.10 it is the DRIVE-button NMI alone, the automap enable is NextReg $0A bit 4, and $BB bit 7 (set at reset) automaps on any instruction fetch at $3Dxx while ROM3 is selected - which the alt ROM image 1 is (official core nextreg.txt, branch 30205 = core 3.02.05, and the varmfskii zx_next_notes register pages; NEXT_REGISTERS). So on current cores (boards run 3.02.00) automap is probably still ON under our games. That explains Commando 541e34e2: hook code at 0x3D00-0x3DFF crashed at its first figure on hardware and in CSpect, and d601385e (the same code moved out of that range; only tables there) runs - not confirmed on a board (C2 #24). Rule regardless: never put code at 0x3D00-0x3DFF; data there worked |
 | Simulator blind spots | The toolkit's simulator does not model: DivMMC (automap traps, see above), an interrupt arriving in the middle of a hook (so the game's ISR never sees hook register/stack state - covered only by the per-instruction interrupt-safety check), the raster (tearing, overruns), real-machine speed (28 MHz wait states, contention), CSpect differences, the VIDEO output of Layer 2 (nextboot / verify model its bank register, port 0x123B, palette writes and pixel pages, not what the screen shows: palette entry 0xE3 as transparency, layer order; Dizzy 1, 2026-10-14, hardware to confirm), beam-racing (multicolour) timing - code that rewrites attributes per scanline works only at the original T-state count and contention (LEARNINGS 1.1), the Next's own flag results after block I/O instructions (OTIR/OUTI/INIR...: only ZF is reliable on the Next; the simulator computes real-Z80 flags - LEARNINGS 1.1), WHERE INTERRUPTS LAND once hooks change the time between game instructions: a value the game writes twice before its interrupt handler reads and clears it (a "mailbox") can be lost only on the Next (NextMasterSystem's My Hero, LEARNINGS 2.1) - the differential check runs each routine to its return and never moves an interrupt. Anything in this list needs a static/invariant check or a hardware test. Also: what NEXLOAD leaves in RAM before the stub runs - it overwrites the 48K printer buffer 0x5B00-0x5BFF (Match Day 2026-10-20; nextboot `nexload=True` models it); and the CPU speed an interrupt handler runs at when it lands in 28 MHz code (a timed beeper player in the handler plays 8x fast: Match Day isr_w / isr_x) |
 | Emulators [MAME] | MAME 0.289 (`specnext`) runs .nex files and is how many users will test (loading, Lua, quirks: LEARNINGS 2.7). It models the alt ROM as NextZXOS ROM3 (it caught Trueno's 0x3B00 bug, the boot sim did not). Known MAME-only behaviour: sprite index 0 under a palette offset drawn opaque (hardware unchecked). A MAME pass is not a hardware pass: record which one a result is |
 | Layer 2 (Dizzy 1, hardware to confirm) | 256x192, 8-bit pixels, banks via NextReg $12 (16K bank; 3 consecutive banks = 6 pages, page = first + y/32, offset (y%32)*256+x); visible = port 0x123B bit 1 (the stub writes 0x123B = 0 BEFORE the patch setup, so setup turns it on); palette NextReg $43 = $10 (Layer 2 palette 0, auto-increment) then $40 index, $41 RRRGGGBB; transparency = global $14 (default $E3) compared with the palette RGB, so entry 0 = $E3 makes pixel 0 transparent; order SLU default ($15 = 0): Layer 2 over the ULA. Zero banks in the .nex start it clear (NEXLOAD leaves banks it does not load with old contents). NextReg $69 bit 7 is the same visible bit as 0x123B bit 1 and, written with NEXTREG, keeps every register and flag ($69 bits 6-0 = ULA shadow screen + Timex mode: write 0 there for a game that uses neither). Double buffering (Wally 2026-10-14, hardware to confirm): draw into the bank not on show, then write $12 - the switch is not raster-synced (a frame may show the top of one buffer and the bottom of the other) |
@@ -353,7 +361,12 @@ Toolkit structure
 
 Hardware to confirm
 24. The 0x3D00 cause (A1): a test build with one harmless routine at 0x3D00 (emulator with DivMMC, or
-   hardware); then record the confirmed reason in A1 / LEARNINGS 1.4.
+   hardware); then record the confirmed reason in A1 / LEARNINGS 1.4. Lead (2026-10-22, official core
+   nextreg.txt 3.02.05 + varmfskii zx_next_notes): from core 3.01.10 the automap enable moved from $06 bit 4 (what the stub clears)
+   to $0A bit 4, and $BB bit 7 automaps on fetches at $3Dxx. Test: the 0x3D00 build crashes as is
+   and runs with the stub also clearing $0A bit 4 (read-modify-write; and/or $BB bit 7). If so, the
+   stub fix changes every game's output: maintainers decide, rebuild and re-verify (selftest
+   --stamp).
 25. Builds never run on hardware: Dizzy V (dialogue text, slot 1 with 7FFD written every interrupt -
    A1 "7FFD lock"), Magicland, Dizzy 6 (its mirror path is proven only by the unit selftest: wants an
    RZX through the mirror room; Dizzy 6 stays slot1). Later: the tail inside the alt ROM (same
@@ -375,12 +388,12 @@ Hardware to confirm
 28. Copper facts to confirm before an engine relies on the copper: a WAIT for a LINE already passed
    holds the rest of the list until the next frame (inferred from guide r3; an h passed on the
    CURRENT line does not wait - hardware-tested, TECHNIQUES "Hardware ground truth"); $64 = 33 aligns
-   copper line 0 with the top of 320x256 Layer 2 (a developer's note says 32: ULA row 0 = line 32 -
-   test both); with $64 = 0 a WAIT for a line the mode lacks (311 at 60 Hz) never fires (TECHNIQUES
+   copper line 0 with the top of 320x256 Layer 2 (a developer's note and the register text say 32:
+   ULA row 0 = line 32, line 0 = first tilemap / sprite row - test both); with $64 = 0 a WAIT for a line the mode lacks (311 at 60 Hz) never fires (TECHNIQUES
    "Raster numbering": the freeze trap).
    How to test any of these: tools/hwtests/README.md (one test .nex per question, a results table in
    fixed RAM, one coloured block per test; Dean photographs the board, MAME runs the same file).
-35. NEXLOAD overwrites the 48K printer buffer (0x5B00-0x5BFF: NextZXOS paging routines + system
+38. NEXLOAD overwrites the 48K printer buffer (0x5B00-0x5BFF: NextZXOS paging routines + system
    variables) after loading bank 5 (Match Day, hardware 2026-10-20: icons and team names lost, plain
    build too). Fixed per game by z80tonex `keep_printer_buffer` (opt-in, so no other output changed).
    Other 48K references with non-zero bytes there, untested for this: dizzy1 (90 bytes; runs "perfect"
@@ -404,7 +417,7 @@ Designs not built yet (use when a game needs them)
    slot-5 trick): NextMasterSystem's trampoline (TECHNIQUES) - the IM2 entry maps the game's page back
    under the ISR and puts a trampoline in its return slot that maps the hook page again. Needs: verify
    models an interrupt mid-hook (A1 blind spot); the game's ISR must not read its own return address.
-34. Hardware IM2 mode for interrupts-on games ($C0 bit 0; TECHNIQUES "NextMasterSystem", INTERRUPTS):
+34. Hardware IM2 mode for interrupts-on games ($C0 bit 0; TECHNIQUES 2.6 "Held interrupts"):
    the Next holds an interrupt until RETI acknowledges it, so hooks could run with interrupts OFF (no
    per-instruction interrupt-safety rule - Commando, midres). PROVEN on a board (2026-10-20,
    tools/hwtests/im2hold v2): vector = I*256 + $16 for the ULA interrupt; an interrupt during a
@@ -426,7 +439,7 @@ Designs not built yet (use when a game needs them)
 36. `inspect` should warn when CODE runs in the printer buffer (0x5B00-0x5BFF): NEXLOAD overwrites it,
    so the build needs keep_printer_buffer (Match Day: data; Cyclone: the main loop - its first plain
    build, without it, would not run on hardware). An access scan (`scan --range 0x5B00-0x5BFF`) shows it.
-37. Beeper sound independent of CPU speed (idea, 2026-10-22; TECHNIQUES 2 zxnext-copper-samples):
+37. Beeper sound independent of CPU speed (idea, 2026-10-22; TECHNIQUES 2.6, sample sound by copper):
    timed beeper loops play 8x fast at 28 MHz (Match Day isr_w; LEARNINGS 2.1f), so today any code
    that beeps must stay at 3.5 MHz. Instead a hook on the game's OUT ($FE) could log (beeper bit,
    game T-time counted at 3.5 MHz rates) and the copper replay it through a DAC NextReg at ~11 kHz

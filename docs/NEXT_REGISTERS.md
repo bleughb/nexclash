@@ -20,7 +20,9 @@ top byte where OTIR must work (0x57, 0x5B). The ULA answers on any even port (A0
 |---|---|---|---|
 | $03 | Machine Type Register | display timing 48K/128K (bits 6:4, bit 7 = allow change); written last in the tail. Does NOT stop 7FFD decoding | z80tonex tail |
 | $05 | Peripheral 1 Setting Register | bit 2 cleared = 50 Hz (unless `nexclash.py ... --allow-60hz`); a new rate takes effect at the NEXT frame and $05 reads back the OLD rate until then - work from the value written, not a read (NextMasterSystem design notes) | z80tonex stub |
-| $06 | Peripheral 2 Setting Register | bit 4 cleared = divMMC automap / DRIVE-button NMI off (the A1 table used to say $0A). Yet code at 0x3D00-0x3DFF crashed Commando: probably not every automap entry point (BRIEFING A1, C2 #24). NOT cleared: bit 7 = F8 CPU-speed key, bit 5 = F3 50/60 Hz key (both 1 after soft reset: a player can change speed / refresh mid-game, C2 #26); bits 1:0 audio chip mode | z80tonex stub |
+| $06 | Peripheral 2 Setting Register | bit 4 cleared by the stub. Up to core 3.01.05 (guide r3) bit 4 = DivMMC automap AND DRIVE-button NMI; from core 3.01.10 (official core nextreg.txt, branch 30205 = core 3.02.05; varmfskii zx_next_notes) bit 4 = DRIVE-button NMI ONLY and the automap enable is $0A bit 4 - so on current cores (boards run 3.02.00) the stub does NOT turn automap off, and code at 0x3D00-0x3DFF crashed Commando (BRIEFING A1, C2 #24). NOT cleared: bit 7 = F8 CPU-speed key, bit 5 = F3 50/60 Hz key (both 1 after soft reset: a player can change speed / refresh mid-game, C2 #26); bits 1:0 audio chip mode | z80tonex stub |
+| $0A | Peripheral 5 Setting Register | bit 4 = enable DivMMC automap (core 3.01.10+, hard reset 0; NextZXOS turns it on). NOT written by the stub today (C2 #24); official core nextreg.txt | - |
+| $B8-$BB | DivMMC entry points (core 3.01.10+) | which fetch addresses automap: $B8 = RST $00-$38 (reset $83), $B9 valid-when ($01), $BA instant / delayed ($00), $BB ($CD at reset): bit 7 = $3Dxx (instant, ROM3, TR-DOS), bit 6 = 1 DISABLES automap at $1FF8-$1FFF (official nextreg.txt; the varmfskii notes say enable), bits 5:2 = tape-trap addresses $056A / $04D7 / $0562 / $04C6 (ROM3), bits 1:0 = $0066 (NMI button). Not written by the stub | - |
 | $07 | CPU Speed Register | 0 = 3.5 MHz for games; 3 = 28 MHz inside the Rainbow and Commando hooks, 0 on exit | stub, rainbow_hooks, commando_hooks |
 | $08 | Peripheral 3 Setting Register | bit 7 write 1 = clear the 7FFD lock (0 does nothing; read 1 = unlocked); bit 6 = 1 DISABLES contention (the tail's AND $30 clears it: contention on); bit 5 ABC/ACB, 4 speaker, 3 DACs, 2 port FF read, 1 TurboSound, 0 = Issue 2 keyboard (an early game that reads EAR on port FE may need it; not used) | tail, altrom stub |
 | $15 | Sprite and Layers System Register | bit 0 sprites visible; bits 4:2 layer order (default SLU, global) | hooks, setup |
@@ -52,7 +54,7 @@ top byte where OTIR must work (0x57, 0x5B). The ULA answers on any even port (A0
 | 0x5B | Sprite Pattern Upload | pattern bytes; auto-advance (256-byte blocks by OTIR). Low byte decoded only: Rainbow (2026-10-19) uploads by unrolled OUTI with any B |
 | 0x57 | Sprite Attribute Upload | 4 or 5 bytes per sprite in $35..$39 order (4 when byte 3 bit 6 = 0); index set by a 0x303B write (which also sets the pattern slot); advances after each sprite, wraps 127 -> 0. Low byte decoded only. Rainbow commit (2026-10-19): 0x303B = sprite, 5 x OUTI; NextState models it (simulated; hardware to confirm) |
 | 0x7FFD | Memory Paging Control | bit 5 = lock; unlocked writes also reset MMU0/1 to ROM and MMU6/7 to the bank; bit 3 = ULA shows bank 7 (shadow screen) |
-| 0x123B | Layer 2 Access Port | bit 1 visible (alias $69 bit 7); bit 0 write-paging / bit 2 read-paging of Layer 2 into 0x0000-0x3FFF, bits 7:6 which 16K (11 = all 48K over slots 0-2), bit 3 shadow banks ($13), bit 4 = offset form (core 3.0.7+). The stub writes 0 (no paging into ROM space) |
+| 0x123B | Layer 2 Access Port | bit 1 visible (alias $69 bit 7); bit 0 write-paging / bit 2 read-paging of Layer 2 into 0x0000-0x3FFF, bits 7:6 which 16K (11 = all 48K over slots 0-2), bit 3 shadow banks ($13), bit 4 = offset form (core 3.00.07+). The stub writes 0 (no paging into ROM space) |
 | 0x1FFD | Plus 3 Memory Paging Control | bit 2 + 7FFD bit 4 select the ROM (ROM3 = 48K = alt image 1) |
 | 0xDFFD | Next Memory Bank Select | not used (bank MSBs) |
 | 0xFE | ULA Control Port | border (restored by the tail) |
@@ -65,11 +67,11 @@ timing (github.com/varmfskii/zxnext_code, zx_next_notes/copper). Researched 2026
 | $09 bit 4 | lockstep $34 with 0x303B | off by default: $34 and 0x303B are separate sprite indices |
 | $75-$79 | $35-$39 with sprite number post-increment | each write increments (nextreg.txt); `NEXTREG $78,0` per sprite = hide a run |
 | $37 bit 0 / $39 bits 7:6 (relative sprites) | anchor + composite / unified relatives | relatives: 8-bit X/Y offsets, visibility ANDed with the anchor, optional pattern / palette offset from the anchor; unified = mirror/rotate/scale as one image |
-| port 0x6B | zxnDMA (core 3.1.2+; 0x0B = Zilog DMA) | WR0-WR6 program by OTIR; WR1/WR2 timing byte = cycle length 2..4; WR4 bits 6:5 = 01 continuous, 10 burst; WR6 $CF load, $87 enable, $83 disable, $D3 continue (repeat from current pointers), $C3 reset, $BB + mask / $BF / $A7 read status; WR1 %00100100 = port A fixed memory (fill). Holds the bus: pulse interrupts are lost |
+| port 0x6B | zxnDMA (core 3.01.02+; 0x0B = Zilog DMA) | WR0-WR6 program by OTIR; WR1/WR2 timing byte = cycle length 2..4; WR4 bits 6:5 = 01 continuous, 10 burst; WR6 $CF load, $87 enable, $83 disable, $D3 continue (repeat from current pointers), $C3 reset, $BB + mask / $BF / $A7 read status; WR1 %00100100 = port A fixed memory (fill). Holds the bus: pulse interrupts are lost |
 | $60 / $63 | copper data upload (byte / whole instruction) | $63 commits only after both bytes: no half instruction runs |
 | $61 / $62 | copper upload index (11 bits) + mode $62 bits 7:6 | 00 stop, 01 reset+run, 10 resume, 11 reset+run + restart each frame; same mode again = index change only |
 | copper WAIT / MOVE | `1HHHHHHV VVVVVVVV` / `0RRRRRRR DDDDDDDD`, HALT = $FFFF, NOOP = 0 | MOVE reaches NextRegs 0x01-0x7F only; WAIT H 0-55 in 8-pixel steps (max usable 52-55 by timing); stored big-endian |
-| $64 | vertical line offset (core 3.1.5+) | added to copper, line interrupt and $1E/$1F line numbers; 0 = ULA row 0 is line 0 |
+| $64 | vertical line offset (core 3.01.05+) | added to copper, line interrupt and $1E/$1F line numbers; 0 = ULA row 0 is line 0 |
 | $22 / $23 | line interrupt: $22 bit 1 enable, bit 0 + $23 = line, bit 2 = ULA interrupt OFF, bit 7 (read) = /INT asserted | fires as the previous line's pixels end; shares /INT with the ULA in pulse mode (never enable under a game) |
 | $C0 bit 0, $C4-$CE | hardware IM2 mode, interrupt enables / status / which may break a DMA | vectors: line 0 (highest), CTC 3-10, ULA 11; we stay in pulse mode ($C0 = 0, stub) |
 
@@ -111,7 +113,7 @@ Z80N instructions worth using in future hooks (all 2 bytes unless noted):
 | MIRROR A | ED 24 | 8 | bit-reverse a graphics byte (mirrored frames without a 256-byte table) | - |
 | SWAPNIB | ED 23 | 8 | nibble swap when packing 4-bit sprite pixels (USED by Rainbow) | - |
 | MUL D,E | ED 30 | 8 | DE = D*E (table offsets, frame*size) | flags unchanged |
-| ADD HL/DE/BC,A | ED 31/32/33 | 8 | pointer + unsigned A | carry NOT preserved (undefined/reset, wiki notes 3.1.5 / 3.02) |
+| ADD HL/DE/BC,A | ED 31/32/33 | 8 | pointer + unsigned A | carry NOT preserved (undefined/reset, wiki notes 3.01.05 / 3.02) |
 | ADD HL/DE/BC,nn | ED 34/35/36 lo hi | 16 | pointer + constant | 4 bytes |
 | PUSH nn | ED 8A hi lo | 23 | push a constant | operand is BIG-endian (only one) |
 | OUTINB | ED 90 | 16 | OUTI without decrementing B: pattern uploads to 0x5B with a fixed port | flags undefined |
