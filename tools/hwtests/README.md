@@ -95,3 +95,38 @@ Board results:
 Checked before any board (2026-10-21): the .nex run in SkoolKit + z80n with a modelled raster
 (224 T x 312 lines, 228 x 311, 224 x 262): 77/77 green, T within 0.1; with ADD HL,A keeping CF,
 LDWS at 16 T and a wrong MUL result: ADDHLAF yellow, MUL red R, LDWS red (15.9).
+
+## nextbench - what Next techniques cost, setup included
+
+    python tools/hwtests/build.py nextbench -o OUTDIR
+
+Times 32 techniques the converted games use or could use, in MICROSECONDS PER CALL at 3.5 MHz and
+at 28 MHz (the speed the hooks run at), measured on the raster line counter as z80ntest's TIME page
+(4 dithered passes, the same loop with an empty routine subtracted, calibrated against 2048 x
+LD A,(IX+0) at 3.5 MHz). ~20 s with a blue border, then page 1; any key flips the two pages.
+Border green = every copy / fill check passed, red = one failed ("!" after that time).
+
+Rows, in groups to compare (same work, different technique):
+- copy 256 bytes: LDIR 256, LDI x256 (unrolled), STACK256 (POP / PUSH), DMA 256, LDIRX256;
+  2K: LDIR 2K vs DMA 2K. DMA setup: DMA 1B (program + start + 1 byte) and DMA prog (the program
+  written without ENABLE). DMA per byte = (DMA 2K - DMA 1B) / 2047.
+- fill 256 bytes: FILL LDR (LDIR), FILL PSH (PUSH), FILL DMA (fixed source).
+- one 16x16 8-bit sprite pattern (256 bytes) to port 0x5B: PAT OTIR, PAT OUTI (unrolled, Rainbow's
+  way), PAT OTNB (OUTINB), PAT DMA.
+- one sprite's 4 attributes: ATTR OUT (port 0x57) vs ATTR NR (NEXTREG $34-$38).
+- one register write: NEXTREGv, NEXTREGa, REG PORT (OUT $243B + OUT $253B); paging: MMU NR vs
+  7FFD OUT.
+- one 8x8 cell: ULA CHAR (8 pixel bytes + attribute, contended), TILE ENT (a 2-byte tilemap entry),
+  L2 8x8 (64 bytes, Layer 2 layout).
+- scrolling: TM SCROL / L2 SCROL (hardware offset registers) vs ULA 256B (one 256-byte screen band
+  copied, contended); PAL 1 (one palette entry); a 32-instruction copper list by NEXTREG $60
+  (COP32 NR) vs OUT $253B (COP32 IO).
+
+Results table at $7E00: "NXBN", version, count, calibration lines (word), per test tenths of us at
+3.5 MHz (dword) and 28 MHz (dword), then one flag byte per test (bit 0 / 1 = check failed at 3.5 /
+28 MHz). DMA uses the zxnDMA port $6B, continuous mode, 2 T timing on both ports; on cores before
+3.02.02 the DMA read was one cycle behind at 3.5 / 7 MHz (changelog) - the copy checks show it.
+
+Checked before any board (2026-10-22): in SkoolKit + z80n with a modelled raster (no DMA, no CPU
+speed change) every CPU-only row at 3.5 MHz matches its T-state count within 0.7 % (e.g. LDI x256
+1251.3 for 1249.7 us, NEXTREGv 5.5 for 5.7, ULA CHAR 61.7 for 61.7).
