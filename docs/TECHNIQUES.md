@@ -344,6 +344,15 @@ What v2 adds:
 
 ## 2. Other projects
 
+- ped7g/ZXSpectrumNextMisc snippets (MIT / Unlicense, read 2026-10-22): MUL-based arithmetic with
+  T counts - 16x8, 24x8, 32x8+8, 16x16 multiplies; E / 10 in 33-60 T (MUL + BSRL); HL mod 40 / 192
+  / 320 / 640 (192 = screen rows, 320 / 640 = Layer 2 widths); `nibrrca` (rotate both nibbles with
+  RRCA + TEST $88 + RET PE / XOR $88); detectZ80N (ED 24 00 00 = MIRROR A on a Z80N, safe NOPs
+  elsewhere); findVLinesCount (lines per frame from the $1F wrap: tight IN loop, as our
+  frame_sync). Their tests also pass on our z80n.py (tools/hwtests/README, z80ntest section).
+  For us: the address sums in hooks (Rainbow speed idea 4: x32 / x64 + base) - MUL D,E is 8 T but
+  needs D / E free.
+
 - DynaTile and Tilemap (github.com/seedy1812, read 2026-10-22; NOT run by us). DynaTile has no
   licence file (ideas only, no code); Tilemap is GPL-3.0 (compatible with ours).
   * DynaTile streams a map of up to 1500 "software" tiles through the 355 hardware tile slots of a

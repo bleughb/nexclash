@@ -96,6 +96,16 @@ Checked before any board (2026-10-21): the .nex run in SkoolKit + z80n with a mo
 (224 T x 312 lines, 228 x 311, 224 x 262): 77/77 green, T within 0.1; with ADD HL,A keeping CF,
 LDWS at 16 T and a wrong MUL result: ADDHLAF yellow, MUL red R, LDWS red (15.9).
 
+Independent cross-check of nexclash/z80n.py (2026-10-22, no hardware): Ped7g's self-checking
+snippet tests (github.com/ped7g/ZXSpectrumNextMisc snippets/runsnippet.asm, MIT, built with the
+pinned sjasmplus from the 2026-09-19 sources) run in SkoolKit + `z80n.install` with a modelled
+raster: every test passed (no "red" NextReg $6C = 2 write) over 11.9 M instructions, among them
+324,687 MUL D,E, 65,806 BSRL DE,B, 67,594 ADD HL,A, 36,129 ADD DE,A, 257 TEST n (div10 / div50 /
+mod 40 / 192 / 320 / 640 / mul / bit_fun / percentCompleted, most exhaustive over 0..65535).
+Negative control: MUL with E off by one -> the div10, mul and percentCompleted tests report errors.
+Not kept as a test here (an outside repo); the harness is a 60-line script around nextboot-style
+loading + a tracer.
+
 ## nextbench - what Next techniques cost, at several sizes, set up / reused / torn down, repeated (v3)
 
     python tools/hwtests/build.py nextbench -o OUTDIR     (runs nextbench_gen.py: the 88 rows)
