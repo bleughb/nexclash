@@ -358,8 +358,8 @@ What v2 adds:
   NOT run by us): a 256x192 Layer 2 picture wobbled by the copper writing the Layer 2 X ($16) and Y
   ($17) offsets on every line (WAIT line n / MOVE $16 / MOVE $17, from a sine table) - the Y offset
   per line picks which picture row a screen line shows (stretch / wave with no redraw). Each frame
-  the CPU rewrites all 256 x 3 instructions by NEXTREG $60 (~1.5 KB; by 1.0b ~2.2 us an instruction
-  = ~1.7 ms at 28 MHz - DMA would take ~0.3 ms), into the list the copper is RUNNING (mode 11,
+  the CPU rewrites all 256 x 3 instructions by NEXTREG $60 (~1.5 KB; by 1.0b COP NR ~5 us an
+  instruction = ~3.8 ms at 28 MHz - DMA would take ~0.3 ms), into the list the copper is RUNNING (mode 11,
   restart every frame; index 0 set once): it tolerates a frame that mixes old and new values. The
   list ends with WAIT line 511 (%10000001,255), a line that never comes, = HALT until the restart.
   The CPU paces itself on $1F LSB = 250 (a line every mode has); the README's "now works in CSpect
