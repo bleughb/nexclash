@@ -375,7 +375,9 @@ Hardware to confirm
 28. Copper facts to confirm before an engine relies on the copper: a WAIT for a LINE already passed
    holds the rest of the list until the next frame (inferred from guide r3; an h passed on the
    CURRENT line does not wait - hardware-tested, TECHNIQUES "Hardware ground truth"); $64 = 33 aligns
-   copper line 0 with the top of 320x256 Layer 2.
+   copper line 0 with the top of 320x256 Layer 2 (a developer's note says 32: ULA row 0 = line 32 -
+   test both); with $64 = 0 a WAIT for a line the mode lacks (311 at 60 Hz) never fires (TECHNIQUES
+   "Raster numbering": the freeze trap).
    How to test any of these: tools/hwtests/README.md (one test .nex per question, a results table in
    fixed RAM, one coloured block per test; Dean photographs the board, MAME runs the same file).
 35. NEXLOAD overwrites the 48K printer buffer (0x5B00-0x5BFF: NextZXOS paging routines + system

@@ -266,6 +266,16 @@ What v2 adds:
   (changelog 3.01.05). Frame length differs by timing: 48K 312 lines, 128K 311, HDMI 312 (60 Hz:
   262/261); display rows 0-191, then border + blanking. A raster wait that assumes 312 lines or
   offset 0 is a hardware-only fault (BRIEFING C2 #26).
+  The freeze trap (a Next developer's note, 2026-10-22; matches Gen4's patch_copper_y): with $64 = 0
+  the line just above ULA row 0 is the LAST line of the frame, numbered 260, 261, 310, 311 or 319
+  by mode. A copper WAIT or a CPU poll for a line the current mode does not have (311 in VGA 60 Hz)
+  never fires: the copper holds, the CPU loops forever. With $64 = 32 the top border starts the
+  count (ULA row 0 = line 32, the line above it = 31 in every mode) and the lines a mode lacks are
+  all at the bottom: wait only for lines below the shortest frame you support (261 lines at 60 Hz).
+  Open: the copper demos above say $64 = 33 aligns the 320x256 Layer 2 top - one line apart from
+  this note; a board test (BRIEFING C2 #28) settles it. Our code assumes $64 = 0 (and a frame of at
+  least 258 lines: nextbench frame_sync, Rainbow rsafe), so the stub must reset $64 (C2 #26), and the
+  F3 key (50 / 60 Hz) changes the frame length under a running game.
 - Tilemap attribute byte (2-byte entries): bits 7:4 palette offset (used), bit 3 X mirror, bit 2 Y
   mirror, bit 1 rotate 90 clockwise (with the mirrors: 0/90/180/270), bit 0 ULA over the tile.
   A tile that is another's mirror or rotation needs NO definition of its own: dedupe tile
