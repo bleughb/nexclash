@@ -363,6 +363,12 @@ What v2 adds:
   * All of them: hardware IM2 mode ($C0, $C4-$C6), $CC-$CE (which interrupts may stop a DMA), and
     NextReg $06 AND $5F at start: the F8 (speed) and F3 (50 / 60 Hz) keys off - the guard BRIEFING
     C2 #26 proposes for our stub.
+  * Gen4 (same author, no licence file: ideas only): parallax by copper - the tilemap X offset
+    ($2F / $30) MOVEd at each band's line, every band with its own speed; the copper list is
+    uploaded by DMA straight to port $253B after selecting register $60 on $243B (DI between the
+    select and the DMA, so an interrupt cannot reselect) - the DMA copper upload we estimated
+    above, in working code. Sprite rows of 21: one anchor + 20 unified relatives 16 px apart, so a
+    336-px-wide row moves with ONE anchor write (TECHNIQUES 1, relative sprites).
 
 - ped7g/ZXSpectrumNextMisc snippets (MIT / Unlicense, read 2026-10-22): MUL-based arithmetic with
   T counts - 16x8, 24x8, 32x8+8, 16x16 multiplies; E / 10 in 33-60 T (MUL + BSRL); HL mod 40 / 192
