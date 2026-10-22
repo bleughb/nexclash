@@ -424,6 +424,13 @@ Designs not built yet (use when a game needs them)
 36. `inspect` should warn when CODE runs in the printer buffer (0x5B00-0x5BFF): NEXLOAD overwrites it,
    so the build needs keep_printer_buffer (Match Day: data; Cyclone: the main loop - its first plain
    build, without it, would not run on hardware). An access scan (`scan --range 0x5B00-0x5BFF`) shows it.
+37. Beeper sound independent of CPU speed (idea, 2026-10-22; TECHNIQUES 2 zxnext-copper-samples):
+   timed beeper loops play 8x fast at 28 MHz (Match Day isr_w; LEARNINGS 2.1f), so today any code
+   that beeps must stay at 3.5 MHz. Instead a hook on the game's OUT ($FE) could log (beeper bit,
+   game T-time counted at 3.5 MHz rates) and the copper replay it through a DAC NextReg at ~11 kHz
+   on the next frame: the game's sound at the original timing whatever speed the code runs at
+   (one frame late; 11 kHz quantises fast tones). Needs: a T clock in the hooks (or the game loop's
+   own count), the DAC enable (NextReg $08 bit 3), a hardware listen test. Not tried.
 
 ### C3b. Two verification levels (agreed with Dean 2026-09-29; how to run them: PLAYBOOK 6)
 - ITERATE (per change): original bytes at every site, boot check, unit tests (with negative

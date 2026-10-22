@@ -344,6 +344,27 @@ What v2 adds:
 
 ## 2. Other projects
 
+- zxnext-copper-samples (github.com/shadowphiar/zxnext-copper-samples, CC0, z88dk C, read
+  2026-10-22; NOT run by us): the copper plays 8-bit stereo PCM at ~11 kHz by MOVEs to the DAC
+  mirror NextRegs (DAC_B / DAC_C) with a WAIT between ticks - sound with no CPU timing at all.
+  Facts and tricks:
+  * Copper raster counters follow the machine type (NextReg $03) and 50 / 60 Hz only, not the
+    VGA / HDMI mode: 896 dots a line at 48K timing, 912 at 128K / Next, 312 / 311 lines (264 at
+    60 Hz); WAIT h = dot / 16.
+  * The last ~128 dots of a line are never matched by a WAIT (commit "Handle copper matching near
+    end of lines"): a WAIT for an h there waits until that line comes round next FRAME. Wait for
+    (line + 1, 0) instead.
+  * Updating a long list while it runs: mode 11 (restart at every vblank) + upload only the HALF the
+    copper is not executing, from a line interrupt that alternates between line 200 and line 10
+    (one compare register, two calls a frame); the $61 / $62 write includes the mode bits, so
+    setting the write index does not stop the list.
+  * Copper list upload by DMA to port $253B (NextReg $60 selected, port B fixed I/O): by our port
+    figures (1.0b PAT DMA) ~14.5 us + 0.36 us an instruction at 28 MHz vs 4.4 us for an OUT loop -
+    ~10x for long lists (not measured as such).
+  * Hardware IM2 mode ($C0 = 1) with the ULA interrupt off and the line interrupt on: vector table
+    entry 0 = line interrupt (our NEXT_REGISTERS $C0 note: line = highest priority).
+  For us: BRIEFING C2 #37 (beeper sound independent of CPU speed).
+
 - NextMasterSystem (github.com/StalePixels/NextMasterSystem, 2026-10; NO licence file: ideas only,
   no code) runs Master System games' own Z80 code on the Next by patching every I/O site into a
   call to a runtime that drives tilemap, sprites, copper and AY - our method on another machine,
