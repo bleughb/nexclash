@@ -344,6 +344,26 @@ What v2 adds:
 
 ## 2. Other projects
 
+- seedy1812 demo ports: scoopex, Grodan-And-Kvack-Kvack, UnitedForces, Spreadpoint
+  (github.com/seedy1812, GPL-3.0 except Grodan (no licence file: ideas only), read 2026-10-22;
+  NOT run by us). Next techniques in them:
+  * More tiles than one tile bank holds (Grodan backdrop.s): the copper rewrites the tile-definition
+    base ($6F) and the default tile attribute ($6C, palette offset) at band boundaries (WAIT 80, ...),
+    so each horizontal band of the screen has its own tile set and colours. For us: Rainbow's
+    176-tile cache (games/rainbow_islands.md, tile budget) could get one set per screen band - but
+    tile definitions must sit in bank 5 / bank 7 (16K each; Rainbow uses bank 7's first 8K), so
+    memory, not the copper, is the limit.
+  * Copper lists rebuilt from tables every frame and reloaded (Grodan / scoopex rasters: stop $62,
+    $61 = 0, NEXTREG $60 loop, start) - per-line palette bars (copper bars, Spreadpoint's DNA
+    gradient: MOVE $40 / $41 per line). Our nextbench: ~4.4 us an instruction to load at 28 MHz.
+  * ULA hardware scroll $26 / $27 (Grodan layer_ula.s): the classic screen scrolled by NextReg, no
+    redraw (also in our C2 #26 reset list).
+  * DMA fill with a fixed-address source (UnitedForces: clear a buffer, then swap screen thirds);
+    sprite "bobs": patterns by OTIR to $5B once, attributes per frame by OUT to $57.
+  * All of them: hardware IM2 mode ($C0, $C4-$C6), $CC-$CE (which interrupts may stop a DMA), and
+    NextReg $06 AND $5F at start: the F8 (speed) and F3 (50 / 60 Hz) keys off - the guard BRIEFING
+    C2 #26 proposes for our stub.
+
 - ped7g/ZXSpectrumNextMisc snippets (MIT / Unlicense, read 2026-10-22): MUL-based arithmetic with
   T counts - 16x8, 24x8, 32x8+8, 16x16 multiplies; E / 10 in 33-60 T (MUL + BSRL); HL mod 40 / 192
   / 320 / 640 (192 = screen rows, 320 / 640 = Layer 2 widths); `nibrrca` (rotate both nibbles with
