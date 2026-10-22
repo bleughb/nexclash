@@ -354,6 +354,24 @@ What v2 adds:
 
 ## 2. Other projects
 
+- zxnext_layer2_tilemap (github.com/vmorilla/zxnext_layer2_tilemap, a copy of benbaker76's demo,
+  MIT, z88dk C + asm, read 2026-10-22; NOT run by us): a SOFTWARE tilemap drawn into Layer 2
+  (full-colour 8x8 tiles, 512 of them in two 8K pages, map + per-tile attributes rotate / X / Y
+  mirror like the hardware tilemap), 256x192 or 320x256.
+  * Scrolling: the Layer 2 offsets ($16 / $71 / $17) move the picture; per step only the newly
+    exposed pixel ROW (or column) is drawn across the screen - 8 bytes of every tile along the
+    edge, at the wrapped position (mod 192 / mod 320 by Ped7g's look-up tables) - into a circular
+    Layer 2. A scroll costs one line of drawing, not a screen copy.
+  * LDWS in its natural job: (DE) = (HL), INC L, INC D. In 320x256 Layer 2 (column-major, address
+    = x * 256 + y) INC D is the next pixel to the right, so 8 x LDWS draws a tile row and
+    ADD DE,$F801 steps to the next line; in 256x192 (row-major) INC D is the next line, so the
+    same instruction draws a tile column. Tiles are stored once; the 8 orientations are 8 unrolled
+    routines, picked per resolution (a 256x192 "normal" tile is the 320x256 "rotated + mirrored"
+    one, drawn with LDI). LDWS 14 T a byte vs LDI 16 T, and the source stays in one 256-byte page.
+    Our Rainbow note says LDWS is not useful there (per-nibble transparency); a Layer 2 engine that
+    copies opaque 8x8 blocks (wally2, dizzy1: TECHNIQUES 1.0 L2 CELL 54 us) is where it fits.
+  * Layer 2 16K banks mapped as two MMU slots (bank_set_16k) at the 64-line / 64-column boundary.
+
 - Next Point (github.com/vmorilla/next-point, GPL-3.0, z88dk C + asm, read 2026-10-22; a released
   tennis game for the White Next contest, runs on hardware and CSpect; NOT run by us):
   * Sample sound by CTC timer interrupt: CTC channel 0 interrupts at ~16 kHz (control word $85,
