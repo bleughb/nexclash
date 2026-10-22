@@ -2991,9 +2991,10 @@ def auto(a, z80, name, out, say):
         ok = ok and not uf
         say('Unit      : %d states x (edge columns, last sprites, passthrough, negative control) + '
             'direct conversion vs %d plotter/carry cases (+ control) + %d left-entry 4-wide pieces + store '
-            'hit/miss/garbage (+ 2 controls) + SWAPNIB + setup + class colour -> %s' % (
+            'hit/miss/garbage (+ 2 controls) + Z80N (%s: one as-NOP control each) + setup + class colour -> %s' % (
                 u['states'], u['direct conversion = plotter (random streams) ok'],
-                u['left-entry 4-wide plotter ok'], 'PASS' if not uf else 'FAIL %s' % uf))
+                u['left-entry 4-wide plotter ok'], ', '.join(Z80N_NAMES[op] for op in Z80N_USED),
+                'PASS' if not uf else 'FAIL %s' % uf))
         oc = [k for k in u if 'negative control' in k and not k.startswith(('negative control', 'store '))]
         say('            objects: %d cell-hook cases + %d render paths (start, 22 bands, end) + cache full / flush '
             '+ raster wait + profile tables; %d negative controls (%d detected); figure controls detected: '
