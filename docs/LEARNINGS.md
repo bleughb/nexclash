@@ -547,6 +547,11 @@ Grouped by question; add a new lesson to its group.
   before choosing altrom; Lode Runner's hooks went into game RAM proven never touched (A3 "ram").
 
 ## 2.3 Our toolkit (nexclash) and host tools
+- A verifier that under-counts T hides beam races: rainbow.py's own NEXTREG handlers cost 0 T, so its
+  simulated raster line ran early and never hit the 255 -> 256 crossing between rsafe's $1E and $1F
+  reads (Open 1b); rainbow_z80n with z80n.install (20 / 17 T) hit it in the first 2000 frames
+  (2026-10-21) and its "frames over 20 ms" rose from none to 2 in rainbownew. Time every instruction
+  the hooks run (z80n.install), and read a two-register value (raster line) until two reads agree.
 - Z80N instructions in hooks: always allowed in .nex builds (maintainers, 2026-10-21). SkoolKit's
   simulator does not know them (an unknown ED opcode runs as a silent 2-byte NOP), so a verifier
   calls `z80n.install(sim, nextreg)` after simpool.machine(): all 29, NEXTREG through the engine's

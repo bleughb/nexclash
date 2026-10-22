@@ -63,28 +63,68 @@
  "outputs": {
   "plain": {
    "file": "rainbow_z80n.nex",
-   "md5": "TBD"
+   "md5": "7ac543fb51c7a3c4137778eeb3cdc175"
   },
   "sprites": {
    "file": "rainbow_z80n_sprites.nex",
-   "md5": "TBD"
+   "md5": "bda21ab675fa271b6f51f332aae14206"
   },
   "diagnostic": {
    "file": "rainbow_z80n_sprites_diag.nex",
-   "md5": "TBD"
+   "md5": "bb2058c8bb9d593364aa1515a38a130c"
   }
  },
  "repro": [],
  "status": {
   "title": "Rainbow Islands (128K, Z80N)",
   "engine_col": "rainbow_z80n (rainbow_z80n.md)",
-  "build": "TBD",
-  "software": "TBD",
+  "build": "rainbow_z80n_sprites.nex bda21ab6 (as cf017271 + Z80N hooks: 13 SWAPNIB, 2 MIRROR A, 2 ADD HL,A; raster pair read until it agrees) + rainbow_z80n_sprites_diag.nex bb2058c8",
+  "software": "RZX IDENTICAL x2 (rainbow 7178 frames, rainbownew 11799) + diagnostic IDENTICAL, unit PASS (Z80N as-NOP controls SWAPNIB / MIRROR A / ADD HL,A); timing with NEXTREG counted: 2 frames over 20 ms in rainbownew",
   "hardware": "untested",
-  "next": "hardware test next to cf017271; everything open in rainbow_islands.md"
+  "next": "hardware test next to cf017271 (checklist); everything open in rainbow_islands.md"
  },
  "checks": [
   "asm2profile:rainbow_z80n"
  ],
- "excluded": "as rainbow (Dean 2026-10-13): too slow for the automatic checks (~50 min verify); run it explicitly with selftest.py --game rainbow_z80n [--verify]"
+ "excluded": "as rainbow (Dean 2026-10-13): too slow for the automatic checks (~50 min verify); run it explicitly with selftest.py --game rainbow_z80n [--verify]",
+ "checked": {
+  "deps": {
+   "asm/rainbow_z80n_hooks.asm": "5c96186df826e866",
+   "docs/profiles/rainbow_z80n.json": "79ff4cca67e0cdd8",
+   "nexclash.py": "7a4b0e6f5b61aaef",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "bc87a441d6f36e56",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "2f7a26a1322ce617",
+   "nexclash/nextboot.py": "a6e46fbbe842b376",
+   "nexclash/rainbow_z80n.py": "da85eaeb0d0d007c",
+   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "cfe7f2701eddfe6e",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-22"
+ },
+ "verified": {
+  "deps": {
+   "asm/rainbow_z80n_hooks.asm": "5c96186df826e866",
+   "docs/profiles/rainbow_z80n.json": "79ff4cca67e0cdd8",
+   "nexclash.py": "7a4b0e6f5b61aaef",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "bc87a441d6f36e56",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "2f7a26a1322ce617",
+   "nexclash/nextboot.py": "a6e46fbbe842b376",
+   "nexclash/rainbow_z80n.py": "da85eaeb0d0d007c",
+   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "cfe7f2701eddfe6e",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-22"
+ }
 }

@@ -37,6 +37,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 
 - Chuckie Egg (chuckie_egg): `chuckie_egg.nex` ec0df71e70fae35836eaed521f300777, `chuckie_egg_sprites.nex` bfad6be1e7c8a2c797a6242d7f339e35; verified 2026-10-13
 - Rainbow Islands (128K) (rainbow): `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_sprites.nex` cf017271dfc01bdd0c7cf2f599b03628, `rainbow_sprites_diag.nex` c16751b0255ee3d83a4e342bf9a8c411; verified 2026-10-13
+- Rainbow Islands (128K, Z80N) (rainbow_z80n): `rainbow_z80n.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_z80n_sprites.nex` bda21ab675fa271b6f51f332aae14206, `rainbow_z80n_sprites_diag.nex` bb2058c8bb9d593364aa1515a38a130c; verified 2026-10-22
 - Everyone's a Wally (wally): `wally.nex` 2e615b3e7ae995e6d6a6ed9e3f586d4d, `wally_sprites.nex` f7605489c3af55b8e8c6a580c1c26150; verified 2026-10-13
 - Everyone's a Wally (updated) (everyones_a_wally_updated): `everyones_a_wally_updated.nex` 2e615b3e7ae995e6d6a6ed9e3f586d4d, `everyones_a_wally_updated_sprites.nex` 31c3ef131330d26238b01a69b35c647e; verified never
 - Spellbound Dizzy (Dizzy V) (dizzy5): `dizzy5.nex` c99189f3274a4803f0b25b0217206bdb, `dizzy5_sprites.nex` 1f33c467e6aa55585cea79cfbb24bcfe, `dizzy5_sprites.nex --strategy slot1` a59c1fd91ec5c32e549526dbc08d2e69 (re-checked 2026-09-28; 00a7c496... had an EMPTY font page: dialogue text blank on hardware); verified 2026-10-13
@@ -75,6 +76,16 @@ driven by the records. No game output changed.
 - Plan checks: `python -m nexclash.records selfcheck` (in `--tools`) passes and catches three broken
   plan() variants; real tree: an engine file change -> that game only; z80tonex.py -> every game
   rebuilt, representatives re-verified.
+
+## Rainbow Islands, Z80N version (128K, engine `rainbow_z80n`) - 2026-10-22
+Fork of engine `rainbow` (cf017271, now deprecated) onto nexclash/z80n.py, Z80N hooks (13 SWAPNIB,
+2 MIRROR A, 2 ADD HL,A) and the rsafe raster pair read (Open 1b). Before the hook changes the fork
+rebuilt 7ac543fb / cf017271 / c16751b0 byte for byte. `selftest.py --game rainbow_z80n --verify
+--stamp`: PASSED - rainbow.rzx 7,178 frames / 2,216 renders and rainbownew.rzx 11,799 frames / 3,530
+renders IDENTICAL, diagnostic IDENTICAL, unit PASS incl. one as-NOP negative control per Z80N
+instruction (SWAPNIB, MIRROR A, ADD HL,A). Outputs: plain 7ac543fb (unchanged), sprites bda21ab6,
+diagnostic bb2058c8. First quick verify with NEXTREG timed found the rsafe crossing (1 of 1416
+renders); fixed. Hardware: untested.
 
 ## Rainbow Islands (128K, engine `rainbow`) - 2026-09-28
 `nexclash.py auto rainbow.z80 --rzx rainbow.rzx --rzx rainbownew.rzx --no-record` (defaults: ink white, outline black)
