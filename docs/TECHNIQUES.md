@@ -54,6 +54,64 @@ What it says:
 - An 8x8 cell: a tilemap entry is ~8x cheaper than the ULA cell and ~50x cheaper than a Layer 2
   cell; hardware scroll costs 1.6 us against 220 us per 256 bytes copied.
 - Copper upload: the port loop is slightly faster than NEXTREG $60 per byte at 28 MHz.
+
+### 1.0b Sizes, reuse and the copper (tools/hwtests/nextbench v2, core 3.02.00, 2026-10-22)
+Same board, same method; R chosen per row. Microseconds per call at 28 MHz (3.5 MHz on the photos,
+specnext reference/hwtests/nextbench/; every 3.5 MHz CPU row again matched its T-state count).
+v2's line read could return a line up to 3 lines late (LEARNINGS 2.3; fixed in v3): at 28 MHz that
+is under 1 % on the rows below (one read is far shorter than a line there). v3 on the same board
+(2026-10-22, 5 runs): NO value varied between runs beyond its rounding (variation page "none"), and
+its 28 MHz means agree with this table within 0.5 % (LDIR 2048 1754.7, DMA 2048 380.5, stack 2048
+1154.2, PUSH fill 2048 459.1, OUTI 2048 1405.7, NEXTREG 0.9): the table stands, and one run of a
+technique is a reliable figure on a given core. DMA at 3.5 MHz (still wrong copies on 3.02.00):
+1 B 102.7, 16 B 117.8, 256 B 393.9, 2 KB 2441.4 us; port uploads 64 B 182.3, 256 B 401.6.
+
+| Copy (bytes) | 1 | 16 | 64 | 256 | 1024 | 2048 |
+|---|---|---|---|---|---|---|
+| LDIR | 2.0 | 14.9 | 56.1 | 220.9 | 881.3 | 1759.6 |
+| LDI unrolled | 2.0 | 12.2 | 44.8 | 175.2 | 704.8 | 1407.1 |
+| stack (POP / PUSH unrolled) | - | 11.2 | 38.3 | 146.6 | 578.7 | 1157.5 |
+| DMA, full program each call | 14.7 | 17.5 | 26.1 | 60.4 | 197.7 | 380.9 |
+| DMA, addresses + length only (rtg) | | 13.2 | | 56.1 | | 376.7 |
+| DMA, LOAD + ENABLE only (same transfer again) | | | | 49.3 | | |
+| DMA burst mode | | | | 60.4 | | 380.9 |
+
+| Other (28 MHz) | sizes -> us |
+|---|---|
+| fill LDIR / PUSH / DMA | 16: 14.4 / 7.6 / 17.5; 256: 220.5 / 59.1 / 60.4; 2048: 1759.6 / 459.5 / 380.9 |
+| sprite pattern OTIR / OUTI / DMA | 64: 56.8 / 45.9 / 27.2; 128: 111.7 / 89.3 / 38.7; 256: 221.7 / 176.5 / 61.7; 2048: 1766.6 / 1409.6 / 382.3 |
+| sprite attributes port 0x57 / NEXTREG $34-$38 | 1 sprite: 4.6 / 6.7; 32 sprites: 111.7 / 243.4 |
+| hide 128 sprites: NEXTREG $78 post-increment / port 0x57 records / $15 off | 188.7 / 441.9 / 0.9 |
+| NEXTREG n,v / n,A / port pair / read a NextReg | 0.9 / 1.0 / 2.3 / 1.9 |
+| MMU 1 slot / 4 slots / OUT 0x7FFD | 0.9 / 3.6 / 1.2 |
+| 8x8 cell ULA / tilemap entry / Layer 2 | 9.5 / 1.1 / 54.0 |
+| tilemap base $6E / Layer 2 bank $12 / shadow screen flip + back | 0.9 / 0.9 / 2.1 |
+| palette 1 entry 8-bit / 16 entries / 1 entry 9-bit / select ($43) | 2.7 / 32.8 / 3.6 / 0.9 |
+| copper load 8 / 32 / 256 instructions by NEXTREG $60 | 42.1 / 160.7 / 1267.9 |
+| copper load 8 / 32 / 256 by OUT $253B | 39.0 / 143.0 / 1122.1 |
+| copper start + stop | 1.8 |
+| LDIR 256 while the copper loops MOVEs | 220.9 (= without) |
+
+Copper function rows: CP WAIT (WAIT line 120 -> MOVE seen by the CPU) at line 120 at 28 MHz (v2: 122
+at 3.5 MHz, which was v2's late line read; v3 reads 120 at both speeds) - copper line numbers = the
+$1E / $1F raster line. CP APART:
+0 of 256 palette entries wrong while the copper looped MOVE $7F and the CPU wrote / read the palette
+by NEXTREG and the port pair. CP SHARE: 255 of 256 wrong with the copper looping MOVE $40.
+
+What v2 adds:
+- DMA set-up depends on what is rewritten: full 16-byte program ~14.5 us, addresses + length
+  (11 bytes) ~10.3, LOAD + ENABLE (3 bytes) ~3.5; then 0.179 us a byte. Keep the ports
+  programmed and only re-run / retarget: break-even vs LDIR drops to ~5 bytes (re-run) / ~15
+  (retarget), vs a stack copy ~9 / ~26. Burst mode = continuous here (no prescaler).
+- Copy below ~37 bytes with a fresh DMA program: stack copy (needs fixed addresses / SP games),
+  else unrolled LDI. Fills up to ~300 bytes: PUSH.
+- Sprite attributes in bulk: port 0x57 (OTIR) is 2.2x NEXTREG per sprite; hiding a run of sprites:
+  NEXTREG $78 with post-increment is 2.3x the port.
+- The copper does NOT slow CPU memory work and does NOT disturb CPU NEXTREG / port-pair access to
+  other registers (CP APART 0): it is usable next to the hooks as long as the two never drive one
+  register pair (CP SHARE confirms that rule). Its WAIT lines are the CPU's raster lines.
+- Copper lists: the port loop is ~12 % faster than NEXTREG $60; ~2.2 us an instruction at 28 MHz,
+  so reload only what changed.
 - Sprite attributes in bulk: write port 0x303B = first sprite, then the 5 bytes per sprite
   (= $35..$39 in order) to port 0x57; the sprite index advances after each sprite's last byte
   (4 bytes when byte 3 bit 6 = 0), wraps 127 -> 0. OTIR 21 T/byte = ~105 T/sprite, unrolled OUTI

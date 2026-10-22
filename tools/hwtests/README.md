@@ -96,7 +96,7 @@ Checked before any board (2026-10-21): the .nex run in SkoolKit + z80n with a mo
 (224 T x 312 lines, 228 x 311, 224 x 262): 77/77 green, T within 0.1; with ADD HL,A keeping CF,
 LDWS at 16 T and a wrong MUL result: ADDHLAF yellow, MUL red R, LDWS red (15.9).
 
-## nextbench - what Next techniques cost, at several sizes, set up / reused / torn down (v2)
+## nextbench - what Next techniques cost, at several sizes, set up / reused / torn down, repeated (v3)
 
     python tools/hwtests/build.py nextbench -o OUTDIR     (runs nextbench_gen.py: the 88 rows)
 
@@ -104,8 +104,22 @@ Microseconds PER CALL at 3.5 MHz and 28 MHz (the hooks' speed) on the raster lin
 z80ntest's TIME page: 4 dithered passes, the same with an empty routine subtracted, calibrated
 against 2048 x LD A,(IX+0) at 3.5 MHz. The repeat count R is chosen per row and speed by a probe
 run (a measurement fills ~140 lines; R = 1 for long calls; ">" = one call does not fit a frame),
-so no row can wrap the line counter. ~1 minute with a blue border, then 5 pages (any key).
-Border green = every check passed, red = a "!" somewhere.
+so no row can wrap the line counter.
+
+v3 runs the whole table 5 times (NRUNS in nextbench_gen.py; ~1 minute a run, blue border, "RUN n/5"
+on screen). R is chosen in run 1 and kept, so the runs measure the same thing. The 5 table pages
+show the MEAN of the runs; "~" after a value = its runs differ by more than rounding to whole raster
+lines can explain. The test: each run's d (4 line reads after the row minus 4 after the empty
+routine) can differ by rounding alone with variance at most 2 line^2 (a read whose instant wobbles
+by under a line rounds to one of two lines: at most 1/4 each), so sum((d - mean)^2) / 2 is at most
+chi-square with 4 degrees of freedom; "~" when it exceeds the 0.1 % point (18.47; nextbench_gen.py
+sigthr: N * sum >= 185). Under 0.2 false "~" over the 176 values. What it can see: one run off by
+~7 lines among 5, i.e. ~7 x 16 us / R per call (R = 1 rows: ~110 us, 6 % of LDIR 2048 at 28 MHz;
+R >= 64 rows: under 2 us).
+Copper function rows: "~" = any run differs. The page(s) after the table list every "~" value
+(name, size, MHz, the smallest and the largest run in us per call) and the calibration lines of each
+run ("cal"); "none" when nothing varied. Any key flips the pages. Border green = all checks passed
+and nothing varied, yellow = a "~" somewhere, red = a "!" somewhere.
 
 Rows (name, size):
 - copy 1 / 16 / 64 / 256 / 1024 / 2048 B: LDIR, LDI unr (unrolled; one 256-LDI block entered at
@@ -130,12 +144,38 @@ Rows (name, size):
   CP SHARE = the same with the copper looping MOVE $40, the palette index the CPU uses (wrong
   entries expected: TECHNIQUES 1 "never drive one register pair from both"; info, never "!").
 
-Results at $7A00: "NXB2", version, count, calibration lines, per row 10 bytes (value at 3.5 / 28
-MHz as dwords in tenths, R at 3.5 / 28 MHz), then a flag byte per row (bit 0 / 1 check failed at
-3.5 / 28 MHz, bit 2 / 3 did not fit a frame).
+Results at $7A00: "NXB3", version, count, calibration lines summed over the runs, per row 10
+bytes (mean value at 3.5 / 28 MHz as dwords in tenths, R at 3.5 / 28 MHz), then a flag byte per row
+(bit 0 / 1 check failed at 3.5 / 28 MHz in any run, bit 2 / 3 did not fit a frame, bit 4 / 5 varies
+between runs). Per run at $6200: NRUNS, 0, each run's calibration lines (words); $6210: per row,
+speed and run the line count d (word; copper function rows: the number).
+
+v2 (commit 93fc8ca: one run, the same 88 rows) is the run the v2 board results were taken with.
+v3 also fixes v2's line read (LEARNINGS 2.3): v2 re-read the $1E / $1F pair until two reads agreed,
+which at 3.5 MHz returned a line 0-3 lines late; v2's 3.5 MHz figures carry that error (up to ~3
+lines x 16 us / R per call: tens of us on R = 1 rows such as LDIR 2048, nothing on R >= 64 rows);
+its 28 MHz figures much less (a read is 8x shorter than a line there).
+
+v3 board run (2026-10-22, core 3.02.00): every value repeated within its rounding over the 5 runs
+(no "~"; page 6 "none"); border red only for the known DMA "!" at 3.5 MHz. CP WAIT 120 / 120 (v2 read
+122 at 3.5 MHz: the late line read, now fixed), CP APART 0 / 0, CP SHARE 255 / 255. 28 MHz means
+within 0.5 % of v2 (TECHNIQUES 1.0b). Photos: specnext reference/hwtests/nextbench/ board_v3_p1..p5.
+
+v3 checked before any board (2026-10-22), SkoolKit + z80n with a modelled raster (NextReg $07 not
+modelled: both speeds run 3.5 MHz timing): (1) no added noise, NR v slowed by 40 T a call in runs
+3-5: every other row's 5 runs within 1 line, only NR v "~" (3.5 and 28), its page min 5.7 / max
+17.1 us (5.7 + 40 T); (2) the same plus a random 0-223 T phase after every frame_sync (worse than
+the board's ~28 T): again only NR v "~" (the first test, with the uniform-rounding bound 8/12,
+flagged 16 of 176 values here: hence the 1/4 bound); (3) SIGTHR forced to 0: every value listed,
+9 statistics pages, page numbers 2 digits (P14/14), the list ends and wraps to page 1.
 
 v1 (commit 0b51cc9, 32 rows, one size each, fixed R) is the run the board results below were taken
 with; TECHNIQUES 1.0 holds its table.
+
+v2 board run (2026-10-22, core 3.02.00): all 88 rows; every 3.5 MHz CPU row matched its T-state
+count; DMA "!" at 3.5 MHz only (border red), right at 28 MHz; CP WAIT 122 / 120, CP APART 0 / 0,
+CP SHARE 255 / 255. Table and conclusions: docs/TECHNIQUES.md 1.0b. Photos: specnext
+reference/hwtests/nextbench/ (board_v2_p1..p5).
 
 v2 checked before any board (2026-10-22): in SkoolKit + z80n with a modelled raster (no DMA, copper
 or CPU speed change) every CPU row at 3.5 MHz matches its T-state count (LDIR 64 390.7 for 391.1 us,

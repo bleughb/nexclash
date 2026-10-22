@@ -491,6 +491,11 @@ Grouped by question; add a new lesson to its group.
 - Measure a technique's set-up before choosing it (TECHNIQUES 1.0, nextbench on a board 2026-10-22):
   DMA costs ~14.5 us to start at 28 MHz, so it only beats LDIR above ~21 bytes, a stack copy above
   ~37 and a PUSH fill above ~330; and on core 3.02.00 DMA at 3.5 MHz copies WRONG (fixed in 3.02.02).
+  Most of that is writing the program: re-running a programmed DMA (LOAD + ENABLE) costs ~3.5 us,
+  so keep the ports programmed and only retarget / re-run (nextbench v2, TECHNIQUES 1.0b).
+- The copper can run next to the hooks: on the board (nextbench v2) a copper looping MOVEs to one
+  register neither slowed the CPU's LDIR nor disturbed its NEXTREG / port-pair palette writes (0 of
+  256 wrong); only a SHARED register pair corrupts (255 of 256). Its WAIT lines = $1E / $1F lines.
 - A game with NO frame sync (Match Day: no HALT, no FRAMES wait in the match loop) loses exactly the
   hook time: +25 % in round 1. Pay for it by running the game's own now-silent drawing at 28 MHz (its
   screen writes are NOPs, the loops still run): the image builds, the XOR draw and the ball routine at
@@ -555,6 +560,18 @@ Grouped by question; add a new lesson to its group.
   reads (Open 1b); rainbow_z80n with z80n.install (20 / 17 T) hit it in the first 2000 frames
   (2026-10-21) and its "frames over 20 ms" rose from none to 2 in rainbownew. Time every instruction
   the hooks run (z80n.install), and read a two-register value (raster line) until two reads agree.
+  That loop is right for a beam test (where is the beam now, roughly) but WRONG for timing: one
+  $1E + $1F read is ~150 T at 3.5 MHz, so consecutive reads straddle a 224-T line most of the time,
+  the loop retries and returns a line 0-3 lines LATE, by phase (nextbench v2's 3.5 MHz figures: one
+  row's runs 417 / 421 lines in the simulator; found 2026-10-22 when v3 repeated the runs). To time:
+  read LSB, MSB, LSB; the first LSB is the instant; the MSB belongs to it unless the second LSB is
+  below the first (the MSB only changes where the LSB wraps), and only then read again (nextbench v3
+  `line`). z80ntest still uses the old loop (its 2048-run averages divide the error away). Board
+  proof: nextbench's copper WAIT 120 row read 122 at 3.5 MHz with the old loop, 120 with the new.
+- The Next is repeatable to the raster line: nextbench v3 ran all 176 timings 5 times on a board and
+  no value varied beyond rounding (DMA, copper, NEXTREG and port rows included). One clean
+  measurement of a technique on a given core is enough; a figure that moves between runs points at
+  the measurement, not the machine.
 - Z80N instructions in hooks: always allowed in .nex builds (maintainers, 2026-10-21). SkoolKit's
   simulator does not know them (an unknown ED opcode runs as a silent 2-byte NOP), so a verifier
   calls `z80n.install(sim, nextreg)` after simpool.machine(): all 29, NEXTREG through the engine's
