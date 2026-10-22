@@ -415,6 +415,12 @@ Designs not built yet (use when a game needs them)
    in the 48K ROM -> 0xFFFF, a JR into RAM): it reads the vector from zeroed ROM and warns "IM 2 handler
    in ROM (0x0000)". It should read the 48K ROM (build.rom48) and name the RAM target. Engines that use
    the alt ROM must then keep those vector bytes (Cyclone: hooks end below 0x3AFF).
+   Generalise it (2026-10-22): IM 2 reads the vector word at I*256 + bus byte, and games with I in
+   0x39-0x3C rely on the bus reading $FF and the 48K ROM's $FF block (0x386E-0x3CFF) giving 0xFFFF -
+   the same block every alt-ROM engine fills with hooks (Cyclone 0x3AFF, Match Day 0x3BFF handle it
+   per engine). A shared check belongs in nextboot.check / the alt ROM build: IM 2 and I*256+0xFF in
+   the altrom range -> refuse unless both vector bytes are unchanged or deliberately redirected.
+   Unconfirmed: that the Next's bus reads $FF in pulse mode on every core (we rely on it).
 36. `inspect` should warn when CODE runs in the printer buffer (0x5B00-0x5BFF): NEXLOAD overwrites it,
    so the build needs keep_printer_buffer (Match Day: data; Cyclone: the main loop - its first plain
    build, without it, would not run on hardware). An access scan (`scan --range 0x5B00-0x5BFF`) shows it.
