@@ -103,7 +103,7 @@ LDWS at 16 T and a wrong MUL result: ADDHLAF yellow, MUL red R, LDWS red (15.9).
 Microseconds PER CALL at 3.5 MHz and 28 MHz (the hooks' speed) on the raster line counter, as
 z80ntest's TIME page: 4 dithered passes, the same with an empty routine subtracted, calibrated
 against 2048 x LD A,(IX+0) at 3.5 MHz. The repeat count R is chosen per row and speed by a probe
-run (a measurement fills ~120 lines; R = 1 for long calls; ">" = one call does not fit a frame),
+run (a measurement fills ~140 lines; R = 1 for long calls; ">" = one call does not fit a frame),
 so no row can wrap the line counter. ~1 minute with a blue border, then 5 pages (any key).
 Border green = every check passed, red = a "!" somewhere.
 

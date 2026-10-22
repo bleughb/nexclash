@@ -4,8 +4,8 @@
 ;
 ; A timing row = one routine CALLed R times in a row; its time per call is measured on the raster
 ; line counter and printed in MICROSECONDS PER CALL at 3.5 MHz and at 28 MHz (the hooks' speed).
-; R is chosen per row and speed: a probe run sizes it so a measurement fills ~120 lines (R = 1 for
-; anything over ~2 lines a call; a row whose single call does not fit a frame shows ">").
+; R is chosen per row and speed: a probe run sizes it so a measurement fills ~140 lines (R = 1 for
+; anything over ~10 lines a call; a row whose single call does not fit a frame shows ">").
 ; Method as z80ntest / v1 (board-proven): frame start, 0..3 quarter-line delay, R calls, read the
 ; line; 4 passes added; the same with an empty routine and the same R subtracted; calibrated against
 ; 2048 x LD A,(IX+0) at 3.5 MHz (38,912 T = 11,117.7 us). Rows with a set-up routine (DMA rtg / rrun:
@@ -43,7 +43,7 @@ DST         equ $D000           ; 4K destination
 COPZ        equ $F200           ; 512 zero bytes (copper NOP lists, sprite hide records)
 NPAGE       equ 21
 TLEN        equ 20              ; table entry: routine, set-up, tear-down, kind, check, n, size, name(8)
-TARGET      equ 120             ; lines a measurement should fill
+TARGET      equ 140             ; lines a measurement should fill
 
         org $8000
 start:  di
@@ -104,11 +104,11 @@ one:    ld (spd),a
         ld a,1 : call measure
         ld a,h : or a : jp nz,.long
         ld a,l : cp 230 : jp nc,.long
-        cp 2 : jr c,.small
-        ld c,a : ld hl,TARGET : call div16_8   ; R = 120 / lines (>= 1)
+        cp 10 : jr c,.small              ; (the probe includes ~3 lines of fixed overhead)
+        ld c,a : ld hl,TARGET : call div16_8   ; R = TARGET / lines (>= 1)
         ld a,l : or a : jr nz,.r
         inc a : jr .r
-.small: ld a,64 : ld hl,(trow) : call measure  ; R = 64 * 120 / (lines of 64 + 1), max 255
+.small: ld a,64 : ld hl,(trow) : call measure  ; R = 64 * TARGET / (lines of 64 + 1), max 255
         inc hl : ld c,l : ld a,h : or a : jr z,.s8
         ld c,255
 .s8:    ld hl,64*TARGET : call div16_8
