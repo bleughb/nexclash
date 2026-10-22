@@ -375,7 +375,9 @@ Hardware to confirm
 28. Copper facts to confirm before an engine relies on the copper: a WAIT for a LINE already passed
    holds the rest of the list until the next frame (inferred from guide r3; an h passed on the
    CURRENT line does not wait - hardware-tested, TECHNIQUES "Hardware ground truth"); $64 = 33 aligns
-   copper line 0 with the top of 320x256 Layer 2.
+   copper line 0 with the top of 320x256 Layer 2 (a developer's note says 32: ULA row 0 = line 32 -
+   test both); with $64 = 0 a WAIT for a line the mode lacks (311 at 60 Hz) never fires (TECHNIQUES
+   "Raster numbering": the freeze trap).
    How to test any of these: tools/hwtests/README.md (one test .nex per question, a results table in
    fixed RAM, one coloured block per test; Dean photographs the board, MAME runs the same file).
 35. NEXLOAD overwrites the 48K printer buffer (0x5B00-0x5BFF: NextZXOS paging routines + system
@@ -415,9 +417,22 @@ Designs not built yet (use when a game needs them)
    in the 48K ROM -> 0xFFFF, a JR into RAM): it reads the vector from zeroed ROM and warns "IM 2 handler
    in ROM (0x0000)". It should read the 48K ROM (build.rom48) and name the RAM target. Engines that use
    the alt ROM must then keep those vector bytes (Cyclone: hooks end below 0x3AFF).
+   Generalise it (2026-10-22): IM 2 reads the vector word at I*256 + bus byte, and games with I in
+   0x39-0x3C rely on the bus reading $FF and the 48K ROM's $FF block (0x386E-0x3CFF) giving 0xFFFF -
+   the same block every alt-ROM engine fills with hooks (Cyclone 0x3AFF, Match Day 0x3BFF handle it
+   per engine). A shared check belongs in nextboot.check / the alt ROM build: IM 2 and I*256+0xFF in
+   the altrom range -> refuse unless both vector bytes are unchanged or deliberately redirected.
+   Unconfirmed: that the Next's bus reads $FF in pulse mode on every core (we rely on it).
 36. `inspect` should warn when CODE runs in the printer buffer (0x5B00-0x5BFF): NEXLOAD overwrites it,
    so the build needs keep_printer_buffer (Match Day: data; Cyclone: the main loop - its first plain
    build, without it, would not run on hardware). An access scan (`scan --range 0x5B00-0x5BFF`) shows it.
+37. Beeper sound independent of CPU speed (idea, 2026-10-22; TECHNIQUES 2 zxnext-copper-samples):
+   timed beeper loops play 8x fast at 28 MHz (Match Day isr_w; LEARNINGS 2.1f), so today any code
+   that beeps must stay at 3.5 MHz. Instead a hook on the game's OUT ($FE) could log (beeper bit,
+   game T-time counted at 3.5 MHz rates) and the copper replay it through a DAC NextReg at ~11 kHz
+   on the next frame: the game's sound at the original timing whatever speed the code runs at
+   (one frame late; 11 kHz quantises fast tones). Needs: a T clock in the hooks (or the game loop's
+   own count), the DAC enable (NextReg $08 bit 3), a hardware listen test. Not tried.
 
 ### C3b. Two verification levels (agreed with Dean 2026-09-29; how to run them: PLAYBOOK 6)
 - ITERATE (per change): original bytes at every site, boot check, unit tests (with negative
