@@ -354,6 +354,21 @@ What v2 adds:
 
 ## 2. Other projects
 
+- l2scroller (github.com/em00k/l2scroller, no licence file: ideas only, ~650 lines, read
+  2026-10-22; NOT run by us): a text scroller on the bottom 8 lines of a 256x192 Layer 2 picture.
+  * The copper scrolls only that band: WAIT 184 / MOVE $16 = n, WAIT 192 / MOVE $16 = 0, HALT -
+    a 4-instruction list reloaded every frame by DMA to $253B (stop, index 0, select $60, DMA,
+    start mode 11) with n + 1. The band wraps (X offset mod 256), so each frame the CPU draws just
+    ONE 1-pixel column (8 bytes) of the current letter at x = n - 1, the column that has just
+    scrolled round to the right edge: a circular band, 8 bytes of drawing a frame.
+  * Copying from banked memory into Layer 2 in ONE address window: the source pages sit in MMU
+    slots 0 / 1 ($0000-$3FFF) and port $123B maps the Layer 2 third for WRITES only over the same
+    $0000-$3FFF (value yy000011: write enable + visible, bits 7:6 = which 64-line third). Reads
+    still come from the MMU pages, writes go to Layer 2, so an LDIR whose HL and DE both point
+    into $0000-$3FFF copies picture data straight into Layer 2 with no buffer.
+  * "Snake" ordering tested (rows stored alternately left-to-right / right-to-left so the plot
+    never returns to the left edge); the author found plain row-by-row LDIR ("typewriter")
+    quickest. Frame pacing: poll $1F LSB = 250.
 - zx-next-copper-wobble (github.com/em00k/zx-next-copper-wobble, GPL-3.0, 200 lines, read 2026-10-22;
   NOT run by us): a 256x192 Layer 2 picture wobbled by the copper writing the Layer 2 X ($16) and Y
   ($17) offsets on every line (WAIT line n / MOVE $16 / MOVE $17, from a sine table) - the Y offset
