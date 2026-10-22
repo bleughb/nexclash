@@ -80,8 +80,8 @@
   "engine_col": "rainbow_z80n (rainbow_z80n.md)",
   "build": "rainbow_z80n_sprites.nex bda21ab6 (as cf017271 + Z80N hooks: 13 SWAPNIB, 2 MIRROR A, 2 ADD HL,A; raster pair read until it agrees) + rainbow_z80n_sprites_diag.nex bb2058c8",
   "software": "RZX IDENTICAL x2 (rainbow 7178 frames, rainbownew 11799) + diagnostic IDENTICAL, unit PASS (Z80N as-NOP controls SWAPNIB / MIRROR A / ADD HL,A); timing with NEXTREG counted: 2 frames over 20 ms in rainbownew",
-  "hardware": "untested",
-  "next": "hardware test next to cf017271 (checklist); everything open in rainbow_islands.md"
+  "hardware": "bda21ab6 works on a real Next and feels smoother than cf017271 (user, 2026-10-22)",
+  "next": "everything open in rainbow_islands.md (painted colours + recolour, boss-round bookmark verify); speed ideas in rainbow_z80n.md"
  },
  "checks": [
   "asm2profile:rainbow_z80n"

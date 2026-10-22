@@ -85,7 +85,7 @@ rebuilt 7ac543fb / cf017271 / c16751b0 byte for byte. `selftest.py --game rainbo
 renders IDENTICAL, diagnostic IDENTICAL, unit PASS incl. one as-NOP negative control per Z80N
 instruction (SWAPNIB, MIRROR A, ADD HL,A). Outputs: plain 7ac543fb (unchanged), sprites bda21ab6,
 diagnostic bb2058c8. First quick verify with NEXTREG timed found the rsafe crossing (1 of 1416
-renders); fixed. Hardware: untested.
+renders); fixed. Hardware 2026-10-22: bda21ab6 works on a real Next, "feels smoother" (user).
 
 ## Rainbow Islands (128K, engine `rainbow`) - 2026-09-28
 `nexclash.py auto rainbow.z80 --rzx rainbow.rzx --rzx rainbownew.rzx --no-record` (defaults: ink white, outline black)

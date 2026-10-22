@@ -53,7 +53,9 @@ Core: SWAPNIB / MIRROR A / ADD HL,A are in every Z80N core; the build needs the 
 ## Status
 2026-10-22: `selftest.py --game rainbow_z80n --verify --stamp` PASSED - rebuild MD5s, rainbow.rzx (7,178
 frames, 2,216 renders) and rainbownew.rzx (11,799 frames, 3,530 renders) IDENTICAL, diagnostic build
-IDENTICAL, unit PASS (incl. one as-NOP control per Z80N instruction). Hardware: untested.
+IDENTICAL, unit PASS (incl. one as-NOP control per Z80N instruction).
+Hardware 2026-10-22: rainbow_z80n_sprites.nex bda21ab6 WORKS on a real Next and "feels smoother"
+than cf017271 (user; impression, not measured).
 
 | Output | MD5 |
 |---|---|
@@ -85,7 +87,6 @@ comparable. Where Z80N / Next hardware could still help (analysis, nothing built
 ## Open
 - Everything open in games/rainbow_islands.md (painted colours + recolour, bookmark verify of the
   boss rounds, Dean's rework).
-- Hardware: run the new build next to the deprecated cf017271 (checklist below).
 - The simulated timing statistics (long frames, tsmax) with NEXTREG counted: compare with the
   deprecated engine's on the same recording.
 
