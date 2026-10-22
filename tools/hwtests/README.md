@@ -137,6 +137,12 @@ MHz as dwords in tenths, R at 3.5 / 28 MHz), then a flag byte per row (bit 0 / 1
 v1 (commit 0b51cc9, 32 rows, one size each, fixed R) is the run the board results below were taken
 with; TECHNIQUES 1.0 holds its table.
 
+v2 checked before any board (2026-10-22): in SkoolKit + z80n with a modelled raster (no DMA, copper
+or CPU speed change) every CPU row at 3.5 MHz matches its T-state count (LDIR 64 390.7 for 391.1 us,
+LDI unr 64 300.2 for 304, L2 CELL 359.5 for 360.6, NR v 5.7 for 5.7); the R probe needed three
+tiers (1 / 8 / 64 calls) - a single tier either under-sized tiny rows or overran the frame on rows
+of 100-640 us. DMA / copper rows show "!" / ">" there (no DMA, no copper).
+
 Board results: v1 (2026-10-22, core 3.02.00): every CPU row at 3.5 MHz as its T-state count; 28 MHz
 6.3-7x faster (memory wait states); DMA rows WRONG at 3.5 MHz ("!" on DMA 1B / 256 / 2K and FILL DMA,
 border red; the core changelog fixes it in 3.02.02), right at 28 MHz. The table and conclusions:
