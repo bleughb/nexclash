@@ -492,6 +492,10 @@ Ped7g's test suite) where a technique there is mostly about one Next feature.
   every frame (~460 us at 28 MHz, no circular buffer), fine scroll by $31 = (Y AND 7) - 8 (hides the
   8 top border lines). It sets $6E = $E0 while the map is written at page 14 offset 0: works only if
   a bank-7 address wraps within its 8K (our inference from the code, not tested).
+- Pixel scroll over a map bigger than the tilemap (zxnext_tilemap): a 48x48 map behind a 40x32
+  tilemap; fine scroll = tilemap offset AND 7 ($30 / $31), and every frame the visible 40x32 window
+  of the big map is copied row by row into the tilemap (80 bytes a row, memcpy or DMA) - the
+  Speedball method in both directions, with the clip window ($1B) trimming the edges.
 - Status bar split and a tile set per screen band: 2.1.
 
 ### 2.4 Sprites
@@ -522,6 +526,13 @@ Ped7g's test suite) where a technique there is mostly about one Next feature.
   $79 post-increments the sprite number, so no $34 per sprite; 20 NEXTREGs per figure. The 3
   relatives never change: writing only the anchor (select $34 + 5 registers) would do.
 - Sprite "bobs" (UnitedForces): patterns by OTIR to $5B once, attributes per frame by OUT to $57.
+- Chess pieces as unified groups (zxnext_chess_demo; RustyPixelsUK zxnext sprite.c): 32 pieces of
+  32x32, each = a 4-bit anchor + 3 UNIFIED relatives at (+16,0), (0,+16), (+16,+16), sprite numbers
+  4n..4n+3, the piece's 4 patterns contiguous (512 bytes, uploaded by OUTI). Relative attribute 4:
+  bit 6 = 1 (relative), bit 5 = N6 (the 128-byte half), bit 0 = 1 (pattern number relative to the
+  anchor's); anchor attribute 4: bit 7 = 4-bit, bit 6 = N6, bit 5 = 1 (unified: the group mirrors,
+  rotates and scales as one image). Moving a piece rewrites only its anchor. Pattern slot select
+  for a 4-bit pattern n: `(n >> 1) | (n << 7)` on 0x303B (the RRC form in Speedball).
 - Multiplexing by chained line interrupts (Gen4, hardware IM2 mode): a table of (handler, line)
   pairs; each handler acknowledges ($C8 bit 1), EIs at once (the frame interrupt may nest),
   rewrites the line-interrupt line ($22 / $23) and PATCHES vector table entry 0 with the next
@@ -534,6 +545,15 @@ Ped7g's test suite) where a technique there is mostly about one Next feature.
   addresses + LOAD + ENABLE (9 bytes; our "rtg" row in 1.0b: ~13 us + 0.18 us a byte, ~19 us for a
   32-byte tile vs ~28 us by LDIR).
 - Fill from a fixed-address source (UnitedForces: clear a buffer, then swap screen thirds).
+- A DMA helper set (RustyPixelsUK zxnext dma.c, used by the benbaker76 demos): every call sends a
+  full program that starts with $83 (disable) + $C3 (reset), cycle length 2 on both ports,
+  continuous mode. Variants: memory -> memory; both ports DECREMENTING (an overlapping move to a
+  higher address); memory -> fixed port $253B (copper list or NextReg data) or $5B (sprite
+  patterns); fill (port A fixed on a byte holding the value).
+- Rectangle copy with a stride (dma_transfer_lines): the first line gets the full program, every
+  further line only WR0 (port A address, no length) + WR4 (port B address) + LOAD + ENABLE (8
+  bytes; the length stays programmed) - our "rtg" re-arm (1.0b) applied to a 2-D block (a Layer 2
+  rectangle, a cut from a sprite sheet).
 - Copper lists, sprite patterns and tilemap rows by DMA: 2.1, 2.4, 2.3.
 
 ### 2.6 Interrupts and sound
@@ -573,6 +593,26 @@ Ped7g's test suite) where a technique there is mostly about one Next feature.
   per interrupt with both channels playing (estimated from the code, not counted), 16,000 a second
   = a tenth to a sixth of 28 MHz - against nothing per sample for the copper player. CTC channel 1
   runs a second timer (palette fade steps).
+- Sample sound by DMA alone (zxnext_dma_sample, a port of em00k's zxnext-simple-dma): ONE program,
+  no CPU per sample and no interrupts: port A memory incrementing, port B the Covox / DAC port $FFDF
+  fixed, burst mode (WR4), WR2 timing byte with bit 5 = a prescaler byte following (the pacing),
+  WR5 auto-restart for a looping sample (z88dk D_WR5_RESTART: at the end of the block the DMA
+  reloads and starts again), then read mask, LOAD, $B3 (force ready), ENABLE. 8-bit unsigned mono
+  at 8 kHz, one 8K page per bank of samples. OPEN: the demo plays with prescaler 12 x 12 = 144,
+  which by "rate = 875 kHz / prescaler" (zxnDMA bullet, section 1) is ~6.1 kHz, not 8 kHz - either
+  that formula or the demo's pitch is off; a board test settles it before we rely on the formula.
+- The same demo's CTC alternative: a timer interrupt (IM2, vector table of $81 bytes, handler at
+  $8181) that sends one byte per interrupt; CTC channel 0, prescaler 16, time constant 219 = 7,991
+  Hz. CTC rate = clk28 / (prescaler x time constant), prescaler 16 or 256 (control word bit 5),
+  time constant 0 = 256 (RustyPixelsUK zxnext ctc.h). Next Point's comment writes "(1 + time
+  constant)"; the two differ by ~1 % - not checked.
+- The Next's clock and frame rate follow the VIDEO TIMING mode (NextReg $11 bits 2:0; RustyPixelsUK
+  zxnext ctc.c tables, not checked against the core docs): clk28 = 28.0, 28.57, 29.46, 30, 31, 32,
+  33 MHz for VGA timings 0-6 and 27 MHz for HDMI; a "50 Hz" frame is then 50.00, 51.02, 52.61,
+  53.57, 55.36, 57.14, 58.93 Hz (HDMI 50.00), a "60 Hz" one 60.00 ... 70.71 (HDMI 60.00). So
+  everything paced by the frame interrupt - every game we convert - runs up to ~18 % fast on a
+  VGA 1-6 setting, and CTC / DMA-prescaler rates scale with clk28 too. The setting is the user's
+  machine configuration (BRIEFING A1, Video).
 - For us: C2 #37 (beeper replay) has two candidate players: copper-driven (no CPU per sample, one
   frame of latency) or a CTC interrupt (~10 % CPU at 16 kHz; needs hardware IM2 mode, C2 #34).
 - Sprite multiplexing by chained line interrupts: 2.4.
@@ -701,3 +741,21 @@ ours.
 - zxnext-copper-samples (github.com/shadowphiar/zxnext-copper-samples; CC0; z88dk C).
 - NextMasterSystem (github.com/StalePixels/NextMasterSystem; ideas only; src/runtime/fw*.asm,
   tools/sitescan.py and docs/*.md read 2026-10-20).
+- benbaker76 Next demos (github.com/benbaker76; MIT; z88dk C + asm; all source read 2026-10-22):
+  zxnext_chess_demo (relative sprites), zxnext_dma_sample (DMA / CTC sample playback, after em00k),
+  zxnext_tilemap (hardware tilemap scroll) and zxnext_layer2_tilemap (the original of the
+  vmorilla copy in 2.2; its configure.m4 also offers C or asm versions, aligned mod look-up tables
+  and map order x- or y-first). Their Next code lives in a git submodule:
+- RustyPixelsUK/zxnext (github.com/RustyPixelsUK/zxnext; NO licence file: ideas only, although
+  the demos that include it are MIT; read 2026-10-22): dma, ctc, sprite, tilemap, layer2 (incl. the
+  software-tilemap draw routines), bank, sound (PT3, AYFX). Reuse review:
+  * sprites_clear sends 5 zero bytes per sprite to port 0x57 for 128 sprites. With byte 3 = 0 a
+    sprite takes only 4 bytes (the 5-byte-stream trap, 1.0b), so the stream drifts by one byte a
+    sprite; harmless ONLY because every byte is 0.
+  * sprites_hide computes `i << 2` in a uint8_t for i < 128: it wraps at i = 64, so the 128 passes
+    hide each of the 32 anchors 4 times (harmless, 4x the work).
+  * layer2_set_screen tests `SCREEN_X == RES_256x192` (256 or 320 against 0: never true), so it
+    always copies FIVE 16K banks - in 256x192 two banks beyond Layer 2 (the clsL2 fault in
+    l2scroller). layer2_clear_screen tests SCREEN_RES and is right.
+  * fast_mod takes the power-of-two path when x, not n, is a power of two (256 mod 192 gives 0,
+    not 64); unused.
