@@ -108,8 +108,13 @@ one:    ld (spd),a
         ld c,a : ld hl,TARGET : call div16_8   ; R = TARGET / lines (>= 1)
         ld a,l : or a : jr nz,.r
         inc a : jr .r
-.small: ld a,64 : ld hl,(trow) : call measure  ; R = 64 * TARGET / (lines of 64 + 1), max 255
-        inc hl : ld c,l : ld a,h : or a : jr z,.s8
+.small: ld a,8 : ld hl,(trow) : call measure   ; 8 calls (< 10 lines each: <= ~83 lines)
+        ld a,h : or a : jr nz,.m8
+        ld a,l : cp 20 : jr c,.tiny
+.m8:    ld c,l : ld hl,8*TARGET : call div16_8   ; R = 8 * TARGET / lines of 8
+        ld a,l : jr .r1
+.tiny:  ld a,64 : ld hl,(trow) : call measure  ; < ~2 lines a call: 64 calls fit (<= ~140 lines)
+        inc hl : ld c,l : ld a,h : or a : jr z,.s8 ; R = 64 * TARGET / (lines of 64 + 1), max 255
         ld c,255
 .s8:    ld hl,64*TARGET : call div16_8
         ld a,h : or a : ld a,l : jr z,.r1
