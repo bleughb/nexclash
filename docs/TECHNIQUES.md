@@ -354,6 +354,33 @@ What v2 adds:
 
 ## 2. Other projects
 
+- Next Point (github.com/vmorilla/next-point, GPL-3.0, z88dk C + asm, read 2026-10-22; a released
+  tennis game for the White Next contest, runs on hardware and CSpect; NOT run by us):
+  * Sample sound by CTC timer interrupt: CTC channel 0 interrupts at ~16 kHz (control word $85,
+    time constant 109: "28 MHz / (16 x (1 + 109))"; the clock source is from their comment, not
+    checked) in hardware IM2 mode (vector 3); the handler maps the sample's 8K page at slot 6,
+    sends one byte to a DAC port per channel (two channels: DAC ports M0 and L1), steps the page
+    at the 8K boundary, acknowledges (NEXTREG $C9,1: CTC 0 status) and RETIs. Cost: roughly 200-350
+    T per interrupt with both channels playing (estimated from the code, not counted), 16,000 a
+    second = a tenth to a sixth of 28 MHz - against nothing per sample for the
+    copper-DAC player (zxnext-copper-samples above). CTC channel 1 runs a second timer (palette
+    fade steps).
+  * Gotchas in its comments: change $C0 read-modify-write (NextZXOS since core 3.01.10 runs the
+    stackless NMI, $C0 bit 3); clear the status registers $C8-$CA with $FF before enabling; CTC
+    interrupts arrived although $C5 was 0, so start the CTC only after setting hardware IM2 mode;
+    the ULA handler EIs at once so a CTC sample interrupt is never delayed by the frame work.
+  * Multi-sprite figures from Aseprite: each animation frame is ONE blob in a banked page:
+    5 attribute bytes per 16x16 sprite (anchor + unified relatives, offsets baked in by their
+    converter) followed by the 8-bit patterns. A frame CHANGE sends the attributes by OTIR to $57
+    and the patterns by DMA to $5B; a plain move writes only the anchor (NEXTREG $34 + X, Y, attr 2,
+    attr 4: 5 writes). Pattern slots are allocated per skin at start-up (max patterns over its
+    frames), attribute slots per entity. The anchor-only move we noted for Speedball, in a shipped
+    game.
+  * dzx7_paged: ZX7 decompression whose source pointer steps to the next 8K page at the slot-6
+    boundary - compressed data spread over pages (Layer 2 screens).
+  For us: C2 #37 (beeper replay) has two candidate players now: copper-driven (no CPU per sample,
+  one frame of latency) or a CTC interrupt (~10 % CPU at 16 kHz; needs hardware IM2 mode, C2 #34).
+
 - seedy1812 demo ports: scoopex, Grodan-And-Kvack-Kvack, UnitedForces, Spreadpoint
   (github.com/seedy1812, GPL-3.0 except Grodan (no licence file: ideas only), read 2026-10-22;
   NOT run by us). Next techniques in them:
