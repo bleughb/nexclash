@@ -96,36 +96,46 @@ Checked before any board (2026-10-21): the .nex run in SkoolKit + z80n with a mo
 (224 T x 312 lines, 228 x 311, 224 x 262): 77/77 green, T within 0.1; with ADD HL,A keeping CF,
 LDWS at 16 T and a wrong MUL result: ADDHLAF yellow, MUL red R, LDWS red (15.9).
 
-## nextbench - what Next techniques cost, setup included
+## nextbench - what Next techniques cost, at several sizes, set up / reused / torn down (v2)
 
-    python tools/hwtests/build.py nextbench -o OUTDIR
+    python tools/hwtests/build.py nextbench -o OUTDIR     (runs nextbench_gen.py: the 88 rows)
 
-Times 32 techniques the converted games use or could use, in MICROSECONDS PER CALL at 3.5 MHz and
-at 28 MHz (the speed the hooks run at), measured on the raster line counter as z80ntest's TIME page
-(4 dithered passes, the same loop with an empty routine subtracted, calibrated against 2048 x
-LD A,(IX+0) at 3.5 MHz). ~20 s with a blue border, then page 1; any key flips the two pages.
-Border green = every copy / fill check passed, red = one failed ("!" after that time).
+Microseconds PER CALL at 3.5 MHz and 28 MHz (the hooks' speed) on the raster line counter, as
+z80ntest's TIME page: 4 dithered passes, the same with an empty routine subtracted, calibrated
+against 2048 x LD A,(IX+0) at 3.5 MHz. The repeat count R is chosen per row and speed by a probe
+run (a measurement fills ~120 lines; R = 1 for long calls; ">" = one call does not fit a frame),
+so no row can wrap the line counter. ~1 minute with a blue border, then 5 pages (any key).
+Border green = every check passed, red = a "!" somewhere.
 
-Rows, in groups to compare (same work, different technique):
-- copy 256 bytes: LDIR 256, LDI x256 (unrolled), STACK256 (POP / PUSH), DMA 256, LDIRX256;
-  2K: LDIR 2K vs DMA 2K. DMA setup: DMA 1B (program + start + 1 byte) and DMA prog (the program
-  written without ENABLE). DMA per byte = (DMA 2K - DMA 1B) / 2047.
-- fill 256 bytes: FILL LDR (LDIR), FILL PSH (PUSH), FILL DMA (fixed source).
-- one 16x16 8-bit sprite pattern (256 bytes) to port 0x5B: PAT OTIR, PAT OUTI (unrolled, Rainbow's
-  way), PAT OTNB (OUTINB), PAT DMA.
-- one sprite's 4 attributes: ATTR OUT (port 0x57) vs ATTR NR (NEXTREG $34-$38).
-- one register write: NEXTREGv, NEXTREGa, REG PORT (OUT $243B + OUT $253B); paging: MMU NR vs
-  7FFD OUT.
-- one 8x8 cell: ULA CHAR (8 pixel bytes + attribute, contended), TILE ENT (a 2-byte tilemap entry),
-  L2 8x8 (64 bytes, Layer 2 layout).
-- scrolling: TM SCROL / L2 SCROL (hardware offset registers) vs ULA 256B (one 256-byte screen band
-  copied, contended); PAL 1 (one palette entry); a 32-instruction copper list by NEXTREG $60
-  (COP32 NR) vs OUT $253B (COP32 IO).
+Rows (name, size):
+- copy 1 / 16 / 64 / 256 / 1024 / 2048 B: LDIR, LDI unr (unrolled; one 256-LDI block entered at
+  the right point, looped above 256), STACK (2 KB unrolled POP / PUSH, entered at the right chunk),
+  DMA (full 16-byte program each call); DMA rtg (only addresses + length rewritten, ports kept)
+  16 / 256 / 2048; DMA rrun (LOAD + ENABLE: the same transfer again) 256; DMA brst (burst mode)
+  256 / 2048; LDIRX 256. Every copy is checked.
+- fill $55 16 / 256 / 2048: FILL LDR, FILL PSH (PUSH block), FILL DMA (fixed source). Checked.
+- sprite pattern to port 0x5B 64 / 128 / 256 / 2048: PAT OTIR, PAT OUTI (unrolled), PAT DMA.
+- sprite attributes: ATR 57 (port, 1 / 32 sprites), ATR NR (NEXTREG $34-$38, 1 / 32), HIDE NR
+  (128 sprites by NEXTREG $78 post-increment), HIDE 57 (128 hide records by port), SPR OFF ($15).
+- NR v, NR a, PORTPAIR (OUT $243B + $253B), NR READ; MMU 1 / 4 slots, 7FFD.
+- ULA CHAR, TILE ENT, L2 CELL; TM SWAP ($6E), L2 FLIP ($12), SHADOW2 (7FFD bit 3 and back);
+  TM SCRL, L2 SCRL.
+- PAL8 1 / 16 entries, PAL9 1, PAL SEL ($43).
+- copper load (stopped) 8 / 32 / 256 instructions by NEXTREG $60 (COP NR) / OUT $253B (COP IO);
+  COPGO+ST (start + stop); LDIR+COP (LDIR 256 while the copper loops MOVEs: does the copper slow
+  the CPU?).
+- copper function (the value is a number): CP WAIT = raster line at which the CPU sees the MOVE
+  after a copper WAIT 120 (copper line numbering vs $1E/$1F; ">" = never); CP APART = wrong palette
+  entries (of 256) the CPU reads back while the copper loops MOVE $7F (expected 0, "!" otherwise);
+  CP SHARE = the same with the copper looping MOVE $40, the palette index the CPU uses (wrong
+  entries expected: TECHNIQUES 1 "never drive one register pair from both"; info, never "!").
 
-Results table at $7E00: "NXBN", version, count, calibration lines (word), per test tenths of us at
-3.5 MHz (dword) and 28 MHz (dword), then one flag byte per test (bit 0 / 1 = check failed at 3.5 /
-28 MHz). DMA uses the zxnDMA port $6B, continuous mode, 2 T timing on both ports; on cores before
-3.02.02 the DMA read was one cycle behind at 3.5 / 7 MHz (changelog) - the copy checks show it.
+Results at $7A00: "NXB2", version, count, calibration lines, per row 10 bytes (value at 3.5 / 28
+MHz as dwords in tenths, R at 3.5 / 28 MHz), then a flag byte per row (bit 0 / 1 check failed at
+3.5 / 28 MHz, bit 2 / 3 did not fit a frame).
+
+v1 (commit 0b51cc9, 32 rows, one size each, fixed R) is the run the board results below were taken
+with; TECHNIQUES 1.0 holds its table.
 
 Board results: v1 (2026-10-22, core 3.02.00): every CPU row at 3.5 MHz as its T-state count; 28 MHz
 6.3-7x faster (memory wait states); DMA rows WRONG at 3.5 MHz ("!" on DMA 1B / 256 / 2K and FILL DMA,
