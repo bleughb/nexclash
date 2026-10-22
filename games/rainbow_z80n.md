@@ -51,7 +51,36 @@ Core: SWAPNIB / MIRROR A / ADD HL,A are in every Z80N core; the build needs the 
 (as before: a recent core).
 
 ## Status
-(filled in by the verification below)
+2026-10-22: `selftest.py --game rainbow_z80n --verify --stamp` PASSED - rebuild MD5s, rainbow.rzx (7,178
+frames, 2,216 renders) and rainbownew.rzx (11,799 frames, 3,530 renders) IDENTICAL, diagnostic build
+IDENTICAL, unit PASS (incl. one as-NOP control per Z80N instruction). Hardware: untested.
+
+| Output | MD5 |
+|---|---|
+| rainbow_z80n.nex (plain: unchanged from the deprecated engine) | 7ac543fb51c7a3c4137778eeb3cdc175 |
+| rainbow_z80n_sprites.nex | bda21ab675fa271b6f51f332aae14206 |
+| rainbow_z80n_sprites_diag.nex | bb2058c8bb9d593364aa1515a38a130c |
+
+Simulated timing (28 MHz T, NEXTREG now counted; wait states still not modelled): rainbow.rzx object
+hooks avg 2.8 / max 14.5 ms per game frame, whole frame max 18.6 ms, 0 frames over 20 ms;
+rainbownew.rzx object hooks avg 5.4 / max 17.4 ms, whole frame max 22.2 ms, 2 frames over 20 ms
+(0 without the object hooks). The deprecated engine's figures counted NEXTREG as 0 T and are not
+comparable. Where Z80N / Next hardware could still help (analysis, nothing built): see "Speed ideas".
+
+## Speed ideas (analysis 2026-10-22, not measured; profile first)
+1. tcommit copies 20 x 64 map bytes per render by LDIR (~27k T): zxnDMA, or two tilemaps switched
+   with NextReg $6E instead of a copy. Pattern uploads (64 bytes per sprite by OUTI, 16 T a byte;
+   OUTINB is no faster) are the other DMA candidate (store hits 94-96% keep them rare). DMA read
+   timing was fixed in core 3.02.02 at 3.5 / 7 MHz (hooks run at 28 MHz; board-test first).
+2. Hook entry / exit paging (NEXTREG $50 in / out, ~40 T per object hook call, hundreds a frame):
+   batch cells per call; Z80N has nothing faster than NEXTREG.
+3. Algorithm: tile-cache probe olook.p (linear over 176, 4-byte key byte by byte), store lookup
+   s_pc.way (whole stream compared per probe: a checksum per way), nooutl.p (a 256-byte table),
+   miss.lp (PUSH / POP HL per stream byte).
+4. Remaining Z80N peepholes, ~0.5-1 %: 13x ADD HL,nn for LD rr,nn / ADD HL,rr (5 T, frees the pair),
+   ADD DE,16 in tcommit, MUL D,E / BSLA for the x32 / x64 / x4+base address sums where a pair is free.
+   Not useful here: LDIX family (transparency is per nibble), PIXELAD / PIXELDN (INC H already),
+   LDWS / LDPIRX.
 
 ## Open
 - Everything open in games/rainbow_islands.md (painted colours + recolour, bookmark verify of the
@@ -63,4 +92,6 @@ Core: SWAPNIB / MIRROR A / ADD HL,A are in every Z80N core; the build needs the 
 ## Hardware checklist
 1. Boots; play as with cf017271: figures, collectables, rainbows, music the same.
 2. Mirrored figures and backgrounds (player facing left, mirrored tiles): drawn exactly as before.
-3. Busy scenes: at least as smooth as cf017271 (the hooks are a little shorter).
+3. Busy scenes: at least as smooth as cf017271 (the hooks are a little shorter). The simulation
+   with NEXTREG counted has 2 frames over 20 ms in rainbownew.rzx: a brief slowdown there is
+   expected, not new (the old figures hid it).

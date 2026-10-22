@@ -9,7 +9,8 @@ facts: games/tid_engine.md). MD5s: docs/VERIFICATION.md.
 | Game | Engine (file) | Sprite build | Software | Hardware | Next |
 |---|---|---|---|---|---|
 | Chuckie Egg | chuckie (chuckie_egg.md) | Chuckie_Egg_sprites.nex bfad6be1 | RZX IDENTICAL, unit PASS | untested | hardware test |
-| Rainbow Islands (128K) | rainbow (rainbow_islands.md) | rainbow_sprites.nex cf017271 (no rainbow border, collectable insides black / white, thrown rainbow without outline) + rainbow_sprites_diag.nex c16751b0 | RZX IDENTICAL x2, unit PASS (22 object controls incl. border control on a bordered profile copy, inside fill control) | cf017271 works on hardware (Dean, 2026-10-19: "seems to work ok") | Dean paints the split colour sheets -> per-pixel colours + recolour; bookmark verify of the boss rounds (islands 7..1) |
+| Rainbow Islands (128K) | rainbow (rainbow_islands.md) | rainbow_sprites.nex cf017271 (no rainbow border, collectable insides black / white, thrown rainbow without outline) + rainbow_sprites_diag.nex c16751b0 | RZX IDENTICAL x2, unit PASS (22 object controls incl. border control on a bordered profile copy, inside fill control) | cf017271 works on hardware (Dean, 2026-10-19: "seems to work ok") | deprecated: superseded by rainbow_z80n (user 2026-10-21); kept unchanged for reference |
+| Rainbow Islands (128K, Z80N) | rainbow_z80n (rainbow_z80n.md) | rainbow_z80n_sprites.nex bda21ab6 (as cf017271 + Z80N hooks: 13 SWAPNIB, 2 MIRROR A, 2 ADD HL,A; raster pair read until it agrees) + rainbow_z80n_sprites_diag.nex bb2058c8 | RZX IDENTICAL x2 (rainbow 7178 frames, rainbownew 11799) + diagnostic IDENTICAL, unit PASS (Z80N as-NOP controls SWAPNIB / MIRROR A / ADD HL,A); timing with NEXTREG counted: 2 frames over 20 ms in rainbownew | untested | hardware test next to cf017271 (checklist); everything open in rainbow_islands.md |
 | Everyone's a Wally | wally (everyones_a_wally.md) | wally_sprites.nex f7605489 | RZX IDENTICAL, unit PASS | boots and runs | frozen: superseded by everyones_a_wally_updated |
 | Everyone's a Wally (updated) | wally2 (everyones_a_wally_updated.md) | everyones_a_wally_updated_sprites.nex 31c3ef13 (every figure - gang, masked and OR objects - on a double-buffered Layer 2 in plot order; one colour per figure, black 4-neighbour outline; default colours (nothing painted yet); recolour; altrom + pages 26/27) | RZX IDENTICAL (registers, memory, Layer 2 image at every commit vs the model), 930 + 921 graphic + joined / commit / restore unit cases, negative control PASS | untested | hardware test (checklist); Dean paints the PAINTING_SPRITES sheet; longer RZX (16 B / 7 C callers not reached) |
 | Spellbound Dizzy (Dizzy V) | dizzy5 (spellbound_dizzy.md) | Dizzy_V_sprites.nex 1f33c467 (altrom) | verified (2 RZX) | untested | hardware test |
@@ -41,4 +42,6 @@ Toolkit backlog: BRIEFING C2 (the one list). Release and maintainer state:
    of every engine. Clear it once with `selftest.py --affected --verify --stamp`; from then on each
    game's own PR stamps it (PLAYBOOK 6).
 2. Rainbow Islands is excluded from every automatic check (Dean 2026-10-13: too slow, being
-   reworked) - `selftest.py --game rainbow --verify` when its work lands.
+   reworked). Going forward it is `rainbow_z80n` (2026-10-22, verified; hardware untested):
+   `selftest.py --game rainbow_z80n --verify`. Engine `rainbow` is deprecated, kept for reference
+   (`--engine rainbow`).
