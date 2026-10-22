@@ -58,6 +58,9 @@ What it says:
 ### 1.0b Sizes, reuse and the copper (tools/hwtests/nextbench v2, core 3.02.00, 2026-10-22)
 Same board, same method; R chosen per row. Microseconds per call at 28 MHz (3.5 MHz on the photos,
 specnext reference/hwtests/nextbench/; every 3.5 MHz CPU row again matched its T-state count).
+v2's line read could return a line up to 3 lines late (LEARNINGS 2.3; fixed in v3): at 28 MHz that
+is under 1 % on the rows below (one read is far shorter than a line there); v3 repeats every row 5
+times and marks values that vary between runs.
 
 | Copy (bytes) | 1 | 16 | 64 | 256 | 1024 | 2048 |
 |---|---|---|---|---|---|---|

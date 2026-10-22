@@ -560,6 +560,13 @@ Grouped by question; add a new lesson to its group.
   reads (Open 1b); rainbow_z80n with z80n.install (20 / 17 T) hit it in the first 2000 frames
   (2026-10-21) and its "frames over 20 ms" rose from none to 2 in rainbownew. Time every instruction
   the hooks run (z80n.install), and read a two-register value (raster line) until two reads agree.
+  That loop is right for a beam test (where is the beam now, roughly) but WRONG for timing: one
+  $1E + $1F read is ~150 T at 3.5 MHz, so consecutive reads straddle a 224-T line most of the time,
+  the loop retries and returns a line 0-3 lines LATE, by phase (nextbench v2's 3.5 MHz figures: one
+  row's runs 417 / 421 lines in the simulator; found 2026-10-22 when v3 repeated the runs). To time:
+  read LSB, MSB, LSB; the first LSB is the instant; the MSB belongs to it unless the second LSB is
+  below the first (the MSB only changes where the LSB wraps), and only then read again (nextbench v3
+  `line`). z80ntest still uses the old loop (its 2048-run averages divide the error away).
 - Z80N instructions in hooks: always allowed in .nex builds (maintainers, 2026-10-21). SkoolKit's
   simulator does not know them (an unknown ED opcode runs as a silent 2-byte NOP), so a verifier
   calls `z80n.install(sim, nextreg)` after simpool.machine(): all 29, NEXTREG through the engine's
