@@ -369,6 +369,13 @@ What v2 adds:
     select and the DMA, so an interrupt cannot reselect) - the DMA copper upload we estimated
     above, in working code. Sprite rows of 21: one anchor + 20 unified relatives 16 px apart, so a
     336-px-wide row moves with ONE anchor write (TECHNIQUES 1, relative sprites).
+  * Speedball_demo (no licence file: ideas only): ten 2x2 4-bit figures, each with its OWN pattern
+    slots; a figure's 512 pattern bytes go to port $5B by DMA only when its animation frame
+    changes (a per-figure "uploaded" flag) - our pattern-slot caches (Commando, Smash TV), with
+    DMA: by 1.0b ~14.5 + 512 x 0.18 = ~107 us against ~350 us by OUTI / ~440 by OTIR at 28 MHz.
+    Attributes per frame by NEXTREG $35-$38 + $79 with NextReg $09 bit 4 (lockstep, 1 above);
+    HUD by copper (WAIT line 215: tilemap scroll to 0 and the HUD's tile definitions via $6F), the
+    copper list loaded by DMA as in Gen4.
 
 - ped7g/ZXSpectrumNextMisc snippets (MIT / Unlicense, read 2026-10-22): MUL-based arithmetic with
   T counts - 16x8, 24x8, 32x8+8, 16x16 multiplies; E / 10 in 33-60 T (MUL + BSRL); HL mod 40 / 192
