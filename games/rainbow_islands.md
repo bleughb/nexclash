@@ -1,4 +1,8 @@
 # Rainbow Islands (Ocean, 128K) - engine `rainbow`
+DEPRECATED (user, 2026-10-21): superseded by engine / record `rainbow_z80n` (games/rainbow_z80n.md),
+the version going forward. This engine, its .asm, profile and builds stay unchanged for reference;
+`nexclash.py auto rainbow.z80 --engine rainbow` builds it. The facts, decisions and history below
+still hold for rainbow_z80n unless games/rainbow_z80n.md says otherwise.
 EXCLUDED from automatic selftest checks (Dean, 2026-10-13: too slow, being reworked): run it with `selftest.py --game rainbow [--verify]`.
 Updated 2026-10-19. Engine `rainbow`. Status: RZX-verified identical; RUNS ON HARDWARE (Dean,
 2026-09-28). 2026-09-29: boss-spider fix + pattern-upload optimisation (hardware: runs, better;
@@ -721,7 +725,8 @@ drawn on top.
        definitions in bank 7's 8K. Check first that every cell the tilemap shows is ONE colour on
        paper (Spectrum cells are 1-bit + ink, but the build's cell colours / outlines may use more).
        NOT 1-byte map entries ($6B bit 5): they drop the per-tile palette offset Rainbow uses.
-1b. rsafe reads the raster line ONCE ($1E then $1F): a board with core 3.1.0 at 3.5 MHz has read
+1b. FIXED in rainbow_z80n (2026-10-21, games/rainbow_z80n.md; its verifier hit the crossing once
+   NEXTREG was timed); open here (deprecated). rsafe reads the raster line ONCE ($1E then $1F): a board with core 3.1.0 at 3.5 MHz has read
    wrong $1F values (Ped7g's ScanlineReadingAndInterrupt test), and a 255 -> 256 crossing between
    the two reads is 256 lines off. Read the pair until two consecutive reads agree (TECHNIQUES 1
    "Hardware ground truth"); a wrong read here commits during the visible frame (tearing).

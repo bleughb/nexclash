@@ -1,0 +1,90 @@
+{
+ "name": "rainbow_z80n",
+ "order": 2.5,
+ "game": "Rainbow Islands (128K, Z80N)",
+ "doc": "rainbow_z80n.md",
+ "engine": "rainbow_z80n",
+ "representative": true,
+ "reference": "rainbow_z80n",
+ "inputs": {
+  "snapshot": {
+   "name": "rainbow_z80n.z80",
+   "md5": "4c98b980b1726af545fccc99665ef29b",
+   "path": "rainbow_islands/rainbow.z80"
+  },
+  "recordings": [
+   {
+    "name": "rainbow.rzx",
+    "md5": "55046d1893bba0a4faf314ecd3a9638b",
+    "path": "rainbow_islands/rainbow.rzx"
+   },
+   {
+    "name": "rainbownew.rzx",
+    "md5": "47bb2b163a947724c343a2bc1b039458",
+    "path": "rainbow_islands/rainbownew.rzx"
+   }
+  ],
+  "bookmarks": {
+   "name": "rainbowislands_LeeBee.rzx",
+   "md5": "92bbaa0a24102b3e5169d5c6432e4928",
+   "path": "rainbow_islands/leebee/leebee_bookmarks.json",
+   "note": "whole playthrough cut into one RZX per round (rzx.cut); used for the colour sheets and bookmark verifies, never replayed in full"
+  }
+ },
+ "modules": [
+  "rainbow_z80n"
+ ],
+ "own_modules": [
+  "rainbow_z80n"
+ ],
+ "data": [
+  "docs/profiles/rainbow_z80n.json",
+  "asm/rainbow_z80n_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "rainbow.rzx",
+   "rainbownew.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 50
+ },
+ "outputs": {
+  "plain": {
+   "file": "rainbow_z80n.nex",
+   "md5": "TBD"
+  },
+  "sprites": {
+   "file": "rainbow_z80n_sprites.nex",
+   "md5": "TBD"
+  },
+  "diagnostic": {
+   "file": "rainbow_z80n_sprites_diag.nex",
+   "md5": "TBD"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Rainbow Islands (128K, Z80N)",
+  "engine_col": "rainbow_z80n (rainbow_z80n.md)",
+  "build": "TBD",
+  "software": "TBD",
+  "hardware": "untested",
+  "next": "hardware test next to cf017271; everything open in rainbow_islands.md"
+ },
+ "checks": [
+  "asm2profile:rainbow_z80n"
+ ],
+ "excluded": "as rainbow (Dean 2026-10-13): too slow for the automatic checks (~50 min verify); run it explicitly with selftest.py --game rainbow_z80n [--verify]"
+}
