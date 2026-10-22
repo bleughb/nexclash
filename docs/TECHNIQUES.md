@@ -369,17 +369,50 @@ What v2 adds:
   * "Snake" ordering tested (rows stored alternately left-to-right / right-to-left so the plot
     never returns to the left edge); the author found plain row-by-row LDIR ("typewriter")
     quickest. Frame pacing: poll $1F LSB = 250.
+  * Reuse review (every .asm read, 2026-10-22; no licence file - get em00k's permission before
+    copying code into the repo; hardware.inc is Ped7g's constants file):
+    - get_xy_pos_l2 (D = y, E = x -> Layer 2 third mapped for writes over $0000-$3FFF, D = y AND 63):
+      sound, 256x192 only. Leaves the write overlay ON (the caller turns it off: OUT $123B,2).
+    - straight_plot (source WxH image from banks into Layer 2, row by row): right for sources up to
+      16K only - the bank-crossing test `LD A,H : OR $C0 : CALL Z,.nextbanks` is never zero (meant
+      AND), and .nextbanks itself is wrong (multiplies the bank by 4, its AND result discarded). It
+      also maps data pages at MMU 0/1, i.e. over the ROM's IM 1 handler at $0038: interrupts must
+      be off (the demo never DIs; it works because nothing enables them). Fix both before reuse.
+    - snake_plot: experimental and broken (its .check_line compares A after get_xy_pos_l2 has
+      changed it); not used by the demo. L2Line: infinite loop (B never decremented); unused.
+    - clsL2: clears FIVE 16K banks from the Layer 2 bank (320x256 size) although the picture is
+      256x192 (3 banks): it wipes two banks beyond Layer 2. Use 3 for 256x192.
+    - plot_l2: one pixel by the write overlay; correct (turns writes off after).
+    - Scroller (update_scroller / scroll_text): correct. The copper list's own MOVE value byte
+      (init_copper.layer2_xoffset - 1) is the scroll position; the column drawn at x = that value,
+      before update_copper adds 1, appears at screen x 255. Leaves MMU 0 = the font page and the
+      Layer 2 write overlay on.
+    - start_copper / TransferDMAPort: the copper-by-DMA loader (stop, index 0, select $60 on $243B,
+      DMA to $253B, start mode 11) - the reusable core, as in Gen4 / Speedball.
 - zx-next-copper-wobble (github.com/em00k/zx-next-copper-wobble, GPL-3.0, 200 lines, read 2026-10-22;
   NOT run by us): a 256x192 Layer 2 picture wobbled by the copper writing the Layer 2 X ($16) and Y
   ($17) offsets on every line (WAIT line n / MOVE $16 / MOVE $17, from a sine table) - the Y offset
   per line picks which picture row a screen line shows (stretch / wave with no redraw). Each frame
   the CPU rewrites all 256 x 3 instructions by NEXTREG $60 (~1.5 KB; by 1.0b COP NR ~5 us an
-  instruction = ~3.8 ms at 28 MHz - DMA would take ~0.3 ms), into the list the copper is RUNNING (mode 11,
-  restart every frame; index 0 set once): it tolerates a frame that mixes old and new values. The
+  instruction = ~3.8 ms at 28 MHz - DMA would take ~0.3 ms), into the list the copper is RUNNING (after the
+  writes it sets $61 = 0 / $62 = mode 11 every frame: the index goes back to 0, and rewriting the
+  same mode bits does not restart a running list - 1.5): it tolerates a frame that mixes old and
+  new values. The
   list ends with WAIT line 511 (%10000001,255), a line that never comes, = HALT until the restart.
   The CPU paces itself on $1F LSB = 250 (a line every mode has); the README's "now works in CSpect
   after correctly waiting for the last line" and a commented-out $64 = 31 are the same top-border
   numbering issue as the freeze trap ("Raster numbering" above).
+  Reuse review (all of main.asm read; GPL-3.0, compatible with ours): the list builder is correct
+  for lines 0-255 (WAIT encoded as NEXTREG $60,$80 / $60,line; lines 192-255 are border / blanking
+  and harmless); the copper is never stopped (each frame ends with $61 = 0 / $62 = mode 11, which
+  only resets the write index), so the next frame writes over a running list - reuse it with a stop
+  ($62 = 0) before the writes, or build the list
+  in RAM and load it by DMA (start_copper above), if a frame must not mix old and new values. The
+  sine table is 256 bytes duplicated (DUP 2) so `ADD HL,A` with A = 0-255 plus an offset never
+  needs a wrap. Picture: Layer 2 bank 12 ($12) loaded as 8K pages 24-29 from tut.bmp (incbin
+  skipping the 1078-byte header + palette; the file's height is +192 = stored bottom-up, so the
+  art must have been flipped beforehand, and its palette is NOT loaded: pixel bytes must already
+  be colours of the default Layer 2 palette, RGB332).
 
 - zxnext_layer2_tilemap (github.com/vmorilla/zxnext_layer2_tilemap, a copy of benbaker76's demo,
   MIT, z88dk C + asm, read 2026-10-22; NOT run by us): a SOFTWARE tilemap drawn into Layer 2
