@@ -95,3 +95,59 @@ Board results:
 Checked before any board (2026-10-21): the .nex run in SkoolKit + z80n with a modelled raster
 (224 T x 312 lines, 228 x 311, 224 x 262): 77/77 green, T within 0.1; with ADD HL,A keeping CF,
 LDWS at 16 T and a wrong MUL result: ADDHLAF yellow, MUL red R, LDWS red (15.9).
+
+## nextbench - what Next techniques cost, at several sizes, set up / reused / torn down (v2)
+
+    python tools/hwtests/build.py nextbench -o OUTDIR     (runs nextbench_gen.py: the 88 rows)
+
+Microseconds PER CALL at 3.5 MHz and 28 MHz (the hooks' speed) on the raster line counter, as
+z80ntest's TIME page: 4 dithered passes, the same with an empty routine subtracted, calibrated
+against 2048 x LD A,(IX+0) at 3.5 MHz. The repeat count R is chosen per row and speed by a probe
+run (a measurement fills ~140 lines; R = 1 for long calls; ">" = one call does not fit a frame),
+so no row can wrap the line counter. ~1 minute with a blue border, then 5 pages (any key).
+Border green = every check passed, red = a "!" somewhere.
+
+Rows (name, size):
+- copy 1 / 16 / 64 / 256 / 1024 / 2048 B: LDIR, LDI unr (unrolled; one 256-LDI block entered at
+  the right point, looped above 256), STACK (2 KB unrolled POP / PUSH, entered at the right chunk),
+  DMA (full 16-byte program each call); DMA rtg (only addresses + length rewritten, ports kept)
+  16 / 256 / 2048; DMA rrun (LOAD + ENABLE: the same transfer again) 256; DMA brst (burst mode)
+  256 / 2048; LDIRX 256. Every copy is checked.
+- fill $55 16 / 256 / 2048: FILL LDR, FILL PSH (PUSH block), FILL DMA (fixed source). Checked.
+- sprite pattern to port 0x5B 64 / 128 / 256 / 2048: PAT OTIR, PAT OUTI (unrolled), PAT DMA.
+- sprite attributes: ATR 57 (port, 1 / 32 sprites), ATR NR (NEXTREG $34-$38, 1 / 32), HIDE NR
+  (128 sprites by NEXTREG $78 post-increment), HIDE 57 (128 hide records by port), SPR OFF ($15).
+- NR v, NR a, PORTPAIR (OUT $243B + $253B), NR READ; MMU 1 / 4 slots, 7FFD.
+- ULA CHAR, TILE ENT, L2 CELL; TM SWAP ($6E), L2 FLIP ($12), SHADOW2 (7FFD bit 3 and back);
+  TM SCRL, L2 SCRL.
+- PAL8 1 / 16 entries, PAL9 1, PAL SEL ($43).
+- copper load (stopped) 8 / 32 / 256 instructions by NEXTREG $60 (COP NR) / OUT $253B (COP IO);
+  COPGO+ST (start + stop); LDIR+COP (LDIR 256 while the copper loops MOVEs: does the copper slow
+  the CPU?).
+- copper function (the value is a number): CP WAIT = raster line at which the CPU sees the MOVE
+  after a copper WAIT 120 (copper line numbering vs $1E/$1F; ">" = never); CP APART = wrong palette
+  entries (of 256) the CPU reads back while the copper loops MOVE $7F (expected 0, "!" otherwise);
+  CP SHARE = the same with the copper looping MOVE $40, the palette index the CPU uses (wrong
+  entries expected: TECHNIQUES 1 "never drive one register pair from both"; info, never "!").
+
+Results at $7A00: "NXB2", version, count, calibration lines, per row 10 bytes (value at 3.5 / 28
+MHz as dwords in tenths, R at 3.5 / 28 MHz), then a flag byte per row (bit 0 / 1 check failed at
+3.5 / 28 MHz, bit 2 / 3 did not fit a frame).
+
+v1 (commit 0b51cc9, 32 rows, one size each, fixed R) is the run the board results below were taken
+with; TECHNIQUES 1.0 holds its table.
+
+v2 checked before any board (2026-10-22): in SkoolKit + z80n with a modelled raster (no DMA, copper
+or CPU speed change) every CPU row at 3.5 MHz matches its T-state count (LDIR 64 390.7 for 391.1 us,
+LDI unr 64 300.2 for 304, L2 CELL 359.5 for 360.6, NR v 5.7 for 5.7); the R probe needed three
+tiers (1 / 8 / 64 calls) - a single tier either under-sized tiny rows or overran the frame on rows
+of 100-640 us. DMA / copper rows show "!" / ">" there (no DMA, no copper).
+
+Board results: v1 (2026-10-22, core 3.02.00): every CPU row at 3.5 MHz as its T-state count; 28 MHz
+6.3-7x faster (memory wait states); DMA rows WRONG at 3.5 MHz ("!" on DMA 1B / 256 / 2K and FILL DMA,
+border red; the core changelog fixes it in 3.02.02), right at 28 MHz. The table and conclusions:
+docs/TECHNIQUES.md 1.0. Photos: specnext reference/hwtests/nextbench/.
+
+Checked before any board (2026-10-22): in SkoolKit + z80n with a modelled raster (no DMA, no CPU
+speed change) every CPU-only row at 3.5 MHz matches its T-state count within 0.7 % (e.g. LDI x256
+1251.3 for 1249.7 us, NEXTREGv 5.5 for 5.7, ULA CHAR 61.7 for 61.7).
