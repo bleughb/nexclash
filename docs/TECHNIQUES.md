@@ -401,7 +401,8 @@ What v2 adds:
     - Background: a 40x32 tilemap with 16-bit entries, 512 tiles; coarse vertical scroll by
       re-copying all 31 visible map rows (2,480 bytes) into the tilemap by DMA every frame (~460 us
       at 28 MHz, no circular buffer), fine scroll by $31 = (Y AND 7) - 8 (hides the 8 top border
-      lines). The tilemap address in bank 7 wraps within its 8K ($6E = $E0 -> offset 0 of page 14).
+      lines). It sets $6E = $E0 while the map is written at page 14 offset 0: works only if a
+      bank-7 address wraps within its 8K (our inference from the code, not tested).
     - HUD: map row 31; a 5-instruction copper list (WAIT line 215, tilemap scroll 0, HUD tile
       definitions via $6F) loaded by DMA and restarted every frame (mode 01 runs once per start;
       mode 11 would restart it by itself).
