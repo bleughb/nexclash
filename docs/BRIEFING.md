@@ -404,7 +404,7 @@ Designs not built yet (use when a game needs them)
    slot-5 trick): NextMasterSystem's trampoline (TECHNIQUES) - the IM2 entry maps the game's page back
    under the ISR and puts a trampoline in its return slot that maps the hook page again. Needs: verify
    models an interrupt mid-hook (A1 blind spot); the game's ISR must not read its own return address.
-34. Hardware IM2 mode for interrupts-on games ($C0 bit 0; TECHNIQUES "NextMasterSystem", INTERRUPTS):
+34. Hardware IM2 mode for interrupts-on games ($C0 bit 0; TECHNIQUES 2.6 "Held interrupts"):
    the Next holds an interrupt until RETI acknowledges it, so hooks could run with interrupts OFF (no
    per-instruction interrupt-safety rule - Commando, midres). PROVEN on a board (2026-10-20,
    tools/hwtests/im2hold v2): vector = I*256 + $16 for the ULA interrupt; an interrupt during a
@@ -426,7 +426,7 @@ Designs not built yet (use when a game needs them)
 36. `inspect` should warn when CODE runs in the printer buffer (0x5B00-0x5BFF): NEXLOAD overwrites it,
    so the build needs keep_printer_buffer (Match Day: data; Cyclone: the main loop - its first plain
    build, without it, would not run on hardware). An access scan (`scan --range 0x5B00-0x5BFF`) shows it.
-37. Beeper sound independent of CPU speed (idea, 2026-10-22; TECHNIQUES 2 zxnext-copper-samples):
+37. Beeper sound independent of CPU speed (idea, 2026-10-22; TECHNIQUES 2.6, sample sound by copper):
    timed beeper loops play 8x fast at 28 MHz (Match Day isr_w; LEARNINGS 2.1f), so today any code
    that beeps must stay at 3.5 MHz. Instead a hook on the game's OUT ($FE) could log (beeper bit,
    game T-time counted at 3.5 MHz rates) and the copper replay it through a DAC NextReg at ~11 kHz
