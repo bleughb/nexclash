@@ -363,19 +363,53 @@ What v2 adds:
   * All of them: hardware IM2 mode ($C0, $C4-$C6), $CC-$CE (which interrupts may stop a DMA), and
     NextReg $06 AND $5F at start: the F8 (speed) and F3 (50 / 60 Hz) keys off - the guard BRIEFING
     C2 #26 proposes for our stub.
-  * Gen4 (same author, no licence file: ideas only): parallax by copper - the tilemap X offset
-    ($2F / $30) MOVEd at each band's line, every band with its own speed; the copper list is
-    uploaded by DMA straight to port $253B after selecting register $60 on $243B (DI between the
-    select and the DMA, so an interrupt cannot reselect) - the DMA copper upload we estimated
-    above, in working code. Sprite rows of 21: one anchor + 20 unified relatives 16 px apart, so a
-    336-px-wide row moves with ONE anchor write (TECHNIQUES 1, relative sprites).
-  * Speedball_demo (no licence file: ideas only): ten 2x2 4-bit figures, each with its OWN pattern
-    slots; a figure's 512 pattern bytes go to port $5B by DMA only when its animation frame
-    changes (a per-figure "uploaded" flag) - our pattern-slot caches (Commando, Smash TV), with
-    DMA: by 1.0b ~14.5 + 512 x 0.18 = ~107 us against ~350 us by OUTI / ~440 by OTIR at 28 MHz.
-    Attributes per frame by NEXTREG $35-$38 + $79 with NextReg $09 bit 4 (lockstep, 1 above);
-    HUD by copper (WAIT line 215: tilemap scroll to 0 and the HUD's tile definitions via $6F), the
-    copper list loaded by DMA as in Gen4.
+  * Gen4 (same author, no licence file: ideas only; code read in full 2026-10-22):
+    - Copper list kept in RAM (WAIT + MOVE tilemap X ($30) + two MOVEs of palette index 1 (9-bit)
+      per line, 144 lines, ~1.2 KB), its MOVE values patched every frame (a sine wobble per line and
+      a rolling 90-line colour gradient), then the whole list reloaded by DMA to port $253B after
+      selecting register $60 on $243B (DI between select and DMA) and started (mode 01) - by 1.0b
+      ~14.5 + 1150 x 0.18 = ~225 us at 28 MHz against ~2.5 ms by an OUT loop.
+    - Top border lines in a copper list: patch_copper_y converts display Y (32 border lines above
+      ULA line 0) to copper lines: Y - 32, and a negative result wraps to (lines per frame) + (Y -
+      32), the line count read from the video mode (312 HDMI / 48K, 311 128K, 320 Pentagon, 262 /
+      261 at 60 Hz). A list that touches the top border must do the same: those lines belong to the
+      END of the copper's frame and their numbers depend on the mode.
+    - The copper changes layer / sprite priority mid-frame (MOVE $15 bit 6 at a line: which sprite
+      number is on top), so the two halves of the screen overlap their sprites in opposite order.
+    - Sprite multiplexing by chained line interrupts (hardware IM2 mode): a table of (handler, line)
+      pairs; each handler acknowledges ($C8 bit 1), EIs at once (the frame interrupt may nest),
+      rewrites the line-interrupt line ($22 / $23) and PATCHES vector table entry 0 with the next
+      handler, then re-sends a band's sprite attributes from RAM buffers to port $57 starting at
+      sprite 0 - the same hardware sprites reused for the next band once the beam has passed. Two
+      "update" handlers rebuild the buffers of the half the beam is not showing.
+    - Sprite rows: per row 3 anchors 128 px apart, each with 7 unified relatives (pattern-relative,
+      cycling through a pattern range); scrolling a row = new anchor X (9-bit: X8 in byte 2) in the
+      buffer; the parallax speeds of the rows come from a small table updated each frame. Layer 2
+      bitmap background scrolled by $16.
+  * Speedball_demo (no licence file: ideas only; code read in full 2026-10-22):
+    - Ten 32x32 figures, each = one 4-bit anchor + 3 COMPOSITE relatives at (+16,0), (0,+16),
+      (+16,+16) with pattern-relative numbers: the 4 patterns sit as 4 x 128 contiguous bytes (anchor
+      N, +N6 half, N+1, N+1 +N6) so ONE 512-byte DMA to port $5B fills a figure. A 4-bit pattern
+      number n is selected on port $303B as `RRC n` (slot n >> 1, bit 7 = the 128-byte half).
+    - Patterns are re-sent only when a figure's animation frame changes (an "uploaded" flag cleared
+      by the animation timer; the timers start staggered so uploads spread over frames): our
+      pattern-slot caches (Commando, Smash TV) with DMA - ~107 us per 512 bytes against ~350 us by
+      OUTI at 28 MHz (1.0b).
+    - Attributes every frame by NEXTREG $35-$38 + $79 with NextReg $09 bit 4 (lockstep): $79
+      post-increments the sprite number, so no $34 per sprite; 20 NEXTREGs per figure. The 3
+      relatives never change: writing only the anchor (select $34 + 5 registers) would do.
+    - Background: a 40x32 tilemap with 16-bit entries, 512 tiles; coarse vertical scroll by
+      re-copying all 31 visible map rows (2,480 bytes) into the tilemap by DMA every frame (~460 us
+      at 28 MHz, no circular buffer), fine scroll by $31 = (Y AND 7) - 8 (hides the 8 top border
+      lines). The tilemap address in bank 7 wraps within its 8K ($6E = $E0 -> offset 0 of page 14).
+    - HUD: map row 31; a 5-instruction copper list (WAIT line 215, tilemap scroll 0, HUD tile
+      definitions via $6F) loaded by DMA and restarted every frame (mode 01 runs once per start;
+      mode 11 would restart it by itself).
+    - Hardware IM2 mode, ULA interrupt only; the handler counts frames and acknowledges $C8 bit 0.
+  For us (both): multi-sprite figures that move as one (anchor-only writes: 5 NEXTREGs instead of 20
+  per 2x2 figure - but composite relatives do not mirror as a group, so a left-facing figure still
+  needs its offsets swapped, as our engines do now); DMA pattern uploads on a cache miss; copper
+  lists patched in RAM and reloaded by DMA; and the top-border line numbering above.
 
 - ped7g/ZXSpectrumNextMisc snippets (MIT / Unlicense, read 2026-10-22): MUL-based arithmetic with
   T counts - 16x8, 24x8, 32x8+8, 16x16 multiplies; E / 10 in 33-60 T (MUL + BSRL); HL mod 40 / 192
