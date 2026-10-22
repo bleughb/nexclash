@@ -127,6 +127,11 @@ Results table at $7E00: "NXBN", version, count, calibration lines (word), per te
 28 MHz). DMA uses the zxnDMA port $6B, continuous mode, 2 T timing on both ports; on cores before
 3.02.02 the DMA read was one cycle behind at 3.5 / 7 MHz (changelog) - the copy checks show it.
 
+Board results: v1 (2026-10-22, core 3.02.00): every CPU row at 3.5 MHz as its T-state count; 28 MHz
+6.3-7x faster (memory wait states); DMA rows WRONG at 3.5 MHz ("!" on DMA 1B / 256 / 2K and FILL DMA,
+border red; the core changelog fixes it in 3.02.02), right at 28 MHz. The table and conclusions:
+docs/TECHNIQUES.md 1.0. Photos: specnext reference/hwtests/nextbench/.
+
 Checked before any board (2026-10-22): in SkoolKit + z80n with a modelled raster (no DMA, no CPU
 speed change) every CPU-only row at 3.5 MHz matches its T-state count within 0.7 % (e.g. LDI x256
 1251.3 for 1249.7 us, NEXTREGv 5.5 for 5.7, ULA CHAR 61.7 for 61.7).

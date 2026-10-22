@@ -12,6 +12,48 @@ zx_next_notes/copper; github.com/stevemonks/ZXSpectrumNextMachineCodeGuides;
 github.com/breakintoprogram/lib-spectrum-next lib/dma.z80; full guide r3 review: GUIDE_R3_REVIEW.md). Nothing here is simulated or hardware-tested: the first engine that uses one
 implements it in the simulator (NEXT_REGISTERS "SIMULATOR TRAP") and records the hardware result.
 Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5 MHz T-states.
+
+### 1.0 Measured costs on a board (tools/hwtests/nextbench, core 3.02.00, 2026-10-22)
+Microseconds per call on a real Next (raster-line timing, call overhead subtracted). These are
+HARDWARE-MEASURED; the estimates in the rest of this section are not. 28 MHz = the hooks' speed.
+
+| Work | Technique | 3.5 MHz | 28 MHz | 28 MHz per byte |
+|---|---|---|---|---|
+| copy 256 B | LDIR | 1548.6 | 220.5 | 0.861 |
+| | LDI x256 unrolled | 1250.7 | 185.6 | 0.725 |
+| | stack (POP / PUSH) | 961.1 | 145.6 | 0.569 |
+| | LDIRX | 1546.4 | 221.1 | 0.864 |
+| | DMA | 394.1 WRONG | 60.2 | |
+| copy 2K | LDIR | 12289.7 | 1755.9 | 0.857 |
+| | DMA | 2451.7 WRONG | 381.6 | 0.179 |
+| DMA set-up | DMA 1 byte (program + start) | 102.6 WRONG | 14.7 | |
+| | program only (no ENABLE) | 94.3 | 13.5 | |
+| fill 256 B | LDIR / PUSH / DMA | 1539.7 / 419.0 / 395.1 WRONG | 220.2 / 57.4 / 60.2 | 0.860 / 0.224 / ~0.18 |
+| sprite pattern 256 B -> 0x5B | OTIR / OUTI unrolled / OUTINB / DMA | 1546.4 / 1252.4 / 1255.8 / 402.8 | 221.3 / 186.7 / 186.7 / 61.6 | 0.864 / 0.729 / 0.729 / 0.184 |
+| one sprite's 4 attributes | port 0x57 / NEXTREG $34-$38 | 30.5 / 28.6 | 4.5 / 4.5 | |
+| one register | NEXTREG n,v / NEXTREG n,A / OUT 243B + 253B | 5.7 / 6.8 / 14.9 | 0.9 / 1.0 / 2.2 | |
+| paging | NEXTREG $56 / OUT 0x7FFD | 5.5 / 8.2 | 0.9 / 1.2 | |
+| one 8x8 cell | ULA (8 B + attr) / tilemap entry / Layer 2 (64 B) | 61.6 / 7.3 / 360.9 | 9.4 / 1.1 / 53.8 | |
+| scroll | tilemap or Layer 2 offset regs / copy one 256 B screen band | 11.4 / 1538.9 | 1.6 / 220.5 | |
+| palette entry | NEXTREG $43 / $40 / $41 | 17.1 | 2.7 | |
+| copper list 32 instructions | NEXTREG $60 / OUT $253B loop | 800.7 / 773.2 | 123.4 / 115.7 | |
+
+What it says:
+- DMA set-up is ~14.5 us at 28 MHz (~13.5 of it writing the 16-byte program); after that 0.18 us a
+  byte, memory or port. Break-even at 28 MHz: vs LDIR ~21 bytes, vs unrolled LDI / OUTI ~27, vs a
+  stack copy ~37; vs a PUSH fill ~330 bytes. Rewriting only the changed DMA registers would cut
+  the set-up (not measured).
+- DMA at 3.5 MHz gives WRONG copies on core 3.02.00 (every check failed; the core changelog fixes
+  it in 3.02.02); at 28 MHz every DMA copy / fill was right. Use DMA only at 28 MHz, or require
+  core 3.02.02+.
+- 28 MHz is ~6.3-7x 3.5 MHz, not 8x: each memory read adds a wait state, so (T + reads) / 8
+  (LEARNINGS 2.1f): LDIR 21 T + 3 reads -> 3.0 T a byte at 3.5 MHz terms = 0.857 us (measured 0.861).
+- Sprite pattern upload: DMA is ~3x OUTI for a 256-byte pattern and ~1.8x for a 64-byte one
+  (14.5 + 64 x 0.18 = 26 us vs 47 us). OUTINB = OUTI. Sprite attributes: port and NEXTREG the same.
+- NEXTREG is 2.4x the port pair; MMU paging (NEXTREG) a little faster than OUT 0x7FFD.
+- An 8x8 cell: a tilemap entry is ~8x cheaper than the ULA cell and ~50x cheaper than a Layer 2
+  cell; hardware scroll costs 1.6 us against 220 us per 256 bytes copied.
+- Copper upload: the port loop is slightly faster than NEXTREG $60 per byte at 28 MHz.
 - Sprite attributes in bulk: write port 0x303B = first sprite, then the 5 bytes per sprite
   (= $35..$39 in order) to port 0x57; the sprite index advances after each sprite's last byte
   (4 bytes when byte 3 bit 6 = 0), wraps 127 -> 0. OTIR 21 T/byte = ~105 T/sprite, unrolled OUTI
