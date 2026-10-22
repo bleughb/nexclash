@@ -191,7 +191,10 @@ BRIEFING - with its reason.
 - Never put hook CODE at 0x3D00-0x3DFF in an alt ROM / slot-1 page: Commando 541e34e2 crashed at
   its first figure on hardware and in CSpect with code there, and ran once the code moved out
   (tables stayed there). Probable cause: the DivMMC (TR-DOS) automap on an instruction fetch at
-  0x3Dxx, despite the stub clearing NextReg $06 bit 4 - not confirmed (BRIEFING A1, C2 #24).
+  0x3Dxx. The stub clears NextReg $06 bit 4, which switched automap off only up to core 3.01.05;
+  from 3.01.10 that bit is the DRIVE-button NMI alone, the automap enable is $0A bit 4, and $BB bit
+  7 (on at reset) automaps on any fetch at $3Dxx while ROM3 is selected (official core nextreg.txt,
+  core 3.02.05; NEXT_REGISTERS $06 / $0A / $B8-$BB). Not confirmed on a board (BRIEFING A1, C2 #24).
   Invisible to the simulator; `auto` checks it statically and per instruction (Commando).
 - Flicker: never hide a figure's sprites at plot entry and show them at exit (hidden for the
   whole call, often across the beam). Keep them visible, build the new image in OTHER pattern

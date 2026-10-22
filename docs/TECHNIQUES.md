@@ -199,7 +199,7 @@ What v2 adds:
     behind a Layer 2 cleared to that index. The changed entry stops matching $14 (a COLOUR
     compare), so 'transparent' pixels become visible: a game layer whose entry the copper rewrites
     loses its see-through pixels. Same demos: $64 = 33 aligns copper line 0 with the 320x256 Layer 2
-    top (not checked against KevB's tables).
+    top (the register text says 32: "Raster numbering" below).
   * DMA fill by overlap: memory -> memory with destination = source + 1 (the LDIR fill idiom)
     fills a block, e.g. a 257-byte IM2 vector table; alternative to fixed-port-A fill.
   * UNVERIFIED claim in its Copper.asm: copper MOVEs to NextReg $15 "reset clipping values", so the
@@ -268,19 +268,25 @@ What v2 adds:
   documented there).
 - Raster numbering: Active Video Line ($1E/$1F), line interrupt ($22/$23) and copper WAIT all
   count from ULA pixel row 0 UNLESS NextReg $64 (core 3.01.05+) is non-zero: it offsets all three
-  (changelog 3.01.05). Frame length differs by timing: 48K 312 lines, 128K 311, HDMI 312 (60 Hz:
-  262/261); display rows 0-191, then border + blanking. A raster wait that assumes 312 lines or
-  offset 0 is a hardware-only fault (BRIEFING C2 #26).
+  (changelog 3.01.05). Frame length differs by timing: 48K 312 lines, 128K 311, Pentagon 320 on
+  VGA; HDMI 312 whatever the machine timing; 60 Hz 262 (48K, HDMI) / 261 (128K VGA). Line length:
+  896 clocks (48K, Pentagon), 912 (128K), 864 (HDMI 50 Hz), 858 (HDMI 60 Hz). The ULA interrupt
+  comes at line 248 (48K / 128K VGA 50 Hz), 239 (Pentagon), 256 (HDMI 50 Hz). Display rows 0-191,
+  then border + blanking (all from varmfskii zx_next_notes copper tables). A raster wait that
+  assumes 312 lines or offset 0 is a hardware-only fault (BRIEFING C2 #26).
   The freeze trap (a Next developer's note, 2026-10-22; matches Gen4's patch_copper_y): with $64 = 0
   the line just above ULA row 0 is the LAST line of the frame, numbered 260, 261, 310, 311 or 319
   by mode. A copper WAIT or a CPU poll for a line the current mode does not have (311 in VGA 60 Hz)
   never fires: the copper holds, the CPU loops forever. With $64 = 32 the top border starts the
   count (ULA row 0 = line 32, the line above it = 31 in every mode) and the lines a mode lacks are
   all at the bottom: wait only for lines below the shortest frame you support (261 lines at 60 Hz).
-  Open: the copper demos above say $64 = 33 aligns the 320x256 Layer 2 top - one line apart from
-  this note; a board test (BRIEFING C2 #28) settles it. Our code assumes $64 = 0 (and a frame of at
-  least 258 lines: nextbench frame_sync, Rainbow rsafe), so the stub must reset $64 (C2 #26), and the
-  F3 key (50 / 60 Hz) changes the frame length under a running game.
+  The register text agrees (varmfskii zx_next_notes, $64): with offset 32, line 32 = ULA row 0 and
+  line 0 = the first pixel row of the tilemap and sprites; a new offset takes effect when the ULA
+  reaches row 0, so up to a frame late. The copper demos above use $64 = 33 for the 320x256 Layer 2
+  top - perhaps to make up for a copper change showing one line late (Sprites/ScanlineDelay below);
+  a board test (BRIEFING C2 #28) settles which a list needs. Our code assumes $64 = 0 (and a frame
+  of at least 258 lines: nextbench frame_sync, Rainbow rsafe), so the stub must reset $64 (C2 #26),
+  and the F3 key (50 / 60 Hz) changes the frame length under a running game.
 - Tilemap attribute byte (2-byte entries): bits 7:4 palette offset (used), bit 3 X mirror, bit 2 Y
   mirror, bit 1 rotate 90 clockwise (with the mirrors: 0/90/180/270), bit 0 ULA over the tile.
   A tile that is another's mirror or rotation needs NO definition of its own: dedupe tile
@@ -308,7 +314,8 @@ What v2 adds:
   * Copper: CSpect 2.11.1 and ZEsarUX 8.0 BAD, MAME 0.282 OK, board core 3.01.05 OK. Copper WAIT
     compares the horizontal position as >= on the current line: a WAIT for an h already passed ON
     THE SAME LINE does not wait (no roll-over into the next frame). Rewriting $61/$62 with the same
-    mode bits does not disturb a running list (already in the Copper bullet above; the test proves it on hardware).
+    mode bits does not disturb a running list (already in the Copper bullet above; the test proves
+    it on hardware).
   * Sprites (Sprites/ScanlineDelay, core 3.00.07+): the sprite engine swaps its line buffer at sprite
     X = -1, so an attribute change shows ONE scanline later; to change a sprite from line N on,
     write it before copper WAIT(line N-2, h ~50). A commit racing the beam tears by whole lines.
@@ -393,12 +400,15 @@ Ped7g's test suite) where a technique there is mostly about one Next feature.
   (zx-next-copper-wobble).
 - WAIT near a line's end (zxnext-copper-samples, commit "Handle copper matching near end of lines"):
   the last ~128 dots of a line are never matched by a WAIT; a WAIT for an h there waits until that
-  line comes round next FRAME. Wait for (line + 1, 0) instead.
+  line comes round next FRAME. Wait for (line + 1, 0) instead. varmfskii's tables give the largest h
+  a WAIT can match per mode: 52 (HDMI), 54 (48K, Pentagon), 55 (128K) - h x 16 clocks, leaving 32
+  clocks of the line (26 at HDMI 60 Hz) that no WAIT reaches.
 - Raster counters and the top border:
-  * zxnext-copper-samples: copper raster counters follow the machine type (NextReg $03) and 50 /
-    60 Hz only, not the VGA / HDMI mode: 896 dots a line at 48K timing, 912 at 128K / Next, 312 /
-    311 lines (264 at 60 Hz by their notes; Gen4 / DynaTile and "Raster numbering" in section 1 say
-    262 / 261 - not checked on a board); WAIT h = dot / 16.
+  * zxnext-copper-samples' notes say the copper counters follow the machine type (NextReg $03)
+    and 50 / 60 Hz only, not VGA / HDMI, with 896 clocks a line at 48K timing, 912 at 128K and 264
+    lines at 60 Hz. varmfskii's tables (section 1, "Raster numbering") disagree on two points: HDMI
+    has its own 864 / 858 clocks a line and 312 / 262 lines whatever the machine timing, and a 60
+    Hz frame is 262 / 261 lines (Gen4 / DynaTile agree). Use those. WAIT h = clock / 16.
   * Gen4 patch_copper_y converts display Y (32 border lines above ULA line 0) to copper lines: Y -
     32, and a negative result wraps to (lines per frame) + (Y - 32), the line count read from the
     video mode (312 HDMI / 48K, 311 128K, 320 Pentagon, 262 / 261 at 60 Hz; DynaTile / Tilemap carry
@@ -598,21 +608,22 @@ Ped7g's test suite) where a technique there is mostly about one Next feature.
   fixed, burst mode (WR4), WR2 timing byte with bit 5 = a prescaler byte following (the pacing),
   WR5 auto-restart for a looping sample (z88dk D_WR5_RESTART: at the end of the block the DMA
   reloads and starts again), then read mask, LOAD, $B3 (force ready), ENABLE. 8-bit unsigned mono
-  at 8 kHz, one 8K page per bank of samples. OPEN: the demo plays with prescaler 12 x 12 = 144,
-  which by "rate = 875 kHz / prescaler" (zxnDMA bullet, section 1) is ~6.1 kHz, not 8 kHz - either
-  that formula or the demo's pitch is off; a board test settles it before we rely on the formula.
+  at 8 kHz, one 8K page per bank of samples. The demo plays with prescaler 12 x 12 = 144,
+  which by "rate = 875 kHz / prescaler" is ~6.1 kHz, not 8 kHz. The formula is the documented one
+  (varmfskii zx_next_notes zxnDMA chapter: 16 kHz = prescaler 55, the 875 kHz scaled by clk28 from
+  NextReg $11, constant across CPU speeds), so the demo most likely plays its samples low.
 - The same demo's CTC alternative: a timer interrupt (IM2, vector table of $81 bytes, handler at
   $8181) that sends one byte per interrupt; CTC channel 0, prescaler 16, time constant 219 = 7,991
   Hz. CTC rate = clk28 / (prescaler x time constant), prescaler 16 or 256 (control word bit 5),
   time constant 0 = 256 (RustyPixelsUK zxnext ctc.h). Next Point's comment writes "(1 + time
   constant)"; the two differ by ~1 % - not checked.
-- The Next's clock and frame rate follow the VIDEO TIMING mode (NextReg $11 bits 2:0; RustyPixelsUK
-  zxnext ctc.c tables, not checked against the core docs): clk28 = 28.0, 28.57, 29.46, 30, 31, 32,
-  33 MHz for VGA timings 0-6 and 27 MHz for HDMI; a "50 Hz" frame is then 50.00, 51.02, 52.61,
-  53.57, 55.36, 57.14, 58.93 Hz (HDMI 50.00), a "60 Hz" one 60.00 ... 70.71 (HDMI 60.00). So
-  everything paced by the frame interrupt - every game we convert - runs up to ~18 % fast on a
-  VGA 1-6 setting, and CTC / DMA-prescaler rates scale with clk28 too. The setting is the user's
-  machine configuration (BRIEFING A1, Video).
+- The Next's clock and frame rate follow the VIDEO TIMING mode (NextReg $11 bits 2:0, writable in
+  config mode only; RustyPixelsUK zxnext ctc.c tables, clk28 as varmfskii's $11 page): clk28 =
+  28.0, 28.57, 29.46, 30, 31, 32, 33 MHz for VGA timings 0-6 and 27 MHz for HDMI; a "50 Hz" frame
+  is then 50.00, 51.02, 52.61, 53.57, 55.36, 57.14, 58.93 Hz (HDMI 50.00), a "60 Hz" one 60.00 ...
+  70.71 (HDMI 60.00). So everything paced by the frame interrupt - every game we convert - runs up
+  to ~18 % fast on a VGA 1-6 setting, and CTC / DMA-prescaler rates scale with clk28 too. The
+  setting is the user's machine configuration (BRIEFING A1, Video).
 - For us: C2 #37 (beeper replay) has two candidate players: copper-driven (no CPU per sample, one
   frame of latency) or a CTC interrupt (~10 % CPU at 16 kHz; needs hardware IM2 mode, C2 #34).
 - Sprite multiplexing by chained line interrupts: 2.4.
@@ -746,6 +757,10 @@ ours.
   zxnext_tilemap (hardware tilemap scroll) and zxnext_layer2_tilemap (the original of the
   vmorilla copy in 2.2; its configure.m4 also offers C or asm versions, aligned mod look-up tables
   and map order x- or y-first). Their Next code lives in a git submodule:
+- zx_next_notes (github.com/varmfskii/zxnext_code, folder zx_next_notes; no licence file; LaTeX
+  source of a Next notes book, read 2026-10-22 for copper / video timing, zxnDMA, $11, $64 and
+  DivMMC): the line, clock and interrupt tables in section 1 "Raster numbering", the DMA prescaler
+  confirmation in 2.6, the DivMMC automap move (BRIEFING A1, C2 #24). Listed in BRIEFING A0.
 - RustyPixelsUK/zxnext (github.com/RustyPixelsUK/zxnext; NO licence file: ideas only, although
   the demos that include it are MIT; read 2026-10-22): dma, ctc, sprite, tilemap, layer2 (incl. the
   software-tilemap draw routines), bank, sound (PT3, AYFX). Reuse review:
