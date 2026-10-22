@@ -156,6 +156,11 @@ which at 3.5 MHz returned a line 0-3 lines late; v2's 3.5 MHz figures carry that
 lines x 16 us / R per call: tens of us on R = 1 rows such as LDIR 2048, nothing on R >= 64 rows);
 its 28 MHz figures much less (a read is 8x shorter than a line there).
 
+v3 board run (2026-10-22, core 3.02.00): every value repeated within its rounding over the 5 runs
+(no "~"; page 6 "none"); border red only for the known DMA "!" at 3.5 MHz. CP WAIT 120 / 120 (v2 read
+122 at 3.5 MHz: the late line read, now fixed), CP APART 0 / 0, CP SHARE 255 / 255. 28 MHz means
+within 0.5 % of v2 (TECHNIQUES 1.0b). Photos: specnext reference/hwtests/nextbench/ board_v3_p1..p5.
+
 v3 checked before any board (2026-10-22), SkoolKit + z80n with a modelled raster (NextReg $07 not
 modelled: both speeds run 3.5 MHz timing): (1) no added noise, NR v slowed by 40 T a call in runs
 3-5: every other row's 5 runs within 1 line, only NR v "~" (3.5 and 28), its page min 5.7 / max

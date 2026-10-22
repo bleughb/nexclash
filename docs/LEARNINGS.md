@@ -566,7 +566,12 @@ Grouped by question; add a new lesson to its group.
   row's runs 417 / 421 lines in the simulator; found 2026-10-22 when v3 repeated the runs). To time:
   read LSB, MSB, LSB; the first LSB is the instant; the MSB belongs to it unless the second LSB is
   below the first (the MSB only changes where the LSB wraps), and only then read again (nextbench v3
-  `line`). z80ntest still uses the old loop (its 2048-run averages divide the error away).
+  `line`). z80ntest still uses the old loop (its 2048-run averages divide the error away). Board
+  proof: nextbench's copper WAIT 120 row read 122 at 3.5 MHz with the old loop, 120 with the new.
+- The Next is repeatable to the raster line: nextbench v3 ran all 176 timings 5 times on a board and
+  no value varied beyond rounding (DMA, copper, NEXTREG and port rows included). One clean
+  measurement of a technique on a given core is enough; a figure that moves between runs points at
+  the measurement, not the machine.
 - Z80N instructions in hooks: always allowed in .nex builds (maintainers, 2026-10-21). SkoolKit's
   simulator does not know them (an unknown ED opcode runs as a silent 2-byte NOP), so a verifier
   calls `z80n.install(sim, nextreg)` after simpool.machine(): all 29, NEXTREG through the engine's

@@ -59,8 +59,12 @@ What it says:
 Same board, same method; R chosen per row. Microseconds per call at 28 MHz (3.5 MHz on the photos,
 specnext reference/hwtests/nextbench/; every 3.5 MHz CPU row again matched its T-state count).
 v2's line read could return a line up to 3 lines late (LEARNINGS 2.3; fixed in v3): at 28 MHz that
-is under 1 % on the rows below (one read is far shorter than a line there); v3 repeats every row 5
-times and marks values that vary between runs.
+is under 1 % on the rows below (one read is far shorter than a line there). v3 on the same board
+(2026-10-22, 5 runs): NO value varied between runs beyond its rounding (variation page "none"), and
+its 28 MHz means agree with this table within 0.5 % (LDIR 2048 1754.7, DMA 2048 380.5, stack 2048
+1154.2, PUSH fill 2048 459.1, OUTI 2048 1405.7, NEXTREG 0.9): the table stands, and one run of a
+technique is a reliable figure on a given core. DMA at 3.5 MHz (still wrong copies on 3.02.00):
+1 B 102.7, 16 B 117.8, 256 B 393.9, 2 KB 2441.4 us; port uploads 64 B 182.3, 256 B 401.6.
 
 | Copy (bytes) | 1 | 16 | 64 | 256 | 1024 | 2048 |
 |---|---|---|---|---|---|---|
@@ -88,8 +92,9 @@ times and marks values that vary between runs.
 | copper start + stop | 1.8 |
 | LDIR 256 while the copper loops MOVEs | 220.9 (= without) |
 
-Copper function rows: CP WAIT (WAIT line 120 -> MOVE seen by the CPU) at line 120 at 28 MHz (122 at
-3.5 MHz: CPU poll + line read latency) - copper line numbers = the $1E / $1F raster line. CP APART:
+Copper function rows: CP WAIT (WAIT line 120 -> MOVE seen by the CPU) at line 120 at 28 MHz (v2: 122
+at 3.5 MHz, which was v2's late line read; v3 reads 120 at both speeds) - copper line numbers = the
+$1E / $1F raster line. CP APART:
 0 of 256 palette entries wrong while the copper looped MOVE $7F and the CPU wrote / read the palette
 by NEXTREG and the port pair. CP SHARE: 255 of 256 wrong with the copper looping MOVE $40.
 
