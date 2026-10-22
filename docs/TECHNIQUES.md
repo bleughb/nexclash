@@ -344,6 +344,30 @@ What v2 adds:
 
 ## 2. Other projects
 
+- DynaTile and Tilemap (github.com/seedy1812, read 2026-10-22; NOT run by us). DynaTile has no
+  licence file (ideas only, no code); Tilemap is GPL-3.0 (compatible with ours).
+  * DynaTile streams a map of up to 1500 "software" tiles through the 355 hardware tile slots of a
+    4-bit tilemap: per software tile a reference count and its hardware slot, per slot its software
+    tile, free slots in a linked list. A tile scrolling in takes a slot only on its first use (count
+    0 -> 1) and uploads its 32 bytes; a slot goes back to the free list when its count drops to 0.
+    O(1) per tile, no search. Upload by DMA with the program split in two: the length and port
+    modes written once, then per tile only addresses + LOAD + ENABLE (9 bytes; our "rtg" row,
+    TECHNIQUES 1.0b: ~13 us + 0.18 us a byte, ~19 us for a 32-byte tile vs ~28 us by LDIR).
+    For us: Rainbow's tile cache (games/rainbow_islands.md, "Objects on the tilemap") rebuilds per
+    render from a key (hash + 16 probes) because its tiles are COMPOSED from objects, not copied, so
+    a count-and-free-list allocator fits only where a cell's tile has a fixed source (a map tile);
+    DMA helps only for copied tiles.
+  * Tilemap: a 40x32 tilemap (320x256) scrolled with a status bar, both by copper: at the bar's line
+    the copper MOVEs the tilemap X / Y offsets ($2F-$31), the clip window ($1C / $1B) and a palette
+    entry, and a second WAIT where the circular 32-row map wraps changes Y again, so the map can
+    scroll through its buffer while the bar stays still. Hardware IM2 mode with the line interrupt
+    as the frame interrupt (DynaTile too: $C0 = 1 + table bits 7:5, $C4 = 2, $22 / $23 line 192,
+    $CC-$CE: which interrupts may stop a running DMA). Lines per mode table: 312 (HDMI / 48K 50 Hz),
+    311 (128K), 320 (Pentagon), 262 / 261 at 60 Hz.
+    For us: Rainbow already clips the tilemap to the play area and switches it off when a render's
+    scroll is not a multiple of 8 (never seen), so no split is needed there; a game that scrolls by
+    pixels with a HUD would use this copper split instead of redrawing.
+
 - zxnext-copper-samples (github.com/shadowphiar/zxnext-copper-samples, CC0, z88dk C, read
   2026-10-22; NOT run by us): the copper plays 8-bit stereo PCM at ~11 kHz by MOVEs to the DAC
   mirror NextRegs (DAC_B / DAC_C) with a WAIT between ticks - sound with no CPU timing at all.
