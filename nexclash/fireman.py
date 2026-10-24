@@ -33,6 +33,7 @@ DIA_GFX = 60692                 # 7 bytes: the collectable's rows
 SPR_DIA = 0                     # sprites 0-4
 SPR_SLOT = {0: (9, 10), 1: (7, 8), 2: (5, 6)}
 PAT_DIA = 6
+DIA_INDEX = 4                   # sprite palette index of the collectables (slots use 1-3, palette offset 0)
 STACK_DEAD = 64
 
 # (address, original bytes, symbol or None, opcode or None, replacement bytes when no symbol)
@@ -97,13 +98,13 @@ def diamond_rows(peek):
 
 
 def diamond_pattern(peek):
-    """128 bytes: 16 x 16 4-bit pixels, the 8 x 7 diamond at the top left (colour 1)."""
+    """128 bytes: 16 x 16 4-bit pixels, the 8 x 7 diamond at the top left (colour index 4)."""
     out = bytearray(128)
     for r, v in enumerate(diamond_rows(peek)):
         for k in range(4):
             hi = (v >> (7 - 2 * k)) & 1
             lo = (v >> (6 - 2 * k)) & 1
-            out[r * 8 + k] = hi << 4 | lo
+            out[r * 8 + k] = (hi << 4 | lo) * DIA_INDEX
     return bytes(out)
 
 
@@ -337,7 +338,7 @@ class World:
         self.hs = bytearray(32)
         self.ns = NextState(pats)
         self.ns.nr[0x43] = 0x20                 # setup: sprite palette selected
-        self.ns.pal[0x31] = 0xB6                # diamond colour (setup)
+        self.ns.pal[DIA_INDEX] = 0xB6           # diamond colour (setup)
         self.F = {}
         self.drawn = {}                 # slot -> (x, y, frame) the original has drawn
         self.dia = {}                   # index -> set of pixels the original drew (room table entry)
@@ -474,6 +475,9 @@ def event(patch, kind, site, get, R, world, alt, Sim, extra=None):
         if not (_run(so, stop) and _run(sp_, stop)):
             return ['isr hook did not return']
         ro, rp = so.registers, sp_.registers
+        world.touch['T original, kind isr'] += ro[25] - R[25]
+        world.touch['T patched, kind isr'] += rp[25] - R[25]
+        world.touch['T patched, isr, worst'] = max(world.touch['T patched, isr, worst'], rp[25] - R[25])
         diff = [i for i in CMP if ro[i] != rp[i]]
         if diff:
             f.append(('registers differ', diff, [ro[i] for i in diff], [rp[i] for i in diff]))
@@ -506,8 +510,8 @@ def event(patch, kind, site, get, R, world, alt, Sim, extra=None):
             world.touch['slot pixels compared'] += len(want)
         for s_ in world.drawn:
             e_ = get(SLOTS + 8 * s_ + 6)
-            if ns.pal.get(16 * s_ + 1) != model_colour(e_):
-                f.append(('slot %d palette entry differs from the colour model' % s_, ns.pal.get(16 * s_ + 1), model_colour(e_)))
+            if ns.pal.get(s_ + 1) != model_colour(e_):
+                f.append(('slot %d palette entry differs from the colour model' % s_, ns.pal.get(s_ + 1), model_colour(e_)))
         ent = _diamond_entries(get)
         for i in range(5):
             got = clip(ns.pixels(SPR_DIA + i))
@@ -584,6 +588,8 @@ def event(patch, kind, site, get, R, world, alt, Sim, extra=None):
             f.append(b_)
         world.touch['hook instructions checked for interrupt safety'] += 1
         rp = sp_.registers
+        world.touch['T original, kind rd'] += ro[25] - R[25]
+        world.touch['T patched, kind rd'] += rp[25] - R[25]
         diff = [i for i in CMP if ro[i] != rp[i]]
         if diff:
             f.append(('rd registers differ', diff, [ro[i] for i in diff], [rp[i] for i in diff]))
@@ -600,6 +606,8 @@ def event(patch, kind, site, get, R, world, alt, Sim, extra=None):
         f.append(b_)
     world.touch['hook instructions checked for interrupt safety'] += 1
     ro, rp = so.registers, sp_.registers
+    world.touch['T original, kind ' + kind] += ro[25] - R[25]
+    world.touch['T patched, kind ' + kind] += rp[25] - R[25]
     diff = [i for i in CMP if ro[i] != rp[i]]
     if kind == 'pl' and diff and set(diff) <= {1, 16, 17}:
         # F and AF' at the end of the plotter are leftovers of its working registers (CP L at 48195,
@@ -749,6 +757,12 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             def mk(fn):
                 def g():
                     pc = R[24]
+                    if pc == 49740:
+                        st['t0'] = R[25]
+                    elif pc == ISR_SITE and 't0' in st:
+                        d = R[25] - st['t0']
+                        world.touch['ISR entry to hook site, T total'] += d
+                        world.touch['ISR entry to hook site, T max'] = max(world.touch['ISR entry to hook site, T max'], d)
                     if pc in WATCH:
                         cnt[pc] += 1
                         ev = EVENT.get(pc)
@@ -924,6 +938,10 @@ def unit_tests(patch, states, neg=None):
         if fl and c['  rd fail example'] < 3:
             c['  rd fail example'] += 1
             c['  site %d de %04X slots %s: %s' % (site, de, slots, str(fl[:1])[:200])] += 1
+    fl = setup_test(patch, isr[0][3])
+    c['setup routine %s' % ('ok' if not fl else 'FAIL!')] += 1
+    if fl:
+        c['  setup: %s' % (fl,)] += 1
     # 5. negative controls: each broken patch must FAIL the same checks
     if neg:
         for name, bp, run in neg:
@@ -934,6 +952,53 @@ def unit_tests(patch, states, neg=None):
                 bad += 1 if run(bp, k) else 0
             c['negative control %s: %s' % (name, 'detected' if bad else 'NOT DETECTED!')] += 1
     return c
+
+
+def setup_test(patch, mem64):
+    """Run the start-up routine (0xD000) with bank 11 behind NextReg $57 = 22: the diamond pattern lands in
+    pattern 6, patterns 0-5 are cleared, palette index 4 is white, every sprite is hidden, sprites are on,
+    $57 is back to 21 and nothing else is touched."""
+    f = []
+    ns = NextState()
+    ns.pat[:] = bytes([0x77]) * 16384                   # garbage the routine must overwrite
+    bank = bytearray(16384)
+    bank[0:128] = patch.extra_banks[11][0:128] if patch.extra_banks else patch.pats
+    base = bytearray(mem64)
+    base[0xD000:0xD000 + len(patch.stub_extra)] = patch.stub_extra
+
+    class M(list):
+        def __getitem__(s, a):
+            if type(a) is int and a >= 0xE000 and ns.nr.get(0x57) == 22 and a < 0x10000:
+                return bank[a - 0xE000]
+            return list.__getitem__(s, a)
+
+        def __setitem__(s, a, v):
+            if type(a) is int and a >= 0x4000:
+                list.__setitem__(s, a, v)
+    mem = M(base)
+    regs = [0] * 28
+    regs[12] = 0xB800
+    regs[24] = 0xD000
+    mem[0xB800], mem[0xB801] = 0xFE, 0xFF
+    sim = _machine(_rw(), mem, regs, ns, 'o')
+    if not _run(sim, lambda r: r[24] == 0xFFFE and r[12] == 0xB802, 100000):
+        return ['setup did not return']
+    if bytes(ns.pat[PAT_DIA * 128:PAT_DIA * 128 + 128]) != patch.pats:
+        f.append('diamond pattern not uploaded')
+    if any(ns.pat[:PAT_DIA * 128]):
+        f.append('patterns 0-5 not cleared')
+    if bytes(ns.pat[(PAT_DIA + 1) * 128:]) != bytes([0x77]) * (16384 - (PAT_DIA + 1) * 128):
+        f.append('setup wrote beyond pattern 6')
+    if ns.pal.get(DIA_INDEX) != 0xB6:
+        f.append('diamond colour')
+    if ns.nr.get(0x4B) != 0 or ns.nr.get(0x15) != 1 or ns.nr.get(0x57) != 21:
+        f.append(('transparency / sprites on / MMU7', ns.nr.get(0x4B), ns.nr.get(0x15), ns.nr.get(0x57)))
+    if any(a[3] & 0x80 for a in ns.attr):
+        f.append('a sprite is visible after setup')
+    other = [e for e in ns.events if e[0] == 'nr' and e[1] not in (0x57, 0x43, 0x40, 0x41, 0x4B, 0x34, 0x38, 0x15)]
+    if other:
+        f.append(('other NextRegs', other[:2]))
+    return f
 
 
 def negative_patches(patch, states):

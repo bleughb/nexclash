@@ -12,9 +12,9 @@
 ;  - Slot s (0 fireman, 1 and 2 room figures): state at 48375 + 8s = x, y, frame (+2), ... E (+6).
 ;    The 16 x 24 image (gfx at (48450) + 48 frame, 2 bytes per row, top down, 1 = ink) is two sprites
 ;    (rows 0-15 at y, rows 8-23 at y + 8; the overlap draws the same pixels twice), patterns 2s, 2s + 1,
-;    converted to 4-bit when the frame changes (LASTF), colour = sprite palette entry 16s + 1 from E.
+;    converted to 4-bit when the frame changes (LASTF), colour = sprite palette entry s + 1 (offset 0) from E.
 ;  - Collectables: the game draws one 8 x 7 diamond per room table entry (id, x, y; table 55021 + 2 room,
-;    5 entries) at (x & 0xF8, y + 2); sprite i, pattern 6 (uploaded by setup), palette offset 3.
+;    5 entries) at (x & 0xF8, y + 2); sprite i, pattern 6 (uploaded by setup, pixel index 4 = white).
 ;
 ; Patch sites (original bytes checked by incredible_shrinking_fireman.py):
 ;   48220  DD E1 C9         POP IX / RET (plotter end, HL = state + 2)      -> JP e_ep
@@ -355,7 +355,9 @@ e_isr:  push af
         push bc
         push de
         push hl
+        push ix
         call upd
+        pop ix
         pop hl
         pop de
         pop bc
@@ -436,11 +438,7 @@ upd:    ld c,0
         add hl,de
         ld e,(hl)               ; sprite colour
         ld a,c
-        add a,a
-        add a,a
-        add a,a
-        add a,a
-        inc a
+        inc a                   ; palette index c + 1 (palette offset 0: MAME draws index 0 opaque under an offset)
         nextreg 0x40,a
         ld a,e
         nextreg 0x41,a
@@ -457,6 +455,12 @@ upd:    ld c,0
         cp b
         jr z,.pos
         ld (hl),b
+        ld a,c
+        inc a
+        ld d,a
+        ld e,0x11
+        mul d,e
+        ld ixh,e                ; pixel colour index c + 1 in both nibbles (IX is the ISR's own, saved at 49745)
         ld a,b
         ld e,a
         add a,a
@@ -491,13 +495,7 @@ upd:    ld c,0
         ld a,0
         adc a,0
         ld b,a                  ; X8
-        ld a,c
-        add a,a
-        add a,a
-        add a,a
-        add a,a
-        or b
-        ld d,a                  ; attribute 2: palette offset c, X8
+        ld d,b                  ; attribute 2: palette offset 0, X8
         inc hl
         ld l,(hl)               ; L = y (H no longer needed)
         ld a,l
@@ -578,7 +576,7 @@ upd:    ld c,0
         ld l,a
         ld a,0
         adc a,0
-        or 0x30                 ; palette offset 3, X8
+                                ; palette offset 0, X8
         ld h,a
         inc de
         ld a,(de)               ; y
@@ -638,9 +636,11 @@ cvt:    rrca                    ; 0x303B = (A >> 1) | (A << 7): pattern slot, bi
         add a,low ntab
         ld e,a
         ld a,(de)
+        and ixh
         out (c),a
         inc e
         ld a,(de)
+        and ixh
         out (c),a
         dec hl
         ld a,(hl)
@@ -650,19 +650,21 @@ cvt:    rrca                    ; 0x303B = (A >> 1) | (A << 7): pattern slot, bi
         add a,low ntab
         ld e,a
         ld a,(de)
+        and ixh
         out (c),a
         inc e
         ld a,(de)
+        and ixh
         out (c),a
         djnz .by
         ret
 
         ALIGN 32
-; nibble (4 pixels, bit 3 = leftmost) -> two bytes of 4-bit pixels (index 1)
-ntab:   DB 0x00,0x00, 0x00,0x01, 0x00,0x10, 0x00,0x11
-        DB 0x01,0x00, 0x01,0x01, 0x01,0x10, 0x01,0x11
-        DB 0x10,0x00, 0x10,0x01, 0x10,0x10, 0x10,0x11
-        DB 0x11,0x00, 0x11,0x01, 0x11,0x10, 0x11,0x11
+; nibble (4 pixels, bit 3 = leftmost) -> two bytes of pixel MASKS; cvt ANDs them with IXH = colour index * 0x11
+ntab:   DB 0x00,0x00, 0x00,0x0F, 0x00,0xF0, 0x00,0xFF
+        DB 0x0F,0x00, 0x0F,0x0F, 0x0F,0xF0, 0x0F,0xFF
+        DB 0xF0,0x00, 0xF0,0x0F, 0xF0,0xF0, 0xF0,0xFF
+        DB 0xFF,0x00, 0xFF,0x0F, 0xFF,0xF0, 0xFF,0xFF
 ; sprite colour by (bright * 8 + ink), RRRGGGBB
 coltab: DB 0x00,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6
         DB 0x00,0x03,0xE0,0xE3,0x1C,0x1F,0xFC,0xFF
@@ -688,8 +690,8 @@ setup:  nextreg 0x57,22             ; bank 11 lower page at 0xE000: [0] diamond 
         otir
         nextreg 0x57,21
         nextreg 0x43,0x20           ; sprite palette 0, auto-increment (every write sets $40 first)
-        nextreg 0x40,0x31
-        nextreg 0x41,0xB6           ; palette offset 3 index 1: white diamond
+        nextreg 0x40,4
+        nextreg 0x41,0xB6           ; palette index 4: white diamond
         nextreg 0x4B,0
         xor a
 .h:     nextreg 0x34,a
