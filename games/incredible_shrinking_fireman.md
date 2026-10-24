@@ -46,8 +46,29 @@ No STATUS row / evidence record / engine yet.
   "virtual read" decision (PLAYBOOK 4) - to be proven by the verifier, not assumed.
 - Frames rendered: reference/<game>/preview_frames.png, preview_plot_47440.png (colour = caller).
 
+## Dean's decisions (2026-10-25, phase A answer)
+- ALL moving figures become sprites (fireman, both moving room figures, cut-scene figures: every
+  caller of 47440), AND the collectable items become sprites too.
+- Depth: no preference -> default: sprites always in front of the scenery. Colours: no preference ->
+  default: the colours the game's attribute routine gives today, then painting sheets (PLAYBOOK 3b) and
+  `recolour`. (Defaults chosen by the agent on Dean's "no preference"; revisit if hardware looks wrong.)
+
+## Collectables (found 2026-10-25)
+- Per-room object table: pointer table at 55021 + 2*room (room = (49612)); each room has 5 entries of
+  3 bytes (id, x, y); id 0 = empty slot. Current room's table address is cached in (60584).
+- Routines: 60487 (find first non-empty entry), 60518 (pickup test: figure box vs each entry, entry
+  box +26 wide / +34 high, returns id), 60727 (clear entry with id C: drop/pick-up bookkeeping),
+  53107 (find a free entry), 53126 (write dropped object: id, x (48375), y (48376)+16).
+- Drawing: the room draw at ~60621-60690 writes each object's 7 rows with plain stores (60683 LD
+  (HL),A; 56 writes in the first 4000 frames), address from 60699 ((x,y) -> screen address);
+  60780 is a second plain-store site (8 rows from 30000 + 8*(60456)+...). Graphics id table: names at
+  57881.., pointer table 57863; object count 32 (ids 1-32?). To be classified: where the graphic bytes
+  come from per id, how the screen cell is erased on pickup (room redraw? 52305?), attribute use.
+- Counts: collectables are drawn by overwrite (not XOR), so the build needs the hide/show model of
+  PLAYBOOK 4 (overwriting writers), not the XOR parity model.
+
 ## Open (next session)
-- Phase A question to Dean sent 2026-10-25 (figures, depth, colours); colour sheets need engine
-  capture code (midres.sheet_part template) - built after the answer.
-- Items/collectables: which routine draws them (not 47440; room redraw?) - check with a later recording.
+- Classify the object draw (60621-60690, 60780) and erase path; find every room/figure caller.
 - Free memory for hook state (all 8 slots touched by the ISR), tail address, alt-ROM hooks possible?
+- Engine: dizzy1.py (pure XOR + shadow screen) vs a differential-plot hook at 47440; sheet code
+  (midres.sheet_part template); evidence record; full verification once.
