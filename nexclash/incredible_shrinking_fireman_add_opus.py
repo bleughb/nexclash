@@ -208,8 +208,10 @@ SITES = {0xB950: ('dde587', 'e_ent', 'en'), 0xBC5C: ('dde1c9', 'e_plot', 'pl'), 
          0xC4A7: ('210040', 'e_c1', 'c'), 0xC5B1: ('210048', 'e_c2', 'c'), 0xB4AD: ('210040', 'e_c3', 'c'),
          0xFFF4: ('c34cc2', 'e_isr', 'isr')}
 NOPS = [(0xBCDF, 'dd7700', '000000')]       # figure attribute painting removed (LD (IX+0),A)
+IM2_SET = 0xC234                            # the game's IM 2 set-up: writes JP 0xC24C to 0xFFF4 (again on a
+IM2_OP = 0xC240                             # restart, RZX frame 32335): its LD BC,0xC24C operand -> e_isr
 INTERIORS = (0xB951, 0xBC5D, 0xFFF5, 0xFFF6, 0xED00, 0xED01, 0xC4A8, 0xC4A9, 0xC5B2, 0xC5B3, 0xB4AE, 0xB4AF,
-             0xBCE0, 0xBCE1)
+             0xBCE0, 0xBCE1, IM2_OP, IM2_OP + 1)
 PLOT_RANGE = (0xB950, 0xBC5F)               # the plotter's own screen writes
 ITEM_PC = 0xED0B                            # the collectable's screen write (LD (HL),A)
 ITEM_RET = 0xECF3
@@ -306,7 +308,8 @@ DECISIONS = {'engine': 'incredible_shrinking_fireman_add_opus',
              'mask': 'fireman and both room figures: black, the 4-neighbours of ink (Dean 2026-10-25, hardware round '
                      '1: all figures, up / down / left / right only; black suggested, not objected to)',
              'depth': 'sprites in front of everything',
-             'interrupts': 'deferred while a plot runs (0xFFF4 -> e_isr; the plotter is not re-entrant and the '
+             'interrupts': 'deferred while a plot runs (0xFFF4 -> e_isr, and the IM 2 set-up 0xC234 writes that jump '
+                           'too: it runs again on a restart; the plotter is not re-entrant and the '
                            'hooks moved the plots, so the ISR plotting into a main-code plot corrupted the screen '
                            'on hardware, Dean 2026-10-25 room 5); run at the plot exit',
              'tail': '0x5D00 (0x5C49-0x615B untouched in the whole-game RZX); printer buffer put back '
@@ -416,6 +419,7 @@ class FiremanPatch:
         self.sites = [(a, bytes.fromhex(old), b'\xC3' + self.syms[sym].to_bytes(2, 'little'))
                       for a, (old, sym, k) in SITES.items()]
         self.sites += [(a, bytes.fromhex(old), bytes.fromhex(new)) for a, old, new in NOPS]
+        self.sites.append((IM2_OP, b'\x4C\xC2', self.syms['e_isr'].to_bytes(2, 'little')))
         self.cmap = load_colours() if colours is None else colours
         self.pages = cmap_pages(self.cmap, code=self.p30)
         self.extra_banks = {}
@@ -874,6 +878,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
     alt = _alt(patch)
     Sim = _rw()
     site_bytes = {a + k for a, old, new in patch.sites for k in range(len(new))}
+    isr_jp = b'\xC3' + patch.syms['e_isr'].to_bytes(2, 'little')
     ns = NextState(patch.pages)
     model = Model(patch.cmap)
     st = {'frame': 0, 'on': False, 'paint': False, 'R': None, 'cover': {}}
@@ -893,7 +898,10 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         def __setitem__(s, a, v):
             if st['on']:
                 if a in site_bytes:
-                    fail('game wrote a patch site', (hex(a),))
+                    if 0xFFF4 <= a <= 0xFFF6 and IM2_SET <= st['R'][24] < IM2_SET + 0x17 and v == isr_jp[a - 0xFFF4]:
+                        c['IM 2 jump re-written by the game (0xC234) with the hook'] += 1
+                    else:
+                        fail('game wrote a patch site', (hex(a), hex(st['R'][24]), v))
                 if GFX0 <= a < GFX_END or ITEM_GFX <= a < ITEM_GFX + ITEM_H:
                     fail('game wrote figure / diamond graphics (the build precomputes from them)', (hex(a),))
                 if a < 0x5800:
@@ -1248,6 +1256,21 @@ def _defer_check(pt, get, R, ns):
     return f
 
 
+def _im2_setup(sites, mem):
+    """Run the game's IM 2 set-up 0xC234 to its RET on mem with `sites` applied -> bytes at 0xFFF4."""
+    from skoolkit.simulator import Simulator
+    m = list(mem)
+    for a, old, new in sites:
+        m[a:a + len(new)] = new
+    m[0x8000:0x8002] = [0x00, 0x90]                 # return address 0x9000
+    sim = Simulator(m, {'PC': IM2_SET, 'SP': 0x8000})
+    for _ in range(100):
+        if sim.registers[24] == 0x9000:
+            break
+        sim.opcodes[m[sim.registers[24]]]()
+    return bytes(m[0xFFF4:0xFFF7])
+
+
 def _plot_len(pt, R, mem, ns0):
     """Instructions from a plot entry to its return, no interrupt (pt: patched, None: original)."""
     get = bytes(mem).__getitem__
@@ -1472,6 +1495,13 @@ def unit_tests(patch, states, negs=None):
         c['negative control: %s %s' % (name, 'detected' if det else 'NOT DETECTED!')] += 1
     if not by['enm']:
         c['interrupt inside a plot: no captured main-program plot entry FAIL!'] += 1
+    # the game's IM 2 set-up (run again on a restart) must keep the deferral hook at 0xFFF4
+    for kind, pc, R, mem, ns0 in by['pl'][:1]:
+        want = b'\xC3' + patch.syms['e_isr'].to_bytes(2, 'little')
+        got = _im2_setup(patch.sites, mem)
+        note('IM 2 set-up (0xC234) writes JP e_isr to 0xFFF4', [] if got == want else [('0xFFF4', got.hex())], True)
+        det = _im2_setup([t for t in patch.sites if t[0] != IM2_OP], mem) != want
+        c['negative control: IM 2 set-up operand left out %s' % ('detected' if det else 'NOT DETECTED!')] += 1
     negd = collections.defaultdict(bool)
     for kind, pc, R, mem, ns0 in by['it'][:1]:
         sp = R[12]

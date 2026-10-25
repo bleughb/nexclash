@@ -42,7 +42,7 @@
    "figures": "fireman, both room figures (every caller of 0xB950), the diamonds (Dean 2026-10-25)",
    "mask": "fireman and both room figures: black, the 4-neighbours of ink (Dean 2026-10-25, hardware round 1: all figures, up / down / left / right only; black suggested, not objected to)",
    "depth": "sprites in front of everything",
-   "interrupts": "deferred while a plot runs (0xFFF4 -> e_isr; the plotter is not re-entrant and the hooks moved the plots, so the ISR plotting into a main-code plot corrupted the screen on hardware, Dean 2026-10-25 room 5); run at the plot exit",
+   "interrupts": "deferred while a plot runs (0xFFF4 -> e_isr, and the IM 2 set-up 0xC234 writes that jump too: it runs again on a restart; the plotter is not re-entrant and the hooks moved the plots, so the ISR plotting into a main-code plot corrupted the screen on hardware, Dean 2026-10-25 room 5); run at the plot exit",
    "tail": "0x5D00 (0x5C49-0x615B untouched in the whole-game RZX); printer buffer put back (the game reads 0x5B41)",
    "colours": "live inks (fireman white, figures the room ink, diamonds their cell ink) + docs/profiles/incredible_shrinking_fireman-add-OPUS_colours.json when present"
   }
@@ -56,7 +56,7 @@
   ],
   "auto_record": false,
   "minutes": 15,
-  "note": "auto: differential verify at every hook site (plotter entry + exit, diamond draw, 3 screen clears): all registers incl. AF', all memory outside the dead stack, interrupt safety per patched instruction while IFF is on; every interrupt that arrives inside a plot deferred to the plot exit (depth 0, handler entered once with the plot's caller as return) (IX, IY, I, alternate set, SP, MMU6, no fetch at 0x3D00-0x3DFF); after every event the sprite layer = the Python model (objects as last plotted with their black mask, the pending image from entry to exit, the pair rule, the diamonds since the last clear, live inks / colour map); the plotter's screen change = old ^ new image of the model (every plot); while a plot runs (entry to exit) every pixel of the old and the new image under a visible sprite; the exit's (x, y, frame) = the entry's prediction; the diamond's 7 writes; every attribute read checked against the cells the removed painter leaves unpainted; the graphics never written; speed line. Unit cases: entry + exit for every frame 0-255 (moves with carries), exit alone (fallback) for every frame x edge positions, inks, pair rule, object guard, cache sequence, colour map with a wrong check byte, diamonds k 0-4 x positions + counter guard, clears; an interrupt injected at 20 points inside 2 main-code plots (plot intact; the original corrupts); 8 negative controls (incl. the interrupt not deferred, the pending sprites not shown at the entry, the mask left out)."
+  "note": "auto: differential verify at every hook site (plotter entry + exit, diamond draw, 3 screen clears): all registers incl. AF', all memory outside the dead stack, interrupt safety per patched instruction while IFF is on; every interrupt that arrives inside a plot deferred to the plot exit (depth 0, handler entered once with the plot's caller as return) (IX, IY, I, alternate set, SP, MMU6, no fetch at 0x3D00-0x3DFF); after every event the sprite layer = the Python model (objects as last plotted with their black mask, the pending image from entry to exit, the pair rule, the diamonds since the last clear, live inks / colour map); the plotter's screen change = old ^ new image of the model (every plot); while a plot runs (entry to exit) every pixel of the old and the new image under a visible sprite; the exit's (x, y, frame) = the entry's prediction; the diamond's 7 writes; every attribute read checked against the cells the removed painter leaves unpainted; the graphics never written; speed line. Unit cases: entry + exit for every frame 0-255 (moves with carries), exit alone (fallback) for every frame x edge positions, inks, pair rule, object guard, cache sequence, colour map with a wrong check byte, diamonds k 0-4 x positions + counter guard, clears; an interrupt injected at 20 points inside 2 main-code plots (plot intact; the original corrupts); the game's IM 2 set-up (0xC234, run again on a restart) writes JP e_isr; the game's rewrites of 0xFFF4 checked to carry the hook; 9 negative controls (incl. the interrupt not deferred, the IM 2 set-up operand left out, the pending sprites not shown at the entry, the mask left out)."
  },
  "outputs": {
   "plain": {
@@ -65,16 +65,16 @@
   },
   "sprites": {
    "file": "incredible_shrinking_fireman-add-OPUS_sprites.nex",
-   "md5": "5f7e59ed5196ee662700ef2f2356f726"
+   "md5": "53f2665e76775f3c1b404aba74e93a7b"
   }
  },
  "repro": [],
  "status": {
   "title": "The Incredible Shrinking Fireman",
   "engine_col": "incredible_shrinking_fireman_add_opus (incredible_shrinking_fireman-add-OPUS.md)",
-  "build": "incredible_shrinking_fireman-add-OPUS_sprites.nex 5f7e59ed (fireman, both room figures: 18 x 26 4-bit sprites with a black 4-neighbour mask, shown from the plotter entry so the half-done XOR plot never shows; diamonds 8 x 7; in front; live inks; figure attribute painting removed; hooks: alt ROM + page 30 at slot 6, shapes precomputed in pages 32-63 at slot 7, 28 MHz inside; interrupts deferred while a plot runs). Replaces 400d0d11 (hardware round 2: corruption in room 5)",
-  "software": "RZX (32492 frames) IDENTICAL (registers, memory, interrupt safety, sprite layer incl. mask vs model, plot screen change = old ^ new, old + new image covered from plot entry to exit: 5.1M pixels, attribute reads vs the removed painter), unit cases + interrupt injection + 8 negative controls PASS; hook cost mean 2.2K T, max 16.5K T per frame",
-  "hardware": "400d0d11 on a real Next (Dean 2026-10-25): corruption in room 5 (ISR plot inside a main-code plot; fixed in 5f7e59ed); dc65565c: flicker (fixed), mask asked (added)",
+  "build": "incredible_shrinking_fireman-add-OPUS_sprites.nex 53f2665e (fireman, both room figures: 18 x 26 4-bit sprites with a black 4-neighbour mask, shown from the plotter entry so the half-done XOR plot never shows; diamonds 8 x 7; in front; live inks; figure attribute painting removed; hooks: alt ROM + page 30 at slot 6, shapes precomputed in pages 32-63 at slot 7, 28 MHz inside; interrupts deferred while a plot runs). Replaces 400d0d11 (hardware round 2: corruption in room 5)",
+  "software": "RZX (32492 frames) IDENTICAL (registers, memory, interrupt safety, sprite layer incl. mask vs model, plot screen change = old ^ new, old + new image covered from plot entry to exit: 5.1M pixels, attribute reads vs the removed painter), unit cases + interrupt injection + 9 negative controls PASS; hook cost mean 2.2K T, max 16.5K T per frame",
+  "hardware": "400d0d11 on a real Next (Dean 2026-10-25): corruption in room 5 (ISR plot inside a main-code plot; fixed in 53f2665e); dc65565c: flicker (fixed), mask asked (added)",
   "next": "hardware test; Dean paints the PAINTING_SPRITES sheet (recolour)"
  },
  "checks": [
