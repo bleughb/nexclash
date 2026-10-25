@@ -878,7 +878,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
     alt = _alt(patch)
     Sim = _rw()
     site_bytes = {a + k for a, old, new in patch.sites for k in range(len(new))}
-    isr_jp = b'\xC3' + patch.syms['e_isr'].to_bytes(2, 'little')
+    isr_jp = bytes.fromhex(SITES[0xFFF4][0])        # what the original set-up writes (JP 0xC24C)
     ns = NextState(patch.pages)
     model = Model(patch.cmap)
     st = {'frame': 0, 'on': False, 'paint': False, 'R': None, 'cover': {}}
@@ -899,7 +899,10 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             if st['on']:
                 if a in site_bytes:
                     if 0xFFF4 <= a <= 0xFFF6 and IM2_SET <= st['R'][24] < IM2_SET + 0x17 and v == isr_jp[a - 0xFFF4]:
-                        c['IM 2 jump re-written by the game (0xC234) with the hook'] += 1
+                        # the replay is the ORIGINAL game: its IM 2 set-up writes JP 0xC24C; the
+                        # patched set-up (operand 0xC240 = e_isr) writes the hook there instead
+                        # (unit test 'IM 2 set-up (0xC234) writes JP e_isr to 0xFFF4')
+                        c['IM 2 jump re-written by the game set-up (0xC234; patched: the hook)'] += 1
                     else:
                         fail('game wrote a patch site', (hex(a), hex(st['R'][24]), v))
                 if GFX0 <= a < GFX_END or ITEM_GFX <= a < ITEM_GFX + ITEM_H:
