@@ -1,42 +1,92 @@
 ; The Incredible Shrinking Fireman (Mastertronic, 1986, 48K) - hardware sprites over the figures.
-; games/incredible_shrinking_fireman-add-OPUS.md "Phase B design". Overlay, not removal: the game's
-; plotter (0xB950, XOR old ^ new) and the collectable drawing (0xECFF) still write the ULA exactly as
-; the original; every figure / collectable gets sprites exactly on its pixels, in front. Only the
-; figure attribute painting is removed (0xBCDF LD (IX+0),A -> NOP x3, no hook).
+; games/incredible_shrinking_fireman-add-OPUS.md "Build". Overlay, not removal: the game's plotter
+; (0xB950, XOR old ^ new) and the collectable drawing (0xECFF) still write the ULA exactly as the
+; original; every figure / collectable gets sprites exactly on its pixels, in front. The figure
+; attribute painting is removed (0xBCDF LD (IX+0),A -> NOP x3, no hook).
+; The XOR plot takes ~1/3 of a frame while the picture is drawn (hardware 2026-10-25: the half-done
+; plot showed in the cells' own colours): the ENTRY hook shows the new image on a second (pending)
+; sprite pair before the plot starts; the EXIT hook switches the figure's own pair to it and hides
+; the pending pair. Every pixel the half-done plot changes is under a sprite all the time.
 ;
 ; Patch sites (original bytes checked by the engine):
+;   0xB950  DD E5 87   PUSH IX / ADD A,A (plotter entry, A = object)   -> JP e_ent
 ;   0xBC5C  DD E1 C9   POP IX / RET (plotter exit, HL = OBJ + 8a + 2)  -> JP e_plot
 ;   0xECFF  11 14 ED   LD DE,0xED14 (one collectable: B = bottom line, C = pixel x) -> JP e_item
 ;   0xC4A7  21 00 40   LD HL,0x4000 (screen clear)                     -> JP e_c1
 ;   0xC5B1  21 00 48   LD HL,0x4800 (clear of lines 64-191)            -> JP e_c2
 ;   0xB4AD  21 00 40   LD HL,0x4000 (screen clear)                     -> JP e_c3
-; Code: alt ROM image 1, two blocks: 0x3A01-0x3CEB (+ the start-up register block) and
-; 0x386E-0x39FE (0x39FF-0x3A00 stay FF FF: the game's IM 2 vector is read there). Hooks run with interrupts OFF (IFF saved with LD A,I twice, restored) at 28 MHz; Next
-; pages 26-30 (colour map; flags byte in page 30) are mapped at slot 6 (0xC000) only inside a hook
-; and MMU6 is put back to page 0 (bank 0, 48K); no hook reads game data in 0xC000-0xDFFF (as Cyclone;
-; slot 0 would also do: the verifier's patched runs keep writes below 0x4000, dizzy6._rw_simulator).
-; Sprites: collectables 0-4 (4-bit patterns: slot k / 2, half k & 1), enemy 2 = 5/6, enemy 1 =
-; 7/8, fireman = 9/10 (higher number on top). Object a: sprites 9-2a (lines 0-15) and 10-2a
-; (lines 16-23) from one 256-byte pattern slot (N6 = 0 / 1), double-buffered: 5-a / 8-a.
+; Code: alt ROM image 1, two blocks: 0x3A01- (+ the start-up register block, below 0x3D00) and
+; 0x386E-0x39FE (0x39FF-0x3A00 stay FF FF: the game's IM 2 vector is read there); and page 30 at
+; 0xD600-0xDDFF: code that only runs while page 30 is at slot 6. Hooks run with interrupts OFF (IFF
+; saved with LD A,I twice, restored) at 28 MHz; Next pages 26-30 (colour map; tables, variables
+; and that code in page 30) are mapped at slot 6 (0xC000) only inside a hook, MMU6 back to page 0
+; (bank 0, 48K); no hook reads game data in 0xC000-0xDFFF (as Cyclone).
+; Sprites (higher number on top): collectables 0-4 (4-bit patterns: slot k / 2, half k & 1); object
+; a (2 = enemy 2, 1 = enemy 1, 0 = fireman) at SPR = 13 - 4a: SPR / SPR+1 its own pair (lines 0-15
+; / 16-23), SPR+2 / SPR+3 the pending pair. Patterns: one 256-byte slot per image (N6 = 0 / 1),
+; double-buffered: slot 5 - a (buffer 0) / 8 - a (buffer 1).
 
         DEVICE ZXSPECTRUMNEXT
 
 OBJ     EQU 0xBCF7              ; object table: x, y, frame, -, dx, dy, attribute, keep-mask
+NEWF    EQU 0xBCF6              ; the frame the plot shows
 GBASE   EQU 0xBD42              ; graphics base (word)
 GFX0    EQU 0x9C40              ; colour-map index 0 = this address
 ITEMG   EQU 0xED14              ; collectable graphic, 7 bytes (byte j drawn on line B - j)
 IDX_IT  EQU 4144                ; colour-map index of ITEMG
 CPAGE   EQU 26                  ; colour map: page 26 + i / 1024, offset (i % 1024) * 8
-FLAGS   EQU 0xDF00              ; flags byte: page CPAGE + 4 (offset 0x1F00) at slot 6
-CACHE   EQU 0xDF10              ; per object a: (frame, ink) of buffer 0, of buffer 1 (4a + 0..3)
+; page CPAGE + 4 (30) at slot 6: colour-map entries 4096-4150 at 0xC000-0xC1B7 (4096-5119 would
+; reach 0xDFFF; the rest is free), PFTAB, code 0xD600-0xDDFF, tables / variables 0xDE00-
 PFTAB   EQU 0xD400              ; 256 bytes: frame f has painted colour-map entries (build time)
 NIBTAB  EQU 0xDE00              ; 32 bytes: nibble -> 2 pattern bytes for ink NIBINK
 NIBF    EQU 0xDE20              ; f(00), f(01), f(10), f(11)
 NIBINK  EQU 0xDE24              ; ink NIBTAB holds (0 = none: inks are 1-15)
-; Page CPAGE + 4 (30) holds colour-map entries 4096-5119 at offsets 0-0x1FFF, of which only
-; 4096-4150 exist (offsets 0-0x1B7); the tables above use offsets 0x1400-0x1F1B.
+FLAGS   EQU 0xDF00              ; bits 0-2 object a shown, 3-5 the buffer its own pair shows
+PEND    EQU 0xDF01              ; bits 0-2 the pending pair is up, 3-5 the buffer it shows
+PX      EQU 0xDF02              ; x, y (PX + 1) of the image being placed
+VA      EQU 0xDF04              ; object a
+VBIT    EQU 0xDF05              ; 1 << a
+VFR     EQU 0xDF06              ; frame
+VINK    EQU 0xDF07              ; live ink
+VSEL    EQU 0xDF08              ; buffer chosen by prep (0 / 1)
+CACHE   EQU 0xDF10              ; per object a: (frame, ink) of buffer 0, of buffer 1 (4a + 0..3)
 
         ORG 0x3A01
+; ---- plotter entry: A = object ---------------------------------------------------------------
+e_ent:  push af
+        ld a,i
+        jp pe,.on
+        ld a,i                  ; NMOS quirk: read twice
+.on:    di
+        push af                 ; P/V = IFF at entry
+        push bc
+        push de
+        push hl
+        nextreg 0x07,3
+        ld hl,9                 ; HL, DE, BC, AF(IFF) pushed; + 9 = A of the first push
+        add hl,sp
+        ld a,(hl)
+        cp 3
+        jr nc,.x
+        nextreg 0x56,CPAGE+4
+        call n_obj
+        nextreg 0x56,0
+.x:     nextreg 0x07,0
+        pop hl
+        pop de
+        pop bc
+        pop af
+        jp po,.off
+        pop af
+        ei
+        push ix                 ; the replaced instructions
+        add a,a
+        jp 0xB953
+.off:   pop af
+        push ix
+        add a,a
+        jp 0xB953
+
 ; ---- plotter exit -------------------------------------------------------------------------
 e_plot: pop ix                  ; the replaced instruction
         push af
@@ -56,9 +106,11 @@ e_plot: pop ix                  ; the replaced instruction
         rrca
         and 0x1F
         cp 3
-        call c,plot_obj
-leave:  nextreg 0x56,0
-        nextreg 0x07,0
+        jr nc,.x
+        nextreg 0x56,CPAGE+4
+        call x_obj
+        nextreg 0x56,0
+.x:     nextreg 0x07,0
         pop hl
         pop de
         pop bc
@@ -102,7 +154,7 @@ e_item: push af
         ld de,ITEMG
         jp 0xED02
 
-;  ---- screen clears: hide every sprite, forget what is shown -------------------------------
+; ---- screen clears: hide every sprite, forget what is shown -------------------------------
 ; HL is dead at the three sites (each loads it). One push (AF) before the DI; out through JP (HL)
 ; to a per-site tail that does the replaced LD HL,nn: no stack in use while interrupts are on.
 e_c1:   ld hl,t_c1
@@ -117,15 +169,16 @@ hide:   push af
 .on:    di
         push af                 ; P/V = IFF at entry
         push bc
-        ld b,11
+        ld b,17
 .h:     ld a,b
         dec a
         nextreg 0x34,a
-        nextreg 0x38,0x40       ; sprites 0-10 invisible
+        nextreg 0x38,0x40       ; sprites 0-16 invisible
         djnz .h
         nextreg 0x56,CPAGE+4
         xor a
         ld (FLAGS),a
+        ld (PEND),a
         nextreg 0x56,0
         pop bc
         pop af
@@ -142,191 +195,9 @@ t_c2:   ld hl,0x4800
 t_c3:   ld hl,0x4000
         jp 0xB4B0
 
-; ---- A = object a (0-2) ---------------------------------------------------------------------
-; FLAGS (page CPAGE+4, 0x1F00): bits 0-2 = object a shown, bits 3-5 = its pattern buffer
-; (0: slot 5-a, 1: slot 8-a). A new image goes into the buffer not on screen; the switch is the
-; attribute-3 write in vis_all.
-plot_obj:
-        ld e,a                  ; E = a
-        add a,a
-        add a,a
-        add a,a
-        ld l,a
-        ld h,0
-        ld bc,OBJ
-        add hl,bc               ; HL = object
-        inc hl
-        inc hl
-        ld d,(hl)               ; D = frame
-        dec hl
-        dec hl
-        ld a,e
-        ld b,1
-        or a
-        jr z,.m1
-.m0:    sla b
-        dec a
-        jr nz,.m0
-.m1:    nextreg 0x56,CPAGE+4
-        ld a,(FLAGS)
-        or b
-        inc d
-        dec d
-        jr nz,.st
-        xor b                   ; frame 0: not shown
-.st:    ld (FLAGS),a
-        ld a,d
-        or a
-        call nz,draw_obj
-; visibility of all three objects (enemies 1 and 2 on one spot with one frame: both hidden)
-vis_all:
-        nextreg 0x56,CPAGE+4
-        ld a,(FLAGS)
-        ld c,a
-        and 6
-        cp 6
-        jr nz,.np
-        ld hl,OBJ+8
-        ld de,OBJ+16
-        ld b,3
-.cmp:   ld a,(de)
-        cp (hl)
-        jr nz,.np
-        inc hl
-        inc de
-        djnz .cmp
-        ld a,c
-        and 0xF9                ; the pair cancels: both hidden (buffers kept)
-        ld c,a
-.np:    ld e,9                  ; top sprite of object a = 9 - 2a
-        ld d,5                  ; slot 5 - a (buffer 0)
-        ld b,3
-.v:     ld a,c
-        and 8                   ; buffer bit of this object
-        ld a,d
-        jr z,.s
-        add a,3                 ; buffer 1: slot 8 - a
-.s:     or 0x40                 ; attribute 4 on
-        bit 0,c
-        jr z,.h
-        or 0x80                 ; visible
-.h:     ld h,a
-        ld a,e
-        nextreg 0x34,a
-        ld a,h
-        nextreg 0x38,a
-        ld a,e
-        inc a
-        nextreg 0x34,a
-        ld a,h
-        nextreg 0x38,a
-        srl c
-        dec d
-        dec e
-        dec e
-        djnz .v
-        ret
-
-; HL = object, E = a, D = frame (non-zero): live ink, upload into the hidden buffer, positions
-draw_obj:
-        push hl
-        ld bc,6
-        add hl,bc
-        ld a,(hl)               ; attribute E
-        inc hl
-        ld b,(hl)               ; keep-mask D
-        ld c,a
-        and 7
-        jr nz,.ink
-        ld a,8                  ; ink 0: black
-        jr .ik
-.ink:   ld l,a
-        ld a,c
-        or b
-        and 0x40
-        ld a,l
-        jr z,.ik
-        add a,8                 ; bright (from E, or kept from the BRIGHT room cells)
-.ik:    ld c,a                  ; C = live ink (palette index)
-        ld b,8
-        ld a,e
-        or a
-        jr z,.t1
-.t0:    sla b
-        dec a
-        jr nz,.t0
-.t1:    nextreg 0x56,CPAGE+4    ; (mapped by plot_obj already; kept for clarity of the contract)
-        ld a,e
-        add a,a
-        add a,a
-        add a,low CACHE
-        ld l,a
-        ld h,high CACHE         ; HL = buffer 0's (frame, ink) of object a
-        ld a,(FLAGS)
-        and b
-        jr z,.c0
-        inc l
-        inc l                   ; the shown buffer's entry
-.c0:    ld a,(hl)
-        cp d
-        jr nz,.c1
-        inc l
-        ld a,(hl)
-        dec l
-        cp c
-        jr z,.pos               ; the shown buffer holds this image: positions only
-.c1:    ld a,l
-        xor 2
-        ld l,a                  ; the other buffer's entry
-        ld a,(FLAGS)
-        xor b
-        ld (FLAGS),a            ; switch (attribute 3 is written in vis_all)
-        ld a,(hl)
-        cp d
-        jr nz,.up
-        inc l
-        ld a,(hl)
-        dec l
-        cp c
-        jr z,.pos               ; it holds this image already
-.up:    ld (hl),d               ; new key: frame, ink
-        inc l
-        ld (hl),c
-        ld a,(FLAGS)
-        and b
-        ld a,5
-        jr z,.t2
-        add a,3
-.t2:    sub e                   ; slot 5 - a or 8 - a
-        push bc
-        ld bc,0x303B
-        out (c),a               ; upload from the slot's start (lines 0-23; 24-31 stay 0)
-        pop bc
-        ld a,d
-        add a,a
-        add a,d                 ; 3 * frame, 8 bits (as the plotter)
-        ld l,a
-        ld h,0
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        push de
-        ld de,(GBASE)
-        add hl,de               ; HL = graphic
-        pop de
-        push hl
-        ld l,d
-        ld h,high PFTAB
-        ld a,(hl)               ; painted frame?
-        pop hl
-        or a
-        jr nz,.slow
-        push de
-        call fast48
-        pop de
-        jr .pos
-.slow:  push de
+; HL = graphic, C = ink: a painted frame's 192 pattern bytes through emit (it maps the colour-map
+; pages at slot 6 per byte), then page CPAGE+4 back at slot 6 (the caller runs from it).
+slow48: push de
         push hl
         ld de,-GFX0
         add hl,de
@@ -338,40 +209,9 @@ draw_obj:
         inc hl
         inc de
         djnz .lp
-        pop de                  ; D = frame, E = a
-.pos:
-        pop hl                  ; HL = object
-        ld a,e
-        add a,a
-        cpl
-        add a,10
-        ld d,a                  ; D = top sprite 9 - 2a
-        ld b,32
-        ld e,0x80               ; attribute 4: 4-bit, N6 = 0 (lines 0-15)
-        call setpos
-        inc d
-        ld b,48
-        ld e,0xC0               ; N6 = 1 (lines 16-23)
-        jp setpos
-
-; D = sprite, HL = object (x, y), B = Y offset, E = attribute 4
-setpos: ld a,d
-        nextreg 0x34,a
-        ld a,(hl)
-        add a,32
-        nextreg 0x35,a
-        ld a,0
-        rla
-        nextreg 0x37,a          ; X8, palette offset 0
-        inc hl
-        ld a,(hl)
-        dec hl
-        add a,b
-        nextreg 0x36,a
-        ld a,e
-        nextreg 0x39,a
+        nextreg 0x56,CPAGE+4
+        pop de
         ret
-
 rom_end:
 
 ; ---- second block: 0x386E-0x39FE (free in the 48K ROM, below the IM 2 vector bytes) ----------
@@ -454,6 +294,438 @@ item:   ld e,a
         srl a
         or 0xC0                 ; visible, attribute 4 on, slot k / 2
         nextreg 0x38,a
+        ret
+
+
+emit:   push hl
+        push de
+        push bc
+        ld b,a
+        ld hl,ZERO4
+        ld a,d
+        cp 0x14                 ; index >= 5120: outside pages 26-30, defaults
+        jr nc,.go
+        srl a
+        srl a
+        add a,CPAGE
+        nextreg 0x56,a
+        ld a,d
+        and 3
+        ld h,a
+        ld l,e
+        add hl,hl
+        add hl,hl
+        add hl,hl               ; (i % 1024) * 8: 4 nibble bytes, check byte at +4
+        ld a,h
+        or 0xC0
+        ld h,a                  ; the page is at slot 6 (0xC000)
+        push hl
+        ld de,4
+        add hl,de
+        ld a,(hl)
+        pop hl
+        cp b
+        jr z,.go
+        ld hl,ZERO4
+.go:    ld d,(hl)               ; painted pair (left, right)
+        inc hl
+        ld e,0
+        sla b
+        jr nc,.r                ; left pixel paper: transparent
+        ld a,d
+        and 0xF0
+        jr nz,.l1
+        ld a,c
+        add a,a
+        add a,a
+        add a,a
+        add a,a
+.l1:    ld e,a
+.r:     sla b
+        jr nc,.o
+        ld a,d
+        and 0x0F
+        jr nz,.r1
+        ld a,c
+.r1:    or e
+        ld e,a
+.o:     ld a,e
+        out (0x5B),a
+        ld a,l
+        and 3                   ; 4 bytes done (map entries and ZERO4 are 4-aligned)
+        jr nz,.go
+        pop bc
+        pop de
+        pop hl
+        ret
+        ALIGN 4
+ZERO4:  defb 0,0,0,0
+rom2_end:
+        ASSERT rom2_end <= 0x39FF
+        ASSERT rom_end <= 0x3CEC                ; + 20-byte register block, below 0x3D00
+
+; ---- page 30 at slot 6, 0xD600-0xDDFF: code that only runs while page CPAGE+4 is mapped -------
+        ORG 0xD600
+; entry, A = object a: its new image -> a buffer; the pending pair shows it at (x + dx, y + dy)
+n_obj:  call setv               ; VA, VBIT; HL = object
+        ld a,(VBIT)
+        cpl
+        ld b,a
+        ld a,(PEND)
+        and b
+        ld (PEND),a             ; pending a down (until set below)
+        ld a,(NEWF)
+        ld (VFR),a
+        or a
+        jp z,hidep              ; new frame 0: the figure disappears, nothing new to show
+        ld a,(hl)
+        ld de,4
+        add hl,de
+        add a,(hl)              ; x + dx, 8 bits (as 0xB97D)
+        ld (PX),a
+        ld hl,(VA)              ; L = a
+        call objhl
+        inc hl
+        ld a,(hl)
+        ld de,4
+        add hl,de
+        add a,(hl)              ; y + dy (as 0xB982)
+        ld (PX+1),a
+        ld hl,(VA)
+        call objhl              ; HL = object
+        call prep               ; A = slot, VSEL
+        push af
+        ld a,(VBIT)
+        ld b,a
+        ld a,(PEND)
+        or b                    ; pending a up
+        call setbuf             ; PEND buffer bit a := VSEL
+        ld (PEND),a
+        pop af
+        or 0xC0                 ; visible, attribute 4 on
+        ld c,a
+        ld a,(VA)
+        call sprnum
+        add a,2
+        ld d,a
+        jp place                ; the pending pair
+
+; exit, A = object a: its own pair takes the image (the pending one, or built now), pending hidden
+x_obj:  call setv               ; VA, VBIT; HL = object
+        inc hl
+        inc hl
+        ld a,(hl)               ; frame
+        dec hl
+        dec hl
+        ld (VFR),a
+        ld a,(VBIT)
+        ld b,a
+        ld a,(FLAGS)
+        or b
+        ld c,a
+        ld a,(VFR)
+        or a
+        ld a,c
+        jr nz,.st
+        xor b                   ; frame 0: not shown
+.st:    ld (FLAGS),a
+        ld a,(VFR)
+        or a
+        jr z,.hid
+        ld a,(PEND)
+        and b
+        jr z,.now
+        ld a,b                  ; the pending image: VSEL = PEND buffer bit a
+        add a,a
+        add a,a
+        add a,a
+        ld c,a
+        ld a,(PEND)
+        and c
+        jr z,.p0
+        ld a,1
+.p0:    ld (VSEL),a
+        jr .take
+.now:   call prep               ; no entry hook ran for it: build the image now
+.take:  ld a,(hl)
+        ld (PX),a
+        inc hl
+        ld a,(hl)
+        ld (PX+1),a
+        ld a,(FLAGS)
+        call setbuf             ; FLAGS buffer bit a := VSEL
+        ld (FLAGS),a
+        call slotv              ; A = slot of VSEL
+        or 0x40                 ; attribute 3 without the visible bit: vis_all sets it
+        ld c,a
+        ld a,(VA)
+        call sprnum
+        ld d,a
+        call place
+.hid:   ld a,(VBIT)
+        cpl
+        ld b,a
+        ld a,(PEND)
+        and b
+        ld (PEND),a             ; pending a down
+        call hidep
+        jp vis_all
+
+; A = object -> VA, VBIT; HL = object
+setv:   ld (VA),a
+        ld l,a
+objhl:  ld a,l
+        ld b,1
+        or a
+        jr z,.b
+.m:     sla b
+        dec a
+        jr nz,.m
+.b:     ld a,b
+        ld (VBIT),a
+        ld a,l
+        add a,a
+        add a,a
+        add a,a
+        ld l,a
+        ld h,0
+        ld de,OBJ
+        add hl,de
+        ret
+
+; A = flags byte -> A with its buffer bit a (8 << a) = VSEL
+setbuf: ld c,a
+        ld a,(VBIT)
+        add a,a
+        add a,a
+        add a,a
+        ld b,a
+        ld a,c
+        or b
+        xor b                   ; bit clear
+        ld c,a
+        ld a,(VSEL)
+        or a
+        ld a,c
+        ret z
+        or b
+        ret
+
+; -> A = slot of buffer VSEL for object VA: 5 - a / 8 - a
+slotv:  ld a,(VSEL)
+        or a
+        ld a,5
+        jr z,.s
+        ld a,8
+.s:     ld b,a
+        ld a,(VA)
+        ld c,a
+        ld a,b
+        sub c
+        ret
+
+; A = a -> 13 - 4a (its own pair)
+sprnum: add a,a
+        add a,a
+        cpl
+        add a,14
+        ret
+
+; hide the pending pair of VA
+hidep:  ld a,(VA)
+        call sprnum
+        add a,2
+        nextreg 0x34,a
+        nextreg 0x38,0x40
+        inc a
+        nextreg 0x34,a
+        nextreg 0x38,0x40
+        ret
+
+; D = sprite, C = attribute 3: D, D+1 at (PX, PX+1) (lines 0-15 / 16-23 of the slot)
+place:  ld a,d
+        nextreg 0x34,a
+        ld a,(PX)
+        add a,32
+        nextreg 0x35,a
+        ld a,0
+        rla
+        nextreg 0x37,a          ; X8, palette offset 0
+        ld a,(PX+1)
+        add a,32
+        nextreg 0x36,a
+        nextreg 0x39,0x80       ; 4-bit, N6 = 0
+        ld a,c
+        nextreg 0x38,a
+        ld a,d
+        inc a
+        nextreg 0x34,a
+        ld a,(PX)
+        add a,32
+        nextreg 0x35,a
+        ld a,0
+        rla
+        nextreg 0x37,a
+        ld a,(PX+1)
+        add a,48
+        nextreg 0x36,a
+        nextreg 0x39,0xC0       ; N6 = 1
+        ld a,c
+        nextreg 0x38,a
+        ret
+
+; HL = object; VA, VBIT, VFR (non-zero): the image (frame, live ink) into a buffer - the one the
+; figure's own pair shows, the other one, or uploaded into the other one -> VSEL, A = slot.
+; Keeps HL.
+prep:   push hl
+        ld de,6
+        add hl,de
+        ld a,(hl)               ; attribute E
+        inc hl
+        ld b,(hl)               ; keep-mask D
+        ld c,a
+        and 7
+        jr nz,.ink
+        ld a,8                  ; ink 0: black
+        jr .ik
+.ink:   ld e,a
+        ld a,c
+        or b
+        and 0x40
+        ld a,e
+        jr z,.ik
+        add a,8                 ; bright (from E, or kept from the BRIGHT room cells)
+.ik:    ld (VINK),a
+        ld c,a                  ; C = ink
+        ld a,(VFR)
+        ld d,a                  ; D = frame
+        ld a,(VBIT)
+        add a,a
+        add a,a
+        add a,a
+        ld b,a                  ; B = buffer bit (8 << a)
+        ld a,(FLAGS)
+        and b
+        jr z,.s0
+        ld a,1
+.s0:    ld e,a                  ; E = the buffer its own pair shows
+        call centry             ; HL = cache entry of buffer E
+        ld a,(hl)
+        cp d
+        jr nz,.c1
+        inc l
+        ld a,(hl)
+        cp c
+        jr z,.hit
+.c1:    ld a,e
+        xor 1
+        ld e,a                  ; the other buffer
+        call centry
+        ld a,(hl)
+        cp d
+        jr nz,.up
+        inc l
+        ld a,(hl)
+        cp c
+        jr z,.hit
+        dec l
+.up:    ld (hl),d               ; new key: frame, ink
+        inc l
+        ld (hl),c
+        ld a,e
+        ld (VSEL),a
+        call slotv
+        ld bc,0x303B
+        out (c),a               ; upload from the slot's start (lines 0-23; 24-31 stay 0)
+        ld a,(VFR)
+        ld d,a
+        add a,a
+        add a,d                 ; 3 * frame, 8 bits (as the plotter)
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,(GBASE)
+        add hl,de               ; HL = graphic
+        ld a,(VINK)
+        ld c,a
+        ld a,(VFR)
+        ld e,a
+        ld d,high PFTAB
+        ld a,(de)               ; painted frame?
+        or a
+        jr nz,.sl
+        call fast48
+        jr .dn
+.sl:    call slow48             ; (ROM: maps the colour-map pages, then page 30 back)
+.dn:    pop hl
+        jp slotv
+.hit:   ld a,e
+        ld (VSEL),a
+        pop hl
+        jp slotv
+
+; E = buffer (0 / 1) -> HL = CACHE + 4a + 2E
+centry: ld a,(VA)
+        add a,a
+        add a,a
+        add a,e
+        add a,e
+        add a,low CACHE
+        ld l,a
+        ld h,high CACHE
+        ret
+
+; visibility of the three objects' own pairs (objects 1 and 2 on one spot with one frame: both
+; hidden, as their XORs cancel)
+vis_all:
+        ld a,(FLAGS)
+        ld c,a
+        and 6
+        cp 6
+        jr nz,.np
+        ld hl,OBJ+8
+        ld de,OBJ+16
+        ld b,3
+.cmp:   ld a,(de)
+        cp (hl)
+        jr nz,.np
+        inc hl
+        inc de
+        djnz .cmp
+        ld a,c
+        and 0xF9                ; the pair cancels: both hidden (buffers kept)
+        ld c,a
+.np:    ld e,13                 ; own pair of object 0; then 9, 5
+        ld d,5                  ; slot 5 - a (buffer 0)
+        ld b,3
+.v:     ld a,c
+        and 8                   ; buffer bit of this object
+        ld a,d
+        jr z,.s
+        add a,3                 ; buffer 1: slot 8 - a
+.s:     or 0x40                 ; attribute 4 on
+        bit 0,c
+        jr z,.h
+        or 0x80                 ; visible
+.h:     ld h,a
+        ld a,e
+        nextreg 0x34,a
+        ld a,h
+        nextreg 0x38,a
+        ld a,e
+        inc a
+        nextreg 0x34,a
+        ld a,h
+        nextreg 0x38,a
+        srl c
+        dec d
+        ld a,e
+        sub 4
+        ld e,a
+        djnz .v
         ret
 
 ; HL = graphic (48 bytes), C = ink, page CPAGE+4 at slot 6: an unpainted frame's 192 pattern
@@ -540,75 +812,10 @@ mknib:  push hl
 ; A = graphics byte, DE = colour-map index, C = live ink: 8 pixels -> 4 bytes to port 0x5B.
 ; Ink pixel = the entry's nibble when non-zero and its check byte equals the graphics byte, else
 ; the live ink; paper pixel = transparent (an overlay: painting never covers the scenery).
-emit:   push hl
-        push de
-        push bc
-        ld b,a
-        ld hl,ZERO4
-        ld a,d
-        cp 0x14                 ; index >= 5120: outside pages 26-30, defaults
-        jr nc,.go
-        srl a
-        srl a
-        add a,CPAGE
-        nextreg 0x56,a
-        ld a,d
-        and 3
-        ld h,a
-        ld l,e
-        add hl,hl
-        add hl,hl
-        add hl,hl               ; (i % 1024) * 8: 4 nibble bytes, check byte at +4
-        ld a,h
-        or 0xC0
-        ld h,a                  ; the page is at slot 6 (0xC000)
-        push hl
-        ld de,4
-        add hl,de
-        ld a,(hl)
-        pop hl
-        cp b
-        jr z,.go
-        ld hl,ZERO4
-.go:    ld d,(hl)               ; painted pair (left, right)
-        inc hl
-        ld e,0
-        sla b
-        jr nc,.r                ; left pixel paper: transparent
-        ld a,d
-        and 0xF0
-        jr nz,.l1
-        ld a,c
-        add a,a
-        add a,a
-        add a,a
-        add a,a
-.l1:    ld e,a
-.r:     sla b
-        jr nc,.o
-        ld a,d
-        and 0x0F
-        jr nz,.r1
-        ld a,c
-.r1:    or e
-        ld e,a
-.o:     ld a,e
-        out (0x5B),a
-        ld a,l
-        and 3                   ; 4 bytes done (map entries and ZERO4 are 4-aligned)
-        jr nz,.go
-        pop bc
-        pop de
-        pop hl
-        ret
-        ALIGN 4
-ZERO4:  defb 0,0,0,0
-rom2_end:
-        ASSERT rom2_end <= 0x39FF
-        ASSERT rom_end <= 0x3CEC                ; + 20-byte register block, below 0x3D00
+p30_end:
+        ASSERT p30_end <= 0xDE00
 
-
-; ---- setup (stub bank, 0xD000): sprite palette, all sprites hidden, sprites on --------------
+; ---- setup (stub bank, 0xD000): sprite palette, pattern RAM 0, all sprites hidden, sprites on ----
         ORG 0xD000
 setup:  nextreg 0x43,0x20       ; sprite palette 0, auto-increment
         nextreg 0x40,0
@@ -641,4 +848,5 @@ setup_end:
 
         SAVEBIN "isf_rom.bin",0x3A01,rom_end-0x3A01
         SAVEBIN "isf_rom2.bin",0x386E,rom2_end-0x386E
+        SAVEBIN "isf_p30.bin",0xD600,p30_end-0xD600
         SAVEBIN "isf_setup.bin",0xD000,setup_end-0xD000

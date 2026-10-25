@@ -205,10 +205,10 @@ CMAP_BANKS = (13, 14, 15)
 TAIL_ADDR, TAIL_END = 0x5D00, 0x615C        # 0x5C49-0x615B never read or written (whole-RZX scan)
 GFX0 = 0x9C40
 GFX_END = GFX0 + 4144           # figure graphics 0x9C40-0xAC6F: never written (whole-RZX scan)
-SITES = {0xBC5C: ('dde1c9', 'e_plot', 'pl'), 0xECFF: ('1114ed', 'e_item', 'it'),
+SITES = {0xB950: ('dde587', 'e_ent', 'en'), 0xBC5C: ('dde1c9', 'e_plot', 'pl'), 0xECFF: ('1114ed', 'e_item', 'it'),
          0xC4A7: ('210040', 'e_c1', 'c'), 0xC5B1: ('210048', 'e_c2', 'c'), 0xB4AD: ('210040', 'e_c3', 'c')}
 NOPS = [(0xBCDF, 'dd7700', '000000')]       # figure attribute painting removed (LD (IX+0),A)
-INTERIORS = (0xBC5D, 0xED00, 0xED01, 0xC4A8, 0xC4A9, 0xC5B2, 0xC5B3, 0xB4AE, 0xB4AF,
+INTERIORS = (0xB951, 0xBC5D, 0xED00, 0xED01, 0xC4A8, 0xC4A9, 0xC5B2, 0xC5B3, 0xB4AE, 0xB4AF,
              0xBCE0, 0xBCE1)
 PLOT_RANGE = (0xB950, 0xBC5F)               # the plotter's own screen writes
 ITEM_PC = 0xED0B                            # the collectable's screen write (LD (HL),A)
@@ -219,12 +219,20 @@ PAINT_PC = 0xBCDF
 # painter's own read (dead in the patched game: its write is removed).
 ATTR_READERS = {0xCAA2: (6, 7), 0xCABF: (6, 7), 0xB3F4: (4, 5), 0xB3C5: (4, 5), 0xB42C: (4, 5),
                 0xC2E4: (4, 5), 0xC2E8: (4, 5)}
-SPR_ITEM0, NSPR = 0, 11                     # items 0-4, object a: 9 - 2a (top) / 10 - 2a (bottom)
+P30_OFF = 0x1600              # page 30: the hooks' code that runs from slot 6 (profile hooks['p30'])
+RUN_LO, RUN_HI = 0x1E00, 0x1F20  # page 30: the bytes the hooks write at run time (tables, flags, cache)
+SEQUELS = {0xB952: 0xB950, 0xBC5E: 0xBC5C}  # reached right after the site's own first instruction
+
+
+def spr_own(a):
+    """Object a's own sprite pair (lines 0-15, 16-23); the pending pair is the next two."""
+    return 13 - 4 * a
 CMP = list(range(0, 13)) + [14] + list(range(16, 25)) + [26, 27]   # all but R, T, MEMPTR
 DECISIONS = {'engine': 'incredible_shrinking_fireman_add_opus',
-             'strategy': 'overlay: the game still draws the ULA; alt ROM hooks (0x3A01 + 0x386E) set hardware '
-                         'sprites on the figures (plotter exit 0xBC5C) and the diamonds (0xECFF); figure '
-                         'attribute painting removed (0xBCDF); colour map pages 26-30 at slot 6 in hooks',
+             'strategy': 'overlay: the game still draws the ULA; hooks (alt ROM 0x3A01 + 0x386E, page 30 '
+                         'at slot 6) set hardware sprites on the figures - the new image at the plotter entry '
+                         '0xB950 (pending pair), switched at the exit 0xBC5C - and the diamonds (0xECFF); '
+                         'figure attribute painting removed (0xBCDF); colour map pages 26-30',
              'figures': 'fireman, both room figures (every caller of 0xB950), the diamonds (Dean 2026-10-25)',
              'depth': 'sprites in front of everything',
              'tail': '0x5D00 (0x5C49-0x615B untouched in the whole-game RZX); printer buffer put back '
@@ -264,10 +272,13 @@ def cmap_index(key):
     return None
 
 
-def cmap_pages(cmap, peek=None):
+def cmap_pages(cmap, peek=None, code=None):
     """Colour map {key: [check, kind, 8 nibbles]} -> {page: 8192 bytes} for pages 26-30 (run-time
-    bytes 0). peek (the game's graphics, static): the painted-frame table at page 30 + 0x1400."""
+    bytes 0). peek (the game's graphics, static): the painted-frame table at page 30 + 0x1400. code:
+    the hooks' page-30 code (default: the profile's), at page 30 + 0x1600."""
     pages = {CPAGE + k: bytearray(8192) for k in range(5)}
+    code = bytes.fromhex(load_profile()['hooks']['p30']) if code is None else code
+    pages[FLAGS_PG][P30_OFF:P30_OFF + len(code)] = code
     if peek is not None:
         for f in range(1, 256):
             ga = gfx_addr(GFX0, f)
@@ -291,20 +302,23 @@ def cmap_pages(cmap, peek=None):
     return pages
 
 
-def cmap_banks(cmap, peek):
-    pg = cmap_pages(cmap, peek)
+def cmap_banks(cmap, peek, code=None):
+    pg = cmap_pages(cmap, peek, code)
     return {13: bytes(pg[26] + pg[27]), 14: bytes(pg[28] + pg[29]), 15: bytes(pg[30]) + bytes(8192)}
 
 
 class FiremanPatch:
     name = ('Incredible Shrinking Fireman: fireman, room figures and diamonds -> hardware sprites '
-            '(overlay; alt ROM hooks 0x3A01, colour map pages 26-30 at slot 6)')
+            '(overlay; plotter entry + exit hooks, alt ROM + page 30 at slot 6)')
 
-    def __init__(self, prof=None, rom_code=None, colours=None, rom2=None):
+    def __init__(self, prof=None, rom_code=None, colours=None, rom2=None, p30=None):
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         self.rom_code = rom_code or bytes.fromhex(h['rom'])
         self.rom2 = rom2 or bytes.fromhex(h['rom2'])
+        self.p30 = p30 or bytes.fromhex(h['p30'])
+        if P30_OFF + len(self.p30) > 0x1E00:
+            raise ValueError('page-30 code too long (tables from 0x1E00)')
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
         self.stub_extra = bytes.fromhex(h['setup'])
         self.setup_call = 0xD000
@@ -332,13 +346,13 @@ class FiremanPatch:
                       for a, (old, sym, k) in SITES.items()]
         self.sites += [(a, bytes.fromhex(old), bytes.fromhex(new)) for a, old, new in NOPS]
         self.cmap = load_colours() if colours is None else colours
-        self.pages = cmap_pages(self.cmap)
+        self.pages = cmap_pages(self.cmap, code=self.p30)
         self.extra_banks = {}
 
     def prepare(self, peek):
         """The colour-map pages with the painted-frame table (from the game's static graphics)."""
         self.peek = peek
-        self.pages = cmap_pages(self.cmap, peek)
+        self.pages = cmap_pages(self.cmap, peek, self.p30)
 
     def apply(self, snap):
         if snap.is128:
@@ -358,7 +372,7 @@ class FiremanPatch:
         snap.banks[2] = bytes(ram[16384:32768])
         snap.banks[0] = bytes(ram[32768:49152])
         self.extra_banks = {12: self.page + bytes(8192)}
-        self.extra_banks.update(cmap_banks(self.cmap, self.peek))
+        self.extra_banks.update(cmap_banks(self.cmap, self.peek, self.p30))
 
 
 # ---------------------------------------------------------------------------------------------
@@ -560,7 +574,9 @@ def event(patch, kind, site, get, R, ns, alt, Sim):
     psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
     sp0 = R[12]
     w = lambda a: get(a) | get(a + 1) << 8
-    if kind == 'pl':
+    if kind == 'en':
+        stop = lambda r: r[24] == 0xB953 and r[12] == sp0 - 2
+    elif kind == 'pl':
         ret, end = w(sp0 + 2), sp0 + 4
         stop = lambda r: r[24] == ret and r[12] == end
     elif kind == 'it':
@@ -649,17 +665,38 @@ def colour(cmap, key, byte, bit, ink):
 
 class Model:
     """Expected sprite layer: objects 0-2 as last plotted (frame 0 or a screen clear: none), the
-    pair rule (objects 1 and 2 on one spot with one frame: both hidden, as their XORs cancel), and
-    the diamonds drawn since the last clear."""
+    pair rule (objects 1 and 2 on one spot with one frame: both hidden, as their XORs cancel), each
+    object's pending image while its plot runs (entry to exit), and the diamonds drawn since the last
+    clear. Higher sprite on top: diamonds, then per object 2, 1, 0 its own pair and its pending pair."""
 
     def __init__(self, cmap):
         self.cmap = cmap
         self.objs = [None, None, None]        # (x, y, frame, gfx address, 48 bytes, ink)
+        self.pend = [None, None, None]        # the same for the image being plotted
         self.items = {}                       # k: (pixel x, bottom line, ink)
 
     def clear(self):
         self.objs = [None, None, None]
+        self.pend = [None, None, None]
         self.items = {}
+
+    def image(self, o, out=None):
+        out = {} if out is None else out
+        x, y, fr, ga, g, ink = o
+        for line in range(H):
+            for half in range(2):
+                v = g[2 * line + half]
+                for bit in range(8):
+                    if v >> (7 - bit) & 1:
+                        px, py = x + 8 * half + bit, y + line
+                        if px < 256 and py < 192:
+                            out[(px, py)] = colour(self.cmap, 'G%04X' % ((ga + 2 * line + half) & 0xFFFF),
+                                                   v, bit, ink)
+        return out
+
+    def pair(self):
+        o1, o2 = self.objs[1], self.objs[2]
+        return o1 is not None and o2 is not None and o1[:3] == o2[:3]
 
     def layer(self):
         out = {}
@@ -673,23 +710,27 @@ class Model:
                         x, y = (c & 0xF8) + bit, b - j
                         if 0 <= y < 192:
                             out[(x, y)] = colour(self.cmap, 'D%04X' % a, v, bit, ink)
-        o1, o2 = self.objs[1], self.objs[2]
-        pair = o1 is not None and o2 is not None and o1[:3] == o2[:3]
+        pair = self.pair()
         for a in (2, 1, 0):
             o = self.objs[a]
-            if o is None or (pair and a in (1, 2)):
-                continue
-            x, y, fr, ga, g, ink = o
-            for line in range(H):
-                for half in range(2):
-                    v = g[2 * line + half]
-                    for bit in range(8):
-                        if v >> (7 - bit) & 1:
-                            px, py = x + 8 * half + bit, y + line
-                            if 0 <= px < 256 and 0 <= py < 192:
-                                out[(px, py)] = colour(self.cmap, 'G%04X' % ((ga + 2 * line + half) & 0xFFFF),
-                                                       v, bit, ink)
+            if o is not None and not (pair and a in (1, 2)):
+                self.image(o, out)
+            if self.pend[a] is not None:
+                self.image(self.pend[a], out)
         return out
+
+
+def obj_predicted(get, a):
+    """At the plotter entry (A = a): the image the plot will show - (x + dx, y + dy) 8-bit as
+    0xB97D / 0xB982, frame (0xBCF6), ink from the table's attribute and keep-mask."""
+    o = [get(OBJ + 8 * a + k) for k in range(8)]
+    fr = get(NEWF)
+    if not fr:
+        return None
+    base = get(GBASE) | get(GBASE + 1) << 8
+    ga = gfx_addr(base, fr)
+    g = bytes(get((ga + i) & 0xFFFF) for i in range(48))
+    return ((o[0] + o[4]) & 255, (o[1] + o[5]) & 255, fr, ga, g, ink_index(o[6], o[7]))
 
 
 def obj_from_table(get, a):
@@ -751,7 +792,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
     under = collections.Counter()
     fcost = collections.Counter()
     states = []
-    WATCH = set(SITES) | set(INTERIORS) | {PLOT, PAINT_PC, ITEM_RET, 0xBC5E} | set(ATTR_READERS)
+    WATCH = set(SITES) | set(INTERIORS) | {PLOT, PAINT_PC, ITEM_RET} | set(SEQUELS) | set(ATTR_READERS)
 
     def fail(k, info=()):
         c[k + '!'] += 1
@@ -831,7 +872,29 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                     if pc == PLOT:
                         a = R[0]
                         old = obj_from_table(get, a) if a < 3 else None
-                        plots.append({'a': a, 'old': old, 'delta': {}})
+                        pred = obj_predicted(get, a) if a < 3 else None
+                        run_event('en', pc)
+                        if a < 3:
+                            if model.pend[a] is not None:
+                                fail('plot entry while the same object\'s plot runs', (a,))
+                            # the old image (as the screen holds it) and the new one must stay
+                            # covered while the plot changes the screen between them
+                            shown_old = model.objs[a] is not None and not (model.pair() and a in (1, 2))
+                            model.pend[a] = pred
+                            exp = model.layer()
+                            need = set()
+                            if shown_old:
+                                need |= set(model.image(model.objs[a]))
+                            if pred is not None:
+                                need |= set(model.image(pred))
+                            miss = need - set(exp)
+                            if miss:
+                                fail('plot entry: image pixels not under a sprite during the plot', (a, len(miss)))
+                            if model.objs[a] is not None and not shown_old:
+                                c['plot entry of a pair-hidden figure (its old pixels uncovered while it moves)'] += 1
+                            c['transient pixels covered'] += len(need)
+                        plots.append({'a': a, 'old': old, 'pred': pred, 'delta': {}})
+                        after(get, 'en', pc)
                     elif pc == PAINT_PC:
                         cell = (R[8] << 8 | R[9]) + get(R[24] + 2) - (256 if get(R[24] + 2) > 127 else 0)
                         if 0x5800 <= cell < 0x5B00 and cell not in adiff:
@@ -867,7 +930,12 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                             if want != got:
                                 fail('plot: screen change is not old ^ new image', (a, len(set(want.items()) ^ set(got.items()))))
                             c['plot screen bytes compared'] += len(want)
+                            pr = rec['pred']
+                            if (pr is None) != (new is None) or (pr is not None and pr[:3] != new[:3]):
+                                fail('plot exit: (x, y, frame) differs from the entry prediction',
+                                     (a, pr and pr[:3], new and new[:3]))
                             model.objs[a] = new
+                            model.pend[a] = None
                             after(get, 'pl', pc)
                     elif pc == 0xECFF:
                         k = 5 - get(R[12] + 5)
@@ -918,8 +986,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
     for a in INTERIORS:
         if cnt[a]:
             c['jump into a patched instruction (0x%04X)!' % a] += 1
-    if cnt[0xBC5E] != cnt[0xBC5C]:          # RET after the site's POP IX: never reached otherwise
-        c['0xBC5E reached other than from 0xBC5C!'] += 1
+    for a, site in SEQUELS.items():         # the original's next instruction after the site's first
+        if cnt[a] != cnt[site]:
+            c['0x%04X reached other than from 0x%04X!' % (a, site)] += 1
     c['frames'] = st['frame']
     c['interrupt-safety points'] = ISAFE['checked']
     if fcost:
@@ -941,12 +1010,14 @@ def _ns_for(pt, ns0):
     only the run-time bytes (sprites, patterns, the flags byte) restored from the capture."""
     ns = ns0.copy()
     ns.pages = {k: bytearray(v) for k, v in pt.pages.items()}
-    ns.pages[FLAGS_PG][FLAGS_OFF] = ns0.flags
+    if FLAGS_PG in ns0.pages:
+        ns.pages[FLAGS_PG][RUN_LO:RUN_HI] = ns0.pages[FLAGS_PG][RUN_LO:RUN_HI]
     return ns
 
 
-def _plot_case(pt, R, mem, ns0, a, x, y, fr, e=7, d=0x40, flags=None, other=None):
-    """Run the plot exit for object a placed at (x, y, fr) -> (failures, ns, model layer)."""
+def _plot_case(pt, R, mem, ns0, a, x, y, fr, e=7, d=0x40, flags=None, other=None, ns=None):
+    """Run the plot exit for object a placed at (x, y, fr) with no entry hook before it (the
+    fallback: the exit builds the image) -> (failures, ns, memory)."""
     m = bytearray(mem)
     o = OBJ + 8 * a
     m[o], m[o + 1], m[o + 2], m[o + 6], m[o + 7] = x, y, fr, e, d
@@ -957,11 +1028,30 @@ def _plot_case(pt, R, mem, ns0, a, x, y, fr, e=7, d=0x40, flags=None, other=None
     r = list(R)
     hl = o + 2
     r[6], r[7] = hl >> 8, hl & 255
-    ns = _ns_for(pt, ns0)
-    if flags is not None:
-        ns.pages[FLAGS_PG][FLAGS_OFF] = flags
+    if ns is None:
+        ns = _ns_for(pt, ns0)
+        ns.pages[FLAGS_PG][FLAGS_OFF + 1] = 0                # no pending image
+        if flags is not None:
+            ns.pages[FLAGS_PG][FLAGS_OFF] = flags
     fl, _, _ = event(pt, 'pl', 0xBC5C, m.__getitem__, r, ns, _alt(pt), _rw())
     return fl, ns, m
+
+
+def _entry_case(pt, R, mem, ns, a, x0, y0, f0, dx, dy, f, e=7, d=0x40):
+    """Run the plot ENTRY for object a at (x0, y0, f0) moving by (dx, dy) to frame f, on Next state
+    ns -> (failures, memory)."""
+    m = bytearray(mem)
+    o = OBJ + 8 * a
+    m[o], m[o + 1], m[o + 2], m[o + 4], m[o + 5], m[o + 6], m[o + 7] = x0, y0, f0, dx, dy, e, d
+    m[NEWF] = f
+    r = list(R)
+    r[0] = a
+    fl, _, _ = event(pt, 'en', 0xB950, m.__getitem__, r, ns, _alt(pt), _rw())
+    return fl, m
+
+
+def _own(a):
+    return range(spr_own(a), spr_own(a) + 4)
 
 
 def _model_objs(pt, m, shown):
@@ -988,7 +1078,7 @@ def unit_tests(patch, states, negs=None):
     def plot_ok(pt, R, mem, ns0, a, x, y, fr, e=7, d=0x40):
         fl, ns, m = _plot_case(pt, R, mem, ns0, a, x, y, fr, e, d, flags=0)
         exp = _model_objs(pt, m, {a} if fr else set()).layer()
-        got = ns.layer(range(5, 11))
+        got = ns.layer(_own(a))
         if ns.bad:
             fl = fl + ns.bad
         return fl, got == exp
@@ -1007,6 +1097,37 @@ def unit_tests(patch, states, negs=None):
                 for y in ys:
                     fl, same = plot_ok(patch, R, mem, ns0, 0, x, y, fr)
                     note('fireman frame x position', fl, same)
+        ens = by['en'][:1]
+        for ek, epc, eR, emem, ens0 in ens:
+            # entry then exit: during the plot the old image (own pair) and the new one (pending
+            # pair) are both up; after the exit only the new one, on the own pair
+            def ee(pt, a, x0, y0, f0, dx, dy, f, e=7, d=0x40):
+                fl0, ns, m0 = _plot_case(pt, R, mem, ns0, a, x0, y0, f0, e, d, flags=0)   # old image up
+                fl1, m1 = _entry_case(pt, eR, emem, ns, a, x0, y0, f0, dx, dy, f, e, d)
+                md = _model_objs(pt, m0, {a} if f0 else set())
+                md.pend[a] = obj_predicted(m1.__getitem__, a)
+                ok1 = ns.layer(_own(a)) == md.layer()
+                x1, y1 = (x0 + dx) & 255, (y0 + dy) & 255
+                fl2, ns, m2 = _plot_case(pt, R, mem, ns0, a, x1, y1, f, e, d, ns=ns)
+                ok2 = ns.layer(_own(a)) == _model_objs(pt, m2, {a} if f else set()).layer()
+                return fl0 + fl1 + fl2 + ns.bad, ok1 and ok2
+            for f in range(256):
+                for x0, y0, dx, dy in ((100, 100, 2, 0), (0, 61, 0xFE, 1), (238, 168, 2, 0xFF),
+                                       (8, 0, 0, 0)):
+                    fl, ok = ee(patch, 0, x0, y0, 3, dx, dy, f)
+                    note('entry + exit, fireman, every frame (moves incl. carries)', fl, ok)
+            for a in (1, 2):
+                for f0, f in ((0, 97), (97, 98), (98, 0), (11, 11), (40, 41)):
+                    fl, ok = ee(patch, a, 120, 90, f0, 0xFF, 2, f, 0x43, 0)
+                    note('entry + exit, figures (appear, wrapped frames, vanish, same image)', fl, ok)
+            if negs:
+                for name, (neg, k) in negs.items():
+                    if k == 'en':
+                        fl, ok = ee(neg, 2, 120, 90, 97, 1, 0, 98, 0x43, 0)
+                        det = bool(fl) or not ok
+                        c['negative control: %s %s' % (name, 'detected' if det else 'NOT DETECTED!')] += 1
+        if not ens:
+            c['entry + exit cases: no captured entry state FAIL!'] += 1
         for a in (1, 2):
             for fr in (0, 1, 40, 85, 86, 100, 255):
                 for x, y in ((0, 0), (233, 168), (240, 61)):
@@ -1020,10 +1141,10 @@ def unit_tests(patch, states, negs=None):
             exp = _model_objs(patch, m, {1, 2}).layer()
             # object 2's sprite shows the pattern from its capture: compare only object 1's sprites
             # and both visibility bits
-            vis = [bool(ns.attr[i][3] & 0x80) for i in (5, 6, 7, 8)]
+            vis = [bool(ns.attr[i][3] & 0x80) for i in (5, 6, 9, 10)]
             pair = (x1, fr1) == (100, 20)
             want = [not pair] * 4
-            got1 = ns.layer(range(7, 9))
+            got1 = ns.layer(range(9, 11))
             exp1 = {} if pair else _model_objs(patch, m, {1}).layer()
             note('pair rule', fl + ns.bad, vis == want and got1 == exp1)
         # cache: one Next state through a sequence (same image twice, the other buffer's image, an
@@ -1031,6 +1152,7 @@ def unit_tests(patch, states, negs=None):
         def seq(pt):
             ns = _ns_for(pt, ns0)
             ns.pages[FLAGS_PG][FLAGS_OFF] = 0
+            ns.pages[FLAGS_PG][FLAGS_OFF + 1] = 0
             bad = 0
             for x, fr, e in ((100, 30, 7), (104, 30, 7), (108, 31, 7), (112, 30, 7), (116, 30, 2),
                              (120, 30, 2), (124, 31, 7), (128, 31, 2), (132, 31, 2)):
@@ -1041,7 +1163,7 @@ def unit_tests(patch, states, negs=None):
                 r[6], r[7] = (o + 2) >> 8, (o + 2) & 255
                 fl, _, _ = event(pt, 'pl', 0xBC5C, m.__getitem__, r, ns, _alt(pt), _rw())
                 exp = _model_objs(pt, m, {0}).layer()
-                bad += bool(fl or ns.bad) or ns.layer(range(5, 11)) != exp
+                bad += bool(fl or ns.bad) or ns.layer(_own(0)) != exp
             return bad
         note('cache sequence (same, other buffer, ink change)', [] if not seq(patch) else ['layer'], True)
         if negs:
@@ -1069,12 +1191,12 @@ def unit_tests(patch, states, negs=None):
             q.prepare(bytes(mem).__getitem__)
             fl, ns, m = _plot_case(q, R, mem, ns0, 0, 100, 100, fr, flags=0)
             exp = _model_objs(q, m, {0}).layer()
-            note('colour map (painted + wrong check byte)', fl + ns.bad, ns.layer(range(5, 11)) == exp)
+            note('colour map (painted + wrong check byte)', fl + ns.bad, ns.layer(_own(0)) == exp)
             if negs is not None and fr == 3:
                 q0 = FiremanPatch(patch.prof, patch.rom_code, colours={}, rom2=patch.rom2)
                 q0.prepare(bytes(mem).__getitem__)
                 fl, ns, m = _plot_case(q0, R, mem, ns0, 0, 100, 100, fr, flags=0)
-                det = bool(fl) or ns.layer(range(5, 11)) != exp
+                det = bool(fl) or ns.layer(_own(0)) != exp
                 c['negative control: colour map left out %s' % ('detected' if det else 'NOT DETECTED!')] += 1
         if negs:
             for name, (neg, k) in negs.items():
@@ -1083,12 +1205,12 @@ def unit_tests(patch, states, negs=None):
                     for x in (0, 100, 240):
                         fl, ns, m = _plot_case(neg, R, mem, ns0, 0, x, 100, 40, flags=0)
                         exp = _model_objs(neg, m, {0}).layer()
-                        det = det or bool(fl) or ns.layer(range(5, 11)) != exp
+                        det = det or bool(fl) or ns.layer(_own(0)) != exp
                     c['negative control: %s %s' % (name, 'detected' if det else 'NOT DETECTED!')] += 1
                 elif k == 'pair':
                     fl, ns, m = _plot_case(neg, R, mem, ns0, 1, 100, 100, 20, 3, 0, flags=0x04,
                                            other={2: {0: 100, 1: 100, 2: 20, 6: 3, 7: 0}})
-                    det = bool(fl) or any(ns.attr[i][3] & 0x80 for i in (5, 6, 7, 8))
+                    det = bool(fl) or any(ns.attr[i][3] & 0x80 for i in (5, 6, 9, 10))
                     c['negative control: %s %s' % (name, 'detected' if det else 'NOT DETECTED!')] += 1
     negd = collections.defaultdict(bool)
     for kind, pc, R, mem, ns0 in by['it'][:1]:
@@ -1125,11 +1247,13 @@ def unit_tests(patch, states, negs=None):
                 c['negative control: %s %s' % (nm, 'detected' if det else 'NOT DETECTED!')] += 1
     for kind, pc, R, mem, ns0 in by['c'][:3]:
         ns = _ns_for(patch, ns0)
-        for i in range(11):
+        for i in range(17):
             ns.attr[i][3] |= 0x80
         ns.pages[FLAGS_PG][FLAGS_OFF] = 0x3F
+        ns.pages[FLAGS_PG][FLAGS_OFF + 1] = 0x3F
         fl, _, _ = event(patch, 'c', pc, bytes(mem).__getitem__, list(R), ns, _alt(patch), _rw())
-        ok = not any(ns.attr[i][3] & 0x80 for i in range(11)) and ns.flags == 0
+        ok = (not any(ns.attr[i][3] & 0x80 for i in range(17)) and ns.flags == 0
+              and ns.pages[FLAGS_PG][FLAGS_OFF + 1] == 0)
         note('screen clear hides all (0x%04X)' % pc, fl + ns.bad, ok)
     return c
 
@@ -1138,23 +1262,24 @@ def _neg(patch, old, new, what, nth=None):
     """Copy of the patch with one hook byte sequence changed (exactly once in the two blocks, or
     its nth occurrence)."""
     o, n = bytes.fromhex(old), bytes.fromhex(new)
-    blocks = [bytearray(patch.rom_code), bytearray(patch.rom2)]
+    blocks = [bytearray(patch.rom_code), bytearray(patch.rom2), bytearray(patch.p30)]
     hits = [(b, i) for b, blk in enumerate(blocks) for i in range(len(blk)) if blk[i:i + len(o)] == o]
     if nth is None and len(hits) != 1:
         raise ValueError('negative control %s: pattern %s found %d times' % (what, old, len(hits)))
     b, i = hits[nth or 0]
     blocks[b][i:i + len(o)] = n
-    q = FiremanPatch(patch.prof, bytes(blocks[0]), colours=patch.cmap, rom2=bytes(blocks[1]))
+    q = FiremanPatch(patch.prof, bytes(blocks[0]), colours=patch.cmap, rom2=bytes(blocks[1]), p30=bytes(blocks[2]))
     if getattr(patch, 'peek', None):
         q.prepare(patch.peek)
     return q
 
 
 def negative_patches(patch):
-    return {'sprite X one pixel off': (_neg(patch, '7ec620ed9235', '7ec621ed9235', 'X'), 'pl'),
+    return {'sprite X one pixel off': (_neg(patch, '3a02dfc620ed9235', '3a02dfc621ed9235', 'X', nth=0), 'pl'),
             'pair rule left out': (_neg(patch, 'e6f9', 'e6ff', 'pair'), 'pair'),
             'diamond one line low': (_neg(patch, 'c61aed9236', 'c61bed9236', 'item Y'), 'it'),
-            'cache ignores the ink': (_neg(patch, '2c7e2db928', '2c7e2dbf28', 'cache', nth=0), 'cache')}
+            'cache ignores the ink': (_neg(patch, '2c7eb928', '2c7ebf28', 'cache', nth=0), 'cache'),
+            'pending pair not shown at the plot entry': (_neg(patch, 'f1f6c04f', 'f1f6404f', 'pending'), 'en')}
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1190,6 +1315,8 @@ def recolour(nex, cmap):
         raise ValueError('hook code differs from this version\'s (rebuild with nexclash.py auto)')
     if bank(10)[0x1000:0x1000 + len(p0.stub_extra)] != p0.stub_extra:
         raise ValueError('set-up code differs from this version\'s (rebuild with nexclash.py auto)')
+    if bank(15)[P30_OFF:P30_OFF + len(p0.p30)] != p0.p30:
+        raise ValueError('page-30 hook code differs from this version\'s (rebuild with nexclash.py auto)')
     new, changed = splice(d, cmap_banks(cmap, peek))
     return new, {'banks changed': changed, 'entries': len(cmap)}
 
@@ -1240,9 +1367,11 @@ def auto(a, z80, name, out, say):
         states += st
         fails = {k: v for k, v in c.items() if k.endswith('!')}
         ok = ok and not fails
-        say('Verify    : %s  %d frames, plots %d, diamonds %d, clears %d, %d sprite pixels, %d plot screen '
-            'bytes, %d diamond bytes, %d attribute reads, %d interrupt-safety points -> %s' % (
-                os.path.basename(r), c['frames'], c['pl'], c['it'], c['c'], c['sprite pixels compared'],
+        say('Verify    : %s  %d frames, plot entries %d, plots %d, diamonds %d, clears %d, %d sprite pixels, '
+            '%d transient pixels covered, %d plot screen bytes, %d diamond bytes, %d attribute reads, %d '
+            'interrupt-safety points -> %s' % (
+                os.path.basename(r), c['frames'], c['en'], c['pl'], c['it'], c['c'], c['sprite pixels compared'],
+                c['transient pixels covered'],
                 c['plot screen bytes compared'], c['diamond screen bytes compared'],
                 c['attribute reads checked'], c['interrupt-safety points'],
                 'IDENTICAL' if not fails else 'FAILED %s' % fails))
@@ -1254,7 +1383,7 @@ def auto(a, z80, name, out, say):
                 c['speed: hook T per game frame, 99th percentile of frames with hooks'],
                 c['speed: hook T per game frame, max']))
         for k, v in c.items():
-            if k.startswith('  writes under'):
+            if k.startswith('  writes under') or 'pair-hidden' in k:
                 say('          %s: %d' % (k.strip(), v))
     if states:
         u = unit_tests(patch, states, negative_patches(patch))

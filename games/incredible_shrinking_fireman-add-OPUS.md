@@ -2,7 +2,8 @@
 
 Reference: specnext reference/incredible_shrinking_fireman-add-OPUS/ (branch
 claude/incredible-shrinking-fireman-add-OPUS; the "-add-OPUS" suffix is this run's naming, Dean 2026-10-25).
-Status: sprite build dc65565c (plain feb706fc) verified in software 2026-10-25; hardware untested.
+Status: sprite build 1498ccd1 (plain feb706fc), 2026-10-25. dc65565c ran on a real Next (Dean): the bulb
+and the enemy fireman flickered (fixed: plot entry hook, below); fireman mask asked (Open).
 Code: nexclash/incredible_shrinking_fireman_add_opus.py (sheets, build, verifier, unit tests, recolour),
 asm/incredible_shrinking_fireman-add-OPUS_hooks.asm, docs/profiles/incredible_shrinking_fireman-add-OPUS.json,
 record docs/records/incredible_shrinking_fireman-add-OPUS.json.
@@ -94,25 +95,42 @@ painted overrides; identical pair stays invisible).
   test past line 191: 4) - removing the painting changes no logic.
 - ROM: the game reads only 0x0000 and 0x39FF-0x3A00 (IM 2 chain) and runs BEEPER / PIXEL-ADD.
 
+## Hardware round 1 (dc65565c, Dean 2026-10-25)
+Runs on a real Next. Two findings: (1) "the fireman sprite needs a surrounding mask (up down left right
+pixels only)" - open, colour asked; (2) room 2's purple bulb flickers, room 6's enemy fireman "badly
+cycling". Cause: the XOR plot takes 24-27K T (a third of a frame) and 97 %+ of plots run while the beam
+draws the picture; dc65565c moved the sprite at the plot's EXIT, so for that third of a frame the half-
+done ULA plot showed uncovered, in the cell's own colour (the painting is removed), e.g. cyan beside the
+bulb. Worst on the wrapped frames (bulb 97-100, enemy fireman 105-108: big shape changes). The
+toolkit could not see it: it checks state at hook boundaries, not what the beam shows mid-plot.
+Fix 1498ccd1: an ENTRY hook (0xB950) shows the new image on a pending sprite pair before the plot runs;
+the exit switches the own pair to it and hides the pending pair: old and new image covered throughout.
+
 ## Build (2026-10-25)
 Overlay, not removal: the plotter and the diamond drawing keep writing the ULA exactly as the original
 (every pixel the game reads is unchanged); each figure gets hardware sprites exactly on its pixels, in
 front. Every ULA pixel that differs from the clean scenery is a figure ink pixel under its own sprite,
 so the picture = scenery + sprites (where a figure crosses scenery ink the ULA's XOR hole is covered by
 the sprite). The figure attribute painting is removed: 0xBCDF LD (IX+0),A -> NOP x3 (value dead).
-- Sites (original bytes checked): 0xBC5C DD E1 C9 (plotter exit POP IX / RET) -> JP e_plot; 0xECFF
+- Sites (original bytes checked): 0xB950 DD E5 87 (plotter entry PUSH IX / ADD A,A, A = object) -> JP
+  e_ent (back with PUSH IX / ADD A,A / JP 0xB953 after the EI); 0xBC5C DD E1 C9 (plotter exit POP IX / RET) -> JP e_plot; 0xECFF
   11 14 ED -> JP e_item (back to 0xED02 with DE = 0xED14); clears 0xC4A7 / 0xB4AD 21 00 40 and 0xC5B1
   21 00 48 -> JP e_c* (HL dead there: loads a per-site tail, hides all, leaves through JP (HL) to the
   tail's LD HL,nn / JP site + 3: no stack in use while interrupts are on); 0xBCDF DD 77 00 -> 00 00 00.
-- Hooks: alt ROM image 1, two blocks: 0x3A01-0x3C13 (+ the 20-byte start-up register block; below
-  0x3D00) and 0x386E-0x39B3 (0x39FF-0x3A00 stay FF FF: the IM 2 vector). DI inside (IFF saved with
+- Hooks: alt ROM image 1, two blocks: 0x3A01- (+ the 20-byte start-up register block; below 0x3D00)
+  and 0x386E- (0x39FF-0x3A00 stay FF FF: the IM 2 vector); the figure logic in page 30 at 0xD600 (runs
+  only while page 30 is at slot 6; the per-byte colour path and the diamond hook, which map other
+  pages at slot 6, stay in ROM). DI inside (IFF saved with
   LD A,I twice, restored), 28 MHz inside (NEXTREG $07 3, back to 0 before the EI), one push (AF) before
   the DI. Hook data in Next pages 26-30 mapped at SLOT 6 (0xC000) only inside a hook, MMU6 back to
   page 0 (as Cyclone; no hook reads game data in 0xC000-0xDFFF; slot 0 would also have done). Tail 0x5D00 (0x5C49-0x615B untouched), printer buffer put back.
-- Sprites: diamonds 0-4 (k = 5 - the loop counter on the stack; 4-bit pattern slot k / 2, half k & 1),
-  object 2 = 5/6, object 1 = 7/8, fireman = 9/10 (higher on top). A figure = two 4-bit sprites (lines
-  0-15, 16-23) from one 256-byte slot, double-buffered 5 - a / 8 - a; the switch is the attribute-3
-  write. Cache: (frame, ink) per buffer (page 30 0x1F10): a plot whose image is in either buffer
+- Sprites: diamonds 0-4 (k = 5 - the loop counter on the stack; 4-bit pattern slot k / 2, half k & 1);
+  object a at 13 - 4a: its own pair (lines 0-15, 16-23) and, from the plot entry to the exit, the
+  pending pair (+2, +3) showing the new image at (x + dx, y + dy) (8-bit adds, as 0xB97D / 0xB982),
+  frame (0xBCF6). Higher on top: diamonds, object 2, 1, fireman. One 256-byte slot per image,
+  double-buffered 5 - a / 8 - a: the entry puts the new image in the buffer the own pair does not
+  show (or finds it in either), the exit switches the own pair to it. An exit with no entry before it
+  builds the image itself (unit-tested fallback). Cache: (frame, ink) per buffer (page 30 0x1F10): a plot whose image is in either buffer
   uploads nothing (40 % of plots in the RZX). Lines 24-31 never written (setup clears pattern RAM).
 - Colours: palette = the sheet's (index 0 transparent). Ink pixel = the painted nibble when the
   entry's check byte equals the graphics byte, else the live ink E & 7 (0 -> black 8), bright if E or
@@ -125,8 +143,8 @@ the sprite). The figure attribute painting is removed: 0xBCDF LD (IX+0),A -> NOP
 - Visibility: shown[a] = frame != 0 at its last plot, cleared by the three screen clears (also the
   option / carrying windows: drawn after the 0xC5B1 clear); objects 1 and 2 both shown at one x, y,
   frame -> both hidden (the XOR cancel). Diamonds shown from their draw to the next clear.
-- Speed (whole RZX): hook cost mean 1.1K T per 69,888-T frame, 99 % of frames with hooks <= 5.8K T,
-  max 6.7K T (28 MHz T / 6). The original never reaches its HALT in a third of the frames (busy:
+- Speed: dc65565c (exit hook only, whole RZX) mean 1.1K T per 69,888-T frame, max 6.7K T; 1498ccd1
+  (entry + exit, 2000 frames) mean 1.8K, max 7.6K (28 MHz T / 6). The original never reaches its HALT in a third of the frames (busy:
   median 31K T): the worst frames may run up to ~10 % longer. First version (no cache, per-byte map
   always; 2000 frames): mean 6.4K, max 21.6K.
 
@@ -146,6 +164,10 @@ under a visible sprite. Unit cases PASS, 5/5 negative controls detected. Details
 - Recolour: python nexclash.py recolour incredible_shrinking_fireman-add-OPUS_sprites.nex PAINTED.png.
 
 ## Open
-- Hardware test. Painted sheet (Dean) -> recolour, then the map becomes the build default.
+- Fireman mask (Dean, hardware round 1): up / down / left / right neighbours only; colour and whether
+  other figures get one asked. 18 x 26 px -> 4 sprites per image.
+- Hardware test of 1498ccd1. Painted sheet (Dean) -> recolour, then the map becomes the build default.
+- A pair-hidden figure (objects 1 and 2 on one spot, XOR cancel) that starts to move: its old pixels
+  are uncovered during that one plot (the verifier counts these plot entries).
 - 21 graphics of the bank never drawn in the RZX (sheet group "From the code"): unit-tested (every frame
   0-255), not seen in play.

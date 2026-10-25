@@ -462,6 +462,14 @@ Grouped by question; add a new lesson to its group.
   phase A because an XOR-parity count by (graphic, x, y) showed twice the figures the screen had.
 
 ### 2.1e Sprites, patterns, colours, depth
+- An overlay sprite must cover the ULA pixels WHILE the game's plot changes them, not only after it:
+  Fireman's XOR plot takes 24-27K T (a third of a frame) and 97 % of plots run while the beam draws
+  the picture; sprites moved at the plot's exit left the half-done plot showing in the cells' own
+  colours (hardware, Dean 2026-10-25: a bulb flickering purple / cyan). Fix: at the plotter ENTRY show
+  the new image on a second (pending) sprite pair, at the exit switch the own pair to it and hide the
+  pending one; verify that from entry to exit every old and new image pixel is under a visible
+  sprite. Measure first: T from the interrupt to each plot's entry and exit (the beam's 48K picture
+  is T 14336-57344).
 - A figure the game draws as TWO objects (Match Day's diving keeper: the keeper + a spare object 16
   px to its right) joins on the colour sheet only by the game's own pairing (frames 2k + 2k+1), and
   on screen it TEARS in the original: the halves update on alternate frames while the camera scrolls.
