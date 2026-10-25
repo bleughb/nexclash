@@ -35,8 +35,10 @@ version; tools/sjasmplus/README.md). Maintainers: repos and private files in doc
   in modules you will change; do not re-read a file you just wrote.
 - Write: change existing files with Edit, never rewrite a large file whole; write a new engine in
   stages (sites, hooks, verify, unit tests), each checked before the next.
-- Print: a command that may print more than ~50 lines goes to a file, then `tail` / `grep` it
-  (reports: `grep -E 'Verify|Unit|Result|!'`). Disassemble only flagged routines.
+- Print: a command that may print more than ~50 lines: `CMD 2>&1 | tee run.log | tail -30; grep -E
+  'WARNING|FAILED|!' run.log | head -20` (tail alone drops the early desync WARNING; the pipe hides
+  the exit code). Reports: `grep -E 'Verify|Unit|Result|!'`. Disassemble only flagged routines.
+- Replies: never re-summarize earlier turns or paste results already in files; say what changed.
 - Long runs: `setsid nohup` + one `sleep 540; tail -3 LOG` per poll, call timeout 10 min (LEARNINGS
   2.6) - plain `&` dies, faster polls resend the conversation for nothing.
 - No subagents unless the user asks: each starts cold and re-reads the docs.
