@@ -4,9 +4,8 @@ Budget rule: a game the tools already convert (`auto` PASS) -> a few tool runs a
 A new engine is phases A-C below; keep each phase to one session where possible.
 Only disassemble routines the tools flag as unclassified.
 
-Phases (a long game may be one session per phase; each starts from games/<game>.md, never from
-chat history): A = steps 0-4 + design approval by the user; B = steps 5-6 (toolkit PASS);
-C = hardware rounds and fixes. Write decisions and open questions to games/<game>.md as they
+Phases: A = steps 0-4 + design approval by the user; B = steps 5-6 (toolkit PASS);
+C = hardware rounds and fixes (one session per round). See "Sessions" below. Write decisions and open questions to games/<game>.md as they
 happen, so a new session can pick up any phase - and in phase B the build's DESIGN too (sites,
 memory used, how each figure becomes a sprite, what the verify checks), before the first quick run.
 Why: Match Day (2026-10-20) lost the session's context mid-phase-B; the whole build existed only as
@@ -19,6 +18,26 @@ Why: the places are far from the start, and every restart costs the user the wal
 
 ("The user" below = whoever runs the session: Dean in maintainer sessions, the contributor in an
 add-a-game session.)
+
+## Sessions (one per phase; Dean 2026-10-26)
+Every tool call resends the whole conversation, so cost grows with the session's length: a fresh
+session that reads this file + games/<game>.md is far cheaper than hour five of an old one.
+- One session per phase: A (analysis + the design question), B (build + quick runs + the one full
+  verification), C (one session per hardware round). A game the tools already convert is one session.
+- A phase ends with the "Next session" block at the top of games/<game>.md, then commit + push:
+  ```
+  ## Next session
+  Phase: B (build)            State: design approved 2026-10-26 (Decisions below)
+  Inputs: specnext/reference/<game>/ (snapshot, recordings)    Branch: claude/<game>
+  Start with: <the first command>       Read: PLAYBOOK 5-6, nexclash/<template>.py <functions>
+  Open: <anything not settled>
+  ```
+  and the reply gives the user the prompt for it (README "Continue a game").
+- Mid-phase: when the session is long (roughly 80+ tool calls, or several hours) and a natural
+  break comes (a quick run passed, a design step done), write the block, commit, and say so: the
+  user starts a new session. Never break in the middle of an edit that does not build.
+- The block replaces any older one; the facts it points to (decisions, design, open items) stay in
+  their sections of games/<game>.md, written as they happen (above).
 
 ## 0. Inputs (ask once, up front)
 - `.z80` snapshot, 48K or 128K, ideally at the title screen or in game, keyboard controls (not
@@ -100,6 +119,18 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   see-through, and the overlap (depth) rule - the game's own rule, always in front, or another.
   (Commando: depth, solid bodies and solid objects were settled across three hardware rounds
   from the user's photos; preview frames would have settled them first.)
+- Design defaults (the phase-A question is these + this game's exceptions; Dean 2026-10-26).
+  Ask in ONE message, numbered, each line the default and what this game shows, so the user can
+  answer "defaults" or "change 3":
+  1. Every figure a sprite (Dean 2026-10-13), from every caller of each plotter.
+  2. Scenery, HUD, score and text stay on the ULA.
+  3. Depth: the game's own rule (behind what the original draws in front).
+  4. Colours: the user paints the PAINTING_SPRITES sheet (below); until then the build uses the
+     game's own colours (the figure's cell ink).
+  5. Menus, pause and message windows over the play area: Layer 2 and sprites off while up (step 4).
+  ALWAYS ASK, no default yet (list what the preview shows): bullets, explosions and other effects;
+  solid or see-through figures; outlines; anything the hooks cannot convert.
+  A new standing answer from the user -> add it here with the date.
 - Every figure is a sprite by default (Dean, 2026-10-13: "make everything possible a sprite"): list
   every caller of each plotter from the code (not only those the RZX shows) and convert them all;
   what stays on the ULA (scenery, HUD, text, cases the hooks cannot do) is the question to ask.
@@ -263,7 +294,8 @@ cases with a synthetic map per figure, a wrong check byte (must be ignored) and 
 full RZX run uses it.
 Also simulate the start-up tail: registers restored, no game memory touched.
 
-Long runs (the full verification, selftest): detached + polled, LEARNINGS 2.6.
+Long runs (the full verification, selftest): detached + polled, LEARNINGS 2.6: one
+`sleep 540; tail -3 LOG` per poll, nothing faster; write the record and the notes meanwhile.
 Iterate fast (the two levels: BRIEFING C3b): while developing use `--quick N` and the unit tests on 1-2
 captured states (minutes). N must reach the first call of every hook the unit tests capture
 states from, or the run FAILS for lack of a state (Lode Runner at 300 frames: "no captured draw

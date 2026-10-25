@@ -11,6 +11,14 @@ Add GAME NAME to nexclash. Snapshot and my RZX are attached.
 Clone bleughb/nexclash and bleughb/specnext side by side and follow nexclash/CLAUDE.md
 ```
 
+### Continue a game (a NEW chat for each phase - much cheaper than one long chat)
+Each phase ends by telling you to start a new chat with:
+```
+Continue GAME NAME in nexclash. Clone bleughb/nexclash and bleughb/specnext side by side,
+follow nexclash/CLAUDE.md, start from the "Next session" block in games/<game>.md.
+```
+Phase A's design question lists the defaults: reply "defaults", or the numbers to change.
+
 
 # nexclash - colour-clash-free ZX Spectrum games on the Spectrum Next
 

@@ -20,11 +20,18 @@ stay on their machine; the maintainers' reference files live in the private repo
    notes and files (STATUS.md, games/<game>.md, specnext/reference/<game>/): read them first.
    No usable recording (none, or one that desyncs: the tools print a WARNING with the frame) ->
    ask the user for a Fuse recording (docs/RECORDING_CHECKLIST.md) before phase A.
-3. Follow docs/PLAYBOOK.md phases A-C. Phase A ends with ONE question to the user, with preview
-   frames and the colour sheets (PLAYBOOK 3b is the one place for the sheet rules): which figures
-   become sprites, what stays on the ULA, depth, colours. Never guess these; if the prompt already
-   says, confirm with the preview. Every engine with a sheet also gets `recolour` (PLAYBOOK 3b).
-4. Long runs (full verify, selftest): `setsid nohup` + poll (LEARNINGS 2.6) - plain `&` dies.
+3. Follow docs/PLAYBOOK.md phases A-C, ONE SESSION PER PHASE (PLAYBOOK "Sessions"): a phase ends
+   by writing the "Next session" block in games/<game>.md and telling the user the prompt for the
+   next session; a session that continues starts from that block, never from chat history.
+   Why: every tool call resends the whole conversation, so the last hours of one long session cost
+   far more than a fresh session that reads one notes file (Match Day: ~5 h in one session).
+   Phase A ends with ONE question to the user, with preview frames and the colour sheets (PLAYBOOK
+   3b is the one place for the sheet rules), asked as the DESIGN DEFAULTS plus this game's
+   exceptions (PLAYBOOK 3b "Design defaults"): the user answers "defaults" or names what changes.
+   Never guess what the defaults leave open. Every engine with a sheet also gets `recolour`.
+4. Long runs (full verify, selftest): `setsid nohup` + poll at most every ~9 minutes with
+   `sleep 540; tail -3 LOG` in ONE call (LEARNINGS 2.6) - plain `&` dies. Never poll faster, never
+   print a whole log: each poll resends the conversation. Do the docs and the record while it runs.
 5. While developing: engine files only, `selftest.py --canary` after any shared change. Iterate with
    `--quick 2000` (PLAYBOOK 6); the full `auto` runs ONCE, on the build that goes to the user.
 6. End: "End of every task" below. The game's one full verification is `selftest.py --game
@@ -133,7 +140,8 @@ or download another version; tools/sjasmplus/README.md).
   colours json, once painted, goes in the record's data list), listed in its reference/README.md.
   Before the merge: `selftest.py --affected --verify --stamp` in a separate worktree (LEARNINGS
   2.6) - it re-verifies only what else the change reached. Contributors never run it.
-- Reply: results, the .nex files, a short hardware checklist.
+- Reply: results, the .nex files, a short hardware checklist; if work remains, the "Next session"
+  prompt (PLAYBOOK "Sessions").
 
 ## Layout
 | Path | What |
