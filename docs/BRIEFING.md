@@ -449,6 +449,10 @@ Designs not built yet (use when a game needs them)
    on the next frame: the game's sound at the original timing whatever speed the code runs at
    (one frame late; 11 kHz quantises fast tones). Needs: a T clock in the hooks (or the game loop's
    own count), the DAC enable (NextReg $08 bit 3), a hardware listen test. Not tried.
+38. selftest.push_access() treats a git WORKTREE as "no push access": it tests isdir(HERE/.git), and in
+   a worktree .git is a file. LEARNINGS 2.6 says to run stamping / --affected runs in a worktree, so
+   they stop with exit 3 there (Fireman, 2026-10-25; ran with NEXCLASH_MAINTAINER=1). Fix: test
+   os.path.exists, or ask `git rev-parse --git-dir`; add a selftest --tools case with a worktree.
 
 ### C3b. Two verification levels (agreed with Dean 2026-09-29; how to run them: PLAYBOOK 6)
 - ITERATE (per change): original bytes at every site, boot check, unit tests (with negative
