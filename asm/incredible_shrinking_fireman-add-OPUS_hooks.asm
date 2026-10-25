@@ -36,11 +36,10 @@ ITEMG   EQU 0xED14              ; collectable graphic, 7 bytes (byte j drawn on 
 IDX_IT  EQU 4144                ; colour-map index of ITEMG
 CPAGE   EQU 26                  ; colour map: page 26 + i / 1024, offset (i % 1024) * 8
 ; page CPAGE + 4 (30) at slot 6: colour-map entries 4096-4150 at 0xC000-0xC1B7 (4096-5119 would
-; reach 0xDFFF; the rest is free), PFTAB, code 0xD600-0xDDFF, tables / variables 0xDE00-
-PFTAB   EQU 0xD400              ; 256 bytes: frame f has painted colour-map entries (build time)
-NIBTAB  EQU 0xDE00              ; 32 bytes: nibble -> 2 pattern bytes for ink NIBINK
-NIBF    EQU 0xDE20              ; f(00), f(01), f(10), f(11)
-NIBINK  EQU 0xDE24              ; ink NIBTAB holds (0 = none: inks are 1-15)
+; reach 0xDFFF; the rest is free), tables 0xC200-0xC7FF, code 0xD600-0xDDFF, variables 0xDE00-
+NIB16   EQU 0xDE00              ; 16 bytes: pixel-pair code -> pattern byte (mktab's scratch)
+TINK    EQU 0xDE20              ; per object a: the ink its tables hold (0 = none: inks are 1-15)
+TABS    EQU 0xC200              ; object a: 0xC200 + 0x200 a (high pair), + 0x100 (low pair)
 FLAGS   EQU 0xDF00              ; bits 0-2 object a shown, 3-5 the buffer its own pair shows
 PEND    EQU 0xDF01              ; bits 0-2 the pending pair is up, 3-5 the buffer it shows
 PX      EQU 0xDF02              ; x, y (PX + 1) of the image being placed
@@ -49,7 +48,14 @@ VBIT    EQU 0xDF05              ; 1 << a
 VFR     EQU 0xDF06              ; frame
 VINK    EQU 0xDF07              ; live ink
 VSEL    EQU 0xDF08              ; buffer chosen by prep (0 / 1)
+VS      EQU 0xDF09              ; upload: the slot base
+SXL     EQU 0xDF0A              ; place: X, X8 of the left column; SXR (0xDF0C) the right; SYT, SYB
+SXR     EQU 0xDF0C
+SYT     EQU 0xDF0E
+SYB     EQU 0xDF0F
 CACHE   EQU 0xDF10              ; per object a: (frame, ink) of buffer 0, of buffer 1 (4a + 0..3)
+FPAGE   EQU 32                  ; figure shapes: frame f at page FPAGE + f / 8, offset (f % 8) * 1024,
+                                ; mapped at slot 7 (0xE000) during an upload only (pages 32-63)
 
         ORG 0x3A01
 ; ---- plotter entry: A = object ---------------------------------------------------------------
@@ -169,11 +175,11 @@ hide:   push af
 .on:    di
         push af                 ; P/V = IFF at entry
         push bc
-        ld b,17
+        ld b,29
 .h:     ld a,b
         dec a
         nextreg 0x34,a
-        nextreg 0x38,0x40       ; sprites 0-16 invisible
+        nextreg 0x38,0x40       ; sprites 0-28 invisible
         djnz .h
         nextreg 0x56,CPAGE+4
         xor a
@@ -195,23 +201,6 @@ t_c2:   ld hl,0x4800
 t_c3:   ld hl,0x4000
         jp 0xB4B0
 
-; HL = graphic, C = ink: a painted frame's 192 pattern bytes through emit (it maps the colour-map
-; pages at slot 6 per byte), then page CPAGE+4 back at slot 6 (the caller runs from it).
-slow48: push de
-        push hl
-        ld de,-GFX0
-        add hl,de
-        ex de,hl                ; DE = colour-map index
-        pop hl
-        ld b,48
-.lp:    ld a,(hl)
-        call emit
-        inc hl
-        inc de
-        djnz .lp
-        nextreg 0x56,CPAGE+4
-        pop de
-        ret
 rom_end:
 
 ; ---- second block: 0x386E-0x39FE (free in the 48K ROM, below the IM 2 vector bytes) ----------
@@ -366,7 +355,7 @@ rom2_end:
 
 ; ---- page 30 at slot 6, 0xD600-0xDDFF: code that only runs while page CPAGE+4 is mapped -------
         ORG 0xD600
-; entry, A = object a: its new image -> a buffer; the pending pair shows it at (x + dx, y + dy)
+; entry, A = object a: its new image -> a buffer; the pending sprites show it at (x + dx, y + dy)
 n_obj:  call setv               ; VA, VBIT; HL = object
         ld a,(VBIT)
         cpl
@@ -393,7 +382,7 @@ n_obj:  call setv               ; VA, VBIT; HL = object
         ld (PX+1),a
         ld hl,(VA)
         call objhl              ; HL = object
-        call prep               ; A = slot, VSEL
+        call prep               ; A = slot base, VSEL
         push af
         ld a,(VBIT)
         ld b,a
@@ -406,11 +395,11 @@ n_obj:  call setv               ; VA, VBIT; HL = object
         ld c,a
         ld a,(VA)
         call sprnum
-        add a,2
+        add a,4
         ld d,a
-        jp place                ; the pending pair
+        jp place                ; the pending sprites
 
-; exit, A = object a: its own pair takes the image (the pending one, or built now), pending hidden
+; exit, A = object a: its own sprites take the image (the pending one, or built now), pending hidden
 x_obj:  call setv               ; VA, VBIT; HL = object
         inc hl
         inc hl
@@ -455,7 +444,7 @@ x_obj:  call setv               ; VA, VBIT; HL = object
         ld a,(FLAGS)
         call setbuf             ; FLAGS buffer bit a := VSEL
         ld (FLAGS),a
-        call slotv              ; A = slot of VSEL
+        call slotv              ; A = slot base of VSEL
         or 0x40                 ; attribute 3 without the visible bit: vis_all sets it
         ld c,a
         ld a,(VA)
@@ -511,71 +500,95 @@ setbuf: ld c,a
         or b
         ret
 
-; -> A = slot of buffer VSEL for object VA: 5 - a / 8 - a
-slotv:  ld a,(VSEL)
-        or a
-        ld a,5
-        jr z,.s
-        ld a,8
-.s:     ld b,a
-        ld a,(VA)
-        ld c,a
-        ld a,b
-        sub c
-        ret
-
-; A = a -> 13 - 4a (its own pair)
-sprnum: add a,a
+; -> A = slot base of buffer VSEL for object VA: 11 - 4a + 2 VSEL (two 256-byte slots per image)
+slotv:  ld a,(VA)
+        add a,a
         add a,a
         cpl
-        add a,14
+        add a,12                ; 11 - 4a
+        ld b,a
+        ld a,(VSEL)
+        add a,a
+        add a,b
         ret
 
-; hide the pending pair of VA
+; A = a -> 21 - 8a (its own 4 sprites; the pending 4 follow)
+sprnum: add a,a
+        add a,a
+        add a,a
+        cpl
+        add a,22
+        ret
+
+; hide the pending sprites of VA
 hidep:  ld a,(VA)
         call sprnum
-        add a,2
-        nextreg 0x34,a
+        add a,4
+        ld b,4
+.h:     nextreg 0x34,a
         nextreg 0x38,0x40
         inc a
-        nextreg 0x34,a
-        nextreg 0x38,0x40
+        djnz .h
         ret
 
-; D = sprite, C = attribute 3: D, D+1 at (PX, PX+1) (lines 0-15 / 16-23 of the slot)
-place:  ld a,d
-        nextreg 0x34,a
-        ld a,(PX)
-        add a,32
-        nextreg 0x35,a
+; D = first sprite, C = attribute 3 (slot base S): an 18 x 26 image (mask included) at (PX - 1,
+; PY - 1) as 4 sprites: D (S, bytes 0-127), D+1 (S, 128-255) 16 px right, D+2 (S+1, 0-127) 16 px
+; down, D+3 (S+1, 128-255)
+place:  ld a,(PX)
+        add a,31                ; x - 1 + 32
+        ld (SXL),a
         ld a,0
         rla
-        nextreg 0x37,a          ; X8, palette offset 0
+        ld (SXL+1),a            ; X8
+        ld a,(PX)
+        add a,47                ; x + 15 + 32
+        ld (SXR),a
+        ld a,0
+        rla
+        ld (SXR+1),a
         ld a,(PX+1)
-        add a,32
-        nextreg 0x36,a
-        nextreg 0x39,0x80       ; 4-bit, N6 = 0
-        ld a,c
-        nextreg 0x38,a
+        add a,31                ; y - 1 + 32
+        ld (SYT),a
+        add a,16
+        ld (SYB),a
+        ld hl,SXL
+        ld a,(SYT)
+        ld e,0x80
+        call .w                 ; D: left, top
+        inc d
+        ld hl,SXR
+        ld a,(SYT)
+        ld e,0xC0
+        call .w                 ; D+1: right, top
+        inc d
+        inc c                   ; slot S + 1
+        ld hl,SXL
+        ld a,(SYB)
+        ld e,0x80
+        call .w                 ; D+2: left, bottom
+        inc d
+        ld hl,SXR
+        ld a,(SYB)
+        ld e,0xC0               ; D+3: right, bottom
+; A = Y, HL -> X, X8; D = sprite; E = attribute 4 (4-bit, N6); C = attribute 3
+.w:     push af
         ld a,d
-        inc a
         nextreg 0x34,a
-        ld a,(PX)
-        add a,32
+        ld a,(hl)
         nextreg 0x35,a
-        ld a,0
-        rla
-        nextreg 0x37,a
-        ld a,(PX+1)
-        add a,48
+        inc hl
+        ld a,(hl)
+        nextreg 0x37,a          ; X8, palette offset 0
+        pop af
         nextreg 0x36,a
-        nextreg 0x39,0xC0       ; N6 = 1
+        ld a,e
+        nextreg 0x39,a
         ld a,c
         nextreg 0x38,a
         ret
 
 ; HL = object; VA, VBIT, VFR (non-zero): the image (frame, live ink) into a buffer - the one the
-; figure's own pair shows, the other one, or uploaded into the other one -> VSEL, A = slot.
+; figure's own sprites show, the other one, or uploaded into the other one -> VSEL, A = slot base.
 ; Keeps HL.
 prep:   push hl
         ld de,6
@@ -608,7 +621,7 @@ prep:   push hl
         and b
         jr z,.s0
         ld a,1
-.s0:    ld e,a                  ; E = the buffer its own pair shows
+.s0:    ld e,a                  ; E = the buffer its own sprites show
         call centry             ; HL = cache entry of buffer E
         ld a,(hl)
         cp d
@@ -635,32 +648,8 @@ prep:   push hl
         ld a,e
         ld (VSEL),a
         call slotv
-        ld bc,0x303B
-        out (c),a               ; upload from the slot's start (lines 0-23; 24-31 stay 0)
-        ld a,(VFR)
-        ld d,a
-        add a,a
-        add a,d                 ; 3 * frame, 8 bits (as the plotter)
-        ld l,a
-        ld h,0
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        ld de,(GBASE)
-        add hl,de               ; HL = graphic
-        ld a,(VINK)
-        ld c,a
-        ld a,(VFR)
-        ld e,a
-        ld d,high PFTAB
-        ld a,(de)               ; painted frame?
-        or a
-        jr nz,.sl
-        call fast48
-        jr .dn
-.sl:    call slow48             ; (ROM: maps the colour-map pages, then page 30 back)
-.dn:    pop hl
+        call upload
+        pop hl
         jp slotv
 .hit:   ld a,e
         ld (VSEL),a
@@ -678,7 +667,235 @@ centry: ld a,(VA)
         ld h,high CACHE
         ret
 
-; visibility of the three objects' own pairs (objects 1 and 2 on one spot with one frame: both
+; A = slot base S; VA, VFR, VINK: the frame's precomputed shape (page FPAGE + f / 8, offset (f % 8)
+; * 1024, mapped at slot 7) -> pattern RAM. Block: +0 codes of the top-left 16 x 16 (64 bytes, 4 per
+; row: two pixel-pair codes each - ink L 8, ink R 4, mask L 2, mask R 1), +64 the first code byte of
+; each top-right row (16; columns 18-31 are always empty), +80 bottom-left rows 16-25 (40), +120 the
+; first code byte of each bottom-right row (10), +256 one painted-override byte per pattern byte in
+; upload order (416), +1023 the painted flag. Object a's tables at 0xC200 + 0x200 a (code byte ->
+; pattern byte of its high pair, + 0x100 of its low pair) for ink TINK[a].
+upload: ld (VS),a
+        ld bc,0x303B
+        out (c),a               ; slot S from its start
+        ld a,(VA)
+        add a,low TINK
+        ld l,a
+        ld h,high TINK
+        ld a,(VINK)
+        cp (hl)
+        call nz,mktab           ; this object's tables for VINK
+        ld a,(VA)
+        add a,a
+        add a,high TABS
+        ld d,a                  ; D = the object's high-pair table page
+        ld a,(VFR)
+        ld b,a
+        rrca
+        rrca
+        rrca
+        and 0x1F
+        add a,FPAGE
+        nextreg 0x57,a          ; the frame's data page at slot 7
+        ld a,b
+        and 7
+        add a,a
+        add a,a
+        or 0xE0
+        ld h,a
+        ld l,0                  ; HL = the frame's block
+        or 3
+        ld b,a
+        ld c,0xFF
+        ld a,(bc)               ; painted flag (+1023)
+        or a
+        jr nz,.pt
+        ld b,64
+        call fa                 ; top-left
+        ld b,16
+        call fb                 ; top-right
+        ld b,40
+        call fa                 ; bottom-left, rows 16-25
+        ld a,(VS)
+        inc a
+        or 0x80
+        ld bc,0x303B
+        out (c),a               ; slot S + 1, bytes 128-
+        ld b,10
+        call fb                 ; bottom-right, rows 16-25
+        nextreg 0x57,1          ; bank 0's upper page back
+        ret
+.pt:    push ix
+        push hl
+        pop ix
+        inc ixh                 ; IX = the overrides (+256)
+        ld b,64
+        call pa
+        ld b,16
+        call pb
+        ld b,40
+        call pa
+        ld a,(VS)
+        inc a
+        or 0x80
+        ld bc,0x303B
+        out (c),a
+        ld b,10
+        call pb
+        pop ix
+        nextreg 0x57,1
+        ret
+; B code bytes -> 2 pattern bytes each
+fa:     ld e,(hl)
+        inc hl
+        ld a,(de)
+        out (0x5B),a
+        inc d
+        ld a,(de)
+        out (0x5B),a
+        dec d
+        djnz fa
+        ret
+; B rows: 1 code byte -> 2 pattern bytes, then 6 empty ones
+fb:     ld e,(hl)
+        inc hl
+        ld a,(de)
+        out (0x5B),a
+        inc d
+        ld a,(de)
+        out (0x5B),a
+        dec d
+        xor a
+        out (0x5B),a
+        out (0x5B),a
+        out (0x5B),a
+        out (0x5B),a
+        out (0x5B),a
+        out (0x5B),a
+        djnz fb
+        ret
+; painted frames: the same, each pattern byte through pout (IX = its override)
+pa:     ld e,(hl)
+        inc hl
+        ld a,(de)
+        call pout
+        inc d
+        ld a,(de)
+        call pout
+        dec d
+        djnz pa
+        ret
+pb:     ld e,(hl)
+        inc hl
+        ld a,(de)
+        call pout
+        inc d
+        ld a,(de)
+        call pout
+        dec d
+        xor a
+        call pout
+        xor a
+        call pout
+        xor a
+        call pout
+        xor a
+        call pout
+        xor a
+        call pout
+        xor a
+        call pout
+        djnz pb
+        ret
+; A = pattern byte; (IX) = its override (non-zero nibbles replace) -> out; keeps BC, DE, HL
+pout:   ld c,a
+        ld a,(ix+0)
+        inc ix
+        or a
+        jr nz,.cb
+        ld a,c
+        out (0x5B),a
+        ret
+.cb:    push de
+        ld e,a
+        and 0xF0
+        jr nz,.h
+        ld a,c
+        and 0xF0
+.h:     ld d,a
+        ld a,e
+        and 0x0F
+        jr nz,.l
+        ld a,c
+        and 0x0F
+.l:     or d
+        pop de
+        out (0x5B),a
+        ret
+
+; VA, VINK: the object's tables: code byte d -> pattern byte of pair d >> 4 (table) and of pair
+; d & 15 (table + 0x100); a pair: ink -> VINK, mask -> 8 (black), else 0 (transparent)
+mktab:  ld a,(VINK)
+        ld (hl),a               ; TINK[a]
+        ld c,a
+        ld hl,NIB16
+        ld b,0
+.n:     ld a,b                  ; NIB16[n], n = ink L 8, ink R 4, mask L 2, mask R 1
+        and 8
+        ld a,c
+        jr nz,.l1
+        ld a,b
+        and 2
+        ld a,8
+        jr nz,.l1
+        xor a
+.l1:    add a,a
+        add a,a
+        add a,a
+        add a,a
+        ld e,a                  ; left nibble
+        ld a,b
+        and 4
+        ld a,c
+        jr nz,.r1
+        ld a,b
+        and 1
+        ld a,8
+        jr nz,.r1
+        xor a
+.r1:    or e
+        ld (hl),a
+        inc l
+        inc b
+        ld a,b
+        cp 16
+        jr nz,.n
+        ld a,(VA)
+        add a,a
+        add a,high TABS
+        ld d,a
+        ld e,0                  ; DE = the high-pair table
+.t:     ld a,e
+        rrca
+        rrca
+        rrca
+        rrca
+        and 0x0F
+        ld l,a
+        ld h,high NIB16
+        ld a,(hl)
+        ld (de),a
+        inc d
+        ld a,e
+        and 0x0F
+        ld l,a
+        ld a,(hl)
+        ld (de),a               ; low-pair table
+        dec d
+        inc e
+        jr nz,.t
+        ret
+
+; visibility of the three objects' own sprites (objects 1 and 2 on one spot with one frame: both
 ; hidden, as their XORs cancel)
 vis_all:
         ld a,(FLAGS)
@@ -698,120 +915,52 @@ vis_all:
         ld a,c
         and 0xF9                ; the pair cancels: both hidden (buffers kept)
         ld c,a
-.np:    ld e,13                 ; own pair of object 0; then 9, 5
-        ld d,5                  ; slot 5 - a (buffer 0)
-        ld b,3
-.v:     ld a,c
-        and 8                   ; buffer bit of this object
-        ld a,d
-        jr z,.s
-        add a,3                 ; buffer 1: slot 8 - a
-.s:     or 0x40                 ; attribute 4 on
+.np:    xor a
+.v:     ld (VA),a
+        call sprnum
+        ld e,a                  ; E = its first sprite
+        ld a,(VA)
+        ld b,a
+        ld a,c                  ; flags shifted: bit 0 shown, bit 3 buffer of this object
+        and 8
+        jr z,.b0
+        ld a,1
+.b0:    ld (VSEL),a
+        push bc
+        call slotv
+        pop bc
+        or 0x40
         bit 0,c
         jr z,.h
         or 0x80                 ; visible
-.h:     ld h,a
+.h:     ld d,a                  ; D = attribute 3 for the top two (slot S)
         ld a,e
         nextreg 0x34,a
-        ld a,h
+        ld a,d
         nextreg 0x38,a
+        inc e
         ld a,e
-        inc a
         nextreg 0x34,a
-        ld a,h
+        ld a,d
+        nextreg 0x38,a
+        inc e
+        inc d                   ; slot S + 1 for the bottom two
+        ld a,e
+        nextreg 0x34,a
+        ld a,d
+        nextreg 0x38,a
+        inc e
+        ld a,e
+        nextreg 0x34,a
+        ld a,d
         nextreg 0x38,a
         srl c
-        dec d
-        ld a,e
-        sub 4
-        ld e,a
-        djnz .v
+        ld a,(VA)
+        inc a
+        cp 3
+        jr nz,.v
         ret
 
-; HL = graphic (48 bytes), C = ink, page CPAGE+4 at slot 6: an unpainted frame's 192 pattern
-; bytes from the 32-byte nibble table (2 output bytes per graphics nibble), rebuilt when the ink
-; changes. Clobbers A, BC, DE, HL.
-fast48: ld a,(NIBINK)
-        cp c
-        call nz,mknib
-        ld d,high NIBTAB
-        ld b,48
-.f:     ld a,(hl)
-        inc hl
-        ld c,a
-        and 0xF0
-        rrca
-        rrca
-        rrca
-        ld e,a                  ; 2 * high nibble
-        ld a,(de)
-        out (0x5B),a
-        inc e
-        ld a,(de)
-        out (0x5B),a
-        ld a,c
-        and 0x0F
-        add a,a
-        ld e,a                  ; 2 * low nibble
-        ld a,(de)
-        out (0x5B),a
-        inc e
-        ld a,(de)
-        out (0x5B),a
-        djnz .f
-        ret
-
-; C = ink: NIBTAB[2n], [2n + 1] = the two pattern bytes of graphics nibble n (pixel pairs
-; f(n >> 2), f(n & 3); f(00) = 0, f(01) = ink, f(10) = ink << 4, f(11) = ink * 0x11)
-mknib:  push hl
-        push de
-        push bc
-        ld a,c
-        ld (NIBINK),a
-        ld hl,NIBF
-        ld (hl),0
-        inc l
-        ld (hl),c
-        inc l
-        add a,a
-        add a,a
-        add a,a
-        add a,a
-        ld (hl),a
-        inc l
-        or c
-        ld (hl),a
-        ld de,NIBTAB
-        ld b,0
-.i:     ld c,0
-.j:     ld a,b
-        or low NIBF
-        ld l,a
-        ld a,(hl)
-        ld (de),a
-        inc e
-        ld a,c
-        or low NIBF
-        ld l,a
-        ld a,(hl)
-        ld (de),a
-        inc e
-        inc c
-        ld a,c
-        cp 4
-        jr nz,.j
-        inc b
-        ld a,b
-        cp 4
-        jr nz,.i
-        pop bc
-        pop de
-        pop hl
-        ret
-
-; A = graphics byte, DE = colour-map index, C = live ink: 8 pixels -> 4 bytes to port 0x5B.
-; Ink pixel = the entry's nibble when non-zero and its check byte equals the graphics byte, else
-; the live ink; paper pixel = transparent (an overlay: painting never covers the scenery).
 p30_end:
         ASSERT p30_end <= 0xDE00
 

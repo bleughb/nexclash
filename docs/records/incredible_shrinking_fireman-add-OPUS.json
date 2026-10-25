@@ -40,6 +40,7 @@
    "engine": "incredible_shrinking_fireman_add_opus",
    "strategy": "overlay: the game still draws the ULA; hooks (alt ROM 0x3A01 + 0x386E, page 30 at slot 6) set hardware sprites on the figures - the new image at the plotter entry 0xB950 (pending pair), switched at the exit 0xBC5C - and the diamonds (0xECFF); figure attribute painting removed (0xBCDF); colour map pages 26-30",
    "figures": "fireman, both room figures (every caller of 0xB950), the diamonds (Dean 2026-10-25)",
+   "mask": "fireman and both room figures: black, the 4-neighbours of ink (Dean 2026-10-25, hardware round 1: all figures, up / down / left / right only; black suggested, not objected to)",
    "depth": "sprites in front of everything",
    "tail": "0x5D00 (0x5C49-0x615B untouched in the whole-game RZX); printer buffer put back (the game reads 0x5B41)",
    "colours": "live inks (fireman white, figures the room ink, diamonds their cell ink) + docs/profiles/incredible_shrinking_fireman-add-OPUS_colours.json when present"
@@ -54,7 +55,7 @@
   ],
   "auto_record": false,
   "minutes": 15,
-  "note": "auto: differential verify at every hook site (plotter entry + exit, diamond draw, 3 screen clears): all registers incl. AF', all memory outside the dead stack, interrupt safety per patched instruction while IFF is on (IX, IY, I, alternate set, SP, MMU6, no fetch at 0x3D00-0x3DFF); after every event the sprite layer = the Python model (objects as last plotted, the pending image from entry to exit, the pair rule, the diamonds since the last clear, live inks / colour map); the plotter's screen change = old ^ new image of the model (every plot); while a plot runs (entry to exit) every pixel of the old and the new image under a visible sprite; the exit's (x, y, frame) = the entry's prediction; the diamond's 7 writes; every attribute read checked against the cells the removed painter leaves unpainted; the graphics never written; speed line. Unit cases: entry + exit for every frame 0-255 (moves with carries), exit alone (fallback) for every frame x edge positions, inks, pair rule, object guard, cache sequence, colour map with a wrong check byte, diamonds k 0-4 x positions + counter guard, clears; 6 negative controls (incl. the pending pair not shown at the entry)."
+  "note": "auto: differential verify at every hook site (plotter entry + exit, diamond draw, 3 screen clears): all registers incl. AF', all memory outside the dead stack, interrupt safety per patched instruction while IFF is on (IX, IY, I, alternate set, SP, MMU6, no fetch at 0x3D00-0x3DFF); after every event the sprite layer = the Python model (objects as last plotted with their black mask, the pending image from entry to exit, the pair rule, the diamonds since the last clear, live inks / colour map); the plotter's screen change = old ^ new image of the model (every plot); while a plot runs (entry to exit) every pixel of the old and the new image under a visible sprite; the exit's (x, y, frame) = the entry's prediction; the diamond's 7 writes; every attribute read checked against the cells the removed painter leaves unpainted; the graphics never written; speed line. Unit cases: entry + exit for every frame 0-255 (moves with carries), exit alone (fallback) for every frame x edge positions, inks, pair rule, object guard, cache sequence, colour map with a wrong check byte, diamonds k 0-4 x positions + counter guard, clears; 7 negative controls (incl. the pending sprites not shown at the entry, the mask left out)."
  },
  "outputs": {
   "plain": {
@@ -63,17 +64,17 @@
   },
   "sprites": {
    "file": "incredible_shrinking_fireman-add-OPUS_sprites.nex",
-   "md5": "1498ccd16e44da50f3f28e9137e11df0"
+   "md5": "400d0d11053913850cd156db4f7d6e40"
   }
  },
  "repro": [],
  "status": {
   "title": "The Incredible Shrinking Fireman",
   "engine_col": "incredible_shrinking_fireman_add_opus (incredible_shrinking_fireman-add-OPUS.md)",
-  "build": "incredible_shrinking_fireman-add-OPUS_sprites.nex 1498ccd1 (fireman, both room figures, diamonds = 4-bit sprites over the ULA, in front; the new image shown from the plotter entry (pending pair) so the half-done XOR plot never shows; live inks; figure attribute painting removed; hooks: alt ROM 0x3A01 + 0x386E + page 30 at slot 6, 28 MHz inside). Replaces dc65565c (hardware 2026-10-25: half-done plots showed in the cells' colours)",
+  "build": "incredible_shrinking_fireman-add-OPUS_sprites.nex 400d0d11 (fireman, both room figures: 18 x 26 4-bit sprites with a black 4-neighbour mask, shown from the plotter entry so the half-done XOR plot never shows; diamonds 8 x 7; in front; live inks; figure attribute painting removed; hooks: alt ROM + page 30 at slot 6, shapes precomputed in pages 32-63 at slot 7, 28 MHz inside). Replaces dc65565c (hardware round 1)",
   "software": "pending: the stamping run",
   "hardware": "dc65565c runs on a real Next (Dean 2026-10-25): bulb / enemy fireman flickered (fixed in 1498ccd1); fireman mask asked",
-  "next": "hardware test of 1498ccd1; fireman mask (colour asked); Dean paints the PAINTING_SPRITES sheet (recolour)"
+  "next": "hardware test; Dean paints the PAINTING_SPRITES sheet (recolour)"
  },
  "checks": [
   "asm2profile:incredible_shrinking_fireman-add-OPUS"

@@ -2,8 +2,8 @@
 
 Reference: specnext reference/incredible_shrinking_fireman-add-OPUS/ (branch
 claude/incredible-shrinking-fireman-add-OPUS; the "-add-OPUS" suffix is this run's naming, Dean 2026-10-25).
-Status: sprite build 1498ccd1 (plain feb706fc), 2026-10-25. dc65565c ran on a real Next (Dean): the bulb
-and the enemy fireman flickered (fixed: plot entry hook, below); fireman mask asked (Open).
+Status: sprite build 400d0d11 (plain feb706fc), 2026-10-25: hardware round 1 fixed (plot entry hook) and
+the mask added (all three figures, black). dc65565c ran on a real Next (Dean).
 Code: nexclash/incredible_shrinking_fireman_add_opus.py (sheets, build, verifier, unit tests, recolour),
 asm/incredible_shrinking_fireman-add-OPUS_hooks.asm, docs/profiles/incredible_shrinking_fireman-add-OPUS.json,
 record docs/records/incredible_shrinking_fireman-add-OPUS.json.
@@ -103,8 +103,10 @@ draws the picture; dc65565c moved the sprite at the plot's EXIT, so for that thi
 done ULA plot showed uncovered, in the cell's own colour (the painting is removed), e.g. cyan beside the
 bulb. Worst on the wrapped frames (bulb 97-100, enemy fireman 105-108: big shape changes). The
 toolkit could not see it: it checks state at hook boundaries, not what the beam shows mid-plot.
-Fix 1498ccd1: an ENTRY hook (0xB950) shows the new image on a pending sprite pair before the plot runs;
-the exit switches the own pair to it and hides the pending pair: old and new image covered throughout.
+Fix: an ENTRY hook (0xB950) shows the new image on pending sprites before the plot runs; the exit
+switches the figure's own sprites to it and hides the pending ones: old and new image covered
+throughout. Mask (Dean: "lets do all figures"): fireman and both room figures, black (suggested, not
+objected to), the 4-neighbours of ink only; the diamonds unmasked. Build 400d0d11.
 
 ## Build (2026-10-25)
 Overlay, not removal: the plotter and the diamond drawing keep writing the ULA exactly as the original
@@ -125,26 +127,34 @@ the sprite). The figure attribute painting is removed: 0xBCDF LD (IX+0),A -> NOP
   the DI. Hook data in Next pages 26-30 mapped at SLOT 6 (0xC000) only inside a hook, MMU6 back to
   page 0 (as Cyclone; no hook reads game data in 0xC000-0xDFFF; slot 0 would also have done). Tail 0x5D00 (0x5C49-0x615B untouched), printer buffer put back.
 - Sprites: diamonds 0-4 (k = 5 - the loop counter on the stack; 4-bit pattern slot k / 2, half k & 1);
-  object a at 13 - 4a: its own pair (lines 0-15, 16-23) and, from the plot entry to the exit, the
-  pending pair (+2, +3) showing the new image at (x + dx, y + dy) (8-bit adds, as 0xB97D / 0xB982),
-  frame (0xBCF6). Higher on top: diamonds, object 2, 1, fireman. One 256-byte slot per image,
-  double-buffered 5 - a / 8 - a: the entry puts the new image in the buffer the own pair does not
-  show (or finds it in either), the exit switches the own pair to it. An exit with no entry before it
-  builds the image itself (unit-tested fallback). Cache: (frame, ink) per buffer (page 30 0x1F10): a plot whose image is in either buffer
-  uploads nothing (40 % of plots in the RZX). Lines 24-31 never written (setup clears pattern RAM).
-- Colours: palette = the sheet's (index 0 transparent). Ink pixel = the painted nibble when the
-  entry's check byte equals the graphics byte, else the live ink E & 7 (0 -> black 8), bright if E or
-  the keep-mask D has bit 6 (room cells are BRIGHT); paper = transparent (painting never covers the
-  scenery). Diamond: its cell's ink. Colour map: index = address - 0x9C40 (0..4143) / 4144 + address -
-  0xED14; entry page 26 + i / 1024, offset (i % 1024) * 8: 4 nibble bytes + check. Page 30: flags
-  0x1F00 (bits 0-2 shown, 3-5 buffer), cache 0x1F10, painted-frame table 0x1400 (build time), nibble
-  table 0x1E00 (built per ink at run time). Unpainted frames: 2 pattern bytes per graphics nibble from
-  the nibble table (~150 T per byte at 28 MHz); painted frames: the per-byte map path.
+  object a at 21 - 8a: its own 4 sprites and, from the plot entry to the exit, 4 pending ones (+4)
+  showing the new image at (x + dx, y + dy) (8-bit adds, as 0xB97D / 0xB982), frame (0xBCF6). An image
+  = 18 x 26 (the 16 x 24 graphic + the black mask) at (x - 1, y - 1): 4-bit sprites top-left / top-right
+  (16 px right) / bottom-left (16 down) / bottom-right from two 256-byte slots. Higher on top:
+  diamonds, object 2, 1, fireman. Double-buffered: slots 11 - 4a + 2 buffer (+1); the entry puts the
+  new image in the buffer the own sprites do not show (or finds it in either: (frame, ink) cache), the
+  exit switches. An exit with no entry before it builds the image itself (unit-tested fallback).
+- Shapes precomputed at build time (the graphics are proven never written): frame f's block in page
+  32 + f / 8 (+ (f % 8) * 1024), mapped at slot 7 during an upload: pixel-pair codes (ink / mask) for
+  the 4 quarters (the right quarters' columns 18-31 are always empty: one code byte per row), the
+  painted overrides per pattern byte, a painted flag. Run time: per object a 512-byte table (code ->
+  pattern byte in its live ink, rebuilt when its ink changes) - 2 pattern bytes per code byte.
+- Colours: palette = the sheet's (index 0 transparent). Figure ink pixel = its painted nibble (built
+  into the shape block from docs/profiles/<record>_colours.json: key G + graphics byte address, used
+  when the entry's check byte equals the graphics byte) else the live ink E & 7 (0 -> black 8), bright
+  if E or the keep-mask D has bit 6 (room cells are BRIGHT); mask = black; paper = transparent
+  (painting never covers the scenery). Diamond: its cell's ink, or its colour-map entry (key D +
+  address; page 26 + i / 1024, offset (i % 1024) * 8, i = 4144 + address - 0xED14) through emit.
+  Page 30: object tables 0x0200-0x07FF, code 0x1600-, NIB16 0x1E00, TINK 0x1E20, flags 0x1F00 (bits
+  0-2 shown, 3-5 buffer), pending 0x1F01, variables 0x1F02-, cache 0x1F10. Recolour rewrites banks
+  13-15 and 16-31 (the shapes carry the painted colours).
 - Visibility: shown[a] = frame != 0 at its last plot, cleared by the three screen clears (also the
   option / carrying windows: drawn after the 0xC5B1 clear); objects 1 and 2 both shown at one x, y,
   frame -> both hidden (the XOR cancel). Diamonds shown from their draw to the next clear.
-- Speed: dc65565c (exit hook only, whole RZX) mean 1.1K T per 69,888-T frame, max 6.7K T; 1498ccd1
-  (entry + exit, 2000 frames) mean 1.8K, max 7.6K (28 MHz T / 6). The original never reaches its HALT in a third of the frames (busy:
+- Speed (28 MHz T / 6): dc65565c (exit hook only, whole RZX) mean 1.1K T per 69,888-T frame, max 6.7K
+  T; entry + exit, no mask (2000 frames) 1.8K / 7.6K; with the mask, first version (per-pixel codes
+  through a 16-entry table, overrides always) 5.8K / 28.3K; per-object tables + fast empty columns
+  (400d0d11, 2000 frames) 2.4K / 16.4K (the max: room entry, three tables built). The original never reaches its HALT in a third of the frames (busy:
   median 31K T): the worst frames may run up to ~10 % longer. First version (no cache, per-byte map
   always; 2000 frames): mean 6.4K, max 21.6K.
 
@@ -164,9 +174,7 @@ under a visible sprite. Unit cases PASS, 5/5 negative controls detected. Details
 - Recolour: python nexclash.py recolour incredible_shrinking_fireman-add-OPUS_sprites.nex PAINTED.png.
 
 ## Open
-- Fireman mask (Dean, hardware round 1): up / down / left / right neighbours only; colour and whether
-  other figures get one asked. 18 x 26 px -> 4 sprites per image.
-- Hardware test of 1498ccd1. Painted sheet (Dean) -> recolour, then the map becomes the build default.
+- Hardware test of 400d0d11 (mask colour black: confirm). Mask on the diamonds: not asked for. Painted sheet (Dean) -> recolour, then the map becomes the build default.
 - A pair-hidden figure (objects 1 and 2 on one spot, XOR cancel) that starts to move: its old pixels
   are uncovered during that one plot (the verifier counts these plot entries).
 - 21 graphics of the bank never drawn in the RZX (sheet group "From the code"): unit-tested (every frame

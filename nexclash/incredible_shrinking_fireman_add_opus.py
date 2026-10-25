@@ -200,7 +200,6 @@ CPAGE = 26                      # colour map pages 26-30 (banks 13-15), mapped a
 CMAP_LEN = 5120                 # entries (8 bytes: 4 nibble bytes, check byte); 0..4143 graphics,
 IDX_ITEM = 4144                 # 4144..4150 the collectable
 FLAGS_PG, FLAGS_OFF = CPAGE + 4, 0x1F00
-PFTAB_OFF = 0x1400              # page 30: frame f painted (any matching non-zero entry), build time
 CMAP_BANKS = (13, 14, 15)
 TAIL_ADDR, TAIL_END = 0x5D00, 0x615C        # 0x5C49-0x615B never read or written (whole-RZX scan)
 GFX0 = 0x9C40
@@ -225,8 +224,76 @@ SEQUELS = {0xB952: 0xB950, 0xBC5E: 0xBC5C}  # reached right after the site's own
 
 
 def spr_own(a):
-    """Object a's own sprite pair (lines 0-15, 16-23); the pending pair is the next two."""
-    return 13 - 4 * a
+    """Object a's own 4 sprites (an 18 x 26 masked image: top-left, top-right, bottom-left,
+    bottom-right); the pending 4 are the next ones."""
+    return 21 - 8 * a
+
+
+FPAGE = 32                      # figure shapes: frame f at page 32 + f // 8, offset (f % 8) * 1024
+MASK_COL = BLACK                # the mask (Dean 2026-10-25: all figures, up/down/left/right only)
+FIG_W, FIG_H = W + 2, H + 2     # 18 x 26 with the mask
+
+
+def fig_grid(g):
+    """48 graphics bytes -> (ink, mask) sets of (col, row) in the 32 x 26 sprite area, figure at (1, 1).
+    Mask = the 4-neighbours of ink that are not ink."""
+    ink = set()
+    for line in range(H):
+        r = g[2 * line] << 8 | g[2 * line + 1]
+        for k in range(16):
+            if r >> (15 - k) & 1:
+                ink.add((k + 1, line + 1))
+    mask = set()
+    for c, r in ink:
+        for q in ((c + 1, r), (c - 1, r), (c, r + 1), (c, r - 1)):
+            if q not in ink:
+                mask.add(q)
+    return ink, mask
+
+
+def fig_data(f, peek, cmap):
+    """Frame f -> its 1024-byte block (asm upload): +0 the top-left 16 x 16 as code bytes (4 per row,
+    each two pixel-pair codes: ink L 8, ink R 4, mask L 2, mask R 1), +64 the first code byte of each
+    top-right row (columns 18-31 are always empty), +80 the bottom-left rows 16-25, +120 the first code
+    byte of each bottom-right row, +256 one painted-override byte per pattern byte in upload order
+    (nibble 0 = the live ink), +1023 1 if any override."""
+    ga = gfx_addr(GFX0, f)
+    g = bytes(peek((ga + i) & 0xFFFF) for i in range(48))
+    ink, mask = fig_grid(g)
+
+    def ov(c, r):
+        if (c, r) not in ink:
+            return 0
+        b = 2 * (r - 1) + (c - 1) // 8
+        return colour(cmap, 'G%04X' % ((ga + b) & 0xFFFF), g[b], (c - 1) % 8, 0)
+
+    def pair(c, r):                    # pixel-pair code of columns c, c + 1
+        return (((c, r) in ink) << 3 | ((c + 1, r) in ink) << 2 | ((c, r) in mask) << 1
+                | ((c + 1, r) in mask))
+
+    blk = bytearray(1024)
+    codes, ovs = bytearray(), bytearray()
+    for rows, c0, full in ((range(16), 0, True), (range(16), 16, False), (range(16, 26), 0, True),
+                           (range(16, 26), 16, False)):
+        for r in rows:
+            for c in range(c0, c0 + 16, 4):
+                if full or c == c0:
+                    codes.append(pair(c, r) << 4 | pair(c + 2, r))
+                ovs.append(ov(c, r) << 4 | ov(c + 1, r))
+                ovs.append(ov(c + 2, r) << 4 | ov(c + 3, r))
+    assert len(codes) == 130 and len(ovs) == 416
+    blk[0:130] = codes
+    blk[256:256 + 416] = ovs
+    blk[1023] = 1 if any(ovs) else 0
+    return bytes(blk)
+
+
+def fig_pages(peek, cmap):
+    """{page 32-63: 8192 bytes}: every frame's shape data (frame 0: nothing)."""
+    pages = {FPAGE + k: bytearray(8192) for k in range(32)}
+    for f in range(1, 256):
+        pages[FPAGE + f // 8][(f % 8) * 1024:(f % 8) * 1024 + 1024] = fig_data(f, peek, cmap)
+    return {k: bytes(v) for k, v in pages.items()}
 CMP = list(range(0, 13)) + [14] + list(range(16, 25)) + [26, 27]   # all but R, T, MEMPTR
 DECISIONS = {'engine': 'incredible_shrinking_fireman_add_opus',
              'strategy': 'overlay: the game still draws the ULA; hooks (alt ROM 0x3A01 + 0x386E, page 30 '
@@ -234,6 +301,8 @@ DECISIONS = {'engine': 'incredible_shrinking_fireman_add_opus',
                          '0xB950 (pending pair), switched at the exit 0xBC5C - and the diamonds (0xECFF); '
                          'figure attribute painting removed (0xBCDF); colour map pages 26-30',
              'figures': 'fireman, both room figures (every caller of 0xB950), the diamonds (Dean 2026-10-25)',
+             'mask': 'fireman and both room figures: black, the 4-neighbours of ink (Dean 2026-10-25, hardware round '
+                     '1: all figures, up / down / left / right only; black suggested, not objected to)',
              'depth': 'sprites in front of everything',
              'tail': '0x5D00 (0x5C49-0x615B untouched in the whole-game RZX); printer buffer put back '
                      '(the game reads 0x5B41)',
@@ -279,15 +348,6 @@ def cmap_pages(cmap, peek=None, code=None):
     pages = {CPAGE + k: bytearray(8192) for k in range(5)}
     code = bytes.fromhex(load_profile()['hooks']['p30']) if code is None else code
     pages[FLAGS_PG][P30_OFF:P30_OFF + len(code)] = code
-    if peek is not None:
-        for f in range(1, 256):
-            ga = gfx_addr(GFX0, f)
-            for i in range(48):
-                a = (ga + i) & 0xFFFF
-                e = cmap.get('G%04X' % a)
-                if e is not None and e[0] == peek(a) and any(e[2]):
-                    pages[FLAGS_PG][PFTAB_OFF + f] = 1
-                    break
     for key, e in cmap.items():
         i = cmap_index(key)
         if i is None:
@@ -303,8 +363,14 @@ def cmap_pages(cmap, peek=None, code=None):
 
 
 def cmap_banks(cmap, peek, code=None):
+    """Every bank the colours decide: 13-15 (colour-map pages 26-30, page-30 code and tables) and
+    16-31 (the figure shapes with their painted overrides). The game never reads them."""
     pg = cmap_pages(cmap, peek, code)
-    return {13: bytes(pg[26] + pg[27]), 14: bytes(pg[28] + pg[29]), 15: bytes(pg[30]) + bytes(8192)}
+    fp = fig_pages(peek, cmap)
+    out = {13: bytes(pg[26] + pg[27]), 14: bytes(pg[28] + pg[29]), 15: bytes(pg[30]) + bytes(8192)}
+    for b in range(16, 32):
+        out[b] = fp[2 * b] + fp[2 * b + 1]
+    return out
 
 
 class FiremanPatch:
@@ -350,9 +416,10 @@ class FiremanPatch:
         self.extra_banks = {}
 
     def prepare(self, peek):
-        """The colour-map pages with the painted-frame table (from the game's static graphics)."""
+        """The colour-map pages and the figure shapes (from the game's static graphics)."""
         self.peek = peek
         self.pages = cmap_pages(self.cmap, peek, self.p30)
+        self.pages.update(fig_pages(peek, self.cmap))
 
     def apply(self, snap):
         if snap.is128:
@@ -380,12 +447,15 @@ class FiremanPatch:
 # ---------------------------------------------------------------------------------------------
 
 class NextState:
+    """pages: the Next pages the hooks map - 26-30 at slot 6 (written: tables, flags, cache), the
+    figure shapes 32-63 at slot 7 (read only: shared between copies, never copied)."""
+
     def __init__(self, pages):
-        self.nr = {0x56: 0}
+        self.nr = {0x56: 0, 0x57: 1}
         self.attr = [[0, 0, 0, 0, 0] for _ in range(128)]
         self.pat = bytearray(16384)
         self.pidx = 0
-        self.pages = {k: bytearray(v) for k, v in pages.items()}
+        self.pages = {k: (bytearray(v) if k < FPAGE else v) for k, v in pages.items()}
         self.events = []
         self.bad = []
 
@@ -395,7 +465,7 @@ class NextState:
         n.attr = [list(a) for a in self.attr]
         n.pat = bytearray(self.pat)
         n.pidx = self.pidx
-        n.pages = {k: bytearray(v) for k, v in self.pages.items()}
+        n.pages = {k: (bytearray(v) if k < FPAGE else v) for k, v in self.pages.items()}
         return n
 
     def nextreg(self, reg, val):
@@ -403,8 +473,11 @@ class NextState:
         if 0x35 <= reg <= 0x39:
             self.attr[self.nr.get(0x34, 0) & 0x7F][reg - 0x35] = val
         elif reg == 0x56:
-            if val != 0 and val not in self.pages:
+            if val != 0 and not (CPAGE <= val < CPAGE + 5 and val in self.pages):
                 self.bad.append(('MMU6 set to page %d' % val,))
+        elif reg == 0x57:
+            if val != 1 and not (FPAGE <= val < FPAGE + 32 and val in self.pages):
+                self.bad.append(('MMU7 set to page %d' % val,))
         elif reg not in (0x34, 0x07):
             self.bad.append(('NEXTREG 0x%02X' % reg,))
         self.events.append(('nr', reg, val))
@@ -504,6 +577,10 @@ def _overlays(get, alt, psite, ns):
                 pg = ns.nr.get(0x56, 0)
                 if pg:
                     return ns.pages[pg][a - 0xC000]
+            elif a >= 0xE000:
+                pg = ns.nr.get(0x57, 1)
+                if pg != 1:
+                    return ns.pages[pg][a - 0xE000]
             v = psite.get(a)
             if v is not None:
                 return v
@@ -514,6 +591,8 @@ def _overlays(get, alt, psite, ns):
                 s.romw = getattr(s, 'romw', 0) + 1
             elif 0xC000 <= a < 0xE000 and ns.nr.get(0x56, 0):
                 ns.pages[ns.nr[0x56]][a - 0xC000] = v
+            elif a >= 0xE000 and ns.nr.get(0x57, 1) != 1:
+                ns.bad.append(('write to a figure-shape page (MMU7)',))
             else:
                 s.ov[a] = v
     return O, P
@@ -555,8 +634,8 @@ def _isafe(sim, regs0, ixs, ns, err):
             bad = 'I / alternate set'
         elif R[12] < sp0 - 2:
             bad = 'SP more than one push below the site'
-        elif ns.nr.get(0x56, 0):
-            bad = 'MMU6 mapped'
+        elif ns.nr.get(0x56, 0) or ns.nr.get(0x57, 1) != 1:
+            bad = 'MMU6 / MMU7 mapped'
         elif 0x3D00 <= pc < 0x3E00:
             bad = 'fetch in 0x3D00-0x3DFF'
         if bad and not err:
@@ -614,8 +693,8 @@ def event(patch, kind, site, get, R, ns, alt, Sim):
     if getattr(p, 'romw', 0):
         f.append(('patched code wrote ROM',))
     f += ns.bad
-    if ns.nr.get(0x56, 0):
-        f.append(('MMU6 left mapped',))
+    if ns.nr.get(0x56, 0) or ns.nr.get(0x57, 1) != 1:
+        f.append(('MMU6 / MMU7 left mapped',))
     dead = range(ro[12] - 64, ro[12])             # below the final SP: dead stack
     keys = set(o.ov) | set(p.ov)
     md = [a for a in keys if a not in dead and o[a] != p[a]]
@@ -680,18 +759,22 @@ class Model:
         self.pend = [None, None, None]
         self.items = {}
 
-    def image(self, o, out=None):
+    def image(self, o, out=None, ink_only=False):
+        """Object image o -> {(x, y): colour} on the screen: its ink pixels (colour map / live ink) and
+        the black mask around them (4-neighbours), one pixel outside the 16 x 24 graphic."""
         out = {} if out is None else out
         x, y, fr, ga, g, ink = o
-        for line in range(H):
-            for half in range(2):
-                v = g[2 * line + half]
-                for bit in range(8):
-                    if v >> (7 - bit) & 1:
-                        px, py = x + 8 * half + bit, y + line
-                        if px < 256 and py < 192:
-                            out[(px, py)] = colour(self.cmap, 'G%04X' % ((ga + 2 * line + half) & 0xFFFF),
-                                                   v, bit, ink)
+        inks, mask = fig_grid(g)
+        if not ink_only:
+            for c, r in mask:
+                px, py = x - 1 + c, y - 1 + r
+                if 0 <= px < 256 and 0 <= py < 192:
+                    out[(px, py)] = MASK_COL
+        for c, r in inks:
+            px, py = x - 1 + c, y - 1 + r
+            if 0 <= px < 256 and 0 <= py < 192:
+                b = 2 * (r - 1) + (c - 1) // 8
+                out[(px, py)] = colour(self.cmap, 'G%04X' % ((ga + b) & 0xFFFF), g[b], (c - 1) % 8, ink)
         return out
 
     def pair(self):
@@ -884,9 +967,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                             exp = model.layer()
                             need = set()
                             if shown_old:
-                                need |= set(model.image(model.objs[a]))
+                                need |= set(model.image(model.objs[a], ink_only=True))
                             if pred is not None:
-                                need |= set(model.image(pred))
+                                need |= set(model.image(pred, ink_only=True))
                             miss = need - set(exp)
                             if miss:
                                 fail('plot entry: image pixels not under a sprite during the plot', (a, len(miss)))
@@ -1009,7 +1092,7 @@ def _ns_for(pt, ns0):
     """The patched machine's Next state for patch pt from a captured one: pt's OWN colour tables,
     only the run-time bytes (sprites, patterns, the flags byte) restored from the capture."""
     ns = ns0.copy()
-    ns.pages = {k: bytearray(v) for k, v in pt.pages.items()}
+    ns.pages = {k: (bytearray(v) if k < FPAGE else v) for k, v in pt.pages.items()}
     if FLAGS_PG in ns0.pages:
         ns.pages[FLAGS_PG][RUN_LO:RUN_HI] = ns0.pages[FLAGS_PG][RUN_LO:RUN_HI]
     return ns
@@ -1051,7 +1134,7 @@ def _entry_case(pt, R, mem, ns, a, x0, y0, f0, dx, dy, f, e=7, d=0x40):
 
 
 def _own(a):
-    return range(spr_own(a), spr_own(a) + 4)
+    return range(spr_own(a), spr_own(a) + 8)
 
 
 def _model_objs(pt, m, shown):
@@ -1141,10 +1224,10 @@ def unit_tests(patch, states, negs=None):
             exp = _model_objs(patch, m, {1, 2}).layer()
             # object 2's sprite shows the pattern from its capture: compare only object 1's sprites
             # and both visibility bits
-            vis = [bool(ns.attr[i][3] & 0x80) for i in (5, 6, 9, 10)]
+            vis = [bool(ns.attr[i][3] & 0x80) for i in list(range(5, 9)) + list(range(13, 17))]
             pair = (x1, fr1) == (100, 20)
-            want = [not pair] * 4
-            got1 = ns.layer(range(9, 11))
+            want = [not pair] * 8
+            got1 = ns.layer(range(13, 17))
             exp1 = {} if pair else _model_objs(patch, m, {1}).layer()
             note('pair rule', fl + ns.bad, vis == want and got1 == exp1)
         # cache: one Next state through a sequence (same image twice, the other buffer's image, an
@@ -1210,7 +1293,7 @@ def unit_tests(patch, states, negs=None):
                 elif k == 'pair':
                     fl, ns, m = _plot_case(neg, R, mem, ns0, 1, 100, 100, 20, 3, 0, flags=0x04,
                                            other={2: {0: 100, 1: 100, 2: 20, 6: 3, 7: 0}})
-                    det = bool(fl) or any(ns.attr[i][3] & 0x80 for i in (5, 6, 9, 10))
+                    det = bool(fl) or any(ns.attr[i][3] & 0x80 for i in list(range(5, 9)) + list(range(13, 17)))
                     c['negative control: %s %s' % (name, 'detected' if det else 'NOT DETECTED!')] += 1
     negd = collections.defaultdict(bool)
     for kind, pc, R, mem, ns0 in by['it'][:1]:
@@ -1247,12 +1330,12 @@ def unit_tests(patch, states, negs=None):
                 c['negative control: %s %s' % (nm, 'detected' if det else 'NOT DETECTED!')] += 1
     for kind, pc, R, mem, ns0 in by['c'][:3]:
         ns = _ns_for(patch, ns0)
-        for i in range(17):
+        for i in range(29):
             ns.attr[i][3] |= 0x80
         ns.pages[FLAGS_PG][FLAGS_OFF] = 0x3F
         ns.pages[FLAGS_PG][FLAGS_OFF + 1] = 0x3F
         fl, _, _ = event(patch, 'c', pc, bytes(mem).__getitem__, list(R), ns, _alt(patch), _rw())
-        ok = (not any(ns.attr[i][3] & 0x80 for i in range(17)) and ns.flags == 0
+        ok = (not any(ns.attr[i][3] & 0x80 for i in range(29)) and ns.flags == 0
               and ns.pages[FLAGS_PG][FLAGS_OFF + 1] == 0)
         note('screen clear hides all (0x%04X)' % pc, fl + ns.bad, ok)
     return c
@@ -1275,11 +1358,12 @@ def _neg(patch, old, new, what, nth=None):
 
 
 def negative_patches(patch):
-    return {'sprite X one pixel off': (_neg(patch, '3a02dfc620ed9235', '3a02dfc621ed9235', 'X', nth=0), 'pl'),
+    return {'sprite X one pixel off': (_neg(patch, '3a02dfc61f', '3a02dfc620', 'X', nth=0), 'pl'),
             'pair rule left out': (_neg(patch, 'e6f9', 'e6ff', 'pair'), 'pair'),
             'diamond one line low': (_neg(patch, 'c61aed9236', 'c61bed9236', 'item Y'), 'it'),
             'cache ignores the ink': (_neg(patch, '2c7eb928', '2c7ebf28', 'cache', nth=0), 'cache'),
-            'pending pair not shown at the plot entry': (_neg(patch, 'f1f6c04f', 'f1f6404f', 'pending'), 'en')}
+            'pending sprites not shown at the plot entry': (_neg(patch, 'f1f6c04f', 'f1f6404f', 'pending'), 'en'),
+            'mask left out (left pixel of a pair)': (_neg(patch, 'e6023e08', 'e6023e00', 'mask', nth=0), 'pl')}
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1296,7 +1380,7 @@ def recolour(nex, cmap):
     from .recolour import nex_offsets, splice
     d = bytes(nex)
     off = nex_offsets(d)
-    need = {5, 2, 0, 10, 12} | set(CMAP_BANKS)
+    need = {5, 2, 0, 10, 12} | set(CMAP_BANKS) | set(range(16, 32))
     if not need <= set(off):
         raise ValueError('not an Incredible Shrinking Fireman sprite build: banks %s missing' % sorted(need - set(off)))
     bank = lambda b: d[off[b]:off[b] + 16384]
@@ -1304,10 +1388,14 @@ def recolour(nex, cmap):
     peek = lambda a: ram[a - 0x4000]
     prof = load_profile()
     sg = prof['signature']
-    sig = bytes.fromhex(sg['bytes'])
-    if bytes(peek(sg['addr'] + k) for k in range(len(sig))) != sig:
-        raise ValueError('not The Incredible Shrinking Fireman (signature)')
     p0 = FiremanPatch(prof, colours={})
+    sig = bytearray.fromhex(sg['bytes'])
+    for a, old, new in p0.sites:                # a patch site inside the signature holds its hook
+        for k, v in enumerate(new):
+            if 0 <= a + k - sg['addr'] < len(sig):
+                sig[a + k - sg['addr']] = v
+    if bytes(peek(sg['addr'] + k) for k in range(len(sig))) != bytes(sig):
+        raise ValueError('not The Incredible Shrinking Fireman (signature)')
     for a, old, new in p0.sites:
         if bytes(peek(a + k) for k in range(len(new))) != new:
             raise ValueError('patch site 0x%04X does not hold this build\'s hook bytes' % a)
