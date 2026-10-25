@@ -2,7 +2,7 @@
 
 | Stage | Who | Ends with (the gate) |
 |---|---|---|
-| 0 Intake | tools: `nexclash.py survey` | the recording reaches every plotter's callers, or the user records more (before any design work) |
+| 0 Intake | tools: `python -m nexclash.survey` | the recording reaches every plotter's callers, or the user records more (before any design work) |
 | 1 Design | session 1 | the design in games/<game>.md + ONE question to the user (defaults + exceptions, preview, plain .nex) |
 | 2 Build | session 2 | quick runs PASS, evidence record written, committed |
 | 3 Prove + deliver | session 3 (small) | the one full verification stamped; sprite build + colour sheets to the user |
@@ -59,15 +59,19 @@ session that reads this file + games/<game>.md is far cheaper than hour five of 
 # Stage 0 - Intake (tools, before any design work)
 
 ## Survey (one command)
-`python nexclash.py survey GAME.z80 --rzx R [--rzx R2]` runs the snapshot check (0b), the plain
-conversion with its boot check (1), engine identification (2) and one analysis pass (3: screen
-writers, plot routines and their callers, ISR, free memory, cost per draw) and writes
-`<game>_survey/survey.md` (one page) + a preview sheet per plot routine. Read survey.md first;
-run the single commands below only for what it leaves open.
-Coverage gate: survey.md lists every CALL / JP to each plot routine found in the code and which
-the recording reached. Callers the recording never reached -> ask the user for a recording that
-reaches them (RECORDING_CHECKLIST.md) BEFORE stage 1 (Cyclone needed a second recording halfway
-through its build).
+`python -m nexclash.survey GAME.z80 --rzx R [--rzx R2]` (~5 min for 8,600 frames; `--stop N` for a
+first look) runs the snapshot check (0b), the plain conversion with its boot check (1; 48K only),
+engine identification (2) and one analysis pass (3: screen writers by routine, callers, T per call,
+ISR, free memory), then a preview pass, and writes `<game>_survey/`: survey.md (one page, ~2K
+tokens), survey.json, preview.png (what each top plot routine draws, per caller), the plain .nex.
+A KNOWN engine there -> `auto`, no stage 1-2. Read survey.md first; run the single commands below
+only for what it leaves open. Its routine attribution is a shadow call stack (BRIEFING C4): a game
+that drops return addresses or blits with SP can blur it - check a surprising row with `cost --at`.
+Coverage gate (survey.md GATE line): every CALL / JP byte pattern to each top plot routine, and
+which the recording reached. An unreached CALL to a FIGURE plotter in code that ran -> ask the user
+for a recording that reaches it (RECORDING_CHECKLIST.md) BEFORE stage 1 (Cyclone needed a second
+recording halfway through its build); to a text / score printer it is usually a message that did
+not come up - note it in games/<game>.md.
 
 ## 0. Inputs (ask once, up front)
 - `.z80` snapshot, 48K or 128K, ideally at the title screen or in game, keyboard controls (not

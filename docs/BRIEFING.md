@@ -328,7 +328,8 @@ Analysis tools
    plotter. Add `scan --static` (recursive descent from entry + ISR, RZX PCs as seeds, object handler
    fields `LD L,(IX+d)/LD H,(IX+d+1)/JP (HL)` and the stores into them, a byte scan for `CD/C3/CA..
    lo hi` at a plotter rated by code-likeness; design: TECHNIQUES "NextMasterSystem"). Keep the
-   existing output; golden check in tools_check.
+   existing output; golden check in tools_check. (The byte scan part exists in survey.static_sites,
+   2026-10-26; the recursive descent does not.)
 12. A shared fast mode for frame-level questions (C simulator + RZXTracer.next_frame, seconds per RZX)
    next to the per-instruction simrun commands (LEARNINGS 2.3); `rzx.trace` could also speed older
    engines' capture and verify passes.
@@ -339,7 +340,10 @@ Analysis tools
    left for frame 0" (simrun-based scan / isr / cost work on 128K).
 16. Treasure Island game snapshot: the auto-recorder finds no start / inputs (needs --start/--keys or
    a user RZX).
-
+40. `nexclash.py convert GAME.z80 --rzx R` stops with "Port readings exhausted" on a recording with
+   Fuse autosave snapshots (Chuckie_Egg.rzx: 9; found 2026-10-26): analyse() replays the RZX as it is,
+   while simrun / auto strip autosaves first. survey strips them before analyse(); `convert` (in
+   nexclash.py: every game's dependency) still needs it.
 Toolkit structure
 17. Generic builder = TID engine only. Next: an XOR template (generalise dizzy1.py: 1-bit shadow screen
    + Layer 2), then non-Codemasters engines; virtual read is in dedicated builders only (the generic
@@ -467,7 +471,17 @@ Logic must be exact at both levels; visuals "good enough" where Dean agreed (gam
 
 ### C4. Shared analysis commands (any game; Dean 2026-10-12: harness stays per engine)
 `nexclash.py inspect | scan | isr | cost | preview` (modules snapinfo, memscan, isrinfo, drawcost, preview on the
-runner simrun.py). Game-independent: game facts come in as arguments (addresses, ranges, keys).
+runner simrun.py) and `python -m nexclash.survey` (stage 0: all of them in one pass + plain build,
+boot, engine, plot routines, coverage; not in nexclash.py because every game's evidence depends on
+nexclash.py and a new subcommand would put them all up for re-verification). Game-independent: game
+facts come in as arguments (addresses, ranges, keys).
+- survey: inspect + engine detectors + the plain conversion as `convert` does it (autosave snapshots
+  stripped first: analyse() desyncs on them) + the 48K boot check, then ONE pass with memscan.Scanner,
+  isrinfo.IsrTracker and survey.PlotTracker (shadow call stack: each screen write -> the innermost
+  CALL or interrupt running; calls, callers, T per call from its own T count), then a preview pass for
+  the top routines. Writes <game>_survey/survey.md (+ .json, preview.png, the plain .nex). Its
+  coverage line is the byte scan of C2 #11 only (CALL / JP nn to each top routine, rated by whether
+  code ran within 24 bytes), not the recursive static pass.
 - simrun: plays an RZX (autosave snapshots stripped to a temp copy) or free-runs a snapshot with
   a key schedule ("5-14:SPACE; 30-:N", K:LEFT... = Kempston); hooks before/after every
   instruction, on every memory access, interrupt and frame. 128K memory hooks swap the Memory

@@ -7,7 +7,7 @@ Never put game data (.z80/.rzx/.nex/.tap/...) in this repo or a contribution: th
 on their machine; the maintainers' reference files live in the private repo bleughb/specnext.
 
 ## A game, stage by stage (docs/PLAYBOOK.md; one session per stage)
-0. Intake: `python nexclash.py survey GAME.z80 --rzx R` -> survey.md. Callers the recording never
+0. Intake: `python -m nexclash.survey GAME.z80 --rzx R` -> survey.md. Callers the recording never
    reached, or a recording that desyncs (WARNING with the frame) -> ask for a recording first.
 1. Design: ONE question - the design defaults + this game's exceptions, preview, plain .nex (3c).
 2. Build: engine files only; `--quick 2000` runs; the evidence record written.
@@ -100,9 +100,9 @@ version; tools/sjasmplus/README.md). Maintainers: repos and private files in doc
 ## Layout
 | Path | What |
 |---|---|
-| nexclash.py | CLI: patch / new / contribute (users), survey / auto / identify / record / convert / verify / recolour / rzx, analysis: inspect / scan / isr / cost / preview |
+| nexclash.py | CLI: patch / new / contribute (users), auto / identify / record / convert / verify / recolour / rzx, analysis: inspect / scan / isr / cost / preview |
 | selftest.py | maintainers' acceptance test, driven by docs/records (needs the private reference files) |
-| nexclash/ | toolkit modules + engines (one module per engine: nexclash/engines.py; games: STATUS.md; build.py = TID generic); simpool.py = reusable verify simulators; userflow.py = patch/new/contribute; survey + simrun + snapinfo/memscan/isrinfo/drawcost = the analysis commands |
+| nexclash/ | toolkit modules + engines (one module per engine: nexclash/engines.py; games: STATUS.md; build.py = TID generic); simpool.py = reusable verify simulators; userflow.py = patch/new/contribute; survey (`python -m nexclash.survey`) + simrun + snapinfo/memscan/isrinfo/drawcost = the analysis commands |
 | asm/ | hook sources; after any edit `python tools/asm2profile.py <engine>`; dizzy5_hooks.asm is the exception: dizzy5.py emits the bytes, selftest compares them |
 | docs/profiles/ | per-game profiles (hook hex read by the engines), signatures.json, verified.json (generated) |
 | docs/records/ | one evidence record per game: inputs, dependencies, rebuild / verify recipes, outputs, status, check stamps (nexclash/records.py) |
