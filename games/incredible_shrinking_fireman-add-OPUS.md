@@ -1,9 +1,13 @@
-# The Incredible Shrinking Fireman (Mastertronic, 1986; 48K) - engine `incredible_shrinking_fireman_add_opus` (phase A)
+# The Incredible Shrinking Fireman (Mastertronic, 1986; 48K) - engine `incredible_shrinking_fireman_add_opus`
 
 Reference: specnext reference/incredible_shrinking_fireman-add-OPUS/ (branch
 claude/incredible-shrinking-fireman-add-OPUS; the "-add-OPUS" suffix is this run's naming, Dean 2026-10-25).
-Status: phase A done 2026-10-25, design question sent to Dean (below). No build yet.
-Code: nexclash/incredible_shrinking_fireman_add_opus.py (capture + colour sheets so far).
+Status: sprite build dc65565c verified in software 2026-10-25 (see Verification); hardware untested.
+Code: nexclash/incredible_shrinking_fireman_add_opus.py (sheets, build, verifier, unit tests, recolour),
+asm/incredible_shrinking_fireman-add-OPUS_hooks.asm, docs/profiles/incredible_shrinking_fireman-add-OPUS.json,
+record docs/records/incredible_shrinking_fireman-add-OPUS.json.
+
+    python nexclash.py auto incredible_shrinking_fireman-add-OPUS.z80 --rzx incrediblefireman.rzx --no-record
 
     python -m nexclash.incredible_shrinking_fireman_add_opus sheet incrediblefireman.rzx \
         --z80 Incredible_Shrinking_Fireman_The_1986_Mastertronic.z80 -o incredible_shrinking_fireman-add-OPUS
@@ -64,15 +68,21 @@ Planned: the three objects (fireman + both enemies, every caller) become hardwar
 of everything, no attribute painting (the scenery keeps its colours); scenery, collectables, HUD,
 text stay on the ULA; enemies keep the room's ink unless painted; identical overlapping enemies
 stay invisible (as the XOR cancel); sprites off while a full-screen window is up.
-Answers (Dean, 2026-10-25): "ALL moving figures should become sprites. There are also a number of
-collectable items that should become sprites." Depth, enemy colours, hidden pair: no preference ->
-the defaults above (in front; live room ink + painted overrides; identical pair stays invisible).
-Open: collectables (find their drawing path, add them to the sheets); painted sheet; a recording
-reaching the 21 undrawn graphics.
+Answers (Dean, 2026-10-25, given in the parallel run claude/incredible-shrinking-fireman; confirmed
+in this run 13:02): every moving figure becomes a sprite - the fireman, the two moving room figures and
+the cut-scene figures, all through the one plotter 47440 (0xB950) - and the collectable items too.
+Depth, enemy colours, hidden pair: no preference -> the defaults above (in front; live room ink +
+painted overrides; identical pair stays invisible).
 
 ## Phase B analysis (2026-10-25, whole RZX; scratch scripts step3.py / attr3.py, now in the verifier)
-- Collectables = the diamonds (above). Items proper are hidden in furniture (EXAMINE: "YOU HAVE
-  JUST FOUND A ..."), never drawn; the floating cards / bulbs / clocks are enemies (0xB950).
+- Collectables = the diamonds: per room up to 5 entries (flag, x, y) via 0xD6ED; 0xECCF draws each
+  with 0xECFF: 7 bytes of 0xED14 written (not XORed), byte j on line B - j (B = y + 8) at column C / 8:
+  C is a PIXEL x (0xED1B takes the column from C bits 7-3), not a column. Items proper are hidden in
+  furniture (EXAMINE: "YOU HAVE JUST FOUND A ..."), never drawn; the floating cards / bulbs / clocks
+  are enemies (0xB950). 0xED4F-0xED74 draws one 8x8 HUD icon via ROM PIXEL-ADD (stays on the ULA).
+- The figure and diamond graphics (0x9C40-0xAC6F, 0xED14-0xED1A) are never written in the whole RZX
+  (scan, 0 writers): the build precomputes from them (painted-frame table), the verifier fails on a
+  write. The printer buffer: 126 bytes non-zero, 0x5B41 read before written -> put back after NEXLOAD.
 - Geometry: for all 27883 plots the screen change equals old ^ new graphic at (x, y), lines from the
   table 0xC044, column x >> 3 (+0..2), shift x & 7 - the sprite geometry. y 61-167, x <= 240: never
   off screen.
@@ -84,34 +94,56 @@ reaching the 21 undrawn graphics.
   test past line 191: 4) - removing the painting changes no logic.
 - ROM: the game reads only 0x0000 and 0x39FF-0x3A00 (IM 2 chain) and runs BEEPER / PIXEL-ADD.
 
-## Phase B design (2026-10-25, before the first build)
-Overlay, not removal: the plotter and the collectable drawing keep writing the ULA exactly as the
-original (every pixel the game reads is unchanged); each figure gets hardware sprites exactly on its
-pixels, in front. Every ULA pixel that differs from the clean scenery is a figure ink pixel under its
-own sprite, so the picture = clean scenery + sprites. The figure attribute painting is removed (0xBCDF
-LD (IX+0),A -> NOP NOP NOP: the value is dead; the scenery keeps its colours).
-- Sites (original bytes checked): 0xBC5C DD E1 C9 (plotter exit POP IX / RET) -> JP e_plot;
-  0xECFF 11 14 ED (collectable draw) -> JP e_item (back to 0xED02); clears 0xC4A7 / 0xB4AD
-  21 00 40 and 0xC5B1 21 00 48 -> JP e_clr* (hide all, back to site + 3); 0xBCDF DD 77 00 -> 00 00 00.
-- Hooks: alt ROM image 1 at 0x3A01-0x3CFF (+0x386E-0x39FE; 0x39FF-0x3A00 stay FF FF for the IM 2
-  chain). DI inside (IFF saved with LD A,I twice, restored), 28 MHz inside (NEXTREG $07), state and
-  the colour map in Next pages 26-30 mapped at slot 0 only while a hook runs (MMU0 back to $FF).
-- Object a = (HL - 0xBCF9) / 8 at 0xBC5C. Sprites: collectables 0-4 (4-bit patterns 0-4), enemy 2 =
-  5/6, enemy 1 = 7/8, fireman = 9/10 (higher on top: fireman in front). A figure = two 4-bit sprites
-  (lines 0-15, 16-23) from one 256-byte pattern slot (5 - a), built at every plot from the game's
-  graphic + live ink + colour map. Collectable k = 5 - (loop counter on the stack), pattern k.
-- Visibility: shown[a] = frame != 0 at its last plot, cleared by the three screen clears; enemies 1
-  and 2 both shown at the same x, y, frame -> both hidden (the XOR cancel).
-- Colours: palette = the sheet's (index 0 transparent); pixel = painted nibble when the entry's check
-  byte equals the graphics byte, else the live ink: E & 7 (0 -> black 8), bright if E or the keep-
-  mask D has bit 6 (the room build sets BRIGHT everywhere). Collectable: its cell's ink.
-  Colour map: index i = address - 0x9C40 (graphics, 0..4143) / 4144 + address - 0xED14
-  (collectable); entry = page 26 + i / 1024, offset (i % 1024) * 8: 4 nibble bytes + check. Flags
-  byte: page 30 offset 0x1F00.
-- Verify (per event, original vs patched from one state): registers, all memory (dead stack excepted),
-  sprite pixels + colours vs the model; S = figure pixels in the ULA (from the original's screen
-  changes) must lie under visible sprite ink; attribute-difference model checked at every attribute
-  reader; interrupt safety before the DI.
+## Build (2026-10-25)
+Overlay, not removal: the plotter and the diamond drawing keep writing the ULA exactly as the original
+(every pixel the game reads is unchanged); each figure gets hardware sprites exactly on its pixels, in
+front. Every ULA pixel that differs from the clean scenery is a figure ink pixel under its own sprite,
+so the picture = scenery + sprites (where a figure crosses scenery ink the ULA's XOR hole is covered by
+the sprite). The figure attribute painting is removed: 0xBCDF LD (IX+0),A -> NOP x3 (value dead).
+- Sites (original bytes checked): 0xBC5C DD E1 C9 (plotter exit POP IX / RET) -> JP e_plot; 0xECFF
+  11 14 ED -> JP e_item (back to 0xED02 with DE = 0xED14); clears 0xC4A7 / 0xB4AD 21 00 40 and 0xC5B1
+  21 00 48 -> JP e_c* (HL dead there: loads a per-site tail, hides all, leaves through JP (HL) to the
+  tail's LD HL,nn / JP site + 3: no stack in use while interrupts are on); 0xBCDF DD 77 00 -> 00 00 00.
+- Hooks: alt ROM image 1, two blocks: 0x3A01-0x3C13 (+ the 20-byte start-up register block; below
+  0x3D00) and 0x386E-0x39B3 (0x39FF-0x3A00 stay FF FF: the IM 2 vector). DI inside (IFF saved with
+  LD A,I twice, restored), 28 MHz inside (NEXTREG $07 3, back to 0 before the EI), one push (AF) before
+  the DI. Hook data in Next pages 26-30 mapped at SLOT 6 (0xC000) only inside a hook, MMU6 back to
+  page 0: slot 6 because the verifier's simulators drop writes below 0x4000; no hook reads game data in
+  0xC000-0xDFFF. Tail 0x5D00 (0x5C49-0x615B untouched), printer buffer put back.
+- Sprites: diamonds 0-4 (k = 5 - the loop counter on the stack; 4-bit pattern slot k / 2, half k & 1),
+  object 2 = 5/6, object 1 = 7/8, fireman = 9/10 (higher on top). A figure = two 4-bit sprites (lines
+  0-15, 16-23) from one 256-byte slot, double-buffered 5 - a / 8 - a; the switch is the attribute-3
+  write. Cache: (frame, ink) per buffer (page 30 0x1F10): a plot whose image is in either buffer
+  uploads nothing (40 % of plots in the RZX). Lines 24-31 never written (setup clears pattern RAM).
+- Colours: palette = the sheet's (index 0 transparent). Ink pixel = the painted nibble when the
+  entry's check byte equals the graphics byte, else the live ink E & 7 (0 -> black 8), bright if E or
+  the keep-mask D has bit 6 (room cells are BRIGHT); paper = transparent (painting never covers the
+  scenery). Diamond: its cell's ink. Colour map: index = address - 0x9C40 (0..4143) / 4144 + address -
+  0xED14; entry page 26 + i / 1024, offset (i % 1024) * 8: 4 nibble bytes + check. Page 30: flags
+  0x1F00 (bits 0-2 shown, 3-5 buffer), cache 0x1F10, painted-frame table 0x1400 (build time), nibble
+  table 0x1E00 (built per ink at run time). Unpainted frames: 2 pattern bytes per graphics nibble from
+  the nibble table (~150 T per byte at 28 MHz); painted frames: the per-byte map path.
+- Visibility: shown[a] = frame != 0 at its last plot, cleared by the three screen clears (also the
+  option / carrying windows: drawn after the 0xC5B1 clear); objects 1 and 2 both shown at one x, y,
+  frame -> both hidden (the XOR cancel). Diamonds shown from their draw to the next clear.
+- Speed (verifier, 2000 frames): hook cost mean 1.3K T per 69,888-T frame, max 5.8K T (28 MHz T / 6).
+  The original never reaches its HALT in a third of the frames (busy: median 31K T): the worst frames
+  may run up to ~8 % longer. First version (no cache, per-byte map always): mean 6.4K, max 21.6K.
+
+## Verification
+The differential verifier (record verify note) at every hook site of the RZX. Results: docs/VERIFICATION.md.
+
+## Hardware checklist
+- Boots to the title (alt ROM + IM 2 via ROM 0x39FF: the vector bytes stay FF FF).
+- Fireman white over the scenery, no flicker while walking / climbing / falling; no white ULA "ghost"
+  around him (the overlay hides the XOR holes; the colour clash on his cells is gone).
+- Room figures in the room's bright ink; two identical overlapping figures stay invisible as before.
+- Diamonds as sprites in their cell's ink; picked up -> gone after the option screen.
+- GAME OPTION TABLE / YOU ARE CARRYING windows: no sprite over them; figures back after.
+- Speed: busy rooms (several figures) no slower than the plain build; beeper sound unchanged.
+- Recolour: python nexclash.py recolour incredible_shrinking_fireman-add-OPUS_sprites.nex PAINTED.png.
 
 ## Open
-- Build + verify (phase B). Paint sheet (Dean).
+- Hardware test. Painted sheet (Dean) -> recolour, then the map becomes the build default.
+- 21 graphics of the bank never drawn in the RZX (sheet group "From the code"): unit-tested (every frame
+  0-255), not seen in play.

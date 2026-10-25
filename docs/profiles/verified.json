@@ -65,6 +65,14 @@
     "sprites": "9182f2f8b4b0dc55b59a69728568b403"
    }
   },
+  "fc8e7535fc42afb60c12625b5fdfd064": {
+   "game": "The Incredible Shrinking Fireman",
+   "doc": "incredible_shrinking_fireman-add-OPUS.md",
+   "nex": {
+    "plain": "feb706fcdaa29f13844a7b4982dc21fa",
+    "sprites": "dc65565ca8f029de908e5d9f519f798e"
+   }
+  },
   "5875d535442974a0de82737652854f1f": {
    "game": "Jetpac",
    "doc": "jetpac.md",

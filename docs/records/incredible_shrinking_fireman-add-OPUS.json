@@ -1,0 +1,81 @@
+{
+ "name": "incredible_shrinking_fireman-add-OPUS",
+ "order": 19,
+ "game": "The Incredible Shrinking Fireman",
+ "doc": "incredible_shrinking_fireman-add-OPUS.md",
+ "engine": "incredible_shrinking_fireman_add_opus",
+ "representative": true,
+ "reference": "incredible_shrinking_fireman-add-OPUS",
+ "inputs": {
+  "snapshot": {
+   "name": "incredible_shrinking_fireman-add-OPUS.z80",
+   "md5": "fc8e7535fc42afb60c12625b5fdfd064",
+   "path": "incredible_shrinking_fireman-add-OPUS/Incredible_Shrinking_Fireman_The_1986_Mastertronic.z80"
+  },
+  "recordings": [
+   {
+    "name": "incrediblefireman.rzx",
+    "md5": "8154d148d90b0f3cc94229bc143bac68",
+    "path": "incredible_shrinking_fireman-add-OPUS/incrediblefireman.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "incredible_shrinking_fireman_add_opus"
+ ],
+ "own_modules": [
+  "incredible_shrinking_fireman_add_opus"
+ ],
+ "data": [
+  "docs/profiles/incredible_shrinking_fireman-add-OPUS.json",
+  "asm/incredible_shrinking_fireman-add-OPUS_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": {
+   "engine": "incredible_shrinking_fireman_add_opus",
+   "strategy": "overlay: the game still draws the ULA; alt ROM hooks (0x3A01 + 0x386E) set hardware sprites on the figures (plotter exit 0xBC5C) and the diamonds (0xECFF); figure attribute painting removed (0xBCDF); colour map pages 26-30 at slot 6 in hooks",
+   "figures": "fireman, both room figures (every caller of 0xB950), the diamonds (Dean 2026-10-25)",
+   "depth": "sprites in front of everything",
+   "tail": "0x5D00 (0x5C49-0x615B untouched in the whole-game RZX); printer buffer put back (the game reads 0x5B41)",
+   "colours": "live inks (fireman white, figures the room ink, diamonds their cell ink) + docs/profiles/incredible_shrinking_fireman-add-OPUS_colours.json when present"
+  }
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "incrediblefireman.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 15,
+  "note": "auto: differential verify at every hook site (plotter exit, diamond draw, 3 screen clears): all registers incl. AF', all memory outside the dead stack, interrupt safety per patched instruction while IFF is on (IX, IY, I, alternate set, SP, MMU6, no fetch at 0x3D00-0x3DFF); after every event the sprite layer = the Python model (objects as last plotted, the pair rule, the diamonds since the last clear, live inks / colour map); the plotter's screen change = old ^ new image of the model (every plot), the diamond's 7 writes; every attribute read checked against the cells the removed painter leaves unpainted; the graphics never written; speed line. Unit cases: every frame 0-255 x edge positions, inks, pair rule, object guard, cache sequence, colour map with a wrong check byte, diamonds k 0-4 x positions + counter guard, clears; 5 negative controls."
+ },
+ "outputs": {
+  "plain": {
+   "file": "incredible_shrinking_fireman-add-OPUS.nex",
+   "md5": "feb706fcdaa29f13844a7b4982dc21fa"
+  },
+  "sprites": {
+   "file": "incredible_shrinking_fireman-add-OPUS_sprites.nex",
+   "md5": "dc65565ca8f029de908e5d9f519f798e"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "The Incredible Shrinking Fireman",
+  "engine_col": "incredible_shrinking_fireman_add_opus (incredible_shrinking_fireman-add-OPUS.md)",
+  "build": "incredible_shrinking_fireman-add-OPUS_sprites.nex dc65565c (fireman, both room figures, diamonds = 4-bit sprites over the ULA, in front; live inks; figure attribute painting removed; hooks: alt ROM 0x3A01 + 0x386E, 28 MHz inside, colour map pages 26-30 at slot 6)",
+  "software": "pending: the stamping run (selftest --game --verify --stamp)",
+  "hardware": "untested",
+  "next": "hardware test; Dean paints the PAINTING_SPRITES sheet (recolour)"
+ },
+ "checks": [
+  "asm2profile:incredible_shrinking_fireman-add-OPUS"
+ ]
+}
