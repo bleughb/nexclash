@@ -24,7 +24,8 @@ Every tool call resends the whole conversation, so cost grows with the session's
 session that reads this file + games/<game>.md is far cheaper than hour five of an old one.
 - One session per phase: A (analysis + the design question), B (build + quick runs + the one full
   verification), C (one session per hardware round). A game the tools already convert is one session.
-- A phase ends with the "Next session" block at the top of games/<game>.md, then commit + push:
+- A phase ends with the "Next session" block right under the title line of games/<game>.md, then
+  commit (+ push, maintainers):
   ```
   ## Next session
   Phase: B (build)            State: design approved 2026-10-26 (Decisions below)
@@ -295,7 +296,7 @@ full RZX run uses it.
 Also simulate the start-up tail: registers restored, no game memory touched.
 
 Long runs (the full verification, selftest): detached + polled, LEARNINGS 2.6: one
-`sleep 540; tail -3 LOG` per poll, nothing faster; write the record and the notes meanwhile.
+`sleep 540; tail -3 LOG` per poll (call timeout 10 min), nothing faster; write the record and the notes meanwhile.
 Iterate fast (the two levels: BRIEFING C3b): while developing use `--quick N` and the unit tests on 1-2
 captured states (minutes). N must reach the first call of every hook the unit tests capture
 states from, or the run FAILS for lack of a state (Lode Runner at 300 frames: "no captured draw

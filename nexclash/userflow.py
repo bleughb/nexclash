@@ -108,7 +108,10 @@ nexclash could not patch it: {why}
 > that changes what I see.
 
 Work goes in phases, one chat each (PLAYBOOK "Sessions"): each phase ends with the prompt for the
-next chat. Reply to the design question with "defaults" or the numbers to change.
+next chat, e.g.
+> Continue {game} in nexclash (package attached / at <path>): follow its CLAUDE.md, start from the
+> "Next session" block in games/<game>.md.
+Reply to the design question with "defaults" or the numbers to change.
 
 ## When the session is done
 1. `python nexclash.py patch {z80}` builds it; test on the Next with the session's checklist.
