@@ -1,13 +1,13 @@
-# Atic Atac (Ultimate Play The Game, 1983; 48K) - engine: not yet (stage 1: design asked)
+# Atic Atac (Ultimate Play The Game, 1983; 48K) - engine: not yet (stage 1 done, design approved)
 
 ## Next session
-Stage: 1 (design, waiting)  State: analysis done, design question sent 2026-10-26 (Engine, Decisions)
+Stage: 2 (build)            State: design approved 2026-10-26 (Engine, Decisions below)
 Inputs: specnext/reference/atic_atac/ (snapshot, AticAtac.rzx)    Branch: claude/atic_atac (both repos)
-Start with: record the user's answer under Decisions; then stage 2 (build)
+Start with: write the build DESIGN (sites, memory, figure -> sprite, verify) here, then the engine
 Start state: the .z80 run to JP 24576 (simrun.free_run(z80, 400, None, stop_pc=24576), get_state,
   write_snapshot); the RZX needs no prerun (its own snapshot is mid-game)
 Read: PLAYBOOK stage 2, docs/ENGINE_CONTRACT.md, this file; Dizzy 1 (1-bit shadow screen) as template
-Open: the design answer; test cheat (offered); game-over path not recorded
+Open: test cheat (offered); game-over path not recorded
 
 Reference: specnext reference/atic_atac/ (Dean, 2026-10-26).
 
@@ -85,7 +85,18 @@ recording (stage 3 checks it with a test cheat off, or a second recording that l
   (colour moves to the sprite). Design to be confirmed by the stage-1 answer.
 
 ## Decisions
-(pending: stage-1 design question sent 2026-10-26)
+Design approved by Dean 2026-10-26 (stage-1 question: "1 to 5 the defaults are ok"):
+1. Every figure a sprite (player, monsters, items, thrown weapons, monster-appearance sparkle);
+   the pocket icons in the panel (IX 0xA17D) stay on the ULA with the panel.
+2. Scenery on the ULA: room outlines, doors (incl. open/close), furniture, scroll panel, chicken,
+   score, time.
+3. Depth: sprites in front of everything. Solid inside (below), not see-through.
+4. Colours: each figure's own ink; the figure-cell attribute painting is skipped (walls keep the
+   room colour); recolour later from the painted sheet.
+5. Play-area clear (room change, game over, escape): hide every sprite there.
+Effects: the player's death and the monster-appearance animation are sprites (Dean: "correct").
+Outlines: yes, every sprite outlined, and the inside of the mask is NOT transparent: fill the
+  area enclosed by the outline (Dean 2026-10-26).
 
 ## Open
 - Menus / message windows over the play area: asked 2026-10-26 (pause? the inventory?).
@@ -103,4 +114,4 @@ recording (stage 3 checks it with a test cheat off, or a second recording that l
 
 ## Stage log
 - 2026-10-26 stage 0 (intake): ~20 min wall, ~30 tool calls, 0 user rounds.
-- 2026-10-26 stage 1 (design): ~1 h wall, ~60 tool calls, 1 user round (the design question).
+- 2026-10-26 stage 1 (design): ~1 h wall, ~60 tool calls, 2 user rounds (the design question + answer).
