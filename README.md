@@ -1,6 +1,10 @@
 # nexclash - BASIC USE FOR CLAUDE AI
 
-## Put the below two line prompt into a claude chat and hit enter
+## Put the below two line prompt into an AI Agent chat and hit enter
+Recommended OPUS 5.5 on MEDIUM
+Tried with Sonnet 5.5 on MEDIUM and it actually uses MORE tokens / overly verbose and less accurate. 
+Currently trying GPT-6 Astra Medium also
+Please post your success stories
 
 ```
 Add GAME NAME to nexclash. Snapshot and my RZX are attached.
