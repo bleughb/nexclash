@@ -750,38 +750,43 @@ Not proven: tape LOAD / SAVE SCREENS, hall of fame name entry, level 2+ in a rec
 trapped and respawned in a recording (unit tests only); hardware untested.
 
 ## The Incredible Shrinking Fireman (48K, engine `incredible_shrinking_fireman_add_opus`) - 2026-10-25
+Build 400d0d11 (replaces dc65565c after hardware round 1: plot entry hook, black mask on all figures).
 Dean's Fuse RZX (incrediblefireman.rzx, 32492 frames, no autosaves; the .z80 replays it). At every
-hook site (plotter exit 0xBC5C, diamond draw 0xECFF, clears 0xC4A7 / 0xC5B1 / 0xB4AD) original and
-patched code run from the same state to the site's end: all registers but R/T/MEMPTR (AF' included),
-all memory outside 64 bytes of dead stack, NEXTREG only $07 / $34-$39 / $56 (pages 26-30), MMU6 back
-to page 0, no ROM write; interrupt safety at every patched instruction executed with IFF set (IX the
-site's or POP IX's, IY, I, alternate set unchanged, SP at most one push below the site, MMU6 page 0,
-no fetch at 0x3D00-0x3DFF). After every event the patched machine's sprite layer (attributes +
-pattern RAM rendered) = an independent Python model: objects 0-2 as last plotted (frame 0 / a clear:
-none), objects 1 and 2 on one spot with one frame hidden (XOR cancel), the diamonds drawn since the
-last clear, live inks / colour map. The model is tied to the ULA: every plot's screen change = old ^
-new image of the model; every diamond = its 7 graphics bytes at (C / 8, B - j). The removed figure
-attribute painting (0xBCDF): every attribute read by game code (0xCAA2, 0xCABF, 0xB3F4, 0xB3C5,
-0xB42C, 0xC2E4 / 0xC2E8) checked against the cells the patched game leaves unpainted. The graphics
-the build precomputes from are never written; no game write to a patch site; 0xBC5E reached only
-from 0xBC5C; no jump into a patched instruction.
+hook site (plotter entry 0xB950 and exit 0xBC5C, diamond draw 0xECFF, clears 0xC4A7 / 0xC5B1 /
+0xB4AD) original and patched code run from the same state to the site's end: all registers but
+R/T/MEMPTR (AF' included), all memory outside 64 bytes of dead stack, NEXTREG only $07 / $34-$39 /
+$56 (pages 26-30) / $57 (shape pages 32-63), MMU6 / MMU7 back to pages 0 / 1, no ROM write, no write
+to a shape page; interrupt safety at every patched instruction executed with IFF set (IX the site's or
+POP IX's, IY, I, alternate set unchanged, SP at most one push below the site, MMU6 / MMU7 unmapped, no
+fetch at 0x3D00-0x3DFF). After every event the patched machine's sprite layer (attributes + pattern
+RAM rendered) = an independent Python model: objects as last plotted with their black 4-neighbour
+mask, each object's pending image from its plot entry to its exit, objects 1 and 2 on one spot with
+one frame hidden (XOR cancel), the diamonds drawn since the last clear, live inks / colour map. The
+model is tied to the ULA: every plot's screen change = old ^ new image of the model, and from entry
+to exit every pixel of the old and the new image is under a visible sprite (the half-done XOR plot is
+never uncovered); the exit's (x, y, frame) = the entry's prediction; every diamond = its 7 graphics
+bytes at (C / 8, B - j). The removed figure attribute painting (0xBCDF): every attribute read by game
+code (0xCAA2, 0xCABF, 0xB3F4, 0xB3C5, 0xB42C, 0xC2E4 / 0xC2E8) checked against the cells the patched
+game leaves unpainted. The graphics the build precomputes from are never written; no game write to a
+patch site; 0xB952 / 0xBC5E reached only from their sites; no jump into a patched instruction.
 
 | Check | Result |
 |---|---|
-| incrediblefireman.rzx, 32492 frames | 27883 plots, 79 diamonds, 165 clears, 9241038 sprite pixels, 1112377 plot screen bytes, 553 diamond bytes, 169038 attribute reads, 9797 interrupt-safety points: IDENTICAL |
+| incrediblefireman.rzx, 32492 frames | 27883 plot entries + exits, 79 diamonds, 165 clears, 34626937 sprite pixels, 5117824 transient pixels covered, 1112377 plot screen bytes, 553 diamond bytes, 169038 attribute reads, 19737 interrupt-safety points: IDENTICAL |
 | non-figure screen writes under a visible sprite | none in the whole RZX |
-| speed (hook cost per 69888-T frame, 28 MHz parts / 6) | mean 1145 T, 99 % of frames with hooks <= 5817 T, max 6712 T |
-| unit: fireman, every frame 0-255 (8-bit wrap) x 36 positions (x 0 / 1 / 7 / 8 / 100 / 232 / 233 / 239 / 240, y 0 / 61 / 120 / 168) | 9216 PASS |
-| unit: figures 1 / 2 x 7 frames x 3 positions x 4 inks (incl. black, BRIGHT from E or the keep-mask) | 168 PASS |
-| unit: pair rule (same spot + frame / x + 1 / frame + 1), object guard (HL past the table), cache sequence (same image, other buffer, ink change) | 3 + 1 + 1 PASS |
-| unit: colour map (a painted frame below and above the 8-bit wrap, one wrong check byte ignored) | 2 PASS |
-| unit: diamonds k 0-4 x 4 positions (x 0 / 120 / 248 / 243, bottom 6-191) x 3 cell inks; loop counter 0 / 6 (guard) | 36 + 24 PASS |
-| unit: screen clears hide all sprites and reset the flags | 3 PASS |
-| negative controls: sprite X 1 px off / pair rule left out / diamond 1 line low / cache ignores the ink / colour map left out | 5/5 detected |
-| recolour: {} -> the build byte for byte; synthetic map -> banks 13 + 15 only, back to {} -> the build; a changed patch site refused; selftest guard | OK |
+| plot entries of a pair-hidden figure (its old pixels uncovered while it moves) | 242 (known limit, games/ Open) |
+| speed (hook cost per 69888-T frame, 28 MHz parts / 6) | mean 2228 T, 99 % of frames with hooks <= 10045 T, max 16455 T (room entry: three ink tables built) |
+| unit: entry + exit, fireman, every frame 0-255 x 4 moves (incl. x / y carries) | 1024 PASS |
+| unit: entry + exit, figures (appear, wrapped frames, vanish, same image) | 10 PASS |
+| unit: exit alone (fallback), fireman every frame 0-255 x 36 positions; figures 7 frames x 3 positions x 4 inks | 9216 + 168 PASS |
+| unit: pair rule, object guard, cache sequence, colour map (painted frames below / above the 8-bit wrap, a wrong check byte ignored) | 3 + 1 + 1 + 2 PASS |
+| unit: diamonds k 0-4 x 4 positions x 3 cell inks; loop counter 0 / 6 (guard); screen clears | 36 + 24 + 3 PASS |
+| negative controls: sprite X 1 px off / pair rule left out / diamond 1 line low / cache ignores the ink / colour map left out / pending sprites not shown at the entry / mask left out | 7/7 detected |
+| recolour: {} -> the build byte for byte (banks 13-31); a changed patch site refused; selftest guard | OK |
 | boot simulation with NEXLOAD, plain + sprites (tail 0x5D00, printer buffer put back) | OK |
-Not proven: the 21 graphics the RZX never draws (unit-tested only); a painted colour map in play (no
-sheet painted yet); hardware untested.
+Hardware: dc65565c ran on a real Next (Dean, 2026-10-25): flicker on the bulb / enemy fireman (the
+half-done plot uncovered between hooks: fixed by the entry hook), no mask (added). 400d0d11 untested.
+Not proven: the 21 graphics the RZX never draws (unit-tested only); a painted colour map in play.
 
 ## Toolkit: colour sheets show only the paintable pixels (2026-10-14)
 coloursheet.write greys only the pixels the read-back uses; the rest of a box keeps the background

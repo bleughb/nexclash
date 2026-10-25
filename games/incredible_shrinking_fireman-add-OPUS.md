@@ -158,15 +158,18 @@ the sprite). The figure attribute painting is removed: 0xBCDF LD (IX+0),A -> NOP
   median 31K T): the worst frames may run up to ~10 % longer. First version (no cache, per-byte map
   always; 2000 frames): mean 6.4K, max 21.6K.
 
-## Verification (2026-10-25, the stamping run: selftest --game --verify --stamp)
-Whole RZX IDENTICAL: 27883 plots, 79 diamonds, 165 clears, 9.2M sprite pixels and 1.1M plot screen
-bytes against the model, 169038 attribute reads, 9797 interrupt-safety points; no non-figure write
-under a visible sprite. Unit cases PASS, 5/5 negative controls detected. Details: docs/VERIFICATION.md.
+## Verification (2026-10-25, the stamping run of 400d0d11: selftest --game --verify --stamp)
+Whole RZX IDENTICAL: 27883 plot entries + exits, 79 diamonds, 165 clears, 34.6M sprite pixels (mask
+included) against the model, 5.1M transient pixels covered from plot entry to exit, 169038 attribute
+reads, 19737 interrupt-safety points; no non-figure write under a visible sprite. Unit cases PASS,
+7/7 negative controls detected. Details: docs/VERIFICATION.md. Comparison picture (specnext):
+incredible_shrinking_fireman-add-OPUS_three_windows.png.
 
 ## Hardware checklist
 - Boots to the title (alt ROM + IM 2 via ROM 0x39FF: the vector bytes stay FF FF).
-- Fireman white over the scenery, no flicker while walking / climbing / falling; no white ULA "ghost"
-  around him (the overlay hides the XOR holes; the colour clash on his cells is gone).
+- Fireman white with a black outline over the scenery, no flicker while walking / climbing / falling;
+  the scenery round him keeps its colours (no clash).
+- Room 2's bulb and room 6's enemy fireman: steady colour, no flicker (round 1 defect).
 - Room figures in the room's bright ink; two identical overlapping figures stay invisible as before.
 - Diamonds as sprites in their cell's ink; picked up -> gone after the option screen.
 - GAME OPTION TABLE / YOU ARE CARRYING windows: no sprite over them; figures back after.
