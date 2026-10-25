@@ -64,7 +64,54 @@ Planned: the three objects (fireman + both enemies, every caller) become hardwar
 of everything, no attribute painting (the scenery keeps its colours); scenery, collectables, HUD,
 text stay on the ULA; enemies keep the room's ink unless painted; identical overlapping enemies
 stay invisible (as the XOR cancel); sprites off while a full-screen window is up.
-Open: Dean's answers; painted sheet; a recording reaching the 21 undrawn graphics.
+Answers (Dean, 2026-10-25): "ALL moving figures should become sprites. There are also a number of
+collectable items that should become sprites." Depth, enemy colours, hidden pair: no preference ->
+the defaults above (in front; live room ink + painted overrides; identical pair stays invisible).
+Open: collectables (find their drawing path, add them to the sheets); painted sheet; a recording
+reaching the 21 undrawn graphics.
+
+## Phase B analysis (2026-10-25, whole RZX; scratch scripts step3.py / attr3.py, now in the verifier)
+- Collectables = the diamonds (above). Items proper are hidden in furniture (EXAMINE: "YOU HAVE
+  JUST FOUND A ..."), never drawn; the floating cards / bulbs / clocks are enemies (0xB950).
+- Geometry: for all 27883 plots the screen change equals old ^ new graphic at (x, y), lines from the
+  table 0xC044, column x >> 3 (+0..2), shift x & 7 - the sprite geometry. y 61-167, x <= 240: never
+  off screen.
+- The floor test READS figure and collectable pixels: 7263 of 674714 reads give another zero /
+  non-zero result without them (fireman standing on an enemy: 2790, on a collectable: 4473). So the
+  ULA pixels must stay as the original draws them (or a virtual read): chosen KEEP THEM.
+- Attributes: no attribute read in the RZX ever sees a cell the figure painter changed (room-build
+  map 0xCAA2 59904 reads, cell printer 0xB3F4 15763, 0xB3C5 3107, point plot 0xB42C 404, floor
+  test past line 191: 4) - removing the painting changes no logic.
+- ROM: the game reads only 0x0000 and 0x39FF-0x3A00 (IM 2 chain) and runs BEEPER / PIXEL-ADD.
+
+## Phase B design (2026-10-25, before the first build)
+Overlay, not removal: the plotter and the collectable drawing keep writing the ULA exactly as the
+original (every pixel the game reads is unchanged); each figure gets hardware sprites exactly on its
+pixels, in front. Every ULA pixel that differs from the clean scenery is a figure ink pixel under its
+own sprite, so the picture = clean scenery + sprites. The figure attribute painting is removed (0xBCDF
+LD (IX+0),A -> NOP NOP NOP: the value is dead; the scenery keeps its colours).
+- Sites (original bytes checked): 0xBC5C DD E1 C9 (plotter exit POP IX / RET) -> JP e_plot;
+  0xECFF 11 14 ED (collectable draw) -> JP e_item (back to 0xED02); clears 0xC4A7 / 0xB4AD
+  21 00 40 and 0xC5B1 21 00 48 -> JP e_clr* (hide all, back to site + 3); 0xBCDF DD 77 00 -> 00 00 00.
+- Hooks: alt ROM image 1 at 0x3A01-0x3CFF (+0x386E-0x39FE; 0x39FF-0x3A00 stay FF FF for the IM 2
+  chain). DI inside (IFF saved with LD A,I twice, restored), 28 MHz inside (NEXTREG $07), state and
+  the colour map in Next pages 26-30 mapped at slot 0 only while a hook runs (MMU0 back to $FF).
+- Object a = (HL - 0xBCF9) / 8 at 0xBC5C. Sprites: collectables 0-4 (4-bit patterns 0-4), enemy 2 =
+  5/6, enemy 1 = 7/8, fireman = 9/10 (higher on top: fireman in front). A figure = two 4-bit sprites
+  (lines 0-15, 16-23) from one 256-byte pattern slot (5 - a), built at every plot from the game's
+  graphic + live ink + colour map. Collectable k = 5 - (loop counter on the stack), pattern k.
+- Visibility: shown[a] = frame != 0 at its last plot, cleared by the three screen clears; enemies 1
+  and 2 both shown at the same x, y, frame -> both hidden (the XOR cancel).
+- Colours: palette = the sheet's (index 0 transparent); pixel = painted nibble when the entry's check
+  byte equals the graphics byte, else the live ink: E & 7 (0 -> black 8), bright if E or the keep-
+  mask D has bit 6 (the room build sets BRIGHT everywhere). Collectable: its cell's ink.
+  Colour map: index i = address - 0x9C40 (graphics, 0..4143) / 4144 + address - 0xED14
+  (collectable); entry = page 26 + i / 1024, offset (i % 1024) * 8: 4 nibble bytes + check. Flags
+  byte: page 30 offset 0x1F00.
+- Verify (per event, original vs patched from one state): registers, all memory (dead stack excepted),
+  sprite pixels + colours vs the model; S = figure pixels in the ULA (from the original's screen
+  changes) must lie under visible sprite ink; attribute-difference model checked at every attribute
+  reader; interrupt safety before the DI.
 
 ## Open
-- Phase A answers (above). Then phase B design + build.
+- Build + verify (phase B). Paint sheet (Dean).
