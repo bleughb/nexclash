@@ -105,22 +105,11 @@ Recordings made by nexclash are normal RZX files: they replay in SkoolKit's
 rzxplay and in Fuse (frame boundaries are defined by instruction counts).
 
 ## Supported games and engines
-| Engine | Games | Sprite build |
-|---|---|---|
-| TID engine (masked sprite + undo buffer) | Fantasy World Dizzy, Magicland Dizzy, and any relocated copy | generic, automatic, verified per run |
-| Treasure Island Dizzy (TID + bubble virtual read) | Treasure Island Dizzy | dedicated builder |
-| Dizzy 1 XOR engine | Dizzy: The Ultimate Cartoon Adventure | dedicated builder |
-| Dizzy V engine (ISR-driven masked sprite + undo buffer) | Spellbound Dizzy, also from a BASIC-loader snapshot | generic, automatic, verified per run |
-| TID engine with a mirrored second figure (`tid_mirror`) | Prince of the Yolkfolk (Dizzy 6) | automatic; mirror path proven by unit tests only (no recording reaches it yet) |
-| Rainbow Islands (128K) | Rainbow Islands | dedicated engine `rainbow`, verified per run (being reworked) |
-| Everyone's a Wally (48K game, 128K snapshot) | Everyone's a Wally | dedicated engine `wally`, verified per run |
-| Chuckie Egg | Chuckie Egg | dedicated engine `chuckie`, verified per run |
-| Commando (128K) | Commando (Elite, BASIC-loader snapshot) | dedicated engine `commando`, verified per run |
-| Midnight Resistance (128K) | Midnight Resistance (Ocean 1990) | dedicated engine `midres`, verified per run |
-| Everyone's a Wally (updated) | Everyone's a Wally (every figure on Layer 2) | dedicated engine `wally2`, verified per run (supersedes `wally`) |
-| Smash TV | Smash TV | dedicated engine `smashtv`, verified per run |
-| Target Renegade (128K) | Target Renegade | dedicated engine `renegade`, verified per run |
-| anything else | - | plain `.nex` only, plus a report to guide the next step |
+STATUS.md lists every supported game, its engine, what the sprite build does and how far it is
+proven (generated from the evidence records, so it is always complete). Games whose engine is
+generic (the Codemasters TID engine: Fantasy World Dizzy, Magicland Dizzy and relocated copies;
+Dizzy V) are recognised automatically; anything else gets a plain `.nex` plus a report to guide
+the next step.
 
 ## Testing on the Next (details per game: games/)
 Copy `GAME_sprites.nex` to the SD card and run it. Check: it starts; every converted figure is
