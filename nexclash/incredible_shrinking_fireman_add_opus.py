@@ -1,9 +1,20 @@
 """The Incredible Shrinking Fireman (Mastertronic, 1986; 48K) - engine `incredible_shrinking_fireman_add_opus`.
 
-Phase A (this file so far): capture of every figure the game draws, the colour sheets.
+Figures that become sprites (Dean, 2026-10-25): every moving figure (the fireman and the room's two
+figures, every caller of 0xB950) and the diamonds; in front of everything; live inks + the colour map.
 
     python -m nexclash.incredible_shrinking_fireman_add_opus sheet R.rzx [MORE.rzx] --z80 GAME.z80 -o PREFIX
     python -m nexclash.incredible_shrinking_fireman_add_opus colours PREFIX_PAINTING_SPRITES_painted.png
+    python nexclash.py auto GAME.z80 --rzx R.rzx --no-record                   (build + verify)
+    python nexclash.py recolour PREFIX_sprites.nex PAINTED.png                    (repaint, no rebuild)
+
+Build (games/incredible_shrinking_fireman-add-OPUS.md "Build"): an OVERLAY - the game's plotter and
+diamond drawing still write the ULA exactly as the original (the floor test reads those pixels); alt
+ROM hooks at the plotter exit and the diamond draw put hardware sprites exactly on the figures' ink
+pixels; the screen clears hide them; the figure attribute painting (0xBCDF) is removed. Verifier:
+differential at every hook site + an independent model of the sprite layer, checked against the
+plotter's own screen changes; every attribute read checked against the cells the patched game leaves
+unpainted.
 
 Figures (games/incredible_shrinking_fireman-add-OPUS.md):
   0xB950 moves object A (A = 0 fireman, 1 / 2 the room's two enemies) of the 8-byte table at 0xBCF7
@@ -14,9 +25,9 @@ Figures (games/incredible_shrinking_fireman-add-OPUS.md):
   Graphics: 16 x 24 px, 2 bytes per line top down, at base (0xBD42, 0x9C40 in every recording) +
   ((3 * frame) & 255) * 16 - the game's 8-bit multiply: frames >= 86 wrap.
 Collectables (the diamonds): per room up to 5 entries (flag, x, y) via the table at 0xD6ED; 0xECCF
-(room build) draws each with 0xECFF: 7 lines of 0xED14 written (not XORed), byte j on line B - j, column C / 8
-(C = pixel x: 0xED1B); a pickup
-(option screen) zeroes the entry (0xED37) and the room is drawn again without it.
+(room build) draws each with 0xECFF: 7 lines of 0xED14 written (not XORed), byte j on line B - j,
+column C / 8 (C = pixel x: 0xED1B); a pickup (option screen) zeroes the entry (0xED37) and the room is
+drawn again without it.
 Colour-map keys: G + the graphics byte's address, D + address for the collectable; default colour =
 the ink the game gives the figure (fireman: white; enemies: their room's bright ink; collectables:
 their cell's ink).

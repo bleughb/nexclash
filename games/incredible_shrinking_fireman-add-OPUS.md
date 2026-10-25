@@ -108,8 +108,7 @@ the sprite). The figure attribute painting is removed: 0xBCDF LD (IX+0),A -> NOP
   0x3D00) and 0x386E-0x39B3 (0x39FF-0x3A00 stay FF FF: the IM 2 vector). DI inside (IFF saved with
   LD A,I twice, restored), 28 MHz inside (NEXTREG $07 3, back to 0 before the EI), one push (AF) before
   the DI. Hook data in Next pages 26-30 mapped at SLOT 6 (0xC000) only inside a hook, MMU6 back to
-  page 0: slot 6 because the verifier's simulators drop writes below 0x4000; no hook reads game data in
-  0xC000-0xDFFF. Tail 0x5D00 (0x5C49-0x615B untouched), printer buffer put back.
+  page 0 (as Cyclone; no hook reads game data in 0xC000-0xDFFF; slot 0 would also have done). Tail 0x5D00 (0x5C49-0x615B untouched), printer buffer put back.
 - Sprites: diamonds 0-4 (k = 5 - the loop counter on the stack; 4-bit pattern slot k / 2, half k & 1),
   object 2 = 5/6, object 1 = 7/8, fireman = 9/10 (higher on top). A figure = two 4-bit sprites (lines
   0-15, 16-23) from one 256-byte slot, double-buffered 5 - a / 8 - a; the switch is the attribute-3

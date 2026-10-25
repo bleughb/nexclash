@@ -13,8 +13,8 @@
 ; Code: alt ROM image 1, two blocks: 0x3A01-0x3CEB (+ the start-up register block) and
 ; 0x386E-0x39FE (0x39FF-0x3A00 stay FF FF: the game's IM 2 vector is read there). Hooks run with interrupts OFF (IFF saved with LD A,I twice, restored) at 28 MHz; Next
 ; pages 26-30 (colour map; flags byte in page 30) are mapped at slot 6 (0xC000) only inside a hook
-; and MMU6 is put back to page 0 (bank 0, 48K); no hook reads game data in 0xC000-0xDFFF. Slot 6,
-; not slot 0: the Z80 simulators of the verifier drop writes below 0x4000.
+; and MMU6 is put back to page 0 (bank 0, 48K); no hook reads game data in 0xC000-0xDFFF (as Cyclone;
+; slot 0 would also do: the verifier's patched runs keep writes below 0x4000, dizzy6._rw_simulator).
 ; Sprites: collectables 0-4 (4-bit patterns: slot k / 2, half k & 1), enemy 2 = 5/6, enemy 1 =
 ; 7/8, fireman = 9/10 (higher number on top). Object a: sprites 9-2a (lines 0-15) and 10-2a
 ; (lines 16-23) from one 256-byte pattern slot (N6 = 0 / 1), double-buffered: 5-a / 8-a.
