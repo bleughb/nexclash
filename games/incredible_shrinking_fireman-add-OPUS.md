@@ -2,8 +2,9 @@
 
 Reference: specnext reference/incredible_shrinking_fireman-add-OPUS/ (branch
 claude/incredible-shrinking-fireman-add-OPUS; the "-add-OPUS" suffix is this run's naming, Dean 2026-10-25).
-Status: sprite build 400d0d11 (plain feb706fc), 2026-10-25: hardware round 1 fixed (plot entry hook) and
-the mask added (all three figures, black). dc65565c ran on a real Next (Dean).
+Status: sprite build 53f2665e (plain feb706fc), 2026-10-25: hardware round 2 fixed (interrupts deferred while
+a plot runs); round 1 fixed in 400d0d11 (plot entry hook, black mask on all three figures). dc65565c and
+400d0d11 ran on a real Next (Dean).
 Code: nexclash/incredible_shrinking_fireman_add_opus.py (sheets, build, verifier, unit tests, recolour),
 asm/incredible_shrinking_fireman-add-OPUS_hooks.asm, docs/profiles/incredible_shrinking_fireman-add-OPUS.json,
 record docs/records/incredible_shrinking_fireman-add-OPUS.json.
@@ -108,6 +109,25 @@ switches the figure's own sprites to it and hides the pending ones: old and new 
 throughout. Mask (Dean: "lets do all figures"): fireman and both room figures, black (suggested, not
 objected to), the 4-neighbours of ink only; the diamonds unmasked. Build 400d0d11.
 
+## Hardware round 2 (400d0d11, Dean 2026-10-25)
+Room 5 (enemy fireman): extra white firemen and garbage over the LIVES box and the tube; "the correct
+sprite is under the table". Cause: the plotter 0xB950 is NOT re-entrant (globals 0xBD17-0xBD41, the
+self-modified operand 0xBCD2), and the ISR 0xC24C (DI ... EI; RETN) plots too: the fireman (0xC269, when
+0xC1F2 is set) and the room figures (0xE9E1 / 0xE8E5). The original never nests only by timing: its
+main-code plots end at least 2.0K T before the interrupt in the frames where the ISR plots. The hooks
+add up to 16K T per frame, so the interrupt landed inside a main-code plot, the ISR's plot overwrote
+the globals and the outer plot carried on with the wrong figure (its screen XOR and its sprite).
+Rejected: save / restore of the globals (the ISR plots the SAME object: the outer plot then XORs a
+stale image); hardware IM 2 hold (the ISR overruns frames, the main code would starve; the IM 1 quit
+path 0xC818). Fix: 0xFFF4 (the IM 2 jump) -> e_isr: while a plot runs (DEPTH > 0, counted by the entry
+and exit hooks) it sets PENDING and returns with EI; the exit hook, back at depth 0, enters 0xC24C with
+the plot's caller as the return address (its RETN goes there). The handler runs at most once per
+interrupt, a few thousand T late. The game's IM 2 set-up 0xC234 writes JP 0xC24C to 0xFFF4 again on a
+restart (RZX frame 32335; the first stamping run caught it as "game wrote a patch site"): its LD BC
+operand 0xC240 holds e_isr too, else the deferral is gone after the first game over. Verified: every deferral in the RZX (handler entered once, at depth
+0, return = the caller) and an interrupt injected at 20 points inside 2 main-code plots (plot intact;
+the original corrupts 19 of 20 in one of them) with a negative control (deferral removed: detected).
+
 ## Build (2026-10-25)
 Overlay, not removal: the plotter and the diamond drawing keep writing the ULA exactly as the original
 (every pixel the game reads is unchanged); each figure gets hardware sprites exactly on its pixels, in
@@ -158,7 +178,7 @@ the sprite). The figure attribute painting is removed: 0xBCDF LD (IX+0),A -> NOP
   median 31K T): the worst frames may run up to ~10 % longer. First version (no cache, per-byte map
   always; 2000 frames): mean 6.4K, max 21.6K.
 
-## Verification (2026-10-25, the stamping run of 400d0d11: selftest --game --verify --stamp)
+## Verification (2026-10-25, the stamping run of 53f2665e: selftest --game --verify --stamp)
 Whole RZX IDENTICAL: 27883 plot entries + exits, 79 diamonds, 165 clears, 34.6M sprite pixels (mask
 included) against the model, 5.1M transient pixels covered from plot entry to exit, 169038 attribute
 reads, 19737 interrupt-safety points; no non-figure write under a visible sprite. Unit cases PASS,
@@ -170,6 +190,8 @@ incredible_shrinking_fireman-add-OPUS_three_windows.png.
 - Fireman white with a black outline over the scenery, no flicker while walking / climbing / falling;
   the scenery round him keeps its colours (no clash).
 - Room 2's bulb and room 6's enemy fireman: steady colour, no flicker (round 1 defect).
+- Room 5 (enemy fireman, table): no extra firemen, LIVES box and tube clean, the figure where the game
+  puts it (round 2 defect); play a minute in every busy room.
 - Room figures in the room's bright ink; two identical overlapping figures stay invisible as before.
 - Diamonds as sprites in their cell's ink; picked up -> gone after the option screen.
 - GAME OPTION TABLE / YOU ARE CARRYING windows: no sprite over them; figures back after.
@@ -177,7 +199,7 @@ incredible_shrinking_fireman-add-OPUS_three_windows.png.
 - Recolour: python nexclash.py recolour incredible_shrinking_fireman-add-OPUS_sprites.nex PAINTED.png.
 
 ## Open
-- Hardware test of 400d0d11 (mask colour black: confirm). Mask on the diamonds: not asked for. Painted sheet (Dean) -> recolour, then the map becomes the build default.
+- Hardware test of 53f2665e (mask colour black: confirm). Mask on the diamonds: not asked for. Painted sheet (Dean) -> recolour, then the map becomes the build default.
 - A pair-hidden figure (objects 1 and 2 on one spot, XOR cancel) that starts to move: its old pixels
   are uncovered during that one plot (the verifier counts these plot entries).
 - 21 graphics of the bank never drawn in the RZX (sheet group "From the code"): unit-tested (every frame

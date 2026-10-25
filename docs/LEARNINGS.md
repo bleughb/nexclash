@@ -514,6 +514,25 @@ Grouped by question; add a new lesson to its group.
   field): find the writer of the colour before calling it a bug, and ask whether to keep it.
 
 ### 2.1f Speed and timing
+- A routine the game calls from BOTH its interrupt handler and its main code is usually not
+  re-entrant (globals, self-modified operands): the original avoids nesting only by TIMING (its main-
+  code calls end before the interrupt in the frames where the ISR calls it). Hook cost moves the
+  interrupt into the main-code call and the outer call carries on with the inner call's state. The
+  differential check cannot see it (each routine runs to its return; the interrupt never moves). Find
+  such routines in phase B (callers of each patched routine: from the ISR's call tree AND from main
+  code) and measure the original's slack (T from the main-code call's return to the next interrupt;
+  Fireman: at least 2.0K T, the hooks add up to 16K). Fix without changing the game: DEFER the
+  interrupt - patch the IM 2 jump to a stub that, while a depth counter (entry + exit hooks) is non-
+  zero, sets a flag and returns with EI; the exit hook at depth 0 enters the handler with the
+  caller's address on the stack. Save / restore of the globals fails when the ISR touches the SAME
+  object (Fireman: the outer plot then XORs a stale image); IM 2 hold mode fails when the ISR can
+  overrun a frame (the main code starves). Patch the game's IM 2 SET-UP too, not just the jump it
+  wrote: games re-run it on a restart (Fireman 0xC234 rewrote 0xFFF4 at the first game over; the
+  verifier's "game wrote a patch site" caught it in the whole-RZX run, not in --quick). Prove it with an injection test: deliver an interrupt at
+  ~20 points spread over the call's OWN length (measured per state; fixed offsets fell past the end
+  of short calls and the negative control passed), require the result = no interrupt, show the
+  original corrupts and the deferral-removed patch is detected (Incredible Shrinking Fireman,
+  hardware round 2, room 5 corruption; 2026-10-25).
 - Before judging hook cost, measure the original's busy time per frame (T from the frame start to
   the first HALT): Fireman never reaches its HALT in a third of the frames, so every hook T there is
   slowdown. Then cut the per-upload work: its first hooks looked up the colour map for every
