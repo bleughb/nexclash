@@ -66,11 +66,11 @@
    }
   },
   "fc8e7535fc42afb60c12625b5fdfd064": {
-   "game": "The Incredible Shrinking Fireman (GPT6_ASTRA)",
-   "doc": "incredible_shrinking_fireman-add-GPT6_ASTRA.md",
+   "game": "The Incredible Shrinking Fireman",
+   "doc": "incredible_shrinking_fireman-add-OPUS.md",
    "nex": {
-    "plain": "f8f213e55e3da01349827f8ae7d93bee",
-    "sprites": "1ea61f0bcaf2b5f27514807f8753f263"
+    "plain": "feb706fcdaa29f13844a7b4982dc21fa",
+    "sprites": "53f2665e76775f3c1b404aba74e93a7b"
    }
   },
   "5875d535442974a0de82737652854f1f": {

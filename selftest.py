@@ -274,7 +274,7 @@ def run_one(rec, action, src, work, human):
 
 
 def tools_check(src):
-    """The shared analysis commands (inspect / scan / isr / cost) against known Chuckie Egg facts
+    """The shared analysis commands (inspect / scan / isr / cost / preview / survey) against known Chuckie Egg facts
     (~1 min). Returns the number of failures. A session that improves a command keeps these passing
     and adds a check for what it added (one easy game is enough: the commands are game-independent)."""
     from nexclash import snapinfo, memscan, isrinfo, drawcost
@@ -346,6 +346,13 @@ def tools_check(src):
         _, r = drawcost.cost(ez, 39500, [er], stop=1500)
         ok('cost plotter 39500 (1500 frames): 1402 calls, median 19535 T',
            r['calls'] == 1402 and r['median'] == 19535, r)
+        from nexclash import survey
+        _, r = survey.survey(ez, [er], os.path.join(work, 'survey'), stop=600, log=lambda m: None)
+        rt = {x['routine']: x for x in r['routines']}
+        ok('survey (600 frames): engine chuckie, plain boot OK, 43899 x1059 calls on top, 40000 x814 from 6 callers at 665 T',
+           r['engine'] == 'chuckie' and r['plain']['boot'].startswith('OK') and r['routines'][0]['routine'] == 43899 and
+           rt[43899]['calls'] == 1059 and rt.get(40000, {}).get('calls') == 814 and
+           len(rt[40000]['callers_seen']) == 6 and rt[40000]['T_median'] == 665, r['routines'][:2])
     finally:
         sys.stderr = old
     shutil.rmtree(work, ignore_errors=True)

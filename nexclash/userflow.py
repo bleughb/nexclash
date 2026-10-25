@@ -104,8 +104,14 @@ nexclash could not patch it: {why}
 ## Start the session with (copy-paste, attach {z80} and {game}.rzx)
 > I want to add a game to nexclash (Spectrum Next colour-clash remover, GPL). The package is
 > attached / at <path or repo URL>: follow its CLAUDE.md. Game: {game}. Snapshot and my RZX are
-> attached. Which figures should become sprites: <REPLACE: e.g. the player and the enemies, or
-> "show me a preview first">. Ask me before anything that changes what I see.
+> attached. Show me the preview and the design defaults (PLAYBOOK 3c) and ask me before anything
+> that changes what I see.
+
+Work goes in stages, one chat each (PLAYBOOK "Sessions"): each stage ends with the prompt for the
+next chat, e.g.
+> Continue {game} in nexclash (package attached / at <path>): follow its CLAUDE.md, start from the
+> "Next session" block in games/<game>.md.
+Reply to the design question with "defaults" or the numbers to change.
 
 ## When the session is done
 1. `python nexclash.py patch {z80}` builds it; test on the Next with the session's checklist.

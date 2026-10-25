@@ -108,7 +108,7 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 | Video | 50Hz forced (NextReg $05) unless `--allow-60hz` (nexclash.py convert / auto / patch / new / verify: sets z80tonex.ALLOW_60HZ, every build path; outputs then differ from the verified MD5s). "50 Hz" is exact only at VGA timing 0 and HDMI: VGA timings 1-6 (NextReg $11, the user's setting) run the frame at up to 58.93 Hz, so a converted game runs up to ~18 % fast there (TECHNIQUES 2.6, clock table: clk28 per mode from the register notes, frame rate = clk28 / clocks per frame; not measured on a board). Ask for the video mode with any "runs too fast" hardware report |
 | 48K fidelity | NextReg $03 = 48K timing (written after the legacy paging writes; VHDL: this does NOT stop 7FFD/1FFD decoding - with 48K/128K timing 7FFD decodes as A15=0, A1:0=01, A14 ignored; timing only changes contention); NextReg $08 contention on; 7FFD lock via the tail's own 7FFD write (bit 5) |
 | DivMMC | The stub clears NextReg $06 bit 4 and unmaps DivMMC memory (OUT $E3,0; z80tonex.build_stub). That bit turned DivMMC automap off only up to core 3.01.05: from core 3.01.10 it is the DRIVE-button NMI alone, the automap enable is NextReg $0A bit 4, and $BB bit 7 (set at reset) automaps on any instruction fetch at $3Dxx while ROM3 is selected - which the alt ROM image 1 is (official core nextreg.txt, branch 30205 = core 3.02.05, and the varmfskii zx_next_notes register pages; NEXT_REGISTERS). So on current cores (boards run 3.02.00) automap is probably still ON under our games. That explains Commando 541e34e2: hook code at 0x3D00-0x3DFF crashed at its first figure on hardware and in CSpect, and d601385e (the same code moved out of that range; only tables there) runs - not confirmed on a board (C2 #24). Rule regardless: never put code at 0x3D00-0x3DFF; data there worked |
-| Simulator blind spots | The toolkit's simulator does not model: DivMMC (automap traps, see above), an interrupt arriving in the middle of a hook (so the game's ISR never sees hook register/stack state - covered only by the per-instruction interrupt-safety check), the raster (tearing, overruns), real-machine speed (28 MHz wait states, contention), CSpect differences, the VIDEO output of Layer 2 (nextboot / verify model its bank register, port 0x123B, palette writes and pixel pages, not what the screen shows: palette entry 0xE3 as transparency, layer order; Dizzy 1, 2026-10-14, hardware to confirm), beam-racing (multicolour) timing - code that rewrites attributes per scanline works only at the original T-state count and contention (LEARNINGS 1.1), the Next's own flag results after block I/O instructions (OTIR/OUTI/INIR...: only ZF is reliable on the Next; the simulator computes real-Z80 flags - LEARNINGS 1.1), WHERE INTERRUPTS LAND once hooks change the time between game instructions: a value the game writes twice before its interrupt handler reads and clears it (a "mailbox") can be lost only on the Next (NextMasterSystem's My Hero, LEARNINGS 2.1) - the differential check runs each routine to its return and never moves an interrupt. Anything in this list needs a static/invariant check or a hardware test. Also: what NEXLOAD leaves in RAM before the stub runs - it overwrites the 48K printer buffer 0x5B00-0x5BFF (Match Day 2026-10-20; nextboot `nexload=True` models it); and the CPU speed an interrupt handler runs at when it lands in 28 MHz code (a timed beeper player in the handler plays 8x fast: Match Day isr_w / isr_x) |
+| Simulator blind spots | The toolkit's simulator does not model: DivMMC (automap traps, see above), an interrupt arriving in the middle of a hook (so the game's ISR never sees hook register/stack state - covered only by the per-instruction interrupt-safety check), the raster (tearing, overruns), real-machine speed (28 MHz wait states, contention), CSpect differences, the VIDEO output of Layer 2 (nextboot / verify model its bank register, port 0x123B, palette writes and pixel pages, not what the screen shows: palette entry 0xE3 as transparency, layer order; Dizzy 1, 2026-10-14, hardware to confirm), beam-racing (multicolour) timing - code that rewrites attributes per scanline works only at the original T-state count and contention (LEARNINGS 1.1), the Next's own flag results after block I/O instructions (OTIR/OUTI/INIR...: only ZF is reliable on the Next; the simulator computes real-Z80 flags - LEARNINGS 1.1), WHERE INTERRUPTS LAND once hooks change the time between game instructions: a value the game writes twice before its interrupt handler reads and clears it (a "mailbox") can be lost only on the Next (NextMasterSystem's My Hero, LEARNINGS 2.1), or a routine the ISR and the main code both call (not re-entrant) can nest only on the Next (Incredible Shrinking Fireman: room 5 corruption on hardware, LEARNINGS 2.1f) - the differential check runs each routine to its return and never moves an interrupt. Anything in this list needs a static/invariant check or a hardware test. Also: what NEXLOAD leaves in RAM before the stub runs - it overwrites the 48K printer buffer 0x5B00-0x5BFF (Match Day 2026-10-20; nextboot `nexload=True` models it); and the CPU speed an interrupt handler runs at when it lands in 28 MHz code (a timed beeper player in the handler plays 8x fast: Match Day isr_w / isr_x); and what the beam shows BETWEEN two hooks: a game routine that changes the ULA over a third of a frame (Fireman's XOR plot) shows its half-done state, which a check at hook boundaries never sees - an overlay must keep old and new figure covered from the routine's entry to its exit (LEARNINGS 2.1e; Fireman's verifier checks it) |
 | Emulators [MAME] | MAME 0.289 (`specnext`) runs .nex files and is how many users will test (loading, Lua, quirks: LEARNINGS 2.7). It models the alt ROM as NextZXOS ROM3 (it caught Trueno's 0x3B00 bug, the boot sim did not). Known MAME-only behaviour: sprite index 0 under a palette offset drawn opaque (hardware unchecked). A MAME pass is not a hardware pass: record which one a result is |
 | Layer 2 (Dizzy 1, hardware to confirm) | 256x192, 8-bit pixels, banks via NextReg $12 (16K bank; 3 consecutive banks = 6 pages, page = first + y/32, offset (y%32)*256+x); visible = port 0x123B bit 1 (the stub writes 0x123B = 0 BEFORE the patch setup, so setup turns it on); palette NextReg $43 = $10 (Layer 2 palette 0, auto-increment) then $40 index, $41 RRRGGGBB; transparency = global $14 (default $E3) compared with the palette RGB, so entry 0 = $E3 makes pixel 0 transparent; order SLU default ($15 = 0): Layer 2 over the ULA. Zero banks in the .nex start it clear (NEXLOAD leaves banks it does not load with old contents). NextReg $69 bit 7 is the same visible bit as 0x123B bit 1 and, written with NEXTREG, keeps every register and flag ($69 bits 6-0 = ULA shadow screen + Timex mode: write 0 there for a game that uses neither). Double buffering (Wally 2026-10-14, hardware to confirm): draw into the bank not on show, then write $12 - the switch is not raster-synced (a frame may show the top of one buffer and the bottom of the other) |
 | MMU | slots 0-7 = NextReg $50-$57, 8K pages; 16K bank n = pages 2n, 2n+1; $FF in slot 0/1 = ROM |
@@ -285,6 +285,8 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
 - Stack low-water = contiguous writes below SP; untouched memory is not automatically free.
 - Lockstep replay cannot prove equivalence of patched code (timing shifts) -> per-routine tests.
 - The 2-byte difference of the old dizzy2_game.nex vs toolkit output is a stub SP change: fine.
+- SkoolKit's Simulator drops every write below 0x4000; a patched run that writes slot 0/1 (a mapped page,
+  alt ROM data) uses dizzy6._rw_simulator() (Fireman re-derived it, 2026-10-25).
 
 ### C2. Known limits (the backlog - the ONE list of open toolkit work)
 Open items only: a finished item is deleted (history lives in git), a new one goes in its group
@@ -322,11 +324,12 @@ Analysis tools
    edges, jump when X stops changing). Until then a short human RZX covers more; puzzle-gated
    content always needs one.
 10. classify() assumes "overwrite" for unrecognised writers - should flag for review.
-11. Static caller scan: `scan` sees only what the RZX ran, but PLAYBOOK 3b wants every caller of every
+11. Static caller scan: `scan` sees only what the RZX ran, but PLAYBOOK 3c wants every caller of every
    plotter. Add `scan --static` (recursive descent from entry + ISR, RZX PCs as seeds, object handler
    fields `LD L,(IX+d)/LD H,(IX+d+1)/JP (HL)` and the stores into them, a byte scan for `CD/C3/CA..
    lo hi` at a plotter rated by code-likeness; design: TECHNIQUES "NextMasterSystem"). Keep the
-   existing output; golden check in tools_check.
+   existing output; golden check in tools_check. (The byte scan part exists in survey.static_sites,
+   2026-10-26; the recursive descent does not.)
 12. A shared fast mode for frame-level questions (C simulator + RZXTracer.next_frame, seconds per RZX)
    next to the per-instruction simrun commands (LEARNINGS 2.3); `rzx.trace` could also speed older
    engines' capture and verify passes.
@@ -337,7 +340,10 @@ Analysis tools
    left for frame 0" (simrun-based scan / isr / cost work on 128K).
 16. Treasure Island game snapshot: the auto-recorder finds no start / inputs (needs --start/--keys or
    a user RZX).
-
+40. `nexclash.py convert GAME.z80 --rzx R` stops with "Port readings exhausted" on a recording with
+   Fuse autosave snapshots (Chuckie_Egg.rzx: 9; found 2026-10-26): analyse() replays the RZX as it is,
+   while simrun / auto strip autosaves first. survey strips them before analyse(); `convert` (in
+   nexclash.py: every game's dependency) still needs it.
 Toolkit structure
 17. Generic builder = TID engine only. Next: an XOR template (generalise dizzy1.py: 1-bit shadow screen
    + Layer 2), then non-Codemasters engines; virtual read is in dedicated builders only (the generic
@@ -349,7 +355,7 @@ Toolkit structure
    a Dizzy 6 change counts as shared. Move _rw_simulator into a shared module.
 20. Colour sheets / recolour on older engines: games converted before Midnight Resistance have no
    sheet; Midnight Resistance has a sheet but no recolour; sheets written before 2026-10-19 use
-   unique=True and join pieces by touching boxes. Bring each to PLAYBOOK 3b at its next rework. Not
+   unique=True and join pieces by touching boxes. Bring each to docs/COLOURS.md at its next rework. Not
    done: a `nexclash.py sheet` command (today `python -m nexclash.<engine> sheet`).
 21. [MAME] A scripted MAME run (put the .nex in the SD image, load, snapshot) next to run_cspect.bat
    (LEARNINGS 2.7).
@@ -429,7 +435,8 @@ Designs not built yet (use when a game needs them)
 35. `inspect` misreports an IM 2 vector table in ROM (Cyclone: I = 0x3A, vector 0x3AFF/0x3B00 = FF FF
    in the 48K ROM -> 0xFFFF, a JR into RAM): it reads the vector from zeroed ROM and warns "IM 2 handler
    in ROM (0x0000)". It should read the 48K ROM (build.rom48) and name the RAM target. Engines that use
-   the alt ROM must then keep those vector bytes (Cyclone: hooks end below 0x3AFF).
+   the alt ROM must then keep those vector bytes (Cyclone: hooks end below 0x3AFF; Incredible Shrinking
+   Fireman: I = 0x39, vector 0x39FF/0x3A00, hooks in two blocks around it).
    Generalise it (2026-10-22): IM 2 reads the vector word at I*256 + bus byte, and games with I in
    0x39-0x3C rely on the bus reading $FF and the 48K ROM's $FF block (0x386E-0x3CFF) giving 0xFFFF -
    the same block every alt-ROM engine fills with hooks (Cyclone 0x3AFF, Match Day 0x3BFF handle it
@@ -446,6 +453,14 @@ Designs not built yet (use when a game needs them)
    on the next frame: the game's sound at the original timing whatever speed the code runs at
    (one frame late; 11 kHz quantises fast tones). Needs: a T clock in the hooks (or the game loop's
    own count), the DAC enable (NextReg $08 bit 3), a hardware listen test. Not tried.
+38. selftest.push_access() treats a git WORKTREE as "no push access": it tests isdir(HERE/.git), and in
+   a worktree .git is a file. LEARNINGS 2.6 says to run stamping / --affected runs in a worktree, so
+   they stop with exit 3 there (Fireman, 2026-10-25; ran with NEXCLASH_MAINTAINER=1). Fix: test
+   os.path.exists, or ask `git rev-parse --git-dir`; add a selftest --tools case with a worktree.
+39. `isr` should list, for every routine the ISR's call tree reaches, the main-code callers too, and
+   the original's slack at each (T from the main-code call's return to the next interrupt, over an
+   RZX): a routine on both lists with little slack is a nesting risk once hooks add cost (LEARNINGS
+   2.1f; Incredible Shrinking Fireman found it only on hardware, 2026-10-25).
 
 ### C3b. Two verification levels (agreed with Dean 2026-09-29; how to run them: PLAYBOOK 6)
 - ITERATE (per change): original bytes at every site, boot check, unit tests (with negative
@@ -456,7 +471,17 @@ Logic must be exact at both levels; visuals "good enough" where Dean agreed (gam
 
 ### C4. Shared analysis commands (any game; Dean 2026-10-12: harness stays per engine)
 `nexclash.py inspect | scan | isr | cost | preview` (modules snapinfo, memscan, isrinfo, drawcost, preview on the
-runner simrun.py). Game-independent: game facts come in as arguments (addresses, ranges, keys).
+runner simrun.py) and `python -m nexclash.survey` (stage 0: all of them in one pass + plain build,
+boot, engine, plot routines, coverage; not in nexclash.py because every game's evidence depends on
+nexclash.py and a new subcommand would put them all up for re-verification). Game-independent: game
+facts come in as arguments (addresses, ranges, keys).
+- survey: inspect + engine detectors + the plain conversion as `convert` does it (autosave snapshots
+  stripped first: analyse() desyncs on them) + the 48K boot check, then ONE pass with memscan.Scanner,
+  isrinfo.IsrTracker and survey.PlotTracker (shadow call stack: each screen write -> the innermost
+  CALL or interrupt running; calls, callers, T per call from its own T count), then a preview pass for
+  the top routines. Writes <game>_survey/survey.md (+ .json, preview.png, the plain .nex). Its
+  coverage line is the byte scan of C2 #11 only (CALL / JP nn to each top routine, rated by whether
+  code ran within 24 bytes), not the recursive static pass.
 - simrun: plays an RZX (autosave snapshots stripped to a temp copy) or free-runs a snapshot with
   a key schedule ("5-14:SPACE; 30-:N", K:LEFT... = Kempston); hooks before/after every
   instruction, on every memory access, interrupt and frame. 128K memory hooks swap the Memory
@@ -474,7 +499,7 @@ runner simrun.py). Game-independent: game facts come in as arguments (addresses,
   plotter (Everyone's a Wally, 2026-10-14: the top 10 were all LDIs of 47653).
 - isr: also "Slots": which 8K slots the handler reads / writes / runs; slots 2-5 it never touches
   may hold a hook RAM page with interrupts on (LEARNINGS 1.3).
-- preview: contact sheet of the screen at chosen frames (PLAYBOOK 3b; with --rzx, --every N needs
+- preview: contact sheet of the screen at chosen frames (PLAYBOOK 3c; with --rzx, --every N needs
   --stop as well, or the run ends after 500 frames); --plot ENTRY colours what each
   plot routine draws per caller (= per figure kind), --buffer ADDR:STRIDE:LINES shows a back buffer
   next to the screen; prints each group's calls, bytes and x/y range. Colours = the last plot that

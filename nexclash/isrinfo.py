@@ -126,6 +126,12 @@ def isr(z80, rzx=None, frames=None, keys=None, stop=None):
     from .snapinfo import inspect
     t = IsrTracker()
     n = run(z80, rzx, t, frames=frames, keys=keys, stop=stop)
+    return report(t, n, z80, rzx, keys)
+
+
+def report(t, n, z80, rzx, keys):
+    """isr()'s report from an IsrTracker that has run (survey runs it in its combined pass)."""
+    from .snapinfo import inspect
     lines = ['Source    : %s, %d frames, %d interrupts accepted, %d never returned before the next' % (
         ', '.join(rzx) if rzx else 'free run (keys: %s)' % (keys or 'none'), n, t.count, t.unreturned)]
     if t.modes and None not in [m[0] for m in t.modes]:

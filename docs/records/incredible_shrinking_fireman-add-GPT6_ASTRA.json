@@ -1,6 +1,6 @@
 {
  "name": "incredible_shrinking_fireman-add-GPT6_ASTRA",
- "order": 21,
+ "order": 20,
  "game": "The Incredible Shrinking Fireman (GPT6_ASTRA)",
  "doc": "incredible_shrinking_fireman-add-GPT6_ASTRA.md",
  "engine": "incredible_shrinking_fireman_add_GPT6_ASTRA",
@@ -79,7 +79,7 @@
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "bc87a441d6f36e56",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "ac047e5ae36fc045",
+   "nexclash/engines.py": "c4e5bb9c1d5333a0",
    "nexclash/incredible_shrinking_fireman_add_GPT6_ASTRA.py": "3d16879aa3c0f391",
    "nexclash/nextboot.py": "a6e46fbbe842b376",
    "nexclash/preview.py": "d9d4e174fa8cd48a",

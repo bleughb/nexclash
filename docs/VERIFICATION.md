@@ -56,6 +56,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Lode Runner (lode_runner): `lode_runner.nex` cd0c1659c8569b2fa80da74962af90d2, `lode_runner_sprites.nex` 85fe6afd593679bf59c787230ba0eaca; verified never
 - Match Day (match_day): `match_day.nex` 612761ec2772c5a7dcd27f939588d227, `match_day_sprites.nex` f0aecd138d1668ff057318c2545f539d; verified 2026-10-20
 - Cyclone (cyclone): `cyclone.nex` 390516396ca4d385c94b7f7bd2315d31, `cyclone_sprites.nex` 25c1b1e070b07565fe4d1a38f69e3024; verified 2026-10-21
+- The Incredible Shrinking Fireman (incredible_shrinking_fireman-add-OPUS): `incredible_shrinking_fireman-add-OPUS.nex` feb706fcdaa29f13844a7b4982dc21fa, `incredible_shrinking_fireman-add-OPUS_sprites.nex` 53f2665e76775f3c1b404aba74e93a7b; verified 2026-10-25
 - The Incredible Shrinking Fireman (GPT6_ASTRA) (incredible_shrinking_fireman-add-GPT6_ASTRA): `incredible_shrinking_fireman_plain-add-GPT6_ASTRA.nex` f8f213e55e3da01349827f8ae7d93bee, `incredible_shrinking_fireman_sprites-add-GPT6_ASTRA.nex` 1ea61f0bcaf2b5f27514807f8753f263; verified 2026-10-26
 <!-- end generated -->
 
@@ -749,6 +750,54 @@ read, whose result only selects a figure paint the build removes; A and F are ov
 Not proven: tape LOAD / SAVE SCREENS, hall of fame name entry, level 2+ in a recording, a guard
 trapped and respawned in a recording (unit tests only); hardware untested.
 
+## The Incredible Shrinking Fireman (48K, engine `incredible_shrinking_fireman_add_opus`) - 2026-10-25
+Build 53f2665e (replaces 400d0d11 after hardware round 2: interrupts deferred while a plot runs, the
+IM 2 set-up patched too; 400d0d11 replaced dc65565c after round 1: plot entry hook, black mask).
+Dean's Fuse RZX (incrediblefireman.rzx, 32492 frames, no autosaves; the .z80 replays it). At every
+hook site (plotter entry 0xB950 and exit 0xBC5C, diamond draw 0xECFF, clears 0xC4A7 / 0xC5B1 /
+0xB4AD) original and patched code run from the same state to the site's end: all registers but
+R/T/MEMPTR (AF' included), all memory outside 64 bytes of dead stack, NEXTREG only $07 / $34-$39 /
+$56 (pages 26-30) / $57 (shape pages 32-63), MMU6 / MMU7 back to pages 0 / 1, no ROM write, no write
+to a shape page; interrupt safety at every patched instruction executed with IFF set (IX the site's or
+POP IX's, IY, I, alternate set unchanged, SP at most one push below the site, MMU6 / MMU7 unmapped, no
+fetch at 0x3D00-0x3DFF). After every event the patched machine's sprite layer (attributes + pattern
+RAM rendered) = an independent Python model: objects as last plotted with their black 4-neighbour
+mask, each object's pending image from its plot entry to its exit, objects 1 and 2 on one spot with
+one frame hidden (XOR cancel), the diamonds drawn since the last clear, live inks / colour map. The
+model is tied to the ULA: every plot's screen change = old ^ new image of the model, and from entry
+to exit every pixel of the old and the new image is under a visible sprite (the half-done XOR plot is
+never uncovered); the exit's (x, y, frame) = the entry's prediction; every diamond = its 7 graphics
+bytes at (C / 8, B - j). The removed figure attribute painting (0xBCDF): every attribute read by game
+code (0xCAA2, 0xCABF, 0xB3F4, 0xB3C5, 0xB42C, 0xC2E4 / 0xC2E8) checked against the cells the patched
+game leaves unpainted. The graphics the build precomputes from are never written; no game write to a
+patch site (except the game's IM 2 set-up 0xC234 rewriting JP 0xC24C at 0xFFF4 on a restart, frame
+32335: the patched set-up writes the hook, unit-tested); 0xB952 / 0xBC5E reached only from their sites;
+no jump into a patched instruction. Interrupts: every interrupt that arrives while a plot runs (entry
+hook to exit hook) is deferred: the handler is entered once, from the exit hook at depth 0, with the
+plot's caller as return address (_defer_check from the live state).
+
+| Check | Result |
+|---|---|
+| incrediblefireman.rzx, 32492 frames | 27883 plot entries + exits, 29891 interrupts (54 deferred to a plot exit), 79 diamonds, 165 clears, 49170529 sprite pixels, 5117824 transient pixels covered, 1112377 plot screen bytes, 553 diamond bytes, 169038 attribute reads, 19737 interrupt-safety points: IDENTICAL |
+| non-figure screen writes under a visible sprite | none in the whole RZX |
+| plot entries of a pair-hidden figure (its old pixels uncovered while it moves) | 242 (known limit, games/ Open) |
+| speed (hook cost per 69888-T frame, 28 MHz parts / 6) | mean 2331 T, 99 % of frames with hooks <= 10185 T, max 16584 T (room entry: three ink tables built) |
+| unit: an interrupt injected at 20 points spread over each of 2 main-code plots (patched: plot = no interrupt) | 2 PASS (the original corrupts 0 and 19 of 20) |
+| unit: the IM 2 set-up 0xC234 writes JP e_isr to 0xFFF4 | 1 PASS |
+| unit: entry + exit, fireman, every frame 0-255 x 4 moves (incl. x / y carries) | 1024 PASS |
+| unit: entry + exit, figures (appear, wrapped frames, vanish, same image) | 10 PASS |
+| unit: exit alone (fallback), fireman every frame 0-255 x 36 positions; figures 7 frames x 3 positions x 4 inks | 9216 + 168 PASS |
+| unit: pair rule, object guard, cache sequence, colour map (painted frames below / above the 8-bit wrap, a wrong check byte ignored) | 3 + 1 + 1 + 2 PASS |
+| unit: diamonds k 0-4 x 4 positions x 3 cell inks; loop counter 0 / 6 (guard); screen clears | 36 + 24 + 3 PASS |
+| negative controls: sprite X 1 px off / pair rule left out / diamond 1 line low / cache ignores the ink / colour map left out / pending sprites not shown at the entry / mask left out / interrupt not deferred during a plot / IM 2 set-up operand left out | 9/9 detected |
+| recolour: {} -> the build byte for byte (banks 13-31); a changed patch site refused; selftest guard | OK |
+| boot simulation with NEXLOAD, plain + sprites (tail 0x5D00, printer buffer put back) | OK |
+Hardware: dc65565c ran on a real Next (Dean, 2026-10-25): flicker on the bulb / enemy fireman (the
+half-done plot uncovered between hooks: fixed by the entry hook), no mask (added). 400d0d11: corruption
+in room 5 (the ISR's plot inside a main-code plot; the plotter is not re-entrant: fixed by the
+deferral). 53f2665e untested.
+Not proven: the 21 graphics the RZX never draws (unit-tested only); a painted colour map in play.
+
 ## Toolkit: colour sheets show only the paintable pixels (2026-10-14)
 coloursheet.write greys only the pixels the read-back uses; the rest of a box keeps the background
 colour, which the read-back ignores. Old vs new code on the same figures: Midnight Resistance
@@ -813,13 +862,3 @@ toolkit). Recipe and facts: games/el_capitan_trueno.md.
   `Trueno_sprites.nex` a9befbb250a040734555ce80aea208b8 byte for byte, with their tk 0.1.4 AND with
   nexclash main; `make_nex.py --en / --immortal / --en --immortal` reproduce da3f1b0a / deaf4577 /
   867bda87. Inputs' MD5s as above. Files: specnext/reference/el_capitan_trueno/.
-
-## Incredible Shrinking Fireman add-GPT6_ASTRA — 2026-10-26
-Final committed build: `selftest.py --game incredible_shrinking_fireman-add-GPT6_ASTRA --verify --stamp`
-PASSED.32,492-frame differential IDENTICAL;27,883 plot-end flag scrambles preserve all RAM at every
-frame end.2,705 unit cases, setup and five negative controls PASS.7,736,176 moving-figure pixels and
-384,200 diamond pixels compared; all19 IFF-enabled update entries preserve state and map MMU6 with
-interrupts disabled. Normal/NEXLOAD boot, pinned assembly, MD5 rebuild and recolour round-trip PASS.
-No recorded clipping/jump exceptions. CSpect/Next hardware testing remains open; full scope and
-limitations in games/incredible_shrinking_fireman-add-GPT6_ASTRA.md. The final report/preview are in
-the matching private reference directory. Stable verifier overlay types fix full-replay memory growth.

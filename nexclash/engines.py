@@ -29,7 +29,7 @@ ENGINES = [
     ('matchday', 'is_matchday', None),                                    # Match Day (48K)
     ('cyclone', 'is_cyclone', None),                                      # Cyclone (48K)
     ('incredible_shrinking_fireman_add_GPT6_ASTRA', 'is_fireman', lambda a: getattr(a, 'z80', '').endswith('-add-GPT6_ASTRA.z80')),
-    ('fireman', 'is_fireman', None),                                      # The Incredible Shrinking Fireman (48K)
+    ('incredible_shrinking_fireman_add_opus', 'is_incredible_shrinking_fireman_add_opus', None),  # The Incredible Shrinking Fireman (48K)
 ]
 
 

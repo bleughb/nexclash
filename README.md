@@ -1,10 +1,31 @@
 # nexclash - BASIC USE FOR CLAUDE AI
 
-## Put the below two line prompt into a claude chat and hit enter
+## Maintainers: put the below two line prompt into an AI Agent chat and hit enter
+(Contributors cannot clone the private bleughb/specnext: run `python nexclash.py new MyGame.z80`
+and use the prompt in the SESSION.md it writes - "Your game is not supported yet" below.)
+Recommended OPUS 5.5 on MEDIUM
+Tried with Sonnet 5.5 on MEDIUM and it actually uses MORE tokens / overly verbose and less accurate. 
+Currently trying GPT-6 Astra Medium also
+Please post your success stories
 
 ```
 Add GAME NAME to nexclash. Snapshot and my RZX are attached.
 Clone bleughb/nexclash and bleughb/specnext side by side and follow nexclash/CLAUDE.md
+```
+
+### Continue a game (a NEW chat for each stage - much cheaper than one long chat)
+Each stage ends by telling you to start a new chat with:
+```
+Continue GAME NAME in nexclash. Clone bleughb/nexclash and bleughb/specnext side by side,
+follow nexclash/CLAUDE.md, start from the "Next session" block in games/<game>.md.
+```
+The design question (stage 1) lists the defaults: reply "defaults", or the numbers to change.
+
+Hardware round (stage 4): test the whole game in one pass first, then send everything at once:
+```
+Continue GAME NAME in nexclash (as above). Hardware round: here is my whole list from one pass
+(painted sheet attached if any). Fix all of it, then ONE build to check - no confirmations in between.
+<list>
 ```
 
 
@@ -91,22 +112,11 @@ Recordings made by nexclash are normal RZX files: they replay in SkoolKit's
 rzxplay and in Fuse (frame boundaries are defined by instruction counts).
 
 ## Supported games and engines
-| Engine | Games | Sprite build |
-|---|---|---|
-| TID engine (masked sprite + undo buffer) | Fantasy World Dizzy, Magicland Dizzy, and any relocated copy | generic, automatic, verified per run |
-| Treasure Island Dizzy (TID + bubble virtual read) | Treasure Island Dizzy | dedicated builder |
-| Dizzy 1 XOR engine | Dizzy: The Ultimate Cartoon Adventure | dedicated builder |
-| Dizzy V engine (ISR-driven masked sprite + undo buffer) | Spellbound Dizzy, also from a BASIC-loader snapshot | generic, automatic, verified per run |
-| TID engine with a mirrored second figure (`tid_mirror`) | Prince of the Yolkfolk (Dizzy 6) | automatic; mirror path proven by unit tests only (no recording reaches it yet) |
-| Rainbow Islands (128K) | Rainbow Islands | dedicated engine `rainbow`, verified per run (being reworked) |
-| Everyone's a Wally (48K game, 128K snapshot) | Everyone's a Wally | dedicated engine `wally`, verified per run |
-| Chuckie Egg | Chuckie Egg | dedicated engine `chuckie`, verified per run |
-| Commando (128K) | Commando (Elite, BASIC-loader snapshot) | dedicated engine `commando`, verified per run |
-| Midnight Resistance (128K) | Midnight Resistance (Ocean 1990) | dedicated engine `midres`, verified per run |
-| Everyone's a Wally (updated) | Everyone's a Wally (every figure on Layer 2) | dedicated engine `wally2`, verified per run (supersedes `wally`) |
-| Smash TV | Smash TV | dedicated engine `smashtv`, verified per run |
-| Target Renegade (128K) | Target Renegade | dedicated engine `renegade`, verified per run |
-| anything else | - | plain `.nex` only, plus a report to guide the next step |
+STATUS.md lists every supported game, its engine, what the sprite build does and how far it is
+proven (generated from the evidence records, so it is always complete). Games whose engine is
+generic (the Codemasters TID engine: Fantasy World Dizzy, Magicland Dizzy and relocated copies;
+Dizzy V) are recognised automatically; anything else gets a plain `.nex` plus a report to guide
+the next step.
 
 ## Testing on the Next (details per game: games/)
 Copy `GAME_sprites.nex` to the SD card and run it. Check: it starts; every converted figure is

@@ -1,24 +1,77 @@
-# Playbook: one game
+# Playbook: one game, in stages
+
+| Stage | Who | Ends with (the gate) |
+|---|---|---|
+| 0 Intake | tools: `python -m nexclash.survey` | the recording reaches every plotter's callers, or the user records more (before any design work) |
+| 1 Design | session 1 | the design in games/<game>.md + ONE question to the user (defaults + exceptions, preview, plain .nex) |
+| 2 Build | session 2 | quick runs PASS, evidence record written, committed |
+| 3 Prove + deliver | session 3 (small) | the one full verification stamped; sprite build + colour sheets to the user |
+| 4 Hardware + colour | one session per round | the user's checklist and painted sheet handled (recolour: seconds, no rebuild) |
+| 5 Close | the session that finishes | status, lessons as candidates, contribution / PR |
+
+Why this order (Dean 2026-10-26): tools do the mechanical work and the agent only the judgement;
+cheap checks before expensive ones; the user is asked three times (recording, the design question,
+hardware + painting), not five; colour comes after the build because recolour makes a repaint free.
+Read this intro, "Sessions" and YOUR stage only (`grep -n '^# Stage' docs/PLAYBOOK.md`, then Read
+with offset/limit); look the rest up when a step points there.
 
 Budget rule: a game the tools already convert (`auto` PASS) -> a few tool runs and one short report.
-A new engine is phases A-C below; keep each phase to one session where possible.
 Only disassemble routines the tools flag as unclassified.
 
-Phases (a long game may be one session per phase; each starts from games/<game>.md, never from
-chat history): A = steps 0-4 + design approval by the user; B = steps 5-6 (toolkit PASS);
-C = hardware rounds and fixes. Write decisions and open questions to games/<game>.md as they
-happen, so a new session can pick up any phase - and in phase B the build's DESIGN too (sites,
-memory used, how each figure becomes a sprite, what the verify checks), before the first quick run.
+Write decisions and open questions to games/<game>.md as they happen, so a new session can pick up
+any stage - and in stage 2 the build's DESIGN too (sites, memory used, how each figure becomes a
+sprite, what the verify checks), before the first quick run.
 Why: Match Day (2026-10-20) lost the session's context mid-phase-B; the whole build existed only as
 code and a running job, and the next turn had to rediscover it from files and the process list.
 Why: Commando took five hardware rounds, each finding something a step below now covers.
-Rounds on a long game (phase C): offer to collect the user's whole list in one pass through the
+Rounds on a long game (stage 4): offer to collect the user's whole list in one pass through the
 game, fix all of it, then check everything in ONE new pass; never restart the emulator unasked.
 Why: the places are far from the start, and every restart costs the user the walk there
 (El Capitan Trueno, 2026-10-13).
 
 ("The user" below = whoever runs the session: Dean in maintainer sessions, the contributor in an
 add-a-game session.)
+
+## Sessions (one per stage; Dean 2026-10-26)
+Every tool call resends the whole conversation, so cost grows with the session's length: a fresh
+session that reads this file + games/<game>.md is far cheaper than hour five of an old one.
+- One session per stage 1-3, one per hardware round (stage 4). A game the tools already convert
+  (`auto` PASS) is one session. Stage 3 is its own small session ON PURPOSE: the full verification
+  is polled for up to an hour, and polls of a short conversation cost little.
+- A stage ends with the "Next session" block right under the title line of games/<game>.md, then
+  commit (+ push, maintainers):
+  ```
+  ## Next session
+  Stage: 2 (build)            State: design approved 2026-10-26 (Decisions below)
+  Inputs: specnext/reference/<game>/ (snapshot, recordings)    Branch: claude/<game>
+  Start with: <the first command>       Read: PLAYBOOK stage 2, nexclash/<template>.py <functions>
+  Open: <anything not settled>
+  ```
+  and the reply gives the user the prompt for it (README "Continue a game"; contributors: SESSION.md).
+- Stage log: one line per finished session under "## Stage log" in games/<game>.md: date, stage,
+  wall time, tool calls (roughly), user rounds. It shows which stage costs the most.
+- Mid-stage: when the session is long (roughly 80+ tool calls, or several hours) and a natural
+  break comes (a quick run passed, a design step done), write the block, commit, and say so: the
+  user starts a new session. Never break in the middle of an edit that does not build.
+- The block replaces any older one; the facts it points to (decisions, design, open items) stay in
+  their sections of games/<game>.md, written as they happen (above).
+
+# Stage 0 - Intake (tools, before any design work)
+
+## Survey (one command)
+`python -m nexclash.survey GAME.z80 --rzx R [--rzx R2]` (~5 min for 8,600 frames; `--stop N` for a
+first look) runs the snapshot check (0b), the plain conversion with its boot check (1; 48K only),
+engine identification (2) and one analysis pass (3: screen writers by routine, callers, T per call,
+ISR, free memory), then a preview pass, and writes `<game>_survey/`: survey.md (one page, ~2K
+tokens), survey.json, preview.png (what each top plot routine draws, per caller), the plain .nex.
+A KNOWN engine there -> `auto`, no stage 1-2. Read survey.md first; run the single commands below
+only for what it leaves open. Its routine attribution is a shadow call stack (BRIEFING C4): a game
+that drops return addresses or blits with SP can blur it - check a surprising row with `cost --at`.
+Coverage gate (survey.md GATE line): every CALL / JP byte pattern to each top plot routine, and
+which the recording reached. An unreached CALL to a FIGURE plotter in code that ran -> ask the user
+for a recording that reaches it (RECORDING_CHECKLIST.md) BEFORE stage 1 (Cyclone needed a second
+recording halfway through its build); to a text / score printer it is usually a message that did
+not come up - note it in games/<game>.md.
 
 ## 0. Inputs (ask once, up front)
 - `.z80` snapshot, 48K or 128K, ideally at the title screen or in game, keyboard controls (not
@@ -41,11 +94,14 @@ ROM 0, which the Next does not have (Commando's first builds crashed on the firs
 the answers in games/<game>.md.
 
 ## 1. Plain conversion
-`python nexclash.py convert GAME.z80 [--rzx R]` -> ask the user to test it on the Next.
+`python nexclash.py convert GAME.z80 [--rzx R]` (survey does it). The user tests it on the Next
+together with the design question (stage 1), not in a round of its own.
 (128K recordings: leave out --rzx - analyse() wraps 48K memory only and stops with "N port
 reading(s) left for frame 0"; prove the tail with `scan --range` instead.)
 Check where the tail went (the converter prints it). It must be in memory the
 game never touches (step 3 proves this: `scan`); override with `--tail ADDR`.
+
+# Stage 1 - Design (session 1)
 
 ## 2. Identify the engine
 `python nexclash.py identify GAME.z80` covers the TID and Dizzy 1 engines (docs/profiles/
@@ -89,7 +145,10 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   would emulate or jump back into: list every LD (nn),A / LD (nn),HL into the routine's code first
   (Dizzy 1 rewrites 58079 and 58709 next to its write sites; the first site at 58707 covered 58709)
 
-## 3b. Visual survey and preview (design approval BEFORE building)
+## 3b. Colour sheets, recolour, speed budget (moved)
+Colour sheets and recolour: docs/COLOURS.md (built in stage 2, sent in stage 3). Speed budget: 3c.
+
+## 3c. Preview and the design question (design approval BEFORE building)
 - `preview GAME.z80 --rzx R --at F,F,... --plot ENTRY ... [--buffer A:S:L] -o sheet.png` shows
   (with --rzx, `--every N` needs `--stop` too: without it the run ends after 500 frames)
   what each plot routine draws per caller (the figure kinds to ask about); `scan --range BUF
@@ -100,83 +159,24 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   see-through, and the overlap (depth) rule - the game's own rule, always in front, or another.
   (Commando: depth, solid bodies and solid objects were settled across three hardware rounds
   from the user's photos; preview frames would have settled them first.)
+- Design defaults (the stage-1 question is these + this game's exceptions; Dean 2026-10-26).
+  Ask in ONE message, numbered, each line the default and what this game shows, so the user can
+  answer "defaults" or "change 3":
+  1. Every figure a sprite (Dean 2026-10-13), from every caller of each plotter.
+  2. Scenery, HUD, score and text stay on the ULA.
+  3. Depth: the game's own rule (behind what the original draws in front).
+  4. Colours: the game's own (the figure's cell ink) until the user paints the sheet sent with
+     the first sprite build (docs/COLOURS.md, stage 3); the painting is applied by recolour.
+  5. Menus, pause and message windows over the play area: Layer 2 and sprites off while up (step 4).
+  ALWAYS ASK, no default yet (list what the preview shows): bullets, explosions and other effects;
+  solid or see-through figures; outlines; anything the hooks cannot convert.
+  A new standing answer from the user -> add it here with the date.
+  Attach the preview frames and the plain .nex (for its hardware test) to the same message.
 - Every figure is a sprite by default (Dean, 2026-10-13: "make everything possible a sprite"): list
   every caller of each plotter from the code (not only those the RZX shows) and convert them all;
   what stays on the ULA (scenery, HUD, text, cases the hooks cannot do) is the question to ask.
   The sheet still shows only what the recording drew: ask for a recording that reaches every
   level, weapon and collectable the user can, before the sheet goes out.
-- COLOUR SHEET - every game from Midnight Resistance on (Dean, 2026-10-13). Colours are not
-  settled in words: the user paints them.
-  - What to send (with the phase-A question; Dean 2026-10-14, rules of 2026-10-19 for ALL games):
-    - `<game>_PAINTING_SPRITES.png`: the fewest WHOLE figures that show every graphics byte
-      (`coloursheet.choose`, then `write(..., unique=False)`), in the colours the build draws today.
-      Why whole: "only the new pixels" of a figure that shares graphics with an earlier one looked
-      like corrupted characters to Dean. A pixel shown in two figures is one colour-map entry: `read`
-      takes a changed copy over an unchanged one and reports two different paints. (Engines written
-      before Rainbow still write unique=True: BRIEFING C2.)
-    - `<game>_REFERENCE_ALL_SPRITES.png` (`unique=False`, every figure): to see the result; not read back.
-    - Items with their own colours (collectables, fruit): ONE COPY PER COLOUR the game draws them in,
-      each painted apart (its own keys).
-    - Many figures -> split: one sheet per level, one for the collectables, one for the player
-      (`<game>_<PART>_PAINTING_SPRITES.png` / `_REFERENCE_ALL_SPRITES.png`, PART = PLAYER, ISLAND1..,
-      LEVEL1.., COLLECTABLES).
-    - Join a figure's pieces by the GAME's own object (the routine that builds one object's draw
-      list: a hook there tags every piece it allocates), not by boxes that touch: two figures side by
-      side, or a figure next to a thrown weapon, were merged into one ("overlapping sprites").
-    - "Every level": the recordings must reach every level, boss and collectable. A whole-game
-      playthrough (Rainbow: rainbowislands_LeeBee.rzx, 195k frames) is cut into BOOKMARKS, one RZX per
-      level (`rzx.scan` finds the frames where the level variable changes, `rzx.cut` writes an RZX that
-      starts there); the full file is never replayed again. Replays use `rzx.trace` (C simulator with
-      hooks: the whole playthrough in ~10 min; the Python simulator takes hours). Report coverage per
-      level: graphics bytes drawn vs the level's graphics data, so a gap is visible, not guessed.
-  - Sheet rules (Dean): 1:1 (one PNG pixel = one Spectrum pixel; an enlarged sheet is too big to
-    paint), multi-part figures JOINED as the game draws them, a row of 8x8 swatches of the sprite
-    palette (1-15) at the top, no text. "Paintable only" (2026-10-14): inside a figure's box only
-    the pixels the read-back uses are grey (or coloured); a part's gap, paper the engine cannot draw
-    and a pixel already shown on an earlier figure keep the background colour (read back as no paint).
-  - Read-back: the user paints, keeps the size, sends it back -> the colour map
-    `docs/profiles/<record>_colours.json`. <record> = the evidence record's name (dizzy1_colours.json),
-    NOT the reference folder's name: the engine's COLOURS constant loads exactly that path and any
-    other name is silently never read; no file = the defaults. The rule is per PIXEL, not per 8x8
-    cell: only bits of the graphics bytes a plot draws exist in the map, so paint outside them
-    (beyond a graphic's byte span) is reported and ignored - graphics with no spare paper column
-    need wider staging. The painting layout keeps the map it was drawn with: a repaint changes only
-    the pixels whose colour changed; painting a pixel back to its default removes its entry.
-    Re-send both sheets after each read-back. Later levels the RZX does not reach: a second sheet
-    from a later recording, read into the same colours file.
-  - Transparent and outline pixels: engines may draw opaque non-ink pixels (code 2: an outline, or
-    Dizzy 1's enclosed paper, black by default). TRANSPARENT: `coloursheet.read(..., clear=True)`
-    reads the sheet's grey on an opaque pixel as transparent (Dean 2026-10-14: "there will always be
-    items that need them"). OUTLINES (Dean 2026-10-14: "borders will be required in MANY future
-    games"): give every bit of a plot's graphics bytes, paper bits as code 0, and write the sheets
-    with `coloursheet.write(..., paint_clear=True)`; a paper bit with a colour nibble is then opaque
-    in that colour (Dizzy 1: fill_mask).
-  - Code: shared nexclash/coloursheet.py does the sheet side (joining a frame's plots into figures,
-    the fewest figures that show every part, PNG, layout JSON, read-back, the colours file). The
-    engine supplies the parts: per plot its staging pixels, each with a colour-map key (one graphics
-    byte = 8 pixels), bit, ink / outline / clear code and today's colour. Templates: midres.sheet_part
-    / capture, CLI `python -m nexclash.<engine> sheet RZX` / `colours painted.png`; for OUTLINES
-    dizzy1 (part_from_writes lists every bit of the bytes drawn, paper as code 0; fill_mask turns
-    painted paper into opaque pixels in the plane, the sprite patterns and the verify model). A
-    capture must strip Fuse autosave snapshots from the RZX first, as auto does before verify
-    (midres.capture does; rzxplay desyncs on them otherwise).
-  - Where: the PNG and its `_layout.json` hold game graphics: specnext/reference/<game>/ only.
-- RECOLOUR - every engine with a colour sheet (Dean, 2026-10-14: "ALL games have this easy
-  ability"). A repaint must not need a rebuild + re-verify: `python nexclash.py recolour
-  <game>_sprites.nex PAINTED.png` writes `<game>_sprites_painted.nex` + its `_colours.json` in about
-  a second (layout found next to the PNG, `X_painted.png` -> `X_layout.json`; the engine is found by
-  the .nex). Shared half: nexclash/recolour.py. The engine adds two names (template: dizzy1.py):
-  `RECOLOUR = {'game', 'output', 'colours', 'clear', 'note'}` and `recolour(nex_bytes, cmap) ->
-  (bytes, info)`, built on `recolour.banks()` / `splice()`. Design rule that makes it safe: put every
-  colour-dependent byte (sprite patterns, Layer 2 pixels, palettes, per-figure colour tables) in banks
-  the GAME never reads, so a colour change cannot change the logic the verification proved; the
-  engine's recolour checks everything else in the .nex is its own build of the expected snapshot
-  (patch sites, hook code, the MD5 of the graphics bytes the colours come from) and refuses
-  otherwise. The engine loads its map through `recolour.build_colours_path(COLOURS)` (honours
-  $NEXCLASH_COLOURS), because the selftest guard builds the game a second time with an empty map and
-  requires recolour to turn each build into the other byte for byte (dizzy1: a recolour that forgot
-  bank 27 failed it). A painting becomes the build default only by copying its `_colours.json` to
-  docs/profiles/<record>_colours.json, then rebuild + verify + stamp as usual.
 - Speed budget: `cost GAME.z80 --rzx R --at PLOTTER --group IX` gives the original's cost per
   draw (T-states), draws per frame and per object; set the allowed hook cost per draw now, and design to it (caching, fewer
   uploads). Commando's first solid hooks cost ~18x the original draw and were redesigned.
@@ -185,15 +185,11 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   / 8 in 3.5 MHz T - about 6x faster, not 8x (LEARNINGS 2.1f). Midnight Resistance's first commit cost ~1.5 TV frames per game
   frame; a pattern-slot cache brought it to 15-60K T.
 
-- Pixel art is the user's. Say so: an AI is not a good pixel artist (it sees a pixel grid
-  coarsely). The AI prepares the sheets - cells or frames copied exactly as the game draws them,
-  each distinct look once - and builds the user's drawing in; it does not draw drafts by rules.
-  (Trueno: automatic drafts cost many rounds; a copied sheet and the user's hand took minutes.)
-
 ## 4. Decide the design (decision table)
 | Finding | Action |
 |---|---|
 | Logic reads player pixels (result changes) | virtual read: screen XOR undo buffer (masked) or XOR graphic (XOR engine) |
+| Logic reads XOR-drawn figure pixels and the figures go in front | overlay instead: keep every ULA write, sprites exactly on the figure's ink pixels; check each plot's screen change = old ^ new image of the model (LEARNINGS 2.1d, Fireman) |
 | No dependency | NO virtual read (it becomes wrong after an overwriter covers the player) |
 | Boxes/panels overwrite the player while drawn | hide sprite at box entry; reappears at next plot |
 | Double draws (XOR engine) | parity model: each XOR draw/erase toggles visibility |
@@ -217,11 +213,16 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
 | Game has no frame sync (no HALT, FRAMES unread) | hook time = slowdown: run whole plots at 28 MHz (entry hook + return-address trampoline), measure the Speed line |
 | The game rewrites bytes in or next to a site | move the site off them; read the rewritten instruction at run time in the hook |
 
+Stage 1 ends: decisions in games/<game>.md, the question sent, the Next session block (stage 2).
+
+# Stage 2 - Build (session 2)
+
 ## 5. Build
 Hooks: asm/<engine>_hooks.asm with `SAVEBIN "<prefix>_<key>.bin"` per block and
 `"hooks": {"source": "asm/<engine>_hooks.asm", ...}` in the profile; after every edit
 `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex + symbols).
-Copy the nearest engine (module + asm + profile + games/ file; STATUS.md lists every engine):
+What the module must provide: docs/ENGINE_CONTRACT.md (doccheck-checked). Copy the nearest engine
+(module + asm + profile + games/ file; STATUS.md lists every engine), one function at a time:
 | Engine | Template for |
 |---|---|
 | build.py TidPatch | Codemasters TID engine (generic builder) |
@@ -237,7 +238,7 @@ Copy the nearest engine (module + asm + profile + games/ file; STATUS.md lists e
 | rainbow.py | full redraw / tile composer, 128K (large; excluded from automatic checks) |
 Change the profile block and site list, rebuild the asm.
 Every site keeps its original-byte check.
-Colour map (every game, PLAYBOOK 3b): the sprite builder applies `<record>_colours.json` per pixel -
+Colour map (every game, docs/COLOURS.md): the sprite builder applies `<record>_colours.json` per pixel -
 key = the graphics byte the pixel comes from, a non-zero nibble replaces the default colour of an
 opaque pixel - and, in an engine with outlines (paint_clear), makes a PAPER pixel opaque in that
 colour (Dizzy 1: fill_mask; its verify model and negative controls must cover it) - and a check of
@@ -245,6 +246,7 @@ the graphics bytes stored with the entry (other graphics at that
 address in a later level -> defaults). Store it where the build can read it at sprite-build time
 (midres: Next pages 28.. at slot 4 during the commit, page tables in the hook page, MidresPatch
 store_pages / asm `ovl`). A build with no colours file = today's defaults.
+Also build the colour-sheet capture and `recolour` now (docs/COLOURS.md): stage 3 sends the sheets.
 
 ## 6. Verify (differential test)
 At every patched routine in the real recording: copy the machine state, run the
@@ -262,21 +264,28 @@ cases with a synthetic map per figure, a wrong check byte (must be ignored) and 
 full RZX run uses it.
 Also simulate the start-up tail: registers restored, no game memory touched.
 
-Long runs (the full verification, selftest): detached + polled, LEARNINGS 2.6.
 Iterate fast (the two levels: BRIEFING C3b): while developing use `--quick N` and the unit tests on 1-2
 captured states (minutes). N must reach the first call of every hook the unit tests capture
 states from, or the run FAILS for lack of a state (Lode Runner at 300 frames: "no captured draw
 state"; Commando: "no plot reused a cached image"): start at 2000. One quick run per change; read
 its counters before changing anything else.
+Unit cases: cross only the inputs that interact. Every graphic x every position edge is one
+product; colours, slots and similar independent inputs need each value once, on a few graphics -
+not every combination (Jetpac's 5,616 graphic cases are 117 graphics x 8 positions x 3 inks x 2
+slots; 117 x 8 + the inks and slots once each covers the same guard edges).
+Stage 2 ends: quick runs PASS (counters in games/<game>.md), the evidence record written (step 7),
+committed; the Next session block (stage 3).
+
+# Stage 3 - Prove and deliver (session 3, small)
+
+## 6a. The one full verification
 The full verification runs ONCE, on the build that goes to the user, and it is the stamping run:
 write the evidence record first (step 7), commit, then `python selftest.py --game <record> --verify
 --stamp` (the record's verify recipe + the rebuild MD5s; it stamps the record, so the maintainers'
 `--affected` before the merge has nothing left to do for this game). Never a separate full `auto`
 as well (Commando ran the ~55 min full check five or six times).
-Unit cases: cross only the inputs that interact. Every graphic x every position edge is one
-product; colours, slots and similar independent inputs need each value once, on a few graphics -
-not every combination (Jetpac's 5,616 graphic cases are 117 graphics x 8 positions x 3 inks x 2
-slots; 117 x 8 + the inks and slots once each covers the same guard edges).
+Long runs (the full verification, selftest): detached + polled, LEARNINGS 2.6: one
+`sleep 540; tail -3 LOG` per poll (call timeout 10 min), nothing faster; write the record and the notes meanwhile.
 
 ## 6b. Hardware risk review (before every build the user tests)
 Go through BRIEFING A1 "Simulator blind spots" item by item for what changed since the last
@@ -292,6 +301,20 @@ engine) to docs/profiles/, games/<game>.md, and the evidence record docs/records
 `data` = your engine's files, `rebuild.decisions` = the run's <name>_decisions.json, `status` =
 the STATUS row), then `python -m nexclash.records views` (regenerates STATUS / VERIFICATION
 checksums / verified.json). Check it: `python -m nexclash.records deps <game>` lists what your
-game's evidence depends on; the one full verification (step 6) stamps it. The engine's line in
+game's evidence depends on; the one full verification (6a) stamps it. The engine's line in
 nexclash/engines.py is not shared code (rebuild-only); anything else outside your engine is:
 `python selftest.py --canary`.
+Send with the sprite build: the colour sheets (docs/COLOURS.md "What to send") and the hardware
+checklist, so the user tests and paints in the same pass.
+
+# Stage 4 - Hardware and colour rounds (one session per round)
+- Collect the user's whole list per round (above); 6b before every build the user tests.
+- A painted sheet: `recolour` (the recolour skill; seconds, no rebuild, no re-verify). Making the
+  painting the build default is its own task (docs/COLOURS.md RECOLOUR: rebuild + verify + stamp).
+- A fix: stage 2 rules (quick runs), then the full verification again as in 6a.
+- A figure or screen the first recording never showed: its own question to the user (CLAUDE.md).
+
+# Stage 5 - Close (the session that finishes the game, or a round)
+CLAUDE.md "End of every stage": games/<game>.md (status, checklist, Stage log), the record and
+`records views`, lesson candidates, `python tools/doccheck.py`; contributors `contribute`,
+maintainers the PR (docs/MAINTAIN.md).

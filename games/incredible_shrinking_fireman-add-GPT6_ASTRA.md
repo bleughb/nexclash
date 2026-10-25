@@ -1,5 +1,13 @@
 # Incredible Shrinking Fireman — add-GPT6_ASTRA
 
+## Next session
+Stage: 4 (hardware/colour)    State: stage3 software acceptance PASSED
+Inputs: specnext/reference/incredible_shrinking_fireman-add-GPT6_ASTRA/ (snapshot, RZX, builds)
+Branch: claude/incredible-shrinking-fireman-add-GPT6_ASTRA
+Start with: test the supplied sprite NEX in CSpect/Next using the checklist below.
+Read: PLAYBOOK stage4; this file's Implementation and Open sections.
+Open: hardware behaviour, unseen paths and optional user painting.
+
 Status: phase B acceptance PASSED and stamped. Hardware untested.
 Branch in both repos: `claude/incredible-shrinking-fireman-add-GPT6_ASTRA`.
 Reference: `specnext/reference/incredible_shrinking_fireman-add-GPT6_ASTRA/`.
@@ -81,12 +89,17 @@ rooms need additional recordings. Real interrupt scheduling/raster/DivMMC are no
 No emulator or hardware result is claimed. Pre-merge affected-game checking remains the maintainer
 workflow; no release or merge is part of this run.
 
-## Captured lessons and corrections
+## Lesson candidates
 - Removed bitmap differences must be tracked at each actual store, including diamond overwrites;
   speculative plot-entry/end updates hid errors. Collectable virtual reads have350 unit cases.
 - Full replay exposed19 IFF-enabled sprite updates: entry state is now explicitly saved/restored.
 - Per-event overlay classes caused simpool's type cache to retain closures until an8GiB OOM kill.
   Stable overlay types fixed the leak; final replay stayed around360MB for the environment.
-  General lesson added to docs/LEARNINGS.md. Earlier interrupted/failed runs received no stamp.
+  Kept local under the current documentation workflow. Earlier interrupted/failed runs received no stamp.
 - Tool-managed sessions were required on this host; a session reset lost an earlier partial run.
   Final acceptance retained stderr and completed. No new hardware/platform claim was inferred.
+
+## Stage log
+- 2026-10-26: stage3 continuation, roughly1hour/150tool calls,0new user rounds; recovered interrupted
+  acceptance, fixed verifier memory growth and rare enabled-IFF entry, full acceptance PASS,
+  published draft PRs and reconciled concurrent main changes. Earlier stage1/2 approved by continue.
