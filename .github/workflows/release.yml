@@ -30,7 +30,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          NOTES="Download nexclash-$(cat VERSION).zip, unzip, \`pip install skoolkit\`, then \`python nexclash.py patch MyGame.z80\`. Supported games: STATUS.md. No game files included - bring your own snapshot. GPL-3.0-or-later."
+          NOTES="Download nexclash-$(cat VERSION).zip, unzip, \`pip install -r requirements.txt\`, then \`python nexclash.py patch MyGame.z80\`. Supported games: STATUS.md. No game files included - bring your own snapshot. GPL-3.0-or-later."
           if gh release view "$TAG" > /dev/null 2>&1; then
             gh release upload "$TAG" dist/nexclash-*.zip --clobber
           else

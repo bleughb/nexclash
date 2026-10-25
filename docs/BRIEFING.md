@@ -324,11 +324,12 @@ Analysis tools
    edges, jump when X stops changing). Until then a short human RZX covers more; puzzle-gated
    content always needs one.
 10. classify() assumes "overwrite" for unrecognised writers - should flag for review.
-11. Static caller scan: `scan` sees only what the RZX ran, but PLAYBOOK 3b wants every caller of every
+11. Static caller scan: `scan` sees only what the RZX ran, but PLAYBOOK 3c wants every caller of every
    plotter. Add `scan --static` (recursive descent from entry + ISR, RZX PCs as seeds, object handler
    fields `LD L,(IX+d)/LD H,(IX+d+1)/JP (HL)` and the stores into them, a byte scan for `CD/C3/CA..
    lo hi` at a plotter rated by code-likeness; design: TECHNIQUES "NextMasterSystem"). Keep the
-   existing output; golden check in tools_check.
+   existing output; golden check in tools_check. (The byte scan part exists in survey.static_sites,
+   2026-10-26; the recursive descent does not.)
 12. A shared fast mode for frame-level questions (C simulator + RZXTracer.next_frame, seconds per RZX)
    next to the per-instruction simrun commands (LEARNINGS 2.3); `rzx.trace` could also speed older
    engines' capture and verify passes.
@@ -339,7 +340,10 @@ Analysis tools
    left for frame 0" (simrun-based scan / isr / cost work on 128K).
 16. Treasure Island game snapshot: the auto-recorder finds no start / inputs (needs --start/--keys or
    a user RZX).
-
+40. `nexclash.py convert GAME.z80 --rzx R` stops with "Port readings exhausted" on a recording with
+   Fuse autosave snapshots (Chuckie_Egg.rzx: 9; found 2026-10-26): analyse() replays the RZX as it is,
+   while simrun / auto strip autosaves first. survey strips them before analyse(); `convert` (in
+   nexclash.py: every game's dependency) still needs it.
 Toolkit structure
 17. Generic builder = TID engine only. Next: an XOR template (generalise dizzy1.py: 1-bit shadow screen
    + Layer 2), then non-Codemasters engines; virtual read is in dedicated builders only (the generic
@@ -351,7 +355,7 @@ Toolkit structure
    a Dizzy 6 change counts as shared. Move _rw_simulator into a shared module.
 20. Colour sheets / recolour on older engines: games converted before Midnight Resistance have no
    sheet; Midnight Resistance has a sheet but no recolour; sheets written before 2026-10-19 use
-   unique=True and join pieces by touching boxes. Bring each to PLAYBOOK 3b at its next rework. Not
+   unique=True and join pieces by touching boxes. Bring each to docs/COLOURS.md at its next rework. Not
    done: a `nexclash.py sheet` command (today `python -m nexclash.<engine> sheet`).
 21. [MAME] A scripted MAME run (put the .nex in the SD image, load, snapshot) next to run_cspect.bat
    (LEARNINGS 2.7).
@@ -467,7 +471,17 @@ Logic must be exact at both levels; visuals "good enough" where Dean agreed (gam
 
 ### C4. Shared analysis commands (any game; Dean 2026-10-12: harness stays per engine)
 `nexclash.py inspect | scan | isr | cost | preview` (modules snapinfo, memscan, isrinfo, drawcost, preview on the
-runner simrun.py). Game-independent: game facts come in as arguments (addresses, ranges, keys).
+runner simrun.py) and `python -m nexclash.survey` (stage 0: all of them in one pass + plain build,
+boot, engine, plot routines, coverage; not in nexclash.py because every game's evidence depends on
+nexclash.py and a new subcommand would put them all up for re-verification). Game-independent: game
+facts come in as arguments (addresses, ranges, keys).
+- survey: inspect + engine detectors + the plain conversion as `convert` does it (autosave snapshots
+  stripped first: analyse() desyncs on them) + the 48K boot check, then ONE pass with memscan.Scanner,
+  isrinfo.IsrTracker and survey.PlotTracker (shadow call stack: each screen write -> the innermost
+  CALL or interrupt running; calls, callers, T per call from its own T count), then a preview pass for
+  the top routines. Writes <game>_survey/survey.md (+ .json, preview.png, the plain .nex). Its
+  coverage line is the byte scan of C2 #11 only (CALL / JP nn to each top routine, rated by whether
+  code ran within 24 bytes), not the recursive static pass.
 - simrun: plays an RZX (autosave snapshots stripped to a temp copy) or free-runs a snapshot with
   a key schedule ("5-14:SPACE; 30-:N", K:LEFT... = Kempston); hooks before/after every
   instruction, on every memory access, interrupt and frame. 128K memory hooks swap the Memory
@@ -485,7 +499,7 @@ runner simrun.py). Game-independent: game facts come in as arguments (addresses,
   plotter (Everyone's a Wally, 2026-10-14: the top 10 were all LDIs of 47653).
 - isr: also "Slots": which 8K slots the handler reads / writes / runs; slots 2-5 it never touches
   may hold a hook RAM page with interrupts on (LEARNINGS 1.3).
-- preview: contact sheet of the screen at chosen frames (PLAYBOOK 3b; with --rzx, --every N needs
+- preview: contact sheet of the screen at chosen frames (PLAYBOOK 3c; with --rzx, --every N needs
   --stop as well, or the run ends after 500 frames); --plot ENTRY colours what each
   plot routine draws per caller (= per figure kind), --buffer ADDR:STRIDE:LINES shows a back buffer
   next to the screen; prints each group's calls, bytes and x/y range. Colours = the last plot that

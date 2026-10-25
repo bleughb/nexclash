@@ -912,8 +912,12 @@ Grouped by question; add a new lesson to its group.
   be its own PID. 1-2 CPUs: `--jobs 2` at most; one long job at a time.
 - Start the job on its own: in `a && b && setsid nohup job &` the `&` backgrounds the WHOLE chain,
   so a failed `a` silently skips the job and its output is lost.
-- A single tool call is capped at 10 minutes: poll a background job with sleeps under that
-  (Chuckie Egg RELEASE run ~15 min: verify 8626 frames ~5 min, unit tests ~10 min).
+- A single tool call is capped at 10 minutes: poll a background job with ONE call per ~9 minutes,
+  `sleep 540; tail -3 LOG` with the call's timeout raised to 10 minutes (the default is 2: a plain
+  call is killed mid-sleep); where calls are capped lower, sleep just under the cap (Chuckie Egg RELEASE run ~15 min: verify 8626 frames ~5 min, unit tests
+  ~10 min). Why not faster: every tool call resends the whole conversation, so ten 1-minute polls of
+  an hour-old session cost about ten times one 9-minute poll and tell you nothing more. Never `cat`
+  a log; `tail -3` or `grep -c '!'` for the counters.
 - Run a stamping selftest in a separate git worktree (`git worktree add ../nexclash-verify BRANCH`)
   so its record stamps do not collide with edits in the main checkout; commit them from there.
 - `cd X; cmd` runs cmd in the OLD directory when X does not exist - use `cd X && cmd` (a selftest

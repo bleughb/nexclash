@@ -123,6 +123,11 @@ def scan(z80, rzx=None, frames=None, keys=None, ranges=None, stop=None, after=No
     watch = [(r, set(parse_range(r, is128))) for r in ranges] if writers and ranges else None
     sc = Scanner(after, watch)
     n = run(z80, rzx, sc, frames=frames, keys=keys, stop=stop)
+    return report(sc, n, rzx, keys, ranges, after, is128, watch)
+
+
+def report(sc, n, rzx, keys, ranges, after, is128, watch):
+    """scan()'s report from a Scanner that has run (survey runs it in its combined pass)."""
     if not ranges:
         ranges = ['0x4000-0xBFFF'] + (['bank%d:0xC000-0xFFFF' % b for b in range(8)] if is128 else ['0xC000-0xFFFF'])
     lines = ['Source    : %s, %d frames' % (', '.join(rzx) if rzx else 'free run (keys: %s)' % (keys or 'none'), n),
