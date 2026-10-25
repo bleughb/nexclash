@@ -2,7 +2,7 @@
 
 Reference: specnext reference/incredible_shrinking_fireman-add-OPUS/ (branch
 claude/incredible-shrinking-fireman-add-OPUS; the "-add-OPUS" suffix is this run's naming, Dean 2026-10-25).
-Status: sprite build dc65565c verified in software 2026-10-25 (see Verification); hardware untested.
+Status: sprite build dc65565c (plain feb706fc) verified in software 2026-10-25; hardware untested.
 Code: nexclash/incredible_shrinking_fireman_add_opus.py (sheets, build, verifier, unit tests, recolour),
 asm/incredible_shrinking_fireman-add-OPUS_hooks.asm, docs/profiles/incredible_shrinking_fireman-add-OPUS.json,
 record docs/records/incredible_shrinking_fireman-add-OPUS.json.
@@ -125,12 +125,15 @@ the sprite). The figure attribute painting is removed: 0xBCDF LD (IX+0),A -> NOP
 - Visibility: shown[a] = frame != 0 at its last plot, cleared by the three screen clears (also the
   option / carrying windows: drawn after the 0xC5B1 clear); objects 1 and 2 both shown at one x, y,
   frame -> both hidden (the XOR cancel). Diamonds shown from their draw to the next clear.
-- Speed (verifier, 2000 frames): hook cost mean 1.3K T per 69,888-T frame, max 5.8K T (28 MHz T / 6).
-  The original never reaches its HALT in a third of the frames (busy: median 31K T): the worst frames
-  may run up to ~8 % longer. First version (no cache, per-byte map always): mean 6.4K, max 21.6K.
+- Speed (whole RZX): hook cost mean 1.1K T per 69,888-T frame, 99 % of frames with hooks <= 5.8K T,
+  max 6.7K T (28 MHz T / 6). The original never reaches its HALT in a third of the frames (busy:
+  median 31K T): the worst frames may run up to ~10 % longer. First version (no cache, per-byte map
+  always; 2000 frames): mean 6.4K, max 21.6K.
 
-## Verification
-The differential verifier (record verify note) at every hook site of the RZX. Results: docs/VERIFICATION.md.
+## Verification (2026-10-25, the stamping run: selftest --game --verify --stamp)
+Whole RZX IDENTICAL: 27883 plots, 79 diamonds, 165 clears, 9.2M sprite pixels and 1.1M plot screen
+bytes against the model, 169038 attribute reads, 9797 interrupt-safety points; no non-figure write
+under a visible sprite. Unit cases PASS, 5/5 negative controls detected. Details: docs/VERIFICATION.md.
 
 ## Hardware checklist
 - Boots to the title (alt ROM + IM 2 via ROM 0x39FF: the vector bytes stay FF FF).

@@ -213,6 +213,10 @@ BRIEFING - with its reason.
 Grouped by question; add a new lesson to its group.
 
 ### 2.1a Finding the code and the figures (analysis)
+- Take a coordinate's UNIT from the address helper, not from the values seen: Incredible Shrinking
+  Fireman's diamond routine gets (B, C) and 0xED1B takes the column from C bits 7-3 - C is a pixel x,
+  not a column (values like 0x80 look like neither). Assumed a column, the hook put the diamond at x =
+  8 * C; the verifier's independent sprite model caught it on the first diamond (2026-10-25).
 - Before a colour sheet or patterns, read the row order from the plotter's line step: a plotter
   that steps UP a line per row (DEC H / 29422 in Jetpac) stores graphics bottom line first. Jetpac's
   first sheets went out upside down (Dean, 2026-10-19).
@@ -283,6 +287,11 @@ Grouped by question; add a new lesson to its group.
   that emulates such an instruction reads it at run time and handles every value the game stores.
 
 ### 2.1b Hook design and safety
+- A site whose replaced instruction LOADS a register (LD HL,nn) gives that register free at entry:
+  load a per-site tail address into it, DI after one push, and leave through JP (HL) to a tail
+  that does the replaced load and jumps back - nothing on the game's stack while interrupts are on.
+  Fireman's first clear hooks CALLed a shared routine (return address + PUSH AF before the DI); the
+  interrupt-safety check flagged it (2026-10-25).
 - Guard limits come from the ORIGINAL's capacity, found by running it, not from the data format:
   Target Renegade's graphic header allows 255 bytes per row, but the plotter's unrolled row code takes
   at most 6 (W = 7 or 8 never returns); the converted / passthrough guard says W <= 6.
@@ -408,6 +417,12 @@ Grouped by question; add a new lesson to its group.
   own, not a guess (Trueno bush_walls.py, fix_cells.py).
 
 ### 2.1d XOR engines
+- Logic that READS the XOR-drawn figure pixels (a floor test under the feet) and figures that go in
+  FRONT: an overlay needs no virtual read. Keep every ULA write exactly as the original and put the
+  sprites exactly on the figure's ink pixels: every ULA pixel that differs from the scenery is then
+  under its own sprite (the XOR holes where a figure crosses scenery ink are covered). Tie the model
+  to the ULA by checking each plot's screen change = old ^ new image of the model (Incredible
+  Shrinking Fireman: 7,263 floor reads change without the figure pixels; 2026-10-25).
 - XOR engines: model visibility as parity. Dizzy 1 had 7 double draws that cancel.
 - Plotter return registers may differ when the player is not on screen (Dizzy 1
   A after erase). Check whether callers use them before "fixing".
@@ -491,6 +506,13 @@ Grouped by question; add a new lesson to its group.
   field): find the writer of the colour before calling it a bug, and ask whether to keep it.
 
 ### 2.1f Speed and timing
+- Before judging hook cost, measure the original's busy time per frame (T from the frame start to
+  the first HALT): Fireman never reaches its HALT in a third of the frames, so every hook T there is
+  slowdown. Then cut the per-upload work: its first hooks looked up the colour map for every
+  graphics byte on every plot (2000 frames: mean 6.4K, max 21.6K T per 69,888-T frame); a build-time painted-frame
+  flag (the graphics are proven never written: scan, and the verifier fails on a write), a per-ink
+  nibble table for unpainted frames (2 pattern bytes per graphics nibble) and a two-buffer (frame,
+  ink) cache (40 % of plots upload nothing) brought it to 1.1K / 6.7K over the whole RZX (2026-10-25).
 - Measure a technique's set-up before choosing it (TECHNIQUES 1.0, nextbench on a board 2026-10-22):
   DMA costs ~14.5 us to start at 28 MHz, so it only beats LDIR above ~21 bytes, a stack copy above
   ~37 and a PUSH fill above ~330; and on core 3.02.00 DMA at 3.5 MHz copies WRONG (fixed in 3.02.02).

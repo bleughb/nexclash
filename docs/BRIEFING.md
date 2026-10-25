@@ -285,6 +285,8 @@ WIPE_IX SOUND_TICK BOX_CONT BOX_VAR. The asm sources are in Dean's earlier zips
 - Stack low-water = contiguous writes below SP; untouched memory is not automatically free.
 - Lockstep replay cannot prove equivalence of patched code (timing shifts) -> per-routine tests.
 - The 2-byte difference of the old dizzy2_game.nex vs toolkit output is a stub SP change: fine.
+- SkoolKit's Simulator drops every write below 0x4000; a patched run that writes slot 0/1 (a mapped page,
+  alt ROM data) uses dizzy6._rw_simulator() (Fireman re-derived it, 2026-10-25).
 
 ### C2. Known limits (the backlog - the ONE list of open toolkit work)
 Open items only: a finished item is deleted (history lives in git), a new one goes in its group
@@ -429,7 +431,8 @@ Designs not built yet (use when a game needs them)
 35. `inspect` misreports an IM 2 vector table in ROM (Cyclone: I = 0x3A, vector 0x3AFF/0x3B00 = FF FF
    in the 48K ROM -> 0xFFFF, a JR into RAM): it reads the vector from zeroed ROM and warns "IM 2 handler
    in ROM (0x0000)". It should read the 48K ROM (build.rom48) and name the RAM target. Engines that use
-   the alt ROM must then keep those vector bytes (Cyclone: hooks end below 0x3AFF).
+   the alt ROM must then keep those vector bytes (Cyclone: hooks end below 0x3AFF; Incredible Shrinking
+   Fireman: I = 0x39, vector 0x39FF/0x3A00, hooks in two blocks around it).
    Generalise it (2026-10-22): IM 2 reads the vector word at I*256 + bus byte, and games with I in
    0x39-0x3C rely on the bus reading $FF and the 48K ROM's $FF block (0x386E-0x3CFF) giving 0xFFFF -
    the same block every alt-ROM engine fills with hooks (Cyclone 0x3AFF, Match Day 0x3BFF handle it
