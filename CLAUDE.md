@@ -148,7 +148,7 @@ or download another version; tools/sjasmplus/README.md).
 |---|---|
 | nexclash.py | CLI: patch / new / contribute (users), auto / identify / record / convert / verify / rzx, analysis: inspect / scan / isr / cost |
 | selftest.py | maintainers' acceptance test, driven by docs/records (needs the private reference files) |
-| nexclash/ | toolkit modules + engines (chuckie, commando, dizzy1, dizzy5, dizzy6, jetpac, loderunner, midres, rainbow, renegade, smashtv, wally, wally2; build.py = TID generic); engines.py = auto's engine table; simpool.py = reusable verify simulators; userflow.py = patch/new/contribute; simrun + snapinfo/memscan/isrinfo/drawcost = the analysis commands |
+| nexclash/ | toolkit modules + engines (one module per engine; the list is nexclash/engines.py, the games STATUS.md; build.py = TID generic); engines.py = auto's engine table; simpool.py = reusable verify simulators; userflow.py = patch/new/contribute; simrun + snapinfo/memscan/isrinfo/drawcost = the analysis commands |
 | asm/ | hook sources; after any edit `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex); dizzy5_hooks.asm is the exception: dizzy5.py emits the bytes, selftest (Dizzy V record check) compares them |
 | docs/profiles/ | per-game profiles (hook hex read by the engines), signatures.json, verified.json (generated) |
 | docs/records/ | one evidence record per game: inputs, dependencies, rebuild / verify recipes, outputs, status, check stamps (nexclash/records.py) |

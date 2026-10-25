@@ -1,6 +1,8 @@
 # nexclash - BASIC USE FOR CLAUDE AI
 
-## Put the below two line prompt into an AI Agent chat and hit enter
+## Maintainers: put the below two line prompt into an AI Agent chat and hit enter
+(Contributors cannot clone the private bleughb/specnext: run `python nexclash.py new MyGame.z80`
+and use the prompt in the SESSION.md it writes - "Your game is not supported yet" below.)
 Recommended OPUS 5.5 on MEDIUM
 Tried with Sonnet 5.5 on MEDIUM and it actually uses MORE tokens / overly verbose and less accurate. 
 Currently trying GPT-6 Astra Medium also
