@@ -28,7 +28,7 @@ ENGINES = [
     ('renegade', 'is_renegade', None),                                    # Target Renegade (128K, BASIC loader)
     ('matchday', 'is_matchday', None),                                    # Match Day (48K)
     ('cyclone', 'is_cyclone', None),                                      # Cyclone (48K)
-    ('fireman', 'is_fireman', None),                                      # The Incredible Shrinking Fireman (48K)
+    ('incredible_shrinking_fireman_add_opus', 'is_incredible_shrinking_fireman_add_opus', None),  # The Incredible Shrinking Fireman (48K)
 ]
 
 

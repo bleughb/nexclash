@@ -213,6 +213,10 @@ BRIEFING - with its reason.
 Grouped by question; add a new lesson to its group.
 
 ### 2.1a Finding the code and the figures (analysis)
+- Take a coordinate's UNIT from the address helper, not from the values seen: Incredible Shrinking
+  Fireman's diamond routine gets (B, C) and 0xED1B takes the column from C bits 7-3 - C is a pixel x,
+  not a column (values like 0x80 look like neither). Assumed a column, the hook put the diamond at x =
+  8 * C; the verifier's independent sprite model caught it on the first diamond (2026-10-25).
 - Before a colour sheet or patterns, read the row order from the plotter's line step: a plotter
   that steps UP a line per row (DEC H / 29422 in Jetpac) stores graphics bottom line first. Jetpac's
   first sheets went out upside down (Dean, 2026-10-19).
@@ -283,6 +287,11 @@ Grouped by question; add a new lesson to its group.
   that emulates such an instruction reads it at run time and handles every value the game stores.
 
 ### 2.1b Hook design and safety
+- A site whose replaced instruction LOADS a register (LD HL,nn) gives that register free at entry:
+  load a per-site tail address into it, DI after one push, and leave through JP (HL) to a tail
+  that does the replaced load and jumps back - nothing on the game's stack while interrupts are on.
+  Fireman's first clear hooks CALLed a shared routine (return address + PUSH AF before the DI); the
+  interrupt-safety check flagged it (2026-10-25).
 - Guard limits come from the ORIGINAL's capacity, found by running it, not from the data format:
   Target Renegade's graphic header allows 255 bytes per row, but the plotter's unrolled row code takes
   at most 6 (W = 7 or 8 never returns); the converted / passthrough guard says W <= 6.
@@ -408,6 +417,12 @@ Grouped by question; add a new lesson to its group.
   own, not a guess (Trueno bush_walls.py, fix_cells.py).
 
 ### 2.1d XOR engines
+- Logic that READS the XOR-drawn figure pixels (a floor test under the feet) and figures that go in
+  FRONT: an overlay needs no virtual read. Keep every ULA write exactly as the original and put the
+  sprites exactly on the figure's ink pixels: every ULA pixel that differs from the scenery is then
+  under its own sprite (the XOR holes where a figure crosses scenery ink are covered). Tie the model
+  to the ULA by checking each plot's screen change = old ^ new image of the model (Incredible
+  Shrinking Fireman: 7,263 floor reads change without the figure pixels; 2026-10-25).
 - XOR engines: model visibility as parity. Dizzy 1 had 7 double draws that cancel.
 - Plotter return registers may differ when the player is not on screen (Dizzy 1
   A after erase). Check whether callers use them before "fixing".
@@ -447,6 +462,14 @@ Grouped by question; add a new lesson to its group.
   phase A because an XOR-parity count by (graphic, x, y) showed twice the figures the screen had.
 
 ### 2.1e Sprites, patterns, colours, depth
+- An overlay sprite must cover the ULA pixels WHILE the game's plot changes them, not only after it:
+  Fireman's XOR plot takes 24-27K T (a third of a frame) and 97 % of plots run while the beam draws
+  the picture; sprites moved at the plot's exit left the half-done plot showing in the cells' own
+  colours (hardware, Dean 2026-10-25: a bulb flickering purple / cyan). Fix: at the plotter ENTRY show
+  the new image on a second (pending) sprite pair, at the exit switch the own pair to it and hide the
+  pending one; verify that from entry to exit every old and new image pixel is under a visible
+  sprite. Measure first: T from the interrupt to each plot's entry and exit (the beam's 48K picture
+  is T 14336-57344).
 - A figure the game draws as TWO objects (Match Day's diving keeper: the keeper + a spare object 16
   px to its right) joins on the colour sheet only by the game's own pairing (frames 2k + 2k+1), and
   on screen it TEARS in the original: the halves update on alternate frames while the camera scrolls.
@@ -491,6 +514,32 @@ Grouped by question; add a new lesson to its group.
   field): find the writer of the colour before calling it a bug, and ask whether to keep it.
 
 ### 2.1f Speed and timing
+- A routine the game calls from BOTH its interrupt handler and its main code is usually not
+  re-entrant (globals, self-modified operands): the original avoids nesting only by TIMING (its main-
+  code calls end before the interrupt in the frames where the ISR calls it). Hook cost moves the
+  interrupt into the main-code call and the outer call carries on with the inner call's state. The
+  differential check cannot see it (each routine runs to its return; the interrupt never moves). Find
+  such routines in phase B (callers of each patched routine: from the ISR's call tree AND from main
+  code) and measure the original's slack (T from the main-code call's return to the next interrupt;
+  Fireman: at least 2.0K T, the hooks add up to 16K). Fix without changing the game: DEFER the
+  interrupt - patch the IM 2 jump to a stub that, while a depth counter (entry + exit hooks) is non-
+  zero, sets a flag and returns with EI; the exit hook at depth 0 enters the handler with the
+  caller's address on the stack. Save / restore of the globals fails when the ISR touches the SAME
+  object (Fireman: the outer plot then XORs a stale image); IM 2 hold mode fails when the ISR can
+  overrun a frame (the main code starves). Patch the game's IM 2 SET-UP too, not just the jump it
+  wrote: games re-run it on a restart (Fireman 0xC234 rewrote 0xFFF4 at the first game over; the
+  verifier's "game wrote a patch site" caught it in the whole-RZX run, not in --quick). Prove it with an injection test: deliver an interrupt at
+  ~20 points spread over the call's OWN length (measured per state; fixed offsets fell past the end
+  of short calls and the negative control passed), require the result = no interrupt, show the
+  original corrupts and the deferral-removed patch is detected (Incredible Shrinking Fireman,
+  hardware round 2, room 5 corruption; 2026-10-25).
+- Before judging hook cost, measure the original's busy time per frame (T from the frame start to
+  the first HALT): Fireman never reaches its HALT in a third of the frames, so every hook T there is
+  slowdown. Then cut the per-upload work: its first hooks looked up the colour map for every
+  graphics byte on every plot (2000 frames: mean 6.4K, max 21.6K T per 69,888-T frame); a build-time painted-frame
+  flag (the graphics are proven never written: scan, and the verifier fails on a write), a per-ink
+  nibble table for unpainted frames (2 pattern bytes per graphics nibble) and a two-buffer (frame,
+  ink) cache (40 % of plots upload nothing) brought it to 1.1K / 6.7K over the whole RZX (2026-10-25).
 - Measure a technique's set-up before choosing it (TECHNIQUES 1.0, nextbench on a board 2026-10-22):
   DMA costs ~14.5 us to start at 28 MHz, so it only beats LDIR above ~21 bytes, a stack copy above
   ~37 and a PUSH fill above ~330; and on core 3.02.00 DMA at 3.5 MHz copies WRONG (fixed in 3.02.02).

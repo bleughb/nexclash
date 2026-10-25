@@ -194,6 +194,7 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
 | Finding | Action |
 |---|---|
 | Logic reads player pixels (result changes) | virtual read: screen XOR undo buffer (masked) or XOR graphic (XOR engine) |
+| Logic reads XOR-drawn figure pixels and the figures go in front | overlay instead: keep every ULA write, sprites exactly on the figure's ink pixels; check each plot's screen change = old ^ new image of the model (LEARNINGS 2.1d, Fireman) |
 | No dependency | NO virtual read (it becomes wrong after an overwriter covers the player) |
 | Boxes/panels overwrite the player while drawn | hide sprite at box entry; reappears at next plot |
 | Double draws (XOR engine) | parity model: each XOR draw/erase toggles visibility |
