@@ -21,6 +21,13 @@ follow nexclash/CLAUDE.md, start from the "Next session" block in games/<game>.m
 ```
 The design question (stage 1) lists the defaults: reply "defaults", or the numbers to change.
 
+Hardware round (stage 4): test the whole game in one pass first, then send everything at once:
+```
+Continue GAME NAME in nexclash (as above). Hardware round: here is my whole list from one pass
+(painted sheet attached if any). Fix all of it, then ONE build to check - no confirmations in between.
+<list>
+```
+
 
 # nexclash - colour-clash-free ZX Spectrum games on the Spectrum Next
 

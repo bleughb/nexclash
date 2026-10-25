@@ -9,6 +9,7 @@ FAIL (in CLAUDE.md, README.md, CONTRIBUTING.md, docs/*.md, .claude/skills/*):
 - `module.function(` where module is a toolkit module that has no such top-level name;
 - a section reference that resolves to no heading: PLAYBOOK 3c / stage 2, LEARNINGS 2.6,
   BRIEFING C4 / A1, TECHNIQUES 2.6, and BRIEFING C2 #N with no item N (C2 renumbers: check it);
+- an engine in nexclash/engines.py without the REQUIRED names of docs/ENGINE_CONTRACT.md;
 - a file over its size budget (BUDGET below). Why budgets: every session reads these files, and
   without a limit they only grow (LEARNINGS tripled in two weeks). Over budget -> consolidate
   (docs/MAINTAIN.md "Lesson consolidation"), do not raise the number.
@@ -26,7 +27,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # bytes; set 2026-10-26 a little above that day's size: hold the line, lower them as files are condensed
-BUDGET = {'CLAUDE.md': 10500, 'docs/PLAYBOOK.md': 27000, 'docs/COLOURS.md': 9000, 'docs/MAINTAIN.md': 6000,
+BUDGET = {'docs/ENGINE_CONTRACT.md': 6000, 'CLAUDE.md': 10500, 'docs/PLAYBOOK.md': 27000, 'docs/COLOURS.md': 9000, 'docs/MAINTAIN.md': 6000,
           'docs/BRIEFING.md': 56000, 'docs/LEARNINGS.md': 90000, 'docs/TECHNIQUES.md': 68000,
           'docs/VERIFICATION.md': 82000, 'README.md': 12000}
 GAME_BUDGET = 25000          # games/<game>.md; older notes over it are listed and must not grow
@@ -82,6 +83,25 @@ def headings():
     return h, {int(x) for x in re.findall(r'^(\d+)\. ', c2, re.M)}
 
 
+CONTRACT = ('auto', 'verify', 'unit_tests', 'load_profile', 'CMP')     # docs/ENGINE_CONTRACT.md REQUIRED
+
+
+def engine_contract():
+    """docs/ENGINE_CONTRACT.md REQUIRED names in every module of nexclash/engines.py (read, not imported)."""
+    t = ast.parse(open(os.path.join(ROOT, 'nexclash', 'engines.py')).read())
+    table = next(n.value for n in t.body if isinstance(n, ast.Assign) and getattr(n.targets[0], 'id', '') == 'ENGINES')
+    out = collections.defaultdict(list)
+    for e in table.elts:
+        mod, det = e.elts[0].value, e.elts[1].value
+        names = module_names().get(mod, set())
+        miss = [x for x in (det,) + CONTRACT if x not in names]
+        if miss:
+            out['engine contract: REQUIRED name missing (docs/ENGINE_CONTRACT.md)'].append('nexclash/%s.py  %s' % (mod, ', '.join(miss)))
+        if ('RECOLOUR' in names) != ('recolour' in names):
+            out['engine contract: RECOLOUR and recolour() go together'].append('nexclash/%s.py' % mod)
+    return out
+
+
 def has_section(heads, doc, sec):
     if sec.lower().startswith('stage'):
         pat = re.compile(r'^#+\s*' + re.escape(sec) + r'\b', re.I)
@@ -135,6 +155,8 @@ def main():
                 p = m.group(1).rstrip('.')
                 if '<' not in p and '*' not in p and p not in SIBLING and not os.path.exists(p):
                     warn['path does not exist'].append('%s  %s' % (loc, p))
+    for k, v in engine_contract().items():
+        fail[k].extend(v)
     for f, cap in BUDGET.items():
         if os.path.exists(f) and os.path.getsize(f) > cap:
             fail['over size budget (consolidate, docs/MAINTAIN.md)'].append('%s  %d > %d bytes' % (f, os.path.getsize(f), cap))

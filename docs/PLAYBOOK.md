@@ -221,7 +221,8 @@ Stage 1 ends: decisions in games/<game>.md, the question sent, the Next session 
 Hooks: asm/<engine>_hooks.asm with `SAVEBIN "<prefix>_<key>.bin"` per block and
 `"hooks": {"source": "asm/<engine>_hooks.asm", ...}` in the profile; after every edit
 `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex + symbols).
-Copy the nearest engine (module + asm + profile + games/ file; STATUS.md lists every engine):
+What the module must provide: docs/ENGINE_CONTRACT.md (doccheck-checked). Copy the nearest engine
+(module + asm + profile + games/ file; STATUS.md lists every engine), one function at a time:
 | Engine | Template for |
 |---|---|
 | build.py TidPatch | Codemasters TID engine (generic builder) |

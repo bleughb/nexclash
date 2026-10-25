@@ -28,10 +28,12 @@ version; tools/sjasmplus/README.md). Maintainers: repos and private files in doc
 
 ## Tokens: read, write and print as little as the task needs
 - Read: this file, PLAYBOOK intro + your stage, games/<game>.md, survey.md. Look things up in
-  BRIEFING (platform + toolkit facts, C2 = backlog), LEARNINGS (lessons), TECHNIQUES (Next techniques)
-  by `grep -n` + Read with offset/limit - never end to end. MAME: `grep -n '\[MAME\]' docs/*.md`.
-- Template: nexclash/chuckie.py (+ asm/chuckie_hooks.asm, games/chuckie_egg.md); other engines
-  (PLAYBOOK 5 table) one function at a time: `grep -n '^def \|^class ' FILE` first. Read code only
+  BRIEFING (platform + toolkit facts, C2 = backlog), LEARNINGS (lessons), TECHNIQUES (Next techniques):
+  `grep -n '^#' FILE` is the map, then grep the subject and Read +-30 lines - never end to end.
+  MAME: `grep -n '\[MAME\]' docs/*.md`.
+- A new engine: docs/ENGINE_CONTRACT.md first (names, patch object, verify loop); template
+  nexclash/chuckie.py (+ asm/chuckie_hooks.asm, games/chuckie_egg.md); other engines (PLAYBOOK 5
+  table) one function at a time: `grep -n '^def \|^class ' FILE` first. Read code only
   in modules you will change; do not re-read a file you just wrote.
 - Write: change existing files with Edit, never rewrite a large file whole; write a new engine in
   stages (sites, hooks, verify, unit tests), each checked before the next.
@@ -109,5 +111,5 @@ version; tools/sjasmplus/README.md). Maintainers: repos and private files in doc
 | docs/profiles/ | per-game profiles (hook hex read by the engines), signatures.json, verified.json (generated) |
 | docs/records/ | one evidence record per game: inputs, dependencies, rebuild / verify recipes, outputs, status, check stamps (nexclash/records.py) |
 | games/ | one file per game, named like its folder in specnext/reference/ (facts, decisions, status, results, open items, checklist, lesson candidates, Next session); tid_engine.md = shared TID facts |
-| docs/ | PLAYBOOK (the stages), COLOURS (colour sheets, recolour), MAINTAIN (maintainers), BRIEFING (facts + backlog C2), LEARNINGS (lessons), TECHNIQUES (Next techniques, other projects), VERIFICATION (results log to 2026-10-25 + generated checksums), RECORDING_CHECKLIST, NEXT_REGISTERS, GUIDE_R3_REVIEW, contribute.json |
+| docs/ | PLAYBOOK (the stages), ENGINE_CONTRACT (what an engine provides; doccheck-checked), COLOURS (colour sheets, recolour), MAINTAIN (maintainers), BRIEFING (facts + backlog C2), LEARNINGS (lessons), TECHNIQUES (Next techniques, other projects), VERIFICATION (results log to 2026-10-25 + generated checksums), RECORDING_CHECKLIST, NEXT_REGISTERS, GUIDE_R3_REVIEW, contribute.json |
 | tools/ | doccheck.py (doc references + size budgets), asm2profile.py, sjasmplus/ (pinned assembler), hwtests/, make_package.py (release zip), merge_contribution.py, prototypes |
