@@ -690,7 +690,7 @@ Source (src/runtime/fw*.asm, tools/sitescan.py, docs/*.md, read 2026-10-20):
   points, unreached byte patterns rated by how code-like their neighbours are, a per-routine cost
   model, and "pattern rules" - code shapes that broke or slowed earlier games. Our `scan` is dynamic
   only (what the RZX ran); a static pass would find the plot callers no recording reaches (PLAYBOOK
-  3b "list every caller from the code"; BRIEFING C2 #11). Design worth copying: per routine a
+  3c "list every caller from the code"; BRIEFING C2 #11). Design worth copying: per routine a
   data-flow pass with abstract values (constant / value at entry / table base + index / stack bytes
   relative to entry SP), routine summaries (returns? skips inline bytes? keeps which registers?),
   repeated to a fixed point; jump tables read until an entry stops looking like code; `PUSH nn; RET`

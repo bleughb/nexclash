@@ -15,7 +15,7 @@ nothing else (no rebuild, no verify, no doc edits unless something fails).
 2. Find the game: docs/records/<game>.json (one per game; match the title); its `reference` is
    the folder in specnext/reference/, its `outputs.sprites.file` the built .nex. Engines that
    can recolour: `python -c "from nexclash import recolour; print(sorted(recolour.engines()))"`.
-   Not listed -> tell the user this engine has no recolour yet (PLAYBOOK 3b "RECOLOUR" says what
+   Not listed -> tell the user this engine has no recolour yet (docs/COLOURS.md "RECOLOUR" says what
    it needs) and stop.
 3. Check the painted PNG has the same size as `<game>_PAINTING_SPRITES.png` in that folder
    (recolour refuses otherwise; tell the user, do not resize).
@@ -32,7 +32,7 @@ nothing else (no rebuild, no verify, no doc edits unless something fails).
    (SendUserFile) with the md5 the command printed and its counts (pixels recoloured, banks).
 7. Put the painted PNG in specnext/reference/<folder>/<game>_PAINTING_SPRITES_painted.png,
    commit ("<Game>: Dean's repainted sprite sheet (<date>)" + the md5) on a branch, push and open a
-   PR in specnext (CLAUDE.md: maintainers commit on a branch); say in the reply it is ready to merge.
+   PR in specnext (docs/MAINTAIN.md: maintainers commit on a branch); say in the reply it is ready to merge.
 8. Reply in two or three lines. Making the painting the build default (copy the colours json to
    docs/profiles/<record>_colours.json - the record's name, e.g. dizzy1_colours.json - rebuild,
    verify, stamp, PR) is a separate task: offer it,

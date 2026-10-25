@@ -324,7 +324,7 @@ Analysis tools
    edges, jump when X stops changing). Until then a short human RZX covers more; puzzle-gated
    content always needs one.
 10. classify() assumes "overwrite" for unrecognised writers - should flag for review.
-11. Static caller scan: `scan` sees only what the RZX ran, but PLAYBOOK 3b wants every caller of every
+11. Static caller scan: `scan` sees only what the RZX ran, but PLAYBOOK 3c wants every caller of every
    plotter. Add `scan --static` (recursive descent from entry + ISR, RZX PCs as seeds, object handler
    fields `LD L,(IX+d)/LD H,(IX+d+1)/JP (HL)` and the stores into them, a byte scan for `CD/C3/CA..
    lo hi` at a plotter rated by code-likeness; design: TECHNIQUES "NextMasterSystem"). Keep the
@@ -351,7 +351,7 @@ Toolkit structure
    a Dizzy 6 change counts as shared. Move _rw_simulator into a shared module.
 20. Colour sheets / recolour on older engines: games converted before Midnight Resistance have no
    sheet; Midnight Resistance has a sheet but no recolour; sheets written before 2026-10-19 use
-   unique=True and join pieces by touching boxes. Bring each to PLAYBOOK 3b at its next rework. Not
+   unique=True and join pieces by touching boxes. Bring each to docs/COLOURS.md at its next rework. Not
    done: a `nexclash.py sheet` command (today `python -m nexclash.<engine> sheet`).
 21. [MAME] A scripted MAME run (put the .nex in the SD image, load, snapshot) next to run_cspect.bat
    (LEARNINGS 2.7).
@@ -485,7 +485,7 @@ runner simrun.py). Game-independent: game facts come in as arguments (addresses,
   plotter (Everyone's a Wally, 2026-10-14: the top 10 were all LDIs of 47653).
 - isr: also "Slots": which 8K slots the handler reads / writes / runs; slots 2-5 it never touches
   may hold a hook RAM page with interrupts on (LEARNINGS 1.3).
-- preview: contact sheet of the screen at chosen frames (PLAYBOOK 3b; with --rzx, --every N needs
+- preview: contact sheet of the screen at chosen frames (PLAYBOOK 3c; with --rzx, --every N needs
   --stop as well, or the run ends after 500 frames); --plot ENTRY colours what each
   plot routine draws per caller (= per figure kind), --buffer ADDR:STRIDE:LINES shows a back buffer
   next to the screen; prints each group's calls, bytes and x/y range. Colours = the last plot that

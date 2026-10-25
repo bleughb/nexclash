@@ -104,10 +104,10 @@ nexclash could not patch it: {why}
 ## Start the session with (copy-paste, attach {z80} and {game}.rzx)
 > I want to add a game to nexclash (Spectrum Next colour-clash remover, GPL). The package is
 > attached / at <path or repo URL>: follow its CLAUDE.md. Game: {game}. Snapshot and my RZX are
-> attached. Show me the preview and the design defaults (PLAYBOOK 3b) and ask me before anything
+> attached. Show me the preview and the design defaults (PLAYBOOK 3c) and ask me before anything
 > that changes what I see.
 
-Work goes in phases, one chat each (PLAYBOOK "Sessions"): each phase ends with the prompt for the
+Work goes in stages, one chat each (PLAYBOOK "Sessions"): each stage ends with the prompt for the
 next chat, e.g.
 > Continue {game} in nexclash (package attached / at <path>): follow its CLAUDE.md, start from the
 > "Next session" block in games/<game>.md.
