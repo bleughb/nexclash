@@ -20,9 +20,11 @@ Reference: specnext reference/atic_atac/ (Dean, 2026-10-26).
 - Snapshot: 48K, LOADER state. PC 0x5B89 inside a descramble loop at 0x5B80 (USR 23424 from the
   one-line BASIC loader): `LD HL,24575 / LD BC,124 / XOR A / RRD / INC HL / DJNZ / DEC C / JR NZ`,
   then `JP 24576` (game entry). IM 1 (ROM ISR), I = 0x3F, SP 0x5FE7, RAMTOP 24574, border 0.
-- Because the recording starts inside the descramble, every range it rewrites counts as touched:
-  the survey's free-memory list understates free space (BRIEFING C4 "analyse(None, ...)").
-  Stage 1: loader.prerun to a snapshot taken after JP 24576, then re-scan.
+- CORRECTION (stage 1, 2026-10-26): the RZX embeds its OWN snapshot (rzxinfo: start address 41446 =
+  0xA1E6, game running, code already descrambled); only the .z80 is at the loader (PC 0x5B89).
+  So no prerun is needed for the recording; the nex start state is the .z80 run to JP 24576
+  (simrun.free_run stop_pc=24576, 2 frames) written with get_state/write_snapshot. loader.prerun's
+  test sees memory only and, on this RZX, returns frame 0 = the embedded snapshot.
 - Recording: AticAtac.rzx, 18,278 frames (6 min), no autosave snapshots, no desync. Plays to the
   escape ("Congratulations, you have escaped", 5:46, score 8060, 39%). Rooms with stairs, doors,
   monsters, the chicken meter and the scroll panel all seen (preview.png).
