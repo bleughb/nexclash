@@ -13,8 +13,12 @@ Figures (games/incredible_shrinking_fireman-add-OPUS.md):
   E = attribute, D = keep-mask, cells flagged by bit 6 in the map at 0xBD44 left alone.
   Graphics: 16 x 24 px, 2 bytes per line top down, at base (0xBD42, 0x9C40 in every recording) +
   ((3 * frame) & 255) * 16 - the game's 8-bit multiply: frames >= 86 wrap.
-Colour-map keys: G + the graphics byte's address; default colour = the ink the game gives the figure
-(fireman: white; enemies: their room's bright ink).
+Collectables (the diamonds): per room up to 5 entries (flag, column, y) via the table at 0xD6ED; 0xECCF
+(room build) draws each with 0xECFF: 7 lines of 0xED14 written (not XORed) at (8 * C, B); a pickup
+(option screen) zeroes the entry (0xED37) and the room is drawn again without it.
+Colour-map keys: G + the graphics byte's address, D + address for the collectable; default colour =
+the ink the game gives the figure (fireman: white; enemies: their room's bright ink; collectables:
+their cell's ink).
 """
 import collections
 import json
@@ -23,8 +27,9 @@ import os
 PALETTE = [0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x00, 0x03, 0xE0, 0xE7, 0x1C, 0x1F, 0xFC, 0xFF]
 BLACK = 8                                   # index 0 is transparent: black figures use 8
 PLOT, OBJ, NEWF, GBASE, ATTRMAP = 0xB950, 0xBCF7, 0xBCF6, 0xBD42, 0xBD44
+ITEM, ITEM_GFX, ITEM_H = 0xECFF, 0xED14, 7       # collectable: 7 lines at (8 * C, B), overwrite
 W, H = 16, 24
-GROUPS = ('Fireman', 'Enemies')
+GROUPS = ('Fireman', 'Enemies', 'Collectables')
 STATIC_GROUP = 'From the code (not in the recordings)'
 _HERE = os.path.dirname(os.path.abspath(__file__))
 RECORD = 'incredible_shrinking_fireman-add-OPUS'
@@ -39,12 +44,14 @@ def gfx_addr(base, frame):
     return (base + ((3 * frame) & 255) * 16) & 0xFFFF
 
 
-def ink_index(attr):
-    """Spectrum attribute -> sheet palette index of its ink (black -> BLACK)."""
+def ink_index(attr, mask=0):
+    """Attribute (and the plotter's keep-mask) -> palette index of the figure's ink (black -> BLACK).
+    Bright when the attribute or the keep-mask has bit 6: the room build sets BRIGHT on every cell,
+    so a figure that keeps the cell's bright bit (the fireman, mask 0x40) shows bright."""
     ink = attr & 7
     if not ink:
         return BLACK
-    return ink + (8 if attr & 64 else 0)
+    return ink + (8 if (attr | mask) & 64 else 0)
 
 
 def figure_part(peek, base, frame, group, ink):
@@ -63,6 +70,20 @@ def figure_part(peek, base, frame, group, ink):
                 pixels=pixels, entries=entries)
 
 
+def item_part(peek, ink):
+    pixels, entries = [], {}
+    for line in range(ITEM_H):                   # byte j is drawn on line B - j: row 6 - j
+        a = ITEM_GFX + ITEM_H - 1 - line
+        v = peek(a)
+        key = 'D%04X' % a
+        for bit in range(8):
+            if v >> (7 - bit) & 1:
+                pixels.append((bit, line, key, bit, 1, ink))
+                entries[key] = [v, 'D']
+    return dict(id=('item', ITEM_GFX), size=1, w=8, h=ITEM_H, x=0, y=0, mir=0, group=GROUPS[2],
+                role=GROUPS[2], pixels=pixels, entries=entries)
+
+
 def capture(rzxs):
     """Replay the recordings (C simulator) -> {(group, base, frame): info} of every drawing seen."""
     from . import rzx as RZ
@@ -70,6 +91,17 @@ def capture(rzxs):
 
     def on_pc(pc, sim):
         m, R = sim.memory, sim.registers
+        if pc == ITEM:
+            y, col = R[2], R[3]
+            at = m[0x5800 + (y >> 3) * 32 + col]
+            k = (GROUPS[2], ITEM_GFX, 0)
+            e = seen.get(k)
+            if e is None:
+                e = seen[k] = dict(group=GROUPS[2], base=ITEM_GFX, frame=0, inks=collections.Counter(),
+                                   count=0, gfx=bytes(m[ITEM_GFX:ITEM_GFX + ITEM_H]))
+            e['inks'][ink_index(at)] += 1
+            e['count'] += 1
+            return
         a = R[0]
         o = m[OBJ + 8 * a:OBJ + 8 * a + 8]
         f, base = m[NEWF], m[GBASE] | m[GBASE + 1] << 8
@@ -81,11 +113,11 @@ def capture(rzxs):
         if e is None:
             e = seen[k] = dict(group=group, base=base, frame=f, inks=collections.Counter(), count=0,
                                gfx=bytes(m[gfx_addr(base, f) + i & 0xFFFF] for i in range(48)))
-        e['inks'][ink_index(o[6])] += 1
+        e['inks'][ink_index(o[6], o[7])] += 1
         e['count'] += 1
     errs = []
     for path in rzxs:
-        n, err = RZ.trace(path, (PLOT,), on_pc)
+        n, err = RZ.trace(path, (PLOT, ITEM), on_pc)
         errs.append((path, n, err))
     return seen, errs
 
@@ -97,6 +129,10 @@ def composites(seen, peek=None):
     comps, drawn = [], set()
     for (group, base, f), e in seen.items():
         g = e['gfx']
+        if group == GROUPS[2]:
+            p = item_part(lambda a: g[a - ITEM_GFX], e['inks'].most_common(1)[0][0])
+            comps.append(dict(count=e['count'], group=group, parts=[dict(p, dx=0, dy=0, dmir=0, vmir=0)]))
+            continue
         p = figure_part(lambda a: g[(a - gfx_addr(base, f)) & 0xFFFF], base, f, group,
                         e['inks'].most_common(1)[0][0])
         drawn.add((base, f))
