@@ -1,12 +1,13 @@
-# Atic Atac (Ultimate Play The Game, 1983; 48K) - engine: not yet (stage 0 done)
+# Atic Atac (Ultimate Play The Game, 1983; 48K) - engine: not yet (stage 1: design asked)
 
 ## Next session
-Stage: 1 (design)           State: intake done 2026-10-26, coverage gate passed (Intake below)
-Inputs: specnext/reference/atic_atac/ (snapshot, AticAtac.rzx)    Branch: claude/atic_atac
-Start with: `python nexclash.py auto <z80> --rzx AticAtac.rzx --no-record` (engine unknown -> the generic path)
-Then: loader.prerun(rzx, test=PC reached 24576) -> in-engine snapshot (no CLI: call it from Python, as nexclash.py's Dizzy V path does)
-Read: PLAYBOOK stage 1, this file, the survey (re-run it, ~15 min: 18,278 frames)
-Open: menus / windows over the play area (user); test cheat (offered); game-over path not recorded
+Stage: 1 (design, waiting)  State: analysis done, design question sent 2026-10-26 (Engine, Decisions)
+Inputs: specnext/reference/atic_atac/ (snapshot, AticAtac.rzx)    Branch: claude/atic_atac (both repos)
+Start with: record the user's answer under Decisions; then stage 2 (build)
+Start state: the .z80 run to JP 24576 (simrun.free_run(z80, 400, None, stop_pc=24576), get_state,
+  write_snapshot); the RZX needs no prerun (its own snapshot is mid-game)
+Read: PLAYBOOK stage 2, docs/ENGINE_CONTRACT.md, this file; Dizzy 1 (1-bit shadow screen) as template
+Open: the design answer; test cheat (offered); game-over path not recorded
 
 Reference: specnext reference/atic_atac/ (Dean, 2026-10-26).
 
@@ -46,8 +47,45 @@ is the GAME OVER path: clear the play area, print "GAME OVER" (string at 35929 v
 `JP 31785`. Not a figure plotter -> the gate passes; the game-over screen is untested by the
 recording (stage 3 checks it with a test cheat off, or a second recording that loses every life).
 
+## Engine (stage 1 analysis, 2026-10-26; start state = .z80 run to JP 24576)
+- Rendering model: PURE XOR to the screen for every figure. Two row blitters, 0x9EDC (40668) and
+  0x9F21 (40737), one CALL site each (0x9EA0 / 0x9EA9) inside the row loop at 0x9E9B; each call XORs
+  one row of 2-3 bytes. The pixel shift is a self-modified JR at 0x9EE4 / 0x9F29 (written at 0x9F91
+  = 40849: LD (40677),A), shared row-advance at 0x9F03. Figure-level entries: 0x9F40 / 0x9F45 /
+  0x9F4A / 0x9F56 / 0x9F74 / 0x9F80 (draw object IX). Object records at 0xEA90.. (IX groups in cost).
+- No logic reads figure pixels (figdep, whole recording): every non-plotter read of a byte holding
+  figure pixels is a drawer's own read-modify-write - room-line OR (HL) 0x9C75 x1150, and the
+  scenery-object drawers' run-time op (XOR/OR (HL)) at 0x99D7 x265, 0x9A78 x83, 0x9B88 x16,
+  0x9ADD x14, 0x9A36 x2. No collision or decision reads the screen -> no virtual read.
+- Writers that change figure bits (they break ULA = scenery ^ figures):
+  0x809F play-area clear 0x8093 (room change 0x914D / escape 0x973A / game over 0x8C35);
+  0xA190/0xA193 = 0xA185, zero a 2x20 cell then re-plot via 0x9F4A (IX = 0xA17D; from 0xA16E and the
+  3-slot loop at 0xA2F3: the pocket icons in the panel);
+  scenery-object drawers 0x99D8 / 0x9ADE / 0x9B89 / 0x9A79 / 0x9A37 (op at the NOP before each
+  picked by 0x9D19: B&3 = 0 LD, 1 OR, 2-3 XOR (HL)); room-line OR 0x9C76; text printer 0xA1E6
+  (8-row glyph LD (HL),A; the escape message over the play area, frame 18184).
+  Counts, whole recording (writes / of them changing figure bits): 0x809F 17894/9587, 0xA190
+  3834/3834, 0xA193 2200/2200, 0x9C76 1150/145, 0x99D8 712/343, 0x9ADE 475/209, 0x9B89 447/188,
+  0x9A79 332/169, 0x9A37 16/7, 0xA1E6 15/3.
+- Panel: only the pocket-icon record IX 0xA17D plots into the panel (cols 25-30, panelix, frames
+  1-2500); every other figure record stays in cols 0-22.
+- Colour = attribute painting: per figure 0x91FE -> 0x9980 (paint, table 0x9985 -> 0x9D25..0x9E55;
+  0xFF entries take (24090)) and 0x9962 -> 0x7E85. That painting IS the clash (wall lines in a
+  figure's cells take its ink, plain.png frames).
+- Scenery on the ULA: room outlines 0x9C61 (OR, from 0x9D08 / 0x9C5D / 0x9CC7), objects above,
+  panel 0x7EB2 (attrs, x 200-247: chicken), play-area clear 0x8093.
+- Cost: plotters 0x9F21 / 0x9EDC median 247 / 235 T per row call, ~10 % of frame time each;
+  typical frames 18 or 34 calls, busiest 85-86 -> hook per FIGURE (the 0x9F4A.. entries), not per row.
+- ISR: ROM IM 1; reads IY; 16 bytes below SP; never touches slots 1, 3-7. Lowest SP 0x5DD8.
+- Free RAM (survey, whole recording): 0xD2EE-0xEA8F (6050 bytes), 0xB786-0xBA57, 0xB536-0xB6F1,
+  0xBB60-0xBCCD, 0x5B00-0x5BFF, 0x5CB1-0x5DD7.
+- Planned pattern (decision table): 1-bit shadow screen (Dizzy 1 row): converted XORs go to the
+  shadow, ULA ^ shadow = original; non-XOR writers above fold their change into shadow / ULA; play-
+  area clear empties both and hides every sprite; attribute painting of figure cells skipped
+  (colour moves to the sprite). Design to be confirmed by the stage-1 answer.
+
 ## Decisions
-(none yet - stage 1 asks the design question)
+(pending: stage-1 design question sent 2026-10-26)
 
 ## Open
 - Menus / message windows over the play area: asked 2026-10-26 (pause? the inventory?).
@@ -55,7 +93,14 @@ recording (stage 3 checks it with a test cheat off, or a second recording that l
 - Game-over path (35893) not in the recording.
 
 ## Lesson candidates
-(none yet; the survey's run time for a long recording went straight into PLAYBOOK stage 0)
+- A .z80 at the loader does not mean the RZX is: an RZX carries its OWN start snapshot (rzxinfo
+  "Start address"); the survey and every --rzx analysis start there. Stage 0 read the .z80's loader
+  state as the recording's and planned a prerun that was not needed (loader.prerun then "finds"
+  frame 0). Check `rzxinfo` in stage 0 before calling a recording loader-stage.
+- A run-time screen-dependency check for an XOR engine is cheap with simrun hooks: shadow ^= each
+  plotter delta, report non-plotter reads / writes where shadow != 0 (figdep, ~15 min for 18K
+  frames). Candidate for a shared `scan --xor-owner ENTRY` option (BRIEFING C4).
 
 ## Stage log
 - 2026-10-26 stage 0 (intake): ~20 min wall, ~30 tool calls, 0 user rounds.
+- 2026-10-26 stage 1 (design): ~1 h wall, ~60 tool calls, 1 user round (the design question).
