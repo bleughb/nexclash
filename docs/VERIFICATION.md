@@ -750,7 +750,8 @@ Not proven: tape LOAD / SAVE SCREENS, hall of fame name entry, level 2+ in a rec
 trapped and respawned in a recording (unit tests only); hardware untested.
 
 ## The Incredible Shrinking Fireman (48K, engine `incredible_shrinking_fireman_add_opus`) - 2026-10-25
-Build 400d0d11 (replaces dc65565c after hardware round 1: plot entry hook, black mask on all figures).
+Build 53f2665e (replaces 400d0d11 after hardware round 2: interrupts deferred while a plot runs, the
+IM 2 set-up patched too; 400d0d11 replaced dc65565c after round 1: plot entry hook, black mask).
 Dean's Fuse RZX (incrediblefireman.rzx, 32492 frames, no autosaves; the .z80 replays it). At every
 hook site (plotter entry 0xB950 and exit 0xBC5C, diamond draw 0xECFF, clears 0xC4A7 / 0xC5B1 /
 0xB4AD) original and patched code run from the same state to the site's end: all registers but
@@ -768,24 +769,32 @@ never uncovered); the exit's (x, y, frame) = the entry's prediction; every diamo
 bytes at (C / 8, B - j). The removed figure attribute painting (0xBCDF): every attribute read by game
 code (0xCAA2, 0xCABF, 0xB3F4, 0xB3C5, 0xB42C, 0xC2E4 / 0xC2E8) checked against the cells the patched
 game leaves unpainted. The graphics the build precomputes from are never written; no game write to a
-patch site; 0xB952 / 0xBC5E reached only from their sites; no jump into a patched instruction.
+patch site (except the game's IM 2 set-up 0xC234 rewriting JP 0xC24C at 0xFFF4 on a restart, frame
+32335: the patched set-up writes the hook, unit-tested); 0xB952 / 0xBC5E reached only from their sites;
+no jump into a patched instruction. Interrupts: every interrupt that arrives while a plot runs (entry
+hook to exit hook) is deferred: the handler is entered once, from the exit hook at depth 0, with the
+plot's caller as return address (_defer_check from the live state).
 
 | Check | Result |
 |---|---|
-| incrediblefireman.rzx, 32492 frames | 27883 plot entries + exits, 79 diamonds, 165 clears, 34626937 sprite pixels, 5117824 transient pixels covered, 1112377 plot screen bytes, 553 diamond bytes, 169038 attribute reads, 19737 interrupt-safety points: IDENTICAL |
+| incrediblefireman.rzx, 32492 frames | 27883 plot entries + exits, 29891 interrupts (54 deferred to a plot exit), 79 diamonds, 165 clears, 49170529 sprite pixels, 5117824 transient pixels covered, 1112377 plot screen bytes, 553 diamond bytes, 169038 attribute reads, 19737 interrupt-safety points: IDENTICAL |
 | non-figure screen writes under a visible sprite | none in the whole RZX |
 | plot entries of a pair-hidden figure (its old pixels uncovered while it moves) | 242 (known limit, games/ Open) |
-| speed (hook cost per 69888-T frame, 28 MHz parts / 6) | mean 2228 T, 99 % of frames with hooks <= 10045 T, max 16455 T (room entry: three ink tables built) |
+| speed (hook cost per 69888-T frame, 28 MHz parts / 6) | mean 2331 T, 99 % of frames with hooks <= 10185 T, max 16584 T (room entry: three ink tables built) |
+| unit: an interrupt injected at 20 points spread over each of 2 main-code plots (patched: plot = no interrupt) | 2 PASS (the original corrupts 0 and 19 of 20) |
+| unit: the IM 2 set-up 0xC234 writes JP e_isr to 0xFFF4 | 1 PASS |
 | unit: entry + exit, fireman, every frame 0-255 x 4 moves (incl. x / y carries) | 1024 PASS |
 | unit: entry + exit, figures (appear, wrapped frames, vanish, same image) | 10 PASS |
 | unit: exit alone (fallback), fireman every frame 0-255 x 36 positions; figures 7 frames x 3 positions x 4 inks | 9216 + 168 PASS |
 | unit: pair rule, object guard, cache sequence, colour map (painted frames below / above the 8-bit wrap, a wrong check byte ignored) | 3 + 1 + 1 + 2 PASS |
 | unit: diamonds k 0-4 x 4 positions x 3 cell inks; loop counter 0 / 6 (guard); screen clears | 36 + 24 + 3 PASS |
-| negative controls: sprite X 1 px off / pair rule left out / diamond 1 line low / cache ignores the ink / colour map left out / pending sprites not shown at the entry / mask left out | 7/7 detected |
+| negative controls: sprite X 1 px off / pair rule left out / diamond 1 line low / cache ignores the ink / colour map left out / pending sprites not shown at the entry / mask left out / interrupt not deferred during a plot / IM 2 set-up operand left out | 9/9 detected |
 | recolour: {} -> the build byte for byte (banks 13-31); a changed patch site refused; selftest guard | OK |
 | boot simulation with NEXLOAD, plain + sprites (tail 0x5D00, printer buffer put back) | OK |
 Hardware: dc65565c ran on a real Next (Dean, 2026-10-25): flicker on the bulb / enemy fireman (the
-half-done plot uncovered between hooks: fixed by the entry hook), no mask (added). 400d0d11 untested.
+half-done plot uncovered between hooks: fixed by the entry hook), no mask (added). 400d0d11: corruption
+in room 5 (the ISR's plot inside a main-code plot; the plotter is not re-entrant: fixed by the
+deferral). 53f2665e untested.
 Not proven: the 21 graphics the RZX never draws (unit-tested only); a painted colour map in play.
 
 ## Toolkit: colour sheets show only the paintable pixels (2026-10-14)

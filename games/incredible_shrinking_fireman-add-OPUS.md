@@ -179,10 +179,13 @@ the sprite). The figure attribute painting is removed: 0xBCDF LD (IX+0),A -> NOP
   always; 2000 frames): mean 6.4K, max 21.6K.
 
 ## Verification (2026-10-25, the stamping run of 53f2665e: selftest --game --verify --stamp)
-Whole RZX IDENTICAL: 27883 plot entries + exits, 79 diamonds, 165 clears, 34.6M sprite pixels (mask
-included) against the model, 5.1M transient pixels covered from plot entry to exit, 169038 attribute
-reads, 19737 interrupt-safety points; no non-figure write under a visible sprite. Unit cases PASS,
-7/7 negative controls detected. Details: docs/VERIFICATION.md. Comparison picture (specnext):
+Whole RZX IDENTICAL: 27883 plot entries + exits, 29891 interrupts (54 deferred to a plot exit, each
+checked), 79 diamonds, 165 clears, 49.2M sprite pixels (mask included) against the model, 5.1M
+transient pixels covered from plot entry to exit, 169038 attribute reads, 19737 interrupt-safety
+points; no non-figure write under a visible sprite. Unit cases PASS (interrupt injection: 2 plots x 20
+points intact, the original corrupts 19 of 20 in one), 9/9 negative controls detected. Two stamping
+runs failed first ("game wrote a patch site" at frame 32335: the IM 2 set-up on a restart; fixed in the
+build, then in the verifier's rule). Details: docs/VERIFICATION.md. Comparison picture (specnext):
 incredible_shrinking_fireman-add-OPUS_three_windows.png.
 
 ## Hardware checklist
