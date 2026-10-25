@@ -14,6 +14,7 @@
 ;   0xECFF  11 14 ED   LD DE,0xED14 (one collectable: B = bottom line, C = pixel x) -> JP e_item
 ;   0xC4A7  21 00 40   LD HL,0x4000 (screen clear)                     -> JP e_c1
 ;   0xC5B1  21 00 48   LD HL,0x4800 (clear of lines 64-191)            -> JP e_c2
+;   0xFFF4  C3 4C C2   JP 0xC24C (the frame interrupt's way to the handler) -> JP e_isr
 ;   0xB4AD  21 00 40   LD HL,0x4000 (screen clear)                     -> JP e_c3
 ; Code: alt ROM image 1, two blocks: 0x3A01- (+ the start-up register block, below 0x3D00) and
 ; 0x386E-0x39FE (0x39FF-0x3A00 stay FF FF: the game's IM 2 vector is read there); and page 30 at
@@ -39,6 +40,8 @@ CPAGE   EQU 26                  ; colour map: page 26 + i / 1024, offset (i % 10
 ; reach 0xDFFF; the rest is free), tables 0xC200-0xC7FF, code 0xD600-0xDDFF, variables 0xDE00-
 NIB16   EQU 0xDE00              ; 16 bytes: pixel-pair code -> pattern byte (mktab's scratch)
 TINK    EQU 0xDE20              ; per object a: the ink its tables hold (0 = none: inks are 1-15)
+DEPTH   EQU 0xDE30              ; plots in progress (the plotter is not re-entrant)
+PENDING EQU 0xDE31              ; a frame interrupt deferred until the running plot's exit
 TABS    EQU 0xC200              ; object a: 0xC200 + 0x200 a (high pair), + 0x100 (low pair)
 FLAGS   EQU 0xDF00              ; bits 0-2 object a shown, 3-5 the buffer its own pair shows
 PEND    EQU 0xDF01              ; bits 0-2 the pending pair is up, 3-5 the buffer it shows
@@ -69,13 +72,14 @@ e_ent:  push af
         push de
         push hl
         nextreg 0x07,3
+        nextreg 0x56,CPAGE+4
+        ld hl,DEPTH             ; a plot in progress (e_isr defers an interrupt until it ends)
+        inc (hl)
         ld hl,9                 ; HL, DE, BC, AF(IFF) pushed; + 9 = A of the first push
         add hl,sp
         ld a,(hl)
         cp 3
-        jr nc,.x
-        nextreg 0x56,CPAGE+4
-        call n_obj
+        call c,n_obj
         nextreg 0x56,0
 .x:     nextreg 0x07,0
         pop hl
@@ -105,27 +109,66 @@ e_plot: pop ix                  ; the replaced instruction
         push de
         push hl
         nextreg 0x07,3
-        ld a,l
+        nextreg 0x56,CPAGE+4
+        ld a,(DEPTH)
+        or a
+        jr z,.d0                ; (no entry seen: leave it 0)
+        dec a
+        ld (DEPTH),a
+.d0:    ld a,l
         sub low (OBJ+2)
         rrca
         rrca
         rrca
         and 0x1F
         cp 3
-        jr nc,.x
-        nextreg 0x56,CPAGE+4
-        call x_obj
-        nextreg 0x56,0
+        call c,x_obj
+        ld a,(DEPTH)
+        or a
+        jr nz,.np
+        ld a,(PENDING)          ; an interrupt came during this plot: run the game's handler now,
+        or a                    ; as if it had come just after the plotter returned
+        jr z,.np
+        xor a
+        ld (PENDING),a
+        ld hl,7                 ; HL, DE, BC pushed; + 7 = A of the IFF push: the marker
+        add hl,sp
+        ld (hl),0xA5
+.np:    nextreg 0x56,0
 .x:     nextreg 0x07,0
         pop hl
         pop de
         pop bc
         pop af
         jp po,.off
+        cp 0xA5
+        jr z,.isr
         pop af
         ei
         ret
+.isr:   pop af                  ; the stack holds the plotter's return address: the handler's
+        jp 0xC24C               ; EI / RETN goes back there with interrupts on
 .off:   pop af
+        ret
+
+; ---- the frame interrupt (0xFFF4 JP 0xC24C, reached through the IM 2 vector) ----------------
+; While a main-program plot runs (DEPTH > 0; the handler itself runs with interrupts off) the
+; plotter must not be re-entered - the handler plots the figures too, through the same working
+; variables, and the original only avoids it by timing that the hooks change. Defer: mark it and
+; return; the plot's exit hook runs the handler. The pulse is over by then, so nothing is lost.
+e_isr:  push af
+        nextreg 0x56,CPAGE+4
+        ld a,(DEPTH)
+        or a
+        jr nz,.defer
+        nextreg 0x56,0
+        pop af
+        jp 0xC24C
+.defer: ld a,1
+        ld (PENDING),a
+        nextreg 0x56,0
+        pop af
+        ei
         ret
 
 ; ---- one collectable: stack +0 return 0xECF3, +2 HL, +4 BC (B = loop counter 5..1) ----------

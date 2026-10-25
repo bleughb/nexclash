@@ -205,9 +205,10 @@ TAIL_ADDR, TAIL_END = 0x5D00, 0x615C        # 0x5C49-0x615B never read or writte
 GFX0 = 0x9C40
 GFX_END = GFX0 + 4144           # figure graphics 0x9C40-0xAC6F: never written (whole-RZX scan)
 SITES = {0xB950: ('dde587', 'e_ent', 'en'), 0xBC5C: ('dde1c9', 'e_plot', 'pl'), 0xECFF: ('1114ed', 'e_item', 'it'),
-         0xC4A7: ('210040', 'e_c1', 'c'), 0xC5B1: ('210048', 'e_c2', 'c'), 0xB4AD: ('210040', 'e_c3', 'c')}
+         0xC4A7: ('210040', 'e_c1', 'c'), 0xC5B1: ('210048', 'e_c2', 'c'), 0xB4AD: ('210040', 'e_c3', 'c'),
+         0xFFF4: ('c34cc2', 'e_isr', 'isr')}
 NOPS = [(0xBCDF, 'dd7700', '000000')]       # figure attribute painting removed (LD (IX+0),A)
-INTERIORS = (0xB951, 0xBC5D, 0xED00, 0xED01, 0xC4A8, 0xC4A9, 0xC5B2, 0xC5B3, 0xB4AE, 0xB4AF,
+INTERIORS = (0xB951, 0xBC5D, 0xFFF5, 0xFFF6, 0xED00, 0xED01, 0xC4A8, 0xC4A9, 0xC5B2, 0xC5B3, 0xB4AE, 0xB4AF,
              0xBCE0, 0xBCE1)
 PLOT_RANGE = (0xB950, 0xBC5F)               # the plotter's own screen writes
 ITEM_PC = 0xED0B                            # the collectable's screen write (LD (HL),A)
@@ -220,6 +221,7 @@ ATTR_READERS = {0xCAA2: (6, 7), 0xCABF: (6, 7), 0xB3F4: (4, 5), 0xB3C5: (4, 5), 
                 0xC2E4: (4, 5), 0xC2E8: (4, 5)}
 P30_OFF = 0x1600              # page 30: the hooks' code that runs from slot 6 (profile hooks['p30'])
 RUN_LO, RUN_HI = 0x1E00, 0x1F20  # page 30: the bytes the hooks write at run time (tables, flags, cache)
+DEPTH_OFF = 0x1E30              # page 30: plots in progress (hooks); +1 PENDING: a deferred interrupt
 SEQUELS = {0xB952: 0xB950, 0xBC5E: 0xBC5C}  # reached right after the site's own first instruction
 
 
@@ -304,6 +306,9 @@ DECISIONS = {'engine': 'incredible_shrinking_fireman_add_opus',
              'mask': 'fireman and both room figures: black, the 4-neighbours of ink (Dean 2026-10-25, hardware round '
                      '1: all figures, up / down / left / right only; black suggested, not objected to)',
              'depth': 'sprites in front of everything',
+             'interrupts': 'deferred while a plot runs (0xFFF4 -> e_isr; the plotter is not re-entrant and the '
+                           'hooks moved the plots, so the ISR plotting into a main-code plot corrupted the screen '
+                           'on hardware, Dean 2026-10-25 room 5); run at the plot exit',
              'tail': '0x5D00 (0x5C49-0x615B untouched in the whole-game RZX); printer buffer put back '
                      '(the game reads 0x5B41)',
              'colours': 'live inks (fireman white, figures the room ink, diamonds their cell ink) + '
@@ -660,6 +665,8 @@ def event(patch, kind, site, get, R, ns, alt, Sim):
         stop = lambda r: r[24] == ret and r[12] == end
     elif kind == 'it':
         stop = lambda r: r[24] == 0xED02 and r[12] == sp0
+    elif kind == 'isr':
+        stop = lambda r: r[24] == 0xC24C and r[12] == sp0
     else:
         nxt = site + 3
         stop = lambda r: r[24] == nxt and r[12] == sp0
@@ -936,9 +943,17 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                 if collect and c['collected ' + kind] < collect:
                     c['collected ' + kind] += 1
                     states.append((kind, pc, list(R), mem_snapshot(get), ns.copy()))
+                if kind == 'en' and R[26] and collect and c['collected enm'] < 2 and st['frame'] > 1000:
+                    c['collected enm'] += 1                 # a main-program plot (interrupts on)
+                    states.append(('enm', pc, list(R), mem_snapshot(get), ns.copy()))
                 COST['extra'] = 0
                 fl, o, ro = event(patch, kind, pc, get, R, ns, alt, Sim)
                 c[kind] += 1
+                if kind in ('en', 'pl'):
+                    st['depth'] = st.get('depth', 0) + (1 if kind == 'en' else -1)
+                    if ns.pages[FLAGS_PG][DEPTH_OFF] != max(0, st['depth']):
+                        fail('hooks\' plot depth differs from the plots in progress',
+                             (ns.pages[FLAGS_PG][DEPTH_OFF], st['depth']))
                 fcost[st['frame']] += COST['extra']
                 for k in fl:
                     fail('%s: %s' % (kind, k[0] if isinstance(k, tuple) else k),
@@ -1038,6 +1053,20 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                             if it['w'] != want:
                                 fail('diamond: screen writes are not the 7 graphics bytes at (C, B - j)', ())
                             c['diamond screen bytes compared'] += len(want)
+                    elif pc == 0xFFF4:
+                        if ns.pages[FLAGS_PG][DEPTH_OFF]:
+                            # the frame interrupt inside a main-program plot: the patched game defers
+                            # it to the plot's exit. Check the deferral, then (from this real state)
+                            # that "deferred" = "the plot first, then the handler"; the replay itself
+                            # goes on in the original's order, so the patched state drops the mark.
+                            c['isr deferred'] += 1
+                            fl = _defer_check(patch, get, R, ns)
+                            for k in fl:
+                                fail('isr deferral: %s' % k[0], k[1:])
+                            ns.pages[FLAGS_PG][DEPTH_OFF + 1] = 0
+                        else:
+                            run_event('isr', pc)
+                            after(get, 'isr', pc)
                     elif pc in SITES:
                         run_event('c', pc)
                         model.clear()
@@ -1144,6 +1173,133 @@ def _model_objs(pt, m, shown):
         if b in shown:
             md.objs[b] = obj_from_table(m.__getitem__, b)
     return md
+
+
+def _defer_check(pt, get, R, ns):
+    """At 0xFFF4 with a main-program plot in progress (live state get / R, patched Next state ns):
+    (1) the patched e_isr returns to the interrupted PC with every register and all memory as they
+    were (the interrupt's push popped) and PENDING set; (2) from this state, the patched game (plot
+    continues, its exit runs the handler) = the original with the handler delivered right after the
+    plot returns: registers, all memory (dead stack excepted). -> failures."""
+    f = []
+    sp0 = R[12]
+    back = get(sp0) | get(sp0 + 1) << 8
+    psite = {a + k: v for a, old, new in pt.sites for k, v in enumerate(new)}
+    alt = _alt(pt)
+    n1 = ns.copy()
+    _, P = _overlays(get, alt, psite, n1)
+    p = P()
+    sim = _machine(_rw(), p, list(R), n1, 'd')
+    if not _run(sim, lambda r: r[24] == back and r[12] == sp0 + 2):
+        return [('patched e_isr did not return to the plot',)]
+    r = sim.registers
+    d = [i for i in CMP if i not in (12, 24, 26) and r[i] != R[i]]
+    if d or not r[26]:
+        f.append(('registers changed by the deferral', d))
+    md = [a for a in p.ov if a < sp0 - 64 or a >= sp0 + 2]
+    if md:
+        f.append(('memory changed by the deferral', [hex(a) for a in md[:3]]))
+    if n1.pages[FLAGS_PG][DEPTH_OFF + 1] != 1:
+        f.append(('PENDING not set',))
+    # (2) the pair: the plot's return address is on the stack below its own frame - find it by
+    # running the original (no interrupt) from the interrupted PC until the plotter's RET
+    def resumed():
+        rr = list(R)
+        rr[24], rr[12], rr[26] = back, sp0 + 2, 1
+        return rr
+    O, _ = _overlays(get, None, {}, NextState({}))
+    o = O()
+    so = _machine(_rw(), o, resumed(), NextState({}), 'o')
+    ro = so.registers
+    exits = {'n': 0}
+    while True:                                   # the original, to the plotter's exit 0xBC5C
+        if ro[24] == 0xBC5C:
+            break
+        so.opcodes[o[ro[24]]]()
+        exits['n'] += 1
+        if exits['n'] > 400000:
+            return f + [('original plot did not reach its exit',)]
+    sp_ex = ro[12]
+    ret = o[sp_ex + 2] | o[sp_ex + 3] << 8      # (POP IX; RET)
+    _run(so, lambda r: r[24] == ret and r[12] == sp_ex + 4)
+    spr = ro[12]
+    o[spr - 2], o[spr - 1], ro[12], ro[24], ro[26] = ret & 255, ret >> 8, spr - 2, 0xFFF4, 0
+    if not _run(so, lambda r: r[24] == ret and r[12] == spr, limit=4000000):
+        return f + [('original handler did not return',)]
+    n2 = n1.copy()
+    _, P2 = _overlays(get, alt, psite, n2)
+    p2 = P2()
+    for a, v in p.ov.items():
+        p2.ov[a] = v
+    sp2 = _machine(_rw(), p2, list(sim.registers), n2, 'p')
+    if not _run(sp2, lambda r: r[24] == ret and r[12] == spr, limit=4000000):
+        return f + [('patched plot + deferred handler did not return',)]
+    rp = sp2.registers
+    d = [i for i in CMP if ro[i] != rp[i]]
+    if d:
+        f.append(('deferred run: registers differ from plot-then-handler', d))
+    dead = range(spr - 80, spr)
+    keys = set(o.ov) | set(p2.ov)
+    md = [a for a in keys if a not in dead and o[a] != p2[a]]
+    if md:
+        f.append(('deferred run: memory differs from plot-then-handler', len(md), [hex(a) for a in sorted(md)[:4]]))
+    if n2.pages[FLAGS_PG][DEPTH_OFF + 1]:
+        f.append(('PENDING left set',))
+    return f
+
+
+def _plot_len(pt, R, mem, ns0):
+    """Instructions from a plot entry to its return, no interrupt (pt: patched, None: original)."""
+    get = bytes(mem).__getitem__
+    sp0 = R[12]
+    ret = mem[sp0] | mem[sp0 + 1] << 8
+    if pt is None:
+        ns = NextState({})
+        o = _overlays(get, None, {}, ns)[0]()
+    else:
+        ns = _ns_for(pt, ns0)
+        o = _overlays(get, _alt(pt), {a + k: v for a, old, new in pt.sites for k, v in enumerate(new)}, ns)[1]()
+    sim = _machine(_rw(), o, list(R), ns, 'i')
+    r, n = sim.registers, 0
+    while not (r[24] == ret and r[12] == sp0 + 2) and n < 400000:
+        sim.opcodes[o[r[24]]]()
+        n += 1
+    return n
+
+
+def _inject(pt, R, mem, ns0, at, limit=3_000_000):
+    """From a main-program plot entry (0xB950, interrupts on): run the plot (pt: patched, None: the
+    original), deliver the frame interrupt after `at` instructions (None, or `at` past the plot's
+    end: right after the plot returns) - at the first instruction boundary from there with interrupts enabled, as the Z80
+    accepts it: push PC, IFF off, PC = 0xFFF4 (the game's IM 2 target) - and run until the plot has
+    returned and the handler too. -> the screen bytes, or None if it did not finish."""
+    get = bytes(mem).__getitem__
+    sp0 = R[12]
+    ret = mem[sp0] | mem[sp0 + 1] << 8
+    if pt is None:
+        ns = NextState({})
+        O, _ = _overlays(get, None, {}, ns)
+        o = O()
+    else:
+        ns = _ns_for(pt, ns0)
+        _, P = _overlays(get, _alt(pt), {a + k: v for a, old, new in pt.sites for k, v in enumerate(new)}, ns)
+        o = P()
+    sim = _machine(_rw(), o, list(R), ns, 'i')
+    r, ops = sim.registers, sim.opcodes
+    n, done = 0, False
+    while True:
+        if not done and r[26] and ((at is not None and n >= at) or (r[24] == ret and r[12] == sp0 + 2)):
+            sp = (r[12] - 2) & 0xFFFF
+            o[sp], o[sp + 1] = r[24] & 255, r[24] >> 8
+            r[12], r[24], r[26], done = sp, 0xFFF4, 0, True
+            continue
+        if done and r[24] == ret and r[12] == sp0 + 2 and n > 0:
+            break
+        ops[o[r[24]]]()
+        n += 1
+        if n > limit:
+            return None
+    return bytes(o[a] for a in range(0x4000, 0x5800))
 
 
 def unit_tests(patch, states, negs=None):
@@ -1295,6 +1451,27 @@ def unit_tests(patch, states, negs=None):
                                            other={2: {0: 100, 1: 100, 2: 20, 6: 3, 7: 0}})
                     det = bool(fl) or any(ns.attr[i][3] & 0x80 for i in list(range(5, 9)) + list(range(13, 17)))
                     c['negative control: %s %s' % (name, 'detected' if det else 'NOT DETECTED!')] += 1
+    # an interrupt inside a main-program plot (the handler plots the other figures): the patched
+    # game must finish the plot exactly as if the interrupt came after it; the original corrupts
+    ndet = collections.defaultdict(bool)
+    for kind, pc, R, mem, ns0 in by['enm'][:2]:
+        def pts(pt):                                  # 20 points over this plot's own length
+            n = _plot_len(pt, R, mem, ns0)
+            return [i * n // 20 for i in range(20)]
+        ref = _inject(patch, R, mem, ns0, None)
+        bad = [at for at in pts(patch) if _inject(patch, R, mem, ns0, at) != ref]
+        note('interrupt inside a main-program plot (20 points): plot intact', [] if not bad else [('corrupt at', bad[:3])], True)
+        oref = _inject(None, R, mem, ns0, None)
+        obad = sum(_inject(None, R, mem, ns0, at) != oref for at in pts(None))
+        c['  original game, same interrupts: %d of 20 plots corrupt' % obad] += 1
+        for name, (neg, k) in (negs or {}).items():
+            if k == 'nest':
+                nref = _inject(neg, R, mem, ns0, None)
+                ndet[name] |= any(_inject(neg, R, mem, ns0, at) != nref for at in pts(neg))
+    for name, det in ndet.items():
+        c['negative control: %s %s' % (name, 'detected' if det else 'NOT DETECTED!')] += 1
+    if not by['enm']:
+        c['interrupt inside a plot: no captured main-program plot entry FAIL!'] += 1
     negd = collections.defaultdict(bool)
     for kind, pc, R, mem, ns0 in by['it'][:1]:
         sp = R[12]
@@ -1363,7 +1540,8 @@ def negative_patches(patch):
             'diamond one line low': (_neg(patch, 'c61aed9236', 'c61bed9236', 'item Y'), 'it'),
             'cache ignores the ink': (_neg(patch, '2c7eb928', '2c7ebf28', 'cache', nth=0), 'cache'),
             'pending sprites not shown at the plot entry': (_neg(patch, 'f1f6c04f', 'f1f6404f', 'pending'), 'en'),
-            'mask left out (left pixel of a pair)': (_neg(patch, 'e6023e08', 'e6023e00', 'mask', nth=0), 'pl')}
+            'mask left out (left pixel of a pair)': (_neg(patch, 'e6023e08', 'e6023e00', 'mask', nth=0), 'pl'),
+            'interrupt not deferred during a plot': (_neg(patch, 'ed91561e3a30deb720', 'ed91561e3a30deb738', 'defer'), 'nest')}
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1455,10 +1633,12 @@ def auto(a, z80, name, out, say):
         states += st
         fails = {k: v for k, v in c.items() if k.endswith('!')}
         ok = ok and not fails
-        say('Verify    : %s  %d frames, plot entries %d, plots %d, diamonds %d, clears %d, %d sprite pixels, '
+        say('Verify    : %s  %d frames, plot entries %d, plots %d, interrupts %d (%d deferred to a plot exit), '
+            'diamonds %d, clears %d, %d sprite pixels, '
             '%d transient pixels covered, %d plot screen bytes, %d diamond bytes, %d attribute reads, %d '
             'interrupt-safety points -> %s' % (
-                os.path.basename(r), c['frames'], c['en'], c['pl'], c['it'], c['c'], c['sprite pixels compared'],
+                os.path.basename(r), c['frames'], c['en'], c['pl'], c['isr'] + c['isr deferred'], c['isr deferred'],
+                c['it'], c['c'], c['sprite pixels compared'],
                 c['transient pixels covered'],
                 c['plot screen bytes compared'], c['diamond screen bytes compared'],
                 c['attribute reads checked'], c['interrupt-safety points'],
