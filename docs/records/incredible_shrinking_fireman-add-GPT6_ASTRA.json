@@ -1,0 +1,122 @@
+{
+ "name": "incredible_shrinking_fireman-add-GPT6_ASTRA",
+ "order": 21,
+ "game": "The Incredible Shrinking Fireman (GPT6_ASTRA)",
+ "doc": "incredible_shrinking_fireman-add-GPT6_ASTRA.md",
+ "engine": "incredible_shrinking_fireman_add_GPT6_ASTRA",
+ "representative": true,
+ "reference": "incredible_shrinking_fireman-add-GPT6_ASTRA",
+ "inputs": {
+  "snapshot": {
+   "name": "incredible_shrinking_fireman-add-GPT6_ASTRA.z80",
+   "md5": "fc8e7535fc42afb60c12625b5fdfd064",
+   "path": "incredible_shrinking_fireman-add-GPT6_ASTRA/incredible_shrinking_fireman-add-GPT6_ASTRA.z80"
+  },
+  "recordings": [
+   {
+    "name": "incrediblefireman-add-GPT6_ASTRA.rzx",
+    "md5": "8154d148d90b0f3cc94229bc143bac68",
+    "path": "incredible_shrinking_fireman-add-GPT6_ASTRA/incrediblefireman-add-GPT6_ASTRA.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "incredible_shrinking_fireman_add_GPT6_ASTRA"
+ ],
+ "own_modules": [
+  "incredible_shrinking_fireman_add_GPT6_ASTRA"
+ ],
+ "data": [
+  "docs/profiles/incredible_shrinking_fireman-add-GPT6_ASTRA.json",
+  "asm/incredible_shrinking_fireman_hooks-add-GPT6_ASTRA.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "incrediblefireman-add-GPT6_ASTRA.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 30,
+  "note": "Differential hooks, pixel/colour models, virtual bitmap reads, frame-by-frame F/AF-prime convergence, units and negative controls. Hardware untested."
+ },
+ "outputs": {
+  "plain": {
+   "file": "incredible_shrinking_fireman_plain-add-GPT6_ASTRA.nex",
+   "md5": "f8f213e55e3da01349827f8ae7d93bee"
+  },
+  "sprites": {
+   "file": "incredible_shrinking_fireman_sprites-add-GPT6_ASTRA.nex",
+   "md5": "1ea61f0bcaf2b5f27514807f8753f263"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Incredible Shrinking Fireman (GPT6_ASTRA)",
+  "engine_col": "incredible_shrinking_fireman_add_GPT6_ASTRA",
+  "build": "incredible_shrinking_fireman_sprites-add-GPT6_ASTRA.nex 1ea61f0b",
+  "software": "Full 32492-frame differential + RAM convergence + 2705 units PASS",
+  "hardware": "untested",
+  "next": "CSpect/Next checklist; hardware untested"
+ },
+ "checks": [
+  "asm2profile:incredible_shrinking_fireman-add-GPT6_ASTRA"
+ ],
+ "checked": {
+  "deps": {
+   "asm/incredible_shrinking_fireman_hooks-add-GPT6_ASTRA.asm": "34a95a1407f3cb0c",
+   "docs/profiles/incredible_shrinking_fireman-add-GPT6_ASTRA.json": "79bf4dd3cc86428b",
+   "nexclash.py": "7a4b0e6f5b61aaef",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "bc87a441d6f36e56",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "ac047e5ae36fc045",
+   "nexclash/incredible_shrinking_fireman_add_GPT6_ASTRA.py": "3d16879aa3c0f391",
+   "nexclash/nextboot.py": "a6e46fbbe842b376",
+   "nexclash/preview.py": "d9d4e174fa8cd48a",
+   "nexclash/recolour.py": "a5744dcf6e6c059c",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "cfe7f2701eddfe6e",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-26"
+ },
+ "verified": {
+  "deps": {
+   "asm/incredible_shrinking_fireman_hooks-add-GPT6_ASTRA.asm": "34a95a1407f3cb0c",
+   "docs/profiles/incredible_shrinking_fireman-add-GPT6_ASTRA.json": "79bf4dd3cc86428b",
+   "nexclash.py": "7a4b0e6f5b61aaef",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "bc87a441d6f36e56",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "ac047e5ae36fc045",
+   "nexclash/incredible_shrinking_fireman_add_GPT6_ASTRA.py": "3d16879aa3c0f391",
+   "nexclash/nextboot.py": "a6e46fbbe842b376",
+   "nexclash/preview.py": "d9d4e174fa8cd48a",
+   "nexclash/recolour.py": "a5744dcf6e6c059c",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "cfe7f2701eddfe6e",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-26"
+ }
+}

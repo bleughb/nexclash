@@ -1,78 +1,92 @@
 # Incredible Shrinking Fireman — add-GPT6_ASTRA
 
-Status: phase A prepared; awaiting visual-design confirmation. No sprite conversion, engine
-registration, verification stamp or hardware claim for this run.
+Status: phase B acceptance PASSED and stamped. Hardware untested.
 Branch in both repos: `claude/incredible-shrinking-fireman-add-GPT6_ASTRA`.
-Reference directory: `specnext-add-GPT6_ASTRA/reference/incredible_shrinking_fireman-add-GPT6_ASTRA/`.
+Reference: `specnext/reference/incredible_shrinking_fireman-add-GPT6_ASTRA/`.
 Module: `nexclash/incredible_shrinking_fireman_add_GPT6_ASTRA.py`.
 
-## Provenance and scope
-The capture module is adapted from the existing add-OPUS phase-A module, not an independent
-from-scratch benchmark. Existing `games/incredible_shrinking_fireman.md` and the OPUS notes were
-read as required by CLAUDE.md. Their research is prior evidence, not newly measured in this run.
-The GPT6_ASTRA suffix is the requested run label; it does not certify model identity.
-No files belonging to another Fireman implementation were modified.
+## Provenance and approved design
+Capture adapts the existing add-OPUS phase-A module; runtime/verifier adapt fireman.py. This is
+not an independent from-scratch benchmark. GPT6_ASTRA is the requested label, not model identity
+certification. Existing Fireman output is unchanged: dispatch selects this engine only for
+snapshot filenames ending `-add-GPT6_ASTRA.z80`.
 
-## Inputs and new checks (2026-10-25)
-- Snapshot: 48K, PC 0xC524, SP 0x618A, IM2, I=0x39, interrupts enabled. BASIC loader remains in RAM;
-  execution is in game code. `inspect` misreports the IM2 ROM vector because it uses blank ROM;
-  the existing notes explain the real vector and trampoline. Do not relocate them blindly.
-- RZX: full 32,492-frame replay through `rzx.trace`, no desynchronisation.
-- Moving figure capture: 9 fireman variants and 172 enemy graphic/ink variants. 198 reference
-  figures including static bank additions; minimum whole-figure painting sheet has 192.
-  Static additions are NOT evidence that the recording exercised those figures.
-- Colour keys include source ink, so painting an enemy in one colour does not overwrite every
-  room-colour variant. Whole figures are retained, at 1:1 resolution, no sheet text.
-- Separate collectable sheet: room-table items call 0xECFF, using the same seven-byte diamond at
-  0xED14. DEC B draws rows bottom to top; the sheet reverses their source-byte order accordingly.
-  Names/inventory icons are a separate UI path, not converted by this proposal.
-- Preview: original ULA at frames 500/1500/2500/3500, replay stopped after 3501. This is a reference
-  preview, NOT a simulated sprite build or evidence of sprite output correctness.
-- Plain baseline: converter `keep_printer_buffer=True`, tail 0x5E40..0x5E8F (80 bytes), 50Hz.
-  Simulated boot PASS with and without NEXLOAD printer-buffer overwrite; registers, RAM outside
-  the explicit tail, ROM and paging checked. Ordinary CLI conversion without buffer restoration
-  failed the NEXLOAD case (255 overwritten printer-buffer bytes), so that output was replaced.
-  Tail lifetime safety relies on the prior full-recording scan noted in the OPUS research and
-  still needs this run's access verification before a final conversion.
-- Unpainted main and collectable sheets read back as zero colour edits. Frame wrap and black /
-  bright palette mapping checked. `git diff --check` clean. Shared code unchanged: no canary due.
+User approved all moving figures and collectables as sprites, in front of scenery, original
+colours, transparent gaps, hidden during option/inventory screens; identical coincident enemies
+retain XOR cancellation. Scenery, HUD, text and inventory UI remain ULA. Diamonds start white.
+Original attribute writes remain because gameplay reads them; background colour behaviour is
+therefore retained. Original colours can have low contrast on light scenery; painting is optional.
 
-## Existing user choices and remaining visual question
-Carry forward the existing game's recorded choices: ALL moving figures and collectables become
-sprites; in front of scenery; existing game colours as starting defaults. Proposed remaining
-behaviour: retain see-through gaps in the original graphics; hide sprites during full-screen
-option/inventory windows; preserve disappearance when identical XOR enemy images cancel.
-Keep scenery, HUD, text and inventory UI on the ULA. Diamonds proposed white, paintable separately.
-Confirm these details against the preview and sheets; painting is optional at this stage and
-belongs to the user, not an AI-generated pixel-art draft.
+## Inputs and survey
+- Snapshot MD5 `fc8e7535fc42afb60c12625b5fdfd064`: 48K, PC0xC524, SP0x618A, IM2, I=0x39.
+- RZX MD5 `8154d148d90b0f3cc94229bc143bac68`:32,492 frames, no desync, includes completion screen.
+- Capture:9 fireman and172 enemy graphic/ink variants;198 reference figures including static
+  additions,192 minimum painting figures. Static additions are not recorded-play coverage.
+- Whole-figure1:1 PNGs without labels, separate diamond sheets, source-ink colour keys and
+  paintable paper pixels. Unpainted sheet read-back produces zero edits.
 
-## Reproduce
-Run from the nexclash checkout (set PYTHONDONTWRITEBYTECODE=1 to avoid cache files).
+## Implementation
+- Three moving slots use two overlapping16x16 patterns each (16x24); five diamond slots.
+- Original bitmap XOR stores removed, attribute painter retained. Virtual reads reconstruct
+  diamond overwritten bytes before XORing moving images. Clears hide sprites for menus/rooms.
+- Hooks0x386E..0x3CA9;20-byte register block follows, below0x3D00. IM2 vector39FF/3A00 remainsFFFF.
+  StateF400..F41F and tail5E40..5F3F were untouched throughout the full memory scan; only preserved
+  vector bytes were touched in the hook ROM range.
+- Sprite update saves entry IFF, disables interrupts, uses28MHz, restores MMU6/page0 and3.5MHz,
+  then restores entry IFF. The recording exercises19 entries with interrupts enabled.
+- Fixed16-colour palette and frame/ink cache. Display banks16..39 cover all256 wrapped frame
+  addresses and16 source inks. Diamond pattern6 occupies the first128 bytes of bank11.
+- Recolour changes only display banks and diamond pixels; header and every non-colour bank are
+  hash-checked. Empty-map identity, synthetic repaint, revert and invalid-header rejection tested.
+- Normal and NEXLOAD boot restore the printer buffer. Plain tail5E40..5E8F; sprite tail stays
+  within the scanned reservation. Original bytes are checked at every patch site.
+
+## Final verification (2026-10-26 local date)
+`selftest.py --game incredible_shrinking_fireman-add-GPT6_ASTRA --verify --stamp`: PASSED.
+- Full32,492-frame differential IDENTICAL:29,891 ISR hooks,27,883 plots,674,333 virtual reads,
+  79 diamond draws and164 clears. All19 IFF-enabled entries pass.
+- Compared7,736,176 moving-figure pixels and384,200 diamond pixels;702,459 hook instructions
+  checked for interrupt safety. Attributes and non-draw memory compared.
+- F/AF-prime scrambled at27,883 plot ends: all RAM identical at every frame end.
+- 2,705 unit cases plus setup and five negative controls PASS: all256 frame addresses at edges,
+  multislot/diamond cases, virtual reads, synthetic paint, cancellation and both entry IFF states.
+  Negatives catch wrong colours, missing virtual reads, IY corruption, omitted paint and missing DI.
+- No recorded right-edge clipping or large-jump exceptions counted. Worst patched ISR53,301
+  simulated T states, mostly at28MHz; this is not a wall-clock/raster measurement.
+- Rebuild MD5s, pinned assembly/profile, recolour round-trip, boot checks PASS. Chuckie Egg
+  stage1 canary PASS after registry change. Generated record views are current.
+- Final report: `verification_report-add-GPT6_ASTRA.txt`; model preview:
+  `verified_preview-add-GPT6_ASTRA.png` (original left, sprite model right, not hardware captures).
+
+Build MD5s:
+- `incredible_shrinking_fireman_plain-add-GPT6_ASTRA.nex`: `f8f213e55e3da01349827f8ae7d93bee`
+- `incredible_shrinking_fireman_sprites-add-GPT6_ASTRA.nex`: `1ea61f0bcaf2b5f27514807f8753f263`
+
+## Reproduce / recolour
+From nexclash, set `PYTHONDONTWRITEBYTECODE=1` and
+`NEXCLASH_REFERENCE=../specnext-add-GPT6_ASTRA/reference` for these suffixed checkouts.
 
 ```sh
+python -m nexclash.incredible_shrinking_fireman_add_GPT6_ASTRA build INPUT-add-GPT6_ASTRA.z80 -o PRIVATE_DIR
 python -m nexclash.incredible_shrinking_fireman_add_GPT6_ASTRA sheet INPUT.rzx --z80 INPUT.z80 -o PRIVATE_DIR/incredible_shrinking_fireman-add-GPT6_ASTRA
-python -m nexclash.incredible_shrinking_fireman_add_GPT6_ASTRA plain INPUT.z80 -o PRIVATE_DIR/incredible_shrinking_fireman_plain-add-GPT6_ASTRA.nex
-python -m nexclash.incredible_shrinking_fireman_add_GPT6_ASTRA colours PAINTED.png --layout ORIGINAL_layout-add-GPT6_ASTRA.json
+python -m nexclash.incredible_shrinking_fireman_add_GPT6_ASTRA recolour BUILD_sprites-add-GPT6_ASTRA.nex PAINTED.png --layout SHEET_layout-add-GPT6_ASTRA.json -o BUILD_painted-add-GPT6_ASTRA.nex
 ```
-Generated files put the suffix immediately before their extension (including layouts).
-For future records/selftests set NEXCLASH_REFERENCE to the suffixed specnext checkout's reference
-folder; do not assume the conventional ../specnext directory exists.
+New filenames carry the suffix immediately before their extension; Python uses underscores.
 
-## Open / phase B
-- Confirm visual choices; identify which static/unseen figures need additional recordings.
-- Scan hook/tail/state memory and all screen readers/writers; prove virtual-read behaviour,
-  attribute dependencies, window cleanup and XOR overlap handling.
-- Implement isolated hooks/profile, sprite builder, per-pixel colours, recolour and differential
-  verification; preserve IM2 vector and interrupt safety. Measure hook cost.
-- Only then create the production evidence record, register the engine, regenerate record views,
-  and perform the single final full verification/stamp. No incomplete record masquerading as PASS.
-- Hardware checklist: CSpect boot first; start/play, room changes, collect/pick up/drop, inventory,
-  options, death/game over/restart, figure overlap, speed and flicker. No hardware run yet.
-- Initial CLI push lacked GitHub credentials; subsequent publishing uses the connected GitHub API.
+## Open / hardware checklist
+CSpect boot first, then Next: title/start, room transitions, collect/pickup/drop, inventory/options,
+death/game-over/restart, figure overlaps, right-edge clipping, speed/flicker and beeper pitch.
+Sprites clip at256px where the original plot can wrap; synthetic units cover edges, but unseen
+rooms need additional recordings. Real interrupt scheduling/raster/DivMMC are not simulated.
+No emulator or hardware result is claimed. Pre-merge affected-game checking remains the maintainer
+workflow; no release or merge is part of this run.
 
-## Capture questions
-1. No new general platform fact: printer-buffer restoration is already documented in z80tonex.
-2. No shared documentation correction necessary.
-3. No actual emulator/hardware failure; NEXLOAD simulation caught the known startup requirement.
-4. Detached setsid/nohup jobs did not survive this host; used tool-managed foreground sessions.
-5. Unproven work is listed above. All additions and limitations recorded here.
+## Captured lessons and corrections
+- Removed bitmap differences must be tracked at each actual store, including diamond overwrites;
+  speculative plot-entry/end updates hid errors. Collectable virtual reads have350 unit cases.
+- Full replay exposed19 IFF-enabled sprite updates: entry state is now explicitly saved/restored.
+- Per-event overlay classes caused simpool's type cache to retain closures until an8GiB OOM kill.
+  Stable overlay types fixed the leak; final replay stayed around360MB for the environment.
+  General lesson added to docs/LEARNINGS.md. Earlier interrupted/failed runs received no stamp.
+- Tool-managed sessions were required on this host; a session reset lost an earlier partial run.
+  Final acceptance retained stderr and completed. No new hardware/platform claim was inferred.

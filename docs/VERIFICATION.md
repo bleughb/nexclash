@@ -56,6 +56,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Lode Runner (lode_runner): `lode_runner.nex` cd0c1659c8569b2fa80da74962af90d2, `lode_runner_sprites.nex` 85fe6afd593679bf59c787230ba0eaca; verified never
 - Match Day (match_day): `match_day.nex` 612761ec2772c5a7dcd27f939588d227, `match_day_sprites.nex` f0aecd138d1668ff057318c2545f539d; verified 2026-10-20
 - Cyclone (cyclone): `cyclone.nex` 390516396ca4d385c94b7f7bd2315d31, `cyclone_sprites.nex` 25c1b1e070b07565fe4d1a38f69e3024; verified 2026-10-21
+- The Incredible Shrinking Fireman (GPT6_ASTRA) (incredible_shrinking_fireman-add-GPT6_ASTRA): `incredible_shrinking_fireman_plain-add-GPT6_ASTRA.nex` f8f213e55e3da01349827f8ae7d93bee, `incredible_shrinking_fireman_sprites-add-GPT6_ASTRA.nex` 1ea61f0bcaf2b5f27514807f8753f263; verified 2026-10-26
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
@@ -812,3 +813,13 @@ toolkit). Recipe and facts: games/el_capitan_trueno.md.
   `Trueno_sprites.nex` a9befbb250a040734555ce80aea208b8 byte for byte, with their tk 0.1.4 AND with
   nexclash main; `make_nex.py --en / --immortal / --en --immortal` reproduce da3f1b0a / deaf4577 /
   867bda87. Inputs' MD5s as above. Files: specnext/reference/el_capitan_trueno/.
+
+## Incredible Shrinking Fireman add-GPT6_ASTRA — 2026-10-26
+Final committed build: `selftest.py --game incredible_shrinking_fireman-add-GPT6_ASTRA --verify --stamp`
+PASSED.32,492-frame differential IDENTICAL;27,883 plot-end flag scrambles preserve all RAM at every
+frame end.2,705 unit cases, setup and five negative controls PASS.7,736,176 moving-figure pixels and
+384,200 diamond pixels compared; all19 IFF-enabled update entries preserve state and map MMU6 with
+interrupts disabled. Normal/NEXLOAD boot, pinned assembly, MD5 rebuild and recolour round-trip PASS.
+No recorded clipping/jump exceptions. CSpect/Next hardware testing remains open; full scope and
+limitations in games/incredible_shrinking_fireman-add-GPT6_ASTRA.md. The final report/preview are in
+the matching private reference directory. Stable verifier overlay types fix full-replay memory growth.

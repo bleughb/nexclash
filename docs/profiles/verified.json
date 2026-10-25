@@ -65,6 +65,14 @@
     "sprites": "9182f2f8b4b0dc55b59a69728568b403"
    }
   },
+  "fc8e7535fc42afb60c12625b5fdfd064": {
+   "game": "The Incredible Shrinking Fireman (GPT6_ASTRA)",
+   "doc": "incredible_shrinking_fireman-add-GPT6_ASTRA.md",
+   "nex": {
+    "plain": "f8f213e55e3da01349827f8ae7d93bee",
+    "sprites": "1ea61f0bcaf2b5f27514807f8753f263"
+   }
+  },
   "5875d535442974a0de82737652854f1f": {
    "game": "Jetpac",
    "doc": "jetpac.md",

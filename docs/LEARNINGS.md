@@ -943,3 +943,10 @@ hardware is.
   Lua helper): put the file, start MAME, wait for the Browser text, type the load, snapshot after
   fixed delays. Worth a toolkit command (BRIEFING C2 #21); CSpect is the other route (run_cspect.bat).
 
+
+### Simulator overlay classes must have stable identity (Fireman, 2026-10-26)
+`simpool._poolable` caches eligibility by memory type. Defining overlay classes inside a
+per-event factory creates a retained type and its closure on every call; the Fireman verifier
+reached the host's8GiB limit near30,000 frames. Define overlay classes once and put changing
+memory/read functions on each instance. This retains pooling and bounds the type cache without
+changing runtime patches. A short replay may pass while a full recording exhausts memory.
