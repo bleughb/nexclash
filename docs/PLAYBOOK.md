@@ -35,8 +35,8 @@ add-a-game session.)
 ## Sessions (one per stage; Dean 2026-10-26)
 Every tool call resends the whole conversation, so cost grows with the session's length: a fresh
 session that reads this file + games/<game>.md is far cheaper than hour five of an old one.
-- One session per stage 1-3, one per hardware round (stage 4). A game the tools already convert
-  (`auto` PASS) is one session. Stage 3 is its own small session ON PURPOSE: the full verification
+- One session per stage 1-3, one per hardware round (stage 4); stage 0 (tools only) opens session 1.
+  A game the tools already convert (`auto` PASS) is one session. Stage 3 is its own small session ON PURPOSE: the full verification
   is polled for up to an hour, and polls of a short conversation cost little.
 - A stage ends with the "Next session" block right under the title line of games/<game>.md, then
   commit (+ push, maintainers):
@@ -48,6 +48,11 @@ session that reads this file + games/<game>.md is far cheaper than hour five of 
   Open: <anything not settled>
   ```
   and the reply gives the user the prompt for it (README "Continue a game"; contributors: SESSION.md).
+- Contributors (no push access): the package edits die with the chat. End EVERY stage with `python
+  nexclash.py contribute <game> --note "stage N"` and tell the user to attach that zip, with the
+  package, the snapshot and the recording, to the next chat, which starts with `python
+  tools/resume_contribution.py nexclash_contribution_<game>.zip` (the zips are cumulative).
+  Maintainers: commit + push instead.
 - Stage log: one line per finished session under "## Stage log" in games/<game>.md: date, stage,
   wall time, tool calls (roughly), user rounds. It shows which stage costs the most.
 - Mid-stage: when the session is long (roughly 80+ tool calls, or several hours) and a natural
@@ -64,6 +69,8 @@ first look) runs the snapshot check (0b), the plain conversion with its boot che
 engine identification (2) and one analysis pass (3: screen writers by routine, callers, T per call,
 ISR, free memory), then a preview pass, and writes `<game>_survey/`: survey.md (one page, ~2K
 tokens), survey.json, preview.png (what each top plot routine draws, per caller), the plain .nex.
+Use `-o` with a folder outside both repos (the scratchpad): the plain .nex and preview.png are game
+data (never in nexclash; specnext gets only what docs/MAINTAIN.md lists).
 A KNOWN engine there -> `auto`, no stage 1-2. Read survey.md first; run the single commands below
 only for what it leaves open. Its routine attribution is a shadow call stack (BRIEFING C4): a game
 that drops return addresses or blits with SP can blur it - check a surprising row with `cost --at`.
@@ -73,7 +80,7 @@ for a recording that reaches it (RECORDING_CHECKLIST.md) BEFORE stage 1 (Cyclone
 recording halfway through its build); to a text / score printer it is usually a message that did
 not come up - note it in games/<game>.md.
 
-## 0. Inputs (ask once, up front)
+## 0. Inputs (snapshot + recording up front; the questions below go into the stage-1 question)
 - `.z80` snapshot, 48K or 128K, ideally at the title screen or in game, keyboard controls (not
   joystick mode - e.g. Fantasy World Dizzy byte 62569=255 enables Kempston and caused phantom
   input). A loader snapshot works but needs extra steps (0b).
@@ -171,7 +178,8 @@ Colour sheets and recolour: docs/COLOURS.md (built in stage 2, sent in stage 3).
   ALWAYS ASK, no default yet (list what the preview shows): bullets, explosions and other effects;
   solid or see-through figures; outlines; anything the hooks cannot convert.
   A new standing answer from the user -> add it here with the date.
-  Attach the preview frames and the plain .nex (for its hardware test) to the same message.
+  Attach the preview frames and the plain .nex (for its hardware test) to the same message, and
+  ask the step-0 questions there too (menus / windows over the play area, a test cheat).
 - Every figure is a sprite by default (Dean, 2026-10-13: "make everything possible a sprite"): list
   every caller of each plotter from the code (not only those the RZX shows) and convert them all;
   what stays on the ULA (scenery, HUD, text, cases the hooks cannot do) is the question to ask.

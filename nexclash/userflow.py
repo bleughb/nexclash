@@ -108,10 +108,11 @@ nexclash could not patch it: {why}
 > that changes what I see.
 
 Work goes in stages, one chat each (PLAYBOOK "Sessions"): each stage ends with the prompt for the
-next chat, e.g.
-> Continue {game} in nexclash (package attached / at <path>): follow its CLAUDE.md, start from the
-> "Next session" block in games/<game>.md.
-Reply to the design question with "defaults" or the numbers to change.
+next chat. Attach to every new chat: the package, the nexclash_contribution_{game}.zip the last
+chat made (your work so far: the chat cannot keep it), {z80} and {game}.rzx. Then:
+> Continue {game} in nexclash (package attached): follow its CLAUDE.md; first run
+> `python tools/resume_contribution.py nexclash_contribution_{game}.zip`, then start from the
+> "Next session" block in games/<game>.md. <your answers to the last question, or "defaults">
 
 ## When the session is done
 1. `python nexclash.py patch {z80}` builds it; test on the Next with the session's checklist.

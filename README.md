@@ -18,6 +18,7 @@ Each stage ends by telling you to start a new chat with:
 ```
 Continue GAME NAME in nexclash. Clone bleughb/nexclash and bleughb/specnext side by side,
 follow nexclash/CLAUDE.md, start from the "Next session" block in games/<game>.md.
+<your answers to the last question, or "defaults">
 ```
 The design question (stage 1) lists the defaults: reply "defaults", or the numbers to change.
 

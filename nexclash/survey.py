@@ -112,6 +112,23 @@ class PlotTracker:
             self.block[r] += 1
 
 
+class _Tee:
+    """stderr that also keeps the lines: simrun reports a desync there, and survey.md must show it."""
+
+    def __init__(self, real):
+        self.real, self.text = real, []
+
+    def write(self, x):
+        self.text.append(x)
+        return self.real.write(x)
+
+    def flush(self):
+        self.real.flush()
+
+    def warnings(self):
+        return [l.strip() for l in ''.join(self.text).split('\n') if l.strip().startswith('WARNING') and 'SZX' not in l]
+
+
 class Multi:
     """Fan the simrun hooks out to several trackers (one pass instead of one per command)."""
 
@@ -190,18 +207,22 @@ def survey(z80, rzx=None, out=None, stop=None, frames=None, keys=None, top=6, lo
     # plain conversion + boot
     log('survey: plain conversion ...')
     plain = os.path.join(out, name + '.nex')
-    an, note = None, ''
-    if rz and not is128:
+    an, note, ans = None, '', []
+    if is128:
+        note = ' (128K: tail not proven by a recording - prove it with `scan --range`, PLAYBOOK 1)'
+    elif rz:
         from .analyse import analyse
-        ans = [analyse(None, r, s.sp, stop=stop) for r in rz]
+        try:
+            ans = [analyse(None, r, s.sp, stop=stop) for r in rz]
+        except Exception as e:                              # noqa: BLE001 - a desync: see the GATE line
+            ans, note = [], ' (access analysis stopped: %s; default tail, not proven)' % str(e)[:80]
+    if ans:
         an = dict(ans[0])
         for x in ans[1:]:
             an['rd'] = bytes(p | q for p, q in zip(an['rd'], x['rd']))
             an['wr'] = bytes(p | q for p, q in zip(an['wr'], x['wr']))
             an['rom_used'] |= x['rom_used']
             an['stack_low_water'] = min(an['stack_low_water'], x['stack_low_water'])
-    elif is128:
-        note = ' (128K: tail not proven by a recording - prove it with `scan --range`, PLAYBOOK 1)'
     cap, orig = {}, zt.convert
 
     def conv(*a, **k):
@@ -235,7 +256,14 @@ def survey(z80, rzx=None, out=None, stop=None, frames=None, keys=None, top=6, lo
     screen = '0x4000-0x5AFF'
     watch = [(screen, set(memscan.parse_range(screen, is128)))]
     sc, it, pt = memscan.Scanner(None, watch), isrinfo.IsrTracker(), PlotTracker()
-    n = run(z80, rz or None, Multi(sc, it, pt), frames=frames, keys=keys, stop=stop)
+    tee = _Tee(sys.stderr)
+    sys.stderr = tee
+    try:
+        n = run(z80, rz or None, Multi(sc, it, pt), frames=frames, keys=keys, stop=stop)
+    finally:
+        sys.stderr = tee.real
+    desync = [w for w in tee.warnings() if 'desync' in w]
+    js['warnings'] = tee.warnings()
     js['frames'] = n
     mem_txt = memscan.report(sc, n, rz or None, keys, None, None, is128, None)[0]
     scr_txt = memscan.report(sc, n, rz or None, keys, [screen], None, is128, watch)[0]
@@ -276,17 +304,24 @@ def survey(z80, rzx=None, out=None, stop=None, frames=None, keys=None, top=6, lo
             pt.pix[r], pt.attr[r], ' (%d block copy)' % pt.block[r] if pt.block[r] else '', calls,
             len(pt.calls[r]),
             '%s / %s' % (info['T_median'], info['T_max']) if tc else '-',
-            ', '.join(_h(k) if isinstance(k, int) else k for k in pt.parents[r]) if isinstance(r, int) else '-',
+            ', '.join(_h(k) if isinstance(k, int) else k for k, _ in pt.parents[r].most_common(4)) +
+            (' +%d more' % (len(pt.parents[r]) - 4) if len(pt.parents[r]) > 4 else '') if isinstance(r, int) else '-',
             cov or '-'))
     js['routines'] = routines
     js['coverage_gaps'] = gaps
     say('## Recording and coverage')
     say('- %d frames analysed%s.' % (n, ' (free run, keys: %s)' % (keys or 'none') if not rz else ''))
-    say('- GATE: %s' % ('OK - every CALL site to the top plot routines in code that ran was reached'
-                         if not gaps else 'CHECK - %d CALL site(s) to these routines, in code that ran, were never reached '
-                         '(table below). For a FIGURE plotter that is a path the recording missed: ask the user for a '
-                         'recording that reaches it (docs/RECORDING_CHECKLIST.md) before stage 1. For a text / score '
-                         'printer it usually is a message that did not come up: say so in games/<game>.md.' % gaps))
+    for w in js['warnings']:
+        say('- ' + w)
+    if desync:
+        say('- GATE: RECORD AGAIN - the recording desyncs (above): everything below covers only the frames '
+            'before it. Ask the user for a new Fuse recording (docs/RECORDING_CHECKLIST.md) before stage 1.')
+    else:
+        say('- GATE: %s' % ('OK - every CALL site to the top plot routines in code that ran was reached'
+                           if not gaps else 'CHECK - %d CALL site(s) to these routines, in code that ran, were never reached '
+                           '(table below). For a FIGURE plotter that is a path the recording missed: ask the user for a '
+                           'recording that reaches it (docs/RECORDING_CHECKLIST.md) before stage 1. For a text / score '
+                           'printer it usually is a message that did not come up: say so in games/<game>.md.' % gaps))
     say('')
     say('## Screen writers by routine (innermost CALL running at the write)')
     say('| Routine | pixel / attr bytes | calls | callers seen | T per call median / max | called from | coverage |')

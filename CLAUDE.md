@@ -15,8 +15,9 @@ on their machine; the maintainers' reference files live in the private repo bleu
    (6a); sprite build + colour sheets (docs/COLOURS.md) + hardware checklist to the user.
 4. Hardware + colour rounds: recolour (skill) for paintings; fixes as stage 2-3.
 5. Close: "End of every stage" below.
-Each stage ends with the "Next session" block in games/<game>.md and the prompt for the next chat
-(PLAYBOOK "Sessions"); a continuing session starts from that block, never from chat history. The
+Each stage ends with the "Next session" block in games/<game>.md and the prompt for the next chat;
+contributors also `contribute` (the chat loses their edits; PLAYBOOK "Sessions"). A continuing
+session starts from that block, never from chat history. The
 game may already have notes and files (games/<game>.md, STATUS.md): read them first. Names: folder
 and games/<game>.md after the game, lower case, underscores.
 
