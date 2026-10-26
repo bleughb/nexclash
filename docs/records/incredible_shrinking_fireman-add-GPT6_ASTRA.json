@@ -65,8 +65,8 @@
   "engine_col": "incredible_shrinking_fireman_add_GPT6_ASTRA",
   "build": "incredible_shrinking_fireman_sprites-add-GPT6_ASTRA.nex 1ea61f0b",
   "software": "Full 32492-frame differential + RAM convergence + 2705 units PASS",
-  "hardware": "untested",
-  "next": "CSpect/Next checklist; hardware untested"
+  "hardware": "User reports game runs OK (2026-10-26); platform/test coverage unspecified",
+  "next": "remaining hardware checklist; optional painting"
  },
  "checks": [
   "asm2profile:incredible_shrinking_fireman-add-GPT6_ASTRA"

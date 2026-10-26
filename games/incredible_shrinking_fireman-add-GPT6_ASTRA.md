@@ -1,14 +1,15 @@
 # Incredible Shrinking Fireman — add-GPT6_ASTRA
 
 ## Next session
-Stage: 4 (hardware/colour)    State: stage3 software acceptance PASSED
+Stage: 4 (hardware/colour)    State: software PASS; user reports game runs OK (2026-10-26)
 Inputs: specnext/reference/incredible_shrinking_fireman-add-GPT6_ASTRA/ (snapshot, RZX, builds)
 Branch: claude/incredible-shrinking-fireman-add-GPT6_ASTRA
-Start with: test the supplied sprite NEX in CSpect/Next using the checklist below.
+Start with: continue any remaining checks below or apply user-painted sheets.
 Read: PLAYBOOK stage4; this file's Implementation and Open sections.
-Open: hardware behaviour, unseen paths and optional user painting.
+Open: test platform/coverage unspecified; remaining checklist and optional user painting.
 
-Status: phase B acceptance PASSED and stamped. Hardware untested.
+Status: software acceptance PASSED and stamped. User reports "game runs ok" (2026-10-26);
+platform and test coverage were not specified, so this is a run confirmation, not full hardware sign-off.
 Branch in both repos: `claude/incredible-shrinking-fireman-add-GPT6_ASTRA`.
 Reference: `specnext/reference/incredible_shrinking_fireman-add-GPT6_ASTRA/`.
 Module: `nexclash/incredible_shrinking_fireman_add_GPT6_ASTRA.py`.
@@ -86,7 +87,8 @@ CSpect boot first, then Next: title/start, room transitions, collect/pickup/drop
 death/game-over/restart, figure overlaps, right-edge clipping, speed/flicker and beeper pitch.
 Sprites clip at256px where the original plot can wrap; synthetic units cover edges, but unseen
 rooms need additional recordings. Real interrupt scheduling/raster/DivMMC are not simulated.
-No emulator or hardware result is claimed. Pre-merge affected-game checking remains the maintainer
+User run confirmation is recorded above; no particular emulator/hardware platform or complete
+checklist pass is claimed. Pre-merge affected-game checking remains the maintainer
 workflow; no release or merge is part of this run.
 
 ## Lesson candidates
@@ -103,3 +105,6 @@ workflow; no release or merge is part of this run.
 - 2026-10-26: stage3 continuation, roughly1hour/150tool calls,0new user rounds; recovered interrupted
   acceptance, fixed verifier memory growth and rare enabled-IFF entry, full acceptance PASS,
   published draft PRs and reconciled concurrent main changes. Earlier stage1/2 approved by continue.
+
+- 2026-10-26: stage4 feedback: user reports "game runs ok"; platform/coverage unspecified.
+  GitHub evidence and draft PR descriptions updated; no build changes.
