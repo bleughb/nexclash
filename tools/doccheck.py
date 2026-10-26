@@ -10,6 +10,7 @@ FAIL (in CLAUDE.md, README.md, CONTRIBUTING.md, docs/*.md, .claude/skills/*):
 - a section reference that resolves to no heading: PLAYBOOK 3c / stage 2, LEARNINGS 2.6,
   BRIEFING C4 / A1, TECHNIQUES 2.6, and BRIEFING C2 #N with no item N (C2 renumbers: check it);
 - an engine in nexclash/engines.py without the REQUIRED names of docs/ENGINE_CONTRACT.md;
+- technique cards, predicates.json, records' recipes and the generated index (tools/techindex.py);
 - a file over its size budget (BUDGET below). Why budgets: every session reads these files, and
   without a limit they only grow (LEARNINGS tripled in two weeks). Over budget -> consolidate
   (docs/MAINTAIN.md "Lesson consolidation"), do not raise the number.
@@ -29,7 +30,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # bytes; set 2026-10-26 a little above that day's size: hold the line, lower them as files are condensed
 BUDGET = {'docs/ENGINE_CONTRACT.md': 6000, 'CLAUDE.md': 10500, 'docs/PLAYBOOK.md': 27000, 'docs/COLOURS.md': 9000, 'docs/MAINTAIN.md': 6000,
           'docs/BRIEFING.md': 56000, 'docs/LEARNINGS.md': 90000, 'docs/TECHNIQUES.md': 68000,
-          'docs/VERIFICATION.md': 82000, 'README.md': 12000}
+          'docs/VERIFICATION.md': 82000, 'README.md': 12000, 'docs/techniques/STANDARD.md': 32000}
 GAME_BUDGET = 25000          # games/<game>.md; older notes over it are listed and must not grow
 GAME_GRANDFATHERED = {'games/rainbow_islands.md': 72000}
 SIBLING = ('nexclash/CLAUDE.md', 'nexclash/requirements.txt', 'nexclash/nexclash.py')   # ../nexclash/... in specnext sessions
@@ -157,6 +158,11 @@ def main():
                     warn['path does not exist'].append('%s  %s' % (loc, p))
     for k, v in engine_contract().items():
         fail[k].extend(v)
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import techindex                      # technique cards, predicates, recipes (docs/techniques/STANDARD.md)
+    fail['technique cards / recipes (python tools/techindex.py)'].extend(techindex.check())
+    if not fail['technique cards / recipes (python tools/techindex.py)']:
+        del fail['technique cards / recipes (python tools/techindex.py)']
     for f, cap in BUDGET.items():
         if os.path.exists(f) and os.path.getsize(f) > cap:
             fail['over size budget (consolidate, docs/MAINTAIN.md)'].append('%s  %d > %d bytes' % (f, os.path.getsize(f), cap))

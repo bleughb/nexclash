@@ -121,5 +121,171 @@
    "skoolkit": "10.1"
   },
   "date": "2026-10-25"
- }
+ },
+ "techniques": [
+  {
+   "application": "fireman.figures.xor-overlay",
+   "id": "patch.xor-overlay-keep-ula",
+   "revision": 1,
+   "target": "plotter 0xB950 entry / 0xBC5C exit (fireman + both room figures); diamonds via 0xECFF; figure-cell painting 0xBCDF removed",
+   "phases": [
+    "entry",
+    "exit",
+    "clear"
+   ],
+   "owns": {
+    "mmu_slots": [
+     6,
+     7
+    ],
+    "next_pages": [
+     26,
+     27,
+     28,
+     29,
+     30,
+     32,
+     33,
+     34,
+     35,
+     36,
+     37,
+     38,
+     39,
+     40,
+     41,
+     42,
+     43,
+     44,
+     45,
+     46,
+     47,
+     48,
+     49,
+     50,
+     51,
+     52,
+     53,
+     54,
+     55,
+     56,
+     57,
+     58,
+     59,
+     60,
+     61,
+     62,
+     63
+    ],
+    "memory": [
+     {
+      "space": "alt_rom",
+      "image": 1,
+      "offset": [
+       "0x386E",
+       "0x394B"
+      ]
+     },
+     {
+      "space": "alt_rom",
+      "image": 1,
+      "offset": [
+       "0x3A01",
+       "0x3B4B"
+      ]
+     }
+    ],
+    "sprite_ids": [
+     [
+      0,
+      4
+     ],
+     [
+      5,
+      28
+     ]
+    ],
+    "speed": "28MHz-inside-hook"
+   }
+  },
+  {
+   "application": "fireman.plot.isr-deferral",
+   "id": "patch.isr-deferral",
+   "revision": 1,
+   "target": "IM 2 jump 0xFFF4 -> e_isr and the set-up operand 0xC240; handler 0xC24C deferred to the outermost plot exit",
+   "phases": [
+    "entry",
+    "isr",
+    "exit"
+   ],
+   "owns": {
+    "vectors": [
+     "im2"
+    ],
+    "hook_state": [
+     "DEPTH",
+     "PENDING"
+    ]
+   }
+  },
+  {
+   "application": "fireman.figures.atomic-switch",
+   "id": "patch.display-atomic-switch",
+   "revision": 1,
+   "target": "objects 0-2: own 4 sprites + 4 pending sprites showing the new image from plot entry to exit",
+   "phases": [
+    "entry",
+    "exit"
+   ],
+   "owns": {
+    "sprite_ids": [
+     [
+      5,
+      28
+     ]
+    ]
+   },
+   "overlap_ok": [
+    {
+     "with": "fireman.figures.xor-overlay",
+     "why": "exclusive use",
+     "note": "the same figures' own and pending sprites: the overlay fills them, the switch picks which set shows; never two writers at once (hooks run with interrupts deferred)"
+    }
+   ]
+  }
+ ],
+ "results": [
+  {
+   "application": "fireman.figures.xor-overlay",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "53f2665e",
+   "scope": "RZX 32,492 frames: registers, memory, interrupt safety, sprite layer incl. mask vs model, plot screen change = old ^ new, attribute reads vs the removed painter; unit cases + 9 negative controls",
+   "evidence": "games/incredible_shrinking_fireman-add-OPUS.md \"Build (2026-10-25)\""
+  },
+  {
+   "application": "fireman.plot.isr-deferral",
+   "check": "time.interrupt-injection",
+   "status": "pass",
+   "build": "53f2665e",
+   "scope": "54 deferrals in the RZX (handler once, depth 0, return = caller); interrupts injected at 20 points in 2 main-loop plots; negative control (deferral removed) detected",
+   "evidence": "games/incredible_shrinking_fireman-add-OPUS.md \"Hardware round 2\""
+  },
+  {
+   "application": "fireman.figures.atomic-switch",
+   "check": "display.entry-to-exit-coverage",
+   "status": "pass",
+   "build": "53f2665e",
+   "scope": "old + new image covered from plot entry to exit: 5.1M pixels (RZX)",
+   "evidence": "games/incredible_shrinking_fireman-add-OPUS.md \"Hardware round 1\""
+  },
+  {
+   "application": "fireman.figures.xor-overlay",
+   "check": "hardware.checklist",
+   "status": "not_run",
+   "build": "53f2665e",
+   "scope": "53f2665e not yet tested on a Next (400d0d11 failed in room 5, fixed in this build)",
+   "evidence": "STATUS.md"
+  }
+ ]
 }

@@ -273,3 +273,10 @@ docs/records/atic_atac.json.
 - 2026-10-26 stage 2 part 1 (build design + hooks asm): ~1.5 h wall, ~80 tool calls, 0 user rounds.
 - 2026-10-26 stage 2 part 2 (engine module, store, verify, unit tests; slice effect found -> image
   groups + run-time builder; 3 hook bugs found by the verifier): ~3 h wall, ~110 tool calls, 1 resume.
+
+## Techniques
+Techniques: `detect.tracked-unit`, `detect.gameplay-screen-readers`, `patch.xor-shadow`,
+`patch.display-atomic-switch` (recipe, owns and results: docs/records/atic_atac.json; cards: docs/techniques/).
+- Shadow, not overlay: no gameplay reader of figure pixels in the recording; non-XOR writers keep
+  ULA ^ shadow = original. Per-image sprites, not one XOR Layer 2 (touching figures would cancel).
+- Tracked unit: whole images, except the appear / death effect (one row per plot) -> row-mask groups.

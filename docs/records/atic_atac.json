@@ -79,5 +79,109 @@
  },
  "checks": [
   "asm2profile:atic_atac"
+ ],
+ "techniques": [
+  {
+   "application": "atic_atac.figures.tracked-unit",
+   "id": "detect.tracked-unit",
+   "revision": 1,
+   "target": "row loop 0x9E9B via setups 0x9F97 / 0x9FC1 (whole images); appear / death effect 0x8CD8 (one row per plot)",
+   "phases": []
+  },
+  {
+   "application": "atic_atac.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 1,
+   "target": "every read of a byte holding figure pixels, whole recording",
+   "phases": []
+  },
+  {
+   "application": "atic_atac.figures.xor-shadow",
+   "id": "patch.xor-shadow",
+   "revision": 1,
+   "target": "row hooks at 0x9EA0 / 0x9EA9; non-XOR writers 0x9C75, 0x99D7, 0x9A36, 0x9A78, 0x9ADD, 0x9B88, text 0xA1E6; clear 0x8093; pocket icons (x >= 192) not converted",
+   "phases": [
+    "entry",
+    "clear"
+   ],
+   "owns": {
+    "mmu_slots": [
+     3,
+     7
+    ],
+    "next_pages": [
+     26,
+     28
+    ],
+    "memory": [
+     {
+      "space": "alt_rom",
+      "image": 1,
+      "offset": [
+       "0x2000",
+       "0x2845"
+      ]
+     }
+    ],
+    "speed": "28MHz-inside-hook"
+   }
+  },
+  {
+   "application": "atic_atac.figures.atomic-switch",
+   "id": "patch.display-atomic-switch",
+   "revision": 1,
+   "target": "image table (24 entries): erase marks PENDING (still shown), a draw by the same owner reuses its sprites",
+   "phases": [
+    "entry"
+   ],
+   "owns": {
+    "sprite_ids": [
+     [
+      0,
+      127
+     ]
+    ],
+    "pattern_slots": [
+     [
+      0,
+      127
+     ]
+    ]
+   }
+  }
+ ],
+ "results": [
+  {
+   "application": "atic_atac.figures.xor-shadow",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "59493b75",
+   "scope": "full RZX 18,279 frames: registers, memory, ULA ^ shadow, attributes, entries, 47.3M sprite pixels; unit 1,473 cases; negative controls 3/3 (2026-10-26; not yet stamped by selftest)",
+   "evidence": "STATUS.md"
+  },
+  {
+   "application": "atic_atac.screen-readers",
+   "check": "detect.readers-classified",
+   "status": "pass",
+   "build": "-",
+   "scope": "whole recording: every non-plotter read of figure pixels is a drawer's own read-modify-write; game-over screen not reached",
+   "evidence": "games/atic_atac.md \"Engine\""
+  },
+  {
+   "application": "atic_atac.figures.tracked-unit",
+   "check": "detect.unit-classified",
+   "status": "pass",
+   "build": "-",
+   "scope": "normal plots = whole images; appear / death = one row per plot (54 slices in the recording)",
+   "evidence": "games/atic_atac.md \"Build design\""
+  },
+  {
+   "application": "atic_atac.figures.xor-shadow",
+   "check": "hardware.checklist",
+   "status": "not_run",
+   "build": "59493b75",
+   "scope": "untested on a Next",
+   "evidence": "STATUS.md"
+  }
  ]
 }

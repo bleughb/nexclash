@@ -207,3 +207,10 @@ incredible_shrinking_fireman-add-OPUS_three_windows.png.
   are uncovered during that one plot (the verifier counts these plot entries).
 - 21 graphics of the bank never drawn in the RZX (sheet group "From the code"): unit-tested (every frame
   0-255), not seen in play.
+
+## Techniques
+Techniques: `patch.xor-overlay-keep-ula`, `patch.isr-deferral`, `patch.display-atomic-switch`
+(recipe, owns and results: docs/records/incredible_shrinking_fireman-add-OPUS.json; cards: docs/techniques/).
+- Overlay, not shadow: figures in front, and keeping every ULA write needs no screen-reader proof.
+- ISR deferral after round 2: the plotter is not re-entrant, the ISR plots, the hooks add up to 16K T.
+- Atomic switch after round 1: a plot lasts a third of a frame, so the new image shows from entry.

@@ -257,3 +257,9 @@ also with a repainted colour map; unit + interrupt + exits + full table + flippe
 6. Speed vs the plain build: normal play, the jeep at the start, the tank at the end of level 1.
 7. Game over: sprites gone from the game-over / high-score screens.
 8. Faults: Fuse "Record from snapshot" on the .z80, autosave off, send the RZX.
+
+## Techniques
+Techniques: `patch.scratch-redirect`, `optimise.pattern-cache`
+(recipe, owns and results: docs/records/midnight_resistance.json; cards: docs/techniques/).
+- Scratch redirect: back-buffer composer, five plotters share CALL 0x7EC1, slot 5 free from the ISR.
+- Pattern cache: 16 entries; thrashes in the tank scene (see the card's Measurements).

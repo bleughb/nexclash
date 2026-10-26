@@ -103,7 +103,7 @@ game never touches (step 3 proves this: `scan`); override with `--tail ADDR`.
 
 # Stage 1 - Design (session 1)
 
-## 2. Identify the engine
+## 2. Identify the engine (fast path) or the patch plan
 `python nexclash.py identify GAME.z80` covers the TID and Dizzy 1 engines (docs/profiles/
 signatures.json); the dedicated engines are recognised by their own checks in `auto`
 (is_<engine>, profile `signature`; the table is nexclash/engines.py), so `identify` says unknown
@@ -125,6 +125,12 @@ too), `preview --plot ENTRY` shows what each plot routine draws per caller; clas
 loop (masked AND/XOR/OR, pure XOR, LDIR/stack blit, attribute-cell), then continue from step 3.
 Classify the RENDERING MODEL first - it picks the hook pattern (BRIEFING A3, decision table 4):
 XOR to screen, masked + undo buffer, back-buffer composer, full redraw / tilemap, differential OR.
+Patch plan (docs/techniques/STANDARD.md 4-5): per routine / figure class, write the observations
+(each with basis observed / inferred / unknown, and scope) in games/<game>.md, then pick cards from
+docs/techniques/index.json: eligible = every `requires` true and every `rejects` false; unknown ->
+run the card's probe, never assume. Record the chosen applications (target, phases) and rejected
+cards with reasons, then the design question (3c). No card fits: say so, design from table 4; a
+reusable new method is a Lesson candidate for a card.
 
 ## 3. One analysis pass over the RZX
 Shared commands first: `isr GAME.z80 --rzx R` (what hooks must keep intact for the interrupt
@@ -221,7 +227,8 @@ Stage 1 ends: decisions in games/<game>.md, the question sent, the Next session 
 Hooks: asm/<engine>_hooks.asm with `SAVEBIN "<prefix>_<key>.bin"` per block and
 `"hooks": {"source": "asm/<engine>_hooks.asm", ...}` in the profile; after every edit
 `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex + symbols).
-What the module must provide: docs/ENGINE_CONTRACT.md (doccheck-checked). Copy the nearest engine
+What the module must provide: docs/ENGINE_CONTRACT.md (doccheck-checked). The cards' example
+functions first; then copy the nearest engine
 (module + asm + profile + games/ file; STATUS.md lists every engine), one function at a time:
 | Engine | Template for |
 |---|---|
@@ -299,7 +306,8 @@ table; a hardware checklist. Add the new profile (and signature if a new
 engine) to docs/profiles/, games/<game>.md, and the evidence record docs/records/<game>.json
 (copy the nearest engine's record; `modules` = the modules your build imports, `own_modules` /
 `data` = your engine's files, `rebuild.decisions` = the run's <name>_decisions.json, `status` =
-the STATUS row), then `python -m nexclash.records views` (regenerates STATUS / VERIFICATION
+the STATUS row, `techniques` + `results` = the recipe and checks, docs/techniques/STANDARD.md 3), then
+`python -m nexclash.records views` (regenerates STATUS / VERIFICATION
 checksums / verified.json). Check it: `python -m nexclash.records deps <game>` lists what your
 game's evidence depends on; the one full verification (6a) stamps it. The engine's line in
 nexclash/engines.py is not shared code (rebuild-only); anything else outside your engine is:
