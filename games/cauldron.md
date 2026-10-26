@@ -1,15 +1,21 @@
-# Cauldron (Palace Software, 1985; 48K) - no engine yet (stage 1: design question sent)
+# Cauldron (Palace Software, 1985; 48K) - no engine yet (stage 2: build, analysis done)
 
 ## Next session
-Stage: 2 (build)    State: stage-1 answers recorded 2026-10-26 (Decisions); build not started
-Inputs: specnext/reference/cauldron/ (Cauldron_1985_Palace_Software_a.z80, cauldron.rzx)
-Branch: claude/cauldron
-Start with: extract the RZX's embedded snapshot as the build input (Q0); LD (nn) scan of 0x6357 + sites
-Read: PLAYBOOK stage 2, this file, docs/techniques/patch.xor-overlay-keep-ula.md,
-  then patch.display-atomic-switch.md (deferred card, see Patch plan)
-Open: bit-level POINT check (only if a shadow design is ever reconsidered)
+Stage: 2 (build), mid-stage    State: analysis done, Q6 answered 2026-10-26 (Decisions)
+Inputs: specnext/reference/cauldron/ (cauldron.rzx; build input = its embedded snapshot, see
+  "Stage 2 analysis": RZX block 0x30, zlib, MD5 2f0ef98e...)    Branch: claude/cauldron
+Start with: write the engine module's start_state (extract the snapshot), then the sites: one
+  entry hook at 0x6357 (5E 23 56 -> JP; the hook CALLs the body at 25434, RET 25562 returns to it)
+  + "touch" hooks that drop sprites: ROM PO-CHAR (alt ROM), 0xB378 tile writer, 0xDED2 / 0xDEEA
+  scrolls, 0xB2A0 clear (rows 64-191), ROM CLS 0x0D6B. Confirm the PO-CHAR writer first.
+Read: PLAYBOOK stage 2, this file ("Stage 2 analysis", "Decisions"), docs/ENGINE_CONTRACT.md,
+  nexclash/incredible_shrinking_fireman_add_opus.py (NextState, _machine, _alt, _overlays,
+  Model, cover_of: the overlay template), patch.display-atomic-switch.md (read already: entry
+  shows the new image on pending sprites, exit switches)
+Open: dropped-key replot rule; sprite budget = 17 live x up to 6 sprites (32 x 32 shifted) +
+  pending - check against 128 before fixing the layout
 
-Reference: specnext reference/cauldron/. Status: stage 0 + stage 1 analysis done 2026-10-26
+Reference: specnext reference/cauldron/. Status: stages 0-1 done, stage 2 analysis done 2026-10-26
 (technique-card pilot). Analysis scripts are scratch (not in the repo): a one-off screen-reader
 probe (detect.gameplay-screen-readers has no shared command yet, BRIEFING C2 candidate).
 
@@ -122,13 +128,56 @@ User answers 2026-10-26 (stage 1, round 1):
 - Q4: figure colour = its cell ink until painted (default 4).
 - Q5: Layer 2 + sprites off on the text screens (0xC4AE family) and the control menu (default 5);
   always-ask items (solid vs see-through, outline) left at the defaults.
+User answer 2026-10-26 (stage 2, round 2):
+- Q6: a figure that any other writer touches (PO-CHAR scenery, tile 0xB378, the bottom-third
+  scrolls, the clears, CLS) loses its sprite at that moment; the ULA keeps whatever the original
+  left (moved, half-wiped or residue), exactly as the original shows it. No scrolling sprites.
+
+## Stage 2 analysis (2026-10-26; scratch probes, not in the repo)
+- Build input: the RZX's embedded snapshot = RZX block 0x30, flags 2 (zlib), a .z80 (39,419
+  bytes, MD5 2f0ef98e5c59552663b15d5eb1175236); 11,994 bytes of RAM differ from the delivered .z80
+  (= stage 0's 11,283 + 711). Plain .nex of it: converts, converter default tail (no proven-safe
+  tail, as stage 0). `inspect` gives the same false "loader snapshot" WARNING (PC 0x0039, SP 0x5FDA).
+- 0x6357 (RZX copy, 25431-25562): descriptor at HL = gfx lo/hi, x, y (BASIC: screen row 175 - y
+  first, then down), rows, width (bytes), attr type, attr value. Per pixel row: ROM PIXEL-ADD
+  (0x22AA), then the row's cells painted (type 2: ROM PO-ATTR; 0: old = ATTR-T -> value; 1: old =
+  value -> ATTR-T), then width graphic bytes XORed (shifted: 2 bytes each). Ends RET 25562; 25563
+  is the IM 2 setup entry, so the exit cannot take a JP: an entry hook must CALL the body (25434).
+  No stores into the routine (no self-modification). Entry bytes 5E 23 56.
+- 14 call sites (list in "Rendering model" obs. 4), all `CALL 0x6357` with HL = the descriptor
+  the compiled BASIC just POKEd. One entry hook covers every figure.
+- Whole RZX (84,638 plots): 93 graphics, never written (shapes can be precomputed); images up to
+  32 rows x 4 bytes (31115: 32 x 32 px; others <= 24 x 24) -> up to 3 x 2 16-px sprites when shifted.
+  Types: 1 33,915, 2 31,808, 0 18,915.
+- XOR parity alone is wrong: ROM CLS (0x0D6B) and the clear 0xB2A0 (rows 64-191) wipe drawn
+  figures without an erase plot (parity model reaches 243 "live"); with clears modelled, max 5 live
+  in frames 1-3000. The clears must reset the sprite set (card phase "clear").
+- **The bottom-third scroll (0xDED2 left / 0xDEEA right, screen rows 128-191, one byte per call)
+  carries plotted images with it**: ground decorations (e.g. gfx 51594 at x 8, rows 152-175, drawn
+  by the 27799/31236 pair) stay drawn while the landscape scrolls under them, never re-plotted at
+  the new place (frames 2684-2702, scroll.png). A sprite there would not move. -> design question.
+- Whole RZX with clears modelled: max 17 live images (frame 41,972); 27 images straddle row 64
+  when 0xB2A0 clears (top part survives on the ULA); scrolls with a live image in the band: 1,568
+  (callers 27799/31236 only).
+- **Other writers break XOR parity too** (seq probe, frames 2598-2645): the witch drawn at (8, 23)
+  at 2602 is overwritten between 2604 and 2624 by a writer that is neither a plot nor a scroll
+  (ROM PO-CHAR scenery printing likely, obs. 11); the game's next XOR draw (2624) lands on clean
+  ground and its erase (2638) puts the image back as residue. So "live" must end when ANY other
+  writer (PO-CHAR, tile 0xB378, scrolls, clears, CLS) touches the image's rectangle, not only
+  at a matching plot. Max 17 live is therefore an upper bound.
 
 ## Open
 - Bit-level check of the POINT readers (obs. 9) if a shadow design is ever wanted.
-- LD (nn),A / LD (nn),HL scan of 0x6357 and its call sites before choosing hook sites (stage 2).
+- How a later plot of a dropped image's key is treated (a dropped key's XOR erase puts residue on
+  the ULA, which stays ULA-only): decide in the model, unit-test it.
 - IM 2 path (0x63DB, handler 25576): when is it used? Not in this recording.
 
 ## Lesson candidates
+- XOR parity per image is not "on the screen": overwrite writers (ROM PO-CHAR scenery, scrolls,
+  clears) wipe or move XOR figures without an erase plot, and the game's next XOR then lands on
+  clean ground (Cauldron frames 2602-2638). An overlay's live set must end at any other writer's
+  touch; check with a byte trace of the figure's rows between plots, not only plot counts.
+  (patch.xor-overlay-keep-ula has no such failure row yet.)
 - `inspect` flags "loader snapshot" when PC is in ROM because an IM 1 interrupt was just taken
   with the BASIC loader still in memory (Cauldron): check the stacked return address before
   treating it as a loader.
@@ -143,6 +192,7 @@ User answers 2026-10-26 (stage 1, round 1):
 ## Stage log
 - 2026-10-26 stage 0+1 (survey, patch plan, design question; pilot): see Pilot log.
 - 2026-10-26 stage 1 answers: RZX snapshot, all figures sprites, overlay, keep attr painting (3a), defaults 4/5.
+- 2026-10-26 stage 2 part 1 (analysis: snapshot extract, plotter decode, 3 whole-RZX probes, Q6): ~85 tool calls, ~1h20, 2 user rounds.
 
 ## Pilot log
 Technique-card pilot, stage 0 + 1, one session, 2026-10-26.

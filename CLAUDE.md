@@ -42,7 +42,9 @@ version; tools/sjasmplus/README.md). Maintainers: repos and private files in doc
   the exit code). Reports: `grep -E 'Verify|Unit|Result|!'`. Disassemble only flagged routines.
 - Replies: never re-summarize earlier turns or paste results already in files; say what changed.
 - Long runs: `setsid nohup` + one `sleep 540; tail -3 LOG` per poll, call timeout 10 min (LEARNINGS
-  2.6) - plain `&` dies, faster polls resend the conversation for nothing.
+  2.6) - plain `&` dies, faster polls resend the conversation for nothing. Where the harness
+  blocks a foreground sleep (claude.ai, 2026-10-26), wait instead with ONE background command
+  `until grep -q 'DONE-LINE\|Traceback' LOG; do sleep 20; done` (a single completion notice).
 - No subagents unless the user asks: each starts cold and re-reads the docs.
 
 ## Rules (contributions are checked against them)
