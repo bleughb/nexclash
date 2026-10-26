@@ -1,17 +1,14 @@
-# Atic Atac (Ultimate Play The Game, 1983; 48K) - engine atic_atac (stage 2: hooks written)
+# Atic Atac (Ultimate Play The Game, 1983; 48K) - engine atic_atac (stage 2 done: built + verified in software)
 
 ## Next session
-Stage: 2 (build, part 2)    State: build design written, hooks assembled 2026-10-26 (Build design below)
+Stage: 3 (prove + deliver)    State: engine complete 2026-10-26; full RZX already IDENTICAL (Results)
 Inputs: specnext/reference/atic_atac/ (snapshot, AticAtac.rzx)    Branch: claude/atic_atac (both repos)
-Start with: nexclash/atic_atac.py - SITES (Build design table) + FACTS, AticAtacPatch (altrom image 1
-  at 0x2000 = profile hooks.rom, stub_extra = setup + 5 op bytes + 256 palette bytes, shadow page 26
-  with the directory at 0x7800, pattern store pages from 32), the store builder (outline + interior),
-  then auto + boot check; then verify (copy dizzy1.verify / run_pair / Model) and unit tests
-Start state: the .z80 run to JP 24576 (simrun.free_run(z80, 400, None, stop_pc=24576), get_state,
-  write_snapshot); the RZX needs no prerun (its own snapshot is mid-game)
-Read: this file (Build design), asm/atic_atac_hooks.asm header, docs/ENGINE_CONTRACT.md, PLAYBOOK 6;
-  dizzy1.py Dizzy1Patch / verify / run_pair one function at a time
-Open: test cheat (offered); game-over path not recorded
+Start with: `python selftest.py --game atic_atac --verify --stamp` (the one full verification, ~12 min
+  replay + ~1.5 min unit tests), then `python -m nexclash.records views`; colour sheets (docs/COLOURS.md:
+  this engine has no sheet capture yet - write `sheets` / `capture` for the group images, or ask Dean
+  whether default inks are enough for the first hardware round); hardware checklist below to Dean
+Read: this file (Build design, Results, Open), PLAYBOOK stage 3, docs/COLOURS.md
+Open: speed on hardware (setups ~2.5k T each); game-over path not recorded; menus / pause asked
 
 Reference: specnext reference/atic_atac/ (Dean, 2026-10-26).
 
@@ -20,6 +17,7 @@ Reference: specnext reference/atic_atac/ (Dean, 2026-10-26).
 | Output | MD5 | Status |
 |---|---|---|
 | atic_atac.nex (plain, tail 0x5B00) | e710fa8785802f1aa51f214d95c82343 | boot sim OK; hardware untested |
+| atic_atac_sprites.nex (from the start state) | 59493b7563e6dd1c7141a6763cf52d73 | software IDENTICAL (full RZX), unit PASS; hardware untested |
 
 ## Intake (stage 0, 2026-10-26)
 - Snapshot: 48K, LOADER state. PC 0x5B89 inside a descramble loop at 0x5B80 (USR 23424 from the
@@ -112,10 +110,17 @@ Facts found for it (stage 2 analysis, whole recording):
   (1,228), 0x9F56 new only (357); 0x9F40 / 0x9F45 / 0x9F74 have no caller.
 - XOR parity per image key (DE, x, y), reset at each play-area clear 0x8093 (127): closes exactly
   (0 left at the end); at most 9 images shown at once (frame 10452).
-- The graphic pointer table 0xA4BE is indexed by id-1 for ids 1-255; ids past its 211 real
-  entries read the following tables, so the player's appear / death effect (IX 0xEA90) draws
-  "graphics" at 0xAEA2-0xAEC2 (inside a figure's rows) with heights 0-248: tall 16-px strips that
-  run off the top of the screen (rows above line 0 go to 0x3xxx = ROM, discarded). h = 0 draws nothing.
+- The graphic pointer table 0xA4BE is indexed by id-1 for ids 1-255 (211 real entries; ids 240-255
+  point into the ROM, the screen, the stack and variables: no game image). h = 0 draws nothing.
+- CORRECTION (stage 2 part 2): the player's appear / death effect 0x8CD8 (IX 0xEA90) does NOT draw
+  tall strips. It draws ONE ROW k of the figure per plot: table entry of id IX+7 -> G + 2k, the byte
+  there (row k-1's second byte) poked to 1 = height, plot via 0x9F4A at y = base - k, both put back
+  (0x8D03 / 0x8D0F). Death: the shown figure, then rows k = 17..0 XOR it away top-down; appear: rows
+  0..17 bottom-up, then the next move XOR-erases the whole figure. The part-1 reading took the
+  heights from the static bytes. Recording: 54 slices (appear, death, re-appear).
+- Graphics change at run time only there (writes to 0xA4BE-0xEA8F: 0x8CEC-0x8D11 the effect, 0x8BB1
+  -0x8C13 a pointer at 0xA626 + room tables, restored before any plot uses them); the verifier checks
+  every plot's graphic bytes against the snapshot.
 - The survey's "free RAM" spans 0xB536-, 0xB786-, 0xBB60-, 0xD2EE- hold graphics (the other two
   characters and more): untouched by this recording, NOT free. No game RAM is used by the build.
 - Attribute readers (whole recording): 0x9782 (one cell 0x5AC1, frame colour cycle), 0x8C9F /
@@ -134,6 +139,12 @@ Facts found for it (stage 2 analysis, whole recording):
 Design:
 - Display: HARDWARE SPRITES, one composite per shown image (not Layer 2: one shared XOR layer
   cancels touching figures, Dizzy 1 hardware round 1; per-image sprites keep each figure solid).
+- IMAGE GROUPS (part 2, after the slice fact above): an image is the group (G = the id's graphic in
+  the snapshot, x, base line) with a 24-bit row mask. A plot of G toggles every row, a slice toggles
+  row k (base = y + k); mask all = the stored image, none = pending, some = the image of those rows
+  built by the hook (ink from the stored image, flood fill + outline as the store: `build`, ~2 per
+  effect step). Per-image parity (DE, x, y) kept 18 slices + the figure as separate sprites while
+  the original's screen was blank (death) - a ghost the per-image pixel check could not see.
   Image = (DE, h): 18 px wide with the outline -> 2 sprites across, ceil((rows+2)/16) down; rows
   above line 0 clipped (clip window = the 256x192 area, tiles wholly above it not shown).
 - Patterns built at build time for all 255 ids (deduplicated by graphic address) from the
@@ -151,8 +162,9 @@ Design:
   Attributes then differ from the original only in cells a figure painted; the verifier keeps the
   original's attributes alongside and checks every attribute READ sees the same byte.
 - Sprite bookkeeping hooks at the two setup tails (sites 0x9F97 `1A3218`, 0x9FC1 `1A3219`, JP to
-  alt ROM; the hook does LD A,(DE) / LD (2408x),A itself and jumps back): key present -> erase,
-  else draw. Erase marks the entry PENDING (still shown); a draw by the same owner (IX) reuses its
+  alt ROM; the hook does LD A,(DE) / LD (2408x),A itself and jumps back): the plot's group toggled
+  (above); a group not in the table takes the owner's pending entry or a free one (24 entries x 26
+  bytes; at most 9 used in the recording). Erase marks the entry PENDING (still shown); a draw by the same owner (IX) reuses its
   sprites (no hide/show flicker across an interrupt; LEARNINGS 2.1d); a pending entry is hidden at
   the next setup by another owner or at the clear. x >= 192 (pocket icons, panel) = not converted.
 - Pixels: 1-bit SHADOW screen (Next page at slot 3 while a hook runs: shadow address = screen
@@ -164,18 +176,58 @@ Design:
   the game: site moved off it, op read at run time), text printer 0xA1E6. Play-area clear 0x8093:
   shadow zeroed, every sprite hidden, table emptied.
 - Hooks: alt ROM image 1 (ROM read check: scan below), interrupts stay on (ROM IM 1 reads IY and
-  touches slots 0, 2 only), 28 MHz inside each hook.
+  touches slots 0, 2 only), 28 MHz inside each hook (the row hooks too: then cheaper than the
+  original blitter). Pages during a setup hook: slot 3 = shadow page 26 (shadow, DIR 0x7800,
+  entries 0x7C00, pair bitmap 0x7ED0), slot 7 = work page 28 (GADR id -> G at 0x0000, build grid
+  0x0200, built patterns 0x0600 = tile rows 6-7), slot 6 = the store page while building. The
+  object records 0xEA90.. are in slot 7: everything read through IX is read BEFORE the remap.
 - Verify (PLAYBOOK 6, template dizzy1.verify): replay the patched machine; at each site run the
   original on ULA ^ shadow and the patched code, compare registers (CMP), memory outside the
   screen, ULA ^ shadow vs the original screen, the sprite set vs the parity model, each shown
   sprite's pixels vs the original plot of that image; interrupt safety; attribute reads see the
   original's value.
 
-Files so far: asm/atic_atac_hooks.asm (1,323 bytes at 0x2000-0x252A + 53-byte setup at 0xD000;
-`python tools/asm2profile.py atic_atac`), docs/profiles/atic_atac.json (signature 0x9EDC blitter A).
-Not yet: nexclash/atic_atac.py, the engines.py line, docs/records/atic_atac.json.
+Files: asm/atic_atac_hooks.asm (2,118 bytes at 0x2000-0x2845 + 53-byte setup at 0xD000;
+`python tools/asm2profile.py atic_atac`), docs/profiles/atic_atac.json (signature 0x9EDC blitter A),
+nexclash/atic_atac.py (store, patch, start state, verify, unit tests, auto), the engines.py line,
+docs/records/atic_atac.json.
+
+## Results (stage 2, 2026-10-26)
+    python nexclash.py auto Atic_Atac_1983_Ultimate_Play_The_Game_a.z80 --rzx AticAtac.rzx [--quick 2000]
+- Build: start state = the .z80 run to JP 24576 (frame 2); 207 stored images, 388 tile rows (pages
+  32-44); static check PASS; boot sim OK (nextboot + own banks: alt ROM, DIR, store, work page, setup).
+- Verify, WHOLE recording (18,279 frames, 615 s): IDENTICAL, 0 failures. 65,698 plots of a stored
+  graphic + 54 one-row slices, 66,312 sprite checks (entries vs the group model, pair bitmap, visible
+  sprites, shadow vs the converted rows, every shown image's pixels and colour vs the original's
+  plots), 47.3M sprite pixels; registers / memory / ULA ^ shadow / attributes / hook rules at every
+  site; no unhooked read or write of a figure byte or a skipped attribute; max 9 entries.
+- --quick 2000: PASSED (Verify IDENTICAL 59 s; Unit 1,473 cases + negative controls 3/3, 82 s).
+- Unit cases: every stored image at 5 edge positions / colours (draw + erase), one-row slices of 24
+  figures (every row, every shift), death (rows erased top-down) and appear (bottom-up, then the
+  move) of 4 figures at 3 places, random row masks, the panel (x >= 192), a full table (26 images,
+  24 shown), the clear with a full table, line / drawer (ops 00 / B6 / AE) / text over figure bits,
+  text outside the pixel area. Negative controls (their own tables / code): store shifted one pixel,
+  directory heights + 1, builder writing black as ink - all detected.
+- Speed (T at 3.5 MHz, 28 MHz parts / 8, whole recording): hooks add ~7,000 T per frame on average
+  (setups ~2.5k T each: the OTIR upload and the table scans; rows -62M T, cheaper than the original;
+  text +5M T, the start screens). Whether the game has that much spare per frame: hardware.
+
+## Hardware checklist (atic_atac_sprites.nex)
+1. Boots to the game's start screens; text prints as the original; keys / joystick work.
+2. Player appears row by row from the bottom (no extra copy left behind after the first move).
+3. Figures solid with a black outline; no colour clash on walls when figures pass; colours = the
+   figure's own ink.
+4. Monsters' appearance sparkle, thrown weapons, items: sprites, no flicker when moving.
+5. Death: the figure dissolves top-down and nothing is left where it stood; re-appears correctly.
+6. Room change: no figure from the old room stays; doors open / close on the ULA as before.
+7. Pocket icons in the panel unchanged (ULA); chicken, score, time as the original.
+8. Speed: busy rooms (several monsters) at the original's pace.
+9. The escape message and the end screen.
 
 ## Open
+- Speed on hardware: setups cost ~2.5k T; if the game slows, skip the pattern upload when an entry
+  shows the image it already holds (same pairs, same image), or keep the last uploaded image per pair.
+- Colour sheets: no sheet capture for this engine yet (stage 3).
 - Menus / message windows over the play area: asked 2026-10-26 (pause? the inventory?).
 - Test cheat (immortality / no chicken drain): offered 2026-10-26.
 - Game-over path (35893) not in the recording.
@@ -199,7 +251,25 @@ Not yet: nexclash/atic_atac.py, the engines.py line, docs/records/atic_atac.json
   (discarded): a shadow address trick that offsets H would move those writes into RAM; check H per
   row (row hooks fall back to the original for H < 0x40).
 
+- XOR parity per image key (graphic, x, y) breaks when a game composes an image from PARTS that
+  XOR-cancel it (Atic Atac's death: 18 one-row slices over the shown figure; the screen ends blank,
+  per-key parity shows 19 sprites). The per-image pixel check cannot see it (each sprite matches its
+  own plot); only a global view does (union of sprites vs the screen). Group by what the parts
+  belong to (the graphic + base line, a row mask) and check the group, not the part.
+- A hook that remaps slot 6 / 7 hides the game RAM there from everything it reads afterwards, IX
+  records included (Atic Atac: IX 0xEA90, colour read through IX+5 after slot 7 = work page: palette
+  offset 0). Read every game byte first, then remap; a verifier memory model with the MMU slots
+  catches it (it did: colours wrong in the 600-frame run).
+- sjasmplus: `ld a,(EXPR)` is a memory READ even when EXPR is a constant expression - `ld a,(OB >>
+  8)` loaded from 0x00E6 and the builder wrote a random page. Use an EQU (`OBH EQU 0xE6`) or no
+  outer parentheses for immediates.
+- Fork the patched and original runs on a memory model that maps pages BEFORE the overlay of this
+  run's game writes: a hook reading a mapped page at an address the game wrote in the same run must
+  see the page.
+
 ## Stage log
 - 2026-10-26 stage 0 (intake): ~20 min wall, ~30 tool calls, 0 user rounds.
 - 2026-10-26 stage 1 (design): ~1 h wall, ~60 tool calls, 2 user rounds (the design question + answer).
 - 2026-10-26 stage 2 part 1 (build design + hooks asm): ~1.5 h wall, ~80 tool calls, 0 user rounds.
+- 2026-10-26 stage 2 part 2 (engine module, store, verify, unit tests; slice effect found -> image
+  groups + run-time builder; 3 hook bugs found by the verifier): ~3 h wall, ~110 tool calls, 1 resume.

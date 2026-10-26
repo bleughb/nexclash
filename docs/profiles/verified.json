@@ -1,6 +1,14 @@
 {
  "_note": "GENERATED from docs/records by `python -m nexclash.records views` - do not edit. Snapshots whose sprite build was differentially verified against a recording. nex = MD5s `nexclash.py patch` reproduces.",
  "snapshots": {
+  "06b11e63d60401666332a61626a5789c": {
+   "game": "Atic Atac",
+   "doc": "atic_atac.md",
+   "nex": {
+    "plain": "e710fa8785802f1aa51f214d95c82343",
+    "sprites": "59493b7563e6dd1c7141a6763cf52d73"
+   }
+  },
   "cddc0cfea8259d0c497b50fae0acd27e": {
    "game": "Chuckie Egg",
    "doc": "chuckie_egg.md",
