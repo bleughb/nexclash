@@ -1,15 +1,23 @@
-# Cauldron (Palace Software, 1985; 48K) - engine `cauldron` (stage 2 done: quick runs PASS)
+# Cauldron (Palace Software, 1985; 48K) - engine `cauldron` (hardware round 1: menu hang fix sent)
 
 ## Next session
-Stage: 3 (prove + deliver)    State: engine built, quick runs 2000 + 9000 PASS 2026-10-26 ("Results")
-Inputs: specnext/reference/cauldron/ (cauldron.rzx: its embedded snapshot is the build input, the
-  engine extracts it)    Branch: claude/cauldron
-Start with: build the colour map + colour sheets + recolour (Open; PLAYBOOK 5 "Colour map", COLOURS.md),
-  quick run 2000, then the one full verification `python selftest.py --game cauldron --verify --stamp`
-  (~30 min: wait with ONE background until-loop), then deliver (PLAYBOOK 7) with the hardware checklist.
-Read: PLAYBOOK stage 3, this file ("Build design", "Results", "Open"), docs/COLOURS.md,
-  nexclash/cauldron.py (Model, upload in asm/cauldron_hooks.asm for where colours enter)
-Open: colour map not built; IM 2 path unreached; worst hook frame 45,288 T (text screens)
+Stage: 2 again (Dean's hardware round 1, 2026-10-27), then 3    Branch: claude/cauldron
+State: d4302eef hung at the menu on a Next (keys dead); 5830cbbd (whole alt ROM from the build)
+  sent for a hardware test - quick 2000 IDENTICAL, unit PASS, boot OK with a foreign ROM3.
+Inputs: specnext/reference/cauldron/ (cauldron.rzx: its embedded snapshot is the build input)
+Start with: Dean's result for 5830cbbd ("Hardware rounds"). Then the two engine changes he asked
+  for ("Decisions", round 3): (1) outline: every sprite opaque black on the 4-neighbour pixels of its
+  ink (Dizzy 1 fill/outline model; images up to 32 px wide need a 3rd sprite column / row when the
+  outline grows past 32: 31115 is 32 x 32); (2) no figure attribute painting on the ULA (the clash
+  in Dean's screenshot: witch over the cottage roof turns it cyan) - plotter body paints a shadow
+  attribute map in a Next page, the game's ATTR / PEEK reads of painted cells (obs. 10: 0x9077-
+  0x90FC, 0x6B39 / 0x6B56, and the plotter's own old-attr tests) read the shadow; every other attr
+  writer (PO-ATTR via PR-ALL, 0xC9F0 restore, 0xCE7F box, CLS) keeps the shadow equal. Then quick
+  2000 + 9000, colour map + sheets + recolour (paint_clear for the outline), full verify --stamp.
+Read: PLAYBOOK 5-7, this file ("Decisions", "Hardware rounds", "Build design", "Open"),
+  docs/COLOURS.md, dizzy1.py fill_mask / part_from_writes (outline), docs/techniques/index.json
+  (virtual attribute read: no card yet).
+Open: see "Open"; CSpect "very slow" with d4302eef not explained yet (ask: plain .nex speed too?).
 
 Reference: specnext reference/cauldron/. Status: stages 0-2 done (engine 2026-10-26); stage 2 analysis 2026-10-26
 (technique-card pilot). Analysis scripts are scratch (not in the repo): a one-off screen-reader
@@ -68,52 +76,19 @@ Observations (basis / scope; scope = cauldron.rzx 89,596 frames unless stated):
 | 14 | hazards | self-modification at sites: not checked (no LD (nn) scan yet); IM 2 path at 0x63DB not reached | unknown |
 
 ## Patch plan (STANDARD 4-5; cards opened: 3)
-Index read whole; cards opened: detect.gameplay-screen-readers, patch.xor-overlay-keep-ula,
-patch.xor-shadow. Others judged from index.json `requires`/`rejects` only.
+Cards opened: detect.gameplay-screen-readers (applied: POINT reads figure bytes, obs. 9; ATTR reads
+painted cells, obs. 10), patch.xor-overlay-keep-ula (chosen: XOR, figures in front Q2; plots ~1/3
+frame -> patch.display-atomic-switch), patch.xor-shadow (REJECTED: POINT readers need the ULA
+pixels; revisit only with a bit-level POINT check). From index.json alone: scratch-redirect
+(rejected, no back buffer), isr-deferral (rejected, ISR is ROM only), pattern-cache (not needed),
+tracked-unit (obs. 5). Overwrite scenery / tile / scroll / clear writers and ROM text: no card;
+they stay on the ULA and are the "other writers" the overlay follows. Attribute painting with
+readers: no card for a virtual attribute read (decision table 4 nearest; lesson candidate).
+Full text in git history.
 
-Figure routine 0x6357 (all 14 callers):
-- detect.gameplay-screen-readers - applied: `screen.gameplay_reads_figure_pixels` = TRUE
-  (obs. 9: byte level observed, bit level inferred; whole RZX), and attribute readers of
-  figure-painted cells exist (obs. 10).
-- **patch.xor-overlay-keep-ula - eligible pending the stage-1 answer.** `render.composition.xor`
-  TRUE (obs. 2); `design.figures_in_front` UNKNOWN -> its probe is the design question (Q2). XOR
-  already shows figures over the scenery, so "in front" matches the original's look.
-  Its probe step 3: attribute painting has readers (obs. 10) -> painting cannot simply be removed
-  (Q3). Step 4: plots last ~1/3 frame (obs. 7) -> patch.display-atomic-switch applies (deferred).
-- patch.xor-shadow - REJECTED: rejects `screen.gameplay_reads_figure_pixels` (TRUE, obs. 9; the
-  ULA would no longer hold the pixels POINT tests). Requires were true (XOR; slots 1, 3-7 free).
-  Revisit only with a bit-level POINT check that comes out false.
-- patch.scratch-redirect - REJECTED: `render.target.back_buffer` FALSE (obs. 1).
-- patch.isr-deferral - REJECTED: `exec.isr_calls_routine` FALSE (obs. 8, whole RZX); unknown
-  only for the unreached IM 2 handler at 25576.
-- patch.display-atomic-switch - deferred to stage 2: `hook.updates_visible_image` is TRUE for an
-  overlay build (sprites move at the plot); not opened (3-card limit).
-- optimise.pattern-cache - deferred to stage 2: `sprite.working_set_fits` UNKNOWN, probe `cost
-  --at 0x6357 --group` (no need yet: ~1.4 plots per active frame).
-- detect.tracked-unit - not opened; obs. 5 from the code (whole image per call).
-
-Scenery / tile / scroll / clear writers (0x6275 targets, obs. 12) and ROM text (obs. 13): no card
-fits (no card covers overwrite scenery writers; they stay on the ULA by default 2). They matter
-only as the "other writers" of obs. 11, which the overlay's sprite model must follow (ULA stays
-original, so behaviour is unaffected; the residue the original leaves is what the sprites cover).
-
-Attribute painting with readers (obs. 10): no card covers a virtual attribute read; decision
-table 4 "Logic reads player pixels -> virtual read" is the nearest row. Lesson candidate below.
-
-## Design question (sent 2026-10-26) - answers go to "Decisions"
-Q0 Start snapshot (exception): build from the RZX's embedded snapshot (the copy the recording
-   proves; proposed) / record again from the .z80 / build from the .z80 unverified (not offered).
-Q1 Every figure a sprite (default 1): all 0x6357 callers, incl. the cauldron-spot image and the
-   HUD item icon (exception: ask whether the HUD icon stays on the ULA).
-Q2 Depth (default 3 = the game's rule): XOR has no depth rule; figures in front (overlay) proposed.
-Q3 Figure-cell attribute painting (exception): keep it (clash halo stays, zero risk to the ATTR
-   tests) / remove it + virtual attribute reads for the ATTR readers (no halo, bigger build).
-Q4 Colours (default 4): the figure's cell ink until painted.
-Q5 Menus / message screens (default 5): Layer 2 + sprites off on the text screens (0xC4AE family)
-   and the control menu. Always-ask: no bullets/explosions seen in 0x6357's groups; solid vs
-   see-through; outline.
-Sheets: preview.png (survey) and preview_6357.png (per caller; scratch, regenerate with
-`preview ... --plot 0x6357 --at 3000,8000,15000,22398,33597,44796 --stop 44800`).
+## Design question (sent 2026-10-26)
+Q0 start snapshot, Q1 which figures, Q2 depth, Q3 attribute painting, Q4 colours, Q5 menus / text
+screens; the answers (and the options as asked) are in "Decisions"; full text in git history.
 
 ## Decisions
 User answers 2026-10-26 (stage 1, round 1):
@@ -128,6 +103,15 @@ User answer 2026-10-26 (stage 2, round 2):
 - Q6: a figure that any other writer touches (PO-CHAR scenery, tile 0xB378, the bottom-third
   scrolls, the clears, CLS) loses its sprite at that moment; the ULA keeps whatever the original
   left (moved, half-wiped or residue), exactly as the original shows it. No scrolling sprites.
+
+User report 2026-10-27 (hardware round 1, screenshots from CSpect):
+- Sprite build d4302eef: hangs at the control menu on the Next, keys do not respond, after a few
+  seconds; runs in CSpect but very slow, with graphical issues.
+- Q7 (Dean): every sprite needs a border - left / right / up / down neighbour pixels only. Colour
+  not answered: black proposed (paintable on the sheet).
+- Q8 (Dean): the scenery must not clash when a figure passes over it (reverses Q3 = 3a): remove
+  the figure-cell attribute painting from the ULA; the game's attribute readers get the original
+  values from a shadow (design stated to Dean 2026-10-27; his explicit go-ahead not yet given).
 
 ## Stage 2 analysis (2026-10-26; scratch probes, not in the repo)
 - Build input: the RZX's embedded snapshot = RZX block 0x30, flags 2 (zlib), a .z80 (39,419
@@ -227,7 +211,23 @@ sprites `..._sprites.nex` d4302eeff4bec044f61cc028fda8c3d4, both boot OK (nextbo
   table full missed, overflow kept by a full clear, INK 9 ignored).
 - Full verification: not run (stage 3). ~25 min (quick 9000 took ~3 min).
 
+## Hardware rounds
+Round 1 (2026-10-27): d4302eef hung at the menu (keys dead). Cause (analysis; hardware result of
+the fix pending): the game reads keys through ROM KEY-SCAN 0x028E / K-TEST 0x031E (its INKEY$
+runtime at 0x61C2) and prints / clears / plots through ROM too. The Next fills the alt ROM from
+NextZXOS's ROM3 (not Sinclair's), then the build wrote only 0x386E-0x3BB3 (hooks, over NextZXOS
+data at 0x3B00-) and the 3 JPs below 0x2000; the verifier ran Sinclair's ROM (BRIEFING C2 #5).
+Fix 5830cbbd: the stub writes the WHOLE 16K image from the build (patch.altrom_low = page 25 with
+0x0000-0x1FFF + JPs; altrom = 0x2000-0x4000 from page 24); the image the game reads is the one
+verified, byte for byte. Check: cauldron.rom3_independent boots with a ROM3 that differs in every
+byte (negative control: the old partial image fails it, 15,546 bytes). Shared code (additive,
+default off): z80tonex.altrom_fill `low` (replaces altrom0), nextboot boot / check `sysrom=`;
+`selftest --canary` PASSED. quick 2000: same counters as stage 2, IDENTICAL; unit 43 + 9 PASS.
+
 ## Open
+- Hardware result of 5830cbbd (menu keys, play). CSpect "very slow" with d4302eef: unexplained
+  (hook cost measured mean 2,765 T / frame); ask whether the plain .nex is slow there too.
+- Outline (Q7) and no figure attribute painting + shadow attribute reads (Q8): not built.
 - Colour map + colour sheets + recolour (PLAYBOOK 5, COLOURS.md): not built yet (stage 3 sends the
   sheets: build them first; patterns are converted at run time, so a colour map needs an override
   table keyed by graphic byte in a Next page).
@@ -240,6 +240,10 @@ sprites `..._sprites.nex` d4302eeff4bec044f61cc028fda8c3d4, both boot OK (nextbo
 - IM 2 path (0x63DB, handler 25576): when is it used? Not in this recording.
 
 ## Lesson candidates
+- A game that runs ROM code (KEY-SCAN, PRINT, CLS) from an alt ROM image whose rest is copied
+  from the SYSTEM ROM3 runs NextZXOS's ROM on hardware, not the one verified: Cauldron hung at the
+  menu, keys dead. Write the whole image from the build (patch.altrom_low) and prove it with a
+  foreign-ROM3 boot (nextboot sysrom=). Candidate: make that the altrom default (BRIEFING C2 #5).
 - A ROM routine as a writer (PR-ALL, CL-LINE, CL-SCROLL) is hooked with a JP in the alt ROM image
   below 0x2000 (patch.altrom0, new); scan the whole ROM for jumps into the replaced bytes first
   (Cauldron: PO-SCR CALLs 0x0E00, inside CL-SCROLL's 0x0DFE).
@@ -266,26 +270,14 @@ sprites `..._sprites.nex` d4302eeff4bec044f61cc028fda8c3d4, both boot OK (nextbo
   card for "virtual attribute read" would cover keeping clash-free colours with such readers.
 
 ## Stage log
+- 2026-10-27 hardware round 1 (menu hang -> whole alt ROM from the build; outline + clash requests recorded): ~45 tool calls, 3 user rounds.
 - 2026-10-26 stage 0+1 (survey, patch plan, design question; pilot): see Pilot log.
 - 2026-10-26 stage 1 answers: RZX snapshot, all figures sprites, overlay, keep attr painting (3a), defaults 4/5.
 - 2026-10-26 stage 2 part 1 (analysis: snapshot extract, plotter decode, 3 whole-RZX probes, Q6): ~85 tool calls, ~1h20, 2 user rounds.
 - 2026-10-26 stage 2 part 2 (engine: module, asm, profile, verify, 43 unit cases + 9 negatives, quick 2000 + 9000 PASS, record; shared altrom0 + canary): ~100 tool calls, 0 user rounds. Whole engine modules read: none (fireman template functions only).
 
 ## Pilot log
-Technique-card pilot, stage 0 + 1, one session, 2026-10-26.
-- Tool calls: ~85 (incl. 4 failed: survey started from the wrong cwd (module not found), an rm
-  stopped by the safety check, a chained sleep blocked, a scratch script named dis.py shadowing
-  the stdlib `dis`).
-- Wall time to the design question: ~78 min, of which ~58 min the survey (89,596 frames; the
-  PLAYBOOK rate holds: ~15 min per 18K frames). Probes: screen-reader pass 10 min, per-caller
-  preview (44,800 frames) ~6 min, memory diffs < 1 min each.
-- Files read more than once: LEARNINGS.md x2 (two different 10-line spans), survey.json x2
-  (queries). Each doc, card and survey.md read once.
-- Cards opened (3): detect.gameplay-screen-readers, patch.xor-overlay-keep-ula, patch.xor-shadow.
-  Judged from index.json alone (5): scratch-redirect, isr-deferral, display-atomic-switch,
-  pattern-cache, tracked-unit. Engine modules of other games read: none.
-- Card choices later corrected: none. Static disassembly of the .z80 was partly stale (the RZX is
-  a different build); the routines the cards rest on were checked identical in both.
-- What cost the most besides the survey: finding the .z80 / RZX mismatch only at call ~60 (after
-  disassembling the .z80). A start-state comparison belongs in the survey (lesson candidate).
-- User rounds: 0 so far (the design question is round 1).
+Technique-card pilot, stage 0 + 1, 2026-10-26: ~85 tool calls (4 failed), ~78 min to the design
+question (~58 min of it the survey); 3 cards opened, 5 judged from index.json, none corrected later.
+Costliest besides the survey: finding the .z80 / RZX mismatch only at call ~60 (lesson candidate).
+Full log in git history.

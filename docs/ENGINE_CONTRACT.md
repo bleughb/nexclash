@@ -38,8 +38,9 @@ OPTIONAL (when the engine has the feature):
 bytes differ; `stub_extra` + `setup_call` (setup code the stub runs), `hook_page_data`,
 `extra_banks` {bank: bytes}, `uses_printer_buffer`, `tail_addr` (below 0xC000); alt-ROM hooks:
 `altrom = (lo, hi)` + `page` (the 8K image); ROM bytes below 0x2000 (a JP into the hooks at a
-ROM routine, Cauldron): `altrom0 = [(addr, page offset, n)]` - bytes of `page` outside lo..hi,
-copied by the stub (z80tonex.altrom_fill) and checked by nextboot.check; older strategies `slot1`,
+ROM routine, Cauldron): `altrom_low = (RAM page, 8K image of 0x0000-0x1FFF)` - with `altrom =
+(0x2000, 0x4000)` the whole image is the build's, not the Next's NextZXOS ROM3 (BRIEFING C2 #5;
+z80tonex.altrom_fill copies it, nextboot.check compares it); older strategies `slot1`,
 `keep_printer_buffer`, `max_tail`.
 
 ## Verify loop (the part every engine repeats; copy it from chuckie.verify)

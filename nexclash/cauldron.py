@@ -46,7 +46,7 @@ V_N, V_OVF, V_NFREE, FREE, TAB = 0x0000, 0x0001, 0x0002, 0x0003, 0x0100   # page
 SITES = {0x6357: ('5e2356', 'e_plot', 'plot'), 0xB2A0: ('210048', 'e_clr', 'clr'),
          0xB366: ('6f2600', 'e_tile', 'tile'), 0xDED2: ('210050', 'e_scl', 'scl'),
          0xDEEA: ('21ff57', 'e_scr', 'scr')}
-# ROM sites (alt ROM bytes below 0x2000, patch.altrom0): (original, jump symbol, kind)
+# ROM sites (alt ROM bytes below 0x2000, in patch.altrom_low): (original, jump symbol, kind)
 ROM_SITES = {0x0B9B: ('3a915c', 'j_char', 'char'), 0x0E44: ('c5cd9b', 'j_cll', 'cll'),
              0x0E00: ('cd9b0e', 'j_csc', 'csc')}
 # where the original and the patched code meet again after a site: (pc, SP change)
@@ -154,30 +154,31 @@ class CauldronPatch:
         if any(b != 0xFF for b in rom[ROM_ORG:self.regblock + 20]):
             raise ValueError('alt ROM hook range is not free ($FF) in the 48K ROM')
         self.slot1 = (ALT_PAGE, self.regblock)
-        self.altrom = (ROM_ORG, self.regblock + 20)
+        # The WHOLE alt ROM image comes from the build (Sinclair's 48K ROM + hooks): the Next copies
+        # NextZXOS's ROM3 first, which is not Sinclair's (BRIEFING C2 #5; it has data at 0x3B00-,
+        # where the hooks sit), and the game runs ROM KEY-SCAN, PRINT, CLS, PIXEL-ADD from it.
+        self.altrom = (0x2000, 0x4000)
         page = bytearray(rom[0x2000:0x4000])
         page[ROM_ORG - 0x2000:ROM_ORG - 0x2000 + len(self.rom_code)] = self.rom_code
-        j0 = self.syms['j_char']                 # the jump block (0x3000-: outside lo..hi, not copied)
-        page[j0 - 0x2000:j0 - 0x2000 + len(self.jmp)] = self.jmp
-        self.page = bytes(page)
-        self.altrom0 = [(a, self.syms[sym] - 0x2000, 3) for a, (old, sym, k) in sorted(ROM_SITES.items())]
+        self.page = bytes(page)                  # ROM 0x2000-0x3FFF + hooks (register block: the stub)
+        low = bytearray(rom[0:0x2000])           # ROM 0x0000-0x1FFF + the JPs at the ROM sites
+        j0 = self.syms['j_char']                 # the jump block as assembled (0x3000-; not in the image)
         for a, (old, sym, k) in ROM_SITES.items():
             if rom[a:a + 3] != bytes.fromhex(old):
                 raise ValueError('48K ROM differs at 0x%04X' % a)
-            if page[self.syms[sym] - 0x2000] != 0xC3:
+            jp = self.jmp[self.syms[sym] - j0:self.syms[sym] - j0 + 3]
+            if jp[0] != 0xC3:
                 raise ValueError('jump block: no JP at %s' % sym)
+            low[a:a + 3] = jp
+        self.altrom_low = (ALT_PAGE + 1, bytes(low))
         self.sites = [(a, bytes.fromhex(old), b'\xC3' + self.syms[sym].to_bytes(2, 'little'))
                       for a, (old, sym, k) in SITES.items()]
-        self.extra_banks = {12: self.page + bytes(8192), PG_BANK: page26(self.p26) + bytes(8192)}
+        self.extra_banks = {12: self.page + bytes(low), PG_BANK: page26(self.p26) + bytes(8192)}
 
     def rom_image(self):
-        """The alt ROM image the patched game reads at 0x0000-0x3FFF."""
-        img = bytearray(_rom48())
-        lo, hi = self.altrom
-        img[lo:hi] = self.page[lo - 0x2000:hi - 0x2000]
-        for addr, off, n in self.altrom0:
-            img[addr:addr + n] = self.page[off:off + n]
-        return img
+        """The alt ROM image the patched game reads at 0x0000-0x3FFF (the stub adds the register
+        block at self.regblock; the game never reads it)."""
+        return bytearray(self.altrom_low[1] + self.page)
 
     def apply(self, snap):
         if snap.is128:
@@ -1121,6 +1122,26 @@ def negative_patches(patch):
 # auto: plain + sprite build from the RZX's snapshot, verify, unit tests
 # ---------------------------------------------------------------------------------------------
 
+def rom3_independent(nex, src, patch, conv):
+    """Boot with a system ROM3 that differs from Sinclair's in every byte: the alt ROM must still
+    be exactly patch.rom_image() (+ the register block). -> list of problems."""
+    from .nextboot import check
+    foreign = bytes(b ^ 0x5A for b in _rom48())
+    bad = check(nex, src, patch, (conv[1], conv[1] + len(conv[2])), nexload=True, sysrom=foreign)
+    from .nextboot import boot
+    import copy
+    from . import z80tonex as zt
+    s = zt.Z80Snapshot(src)
+    st = boot(nex, s.pc, nexload=True, sysrom=foreign)
+    img = patch.rom_image()
+    view = bytes(st['mem'][a] for a in range(0x4000))
+    rb = patch.regblock
+    d = [a for a in range(0x4000) if view[a] != img[a] and not rb <= a < rb + 20]
+    if d:
+        bad.append(('alt ROM differs from rom_image()', len(d), [hex(x) for x in d[:6]]))
+    return bad
+
+
 def auto(a, z80, name, out, say):
     from . import z80tonex as zt
     from .nextboot import check
@@ -1143,8 +1164,12 @@ def auto(a, z80, name, out, say):
     spr = os.path.join(out, name + '_sprites.nex')
     conv = zt.convert(src, spr, None, True, quiet=True, patch=patch)
     bad2 = check(spr, src, patch, (conv[1], conv[1] + len(conv[2])), nexload=True)
+    # the Next copies NextZXOS's ROM3, not Sinclair's: boot again with a ROM3 that differs in every
+    # byte; slots 0/1 must still show exactly the image the verify runs on (BRIEFING C2 #5)
+    bad2 += ['foreign ROM3: %s' % x for x in rom3_independent(spr, src, patch, conv)]
     say('Sprites   : %s  %s  boot %s' % (os.path.basename(spr), md5(spr),
-                                         'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200]))
+                                         'OK (also with a foreign ROM3)' if not bad2 else
+                                         'MISMATCH %s' % str(bad2[:3])[:200]))
     ok = not bad and not bad2
     json.dump(DECISIONS, open(os.path.join(out, name + '_decisions.json'), 'w'))
     if getattr(a, 'decisions', None):

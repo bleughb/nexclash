@@ -34,9 +34,11 @@ def load_nex(path):
 NEXLOAD_PRINTER = bytes((0xA5 ^ k) for k in range(256))
 
 
-def boot(nex, pc_stop, limit=5_000_000, nexload=False):
+def boot(nex, pc_stop, limit=5_000_000, nexload=False, sysrom=None):
     """Run the NEX from its entry point until PC == pc_stop. Returns the machine state dict.
-    nexload: start with the printer buffer overwritten as NEXLOAD leaves it (NEXLOAD_PRINTER)."""
+    nexload: start with the printer buffer overwritten as NEXLOAD leaves it (NEXLOAD_PRINTER).
+    sysrom: the system ROM3 the stub copies into the alt ROM (default Sinclair's rom48(); the Next's
+    is NextZXOS's - pass a different ROM to prove an image does not depend on it, BRIEFING C2 #5)."""
     banks, sp, pc = load_nex(nex)
     pages = {}
     for b, data in banks.items():
@@ -44,7 +46,7 @@ def boot(nex, pc_stop, limit=5_000_000, nexload=False):
         pages[2 * b + 1] = bytearray(data[8192:16384])
     if nexload and 10 in pages:
         pages[10][0x1B00:0x1C00] = NEXLOAD_PRINTER
-    rom = rom48()
+    rom = sysrom if sysrom is not None else rom48()
     st = {'mmu': [0xFF, 0xFF, 10, 11, 4, 5, 20, 21], 'nr': {0x8C: 0, 0x08: 0}, 'p7ffd': 0x00, 'p1ffd': 0,
           'alt': [bytearray(16384), bytearray(16384)], 'bad': [], 'sel': 0, 'ports': {}, 'nrlog': []}
 
@@ -123,7 +125,7 @@ def boot(nex, pc_stop, limit=5_000_000, nexload=False):
     return st
 
 
-def check(nex, z80, patch=None, tail=None, nexload=False):
+def check(nex, z80, patch=None, tail=None, nexload=False, sysrom=None):
     """Boot the NEX and compare with the snapshot: registers (except R), RAM 0x4000-0xFFFF (patched
     RAM from the NEX's own banks 5/2/0, except the tail bytes), what slots 0/1 show (ROM3 or
     ROM3 + alt ROM patch bytes), paging lock, $8C. Returns a list of problems (empty = OK).
@@ -133,7 +135,7 @@ def check(nex, z80, patch=None, tail=None, nexload=False):
     if patch is not None:
         patch = copy.deepcopy(patch)          # apply() again on a fresh snapshot, caller's object untouched
         patch.apply(s)
-    st = boot(nex, s.pc, nexload=nexload)
+    st = boot(nex, s.pc, nexload=nexload, sysrom=sysrom)
     R, mem, bad = st['R'], st['mem'], list(st['bad'])
     w = lambda h, l: R[h] * 256 + R[l]
     got = {'BC': w(2, 3), 'DE': w(4, 5), 'HL': w(6, 7), 'AF': w(0, 1), 'IX': w(8, 9), 'IY': w(10, 11),
@@ -148,16 +150,15 @@ def check(nex, z80, patch=None, tail=None, nexload=False):
     diffs = [a for a in range(0x4000, 0x10000) if mem[a] != ram[a - 0x4000] and not t0 <= a < t1]
     if diffs:
         bad.append(('RAM differs', len(diffs), diffs[:6]))
-    rom = rom48()
-    img = bytearray(rom)
+    img = bytearray(sysrom if sysrom is not None else rom48())
     if getattr(patch, 'altrom', None) or getattr(patch, 'slot1', None):
         regs = zt.build_tail(s, 0x8000, patch.slot1, bool(getattr(patch, 'altrom', None)))[3]
         rb = patch.slot1[1]
         if getattr(patch, 'altrom', None):
             lo, hi = patch.altrom
             img[lo:hi] = patch.page[lo - 0x2000:hi - 0x2000]
-            for addr, off, n in getattr(patch, 'altrom0', ()):    # ROM bytes below 0x2000 (z80tonex.altrom_fill)
-                img[addr:addr + n] = patch.page[off:off + n]
+            if getattr(patch, 'altrom_low', None):           # 0x0000-0x1FFF from the build (z80tonex.altrom_fill)
+                img[0:0x2000] = patch.altrom_low[1]
         else:
             img[0x2000:0x4000] = patch.page
         img[rb:rb + len(regs)] = regs                    # register block written by the stub

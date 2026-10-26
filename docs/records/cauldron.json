@@ -68,17 +68,17 @@
   },
   "sprites": {
    "file": "Cauldron_1985_Palace_Software_a_sprites.nex",
-   "md5": "d4302eeff4bec044f61cc028fda8c3d4"
+   "md5": "5830cbbdc6e327d5c53e22ff8e7924a9"
   }
  },
  "repro": [],
  "status": {
   "title": "Cauldron",
   "engine_col": "cauldron (cauldron.md)",
-  "build": "Cauldron_1985_Palace_Software_a_sprites.nex d4302eef (every XOR-plotted image a 2 x 2 4-bit sprite in the cell ink; overlay; touch hooks on every screen writer; alt ROM + page 26, 28 MHz)",
+  "build": "Cauldron_1985_Palace_Software_a_sprites.nex 5830cbbd (every XOR-plotted image a 2 x 2 4-bit sprite in the cell ink; overlay; touch hooks on every screen writer; whole alt ROM image from the build + page 26, 28 MHz)",
   "software": "quick runs IDENTICAL: 9,000 frames (6,448 plots, every writer kind but CL-SCROLL; 2.03M sprite pixels, tables, transient checks), unit 43 cases + negative controls 9/9 PASS (2026-10-26, stage 2); full RZX not yet",
-  "hardware": "untested",
-  "next": "stage 3: selftest --game cauldron --verify --stamp, colour map + sheets, hardware checklist"
+  "hardware": "d4302eef hung at the menu on a Next (keys dead; Dean 2026-10-27; ran slow in CSpect); 5830cbbd (whole alt ROM, not NextZXOS ROM3) sent for test",
+  "next": "hardware result of 5830cbbd; then outlines + no figure attribute painting (Dean 2026-10-27), colour map + sheets, full verify --stamp"
  },
  "checks": [
   "asm2profile:cauldron"
