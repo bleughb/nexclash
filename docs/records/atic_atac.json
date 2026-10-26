@@ -75,7 +75,7 @@
   "build": "atic_atac_sprites.nex 4a7bc013 (every figure a 4-neighbour-outlined, solid hardware-sprite image; image groups with row masks for the appear / death effect; XOR shadow screen; hooks: alt ROM + pages 26 / 28, 28 MHz)",
   "software": "full RZX IDENTICAL (18,279 frames: registers, memory, ULA ^ shadow, attributes, entries, sprite pixels vs the original's plots), unit 1,473 cases + negative controls 3/3 PASS; stamped by selftest 2026-10-26 (outline = 4-neighbours)",
   "hardware": "untested",
-  "next": "stage 3 delivery: hardware round 1 + colour sheets (per-pixel colour model: Dean to decide)"
+  "next": "hardware round 1 (default inks, Dean 2026-10-26); colour sheets later if asked"
  },
  "checks": [
   "asm2profile:atic_atac"

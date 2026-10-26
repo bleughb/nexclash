@@ -3,11 +3,11 @@
 ## Next session
 Stage: 4 (hardware round 1)    State: stage 3 done 2026-10-26: build stamped by selftest (verified)
 Inputs: specnext/reference/atic_atac/ (snapshot, AticAtac.rzx)    Branch: claude/atic_atac (both repos)
-Start with: Dean's hardware result for atic_atac_sprites.nex (checklist below; CSpect first is not needed:
-  no start-up change since the plain build). Colour sheets NOT built: today a sprite's colour = one
-  palette offset (the figure's ink, IX+5), so a painted per-pixel sheet needs a colour model first - ask
-  Dean: (a) default inks are enough, or (b) per-pixel painting (then pattern indices 1-14 carry the
-  paint, offsets stay per figure; recolour banks = the pattern store pages 32-44, never read by the game)
+Start with: Dean's hardware result for atic_atac_sprites.nex (checklist below; no start-up change since the
+  plain build, so CSpect first is not needed). Colours: Dean chose DEFAULT INKS for round 1 (2026-10-26;
+  figure's own ink, black outline). Paintable colour sheets only if he asks after the hardware round:
+  then a per-pixel model first (pattern indices 1-14 carry the paint, palette offsets stay per figure;
+  recolour banks = pattern store pages 32-44, never read by the game) + engine sheet / capture / read-back
 Read: this file (Hardware checklist, Open), PLAYBOOK stage 4, docs/COLOURS.md only for (b)
 Open: speed on hardware (setups ~2.5k T each); game-over path not recorded; menus / pause asked
 
@@ -229,7 +229,7 @@ Sprite borders are 1 px wide with left / right / up / down neighbours only (no d
 ## Open
 - Speed on hardware: setups cost ~2.5k T; if the game slows, skip the pattern upload when an entry
   shows the image it already holds (same pairs, same image), or keep the last uploaded image per pair.
-- Colour sheets: not built; needs Dean's colour-model answer (Next session). reference/atic_atac/atic_atac_REFERENCE_OUTLINES_4N.png shows every stored image with its outline (default colours, 3x).
+- Colour sheets: not built; Dean 2026-10-26: default inks for round 1, sheets later if wanted (Next session). reference/atic_atac/atic_atac_REFERENCE_OUTLINES_4N.png shows every stored image with its outline (default colours, 3x).
 - Menus / message windows over the play area: asked 2026-10-26 (pause? the inventory?).
 - Test cheat (immortality / no chicken drain): offered 2026-10-26.
 - Game-over path (35893) not in the recording.
