@@ -61,3 +61,11 @@ budget). Maintainers read this; agents read the standard.
 | Whole-module reading exceptions go in the session's Stage log line, not the game's technical notes | §12 |
 | `detect.tracked-unit` stays `candidate` until a second game exercises the row-mask path | §11 |
 | Changelog moved out of the standard into this file | - |
+
+## 2026-10-27 - optional external investigation examples
+
+User-requested catalogue additions; the v3.4 schema and pilot workflow stay frozen.
+- Three candidate detection cards: drawing parameters, graphics record layout, buffer layout/producer.
+- Tracked-unit revision 2 adds Quazatron's composite draw-list example and the parameter probe.
+- External Lua sources are pinned and source-reviewed only; addresses/formats remain game-specific.
+- No scripts imported, runtime code changed, game applications added or verification results claimed.
