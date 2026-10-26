@@ -1,13 +1,13 @@
 # Cauldron (Palace Software, 1985; 48K) - no engine yet (stage 1: design question sent)
 
 ## Next session
-Stage: 1 (design) waits for the user's answer; then 2 (build)    State: question sent 2026-10-26
+Stage: 2 (build)    State: stage-1 answers recorded 2026-10-26 (Decisions); build not started
 Inputs: specnext/reference/cauldron/ (Cauldron_1985_Palace_Software_a.z80, cauldron.rzx)
 Branch: claude/cauldron
-Start with: record the answers under "Decisions"; settle Q0 (which start snapshot) BEFORE any build
+Start with: extract the RZX's embedded snapshot as the build input (Q0); LD (nn) scan of 0x6357 + sites
 Read: PLAYBOOK stage 2, this file, docs/techniques/patch.xor-overlay-keep-ula.md,
   then patch.display-atomic-switch.md (deferred card, see Patch plan)
-Open: Q0-Q5 below; bit-level POINT check (only if a shadow design is ever reconsidered)
+Open: bit-level POINT check (only if a shadow design is ever reconsidered)
 
 Reference: specnext reference/cauldron/. Status: stage 0 + stage 1 analysis done 2026-10-26
 (technique-card pilot). Analysis scripts are scratch (not in the repo): a one-off screen-reader
@@ -114,10 +114,16 @@ Sheets: preview.png (survey) and preview_6357.png (per caller; scratch, regenera
 `preview ... --plot 0x6357 --at 3000,8000,15000,22398,33597,44796 --stop 44800`).
 
 ## Decisions
-(none yet)
+User answers 2026-10-26 (stage 1, round 1):
+- Q0: build from the RZX's embedded snapshot (the copy the recording proves).
+- Q1: every 0x6357 caller a sprite, incl. the cauldron-spot image and the HUD item icon (default 1).
+- Q2: figures in front - overlay (patch.xor-overlay-keep-ula), XOR kept on the ULA (default 3).
+- Q3: keep the figure-cell attribute painting (3a): clash halo stays, ATTR readers untouched.
+- Q4: figure colour = its cell ink until painted (default 4).
+- Q5: Layer 2 + sprites off on the text screens (0xC4AE family) and the control menu (default 5);
+  always-ask items (solid vs see-through, outline) left at the defaults.
 
 ## Open
-- Q0-Q5 unanswered.
 - Bit-level check of the POINT readers (obs. 9) if a shadow design is ever wanted.
 - LD (nn),A / LD (nn),HL scan of 0x6357 and its call sites before choosing hook sites (stage 2).
 - IM 2 path (0x63DB, handler 25576): when is it used? Not in this recording.
@@ -136,6 +142,7 @@ Sheets: preview.png (survey) and preview_6357.png (per caller; scratch, regenera
 
 ## Stage log
 - 2026-10-26 stage 0+1 (survey, patch plan, design question; pilot): see Pilot log.
+- 2026-10-26 stage 1 answers: RZX snapshot, all figures sprites, overlay, keep attr painting (3a), defaults 4/5.
 
 ## Pilot log
 Technique-card pilot, stage 0 + 1, one session, 2026-10-26.
