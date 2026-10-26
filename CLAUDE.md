@@ -70,7 +70,8 @@ version; tools/sjasmplus/README.md). Maintainers: repos and private files in doc
   (the maintainers' `--affected` does, docs/MAINTAIN.md). Without the references, say in the
   contribution note that shared code changed. Without push access selftest.py refuses the other runs.
 - Never `pkill -f` / kill by `pgrep -f` pattern (it matches your own shell): `pgrep -fa`, read, kill
-  the PID in the next command.
+  the PID in the next command. No `pgrep -f` in ANY loop condition (`until ... && ! pgrep -f X`
+  too: the loop's own command line contains X, never ends; recurred at stage 1): `kill -0 PID` or the log.
 - The start-up tail must end below 0xC000, 48K too (the stub's bank 10 sits at 0xC000-0xFFFF;
   Trueno never booted). z80tonex.choose_tail_addr refuses such a tail; nextboot.check catches it.
 - Shell heredocs that write docs: quote the delimiter (`<<'EOF'`), or the shell runs every

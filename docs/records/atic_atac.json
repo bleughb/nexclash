@@ -1,0 +1,83 @@
+{
+ "name": "atic_atac",
+ "order": 20,
+ "game": "Atic Atac",
+ "doc": "atic_atac.md",
+ "engine": "atic_atac",
+ "representative": true,
+ "reference": "atic_atac",
+ "inputs": {
+  "snapshot": {
+   "name": "Atic_Atac_1983_Ultimate_Play_The_Game_a.z80",
+   "md5": "06b11e63d60401666332a61626a5789c",
+   "path": "atic_atac/Atic_Atac_1983_Ultimate_Play_The_Game_a.z80"
+  },
+  "recordings": [
+   {
+    "name": "AticAtac.rzx",
+    "md5": "3e3845a6391f2533d7fa45d4ad828e79",
+    "path": "atic_atac/AticAtac.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "atic_atac"
+ ],
+ "own_modules": [
+  "atic_atac"
+ ],
+ "data": [
+  "docs/profiles/atic_atac.json",
+  "asm/atic_atac_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": {
+   "engine": "atic_atac",
+   "strategy": "pure-XOR row blitters 0x9EDC / 0x9F21 -> 1-bit shadow screen (page 26 at slot 3; ULA ^ shadow = the original); non-XOR writers (room line 0x9C75, 5 drawers with run-time ops, text 0xA1E6) keep it exact; hooks in alt ROM image 1 at 0x2000, 28 MHz inside every hook",
+   "start": "the .z80 (loader state) run to JP 24576 (frame 2); hook RAM 0x5B80-0x5BFF zeroed (loader bytes there are dead)",
+   "figures": "every figure a hardware-sprite image (Dean 2026-10-26: decisions 1-5 = defaults); the panel's pocket icons (x >= 192) stay on the ULA",
+   "images": "image group = (the id's graphic in the snapshot, x, base line) + row mask: a plot of the graphic toggles all rows, the appear / death effect's one-row slice (0x8CD8) row k; all rows = the stored image (207 images, pages 32-44), some = built by the hook (work page 28)",
+   "outline": "solid: ink 1, enclosed paper (4-connected flood) + 1-px outline (8-neighbours) black 2, else transparent (Dean 2026-10-26)",
+   "colours": "palette offset = the figure's ink + 8 * BRIGHT (IX+5); the figure painter's 6 LD (HL),D become NOP",
+   "tail": "0x5B00 (printer buffer: never touched in the RZX)"
+  }
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "AticAtac.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 15,
+  "note": "auto: differential verify at every hook site (rows, setups, clear, room line, 5 drawers, text, op writers, figure painter): all registers incl. AF', memory outside the screen / attributes / hook RAM / dead stack, ULA ^ shadow = the original's screen, attributes (painter's skipped cells tracked, never read by the game), interrupt safety (IY / I / alternates / IFF, hook stack, slots 3 / 6 / 7 and CPU speed given back); at every setup and clear the entry table vs the group model from the original's plots, pair bitmap, visible sprites, shadow vs the converted rows, every shown image's pixels and colour vs expected_map of the original's plotted pixels; globally no unhooked read / write of a figure byte or skipped attribute, no patch-site write, no jump into a patched instruction; every plot's graphic bytes = the snapshot's. + unit tests (every stored image at edges, slices, death / appear sequences, random masks, panel, full table, clear, writers over figures, text off-screen) with 3 negative controls on their own tables / code"
+ },
+ "outputs": {
+  "plain": {
+   "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a.nex",
+   "md5": "e710fa8785802f1aa51f214d95c82343"
+  },
+  "sprites": {
+   "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites.nex",
+   "md5": "59493b7563e6dd1c7141a6763cf52d73"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Atic Atac",
+  "engine_col": "atic_atac (atic_atac.md)",
+  "build": "atic_atac_sprites.nex 59493b75 (every figure an outlined, solid hardware-sprite image; image groups with row masks for the appear / death effect; XOR shadow screen; hooks: alt ROM + pages 26 / 28, 28 MHz)",
+  "software": "full RZX IDENTICAL (18,279 frames: registers, memory, ULA ^ shadow, attributes, entries, 47.3M sprite pixels vs the original's plots), unit 1,473 cases + negative controls 3/3 PASS (2026-10-26; not yet stamped by selftest)",
+  "hardware": "untested",
+  "next": "stage 3: selftest --verify --stamp, colour sheets, hardware checklist"
+ },
+ "checks": [
+  "asm2profile:atic_atac"
+ ]
+}

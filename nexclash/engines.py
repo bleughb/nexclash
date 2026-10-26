@@ -29,6 +29,7 @@ ENGINES = [
     ('matchday', 'is_matchday', None),                                    # Match Day (48K)
     ('cyclone', 'is_cyclone', None),                                      # Cyclone (48K)
     ('incredible_shrinking_fireman_add_opus', 'is_incredible_shrinking_fireman_add_opus', None),  # The Incredible Shrinking Fireman (48K)
+    ('atic_atac', 'is_atic_atac', None),                                  # Atic Atac (48K)
 ]
 
 
