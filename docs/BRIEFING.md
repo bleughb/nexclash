@@ -464,6 +464,12 @@ Designs not built yet (use when a game needs them)
    the original's slack at each (T from the main-code call's return to the next interrupt, over an
    RZX): a routine on both lists with little slack is a nesting risk once hooks add cost (LEARNINGS
    2.1f; Incredible Shrinking Fireman found it only on hardware, 2026-10-25).
+41. survey: compare the RZX's embedded snapshot with the delivered .z80 and WARN when they differ
+   (Cauldron 2026-10-26: 11,283 bytes, the code shifted; found only at tool call ~60, after a stale
+   disassembly). Both start states are at hand in survey.analyse.
+42. inspect: the "loader snapshot" WARNING fires when PC is in ROM only because an IM 1 interrupt was
+   just taken with the BASIC loader still in memory (Cauldron: PC 0x0038, stacked return 0x613E =
+   game code). Check the stacked return address before warning; add a tools_check case.
 
 ### C3b. Two verification levels (agreed with Dean 2026-09-29; how to run them: PLAYBOOK 6)
 - ITERATE (per change): original bytes at every site, boot check, unit tests (with negative

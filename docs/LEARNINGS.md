@@ -79,7 +79,9 @@ BRIEFING - with its reason.
   NextZXOS has data at 0x3B00-0x3CFF. A patch that relies on 48K ROM bytes there must write them
   into the alt ROM itself (El Capitan Trueno: a 'map of 0xFF bytes' at 0x3B00 let the plotter draw
   into the ULA until the build copied 0xFF over 0x3B00-0x3CFF). nextboot.check uses rom48() for
-  ROM3, so it cannot see this (BRIEFING C2).
+  ROM3 unless given `sysrom=` (BRIEFING C2 #5). A game that runs ROM code (KEY-SCAN, PRINT) from
+  the image runs NextZXOS's on hardware: Cauldron's menu hung, keys dead, until the build wrote the
+  whole image (patch.altrom_low) and a foreign-ROM3 boot proved it (2026-10-27).
 - A legacy 1FFD/7FFD write from the stub remaps slots 6/7, where the stub runs: page the stub into
   slot 4 as an alias and run the paging + copy there (no stack), restore 6/7, jump back.
 - UNLOCKED legacy paging writes (7FFD/1FFD) remap MMU slots (most recent change wins); map

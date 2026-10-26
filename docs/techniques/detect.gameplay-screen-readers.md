@@ -2,9 +2,9 @@
 
 ```json
 {
-  "schema": 3,
+  "schema": 4,
   "id": "detect.gameplay-screen-readers",
-  "revision": 1,
+  "revision": 2,
   "kind": "detect",
   "title": "Does game logic read figure pixels from the screen?",
   "question": "Would removing a figure from the ULA change what the game decides?",
@@ -17,7 +17,7 @@
   "phases": [],
   "order": {},
   "owns": {},
-  "examples": ["atic_atac", "treasure_island_dizzy", "dizzy1"],
+  "examples": ["atic_atac", "treasure_island_dizzy", "dizzy1", "cauldron"],
   "sources": []
 }
 ```
@@ -28,6 +28,12 @@ the figure. Run it before choosing between removing figures from the ULA (patch.
 patch.scratch-redirect) and keeping them (patch.xor-overlay-keep-ula, or a virtual read). It sets
 `screen.gameplay_reads_figure_pixels` for the stated scope only.
 
+**Assumptions.** The recording reaches the gameplay whose reads matter; a reader's result can be
+compared with and without the figure (patched-screen model).
+
+**Validation gap.** Byte-level reads classed in four games; bit-level dependence is inferred
+(Cauldron POINT) unless a model check was run.
+
 ## Recognise
 - Collision or landing tests that read pixels (Treasure Island Dizzy's bubbles read Dizzy's pixels;
   Dizzy 1's falling objects land on him: 472 of 736 tests).
@@ -36,7 +42,10 @@ patch.scratch-redirect) and keeping them (patch.xor-overlay-keep-ula, or a virtu
 - A virtual read is wrong where boxes overwrite the player (Dizzy 3/4: screen XOR undo no longer holds).
 
 ## Probe and stop
-1. List screen reads by PC over the recording (no shared command yet; Atic Atac used a one-off pass).
+1. List screen reads by PC: `scan GAME.z80 --rzx R --range 0x4000-0x57FF --writers` (its readers;
+   attributes: `--range 0x5800-0x5AFF`). Compiled BASIC reads through runtime PEEK / POINT / ATTR
+   routines (Cauldron 0x61D8, 0x61F1): find those first, then class reads by return address;
+   `tools/probes/rzx_census.py R --pc <routine> --hl` counts them fast.
 2. Drop reads by the plotters and by drawers' own read-modify-write.
 3. For each remaining reader: does its result change with the figure removed (patched-screen model)?
 4. Scope: name the recording, frames, and paths not reached (survey coverage gate).

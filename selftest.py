@@ -333,6 +333,12 @@ def tools_check(src):
         ok('scan --writers (300 frames): screen writers 43909 x141017, 43916 x42204, 42409, 40068; 3 readers',
            w['writers'].get(43909) == 141017 and w['writers'].get(43916) == 42204 and
            set(w['writers']) == {43909, 43916, 42409, 40068} and len(w['readers']) == 3, w)
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tools', 'probes'))
+        import rzx_census                       # probe (tools/probes/README.md): C-simulator PC census
+        r = rzx_census.census(er, [40092, 43909], stop=300)
+        ok('probe rzx_census (300 frames): ISR 40092 x299 from frame 0, 43909 x141017 (= scan --writers)',
+           r['frames'] == 300 and not r['desync'] and r['pcs'][40092]['count'] == 299 and
+           r['pcs'][40092]['first'] == 0 and r['pcs'][43909]['count'] == 141017, r)
         sp = memscan.rest_spans({100: 5, 104: 1, 120: 2, 200: 9}, {200})
         ok('scan --writers: writers outside the top 10 joined into routine spans (100-104 x6, 120 x2)',
            [s[:3] for s in sp] == [(100, 104, 6), (120, 120, 2)], sp)

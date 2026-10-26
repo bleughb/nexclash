@@ -16,9 +16,10 @@ on their machine; the maintainers' reference files live in the private repo bleu
 4. Hardware + colour rounds: recolour (skill) for paintings; fixes as stage 2-3.
 5. Close: "End of every stage" below.
 Each stage ends with the "Next session" block in games/<game>.md and the prompt for the next chat
-(PLAYBOOK "Sessions"); a continuing session starts from that block, never from chat history. The
-game may already have notes and files (games/<game>.md, STATUS.md): read them first. Names: folder
-and games/<game>.md after the game, lower case, underscores.
+(PLAYBOOK "Sessions"); a continuing session starts from that block, never from chat history, then
+refreshes its knowledge from main at a safe boundary (docs/LEARNING.md 1: fetch, read the incoming
+changes, merge). The game may already have notes and files (games/<game>.md, STATUS.md): read them
+first. Names: folder and games/<game>.md after the game, lower case, underscores.
 
 ## Setup
 `pip install -r requirements.txt --break-system-packages` (SkoolKit + Pillow; a fresh cloud
@@ -90,16 +91,13 @@ version; tools/sjasmplus/README.md). Maintainers: repos and private files in doc
 - At stage 2-3: the evidence record docs/records/<game>.json (PLAYBOOK 7), then `python -m
   nexclash.records views` (writes STATUS.md's table, VERIFICATION.md's checksum list, verified.json;
   never edit those by hand - selftest fails when they are stale).
-- Capture (nothing learned may stay only in the chat); answer each, say in the reply what you wrote:
-  1. A fact or rule the docs did not give? -> "## Lesson candidates" in games/<game>.md (a platform
-     fact: BRIEFING directly). Maintainers promote candidates (docs/MAINTAIN.md).
-  2. A doc gave a rule without its reason, or a wrong one? -> fix it there, with the reason.
-  3. Hardware or an emulator failed where the toolkit passed? -> BRIEFING A1 "simulator blind
-     spots" + a candidate, and a toolkit check if one is possible.
-  4. A mistake recurred that a doc warns about? -> make that warning sharper, in place.
-  5. Not done or not proven? -> games/<game>.md Open, or BRIEFING C2 if general.
-  Before adding a line anywhere: grep for the subject; sharpen the existing line instead.
-- Changed any doc: `python tools/doccheck.py` (references resolve, size budgets) must PASS.
+- Learning loop (docs/LEARNING.md; a stage is not complete without it): every finding a line in
+  games/<game>.md "## Lessons" with its disposition tag (card / doc / tool / backlog / probe / local
+  / deferred), each acted on now: card or doc amended, useful scripts kept in tools/probes/, wrong
+  or reasonless rules fixed in place, recurring mistakes' warnings sharpened, hardware-only failures
+  in BRIEFING A1. "## Technique use": which cards / probes helped. Record matches the build. Grep
+  before adding a line anywhere; sharpen the existing one. Say in the reply what you wrote.
+- `python tools/doccheck.py` (references, budgets, cards, learncheck) must PASS.
 - Contributors: `python nexclash.py contribute <game> --report <the _report.txt>`, give the user the
   zip + the upload step from CONTRIBUTING.md. Maintainers: PR + private files (docs/MAINTAIN.md).
 - Reply: results, the .nex files, a short hardware checklist, the next session's prompt.
@@ -114,5 +112,5 @@ version; tools/sjasmplus/README.md). Maintainers: repos and private files in doc
 | docs/profiles/ | per-game profiles (hook hex read by the engines), signatures.json, verified.json (generated) |
 | docs/records/ | one evidence record per game: inputs, dependencies, rebuild / verify recipes, outputs, status, check stamps (nexclash/records.py) |
 | games/ | one file per game, named like its folder in specnext/reference/ (facts, decisions, status, results, open items, checklist, lesson candidates, Next session); tid_engine.md = shared TID facts |
-| docs/ | techniques/ (STANDARD, cards, index.json), PLAYBOOK (the stages), ENGINE_CONTRACT (what an engine provides; doccheck-checked), COLOURS (colour sheets, recolour), MAINTAIN (maintainers), BRIEFING (facts + backlog C2), LEARNINGS (lessons), TECHNIQUES (Next techniques, other projects), VERIFICATION (results log to 2026-10-25 + generated checksums), RECORDING_CHECKLIST, NEXT_REGISTERS, GUIDE_R3_REVIEW, contribute.json |
-| tools/ | doccheck.py (doc references + size budgets), asm2profile.py, sjasmplus/ (pinned assembler), hwtests/, make_package.py (release zip), merge_contribution.py, prototypes |
+| docs/ | LEARNING (learning loop), techniques/ (STANDARD, cards, index.json), PLAYBOOK (the stages), ENGINE_CONTRACT (what an engine provides; doccheck-checked), COLOURS (colour sheets, recolour), MAINTAIN (maintainers), BRIEFING (facts + backlog C2), LEARNINGS (lessons), TECHNIQUES (Next techniques, other projects), VERIFICATION (results log to 2026-10-25 + generated checksums), RECORDING_CHECKLIST, NEXT_REGISTERS, GUIDE_R3_REVIEW, contribute.json |
+| tools/ | doccheck.py (+ learncheck.py), probes/ (kept probes), asm2profile.py, sjasmplus/ (pinned assembler), hwtests/, make_package.py (release zip), merge_contribution.py, prototypes |

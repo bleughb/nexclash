@@ -2,9 +2,9 @@
 
 ```json
 {
-  "schema": 3,
+  "schema": 4,
   "id": "patch.xor-overlay-keep-ula",
-  "revision": 1,
+  "revision": 2,
   "kind": "patch",
   "title": "Overlay: keep every ULA write, cover XOR figures with sprites",
   "question": "Can figures become sprites without changing a single screen byte the game reads?",
@@ -21,7 +21,7 @@
     "cross": ["sprites cover the figure's ink pixels from plot entry to exit (patch.display-atomic-switch)"]
   },
   "owns": {"mmu_slots": "param", "memory": "param", "sprite_ids": "param", "pattern_slots": "param"},
-  "examples": ["incredible_shrinking_fireman-add-OPUS"],
+  "examples": ["incredible_shrinking_fireman-add-OPUS", "cauldron"],
   "sources": []
 }
 ```
@@ -32,12 +32,18 @@ figure's ink pixels, in front. Use when figures go in front and gameplay may rea
 (nothing changes on the ULA, so no virtual read is needed). Do not use when figures must go behind
 scenery (the ULA's XOR hole shows), or when the composition is not XOR.
 
+**Assumptions.** Figure pixels change only by their own plots, or every other writer is hooked.
+
+**Validation gap.** Fireman OPUS and Cauldron only; no masked or partial XOR images yet.
+
 ## Recognise
 - XOR figures that logic reads or might read, and the user wants figures in front (Fireman).
 - Every ULA pixel that differs from the clean scenery is a figure ink pixel under its own sprite,
   so the picture = scenery + sprites; where a figure crosses scenery ink, the sprite covers the hole.
 - Attribute painting of figure cells is usually what causes the clash: it can be removed if no
-  logic reads those attributes (Fireman: 0xBCDF LD (IX+0),A -> NOPs, value dead).
+  logic reads those attributes (Fireman: 0xBCDF LD (IX+0),A -> NOPs, value dead); if logic reads
+  them, patch.attribute-shadow.
+- No object table (compiled BASIC, Cauldron): key = (graphic, x, y, rows, width); a plot toggles it.
 
 ## Probe and stop
 1. `render.composition.xor` per plotter.
@@ -64,6 +70,7 @@ during hooks, alt ROM hook ranges.
 | Cell-colour flashes beside figures (Fireman round 1) | sprite moved only at exit; half-done plot visible | `cost --at` | patch.display-atomic-switch | - |
 | Extra figures / garbage in one room (Fireman round 2) | added hook time let the ISR nest a plot | patch.isr-deferral probes | patch.isr-deferral | save/restore globals |
 | Item or diamond at the wrong x | coordinate unit assumed (column vs pixel) | read the address helper | take the unit from the helper | - |
+| Sprite left where the figure was wiped or moved (Cauldron) | clears, scrolls, text overwrite XOR figures without an erase | byte trace of the figure's rows between plots | hook every other writer: it ends the sprite | XOR parity alone |
 
 ## Verification
 Registers and memory at every hook; plot screen change = old ^ new image of the model; sprite layer

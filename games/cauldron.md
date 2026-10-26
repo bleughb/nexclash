@@ -225,38 +225,47 @@ Round 2 (2026-10-27): 55ed40f8 (outline + no clash) works on the Next (Dean 2026
   any unhooked write into a live image's rectangle, so a recording that reaches one shows it.
 - Bit-level check of the POINT readers (obs. 9) if a shadow design is ever wanted.
 
-## Lesson candidates
-- Clash-free figures with attribute readers: keep the original's attribute file in a shadow page,
-  run the plotter's painting into it, hook every attribute reader / writer (a `scan --writers` of
-  0x5800-0x5AFF lists them), and verify that no code outside the hooks reads a cell whose ULA value
-  differs (Cauldron Q8). Candidate card: patch.attribute-shadow (no card covered it).
-- A hook that runs a whole routine (to the caller's return) makes sites inside it nested: the
-  replay must skip them until the span ends (Cauldron: PO-ATTR inside the plotter body).
-- A game that runs ROM code (KEY-SCAN, PRINT, CLS) from an alt ROM image whose rest is copied
-  from the SYSTEM ROM3 runs NextZXOS's ROM on hardware, not the one verified: Cauldron hung at the
-  menu, keys dead. Write the whole image from the build (patch.altrom_low) and prove it with a
-  foreign-ROM3 boot (nextboot sysrom=). Candidate: make that the altrom default (BRIEFING C2 #5).
-- A ROM routine as a writer (PR-ALL, CL-LINE, CL-SCROLL) is hooked with a JP in the alt ROM image
-  below 0x2000 (patch.altrom0, new); scan the whole ROM for jumps into the replaced bytes first
-  (Cauldron: PO-SCR CALLs 0x0E00, inside CL-SCROLL's 0x0DFE).
-- An entry hook can run the routine's body itself (CALL body; its RET comes back) when the exit
-  cannot take a JP (Cauldron: 0x63DB, the next routine, starts right after the RET): one site gives
-  both "show at entry" and "hide at exit"; the body sees 4 more stack bytes (dead stack).
-- XOR overlay without a fixed object table: key = (graphic, x, y, rows, width); one plot toggles it;
-  other writers taint it (no sprite until a clear holds it whole). Proof: any screen write outside
-  the plotter into a live key's rectangle fails the verify, so a missed writer cannot hide.
-- XOR parity per image is not "on the screen": overwrite writers wipe or move XOR figures without
-  an erase plot (frames 2602-2638); an overlay's live set must end at any other writer's touch
-  (byte-trace the figure's rows between plots). patch.xor-overlay-keep-ula lacks this failure row.
-- `inspect` flags "loader snapshot" when PC is in ROM only because an IM 1 interrupt was just
-  taken (BASIC loader still in memory): check the stacked return address first.
-- An RZX's embedded snapshot can be a different build of the game than the .z80 delivered with
-  it (Cauldron: 11,283 bytes differ, code shifted): the survey analyses the RZX's copy. The survey
-  could compare the two start states and warn (BRIEFING C2 candidate).
-- Compiled BASIC games read the screen through runtime PEEK / POINT / ATTR routines: find those
-  routines first, then classify reads by their return address (Cauldron).
-- Figure-cell attribute painting can have gameplay readers (Cauldron ATTR neighbour tests); a
-  card for "virtual attribute read" would cover keeping clash-free colours with such readers.
+## Lessons
+- [card patch.attribute-shadow §Use] Clash-free figures when logic reads painted cells: original
+  attributes in a shadow page, plotter paints it, every attribute reader / writer hooked; verify
+  that no code outside the hooks reads a differing cell (Q8; observed, quick 9,000 + hardware).
+- [doc docs/ENGINE_CONTRACT.md §Verify loop] A hook that runs the routine to the caller's return
+  nests the sites inside it: the replay skips them until the span ends (PO-ATTR in the plot body).
+- [doc LEARNINGS 1.3] [tool nextboot.check] [deferred C2 #5: reconsider when the maintainers can
+  re-verify every altrom game with the whole image as default] ROM code run from an alt ROM whose
+  rest is the system ROM3 is NextZXOS's on hardware: the menu hung, keys dead (observed, round 1).
+- [doc docs/ENGINE_CONTRACT.md §The patch object] ROM routines below 0x2000 (PR-ALL, CL-LINE,
+  CL-SCROLL, PO-ATTR) hooked by JPs in the build's own image; scan the ROM for jumps into the
+  replaced bytes first (PO-SCR CALLs 0x0E00 inside CL-SCROLL).
+- [doc docs/ENGINE_CONTRACT.md §Verify loop] An entry hook can CALL the routine's body when no
+  exit JP fits (0x63DB starts right after the RET): show at entry, hide after the body.
+- [card patch.xor-overlay-keep-ula §Recognise] XOR overlay without an object table: key =
+  (graphic, x, y, rows, width), a plot toggles it, other writers taint it.
+- [card patch.xor-overlay-keep-ula §Failure lookup] XOR parity is not "on screen": clears,
+  scrolls and text wipe or move figures without an erase (frames 2602-2638).
+- [backlog C2 #42] `inspect` "loader snapshot" WARNING when PC is in ROM only because of an IM 1
+  interrupt (stacked return = game code).
+- [backlog C2 #41] The RZX's embedded snapshot was a different build than the delivered .z80
+  (11,283 bytes, code shifted); the survey should compare the two.
+- [card detect.gameplay-screen-readers §Probe and stop] Compiled BASIC reads the screen through
+  runtime PEEK / POINT / ATTR routines: find them, class reads by return address; the card's
+  "no shared command" for listing readers was wrong (`scan --writers` lists readers): corrected.
+- [probe tools/probes/rzx_census.py] Counts and first frame of given PCs over a whole recording
+  with the C simulator (~4 min for 90K frames vs ~1 h in Python): which quick run reaches a hook.
+- [local: the original itself never returns from CL-LINE with B 0 or > 24 (it clears over the
+  stack), so those unit cases were dropped; no other game known to call CL-LINE that way]
+- [deferred Open: reconsider when a hardware round reports a slowdown] Hook cost doubled with the
+  outline upload (mean 5,701 T / frame); the upload could build only the grid cells in use.
+- [doc docs/LEARNING.md §The learning loop] Lessons left as candidates, scratch scripts and a
+  stale branch (main had new cards) were the gap; the loop and learncheck now enforce it.
+
+## Technique use
+- patch.xor-overlay-keep-ula: helped (the design; lacked the other-writers failure row: corrected)
+- detect.gameplay-screen-readers: corrected: listing readers has a shared command; compiled BASIC method added
+- patch.xor-shadow: no help: rejected (POINT reads figure pixels), as the card predicted
+- patch.display-atomic-switch: used (draw shown at entry, erase hidden after the body)
+- patch.attribute-shadow: used (written from this game)
+- tools/probes/rzx_census.py: helped (first frame of each attribute hook, plot geometries)
 
 ## Stage log
 - 2026-10-27 round 2 (Q7 outline + Q8 attribute shadow: 12 new sites, page 27, verify spans + attribute model, 32 new unit cases, 8 negatives; quick 9000 PASS): ~70 tool calls, 1 user round.

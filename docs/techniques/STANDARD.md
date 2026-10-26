@@ -83,10 +83,12 @@ List order is the order applications were designed in, **not** a run-time sequen
 exit hooks and the interrupt handler are conditional paths. Run-time constraints are explicit, in
 the card's `order` (§6): within a phase, and across phases.
 
-Capture first, consolidate later. A session writes a lesson candidate in games/<game>.md
-(question, observation, decision, evidence, limitation, rejected alternatives). It becomes a card
-when it is reusable or prevents a costly repeat. A different address is an application, not a
-new card.
+Capture and disposition in the same stage (docs/LEARNING.md, since 2026-10-27): a lesson in
+games/<game>.md "## Lessons" carries its disposition (an amended or new card, a doc, a tool, a
+backlog item, a kept probe, local, deferred). It becomes a card when it is reusable or prevents a
+costly repeat. A different address is an application, not a new card. New / revised cards are
+schema 4: a candidate states `**Assumptions.**` and `**Validation gap.**`; `active` needs scoped
+local evidence (a record `pass` result).
 
 ## 4. Card kinds and observation axes
 

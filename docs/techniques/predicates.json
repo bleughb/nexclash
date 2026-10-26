@@ -122,5 +122,29 @@
     "evaluation": "manual",
     "survey_field": null,
     "probe": "cost GAME.z80 --rzx R --at PLOTTER --group IX; count distinct graphics per frame in the worst scene"
+  },
+  "render.paints_figure_attributes": {
+    "means": "the figure plotter writes the attribute cells under the figure (its colour), so scenery around it changes colour (clash)",
+    "true_when": "a plotter instruction writes 0x5800-0x5AFF in scope",
+    "false_when": "the plotters never write attributes in scope",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "scan GAME.z80 --rzx R --range 0x5800-0x5AFF --writers: plotter PCs among the writers"
+  },
+  "screen.gameplay_reads_figure_attributes": {
+    "means": "game logic reads attribute cells the plotter painted, and the result depends on the painted value",
+    "true_when": "a non-plotter instruction reads an attribute cell after a plotter painted it, in scope",
+    "false_when": "no reader of painted cells in scope (unreached paths listed as unknowns)",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "scan GAME.z80 --rzx R --range 0x5800-0x5AFF --writers (readers), then painted-cell tracking per reader"
+  },
+  "design.no_figure_clash": {
+    "means": "the user's design answer keeps the scenery's colours under and around converted figures",
+    "true_when": "the design answer (or a later round) asks for no clash on the scenery",
+    "false_when": "the clash halo of the original is kept",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "the design question (PLAYBOOK 3c) or a hardware-round report"
   }
 }

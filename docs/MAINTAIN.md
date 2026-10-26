@@ -48,10 +48,15 @@ workflow builds the zip (tools/make_package.py; version = the tag) and attaches 
 Actions -> release -> Run workflow with the tag. Before a release: `python selftest.py --stamp`
 (every game rebuilt + the re-verifications due) must PASS.
 
-## Lesson consolidation (every few games, or when doccheck reports a file over budget)
-Game sessions write lessons as candidates in games/<game>.md "## Lesson candidates" (CLAUDE.md End of
-every stage). A consolidation session: read the candidates of the games since the last pass; a lesson
-seen in two or more games, or that would have saved a debugging cycle anywhere, goes into LEARNINGS /
-BRIEFING - merged into the existing line on the same subject (grep first), never appended beside it;
-delete what a newer line supersedes; mark the candidates "promoted <date>" or "kept local". Then
-`python tools/doccheck.py` must report every file within its budget.
+## Lesson consolidation (old notes; new lessons are dispositioned at once, docs/LEARNING.md)
+Since 2026-10-27 every stage dispositions its own lessons (card / doc / tool / backlog / probe /
+local / deferred; learncheck checks them). What is left for maintainers:
+- Review card changes in each PR: an incorrect card steers future implementations.
+- Promote a candidate card to `active` only with scoped local evidence (a record `pass` result);
+  a probe to a shared command when a second game uses it (tools/probes/README.md).
+- `python tools/learncheck.py --usage`: cards that never help or keep being corrected -> revise or
+  deprecate.
+- Old games still with "## Lesson candidates": migrated when the game is next touched (learncheck
+  fails a changed file that still has them). A lesson seen in two or more games goes into LEARNINGS
+  / BRIEFING, merged into the existing line on the same subject (grep first), never beside it.
+Then `python tools/doccheck.py` must report every file within its budget.
