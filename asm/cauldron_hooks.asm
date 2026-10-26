@@ -28,8 +28,29 @@
 
 BODY    EQU 0x635A              ; the plotter after the replaced instructions; RET 0x63DA
 PG      EQU 26                  ; table page (bank 13), at slot 6 inside a hook
-NSLOT   EQU 28
+NSLOT   EQU 14                  ; 9 sprites / 9 patterns a slot (3 x 3 of 16 x 16: image + outline up to 34 x 34)
 NTAB    EQU 128
+P27     EQU 27                  ; page 27 at slot 4 (0x8000-) inside hooks: attribute shadow, canvases, code
+GPG4    EQU 4                   ; the game's page at slot 4
+SH      EQU 0x8000              ; 768: the attribute file the ORIGINAL holds (the ULA keeps the scenery's)
+USAVE   EQU 0x8300              ; 192 pairs: (ULA, shadow) attribute at the last bottom-third save
+CB      EQU 0x8490              ; 1: CL-LINE's B at the hook
+UNC     EQU 0x8491              ; sprite grid columns / rows of the slot being shown
+UNR     EQU 0x8492
+UG      EQU 0x8493              ; upload: graphic (2), width, rows, ink, slot, pattern base, row, col,
+UWW     EQU 0x8495              ;   bytes per line pair, line
+URR     EQU 0x8496
+UIN     EQU 0x8497
+USL     EQU 0x8498
+UPN     EQU 0x8499
+UTR     EQU 0x849A
+UTC     EQU 0x849B
+UNB     EQU 0x849C
+UL      EQU 0x849D
+CANI    EQU 0x8500              ; 36 x 5: ink bits, canvas line L at CANI + 5 (L + 1), pixel x at bit x + 1
+CANO    EQU 0x8600              ; 36 x 5: outline bits (4-neighbours of ink, not ink)
+TT      EQU 0x8700              ; 16: (ink 2 bits, outline 2 bits) -> pattern byte (2 pixels)
+BUF     EQU 51700               ; the game's bottom-third attribute buffer (0xC9DB / 0xC9E7)
 ATTR_T  EQU 23695
 MASK_T  EQU 23696
 P_FLAG  EQU 23697
@@ -44,7 +65,7 @@ RECT    EQU 0xC028              ; 4: y0, y1 (pixel rows), c0, c1 (byte columns)
 KIND    EQU 0xC02C              ; touch: 0 taint, 1 clear
 WRAP    EQU 0xC02D              ; 1: the plot reaches past column 31 (whole-screen rectangle), 2: too big; no sprite
 USLOT   EQU 0xC02E              ; slot to upload + show
-UINK    EQU 0xC02F              ; ink pair (ink * 0x11)
+UINK    EQU 0xC02F              ; ink nibble (1-15)
 TAB     EQU 0xC100              ; NTAB x 12: key (6), state, y0, y1, c0, c1, 0
 ; state: 0-27 live with that sprite slot, 0xFE live with no sprite, 0xFF tainted
 
@@ -57,6 +78,7 @@ e_plot: push hl                 ; placeholder: the slot to hide at the exit (low
         push hl
         push ix
         nextreg 0x07,3
+        nextreg 0x54,P27        ; the attribute shadow (ink rule, body copy), canvases, page-27 code
         ld e,(hl)               ; the descriptor through the stack (it may sit at 0xC000-0xDFFF)
         inc hl
         ld d,(hl)
@@ -110,7 +132,7 @@ e_plot: push hl                 ; placeholder: the slot to hide at the exit (low
         ld a,(DESC+4)
         ld b,a                  ; rows
         nextreg 0x56,0
-        call upload
+        call upload             ; page 27: canvas + patterns (UNC, UNR)
         pop hl
         pop bc
         call show
@@ -125,12 +147,13 @@ e_plot: push hl                 ; placeholder: the slot to hide at the exit (low
         ld e,(hl)               ; the replaced instructions
         inc hl
         ld d,(hl)
-        call BODY               ; its RET 0x63DA comes back here
+        call body2              ; the plotter body, attributes painted into the shadow; RET comes back here
         ex (sp),hl              ; L = the slot to hide; the game's HL on the stack
         push af
         ld a,l
         cp NSLOT
         call c,hide_s
+        nextreg 0x54,GPG4
         pop af
         pop hl
         ret
@@ -236,7 +259,10 @@ e_cll:  push af                 ; ROM CL-LINE 0x0E44: B lines from the bottom cl
         push de
         push hl
         push ix
+        nextreg 0x54,P27
         ld a,b
+        ld (CB),a
+        nextreg 0x54,GPG4
         or a
         jr z,.all
         cp 25
@@ -252,7 +278,10 @@ e_cll:  push af                 ; ROM CL-LINE 0x0E44: B lines from the bottom cl
         ld de,31
         ld a,1
         jr .t
-.all:   ld bc,191
+.all:   nextreg 0x54,P27        ; B 0 or > 24 (garbage): the ULA takes the shadow first
+        call u_from_s
+        nextreg 0x54,GPG4
+        ld bc,191
         ld de,31
         xor a
 .t:     call dotouch
@@ -261,11 +290,26 @@ e_cll:  push af                 ; ROM CL-LINE 0x0E44: B lines from the bottom cl
         pop de
         pop bc
         pop af
+        call .run               ; CL-LINE runs; its RET comes back here
+        push af
         push bc
+        push de
+        push hl
+        nextreg 0x07,3
+        nextreg 0x54,P27
+        call cll_post           ; the cleared rows into the shadow
+        nextreg 0x54,GPG4
+        nextreg 0x07,0
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ret
+.run:   push bc
         call 0x0E9B
         jp 0x0E48
 
-e_csc:  push af                 ; ROM CL-SCROLL 0x0E00: the screen moves up a line
+e_csc:  push af                 ; ROM CL-SCROLL 0x0E00: the screen moves up a line (never in the RZX)
         push bc
         push de
         push hl
@@ -274,13 +318,159 @@ e_csc:  push af                 ; ROM CL-SCROLL 0x0E00: the screen moves up a li
         ld de,31
         xor a
         call dotouch
+        nextreg 0x07,3
+        nextreg 0x54,P27        ; the ULA takes the shadow (the scroll moves the original's attributes)
+        call u_from_s
+        nextreg 0x54,GPG4
+        nextreg 0x07,0
         pop ix
         pop hl
         pop de
         pop bc
         pop af
-        call 0x0E9B
+        call .run               ; CL-SCROLL, then CL-LINE (e_cll), returns here
+        push af
+        push bc
+        push de
+        push hl
+        nextreg 0x07,3
+        nextreg 0x54,P27
+        call s_from_u
+        nextreg 0x54,GPG4
+        nextreg 0x07,0
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ret
+.run:   call 0x0E9B
         jp 0x0E03
+
+; ---- attribute shadow: the ULA keeps the scenery's colours (Dean 2026-10-27 Q8) ----------------
+e_peek: push af                 ; 0x61D8 LD L,(HL) (runtime PEEK / ATTR): attributes from the shadow
+        ld a,h
+        cp 0x58
+        jr c,.n
+        cp 0x5B
+        jr nc,.n
+        nextreg 0x54,P27
+        add a,0x28
+        ld h,a
+        ld l,(hl)
+        sub 0x28
+        ld h,a                  ; H as the original's (LD H,0 at 0x61D5 follows)
+        nextreg 0x54,GPG4
+        pop af
+        jp 0x61D5
+.n:     pop af
+        ld l,(hl)
+        jp 0x61D5
+
+e_poa:  ld a,h                  ; ROM PO-ATTR 0x0BE4 (HL = attribute): on the ULA, then on the shadow
+        cp 0x58
+        jr c,poa_r
+        cp 0x5B
+        jr nc,poa_r
+        push hl
+        call poa_r              ; the ULA cell from its own old value
+        pop hl
+        nextreg 0x54,P27
+        push hl
+        ld a,h
+        add a,0x28
+        ld h,a
+        call poa_r              ; the shadow last: A, DE, F as the original's
+        pop hl
+        nextreg 0x54,GPG4
+        ret
+poa_r:  ld de,(ATTR_T)
+        jp 0x0BE8
+
+e_tatt: ld a,h                  ; 0xB33E: a room tile's attribute, (DE) = H | 0x40, ULA and shadow
+        set 6,a
+        ld (de),a
+        push af
+        ld a,d
+        cp 0x58
+        jr c,.x
+        cp 0x5B
+        jr nc,.x
+        push de
+        add a,0x28
+        ld d,a
+        nextreg 0x54,P27
+        ld a,h
+        set 6,a
+        ld (de),a
+        nextreg 0x54,GPG4
+        pop de
+.x:     pop af
+        jp 0xB342
+
+e_tard: push hl                 ; 0xB361 LD A,(DE): a room cell's attribute, from the shadow
+        push af
+        ld a,d
+        cp 0x58
+        jr c,.n
+        cp 0x5B
+        jr nc,.n
+        push de
+        add a,0x28
+        ld d,a
+        nextreg 0x54,P27
+        ld a,(de)
+        nextreg 0x54,GPG4
+        pop de
+        jr .w
+.n:     ld a,(de)
+.w:     ld h,a
+        pop af
+        ld a,h
+        pop hl
+        ld (TILEAT),hl
+        jp 0xB365
+
+e_save: nextreg 0x07,3          ; 0xC9DB: bottom-third attributes -> BUF (the shadow's; ULA + shadow kept)
+        nextreg 0x54,P27
+        call save27
+        nextreg 0x54,GPG4
+        nextreg 0x07,0
+        jp 0xC9E6
+
+e_rest: nextreg 0x07,3          ; 0xC9E7: BUF -> bottom third (shadow = BUF; ULA = its saved colours)
+        nextreg 0x54,P27
+        call rest27
+        nextreg 0x54,GPG4
+        nextreg 0x07,0
+        jp 0xC9F2
+
+e_box:  nextreg 0x07,3          ; 0xCE74: 6 x 5 attribute box from 52820, on the ULA and the shadow
+        nextreg 0x54,P27
+        call box27
+        nextreg 0x54,GPG4
+        nextreg 0x07,0
+        jp 0xCE8D
+
+e_rfil: nextreg 0x07,3          ; 0xB2AC: rows 4-23 filled with (23297), on the ULA and the shadow
+        nextreg 0x54,P27
+        call rfil27
+        nextreg 0x54,GPG4
+        nextreg 0x07,0
+        jp 0xB2BB
+
+e_sal:  nextreg 0x07,3          ; 0xDF04: bottom-third attributes one cell left, ULA and shadow
+        nextreg 0x54,P27
+        call sal27
+        nextreg 0x54,GPG4
+        nextreg 0x07,0
+        jp 0xDF16
+
+e_sar:  nextreg 0x07,3          ; 0xDF17: one cell right
+        nextreg 0x54,P27
+        call sar27
+        nextreg 0x54,GPG4
+        nextreg 0x07,0
+        jp 0xDF29
 
 ; HL screen address -> B = y0, C = y1, D = E = column; not the top line of a cell: whole screen
 cellr:  ld a,h
@@ -327,40 +517,58 @@ dotouch:
         ret
 
 ; ---- sprites ------------------------------------------------------------------------------------
-hide_s: add a,a                 ; A = slot: its 4 sprites hidden (A, F changed)
+hide_s: push bc                 ; A = slot: its 9 sprites hidden (A, F changed)
+        ld c,a
         add a,a
-        nextreg 0x34,a
+        add a,a
+        add a,a
+        add a,c                 ; 9 s
+        ld b,9
+.h:     nextreg 0x34,a
         nextreg 0x38,0
         inc a
-        nextreg 0x34,a
-        nextreg 0x38,0
-        inc a
-        nextreg 0x34,a
-        nextreg 0x38,0
-        inc a
-        nextreg 0x34,a
-        nextreg 0x38,0
+        djnz .h
+        pop bc
         ret
 
-show:   ld a,c                  ; C = slot, HL = X, B = Y
+; show: C = slot, HL = X (image x + 32), B = Y (image y0 + 32); UNC x UNR sprites of the grid at
+; (X - 1 + 16 col, Y - 1 + 16 row) shown, the slot's other sprites hidden. Page 27 mapped.
+show:   ld a,c
+        call hide_s
+        ld a,c
         add a,a
         add a,a
-        ld c,a
-        call sh1
+        add a,a
+        add a,c
+        ld c,a                  ; sprite / pattern 9 s
+        dec hl
+        dec b
+        ld a,(UNR)
+        ld e,a
+.r:     push hl
+        push bc
+        ld a,(UNC)
+        ld d,a
+.c:     call sh1
         inc c
-        push hl
+        push de
         ld de,16
         add hl,de
-        call sh1
+        pop de
+        dec d
+        jr nz,.c
+        pop bc
         pop hl
-        inc c
+        ld a,c
+        add a,3
+        ld c,a
         ld a,b
         add a,16
         ld b,a
-        call sh1
-        inc c
-        ld de,16
-        add hl,de
+        dec e
+        jr nz,.r
+        ret
+
 sh1:    ld a,c                  ; sprite C at (HL, B), pattern C (4-bit)
         nextreg 0x34,a
         ld a,l
@@ -382,136 +590,6 @@ sh1:    ld a,c                  ; sprite C at (HL, B), pattern C (4-bit)
         nextreg 0x39,a
         ret
 
-; upload: C = slot, HL = graphic, E = width, B = rows, D = ink pair. 4 patterns of 16 lines x 8
-; bytes: pattern k covers graphic bytes 2 (k & 1) .. +1 of lines 16 (k >> 1) .. +15.
-upload: ld a,c
-        add a,a                 ; pattern 4s: index 2s, first half
-        push bc
-        ld bc,0x303B
-        out (c),a
-        pop bc
-        ld ix,-8
-        add ix,sp
-        ld sp,ix                ; frame: +0 w, +1 rows, +2 ink, +3/4 graphic, +5 k, +6 nb, +7 line
-        ld (ix+0),e
-        ld (ix+1),b
-        ld (ix+2),d
-        ld (ix+3),l
-        ld (ix+4),h
-        ld (ix+5),0
-.k:     ld a,(ix+5)             ; HL = graphic + 16 w (k >> 1) + 2 (k & 1)
-        and 2
-        ld l,0
-        jr z,.k0
-        ld a,(ix+0)
-        add a,a
-        add a,a
-        add a,a
-        add a,a
-        ld l,a
-.k0:    ld a,(ix+5)
-        and 1
-        add a,a
-        ld c,a                  ; 2 (k & 1)
-        add a,l
-        ld e,a
-        ld d,0
-        ld l,(ix+3)
-        ld h,(ix+4)
-        add hl,de
-        ld a,(ix+0)             ; nb = min(2, max(0, w - 2 (k & 1)))
-        sub c
-        jr nc,.n0
-        xor a
-.n0:    cp 3
-        jr c,.n1
-        ld a,2
-.n1:    ld (ix+6),a
-        ld a,(ix+5)
-        and 2
-        add a,a
-        add a,a
-        add a,a                 ; 16 (k >> 1)
-        ld (ix+7),a
-        ld b,16
-        ld d,(ix+2)
-.ln:    ld a,(ix+7)
-        cp (ix+1)
-        jr nc,.z8               ; line >= rows: 8 zeros
-        push hl
-        ld c,(ix+6)
-        ld a,c
-        or a
-        jr z,.zr
-.eb:    ld a,(hl)
-        call emit4
-        inc hl
-        dec c
-        jr nz,.eb
-.zr:    ld a,2
-        sub (ix+6)
-        jr z,.nz
-        add a,a
-        add a,a
-        ld c,a
-        xor a
-.zz:    out (0x5B),a
-        dec c
-        jr nz,.zz
-.nz:    pop hl
-        jr .nx
-.z8:    xor a
-        ld c,8
-.z9:    out (0x5B),a
-        dec c
-        jr nz,.z9
-.nx:    ld a,l
-        add a,(ix+0)
-        ld l,a
-        jr nc,.nc
-        inc h
-.nc:    inc (ix+7)
-        djnz .ln
-        inc (ix+5)
-        ld a,(ix+5)
-        cp 4
-        jp c,.k
-        ld ix,8
-        add ix,sp
-        ld sp,ix
-        ret
-
-emit4:  push hl                 ; A = graphic byte -> 4 pattern bytes (D = ink pair)
-        push af
-        rrca
-        rrca
-        rrca
-        rrca
-        call emit2
-        pop af
-        call emit2
-        pop hl
-        ret
-emit2:  and 15
-        add a,a
-        add a,low NIBT
-        ld l,a
-        ld h,high NIBT
-        ld a,(hl)
-        and d
-        out (0x5B),a
-        inc l
-        ld a,(hl)
-        and d
-        out (0x5B),a
-        ret
-
-        ALIGN 32
-NIBT:   ; nibble (pixels 0-3, bit 3 first) -> 2 pattern-byte masks
-        DEFB 0x00,0x00, 0x00,0x0F, 0x00,0xF0, 0x00,0xFF
-        DEFB 0x0F,0x00, 0x0F,0x0F, 0x0F,0xF0, 0x0F,0xFF
-        DEFB 0xF0,0x00, 0xF0,0x0F, 0xF0,0xF0, 0xF0,0xFF
-        DEFB 0xFF,0x00, 0xFF,0x0F, 0xFF,0xF0, 0xFF,0xFF
 rom_end:
         ASSERT rom_end + 20 <= 0x3D00
 
@@ -738,9 +816,9 @@ ink:    ld a,(RECT)             ; colour of the image's first cell after the plo
         add a,l
         ld l,a
         ld a,h
-        add a,0x58
+        add a,high SH
         ld h,a
-        ld c,(hl)               ; the cell's attribute now
+        ld c,(hl)               ; the cell's attribute now (the shadow = the original's, page 27 at slot 4)
         ld a,(DESC+6)
         cp 2
         jr z,.t2
@@ -784,13 +862,7 @@ ink:    ld a,(RECT)             ; colour of the image's first cell after the plo
         or 8
         jr .pr
 .bk:    ld a,8                  ; black (bright or not): palette 8 (0 is transparent)
-.pr:    ld c,a
-        rlca
-        rlca
-        rlca
-        rlca
-        or c
-        ld (UINK),a
+.pr:    ld (UINK),a             ; the ink nibble
         ret
 
 ; touch: RECT, KIND. Every entry whose rectangle meets RECT: its sprite hidden and freed; a clear
@@ -900,11 +972,533 @@ p26_end:
         ASSERT p26_end <= 0xE000
 
 
+
+; ---- page 27 code (0x8A00-, runs while page 27 is at slot 4; graphics are game memory 0xA5D2-) -----
+        ORG 0x8A00
+; upload: C = slot, HL = graphic, E = width (bytes), B = rows, D = ink nibble. The image's ink bits
+; at canvas pixel (x + 1, line + 1), the outline = the 4-neighbours of ink that are not ink, the
+; slot's UNC x UNR patterns (9 s + 3 row + col) written: ink pixels the ink, outline 8 (black).
+upload: ld (UG),hl
+        ld a,e
+        ld (UWW),a
+        ld a,b
+        ld (URR),a
+        ld a,d
+        ld (UIN),a
+        ld a,c
+        ld (USL),a
+        ld a,e
+        add a,a
+        add a,a
+        add a,a
+        add a,17
+        rrca
+        rrca
+        rrca
+        rrca
+        and 15
+        ld (UNC),a              ; (8 w + 2 + 15) / 16
+        ld a,b
+        add a,17
+        rrca
+        rrca
+        rrca
+        rrca
+        and 15
+        ld (UNR),a              ; (rows + 2 + 15) / 16
+        ld hl,CANI
+        ld de,CANI+1
+        ld bc,511
+        ld (hl),0
+        ldir
+        ld hl,(UG)
+        ld de,CANI+10           ; image row 0 = canvas line 1
+        ld a,(URR)
+        ld c,a
+.row:   push de
+        ld a,(UWW)
+        ld b,a
+        or a                    ; CF = 0: pixel x lands at bit x + 1
+.byt:   ld a,(hl)
+        rra
+        ld (de),a
+        inc hl
+        inc de
+        djnz .byt
+        ld a,0
+        rra
+        ld (de),a
+        pop de
+        ld a,e
+        add a,5
+        ld e,a
+        jr nc,.r1
+        inc d
+.r1:    dec c
+        jr nz,.row
+        ld a,(URR)              ; outline over canvas lines 0 .. rows + 1 (5 bytes each, flat)
+        add a,2
+        ld b,a
+        add a,a
+        add a,a
+        add a,b
+        ld b,a
+        ld ix,CANI+5
+        ld hl,CANO+5
+.ol:    ld a,(ix-5)
+        or (ix+5)
+        ld c,a
+        ld a,(ix-1)
+        rrca
+        and 0x80
+        ld d,a
+        ld a,(ix+0)
+        srl a
+        or d
+        or c
+        ld c,a
+        ld a,(ix+1)
+        rlca
+        and 1
+        ld d,a
+        ld a,(ix+0)
+        add a,a
+        or d
+        or c
+        ld c,a
+        ld a,(ix+0)
+        cpl
+        and c
+        ld (hl),a
+        inc ix
+        inc hl
+        djnz .ol
+        ld hl,TT                ; (ink hi, ink lo, outline hi, outline lo) -> 2 pixels
+        ld c,0
+.tt:    ld a,c
+        and 8
+        ld a,(UIN)
+        jr nz,.h
+        ld a,c
+        and 2
+        ld a,8
+        jr nz,.h
+        xor a
+.h:     rlca
+        rlca
+        rlca
+        rlca
+        ld d,a
+        ld a,c
+        and 4
+        ld a,(UIN)
+        jr nz,.lo
+        ld a,c
+        and 1
+        ld a,8
+        jr nz,.lo
+        xor a
+.lo:    or d
+        ld (hl),a
+        inc hl
+        inc c
+        ld a,c
+        cp 16
+        jr nz,.tt
+        ld a,(USL)
+        ld b,a
+        add a,a
+        add a,a
+        add a,a
+        add a,b
+        ld (UPN),a              ; 9 s
+        xor a
+        ld (UTR),a
+.tr:    xor a
+        ld (UTC),a
+.tc:    ld a,(UTR)
+        ld b,a
+        add a,a
+        add a,b
+        ld b,a
+        ld a,(UTC)
+        add a,b
+        ld b,a
+        ld a,(UPN)
+        add a,b                 ; pattern n
+        rrca                    ; 4-bit pattern n: index n >> 1, bit 7 = n & 1
+        ld bc,0x303B
+        out (c),a
+        ld a,(UTC)
+        add a,a
+        ld b,a
+        ld a,5
+        sub b
+        cp 3
+        jr c,.nb
+        ld a,2
+.nb:    ld (UNB),a              ; canvas bytes in this column: min(2, 5 - 2 col)
+        ld a,(UTR)
+        add a,a
+        add a,a
+        add a,a
+        add a,a
+        ld (UL),a
+        ld b,16
+.ln:    push bc
+        ld a,(URR)
+        inc a
+        ld c,a
+        ld a,(UL)
+        cp c
+        jr z,.in
+        jr nc,.zl               ; past canvas line rows + 1: empty
+.in:    inc a
+        ld l,a
+        ld h,0
+        ld d,h
+        ld e,l
+        add hl,hl
+        add hl,hl
+        add hl,de               ; 5 (L + 1)
+        ld a,(UTC)
+        add a,a
+        add a,l
+        ld l,a
+        ld de,CANI
+        add hl,de
+        ld a,(UNB)
+        ld b,a
+.bp:    ld c,(hl)               ; ink byte
+        inc h
+        ld e,(hl)               ; outline byte (CANO = CANI + 0x100)
+        dec h
+        inc hl
+        ld d,4
+.px:    xor a
+        rl c
+        rla
+        rl c
+        rla
+        rl e
+        rla
+        rl e
+        rla
+        push hl
+        ld l,a
+        ld h,high TT
+        ld a,(hl)
+        pop hl
+        out (0x5B),a
+        dec d
+        jr nz,.px
+        djnz .bp
+        ld a,(UNB)
+        ld b,a
+        ld a,2
+        sub b
+        jr z,.lnx
+        add a,a
+        add a,a
+        ld b,a
+        xor a
+.zp:    out (0x5B),a
+        djnz .zp
+        jr .lnx
+.zl:    xor a
+        ld b,8
+.zz:    out (0x5B),a
+        djnz .zz
+.lnx:   ld a,(UL)
+        inc a
+        ld (UL),a
+        pop bc
+        djnz .ln
+        ld a,(UTC)
+        inc a
+        ld (UTC),a
+        ld b,a
+        ld a,(UNC)
+        cp b
+        jp nz,.tc
+        ld a,(UTR)
+        inc a
+        ld (UTR),a
+        ld b,a
+        ld a,(UNR)
+        cp b
+        jp nz,.tr
+        ret
+
+; body2: the plotter body (0x635A-0x63DA) with every attribute access on the shadow (OR 0x80 for
+; OR 0x58; type 2 PO-ATTR through poa_r on the shadow cell). Entered as the original at 0x635A.
+body2:  inc hl
+        push de
+        pop ix
+        ld c,(hl)
+        inc hl
+        ld b,(hl)
+        inc hl
+        ld a,(hl)
+        inc hl
+.l1:    push af
+        push bc
+        push hl
+        call 0x22AA             ; PIXEL-ADD
+        ld c,a
+        ex de,hl
+        pop hl
+        ld b,(hl)
+        ld a,c
+        or a
+        jr z,.s1
+        inc b
+.s1:    inc hl
+        ex de,hl
+        push hl
+.l2:    push hl
+        ld a,h
+        rrca
+        rrca
+        rrca
+        and 3
+        or high SH
+        ld h,a
+        ld a,(de)
+        inc de
+        cp 2
+        jr nz,.t01
+        push de
+        call poa_r
+        pop de
+        jr .nx
+.t01:   or a
+        jr nz,.t1
+        ld a,(23693)
+        cp (hl)
+        jr nz,.nx
+        ld a,(de)
+        jr .wr
+.t1:    ld a,(de)
+        cp (hl)
+        jr nz,.nx
+        ld a,(23693)
+.wr:    ld (hl),a
+.nx:    pop hl
+        inc hl
+        dec de
+        djnz .l2
+        dec de
+        ex de,hl
+        ld b,(hl)
+        ex (sp),hl
+        ld a,c
+        or a
+        jr z,.al
+.sh:    ex de,hl
+        ld l,(ix+0)
+        ld h,0
+        ld a,8
+        sub c
+.sl:    add hl,hl
+        dec a
+        jr nz,.sl
+        ex de,hl
+        ld a,(hl)
+        xor d
+        ld (hl),a
+        inc hl
+        ld a,(hl)
+        xor e
+        ld (hl),a
+        inc ix
+        djnz .sh
+        jr .en
+.al:    ld a,(ix+0)
+        xor (hl)
+        ld (hl),a
+        inc hl
+        inc ix
+        djnz .al
+.en:    pop hl
+        pop bc
+        dec b
+        pop af
+        dec a
+        jr nz,.l1
+        ret
+
+cll_post:                       ; after CL-LINE: its rows (or, B 0 / > 24, everything) into the shadow
+        ld a,(CB)
+        or a
+        jr z,s_from_u
+        cp 25
+        jr nc,s_from_u
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld b,h
+        ld c,l                  ; 32 B
+        ld hl,0x5B00
+        and a
+        sbc hl,bc
+        push hl
+        ld de,SH-0x5800
+        add hl,de
+        ex de,hl
+        pop hl
+        ldir
+        ret
+s_from_u:
+        ld hl,0x5800
+        ld de,SH
+        ld bc,768
+        ldir
+        ret
+u_from_s:
+        ld hl,SH
+        ld de,0x5800
+        ld bc,768
+        ldir
+        ret
+
+save27: push af                 ; (ULA, shadow) pairs saved; BUF = the shadow (as the original)
+        push ix
+        ld hl,0x5A00
+        ld de,SH+0x200
+        ld ix,USAVE
+        ld b,192
+.l:     ld a,(hl)
+        ld (ix+0),a
+        ld a,(de)
+        ld (ix+1),a
+        inc hl
+        inc de
+        inc ix
+        inc ix
+        djnz .l
+        pop ix
+        pop af
+        ld hl,SH+0x200
+        ld de,BUF
+        ld bc,192
+        ldir                    ; flags as the original's LDIR (same bytes, same A)
+        ld hl,0x5AC0
+        ret
+
+rest27: push af                 ; ULA: the colour it had at the save where BUF still holds that save's value
+        push ix
+        ld hl,BUF
+        ld de,0x5A00
+        ld ix,USAVE
+        ld b,192
+.l:     ld a,(hl)
+        cp (ix+1)
+        jr nz,.w
+        ld a,(ix+0)
+.w:     ld (de),a
+        inc hl
+        inc de
+        inc ix
+        inc ix
+        djnz .l
+        pop ix
+        pop af
+        ld hl,BUF
+        ld de,SH+0x200
+        ld bc,192
+        ldir                    ; shadow = BUF; registers and flags as the original's
+        ld de,0x5AC0
+        ret
+
+box27:  ld hl,0x58E6
+        call .b
+        ld hl,SH+0xE6
+        call .b
+        ld hl,0x5986
+        ret
+.b:     ld de,52820
+        ld c,5
+.r:     ld b,6
+.c:     ld a,(de)
+        ld (hl),a
+        inc hl
+        inc de
+        djnz .c
+        push de
+        ld de,26
+        add hl,de
+        pop de
+        dec c
+        jr nz,.r
+        ret
+
+rfil27: ld a,(23297)
+        ld hl,0x5880
+        ld de,0x5881
+        ld (hl),a
+        ld bc,639
+        ldir
+        ld a,(23297)
+        ld hl,SH+0x80
+        ld de,SH+0x81
+        ld (hl),a
+        ld bc,639
+        ldir
+        ld hl,0x5AFF
+        ld de,0x5B00
+        ret
+
+sal27:  ld hl,0x5A00
+        call .s
+        ld hl,SH+0x200
+        call .s
+        ld hl,0x5B00
+        ret
+.s:     ld c,8
+.r:     ld b,31
+.m:     inc hl
+        ld e,(hl)
+        dec hl
+        ld (hl),e
+        inc hl
+        djnz .m
+        inc hl
+        dec c
+        jr nz,.r
+        ret
+
+sar27:  ld hl,0x5AFF
+        call .s
+        ld hl,SH+0x2FF
+        call .s
+        ld hl,0x59FF
+        ret
+.s:     ld c,8
+.r:     ld b,31
+.m:     dec hl
+        ld e,(hl)
+        inc hl
+        ld (hl),e
+        dec hl
+        djnz .m
+        dec hl
+        dec c
+        jr nz,.r
+        ret
+p27_end:
+        ASSERT p27_end <= 0xA000
+
 ; ---- the ROM-site jumps (copied into the alt ROM image below 0x2000 by the stub) ----------------
         ORG 0x3000
 j_char: jp e_char
 j_cll:  jp e_cll
 j_csc:  jp e_csc
+j_poa:  jp e_poa
 j_end:
 
 ; ---- setup (stub bank, 0xD000): sprite palette, sprites hidden (4-bit attr 4 set), sprites on ----
@@ -940,3 +1534,4 @@ setup_end:
         SAVEBIN "cau_jmp.bin",0x3000,j_end-0x3000
         SAVEBIN "cau_p26.bin",0xC700,p26_end-0xC700
         SAVEBIN "cau_setup.bin",0xD000,setup_end-0xD000
+        SAVEBIN "cau_p27.bin",0x8A00,p27_end-0x8A00

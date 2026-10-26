@@ -1,30 +1,16 @@
-# Cauldron (Palace Software, 1985; 48K) - engine `cauldron` (hardware round 1 fixed; outline + no clash next)
+# Cauldron (Palace Software, 1985; 48K) - engine `cauldron` (round 2: outline + no clash, 55ed40f8 on test)
 
 ## Next session
-Stage: 2 again (round-2 engine changes Q7 + Q8, both decided), then 3    Branch: claude/cauldron
-State: 5830cbbd boots and runs at full speed on a Next (Dean 2026-10-27, hardware round 1 fixed);
-  quick 2000 IDENTICAL, unit 43 + 9 PASS. Full verification not run.
+Stage: 4 (hardware + colour round)    Branch: claude/cauldron
+State: 55ed40f8 (Q7 outline, Q8 no clash) sent to Dean 2026-10-27; quick 9000 IDENTICAL, unit 75 +
+  17 PASS; `selftest --game cauldron --verify --stamp` started the same day (result in "Results" /
+  the record once it ends; if it did not stamp, rerun it).
 Inputs: specnext/reference/cauldron/ (cauldron.rzx: its embedded snapshot is the build input)
-Do, in order, each checked before the next (CLAUDE.md "Write"):
-  1. Q8 no clash: the ULA keeps the scenery attributes; the plotter's figure-cell painting goes to a
-     SHADOW attribute map (768 bytes, Next page, mapped only inside hooks). Every game read of an
-     attribute (runtime ATTR 25089 / PEEK 0x61D8 on 0x5800-0x5AFF, the plotter's own old-attr tests
-     incl. ROM PO-ATTR 0x0BE4 for type 2) must return what the ORIGINAL holds = the shadow; every
-     other attr writer (PR-ALL's PO-ATTR, 0xC9F0 restore, 0xCE7F box, CLS / CL-LINE, the 0xB2A0
-     clear, ROM 0x0E80) writes both. Find all attr readers/writers with a whole-RZX pass first
-     (obs. 10-11 list them). Verify: original vs patched - the shadow equals the original's attr
-     file at every event; the patched ULA attr file equals the original's minus figure painting
-     (an independent model); all registers / other memory as now.
-  2. Q7 outline: every sprite opaque black (palette entry 8) on the 4-neighbour pixels of its ink
-     (left / right / up / down only, not diagonals; not over its own ink). The outline grows the box
-     by 1 px each side: shift the sprite box (x-1, y-1) and use a 3rd column / row of 16 x 16 sprites
-     when the image + 2 px exceeds 32 (31115 is 32 x 32). Model + verify: expected layer = ink +
-     outline; unit cases at every graphic edge; negative control (outline off).
-  3. quick 2000 + 9000 PASS; then colour map + sheets + recolour (COLOURS.md, paint_clear=True so
-     the outline is paintable), record, `selftest --game cauldron --verify --stamp`, deliver.
-Read: PLAYBOOK 5-7, this file ("Decisions", "Rendering model", "Build design", "Open"),
-  docs/COLOURS.md, dizzy1.py outline functions (fill_mask, part_from_writes), index.json.
-Open: CSpect "very slow" with d4302eef unexplained (5830cbbd full speed on hardware).
+Start with: Dean's hardware result for 55ed40f8 (speed: hook cost doubled). Then the colour map:
+  per-pixel override keyed by graphic byte in a Next page the game never reads, applied in page-27
+  `upload` (ink nibble per pixel), outline paintable (paint_clear); sheets (COLOURS.md, 93
+  graphics, 4 of them 32 x 32) + recolour; quick runs, full verify --stamp, deliver.
+Read: PLAYBOOK 5-7, COLOURS.md, this file ("Build design round 2", "Open"), dizzy1.py recolour.
 
 Reference: specnext reference/cauldron/. Status: stages 0-2 done (engine 2026-10-26); stage 2 analysis 2026-10-26
 (technique-card pilot). Analysis scripts are scratch (not in the repo): a one-off screen-reader
@@ -120,37 +106,14 @@ User report 2026-10-27 (hardware round 1, screenshots from CSpect):
   black by default (proposed, not objected; paintable on the sheet).
 
 ## Stage 2 analysis (2026-10-26; scratch probes, not in the repo)
-- Build input: the RZX's embedded snapshot = RZX block 0x30, flags 2 (zlib), a .z80 (39,419
-  bytes, MD5 2f0ef98e5c59552663b15d5eb1175236); 11,994 bytes of RAM differ from the delivered .z80
-  (= stage 0's 11,283 + 711). Plain .nex of it: converts, converter default tail (no proven-safe
-  tail, as stage 0). `inspect` gives the same false "loader snapshot" WARNING (PC 0x0039, SP 0x5FDA).
-- 0x6357 (RZX copy, 25431-25562): descriptor at HL = gfx lo/hi, x, y (BASIC: screen row 175 - y
-  first, then down), rows, width (bytes), attr type, attr value. Per pixel row: ROM PIXEL-ADD
-  (0x22AA), then the row's cells painted (type 2: ROM PO-ATTR; 0: old = ATTR-T -> value; 1: old =
-  value -> ATTR-T), then width graphic bytes XORed (shifted: 2 bytes each). Ends RET 25562; 25563
-  is the IM 2 setup entry, so the exit cannot take a JP: an entry hook must CALL the body (25434).
-  No stores into the routine (no self-modification). Entry bytes 5E 23 56.
-- 14 call sites (list in "Rendering model" obs. 4), all `CALL 0x6357` with HL = the descriptor
-  the compiled BASIC just POKEd. One entry hook covers every figure.
-- Whole RZX (84,638 plots): 93 graphics, never written (shapes can be precomputed); images up to
-  32 rows x 4 bytes (31115: 32 x 32 px; others <= 24 x 24) -> up to 3 x 2 16-px sprites when shifted.
-  Types: 1 33,915, 2 31,808, 0 18,915.
-- XOR parity alone is wrong: ROM CLS (0x0D6B) and the clear 0xB2A0 (rows 64-191) wipe drawn
-  figures without an erase plot (parity model reaches 243 "live"); with clears modelled, max 5 live
-  in frames 1-3000. The clears must reset the sprite set (card phase "clear").
-- **The bottom-third scroll (0xDED2 left / 0xDEEA right, screen rows 128-191, one byte per call)
-  carries plotted images with it**: ground decorations (e.g. gfx 51594 at x 8, rows 152-175, drawn
-  by the 27799/31236 pair) stay drawn while the landscape scrolls under them, never re-plotted at
-  the new place (frames 2684-2702, scroll.png). A sprite there would not move. -> design question.
-- Whole RZX with clears modelled: max 17 live images (frame 41,972); 27 images straddle row 64
-  when 0xB2A0 clears (top part survives on the ULA); scrolls with a live image in the band: 1,568
-  (callers 27799/31236 only).
-- **Other writers break XOR parity too** (seq probe, frames 2598-2645): the witch drawn at (8, 23)
-  at 2602 is overwritten between 2604 and 2624 by a writer that is neither a plot nor a scroll
-  (ROM PO-CHAR scenery printing likely, obs. 11); the game's next XOR draw (2624) lands on clean
-  ground and its erase (2638) puts the image back as residue. So "live" must end when ANY other
-  writer (PO-CHAR, tile 0xB378, scrolls, clears, CLS) touches the image's rectangle, not only
-  at a matching plot. Max 17 live is therefore an upper bound.
+- Build input: RZX block 0x30 (zlib) = a .z80, MD5 2f0ef98e...; 11,994 RAM bytes differ from the delivered .z80.
+- 0x6357 (25431-25562): descriptor at HL = gfx lo/hi, x, y (row 175 - y), rows, width, attr type, value.
+  Per pixel row: PIXEL-ADD, the row's cells painted (2: PO-ATTR; 0: old = ATTR-P 23693 -> value; 1:
+  old = value -> ATTR-P), then XOR. 25563 (IM 2 set-up) follows the RET: an entry hook must CALL a body.
+- 93 graphics, never written, up to 32 x 32 (4 of them, caller 31115); types 1/2/0 = 33,915/31,808/18,915.
+- XOR parity is not "on screen": clears, scrolls and PO-CHAR scenery wipe or move figures without an
+  erase plot (frames 2602-2638; bottom-third scroll carries ground decorations, 2684-2702) -> Q6.
+  Whole RZX: max 17 live (upper bound), 27 images straddle row 64 at 0xB2A0 clears. Details: git history.
 
 ## Build design (stage 2 part 2, 2026-10-26)
 Engine `cauldron` (nexclash/cauldron.py, asm/cauldron_hooks.asm, docs/profiles/cauldron.json). Overlay:
@@ -199,23 +162,38 @@ right, clear 0xB2A0 110, CL-LINE 64 (B = 24 x 32 = CLS, B = 2 x 32), CL-SCROLL 0
 - Not in this part: colour map, sheets, recolour (Open).
 Techniques: `detect.gameplay-screen-readers`, `patch.xor-overlay-keep-ula`, `patch.display-atomic-switch`
 
-## Results (stage 2, 2026-10-26)
-Build from the RZX snapshot: plain `Cauldron_1985_Palace_Software_a.nex` b5b211f1fc6103ec0d42711dcc29cd0d,
-sprites `..._sprites.nex` d4302eeff4bec044f61cc028fda8c3d4, both boot OK (nextboot.check, tail 0x5E00).
-- `auto --quick 2000`: 1,029 plots (516 draw / 513 erase), PR-ALL 4,359, scroll right 160, CL-LINE 4;
-  256,742 sprite pixels, 1,029 transient checks, 32,571 plot screen bytes -> IDENTICAL; unit PASS.
-- `auto --quick 9000`: 6,448 plots (3,228 draw / 3,216 erase / 4 no sprite), PR-ALL 9,594, tile 795,
-  scrolls 256 left / 512 right, clear 3, CL-LINE 6, CL-SCROLL 0; 2,030,681 sprite pixels, 921,684
-  table bytes, 6,448 transient checks, 185,079 plot screen bytes, 39.3M interrupt-safety points, max 5
-  live keys / 7 entries -> IDENTICAL. Colour rule = first cell ink at the plot exit 3,228 / 3,228.
-  Hook cost per frame: mean 2,765 T, max 45,288 T (a frame of text printing: ~300 T per PR-ALL).
-- Unit: 43 cases (draw / erase as captured; table full, overflow, no free slot, past column 31, too
-  wide, tainted and no-sprite keys, 4 bad geometries; colour types 0-2, INK / PAPER 9, MASK-T; every
-  touch site incl. CL-SCROLL, printer buffer, non-aligned cell, scroll columns 0 / 31, clears inside /
-  straddling / in overflow, CL-LINE 0 / 2 / 24 / 25) PASS; 9 negative controls on their own code all
-  caught (X off by one, erase never hidden, scroll / clear / PR-ALL touch broken, tainted key re-armed,
-  table full missed, overflow kept by a full clear, INK 9 ignored).
-- Full verification: not run (stage 3). ~25 min (quick 9000 took ~3 min).
+## Build design round 2 (2026-10-27: Q7 outline, Q8 no clash)
+- Q8 attribute shadow: page 27 at slot 4 (0x8000-, mapped only in hooks; the ROM IM 1 handler
+  never touches slot 4) holds the original's attribute file (SH = attr + 0x2800). The plotter body
+  runs as a copy in page 27 (OR 0x80 for OR 0x58; type 2 PO-ATTR on the shadow), so its painting
+  never reaches the ULA. Every other attribute access (whole-RZX `scan --writers` on 0x5800-0x5AFF:
+  11 writers, 10 readers) is a hook: PEEK / ATTR runtime 0x61D8 (attrs from the shadow), PO-ATTR
+  0x0BE4 (on the ULA from its own value, then on the shadow), CL-LINE (rows into the shadow after it;
+  B 0 / > 24: ULA = shadow first), CL-SCROLL (ULA = shadow first, all back after), bottom-third save
+  0xC9DB (buffer = the shadow; (ULA, shadow) pairs kept) / restore 0xC9E7 (shadow = buffer; ULA = the
+  saved ULA colour where the buffer still holds that save), box 0xCE74, room fill 0xB2AC, room cell
+  write 0xB33E / read 0xB361, attribute scrolls 0xDF04 / 0xDF17 (each run on ULA and shadow,
+  registers and flags as the original's: the shadow run last). The game's memory equals the
+  original's everywhere but the ULA attribute file.
+- Q7 outline: patterns built at the draw in page 27: ink bits on a canvas at (+1, +1), outline =
+  4-neighbours of ink not ink, 2 pixels per byte through a 16-entry table (ink nibble / 8 / 0). A
+  slot = 9 sprites + 9 patterns (3 x 3 grid at (x - 1, y0 - 1), UNC x UNR used); 14 slots.
+- Verify adds: events spanning a hooked routine to its caller's return (plot, PO-ATTR, CL-LINE,
+  CL-SCROLL; nested sites skipped), the ULA attribute model (Model.attrs) and the shadow vs the
+  original after every event, and outside the hooked routines any attribute write, or a read of a
+  cell whose ULA value differs, fails.
+
+## Results
+- Stage 2 (2026-10-26, d4302eef): quick 2000 + 9000 IDENTICAL, unit 43 + 9 PASS.
+- Round 2 (2026-10-27): sprites 55ed40f88d103cfd2fc9474199fe7f9d (plain unchanged b5b211f1), boot OK
+  also with a foreign ROM3. quick 9000: 6,448 plots (3,228 draw / 3,216 erase / 4 no sprite), PR-ALL
+  9,594, tile 795, scrolls 256 / 512, clear 3, CL-LINE 6; 9,847,336 sprite pixels (ink + outline),
+  1,662,970 table bytes, 6,448 transient checks, 185,079 plot screen bytes, 74.2M interrupt-safety
+  points -> IDENTICAL; colour rule 3,228 / 3,228. Hook cost mean 5,701 T / frame (was 2,765: outline
+  upload, double PO-ATTR), max 45,474 T. Unit 75 cases + 17 negative controls (8 new: plotter paints
+  the ULA, no outline, PEEK reads the ULA, PO-ATTR twice on the ULA, restore ignores the save, scroll /
+  box / CL-LINE skip the shadow) PASS. CL-LINE B 0 / 25 cases dropped: the original never returns.
+- Full verification: see "Next session".
 
 ## Hardware rounds
 Round 1 (2026-10-27): d4302eef hung at the menu (keys dead). 5830cbbd (fix below) boots and runs at
@@ -233,7 +211,8 @@ default off): z80tonex.altrom_fill `low` (replaces altrom0), nextboot boot / che
 ## Open
 - CSpect "very slow" with d4302eef: unexplained
   (hook cost measured mean 2,765 T / frame); ask whether the plain .nex is slow there too.
-- Q7 outline, Q8 shadow attributes: not built (Next session).
+- CL-SCROLL (never reached) shows the original's clash colours until the cells are written again.
+- Hook cost doubled (outline upload): speed on hardware to watch.
 - Colour map + colour sheets + recolour (PLAYBOOK 5, COLOURS.md): not built yet (stage 3 sends the
   sheets: build them first; patterns are converted at run time, so a colour map needs an override
   table keyed by graphic byte in a Next page).
@@ -245,6 +224,12 @@ default off): z80tonex.altrom_fill `low` (replaces altrom0), nextboot boot / che
 - Bit-level check of the POINT readers (obs. 9) if a shadow design is ever wanted.
 
 ## Lesson candidates
+- Clash-free figures with attribute readers: keep the original's attribute file in a shadow page,
+  run the plotter's painting into it, hook every attribute reader / writer (a `scan --writers` of
+  0x5800-0x5AFF lists them), and verify that no code outside the hooks reads a cell whose ULA value
+  differs (Cauldron Q8). Candidate card: patch.attribute-shadow (no card covered it).
+- A hook that runs a whole routine (to the caller's return) makes sites inside it nested: the
+  replay must skip them until the span ends (Cauldron: PO-ATTR inside the plotter body).
 - A game that runs ROM code (KEY-SCAN, PRINT, CLS) from an alt ROM image whose rest is copied
   from the SYSTEM ROM3 runs NextZXOS's ROM on hardware, not the one verified: Cauldron hung at the
   menu, keys dead. Write the whole image from the build (patch.altrom_low) and prove it with a
@@ -272,6 +257,7 @@ default off): z80tonex.altrom_fill `low` (replaces altrom0), nextboot boot / che
   card for "virtual attribute read" would cover keeping clash-free colours with such readers.
 
 ## Stage log
+- 2026-10-27 round 2 (Q7 outline + Q8 attribute shadow: 12 new sites, page 27, verify spans + attribute model, 32 new unit cases, 8 negatives; quick 9000 PASS): ~70 tool calls, 1 user round.
 - 2026-10-27 hardware round 1 (menu hang -> whole alt ROM from the build; outline + clash requests recorded): ~45 tool calls, 3 user rounds.
 - 2026-10-26 stage 0+1 (survey, patch plan, design question; pilot): see Pilot log.
 - 2026-10-26 stage 1 answers: RZX snapshot, all figures sprites, overlay, keep attr painting (3a), defaults 4/5.

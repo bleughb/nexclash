@@ -1,10 +1,11 @@
 """Cauldron (Palace Software, 1985; 48K) - engine `cauldron`.
 
-Figures that become sprites (Dean, 2026-10-26, games/cauldron.md "Decisions"): every image the XOR
+Figures that become sprites (Dean, 2026-10-26/27, games/cauldron.md "Decisions"): every image the XOR
 plotter 0x6357 draws (all 14 callers: the movers, the cauldron-spot image, the HUD item icon), in
-front of everything (overlay: the ULA keeps the original's XOR picture and attribute painting),
-colour = the image's cell ink; a figure that any other screen writer touches loses its sprite at
-that moment and the ULA shows whatever the original left (Q6).
+front of everything (overlay: the ULA keeps the original's XOR pixels), colour = the image's cell
+ink, with a black 4-neighbour outline (Q7); a figure that any other screen writer touches loses its
+sprite at that moment and the ULA shows whatever the original left (Q6). The ULA keeps the
+scenery's attributes: the figure-cell painting goes to a shadow the game reads instead (Q8).
 
     python nexclash.py auto GAME.z80 --rzx cauldron.rzx --no-record     (build + verify)
     python -m nexclash.cauldron extract cauldron.rzx -o OUT.z80        (the build input)
@@ -40,21 +41,36 @@ ALT_PAGE = 24                   # the patch image of 0x2000-0x3FFF (bank 12), co
 PG, PG_BANK = 26, 13            # tables + their code (0xC700-) at slot 6 inside the hooks
 P26_OFF = 0x0700
 TAIL_ADDR, TAIL_END = 0x5E00, 0x5FBA    # survey: 0x5D52-0x5FB9 free (whole RZX), lowest SP 0x5FBA
-NSLOT, NTAB = 28, 128
+NSLOT, NTAB = 14, 128         # 9 sprites / patterns a slot (3 x 3: image + outline up to 34 x 34)
+P27, GPG4 = 27, 4             # page 27 at slot 4 inside hooks (attribute shadow, canvases, code); the game's page 4
+P27_OFF = 0x0A00              # page-27 code
+OUTLINE = 8                   # outline nibble (palette 8 = black; Dean 2026-10-27 Q7)
 V_N, V_OVF, V_NFREE, FREE, TAB = 0x0000, 0x0001, 0x0002, 0x0003, 0x0100   # page-26 offsets
 # RAM sites: (original, hook symbol, kind)
 SITES = {0x6357: ('5e2356', 'e_plot', 'plot'), 0xB2A0: ('210048', 'e_clr', 'clr'),
          0xB366: ('6f2600', 'e_tile', 'tile'), 0xDED2: ('210050', 'e_scl', 'scl'),
-         0xDEEA: ('21ff57', 'e_scr', 'scr')}
+         0xDEEA: ('21ff57', 'e_scr', 'scr'),
+         # attribute shadow (Q8): every reader / writer of the attribute file but the plotter's own
+         0x61D8: ('6e18fa', 'e_peek', 'peek'), 0xC9DB: ('21005a', 'e_save', 'save'),
+         0xC9E7: ('21f4c9', 'e_rest', 'rest'), 0xCE74: ('21e658', 'e_box', 'box'),
+         0xB2AC: ('3a015b', 'e_rfil', 'rfil'), 0xDF04: ('21005a', 'e_sal', 'sal'),
+         0xDF17: ('21ff5a', 'e_sar', 'sar'), 0xB33E: ('7ccbf7', 'e_tatt', 'tatt'),
+         0xB361: ('1a2294', 'e_tard', 'tard')}
 # ROM sites (alt ROM bytes below 0x2000, in patch.altrom_low): (original, jump symbol, kind)
 ROM_SITES = {0x0B9B: ('3a915c', 'j_char', 'char'), 0x0E44: ('c5cd9b', 'j_cll', 'cll'),
-             0x0E00: ('cd9b0e', 'j_csc', 'csc')}
+             0x0E00: ('cd9b0e', 'j_csc', 'csc'), 0x0BE4: ('ed5b8f', 'j_poa', 'poa')}
 # where the original and the patched code meet again after a site: (pc, SP change)
 RESUME = {0x6357: None, 0xB2A0: (0xB2A3, 0), 0xB366: (0xB369, 0), 0xDED2: (0xDED5, 0),
-          0xDEEA: (0xDEED, 0), 0x0B9B: (0x0B9E, 0), 0x0E44: (0x0E48, -2), 0x0E00: (0x0E03, 0)}
-INTERIORS = tuple(a + k for a in list(SITES) + list(ROM_SITES) for k in (1, 2))
+          0xDEEA: (0xDEED, 0), 0x0B9B: (0x0B9E, 0), 0x0E44: None, 0x0E00: None, 0x0BE4: None,
+          0x61D8: (0x61D5, 0), 0xC9DB: (0xC9E6, 0), 0xC9E7: (0xC9F2, 0), 0xCE74: (0xCE8D, 0),
+          0xB2AC: (0xB2BB, 0), 0xDF04: (0xDF16, 0), 0xDF17: (0xDF29, 0), 0xB33E: (0xB342, 0),
+          0xB361: (0xB365, 0)}           # None: to the caller's return (the hook runs the routine)
+INTERIORS = tuple(a + k for a in list(SITES) + list(ROM_SITES) for k in (1, 2)) + (0x0BE7,)
 # interior bytes the ORIGINAL reaches right after the site's own first (1-byte) instruction
-SEQUELS = {0x6358: PLOT, 0x6359: PLOT, 0xB367: 0xB366, 0x0E45: 0x0E44}
+SEQUELS = {0x6358: PLOT, 0x6359: PLOT, 0xB367: 0xB366, 0x0E45: 0x0E44, 0x61D9: 0x61D8,
+           0xB33F: 0xB33E, 0xB362: 0xB361}
+ATTR0, ATTR1 = 0x5800, 0x5B00
+BUF = 51700                     # the game's bottom-third attribute buffer (0xC9DB saves, 0xC9E7 restores)
 HOOK_RANGE = (ROM_ORG, 0x3D00)  # FF in the 48K ROM: the original never runs there (verify counts it)
 TOUCH = {'clr': ((64, 191, 0, 31), 1), 'scl': ((128, 191, 0, 30), 0), 'scr': ((128, 191, 1, 31), 0),
          'csc': ((0, 191, 0, 31), 0)}
@@ -63,12 +79,19 @@ ATTR_T, MASK_T, P_FLAG, TILEAT = 23695, 23696, 23697, 45972
 CMP = list(range(0, 13)) + [14] + list(range(16, 25)) + [26, 27]   # all but R, T, MEMPTR
 DECISIONS = {'engine': 'cauldron',
              'input': 'the snapshot embedded in cauldron.rzx (MD5 %s; Q0, Dean 2026-10-26)' % RZX_Z80_MD5,
-             'strategy': 'overlay: the game still draws the ULA; hooks in alt ROM image 1 (0x386E-) + page 26 at '
-                         'slot 6 put 2 x 2 4-bit sprites on every live XOR image (key = graphic, x, y, rows, '
-                         'width) - shown at a drawing plot\'s entry, hidden at an erasing plot\'s exit',
+             'strategy': 'overlay: the game still draws the ULA pixels; hooks in alt ROM image 1 (0x386E-, the '
+                         'whole alt ROM image from the build) + page 26 at slot 6 + page 27 at slot 4 put a grid of '
+                         '4-bit sprites on every live XOR image (key = graphic, x, y, rows, width) - shown at a '
+                         'drawing plot\'s entry, hidden at an erasing plot\'s exit',
              'figures': 'every image of the plotter 0x6357 (all 14 callers; Q1)',
-             'depth': 'sprites in front of everything (Q2); attribute painting kept (Q3)',
-             'colour': 'the image\'s first cell ink after the plotter paints it (Q4); black -> palette 8',
+             'depth': 'sprites in front of everything (Q2)',
+             'outline': 'every sprite: black (palette 8) on the left / right / up / down neighbours of its ink '
+                        '(Q7, Dean 2026-10-27); up to 3 x 3 sprites a figure, 14 figures with sprites at once',
+             'attributes': 'the ULA keeps the scenery colours: the plotter paints an attribute shadow (page 27) '
+                           'instead (Q8, Dean 2026-10-27, reverses Q3); every game read of an attribute reads the '
+                           'shadow, every other attribute writer writes both; a bottom-third restore gives the '
+                           'ULA the colours of its save',
+             'colour': 'the image\'s first cell ink after the plotter paints it (Q4, from the shadow); black -> palette 8',
              'other writers': 'ROM PR-ALL, CL-LINE, CL-SCROLL, the clear 0xB2A0, the tile writer 0xB366, the '
                               'scrolls 0xDED2 / 0xDEEA: a touched live image loses its sprite and is tainted; a '
                               'clear holding it whole forgets it (Q6)',
@@ -131,12 +154,15 @@ class CauldronPatch:
     name = ('Cauldron: every XOR-plotted image -> hardware sprites (overlay; plotter + screen-writer '
             'hooks in alt ROM image 1, tables in page 26 at slot 6)')
 
-    def __init__(self, prof=None, rom_code=None, p26=None, jmp=None):
+    def __init__(self, prof=None, rom_code=None, p26=None, jmp=None, p27=None):
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         self.rom_code = rom_code if rom_code is not None else bytes.fromhex(h['rom'])
         self.p26 = p26 if p26 is not None else bytes.fromhex(h['p26'])
         self.jmp = jmp if jmp is not None else bytes.fromhex(h['jmp'])
+        self.p27 = p27 if p27 is not None else bytes.fromhex(h['p27'])
+        if P27_OFF + len(self.p27) > 0x2000:
+            raise ValueError('page-27 code too long')
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
         self.stub_extra = bytes.fromhex(h['setup'])
         self.setup_call = 0xD000
@@ -173,7 +199,7 @@ class CauldronPatch:
         self.altrom_low = (ALT_PAGE + 1, bytes(low))
         self.sites = [(a, bytes.fromhex(old), b'\xC3' + self.syms[sym].to_bytes(2, 'little'))
                       for a, (old, sym, k) in SITES.items()]
-        self.extra_banks = {12: self.page + bytes(low), PG_BANK: page26(self.p26) + bytes(8192)}
+        self.extra_banks = {12: self.page + bytes(low), PG_BANK: page26(self.p26) + page27(bytes(768), self.p27)}
 
     def rom_image(self):
         """The alt ROM image the patched game reads at 0x0000-0x3FFF (the stub adds the register
@@ -193,6 +219,18 @@ class CauldronPatch:
         snap.banks[5] = bytes(ram[0:16384])
         snap.banks[2] = bytes(ram[16384:32768])
         snap.banks[0] = bytes(ram[32768:49152])
+        # page 27 starts with the snapshot's attribute file as the shadow (the ULA and the original agree)
+        self.extra_banks[PG_BANK] = page26(self.p26) + page27(bytes(ram[0x1800:0x1B00]), self.p27)
+
+
+def page27(attrs, code=None):
+    """Page 27 as the build loads it: the attribute shadow (= the snapshot's attribute file) at 0, the
+    save pairs / canvases empty, the code at 0x0A00."""
+    p = bytearray(8192)
+    p[0:768] = attrs
+    code = bytes.fromhex(load_profile()['hooks']['p27']) if code is None else code
+    p[P27_OFF:P27_OFF + len(code)] = code
+    return bytes(p)
 
 
 def page26(code=None):
@@ -215,7 +253,8 @@ class NextState:
     """NEXTREG, sprite attributes, pattern RAM, page 26 (the hooks' tables)."""
 
     def __init__(self, pages):
-        self.nr = {0x56: 0, 0x57: 1}
+        self.nr = {0x54: GPG4, 0x56: 0, 0x57: 1}
+        self.u = bytearray(768)               # the patched machine's ULA attribute file
         self.attr = [[0, 0, 0, 0, 0] for _ in range(128)]
         self.pat = bytearray(16384)
         self.pidx = 0
@@ -229,6 +268,7 @@ class NextState:
         n.pat = bytearray(self.pat)
         n.pidx = self.pidx
         n.pages = {k: bytearray(v) for k, v in self.pages.items()}
+        n.u = bytearray(self.u)
         return n
 
     def nextreg(self, reg, val):
@@ -238,6 +278,9 @@ class NextState:
         elif reg == 0x56:
             if val not in (0, PG) or (val == PG and PG not in self.pages):
                 self.bad.append(('MMU6 set to page %d' % val,))
+        elif reg == 0x54:
+            if val not in (GPG4, P27) or (val == P27 and P27 not in self.pages):
+                self.bad.append(('MMU4 set to page %d' % val,))
         elif reg not in (0x34, 0x07):
             self.bad.append(('NEXTREG 0x%02X' % reg,))
 
@@ -323,6 +366,10 @@ def _overlays(get, alt, psite, ns):
                 return alt[a]
             if 0xC000 <= a < 0xE000 and ns.nr.get(0x56, 0) == PG:
                 return ns.pages[PG][a - 0xC000]
+            if 0x8000 <= a < 0xA000 and ns.nr.get(0x54, GPG4) == P27:
+                return ns.pages[P27][a - 0x8000]
+            if ATTR0 <= a < ATTR1:
+                return ns.u[a - ATTR0]
             v = psite.get(a)
             if v is not None:
                 return v
@@ -333,6 +380,10 @@ def _overlays(get, alt, psite, ns):
                 s.romw = getattr(s, 'romw', 0) + 1
             elif 0xC000 <= a < 0xE000 and ns.nr.get(0x56, 0) == PG:
                 ns.pages[PG][a - 0xC000] = v
+            elif 0x8000 <= a < 0xA000 and ns.nr.get(0x54, GPG4) == P27:
+                ns.pages[P27][a - 0x8000] = v
+            elif ATTR0 <= a < ATTR1:
+                ns.u[a - ATTR0] = v
             else:
                 s.ov[a] = v
     return O, P
@@ -390,7 +441,7 @@ def event(patch, site, get, R, ns, alt, Sim, at_body=None):
     at_body(ns) is called when the patched plot hook reaches the plotter body."""
     psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
     sp0 = R[12]
-    if site == PLOT:
+    if RESUME[site] is None:                      # the hook runs the routine: meet at the caller's return
         ret = get(sp0) | get(sp0 + 1) << 8
         stop = lambda r: r[24] == ret and r[12] == sp0 + 2
     else:
@@ -406,10 +457,11 @@ def event(patch, site, get, R, ns, alt, Sim, at_body=None):
     err = []
     chk = _isafe(sp_, R, ns, err)
     rp_, tm = sp_.registers, {'prev': R[25], 'slow': 0, 'fast': 0, 'body': at_body is None}
+    body = patch.syms['body2']
 
     def check():
         chk()
-        if not tm['body'] and rp_[24] == BODY:
+        if not tm['body'] and rp_[24] == body:
             tm['body'] = True
             at_body(ns)
         d = rp_[25] - tm['prev']
@@ -428,13 +480,13 @@ def event(patch, site, get, R, ns, alt, Sim, at_body=None):
     if getattr(p, 'romw', 0):
         f.append(('patched code wrote ROM',))
     f += ns.bad
-    if ns.nr.get(0x56, 0) or ns.nr.get(0x57, 1) != 1:
-        f.append(('MMU6 / MMU7 left mapped',))
+    if ns.nr.get(0x56, 0) or ns.nr.get(0x57, 1) != 1 or ns.nr.get(0x54, GPG4) != GPG4:
+        f.append(('MMU4 / MMU6 / MMU7 left mapped',))
     if ns.nr.get(0x07, 0):
         f.append(('CPU speed left at %d' % ns.nr[0x07],))
     dead = range(ro[12] - 64, ro[12])             # below the final SP: dead stack
     keys = set(o.ov) | set(p.ov)
-    md = [a for a in keys if a not in dead and o[a] != p[a]]
+    md = [a for a in keys if a not in dead and not ATTR0 <= a < ATTR1 and o[a] != p[a]]
     if md:
         f.append(('memory differs', len(md), [hex(a) for a in sorted(md)[:4]]))
     return f, o, ro
@@ -503,6 +555,33 @@ def image_pixels(g, w, rows, x, y0):
     return out
 
 
+def outline(pix):
+    """Ink pixels -> the outline: their left / right / up / down neighbours that are not ink (Q7)."""
+    p = set(pix)
+    out = set()
+    for x, y in p:
+        for q in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
+            if q not in p:
+                out.add(q)
+    return out
+
+
+def po_attr(old, get):
+    """ROM PO-ATTR (0x0BE4-0x0C08) on one attribute value with the system variables of get."""
+    e, m = get(ATTR_T), get(MASK_T)
+    a = ((old ^ e) & m) ^ e
+    pf = get(P_FLAG)
+    if pf & 0x40:
+        a &= 0xC7
+        if not a & 4:
+            a ^= 0x38
+    if pf & 0x10:
+        a &= 0xF8
+        if not a & 0x20:
+            a ^= 7
+    return a
+
+
 def image_bytes(get, d):
     """{screen address: XOR mask} the plotter changes for descriptor d (addresses as it computes
     them: PIXEL-ADD per line, then consecutive bytes)."""
@@ -532,7 +611,9 @@ class Model:
         self.tab = []                         # [key, state, rect]
         self.free = [NSLOT - 1 - i for i in range(NSLOT)]
         self.ovf = 0
-        self.shown = {}                       # slot: (pixels {(x, y): ink})
+        self.shown = {}                       # slot: (pixels {(x, y): ink or OUTLINE})
+        self.u = bytearray(768)               # the ULA attribute file the build must show (Q8)
+        self.usv = bytearray(384)             # (ULA, original) pairs at the last bottom-third save
 
     def copy(self):
         m = Model()
@@ -540,7 +621,53 @@ class Model:
         m.free = list(self.free)
         m.ovf = self.ovf
         m.shown = dict(self.shown)
+        m.u = bytearray(self.u)
+        m.usv = bytearray(self.usv)
         return m
+
+    def attrs(self, kind, get, R, after):
+        """The ULA attributes after an attribute event (games/cauldron.md "Build design", Q8): the
+        plotter's painting never reaches the ULA; every other writer writes it; a restore of the
+        bottom third gives back the ULA colours of the save where the buffer still holds that save.
+        get = the original before the event, after = the original after it."""
+        u = self.u
+        if kind == 'poa':
+            a = (R[6] << 8 | R[7]) - ATTR0
+            if 0 <= a < 768:
+                u[a] = po_attr(u[a], get)
+        elif kind == 'cll':
+            b = R[2]
+            lo = (24 - b) * 32 if 1 <= b <= 24 else 0
+            for a in range(lo, 768):
+                u[a] = after(ATTR0 + a)
+        elif kind == 'csc':
+            for a in range(768):
+                u[a] = after(ATTR0 + a)
+        elif kind == 'save':
+            for i in range(192):
+                self.usv[2 * i] = u[0x200 + i]
+                self.usv[2 * i + 1] = get(ATTR0 + 0x200 + i)
+        elif kind == 'rest':
+            for i in range(192):
+                b = get(BUF + i)
+                u[0x200 + i] = self.usv[2 * i] if b == self.usv[2 * i + 1] else b
+        elif kind == 'box':
+            for r in range(5):
+                for c in range(6):
+                    a = 0xE6 + 32 * r + c
+                    u[a] = after(ATTR0 + a)
+        elif kind == 'rfil':
+            for a in range(0x80, 0x300):
+                u[a] = after(ATTR0 + a)
+        elif kind in ('sal', 'sar'):
+            for r in range(8):
+                row = u[0x200 + 32 * r:0x220 + 32 * r]
+                row = row[1:] + row[31:] if kind == 'sal' else row[:1] + row[:31]
+                u[0x200 + 32 * r:0x220 + 32 * r] = row
+        elif kind == 'tatt':
+            a = (R[4] << 8 | R[5]) - ATTR0
+            if 0 <= a < 768:
+                u[a] = R[6] | 0x40
 
     def _hide(self, s):
         self.shown.pop(s, None)
@@ -595,7 +722,10 @@ class Model:
             return None, None
         g = bytes(get((d['g'] + i) & 0xFFFF) for i in range(rows * w))
         ink = plot_ink(get, d, y0, c0)
-        self.shown[s] = {p: ink for p in image_pixels(g, w, rows, x, y0)}
+        pix = image_pixels(g, w, rows, x, y0)
+        sh = {p: OUTLINE for p in outline(pix)}
+        sh.update({p: ink for p in pix})
+        self.shown[s] = sh
         return None, s
 
     def exit(self, s):
@@ -657,6 +787,8 @@ def touch_rect(site, get, R):
     k = SITES[site][2] if site in SITES else ROM_SITES[site][2]
     if k in TOUCH:
         return TOUCH[k]
+    if k not in ('char', 'tile', 'cll'):
+        return None
     if k == 'char':
         a = R[6] << 8 | R[7]
     elif k == 'tile':
@@ -693,12 +825,27 @@ def _sync(ns, m):
         pg[a] = v
     for s in range(NSLOT):
         if s not in m.shown:
-            for k in range(4):
-                ns.attr[4 * s + k][3] = 0
+            for k in range(9):
+                ns.attr[9 * s + k][3] = 0
+    ns.u[:] = m.u
+    if P27 in ns.pages:
+        ns.pages[P27][0x300:0x480] = m.usv
 
 
-def compare(ns, m, fail, what, c=None):
-    """Patched Next state vs the model: the sprite layer and the hooks' tables."""
+def compare(ns, m, fail, what, c=None, orig=None):
+    """Patched Next state vs the model: the sprite layer, the hooks' tables, the ULA attribute file
+    and (orig = the original's memory) the attribute shadow."""
+    if ns.u != m.u:
+        d = [i for i in range(768) if ns.u[i] != m.u[i]]
+        fail('%s: ULA attributes differ from the model' % what, (len(d), [(hex(ATTR0 + i), ns.u[i], m.u[i]) for i in d[:3]]))
+    if orig is not None:
+        sh = ns.pages[P27]
+        d = [i for i in range(768) if sh[i] != orig(ATTR0 + i)]
+        if d:
+            fail('%s: attribute shadow differs from the original' % what,
+                 (len(d), [(hex(ATTR0 + i), sh[i], orig(ATTR0 + i)) for i in d[:3]]))
+        if c is not None:
+            c['attribute bytes compared'] += 1536
     exp, got = m.layer(), ns.layer()
     if ns.bad:
         fail('%s: %s' % (what, ns.bad[0][0]))
@@ -717,11 +864,15 @@ def compare(ns, m, fail, what, c=None):
         c['table bytes compared'] += len(tb)
 
 
-def verify(patch, rzx_path, stop=None, collect=0, progress=None):
+def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None):
     """Replay the RZX (original game, Python simulator); at every site run the original and the
-    patched code from the same state and compare; check the sprite layer and the hooks' tables
-    against the model after every event and at a plot's body start, each plot's screen change
-    against its image, and every screen write outside the plotter against the live rectangles.
+    patched code from the same state and compare; check the sprite layer, the hooks' tables, the ULA
+    attribute file (model) and the attribute shadow (= the original's) after every event and at a
+    plot's body start, each plot's screen change against its image, every screen write outside the
+    plotter against the live rectangles, and every attribute access outside the hooked routines
+    (none may write; none may read a cell whose ULA value differs from the original's).
+    shots: frames at which to keep what the Next shows (ULA pixels, ULA attributes, sprite layer):
+    -> (Counter, examples, states, shots) then.
     -> (Counter, examples[, states])."""
     import skoolkit.rzxplay as rzxplay
     from skoolkit.simulator import Simulator
@@ -733,7 +884,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
     site_bytes = {a + k for a, old, new in patch.sites for k in range(len(new))}
     ns = NextState({PG: page26(patch.p26)})
     model = Model()
-    st = {'frame': 0, 'on': False, 'R': None, 'live': {}, 'plot': None, 'gfx': set()}
+    st = {'frame': 0, 'on': False, 'R': None, 'live': {}, 'plot': None, 'gfx': set(), 'span': None,
+          'diff': set()}
     cnt = collections.Counter()
     fcost = collections.Counter()
     states = []
@@ -746,6 +898,12 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             ex[k].append((st['frame'],) + tuple(info))
 
     class Mem(list):
+        def __getitem__(s, a):
+            if a in st['diff'] and st['span'] is None and st['on']:
+                fail('attribute read outside the hooks of a cell the ULA shows differently',
+                     (hex(st['R'][24]), hex(a)))
+            return G(s, a)
+
         def __setitem__(s, a, v):
             if st['on']:
                 if a in site_bytes:
@@ -761,6 +919,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                             pl['delta'][a] = pl['delta'].get(a, 0) ^ d
                     elif d and a in st['live']:
                         fail('screen write into a live image\'s rectangle with no touch hook', (hex(pc), hex(a)))
+                elif ATTR0 <= a < ATTR1 and st['span'] is None:
+                    fail('attribute write outside the hooks', (hex(st['R'][24]), hex(a)))
             S(s, a, v)
 
     def snap(get):
@@ -769,15 +929,30 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
     class Sm(Simulator):
         def __init__(self, memory, registers=None, state_=None, config=None):
             super().__init__(Mem(memory), registers, state_, config)
-            st['on'] = True
             R, mem, ops = self.registers, self.memory, self.opcodes
-            st['R'] = R
             get = lambda a: G(mem, a)
+            at0 = bytes(get(ATTR0 + i) for i in range(768))
+            ns.pages[P27] = bytearray(page27(at0, patch.p27))
+            ns.u[:] = at0
+            model.u[:] = at0
+            st['on'] = True
+            st['R'] = R
+            st['mem'] = mem
 
             def keep(label, pc):
                 if collect and c['collected ' + label] < collect:
                     c['collected ' + label] += 1
                     states.append((label, pc, list(R), snap(get), ns.copy(), model.copy()))
+
+            def span(pc):
+                r = RESUME[pc]
+                if r is None:
+                    st['span'] = (get(R[12]) | get(R[12] + 1) << 8, (R[12] + 2) & 0xFFFF)
+                else:
+                    st['span'] = (r[0], (R[12] + r[1]) & 0xFFFF)
+
+            def diff():
+                st['diff'] = {ATTR0 + i for i in range(768) if model.u[i] != G(mem, ATTR0 + i)}
 
             def run(pc, label, at_body=None):
                 COST['extra'] = 0
@@ -787,14 +962,22 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                 for k in fl:
                     fail('%s: %s' % (label, k[0] if isinstance(k, tuple) else k),
                          k[1:] if isinstance(k, tuple) else ())
+                return o
 
             def mk(fn):
                 def g():
                     pc = R[24]
+                    sp_ = st['span']
+                    if sp_ is not None and pc == sp_[0] and R[12] == sp_[1]:
+                        st['span'] = None
+                        diff()
                     if pc not in WATCH:
                         fn()
                         return
                     cnt[pc] += 1
+                    if st['span'] is not None and pc != BODY_RET:
+                        fn()
+                        return
                     if pc == PLOT:
                         d = read_desc(get, R[6] << 8 | R[7])
                         m1 = model.copy()
@@ -805,11 +988,12 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                         mb = model.copy()
 
                         def at_body(ns_):
-                            compare(ns_, mb, fail, '%s at the body start' % label)
+                            compare(ns_, mb, fail, '%s at the body start' % label, None, get)
                             c['transient checks'] += 1
-                        run(pc, label, at_body)
+                        o = run(pc, label, at_body)
                         model.exit(hide)
-                        compare(ns, model, fail, label, c)
+                        compare(ns, model, fail, label, c, o.__getitem__)
+                        span(pc)
                         st['plot'] = {'d': d, 'delta': {}, 'sp': R[12]}
                         g0 = d['g']
                         for i in range(d['rows'] * d['w']):
@@ -843,11 +1027,13 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                         tr = touch_rect(pc, get, R)
                         label = SITES[pc][2] if pc in SITES else ROM_SITES[pc][2]
                         keep(label, pc)
-                        run(pc, label)
+                        o = run(pc, label)
                         if tr:
                             model.touch(*tr)
-                        compare(ns, model, fail, label, c)
+                        model.attrs(label, get, R, o.__getitem__)
+                        compare(ns, model, fail, label, c, o.__getitem__)
                         st['live'] = model.live_bytes()
+                        span(pc)
                     fn()
                 return g
             for i in range(256):
@@ -855,8 +1041,12 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
 
     _nf = rzxplay.RZXTracer.next_frame
 
+    shot = []
+
     def next_frame(self):
         st['frame'] += 1
+        if shots and st['frame'] in shots and st.get('mem') is not None:
+            shot.append((st['frame'], bytes(G(st['mem'], a) for a in range(0x4000, 0x5800)), bytes(ns.u), ns.layer()))
         if progress and st['frame'] % 1000 == 0:
             progress(st['frame'], c)
         return _nf(self)
@@ -883,7 +1073,29 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         v = sorted(fcost.values())
         c['speed: hook T per game frame, mean'] = int(sum(v) / max(1, st['frame']))
         c['speed: hook T per game frame, max'] = int(v[-1])
+    if shots:
+        return c, dict(ex), states, shot
     return (c, dict(ex), states) if collect else (c, dict(ex))
+
+
+def render(pixels, attrs, layer, scale=2):
+    """What the Next shows: the ULA (pixels + attributes) with the sprite layer in front -> PIL image."""
+    from PIL import Image
+    pal = [(0, 0, 0), (0, 0, 0xD7), (0xD7, 0, 0), (0xD7, 0, 0xD7), (0, 0xD7, 0), (0, 0xD7, 0xD7),
+           (0xD7, 0xD7, 0), (0xD7, 0xD7, 0xD7), (0, 0, 0), (0, 0, 0xFF), (0xFF, 0, 0), (0xFF, 0, 0xFF),
+           (0, 0xFF, 0), (0, 0xFF, 0xFF), (0xFF, 0xFF, 0), (0xFF, 0xFF, 0xFF)]
+    img = Image.new('RGB', (256, 192))
+    px = img.load()
+    for y in range(192):
+        for c in range(32):
+            b = pixels[screen_addr(c, y) - 0x4000]
+            a = attrs[(y >> 3) * 32 + c]
+            br = 8 if a & 0x40 else 0
+            for k in range(8):
+                px[c * 8 + k, y] = pal[(a & 7 if b >> (7 - k) & 1 else a >> 3 & 7) + br]
+    for (x, y), n in layer.items():
+        px[x, y] = pal[n]
+    return img.resize((256 * scale, 192 * scale), Image.NEAREST)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -895,6 +1107,7 @@ def _ns_for(pt, ns0):
     26 (tables, 0x0000-0x06FF) from the capture, pt's OWN code (CLAUDE.md: negative controls)."""
     ns = ns0.copy()
     ns.pages[PG][P26_OFF:] = page26(pt.p26)[P26_OFF:]
+    ns.pages[P27][P27_OFF:] = page27(bytes(768), pt.p27)[P27_OFF:]
     return ns
 
 
@@ -903,7 +1116,8 @@ def _entry_only(pt, R, mem, ns, alt, Sim):
     psite = {a + k: v for a, old, new in pt.sites for k, v in enumerate(new)}
     O, P = _overlays(mem.__getitem__, alt, psite, ns)
     sim = _machine(Sim, P(), list(R), ns, 'p')
-    ok = _run(sim, lambda r: r[24] == BODY)
+    body = pt.syms['body2']
+    ok = _run(sim, lambda r: r[24] == body)
     return [] if ok else ['patched hook never reached the body']
 
 
@@ -1021,9 +1235,74 @@ def unit_cases(states):
                   ('scroll right, images in the bottom third', erase, at(0xDEEA, model_=lower), 'run'),
                   ('CL-LINE 24 (CLS) in overflow: all forgotten, overflow ends', erase, at(0x0E44, {2: 24}, model_=ovf), 'run'),
                   ('CL-LINE 2: lower lines only', erase, at(0x0E44, {2: 2}, model_=lower), 'run'),
-                  ('CL-LINE 0: whole screen tainted', erase, at(0x0E44, {2: 0}), 'run'),
-                  ('CL-LINE 25: whole screen tainted', erase, at(0x0E44, {2: 25}), 'run'),
                   ('CL-SCROLL (0x0E00, B 23): all tainted', erase, at(0x0E00, {2: 23}), 'run')]
+    # attribute shadow (Q8): each hooked reader / writer as captured, and with every ULA cell
+    # different from the original's (as under painted figures)
+    def paint(R, mem, m):
+        m.u[:] = bytes(b ^ 0x3F for b in mem[ATTR0:ATTR1])
+
+    def regs(**kw):
+        idx = {'A': 0, 'B': 2, 'C': 3, 'D': 4, 'E': 5, 'H': 6, 'L': 7}
+        def f(R, mem, m):
+            for k, v in kw.items():
+                R[idx[k]] = v
+        return f
+
+    def both2(*fs):
+        def f(R, mem, m):
+            for g in fs:
+                g(R, mem, m)
+        return f
+    for kind in ('peek', 'poa', 'save', 'rest', 'box', 'rfil', 'sal', 'sar', 'tatt', 'tard', 'cll'):
+        if by[kind]:
+            stt = by[kind][-1]
+            cases += [('%s as captured' % kind, stt, None, 'run'),
+                      ('%s, every ULA cell differs' % kind, stt, paint, 'run')]
+    if by['peek']:
+        stt = by['peek'][-1]
+        cases += [('PEEK of an attribute, ULA differs', stt, both2(paint, regs(H=0x59, L=0x23)), 'run'),
+                  ('PEEK of the screen', stt, both2(paint, regs(H=0x48, L=0x23)), 'run'),
+                  ('PEEK of 0x5B00', stt, both2(paint, regs(H=0x5B, L=0x00)), 'run')]
+    if by['rest']:
+        stt = by['rest'][-1]
+
+        def bufchg(R, mem, m):
+            paint(R, mem, m)
+            for i in range(0, 192, 7):
+                mem[BUF + i] ^= 0x11
+        cases.append(('restore with the buffer changed since the save', stt, bufchg, 'run'))
+
+        def saved(R, mem, m):
+            paint(R, mem, m)
+            for i in range(192):
+                m.usv[2 * i + 1] = mem[BUF + i]
+                m.usv[2 * i] = mem[BUF + i] ^ 0x3F
+        cases.append(('restore right after its save, every ULA cell different', stt, saved, 'run'))
+    if by['box']:
+        def boxchg(R, mem, m):
+            paint(R, mem, m)
+            for r in range(5):
+                for c_ in range(6):
+                    mem[ATTR0 + 0xE6 + 32 * r + c_] ^= 0x3F
+        cases.append(('box over cells holding other colours', by['box'][-1], boxchg, 'run'))
+    if by['tard']:
+        cases.append(('room cell read off the attributes', by['tard'][-1], both2(paint, regs(D=0x40)), 'run'))
+    if by['tatt']:
+        cases.append(('room cell write off the attributes', by['tatt'][-1], both2(paint, regs(D=0x40)), 'run'))
+    if by['poa']:
+        stt = by['poa'][-1]
+
+        def mask(R, mem, m):
+            paint(R, mem, m)
+            mem[MASK_T] = 0xFF
+            mem[P_FLAG] = 0x50
+        cases.append(('PO-ATTR with MASK-T 0xFF, INK / PAPER 9, ULA differs', stt, mask, 'run'))
+    if erase:
+        # CL-LINE with B 0 or > 24 never returns in the original (it clears over the stack): no case
+        cases += [('CL-LINE 3 with every ULA cell different', erase, both2(paint, at(0x0E44, {2: 3})), 'run'),
+                  ('CL-SCROLL with every ULA cell different', erase, both2(paint, at(0x0E00, {2: 23})), 'run')]
+    if draw:
+        cases.append(('draw with every ULA cell different', draw, paint, 'run'))
     return cases
 
 
@@ -1034,6 +1313,7 @@ def run_case(pt, stt, mut, mode, fail, c=None):
         mut(R, mem, m)
     ns = _ns_for(pt, ns0)
     _sync(ns, m)
+    ns.pages[P27][0:768] = mem[ATTR0:ATTR1]       # the shadow = the original's attributes (a mutated case too)
     alt = pt.rom_image()
     Sim = _rw()
     get = mem.__getitem__
@@ -1048,16 +1328,18 @@ def run_case(pt, stt, mut, mode, fail, c=None):
             return
         mb = m.copy()
         fl, o, ro = event(pt, pc, get, R, ns, alt, Sim,
-                          lambda ns_: compare(ns_, mb, fail, 'at the body start', c))
+                          lambda ns_: compare(ns_, mb, fail, 'at the body start', c, get))
         m.exit(hide)
     else:
         tr = touch_rect(pc, get, R)
         fl, o, ro = event(pt, pc, get, R, ns, alt, Sim)
         if tr:
             m.touch(*tr)
+        k_ = SITES[pc][2] if pc in SITES else ROM_SITES[pc][2]
+        m.attrs(k_, get, R, o.__getitem__)
     for k in fl:
         fail(k[0] if isinstance(k, tuple) else k, k[1:] if isinstance(k, tuple) else ())
-    compare(ns, m, fail, 'after', c)
+    compare(ns, m, fail, 'after', c, o.__getitem__)
 
 
 def unit_tests(patch, states, negs=None):
@@ -1095,27 +1377,35 @@ def _neg(patch, old, new, what, block='rom', nth=None):
     """Copy of the patch with one hook byte sequence changed (exactly once in the block, or its nth
     occurrence)."""
     o, n = bytes.fromhex(old), bytes.fromhex(new)
-    blk = bytearray(patch.rom_code if block == 'rom' else patch.p26)
+    blk = bytearray({'rom': patch.rom_code, 'p26': patch.p26, 'p27': patch.p27}[block])
     hits = [i for i in range(len(blk)) if blk[i:i + len(o)] == o]
     if nth is None and len(hits) != 1:
         raise ValueError('negative control %s: pattern %s found %d times' % (what, old, len(hits)))
     i = hits[nth or 0]
     blk[i:i + len(o)] = n
-    if block == 'rom':
-        return CauldronPatch(patch.prof, rom_code=bytes(blk), p26=patch.p26, jmp=patch.jmp)
-    return CauldronPatch(patch.prof, rom_code=patch.rom_code, p26=bytes(blk), jmp=patch.jmp)
+    kw = {'rom_code': patch.rom_code, 'p26': patch.p26, 'p27': patch.p27}
+    kw[{'rom': 'rom_code', 'p26': 'p26', 'p27': 'p27'}[block]] = bytes(blk)
+    return CauldronPatch(patch.prof, jmp=patch.jmp, **kw)
 
 
 def negative_patches(patch):
     return {'sprite X one pixel off': _neg(patch, '6f2600112000', '6f2600112100', 'X'),
-            'erase never hides its sprite': _neg(patch, 'e3f57dfe1c', 'e3f57dfe00', 'exit'),
+            'erase never hides its sprite': _neg(patch, 'e3f57dfe0e', 'e3f57dfe00', 'exit'),
             'left scroll touches nothing': _neg(patch, '01bf80111e00', '01bfc0111e00', 'scl'),
             'clear 0xB2A0 forgets nothing (taints)': _neg(patch, '01bf40111f003e01', '01bf40111f003e00', 'clr'),
             'PR-ALL hook only for 0x4000-0x40FF': _neg(patch, 'fe5830', 'fe4130', 'char', nth=0),
             'tainted key plotted again gets a sprite': _neg(patch, 'feffca', 'fefdca', 'taint', 'p26'),
             'table full not detected': _neg(patch, 'fe8038', 'fe8138', 'full', 'p26'),
             'full clear keeps the overflow': _neg(patch, 'af3201c0c9', '003201c0c9', 'ovf', 'p26'),
-            'type 2 colour ignores INK 9': _neg(patch, 'cb66', 'cb6e', 'pflag', 'p26')}
+            'type 2 colour ignores INK 9': _neg(patch, 'cb66', 'cb6e', 'pflag', 'p26'),
+            'plotter paints the ULA': _neg(patch, 'e603f680', 'e603f658', 'body', 'p27'),
+            'no outline (top pixel of a pair)': _neg(patch, '3e082001af', '3e002001af', 'outline', 'p27', nth=0),
+            'PEEK reads the ULA': _neg(patch, 'c628', 'c600', 'peek', nth=0),
+            'PO-ATTR twice on the ULA': _neg(patch, 'c628', 'c600', 'poa', nth=1),
+            'restore ignores the save': _neg(patch, 'ddbe01', 'ddbe00', 'rest', 'p27'),
+            'left attribute scroll skips the shadow': _neg(patch, '210082cd', '21005acd', 'sal', 'p27'),
+            'box skips the shadow': _neg(patch, '21e680cd', '21e658cd', 'box', 'p27'),
+            'CL-LINE rows not into the shadow': _neg(patch, '110028', '110000', 'cll', 'p27')}
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1191,6 +1481,10 @@ def auto(a, z80, name, out, say):
                 c['csc'], c['sprite pixels compared'], c['table bytes compared'], c['transient checks'],
                 c['plot screen bytes compared'], c['interrupt-safety points'], c['max live keys'],
                 c['max table entries'], 'IDENTICAL' if not fails else 'FAILED %s' % fails))
+        say('Attributes: PEEK %d, PO-ATTR %d, save %d, restore %d, box %d, room fill %d, room cell %d / %d, '
+            'scroll %d / %d; %d shadow + ULA bytes compared, no unhooked attribute access (Q8)' % (
+                c['peek'], c['poa'], c['save'], c['rest'], c['box'], c['rfil'], c['tatt'], c['tard'],
+                c['sal'], c['sar'], c['attribute bytes compared']))
         for k, v in ex.items():
             say('            %s: %s' % (k, str(v)[:300]))
         say('Colour    : rule = first cell ink at the plot exit %d, differs %d (informative)' % (

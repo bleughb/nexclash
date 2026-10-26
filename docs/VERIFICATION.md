@@ -59,7 +59,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - The Incredible Shrinking Fireman (incredible_shrinking_fireman-add-OPUS): `incredible_shrinking_fireman-add-OPUS.nex` feb706fcdaa29f13844a7b4982dc21fa, `incredible_shrinking_fireman-add-OPUS_sprites.nex` 53f2665e76775f3c1b404aba74e93a7b; verified 2026-10-25
 - Atic Atac (atic_atac): `Atic_Atac_1983_Ultimate_Play_The_Game_a.nex` e710fa8785802f1aa51f214d95c82343, `Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites.nex` 59493b7563e6dd1c7141a6763cf52d73; verified never
 - The Incredible Shrinking Fireman (GPT6_ASTRA) (incredible_shrinking_fireman-add-GPT6_ASTRA): `incredible_shrinking_fireman_plain-add-GPT6_ASTRA.nex` f8f213e55e3da01349827f8ae7d93bee, `incredible_shrinking_fireman_sprites-add-GPT6_ASTRA.nex` 1ea61f0bcaf2b5f27514807f8753f263; verified 2026-10-26
-- Cauldron (cauldron): `Cauldron_1985_Palace_Software_a.nex` b5b211f1fc6103ec0d42711dcc29cd0d, `Cauldron_1985_Palace_Software_a_sprites.nex` 5830cbbdc6e327d5c53e22ff8e7924a9; verified never
+- Cauldron (cauldron): `Cauldron_1985_Palace_Software_a.nex` b5b211f1fc6103ec0d42711dcc29cd0d, `Cauldron_1985_Palace_Software_a_sprites.nex` 55ed40f88d103cfd2fc9474199fe7f9d; verified never
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
