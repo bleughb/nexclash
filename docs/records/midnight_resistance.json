@@ -118,5 +118,74 @@
   "date": "2026-10-14"
  },
  "canary": 2,
- "canary_quick": 300
+ "canary_quick": 300,
+ "techniques": [
+  {
+   "application": "midres.figures.scratch-redirect",
+   "id": "patch.scratch-redirect",
+   "revision": 1,
+   "target": "CALL 0x7EC1 sites 0x97E5, 0x981E, 0x7DC6, 0x9EF0, 0x9F45; loop exits 0x980F, 0x9861, 0x7DE5, 0x9F3D, 0x9FB7; level exit 0x8988",
+   "phases": [
+    "entry",
+    "exit",
+    "commit"
+   ],
+   "owns": {
+    "mmu_slots": [
+     2,
+     5
+    ],
+    "next_pages": [
+     26,
+     27
+    ],
+    "memory": [
+     {
+      "space": "alt_rom",
+      "image": 1,
+      "offset": [
+       "0x2000",
+       "0x2EA1"
+      ]
+     }
+    ],
+    "speed": "28MHz-inside-hook"
+   }
+  },
+  {
+   "application": "midres.commit.pattern-cache",
+   "id": "optimise.pattern-cache",
+   "revision": 1,
+   "target": "commit 0x8950 (and the shop path 0xB893): 16-entry pattern-slot cache",
+   "phases": [
+    "commit"
+   ]
+  }
+ ],
+ "results": [
+  {
+   "application": "midres.figures.scratch-redirect",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "670f9403",
+   "scope": "2 RZX IDENTICAL with the painted colour map; unit + interrupt + level / shop exit + full table + flipped + map PASS",
+   "evidence": "STATUS.md"
+  },
+  {
+   "application": "midres.figures.scratch-redirect",
+   "check": "hardware.checklist",
+   "status": "pass",
+   "build": "670f9403",
+   "scope": "tests OK on a real Next (Dean, 2026-10-14)",
+   "evidence": "STATUS.md"
+  },
+  {
+   "application": "midres.commit.pattern-cache",
+   "check": "optimise.measurements",
+   "status": "partial",
+   "build": "670f9403",
+   "scope": "commit 15-60K T without vehicles, 76-200K with the jeep, 340-410K with the tank (16 entries thrash); hit / miss counts not recorded",
+   "evidence": "games/midnight_resistance.md"
+  }
+ ]
 }

@@ -1,0 +1,126 @@
+{
+  "_note": "The one place a technique predicate is defined (docs/techniques/STANDARD.md 5). evaluation: auto = a field the tools emit today (survey_field set), manual = an agent judges from tool output and disassembly, proposed = no tool yet. Values per routine or figure class are true / false / unknown / conflicted, each with basis and scope.",
+  "render.composition.xor": {
+    "means": "every write the routine makes to its target (screen or buffer) is XOR of the byte read",
+    "true_when": "every screen-writing instruction of the routine XORs the old byte (e.g. LD A,(DE) / XOR (HL) / LD (HL),A) over the stated scope",
+    "false_when": "any write in scope is overwrite, OR or AND",
+    "evaluation": "manual",
+    "survey_field": null,
+    "survey_field_proposed": "routines[].composition",
+    "probe": "scan GAME.z80 --rzx R --range 0x4000-0x57FF --writers lists the writing PCs (it does not classify them); disassemble those PCs (PLAYBOOK 2)"
+  },
+  "render.target.back_buffer": {
+    "means": "the figure plotter draws into a RAM buffer that a separate routine copies to the screen",
+    "true_when": "the plotter's writes land in a RAM range and a block copy (LDIR / LDI / PUSH) from that range writes the screen",
+    "false_when": "the plotter writes the screen bitmap directly",
+    "evaluation": "manual",
+    "survey_field": null,
+    "survey_field_proposed": "routines[].target",
+    "probe": "survey.md block-copy rows hint at it; scan GAME.z80 --rzx R --range BUF --writers on the copied range"
+  },
+  "render.unit.partial_image": {
+    "means": "one plot call draws less than a whole figure image (a row, slice, quarter) for at least one entry or effect",
+    "true_when": "for some plot entry, the rows or bytes drawn per call are fewer than the figure's full graphic, in a state the recording reaches",
+    "false_when": "every entry draws whole images over the stated scope (normal play and every effect reached)",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "detect.tracked-unit: compare rows drawn per call with the graphic's height byte / row count, per entry and per effect"
+  },
+  "screen.gameplay_reads_figure_pixels": {
+    "means": "game logic (collision, landing, decisions) reads screen bytes that hold figure pixels, and the result depends on them",
+    "true_when": "a non-drawing routine reads a byte holding figure pixels and its result changes if the figure is removed",
+    "false_when": "every read of figure pixels in scope is a drawer's own read-modify-write",
+    "evaluation": "manual",
+    "survey_field": null,
+    "survey_field_proposed": "screen_readers[]",
+    "probe": "detect.gameplay-screen-readers (no shared command yet; BRIEFING C2 candidate)"
+  },
+  "screen.other_writers_change_figure_bits": {
+    "means": "routines other than the figure plotters overwrite or modify bytes holding figure pixels (clears, boxes, scenery, text)",
+    "true_when": "a writer other than the plotters changes a figure bit in scope",
+    "false_when": "no other writer touches figure bits in scope",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "scan GAME.z80 --rzx R --range 0x4000-0x57FF --writers, then classify each non-plotter writer against the figures' bytes"
+  },
+  "design.figures_in_front": {
+    "means": "the user's design answer puts converted figures in front of scenery",
+    "true_when": "the stage-1 answer (default 3 changed, or an exception) says figures go in front",
+    "false_when": "figures keep the game's own depth rule",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "the stage-1 design question (PLAYBOOK 3c)"
+  },
+  "exec.interrupts_on_at_sites": {
+    "means": "interrupts are enabled when the candidate hook sites run",
+    "true_when": "IFF is 1 at the site in any recorded call",
+    "false_when": "IFF is 0 at every recorded call and the code path shows DI before the site",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "isr GAME.z80 --rzx R (handler, slots, stack); a trace of IFF at the site"
+  },
+  "exec.isr_calls_routine": {
+    "means": "the game's interrupt handler calls (directly or indirectly) the routine being hooked",
+    "true_when": "a call path from the ISR entry reaches the routine",
+    "false_when": "no path from the ISR reaches it (static) and none is seen in the recording",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "isr GAME.z80 --rzx R for the handler; survey callers of the routine with the interrupt marked"
+  },
+  "exec.routine_not_reentrant": {
+    "means": "the routine keeps state in fixed memory or self-modified code, so a nested call corrupts the outer one",
+    "true_when": "it writes globals or its own operands that it later reads within the same call",
+    "false_when": "all its working state is in registers or on the stack",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "disassemble the routine: list LD (nn),r / LD (nn),A writes into data or its own code, and their later reads"
+  },
+  "exec.isr_must_run_on_time": {
+    "means": "delaying the interrupt handler by a few thousand T changes behaviour (music timing, raster effects, frame counters read mid-frame)",
+    "true_when": "the handler's work is timing-critical in a way a delay changes",
+    "false_when": "the handler's work tolerates running later in the same frame",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "isr GAME.z80 --rzx R; read what the handler does; ask the user if music or effects are involved"
+  },
+  "hook.adds_time": {
+    "means": "the hooks add enough T-states to move later code relative to the interrupt",
+    "true_when": "hook cost per frame is non-trivial against the gap the original leaves before the interrupt",
+    "false_when": "hooks add no time on the path (pure data patches)",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "no shared hook-cost tool (BRIEFING C2 #1); measure T per frame in the verifier's pair runs"
+  },
+  "hook.updates_visible_image": {
+    "means": "a hook changes what a visible sprite or layer shows while the original routine is still drawing",
+    "true_when": "the hook writes sprite attributes, patterns or Layer 2 that are on screen during the plot",
+    "false_when": "replacement graphics change only while hidden or at a point the beam cannot show mid-update",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "read the hook design; cost GAME.z80 --rzx R --at PLOTTER gives how long a plot runs"
+  },
+  "plot.call_target_redirectable": {
+    "means": "the plotters get their destination from a shared helper or CALL target that a hook can replace without changing their loops",
+    "true_when": "every converted plotter obtains its buffer address from one CALL / helper whose return value can be redirected",
+    "false_when": "destinations are computed inline in each plotter",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "disassemble each plotter's entry; list CALLs shared between them"
+  },
+  "mem.hook_page_slot_free": {
+    "means": "a Next MMU slot exists that the ISR never touches, so a hook can map its own page there while interrupts are on",
+    "true_when": "the full-RZX isr slot scan shows the slot untouched by the handler (and its paging writes)",
+    "false_when": "the handler touches every candidate slot",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "isr GAME.z80 --rzx R (slots touched)"
+  },
+  "sprite.working_set_fits": {
+    "means": "the distinct images shown at once fit in pattern memory (or the planned cache) in the worst scene",
+    "true_when": "distinct images per worst frame fit the cache entries / pattern slots planned",
+    "false_when": "the worst recorded scene needs more distinct images than the cache holds",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "cost GAME.z80 --rzx R --at PLOTTER --group IX; count distinct graphics per frame in the worst scene"
+  }
+}
