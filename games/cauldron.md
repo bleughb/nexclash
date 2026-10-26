@@ -3,8 +3,7 @@
 ## Next session
 Stage: 4 (hardware + colour round)    Branch: claude/cauldron
 State: 55ed40f8 (Q7 outline, Q8 no clash) works on the Next (Dean 2026-10-27); quick 9000 IDENTICAL, unit 75 +
-  17 PASS; `selftest --game cauldron --verify --stamp` started the same day (result in "Results" /
-  the record once it ends; if it did not stamp, rerun it).
+  17 PASS; full verification IDENTICAL and stamped 2026-10-27 ("Results"); record reconciled.
 Inputs: specnext/reference/cauldron/ (cauldron.rzx: its embedded snapshot is the build input)
 Start with: the colour map:
   per-pixel override keyed by graphic byte in a Next page the game never reads, applied in page-27
@@ -160,7 +159,7 @@ right, clear 0xB2A0 110, CL-LINE 64 (B = 24 x 32 = CLS, B = 2 x 32), CL-SCROLL 0
 - Shared code (additive, default off): z80tonex.altrom_fill / build_stub + nextboot.check take
   `patch.altrom0` (ROM bytes below 0x2000); ENGINE_CONTRACT patch object. `selftest --canary` PASSED.
 - Not in this part: colour map, sheets, recolour (Open).
-Techniques: `detect.gameplay-screen-readers`, `patch.xor-overlay-keep-ula`, `patch.display-atomic-switch`
+Techniques: `detect.gameplay-screen-readers`, `patch.xor-overlay-keep-ula`, `patch.display-atomic-switch`, `patch.attribute-shadow` (recipe and results: docs/records/cauldron.json)
 
 ## Build design round 2 (2026-10-27: Q7 outline, Q8 no clash)
 - Q8 attribute shadow: page 27 at slot 4 (0x8000-, mapped only in hooks; the ROM IM 1 handler
@@ -193,7 +192,13 @@ Techniques: `detect.gameplay-screen-readers`, `patch.xor-overlay-keep-ula`, `pat
   upload, double PO-ATTR), max 45,474 T. Unit 75 cases + 17 negative controls (8 new: plotter paints
   the ULA, no outline, PEEK reads the ULA, PO-ATTR twice on the ULA, restore ignores the save, scroll /
   box / CL-LINE skip the shadow) PASS. CL-LINE B 0 / 25 cases dropped: the original never returns.
-- Full verification: see "Next session".
+- Full verification (stamped 2026-10-27, 55ed40f8): 89,596 frames IDENTICAL - 84,638 plots (42,188
+  draw / 41,855 erase / 595 no sprite), PR-ALL 53,334, tile 28,399, scrolls 1,760 / 3,552, clear 110,
+  CL-LINE 64; 188.6M sprite pixels, 32.4M table bytes, 2.86M plot screen bytes, 936M interrupt-safety
+  points, max 10 live keys / 33 entries; attributes: PEEK 103,930, PO-ATTR 53,334, save 182, restore
+  6,051, box 15,236, room fill 110, room cell 14,319 / 9,406, scrolls 1,760 / 3,552, 583M bytes
+  compared, no unhooked access. Colour rule 42,188 / 42,188. Hook cost mean 7,611 T, max 130,678 T
+  (one frame, ~2 frames' worth: a room draw + text).
 
 ## Hardware rounds
 Round 1 (2026-10-27): d4302eef hung at the menu (keys dead). 5830cbbd (fix below) boots and runs at
@@ -268,6 +273,7 @@ Round 2 (2026-10-27): 55ed40f8 (outline + no clash) works on the Next (Dean 2026
 - tools/probes/rzx_census.py: helped (first frame of each attribute hook, plot geometries)
 
 ## Stage log
+- 2026-10-27 stage 3 for round 2 (full verify stamped) + learning loop (docs/LEARNING.md, learncheck, probes, schema-4 cards; Cauldron migrated; main merged at the stage boundary, knowledge revision 639d585): ~40 tool calls, 2 user rounds.
 - 2026-10-27 round 2 (Q7 outline + Q8 attribute shadow: 12 new sites, page 27, verify spans + attribute model, 32 new unit cases, 8 negatives; quick 9000 PASS): ~70 tool calls, 1 user round.
 - 2026-10-27 hardware round 1 (menu hang -> whole alt ROM from the build; outline + clash requests recorded): ~45 tool calls, 3 user rounds.
 - 2026-10-26 stage 0+1 (survey, patch plan, design question; pilot): see Pilot log.
