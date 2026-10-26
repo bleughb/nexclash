@@ -150,7 +150,7 @@ Design:
 - Patterns built at build time for all 255 ids (deduplicated by graphic address) from the
   snapshot's bytes (4-bit, 16x16; at most the bottom 192 rows, nothing above line 0 can show):
   ink = index 1 (colour = the sprite's palette offset = IX+5's ink + BRIGHT * 8), enclosed paper
-  (4-connected flood from outside) and a 1-px outline (8-neighbours of ink | interior) = index 2
+  (4-connected flood from outside) and a 1-px outline (4-neighbours - left, right, up, down - of ink | interior; Dean 2026-10-26) = index 2
   black, rest index 0 transparent. Pattern store: Next pages, one tile row (2 patterns, 256 bytes)
   after another, an image never crosses a page; directory id -> (page, offset, tile rows).
 - Pattern RAM in PAIRS: 64 pairs; sprite 2p / 2p+1 always shows 4-bit pattern 2p / 2p+1. A shown

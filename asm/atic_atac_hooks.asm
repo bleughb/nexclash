@@ -968,7 +968,7 @@ draw:   ld a,(V_YB)             ; top = base - H (the outline row), signed 16 bi
         ret
 
 ; build: the image of the rows in V_E's mask, outlined and filled by the store's rule (ink 1; the paper
-; the ink encloses and the 8-neighbours of ink / enclosed paper 2; else 0) -> 2 tile rows at OB (work
+; the ink encloses and the 4-neighbours (left / right / up / down) of ink / enclosed paper 2; else 0) -> 2 tile rows at OB (work
 ; page, slot 7). Ink from the stored image (store page at slot 6). Grid at GB: (H + 4) x 20 cells
 ; (image + a margin ring): 1 ink, 0 not yet reached, 3 outside (4-connected to the margin).
 build:  ld hl,(V_E)
@@ -1094,25 +1094,25 @@ build:  ld hl,(V_E)
         jr z,.o1
         or a
         jr z,.o2                ; enclosed paper
-        push bc                 ; outside: black next to ink / enclosed paper
-        ld de,-21
-        add hl,de
-        call nb3
+        push bc                 ; outside: black next to ink / enclosed paper (4 neighbours only)
+        ld de,-20
+        add hl,de               ; up
+        ld a,(hl)
+        cp 3
         jr nz,.ob
-        ld de,20
-        add hl,de
+        ld de,19
+        add hl,de               ; left
         ld a,(hl)
         cp 3
         jr nz,.ob
         inc hl
-        inc hl
+        inc hl                  ; right
         ld a,(hl)
-        dec hl
-        dec hl
         cp 3
         jr nz,.ob
-        add hl,de
-        call nb3
+        add hl,de               ; down (cell + 1 + 19 = cell + 20)
+        ld a,(hl)
+        cp 3
         jr nz,.ob
         pop bc
         jr .on
@@ -1128,23 +1128,6 @@ build:  ld hl,(V_E)
         ld a,b
         or a
         jr nz,.o
-        ret
-
-; nb3: Z if (HL), (HL + 1), (HL + 2) are all 3 (HL kept)
-nb3:    ld a,(hl)
-        cp 3
-        ret nz
-        inc hl
-        ld a,(hl)
-        dec hl
-        cp 3
-        ret nz
-        inc hl
-        inc hl
-        ld a,(hl)
-        dec hl
-        dec hl
-        cp 3
         ret
 
 ; mul20: A -> BC = 20 * A (HL kept)

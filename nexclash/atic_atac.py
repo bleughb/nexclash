@@ -108,7 +108,9 @@ def kept_rows(h):
 def build_image(rows, hc):
     """Image grid [row][col], hc + 2 rows x 18 columns: row 0 = the outline row above the top ink
     row, column 0 = the outline column left of the figure. Values: 1 ink, 2 black (outline and the
-    paper the ink encloses: 4-connected flood from outside through non-ink), 0 transparent."""
+    paper the ink encloses: 4-connected flood from outside through non-ink), 0 transparent. The
+    outline = the 4-neighbours (left / right / up / down only, no diagonal corner pixels) of ink /
+    enclosed paper (Dean 2026-10-26)."""
     H, W = hc + 2, 18
     ink = [[0] * W for _ in range(H)]
     for i in range(hc):
@@ -134,7 +136,7 @@ def build_image(rows, hc):
                 img[r][c] = 1
             elif shape[r][c]:
                 img[r][c] = 2
-            elif any(shape[r + dr][c + dc] for dr in (-1, 0, 1) for dc in (-1, 0, 1)
+            elif any(shape[r + dr][c + dc] for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1))
                      if 0 <= r + dr < H and 0 <= c + dc < W):
                 img[r][c] = 2
     return img
@@ -726,7 +728,8 @@ WATCH = set(KIND)
 
 def expected_map(P):
     """{(x, y): 1 ink / 2 black} for the plotted pixels P: black = the paper P encloses (4-connected
-    flood of the non-ink pixels from outside P's box) and the 8-neighbours of ink and enclosed paper."""
+    flood of the non-ink pixels from outside P's box) and the 4-neighbours (left / right / up / down,
+    no diagonals) of ink and enclosed paper."""
     if not P:
         return {}
     x0 = min(x for x, y in P) - 1
@@ -745,11 +748,10 @@ def expected_map(P):
                       if (x, y) not in seen and (x, y) not in P}
     m = {q: 1 for q in P}
     for x, y in shape:
-        for dx in (-1, 0, 1):
-            for dy in (-1, 0, 1):
-                q = (x + dx, y + dy)
-                if q not in shape or q not in P:
-                    m.setdefault(q, 2)
+        for dx, dy in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)):
+            q = (x + dx, y + dy)
+            if q not in shape or q not in P:
+                m.setdefault(q, 2)
     return m
 
 
