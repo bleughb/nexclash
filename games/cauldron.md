@@ -2,11 +2,11 @@
 
 ## Next session
 Stage: 4 (hardware + colour round)    Branch: claude/cauldron
-State: 55ed40f8 (Q7 outline, Q8 no clash) sent to Dean 2026-10-27; quick 9000 IDENTICAL, unit 75 +
+State: 55ed40f8 (Q7 outline, Q8 no clash) works on the Next (Dean 2026-10-27); quick 9000 IDENTICAL, unit 75 +
   17 PASS; `selftest --game cauldron --verify --stamp` started the same day (result in "Results" /
   the record once it ends; if it did not stamp, rerun it).
 Inputs: specnext/reference/cauldron/ (cauldron.rzx: its embedded snapshot is the build input)
-Start with: Dean's hardware result for 55ed40f8 (speed: hook cost doubled). Then the colour map:
+Start with: the colour map:
   per-pixel override keyed by graphic byte in a Next page the game never reads, applied in page-27
   `upload` (ink nibble per pixel), outline paintable (paint_clear); sheets (COLOURS.md, 93
   graphics, 4 of them 32 x 32) + recolour; quick runs, full verify --stamp, deliver.
@@ -207,6 +207,8 @@ verified, byte for byte. Check: cauldron.rom3_independent boots with a ROM3 that
 byte (negative control: the old partial image fails it, 15,546 bytes). Shared code (additive,
 default off): z80tonex.altrom_fill `low` (replaces altrom0), nextboot boot / check `sysrom=`;
 `selftest --canary` PASSED. quick 2000: same counters as stage 2, IDENTICAL; unit 43 + 9 PASS.
+
+Round 2 (2026-10-27): 55ed40f8 (outline + no clash) works on the Next (Dean 2026-10-27).
 
 ## Open
 - CSpect "very slow" with d4302eef: unexplained
