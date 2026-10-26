@@ -9,6 +9,14 @@
     "sprites": "59493b7563e6dd1c7141a6763cf52d73"
    }
   },
+  "00ee637a4f63ffe61fc3503de42d7822": {
+   "game": "Cauldron",
+   "doc": "cauldron.md",
+   "nex": {
+    "plain": "b5b211f1fc6103ec0d42711dcc29cd0d",
+    "sprites": "d4302eeff4bec044f61cc028fda8c3d4"
+   }
+  },
   "cddc0cfea8259d0c497b50fae0acd27e": {
    "game": "Chuckie Egg",
    "doc": "chuckie_egg.md",

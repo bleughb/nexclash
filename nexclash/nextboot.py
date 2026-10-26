@@ -156,6 +156,8 @@ def check(nex, z80, patch=None, tail=None, nexload=False):
         if getattr(patch, 'altrom', None):
             lo, hi = patch.altrom
             img[lo:hi] = patch.page[lo - 0x2000:hi - 0x2000]
+            for addr, off, n in getattr(patch, 'altrom0', ()):    # ROM bytes below 0x2000 (z80tonex.altrom_fill)
+                img[addr:addr + n] = patch.page[off:off + n]
         else:
             img[0x2000:0x4000] = patch.page
         img[rb:rb + len(regs)] = regs                    # register block written by the stub

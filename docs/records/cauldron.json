@@ -1,0 +1,190 @@
+{
+ "name": "cauldron",
+ "order": 22,
+ "game": "Cauldron",
+ "doc": "cauldron.md",
+ "engine": "cauldron",
+ "representative": true,
+ "reference": "cauldron",
+ "inputs": {
+  "snapshot": {
+   "name": "Cauldron_1985_Palace_Software_a.z80",
+   "md5": "00ee637a4f63ffe61fc3503de42d7822",
+   "path": "cauldron/Cauldron_1985_Palace_Software_a.z80"
+  },
+  "recordings": [
+   {
+    "name": "cauldron.rzx",
+    "md5": "6974898953de6e279369a77d796407ea",
+    "path": "cauldron/cauldron.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "cauldron"
+ ],
+ "own_modules": [
+  "cauldron"
+ ],
+ "data": [
+  "docs/profiles/cauldron.json",
+  "asm/cauldron_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "cauldron.rzx"
+  ],
+  "decisions": {
+   "engine": "cauldron",
+   "input": "the snapshot embedded in cauldron.rzx (MD5 2f0ef98e5c59552663b15d5eb1175236; Q0, Dean 2026-10-26)",
+   "strategy": "overlay: the game still draws the ULA; hooks in alt ROM image 1 (0x386E-) + page 26 at slot 6 put 2 x 2 4-bit sprites on every live XOR image (key = graphic, x, y, rows, width) - shown at a drawing plot's entry, hidden at an erasing plot's exit",
+   "figures": "every image of the plotter 0x6357 (all 14 callers; Q1)",
+   "depth": "sprites in front of everything (Q2); attribute painting kept (Q3)",
+   "colour": "the image's first cell ink after the plotter paints it (Q4); black -> palette 8",
+   "other writers": "ROM PR-ALL, CL-LINE, CL-SCROLL, the clear 0xB2A0, the tile writer 0xB366, the scrolls 0xDED2 / 0xDEEA: a touched live image loses its sprite and is tainted; a clear holding it whole forgets it (Q6)",
+   "interrupts": "left on (the ROM IM 1 handler touches slots 0 and 2 only)",
+   "tail": "0x5E00 (0x5D52-0x5FB9 free in the whole RZX); printer buffer put back (the game reads 0x5B00 / 0x5B01)"
+  }
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "cauldron.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 30,
+  "note": "auto: the build input is the snapshot inside cauldron.rzx (Q0). Differential verify at every hook site (plotter entry incl. the body, PR-ALL, CL-LINE, CL-SCROLL, clear 0xB2A0, tile 0xB366, scrolls 0xDED2 / 0xDEEA): all registers, memory outside dead stack, interrupt safety (IY / I / alternates / SP floor / MMU7 / speed given back); after every event and at each plot's body start the sprite layer and the hooks' page-26 tables vs an independent model of the key table; each plot's screen change = its image; any screen write outside the plotter into a live key's rectangle fails; no patch-site or graphic write, no jump into a patched instruction, the original never runs in the hook range. + unit tests (overflow, full table, no free slot, wrap, too big, bad geometry, tainted / no-sprite keys, colour rule types 0-2 with INK / PAPER 9 and MASK-T, every touch site incl. the unreached CL-SCROLL, printer buffer, non-aligned cells) with 9 negative controls on their own code"
+ },
+ "outputs": {
+  "plain": {
+   "file": "Cauldron_1985_Palace_Software_a.nex",
+   "md5": "b5b211f1fc6103ec0d42711dcc29cd0d"
+  },
+  "sprites": {
+   "file": "Cauldron_1985_Palace_Software_a_sprites.nex",
+   "md5": "d4302eeff4bec044f61cc028fda8c3d4"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Cauldron",
+  "engine_col": "cauldron (cauldron.md)",
+  "build": "Cauldron_1985_Palace_Software_a_sprites.nex d4302eef (every XOR-plotted image a 2 x 2 4-bit sprite in the cell ink; overlay; touch hooks on every screen writer; alt ROM + page 26, 28 MHz)",
+  "software": "quick runs IDENTICAL: 9,000 frames (6,448 plots, every writer kind but CL-SCROLL; 2.03M sprite pixels, tables, transient checks), unit 43 cases + negative controls 9/9 PASS (2026-10-26, stage 2); full RZX not yet",
+  "hardware": "untested",
+  "next": "stage 3: selftest --game cauldron --verify --stamp, colour map + sheets, hardware checklist"
+ },
+ "checks": [
+  "asm2profile:cauldron"
+ ],
+ "techniques": [
+  {
+   "application": "cauldron.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 1,
+   "target": "POINT / ATTR readers of figure bytes (0x6B87, 0x6BA8, 0x9DE1, 0x9E3F; 0x9077-0x90FC)",
+   "phases": []
+  },
+  {
+   "application": "cauldron.figures.xor-overlay",
+   "id": "patch.xor-overlay-keep-ula",
+   "revision": 1,
+   "target": "plotter 0x6357 (all 14 callers); touch hooks: ROM 0x0B9B / 0x0E44 / 0x0E00, RAM 0xB2A0 / 0xB366 / 0xDED2 / 0xDEEA",
+   "phases": [
+    "entry",
+    "clear"
+   ],
+   "owns": {
+    "mmu_slots": [
+     6
+    ],
+    "next_pages": [
+     24,
+     26
+    ],
+    "memory": [
+     {
+      "space": "alt_rom",
+      "image": 1,
+      "offset": [
+       "0x386E",
+       "0x3BB4"
+      ]
+     },
+     {
+      "space": "alt_rom",
+      "image": 1,
+      "offset": [
+       "0x0B9B",
+       "0x0B9E"
+      ]
+     },
+     {
+      "space": "alt_rom",
+      "image": 1,
+      "offset": [
+       "0x0E00",
+       "0x0E03"
+      ]
+     },
+     {
+      "space": "alt_rom",
+      "image": 1,
+      "offset": [
+       "0x0E44",
+       "0x0E47"
+      ]
+     }
+    ],
+    "speed": "28MHz-inside-hook"
+   }
+  },
+  {
+   "application": "cauldron.figures.atomic-switch",
+   "id": "patch.display-atomic-switch",
+   "revision": 1,
+   "target": "a drawing plot shows its sprites at the entry, an erasing plot hides them at the exit (the hook runs the body)",
+   "phases": [
+    "entry"
+   ],
+   "owns": {
+    "sprite_ids": [
+     [
+      0,
+      111
+     ]
+    ],
+    "pattern_slots": [
+     [
+      0,
+      111
+     ]
+    ]
+   }
+  }
+ ],
+ "results": [
+  {
+   "application": "cauldron.figures.xor-overlay",
+   "check": "state.rzx-differential",
+   "status": "partial",
+   "build": "d4302eef",
+   "scope": "quick 2,000 + 9,000 frames IDENTICAL (2026-10-26): registers, memory, tables, 2.03M sprite pixels, plot screen bytes, unhooked-writer check; unit 43 cases; negative controls 9/9; full RZX not yet",
+   "evidence": "games/cauldron.md \"Results\""
+  },
+  {
+   "application": "cauldron.figures.xor-overlay",
+   "check": "hardware.checklist",
+   "status": "not_run",
+   "build": "d4302eef",
+   "scope": "untested on a Next",
+   "evidence": "STATUS.md"
+  }
+ ]
+}

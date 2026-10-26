@@ -1,21 +1,17 @@
-# Cauldron (Palace Software, 1985; 48K) - no engine yet (stage 2: build, analysis done)
+# Cauldron (Palace Software, 1985; 48K) - engine `cauldron` (stage 2 done: quick runs PASS)
 
 ## Next session
-Stage: 2 (build), mid-stage    State: analysis done, Q6 answered 2026-10-26 (Decisions)
-Inputs: specnext/reference/cauldron/ (cauldron.rzx; build input = its embedded snapshot, see
-  "Stage 2 analysis": RZX block 0x30, zlib, MD5 2f0ef98e...)    Branch: claude/cauldron
-Start with: write the engine module's start_state (extract the snapshot), then the sites: one
-  entry hook at 0x6357 (5E 23 56 -> JP; the hook CALLs the body at 25434, RET 25562 returns to it)
-  + "touch" hooks that drop sprites: ROM PO-CHAR (alt ROM), 0xB378 tile writer, 0xDED2 / 0xDEEA
-  scrolls, 0xB2A0 clear (rows 64-191), ROM CLS 0x0D6B. Confirm the PO-CHAR writer first.
-Read: PLAYBOOK stage 2, this file ("Stage 2 analysis", "Decisions"), docs/ENGINE_CONTRACT.md,
-  nexclash/incredible_shrinking_fireman_add_opus.py (NextState, _machine, _alt, _overlays,
-  Model, cover_of: the overlay template), patch.display-atomic-switch.md (read already: entry
-  shows the new image on pending sprites, exit switches)
-Open: dropped-key replot rule; sprite budget = 17 live x up to 6 sprites (32 x 32 shifted) +
-  pending - check against 128 before fixing the layout
+Stage: 3 (prove + deliver)    State: engine built, quick runs 2000 + 9000 PASS 2026-10-26 ("Results")
+Inputs: specnext/reference/cauldron/ (cauldron.rzx: its embedded snapshot is the build input, the
+  engine extracts it)    Branch: claude/cauldron
+Start with: build the colour map + colour sheets + recolour (Open; PLAYBOOK 5 "Colour map", COLOURS.md),
+  quick run 2000, then the one full verification `python selftest.py --game cauldron --verify --stamp`
+  (~30 min: wait with ONE background until-loop), then deliver (PLAYBOOK 7) with the hardware checklist.
+Read: PLAYBOOK stage 3, this file ("Build design", "Results", "Open"), docs/COLOURS.md,
+  nexclash/cauldron.py (Model, upload in asm/cauldron_hooks.asm for where colours enter)
+Open: colour map not built; IM 2 path unreached; worst hook frame 45,288 T (text screens)
 
-Reference: specnext reference/cauldron/. Status: stages 0-1 done, stage 2 analysis done 2026-10-26
+Reference: specnext reference/cauldron/. Status: stages 0-2 done (engine 2026-10-26); stage 2 analysis 2026-10-26
 (technique-card pilot). Analysis scripts are scratch (not in the repo): a one-off screen-reader
 probe (detect.gameplay-screen-readers has no shared command yet, BRIEFING C2 candidate).
 
@@ -166,13 +162,93 @@ User answer 2026-10-26 (stage 2, round 2):
   writer (PO-CHAR, tile 0xB378, scrolls, clears, CLS) touches the image's rectangle, not only
   at a matching plot. Max 17 live is therefore an upper bound.
 
+## Build design (stage 2 part 2, 2026-10-26)
+Engine `cauldron` (nexclash/cauldron.py, asm/cauldron_hooks.asm, docs/profiles/cauldron.json). Overlay:
+the game still draws the ULA exactly as the original; hooks put 4-bit sprites on every live image.
+Facts behind it (whole-RZX probe, scratch): 84,638 plots, descriptors only at 0x60B7-0x60EF, 93
+graphics at 0xA5D2-0xEB84 (one geometry each: rows 8/16/24/32 x width 2/3/4), types 0/1/2; PR-ALL
+53,334 (3,753 with OVER 1), tile 0xB366 28,399 (always char-aligned), scrolls 1,760 left / 3,552
+right, clear 0xB2A0 110, CL-LINE 64 (B = 24 x 32 = CLS, B = 2 x 32), CL-SCROLL 0, IM 2 set-up 0.
+- Key = (graphic, x, y, rows, width): one XOR plot toggles it (the same key's next plot erases).
+  States (table in Next page 26 at slot 6, 128 entries): none (absent), live (sprite slot 0-27, or
+  "no sprite"), tainted. Plot: none -> live, live -> none, tainted -> tainted. Touch by another
+  writer (rectangle in rows x byte columns): a CLEAR whose rectangle holds the whole key -> none;
+  any other touch of a live / tainted key -> tainted (its sprite hidden). Tainted keys never get a
+  sprite again until a clear (Q6 + the Open "dropped-key replot rule": residue stays ULA-only).
+  Model over the probe: max 10 live, max 33 entries; 44 live keys tainted, 583 plots of tainted keys.
+- Overflow: table full -> new keys not recorded (no sprites; the recorded ones go on as before)
+  until a clear of the whole screen (CL-LINE 24 = CLS). A plot whose geometry the plotter cannot
+  draw (y > 175, rows 0, width 0, y + 1 < rows: PIXEL-ADD stops it part way, or width 0 XORs 256
+  bytes a line) -> every entry tainted + overflow. A plot reaching past column 31 (the ULA row wraps;
+  12 plots in the RZX) -> live with no sprite, rectangle = the whole screen; wider than 4 bytes or
+  taller than 32 rows (never seen) -> live with no sprite.
+- Sprites: slot s = sprites 4s..4s+3 (2 x 2 of 16 x 16, the unshifted image at pixel x), 4-bit
+  patterns 4s..4s+3 uploaded at the draw (512 bytes from the game's graphic, converted at run time,
+  so no static graphic list); colour = ink of the image's first cell after the plotter's first
+  paint of it (type 0: v if old = ATTR-T; 2: PO-ATTR(old); other: ATTR-T if old = v; black -> 8).
+- Sites (original bytes checked): RAM 0x6357 5E 23 56 -> JP e_plot (the hook does the 3
+  instructions, CALLs the body 0x635A, RET 0x63DA comes back to it; draw: sprite shown BEFORE the
+  body; erase: hidden AFTER it); 0xB2A0 21 00 48 clear rows 64-191; 0xB366 6F 26 00 tile cell at
+  (45972); 0xDED2 21 00 50 / 0xDEEA 21 FF 57 scrolls (taint rows 128-191, cols 0-30 / 1-31). ROM
+  (alt ROM, slot 0 bytes via patch.altrom0, a new optional z80tonex / nextboot field): 0x0B9B 3A 91
+  5C PR-ALL (HL = the cell; screen only; taint; not a cell's top line -> the whole screen), 0x0E44
+  C5 CD 9B CL-LINE (B lines from the bottom: clear; B 0 or > 24 -> taint all), 0x0E00 CD 9B 0E
+  CL-SCROLL (taint all; ROM PO-SCR calls 0x0E00 directly, 0x0DFE falls into it; never reached in
+  the RZX: unit test). ROM scan: no other jump into the replaced bytes.
+- Hooks: alt ROM 0x386E-0x3CFF; page 26 mapped at slot 6 only while the tables are used (no game
+  read then; descriptor copied first through the stack); interrupts left as the game has them (the
+  ROM IM 1 handler touches slots 0 and 2 only; IY, I, stack room checked); 28 MHz inside hooks,
+  3.5 MHz for the original body. Printer buffer put back (the game reads 0x5B00 / 0x5B01).
+- Verify: at every site original vs patched to the return / site + 3 (registers, memory outside dead
+  stack, interrupt safety); sprite layer = model after every event and at the body start of a plot
+  (draw: new image already up; erase: old still up); each plot's screen change = its key's image;
+  any screen write by a non-plot PC into a live key's rectangle = failure (proves the touch hooks
+  cover every writer); interiors never jumped into.
+- Shared code (additive, default off): z80tonex.altrom_fill / build_stub + nextboot.check take
+  `patch.altrom0` (ROM bytes below 0x2000); ENGINE_CONTRACT patch object. `selftest --canary` PASSED.
+- Not in this part: colour map, sheets, recolour (Open).
+Techniques: `detect.gameplay-screen-readers`, `patch.xor-overlay-keep-ula`, `patch.display-atomic-switch`
+
+## Results (stage 2, 2026-10-26)
+Build from the RZX snapshot: plain `Cauldron_1985_Palace_Software_a.nex` b5b211f1fc6103ec0d42711dcc29cd0d,
+sprites `..._sprites.nex` d4302eeff4bec044f61cc028fda8c3d4, both boot OK (nextboot.check, tail 0x5E00).
+- `auto --quick 2000`: 1,029 plots (516 draw / 513 erase), PR-ALL 4,359, scroll right 160, CL-LINE 4;
+  256,742 sprite pixels, 1,029 transient checks, 32,571 plot screen bytes -> IDENTICAL; unit PASS.
+- `auto --quick 9000`: 6,448 plots (3,228 draw / 3,216 erase / 4 no sprite), PR-ALL 9,594, tile 795,
+  scrolls 256 left / 512 right, clear 3, CL-LINE 6, CL-SCROLL 0; 2,030,681 sprite pixels, 921,684
+  table bytes, 6,448 transient checks, 185,079 plot screen bytes, 39.3M interrupt-safety points, max 5
+  live keys / 7 entries -> IDENTICAL. Colour rule = first cell ink at the plot exit 3,228 / 3,228.
+  Hook cost per frame: mean 2,765 T, max 45,288 T (a frame of text printing: ~300 T per PR-ALL).
+- Unit: 43 cases (draw / erase as captured; table full, overflow, no free slot, past column 31, too
+  wide, tainted and no-sprite keys, 4 bad geometries; colour types 0-2, INK / PAPER 9, MASK-T; every
+  touch site incl. CL-SCROLL, printer buffer, non-aligned cell, scroll columns 0 / 31, clears inside /
+  straddling / in overflow, CL-LINE 0 / 2 / 24 / 25) PASS; 9 negative controls on their own code all
+  caught (X off by one, erase never hidden, scroll / clear / PR-ALL touch broken, tainted key re-armed,
+  table full missed, overflow kept by a full clear, INK 9 ignored).
+- Full verification: not run (stage 3). ~25 min (quick 9000 took ~3 min).
+
 ## Open
+- Colour map + colour sheets + recolour (PLAYBOOK 5, COLOURS.md): not built yet (stage 3 sends the
+  sheets: build them first; patterns are converted at run time, so a colour map needs an override
+  table keyed by graphic byte in a Next page).
+- IM 2 path (0x63DB, never reached): with I = 0xFE an interrupt inside a hook that maps page 26 at
+  slot 6 runs the BASIC handler at 25576 with page 26 there; unit-test or hook 0x63DB if a recording
+  ever reaches it.
+- ROM PLOT / DRAW (PLOT-SUB 0x22E5) and other ROM screen writers: never reached; the verifier fails
+  any unhooked write into a live image's rectangle, so a recording that reaches one shows it.
 - Bit-level check of the POINT readers (obs. 9) if a shadow design is ever wanted.
-- How a later plot of a dropped image's key is treated (a dropped key's XOR erase puts residue on
-  the ULA, which stays ULA-only): decide in the model, unit-test it.
 - IM 2 path (0x63DB, handler 25576): when is it used? Not in this recording.
 
 ## Lesson candidates
+- A ROM routine as a writer (PR-ALL, CL-LINE, CL-SCROLL) is hooked with a JP in the alt ROM image
+  below 0x2000 (patch.altrom0, new); scan the whole ROM for jumps into the replaced bytes first
+  (Cauldron: PO-SCR CALLs 0x0E00, inside CL-SCROLL's 0x0DFE).
+- An entry hook can run the routine's body itself (CALL body; its RET comes back) when the exit
+  cannot take a JP (Cauldron: 0x63DB, the next routine, starts right after the RET): one site gives
+  both "show at entry" and "hide at exit"; the body sees 4 more stack bytes (dead stack).
+- XOR overlay without a fixed object table: key = (graphic, x, y, rows, width); one plot toggles it;
+  other writers taint it (no sprite until a clear holds it whole). Proof: any screen write outside
+  the plotter into a live key's rectangle fails the verify, so a missed writer cannot hide.
 - XOR parity per image is not "on the screen": overwrite writers (ROM PO-CHAR scenery, scrolls,
   clears) wipe or move XOR figures without an erase plot, and the game's next XOR then lands on
   clean ground (Cauldron frames 2602-2638). An overlay's live set must end at any other writer's
@@ -193,6 +269,7 @@ User answer 2026-10-26 (stage 2, round 2):
 - 2026-10-26 stage 0+1 (survey, patch plan, design question; pilot): see Pilot log.
 - 2026-10-26 stage 1 answers: RZX snapshot, all figures sprites, overlay, keep attr painting (3a), defaults 4/5.
 - 2026-10-26 stage 2 part 1 (analysis: snapshot extract, plotter decode, 3 whole-RZX probes, Q6): ~85 tool calls, ~1h20, 2 user rounds.
+- 2026-10-26 stage 2 part 2 (engine: module, asm, profile, verify, 43 unit cases + 9 negatives, quick 2000 + 9000 PASS, record; shared altrom0 + canary): ~100 tool calls, 0 user rounds. Whole engine modules read: none (fireman template functions only).
 
 ## Pilot log
 Technique-card pilot, stage 0 + 1, one session, 2026-10-26.
