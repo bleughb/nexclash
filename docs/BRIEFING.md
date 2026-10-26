@@ -470,6 +470,9 @@ Designs not built yet (use when a game needs them)
 42. inspect: the "loader snapshot" WARNING fires when PC is in ROM only because an IM 1 interrupt was
    just taken with the BASIC loader still in memory (Cauldron: PC 0x0038, stacked return 0x613E =
    game code). Check the stacked return address before warning; add a tools_check case.
+43. coloursheet.write crashes (max() of an empty sequence) on a figure with no opaque pixel (Cauldron
+   2026-10-27: image D710 3 x 24 is all zero bytes; the engine now leaves such images off). Skip them
+   in write / choose and report them; add a tools_check case.
 
 ### C3b. Two verification levels (agreed with Dean 2026-09-29; how to run them: PLAYBOOK 6)
 - ITERATE (per change): original bytes at every site, boot check, unit tests (with negative

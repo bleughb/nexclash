@@ -77,10 +77,10 @@
  "status": {
   "title": "Cauldron",
   "engine_col": "cauldron (cauldron.md)",
-  "build": "Cauldron_1985_Palace_Software_a_sprites.nex 55ed40f8 (every XOR-plotted image a grid of 4-bit sprites in the cell ink with a black outline; scenery keeps its colours: attribute shadow; overlay; whole alt ROM image from the build + pages 26 / 27, 28 MHz)",
-  "software": "full RZX IDENTICAL 2026-10-27 (89,596 frames: 84,638 plots, 188.6M sprite pixels incl. outline, attribute shadow + ULA model at every event, no unhooked attribute access), unit 75 + negatives 17/17",
-  "hardware": "55ed40f8 works on a Next at full speed (Dean 2026-10-27; round 1 menu hang fixed by the whole alt ROM image)",
-  "next": "colour map + sheets + recolour (stage 4 round)"
+  "build": "Cauldron_1985_Palace_Software_a_sprites.nex 43c1ca49 (every XOR-plotted image a grid of 4-bit sprites in the cell ink with a black outline, paintable: colour map + sheets + recolour; scenery keeps its colours: attribute shadow; overlay; whole alt ROM image from the build + pages 26-35, 28 MHz)",
+  "software": "full RZX IDENTICAL 2026-10-27 (89,596 frames: 84,638 plots, 188.6M sprite pixels incl. outline, attribute shadow + ULA model at every event, no unhooked attribute access), unit 87 + negatives 20/20; colour map: synthetic painting read back + recolour = full build",
+  "hardware": "55ed40f8 works on a Next at full speed (Dean 2026-10-27); 43c1ca49 (colour map) untested",
+  "next": "hardware round 3: 43c1ca49 + a painted sheet through recolour"
  },
  "checks": [
   "asm2profile:cauldron"
@@ -341,15 +341,15 @@
    "application": "cauldron.figures.xor-overlay",
    "check": "state.rzx-differential",
    "status": "pass",
-   "build": "55ed40f8",
-   "scope": "full RZX, 89,596 frames IDENTICAL (2026-10-27, stamped): 84,638 plots, 188.6M sprite pixels (ink + outline), 32.4M table bytes, 84,638 transient checks, 2.86M plot screen bytes, 936M interrupt-safety points; unit 75 cases, negative controls 17/17",
+   "build": "43c1ca49",
+   "scope": "full RZX, 89,596 frames IDENTICAL (2026-10-27, stamped, 43c1ca49): 84,638 plots, 188.6M sprite pixels (ink + outline), 32.4M table bytes, 84,638 transient checks, 2.86M plot screen bytes, 952M interrupt-safety points; unit 87 cases, negative controls 20/20",
    "evidence": "games/cauldron.md \"Results\""
   },
   {
    "application": "cauldron.figures.atomic-switch",
    "check": "display.entry-to-exit",
    "status": "pass",
-   "build": "55ed40f8",
+   "build": "43c1ca49",
    "scope": "84,638 transient checks at the plot body start (full RZX); software = return/boundary + body start",
    "evidence": "games/cauldron.md \"Results\""
   },
@@ -357,7 +357,7 @@
    "application": "cauldron.attributes.shadow",
    "check": "state.rzx-differential",
    "status": "pass",
-   "build": "55ed40f8",
+   "build": "43c1ca49",
    "scope": "full RZX: PEEK 103,930, PO-ATTR 53,334, save 182, restore 6,051, box 15,236, room fill 110, room cell 14,319 / 9,406, attribute scrolls 1,760 / 3,552; 583M shadow + ULA bytes compared; no unhooked attribute access",
    "evidence": "games/cauldron.md \"Results\""
   },
@@ -376,20 +376,33 @@
    "build": "55ed40f8",
    "scope": "Dean 2026-10-27: boots, runs at full speed, outline + scenery colours as asked (hardware round 2)",
    "evidence": "games/cauldron.md \"Hardware rounds\""
+  },
+  {
+   "application": "cauldron.figures.colour-map",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "43c1ca49",
+   "scope": "full RZX with no map (IDENTICAL, stamped) + 12 unit cases with synthetic maps (every image geometry, shifts, screen edges, wrong check bytes) + 3 negative controls; a synthetic painting (1,593 entries, 30 images) read back, recoloured = full build with that map (50572718), quick 2000 IDENTICAL; selftest recolour guard both ways",
+   "evidence": "games/cauldron.md \"Colour map\", \"Results\""
   }
  ],
  "checked": {
   "deps": {
-   "asm/cauldron_hooks.asm": "76dd59cc6ee75638",
-   "docs/profiles/cauldron.json": "c6afb72490f451c6",
+   "asm/cauldron_hooks.asm": "21dfba409f90df73",
+   "docs/profiles/cauldron.json": "10242650d9e6c274",
    "nexclash.py": "7a4b0e6f5b61aaef",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/cauldron.py": "d5f45e7d350063c1",
+   "nexclash/cauldron.py": "8c25f694ba9633be",
+   "nexclash/coloursheet.py": "bc87a441d6f36e56",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
    "nexclash/engines.py": "d7317a7d9ec89979",
    "nexclash/nextboot.py": "44c08db48a1bf32d",
+   "nexclash/recolour.py": "a5744dcf6e6c059c",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "45f6a7e4fd28e07e",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "a6ff9eef9ca737b3",
    "skoolkit": "10.1"
   },
@@ -397,16 +410,21 @@
  },
  "verified": {
   "deps": {
-   "asm/cauldron_hooks.asm": "76dd59cc6ee75638",
-   "docs/profiles/cauldron.json": "c6afb72490f451c6",
+   "asm/cauldron_hooks.asm": "21dfba409f90df73",
+   "docs/profiles/cauldron.json": "10242650d9e6c274",
    "nexclash.py": "7a4b0e6f5b61aaef",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/cauldron.py": "d5f45e7d350063c1",
+   "nexclash/cauldron.py": "8c25f694ba9633be",
+   "nexclash/coloursheet.py": "bc87a441d6f36e56",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
    "nexclash/engines.py": "d7317a7d9ec89979",
    "nexclash/nextboot.py": "44c08db48a1bf32d",
+   "nexclash/recolour.py": "a5744dcf6e6c059c",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "45f6a7e4fd28e07e",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "a6ff9eef9ca737b3",
    "skoolkit": "10.1"
   },

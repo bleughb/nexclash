@@ -41,7 +41,10 @@ recolour makes a repaint free (no rebuild, no re-verify), so colour is not a des
     other name is silently never read; no file = the defaults. The rule is per PIXEL, not per 8x8
     cell: only bits of the graphics bytes a plot draws exist in the map, so paint outside them
     (beyond a graphic's byte span) is reported and ignored - graphics with no spare paper column
-    need wider staging. The painting layout keeps the map it was drawn with: a repaint changes only
+    need wider staging, or keys of their own for the pixels outside the bytes (Cauldron: an outline
+    ring per image, key graphic:WxR:line,col). Patterns built at run time (no pattern per image at
+    build time): the map goes into per-image override tables the upload applies
+    (docs/techniques/patch.runtime-colour-map.md). The painting layout keeps the map it was drawn with: a repaint changes only
     the pixels whose colour changed; painting a pixel back to its default removes its entry.
     Re-send both sheets after each read-back. Later levels the RZX does not reach: a second sheet
     from a later recording, read into the same colours file.

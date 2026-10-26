@@ -1,15 +1,14 @@
-# Cauldron (Palace Software, 1985; 48K) - engine `cauldron` (round 2: outline + no clash, 55ed40f8 on test)
+# Cauldron (Palace Software, 1985; 48K) - engine `cauldron` (colour map; 43c1ca49 to hardware round 3)
 
 ## Next session
-Stage: 4 (hardware + colour round)    Branch: claude/cauldron
-State: 55ed40f8 (Q7 outline, Q8 no clash) works on the Next (Dean 2026-10-27); quick 9000 IDENTICAL, unit 75 +
-  17 PASS; full verification IDENTICAL and stamped 2026-10-27 ("Results"); record reconciled.
+Stage: 4 (hardware + colour round 3)    Branch: claude/cauldron (PR to main: process + Cauldron)
+State: 43c1ca49 = 55ed40f8 + colour map, sheets, recolour; full verification IDENTICAL, stamped
+  2026-10-27 ("Results"); sheets in specnext reference/cauldron/; hardware untested.
 Inputs: specnext/reference/cauldron/ (cauldron.rzx: its embedded snapshot is the build input)
-Start with: the colour map:
-  per-pixel override keyed by graphic byte in a Next page the game never reads, applied in page-27
-  `upload` (ink nibble per pixel), outline paintable (paint_clear); sheets (COLOURS.md, 93
-  graphics, 4 of them 32 x 32) + recolour; quick runs, full verify --stamp, deliver.
-Read: PLAYBOOK 5-7, COLOURS.md, this file ("Build design round 2", "Open"), dizzy1.py recolour.
+Start with: Dean's round-3 report (43c1ca49 on the Next) and his painted sheet: `python nexclash.py
+  recolour Cauldron_1985_Palace_Software_a_sprites.nex PAINTED.png` (layout next to the PNG); send
+  the _painted.nex + both sheets re-drawn with the map. Making it the default: COLOURS.md RECOLOUR.
+Read: COLOURS.md, this file ("Colour map", "Open"), card patch.runtime-colour-map.
 
 Reference: specnext reference/cauldron/. Status: stages 0-2 done (engine 2026-10-26); stage 2 analysis 2026-10-26
 (technique-card pilot). Analysis scripts are scratch (not in the repo): a one-off screen-reader
@@ -104,32 +103,21 @@ User report 2026-10-27 (hardware round 1, screenshots from CSpect):
   values from a shadow. Go-ahead for both: Dean 2026-10-27 (after the hardware round); outline
   black by default (proposed, not objected; paintable on the sheet).
 
-## Stage 2 analysis (2026-10-26; scratch probes, not in the repo)
-- Build input: RZX block 0x30 (zlib) = a .z80, MD5 2f0ef98e...; 11,994 RAM bytes differ from the delivered .z80.
-- 0x6357 (25431-25562): descriptor at HL = gfx lo/hi, x, y (row 175 - y), rows, width, attr type, value.
-  Per pixel row: PIXEL-ADD, the row's cells painted (2: PO-ATTR; 0: old = ATTR-P 23693 -> value; 1:
-  old = value -> ATTR-P), then XOR. 25563 (IM 2 set-up) follows the RET: an entry hook must CALL a body.
-- 93 graphics, never written, up to 32 x 32 (4 of them, caller 31115); types 1/2/0 = 33,915/31,808/18,915.
-- XOR parity is not "on screen": clears, scrolls and PO-CHAR scenery wipe or move figures without an
-  erase plot (frames 2602-2638; bottom-third scroll carries ground decorations, 2684-2702) -> Q6.
-  Whole RZX: max 17 live (upper bound), 27 images straddle row 64 at 0xB2A0 clears. Details: git history.
+## Stage 2 analysis (2026-10-26; scratch probes)
+- Build input: RZX block 0x30 (zlib) = a .z80, MD5 2f0ef98e...; 11,994 RAM bytes differ from the .z80.
+- 0x6357: descriptor at HL = gfx lo/hi, x, y (row 175 - y), rows, width, attr type, value; per row
+  PIXEL-ADD, cells painted (2: PO-ATTR; 0 / 1 via ATTR-P), then XOR. 0x63DB follows the RET.
+- 93 graphics, never written, up to 32 x 32. XOR parity is not "on screen" (clears, scrolls, text
+  wipe figures: frames 2602-2638) -> Q6. Max 17 live. Details: git history.
 
 ## Build design (stage 2 part 2, 2026-10-26; round 2 below changes sprites and attributes)
-Engine `cauldron` (nexclash/cauldron.py, asm/cauldron_hooks.asm, docs/profiles/cauldron.json). Overlay:
-the game still draws the ULA pixels as the original; hooks put 4-bit sprites on every live image.
-- Key = (graphic, x, y, rows, width): a plot toggles it. States (page 26 at slot 6, 128 entries):
-  none, live (slot or "no sprite"), tainted. Another writer touching a live / tainted key taints it
-  (sprite hidden); a clear holding it whole forgets it. Table full -> overflow until a full clear;
-  geometry the plotter cannot draw -> all tainted + overflow; past column 31 / too big -> no sprite.
-- Colour = ink of the image's first cell after the plotter's first paint (black -> palette 8).
-- Sites: RAM 0x6357 (the hook runs the body: draw shown before it, erase hidden after), 0xB2A0
-  clear, 0xB366 tile, 0xDED2 / 0xDEEA scrolls; ROM PR-ALL 0x0B9B, CL-LINE 0x0E44, CL-SCROLL 0x0E00
-  (JPs in the build's own alt ROM image; no other ROM jump into the replaced bytes).
-- Hooks in alt ROM 0x386E-0x3CFF, tables mapped only inside hooks, interrupts as the game has them
-  (ROM IM 1 handler: slots 0 and 2 only), 28 MHz in hooks, printer buffer put back.
-- Verify: per site original vs patched; sprite layer and tables vs the model after every event and
-  at the body start; plot screen change = the image; an unhooked screen write into a live
-  rectangle fails. Details: git history.
+Overlay: the game draws the ULA pixels as the original; hooks put 4-bit sprites on every live image.
+Key = (graphic, x, y, rows, width), a plot toggles it; other writers taint (sprite hidden), a clear
+holding it whole forgets it; table (page 26 at slot 6, 128 entries) full -> overflow until a full
+clear. Colour = first cell ink after the first paint (black -> 8). Sites: RAM 0x6357 (hook runs the
+body: draw shown before, erase hidden after), 0xB2A0, 0xB366, 0xDED2 / 0xDEEA; ROM PR-ALL 0x0B9B,
+CL-LINE 0x0E44, CL-SCROLL 0x0E00 (JPs in the build's own alt ROM image). Hooks in alt ROM 0x386E-,
+28 MHz, interrupts as the game has them. Details: git history.
 
 ## Build design round 2 (2026-10-27: Q7 outline, Q8 no clash)
 - Q8 attribute shadow: page 27 at slot 4 (0x8000-, mapped only in hooks; the ROM IM 1 handler
@@ -152,6 +140,23 @@ the game still draws the ULA pixels as the original; hooks put 4-bit sprites on 
   original after every event, and outside the hooked routines any attribute write, or a read of a
   cell whose ULA value differs, fails.
 
+## Colour map (stage 4, 2026-10-27; card patch.runtime-colour-map)
+- Keys, one per canvas pixel (the image + its 1-pixel outline ring, (8 w + 2) x (rows + 2)): inside
+  the graphic's bytes the graphics byte (hex address, check = its value; shared by every image that
+  draws it), the ring per image (`G:WxR:line,col`). Paint: a colour (ink, outline or paper ->
+  opaque) or transparent (any pixel). docs/profiles/cauldron_colours.json; none = today's colours.
+- Build (`colour_tables`): per painted image a transparent mask (5 bytes a canvas line) + a colour
+  stream (2 pixels a byte, `stream_stride(w)` = 4 x canvas bytes read a line) in pages 28-35 (banks
+  14-17), index at page 28 (count + 7-byte entries). `upload` -> `ovfind` after the outline: masked
+  pixels out of both canvases (the outline stays the real ink's), page at slot 6 while the patterns
+  are written: byte = (TT AND KEEP[v]) OR v (KEEP at page 27 0x0800). Unpainted: the old path.
+- 93 images (profile `colour_images`, whole-RZX `capture` in 70 s); worst case all painted ~48K.
+  The game never reads pages 28-35: `recolour` splices banks 14-17 only (refuses another build:
+  graphics MD5 `colour_inputs`, sites, bank 12, pages 26 / 27).
+- Sheets (`python -m nexclash.cauldron sheet RZX`): one figure per image in its most frequent ink
+  (92; D710 3 x 24 draws nothing), the whole canvas grey = paintable; ring keys are per image, so
+  the painting sheet shows every image. Read-back: `colours PNG` or `nexclash.py recolour`.
+
 Techniques: `detect.gameplay-screen-readers`, `patch.xor-overlay-keep-ula`, `patch.display-atomic-switch`, `patch.attribute-shadow` (recipe and results: docs/records/cauldron.json)
 
 ## Results
@@ -172,6 +177,14 @@ Techniques: `detect.gameplay-screen-readers`, `patch.xor-overlay-keep-ula`, `pat
   compared, no unhooked access. Colour rule 42,188 / 42,188. Hook cost mean 7,611 T, max 130,678 T
   (one frame, ~2 frames' worth: a room draw + text).
 
+- Colour map (2026-10-27, 43c1ca49; plain unchanged b5b211f1): full verification stamped, 89,596
+  frames IDENTICAL with the same counters as round 2 (952M interrupt-safety points), unit 87 cases
+  (12 colour: every image geometry, shifts, screen edges, wrong check bytes) + 20 negative controls
+  (+ map left out, transparent mask ignored, check byte not checked) PASS; recolour = full build
+  both ways (selftest guard). Hook cost mean 7,801 T (was 7,611: the index search). Synthetic
+  painting (1,593 entries, 30 images): read back, recolour = full build with the map (50572718),
+  quick 2000 IDENTICAL; a tampered page 27 is refused.
+
 ## Hardware rounds
 Round 1 (2026-10-27): d4302eef hung at the menu (keys dead). 5830cbbd (fix below) boots and runs at
 full speed on the Next (Dean 2026-10-27), which confirms the cause: the game reads keys through ROM KEY-SCAN 0x028E / K-TEST 0x031E (its INKEY$
@@ -187,14 +200,18 @@ default off): z80tonex.altrom_fill `low` (replaces altrom0), nextboot boot / che
 
 Round 2 (2026-10-27): 55ed40f8 (outline + no clash) works on the Next (Dean 2026-10-27).
 
+Round 3 (sent 2026-10-27): 43c1ca49 + sheets. Checklist: boots, menu keys work, full speed, looks
+exactly as 55ed40f8 (no map); then a test painting through recolour: painted colours shown,
+unpainted images unchanged, transparent pixels show the scenery (try CSpect first: +4 banks).
+
 ## Open
 - CSpect "very slow" with d4302eef: unexplained
   (hook cost measured mean 2,765 T / frame); ask whether the plain .nex is slow there too.
 - CL-SCROLL (never reached) shows the original's clash colours until the cells are written again.
 - Hook cost doubled (outline upload): speed on hardware to watch.
-- Colour map + colour sheets + recolour (PLAYBOOK 5, COLOURS.md): not built yet (stage 3 sends the
-  sheets: build them first; patterns are converted at run time, so a colour map needs an override
-  table keyed by graphic byte in a Next page).
+- Colour map: the painting path is proven in software (unit cases, synthetic painting quick run);
+  no painting on hardware yet. Images drawn in several inks (65 of 93: the cell-ink rule) show one
+  ink on the sheet; a painted pixel is that colour in every room.
 - IM 2 path (0x63DB, never reached): with I = 0xFE an interrupt inside a hook that maps page 26 at
   slot 6 runs the BASIC handler at 25576 with page 26 there; unit-test or hook 0x63DB if a recording
   ever reaches it.
@@ -236,6 +253,17 @@ Round 2 (2026-10-27): 55ed40f8 (outline + no clash) works on the Next (Dean 2026
 - [doc docs/LEARNING.md §The learning loop] Lessons left as candidates, scratch scripts and a
   stale branch (main had new cards) were the gap; the loop and learncheck now enforce it.
 
+- [card patch.runtime-colour-map §Use / do not use] Patterns built at run time take a colour map as
+  per-image override tables (mask + colour stream) in pages the game never reads, applied at the
+  upload; recolour splices only those banks (observed: 12 unit cases, synthetic painting quick 2000).
+- [doc docs/COLOURS.md §Colour sheets and recolour] An outline ring lies outside the graphic's bytes:
+  per-image ring keys make it paintable without widening the graphic (observed, Cauldron sheets).
+- [backlog C2 #43] coloursheet.write crashes on a figure with no opaque pixel (image D710).
+- [local: the verifier wired NEXTREG by hand; it now uses z80n.install as CLAUDE.md says (MUL D,E and
+  ADD HL,A in the upload needed it); the rule already exists, the round-1 engine predated it]
+- [doc docs/COLOURS.md §Colour sheets and recolour] A whole-RZX sheet capture through rzx.trace takes
+  ~70 s for 90K frames (the census probe's method; COLOURS.md already names rzx.trace).
+
 ## Technique use
 - patch.xor-overlay-keep-ula: helped (the design; lacked the other-writers failure row: corrected)
 - detect.gameplay-screen-readers: corrected: listing readers has a shared command; compiled BASIC method added
@@ -243,8 +271,11 @@ Round 2 (2026-10-27): 55ed40f8 (outline + no clash) works on the Next (Dean 2026
 - patch.display-atomic-switch: used (draw shown at entry, erase hidden after the body)
 - patch.attribute-shadow: used (written from this game)
 - tools/probes/rzx_census.py: helped (first frame of each attribute hook, plot geometries)
+- patch.runtime-colour-map: used (written from this game; candidate)
+- patch.xor-overlay-keep-ula: helped (its canvas-at-the-draw upload is where the map applies)
 
 ## Stage log
+- 2026-10-27 stage 4 colour round (capture, colour tables + upload override, sheets, recolour, 12 unit cases + 3 negatives, card patch.runtime-colour-map, full verify stamped): ~75 tool calls, 2 user rounds (merge questions).
 - 2026-10-27 stage 3 for round 2 (full verify stamped) + learning loop (docs/LEARNING.md, learncheck, probes, schema-4 cards; Cauldron migrated; main merged at the stage boundary, knowledge revision 639d585): ~40 tool calls, 2 user rounds.
 - 2026-10-27 round 2 (Q7 outline + Q8 attribute shadow: 12 new sites, page 27, verify spans + attribute model, 32 new unit cases, 8 negatives; quick 9000 PASS): ~70 tool calls, 1 user round.
 - 2026-10-27 hardware round 1 (menu hang -> whole alt ROM from the build; outline + clash requests recorded): ~45 tool calls, 3 user rounds.
@@ -254,7 +285,5 @@ Round 2 (2026-10-27): 55ed40f8 (outline + no clash) works on the Next (Dean 2026
 - 2026-10-26 stage 2 part 2 (engine: module, asm, profile, verify, 43 unit cases + 9 negatives, quick 2000 + 9000 PASS, record; shared altrom0 + canary): ~100 tool calls, 0 user rounds. Whole engine modules read: none (fireman template functions only).
 
 ## Pilot log
-Technique-card pilot, stage 0 + 1, 2026-10-26: ~85 tool calls (4 failed), ~78 min to the design
-question (~58 min of it the survey); 3 cards opened, 5 judged from index.json, none corrected later.
-Costliest besides the survey: finding the .z80 / RZX mismatch only at call ~60 (lesson candidate).
-Full log in git history.
+Technique-card pilot, stage 0 + 1, 2026-10-26: ~85 tool calls, ~78 min to the design question
+(~58 min the survey); 3 cards opened, 5 judged from index.json. Full log in git history.
