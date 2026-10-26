@@ -42,7 +42,7 @@
    "start": "the .z80 (loader state) run to JP 24576 (frame 2); hook RAM 0x5B80-0x5BFF zeroed (loader bytes there are dead)",
    "figures": "every figure a hardware-sprite image (Dean 2026-10-26: decisions 1-5 = defaults); the panel's pocket icons (x >= 192) stay on the ULA",
    "images": "image group = (the id's graphic in the snapshot, x, base line) + row mask: a plot of the graphic toggles all rows, the appear / death effect's one-row slice (0x8CD8) row k; all rows = the stored image (207 images, pages 32-44), some = built by the hook (work page 28)",
-   "outline": "solid: ink 1, enclosed paper (4-connected flood) + 1-px outline (8-neighbours) black 2, else transparent (Dean 2026-10-26)",
+   "outline": "solid: ink 1, enclosed paper (4-connected flood) + 1-px outline (4-neighbours: left / right / up / down, no diagonal corner pixels) black 2, else transparent (Dean 2026-10-26)",
    "colours": "palette offset = the figure's ink + 8 * BRIGHT (IX+5); the figure painter's 6 LD (HL),D become NOP",
    "tail": "0x5B00 (printer buffer: never touched in the RZX)"
   }
@@ -65,7 +65,7 @@
   },
   "sprites": {
    "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites.nex",
-   "md5": "59493b7563e6dd1c7141a6763cf52d73"
+   "md5": "4a7bc0132c04bbf8350cf830a192a40e"
   }
  },
  "repro": [],

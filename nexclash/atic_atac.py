@@ -1475,6 +1475,9 @@ def boot_check(nex, z80, patch):
     return bad
 
 
+DECISIONS = json.loads('{"engine": "atic_atac", "strategy": "pure-XOR row blitters 0x9EDC / 0x9F21 -> 1-bit shadow screen (page 26 at slot 3; ULA ^ shadow = the original); non-XOR writers (room line 0x9C75, 5 drawers with run-time ops, text 0xA1E6) keep it exact; hooks in alt ROM image 1 at 0x2000, 28 MHz inside every hook", "start": "the .z80 (loader state) run to JP 24576 (frame 2); hook RAM 0x5B80-0x5BFF zeroed (loader bytes there are dead)", "figures": "every figure a hardware-sprite image (Dean 2026-10-26: decisions 1-5 = defaults); the panel\'s pocket icons (x >= 192) stay on the ULA", "images": "image group = (the id\'s graphic in the snapshot, x, base line) + row mask: a plot of the graphic toggles all rows, the appear / death effect\'s one-row slice (0x8CD8) row k; all rows = the stored image (207 images, pages 32-44), some = built by the hook (work page 28)", "outline": "solid: ink 1, enclosed paper (4-connected flood) + 1-px outline (4-neighbours: left / right / up / down, no diagonal corner pixels) black 2, else transparent (Dean 2026-10-26)", "colours": "palette offset = the figure\'s ink + 8 * BRIGHT (IX+5); the figure painter\'s 6 LD (HL),D become NOP", "tail": "0x5B00 (printer buffer: never touched in the RZX)"}')
+
+
 def auto(a, z80, name, out, say):
     import hashlib
     import time
@@ -1509,6 +1512,7 @@ def auto(a, z80, name, out, say):
         os.path.basename(spr), md5(spr), 'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200],
         len(patch.seen), sum(v[2] for v in patch.seen.values()), min(patch.store), max(patch.store), conv[1]))
     ok = not bad and not bad2 and not sc
+    json.dump(DECISIONS, open(os.path.join(out, name + '_decisions.json'), 'w'), indent=1)
     states = []
     for r in list(a.rzx or []):
         from skoolkit.rzxplay import parse_rzx
