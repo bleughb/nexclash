@@ -72,12 +72,50 @@
  "status": {
   "title": "Atic Atac",
   "engine_col": "atic_atac (atic_atac.md)",
-  "build": "atic_atac_sprites.nex 59493b75 (every figure an outlined, solid hardware-sprite image; image groups with row masks for the appear / death effect; XOR shadow screen; hooks: alt ROM + pages 26 / 28, 28 MHz)",
-  "software": "full RZX IDENTICAL (18,279 frames: registers, memory, ULA ^ shadow, attributes, entries, 47.3M sprite pixels vs the original's plots), unit 1,473 cases + negative controls 3/3 PASS (2026-10-26; not yet stamped by selftest)",
+  "build": "atic_atac_sprites.nex 4a7bc013 (every figure a 4-neighbour-outlined, solid hardware-sprite image; image groups with row masks for the appear / death effect; XOR shadow screen; hooks: alt ROM + pages 26 / 28, 28 MHz)",
+  "software": "full RZX IDENTICAL (18,279 frames: registers, memory, ULA ^ shadow, attributes, entries, sprite pixels vs the original's plots), unit 1,473 cases + negative controls 3/3 PASS; stamped by selftest 2026-10-26 (outline = 4-neighbours)",
   "hardware": "untested",
-  "next": "stage 3: selftest --verify --stamp, colour sheets, hardware checklist"
+  "next": "stage 3 delivery: hardware round 1 + colour sheets (per-pixel colour model: Dean to decide)"
  },
  "checks": [
   "asm2profile:atic_atac"
- ]
+ ],
+ "checked": {
+  "deps": {
+   "asm/atic_atac_hooks.asm": "4c73daab29a1205f",
+   "docs/profiles/atic_atac.json": "66ac3b4289835b8c",
+   "nexclash.py": "7a4b0e6f5b61aaef",
+   "nexclash/atic_atac.py": "29160cd9951da338",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "125d380572fb0a7e",
+   "nexclash/nextboot.py": "a6e46fbbe842b376",
+   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "cfe7f2701eddfe6e",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-26"
+ },
+ "verified": {
+  "deps": {
+   "asm/atic_atac_hooks.asm": "4c73daab29a1205f",
+   "docs/profiles/atic_atac.json": "66ac3b4289835b8c",
+   "nexclash.py": "7a4b0e6f5b61aaef",
+   "nexclash/atic_atac.py": "29160cd9951da338",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "125d380572fb0a7e",
+   "nexclash/nextboot.py": "a6e46fbbe842b376",
+   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "cfe7f2701eddfe6e",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-26"
+ }
 }

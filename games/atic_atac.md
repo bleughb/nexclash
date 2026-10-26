@@ -1,13 +1,14 @@
 # Atic Atac (Ultimate Play The Game, 1983; 48K) - engine atic_atac (stage 2 done: built + verified in software)
 
 ## Next session
-Stage: 3 (prove + deliver)    State: engine complete 2026-10-26; full RZX already IDENTICAL (Results)
+Stage: 4 (hardware round 1)    State: stage 3 done 2026-10-26: build stamped by selftest (verified)
 Inputs: specnext/reference/atic_atac/ (snapshot, AticAtac.rzx)    Branch: claude/atic_atac (both repos)
-Start with: `python selftest.py --game atic_atac --verify --stamp` (the one full verification, ~12 min
-  replay + ~1.5 min unit tests), then `python -m nexclash.records views`; colour sheets (docs/COLOURS.md:
-  this engine has no sheet capture yet - write `sheets` / `capture` for the group images, or ask Dean
-  whether default inks are enough for the first hardware round); hardware checklist below to Dean
-Read: this file (Build design, Results, Open), PLAYBOOK stage 3, docs/COLOURS.md
+Start with: Dean's hardware result for atic_atac_sprites.nex (checklist below; CSpect first is not needed:
+  no start-up change since the plain build). Colour sheets NOT built: today a sprite's colour = one
+  palette offset (the figure's ink, IX+5), so a painted per-pixel sheet needs a colour model first - ask
+  Dean: (a) default inks are enough, or (b) per-pixel painting (then pattern indices 1-14 carry the
+  paint, offsets stay per figure; recolour banks = the pattern store pages 32-44, never read by the game)
+Read: this file (Hardware checklist, Open), PLAYBOOK stage 4, docs/COLOURS.md only for (b)
 Open: speed on hardware (setups ~2.5k T each); game-over path not recorded; menus / pause asked
 
 Reference: specnext reference/atic_atac/ (Dean, 2026-10-26).
@@ -17,7 +18,7 @@ Reference: specnext reference/atic_atac/ (Dean, 2026-10-26).
 | Output | MD5 | Status |
 |---|---|---|
 | atic_atac.nex (plain, tail 0x5B00) | e710fa8785802f1aa51f214d95c82343 | boot sim OK; hardware untested |
-| atic_atac_sprites.nex (from the start state) | 59493b7563e6dd1c7141a6763cf52d73 | software IDENTICAL (full RZX), unit PASS; hardware untested |
+| atic_atac_sprites.nex (from the start state; outline = 4-neighbours) | 4a7bc0132c04bbf8350cf830a192a40e | stamped (selftest --verify --stamp): full RZX IDENTICAL, unit PASS; hardware untested |
 
 ## Intake (stage 0, 2026-10-26)
 - Snapshot: 48K, LOADER state. PC 0x5B89 inside a descramble loop at 0x5B80 (USR 23424 from the
@@ -213,9 +214,10 @@ docs/records/atic_atac.json.
   text +5M T, the start screens). Whether the game has that much spare per frame: hardware.
 
 ## Hardware checklist (atic_atac_sprites.nex)
+Sprite borders are 1 px wide with left / right / up / down neighbours only (no diagonal corner pixels).
 1. Boots to the game's start screens; text prints as the original; keys / joystick work.
 2. Player appears row by row from the bottom (no extra copy left behind after the first move).
-3. Figures solid with a black outline; no colour clash on walls when figures pass; colours = the
+3. Figures solid with a black outline (orthogonal only, no corner dots); no colour clash on walls when figures pass; colours = the
    figure's own ink.
 4. Monsters' appearance sparkle, thrown weapons, items: sprites, no flicker when moving.
 5. Death: the figure dissolves top-down and nothing is left where it stood; re-appears correctly.
@@ -227,7 +229,7 @@ docs/records/atic_atac.json.
 ## Open
 - Speed on hardware: setups cost ~2.5k T; if the game slows, skip the pattern upload when an entry
   shows the image it already holds (same pairs, same image), or keep the last uploaded image per pair.
-- Colour sheets: no sheet capture for this engine yet (stage 3).
+- Colour sheets: not built; needs Dean's colour-model answer (Next session). reference/atic_atac/atic_atac_REFERENCE_OUTLINES_4N.png shows every stored image with its outline (default colours, 3x).
 - Menus / message windows over the play area: asked 2026-10-26 (pause? the inventory?).
 - Test cheat (immortality / no chicken drain): offered 2026-10-26.
 - Game-over path (35893) not in the recording.
@@ -273,3 +275,9 @@ docs/records/atic_atac.json.
 - 2026-10-26 stage 2 part 1 (build design + hooks asm): ~1.5 h wall, ~80 tool calls, 0 user rounds.
 - 2026-10-26 stage 2 part 2 (engine module, store, verify, unit tests; slice effect found -> image
   groups + run-time builder; 3 hook bugs found by the verifier): ~3 h wall, ~110 tool calls, 1 resume.
+- 2026-10-26 stage 3 (prove + deliver): outline changed to 4-neighbours (Python store, asm build,
+  verifier model); one full verification stamped; ~1.5 h wall, 0 user rounds. Risk review (BRIEFING A1):
+  covered = interrupt safety per instruction (ROM IM 1, IY kept, hook stack above 0x5BA7 + 18), slot
+  remaps given back, CPU speed given back, boot sim; hardware-only = real 28 MHz timing / speed (Open),
+  raster tearing between a figure's erase and draw (sprites hide / reuse entries without flicker by
+  design, to confirm), NEXLOAD printer buffer (tail at 0x5B00 is restored by the stub, as the plain build).
