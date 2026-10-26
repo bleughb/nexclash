@@ -1,23 +1,30 @@
-# Cauldron (Palace Software, 1985; 48K) - engine `cauldron` (hardware round 1: menu hang fix sent)
+# Cauldron (Palace Software, 1985; 48K) - engine `cauldron` (hardware round 1 fixed; outline + no clash next)
 
 ## Next session
-Stage: 2 again (Dean's hardware round 1, 2026-10-27), then 3    Branch: claude/cauldron
-State: d4302eef hung at the menu on a Next (keys dead); 5830cbbd (whole alt ROM from the build)
-  sent for a hardware test - quick 2000 IDENTICAL, unit PASS, boot OK with a foreign ROM3.
+Stage: 2 again (round-2 engine changes Q7 + Q8, both decided), then 3    Branch: claude/cauldron
+State: 5830cbbd boots and runs at full speed on a Next (Dean 2026-10-27, hardware round 1 fixed);
+  quick 2000 IDENTICAL, unit 43 + 9 PASS. Full verification not run.
 Inputs: specnext/reference/cauldron/ (cauldron.rzx: its embedded snapshot is the build input)
-Start with: Dean's result for 5830cbbd ("Hardware rounds"). Then the two engine changes he asked
-  for ("Decisions", round 3): (1) outline: every sprite opaque black on the 4-neighbour pixels of its
-  ink (Dizzy 1 fill/outline model; images up to 32 px wide need a 3rd sprite column / row when the
-  outline grows past 32: 31115 is 32 x 32); (2) no figure attribute painting on the ULA (the clash
-  in Dean's screenshot: witch over the cottage roof turns it cyan) - plotter body paints a shadow
-  attribute map in a Next page, the game's ATTR / PEEK reads of painted cells (obs. 10: 0x9077-
-  0x90FC, 0x6B39 / 0x6B56, and the plotter's own old-attr tests) read the shadow; every other attr
-  writer (PO-ATTR via PR-ALL, 0xC9F0 restore, 0xCE7F box, CLS) keeps the shadow equal. Then quick
-  2000 + 9000, colour map + sheets + recolour (paint_clear for the outline), full verify --stamp.
-Read: PLAYBOOK 5-7, this file ("Decisions", "Hardware rounds", "Build design", "Open"),
-  docs/COLOURS.md, dizzy1.py fill_mask / part_from_writes (outline), docs/techniques/index.json
-  (virtual attribute read: no card yet).
-Open: see "Open"; CSpect "very slow" with d4302eef not explained yet (ask: plain .nex speed too?).
+Do, in order, each checked before the next (CLAUDE.md "Write"):
+  1. Q8 no clash: the ULA keeps the scenery attributes; the plotter's figure-cell painting goes to a
+     SHADOW attribute map (768 bytes, Next page, mapped only inside hooks). Every game read of an
+     attribute (runtime ATTR 25089 / PEEK 0x61D8 on 0x5800-0x5AFF, the plotter's own old-attr tests
+     incl. ROM PO-ATTR 0x0BE4 for type 2) must return what the ORIGINAL holds = the shadow; every
+     other attr writer (PR-ALL's PO-ATTR, 0xC9F0 restore, 0xCE7F box, CLS / CL-LINE, the 0xB2A0
+     clear, ROM 0x0E80) writes both. Find all attr readers/writers with a whole-RZX pass first
+     (obs. 10-11 list them). Verify: original vs patched - the shadow equals the original's attr
+     file at every event; the patched ULA attr file equals the original's minus figure painting
+     (an independent model); all registers / other memory as now.
+  2. Q7 outline: every sprite opaque black (palette entry 8) on the 4-neighbour pixels of its ink
+     (left / right / up / down only, not diagonals; not over its own ink). The outline grows the box
+     by 1 px each side: shift the sprite box (x-1, y-1) and use a 3rd column / row of 16 x 16 sprites
+     when the image + 2 px exceeds 32 (31115 is 32 x 32). Model + verify: expected layer = ink +
+     outline; unit cases at every graphic edge; negative control (outline off).
+  3. quick 2000 + 9000 PASS; then colour map + sheets + recolour (COLOURS.md, paint_clear=True so
+     the outline is paintable), record, `selftest --game cauldron --verify --stamp`, deliver.
+Read: PLAYBOOK 5-7, this file ("Decisions", "Rendering model", "Build design", "Open"),
+  docs/COLOURS.md, dizzy1.py outline functions (fill_mask, part_from_writes), index.json.
+Open: CSpect "very slow" with d4302eef unexplained (5830cbbd full speed on hardware).
 
 Reference: specnext reference/cauldron/. Status: stages 0-2 done (engine 2026-10-26); stage 2 analysis 2026-10-26
 (technique-card pilot). Analysis scripts are scratch (not in the repo): a one-off screen-reader
@@ -38,8 +45,6 @@ probe (detect.gameplay-screen-readers has no shared command yet, BRIEFING C2 can
 ## Snapshot facts (PLAYBOOK 0b)
 - 48K, IM 1, I = 0x3F, DI (an interrupt was just accepted: PC 0x0038, stacked return 0x613E is
   game code), SP 0x5FF6, border 0. RAMTOP 24599; game 0x6018-0xFFFF resident.
-- `inspect` WARNING "loader snapshot" is a false positive here: the BASIC loader (tape load to
-  0x6018 then `JP 0x6018`) is still in memory and PC is in ROM only because of the interrupt.
 - ISR: ROM IM 1 only, 89,377 interrupts, 126 distinct handler instructions, all in ROM (observed,
   whole RZX). Reads IY (keep IY), needs >= 18 free stack bytes. MMU slots touched 0 and 2 only;
   1, 3-7 never. 0x63DB sets IM 2 (vector table 0xFEFF -> 25576) - never executed in this
@@ -111,7 +116,8 @@ User report 2026-10-27 (hardware round 1, screenshots from CSpect):
   not answered: black proposed (paintable on the sheet).
 - Q8 (Dean): the scenery must not clash when a figure passes over it (reverses Q3 = 3a): remove
   the figure-cell attribute painting from the ULA; the game's attribute readers get the original
-  values from a shadow (design stated to Dean 2026-10-27; his explicit go-ahead not yet given).
+  values from a shadow. Go-ahead for both: Dean 2026-10-27 (after the hardware round); outline
+  black by default (proposed, not objected; paintable on the sheet).
 
 ## Stage 2 analysis (2026-10-26; scratch probes, not in the repo)
 - Build input: the RZX's embedded snapshot = RZX block 0x30, flags 2 (zlib), a .z80 (39,419
@@ -212,8 +218,8 @@ sprites `..._sprites.nex` d4302eeff4bec044f61cc028fda8c3d4, both boot OK (nextbo
 - Full verification: not run (stage 3). ~25 min (quick 9000 took ~3 min).
 
 ## Hardware rounds
-Round 1 (2026-10-27): d4302eef hung at the menu (keys dead). Cause (analysis; hardware result of
-the fix pending): the game reads keys through ROM KEY-SCAN 0x028E / K-TEST 0x031E (its INKEY$
+Round 1 (2026-10-27): d4302eef hung at the menu (keys dead). 5830cbbd (fix below) boots and runs at
+full speed on the Next (Dean 2026-10-27), which confirms the cause: the game reads keys through ROM KEY-SCAN 0x028E / K-TEST 0x031E (its INKEY$
 runtime at 0x61C2) and prints / clears / plots through ROM too. The Next fills the alt ROM from
 NextZXOS's ROM3 (not Sinclair's), then the build wrote only 0x386E-0x3BB3 (hooks, over NextZXOS
 data at 0x3B00-) and the 3 JPs below 0x2000; the verifier ran Sinclair's ROM (BRIEFING C2 #5).
@@ -225,9 +231,9 @@ default off): z80tonex.altrom_fill `low` (replaces altrom0), nextboot boot / che
 `selftest --canary` PASSED. quick 2000: same counters as stage 2, IDENTICAL; unit 43 + 9 PASS.
 
 ## Open
-- Hardware result of 5830cbbd (menu keys, play). CSpect "very slow" with d4302eef: unexplained
+- CSpect "very slow" with d4302eef: unexplained
   (hook cost measured mean 2,765 T / frame); ask whether the plain .nex is slow there too.
-- Outline (Q7) and no figure attribute painting + shadow attribute reads (Q8): not built.
+- Q7 outline, Q8 shadow attributes: not built (Next session).
 - Colour map + colour sheets + recolour (PLAYBOOK 5, COLOURS.md): not built yet (stage 3 sends the
   sheets: build them first; patterns are converted at run time, so a colour map needs an override
   table keyed by graphic byte in a Next page).
@@ -237,7 +243,6 @@ default off): z80tonex.altrom_fill `low` (replaces altrom0), nextboot boot / che
 - ROM PLOT / DRAW (PLOT-SUB 0x22E5) and other ROM screen writers: never reached; the verifier fails
   any unhooked write into a live image's rectangle, so a recording that reaches one shows it.
 - Bit-level check of the POINT readers (obs. 9) if a shadow design is ever wanted.
-- IM 2 path (0x63DB, handler 25576): when is it used? Not in this recording.
 
 ## Lesson candidates
 - A game that runs ROM code (KEY-SCAN, PRINT, CLS) from an alt ROM image whose rest is copied
@@ -253,14 +258,11 @@ default off): z80tonex.altrom_fill `low` (replaces altrom0), nextboot boot / che
 - XOR overlay without a fixed object table: key = (graphic, x, y, rows, width); one plot toggles it;
   other writers taint it (no sprite until a clear holds it whole). Proof: any screen write outside
   the plotter into a live key's rectangle fails the verify, so a missed writer cannot hide.
-- XOR parity per image is not "on the screen": overwrite writers (ROM PO-CHAR scenery, scrolls,
-  clears) wipe or move XOR figures without an erase plot, and the game's next XOR then lands on
-  clean ground (Cauldron frames 2602-2638). An overlay's live set must end at any other writer's
-  touch; check with a byte trace of the figure's rows between plots, not only plot counts.
-  (patch.xor-overlay-keep-ula has no such failure row yet.)
-- `inspect` flags "loader snapshot" when PC is in ROM because an IM 1 interrupt was just taken
-  with the BASIC loader still in memory (Cauldron): check the stacked return address before
-  treating it as a loader.
+- XOR parity per image is not "on the screen": overwrite writers wipe or move XOR figures without
+  an erase plot (frames 2602-2638); an overlay's live set must end at any other writer's touch
+  (byte-trace the figure's rows between plots). patch.xor-overlay-keep-ula lacks this failure row.
+- `inspect` flags "loader snapshot" when PC is in ROM only because an IM 1 interrupt was just
+  taken (BASIC loader still in memory): check the stacked return address first.
 - An RZX's embedded snapshot can be a different build of the game than the .z80 delivered with
   it (Cauldron: 11,283 bytes differ, code shifted): the survey analyses the RZX's copy. The survey
   could compare the two start states and warn (BRIEFING C2 candidate).
