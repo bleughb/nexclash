@@ -108,3 +108,6 @@ workflow; no release or merge is part of this run.
 
 - 2026-10-26: stage4 feedback: user reports "game runs ok"; platform/coverage unspecified.
   GitHub evidence and draft PR descriptions updated; no build changes.
+
+- 2026-10-26: PR73 conflict maintenance: retain main's Atic Atac registration, assign this record
+  a unique order, regenerate views; verified engine/assembly/profile and NEX builds unchanged.

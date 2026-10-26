@@ -59,9 +59,9 @@ session that reads this file + games/<game>.md is far cheaper than hour five of 
 # Stage 0 - Intake (tools, before any design work)
 
 ## Survey (one command)
-`python -m nexclash.survey GAME.z80 --rzx R [--rzx R2]` (~5 min for 8,600 frames; `--stop N` for a
-first look) runs the snapshot check (0b), the plain conversion with its boot check (1; 48K only),
-engine identification (2) and one analysis pass (3: screen writers by routine, callers, T per call,
+`python -m nexclash.survey GAME.z80 --rzx R [--rzx R2]` (~5 min for 8,600 frames, linear: 18,300
+frames ~15 min, the analysis pass silent for ~12 - not a hang; `--stop N` for a first look) runs
+the snapshot check (0b), the plain conversion with its boot check (1; 48K only), engine identification (2) and one analysis pass (3: screen writers by routine, callers, T per call,
 ISR, free memory), then a preview pass, and writes `<game>_survey/`: survey.md (one page, ~2K
 tokens), survey.json, preview.png (what each top plot routine draws, per caller), the plain .nex.
 A KNOWN engine there -> `auto`, no stage 1-2. Read survey.md first; run the single commands below
