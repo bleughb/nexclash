@@ -1,0 +1,192 @@
+{
+ "name": "cauldron",
+ "order": 22,
+ "game": "Cauldron",
+ "doc": "cauldron.md",
+ "engine": "cauldron",
+ "representative": true,
+ "reference": "cauldron",
+ "inputs": {
+  "snapshot": {
+   "name": "Cauldron_1985_Palace_Software_a.z80",
+   "md5": "00ee637a4f63ffe61fc3503de42d7822",
+   "path": "cauldron/Cauldron_1985_Palace_Software_a.z80"
+  },
+  "recordings": [
+   {
+    "name": "cauldron.rzx",
+    "md5": "6974898953de6e279369a77d796407ea",
+    "path": "cauldron/cauldron.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "cauldron"
+ ],
+ "own_modules": [
+  "cauldron"
+ ],
+ "data": [
+  "docs/profiles/cauldron.json",
+  "asm/cauldron_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "cauldron.rzx"
+  ],
+  "decisions": {
+   "engine": "cauldron",
+   "input": "the snapshot embedded in cauldron.rzx (MD5 2f0ef98e5c59552663b15d5eb1175236; Q0, Dean 2026-10-26)",
+   "strategy": "overlay: the game still draws the ULA pixels; hooks in alt ROM image 1 (0x386E-, the whole alt ROM image from the build) + page 26 at slot 6 + page 27 at slot 4 put a grid of 4-bit sprites on every live XOR image (key = graphic, x, y, rows, width) - shown at a drawing plot's entry, hidden at an erasing plot's exit",
+   "figures": "every image of the plotter 0x6357 (all 14 callers; Q1)",
+   "depth": "sprites in front of everything (Q2)",
+   "outline": "every sprite: black (palette 8) on the left / right / up / down neighbours of its ink (Q7, Dean 2026-10-27); up to 3 x 3 sprites a figure, 14 figures with sprites at once",
+   "attributes": "the ULA keeps the scenery colours: the plotter paints an attribute shadow (page 27) instead (Q8, Dean 2026-10-27, reverses Q3); every game read of an attribute reads the shadow, every other attribute writer writes both; a bottom-third restore gives the ULA the colours of its save",
+   "colour": "the image's first cell ink after the plotter paints it (Q4, from the shadow); black -> palette 8",
+   "other writers": "ROM PR-ALL, CL-LINE, CL-SCROLL, the clear 0xB2A0, the tile writer 0xB366, the scrolls 0xDED2 / 0xDEEA: a touched live image loses its sprite and is tainted; a clear holding it whole forgets it (Q6)",
+   "interrupts": "left on (the ROM IM 1 handler touches slots 0 and 2 only)",
+   "tail": "0x5E00 (0x5D52-0x5FB9 free in the whole RZX); printer buffer put back (the game reads 0x5B00 / 0x5B01)"
+  }
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "cauldron.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 60,
+  "note": "auto: the build input is the snapshot inside cauldron.rzx (Q0). Differential verify at every hook site (plotter entry incl. its body copy, PR-ALL, PO-ATTR, CL-LINE, CL-SCROLL, clear 0xB2A0, tile 0xB366, scrolls 0xDED2 / 0xDEEA, and every attribute reader / writer: PEEK 0x61D8, save 0xC9DB, restore 0xC9E7, box 0xCE74, room fill 0xB2AC, room cell 0xB33E / 0xB361, attribute scrolls 0xDF04 / 0xDF17): all registers, memory outside dead stack and the attribute file, interrupt safety; after every event and at each plot's body start the sprite layer (ink + black 4-neighbour outline), the hooks' tables and the ULA attribute file vs an independent model, and the attribute shadow vs the original's attributes; each plot's screen change = its image; any screen write outside the plotter into a live key's rectangle fails; any attribute write outside the hooked routines fails, and any read of a cell whose ULA value differs from the original's; no patch-site or graphic write, no jump into a patched instruction. + unit tests (75 cases: overflow, full table, no free slot, wrap, too big, bad geometry, colour rule, every touch and attribute hook as captured and with every ULA cell different, buffer changed since the save) with 17 negative controls"
+ },
+ "outputs": {
+  "plain": {
+   "file": "Cauldron_1985_Palace_Software_a.nex",
+   "md5": "b5b211f1fc6103ec0d42711dcc29cd0d"
+  },
+  "sprites": {
+   "file": "Cauldron_1985_Palace_Software_a_sprites.nex",
+   "md5": "55ed40f88d103cfd2fc9474199fe7f9d"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Cauldron",
+  "engine_col": "cauldron (cauldron.md)",
+  "build": "Cauldron_1985_Palace_Software_a_sprites.nex 55ed40f8 (every XOR-plotted image a grid of 4-bit sprites in the cell ink with a black outline; scenery keeps its colours: attribute shadow; overlay; whole alt ROM image from the build + pages 26 / 27, 28 MHz)",
+  "software": "quick 9,000 IDENTICAL (6,448 plots, 9.85M sprite pixels incl. outline, attribute shadow + ULA model at every event, no unhooked attribute access), unit 75 + negatives 17/17 PASS (2026-10-27); full RZX running",
+  "hardware": "5830cbbd runs at full speed on a Next (Dean 2026-10-27); 55ed40f8 (outline + no clash) sent for test",
+  "next": "hardware result of 55ed40f8; colour map + sheets + recolour (stage 4 round)"
+ },
+ "checks": [
+  "asm2profile:cauldron"
+ ],
+ "techniques": [
+  {
+   "application": "cauldron.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 1,
+   "target": "POINT / ATTR readers of figure bytes (0x6B87, 0x6BA8, 0x9DE1, 0x9E3F; 0x9077-0x90FC)",
+   "phases": []
+  },
+  {
+   "application": "cauldron.figures.xor-overlay",
+   "id": "patch.xor-overlay-keep-ula",
+   "revision": 1,
+   "target": "plotter 0x6357 (all 14 callers); touch hooks: ROM 0x0B9B / 0x0E44 / 0x0E00, RAM 0xB2A0 / 0xB366 / 0xDED2 / 0xDEEA",
+   "phases": [
+    "entry",
+    "clear"
+   ],
+   "owns": {
+    "mmu_slots": [
+     6
+    ],
+    "next_pages": [
+     24,
+     26
+    ],
+    "memory": [
+     {
+      "space": "alt_rom",
+      "image": 1,
+      "offset": [
+       "0x386E",
+       "0x3BB4"
+      ]
+     },
+     {
+      "space": "alt_rom",
+      "image": 1,
+      "offset": [
+       "0x0B9B",
+       "0x0B9E"
+      ]
+     },
+     {
+      "space": "alt_rom",
+      "image": 1,
+      "offset": [
+       "0x0E00",
+       "0x0E03"
+      ]
+     },
+     {
+      "space": "alt_rom",
+      "image": 1,
+      "offset": [
+       "0x0E44",
+       "0x0E47"
+      ]
+     }
+    ],
+    "speed": "28MHz-inside-hook"
+   }
+  },
+  {
+   "application": "cauldron.figures.atomic-switch",
+   "id": "patch.display-atomic-switch",
+   "revision": 1,
+   "target": "a drawing plot shows its sprites at the entry, an erasing plot hides them at the exit (the hook runs the body)",
+   "phases": [
+    "entry"
+   ],
+   "owns": {
+    "sprite_ids": [
+     [
+      0,
+      111
+     ]
+    ],
+    "pattern_slots": [
+     [
+      0,
+      111
+     ]
+    ]
+   }
+  }
+ ],
+ "results": [
+  {
+   "application": "cauldron.figures.xor-overlay",
+   "check": "state.rzx-differential",
+   "status": "partial",
+   "build": "d4302eef",
+   "scope": "quick 2,000 + 9,000 frames IDENTICAL (2026-10-26): registers, memory, tables, 2.03M sprite pixels, plot screen bytes, unhooked-writer check; unit 43 cases; negative controls 9/9; full RZX not yet",
+   "evidence": "games/cauldron.md \"Results\""
+  },
+  {
+   "application": "cauldron.figures.xor-overlay",
+   "check": "hardware.checklist",
+   "status": "not_run",
+   "build": "d4302eef",
+   "scope": "untested on a Next",
+   "evidence": "STATUS.md"
+  }
+ ]
+}

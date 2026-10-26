@@ -37,14 +37,18 @@ OPTIONAL (when the engine has the feature):
 `name`; `sites` = [(addr, original bytes, new bytes)] - `apply(snap)` refuses a snapshot whose
 bytes differ; `stub_extra` + `setup_call` (setup code the stub runs), `hook_page_data`,
 `extra_banks` {bank: bytes}, `uses_printer_buffer`, `tail_addr` (below 0xC000); alt-ROM hooks:
-`altrom = (lo, hi)` + `page` (the 8K image); older strategies `slot1`, `keep_printer_buffer`,
-`max_tail`.
+`altrom = (lo, hi)` + `page` (the 8K image); ROM bytes below 0x2000 (a JP into the hooks at a
+ROM routine, Cauldron): `altrom_low = (RAM page, 8K image of 0x0000-0x1FFF)` - with `altrom =
+(0x2000, 0x4000)` the whole image is the build's, not the Next's NextZXOS ROM3 (BRIEFING C2 #5;
+z80tonex.altrom_fill copies it, nextboot.check compares it); older strategies `slot1`,
+`keep_printer_buffer`, `max_tail`.
 
 ## Verify loop (the part every engine repeats; copy it from chuckie.verify)
 Replay the RZX with the opcode table wrapped: at a hook site copy the state, run original and
 patched code to their return (simulators from `simpool.machine`), compare CMP registers, memory,
 sprite pixels; `fail()` keeps 5 examples per key; also count writes to patch sites and jumps into
-INTERIORS. Hook asm may use Z80N: the verifier installs it with `z80n.install(sim, nextreg)`.
+INTERIORS (a site whose first instruction is 1 byte: the original itself runs the next bytes - count
+them against the site's own count, SEQUELS; Fireman, Cauldron). Hook asm may use Z80N: the verifier installs it with `z80n.install(sim, nextreg)`.
 
 ## Record (docs/records/<record>.json)
 Fields: nexclash/records.py docstring; copy the nearest record. `python -m nexclash.records deps

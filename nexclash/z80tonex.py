@@ -291,13 +291,17 @@ def build_tail(snap, org, slot1=None, altrom=False):
 # Setup stub (runs from the entry bank at C000)
 # --------------------------------------------------------------------------
 
-def altrom_fill(org, page, lo, hi):
+def altrom_fill(org, page, lo, hi, low=None):
     """Stub code (assembled for address org in the stub page at C000) that fills alt ROM image 1:
     ROM3 (48K BASIC) copied 0x0000-0x3FFF in write mode ($8C bits 7+6), then bytes lo..hi-1 of
-    RAM page `page` (the patch image of 0x2000-0x3FFF) written over it; $8C is left at 0 (the tail
-    enables reads). The legacy 1FFD/7FFD writes that select ROM3 remap MMU slots 6/7 (where the
-    stub runs), so the routine runs from an alias of the stub page in slot 4, with the patch page
-    in slot 5 as the copy source, restores slots 6/7 and jumps back; no stack use in between."""
+    RAM page `page` (the patch image of 0x2000-0x3FFF) written over it, then, with `low`
+    (patch.altrom_low: a RAM page holding an image of 0x0000-0x1FFF), all of 0x0000-0x1FFF from that
+    page. With lo..hi = 0x2000..0x4000 and `low` the image no longer depends on the system ROM3,
+    which is NextZXOS's, not Sinclair's (BRIEFING C2 #5; Cauldron's hooks in ROM routines below
+    0x2000). $8C is left at 0 (the tail enables reads). The legacy 1FFD/7FFD writes that select ROM3
+    remap MMU slots 6/7 (where the stub runs), so the routine runs from an alias of the stub page in
+    slot 4, with the patch page in slot 5 as the copy source, restores slots 6/7 and jumps back; no
+    stack use in between."""
     c = bytearray()
     c += nextreg(0x54, STUB_PAGE_LO) + nextreg(0x55, page)
     c += b'\xC3' + w16(org + len(c) + 3 - 0x4000)               # JP into the slot-4 alias
@@ -306,6 +310,8 @@ def altrom_fill(org, page, lo, hi):
     c += nextreg(0x8C, 0xC0)                                     # alt ROM write mode
     c += b'\x21\x00\x00\x11\x00\x00\x01\x00\x40\xED\xB0'       # LD HL,0 / LD DE,0 / LD BC,$4000 / LDIR
     c += b'\x21' + w16(0xA000 + lo - 0x2000) + b'\x11' + w16(lo) + b'\x01' + w16(hi - lo) + b'\xED\xB0'
+    if low is not None:
+        c += nextreg(0x55, low) + b'\x21\x00\xA0\x11\x00\x00\x01\x00\x20\xED\xB0'
     c += nextreg(0x8C, 0x00)
     c += nextreg(0x56, STUB_PAGE_LO) + nextreg(0x57, STUB_PAGE_HI)
     c += b'\xC3' + w16(org + len(c) + 3)                          # JP back to C000 space
@@ -314,7 +320,7 @@ def altrom_fill(org, page, lo, hi):
 
 
 def build_stub(snap, tail, tail_addr, p3_off, force50, setup_call=None, slot1=None, regs=None, altrom=None,
-               printer=None):
+               printer=None, altrom_low=None):
     code = bytearray()
     code += b'\xF3'                          # DI
     code += b'\x31' + w16(STUB_SP)           # LD SP,$FFFE
@@ -359,7 +365,7 @@ def build_stub(snap, tail, tail_addr, p3_off, force50, setup_call=None, slot1=No
         code += b'\xED\xB0'                                     # LDIR
         code += nextreg(0x57, STUB_PAGE_HI)
         if altrom is not None:                  # (lo, hi): patch bytes of the page for the alt ROM
-            code += altrom_fill(STUB_ORG + len(code), slot1[0], altrom[0], altrom[1])
+            code += altrom_fill(STUB_ORG + len(code), slot1[0], altrom[0], altrom[1], altrom_low)
 
     # Peripheral 3 ($08) value for the tail:
     #   keep bit 5 (AY stereo) and bit 4 (internal speaker) from the current setting,
@@ -503,7 +509,8 @@ def convert(src, dst, tail_req=None, force50=True, quiet=False, patch=None, keep
             raise ValueError('keep_printer_buffer is for 48K snapshots')
         printer = bytes(snap.banks[5][0x1B00:0x1C00])
     stub = build_stub(snap, tail, tail_addr, p3_off, force50,
-                      patch.setup_call if patch is not None else None, slot1, regs, altrom, printer)
+                      patch.setup_call if patch is not None else None, slot1, regs, altrom, printer,
+                      getattr(patch, 'altrom_low', (None,))[0] if patch is not None and getattr(patch, 'altrom_low', None) else None)
     if len(stub) > 0x1000:
         raise ValueError('stub too long')
 

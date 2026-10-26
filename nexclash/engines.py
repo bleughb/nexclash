@@ -31,6 +31,7 @@ ENGINES = [
     ('incredible_shrinking_fireman_add_GPT6_ASTRA', 'is_fireman', lambda a: getattr(a, 'z80', '').endswith('-add-GPT6_ASTRA.z80')),
     ('incredible_shrinking_fireman_add_opus', 'is_incredible_shrinking_fireman_add_opus', None),  # The Incredible Shrinking Fireman (48K)
     ('atic_atac', 'is_atic_atac', None),                                  # Atic Atac (48K)
+    ('cauldron', 'is_cauldron', None),                                    # Cauldron (48K)
 ]
 
 
