@@ -4,7 +4,7 @@
 {
   "schema": 3,
   "id": "detect.tracked-unit",
-  "revision": 1,
+  "revision": 2,
   "kind": "detect",
   "title": "Find the unit the hooks must track (whole image, partial image, composite)",
   "question": "Does one plot call draw a whole figure, part of one, or one piece of a multi-part object?",
@@ -18,7 +18,7 @@
   "order": {},
   "owns": {},
   "examples": ["atic_atac"],
-  "sources": []
+  "sources": ["https://github.com/TheGoodDoktor/SpectrumAnalyserProjects/blob/2aeb826aea3ccb73ad7630288d0351fda4096e84/Quazatron/DrawListViewer.lua"]
 }
 ```
 
@@ -41,6 +41,8 @@ track", nothing else.
    trace at the entry (`cost GAME.z80 --rzx R --at ENTRY --group IX` for calls per object).
 2. Repeat for every effect the recording reaches (appear, death, flash, shop, boss).
 3. Check run-time writes into graphics or height bytes (the effect may patch them).
+   If parameters are unclear, use detect.drawing-parameters; for composite commands, inspect
+   per-piece offsets, dimensions and operations before assigning an owner (Quazatron example).
 Stop when every entry is classed whole image / partial image (with how parts join: row mask,
 quarter, slice) / composite object, or the unclassed entries are named as unknowns.
 
@@ -68,3 +70,7 @@ path (every slice index, both directions); a negative control with per-call pari
 - LEARNINGS 2.1a (figure = the game's object; bosses as several objects).
 - `grep -n 'def kept_rows\|def build_image\|def rows_of' nexclash/atic_atac.py`; asm labels
   `group`, `tog`, `mbit`: asm/atic_atac_hooks.asm.
+- External, source-reviewed only: the pinned Quazatron source in metadata,
+  `DrawDrawListToView` / `FormatDrawlist`, decodes signed offsets, heights and OR/XOR/mask
+  flags. This is a known game format, not an automatic detector or evidence that its flag
+  meanings transfer. No external script was run and no local application was re-verified.
