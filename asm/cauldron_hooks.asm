@@ -47,9 +47,14 @@ UTR     EQU 0x849A
 UTC     EQU 0x849B
 UNB     EQU 0x849C
 UL      EQU 0x849D
+UOF     EQU 0x849E              ; colour map (games/cauldron.md "Colour map"): 1 = this image has an override,
+UOS     EQU 0x849F              ;   its colour stream's bytes per canvas line, the stream (in the colour page
+UOV     EQU 0x84A0              ;   mapped at slot 6 while the patterns are written)
 CANI    EQU 0x8500              ; 36 x 5: ink bits, canvas line L at CANI + 5 (L + 1), pixel x at bit x + 1
 CANO    EQU 0x8600              ; 36 x 5: outline bits (4-neighbours of ink, not ink)
 TT      EQU 0x8700              ; 16: (ink 2 bits, outline 2 bits) -> pattern byte (2 pixels)
+KEEP    EQU 0x8800              ; 256 (page27(), data): v -> the nibbles of a pattern byte v leaves at the default
+CPG     EQU 28                  ; colour pages 28-35: page 28 starts with the index (count, 7-byte entries)
 BUF     EQU 51700               ; the game's bottom-third attribute buffer (0xC9DB / 0xC9E7)
 ATTR_T  EQU 23695
 MASK_T  EQU 23696
@@ -1073,6 +1078,7 @@ upload: ld (UG),hl
         inc ix
         inc hl
         djnz .ol
+        call ovfind             ; colour map: transparent pixels out of both planes, UOF / UOV / UOS
         ld hl,TT                ; (ink hi, ink lo, outline hi, outline lo) -> 2 pixels
         ld c,0
 .tt:    ld a,c
@@ -1153,7 +1159,25 @@ upload: ld (UG),hl
         cp c
         jr z,.in
         jr nc,.zl               ; past canvas line rows + 1: empty
-.in:    inc a
+.in:    ld a,(UOF)
+        or a
+        jr z,.in2
+        ld a,(UL)               ; IX = the colour stream at line L, tile column UTC (8 bytes a column)
+        ld d,a
+        ld a,(UOS)
+        ld e,a
+        mul d,e
+        ld hl,(UOV)
+        add hl,de
+        ld a,(UTC)
+        add a,a
+        add a,a
+        add a,a
+        add hl,a
+        push hl
+        pop ix
+.in2:   ld a,(UL)
+        inc a
         ld l,a
         ld h,0
         ld d,h
@@ -1169,6 +1193,9 @@ upload: ld (UG),hl
         add hl,de
         ld a,(UNB)
         ld b,a
+        ld a,(UOF)
+        or a
+        jp nz,.bpo
 .bp:    ld c,(hl)               ; ink byte
         inc h
         ld e,(hl)               ; outline byte (CANO = CANI + 0x100)
@@ -1193,7 +1220,7 @@ upload: ld (UG),hl
         dec d
         jr nz,.px
         djnz .bp
-        ld a,(UNB)
+.bpx:   ld a,(UNB)
         ld b,a
         ld a,2
         sub b
@@ -1213,7 +1240,8 @@ upload: ld (UG),hl
         inc a
         ld (UL),a
         pop bc
-        djnz .ln
+        dec b
+        jp nz,.ln
         ld a,(UTC)
         inc a
         ld (UTC),a
@@ -1228,6 +1256,111 @@ upload: ld (UG),hl
         ld a,(UNR)
         cp b
         jp nz,.tr
+        ld a,(UOF)
+        or a
+        ret z
+        nextreg 0x56,0          ; the colour page out of slot 6
+        ret
+; the pattern bytes of an image with an override: v = the stream byte, byte = (TT AND KEEP[v]) OR v
+.bpo:   ld c,(hl)
+        inc h
+        ld e,(hl)
+        dec h
+        inc hl
+        ld d,4
+.pxo:   xor a
+        rl c
+        rla
+        rl c
+        rla
+        rl e
+        rla
+        rl e
+        rla
+        push hl
+        ld l,a
+        ld h,high TT
+        ld a,(hl)
+        ld l,(ix+0)
+        ld h,high KEEP
+        and (hl)
+        or l
+        inc ix
+        pop hl
+        out (0x5B),a
+        dec d
+        jr nz,.pxo
+        djnz .bpo
+        jp .bpx
+
+; ovfind: the image (UG, UWW, URR) in the colour index (page 28 at slot 6). Found: its page stays at
+; slot 6, its transparent mask (5 bytes a canvas line, lines 0 .. rows + 1) clears those pixels in
+; CANI and CANO, UOV = its colour stream (UOS bytes a line = 4 min(2 UNC, 5)), UOF = 1. Else slot 6
+; back to the game's page 0, UOF = 0. Uses A, B, C, DE, HL, IX.
+ovfind: xor a
+        ld (UOF),a
+        nextreg 0x56,CPG
+        ld a,(0xC000)
+        or a
+        jr z,.no
+        ld b,a
+        ld ix,0xC001
+        ld de,(UG)
+.s:     ld a,(ix+0)
+        cp e
+        jr nz,.nx
+        ld a,(ix+1)
+        cp d
+        jr nz,.nx
+        ld a,(UWW)
+        cp (ix+2)
+        jr nz,.nx
+        ld a,(URR)
+        cp (ix+3)
+        jr z,.hit
+.nx:    push de
+        ld de,7
+        add ix,de
+        pop de
+        djnz .s
+.no:    nextreg 0x56,0
+        ret
+.hit:   ld e,(ix+5)
+        ld d,(ix+6)
+        ld a,(ix+4)
+        nextreg 0x56,a
+        ld a,(URR)
+        add a,2
+        ld b,a
+        add a,a
+        add a,a
+        add a,b
+        ld b,a                  ; 5 (rows + 2)
+        ld hl,CANI+5
+.t:     ld a,(de)
+        cpl
+        ld c,a
+        and (hl)
+        ld (hl),a
+        inc h                   ; CANO = CANI + 0x100
+        ld a,c
+        and (hl)
+        ld (hl),a
+        dec h
+        inc hl
+        inc de
+        djnz .t
+        ld (UOV),de
+        ld a,(UNC)
+        add a,a
+        cp 5
+        jr c,.k
+        ld a,5
+.k:     add a,a
+        add a,a
+        ld (UOS),a
+        ld a,1
+        ld (UOF),a
         ret
 
 ; body2: the plotter body (0x635A-0x63DA) with every attribute access on the shadow (OR 0x80 for

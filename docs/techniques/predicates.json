@@ -146,5 +146,13 @@
     "evaluation": "manual",
     "survey_field": null,
     "probe": "the design question (PLAYBOOK 3c) or a hardware-round report"
+  },
+  "sprite.patterns_built_at_runtime": {
+    "means": "the hooks convert the game graphics into sprite patterns at run time (at the draw), so the build has no pattern per image to colour",
+    "true_when": "the pattern code reads the graphic from game memory inside a hook (Cauldron: upload builds a canvas + outline per draw)",
+    "false_when": "patterns are prepared at build time from a known image list (Dizzy 1 plane, Midnight Resistance commits)",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "read the engine design: where the pattern bytes (port 0x5B) come from"
   }
 }

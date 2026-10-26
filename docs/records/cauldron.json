@@ -61,7 +61,7 @@
   ],
   "auto_record": false,
   "minutes": 60,
-  "note": "auto: the build input is the snapshot inside cauldron.rzx (Q0). Differential verify at every hook site (plotter entry incl. its body copy, PR-ALL, PO-ATTR, CL-LINE, CL-SCROLL, clear 0xB2A0, tile 0xB366, scrolls 0xDED2 / 0xDEEA, and every attribute reader / writer: PEEK 0x61D8, save 0xC9DB, restore 0xC9E7, box 0xCE74, room fill 0xB2AC, room cell 0xB33E / 0xB361, attribute scrolls 0xDF04 / 0xDF17): all registers, memory outside dead stack and the attribute file, interrupt safety; after every event and at each plot's body start the sprite layer (ink + black 4-neighbour outline), the hooks' tables and the ULA attribute file vs an independent model, and the attribute shadow vs the original's attributes; each plot's screen change = its image; any screen write outside the plotter into a live key's rectangle fails; any attribute write outside the hooked routines fails, and any read of a cell whose ULA value differs from the original's; no patch-site or graphic write, no jump into a patched instruction. + unit tests (75 cases: overflow, full table, no free slot, wrap, too big, bad geometry, colour rule, every touch and attribute hook as captured and with every ULA cell different, buffer changed since the save) with 17 negative controls"
+  "note": "auto: the build input is the snapshot inside cauldron.rzx (Q0). Differential verify at every hook site (plotter entry incl. its body copy, PR-ALL, PO-ATTR, CL-LINE, CL-SCROLL, clear 0xB2A0, tile 0xB366, scrolls 0xDED2 / 0xDEEA, and every attribute reader / writer: PEEK 0x61D8, save 0xC9DB, restore 0xC9E7, box 0xCE74, room fill 0xB2AC, room cell 0xB33E / 0xB361, attribute scrolls 0xDF04 / 0xDF17): all registers, memory outside dead stack and the attribute file, interrupt safety; after every event and at each plot's body start the sprite layer (ink + black 4-neighbour outline + colour map), the hooks' tables and the ULA attribute file vs an independent model, and the attribute shadow vs the original's attributes; each plot's screen change = its image; any screen write outside the plotter into a live key's rectangle fails; any attribute write outside the hooked routines fails, and any read of a cell whose ULA value differs from the original's; no patch-site or graphic write, no jump into a patched instruction. + unit tests (87 cases: colour map per image geometry, shifted and at the screen edges, wrong check bytes ignored; overflow, full table, no free slot, wrap, too big, bad geometry, colour rule, every touch and attribute hook as captured and with every ULA cell different, buffer changed since the save) with 20 negative controls (+ colour map left out, transparent mask ignored, check byte not checked)"
  },
  "outputs": {
   "plain": {
@@ -70,7 +70,7 @@
   },
   "sprites": {
    "file": "Cauldron_1985_Palace_Software_a_sprites.nex",
-   "md5": "55ed40f88d103cfd2fc9474199fe7f9d"
+   "md5": "43c1ca492d7c1cc68541f02aaed9cb4c"
   }
  },
  "repro": [],
@@ -136,7 +136,7 @@
       "page": 27,
       "offset": [
        "0x0A00",
-       "0x0BA2"
+       "0x0C87"
       ],
       "mapped_at": "slot 4"
      }
@@ -204,8 +204,8 @@
       "space": "next_page",
       "page": 27,
       "offset": [
-       "0x0BA3",
-       "0x0D4F"
+       "0x0C88",
+       "0x0E34"
       ],
       "mapped_at": "slot 4"
      },
@@ -219,6 +219,121 @@
      }
     ]
    }
+  },
+  {
+   "application": "cauldron.figures.colour-map",
+   "id": "patch.runtime-colour-map",
+   "revision": 1,
+   "target": "upload (page 27): ovfind looks the image (graphic, width, rows) up in the index at page 28, takes its transparent pixels out of both canvases after the outline, writes pattern bytes (TT AND KEEP[v]) OR v from its colour stream; 93 images (profile colour_images); map docs/profiles/cauldron_colours.json (none = defaults)",
+   "phases": [
+    "entry"
+   ],
+   "owns": {
+    "mmu_slots": [
+     6
+    ],
+    "next_pages": [
+     28,
+     29,
+     30,
+     31,
+     32,
+     33,
+     34,
+     35
+    ],
+    "memory": [
+     {
+      "space": "next_page",
+      "page": 27,
+      "offset": [
+       "0x0800",
+       "0x08FF"
+      ],
+      "mapped_at": "slot 4"
+     },
+     {
+      "space": "next_page",
+      "page": 28,
+      "offset": [
+       "0x0000",
+       "0x1FFF"
+      ],
+      "mapped_at": "slot 6"
+     },
+     {
+      "space": "next_page",
+      "page": 29,
+      "offset": [
+       "0x0000",
+       "0x1FFF"
+      ],
+      "mapped_at": "slot 6"
+     },
+     {
+      "space": "next_page",
+      "page": 30,
+      "offset": [
+       "0x0000",
+       "0x1FFF"
+      ],
+      "mapped_at": "slot 6"
+     },
+     {
+      "space": "next_page",
+      "page": 31,
+      "offset": [
+       "0x0000",
+       "0x1FFF"
+      ],
+      "mapped_at": "slot 6"
+     },
+     {
+      "space": "next_page",
+      "page": 32,
+      "offset": [
+       "0x0000",
+       "0x1FFF"
+      ],
+      "mapped_at": "slot 6"
+     },
+     {
+      "space": "next_page",
+      "page": 33,
+      "offset": [
+       "0x0000",
+       "0x1FFF"
+      ],
+      "mapped_at": "slot 6"
+     },
+     {
+      "space": "next_page",
+      "page": 34,
+      "offset": [
+       "0x0000",
+       "0x1FFF"
+      ],
+      "mapped_at": "slot 6"
+     },
+     {
+      "space": "next_page",
+      "page": 35,
+      "offset": [
+       "0x0000",
+       "0x1FFF"
+      ],
+      "mapped_at": "slot 6"
+     }
+    ],
+    "speed": "28MHz-inside-hook"
+   },
+   "overlap_ok": [
+    {
+     "with": "cauldron.figures.xor-overlay",
+     "why": "non-overlapping lifetime",
+     "note": "slot 6 holds page 26 in the plot hook but the game page 0 at the upload; ovfind maps a colour page there only between the outline pass and the end of the pattern writes, then puts page 0 back"
+    }
+   ]
   }
  ],
  "results": [
