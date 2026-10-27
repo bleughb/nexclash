@@ -2,7 +2,8 @@
 
 **A stage is not complete until its reusable learning is incorporated or explicitly dispositioned,
 and its evidence record matches the implementation.** `python tools/learncheck.py` (run by
-`python tools/doccheck.py`) checks the structural part; the rest is the session's job. Why: lesson
+`python tools/doccheck.py`, and on every pull request by .github/workflows/checks.yml) checks the
+structural part; the rest is the session's job. Why: lesson
 lists that wait for a later consolidation pass are not read, and scratch scripts vanish with the
 container (Cauldron, 2026-10-27: a census script, a card warning and two tool fixes were left behind).
 
@@ -18,7 +19,9 @@ session's knowledge is from.
 ## 2. Capture (as you go)
 games/<game>.md "## Lessons": one bullet per finding - a new fact, a failed approach, a probe that
 worked, a coverage limit - in one or two lines (observation, evidence, limit), starting with its
-disposition tag. Mark observed / inferred / demonstrated. A script that answered a question another
+disposition tag. Mark observed / inferred / demonstrated. Only "- " bullets (continuation lines
+indented) count; any other line in the section fails, so nothing is silently skipped. A stage with
+no reusable finding says so: `- [none: <why>]` (e.g. "hardware report only, nothing new"). A script that answered a question another
 game may ask goes to tools/probes/ (its README) the same day, not to a scratch folder.
 
 ## 3. Dispositions (one or more per lesson, each must resolve)
@@ -31,6 +34,7 @@ game may ask goes to tools/probes/ (its README) the same day, not to a scratch f
 | `[probe tools/probes/<x>.py]` | kept as a reproducible probe | file, README row, docstring fields |
 | `[local: <reason>]` | true for this game only | a reason |
 | `[deferred C2 #N\|Open: reconsider when <condition>]` | unresolved; evidence kept there | target exists, a condition |
+| `[none: <why>]` | this stage found nothing reusable (stated, not skipped) | a reason |
 
 Docs and cards change at once (they rebuild nothing). Executable changes keep their gates: a probe
 first, tested in `selftest --tools`; promotion to a shared command when a second game uses it
@@ -47,13 +51,16 @@ the PR says what changed and why. Then `python tools/techindex.py` regenerates t
 ## 5. Technique use (does the catalogue help?)
 games/<game>.md "## Technique use": one line per card or probe consulted,
 `- <card id | tools/probes/<x>.py>: used | helped | no help: <why> | corrected: <what>`.
-`python tools/learncheck.py --usage` totals them: a card that never helps, or keeps being
-corrected, is the next one to revise or deprecate.
+`python tools/learncheck.py --usage` totals them per card: DISTINCT games and individual uses apart
+(two lines from one game are one game - cross-game validation needs distinct games). A card that
+never helps, or keeps being corrected, is the next one to revise or deprecate.
 
 ## 6. Scope
-Enforced on game files with "## Lessons". A game file changed against origin/main that still has
-the old "## Lesson candidates" fails: migrate it when the game is revisited. Untouched old files
-stay as they are (MAINTAIN "Lesson consolidation" handles them).
+Enforced on game files with "## Lessons", and on every record's game file changed against
+origin/main: it needs "## Lessons" + "## Technique use" and a lesson added or changed since the merge
+base (or a `[none: <why>]` line). One that still has the old "## Lesson candidates" fails: migrate it
+when revisited. Untouched old files stay as they are (MAINTAIN "Lesson consolidation" handles them).
+Under CI a missing merge base fails (the workflow fetches the full history).
 
 ## 7. Record reconciliation
 The record's `techniques` lists every card the build applies (application, target, `owns`) and its

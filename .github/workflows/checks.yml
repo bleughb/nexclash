@@ -1,0 +1,27 @@
+# Runs on every pull request (and pushes to main): the doc / learning-loop checks, so no session has to
+# remember them (GPT6 review, 2026-10-27). Make "checks / doccheck" a required status check on main
+# (repository Settings -> Branches) so a failing PR cannot be merged. No game data is needed or used:
+# selftest's game runs need the private reference files and stay with the maintainers (docs/MAINTAIN.md).
+name: checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  doccheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # learncheck compares changed game notes with the merge base on origin/main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: pip install -r requirements.txt
+      - name: learncheck self-check (parser, tags, distinct-game counts)
+        run: python tools/learncheck.py --selfcheck
+      - name: doccheck (references, budgets, technique cards, learncheck)
+        run: python tools/doccheck.py
