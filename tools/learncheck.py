@@ -3,14 +3,21 @@
 resolves, technique use is recorded, kept probes are complete, new cards carry their evidence.
 
     python tools/learncheck.py            exit 0 = PASS, 1 = FAIL (doccheck runs check() too)
-    python tools/learncheck.py --usage    per card / probe: how often games used it, it helped,
-                                          it did not help, it was corrected
+    python tools/learncheck.py --usage    per card / probe: in how many distinct games, how often it
+                                          was used, helped, did not help, was corrected
+    python tools/learncheck.py --selfcheck  the parser and counting rules on synthetic notes (CI)
 
 Checks STRUCTURE, never technical truth. Scope (docs/LEARNING.md 6): games/<game>.md files with a
-"## Lessons" section; a game file changed against origin/main that still has the old
-"## Lesson candidates" section fails (migrate when revisited); untouched old files are left alone.
+"## Lessons" section, and every game file a record names (docs/records "doc") that changed against
+origin/main: it must have "## Lessons" + "## Technique use", and a lesson added or changed since the
+merge base - or an explicit `- [none: <why>]` line ("no new findings"). Untouched old files are left
+alone. Lessons and technique-use lines are "- " bullets (continuation lines indented); any other
+line there fails, so nothing is silently skipped. Under CI ($CI set) a missing merge base fails
+instead of skipping the changed-file checks. Kept probes: each is in selftest.py's PROBE_SMOKE
+registry with a smoke-test function that tools_check runs (GPT6 review, 2026-10-27).
 Not a game dependency (docs/records): changing it re-verifies nothing.
 """
+import ast
 import collections
 import glob
 import json
@@ -25,7 +32,7 @@ PDIR = os.path.join(ROOT, 'tools', 'probes')
 NOT_CARDS = {'STANDARD.md', 'CHANGELOG.md'}
 USE = ('used', 'helped', 'no help', 'corrected')
 PROBE_FIELDS = ('Invocation:', 'Limits:', 'Origin:', 'Smoke test:')
-TAG = re.compile(r'\[(card|doc|tool|backlog|probe|local|deferred)\b([^\]]*)\]')
+TAG = re.compile(r'\[(card|doc|tool|backlog|probe|local|deferred|none)\b([^\]]*)\]')
 
 
 def cards():
@@ -62,8 +69,9 @@ def _ctx():
             'has_section': doccheck.has_section}
 
 
-def _section(text, title):
-    """Lines of the '## title' section (bullets with their continuation lines joined)."""
+def _section(text, title, stray=None):
+    """Items of the '## title' section: "- " bullets with their indented continuation lines joined.
+    stray (a list): every other non-blank line is appended to it (unrecognised formatting)."""
     m = re.search(r'^## %s\s*$(.*?)(?=^## |\Z)' % re.escape(title), text, re.M | re.S)
     if not m:
         return None
@@ -76,6 +84,8 @@ def _section(text, title):
             cur.append(line.strip())
         elif not line.strip():
             cur = None
+        elif stray is not None:
+            stray.append(line.strip())
     return [' '.join(x) for x in items]
 
 
@@ -136,6 +146,9 @@ def _check_tag(kind, arg, game_text, cs, ps, ctx):
         missing, listed = ps[n]
         if missing or not listed:
             return 'probe %s: %s' % (n, ', '.join(missing + ([] if listed else ['not in tools/probes/README.md'])))
+    elif kind == 'none':
+        if not re.match(r':\s*\S.{6,}', arg):
+            return 'none tag needs a reason "[none: <why there is no new finding>]"'
     elif kind == 'local':
         if not re.match(r':\s*\S.{6,}', arg):
             return 'local tag needs a reason "[local: <reason>]"'
@@ -150,11 +163,21 @@ def _check_tag(kind, arg, game_text, cs, ps, ctx):
     return None
 
 
-def changed_games():
-    """Game files changed against origin/main (merge base, incl. the working tree); None: no git."""
+def merge_base():
+    """The merge base with origin/main, or None (no git / no origin/main)."""
     try:
-        base = subprocess.run(['git', 'merge-base', 'HEAD', 'origin/main'], cwd=ROOT, capture_output=True,
+        return subprocess.run(['git', 'merge-base', 'HEAD', 'origin/main'], cwd=ROOT, capture_output=True,
                               text=True, check=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+
+def changed_games(base=None):
+    """Game files changed against origin/main (merge base, incl. the working tree); None: no git."""
+    base = base or merge_base()
+    if not base:
+        return None
+    try:
         out = subprocess.run(['git', 'diff', '--name-only', base], cwd=ROOT, capture_output=True,
                              text=True, check=True).stdout.split()
     except (OSError, subprocess.CalledProcessError):
@@ -162,28 +185,84 @@ def changed_games():
     return {f for f in out if f.startswith('games/') and f.endswith('.md')}
 
 
+def _at_base(base, rel):
+    """The file's text at the merge base ('' if it did not exist)."""
+    r = subprocess.run(['git', 'show', '%s:%s' % (base, rel)], cwd=ROOT, capture_output=True, text=True)
+    return r.stdout if r.returncode == 0 else ''
+
+
+def record_docs():
+    """games/<doc> of every evidence record."""
+    return {'games/' + json.load(open(p)).get('doc', '') for p in glob.glob(os.path.join(ROOT, 'docs', 'records', '*.json'))}
+
+
+def probe_registry():
+    """selftest.py's PROBE_SMOKE (read, not imported) -> ({probe file: smoke function}, module-level
+    function names, True when tools_check runs the registry)."""
+    tree = ast.parse(open(os.path.join(ROOT, 'selftest.py')).read())
+    reg, funcs, runs = {}, set(), False
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef):
+            funcs.add(node.name)
+            if node.name == 'tools_check':
+                runs = any(isinstance(n, ast.Name) and n.id == 'PROBE_SMOKE' for n in ast.walk(node))
+        elif isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'PROBE_SMOKE' for t in node.targets):
+            if isinstance(node.value, ast.Dict):
+                for k, v in zip(node.value.keys, node.value.values):
+                    if isinstance(k, ast.Constant) and isinstance(v, ast.Name):
+                        reg[k.value] = v.id
+    return reg, funcs, runs
+
+
 def check(ctx=None):
     """-> list of problems (strings)."""
     ctx = ctx or _ctx()
     cs, ps = cards(), probes()
     bad = []
+    reg, funcs, runs = probe_registry()
     for n, (missing, listed) in ps.items():
         if missing:
             bad.append('tools/probes/%s: docstring lacks %s' % (n, ', '.join(missing)))
         if not listed:
             bad.append('tools/probes/%s: not listed in tools/probes/README.md' % n)
-    changed = changed_games()
+        if n not in reg:
+            bad.append('tools/probes/%s: no smoke test in selftest.py PROBE_SMOKE' % n)
+        elif reg[n] not in funcs:
+            bad.append('tools/probes/%s: PROBE_SMOKE names %s, no such function in selftest.py' % (n, reg[n]))
+    for n in sorted(set(reg) - set(ps)):
+        bad.append('selftest.py PROBE_SMOKE: %s is not a probe in tools/probes/' % n)
+    if reg and not runs:
+        bad.append('selftest.py tools_check never runs PROBE_SMOKE (the probes\' smoke tests)')
+    base = merge_base()
+    changed = changed_games(base)
+    if changed is None and os.environ.get('CI'):
+        bad.append('no merge base with origin/main (CI checkout needs fetch-depth: 0): changed game files not checked')
+    rdocs = record_docs()
     for g in sorted(glob.glob(os.path.join(ROOT, 'games', '*.md'))):
         rel = os.path.relpath(g, ROOT)
         t = open(g).read()
-        lessons = _section(t, 'Lessons')
+        stray = []
+        lessons = _section(t, 'Lessons', stray)
+        revisited = changed is not None and rel in changed and rel in rdocs
         if lessons is None:
             if changed is not None and rel in changed and re.search(r'^## Lesson candidates', t, re.M):
                 bad.append('%s: changed but still "## Lesson candidates": migrate to "## Lessons" with '
                            'dispositions (docs/LEARNING.md)' % rel)
+            elif revisited:
+                bad.append('%s: changed but no "## Lessons" section (docs/LEARNING.md 2; nothing new: '
+                           '"- [none: <why>]")' % rel)
             continue
         if re.search(r'^## Lesson candidates', t, re.M):
             bad.append('%s: both "## Lessons" and "## Lesson candidates"' % rel)
+        for line in stray:
+            bad.append('%s: "## Lessons": not a "- " bullet (or an indented continuation): %s' % (rel, line[:70]))
+        if not lessons:
+            bad.append('%s: "## Lessons" is empty (nothing new: "- [none: <why>]")' % rel)
+        if revisited and base:
+            old = set(_section(_at_base(base, rel), 'Lessons') or [])
+            if not [x for x in lessons if x not in old]:
+                bad.append('%s: changed since %s but no lesson added or changed (nothing new: add '
+                           '"- [none: <why>]", docs/LEARNING.md 2)' % (rel, base[:7]))
         for i, item in enumerate(lessons, 1):
             tags = TAG.findall(item[:400])
             if not tags or not item.startswith('['):
@@ -193,7 +272,10 @@ def check(ctx=None):
                 p = _check_tag(kind, arg, t, cs, ps, ctx)
                 if p:
                     bad.append('%s: lesson %d: %s' % (rel, i, p))
-        use = _section(t, 'Technique use')
+        ustray = []
+        use = _section(t, 'Technique use', ustray)
+        for line in ustray:
+            bad.append('%s: "## Technique use": not a "- " bullet: %s' % (rel, line[:70]))
         if use is None:
             bad.append('%s: "## Lessons" needs "## Technique use" (docs/LEARNING.md 5)' % rel)
         else:
@@ -227,20 +309,58 @@ def _active_evidence(cid):
     return False
 
 
-def usage():
-    cnt = collections.defaultdict(collections.Counter)
-    for g in glob.glob(os.path.join(ROOT, 'games', '*.md')):
-        for item in _section(open(g).read(), 'Technique use') or []:
+def usage_counts(texts=None):
+    """-> {card or probe: Counter(uses, used, helped, ...)}, {card or probe: set of games}. A game with
+    several lines for one card counts once in the games (cross-game evidence is distinct games).
+    texts: {game file name: text} instead of games/*.md."""
+    cnt, games = collections.defaultdict(collections.Counter), collections.defaultdict(set)
+    if texts is None:
+        texts = {os.path.basename(g): open(g).read() for g in glob.glob(os.path.join(ROOT, 'games', '*.md'))}
+    for g, text in texts.items():
+        for item in _section(text, 'Technique use') or []:
             m = re.match(r'([\w./-]+):\s*(used|helped|no help|corrected)\b', item)
             if m:
                 cnt[m.group(1)][m.group(2)] += 1
-                cnt[m.group(1)]['games'] += 1
+                cnt[m.group(1)]['uses'] += 1
+                games[m.group(1)].add(g)
+    return cnt, games
+
+
+def usage():
+    cnt, games = usage_counts()
     for k in sorted(cnt):
-        print('%-40s %s' % (k, ', '.join('%s %d' % (u, cnt[k][u]) for u in ('games',) + USE if cnt[k][u])))
+        print('%-40s games %d (%s), %s' % (k, len(games[k]), ', '.join(sorted(games[k])),
+                                          ', '.join('%s %d' % (u, cnt[k][u]) for u in ('uses',) + USE if cnt[k][u])))
+
+
+def selfcheck():
+    """The parser and counting rules on synthetic notes (no git, no game files) -> list of failures."""
+    bad = []
+    stray = []
+    t = '## Lessons\n- [local: one line\n  continued here]\n* starred\nplain paragraph\n\n## Open\n- x\n'
+    items = _section(t, 'Lessons', stray)
+    if items != ['[local: one line continued here]'] or stray != ['* starred', 'plain paragraph']:
+        bad.append('lesson parsing: %r / %r' % (items, stray))
+    if _section('## Open\n- x\n', 'Lessons') is not None:
+        bad.append('missing section not None')
+    for arg, ok in ((': hardware report only, nothing new', True), ('', False), (':  ', False)):
+        if (_check_tag('none', arg, '', {}, {}, {}) is None) != ok:
+            bad.append('none tag %r' % arg)
+    use = '## Technique use\n- patch.a: helped\n- patch.a: helped (again)\n- patch.b: used\n'
+    cnt, games = usage_counts({'g1.md': use, 'g2.md': '## Technique use\n- patch.b: no help: why\n'})
+    if (len(games['patch.a']), cnt['patch.a']['uses'], len(games['patch.b']), cnt['patch.b']['uses']) != (1, 2, 2, 2):
+        bad.append('usage: distinct games vs uses %r %r' % (dict(cnt), dict(games)))
+    return bad
 
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
+    if '--selfcheck' in argv:
+        bad = selfcheck()
+        for b in bad:
+            print('FAIL ' + b)
+        print('learncheck selfcheck: %s' % ('FAIL' if bad else 'PASS'))
+        return 1 if bad else 0
     if '--usage' in argv:
         usage()
         return 0

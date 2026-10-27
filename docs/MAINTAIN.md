@@ -18,6 +18,8 @@ contribution, a release, lesson consolidation. An add-a-game session by a contri
   built <game>.nex + <game>_sprites.nex, both colour sheets + the painting sheet's _layout.json; the
   colours json, once painted, goes in the record's data list), listed in its reference/README.md
   (edit by grepping for the game's heading; the index is long).
+- Every PR runs .github/workflows/checks.yml (learncheck self-check + doccheck, no game data); keep
+  "checks / doccheck" a required status check on main (Settings -> Branches).
 - Before the merge: `selftest.py --affected --verify --stamp` in a separate worktree (LEARNINGS 2.6) -
   it re-verifies only what else the change reached. Contributors never run it.
 
@@ -52,8 +54,9 @@ Actions -> release -> Run workflow with the tag. Before a release: `python selft
 Since 2026-10-27 every stage dispositions its own lessons (card / doc / tool / backlog / probe /
 local / deferred; learncheck checks them). What is left for maintainers:
 - Review card changes in each PR: an incorrect card steers future implementations.
-- Promote a candidate card to `active` only with scoped local evidence (a record `pass` result);
-  a probe to a shared command when a second game uses it (tools/probes/README.md).
+- Promote a candidate card to `active` only with scoped local evidence (a record `pass` result)
+  and count cross-game validation in DISTINCT games (`--usage` "games N"), not in uses; a probe to a
+  shared command when a second game uses it (tools/probes/README.md).
 - `python tools/learncheck.py --usage`: cards that never help or keep being corrected -> revise or
   deprecate.
 - Old games still with "## Lesson candidates": migrated when the game is next touched (learncheck

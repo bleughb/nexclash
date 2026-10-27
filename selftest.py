@@ -273,6 +273,19 @@ def run_one(rec, action, src, work, human):
     return rec, action, bad, lines, None
 
 
+def smoke_rzx_census(ez, er, ok):
+    import rzx_census                           # probe (tools/probes/README.md): C-simulator PC census
+    r = rzx_census.census(er, [40092, 43909], stop=300)
+    ok('probe rzx_census (300 frames): ISR 40092 x299 from frame 0, 43909 x141017 (= scan --writers)',
+       r['frames'] == 300 and not r['desync'] and r['pcs'][40092]['count'] == 299 and
+       r['pcs'][40092]['first'] == 0 and r['pcs'][43909]['count'] == 141017, r)
+
+
+# Every tools/probes/<name>.py -> its smoke test on Chuckie Egg (ez, er, ok), run by tools_check;
+# learncheck fails a probe that is missing here or names no function (GPT6 review, 2026-10-27).
+PROBE_SMOKE = {'rzx_census.py': smoke_rzx_census}
+
+
 def tools_check(src):
     """The shared analysis commands (inspect / scan / isr / cost / preview / survey) against known Chuckie Egg facts
     (~1 min). Returns the number of failures. A session that improves a command keeps these passing
@@ -334,11 +347,8 @@ def tools_check(src):
            w['writers'].get(43909) == 141017 and w['writers'].get(43916) == 42204 and
            set(w['writers']) == {43909, 43916, 42409, 40068} and len(w['readers']) == 3, w)
         sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tools', 'probes'))
-        import rzx_census                       # probe (tools/probes/README.md): C-simulator PC census
-        r = rzx_census.census(er, [40092, 43909], stop=300)
-        ok('probe rzx_census (300 frames): ISR 40092 x299 from frame 0, 43909 x141017 (= scan --writers)',
-           r['frames'] == 300 and not r['desync'] and r['pcs'][40092]['count'] == 299 and
-           r['pcs'][40092]['first'] == 0 and r['pcs'][43909]['count'] == 141017, r)
+        for name in sorted(PROBE_SMOKE):        # every kept probe's smoke test (learncheck checks the registry)
+            PROBE_SMOKE[name](ez, er, ok)
         sp = memscan.rest_spans({100: 5, 104: 1, 120: 2, 200: 9}, {200})
         ok('scan --writers: writers outside the top 10 joined into routine spans (100-104 x6, 120 x2)',
            [s[:3] for s in sp] == [(100, 104, 6), (120, 120, 2)], sp)
