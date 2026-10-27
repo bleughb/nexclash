@@ -515,6 +515,8 @@ def main():
     p.add_argument('nex', help='the built <game>_sprites.nex'); p.add_argument('colours', help='the painted <game>_PAINTING_SPRITES.png, or a colours .json')
     p.add_argument('--layout', help='painting layout json (default: next to the PNG)')
     p.add_argument('--game', help='record name (default: the engine that recognises the .nex)'); p.add_argument('-o', '--output')
+    p.add_argument('--onto', help='the colour map the build holds now (default: found by reproducing the build)')
+    p.add_argument('--replace', action='store_true', help='start from the sheet\'s own map, not the build\'s')
     p = sub.add_parser('rzx'); p.add_argument('action', choices=['info', 'merge', 'strip']); p.add_argument('files', nargs='+')
     p.add_argument('-o', '--output')
     for cmd in ('inspect', 'scan', 'isr', 'cost', 'preview'):
@@ -592,7 +594,7 @@ def main():
     elif a.cmd == 'recolour':
         from nexclash import recolour
         try:
-            recolour.run(a.nex, a.colours, a.layout, a.game, a.output)
+            recolour.run(a.nex, a.colours, a.layout, a.game, a.output, onto=a.onto, replace=a.replace)
         except ValueError as e:
             sys.exit('recolour refused: %s' % e)
     elif a.cmd == 'rzx':

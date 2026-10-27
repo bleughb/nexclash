@@ -46,7 +46,7 @@ recolour makes a repaint free (no rebuild, no re-verify), so colour is not a des
     build time): the map goes into per-image override tables the upload applies
     (docs/techniques/patch.runtime-colour-map.md). The painting layout keeps the map it was drawn with: a repaint changes only
     the pixels whose colour changed; painting a pixel back to its default removes its entry.
-    Re-send both sheets after each read-back. Later levels the RZX does not reach: a second sheet
+    Re-send both sheets after each read-back (recolour redraws them: below). Later levels the RZX does not reach: a second sheet
     from a later recording, read into the same colours file.
   - Transparent and outline pixels: engines may draw opaque non-ink pixels (code 2: an outline, or
     Dizzy 1's enclosed paper, black by default). TRANSPARENT: `coloursheet.read(..., clear=True)`
@@ -81,6 +81,15 @@ recolour makes a repaint free (no rebuild, no re-verify), so colour is not a des
   requires recolour to turn each build into the other byte for byte (dizzy1: a recolour that forgot
   bank 27 failed it). A painting becomes the build default only by copying its `_colours.json` to
   docs/profiles/<record>_colours.json, then rebuild + verify + stamp as usual.
+  - The bundle (2026-10-27, GPT6 review; shared, every engine): recolour MERGES the painting onto
+    the map the build holds, found by reproduction (`recolour(build, map)` = the build byte for
+    byte): the .nex's `_colours.json` sidecar, the build default or empty; `--onto MAP` names it,
+    `--replace` starts from the sheet's map. Pixel states (default / colour / transparent) merge
+    three ways (`coloursheet.merge`): untouched pixels keep the current state, so an old sheet
+    cannot wipe newer paint. Refused, nothing written: a pixel painted two ways, a pixel changed on
+    the sheet and since, a build no map reproduces. Output, all or nothing: .nex, colours json,
+    both sheets redrawn from their OWN layouts (`coloursheet.redraw`: no capture; a missing one is
+    reported) + layouts, `_report.json`.
 
 - Pixel art is the user's. Say so: an AI is not a good pixel artist (it sees a pixel grid
   coarsely). The AI prepares the sheets - cells or frames copied exactly as the game draws them,
