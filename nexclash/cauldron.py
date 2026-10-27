@@ -1686,6 +1686,18 @@ def colour_tables(get, cmap, imgs):
     return pages, ovr, info
 
 
+def colour_identity(peek, prof=None):
+    """What a colour map / sheet layout means for this build (docs/COLOURS.md "Identity"): keys =
+    graphics byte (%04X) or an image's outline-ring group (G:WxR:line,col), bit = pixel; `inputs` =
+    the graphics bytes of every known image, `geometry` = the image list the ring keys and the
+    colour tables follow (profile colour_images)."""
+    prof = prof or load_profile()
+    geo = hashlib.md5(json.dumps(prof.get('colour_images', [])).encode()).hexdigest()
+    return {'schema': 1, 'game': RECORD, 'engine': 'cauldron',
+            'keys': 'cauldron-canvas-1: %04X graphics byte / G:WxR:line,col image ring, bit = pixel',
+            'inputs': colour_inputs_md5(peek, prof)[0], 'geometry': geo}
+
+
 def colour_inputs_md5(get, prof=None):
     """MD5 + count of the graphics bytes the colour map is keyed by (every known image's bytes)."""
     seen = set()
@@ -1778,10 +1790,11 @@ def sheets(rzx_path, out_dir, prefix='cauldron', colours=None, stop=None, get=No
     cmap = colours if colours is not None else load_colours()
     rgb = cs.palette_rgb(PALETTE)
     pre = os.path.join(out_dir, prefix)
+    ident = colour_identity(get)
     n1 = cs.write(cs.choose(comps, {}), pre + '_PAINTING_SPRITES.png', pre + '_PAINTING_SPRITES_layout.json',
-                  rgb, colours=cmap, paint_clear=True)
+                  rgb, colours=cmap, paint_clear=True, identity=ident)
     n2 = cs.write(comps, pre + '_REFERENCE_ALL_SPRITES.png', pre + '_REFERENCE_ALL_SPRITES_layout.json',
-                  rgb, colours=cmap, paint_clear=True)
+                  rgb, colours=cmap, paint_clear=True, identity=ident)
     say('Sheets    : %d images seen in %d frames; painting sheet %d figures, reference %d' % (
         len(seen), frames, n1, n2))
     return seen
@@ -1883,24 +1896,11 @@ def main(argv=None):
     p.add_argument('rzx')
     p.add_argument('-o', '--out', default='.')
     p.add_argument('--stop', type=int)
-    p = sub.add_parser('colours', help='painted sheet -> the colour map (default: the build default file)')
-    p.add_argument('png')
-    p.add_argument('--layout')
-    p.add_argument('-o', '--output', default=COLOURS)
     a = ap.parse_args(argv)
     if a.cmd == 'extract':
         print(start_state(a.rzx, a.out))
     elif a.cmd == 'sheet':
         sheets(a.rzx, a.out, stop=a.stop)
-    elif a.cmd == 'colours':
-        from . import coloursheet as cs
-        from .recolour import find_layout, warn_ignored
-        ent, rep = cs.read(a.png, a.layout or find_layout(a.png), clear=True)
-        for k, v in sorted(rep.items()):
-            print('%s: %d' % (k, v))
-        warn_ignored(rep)
-        cs.save(ent, a.output, NOTE)
-        print('-> %s (%d entries)' % (a.output, len(ent)))
 
 
 if __name__ == '__main__':

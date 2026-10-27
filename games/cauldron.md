@@ -17,14 +17,11 @@ probe (detect.gameplay-screen-readers has no shared command yet, BRIEFING C2 can
 ## Inputs (2026-10-26)
 - Cauldron_1985_Palace_Software_a.z80 (39,878 bytes, 48K), cauldron.rzx (89,595 frames, ~30 min,
   1 segment, no autosaves, no desync).
-- **The RZX does not start from this .z80** (observed, 2026-10-26): its embedded Z80 snapshot has
-  the same screen and entry (0x6018 `JP 0x63F8`) but 11,283 bytes of 0x6018-0xFFFF and 711 bytes
-  of sysvars/BASIC differ: the compiled-BASIC body (0x6D9E-0x7Fxx at least) is laid out
-  differently (e.g. `CALL 0x6275` sites at 29140/29149/29164 in the RZX's copy, 29191/29200/29215
-  in the .z80). A different build or variant of the game. Everything the survey and the probes
-  measured is the RZX's copy. Identical in both (checked at frame 2000): 0x6275 helper, 0x6357
-  plotter, 0x61D8-0x61FF PEEK/POINT, 0xB29C-0xB380, 0xC9D8-0xC9F3, 0xCE74-0xCE90, 0xDED2-0xDF30.
-  -> Q0 in the design question.
+- **The RZX does not start from this .z80** (observed): its embedded snapshot has the same screen
+  and entry (0x6018 `JP 0x63F8`) but 11,283 bytes of 0x6018-0xFFFF and 711 of sysvars/BASIC differ
+  (compiled-BASIC body laid out differently: another build). Everything measured is the RZX's copy;
+  identical in both: 0x6275, the 0x6357 plotter, 0x61D8-0x61FF, 0xB29C-0xB380, 0xC9D8-0xC9F3,
+  0xCE74-0xCE90, 0xDED2-0xDF30 -> Q0.
 
 ## Snapshot facts (PLAYBOOK 0b)
 - 48K, IM 1, I = 0x3F, DI (an interrupt was just accepted: PC 0x0038, stacked return 0x613E is
@@ -65,15 +62,12 @@ Observations (basis / scope; scope = cauldron.rzx 89,596 frames unless stated):
 | 14 | hazards | self-modification at sites: not checked (no LD (nn) scan yet); IM 2 path at 0x63DB not reached | unknown |
 
 ## Patch plan (STANDARD 4-5; cards opened: 3)
-Cards opened: detect.gameplay-screen-readers (applied: POINT reads figure bytes, obs. 9; ATTR reads
-painted cells, obs. 10), patch.xor-overlay-keep-ula (chosen: XOR, figures in front Q2; plots ~1/3
-frame -> patch.display-atomic-switch), patch.xor-shadow (REJECTED: POINT readers need the ULA
-pixels; revisit only with a bit-level POINT check). From index.json alone: scratch-redirect
-(rejected, no back buffer), isr-deferral (rejected, ISR is ROM only), pattern-cache (not needed),
-tracked-unit (obs. 5). Overwrite scenery / tile / scroll / clear writers and ROM text: no card;
-they stay on the ULA and are the "other writers" the overlay follows. Attribute painting with
-readers: no card for a virtual attribute read (decision table 4 nearest; lesson candidate).
-Full text in git history.
+detect.gameplay-screen-readers (applied: POINT reads figure bytes, obs. 9; ATTR reads painted
+cells, obs. 10); patch.xor-overlay-keep-ula (chosen: XOR, figures in front; plots ~1/3 frame ->
+patch.display-atomic-switch); patch.xor-shadow (REJECTED: POINT readers need the ULA pixels).
+From index.json alone: scratch-redirect, isr-deferral rejected, pattern-cache not needed,
+tracked-unit (obs. 5). Overwrite writers and ROM text stay on the ULA (the "other writers" the
+overlay follows). Full text in git history.
 
 ## Design question (sent 2026-10-26)
 Q0 start snapshot, Q1 which figures, Q2 depth, Q3 attribute painting, Q4 colours, Q5 menus / text
@@ -155,7 +149,8 @@ CL-LINE 0x0E44, CL-SCROLL 0x0E00 (JPs in the build's own alt ROM image). Hooks i
   graphics MD5 `colour_inputs`, sites, bank 12, pages 26 / 27).
 - Sheets (`python -m nexclash.cauldron sheet RZX`): one figure per image in its most frequent ink
   (92; D710 3 x 24 draws nothing), the whole canvas grey = paintable; ring keys are per image, so
-  the painting sheet shows every image. Read-back: `colours PNG` or `nexclash.py recolour`.
+  the painting sheet shows every image. Read-back: `nexclash.py recolour` only (the bundle:
+  merged onto the build's map, both sheets redrawn); the sheets carry `colour_identity` (2026-10-27).
 
 Techniques: `detect.gameplay-screen-readers`, `patch.xor-overlay-keep-ula`, `patch.display-atomic-switch`, `patch.attribute-shadow` (recipe and results: docs/records/cauldron.json)
 
@@ -186,17 +181,11 @@ Techniques: `detect.gameplay-screen-readers`, `patch.xor-overlay-keep-ula`, `pat
   quick 2000 IDENTICAL; a tampered page 27 is refused.
 
 ## Hardware rounds
-Round 1 (2026-10-27): d4302eef hung at the menu (keys dead). 5830cbbd (fix below) boots and runs at
-full speed on the Next (Dean 2026-10-27), which confirms the cause: the game reads keys through ROM KEY-SCAN 0x028E / K-TEST 0x031E (its INKEY$
-runtime at 0x61C2) and prints / clears / plots through ROM too. The Next fills the alt ROM from
-NextZXOS's ROM3 (not Sinclair's), then the build wrote only 0x386E-0x3BB3 (hooks, over NextZXOS
-data at 0x3B00-) and the 3 JPs below 0x2000; the verifier ran Sinclair's ROM (BRIEFING C2 #5).
-Fix 5830cbbd: the stub writes the WHOLE 16K image from the build (patch.altrom_low = page 25 with
-0x0000-0x1FFF + JPs; altrom = 0x2000-0x4000 from page 24); the image the game reads is the one
-verified, byte for byte. Check: cauldron.rom3_independent boots with a ROM3 that differs in every
-byte (negative control: the old partial image fails it, 15,546 bytes). Shared code (additive,
-default off): z80tonex.altrom_fill `low` (replaces altrom0), nextboot boot / check `sysrom=`;
-`selftest --canary` PASSED. quick 2000: same counters as stage 2, IDENTICAL; unit 43 + 9 PASS.
+Round 1 (2026-10-27): d4302eef hung at the menu (keys dead): the game runs ROM KEY-SCAN, PRINT and
+CLS from the alt ROM, which the Next fills from NextZXOS's ROM3, not Sinclair's (BRIEFING C2 #5).
+Fix 5830cbbd: the stub writes the WHOLE 16K image from the build; `rom3_independent` boots with a
+ROM3 differing in every byte (the old image fails it). Runs at full speed on the Next. Shared,
+additive: z80tonex.altrom_fill `low`, nextboot `sysrom=`; canary PASSED. Details: git history.
 
 Round 2 (2026-10-27): 55ed40f8 (outline + no clash) works on the Next (Dean 2026-10-27).
 
@@ -264,6 +253,16 @@ unpainted images unchanged, transparent pixels show the scenery (try CSpect firs
 - [doc docs/COLOURS.md §Colour sheets and recolour] A whole-RZX sheet capture through rzx.trace takes
   ~70 s for 90K frames (the census probe's method; COLOURS.md already names rzx.trace).
 
+- [doc docs/COLOURS.md §Colour sheets and recolour] A painting read back from an older sheet
+  replaced the whole map: one pixel on the original sheet, applied to the painted build, kept 0 of
+  1,593 entries (reproduced 2026-10-27). recolour now merges onto the map the build holds, found by
+  reproduction, and redraws both sheets from their own layouts (all 25 kept sheets: pixel-identical).
+- [tool recolour.check_identity] A layout carries no proof which build it fits: sheets now store the
+  engine's colour_identity (keys scheme, inputs MD5, geometry MD5), refused on any difference;
+  producer (capture memory) and consumer (.nex) agree for Cauldron and Dizzy 1 (observed).
+- [local: the engine's own `colours` subcommand wrote the build default from a sheet with no merge;
+  removed - one recolour workflow (Dizzy 1 still has one: flagged in PR #80)]
+
 ## Technique use
 - patch.xor-overlay-keep-ula: helped (the design; lacked the other-writers failure row: corrected)
 - detect.gameplay-screen-readers: corrected: listing readers has a shared command; compiled BASIC method added
@@ -275,6 +274,7 @@ unpainted images unchanged, transparent pixels show the scenery (try CSpect firs
 - patch.xor-overlay-keep-ula: helped (its canvas-at-the-draw upload is where the map applies)
 
 ## Stage log
+- 2026-10-27 colour workflow (GPT6 review, steps 1-4: recolour merge + bundle, identity, contract; shared code, PR #80): ~50 tool calls, 4 user rounds.
 - 2026-10-27 stage 4 colour round (capture, colour tables + upload override, sheets, recolour, 12 unit cases + 3 negatives, card patch.runtime-colour-map, full verify stamped): ~75 tool calls, 2 user rounds (merge questions).
 - 2026-10-27 stage 3 for round 2 (full verify stamped) + learning loop (docs/LEARNING.md, learncheck, probes, schema-4 cards; Cauldron migrated; main merged at the stage boundary, knowledge revision 639d585): ~40 tool calls, 2 user rounds.
 - 2026-10-27 round 2 (Q7 outline + Q8 attribute shadow: 12 new sites, page 27, verify spans + attribute model, 32 new unit cases, 8 negatives; quick 9000 PASS): ~70 tool calls, 1 user round.

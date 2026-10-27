@@ -130,12 +130,15 @@ def owners(comp, clear=False):
     return own
 
 
-def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=False, paint_clear=False):
+def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=False, paint_clear=False,
+          identity=None):
     """The sheet (png) and its layout (json). colours: an existing map, shown instead of defaults.
     unique (the PAINTING sheet, Dean 2026-10-14): every graphics pixel (key, bit) once - a figure
     sharing graphics with one before it shows only its new pixels (box cropped to them), a figure
     with nothing new is left out; the largest figure of a group comes first, so shared pieces are
     shown on a whole figure. Without unique (the REFERENCE sheet): every figure whole.
+    identity: the engine's colour_identity(peek) of the game the sheet was captured from, stored in
+    the layout (recolour compares it with the build's; docs/COLOURS.md "Identity").
     paint_clear: the clear pixels (code 0) inside each figure's box are listed too, paintable (the box
     is still the opaque pixels' box).
     Inside a box only the paintable pixels are grey (or coloured); the rest keeps the background
@@ -224,6 +227,8 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
                swatches=[[1 + (i - 1) * (SW + 2), 1, i] for i in range(1, 16)], composites=lay)
     if paint_clear:
         out['paint_clear'] = True
+    if identity:
+        out['identity'] = identity
     json.dump(out, open(layout_path, 'w'))
     return len(lay)
 

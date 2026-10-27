@@ -28,6 +28,7 @@ OPTIONAL (when the engine has the feature):
 |---|---|
 | `RECOLOUR = {...}` + `recolour(nex_bytes, cmap)` | both or neither (doccheck); docs/COLOURS.md RECOLOUR |
 | `COLOURS`, `load_colours()`, `sheets(...)` / `capture(...)` | colour map path (via `recolour.build_colours_path`), sheet capture (docs/COLOURS.md) |
+| `colour_identity(peek)` (+ `nex_peek(nex)` for 128K) | what a map / sheet means for this build; stored in sheet layouts, compared by recolour (docs/COLOURS.md "Identity") |
 | `negative_patch(patch)` / `negative_patches(...)` | the broken builds the negative controls run |
 | `boot_check(nex, z80, patch)` | 128K builds: the engine's own boot check (nextboot.check is 48K only) |
 | `DECISIONS` | stored build facts for `auto --decisions` (docs/records `rebuild.decisions`) |
