@@ -337,14 +337,23 @@ def _mem(z80):
     return bytearray(bytes(16384) + bytes(s.memory[16384:65536]))
 
 
-def sheets(comps, prefix, colours=None):
+def colour_identity(peek):
+    """What a colour map / sheet layout means for this build (docs/COLOURS.md "Identity"): keys G<addr>
+    (graphics byte) and D<addr> (Dizzy staging byte), bit = pixel; every game byte they and the colour
+    banks derive from, frame tables included, in `inputs` - so no separate geometry."""
+    return {'schema': 1, 'game': RECOLOUR['game'], 'engine': 'dizzy1',
+            'keys': 'dizzy1-gd-1: G%04X graphics byte / D%04X Dizzy staging byte, bit = pixel',
+            'inputs': colour_inputs_md5(peek)[0], 'geometry': None}
+
+
+def sheets(comps, prefix, colours=None, identity=None):
     from . import coloursheet as cs
     rgb16 = cs.palette_rgb(PALETTE)
     out = []
     for suffix, uniq in (('_PAINTING_SPRITES', True), ('_REFERENCE_ALL_SPRITES', False)):
         png = prefix + suffix + '.png'
         n = cs.write(comps, png, os.path.splitext(png)[0] + '_layout.json', rgb16, colours, unique=uniq,
-                     paint_clear=True)          # outlines: paper bits are paintable (fill_mask)
+                     paint_clear=True, identity=identity)   # outlines: paper bits are paintable (fill_mask)
         out.append((png, n))
     return out
 
@@ -1774,7 +1783,8 @@ def _main(argv=None):
     a = ap.parse_args(argv)
     if a.cmd == 'sheet':
         comps, cap = capture(a.rzx, a.z80, a.stop)
-        for png, n in sheets(comps, a.output, load_colours()):
+        ident = colour_identity(_mem(a.z80).__getitem__) if a.z80 else None
+        for png, n in sheets(comps, a.output, load_colours(), ident):
             print('%d figures -> %s' % (n, png))
         for (pc, ret, conv), k in sorted(cap.calls.items()):
             print('  %s from %d: %d calls%s' % ('Dizzy plotter' if pc == DZ_ENTRY else 'plotter 2', ret, k,

@@ -142,6 +142,46 @@ def find_layout(png):
     raise ValueError('no painting layout next to %s (pass --layout <game>_PAINTING_SPRITES_layout.json)' % png)
 
 
+IDENTITY_FIELDS = ('schema', 'game', 'engine', 'keys', 'inputs', 'geometry')
+
+
+def nex_peek(nex):
+    """48K game memory of a .nex (banks 5, 2, 0 at 0x4000-0xFFFF; 0 below): the default the
+    identity is computed from. A 128K engine provides its own nex_peek."""
+    off = nex_offsets(nex)
+    ram = b''.join(nex[off[b]:off[b] + 16384] for b in (5, 2, 0))
+    return lambda a: ram[a - 0x4000] if 0x4000 <= a < 0x10000 else 0
+
+
+def build_identity(mod, nex):
+    """The build's colour identity (engine colour_identity(peek)), or None when the engine has none."""
+    if not hasattr(mod, 'colour_identity'):
+        return None
+    return mod.colour_identity(getattr(mod, 'nex_peek', nex_peek)(nex))
+
+
+def check_identity(mod, name, nex, layouts):
+    """Layouts vs the build. -> status lines for the report ('validated' / 'unverified: why');
+    ValueError naming the differing fields when a layout's identity differs from the build's."""
+    import json
+    want = build_identity(mod, nex)
+    status = []
+    for lp in layouts:
+        got = json.load(open(lp)).get('identity')
+        n = os.path.basename(lp)
+        if want is None:
+            status.append('%s: unverified (engine %s has no colour_identity)' % (n, name))
+        elif got is None:
+            status.append('%s: unverified (legacy layout: no identity; the engine\'s build checks still apply)' % n)
+        else:
+            diff = [f for f in IDENTITY_FIELDS if got.get(f) != want.get(f)]
+            if diff:
+                raise ValueError('sheet %s does not belong to this build: %s' % (n, '; '.join(
+                    '%s %r, build %r' % (f, got.get(f), want.get(f)) for f in diff)))
+            status.append('%s: validated' % n)
+    return status
+
+
 def reference_layout(painting_layout):
     """The reference sheet's layout beside a painting layout (X_PAINTING_SPRITES_layout.json ->
     X_REFERENCE_ALL_SPRITES_layout.json), or None when the name has no PAINTING_SPRITES part."""
@@ -195,6 +235,13 @@ def run(nex_path, colours, layout=None, game=None, output=None, say=print, onto=
     lay = layout
     if colours.lower().endswith('.png'):
         lay = layout or find_layout(colours)
+    if lay:
+        ref = reference_layout(lay)
+        ident = check_identity(mod, name, nex, [lay] + ([ref] if ref and os.path.exists(ref) else []))
+        for line in ident:
+            say('identity: %s' % line)
+        report['identity'] = ident
+    if colours.lower().endswith('.png'):
         base, chg, meta, sconf, rep = cs.changes(colours, lay, clear=clear)
         for k, v in sorted(rep.items()):
             say('%s: %d' % (k, v))
@@ -333,6 +380,34 @@ def selfcheck():
             bad.append('accepted a bad .nex')
         except ValueError:
             pass
+    import json
+    import tempfile
+    import types
+    work = tempfile.mkdtemp(prefix='nexclash_ident_')
+    ident = {'schema': 1, 'game': 'g', 'engine': 'e', 'keys': 'k-1', 'inputs': 'a' * 32, 'geometry': None}
+    eng = types.SimpleNamespace(colour_identity=lambda peek: dict(ident, inputs='a' * 31 + chr(97 + peek(0x4000) % 2)),
+                                nex_peek=lambda n: (lambda a: 0))
+    lays = {}
+    for name, idv in (('ok', ident), ('legacy', None), ('bad', dict(ident, geometry='g'))):
+        lays[name] = os.path.join(work, name + '_layout.json')
+        json.dump({'identity': idv} if idv else {}, open(lays[name], 'w'))
+    try:
+        st = check_identity(eng, 'e', nex, [lays['ok'], lays['legacy']])
+        if not (st[0].endswith(': validated') and 'unverified (legacy' in st[1]):
+            bad.append('identity: validated / legacy %r' % st)
+    except ValueError as e:
+        bad.append('identity: refused a matching layout (%s)' % e)
+    try:
+        check_identity(eng, 'e', nex, [lays['bad']])
+        bad.append('identity: a different geometry was accepted')
+    except ValueError as e:
+        if 'geometry' not in str(e):
+            bad.append('identity: refusal does not name the field (%s)' % e)
+    st = check_identity(types.SimpleNamespace(), 'x', nex, [lays['ok']])
+    if 'has no colour_identity' not in st[0]:
+        bad.append('identity: engine without colour_identity %r' % st)
+    import shutil
+    shutil.rmtree(work, ignore_errors=True)
     missing = next(b for b in range(112) if b not in order)
     try:
         splice(nex, {missing: bytes(16384)})

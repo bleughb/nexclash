@@ -55,41 +55,44 @@ recolour makes a repaint free (no rebuild, no re-verify), so colour is not a des
     games"): give every bit of a plot's graphics bytes, paper bits as code 0, and write the sheets
     with `coloursheet.write(..., paint_clear=True)`; a paper bit with a colour nibble is then opaque
     in that colour (Dizzy 1: fill_mask).
-  - Code: shared nexclash/coloursheet.py does the sheet side (joining a frame's plots into figures,
-    the fewest figures that show every part, PNG, layout JSON, read-back, the colours file). The
-    engine supplies the parts: per plot its staging pixels, each with a colour-map key (one graphics
-    byte = 8 pixels), bit, ink / outline / clear code and today's colour. Templates: midres.sheet_part
-    / capture, CLI `python -m nexclash.<engine> sheet RZX` / `colours painted.png`; for OUTLINES
-    dizzy1 (part_from_writes lists every bit of the bytes drawn, paper as code 0; fill_mask turns
-    painted paper into opaque pixels in the plane, the sprite patterns and the verify model). A
-    capture must strip Fuse autosave snapshots from the RZX first, as auto does before verify
-    (midres.capture does; rzxplay desyncs on them otherwise).
+  - Code: shared nexclash/coloursheet.py does the sheet side (joining plots into figures, the
+    fewest figures showing every part, PNG, layout, read-back, merge, redraw); its docstring defines
+    the part format. The engine supplies the parts: per plot its staging pixels, each with a key
+    (one graphics byte = 8 pixels), bit, ink / outline / clear code and today's colour. Templates:
+    midres.sheet_part / capture; OUTLINES dizzy1 (part_from_writes: paper bits as code 0; fill_mask)
+    and cauldron (ring keys); CLI `python -m nexclash.<engine> sheet RZX`. A capture strips Fuse
+    autosave snapshots from the RZX first (midres.capture; rzxplay desyncs on them otherwise).
   - Where: the PNG and its `_layout.json` hold game graphics: specnext/reference/<game>/ only.
-- RECOLOUR - every engine with a colour sheet (Dean, 2026-10-14: "ALL games have this easy
-  ability"). A repaint must not need a rebuild + re-verify: `python nexclash.py recolour
-  <game>_sprites.nex PAINTED.png` writes `<game>_sprites_painted.nex` + its `_colours.json` in about
-  a second (layout found next to the PNG, `X_painted.png` -> `X_layout.json`; the engine is found by
-  the .nex). Shared half: nexclash/recolour.py. The engine adds two names (template: dizzy1.py):
-  `RECOLOUR = {'game', 'output', 'colours', 'clear', 'note'}` and `recolour(nex_bytes, cmap) ->
-  (bytes, info)`, built on `recolour.banks()` / `splice()`. Design rule that makes it safe: put every
-  colour-dependent byte (sprite patterns, Layer 2 pixels, palettes, per-figure colour tables) in banks
-  the GAME never reads, so a colour change cannot change the logic the verification proved; the
-  engine's recolour checks everything else in the .nex is its own build of the expected snapshot
-  (patch sites, hook code, the MD5 of the graphics bytes the colours come from) and refuses
-  otherwise. The engine loads its map through `recolour.build_colours_path(COLOURS)` (honours
-  $NEXCLASH_COLOURS), because the selftest guard builds the game a second time with an empty map and
-  requires recolour to turn each build into the other byte for byte (dizzy1: a recolour that forgot
-  bank 27 failed it). A painting becomes the build default only by copying its `_colours.json` to
-  docs/profiles/<record>_colours.json, then rebuild + verify + stamp as usual.
-  - The bundle (2026-10-27, GPT6 review; shared, every engine): recolour MERGES the painting onto
-    the map the build holds, found by reproduction (`recolour(build, map)` = the build byte for
-    byte): the .nex's `_colours.json` sidecar, the build default or empty; `--onto MAP` names it,
-    `--replace` starts from the sheet's map. Pixel states (default / colour / transparent) merge
-    three ways (`coloursheet.merge`): untouched pixels keep the current state, so an old sheet
+- RECOLOUR - every engine with a colour sheet (Dean 2026-10-14: "ALL games have this easy
+  ability"); shared half nexclash/recolour.py, steps in .claude/skills/recolour.
+  - Routine use (one command; no engine code to read): `python nexclash.py recolour BUILD.nex
+    PAINTED.png` (layout beside the PNG, `X_painted.png` -> `X_layout.json`; engine found by the
+    .nex). It MERGES the painting onto the map the build holds, found by reproduction
+    (`recolour(build, map)` = the build byte for byte): the .nex's `_colours.json` sidecar, the
+    build default or empty; `--onto MAP` names it, `--replace` starts from the sheet's map. Pixel
+    states (default / colour / transparent) merge three ways (`coloursheet.merge`), so an old sheet
     cannot wipe newer paint. Refused, nothing written: a pixel painted two ways, a pixel changed on
-    the sheet and since, a build no map reproduces. Output, all or nothing: .nex, colours json,
-    both sheets redrawn from their OWN layouts (`coloursheet.redraw`: no capture; a missing one is
-    reported) + layouts, `_report.json`.
+    the sheet and since, a build no map reproduces, a sheet of another identity. Output, all or
+    nothing: .nex, colours json, both sheets redrawn from their OWN layouts (`coloursheet.redraw`,
+    no capture; a missing one is reported) + layouts, `_report.json`. A painting becomes the build
+    default only by copying its `_colours.json` to docs/profiles/<record>_colours.json, then
+    rebuild + verify + stamp.
+  - Engine contract (docs/ENGINE_CONTRACT.md OPTIONAL; templates cauldron.py, dizzy1.py):
+    `RECOLOUR = {'game', 'output', 'colours', 'clear', 'note'}`; `recolour(nex_bytes, cmap) ->
+    (bytes, info)` on `recolour.banks()` / `splice()`, rewriting only banks the GAME never reads
+    (patterns, Layer 2, palettes, colour tables) and refusing a .nex that is not its build of the
+    expected snapshot (sites, hook code, graphics MD5); the map loaded through
+    `recolour.build_colours_path(COLOURS)` (the selftest guard builds with an empty map and needs
+    recolour to turn each build into the other byte for byte); the sheet writer passes
+    `identity=colour_identity(peek)` to `coloursheet.write`.
+  - Identity: `colour_identity(peek)` -> {schema 1; game (record); engine (module); keys (key
+    scheme + version: what a key and bit mean); inputs (MD5 of every game byte the keys and colour
+    banks derive from); geometry (MD5 of engine data the keys follow beyond those bytes - Cauldron's
+    image list - or None)}. ONE function for the producer (sheet, capture memory) and the consumer
+    (recolour, the .nex via `recolour.nex_peek`, 48K; a 128K engine adds `nex_peek`); any field
+    differing -> refused. A layout without one (before 2026-10-27), or an engine without the
+    function: "unverified" in the report, the engine's build checks still apply. Change the keys
+    meaning -> bump `keys`.
 
 - Pixel art is the user's. Say so: an AI is not a good pixel artist (it sees a pixel grid
   coarsely). The AI prepares the sheets - cells or frames copied exactly as the game draws them,
