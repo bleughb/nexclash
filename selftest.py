@@ -504,6 +504,50 @@ def coloursheet_check():
         res.append(('resized sheet refused', False))
     except ValueError:
         res.append(('resized sheet refused', True))
+    # recolour bundle (GPT6 review 2026-10-27): changes against the sheet's map, three-way merge on
+    # pixel states, redraw from the layout, two copies of one pixel painted differently
+    m = {}
+    cs.set_state(m, 'B0', 1, ('C', 10), [0, 1])
+    cs.set_state(m, 'B0', 2, 'T', [0, 1])
+    res.append(('set_state: colour + transparent', m == {'B0': [0, 1, [0, 10, 0, 0, 0, 0, 0, 0], 0x20]}))
+    cs.set_state(m, 'B0', 1, 'D', [0, 1])
+    cs.set_state(m, 'B0', 2, 'D', [0, 1])
+    res.append(('set_state: back to default removes the override (entry gone)', m == {}))
+    base = {'B0': [0, 1, [0, 10, 0, 0, 0, 0, 0, 0]], 'B1': [1, 1, [3, 0, 0, 0, 0, 0, 0, 0]]}
+    cur = {'B0': [0, 1, [0, 10, 0, 0, 0, 0, 0, 0]], 'B1': [1, 1, [5, 0, 0, 0, 0, 0, 0, 0]],
+           'B2': [2, 1, [0, 0, 7, 0, 0, 0, 0, 0]]}
+    meta = {'B0': [0, 1], 'B1': [1, 1], 'B2': [2, 1], 'B3': [3, 1]}
+    mg, mc = cs.merge(base, {('B0', 1): 'D', ('B3', 0): 'T'}, meta, cur)
+    res.append(('merge: user reset + transparent applied, newer current entries kept',
+                not mc and mg == {'B1': cur['B1'], 'B2': cur['B2'], 'B3': [3, 1, [0] * 8, 0x80]}))
+    mg, mc = cs.merge(base, {('B1', 0): ('C', 9)}, meta, cur)
+    res.append(('merge: changed on the sheet AND since -> conflict, nothing applied',
+                len(mc) == 1 and mc[0][1:] == (('C', 3), ('C', 9), ('C', 5)) and mg == cur))
+    mg, mc = cs.merge(base, {('B1', 0): ('C', 5)}, meta, cur)
+    res.append(('merge: the same change on both sides -> no conflict', not mc and mg == cur))
+    rp, rl = os.path.join(work, 'r.png'), os.path.join(work, 'r_layout.json')
+    cs.write(col3.composites(['Fig']), rp, rl, pal, base, unique=False)       # body B shown in 2 figures
+    rp2, rl2 = os.path.join(work, 'r2.png'), os.path.join(work, 'r2_layout.json')
+    cs.redraw(rl, base, rp2, rl2)
+    res.append(('redraw from the layout with its own map = the written sheet, same layout',
+                list(Image.open(rp).getdata()) == list(Image.open(rp2).getdata()) and
+                json.load(open(rl)) == json.load(open(rl2))))
+    R_ = json.load(open(rl))
+    figs = [c for c in R_['composites'] if any(p['id'] == 'B' for p in c['parts'])]
+    imr = Image.open(rp).convert('RGB')
+    for c, colr in zip(figs, (pal[4], pal[6])):
+        imr.putpixel((c['x'] + 1, c['y']), colr)                # B0 bit 1 (ink) in both figures
+    imr.save(rp)
+    _, ch, _, cf_, _ = cs.changes(rp, rl)
+    res.append(('changes: one pixel painted two ways in two figures -> conflict', len(figs) == 2 and
+                len(cf_) == 1 and cf_[0][0] == ('B0', 1) and ('B0', 1) not in ch))
+    imr.putpixel((figs[1]['x'] + 1, figs[1]['y']), pal[4])
+    imr.save(rp)
+    _, ch, _, cf_, _ = cs.changes(rp, rl)
+    res.append(('changes: painted the same in both copies -> one change', not cf_ and ch == {('B0', 1): ('C', 4)}))
+    cs.redraw(rl, cs.merge(base, ch, {'B0': [0, 1]}, base)[0], rp2, rl2)
+    _, ch2, _, _, _ = cs.changes(rp2, rl2)
+    res.append(('redrawn with the merged map, read back -> no changes', ch2 == {}))
     shutil.rmtree(work, ignore_errors=True)
     for name, cond in res:
         print('%-4s tools: coloursheet: %s' % ('OK' if cond else 'FAIL', name))

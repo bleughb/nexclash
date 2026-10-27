@@ -362,3 +362,168 @@ def load(path):
     d = json.load(open(path))['entries']
     return {k: [v[0], v[1], [int(ch, 16) for ch in v[2]]] + ([int(v[3], 16)] if len(v) > 3 else [])
             for k, v in d.items()}
+
+
+# ---------------------------------------------------------------------------------------------
+# Pixel states, changes against the sheet's own map, three-way merge, redraw (recolour bundle;
+# docs/COLOURS.md RECOLOUR, GPT6 review 2026-10-27). A pixel = (key, bit); its state in a map is
+# 'D' (default: nibble 0, not transparent), ('C', n) (colour n) or 'T' (painted transparent).
+# ---------------------------------------------------------------------------------------------
+
+def state(cmap, key, bit):
+    e = cmap.get(key)
+    if not e:
+        return 'D'
+    if len(e) > 3 and e[3] & (0x80 >> bit):
+        return 'T'
+    return ('C', e[2][bit]) if e[2][bit] else 'D'
+
+
+def set_state(cmap, key, bit, st, meta):
+    """Set one pixel's state in cmap (in place); meta = [check, kind] for a new entry. An entry left
+    with no colour and no transparent bit is removed (a reset to the default deletes the override)."""
+    e = cmap.get(key)
+    e = [e[0], e[1], list(e[2])] + list(e[3:4]) if e else list(meta[:2]) + [[0] * 8]
+    m = e[3] if len(e) > 3 else 0
+    e[2][bit] = st[1] if st not in ('D', 'T') else 0
+    m = (m | 0x80 >> bit) if st == 'T' else (m & ~(0x80 >> bit))
+    e = e[:3] + ([m] if m else [])
+    if any(e[2]) or m:
+        cmap[key] = e
+    else:
+        cmap.pop(key, None)
+
+
+def _copy(cmap):
+    return {k: [v[0], v[1], list(v[2])] + list(v[3:4]) for k, v in cmap.items()}
+
+
+def _fig(lay, ci, px, py):
+    c = lay['composites'][ci]
+    return '%s figure at %d,%d pixel %d,%d' % (c['group'], c['x'], c['y'], px - c.get('ox', 0), py - c.get('oy', 0))
+
+
+def changes(png, layout_path, clear=False):
+    """What the user changed on a painted sheet, against the map the sheet was drawn with (its
+    layout's 'colours'): -> (base map, {(key, bit): new state}, {key: [check, kind]}, conflicts, report).
+    A pixel counts as changed only when its colour differs from what the sheet showed. conflicts =
+    [((key, bit), [(figure, state), ...])]: one pixel shown in several figures and painted to two
+    different states (recolour refuses those). Geometry and rules as read()."""
+    from PIL import Image
+    lay = json.load(open(layout_path))
+    rgb16 = [tuple(c) for c in lay['palette']]
+    img = Image.open(png).convert('RGB')
+    if list(img.size) != lay['size']:
+        raise ValueError('sheet is %dx%d, expected %dx%d (save at the same size, no scaling)'
+                         % (tuple(img.size) + tuple(lay['size'])))
+    base = {k: [v[0], v[1], list(v[2])] + list(v[3:4]) for k, v in lay.get('colours', {}).items()}
+    rep = collections.Counter()
+    pclear = bool(lay.get('paint_clear'))
+    edits = collections.defaultdict(list)           # (key, bit) -> [(figure, state)]
+    meta = {}
+    unchanged = collections.defaultdict(int)
+    for ci, comp in enumerate(lay['composites']):
+        parts = _parts_of(comp)
+        own = _shown(comp, parts, pclear)
+        ox, oy = comp.get('ox', 0), comp.get('oy', 0)
+        for yy in range(comp['h']):
+            for xx in range(comp['w']):
+                v = img.getpixel((comp['x'] + xx, comp['y'] + yy))
+                if (xx + ox, yy + oy) not in own and not background(v) and nearest(v, rgb16)[0]:
+                    rep['paint on pixels no graphic draws (ignored)' if pclear else
+                        'painted transparent pixels (ignored)'] += 1
+        for (px, py), (n, i) in own.items():
+            c, r, key, bit, code, dflt = parts[n]['pixels'][i]
+            meta.setdefault(key, list(parts[n]['entries'][key][:2]))
+            idx, dist = nearest(img.getpixel((comp['x'] + px - ox, comp['y'] + py - oy)), rgb16)
+            if dist > 3 * 40 ** 2:
+                rep['pixels not near a palette colour (kept default)'] += 1
+                continue
+            b = state(base, key, bit)
+            shown = 0 if b == 'T' else ((b[1] if b != 'D' else 0) or (dflt if code else 0))
+            if idx == shown:
+                unchanged[(key, bit)] += 1
+                continue
+            if idx == 0:
+                if code and not clear:
+                    rep['opaque pixels painted grey (kept default)'] += 1
+                    continue
+                st = 'T' if code else 'D'
+            else:
+                st = 'D' if (code and idx == dflt) else ('C', idx)
+            edits[(key, bit)].append((_fig(lay, ci, px, py), st))
+    chg, conflicts = {}, []
+    for kb, lst in edits.items():
+        sts = []
+        for _, st in lst:
+            if st not in sts:
+                sts.append(st)
+        if len(sts) > 1:
+            conflicts.append((kb, lst))
+            continue
+        chg[kb] = sts[0]
+        if unchanged.get(kb):
+            rep['pixels left unpainted in a figure but painted in another copy (paint applies to all)'] += unchanged[kb]
+    for kb, st in chg.items():
+        rep['pixels painted transparent' if st == 'T' else 'pixels set to the default' if st == 'D'
+            else 'pixels recoloured'] += 1
+    return base, chg, meta, conflicts, rep
+
+
+def _shown(comp, parts, pclear):
+    """The pixels a composite shows on its sheet (as read() and write() place them)."""
+    own = owners(dict(parts=parts), clear=pclear)
+    ox, oy = comp.get('ox', 0), comp.get('oy', 0)
+    if comp.get('show') is not None:
+        keep = {tuple(p) for p in comp['show']}
+        return {k: v for k, v in own.items() if k in keep}
+    if pclear:
+        return {(x, y): v for (x, y), v in own.items() if ox <= x < ox + comp['w'] and oy <= y < oy + comp['h']}
+    return own
+
+
+def merge(base, chg, meta, current):
+    """Three-way merge on pixel states: base = the sheet's map, chg = the user's changes, current =
+    the map the build holds now. -> (merged map, conflicts [((key, bit), base, user, current)]).
+    Untouched pixels keep the current state; a change where current still equals base applies; a
+    change current already holds is kept; anything else conflicts."""
+    out, conflicts = _copy(current), []
+    for (key, bit), u in sorted(chg.items()):
+        b, c = state(base, key, bit), state(current, key, bit)
+        if c == b:
+            set_state(out, key, bit, u, meta[key])
+        elif c != u:
+            conflicts.append(((key, bit), b, u, c))
+    return out, conflicts
+
+
+def redraw(layout_path, cmap, png_out, layout_out):
+    """Redraw a sheet from its own layout with another colour map: same size, same figures at the
+    same places, same paintable pixels; the new layout records cmap as the map it shows (the next
+    painting is read against it). No capture, no emulation."""
+    from PIL import Image
+    lay = json.load(open(layout_path))
+    rgb16 = [tuple(c) for c in lay['palette']]
+    img = Image.new('RGB', tuple(lay['size']), BG_RGB)
+    for x, y, i in lay['swatches']:
+        for yy in range(y, y + SW):
+            for xx in range(x, x + SW):
+                img.putpixel((xx, yy), rgb16[i])
+    pclear = bool(lay.get('paint_clear'))
+    for comp in lay['composites']:
+        parts = _parts_of(comp)
+        own = _shown(comp, parts, pclear)
+        ox, oy = comp.get('ox', 0), comp.get('oy', 0)
+        for (px, py) in own:
+            img.putpixel((comp['x'] + px - ox, comp['y'] + py - oy), TRANSP_RGB)
+        for (px, py), (n, i) in own.items():
+            c, r, key, bit, code, dflt = parts[n]['pixels'][i]
+            st = state(cmap, key, bit)
+            if st == 'T':
+                continue
+            v = (st[1] if st != 'D' else 0) or dflt
+            if v:
+                img.putpixel((comp['x'] + px - ox, comp['y'] + py - oy), rgb16[v])
+    img.save(png_out)
+    lay['colours'] = {k: [v[0], v[1], list(v[2])] + list(v[3:4]) for k, v in cmap.items()}
+    json.dump(lay, open(layout_out, 'w'))
