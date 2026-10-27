@@ -79,8 +79,8 @@
   "engine_col": "cauldron (cauldron.md)",
   "build": "Cauldron_1985_Palace_Software_a_sprites.nex 43c1ca49 (every XOR-plotted image a grid of 4-bit sprites in the cell ink with a black outline, paintable: colour map + sheets + recolour; scenery keeps its colours: attribute shadow; overlay; whole alt ROM image from the build + pages 26-35, 28 MHz)",
   "software": "full RZX IDENTICAL 2026-10-27 (89,596 frames: 84,638 plots, 188.6M sprite pixels incl. outline, attribute shadow + ULA model at every event, no unhooked attribute access), unit 87 + negatives 20/20; colour map: synthetic painting read back + recolour = full build",
-  "hardware": "55ed40f8 works on a Next at full speed (Dean 2026-10-27); 43c1ca49 (colour map) untested",
-  "next": "hardware round 3: 43c1ca49 + a painted sheet through recolour"
+  "hardware": "43c1ca49 works on a Next (Dean 2026-10-27, round 3; colour map unpainted); 55ed40f8 before it",
+  "next": "Dean paints the sheet -> recolour; making it the build default: COLOURS.md RECOLOUR"
  },
  "checks": [
   "asm2profile:cauldron"
@@ -384,6 +384,30 @@
    "build": "43c1ca49",
    "scope": "full RZX with no map (IDENTICAL, stamped) + 12 unit cases with synthetic maps (every image geometry, shifts, screen edges, wrong check bytes) + 3 negative controls; a synthetic painting (1,593 entries, 30 images) read back, recoloured = full build with that map (50572718), quick 2000 IDENTICAL; selftest recolour guard both ways",
    "evidence": "games/cauldron.md \"Colour map\", \"Results\""
+  },
+  {
+   "application": "cauldron.figures.xor-overlay",
+   "check": "hardware.checklist",
+   "status": "pass",
+   "build": "43c1ca49",
+   "scope": "Dean 2026-10-27: 43c1ca49 works on the Next (hardware round 3; no painting yet)",
+   "evidence": "games/cauldron.md \"Hardware rounds\""
+  },
+  {
+   "application": "cauldron.attributes.shadow",
+   "check": "hardware.checklist",
+   "status": "pass",
+   "build": "43c1ca49",
+   "scope": "Dean 2026-10-27: 43c1ca49 works on the Next (hardware round 3; no painting yet)",
+   "evidence": "games/cauldron.md \"Hardware rounds\""
+  },
+  {
+   "application": "cauldron.figures.colour-map",
+   "check": "hardware.checklist",
+   "status": "pass",
+   "build": "43c1ca49",
+   "scope": "Dean 2026-10-27: 43c1ca49 works on the Next with no map (round 3); a painted map on hardware not yet reported",
+   "evidence": "games/cauldron.md \"Hardware rounds\""
   }
  ],
  "checked": {

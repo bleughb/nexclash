@@ -1,11 +1,11 @@
-# Cauldron (Palace Software, 1985; 48K) - engine `cauldron` (colour map; 43c1ca49 to hardware round 3)
+# Cauldron (Palace Software, 1985; 48K) - engine `cauldron` (colour map; 43c1ca49 works on the Next)
 
 ## Next session
 Stage: 4 (hardware + colour round 3)    Branch: claude/cauldron (PR to main: process + Cauldron)
 State: 43c1ca49 = 55ed40f8 + colour map, sheets, recolour; full verification IDENTICAL, stamped
-  2026-10-27 ("Results"); sheets in specnext reference/cauldron/; hardware untested.
+  2026-10-27 ("Results"); sheets in specnext reference/cauldron/; works on the Next (Dean).
 Inputs: specnext/reference/cauldron/ (cauldron.rzx: its embedded snapshot is the build input)
-Start with: Dean's round-3 report (43c1ca49 on the Next) and his painted sheet: `python nexclash.py
+Start with: Dean's painted sheet: `python nexclash.py
   recolour Cauldron_1985_Palace_Software_a_sprites.nex PAINTED.png` (layout next to the PNG); send
   the _painted.nex + both sheets re-drawn with the map. Making it the default: COLOURS.md RECOLOUR.
 Read: COLOURS.md, this file ("Colour map", "Open"), card patch.runtime-colour-map.
@@ -200,7 +200,7 @@ default off): z80tonex.altrom_fill `low` (replaces altrom0), nextboot boot / che
 
 Round 2 (2026-10-27): 55ed40f8 (outline + no clash) works on the Next (Dean 2026-10-27).
 
-Round 3 (sent 2026-10-27): 43c1ca49 + sheets. Checklist: boots, menu keys work, full speed, looks
+Round 3 (2026-10-27): 43c1ca49 works on the Next (Dean 2026-10-27); no painting reported yet. Checklist: boots, menu keys work, full speed, looks
 exactly as 55ed40f8 (no map); then a test painting through recolour: painted colours shown,
 unpainted images unchanged, transparent pixels show the scenery (try CSpect first: +4 banks).
 
