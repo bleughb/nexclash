@@ -69,3 +69,13 @@ User-requested catalogue additions; the v3.4 schema and pilot workflow stay froz
 - Tracked-unit revision 2 adds Quazatron's composite draw-list example and the parameter probe.
 - External Lua sources are pinned and source-reviewed only; addresses/formats remain game-specific.
 - No scripts imported, runtime code changed, game applications added or verification results claimed.
+
+## v3.4 -> schema 4 cards + the learning loop (2026-10-27, Cauldron; GPT-6's proposal, Claude's checks)
+
+| Before | After | Why |
+|---|---|---|
+| Lesson candidates in games/<game>.md, promoted later by a consolidation pass | Every lesson dispositioned in its stage (card / doc / tool / backlog / probe / local / deferred), checked by tools/learncheck.py inside doccheck (docs/LEARNING.md) | Cauldron's lessons, a scratch script and a card warning waited for a pass that does not come |
+| Candidate cards with examples only | Schema 4: candidates state Assumptions + Validation gap + a source; `active` needs a record `pass` result | Candidates stay useful before validation; promotion needs local evidence |
+| No record of whether a card helped | games/<game>.md "## Technique use"; `learncheck --usage` totals | The catalogue should improve through use, not only grow |
+| Investigation scripts in scratch folders | tools/probes/ with invocation, limits, a smoke test in `selftest --tools` | Reproducible, promotable to a shared command |
+| New: patch.attribute-shadow (candidate); revised: patch.xor-overlay-keep-ula r2, detect.gameplay-screen-readers r2 | | Cauldron Q8; the overlay's other-writers failure; compiled-BASIC readers, `scan --writers` lists readers |

@@ -55,6 +55,8 @@ session that reads this file + games/<game>.md is far cheaper than hour five of 
   user starts a new session. Never break in the middle of an edit that does not build.
 - The block replaces any older one; the facts it points to (decisions, design, open items) stay in
   their sections of games/<game>.md, written as they happen (above).
+- Start of every stage: the knowledge refresh from main (docs/LEARNING.md 1); end: the learning
+  loop (dispositioned "## Lessons", "## Technique use", probes kept).
 
 # Stage 0 - Intake (tools, before any design work)
 
@@ -324,5 +326,5 @@ checklist, so the user tests and paints in the same pass.
 
 # Stage 5 - Close (the session that finishes the game, or a round)
 CLAUDE.md "End of every stage": games/<game>.md (status, checklist, Stage log), the record and
-`records views`, lesson candidates, `python tools/doccheck.py`; contributors `contribute`,
-maintainers the PR (docs/MAINTAIN.md).
+`records views`, the learning loop (docs/LEARNING.md), `python tools/doccheck.py`; contributors
+`contribute`, maintainers the PR (docs/MAINTAIN.md).

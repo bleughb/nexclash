@@ -49,6 +49,10 @@ patched code to their return (simulators from `simpool.machine`), compare CMP re
 sprite pixels; `fail()` keeps 5 examples per key; also count writes to patch sites and jumps into
 INTERIORS (a site whose first instruction is 1 byte: the original itself runs the next bytes - count
 them against the site's own count, SEQUELS; Fireman, Cauldron). Hook asm may use Z80N: the verifier installs it with `z80n.install(sim, nextreg)`.
+A hook that runs the routine itself (CALL body / the routine's RET comes back to the hook, e.g. when
+the next routine starts right after the RET, so no exit JP fits: Cauldron 0x6357) meets the original
+at the CALLER's return: the replay must skip sites nested inside it until that point (Cauldron
+`span`), or they are applied twice.
 
 ## Record (docs/records/<record>.json)
 Fields: nexclash/records.py docstring; copy the nearest record. `python -m nexclash.records deps

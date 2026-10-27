@@ -45,6 +45,11 @@ NSLOT, NTAB = 14, 128         # 9 sprites / patterns a slot (3 x 3: image + outl
 P27, GPG4 = 27, 4             # page 27 at slot 4 inside hooks (attribute shadow, canvases, code); the game's page 4
 P27_OFF = 0x0A00              # page-27 code
 OUTLINE = 8                   # outline nibble (palette 8 = black; Dean 2026-10-27 Q7)
+KEEP_OFF = 0x0800             # page 27: KEEP table (256: v -> the nibbles a colour-stream byte v leaves at the default)
+CPG, NCP = 28, 8              # colour pages 28-35 (banks 14-17): page 28 = index + tables, then tables; never game-read
+COLOUR_BANKS = tuple(range(CPG // 2, (CPG + NCP) // 2))
+CIDX = 0x0300                 # page 28: tables start after the index (1 + 7 x <= 109 entries)
+COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', RECORD + '_colours.json')
 V_N, V_OVF, V_NFREE, FREE, TAB = 0x0000, 0x0001, 0x0002, 0x0003, 0x0100   # page-26 offsets
 # RAM sites: (original, hook symbol, kind)
 SITES = {0x6357: ('5e2356', 'e_plot', 'plot'), 0xB2A0: ('210048', 'e_clr', 'clr'),
@@ -154,8 +159,10 @@ class CauldronPatch:
     name = ('Cauldron: every XOR-plotted image -> hardware sprites (overlay; plotter + screen-writer '
             'hooks in alt ROM image 1, tables in page 26 at slot 6)')
 
-    def __init__(self, prof=None, rom_code=None, p26=None, jmp=None, p27=None):
+    def __init__(self, prof=None, rom_code=None, p26=None, jmp=None, p27=None, colours=None):
         self.prof = prof or load_profile()
+        self.colours = load_colours() if colours is None else colours
+        self.ovr, self.cinfo = {}, {}
         h = self.prof['hooks']
         self.rom_code = rom_code if rom_code is not None else bytes.fromhex(h['rom'])
         self.p26 = p26 if p26 is not None else bytes.fromhex(h['p26'])
@@ -200,6 +207,15 @@ class CauldronPatch:
         self.sites = [(a, bytes.fromhex(old), b'\xC3' + self.syms[sym].to_bytes(2, 'little'))
                       for a, (old, sym, k) in SITES.items()]
         self.extra_banks = {12: self.page + bytes(low), PG_BANK: page26(self.p26) + page27(bytes(768), self.p27)}
+        self.prepare(None)
+
+    def prepare(self, get):
+        """The colour map for the game memory `get` (None: no graphics known, every entry's check
+        fails -> default colours): self.ovr (the verify model's overrides) and the colour banks."""
+        self.cget = get
+        pages, self.ovr, self.cinfo = colour_tables(get, self.colours, images(self.prof))
+        for b in COLOUR_BANKS:
+            self.extra_banks[b] = bytes(pages[2 * b]) + bytes(pages[2 * b + 1])
 
     def rom_image(self):
         """The alt ROM image the patched game reads at 0x0000-0x3FFF (the stub adds the register
@@ -221,13 +237,16 @@ class CauldronPatch:
         snap.banks[0] = bytes(ram[32768:49152])
         # page 27 starts with the snapshot's attribute file as the shadow (the ULA and the original agree)
         self.extra_banks[PG_BANK] = page26(self.p26) + page27(bytes(ram[0x1800:0x1B00]), self.p27)
+        self.prepare(lambda a: ram[a - 0x4000] if a >= 0x4000 else 0)
 
 
 def page27(attrs, code=None):
     """Page 27 as the build loads it: the attribute shadow (= the snapshot's attribute file) at 0, the
-    save pairs / canvases empty, the code at 0x0A00."""
+    save pairs / canvases empty, the KEEP table at 0x0800, the code at 0x0A00."""
     p = bytearray(8192)
     p[0:768] = attrs
+    for v in range(256):
+        p[KEEP_OFF + v] = (0 if v & 0xF0 else 0xF0) | (0 if v & 15 else 15)
     code = bytes.fromhex(load_profile()['hooks']['p27']) if code is None else code
     p[P27_OFF:P27_OFF + len(code)] = code
     return bytes(p)
@@ -276,7 +295,7 @@ class NextState:
         if 0x35 <= reg <= 0x39:
             self.attr[self.nr.get(0x34, 0) & 0x7F][reg - 0x35] = val
         elif reg == 0x56:
-            if val not in (0, PG) or (val == PG and PG not in self.pages):
+            if val and val not in self.pages or val not in (0, PG) + tuple(range(CPG, CPG + NCP)):
                 self.bad.append(('MMU6 set to page %d' % val,))
         elif reg == 0x54:
             if val not in (GPG4, P27) or (val == P27 and P27 not in self.pages):
@@ -317,21 +336,10 @@ class NextState:
 
 
 def _machine(Sim, mem, regs, ns, slot='o'):
-    from skoolkit.simulator import R2
     from .simpool import machine
+    from . import z80n
     sim = machine(Sim, mem, regs, slot)
-    R, ed = sim.registers, sim.after_ED
-
-    def nn():
-        p = R[24]
-        ns.nextreg(mem[(p + 2) % 65536], mem[(p + 3) % 65536])
-        R[15] = R2[R[15]]; R[24] = (p + 4) % 65536; R[25] += 20
-
-    def na():
-        p = R[24]
-        ns.nextreg(mem[(p + 2) % 65536], R[0])
-        R[15] = R2[R[15]]; R[24] = (p + 3) % 65536; R[25] += 17
-    ed[0x91], ed[0x92] = nn, na
+    z80n.install(sim, ns.nextreg, strict=False)     # game code runs here too: its ED NOPs stay NOPs
 
     class Tr:
         def read_port(s, regs_, port):
@@ -364,8 +372,8 @@ def _overlays(get, alt, psite, ns):
         def __getitem__(s, a):
             if a < 0x4000:
                 return alt[a]
-            if 0xC000 <= a < 0xE000 and ns.nr.get(0x56, 0) == PG:
-                return ns.pages[PG][a - 0xC000]
+            if 0xC000 <= a < 0xE000 and ns.nr.get(0x56, 0):
+                return ns.pages[ns.nr[0x56]][a - 0xC000]
             if 0x8000 <= a < 0xA000 and ns.nr.get(0x54, GPG4) == P27:
                 return ns.pages[P27][a - 0x8000]
             if ATTR0 <= a < ATTR1:
@@ -378,8 +386,10 @@ def _overlays(get, alt, psite, ns):
         def __setitem__(s, a, v):
             if a < 0x4000:
                 s.romw = getattr(s, 'romw', 0) + 1
-            elif 0xC000 <= a < 0xE000 and ns.nr.get(0x56, 0) == PG:
-                ns.pages[PG][a - 0xC000] = v
+            elif 0xC000 <= a < 0xE000 and ns.nr.get(0x56, 0):
+                if ns.nr[0x56] != PG:
+                    s.romw = getattr(s, 'romw', 0) + 1           # the colour pages are read-only
+                ns.pages[ns.nr[0x56]][a - 0xC000] = v
             elif 0x8000 <= a < 0xA000 and ns.nr.get(0x54, GPG4) == P27:
                 ns.pages[P27][a - 0x8000] = v
             elif ATTR0 <= a < ATTR1:
@@ -607,7 +617,8 @@ class Model:
     them (the slot a key gets decides which sprite is on top), the rule as games/cauldron.md
     "Build design" states it."""
 
-    def __init__(self):
+    def __init__(self, ovr=None):
+        self.ovr = ovr or {}                  # colour map: (g, w, rows) -> {(cx, cl): nibble, 0 = transparent}
         self.tab = []                         # [key, state, rect]
         self.free = [NSLOT - 1 - i for i in range(NSLOT)]
         self.ovf = 0
@@ -616,7 +627,7 @@ class Model:
         self.usv = bytearray(384)             # (ULA, original) pairs at the last bottom-third save
 
     def copy(self):
-        m = Model()
+        m = Model(self.ovr)
         m.tab = [[k, s, r] for k, s, r in self.tab]
         m.free = list(self.free)
         m.ovf = self.ovf
@@ -725,6 +736,12 @@ class Model:
         pix = image_pixels(g, w, rows, x, y0)
         sh = {p: OUTLINE for p in outline(pix)}
         sh.update({p: ink for p in pix})
+        for (cx, cl), v in self.ovr.get((d['g'], w, rows), {}).items():   # canvas (cx, cl) = (x - 1 + cx, y0 - 1 + cl)
+            q = (x - 1 + cx, y0 - 1 + cl)
+            if v:
+                sh[q] = v
+            else:
+                sh.pop(q, None)
         self.shown[s] = sh
         return None, s
 
@@ -882,8 +899,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None):
     alt = patch.rom_image()
     Sim = _rw()
     site_bytes = {a + k for a, old, new in patch.sites for k in range(len(new))}
-    ns = NextState({PG: page26(patch.p26)})
-    model = Model()
+    ns = NextState({PG: page26(patch.p26), **colour_pages(patch)})
+    model = Model(patch.ovr)
     st = {'frame': 0, 'on': False, 'R': None, 'live': {}, 'plot': None, 'gfx': set(), 'span': None,
           'diff': set()}
     cnt = collections.Counter()
@@ -1108,7 +1125,15 @@ def _ns_for(pt, ns0):
     ns = ns0.copy()
     ns.pages[PG][P26_OFF:] = page26(pt.p26)[P26_OFF:]
     ns.pages[P27][P27_OFF:] = page27(bytes(768), pt.p27)[P27_OFF:]
+    ns.pages[P27][KEEP_OFF:KEEP_OFF + 256] = page27(bytes(768), pt.p27)[KEEP_OFF:KEEP_OFF + 256]
+    ns.pages.update(colour_pages(pt))
     return ns
+
+
+def colour_pages(pt):
+    """pt's colour pages (CPG..) as the build loads them -> {page: bytearray}."""
+    return {p: bytearray(pt.extra_banks[p // 2][(p & 1) * 8192:(p & 1) * 8192 + 8192])
+            for p in range(CPG, CPG + NCP)}
 
 
 def _entry_only(pt, R, mem, ns, alt, Sim):
@@ -1342,9 +1367,104 @@ def run_case(pt, stt, mut, mode, fail, c=None):
     compare(ns, m, fail, 'after', c, o.__getitem__)
 
 
+def colour_paint(get, g, w, rows, seed=0):
+    """A synthetic colour map for image (g, w, rows): about 1 canvas pixel in 5 coloured, 1 in 5
+    transparent, over ink, outline, paper and the ring -> (map, expected {(cx, cl): nibble, 0 = transparent})."""
+    cmap, exp = {}, {}
+    for (cx, cl), (key, bit) in canvas_keys(g, w, rows).items():
+        k = (cx * 7 + cl * 3 + seed) % 5
+        if k > 1:
+            continue
+        v = 1 + (cx + cl + seed) % 15 if k == 0 else 0
+        real = ':' not in key
+        e = cmap.setdefault(key, [get(int(key, 16)) if real else 0, 'g' if real else 'o', [0] * 8, 0])
+        if v:
+            e[2][bit] = v
+        else:
+            e[3] |= 0x80 >> bit
+        exp[(cx, cl)] = v
+    return cmap, exp
+
+
+def _variant(patch, cmap, get, p27=None):
+    n = CauldronPatch(patch.prof, rom_code=patch.rom_code, p26=patch.p26, jmp=patch.jmp,
+                      p27=p27 or patch.p27, colours=cmap)
+    n.prepare(get)
+    return n
+
+
+def colour_cases(patch, states):
+    """Colour map (games/cauldron.md "Colour map"): [(name, patch built with a synthetic map, state,
+    mutate)] - a captured draw turned into each image geometry, shifted and at the screen edges; the
+    model expects the map. Plus [(name, negative patch, state, mutate)]: the map left out of the
+    build, the transparent mask ignored, the check byte not checked."""
+    draws = [s for s in states if s[0] == 'draw']
+    if not draws:
+        return [], []
+    stt = draws[-1]
+    mem = stt[3]
+    get = mem.__getitem__
+    geo = {}
+    for g, w, rows in images(patch.prof):
+        geo.setdefault((w, rows), (g, w, rows))
+    want = [(img, 61, 120) for img in sorted(geo.values(), key=lambda t: (t[1], t[2]))]
+    g2 = geo.get((2, 16)) or want[0][0]
+    g3 = geo.get((3, 24)) or want[-1][0]
+    want += [(g2, 0, 120), (g2, 8, 120), (g3, 255 - 24, 120), (g3, 100, g3[2] - 1), (g3, 100, 175)]
+    cases, negs = [], []
+    for n, ((g, w, rows), x, y) in enumerate(want):
+        cmap, exp = colour_paint(get, g, w, rows, seed=n)
+
+        def mut(R, mem_, m, g=g, w=w, rows=rows, x=x, y=y, exp=exp):
+            a = R[6] << 8 | R[7]
+            for k, v in enumerate((g & 255, g >> 8, x, y, rows, w)):
+                mem_[(a + k) & 0xFFFF] = v
+            m.ovr = {(g, w, rows): exp}
+        name = 'colour map: %04X %d x %d at x %d, y %d' % (g, w, rows, x, y)
+        cases.append((name, _variant(patch, cmap, get), stt, mut))
+        negs.append(('colour map left out of the build', _variant(patch, {}, get), stt, mut))
+        if n == 0:
+            negs.append(('transparent pixels not taken out', _variant(
+                patch, cmap, get, _neg(patch, '2f4fa6', '004fa6', 'tmask', 'p27').p27), stt, mut))
+            bad = {k: ([e[0] ^ 0xFF] + e[1:] if ':' not in k else e) for k, e in cmap.items()}
+            ring = {q: v for q, v in exp.items() if ':' in canvas_keys(g, w, rows)[q][0]}
+
+            def mut2(R, mem_, m, mut=mut, g=g, w=w, rows=rows, ring=ring):
+                mut(R, mem_, m)
+                m.ovr = {(g, w, rows): ring}
+            ptb = _variant(patch, bad, get)
+            cases.append(('colour map: wrong check bytes ignored (%d entries)'
+                          % ptb.cinfo['map entries ignored (check byte differs)'], ptb, stt, mut2))
+            negs.append(('check byte not checked', _variant(patch, cmap, get), stt, mut2))
+    return cases, negs
+
+
 def unit_tests(patch, states, negs=None):
     """Every case with the real patch must pass; every negative patch must fail at least one."""
     c = collections.Counter()
+    ccases, cnegs = colour_cases(patch, states)
+    for name, pt, stt, mut in ccases:
+        bad = []
+        run_case(pt, stt, mut, 'run', lambda k, info=(): bad.append((k, info)), c)
+        c['cases'] += 1
+        if bad:
+            c['%s: %s!' % (name, bad[0][0])] += 1
+            c['  %s: %s %s' % (name, bad[0][0], str(bad[0][1])[:160])] += 1
+    cn = collections.defaultdict(lambda: [0, 0])
+    for what, npt, stt, mut in cnegs:
+        bad = []
+        try:
+            run_case(npt, stt, mut, 'run', lambda k, info=(): bad.append(k))
+        except Exception as e:
+            bad.append(repr(e))
+        cn[what][0] += 1
+        cn[what][1] += bool(bad)
+    for what, (n, caught) in cn.items():
+        c['negative controls'] += 1
+        if not caught:
+            c['negative control not caught: %s!' % what] += 1
+        else:
+            c['  negative control %s: caught by %d of %d cases' % (what, caught, n)] += 1
     cases = unit_cases(states)
     for name, stt, mut, mode in cases:
         bad = []
@@ -1385,7 +1505,9 @@ def _neg(patch, old, new, what, block='rom', nth=None):
     blk[i:i + len(o)] = n
     kw = {'rom_code': patch.rom_code, 'p26': patch.p26, 'p27': patch.p27}
     kw[{'rom': 'rom_code', 'p26': 'p26', 'p27': 'p27'}[block]] = bytes(blk)
-    return CauldronPatch(patch.prof, jmp=patch.jmp, **kw)
+    n = CauldronPatch(patch.prof, jmp=patch.jmp, colours=patch.colours, **kw)
+    n.prepare(patch.cget)
+    return n
 
 
 def negative_patches(patch):
@@ -1432,6 +1554,247 @@ def rom3_independent(nex, src, patch, conv):
     return bad
 
 
+# ---------------------------------------------------------------------------------------------
+# Colour sheets (docs/COLOURS.md): one plot = one whole figure (one image); every canvas pixel of an
+# image (ink, outline ring, paper) is paintable (paint_clear) and can be painted transparent (clear)
+# ---------------------------------------------------------------------------------------------
+
+def capture(rzx_path, stop=None):
+    """Replay the RZX (C simulator) and collect every image the plotter draws: {(g, w, rows):
+    {'inks': Counter, 'count', 'frame', 'x', 'y'}} (draws only: a key's plots toggle it)."""
+    from .rzx import trace
+    live, seen, fr = set(), {}, [0]
+
+    def on(pc, sim):
+        if pc == 0x0038:
+            fr[0] += 1
+            return
+        m, r = sim.memory, sim.registers
+        get = lambda a: m[a & 0xFFFF]
+        d = read_desc(get, r[6] << 8 | r[7])
+        y, rows, w = d['y'], d['rows'], d['w']
+        if y > 175 or not rows or y + 1 < rows or not w or w > 4 or rows > 32:
+            return
+        key = (d['g'], d['x'], y, rows, w)
+        if key in live:
+            live.discard(key)
+            return
+        live.add(key)
+        if len(live) > 64:                       # parity lost (a clear wiped figures): start again
+            live.clear()
+        e = seen.setdefault((d['g'], w, rows), {'inks': collections.Counter(), 'count': 0,
+                                                'frame': fr[0], 'x': d['x'], 'y': 175 - y})
+        e['count'] += 1
+        e['inks'][plot_ink(get, d, 175 - y, d['x'] >> 3)] += 1
+
+    frames, err = trace(rzx_path, (PLOT, 0x0038), on, stop=stop)
+    return seen, frames, err
+
+
+def canvas_keys(g, w, rows):
+    """Every canvas pixel of image (g, w, rows) -> (colour-map key, bit): the canvas is the image with
+    a 1-pixel ring (the outline's room), (8 w + 2) x (rows + 2), pixel (cx, cl). Inside the graphic's
+    bytes the key is the graphics byte ('%04X' % address, shared by every image that draws it); the
+    ring has keys of its own per image ('%04X:%dx%d:line,col', col -1 / w = left / right of a line)."""
+    out = {}
+    for cl in range(rows + 2):
+        for cx in range(8 * w + 2):
+            r, xx = cl - 1, cx - 1
+            if 0 <= r < rows and 0 <= xx < 8 * w:
+                out[(cx, cl)] = ('%04X' % ((g + r * w + xx // 8) & 0xFFFF), xx & 7)
+            else:
+                col = -1 if xx < 0 else w if xx >= 8 * w else xx // 8
+                out[(cx, cl)] = ('%04X:%dx%d:%d,%d' % (g, w, rows, r, col), xx & 7)
+    return out
+
+
+def images(prof=None):
+    """The images the game draws (whole-RZX capture, profile 'colour_images'): [(g, w, rows)]."""
+    out = []
+    for s in (prof or load_profile()).get('colour_images', []):
+        g, w, r = s.split(':')
+        out.append((int(g, 16), int(w), int(r)))
+    return out
+
+
+def build_colours_path_():
+    from .recolour import build_colours_path
+    return build_colours_path(COLOURS)
+
+
+def load_colours():
+    from . import coloursheet as cs
+    return cs.load(build_colours_path_())
+
+
+def stream_stride(w):
+    """Colour-stream bytes per canvas line: 4 per canvas byte the patterns read (min(2 UNC, 5))."""
+    return 4 * min(2 * ((8 * w + 2 + 15) // 16), 5)
+
+
+def colour_tables(get, cmap, imgs):
+    """Colour map -> ({page: 8192 bytes} for pages CPG.., {(g, w, rows): {(cx, cl): nibble, 0 =
+    transparent}}, info). Per image with any override: a transparent mask (5 bytes a canvas line, as
+    the canvas) and a colour stream (stream_stride(w) bytes a line, 2 pixels a byte, 0 = default);
+    index at page 28: count, then (g lo, g hi, w, rows, page, address at slot 6). A graphics-byte entry
+    whose check byte is not the graphic's byte (or get None) is ignored."""
+    pages = {p: bytearray(8192) for p in range(CPG, CPG + NCP)}
+    ovr, idx, info = {}, [], collections.Counter()
+    pg, off = CPG, CIDX
+    used, bad = set(), set()
+    for g, w, rows in imgs:
+        o = {}
+        for (cx, cl), (key, bit) in canvas_keys(g, w, rows).items():
+            e = cmap.get(key)
+            if not e:
+                continue
+            if ':' not in key and (get is None or get(int(key, 16)) != e[0]):
+                bad.add(key)
+                continue
+            used.add(key)
+            if len(e) > 3 and e[3] & (0x80 >> bit):
+                o[(cx, cl)] = 0
+            elif e[2][bit]:
+                o[(cx, cl)] = e[2][bit]
+        if not o:
+            continue
+        st, nl = stream_stride(w), rows + 2
+        n = 5 * nl + st * nl
+        if off + n > 8192:
+            pg, off = pg + 1, 0
+            if pg >= CPG + NCP:
+                raise ValueError('colour tables need more than %d pages' % NCP)
+        data = bytearray(n)
+        for (cx, cl), v in o.items():
+            if v == 0:
+                data[5 * cl + cx // 8] |= 0x80 >> (cx & 7)
+            else:
+                data[5 * nl + cl * st + cx // 2] |= v << 4 if not cx & 1 else v
+        pages[pg][off:off + n] = data
+        idx.append((g, w, rows, pg, 0xC000 + off))
+        ovr[(g, w, rows)] = o
+        off += n
+    if len(idx) * 7 + 1 > CIDX:
+        raise ValueError('colour index full')
+    p = pages[CPG]
+    p[0] = len(idx)
+    for i, (g, w, rows, pgn, ad) in enumerate(idx):
+        p[1 + 7 * i:8 + 7 * i] = bytes((g & 255, g >> 8, w, rows, pgn, ad & 255, ad >> 8))
+    info.update({'images with colours': len(idx), 'map entries used': len(used),
+                 'map entries ignored (check byte differs)': len(bad),
+                 'map entries for no known image': len(set(cmap) - used - bad)})
+    return pages, ovr, info
+
+
+def colour_inputs_md5(get, prof=None):
+    """MD5 + count of the graphics bytes the colour map is keyed by (every known image's bytes)."""
+    seen = set()
+    for g, w, rows in images(prof):
+        seen.update((g + i) & 0xFFFF for i in range(w * rows))
+    return hashlib.md5(bytes(get(a) for a in sorted(seen))).hexdigest(), len(seen)
+
+
+# nexclash/recolour.py: `python nexclash.py recolour Cauldron..._sprites.nex PAINTED.png` (seconds, no
+# rebuild): only the colour banks change; the game never reads them (pages 28-35, slot 6 inside upload).
+NOTE = ('Cauldron colour map (docs/COLOURS.md): key = graphics byte (hex address; check = its value) or '
+        'an image ring pixel group (graphic:WxR:line,col); 8 nibbles, 0 = default (cell ink / black outline / '
+        'transparent paper); optional 4th = transparent mask')
+RECOLOUR = {'game': 'cauldron', 'output': 'sprites', 'colours': 'docs/profiles/cauldron_colours.json',
+            'clear': True, 'note': NOTE}
+
+
+def recolour(nex, cmap):
+    """Built Cauldron sprite .nex bytes + colour map -> (new .nex bytes, info). Refuses a .nex that is
+    not this engine's build of the expected snapshot (patch sites, hook code, page 26 / 27, graphics)."""
+    from .recolour import nex_offsets
+    d = bytearray(nex)
+    off = nex_offsets(d)
+    need = set(COLOUR_BANKS) | {5, 2, 0, 12, PG_BANK}
+    if not need <= set(off):
+        raise ValueError('not a Cauldron sprite build: banks %s missing' % sorted(need - set(off)))
+    bank = lambda b: bytes(d[off[b]:off[b] + 16384])
+    ram = bank(5) + bank(2) + bank(0)
+    peek = lambda a: ram[a - 0x4000] if a >= 0x4000 else 0
+    prof = load_profile()
+    want = prof.get('colour_inputs', {})
+    got = colour_inputs_md5(peek, prof)
+    if [want.get('md5'), want.get('bytes')] != list(got):
+        raise ValueError('game graphics differ from the expected snapshot (%s / %d bytes, expected %s)'
+                         % (got[0], got[1], want))
+    p0 = CauldronPatch(prof, colours={})
+    for a, old, new in p0.sites:
+        if bytes(peek(a + k) for k in range(len(new))) != new:
+            raise ValueError('patch site 0x%04X does not hold this build\'s hook jump' % a)
+    if bank(12) != p0.extra_banks[12]:
+        raise ValueError('alt ROM image / hook code differs from this version\'s (rebuild with nexclash.py auto)')
+    if bank(PG_BANK) != page26(p0.p26) + page27(ram[0x1800:0x1B00], p0.p27):
+        raise ValueError('page 26 / 27 differ from this version\'s (rebuild with nexclash.py auto)')
+    p = CauldronPatch(prof, colours=cmap)
+    p.prepare(peek)
+    changed = []
+    for b in COLOUR_BANKS:
+        if bank(b) != p.extra_banks[b]:
+            changed.append(b)
+        d[off[b]:off[b] + 16384] = p.extra_banks[b]
+    info = {'banks changed': changed}
+    info.update({k: v for k, v in p.cinfo.items() if v})
+    return bytes(d), info
+
+
+def image_part(get, g, w, rows, ink):
+    """The coloursheet part of image (g, w, rows) drawn in ink: every canvas pixel, ink code 1
+    (default ink), outline code 2 (default OUTLINE), paper code 0."""
+    gb = bytes(get((g + i) & 0xFFFF) for i in range(rows * w))
+    pix = set((x + 1, y + 1) for x, y in image_pixels(gb, w, rows, 0, 0))
+    ol = outline(pix)
+    px, ent = [], {}
+    for (cx, cl), (key, bit) in sorted(canvas_keys(g, w, rows).items(), key=lambda t: (t[0][1], t[0][0])):
+        code, dflt = (1, ink) if (cx, cl) in pix else (2, OUTLINE) if (cx, cl) in ol else (0, 0)
+        px.append((cx, cl, key, bit, code, dflt))
+        ent[key] = [get(int(key, 16)) if ':' not in key else 0, 'g' if ':' not in key else 'o']
+    return {'id': '%04X:%dx%d' % (g, w, rows), 'size': 1, 'w': 8 * w + 2, 'h': rows + 2, 'x': 0, 'y': 0,
+            'mir': 0, 'pixels': px, 'entries': ent}
+
+
+def sheets(rzx_path, out_dir, prefix='cauldron', colours=None, stop=None, get=None, say=print):
+    """The colour sheets: <prefix>_PAINTING_SPRITES.png (the fewest whole figures showing every
+    canvas pixel) + _REFERENCE_ALL_SPRITES.png (every image), each with its _layout.json."""
+    from . import coloursheet as cs
+    seen, frames, err = capture(rzx_path, stop)
+    if err:
+        say('capture   : stopped at frame %d: %s' % (frames, err))
+    if get is None:
+        mem = _start_mem(rzx_path)
+        get = lambda a: mem[a & 0xFFFF]
+    comps = []
+    for (g, w, rows), e in sorted(seen.items(), key=lambda t: t[1]['frame']):
+        ink = e['inks'].most_common(1)[0][0]
+        p = image_part(get, g, w, rows, ink)
+        if not any(q[4] for q in p['pixels']):
+            say('            image %s draws no pixel: not on the sheets' % p['id'])
+            continue
+        p.update(dx=0, dy=0, dmir=0, vmir=0, group=0)
+        comps.append({'count': e['count'], 'group': 0, 'parts': [p]})
+    cmap = colours if colours is not None else load_colours()
+    rgb = cs.palette_rgb(PALETTE)
+    pre = os.path.join(out_dir, prefix)
+    n1 = cs.write(cs.choose(comps, {}), pre + '_PAINTING_SPRITES.png', pre + '_PAINTING_SPRITES_layout.json',
+                  rgb, colours=cmap, paint_clear=True)
+    n2 = cs.write(comps, pre + '_REFERENCE_ALL_SPRITES.png', pre + '_REFERENCE_ALL_SPRITES_layout.json',
+                  rgb, colours=cmap, paint_clear=True)
+    say('Sheets    : %d images seen in %d frames; painting sheet %d figures, reference %d' % (
+        len(seen), frames, n1, n2))
+    return seen
+
+
+def _start_mem(rzx_path):
+    """64K memory of the build input (the RZX's embedded snapshot)."""
+    import tempfile
+    from skoolkit.snapshot import get_snapshot
+    with tempfile.TemporaryDirectory() as td:
+        return bytearray(get_snapshot(start_state(rzx_path, os.path.join(td, 's.z80'))))
+
+
 def auto(a, z80, name, out, say):
     from . import z80tonex as zt
     from .nextboot import check
@@ -1452,6 +1815,9 @@ def auto(a, z80, name, out, say):
         os.path.basename(plain), md5(plain), 'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:200], TAIL_ADDR))
     patch = CauldronPatch()
     spr = os.path.join(out, name + '_sprites.nex')
+    cpath = build_colours_path_()
+    say('Colours   : %s' % ('%d colour-map entries (%s)' % (len(patch.colours), os.path.basename(cpath))
+                            if patch.colours else 'no colour map: default colours (cell ink, black outline)'))
     conv = zt.convert(src, spr, None, True, quiet=True, patch=patch)
     bad2 = check(spr, src, patch, (conv[1], conv[1] + len(conv[2])), nexload=True)
     # the Next copies NextZXOS's ROM3, not Sinclair's: boot again with a ROM3 that differs in every
@@ -1460,6 +1826,8 @@ def auto(a, z80, name, out, say):
     say('Sprites   : %s  %s  boot %s' % (os.path.basename(spr), md5(spr),
                                          'OK (also with a foreign ROM3)' if not bad2 else
                                          'MISMATCH %s' % str(bad2[:3])[:200]))
+    if patch.colours:
+        say('            %s' % ', '.join('%s %d' % kv for kv in sorted(patch.cinfo.items())))
     ok = not bad and not bad2
     json.dump(DECISIONS, open(os.path.join(out, name + '_decisions.json'), 'w'))
     if getattr(a, 'decisions', None):
@@ -1511,9 +1879,28 @@ def main(argv=None):
     p = sub.add_parser('extract', help='cauldron.rzx -> its embedded snapshot (the build input)')
     p.add_argument('rzx')
     p.add_argument('-o', '--out', required=True)
+    p = sub.add_parser('sheet', help='cauldron.rzx -> the colour sheets (docs/COLOURS.md), in the colours the build draws')
+    p.add_argument('rzx')
+    p.add_argument('-o', '--out', default='.')
+    p.add_argument('--stop', type=int)
+    p = sub.add_parser('colours', help='painted sheet -> the colour map (default: the build default file)')
+    p.add_argument('png')
+    p.add_argument('--layout')
+    p.add_argument('-o', '--output', default=COLOURS)
     a = ap.parse_args(argv)
     if a.cmd == 'extract':
         print(start_state(a.rzx, a.out))
+    elif a.cmd == 'sheet':
+        sheets(a.rzx, a.out, stop=a.stop)
+    elif a.cmd == 'colours':
+        from . import coloursheet as cs
+        from .recolour import find_layout, warn_ignored
+        ent, rep = cs.read(a.png, a.layout or find_layout(a.png), clear=True)
+        for k, v in sorted(rep.items()):
+            print('%s: %d' % (k, v))
+        warn_ignored(rep)
+        cs.save(ent, a.output, NOTE)
+        print('-> %s (%d entries)' % (a.output, len(ent)))
 
 
 if __name__ == '__main__':

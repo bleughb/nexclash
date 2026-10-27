@@ -61,7 +61,7 @@
   ],
   "auto_record": false,
   "minutes": 60,
-  "note": "auto: the build input is the snapshot inside cauldron.rzx (Q0). Differential verify at every hook site (plotter entry incl. its body copy, PR-ALL, PO-ATTR, CL-LINE, CL-SCROLL, clear 0xB2A0, tile 0xB366, scrolls 0xDED2 / 0xDEEA, and every attribute reader / writer: PEEK 0x61D8, save 0xC9DB, restore 0xC9E7, box 0xCE74, room fill 0xB2AC, room cell 0xB33E / 0xB361, attribute scrolls 0xDF04 / 0xDF17): all registers, memory outside dead stack and the attribute file, interrupt safety; after every event and at each plot's body start the sprite layer (ink + black 4-neighbour outline), the hooks' tables and the ULA attribute file vs an independent model, and the attribute shadow vs the original's attributes; each plot's screen change = its image; any screen write outside the plotter into a live key's rectangle fails; any attribute write outside the hooked routines fails, and any read of a cell whose ULA value differs from the original's; no patch-site or graphic write, no jump into a patched instruction. + unit tests (75 cases: overflow, full table, no free slot, wrap, too big, bad geometry, colour rule, every touch and attribute hook as captured and with every ULA cell different, buffer changed since the save) with 17 negative controls"
+  "note": "auto: the build input is the snapshot inside cauldron.rzx (Q0). Differential verify at every hook site (plotter entry incl. its body copy, PR-ALL, PO-ATTR, CL-LINE, CL-SCROLL, clear 0xB2A0, tile 0xB366, scrolls 0xDED2 / 0xDEEA, and every attribute reader / writer: PEEK 0x61D8, save 0xC9DB, restore 0xC9E7, box 0xCE74, room fill 0xB2AC, room cell 0xB33E / 0xB361, attribute scrolls 0xDF04 / 0xDF17): all registers, memory outside dead stack and the attribute file, interrupt safety; after every event and at each plot's body start the sprite layer (ink + black 4-neighbour outline + colour map), the hooks' tables and the ULA attribute file vs an independent model, and the attribute shadow vs the original's attributes; each plot's screen change = its image; any screen write outside the plotter into a live key's rectangle fails; any attribute write outside the hooked routines fails, and any read of a cell whose ULA value differs from the original's; no patch-site or graphic write, no jump into a patched instruction. + unit tests (87 cases: colour map per image geometry, shifted and at the screen edges, wrong check bytes ignored; overflow, full table, no free slot, wrap, too big, bad geometry, colour rule, every touch and attribute hook as captured and with every ULA cell different, buffer changed since the save) with 20 negative controls (+ colour map left out, transparent mask ignored, check byte not checked)"
  },
  "outputs": {
   "plain": {
@@ -70,17 +70,17 @@
   },
   "sprites": {
    "file": "Cauldron_1985_Palace_Software_a_sprites.nex",
-   "md5": "55ed40f88d103cfd2fc9474199fe7f9d"
+   "md5": "43c1ca492d7c1cc68541f02aaed9cb4c"
   }
  },
  "repro": [],
  "status": {
   "title": "Cauldron",
   "engine_col": "cauldron (cauldron.md)",
-  "build": "Cauldron_1985_Palace_Software_a_sprites.nex 55ed40f8 (every XOR-plotted image a grid of 4-bit sprites in the cell ink with a black outline; scenery keeps its colours: attribute shadow; overlay; whole alt ROM image from the build + pages 26 / 27, 28 MHz)",
-  "software": "quick 9,000 IDENTICAL (6,448 plots, 9.85M sprite pixels incl. outline, attribute shadow + ULA model at every event, no unhooked attribute access), unit 75 + negatives 17/17 PASS (2026-10-27); full RZX running",
-  "hardware": "5830cbbd runs at full speed on a Next (Dean 2026-10-27); 55ed40f8 (outline + no clash) sent for test",
-  "next": "hardware result of 55ed40f8; colour map + sheets + recolour (stage 4 round)"
+  "build": "Cauldron_1985_Palace_Software_a_sprites.nex 43c1ca49 (every XOR-plotted image a grid of 4-bit sprites in the cell ink with a black outline, paintable: colour map + sheets + recolour; scenery keeps its colours: attribute shadow; overlay; whole alt ROM image from the build + pages 26-35, 28 MHz)",
+  "software": "full RZX IDENTICAL 2026-10-27 (89,596 frames: 84,638 plots, 188.6M sprite pixels incl. outline, attribute shadow + ULA model at every event, no unhooked attribute access), unit 87 + negatives 20/20; colour map: synthetic painting read back + recolour = full build",
+  "hardware": "43c1ca49 works on a Next (Dean 2026-10-27, round 3; colour map unpainted); 55ed40f8 before it",
+  "next": "Dean paints the sheet -> recolour; making it the build default: COLOURS.md RECOLOUR"
  },
  "checks": [
   "asm2profile:cauldron"
@@ -89,25 +89,28 @@
   {
    "application": "cauldron.screen-readers",
    "id": "detect.gameplay-screen-readers",
-   "revision": 1,
-   "target": "POINT / ATTR readers of figure bytes (0x6B87, 0x6BA8, 0x9DE1, 0x9E3F; 0x9077-0x90FC)",
+   "revision": 2,
+   "target": "POINT / ATTR readers of figure bytes (0x6B87, 0x6BA8, 0x9DE1, 0x9E3F; 0x9077-0x90FC) through the runtime PEEK 0x61D8 / POINT 0x61F1; attribute readers and writers: scan --writers 0x5800-0x5AFF (11 writers, 10 readers)",
    "phases": []
   },
   {
    "application": "cauldron.figures.xor-overlay",
    "id": "patch.xor-overlay-keep-ula",
-   "revision": 1,
-   "target": "plotter 0x6357 (all 14 callers); touch hooks: ROM 0x0B9B / 0x0E44 / 0x0E00, RAM 0xB2A0 / 0xB366 / 0xDED2 / 0xDEEA",
+   "revision": 2,
+   "target": "plotter 0x6357 (all 14 callers; key = graphic, x, y, rows, width); touch hooks: ROM 0x0B9B / 0x0E44 / 0x0E00, RAM 0xB2A0 / 0xB366 / 0xDED2 / 0xDEEA; outline patterns built at the draw (Q7)",
    "phases": [
     "entry",
+    "exit",
     "clear"
    ],
    "owns": {
     "mmu_slots": [
+     4,
      6
     ],
     "next_pages": [
      24,
+     25,
      26
     ],
     "memory": [
@@ -115,43 +118,44 @@
       "space": "alt_rom",
       "image": 1,
       "offset": [
-       "0x386E",
-       "0x3BB4"
+       "0x0000",
+       "0x3FFF"
       ]
      },
      {
-      "space": "alt_rom",
-      "image": 1,
+      "space": "next_page",
+      "page": 27,
       "offset": [
-       "0x0B9B",
-       "0x0B9E"
-      ]
+       "0x0480",
+       "0x07FF"
+      ],
+      "mapped_at": "slot 4"
      },
      {
-      "space": "alt_rom",
-      "image": 1,
+      "space": "next_page",
+      "page": 27,
       "offset": [
-       "0x0E00",
-       "0x0E03"
-      ]
-     },
-     {
-      "space": "alt_rom",
-      "image": 1,
-      "offset": [
-       "0x0E44",
-       "0x0E47"
-      ]
+       "0x0A00",
+       "0x0C87"
+      ],
+      "mapped_at": "slot 4"
      }
     ],
     "speed": "28MHz-inside-hook"
-   }
+   },
+   "overlap_ok": [
+    {
+     "with": "cauldron.attributes.shadow",
+     "why": "exclusive use",
+     "note": "one hook block from asm/cauldron_hooks.asm: the whole alt ROM image is the build's (hook code 0x386E-0x3C26 + register block; shadow stubs e_peek..e_sar and the PO-ATTR JP at 0x0BE4 inside it); slot 4 maps page 27 for both, disjoint offsets"
+    }
+   ]
   },
   {
    "application": "cauldron.figures.atomic-switch",
    "id": "patch.display-atomic-switch",
    "revision": 1,
-   "target": "a drawing plot shows its sprites at the entry, an erasing plot hides them at the exit (the hook runs the body)",
+   "target": "a drawing plot shows its sprites at the entry, an erasing plot hides them after the body (the hook runs the body copy)",
    "phases": [
     "entry"
    ],
@@ -159,34 +163,295 @@
     "sprite_ids": [
      [
       0,
-      111
+      125
      ]
     ],
     "pattern_slots": [
      [
       0,
-      111
+      125
      ]
     ]
    }
+  },
+  {
+   "application": "cauldron.attributes.shadow",
+   "id": "patch.attribute-shadow",
+   "revision": 1,
+   "target": "plotter body copy (body2) paints the shadow; hooks: PEEK / ATTR 0x61D8, PO-ATTR 0x0BE4, CL-LINE / CL-SCROLL (after), save 0xC9DB / restore 0xC9E7, box 0xCE74, room fill 0xB2AC, room cell 0xB33E / 0xB361, attribute scrolls 0xDF04 / 0xDF17 (Q8)",
+   "phases": [
+    "entry",
+    "exit"
+   ],
+   "owns": {
+    "mmu_slots": [
+     4
+    ],
+    "next_pages": [
+     27
+    ],
+    "memory": [
+     {
+      "space": "next_page",
+      "page": 27,
+      "offset": [
+       "0x0000",
+       "0x047F"
+      ],
+      "mapped_at": "slot 4"
+     },
+     {
+      "space": "next_page",
+      "page": 27,
+      "offset": [
+       "0x0C88",
+       "0x0E34"
+      ],
+      "mapped_at": "slot 4"
+     },
+     {
+      "space": "alt_rom",
+      "image": 1,
+      "offset": [
+       "0x0BE4",
+       "0x0BE6"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "application": "cauldron.figures.colour-map",
+   "id": "patch.runtime-colour-map",
+   "revision": 1,
+   "target": "upload (page 27): ovfind looks the image (graphic, width, rows) up in the index at page 28, takes its transparent pixels out of both canvases after the outline, writes pattern bytes (TT AND KEEP[v]) OR v from its colour stream; 93 images (profile colour_images); map docs/profiles/cauldron_colours.json (none = defaults)",
+   "phases": [
+    "entry"
+   ],
+   "owns": {
+    "mmu_slots": [
+     6
+    ],
+    "next_pages": [
+     28,
+     29,
+     30,
+     31,
+     32,
+     33,
+     34,
+     35
+    ],
+    "memory": [
+     {
+      "space": "next_page",
+      "page": 27,
+      "offset": [
+       "0x0800",
+       "0x08FF"
+      ],
+      "mapped_at": "slot 4"
+     },
+     {
+      "space": "next_page",
+      "page": 28,
+      "offset": [
+       "0x0000",
+       "0x1FFF"
+      ],
+      "mapped_at": "slot 6"
+     },
+     {
+      "space": "next_page",
+      "page": 29,
+      "offset": [
+       "0x0000",
+       "0x1FFF"
+      ],
+      "mapped_at": "slot 6"
+     },
+     {
+      "space": "next_page",
+      "page": 30,
+      "offset": [
+       "0x0000",
+       "0x1FFF"
+      ],
+      "mapped_at": "slot 6"
+     },
+     {
+      "space": "next_page",
+      "page": 31,
+      "offset": [
+       "0x0000",
+       "0x1FFF"
+      ],
+      "mapped_at": "slot 6"
+     },
+     {
+      "space": "next_page",
+      "page": 32,
+      "offset": [
+       "0x0000",
+       "0x1FFF"
+      ],
+      "mapped_at": "slot 6"
+     },
+     {
+      "space": "next_page",
+      "page": 33,
+      "offset": [
+       "0x0000",
+       "0x1FFF"
+      ],
+      "mapped_at": "slot 6"
+     },
+     {
+      "space": "next_page",
+      "page": 34,
+      "offset": [
+       "0x0000",
+       "0x1FFF"
+      ],
+      "mapped_at": "slot 6"
+     },
+     {
+      "space": "next_page",
+      "page": 35,
+      "offset": [
+       "0x0000",
+       "0x1FFF"
+      ],
+      "mapped_at": "slot 6"
+     }
+    ],
+    "speed": "28MHz-inside-hook"
+   },
+   "overlap_ok": [
+    {
+     "with": "cauldron.figures.xor-overlay",
+     "why": "non-overlapping lifetime",
+     "note": "slot 6 holds page 26 in the plot hook but the game page 0 at the upload; ovfind maps a colour page there only between the outline pass and the end of the pattern writes, then puts page 0 back"
+    }
+   ]
   }
  ],
  "results": [
   {
    "application": "cauldron.figures.xor-overlay",
    "check": "state.rzx-differential",
-   "status": "partial",
-   "build": "d4302eef",
-   "scope": "quick 2,000 + 9,000 frames IDENTICAL (2026-10-26): registers, memory, tables, 2.03M sprite pixels, plot screen bytes, unhooked-writer check; unit 43 cases; negative controls 9/9; full RZX not yet",
+   "status": "pass",
+   "build": "43c1ca49",
+   "scope": "full RZX, 89,596 frames IDENTICAL (2026-10-27, stamped, 43c1ca49): 84,638 plots, 188.6M sprite pixels (ink + outline), 32.4M table bytes, 84,638 transient checks, 2.86M plot screen bytes, 952M interrupt-safety points; unit 87 cases, negative controls 20/20",
+   "evidence": "games/cauldron.md \"Results\""
+  },
+  {
+   "application": "cauldron.figures.atomic-switch",
+   "check": "display.entry-to-exit",
+   "status": "pass",
+   "build": "43c1ca49",
+   "scope": "84,638 transient checks at the plot body start (full RZX); software = return/boundary + body start",
+   "evidence": "games/cauldron.md \"Results\""
+  },
+  {
+   "application": "cauldron.attributes.shadow",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "43c1ca49",
+   "scope": "full RZX: PEEK 103,930, PO-ATTR 53,334, save 182, restore 6,051, box 15,236, room fill 110, room cell 14,319 / 9,406, attribute scrolls 1,760 / 3,552; 583M shadow + ULA bytes compared; no unhooked attribute access",
    "evidence": "games/cauldron.md \"Results\""
   },
   {
    "application": "cauldron.figures.xor-overlay",
    "check": "hardware.checklist",
-   "status": "not_run",
-   "build": "d4302eef",
-   "scope": "untested on a Next",
-   "evidence": "STATUS.md"
+   "status": "pass",
+   "build": "55ed40f8",
+   "scope": "Dean 2026-10-27: boots, runs at full speed, outline + scenery colours as asked (hardware round 2)",
+   "evidence": "games/cauldron.md \"Hardware rounds\""
+  },
+  {
+   "application": "cauldron.attributes.shadow",
+   "check": "hardware.checklist",
+   "status": "pass",
+   "build": "55ed40f8",
+   "scope": "Dean 2026-10-27: boots, runs at full speed, outline + scenery colours as asked (hardware round 2)",
+   "evidence": "games/cauldron.md \"Hardware rounds\""
+  },
+  {
+   "application": "cauldron.figures.colour-map",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "43c1ca49",
+   "scope": "full RZX with no map (IDENTICAL, stamped) + 12 unit cases with synthetic maps (every image geometry, shifts, screen edges, wrong check bytes) + 3 negative controls; a synthetic painting (1,593 entries, 30 images) read back, recoloured = full build with that map (50572718), quick 2000 IDENTICAL; selftest recolour guard both ways",
+   "evidence": "games/cauldron.md \"Colour map\", \"Results\""
+  },
+  {
+   "application": "cauldron.figures.xor-overlay",
+   "check": "hardware.checklist",
+   "status": "pass",
+   "build": "43c1ca49",
+   "scope": "Dean 2026-10-27: 43c1ca49 works on the Next (hardware round 3; no painting yet)",
+   "evidence": "games/cauldron.md \"Hardware rounds\""
+  },
+  {
+   "application": "cauldron.attributes.shadow",
+   "check": "hardware.checklist",
+   "status": "pass",
+   "build": "43c1ca49",
+   "scope": "Dean 2026-10-27: 43c1ca49 works on the Next (hardware round 3; no painting yet)",
+   "evidence": "games/cauldron.md \"Hardware rounds\""
+  },
+  {
+   "application": "cauldron.figures.colour-map",
+   "check": "hardware.checklist",
+   "status": "pass",
+   "build": "43c1ca49",
+   "scope": "Dean 2026-10-27: 43c1ca49 works on the Next with no map (round 3); a painted map on hardware not yet reported",
+   "evidence": "games/cauldron.md \"Hardware rounds\""
   }
- ]
+ ],
+ "checked": {
+  "deps": {
+   "asm/cauldron_hooks.asm": "21dfba409f90df73",
+   "docs/profiles/cauldron.json": "10242650d9e6c274",
+   "nexclash.py": "7a4b0e6f5b61aaef",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/cauldron.py": "8c25f694ba9633be",
+   "nexclash/coloursheet.py": "bc87a441d6f36e56",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "d7317a7d9ec89979",
+   "nexclash/nextboot.py": "44c08db48a1bf32d",
+   "nexclash/recolour.py": "a5744dcf6e6c059c",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "a6ff9eef9ca737b3",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-27"
+ },
+ "verified": {
+  "deps": {
+   "asm/cauldron_hooks.asm": "21dfba409f90df73",
+   "docs/profiles/cauldron.json": "10242650d9e6c274",
+   "nexclash.py": "7a4b0e6f5b61aaef",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/cauldron.py": "8c25f694ba9633be",
+   "nexclash/coloursheet.py": "bc87a441d6f36e56",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "d7317a7d9ec89979",
+   "nexclash/nextboot.py": "44c08db48a1bf32d",
+   "nexclash/recolour.py": "a5744dcf6e6c059c",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "a6ff9eef9ca737b3",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-10-27"
+ }
 }
