@@ -3,9 +3,10 @@
 ## Next session
 Stage: 4 (hardware round for the overrun-recovery build)    Branch: claude/rainbow-overrun
 State: 69369c89 = bda21ab6 + overrun recovery ("Overrun recovery" below); full verification stamped
-  2026-10-31; all 28 LeeBee rounds verified ("Status"). Not yet on a real Next. PR to main open.
+  2026-10-31; all 28 LeeBee rounds verified ("Status"). Works very well on a real Next, slowdowns
+  reduced (user, 2026-10-31). PR #82 to main open.
 Inputs: specnext/reference/rainbow_islands/ (rainbow.z80, rainbow.rzx, rainbownew.rzx, leebee/)
-Start with: the user's hardware report on 69369c89 ("Hardware checklist" below).
+Start with: merge PR #82 + the specnext branch; then, if wanted, more speed margin ("Speed ideas").
 Read: this file ("Overrun recovery", "Speed ideas"), rainbow_islands.md only where pointed to.
 Open: AY ticks of missed interrupts are not re-sent at the frame end (the queue catches up);
   hook speed ideas 1-4 not built.
@@ -65,7 +66,8 @@ Core: SWAPNIB / MIRROR A / ADD HL,A are in every Z80N core; the build needs the 
 rebuild MD5s, rainbow.rzx (7,178 frames, 2,216 renders) and rainbownew.rzx (11,799 frames, 3,530
 renders) IDENTICAL, diagnostic IDENTICAL, unit PASS, boot OK. Every LeeBee round
 (28 cuts, all 7 islands + bosses, 55,580 game frames) verified with the same verifier: no failure
-(rounds 12 / 16 / 23 / 24 / 26 after the two verifier fixes of the day). Hardware: not yet.
+(rounds 12 / 16 / 23 / 24 / 26 after the two verifier fixes of the day). Hardware 2026-10-31: "it
+seems to work very well, slowdowns are reduced" (user).
 2026-10-22: bda21ab6 works on a real Next, "feels smoother" than cf017271; 2026-10-31 user: "significant
 slowdowns" -> this round.
 
@@ -148,6 +150,9 @@ the fixed T accounting (below) on 2000 frames, x 8/6.5 for the 28 MHz wait state
   forward slashes passed; every profile IDENTICAL after.
 - [backlog C2 #44] sjasm.py cannot find or build the pinned assembler on Windows; a local 1.24.0
   copied into the cache gave identical output for all profiles.
+- [doc LEARNINGS 2.1f] Confirmed on hardware: the recovery alone removed most of the felt slowdown
+  with no hook made faster (user, 2026-10-31: "works very well, slowdowns reduced") - recover lost
+  interrupts before optimising hooks.
 - [deferred Open: reconsider when the hardware round reports music unevenness in busy scenes] The
   AY ticks of interrupts a frame missed are not re-sent at the frame end; the queue's catch-up
   (two per interrupt, flush when full) covers them.
