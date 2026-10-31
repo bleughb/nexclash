@@ -174,7 +174,7 @@ def main():
         if os.path.exists(f) and os.path.getsize(f) > cap:
             fail['over size budget (consolidate, docs/MAINTAIN.md)'].append('%s  %d > %d bytes' % (f, os.path.getsize(f), cap))
     for f in glob.glob('games/*.md'):
-        cap = GAME_GRANDFATHERED.get(f, GAME_BUDGET)
+        cap = GAME_GRANDFATHERED.get(f.replace(os.sep, '/'), GAME_BUDGET)    # glob gives '\' on Windows
         if os.path.getsize(f) > cap:
             fail['over size budget (consolidate, docs/MAINTAIN.md)'].append('%s  %d > %d bytes' % (f, os.path.getsize(f), cap))
     for title, d in (('WARN', warn), ('FAIL', fail)):

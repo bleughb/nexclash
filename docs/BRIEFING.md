@@ -473,6 +473,8 @@ Designs not built yet (use when a game needs them)
 43. coloursheet.write crashes (max() of an empty sequence) on a figure with no opaque pixel (Cauldron
    2026-10-27: image D710 3 x 24 is all zero bytes; the engine now leaves such images off). Skip them
    in write / choose and report them; add a tools_check case.
+44. sjasm.py on Windows: no binary, no make. A local 1.24.0 copied to the cache as `sjasmplus`
+   (+ .exe) gave --check --all IDENTICAL (2026-10-31); accept a cached .exe.
 
 ### C3b. Two verification levels (agreed with Dean 2026-09-29; how to run them: PLAYBOOK 6)
 - ITERATE (per change): original bytes at every site, boot check, unit tests (with negative

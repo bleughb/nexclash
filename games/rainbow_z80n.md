@@ -128,6 +128,34 @@ the fixed T accounting (below) on 2000 frames, x 8/6.5 for the 28 MHz wait state
 - The simulated timing statistics (long frames, tsmax) with NEXTREG counted: compare with the
   deprecated engine's on the same recording.
 
+## Lessons
+- [doc LEARNINGS 2.1f] A turbo limiter running the game frame with interrupts off loses the
+  interrupts a long frame spans (a hitch each); recover them from raster wraps sampled by the hooks
+  and credit the limiter (demonstrated: verify + 9 unit cases + control; hardware not yet).
+- [doc LEARNINGS 2.5] rzxplay zeroes T before next_frame: the verifier's frame T lost every RZX
+  frame a game frame spanned, so "frames over 20 ms" was too low since the deprecated engine
+  (observed: 13 vs 2 in rainbownew's first 2000 frames); the beam must be one monotonic formula.
+- [doc LEARNINGS 2.1f] Simulated 28 MHz T x 8/6.5 (wait states) turned 13 simulated overruns into
+  128 hardware ones in 1,043 frames: judge a limiter's budget with the hardware factor (inferred
+  from TECHNIQUES 1.0 board figures, not measured on this game).
+- [tool tools/asm2profile.py] sjasmplus warns on backslashes in the source path (Windows):
+  forward slashes passed; every profile IDENTICAL after.
+- [backlog C2 #44] sjasm.py cannot find or build the pinned assembler on Windows; a local 1.24.0
+  copied into the cache gave identical output for all profiles.
+- [deferred Open: reconsider when the hardware round reports music unevenness in busy scenes] The
+  AY ticks of interrupts a frame missed are not re-sent at the frame end; the queue's catch-up
+  (two per interrupt, flush when full) covers them.
+
+## Technique use
+- patch.isr-deferral: no help: about re-entrancy of a game ISR under hook time, not about pacing
+  (judged from index.json; no card covers limiter pacing - written to LEARNINGS 2.1f instead)
+
+## Stage log
+- 2026-10-31 stage 4 speed round (user: "significant slowdowns"; profile, overrun recovery, verifier
+  T fix + exact beam, 9 unit cases + control, quick 2000 x2, full verify stamped, 28 LeeBee rounds
+  verified; knowledge from main 806937d, no merge needed: branch made from it): ~110 tool calls,
+  1 user round.
+
 ## Hardware checklist - overrun recovery 69369c89 (2026-10-31)
 1. Busy scenes (many enemies + rainbows + fruit, scrolling, bonus scenes, bosses): game pace
    steady - no slow-motion stretches; compare with bda21ab6 in the same place.

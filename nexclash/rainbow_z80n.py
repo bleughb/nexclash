@@ -1254,6 +1254,7 @@ def verify(patch, rzx_path, progress=None, stop=None):
         started at the interrupt (line INT_LINE); the patched T since then moves it on."""
         if st.get('fr_on'):
             ns.line_x = st['facc'] - st['f0'] + st['fx']
+            st['smp'].append(INT_LINE + (ns.line_x + R[25]) // LINE_T)
 
     def ev_exit(mem, R):
         """Handler exit 65274 after a game frame: patched = original, and the interrupts the frame
@@ -1269,7 +1270,13 @@ def verify(patch, rzx_path, progress=None, stop=None):
         a_out = a_in + (sp_.registers[25] - R[25]) // LINE_T + 1
         ok = {min(LIMIT - 1, max(0, (a - l0 - 1) // 312)) for a in range(a_in, a_out + 1)}
         got = ns.scratch[V_TICK]
-        if got not in ok or ns.scratch[V_LON]:
+        smp = st['smp']
+        if max(b - a for a, b in zip(smp, smp[1:])) < 312:     # samples < a video frame apart: exact
+            good = got in ok
+        else:           # a stretch with no sampling hook (no render: round / island change): the hook
+            good = got <= max(ok)       # sees fewer wraps, so it may credit less, never more
+            c['game frames with a stretch over a video frame between beam samples (credited <= missed)'] += 1
+        if not good or ns.scratch[V_LON]:
             fail('handler exit: interrupts missed by the frame not credited as the model', (a_in, l0, got, sorted(ok)))
         c['game frames: interrupts missed and credited %d' % got] += 1
 
@@ -1776,6 +1783,7 @@ def verify(patch, rzx_path, progress=None, stop=None):
                                     check_commit(*pend)
                                     c['deferred commits checked'] += 1
                             st['fr_on'], st['f0'], st['facc'], st['fx'], st['fxi'] = True, R[25], 0, 0, 0
+                            st['smp'] = [INT_LINE]                  # beam samples (abs lines) this frame
                             st['pf0'] = tuple(st.get(k, 0) for k in PROF_KEYS)
                             if ns.nr.get(0x07) != 3:
                                 fail('limiter: not 28 MHz for the frame', (ns.nr.get(0x07),))
