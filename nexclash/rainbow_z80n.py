@@ -1745,6 +1745,8 @@ def verify(patch, rzx_path, progress=None, stop=None):
                             ev_render_start(mem, R)
                             st['render'], st['figw'] = True, set()
                         elif pc == 59087:
+                            if not cnt[58851]:              # a cut RZX (LeeBee bookmarks) started mid-render
+                                st['mid_start'] = 1
                             st['render'] = False
                             ev_render_end(mem, R)
                         elif pc == 59547:
@@ -1854,7 +1856,7 @@ def verify(patch, rzx_path, progress=None, stop=None):
         c['59541 reached other than from 59539!'] += 1
     if cnt[59543] != cnt[59544]:
         c['59544 reached other than from 59543!'] += 1
-    if not 0 <= cnt[58851] - cnt[59087] <= 1:          # the recording may end mid-render
+    if not -st.get('mid_start', 0) <= cnt[58851] - cnt[59087] <= 1:   # it may start / end mid-render
         c['render start/end counts differ (%d/%d)!' % (cnt[58851], cnt[59087])] += 1
     for a in (58852, 58853, 58854, 59088, 59089, 59540, 59542, 59545, 59546, 60856, 60842, 59548, 59549):
         if cnt[a]:
