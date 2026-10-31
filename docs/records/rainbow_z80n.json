@@ -90,7 +90,7 @@
  "checked": {
   "deps": {
    "asm/rainbow_z80n_hooks.asm": "479b511766e0b070",
-   "docs/profiles/rainbow_z80n.json": "011cfef7c19bc948",
+   "docs/profiles/rainbow_z80n.json": "f99967a277559535",
    "nexclash.py": "71dc4c592918bff8",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
@@ -110,7 +110,7 @@
  "verified": {
   "deps": {
    "asm/rainbow_z80n_hooks.asm": "479b511766e0b070",
-   "docs/profiles/rainbow_z80n.json": "011cfef7c19bc948",
+   "docs/profiles/rainbow_z80n.json": "f99967a277559535",
    "nexclash.py": "71dc4c592918bff8",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
