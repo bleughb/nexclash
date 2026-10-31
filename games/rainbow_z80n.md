@@ -3,7 +3,7 @@
 ## Next session
 Stage: 4 (hardware round for the overrun-recovery build)    Branch: claude/rainbow-overrun
 State: 69369c89 = bda21ab6 + overrun recovery ("Overrun recovery" below); full verification stamped
-  2026-10-31; all 28 LeeBee rounds verified ("Status"). Not yet on a real Next.
+  2026-10-31; all 28 LeeBee rounds verified ("Status"). Not yet on a real Next. PR to main open.
 Inputs: specnext/reference/rainbow_islands/ (rainbow.z80, rainbow.rzx, rainbownew.rzx, leebee/)
 Start with: the user's hardware report on 69369c89 ("Hardware checklist" below).
 Read: this file ("Overrun recovery", "Speed ideas"), rainbow_islands.md only where pointed to.
@@ -61,23 +61,29 @@ Core: SWAPNIB / MIRROR A / ADD HL,A are in every Z80N core; the build needs the 
 (as before: a recent core).
 
 ## Status
-2026-10-22: `selftest.py --game rainbow_z80n --verify --stamp` PASSED - rebuild MD5s, rainbow.rzx (7,178
-frames, 2,216 renders) and rainbownew.rzx (11,799 frames, 3,530 renders) IDENTICAL, diagnostic build
-IDENTICAL, unit PASS (incl. one as-NOP control per Z80N instruction).
-Hardware 2026-10-22: rainbow_z80n_sprites.nex bda21ab6 WORKS on a real Next and "feels smoother"
-than cf017271 (user; impression, not measured).
+2026-10-31 (69369c89, overrun recovery): `selftest.py --game rainbow_z80n --verify --stamp` PASSED -
+rebuild MD5s, rainbow.rzx (7,178 frames, 2,216 renders) and rainbownew.rzx (11,799 frames, 3,530
+renders) IDENTICAL, diagnostic IDENTICAL, unit PASS, boot OK. Every LeeBee round
+(28 cuts, all 7 islands + bosses, 55,580 game frames) verified with the same verifier: no failure
+(rounds 12 / 16 / 23 / 24 / 26 after the two verifier fixes of the day). Hardware: not yet.
+2026-10-22: bda21ab6 works on a real Next, "feels smoother" than cf017271; 2026-10-31 user: "significant
+slowdowns" -> this round.
 
 | Output | MD5 |
 |---|---|
 | rainbow_z80n.nex (plain: unchanged from the deprecated engine) | 7ac543fb51c7a3c4137778eeb3cdc175 |
-| rainbow_z80n_sprites.nex | bda21ab675fa271b6f51f332aae14206 |
-| rainbow_z80n_sprites_diag.nex | bb2058c8bb9d593364aa1515a38a130c |
+| rainbow_z80n_sprites.nex | 69369c89035d39eac8e4211c2686503c |
+| rainbow_z80n_sprites_diag.nex | 24e547de8e2e28982fe155611068f039 |
+| (previous: bda21ab6 / diagnostic bb2058c8) | |
 
-Simulated timing (28 MHz T, NEXTREG now counted; wait states still not modelled): rainbow.rzx object
-hooks avg 2.8 / max 14.5 ms per game frame, whole frame max 18.6 ms, 0 frames over 20 ms;
-rainbownew.rzx object hooks avg 5.4 / max 17.4 ms, whole frame max 22.2 ms, 2 frames over 20 ms
-(0 without the object hooks). The deprecated engine's figures counted NEXTREG as 0 T and are not
-comparable. Where Z80N / Next hardware could still help (analysis, nothing built): see "Speed ideas".
+Timing (28 MHz T with the fixed frame accounting; "hw" = x 8/6.5 for the wait states), LeeBee 28
+rounds: game frame avg 13-18 ms, p95 18-25 ms, max 45.7 ms (island 7 round 3) except the 7 round /
+island changes (~350 ms, no render; long in the original too). Frames over 20 ms hw = a hitch in
+bda21ab6: 18,071 of 55,580 (32.5 %; island 1 20-35 %, island 7 51-55 %). With the recovery a hitch
+needs over 60 hw ms: none in play (max 45.7 x 8/6.5 = 56 ms: thin margin). Hook share of an average
+frame ~7 ms (pieces 2-4, render start 1.3-3.2, band ends 1.1-2.4); the game's own code ~7-9 ms.
+The 2026-10-22 figures (max 22.2 ms, 2 frames over 20 ms) were too low (verifier T bug, below).
+Where Z80N / Next hardware could still help (analysis, nothing built): see "Speed ideas".
 
 ## Overrun recovery (2026-10-31, 69369c89)
 User: bda21ab6 "has significant slowdowns". Cause: the game frame runs inside the IM2 handler with

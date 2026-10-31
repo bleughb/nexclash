@@ -89,42 +89,42 @@
  "excluded": "as rainbow (Dean 2026-10-13): too slow for the automatic checks (~50 min verify); run it explicitly with selftest.py --game rainbow_z80n [--verify]",
  "checked": {
   "deps": {
-   "asm/rainbow_z80n_hooks.asm": "5c96186df826e866",
-   "docs/profiles/rainbow_z80n.json": "79ff4cca67e0cdd8",
-   "nexclash.py": "7a4b0e6f5b61aaef",
+   "asm/rainbow_z80n_hooks.asm": "479b511766e0b070",
+   "docs/profiles/rainbow_z80n.json": "011cfef7c19bc948",
+   "nexclash.py": "71dc4c592918bff8",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "bc87a441d6f36e56",
+   "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "2f7a26a1322ce617",
-   "nexclash/nextboot.py": "a6e46fbbe842b376",
-   "nexclash/rainbow_z80n.py": "da85eaeb0d0d007c",
+   "nexclash/engines.py": "d7317a7d9ec89979",
+   "nexclash/nextboot.py": "44c08db48a1bf32d",
+   "nexclash/rainbow_z80n.py": "ab6bf4da4371f015",
    "nexclash/rzx.py": "45f6a7e4fd28e07e",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "cfe7f2701eddfe6e",
+   "nexclash/z80tonex.py": "a6ff9eef9ca737b3",
    "skoolkit": "10.1"
   },
-  "date": "2026-10-22"
+  "date": "2026-10-31"
  },
  "verified": {
   "deps": {
-   "asm/rainbow_z80n_hooks.asm": "5c96186df826e866",
-   "docs/profiles/rainbow_z80n.json": "79ff4cca67e0cdd8",
-   "nexclash.py": "7a4b0e6f5b61aaef",
+   "asm/rainbow_z80n_hooks.asm": "479b511766e0b070",
+   "docs/profiles/rainbow_z80n.json": "011cfef7c19bc948",
+   "nexclash.py": "71dc4c592918bff8",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "bc87a441d6f36e56",
+   "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "2f7a26a1322ce617",
-   "nexclash/nextboot.py": "a6e46fbbe842b376",
-   "nexclash/rainbow_z80n.py": "da85eaeb0d0d007c",
+   "nexclash/engines.py": "d7317a7d9ec89979",
+   "nexclash/nextboot.py": "44c08db48a1bf32d",
+   "nexclash/rainbow_z80n.py": "ab6bf4da4371f015",
    "nexclash/rzx.py": "45f6a7e4fd28e07e",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "cfe7f2701eddfe6e",
+   "nexclash/z80tonex.py": "a6ff9eef9ca737b3",
    "skoolkit": "10.1"
   },
-  "date": "2026-10-22"
+  "date": "2026-10-31"
  }
 }
