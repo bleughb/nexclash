@@ -51,7 +51,8 @@ def assemble(src, exe):
     if not names:
         raise RuntimeError('%s has no SAVEBIN' % src)
     with tempfile.TemporaryDirectory() as tmp:
-        r = subprocess.run([exe, '--zxnext', '--msg=war', '--sym=hooks.sym', src], cwd=tmp,
+        # forward slashes: sjasmplus warns on '\' in a file name (Windows paths; 2026-10-31)
+        r = subprocess.run([exe, '--zxnext', '--msg=war', '--sym=hooks.sym', src.replace('\\', '/')], cwd=tmp,
                            capture_output=True, text=True)
         msg = r.stdout + r.stderr
         if r.returncode or 'error' in msg.lower() or 'warning' in msg.lower():

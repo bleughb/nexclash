@@ -579,8 +579,18 @@ Grouped by question; add a new lesson to its group.
   state): capture the chip writes at the player's own output routine (Rainbow: one routine for
   every AY register write) into a per-tick queue and send one tick per interrupt. Memory and logic
   stay identical; verify the chip state after each tick sent against the original's. Profile
-  before choosing Next hardware: Rainbow's game logic was 1.2 ms of a 9 ms frame - the hooks,
-  not the game, were the cost, so hardware scrolling would not have helped.
+  before choosing Next hardware: Rainbow's own code is ~6 ms of a ~12 ms game frame at 28 MHz
+  (rainbow.rzx 2000 frames; the "1.2 ms of 9 ms" first written here came from a verifier that lost
+  the T of frames spanning RZX frames, 2.5 below) - the blit is inside the game's share, so
+  hardware scrolling would not have helped.
+- A limiter whose game frame runs with interrupts OFF (inside the IM 2 handler) loses every
+  interrupt a long frame spans: that cycle takes LIMIT + 1 interrupts, a hitch. Simulated T hides
+  how often: x 8/6.5 for the 28 MHz wait states, Rainbow had 8-17 % of frames over 20 ms on
+  hardware (2026-10-31). RECOVER them instead of only shortening frames: sample the raster line
+  ($1E/$1F pair) at the frame start (the interrupt) and at hooks that are never a video frame apart;
+  a sample below the previous = a wrap; missed = wraps, minus one unless the last sample is past the
+  start line; credit min(missed, LIMIT - 1) to the tick counter at the frame end. The pace then holds
+  up to LIMIT video frames per game frame; memory and logic untouched (Rainbow 69369c89).
 
 ### 2.1g Elsewhere
 - Other projects worth reading for design ideas (NextMasterSystem: IM2 hold mode, slot borrowing,
@@ -752,6 +762,13 @@ Grouped by question; add a new lesson to its group.
   every site whose first instruction is longer than one byte (wally2 STARTS / INTERIORS, 2026-10-14).
 - Lockstep RZX replay cannot prove equivalence once cycle counts change (input
   sampling shifts). Use per-routine differential tests from real states.
+- Timing across RZX frames: skoolkit's rzxplay sets T (registers[25]) to 0 BEFORE it calls
+  next_frame, so `T += registers[25]` in a next_frame override adds 0 and every span that crosses an
+  RZX frame (a game frame run with interrupts off) loses whole frames of T. Take the frame's T at
+  rzxplay's last act on it (`tracer.border[:] = ...`, a list subclass; rainbow_z80n FrameEnd).
+  Rainbow's frame statistics were too low for a month (2026-10-31). A beam model must also be one
+  formula of the T since the interrupt (line = start + T // T-per-line): per-event rounding stepped
+  back a line, which a wrap-counting hook reads as a wrap.
 - Per event: original and patched from the same state on private overlays; compare all registers
   except R/T/MEMPTR and all memory.
 - Model what a routine USES at the moment it uses it (capture the inputs at the inner call, e.g.

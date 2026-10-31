@@ -50,6 +50,7 @@ SITES1_ORIG = {0xD4DE: bytes.fromhex('21595C'), 0xD6D4: bytes.fromhex('01FDFF')}
 V_AYR, V_AYN, V_AYO, V_AYW, AYQ = 0x82, 0x83, 0x84, 0x85, 0x1FC0
 CLIST, ATTRB, V_NP = 0x1B00, 0x1C80, 0x01
 V_TICK, LIMIT = 0x2E, 3     # frame limiter (asm s_lim)
+V_LI, V_L0, V_LL, V_WR, V_LON = 0x76, 0x78, 0x7A, 0x7C, 0x7D   # overrun recovery (asm lexit)
 # Objects (2026-10-11, tilemap build): every object the game puts in a back-buffer cell (rainbow
 # pieces = codes 1-14 of both drawers, fruit / flowers / collectables = opaque codes >= 15) is shown on
 # the tilemap layer (bank 7 = Next page 14, in front of the ULA, behind the sprites); the ULA cell shows
@@ -600,6 +601,7 @@ class NextState:
         self.events = []
         self.line = 200             # video line seen by the raster wait: fixed (bottom border: no wait),
         self.line_t = None          # or (line at T = 0) advancing LINE_T per line (unit tests)
+        self.line_x = None          # or patched T since the interrupt minus T now (verify: exact, monotonic)
         self.rsel = 0
         self.R = None               # registers of the machine running this state (T for the raster)
         self.t34 = None             # T of the first sprite select ($34) write
@@ -610,6 +612,8 @@ class NextState:
         self.clip_tm, self.clip_i = [None] * 4, 0
 
     def video_line(self):
+        if self.line_x is not None:                 # exact: the frame's patched T since the interrupt
+            return (INT_LINE + (self.R[25] + self.line_x) // LINE_T) % 312
         if self.line_t is None:
             return self.line
         return (self.line_t + self.R[25] // LINE_T) % 312
@@ -1245,6 +1249,37 @@ def verify(patch, rzx_path, progress=None, stop=None):
         if st.get('fr_on'):
             st['fx'] += sp_.registers[25] - so.registers[25]
 
+    def beam(R):
+        """The beam seen by a hook inside the game frame (overrun recovery samples it): the frame
+        started at the interrupt (line INT_LINE); the patched T since then moves it on."""
+        if st.get('fr_on'):
+            ns.line_x = st['facc'] - st['f0'] + st['fx']
+            st['smp'].append(INT_LINE + (ns.line_x + R[25]) // LINE_T)
+
+    def ev_exit(mem, R):
+        """Handler exit 65274 after a game frame: patched = original, and the interrupts the frame
+        missed (the beam passed the frame's start line again) credited to the limiter tick."""
+        beam(R)
+        a_in = INT_LINE + (st['facc'] + R[25] - st['f0'] + st['fx']) // LINE_T
+        ret = MG(mem, R[12] + 2) | MG(mem, R[12] + 3) << 8
+        l0 = ns.scratch[V_L0] | ns.scratch[V_L0 + 1] << 8
+        sp_ = ev_simple(mem, R, ret, 'handler exit')
+        ns.line_x = None
+        if sp_ is None:
+            return
+        a_out = a_in + (sp_.registers[25] - R[25]) // LINE_T + 1
+        ok = {min(LIMIT - 1, max(0, (a - l0 - 1) // 312)) for a in range(a_in, a_out + 1)}
+        got = ns.scratch[V_TICK]
+        smp = st['smp']
+        if max(b - a for a, b in zip(smp, smp[1:])) < 312:     # samples < a video frame apart: exact
+            good = got in ok
+        else:           # a stretch with no sampling hook (no render: round / island change): the hook
+            good = got <= max(ok)       # sees fewer wraps, so it may credit less, never more
+            c['game frames with a stretch over a video frame between beam samples (credited <= missed)'] += 1
+        if not good or ns.scratch[V_LON]:
+            fail('handler exit: interrupts missed by the frame not credited as the model', (a_in, l0, got, sorted(ok)))
+        c['game frames: interrupts missed and credited %d' % got] += 1
+
     def compare(o, p, ro, rp, what, dead=()):
         diff = [i for i in CMP if ro[i] != rp[i] and i not in dead]
         if diff:
@@ -1428,7 +1463,9 @@ def verify(patch, rzx_path, progress=None, stop=None):
         exp = obj_build(peek, sh, pg, ns.pages[PAGE_F])
         keys0 = bytes(pg[KEYS - 0x2000:KEYS - 0x2000 + 4 * NTILE])
         fx0 = st.get('fx', 0)
+        beam(R)
         sp_ = ev_simple(real, R, 58855, 'render start')
+        ns.line_x = None
         keys1 = bytes(pg[KEYS - 0x2000:KEYS - 0x2000 + 4 * NTILE])
         c['tiles composed (cache misses)'] += sum(1 for t in range(NTILE) if keys0[4 * t:4 * t + 4] != keys1[4 * t:4 * t + 4])
         st['fxi'] = st.get('fxi', 0) + st.get('fx', 0) - fx0
@@ -1488,7 +1525,10 @@ def verify(patch, rzx_path, progress=None, stop=None):
         o, p = OMem(real), PMem(real)
         so = _machine(Sim, o, list(R), NextState(patch))
         sp_ = _machine(Sim, p, list(R), ns)
-        if not (_run(so, (59550,)) and _run(sp_, (59550,))):
+        beam(R)
+        ok_run = _run(so, (59550,)) and _run(sp_, (59550,))
+        ns.line_x = None
+        if not ok_run:
             fail('band: did not return', ())
             return
         fx0 = st.get('fx', 0)
@@ -1564,11 +1604,10 @@ def verify(patch, rzx_path, progress=None, stop=None):
         so = _machine(Sim, o, list(R), NextState(patch))
         sp_ = _machine(Sim, p, list(R), ns)
         ns.events = []
-        if st.get('fr_on'):                 # the beam: the frame starts at the interrupt (line INT_LINE);
-            ns.line_t = INT_LINE + st['tre_at'] // LINE_T - R[25] // LINE_T   # patched T since then
+        beam(R)                             # the beam: the frame starts at the interrupt (line INT_LINE)
         t0 = sp_.registers[25]
         ok_run = _run(so, (59092,), 400000) and _run(sp_, (59092,), 400000)
-        ns.line_t = None
+        ns.line_x = None
         if not ok_run:
             fail('render end: did not return', ())
             return
@@ -1706,6 +1745,8 @@ def verify(patch, rzx_path, progress=None, stop=None):
                             ev_render_start(mem, R)
                             st['render'], st['figw'] = True, set()
                         elif pc == 59087:
+                            if not cnt[58851]:              # a cut RZX (LeeBee bookmarks) started mid-render
+                                st['mid_start'] = 1
                             st['render'] = False
                             ev_render_end(mem, R)
                         elif pc == 59547:
@@ -1717,12 +1758,12 @@ def verify(patch, rzx_path, progress=None, stop=None):
                                 fail('limiter: commit pending flag', (ns.scratch[V_PEND],))
                             f7f = ns.nr.get(0x7F, 0)
                             ns.scratch[V_TICK] = LIMIT - 1          # the recording ran this frame
-                            ns.line_t = INT_LINE - R[25] // LINE_T  # the interrupt: line 248
+                            ns.line_x = -R[25]                      # the interrupt: line 248
                             pw0, ns.events = ns.pat_writes, []
                             st['fr_on'] = False
                             fx0 = st.get('fx', 0)
                             ev_simple(mem, R, 65175, 'limiter: frame runs', dead=(1,))   # F: CP 3 next
-                            ns.line_t = None
+                            ns.line_x = None
                             want = ay.tick()
                             if ay_writes(ns) != want:
                                 fail('AY replay at the interrupt differs from the model', (ay_writes(ns)[:4], want[:4]))
@@ -1744,6 +1785,7 @@ def verify(patch, rzx_path, progress=None, stop=None):
                                     check_commit(*pend)
                                     c['deferred commits checked'] += 1
                             st['fr_on'], st['f0'], st['facc'], st['fx'], st['fxi'] = True, R[25], 0, 0, 0
+                            st['smp'] = [INT_LINE]                  # beam samples (abs lines) this frame
                             st['pf0'] = tuple(st.get(k, 0) for k in PROF_KEYS)
                             if ns.nr.get(0x07) != 3:
                                 fail('limiter: not 28 MHz for the frame', (ns.nr.get(0x07),))
@@ -1752,7 +1794,9 @@ def verify(patch, rzx_path, progress=None, stop=None):
                             if ns.nr.get(0x15) != 0 or ns.nr.get(0x6B) != 0 or ns.nr.get(0x7F) != 1:
                                 fail('sprites / tilemap not switched off, or no cache flush', (pc,))
                         elif pc == 65274:
-                            if st.get('fr_on'):
+                            fr_on = st.get('fr_on')
+                            if fr_on:
+                                ev_exit(mem, R)
                                 ft = st['facc'] + R[25] - st['f0'] + st['fx']
                                 st['fr_on'] = False
                                 st.setdefault('prof', []).append(
@@ -1768,8 +1812,9 @@ def verify(patch, rzx_path, progress=None, stop=None):
                                 st['fisum'] = st.get('fisum', 0) + st['fxi']
                                 st['fn'] = st.get('fn', 0) + 1
                                 c['item hooks per game frame avg (28 MHz us)'] = st['fisum'] * 1000000 // 28000000 // st['fn']
-                            ret = MG(mem, R[12] + 2) | MG(mem, R[12] + 3) << 8
-                            ev_simple(mem, R, ret, 'handler exit')
+                            else:
+                                ret = MG(mem, R[12] + 2) | MG(mem, R[12] + 3) << 8
+                                ev_simple(mem, R, ret, 'handler exit')
                             if ns.nr.get(0x07) != 0:
                                 fail('handler exit: not back to 3.5 MHz', (ns.nr.get(0x07),))
                     f()
@@ -1779,10 +1824,19 @@ def verify(patch, rzx_path, progress=None, stop=None):
 
     _nf = rzxplay.RZXTracer.next_frame
 
+    class FrameEnd(list):
+        """rzxplay zeroes T BEFORE next_frame (2026-10-31: the old `facc += registers[25]` in
+        next_frame always added 0, so a game frame spanning RZX frames lost their T); its last act on
+        a frame without a screen is `tracer.border[:] = ...`, while T still holds the frame's T."""
+        def __setitem__(s, k, v):
+            if st.get('fr_on') and st['sim'] is not None:
+                st['facc'] += st['sim'].registers[25]
+            list.__setitem__(s, k, v)
+
     def next_frame(self):
         st['frame'] += 1
-        if st.get('fr_on'):
-            st['facc'] += st['sim'].registers[25]
+        if not isinstance(self.border, FrameEnd):
+            self.border = FrameEnd(self.border)
         if progress and st['frame'] % 1000 == 0:
             progress(st['frame'], c)
         return _nf(self)
@@ -1802,7 +1856,7 @@ def verify(patch, rzx_path, progress=None, stop=None):
         c['59541 reached other than from 59539!'] += 1
     if cnt[59543] != cnt[59544]:
         c['59544 reached other than from 59543!'] += 1
-    if not 0 <= cnt[58851] - cnt[59087] <= 1:          # the recording may end mid-render
+    if not -st.get('mid_start', 0) <= cnt[58851] - cnt[59087] <= 1:   # it may start / end mid-render
         c['render start/end counts differ (%d/%d)!' % (cnt[58851], cnt[59087])] += 1
     for a in (58852, 58853, 58854, 59088, 59089, 59540, 59542, 59545, 59546, 60856, 60842, 59548, 59549):
         if cnt[a]:
@@ -2181,6 +2235,37 @@ def unit_tests(patch, rzx_path, want=40, frames=3000):
         ro, o, rp, p, ns, err = _pair(patch, bm, R, 0, scratch=sc, stops=(65175, ret))
         c['limiter negative control (skip removed) %s' % (
             'detected' if rp[24] == 65175 else 'NOT DETECTED!')] += 1
+        # overrun recovery at the frame end (65274): (frame running, start line, last sample, wraps
+        # so far, line the exit reads) -> tick. Control: the tick store NOPed (no recovery).
+        R = list(R)
+        R[24], R[25] = 65274, 0
+
+        def exit_case(pt, lon, l0, ll, wr, lx, tick0=0):
+            sc = bytearray(pt.scratch)
+            sc[V_TICK], sc[V_LON], sc[V_WR] = tick0, lon, wr
+            sc[V_L0:V_L0 + 2] = l0.to_bytes(2, 'little')
+            sc[V_LL:V_LL + 2] = ll.to_bytes(2, 'little')
+            ro, o, rp, p, ns, err = _pair(pt, bm, R, 0, scratch=sc, stops=(ret,), line_t=lx)
+            same = not err and all(ro[i] == rp[i] for i in CMP + [24]) and o.ov == p.ov and \
+                ns.nr.get(0x07) == 0 and not ns.scratch[V_LON]
+            return same, ns.scratch[V_TICK]
+        for lon, l0, ll, wr, lx, tick0, want in (
+                (1, 248, 290, 0, 300, 0, 0),       # no wrap
+                (1, 248, 300, 0, 10, 0, 0),        # wraps at the exit, not back at the start line
+                (1, 248, 200, 1, 249, 0, 1),       # past the start line once: one interrupt missed
+                (1, 248, 200, 1, 248, 0, 0),       # on the start line: not counted
+                (1, 248, 100, 2, 250, 0, 2),       # twice
+                (1, 248, 100, 3, 250, 0, 2),       # more: capped (the next interrupt runs a frame)
+                (1, 250, 100, 1, 251, 0, 1),
+                (1, 250, 280, 1, 251, 0, 2),       # the exit's own sample wraps again
+                (0, 248, 100, 2, 250, 1, 1)):      # skip path: tick untouched
+            same, got = exit_case(patch, lon, l0, ll, wr, lx, tick0)
+            c['frame-end overrun recovery %s' % ('ok' if same and got == want else 'FAIL! %s' % (
+                (lon, l0, ll, wr, lx, got, want),))] += 1
+        bad = _with_rom_bytes(patch, 'lexit.t', bytes((0x32, V_TICK, 0)), b'\x00\x00\x00')
+        same, got = exit_case(bad, 1, 248, 200, 1, 249)
+        c['frame-end overrun recovery negative control (tick not credited) %s' % (
+            'detected' if got != 1 else 'NOT DETECTED!')] += 1
     else:
         c['limiter states FAIL! (none collected)'] += 1
     # render-end commit: negative control through the verifier itself (a short replay with the

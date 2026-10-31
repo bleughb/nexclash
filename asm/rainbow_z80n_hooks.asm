@@ -163,6 +163,16 @@ V_OMB   EQU 0x0071          ; mask bits left
 V_DIAG  EQU 0x0072          ; 1 = diagnostic build (border colours)
 V_FRUN  EQU 0x0073          ; diagnostic: a game frame is running
 V_DBC   EQU 0x0074          ; diagnostic: BC (word)
+; overrun recovery (2026-10-31): the game frame runs with interrupts off, so a frame longer than one
+; video frame loses the interrupts it spans and the next frame started one interrupt late (a hitch).
+; The line is sampled at the interrupt (s_int), render start, every band end, render end and frame
+; end; a sample below the previous one = the beam wrapped. Interrupts missed = wraps, minus one when
+; the last sample is not past the frame's start line. They are credited to V_TICK at the frame end.
+V_LI    EQU 0x0076          ; line read at this interrupt (word)
+V_L0    EQU 0x0078          ; line at the start of the running game frame (word)
+V_LL    EQU 0x007A          ; last line sampled (word)
+V_WR    EQU 0x007C          ; wraps seen since the frame start
+V_LON   EQU 0x007D          ; 1 = a game frame is running (samples counted)
 RS_LINE EQU 240             ; render end at or past this line: commit at once (if it fits before line 16)
 V_PEND  EQU 0x0080          ; 1 = this render's commit is still to do (deferred to the next interrupt)
 V_N58   EQU 0x0081          ; (58850) at the render end (play-area rows; the deferred commit clips with it)
@@ -225,9 +235,9 @@ e_off2: nextreg 0x15,0              ; site 65029 CALL 23698 (main loop (re)start
         nextreg 0x6B,0
         nextreg 0x7F,1
         jp 23698
-e_hx:   nextreg 0x07,0              ; site 65274 (POP AF / EI / RET): back to 3.5 MHz for the
-        nextreg 0x50,PAGE_S         ; main loop (its timing stays the original's). A is free here.
-        jp dfend                    ; diagnostic build: frame end (then x_hx; no stack use)
+e_hx:   nextreg 0x50,PAGE_S         ; site 65274 (POP AF / EI / RET). A and F are free here.
+        jp lexit                    ; overrun recovery, back to 3.5 MHz for the main loop (its
+                                    ; timing stays the original's), then dfend (diagnostic) and x_hx
 x_hx:   nextreg 0x50,0xFF
         pop af
         ei
@@ -280,6 +290,8 @@ s_int:  ld (V_SP4),sp
         push bc
         push de
         push hl
+        call lread                  ; the line at this interrupt (a game frame starting here samples
+        ld (V_LI),hl                ; from it; the deferred commit below already counts)
         ld a,(V_PEND)
         or a
         jr z,.nc
@@ -461,7 +473,31 @@ dcom:   ld bc,0x243B
 ; The line is read as a pair ($1E, $1F) until two consecutive pairs agree (rainbow_islands.md Open
 ; 1b): a 255 -> 256 crossing between the two reads gives line 0 (256 lines off). rainbow_z80n's
 ; NEXTREG timings made the verifier land on that crossing (2026-10-21).
-rsafe:  ld bc,0x243B
+rsafe:  call lsamp                   ; (a frame-time sample as well)
+        ld hl,(V_LL)
+        ld de,RS_LINE
+        or a
+        sbc hl,de
+        jr c,.no                    ; L < RS_LINE: the interrupt comes first
+        ex de,hl
+        ld hl,327-20-RS_LINE        ; 128K timing: 311 lines a frame
+        or a
+        sbc hl,de
+        jr c,.no
+        ld a,(V_S)
+        ld e,a
+        ld d,0
+        or a
+        sbc hl,de
+        jr c,.no
+        scf
+        ret
+.no:    or a
+        ret
+
+; lread: HL = the active video line ($1E, $1F), read as a pair until two consecutive pairs agree
+; (rainbow_islands.md Open 1b: a 255 -> 256 crossing between the two reads gives line 0). A, F, BC.
+lread:  ld bc,0x243B
 .rd:    ld a,0x1E
         out (c),a
         inc b
@@ -490,25 +526,63 @@ rsafe:  ld bc,0x243B
         dec b
         cp l
         jr nz,.rd
-        ld de,RS_LINE
-        or a
-        sbc hl,de
-        jr c,.no                    ; L < RS_LINE: the interrupt comes first
-        ex de,hl
-        ld hl,327-20-RS_LINE        ; 128K timing: 311 lines a frame
-        or a
-        sbc hl,de
-        jr c,.no
-        ld a,(V_S)
-        ld e,a
-        ld d,0
-        or a
-        sbc hl,de
-        jr c,.no
-        scf
         ret
-.no:    or a
+
+; lsamp: frame-time sample: V_LL = the line; below the previous sample -> the beam wrapped (V_WR + 1).
+; Only A and F change. Samples are never a frame apart (render start, band ends, render end).
+lsamp:  push bc
+        push de
+        push hl
+        call lread
+        ld de,(V_LL)
+        ld (V_LL),hl
+        or a
+        sbc hl,de
+        jr nc,.n
+        ld hl,V_WR
+        inc (hl)
+.n:     pop hl
+        pop de
+        pop bc
         ret
+
+; lexit: game frame end (site 65274; AF is restored by the POP AF that follows). Interrupts the
+; frame missed (interrupts were off): wraps, minus one unless the last sample is past the start
+; line; credited to the limiter (at most LIMIT-1: the next interrupt runs the next frame at once),
+; so the game keeps one frame per LIMIT interrupts up to LIMIT video frames long.
+lexit:  ld a,(V_LON)
+        or a
+        jr z,.x                     ; the skip path (no game frame ran)
+        ld (V_SP4),sp
+        ld sp,STK
+        push bc
+        push de
+        push hl
+        call lsamp
+        xor a
+        ld (V_LON),a
+        ld a,(V_WR)
+        or a
+        jr z,.d                     ; no wrap: no interrupt missed
+        ld c,a
+        ld hl,(V_LL)
+        ld de,(V_L0)
+        or a
+        sbc hl,de
+        jr z,.m1
+        jr nc,.m                    ; past the start line: missed = wraps
+.m1:    dec c                       ; else wraps - 1
+.m:     ld a,c
+        cp LIMIT
+        jr c,.t
+        ld a,LIMIT-1
+.t:     ld (V_TICK),a               ; (unit-test control: NOPs = no recovery)
+.d:     pop hl
+        pop de
+        pop bc
+        ld sp,(V_SP4)
+.x:     nextreg 0x07,0
+        jp dfend
 
 ; X8T (page 28, mapped at slot 2 here): X8T + 256k + v = nibbles of bits 7-2k (high) / 6-2k (low)
 ; of v, 0xF per set bit. Built once at the first render start (page 28 is not in the .nex).
@@ -646,6 +720,7 @@ s_rs:   ld iy,0                     ; clears V_S (and spare 0x0001) without touc
         push bc
         push de
         push hl
+        call lsamp                  ; frame-time sample (overrun recovery)
         ld a,(V_X8)
         or a
         call z,x8bld
@@ -665,6 +740,15 @@ s_lim:  ld a,(V_TICK)
         jr c,.skip
         xor a
         ld (V_TICK),a
+        ld (V_WR),a                 ; overrun recovery: the frame starts at this interrupt's line
+        ld a,(V_LI)                 ; (only A: BC DE HL belong to the interrupted code)
+        ld (V_L0),a
+        ld (V_LL),a
+        ld a,(V_LI+1)
+        ld (V_L0+1),a
+        ld (V_LL+1),a
+        ld a,1
+        ld (V_LON),a
         nextreg 0x07,3              ; 28 MHz for the game frame
         jp dfst                     ; diagnostic build: frame start (then x_lrun; no stack use)
 .skip:  ld (V_TICK),a
@@ -2136,6 +2220,7 @@ s_bend: ld (V_SP4),sp
         push bc
         push de
         push hl
+        call lsamp                  ; frame-time sample (overrun recovery)
         ld a,(V_TOK)
         or a
         jp z,.q
