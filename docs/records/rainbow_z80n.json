@@ -67,21 +67,21 @@
   },
   "sprites": {
    "file": "rainbow_z80n_sprites.nex",
-   "md5": "bda21ab675fa271b6f51f332aae14206"
+   "md5": "69369c89035d39eac8e4211c2686503c"
   },
   "diagnostic": {
    "file": "rainbow_z80n_sprites_diag.nex",
-   "md5": "bb2058c8bb9d593364aa1515a38a130c"
+   "md5": "24e547de8e2e28982fe155611068f039"
   }
  },
  "repro": [],
  "status": {
   "title": "Rainbow Islands (128K, Z80N)",
   "engine_col": "rainbow_z80n (rainbow_z80n.md)",
-  "build": "rainbow_z80n_sprites.nex bda21ab6 (as cf017271 + Z80N hooks: 13 SWAPNIB, 2 MIRROR A, 2 ADD HL,A; raster pair read until it agrees) + rainbow_z80n_sprites_diag.nex bb2058c8",
-  "software": "RZX IDENTICAL x2 (rainbow 7178 frames, rainbownew 11799) + diagnostic IDENTICAL, unit PASS (Z80N as-NOP controls SWAPNIB / MIRROR A / ADD HL,A); timing with NEXTREG counted: 2 frames over 20 ms in rainbownew",
-  "hardware": "bda21ab6 works on a real Next and feels smoother than cf017271 (user, 2026-10-22)",
-  "next": "everything open in rainbow_islands.md (painted colours + recolour, boss-round bookmark verify); speed ideas in rainbow_z80n.md"
+  "build": "rainbow_z80n_sprites.nex 69369c89 (bda21ab6 + overrun recovery: interrupts a long game frame misses are credited to the limiter) + rainbow_z80n_sprites_diag.nex 24e547de",
+  "software": "RZX IDENTICAL x2 (rainbow 7178 frames, rainbownew 11799) + diagnostic IDENTICAL, unit PASS (recovery 9 cases + control; Z80N as-NOP controls); every simulated overrun frame credited as the beam model",
+  "hardware": "bda21ab6 works but slows down in busy scenes (user, 2026-10-31); 69369c89 untested",
+  "next": "hardware test of 69369c89 (rainbow_z80n.md checklist); everything open in rainbow_islands.md; speed ideas in rainbow_z80n.md"
  },
  "checks": [
   "asm2profile:rainbow_z80n"
