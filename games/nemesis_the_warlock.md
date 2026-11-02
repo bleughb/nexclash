@@ -1,10 +1,11 @@
 # Nemesis the Warlock (Martech 1987, 48K) - https://spectrumcomputing.co.uk/entry/3387/ZX-Spectrum/Nemesis_the_Warlock
 
 ## Next session
-Stage: 1 (design)           State: design answered 2026-11-02 (Decisions); item 6 still open
-Inputs: specnext/reference/nemesis_the_warlock/ (snapshot from the RZX, rzx, survey)    Branch: claude/festive-einstein-sx8txv
-Start with: settle Open item 6, then `scan` buffer readers (collision probe), engine sites      Read: PLAYBOOK stage 2, ## Design below
-Open: item 6 (solid/see-through; platform spikes on ULA) unanswered; buffer readers 0x800A/0x8061/0x80A5 (collision? detect.gameplay-screen-readers probe); 3-byte-wide variants (51930 = 4/5); define-keys recording
+Stage: 2 (build)            State: design approved 2026-11-02 (Decisions); build plan below (## Build plan)
+Inputs: specnext/reference/nemesis_the_warlock/ (snapshot, rzx, survey)    Branch: claude/festive-einstein-sx8txv
+Start with: copy nexclash/chuckie.py (ENGINE_CONTRACT template) -> nexclash/nemesis.py; sites first
+Read: PLAYBOOK stage 2, docs/ENGINE_CONTRACT.md, ## Build plan; wally.py only for interrupts-off back-buffer details
+Open: plot -> copy -> restore order holds on every path (0x74C2/0x74C5/0x74CE yes; 0x715E/0x7166/0x8517/0x851D: restore at 0x86A2/0x86AA after copy 0x711D? prove with the RZX)
 
 ## Facts
 - Inputs: only a SPIN 0.6 RZX (1 segment, 134,980 frames, no autosaves). Its embedded Z80 snapshot
@@ -53,6 +54,28 @@ Open: item 6 (solid/see-through; platform spikes on ULA) unanswered; buffer read
   save-under (restore then writes back unchanged bytes), build the sprite from DE (mask+image) at HL.
   detect.gameplay-screen-readers: to run in stage 2 on the buffer readers listed in Open.
 
+## Build plan (stage 1 end, 2026-11-02)
+- Every plot / restore site (CALL / CALL cc, from the snapshot):
+  plot 32 right 0x7A24: 0x7107 (player), 0x74C2, 0x715E (Z), 0x8517 (Z, enemies)
+  plot 32 left  0x7A82: 0x710D (player), 0x7166 (NZ), 0x851D (NZ, enemies)
+  plot 8x8 0x79ED: 0x70EE (NZ, when (51808) != 0; DE = 32412) ; restore 8x8 0x7A11: 0x7144 (NZ)
+  restore 32 0x7B61: 0x7134, 0x74CE, 0x86A2 (Z) ; 0x7B8B: 0x713A, 0x86AA (NZ)
+  copy 0x7D9A: 0x70AE, 0x711D, 0x74C5, 0x9217 (title) ; main frame: 0x7107 plot player,
+  0x711A CALL 0x83A9 (enemies plot), 0x711D copy, 0x7120 CALL 0x8613 (enemies restore), 0x7134 restore.
+- Method (no card fits exactly; candidate new card "overlay from save-under"): the plotters run
+  UNCHANGED, so all game memory (buffer, save-under areas) stays bit-identical to the original
+  and the verifier compares everything except the ULA pixel area. Hooks:
+  1. plot entries 0x79ED / 0x7A24 / 0x7A82 (and 24-wide 0x7FBF.. via 51930=4/5): log
+     (HL buffer addr, IY save area, DE graphic, kind) to a per-frame list, then the original.
+  2. copy 0x7D9A exit: for the logged figures in REVERSE order, write each save-under rectangle
+     (the background before that figure) onto the screen (buffer line L = screen y L, column c
+     = screen column c, visible lines 8-127, columns 2-29), then build sprites from DE
+     (mask AND, image OR; mirror via table 62394 for left) and clear the list.
+     Colour: cell ink where the game sets one, else the cell paper; mask-outline pixels = paper (solid).
+  3. full-screen screens (0x93E9 entry, title 0x921E): sprites off ($15), list cleared.
+- Hooks in alt ROM image 1 (`altrom`, decision table); interrupts are off all game (isr: 0 accepted).
+- Cost: original plot ~? T (cost --at 0x7A24); copy 68K T/frame; set a budget before writing asm.
+
 ## Decisions
 - 2026-11-02 user: plain .nex runs on CSpect (hardware not yet).
 - 1, 2, 3, 5: defaults (every figure a sprite; scenery/HUD/text on ULA; figures in front = game's
@@ -61,7 +84,8 @@ Open: item 6 (solid/see-through; platform spikes on ULA) unanswered; buffer read
   colour". Reading: sprite ink = the attribute ink the game sets in the figure's cells; where the
   game sets none for a pixel (mask outline / unset), the room's paper colour. Confirm with the
   first sheet.
-- 6: no answer yet (solid vs see-through; blue spike effect left on ULA).
+- 6 (user 2026-11-02): SOLID sprites (mask-outline pixels opaque in the paper colour). Spikes: not
+  answered; they are scenery in the buffer (blitters 0x82C3..), so they stay on the ULA by rule 2.
 
 ## Lessons
 - [local: one-off extraction; a later game with only an RZX should add an `rzx extract` command] SPIN RZX snapshot blocks are zlib-compressed Z80 (flag 2); extracted with a 10-line block parse; no CLI command extracts the first snapshot to a file.
@@ -71,4 +95,5 @@ Open: item 6 (solid/see-through; platform spikes on ULA) unanswered; buffer read
 
 ## Stage log
 - 2026-11-02 stage 0: ~2 h wall (survey ~1.8 h for 135K frames), ~25 tool calls, 4 user rounds; menus found in code.
+- 2026-11-02 stage 2 start: plan + every call site; broke before code (session ~65 calls, PLAYBOOK Sessions).
 - 2026-11-02 stage 1: ~40 min, ~20 tool calls, 2 user rounds (design answered, item 6 open).
