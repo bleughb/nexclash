@@ -3141,14 +3141,21 @@ def shifted_key(a, sb, shifts):
     """A byte of a graphic the game shifts IN PLACE (the player's 8 frames 0xD662 + 144 k: 60300
     rotates mask and gfx right / left to the figure's x & 6, so the same address holds other pixels
     after a move) -> (key, bit) of the UNSHIFTED pixel ('G<start>.<row>.<byte>'), None outside such a
-    graphic (False: a pixel the shift moved in from outside the picture)."""
+    graphic. The rows are stored serpentine (odd rows reversed: the plotters draw them leftward), so
+    a shift that moves the picture right on screen moves even rows right in memory and odd rows LEFT
+    (2026-11-02: keyed as all-right before, 927 sheet pixels ink in one figure and clear in another;
+    probe: 444,840 rows of both RZX un-shift to one picture each with this rule, 0 differ). A pixel
+    the shift moved in from outside the picture: key '...L' / '...R' (never ink, shown clear)."""
     for st, sh in shifts.items():
         if st <= a < st + SHIFT_ROWS * SHIFT_ROW:
             off = a - st
-            ux = 8 * ((off % SHIFT_ROW) // 2) + sb - sh
-            if ux < 0:                  # moved in from the left: never ink, shown clear
-                return 'G%04X.%d.L' % (st, off // SHIFT_ROW), ux & 7
-            return 'G%04X.%d.%d' % (st, off // SHIFT_ROW, ux >> 3), ux & 7
+            row = off // SHIFT_ROW
+            ux = 8 * ((off % SHIFT_ROW) // 2) + sb + (sh if row % 2 else -sh)
+            if ux < 0:
+                return 'G%04X.%d.L' % (st, row), ux & 7
+            if ux >= 24:
+                return 'G%04X.%d.R' % (st, row), ux & 7
+            return 'G%04X.%d.%d' % (st, row, ux >> 3), ux & 7
     return None
 
 
@@ -3476,6 +3483,18 @@ def sheets(cap, prefix, colours=None):
     return out
 
 
+def shifted_key_conflicts(cap):
+    """Pixels of the in-place shifted graphics ('G' keys) that are ink in one captured figure and not
+    in another: 0 when shifted_key follows the shifter (a key = one unshifted pixel, always the same)."""
+    seen = collections.defaultdict(set)
+    for c in cap.col.comps.values():
+        for p in c['parts']:
+            for (x, y, key, bit, code, d) in p['pixels']:
+                if key.startswith('G') and key[-1] not in 'LR':
+                    seen[(key, bit)].add(code == 1)
+    return sum(1 for v in seen.values() if len(v) > 1), len(seen)
+
+
 def _main(argv=None):
     import argparse
     ap = argparse.ArgumentParser(prog='python -m nexclash.rainbow_z80n',
@@ -3489,6 +3508,9 @@ def _main(argv=None):
         os.path.basename(r), n, ' (WARNING: desync: %s)' % err if err else ''), flush=True))
     for (isl, what), (d, nz) in cap.coverage().items():
         print('island %d %s: %d of %d non-zero buffer bytes drawn (%.0f%%)' % (isl, what, d, nz, 100.0 * d / max(nz, 1)))
+    bad, n = shifted_key_conflicts(cap)
+    print('player (shifted in place): %d pixels keyed, %d ink in one figure and not in another%s' % (
+        n, bad, ' - WARNING: shifted_key does not follow the shifter' if bad else ''))
     for png, n in sheets(cap, a.output):
         print('%d figures -> %s' % (n, png))
 

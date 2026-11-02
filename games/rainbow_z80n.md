@@ -152,6 +152,12 @@ the fixed T accounting (below) on 2000 frames, x 8/6.5 for the 28 MHz wait state
   AY ticks of interrupts a frame missed are not re-sent at the frame end; the queue's catch-up
   (two per interrupt, flush when full) covers them.
 
+- [local: the player's shifted-in-place frames are stored serpentine] Sheet keys un-shifted every row
+  the same way; odd rows move the other way in memory, so 927 player pixels were ink in one figure and
+  clear in another (painting landed elsewhere). shifted_key fixed by row parity (probe: 444,840 rows of
+  both RZX, 0 differ); `sheet` now reports such conflicts (0 on the painting sheet; 2 on the reference
+  sheet, frame D932 at shift 4, only in the LeeBee rounds - most likely the game's own shifter).
+
 ## Technique use
 - patch.isr-deferral: no help: about re-entrancy of a game ISR under hook time, not about pacing
   (judged from index.json; no card covers limiter pacing - written to LEARNINGS 2.1f instead)
