@@ -1,10 +1,10 @@
 # Nemesis the Warlock (Martech 1987, 48K) - https://spectrumcomputing.co.uk/entry/3387/ZX-Spectrum/Nemesis_the_Warlock
 
 ## Next session
-Stage: 1 (design)           State: design question sent 2026-11-02, awaiting answer
+Stage: 1 (design)           State: design answered 2026-11-02 (Decisions); item 6 still open
 Inputs: specnext/reference/nemesis_the_warlock/ (snapshot from the RZX, rzx, survey)    Branch: claude/festive-einstein-sx8txv
-Start with: the user's answer to the design question -> Decisions; then stage 2      Read: PLAYBOOK stage 2, ## Design below
-Open: buffer readers 0x800A/0x8061/0x80A5 (collision? detect.gameplay-screen-readers probe); 3-byte-wide variants (51930 = 4/5); define-keys recording
+Start with: settle Open item 6, then `scan` buffer readers (collision probe), engine sites      Read: PLAYBOOK stage 2, ## Design below
+Open: item 6 (solid/see-through; platform spikes on ULA) unanswered; buffer readers 0x800A/0x8061/0x80A5 (collision? detect.gameplay-screen-readers probe); 3-byte-wide variants (51930 = 4/5); define-keys recording
 
 ## Facts
 - Inputs: only a SPIN 0.6 RZX (1 segment, 134,980 frames, no autosaves). Its embedded Z80 snapshot
@@ -54,7 +54,14 @@ Open: buffer readers 0x800A/0x8061/0x80A5 (collision? detect.gameplay-screen-rea
   detect.gameplay-screen-readers: to run in stage 2 on the buffer readers listed in Open.
 
 ## Decisions
-(none yet - stage 1 question)
+- 2026-11-02 user: plain .nex runs on CSpect (hardware not yet).
+- 1, 2, 3, 5: defaults (every figure a sprite; scenery/HUD/text on ULA; figures in front = game's
+  rule; sprites off while full-screen menus are up).
+- 4 (user, verbatim): "if game defines a colour, use it, otherwise same as background paper
+  colour". Reading: sprite ink = the attribute ink the game sets in the figure's cells; where the
+  game sets none for a pixel (mask outline / unset), the room's paper colour. Confirm with the
+  first sheet.
+- 6: no answer yet (solid vs see-through; blue spike effect left on ULA).
 
 ## Lessons
 - [local: one-off extraction; a later game with only an RZX should add an `rzx extract` command] SPIN RZX snapshot blocks are zlib-compressed Z80 (flag 2); extracted with a 10-line block parse; no CLI command extracts the first snapshot to a file.
@@ -64,3 +71,4 @@ Open: buffer readers 0x800A/0x8061/0x80A5 (collision? detect.gameplay-screen-rea
 
 ## Stage log
 - 2026-11-02 stage 0: ~2 h wall (survey ~1.8 h for 135K frames), ~25 tool calls, 4 user rounds; menus found in code.
+- 2026-11-02 stage 1: ~40 min, ~20 tool calls, 2 user rounds (design answered, item 6 open).
