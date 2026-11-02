@@ -129,6 +129,14 @@
     "sprites": "670f94034af175ed56df97f8cdb1ef29"
    }
   },
+  "f7d376977b93b515feaff1672c212b12": {
+   "game": "Nemesis the Warlock",
+   "doc": "nemesis_the_warlock.md",
+   "nex": {
+    "plain": "f1497589ddf479e34d42f6ab0618954d",
+    "sprites": "2071743eab2e959943039aea5e233262"
+   }
+  },
   "4c98b980b1726af545fccc99665ef29b": {
    "game": "Rainbow Islands (128K, Z80N)",
    "doc": "rainbow_z80n.md",

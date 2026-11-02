@@ -1,0 +1,73 @@
+{
+ "name": "nemesis_the_warlock",
+ "order": 23,
+ "game": "Nemesis the Warlock",
+ "doc": "nemesis_the_warlock.md",
+ "engine": "nemesis",
+ "representative": true,
+ "reference": "nemesis_the_warlock",
+ "inputs": {
+  "snapshot": {
+   "name": "nemesis_the_warlock.z80",
+   "md5": "f7d376977b93b515feaff1672c212b12",
+   "path": "nemesis_the_warlock/nemesis_the_warlock.z80"
+  },
+  "recordings": [
+   {
+    "name": "nemesis_the_warlock.rzx",
+    "md5": "c46e94525128df6f98993f0ebde5c49c",
+    "path": "nemesis_the_warlock/nemesis_the_warlock.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "nemesis"
+ ],
+ "own_modules": [
+  "nemesis"
+ ],
+ "data": [
+  "docs/profiles/nemesis_the_warlock.json",
+  "asm/nemesis_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "nemesis_the_warlock.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 240
+ },
+ "outputs": {
+  "plain": {
+   "file": "nemesis_the_warlock.nex",
+   "md5": "f1497589ddf479e34d42f6ab0618954d"
+  },
+  "sprites": {
+   "file": "nemesis_the_warlock_sprites.nex",
+   "md5": "2071743eab2e959943039aea5e233262"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Nemesis the Warlock",
+  "engine_col": "nemesis (nemesis_the_warlock.md)",
+  "build": "nemesis_the_warlock_sprites.nex 2071743e",
+  "software": "quick 2000 IDENTICAL, unit PASS",
+  "hardware": "untested",
+  "next": "stage 3: full verification"
+ },
+ "checks": [
+  "asm2profile:nemesis_the_warlock"
+ ]
+}
