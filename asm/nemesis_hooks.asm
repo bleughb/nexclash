@@ -15,10 +15,14 @@
 ;   31362 3A DA CA     LD A,(51930) (32-line plot left)   -> JP e_pl
 ;   32154 21 F8 5D     LD HL,24056 (buffer -> screen)     -> JP e_cp
 ;   37865 21 00 40     LD HL,16384 (full-screen draw)     -> JP e_cls
+;   35321 EE 5A 77     XOR 90 / LD (HL),A (effect)        -> JP e_x1 (then the RET at 35324)
+;   35334 EE 5A 77     XOR 90 / LD (HL),A (effect)        -> JP e_x2
+; The XOR effect can toggle a buffer byte under a figure after its plot: post undoes every event
+; in reverse (XOR = toggle, plot = save-under), then toggles the XORs again (they stay on the ULA).
 
         DEVICE ZXSPECTRUMNEXT
 
-NENT    EQU 16          ; figures per frame (4 sprites each)
+NENT    EQU 24          ; events per frame: figures (4 sprites each) + XOR effects
 NSLOT   EQU 32          ; cached images (4 patterns each)
 BUFBASE EQU 23798       ; back buffer: line L, column c at BUFBASE + 32L + c = screen (c*8, L)
 ROOMATT EQU 51800
@@ -61,6 +65,8 @@ e_p8:   push af
 
 ; B = width (1, 3, 4), C = direction (0 right, 1 left); HL, DE, IY = plotter inputs
 logent: ld a,b
+        or a
+        jr z,.ok                ; XOR event
         dec a
         jr z,.ok                ; 8x8: its own save area
         ld a,iyh
@@ -107,6 +113,23 @@ logent: ld a,b
         inc (hl)
         pop de
         pop hl
+        ret
+
+; ---- XOR effect: log the buffer address as an event (width 0) ----
+e_x1:   xor 90
+        ld (hl),a
+        call logx
+        ret
+e_x2:   xor 90
+        ld (hl),a
+        call logx
+        jp 35337
+logx:   push af
+        push bc
+        ld bc,0
+        call logent
+        pop bc
+        pop af
         ret
 
 ; ---- full-screen draw: sprites off, log cleared ----
@@ -164,7 +187,7 @@ post:   push af
         or 8
 .p:     call rgb
         nextreg 0x41,a
-        ; background back onto the screen, last figure first
+        ; background back onto the screen: every event undone, last first
         ld a,(cnt)
         or a
         jr z,.spr
@@ -173,9 +196,28 @@ post:   push af
         ld a,b
         dec a
         call entry
-        call unpaint
-        pop bc
+        ld a,(ix+6)
+        or a
+        jr nz,.up
+        call xorput
+        jr .ux
+.up:    call unpaint
+.ux:    pop bc
         djnz .un
+        ; the XOR effects again, in order
+        ld a,(cnt)
+        ld b,a
+        xor a
+.xf:    push bc
+        push af
+        call entry
+        ld a,(ix+6)
+        or a
+        call z,xorput
+        pop af
+        inc a
+        pop bc
+        djnz .xf
 .spr:   ld a,(cnt)
         or a
         jr z,.hide
@@ -417,10 +459,65 @@ down:   inc h
         ld h,a
         ret
 
+; buffer address of entry IX: toggle (XOR 90) its screen byte when inside the copy window
+xorput: ld l,(ix+0)
+        ld h,(ix+1)
+        ld de,BUFBASE
+        or a
+        sbc hl,de
+        ret c
+        ld a,h
+        cp 16
+        ret nc
+        ld a,l
+        and 31
+        cp 2
+        ret c
+        cp 30
+        ret nc
+        ld e,a
+        ld a,l
+        rlca
+        rlca
+        rlca
+        and 7
+        ld d,a
+        ld a,h
+        add a,a
+        add a,a
+        add a,a
+        or d
+        cp 8
+        ret c
+        ld d,a
+        and 7
+        ld h,a
+        ld a,d
+        and 0xC0
+        rrca
+        rrca
+        rrca
+        or h
+        or 0x40
+        ld h,a
+        ld a,d
+        and 0x38
+        add a,a
+        add a,a
+        or e
+        ld l,a
+        ld a,(hl)
+        xor 90
+        ld (hl),a
+        ret
+
 ; ---- sprites 4A..4A+3 for entry IX ----
 mkspr:  add a,a
         add a,a
         ld (t_spr),a
+        ld a,(ix+6)
+        or a
+        jp z,.off               ; XOR event: no sprite
         call lookup             ; A = first pattern (4 x slot)
         ld (t_pat),a
         ld l,(ix+0)

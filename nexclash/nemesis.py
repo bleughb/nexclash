@@ -21,13 +21,16 @@ TAIL_ADDR = 0x5E00          # back buffer: written before it is read (scan 2026-
 BUFBASE = 23798
 ROOMATT = 51800
 WIN_X, WIN_Y = (16, 240), (8, 128)          # copy window in pixels
-SITES_ORIG = {31213: '0608dd', 31268: '3adaca', 31362: '3adaca', 32154: '21f85d', 37865: '210040'}
-SITE_SYM = {31213: 'e_p8', 31268: 'e_pr', 31362: 'e_pl', 32154: 'e_cp', 37865: 'e_cls'}
-SITE_KIND = {31213: 'p8', 31268: 'pr', 31362: 'pl', 32154: 'cp', 37865: 'cls'}
-CONT = {'p8': 31219, 'pr': 31271, 'pl': 31365, 'cls': 37868}
+SITES_ORIG = {31213: '0608dd', 31268: '3adaca', 31362: '3adaca', 32154: '21f85d', 37865: '210040',
+              35321: 'ee5a77', 35334: 'ee5a77'}
+SITE_SYM = {31213: 'e_p8', 31268: 'e_pr', 31362: 'e_pl', 32154: 'e_cp', 37865: 'e_cls', 35321: 'e_x1',
+            35334: 'e_x2'}
+SITE_KIND = {31213: 'p8', 31268: 'pr', 31362: 'pl', 32154: 'cp', 37865: 'cls', 35321: 'x1', 35334: 'x2'}
+CONT = {'p8': 31219, 'pr': 31271, 'pl': 31365, 'cls': 37868, 'x1': 35324, 'x2': 35337}
+NENT = 24                   # events per frame (asm NENT)
 COPY_RET = 32379            # the copy routine's RET
 INTERIORS = (31214, 31216, 31217, 31218, 31269, 31270, 31363, 31364, 32155, 32156,
-             37866, 37867)
+             37866, 37867, 35322, 35323, 35335, 35336)
 SPECCY = [0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6,
           0x00, 0x03, 0xE0, 0xE7, 0x1C, 0x1F, 0xFC, 0xFF]
 FULL_RUNS = 20              # copy events run through e_cp in full; later ones start at post
@@ -170,9 +173,11 @@ def _rev(b):
 
 
 def figure_writes(fig, peek):
-    """Model of one plot: [(buffer address, mask byte, image byte, save-under address)] in write
-    order, bytes already mirrored for a left plot."""
+    """Model of one plot: [(buffer address, mask byte, image byte, save-under address, wrapped)] in
+    write order, bytes already mirrored for a left plot; wrapped = past column 31 (the byte lands on
+    the next line's left edge: the hook leaves it on the ULA, as the original shows it)."""
     hl, iy, de, w, d = fig
+    c0 = (hl - BUFBASE) & 31
     lines = 8 if w == 1 else 32
     img = de + {1: 8, 3: 96, 4: 128}[w]
     out = []
@@ -183,7 +188,7 @@ def figure_writes(fig, peek):
             col = (w - 1 - j) if d else j
             if d:
                 m, g = _rev(m), _rev(g)
-            out.append(((hl + 32 * r + col) & 0xFFFF, m, g, (iy + k) & 0xFFFF))
+            out.append(((hl + 32 * r + col) & 0xFFFF, m, g, (iy + k) & 0xFFFF, c0 + col > 31))
             k += 1
     return out
 
@@ -197,24 +202,46 @@ def _visible(a):
 
 
 def expected(figs, peek):
-    """From the original state just after the copy: (background screen bytes {addr: v},
-    composed screen bytes, expected sprite layer {(x, y): 1 ink / 2 paper})."""
-    scr = {}
-    writes = [figure_writes(f, peek) for f in figs]
-    for ws in reversed(writes):
-        for a, m, g, s in reversed(ws):
-            v = _visible(a)
+    """From the original state just after the copy, events = plots (tuples of 5) and XOR effects
+    (('x', buffer address)): (expected ULA bytes {addr: v}, the original screen rebuilt from the
+    background + events, expected sprite layer {(x, y): 1 ink / 2 paper})."""
+    cur = {}
+    get = lambda a: cur[a] if a in cur else peek(a)
+    writes = [figure_writes(f, peek) if f[0] != 'x' else f for f in figs]
+    for ws in reversed(writes):                     # undo every event, last first
+        if ws[0] == 'x':
+            v = _visible(ws[1])
             if v:
-                scr[_ula(*v)] = peek(s)
-    comp = dict(scr)
+                cur[_ula(*v)] = get(_ula(*v)) ^ 0x5A
+            continue
+        for a, m, g, s, wr in reversed(ws):
+            v = _visible(a)
+            if v and not wr:
+                cur[_ula(*v)] = peek(s)
+    bg = dict(cur)
+    for ws in writes:                               # the XOR effects again: they stay on the ULA
+        if ws[0] == 'x':
+            v = _visible(ws[1])
+            if v:
+                cur[_ula(*v)] = get(_ula(*v)) ^ 0x5A
+    scr = cur
+    comp = dict(bg)
+    gc = lambda a: comp[a] if a in comp else peek(a)
     lay = {}
     for ws in writes:
-        for a, m, g, s in ws:
+        if ws[0] == 'x':
+            v = _visible(ws[1])
+            if v:
+                comp[_ula(*v)] = gc(_ula(*v)) ^ 0x5A
+            continue
+        for a, m, g, s, wr in ws:
             v = _visible(a)
             if not v:
                 continue
             sa = _ula(*v)
-            comp[sa] = (comp.get(sa, peek(sa)) & m) | g
+            comp[sa] = (gc(sa) & m) | g
+            if wr:
+                continue
             y, c = v
             for k in range(8):
                 bit = 0x80 >> k
@@ -371,6 +398,29 @@ def plot_event(eng, kind, get, R):
     return f
 
 
+def xor_event(eng, kind, get, R):
+    """Patched XOR effect (XOR 90 / LD (HL),A) from the original's state: same registers and the
+    same game memory at the continuation; the model logs the event."""
+    a = R[6] << 8 | R[7]
+    eng.figs.append(('x', a))
+    stop = (lambda r: r[24] == 35324) if kind == 'x1' else (lambda r: r[24] == 35337)
+    o = _PMem(get, bytearray(8192), {}, eng.rom)
+    so = _machine(o, list(R), NextState())
+    p = _PMem(get, eng.page, eng.psite, eng.rom)
+    sim = _machine(p, list(R), eng.ns)
+    if not (_run(so, stop) and _run(sim, stop)):
+        return ['xor hook did not return']
+    f = []
+    diff = [i for i in CMP if so.registers[i] != sim.registers[i]]
+    if diff:
+        f.append(('xor: registers differ', diff[:6]))
+    dead = range(R[12] - 64, R[12])
+    md = [b for b in set(o.ov) | set(p.ov) if b not in dead and o[b] != p[b]]
+    if md:
+        f.append(('xor: game memory differs', md[:3]))
+    return f
+
+
 def cls_event(eng, get, R):
     eng.figs = []
     p = _PMem(get, eng.page, eng.psite, eng.rom)
@@ -456,8 +506,8 @@ def copy_event(eng, get, R, full, orig_end=None):
     cd = [a for a, v in comp.items() if v != after(a)]
     if cd:
         f.append(('model: original screen != background + figures (something else drew)', len(cd)))
-    if len(figs) > 16:
-        f.append(('more than 16 figures in a frame', len(figs)))
+    if len(figs) > NENT:
+        f.append(('more than %d events in a frame' % NENT, len(figs)))
     got = eng.ns.layer()
     if got != lay:
         f.append(('sprite pixels differ from the model', len(set(got.items()) ^ set(lay.items()))))
@@ -546,6 +596,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, cost=False):
                                 states.append((kind, list(R), bytes(G(mem, a) for a in range(65536)),
                                                eng.snapshot()))
                             report(kind, plot_event(eng, kind, get, R))
+                        elif kind in ('x1', 'x2'):
+                            c['xor'] += 1
+                            report(kind, xor_event(eng, kind, get, R))
                         elif kind == 'cls':
                             c['cls'] += 1
                             report('cls', cls_event(eng, get, R))
@@ -601,6 +654,12 @@ def _unit_frame(patch, mem, R_cp, eng_state, figs_in, neg=False):
     fl = []
     sp = R_cp[12]
     for fig in figs_in:
+        if fig[0] == 'x':
+            r = list(R_cp)
+            r[6], r[7], r[0], r[24] = fig[1] >> 8, fig[1] & 255, m[fig[1]], 35334
+            fl += xor_event(eng, 'x2', m.__getitem__, r)
+            m[fig[1]] ^= 0x5A
+            continue
         hl, iy, de, w, d = fig
         kind = 'p8' if w == 1 else ('pl' if d else 'pr')
         entry = {'p8': 31213, 'pr': 31268, 'pl': 31362}[kind]
@@ -658,11 +717,18 @@ def unit_tests(patch, states, neg=None):
     c['16 overlapping figures %s' % ('ok' if not fl else 'FAIL!')] += 1
     if fl:
         c['  16 figures: %s' % str(fl[:2])[:150]] += 1
+    # XOR effects: inside a figure after its plot, outside any figure, before a plot
+    x0 = figs[0][0] + 32 * 5 + 1
+    fl = _unit_frame(patch, mem, R, es, [('x', BUFBASE + 32 * 50 + 9), figs[0], ('x', x0), figs[1],
+                                         ('x', x0 + 32)])
+    c['xor effects %s' % ('ok' if not fl else 'FAIL!')] += 1
+    if fl:
+        c['  xor: %s' % str(fl[:2])[:150]] += 1
     # a permanent stamp (save-under IY = 0, 0x7162) under two figures: scenery, no sprite
     fl = _unit_frame(patch, mem, R, es, [(figs[0][0], 0, de, 4, 1)] + figs[:2])
     c['stamp (IY = 0) stays scenery %s' % ('ok' if not fl else 'FAIL!')] += 1
-    fl = _unit_frame(patch, mem, R, es, figs + figs[:1])
-    c['17 figures: limit reported %s' % ('ok' if any('more than 16' in str(x) for x in fl) else 'FAIL!')] += 1
+    fl = _unit_frame(patch, mem, R, es, figs + figs[:9])
+    c['25 figures: limit reported %s' % ('ok' if any('more than 24' in str(x) for x in fl) else 'FAIL!')] += 1
     if neg is not None:
         fl = _unit_frame(neg, mem, R, es, figs[:4])
         c['negative control %s' % ('detected' if fl else 'NOT DETECTED!')] += 1
@@ -707,8 +773,8 @@ def auto(a, z80, name, out, say):
         fails = {k: v for k, v in c.items() if k.endswith('!')}
         ok = ok and not fails
         say('Verify    : %s  %d frames, copies %d (%d full), plots right %d left %d 8x8 %d, clears %d, '
-            '%d sprite pixels -> %s' % (os.path.basename(r), c['frames'], c['cp'], c['cp full'], c['pr'],
-                                        c['pl'], c['p8'], c['cls'], c['sprite pixels compared'],
+            'xor effects %d, %d sprite pixels -> %s' % (os.path.basename(r), c['frames'], c['cp'], c['cp full'], c['pr'],
+                                        c['pl'], c['p8'], c['cls'], c['xor'], c['sprite pixels compared'],
                                         'IDENTICAL' if not fails else 'FAILED %s' % fails))
         for k, v in ex.items():
             say('            %s: %s' % (k, str(v)[:200]))
@@ -720,8 +786,9 @@ def auto(a, z80, name, out, say):
         u = unit_tests(patch, states, negative_patch(patch))
         uf = {k: v for k, v in u.items() if k.endswith('!')}
         ok = ok and not uf
-        say('Unit      : edges %d, 8x8 %d, 16 figures %d, stamp %d, negative control %d/%d -> %s' % (
-            u['edge cases ok'], u['8x8 cases ok'], u['16 overlapping figures ok'], u['stamp (IY = 0) stays scenery ok'],
+        say('Unit      : edges %d, 8x8 %d, 16 figures %d, xor %d, stamp %d, negative control %d/%d -> %s' % (
+            u['edge cases ok'], u['8x8 cases ok'], u['16 overlapping figures ok'], u['xor effects ok'],
+            u['stamp (IY = 0) stays scenery ok'],
             u['negative control detected'], u['negative control detected'] + u['negative control NOT DETECTED!'],
             'PASS' if not uf else 'FAIL %s' % uf))
         for k, v in u.items():
