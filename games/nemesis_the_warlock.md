@@ -1,11 +1,11 @@
 # Nemesis the Warlock (Martech 1987, 48K) - https://spectrumcomputing.co.uk/entry/3387/ZX-Spectrum/Nemesis_the_Warlock
 
 ## Next session
-Stage: 2 (build)            State: design approved 2026-11-02 (Decisions); build plan below (## Build plan)
-Inputs: specnext/reference/nemesis_the_warlock/ (snapshot, rzx, survey)    Branch: claude/festive-einstein-sx8txv
-Start with: copy nexclash/chuckie.py (ENGINE_CONTRACT template) -> nexclash/nemesis.py; sites first
-Read: PLAYBOOK stage 2, docs/ENGINE_CONTRACT.md, ## Build plan; wally.py only for interrupts-off back-buffer details
-Open: plot -> copy -> restore order holds on every path (0x74C2/0x74C5/0x74CE yes; 0x715E/0x7166/0x8517/0x851D: restore at 0x86A2/0x86AA after copy 0x711D? prove with the RZX)
+Stage: 3 (prove + deliver)  State: engine built 2026-11-02; quick runs PASS (## Results); record written
+Inputs: specnext/reference/nemesis_the_warlock/ (snapshot, rzx)    Branch: claude/festive-einstein-sx8txv
+Start with: `python selftest.py --game nemesis_the_warlock --verify --stamp` (detached; ~3-4 h for 135K frames)
+Read: PLAYBOOK stage 3, docs/COLOURS.md (sheets: not built yet), BRIEFING A1 (6b review)
+Open: colour sheets + recolour not built (colours are the room attribute, fixed rule); permanent stamps (corpses?) stay on the ULA - tell the user
 
 ## Facts
 - Inputs: only a SPIN 0.6 RZX (1 segment, 134,980 frames, no autosaves). Its embedded Z80 snapshot
@@ -76,6 +76,26 @@ Open: plot -> copy -> restore order holds on every path (0x74C2/0x74C5/0x74CE ye
 - Hooks in alt ROM image 1 (`altrom`, decision table); interrupts are off all game (isr: 0 accepted).
 - Cost: original plot ~? T (cost --at 0x7A24); copy 68K T/frame; set a budget before writing asm.
 
+## Engine (stage 2, 2026-11-02)
+- nexclash/nemesis.py + asm/nemesis_hooks.asm + docs/profiles/nemesis_the_warlock.json; hooks and
+  state in RAM page 24 at MMU slot 1 (0x2000-0x3FFF; the game reads no ROM there); tail 0x5E00 (back
+  buffer, write-first). Sites: 31213 / 31268 / 31362 (plot log), 32154 (copy -> post), 37865 (cls).
+- post (after each copy): palette 1 / 2 = room attribute (51800) ink / paper; save-unders back onto
+  the screen, last figure first; 4 sprites (2x2, 4-bit) per figure, pattern cache 32 x (graphic, width).
+- Plots with the save-under in ROM (IY = 0: 0x7162, when (51932) is set) are PERMANENT stamps into
+  the buffer (no restore): scenery, left on the ULA [observed: model check failed until excluded].
+- Verifier: original replay; per plot the hook vs the original instruction; per copy the hook from
+  the original's RET (first 20 copies run e_cp in full): registers, all game memory except the ULA
+  pixels, ULA = background model (save-unders), sprite layer = figure model (mask / image, mirror),
+  palette = room attribute, and the model itself = original screen (background + figures).
+
+## Results
+- quick 2000 (2026-11-02): 475 copies (20 full), plots 710 right / 795 left / 52 8x8, 517,912 sprite
+  pixels IDENTICAL; unit: edges 252, 8x8 16, 16 overlapping, stamp, negative control 1/1 PASS.
+- Speed (post hook, 28 MHz): 53,447 T mean / 242,166 T max (~8.9K / 40K T at 3.5 MHz); cache
+  misses ~0.13 per frame (34 graphics in 2000 frames).
+- Builds: plain f1497589ddf479e34d42f6ab0618954d, sprites 2071743eab2e959943039aea5e233262.
+
 ## Decisions
 - 2026-11-02 user: plain .nex runs on CSpect (hardware not yet).
 - 1, 2, 3, 5: defaults (every figure a sprite; scenery/HUD/text on ULA; figures in front = game's
@@ -88,12 +108,16 @@ Open: plot -> copy -> restore order holds on every path (0x74C2/0x74C5/0x74CE ye
   answered; they are scenery in the buffer (blitters 0x82C3..), so they stay on the ULA by rule 2.
 
 ## Lessons
+- [card detect.buffer-layout-producer §Contract] Overlay from save-under: with a masked back-buffer plotter that saves the background (IY), the hooks leave the plotters and all game memory untouched and rebuild the screen from the save-unders after the copy; the verifier then compares ALL game memory. Card amended with this as a second producer pattern.
+- [local: game-specific] A plot whose save-under pointer is in ROM is a permanent stamp (scenery), not a figure: check every plot caller's save pointer before treating it as a sprite.
+- [local: measured here; the PLAYBOOK speed budget already asks for it] Row address arithmetic per row cost 3x the copy itself (620 T/row): compute visible row range + screen address once, step with the next-line routine.
 - [local: one-off extraction; a later game with only an RZX should add an `rzx extract` command] SPIN RZX snapshot blocks are zlib-compressed Z80 (flag 2); extracted with a 10-line block parse; no CLI command extracts the first snapshot to a file.
 
 ## Technique use
-- detect.buffer-layout-producer: used: not yet (stage 1 will need it for the 0x7D9A back buffer)
+- detect.buffer-layout-producer: helped: copy -> buffer -> masked plotters with save-under found in 3 scans
 
 ## Stage log
 - 2026-11-02 stage 0: ~2 h wall (survey ~1.8 h for 135K frames), ~25 tool calls, 4 user rounds; menus found in code.
+- 2026-11-02 stage 2: ~3 h, ~60 tool calls, 1 user round (engine, quick runs, record).
 - 2026-11-02 stage 2 start: plan + every call site; broke before code (session ~65 calls, PLAYBOOK Sessions).
 - 2026-11-02 stage 1: ~40 min, ~20 tool calls, 2 user rounds (design answered, item 6 open).

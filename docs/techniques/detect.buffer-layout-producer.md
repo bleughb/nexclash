@@ -57,7 +57,11 @@ link. Keep a compact mapping, writer list and representative events; store raw c
 
 ## Contract
 Output: physical buffer identity, layout mapping, producer/copy entries, update ordering and scope.
-Feeds detect.tracked-unit and potentially patch.scratch-redirect. A buffer finding alone does not
+Feeds detect.tracked-unit and potentially patch.scratch-redirect. A masked producer that keeps a
+save-under (Nemesis the Warlock: AND/OR into the buffer, background bytes to IY) allows an
+overlay instead: plotters untouched, the screen rebuilt from the save-unders after the copy, so
+all game memory stays comparable (games/nemesis_the_warlock.md "Engine"). Check every producer
+call's save pointer: one in ROM is a permanent stamp (scenery). A buffer finding alone does not
 establish redirectability, absence of gameplay readers, interrupt safety or Display equivalence.
 Manual evaluation; unmatched producers and unreached scenes stay unknown.
 
@@ -80,5 +84,6 @@ required checks for future applications, not results of this documentation chang
 - External sources (metadata), source-reviewed only: Ranarama's handler uses room dimensions and
   maps display positions to offsets; Chase HQ's `DrawBackBufferToView` permutes row-address bits
   from known 0xF000. Both depend on already-identified game layouts.
+- Local: games/nemesis_the_warlock.md (save-under overlay, 2026-11-02).
 - Local motivation: games/midnight_resistance.md describes a linear buffer and shared address
   helper; games/cyclone.md documents figures composed into dynamic tiles rather than the screen.
