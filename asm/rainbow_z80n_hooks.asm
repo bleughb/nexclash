@@ -914,7 +914,7 @@ s_pc:
         ld (hl),a
 ; --- store lookup. Key = IX + AF' carry + the WHOLE stream (compared in full). Hash of IXl,
 ; carry and the first <= 16 stream bytes -> set (512 sets x 2 ways, 256 bytes per entry).
-        ld a,(V_LEN)
+.c_key: ld a,(V_LEN)                ; (colour build: call t_key)
         cp 17
         jr c,.hl
         ld a,16
@@ -973,7 +973,7 @@ s_pc:
         inc de
         inc l
         djnz .cmp
-        jp hit
+.c_hit: jp hit                      ; (colour build: jp t_hit)
 .wn:    inc h
         dec c
         jr nz,.way
@@ -1112,7 +1112,7 @@ miss:   ld a,h
         ld hl,V_NS
         cp (hl)
         jr c,.spr
-        call nooutl                 ; classes without outline: outline pixels (2) -> transparent (0)
+.c_miss: call nooutl                ; (colour build: call t_miss) classes without outline: outline pixels (2) -> transparent (0)
         ld hl,(V_ENT)               ; header: IXl IXh key stamp vis0-2 nspr, stream at +8
         ld a,(V_IX)
         ld (hl),a
@@ -1278,7 +1278,7 @@ regsdone:
         add a,32
         ld c,a
         ld a,(V_SP+1)               ; palette offset by graphics page
-        ld e,a
+.c_pal: ld e,a                      ; (colour build: call t_pal / nop)
         ld d,high CLASSTAB
         ld a,(de)
         and 0xF0                    ; bit 0 = no-outline flag, not attr2's X8
@@ -2695,6 +2695,297 @@ odraw:  ld a,(V_CLS)
 
 code2_end:
 
+; --- colour map (2026-11-02; games/rainbow_z80n.md "Colour map"). Only in builds with a colour map:
+; Python writes this block over MIRTAB (unused by these hooks), the colour pass + tables into page 25
+; (C_*), and splices s_pc.c_key -> call t_key, s_pc.c_hit -> jp t_hit, miss.c_miss -> call t_miss,
+; regsdone.c_pal -> call t_pal / nop. Painted pieces (the player 0xD662 + 144k, k 0-7, at shift
+; 0xC676 + k; the thrown rainbow 0xC3xx) get V_KEY bit 2 + a 3-byte tag after the stream in the entry
+; and sprite palette offset 15 (the sheet's colours); their patterns are the colour window CW.
+V_CPNT  EQU 0x0090          ; 1 = this piece is painted
+V_CTAG  EQU 0x0091          ; its tag: gfx lo, gfx hi, shift
+V_CIDX  EQU 0x0094          ; colour pass: row index of the byte (k * 24 + row)
+V_CLB   EQU 0x0095          ; colour pass: layout byte
+V_CPASS EQU 0x0096          ; colour pass: 0x80 = mask bytes, 0 = ink bytes
+C_ROWIDX EQU 0x4700         ; page 25 at slot 2: per player byte (A - 0xD662) its k * 24 + row
+C_DEF   EQU 0x4B80          ; default pattern byte | 0x80 -> offset-15 colours (1 ink -> 15, 2 outline -> 1)
+C_RB    EQU 0x4C00          ; rainbow: 4 bytes (8 nibbles, stored bit order) per address 0xC300-0xC3FF
+C_CW    EQU 0x5000          ; colour window: 4 bytes per window position (rows 0-7: 48 x 4)
+C_ROWS  EQU 0x50C0          ; player: 18 bytes per (k, row): 6 pad + 24 unshifted pixels + 6 pad nibbles
+C_CODE  EQU 0x5E40
+
+        ORG MIRTAB
+t_key:  xor a                       ; at s_pc.c_key (LD A,(V_LEN)): painted piece? -> tag, V_KEY bit 2
+        ld (V_CPNT),a
+        ld hl,(V_SP)
+        ld a,(V_LEN)
+        ld c,a
+        ld a,h
+        cp 0xC3
+        jr nz,.pl
+        ld a,l                      ; rainbow: the stream ends inside 0xC3xx
+        add a,c
+        jr nc,.rb
+        jr nz,.no
+.rb:    xor a                       ; shift 0
+        jr .yes
+.pl:    ld de,0x299E                ; HL = A - 0xD662 (carry: A >= 0xD662)
+        add hl,de
+        jr nc,.no
+        ld de,0xFF70                ; k = off / 144
+        ld b,0xFF
+.dv:    inc b
+        add hl,de
+        jr c,.dv
+        ld de,144
+        add hl,de                   ; offset in the frame
+        ld a,b
+        cp 8
+        jr nc,.no
+        ld a,l                      ; the stream ends inside frame k
+        add a,c
+        jr c,.no
+        cp 145
+        jr nc,.no
+        ld a,b
+        add a,0x76
+        ld l,a
+        ld h,0xC6
+        ld a,(hl)                   ; shift of frame k (game bank 0 at slot 3)
+        ld b,a
+        and 0xF9                    ; 0, 2, 4, 6 only
+        jr nz,.no
+        ld a,b
+.yes:   ld (V_CTAG+2),a
+        ld hl,(V_SP)
+        ld (V_CTAG),hl
+        ld a,1
+        ld (V_CPNT),a
+        ld a,(V_KEY)
+        or 4
+        ld (V_KEY),a
+.no:    ld a,(V_LEN)
+        ret
+
+t_hit:  ld a,(V_KEY)                ; at s_pc.c_hit: the stream matched (L = 8 + len)
+        and 4
+        jp z,hit
+        ld de,V_CTAG
+        ld b,3
+.c:     ld a,(de)
+        cp (hl)
+.cj:    jp nz,s_pc.wn               ; (unit-test negative control: tag not compared)
+        inc de
+        inc l
+        djnz .c
+        jp hit
+
+t_miss: call nooutl                 ; at miss.c_miss
+        ld a,(V_CPNT)
+        or a
+        ret z
+        nextreg 0x52,PAGE_F
+        call cpass
+        nextreg 0x52,10
+        ret
+
+t_pal:  ld e,a                      ; at regsdone.c_pal: offset 15 for painted pieces
+        ld d,high CLASSTAB
+        ld a,(V_CPNT)
+        or a
+        ld a,0xF0
+        ret nz
+        ld a,(de)
+        ret
+pagec_end:
+
+        ORG C_CODE
+cpass:  ld hl,C_CW                  ; CW = 0 (default)
+        xor a
+        ld b,192
+.z:     ld (hl),a
+        inc l
+        djnz .z
+        nextreg 0x51,PAGE_T         ; layout table at slot 1
+        ld a,0x80                   ; mask bytes first, ink bytes over them
+        call cbytes
+        xor a
+        call cbytes
+        ld a,(V_EPG)
+        nextreg 0x51,a              ; entry back in slot 1
+        ld hl,(V_ENT)               ; tag at entry + 8 + len
+        ld a,(V_LEN)
+        add a,8
+        ld l,a
+        ld de,V_CTAG
+        ld b,3
+.t:     ld a,(de)
+        ld (hl),a
+        inc de
+        inc l
+        djnz .t
+        ld a,(V_NS)                 ; patterns: byte = CW where painted (nibble != 0), else the default
+        ld b,a                      ; pixel as an offset-15 colour (C_DEF)
+        xor a
+.s:     sub 64
+        djnz .s
+        ld l,a
+        ld a,(V_ENT+1)
+        ld h,a
+        ld ix,C_CW
+        ld d,high C_DEF
+        ld iy,0                     ; IYh = sprite k, IYl = OR of its bytes
+.m:     ld a,(hl)
+        or 0x80
+        ld e,a
+        ld a,(de)
+        ld b,a
+        ld c,(ix+0)
+        ld a,c
+        and 0xF0
+        jr z,.k1
+        ld a,b
+        and 0x0F
+        ld b,a
+.k1:    ld a,c
+        and 0x0F
+        jr z,.k2
+        ld a,b
+        and 0xF0
+        ld b,a
+.k2:    ld a,b
+        or c
+.w:     ld (hl),a                   ; (unit-test negative control: NOP = colours not applied)
+        or iyl
+        ld iyl,a
+        inc ix
+        inc l
+        ld a,l
+        and 7
+        jr nz,.m
+        ld bc,16                    ; next row: CW + 24
+        add ix,bc
+        ld a,l
+        and 63
+        jr nz,.m
+        ld bc,0x10000-184           ; next sprite: CW + 8 (k + 1)
+        add ix,bc
+        ld a,iyh
+        add a,low V_VIS
+        ld c,a
+        ld b,high V_VIS
+        ld a,iyl
+        ld (bc),a
+        ld iyl,0
+        inc iyh
+        ld a,l
+        or a
+        jr nz,.m
+        ret
+
+; cbytes: A = 0x80 (mask bytes) / 0 (ink bytes): their colour rows -> CW (layout pos < 48)
+cbytes: ld (V_CPASS),a
+        ld hl,(V_LT)
+        ld de,(V_SP)
+        ld a,(V_LEN)
+        ld b,a
+.lp:    ld a,(hl)
+        inc hl
+        ld (V_CLB),a
+        ld c,a
+        ld a,(V_CPASS)
+        xor c
+        and 0x80
+        jp nz,.nx
+        ld a,c
+        and 0x3F
+        cp 48
+        jp nc,.nx
+        push hl
+        push bc
+        ld a,d
+        cp 0xC3
+        jr nz,.pp
+        ld l,e                      ; rainbow: C_RB + 4 * (A & 255)
+        ld h,0
+        add hl,hl
+        add hl,hl
+        ld a,h
+        add a,high C_RB
+        ld h,a
+        jr .src
+.pp:    push de                     ; player
+        ld hl,0x299E
+        add hl,de                   ; off = A - 0xD662
+        ld d,h
+        ld e,l
+        ld bc,C_ROWIDX
+        add hl,bc
+        ld a,(hl)
+        ld (V_CIDX),a               ; k * 24 + row
+        ex de,hl
+        ld d,a
+        ld e,6
+        mul d,e
+        or a
+        sbc hl,de                   ; off - 6 * index = 2b (+1 for the gfx byte)
+        ld a,l
+        and 6
+        add a,a
+        add a,3                     ; 4b + 3
+        ld c,a
+        ld a,(V_CTAG+2)
+        rrca                        ; shift / 2
+        ld b,a
+        ld a,(V_CIDX)
+        rrca                        ; odd row (serpentine): the other way
+        ld a,c
+        jr c,.od
+        sub b
+        jr .ad
+.od:    add a,b
+.ad:    ld c,a
+        ld a,(V_CIDX)
+        ld d,a
+        ld e,18
+        mul d,e
+        ld hl,C_ROWS
+        add hl,de
+        ld a,c
+        add hl,a
+        pop de
+.src:   ld a,(V_CLB)                ; HL = 4 colour bytes in stored bit order -> CW + 4 * pos
+        and 0x3F
+        add a,a
+        add a,a
+        ld ixl,a
+        ld ixh,high C_CW
+        ld a,(V_CLB)
+        bit 6,a
+        jr nz,.mi
+        ld b,4
+.c:     ld a,(hl)
+        ld (ix+0),a
+        inc hl
+        inc ix
+        djnz .c
+        jr .dn
+.mi:    ld bc,3                     ; mirrored row: nibbles reversed
+        add ix,bc
+        ld b,4
+.cm:    ld a,(hl)
+        swapnib
+        ld (ix+0),a
+        inc hl
+        dec ix
+        djnz .cm
+.dn:    pop bc
+        pop hl
+.nx:    inc de
+        dec b
+        jp nz,.lp
+        ret
+colf_end:
+
 ; --- setup routine (stub bank, 0xD000): palette, transparency, hide all, clip, sprites on ----
         ORG 0xD000
 setup:  nextreg 0x43,0x20           ; edit sprite palette 0, auto-increment
@@ -2751,3 +3042,5 @@ pal:                                ; 256 palette bytes appended by Python
         SAVEBIN "rb_page4.bin",CODE4,code4_end-CODE4
         SAVEBIN "rb_page2.bin",CODE2,code2_end-CODE2
         SAVEBIN "rb_setup.bin",0xD000,pal-0xD000
+        SAVEBIN "rb_pagec.bin",MIRTAB,pagec_end-MIRTAB
+        SAVEBIN "rb_colf.bin",C_CODE,colf_end-C_CODE

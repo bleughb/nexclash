@@ -113,6 +113,53 @@ the fixed T accounting (below) on 2000 frames, x 8/6.5 for the 28 MHz wait state
 - Unit: 9 frame-end cases (no wrap, wrap below / on / past the start line, 2, capped, the exit's
   own wrap, skip path untouched) + negative control (lexit.t store NOPed: not credited, detected).
 
+## Colour map (design 2026-11-02, branch claude/rainbow-colours)
+Scope: the player (keys `G<start>.<row>.<byte>`) and the thrown rainbow (keys `C3xx`, check = the
+byte). Other keys (islands, items) are reported "not applied" until a later round.
+- Where colours enter: the store-MISS conversion only (s_pc .. miss; hits reuse the converted entry).
+  After cbyte + nooutl, a colour pass REPLACES the entry's patterns: per stream byte i (address
+  A = gfx + i, layout byte = window pos, mirror, mask) its 8 pixels' resolved nibbles (4 bytes,
+  nibble order reversed when mirrored) go to a colour window CW (96 pos x 4 bytes); mask bytes
+  first, then ink bytes over them (a pixel's key is the ink byte when there is one: sheet_piece).
+  Patterns = CW rows (k: columns 2k, 2k+1, 8 rows), visibility recomputed. Painted pieces use sprite
+  palette offset 15 (= SHEET_PAL: 1 black, 2-15 the Spectrum inks), so a nibble is the sheet colour.
+- Resolved nibbles (build time, Python): per key bit its role in the unshifted picture is fixed
+  (graphics never written; the store compare + verifier prove it): ink -> paint or 15 (bright white =
+  today's ink), outline -> paint or 1 (black), clear -> paint (opaque) or 0, painted transparent -> 0.
+  The rainbow class has no outline: its non-ink pixels are clear. So the pattern needs no default
+  nibble: CW alone is the pattern.
+- Player keys at run time: the game shifts frame k (0xD662 + 144k) in place; its shift is at
+  0xC676 + k (probe 2026-11-02, rainbow.rzx 5,500 frames: = the shifter's D at every draw; values
+  0/2/4/6). Table per (k, row): 24 unshifted nibbles padded 6 each side = 18 bytes. Memory byte
+  (k, row, b) at shift s = the 4 bytes at row + 4b + 3 - s/2 (even rows) / + s/2 (odd rows,
+  serpentine): s even -> byte aligned. Row index per address: a 1152-byte table (k*24 + row);
+  b = (A - 0xD662 - 6 * index) / 2 (MUL D,E). Rainbow: 4 bytes per address 0xC300-0xC3FF.
+- Store key: a painted piece (gfx .. gfx+len-1 inside one table area) gets V_KEY bit 2 and a 3-byte
+  tag (gfx lo, hi, shift) after the stream (entry +8+len; max 8 + len + 64 nspr + 3 = 251 <= 256),
+  compared on a stream match: same stream at another address / shift = another entry.
+- Memory: page-26 code is full (0x0CFF of 0x0D00), so the colour code goes over MIRTAB (0x0F00,
+  256 bytes, unused by the z80n hooks) and the tables + CW into page 31 (bank 15 upper; page 30 =
+  overflow entries), mapped at slot 2 only inside the colour code (slot 2 = 10 again before return).
+- No map (no file): the build is byte for byte today's (69369c89): the colour code, the tables and
+  4 splices are added ONLY with a non-empty map - S1 `ld a,(V_LEN)` at the lookup -> `call t_key`
+  (painted? tag, V_CPNT), S2 the stream match's `jp hit` -> `jp t_hit` (tag compared), S3 the miss's
+  `call nooutl` -> `call t_miss`, S4 `ld e,a / ld d,high CLASSTAB / ld a,(de)` -> `call t_pal / nop`
+  (offset 15 when V_CPNT). recolour splices banks 13 + 15 (the game never maps them).
+- Verifier: the model draws each piece from sheet_piece's (key, bit, code) per pixel + the map
+  (an independent route from the tables), compares sprite pixels and the palette offset.
+
+Result 2026-11-02: no map -> sprites 69369c89 / diag 24e547de (unchanged). Draft map
+(sheets_auto, 345 entries) -> 1078e0a2 = recolour(69369c89, map) (and back = 69369c89).
+Quick 2000 x both RZX IDENTICAL with the map (91% store hits); colour_unit_tests PASS (7 states:
+player at shifts 0-6 + rainbow, build + synthetic map, miss / hit / other shift / odd shift;
+controls detected: no map, tag not compared, colours not written, check byte not checked);
+base unit_tests run on the map-less patch (they assert ink 1 / outline 2). Not stamped; not on hardware.
+Limit: transparent paint and keys outside player / rainbow are reported, not applied.
+
+## Hardware checklist - painted test 1078e0a2 (draft map)
+1. Player: red hair, green shirt, red shoes; same in every move / facing left (shifted frames).
+2. Thrown rainbow: coloured bands. 3. Other figures, collectables, pace: as 69369c89.
+
 ## Speed ideas (analysis 2026-10-22, not measured; profile first)
 1. tcommit copies 20 x 64 map bytes per render by LDIR (~27k T): zxnDMA, or two tilemaps switched
    with NextReg $6E instead of a copy. Pattern uploads (64 bytes per sprite by OUTI, 16 T a byte;
@@ -158,7 +205,13 @@ the fixed T accounting (below) on 2000 frames, x 8/6.5 for the 28 MHz wait state
   both RZX, 0 differ); `sheet` now reports such conflicts (0 on the painting sheet; 2 on the reference
   sheet, frame D932 at shift 4, only in the LeeBee rounds - most likely the game's own shifter).
 
+- [card patch.runtime-colour-map §Failure lookup] A converted-pattern STORE keyed by stream bytes alone shares one
+  entry between graphics with equal bytes: colours need the address (+ shift) in the key (tag after
+  the stream, compared on a match; control: tag not compared -> detected).
+
 ## Technique use
+- patch.runtime-colour-map: helped (override nibble rule, controls list); adapted: tables at the miss
+  path instead of the upload, keys follow an in-place shift.
 - patch.isr-deferral: no help: about re-entrancy of a game ISR under hook time, not about pacing
   (judged from index.json; no card covers limiter pacing - written to LEARNINGS 2.1f instead)
 
@@ -167,6 +220,9 @@ the fixed T accounting (below) on 2000 frames, x 8/6.5 for the 28 MHz wait state
   T fix + exact beam, 9 unit cases + control, quick 2000 x2, full verify stamped, 28 LeeBee rounds
   verified; knowledge from main 806937d, no merge needed: branch made from it): ~110 tool calls,
   1 user round.
+
+- 2026-11-02 stage 2 colour map (design, asm 480 bytes, tables, verifier model, colour unit cases + 4
+  controls, recolour, quick 2000 x2 painted): ~90 tool calls.
 
 ## Hardware checklist - overrun recovery 69369c89 (2026-10-31)
 1. Busy scenes (many enemies + rainbows + fruit, scrolling, bonus scenes, bosses): game pace
