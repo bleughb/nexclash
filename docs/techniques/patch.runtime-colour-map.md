@@ -69,7 +69,8 @@ Colour pages + one slot during the upload (Cauldron: pages 28-35 at slot 6, KEEP
 | Symptom | Cause | Probe | Fix | Rejected |
 |---|---|---|---|---|
 | Stripes of colour in the next line | stream stride shorter than the canvas bytes the patterns read | unit case per image width | stride = 4 x canvas bytes read per line | stride from the image width alone |
-| Paint shows on the wrong image | key by graphic address alone | two images sharing bytes | bytes shared, rings per (graphic, width, rows) | - |
+| Paint on the wrong image | key by address alone | two images sharing bytes | bytes shared, rings per (graphic, width, rows) | - |
+| Wrong colours on hits | byte-only key | shared bytes | key the address | - |
 
 ## Verification
 The verify model applies the map per canvas pixel; unit cases with a synthetic map per image

@@ -22,6 +22,7 @@ sprites 4n..4n+3 (empty ones hidden); the render end (59087) hides the sprites l
 once per 8-line band from inside the blit, so the piece counter is reset at render start (58851).
 """
 import collections
+import hashlib
 import json
 import os
 
@@ -206,7 +207,7 @@ def plotter_stream_lengths(peek):
     return out
 
 
-COLOURS = {'white': 0xFF, 'black': 0x00, 'blue': 0x03, 'transparent': None}
+COLOUR_NAMES = {'white': 0xFF, 'black': 0x00, 'blue': 0x03, 'transparent': None}
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -226,8 +227,8 @@ def load_profile():
 def colour(v):
     """'white' | 'black' | 'blue' | 'transparent' | '#RRGGBB' -> RRRGGGBB byte (None = transparent)."""
     v = v.strip().lower()
-    if v in COLOURS:
-        return COLOURS[v]
+    if v in COLOUR_NAMES:
+        return COLOUR_NAMES[v]
     if v.startswith('#') and len(v) == 7:
         r, g, b = int(v[1:3], 16), int(v[3:5], 16), int(v[5:7], 16)
         return (r >> 5) << 5 | (g >> 5) << 2 | (b >> 6)
@@ -379,6 +380,120 @@ def fill_page(prof):
     return bytes(pg)
 
 
+# Colour map (games/rainbow_z80n.md "Colour map"): the player (keys G<start>.<row>.<byte>, shifted in
+# place) and the thrown rainbow (keys C3xx). Only a non-empty map adds the colour code (asm t_key ..
+# cbytes), the tables in page 25 and the 4 splices; no map = the build of before, byte for byte.
+RECORD = 'rainbow_z80n'
+COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', RECORD + '_colours.json')
+PLAYER0, PLAYER_FRAMES, PLAYER_FRAME = 0xD662, 8, 144     # the 8 frames the game shifts in place
+SHIFT_VARS = 0xC676                 # shift of frame k at SHIFT_VARS + k (0 / 2 / 4 / 6)
+RB_PAGE = 0xC3                      # the thrown rainbow's graphics
+C_ROWIDX, C_DEF, C_RB, C_CW, C_ROWS, C_CODE = 0x0700, 0x0B80, 0x0C00, 0x1000, 0x10C0, 0x1E40  # page 25
+C_PAD = 3                           # bytes (6 nibbles) of padding each side of a player row
+COLOUR_DEF = (0, 15, 1) + (0,) * 13   # default pixel (0 clear, 1 ink, 2 outline) -> offset-15 colour
+V_CPNT = 0x90
+
+
+def load_colours(path=None):
+    """The colour map the build uses (docs/profiles/rainbow_z80n_colours.json; {} when absent)."""
+    from . import coloursheet as cs
+    from .recolour import build_colours_path
+    return cs.load(path or build_colours_path(COLOURS))
+
+
+def colour_scope(key):
+    """'rb' (C3xx), 'pl' (G key of an unshifted player pixel), 'pad' (G...L / R: never applied), None."""
+    if key.startswith('G'):
+        return 'pad' if key[-1] in 'LR' else 'pl'
+    return 'rb' if len(key) == 4 and key[:2].upper() == 'C3' else None
+
+
+def colour_entry(cmap, key, peek):
+    """The map entry that applies to key (C3xx: its check byte = the graphics byte), else None."""
+    e = cmap.get(key)
+    if not e or colour_scope(key) not in ('rb', 'pl'):
+        return None
+    if colour_scope(key) == 'rb' and (peek is None or peek(int(key, 16)) != e[0]):
+        return None
+    return e
+
+
+def colour_tables(cmap, peek):
+    """Colour map -> ({page-25 offset: bytes}, info). Player rows: C_ROWS + 18 * (k * 24 + row), the 24
+    unshifted pixels as nibbles after C_PAD bytes; rainbow: C_RB + 4 * (a & 255); nibble 0 = default."""
+    rows, rb = bytearray(18 * 24 * PLAYER_FRAMES), bytearray(1024)
+    info = collections.Counter()
+    for key, e in cmap.items():
+        sc = colour_scope(key)
+        if sc is None:
+            info['map entries outside the player / rainbow (not applied yet)'] += 1
+            continue
+        if sc == 'pad':
+            if any(e[2]):
+                info['map entries for pixels shifted in (never drawn; ignored)'] += 1
+            continue
+        if len(e) > 3 and e[3]:
+            info['transparent paint (not supported; ignored)'] += 1
+        if colour_entry(cmap, key, peek) is None:
+            info['map entries ignored (check byte differs)'] += 1
+            continue
+        info['map entries applied'] += 1
+        if sc == 'rb':
+            a = int(key, 16) & 255
+            for b, n in enumerate(e[2]):
+                rb[4 * a + b // 2] |= n << 4 if not b & 1 else n
+        else:
+            st, row, byte = key[1:].split('.')
+            k = (int(st, 16) - PLAYER0) // PLAYER_FRAME
+            if int(st, 16) != PLAYER0 + PLAYER_FRAME * k or not 0 <= k < PLAYER_FRAMES:
+                info['map entries for no known player frame'] += 1
+                continue
+            base = 18 * (24 * k + int(row))
+            for b, n in enumerate(e[2]):
+                ux = 2 * C_PAD + 8 * int(byte) + b
+                rows[base + ux // 2] |= n << 4 if not ux & 1 else n
+    rowidx = bytes(24 * (o // PLAYER_FRAME) + (o % PLAYER_FRAME) // 6 for o in range(PLAYER_FRAME * PLAYER_FRAMES))
+    deft = bytes(COLOUR_DEF[p >> 4] << 4 | COLOUR_DEF[p & 15] for p in range(128))
+    return {C_ROWIDX: rowidx, C_DEF: deft, C_RB: bytes(rb), C_ROWS: bytes(rows)}, info
+
+
+def colour_painted(prof, ix, carry, gfx, peek):
+    """The hook's rule: is this piece drawn from the colour tables (offset 15)? -> shifts dict for
+    sheet_piece ({} for the rainbow) or None."""
+    pi = prof['plotters'].get(str(ix))
+    if pi is None or ix in (60176, 60180):
+        return None
+    ln = pi['len'][carry]
+    if gfx >> 8 == RB_PAGE:
+        return {} if (gfx & 255) + ln <= 256 else None
+    off = gfx - PLAYER0
+    if not 0 <= off < PLAYER_FRAME * PLAYER_FRAMES:
+        return None
+    k = off // PLAYER_FRAME
+    sh = peek(SHIFT_VARS + k)
+    if off % PLAYER_FRAME + ln > PLAYER_FRAME or sh not in (0, 2, 4, 6):
+        return None
+    return {PLAYER0 + PLAYER_FRAME * k: sh}
+
+
+def colour_model(patch, ix, carry, gfx, de, peek):
+    """Verifier model of a painted piece, from sheet_piece (the sheet's own keys, not the hook's tables):
+    {(x, y): (offset-15 colour, code)} for every pixel of the pattern rows (0-7), or None when the piece
+    is not painted. Colour = the map nibble of the pixel's key, else today's (ink 15, outline 1, clear 0)."""
+    shifts = colour_painted(patch.prof, ix, carry, gfx, peek)
+    if shifts is None:
+        return None
+    pc = sheet_piece(patch.prof, ix, carry, gfx, de, peek, patch.cfg.no_outline(gfx >> 8), 0, shifts or None)
+    out = {}
+    for (x, r, key, bit, code, d) in pc['pixels'] if pc else ():
+        if r >= 8:
+            continue
+        e = colour_entry(patch.cmap, key, peek)
+        n = e[2][bit] if e else 0
+        out[(pc['x'] + x, pc['y'] + r)] = (n or COLOUR_DEF[code], code)
+    return out
+
+
 def obj_fill(fpage, code):
     """(inside mask rows, FILLC byte) of an opaque code, or None."""
     if code not in FILL_CODES:
@@ -397,9 +512,11 @@ def identify_rb(mem):
 class RainbowPatch:
     name = 'Rainbow Islands sprite-list walker -> hardware sprites (altrom + RAM page 26)'
 
-    def __init__(self, cfg=None, prof=None):
+    def __init__(self, cfg=None, prof=None, colours=None):
         self.cfg = cfg or Config()
         self.prof = prof or load_profile()
+        self.cmap = colours or {}           # colour map ({} = no colour code: the build of before)
+        self.cinfo = collections.Counter()
         h = self.prof['hooks']
         self.rom_code = bytes.fromhex(h['rom'])
         self.page_code = bytes.fromhex(h['page'])
@@ -468,9 +585,28 @@ class RainbowPatch:
         tp[OCLASS - 0x2000:OCLASS - 0x2000 + 256] = ocls
         tp[MCLASS - 0x2000:MCLASS - 0x2000 + 16] = mcls
         tp[BGOVR - 0x2000:BGOVR - 0x2000 + 256] = bg
+        if self.cmap:                               # colour code over MIRTAB (unused) + the 4 splices
+            pc = bytes.fromhex(h['pagec'])
+            if MIRTAB + len(pc) > NIBTAB:
+                raise ValueError('colour code longer than MIRTAB')
+            sp[MIRTAB:MIRTAB + len(pc)] = pc
+            for a, old, new in self.colour_splices():
+                if bytes(sp[a:a + len(old)]) != old:
+                    raise ValueError('colour splice 0x%04X: unexpected bytes %s' % (a, sp[a:a + len(old)].hex()))
+                sp[a:a + len(new)] = new
         self.scratch = bytes(sp)
         self.tpage = bytes(tp)
         self.fpage = fill_page(self.prof)
+        if self.cmap:
+            fp = bytearray(self.fpage)
+            if any(fp[C_ROWIDX:]):
+                raise ValueError('page 25 colour area is not free')
+            cf = bytes.fromhex(h['colf'])
+            if C_CODE + len(cf) > 0x2000:
+                raise ValueError('colour pass longer than page 25')
+            fp[C_CODE:C_CODE + len(cf)] = cf
+            self.fpage = bytes(fp)
+            self.set_colour_tables(None)
         self.extra_banks = {12: self.page + self.fpage, 13: self.scratch + self.tpage}
         s = self.syms
         self.sites = [(58851, SITES_ORIG[58851], b'\xC3' + s['e_rs'].to_bytes(2, 'little') + b'\x00'),
@@ -487,6 +623,25 @@ class RainbowPatch:
                       (59547, SITES_ORIG[59547], b'\xC3' + s['e_bend'].to_bytes(2, 'little'))]
         self.sites1 = [(0xD4DE, SITES1_ORIG[0xD4DE], b'\xC3' + s['e_ps'].to_bytes(2, 'little')),
                        (0xD6D4, SITES1_ORIG[0xD6D4], b'\xC3' + s['e_ay'].to_bytes(2, 'little'))]
+
+    def colour_splices(self):
+        """[(page-26 address, original bytes, colour-build bytes)] (asm "colour map" header)."""
+        s, le = self.syms, lambda v: v.to_bytes(2, 'little')
+        return [(s['s_pc.c_key'], b'\x3A' + le(0x23), b'\xCD' + le(s['t_key'])),
+                (s['s_pc.c_hit'], b'\xC3' + le(s['hit']), b'\xC3' + le(s['t_hit'])),
+                (s['miss.c_miss'], b'\xCD' + le(s['nooutl']), b'\xCD' + le(s['t_miss'])),
+                (s['regsdone.c_pal'], bytes((0x5F, 0x16, CLASSTAB >> 8, 0x1A)), b'\xCD' + le(s['t_pal']) + b'\x00')]
+
+    def set_colour_tables(self, peek):
+        """Write the colour tables for this map into page 25 (peek = game memory for the C3xx check
+        bytes; None = before the snapshot is known: rainbow entries left out)."""
+        tabs, self.cinfo = colour_tables(self.cmap, peek)
+        fp = bytearray(self.fpage)
+        for off, data in tabs.items():
+            fp[off:off + len(data)] = data
+        self.fpage = bytes(fp)
+        if hasattr(self, 'extra_banks'):
+            self.extra_banks[12] = self.page + self.fpage
 
     def check_sites(self, bank0):
         for a, old, new in self.sites:
@@ -516,6 +671,9 @@ class RainbowPatch:
             raise ValueError('snapshot selects ROM 0; the hooks need the 48K ROM (alt image 1)')
         if any(snap.banks[7][:8192]):
             raise ValueError('bank 7 (first 8K) is not empty: needed for the tilemap')
+        if self.cmap:                       # the rainbow's check bytes: the snapshot's graphics
+            b0 = snap.banks[0]
+            self.set_colour_tables(lambda a: b0[a - 0xC000] if a >= 0xC000 else None)
         snap.banks[0] = self.patched_bank0(snap.banks[0])
         snap.banks[1] = self.patched_bank1(snap.banks[1])
 
@@ -1357,6 +1515,21 @@ def verify(patch, rzx_path, progress=None, stop=None):
             a = 0x4000 | ((y & 0xC0) << 5) | ((y & 7) << 8) | ((y & 0x38) << 2) | (x >> 3)
             return (m[a] >> (7 - (x & 7))) & 1, a
         bad_px = 0
+        cm = colour_model(patch, R[8] * 256 + R[9], R[17] & 1, R[12], R[4] * 256 + R[5],
+                          lambda a: MG(real, a)) if patch.cmap else None
+        if patch.cmap:                              # palette offset: 15 painted, else the class's
+            want = 0xF0 if cm is not None else patch.scratch[CLASSTAB + (R[12] >> 8)] & 0xF0
+            if any(stg.attr[i][2] & 0xF0 != want for i in range(n_before, n_before + nspr)):
+                fail('piece: palette offset (colour map)', (hex(R[12]), want))
+        if cm is not None:                          # painted: every pixel = the model's colour
+            c['painted pieces (colour map)'] += 1
+            exp = {xy: v for xy, v in cm.items() if v[0] and 0 <= xy[0] < 256 and 0 <= xy[1] < 192}
+            bad_c = sum(1 for xy in set(exp) | set(cov) if cov.get(xy, 0) != exp.get(xy, (0,))[0])
+            if bad_c:
+                fail('piece: painted colours differ from the model', (bad_c, hex(R[12])))
+            c['painted pixels compared'] += len(exp)
+            c['painted pixels with a map colour'] += sum(1 for v in exp.values() if v[0] != COLOUR_DEF[v[1]])
+            cov = {xy: v[1] for xy, v in exp.items() if v[1]}     # roles for the plot comparison below
         for (x, y), idx in cov.items():
             after, a = bit(o, x, y)
             if idx == 1 and after != 1 or idx == 2 and after != 0:
@@ -2350,6 +2523,149 @@ def unit_tests(patch, rzx_path, want=40, frames=3000):
     return c
 
 
+def colour_states(rzx_path, want=6, frames=3000):
+    """Dispatch states (59539) of player and rainbow pieces from the RZX (C simulator): per area up to
+    `want`, distinct (plotter, carry). -> [(banks, o7ffd, regs)]."""
+    from . import rzx as RZ
+    got, seen = [], collections.Counter()
+
+    def on(pc, sim):
+        mem, R = sim.memory, sim.registers
+        if (mem.o7ffd & 7) != 0:
+            return
+        g = R[12]
+        area = 'rb' if g >> 8 == RB_PAGE else 'pl' if PLAYER0 <= g < PLAYER0 + PLAYER_FRAME * PLAYER_FRAMES \
+            else None
+        key = (area, R[8] * 256 + R[9], R[17] & 1)
+        if area and seen[area] < want and key not in seen:
+            seen[key] += 1
+            seen[area] += 1
+            got.append(([bytes(b) for b in mem.banks], mem.o7ffd, list(R)))
+    RZ.trace(rzx_path, (59539,), on, stop=frames)
+    return got
+
+
+def colour_unit_tests(patch, rzx_path, frames=3000):
+    """Colour map cases the recordings may not reach (games/rainbow_z80n.md "Colour map"): player pieces
+    at every shift 0/2/4/6 (both row parities), rainbow pieces, with a synthetic map (a colour on every
+    key bit) and the build's map: patterns + palette offset = colour_model; a store hit after a miss;
+    the same stream at another shift = a miss (tag); an odd shift / a stream past the frame = unpainted.
+    Negative controls: no map, tag not compared, colours not written, check byte not checked."""
+    import copy
+    import random
+    from .build import rom48
+    rom = rom48()
+    c = collections.Counter()
+    states = colour_states(rzx_path, frames=frames)
+    rnd = random.Random(11)
+    synth = {}
+    for k in range(PLAYER_FRAMES):
+        for row in range(24):
+            for b in range(3):
+                synth['G%04X.%d.%d' % (PLAYER0 + PLAYER_FRAME * k, row, b)] = [0, 3, [rnd.randrange(16) for _ in range(8)]]
+
+    def case(pt, bm, R, ns_in=None):
+        """-> (ok, NextState, hit): the piece through pt vs colour_model, registers vs the original."""
+        kw = {} if ns_in is None else {'scratch': ns_in.scratch, 'pages': ns_in.pages}
+        h0 = ns_in.scratch[V_HITS] if ns_in is not None else 0
+        ro, o, rp, p, ns, err = _pair(pt, bm, R, 3, **kw)
+        stg = staged(ns, 3)
+        cov = {}
+        for i in range(3, ns.scratch[V_S]):
+            for x, y, idx in stg.sprite_pixels(i) or ():
+                if idx and 0 <= x < 256 and 0 <= y < 192:
+                    cov[(x, y)] = (idx, stg.attr[i][2] & 0xF0)
+        cm = colour_model(patch, R[8] * 256 + R[9], R[17] & 1, R[12], R[4] * 256 + R[5], bm.__getitem__)
+        if cm is None:
+            return None, ns, False
+        exp = {xy: (v[0], 0xF0) for xy, v in cm.items() if v[0] and 0 <= xy[0] < 256 and 0 <= xy[1] < 192}
+        ok = not err and all(ro[i] == rp[i] for i in CMP) and cov == exp
+        return ok, ns, ns.scratch[V_HITS] != h0
+
+    def build(cmap, bm):
+        pt = RainbowPatch(patch.cfg, patch.prof, colours=cmap)
+        pt.set_colour_tables(bm.__getitem__)
+        return pt
+    for banks, o7, R in states:
+        bm = _BankMem(banks, o7, rom)
+        g = R[12]
+        rb = g >> 8 == RB_PAGE
+        maps = [('build map', patch.cmap)]
+        if rb:
+            synth_rb = {'C3%02X' % a: [bm[0xC300 + a], 1, [rnd.randrange(16) for _ in range(8)]] for a in range(256)}
+            maps.append(('synthetic', synth_rb))
+        else:
+            maps.append(('synthetic', synth))
+        for name, cmap in maps:
+            pt = build(cmap, bm)
+            model = copy.copy(patch)
+            model.cmap = cmap
+            patch_, patch = patch, model
+            try:
+                shifts = (0,) if rb else (0, 2, 4, 6)
+                k = (g - PLAYER0) // PLAYER_FRAME
+                for sh in shifts:
+                    if not rb:
+                        bm.banks[0][SHIFT_VARS + k - 0xC000] = sh
+                    ok, ns, hit = case(pt, bm, R)
+                    c['%s piece, %s, miss %s' % ('rainbow' if rb else 'player', name,
+                                                     'ok' if ok else 'n/a (not painted)' if ok is None else 'FAIL!')] += 1
+                    ok2, ns2, hit2 = case(pt, bm, R, ns)
+                    c['store hit (same stream, address, shift) %s' % ('ok' if ok2 and hit2 else 'FAIL!')] += 1
+                    if not rb and name == 'synthetic':
+                        bm.banks[0][SHIFT_VARS + k - 0xC000] = (sh + 2) & 6
+                        ok3, ns3, hit3 = case(pt, bm, R, ns)
+                        c['same stream at another shift: miss + its colours %s' % (
+                            'ok' if ok3 and not hit3 else 'FAIL!')] += 1
+                        bad = copy.deepcopy(pt)                 # control: tag not compared
+                        sc = bytearray(bad.scratch)
+                        sc[bad.syms['t_hit.cj']:bad.syms['t_hit.cj'] + 3] = bytes(3)
+                        bad.scratch = bytes(sc)
+                        bm.banks[0][SHIFT_VARS + k - 0xC000] = sh
+                        _, nsb, _ = case(bad, bm, R)
+                        bm.banks[0][SHIFT_VARS + k - 0xC000] = (sh + 2) & 6
+                        okb, _, hitb = case(bad, bm, R, nsb)
+                        c['negative control (tag not compared) %s' % (
+                            'detected' if not okb or hitb else 'NOT DETECTED!')] += 1
+                        bm.banks[0][SHIFT_VARS + k - 0xC000] = sh
+                if not rb and name == 'synthetic':
+                    for sh in (1, 8):                       # not a shift the game sets: unpainted
+                        bm.banks[0][SHIFT_VARS + k - 0xC000] = sh
+                        ro, o, rp, p, ns, err = _pair(pt, bm, R, 3)
+                        st = staged(ns, 3)
+                        un = colour_model(patch, R[8] * 256 + R[9], R[17] & 1, g, R[4] * 256 + R[5], bm.__getitem__)
+                        okp = un is None and not err and _pixels_ok(st, 3, bm, o) == 0 and \
+                            all(st.attr[i][2] & 0xF0 == pt.scratch[CLASSTAB + (g >> 8)] & 0xF0 for i in range(3, ns.scratch[V_S]))
+                        c['shift %d: unpainted (class palette, default pixels) %s' % (sh, 'ok' if okp else 'FAIL!')] += 1
+                    bm.banks[0][SHIFT_VARS + k - 0xC000] = 0
+                if name == 'synthetic':
+                    for what, bad in (('no map', RainbowPatch(patch.cfg, patch.prof)),
+                                      ('colours not written', None)):
+                        if bad is None:
+                            bad = copy.deepcopy(pt)
+                            sc = bytearray(bad.fpage)
+                            a = bad.syms['cpass.w'] - 0x4000
+                            sc[a] = 0x00                    # LD (HL),A -> NOP
+                            bad.fpage = bytes(sc)
+                        okb, _, _ = case(bad, bm, R)
+                        c['negative control (%s) %s' % (what, 'detected' if okb is False else 'NOT DETECTED!')] += 1
+                    if rb:                                  # check byte: a wrong one must be ignored
+                        wrong = {k_: [v[0] ^ 0xFF, v[1], v[2]] for k_, v in cmap.items()}
+                        tabs, inf = colour_tables(wrong, bm.__getitem__)
+                        c['wrong check bytes ignored %s' % ('ok' if not any(tabs[C_RB]) else 'FAIL!')] += 1
+                        nochk = copy.deepcopy(pt)           # control: tables built without the check
+                        nochk.cmap = wrong
+                        nochk.set_colour_tables(lambda a: wrong.get('C3%02X' % (a & 255), [0])[0])
+                        model.cmap = wrong
+                        okb, _, _ = case(nochk, bm, R)
+                        c['negative control (check byte not checked) %s' % (
+                            'detected' if okb is False else 'NOT DETECTED!')] += 1
+            finally:
+                patch = patch_
+    c['states'] = len(states)
+    return c
+
+
 def _ay_writes(ns_):
     return [(e[1], e[2]) for e in ns_.events if e[0] == 'port' and e[1] & 0x8002 == 0x8000]
 
@@ -2992,15 +3308,18 @@ def auto(a, z80, name, out, say):
     bad = boot_check(plain, z80, tail=(TAIL_ADDR, TAIL_ADDR + 80))
     say('Plain     : %s  %s  boot %s  (tail 0x%04X = back buffer, write-first in both reference RZX)' % (
         os.path.basename(plain), md5(plain), 'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:200], TAIL_ADDR))
-    patch = RainbowPatch(cfg)
+    cmap = load_colours(getattr(a, 'colours', None))
+    patch = RainbowPatch(cfg, colours=cmap)
     spr = os.path.join(out, name + '_sprites.nex')
     zt.convert(z80, spr, quiet=True, patch=patch)
     bad2 = boot_check(spr, z80, patch)
     say('Sprites   : %s  %s  boot %s' % (os.path.basename(spr), md5(spr),
                                           'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200]))
+    if cmap:
+        say('Colour map: %d entries: %s' % (len(cmap), ', '.join('%s %d' % kv for kv in sorted(patch.cinfo.items()))))
     ok = not bad and not bad2
     dpatch = RainbowPatch(Config(getattr(a, 'ink', None) or 'white', getattr(a, 'outline', None) or 'black',
-                                 cls, diag=True))
+                                 cls, diag=True), colours=cmap)
     dspr = os.path.join(out, name + '_sprites_diag.nex')
     zt.convert(z80, dspr, quiet=True, patch=dpatch)
     bad3 = boot_check(dspr, z80, dpatch)
@@ -3071,7 +3390,7 @@ def auto(a, z80, name, out, say):
         ok = ok and not fd
         say('            diagnostic build: %s first %d frames, %d renders -> %s' % (
             os.path.basename(r), cd['frames'], cd['render start'], 'IDENTICAL' if not fd else 'FAILED %s' % fd))
-        u = unit_tests(patch, r)
+        u = unit_tests(RainbowPatch(cfg) if cmap else patch, r)   # base hooks; colours: colour_unit_tests
         uf = {k: v for k, v in u.items() if k.endswith('!')}
         ok = ok and not uf
         say('Unit      : %d states x (edge columns, last sprites, passthrough, negative control) + '
@@ -3088,6 +3407,15 @@ def auto(a, z80, name, out, say):
                 u['object render path (start, 22 bands, end; tiles, background, inks, classes) ok'],
                 len(oc), sum(1 for k in oc if k.endswith('detected')),
                 u['negative control detected'], u['store stale-pattern negative control detected']))
+        if cmap:
+            cu = colour_unit_tests(patch, r)
+            cf = {k: v for k, v in cu.items() if k.endswith('!')}
+            ok = ok and not cf
+            say('Colours   : %d states (player at shifts 0-6, rainbow) x (build + synthetic map; miss, hit, other '
+                'shift, odd shift) + %d negative controls (%d detected) -> %s' % (
+                    cu['states'], sum(v for k, v in cu.items() if k.startswith('negative control')),
+                    sum(v for k, v in cu.items() if k.startswith('negative control') and k.endswith('detected')),
+                    'PASS' if not cf else 'FAIL %s' % cf))
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return ok
 
@@ -3453,7 +3781,7 @@ def sheet_capture(rzx_paths, prof=None, progress=None):
     return cap
 
 
-def sheets(cap, prefix, colours=None):
+def sheets(cap, prefix, colours=None, identity=None):
     """Per SHEET_SPLIT name (players, each island, collectables; Dean 2026-10-19: one sheet per level +
     collectables + player when there are many figures): <prefix>_<NAME>_PAINTING_SPRITES.png (the
     fewest WHOLE figures that show every graphics byte once at least; + _layout.json, read back) and
@@ -3478,9 +3806,75 @@ def sheets(cap, prefix, colours=None):
         for kind, comps in (('PAINTING_SPRITES', paint), ('REFERENCE_ALL_SPRITES', allc)):
             png = '%s_%s_%s.png' % (prefix, name, kind)
             n = cs.write(comps, png, os.path.splitext(png)[0] + '_layout.json', rgb, colours, unique=False,
-                         paint_clear=True)
+                         paint_clear=True, identity=identity)
             out.append((png, n))
     return out
+
+
+def colour_identity(peek, prof=None):
+    """What a colour map / sheet layout means for this build (docs/COLOURS.md "Identity"): keys =
+    unshifted player pixel G<start>.<row>.<byte> (serpentine rows) / rainbow byte C3xx (+ the other
+    sheet keys, not applied yet); inputs = the rainbow's graphics page (the player's bytes are shifted
+    by play, so not an input); geometry = the player frames, shift variables and plotter layouts the
+    keys follow."""
+    prof = prof or load_profile()
+    geo = hashlib.md5(json.dumps([PLAYER0, PLAYER_FRAME, PLAYER_FRAMES, SHIFT_VARS, SHIFT_ROWS, SHIFT_ROW,
+                                  prof['plotters']], sort_keys=True).encode()).hexdigest()
+    return {'schema': 1, 'game': RECORD, 'engine': 'rainbow_z80n',
+            'keys': 'rainbow-z80n-1: G<start>.<row>.<byte> unshifted player pixel / C3xx rainbow byte, bit = pixel',
+            'inputs': hashlib.md5(bytes(peek(a) for a in range(RB_PAGE << 8, (RB_PAGE + 1) << 8))).hexdigest(),
+            'geometry': geo}
+
+
+# nexclash/recolour.py: `python nexclash.py recolour rainbow_z80n_sprites.nex PAINTED.png` (seconds, no
+# rebuild): only banks 12 (page 25 colour tables + pass) and 13 (page 26 colour code + splices) change;
+# the game never maps them.
+NOTE = ('Rainbow Islands Z80N colour map (games/rainbow_z80n.md "Colour map"): key = unshifted player pixel '
+        'group G<start>.<row>.<byte> or rainbow byte C3xx (check = its value); 8 nibbles = sheet colours '
+        '1-15, 0 = default (ink bright white, outline black, clear transparent). Other keys: not applied yet.')
+RECOLOUR = {'game': RECORD, 'output': 'sprites', 'colours': 'docs/profiles/rainbow_z80n_colours.json',
+            'clear': False, 'note': NOTE}
+
+
+def recolour(nex, cmap):
+    """Built rainbow_z80n sprite .nex bytes + colour map -> (new .nex bytes, info). Refuses a .nex that
+    is not this version's build (patch sites, alt ROM, page 26 outside the colour code, pages 25 / 27)."""
+    from .recolour import nex_offsets
+    d = bytearray(nex)
+    off = nex_offsets(d)
+    if not {0, 12, 13} <= set(off):
+        raise ValueError('not a Rainbow Islands Z80N sprite build: banks %s missing' % sorted({0, 12, 13} - set(off)))
+    bank = lambda b: bytes(d[off[b]:off[b] + 16384])
+    b0 = bank(0)
+    peek = lambda a: b0[a - 0xC000] if a >= 0xC000 else None
+    prof = load_profile()
+    cfg = Config(class_colours=prof.get('colours', {}).get('class_colours'), diag=bool(bank(13)[V_DIAG]))
+    p0 = RainbowPatch(cfg, prof)
+    for a, old, new in p0.sites:
+        if b0[a - 0xC000:a - 0xC000 + len(new)] != new:
+            raise ValueError('patch site 0x%04X does not hold this build\'s hook jump' % a)
+    b12, b13 = bank(12), bank(13)
+    if b12[:8192] != p0.page or b13[8192:] != p0.tpage:
+        raise ValueError('alt ROM / page 27 differ from this version\'s (rebuild with nexclash.py auto)')
+    if b12[8192:8192 + C_ROWIDX] != p0.fpage[:C_ROWIDX]:
+        raise ValueError('page 25 differs from this version\'s (rebuild with nexclash.py auto)')
+    pc = RainbowPatch(cfg, prof, colours={'_': [0, 0, [0] * 8]})    # any map: the colour code's bytes
+    free = set(range(MIRTAB, MIRTAB + 256)) | {a + k for a, old, new in p0.colour_splices() for k in range(len(old))}
+    pg = b13[:8192]
+    if any(pg[a] != p0.scratch[a] for a in range(8192) if a not in free) or \
+            not any(all(pg[a] == x.scratch[a] for a in free) for x in (p0, pc)):
+        raise ValueError('page 26 differs from this version\'s (rebuild with nexclash.py auto)')
+    p = RainbowPatch(cfg, prof, colours=cmap)
+    if cmap:
+        p.set_colour_tables(peek)
+    changed = []
+    for b, data in ((12, p.page + p.fpage), (13, p.scratch + p.tpage)):
+        if bank(b) != data:
+            changed.append(b)
+        d[off[b]:off[b] + 16384] = data
+    info = {'banks changed': changed}
+    info.update({k: v for k, v in p.cinfo.items() if v})
+    return bytes(d), info
 
 
 def shifted_key_conflicts(cap):
@@ -3503,6 +3897,7 @@ def _main(argv=None):
     p = sub.add_parser('sheet', help='RZX(s) -> sheet PNGs + layout JSON (game graphics: keep private)')
     p.add_argument('rzx', nargs='+', help='recordings (e.g. the playthrough bookmarks, one per round)')
     p.add_argument('-o', '--output', default='rainbow_islands')
+    p.add_argument('--z80', help='the build snapshot: stores colour_identity in the layouts')
     a = ap.parse_args(argv)
     cap = sheet_capture(a.rzx, progress=lambda r, n, err: print('%s: %d frames%s' % (
         os.path.basename(r), n, ' (WARNING: desync: %s)' % err if err else ''), flush=True))
@@ -3511,7 +3906,12 @@ def _main(argv=None):
     bad, n = shifted_key_conflicts(cap)
     print('player (shifted in place): %d pixels keyed, %d ink in one figure and not in another%s' % (
         n, bad, ' - WARNING: shifted_key does not follow the shifter' if bad else ''))
-    for png, n in sheets(cap, a.output):
+    ident = None
+    if a.z80:
+        from skoolkit.snapshot import Snapshot as SS
+        b0 = SS.get(a.z80).memory.banks[0]
+        ident = colour_identity(lambda x: b0[x - 0xC000] if x >= 0xC000 else 0)
+    for png, n in sheets(cap, a.output, identity=ident):
         print('%d figures -> %s' % (n, png))
 
 
