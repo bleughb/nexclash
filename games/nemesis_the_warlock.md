@@ -1,10 +1,10 @@
 # Nemesis the Warlock (Martech 1987, 48K) - https://spectrumcomputing.co.uk/entry/3387/ZX-Spectrum/Nemesis_the_Warlock
 
 ## Next session
-Stage: 1 (design)           State: stage 0 intake done 2026-11-02 (survey GATE OK)
+Stage: 1 (design)           State: design question sent 2026-11-02, awaiting answer
 Inputs: specnext/reference/nemesis_the_warlock/ (snapshot from the RZX, rzx, survey)    Branch: claude/festive-einstein-sx8txv
-Start with: read nemesis_the_warlock_survey/survey.md + preview.png      Read: PLAYBOOK stage 1 (2, 3, 3c, 4)
-Open: back buffer source of the 0x7D9A blit (`scan --range BUF --writers`); figure plotter(s) inside 0x7D28 callers; screens below: confirm with user at stage 1
+Start with: the user's answer to the design question -> Decisions; then stage 2      Read: PLAYBOOK stage 2, ## Design below
+Open: buffer readers 0x800A/0x8061/0x80A5 (collision? detect.gameplay-screen-readers probe); 3-byte-wide variants (51930 = 4/5); define-keys recording
 
 ## Facts
 - Inputs: only a SPIN 0.6 RZX (1 segment, 134,980 frames, no autosaves). Its embedded Z80 snapshot
@@ -32,6 +32,26 @@ Open: back buffer source of the 0x7D9A blit (`scan --range BUF --writers`); figu
   draws via 0x7D31 and sets 4 attribute cells of the top panel row (22532/3, 22554/5) to 127.
   An in-play action on the ULA panel, not a pause; reached 21 times.
 - Ask the user for a recording that uses "define keys" (option 4) if that screen must be proven.
+
+## Design (stage 1 observations, 2026-11-02)
+- Rendering model: back-buffer composer [observed]. Buffer 0x5CF6 (23798), 32 bytes per pixel line,
+  linear; 0x7D9A copies 28 x 120 of it (from 0x5DF8) to screen 0x4022.. (rows 1-15) with LDI.
+  Attributes are not per figure: platforms red, background cyan, set per room (0x80D6).
+- Figure plotters [observed], masked AND/OR into the buffer with save-under to IY:
+  - 0x7A24 (31268) 32x32 facing right; 0x7A82 (31362) facing left (mirror table 62394).
+    51930 = 4/5 -> 24-wide variants 0x7FBF / 0x8000 / 0x80A2 / 0x80BB [inferred from code].
+  - Restore (save-under back): 0x7B61 (31585), 0x7B8B (31627).
+  - 8x8 masked plot 0x79ED + restore 0x7A11: no CALL found [inferred unused].
+  - Callers: 0x710A / 0x7110 = Nemesis (player); 0x851A / 0x8520 = enemies (terminators etc.);
+    0x7161 / 0x7169 = a third figure kind (few calls).
+- Scenery / objects: block blitters 0x82C3 (OR), 0x8300 (copy), 0x834E (masked) with inline
+  parameters (POP IX), buffer base 23798 [observed].
+- Depth: figures are masked over everything already in the buffer, nothing drawn after them
+  [observed] -> sprites always in front of the scenery = the game's own rule.
+- Cards: patch.scratch-redirect REJECTED (plotters take HL directly; no shared address helper);
+  plan = hook the two plot entries (and the 24-wide variants): skip the buffer write, keep the
+  save-under (restore then writes back unchanged bytes), build the sprite from DE (mask+image) at HL.
+  detect.gameplay-screen-readers: to run in stage 2 on the buffer readers listed in Open.
 
 ## Decisions
 (none yet - stage 1 question)
