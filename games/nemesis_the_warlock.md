@@ -115,7 +115,7 @@ Open: colour sheets + recolour not built (colours are the room attribute, fixed 
 ## Lessons
 - [card detect.buffer-layout-producer §Contract] Overlay from save-under: with a masked back-buffer plotter that saves the background (IY), the hooks leave the plotters and all game memory untouched and rebuild the screen from the save-unders after the copy; the verifier then compares ALL game memory. Card amended with this as a second producer pattern.
 - [local: game-specific] A plot whose save-under pointer is in ROM is a permanent stamp (scenery), not a figure: check every plot caller's save pointer before treating it as a sprite.
-- [doc] Quick runs: 2000 frames missed two rare cases that 20000 found (XOR effect under a figure, column-31 wrap): when a game verifies at ~10K frames/min, run the quick check at 20000 before stage 3. PLAYBOOK 6 amended.
+- [doc docs/PLAYBOOK.md §6. Verify (differential test)] Quick runs: 2000 frames missed two rare cases that 20000 found (XOR effect under a figure, column-31 wrap): when a game verifies at ~10K frames/min, run the quick check at 20000 before stage 3. PLAYBOOK 6 amended.
 - [local: measured here; the PLAYBOOK speed budget already asks for it] Row address arithmetic per row cost 3x the copy itself (620 T/row): compute visible row range + screen address once, step with the next-line routine.
 - [local: one-off extraction; a later game with only an RZX should add an `rzx extract` command] SPIN RZX snapshot blocks are zlib-compressed Z80 (flag 2); extracted with a 10-line block parse; no CLI command extracts the first snapshot to a file.
 
