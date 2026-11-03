@@ -131,6 +131,7 @@ Open: colour sheets not built (fixed rule); stamps (bodies) on the ULA; speed sp
   answered; they are scenery in the buffer (blitters 0x82C3..), so they stay on the ULA by rule 2.
 
 ## Lessons
+- [none: hardware round 1 found no faults; nothing new learned]
 - [card detect.buffer-layout-producer §Contract] Overlay from save-under: with a masked back-buffer plotter that saves the background (IY), the hooks leave the plotters and all game memory untouched and rebuild the screen from the save-unders after the copy; the verifier then compares ALL game memory. Card amended with this as a second producer pattern.
 - [local: game-specific] A plot whose save-under pointer is in ROM is a permanent stamp (scenery), not a figure: check every plot caller's save pointer before treating it as a sprite.
 - [local: CLAUDE.md "Rules" sharpened with this form (learncheck takes docs/ paths only)] I wrote `kill -0 $(pgrep -o -f X)` in a wait loop - the warned pattern in a new form; CLAUDE.md's rule now names it.
