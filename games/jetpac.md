@@ -1,12 +1,14 @@
 # Jetpac (Ultimate Play The Game, 1983) - engine `jetpac`
 
 ## Next session
-Stage: 4 (hardware round 2)  State: rocket / fuel / flames fix verified + stamped 2026-11-03
+Stage: 4 done (hardware round 2 PASSED, user 2026-11-03)  State: jetpac_sprites.nex 3cf8fbd2 works on hardware
 Inputs: specnext/reference/jetpac/ (snapshot, both .nex)    Branch: claude/adoring-albattani-50f4p8
-Start with: the user's hardware report against ## Hardware checklist (round 2)
-Read: PLAYBOOK stage 4, ## Rocket (round 2), ## Patch design
-Open: no RZX yet (rocket build, take-off, levels 2+ proven by unit tests on the game's own
-routines); colour sheets not rebuilt (the game's own colours, no recolour); no PR yet
+Start with: stage 5 close (PR + private files, docs/MAINTAIN.md), or the deferred checks below
+Read: PLAYBOOK stage 5, ## Open
+Open: no PR yet; checks deferred by the user ("sort checks another day"): seeded free runs that
+take the game's own main loop through the rocket paths (rocket built + fuel 0 with a steering
+Jetman; fuel 5 carrying the last pod -> take-off, level 2 landing; level 4 complete -> level 5
+base-only rocket), or a real Fuse RZX of building + launching. Build unchanged by either.
 
 48K (16K game). Code: nexclash/jetpac.py, asm/jetpac_hooks.asm, asm/jetpac_tables.asm (GENERATED:
 `python -m nexclash.jetpac tables GAME.z80`, then `python tools/asm2profile.py jetpac`),
@@ -21,7 +23,7 @@ every graphic. A real Fuse RZX would add the game's own paths (rocket build, fue
 | Output | MD5 | Status |
 |---|---|---|
 | jetpac.nex (plain, tail 0x5B00) | feff51b7038606d21c03c260055481e4 | boot sim OK |
-| jetpac_sprites.nex (altrom, stateless hooks, 82 patterns) | 3cf8fbd2762091244c7580ccfa79d82d | free run IDENTICAL, unit PASS (round 2 fix); hardware: round 2 pending |
+| jetpac_sprites.nex (altrom, stateless hooks, 82 patterns) | 3cf8fbd2762091244c7580ccfa79d82d | free run IDENTICAL, unit PASS (round 2 fix); hardware: round 2 PASSED (user, 2026-11-03) |
 | (round 1 build, superseded) | c963b42f0e685d648d552656fde4d6f9 | hardware: rocket sections flash, fuel invisible, no flames |
 
 Verification (2026-10-19): free run 6000 frames: 20433 draws, 100 erases, 23192 colour paints,
@@ -76,7 +78,7 @@ paths the free run never reaches (it never builds the rocket), so every check pa
 - Stack: lowest SP inside the hooks 23762 (sites >= 23782); + the ROM ISR's 16 bytes = 23746, above
   the code the game runs at 23728-23730 (the game alone reaches 23742).
 
-## Hardware checklist (round 2: the rocket fix)
+## Hardware checklist (round 2: the rocket fix) - PASSED on hardware (user, 2026-11-03)
 - Level 1: build the rocket - after the middle and after the nose land, ALL sections stay shown,
   no flashing.
 - Fuel pods: visible falling and while carried (cycling colour), drop onto the rocket.
@@ -176,6 +178,7 @@ defaults all white until painted).
 - [local: Jetpac only - the alt ROM gap 0x386E-0x3CFF is its only hook space] Hooks + tables now end at 0x3CFF with the register block: 1 byte left. Further growth needs table compaction (the fuel subtables repeat one graphic, 48 bytes) or a RAM page.
 - [local: game-specific colour rule] Rocket fuel rows (per character row) done with two-index patterns (top 8 lines index 2) and the unused palette offset 8 (magenta below, white above); valid because partial fuel occurs only standing at y 183, where rows and sections align.
 - [doc docs/LEARNINGS.md §2.6 Process / tokens (this sandbox)] `$!` after `setsid nohup` is the wrapper's PID: a `kill -0` wait on it ended at once (independent check, 2026-11-03); the job's PID comes from `ps`.
+- [deferred Open: reconsider when the user picks up the checks (2026-11-03: "sort checks another day")] Without an RZX, a seeded free run (poke only values the game itself writes, e.g. rocket fields / (23860), then a Jetman steered by reading positions each frame) takes the game's main loop through paths a key schedule never reaches; unit tests on single routines skip the transitions between them.
 
 ## Technique use
 - detect.tracked-unit: corrected: its composite question missed one object drawing several figures; card amended with that case
@@ -183,3 +186,4 @@ defaults all white until painted).
 ## Stage log
 - 2026-11-03 stage 4 (round 1 hardware report: 3 faults): ~2 h, ~60 tool calls, 0 user rounds; main had nothing new at the start (fetch).
 - 2026-11-03 stage 4 check (no hardware report yet): independent re-verify `selftest --game jetpac --verify` PASSED (rebuild MD5s, free run IDENTICAL, unit + rocket 37 PASS, boot OK); specnext files match; two stale Patch-design / results lines corrected. ~25 tool calls.
+- 2026-11-03 stage 4 round 2: user reports the round-2 build works on real hardware; checks (seeded free runs / RZX) deferred by the user. ~10 tool calls.

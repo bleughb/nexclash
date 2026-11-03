@@ -62,8 +62,8 @@
   "engine_col": "jetpac (jetpac.md)",
   "build": "jetpac_sprites.nex 3cf8fbd2",
   "software": "free run IDENTICAL (no RZX), unit PASS (rocket, fuel, flames: round 2)",
-  "hardware": "round 1: rocket / fuel / flames faults (fixed, round 2 untested)",
-  "next": "hardware round 2; a real RZX"
+  "hardware": "round 2 PASSED (user, 2026-11-03; round 1 rocket / fuel / flames faults fixed)",
+  "next": "close (PR); deferred: seeded free runs of the rocket paths or a real RZX"
  },
  "checks": [
   "asm2profile:jetpac"
