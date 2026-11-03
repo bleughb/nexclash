@@ -1,11 +1,11 @@
 # Nemesis the Warlock (Martech 1987, 48K) - https://spectrumcomputing.co.uk/entry/3387/ZX-Spectrum/Nemesis_the_Warlock
 
 ## Next session
-Stage: 4 (hardware round 2, when the user reports)  State: round 1 OK on hardware (basic play, 2026-11-03)
+Stage: 4 (hardware round 2, when the user reports)  State: colour build 31ad4ab5 + sheets sent (2026-11-03); round 1 OK
 Inputs: specnext/reference/nemesis_the_warlock/ (snapshot, rzx, both .nex)    Branch: claude/festive-einstein-sx8txv
-Start with: the user's report from longer play (later levels, define keys, speed)
+Start with: the user's report on 31ad4ab5 (longer play, define keys, speed) or a painted sheet (recolour skill)
 Read: PLAYBOOK stage 4, ## Engine, ## Hardware checklist
-Open: colour sheets not built (fixed rule); stamps (bodies) on the ULA; speed spikes (87K T max)
+Open: stamps (bodies) on the ULA; speed spikes (129K T max at 3.5 MHz, cache-miss frames)
 
 ## Facts
 - Inputs: only a SPIN 0.6 RZX (1 segment, 134,980 frames, no autosaves). Its embedded Z80 snapshot
@@ -119,6 +119,11 @@ Open: colour sheets not built (fixed rule); stamps (bodies) on the ULA; speed sp
   pixels IDENTICAL; unit PASS; boot OK both builds; rebuild MD5s match. Speed over the whole
   recording: 17.1K T mean / 86.9K T max per frame (3.5 MHz equivalent).
 - Builds: plain f1497589ddf479e34d42f6ab0618954d, sprites 36c8a2e8a7e50c092d4740099e446696.
+- FULL with the colour map (2026-11-03, stamped): same counts, 47,173,776 sprite pixels IDENTICAL;
+  colour cases 83 + overlap + wrong check byte, negative controls 2/2 detected; recolour = full build
+  both ways. Synthetic map over all 89 images: quick 1200 IDENTICAL. Speed 19.7K T mean / 129K T
+  max per frame (3.5 MHz; was 17.1K / 86.9K: pout's flag test on every pattern byte of a build).
+  Sprites 31ad4ab5b7507b6289ffe30f82c7d6bb (plain unchanged).
 
 ## Hardware checklist (round 1)
 1. nemesis_the_warlock.nex (plain) starts and plays as before (CSpect: yes, 2026-11-02).
@@ -129,6 +134,8 @@ Open: colour sheets not built (fixed rule); stamps (bodies) on the ULA; speed sp
 6. Speed: the game is no slower than the plain build in normal play; note any stutter when a new
    enemy type first appears (pattern build, up to ~1.2 frames).
 7. Message screens between levels: no sprites left over them.
+
+8. (31ad4ab5) Colours as before (no map yet); note any extra stutter when new enemies appear.
 
 ## Hardware rounds
 - Round 1 (2026-11-03, sprites 36c8a2e8): user "all ok for now with a basic game play" - checklist
@@ -174,6 +181,7 @@ Open: colour sheets not built (fixed rule); stamps (bodies) on the ULA; speed sp
 ## Stage log
 - 2026-11-02 stage 0: ~2 h wall (survey ~1.8 h for 135K frames), ~25 tool calls, 4 user rounds; menus found in code.
 - 2026-11-03 learning capture: rzx extract, attr_census probe, verify card, contract / LEARNINGS / LEARNING 2b, learncheck friction sweep.
+- 2026-11-03 stage 3 gap (colour map, sheets, recolour): ~1.5 h, ~45 tool calls, 0 user rounds (two full verifications: record MD5 first).
 - 2026-11-03 stage 4 round 1: hardware OK (basic play), 1 user round, no code change.
 - 2026-11-03 stage 3: ~30 min, ~10 tool calls, 0 user rounds (full verification 14 min).
 - 2026-11-02 stage 2: ~3 h, ~60 tool calls, 1 user round (engine, quick runs, record).
