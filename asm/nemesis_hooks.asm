@@ -26,6 +26,7 @@ NENT    EQU 24          ; events per frame: figures (4 sprites each) + XOR effec
 NSLOT   EQU 32          ; cached images (4 patterns each)
 BUFBASE EQU 23798       ; back buffer: line L, column c at BUFBASE + 32L + c = screen (c*8, L)
 ROOMATT EQU 51800
+CPG     EQU 26          ; colour pages (nemesis.py CPG): index at 0x0000 of CPG, streams at slot 0
 
         ORG 0x2000
 ; ---- plot entries ----
@@ -704,6 +705,46 @@ keyp:   ld l,b
 build:  add a,a
         add a,a
         ld (t_pat),a
+        ; colour map: index entry (g lo, g hi, w, page, stream) for this image -> slot 0, t_ov = 1
+        xor a
+        ld (t_ov),a
+        nextreg 0x50,CPG
+        ld hl,0
+        ld b,(hl)
+        inc hl
+        ld a,b
+        or a
+        jr z,.nf
+.cs:    ld a,(ix+4)
+        cp (hl)
+        jr nz,.cn
+        inc hl
+        ld a,(ix+5)
+        cp (hl)
+        jr nz,.cn1
+        inc hl
+        ld a,(ix+6)
+        cp (hl)
+        jr nz,.cn2
+        inc hl
+        ld a,(hl)
+        inc hl
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ld (t_sp),de
+        nextreg 0x50,a
+        ld a,1
+        ld (t_ov),a
+        jr .nf
+.cn:    inc hl
+.cn1:   inc hl
+.cn2:   inc hl
+        inc hl
+        inc hl
+        inc hl
+        djnz .cs
+.nf:
         ld l,(ix+4)
         ld h,(ix+5)
         ld (t_m),hl             ; mask
@@ -771,7 +812,7 @@ build:  add a,a
         jr .nr
 .zr:    xor a
         ld b,8
-.z:     out (0x5B),a
+.z:     call pout
         djnz .z
 .nr:    ld hl,t_r
         inc (hl)
@@ -781,6 +822,7 @@ build:  add a,a
         inc a
         cp 4
         jr nz,.q
+        nextreg 0x50,0xFF       ; ROM back in slot 0
         ret
 
 ; 8 pixels for byte column B of the row at offset (t_x) (+1 for the second column); keeps B, C
@@ -817,10 +859,10 @@ byte:   ld a,b
         jr nc,.h1
         inc h
 .h1:    ld a,(hl)
-        out (0x5B),a
+        call pout
         inc l
         ld a,(hl)
-        out (0x5B),a
+        call pout
         ld h,high nib
         ld a,b
         add a,a
@@ -836,17 +878,32 @@ byte:   ld a,b
         jr nc,.h2
         inc h
 .h2:    ld a,(hl)
-        out (0x5B),a
+        call pout
         inc l
         ld a,(hl)
-        out (0x5B),a
+        call pout
         pop bc
         ret
 .z:     xor a
-        out (0x5B),a
-        out (0x5B),a
-        out (0x5B),a
-        out (0x5B),a
+        call pout
+        call pout
+        call pout
+        call pout
+        ret
+
+; pattern byte A out; a painted image (t_ov) applies its stream pair: A = (A AND a) OR o
+pout:   push hl
+        ld hl,t_ov
+        bit 0,(hl)
+        jr z,.o
+        ld hl,(t_sp)
+        and (hl)
+        inc hl
+        or (hl)
+        inc hl
+        ld (t_sp),hl
+.o:     out (0x5B),a
+        pop hl
         ret
 
 spc:    db 0x00,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6
@@ -908,6 +965,8 @@ t_iy:   dw 0
 t_m:    dw 0
 t_g:    dw 0
 rowp:   dw 0
+t_ov:   db 0
+t_sp:   dw 0
 keys:   ds NSLOT*4          ; graphic lo, hi, width (0 = empty), frame stamp
 tab:    ds NENT*8           ; HL, save IY, graphic DE, width, direction
 regs:   ds 20               ; register block for the start-up tail
@@ -923,6 +982,13 @@ setup:  nextreg 0x4B,0
         inc a
         cp 128
         jr nz,.h
+        nextreg 0x40,3          ; sprite palette 3-15: fixed colours (nemesis.py FIXED)
+        ld hl,fixed
+        ld b,13
+.f:     ld a,(hl)
+        nextreg 0x41,a
+        inc hl
+        djnz .f
         nextreg 0x1C,2
         nextreg 0x19,16
         nextreg 0x19,239
@@ -930,6 +996,7 @@ setup:  nextreg 0x4B,0
         nextreg 0x19,127
         nextreg 0x15,0x01
         ret
+fixed:  db 0x00,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6,0xE0,0xE7,0x1C,0xFC,0xFF
 setup_end:
 
         SAVEBIN "nw_page.bin",0x2000,page_end-0x2000

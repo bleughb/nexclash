@@ -9,7 +9,7 @@ contribution, a release, lesson consolidation. An add-a-game session by a contri
   access first (LEARNINGS 2.6). specnext is large: a sparse checkout of `reference/<game>` is enough
   for one game.
 - New game inputs: the attached .z80 + .rzx -> specnext/reference/<game>/; no .z80 but a Fuse RZX ->
-  its first snapshot is the .z80 (LEARNINGS 2.4).
+  its first snapshot is the .z80 (`nexclash.py rzx extract`; LEARNINGS 2.4).
 
 ## Commit, PR and the private files
 - Commit on a branch, push, open a PR (message = what changed + verification). GitHub API details

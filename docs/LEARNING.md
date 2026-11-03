@@ -24,11 +24,19 @@ indented) count; any other line in the section fails, so nothing is silently ski
 no reusable finding says so: `- [none: <why>]` (e.g. "hardware report only, nothing new"). A script that answered a question another
 game may ask goes to tools/probes/ (its README) the same day, not to a scratch folder.
 
+## 2b. Friction sweep (stage end; learncheck)
+games/<game>.md "## Friction": five bullets, each `- <key>: [tag] <answer>` (tags as below,
+`[none: why]` allowed): `reuse` (written from scratch, reusable by another game?), `retries` (a
+toolkit / verifier mistake that cost more than one attempt), `environment` (a git / harness /
+network workaround), `hand-rolled` (a missing command done by hand), `scratch` (scratchpad
+scripts: each kept in tools/probes/ or dropped, why). Toolkit lessons count, not only game facts.
+A `[local]` lesson naming shared code (simpool, rzx, z80tonex, ...) fails: it is a tool / doc / backlog.
+
 ## 3. Dispositions (one or more per lesson, each must resolve)
 | Tag | Meaning | learncheck checks |
 |---|---|---|
 | `[card <id> §<section>]` | incorporated into a technique card (amended, or a new candidate) | card id, section heading |
-| `[doc BRIEFING A1]` / `[doc docs/<X>.md §Heading]` | a platform / toolkit fact in a shared doc | section resolves |
+| `[doc BRIEFING A1]` / `[doc docs/<X>.md §Heading]` / `[doc CLAUDE.md §Heading]` | a platform / toolkit fact in a shared doc | section resolves |
 | `[tool <ref>]` | implemented in shared code now | `nexclash.py <cmd>`, `nexclash.<module>`, `<module>.<function>` or a path resolves |
 | `[backlog C2 #N]` | a shared capability requested, not built | BRIEFING C2 item exists |
 | `[probe tools/probes/<x>.py]` | kept as a reproducible probe | file, README row, docstring fields |

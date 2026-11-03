@@ -19,3 +19,4 @@ Rules (learncheck checks all four):
 | Probe | Answers | Smoke test | Origin |
 |---|---|---|---|
 | rzx_census.py | how often and from which frame a recording reaches given addresses (+ HL buckets); C simulator, ~400 frames/s | Chuckie Egg: ISR 40092 x299 in 300 frames, 43909 x141017 (= `scan --writers`) | Cauldron 2026-10-27 |
+| attr_census.py | which attribute sets a screen window shows across a recording (sampled; colour-rule questions at design) | Chuckie Egg: 3000 frames every 50 -> 60 samples, 35 sets | Nemesis the Warlock 2026-11-03 |

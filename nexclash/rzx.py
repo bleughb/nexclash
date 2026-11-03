@@ -1,4 +1,5 @@
 """Minimal RZX writer/reader (snapshot + input-recording segments)."""
+import os
 import struct
 from skoolkit.rzxplay import parse_rzx, InputRecording
 from skoolkit.snapshot import Snapshot
@@ -61,6 +62,35 @@ def strip(path, out):
         i += n
     open(out, 'wb').write(d[:10] + bytes(body))
     return snaps - 1
+
+
+def extract(path, out=None, index=0):
+    """Write snapshot `index` (0 = the recording's start state) of an RZX to a file: the .z80 when
+    the user has only a recording (docs/MAINTAIN.md). Snapshot blocks (0x30) may be zlib-compressed
+    (flag bit 1; SPIN, Fuse); encrypted ones (bit 0) are refused. out defaults to <rzx>.<ext>, the
+    extension taken from the block (z80 / szx / sna). -> (out path, extension)."""
+    import zlib
+    d = open(path, 'rb').read()
+    i, k = 10, 0
+    while i + 5 <= len(d):
+        n = struct.unpack('<I', d[i + 1:i + 5])[0]
+        if n < 5:
+            break
+        if d[i] == 0x30:
+            if k == index:
+                flags = struct.unpack('<I', d[i + 5:i + 9])[0]
+                if flags & 1:
+                    raise ValueError('%s: snapshot %d is encrypted' % (path, index))
+                ext = d[i + 9:i + 13].rstrip(b'\0').decode('ascii', 'replace').lower()
+                body = d[i + 17:i + n]
+                if flags & 2:
+                    body = zlib.decompress(body)
+                out = out or os.path.splitext(path)[0] + '.' + ext
+                open(out, 'wb').write(body)
+                return out, ext
+            k += 1
+        i += n
+    raise ValueError('%s: no snapshot %d (%d in the file)' % (path, index, k))
 
 
 def info(path):

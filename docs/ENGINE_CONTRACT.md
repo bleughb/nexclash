@@ -54,6 +54,12 @@ A hook that runs the routine itself (CALL body / the routine's RET comes back to
 the next routine starts right after the RET, so no exit JP fits: Cauldron 0x6357) meets the original
 at the CALLER's return: the replay must skip sites nested inside it until that point (Cauldron
 `span`), or they are applied twice.
+Return shortcut (Nemesis): a hook on a long routine the replay runs anyway (a 68K T screen copy)
+pushes a return trampoline and lets the original run; the verifier runs the full patched path for
+the first N calls, then only the trampoline's code from the original's state at the routine's RET -
+a full verify in 14 min instead of hours. Slots: `simpool.machine` keeps ONE simulator per slot
+name; two alive at once (original + patched in one event) need different slots, or the second
+resets the first (a false "memory differs").
 
 ## Record (docs/records/<record>.json)
 Fields: nexclash/records.py docstring; copy the nearest record. `python -m nexclash.records deps

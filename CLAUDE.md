@@ -73,9 +73,8 @@ version; tools/sjasmplus/README.md). Maintainers: repos and private files in doc
   (the maintainers' `--affected` does, docs/MAINTAIN.md). Without the references, say in the
   contribution note that shared code changed. Without push access selftest.py refuses the other runs.
 - Never `pkill -f` / kill by `pgrep -f` pattern (it matches your own shell): `pgrep -fa`, read, kill
-  the PID in the next command. No `pgrep -f` in ANY loop condition (`until ... && ! pgrep -f X`
-  too, and `kill -0 $(pgrep -o -f X)`: the loop's own command line contains X, never ends; recurred at
-  stage 1 and 3): `kill -0 PID` with the PID read first, or the log.
+  the PID in the next command. No `pgrep -f` anywhere in a loop (`! pgrep -f X`, `kill -0 $(pgrep -f
+  X)`: it matches the loop itself, never ends; stages 1, 3): `kill -0 PID` read first or the log.
 - The start-up tail must end below 0xC000, 48K too (the stub's bank 10 sits at 0xC000-0xFFFF;
   Trueno never booted). z80tonex.choose_tail_addr refuses such a tail; nextboot.check catches it.
 - Shell heredocs that write docs: quote the delimiter (`<<'EOF'`), or the shell runs every
@@ -94,9 +93,10 @@ version; tools/sjasmplus/README.md). Maintainers: repos and private files in doc
   never edit those by hand - selftest fails when they are stale).
 - Learning loop (docs/LEARNING.md; a stage is not complete without it): every finding a line in
   games/<game>.md "## Lessons" with its disposition tag (card / doc / tool / backlog / probe / local
-  / deferred), each acted on now: card or doc amended, useful scripts kept in tools/probes/, wrong
-  or reasonless rules fixed in place, recurring mistakes' warnings sharpened, hardware-only failures
-  in BRIEFING A1. "## Technique use": which cards / probes helped. Record matches the build. Grep
+  / deferred), each acted on now: card or doc amended, wrong or reasonless rules fixed in place,
+  recurring mistakes' warnings sharpened, hardware-only failures in BRIEFING A1. "## Friction"
+  sweep (docs/LEARNING.md 2b): toolkit + environment lessons, scratch scripts to tools/probes/
+  or dropped. "## Technique use": which cards / probes helped. Record matches the build. Grep
   before adding a line anywhere; sharpen the existing one. Say in the reply what you wrote.
 - `python tools/doccheck.py` (references, budgets, cards, learncheck) must PASS.
 - Contributors: `python nexclash.py contribute <game> --report <the _report.txt>`, give the user the

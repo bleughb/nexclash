@@ -283,7 +283,15 @@ def smoke_rzx_census(ez, er, ok):
 
 # Every tools/probes/<name>.py -> its smoke test on Chuckie Egg (ez, er, ok), run by tools_check;
 # learncheck fails a probe that is missing here or names no function (GPT6 review, 2026-10-27).
-PROBE_SMOKE = {'rzx_census.py': smoke_rzx_census}
+def smoke_attr_census(ez, er, ok):
+    import attr_census                          # probe (tools/probes/README.md): attribute sets per sample
+    sets, n = attr_census.census(er, stop=3000)
+    k, v = sets.most_common(1)[0]
+    ok('probe attr_census (3000 frames, every 50): 60 samples, 35 sets, commonest x6 starting 00 x106',
+       (n, len(sets), v, k[0]) == (60, 35, 6, (0, 106)), (n, len(sets), v, k[0]))
+
+
+PROBE_SMOKE = {'rzx_census.py': smoke_rzx_census, 'attr_census.py': smoke_attr_census}
 
 
 def tools_check(src):
@@ -328,6 +336,11 @@ def tools_check(src):
     def ok(name, cond, info=''):
         checks_.append(cond)
         print('%-4s tools: %s%s' % ('OK' if cond else 'FAIL', name, '' if cond else ' (%s)' % str(info)[:200]))
+
+    from nexclash import rzx as rzxmod          # rzx extract: the start snapshot when a user sends only an RZX
+    xo, xe = rzxmod.extract(er, os.path.join(work, 'extract.bin'))
+    ok('rzx extract: Chuckie Egg RZX snapshot 0 = SZX, 11786 bytes, md5 a6c4560d', xe == 'szx'
+       and md5(xo) == 'a6c4560df48533e690fffc23c747e489', (xe, md5(xo)))
     old = sys.stderr
     sys.stderr = io.StringIO()                  # SkoolKit's SZX warnings
     try:

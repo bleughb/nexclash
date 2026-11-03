@@ -6,3 +6,4 @@ selftest.log
 dist/
 contrib_reports/
 MANIFEST.json
+out_nemesis/

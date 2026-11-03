@@ -37,11 +37,11 @@ at build time: colour them there (Dizzy 1 plane, Midnight Resistance commit page
 **Assumptions.** The image list is known (whole-recording capture, kept in the profile); graphics
 are never written (else a run-time check per entry); an MMU slot is free at the upload.
 
-**Validation gap.** One game (Cauldron): unit cases on every image geometry and the screen edges,
-a synthetic painting through read-back + recolour + a quick verify; no painting on hardware yet.
+**Validation gap.** Cauldron, Nemesis: unit cases per image geometry and screen edge,
+synthetic painting via read-back, recolour, quick verify; none on hardware.
 
 ## Recognise
-- Patterns written from a canvas the hook fills from the graphic at each draw (Cauldron `upload`).
+- Patterns built by the hook from the graphic at each draw (Cauldron `upload`).
 - Outlines or rings beyond the graphic's bytes: those pixels need keys of their own.
 
 ## Probe and stop
@@ -80,5 +80,6 @@ equals a full build (selftest guard).
 
 ## Evidence
 - games/cauldron.md "Colour map" (observed: unit cases, synthetic painting quick run).
+- games/nemesis_the_warlock.md "Colour map" (no canvas: AND / OR pair per pattern byte).
 - `grep -n 'def colour_tables\|def canvas_keys\|def colour_cases\|def recolour' nexclash/cauldron.py`;
   asm labels `ovfind`, `.bpo`: asm/cauldron_hooks.asm.
