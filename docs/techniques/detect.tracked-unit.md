@@ -4,7 +4,7 @@
 {
   "schema": 3,
   "id": "detect.tracked-unit",
-  "revision": 2,
+  "revision": 3,
   "kind": "detect",
   "title": "Find the unit the hooks must track (whole image, partial image, composite)",
   "question": "Does one plot call draw a whole figure, part of one, or one piece of a multi-part object?",
@@ -17,7 +17,7 @@
   "phases": [],
   "order": {},
   "owns": {},
-  "examples": ["atic_atac"],
+  "examples": ["atic_atac", "jetpac"],
   "sources": ["https://github.com/TheGoodDoktor/SpectrumAnalyserProjects/blob/2aeb826aea3ccb73ad7630288d0351fda4096e84/Quazatron/DrawListViewer.lua"]
 }
 ```
@@ -34,6 +34,7 @@ track", nothing else.
 - Effects that draw a slice of a figure per call (Atic Atac appear / death: one row k per plot,
   height poked to 1 and restored).
 - Several objects forming one figure (Rainbow Islands bosses: one object per quarter).
+- One object, several figures per frame (Jetpac rocket: sections + flames, same IX).
 - False reading: heights taken from the static graphic bytes when the game pokes them at run time.
 
 ## Probe and stop
@@ -60,6 +61,7 @@ None.
 | Ghost figure kept on screen while the original's was blank (Atic Atac: 18 slices + figure) | parity kept per draw call, not per tracked unit | this card | image groups with a 24-bit row mask | per-image parity (DE, x, y) |
 | Hook cost too high | hooked per row | `cost --at` | hook per figure | - |
 | Boss or vehicle shown in pieces | composite object not joined | trace object records | join by graphics area or owner | - |
+| Only an object's last figure shown (Jetpac) | one sprite set per object | calls per object per frame | sprites per figure; whole-routine check | - |
 
 ## Verification
 For the design it feeds: the Display check compares by tracked unit; unit cases cover each partial

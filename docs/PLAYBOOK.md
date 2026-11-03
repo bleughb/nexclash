@@ -278,10 +278,11 @@ captured states (minutes). N must reach the first call of every hook the unit te
 states from, or the run FAILS for lack of a state (Lode Runner at 300 frames: "no captured draw
 state"; Commando: "no plot reused a cached image"): start at 2000. A verifier at ~10K frames/min ends stage 2 with a 20000-frame run (Nemesis: 2000 missed two rare cases). One quick run per change; read
 its counters before changing anything else.
+Unreached paths: unit cases run the game's own routine (fields poked); index values from its
+writers, not its name (Jetpac rocket, fuel).
 Unit cases: cross only the inputs that interact. Every graphic x every position edge is one
 product; colours, slots and similar independent inputs need each value once, on a few graphics -
-not every combination (Jetpac's 5,616 graphic cases are 117 graphics x 8 positions x 3 inks x 2
-slots; 117 x 8 + the inks and slots once each covers the same guard edges).
+not every combination (Jetpac: 117 graphics x 8 positions, inks and slots once each).
 Stage 2 ends: quick runs PASS (counters in games/<game>.md), the evidence record written (step 7),
 committed; the Next session block (stage 3).
 
