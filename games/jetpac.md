@@ -25,7 +25,7 @@ every graphic. A real Fuse RZX would add the game's own paths (rocket build, fue
 | (round 1 build, superseded) | c963b42f0e685d648d552656fde4d6f9 | hardware: rocket sections flash, fuel invisible, no flames |
 
 Verification (2026-10-19): free run 6000 frames: 20433 draws, 100 erases, 23192 colour paints,
-5 screen clears, 2193166 sprite pixels = the original plot; unit: 5616 graphic cases (every graphic
+5 screen clears, 2193166 sprite pixels = the original plot; unit (round 1): 5616 graphic cases (every graphic
 incl. all 8 levels' aliens and the 12 carried rocket parts x 8 positions incl. both edges x 3 inks x
 first/last object), erase 2, clear 1, guard 1, negative control 40/40.
 
@@ -57,7 +57,7 @@ paths the free run never reaches (it never builds the rocket), so every check pa
   original erases and redraws its flames on the ULA: same as the original.
 
 ## Patch design
-- Alt ROM only (hooks + tables 0x386E-0x3C15, 935 bytes): no RAM page, no state. 80 4-bit patterns
+- Alt ROM only (hooks + tables 0x386E-0x3CEB, 1149 bytes + 20-byte register block to 0x3CFF): no RAM page, no state. 82 4-bit patterns
   (bank 11, uploaded at setup across both 8K pages), sprite palette offset n index 1 = Spectrum
   colour n (8-15 bright). Tail 0x5B00 (0x5B00-0x5B7F zero; a loader leftover at 0x5B80-0x5B8D is
   never touched).
@@ -175,9 +175,11 @@ defaults all white until painted).
 - [doc docs/PLAYBOOK.md §6. Verify (differential test)] No RZX and a free run that never builds the rocket: the unit tests now run the game's own routines (26217 flames, 26419 sections) from a captured state with the rocket's fields poked. The lookup guard `part < 3` came from the name ("3 parts"); the game writes 3 = fuel (24858, 26041). PLAYBOOK 6 line added.
 - [local: Jetpac only - the alt ROM gap 0x386E-0x3CFF is its only hook space] Hooks + tables now end at 0x3CFF with the register block: 1 byte left. Further growth needs table compaction (the fuel subtables repeat one graphic, 48 bytes) or a RAM page.
 - [local: game-specific colour rule] Rocket fuel rows (per character row) done with two-index patterns (top 8 lines index 2) and the unused palette offset 8 (magenta below, white above); valid because partial fuel occurs only standing at y 183, where rows and sections align.
+- [doc: LEARNINGS 2.6] `$!` after `setsid nohup` is the wrapper's PID: a `kill -0` wait on it ended at once (independent check, 2026-11-03); the job's PID comes from `ps`.
 
 ## Technique use
 - detect.tracked-unit: corrected: its composite question missed one object drawing several figures; card amended with that case
 
 ## Stage log
 - 2026-11-03 stage 4 (round 1 hardware report: 3 faults): ~2 h, ~60 tool calls, 0 user rounds; main had nothing new at the start (fetch).
+- 2026-11-03 stage 4 check (no hardware report yet): independent re-verify `selftest --game jetpac --verify` PASSED (rebuild MD5s, free run IDENTICAL, unit + rocket 37 PASS, boot OK); specnext files match; two stale Patch-design / results lines corrected. ~25 tool calls.

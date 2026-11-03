@@ -929,6 +929,9 @@ Grouped by question; add a new lesson to its group.
   `nohup cmd &` and `( a; b ) &` die silently - the log just stops (Midnight Resistance session:
   a 20-min `selftest --verify` lost twice). Check with `ps -eo pid,sid,args`: the job's SID must
   be its own PID. 1-2 CPUs: `--jobs 2` at most; one long job at a time.
+- `$!` after `setsid nohup job &` is the wrapper's PID, not the job's (setsid forks): a `until ! kill -0 $!`
+  wait ends at once and looks like a finished run (Jetpac check, 2026-11-03). Read the job's PID from
+  `ps -eo pid,sid,args` (or wait on the log's last line) before waiting on it.
 - Start the job on its own: in `a && b && setsid nohup job &` the `&` backgrounds the WHOLE chain,
   so a failed `a` silently skips the job and its output is lost.
 - A single tool call is capped at 10 minutes: poll a background job with ONE call per ~9 minutes,
