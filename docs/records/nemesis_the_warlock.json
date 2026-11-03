@@ -64,8 +64,8 @@
   "engine_col": "nemesis (nemesis_the_warlock.md)",
   "build": "nemesis_the_warlock_sprites.nex 36c8a2e8",
   "software": "quick 20000 IDENTICAL, unit PASS",
-  "hardware": "untested",
-  "next": "stage 3: full verification"
+  "hardware": "round 1 OK (basic play, 2026-11-03)",
+  "next": "more play: later levels, define keys, speed"
  },
  "checks": [
   "asm2profile:nemesis_the_warlock"

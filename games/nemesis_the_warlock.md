@@ -1,11 +1,11 @@
 # Nemesis the Warlock (Martech 1987, 48K) - https://spectrumcomputing.co.uk/entry/3387/ZX-Spectrum/Nemesis_the_Warlock
 
 ## Next session
-Stage: 4 (hardware round 1)  State: full verification PASSED + stamped 2026-11-03; build sent to the user
+Stage: 4 (hardware round 2, when the user reports)  State: round 1 OK on hardware (basic play, 2026-11-03)
 Inputs: specnext/reference/nemesis_the_warlock/ (snapshot, rzx, both .nex)    Branch: claude/festive-einstein-sx8txv
-Start with: the user's hardware / CSpect report against ## Hardware checklist
-Read: PLAYBOOK stage 4, ## Engine, ## Results
-Open: speed spikes (87K T max at 3.5 MHz) if the user sees stutter; colour sheets not built (fixed rule: room ink / paper); stamps (corpses?) on the ULA; no PR yet
+Start with: the user's report from longer play (later levels, define keys, speed)
+Read: PLAYBOOK stage 4, ## Engine, ## Hardware checklist
+Open: colour sheets not built (fixed rule); stamps (bodies) on the ULA; speed spikes (87K T max)
 
 ## Facts
 - Inputs: only a SPIN 0.6 RZX (1 segment, 134,980 frames, no autosaves). Its embedded Z80 snapshot
@@ -115,6 +115,10 @@ Open: speed spikes (87K T max at 3.5 MHz) if the user sees stutter; colour sheet
    enemy type first appears (pattern build, up to ~1.2 frames).
 7. Message screens between levels: no sprites left over them.
 
+## Hardware rounds
+- Round 1 (2026-11-03, sprites 36c8a2e8): user "all ok for now with a basic game play" - checklist
+  1-7 no faults seen. Not yet covered: later levels, define keys screen, long-play speed.
+
 ## Decisions
 - 2026-11-02 user: plain .nex runs on CSpect (hardware not yet).
 - 1, 2, 3, 5: defaults (every figure a sprite; scenery/HUD/text on ULA; figures in front = game's
@@ -139,6 +143,7 @@ Open: speed spikes (87K T max at 3.5 MHz) if the user sees stutter; colour sheet
 
 ## Stage log
 - 2026-11-02 stage 0: ~2 h wall (survey ~1.8 h for 135K frames), ~25 tool calls, 4 user rounds; menus found in code.
+- 2026-11-03 stage 4 round 1: hardware OK (basic play), 1 user round, no code change.
 - 2026-11-03 stage 3: ~30 min, ~10 tool calls, 0 user rounds (full verification 14 min).
 - 2026-11-02 stage 2: ~3 h, ~60 tool calls, 1 user round (engine, quick runs, record).
 - 2026-11-02 stage 2 start: plan + every call site; broke before code (session ~65 calls, PLAYBOOK Sessions).
