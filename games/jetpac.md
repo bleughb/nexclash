@@ -168,7 +168,7 @@ defaults all white until painted).
   sections, fuel 0-6, flash bit, y 183 / 163 / 150 / 41) -> PASS; negative controls: shifted
   patterns 40/40, the build without the rocket's pairs (neg_rk) 36/37 (the 37th: a lone base, no
   flames - the fault cannot show), the build dropping part 3 (neg_pt) 16/16 fuel cases.
-- The full verification: ## Stage log (stamped by selftest).
+- Full verification (selftest --game jetpac --verify --stamp, 6000-frame free run + unit + boot): PASSED, stamped 2026-11-03.
 
 ## Lessons
 - [card detect.tracked-unit §Recognise] One object drew 4 figures a frame (the rocket: 3 sections in a loop + flames, same IX); a sprite set per object showed only the last, and the per-draw check passed because it compares each draw alone. Observed on hardware (user), demonstrated by the neg_rk build failing 36/37 whole-routine cases. Card: Recognise bullet + failure row.
