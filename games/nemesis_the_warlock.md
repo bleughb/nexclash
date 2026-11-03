@@ -1,11 +1,11 @@
 # Nemesis the Warlock (Martech 1987, 48K) - https://spectrumcomputing.co.uk/entry/3387/ZX-Spectrum/Nemesis_the_Warlock
 
 ## Next session
-Stage: 3 (prove + deliver)  State: engine built 2026-11-02; quick runs PASS (## Results); record written
-Inputs: specnext/reference/nemesis_the_warlock/ (snapshot, rzx)    Branch: claude/festive-einstein-sx8txv
-Start with: `python selftest.py --game nemesis_the_warlock --verify --stamp` (detached; ~15 min for 135K frames)
-Read: PLAYBOOK stage 3, docs/COLOURS.md (sheets: not built yet), BRIEFING A1 (6b review)
-Open: colour sheets + recolour not built (colours are the room attribute, fixed rule); permanent stamps (corpses?) stay on the ULA - tell the user
+Stage: 4 (hardware round 1)  State: full verification PASSED + stamped 2026-11-03; build sent to the user
+Inputs: specnext/reference/nemesis_the_warlock/ (snapshot, rzx, both .nex)    Branch: claude/festive-einstein-sx8txv
+Start with: the user's hardware / CSpect report against ## Hardware checklist
+Read: PLAYBOOK stage 4, ## Engine, ## Results
+Open: speed spikes (87K T max at 3.5 MHz) if the user sees stutter; colour sheets not built (fixed rule: room ink / paper); stamps (corpses?) on the ULA; no PR yet
 
 ## Facts
 - Inputs: only a SPIN 0.6 RZX (1 segment, 134,980 frames, no autosaves). Its embedded Z80 snapshot
@@ -99,7 +99,21 @@ Open: colour sheets + recolour not built (colours are the room attribute, fixed 
   It found two cases 2000 frames missed: an XOR-90 effect (0x89F9 / 0x8A06) toggling buffer bytes
   under a figure (now logged as events, undone and redone around the save-unders) and a figure at
   column 31 wrapping 3 bytes onto the next line's column 2 (left on the ULA, as the original shows).
+- FULL (selftest --game --verify --stamp, 2026-11-03): 134,977 frames, 27,656 copies (20 full),
+  plots 77,738 right / 78,789 left / 4,517 8x8, 2 clears, 29,412 XOR effects, 47,173,776 sprite
+  pixels IDENTICAL; unit PASS; boot OK both builds; rebuild MD5s match. Speed over the whole
+  recording: 17.1K T mean / 86.9K T max per frame (3.5 MHz equivalent).
 - Builds: plain f1497589ddf479e34d42f6ab0618954d, sprites 36c8a2e8a7e50c092d4740099e446696.
+
+## Hardware checklist (round 1)
+1. nemesis_the_warlock.nex (plain) starts and plays as before (CSpect: yes, 2026-11-02).
+2. _sprites.nex: title and menu show no sprites; define keys (option 4) screen clean.
+3. In play: Nemesis and the enemies solid, black ink / cyan fill, no colour change over red platforms.
+4. Figures at the left / right edges of the play area clip at its border (no sprite over the side panels).
+5. Bodies (permanent stamps) stay on the screen as before (ULA colours).
+6. Speed: the game is no slower than the plain build in normal play; note any stutter when a new
+   enemy type first appears (pattern build, up to ~1.2 frames).
+7. Message screens between levels: no sprites left over them.
 
 ## Decisions
 - 2026-11-02 user: plain .nex runs on CSpect (hardware not yet).
@@ -115,6 +129,7 @@ Open: colour sheets + recolour not built (colours are the room attribute, fixed 
 ## Lessons
 - [card detect.buffer-layout-producer §Contract] Overlay from save-under: with a masked back-buffer plotter that saves the background (IY), the hooks leave the plotters and all game memory untouched and rebuild the screen from the save-unders after the copy; the verifier then compares ALL game memory. Card amended with this as a second producer pattern.
 - [local: game-specific] A plot whose save-under pointer is in ROM is a permanent stamp (scenery), not a figure: check every plot caller's save pointer before treating it as a sprite.
+- [local: CLAUDE.md "Rules" sharpened with this form (learncheck takes docs/ paths only)] I wrote `kill -0 $(pgrep -o -f X)` in a wait loop - the warned pattern in a new form; CLAUDE.md's rule now names it.
 - [doc docs/PLAYBOOK.md §6. Verify (differential test)] Quick runs: 2000 frames missed two rare cases that 20000 found (XOR effect under a figure, column-31 wrap): when a game verifies at ~10K frames/min, run the quick check at 20000 before stage 3. PLAYBOOK 6 amended.
 - [local: measured here; the PLAYBOOK speed budget already asks for it] Row address arithmetic per row cost 3x the copy itself (620 T/row): compute visible row range + screen address once, step with the next-line routine.
 - [local: one-off extraction; a later game with only an RZX should add an `rzx extract` command] SPIN RZX snapshot blocks are zlib-compressed Z80 (flag 2); extracted with a 10-line block parse; no CLI command extracts the first snapshot to a file.
@@ -124,6 +139,7 @@ Open: colour sheets + recolour not built (colours are the room attribute, fixed 
 
 ## Stage log
 - 2026-11-02 stage 0: ~2 h wall (survey ~1.8 h for 135K frames), ~25 tool calls, 4 user rounds; menus found in code.
+- 2026-11-03 stage 3: ~30 min, ~10 tool calls, 0 user rounds (full verification 14 min).
 - 2026-11-02 stage 2: ~3 h, ~60 tool calls, 1 user round (engine, quick runs, record).
 - 2026-11-02 stage 2 start: plan + every call site; broke before code (session ~65 calls, PLAYBOOK Sessions).
 - 2026-11-02 stage 1: ~40 min, ~20 tool calls, 2 user rounds (design answered, item 6 open).
