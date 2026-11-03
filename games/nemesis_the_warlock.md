@@ -3,7 +3,7 @@
 ## Next session
 Stage: 3 (prove + deliver)  State: engine built 2026-11-02; quick runs PASS (## Results); record written
 Inputs: specnext/reference/nemesis_the_warlock/ (snapshot, rzx)    Branch: claude/festive-einstein-sx8txv
-Start with: `python selftest.py --game nemesis_the_warlock --verify --stamp` (detached; ~3-4 h for 135K frames)
+Start with: `python selftest.py --game nemesis_the_warlock --verify --stamp` (detached; ~15 min for 135K frames)
 Read: PLAYBOOK stage 3, docs/COLOURS.md (sheets: not built yet), BRIEFING A1 (6b review)
 Open: colour sheets + recolour not built (colours are the room attribute, fixed rule); permanent stamps (corpses?) stay on the ULA - tell the user
 
@@ -94,7 +94,12 @@ Open: colour sheets + recolour not built (colours are the room attribute, fixed 
   pixels IDENTICAL; unit: edges 252, 8x8 16, 16 overlapping, stamp, negative control 1/1 PASS.
 - Speed (post hook, 28 MHz): 53,447 T mean / 242,166 T max (~8.9K / 40K T at 3.5 MHz); cache
   misses ~0.13 per frame (34 graphics in 2000 frames).
-- Builds: plain f1497589ddf479e34d42f6ab0618954d, sprites 2071743eab2e959943039aea5e233262.
+- quick 20000 (2026-11-03, after the XOR / wrap fixes): 4,715 copies, plots 9,544 / 10,753 / 598,
+  XOR effects 1,136, 6,470,310 sprite pixels IDENTICAL in 2 min; speed 12.6K T mean / 54K max (3.5 MHz).
+  It found two cases 2000 frames missed: an XOR-90 effect (0x89F9 / 0x8A06) toggling buffer bytes
+  under a figure (now logged as events, undone and redone around the save-unders) and a figure at
+  column 31 wrapping 3 bytes onto the next line's column 2 (left on the ULA, as the original shows).
+- Builds: plain f1497589ddf479e34d42f6ab0618954d, sprites 36c8a2e8a7e50c092d4740099e446696.
 
 ## Decisions
 - 2026-11-02 user: plain .nex runs on CSpect (hardware not yet).
@@ -110,6 +115,7 @@ Open: colour sheets + recolour not built (colours are the room attribute, fixed 
 ## Lessons
 - [card detect.buffer-layout-producer §Contract] Overlay from save-under: with a masked back-buffer plotter that saves the background (IY), the hooks leave the plotters and all game memory untouched and rebuild the screen from the save-unders after the copy; the verifier then compares ALL game memory. Card amended with this as a second producer pattern.
 - [local: game-specific] A plot whose save-under pointer is in ROM is a permanent stamp (scenery), not a figure: check every plot caller's save pointer before treating it as a sprite.
+- [doc] Quick runs: 2000 frames missed two rare cases that 20000 found (XOR effect under a figure, column-31 wrap): when a game verifies at ~10K frames/min, run the quick check at 20000 before stage 3. PLAYBOOK 6 amended.
 - [local: measured here; the PLAYBOOK speed budget already asks for it] Row address arithmetic per row cost 3x the copy itself (620 T/row): compute visible row range + screen address once, step with the next-line routine.
 - [local: one-off extraction; a later game with only an RZX should add an `rzx extract` command] SPIN RZX snapshot blocks are zlib-compressed Z80 (flag 2); extracted with a 10-line block parse; no CLI command extracts the first snapshot to a file.
 

@@ -46,7 +46,7 @@
    "nemesis_the_warlock.rzx"
   ],
   "auto_record": false,
-  "minutes": 240
+  "minutes": 20
  },
  "outputs": {
   "plain": {
@@ -55,15 +55,15 @@
   },
   "sprites": {
    "file": "nemesis_the_warlock_sprites.nex",
-   "md5": "2071743eab2e959943039aea5e233262"
+   "md5": "36c8a2e8a7e50c092d4740099e446696"
   }
  },
  "repro": [],
  "status": {
   "title": "Nemesis the Warlock",
   "engine_col": "nemesis (nemesis_the_warlock.md)",
-  "build": "nemesis_the_warlock_sprites.nex 2071743e",
-  "software": "quick 2000 IDENTICAL, unit PASS",
+  "build": "nemesis_the_warlock_sprites.nex 36c8a2e8",
+  "software": "quick 20000 IDENTICAL, unit PASS",
   "hardware": "untested",
   "next": "stage 3: full verification"
  },
