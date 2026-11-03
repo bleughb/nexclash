@@ -14,14 +14,23 @@
 ;   29171 72 -> 00 (object colour over its cells).
 ; Sprites: object i = (IX - 23808) / 8 (0-16) owns sprites 6i .. 6i+5: 2 rows x (2 columns + a copy
 ; of the column that crosses x = 256 at x - 256, as the ULA wraps the row).
-; Patterns (4-bit, ink = 1) and their lookup: asm/jetpac_tables.asm (generated).
+; The rocket (object 6, 23856) draws up to 4 figures a frame on one object: base, middle, nose
+; (26432 loop) and flames (26265). Its figures get a pair each (102-103 base, 104-105 middle,
+; 106-107 nose, 108-109 flames; 36-41 stay for an ordinary figure) and touch only that pair, so every section stays shown (2026-11-03: one shared set
+; showed only the last section drawn; the flames had no table entry).
+; Patterns (4-bit, ink = 1; rocket parts: index 1 bottom 8 lines, index 2 top 8 lines, so a
+; section shows the game's two row colours: palette offset 8 = magenta below, white above)
+; and their lookup: asm/jetpac_tables.asm (generated).
 
         DEVICE ZXSPECTRUMNEXT
 
 OBJ0    EQU 23808
 NOBJ    EQU 17
 LEVEL   EQU 24048
-PART    EQU 23860
+PART    EQU 23860           ; the rocket's part count: the carried graphic is part (23860), 3 = fuel
+ROCKET  EQU 23856           ; object 6: draws up to 4 figures a frame (sections 26432, flames 26265)
+RKSPR   EQU NOBJ*6          ; the rocket's figures: a pair each, sprites 102-109
+NHIDE   EQU NOBJ*6+8
 
         ORG 0x386E
 ; ---- new frame of an object ----
@@ -41,20 +50,20 @@ e_nw:   push af
         ld (24004),a
         jp 29268
 
-; ---- erase-only entries: hide the object's sprites ----
-e_e1:   call hideobj
+; ---- erase-only entries: hide the object's sprites (e_e1: graphic DE known -> only that figure's
+; sprites on the rocket, so erasing the flames (26255/26261) leaves the rocket's sections shown) ----
+e_e1:   call hidefig
         jp 29223
 e_e2:   call hideobj
         jp 29220
 
-; ---- screen clear: hide every sprite ----
+; ---- screen clear: hide every sprite the hooks use ----
 e_cls:  push af
+        push bc
         xor a
-.h:     nextreg 0x34,a
-        nextreg 0x38,0
-        inc a
-        cp NOBJ*6
-        jr nz,.h
+        ld b,NHIDE
+        call hiden
+        pop bc
         pop af
         jp 29112
 
@@ -80,18 +89,122 @@ objbase:
 .no:    scf
         ret
 
+; Z if IX = the rocket object (uses A)
+isrk:   ld a,ixl
+neg_rk: cp low ROCKET           ; (the negative control's build changes this operand)
+        ret nz
+        ld a,ixh
+        cp high ROCKET
+        ret
+
+; hide B sprites from sprite A (A += B, B = 0)
+hiden:  nextreg 0x34,a
+        nextreg 0x38,0
+        inc a
+        djnz hiden
+        ret
+
+; hide all of the object's sprites (the rocket: also its figures' pairs)
 hideobj:
         push af
         push bc
         call objbase
         jr c,.out
         ld b,6
-.h:     nextreg 0x34,a
-        nextreg 0x38,0
-        inc a
-        djnz .h
+        call hiden
+        call isrk
+        jr nz,.out
+        ld a,RKSPR
+        ld b,8
+        call hiden
 .out:   pop bc
         pop af
+        ret
+
+; erase of graphic DE: on the rocket, hide only that figure's pair (section / flames)
+hidefig:
+        push af
+        push bc
+        push hl
+        call isrk
+        jr nz,.all
+        call find
+        jr c,.all
+        ld a,(hl)
+        call role
+        jr z,.all
+        call rspr
+        call hiden
+        jr .out
+.all:   call hideobj
+.out:   pop hl
+        pop bc
+        pop af
+        ret
+
+; DE = graphic -> HL = its gtab kind byte, carry clear; carry set if not in gtab (uses A, BC)
+find:   ld hl,gtab
+.lk:    ld c,(hl)
+        inc hl
+        ld b,(hl)
+        inc hl
+        ld a,b
+        or c
+        scf
+        ret z
+        ld a,c
+        cp e
+        jr nz,.nx
+        ld a,b
+        cp d
+        ret z
+.nx:    inc hl
+        inc hl
+        inc hl
+        inc hl
+        jr .lk
+
+; A = gtab kind -> A = rocket role (0 none, 1-3 section base / middle / nose, 4 flames), Z if 0
+role:   rrca
+        rrca
+        and 7
+        ret
+
+; A = role 1-4 -> A = its first sprite (102 + 2 * (role - 1)), B = 2
+rspr:   add a,a
+        add a,RKSPR-2
+        ld b,2
+        ret
+
+; A = section k (0-2) of the rocket IX -> A = palette offset << 4 of its two character rows, as
+; the game paints them after drawing (26488-26562): rows 2k (bottom half, pattern index 1) and
+; 2k+1 (top half, index 2); 15 = both white, 11 = both magenta, 8 = magenta below, white above.
+rcol:   ld l,a
+        ld a,(ix+4)
+        add a,a
+        cp 6
+        jr c,.w                 ; rocket not complete: white
+        ld a,(ix+5)
+        or a
+        jr z,.w                 ; no fuel: white
+        cp 6
+        jr c,.p
+        ld a,(24012)
+        and 16
+        jr nz,.w                ; full: flashing 67 / 71 by bit 4 of the frame counter
+.m:     ld a,0xB0
+        ret
+.w:     ld a,0xF0
+        ret
+.p:     ld h,a                  ; F = fuel rows (magenta from the bottom)
+        ld a,l
+        add a,a
+        cp h
+        jr nc,.w
+        inc a
+        cp h
+        jr c,.m
+        ld a,0x80
         ret
 
 ; HL = screen address (bottom line), DE -> W (graphic + 1), IX = object. Uses all but IX/IY.
@@ -99,28 +212,12 @@ draw:   call objbase
         ret c
         dec de                  ; DE = graphic
         push hl
-        ld hl,gtab
-.lk:    ld c,(hl)
+        call find
+        jp c,.none0
+        ld a,(hl)               ; kind
         inc hl
-        ld b,(hl)
-        inc hl
-        ld a,b
-        or c
-        jp z,.none
-        ld a,c
-        cp e
-        jr nz,.nx
-        ld a,b
-        cp d
-        jr z,.fnd
-.nx:    inc hl
-        inc hl
-        inc hl
-        inc hl
-        jr .lk
-.fnd:   ld a,(hl)               ; kind
-        inc hl
-        or a
+        push af                 ; [kind, scr]
+        and 3
         jr z,.ent
         ld c,(hl)
         inc hl
@@ -131,7 +228,7 @@ draw:   call objbase
         and 7
         jr .idx
 .car:   ld a,(PART)
-        cp 3
+.np:    cp 4                    ; parts 0-2 and 3 = fuel (neg_pt: the negative control's build: 3)
         jp nc,.none
         add a,a
         add a,a
@@ -155,7 +252,8 @@ draw:   call objbase
         ld b,(hl)               ; B = layout
         inc hl
         ld a,(hl)               ; A = x adjust
-        pop hl                  ; HL = screen address
+        pop hl                  ; H = kind
+        ex (sp),hl              ; HL = screen address, [kind]
         push bc
         ld b,a
         ld a,l
@@ -165,9 +263,8 @@ draw:   call objbase
         add a,a
         add a,b
         ld e,a
-        ld a,0
-        adc a,0
-        ld d,a                  ; DE = x (0-263)
+        ld d,0
+        rl d                    ; DE = x (0-263)
         ld a,l
         rrca
         rrca
@@ -189,9 +286,36 @@ draw:   call objbase
         add a,17                ; Y = y - 15 + 32
         jr .ry
 .r2:    inc a                   ; Y = y - 31 + 32
-.ry:    push bc                 ; [pattern/layout]
-        push de                 ; [x]
+.ry:    push bc                 ; [pattern/layout, kind]
+        push de                 ; [x, pattern/layout, kind]
         ld e,a                  ; E = Y
+        ld hl,5
+        add hl,sp               ; HL -> kind (becomes the end of the sprite range)
+        call isrk
+        jr nz,.nrm
+        ld a,(hl)
+        call role
+        jr z,.rk0
+        push af
+        call rspr
+        ld d,a                  ; D = first sprite of the figure
+        add a,b
+        ld (hl),a               ; end = its pair
+        pop af
+        ld b,0xA0               ; flames: bright red (the game paints 66 over them, 26268)
+        cp 4
+        jr z,.pl
+        dec a
+        call rcol
+        ld b,a
+        jr .pl
+.rk0:   ld a,RKSPR              ; the rocket object, an ordinary figure: no rocket figures
+        ld b,8
+        call hiden
+.nrm:   call objbase
+        ld d,a                  ; D = next sprite
+        add a,6
+        ld (hl),a               ; end = the object's 6
         ld a,(ix+3)
         ld c,a
         and 7
@@ -205,13 +329,11 @@ draw:   call objbase
         add a,a
         or b
         ld b,a                  ; B = palette offset (ink + 8 * bright) << 4
-        call objbase
-        ld d,a                  ; D = next sprite
-        pop hl
+.pl:    pop hl
         ex (sp),hl
         ld c,l                  ; C = pattern
         ld a,h                  ; A = layout
-        ex (sp),hl              ; HL = x, stack [pattern/layout]
+        ex (sp),hl              ; HL = x, stack [pattern/layout, end]
         push af
         push hl
         call place              ; row 0, column 0
@@ -245,13 +367,7 @@ draw:   call objbase
         call add16
         call place              ; row 1, column 1
 .done:  pop hl
-        jr .hide
-.none:  pop hl
-        call objbase
-        ld d,a
-.hide:  call objbase
-        add a,6
-        ld b,a
+        pop bc                  ; B = end of the figure's sprite range
 .hd:    ld a,d
         cp b
         ret nc
@@ -259,6 +375,11 @@ draw:   call objbase
         nextreg 0x38,0
         inc d
         jr .hd
+.none:  pop af
+.none0: pop hl
+        jp hideobj
+
+neg_pt  EQU draw.np
 
 add16:  ld a,l
         add a,16
@@ -277,9 +398,8 @@ place:  ld a,h
         ld a,l
         add a,32
         nextreg 0x35,a
-        ld a,0
-        adc a,0
-        or b
+        ld a,b
+        adc a,0                 ; palette | X bit 8 (B's low bits are 0)
         nextreg 0x37,a
         ld a,e
         nextreg 0x36,a
@@ -330,9 +450,8 @@ setup:  nextreg 0x57,22             ; bank 11 lower page at 0xE000
 .u2:    dec d
         jr nz,.u
         nextreg 0x57,21
-        nextreg 0x43,0x20           ; sprite palette 0, auto-increment off for 0x41 writes below
+        nextreg 0x43,0x20           ; sprite palette 0 (auto-increment on)
         ld hl,speccy
-        ld b,16
         ld c,1
 .p:     ld a,c
         nextreg 0x40,a
@@ -340,9 +459,16 @@ setup:  nextreg 0x57,22             ; bank 11 lower page at 0xE000
         nextreg 0x41,a              ; offset n index 1 = Spectrum colour n (8-15 bright)
         inc hl
         ld a,c
+        inc a
+        nextreg 0x40,a
+        ld a,(hl)
+        nextreg 0x41,a              ; index 2 = the same, but offset 8: bright white
+        inc hl
+        ld a,c
         add a,16
         ld c,a
-        djnz .p
+        cp 1
+        jr nz,.p
         nextreg 0x4B,0
         xor a
 .h:     nextreg 0x34,a
@@ -352,7 +478,10 @@ setup:  nextreg 0x57,22             ; bank 11 lower page at 0xE000
         jr nz,.h
         nextreg 0x15,0x01
         ret
-speccy: db 0x00,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6,0x00,0x03,0xE0,0xE7,0x1C,0x1F,0xFC,0xFF
+; (index 1, index 2) per palette offset 0-15; offset 8 (bright black, never an object ink: the game
+; avoids 64, 25877) is the rocket's half-fuelled section: bright magenta below, bright white above
+speccy: db 0x00,0x00, 0x02,0x02, 0xA0,0xA0, 0xA2,0xA2, 0x14,0x14, 0x16,0x16, 0xB4,0xB4, 0xB6,0xB6
+        db 0xE7,0xFF, 0x03,0x03, 0xE0,0xE0, 0xE7,0xE7, 0x1C,0x1C, 0x1F,0x1F, 0xFC,0xFC, 0xFF,0xFF
 setup_end:
 
         SAVEBIN "jp_rom.bin",0x386E,rom_end-0x386E

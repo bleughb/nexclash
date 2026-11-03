@@ -44,7 +44,7 @@
   "rzx": [],
   "auto_record": false,
   "minutes": 12,
-  "note": "no recording: differential test on a 6000-frame free run (jetpac.free_keys) + unit tests over every graphic"
+  "note": "no recording: differential test on a 6000-frame free run (jetpac.free_keys) + unit tests over every graphic + the rocket routines 26217 / 26419 (37 cases, negative builds neg_rk / neg_pt)"
  },
  "outputs": {
   "plain": {
@@ -53,17 +53,17 @@
   },
   "sprites": {
    "file": "jetpac_sprites.nex",
-   "md5": "c963b42f0e685d648d552656fde4d6f9"
+   "md5": "3cf8fbd2762091244c7580ccfa79d82d"
   }
  },
  "repro": [],
  "status": {
   "title": "Jetpac",
   "engine_col": "jetpac (jetpac.md)",
-  "build": "jetpac_sprites.nex c963b42f",
-  "software": "free run IDENTICAL (no RZX), unit PASS",
-  "hardware": "untested",
-  "next": "hardware test; a real RZX"
+  "build": "jetpac_sprites.nex 3cf8fbd2",
+  "software": "free run IDENTICAL (no RZX), unit PASS (rocket, fuel, flames: round 2)",
+  "hardware": "round 1: rocket / fuel / flames faults (fixed, round 2 untested)",
+  "next": "hardware round 2; a real RZX"
  },
  "checks": [
   "asm2profile:jetpac"
