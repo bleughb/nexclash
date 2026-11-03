@@ -175,7 +175,7 @@ defaults all white until painted).
 - [doc docs/PLAYBOOK.md §6. Verify (differential test)] No RZX and a free run that never builds the rocket: the unit tests now run the game's own routines (26217 flames, 26419 sections) from a captured state with the rocket's fields poked. The lookup guard `part < 3` came from the name ("3 parts"); the game writes 3 = fuel (24858, 26041). PLAYBOOK 6 line added.
 - [local: Jetpac only - the alt ROM gap 0x386E-0x3CFF is its only hook space] Hooks + tables now end at 0x3CFF with the register block: 1 byte left. Further growth needs table compaction (the fuel subtables repeat one graphic, 48 bytes) or a RAM page.
 - [local: game-specific colour rule] Rocket fuel rows (per character row) done with two-index patterns (top 8 lines index 2) and the unused palette offset 8 (magenta below, white above); valid because partial fuel occurs only standing at y 183, where rows and sections align.
-- [doc: LEARNINGS 2.6] `$!` after `setsid nohup` is the wrapper's PID: a `kill -0` wait on it ended at once (independent check, 2026-11-03); the job's PID comes from `ps`.
+- [doc docs/LEARNINGS.md §2.6 Process / tokens (this sandbox)] `$!` after `setsid nohup` is the wrapper's PID: a `kill -0` wait on it ended at once (independent check, 2026-11-03); the job's PID comes from `ps`.
 
 ## Technique use
 - detect.tracked-unit: corrected: its composite question missed one object drawing several figures; card amended with that case
