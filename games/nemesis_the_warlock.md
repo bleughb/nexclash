@@ -131,19 +131,30 @@ Open: colour sheets not built (fixed rule); stamps (bodies) on the ULA; speed sp
   answered; they are scenery in the buffer (blitters 0x82C3..), so they stay on the ULA by rule 2.
 
 ## Lessons
-- [none: hardware round 1 found no faults; nothing new learned]
 - [card detect.buffer-layout-producer §Contract] Overlay from save-under: with a masked back-buffer plotter that saves the background (IY), the hooks leave the plotters and all game memory untouched and rebuild the screen from the save-unders after the copy; the verifier then compares ALL game memory. Card amended with this as a second producer pattern.
 - [local: game-specific] A plot whose save-under pointer is in ROM is a permanent stamp (scenery), not a figure: check every plot caller's save pointer before treating it as a sprite.
-- [local: CLAUDE.md "Rules" sharpened with this form (learncheck takes docs/ paths only)] I wrote `kill -0 $(pgrep -o -f X)` in a wait loop - the warned pattern in a new form; CLAUDE.md's rule now names it.
-- [doc docs/PLAYBOOK.md §6. Verify (differential test)] Quick runs: 2000 frames missed two rare cases that 20000 found (XOR effect under a figure, column-31 wrap): when a game verifies at ~10K frames/min, run the quick check at 20000 before stage 3. PLAYBOOK 6 amended.
+- [doc CLAUDE.md §Rules] I wrote `kill -0 $(pgrep -o -f X)` in a wait loop - the warned pattern in a new form; CLAUDE.md's rule now names it.
+- [doc docs/PLAYBOOK.md §6. Verify (differential test)] Quick runs: 2000 frames missed two rare cases that 20000 found (XOR effect under a figure, column-31 wrap): run 20000 before stage 3 when the verifier is fast.
 - [local: measured here; the PLAYBOOK speed budget already asks for it] Row address arithmetic per row cost 3x the copy itself (620 T/row): compute visible row range + screen address once, step with the next-line routine.
-- [local: one-off extraction; a later game with only an RZX should add an `rzx extract` command] SPIN RZX snapshot blocks are zlib-compressed Z80 (flag 2); extracted with a 10-line block parse; no CLI command extracts the first snapshot to a file.
+- [tool nexclash.py rzx] SPIN RZX snapshot blocks are zlib-compressed (flag 2); I parsed them by hand. Now `nexclash.py rzx extract` (golden check in selftest --tools); MAINTAIN points to it. (Was mis-tagged local.)
+- [doc docs/ENGINE_CONTRACT.md §Verify loop] Return shortcut: verify a hook on a long routine from the original's state at its RET (full runs for the first 20 calls): full verify 14 min instead of hours.
+- [doc docs/ENGINE_CONTRACT.md §Verify loop] simpool.machine pools one simulator per slot name: my original and patched XOR runs shared slot 'p' and the second reset the first (false "memory differs", one retry).
+- [card verify.model-reconstruction §Use] Rebuilding the original screen from the model at every event caught both rare bugs (XOR effect, wrap) the hook-vs-model check could not: new verify card.
+- [doc docs/LEARNING.md §2b. Friction sweep] Not captured at first: toolkit and environment lessons were treated as engineering, not findings, and learncheck checked form, not coverage. Added the friction sweep and a check that a local-tagged lesson does not name shared code (learncheck).
+
+## Friction
+- reuse: [doc docs/ENGINE_CONTRACT.md §Verify loop] the return shortcut and per-event slots; [card verify.model-reconstruction §Use] the model rebuild check.
+- retries: [doc docs/ENGINE_CONTRACT.md §Verify loop] simpool slot clash; e_x1 ending in its own RET never reached the verifier's stop address [local: an asm slip in this engine, caught by "did not return"].
+- environment: [doc LEARNINGS 2.6] shallow clone without a remote-tracking ref (stop hook "no remote branch"); a force push the classifier refused was not needed (fast-forward) [none: no doc change].
+- hand-rolled: [tool nexclash.py rzx] snapshot extraction from an RZX.
+- scratch: [probe tools/probes/attr_census.py] kept; probe_model / probe2 / probe_keys / probe_prof dropped [none: they monkeypatch nemesis.py functions; nothing for another game].
 
 ## Technique use
 - detect.buffer-layout-producer: helped: copy -> buffer -> masked plotters with save-under found in 3 scans
 
 ## Stage log
 - 2026-11-02 stage 0: ~2 h wall (survey ~1.8 h for 135K frames), ~25 tool calls, 4 user rounds; menus found in code.
+- 2026-11-03 learning capture: rzx extract, attr_census probe, verify card, contract / LEARNINGS / LEARNING 2b, learncheck friction sweep.
 - 2026-11-03 stage 4 round 1: hardware OK (basic play), 1 user round, no code change.
 - 2026-11-03 stage 3: ~30 min, ~10 tool calls, 0 user rounds (full verification 14 min).
 - 2026-11-02 stage 2: ~3 h, ~60 tool calls, 1 user round (engine, quick runs, record).

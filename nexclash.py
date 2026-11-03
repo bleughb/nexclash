@@ -517,7 +517,7 @@ def main():
     p.add_argument('--game', help='record name (default: the engine that recognises the .nex)'); p.add_argument('-o', '--output')
     p.add_argument('--onto', help='the colour map the build holds now (default: found by reproducing the build)')
     p.add_argument('--replace', action='store_true', help='start from the sheet\'s own map, not the build\'s')
-    p = sub.add_parser('rzx'); p.add_argument('action', choices=['info', 'merge', 'strip']); p.add_argument('files', nargs='+')
+    p = sub.add_parser('rzx'); p.add_argument('action', choices=['info', 'merge', 'strip', 'extract']); p.add_argument('files', nargs='+')
     p.add_argument('-o', '--output')
     for cmd in ('inspect', 'scan', 'isr', 'cost', 'preview'):
         p = sub.add_parser(cmd); p.add_argument('z80')
@@ -601,6 +601,9 @@ def main():
         if a.action == 'info':
             for f in a.files:
                 print(rzxmod.info(f))
+        elif a.action == 'extract':
+            o, ext = rzxmod.extract(a.files[0], a.output)
+            print('snapshot 0 (%s) -> %s' % (ext, o))
         elif a.action == 'strip':
             out = a.output or os.path.splitext(a.files[0])[0] + '_stripped.rzx'
             print('dropped %d autosave snapshot(s)' % rzxmod.strip(a.files[0], out))

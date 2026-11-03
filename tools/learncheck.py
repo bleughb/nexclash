@@ -32,6 +32,9 @@ PDIR = os.path.join(ROOT, 'tools', 'probes')
 NOT_CARDS = {'STANDARD.md', 'CHANGELOG.md'}
 USE = ('used', 'helped', 'no help', 'corrected')
 PROBE_FIELDS = ('Invocation:', 'Limits:', 'Origin:', 'Smoke test:')
+FRICTION_KEYS = ('reuse', 'retries', 'environment', 'hand-rolled', 'scratch')     # docs/LEARNING.md 2b
+SHARED = re.compile(r'\b(simpool|z80tonex|nextboot|rzx|records|selftest|learncheck|doccheck|survey|memscan|'
+                    r'snapinfo|isrinfo|drawcost|simrun|preview|userflow|build\.py|sprites\.py|engines\.py)\b')
 TAG = re.compile(r'\[(card|doc|tool|backlog|probe|local|deferred|none)\b([^\]]*)\]')
 
 
@@ -123,9 +126,9 @@ def _check_tag(kind, arg, game_text, cs, ps, ctx):
             if n:
                 return None if int(n.group(1)) in ctx['c2'] else 'no BRIEFING C2 #%s' % n.group(1)
             return None if ctx['has_section'](ctx['heads'], doc, sec.split()[0]) else 'no %s %s' % (doc, sec)
-        m = re.match(r'((?:docs|tools)/[\w./-]+\.md)\s+§\s*(.+)$', arg)
+        m = re.match(r'((?:docs|tools)/[\w./-]+\.md|CLAUDE\.md)\s+§\s*(.+)$', arg)
         if not m:
-            return 'doc tag needs "[doc BRIEFING A1]" or "[doc docs/X.md §Heading]"'
+            return 'doc tag needs "[doc BRIEFING A1]", "[doc docs/X.md §Heading]" or "[doc CLAUDE.md §Heading]"'
         p, sec = m.groups()
         if not os.path.exists(os.path.join(ROOT, p)):
             return 'no file %s' % p
@@ -161,6 +164,43 @@ def _check_tag(kind, arg, game_text, cs, ps, ctx):
         if m.group(1) == 'Open' and not re.search(r'^## Open', game_text, re.M):
             return 'no "## Open" section to defer to'
     return None
+
+
+def check_friction(rel, t, cs, ps, ctx, required):
+    """docs/LEARNING.md 2b: the "## Friction" sweep (five keyed bullets, each with a disposition tag)
+    and no [local] lesson that names shared code. -> problems."""
+    bad = []
+    stray = []
+    fr = _section(t, 'Friction', stray)
+    if fr is None:
+        if required:
+            bad.append('%s: changed but no "## Friction" sweep (docs/LEARNING.md 2b: %s)' % (rel, ', '.join(FRICTION_KEYS)))
+    else:
+        for line in stray:
+            bad.append('%s: "## Friction": not a "- " bullet: %s' % (rel, line[:70]))
+        seen = set()
+        for item in fr:
+            m = re.match(r'([\w-]+):\s*(\[.*)', item)
+            if not m or m.group(1) not in FRICTION_KEYS:
+                bad.append('%s: friction line "%s" (want "<%s>: [tag] answer")' % (rel, item[:50], '|'.join(FRICTION_KEYS)))
+                continue
+            seen.add(m.group(1))
+            tags = TAG.findall(m.group(2)[:400])
+            if not tags:
+                bad.append('%s: friction %s: no disposition tag' % (rel, m.group(1)))
+            for kind, arg in tags:
+                p = _check_tag(kind, arg, t, cs, ps, ctx)
+                if p:
+                    bad.append('%s: friction %s: %s' % (rel, m.group(1), p))
+        for k in FRICTION_KEYS:
+            if k not in seen:
+                bad.append('%s: "## Friction" has no "%s:" line' % (rel, k))
+    if required:
+        for i, item in enumerate(_section(t, 'Lessons') or [], 1):
+            if item.startswith('[local') and SHARED.search(item):
+                bad.append('%s: lesson %d is [local] but names shared code (%s): tag it tool / doc / backlog '
+                           '(docs/LEARNING.md 2b)' % (rel, i, SHARED.search(item).group(1)))
+    return bad
 
 
 def merge_base():
@@ -272,6 +312,7 @@ def check(ctx=None):
                 p = _check_tag(kind, arg, t, cs, ps, ctx)
                 if p:
                     bad.append('%s: lesson %d: %s' % (rel, i, p))
+        bad += check_friction(rel, t, cs, ps, ctx, revisited)
         ustray = []
         use = _section(t, 'Technique use', ustray)
         for line in ustray:
@@ -350,6 +391,18 @@ def selfcheck():
     cnt, games = usage_counts({'g1.md': use, 'g2.md': '## Technique use\n- patch.b: no help: why\n'})
     if (len(games['patch.a']), cnt['patch.a']['uses'], len(games['patch.b']), cnt['patch.b']['uses']) != (1, 2, 2, 2):
         bad.append('usage: distinct games vs uses %r %r' % (dict(cnt), dict(games)))
+    good = ('## Lessons\n- [none: x]\n\n## Friction\n' +
+            ''.join('- %s: [none: nothing]\n' % k for k in FRICTION_KEYS))
+    if check_friction('g.md', good, {}, {}, {}, True):
+        bad.append('friction: a complete sweep fails %r' % check_friction('g.md', good, {}, {}, {}, True))
+    if not check_friction('g.md', good.replace('- scratch: [none: nothing]\n', ''), {}, {}, {}, True):
+        bad.append('friction: a missing key passes')
+    if not check_friction('g.md', '## Lessons\n- [none: x]\n', {}, {}, {}, True):
+        bad.append('friction: a changed file without the section passes')
+    if check_friction('g.md', '## Lessons\n- [none: x]\n', {}, {}, {}, False):
+        bad.append('friction: an untouched old file fails')
+    if not check_friction('g.md', good.replace('[none: x]', '[local: a simpool slot clash]'), {}, {}, {}, True):
+        bad.append('friction: a [local] lesson naming shared code passes')
     return bad
 
 

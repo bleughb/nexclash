@@ -924,6 +924,10 @@ Grouped by question; add a new lesson to its group.
   all held the same MD5s). Keep one source (the record) and generate the rest.
 
 ## 2.6 Process / tokens (this sandbox)
+- Shallow clones (`git clone --depth 1`) fetch only the default branch: a work branch pushed from one
+  has no remote-tracking ref, so `git status` shows no upstream and the stop hook keeps reporting
+  "no remote branch". Fix: `git config --add remote.origin.fetch +refs/heads/B:refs/remotes/origin/B`,
+  `git fetch origin B`, `git branch -u origin/B` (Nemesis 2026-11-02).
 - Background jobs die when the turn ends (or the shell resets) unless started in their OWN session:
   `setsid nohup sh -c 'cd DIR && a; b' > log 2>&1 < /dev/null &`, then poll inside the turn. Plain
   `nohup cmd &` and `( a; b ) &` die silently - the log just stops (Midnight Resistance session:
