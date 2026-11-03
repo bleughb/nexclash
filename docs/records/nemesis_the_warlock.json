@@ -46,7 +46,7 @@
    "nemesis_the_warlock.rzx"
   ],
   "auto_record": false,
-  "minutes": 240
+  "minutes": 20
  },
  "outputs": {
   "plain": {
@@ -55,19 +55,53 @@
   },
   "sprites": {
    "file": "nemesis_the_warlock_sprites.nex",
-   "md5": "2071743eab2e959943039aea5e233262"
+   "md5": "36c8a2e8a7e50c092d4740099e446696"
   }
  },
  "repro": [],
  "status": {
   "title": "Nemesis the Warlock",
   "engine_col": "nemesis (nemesis_the_warlock.md)",
-  "build": "nemesis_the_warlock_sprites.nex 2071743e",
-  "software": "quick 2000 IDENTICAL, unit PASS",
+  "build": "nemesis_the_warlock_sprites.nex 36c8a2e8",
+  "software": "quick 20000 IDENTICAL, unit PASS",
   "hardware": "untested",
   "next": "stage 3: full verification"
  },
  "checks": [
   "asm2profile:nemesis_the_warlock"
- ]
+ ],
+ "checked": {
+  "deps": {
+   "asm/nemesis_hooks.asm": "b67a29c449b95016",
+   "docs/profiles/nemesis_the_warlock.json": "85bd266c86d8acad",
+   "nexclash.py": "71dc4c592918bff8",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "6b69f9b06b029515",
+   "nexclash/nemesis.py": "1da8bd6988973fd9",
+   "nexclash/nextboot.py": "44c08db48a1bf32d",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "a6ff9eef9ca737b3",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-11-03"
+ },
+ "verified": {
+  "deps": {
+   "asm/nemesis_hooks.asm": "b67a29c449b95016",
+   "docs/profiles/nemesis_the_warlock.json": "85bd266c86d8acad",
+   "nexclash.py": "71dc4c592918bff8",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "6b69f9b06b029515",
+   "nexclash/nemesis.py": "1da8bd6988973fd9",
+   "nexclash/nextboot.py": "44c08db48a1bf32d",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "a6ff9eef9ca737b3",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-11-03"
+ }
 }

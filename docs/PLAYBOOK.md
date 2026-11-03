@@ -276,7 +276,7 @@ Also simulate the start-up tail: registers restored, no game memory touched.
 Iterate fast (the two levels: BRIEFING C3b): while developing use `--quick N` and the unit tests on 1-2
 captured states (minutes). N must reach the first call of every hook the unit tests capture
 states from, or the run FAILS for lack of a state (Lode Runner at 300 frames: "no captured draw
-state"; Commando: "no plot reused a cached image"): start at 2000. One quick run per change; read
+state"; Commando: "no plot reused a cached image"): start at 2000. A verifier at ~10K frames/min ends stage 2 with a 20000-frame run (Nemesis: 2000 missed two rare cases). One quick run per change; read
 its counters before changing anything else.
 Unit cases: cross only the inputs that interact. Every graphic x every position edge is one
 product; colours, slots and similar independent inputs need each value once, on a few graphics -
