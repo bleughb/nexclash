@@ -89,6 +89,21 @@ Open: colour sheets not built (fixed rule); stamps (bodies) on the ULA; speed sp
   pixels, ULA = background model (save-unders), sprite layer = figure model (mask / image, mirror),
   palette = room attribute, and the model itself = original screen (background + figures).
 
+## Colour map (stage 3 gap closed, 2026-11-03)
+- Card patch.runtime-colour-map. Patterns are built on a cache miss per (graphic, width); per
+  painted image an AND / OR pair per pattern byte (1024 bytes, builder's output order), index at
+  page 26 (count, g lo, g hi, w, page, address), streams pages 26-37 (banks 13-18, 95 images max),
+  mapped at slot 0 only inside `build` (then 0xFF = ROM; interrupts off all game). `pout` applies
+  the pair. Unpainted images: one flag test per byte.
+- Keys: image byte '%04X' (check = its value), bit 0 = leftmost as stored; codes 1 ink (palette 1 =
+  room ink), 2 solid paper (palette 2 = room paper), 0 clear (paintable, paint_clear). Palette
+  3-15 fixed: black, blue, red, magenta, green, cyan, yellow, white, bright red / magenta / green /
+  yellow / white (bright blue / cyan left out: 16 > 15). Painting with swatch 1 / 2 = follow the room.
+- Images: 89 (profile colour_images; whole-RZX capture 94 s; graphics never change: 0 differ);
+  colour_inputs 91c5e0503aaba7bf7d26217773467a3a / 20512 bytes.
+- Sheets: `python -m nexclash.nemesis sheet RZX Z80 -o DIR` (89 figures each; shown in room
+  attribute 40 = black ink on cyan, the commonest). Recolour: `python nexclash.py recolour`.
+
 ## Results
 - quick 2000 (2026-11-02): 475 copies (20 full), plots 710 right / 795 left / 52 8x8, 517,912 sprite
   pixels IDENTICAL; unit: edges 252, 8x8 16, 16 overlapping, stamp, negative control 1/1 PASS.
@@ -142,6 +157,9 @@ Open: colour sheets not built (fixed rule); stamps (bodies) on the ULA; speed sp
 - [card verify.model-reconstruction §Use] Rebuilding the original screen from the model at every event caught both rare bugs (XOR effect, wrap) the hook-vs-model check could not: new verify card.
 - [doc docs/LEARNING.md §2b. Friction sweep] Not captured at first: toolkit and environment lessons were treated as engineering, not findings, and learncheck checked form, not coverage. Added the friction sweep and a check that a local-tagged lesson does not name shared code (learncheck).
 
+- [card patch.runtime-colour-map §Evidence] Second game for the card: a pattern builder with no canvas takes the stream in its own output order (AND / OR pair per byte); a palette with run-time entries leaves fewer fixed colours. Card evidence + validation gap amended.
+- [local: game-specific] `po` is a Z80 condition code (call po = CALL parity odd): sjasmplus refused the routine name; renamed pout.
+
 ## Friction
 - reuse: [doc docs/ENGINE_CONTRACT.md §Verify loop] the return shortcut and per-event slots; [card verify.model-reconstruction §Use] the model rebuild check.
 - retries: [doc docs/ENGINE_CONTRACT.md §Verify loop] simpool slot clash; e_x1 ending in its own RET never reached the verifier's stop address [local: an asm slip in this engine, caught by "did not return"].
@@ -150,6 +168,7 @@ Open: colour sheets not built (fixed rule); stamps (bodies) on the ULA; speed sp
 - scratch: [probe tools/probes/attr_census.py] kept; probe_model / probe2 / probe_keys / probe_prof dropped [none: they monkeypatch nemesis.py functions; nothing for another game].
 
 ## Technique use
+- patch.runtime-colour-map: helped: Cauldron template (tables, recolour, identity) reused nearly as is
 - detect.buffer-layout-producer: helped: copy -> buffer -> masked plotters with save-under found in 3 scans
 
 ## Stage log

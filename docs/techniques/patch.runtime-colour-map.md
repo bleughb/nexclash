@@ -37,7 +37,7 @@ at build time: colour them there (Dizzy 1 plane, Midnight Resistance commit page
 **Assumptions.** The image list is known (whole-recording capture, kept in the profile); graphics
 are never written (else a run-time check per entry); an MMU slot is free at the upload.
 
-**Validation gap.** One game (Cauldron): unit cases on every image geometry and the screen edges,
+**Validation gap.** Two games (Cauldron, Nemesis the Warlock): unit cases on every image geometry and the screen edges,
 a synthetic painting through read-back + recolour + a quick verify; no painting on hardware yet.
 
 ## Recognise
@@ -80,5 +80,10 @@ equals a full build (selftest guard).
 
 ## Evidence
 - games/cauldron.md "Colour map" (observed: unit cases, synthetic painting quick run).
+- games/nemesis_the_warlock.md "Colour map" (observed: second game; patterns built per (graphic,
+  width) on a cache miss, so the stream is an AND / OR pair per pattern byte in the builder's output
+  order - no outline ring, no canvas; 89 images all painted fit 6 banks; synthetic whole-game map
+  IDENTICAL in a quick replay, recolour both ways = the builds byte for byte).
+  A palette with run-time entries (room ink / paper at 1 / 2) leaves 13 fixed colours (3-15).
 - `grep -n 'def colour_tables\|def canvas_keys\|def colour_cases\|def recolour' nexclash/cauldron.py`;
   asm labels `ovfind`, `.bpo`: asm/cauldron_hooks.asm.
