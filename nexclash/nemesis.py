@@ -30,7 +30,8 @@ CONT = {'p8': 31219, 'pr': 31271, 'pl': 31365, 'cls': 37868, 'x1': 35324, 'x2': 
 NENT = 24                   # events per frame (asm NENT)
 COPY_RET = 32379            # the copy routine's RET
 INTERIORS = (31214, 31216, 31217, 31218, 31269, 31270, 31363, 31364, 32155, 32156,
-             37866, 37867, 35322, 35323, 35335, 35336)
+             37866, 37867, 35322, 35335)
+SEQUELS = {31215: 31213, 35323: 35321, 35336: 35334}   # a site's 2-byte first instruction: the original runs on
 SPECCY = [0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6,
           0x00, 0x03, 0xE0, 0xE7, 0x1C, 0x1F, 0xFC, 0xFF]
 FULL_RUNS = 20              # copy events run through e_cp in full; later ones start at post
@@ -303,10 +304,10 @@ class _PMem:
         return 65536
 
 
-def _machine(mem, regs, ns):
+def _machine(mem, regs, ns, slot='p'):
     from skoolkit.simulator import R2
     from .simpool import machine
-    sim = machine(_rw(), mem, regs, 'p')
+    sim = machine(_rw(), mem, regs, slot)
     R, ed = sim.registers, sim.after_ED
 
     def nn():
@@ -405,7 +406,7 @@ def xor_event(eng, kind, get, R):
     eng.figs.append(('x', a))
     stop = (lambda r: r[24] == 35324) if kind == 'x1' else (lambda r: r[24] == 35337)
     o = _PMem(get, bytearray(8192), {}, eng.rom)
-    so = _machine(o, list(R), NextState())
+    so = _machine(o, list(R), NextState(), 'xo')
     p = _PMem(get, eng.page, eng.psite, eng.rom)
     sim = _machine(p, list(R), eng.ns)
     if not (_run(so, stop) and _run(sim, stop)):
@@ -535,7 +536,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, cost=False):
     st = {'frame': 0, 'on': False}
     eng = Engine(patch)
     cnt = collections.Counter()
-    WATCH = set(SITE_KIND) | set(INTERIORS) | {COPY_RET, 31215}
+    WATCH = set(SITE_KIND) | set(INTERIORS) | {COPY_RET} | set(SEQUELS)
     states = []
 
     def fail(k, info=()):
@@ -625,8 +626,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, cost=False):
         pass
     finally:
         rzxplay.RZXTracer.next_frame, rzxplay.Simulator, rzxplay.CSimulator = old
-    if cnt[31215] != cnt[31213]:              # 31213 LD B,8 is 2 bytes: the original runs on at 31215
-        c['31215 reached other than after 31213!'] += 1
+    for a, site in SEQUELS.items():
+        if cnt[a] != cnt[site]:
+            c['%d reached other than after %d!' % (a, site)] += 1
     for a in INTERIORS:
         if cnt[a]:
             c['jump into a patched instruction (%d)!' % a] += 1

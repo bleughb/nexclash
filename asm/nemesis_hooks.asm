@@ -119,7 +119,7 @@ logent: ld a,b
 e_x1:   xor 90
         ld (hl),a
         call logx
-        ret
+        jp 35324
 e_x2:   xor 90
         ld (hl),a
         call logx
