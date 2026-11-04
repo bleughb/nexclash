@@ -4,7 +4,7 @@
 differential tests against real recordings. Sessions: **add a game** (a contributor's SESSION.md, or
 a maintainer's prompt) and **maintain** (toolkit, releases, contributions: docs/MAINTAIN.md).
 Never put game data (.z80/.rzx/.nex/.tap/...) in this repo or a contribution: the user's files stay
-on their machine; the maintainers' reference files live in the private repo bleughb/specnext.
+on their machine; the maintainers' reference files live in bleughb/specnext (currently public).
 
 ## A game, stage by stage (docs/PLAYBOOK.md; one session per stage)
 0. Intake: `python -m nexclash.survey GAME.z80 --rzx R` -> survey.md. Callers the recording never
@@ -25,7 +25,7 @@ first. Names: folder and games/<game>.md after the game, lower case, underscores
 `pip install -r requirements.txt --break-system-packages` (SkoolKit + Pillow; a fresh cloud
 container has neither). sjasmplus (only for .asm edits) is bundled and pinned: `python
 tools/asm2profile.py <engine>` assembles and updates the profile (never build or download another
-version; tools/sjasmplus/README.md). Maintainers: repos and private files in docs/MAINTAIN.md.
+version; tools/sjasmplus/README.md). Maintainers: repos and reference files in docs/MAINTAIN.md.
 
 ## Tokens: read, write and print as little as the task needs
 - Read: this file, PLAYBOOK intro + your stage, games/<game>.md, survey.md. Look things up in
@@ -100,14 +100,14 @@ version; tools/sjasmplus/README.md). Maintainers: repos and private files in doc
   before adding a line anywhere; sharpen the existing one. Say in the reply what you wrote.
 - `python tools/doccheck.py` (references, budgets, cards, learncheck) must PASS.
 - Contributors: `python nexclash.py contribute <game> --report <the _report.txt>`, give the user the
-  zip + the upload step from CONTRIBUTING.md. Maintainers: PR + private files (docs/MAINTAIN.md).
+  zip + the upload step from CONTRIBUTING.md. Maintainers: PR + reference files (docs/MAINTAIN.md).
 - Reply: results, the .nex files, a short hardware checklist, the next session's prompt.
 
 ## Layout
 | Path | What |
 |---|---|
 | nexclash.py | CLI: patch / new / contribute (users), auto / identify / record / convert / verify / recolour / rzx, analysis: inspect / scan / isr / cost / preview |
-| selftest.py | maintainers' acceptance test, driven by docs/records (needs the private reference files) |
+| selftest.py | maintainers' acceptance test, driven by docs/records (needs the reference files) |
 | nexclash/ | toolkit modules + engines (one module per engine: nexclash/engines.py; games: STATUS.md; build.py = TID generic); simpool.py = reusable verify simulators; userflow.py = patch/new/contribute; survey (`python -m nexclash.survey`) + simrun + snapinfo/memscan/isrinfo/drawcost = the analysis commands |
 | asm/ | hook sources; after any edit `python tools/asm2profile.py <engine>`; dizzy5_hooks.asm is the exception: dizzy5.py emits the bytes, selftest compares them |
 | docs/profiles/ | per-game profiles (hook hex read by the engines), signatures.json, verified.json (generated) |

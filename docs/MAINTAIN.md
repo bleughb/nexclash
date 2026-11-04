@@ -11,13 +11,13 @@ contribution, a release, lesson consolidation. An add-a-game session by a contri
 - New game inputs: the attached .z80 + .rzx -> specnext/reference/<game>/; no .z80 but a Fuse RZX ->
   its first snapshot is the .z80 (`nexclash.py rzx extract`; LEARNINGS 2.4).
 
-## Commit, PR and the private files
+## Commit, PR and the reference files
 - Commit on a branch, push, open a PR (message = what changed + verification). GitHub API details
   (no GraphQL, stacked PRs): LEARNINGS 2.6.
-- A new game's files go in the private repo: specnext/reference/<game>/ (snapshot, recordings, the
+- A new game's files go in specnext/reference/<game>/ (snapshot, recordings, the
   built <game>.nex + <game>_sprites.nex, both colour sheets + the painting sheet's _layout.json; the
   colours json, once painted, goes in the record's data list), listed in its reference/README.md
-  (edit by grepping for the game's heading; the index is long).
+  (edit by grepping for the game's heading; the index is long). specnext is public (checked 2026-11-05).
 - Every PR runs .github/workflows/checks.yml (learncheck self-check + doccheck, no game data); keep
   "checks / doccheck" a required status check on main (Settings -> Branches).
 - Before the merge: `selftest.py --affected --verify --stamp` in a separate worktree (LEARNINGS 2.6) -

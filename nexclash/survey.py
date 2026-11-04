@@ -165,7 +165,7 @@ def survey(z80, rzx=None, out=None, stop=None, frames=None, keys=None, top=6, lo
     if eng:
         say('KNOWN dedicated engine `%s`: `python nexclash.py auto %s --rzx R --no-record` builds it; no new engine needed.'
             % (js['engine'], os.path.basename(z80)))
-    elif prof.get('engine'):
+    elif prof.get('engine') not in (None, 'unknown'):
         say('Generic engine `%s` (identify): `python nexclash.py auto` builds it.' % prof['engine'])
     else:
         say('Unknown: no detector in nexclash/engines.py and no TID / Dizzy 1 signature -> stage 1 (a new engine).')
