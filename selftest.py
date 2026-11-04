@@ -275,10 +275,21 @@ def run_one(rec, action, src, work, human):
 
 def smoke_rzx_census(ez, er, ok):
     import rzx_census                           # probe (tools/probes/README.md): C-simulator PC census
-    r = rzx_census.census(er, [40092, 43909], stop=300)
+    r = rzx_census.census(er, [40092, 43909], stop=300, sample_frames=[0, 1, 2],
+                          memory=[(40092, 4)])
     ok('probe rzx_census (300 frames): ISR 40092 x299 from frame 0, 43909 x141017 (= scan --writers)',
        r['frames'] == 300 and not r['desync'] and r['pcs'][40092]['count'] == 299 and
        r['pcs'][40092]['first'] == 0 and r['pcs'][43909]['count'] == 141017, r)
+    ok('probe rzx_census captures first hit per PC/frame before execution, exact code bytes',
+       [(s['pc'], s['frame']) for s in r['samples']] ==
+       [(pc, f) for f in range(3) for pc in (40092, 43909)] and
+       all(s['registers'][24] == s['pc'] and s['memory'] == {'40092': [195, 194, 156, 0]}
+           for s in r['samples']), r['samples'])
+    bounded = rzx_census.census(er, [40092, 43909], stop=3, sample_frames=[0, 1, 2, 999],
+                               sample_limit=2)
+    ok('probe rzx_census: two-hit bound per PC/frame, absent frame has no sample',
+       [(s['pc'], s['frame']) for s in bounded['samples']] ==
+       [(pc, f) for f in range(3) for pc in (40092, 43909, 43909)], bounded['samples'])
 
 
 # Every tools/probes/<name>.py -> its smoke test on Chuckie Egg (ez, er, ok), run by tools_check;
