@@ -1,0 +1,75 @@
+{
+ "name": "inferno",
+ "order": 24,
+ "game": "Inferno",
+ "doc": "inferno.md",
+ "engine": "inferno",
+ "representative": false,
+ "reference": "inferno",
+ "verified_json": false,
+ "inputs": {
+  "snapshot": {
+   "name": "inferno.z80",
+   "md5": "338a35ccf625f820c0cd6a2a4175aab2",
+   "path": "inferno/Inferno.z80"
+  },
+  "recordings": []
+ },
+ "modules": [
+  "inferno"
+ ],
+ "own_modules": [
+  "inferno"
+ ],
+ "data": [
+  "docs/profiles/inferno.json",
+  "asm/inferno_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "cmd": "convert",
+  "args": [
+   "--tail",
+   "0x9A80"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": null,
+ "outputs": {
+  "plain": {
+   "file": "inferno.nex",
+   "md5": "0a3bde4734c5b3f15ad0f2a55cc81e19"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Inferno",
+  "engine_col": "inferno foundation (inferno.md)",
+  "build": "loader diagnostic only",
+  "software": "byte + Na/Nb prefix tests PASS; sprites absent",
+  "hardware": "untested",
+  "next": "finish stage 2"
+ },
+ "checks": [
+  "asm2profile:inferno"
+ ],
+ "excluded": "Stage 2 incomplete: unregistered loader foundation, no sprite auto/verify contract; no full proof or verified stamp. Rebuild recipe preserves existing plain baseline only.",
+ "foundation": {
+  "scope": "byte decoder, crafted 7131-to-718C prefixes, diagnostic boot only; not continuous gameplay or sprite proof",
+  "artifacts": {
+   "Inferno_loader_diagnostic.nex": "33791e6ffafce8b8a447092476cd776b",
+   "bootstrap_checks.json": "06ae2bc3b876a8223d288919cea16cb8",
+   "loader_checks.json": "339c2009340ffbdc24ecd16ac1112117",
+   "manifest.json": "20ffdeafd4d3f1de9edca8f37842c56e",
+   "Inferno_bootstrap.z80": "9814983816aafb2b9efd99344dd8c221",
+   "continuation_checks.json": "fc08b1de0630072bb96a7aa2a1b72d47",
+   "bootstrap_scan.txt": "3ac742eb9e128d944335f0f9c3638539"
+  },
+  "recipes": [
+   "python -m nexclash.inferno --loader-tests ../specnext/reference/inferno/Inferno.tzx",
+   "python -m nexclash.inferno --continuation-tests ../specnext/reference/inferno",
+   "python -m nexclash.inferno --bootstrap ../specnext/reference/inferno/Inferno.tzx --out work/inferno"
+  ]
+ }
+}

@@ -1,0 +1,33 @@
+{
+ "game": "Inferno (Firebird, 48K)",
+ "engine": "inferno",
+ "state": "loader foundation; sprite engine not registered",
+ "signature": {
+  "addr": 37168,
+  "bytes": ""
+ },
+ "loader": {
+  "entry": 1378,
+  "original": "DBFE1F",
+  "payload_pages": [
+   32,
+   55
+  ],
+  "state_page": 68
+ },
+ "hooks": {
+  "source": "asm/inferno_hooks.asm",
+  "syms": {
+   "decode": "0x38C2",
+   "finish": "0x38FF",
+   "loader": "0x386E",
+   "nextbyte": "0x3909",
+   "parity": "0x38FD",
+   "rom_end": "0x3945",
+   "store": "0x38C7",
+   "write_byte": "0x38CE"
+  },
+  "rom": "F3D9C5D5E5D9F5C5D5E5ED9150443A01004F3A0000B930216F3C32000026005D542929191100011946235E2356237E23666FEB78ED925018081100002100000620D9E1D1C1F1260006B00E22CD0939D2FF38183308200F3019F5DD7CFE403803DD7500F11813CB11ADC2FF38791F4F131809CD2639ADC2FF38DD231B0806B2CD0939D2FF3806B07CAD677AB320C67CFE01ED9150FFD9E1D1C1D9C9D97AB328157E4F231B7CFE20200726000478ED925079D96F37C9D9AFC9E5F5DD7CFE203010ED9150FFDD7E006FD978ED9250D91803DD6E00F17DE1C9",
+  "assembled_with": "sjasmplus 1.24.0"
+ }
+}
