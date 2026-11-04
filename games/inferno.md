@@ -1,12 +1,12 @@
 # Inferno
 
 ## Next session
-Stage: 1 (design)    State: proposal and six-level preview ready 2026-11-05; awaiting design answer
+Stage: 2 (build)    State: all design decisions approved 2026-11-05 (Design decision below)
 Inputs: specnext/reference/inferno/    Branch: codex/inferno
-Start with: record the user's answer under Design decision; then stage 2 in a fresh session.
-Read: docs/PLAYBOOK.md stage 2, Proposed design below, design/README.md in the reference folder.
-Open: explicit effects / body / outline choices; no engine or sprite build before approval.
-After approval: "Continue Inferno stage 2 (build). Clone bleughb/nexclash and bleughb/specnext
+Start with: refresh from main per docs/LEARNING.md, then record the concrete engine build design.
+Read: docs/PLAYBOOK.md stage 2, Approved design below, design/README.md in the reference folder.
+Open: transition hooks, bootstrap/loader equivalence, interrupt safety, resources and measured timing.
+Next prompt: "Continue Inferno stage 2 (build). Clone bleughb/nexclash and bleughb/specnext
 side by side, checkout codex/inferno in both, and follow nexclash/CLAUDE.md and games/inferno.md."
 
 ## Inputs and facts
@@ -137,9 +137,9 @@ side by side, checkout codex/inferno in both, and follow nexclash/CLAUDE.md and 
 - Original cost (level-4 first 2,001 frames): player-list entry 9535 x367, median/max 1,732 T;
   this is ONE list, not all sprites. Full-copy sampled costs are in the intake table above.
 
-## Proposed design (unapproved)
+## Approved design
 - Figures: capture every C100 actor image in original order, including BOTH projectile lists,
-  effects and collectables if approved. Track one complete run-list per draw ordinal and IX;
+  effects and collectables. Track one complete run-list per draw ordinal and IX;
   do not collapse several draws by owner or count 9790 as a figure. Keep C000 scenery intact.
 - State: execute original producers, collision logic and ULA copier unchanged. At 8F7C retain
   the clean scenery tile map. Build a Layer 2 view of that scenery over y=48..191, opaque black
@@ -147,9 +147,9 @@ side by side, checkout codex/inferno in both, and follow nexclash/CLAUDE.md and 
   original ULA HUD shows. This is the exception to the usual ULA-only scenery display: original
   scenery bytes remain on the ULA underneath, while the displayed clean copy masks the old figures.
   No virtual screen reader or collision rewrite is needed because original memory stays intact.
-- Display: preserve actor draw priority and tile colours; two preview options are coloured ink
-  only (see-through), or that ink plus enclosed black interiors (solid silhouette). Neither option
-  adds an outline. Deliberate rectangular tile knockouts outside the silhouette disappear.
+- Display: preserve actor draw priority and tile colours; approved option B adds enclosed black
+  interiors to coloured ink (solid silhouette), with no added outline. Deliberate rectangular
+  tile knockouts outside the silhouette disappear. Option A remains in the comparison only.
   Keep shop, menu, pause, message and intro/ending screens entirely original: disable BOTH new
   layers before their first draw; re-enable only on a complete new gameplay image, not at a text
   print return. Exact transition hooks and every alternate entry remain stage-2 proof obligations.
@@ -180,13 +180,14 @@ side by side, checkout codex/inferno in both, and follow nexclash/CLAUDE.md and 
   state comparisons, plus Next hardware testing in stage 3. No loader has been implemented.
 
 ## Design decision
-Pending ONE user answer (preview in specnext/reference/inferno/design/design_comparison.png):
-1. Default: every figure a sprite; explicitly include bullets, explosions, other effects and pickups?
-2. Original scenery/HUD/text appearance; accept clean Layer 2 gameplay scenery with original ULA retained?
-3. Original draw depth, including actor order and behind anything the original draws later?
-4. Original per-tile colours until painting; choose A see-through or B solid enclosed interiors;
-   add outlines or none? Recommended proposal: B, no added outline; effects/pickups included.
-5. Original shop/pause/messages/intro/ending with both new layers off; full continuous-game automatic loads?
+Approved 2026-11-05: user said "all design decisions approved" after clarification of item 5.
+1. Every figure a sprite, including bullets, explosions, other effects and pickups.
+2. Original scenery/HUD/text appearance; clean Layer 2 gameplay scenery with original ULA retained.
+3. Original draw depth, including actor order and behind anything the original draws later.
+4. Original per-tile colours until painting; B: solid enclosed black interiors, no added outlines.
+5. Original shop/pause/messages/intro/ending with both new layers off; full continuous-game automatic
+   loads, preserving score, health and equipment through all six levels and the ending.
+Visual choices are settled; technical proof obligations and the stage-2/3 checks remain required.
 The comparison contains original, A and B for each level; it is a software design simulation,
 not a sprite build. The existing plain Inferno.nex is the hardware baseline, level 1 only.
 
@@ -258,8 +259,9 @@ Preserve the intro/title beeper ISR; the sampled intro handler touches all MMU s
 ## Stage log
 - 2026-11-05: stage 1 analysis/proposal ready (~18 min, ~80 tool calls, 0 user answer rounds);
   nexclash knowledge main 9484427, specnext main 6bce6aa. Full level-2 census PASS; 25-tick
-  six-level original-image model PASS; tools/canary/doccheck PASS. The one design question is
-  awaiting an answer; stage 2 remains gated. Revised one detection card and the existing census;
+  six-level original-image model PASS; tools/canary/doccheck PASS. All design decisions approved
+  after one clarification (item 5) and one approval round; stage 2 starts in a fresh session.
+  Revised one detection card and the existing census;
   no engine module read or written. Disposable game preview calculations dropped; captures retained.
 - 2026-11-05: stage 0 complete (~40 min, ~120 tool calls, 3 user rounds), knowledge from nexclash
   9484427 / specnext 6bce6aa. Full raw replays and all sampled gates PASS; tools/canary/doccheck PASS.
