@@ -1,12 +1,27 @@
-# El Capitan Trueno (Dinamic, 1990) - engine: none yet (phase A in progress)
+# El Capitan Trueno (Dinamic, 1990) - engine `trueno` (hooks and build from the contributor; NOT verified)
+
+## Next session
+Stage: 3 (prove)  State: released to players as version 1.2 (2026-11-01); software proof NOT done
+Inputs: specnext branch contrib-el-capitan-trueno (snapshot, trueno1.rzx, the contributor's build folder)
+Start with: ## Verification plan below (classify the hook sites, then write verify / unit tests)
+Read: PLAYBOOK stage 3 + 6, docs/ENGINE_CONTRACT.md, games/el_capitan_trueno_build.md (## System map, recipe), ## Open
+Open: nexclash/trueno.py does the plain build only (the sprite chain is the contributor's trueno/build/*.py,
+outside the toolkit), no differential verify, no unit tests, no negative control, hardware untested (MAME 0.289 only)
 
 48K. Inputs (contributor's machine, not in this repo): `Capitan Trueno, El (1990)(Dinamic)(ES).z80`
 (copied as Trueno.z80) + trueno1.rzx (Spectaculator 0.61, 53542 frames, ~17m50s). The .z80 is the
 RZX's own start snapshot (same PC/SP/I/IM, 60 bytes differ).
 
+The contributor plays and ships the build as "version 1.2" (2026-11-01): four .nex files (plain,
+immortal, sword, both), three languages, two sprite colourings, 28 MHz with a frame limiter, a
+patcher page for the cheats. The sections up to ## Open describe the first prototype (2026-10-13);
+## State 2026-11-04 and, in games/el_capitan_trueno_build.md, ## System map describe what
+asm/trueno_hooks.asm (2494 lines) does now. The graphics table and the build recipe moved to that file.
+
 | Output | Status |
 |---|---|
 | Trueno.nex (plain, `--tail 0xA6C9`) | boot sim OK; runs in MAME 0.289 (title menu, key 1 starts, played by the contributor) |
+| Trueno.nex / _immortal / _sword / _immortal_sword (release 1.2: multi language, both colourings, 28 MHz) | boot sim OK; tested by the contributor in MAME 0.289 (the variants were played; the contributor's own start-to-end run of 1.2 is still to do); differential verify NOT done; hardware untested |
 
 ## Snapshot (inspect)
 PC 0xEEEE = ISR entry (title menu; DI, IM 2, I=0xED, table 0xED00-0xEE00 all 0xEE -> 0xEEEE JP 0xA1CB).
@@ -68,123 +83,6 @@ back and the tail vanishes (choose_tail_addr refuses >0xC000 only for 128K; next
   0x00 / 0xFF): the mask is a ~1 px outline built in pixel pairs; a morphological body (demo:
   fill(close1(dilate1(ink)))) leaves 49 mask pixels uncovered -> masks must come from the game.
 
-## Graphics (frame table)
-- Table at 0xE290, 4 bytes per frame: [flags | width in bytes (bits 0-4), height, gfx address]; 0x8254
-  looks it up (frame * 4 + 0xE290). Bit 7 of the flags = the side the graphic faces now: when a figure
-  turns, the game mirrors the graphic IN PLACE (0x8280/0x8295/0x82A1).
-- Gfx: 1 header byte, then height rows of width bytes (1 bpp, no mask stored), then a few extra bytes
-  (likely the column draw/skip bits for the 0x872C code generator). Same table in all levels: 126
-  frames, then a second block after a gap (e.g. 161/162 = rope links).
-- Composite figures (0x8ABC, IY 0xE644 for the hero): part list [frame, dx, dx mirrored, dy] -> temp
-  descriptor 0xE600 -> 0x82DF.
-- Heroes: Captain = torso 98 (+ poses 80-91) over legs 95 (+ 93-97); Crispin (small, blond) = frame 4
-  (+ 9-16?) with part 33; Goliath (big) = frame 75 (+ 76-79?), one piece 24x38. Portrait at the bottom:
-  col 0 Captain, col 9 Goliath, col 23 Crispin (hidden ones are black on black).
-- Others: rats 57-62, coins/items 24-31, knives, explosions, monsters (sheet: snaps/frames.png).
-
-- Graphics catalogue over the whole RZX (C simulator, gfx hashed at each frame end, 7.6 s): one
-  real graphic per frame (+ its exact bit mirror: in-place mirroring is bit-exact); other variants
-  occur 1-6 times = caught mid-mirror, never plotted. Exception: frame 32 = the thrown knife (red
-  hilt, yellow blade), two hand-drawn graphics swapped in by the game (2802 / 831 frames), not a
-  mirror. Total 167 shapes, ~680 16x16 patterns (~84 KB at 4 bpp): does not fit pattern RAM,
-  so keep converted patterns in spare RAM banks and upload the ones on screen (3-6 figures).
-- Unknown graphic at run time (not in the catalogue): leave that figure on the ULA as the original.
-- The mask is NOT computed from the graphic alone: it comes from the graphic's trailing bytes, which
-  the in-place mirroring flips too. Shapes must be captured from one consistent state (graphic + its
-  own trailing bytes as the base state holds them); writing the catalogue's graphic over a state where
-  the frame was mirrored paired it with a mirrored mask (frame 98: 55 mask pixels on the wrong side ->
-  ULA figure pixels left uncovered = the "white flashes"). Fixed in build/shapes.py 2026-10-13.
-- Frame table has up to 212 entries (0xE290-0xE5DF; 0xE600 = temp descriptor): catalogue with
-  220 -> 210 shapes, 535 patterns, 9 pages (72 KB). Every extra variant is transient (mid-mirror).
-- Plotted in the RZX (Python hook on 0x82DF, build/plotstats.py, ~7 min): frames 0-124 (not 77-79,
-  105), 156, 157, 161, 162, 192, 209; callers 0x8AF7 (composite, 40845) and 0x8A74 (tables, 7015).
-  Flags seen: 0x05/0x15 (+0x80 mirror), 0x55 (frame 33 only: bit 6), bit 1 set ~330 times.
-- Descriptor: +0 frame, +1 x in 4-pixel units, +2 y, +3 flags: bit 0 visible, bit 7 mirror x,
-  bit 6 mirror y (exact, same box), bit 1 hit flash (the whole silhouette = mask in the ink colour),
-  bit 3 mask = whole box (not seen in the RZX), bits 2/4 always set in play (meaning not needed).
-- Colours: per cell. Table flags bit 6 = multi-colour graphic: the painter 0x83A6 copies
-  attributes per column from the graphic data (self-modified NOP/INC HL), e.g. the knife: blade
-  0x46, hilt 0x42. Shapes are captured cell-aligned (descriptor x 40, y 76) and each ink pixel takes
-  the attribute painted in its cell (13 multi-colour frames).
-- Clean attributes: only the figure painter, the post-copy reset and 0x89C9 (cycle start: saves
-  0xF13C -> 0xEF98) touch the attr buffer, so 0xEF98 at copy time = scenery only. Patch: the
-  copy's attr source operand at 0x889C (3C F1 -> 98 EF). Screen position of the mask box: x = 4*(+1) - 120,
-  y = (+2) - 52 (buffer: x = 4*(+1) - 128, y = (+2) - 68; buffer -> screen +8, +16).
-
-## Recipe for an AI session (fill in as the build is done; goal: repeat without the research)
-1. Plain build: `zt.convert('Trueno.z80', out, 0xA6C9, True)` (tail in the RZX-proven write-first area).
-2. Facts above are verified; do not re-derive them. Masks/ink per shape: call 0x82DF in the
-   simulator with a descriptor at 0xE600 (IX), foreground map 0xEF60-0xEF97 zeroed, (0xE60B) != 34,
-   buffer 0xF2E0 filled with 0x00 (ink) and 0xFF (mask = cleared | ink); state taken just after the
-   ISR restore (stop at 0xA1F1 after 0x886F).
-3. Catalogue (C simulator, seconds): `trueno/build/gfxcat.py RZX gfx_catalog.json` -> `shapes.py`
-   (ink, mask, per-cell attributes per frame via the game's plotter) -> `patterns.py` (4-bit
-   patterns, 64 per page, shapedir/flash/palette) -> `check_patterns.py` (round trip, 0 mismatches).
-4. Hooks: asm/trueno_hooks.asm (sjasmplus 1.24.0), builder prototype `trueno/build/make_nex.py`
-   (TruenoPatch: alt ROM page 24 = bank 12, hook page 26 = bank 13, patterns from page 28 = bank 14,
-   Layer 2 banks 20-22 filled 0xE3, tail 0xA6C9) -> Trueno_sprites.nex; nextboot.check OK.
-5. MAME 0.289 (2026-10-13, `trueno/build/run_nex.py`): menu, game starts, hero and goblins as
-   sprites, a goblin passes behind a bush (Layer 2 priority). Host's look still to come.
-   Render order (build/check_order.py, whole RZX): no 0x82DF call while a render waits for the
-   copy (298,965 plots, 10,755 copies), no interrupt accepted at 0x82DF.
-   Screen reads (build/check_screen_reads.py, whole RZX; only window attributes differ from the
-   original): CLS fills 0xA21F/0xA230 (read what they wrote), effects 0x5E1E-0x5E41 (pixel shift,
-   attribute fade), 0x984B (game end: LDIR all attrs -> 0xFC1C, a screen save), 0x980B / 0xA659 /
-   0xA67F / 0xA27F (panel and status rows), 0xEF2E (pixels). No logic reads window attributes;
-   exact address ranges per PC still to list for the record.
-   Cover (build/check_cover.py, whole RZX, hooks' model incl. pattern memory and flushes): every
-   figure pixel the game changes lies under an opaque sprite pixel - 10,508 renders, 17 flushes,
-   0 uncovered (2026-10-13, after the consistent-state shapes; before: 5,769 renders uncovered).
-   Buffer reads (build/check_buffer_reads.py, whole RZX, 0xF2E0-0xFFFF): the plotter 0x85FA-0x862C,
-   the copy 0x896D-0x89A7, the stack (menu SP 0xFFF6: 0x8869, 0xA19C-0xA204), the block swap
-   0xEF23 (screen <-> memory store for menus / transitions), start-up 0x5FFC-0x6086 and
-   0x9837-0x986C. No logic reads figure pixels (no pixel collision): not drawing figures is safe.
-   No-draw patch (check_nodraw.py over 4 states): RAM differs only in the generated row code
-   0x85FC-0x8610, restore-list saved bytes (overlapping figures save scenery, never read except by
-   the restore, which leaves the same buffer) and dead stack.
-5a. Pause menu (key during play): 0xA36C polls the keys and tail-jumps 0xA375 JP 0xA501; the menu
-   draws its window in the ULA (0xA5DA), loops at 0xA50B-0xA54A and returns with RET NC (fire, 0xA540)
-   or C. Layer 2 and the sprites covered the window -> 0xA375 -> e_mnu: NEXTREG 0x15,0 / 0x69,0,
-   CALL 0xA501, NEXTREG 0x69,0x80 / 0x15,1, RET (no register or flag change); e_scr turns Layer 2
-   on too, in case the menu is left without its RET. Checked in MAME by the contributor (2026-10-13).
-   Any game: look for menus and windows over the play area before relying on Layer 2 foreground.
-5b. Dragon (screen 34, clear mode 0xE60B = 34): its energy bar (frame 0x69 x (0xE858), then 0x7D)
-   is drawn by 0x8A0C through 0x82E4, past the figure hook, so it stays in the ULA; its colours
-   (3 red cells, then green) are in 0xF13C. Hook e_att (0x889B, was the data patch 0x889C): the
-   copy takes attributes from 0xEF98, on screen 34 from 0xF13C. s_cm clears Layer 2 (ZMAP) on
-   screen 34 instead of deferring the rebuild (the old screen's foreground stayed there).
-5c. End of part 1 (screen 60): 0x65CD JP Z 0x5DCD draws the access code screen without a screen
-   build. Hook e_end (0x5DCD CALL 0x5E0E): sprites and Layer 2 off; the next game's e_scr (NEXTREG
-   $69,$80) and first commit turn them on.
-5d. Title menu: no '5 COLOR ON' (the original's colour off only greys the figures). Data patch
-   0x5FF1 05 -> 04: LD B,5 at 0x5FF0 is the item count for drawing and for the key poll (items
-   0x5ED1: pos, key 0x1B-0x1F, text letters 0x00 = A ... 0x26 = space, 0xFF end; handlers 0x5F98).
-   The snapshot shows the menu already drawn: make_nex also wipes item 5's pixels (y 112-119, x
-   88-175).
-5e. Scenery clash, fix cells (build/fix_cells.py -> gfx/fix_tiles.png + .json, merged by
-   bush_walls.py into bushwall.bin, Layer 2 WITHOUT priority, marked in OLDROPE so a screen change
-   clears them). Places (screens, frames): barrels 45-47 (0xCB; 0xCC = the wall's cut edge) - the
-   wall built without the barrels moved to them (right 1 px, each row's leftmost top-left
-   shoulder); bell 17 (rim cells, ring 0x2E); hanging skeletons 39-41, 50-52 (0x52/0x53, 10 cells
-   each, 6 looks); well arch 18 (0x32-0x34); cypresses over the red roof (0xAA-0xAD) 18-24, 58,
-   59. The sheet holds each distinct look once; the build gives the drawing to every object that
-   looks the same and leaves out cells drawn as the original. The contributor drew all of them.
-5f. Explosions = frames 0-3 (attr 0x42): gfx/explosions.png (clean_sheet.py --raw
-   Explosions=0-3), read by patterns.py; the contributor redrew them. Coins 25-31: gfx/coins.png.
-5g. Test cheat CHEAT_IMMORTAL (0x7A1F LD (HL),A -> NOP) was on for the rounds; off since
-   2026-10-13 evening: no-cheat run and game over checked (the original has no game over screen:
-   straight back to the title menu).
-   Checked in MAME by the contributor, 2026-10-13 (the last cypress tweak: at a later stage).
-5h. English texts (contributor, 2026-10-14): build/texts_en.py, make_nex.py --en. Letter codes 0x00-0x19
-   A-Z, 0x1A-0x23 0-9, 0x25 copyright, 0x26 space, 0xFF end; an item = x, y (pixels), codes. Lists
-   (access code 0x5DF3, credits 0x5E58, menu 0x5ED1) are read from their head only and rebuilt whole;
-   key labels (pointers in 0x5F13, 4 bytes each) and CONTINUAR (0xE904) in place. The snapshot's title
-   is redrawn by the game's print routines 0x5FE9 / 0x5FFD in the simulator (IY = 0x60F8: 0x5FF2 tests
-   (IY+0x13) bit 0 for a 5th menu item). make_nex.py --immortal = the test cheat as a player option.
-6. (to do) differential
-   verification of the hooks (registers + memory), hardware checklist, move the prototype into
-   nexclash/trueno.py (graphics generated from the user's files, never stored in the repo).
-
 ## Heroes (contributor, 2026-10-13)
 - Three heroes, the player switches: the Captain, Crispin (small, blond; the only one who climbs
   ropes), Goliath (big; too heavy to climb). Composite entry 0x8AC0 with IY = object (hero: IY
@@ -208,9 +106,24 @@ back and the tail vanishes (choose_tail_addr refuses >0xC000 only for 128K; next
 - Depth: the game's own rule - bushes and other foreground stay in front of the figures.
 
 ## Open
-- Plotter internals: gfx format, widths, what (DE) is (save-under?), frame -> gfx address.
-- isr / scan for hook state; who reads the buffer bytes of figures (collision).
-- Preview frames and the contributor's decisions (which figures, colours, depth).
+(2026-11-04; the 2026-10-13 questions about the plotter, the figures and the decisions are answered
+in ## Render, ## Graphics and ## Contributor's decisions.)
+- Differential verification: none yet (## Verification plan). Only the contributor's play in MAME 0.289
+  and his check scripts (cover, order, no-draw, patterns, screen reads, buffer reads) back the build.
+- Engine files: done in 2026-11-04 as far as they go: nexclash/trueno.py (detector, plain build at tail
+  0xA6C9, boot check; auto() returns False and says "sprite build NOT VERIFIED"), the profile
+  (asm2profile assembles the BASE build only: the -DMULTI / -DGAME_MHZ / -DLIM / -DTITLE_MHZ switches
+  of the release are not in it), the record, the line in nexclash/engines.py. Missing: the sprite build
+  inside the toolkit, verify() and unit_tests() (both raise NotImplementedError).
+- Hardware: nothing run on a real Next. The copper shake, the Layer 2 priority bit and the NextReg
+  0x07 switching at 28 MHz are MAME-only results.
+- Cheats and patches: a new standard for such files is being discussed (2026-11-03, Dean takes part);
+  the contributor made `Capitan Trueno, El (1990)(Dinamic)(ES).pok` for the original 48K game
+  (Fuse format, three trainers, original bytes checked against the snapshot; not tried in an
+  emulator). Wait for the standard before choosing a format.
+- Hooks: the alt ROM had 0x3BF6-0x3C08 and 0x3CC0-0x3CC8 free (multi + fast build, 2026-10-31; later
+  edits not rechecked); more growth needs another move of bodies into the hook page.
+- Page budget: the fix-cell table (pages 60-67) is full; 3.2 KB left.
 
 ## Maintainer check (2026-10-14)
 - Archive received; reference files were in specnext/reference/el_capitan_trueno/ (contributor's
@@ -222,4 +135,67 @@ back and the tail vanishes (choose_tail_addr refuses >0xC000 only for 128K; next
   default-tail build, which does not boot (docs/VERIFICATION.md).
 - Still open: engine module + profile + record (recipe step 6), per-call differential verification,
   unit tests, negative control, hardware. nexpatch: maintainers' decision pending (private for now).
+
+## State 2026-11-04 (what asm/trueno_hooks.asm does now; the 2026-10-14 archive had 1412 lines)
+Features added since the archive, each checked by the contributor in MAME 0.289 (software proof: none):
+- Pause window, access-code screen and menus are drawn in the ULA: Layer 2 and sprites are hidden while
+  they are up (e_mnu, s_end); the access-code screen clips Layer 2 to the panel (lines 136-191) instead
+  of switching it off, so the three portraits stay.
+- Screen shake and the pause use the copper (list `clist`, mode 11, restarted every frame): shake moves
+  Layer 2 by 8 lines for lines 24-135 only; the pause turns Layer 2 off for lines 16-135.
+- Foreground and scenery clash: bushes (Layer 2 with priority), then "fix cells" (scenery cells redrawn by
+  the contributor on a sheet: walls, battlements, windows), explosions, hit shapes, a dragon replacing
+  the unused "big rat", the pause sword as sprite 0.
+- 28 MHz with a frame limiter (e_lim at 0x89FA, 4 interrupts per render as the original's usual pace) and
+  e_dly at 0xA18F (CPU-timed delay loops run at 3.5 MHz): the dragon's 12-frame renders and the other
+  slowdowns are gone; the original pace stays.
+- One build with a language menu (ES / EN / RU, item 6) and a sprite-colour menu (item 5, COLOR ON/OFF,
+  start ON) written into the game's own title menu; Russian font as 24 extra glyphs in the alt ROM.
+- Cheats as tiny data patches, each its own option: immortality (1 byte at 0x7A1F) and the Captain's
+  best sword (12 bytes, the four readers of 0xE634), never overlapping; the ORIGINAL game's .pok file
+  has the same two plus infinite lives (0x9BA0).
+- Three portraits on the panel at once (inactive ones grey), the title screen from the snapshot plus the
+  patch cells in Layer 2, castle wall / back battlements / windows redrawn.
+- An ORIGINAL bug fixed (multi build): after the dragon fight the pause window came out striped (draw list
+  0xE8B2 doubles as the dragon's object record); e_pwin saves and restores the 24 bytes.
+
+## Verification plan (not started; this session's proposal, 2026-11-04)
+Classify every hook site first, then verify each class its own way:
+1. Logic-neutral (figure plotting, explosions, hit shapes, fix cells): the usual differential test over
+   trueno1.rzx (53542 frames); the game's memory must equal the original's outside the never-read back
+   buffer (0xF2E0, attributes 0xF13C), as in the first prototype.
+2. Screen-only (Layer 2, copper, portraits, title): compare what the hooks WRITE (map and palette
+   bytes) against the model, not the game's memory; the contributor's check scripts for cover, order,
+   no-draw, patterns, screen reads and buffer reads already do part of this (10,508 renders).
+3. Deliberate changes (menu, language, colour menu, cheats, pause sword, limiter, 28 MHz): outside the
+   recording's reach. The recording replays only the base build (3.5 MHz, no menu items, no cheats);
+   verify THAT build, then test the variants by unit tests on the changed routines (menu dispatch,
+   text records, cheat bytes at their sites, one negative control per class).
+The limiter and 28 MHz change timing, so the recording cannot drive them: build the base for the proof
+(-DGAME_MHZ=0, no -DMULTI) and say so in the record.
+
+## Lessons
+- [doc LEARNINGS 1.4] Reading a NextReg (select on 0x243B, read on 0x253B) with interrupts on is a race: an ISR hook selects another register between the OUT and the IN, the read returns that one, and a hook that writes the value back sets it as the CPU speed (Trueno: the 28 MHz menu fell to 3.5 MHz and missed key taps). Observed in MAME; after reading with interrupts off (IFF restored) the menu ran 8/8 steps and 20/20 taps at 7 MHz. Same race for test scripts that poke 0x243B while the game runs.
+- [doc LEARNINGS 2.7] MAME 0.289 Lua: stop the machine with emu.pause() (manager.machine:pause() does not exist); poking ports or NextRegs from a script while the game runs races the ISR, so pause first. Observed.
+- [doc LEARNINGS 2.5] A fault seen only in the patched build can be an original bug: the pause window came out striped after the dragon fight. The recording (no hooks) shows the same at frame 48898, screen 34: the pause window's draw list at 0xE8B2 doubles as the dragon's object record (IX 0xE8B2, script pointer left at 0xE8B6). Found by running the window routine in a simulator on memory read from the emulator (patch sites put back) and bisecting against the expected memory. Run the original unhooked to the same state before blaming a hook; fix by saving and restoring the 24 bytes around the window. Demonstrated.
+- [local: met in this game only so far; the detail stays here until a second game meets it] When the alt ROM is full, hook bodies move to the hook page behind 5-7 byte stubs; dead game areas can hold tables once a scan proves no real reference (a match inside a data table is not one). Trueno reused 12 of the 22 bytes of the old colour handler and the old menu list, and put the plotter's all-0xFF map at the ROM top. Demonstrated by the code scan; MAME run.
+- [local: met in this game only so far; the detail stays here until a second game meets it] Adding items to the original menu: its dispatch matches the key against the first code of each item, so every new item must start with its digit; a switchable language is a set of entries (address, length, bytes) copied into the game's RAM at the switch, then the menu and credits are printed again after the screen pixels are wiped (the title screen holds text only). New glyphs (Russian font) go in as extra characters. Demonstrated in MAME: 8 steps, state bytes, text in RAM and screen pixels equal to the simulator's print.
+- [doc LEARNINGS 2.1f] Delays timed by CPU instructions (a DEC DE loop: menu, pause, access-code screen) become far too short at 28 MHz and a frame limiter does not touch them. Hook the delay routine, run its loop at 3.5 MHz and set the speed back (Trueno 0xA18F). The same for the beeper: per-note speed switching was heard as noise, so the whole effect runs at 3.5 MHz (hook at the effect entry 0xA43D); the access-code picture shift 0x5E0E (CPU-timed) runs at 3.5 MHz too. Observed in MAME: menu, pause and sound match the original; other inline DJNZ delays may exist, none noticed in play.
+- [local: the sheet pipeline is built for this game's cell tables; the detail stays here] Scenery redrawn by a human on a sheet: pass the whole set of what the build copies unchanged into Layer 2 to the human first (the white walls were never on a sheet because the hooks copy every foreground cell whole). One edited cell goes to every identical tile (not mirrored); a second rule takes every cell that LOOKS the same (windows cut by bushes); pink on the sheet = see-through. Per-screen blocks are packed biggest first, and a block may cross one page edge when two MMU slots are mapped. Observed over several rounds with the contributor, in MAME.
+- [doc TECHNIQUES 2.1] A short copper list does both jobs of a pause and a shake in a back-buffer game: shake = Layer 2 Y scroll 8 lines for a band, pause = Layer 2 off for the window's lines; every instruction is written whole by NextReg 0x63, and a hook that rewrites the list takes effect at the next frame. MAME only (hardware untested).
+- [local: the panel hides a portrait by attribute 0 and keeps its pixels, so the dim state is drawn from the stored pixel and attribute pair per cell] Trueno's three portraits at once; only changed cells are drawn; 8100 of 8192 bytes of a page.
+- [deferred Open: reconsider when Dean's cheat and patch standard is published] Cheats as separate one-purpose data patches (1 byte / 12 bytes) that never touch the same bytes can be ticked in any combination on a patcher page; a .pok for the original game was made the same way. Format wait.
+
+## Friction
+- reuse: [deferred Open: reconsider when a second back-buffer game needs the same chain] The catalogue chain (play the recording, hash the graphics at each frame end, call the game's own plotter on 0x00 and 0xFF buffers, pack 4-bit patterns) was written from scratch for this game; it is generic for plotter-based games.
+- retries: [doc LEARNINGS 1.4] The NextReg read race cost more than one attempt; the test script's own pokes while the game ran may have added to the drop.
+- environment: [doc LEARNINGS 2.7 + tools/sjasmplus/README.md] MAME Lua: manager.machine:pause() does not exist in 0.289; emu.pause() does. Also on Windows tools/asm2profile.py finds no bundled assembler (the pinned binary is Linux x86-64) and would clone and build sjasmplus from GitHub; this session called asm2profile.run() with an sjasmplus.exe that reports 1.24.0 instead (no network, nothing outside the project).
+- hand-rolled: [deferred Open: reconsider when the verifier is written] The cover, order, no-draw, pattern, screen-read and buffer-read checks were separate scripts, not toolkit commands.
+- scratch: [local: dropped, tied to this game's pause window and menu addresses] Scratch scripts for the pause window bisection and the menu run were not kept.
+
+## Technique use
+
+## Stage log
+- 2026-10-13 .. 2026-11-04 (contributor's stages A to 4, one prototype + releases 1.0 to 1.2): ~3 weeks of sessions, the contributor tested everything in MAME 0.289; the differential proof (stage 3) was never done. Knowledge refresh against nexclash main at 2026-11-04 (v0.1.5 release, main commits of 2026-11-03).
+- 2026-11-04 maintainer merge (first user contribution, made against package 0.1.3): files applied with LF endings, generated STATUS / VERIFICATION rebuilt by `records views` (the contributor's copies not taken), asm2profile reproduces the profile (unchanged), plain rebuilt with `auto` = ca49e0f4 boot OK (engine detected), canary PASSED, lesson tags checked against where the lines landed (NextReg race is in LEARNINGS 1.4), Windows sjasmplus note added to tools/sjasmplus/README.md; game files to specnext/reference/el_capitan_trueno/.
 

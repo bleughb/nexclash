@@ -15,6 +15,10 @@ from source into ~/.cache/nexclash/ (~15 s; needs git, make, a C++ compiler). An
 version is refused. Both paths give byte-identical output (checked 2026-10-12, all four hook
 engines).
 
+Windows without git / make / a compiler (offline): pass `asm2profile.run()` an sjasmplus.exe
+that reports 1.24.0, then let a Linux session confirm with `--check --all` (El Capitan Trueno,
+2026-11-04: the profile it made is what the pinned Linux binary makes).
+
 Dizzy V (`asm/dizzy5_hooks.asm`) has no hooks section: dizzy5.py emits the bytes itself and
 selftest (the Dizzy V record's `dizzy5_asm` check, run with every Dizzy V rebuild) checks the
 pinned assembler's output equals them.

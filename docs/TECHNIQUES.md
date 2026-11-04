@@ -443,6 +443,12 @@ Ped7g's test suite) where a technique there is mostly about one Next feature.
   * Sprite priority mid-frame (Gen4): MOVE $15 bit 6 at a line (which sprite number is on top), so
     the two halves of the screen overlap their sprites in opposite order.
   * Sound by copper: 2.6.
+  * Shake and pause in a back-buffer game (El Capitan Trueno, MAME 0.289 only): a 9-instruction list
+    in mode 11 (WAIT 15, shake slot, WAIT 23, two shake slots, WAIT 135, MOVE $17,0, pause slot, HALT).
+    Shake = Layer 2 Y scroll ($17) 8 lines for lines 24-135 so the panel stays still; pause = Layer 2
+    off ($69) for lines 16-135 and on at 136. The slots hold NOOP (0x0000) or the instruction; a hook
+    rewrites a slot by NEXTREG $63 (the copper never reads half an instruction) and the change shows
+    at the next frame. The pause no longer clips Layer 2, which cut the frame line at y 14.
 
 ### 2.2 Layer 2 and ULA: drawing and scrolling
 - Copy from banked memory into Layer 2 in ONE address window (l2scroller): the source pages sit in

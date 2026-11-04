@@ -1,0 +1,64 @@
+{
+ "name": "el_capitan_trueno",
+ "order": 24,
+ "game": "El Capitan Trueno",
+ "doc": "el_capitan_trueno.md",
+ "engine": "trueno",
+ "representative": true,
+ "reference": "el_capitan_trueno",
+ "verified_json": false,
+ "inputs": {
+  "snapshot": {
+   "name": "el_capitan_trueno.z80",
+   "md5": "15e128b05c471678d2f0fae2fbb8cedc",
+   "path": "el_capitan_trueno/Capitan Trueno, El (1990)(Dinamic)(ES).z80"
+  },
+  "recordings": [
+   {
+    "name": "trueno1.rzx",
+    "md5": "d07fcc914f385aabfe42c4a5cbaf1bba",
+    "path": "el_capitan_trueno/trueno1.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "build",
+  "trueno"
+ ],
+ "own_modules": [
+  "trueno"
+ ],
+ "data": [
+  "docs/profiles/el_capitan_trueno.json",
+  "asm/trueno_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "cmd": "convert",
+  "args": [
+   "--tail",
+   "0xA6C9"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": null,
+ "outputs": {
+  "plain": {
+   "file": "el_capitan_trueno.nex",
+   "md5": "ca49e0f4c92da6fe96d71062c2ed15a3"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "El Capitan Trueno",
+  "engine_col": "trueno, plain build only (el_capitan_trueno.md)",
+  "build": "plain ca49e0f4 (--tail 0xA6C9); sprite releases 1.2 are the contributor's chain, not in the toolkit",
+  "software": "plain: boot sim OK; sprites: NOT verified (no differential test)",
+  "hardware": "MAME 0.289 only (contributor played the variants)",
+  "next": "engine module + differential verify (games/el_capitan_trueno.md, Verification plan)"
+ },
+ "checks": [
+  "asm2profile:el_capitan_trueno"
+ ]
+}

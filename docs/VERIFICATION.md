@@ -61,6 +61,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - The Incredible Shrinking Fireman (GPT6_ASTRA) (incredible_shrinking_fireman-add-GPT6_ASTRA): `incredible_shrinking_fireman_plain-add-GPT6_ASTRA.nex` f8f213e55e3da01349827f8ae7d93bee, `incredible_shrinking_fireman_sprites-add-GPT6_ASTRA.nex` 1ea61f0bcaf2b5f27514807f8753f263; verified 2026-10-26
 - Cauldron (cauldron): `Cauldron_1985_Palace_Software_a.nex` b5b211f1fc6103ec0d42711dcc29cd0d, `Cauldron_1985_Palace_Software_a_sprites.nex` 43c1ca492d7c1cc68541f02aaed9cb4c; verified 2026-10-27
 - Nemesis the Warlock (nemesis_the_warlock): `nemesis_the_warlock.nex` f1497589ddf479e34d42f6ab0618954d, `nemesis_the_warlock_sprites.nex` 31ad4ab5b7507b6289ffe30f82c7d6bb; verified 2026-11-03
+- El Capitan Trueno (el_capitan_trueno): `el_capitan_trueno.nex` ca49e0f4c92da6fe96d71062c2ed15a3; verified never
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

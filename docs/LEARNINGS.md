@@ -159,6 +159,8 @@ BRIEFING - with its reason.
   video line = NextReg $1E (bit 0 = bit 8) / $1F, read via OUT 0x243B (select) + IN 0x253B; line
   0 = first ULA pixel row, play area rows 16-175 in Rainbow; the ULA interrupt is near line 248.
   Hook work that delays a commit into the visible area tears even if the original never did.
+- A NextReg read (OUT 0x243B + IN 0x253B) with interrupts on races an ISR hook that selects another
+  register: read with DI (Trueno: 28 MHz fell to 3.5).
 - Never WAIT for the beam inside a limiter-paced game frame (interrupts off): the wait is paid in
   every frame whose render ends mid-screen. Rainbow 2026-10-19: half of all renders, 3.4 ms average,
   10 ms worst, typical frame 17 of 20 ms. Defer the commit to the next interrupt instead (line 248,
@@ -572,6 +574,8 @@ Grouped by question; add a new lesson to its group.
   Measure it: Speed line (T per game frame, original vs patched) from the verifier's pair runs. A
   28 MHz part costs T + 1 per memory read in 28 MHz cycles, i.e. (T + reads) / 8 at 3.5 MHz - not
   T / 8 (TECHNIQUES "NextMasterSystem", speed rule; BRIEFING C2 #1).
+- CPU-timed code (Trueno: delay 0xA18F, beeper 0xA473) runs too fast at 28 MHz and the limiter does
+  not touch it: hook it and run it at 3.5 MHz; a sound effect as a whole (per-note switching is audible).
 - Turbo (28 MHz frame + limiter) compresses whatever the game spreads across its frame. A music
   player ticked several times per game frame (Rainbow: 3, i.e. ~50 Hz at 3.5 MHz) then plays its
   ticks within a few ms and is silent for the rest of the frame: choppy music, and every overrun
@@ -922,6 +926,8 @@ Grouped by question; add a new lesson to its group.
   new check failed silently). Write '<detail> FAIL!'; read the failure list, not just 'PASSED'.
 - Hand-kept duplicate lists drift (selftest INPUTS / EXPECTED, STATUS, VERIFICATION, verified.json
   all held the same MD5s). Keep one source (the record) and generate the rest.
+- A fault only in the patched build may be an original bug: replay the unhooked recording to the same
+  state first (Trueno: a striped pause window, its list 0xE8B2 shared with the dragon's record).
 
 ## 2.6 Process / tokens (this sandbox)
 - Shallow clones (`git clone --depth 1`) fetch only the default branch: a work branch pushed from one
@@ -994,6 +1000,7 @@ hardware is.
 - [MAME] MAME 0.282 passes Ped7g's Copper, NextReg-defaults and Layer2Port hardware tests where
   CSpect 2.11.1 / 2.9.2 and ZEsarUX 8.0 fail Copper and NextReg defaults (TECHNIQUES 1 "Hardware
   ground truth"): prefer MAME over CSpect for a copper build. Record each MAME-only result as such (Trueno: MAME 0.289 only, hardware untested).
+- [MAME] 0.289 Lua: emu.pause(), not manager.machine:pause(); poke registers only while paused.
 - CSpect 3.3.1.0 gets Z80N details wrong that the board (core 3.02.00) gets right (tools/hwtests
   z80ntest, 2026-10-21): ADD rr,A keeps CF, the LDIX family keeps flag bits 5/3, LDWS uses INC D's
   flags, JP (C) sets IN-style flags, PUSH nn takes 19 T instead of 23. A hook that reads none of those
