@@ -168,7 +168,12 @@
     "args": [
      "--no-record"
     ],
-    "decisions": {}
+    "decisions": {
+     "engine": "tid128",
+     "base": "Dean's dizzy_patch (trampolines, hooks, set-up, patterns: read, not copied)",
+     "input": "the 128K release (AY music from bank 6 in the game ISR)",
+     "strategy": "printer buffer trampolines 0x5B00-0x5B50 (put back after NEXLOAD); hooks in bank 10 page 21 at slot 0 with interrupts off (Dean); whole alt ROM image: ROM 1 + the register block at 0x386E"
+    }
    },
    "verify": {
     "args": [
