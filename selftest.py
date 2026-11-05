@@ -238,8 +238,11 @@ def _rework_cmd(z80, x, stage_, d):
     """An opt-in rework of an existing game (record "rework"): auto with the rework's own args, e.g.
     `--altrom-fill whole`, which overrides the record pin (Jetpac v1.1: engines.py picks jetpac_v11), plus its own
     "rebuild" / "verify" recipe (args, rzx, stored decisions), as a record's, and its own environment ("env", e.g.
-    NEXCLASH_REWORK=atic_atac_v13 for a rework that keeps the pinned fill; the callers add it)."""
+    NEXCLASH_REWORK=atic_atac_v13 for a rework that keeps the pinned fill; the callers add it). "snapshot": the
+    name of one of the rework's inputs to build from instead of the record's (a rework on another release of the game)."""
     rc = x.get(stage_) or {}
+    if x.get('snapshot'):                       # a rework built from its own snapshot, one of its inputs (Lode Runner 128K)
+        z80 = os.path.join(d, x['snapshot'])
     cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80] + list(x.get('args', [])) + list(rc.get('args', []))
     if stage_ == 'rebuild' and '--no-record' not in cmd:
         cmd.append('--no-record')

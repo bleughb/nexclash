@@ -41,6 +41,7 @@ ENGINES = [
     ('atic_atac_v13', 'is_atic_atac_v13', None),                          # Atic Atac v1.3: opt-in rework of atic_atac (NEXCLASH_REWORK)
     ('atic_atac', 'is_atic_atac', None),                                  # Atic Atac (48K)
     ('renegade128', 'is_renegade128', None),                              # Renegade (128K release)
+    ('cauldron_v11', 'is_cauldron', lambda a: getattr(a, 'altrom_fill', None) == 'whole'),  # Cauldron v1.1: opt-in rework of cauldron
     ('cauldron', 'is_cauldron', None),                                    # Cauldron (48K)
     ('nightshade', 'is_nightshade', None),                                # Nightshade (48K)
     ('knight_tyme', 'is_knight_tyme', None),                              # Knight Tyme (128K)
