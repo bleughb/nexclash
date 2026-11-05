@@ -3,7 +3,7 @@
 | Stage | Who | Ends with (the gate) |
 |---|---|---|
 | 0 Intake | tools: `python -m nexclash.survey` | the recording reaches every plotter's callers, or the user records more (before any design work) |
-| 1 Design | session 1 | the design in games/<game>.md + ONE question to the user (defaults + exceptions, preview, plain .nex) |
+| 1 Design | session 1 | recorded user answers and approved design in games/<game>.md |
 | 2 Build | session 2 | quick runs PASS, evidence record written, committed |
 | 3 Prove + deliver | session 3 (small) | the one full verification stamped; sprite build + colour sheets to the user |
 | 4 Hardware + colour | one session per round | the user's checklist and painted sheet handled (recolour: seconds, no rebuild) |
@@ -21,9 +21,6 @@ Only disassemble routines the tools flag as unclassified.
 Write decisions and open questions to games/<game>.md as they happen, so a new session can pick up
 any stage - and in stage 2 the build's DESIGN too (sites, memory used, how each figure becomes a
 sprite, what the verify checks), before the first quick run.
-Why: Match Day (2026-10-20) lost the session's context mid-phase-B; the build existed only as
-code and a running job; the next turn had to rediscover it from files and the process list.
-Why: Commando took five hardware rounds, each finding something a step below now covers.
 Rounds on a long game (stage 4): offer to collect the user's whole list in one pass through the
 game, fix all of it, then check everything in ONE new pass; never restart the emulator unasked.
 Why: each restart costs the user the walk back (El Capitan Trueno, 2026-10-13).
@@ -31,22 +28,22 @@ Why: each restart costs the user the walk back (El Capitan Trueno, 2026-10-13).
 ("The user" below = whoever runs the session: Dean in maintainer sessions, the contributor in an
 add-a-game session.)
 
-## Sessions (one per stage; Dean 2026-10-26)
-Every tool call resends the whole conversation, so cost grows with the session's length: a fresh
-session that reads this file + games/<game>.md is far cheaper than hour five of an old one.
-- One session per stage 1-3, one per hardware round (stage 4). A game the tools already convert
-  (`auto` PASS) is one session. Stage 3 is its own small session ON PURPOSE: the full verification
-  is polled for up to an hour, and polls of a short conversation cost little.
-- A stage ends with the "Next session" block right under the title line of games/<game>.md, then
-  commit (+ push, maintainers):
+## Sessions
+Use a new session when helpful for the execution environment; preserve the handoff either way.
+- A session may cover one or more stages or hardware rounds. A game the tools already convert
+  (`auto` PASS) may need only one session.
+- A stage ends with the "Next session" block right under the title line of games/<game>.md; in
+  Git, commit it (and push if the next session needs remote access):
   ```
   ## Next session
   Stage: 2 (build)            State: design approved 2026-10-26 (Decisions below)
-  Inputs: specnext/reference/<game>/ (snapshot, recordings)    Branch: claude/<game>
+  Inputs: <local paths>    Branch: <branch>    Commit: <commit>
+  Checks: <completed checks>  Pending user answers: <answers or none>
   Start with: <the first command>       Read: PLAYBOOK stage 2, nexclash/<template>.py <functions>
   Open: <anything not settled>
   ```
-  and the reply gives the user the prompt for it (README "Continue a game"; contributors: SESSION.md).
+  and the reply gives the user the prompt for it. In a fresh Git checkout, check out the recorded
+  branch and commit before reading its handoff. Zip users preserve and reopen the modified package.
 - Stage log: one line per finished session under "## Stage log" in games/<game>.md: date, stage,
   wall time, tool calls (roughly), user rounds. It shows which stage costs the most.
 - Mid-stage: when the session is long (roughly 80+ tool calls, or several hours) and a natural
@@ -54,7 +51,7 @@ session that reads this file + games/<game>.md is far cheaper than hour five of 
   user starts a new session. Never break in the middle of an edit that does not build.
 - The block replaces any older one; the facts it points to (decisions, design, open items) stay in
   their sections of games/<game>.md, written as they happen (above).
-- Start of every stage: the knowledge refresh from main (docs/LEARNING.md 1); end: the learning
+- Start of every Git stage: the knowledge refresh from main (docs/LEARNING.md 1); end: the learning
   loop (dispositioned "## Lessons", "## Technique use", probes kept).
 
 # Stage 0 - Intake (tools, before any design work)
@@ -68,8 +65,8 @@ tokens), survey.json, preview.png (what each top plot routine draws, per caller)
 A KNOWN engine there -> `auto`, no stage 1-2. Read survey.md first; run the single commands below
 only for what it leaves open. Its routine attribution is a shadow call stack (BRIEFING C4): a game
 that drops return addresses or blits with SP can blur it - check a surprising row with `cost --at`.
-Coverage gate (survey.md GATE line): every CALL / JP byte pattern to each top plot routine, and
-which the recording reached. An unreached CALL to a FIGURE plotter in code that ran -> ask the user
+Coverage gate (survey.md GATE line): CALL sites near executed code; JP sites are listed but not
+tracked, and unseen code can contain further callers. An unreached CALL to a FIGURE plotter in code that ran -> ask the user
 for a recording that reaches it (RECORDING_CHECKLIST.md) BEFORE stage 1 (Cyclone needed a second
 recording halfway through its build); to a text / score printer it is usually a message that did
 not come up - note it in games/<game>.md.
@@ -220,7 +217,8 @@ Colour sheets and recolour: docs/COLOURS.md (built in stage 2, sent in stage 3).
 | Game has no frame sync (no HALT, FRAMES unread) | hook time = slowdown: run whole plots at 28 MHz (entry hook + return-address trampoline), measure the Speed line |
 | The game rewrites bytes in or next to a site | move the site off them; read the rewritten instruction at run time in the hook |
 
-Stage 1 ends: decisions in games/<game>.md, the question sent, the Next session block (stage 2).
+Stage 1 ends after the user answers and decisions are recorded. If the answer is pending, the
+next session must resume the design question; do not start stage 2.
 
 # Stage 2 - Build (session 2)
 
@@ -292,8 +290,8 @@ The full verification runs ONCE, on the build that goes to the user, and it is t
 write the evidence record first (step 7), commit, then `python selftest.py --game <record> --verify
 --stamp` (the record's verify recipe + the rebuild MD5s; it stamps the record, so the maintainers'
 `--affected` before the merge has nothing left to do for this game). Never a separate full `auto`
-as well (Commando ran the ~55 min full check five or six times). Long runs: detached + polled
-(CLAUDE.md "Tokens", LEARNINGS 2.6); write the record and the notes meanwhile.
+as well (Commando ran the ~55 min full check five or six times).
+Long runs: use the environment's supported background execution and retain logs and exit status; write the record and the notes meanwhile.
 
 ## 6b. Hardware risk review (before every build the user tests)
 Go through BRIEFING A1 "Simulator blind spots" item by item for what changed since the last

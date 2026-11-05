@@ -17,7 +17,8 @@ Clone bleughb/nexclash and bleughb/specnext side by side and follow nexclash/CLA
 Each stage ends by telling you to start a new chat with:
 ```
 Continue GAME NAME in nexclash. Clone bleughb/nexclash and bleughb/specnext side by side,
-follow nexclash/CLAUDE.md, start from the "Next session" block in games/<game>.md.
+check out the working branch and commit from the previous handoff, then follow nexclash/CLAUDE.md
+and start from the "Next session" block in games/<game>.md.
 ```
 The design question (stage 1) lists the defaults: reply "defaults", or the numbers to change.
 
@@ -31,20 +32,19 @@ Continue GAME NAME in nexclash (as above). Hardware round: here is my whole list
 
 # nexclash - colour-clash-free ZX Spectrum games on the Spectrum Next
 
-Turns a ZX Spectrum `.z80` snapshot of a game into a sprite build for the Spectrum Next in which the
-game's figures are Next hardware sprites (no attribute clash), packaged as a `.nxc` patch to share
-(`--nex`: the `.nex` files too, a plain conversion and the sprite build).
-Every supported game was proven to play exactly like the original by replaying real recordings
-through the original and the patched code side by side (paths no recording reaches are covered by
-unit tests; per-game details in games/).
+Turns a ZX Spectrum `.z80` snapshot of a game into Spectrum Next `.nex` files: a plain conversion
+and a sprite build in which the game's figures are Next hardware sprites (no attribute clash).
+`patch` packages the sprite build as a `.nxc` patch to share (`--nex` keeps the `.nex` files too).
+Verification coverage varies by game and build; see STATUS.md and games/ for recordings, tests and hardware results.
 
-No game files are included or ever uploaded: you bring your own snapshot, and the patched `.nex`
-is built on your machine. GPL-3.0-or-later (LICENSE). Status of every game: STATUS.md.
+No game files are included in the release. Contribution packaging excludes known game-data file
+extensions; review the files before sharing. Attaching a snapshot or recording to an online AI
+service uploads it. GPL-3.0-or-later (LICENSE). Status of every game: STATUS.md.
 
 ## Install (once)
-1. Python 3.10+, SkoolKit 10.x (tested with 10.1) and Pillow: `pip install -r requirements.txt`
-   (add `--break-system-packages` on a managed Python: Debian/Ubuntu, Homebrew, cloud containers).
-2. Download the latest nexclash zip from the Releases page and unzip it (or `git clone` this repo).
+1. Download and unzip the latest release, or clone this repository, then enter its directory.
+2. With Python 3.10+, create a virtual environment (`python -m venv .venv`), activate it,
+   then run `python -m pip install -r requirements.txt`.
 3. For the `.nxc`: a C compiler (`cc`, `gcc` or `clang`) builds the bundled ZX0 compressor once; on Windows
    without one, download upstream's zx0.exe into tools/zx0/ (tools/zx0/README.md). Without either the build
    keeps its `.nex` files and the report says why.
@@ -57,7 +57,7 @@ Output in `MyGame_nexclash/`: `MyGame.nxc` and a report. **The `.nxc` is the fil
 holds the sprite build as a patch and needs the player's own copy of the game (the `.z80` it was built
 from, same MD5), so no game data travels with it. To play it on the Next, put it beside the game on
 the SD card with the `.nxc` loader: loader, card setup and the `nxc.py` tool at
-https://github.com/jattree/nxc. The `.nxc` holds every variant of the sprite build (its colour sets, the
+https://github.com/jattree/nxc. The `.nxc` holds every variant of the sprite build (its colour sets and toggles, the
 tape's loading screen), each checked on read-back; outputs it does not hold stay beside it, named in the
 report (`MyGame.nex`, the plain conversion). `--nex` also keeps `MyGame_sprites.nex` (sprites), to copy
 straight to the card. Once only: `--patch-by "Your Name"` puts you on the menu's
@@ -66,7 +66,7 @@ credit line and is saved for later builds (or set `NEXCLASH_PATCH_BY`). Optional
 name players have the game under; default the snapshot's own, best in TOSEC style), `--no-nxc`.
 The `.nxc` carries the proof the report gives (`PRF1`), and says "not verified" when there is none.
 The last lines tell you how far it is proven:
-- **VERIFIED** - your snapshot is byte-identical to one we verified, and so is the output.
+- **Recognised snapshot** - check whether the output matches the reference; see the game notes for its verification and hardware coverage.
 - **PATCHED** - a different dump of a supported game: every patch site held the original bytes,
   so the same patch applied; it is not yet replayed against a recording of YOUR snapshot. To
   prove it: record an RZX in Fuse (docs/RECORDING_CHECKLIST.md), then

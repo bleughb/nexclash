@@ -17,7 +17,7 @@ on their machine; the maintainers' reference files live in the private repo bleu
 5. Close: "End of every stage" below.
 Each stage ends with the "Next session" block in games/<game>.md and the prompt for the next chat
 (PLAYBOOK "Sessions"); a continuing session starts from that block, never from chat history, then
-refreshes its knowledge from main at a safe boundary (docs/LEARNING.md 1: fetch, read the incoming
+in a Git checkout refreshes its knowledge from main at a safe boundary (docs/LEARNING.md 1: fetch, read the incoming
 changes, merge). The game may already have notes and files (games/<game>.md, STATUS.md): read them
 first. Names: folder and games/<game>.md after the game, lower case, underscores.
 
@@ -42,10 +42,7 @@ version; tools/sjasmplus/README.md). Maintainers: repos and private files in doc
   'WARNING|FAILED|!' run.log | head -20` (tail alone drops the early desync WARNING; the pipe hides
   the exit code). Reports: `grep -E 'Verify|Unit|Result|!'`. Disassemble only flagged routines.
 - Replies: never re-summarize earlier turns or paste results already in files; say what changed.
-- Long runs: `setsid nohup` + one `sleep 540; tail -3 LOG` per poll, call timeout 10 min (LEARNINGS
-  2.6) - plain `&` dies, faster polls resend the conversation for nothing. Where the harness
-  blocks a foreground sleep (claude.ai, 2026-10-26), wait instead with ONE background command
-  `until grep -q 'DONE-LINE\|Traceback' LOG; do sleep 20; done` (a single completion notice).
+- Long runs: use the environment's supported background execution; retain logs and exit status.
 - No subagents unless the user asks: each starts cold and re-reads the docs.
 
 ## Rules (contributions are checked against them)
@@ -99,9 +96,9 @@ version; tools/sjasmplus/README.md). Maintainers: repos and private files in doc
   or dropped. "## Technique use": which cards / probes helped. Record matches the build. Grep
   before adding a line anywhere; sharpen the existing one. Say in the reply what you wrote.
 - `python tools/doccheck.py` (references, budgets, cards, learncheck) must PASS.
-- Contributors: `python nexclash.py contribute <game> --report <the _report.txt>`, give the user the
-  zip + the upload step from CONTRIBUTING.md. Maintainers: PR + private files (docs/MAINTAIN.md).
-- Reply: results, the .nex files, a short hardware checklist, the next session's prompt.
+- At delivery or close, contributors provide the contribution zip and upload step; maintainers use
+  a PR and private files (docs/MAINTAIN.md). Reply with results and available artifacts for the stage;
+  include a hardware checklist with a build and the next session prompt when needed.
 
 ## Layout
 | Path | What |

@@ -604,7 +604,7 @@ def main():
         nxcout.add_args(p)
     p = sub.add_parser('contribute'); p.add_argument('name', help='game name (zip name)')
     p.add_argument('--report', action='append', help='nexclash report(s) to include (GAME_report.txt)')
-    p.add_argument('--note', help='one line for the maintainers'); p.add_argument('-o', '--output')
+    p.add_argument('--note', help='one line for the maintainers'); p.add_argument('--base', help='starting git commit (default: merge base with origin/main)'); p.add_argument('-o', '--output')
     p = sub.add_parser('identify'); p.add_argument('z80')
     p = sub.add_parser('record'); p.add_argument('z80'); p.add_argument('-o', '--output'); rec_args(p)
     p = sub.add_parser('convert'); p.add_argument('z80'); p.add_argument('--rzx', action='append'); p.add_argument('-o', '--output')
