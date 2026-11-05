@@ -6,7 +6,12 @@ follows CLAUDE.md: a game's output changes only where the item says so, shared c
 `selftest.py --canary` and `--affected`, and lessons go where docs/LEARNING.md says. The order below is the order of
 work.
 
-## 1. Bugs in the shared code (every game gets the fix)
+Scope (Dean's rule, 2026-11-04): the shared fixes are the default for NEW engines and builds. Existing games are
+frozen: their record "pin" keeps the behaviour they were verified with, and each gets the new standard only as an
+opt-in rework with its own proof and version (record "rework"). "Done" below means built and checked in software;
+hardware runs are the games' own.
+
+## 1. Bugs in the shared code (new builds get the fix; existing games by opt-in rework)
 1. **Whole alt ROM image by default.** Write Sinclair's 48K ROM plus the hooks across 0x0000-0x3FFF, never only the
    hook bytes. The Next fills the alt ROM from NextZXOS's ROM3, whose UDG print and IM 1 reach the hooks. This broke
    Starquake, and five others had the hidden fault (runs/altrom_audit).
@@ -60,12 +65,16 @@ These warn and never refuse. Their results go into the patch's proof record.
 
 ## 6. Output and workflow
 23. **.nxc as the default output,** with the packager inside NexClash (both GPL-3). `--nex` keeps today's .nex.
-    Title and publisher come from `identify`. The patch author is a one-time setting. Dean's credit is the default;
-    the version starts at 1.0; cheats come from a .pok. The proof record is filled from `verify`. `contribute`
-    sends a .nxc.
+    Done: the default output, every variant packaged (colour sets, the loading screen) and read back, outputs the
+    .nxc does not hold kept; the patch author a one-time setting; Dean's credit the default; the version the
+    record's (a rework's own), else 1.0; cheats from a .pok; PRF1 from this run's Verify / Unit / Result / Checks
+    lines, else the record; `contribute` sends a .nxc. Not done (planned): the title comes from verified.json, the
+    record or identify, but the publisher only from `--publisher` (no source has it); play-check results (pace,
+    flicker, soak) are not in PRF1.
 24. **Sprite sheet layout block** in the .nxc spec, so engines that build images at run time (Nightshade, Lunar
-    Jetman, the NZS tilemap) can support export and import.
-25. **Alt ROM warning at packaging,** in nxc.py too.
+    Jetman, the NZS tilemap) can support export and import. Pending. Nightshade's complete pipeline (paint, export,
+    import, owner and hardware review) is pending with it (games/nightshade.md).
+25. **Alt ROM warning at packaging,** in nxc.py too. Pending.
 
 ## 7. Structure and documents
 26. **A shared hook library:** sprite upload, attribute commit, double buffering, saving and restoring the speed. A

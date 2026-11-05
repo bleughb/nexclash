@@ -38,13 +38,14 @@ Enhanced from the menu: black hair, skin face, grey-mail guards with red shields
 Standalone engine: `nexclash/robin_of_the_wood.py`; hooks:
 `asm/robin_of_the_wood_hooks.asm`; profile: `docs/profiles/robin_of_the_wood.json`.
 The specified Odin 128K snapshot has MD5 `d2fa7f2eeb8ccb75c30edbacb432a8b5`.
-The standalone build entry refuses other dumps. This engine is not auto-registered.
+The standalone build entry refuses other dumps. (Before the import: not auto-registered; since 2026-11-04
+nexclash/engines.py registers it, "Import" above.)
 
 Round 2 follows the owner's explicit rule: no outline or exterior paper, close
 bounded 1–2 pixel seams, fill the resulting interior in the figure's own hue.
 Original ink colours and explicitly drawn black detail remain. Six darker fill
 shades occupy unused palette entries; guards and Ent select their own sprite
-palette banks. There is no Enhanced set. The 73 pointer entries contain 68 unique
+palette banks. Round 2 had no Enhanced set (it has one since 2026-11-04, below). The 73 pointer entries contain 68 unique
 graphics; both bitmap and tiled renderers, flying arrows and world-item IDs 0–7
 are handled. Menu/HUD/scenery rendering remains ULA.
 

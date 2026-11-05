@@ -11,3 +11,7 @@ ecde3a2 (pin.json; BSD-3-Clause, LICENSE-zx0). Applying or listing a .nxc never 
    into `~/.cache/nexclash/zx0-ecde3a2/`.
 Every binary must give pin.json's golden output before it is used. With none of these, the build
 keeps its .nex files and the report says why no .nxc was made.
+
+`zx0.exe` stays in Git for now (2026-11-05), as the pinned assembler does (tools/sjasmplus): source, BSD notice,
+SHA-256 and the golden output are checked before use (selftest --tools). Shipping it only in the release zip
+instead is Dean's call; until he decides, keep the pin and the golden check.

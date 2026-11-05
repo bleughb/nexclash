@@ -45,6 +45,8 @@ is built on your machine. GPL-3.0-or-later (LICENSE). Status of every game: STAT
 1. Python 3.10+, SkoolKit 10.x (tested with 10.1) and Pillow: `pip install -r requirements.txt`
    (add `--break-system-packages` on a managed Python: Debian/Ubuntu, Homebrew, cloud containers).
 2. Download the latest nexclash zip from the Releases page and unzip it (or `git clone` this repo).
+3. For the `.nxc` on Linux / macOS: a C compiler (`cc`, `gcc` or `clang`) builds the bundled ZX0 compressor
+   once (tools/zx0/README.md). Without one the build keeps its `.nex` files and the report says why.
 
 ## Patch your game
 ```
