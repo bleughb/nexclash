@@ -81,6 +81,15 @@
     "sprites": "9182f2f8b4b0dc55b59a69728568b403"
    }
   },
+  "54ad66af6678df22a9d4443e3d04aadb": {
+   "game": "Ikari Warriors (48K form)",
+   "doc": "ikari_warriors.md",
+   "nex": {
+    "plain": "2d56c304bcb21619d8402d64804fef75",
+    "sprites": "e740ae71fd47dc06c1a752bf150afb77",
+    "enhanced": "22be808b58eb8444c57277c176f8a741"
+   }
+  },
   "fc8e7535fc42afb60c12625b5fdfd064": {
    "game": "The Incredible Shrinking Fireman",
    "doc": "incredible_shrinking_fireman-add-OPUS.md",

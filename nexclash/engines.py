@@ -21,6 +21,7 @@ ENGINES = [
     ('wally', 'is_wally', None),                                          # Everyone's a Wally (frozen: --engine wally)
     ('chuckie', 'is_chuckie', None),                                      # Chuckie Egg (48K)
     ('rambo', 'is_rambo', None),                                          # Rambo (48K)
+    ('ikari_warriors', 'is_ikari_warriors', None),                        # Ikari Warriors (48K)
     ('nemesis', 'is_nemesis', None),                                      # Nemesis the Warlock (48K)
     ('jetpac', 'is_jetpac', None),                                        # Jetpac (16K)
     ('loderunner', 'is_loderunner', None),                                # Lode Runner (48K)
