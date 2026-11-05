@@ -759,6 +759,8 @@ Grouped by question; add a new lesson to its group.
   "Record from snapshot" case: nothing unverified between them).
 
 ## 2.5 Verification method
+- Per-event verifiers never run ROM code a game runs outside hooks (IM 1, prints), whatever ROM they
+  model (Starquake passed): `auto` checks it against the booted .nex (nextboot.rom_paths).
 - "Never jump into a patched instruction" needs the ORIGINAL instruction boundaries under each JP:
   a byte that starts an original instruction must be reached only through the site, a byte inside
   one must never be a PC. Counting every byte of the 3 bytes as "must equal the site's count" fails

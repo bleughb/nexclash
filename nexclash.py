@@ -9,6 +9,7 @@ Copyright (C) 2026 the nexclash contributors. GPL-3.0-or-later (see LICENSE).
       --strategy altrom|printer|slot1   patch memory (default: altrom where proven; old builds: printer/slot1)
       --allow-60hz                      keep the Next's video rate (default: 50 Hz forced, as verified)
       --altrom-fill whole|rom3          alt ROM fill (default whole; existing games: rom3 via their record pin)
+      --next-rom enNextZX.rom           the Next's ROMs for the boot model + ROM path check (or $NEXCLASH_NEXT_ROM)
   python nexclash.py identify GAME.z80                  which engine (and the derived profile)
   python nexclash.py record GAME.z80 [-o OUT.rzx]       automatic (or scripted) RZX recording
   python nexclash.py convert GAME.z80 [--rzx R]         plain .nex only (tail placement checked)
@@ -180,9 +181,12 @@ def cmd_auto(a):
     rep = []
     say = lambda s='': (rep.append(s), print(s))
     pin = _record_pin(z80, a)
+    frozen = pin is not None and not getattr(a, 'altrom_fill', None)
+    _AUTO.update(rzx=[] if getattr(a, 'decisions', None) or frozen else list(a.rzx or []),
+                 quick=getattr(a, 'quick', None), z80=z80)
     if pin is not None:
-        print('Pinned    : %s: --altrom-fill %s (record pin)%s' % (pin['name'], zt.ALTROM_FILL, '' if not getattr(
-            a, 'altrom_fill', None) else ', overridden on the command line: an opt-in rework, not the verified build'))
+        print('Pinned    : %s: %s' % (pin['name'], '--altrom-fill %s (record pin)' % zt.ALTROM_FILL if frozen else
+              'pin %s overridden by --altrom-fill %s: an opt-in rework, not the verified build' % (pin['pin'].get('altrom_fill'), zt.ALTROM_FILL)))
     s = Snapshot.get(z80)
     from nexclash.engines import find                       # dedicated engines: nexclash/engines.py
     eng_mod = find(s, a)
@@ -496,7 +500,33 @@ def _write_decisions(out, name, an, extra=None):
     return d
 
 
+_AUTO = {}                  # cmd_auto's recordings, for the ROM path check in _finish
+
+
+def _rom_paths(out, rep):
+    """docs/REFACTOR.md 7: every ROM byte the original game uses in the recordings against what each
+    built .nex gives it on the Next (nextboot.rom_paths; ROM model: nextboot.rom_model()). New builds
+    only: a pinned game verifies as it was verified (record pin), a --decisions rebuild replays nothing."""
+    import glob
+    from nexclash import nextboot
+    rzxs, quick = _AUTO.get('rzx'), _AUTO.get('quick')
+    nexes = sorted(glob.glob(os.path.join(out, '*.nex')))
+    if not rzxs or not nexes:
+        return
+    t = time.time()
+    try:
+        res = nextboot.rom_paths(nexes, rzxs, stop=quick)
+    except ValueError as e:
+        rep.append('ROM paths : not checked (%s)' % e)
+        return
+    rep.append('ROM paths : ROM model %s (%.0fs)' % (nextboot.rom_model(), time.time() - t))
+    for nex in nexes:
+        rep.extend('            ' + x for x in res[nex][1])
+    print('\n'.join(rep[-1 - sum(len(res[x][1]) for x in nexes):]))
+
+
 def _finish(out, name, rep):
+    _rom_paths(out, rep)
     rep.append('')
     rep.append('Hardware checklist: starts; player visible and animating; hidden in boxes/room changes;')
     rep.append('title music unchanged. Problems: record an RZX (Fuse, autosave OFF) and send it.')
@@ -518,6 +548,8 @@ def main():
         p.add_argument('--outline', help="rainbow engine: mask-only pixels (black, blue, transparent, #RRGGBB)")
         p.add_argument('--class-colours', help='rainbow engine: JSON {"pages": {"D6": 1}, "palettes": {"1": {"ink": "#00FF00"}}}')
         p.add_argument('--allow-60hz', action='store_true', help='do not force 50 Hz video (outputs then differ from the verified MD5s)')
+        p.add_argument('--next-rom', help="NextZXOS's enNextZX.rom (or its 16K ROM3), copied from your card: the boot "
+                       "model and the ROM path check use its ROMs as the Next's (default $NEXCLASH_NEXT_ROM; never in the repo)")
         p.add_argument('--altrom-fill', choices=['whole', 'rom3'], help="alt ROM image 1: whole = Sinclair's ROM + the "
                        "build's bytes (default for new builds), rom3 = NextZXOS's ROM3 + the hook bytes (the games verified "
                        "before 2026-11-04 keep it through their record's pin; naming either here overrides the pin)")
@@ -567,6 +599,9 @@ def main():
     a = ap.parse_args()
     if getattr(a, 'altrom_fill', None):
         zt.ALTROM_FILL = a.altrom_fill
+    if getattr(a, 'next_rom', None):
+        from nexclash import nextboot
+        nextboot.NEXT_ROM = a.next_rom
     if getattr(a, 'allow_60hz', False):
         zt.ALLOW_60HZ = True
         print('Video     : --allow-60hz: 50 Hz is NOT forced; the .nex MD5s differ from the verified builds')

@@ -48,7 +48,8 @@ no longer traps 0x0038 (other loaders, CSpect), a reset to the NextZXOS browser.
 
 ## Probe and stop
 1. `nextboot.boot(nex, pc, sysrom=ROM3)`: alt image 1 minus Sinclair's ROM must be the hook bytes only.
-2. The verifier's alt ROM model must be that image, not the page over Sinclair's ROM.
+2. `auto` with recordings and `NEXCLASH_NEXT_ROM=enNextZX.rom`: no MISMATCH in the `ROM paths` lines
+   (nextboot.rom_paths); a new engine's verifier takes the image from nextboot.alt_image.
 
 ## Contract
 - Alt image 1 = Sinclair's ROM + the build's bytes; independent of the card's NextZXOS version.

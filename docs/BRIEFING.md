@@ -137,7 +137,9 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
   7FFD=$10 (ROM3), $8C=$C0, LDIR 0000->0000 (16K; new builds: Sinclair's ROM from bank 47, card
   patch.whole-altrom-image; pinned games keep this), LDIR the patch bytes lo..hi from page 24,
   $8C=0, restores slots 6/7, jumps back, restores slots 4/5. No stack use in between.
-- nextboot.py simulates that boot on a Next model (every sprite build prints a `Boot` line).
+- nextboot.py simulates that boot on a Next model (every sprite build prints a `Boot` line). New
+  builds verified with recordings add `ROM paths` (nextboot.rom_paths; $NEXCLASH_NEXT_ROM = your
+  card's enNextZX.rom, else Sinclair's ROM stands in); pinned games verify as before.
 - 48K and 128K: the tail must end below 0xC000. The stub runs with its own bank 10 at C000-FFFF and
   the tail's OUT 0x7FFD maps bank 0 back under the PC (El Capitan Trueno: a 48K tail at 0xFF97
   never reached the game); z80tonex refuses it, nextboot.check catches it too.

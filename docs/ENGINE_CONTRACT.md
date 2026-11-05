@@ -43,7 +43,7 @@ ROM routine, Cauldron): `altrom_low = (RAM page, 8K image of 0x0000-0x1FFF)` - w
 (0x2000, 0x4000)` the whole image is the build's, not the Next's NextZXOS ROM3 (BRIEFING C2 #5;
 z80tonex.altrom_fill copies it, nextboot.check compares it); a 128K game that reads ROM 0 with the
 alt ROM on: `altrom0 = (lo, hi)` (image 0 = the 128K ROM 0 + those bytes, z80tonex.altrom0); older strategies `slot1`,
-`keep_printer_buffer`, `max_tail`.
+`keep_printer_buffer`, `max_tail`. A new engine's verifier takes its alt ROM image from nextboot.alt_image.
 
 ## Verify loop (the part every engine repeats; copy it from chuckie.verify)
 Replay the RZX with the opcode table wrapped: at a hook site copy the state, run original and

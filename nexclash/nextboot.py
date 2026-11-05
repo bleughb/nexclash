@@ -7,10 +7,17 @@ paging, NEXTREG $08 bit 7 = 1 unlocks it; ROM number = 1FFD bit 2 (hi) + 7FFD bi
 alt ROM $8C: bit 7 enable, bit 6 write mode (reads ROM, writes alt), image = ROM number bit 0.
 NEX launch state: paging UNLOCKED (every hardware-tested build pages with legacy writes without
 unlocking first) and ROM 0 selected (worst case: the stub must select ROM3 itself). Only ROM3 (48K
-BASIC) is modelled; reading another ROM fails the check.
+BASIC) is modelled (ROMs 0-2 too when the 64K enNextZX.rom is given); reading another ROM fails the check.
+
+The system ROM3 is what the Next really has (docs/REFACTOR.md 7): ROM3 of NextZXOS's enNextZX.rom
+(enNextLG.rom's ROM3 is byte-identical), from the file named by $NEXCLASH_NEXT_ROM or `--next-rom PATH`
+(the whole 64K enNextZX.rom, or its 16K ROM3; never in this repo: copy it from your card,
+MACHINES/NEXT/enNextZX.rom). Without it Sinclair's ROM stands in and rom_model() says so. Verifiers
+take the alt ROM image from alt_image(patch): what the stub leaves there, over that ROM3.
 
     python -m nexclash.nextboot GAME_sprites.nex GAME.z80 [PATCHED_REFERENCE_UNUSED]
 """
+import os
 import sys
 from .dizzy6 import _rw_simulator
 from . import z80tonex as zt
@@ -28,6 +35,199 @@ def load_nex(path):
     return banks, d[12] | d[13] << 8, d[14] | d[15] << 8
 
 
+NEXT_ROM = None             # set by `nexclash.py ... --next-rom PATH`; else $NEXCLASH_NEXT_ROM
+_ROM3 = {}
+
+
+def system_rom3():
+    """-> (16K ROM3 the Next pages as ROM 3, label). NextZXOS's when a path is given, else Sinclair's."""
+    import hashlib
+    import os
+    path = NEXT_ROM or os.environ.get('NEXCLASH_NEXT_ROM')
+    if path not in _ROM3:
+        if not path:
+            _ROM3[path] = (rom48(), "Sinclair's 48K ROM (no --next-rom / NEXCLASH_NEXT_ROM: NextZXOS's ROM3 NOT modelled)")
+        else:
+            d = open(path, 'rb').read()
+            if len(d) not in (16384, 65536):
+                raise ValueError('%s: %d bytes; want enNextZX.rom (64K) or its ROM3 (16K)' % (path, len(d)))
+            _ROM3[path] = (d[-16384:], 'ROM3 of %s (file md5 %s)' % (os.path.basename(path), hashlib.md5(d).hexdigest()[:8]))
+    return _ROM3[path]
+
+
+def rom_model():
+    """One report line: which ROM3 the boot model and the verifiers use."""
+    return system_rom3()[1]
+
+
+def alt_image(patch, sysrom=None):
+    """Alt ROM image 1 as the stub leaves it on the Next (z80tonex.altrom_fill): Sinclair's ROM (the
+    whole-image fill) or the system ROM3 (old builds: `--altrom-fill rom3`), then the build's bytes
+    lo..hi from patch.page and patch.altrom_low. The shared base of every verifier's alt ROM model:
+    bytes outside lo..hi are what the Next has, not the page's (BRIEFING C2 #5)."""
+    lo, hi = patch.altrom
+    img = bytearray(rom48() if zt.altrom_whole(patch) else (sysrom or system_rom3()[0]))
+    img[lo:hi] = patch.page[lo - 0x2000:hi - 0x2000]
+    if getattr(patch, 'altrom_low', None):
+        img[0:0x2000] = patch.altrom_low[1]
+    return img
+
+
+def system_roms():
+    """NextZXOS's four ROMs (enNextZX.rom, 64K) when given, else None (only ROM3 is modelled)."""
+    import os
+    path = NEXT_ROM or os.environ.get('NEXCLASH_NEXT_ROM')
+    if path and os.path.getsize(path) == 65536:
+        d = open(path, 'rb').read()
+        return [d[k * 16384:(k + 1) * 16384] for k in range(4)]
+    return None
+
+
+def system_rom0():
+    """-> (16K ROM 0 the Next pages as ROM 0, label): NextZXOS's (the first 16K of the 64K file) when
+    given, else the 128K ROM 0 (SkoolKit's) stands in."""
+    import os
+    path = NEXT_ROM or os.environ.get('NEXCLASH_NEXT_ROM')
+    if path and os.path.getsize(path) == 65536:
+        return open(path, 'rb').read()[:16384], 'ROM0 of %s' % os.path.basename(path)
+    return zt.rom128_0(), 'the 128K ROM 0 (NextZXOS ROM0 NOT modelled)'
+
+
+def alt_image0(patch, rom0=None):
+    """Alt ROM image 0 as the Next holds it: the 128K ROM 0 + the build's bytes (z80tonex.altrom0), or for
+    an older build its setup's copy of the Next's ROM 0 + the hook bytes lo..hi (Target Renegade)."""
+    a0 = zt.altrom0(patch)
+    lo, hi = a0 or patch.altrom
+    img = bytearray(zt.rom128_0() if a0 else (rom0 or system_rom0()[0]))
+    img[lo:hi] = patch.page[lo - 0x2000:hi - 0x2000]
+    return img
+
+
+def rom_view(patch, sysrom=None):
+    """What the game sees at 0x0000-0x3FFF on the Next once the tail has run: the alt ROM image
+    (alt_image), or for a slot-1 build the system ROM3's 0x0000-0x1FFF + its RAM page, or the ROM3."""
+    rom = sysrom or system_rom3()[0]
+    if getattr(patch, 'altrom', None):
+        return alt_image(patch, rom)
+    if getattr(patch, 'slot1', None) is not None and getattr(patch, 'page', None) is not None:
+        return bytearray(rom[0:0x2000]) + bytearray(patch.page)
+    return bytearray(rom)
+
+
+def start_pc(nex):
+    """The snapshot PC a built .nex jumps to (tail_of)."""
+    return tail_of(nex)[0]
+
+
+def tail_of(nex):
+    """-> (snapshot PC, tail address, tail length) of a built .nex: the tail's JP (z80tonex.build_tail; the
+    stub copies the tail with LD DE,tail / LD BC,len / LDIR / LD (tail+p3),A / JP tail, its bytes after)."""
+    banks, _, _ = load_nex(nex)
+    st = banks[zt.STUB_BANK][:0x1000]
+    for i in range(len(st) - 14):
+        if st[i] == 0x11 and st[i + 3] == 0x01 and st[i + 6:i + 8] == b'\xED\xB0' and st[i + 8] == 0x32 \
+                and st[i + 11] == 0xC3 and st[i + 12:i + 14] == st[i + 1:i + 3]:
+            n = st[i + 4] | st[i + 5] << 8
+            t = st[i + 14:i + 14 + n]
+            for k in (n - 3, n - 23):                       # compact tail / tail + its 20-byte register block
+                if k > 0 and t[k] == 0xC3:
+                    return t[k + 1] | t[k + 2] << 8, st[i + 1] | st[i + 2] << 8, n
+    raise ValueError('%s: no z80tonex start-up tail found' % nex)
+
+
+def rom_paths(nexes, rzxs, stop=None, sysrom=None):
+    """Every ROM byte the ORIGINAL game runs or reads in its recordings, against what each built .nex
+    gives it on the Next: the .nex booted over the system ROM3 (system_rom3(): NextZXOS's when given) to
+    the game start - its alt ROM images, slot-1 page or the ROM3 itself. The per-event verifiers run
+    patched code only from a hook to its return, so a ROM path outside the hooks (IM 1, a ROM print) never
+    runs there: Starquake's UDG print into the hooks passed them. One replay per recording for all builds.
+    -> {nex: (kind, lines, faults)}: kind 'alt' / 'slot1' / 'plain'; faults = ROM addresses the game RUNS
+    whose byte differs on the Next ('alt' / 'slot1': the build owns that ROM, each is a fault; 'plain':
+    the Next's own ROM3 runs, reported only), and data reads of differing bytes that come from the Next's
+    own ROM (the byte equals NextZXOS's there: Target Renegade e0b246e3's sound data); data reads of bytes
+    the build wrote (an IM 2 vector) are listed only."""
+    from skoolkit import ROM48, ROM128, read_bin_file
+    from .simrun import run
+    builds, sysr = [], system_roms() or [None, None, None, sysrom or system_rom3()[0]]
+    if sysrom is not None:
+        sysr[3] = sysrom
+    tails = {nex: tail_of(nex) for nex in nexes}
+    for nex in nexes:
+        st = boot(nex, tails[nex][0], sysrom=sysrom or system_rom3()[0])
+        alt_on = bool(st['nr'].get(0x8C, 0) & 0x80)
+        kind = 'alt' if alt_on else ('slot1' if st['mmu'][1] != 0xFF else 'plain')
+        builds.append((nex, kind, alt_on, st, bytes(st['mem'][a] for a in range(0x4000)), 2 if st['p1ffd'] & 4 else 0))
+    out = {nex: (kind, [], {}) for nex, kind, *_ in builds}
+    o48 = list(read_bin_file(ROM48, 16384))
+    o128 = [list(read_bin_file(ROM128[0], 16384)), list(read_bin_file(ROM128[1], 16384))]
+    for r in rzxs:
+        frame, seen, tabs = [0], set(), []
+
+        class H:
+            def on_sim(h, sim):
+                h.is128 = hasattr(sim.memory, 'o7ffd')
+                orig = o128 if h.is128 else [o48, o48]
+                tabs[:] = []
+                for nex, kind, alt_on, st, view, hi_rom in builds:
+                    nx, d = {}, {}
+                    for sel in (0, 1):
+                        img = st['alt'][sel if h.is128 else 1] if alt_on else (
+                            None if h.is128 and (hi_rom | sel) != 3 else view)      # another system ROM: not modelled
+                        nx[sel] = img
+                        d[sel] = {a for a in range(0x4000) if img[a] != orig[sel][a]} if img is not None else None
+                    tabs.append((nex, nx, d, orig, {}))
+
+            def on_read(h, a, pc, mem):
+                if a >= 0x4000:
+                    return
+                sel = (mem.o7ffd >> 4) & 1 if h.is128 else 1
+                seen.add((sel, a))
+                ex = pc <= a <= pc + 3
+                for nex, nx, d, orig, diff in tabs:
+                    ds = d[sel]
+                    if ds is None:
+                        diff.setdefault(('?', sel, ''), (pc, frame[0]))
+                    elif a in ds:
+                        own = sysr[3 if sel else 0]          # where an old fill's byte came from (ROM3 / ROM 0)
+                        k = (sel, a, 'run' if ex else ('next' if own is not None and own[a] == nx[sel][a] else 'data'))
+                        if k not in diff:
+                            diff[k] = (pc, frame[0], orig[sel][a], nx[sel][a])
+
+            def on_write(h, a, v, pc, mem):
+                pass
+
+            def on_frame(h, n):
+                frame[0] = n
+        n = run(None, [r], H(), stop=stop)
+        name = os.path.basename(r)
+        for (nex, nx, d, orig, diff), (_, kind, alt_on, *_x) in zip(tabs, builds):
+            lines, faults = out[nex][1], out[nex][2]
+            run_d = sorted(k for k in diff if k[0] != '?' and k[2] in ('run', 'next'))
+            data_d = sorted(k for k in diff if k[0] != '?' and k[2] == 'data')
+            unk = sorted({k[1] for k in diff if k[0] == '?'})
+            img = (lambda sel: 'image %d ' % sel) if alt_on else (lambda sel: '')
+            head = '%s: %s %d frames, %d ROM bytes used' % (os.path.basename(nex), name, n, len(seen))
+            if run_d and kind != 'plain':
+                faults[name] = run_d
+                lines.append('%s; MISMATCH: the Next gives other ROM bytes at %d addresses the game runs or reads '
+                             '(the Next\'s own ROM there): %s' % (head, len(run_d), ', '.join(
+                                 '%s0x%04X %s (%02X here, %02X recorded; PC 0x%04X frame %d)' % (
+                                     (img(k[0]), k[1], 'run' if k[2] == 'run' else 'read') + (diff[k][3], diff[k][2]) + diff[k][:2])
+                                 for k in run_d[:4])))
+            elif run_d:
+                lines.append('%s; plain build (the Next\'s own ROM3 runs): %d bytes it runs or reads differ from the recording\'s ROM, e.g. %s'
+                             % (head, len(run_d), ', '.join('0x%04X' % k[1] for k in run_d[:6])))
+            else:
+                lines.append('%s; every byte the game runs is as recorded' % head)
+            if data_d:
+                lines.append('            reads %d ROM bytes held differently on the Next (data: the build\'s own, e.g. a '
+                             'vector, or a fault): %s' % (len(data_d), ', '.join('%s0x%04X' % (img(k[0]), k[1]) for k in data_d[:8])))
+            if unk:
+                lines.append('            ROM select %s not modelled (a Next system ROM other than ROM3)' % ', '.join(map(str, unk)))
+
+    return out
+
+
 # What NEXLOAD leaves in the 48K printer buffer before the stub runs (NextZXOS paging routines and
 # system variables live at 0x5B00-0x5BFF; hardware 2026-10-20, Match Day): modelled as a pattern no
 # game data matches, so a check with nexload=True shows every byte the stub does not put back.
@@ -37,8 +237,9 @@ NEXLOAD_PRINTER = bytes((0xA5 ^ k) for k in range(256))
 def boot(nex, pc_stop, limit=5_000_000, nexload=False, sysrom=None):
     """Run the NEX from its entry point until PC == pc_stop. Returns the machine state dict.
     nexload: start with the printer buffer overwritten as NEXLOAD leaves it (NEXLOAD_PRINTER).
-    sysrom: the system ROM3 the stub copies into the alt ROM (default Sinclair's rom48(); the Next's
-    is NextZXOS's - pass a different ROM to prove an image does not depend on it, BRIEFING C2 #5)."""
+    sysrom: the system ROM3 (default Sinclair's: a check of the stub alone, as the engines' own boot
+    checks expect; check() and rom_paths() pass system_rom3(), NextZXOS's when given; pass a different
+    ROM to prove an image does not depend on it, BRIEFING C2 #5)."""
     banks, sp, pc = load_nex(nex)
     pages = {}
     for b, data in banks.items():
@@ -47,6 +248,7 @@ def boot(nex, pc_stop, limit=5_000_000, nexload=False, sysrom=None):
     if nexload and 10 in pages:
         pages[10][0x1B00:0x1C00] = NEXLOAD_PRINTER
     rom = sysrom if sysrom is not None else rom48()
+    others = system_roms()                     # NextZXOS's ROMs 0-2 when the 64K file is given
     st = {'mmu': [0xFF, 0xFF, 10, 11, 4, 5, 20, 21], 'nr': {0x8C: 0, 0x08: 0}, 'p7ffd': 0x00, 'p1ffd': 0,
           'alt': [bytearray(16384), bytearray(16384)], 'bad': [], 'sel': 0, 'ports': {}, 'nrlog': []}
 
@@ -65,7 +267,7 @@ def boot(nex, pc_stop, limit=5_000_000, nexload=False, sysrom=None):
                     return st['alt'][n & 1][a]
                 if n != 3:
                     st['bad'].append(('read of ROM %d' % n, a))
-                    return 0
+                    return others[n][a] if others else 0
                 return rom[a]
             return page(m)[a & 0x1FFF]
 
@@ -135,6 +337,7 @@ def check(nex, z80, patch=None, tail=None, nexload=False, sysrom=None):
     if patch is not None:
         patch = copy.deepcopy(patch)          # apply() again on a fresh snapshot, caller's object untouched
         patch.apply(s)
+    sysrom = sysrom if sysrom is not None else system_rom3()[0]
     st = boot(nex, s.pc, nexload=nexload, sysrom=sysrom)
     R, mem, bad = st['R'], st['mem'], list(st['bad'])
     w = lambda h, l: R[h] * 256 + R[l]
@@ -150,16 +353,12 @@ def check(nex, z80, patch=None, tail=None, nexload=False, sysrom=None):
     diffs = [a for a in range(0x4000, 0x10000) if mem[a] != ram[a - 0x4000] and not t0 <= a < t1]
     if diffs:
         bad.append(('RAM differs', len(diffs), diffs[:6]))
-    # the whole-image fill (z80tonex.altrom_whole) writes Sinclair's ROM whatever the system ROM3 is
-    img = bytearray(rom48() if zt.altrom_whole(patch) or sysrom is None else sysrom)
+    img = bytearray(sysrom)
     if getattr(patch, 'altrom', None) or getattr(patch, 'slot1', None):
         regs = zt.build_tail(s, 0x8000, patch.slot1, bool(getattr(patch, 'altrom', None)))[3]
         rb = patch.slot1[1]
         if getattr(patch, 'altrom', None):
-            lo, hi = patch.altrom
-            img[lo:hi] = patch.page[lo - 0x2000:hi - 0x2000]
-            if getattr(patch, 'altrom_low', None):           # 0x0000-0x1FFF from the build (z80tonex.altrom_fill)
-                img[0:0x2000] = patch.altrom_low[1]
+            img = alt_image(patch, sysrom)                   # what the stub writes (z80tonex.altrom_fill)
         else:
             img[0x2000:0x4000] = patch.page
         img[rb:rb + len(regs)] = regs                    # register block written by the stub
