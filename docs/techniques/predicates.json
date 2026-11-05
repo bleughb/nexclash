@@ -154,5 +154,21 @@
     "evaluation": "manual",
     "survey_field": null,
     "probe": "read the engine design: where the pattern bytes (port 0x5B) come from"
+  },
+  "exec.game_reads_r": {
+    "means": "game logic reads the refresh register R (LD A,R) and its result changes what the game does (random numbers, encounters)",
+    "true_when": "an LD A,R (ED 5F) in game code feeds a value the game later branches on, in a state the recording or the code reaches",
+    "false_when": "no ED 5F in the game's code, or every one only seeds something that never changes play",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "search the snapshot's code for ED 5F and read each site (Atic Atac: 9 sites, pilot runs/atic_atac work/PERFORMANCE.md)"
+  },
+  "hook.faster_than_original": {
+    "means": "a hook takes less real time than the original code it displaces (sprite drawing for a ULA plot, its own work at 28 MHz)",
+    "true_when": "the pace meter reads a negative penalty, or the net hook time against the displaced code per frame is negative",
+    "false_when": "the hook takes at least the original's time on every path",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "python -m nexclash.pace (docs/CHECKS.md); the verifier's pair runs, T of the original against the hook"
   }
 }
