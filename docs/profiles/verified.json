@@ -146,6 +146,15 @@
     "diagnostic": "24e547de8e2e28982fe155611068f039"
    }
   },
+  "3eb7a65e19c9ffa82a49654d31a41886": {
+   "game": "Rambo",
+   "doc": "rambo.md",
+   "nex": {
+    "plain": "434a84778881e230d0c930677abad0b4",
+    "sprites": "9ebfe9c8a88d3b2ca1fa9067e3abf2d5",
+    "enhanced": "c2395f02f504d4f38ccc2e0d12973b44"
+   }
+  },
   "3b89344c6d7e6433bf044bef1880a2f1": {
    "game": "Smash TV",
    "doc": "smash_tv.md",
