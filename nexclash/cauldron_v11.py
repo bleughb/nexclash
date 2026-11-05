@@ -60,6 +60,8 @@ OUTLINE = 8                   # outline nibble (palette 8 = black; Dean 2026-10-
 KEEP_OFF = 0x0800             # page 27: KEEP table (256: v -> the nibbles a colour-stream byte v leaves at the default)
 CPG, NCP = 28, 8              # colour pages 28-35 (banks 14-17): page 28 = index + tables, then tables; never game-read
 COLOUR_BANKS = tuple(range(CPG // 2, (CPG + NCP) // 2))
+CIX, NCACHE = 36, 8           # v1.1 speed pass: the image cache, pages 36-43 (banks 18-21; image_cache)
+CACHE_BANKS = tuple(range(CIX // 2, (CIX + NCACHE) // 2))
 CIDX = 0x0300                 # page 28: tables start after the index (1 + 7 x <= 109 entries)
 COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', RECORD + '_colours.json')
 V_N, V_OVF, V_NFREE, FREE, TAB = 0x0000, 0x0001, 0x0002, 0x0003, 0x0100   # page-26 offsets
@@ -229,6 +231,9 @@ class CauldronPatch:
         pages, self.ovr, self.cinfo = colour_tables(get, self.colours, images(self.prof))
         for b in COLOUR_BANKS:
             self.extra_banks[b] = bytes(pages[2 * b]) + bytes(pages[2 * b + 1])
+        cp = image_cache(get, images(self.prof), self.prof.get('cache_inks', {}))
+        for b in CACHE_BANKS:
+            self.extra_banks[b] = bytes(cp[2 * b]) + bytes(cp[2 * b + 1])
 
     def rom_image(self):
         """The alt ROM image the patched game reads at 0x0000-0x3FFF (the stub adds the register
@@ -308,7 +313,7 @@ class NextState:
         if 0x35 <= reg <= 0x39:
             self.attr[self.nr.get(0x34, 0) & 0x7F][reg - 0x35] = val
         elif reg == 0x56:
-            if val and val not in self.pages or val not in (0, PG) + tuple(range(CPG, CPG + NCP)):
+            if val and val not in self.pages or val not in (0, PG) + tuple(range(CPG, CPG + NCP)) + tuple(range(CIX, CIX + NCACHE)):
                 self.bad.append(('MMU6 set to page %d' % val,))
         elif reg == 0x54:
             if val not in (GPG4, P27) or (val == P27 and P27 not in self.pages):
@@ -317,6 +322,9 @@ class NextState:
             self.bad.append(('NEXTREG 0x%02X' % reg,))
 
     def port(self, port, v):
+        if port == 0x243B:                    # v1.1: the NextReg select (the speed latches read NR 7)
+            self.sel = v
+            return
         if port == 0x303B:
             self.pidx = (v & 0x3F) * 256 + (128 if v & 0x80 else 0)
         elif port & 0xFF == 0x5B:
@@ -356,6 +364,15 @@ def _machine(Sim, mem, regs, ns, slot='o'):
 
     class Tr:
         def read_port(s, regs_, port):
+            sel = getattr(ns, 'sel', None)
+            if port == 0x253B and sel == 0x07:          # v1.1: the speed latch reads NR 7
+                return ns.nr.get(0x07, 0) & 3
+            if port == 0x253B and sel in (0x1E, 0x1F):  # v1.1: the pace limiter's video line (a model: a line
+                ln = getattr(ns, 'line', 0)             #   a read of the LSB, 312 lines a frame)
+                if sel == 0x1E:
+                    return ln >> 8 & 1
+                ns.line = (ln + 1) % 312
+                return ln & 255
             ns.bad.append(('IN 0x%04X' % port,))
             return 0xFF
 
@@ -1133,6 +1150,40 @@ def render(pixels, attrs, layer, scale=2):
 # Unit tests (paths the RZX does not reach) and negative controls
 # ---------------------------------------------------------------------------------------------
 
+def clock_matrix(patch, states):
+    """v1.1, the every-site clock matrix (hooklib.every_site): each captured state's hook entered at NR 7 = 0-3 and
+    run against the original to where they meet (event()): the exit speed must be the incoming one, and the
+    result - event()'s own checks against the original (registers, memory, the sprite layer), the sprite
+    attributes and pattern RAM - the same at every clock. The speed latches and the limiter's line are left out
+    (they hold the speed and the time). -> (Counter, rows)."""
+    import hashlib
+    from .hooklib import every_site
+    alt = patch.rom_image()
+    Sim = _rw()
+    by = {}
+    for stt in states:
+        by.setdefault(stt[1], stt)
+
+    def run(pc, clock):
+        label, pc_, R, mem, ns0, m0 = by[pc]
+        R, mem = list(R), bytearray(mem)
+        ns = _ns_for(patch, ns0)
+        ns.pages[P27][0:768] = mem[ATTR0:ATTR1]
+        ns.nr[0x07] = clock
+        get = mem.__getitem__
+        fl, o, ro = event(patch, pc, get, R, ns, alt, Sim, (lambda ns_: None) if pc == PLOT else None)
+        fl = tuple(sorted(str(k) for k in fl if not str(k).startswith("('CPU speed left at")))
+        p27 = bytearray(ns.pages[P27])
+        for a in (0x04A3, 0x04A4, 0x04A5, 0x04A6, 0x04A9, 0x04AA):
+            p27[a] = 0
+        pg = bytearray(ns.pages[PG])
+        pg[0x0030] = 0
+        st = (fl, tuple(tuple(a) for a in ns.attr), hashlib.md5(bytes(ns.pat)).hexdigest(),
+              hashlib.md5(bytes(p27)).hexdigest(), hashlib.md5(bytes(pg)).hexdigest())
+        return ns.nr.get(0x07, 0) & 3, st
+    return every_site(sorted(by), run)
+
+
 def _ns_for(pt, ns0):
     """The patched machine's Next state for patch pt from a captured one: the run-time bytes of page
     26 (tables, 0x0000-0x06FF) from the capture, pt's OWN code (CLAUDE.md: negative controls)."""
@@ -1145,9 +1196,89 @@ def _ns_for(pt, ns0):
 
 
 def colour_pages(pt):
-    """pt's colour pages (CPG..) as the build loads them -> {page: bytearray}."""
+    """pt's colour pages (CPG..) and image cache pages (CIX..) as the build loads them -> {page: bytearray}."""
     return {p: bytearray(pt.extra_banks[p // 2][(p & 1) * 8192:(p & 1) * 8192 + 8192])
-            for p in range(CPG, CPG + NCP)}
+            for p in tuple(range(CPG, CPG + NCP)) + tuple(range(CIX, CIX + NCACHE))}
+
+
+def upload_stream(get, g, w, rows, ink):
+    """The pattern bytes the hooks' canvas upload (asm `upload`, no colour map) writes to port 0x5B for an image:
+    canvas lines 0 .. rows + 1 of 5 bytes (pixel x at bit x + 1), the outline = 4-neighbours of ink that are not
+    ink over the flat canvas (a line's first byte sees the line before's last bit, as the asm does), 2 pixels a
+    byte (ink -> ink, outline -> 8, else 0), the UNC x UNR patterns row by row, 16 lines of min(2, 5 - 2 col)
+    canvas bytes, zero-padded to 8 bytes. A model of the asm, checked against it by the replay (sprite layer)."""
+    can = bytearray(512)                  # CANI 0x8500-0x86FF: ink, then outline at +0x100
+    for r in range(rows):
+        o = 10 + 5 * r
+        carry = 0
+        for k in range(w):
+            b = get((g + r * w + k) & 0xFFFF)
+            can[o + k] = (b >> 1) | (carry << 7)
+            carry = b & 1
+        can[o + w] = carry << 7
+    n = (rows + 2) * 5
+    for i in range(5, 5 + n):
+        c = can[i - 5] | can[i + 5]
+        c |= (can[i - 1] >> 1 | can[i - 1] << 7) & 0x80
+        c |= can[i] >> 1
+        c |= (can[i + 1] << 1 | can[i + 1] >> 7) & 1
+        c |= (can[i] << 1) & 0xFF
+        can[0x100 + i] = c & ~can[i] & 0xFF
+    unc, unr = (8 * w + 17) // 16, (rows + 17) // 16
+    tt = []
+    for c in range(16):
+        hi = ink if c & 8 else 8 if c & 2 else 0
+        lo = ink if c & 4 else 8 if c & 1 else 0
+        tt.append(hi << 4 | lo)
+    out = bytearray()
+    for tr in range(unr):
+        for tc in range(unc):
+            nb = min(2, 5 - 2 * tc)
+            for ln in range(16 * tr, 16 * tr + 16):
+                if ln > rows + 1:
+                    out += bytes(8)
+                    continue
+                a = 5 * (ln + 1) + 2 * tc
+                for k in range(nb):
+                    ci, co = can[a + k], can[0x100 + a + k]
+                    for q in range(4):
+                        sh = 6 - 2 * q
+                        out.append(tt[((ci >> sh) & 3) << 2 | ((co >> sh) & 3)])
+                out += bytes(4 * (2 - nb))
+    return bytes(out)
+
+
+def image_cache(get, imgs, inks=None):
+    """v1.1 speed pass: every known image's patterns in its commonest ink (profile cache_inks; black and unknown:
+    0xF), which the hooks send as they are when the draw's ink is that one and map through XLT otherwise, packed
+    one image to an 8K page, from page CIX; page CIX starts with the index: count, then 8 bytes an image: graphic
+    lo / hi, width, rows, page, address lo / hi (in slot 6), the stored ink. get None: an empty index.
+    -> {page: bytearray}."""
+    pages = {p: bytearray(8192) for p in range(CIX, CIX + NCACHE)}
+    if get is None:
+        return pages
+    inks = inks or {}
+    idx = pages[CIX]
+    pg, off = CIX, 0x0400
+    entries = []
+    for g, w, rows in imgs:
+        ink = inks.get('%04X:%d:%d' % (g, w, rows), 15)
+        if ink in (0, 8):                   # black ink (8) is the outline's nibble: kept as 0xF, translated
+            ink = 15
+        data = upload_stream(get, g, w, rows, ink)
+        if off + len(data) > 8192:
+            pg, off = pg + 1, 0
+            if pg >= CIX + NCACHE:
+                raise ValueError('image cache: more than %d pages' % NCACHE)
+        pages[pg][off:off + len(data)] = data
+        entries.append((g, w, rows, pg, 0xC000 + off, ink))
+        off += len(data)
+    if 1 + 8 * len(entries) > 0x0400:
+        raise ValueError('image cache index too long')
+    idx[0] = len(entries)
+    for i, (g, w, rows, p_, a, ink) in enumerate(entries):
+        idx[1 + 8 * i:9 + 8 * i] = bytes([g & 255, g >> 8, w, rows, p_, a & 255, a >> 8, ink])
+    return pages
 
 
 def _entry_only(pt, R, mem, ns, alt, Sim):
@@ -1527,8 +1658,36 @@ def _neg(patch, old, new, what, block='rom', nth=None):
     return n
 
 
+def _nocache(n):
+    """The patch with an empty image cache index (the canvas path for every image)."""
+    b = bytearray(n.extra_banks[CIX // 2])
+    b[(CIX & 1) * 8192] = 0
+    n.extra_banks[CIX // 2] = bytes(b)
+    return n
+
+
+def _cache_variant(patch, what):
+    """v1.1 negative: the image cache built wrong (what = 'no outline': the outline nibbles 0)."""
+    import copy
+    n = copy.copy(patch)
+    n.extra_banks = dict(patch.extra_banks)
+    pages = image_cache(patch.cget, images(patch.prof))
+    for p_ in range(CIX + 1, CIX + NCACHE) if what == 'no outline' else ():
+        pg = pages[p_]
+        for i in range(8192):
+            v = pg[i]
+            pg[i] = (0 if v >> 4 == 8 else v & 0xF0) | (0 if v & 15 == 8 else v & 15)
+    pg = pages[CIX]
+    for i in range(0x0400, 8192):
+        v = pg[i]
+        pg[i] = (0 if v >> 4 == 8 else v & 0xF0) | (0 if v & 15 == 8 else v & 15)
+    for b in CACHE_BANKS:
+        n.extra_banks[b] = bytes(pages[2 * b]) + bytes(pages[2 * b + 1])
+    return n
+
+
 def negative_patches(patch):
-    return {'sprite X one pixel off': _neg(patch, '6f2600112000', '6f2600112100', 'X'),
+    return {'image cache without the outline (v1.1)': _cache_variant(patch, 'no outline'),'sprite X one pixel off': _neg(patch, '6f2600112000', '6f2600112100', 'X'),
             'erase never hides its sprite': _neg(patch, 'e3f57dfe0e', 'e3f57dfe00', 'exit'),
             'left scroll touches nothing': _neg(patch, '01bf80111e00', '01bfc0111e00', 'scl'),
             'clear 0xB2A0 forgets nothing (taints)': _neg(patch, '01bf40111f003e01', '01bf40111f003e00', 'clr'),
@@ -1538,7 +1697,7 @@ def negative_patches(patch):
             'full clear keeps the overflow': _neg(patch, 'af3201c0c9', '003201c0c9', 'ovf', 'p26'),
             'type 2 colour ignores INK 9': _neg(patch, 'cb66', 'cb6e', 'pflag', 'p26'),
             'plotter paints the ULA': _neg(patch, 'e603f680', 'e603f658', 'body', 'p27'),
-            'no outline (top pixel of a pair)': _neg(patch, '3e082001af', '3e002001af', 'outline', 'p27', nth=0),
+            'no outline (top pixel of a pair)': _nocache(_neg(patch, '3e082001af', '3e002001af', 'outline', 'p27', nth=0)),
             'PEEK reads the ULA': _neg(patch, 'c628', 'c600', 'peek', nth=0),
             'PO-ATTR twice on the ULA': _neg(patch, 'c628', 'c600', 'poa', nth=1),
             'restore ignores the save': _neg(patch, 'ddbe01', 'ddbe00', 'rest', 'p27'),
@@ -1900,6 +2059,16 @@ def auto(a, z80, name, out, say):
         for k, v in u.items():
             if k.startswith('  '):
                 say('          %s' % k.strip())
+    if states:
+        cm, rows = clock_matrix(patch, states)
+        cn, _ = clock_matrix(_neg(patch, 'f53aa384ed9207', 'f5af0000ed9207', 'forced 3.5 MHz exit', 'p27'), states)
+        bad = {k: v for k, v in cm.items() if k.endswith('!')}
+        caught = sum(v for k, v in cn.items() if k.endswith('!'))
+        sites = sorted({r['site'] for r in rows})
+        ok = ok and not bad and caught > 0
+        say('Clocks    : every-site matrix, %d hook sites x 4 incoming clocks = %d cases: exit speed = the incoming one, '
+            'result the same at every clock -> %s; negative "forced 3.5 MHz exit" (the plot hook) caught at %d cases -> %s'
+            % (len(sites), cm['cases'], 'PASS' if not bad else 'FAIL %s' % bad, caught, 'DETECTED' if caught else 'NOT DETECTED!'))
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return ok
 

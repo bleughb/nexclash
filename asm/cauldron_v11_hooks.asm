@@ -55,6 +55,18 @@ CANI    EQU 0x8500              ; 36 x 5: ink bits, canvas line L at CANI + 5 (L
 CANO    EQU 0x8600              ; 36 x 5: outline bits (4-neighbours of ink, not ink)
 TT      EQU 0x8700              ; 16: (ink 2 bits, outline 2 bits) -> pattern byte (2 pixels)
 KEEP    EQU 0x8800              ; 256 (page27(), data): v -> the nibbles of a pattern byte v leaves at the default
+XLT     EQU 0x8900              ; 256 (v1.1 speed pass): a cached pattern byte (ink nibbles 0xF) -> the ink's byte
+XLTINK   EQU 0x84A2              ; 1: the ink XL holds (0: none yet)
+LAT_PL  EQU 0x84A3              ; v1.1 speed latches (page 27): the plot hook, CL-LINE post, CL-SCROLL, the
+LAT_CL  EQU 0x84A4              ;   attribute hooks (save, restore, box, room fill, scrolls)
+LAT_CS  EQU 0x84A5
+LAT_K   EQU 0x84A6
+LAT_T   EQU 0xC030              ; v1.1 (page 26): dotouch
+UCI     EQU 0x84A7              ; v1.1: the cached image's stored ink (its index entry)
+XLTFROM EQU 0x84A8              ; v1.1: the stored ink XLT maps from
+LIM_L0  EQU 0x84A9              ; v1.1 (2): the line at the pace window's start
+CIX     EQU 36                  ; v1.1 image cache: page 36 = the index (count, 7-byte entries: graphic, width,
+                                ;   rows, page, address) + data; pages 37-43 data (cauldron_v11.image_cache)
 CPG     EQU 28                  ; colour pages 28-35: page 28 starts with the index (count, 7-byte entries)
 BUF     EQU 51700               ; the game's bottom-third attribute buffer (0xC9DB / 0xC9E7)
 ATTR_T  EQU 23695
@@ -77,14 +89,14 @@ TAB     EQU 0xC100              ; NTAB x 12: key (6), state, y0, y1, c0, c1, 0
 
         ORG 0x386E
 ; ---- plotter entry (0x6357): HL = descriptor --------------------------------------------------
-e_plot: push hl                 ; placeholder: the slot to hide at the exit (low byte)
+e_plot: nextreg 0x54,P27        ; v1.1: 28 MHz from the first instruction (the speed pass)
+        call spin_pl
+        push hl                 ; placeholder: the slot to hide at the exit (low byte)
         push af
         push bc
         push de
         push hl
         push ix
-        nextreg 0x07,3
-        nextreg 0x54,P27        ; the attribute shadow (ink rule, body copy), canvases, page-27 code
         ld e,(hl)               ; the descriptor through the stack (it may sit at 0xC000-0xDFFF)
         inc hl
         ld d,(hl)
@@ -144,8 +156,7 @@ e_plot: push hl                 ; placeholder: the slot to hide at the exit (low
         call show
         jr .go
 .nou:   nextreg 0x56,0
-.go:    nextreg 0x07,0
-        pop ix
+.go:    pop ix
         pop hl
         pop de
         pop bc
@@ -153,16 +164,21 @@ e_plot: push hl                 ; placeholder: the slot to hide at the exit (low
         ld e,(hl)               ; the replaced instructions
         inc hl
         ld d,(hl)
+        call spout_pl           ; v1.1: the incoming speed (Dean: 3.5 MHz) for the plotter body
         call body2              ; the plotter body, attributes painted into the shadow; RET comes back here
         ex (sp),hl              ; L = the slot to hide; the game's HL on the stack
         push af
         ld a,l
         cp NSLOT
-        call c,hide_s
+        call c,hide_w
         nextreg 0x54,GPG4
         pop af
         pop hl
         ret
+
+hide_w: call spin_pl            ; v1.1: an erase's hide at 28 MHz, then the caller's speed
+        call hide_s
+        jp spout_pl
 
 ; ---- the other screen writers: B = y0, C = y1, D = c0, E = c1, A = kind ------------------------
 e_char: push af                 ; ROM PR-ALL 0x0B9B: HL = the cell (screen or printer buffer)
@@ -171,17 +187,21 @@ e_char: push af                 ; ROM PR-ALL 0x0B9B: HL = the cell (screen or pr
         jr c,.x
         cp 0x58
         jr nc,.x
+        nextreg 0x56,PG         ; v1.1: 28 MHz from here (the speed pass), the caller's speed back after
+        call spin_t
         push bc
         push de
         push hl
         push ix
         call cellr
         xor a
-        call dotouch
+        call dotch2
         pop ix
         pop hl
         pop de
         pop bc
+        call spout_t
+        nextreg 0x56,0
 .x:     pop af
         ld a,(P_FLAG)
         jp 0x0B9E
@@ -301,11 +321,11 @@ e_cll:  push af                 ; ROM CL-LINE 0x0E44: B lines from the bottom cl
         push bc
         push de
         push hl
-        nextreg 0x07,3
         nextreg 0x54,P27
+        call spin_cl
         call cll_post           ; the cleared rows into the shadow
+        call spout_cl
         nextreg 0x54,GPG4
-        nextreg 0x07,0
         pop hl
         pop de
         pop bc
@@ -324,11 +344,11 @@ e_csc:  push af                 ; ROM CL-SCROLL 0x0E00: the screen moves up a li
         ld de,31
         xor a
         call dotouch
-        nextreg 0x07,3
         nextreg 0x54,P27        ; the ULA takes the shadow (the scroll moves the original's attributes)
+        call spin_cs
         call u_from_s
+        call spout_cs
         nextreg 0x54,GPG4
-        nextreg 0x07,0
         pop ix
         pop hl
         pop de
@@ -339,11 +359,11 @@ e_csc:  push af                 ; ROM CL-SCROLL 0x0E00: the screen moves up a li
         push bc
         push de
         push hl
-        nextreg 0x07,3
         nextreg 0x54,P27
+        call spin_cs
         call s_from_u
+        call spout_cs
         nextreg 0x54,GPG4
-        nextreg 0x07,0
         pop hl
         pop de
         pop bc
@@ -436,46 +456,46 @@ e_tard: push hl                 ; 0xB361 LD A,(DE): a room cell's attribute, fro
         ld (TILEAT),hl
         jp 0xB365
 
-e_save: nextreg 0x07,3          ; 0xC9DB: bottom-third attributes -> BUF (the shadow's; ULA + shadow kept)
-        nextreg 0x54,P27
+e_save:  nextreg 0x54,P27                ; 0xC9DB: bottom-third attributes -> BUF (the shadow's; ULA + shadow kept)
+        call spin_k
         call save27
+        call spout_k19          ; v1.1: no sooner than the original's 19 lines (pace limiter; JNext's mean)
         nextreg 0x54,GPG4
-        nextreg 0x07,0
         jp 0xC9E6
 
-e_rest: nextreg 0x07,3          ; 0xC9E7: BUF -> bottom third (shadow = BUF; ULA = its saved colours)
-        nextreg 0x54,P27
+e_rest:  nextreg 0x54,P27                ; 0xC9E7: BUF -> bottom third (shadow = BUF; ULA = its saved colours)
+        call spin_k
         call rest27
+        call spout_k24          ; v1.1: no sooner than the original's 24 lines (pace limiter; JNext's mean)
         nextreg 0x54,GPG4
-        nextreg 0x07,0
         jp 0xC9F2
 
-e_box:  nextreg 0x07,3          ; 0xCE74: 6 x 5 attribute box from 52820, on the ULA and the shadow
-        nextreg 0x54,P27
+e_box:  nextreg 0x54,P27                ; 0xCE74: 6 x 5 attribute box from 52820, on the ULA and the shadow
+        call spin_k
         call box27
+        call spout_k7          ; v1.1: no sooner than the original's 7 lines (pace limiter)
         nextreg 0x54,GPG4
-        nextreg 0x07,0
         jp 0xCE8D
 
-e_rfil: nextreg 0x07,3          ; 0xB2AC: rows 4-23 filled with (23297), on the ULA and the shadow
-        nextreg 0x54,P27
+e_rfil:  nextreg 0x54,P27                ; 0xB2AC: rows 4-23 filled with (23297), on the ULA and the shadow
+        call spin_k
         call rfil27
+        call spout_k
         nextreg 0x54,GPG4
-        nextreg 0x07,0
         jp 0xB2BB
 
-e_sal:  nextreg 0x07,3          ; 0xDF04: bottom-third attributes one cell left, ULA and shadow
-        nextreg 0x54,P27
+e_sal:  nextreg 0x54,P27                ; 0xDF04: bottom-third attributes one cell left, ULA and shadow
+        call spin_k
         call sal27
+        call spout_k53          ; v1.1: no sooner than the original's 53 lines (pace limiter; JNext's mean)
         nextreg 0x54,GPG4
-        nextreg 0x07,0
         jp 0xDF16
 
-e_sar:  nextreg 0x07,3          ; 0xDF17: one cell right
-        nextreg 0x54,P27
+e_sar:  nextreg 0x54,P27                ; 0xDF17: one cell right
+        call spin_k
         call sar27
+        call spout_k53          ; v1.1: no sooner than the original's 53 lines (pace limiter; JNext's mean)
         nextreg 0x54,GPG4
-        nextreg 0x07,0
         jp 0xDF29
 
 ; HL screen address -> B = y0, C = y1, D = E = column; not the top line of a cell: whole screen
@@ -506,9 +526,13 @@ cellr:  ld a,h
         ret
 
 dotouch:
-        nextreg 0x07,3
         nextreg 0x56,PG
-        ld (KIND),a
+        call spin_t             ; v1.1 (page 26): the incoming speed latched, 28 MHz
+        call dotch2
+        call spout_t
+        nextreg 0x56,0
+        ret
+dotch2: ld (KIND),a             ; (page 26 at slot 6, any speed)
         ld a,b
         ld (RECT),a
         ld a,c
@@ -517,10 +541,7 @@ dotouch:
         ld (RECT+2),a
         ld a,e
         ld (RECT+3),a
-        call touch
-        nextreg 0x56,0
-        nextreg 0x07,0
-        ret
+        jp touch
 
 ; ---- sprites ------------------------------------------------------------------------------------
 hide_s: push bc                 ; A = slot: its 9 sprites hidden (A, F changed)
@@ -977,6 +998,27 @@ taint_all:
         add ix,de
         dec b
         jr .lp
+; v1.1: dotouch's speed latch (page 26 at slot 6)
+spin_t:
+        push af
+        push bc
+        ld bc,0x243B
+        ld a,7
+        out (c),a
+        inc b
+        in a,(c)
+        and 3
+        ld (LAT_T),a
+        nextreg 0x07,3
+        pop bc
+        pop af
+        ret
+spout_t:
+        push af
+        ld a,(LAT_T)
+        nextreg 0x07,a
+        pop af
+        ret
 p26_end:
         ASSERT p26_end <= 0xE000
 
@@ -1015,6 +1057,8 @@ upload: ld (UG),hl
         rrca
         and 15
         ld (UNR),a              ; (rows + 2 + 15) / 16
+        call cfind              ; v1.1: the image's patterns prepared at build time (no colour map)?
+        jp z,ufast
         ld hl,CANI
         ld de,CANI+1
         ld bc,511
@@ -1627,6 +1671,375 @@ sar27:  ld hl,0x5AFF
         dec c
         jr nz,.r
         ret
+; ---- v1.1 speed pass: the image cache --------------------------------------------------------------
+; cfind: (UG, UWW, URR) in the cache index (page CIX at slot 6) when no colour map is in the build (the
+; colour index, page CPG, empty). Z: found, HL = its pattern bytes (their page at slot 6). NZ: slot 6 back to
+; the game's page 0. Uses A, B, DE, HL, IX.
+cfind:  nextreg 0x56,CPG
+        ld a,(0xC000)
+        or a
+        jr nz,.miss             ; a colour map: the canvas path (its overrides)
+        nextreg 0x56,CIX
+        ld a,(0xC000)
+        or a
+        jr z,.miss
+        ld b,a
+        ld ix,0xC001
+        ld de,(UG)
+.s:     ld a,(ix+0)
+        cp e
+        jr nz,.nx
+        ld a,(ix+1)
+        cp d
+        jr nz,.nx
+        ld a,(UWW)
+        cp (ix+2)
+        jr nz,.nx
+        ld a,(URR)
+        cp (ix+3)
+        jr z,.hit
+.nx:    push de
+        ld de,8
+        add ix,de
+        pop de
+        djnz .s
+.miss:  nextreg 0x56,0
+        or 1
+        ret
+.hit:   ld a,(ix+7)
+        ld (UCI),a
+        ld a,(ix+4)
+        ld l,(ix+5)
+        ld h,(ix+6)
+        nextreg 0x56,a
+        xor a
+        ret
+
+; ufast: the slot's UNC x UNR patterns from the cache (HL): as stored when the draw's ink is the stored one
+; (OUTINB, 18 cycles a byte), else each byte through XLT (the stored ink's nibbles -> UIN).
+ufast:  ld a,(UIN)
+        ld b,a
+        ld a,(UCI)
+        cp b
+        jp z,ufst
+        ld c,a
+        ld a,(XLTFROM)
+        cp c
+        jr nz,.nb
+        ld a,(XLTINK)
+        cp b
+        call nz,xlbuild
+        jr .go
+.nb:    call xlbuild
+.go:    ld a,(USL)
+        ld b,a
+        add a,a
+        add a,a
+        add a,a
+        add a,b
+        ld (UPN),a              ; 9 s
+        ex de,hl
+        xor a
+        ld (UTR),a
+.r:     xor a
+        ld (UTC),a
+.c:     ld a,(UTR)
+        ld b,a
+        add a,a
+        add a,b
+        ld b,a
+        ld a,(UTC)
+        add a,b
+        ld b,a
+        ld a,(UPN)
+        add a,b
+        rrca
+        ld bc,0x303B
+        out (c),a
+        ld h,high XLT
+        ld b,128
+.b:     ld a,(de)
+        inc de
+        ld l,a
+        ld a,(hl)
+        out (0x5B),a
+        djnz .b
+        ld a,(UTC)
+        inc a
+        ld (UTC),a
+        ld b,a
+        ld a,(UNC)
+        cp b
+        jr nz,.c
+        ld a,(UTR)
+        inc a
+        ld (UTR),a
+        ld b,a
+        ld a,(UNR)
+        cp b
+        jr nz,.r
+        nextreg 0x56,0
+        ret
+
+; xlbuild: XLT from the stored ink C to the ink B: each nibble C -> B, the others as they are. Keeps HL.
+xlbuild:
+        ld a,b
+        ld (XLTINK),a
+        ld a,c
+        ld (XLTFROM),a
+        push hl
+        ld hl,XLT
+.x:     ld a,l
+        rrca
+        rrca
+        rrca
+        rrca
+        and 15
+        cp c
+        jr nz,.h
+        ld a,b
+.h:     rlca
+        rlca
+        rlca
+        rlca
+        ld d,a
+        ld a,l
+        and 15
+        cp c
+        jr nz,.l
+        ld a,b
+.l:     or d
+        ld (hl),a
+        inc l
+        jr nz,.x
+        pop hl
+        ret
+
+; ufst: the stored bytes sent as they are (HL = the cache), 8 OUTINB a loop.
+ufst:   ld a,(USL)
+        ld b,a
+        add a,a
+        add a,a
+        add a,a
+        add a,b
+        ld (UPN),a
+        xor a
+        ld (UTR),a
+.r:     xor a
+        ld (UTC),a
+.c:     ld a,(UTR)
+        ld b,a
+        add a,a
+        add a,b
+        ld b,a
+        ld a,(UTC)
+        add a,b
+        ld b,a
+        ld a,(UPN)
+        add a,b
+        rrca
+        ld bc,0x303B
+        out (c),a
+        ld bc,0x005B
+        ld d,16
+.f:     outinb
+        outinb
+        outinb
+        outinb
+        outinb
+        outinb
+        outinb
+        outinb
+        dec d
+        jr nz,.f
+        ld a,(UTC)
+        inc a
+        ld (UTC),a
+        ld b,a
+        ld a,(UNC)
+        cp b
+        jr nz,.c
+        ld a,(UTR)
+        inc a
+        ld (UTR),a
+        ld b,a
+        ld a,(UNR)
+        cp b
+        jr nz,.r
+        nextreg 0x56,0
+        ret
+
+; ---- v1.1: the caller's speed kept (card patch.restore-speed); one latch a hook (they never nest) ------
+spin_pl:
+        push af
+        push bc
+        ld bc,0x243B
+        ld a,7
+        out (c),a
+        inc b
+        in a,(c)
+        and 3
+        ld (LAT_PL),a
+        nextreg 0x07,3
+        pop bc
+        pop af
+        ret
+spout_pl:
+        push af
+        ld a,(LAT_PL)
+        nextreg 0x07,a
+        pop af
+        ret
+spin_cl:
+        push af
+        push bc
+        ld bc,0x243B
+        ld a,7
+        out (c),a
+        inc b
+        in a,(c)
+        and 3
+        ld (LAT_CL),a
+        nextreg 0x07,3
+        pop bc
+        pop af
+        ret
+spout_cl:
+        push af
+        ld a,(LAT_CL)
+        nextreg 0x07,a
+        pop af
+        ret
+spin_cs:
+        push af
+        push bc
+        ld bc,0x243B
+        ld a,7
+        out (c),a
+        inc b
+        in a,(c)
+        and 3
+        ld (LAT_CS),a
+        nextreg 0x07,3
+        pop bc
+        pop af
+        ret
+spout_cs:
+        push af
+        ld a,(LAT_CS)
+        nextreg 0x07,a
+        pop af
+        ret
+spin_k:
+        push af
+        push bc
+        ld bc,0x243B
+        ld a,7
+        out (c),a
+        inc b
+        in a,(c)
+        and 3
+        ld (LAT_K),a
+        nextreg 0x07,3
+        push hl
+        call lim_line           ; the pace window opens (the attribute hooks' limiter)
+        ld (LIM_L0),hl
+        pop hl
+        pop bc
+        pop af
+        ret
+
+; ---- v1.1 pace limiter (card patch.pace-limiter): an attribute hook that does at 28 MHz what the original did
+; at 3.5 MHz (a fixed-cost copy or scroll, now done on the ULA and the shadow) waits until the original's time
+; has passed since spin_k: its mean duration on the unpatched game in JNext (lines, interrupts in), >> the
+; incoming speed. spout_kN: N lines.
+spout_k19:
+        push af
+        ld a,19
+        jr spoutw
+spout_k24:
+        push af
+        ld a,24
+        jr spoutw
+spout_k7:
+        push af
+        ld a,7
+        jr spoutw
+spout_k53:
+        push af
+        ld a,53
+spoutw: push bc
+        push de
+        push hl
+        ld e,a
+        ld a,(LAT_K)
+        or a
+        jr z,.s
+        ld b,a
+.sh:    srl e
+        djnz .sh
+.s:     ld bc,0                 ; poll limit: never hangs without a line counter
+        push bc
+.w:     pop bc
+        dec bc
+        ld a,b
+        or c
+        jr z,.d0
+        push bc
+        call lim_line
+        ld bc,(LIM_L0)
+        or a
+        sbc hl,bc
+        jr nc,.p
+        ld bc,312               ; one frame wrap (48K timing)
+        add hl,bc
+.p:     ld a,h
+        or a
+        jr nz,.d
+        ld a,l
+        cp e
+        jr c,.w
+.d:     pop bc
+.d0:    pop hl
+        pop de
+        pop bc
+        ld a,(LAT_K)
+        nextreg 0x07,a
+        pop af
+        ret
+
+; lim_line: HL = the video line (NR 0x1E / 0x1F), read until the MSB holds still. A, B, C lost.
+lim_line:
+        ld bc,0x243B
+.r:     ld a,0x1E
+        out (c),a
+        inc b
+        in h,(c)
+        dec b
+        ld a,0x1F
+        out (c),a
+        inc b
+        in l,(c)
+        dec b
+        ld a,0x1E
+        out (c),a
+        inc b
+        in a,(c)
+        dec b
+        xor h
+        and 1
+        jr nz,.r
+        ld a,h
+        and 1
+        ld h,a
+        ret
+spout_k:
+        push af
+        ld a,(LAT_K)
+        nextreg 0x07,a
+        pop af
+        ret
+
 p27_end:
         ASSERT p27_end <= 0xA000
 

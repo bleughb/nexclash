@@ -521,7 +521,7 @@
     },
     "sprites": {
      "file": "Cauldron (1985)(Palace)_sprites.nex",
-     "md5": "fc102321d8fff44c12fa7781114bc40f"
+     "md5": "b25577e49478ab8c19ae2e424387b506"
     }
    },
    "rom_paths_known": [
@@ -550,8 +550,8 @@
      "why": "the build's own hook JP at a ROM site (PR-ALL 0x0B9B, PO-ATTR 0x0BE4, CL-SCROLL 0x0E00, CL-LINE 0x0E44), written into its whole alt ROM image; each call is proved event by event by the differential verifier (rework v11; Dean's build is waived by its pin)"
     }
    ],
-   "proof": "cauldron.rzx (89,596 frames, Dean's recording of this release) IDENTICAL on rework v11: 84,638 plots (42,188 draws, 41,855 erases), PR-ALL 53,334, tile 28,399, scrolls 1,760 / 3,552, clears 110, CL-LINE 64; 188.6M sprite pixels; attribute shadow + ULA model at every event, no unhooked attribute access; the new colour rule held at every draw (457 draws now take their own colour where v1.0 took a scenery cell's); 90 unit cases PASS, 21 negative controls detected incl. Dean's v1.0 colour rule; ROM paths pass (known: the build's own JPs at 4 ROM sites); start-up tail never read before written. CL-SCROLL never reached; clock matrix not run: the hooks force 3.5 MHz on exit, as Dean's",
-   "note": "Jon Attree's Cauldron v1.1 (2026-11-05): engine cauldron_v11, a copy of Dean's with one change, the type 0 colour rule (a figure the plotter paints in its own value keeps it, never a scenery cell's ink: the bats by the trees and the cavern trunks). Picked by engines.py for `--altrom-fill whole`; built from the snapshot in cauldron.rzx as Dean's, packaged against the plain TOSEC file Cauldron (1985)(Palace).z80, whose RAM is that recording's build (the record's [a2][a2] snapshot is another layout). Pace NOT ORIGINAL: +9.75% (Dean's v1.0 +10.90%): a hook-speed pass is outstanding. games/cauldron.md \"Rework (opt-in) v11\"."
+   "proof": "cauldron.rzx (89,596 frames, Dean's recording of this release) IDENTICAL on rework v11 with the speed pass: 84,638 plots (42,188 draws, 41,855 erases), PR-ALL 53,334, tile 28,399, scrolls 1,760 / 3,552, clears 110, CL-LINE 64; 188.6M sprite pixels from the image cache and the canvas path; attribute shadow + ULA model at every event, no unhooked attribute access; 90 unit cases PASS, 22 negative controls detected (Dean's v1.0 colour rule, a cache without the outline); clock matrix 17 hook sites x 4 incoming clocks = 68 cases, exit = the incoming speed, a forced 3.5 MHz exit detected; ROM paths pass (known: the 4 ROM-site JPs); start-up tail never read before written. CL-SCROLL never reached",
+   "note": "Jon Attree's Cauldron v1.1 (2026-11-05): engine cauldron_v11, a copy of Dean's with one change, the type 0 colour rule (a figure the plotter paints in its own value keeps it, never a scenery cell's ink: the bats by the trees and the cavern trunks). Picked by engines.py for `--altrom-fill whole`; built from the snapshot in cauldron.rzx as Dean's, packaged against the plain TOSEC file Cauldron (1985)(Palace).z80, whose RAM is that recording's build (the record's [a2][a2] snapshot is another layout). Speed pass (2026-11-05): an image cache prepared at build time (pages 36-43, each image in its commonest ink, OUTINB; profile cache_inks), every hook at 28 MHz restoring the caller's speed (latches), a pace limiter on the attribute hooks (JNext's mean original durations); pace -1.4 to -1.7 % (the body copy runs from uncontended RAM). games/cauldron.md."
   }
  ]
 }

@@ -285,13 +285,12 @@ Full lines in git history (2026-10-26 / 27: stage 0+1 pilot ~85 calls; stage 2 p
 Technique-card pilot, stage 0 + 1, 2026-10-26: ~85 calls, ~78 min; full log in git history.
 
 ## Rework (opt-in) v11 (engine `cauldron_v11`; Jon Attree, 2026-11-05)
-Dean's build stays the default; `selftest --game cauldron` rebuilds both. The owner's "bats clash with the trees" is
-the Q4 colour rule: a type 0 image (value v painted on ATTR-T cells) took a scenery cell's ink when its first cell lay
-on one (cave bats 0x979D / 0x9A74, v 5, red by trunks; 2,612 of 18,914 type 0 draws). v11: type 0 -> v (`ink`, 6
-NOPs keep page 26's layout; plot_ink), new unit cases + Dean's rule as a negative; types 1 / 2 unchanged. Packaged
-on the plain TOSEC .z80 (d0788bcf: the RZX's build). sprites fc102321: RZX 89,596 frames IDENTICAL, 90 cases, 21
-negatives, ROM paths pass (known: the 4 ROM-site JPs). Pace NOT ORIGINAL (+9.7 %; Dean's +10.9 %): a hook-speed pass
-is owed. Details: pilot runs/dean_cauldron/REPORT.md.
+Dean's build stays the default. "Bats clash with the trees" = the Q4 rule: a type 0 image took a scenery cell's ink
+(cave bats, v 5, red by trunks). v11: type 0 -> v (`ink`), unit cases + Dean's rule as a negative. Speed pass: image
+cache built offline (pages 36-43, commonest ink, OUTINB; XLT for other inks; off with a colour map), every hook at 28
+MHz restoring the caller's speed (latches), a limiter on the attribute hooks (JNext's original durations). sprites
+b25577e4: RZX 89,596 frames IDENTICAL, 90 cases, 22 negatives, clock matrix 68 cases PASS; pace -1.4 to -1.7 % (the
+body copy runs from uncontended RAM); 23 one-frame flicker transients in 900 frames (none in the original's): open.
 
 ## Friction
 - reuse: [tool nextboot.rom_paths] the ROM path and tail checks; rom_paths_known for the ROM-site JPs
