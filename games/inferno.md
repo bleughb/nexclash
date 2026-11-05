@@ -1,17 +1,17 @@
 # Inferno
 
 ## Next session
-Stage: 2 (continued)    State: experimental textmap worker passes six quick replays; no display
+Stage: 2 (continued)    State: post-copy/setup/Copper/modal checks pass; sprite rendering remains open
 Inputs: specnext/reference/inferno/    Branch: codex/inferno (both existing checkouts)
-Start: refresh main; read reference build/timing_architecture.md and build/README.md. Do not re-clone.
-Read: inferno.py run_render_textmap/textmap_checks/model_verify; asm/inferno_hooks.asm render_textmap.
-Next: prove textmap setup/clip/palette and modal disable (level-4 shop), then post-copy frame
-  work/atomic commit and approved B sprite compilation/uploads. Keep original RAM and appearance.
+Start: refresh main; read reference build/frame_pipeline.md and build/README.md. Do not re-clone.
+Read: inferno.py FramePatch/run_frame/queue_checks/display_checks; matching Inferno ASM blocks.
+Next: implement approved B sprite compilation/cache/uploads, then connect complete-frame readiness.
+  Preserve RAM/appearance; prove FLASH clock sync, remaining modal paths and whole-tick timing.
 Workflow: iterate on Inferno6.rzx --quick 2000; run the other levels at integration milestones,
   plus targeted level-specific paths (e.g. level-4 shop). Compare each with its own original replay.
 Open: modal hooks, palette/recolour/sheets, continuous original-BASIC startup/Nb/game/ending,
   startup-tail lifetime, full ROM-reader coverage and resource maxima. Engine stays unregistered.
-Next prompt: "Continue Inferno stage 2 from the experimental textmap worker. Use existing
+Next prompt: "Continue Inferno stage 2 from the checked frame pipeline. Use existing
 codex/inferno checkouts, CLAUDE.md and games/inferno.md; use level 6 for the main iteration loop."
 
 ## Inputs and facts
@@ -137,61 +137,50 @@ codex/inferno checkouts, CLAUDE.md and games/inferno.md; use level 6 for the mai
 - Bootstrap tail 5D30-5D65 is untouched only in the initial 2,000-frame scan (span 5D30-5E59).
   Later lifetime and continuous Nb/game/ending behavior remain unproved. Source/recipes: build/README.md.
 
-## Stage-2 scenery baseline (2026-11-05)
-- Historical Layer 2 worker remains available: tile expansion, 64-slot full-content cache,
-  batch blit and per-buffer scene keys; tests/evidence in build/README.md. Validation optimization
-  reduced unchanged level-6 cost to 32,738.5 equivalent T (9.354 ms), but worst rebuilding still
-  cost 455,240.75 (130.069 ms). No diagnostic NEX installs either scenery worker.
-- Experimental replacement: one-bit hardware textmap, preserving the approved visual model.
-  Page 14 holds back/front maps (0000/0600) and independent 256-pattern halves (0C00/1400).
-  Page 69 compiles each live source once per image, consumes page-68 map directly via SP under DI,
-  and maps page 14 temporarily at slot 2; original physical RAM and mapping are preserved.
-  No Layer 2 pixel expansion or long-lived source validation. Textmap setup is not installed.
-- Twelve bounded scenes, 512 attribute/FLASH cases, capacity/front guards and broken stale-source,
-  front-write/FLASH controls PASS. Six original quick replays: 12,000 frames, 1,855 scenery images /
-  68,382,720 scenery pixels; 16,903 capture events, 1,854 map and 1,850 ULA checks PASS.
-  Max observed sources 134/256; full-game capacity unproved. Overflow rejects without front writes.
-- Worst level-6 scenery cost 22,913.25 equivalent T (6.547 ms); capture+scenery 30,476.375
-  (8.708 ms). TOTAL target is 10 ms per game update, leaving only 1.292 ms for sprites/wrappers/
-  commit. Synthetic full-capacity scenery alone costs 9.584 ms. No total-budget or hardware PASS.
-- Level-4 original replay to 52,500 frames has no desync. Gameplay hooks last run at 51,802;
-  none runs at the shop image 52,229. A separate modal-entry disable hook is required and unproved.
-  Architecture/source evaluation, units, per-level counts and recipes: build/timing_architecture.md.
+## Stage-2 frame pipeline (2026-11-06; build/frame_pipeline.md)
+- Historical Layer 2 worker remains available; worst level-6 scenery overhead was 130.069 ms.
+  Textmap preparation uses original one-bit tiles, private page 69 and double-buffered page 14.
+- FramePatch verifies/replaces 8F95's LD A,(AC49), prepares scenery after the unchanged copier,
+  and restores all main/alternate registers, RAM, stack and mappings. Display readiness stays
+  zero until the missing B sprite compiler finishes. Pending Copper ownership prevents reuse.
+- Six original 2,000-frame replays: 1,850 post-copy hooks / 68,198,400 pixels, 16,903 capture
+  events, 1,854 map / 1,850 ULA checks PASS. Source lifetime holds in 1,850 scenery / 13,159
+  actor cases. Front/phase/pending guards and broken DI/skipped-render controls pass.
+- Setup copies the actual active nine-bit ULA ink AND paper palettes; clip/scroll geometry and
+  294,912 RGB pixels pass across both palette banks, buffers and FLASH phases. FLASH now inverts
+  bitmap bits, replacing the old pair-swap method which fails with distinct ink/paper palettes.
+  Actual ULA FLASH clock synchronization remains unimplemented. Setup costs 2.030 ms once.
+- Copper queue applies complete attributes, map base and acknowledgement at line 224 then HALTs.
+  Bounded device-model tests cover late-line commit, serial wrap, busy ownership, count shrink,
+  setup/readiness guards and modal cancellation. Uses synthetic attributes; no sprite compiler.
+- Level-4 original return at frame 51,805 supplies modal tests: the 9019 hook cancels Copper,
+  hides replacement layers and reproduces LD SP,86D5. 256 control-bit cases and four broken-hide
+  controls pass. Other pause/message/intro/ending entries remain open. Hide costs 0.035 ms.
+- Modeled added time: capture + actual frame preparation max 8.715 ms; 58-sprite queue ~0.55 ms
+  (~0.64 ms when shrinking). Roughly 0.64-0.74 ms remains of the 10 ms total target for sprites
+  and further integration. Full-capacity FLASH-heavy cases exceed it. No total timing PASS.
+- Code: capture 3A00-3B80, modal 3B90-3BDF, frame wrapper 3BE0-3C30; all below 3D00.
+  No NEX includes this pipeline. Hardware raster/IRQ timing, continuous startup and sprite output
+  remain unproved. Current recipes/evidence: build/frame_pipeline.md; older results are historical.
 
-## Stage-2 capture kernel results (2026-11-05; mid-stage checkpoint)
-- New capture code: 352 bytes at 3A00-3B5F, in the exact original alt-ROM image. Patches:
-  8F7C CALL 9535, 8F92 CALL 9790, and single DD 6E 04 lookups at 959B/96A1. Original LD H,C1
-  instructions remain intact; legitimate ISR resumes between those instructions are preserved.
-- Page 68: SP save/flags at 03F0, scenery 0400-087F, whole run-list log from 0900, private stack
-  below 1FF0. DI before mapping/28 MHz, original mapping/registers/SP and 3.5 MHz before EI.
-  CALL return bytes reproduced exactly: no game-stack or game-RAM exclusions in the hook check
-  beyond the explicitly compiled replacement bytes (which must retain their expected values).
-- All six 2,000-frame capture checks PASS in one process: 12,000 frames, 16,903 hook events,
-  4,038,809 hook instructions, 13,194 actor draws, 1,854 original tile checks and 1,850 complete
-  visible-ULA checks (68,198,400 viewport pixels). No desync or state/log/reconstruction mismatch.
-- Units per level: 40 capture-coordinate cases; inactive/full/overflow/ordinal/commit guards;
-  four snapshot-site refusals; four actual IRQ entries plus four forced stack-unwind cases.
-  IRQ tests execute FFFF/FFF4 and the handler through RET (the earlier bounded test missed the
-  trampoline). Broken DI, interior jump and live-game-byte writes are detected using their own data.
-- Wrong-coordinate control detected 841 times; dropped-writer control 1,666 times. B model units
-  cover closed/open interiors, whole-image fill across a tile seam, palette, overwrites, content
-  cache keys and clip/wrap. These do NOT constitute a runtime sprite rasterizer test.
-- Sample maxima: 21 image calls, 58 visible 16x16 chunks, 56 distinct patterns, 64 old+new pattern
-  union. Graphics-region bytes have 9-109 distinct states per quick run; no permanent pointer key.
-  Dirty-cell histograms count tile IDs only; source-content invalidations remain extra work.
-- Capture-only added cost upper model: 3,562.625 equivalent 3.5 MHz T for scenery, <=758.375 per
-  actor, 97.75 commit; max tick 8,342.625. Includes one extra 28 MHz cycle per modeled memory read,
-  conservatively charges speed transitions. NOT a hardware measurement or total renderer budget.
-- Per-event simulators use pooled distinct slots; pooled/unpooled 810-frame results are identical.
-  Original intro and level-4 scans (2,001 frames each) never read/write either new ROM region.
-  Other levels/full-recording ROM-reader coverage remains open.
-- Pulse oracle now executes unmodified ROM against TZX timings (no fast load or accelerators).
-  Fixed canonical C from 22 to 7E: 32 loads +32 verifies +3 failure cases strictly match CMP/live RAM.
-  All seven physical-pulse loading prefixes match at every 731C return and the 718C handoff,
-  with equal R inputs at the beeper. Reference polarity 0 only; timeout/other polarities unproved.
-- Loader-only bootstrap and capture-only snapshot NEX builds pass NEXLOAD/foreign-ROM3 boot checks.
-  Neither enables replacement layers or is a hardware candidate. Checksums/recipes: specnext build/.
-  Original plain Inferno.nex is unchanged. No auto registration, sprite build or full verify/stamp.
+## Capture/loader foundation (historical details: reference build/README.md)
+- Capture patches: 8F7C CALL 9535, 8F92 CALL 9790, and single DD 6E 04 lookups at 959B/96A1.
+  Original LD H,C1 remains intact, preserving legitimate ISR resumes. Page 68 holds SP/flags
+  at 03F0, scenery 0400-087F, whole run-list log from 0900 and private stack below 1FF0.
+  Original CALL stack bytes are reproduced exactly; no game-RAM/stack exclusions beyond sites.
+- Six quick runs cover 13,194 actor draws; original map/ULA reconstruction and coordinate,
+  overflow, ordinal, inactive, snapshot-site and live-write controls pass. IRQ tests execute
+  FFFF/FFF4 through RET, including forced stack unwinds. B model tests are not a sprite rasterizer.
+- Sample maxima: 21 image calls, 58 visible chunks, 56 patterns, 64 old+new pattern union.
+  Graphics have 9-109 distinct states per quick run; pointer-only persistent caching is unsafe.
+- Initial intro/level-4 ROM scans are bounded to 2,001 frames. Other/full ROM-reader coverage
+  remains open. Pooled/unpooled 810-frame verifier checks were identical.
+- Physical TZX/ROM oracle matches 32 loads, 32 verifies, three errors and seven Na/Nb prefixes
+  at 731C/718C, with equal R inputs at the beeper. Canonical C is 7E. Polarity 0 only; timeouts,
+  other polarities and continuous Nb/game/ending remain unproved.
+- Loader-only bootstrap and capture-only NEX boot checks pass with NEXLOAD/foreign ROM3.
+  These older diagnostics enable no replacement layers and contain no new frame pipeline.
+  Plain Inferno.nex is unchanged. No sprite build, registration, full verification or stamp.
 
 ## Stage-1 results
 Preview MD5 `cf3fda58c14e87d91c55fe2773165d6a`, model_checks.json
@@ -199,6 +188,9 @@ Preview MD5 `cf3fda58c14e87d91c55fe2773165d6a`, model_checks.json
 Other checksums: design/manifest.json. Stage-1 tools/canary/doccheck PASS; no sprite stamp.
 
 ## Lessons
+- [local: Inferno frame pipeline] Demonstrated: post-copy source lifetime, private register/stack
+  restoration and Copper cancellation at shop return pass sampled tests. Real FLASH clock and
+  other modal entries remain open; synthetic commit attributes are not a sprite-rendering proof.
 - [local: Inferno representation] Demonstrated: copying live one-bit tiles once per source ID
   removes pixel expansion and full-content validation; worst sampled scenery drops 130.069 to
   6.547 ms. Textmap capacity/clip/palette/modal/raster integration remain separate obligations.
@@ -277,6 +269,8 @@ Other checksums: design/manifest.json. Stage-1 tools/canary/doccheck PASS; no sp
 - detect.buffer-layout-producer: corrected: visible colour checks distinguish black-masked stale bitmap data.
 
 ## Stage log
+- 2026-11-06: resumed preserved workspace; six quick frame-hook replays, display/queue/modal
+  units and source-lifetime checks PASS. Evidence in build/frame_pipeline.md; sprites remain open.
 - 2026-11-05: textmap architecture checkpoint. Reviewed Next instruction/DMA/tilemap/memory
   references and local board benchmarks. New standalone worker, six quick replays, palette/
   capacity/negative units PASS; shop census exposes missing modal hook. Expanded RAM authorized.

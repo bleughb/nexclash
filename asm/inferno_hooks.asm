@@ -189,7 +189,11 @@ cap_scene:
         ld hl,0x9B00
         ld de,CAP_MAP
         ld bc,0x0480
-        ldir
+.copy_map:
+        DUP 16
+        ldi
+        EDUP
+        jp pe,.copy_map
         ld hl,CAP_LOG
         ld (CAP_PTR),hl
         xor a
@@ -1328,6 +1332,7 @@ T_COUNT     EQU 0x1E84
 T_SP        EQU 0x1E86
 T_DEFHI     EQU 0x1E88
 T_MAPSP     EQU 0x1E89
+T_PATTERN   EQU 0x1E8B
         ORG 0
 render_textmap:
         xor a
@@ -1401,7 +1406,7 @@ render_textmap:
         ld de,(T_COUNT)
         ld a,d
         or a
-        jr nz,.tm_full
+        jp nz,.tm_full
         inc de
         ld (T_COUNT),de
         dec e
@@ -1413,6 +1418,7 @@ render_textmap:
         ld a,(T_DEFHI)
         add a,d
         ld d,a
+        ld (T_PATTERN),de
         pop hl
         push hl
         ld a,h
@@ -1432,9 +1438,22 @@ render_textmap:
         ld l,c
         ld a,(hl)
         ld l,a
+        and 0x80
+        jr z,.tm_noinvert
         ld a,(T_FLASH)
-        add a,4
-        ld h,a
+        or a
+        jr z,.tm_noinvert
+        push hl
+        ld hl,(T_PATTERN)
+        DUP 8
+        ld a,(hl)
+        cpl
+        ld (hl),a
+        inc l
+        EDUP
+        pop hl
+.tm_noinvert:
+        ld h,4                 ; FLASH inverts bitmap: preserve distinct ULA ink/paper palettes
         ld a,(hl)
         ld e,a
         ld a,(T_HALF)
@@ -1462,3 +1481,437 @@ tm_bad:
 render_textmap_end:
         ASSERT render_textmap_end < 0x0400
         SAVEBIN "inferno_textmap.bin",render_textmap,render_textmap_end-render_textmap
+
+; Hide replacement layers at the original gameplay return, before IM1/modal drawing.
+; JP at 9019 replaces LD SP,86D5. Entry contract: original gameplay IFF=1/IM2.
+        ORG 0x3B90
+modal_hide:
+        di
+        nextreg 0x07,3
+        nextreg 0x50,68
+        ld sp,CAP_STACK
+        push af
+        push bc
+        nextreg 0x62,0          ; cancel a pending copper commit before hiding the layers
+        ld bc,0x243B
+        ld a,0x6B
+        out (c),a
+        inc b
+        in a,(c)
+        and 0x7F
+        nextreg 0x6B,a
+        dec b
+        ld a,0x15
+        out (c),a
+        inc b
+        in a,(c)
+        and 0xFE
+        nextreg 0x15,a
+        dec b
+        ld a,0x69
+        out (c),a
+        inc b
+        in a,(c)
+        and 0x7F
+        nextreg 0x69,a
+        xor a
+        ld (CAP_PHASE),a        ; no old actor log may re-enable a modal screen
+        pop bc
+        pop af
+        nextreg 0x50,255
+        nextreg 0x07,0
+        ld sp,0x86D5
+        ei
+        jp 0x901C
+modal_hide_end:
+        ASSERT modal_hide_end < 0x3D00
+        SAVEBIN "inferno_modal.bin",modal_hide,modal_hide_end-modal_hide
+
+; Queue a complete, immutable copper list in page 74. No raster busy-wait.
+; Caller: DI/28MHz, page 69 in slot 0, original page 10 in slot 2, private stack.
+; READY is set only after BOTH scenery and approved sprite patterns/attributes exist.
+; Front/back ownership cannot change until the copper acknowledges TOKEN through $7F.
+Q_TOKEN     EQU 0x1EA0
+Q_READY     EQU 0x1EA1
+Q_BUSY      EQU 0x1EA2
+Q_ERROR     EQU 0x1EA3
+Q_TARGET    EQU 0x1EA4
+Q_CONTROL   EQU 0x1EA5
+Q_COUNT     EQU 0x1EA6
+Q_PREVIOUS  EQU 0x1EA7
+Q_PENDING   EQU 0x1EA8
+Q_SEND      EQU 0x1EA9
+Q_MAPBYTE   EQU 0x4603          ; WAIT + 128*(index MOVE + five attribute MOVEs)
+Q_TOKENBYTE EQU 0x4609
+Q_SIZE      EQU 1548
+        ORG 0x0600
+queue_frame:
+        xor a
+        ld (Q_ERROR),a
+        ld a,(D_SETUP)
+        cp 1
+        ret nz
+        ld a,(Q_READY)
+        cp 1
+        ret nz
+        ld a,(Q_TARGET)
+        cp 2
+        jp nc,.invalid
+        ld a,(Q_COUNT)
+        cp 129
+        jp nc,.invalid
+        ld a,(Q_PREVIOUS)
+        cp 129
+        jp nc,.invalid
+        ld a,(Q_BUSY)
+        or a
+        jr z,.available
+        ld bc,0x243B
+        ld a,0x7F
+        out (c),a
+        inc b
+        in a,(c)
+        ld b,a
+        ld a,(Q_TOKEN)
+        cp b
+        ret nz                 ; pending list/front/patterns remain owned by the old queue
+        ld a,(Q_PENDING)
+        ld (Q_PREVIOUS),a
+.available:
+        nextreg 0x62,0
+        nextreg 0x52,74
+        ld a,(Q_COUNT)
+        ld (Q_PENDING),a
+        ld e,a
+        ld a,(Q_PREVIOUS)
+        cp e
+        jr nc,.clear_tail
+        ld a,e
+        ld (Q_SEND),a
+        jr .tail_done
+.clear_tail:
+        ld (Q_SEND),a
+        sub e
+        jr z,.tail_done
+        ld b,a
+        ld d,12
+        mul d,e
+        ld hl,0x400B
+        add hl,de
+        ld de,12
+.hide_tail:
+        res 7,(hl)             ; hide old trailing sprites, even if supplied bytes were stale
+        add hl,de
+        djnz .hide_tail
+.tail_done:
+        ld a,(Q_TARGET)
+        or a
+        ld a,0x80
+        jr z,.target
+        ld a,0x86
+.target:
+        ld (Q_MAPBYTE),a
+        ld a,(Q_CONTROL)
+        or 1
+        ld (Q_MAPBYTE+4),a
+        ld a,(Q_TOKEN)
+        inc a
+        ld (Q_TOKEN),a
+        ld (Q_TOKENBYTE),a
+        nextreg 0x61,0
+        ld bc,0x243B
+        ld a,0x60
+        out (c),a
+        inc b
+        ld hl,0x4000
+        outinb
+        outinb
+        ld a,(Q_SEND)
+        ld e,a
+        or a
+        jr z,.upload_tail
+.upload:
+        DUP 12
+        outinb
+        EDUP
+        dec e
+        jr nz,.upload
+.upload_tail:
+        ld hl,0x4602
+        DUP 10
+        outinb
+        EDUP
+        nextreg 0x52,10
+        ld a,1
+        ld (Q_BUSY),a
+        xor a
+        ld (Q_READY),a
+        nextreg 0x62,0x40       ; reset CPC once; final HALT prevents recurring stale commits
+        ret
+.invalid:
+        ld a,1
+        ld (Q_ERROR),a
+        ret
+queue_frame_end:
+        ASSERT queue_frame_end <= 0x0700
+        SAVEBIN "inferno_queue.bin",queue_frame,queue_frame_end-queue_frame
+
+; One-time hidden display setup. Copy the active ULA's actual 9-bit ink AND paper
+; colours; legacy ULA paper entries are 128..143, not necessarily equal to ink 0..15.
+D_SAVED43   EQU 0x1EB0
+D_SAVED40   EQU 0x1EB1
+D_TRANS     EQU 0x1EB2
+D_ERROR     EQU 0x1EB3
+D_SETUP     EQU 0x1EB4
+D_COLOURS   EQU 0x1C80
+        ORG 0x1A00
+setup_display:
+        xor a
+        ld (D_SETUP),a
+        ld (D_ERROR),a
+        ld a,0x43
+        call ds_read
+        ld (D_SAVED43),a
+        ld a,0x40
+        call ds_read
+        ld (D_SAVED40),a
+        ld a,(D_SAVED43)
+        and 1
+        jp nz,ds_bad
+        ld a,0x6B
+        call ds_read
+        and 0x80
+        jp nz,ds_bad           ; never rewrite a visible tilemap palette
+        ld a,0x14
+        call ds_read
+        ld (D_TRANS),a
+        ld a,(D_SAVED43)
+        and 0x0F
+        ld e,a
+        and 2
+        DUP 5
+        rlca
+        EDUP
+        or e
+        nextreg 0x43,a
+        ld hl,D_COLOURS
+        ld e,0
+.ds_read_colour:
+        ld a,e
+        nextreg 0x40,a
+        ld a,0x41
+        call ds_read
+        ld (hl),a
+        inc hl
+        ld d,a
+        ld a,(D_TRANS)
+        cp d
+        jp z,ds_bad            ; opaque scenery cannot use the global transparent colour
+        ld a,0x44
+        call ds_read
+        and 1
+        ld (hl),a
+        inc hl
+        inc e
+        ld a,e
+        cp 16
+        jr nz,.ds_read_end
+        ld e,128
+.ds_read_end:
+        cp 144
+        jr nz,.ds_read_colour
+        ld a,(D_SAVED43)
+        and 0x0F
+        or 0x30
+        nextreg 0x43,a
+        nextreg 0x40,0
+        ld d,0
+.ds_pair:
+        ld a,d
+        rrca
+        rrca
+        rrca
+        and 15
+        add a,a
+        add a,0xA0
+        ld l,a
+        ld h,0x1C
+        call ds_colour         ; paper from the original paper palette
+        ld a,d
+        and 7
+        ld e,a
+        ld a,d
+        and 0x40
+        rrca
+        rrca
+        rrca
+        or e
+        add a,a
+        add a,0x80
+        ld l,a
+        call ds_colour         ; ink from the original ink palette
+        inc d
+        bit 7,d
+        jr z,.ds_pair
+        nextreg 0x1C,8
+        nextreg 0x1B,16
+        nextreg 0x1B,143
+        nextreg 0x1B,80
+        nextreg 0x1B,223
+        nextreg 0x2F,1
+        nextreg 0x30,32
+        nextreg 0x31,176
+        nextreg 0x6F,0x8C
+        nextreg 0x6E,0x80
+        nextreg 0x6B,0x0B
+        nextreg 0x64,0
+        nextreg 0x68,0
+        ld a,0x69
+        call ds_read
+        and 0x7F
+        nextreg 0x69,a
+        ld a,0x15
+        call ds_read
+        and 0xE2              ; SLU layer order, sprites remain disabled
+        nextreg 0x15,a
+        ld a,1
+        ld (D_SETUP),a
+        jr ds_restore
+ds_bad:
+        ld a,1
+        ld (D_ERROR),a
+ds_restore:
+        ld a,(D_SAVED43)
+        nextreg 0x43,a
+        ld a,(D_SAVED40)
+        nextreg 0x40,a
+        ret
+ds_colour:
+        ld a,(hl)
+        nextreg 0x44,a
+        inc l
+        ld a,(hl)
+        nextreg 0x44,a
+        ret
+ds_read:
+        ld bc,0x243B
+        out (c),a
+        inc b
+        in a,(c)
+        ret
+setup_display_end:
+        ASSERT setup_display_end < D_COLOURS
+        SAVEBIN "inferno_display.bin",setup_display,setup_display_end-setup_display
+
+; Post-copy preparation preserves all original registers, including alternates, and
+; leaves original RAM untouched. Rendering stays hidden until the sprite stage exists.
+F_SCENE_READY EQU 0x1EAC
+        ORG 0x3BE0
+frame_hook:
+        di
+        nextreg 0x07,3
+        nextreg 0x50,68
+        ld (CAP_SP),sp
+        ld sp,CAP_STACK
+        push af
+        push bc
+        push de
+        push hl
+        push ix
+        push iy
+        ex af,af'
+        push af
+        ex af,af'
+        exx
+        push bc
+        push de
+        push hl
+        exx
+        nextreg 0x50,69
+        jp prepare_frame
+frame_restore:
+        nextreg 0x50,68
+        ld sp,CAP_STACK-20
+        exx
+        pop hl
+        pop de
+        pop bc
+        exx
+        ex af,af'
+        pop af
+        ex af,af'
+        pop iy
+        pop ix
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(CAP_SP)
+        nextreg 0x50,255
+        nextreg 0x07,0
+        ld a,(0xAC49)           ; exact displaced instruction at 8F95
+        ei
+        jp 0x8F98
+frame_hook_end:
+        ASSERT frame_hook_end < 0x3D00
+        SAVEBIN "inferno_framehook.bin",frame_hook,frame_hook_end-frame_hook
+
+        ORG 0x0700
+prepare_frame:
+        nextreg 0x51,68
+        ld sp,0x2000+CAP_STACK-20
+        xor a
+        ld (F_SCENE_READY),a
+        ld (Q_READY),a
+        ld a,(0x2000+CAP_PHASE)
+        cp 2
+        jr nz,.return
+        xor a
+        ld (0x2000+CAP_PHASE),a
+        ld a,(Q_BUSY)
+        or a
+        jr z,.available
+        ld bc,0x243B
+        ld a,0x7F
+        out (c),a
+        inc b
+        in a,(c)
+        ld b,a
+        ld a,(Q_TOKEN)
+        cp b
+        jr nz,.return          ; never rebuild memory still owned by a pending display
+.available:
+        ld bc,0x243B
+        ld a,0x6B
+        out (c),a
+        inc b
+        in a,(c)
+        and 0x80
+        ld a,255
+        jr z,.hidden
+        dec b
+        ld a,0x6E
+        out (c),a
+        inc b
+        in a,(c)
+        cp 0x86
+        ld a,0
+        jr nz,.hidden
+        inc a
+.hidden:
+        ld (T_FRONT),a
+        inc a
+        and 1
+        ld (T_HALF),a
+        call render_textmap
+        ld a,(T_ERROR)
+        or a
+        jr nz,.return
+        ld a,1
+        ld (F_SCENE_READY),a
+.return:
+        nextreg 0x51,255
+        jp frame_restore
+prepare_frame_end:
+        ASSERT prepare_frame_end < 0x0800
+        SAVEBIN "inferno_prepare.bin",prepare_frame,prepare_frame_end-prepare_frame

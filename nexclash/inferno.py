@@ -232,7 +232,7 @@ def scenery_delta(old, new):
     return best
 
 
-def model_verify(path, stop=2000, capture=False, scenery=False):
+def model_verify(path, stop=2000, capture=False, scenery=False, frame=False):
     """Original-image reconstruction and resource census, NOT a sprite hook verifier.
 
     C replay is only the source machine. Process live producer events immediately, keeping
@@ -256,6 +256,8 @@ def model_verify(path, stop=2000, capture=False, scenery=False):
     ctx.tracefile = Sink()
     counts, errors, dirty_counts, shifts, graphics = Counter(), [], Counter(), Counter(), set()
     kernel = CapturePatch() if capture else None
+    frame_patch, frame_pages = FramePatch() if frame else None, None
+    frame_state = None
     interiors = ({a + j for a, (old, new) in kernel.sites.items() for j in range(1, len(old))} if kernel else set())
     private = bytearray(8192)
     display_pages, scene_number = None, 0
@@ -273,7 +275,7 @@ def model_verify(path, stop=2000, capture=False, scenery=False):
         sim = context.simulator
         m, r = sim.memory, sim.registers
         try:
-            nonlocal private, display_pages, scene_number
+            nonlocal private, display_pages, scene_number, frame_pages, frame_state
             if kernel and pc in kernel.sites and (pc == 0x8F7C or st['base'] is not None):
                 private, cost, steps = run_capture(kernel, m, list(r), private, pc)
                 counts['kernel events'] += 1
@@ -294,7 +296,7 @@ def model_verify(path, stop=2000, capture=False, scenery=False):
                 if st['previous'] is not None:
                     dirty_counts[dirty] += 1
                     shifts[str(shift)] += 1
-                if scenery:
+                if scenery and not frame:
                     bank = 31 if scene_number % 2 == 0 else 28
                     if scenery == 'textmap':
                         rendered = run_render_textmap(m, half=scene_number % 2,
@@ -315,18 +317,23 @@ def model_verify(path, stop=2000, capture=False, scenery=False):
                         counts['unchanged scenery images'] += 1
                         counts['max unchanged scenery equivalent T'] = max(counts['max unchanged scenery equivalent T'], rendered['equivalent_T'])
                 st.update(base=base, previous=base, actors=[], tiles=None, chunks=0, patterns=set())
+                if scenery == 'textmap':
+                    st['scenery_sources'] = {tile:raw_tile(m, tile) for tile in set(base)}
+                    st['actor_sources'] = []
                 graphics.add(sha256(bytes(m[0xDC00:0x10000])).hexdigest())
                 counts['scenery events'] += 1
             elif pc in (0x959B, 0x96A1) and st['base'] is not None:
                 a = actor_tiles(m, r)
                 st['actors'].append(a)
+                if scenery == 'textmap':
+                    st['actor_sources'].append({tile:raw_tile(m, tile) for dx,dy,tile in a['tiles']})
                 pats = visible_patterns(a, m)
                 st['chunks'] += len(pats)
                 st['patterns'].update(pats.values())
                 counts['actor events'] += 1
                 counts['wrapped path' if pc == 0x96A1 else 'normal path'] += 1
             elif pc == 0x8F92 and st['base'] is not None:
-                if scenery:
+                if scenery and not frame:
                     counts['max capture plus scenery equivalent T'] = max(
                         counts['max capture plus scenery equivalent T'], st['capture_cost'] + st['scenery_cost'])
                 actual = map_tiles(m)
@@ -354,6 +361,24 @@ def model_verify(path, stop=2000, capture=False, scenery=False):
                 st['previous_patterns'] = set(st['patterns'])
                 counts['tile checks'] += 1
             elif pc == 0x8F95 and st['tiles'] is not None:
+                if scenery == 'textmap':
+                    for kind, sources in [('scenery', st['scenery_sources'])] + [('actor', s) for s in st['actor_sources']]:
+                        if any(raw_tile(m, tile) != raw for tile,raw in sources.items()):
+                            fail('post-copy ' + kind + ' source lifetime', 'live graphics changed since capture')
+                        else:
+                            counts['post-copy ' + kind + ' source lifetime'] += 1
+                if frame:
+                    if frame_state is None:
+                        frame_state = (list(m), list(r), bytes(private))
+                    result = run_frame(frame_patch, m, list(r), private, frame_pages)
+                    frame_pages = result['pages']
+                    private = bytearray(frame_pages[68])
+                    if not result['ready']:
+                        raise AssertionError('valid replay frame was not prepared')
+                    counts['post-copy assembled frame hooks'] += 1
+                    counts['scenery viewport pixels compared'] += 36864
+                    counts['max post-copy frame hook equivalent T'] = max(counts['max post-copy frame hook equivalent T'], result['equivalent_T'])
+                    counts['max capture plus frame hook equivalent T'] = max(counts['max capture plus frame hook equivalent T'], st['capture_cost'] + result['equivalent_T'])
                 differences = ula_matches(m, st['tiles'])
                 if differences:
                     fail('ULA reconstruction', differences)
@@ -421,6 +446,11 @@ def model_verify(path, stop=2000, capture=False, scenery=False):
                     fail('game RAM control', str(e))
             else:
                 fail('game RAM control', 'live game byte corruption was not detected')
+    if frame:
+        if frame_state is None:
+            fail('frame coverage', 'no original post-copy state')
+        else:
+            counts.update(frame_units(frame_patch, frame_state))
     return {'frames': ctx.frame_count, 'counts': dict(counts), 'examples': errors,
             'scenery_dirty_histogram': dict(sorted(dirty_counts.items())), 'scenery_shifts': dict(shifts),
             'graphics_content_versions': len(graphics),
@@ -428,14 +458,14 @@ def model_verify(path, stop=2000, capture=False, scenery=False):
 
 
 
-def capture_all(reference, folder, stop=2000, progress=None, scenery=False):
+def capture_all(reference, folder, stop=2000, progress=None, scenery=False, frame=False):
     """All six quick capture checks in one process, including cross-level simulator/cache reuse."""
     reference, folder = Path(reference), Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
     counts, cases, frames = Counter(), [], 0
     for level in range(1, 7):
-        result = model_verify(reference / ('Inferno%d.rzx' % level), stop, capture=True, scenery=scenery)
-        filename = ('textmap%d.json' if scenery == 'textmap' else 'scenery%d.json' if scenery else 'capture%d.json') % level
+        result = model_verify(reference / ('Inferno%d.rzx' % level), stop, capture=True, scenery=scenery, frame=frame)
+        filename = ('frame%d.json' if frame else 'textmap%d.json' if scenery == 'textmap' else 'scenery%d.json' if scenery else 'capture%d.json') % level
         (folder / filename).write_text(json.dumps(result, indent=2) + '\n')
         bad = {k: v for k, v in result['counts'].items() if k.endswith('!') and v}
         for k, v in result['counts'].items():
@@ -1327,9 +1357,9 @@ def textmap_checks(reference):
         raise AssertionError('textmap front-write control not detected')
     # A single-bit display error must fail independently of the compiler's tables.
     broken = bytearray(code)
-    # Force FLASH lookup to phase 0 (ADD A,4 -> LD A,4); phase-1 pixels must disagree.
-    off = broken.index(bytes.fromhex('3A811EC604'))
-    broken[off + 3:off + 5] = bytes.fromhex('3E04')
+    # Omit one bitmap-row inversion; FLASH pixels must disagree.
+    off = broken.index(bytes.fromhex('7E2F77'))
+    broken[off + 1] = 0
     try:
         run_render_textmap(ram, flash=1, code=broken)
     except AssertionError as e:
@@ -1340,6 +1370,382 @@ def textmap_checks(reference):
         raise AssertionError('textmap FLASH control not detected')
     return {'counts': dict(counts), 'cases': cases,
             'scope': 'assembled textmap construction only; no display setup, frame commit, sprite renderer or raster proof'}
+
+
+class DisplayMemory(TextMapMemory):
+    """Palette/clip setup device model, with distinct original ink and paper colours."""
+    def __init__(self, control=0x8E, overrides=None, code=None):
+        h = load_profile()['hooks']
+        code = bytes.fromhex(h['display']) if code is None else code
+        super().__init__([0] * 65536, 0, 0, 1, None, bytes(0x1A00) + code)
+        self.nr.update({0x43:control, 0x40:97, 0x14:0xE3, 0x6B:0x0B,
+                        0x69:0x35, 0x15:0xE2, 0x68:0, 0x64:0})
+        self.nr.update(overrides or {})
+        self.palettes = [[(index * 13 + bank * 31) % 400 for index in range(256)] for bank in range(8)]
+        self.clip, self.clip_index, self.palette_first = [0,159,0,255], 2, None
+
+    def nextreg(self, reg, value):
+        if reg == 0x44:
+            if self.palette_first is None:
+                self.palette_first = value
+            else:
+                bank, index = (self.nr[0x43] >> 4) & 7, self.nr[0x40]
+                self.palettes[bank][index] = self.palette_first * 2 + (value & 1)
+                self.palette_first = None
+                if not self.nr[0x43] & 128:
+                    self.nr[0x40] = (index + 1) & 255
+        elif reg == 0x1C:
+            if value != 8:
+                raise AssertionError('setup changed other clip indexes')
+            self.clip_index = 0
+        elif reg == 0x1B:
+            self.clip[self.clip_index] = value
+            self.clip_index = (self.clip_index + 1) & 3
+        elif reg not in (0x43,0x40,0x2F,0x30,0x31,0x6F,0x6E,0x6B,0x64,0x68,0x69,0x15):
+            raise AssertionError('setup changed unowned register')
+        if reg in (0x40,0x43):
+            self.palette_first = None
+        self.nr[reg] = value
+
+    def write_port(self, regs, port, value, *args):
+        if port != 0x243B:
+            raise AssertionError('setup wrote unowned port')
+        self.selected = value
+
+    def read_port(self, regs, port):
+        if port != 0x253B:
+            raise AssertionError('setup read unowned port')
+        if self.selected in (0x41, 0x44):
+            c = self.palettes[(self.nr[0x43] >> 4) & 7][self.nr[0x40]]
+            return c >> 1 if self.selected == 0x41 else c & 1
+        return self.nr.get(self.selected, 0)
+
+
+def run_display_setup(**kwargs):
+    from . import simpool, z80n
+    from .dizzy6 import _rw_simulator
+    mem = DisplayMemory(**kwargs)
+    before = {p:bytes(v) for p,v in mem.pages.items()}
+    palette_before = [list(p) for p in mem.palettes]
+    control, index = mem.nr[0x43], mem.nr[0x40]
+    regs = [0] * 30
+    regs[12], regs[24] = 0x1FF0, 0x1A00
+    sim = simpool.machine(_rw_simulator(), mem, regs, 'inferno.display.setup')
+    sim.set_tracer(mem)
+    z80n.install(sim, mem.nextreg)
+    r, steps = sim.registers, 0
+    while r[24] != 0x1D00:
+        if steps >= 20000:
+            raise AssertionError('display setup did not return')
+        sim.opcodes[mem[r[24]]]()
+        if r[26] or mem.mmu2 != 10 or mem.nr[0x07] != 3:
+            raise AssertionError('display setup left private domain')
+        steps += 1
+    if mem.game_writes or r[12] != 0x1FF2 or mem.nr[0x43] != control or mem.nr[0x40] != index:
+        raise AssertionError('setup failed RAM/stack/palette selector preservation')
+    if mem.pages[69][:0x1C80] != before[69][:0x1C80] or any(bytes(mem.pages[p]) != b for p,b in before.items() if p != 69):
+        raise AssertionError('setup changed code or another page')
+    error = mem.pages[69][0x1EB3]
+    if any(mem.palettes[i] != palette_before[i] for i in range(8) if i != 3):
+        raise AssertionError('setup modified an original palette')
+    if not error:
+        source = palette_before[4 if control & 2 else 0]
+        expected = []
+        for pair in range(128):
+            bright = (pair >> 3) & 8
+            expected.extend((source[128 + ((pair >> 3) & 7) + bright], source[(pair & 7) + bright]))
+        if mem.palettes[3] != expected or mem.clip != [16,143,80,223] or mem.nr[0x6B] != 0x0B:
+            raise AssertionError('setup palette/clip/visibility differs')
+    elif mem.palettes != palette_before:
+        raise AssertionError('rejected setup changed palettes')
+    return mem, (r[25] + mem.reads) / 28000
+
+
+def display_checks():
+    counts, maximum = Counter(), 0
+    ram = [0] * 65536
+    for cell in range(576):
+        tile = cell % 256
+        ram[0x9B00+cell*2] = tile
+        ram[0xFC00+tile] = tile
+        ram[0xDC00+tile*8:0xDC08+tile*8] = [tile ^ (1 << b) for b in range(8)]
+    for control in (0x8C, 0x8E):
+        setup, cost = run_display_setup(control=control)
+        maximum = max(maximum, cost)
+        source = setup.palettes[4 if control & 2 else 0]
+        for phase in (0,1):
+            for half in (0,1):
+                output = run_render_textmap(ram, half=half, flash=phase)['pages'][14]
+                # Project documented scroll/clip geometry in the full border coordinate space.
+                clip = setup.clip
+                xscroll = setup.nr[0x2F] * 256 + setup.nr[0x30]
+                for y in range(256):
+                    for x in range(320):
+                        visible = clip[0]*2 <= x <= clip[1]*2+1 and clip[2] <= y <= clip[3]
+                        if visible != (32 <= x < 288 and 80 <= y < 224):
+                            raise AssertionError('textmap covers HUD/border or misses viewport')
+                        if not visible:
+                            continue
+                        tx,ty = (x+xscroll)%320, (y+setup.nr[0x31])%256
+                        off = half*0x600 + (ty//8)*80 + (tx//8)*2
+                        slot = output[off] + ((output[off+1]&1)<<8)
+                        bit = (output[0xC00+slot*8+(ty&7)] >> (7-(tx&7))) & 1
+                        actual = setup.palettes[3][(output[off+1]&254) | bit]
+                        cell = ((y-80)//8)*32 + (x-32)//8
+                        tile = cell%256
+                        attr = ram[0xFC00+tile]
+                        original_bit = ((ram[0xDC00+tile*8+((y-80)&7)] >> (7-((x-32)&7)))&1) ^ bool(phase and attr&128)
+                        bright = (attr>>3)&8
+                        expected = source[((attr&7)+bright) if original_bit else (128+((attr>>3)&7)+bright)]
+                        if actual != expected:
+                            raise AssertionError('textmap RGB differs from original ULA ink/paper/FLASH')
+                        counts['viewport RGB pixels'] += 1
+                counts['palette/phase/buffer geometry'] += 1
+    for kwargs in ({'control':0x8D}, {'overrides':{0x6B:0x8B}}, {'overrides':{0x14:62}}):
+        mem, cost = run_display_setup(**kwargs)
+        if mem.pages[69][0x1EB3] != 1 or mem.pages[69][0x1EB4]:
+            raise AssertionError('unsupported/visible/transparent setup was accepted')
+        counts['setup guards'] += 1
+    code = bytes.fromhex(load_profile()['hooks']['display'])
+    for needle, replacement in ((bytes.fromhex('C6A0'), bytes.fromhex('C680')),
+                                (bytes.fromhex('ED911B10'),bytes.fromhex('ED911B00'))):
+        broken = bytearray(code)
+        off = broken.index(needle)
+        broken[off:off+len(needle)] = replacement
+        try:
+            run_display_setup(code=broken)
+        except AssertionError as e:
+            if 'palette/clip' not in str(e):
+                raise
+            counts['palette/clip control detected'] += 1
+        else:
+            raise AssertionError('setup control not detected')
+    return {'counts':dict(counts), 'max_once_only_setup_ms':maximum,
+            'scope':'assembled palette/clip setup and documented geometry model; no video hardware or installed sprite renderer'}
+
+
+def copper_frame_template(attributes):
+    """Fixed 1548-byte program; compiler must supply all 128 five-byte sprite records."""
+    if len(attributes) != 640:
+        raise ValueError('copper frame needs 128 complete sprite records')
+    program = bytearray((0x80, 224))
+    for sprite in range(128):
+        program.extend((0x34, sprite))
+        for field in range(5):
+            program.extend((0x35 + field, attributes[sprite * 5 + field]))
+    program.extend((0x6E, 0x80, 0x6B, 0x8B, 0x15, 1, 0x7F, 0, 255, 255))
+    return bytes(program)
+
+
+class FrameCopper:
+    """Bounded documented device semantics, not a physical raster/core emulator."""
+    def __init__(self, token=0):
+        self.memory = bytearray(2048)
+        self.nr = {0x62:0, 0x7F:token, 0x6E:0x80, 0x6B:0x8B, 0x15:1, 0x69:0}
+        self.mode, self.pc, self.index, self.sprite = 0, 0, 0, 0
+        self.attributes = bytearray(640)
+        self.events, self.uploads = [], 0
+
+    def write(self, reg, value, source='cpu', line=None):
+        if source == 'copper':
+            self.events.append((line, reg, value))
+        if reg == 0x62:
+            mode = value >> 6
+            if mode != self.mode and mode in (1, 3):
+                self.pc = 0
+            self.mode = mode
+            self.index = (self.index & 255) | ((value & 7) << 8)
+        elif reg == 0x61:
+            self.index = (self.index & 0x700) | value
+        elif reg == 0x60:
+            if self.mode:
+                raise AssertionError('upload changed a running copper list')
+            self.memory[self.index] = value
+            self.index = (self.index + 1) & 2047
+            self.uploads += 1
+        elif reg == 0x34:
+            self.sprite = value & 127
+        elif 0x35 <= reg <= 0x39:
+            self.attributes[self.sprite * 5 + reg - 0x35] = value
+        self.nr[reg] = value
+
+    def advance(self, line, horizontal=0, lines=312):
+        # 28 MHz Copper, shortest documented HDMI-60 line: 858 clocks at 14 MHz.
+        clocks, line_cycles = horizontal, 1716
+        for _ in range(1024):
+            if not self.mode:
+                return
+            hi, lo = self.memory[self.pc * 2:self.pc * 2 + 2]
+            if hi & 128:
+                if (hi, lo) == (255, 255):
+                    return
+                wanted_line, wanted_h = ((hi & 1) << 8) | lo, ((hi >> 1) & 63) * 16
+                if line != wanted_line or clocks < wanted_h:
+                    return
+                elapsed = 1
+            else:
+                self.write(hi, lo, 'copper', line)
+                elapsed = 2 if hi else 1
+            self.pc = (self.pc + 1) & 1023
+            clocks += elapsed
+            if clocks >= line_cycles:
+                clocks -= line_cycles
+                line = (line + 1) % lines
+        raise AssertionError('copper list failed to halt')
+
+
+class QueueMemory(TextMapMemory):
+    def __init__(self, program, copper, ready=1, busy=0, token=0, half=1, count=128,
+                 previous=128, pending=128, setup=1, code=None):
+        h = load_profile()['hooks']
+        code = bytes.fromhex(h['queue']) if code is None else code
+        image = bytes(0x600) + code
+        super().__init__([0] * 65536, half, 0, 1-half if half in (0, 1) else 0, None, image)
+        self.pages[74] = bytearray(program).ljust(8192, b'\0')
+        self.pages[69][0x1EA0:0x1EAA] = bytes((token, ready, busy, 0, half, 0xA0, count, previous, pending, 0))
+        self.pages[69][0x1EB4] = setup
+        self.copper = copper
+
+    def __getitem__(self, a):
+        if not isinstance(a, slice) and 0x4000 <= a < 0x6000 and self.mmu2 == 74:
+            self.reads += 1
+            return self.pages[74][a - 0x4000]
+        return super().__getitem__(a)
+
+    def __setitem__(self, a, v):
+        if 0x4000 <= a < 0x6000 and self.mmu2 == 74:
+            trailing = a >= 0x400B and (a-0x400B)%12 == 0 and self.pages[69][0x1EA6] <= (a-0x400B)//12 < self.pages[69][0x1EA7]
+            if a not in (0x4603, 0x4607, 0x4609) and not trailing:
+                raise AssertionError('queue changed immutable copper template/attributes')
+            self.pages[74][a - 0x4000] = v
+        else:
+            super().__setitem__(a, v)
+
+    def nextreg(self, reg, value):
+        if reg == 0x52 and value in (10, 74):
+            self.mmu2 = value
+        elif reg in (0x61, 0x62):
+            self.copper.write(reg, value)
+        else:
+            raise AssertionError('queue changed an unowned NextReg')
+
+    def write_port(self, regs, port, value, *args):
+        if port == 0x243B:
+            self.selected = value
+        elif port == 0x253B and self.selected == 0x60:
+            self.copper.write(0x60, value)
+        else:
+            raise AssertionError('queue wrote an unowned port')
+
+    def read_port(self, regs, port):
+        if port != 0x253B or self.selected != 0x7F:
+            raise AssertionError('queue read an unowned port')
+        return self.copper.nr[0x7F]
+
+
+def run_queue(program, copper, **kwargs):
+    from . import simpool, z80n
+    from .dizzy6 import _rw_simulator
+    mem = QueueMemory(program, copper, **kwargs)
+    before = {p:bytes(v) for p,v in mem.pages.items()}
+    regs = [0] * 30
+    regs[12], regs[24] = 0x1FF0, 0x600
+    sim = simpool.machine(_rw_simulator(), mem, regs, 'inferno.frame.queue')
+    sim.set_tracer(mem)
+    z80n.install(sim, mem.nextreg)
+    steps, r = 0, sim.registers
+    while r[24] != 0x1D00:
+        if steps >= 10000:
+            raise AssertionError('queue did not return')
+        sim.opcodes[mem[r[24]]]()
+        if r[26] or mem.nr[0x07] != 3:
+            raise AssertionError('queue left DI/28MHz')
+        steps += 1
+    if mem.mmu2 != 10 or r[12] != 0x1FF2 or mem.game_writes:
+        raise AssertionError('queue corrupted game mapping/stack/RAM')
+    if any(bytes(mem.pages[p]) != b for p,b in before.items() if p not in (69, 74)):
+        raise AssertionError('queue wrote another owner page')
+    if mem.pages[69][:0x1EA0] != before[69][:0x1EA0]:
+        raise AssertionError('queue modified code or cache')
+    cost = (r[25] + mem.reads) / 8
+    return {'equivalent_T':cost, 'added_ms':cost/3500, 'instructions':steps,
+            'state':list(mem.pages[69][0x1EA0:0x1EAA]), 'program':bytes(mem.pages[74][:1548])}
+
+
+def queue_checks():
+    counts, costs = Counter(), []
+    attributes = bytes((i * 29 + 7) & 255 for i in range(640))
+    program = copper_frame_template(attributes)
+    for token in (0, 254, 255):
+        for half in (0, 1):
+            copper = FrameCopper(token)
+            before = dict(copper.nr), bytes(copper.attributes)
+            result = run_queue(program, copper, token=token, half=half)
+            costs.append(result['added_ms'])
+            if copper.uploads != 1548 or copper.memory[:1548] != result['program'] or copper.mode != 1:
+                raise AssertionError('queue upload or arm differs')
+            for line in (0, 48, 191, 223):
+                copper.advance(line)
+            if copper.attributes != before[1] or any(copper.nr[k] != before[0][k] for k in (0x7F,0x6B,0x15,0x6E)):
+                raise AssertionError('pending frame exposed before blank')
+            counts['old complete frame retained'] += 1
+            pending = bytes(copper.memory)
+            rejected = run_queue(program, copper, token=(token+1)&255, busy=1, half=1-half)
+            if copper.memory != pending or rejected['state'][1] != 1:
+                raise AssertionError('busy queue overwritten before acknowledgement')
+            counts['pending ownership guard'] += 1
+            copper.advance(224, horizontal=1700, lines=262)
+            if copper.attributes != attributes or copper.nr[0x7F] != (token+1)&255 or copper.nr[0x6E] != (0x86 if half else 0x80):
+                raise AssertionError('copper frame or acknowledgement differs')
+            if any(not 224 <= line <= 225 for line,reg,value in copper.events):
+                raise AssertionError('commit escaped lower-border interval')
+            frozen = list(copper.events)
+            copper.advance(224)
+            if copper.events != frozen:
+                raise AssertionError('completed list repeated')
+            counts['blank commit and one-shot HALT'] += 1
+            run_queue(program, copper, token=(token+1)&255, busy=1, half=1-half)
+            copper.advance(224)
+            counts['acknowledged queue reuse'] += 1
+    sized = []
+    for count, previous in ((0,0),(1,0),(58,0),(2,58),(0,58),(128,128)):
+        copper = FrameCopper()
+        result = run_queue(program, copper, count=count, previous=previous)
+        sent = max(count, previous)
+        if copper.uploads != sent*12+12:
+            raise AssertionError('queue uploaded the wrong sprite range')
+        copper.advance(224)
+        if copper.attributes[:count*5] != attributes[:count*5]:
+            raise AssertionError('active sprite attributes changed')
+        if any(copper.attributes[i*5+3]&128 for i in range(count, previous)):
+            raise AssertionError('shrinking frame left trailing sprites visible')
+        sized.append({'sprites':count,'previous':previous,'bytes':copper.uploads,'added_ms':result['added_ms']})
+        counts['bounded upload / stale trailing sprite cases'] += 1
+    for kw in ({'ready':0}, {'ready':2}, {'setup':0}, {'half':2}, {'count':129}, {'previous':129}):
+        copper = FrameCopper()
+        run_queue(program, copper, **kw)
+        if copper.uploads or copper.mode:
+            raise AssertionError('incomplete/invalid image armed')
+        counts['ready/target guard'] += 1
+    copper = FrameCopper()
+    run_queue(program, copper)
+    copper.write(0x62, 0)
+    copper.write(0x6B, 0x0B)
+    copper.write(0x15, 0)
+    copper.advance(224)
+    if copper.events or copper.nr[0x6B] & 128 or copper.nr[0x15] & 1:
+        raise AssertionError('cancelled modal frame reappeared')
+    counts['modal cancels pending copper'] += 1
+    broken = bytearray(program)
+    broken[:2] = bytes((0x80,48))
+    copper = FrameCopper()
+    run_queue(broken, copper)
+    copper.advance(48)
+    if not copper.events:
+        raise AssertionError('active-raster control uninformative')
+    counts['active-raster control detected'] += 1
+    return {'counts':dict(counts), 'max_queue_added_ms':max(costs), 'sized_uploads':sized,
+            'scope':'assembled uploader + bounded Copper model; synthetic sprite records; no sprite compiler, installed frame hook or hardware raster proof'}
 
 
 class CapturePatch:
@@ -1395,7 +1801,7 @@ class CaptureMemory(LoaderMemory):
             raise AssertionError('capture changed an unowned register/page')
 
 
-def run_capture(patch, memory, registers, state, site):
+def run_capture(patch, memory, registers, state, site, memory_class=CaptureMemory, limit=10000):
     """Differential instruction test through the displaced original instruction(s).
 
     No game-RAM exclusions except the checked patch bytes; even original CALL stack bytes must
@@ -1413,8 +1819,9 @@ def run_capture(patch, memory, registers, state, site):
     end = patch.stops[site]
     while original.registers[24] != end:
         original.opcodes[original.memory[original.registers[24]]]()
-    mem = CaptureMemory(patched_ram, state, patch)
+    mem = memory_class(patched_ram, state, patch)
     sim = simpool.machine(_rw_simulator(), mem, registers, 'inferno.capture.patched')
+    sim.set_tracer(mem)
     r = sim.registers
     if r[26] != 1 or r[27] != 2:
         raise AssertionError('capture entry is not the proved IFF=1/IM2 gameplay domain')
@@ -1424,7 +1831,7 @@ def run_capture(patch, memory, registers, state, site):
     elapsed, steps = 0.0, 0
     safe = [i for i in CMP if i != 24]
     while r[24] != end:
-        if steps >= 10000:
+        if steps >= limit:
             raise AssertionError('capture did not return')
         if r[24] in patch.site_bytes and r[24] not in patch.sites:
             raise AssertionError('capture jumped into a patched instruction interior')
@@ -1435,7 +1842,7 @@ def run_capture(patch, memory, registers, state, site):
         # Transition instructions charged at 3.5MHz is a conservative bound.
         elapsed += (r[25] - before + (mem.fast_reads - reads if speed == 3 else 0)) / (8 if speed == 3 and mem.speed == 3 else 1)
         if r[26]:
-            if mem.mmu0 != 255 or mem.speed != 0:
+            if mem.mmu0 != 255 or mem.speed != 0 or getattr(mem,'mmu1',255) != 255 or getattr(mem,'mmu2',10) != 10:
                 raise AssertionError('interrupt-enabled scratch mapping/fast beeper')
             if not (all(r[i] == registers[i] for i in safe) or
                     all(r[i] == original.registers[i] for i in safe)):
@@ -1457,6 +1864,272 @@ def run_capture(patch, memory, registers, state, site):
     return mem.pages[STATE_PAGE], added, steps
 
 
+
+
+class ModalPatch(CapturePatch):
+    """Original gameplay-return boundary; no modal drawing instruction is bypassed."""
+    def __init__(self, code=None):
+        h = load_profile()['hooks']
+        self.code = bytes.fromhex(h['modal']) if code is None else code
+        self.rom = loader_rom()
+        org = int(h['syms']['modal_hide'], 16)
+        if org + len(self.code) >= 0x3D00 or any(v != 255 for v in self.rom[org:org + len(self.code)]):
+            raise ValueError('modal hook overlaps live ROM')
+        self.rom[org:org + len(self.code)] = self.code
+        self.sites = {0x9019: (bytes.fromhex('31D586'), b'\xC3' + org.to_bytes(2, 'little'))}
+        self.stops = {0x9019: 0x901C}
+        self.site_bytes = set(range(0x9019, 0x901C))
+
+
+class ModalMemory(CaptureMemory):
+    def __init__(self, ram, state, patch, display=None):
+        super().__init__(ram, state, patch)
+        self.nr = dict(display or {0x6B:0x8B, 0x15:0x01, 0x69:0x80, 0x62:0x40})
+        self.selected, self.display_writes = 0, []
+
+    def nextreg(self, reg, value):
+        if reg in (0x6B, 0x15, 0x69, 0x62):
+            if self.speed != 3 or self.mmu0 != 68:
+                raise AssertionError('modal display write outside private domain')
+            self.nr[reg] = value
+            self.display_writes.append((reg, value))
+        else:
+            super().nextreg(reg, value)
+
+    def write_port(self, regs, port, value, *args):
+        if port != 0x243B:
+            raise AssertionError('modal wrote an unowned port')
+        self.selected = value
+
+    def read_port(self, regs, port):
+        if port != 0x253B or self.selected not in self.nr:
+            raise AssertionError('modal read an unowned port')
+        return self.nr[self.selected]
+
+
+def modal_checks(capture):
+    """Actual original-replay return state, plus visibility bit and stale-phase controls."""
+    data = json.loads(Path(capture).read_text())
+    if data['desync'] or not data.get('samples'):
+        raise AssertionError('modal check needs an original replay sample without desync')
+    patch, counts, maximum = ModalPatch(), Counter(), 0
+    for sample in data['samples']:
+        if sample['pc'] != 0x9019:
+            raise AssertionError('wrong modal entry sample')
+        ram = [0] * 16384 + sample['memory']['16384']
+        regs = sample['registers']
+        for value in range(256):
+            state = bytearray(8192)
+            state[0x3F6] = 2
+            display = {0x6B:value, 0x15:value ^ 0xA5, 0x69:255-value, 0x62:0x40}
+            memories = []
+            def factory(m, s, p):
+                mem = ModalMemory(m, s, p, display)
+                memories.append(mem)
+                return mem
+            result, cost, steps = run_capture(patch, ram, regs, state, 0x9019, factory)
+            want = {r:v & (0xFE if r == 0x15 else 0x7F) for r,v in display.items()}
+            want[0x62] = 0
+            if memories[0].nr != want or result[0x3F6] != 0 or memories[0].display_writes[0] != (0x62, 0):
+                raise AssertionError('modal visibility or pending-phase invalidation failed')
+            maximum = max(maximum, cost)
+            counts['display-bit preservation cases'] += 1
+        for register in (0x6B, 0x15, 0x69, 0x62):
+            code = bytearray(patch.code)
+            instruction = bytes((0xED, 0x91, 0x62, 0)) if register == 0x62 else bytes((0xED, 0x92, register))
+            off = code.index(instruction)
+            code[off:off+len(instruction)] = bytes(len(instruction))
+            memories = []
+            def factory(m, s, p):
+                mem = ModalMemory(m, s, p)
+                memories.append(mem)
+                return mem
+            run_capture(ModalPatch(code), ram, regs, state, 0x9019, factory)
+            mask = 0x40 if register == 0x62 else 1 if register == 0x15 else 128
+            if not memories[0].nr[register] & mask:
+                raise AssertionError('missing-hide control was not informative')
+            counts['missing-hide control detected'] += 1
+        bad = list(ram)
+        bad[0x9019] ^= 1
+        try:
+            patch.apply_memory(bad)
+        except ValueError:
+            counts['modal site refusal'] += 1
+        else:
+            raise AssertionError('modal site refused no changed bytes')
+    return {'counts': dict(counts), 'entry_frames': [s['frame'] for s in data['samples']],
+            'max_equivalent_T': maximum, 'max_added_ms': maximum / 3500,
+            'scope': 'assembled hide at sampled original gameplay return; all other modal paths and integration remain open'}
+
+
+class FramePatch(CapturePatch):
+    """Capture + modal cancellation + hidden post-copy scenery preparation."""
+    def __init__(self):
+        super().__init__()
+        h = load_profile()['hooks']
+        for block, symbol in (('modal','modal_hide'),('framehook','frame_hook')):
+            code, org = bytes.fromhex(h[block]), int(h['syms'][symbol],16)
+            if org+len(code) >= 0x3D00 or any(v != 255 for v in self.rom[org:org+len(code)]):
+                raise ValueError('frame hook overlaps live ROM')
+            self.rom[org:org+len(code)] = code
+        self.sites[0x9019] = bytes.fromhex('31D586'), b'\xC3'+int(h['syms']['modal_hide'],16).to_bytes(2,'little')
+        self.sites[0x8F95] = bytes.fromhex('3A49AC'), b'\xC3'+int(h['syms']['frame_hook'],16).to_bytes(2,'little')
+        self.stops.update({0x9019:0x901C, 0x8F95:0x8F98})
+        self.site_bytes = {a+j for a,(old,new) in self.sites.items() for j in range(len(old))}
+        self.renderer = bytearray(8192)
+        for block,symbol in (('textmap','render_textmap'),('queue','queue_frame'),('prepare','prepare_frame'),('display','setup_display')):
+            org = int(h['syms'][symbol],16)
+            code = bytes.fromhex(h[block])
+            self.renderer[org:org+len(code)] = code
+        for phase in range(2):
+            self.renderer[0x400+phase*256:0x500+phase*256] = bytes((a&127)*2 for a in range(256))
+
+
+class FrameMemory(CaptureMemory):
+    def __init__(self, ram, state, patch, previous=None, display=None):
+        super().__init__(ram, state, patch)
+        self.pages[69] = bytearray(previous[69]) if previous else bytearray(patch.renderer)
+        self.pages[14] = bytearray(previous[14]) if previous else bytearray([0xE3]*8192)
+        self.mmu1, self.mmu2 = 255, 10
+        self.nr = dict(display or {0x6B:0x0B, 0x6E:0x80, 0x7F:0})
+        self.selected, self.text_writes = 0, set()
+
+    def __getitem__(self, a):
+        if isinstance(a,slice):
+            return [self[i] for i in range(*a.indices(65536))]
+        if self.speed == 3:
+            self.fast_reads += 1
+        if a < 8192 and self.mmu0 != 255:
+            return self.pages[self.mmu0][a]
+        if 8192 <= a < 16384 and self.mmu1 != 255:
+            return self.pages[self.mmu1][a-8192]
+        if 0x4000 <= a < 0x6000 and self.mmu2 == 14:
+            return self.pages[14][a-0x4000]
+        return self.rom[a] if a < 16384 else self.ram[a]
+
+    def __setitem__(self, a, v):
+        if a < 8192 and self.mmu0 != 255:
+            self.pages[self.mmu0][a] = v
+        elif 8192 <= a < 16384 and self.mmu1 != 255:
+            self.pages[self.mmu1][a-8192] = v
+        elif 0x4000 <= a < 0x6000 and self.mmu2 == 14:
+            offset = a-0x4000
+            front = 1 if self.nr[0x6E] == 0x86 else 0
+            if self.nr[0x6B]&128 and (front*0x600 <= offset < front*0x600+0x600 or
+                    0xC00+front*0x800 <= offset < 0x1400+front*0x800):
+                raise AssertionError('frame worker changed visible map/definitions')
+            self.pages[14][offset] = v
+            self.text_writes.add(offset)
+        elif a >= 16384:
+            raise AssertionError('frame wrote original game RAM')
+        else:
+            raise AssertionError('frame wrote unmapped ROM')
+
+    def nextreg(self, reg, value):
+        if reg == 0x50 and value in (68,69,255):
+            self.mmu0 = value
+        elif reg == 0x51 and value in (68,255):
+            self.mmu1 = value
+        elif reg == 0x52 and value in (14,10):
+            self.mmu2 = value
+        elif reg == 0x07 and value in (0,3):
+            if value == 0 and (self.mmu1 != 255 or self.mmu2 != 10):
+                raise AssertionError('frame restored speed before original mapping')
+            self.speed = value
+        else:
+            raise AssertionError('hidden frame preparation changed display/unowned register')
+
+    def write_port(self, regs, port, value, *args):
+        if port != 0x243B:
+            raise AssertionError('frame wrote unowned port')
+        self.selected = value
+
+    def read_port(self, regs, port):
+        if port != 0x253B or self.selected not in self.nr:
+            raise AssertionError('frame read unowned register')
+        return self.nr[self.selected]
+
+
+def run_frame(patch, ram, registers, state, previous=None, display=None):
+    memories = []
+    def factory(m,s,p):
+        mem = FrameMemory(m,s,p,previous,display)
+        memories.append(mem)
+        return mem
+    result,cost,steps = run_capture(patch,ram,registers,state,0x8F95,factory,limit=200000)
+    mem = memories[0]
+    ready = mem.pages[69][0x1EAC]
+    if mem.mmu1 != 255 or mem.mmu2 != 10 or mem.pages[69][0x1EA1]:
+        raise AssertionError('frame mapping or premature sprite/display readiness')
+    if ready:
+        half, flash = mem.pages[69][0x1E80:0x1E82]
+        expected_ram = list(ram)
+        expected_ram[0x9B00:0x9F80] = state[0x400:0x880]
+        data = mem.pages[14]
+        for cell,tile in enumerate(map_tiles(expected_ram)):
+            at = half*0x600+(cell//32)*80+(cell%32)*2
+            slot = data[at]+((data[at+1]&1)<<8)
+            attr = data[at+1]>>1
+            raw = bytes(data[0xC00+slot*8:0xC08+slot*8])+bytes((attr,))
+            if tile_pixels(raw) != expected_tile(expected_ram,tile,flash):
+                raise AssertionError('post-copy frame pixels differ from clean scenery')
+    elif mem.text_writes:
+        raise AssertionError('unready frame wrote display memory')
+    return {'ready':ready,'equivalent_T':cost,'added_ms':cost/3500,'instructions':steps,
+            'pages':{p:bytes(v) for p,v in mem.pages.items()}}
+
+
+def frame_units(patch, fixture):
+    ram, regs, state = fixture
+    counts = Counter()
+    good = run_frame(patch,ram,regs,state)
+    for front in (0,1):
+        result = run_frame(patch,ram,regs,state,good['pages'],{0x6B:0x8B,0x6E:0x86 if front else 0x80,0x7F:0})
+        if not result['ready'] or result['pages'][69][0x1E80] != 1-front:
+            raise AssertionError('frame selected the visible buffer')
+        counts['frame inactive buffer unit'] += 1
+    pending = dict(good['pages'])
+    pending[69] = bytearray(pending[69])
+    pending[69][0x1EA0:0x1EA3] = bytes((7,1,1))
+    for ack, expected in ((6,0),(7,1)):
+        result = run_frame(patch,ram,regs,state,pending,{0x6B:0x8B,0x6E:0x80,0x7F:ack})
+        if result['ready'] != expected:
+            raise AssertionError('pending frame ownership not respected')
+        counts['frame pending/ack unit'] += 1
+    for phase in (0,1):
+        inactive = bytearray(state)
+        inactive[0x3F6] = phase
+        if run_frame(patch,ram,regs,inactive,good['pages'])['ready']:
+            raise AssertionError('incomplete capture prepared a frame')
+        counts['frame phase guard'] += 1
+    broken = FramePatch()
+    broken.rom[int(load_profile()['hooks']['syms']['frame_hook'],16)] = 0
+    try:
+        run_frame(broken,ram,regs,state)
+    except AssertionError as e:
+        if 'interrupt-enabled' not in str(e):
+            raise
+        counts['frame unsafe-DI control detected'] += 1
+    else:
+        raise AssertionError('frame unsafe-DI control not detected')
+    stale = dict(good['pages'])
+    stale[69] = bytearray(stale[69])
+    off = stale[69].index(bytes.fromhex('CD0000'),0x700,0x800)
+    stale[69][off:off+3] = bytes(3)
+    changed = list(ram)
+    clean = list(ram)
+    clean[0x9B00:0x9F80] = state[0x400:0x880]
+    tile = next(t for t in map_tiles(clean) if (ram[0xFC00+t]&7) != ((ram[0xFC00+t]>>3)&7))
+    changed[0xDC00+tile*8] ^= 255
+    try:
+        run_frame(patch,changed,regs,state,stale)
+    except AssertionError as e:
+        if 'frame pixels' not in str(e):
+            raise
+        counts['frame skipped-render control detected'] += 1
+    else:
+        raise AssertionError('frame skipped-render control not detected')
+    return counts
 
 
 def capture_irq_units(patch, tests):
@@ -2087,6 +2760,11 @@ def continuation_tests(folder, pulse=False):
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     action = ap.add_mutually_exclusive_group(required=True)
+    action.add_argument('--modal-checks', type=Path)
+    action.add_argument('--queue-checks', action='store_true')
+    action.add_argument('--display-checks', action='store_true')
+    action.add_argument('--frame-check', type=Path)
+    action.add_argument('--frame-all', type=Path)
     action.add_argument('--textmap-check', type=Path)
     action.add_argument('--textmap-all', type=Path)
     action.add_argument('--textmap-units', type=Path)
@@ -2110,6 +2788,34 @@ def main():
     ap.add_argument('--out', type=Path, default=Path('work/inferno'))
     ap.add_argument('--json', type=Path)
     a = ap.parse_args()
+    if a.frame_check or a.frame_all:
+        if a.quick <= 0:
+            ap.error('--quick must be positive')
+        result = (capture_all(a.frame_all,a.out,a.quick,progress=print,scenery='textmap',frame=True)
+                  if a.frame_all else model_verify(a.frame_check,a.quick,capture=True,scenery='textmap',frame=True))
+        result['scope'] = 'capture and assembled post-copy preparation; all game registers/RAM preserved; display stays disabled without sprite compiler'
+        if a.json:
+            a.json.write_text(json.dumps(result,indent=2)+'\n')
+        print(json.dumps(result))
+        return int(any(v for k,v in result['counts'].items() if k.endswith('!')))
+    if a.display_checks:
+        result = display_checks()
+        if a.json:
+            a.json.write_text(json.dumps(result, indent=2) + '\n')
+        print(json.dumps(result))
+        return 0
+    if a.queue_checks:
+        result = queue_checks()
+        if a.json:
+            a.json.write_text(json.dumps(result, indent=2) + '\n')
+        print(json.dumps(result))
+        return 0
+    if a.modal_checks:
+        result = modal_checks(a.modal_checks)
+        if a.json:
+            a.json.write_text(json.dumps(result, indent=2) + '\n')
+        print(json.dumps(result))
+        return 0
     if a.textmap_check or a.textmap_units or a.textmap_all:
         if a.quick <= 0:
             ap.error('--quick must be positive')

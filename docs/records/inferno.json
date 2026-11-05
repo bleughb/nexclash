@@ -325,5 +325,156 @@
    "python -m nexclash.inferno --textmap-check ../specnext/reference/inferno/Inferno6.rzx --quick 2000",
    "python -m nexclash.inferno --textmap-all ../specnext/reference/inferno --quick 2000 --out work/textmap_quick"
   ]
+ },
+ "frame_pipeline": {
+  "scope": "assembled post-copy preparation, palette/clip setup, Copper queue and sampled shop-return cancellation; no B compiler/pattern upload/continuous sprite release",
+  "sources": {
+   "nexclash/inferno.py": "6bcc915f860fa0c197da19d5634c70b5",
+   "asm/inferno_hooks.asm": "3f2de42674fd87d0e33cf0d2e7abd583",
+   "docs/profiles/inferno.json": "f54b9548827ce886ec052e672461cc24"
+  },
+  "artifacts": {
+   "display_checks.json": "d4745f0de09e681709f0d9635f6e105a",
+   "queue_checks.json": "9490e8a104d4d7ac867407c2fc379ca5",
+   "modal_checks.json": "0468d475015f3919788ef98e85106965",
+   "modal4_entry.json": "e9ab67bfdb4c1b4bf72c5c5744d1804b",
+   "display_textmap_units.json": "9ef3efa869f4f07330bdcb36e5cc66a1",
+   "frame_summary.json": "3589ec1851514caeb77375c7a9d4ebca",
+   "frame1.json": "2d688ab49c36536cecf7973c4cd1b539",
+   "frame2.json": "7bd23986a110b2174c1515504d26034f",
+   "frame3.json": "b82b3dd204c0366f146dacd5e500f8c1",
+   "frame4.json": "09e2c32f6d153a8538288b5b6ca11783",
+   "frame5.json": "14f01db59d63a525d4738101e6f588fb",
+   "frame6.json": "254c7312f2550325c771d22a85d439cc",
+   "frame_pipeline.md": "3d2a8f52b4bd1676199d6244290d6311"
+  },
+  "quick_counts": {
+   "kernel events": 16903,
+   "kernel instructions": 4172369,
+   "max kernel cost 8F7C": 2960.0,
+   "scenery events": 1855,
+   "max kernel cost 96A1": 758.0,
+   "actor events": 13194,
+   "wrapped path": 10005,
+   "max kernel cost 959B": 758.375,
+   "normal path": 3189,
+   "max capture tick cost": 7740.0,
+   "max kernel cost 8F92": 97.75,
+   "dropped writer detected": 1666,
+   "max image calls": 21,
+   "max visible chunks": 58,
+   "max unique patterns": 56,
+   "max pending pattern union": 64,
+   "tile checks": 1854,
+   "post-copy scenery source lifetime": 1850,
+   "post-copy actor source lifetime": 13159,
+   "post-copy assembled frame hooks": 1850,
+   "scenery viewport pixels compared": 68198400,
+   "max post-copy frame hook equivalent T": 23565.375,
+   "max capture plus frame hook equivalent T": 30503.375,
+   "ULA checks": 1850,
+   "coordinate control detected": 841,
+   "position unit": 240,
+   "inactive unit": 24,
+   "full log unit": 12,
+   "overflow skip unit": 12,
+   "ordinal full unit": 12,
+   "commit phase unit": 18,
+   "site refusal unit": 24,
+   "ISR entry unit": 24,
+   "ISR forced unwind unit": 24,
+   "unsafe DI control detected": 6,
+   "interior jump control detected": 6,
+   "game RAM control detected": 6,
+   "frame inactive buffer unit": 12,
+   "frame pending/ack unit": 12,
+   "frame phase guard": 12,
+   "frame unsafe-DI control detected": 6,
+   "frame skipped-render control detected": 6
+  },
+  "units": {
+   "display_checks.json": {
+    "counts": {
+     "viewport RGB pixels": 294912,
+     "palette/phase/buffer geometry": 8,
+     "setup guards": 3,
+     "palette/clip control detected": 2
+    },
+    "max_once_only_setup_ms": 2.0301785714285714,
+    "scope": "assembled palette/clip setup and documented geometry model; no video hardware or installed sprite renderer"
+   },
+   "queue_checks.json": {
+    "counts": {
+     "old complete frame retained": 6,
+     "pending ownership guard": 6,
+     "blank commit and one-shot HALT": 6,
+     "acknowledged queue reuse": 6,
+     "bounded upload / stale trailing sprite cases": 6,
+     "ready/target guard": 6,
+     "modal cancels pending copper": 1,
+     "active-raster control detected": 1
+    },
+    "max_queue_added_ms": 1.165,
+    "sized_uploads": [
+     {
+      "sprites": 0,
+      "previous": 0,
+      "bytes": 12,
+      "added_ms": 0.03628571428571428
+     },
+     {
+      "sprites": 1,
+      "previous": 0,
+      "bytes": 24,
+      "added_ms": 0.04446428571428571
+     },
+     {
+      "sprites": 58,
+      "previous": 0,
+      "bytes": 708,
+      "added_ms": 0.5472857142857143
+     },
+     {
+      "sprites": 2,
+      "previous": 58,
+      "bytes": 708,
+      "added_ms": 0.6392857142857142
+     },
+     {
+      "sprites": 0,
+      "previous": 58,
+      "bytes": 708,
+      "added_ms": 0.6425
+     },
+     {
+      "sprites": 128,
+      "previous": 128,
+      "bytes": 1548,
+      "added_ms": 1.165
+     }
+    ],
+    "scope": "assembled uploader + bounded Copper model; synthetic sprite records; no sprite compiler, installed frame hook or hardware raster proof"
+   },
+   "modal_checks.json": {
+    "counts": {
+     "display-bit preservation cases": 256,
+     "missing-hide control detected": 4,
+     "modal site refusal": 1
+    },
+    "entry_frames": [
+     51805
+    ],
+    "max_equivalent_T": 121.0,
+    "max_added_ms": 0.03457142857142857,
+    "scope": "assembled hide at sampled original gameplay return; all other modal paths and integration remain open"
+   }
+  },
+  "recipes": [
+   "python -m nexclash.inferno --frame-check ../specnext/reference/inferno/Inferno6.rzx --quick 2000",
+   "python -m nexclash.inferno --frame-all ../specnext/reference/inferno --quick 2000 --out work/frame_quick",
+   "python -m nexclash.inferno --display-checks",
+   "python -m nexclash.inferno --queue-checks",
+   "python -m nexclash.inferno --modal-checks ../specnext/reference/inferno/build/modal4_entry.json"
+  ]
  }
 }
