@@ -162,7 +162,14 @@
     "args": [
      "--no-record"
     ],
-    "decisions": {}
+    "decisions": {
+     "engine": "loderunner_v2",
+     "base": "Dean's loderunner (hooks, profile, colours read, not copied)",
+     "input": "the 128K release (AY music from bank 4 in the IM 2 handler)",
+     "strategy": "RAM hooks 0xA460 (Dean); whole alt ROM image: Sinclair's 48K ROM + the register block at 0x386E (the fade reads 0x0000-0x3FFF as masks)",
+     "tail": "0xA400",
+     "colours": "docs/profiles/lode_runner_colours.json (none = defaults)"
+    }
    },
    "verify": {
     "args": [

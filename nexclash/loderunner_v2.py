@@ -516,7 +516,7 @@ class LodeRunnerPatch:
 # Recolour (PLAYBOOK 3b): the patterns (bank 11) are the only colour-dependent bytes; the game
 # never reads bank 11.
 # ---------------------------------------------------------------------------------------------
-RECOLOUR = {'game': 'lode_runner', 'output': 'sprites', 'colours': 'docs/profiles/lode_runner_colours.json',
+RECOLOUR = {'game': 'lode_runner_v2', 'output': 'sprites', 'colours': 'docs/profiles/lode_runner_colours.json',
             'clear': True, 'note': NOTE}
 
 
