@@ -26,10 +26,12 @@
   ]
  },
  "modules": [
-  "matchday"
+  "matchday",
+  "matchday_v2"
  ],
  "own_modules": [
-  "matchday"
+  "matchday",
+  "matchday_v2"
  ],
  "data": [
   "docs/profiles/match_day.json",
@@ -71,6 +73,54 @@
   "altrom_fill": "rom3",
   "note": "verified before the shared defaults of 2026-11-04 (docs/REFACTOR.md 1-3, 7): the old alt ROM fill, no ROM path / tail check; `--altrom-fill whole` opts in to the rework"
  },
+ "rework": [
+  {
+   "name": "v2",
+   "version": "2.0",
+   "args": [
+    "--altrom-fill",
+    "whole"
+   ],
+   "inputs": [
+    {
+     "name": "enNextZX.rom",
+     "md5": "8c34d957fb2cbbd0be423cea3b370fd5",
+     "path": "match_day/enNextZX.rom"
+    }
+   ],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ],
+    "decisions": {
+     "engine": "matchday_v2",
+     "altrom_fill": "whole",
+     "tail": "0xBE00 in both builds"
+    }
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [
+     "match_day.rzx",
+     "match_day_spectrumcomputing.rzx"
+    ]
+   },
+   "outputs": {
+    "plain": {
+     "file": "match_day.nex",
+     "md5": "02fd183587897ea65aaaca5a0d1db36e"
+    },
+    "sprites": {
+     "file": "match_day_sprites.nex",
+     "md5": "ec0706e98fd681333b49fcb08bcc6a72"
+    }
+   },
+   "proof": "both recordings IDENTICAL with the IM 1 handler compared at every 0x0038 against NextZXOS's ROM3, unit tests + controls, ROM paths with the start-up tail proof, negatives rom3_left and the old tail",
+   "note": "Jon Attree's Match Day rework (no published .nxc; the proof is the verification): engine matchday_v2, picked by engines.py for `--altrom-fill whole` on this snapshot, the opt-in the pin names. Dean's matchday with the whole alt ROM image (the shared fill: Sinclair's ROM + the hooks) and the start-up tail at 0xBE00 in both builds, the cure for the trophy screen's corruption (the converter's default tail sat on its attribute data below SP). Combines refactor-unpinned 70a2529 (tail, the verifier's alt ROM model) and pilot runs/match_day 4a6493d (IM 1 handler compared at every 0x0038, rom3_left). Verify: both recordings IDENTICAL with the IM 1 check against NextZXOS's ROM3 (enNextZX.rom, staged), unit tests + controls, ROM paths with the tail proof, negatives rom3_left and the old tail; JNext: the trophy drawn clean (specnext match_day_v2_JNEXT_trophy.png). games/match_day.md \"Rework (opt-in)\"."
+  }
+ ],
  "status": {
   "title": "Match Day",
   "engine_col": "matchday (match_day.md)",

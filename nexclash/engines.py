@@ -30,6 +30,7 @@ ENGINES = [
     ('midres', 'is_midres', None),                                        # Midnight Resistance (128K)
     ('smashtv', 'is_smashtv', None),                                      # Smash TV (48K, BASIC loader)
     ('renegade', 'is_renegade', None),                                    # Target Renegade (128K, BASIC loader)
+    ('matchday_v2', 'is_matchday', lambda a: getattr(a, 'altrom_fill', None) == 'whole'),  # Match Day: opt-in rework of matchday
     ('matchday', 'is_matchday', None),                                    # Match Day (48K)
     ('cyclone', 'is_cyclone', None),                                      # Cyclone (48K)
     ('incredible_shrinking_fireman_add_GPT6_ASTRA', 'is_fireman', lambda a: getattr(a, 'z80', '').endswith('-add-GPT6_ASTRA.z80')),
