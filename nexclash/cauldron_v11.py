@@ -8,7 +8,16 @@ gave a bat (callers 0x979D / 0x9A74, value 5) the red of a cavern trunk or the g
 first cell lay on one: the figure clashed with the scenery in the sprite's colour (TECHDEBT, owner 2026-11-03).
 Types 1 and 2 (their colour is the cell's, by the game's own rule) are unchanged. engines.py picks this module
 for `--altrom-fill whole` (the opt-in the record's pin names): the build writes the whole alt ROM image itself,
-as Dean's does, and the ROM path and start-up tail checks run. Dean's notes follow.
+as Dean's does, and the ROM path and start-up tail checks run.
+
+Round 2 (2026-11-05, the one-frame vanish): the hide at an erase's end and the show at the next draw's start left a
+gap with no sprite and no ULA figure; when the beam crossed the figure's rows in it the frame showed the figure
+missing (JNext, work/r2/cause.py: 23 of 23 transients in 900 frames on such a gap). Now an erase leaves its sprite
+pending (still shown over the erased ULA figure); the commit of a later draw hides the pending sprites it replaces
+(rectangles meeting the draw's, or pending since an earlier draw) and shows the draw's own sprite in one burst,
+once the beam is off all their rows (Model._mark / _commit, beam_check). A screen writer over a pending sprite, a
+taint of everything, or a draw with no free slot hides it at once. The plot hook is paced to the original's
+time with the hook library's limiter (asm popen / pwait, hlib_pace.asm). Dean's notes follow.
 
 Cauldron (Palace Software, 1985; 48K) - engine `cauldron`.
 
@@ -27,7 +36,7 @@ delivered .z80: games/cauldron.md "Inputs"); `auto` extracts it and builds from 
 
 Build (games/cauldron.md "Build design"): hooks in alt ROM image 1 (0x386E-) at the plotter entry
 0x6357 (the hook runs the plotter body itself: a DRAW shows the image's sprites before the body, an
-ERASE hides them after it) and at every other screen writer (ROM PR-ALL / CL-LINE / CL-SCROLL via
+ERASE hides them after it - v1.1 round 2: at a later draw's commit) and at every other screen writer (ROM PR-ALL / CL-LINE / CL-SCROLL via
 alt ROM bytes below 0x2000, the game's clear, tile writer and the two bottom-third scrolls). A key
 (graphic, x, y, rows, width) is live between the plot that draws it and the one that erases it;
 another writer touching it taints it (no sprite until a clear holds it whole). Tables in Next page
@@ -65,6 +74,8 @@ CACHE_BANKS = tuple(range(CIX // 2, (CIX + NCACHE) // 2))
 CIDX = 0x0300                 # page 28: tables start after the index (1 + 7 x <= 109 entries)
 COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', RECORD + '_colours.json')
 V_N, V_OVF, V_NFREE, FREE, TAB = 0x0000, 0x0001, 0x0002, 0x0003, 0x0100   # page-26 offsets
+V_NP, V_NC, PEND = 0x0040, 0x0041, 0x0042   # round 2: pending hides (NSLOT x 6: slot, y0, y1, c0, c1, flag)
+BEAM_STEP = 4                   # round 2: the model beam moves 4 lines a read of NR 0x1F (waits stay short to simulate)
 # RAM sites: (original, hook symbol, kind)
 SITES = {0x6357: ('5e2356', 'e_plot', 'plot'), 0xB2A0: ('210048', 'e_clr', 'clr'),
          0xB366: ('6f2600', 'e_tile', 'tile'), 0xDED2: ('210050', 'e_scl', 'scl'),
@@ -101,7 +112,10 @@ DECISIONS = {'engine': 'cauldron_v11', 'base': "Dean's cauldron (a copy; his fil
              'strategy': 'overlay: the game still draws the ULA pixels; hooks in alt ROM image 1 (0x386E-, the '
                          'whole alt ROM image from the build) + page 26 at slot 6 + page 27 at slot 4 put a grid of '
                          '4-bit sprites on every live XOR image (key = graphic, x, y, rows, width) - shown at a '
-                         'drawing plot\'s entry, hidden at an erasing plot\'s exit',
+                         'drawing plot\'s entry; an erasing plot leaves its sprite pending, hidden at the commit of a '
+                         'later draw (the one that replaces it) in one burst with that draw\'s sprite, timed to the '
+                         'beam off their rows (round 2, the one-frame vanish); the plot hook paced to the '
+                         'original\'s time (hook library limiter)',
              'figures': 'every image of the plotter 0x6357 (all 14 callers; Q1)',
              'depth': 'sprites in front of everything (Q2)',
              'outline': 'every sprite: black (palette 8) on the left / right / up / down neighbours of its ink '
@@ -312,6 +326,9 @@ class NextState:
         self.nr[reg] = val
         if 0x35 <= reg <= 0x39:
             self.attr[self.nr.get(0x34, 0) & 0x7F][reg - 0x35] = val
+            tr = getattr(self, 'track', None)
+            if tr is not None:                # round 2: (the model beam's line, sprite) of every attribute write
+                tr.append(((getattr(self, 'line', 0) - BEAM_STEP) % 312, self.nr.get(0x34, 0) & 0x7F))
         elif reg == 0x56:
             if val and val not in self.pages or val not in (0, PG) + tuple(range(CPG, CPG + NCP)) + tuple(range(CIX, CIX + NCACHE)):
                 self.bad.append(('MMU6 set to page %d' % val,))
@@ -371,7 +388,7 @@ def _machine(Sim, mem, regs, ns, slot='o'):
                 ln = getattr(ns, 'line', 0)             #   a read of the LSB, 312 lines a frame)
                 if sel == 0x1E:
                     return ln >> 8 & 1
-                ns.line = (ln + 1) % 312
+                ns.line = (ln + BEAM_STEP) % 312
                 return ln & 255
             ns.bad.append(('IN 0x%04X' % port,))
             return 0xFF
@@ -490,6 +507,7 @@ def event(patch, site, get, R, ns, alt, Sim, at_body=None):
     O, P = _overlays(get, alt, psite, ns)
     o, p = O(), P()
     ns.bad = []
+    ns.track = [] if site == PLOT else None
     so = _machine(Sim, o, list(R), NextState({}))
     sp_ = _machine(Sim, p, list(R), ns, 'p')
     if not _run(so, stop):
@@ -654,6 +672,8 @@ class Model:
         self.free = [NSLOT - 1 - i for i in range(NSLOT)]
         self.ovf = 0
         self.shown = {}                       # slot: (pixels {(x, y): ink or OUTLINE})
+        self.pend = []                        # round 2: [slot, rect, flag] erased, still shown until a commit
+        self.burst = []                       # round 2: rectangles the last plot's commit changed (beam check)
         self.u = bytearray(768)               # the ULA attribute file the build must show (Q8)
         self.usv = bytearray(384)             # (ULA, original) pairs at the last bottom-third save
 
@@ -663,6 +683,7 @@ class Model:
         m.free = list(self.free)
         m.ovf = self.ovf
         m.shown = dict(self.shown)
+        m.pend = [[a, b, c] for a, b, c in self.pend]
         m.u = bytearray(self.u)
         m.usv = bytearray(self.usv)
         return m
@@ -720,6 +741,27 @@ class Model:
             if e[1] < NSLOT:
                 self._hide(e[1])
             e[1] = 0xFF
+        for p in self.pend:
+            p[2] = 2
+        self._commit()
+
+    @staticmethod
+    def _meet(a, b):
+        return not (a[1] < b[0] or b[1] < a[0] or a[3] < b[2] or b[3] < a[2])
+
+    def _mark(self, rect):
+        """Round 2, at a draw: a pending sprite whose rectangle meets the draw's, or that has seen a draw
+        elsewhere already, is hidden at this draw's commit; the others have now seen one."""
+        for p in self.pend:
+            p[2] = 2 if p[2] or self._meet(p[1], rect) else 1
+
+    def _commit(self):
+        """The pending sprites marked 2 hidden, their slots to the free stack in pending order."""
+        for p in self.pend:
+            if p[2] == 2:
+                self.burst.append((p[0], p[1]))
+                self._hide(p[0])
+        self.pend = [p for p in self.pend if p[2] != 2]
 
     def _remove(self, i):
         last = self.tab.pop()
@@ -727,7 +769,10 @@ class Model:
             self.tab[i] = last
 
     def plot(self, get, d):
-        """At the plotter entry. -> (slot hidden at the exit or None, slot shown now or None)."""
+        """At the plotter entry. -> (slot hidden at the exit or None, slot shown now or None). Round 2: an
+        erase hides nothing at its exit; its sprite stays shown, pending, until a later draw's commit."""
+        self.burst = []
+        self.erased = False
         y, rows, w, x = d['y'], d['rows'], d['w'], d['x']
         if y > 175 or not rows or y + 1 < rows or not w:
             self.taint_all()
@@ -749,18 +794,26 @@ class Model:
                 if s == 0xFF:
                     return None, None
                 self._remove(i)
-                if s < NSLOT:
-                    self.free.append(s)
-                    return s, None
+                if s < NSLOT:                     # round 2: still shown, pending (was: hidden at the exit)
+                    self.pend.append([s, e[2], 0])
+                    self.erased = True
                 return None, None
+        self._mark(rect)
         if self.ovf:
+            self._commit()
             return None, None
         if len(self.tab) >= NTAB:
             self.ovf = 1
+            self._commit()
             return None, None
+        if not nospr and not self.free and self.pend:   # no free slot: every pending sprite hidden first
+            for p in self.pend:
+                p[2] = 2
+            self._commit()
         s = 0xFE if nospr or not self.free else self.free.pop()
         self.tab.append([key, s, rect])
         if s >= NSLOT:
+            self._commit()
             return None, None
         g = bytes(get((d['g'] + i) & 0xFFFF) for i in range(rows * w))
         ink = plot_ink(get, d, y0, c0)
@@ -774,6 +827,8 @@ class Model:
             else:
                 sh.pop(q, None)
         self.shown[s] = sh
+        self.burst.append((s, rect))
+        self._commit()
         return None, s
 
     def exit(self, s):
@@ -796,6 +851,10 @@ class Model:
                 continue
             e[1] = 0xFF
             i += 1
+        for p in self.pend:                       # round 2: pending sprites under the writer hidden too
+            if self._meet(p[1], rect):
+                p[2] = 2
+        self._commit()
         if kind and rect == WHOLE:
             self.ovf = 0
 
@@ -820,9 +879,12 @@ class Model:
 
     def table_bytes(self):
         """The page-26 bytes the hooks must hold for this model (entries, count, flags, free stack)."""
-        p = {V_N: len(self.tab), V_OVF: self.ovf, V_NFREE: len(self.free)}
+        p = {V_N: len(self.tab), V_OVF: self.ovf, V_NFREE: len(self.free), V_NP: len(self.pend), V_NC: 0}
         for i, s in enumerate(self.free):
             p[FREE + i] = s
+        for i, (s, r, f) in enumerate(self.pend):
+            for j, v in enumerate([s] + list(r) + [f]):
+                p[PEND + 6 * i + j] = v
         for i, (k, s, r) in enumerate(self.tab):
             for j, v in enumerate(list(k) + [s] + list(r) + [0]):
                 p[TAB + 12 * i + j] = v
@@ -912,6 +974,22 @@ def compare(ns, m, fail, what, c=None, orig=None):
         c['table bytes compared'] += len(tb)
 
 
+def beam_check(ns, m, fail, what, c=None):
+    """Round 2: every sprite attribute write of a plot hook happened with the (model) beam off the rows of the
+    image its slot shows or stops showing (the commit's burst; m.burst = the model's (slot, rect) changes)."""
+    tr, ns.track = getattr(ns, 'track', None) or [], None
+    rows = collections.defaultdict(list)
+    for s, r in m.burst:
+        rows[s].append(r)
+    for ln, spr in tr:
+        for r in rows.get(spr // 9, ()):
+            if r[0] - 1 <= ln <= r[1] + 1:
+                fail('%s: a sprite switched while the beam was on its rows' % what, (ln, spr, r))
+                return
+    if c is not None and tr:
+        c['commit beam checks'] += 1
+
+
 def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None):
     """Replay the RZX (original game, Python simulator); at every site run the original and the
     patched code from the same state and compare; check the sprite layer, the hooks' tables, the ULA
@@ -991,6 +1069,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None):
                 if collect and c['collected ' + label] < collect:
                     c['collected ' + label] += 1
                     states.append((label, pc, list(R), snap(get), ns.copy(), model.copy()))
+                if collect and label == 'draw' and not c['collected draw2'] and len(model.shown) >= 3:
+                    c['collected draw2'] += 1             # round 2: a draw with 3+ sprites shown (pending cases)
+                    states.append(('draw2', pc, list(R), snap(get), ns.copy(), model.copy()))
 
             def span(pc):
                 r = RESUME[pc]
@@ -1030,7 +1111,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None):
                         d = read_desc(get, R[6] << 8 | R[7])
                         m1 = model.copy()
                         hide, show = m1.plot(get, d)
-                        label = 'draw' if show is not None else ('erase' if hide is not None else 'plot, no sprite')
+                        label = 'draw' if show is not None else ('erase' if hide is not None or m1.erased
+                                                                 else 'plot, no sprite')
                         keep(label, pc)
                         model.plot(get, d)
                         mb = model.copy()
@@ -1040,7 +1122,10 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None):
                             c['transient checks'] += 1
                         o = run(pc, label, at_body)
                         model.exit(hide)
+                        beam_check(ns, model, fail, label, c)
                         compare(ns, model, fail, label, c, o.__getitem__)
+                        if model.pend:
+                            c['max pending hides'] = max(c['max pending hides'], len(model.pend))
                         span(pc)
                         st['plot'] = {'d': d, 'delta': {}, 'sp': R[12]}
                         g0 = d['g']
@@ -1174,10 +1259,11 @@ def clock_matrix(patch, states):
         fl, o, ro = event(patch, pc, get, R, ns, alt, Sim, (lambda ns_: None) if pc == PLOT else None)
         fl = tuple(sorted(str(k) for k in fl if not str(k).startswith("('CPU speed left at")))
         p27 = bytearray(ns.pages[P27])
-        for a in (0x04A3, 0x04A4, 0x04A5, 0x04A6, 0x04A9, 0x04AA):
-            p27[a] = 0
+        for a in (0x04A3, 0x04A4, 0x04A5, 0x04A6, 0x04A9, 0x04AA) + tuple(range(0x04B0, 0x04BE)):
+            p27[a] = 0                            # round 2: + the plot limiter's state (its time, the clock's)
         pg = bytearray(ns.pages[PG])
         pg[0x0030] = 0
+        pg[0x009A] = pg[0x009B] = 0               # round 2: the beam wait's poll count
         st = (fl, tuple(tuple(a) for a in ns.attr), hashlib.md5(bytes(ns.pat)).hexdigest(),
               hashlib.md5(bytes(p27)).hexdigest(), hashlib.md5(bytes(pg)).hexdigest())
         return ns.nr.get(0x07, 0) & 3, st
@@ -1368,6 +1454,48 @@ def unit_cases(states):
         for sc in (0x44, 0x42, 0x07):       # v1.1: type 0 over a tree / trunk / star cell keeps its own value
             cases.append(('colour type 0, scenery cell 0x%02X: its own value' % sc, draw,
                           both(dset(6, 0), dset(7, 0x05), cell(sc, 0x38, 0, 0)), 'run'))
+
+        # round 2: pending hides (an erase's sprite stays shown until the commit of the draw that replaces it)
+        def drect(R, mem):
+            d = read_desc(mem.__getitem__, R[6] << 8 | R[7])
+            y0 = 175 - d['y']
+            c0 = d['x'] >> 3
+            return (y0, y0 + d['rows'] - 1, c0, c0 + d['w'] - 1 + (1 if d['x'] & 7 else 0))
+
+        def pending(where, flag=0):
+            """One more pending sprite (a live one made pending, else the next one the capture holds), its
+            rectangle over the draw's or away from it."""
+            def f(R, mem, m):
+                r = drect(R, mem) if where == 'over' else (180, 190, 0, 1)
+                used = getattr(m, 'pused', 0)
+                if used < len(m.pend):
+                    m.pend[used][1:] = [r, flag]
+                else:
+                    e = next((e for e in m.tab if e[1] < NSLOT), None)
+                    if e is None:
+                        raise ValueError('no live or pending sprite in the capture')
+                    m.tab.remove(e)
+                    m.pend.append([e[1], r, flag])
+                m.pused = used + 1
+            return f
+
+        def beam_on(R, mem, m):
+            m.beam_at = drect(R, mem)[0]
+        d2 = by['draw2'][-1] if by['draw2'] else draw
+        cases += [('draw over a pending erase: hidden with the new sprite in one burst', draw, pending('over'), 'run'),
+                  ('draw elsewhere: a pending sprite waits one more draw', draw, pending('away'), 'run'),
+                  ('draw elsewhere, the pending sprite has seen a draw: hidden now', draw, pending('away', 1), 'run'),
+                  ('draw, two pending: one over it, one away', d2, both(pending('over'), pending('away')), 'run'),
+                  ('draw with no free slot and a pending sprite: hidden first, its slot taken', draw,
+                   both(pending('away'), nofree), 'run'),
+                  ('draw in overflow: the pending sprite over it still hidden', draw, both(pending('over'), ovf), 'run'),
+                  ('draw past column 31: every pending sprite hidden (whole screen)', draw,
+                   both(pending('away'), dset(2, 250)), 'run'),
+                  ('plot of a tainted key: pending sprites untouched', draw, both(pending('over'), taint_key), 'run'),
+                  ('plot y 176: pending sprites hidden with the taint', draw, both(pending('away'), dset(3, 176)), 'body'),
+                  ('draw with the beam on its rows: the burst waits', draw, beam_on, 'run'),
+                  ('draw with the beam on a pending sprite\'s rows: the burst waits', draw,
+                   both(pending('over'), beam_on), 'run')]
     if erase:
         cases.append(('erase', erase, None, 'run'))
 
@@ -1395,6 +1523,21 @@ def unit_cases(states):
                       ('tile on a live image', erase, at(0xB366, {0: 0x41}, {TILEAT: lc & 255, TILEAT + 1: lc >> 8}), 'run')]
         lower = lambda R, mem, m: [e.__setitem__(2, (130, 140, e[2][2], e[2][3])) for e in m.tab]
         lowcol = lambda col: lambda R, mem, m: [e.__setitem__(2, (130, 140, col, col)) for e in m.tab]
+        def pend_all(R, mem, m):
+            for e in list(m.tab):
+                if e[1] < NSLOT:
+                    m.tab.remove(e)
+                    m.pend.append([e[1], e[2], 0])
+            if not m.pend:
+                raise ValueError('no live or pending sprite in the capture')
+        if lc is not None:
+            cases += [('PR-ALL on a pending image: hidden now', erase, at(0x0B9B, {6: lc >> 8, 7: lc & 255},
+                                                                         model_=pend_all), 'run'),
+                      ('clear 64-191 with the pending images inside: hidden', erase,
+                       at(0xB2A0, model_=lambda R, mem, m: (lower(R, mem, m), pend_all(R, mem, m))), 'run'),
+                      ('CL-LINE 24 (CLS) with pending images: all hidden', erase, at(0x0E44, {2: 24}, model_=pend_all), 'run'),
+                      ('scroll left, pending images in column 31 only: kept', erase,
+                       at(0xDED2, model_=lambda R, mem, m: (lowcol(31)(R, mem, m), pend_all(R, mem, m))), 'run')]
         cases += [('PR-ALL to the printer buffer: no touch', erase, at(0x0B9B, {6: 0x5B, 7: 0x00}), 'run'),
                   ('PR-ALL off a cell\'s top line: whole screen', erase, at(0x0B9B, {6: 0x43, 7: 0x00}), 'run'),
                   ('tile off the screen: no touch', erase, at(0xB366, {0: 0x41}, {TILEAT: 0, TILEAT + 1: 0x60}), 'run'),
@@ -1486,6 +1629,8 @@ def run_case(pt, stt, mut, mode, fail, c=None):
         mut(R, mem, m)
     ns = _ns_for(pt, ns0)
     _sync(ns, m)
+    if getattr(m, 'beam_at', None) is not None:   # round 2: the model beam put on a line (a commit must wait)
+        ns.line = m.beam_at
     ns.pages[P27][0:768] = mem[ATTR0:ATTR1]       # the shadow = the original's attributes (a mutated case too)
     alt = pt.rom_image()
     Sim = _rw()
@@ -1503,6 +1648,7 @@ def run_case(pt, stt, mut, mode, fail, c=None):
         fl, o, ro = event(pt, pc, get, R, ns, alt, Sim,
                           lambda ns_: compare(ns_, mb, fail, 'at the body start', c, get))
         m.exit(hide)
+        beam_check(ns, m, fail, 'after', c)
     else:
         tr = touch_rect(pc, get, R)
         fl, o, ro = event(pt, pc, get, R, ns, alt, Sim)
@@ -1686,9 +1832,19 @@ def _cache_variant(patch, what):
     return n
 
 
+def _le(a):
+    return '%02x%02x' % (a & 255, a >> 8)
+
+
 def negative_patches(patch):
+    y = patch.syms
+    bw, ph, fs = _le(y['bwait']), _le(y['phide']), _le(y['free_s'])
     return {'image cache without the outline (v1.1)': _cache_variant(patch, 'no outline'),'sprite X one pixel off': _neg(patch, '6f2600112000', '6f2600112100', 'X'),
-            'erase never hides its sprite': _neg(patch, 'e3f57dfe0e', 'e3f57dfe00', 'exit'),
+            'erase never hides its sprite (round 2: the commit leaves the pending sprites shown)':
+                _neg(patch, 'cd%scd%s' % (bw, ph), 'cd%s000000' % bw, 'commit hide', 'p26'),
+            'hide at the erase\'s end (the build before round 2: the one-frame vanish)':
+                _neg(patch, '1806cd%s' % fs, '0000cd%s' % fs, 'defer', 'p26'),
+            'commit without the beam wait (round 2)': _neg(patch, 'cd%scd%s' % (bw, ph), '000000cd%s' % ph, 'bwait', 'p26'),
             'left scroll touches nothing': _neg(patch, '01bf80111e00', '01bfc0111e00', 'scl'),
             'clear 0xB2A0 forgets nothing (taints)': _neg(patch, '01bf40111f003e01', '01bf40111f003e00', 'clr'),
             'PR-ALL hook only for 0x4000-0x40FF': _neg(patch, 'fe5830', 'fe4130', 'char', nth=0),

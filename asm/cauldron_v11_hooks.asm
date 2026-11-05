@@ -1,5 +1,6 @@
-; Cauldron v1.1 (rework of Dean Woodyatt's cauldron_hooks.asm, Jon Attree 2026-11-05: only the type 0 colour
-; rule in `ink` changed - see nexclash/cauldron_v11.py). Cauldron (Palace Software, 1985, 48K) - hardware sprites over the figures (games/cauldron.md
+; Cauldron v1.1 (rework of Dean Woodyatt's cauldron_hooks.asm, Jon Attree 2026-11-05: the type 0 colour
+; rule in `ink`, the speed pass, and round 2: an erase's hide deferred to a later draw's commit, one beam-timed
+; burst, and the plot hook's pace limiter - see nexclash/cauldron_v11.py). Cauldron (Palace Software, 1985, 48K) - hardware sprites over the figures (games/cauldron.md
 ; "Build design"). Overlay: the game's XOR plotter (0x6357) and every other screen writer still
 ; write the ULA exactly as the original; every LIVE image (one XOR plot drew it, its key's next
 ; plot erases it) gets 2 x 2 4-bit sprites on its pixels, in front. A key is (graphic, x, y, rows,
@@ -65,6 +66,9 @@ LAT_T   EQU 0xC030              ; v1.1 (page 26): dotouch
 UCI     EQU 0x84A7              ; v1.1: the cached image's stored ink (its index entry)
 XLTFROM EQU 0x84A8              ; v1.1: the stored ink XLT maps from
 LIM_L0  EQU 0x84A9              ; v1.1 (2): the line at the pace window's start
+HLIB_V_PACE EQU 0x84B0          ; round 2 (14): the hook library's pace limiter state (asm/lib/hlib_pace.asm)
+HLIB_PACE_NL EQU 312            ;   48K timing
+PTGT    EQU 0x84C0              ; round 2 (2): the plot's original time (1/16 lines at 3.5 MHz), from popen
 CIX     EQU 36                  ; v1.1 image cache: page 36 = the index (count, 7-byte entries: graphic, width,
                                 ;   rows, page, address) + data; pages 37-43 data (cauldron_v11.image_cache)
 CPG     EQU 28                  ; colour pages 28-35: page 28 starts with the index (count, 7-byte entries)
@@ -85,6 +89,15 @@ WRAP    EQU 0xC02D              ; 1: the plot reaches past column 31 (whole-scre
 USLOT   EQU 0xC02E              ; slot to upload + show
 UINK    EQU 0xC02F              ; ink nibble (1-15)
 TAB     EQU 0xC100              ; NTAB x 12: key (6), state, y0, y1, c0, c1, 0
+; v1.1 round 2 (the one-frame vanish): an erase no longer hides its sprite at the erase's end. The slot goes to a
+; pending list and stays shown over the erased ULA figure until the commit at a later draw: the pending sprites
+; that draw replaces are hidden and its own sprite shown in one burst, timed to the beam off all their rows.
+V_NP    EQU 0xC040              ; pending hides
+V_NC    EQU 0xC041              ; of them marked for the next commit
+PEND    EQU 0xC042              ; NSLOT x 6: slot, y0, y1, c0, c1, flag (0 new, 1 seen a draw elsewhere, 2 commit)
+PRECT   EQU 0xC096              ; 4: the erased entry's rectangle (copied before its entry is removed)
+V_BWN   EQU 0xC09A              ; 2: beam-wait polls left
+CSL     EQU 0xC09C              ; the slot the commit shows (>= NSLOT: none)
 ; state: 0-27 live with that sprite slot, 0xFE live with no sprite, 0xFF tainted
 
         ORG 0x386E
@@ -125,6 +138,7 @@ e_plot: nextreg 0x54,P27        ; v1.1: 28 MHz from the first instruction (the s
         ld (DESC+2),de
         pop de
         ld (DESC),de
+        call popen              ; round 2: the pace window opens (page 27; the original's time from DESC)
         call p_ent              ; A = slot to hide at the exit, C = slot to show now (0xFF: none)
         ld hl,10                ; IX, HL, DE, BC, AF pushed: + 10 = the placeholder
         add hl,sp
@@ -153,9 +167,9 @@ e_plot: nextreg 0x54,P27        ; v1.1: 28 MHz from the first instruction (the s
         call upload             ; page 27: canvas + patterns (UNC, UNR)
         pop hl
         pop bc
-        call show
-        jr .go
-.nou:   nextreg 0x56,0
+        nextreg 0x56,PG
+.nou:   call commit             ; round 2: the pending hides this draw replaces + its own sprite, one burst
+        nextreg 0x56,0
 .go:    pop ix
         pop hl
         pop de
@@ -171,6 +185,7 @@ e_plot: nextreg 0x54,P27        ; v1.1: 28 MHz from the first instruction (the s
         ld a,l
         cp NSLOT
         call c,hide_w
+        call pwait              ; round 2: the pace limiter (hlib_pace_wait, page 27)
         nextreg 0x54,GPG4
         pop af
         pop hl
@@ -690,6 +705,12 @@ p_ent:  ld a,(DESC+3)           ; y
         ld de,6
         add hl,de
         ld a,(hl)               ; state
+        inc hl
+        ld de,PRECT             ; round 2: its rectangle, for the pending list
+        ldi
+        ldi
+        ldi
+        ldi
         pop hl
         cp 0xFF
         jp z,.none              ; tainted: stays tainted
@@ -698,10 +719,14 @@ p_ent:  ld a,(DESC+3)           ; y
         pop af
         cp NSLOT
         jp nc,.none             ; live with no sprite
+        jr .defer               ; round 2: the hide waits for the commit (two NOPs: the old hide at the erase's end)
         call free_s
         ld c,0xFF
         ret                     ; A = the slot to hide at the exit
-.new:   ld a,(V_OVF)
+.defer: call padd
+        jp .none
+.new:   call pmark              ; round 2: a draw commits the pending hides it replaces
+        ld a,(V_OVF)
         or a
         jp nz,.none
         ld a,(V_N)
@@ -723,8 +748,15 @@ p_ent:  ld a,(DESC+3)           ; y
         jr nz,.ns
         ld a,(V_NFREE)
         or a
+        jr nz,.hv
+        ld a,(V_NP)             ; round 2: no free slot - every pending sprite hidden now (beam-timed), then one
+        or a
         jr z,.ns
-        dec a
+        push hl
+        call pflush
+        pop hl
+        ld a,(V_NFREE)
+.hv:    dec a
         ld (V_NFREE),a
         push hl
         ld e,a
@@ -957,7 +989,8 @@ touch:  ld ix,TAB
         add ix,de
         dec b
         jr .lp
-.done:  ld a,(KIND)
+.done:  call ptouch              ; round 2: pending sprites under the writer hidden too
+        ld a,(KIND)
         or a
         ret z
         ld hl,RECT
@@ -986,7 +1019,7 @@ taint_all:
         ld b,a
 .lp:    ld a,b
         or a
-        ret z
+        jp z,pall               ; round 2: and every pending sprite hidden
         ld a,(ix+6)
         cp NSLOT
         jr nc,.t
@@ -998,6 +1031,253 @@ taint_all:
         add ix,de
         dec b
         jr .lp
+
+; ---- v1.1 round 2: pending hides and the commit (page 26 at slot 6, page 27 at slot 4) ---------------------
+; padd: A = the erased key's slot -> the end of the pending list, rectangle PRECT, flag 0
+padd:   ld c,a
+        ld a,(V_NP)
+        ld b,a
+        inc a
+        ld (V_NP),a
+        ld a,b
+        add a,a
+        add a,b
+        add a,a                 ; 6 n
+        ld e,a
+        ld d,0
+        ld hl,PEND
+        add hl,de
+        ld (hl),c
+        inc hl
+        ex de,hl
+        ld hl,PRECT
+        ld bc,4
+        ldir
+        xor a
+        ld (de),a
+        ret
+
+; pmark: at a draw (RECT = its rectangle): a pending entry meeting RECT, or one that has seen a draw elsewhere
+; already, -> 2 (hidden at this draw's commit); every other -> 1. V_NC = the 2s.
+pmark:  ld a,(V_NP)
+        or a
+        ret z
+        ld b,a
+        ld c,0
+        ld ix,PEND
+.lp:    ld a,(ix+5)
+        or a
+        jr nz,.cm               ; it saw a draw before: now
+        call pmeet
+        jr c,.sn
+.cm:    ld (ix+5),2
+        inc c
+        jr .nx
+.sn:    ld (ix+5),1
+.nx:    ld de,6
+        add ix,de
+        djnz .lp
+        ld a,c
+        ld (V_NC),a
+        ret
+
+; pmeet: IX = a pending entry -> CF clear when its rectangle meets RECT (AF, HL lost)
+pmeet:  ld hl,RECT
+        ld a,(ix+2)
+        cp (hl)
+        ret c                   ; e.y1 < y0
+        inc hl
+        ld a,(hl)
+        cp (ix+1)
+        ret c                   ; y1 < e.y0
+        inc hl
+        ld a,(ix+4)
+        cp (hl)
+        ret c                   ; e.c1 < c0
+        inc hl
+        ld a,(hl)
+        cp (ix+3)
+        ret                     ; CF: c1 < e.c0
+
+; pflush: every pending sprite hidden now, beam-timed (a draw that finds no free slot)
+pflush: ld a,(V_NP)
+        or a
+        ret z
+        call pset2
+        ld c,0xFF
+        jp commit
+
+; pall: every pending sprite hidden now (taint_all: no beam wait, the writer's own moment)
+pall:   ld a,(V_NP)
+        or a
+        ret z
+        call pset2
+        call phide
+        jp pfree
+
+pset2:  ld b,a
+        ld (V_NC),a
+        ld ix,PEND
+        ld de,6
+.lp:    ld (ix+5),2
+        add ix,de
+        djnz .lp
+        ret
+
+; ptouch: the pending sprites whose rectangle meets RECT (a screen writer) hidden now and freed
+ptouch: ld a,(V_NP)
+        or a
+        ret z
+        ld b,a
+        ld c,0
+        ld ix,PEND
+.lp:    call pmeet
+        jr c,.nx
+        ld (ix+5),2
+        inc c
+.nx:    ld de,6
+        add ix,de
+        djnz .lp
+        ld a,c
+        or a
+        ret z
+        ld (V_NC),a
+        call phide
+        jp pfree
+
+; commit: C = the slot to show (>= NSLOT: none; HL = X, B = Y as `show` takes them). The pending sprites marked
+; 2 are hidden and the new one shown in one burst, once the beam is off the rows of every one of them; then
+; the hidden slots go to the free stack in pending order.
+commit: ld a,c
+        ld (CSL),a
+        ld a,(V_NC)
+        or a
+        jr nz,.go
+        ld a,c
+        cp NSLOT
+        ret nc                  ; nothing changes
+.go:    push bc
+        push hl
+        call bwait
+        call phide
+        pop hl
+        pop bc
+        ld a,c
+        cp NSLOT
+        call c,show
+        jp pfree
+
+; phide: the slots marked 2 hidden
+phide:  ld a,(V_NP)
+        or a
+        ret z
+        ld b,a
+        ld ix,PEND
+        ld de,6
+.lp:    ld a,(ix+5)
+        cp 2
+        jr nz,.nx
+        ld a,(ix+0)
+        call hide_s
+.nx:    add ix,de
+        djnz .lp
+        ret
+
+; pfree: the slots marked 2 to the free stack (pending order), their entries out of the list (order kept)
+pfree:  ld a,(V_NC)
+        or a
+        ret z
+        ld a,(V_NP)
+        or a
+        ret z
+        ld b,a
+        ld hl,PEND
+        ld de,PEND
+        ld c,0                  ; entries kept
+.lp:    push bc
+        push hl
+        ld bc,5
+        add hl,bc
+        ld a,(hl)
+        pop hl
+        cp 2
+        jr nz,.kp
+        ld a,(hl)
+        call free_s
+        ld bc,6
+        add hl,bc
+        pop bc
+        jr .nx
+.kp:    ld bc,6
+        ldir
+        pop bc
+        inc c
+.nx:    djnz .lp
+        ld a,c
+        ld (V_NP),a
+        xor a
+        ld (V_NC),a
+        ret
+
+; bwait: wait while the beam (NR 0x1E / 0x1F, line 0 = the first pixel row) is on the rows of the image CSL
+; shows (RECT) or of a pending sprite marked 2, with 6 lines above and 2 below (the burst: under 3 lines in JNext,
+; an interrupt in it included; the sprite grid starts a line above the image, the outline a line below) - at most
+; 65536 polls
+bwait:  ld hl,0
+        ld (V_BWN),hl
+.lp:    ld hl,(V_BWN)
+        dec hl
+        ld (V_BWN),hl
+        ld a,h
+        or l
+        ret z                   ; no line counter: no wait
+        call lim_line           ; HL = the line (page 27)
+        ld a,h
+        or a
+        ret nz                  ; lines 256-311: below every image
+        ld e,l
+        ld a,(CSL)
+        cp NSLOT
+        jr nc,.pd
+        ld a,(RECT)
+        ld d,a
+        ld a,(RECT+1)
+        call inb
+        jr c,.lp
+.pd:    ld a,(V_NP)
+        or a
+        ret z
+        ld b,a
+        ld ix,PEND
+.pl:    ld a,(ix+5)
+        cp 2
+        jr nz,.pn
+        ld d,(ix+1)
+        ld a,(ix+2)
+        call inb
+        jr c,.lp
+.pn:    push de
+        ld de,6
+        add ix,de
+        pop de
+        djnz .pl
+        ret
+
+; inb: E = the line, D = y0, A = y1 -> CF set when the line is in [y0 - 6, y1 + 2]
+inb:    add a,2
+        cp e
+        jr c,.out               ; y1 + 2 < line
+        ld a,d
+        sub 6
+        jr c,.in                ; y0 < 6
+        cp e
+        jr z,.in
+        jr c,.in                ; y0 - 4 <= line
+.out:   or a
+        ret
+.in:    scf
+        ret
+
 ; v1.1: dotouch's speed latch (page 26 at slot 6)
 spin_t:
         push af
@@ -2039,6 +2319,59 @@ spout_k:
         nextreg 0x07,a
         pop af
         ret
+
+; ---- v1.1 round 2: the plot hook's pace limiter (card patch.pace-limiter, the hook library) -------------
+; popen (page 26 at slot 6: DESC): the window opens at the hook's entry; PTGT = the unpatched plot's time in JNext,
+; rows x PT[width, shifted, type 2] (1/16 lines a row; pilot runs/dean_cauldron work/r2/pfit2.py, ptable.py)
+popen:  ld a,(DESC+5)
+        dec a
+        cp 8
+        jr c,.w
+        ld a,7                  ; (no plot in the recording is wider than 4)
+.w:     ld e,a
+        ld a,(DESC+2)
+        and 7
+        jr z,.u
+        ld a,8
+.u:     add a,e
+        ld e,a
+        ld a,(DESC+6)
+        cp 2
+        ld a,e
+        jr nz,.t
+        add a,16
+.t:     ld e,a
+        ld d,0
+        ld hl,PT
+        add hl,de
+        ld e,(hl)
+        ld a,(DESC+4)
+        ld d,a
+        mul d,e
+        ld (PTGT),de
+        jp hlib_pace_open
+
+; pwait: at the hook's exit, at the caller's speed (interrupts as the game has them): the window lasts the
+; original's time; time over it carries to the next windows (the library's debt). AF, IX, IY kept by the caller.
+pwait:  push bc
+        push de
+        push hl
+        ld hl,(PTGT)
+        ld a,(LAT_PL)
+        call hlib_pace_wait
+        pop hl
+        pop de
+        pop bc
+        ret
+
+PT:     ; 1/16 lines a row: index (width - 1) + 8 shifted + 16 type 2 (ptable.py 0.95: the fit x 0.95, the pace
+        ; trials centred: quiet -0.45 %, busy / sound +0.5 to +0.7 %)
+        defb 29,56,83,110,137,165,192,219
+        defb 73,109,145,181,218,254,255,255
+        defb 58,85,112,139,167,194,221,248
+        defb 102,138,174,211,247,255,255,255
+
+        INCLUDE "lib/hlib_pace.asm"
 
 p27_end:
         ASSERT p27_end <= 0xA000
