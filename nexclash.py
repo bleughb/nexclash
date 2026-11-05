@@ -48,7 +48,7 @@ except ImportError:
 
 from skoolkit.snapshot import Snapshot
 from nexclash.identify import identify
-from nexclash import recorder, rzx as rzxmod, build as B, z80tonex as zt
+from nexclash import recorder, rzx as rzxmod, build as B, z80tonex as zt, runchecks
 from nexclash.machine import parse_inputs, FAST
 
 
@@ -183,7 +183,11 @@ def cmd_auto(a):
     pin = _record_pin(z80, a)
     frozen = pin is not None and not getattr(a, 'altrom_fill', None)
     _AUTO.update(rzx=[] if getattr(a, 'decisions', None) or frozen else list(a.rzx or []),
-                 quick=getattr(a, 'quick', None), z80=z80)
+                 quick=getattr(a, 'quick', None), z80=z80, frozen=frozen)
+    _CHECKS.clear()
+    if frozen:
+        runchecks.add(_CHECKS, 'rom_paths', 'waived', 'record %s pin: %s' % (pin['name'], pin['pin'].get('note', '')),
+                      required=False)
     if pin is not None:
         print('Pinned    : %s: %s' % (pin['name'], '--altrom-fill %s (record pin)' % zt.ALTROM_FILL if frozen else
               'pin %s overridden by --altrom-fill %s: an opt-in rework, not the verified build' % (pin['pin'].get('altrom_fill'), zt.ALTROM_FILL)))
@@ -220,6 +224,8 @@ def cmd_auto(a):
         if r['inputs'].startswith('none') or r['start'] == 'none detected':
             say('            weak recording: try --start/--keys, or send your own RZX (--rzx)')
         rzxs.insert(0, auto)
+        if not frozen:
+            _AUTO['rzx'] = list(rzxs)           # the ROM path check replays the automatic recording too
     if not rzxs and dec is None:
         say('No recording: plain conversion uses the converter default tail (unchecked).')
     if eng in ('dizzy5', 'dizzy5_like'):
@@ -501,6 +507,7 @@ def _write_decisions(out, name, an, extra=None):
 
 
 _AUTO = {}                  # cmd_auto's recordings, for the ROM path check in _finish
+_CHECKS = []                # this run's check status (nexclash/runchecks.py): NAME_checks.json + the Checks line
 
 
 def _rom_paths_known(z80):
@@ -515,6 +522,12 @@ def _rom_paths_known(z80):
     return [(k['image'], int(k['from'], 16), int(k['to'], 16), k['why']) for k in rec['rom_paths_known']] if rec else ()
 
 
+def rom_identity():
+    """The system ROM verification modelled (NEXCLASH_NEXT_ROM's MD5, else Sinclair's fallback): records.rom_identity."""
+    from nexclash import records
+    return records.rom_identity() or 'sinclair (no NEXCLASH_NEXT_ROM)'
+
+
 def _rom_paths(out, rep):
     """docs/REFACTOR.md 7: every ROM byte the original game uses in the recordings against what each
     built .nex gives it on the Next (nextboot.rom_paths; ROM model: nextboot.rom_model()). New builds
@@ -523,7 +536,10 @@ def _rom_paths(out, rep):
     from nexclash import nextboot
     rzxs, quick = _AUTO.get('rzx'), _AUTO.get('quick')
     nexes = sorted(glob.glob(os.path.join(out, '*.nex')))
+    if any(c['check'] == 'rom_paths' for c in _CHECKS):      # waived: the record pin
+        return
     if not rzxs or not nexes:
+        runchecks.add(_CHECKS, 'rom_paths', 'not run', 'no recordings' if not rzxs else 'no .nex built', required=False)
         return
     t = time.time()
     try:
@@ -532,10 +548,13 @@ def _rom_paths(out, rep):
     except Exception as e:                  # noqa: BLE001 - the check never ends auto (Knight Tyme, 2026-11-04)
         import traceback
         tb = traceback.extract_tb(e.__traceback__)[-1]
-        rep.append('ROM paths : NOT CHECKED: the check itself failed (%s: %s, %s line %d); the builds above stand, '
-                   'their ROM paths are unproven' % (type(e).__name__, e, os.path.basename(tb.filename), tb.lineno))
+        why = 'the check itself failed (%s: %s, %s line %d)' % (type(e).__name__, e, os.path.basename(tb.filename), tb.lineno)
+        rep.append('ROM paths : NOT CHECKED: %s; the builds above stand, their ROM paths are unproven' % why)
         print(rep[-1])
+        runchecks.add(_CHECKS, 'rom_paths', 'incomplete', why)
         return
+    st, why, cov = runchecks.rom_paths(res, rzxs, nexes)
+    runchecks.add(_CHECKS, 'rom_paths', st, why, coverage=cov)
     rep.append('ROM paths : ROM model %s (%.0fs)' % (nextboot.rom_model(), time.time() - t))
     for nex in nexes:
         rep.extend('            ' + x for x in res[nex][1])
@@ -544,6 +563,14 @@ def _rom_paths(out, rep):
 
 def _finish(out, name, rep):
     _rom_paths(out, rep)
+    from nexclash import nextboot
+    try:
+        model = nextboot.rom_model()
+    except Exception as e:                  # noqa: BLE001 - the model's name is information only
+        model = 'unknown (%s)' % e
+    rep.append('Checks    : %s' % runchecks.line(_CHECKS))
+    print(rep[-1])
+    runchecks.write(out, name, _CHECKS, {'rom_model': model, 'rom': rom_identity()})
     rep.append('')
     rep.append('Hardware checklist: starts; player visible and animating; hidden in boxes/room changes;')
     rep.append('title music unchanged. Problems: record an RZX (Fuse, autosave OFF) and send it.')

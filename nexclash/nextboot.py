@@ -296,6 +296,7 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=()):
             run_d = sorted(k for k in diff if k[0] != '?' and k[2] in ('run', 'next') and k not in kn)
             data_d = sorted(k for k in diff if k[0] != '?' and k[2] == 'data' and k not in kn)
             unk = sorted({k[1] for k in diff if k[0] == '?'})
+            cover[name]['unmodelled'] = unk
             img = (lambda sel: 'image %d ' % sel) if alt_on else (lambda sel: '')
             head = '%s: %s %d frames, %d ROM bytes used' % (os.path.basename(nex), name, done, len(seen))
             if run_d and kind != 'plain':

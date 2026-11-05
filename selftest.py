@@ -270,6 +270,31 @@ def recolour_guard(rec, out, lines, cmd, d):
     return 0 if ok else 1
 
 
+def _checks_status(out, name, label, lines, had_rzx, rec=None):
+    """The run's structured check status (nexclash/runchecks.py, NAME_checks.json) -> failures (int); a check left
+    incomplete, or a required one not run (recordings given, ROM path check 'not run'), is listed INCOMPLETE and kept in
+    rec['_incomplete']: the run is no full verification and gets no stamp."""
+    from nexclash import runchecks
+    ck = runchecks.read(out, name)
+    if ck is None:
+        why = ['no check status (%s)' % os.path.basename(runchecks.path(out, name))]
+    else:
+        f = [c for c in ck['checks'] if c['status'] == 'fail']
+        if f:
+            lines.append('FAIL %s checks: %s' % (label, runchecks.line(f)))
+            return 1
+        why = ['%s %s: %s' % (c['check'], c['status'], c['why'][:200]) for c in ck['checks']
+               if c['required'] and c['status'] not in runchecks.DONE]
+        if had_rzx:
+            why += ['%s not run although recordings were given' % c['check'] for c in ck['checks']
+                    if c['status'] == 'not run']
+    if why:
+        lines.append('INCOMPLETE %s: %s' % (label, '; '.join(why)))
+        if rec is not None:
+            rec.setdefault('_incomplete', []).extend('%s: %s' % (label, w) for w in why)
+    return 0
+
+
 def _verify_report(rep, label, lines, rec=None):
     if not rep or 'FAILED' in rep or 'MISMATCH' in rep:
         lines.append('FAIL %s verification' % label)
@@ -300,6 +325,7 @@ def reverify(rec, d, lines, human=False):
     _run(cmd + ['-o', out], env)
     name = _snapname(rec)
     bad = _check_outputs(rec, out, lines, stage_='verify') + _verify_report(_report(out, name), rec['name'], lines, rec)
+    bad += _checks_status(out, name, rec['name'], lines, bool(rz), rec)
     dec_p = os.path.join(out, name + '_decisions.json')
     stored = (rec.get('rebuild') or {}).get('decisions')
     if stored is not None:
@@ -319,6 +345,7 @@ def reverify(rec, d, lines, human=False):
         _run(rcmd, env)
         bad += _check_outputs(rec, ro, lines, {'repro': x}, 'verify')
         bad += _verify_report(_report(ro, name), '%s --strategy %s' % (rec['name'], x['strategy']), lines)
+        bad += _checks_status(ro, name, '%s --strategy %s' % (rec['name'], x['strategy']), lines, True, rec)
     for x in rec.get('rework', []):
         if x.get('_missing'):
             continue                            # said by rebuild()
@@ -326,6 +353,8 @@ def reverify(rec, d, lines, human=False):
         _run(_rework_cmd(z80, x, 'verify', d) + ['-o', ro], env)
         bad += _check_outputs(rec, ro, lines, x['outputs'], 'verify rework %s:' % x['name'])
         bad += _verify_report(_report(ro, name), '%s rework %s' % (rec['name'], x['name']), lines)
+        bad += _checks_status(ro, name, '%s rework %s' % (rec['name'], x['name']), lines,
+                              bool((x.get('verify') or {}).get('rzx')), rec)
     return bad + _audit_check(rec, alog, lines, 'verify')
 
 
@@ -341,6 +370,8 @@ def run_one(rec, action, src, work, human):
     else:
         action = 'rebuild'                      # no verify recipe: only a rebuild was proven
     miss = ['rework %s: %s' % (x['name'], x['_missing']) for x in rec.get('rework', []) if x.get('_missing')]
+    if rec.get('_incomplete'):
+        return rec, action, bad, lines, 'verification incomplete: ' + '; '.join(rec['_incomplete'])
     return rec, action, bad, lines, ('partial: ' + '; '.join(miss)) if miss else None
 
 
@@ -365,13 +396,78 @@ def smoke_attr_census(ez, er, ok):
 PROBE_SMOKE = {'rzx_census.py': smoke_rzx_census, 'attr_census.py': smoke_attr_census}
 
 
+def verification_selfcheck():
+    """Fault injection at the stamp and packaging boundary, no game data: nexclash.py's ROM path check (its nextboot
+    call replaced) and _finish write the check status; selftest's verification reads it and nxcout's PRF1 says it.
+    A checker exception, an early partial replay, no coverage, a ROM select not modelled, recordings given but no check
+    run -> INCOMPLETE (no stamp; PRF1 checks=INCOMPLETE, except the last, which only selftest knows); a fault -> FAIL; the record pin (waived) and a last-frame
+    truncation -> complete. -> failures"""
+    import importlib.util
+    from unittest import mock
+    from nexclash import nextboot, nxcout
+    spec = importlib.util.spec_from_file_location('nexclash_cli_selfcheck', NEXCLASH)
+    cli = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(cli)
+    bad = []
+    rep0 = ['Verify    : synthetic.rzx 100 frames -> IDENTICAL', 'Result    : PASSED']
+
+    def cov(how, frames=100, unmodelled=()):
+        return {'synthetic.rzx': dict(frames=frames, of=100, how=how, desync=None, rom1='48K machine', segments=False,
+                                      unmodelled=list(unmodelled))}
+
+    def res(nex, kind='alt', faults=None, c=None):
+        return {nex: (kind, ['synthetic'], faults or {}, cov('as recorded') if c is None else c)}
+    cases = [('checker exception', RuntimeError('injected'), False, 'incomplete'),
+             ('early partial replay', lambda n: res(n, c=cov('partial', 40)), False, 'incomplete'),
+             ('no coverage', lambda n: res(n, c={}), False, 'incomplete'),
+             ('ROM select not modelled', lambda n: res(n, c=cov('as recorded', unmodelled=[2])), False, 'incomplete'),
+             ('a fault', lambda n: res(n, faults={'synthetic.rzx': [(1, 0x38, 'run')]}), False, 'fail'),
+             ('boot failed', lambda n: res(n, kind='boot'), False, 'fail'),
+             ('last-frame truncation (accepted)', lambda n: res(n, c=cov('last frame', 99)), False, 'complete'),
+             ('record pin (waived)', None, True, 'complete'),
+             ('recordings given, no check run', None, False, 'incomplete')]
+    with tempfile.TemporaryDirectory() as d:
+        for label, inj, frozen, want in cases:
+            out = os.path.join(d, label.split()[0])
+            os.makedirs(out, exist_ok=True)
+            nex = os.path.join(out, 'synthetic_sprites.nex')
+            open(nex, 'wb').write(b'')
+            cli._CHECKS.clear()
+            cli._AUTO.clear()
+            cli._AUTO.update(rzx=[] if frozen or inj is None else ['synthetic.rzx'], quick=None, z80=None)
+            if frozen:
+                cli.runchecks.add(cli._CHECKS, 'rom_paths', 'waived', 'record x pin: synthetic', required=False)
+            side = inj if isinstance(inj, Exception) else None
+            ret = inj(nex) if callable(inj) else None
+            rep = list(rep0)
+            with mock.patch.object(nextboot, 'rom_paths', side_effect=side, return_value=ret), \
+                    mock.patch.object(cli, 'print', create=True), mock.patch('builtins.print'):
+                cli._finish(out, 'synthetic', rep)
+            lines, rec = [], {'name': 'synthetic'}
+            f = _checks_status(out, 'synthetic', 'synthetic', lines, True, rec)
+            got = 'fail' if f else 'incomplete' if rec.get('_incomplete') else 'complete'
+            prf = nxcout.proof('\n'.join(rep), 'no-such-md5', 'no-such-md5')
+            # PRF1: what the run itself knows; a run given no recordings cannot know some were expected (free-run
+            # engines verify without any): only selftest's boundary, which gave them, catches that case
+            prf_ok = ('checks' in prf) == (want != 'complete' and inj is not None or frozen and want != 'complete')
+            if got != want or not prf_ok:
+                bad.append('%s: %s (want %s), PRF1 %s' % (label, got, want, prf.get('checks', 'complete')))
+    return bad
+
+
 def tools_check(src):
     """The shared analysis commands (inspect / scan / isr / cost / preview / survey) against known Chuckie Egg facts
     (~1 min). Returns the number of failures. A session that improves a command keeps these passing
     and adds a check for what it added (one easy game is enough: the commands are game-independent)."""
     from nexclash import snapinfo, memscan, isrinfo, drawcost
     bad = R.selfcheck()
-    print('%-4s tools: records plan() on synthetic stamps%s' % ('OK' if not bad else 'FAIL', '' if not bad else ' (%s)' % bad[:3]))
+    print('%-4s tools: records plan() on synthetic stamps, recipe digest and ROM identity mutations%s' % (
+        'OK' if not bad else 'FAIL', '' if not bad else ' (%s)' % bad[:3]))
+    vb = verification_selfcheck()
+    print('%-4s tools: check status at the stamp / PRF1 boundary (checker exception, partial, no coverage, unmodelled '
+          'ROM, missing run -> INCOMPLETE; fault, boot -> FAIL; pin, last frame -> complete)%s' % (
+              'OK' if not vb else 'FAIL', '' if not vb else ' (%s)' % vb[:3]))
+    bad = list(bad) + vb
     global _PUSH
     keep, _PUSH = _PUSH, False                  # the no-push-access gate (Dean 2026-10-21)
     try:
