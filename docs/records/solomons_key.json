@@ -86,14 +86,14 @@
   },
   "sprites": {
    "file": "solomons_key_sprites.nex",
-   "md5": "b1d8444e05360ce25b9d4303bf2c6942"
+   "md5": "80e83ae3cab8adf6e58085261517a80f"
   }
  },
  "repro": [],
  "status": {
   "title": "Solomon's Key",
   "engine_col": "solomons_key (solomons_key.md)",
-  "build": "solomons_key_sprites.nex b1d8444e (every figure a sprite, bright white ink, black body; hooks in the whole alt ROM image; R preserved; pace ORIGINAL by the pass padding)",
+  "build": "solomons_key_sprites.nex 80e83ae3 (every figure a sprite, bright white ink, black body; hooks in the whole alt ROM image; R preserved; pace ORIGINAL by the pass padding; plot, commit and clear at 28 MHz)",
   "software": "Verify IDENTICAL on 6 random-walk recordings with the pace accounting; unit PASS incl. every-site clock matrix; negatives detected; ROM path check pass; JNext 1.1.104 reaches play; pace ORIGINAL",
   "hardware": "untested",
   "next": "the owner plays the .nxc; hardware test"
@@ -116,6 +116,16 @@
    "target": "both builds: Sinclair's ROM as alt image 1 (the delay LDIR reads 0x0000-0x01F3); the hooks at 0x386E",
    "phases": [
     "setup"
+   ]
+  },
+  {
+   "application": "solomons_key.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "e_plot, post, e_cls: NR 7 latched in the state page at entry, restored at exit; e_pad at the caller clock",
+   "phases": [
+    "entry",
+    "exit"
    ]
   },
   {
@@ -151,9 +161,69 @@
    "application": "solomons_key.screen-readers",
    "check": "state.rzx-differential",
    "status": "pass",
-   "build": "b1d8444e",
+   "build": "80e83ae3",
    "scope": "6 random-walk recordings; cheats in 5; no human recording; no hardware",
    "evidence": "games/solomons_key.md \"Results\""
   }
- ]
+ ],
+ "rom_paths_known": [
+  {
+   "image": 1,
+   "from": "0x386E",
+   "to": "0x3B12",
+   "why": "the game's delay 39194 copies ROM onto itself (LDIR from 0x0000, writes ignored); with BC = 16384 (sk_o1 frame 5214, PC 0x9923) it reads the alt ROM image's hook bytes and register block, where a 48K has 0xFF; nothing uses what it reads, and the time is the same"
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/solomons_key_hooks.asm": "55be5c99b9a76a87",
+   "docs/profiles/solomons_key.json": "8cc819d9b848f6b4",
+   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "162037ccf3614b62",
+   "nexclash/hooklib.py": "a877bac70d417c69",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/solomons_key.py": "0fbed929c04294ec",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "41ce4c58aec118d3",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-05"
+ },
+ "verified": {
+  "deps": {
+   "asm/solomons_key_hooks.asm": "55be5c99b9a76a87",
+   "docs/profiles/solomons_key.json": "8cc819d9b848f6b4",
+   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "162037ccf3614b62",
+   "nexclash/hooklib.py": "a877bac70d417c69",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/solomons_key.py": "0fbed929c04294ec",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "41ce4c58aec118d3",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-05"
+ }
 }

@@ -89,7 +89,9 @@ and the setup's 16 palette bytes only), with the loading screen 00958c19 / 0e5b3
 Every hook ran (plot, commit, clear, pad; sk_x1 has no blits). Every hook's debt change equals its modelled time over the
 original's at every event (pilot work2/verify_all.py). Unit PASS: 128 frames, 8 edges, order, rest hidden, full log,
 scenery, clear, mirror flag, 16 pad cases (debt 0 to 2^24 steps), setup; every-site clock matrix 196 cases. ROM paths:
-both builds, every ROM byte the game runs or reads as recorded (the delay's 500 bytes); the tail never read before written.
+both builds, every ROM byte the game runs or reads as recorded, but for the record's rom_paths_known: the delay
+39194 copies ROM onto itself, and with BC = 16,384 (sk_o1 frame 5214) it reads the hook bytes (0x3941, 0x3AA6), where a 48K
+has 0xFF; nothing uses them. The tail never read before written.
 Negatives on sk_d1 2,000 frames, 12 of 12 DETECTED: plot logs x as y, plot hook clobbers HL, commit loses x bit 8, commit
 drops N6, old sprites stay, mirror flag ignored, R one off after a plot, plot time not in the debt, pad delay length wrong,
 pad flags wrong, forced 3.5 MHz exit (replayed at 7 MHz), blit source not changed.
@@ -101,7 +103,9 @@ counters, 10 trials a scene, 400 passes each:
 | busy | +2.06 % | +0.15 % | +2.08 % | +0.15 % |
 | sound (fireballs, blocks) | +2.02 % | +0.09 % | +2.05 % | +0.09 % |
 | level 10, busy (fixture, 5 trials) | +2.19 % | -0.01 % | | |
-FLICKER-SOAK-PENDING
+Flicker 300 frames, both sets: 0 out of step, 0 vanished, 0 transients. Soak 15 minutes, both sets, against the .z80:
+no freeze, loop or crash; play, game overs and restarts on the sheet. The .nxc's menu builds reach the loading screen, the
+title and play in both sets, cheats on and off.
 
 ## Defaults taken (a human would have decided)
 1. Every figure a sprite, including block flashes, enemies, the player, fireballs, flames. 2. Scenery, HUD, text on the ULA; also blocks, the door, key and items, which the game stamps into the clean copy and so never had clash of their own. 3. Depth: plot order, all over the scenery. 4. Colours: bright white ink, as on an empty cell; black solid body. 5. A blink in the original (above) is not reproduced.
@@ -116,6 +120,7 @@ FLICKER-SOAK-PENDING
 - [local: this game's blit] demonstrated: the build's blit source (the clean copy, all in contended memory) costs time the original's compose buffer did not (+0.39 % with no other change); counted in the debt as 2.3 T a byte of rows 104-191.
 - [local: this engine's model] observed: the 2026-11-03 verifier ran NEXTREG in 0 T (its own ED handlers); z80n.install counts 20 / 17 T, which the pace accounting needs.
 - [local: this game's stack] observed: the stack is at the top of memory, so the state page maps at slot 6, not 7.
+- [local: this game's delay] observed: 39194 copies ROM onto itself; one caller passes BC = 16,384, so it reads the alt ROM's hook bytes (sk_o1): harmless, accepted in the record's rom_paths_known.
 
 ## Friction
 - reuse: [local: the debt and pad method is this engine's; card patch.pace-limiter names a raster limiter, not a delay to shorten]
