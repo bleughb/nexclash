@@ -4,7 +4,7 @@
     python tools/merge_contribution.py nexclash_contribution_GAME.zip
 
 Checks every path stays inside the toolkit folders and refuses game data; prints the note, the
-files (new / changed) and the reports. Commit + PR after review (CONTRIBUTING.md).
+files (new / changed), the reports and the .nxc (both kept out of git, in contrib_reports/). Commit + PR after review (CONTRIBUTING.md).
 """
 import json, os, subprocess, sys, zipfile
 
@@ -32,11 +32,11 @@ def main():
         open(p, 'wb').write(z.read('files/' + f))
     rep = os.path.join(ROOT, 'contrib_reports', branch)
     for n in z.namelist():
-        if n.startswith('reports/'):
+        if n.startswith(('reports/', 'patches/')):          # the report(s) and the game's .nxc
             os.makedirs(rep, exist_ok=True)
             open(os.path.join(rep, os.path.basename(n)), 'wb').write(z.read(n))
     print('game %s, package %s, note: %s' % (meta['game'], meta.get('package_version'), meta.get('note')))
-    print('branch %s; reports in %s (not to be committed)' % (branch, rep))
+    print('branch %s; reports and .nxc in %s (not to be committed)' % (branch, rep))
 
 
 if __name__ == '__main__':
