@@ -25,6 +25,14 @@
     "sprites": "bfad6be1e7c8a2c797a6242d7f339e35"
    }
   },
+  "0268fb4d76200708849269c9747b65ff": {
+   "game": "Cobra",
+   "doc": "cobra.md",
+   "nex": {
+    "plain": "2ec883ba2f88ef4fcda0623c2b985777",
+    "sprites": "00ead70a486598fb9b908feb675680ee"
+   }
+  },
   "c9af5668191462d77c5859900268c24b": {
    "game": "Commando",
    "doc": "commando.md",

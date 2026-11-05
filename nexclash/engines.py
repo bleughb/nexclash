@@ -47,6 +47,7 @@ ENGINES = [
     ('starquake', 'is_starquake', None),                                  # Starquake (48K)
     ('lunar_jetman', 'is_lunar_jetman', None),                            # Lunar Jetman (48K)
     ('robin_of_the_wood', 'is_robin_of_the_wood', None),                  # Robin of the Wood (128K)
+    ('cobra', 'is_cobra', None),                                          # Cobra (48K)
 ]
 
 
