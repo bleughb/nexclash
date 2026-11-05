@@ -50,8 +50,10 @@ Hardware, CSpect. Speed on a board. Puzzles, spells that succeed, the ending, ch
 ## Lessons
 - [backlog C2 #45] The pilot changed the shared boot model for its picture hold. A shared-code change of a pilot clone goes into the
   engine on import: _boot here is nextboot.boot plus the raster line model, used only by this engine's boot check.
-- [backlog C2 #45] The ROM path check never finishes this build's boot (picture hold, no raster line): the record
-  pins `rom_paths: skipped`; the lockstep runs ROM 1 from the image the Next holds instead.
+- [tool nextboot.rom_paths] The ROM path check runs on this build now (2026-11-04): nextboot.boot's raster counter
+  ends the picture hold; t_balls / t_chars / t_rooms (2 / 7 / 57 snapshots) replay per segment (stripped, they
+  desynced at frames 227 / 168 / 315); the 128K ROM 1's keypad code is listed, not compared. Demonstrated: 9 of 9 in
+  sync, 39,222 frames, no MISMATCH. Pin removed; `auto` runs it.
 - [local: a store can be a NOP] Replacing one store with NOP keeps instruction counts and the lockstep; a watch at the site still checks the store's would-be effect.
 - [local: an XOR plot needs no state] Follow every call with the sprite: an erase names the place it is already.
 - [local: read the sister engine's options again] Knight Tyme's option is off by default, Spellbound's on; the same flag.
@@ -106,7 +108,7 @@ bank 12 (the image's page bytes). Emulator only.
   enh2/neg_palette.py / ut.py are now auto: both sets on every recording, the 23 negatives (t1 1400 frames, then
   t_balls, then t_chars), the 7 palette negatives, unit tests on t1's first 500 frames.
 - New defaults: whole alt ROM image already written by the build (altrom 0x2000-0x4000 + altrom_low); record pin
-  `rom_paths: skipped`. Output as approved. Evidence (BRIEFING C2 #45, 2026-11-04, NextZXOS ROM modelled):
+  `rom_paths: skipped` until the fix below. Output as approved. Evidence then (2026-11-04, NextZXOS ROM modelled):
   `nextboot.rom_paths([spellbound_magic_knight_sprites.nex], [t1.rzx], z80=...)`: rom_paths (line 160) -> boot (line
   351) `RuntimeError: boot did not reach PC 26627 (at 53426)` (the set-up's line wait; no frame of t1.rzx is replayed).
   The plain .nex (no hold) replays t1.rzx through it to frame 2109, so these recordings replay; only the boot fails.
@@ -116,6 +118,12 @@ bank 12 (the image's page bytes). Emulator only.
 - Results (2026-11-04, this tree, stamped): published v1.1 .nxc (e1fefc34) --bare = default 379e61b0, Enhanced 3a824f3a
   = the rebuild (plain 656c71c4). Lockstep IDENTICAL, default and Enhanced, all nine recordings, 39,222 frames
   (commits 28,438); unit PASS; negatives 23/23, palette 7/7 DETECTED; recolour guard OK; boot OK with the palette check.
+
+- ROM path check (2026-11-04, refactor-romcheck; pin removed): `nextboot.rom_paths` on plain 656c71c4, default
+  379e61b0, Enhanced 3a824f3a, NextZXOS ROM modelled: all nine recordings in sync, 39,222 frames; default and Enhanced
+  every byte the game runs as recorded (the keypad code at 0x386E- listed, 62 bytes); plain: NextZXOS's IM 1 bytes
+  0x004B-C differ (reported only); tail never read before written. Rebuild MD5s unchanged. `selftest.py --game
+  spellbound_magic_knight --verify` (not stamped) PASSED with the check inside auto (226 s).
 
 ## Hardware checklist
 1. The tape's picture held until a key or 5 s, then the menu; Z down, SPACE; PLAY GAME.
@@ -127,6 +135,7 @@ bank 12 (the image's page bytes). Emulator only.
 ## Stage log
 - 2026-11-03 stages 0-3 (pilot, unattended); Enhanced second version the same evening.
 - 2026-11-04 import into nexclash (phase 7, group 2): renamed, record, stamped verify; 0 user rounds.
+- 2026-11-04 ROM path check fixed for this game (raster line, segments); record unpinned; 0 user rounds.
 
 ## Friction
 - reuse: [local: rebuild and boot model are today's shared code; the raster line model is the engine's copy of the boot]

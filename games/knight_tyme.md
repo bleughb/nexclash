@@ -51,8 +51,12 @@ Cheats: archive .pok's [128K] entries; time and others' stats held in the simula
 ## Lessons
 - [local: the pilot added the loading screen after the build with its own script] Rebuilding the approved .nex
   needs the post-step in the engine: stub source in the .asm, the screen from the tape beside the snapshot.
-- [backlog C2 #45] The ROM path check cannot replay recordings made on the 48K ROM as ROM 1; the record pins
-  `rom_paths: skipped`; the engine's lockstep runs ROM 1 from the image the Next holds instead.
+- [tool nextboot.rom_paths] The ROM path check replays these recordings now (2026-11-04): a 128K replay that
+  desyncs early is tried on the 48K ROM as ROM 1 (kt_t1 frame 2 -> in sync) and per segment (kt_rooms: 48
+  snapshots, the stripped replay desyncs at frame 142). Demonstrated: all four in sync, 33,534 frames. Pin removed.
+- [tool docs/records/knight_tyme.json] A real ROM difference the build keeps: the Bridge star map reads alt image 0
+  (the Next's ROM 0) at 0x0D00-0x0D20, kt_t1 frame 937 / kt_rooms frame 153; the record's `rom_paths_known` lists it
+  (KNOWN), any other difference is a MISMATCH. Limit: only these 33 bytes were seen; the altrom0 rework removes it.
 - [local: a composite whose clean copy is captured after figures are plotted needs the plots undone before the capture] Run plot, restore cells: all registers equal for free, no second path.
 - [local: count hook instructions out and the original and patched machines stay in lockstep] Whole 128K compared per frame, with no per-site pairing; every hook counted as nothing. Works only where game instructions stay the same.
 - [local: the 128K ROM 1 in SkoolKit is not the Next's] 128-1.rom has keypad code at 0x386E on the ISR path; a stub there broke replay. Record on the 48K ROM for this kind of engine.
@@ -74,6 +78,7 @@ Cheats: archive .pok's [128K] entries; time and others' stats held in the simula
 ## Stage log
 - 2026-11-03 stages 0-3 in one session (pilot, unattended); 0 user rounds.
 - 2026-11-04 import into nexclash (phase 7, group 2): loading screen in the engine, record, stamped verify; 0 user rounds.
+- 2026-11-04 ROM path check fixed for this game (48K ROM as ROM 1, segments); record unpinned, star map known; 0 user rounds.
 
 ## Open
 - Hardware, CSpect: never run.
@@ -106,12 +111,8 @@ bank 12 (the image's page bytes). Emulator only.
   the stub on a model. The boot check runs on the base .nex (nextboot.boot ignores the entry bank).
 - New defaults: the build already writes its whole alt ROM image (altrom 0x2000-0x4000 + altrom_low, so
   z80tonex.altrom_whole is False and the output is unchanged); alt image 0 is the old ROM 0 copy (Open). The record
-  pins `rom_paths: skipped`: the shared ROM path check replays the recordings on SkoolKit's 128K ROMs, these were
-  recorded on Sinclair's 48K ROM as ROM 1 (Inputs), so it desyncs at frame 1 and its SkoolKitError ends `auto`.
-  Evidence (BRIEFING C2 #7, 2026-11-04, NextZXOS ROM modelled): `nextboot.rom_paths([knight_tyme_sprites.nex],
-  [kt_t1.rzx], z80=knight_tyme.z80)`: nextboot.rom_paths -> simrun.run (line 232) -> play_rzx (line 157) -> rzxplay ->
-  `skoolkit.SkoolKitError: Port readings exhausted for frame 1`; in `auto` it surfaces from nexclash.py _finish ->
-  _rom_paths (line 518) after the engine's Result line, and no report is written.
+  pinned `rom_paths: skipped` (the check crashed on kt_t1 frame 1: these were recorded on Sinclair's 48K ROM as ROM 1,
+  Inputs) until 2026-11-04; the fix and its results are under "ROM path check" below.
 - How it runs in today's tree: rebuild `python nexclash.py auto --no-nxc knight_tyme.z80 --no-record -o OUT` (the
   .tzx beside it); verify `NEXCLASH_MAINTAINER=1 NEXCLASH_REFERENCE=<specnext/reference> NEXCLASH_NEXT_ROM=<enNextZX.rom>
   python selftest.py --game knight_tyme --verify --stamp`: kt_t1 in the main process (unit-test states), the other
@@ -120,6 +121,15 @@ bank 12 (the image's page bytes). Emulator only.
   ed735a24, plain 0f91cab9). Lockstep IDENTICAL: kt_t1 3,346 frames (commits 2,836, crew overlays 4), kt_rooms 6,720
   (48 room builds), kt_over 882, kt_cmds 22,586 (750 windows); unit PASS (42 figure cases, pool full, window pictures);
   negatives 19/19 DETECTED (crew ones on kt_t1); recolour guard OK; boot OK; loading stub OK.
+
+## ROM path check (2026-11-04, refactor-romcheck)
+- `nextboot.rom_paths` on the record's builds (base 0f91cab9, sprites 645401e4), NextZXOS ROM modelled: kt_t1 3,346,
+  kt_rooms 6,720 (per segment), kt_over 882, kt_cmds 22,586 frames, all in sync on the 48K ROM as ROM 1. Sprites: every
+  byte the game runs as recorded; the star map KNOWN (record `rom_paths_known`). Plain: NextZXOS's IM 1 bytes 0x004B-C
+  differ (reported only). Tail never read before written. Rebuild MD5s unchanged (selftest --game knight_tyme).
+- `auto` runs it again for this game (pin removed): `selftest.py --game knight_tyme --verify` (not stamped) PASSED,
+  the check inside auto 236 s, report as above. selftest --tools: kt_t1 940 frames with and without the known range
+  (the MISMATCH negative), kt_rooms 300 frames per segment.
 
 ## Friction
 - reuse: [local: rebuild and boot model are today's shared code; rom3 from nextboot.system_rom3; the loading wrapper is new, in the engine]

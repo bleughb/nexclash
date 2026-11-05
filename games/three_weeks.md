@@ -9,7 +9,7 @@ Start with: the hardware checklist below. Open: everything under "Open".
 Ported from Jon Attree's .nxc work, 2026-11-04 (pilot clone runs/three_weeks, base d7abd1c, head dbfe17f). Published .nxc: Three Weeks in Paradise v1.0 (md5 5443f903, github.com/jattree/nxc).
 Rebuild in today's tree = the approved build: plain 1a6f1bbe, sprites 90eeeb14, Enhanced e6e6f6b0, each equal to `nxc.py --bare` (default / `--colours Enhanced`) of the published .nxc on the archive file bf0eff84. Trainers are pokes the .nxc applies over that .nex.
 Pinned (record "pin"): `altrom_fill` rom3. The approved build has NextZXOS's ROM3 + the hook bytes 0x386E- as alt image 1; the new whole-image default gives sprites abc0f2e0 / Enhanced bec1527a (opt-in rework: `--altrom-fill whole`, then the ROM path check and a new proof).
-Shared code the clone changed: nextboot.boot read the raster line (NR 0x1F) as a counter, and check() accepted 128K paging left unlocked. Both now live in the engine (`boot_check`, a wrapper around nextboot.check); nextboot is unchanged.
+Shared code the clone changed (raster counter in nextboot.boot, 128K paging in check()): nextboot has both since 2026-11-04; the engine's `boot_check` wrapper is a leftover (BRIEFING C2 #45).
 Moved into `auto`: the Enhanced build (docs/profiles/three_weeks_enhanced.json = work/enh.json) and its replay on ENH_VERIFY, the guard and effect unit negatives, and the negatives on the recordings that reach them (NEG_PLAN; the two pace negatives added to negative_patches). Left in the pilot folder: the negatives that need old builds' tables (162e6b6d, 773902f2, 177f2213, dense bush, cells over an item, palm exception), all DETECTED there (work/gb/neg12.log).
 Profile colour_inputs was the 48K engine's (cbb1c2dc): now the 128K start's (1c89025f), so `recolour` accepts the build (selftest recolour guard).
 
@@ -102,11 +102,11 @@ t128_tour (cheats poked in the start): 19 rooms by walking, 45,116 frames. t128_
 
 ## Open
 Lag: built, see "Pace" (2026-11-04).
-Hardware, CSpect. Speed on a board. Evidence record docs/records, doccheck, selftest stamp: not done. Colour route for a human painter: RECOLOUR, sheets/128/.
+Hardware, CSpect. Speed on a board. Colour route for a human painter: RECOLOUR, sheets/128/.
 
 ## Lessons
 - [local: import pin] An approved build made before the 2026-11-04 defaults rebuilds only with the record's pin (alt ROM fill rom3); the unpinned rebuild differs in bank 47 and the stub.
-- [backlog C2 #45] The clone's nextboot edits (raster counter, 128K paging) were needed only by this build's check: a wrapper in the engine (boot_check) keeps nextboot as it was for every other game.
+- [tool nextboot.check] [backlog C2 #45] The clone's nextboot edits are shared (2026-11-04): boot passes the picture hold (stopped at 0xD089), check() passes all 3 builds; rom_paths (direct: the pin skips it in auto) 16 recordings x 3, 62,680 frames in sync, 0 ROM bytes used, tail unread.
 - [local: stale profile field] colour_inputs came from the 48K engine and never matched the 128K build; nothing used recolour until the record's guard ran it.
 - [local: 128K BASIC snapshot] A file stopped in 128 BASIC can be stepped to its USR with a key held; the .nex starts there and the 39 bytes go in SIT1. Check PC, the stack and PROG before believing "needs ROM".
 - [local: colour by cell] Colour from the cell under a sprite is clash moved to the sprite layer. Two-plot figures show it first. Check by layer before trusting a clash report's cause.
