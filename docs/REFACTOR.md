@@ -66,7 +66,11 @@ These warn and never refuse. Their results go into the patch's proof record.
 
 ## 7. Structure and documents
 26. **A shared hook library:** sprite upload, attribute commit, double buffering, saving and restoring the speed. A
-    fix then reaches every engine.
+    fix then reaches every engine. Done for NEW engines (option 1, Dean's rule: existing engines keep their copies):
+    asm/lib/hlib_*.asm (speed latch, R kept, pace limiter, content cache, atomic commit) + nexclash/hooklib.py
+    (simulator model, every-site matrix, R and pace helpers; selftest --tools runs its tests and negatives). Item 4 and
+    the owner's decisions (2026-11-04: preserve R, the limiter for ORIGINAL) are its defaults for new engines;
+    cards patch.restore-speed, patch.preserve-r, patch.pace-limiter.
 27. **Bring in our ~20 engines** from the per-game copies under pilot/runs, each as its own branch with its verifier,
     recordings and notes.
 28. **Technique notes:** the whole alt ROM image, pace targets, hook speed without changing the picture, painting by
