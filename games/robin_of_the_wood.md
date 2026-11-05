@@ -83,6 +83,13 @@ Evidence: `../work/enh/`, sheet `../png/robin_enhanced_sheet.png`.
 - [local: verifier spread over scripts] The replay, its reference and the inventory were three scripts with
   module globals and monkeypatches; one function keeps the checks and restores what it patches when it returns.
 
+## Friction
+- reuse: [local: the loading hold is the same stub as Lunar Jetman's, one copy per engine]
+- retries: [local: the ported verifier kept the script's sys.argv MODE line, so the art negatives ran as normal; removed, rerun]
+- environment: [local: killing a selftest needs its auto child's PID too (never pkill -f)]
+- hand-rolled: [local: the figure inventory read from the snapshot's tables instead of the pilot's json]
+- scratch: [none: scratch test scripts dropped]
+
 ## Technique use
 - patch.whole-altrom-image: no help: the build is pinned to the old fill (rom3); the card is its opt-in rework.
 

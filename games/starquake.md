@@ -112,6 +112,13 @@ a painting). Evidence record, doccheck, selftest stamp: not done (pilot).
 ## Techniques
 Techniques: `patch.whole-altrom-image` (docs/records/starquake.json)
 
+## Friction
+- reuse: [local: the loading hold is the same stub as Lunar Jetman's and Robin's, one copy per engine by the import rule]
+- retries: [local: RECOLOUR registered with a map format the shared tool cannot read; unregistered]
+- environment: [local: needs NEXCLASH_NEXT_ROM=enNextZX.rom (pilot runs/starquake/work/rom) for the ROM3 negative]
+- hand-rolled: [local: loading_nex() repeats the pilot's mkload.py byte layout]
+- scratch: [none: scratch build scripts dropped]
+
 ## Technique use
 - patch.whole-altrom-image: helped: the crash was NextZXOS ROM3 code round the hooks; the card's rule (every byte from the build) fixed it.
 

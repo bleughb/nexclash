@@ -456,20 +456,21 @@ Designs not built yet (use when a game needs them)
 39. `isr` should list, for every routine the ISR's call tree reaches, the main-code callers too, and
    the original's slack at each (T from the main-code call's return to the next interrupt, over an
    RZX): a routine on both lists with little slack is a nesting risk once hooks add cost (LEARNINGS
-   2.1f; Incredible Shrinking Fireman found it only on hardware, 2026-10-25).
+   2.1f; Fireman found it only on hardware).
 41. survey: compare the RZX's embedded snapshot with the delivered .z80 and WARN when they differ
    (Cauldron 2026-10-26: 11,283 bytes, the code shifted; found only at tool call ~60, after a stale
    disassembly). Both start states are at hand in survey.analyse.
 42. inspect: the "loader snapshot" WARNING fires when PC is in ROM only because an IM 1 interrupt was
-   just taken with the BASIC loader still in memory (Cauldron: PC 0x0038, stacked return 0x613E =
-   game code). Check the stacked return address before warning; add a tools_check case.
+   just taken (Cauldron: PC 0x0038, stacked return 0x613E = game code). Check the stacked return
+   address before warning; add a tools_check case.
 43. coloursheet.write crashes (max() of an empty sequence) on a figure with no opaque pixel (Cauldron
    2026-10-27: image D710 3 x 24 is all zero bytes; the engine now leaves such images off). Skip them
    in write / choose and report them; add a tools_check case.
-44. sjasm.py on Windows: no binary, no make. A local 1.24.0 copied to the cache as `sjasmplus`
-   (+ .exe) gave --check --all IDENTICAL (2026-10-31); accept a cached .exe.
+44. sjasm.py on Windows: no binary, no make; a cached 1.24.0 `sjasmplus` (+ .exe) gave --check --all
+   IDENTICAL (2026-10-31): accept it.
 45. nextboot.boot has no raster line: Spellbound's picture hold never ends; rom_paths raises "boot did
-   not reach PC 26627", ending `auto` (spellbound_magic_knight.md).
+   not reach PC 26627", ending `auto` (spellbound_magic_knight.md). Three Weeks too; check() wants 128K
+   paging locked (three_weeks.boot_check models both).
 
 ### C3b. Two verification levels (agreed with Dean 2026-09-29; how to run them: PLAYBOOK 6)
 - ITERATE (per change): original bytes at every site, boot check, unit tests (with negative

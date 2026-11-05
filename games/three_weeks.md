@@ -39,11 +39,8 @@ Plotters, prologue FD E5 D9: B82C OR 16x16 (base (47723) + A*32, pos 27906/7; y 
 In-place changes to graphics: Wally 0xB75C mirrors all 18 frames on a turn (35634); 0xB52E mirrors the spear carrier (0xD680, 384 bytes) when his direction (35669) changes sign; 0x8F23 copies frame 17 (0xCCC6) over frame 0, which differs from the snapshot's in 27 bytes; 0x8F3B shifts frame 0 down a line per step while he sinks ((27887) non-zero).
 Attribute buffer writers: 0xB787 tiles (7400 too), item paint, 0x9451 Wally's paint (skipped if 27866, key 3, or 27876, set while he goes through the hut door), 0xA3F1 room 21's effect.
 
-## Room 21 and hook 0xA3F1 (48K 0xD08B)
-It "never ran" because no walk reaches room 21. It is inside room 21's handler 0xA3E5, every game frame while (27886) is 0: the room is dark, the attribute buffer goes white on black. Now run on a recording that reaches the room: see Results, with its negative control detected.
-
-## The undetected control, resolved
-"plots survive 0xE17E" could not be seen on any recording: plots are never pending when the list is restored (count: Results). The earlier agent had started removing the guard. Kept: a static read cannot rule out a path, the guard costs one site, and the case is now tested directly: unit_tests logs a plot, runs 0xB7D7, and requires the log empty. The negative fails there, as quoted in Results. On recordings it is still not detected, because nothing reaches it, and that is stated.
+## Room 21 and the plots-survive guard
+0xA3F1 (48K 0xD08B) is inside room 21's handler 0xA3E5, every game frame while (27886) is 0: the room is dark, the attribute buffer goes white on black; replayed on t128_r21, its negative detected. "Plots survive 0xB7D7": plots are never pending when the list is restored in any play recording; the guard is kept (one site) and tested directly (unit test: log a plot, run 0xB7D7, log empty; t128_pend, a forced start state).
 
 ## Design
 The game's code runs unchanged; plotters only log. e_bl walks the save-under list without changing it, so the blit shows no figures, 0xB7D7 then writes the same bytes again; e_at takes attributes from the clean copy 7400 (7600 if the effect ran). So no game memory differs but the screen, and two dead-stack bytes.
@@ -75,7 +72,7 @@ Results (update-locked, seconds, plain / d386a699 / this): room 0 with bats 5.66
 Left: each room change's hook time (about 100 ms: e_aw builds every new figure) is a hitch of the change itself, repaid within the next one or two updates, which run that much faster. JNext only; on a Next the line counter and the 28 MHz waits are the hardware's own, so the window holds the same lines, but this is not measured there. 60 Hz: the lines per frame are learned at each wait (311 until then).
 Negatives (timing, JNext): the window without the wait (TGT16 0): -18 to -32 %; V_DEBT ignored: +1.2 to +2.7 %. Replay: "the pace wait loses AF" (registers differ: 373), "the blit left at 28 MHz" (MMU / speed not restored: 224).
 Captures: by update, the frame after the blit, d386a699 against this build: 7 of 7 pixel-identical (work/pace/out/C_old, C_new). During the hurt the death path's render runs, so those updates have no capture.
-Note: the game reads R (LD A,R at 0xAD85). Hooks run their own instructions, so R differs from the original's in every build (d386a699 too); the update-locked runs stayed in step here, but random choices can differ from the original's at the same point.
+Note: the game reads R (LD A,R at 0xAD85); hooks change R in every build, so random choices can differ from the original's (the update-locked runs stayed in step).
 
 ## Enhanced (menu set, off by default)
 work/paint128.py, method of paint256.py: master bits must equal the game's, then palette index per bit -> RGB. .256 master: every non-zero byte of banks 0, 3, 4, 6 the same; bank 1 same; bank 2 all but 2. Colours from the MVV package's older Spec256 conversion (SOURCES.txt: mvv_games/Spec256-Games-master/TreeWeeks128k), painter not established. No --colours-by.
@@ -96,7 +93,7 @@ Hooks, t128_tour (45,116 frames): 6F09 3, A1E9 8057, A204 8057, A89C 567, A8ED 7
 Pilot negatives (work/gb/neg12.log, work/pace/negpace.log): 27 of 27 DETECTED, among them the old builds 162e6b6d (a part not shown whole) and 773902f2 (figure pixel under black), the palm exception taken out, a dense bush, cells over an item, the 177f2213 table (split). "plots survive 0xB7D7" only on t128_pend and in the unit test.
 ULA by layer: no figure moves on the ULA. Only room 23 changes, 451 cells, whole rows filling as scenery (work/u23.py). 706E: y >= 128 only.
 Enhanced census by plot (work/cens_final.log, 13 recordings, 51,871 plots): no half-painted figure. Three have one stray default pixel (0xCD40 52 of 53, 0xD320 44 of 45, 0xD340 150 of 151); four frames have no .256 colour and are one fixed ink whole (0x7115, 0x7135, 0xDBA0, 0xDBC0).
-Sound: JNext WAV of plain and sprites, both play (peak 2616, 2876); not compared by ear.
+Sound: JNext WAVs of both builds play; not compared by ear.
 Speed (simulator): 155-177K T per game frame at 28 MHz against about 425K T at 3.5 MHz, about 5 %; the go-behind adds 3.8 % a frame (h_nb). Pace in JNext: see "Pace".
 Cheats: lives held at 3 with each POKE, 3 down to 0 without, same inputs, simulator on the original code. Through the loader with both on, played by a script; effect in the patched build not checked.
 
@@ -109,7 +106,7 @@ Hardware, CSpect. Speed on a board. Evidence record docs/records, doccheck, self
 
 ## Lessons
 - [local: import pin] An approved build made before the 2026-11-04 defaults rebuilds only with the record's pin (alt ROM fill rom3); the unpinned rebuild differs in bank 47 and the stub.
-- [local: shared change moved into the engine] The clone's nextboot edits (raster counter, 128K paging) were needed only by this build's check: a wrapper in the engine keeps nextboot as it was for every other game.
+- [backlog C2 #45] The clone's nextboot edits (raster counter, 128K paging) were needed only by this build's check: a wrapper in the engine (boot_check) keeps nextboot as it was for every other game.
 - [local: stale profile field] colour_inputs came from the 48K engine and never matched the 128K build; nothing used recolour until the record's guard ran it.
 - [local: 128K BASIC snapshot] A file stopped in 128 BASIC can be stepped to its USR with a key held; the .nex starts there and the 39 bytes go in SIT1. Check PC, the stack and PROG before believing "needs ROM".
 - [local: colour by cell] Colour from the cell under a sprite is clash moved to the sprite layer. Two-plot figures show it first. Check by layer before trusting a clash report's cause.
@@ -119,6 +116,13 @@ Hardware, CSpect. Speed on a board. Evidence record docs/records, doccheck, self
 
 ## Techniques
 Techniques: `optimise.pattern-cache`, `verify.update-locked-pace` (docs/records/three_weeks.json)
+
+## Friction
+- reuse: [local: rebuild, boot model and records are today's shared code; boot_check wraps nextboot.check]
+- retries: [local: the recolour guard failed on a stale colour_inputs; refreshed in the profile]
+- environment: [local: full verify ~45 min detached (setsid); a selftest's stamp hashes the tree at its start, so no edits while it runs]
+- hand-rolled: [local: per-commit engines.py and views written by a scratch script so each commit holds one game]
+- scratch: [none: scratch build and negative scripts dropped; the negatives are in auto now]
 
 ## Technique use
 - optimise.pattern-cache: helped: patterns built once from the game's bytes, keyed on a hash, survive in-place changes.

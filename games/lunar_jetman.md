@@ -102,8 +102,8 @@ apart from 16 bytes (KSTATE, FRAMES, dead stack). Cheats: the .pok's proven entr
 - Evidence record, doccheck, selftest stamp: not done.
 
 ## Lessons
-- [local: a verifier left as a script] work/verify.py ran from sys.argv with module globals; importing it meant one
-  function with the script as its body (closures, no globals), so selftest's verify can run it per recording and negative.
+- [doc docs/ENGINE_CONTRACT.md §Module names] The contract's `verify(patch, rzx, stop, ...)` is a module function:
+  the pilot's work/verify.py ran from sys.argv with module globals, so the import made it one function (closures).
 - [local: inputs beside the snapshot] The build reads three files that are not recordings (the start state, the tape
   screen, the Spec256 Jetpac): they ride in the record's recordings list, md5-checked and staged beside the snapshot.
 - [local: a loader snapshot] Step it with a key held to the decrypter's jump; the .nxc carries the difference.
@@ -148,6 +148,13 @@ bank 12 (the image's page bytes). Emulator only.
 
 ## Techniques
 Techniques: `patch.whole-altrom-image` (docs/records/lunar_jetman.json)
+
+## Friction
+- reuse: [local: the loading hold is the same stub as Starquake's and Robin's, one copy per engine]
+- retries: [local: the detector missed the decrypter state; it now decrypts first]
+- environment: [local: needs NEXCLASH_NEXT_ROM=enNextZX.rom; full verify ~80 min detached]
+- hand-rolled: [local: the script verifier wrapped into verify() by a scratch converter]
+- scratch: [none: the converter and test scripts dropped]
 
 ## Technique use
 - patch.whole-altrom-image: helped: altrom 0x2000-0x4000 + altrom_low keeps NextZXOS ROM3's IM 1 out of the hooks.
