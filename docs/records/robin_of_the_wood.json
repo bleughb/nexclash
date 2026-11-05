@@ -1,0 +1,142 @@
+{
+ "name": "robin_of_the_wood",
+ "order": 104,
+ "game": "Robin of the Wood (128K)",
+ "doc": "robin_of_the_wood.md",
+ "engine": "robin_of_the_wood",
+ "representative": true,
+ "reference": "robin_of_the_wood",
+ "inputs": {
+  "snapshot": {
+   "name": "robin_of_the_wood.z80",
+   "md5": "d2fa7f2eeb8ccb75c30edbacb432a8b5",
+   "path": "robin_of_the_wood/robin_of_the_wood.z80"
+  },
+  "recordings": [
+   {
+    "name": "journey.rzx",
+    "md5": "93d58083a376957125e91e79bccc4f34",
+    "path": "robin_of_the_wood/journey.rzx"
+   },
+   {
+    "name": "lifecycle.rzx",
+    "md5": "75f96b83b74dc4843ebea025ab121ab8",
+    "path": "robin_of_the_wood/lifecycle.rzx"
+   },
+   {
+    "name": "bishop_coverage.rzx",
+    "md5": "3b921e8e5ab438ab69ec93098892026f",
+    "path": "robin_of_the_wood/bishop_coverage.rzx"
+   },
+   {
+    "name": "robin_of_the_wood.scr",
+    "md5": "5535904d32f205540c03b206466823cc",
+    "path": "robin_of_the_wood/robin_of_the_wood.scr",
+    "note": "not a recording: the tape's loading screen (block 4, 6,912 bytes)"
+   }
+  ]
+ },
+ "modules": [
+  "robin_of_the_wood"
+ ],
+ "own_modules": [
+  "robin_of_the_wood",
+  "robin_enhanced"
+ ],
+ "data": [
+  "docs/profiles/robin_of_the_wood.json",
+  "asm/robin_of_the_wood_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": []
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "journey.rzx",
+   "lifecycle.rzx",
+   "bishop_coverage.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 40,
+  "note": "auto: continuous RZX pair replay (original and patched), hooks run from the assembled code with the sprite hardware modelled from every attribute bit and the shipped palette; all registers at frame boundaries outside the plot, RAM outside the screen, buffer, sites and dead stack, ports and inputs every frame; after the blit the ULA = the original with exactly the figure ink removed; every figure against an independent closed-silhouette reference (seams, hollow, outside, colour policy; Enhanced: part colours inside the default silhouette); asset negatives forked at real commits; default and Enhanced on every recording; 12 + 16 negatives on lifecycle. Not imported: IRQ injection (pilot work/enh/check_irq_enh.py) and the item fixtures (check_items_enh.py)"
+ },
+ "outputs": {
+  "plain": {
+   "file": "robin_of_the_wood.nex",
+   "md5": "d6e8b01ea8b94970ef102afca79e611b"
+  },
+  "sprites_raw": {
+   "file": "robin_of_the_wood_sprites_raw.nex",
+   "md5": "7cedff6b61b71f7d94330fc9e5936d57"
+  },
+  "sprites": {
+   "file": "robin_of_the_wood_sprites.nex",
+   "md5": "1d07361f9c04903643a06cc1a8d6c88a"
+  },
+  "enhanced_raw": {
+   "file": "robin_of_the_wood_enhanced_raw.nex",
+   "md5": "425259deba42b667a01e2ece96c9b1ea"
+  },
+  "enhanced": {
+   "file": "robin_of_the_wood_enhanced.nex",
+   "md5": "8cb149338c77f85a088e3ddf220ed05b"
+  }
+ },
+ "repro": [],
+ "pin": {
+  "altrom_fill": "rom3",
+  "note": "the owner's build (.nxc e0c97d69, not published) was made before the 2026-11-04 defaults with the old alt ROM fill (NextZXOS's ROM3 + the hook bytes 0x386E-): pinned so the rebuild is that build; `--altrom-fill whole` is the opt-in rework"
+ },
+ "status": {
+  "title": "Robin of the Wood (128K)",
+  "engine_col": "robin_of_the_wood (robin_of_the_wood.md)",
+  "build": "robin_of_the_wood_sprites.nex 1d07361f + robin_of_the_wood_enhanced.nex 8cb14933 (every figure a closed solid sprite in its own hues, no outline; Enhanced painted by parts; tape loading screen) = .nxc e0c97d69, not published (owner deferred Enhanced)",
+  "software": "replay IDENTICAL on 3 recordings, default and Enhanced; negatives detected (games/robin_of_the_wood.md)",
+  "hardware": "none (JNext only)",
+  "next": "owner review of Enhanced; ported from Jon Attree's .nxc work, 2026-11-04"
+ },
+ "checks": [
+  "asm2profile:robin_of_the_wood"
+ ],
+ "checked": {
+  "deps": {
+   "asm/robin_of_the_wood_hooks.asm": "528f1305e224d2b4",
+   "docs/profiles/robin_of_the_wood.json": "8d012f27b506c68a",
+   "nexclash.py": "ce784cd6cd1eb043",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/engines.py": "699bff499f91147b",
+   "nexclash/robin_enhanced.py": "6851a8763bffc824",
+   "nexclash/robin_of_the_wood.py": "c0a486b6e13eff13",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "9e111968561fe668",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-11-04"
+ },
+ "verified": {
+  "deps": {
+   "asm/robin_of_the_wood_hooks.asm": "528f1305e224d2b4",
+   "docs/profiles/robin_of_the_wood.json": "8d012f27b506c68a",
+   "nexclash.py": "ce784cd6cd1eb043",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/engines.py": "699bff499f91147b",
+   "nexclash/robin_enhanced.py": "6851a8763bffc824",
+   "nexclash/robin_of_the_wood.py": "c0a486b6e13eff13",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "9e111968561fe668",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-11-04"
+ }
+}
