@@ -79,5 +79,27 @@
  },
  "checks": [
   "asm2profile:lode_runner"
- ]
+ ],
+ "checked": {
+  "deps": {
+   "asm/loderunner_hooks.asm": "edaf15d8f19d34e9",
+   "docs/profiles/lode_runner.json": "4a2d1e755d055a01",
+   "nexclash.py": "19b2cd33813cac01",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "6b69f9b06b029515",
+   "nexclash/loderunner.py": "1f0071a2f9565a9c",
+   "nexclash/nextboot.py": "13c3ba6016db4c6f",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "9e111968561fe668",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-11-04"
+ }
 }

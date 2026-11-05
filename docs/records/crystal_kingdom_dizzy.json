@@ -49,12 +49,13 @@
  },
  "checked": {
   "deps": {
-   "nexclash.py": "5eeaaae9ae6e4a3c",
-   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash.py": "19b2cd33813cac01",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/engines.py": "6b69f9b06b029515",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "nexclash/z80tonex.py": "9e111968561fe668",
    "skoolkit": "10.1"
   },
-  "date": "2026-10-13"
+  "date": "2026-11-04"
  }
 }

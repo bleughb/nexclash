@@ -78,17 +78,20 @@
   "deps": {
    "asm/chuckie_hooks.asm": "5fed61c8f674f78b",
    "docs/profiles/chuckie_egg.json": "8cfb95560319426a",
-   "nexclash.py": "5eeaaae9ae6e4a3c",
-   "nexclash/build.py": "a60e4d3c5945c94a",
-   "nexclash/chuckie.py": "92e0990c7a70a175",
-   "nexclash/dizzy6.py": "89c8ba59fc762962",
-   "nexclash/nextboot.py": "c71aaed434e73ef1",
-   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash.py": "19b2cd33813cac01",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/chuckie.py": "6fd6788ea9e54985",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "6b69f9b06b029515",
+   "nexclash/nextboot.py": "13c3ba6016db4c6f",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2409732095c0bfd3",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
+   "nexclash/z80tonex.py": "9e111968561fe668",
    "skoolkit": "10.1"
   },
-  "date": "2026-10-13"
+  "date": "2026-11-04"
  },
  "verified": {
   "deps": {

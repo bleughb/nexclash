@@ -108,22 +108,23 @@
   "deps": {
    "asm/cyclone_hooks.asm": "3ca11c399bb27c79",
    "docs/profiles/cyclone.json": "3261d4df27c9642d",
-   "nexclash.py": "d727de919fb5b21e",
+   "nexclash.py": "19b2cd33813cac01",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "bc87a441d6f36e56",
+   "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/cyclone.py": "2929d1aa326df6ec",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "b3179b2ff568156f",
-   "nexclash/nextboot.py": "a6e46fbbe842b376",
-   "nexclash/recolour.py": "a5744dcf6e6c059c",
+   "nexclash/engines.py": "6b69f9b06b029515",
+   "nexclash/nextboot.py": "13c3ba6016db4c6f",
+   "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "37b0e84f39f58243",
-   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/rzx.py": "fda23afec57aec5e",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2409732095c0bfd3",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "cfe7f2701eddfe6e",
+   "nexclash/z80tonex.py": "9e111968561fe668",
    "skoolkit": "10.1"
   },
-  "date": "2026-10-21"
+  "date": "2026-11-04"
  },
  "verified": {
   "deps": {

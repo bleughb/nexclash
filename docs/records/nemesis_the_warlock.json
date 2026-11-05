@@ -78,22 +78,23 @@
   "deps": {
    "asm/nemesis_hooks.asm": "f54982d794be8865",
    "docs/profiles/nemesis_the_warlock.json": "f392a3a7f8bffc35",
-   "nexclash.py": "a54105f03c86a108",
+   "nexclash.py": "19b2cd33813cac01",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
    "nexclash/engines.py": "6b69f9b06b029515",
    "nexclash/nemesis.py": "5a005d109288c95b",
-   "nexclash/nextboot.py": "44c08db48a1bf32d",
+   "nexclash/nextboot.py": "13c3ba6016db4c6f",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "37b0e84f39f58243",
    "nexclash/rzx.py": "fda23afec57aec5e",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2409732095c0bfd3",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "a6ff9eef9ca737b3",
+   "nexclash/z80tonex.py": "9e111968561fe668",
    "skoolkit": "10.1"
   },
-  "date": "2026-11-03"
+  "date": "2026-11-04"
  },
  "verified": {
   "deps": {
