@@ -24,10 +24,12 @@
   "recorder",
   "machine",
   "rzx",
-  "dizzy_patch"
+  "dizzy_patch",
+  "tid128"
  ],
  "own_modules": [
-  "dizzy_patch"
+  "dizzy_patch",
+  "tid128"
  ],
  "data": [],
  "shared_data": [
@@ -128,5 +130,69 @@
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-05"
- }
+ },
+ "rework": [
+  {
+   "name": "v128",
+   "version": "1.0",
+   "snapshot": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K).z80",
+   "args": [],
+   "inputs": [
+    {
+     "name": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K).z80",
+     "md5": "db6ccbeb2f9c601476efab3cfd28b131",
+     "path": "treasure_island_dizzy/Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K).z80"
+    },
+    {
+     "name": "tid128_walk1.rzx",
+     "md5": "43ccde8a7c7e8dfc83106c3e231b0e8a",
+     "path": "treasure_island_dizzy/tid128_walk1.rzx"
+    },
+    {
+     "name": "tid128_walk2.rzx",
+     "md5": "b4f0d8e56c6c239d956d119fee62204d",
+     "path": "treasure_island_dizzy/tid128_walk2.rzx"
+    },
+    {
+     "name": "tid128_walk3.rzx",
+     "md5": "e599381fdc08d9f997f6d7f2534dc489",
+     "path": "treasure_island_dizzy/tid128_walk3.rzx"
+    },
+    {
+     "name": "tid128_water4.rzx",
+     "md5": "8e8f8765f2cb7a0e6de346252133b598",
+     "path": "treasure_island_dizzy/tid128_water4.rzx"
+    }
+   ],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ],
+    "decisions": {}
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [
+     "tid128_walk1.rzx",
+     "tid128_walk2.rzx",
+     "tid128_walk3.rzx",
+     "tid128_water4.rzx"
+    ]
+   },
+   "outputs": {
+    "plain": {
+     "file": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K).nex",
+     "md5": "0515a0aea267e2a3f8933ea5fdaa8658"
+    },
+    "sprites": {
+     "file": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K)_sprites.nex",
+     "md5": "b3321d93df6a130838660f09d42bbc0f"
+    }
+   },
+   "proof": "4 recordings of the 128K release IDENTICAL on rework v128 (3 bot walks of 12,035 / 12,000 / 12,011 frames, and 1,103 frames on the sea bed with the .pok's walk-in-water POKE to reach the bubbles): 6,927 plots pixel-perfect, 6,900 erases, 27,567 ISR hide checks, 111 room wipes, 189 bubble tests (the virtual read) equal to the original's; the game never touches the trampolines in the printer buffer; 3 negative controls detected; clock matrix 5 hook sites x 4 incoming clocks = 20 cases PASS, a forced 3.5 MHz exit detected; ROM paths: every ROM byte as recorded; start-up tail never read before written",
+   "note": "Jon Attree's Treasure Island Dizzy 128K rework (2026-11-05): engine tid128 (engines.py: the 128K snapshot), Dean's dizzy_patch builder (trampolines, hooks, set-up, patterns read, not copied) on the 128K release so the AY music plays; whole alt ROM image; the printer buffer put back after NEXLOAD; a 128K copy of the TID verifier with the bubble test and a printer-buffer guard; his two hook-page entries through a 28 MHz wrapper that restores the incoming speed; the every-site clock matrix. Recordings: bot walks on SkoolKit's C simulator (one with the walk-in-water POKE to reach the sea bed). Published as Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K).nxc v1.0 (pilot runs/dean_treasure_island_dizzy). games/treasure_island_dizzy.md."
+  }
+ ]
 }
