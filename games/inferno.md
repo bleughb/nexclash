@@ -1,18 +1,18 @@
 # Inferno
 
 ## Next session
-Stage: 2 (renderer, continued)    State: capture kernel tested; replacement display NOT built
+Stage: 2 (continued)    State: capture + assembled scenery baseline; no runtime sprite display
 Inputs: specnext/reference/inferno/    Branch: codex/inferno (both existing checkouts)
-Start with: refresh main; read capture results below and specnext build/README.md.
-Read: nexclash/inferno.py CapturePatch/run_capture/capture_log/model_verify; asm/inferno_hooks.asm.
-Next implementation: content-validated pattern cache and budgeted Layer 2/sprite renderer using
-  the retained whole-image run lists. Keep original game memory/ULA writes; complete modal hooks,
-  original-BASIC startup installation and all-level continuation before exposing auto detection.
-Open: total rendering/upload timing; full resource maxima; painting/recolour/sheets; original
-  startup-tail lifetime; Nb initialization/game/ending continuity; full ROM-reader coverage.
-Next prompt: "Continue Inferno stage 2 renderer from the tested capture kernel, using the existing
-nexclash/specnext checkouts on codex/inferno. Follow CLAUDE.md and games/inferno.md. No sprite
-NEX is ready; complete the replacement display and remaining build gates."
+Start: refresh main; read scenery results below and reference build/README.md. Do not re-clone.
+Read: inferno.py scenery_code/run_render_scene/model_verify; asm/inferno_hooks.asm render_scene.
+Next: reduce source-validation and dirty-render costs to the TOTAL tick budget, then integrate
+  post-copy frame work/atomic commit and approved B sprite compilation/uploads. Keep original RAM.
+Workflow: iterate on Inferno6.rzx --quick 2000; run the other levels at integration milestones,
+  plus targeted level-specific paths (e.g. level-4 shop). Compare each with its own original replay.
+Open: modal hooks, palette/recolour/sheets, continuous original-BASIC startup/Nb/game/ending,
+  startup-tail lifetime, full ROM-reader coverage and resource maxima. Engine stays unregistered.
+Next prompt: "Continue Inferno stage 2 from the assembled scenery baseline. Use existing
+codex/inferno checkouts, CLAUDE.md and games/inferno.md; use level 6 for the main iteration loop."
 
 ## Inputs and facts
 - Inferno.tzx: supplied tape, MD5 `335eec35a526f2044455cb87e8c77206`.
@@ -35,40 +35,25 @@ NEX is ready; complete the replacement display and remaining build gates."
   `python nexclash.py rzx extract`; MD5 `338a35ccf625f820c0cd6a2a4175aab2`.
 - Snapshot: 48K, PC 0x0038, SP 0x86CF, IM 1, interrupts disabled, I=0xFE.
   The stack returns to RAM at 0xECF8; retained BASIC does not prove a running loader.
-- No existing Inferno engine, notes, evidence record or private reference folder at intake.
 - Game data stays in specnext; the visual design is now approved, but no sprite build exists.
 - GitHub reports specnext as public. The user explicitly authorised publishing these Inferno
   recordings, snapshots, previews and builds there on 2026-11-05; do not re-ask in this session.
 
 ## Status and open items
-- Intake gates PASS: all eight raw recordings replay to the end (449,659 frames, no desync;
-  specnext replay_checks.txt). Each sampled survey covers 2,001 frames (16,008 total), caller and
-  plain boot gates PASS; these are preliminary analyses, not sprite verification. No supported
-  engine was detected. Default-tail level builds are diagnostic only; use the flat Inferno.nex.
-  Original copier sample costs: median 200,191-212,139 T, max 214,693-274,392 T (per-level surveys).
-- Initial renderer/writer/caller surveys and full producer census are retained in specnext;
-  Stage-1 findings below supersede their preliminary ownership/layout conclusions.
-- Runtime snapshot at frame 1000 shows a five-byte draw-list loop at 0x93E0. The producer
-  reads a graphic-pointer table based at 0xC000 and writes tile IDs plus flags. The operand
-  at 0x9419 changes from 0 to 0xFC; avoid treating adjacent code as immutable.
-- Level-1 mixed title/game ISR sample: IY+1/+7 read in the ROM handler, alternate registers
-  used, stack switches and up to 334 bytes below interrupted SP. Determine safety per hook site;
-  the survey's union of title and game behaviour does not prove any one site's conditions.
-- Plain `Inferno.nex`: explicit 79-byte tail at 0x9A80-0x9ACE, below 0xC000. All these map
-  bytes are written before read in the initial 1,000-frame scan; `nextboot.check` PASS.
-  MD5 `0a3bde4734c5b3f15ad0f2a55cc81e19`; replaces the first survey's unproven default-tail build.
-- Shared diagnostics: `selftest.py --tools` PASS (including three interrupt/BASIC cases and
-  unknown-engine survey regression, C/Python frame-only capture with autosaves and a buffer);
-  `selftest.py --canary` PASS (Chuckie Egg rebuilt unchanged).
-- Original contact sheets sample the intro, every level and the ending across their full
-  recordings. Overview: specnext/reference/inferno/recording_overview.png. These are original
-  frames, not a proposed sprite render. Level 4 reaches a full-screen equipment/shop grid.
-- TZX: BASIC, main CODE 24200:29499, then pairs named level 0a/0b through 6a/6b (CODE at
-  50000 and 44000). A complete release must preserve these transitions and game state;
-  independently launching the supplied snapshots does not establish continuous-game behaviour.
-- Ending sample: 0xBE69 scrolls the background, 0xBCDF draws text/medal content, and 0xBC64
-  clears the display. Preserve this ULA sequence when designing the front end.
-- No test cheat or game patch has been applied.
+- Intake PASS: eight original recordings, 449,659 frames, no desync (replay_checks.txt); sampled
+  surveys 2,001 frames each (16,008 total), caller/plain boot gates PASS. No supported engine.
+  Original copier median 200,191-212,139 T, max 214,693-274,392 T across sampled levels.
+- Initial surveys/full producer census remain in specnext; Stage-1 findings supersede preliminary
+  ownership/layout conclusions. Runtime draw-list loop 93E0 reads C000 and writes tile IDs/flags;
+  operand 9419 changes 0 to FC, so nearby code cannot be assumed immutable.
+- Mixed title/game IRQ sample reads IY+1/+7, alternate registers, switches stack and uses up to
+  334 bytes below interrupted SP. Its union does not prove safety at a particular hook.
+- Plain Inferno.nex uses 79-byte tail 9A80-9ACE, below C000: initial 1,000-frame write-first and
+  nextboot checks PASS, MD5 0a3bde4734c5b3f15ad0f2a55cc81e19. Default-tail survey builds superseded.
+- Original full-recording contact sheets: recording_overview.png; level 4 reaches the equipment
+  shop grid. Ending BE69 scrolls, BCDF draws text/medals, BC64 clears. Preserve the ULA sequence.
+- Shared tools/canary passed intake/capture checkpoints (Chuckie unchanged). No test cheat or game
+  patch. Independent level snapshots do not establish continuous TZX transitions; see Approved design.
 
 ## Hardware checklist
 - Plain level-1 Inferno.nex: try CSpect first, then the Next; check title/text to gameplay,
@@ -127,7 +112,7 @@ NEX is ready; complete the replacement display and remaining build gates."
   measured hook timings. Raster atomicity and per-instruction interrupt safety remain unproved.
 - Memory proposal: alt-ROM hooks outside 3D00-3DFF, retaining every original ROM reader;
   page 24 boot source, tape payload pages 32-55, Layer 2 double buffers pages 56-67,
-  scratch/state pages 68-71 (all <=95). This allocation is provisional until bootstrap and ISR
+  scratch/state initially 68-71, scenery baseline through 73 (all <=95). This allocation is provisional until bootstrap and ISR
   checks pass. Do not map a scratch page across an interrupt until its safety is demonstrated.
 - Multiload front end: one original-game launch with original intro/title, levels 1-6 and ending;
   automatic loads, no independently restored level snapshots or new level-select menu.
@@ -150,6 +135,31 @@ NEX is ready; complete the replacement display and remaining build gates."
   and two broken controls PASS. Pulse-level extension and seven Na/Nb prefixes are below.
 - Bootstrap tail 5D30-5D65 is untouched only in the initial 2,000-frame scan (span 5D30-5E59).
   Later lifetime and continuous Nb/game/ending behavior remain unproved. Source/recipes: build/README.md.
+
+## Stage-2 scenery baseline (2026-11-05)
+- Assembled page-69 routines: live 8x8 tile expansion, 64-slot content cache, preflighted batch
+  blit, and a complete clean-map worker. Pixels go through shadow write-only 123B paging;
+  DI/28MHz, private stack, front-bank/visibility protection, original RAM and top-48 HUD preserved.
+- Page 68 retains capture state; 70/71 hold independent per-buffer cell keys; 72/73 form cache
+  bank 36 (metadata and RGB in 73). Private map/validation flags and batch jobs overlap scratch
+  by API, never run concurrently. These pages are not yet installed by either diagnostic NEX.
+- Cache keys include tile ID, all eight bitmap bytes, attribute and relevant FLASH phase.
+  Cold fills commit VALID last; collisions and same-ID source changes cannot reuse stale RGB.
+  The quiet gate compares every map ID and validates each distinct source once. Per-image
+  validation flags are cleared each call, including when private scratch survives simulator reuse.
+- Tests: 384 colour/flash cases; cache miss+hit for each; tile/VRAM edges; invalid/front guards;
+  complete 576-cell batches; late invalid jobs reject before any pixel write. Broken shadow,
+  visibility, stale-key and retained-validation controls are detected. Six bounded level scenes
+  match 663,552 RGB pixels across cold/unchanged/live-mutation cases; independent buffer keys,
+  whole-scene FLASH/attribute invalidation and one-cell colliding map changes also pass.
+- Cost model: (Z80 T + one per modeled read)/8, excluding entry/exit/commit, palette and sprites.
+  Sample tile max 708.25; cache miss 1,238.375, hit 484.5; prepared batch ~307.12 per tile. Complete
+  scene cold <=459,051.75 and unchanged <=37,198.625. The quiet gate reduced unchanged maximum
+  from 84,392.125; the TOTAL 35,000/tick gate still FAILS. This is a correctness baseline, not a
+  hardware-speed claim or releasable renderer. Budgeted cache validation/scheduling is next.
+- Level-6 quick 2,000: 347 scenery images / 12,791,808 pixels, 2,966 capture events,
+  347 tile-map / 346 ULA checks PASS; max unchanged cost 37,782.875. Reports/PNGs in build/.
+  Host-selected back buffers exercise the worker; no runtime hook, atomic commit or sprite upload.
 
 ## Stage-2 capture kernel results (2026-11-05; mid-stage checkpoint)
 - New capture code: 352 bytes at 3A00-3B5F, in the exact original alt-ROM image. Patches:
@@ -186,20 +196,18 @@ NEX is ready; complete the replacement display and remaining build gates."
   Neither enables replacement layers or is a hardware candidate. Checksums/recipes: specnext build/.
   Original plain Inferno.nex is unchanged. No auto registration, sprite build or full verify/stamp.
 
-## Design decision
-Approved 2026-11-05: user said "all design decisions approved" after clarification of item 5
-(continuous loads preserving score/health/equipment and original modal/intro/ending screens).
-Every figure/effect/pickup, original colours/depth, B solid enclosed interiors/no outline, and
-clean Layer 2 scenery with original ULA retained are settled in Approved design above.
-Technical proof gates remain required. The comparison is a design simulation, not a sprite build.
-
 ## Stage-1 results
 Preview MD5 `cf3fda58c14e87d91c55fe2773165d6a`, model_checks.json
 `e2b72180a10af6a7261fab91a131ca69`, level-2 census `46261ceb27a13580bddf0ea50d67ec5b`.
-Asset checksums: specnext design/manifest.json. Tools/canary/doccheck PASS, diff clean;
-no engine, full sprite verification, stamp or new sprite NEX at stage 1.
+Other checksums: design/manifest.json. Stage-1 tools/canary/doccheck PASS; no sprite stamp.
 
 ## Lessons
+- [local: Inferno scenery budget] Measured: per-cell source checks exceed the tick budget even
+  with no writes. The quiet gate validates distinct sources once; reports retain the failed total
+  gate rather than treating primitive timing or host scheduling as full-render performance.
+- [tool nexclash/inferno.py] Demonstrated: validation flags and per-buffer keys must survive tests
+  as on hardware. Retained scratch plus a broken-clear control catches stale source validation;
+  same-ID bitmap/attribute/FLASH and colliding-ID tests protect the assembled cache/scene worker.
 - [tool nexclash/inferno.py] Demonstrated: IRQ injection must execute the FFFF/FFF4 trampoline,
   not stop before the handler. Actual and forced-unwind paths now run through RET; single-
   instruction actor sites retain original interrupt-resume entrypoints.
@@ -251,12 +259,12 @@ no engine, full sprite verification, stamp or new sprite NEX at stage 1.
   complete branches and refreshed main. Reproducible evidence lives in the authorised specnext branch.
 - hand-rolled: [local: Inferno verification] Uses SkoolKit's original ROM/pulse loader and native
   RZX source; per-engine hook/log/model comparisons remain in the engine, not a parallel toolkit.
-- scratch: [local: Inferno probes] Kept structured checks, scans and diagnostic builds; temporary
-  pulse/trace/source-insertion scripts dropped. Batch replay is retained as capture-all.
+- scratch: [local: Inferno probes] Kept structured checks/scans/builds; insertion scripts stay ignored.
+  capture-all/scenery-check retain replay drivers; use one level during iteration (user preference).
 
 ## Technique use
-- patch.display-atomic-switch: no help: renderer not implemented; double-buffered commit still required.
-- optimise.pattern-cache: helped: measured content keys and pending-pattern union; runtime cache remains unbuilt.
+- patch.display-atomic-switch: helped: front-bank/visibility guards pass; runtime atomic commit remains open.
+- optimise.pattern-cache: helped: assembled full-content/phase keys, collision controls and measured cache costs.
 - verify.model-reconstruction: used: quick tile/ULA closure, dropped-writer and incorrect-coordinate controls.
 - detect.buffer-layout-producer: helped: followed the 0x9790 copier to its tile map and source tables.
 - detect.tracked-unit: helped: the screen-copy routine is not a figure; producers remain to classify.
@@ -266,26 +274,19 @@ no engine, full sprite verification, stamp or new sprite NEX at stage 1.
 - detect.buffer-layout-producer: corrected: visible colour checks distinguish black-masked stale bitmap data.
 
 ## Stage log
-- 2026-11-05: stage 2 capture checkpoint (extended session, ~100 tool calls, 0 design questions).
-  Knowledge refreshed: nexclash main 9484427 / specnext main 6bce6aa, already included. Six quick
-  replays, original RAM/register comparisons, actual IRQ/forced-unwind units, pulse transport and
-  seven loading prefixes PASS. New engine sections only; no other engine module changed.
-  Canary, pinned assembly, doccheck and diff checks PASS. No full verify/stamp.
-  Stage 2 remains incomplete: renderer, colour workflow and continuous frontend are next.
-- 2026-11-05: stage 2 loader-foundation checkpoint (~25 min, ~80 tool calls, 0 user rounds).
-  Knowledge refreshed from main (already included); original decoder unit checks, all seven Na/Nb
-  handoff prefixes and diagnostic bootstrap checks PASS. Engine module is new and contains the
-  loader, independent ROM oracle and prefix harness; no other engine module read whole or changed.
-  asm2profile/doccheck/diff checks PASS. Stage 2 remains INCOMPLETE: no sprite build, quick RZX sprite verification or full proof/stamp.
-  Natural boundary after loader checks; continuing build starts from this block in a fresh session.
-- 2026-11-05: stage 1 analysis/proposal ready (~18 min, ~80 tool calls, 0 user answer rounds);
-  nexclash knowledge main 9484427, specnext main 6bce6aa. Full level-2 census PASS; 25-tick
-  six-level original-image model PASS; tools/canary/doccheck PASS. All design decisions approved
-  after one clarification (item 5) and one approval round; stage 2 starts in a fresh session.
-  Revised one detection card and the existing census;
-  no engine module read or written. Disposable game preview calculations dropped; captures retained.
-- 2026-11-05: stage 0 complete (~40 min, ~120 tool calls, 3 user rounds), knowledge from nexclash
-  9484427 / specnext 6bce6aa. Full raw replays and all sampled gates PASS; tools/canary/doccheck PASS.
-  No engine module read: flagged game copy/producer instructions and shared diagnostic functions
-  inspected to fix their reports and profile the preview. Next stage starts in a fresh session
-  at this natural boundary (PLAYBOOK Sessions); no sprite engine or approved design yet.
+- 2026-11-05: stage 2 scenery checkpoint; main 9484427/6bce6aa already included. Assembled
+  tile/cache/batch/complete-scenery tests and six bounded scenes PASS; representative level-6
+  quick replay retained. User requested one-level iteration, other levels at milestones.
+  Assembly/doccheck/diff PASS. Only Inferno sections changed; no other engine read whole. No stamp.
+  Scenery cost gate fails; runtime frame integration, sprites and continuous frontend remain open.
+- 2026-11-05: stage 2 capture checkpoint (~100 calls, 0 design questions), main 9484427/6bce6aa.
+  Six quick replays, original state, IRQ/unwind, pulse transport and seven loading prefixes PASS;
+  canary/pinned assembly/doccheck/diff PASS. Engine sections only; no full verify/stamp.
+- 2026-11-05: stage 2 loader checkpoint (~25 min/~80 calls), main unchanged. Decoder units,
+  seven Na/Nb prefixes, bootstrap and assembly/doccheck/diff PASS. New engine only; no stamp.
+- 2026-11-05: stage 1 (~18 min/~80 calls): approved after one clarification + approval;
+  six-level 25-tick model, full level-2 census and tools/canary/doccheck PASS. Detection card/census
+  revised, no engine module read. Disposable preview calculations dropped; captures retained.
+- 2026-11-05: stage 0 (~40 min/~120 calls, 3 user rounds), main 9484427/6bce6aa. Full raw
+  replays, sampled gates and tools/canary/doccheck PASS; shared diagnostics corrected, no engine
+  read whole. Intake evidence retained in specnext.

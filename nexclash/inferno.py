@@ -1,6 +1,6 @@
-"""Inferno stage 2: bank loader, original-image model and original-state-preserving capture.
+"""Inferno stage 2: bank loader, capture kernel and assembled scenery baseline.
 
-Unregistered: sprite/Layer 2 rendering, recolour and continuous startup installation remain open.
+Unregistered: budgeted frame integration, sprites, recolour and continuous startup remain open.
 --capture-check replays the original RZX and differentially runs the assembled capture hooks;
 --pulse-tests uses unmodified ROM/TZX pulse timings, without byte shortcuts or accelerators.
 Diagnostic NEX builds enable no replacement display layers and are not release candidates.
@@ -232,7 +232,7 @@ def scenery_delta(old, new):
     return best
 
 
-def model_verify(path, stop=2000, capture=False):
+def model_verify(path, stop=2000, capture=False, scenery=False):
     """Original-image reconstruction and resource census, NOT a sprite hook verifier.
 
     C replay is only the source machine. Process live producer events immediately, keeping
@@ -258,6 +258,7 @@ def model_verify(path, stop=2000, capture=False):
     kernel = CapturePatch() if capture else None
     interiors = ({a + j for a, (old, new) in kernel.sites.items() for j in range(1, len(old))} if kernel else set())
     private = bytearray(8192)
+    display_pages, scene_number = None, 0
     tests = {}
     st = {'base': None, 'actors': [], 'tiles': None, 'previous': None, 'patterns': set(), 'chunks': 0, 'previous_patterns': set()}
     def fail(kind, detail):
@@ -272,7 +273,7 @@ def model_verify(path, stop=2000, capture=False):
         sim = context.simulator
         m, r = sim.memory, sim.registers
         try:
-            nonlocal private
+            nonlocal private, display_pages, scene_number
             if kernel and pc in kernel.sites and (pc == 0x8F7C or st['base'] is not None):
                 private, cost, steps = run_capture(kernel, m, list(r), private, pc)
                 counts['kernel events'] += 1
@@ -293,6 +294,20 @@ def model_verify(path, stop=2000, capture=False):
                 if st['previous'] is not None:
                     dirty_counts[dirty] += 1
                     shifts[str(shift)] += 1
+                if scenery:
+                    bank = 31 if scene_number % 2 == 0 else 28
+                    rendered = run_render_scene(m, bank=bank, front=59-bank, previous=display_pages)
+                    if rendered['error']:
+                        raise AssertionError('valid captured scene was rejected')
+                    display_pages = rendered['pages']
+                    scene_number += 1
+                    counts['assembled scenery images'] += 1
+                    counts['scenery viewport pixels compared'] += 36864
+                    counts['scenery changed cells'] += rendered['changed']
+                    counts['max scenery worker equivalent T'] = max(counts['max scenery worker equivalent T'], rendered['equivalent_T'])
+                    if rendered['changed'] == 0:
+                        counts['unchanged scenery images'] += 1
+                        counts['max unchanged scenery equivalent T'] = max(counts['max unchanged scenery equivalent T'], rendered['equivalent_T'])
                 st.update(base=base, previous=base, actors=[], tiles=None, chunks=0, patterns=set())
                 graphics.add(sha256(bytes(m[0xDC00:0x10000])).hexdigest())
                 counts['scenery events'] += 1
@@ -400,18 +415,18 @@ def model_verify(path, stop=2000, capture=False):
     return {'frames': ctx.frame_count, 'counts': dict(counts), 'examples': errors,
             'scenery_dirty_histogram': dict(sorted(dirty_counts.items())), 'scenery_shifts': dict(shifts),
             'graphics_content_versions': len(graphics),
-            'scope': ('capture kernel + original reconstruction; no display layer, loader integration or total-render timing' if capture else 'original reconstruction/resource census; no sprite hooks or timings')}
+            'scope': ('capture kernel + offline complete scenery worker; no frame hook/commit/sprites or total-render timing' if scenery else 'capture kernel + original reconstruction; no display layer, loader integration or total-render timing' if capture else 'original reconstruction/resource census; no sprite hooks or timings')}
 
 
 
-def capture_all(reference, folder, stop=2000, progress=None):
+def capture_all(reference, folder, stop=2000, progress=None, scenery=False):
     """All six quick capture checks in one process, including cross-level simulator/cache reuse."""
     reference, folder = Path(reference), Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
     counts, cases, frames = Counter(), [], 0
     for level in range(1, 7):
-        result = model_verify(reference / ('Inferno%d.rzx' % level), stop, capture=True)
-        filename = 'capture%d.json' % level
+        result = model_verify(reference / ('Inferno%d.rzx' % level), stop, capture=True, scenery=scenery)
+        filename = ('scenery%d.json' if scenery else 'capture%d.json') % level
         (folder / filename).write_text(json.dumps(result, indent=2) + '\n')
         bad = {k: v for k, v in result['counts'].items() if k.endswith('!') and v}
         for k, v in result['counts'].items():
@@ -419,9 +434,9 @@ def capture_all(reference, folder, stop=2000, progress=None):
         frames += result['frames']
         cases.append({'level': level, 'file': filename, 'failures': bad})
         if progress:
-            progress('Capture level %d: %s (%d frames)' % (level, 'FAIL' if bad else 'PASS', result['frames']))
+            progress('%s level %d: %s (%d frames)' % ('Scenery/capture' if scenery else 'Capture', level, 'FAIL' if bad else 'PASS', result['frames']))
     return {'frames': frames, 'counts': dict(counts), 'cases': cases,
-            'scope': 'capture/model/invariant checks only; no sprite/Layer 2 renderer or continuous release'}
+            'scope': ('capture plus offline assembled scenery worker; host alternates target banks, no runtime commit, sprite display or continuous release' if scenery else 'capture/model/invariant checks only; no sprite/Layer 2 renderer or continuous release')}
 
 
 def tape_blocks(path):
@@ -523,6 +538,597 @@ class LoaderMemory:
         self.maps.append(value)
 
 
+
+
+
+class Layer2Memory:
+    """Renderer execution model: code page 69 and shadow write-only L2 paging, not a video model."""
+    def __init__(self, ram, code, tile, x, y, bank, flash, visible, cache=None, front=28):
+        from .build import rom48
+        self.ram, self.rom = list(ram), rom48()
+        self.pages = {p: bytearray([0xE3] * 8192) for p in range(56, 68)}
+        self.pages[68], self.pages[69] = bytearray(8192), bytearray(8192)
+        self.pages[70], self.pages[71] = bytearray(8192), bytearray(8192)
+        self.pages[72], self.pages[73] = bytearray(8192), bytearray(cache) if cache is not None else bytearray(8192)
+        self.mmu1 = 68
+        self.pages[69][:len(code)] = code
+        self.pages[69][0x1E00:0x1E07] = tile.to_bytes(2, 'little') + bytes((y, x, 0, bank, flash))
+        self.pages[69][0x1FF0:0x1FF2] = b'\x00\x1D'
+        self.nr, self.selected = {0x07: 3, 0x12: front, 0x13: 31, 0x69: 0x80 if visible else 0}, 0
+        self.access, self.visible = 2 if visible else 0, visible
+        self.reads, self.pixels, self.game_writes, self.ports = 0, 0, [], []
+
+    def __getitem__(self, a):
+        if isinstance(a, slice):
+            return [self[i] for i in range(*a.indices(65536))]
+        self.reads += 1
+        if a < 8192:
+            return self.pages[69][a]
+        if a < 16384:
+            return self.pages[self.mmu1][a - 8192]
+        return self.ram[a]
+
+    def __setitem__(self, a, v):
+        if a < 16384 and self.access & 1:
+            section = self.access >> 6
+            if section > 2:
+                raise AssertionError('unsupported all-48K paging')
+            bank = self.nr[0x13 if self.access & 8 else 0x12]
+            if self.visible and bank == self.nr[0x12]:
+                raise AssertionError('renderer wrote displayed front buffer')
+            page = 2 * bank + 2 * section + (a >> 13)
+            if not (56 <= page <= 67 or page in (72, 73)):
+                raise AssertionError('renderer wrote an unallocated page')
+            self.pages[page][a & 8191] = v
+            self.pixels += 1
+        elif a < 8192:
+            self.pages[69][a] = v
+        elif a < 16384:
+            self.pages[self.mmu1][a - 8192] = v
+        else:
+            self.game_writes.append(a)
+            self.ram[a] = v
+
+    def nextreg(self, reg, value):
+        if reg == 0x51 and value in (68, 70, 71, 73):
+            self.mmu1 = value
+        elif reg != 0x13:
+            raise AssertionError('tile routine changed an unowned NextReg')
+        self.nr[reg] = value
+
+    def read_port(self, regs, port):
+        if port != 0x253B:
+            raise AssertionError('unexpected renderer port read')
+        return self.nr.get(self.selected, 0)
+
+    def write_port(self, regs, port, value, *args):
+        self.ports.append((port, value))
+        if port == 0x243B:
+            self.selected = value
+        elif port == 0x123B:
+            if value & 4:
+                raise AssertionError('renderer enabled L2 read paging over its code')
+            if bool(value & 2) != self.visible:
+                raise AssertionError('renderer changed old-image visibility')
+            self.access = value
+        else:
+            raise AssertionError('unexpected renderer port write')
+
+
+def expected_tile(memory, tile, flash=0):
+    """Independent pixel truth, including both ULA FLASH phases and bright black normalization."""
+    a = memory[0xFC00 + tile]
+    bright = 8 if a & 64 else 0
+    ink, paper = (a & 7) | bright, ((a >> 3) & 7) | bright
+    if a & 128 and flash:
+        ink, paper = paper, ink
+    ink, paper = ink if ink & 7 else 0, paper if paper & 7 else 0
+    return bytes(ink if memory[0xDC00 + tile * 8 + row] & (128 >> x) else paper
+                 for row in range(8) for x in range(8))
+
+
+def run_render_tile(ram, tile=0, x=0, y=48, bank=31, flash=0, visible=True, code=None, cached=False, cache=None):
+    from . import simpool, z80n
+    from .dizzy6 import _rw_simulator
+    profile = load_profile()
+    if code is None:
+        code = bytes.fromhex(profile['hooks']['tile'])
+        if cached:
+            entry = int(profile['hooks']['syms']['render_cached_tile'], 16)
+            code = code.ljust(entry, b'\0') + bytes.fromhex(profile['hooks']['tilecache'])
+    else:
+        code = bytes(code)
+    entry = int(profile['hooks']['syms']['render_cached_tile'], 16) if cached else 0
+    mem = Layer2Memory(ram, code, tile, x, y, bank, flash, visible, cache)
+    before = {p: bytes(data) for p, data in mem.pages.items()}
+    regs = [0] * 30
+    regs[12], regs[14], regs[27], regs[24] = 0x1FF0, 0xFE, 2, entry
+    sim = simpool.machine(_rw_simulator(), mem, regs, 'inferno.render.tile')
+    sim.set_tracer(mem)
+    z80n.install(sim, mem.nextreg)
+    r, steps = sim.registers, 0
+    while r[24] != 0x1D00:
+        if steps >= 5000:
+            raise AssertionError('tile renderer did not return')
+        sim.opcodes[mem[r[24]]]()
+        if r[26] or mem.nr[0x07] != 3:
+            raise AssertionError('renderer left the protected DI/28MHz domain')
+        steps += 1
+    error = mem.pages[69][0x1E04]
+    if mem.access != (2 if visible else 0) or r[12] != 0x1FF2 or mem.mmu1 != 68:
+        raise AssertionError('renderer did not restore paging/private stack')
+    if mem.game_writes or mem.ram != list(ram):
+        raise AssertionError('renderer wrote original game RAM')
+    if mem.pages[68] != before[68] or mem.pages[69][:len(code)] != before[69][:len(code)]:
+        raise AssertionError('renderer changed capture data or its code')
+    expected = {p: bytearray(before[p]) for p in (*range(56, 68), 72, 73)}
+    if not error:
+        pixels = expected_tile(ram, tile, flash)
+        for row in range(8):
+            for col in range(8):
+                offset = (y + row) * 256 + x + col
+                expected[2 * bank + offset // 8192][offset & 8191] = pixels[row * 8 + col]
+        expected_writes = 64
+        if cached:
+            slot = tile & 63
+            meta = slot * 16
+            key = bytes(ram[0xDC00 + 8 * tile:0xDC08 + 8 * tile]) + bytes((ram[0xFC00 + tile],))
+            old = before[73]
+            hit = old[meta] == 0xA5 and old[meta + 1:meta + 3] == tile.to_bytes(2, 'little') and old[meta + 3:meta + 12] == key
+            hit = hit and (not key[8] & 128 or old[meta + 12] == flash)
+            if mem.pages[69][0x1E1A] != int(hit):
+                raise AssertionError('cache key reuse disagrees with live source')
+            if not hit:
+                expected_writes += 64
+                expected[73][meta:meta + 13] = b'\xA5' + tile.to_bytes(2, 'little') + key + bytes((flash,))
+                cx, cy = (slot & 31) * 8, 48 + (slot >> 5) * 8
+                for row in range(8):
+                    for col in range(8):
+                        offset = (cy + row) * 256 + cx + col
+                        expected[72 + offset // 8192][offset & 8191] = pixels[row * 8 + col]
+        if mem.pixels != expected_writes:
+            raise AssertionError('tile renderer emitted the wrong pixel count')
+    elif mem.pixels:
+        raise AssertionError('rejected tile changed VRAM')
+    if any(mem.pages[p] != expected[p] for p in expected):
+        raise AssertionError('rendered Layer 2 pixels or preserved buffer differ')
+    return {'error': error, 'instructions': steps, 'equivalent_T': (r[25] + mem.reads) / 8,
+            'hit': mem.pages[69][0x1E1A], 'cache_data': bytes(mem.pages[73])}
+
+
+def tile_renderer_units():
+    counts, examples = Counter(), []
+    memory = [0] * 65536
+    rows = bytes((0x80, 0x01, 0xA6, 0x59, 0xFF, 0, 0x18, 0x7E))
+    memory[0xDC00:0xDC08] = rows
+    def check(name, **kw):
+        try:
+            result = run_render_tile(memory, **kw)
+            counts[name] += 1
+            counts['max uncached tile equivalent T'] = max(counts['max uncached tile equivalent T'], result['equivalent_T'])
+            return result
+        except AssertionError as e:
+            counts[name + '!'] += 1
+            if len(examples) < 5:
+                examples.append([name, str(e)])
+            return None
+    for attr in range(256):
+        memory[0xFC00] = attr
+        for flash in ((0, 1) if attr & 128 else (0,)):
+            r = check('colour/flash', flash=flash)
+            if r and r['error']:
+                counts['valid colour rejected!'] += 1
+    for bitmap in (0, 255):
+        memory[0xDC00:0xDC08] = [bitmap] * 8
+        check('uniform bitmap timing edge')
+    memory[0xDC00:0xDC08] = rows
+    memory[0xFC00] = 0x47
+    for tile, x, y in ((0, 0, 48), (127, 248, 56), (128, 0, 64), (511, 248, 120),
+                       (512, 0, 128), (1023, 248, 184)):
+        memory[0xDC00 + 8 * tile:0xDC08 + 8 * tile] = rows
+        memory[0xFC00 + tile] = 0x47
+        for visible, bank in ((True, 31), (False, 28)):
+            r = check('paging edge', tile=tile, x=x, y=y, visible=visible, bank=bank)
+            if r and r['error']:
+                counts['valid position rejected!'] += 1
+    for kw in ({'tile':1024}, {'x':1}, {'y':47}, {'y':49}, {'y':192}, {'bank':29}, {'flash':2}, {'bank':28}):
+        r = check('invalid/front guard', **kw)
+        if r and not r['error']:
+            counts['invalid input accepted!'] += 1
+    memory[0xDC00] ^= 0xFF
+    check('live source mutation')
+    code = bytearray.fromhex(load_profile()['hooks']['tile'])
+    broken = bytearray(code)
+    off = broken.index(b'\xF6\x09')
+    broken[off + 1] = 1
+    try:
+        run_render_tile(memory, code=broken)
+    except AssertionError as e:
+        if 'displayed front' in str(e):
+            counts['front-write control detected'] += 1
+        else:
+            counts['front-write control!'] += 1
+    else:
+        counts['front-write control!'] += 1
+    broken = bytearray(code)
+    off = broken.index(bytes.fromhex('3A121EB032131E'))
+    broken[off:off + 3] = b'\xAF\x00\x00'
+    try:
+        run_render_tile(memory, code=broken)
+    except AssertionError as e:
+        if 'visibility' in str(e):
+            counts['visibility control detected'] += 1
+        else:
+            counts['visibility control!'] += 1
+    else:
+        counts['visibility control!'] += 1
+    return {'counts': dict(counts), 'examples': examples,
+            'scope': 'assembled uncached L2 tile primitive; no frame scheduler, sprites, palette setup or display commit'}
+
+
+
+def tile_cache_units():
+    counts, examples = Counter(), []
+    memory = [0] * 65536
+    rows = bytes((128, 1, 166, 89, 255, 0, 24, 126))
+    memory[0xDC00:0xDC08] = rows
+    cache = None
+    for attr in range(256):
+        memory[0xFC00] = attr
+        for flash in ((0, 1) if attr & 128 else (0,)):
+            first = run_render_tile(memory, cached=True, cache=cache, flash=flash)
+            second = run_render_tile(memory, cached=True, cache=first['cache_data'], flash=flash)
+            counts['colour/flash miss'] += 1
+            counts['colour/flash hit'] += 1
+            if first['error'] or second['error'] or first['hit'] or not second['hit']:
+                counts['cache roundtrip!'] += 1
+            counts['max miss equivalent T'] = max(counts['max miss equivalent T'], first['equivalent_T'])
+            counts['max hit equivalent T'] = max(counts['max hit equivalent T'], second['equivalent_T'])
+            cache = second['cache_data']
+    for bitmap in (0, 255):
+        memory[0xDC00:0xDC08] = [bitmap] * 8
+        a = run_render_tile(memory, cached=True)
+        b = run_render_tile(memory, cached=True, cache=a['cache_data'])
+        counts['uniform bitmap timing edge'] += 1
+        counts['max miss equivalent T'] = max(counts['max miss equivalent T'], a['equivalent_T'])
+        counts['max hit equivalent T'] = max(counts['max hit equivalent T'], b['equivalent_T'])
+    memory[0xDC00:0xDC08] = rows
+    for tile, x, y in ((63, 248, 56), (64, 0, 64), (127, 248, 120),
+                       (128, 0, 128), (1023, 248, 184)):
+        memory[0xDC00 + 8 * tile:0xDC08 + 8 * tile] = rows
+        memory[0xFC00 + tile] = 0x47
+        a = run_render_tile(memory, tile, x, y, cached=True, cache=cache)
+        b = run_render_tile(memory, tile, x, y, cached=True, cache=a['cache_data'])
+        counts['cache/VRAM edge'] += 1
+        if a['error'] or b['error'] or not b['hit']:
+            counts['cache edge!'] += 1
+        cache = b['cache_data']
+    for kw in ({'tile':1024}, {'x':1}, {'y':47}, {'y':49}, {'y':192}, {'bank':29}, {'bank':36}, {'flash':2}, {'bank':28}):
+        r = run_render_tile(memory, cached=True, cache=cache, **kw)
+        counts['cache input/front guard'] += 1
+        if not r['error'] or r['cache_data'] != cache:
+            counts['cache guard!'] += 1
+    memory[0xFC00] = 0x47
+    good = run_render_tile(memory, cached=True)
+    memory[0xDC00] ^= 0xFF
+    changed = run_render_tile(memory, cached=True, cache=good['cache_data'])
+    counts['source mutation'] += 1
+    if changed['hit']:
+        counts['stale source!'] += 1
+    profile = load_profile()
+    entry = int(profile['hooks']['syms']['render_cached_tile'], 16)
+    code = bytearray(bytes.fromhex(profile['hooks']['tile']).ljust(entry, b'\0') + bytes.fromhex(profile['hooks']['tilecache']))
+    broken = bytearray(code)
+    off = broken.index(bytes.fromhex('1ABE20'), entry)
+    broken[off + 2:off + 4] = b'\0\0'  # omit raw source-byte mismatch branch
+    try:
+        run_render_tile(memory, cached=True, cache=good['cache_data'], code=broken)
+    except AssertionError as e:
+        if 'cache key reuse' in str(e):
+            counts['stale-key control detected'] += 1
+        else:
+            counts['stale-key control!'] += 1
+            examples.append(str(e))
+    else:
+        counts['stale-key control!'] += 1
+    # Different IDs with identical source bytes collide in slot 0. ID remains part of the key.
+    memory[0xDE00:0xDE08], memory[0xFC40] = memory[0xDC00:0xDC08], memory[0xFC00]
+    first = run_render_tile(memory, cached=True)
+    other = run_render_tile(memory, tile=64, cached=True, cache=first['cache_data'])
+    counts['colliding ID'] += 1
+    if other['hit']:
+        counts['colliding ID!'] += 1
+    return {'counts': dict(counts), 'examples': examples,
+            'scope': 'assembled 64-slot content-checked background cache and inactive L2 blit; no scheduler or sprites'}
+
+
+def run_render_batch(jobs, cache, bank=31, visible=True, code=None, count=None):
+    """Execute the prepared-cache blitter; the caller owns live-key validation/scheduling."""
+    from . import simpool, z80n
+    from .dizzy6 import _rw_simulator
+    profile = load_profile()['hooks']
+    entry = int(profile['syms']['render_batch'], 16)
+    if code is None:
+        code = bytes(entry) + bytes.fromhex(profile['tilebatch'])
+    mem = Layer2Memory([0] * 65536, code, 0, 0, 48, bank, 0, visible, cache)
+    data = bytes(v for job in jobs for v in job)
+    mem.pages[69][0x1000:0x1000 + len(data)] = data
+    mem.pages[69][0x1E30:0x1E34] = (len(jobs) if count is None else count).to_bytes(2, 'little') + bytes((bank, 0))
+    before = {p: bytes(data) for p, data in mem.pages.items()}
+    regs = [0] * 30
+    regs[12], regs[14], regs[27], regs[24] = 0x1FF0, 0xFE, 2, entry
+    sim = simpool.machine(_rw_simulator(), mem, regs, 'inferno.render.batch')
+    sim.set_tracer(mem)
+    z80n.install(sim, mem.nextreg)
+    r, steps = sim.registers, 0
+    while r[24] != 0x1D00:
+        if steps >= 500_000:
+            raise AssertionError('batch renderer did not return')
+        sim.opcodes[mem[r[24]]]()
+        if r[26] or mem.nr[0x07] != 3:
+            raise AssertionError('batch left the DI/28MHz domain')
+        steps += 1
+    error = mem.pages[69][0x1E33]
+    if mem.access != (2 if visible else 0) or r[12] != 0x1FF2 or mem.mmu1 != 68:
+        raise AssertionError('batch did not restore paging/private stack')
+    if mem.game_writes or any(mem.ram):
+        raise AssertionError('batch wrote original game RAM')
+    if mem.pages[68] != before[68] or mem.pages[69][:len(code)] != before[69][:len(code)]:
+        raise AssertionError('batch changed capture data or code')
+    if mem.pages[69][0x1000:0x1000 + len(data)] != data:
+        raise AssertionError('batch changed its job list')
+    expected = {p: bytearray(before[p]) for p in (*range(56, 68), 72, 73)}
+    if not error:
+        for x, y, slot in jobs:
+            for row in range(8):
+                for col in range(8):
+                    src = 4096 + (slot >> 5) * 2048 + row * 256 + (slot & 31) * 8 + col
+                    dest = (y + row) * 256 + x + col
+                    expected[2 * bank + dest // 8192][dest & 8191] = cache[src]
+    if mem.pixels != (0 if error else 64 * len(jobs)):
+        raise AssertionError('batch emitted wrong pixel count or wrote before rejecting')
+    if any(mem.pages[p] != expected[p] for p in expected):
+        raise AssertionError('batch pixels/cache/preserved buffer differ')
+    return {'error': error, 'instructions': steps, 'equivalent_T': (r[25] + mem.reads) / 8}
+
+
+def tile_batch_units():
+    counts, examples = Counter(), []
+    cache = bytearray(8192)
+    for slot in range(64):
+        cache[slot * 16] = 0xA5
+        for row in range(8):
+            for col in range(8):
+                cache[4096 + (slot >> 5) * 2048 + row * 256 + (slot & 31) * 8 + col] = (slot * 13 + row * 7 + col * 3) & 255
+    def check(name, jobs, **kw):
+        try:
+            result = run_render_batch(jobs, cache, **kw)
+            counts[name] += 1
+            return result
+        except AssertionError as e:
+            counts[name + '!'] += 1
+            if len(examples) < 5:
+                examples.append([name, str(e)])
+    for visible, bank in ((True, 31), (False, 28), (False, 31)):
+        for jobs in ([], [(248, 184, 63)], [(x * 8, y * 8, (x + 32 * y) & 63) for y in range(6, 24) for x in range(32)]):
+            r = check('empty/edge/full viewport', jobs, bank=bank, visible=visible)
+            if r and r['error']:
+                counts['valid batch rejected!'] += 1
+            if r and len(jobs) == 576:
+                counts['full viewport equivalent T'] = max(counts['full viewport equivalent T'], r['equivalent_T'])
+                counts['full viewport per tile equivalent T'] = r['equivalent_T'] / 576
+    good = [(0, 48, 0), (248, 184, 63)]
+    for bad in ((1, 48, 0), (0, 47, 0), (0, 49, 0), (0, 192, 0), (0, 48, 64)):
+        r = check('late invalid job atomic rejection', good + [bad])
+        if r and not r['error']:
+            counts['invalid job accepted!'] += 1
+    for kw in ({'bank':28}, {'bank':29}, {'count':577}):
+        r = check('bank/count guard', good, **kw)
+        if r and not r['error']:
+            counts['batch guard!'] += 1
+    cache[63 * 16] = 0
+    r = check('invalid cache atomic rejection', good)
+    if r and not r['error']:
+        counts['invalid cache accepted!'] += 1
+    cache[63 * 16] = 0xA5
+    h = load_profile()['hooks']
+    entry = int(h['syms']['render_batch'], 16)
+    broken = bytearray(bytes(entry) + bytes.fromhex(h['tilebatch']))
+    off = broken.index(bytes.fromhex('F609'), entry)
+    broken[off + 1] = 1  # wrong target: write front instead of shadow
+    try:
+        run_render_batch(good, cache, code=broken)
+    except AssertionError as e:
+        if 'front buffer' in str(e):
+            counts['wrong-buffer control detected'] += 1
+        else:
+            counts['wrong-buffer control!'] += 1
+            examples.append(str(e))
+    else:
+        counts['wrong-buffer control!'] += 1
+    return {'counts': dict(counts), 'examples': examples,
+            'scope': 'assembled prepared-cache batch L2 writes; live-key validation, cache preparation and frame scheduling excluded from timing'}
+
+
+def scenery_code():
+    h = load_profile()['hooks']
+    code = bytearray()
+    for block, symbol in (('tile', 'render_tile'), ('tilecache', 'render_cached_tile'),
+                          ('scene', 'render_scene'), ('tilequiet', 'render_quiet')):
+        entry = int(h['syms'][symbol], 16)
+        code.extend(bytes(entry - len(code)))
+        code.extend(bytes.fromhex(h[block]))
+    return bytes(code)
+
+
+def run_render_scene(ram, bank=31, flash=0, visible=True, previous=None, code=None, front=28):
+    """Complete assembled clean-map worker, independent RGB/key and preservation checks."""
+    from . import simpool, z80n
+    from .dizzy6 import _rw_simulator
+    h = load_profile()['hooks']
+    entry = int(h['syms']['render_scene'], 16)
+    if code is None:
+        code = scenery_code()
+    mem = Layer2Memory(ram, code, 0, 0, 48, bank, flash, visible, front=front)
+    if previous:
+        for p, data in previous.items():
+            if p == 69:
+                mem.pages[p][0x1000:0x1E00] = data[0x1000:0x1E00]
+            else:
+                mem.pages[p][:] = data
+    mem.pages[68][0x400:0x880] = bytes(ram[0x9B00:0x9F80])
+    before = {p: bytes(data) for p, data in mem.pages.items()}
+    regs = [0] * 30
+    regs[12], regs[14], regs[27], regs[24] = 0x1FF0, 0xFE, 2, entry
+    sim = simpool.machine(_rw_simulator(), mem, regs, 'inferno.render.scene')
+    sim.set_tracer(mem)
+    z80n.install(sim, mem.nextreg)
+    r, steps = sim.registers, 0
+    while r[24] != 0x1D00:
+        if steps >= 2_000_000:
+            raise AssertionError('scene renderer did not return')
+        sim.opcodes[mem[r[24]]]()
+        if r[26] or mem.nr[0x07] != 3:
+            raise AssertionError('scene left the DI/28MHz domain')
+        steps += 1
+    error = mem.pages[69][0x1E04]
+    if mem.access != (2 if visible else 0) or r[12] != 0x1FF2 or mem.mmu1 != 68:
+        raise AssertionError('scene did not restore paging/private stack')
+    if mem.game_writes or mem.ram != list(ram):
+        raise AssertionError('scene wrote original game RAM')
+    if mem.pages[68] != before[68] or mem.pages[69][:len(code)] != before[69][:len(code)]:
+        raise AssertionError('scene changed capture data or code')
+    expected = {p: bytearray(before[p]) for p in range(56, 68)}
+    changed = 0
+    if not error:
+        keypage = 70 if bank == 28 else 71
+        keys = bytearray(before[keypage])
+        for cell, tile in enumerate(map_tiles(ram)):
+            offset = cell * 13
+            key = tile.to_bytes(2, 'little') + raw_tile(ram, tile)
+            old = keys[offset:offset + 13]
+            hit = old[0] == 0xA5 and old[1:12] == key and (not key[10] & 128 or old[12] == flash)
+            if not hit:
+                changed += 1
+                keys[offset:offset + 13] = b'\xA5' + key + bytes((flash,))
+            pixels = expected_tile(ram, tile, flash)
+            x, y = (cell % 32) * 8, 48 + (cell // 32) * 8
+            for row in range(8):
+                for col in range(8):
+                    dest = (y + row) * 256 + x + col
+                    expected[2 * bank + dest // 8192][dest & 8191] = pixels[row * 8 + col]
+        if mem.pages[keypage] != keys or mem.pages[141 - keypage] != before[141 - keypage]:
+            raise AssertionError('scene per-buffer source keys differ')
+        actual_changed = int.from_bytes(mem.pages[69][0x1E45:0x1E47], 'little')
+        if actual_changed != changed:
+            raise AssertionError('scene dirty count disagrees with live content')
+    elif any(mem.pages[p] != before[p] for p in (70, 71, 72, 73)) or mem.pixels:
+        raise AssertionError('rejected scene changed cache/VRAM')
+    if any(mem.pages[p] != expected[p] for p in expected):
+        raise AssertionError('complete scenery pixels or preserved front/HUD differ')
+    return {'error': error, 'changed': changed, 'instructions': steps,
+            'equivalent_T': (r[25] + mem.reads) / 8, 'pixel_writes': mem.pixels,
+            'pages': {p: bytes(data) for p, data in mem.pages.items()}}
+
+
+def scene_renderer_checks(reference, folder):
+    """Bounded six-level source captures; includes cold, unchanged and same-ID mutation."""
+    import gzip
+    from PIL import Image
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    counts, cases = Counter(), []
+    palette = [(0, 0, 0)] + [tuple(205 if c & bit else 0 for bit in (2, 4, 1)) for c in range(1, 8)]
+    palette += [(0, 0, 0)] + [tuple(255 if c & bit else 0 for bit in (2, 4, 1)) for c in range(1, 8)]
+    for level in range(1, 7):
+        captures = json.loads(gzip.open(Path(reference) / 'design' / ('scene%d.json.gz' % level), 'rt').read())
+        source = next(s for s in captures['samples'] if s['pc'] == 0x8F7C)
+        ram = [0] * 16384 + source['memory']['16384']
+        cold = run_render_scene(ram)
+        steady = run_render_scene(ram, previous=cold['pages'])
+        tile = map_tiles(ram)[0]
+        ram[0xDC00 + tile * 8] ^= 255
+        mutated = run_render_scene(ram, previous=steady['pages'])
+        if cold['error'] or steady['error'] or mutated['error'] or steady['changed'] or steady['pixel_writes'] or not mutated['changed']:
+            raise AssertionError('scene roundtrip/unchanged/source mutation failed')
+        counts['cold complete scene'] += 1
+        counts['unchanged no-write scene'] += 1
+        counts['same-ID graphics mutation scene'] += 1
+        counts['viewport pixels compared'] += 3 * 36864
+        counts['max cold equivalent T'] = max(counts['max cold equivalent T'], cold['equivalent_T'])
+        counts['max unchanged equivalent T'] = max(counts['max unchanged equivalent T'], steady['equivalent_T'])
+        counts['max mutated equivalent T'] = max(counts['max mutated equivalent T'], mutated['equivalent_T'])
+        item = {'level': level, 'frame': source['frame']}
+        for name, result in (('cold', cold), ('unchanged', steady), ('mutated', mutated)):
+            item[name] = {k: v for k, v in result.items() if k != 'pages'}
+        cases.append(item)
+        rgb = b''.join(cold['pages'][p] for p in range(62, 68))
+        image = Image.new('RGB', (256, 192))
+        image.putdata([palette[p] if p < 16 else (227, 0, 227) for p in rgb])
+        image.crop((0, 48, 256, 192)).save(folder / ('scenery%d.png' % level))
+        print('Scenery level %d: PASS cold/unchanged/live mutation' % level, flush=True)
+    # Both buffer-key pages must remain independent, and hidden startup may draw bank 28.
+    first = run_render_scene(ram, bank=28, visible=False)
+    second = run_render_scene(ram, bank=31, previous=first['pages'])
+    if first['changed'] != 576 or second['changed'] != 576:
+        raise AssertionError('one buffer incorrectly validated the other')
+    counts['independent buffer scene'] += 2
+    for kw in ({'bank':28}, {'bank':29}, {'flash':2}):
+        rejected = run_render_scene(ram, previous=second['pages'], **kw)
+        if not rejected['error']:
+            raise AssertionError('scene input/front guard accepted invalid target')
+        counts['scene input/front guard'] += 1
+    warm = run_render_scene(ram, previous=second['pages'])
+    # Break source comparison while retaining the good worker's actual buffer/cache pages.
+    h = load_profile()['hooks']
+    entry = int(h['syms']['render_scene'], 16)
+    code = scenery_code()
+    broken = bytearray(code)
+    off = broken.index(bytes.fromhex('1ABE20'), entry)
+    broken[off + 2:off + 4] = b'\0\0'
+    ram[0xDC00 + tile * 8] ^= 255
+    try:
+        run_render_scene(ram, previous=warm['pages'], code=broken)
+    except AssertionError as e:
+        if 'dirty count' not in str(e) and 'scenery pixels' not in str(e) and 'source keys' not in str(e):
+            raise
+        counts['stale-scene control detected'] += 1
+    else:
+        raise AssertionError('stale-scene control was not detected')
+    # Scratch survives real calls: forgetting to clear per-image validation flags must fail.
+    broken = bytearray(code)
+    off = broken.index(bytes.fromhex('3600EDB0'), entry)
+    broken[off:off + 4] = bytes(4)
+    try:
+        run_render_scene(ram, previous=warm['pages'], code=broken)
+    except AssertionError as e:
+        if 'dirty count' not in str(e) and 'scenery pixels' not in str(e) and 'source keys' not in str(e):
+            raise
+        counts['retained-validation control detected'] += 1
+    else:
+        raise AssertionError('retained-validation control was not detected')
+    synthetic = [0] * 65536
+    synthetic[0xDC00:0xDC08] = [128, 1, 170, 85, 255, 0, 24, 126]
+    synthetic[0xFC00] = 0x87
+    current = run_render_scene(synthetic)
+    flashed = run_render_scene(synthetic, flash=1, previous=current['pages'])
+    if flashed['changed'] != 576:
+        raise AssertionError('scene FLASH phase did not invalidate all cells')
+    counts['whole-scene FLASH phase'] += 1
+    synthetic[0xFC00] = 0x42
+    recoloured = run_render_scene(synthetic, previous=flashed['pages'])
+    if recoloured['changed'] != 576:
+        raise AssertionError('same-ID attribute change did not invalidate all cells')
+    counts['whole-scene live attribute'] += 1
+    synthetic[0xDE00:0xDE08] = synthetic[0xDC00:0xDC08]
+    synthetic[0xFC40] = synthetic[0xFC00]
+    synthetic[0x9B00] = 64
+    remapped = run_render_scene(synthetic, previous=recoloured['pages'])
+    if remapped['changed'] != 1:
+        raise AssertionError('one-cell map change dirtied the wrong cells')
+    counts['one-cell colliding map ID'] += 1
+    return {'counts': dict(counts), 'cases': cases,
+            'scope': 'assembled complete scenery baseline on bounded stage-1 captures, not a frame hook, budgeted renderer, sprite display or hardware proof'}
 
 
 class CapturePatch:
@@ -1270,6 +1876,12 @@ def continuation_tests(folder, pulse=False):
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     action = ap.add_mutually_exclusive_group(required=True)
+    action.add_argument('--scenery-check', type=Path)
+    action.add_argument('--scenery-all', type=Path)
+    action.add_argument('--scene-renderer-checks', type=Path)
+    action.add_argument('--tile-batch-units', action='store_true')
+    action.add_argument('--tile-cache-units', action='store_true')
+    action.add_argument('--tile-renderer-units', action='store_true')
     action.add_argument('--render-model-units', action='store_true')
     action.add_argument('--capture-all', type=Path)
     action.add_argument('--capture-build', type=Path)
@@ -1284,8 +1896,44 @@ def main():
     ap.add_argument('--out', type=Path, default=Path('work/inferno'))
     ap.add_argument('--json', type=Path)
     a = ap.parse_args()
-    if (a.model_check or a.capture_check or a.capture_all) and a.quick <= 0:
+    if (a.model_check or a.capture_check or a.capture_all or a.scenery_all or a.scenery_check) and a.quick <= 0:
         ap.error('--quick must be positive')
+    if a.scenery_check:
+        result = model_verify(a.scenery_check, a.quick, capture=True, scenery=True)
+        if a.json:
+            a.json.write_text(json.dumps(result, indent=2) + '\n')
+        print(json.dumps(result))
+        return int(any(v for k, v in result['counts'].items() if k.endswith('!')))
+    if a.scenery_all:
+        result = capture_all(a.scenery_all, a.out, a.quick, progress=print, scenery=True)
+        if a.json:
+            a.json.write_text(json.dumps(result, indent=2) + '\n')
+        print(json.dumps(result))
+        return int(any(v for k, v in result['counts'].items() if k.endswith('!')))
+    if a.scene_renderer_checks:
+        result = scene_renderer_checks(a.scene_renderer_checks, a.out)
+        if a.json:
+            a.json.write_text(json.dumps(result, indent=2) + '\n')
+        print(json.dumps(result))
+        return int(any(v for k, v in result['counts'].items() if k.endswith('!')))
+    if a.tile_batch_units:
+        result = tile_batch_units()
+        if a.json:
+            a.json.write_text(json.dumps(result, indent=2) + '\n')
+        print(json.dumps(result))
+        return int(any(v for k, v in result['counts'].items() if k.endswith('!')))
+    if a.tile_cache_units:
+        result = tile_cache_units()
+        if a.json:
+            a.json.write_text(json.dumps(result, indent=2) + '\n')
+        print(json.dumps(result))
+        return int(any(v for k, v in result['counts'].items() if k.endswith('!')))
+    if a.tile_renderer_units:
+        result = tile_renderer_units()
+        if a.json:
+            a.json.write_text(json.dumps(result, indent=2) + '\n')
+        print(json.dumps(result))
+        return int(any(v for k, v in result['counts'].items() if k.endswith('!')))
     if a.capture_all:
         result = capture_all(a.capture_all, a.out, a.quick, progress=print)
         if a.json:

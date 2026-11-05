@@ -364,3 +364,939 @@ cap_done:
 cap_end:
         ASSERT cap_end < 0x3D00
         SAVEBIN "inferno_capture.bin",cap_scene,cap_end-cap_scene
+
+; Renderer tile primitive, page 69 mapped at 0000, DI and 28MHz; private stack in that page.
+; Inputs 1E00 tile16, 1E02 screenY, 1E03 screenX, 1E05 target bank (28/31), 1E06 flash phase.
+; Output 1E04 error (0 success, 1 invalid input, 2 visible-front target).
+; Writes ONLY an inactive L2 bank, preserving visibility. Write paging is off before RET.
+R_TILE      EQU 0x1E00
+R_Y         EQU 0x1E02
+R_X         EQU 0x1E03
+R_ERROR     EQU 0x1E04
+R_BANK      EQU 0x1E05
+R_FLASH     EQU 0x1E06
+R_CHECK     EQU 0x1E07
+R_ATTR      EQU 0x1E10
+R_PAPER     EQU 0x1E11
+R_VISIBLE   EQU 0x1E12
+R_ACCESS    EQU 0x1E13
+R_FRONT     EQU 0x1E14
+        ORG 0
+render_tile:
+        xor a
+        ld (R_ERROR),a
+        ld hl,(R_TILE)
+        ld a,h
+        and 0xFC
+        jp nz,rt_bad
+        ld a,(R_X)
+        and 7
+        jp nz,rt_bad
+        ld a,(R_Y)
+        cp 48
+        jp c,rt_bad
+        cp 185
+        jp nc,rt_bad
+        and 7
+        jp nz,rt_bad
+        ld a,(R_FLASH)
+        and 0xFE
+        jp nz,rt_bad
+        ld a,(R_BANK)
+        cp 28
+        jr z,.bank_ok
+        cp 31
+        jr z,.bank_ok
+        cp 36                  ; private colour-cache bank, never selected for display
+        jp nz,rt_bad
+        ld a,(R_Y)
+        cp 57                  ; cache occupies y=48/56 in this bank only
+        jp nc,rt_bad
+.bank_ok:
+        ld bc,0x243B
+        ld a,0x69
+        out (c),a
+        inc b
+        in a,(c)
+        and 0x80
+        rlca
+        rlca
+        ld (R_VISIBLE),a
+        ld bc,0x243B
+        ld a,0x12
+        out (c),a
+        inc b
+        in a,(c)
+        ld (R_FRONT),a
+        ld b,a
+        ld a,(R_VISIBLE)
+        or a
+        jr z,.not_front
+        ld a,(R_BANK)
+        cp b
+        jr nz,.not_front
+        ld a,2
+        ld (R_ERROR),a
+        ret
+.not_front:
+        ld a,(R_CHECK)
+        or a
+        ret nz
+        ld a,(R_BANK)
+        nextreg 0x13,a
+        ld hl,(R_TILE)
+        ld de,0xFC00
+        add hl,de
+        ld a,(hl)
+        ld (R_ATTR),a
+        and 0x40
+        rrca
+        rrca
+        rrca
+        ld e,a                 ; bright bit as colour bit 3
+        ld a,(R_ATTR)
+        and 7
+        or e
+        ld d,a                 ; ink
+        and 7
+        jr nz,.ink_ok
+        ld d,0
+.ink_ok:
+        ld a,(R_ATTR)
+        rrca
+        rrca
+        rrca
+        and 7
+        or e
+        ld c,a                 ; paper
+        and 7
+        jr nz,.paper_ok
+        ld c,0
+.paper_ok:
+        ld a,d
+        ex af,af'              ; ink lives in A'
+        ld a,(R_ATTR)
+        and 0x80
+        jr z,.colours
+        ld a,(R_FLASH)
+        and 1
+        jr z,.colours
+        ld a,c
+        ex af,af'
+        ld c,a                 ; swap ink/paper on FLASH phase 1
+.colours:
+        ld a,c
+        ld (R_PAPER),a
+        ld hl,(R_TILE)
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,0xDC00
+        add hl,de
+        ld a,(R_Y)
+        and 0xC0
+        or 9                   ; shadow bank, write paging only
+        ld b,a
+        ld a,(R_VISIBLE)
+        or b
+        ld (R_ACCESS),a
+        ld a,(R_Y)
+        and 63
+        ld d,a
+        ld a,(R_X)
+        ld e,a
+        ld a,(R_ACCESS)
+        ld bc,0x123B
+        out (c),a
+        ld a,(R_PAPER)
+        ld c,a
+        ld iyl,8
+rt_row:
+        ld a,(hl)
+        inc hl
+        ld b,a
+        rlc b
+        ld a,c
+        jr nc,rt_paper0
+        ex af,af'
+        ld (de),a
+        ex af,af'
+        jr rt_pixel0
+rt_paper0:
+        ld (de),a
+rt_pixel0:
+        inc e
+        rlc b
+        ld a,c
+        jr nc,rt_paper1
+        ex af,af'
+        ld (de),a
+        ex af,af'
+        jr rt_pixel1
+rt_paper1:
+        ld (de),a
+rt_pixel1:
+        inc e
+        rlc b
+        ld a,c
+        jr nc,rt_paper2
+        ex af,af'
+        ld (de),a
+        ex af,af'
+        jr rt_pixel2
+rt_paper2:
+        ld (de),a
+rt_pixel2:
+        inc e
+        rlc b
+        ld a,c
+        jr nc,rt_paper3
+        ex af,af'
+        ld (de),a
+        ex af,af'
+        jr rt_pixel3
+rt_paper3:
+        ld (de),a
+rt_pixel3:
+        inc e
+        rlc b
+        ld a,c
+        jr nc,rt_paper4
+        ex af,af'
+        ld (de),a
+        ex af,af'
+        jr rt_pixel4
+rt_paper4:
+        ld (de),a
+rt_pixel4:
+        inc e
+        rlc b
+        ld a,c
+        jr nc,rt_paper5
+        ex af,af'
+        ld (de),a
+        ex af,af'
+        jr rt_pixel5
+rt_paper5:
+        ld (de),a
+rt_pixel5:
+        inc e
+        rlc b
+        ld a,c
+        jr nc,rt_paper6
+        ex af,af'
+        ld (de),a
+        ex af,af'
+        jr rt_pixel6
+rt_paper6:
+        ld (de),a
+rt_pixel6:
+        inc e
+        rlc b
+        ld a,c
+        jr nc,rt_paper7
+        ex af,af'
+        ld (de),a
+        ex af,af'
+        jr rt_pixel7
+rt_paper7:
+        ld (de),a
+rt_pixel7:
+        inc e
+        ld a,(R_X)
+        ld e,a
+        inc d
+        dec iyl
+        jp nz,rt_row
+        ld a,(R_VISIBLE)
+        ld bc,0x123B
+        out (c),a
+        ret
+rt_bad:
+        ld a,1
+        ld (R_ERROR),a
+        ret
+render_tile_end:
+        ASSERT render_tile_end < 0x1800
+        SAVEBIN "inferno_tile.bin",render_tile,render_tile_end-render_tile
+
+; Direct-mapped 64-entry tile cache. Page 73: metadata 0000..03FF; pixels 1000..1FFF.
+; Cache fill reuses the checked pixel primitive with bank 36 / y 48 or 56. Full source-byte,
+; tile ID and FLASH-phase checks precede a hit; metadata VALID is committed last.
+R_GFX       EQU 0x1E15
+R_META      EQU 0x1E17
+R_SLOT      EQU 0x1E19
+R_HIT       EQU 0x1E1A
+R_OLDX      EQU 0x1E1B
+R_OLDY      EQU 0x1E1C
+R_OLDBANK   EQU 0x1E1D
+R_CSRC      EQU 0x1E1E
+R_SAVEDSP   EQU 0x1E20
+        ORG 0x0400
+render_cached_tile:
+        xor a
+        ld (R_HIT),a
+        ld a,(R_BANK)
+        cp 36
+        jp z,rt_bad             ; bank 36 is internal cache storage, not a frame target
+        ld a,1
+        ld (R_CHECK),a
+        call render_tile        ; validate without touching VRAM or changing shadow bank
+        xor a
+        ld (R_CHECK),a
+        ld a,(R_ERROR)
+        or a
+        ret nz
+        nextreg 0x51,73
+        ld hl,(R_TILE)
+        ld a,l
+        and 63
+        ld (R_SLOT),a
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,0x2000
+        add hl,de
+        ld (R_META),hl
+        ld hl,(R_TILE)
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,0xDC00
+        add hl,de
+        ld (R_GFX),hl
+        ld hl,(R_TILE)
+        ld de,0xFC00
+        add hl,de
+        ld a,(hl)
+        ld (R_ATTR),a
+        ld hl,(R_META)
+        ld a,(hl)
+        cp 0xA5
+        jr nz,rc_miss
+        inc hl
+        ld de,(R_TILE)
+        ld a,(hl)
+        cp e
+        jr nz,rc_miss
+        inc hl
+        ld a,(hl)
+        cp d
+        jr nz,rc_miss
+        inc hl
+        ld de,(R_GFX)
+        ld b,8
+rc_compare:
+        ld a,(de)
+        cp (hl)
+        jr nz,rc_miss
+        inc de
+        inc hl
+        djnz rc_compare
+        ld a,(R_ATTR)
+        cp (hl)
+        jr nz,rc_miss
+        and 0x80
+        jr z,rc_hit
+        inc hl
+        ld a,(R_FLASH)
+        cp (hl)
+        jr nz,rc_miss
+rc_hit:
+        ld a,1
+        ld (R_HIT),a
+        jp rc_blit
+rc_miss:
+        ld hl,(R_META)
+        ld (hl),0
+        ld a,(R_X)
+        ld (R_OLDX),a
+        ld a,(R_Y)
+        ld (R_OLDY),a
+        ld a,(R_BANK)
+        ld (R_OLDBANK),a
+        ld a,(R_SLOT)
+        and 31
+        rlca
+        rlca
+        rlca
+        ld (R_X),a
+        ld a,(R_SLOT)
+        and 32
+        rrca
+        rrca
+        add a,48
+        ld (R_Y),a
+        ld a,36
+        ld (R_BANK),a
+        call render_tile
+        ld a,(R_OLDX)
+        ld (R_X),a
+        ld a,(R_OLDY)
+        ld (R_Y),a
+        ld a,(R_OLDBANK)
+        ld (R_BANK),a
+        ld a,(R_ERROR)
+        or a
+        jp nz,rc_exit
+        ld hl,(R_META)
+        inc hl
+        ld de,(R_TILE)
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        inc hl
+        ld de,(R_GFX)
+        ld b,8
+rc_key:
+        ld a,(de)
+        ld (hl),a
+        inc de
+        inc hl
+        djnz rc_key
+        ld a,(R_ATTR)
+        ld (hl),a
+        inc hl
+        ld a,(R_FLASH)
+        ld (hl),a
+        ld hl,(R_META)
+        ld (hl),0xA5
+rc_blit:
+        ld a,(R_BANK)
+        nextreg 0x13,a
+        ld a,(R_SLOT)
+        and 31
+        rlca
+        rlca
+        rlca
+        ld l,a
+        ld a,(R_SLOT)
+        and 32
+        rrca
+        rrca
+        add a,0x30
+        ld h,a
+        ld (R_CSRC),hl
+        ld a,(R_Y)
+        and 0xC0
+        or 9
+        ld b,a
+        ld a,(R_VISIBLE)
+        or b
+        ld (R_ACCESS),a
+        ld a,(R_Y)
+        and 63
+        ld d,a
+        ld a,(R_X)
+        ld e,a
+        ld a,8
+        add de,a                ; PUSH writes backwards from the end of each destination row
+        ld hl,(R_CSRC)
+        exx                     ; alternate HL/DE retain source/destination row addresses
+        ld (R_SAVEDSP),sp
+        ld iyl,8
+        ld a,(R_ACCESS)
+        ld bc,0x123B
+        out (c),a
+rc_row:
+        exx
+        ld sp,hl
+        exx
+        pop bc
+        pop de
+        pop hl
+        pop ix
+        exx
+        ex de,hl
+        ld sp,hl
+        ex de,hl
+        exx
+        push ix
+        push hl
+        push de
+        push bc
+        exx
+        inc h
+        inc d
+        exx
+        dec iyl
+        jp nz,rc_row
+        ld a,(R_VISIBLE)
+        ld bc,0x123B
+        out (c),a
+        ld sp,(R_SAVEDSP)
+rc_exit:
+        nextreg 0x51,68
+        ret
+render_cache_end:
+        ASSERT render_cache_end < 0x1800
+        SAVEBIN "inferno_tilecache.bin",render_cached_tile,render_cache_end-render_cached_tile
+
+; Prepared cache-slot jobs [x,y,slot] at 1000, count <=576. Caller must validate
+; live cache contents before scheduling; this routine only copies prepared RGB.
+; Entire list is preflighted before any VRAM write. No visible-buffer commit.
+B_COUNT     EQU 0x1E30
+B_BANK      EQU 0x1E32
+B_ERROR     EQU 0x1E33
+B_JOBS      EQU 0x1000
+        ORG 0x0800
+render_batch:
+        xor a
+        ld (B_ERROR),a
+        ld hl,(B_COUNT)
+        ld de,577
+        or a
+        sbc hl,de
+        jp nc,rb_bad
+        ld a,(B_BANK)
+        cp 28
+        jr z,rb_bank
+        cp 31
+        jp nz,rb_bad
+rb_bank:
+        ld bc,0x243B
+        ld a,0x69
+        out (c),a
+        inc b
+        in a,(c)
+        and 0x80
+        rlca
+        rlca
+        ld (R_VISIBLE),a
+        ld a,0x12
+        dec b
+        out (c),a
+        inc b
+        in a,(c)
+        ld b,a
+        ld a,(R_VISIBLE)
+        or a
+        jr z,rb_front_ok
+        ld a,(B_BANK)
+        cp b
+        jp z,rb_front
+rb_front_ok:
+        nextreg 0x51,73
+        ld bc,(B_COUNT)
+        ld a,b
+        or c
+        jp z,rb_exit
+        ld iy,B_JOBS
+rb_check:
+        ld a,(iy+0)
+        and 7
+        jp nz,rb_bad_mapped
+        ld a,(iy+1)
+        cp 48
+        jp c,rb_bad_mapped
+        cp 185
+        jp nc,rb_bad_mapped
+        and 7
+        jp nz,rb_bad_mapped
+        ld a,(iy+2)
+        cp 64
+        jp nc,rb_bad_mapped
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,0x2000
+        add hl,de
+        ld a,(hl)
+        cp 0xA5
+        jp nz,rb_bad_mapped
+        inc iy
+        inc iy
+        inc iy
+        dec bc
+        ld a,b
+        or c
+        jr nz,rb_check
+        ld a,(B_BANK)
+        nextreg 0x13,a
+        ld (R_SAVEDSP),sp
+        ld iy,B_JOBS
+        ld bc,(B_COUNT)
+        exx                     ; alternate BC owns remaining job count
+rb_job:
+        ld a,(iy+1)
+        and 0xC0
+        or 9
+        ld b,a
+        ld a,(R_VISIBLE)
+        or b
+        ld (R_ACCESS),a
+        ld a,(iy+1)
+        and 63
+        ld d,a
+        ld e,(iy+0)
+        ld a,8
+        add de,a
+        ld a,(iy+2)
+        and 31
+        rlca
+        rlca
+        rlca
+        ld l,a
+        ld a,(iy+2)
+        and 32
+        rrca
+        rrca
+        add a,0x30
+        ld h,a
+        ld (R_CSRC),hl
+        ld (R_GFX),de
+        exx
+        ld hl,(R_CSRC)
+        ld de,(R_GFX)
+        exx
+        ld a,(R_ACCESS)
+        ld bc,0x123B
+        out (c),a
+        ld a,8
+rb_row:
+        exx
+        ld sp,hl
+        exx
+        pop bc
+        pop de
+        pop hl
+        pop ix
+        exx
+        ex de,hl
+        ld sp,hl
+        ex de,hl
+        exx
+        push ix
+        push hl
+        push de
+        push bc
+        exx
+        inc h
+        inc d
+        exx
+        dec a
+        jp nz,rb_row
+        ld a,(R_VISIBLE)
+        ld bc,0x123B
+        out (c),a
+        ld sp,(R_SAVEDSP)
+        inc iy
+        inc iy
+        inc iy
+        exx
+        dec bc
+        ld a,b
+        or c
+        exx
+        jp nz,rb_job
+rb_exit:
+        nextreg 0x51,68
+        ret
+rb_front:
+        ld a,2
+        ld (B_ERROR),a
+        ret
+rb_bad_mapped:
+        nextreg 0x51,68
+rb_bad:
+        ld a,1
+        ld (B_ERROR),a
+        ret
+render_batch_end:
+        ASSERT render_batch_end < B_JOBS
+        SAVEBIN "inferno_tilebatch.bin",render_batch,render_batch_end-render_batch
+
+; Complete scenery baseline. Copy the captured clean map from state page 68, then
+; compare each cell's full live source key with the chosen buffer's page 70/71.
+; Content keys are per-buffer: an update to one back buffer never validates the other.
+; This correctness baseline uses the checked immediate cache routine, not the batch API.
+S_MAP       EQU 0x1000
+S_KEY       EQU 0x1E40
+S_MP        EQU 0x1E42
+S_PAGE      EQU 0x1E44
+S_CHANGED   EQU 0x1E45
+S_LEFT      EQU 0x1E47
+S_FLAGPTR   EQU 0x1E49
+S_FLAGS     EQU 0x1480
+        ORG 0x0A00
+render_scene:
+        xor a
+        ld (R_ERROR),a
+        ld (S_CHANGED),a
+        ld (S_CHANGED+1),a
+        ld a,(R_BANK)
+        cp 28
+        jr z,rs_bank
+        cp 31
+        jp nz,rt_bad
+rs_bank:
+        ld (R_OLDBANK),a
+        ld a,(R_X)
+        ld (R_OLDX),a
+        ld a,(R_Y)
+        ld (R_OLDY),a
+        xor a
+        ld (R_X),a
+        ld a,48
+        ld (R_Y),a
+        ld a,1
+        ld (R_CHECK),a
+        call render_tile
+        xor a
+        ld (R_CHECK),a
+        ld a,(R_ERROR)
+        or a
+        ret nz
+        nextreg 0x51,68
+        ld hl,0x2400
+        ld de,S_MAP
+        ld bc,1152
+        ldir
+        ld hl,S_FLAGS
+        ld de,S_FLAGS+1
+        ld bc,1023
+        ld (hl),0
+        ldir
+        ld a,(R_BANK)
+        cp 28
+        ld a,70
+        jr z,rs_page
+        inc a
+rs_page:
+        ld (S_PAGE),a
+        nextreg 0x51,a
+        call render_quiet
+        jp nc,rs_exit
+        ld hl,0x2000
+        ld (S_KEY),hl
+        ld hl,S_MAP
+        ld (S_MP),hl
+        ld hl,576
+        ld (S_LEFT),hl
+rs_cell:
+        ld hl,(S_MP)
+        ld e,(hl)
+        inc hl
+        ld a,(hl)
+        and 3
+        ld d,a
+        inc hl
+        ld (S_MP),hl
+        ld (R_TILE),de
+        ld hl,S_FLAGS
+        add hl,de
+        ld (S_FLAGPTR),hl
+        ld hl,(S_KEY)
+        ld a,(hl)
+        cp 0xA5
+        jr nz,rs_paint
+        inc hl
+        ld de,(R_TILE)
+        ld a,(hl)
+        cp e
+        jr nz,rs_paint
+        inc hl
+        ld a,(hl)
+        cp d
+        jr nz,rs_paint
+        ld hl,(S_FLAGPTR)
+        ld a,(hl)
+        cp 1
+        jp z,rs_next
+        cp 2
+        jr z,rs_paint
+        ld hl,(R_TILE)
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,0xDC00
+        add hl,de
+        ld (R_GFX),hl
+        ld hl,(R_TILE)
+        ld de,0xFC00
+        add hl,de
+        ld a,(hl)
+        ld (R_ATTR),a
+        ld hl,(S_KEY)
+        inc hl
+        inc hl
+        inc hl
+        ld de,(R_GFX)
+        ld b,8
+rs_compare:
+        ld a,(de)
+        cp (hl)
+        jr nz,rs_dirty
+        inc de
+        inc hl
+        djnz rs_compare
+        ld a,(R_ATTR)
+        cp (hl)
+        jr nz,rs_dirty
+        and 0x80
+        jr z,rs_clean
+        inc hl
+        ld a,(R_FLASH)
+        cp (hl)
+        jr nz,rs_dirty
+rs_clean:
+        ld hl,(S_FLAGPTR)
+        ld (hl),1
+        jr rs_next
+rs_dirty:
+        ld hl,(S_FLAGPTR)
+        ld (hl),2
+rs_paint:
+        call render_cached_tile
+        ld a,(R_ERROR)
+        or a
+        jp nz,rs_exit
+        ld a,(S_PAGE)
+        nextreg 0x51,a
+        ld hl,(S_KEY)
+        inc hl
+        ld de,(R_TILE)
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        inc hl
+        ld de,(R_GFX)
+        ld b,8
+rs_save:
+        ld a,(de)
+        ld (hl),a
+        inc de
+        inc hl
+        djnz rs_save
+        ld a,(R_ATTR)
+        ld (hl),a
+        inc hl
+        ld a,(R_FLASH)
+        ld (hl),a
+        ld hl,(S_KEY)
+        ld (hl),0xA5
+        ld hl,(S_CHANGED)
+        inc hl
+        ld (S_CHANGED),hl
+rs_next:
+        ld hl,(S_KEY)
+        ld de,13
+        add hl,de
+        ld (S_KEY),hl
+        ld a,(R_X)
+        add a,8
+        ld (R_X),a
+        jr nc,rs_same_row
+        ld a,(R_Y)
+        add a,8
+        ld (R_Y),a
+rs_same_row:
+        ld hl,(S_LEFT)
+        dec hl
+        ld (S_LEFT),hl
+        ld a,h
+        or l
+        jp nz,rs_cell
+rs_exit:
+        nextreg 0x51,68
+        ret
+render_scene_end:
+        ASSERT render_scene_end < S_MAP
+        SAVEBIN "inferno_scene.bin",render_scene,render_scene_end-render_scene
+
+; Fast no-change gate: compare every map ID, but each distinct live source only once.
+; Last-frame per-buffer keys are coherent because render_scene always completes under DI.
+; Carry clear = complete identical image; carry set = use the dirty-cell worker.
+        ORG 0x0C00
+render_quiet:
+        ld hl,S_MAP
+        ld de,0x2000
+rq_cell:
+        ld a,(de)
+        cp 0xA5
+        jr nz,rq_dirty
+        inc de
+        ld a,(de)
+        cp (hl)
+        jr nz,rq_dirty
+        ld c,(hl)
+        inc hl
+        inc de
+        ld a,(hl)
+        and 3
+        ld b,a
+        ld a,(de)
+        cp b
+        jr nz,rq_dirty
+        inc hl
+        inc de
+        push hl                 ; next map word
+        ld hl,S_FLAGS
+        add hl,bc
+        ld a,(hl)
+        or a
+        jr z,rq_source
+        pop hl
+        ld a,10                 ; key already advanced past valid and ID
+        add de,a
+        jr rq_next
+rq_source:
+        ld (S_FLAGPTR),hl
+        ld (R_TILE),bc
+        ld h,b
+        ld l,c
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld bc,0xDC00
+        add hl,bc
+        ld b,8
+rq_bytes:
+        ld a,(de)
+        cp (hl)
+        jr nz,rq_dirty_pop
+        inc de
+        inc hl
+        djnz rq_bytes
+        ld hl,(R_TILE)
+        ld bc,0xFC00
+        add hl,bc
+        ld a,(de)
+        cp (hl)
+        jr nz,rq_dirty_pop
+        and 0x80
+        inc de
+        jr z,rq_source_ok
+        ld a,(R_FLASH)
+        ld b,a
+        ld a,(de)
+        cp b
+        jr nz,rq_dirty_pop
+rq_source_ok:
+        inc de
+        ld hl,(S_FLAGPTR)
+        ld (hl),1
+        pop hl
+rq_next:
+        ld a,h
+        cp 0x14
+        jp nz,rq_cell
+        ld a,l
+        cp 0x80
+        jp nz,rq_cell
+        or a
+        ret
+rq_dirty_pop:
+        pop hl
+rq_dirty:
+        scf
+        ret
+render_quiet_end:
+        ASSERT render_quiet_end < S_MAP
+        SAVEBIN "inferno_tilequiet.bin",render_quiet,render_quiet_end-render_quiet

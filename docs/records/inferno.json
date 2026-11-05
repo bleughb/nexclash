@@ -45,16 +45,16 @@
  "repro": [],
  "status": {
   "title": "Inferno",
-  "engine_col": "inferno capture (inferno.md)",
-  "build": "capture/loader diagnostics",
-  "software": "capture 12000 frames PASS; renderer absent",
+  "engine_col": "inferno scenery (inferno.md)",
+  "build": "scenery/capture diagnostics",
+  "software": "L6 2000-frame scenery PASS; timing gate fails",
   "hardware": "untested",
-  "next": "finish renderer and continuous frontend"
+  "next": "budgeted frame renderer and continuous frontend"
  },
  "checks": [
   "asm2profile:inferno"
  ],
- "excluded": "Stage 2 incomplete: capture/loader diagnostics only; no sprite auto/verify/recolour contract or continuous release. No full proof or verified stamp. Rebuild recipe preserves existing plain baseline only.",
+ "excluded": "Stage 2 incomplete: offline assembled scenery baseline and capture/loader diagnostics; total tick budget fails, no sprite/frame/auto/verify/recolour or continuous release. No full proof/stamp. Rebuild recipe retains plain baseline only.",
  "foundation": {
   "scope": "capture kernel and TZX pulse transport; no replacement display or continuous release",
   "artifacts": {
@@ -69,7 +69,7 @@
    "loader_checks.json": "339c2009340ffbdc24ecd16ac1112117",
    "pulse_continuation.json": "229211a17355aef8aa396ad229e91da7",
    "capture_boot.json": "44f4423ce69c0d3f898df6eb6e9aeeaf",
-   "manifest.json": "9ea7d65f2b2e7ea58c432c04a88ee4bd",
+   "manifest.json": "bc33e9cb6025fd466e0fa39b37eefb56",
    "Inferno_bootstrap.z80": "9814983816aafb2b9efd99344dd8c221",
    "continuation_checks.json": "292e8e9e1749b0656a1a2163ddc7003f",
    "capture_summary.json": "eaf911436e2222a80ff01c611abb5927",
@@ -121,5 +121,122 @@
    "python -m nexclash.inferno --pulse-continuation ../specnext/reference/inferno",
    "python -m nexclash.inferno --capture-build ../specnext/reference/inferno --out work/inferno"
   ]
+ },
+ "scenery": {
+  "scope": "offline assembled scenery baseline; no installed frame hook, sprites, palette, commit or continuous release; timing gate fails",
+  "sources": {
+   "nexclash/inferno.py": "9c28f211610245f7f79288d8babf7d60",
+   "asm/inferno_hooks.asm": "52e8f885d07e0de69b5f0297e23b8ac6",
+   "docs/profiles/inferno.json": "101187403b24ed7b5e72fc7f842135a9"
+  },
+  "artifacts": {
+   "tile_renderer_units.json": "cc5f6d1689152db766f43abb9d8283d6",
+   "tile_cache_units.json": "11451d4d068ac6591962b8c6e6209195",
+   "tile_batch_units.json": "661e8d79f6e01b680d0c11a657fec201",
+   "scene_renderer_checks.json": "d596e99887a8545ba083b4478b2956fa",
+   "scenery6_quick.json": "dc9d0c52de2f7aca240200740c8966f2",
+   "scenery1.png": "d9161ac236cd5611f6f90dbc50a2394f",
+   "scenery2.png": "55aa76bb3dea55fed98fc26154b7f719",
+   "scenery3.png": "a42f91ac7c7a235975cc187639a1d7a5",
+   "scenery4.png": "a3b0530b1bf6bc74e6cc995ed5bd2039",
+   "scenery5.png": "15783a8854c4222bad787cdc576fb648",
+   "scenery6.png": "a01971f876da84248d654d0d4bf6464c"
+  },
+  "unit_counts": {
+   "tile_renderer_units.json": {
+    "colour/flash": 384,
+    "max uncached tile equivalent T": 708.25,
+    "uniform bitmap timing edge": 2,
+    "paging edge": 12,
+    "invalid/front guard": 8,
+    "live source mutation": 1,
+    "front-write control detected": 1,
+    "visibility control detected": 1
+   },
+   "tile_cache_units.json": {
+    "colour/flash miss": 384,
+    "colour/flash hit": 384,
+    "max miss equivalent T": 1238.375,
+    "max hit equivalent T": 484.5,
+    "uniform bitmap timing edge": 2,
+    "cache/VRAM edge": 5,
+    "cache input/front guard": 9,
+    "source mutation": 1,
+    "stale-key control detected": 1,
+    "colliding ID": 1
+   },
+   "tile_batch_units.json": {
+    "empty/edge/full viewport": 9,
+    "full viewport equivalent T": 176903.875,
+    "full viewport per tile equivalent T": 307.1189236111111,
+    "late invalid job atomic rejection": 5,
+    "bank/count guard": 3,
+    "invalid cache atomic rejection": 1,
+    "wrong-buffer control detected": 1
+   },
+   "scene_renderer_checks.json": {
+    "cold complete scene": 6,
+    "unchanged no-write scene": 6,
+    "same-ID graphics mutation scene": 6,
+    "viewport pixels compared": 663552,
+    "max cold equivalent T": 459051.75,
+    "max unchanged equivalent T": 37198.625,
+    "max mutated equivalent T": 278524.5,
+    "independent buffer scene": 2,
+    "scene input/front guard": 3,
+    "stale-scene control detected": 1,
+    "retained-validation control detected": 1,
+    "whole-scene FLASH phase": 1,
+    "whole-scene live attribute": 1,
+    "one-cell colliding map ID": 1
+   }
+  },
+  "quick_counts": {
+   "kernel events": 2966,
+   "kernel instructions": 694051,
+   "max kernel cost 8F7C": 3562.625,
+   "assembled scenery images": 347,
+   "scenery viewport pixels compared": 12791808,
+   "scenery changed cells": 18081,
+   "max scenery worker equivalent T": 457461.75,
+   "scenery events": 347,
+   "max kernel cost 96A1": 365.0,
+   "actor events": 2272,
+   "wrapped path": 1901,
+   "max capture tick cost": 8175.0,
+   "max kernel cost 8F92": 97.75,
+   "dropped writer detected": 332,
+   "max image calls": 21,
+   "max visible chunks": 48,
+   "max unique patterns": 32,
+   "max pending pattern union": 38,
+   "tile checks": 347,
+   "ULA checks": 346,
+   "unchanged scenery images": 239,
+   "max unchanged scenery equivalent T": 37782.875,
+   "max kernel cost 959B": 365.375,
+   "normal path": 371,
+   "coordinate control detected": 103,
+   "position unit": 40,
+   "inactive unit": 4,
+   "full log unit": 2,
+   "overflow skip unit": 2,
+   "ordinal full unit": 2,
+   "commit phase unit": 3,
+   "site refusal unit": 4,
+   "ISR entry unit": 4,
+   "ISR forced unwind unit": 4,
+   "unsafe DI control detected": 1,
+   "interior jump control detected": 1,
+   "game RAM control detected": 1
+  },
+  "recipes": [
+   "python -m nexclash.inferno --tile-renderer-units",
+   "python -m nexclash.inferno --tile-cache-units",
+   "python -m nexclash.inferno --tile-batch-units",
+   "python -m nexclash.inferno --scene-renderer-checks ../specnext/reference/inferno --out work/scenery",
+   "python -m nexclash.inferno --scenery-check ../specnext/reference/inferno/Inferno6.rzx --quick 2000"
+  ],
+  "iteration": "level 6 quick 2000 per edit; other levels at integration milestones or targeted path checks"
  }
 }
