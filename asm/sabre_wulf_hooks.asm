@@ -615,5 +615,68 @@ pal:    DB 0x00,0x00,0x02,0xA0,0xA2,0x14,0x16,0xB4      ; entry 0 unused, entry 
         DB 0xB6,0x03,0xE0,0xE7,0x1C,0x1F,0xFC,0xFF      ; white, then bright blue..white
 setup_end:
 
+        IFDEF QAOP
+; ---- "QAOP + Space" toggle (asm/sabre_wulf_qaop.asm defines QAOP; the base assembles without it) ----
+; At its own ORG in the ROM's 0xFF area, past the base code and its 20-byte register block, so nothing of the base
+; moves: the toggle's bytes are this block and the two game bytes below, nothing else.
+; The game's keyboard read 0xB0FA (reached from 0xB0A3 only when (38546) bits 2:1 = 0, keyboard chosen; the player's
+; handler calls it once a round under DI, the hall of fame's name entry in its loop):
+; LD A,0xFB / OUT (0xFD),A / IN A,(0xFE) / CPL / LD C,A / RET, so C = the action byte, Kempston's order:
+; bit 0 Q left, 1 W right, 2 E up, 3 R down, 4 T fire (the joystick routines 0xB0D9, 0xB103, 0xB0B1 build the same).
+; h_qaop (site: JP over its first 3 bytes) makes that 0xFBFE byte from Q A O P Space instead, active low:
+;   bit 0 <- O (0xDFFE bit 1)   bit 2 <- Q (0xFBFE bit 0)   bit 4 <- Space (0x7FFE bit 0)
+;   bit 1 <- P (0xDFFE bit 0)   bit 3 <- A (0xFDFE bit 0)   bits 5-7 <- 0xFBFE's own
+; then goes on at 0xB100 (CPL / LD C,A / RET): A, C as the original's for that byte; F as the original's (pushed);
+; B, DE, HL untouched. R as the original's at the RET: LD A,R gives R0 + 35 (R0 = R at 0xB0FA), 6 M1s follow the
+; LD R,A, the original has 6 M1s from 0xB0FA to its RET: so R is set to R0 (bit 7 kept: the 7-bit field is shifted
+; up by RLCA, 2 * 35 subtracted, shifted back). Clock: the caller's (no NEXTREG).
+; The pause (0xAC28: EI / LD A,0x7E / OUT (0xFD),A / IN A,(0xFE) / BIT 0,A / RET NZ / CPL / AND 0x1E / RET NZ, then
+; 0xAC36 pauses) pauses on Space or Caps Shift with no other key of rows 0x7FFE / 0xFEFE. With Space as fire it would
+; pause at every shot. It runs every round, so the toggle rewrites its 13 bytes 0xAC29-0xAC35 in place (no hook):
+;   LD A,0x7E / OUT (0xFD),A / OR 0x80 / IN A,(0xFE) / RRCA / RET C / NOP / NOP / NOP
+; the game's own OUT (port 0x7EFD, value 0x7E), then row 0xFEFE alone: Caps Shift up returns (RET C), down pauses.
+; The usual path has the original's 6 M1s (R unchanged) and 3 T more (OR 7, RRCA 4 against BIT 8). A and F at the
+; return differ and are dead (each caller writes both before reading: 0x9A3C, 0x9F87, 0xBB7C). Caps Shift with
+; Z X C V held pauses too (the original's other-keys test does not fit). Resuming is the game's own: Space or Caps Shift.
+D_QAOP  EQU 35
+        ORG 0x3C00
+h_qaop: push af                 ; the entry F (S, Z, P/V, C survive the original's CPL)
+        ld a,0xFB
+        out (0xFD),a            ; as the original (port 0xFBFD)
+        in a,(0xFE)             ; 0xFBFE: b7 b6 b5 T R E W Q
+        rlca
+        rlca
+        rlca                    ; T R E W Q b7 b6 b5
+        ld c,a
+        ld a,0x7F
+        in a,(0xFE)             ; 0x7FFE: Space in bit 0
+        rra
+        rl c                    ; R E W Q b7 b6 b5 Sp
+        ld a,0xFD
+        in a,(0xFE)             ; 0xFDFE: A in bit 0
+        rra
+        rl c                    ; E W Q b7 b6 b5 Sp A
+        ld a,c
+        add a,a
+        add a,a
+        add a,a                 ; carry = Q (bit 5)
+        rl c                    ; W Q b7 b6 b5 Sp A Q
+        ld a,0xDF
+        in a,(0xFE)             ; 0xDFFE: P in bit 0, O in bit 1
+        rra
+        rl c                    ; Q b7 b6 b5 Sp A Q P
+        rra
+        rl c                    ; b7 b6 b5 Sp A Q P O
+        ld a,r
+        rlca
+        sub 2*D_QAOP
+        rrca
+        ld r,a
+        pop af
+        ld a,c
+        jp 0xB100
+qaop_end:
+        ENDIF
+
         SAVEBIN "sw_rom.bin",0x386E,rom_end-0x386E
         SAVEBIN "sw_setup.bin",0xD000,setup_end-0xD000

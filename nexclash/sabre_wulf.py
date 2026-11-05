@@ -32,6 +32,17 @@ SITES_ORIG = {47529: ('cd69b9', 'e_mov'), 47385: ('cd69b9', 'e_tog'), 47349: ('c
 ROW_LOOPS = ((47629, 47756), (47756, 47883))
 PAINT = 47948               # LD (HL),D in the paint loop -> CP (HL): 7 T and one access of the cell, as the write
 INTERIORS = tuple(a + k for a in SITES_ORIG for k in (1, 2))
+# "QAOP + Space" toggle (asm/sabre_wulf_qaop.asm; profile sabre_wulf_qaop): only a profile with h_qaop has these.
+# 0xB0FA: the keyboard read (LD A,0xFB / OUT (0xFD),A / IN A,(0xFE) / CPL / LD C,A / RET), reached from 0xB0A3 only
+# with the keyboard chosen ((38546) & 6 = 0) -> JP h_qaop. 0xAC29-0xAC35: the pause check (runs every round) reads
+# row 0xFEFE: Caps Shift pauses (asm "The pause"); its OUT, its M1s and R are the game's own, 3 T more a round.
+QAOP_ORG = 0x3C00
+QSITE = (0xB0FA, '3efbd3', 'h_qaop')
+QPAUSE = (0xAC29, '3e7ed3fddbfecb47c02fe61ec0', '3e7ed3fdf680dbfe0fd8000000')
+QFACTS = ((0xB0A3, '3a92960fe603284f'), (0xB0FD, 'fddbfe2f4fc9'), (0xAC28, 'fb'),
+          (0xAC36, '3e7ed3fddbfecb4728f6'), (0x9A30, 'cd28ac'), (0x9F84, 'cd28acaf'), (0xA245, 'cd28accd7cbb'),
+          (0x9A3C, '3ab596a7'), (0xBB7C, '2140581811'), (0xBB92, '065b0e4018f0'), (0xBB88, '71237cb8'))
+QAOP_NAME = 'QAOP + Space'          # the toggle's menu name in the .nxc
 # The snapshot stops at PAUSE 0 in BASIC, in "PAUSE 0: RANDOMIZE USR 24576" in the edit line. A .nex runs on NextZXOS's ROM3,
 # whose BASIC differs, so that return never reaches USR. Both builds start here: the same wait, then the game's entry.
 START, ENTRY = 0x5D00, 24576
@@ -56,6 +67,11 @@ def _profile_path():
 
 def load_profile():
     return json.load(open(_profile_path()))
+
+
+def load_qprofile():
+    """The "QAOP + Space" toggle build's hooks: the base's rom and setup, byte for byte, + h_qaop at QAOP_ORG."""
+    return json.load(open(os.path.join(_HERE, '..', 'docs', 'profiles', 'sabre_wulf_qaop.json')))
 
 
 def is_sabre_wulf(snap):
@@ -252,6 +268,25 @@ class SabreWulfPatch:
         self.sites = []
         for a, (old, sym) in SITES_ORIG.items():
             self.sites.append((a, bytes.fromhex(old), bytes([0xC3]) + self.syms[sym].to_bytes(2, 'little')))
+        self.qaop = 'h_qaop' in self.syms
+        if self.qaop:                       # the toggle build: its code at QAOP_ORG, past the base and its register block
+            self.qaop_code = bytes.fromhex(h['qaop'])
+            if self.syms['h_qaop'] != QAOP_ORG or QAOP_ORG < self.regblock + 20 or QAOP_ORG + len(self.qaop_code) > 0x3D00:
+                raise ValueError('QAOP hook outside its room')
+            pg = bytearray(self.page)
+            o = QAOP_ORG - 0x2000
+            if any(b != 0xFF for b in pg[o:o + len(self.qaop_code)]):
+                raise ValueError('QAOP hook range is not free ($FF) in the 48K ROM')
+            pg[o:o + len(self.qaop_code)] = self.qaop_code
+            self.page = bytes(pg)
+            # the stub copies only bytes lo..hi of the page into the alt ROM (z80tonex.altrom_fill): the copy runs on to
+            # the toggle's code (the bytes between are the ROM's own 0xFF, as the whole-image fill leaves them). The
+            # register block stays where the base has it (slot1).
+            self.altrom = (ROM_ORG, QAOP_ORG + len(self.qaop_code))
+            a, old, sym = QSITE
+            self.sites.append((a, bytes.fromhex(old), bytes([0xC3]) + self.syms[sym].to_bytes(2, 'little')))
+            a, old, nw = QPAUSE
+            self.sites.append((a, bytes.fromhex(old), bytes.fromhex(nw)))
         self.extra_banks = {}
         self.state = None
         self.pages = None
@@ -278,6 +313,11 @@ class SabreWulfPatch:
             cur = bytes(ram[a - 0x4000:a - 0x4000 + len(old)])
             if cur != old:
                 raise ValueError('unexpected code at %d (%s, expected %s)' % (a, cur.hex(), old.hex()))
+        if self.qaop:
+            for a, hx in QFACTS:
+                cur = bytes(ram[a - 0x4000:a - 0x4000 + len(hx) // 2])
+                if cur.hex() != hx:
+                    raise ValueError('unexpected code at %d (%s, expected %s)' % (a, cur.hex(), hx))
         self.tables(peek)
         for a, old, new in self.sites:
             ram[a - 0x4000:a - 0x4000 + len(new)] = new
@@ -681,6 +721,168 @@ class _NullNs:
 
 
 # ---------------------------------------------------------------------------------------------
+# The "QAOP + Space" toggle: its key sites, original and toggle build from one state
+# ---------------------------------------------------------------------------------------------
+
+QKIND = {0xB0FA: 'keys', 0xAC28: 'pause'}
+PAUSED = 0xAC36                     # the pause check went on to pause (waits on FRAMES: not run here)
+
+
+def qaop_ports(kind, v):
+    """The toggle build's port reads for one read of the original. kind 'keys': v = the original's 0xFBFE byte (bit 0
+    Q left, 1 W right, 2 E up, 3 R down, 4 T fire, active low) -> the four half-rows with the same actions on Q A O P
+    Space (Q up, A down, O left, P right, Space fire), no other key of those rows down, bits 5-7 the original's.
+    kind 'pause': v = the original's 0x7EFE byte (bit 0: Space or Caps Shift) -> row 0xFEFE with Caps Shift as that
+    bit (the player who paused presses Caps Shift). -> {port: value}"""
+    hi = v & 0xE0
+    if kind == 'keys':
+        return {0xFBFE: hi | 0x1E | (v >> 2 & 1), 0x7FFE: hi | 0x1E | (v >> 4 & 1),
+                0xFDFE: hi | 0x1E | (v >> 3 & 1), 0xDFFE: hi | 0x1C | (v & 1) << 1 | (v >> 1 & 1)}
+    return {0xFEFE: v}
+
+
+class _KeyNs(_NullNs):
+    """Ports for a key event: a list of values in order (the original: the recording's) or {port: value} (the build)."""
+
+    def __init__(s, vals):
+        s.vals, s.io, s.nr, s.state = vals, [], {0x56: 0, 0x57: 1, 0x07: 0}, None
+
+    def inp(s, port):
+        s.io.append(('in', port))
+        if isinstance(s.vals, dict):
+            return s.vals.get(port, 0xFF)
+        return s.vals.pop(0) if s.vals else 0xFF
+
+    def out(s, port, value):
+        s.io.append(('out', port, value))
+
+    def nextreg(s, reg, val):
+        s.io.append(('nr', reg, val))
+
+
+def key_event(patch, kind, get, R, alt, psite, v, ports=None, orig_vals=None):
+    """Original from the key site with the recorded byte v, the toggle build with qaop_ports (or `ports`), both to the
+    routine's return (the pause: or to PAUSED). Compared: every register (CMP, R and F included), memory, the OUTs; the
+    original reads one port, the build each of its ports exactly once and nothing else. -> failures"""
+    Sim = _rw()
+    sp0 = R[12]
+    ret = get(sp0) | get(sp0 + 1) << 8
+
+    def stop(r):
+        return (r[24] == ret and r[12] == sp0 + 2) or (kind == 'pause' and r[24] == PAUSED)
+    want = qaop_ports(kind, v) if ports is None else ports
+    o = _O(get)
+    ons = _KeyNs(list(orig_vals) if orig_vals is not None else [v])
+    so = _machine(Sim, o, list(R), ons, 'qo')
+    pns = _KeyNs(list(orig_vals) if orig_vals is not None else dict(want))
+    p = _P(get, alt, psite, pns)
+    sp_ = _machine(Sim, p, list(R), pns, 'qp')
+    f = []
+    if not _run(so, stop, limit=5000):
+        return [('original did not return',)]
+    try:
+        if not _run(sp_, stop, limit=5000):
+            return [('toggle build did not return',)]
+    except Exception as e:
+        return [('toggle build raised %s' % str(e)[:80],)]
+    ro, rp = so.registers, sp_.registers
+    key_event.last = (list(ro), list(rp))
+    if ro[24] != rp[24]:
+        f.append(('ended elsewhere', ro[24], rp[24]))
+    # the pause check's A and F at its return (or at PAUSED) are dead: each caller's continuation writes both before
+    # reading either (0x9A3C LD A / AND A; 0x9F87 XOR A; 0xBB7C .. 0xBB8A LD A,H / CP B; PAUSED: LD A / BIT; QFACTS)
+    d = [k for k in CMP if ro[k] != rp[k] and not (kind == 'pause' and k in (0, 1))]
+    if d:
+        f.append(('registers differ', d, [ro[k] for k in d], [rp[k] for k in d]))
+    dead = range(ro[12] - 64, ro[12])
+    md = [a for a in set(o.ov) | set(p.ov) if a not in dead and o[a] != _pv(p, a, get)]
+    if md:
+        f.append(('memory differs', len(md), sorted(md)[:4]))
+    if p.romw or p.pagew:
+        f.append(('toggle build wrote ROM or a Next page',))
+    oo = [x for x in ons.io if x[0] != 'in']
+    po = [x for x in pns.io if x[0] != 'in']
+    if oo != po:
+        f.append(('OUTs or NEXTREGs differ', oo, po))
+    if ons.vals:
+        f.append(('the original read fewer ports', ons.vals))
+    if orig_vals is not None:               # untouched code (the joysticks): the same reads of the same ports
+        if [x for x in ons.io if x[0] == 'in'] != [x for x in pns.io if x[0] == 'in']:
+            f.append(('reads differ', ons.io, pns.io))
+    elif sorted(x[1] for x in pns.io if x[0] == 'in') != sorted(want):
+        f.append(('toggle build read other ports', [hex(x[1]) for x in pns.io if x[0] == 'in'], sorted(map(hex, want))))
+    return f
+
+
+def qaop_units(patch, kstate, pstate, neg_ports=None):
+    """Unit tests of the toggle on the built bytes, from a captured key-read state and a pause-check state
+    ((registers, 64K memory) each). neg_ports: a wrong translation (a negative) used in place of qaop_ports.
+    -> Counter ('...!' = failure)"""
+    import random
+    c = collections.Counter()
+    alt = _alt(patch)
+    psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
+    rnd = random.Random(5)
+    R, mem = kstate
+    get = bytes(mem).__getitem__
+    tr = neg_ports or qaop_ports
+    # every combination of the five actions, with other keys of the four rows held at random, three EAR / bit 5-7 cases
+    for combo in range(32):
+        for hi in (0xE0, 0xA0, 0x40):
+            for rep in range(6):
+                v = hi | 0x1F & ~combo
+                q = tr('keys', v)
+                if rep:                         # unrelated keys down: S D F G, Y U I, SYM M N B, W E R T
+                    q[0xFDFE] &= ~(rnd.randrange(16) << 1) & 0xFF
+                    q[0xDFFE] &= ~(rnd.randrange(8) << 2) & 0xFF
+                    q[0x7FFE] &= ~(rnd.randrange(16) << 1) & 0xFF
+                    q[0xFBFE] &= ~(rnd.randrange(16) << 1) & 0xFF
+                fl = key_event(patch, 'keys', get, list(R), alt, psite, v, ports=q)
+                c['keys: QAOP Space cases %s' % ('ok' if not fl else 'FAIL!')] += 1
+                if fl and c['keys fail examples'] < 3:
+                    c['keys fail examples'] += 1
+                    c['  keys v=%02X %s' % (v, str(fl[0])[:120])] += 1
+    # W, E, R, T and nothing else held: no action (all 16 combinations); the original's byte for no keys
+    for k in range(16):
+        q = qaop_ports('keys', 0xFF)
+        q[0xFBFE] &= ~(k << 1) & 0xFF
+        fl = key_event(patch, 'keys', get, list(R), alt, psite, 0xFF, ports=q)
+        c['keys: W E R T do nothing %s' % ('ok' if not fl else 'FAIL!')] += 1
+    # the other control modes: from 0xB0A3 with (38546) = 2, 4, 6 the original and the toggle build read and act alike
+    rr = list(R)
+    rr[24] = 0xB0A3
+    for mode, ports in ((2, [0x1F]), (4, [0xF7FE, 0xEFFE]), (6, [0xEFFE])):
+        for trial in range(40):
+            m2 = bytearray(mem)
+            m2[38546] = (m2[38546] & ~6) | mode
+            vals = [rnd.randrange(32) if p_ == 0x1F else 0xE0 | rnd.randrange(32) for p_ in ports]
+            g2 = bytes(m2).__getitem__
+            fl = key_event(patch, 'joy', g2, rr, alt, psite, None, ports={}, orig_vals=vals)
+            c['joystick mode %d %s' % (mode, 'ok' if not fl else 'FAIL!')] += 1
+    # the pause: nothing held returns, Caps Shift pauses, both as the original's with its own pause key (Space or Caps
+    # Shift); every other key of row 0xFEFE (Z X C V) with nothing pressed returns as the original's
+    R, mem = pstate
+    get = bytes(mem).__getitem__
+    for k in range(32):
+        v = 0xE0 | 0x1E & ~(k << 1) | 1
+        for desc, vv, want_pause in (('no pause key, Z X C V %02X' % k, v, False),) + (
+                (('Caps Shift', 0xFE, True),) if k == 0 else ()):
+            fl = key_event(patch, 'pause', get, list(R), alt, psite, vv)
+            ok = not fl and (key_event.last[1][24] == PAUSED) == want_pause
+            c['pause: %s %s' % ('Caps Shift' if desc == 'Caps Shift' else 'no pause key', 'ok' if ok else 'FAIL!')] += 1
+    # Caps Shift with Z X C V held: the build pauses (its check tests bit 0 only); the original, with its pause key and
+    # one of those held, does not. The toggle's one difference in the pause, besides the key.
+    fl = key_event(patch, 'pause', get, list(R), alt, psite, 0xFC)
+    c['pause: Caps Shift + Z pauses the build, not the original %s' % (
+        'ok' if key_event.last[1][24] == PAUSED and key_event.last[0][24] != PAUSED else 'FAIL!')] += 1
+    # Space alone with the toggle: the build reads row 0xFEFE (Space not on it): no pause. The original pauses on it.
+    fl = key_event(patch, 'pause', get, list(R), alt, psite, 0xFE, ports={0xFEFE: 0xFF})
+    c['pause: Space alone does not pause the toggle build %s' % (
+        'ok' if fl and key_event.last[1][24] != PAUSED and key_event.last[0][24] == PAUSED else 'FAIL!')] += 1
+    return c
+
+
+# ---------------------------------------------------------------------------------------------
 # Replay
 # ---------------------------------------------------------------------------------------------
 
@@ -689,7 +891,7 @@ LOOP_TOP = 39408            # back in the round robin: no plot is under way
 PLAY_LINES = 16             # the panel above this line is the game's own text
 
 
-def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, clock=0, enh=None):
+def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, clock=0, enh=None, qtranslate=None, qstates=None):
     """Replay the original (C simulator); at every hook site run original and patched from the same state and compare.
     Each loop top, once per frame: screen XOR all visible sprites = the scenery, unchanged since the last clear.
     shot(frame, memory, ns, clean screen, {attr address: value before the game painted it}): the same state, for pictures.
@@ -712,6 +914,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, cloc
     psite = {}
     fused = collections.Counter()
     pcs = set(SITE_KIND) | set(INTERIORS) | {LOOP_TOP}
+    qk = QKIND if getattr(patch, 'qaop', False) else {}      # the toggle build: its key sites (qaop_ports, key_event)
+    pcs |= set(qk)
     painted = {}
     if shot:
         pcs.add(PAINT)
@@ -738,6 +942,27 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, cloc
             ns.speed_in = clock                  # the game's clock (NR 7): 0 = 3.5 MHz as recorded
         if pc in INTERIORS:
             c['jump into a patched instruction (%d)!' % pc] += 1
+            return
+        if pc in qk:
+            kind = qk[pc]
+            t = sim.tracer
+            v = t.data[t.index] if t.index < t.end else None
+            if v is None:                        # the read is past a frame end: the next value may be the ISR's
+                c['%s at a frame end, not compared' % kind] += 1
+                return
+            if kind == 'keys' and R[26]:
+                fail('keys: a key read with interrupts on')
+            if qstates is not None and kind not in qstates:
+                qstates[kind] = (list(R), bytes(M[:65536]))
+            fl = key_event(patch, kind, M.__getitem__, list(R), alt, psite, v,
+                           ports=qtranslate(kind, v) if qtranslate else None)
+            c['events ' + kind] += 1
+            if kind == 'keys' and (~v & 0x1F):
+                c['keys: reads with an action'] += 1
+            if kind == 'pause' and not v & 1:
+                c['pause: pressed'] += 1
+            for k in fl:
+                fail('%s: %s' % (kind, k[0]), k[1:])
             return
         if pc == PAINT:
             painted.setdefault(R[6] << 8 | R[7], M[R[6] << 8 | R[7]])
@@ -1033,6 +1258,10 @@ def recolour(nex, cmap):
         raise ValueError('not a Sabre Wulf sprite build')
     peek = nex_peek(nex)
     p = SabreWulfPatch(colours=cmap)
+    if have[ALT_BANK] != p.page + bytes(8192):      # the "QAOP + Space" toggle build: its own alt ROM image and sites
+        q = SabreWulfPatch(prof=load_qprofile(), colours=cmap)
+        if have[ALT_BANK] == q.page + bytes(8192):
+            p = q
     p.add_screen_sites(lambda a: _orig_byte(peek, a))
     for a, old, new in p.sites:
         if bytes(peek(a + k) for k in range(len(new))) != new:

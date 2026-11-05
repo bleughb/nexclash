@@ -44,6 +44,45 @@ Recordings (no Fuse, no human; pilot work/bot.py and work/rec_end.py; cheats cha
 | sw_ending | room test removed (41361) | the ending text, game over, hall of fame, a new game |
 Not played: the amulet collected by a player and the walk into the cave. All 182 non-empty frames are in unit tests.
 
+## Controls (how the game reads them; 2026-11-05)
+- Control select: the menu loop 0xB3F5 reads row 0xF7FE (1 / 2 players: bit 0 of 38546; keys 3 / 4 / 5 / 6 set bits 2:1 of
+  38546 to 0 / 1 / 2 / 3) and row 0xEFFE (0 starts). Mode 0 keyboard (default), 1 Kempston, 2 cursor (5 6 7 8, 0), 3
+  Interface 2 (6 7 8 9 0).
+- 0xB0A3 (called by the player's two handlers, 0xADE5 and 0xAF0E, once a round under DI, and by the hall of fame's name
+  entry 0xB6DF / 0xB71C) returns C = the action byte, Kempston's order: bit 0 left, 1 right, 2 up, 3 down, 4 fire.
+  - keyboard 0xB0FA: LD A,0xFB / OUT (0xFD),A / IN A,(0xFE) / CPL / LD C,A / RET: the QWERT row as it is, Q left, W
+    right, E up, R down, T fire (bits 5-7: the port's, inverted).
+  - Kempston 0xB0D9: IN A,(0x1F), bits 0-3 re-ordered (right, left, down, up -> 1, 0, 3, 2), fire bit 4.
+  - cursor 0xB103: rows 0xF7FE (5 left) and 0xEFFE (6 down, 7 up, 8 right, 0 fire); Interface 2 0xB0B1: row 0xEFFE
+    (6 left, 7 right, 8 down, 9 up, 0 fire).
+- Pause 0xAC28, called at every round end (0x9A30, after the probe 39453) and at 0x9F84, 0xA245: EI / LD A,0x7E / OUT
+  (0xFD),A / IN A,(0xFE) / BIT 0,A / RET NZ / CPL / AND 0x1E / RET NZ: Space or Caps Shift (bit 0 of rows 0x7FFE and 0xFEFE
+  together) with no other key of those rows pauses at 0xAC36 (border flash, waits on FRAMES); the same key resumes.
+- Any-key waits: 0xB289 and 0xBD55 (all rows). Nothing else reads the keyboard (work3/scan_in.py, the recordings:
+  work3/keyprobe.py: every key read at IFF 0 in mode 0).
+
+## QAOP + Space toggle (.nxc v1.1, 2026-11-05; profile sabre_wulf_qaop, asm/sabre_wulf_qaop.asm)
+Off by default; with it off every build is v1.0's byte for byte. On: 67 bytes, the same in both colour sets.
+- 0xB0FA -> JP h_qaop (0x3C00, 54 bytes in the ROM's 0xFF area past the base code and register block): the QWERT byte
+  made from Q (up), A (down), O (left), P (right), Space (fire), bits 5-7 the 0xFBFE read's, then the game's CPL / LD C,A /
+  RET. F kept (pushed), R set to the original's (LD A,R / RLCA / SUB 70 / RRCA / LD R,A), the caller's clock, B D E H L
+  untouched. About 220 T more a round at 3.5 MHz.
+- The stub's alt ROM copy (bank 10 offset 0xAD) runs on to 0x3C36: the stub writes only lo..hi of the page into the alt
+  ROM (z80tonex.altrom_fill), so code past the register block needs the longer copy (the verifier caught a JP into 0xFF).
+- 0xAC29-0xAC35 (pause, no hook: it runs every round): LD A,0x7E / OUT (0xFD),A / OR 0x80 / IN A,(0xFE) / RRCA / RET C /
+  NOP x3: the game's own OUT (0x7EFD, 0x7E: LD A,0xFE before it would have sent 0xFE to 0xFEFD, the AY select port on a
+  128K decode), then row 0xFEFE alone: Caps Shift pauses. 6 M1s as the original's (R the same), 3 T more. A and F at the
+  return are dead (0x9A3C, 0x9F87, 0xBB7C write both first). Caps Shift with Z X C V held pauses too (the original's
+  other-keys test does not fit in 13 bytes). Resuming is the game's own: Space or Caps Shift.
+- Clash: Q was left and is now up; Space was pause and is now fight. With the toggle on the read is replaced, not added
+  to: W E R T do nothing, Space never pauses. Kempston, cursor, Interface 2, the menu keys and the any-key waits are
+  untouched; with a joystick chosen the pause key is Caps Shift too.
+- Proof (work3/): replay with the key sites forked (sabre_wulf.key_event: the recording's QWERT byte for the original,
+  qaop_ports' four half-rows for the build), every other hook as in v1.0, the Enhanced build beside it; unit tests
+  (qaop_units); negatives (O and P swapped, down read from Caps Shift, R one off, pause bytes left, keys as recorded); an
+  exact lockstep in the simulator (work3/lockstep_sim.py) and JNext trials (work3/trials_q.py) on fixture 2. Results in
+  the run's REPORT.md.
+
 ## Clash
 Kind A. work/census.py (pilot): sampled plots spanning more than one attribute value 20-22 %, figure pixels in a colour not
 their own 17 %. The paint routine 47941 gives a figure's cells its ink wherever paper is 0, so foliage takes the figure's
