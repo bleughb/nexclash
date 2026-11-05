@@ -162,6 +162,15 @@
     "sprites": "e0b246e35d028c34170e1d1c52f00f5f"
    }
   },
+  "72bcb108d7baec2ee10ede47594010dd": {
+   "game": "Three Weeks in Paradise (128K)",
+   "doc": "three_weeks.md",
+   "nex": {
+    "plain": "1a6f1bbe0abfbcfbb5712ad4f4700e95",
+    "sprites": "90eeeb14fa20edc3585124422530a41d",
+    "enhanced": "e6e6f6b06c3cff4f2cd259ce27de035a"
+   }
+  },
   "7578947fcc8dbc4ba822e2c565499d54": {
    "game": "Treasure Island Dizzy (in game)",
    "doc": "treasure_island_dizzy.md",
