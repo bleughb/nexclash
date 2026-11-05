@@ -223,11 +223,12 @@ rom3) are untouched and stay the default.
   (h_cls; before, menu icons stayed as sprites for 7 frames). v1.3: the "QAOP + Space" toggle (profile _qaop; hooks
   0x93CD key read, 0x948A pause: Caps Shift alone pauses).
 - Kept apart: nexclash/atic_atac_v13.py, asm/atic_atac_v13_hooks.asm + _qaop.asm, docs/profiles/atic_atac_v13*.json;
-  engines.py picks it only with NEXCLASH_REWORK=atic_atac_v13; the pinned rom3 fill stays (as published). Moved in:
+  engines.py picks it only with that switch; the pinned rom3 fill stays (as published). Moved in:
   the Enhanced set (atic_atac_enhanced_colours.json, read back from the published store; from the MVV .256) and the
   loading screen (atic_atac_loading.scr, bank 23 stub `ldscr`); both specnext inputs only.
-- Rebuild = `nxc.py --bare`, every set and option: default b87774a2, Enhanced 47f0e72c, + QAOP 19318e4f / 1f58e936.
-- Verify (`selftest.py --game atic_atac --verify`, 2026-11-04, ~15 min wall, replays in parallel): all four builds
+- Rebuild = `nxc.py --bare`, every set and option: default b87774a2, Enhanced 47f0e72c, + QAOP 19318e4f / 1f58e936;
+  one .nxc holds all four, QAOP + Space as a toggle.
+- Verify (`selftest.py --game atic_atac --verify`, 2026-11-04, ~15 min wall): all four builds
   IDENTICAL on walk1, walk2, t (21,003 frames; per build 40,623 setups, 91,084 vacated sites with no attribute
   written, 45.1M sprite pixels; Enhanced as ink; toggle builds with every QWERT read
   translated: 16,148 key reads, 6,252 pause checks). Units per set: 1,483 cases, controls 3/3, the rework negatives

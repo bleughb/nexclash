@@ -467,12 +467,15 @@ def verification_selfcheck():
             lines, rec = [], {'name': 'synthetic'}
             f = _checks_status(out, 'synthetic', 'synthetic', lines, True, rec)
             got = 'fail' if f else 'incomplete' if rec.get('_incomplete') else 'complete'
-            prf = nxcout.proof('\n'.join(rep), 'no-such-md5', 'no-such-md5')
-            # PRF1: what the run itself knows; a run given no recordings cannot know some were expected (free-run
-            # engines verify without any): only selftest's boundary, which gave them, catches that case
-            prf_ok = ('checks' in prf) == (want != 'complete' and inj is not None or frozen and want != 'complete')
-            if got != want or not prf_ok:
-                bad.append('%s: %s (want %s), PRF1 %s' % (label, got, want, prf.get('checks', 'complete')))
+            # PRF1: what the run itself knows (its structured status, with and without the Verify line); a run given
+            # no recordings cannot know some were expected (free-run engines verify without any): only selftest's
+            # boundary, which gave them, catches that case
+            ck = cli.runchecks.read(out, 'synthetic')
+            for text in ('\n'.join(rep), '\n'.join(l for l in rep if not l.startswith('Verify'))):
+                prf = nxcout.proof(text, 'no-such-md5', 'no-such-md5', checks=ck)
+                prf_ok = nxcout.qualified(prf) == (want != 'complete' and inj is not None or frozen and want != 'complete')
+                if got != want or not prf_ok:
+                    bad.append('%s: %s (want %s), PRF1 %s' % (label, got, want, prf.get(nxcout.QUALIFY, 'complete')))
     return bad
 
 
@@ -585,11 +588,12 @@ def tools_check(src):
            r['calls'] == 1402 and r['median'] == 19535, r)
         for name, cond, info in nxcout.chuckie_check(ez, work, NEXCLASH, sys.executable):
             ok(name, cond, info)                # default output GAME.nxc = the --nex sprite build when applied
-        for x in nxcout.multi_check(src, work, NEXCLASH, sys.executable, stage):
+        for x in nxcout.multi_check(src, work, NEXCLASH, sys.executable, stage) + \
+                nxcout.proof_check(src, work, NEXCLASH, sys.executable, stage):
             if x[0] == 'SKIP':
                 print('SKIP tools: %s' % x[1])
             else:
-                ok(*x)                          # every variant packaged and read back; outputs not held kept
+                ok(*x)                          # every variant / toggle packaged and read back; PRF1 keeps open checks
         live = jnext.live_check(ez, work)       # JNext + card ($NEXCLASH_JNEXT_CARD) present
         if live:
             ok(*live)

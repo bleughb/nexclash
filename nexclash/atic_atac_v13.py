@@ -72,6 +72,10 @@ QSITES = ((0x93CD, '3efbd3', 'h_qaop', 'jp'), (0x948A, '3e7ed3', 'h_pause', 'jp'
 QFACTS = ((0x93C3, '2808'), (0x93D0, 'fddbfe4f1fe6015f7917e602b35f79e61cb3c9'), (0x9489, 'f3'),
           (0x948D, 'fddbfecb47c02fe61ec0'))
 QWATCH = {a for a, *_ in QSITES}
+QAOP_NAME = 'QAOP + Space'          # the toggle's menu name in the .nxc (nxcout: NAME_outputs.json "toggles")
+QAOP_WHAT = ('QAOP + Space, changes the game logic: with the keyboard chosen, the game reads Q up, A down, O left, '
+             'P right, Space fire in place of Q left, W right, E down, R up, T fire (hook at the key read 0x93CD), '
+             'and pauses on Caps Shift alone (hook at 0x948A); Kempston, cursor and the menu keys are untouched')
 # where each forked segment ends (None: the routine's own return, with the return address at sp + off)
 SEG_END = {0xA1D6: 0xA1D9, 0x9EA0: 0x9EA3, 0x9EA9: 0x9EAC, 0x9F97: 0x9F9B, 0x9FC1: 0x9FC5, 0x99D7: 0x99DA, 0x9A36: 0x9A39,
            0x9A78: 0x9A7B, 0x9ADD: 0x9AE0, 0x9B88: 0x9B8B, 0xA1E6: 0xA1E9, 0x93CD: 0x93E2, 0x948A: 0x9490}
@@ -2022,6 +2026,13 @@ def auto(a, z80, name, out, say):
             'PASS' if not stc else 'FAIL %s' % stc[:2], '' if not lb else ', loading screen PROBLEM %s' % lb))
     json.dump({'engine': 'atic_atac_v13', 'start': 'as atic_atac', 'sets': [x[0] for x in sets]},
               open(os.path.join(out, name + '_decisions.json'), 'w'))
+    b = {k: os.path.basename(f) for k, f in built.items()}   # the outputs by role, for the .nxc (nxcout.manifest)
+    json.dump({'default': b['sprites'], 'loading': None, 'plain': os.path.basename(plain),
+               'colours': {'Enhanced': {'default': b['enhanced']}} if 'enhanced' in b else {},
+               'toggles': {QAOP_NAME: {'logic': True, 'what': QAOP_WHAT, 'default': b['sprites_qaop'],
+                                       'colours': {'Enhanced': {'default': b['enhanced_qaop']}} if 'enhanced_qaop' in b
+                                       else {}}}},
+              open(os.path.join(out, name + '_outputs.json'), 'w'), indent=1)
     if getattr(a, 'decisions', None):
         say('Result    : %s (rebuild from stored decisions, no verification)' % ('PASSED' if ok else 'FAILED'))
         return ok
