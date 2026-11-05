@@ -36,6 +36,10 @@ ENGINES = [
     ('nightshade', 'is_nightshade', None),                                # Nightshade (48K)
     ('knight_tyme', 'is_knight_tyme', None),                              # Knight Tyme (128K)
     ('spellbound_magic_knight', 'is_spellbound_magic_knight', None),      # Spellbound (128K, Magic Knight 2)
+    ('three_weeks', 'is_three_weeks', None),                              # Three Weeks in Paradise (128K)
+    ('starquake', 'is_starquake', None),                                  # Starquake (48K)
+    ('lunar_jetman', 'is_lunar_jetman', None),                            # Lunar Jetman (48K)
+    ('robin_of_the_wood', 'is_robin_of_the_wood', None),                  # Robin of the Wood (128K)
 ]
 
 

@@ -113,6 +113,17 @@
     "sprites": "85fe6afd593679bf59c787230ba0eaca"
    }
   },
+  "426084d3d941fd7452d6bebf726d9746": {
+   "game": "Lunar Jetman",
+   "doc": "lunar_jetman.md",
+   "nex": {
+    "plain": "3e5ca3908616f76a33f864be57baef95",
+    "sprites": "e33f68c4fc0dca007daf14e99188ecfd",
+    "sprites_loading": "4634886880940d0db5e4cee9c1113819",
+    "enhanced": "dfeb2cf9d184d6672f2c1448c0d9b805",
+    "enhanced_loading": "62f7e914c390fcce7477d5efd2423cad"
+   }
+  },
   "53078ac60141cd808b609600b85f4094": {
    "game": "Magicland Dizzy",
    "doc": "magicland_dizzy.md",
@@ -163,6 +174,17 @@
     "diagnostic": "24e547de8e2e28982fe155611068f039"
    }
   },
+  "d2fa7f2eeb8ccb75c30edbacb432a8b5": {
+   "game": "Robin of the Wood (128K)",
+   "doc": "robin_of_the_wood.md",
+   "nex": {
+    "plain": "d6e8b01ea8b94970ef102afca79e611b",
+    "sprites_raw": "7cedff6b61b71f7d94330fc9e5936d57",
+    "sprites": "1d07361f9c04903643a06cc1a8d6c88a",
+    "enhanced_raw": "425259deba42b667a01e2ece96c9b1ea",
+    "enhanced": "8cb149338c77f85a088e3ddf220ed05b"
+   }
+  },
   "3b89344c6d7e6433bf044bef1880a2f1": {
    "game": "Smash TV",
    "doc": "smash_tv.md",
@@ -180,12 +202,30 @@
     "enhanced": "3a824f3a78d11d6cee6bc6a3b37b222c"
    }
   },
+  "b94691b08d31386d3e5661d04e6c164f": {
+   "game": "Starquake",
+   "doc": "starquake.md",
+   "nex": {
+    "plain": "f447d9b3d937837d2427e021002a9648",
+    "sprites": "4efee1728e8092cdfd9f0e4ad859cf52",
+    "loading": "2e2f107e95cf80ea9412ba7023e819ee"
+   }
+  },
   "1895877d638a4a5f37a9402bed18f59a": {
    "game": "Target Renegade (128K)",
    "doc": "target_renegade.md",
    "nex": {
     "plain": "a0be8dc03a1be8c6d67dc3e0229abc35",
     "sprites": "e0b246e35d028c34170e1d1c52f00f5f"
+   }
+  },
+  "72bcb108d7baec2ee10ede47594010dd": {
+   "game": "Three Weeks in Paradise (128K)",
+   "doc": "three_weeks.md",
+   "nex": {
+    "plain": "1a6f1bbe0abfbcfbb5712ad4f4700e95",
+    "sprites": "90eeeb14fa20edc3585124422530a41d",
+    "enhanced": "e6e6f6b06c3cff4f2cd259ce27de035a"
    }
   },
   "7578947fcc8dbc4ba822e2c565499d54": {

@@ -64,6 +64,10 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Nightshade (nightshade): `nightshade.nex` e4d954de899563af241cb8db84114654, `nightshade_sprites.nex` 1cf6b27644a2b7941b3d80a1aaa87ef5, `nightshade_enhanced.nex` 37f970019aa9443669a5ca8f0fef0613; verified 2026-11-04
 - Knight Tyme (128K) (knight_tyme): `knight_tyme.nex` 0f91cab91a9261bb8645a0ec9cc871f2, `knight_tyme_sprites.nex` 645401e4e42dbc80cfcb04954773ecd4; verified 2026-11-04
 - Spellbound (128K, Magic Knight 2) (spellbound_magic_knight): `spellbound_magic_knight.nex` 656c71c4b2ebb8318f3ad442d70b0ab9, `spellbound_magic_knight_sprites.nex` 379e61b026044552437b22e117ecfd1b, `spellbound_magic_knight_enhanced.nex` 3a824f3a78d11d6cee6bc6a3b37b222c; verified 2026-11-04
+- Three Weeks in Paradise (128K) (three_weeks): `three_weeks_128.nex` 1a6f1bbe0abfbcfbb5712ad4f4700e95, `three_weeks_128_sprites.nex` 90eeeb14fa20edc3585124422530a41d, `three_weeks_128_enhanced.nex` e6e6f6b06c3cff4f2cd259ce27de035a; verified 2026-11-04
+- Starquake (starquake): `starquake.nex` f447d9b3d937837d2427e021002a9648, `starquake_sprites.nex` 4efee1728e8092cdfd9f0e4ad859cf52, `starquake_sprites_loading.nex` 2e2f107e95cf80ea9412ba7023e819ee; verified 2026-11-04
+- Lunar Jetman (lunar_jetman): `lunar_jetman.nex` 3e5ca3908616f76a33f864be57baef95, `lunar_jetman_sprites.nex` e33f68c4fc0dca007daf14e99188ecfd, `lunar_jetman_sprites_loading.nex` 4634886880940d0db5e4cee9c1113819, `lunar_jetman_enhanced.nex` dfeb2cf9d184d6672f2c1448c0d9b805, `lunar_jetman_enhanced_loading.nex` 62f7e914c390fcce7477d5efd2423cad; verified 2026-11-04
+- Robin of the Wood (128K) (robin_of_the_wood): `robin_of_the_wood.nex` d6e8b01ea8b94970ef102afca79e611b, `robin_of_the_wood_sprites_raw.nex` 7cedff6b61b71f7d94330fc9e5936d57, `robin_of_the_wood_sprites.nex` 1d07361f9c04903643a06cc1a8d6c88a, `robin_of_the_wood_enhanced_raw.nex` 425259deba42b667a01e2ece96c9b1ea, `robin_of_the_wood_enhanced.nex` 8cb149338c77f85a088e3ddf220ed05b; verified 2026-11-04
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
