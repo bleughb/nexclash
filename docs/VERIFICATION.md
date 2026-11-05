@@ -63,6 +63,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Nemesis the Warlock (nemesis_the_warlock): `nemesis_the_warlock.nex` f1497589ddf479e34d42f6ab0618954d, `nemesis_the_warlock_sprites.nex` 31ad4ab5b7507b6289ffe30f82c7d6bb; verified 2026-11-03
 - Rambo (rambo): `rambo.nex` 434a84778881e230d0c930677abad0b4, `rambo_sprites.nex` 9ebfe9c8a88d3b2ca1fa9067e3abf2d5, `rambo_enhanced.nex` c2395f02f504d4f38ccc2e0d12973b44; verified 2026-11-04
 - Ikari Warriors (48K form) (ikari_warriors): `ikari_warriors.nex` 2d56c304bcb21619d8402d64804fef75, `ikari_warriors_sprites.nex` e740ae71fd47dc06c1a752bf150afb77, `ikari_warriors_enhanced.nex` 22be808b58eb8444c57277c176f8a741; verified 2026-11-04
+- Renegade (128K) (renegade): `renegade.nex` 62a06036dec229a7d19821df2cca6a04, `renegade_sprites.nex` a670c5b19d254f367f6471bc5efd8df4, `renegade_enhanced.nex` 82b45f46c01c6b188ee28c2e76adbde2; verified 2026-11-04
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

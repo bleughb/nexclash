@@ -35,6 +35,7 @@ facts: games/tid_engine.md). MD5s: docs/VERIFICATION.md.
 | Nemesis the Warlock | nemesis (nemesis_the_warlock.md) | nemesis_the_warlock_sprites.nex 36c8a2e8 | quick 20000 IDENTICAL, unit PASS | round 1 OK (basic play, 2026-11-03) | more play: later levels, define keys, speed |
 | Rambo | rambo (rambo.md) | rambo_sprites.nex 9ebfe9c8 (.nxc v1.0) | lockstep IDENTICAL on 3 script recordings, default and Enhanced; unit PASS; 17/17 negatives detected (no human recording) | untested (JNext only) | hardware test; a human's design answers |
 | Ikari Warriors (48K form) | ikari_warriors (ikari_warriors.md) | ikari_warriors_sprites.nex e740ae71 (.nxc v1.0) | lockstep on 8 scripted recordings, default and Enhanced through the colour-set checker: game memory and registers, the picture classed by the first default; 12/12 colour-set and 7/7 engine negatives; JNext reaches play | untested | hardware test; a human recording |
+| Renegade (128K) | renegade128 (renegade.md) | sprites a670c5b1 (.nxc v1.0) | Verify on 4 bot recordings, whole game; unit PASS; negatives detected; reaches gameplay in JNext 1.1.104 (no human recording) | untested | hardware test |
 <!-- end generated -->
 
 Platform on hardware: alt ROM ($8C) PASS 2026-09-27; plain 48K and 128K conversion run.

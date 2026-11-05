@@ -164,6 +164,15 @@
     "enhanced": "c2395f02f504d4f38ccc2e0d12973b44"
    }
   },
+  "1a931038f3d0152477b7d7e30390f997": {
+   "game": "Renegade (128K)",
+   "doc": "renegade.md",
+   "nex": {
+    "plain": "62a06036dec229a7d19821df2cca6a04",
+    "sprites": "a670c5b19d254f367f6471bc5efd8df4",
+    "enhanced": "82b45f46c01c6b188ee28c2e76adbde2"
+   }
+  },
   "3b89344c6d7e6433bf044bef1880a2f1": {
    "game": "Smash TV",
    "doc": "smash_tv.md",
