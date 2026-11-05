@@ -163,6 +163,12 @@ def check(nex, z80, patch=None, tail=None, nexload=False, sysrom=None):
         else:
             img[0x2000:0x4000] = patch.page
         img[rb:rb + len(regs)] = regs                    # register block written by the stub
+    if zt.altrom0(patch):                                # alt image 0 = the 128K ROM 0 + the build's bytes
+        lo0, hi0 = zt.altrom0(patch)
+        img0 = bytearray(zt.rom128_0())
+        img0[lo0:hi0] = patch.page[lo0 - 0x2000:hi0 - 0x2000]
+        if bytes(st['alt'][0]) != bytes(img0):
+            bad.append(('alt image 0 differs from the 128K ROM 0 + the build\'s bytes',))
     if getattr(patch, 'altrom', None):
         if st['nr'][0x8C] != 0x80:
             bad.append(('$8C', st['nr'][0x8C]))

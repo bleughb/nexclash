@@ -41,7 +41,8 @@ bytes differ; `stub_extra` + `setup_call` (setup code the stub runs), `hook_page
 `altrom = (lo, hi)` + `page` (the 8K image; the stub writes Sinclair's ROM under it, z80tonex.altrom_whole); ROM bytes below 0x2000 (a JP into the hooks at a
 ROM routine, Cauldron): `altrom_low = (RAM page, 8K image of 0x0000-0x1FFF)` - with `altrom =
 (0x2000, 0x4000)` the whole image is the build's, not the Next's NextZXOS ROM3 (BRIEFING C2 #5;
-z80tonex.altrom_fill copies it, nextboot.check compares it); older strategies `slot1`,
+z80tonex.altrom_fill copies it, nextboot.check compares it); a 128K game that reads ROM 0 with the
+alt ROM on: `altrom0 = (lo, hi)` (image 0 = the 128K ROM 0 + those bytes, z80tonex.altrom0); older strategies `slot1`,
 `keep_printer_buffer`, `max_tail`.
 
 ## Verify loop (the part every engine repeats; copy it from chuckie.verify)

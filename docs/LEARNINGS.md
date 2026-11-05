@@ -65,8 +65,9 @@ BRIEFING - with its reason.
   7FFD, 1FFD or both is not known: build from the state AFTER such a write (the tail then writes 7FFD
   and 1FFD itself) - games/target_renegade.md.
 - A game may run with ROM 0 selected in play (Target Renegade: 7FFD = 0). The alt ROM image the hooks
-  live in is the one the game selects: fill image 0 too (setup: 1FFD = 0, 7FFD = 0, write mode, LDIR
-  0000->0000, hook bytes over it) and keep the bytes the game reads (scan --range 0x0000-0x3FFF).
+  live in is the one the game selects: fill image 0 too (`patch.altrom0`: the 128K ROM 0 + the hook
+  bytes; a copy of ROM 0 on the Next is NextZXOS's: Target Renegade's sound data, Knight Tyme's star
+  map) and keep the bytes the game reads (scan --range 0x0000-0x3FFF).
 
 ## 1.3 Spectrum Next: MMU, legacy paging, alt ROM, NextRegs
 - `$8C alt ROM verified on hardware 2026-09-27: write-mode copy, read-only, 7FFD b4 switch, MMU $FF, IM1, font - all PASS; $8C=00 at NEX launch.`
