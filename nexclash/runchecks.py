@@ -11,6 +11,7 @@ import json
 import os
 
 DONE = ('pass', 'waived', 'not run')
+RUN = []                    # this process's run: nexclash.py's _CHECKS; an engine adds its own (Starquake's negatives)
 
 
 def add(checks, name, status, why='', required=True, coverage=None):

@@ -84,6 +84,10 @@ figure plots (model ink = plotted pixels), 19,191,258 sprite pixels against the 
 Negatives (work/vlog/neg_final.log, neg_ovf.log): x+1, wrong page, BC clobbered, MMU7 left, BLOB not hidden, no e_un, plot store kept,
 outline missing: DETECTED on b2; paint overflow store removed: DETECTED on b1 (frame 5398 is where it matters); tile store 0xDB51
 removed: DETECTED. The room-list store 0xD978 removed was not detected: with the paint undone first it writes what is there already.
+Unit (2026-11-05, with every verification): the canvas rules on all 196 images from the game's own graphics, drawn or not
+in the recordings (ink exact, never clipped, holes filled, outline ring closed, tiles round-trip), with 4 broken-canvas
+negative controls. Negative fixtures are the record's recordings by MD5; a missing one is NOT EXERCISED and leaves the run's
+check status INCOMPLETE (no stamp), as does --quick.
 Outline census (work/canvas_check.py): 196 images, 16,174 outline pixels, ring complete, never at the canvas edge, no see-through hole.
 Speed: hook 1,471.9M T counted at 3.5 MHz over 26,627 frames, 55K per frame, run at 28 MHz (about 7-9K of 69,888); JNext plain and
 sprites identical at frame 1200 with the same keys. Cheats (work/cheats.py, 6,000 frames random play, original code): lives held at

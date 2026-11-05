@@ -810,11 +810,77 @@ def colour_identity(peek):
             'inputs': h.hexdigest(), 'geometry': None}
 
 
-def unit_tests(patch, states=(), neg=None):
-    """canvas rules on every image: outline never on ink, never clipped, holes filled."""
-    C = collections.Counter()
-    from skoolkit.snapshot import Snapshot
-    return C
+def canvas_rules(get, n, cv=None):
+    """The canvas rules for image n (cv: its canvas, default canvas(get, n)) -> [broken rules]: every ink bit of the
+    graphic is ink (1) and nothing else is; nothing on the canvas edge (never clipped); no transparent pixel enclosed
+    (holes filled); every pixel touching the figure (8 ways) is opaque (the outline ring complete); the tiles hold
+    the canvas exactly."""
+    cv = cv if cv is not None else canvas(get, n)
+    W, b, bad = CANVAS, image_base(n), []
+    ink = {(ORGY + r, ORGX + c) for r in range(16) for c in range(24)
+           if (get(b + 3 * r) << 16 | get(b + 3 * r + 1) << 8 | get(b + 3 * r + 2)) >> (23 - c) & 1}
+    if not ink:
+        return [] if not any(any(r) for r in cv) else ['blank image drawn']
+    if {(y, x) for y in range(W) for x in range(W) if cv[y][x] == 1} != ink:
+        bad.append('ink pixels differ from the graphic')
+    if any(cv[0][x] or cv[W - 1][x] or cv[x][0] or cv[x][W - 1] for x in range(W)):
+        bad.append('clipped: drawn on the canvas edge')
+    out, st = {(0, 0)}, [(0, 0)]
+    while st:
+        y, x = st.pop()
+        for yy, xx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+            if 0 <= yy < W and 0 <= xx < W and (yy, xx) not in out and not cv[yy][xx]:
+                out.add((yy, xx))
+                st.append((yy, xx))
+    if any(not cv[y][x] and (y, x) not in out for y in range(W) for x in range(W)):
+        bad.append('a hole left transparent')
+    if any(cv[y][x] in (1, 2) and any(0 <= y + dy < W and 0 <= x + dx < W and not cv[y + dy][x + dx]
+                                      for dy in (-1, 0, 1) for dx in (-1, 0, 1)) for y in range(W) for x in range(W)):
+        bad.append('outline ring open')
+    t = tiles(cv)
+    back = [[(t[(y // 16 * 2 + x // 16) * 128 + (y % 16) * 8 + (x % 16) // 2] >> (4 * (1 - x % 2))) & 15
+             for x in range(W)] for y in range(W)]
+    if back != cv:
+        bad.append('tiles do not hold the canvas')
+    return bad
+
+
+def unit_tests(patch, states=(), neg=None, z80=None):
+    """Cases no recording needs to reach: the canvas rules (canvas_rules) on every one of the 196 images, drawn or
+    not in the recordings, from the game's own graphics; and a negative control: canvases broken on purpose (an ink
+    pixel cleared, the outline dropped, a hole cut, the image moved onto the edge) must each break a rule.
+    -> (Counter, failures). Without z80 (the snapshot) nothing is checked: 'not exercised'."""
+    C, fails = collections.Counter(), []
+    if z80 is None:
+        C['unit tests not exercised (no snapshot)!'] += 1
+        return C, ['no snapshot']
+    from . import z80tonex as zt
+    s = zt.Z80Snapshot(z80)
+    ram = bytes(s.banks[5] + s.banks[2] + s.banks[0])
+    get = lambda a: ram[a - 0x4000]
+    for n in range(NIMG):
+        bad = canvas_rules(get, n)
+        C['images'] += 1
+        for k in bad:
+            C[k + '!'] += 1
+            fails.append((n, k))
+    n = next(i for i in range(NIMG) if any(get(image_base(i) + k) for k in range(48)))
+    cv = canvas(get, n)
+    y0, x0 = next((y, x) for y in range(CANVAS) for x in range(CANVAS) if cv[y][x] == 1)
+    broken = {'ink pixel cleared': lambda c: c[y0].__setitem__(x0, 2),
+              'outline dropped': lambda c: [r.__setitem__(x, 0) for r in c for x in range(CANVAS) if r[x] == 3],
+              'hole cut': lambda c: c[y0].__setitem__(x0, 0),
+              'moved onto the edge': lambda c: [c.__setitem__(y, c[y][4:] + [0] * 4) for y in range(CANVAS)]}
+    for k, f in broken.items():
+        c = [list(r) for r in cv]
+        f(c)
+        C['negative control cases'] += 1
+        if canvas_rules(get, n, c):
+            C['negative control detected'] += 1
+        else:
+            C['negative control (%s) NOT DETECTED!' % k] += 1
+            fails.append(('negative', k))
+    return C, fails
 
 
 # ---------------------------------------------------------------------------------------------
@@ -869,6 +935,20 @@ def build(z80, out, name, say=print):
     return not bad and not bad2, patch
 
 
+def fixtures(rzxs):
+    """The recordings given, by the record's name for their MD5 ({'m1': path, ...}): a negative's fixture is the
+    record's recording, whatever the file is called; another file called m1.rzx is not it."""
+    import hashlib
+    from . import records
+    names = {r['md5']: os.path.splitext(r['name'])[0] for r in records.load('starquake')['inputs']['recordings']}
+    out = {}
+    for p in rzxs:
+        k = names.get(hashlib.md5(open(p, 'rb').read()).hexdigest())
+        if k:
+            out[k] = p
+    return out
+
+
 # negatives: the recording (name, frames; 0 = whole) that reaches each case
 NEG_PLAN = {'a paint store removed (0xD943 -> NOP: the 0x5B00 overflow lost)': ('b1', 5500)}
 NEG_DEFAULT = ('m1', 0)
@@ -885,6 +965,10 @@ def auto(a, z80, name, out, say):
     stop = getattr(a, 'quick', None)
     if rzxs:
         say('ROM model : %s' % rom_model())
+    if rzxs:
+        u, uf = unit_tests(patch, z80=z80)
+        ok = ok and not uf
+        say('Unit      : %s %s' % ('PASS' if not uf else 'FAILED', ' '.join('%s=%s' % kv for kv in sorted(u.items()))))
     for r in rzxs:
         t = time.time()
         c, ex = verify(patch, r, stop=stop)
@@ -893,20 +977,27 @@ def auto(a, z80, name, out, say):
         say('Verify    : %s  %s, %.0fs -> %s' % (os.path.basename(r), ', '.join('%s %s' % (k, v) for k, v in sorted(c.items())
                                                                               if not k.endswith('!'))[:700],
                                                time.time() - t, 'IDENTICAL' if not fails else 'FAILED %s' % fails))
+    from . import runchecks
+    if rzxs and stop:
+        runchecks.add(runchecks.RUN, 'negatives', 'incomplete', '--quick %d: the negatives need whole recordings' % stop)
     if rzxs and not stop:
-        by = {os.path.splitext(os.path.basename(r))[0]: r for r in rzxs}
+        by = fixtures(rzxs)
         det = tot = 0
+        unrun = []
         for nm, p in negative_patches(z80):
             k, n = NEG_PLAN.get(nm, NEG_DEFAULT)
-            if k not in by:
-                say('Negative  : %-62s not run (no %s.rzx)' % (nm, k))
-                continue
             tot += 1
+            if k not in by:
+                say('Negative  : %-62s NOT EXERCISED (no recording with the record\'s %s.rzx MD5)' % (nm, k))
+                unrun.append(nm)
+                continue
             c, _ = verify(p, by[k], stop=n or None)
             f = {x: v for x, v in c.items() if x.endswith('!')}
             det += bool(f)
             say('Negative  : %-62s %s' % (nm, 'DETECTED on %s %s' % (k, str(f)[:120]) if f else 'NOT DETECTED (%s)' % k))
-        ok = ok and det == tot
-        say('Negatives : %d of %d DETECTED' % (det, tot))
+        ok = ok and det == tot - len(unrun)
+        say('Negatives : %d of %d DETECTED%s' % (det, tot, ', %d NOT EXERCISED' % len(unrun) if unrun else ''))
+        runchecks.add(runchecks.RUN, 'negatives', 'incomplete' if unrun else 'pass' if det == tot else 'fail',
+                      ('not exercised: %s' % '; '.join(unrun)) if unrun else '%d of %d detected' % (det, tot))
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return ok

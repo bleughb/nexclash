@@ -507,7 +507,7 @@ def _write_decisions(out, name, an, extra=None):
 
 
 _AUTO = {}                  # cmd_auto's recordings, for the ROM path check in _finish
-_CHECKS = []                # this run's check status (nexclash/runchecks.py): NAME_checks.json + the Checks line
+_CHECKS = runchecks.RUN     # this run's check status (nexclash/runchecks.py): NAME_checks.json + the Checks line
 
 
 def _rom_paths_known(z80):
