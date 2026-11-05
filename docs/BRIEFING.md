@@ -296,15 +296,14 @@ with the next free number. STATUS.md "Open work" holds only release state and po
 
 Verification and speed
 1. Hook speed: `python -m nexclash.pace` measures the pace penalty and hook time (NR 7) in JNext
-   (docs/CHECKS.md). Still wanted: an `auto` line with hook T per call against a budget per game frame
-   (Smash TV's `Speed` line is the pattern); hooks with no NR 7 switch read 0 in pace. Core-exact:
+   (docs/CHECKS.md). Wanted: an `auto` line, hook T per call against a per-frame budget (Smash TV's
+   `Speed` line); hooks with no NR 7 switch read 0 in pace. Core-exact:
    MAME breakpoints on hook entry / exit (TECHNIQUES "NextMasterSystem"); 28 MHz cycles = T + 1 per
    memory read, not T / 8. Matters most without frame sync (LEARNINGS 2.1).
 2. Interrupt injection: in verify / unit tests, run the game's ISR at random hook instructions and
    require identical results (would have caught Commando's IY bug directly; the per-instruction
    invariant check is the stand-in).
-3. Boot-path RAM check (entry -> menu, in no RZX) is not automatic in `auto`: the checked range must
-   be the WHOLE hook RAM. Tool: `scan --frames N --keys K --after ENTRY --range ...` (C4).
+3. Boot-path RAM check (entry -> menu, in no RZX) is not automatic in `auto`: check the WHOLE hook RAM. Tool: `scan --frames N --keys K --after ENTRY --range ...` (C4).
 4. Treasure Island (dedicated builder) is not re-verified differentially by any tool: selftest
    re-proves only the plain tail (access scan) and the boot (record: verify.differential false).
 5. Whole alt ROM image: new builds' default (card patch.whole-altrom-image); older games pinned.
@@ -312,17 +311,15 @@ Verification and speed
    alt ROM games. Open: slot1 builds keep NextZXOS's ROM3 at 0x0000-0x1FFF.
 6. `nexclash.py patch` (the users' command) writes the plain .nex WITHOUT nextboot.check (El Capitan
    Trueno's first plain build crashed at once: 48K tail above 0xC000). Run it in `patch`; refuse or warn.
-7. `auto` on an unknown engine made Jetpac's synthetic _auto.rzx (6410 frames), but `scan` / `preview`
-   on it stop with "Port readings exhausted for frame 532": recorder and replay disagree on one
-   frame's port reads. Not investigated (Jetpac used free runs).
+7. "Port readings exhausted": scan / preview on Jetpac's _auto.rzx (frame 532), and rom_paths on Knight
+   Tyme's kt_t1.rzx (frame 1; 48K ROM as ROM 1) ends `auto`: only ValueError caught (knight_tyme.md).
 8. selftest has no dependency check: without SkoolKit every rebuild prints "got None" and the canary
-   says "the TOOL CHAIN is broken". Check the imports (skoolkit, PIL) first; golden check in tools_check.
+   blames the TOOL CHAIN. Check the imports (skoolkit, PIL) first; golden check in tools_check.
 
 Analysis tools
-9. Explorer reach is LOW (1-4 real rooms in 6,000-60,000 frames on the Dizzy games). Next step:
-   goal-directed exploration for the TID engine from the player X/Y variables (walk to screen
-   edges, jump when X stops changing). Until then a short human RZX covers more; puzzle-gated
-   content always needs one.
+9. Explorer reach is LOW (1-4 real rooms in 6,000-60,000 frames, Dizzy games). Next: goal-directed
+   exploration for TID from the player X/Y (walk to screen edges, jump when X stops). Until then a
+   short human RZX covers more; puzzle-gated content needs one.
 10. classify() assumes "overwrite" for unrecognised writers - should flag for review.
 11. Static caller scan: `scan` sees only what the RZX ran, but PLAYBOOK 3c wants every caller of every
    plotter. Add `scan --static` (recursive descent from entry + ISR, RZX PCs as seeds, object handler
@@ -471,6 +468,8 @@ Designs not built yet (use when a game needs them)
    in write / choose and report them; add a tools_check case.
 44. sjasm.py on Windows: no binary, no make. A local 1.24.0 copied to the cache as `sjasmplus`
    (+ .exe) gave --check --all IDENTICAL (2026-10-31); accept a cached .exe.
+45. nextboot.boot has no raster line: Spellbound's picture hold never ends; rom_paths raises "boot did
+   not reach PC 26627", ending `auto` (spellbound_magic_knight.md).
 
 ### C3b. Two verification levels (agreed with Dean 2026-09-29; how to run them: PLAYBOOK 6)
 - ITERATE (per change): original bytes at every site, boot check, unit tests (with negative

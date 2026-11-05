@@ -85,7 +85,7 @@
  "repro": [],
  "pin": {
   "rom_paths": "skipped",
-  "note": "the shared ROM path check (nextboot.rom_paths) replays the recordings on SkoolKit's 128K ROMs; these were recorded with Sinclair's 48K ROM as ROM 1 (games/knight_tyme.md Inputs: the 128K ROM 1 has keypad code at 0x386E), so it desyncs at frame 1 and its SkoolKitError aborts auto. A pin makes cmd_auto skip it (no altrom_fill: the build writes its whole alt ROM image itself, altrom 0x2000-0x4000 + altrom_low, so z80tonex.altrom_whole is False either way). The engine's lockstep runs ROM 1 from the image the Next holds instead. Alt image 0 is still the setup's copy of the Next's ROM 0 (REFACTOR item 2: the Bridge star map): `altrom0` is an opt-in rework, not this build"
+  "note": "the shared ROM path check (nextboot.rom_paths) replays the recordings on SkoolKit's 128K ROMs; these were recorded with Sinclair's 48K ROM as ROM 1 (games/knight_tyme.md Inputs: the 128K ROM 1 has keypad code at 0x386E), so it desyncs at frame 1 and its SkoolKitError aborts auto (BRIEFING C2 #45). A pin makes cmd_auto skip it (no altrom_fill: the build writes its whole alt ROM image itself, altrom 0x2000-0x4000 + altrom_low, so z80tonex.altrom_whole is False either way). The engine's lockstep runs ROM 1 from the image the Next holds instead. Alt image 0 is still the setup's copy of the Next's ROM 0 (REFACTOR item 2: the Bridge star map): `altrom0` is an opt-in rework, not this build"
  },
  "status": {
   "title": "Knight Tyme (128K)",

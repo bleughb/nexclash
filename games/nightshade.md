@@ -157,7 +157,7 @@ card_test10.img): default, Enhanced, Enhanced + Infinite Lives MD5 exact with ap
   (part maps dropped included); no-blink 62 changes / 62 blits, switch 0 of 210 in the play area. Default .nex still
   1cf6b276; Enhanced 2706282f; real loader exact default, Enhanced, Enhanced + Infinite Lives (581efc01).
 - out/nightshade.nxc 8ffb02c6 (prev 8983d5d7 kept as out/nightshade.prev_8983d5d7.nxc). Note: nexclash-patch's
-  tools/nxc.py (changed 12:39 by someone else) now writes the menu .nex by default; pack checks use --bare.
+  nxc.py (changed 12:39 by someone else) now writes the menu .nex by default; pack checks use --bare.
 
 ## Round 6 (2026-11-04, owner and Dean Woodyatt after 8ffb02c6)
 - Asks: collar the hood's grey (Jon); "the run before coloured the bottom of the helmet the colour of the tunic. the
@@ -199,7 +199,7 @@ card_test10.img): default, Enhanced, Enhanced + Infinite Lives MD5 exact with ap
     selftest.py --game nightshade --verify --stamp` = auto with --rzx a1 a2 rec1 rec2: 8 replays (default and Enhanced)
     and 16 negatives in worker processes (about 3 min), then nexclash.py's ROM path check (350 s on this machine).
   - .nxc: `nexclash.py auto` without --no-nxc packages the sprite build (nxcout); the approved .nxc was made by
-    nexclash-patch tools/nxc.py from the two .nex (runs/nightshade/work/v3/pack.sh) with the .pok's Infinite Lives.
+    nexclash-patch's nxc.py from the two .nex (runs/nightshade/work/v3/pack.sh) with the .pok's Infinite Lives.
 - Results (2026-11-04, this tree, stamped): approved .nxc b8c3754c `--bare` = 1cf6b276 default, 37f97001 Enhanced: the
   rebuild equals both. Replay IDENTICAL: a1 9010 frames (figure hook 4817, blits 1776, hero box 1776, clear 1), a2 9028
   (4709 / 1765), rec1 9010 (5711 / 1945), rec2 9028 (5504 / 1947), default and Enhanced, every figure painted in

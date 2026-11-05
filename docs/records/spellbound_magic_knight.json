@@ -115,7 +115,7 @@
  "repro": [],
  "pin": {
   "rom_paths": "skipped",
-  "note": "the shared ROM path check (nextboot.rom_paths) boots each .nex with nextboot.boot, which has no raster line: the set-up holds the loading picture until a key or 250 frames and never finishes there (the pilot changed nextboot.py; the line model now lives in this engine's _boot); its recordings run ROM 1 = Sinclair's 48K ROM, as Knight Tyme's. A pin makes cmd_auto skip it (no altrom_fill: the build writes its whole alt ROM image itself, altrom 0x2000-0x4000 + altrom_low). The lockstep runs ROM 1 from the image the Next holds instead"
+  "note": "the shared ROM path check (nextboot.rom_paths) boots each .nex with nextboot.boot, which has no raster line: the set-up holds the loading picture until a key or 250 frames and never finishes there (RuntimeError: boot did not reach PC 26627; BRIEFING C2 #45; the pilot changed nextboot.py, the line model now lives in this engine's _boot). The plain build (no hold) replays t1.rzx through it. A pin makes cmd_auto skip it (no altrom_fill: the build writes its whole alt ROM image itself, altrom 0x2000-0x4000 + altrom_low). The lockstep runs ROM 1 from the image the Next holds instead"
  },
  "status": {
   "title": "Spellbound (128K, Magic Knight 2)",

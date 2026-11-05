@@ -48,9 +48,9 @@ Owner: "Thor looks like a devil and only half red"; the Knight wears armour, so 
 Hardware, CSpect. Speed on a board. Puzzles, spells that succeed, the ending, characters taking orders: not played. Two plots of an arriving character use the pool twice (duplicates, harmless, pool not filled on any recording).
 
 ## Lessons
-- [local: the pilot changed nextboot.boot for its picture hold] A shared-code change of a pilot clone goes into the
+- [backlog C2 #45] The pilot changed the shared boot model for its picture hold. A shared-code change of a pilot clone goes into the
   engine on import: _boot here is nextboot.boot plus the raster line model, used only by this engine's boot check.
-- [deferred Open: reconsider when the ROM path check models the raster line and 48K-ROM-as-ROM-1 recordings] The record
+- [backlog C2 #45] The ROM path check never finishes this build's boot (picture hold, no raster line): the record
   pins `rom_paths: skipped`; the lockstep runs ROM 1 from the image the Next holds instead.
 - [local: a store can be a NOP] Replacing one store with NOP keeps instruction counts and the lockstep; a watch at the site still checks the store's would-be effect.
 - [local: an XOR plot needs no state] Follow every call with the sprite: an erase names the place it is already.
@@ -106,8 +106,10 @@ bank 12 (the image's page bytes). Emulator only.
   enh2/neg_palette.py / ut.py are now auto: both sets on every recording, the 23 negatives (t1 1400 frames, then
   t_balls, then t_chars), the 7 palette negatives, unit tests on t1's first 500 frames.
 - New defaults: whole alt ROM image already written by the build (altrom 0x2000-0x4000 + altrom_low); record pin
-  `rom_paths: skipped` (nextboot.rom_paths' boot has no raster line and never leaves the hold; the recordings run
-  ROM 1 = Sinclair's 48K ROM). Output as approved.
+  `rom_paths: skipped`. Output as approved. Evidence (BRIEFING C2 #45, 2026-11-04, NextZXOS ROM modelled):
+  `nextboot.rom_paths([spellbound_magic_knight_sprites.nex], [t1.rzx], z80=...)`: rom_paths (line 160) -> boot (line
+  351) `RuntimeError: boot did not reach PC 26627 (at 53426)` (the set-up's line wait; no frame of t1.rzx is replayed).
+  The plain .nex (no hold) replays t1.rzx through it to frame 2109, so these recordings replay; only the boot fails.
 - How it runs in today's tree: rebuild `python nexclash.py auto --no-nxc spellbound_magic_knight.z80 --no-record -o
   OUT`; verify `NEXCLASH_MAINTAINER=1 NEXCLASH_REFERENCE=<specnext/reference> NEXCLASH_NEXT_ROM=<enNextZX.rom> python
   selftest.py --game spellbound_magic_knight --verify --stamp` (18 locksteps and the negatives in worker processes).

@@ -4,7 +4,7 @@
 Stage: import PARTIAL    State: the approved build is not in this repo; no engine, no record, nothing in engines.py.
 Approved: New Zealand Story v1.1 .nxc (nexclash-patch patches/, nex_md5 70174ecb, toggle Smooth scrolling), made from
 Jon Attree's .nxc work in runs/new_zealand_story (stage 1: work/build.py; colour: colour/build/make.py, gen.py,
-hooks.asm; 1.1 speed pass: colour/speedup, its sources hashed in the run clone's tools/probes/nzs_speedup/sources.json).
+hooks.asm; 1.1 speed pass: colour/speedup, its sources hashed in the run clone's probe snapshot nzs_speedup/sources.json).
 Start with: the decisions under "Open" (the owner's and the maintainers').
 
 ## Why it stops (checked 2026-11-04 against refactor 884d31a)

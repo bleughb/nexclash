@@ -51,7 +51,7 @@ Cheats: archive .pok's [128K] entries; time and others' stats held in the simula
 ## Lessons
 - [local: the pilot added the loading screen after the build with its own script] Rebuilding the approved .nex
   needs the post-step in the engine: stub source in the .asm, the screen from the tape beside the snapshot.
-- [deferred Open: reconsider when the ROM path check can replay recordings made on the 48K ROM as ROM 1] The record pins
+- [backlog C2 #45] The ROM path check cannot replay recordings made on the 48K ROM as ROM 1; the record pins
   `rom_paths: skipped`; the engine's lockstep runs ROM 1 from the image the Next holds instead.
 - [local: a composite whose clean copy is captured after figures are plotted needs the plots undone before the capture] Run plot, restore cells: all registers equal for free, no second path.
 - [local: count hook instructions out and the original and patched machines stay in lockstep] Whole 128K compared per frame, with no per-site pairing; every hook counted as nothing. Works only where game instructions stay the same.
@@ -108,6 +108,10 @@ bank 12 (the image's page bytes). Emulator only.
   z80tonex.altrom_whole is False and the output is unchanged); alt image 0 is the old ROM 0 copy (Open). The record
   pins `rom_paths: skipped`: the shared ROM path check replays the recordings on SkoolKit's 128K ROMs, these were
   recorded on Sinclair's 48K ROM as ROM 1 (Inputs), so it desyncs at frame 1 and its SkoolKitError ends `auto`.
+  Evidence (BRIEFING C2 #7, 2026-11-04, NextZXOS ROM modelled): `nextboot.rom_paths([knight_tyme_sprites.nex],
+  [kt_t1.rzx], z80=knight_tyme.z80)`: nextboot.rom_paths -> simrun.run (line 232) -> play_rzx (line 157) -> rzxplay ->
+  `skoolkit.SkoolKitError: Port readings exhausted for frame 1`; in `auto` it surfaces from nexclash.py _finish ->
+  _rom_paths (line 518) after the engine's Result line, and no report is written.
 - How it runs in today's tree: rebuild `python nexclash.py auto --no-nxc knight_tyme.z80 --no-record -o OUT` (the
   .tzx beside it); verify `NEXCLASH_MAINTAINER=1 NEXCLASH_REFERENCE=<specnext/reference> NEXCLASH_NEXT_ROM=<enNextZX.rom>
   python selftest.py --game knight_tyme --verify --stamp`: kt_t1 in the main process (unit-test states), the other
