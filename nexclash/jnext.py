@@ -479,3 +479,46 @@ def result_block(lines, path=None):
     return txt
 
 
+
+# ---- selftest --tools -------------------------------------------------------------------------------------
+def selfcheck():
+    """Each play check's detectors on synthetic data: [(name, failures)]."""
+    from . import soak, pace, flicker, looksheet
+    bad = []
+    rows = unwrap([dict(C=v) for v in (2 ** 31 - 10, -2 ** 31 + 5, -2 ** 31 + 50)])
+    if [r['C'] for r in rows] != [2 ** 31 - 10, 2 ** 31 + 5, 2 ** 31 + 50]:
+        bad.append(('unwrap', rows))
+    s = schedule(GENERIC, 3000, 7)
+    if s != schedule(GENERIC, 3000, 7) or not s or s[0][0] < GENERIC['play_from']:
+        bad.append('schedule not repeatable')
+    if down(['q', 'K:FIRE', 'K:UP']) != '  press "q"\n  joystick 1 24\n':
+        bad.append(('keys', down(['q', 'K:FIRE', 'K:UP'])))
+    return [('play checks: jnext runner (32-bit cycle unwrap, repeatable input, keys)', bad),
+            ('soak: still-picture and tight-loop detectors (synthetic)', soak.selfcheck()),
+            ('pace: penalty by update windows, quiet / busy thirds, lockstep (synthetic)', pace.selfcheck()),
+            ('flicker: out of step, vanished figure, one-frame attribute change (synthetic)', flicker.selfcheck()),
+            ('looksheet: straight cut, drawn line, vanishing colour, white rim (synthetic)', looksheet.selfcheck())]
+
+
+def live_check(z80, work):
+    """JNext end to end on a reference game: the original against itself must pace at exactly 0% in
+    lockstep and soak with the same pictures. -> (name, ok, info), or None without JNext and a card."""
+    import contextlib
+    import io as _io
+    try:
+        binary()
+        card()
+    except SystemExit:
+        return None
+    from . import soak, pace
+    out = os.path.join(work, 'play')
+    with contextlib.redirect_stdout(_io.StringIO()):
+        pace.main([z80, '--original', z80, '--probe', '40092', '--updates', '100', '--window', '10',
+                   '-o', os.path.join(out, 'pace')])
+        soak.main([z80, '--original', z80, '--minutes', '0.5', '--static', '5', '-o', os.path.join(out, 'soak')])
+    p = json.load(open(os.path.join(out, 'pace', 'pace.json')))['result'] or {}
+    k = json.load(open(os.path.join(out, 'soak', 'soak.json')))
+    pen = p.get('phases', [[None, {}]])[0][1].get('penalty')
+    same = k['build']['distinct'] == k['original']['distinct'] > 10 and not k['build']['static'] and not k['build']['loops']
+    return ('play checks in JNext: Chuckie Egg against itself paces at 0.00% over 100 updates (probe 40092) '
+            'and soaks 0.5 min with the same pictures', pen == 0.0 and same, (pen, k['build']['distinct'], k['original']['distinct']))

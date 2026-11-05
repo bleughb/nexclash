@@ -324,6 +324,10 @@ def tools_check(src):
     print('%-4s tools: z80n - every Z80N instruction against worked results (core 3.02.05 / guide r3)%s' % (
         'OK' if not zbad else 'FAIL', '' if not zbad else ' (%s)' % zbad[:3]))
     cbad += len(zbad)
+    from nexclash import jnext                  # play checks: soak / pace / flicker / looksheet (docs/CHECKS.md)
+    for name, jbad in jnext.selfcheck():
+        print('%-4s tools: %s%s' % ('OK' if not jbad else 'FAIL', name, '' if not jbad else ' (%s)' % str(jbad)[:200]))
+        cbad += len(jbad)
     rec = R.load('chuckie_egg')
     work = tempfile.mkdtemp(prefix='nexclash_tools_')
     d, why = stage(rec, src, work)
@@ -375,6 +379,11 @@ def tools_check(src):
         _, r = drawcost.cost(ez, 39500, [er], stop=1500)
         ok('cost plotter 39500 (1500 frames): 1402 calls, median 19535 T',
            r['calls'] == 1402 and r['median'] == 19535, r)
+        live = jnext.live_check(ez, work)       # JNext + card ($NEXCLASH_JNEXT_CARD) present
+        if live:
+            ok(*live)
+        else:
+            print('SKIP tools: play checks in JNext (no jnext or no $NEXCLASH_JNEXT_CARD)')
         from nexclash import survey
         _, r = survey.survey(ez, [er], os.path.join(work, 'survey'), stop=600, log=lambda m: None)
         rt = {x['routine']: x for x in r['routines']}
