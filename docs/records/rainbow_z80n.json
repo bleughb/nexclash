@@ -32,14 +32,18 @@
   }
  },
  "modules": [
-  "rainbow_z80n"
+  "rainbow_z80n",
+  "rainbow_z80n_sky"
  ],
  "own_modules": [
-  "rainbow_z80n"
+  "rainbow_z80n",
+  "rainbow_z80n_sky"
  ],
  "data": [
   "docs/profiles/rainbow_z80n.json",
-  "asm/rainbow_z80n_hooks.asm"
+  "asm/rainbow_z80n_hooks.asm",
+  "docs/profiles/rainbow_z80n_sky.json",
+  "asm/rainbow_z80n_sky_ldscr.asm"
  ],
  "shared_data": [],
  "rebuild": {
@@ -79,6 +83,136 @@
   "altrom_fill": "rom3",
   "note": "verified before the shared defaults of 2026-11-04 (docs/REFACTOR.md 1-3, 7): the old alt ROM fill, no ROM path / tail check; `--altrom-fill whole` opts in to the rework"
  },
+ "rework": [
+  {
+   "name": "sky",
+   "version": "1.0",
+   "args": [],
+   "env": {
+    "NEXCLASH_REWORK": "rainbow_z80n_sky"
+   },
+   "inputs": [
+    {
+     "name": "leebee_r01_island1_round1.rzx",
+     "md5": "01b6cca0cbd9f1de98e0193adfa7e46c",
+     "path": "rainbow_islands/leebee/leebee_r01_island1_round1.rzx"
+    },
+    {
+     "name": "leebee_r04_island1_round4.rzx",
+     "md5": "86439299b7d4cb646b8d5cda35c0227f",
+     "path": "rainbow_islands/leebee/leebee_r04_island1_round4.rzx"
+    },
+    {
+     "name": "leebee_r05_island2_round1.rzx",
+     "md5": "84c7f6a887ed2bce611270b71be5f797",
+     "path": "rainbow_islands/leebee/leebee_r05_island2_round1.rzx"
+    },
+    {
+     "name": "leebee_r08_island2_round4.rzx",
+     "md5": "96694a8f7cb8a361c8de7a35e4111456",
+     "path": "rainbow_islands/leebee/leebee_r08_island2_round4.rzx"
+    },
+    {
+     "name": "leebee_r09_island3_round1.rzx",
+     "md5": "14ce2388bbe7f8aa6242cbe844e19215",
+     "path": "rainbow_islands/leebee/leebee_r09_island3_round1.rzx"
+    },
+    {
+     "name": "leebee_r12_island3_round4.rzx",
+     "md5": "1028abfe7b2161ba1b0b1c43d5d448fa",
+     "path": "rainbow_islands/leebee/leebee_r12_island3_round4.rzx"
+    },
+    {
+     "name": "leebee_r13_island4_round1.rzx",
+     "md5": "62a14f85569e8e57b322442b8cf4518f",
+     "path": "rainbow_islands/leebee/leebee_r13_island4_round1.rzx"
+    },
+    {
+     "name": "leebee_r17_island5_round1.rzx",
+     "md5": "87a29f5190cc7b476bc18e1b837102e4",
+     "path": "rainbow_islands/leebee/leebee_r17_island5_round1.rzx"
+    },
+    {
+     "name": "leebee_r21_island6_round1.rzx",
+     "md5": "c3b372bb5c40cf18bae8ed2c7a266b5b",
+     "path": "rainbow_islands/leebee/leebee_r21_island6_round1.rzx"
+    },
+    {
+     "name": "leebee_r24_island6_round4.rzx",
+     "md5": "8cbefcf72c101cf3be7cfad5e052a68b",
+     "path": "rainbow_islands/leebee/leebee_r24_island6_round4.rzx"
+    },
+    {
+     "name": "leebee_r25_island7_round1.rzx",
+     "md5": "63c8919ef45b10edec1fc5e5a748f066",
+     "path": "rainbow_islands/leebee/leebee_r25_island7_round1.rzx"
+    },
+    {
+     "name": "leebee_r28_island7_round4.rzx",
+     "md5": "06db1242613dd3415ff480b36cf6ea11",
+     "path": "rainbow_islands/leebee/leebee_r28_island7_round4.rzx"
+    },
+    {
+     "name": "leebee_ending.rzx",
+     "md5": "85ef7d40191c957abfc7eb473acbb985",
+     "path": "rainbow_islands/leebee/leebee_ending.rzx"
+    },
+    {
+     "name": "rainbow_z80n_loading.scr",
+     "md5": "d91477c36ad36ad42b2b915bf6a1a953",
+     "path": "rainbow_islands/rainbow_z80n_loading.scr"
+    }
+   ],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ],
+    "decisions": {
+     "engine": "rainbow_z80n_sky",
+     "sky": "ULA palette entry 17 bright blue at every game frame start on islands 1 and 4-7",
+     "loading_screen": "bank 32"
+    }
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [
+     "leebee_r01_island1_round1.rzx",
+     "leebee_r04_island1_round4.rzx",
+     "leebee_r05_island2_round1.rzx",
+     "leebee_r08_island2_round4.rzx",
+     "leebee_r09_island3_round1.rzx",
+     "leebee_r12_island3_round4.rzx",
+     "leebee_r13_island4_round1.rzx",
+     "leebee_r17_island5_round1.rzx",
+     "leebee_r21_island6_round1.rzx",
+     "leebee_r24_island6_round4.rzx",
+     "leebee_r25_island7_round1.rzx",
+     "leebee_r28_island7_round4.rzx",
+     "leebee_ending.rzx",
+     "rainbow.rzx",
+     "rainbownew.rzx"
+    ]
+   },
+   "outputs": {
+    "plain": {
+     "file": "rainbow_z80n.nex",
+     "md5": "7ac543fb51c7a3c4137778eeb3cdc175"
+    },
+    "sprites": {
+     "file": "rainbow_z80n_sprites.nex",
+     "md5": "d7b2345c8f1fd35f592324740ec4daae"
+    },
+    "diagnostic": {
+     "file": "rainbow_z80n_sprites_diag.nex",
+     "md5": "305a6ed7bdd1dd93821c028ea4012297"
+    }
+   },
+   "proof": "the 13 LeeBee round cuts (islands 1-7 and the ending) and Dean's two recordings IDENTICAL with palette entry 17 = the model at every game frame start, unit tests and the diagnostic build on rainbownew, 7 sky palette negatives",
+   "note": "Jon Attree's Rainbow Islands .nxc v1.0 (published, github.com/jattree/nxc, patch md5 38e9cead; its immunity-bank cheat fix is .nxc-level only): engine rainbow_z80n_sky, picked by engines.py only with NEXCLASH_REWORK=rainbow_z80n_sky (the build keeps the record's pinned rom3 fill, as published). Dean's rainbow_z80n as of d7abd1c + the sky fix (ULA palette entry 17 bright blue at every game frame start on islands 1 and 4-7, pilot runs/rainbow_sky 8e111d0) + the loading screen (rainbow_z80n_loading.scr, bank 32). sprites = nxc.py --bare. Verify: the 13 LeeBee round cuts (islands 1-7 and the ending, replay only) and Dean's two recordings replayed in parallel with entry 17 checked against the model at every game frame start; unit tests and the diagnostic build on rainbownew; 7 sky palette negatives on rainbow.rzx and the island 2 cut. Excluded from automatic checks as the record: run it with selftest.py --game rainbow_z80n --verify. games/rainbow_islands.md \"Rework (opt-in)\"."
+  }
+ ],
  "status": {
   "title": "Rainbow Islands (128K, Z80N)",
   "engine_col": "rainbow_z80n (rainbow_z80n.md)",
@@ -88,7 +222,8 @@
   "next": "hardware test of 69369c89 (rainbow_z80n.md checklist); everything open in rainbow_islands.md; speed ideas in rainbow_z80n.md"
  },
  "checks": [
-  "asm2profile:rainbow_z80n"
+  "asm2profile:rainbow_z80n",
+  "asm2profile:rainbow_z80n_sky"
  ],
  "excluded": "as rainbow (Dean 2026-10-13): too slow for the automatic checks (~50 min verify); run it explicitly with selftest.py --game rainbow_z80n [--verify]",
  "checked": {
