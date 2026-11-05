@@ -239,5 +239,91 @@
    "python -m nexclash.inferno --scenery-check ../specnext/reference/inferno/Inferno6.rzx --quick 2000"
   ],
   "iteration": "level 6 quick 2000 per edit; other levels at integration milestones or targeted path checks"
+ },
+ "textmap": {
+  "scope": "experimental offline assembled 1-bit scenery compiler; no display setup/frame hook/sprites/commit; total budget unproved",
+  "sources": {
+   "nexclash/inferno.py": "fdaa1687b44065f5f9ab4c44d9bff01c",
+   "asm/inferno_hooks.asm": "a9ee098552191191f6ff917f58aa7563",
+   "docs/profiles/inferno.json": "0294e4945c8e24ae6a20f624331f2bf7"
+  },
+  "artifacts": {
+   "textmap_units.json": "b7df680d7d37dfc12e508edc854f4b5d",
+   "textmap6_quick.json": "3019f49174479a3fe892c3bfdcb0e992",
+   "textmap_summary.json": "05d26705bb3c4c5cc97031f60235d2c9",
+   "textmap_shop_census.json": "13c2c51e063b0e20aaa7bb5cffe6dd5f",
+   "textmap_shop_state.json": "c21b7567a6ee3238d79015fb11e28135",
+   "textmap1.json": "31a6fe35f41e7985652853a79c4d1201",
+   "textmap2.json": "f303e634d51bfc975f68d1a88123cbd2",
+   "textmap3.json": "1f78de8d1f5f48811e9dfdb7a84a5db6",
+   "textmap4.json": "96f82107a1e14164dc8a8ae6c8d9fa07",
+   "textmap5.json": "8b9b57a9f4a02a515276be6745836ce7",
+   "textmap6.json": "967d14673ce0b7f856fc9294c4735780",
+   "timing_architecture.md": "f3890d2cde9920e4a92ac80d37bba9f0"
+  },
+  "unit_counts": {
+   "bounded scenes both buffers": 12,
+   "viewport pixels compared": 442368,
+   "max scene equivalent T": 22301.375,
+   "attribute/FLASH cases": 512,
+   "max full-half equivalent T": 33542.5,
+   "input/front guard": 3,
+   "257-source rejection with preserved front": 1,
+   "same-ID live mutation with retained scratch": 1,
+   "stale-source control detected": 1,
+   "front-write control detected": 1,
+   "FLASH control detected": 1
+  },
+  "quick_counts": {
+   "kernel events": 16903,
+   "kernel instructions": 4038809,
+   "max kernel cost 8F7C": 3562.625,
+   "max textmap distinct sources": 134,
+   "assembled scenery images": 1855,
+   "scenery viewport pixels compared": 68382720,
+   "scenery changed cells": 1068480,
+   "max scenery worker equivalent T": 22913.25,
+   "scenery events": 1855,
+   "max kernel cost 96A1": 758.0,
+   "actor events": 13194,
+   "wrapped path": 10005,
+   "max kernel cost 959B": 758.375,
+   "normal path": 3189,
+   "max capture tick cost": 8342.625,
+   "max kernel cost 8F92": 97.75,
+   "max capture plus scenery equivalent T": 30476.375,
+   "dropped writer detected": 1666,
+   "max image calls": 21,
+   "max visible chunks": 58,
+   "max unique patterns": 56,
+   "max pending pattern union": 64,
+   "tile checks": 1854,
+   "ULA checks": 1850,
+   "coordinate control detected": 841,
+   "position unit": 240,
+   "inactive unit": 24,
+   "full log unit": 12,
+   "overflow skip unit": 12,
+   "ordinal full unit": 12,
+   "commit phase unit": 18,
+   "site refusal unit": 24,
+   "ISR entry unit": 24,
+   "ISR forced unwind unit": 24,
+   "unsafe DI control detected": 6,
+   "interior jump control detected": 6,
+   "game RAM control detected": 6
+  },
+  "timing_ms": {
+   "level6_scenery_max": 6.546642857142857,
+   "capture_plus_scenery_max": 8.707535714285715,
+   "total_target": 10,
+   "remaining_for_unimplemented_work": 1.2924642857142856
+  },
+  "memory": "page 14 map/definitions, page 68 capture, standalone page 69 compiler/scratch; expanded pages 96..223 authorized for future caches",
+  "recipes": [
+   "python -m nexclash.inferno --textmap-units ../specnext/reference/inferno",
+   "python -m nexclash.inferno --textmap-check ../specnext/reference/inferno/Inferno6.rzx --quick 2000",
+   "python -m nexclash.inferno --textmap-all ../specnext/reference/inferno --quick 2000 --out work/textmap_quick"
+  ]
  }
 }

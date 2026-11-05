@@ -1,17 +1,17 @@
 # Inferno
 
 ## Next session
-Stage: 2 (continued)    State: optimized scenery validation baseline; no runtime sprite display
+Stage: 2 (continued)    State: experimental textmap worker passes six quick replays; no display
 Inputs: specnext/reference/inferno/    Branch: codex/inferno (both existing checkouts)
-Start: refresh main; read scenery results below and reference build/README.md. Do not re-clone.
-Read: inferno.py scenery_code/run_render_scene/model_verify; asm/inferno_hooks.asm render_scene.
-Next: reduce source-validation and dirty-render costs to the TOTAL tick budget, then integrate
-  post-copy frame work/atomic commit and approved B sprite compilation/uploads. Keep original RAM.
+Start: refresh main; read reference build/timing_architecture.md and build/README.md. Do not re-clone.
+Read: inferno.py run_render_textmap/textmap_checks/model_verify; asm/inferno_hooks.asm render_textmap.
+Next: prove textmap setup/clip/palette and modal disable (level-4 shop), then post-copy frame
+  work/atomic commit and approved B sprite compilation/uploads. Keep original RAM and appearance.
 Workflow: iterate on Inferno6.rzx --quick 2000; run the other levels at integration milestones,
   plus targeted level-specific paths (e.g. level-4 shop). Compare each with its own original replay.
 Open: modal hooks, palette/recolour/sheets, continuous original-BASIC startup/Nb/game/ending,
   startup-tail lifetime, full ROM-reader coverage and resource maxima. Engine stays unregistered.
-Next prompt: "Continue Inferno stage 2 from the assembled scenery baseline. Use existing
+Next prompt: "Continue Inferno stage 2 from the experimental textmap worker. Use existing
 codex/inferno checkouts, CLAUDE.md and games/inferno.md; use level 6 for the main iteration loop."
 
 ## Inputs and facts
@@ -112,7 +112,8 @@ codex/inferno checkouts, CLAUDE.md and games/inferno.md; use level 6 for the mai
   measured hook timings. Raster atomicity and per-instruction interrupt safety remain unproved.
 - Memory proposal: alt-ROM hooks outside 3D00-3DFF, retaining every original ROM reader;
   page 24 boot source, tape payload pages 32-55, Layer 2 double buffers pages 56-67,
-  scratch/state initially 68-71, scenery baseline through 73 (all <=95). This allocation is provisional until bootstrap and ISR
+  scratch/state initially 68-71, scenery baseline through 73. Expanded pages 96-223 are now
+  user-authorized for caches/tables; hardware display stores remain bounded. Allocation awaits bootstrap and ISR
   checks pass. Do not map a scratch page across an interrupt until its safety is demonstrated.
 - Multiload front end: one original-game launch with original intro/title, levels 1-6 and ending;
   automatic loads, no independently restored level snapshots or new level-select menu.
@@ -137,31 +138,25 @@ codex/inferno checkouts, CLAUDE.md and games/inferno.md; use level 6 for the mai
   Later lifetime and continuous Nb/game/ending behavior remain unproved. Source/recipes: build/README.md.
 
 ## Stage-2 scenery baseline (2026-11-05)
-- Validation follow-up: page-aligned flags remove repeated map-cursor saves, DI/private-stack
-  clearing replaces the flag LDIR, and eight source-byte comparisons are unrolled. Six bounded
-  scenes plus eight flag-page boundary cases PASS, retaining stale-source/retained-flag controls.
-  Level-6 quick 2,000 still passes 347 scenes / 12,791,808 pixels, 2,966 capture events,
-  347 map / 346 ULA checks. Unchanged maximum falls 37,782.875 -> 32,738.5 equivalent T;
-  bounded-scene maximum 37,198.625 -> 32,219. Cold level-6 maximum remains 455,240.75.
-  TOTAL budget still FAILS: capture, dirty rendering, sprites and commit need further work.
-- Assembled page-69 routines: live 8x8 tile expansion, 64-slot content cache, preflighted batch
-  blit, and a complete clean-map worker. Pixels go through shadow write-only 123B paging;
-  DI/28MHz, private stack, front-bank/visibility protection, original RAM and top-48 HUD preserved.
-- Page 68 retains capture state; 70/71 hold independent per-buffer cell keys; 72/73 form cache
-  bank 36 (metadata and RGB in 73). Private map/validation flags and batch jobs overlap scratch
-  by API, never run concurrently. These pages are not yet installed by either diagnostic NEX.
-- Cache keys include tile ID, all eight bitmap bytes, attribute and relevant FLASH phase.
-  Cold fills commit VALID last; collisions and same-ID source changes cannot reuse stale RGB.
-  The quiet gate compares every map ID and validates each distinct source once. Per-image
-  validation flags are cleared each call, including when private scratch survives simulator reuse.
-- Tests: 384 colour/flash cases; cache miss+hit for each; tile/VRAM edges; invalid/front guards;
-  complete 576-cell batches; late invalid jobs reject before any pixel write. Broken shadow,
-  visibility, stale-key and retained-validation controls are detected. Six bounded level scenes
-  match 663,552 RGB pixels across cold/unchanged/live-mutation cases; independent buffer keys,
-  whole-scene FLASH/attribute invalidation and one-cell colliding map changes also pass.
-- Cost model: (Z80 T + one per modeled read)/8, excluding entry/exit/commit, palette and sprites.
-  Primitive and historical timings: reference build/README.md. Host-selected back buffers only;
-  no runtime hook, atomic commit, sprite upload or hardware timing proof.
+- Historical Layer 2 worker remains available: tile expansion, 64-slot full-content cache,
+  batch blit and per-buffer scene keys; tests/evidence in build/README.md. Validation optimization
+  reduced unchanged level-6 cost to 32,738.5 equivalent T (9.354 ms), but worst rebuilding still
+  cost 455,240.75 (130.069 ms). No diagnostic NEX installs either scenery worker.
+- Experimental replacement: one-bit hardware textmap, preserving the approved visual model.
+  Page 14 holds back/front maps (0000/0600) and independent 256-pattern halves (0C00/1400).
+  Page 69 compiles each live source once per image, consumes page-68 map directly via SP under DI,
+  and maps page 14 temporarily at slot 2; original physical RAM and mapping are preserved.
+  No Layer 2 pixel expansion or long-lived source validation. Textmap setup is not installed.
+- Twelve bounded scenes, 512 attribute/FLASH cases, capacity/front guards and broken stale-source,
+  front-write/FLASH controls PASS. Six original quick replays: 12,000 frames, 1,855 scenery images /
+  68,382,720 scenery pixels; 16,903 capture events, 1,854 map and 1,850 ULA checks PASS.
+  Max observed sources 134/256; full-game capacity unproved. Overflow rejects without front writes.
+- Worst level-6 scenery cost 22,913.25 equivalent T (6.547 ms); capture+scenery 30,476.375
+  (8.708 ms). TOTAL target is 10 ms per game update, leaving only 1.292 ms for sprites/wrappers/
+  commit. Synthetic full-capacity scenery alone costs 9.584 ms. No total-budget or hardware PASS.
+- Level-4 original replay to 52,500 frames has no desync. Gameplay hooks last run at 51,802;
+  none runs at the shop image 52,229. A separate modal-entry disable hook is required and unproved.
+  Architecture/source evaluation, units, per-level counts and recipes: build/timing_architecture.md.
 
 ## Stage-2 capture kernel results (2026-11-05; mid-stage checkpoint)
 - New capture code: 352 bytes at 3A00-3B5F, in the exact original alt-ROM image. Patches:
@@ -204,6 +199,9 @@ Preview MD5 `cf3fda58c14e87d91c55fe2773165d6a`, model_checks.json
 Other checksums: design/manifest.json. Stage-1 tools/canary/doccheck PASS; no sprite stamp.
 
 ## Lessons
+- [local: Inferno representation] Demonstrated: copying live one-bit tiles once per source ID
+  removes pixel expansion and full-content validation; worst sampled scenery drops 130.069 to
+  6.547 ms. Textmap capacity/clip/palette/modal/raster integration remain separate obligations.
 - [local: Inferno validation loops] Demonstrated: aligned flags, stack clearing under the existing
   DI/private-stack contract and unrolled comparisons reduce level-6 unchanged work by 13.35%.
   All four flag pages have boundary tests; this does not resolve cold/dirty or total tick costs.
@@ -279,11 +277,12 @@ Other checksums: design/manifest.json. Stage-1 tools/canary/doccheck PASS; no sp
 - detect.buffer-layout-producer: corrected: visible colour checks distinguish black-masked stale bitmap data.
 
 ## Stage log
-- 2026-11-05: validation optimization checkpoint. Repositories were absent in the attached
-  environment; cloned both codex/inferno branches after explicit user instruction to add them.
-  Main included. Six bounded scenes, eight flag boundaries,
-  level-6 quick 2,000, pinned assembly and doccheck PASS. No runtime integration milestone,
-  other-level replay/shop checks not repeated. Frame switching and sprites remain unimplemented.
+- 2026-11-05: textmap architecture checkpoint. Reviewed Next instruction/DMA/tilemap/memory
+  references and local board benchmarks. New standalone worker, six quick replays, palette/
+  capacity/negative units PASS; shop census exposes missing modal hook. Expanded RAM authorized.
+  Assembly/doccheck/diff PASS; main unchanged; no sprite NEX. Evidence: build/timing_architecture.md.
+- 2026-11-05: validation checkpoint: restored missing repos at user request; bounded/level-6
+  tests, assembly/doccheck PASS. No runtime integration; details in reference build/README.md.
 - 2026-11-05: scenery checkpoint, main 9484427/6bce6aa included. Tile/cache/batch/scene units,
   six bounded scenes, level-6 quick, assembly/doccheck/diff PASS. Cost gate fails; no stamp.
 - 2026-11-05: stage 2 capture checkpoint (~100 calls, 0 design questions), main 9484427/6bce6aa.

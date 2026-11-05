@@ -1311,3 +1311,154 @@ rq_dirty:
 render_quiet_end:
         ASSERT render_quiet_end < S_MAP
         SAVEBIN "inferno_tilequiet.bin",render_quiet,render_quiet_end-render_quiet
+
+; Experimental text-tilemap scenery worker, standalone page 69 image.
+; Page 14 (unused by the original 48K machine): maps 0000/0600, definitions
+; 0C00/1400 (256 per half). Only clipped 32x18 cells of each 40-column map
+; are fetched. Rebuild source definitions once per ID per image: no stale keys.
+; Caller owns DI/28MHz/private stack. Does NOT enable or commit any display layer.
+T_FLAGS     EQU 0x0800
+T_PAIRS     EQU 0x1000          ; ID*2 -> slot/attribute, twice its flag address
+T_MAP       EQU 0x2400          ; consume page-68 capture directly, no second map copy
+T_HALF      EQU 0x1E80
+T_FLASH     EQU 0x1E81
+T_FRONT     EQU 0x1E82
+T_ERROR     EQU 0x1E83
+T_COUNT     EQU 0x1E84
+T_SP        EQU 0x1E86
+T_DEFHI     EQU 0x1E88
+T_MAPSP     EQU 0x1E89
+        ORG 0
+render_textmap:
+        xor a
+        ld (T_ERROR),a
+        ld (T_COUNT),a
+        ld (T_COUNT+1),a
+        ld a,(T_HALF)
+        cp 2
+        jp nc,tm_bad
+        ld b,a
+        ld a,(T_FRONT)
+        cp b
+        jp z,tm_bad
+        ld a,(T_FLASH)
+        cp 2
+        jp nc,tm_bad
+        ld (T_SP),sp
+        ld sp,T_FLAGS+1024
+        ld bc,0
+        ld a,32
+.tm_clear:
+        DUP 16
+        push bc
+        EDUP
+        dec a
+        jr nz,.tm_clear
+        ld sp,(T_SP)
+        ld a,(T_HALF)
+        or a
+        ld de,0x4000
+        ld a,0x4C
+        jr z,.tm_half
+        ld de,0x4600
+        ld a,0x54
+.tm_half:
+        ld (T_DEFHI),a
+        nextreg 0x52,14         ; original screen page hidden only inside DI domain
+        ld sp,T_MAP             ; POP reads the captured map; interrupts remain disabled
+        ld ix,0x2012
+.tm_cell:
+        pop bc
+        ld a,b
+        and 3
+        add a,T_FLAGS/256
+        ld h,a
+        ld l,c
+        ld a,(hl)
+        or a
+        jr z,.tm_source
+.tm_ready:
+        add hl,hl
+.tm_pair:
+        ldi
+        ldi
+        dec ixh
+        jr nz,.tm_cell
+        ld a,16
+        add de,a
+        ld ixh,32
+        dec ixl
+        jr nz,.tm_cell
+.tm_exit:
+        ld sp,(T_SP)
+        nextreg 0x52,10         ; original 48K screen page restored before returning
+        ret
+.tm_source:
+        ld (T_MAPSP),sp
+        ld sp,(T_SP)
+        push de
+        push hl
+        ld de,(T_COUNT)
+        ld a,d
+        or a
+        jr nz,.tm_full
+        inc de
+        ld (T_COUNT),de
+        dec e
+        ld (hl),1
+        add hl,hl
+        ld (hl),e
+        ld d,8
+        mul d,e
+        ld a,(T_DEFHI)
+        add a,d
+        ld d,a
+        pop hl
+        push hl
+        ld a,h
+        sub T_FLAGS/256
+        ld h,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,0xDC00
+        DUP 8
+        ldi
+        EDUP
+        pop bc
+        ld a,b
+        add a,0xF4             ; flags page 08..0B -> attributes FC..FF
+        ld h,a
+        ld l,c
+        ld a,(hl)
+        ld l,a
+        ld a,(T_FLASH)
+        add a,4
+        ld h,a
+        ld a,(hl)
+        ld e,a
+        ld a,(T_HALF)
+        or e
+        ld e,a
+        ld h,b
+        ld l,c
+        add hl,hl
+        inc hl
+        ld (hl),e
+        dec hl
+        pop de
+        ld sp,(T_MAPSP)
+        jp .tm_pair
+.tm_full:
+        pop bc
+        pop de
+        ld a,2
+        ld (T_ERROR),a
+        jp .tm_exit
+tm_bad:
+        ld a,1
+        ld (T_ERROR),a
+        ret
+render_textmap_end:
+        ASSERT render_textmap_end < 0x0400
+        SAVEBIN "inferno_textmap.bin",render_textmap,render_textmap_end-render_textmap

@@ -296,7 +296,12 @@ def model_verify(path, stop=2000, capture=False, scenery=False):
                     shifts[str(shift)] += 1
                 if scenery:
                     bank = 31 if scene_number % 2 == 0 else 28
-                    rendered = run_render_scene(m, bank=bank, front=59-bank, previous=display_pages)
+                    if scenery == 'textmap':
+                        rendered = run_render_textmap(m, half=scene_number % 2,
+                                                      previous=display_pages)
+                        counts['max textmap distinct sources'] = max(counts['max textmap distinct sources'], rendered['sources'])
+                    else:
+                        rendered = run_render_scene(m, bank=bank, front=59-bank, previous=display_pages)
                     if rendered['error']:
                         raise AssertionError('valid captured scene was rejected')
                     display_pages = rendered['pages']
@@ -305,6 +310,7 @@ def model_verify(path, stop=2000, capture=False, scenery=False):
                     counts['scenery viewport pixels compared'] += 36864
                     counts['scenery changed cells'] += rendered['changed']
                     counts['max scenery worker equivalent T'] = max(counts['max scenery worker equivalent T'], rendered['equivalent_T'])
+                    st['scenery_cost'] = rendered['equivalent_T']
                     if rendered['changed'] == 0:
                         counts['unchanged scenery images'] += 1
                         counts['max unchanged scenery equivalent T'] = max(counts['max unchanged scenery equivalent T'], rendered['equivalent_T'])
@@ -320,6 +326,9 @@ def model_verify(path, stop=2000, capture=False, scenery=False):
                 counts['actor events'] += 1
                 counts['wrapped path' if pc == 0x96A1 else 'normal path'] += 1
             elif pc == 0x8F92 and st['base'] is not None:
+                if scenery:
+                    counts['max capture plus scenery equivalent T'] = max(
+                        counts['max capture plus scenery equivalent T'], st['capture_cost'] + st['scenery_cost'])
                 actual = map_tiles(m)
                 if kernel:
                     logged = capture_log(private)
@@ -426,7 +435,7 @@ def capture_all(reference, folder, stop=2000, progress=None, scenery=False):
     counts, cases, frames = Counter(), [], 0
     for level in range(1, 7):
         result = model_verify(reference / ('Inferno%d.rzx' % level), stop, capture=True, scenery=scenery)
-        filename = ('scenery%d.json' if scenery else 'capture%d.json') % level
+        filename = ('textmap%d.json' if scenery == 'textmap' else 'scenery%d.json' if scenery else 'capture%d.json') % level
         (folder / filename).write_text(json.dumps(result, indent=2) + '\n')
         bad = {k: v for k, v in result['counts'].items() if k.endswith('!') and v}
         for k, v in result['counts'].items():
@@ -1146,6 +1155,191 @@ def scene_renderer_checks(reference, folder):
     counts['validation flag page boundaries'] += len(edges)
     return {'counts': dict(counts), 'cases': cases,
             'scope': 'assembled complete scenery baseline on bounded stage-1 captures, not a frame hook, budgeted renderer, sprite display or hardware proof'}
+
+
+class TextMapMemory(Layer2Memory):
+    """Private text-mode back maps/definitions in physical page 14; no video emulation."""
+    def __init__(self, ram, half, flash, front, previous, code):
+        super().__init__(ram, code, 0, 0, 48, 31, 0, False)
+        self.pages[14] = bytearray(previous[14]) if previous else bytearray([0xE3] * 8192)
+        if previous and 69 in previous:
+            self.pages[69][0x800:0x1800] = previous[69][0x800:0x1800]
+        self.mmu2 = 10
+        self.half, self.front, self.text_writes = half, front, set()
+        self.pages[69][0x1E80:0x1E83] = bytes((half, flash, front))
+        self.pages[68][0x400:0x880] = bytes(ram[0x9B00:0x9F80])
+        # Immutable bytecode lookup data, initialized once by a future boot hook.
+        for phase in range(2):
+            for attr in range(256):
+                pair = attr & 127
+                if phase and attr & 128:
+                    pair = (pair & 64) | ((pair & 7) << 3) | ((pair >> 3) & 7)
+                self.pages[69][0x400 + 256 * phase + attr] = pair * 2
+
+    def nextreg(self, reg, value):
+        if reg != 0x52 or value not in (14, 10):
+            raise AssertionError('textmap changed an unowned register')
+        self.mmu2 = value
+
+    def __getitem__(self, a):
+        if not isinstance(a, slice) and 0x4000 <= a < 0x6000 and self.mmu2 == 14:
+            self.reads += 1
+            return self.pages[14][a - 0x4000]
+        return super().__getitem__(a)
+
+    def __setitem__(self, a, v):
+        if 0x4000 <= a < 0x6000 and self.mmu2 == 14:
+            off = a - 0x4000
+            if self.front in (0, 1) and (self.front * 0x600 <= off < self.front * 0x600 + 0x600
+                    or 0xC00 + self.front * 0x800 <= off < 0x1400 + self.front * 0x800):
+                raise AssertionError('textmap wrote visible map or definitions')
+            self.text_writes.add(off)
+            self.pages[14][off] = v
+            return
+        super().__setitem__(a, v)
+
+    def write_port(self, *args):
+        raise AssertionError('textmap worker changed a display port')
+
+
+def run_render_textmap(ram, half=0, flash=0, previous=None, front=None, code=None):
+    """Execute fresh-source 1-bit map construction; compare every pixel independently."""
+    from . import simpool, z80n
+    from .dizzy6 import _rw_simulator
+    code = bytes.fromhex(load_profile()['hooks']['textmap']) if code is None else code
+    front = 1 - half if front is None else front
+    mem = TextMapMemory(ram, half, flash, front, previous, code)
+    before = {p: bytes(data) for p, data in mem.pages.items()}
+    regs = [0] * 30
+    regs[12], regs[14], regs[27] = 0x1FF0, 0xFE, 2
+    sim = simpool.machine(_rw_simulator(), mem, regs, 'inferno.render.textmap')
+    sim.set_tracer(mem)
+    z80n.install(sim, mem.nextreg)
+    r, steps = sim.registers, 0
+    while r[24] != 0x1D00:
+        if steps >= 200000:
+            raise AssertionError('textmap did not return')
+        sim.opcodes[mem[r[24]]]()
+        if r[26] or mem.nr[0x07] != 3:
+            raise AssertionError('textmap left DI/28MHz domain')
+        steps += 1
+    error = mem.pages[69][0x1E83]
+    sources = int.from_bytes(mem.pages[69][0x1E84:0x1E86], 'little')
+    if r[12] != 0x1FF2 or mem.mmu1 != 68 or mem.mmu2 != 10 or mem.game_writes or mem.ram != list(ram):
+        raise AssertionError('textmap changed game RAM or failed stack/mapping restore')
+    if mem.pages[68] != before[68] or mem.pages[69][:0x600] != before[69][:0x600]:
+        raise AssertionError('textmap changed capture/code/lookup tables')
+    if any(mem.pages[p] != before[p] for p in mem.pages if p not in (14, 69)):
+        raise AssertionError('textmap wrote an unowned page')
+    if not error:
+        allowed = set(range(0xC00 + half * 0x800, 0xC00 + half * 0x800 + sources * 8))
+        data = mem.pages[14]
+        for cell, tile in enumerate(map_tiles(ram)):
+            offset = half * 0x600 + (cell // 32) * 80 + (cell % 32) * 2
+            allowed.update((offset, offset + 1))
+            slot = data[offset] + ((data[offset + 1] & 1) << 8)
+            pair = data[offset + 1] >> 1
+            bright = 8 if pair & 64 else 0
+            ink, paper = (pair & 7) | bright, ((pair >> 3) & 7) | bright
+            ink, paper = ink if ink & 7 else 0, paper if paper & 7 else 0
+            bitmap = data[0xC00 + slot * 8:0xC08 + slot * 8]
+            pixels = bytes(ink if row & (128 >> x) else paper for row in bitmap for x in range(8))
+            if pixels != expected_tile(ram, tile, flash):
+                raise AssertionError('textmap pixel mismatch at cell %d' % cell)
+        if not mem.text_writes <= allowed:
+            raise AssertionError('textmap wrote outside back map/used definitions')
+    return {'error': error, 'sources': sources, 'changed': 576 if not error else 0,
+            'instructions': steps, 'equivalent_T': (r[25] + mem.reads) / 8,
+            'pixel_writes': 0, 'bytes_written': len(mem.text_writes),
+            'pages': {p: bytes(mem.pages[p]) for p in (14, 69)}}
+
+
+def textmap_checks(reference):
+    """Six bounded scenes, palette/FLASH closure, buffer and capacity boundaries."""
+    import gzip
+    counts, cases = Counter(), []
+    for level in range(1, 7):
+        captures = json.loads(gzip.open(Path(reference) / 'design' / ('scene%d.json.gz' % level), 'rt').read())
+        source = next(s for s in captures['samples'] if s['pc'] == 0x8F7C)
+        ram = [0] * 16384 + source['memory']['16384']
+        first = run_render_textmap(ram)
+        second = run_render_textmap(ram, half=1, previous=first['pages'])
+        if first['error'] or second['error']:
+            raise AssertionError('bounded textmap scene rejected')
+        counts['bounded scenes both buffers'] += 2
+        counts['viewport pixels compared'] += 2 * 36864
+        counts['max scene equivalent T'] = max(counts['max scene equivalent T'], first['equivalent_T'])
+        cases.append({'level': level, **{k:v for k,v in first.items() if k != 'pages'}})
+    ram = [0] * 65536
+    # All 256 attributes and both FLASH phases in one scene; exactly full 256-slot half.
+    for cell in range(576):
+        tile = cell % 256
+        ram[0x9B00 + 2 * cell:0x9B02 + 2 * cell] = [tile, 3]
+        ram[0xFC00 + 768 + tile] = tile
+        ram[0xDC00 + 8 * (768 + tile):0xDC08 + 8 * (768 + tile)] = [tile ^ (1 << b) for b in range(8)]
+    first = run_render_textmap(ram)
+    for phase in (0, 1):
+        result = run_render_textmap(ram, half=1, flash=phase, previous=first['pages'])
+        if result['error'] or result['sources'] != 256:
+            raise AssertionError('full textmap half rejected')
+        counts['attribute/FLASH cases'] += 256
+        counts['max full-half equivalent T'] = max(counts['max full-half equivalent T'], result['equivalent_T'])
+    for kw in ({'half':0,'front':0}, {'half':2,'front':0}, {'flash':2}):
+        result = run_render_textmap(ram, **kw)
+        if result['error'] != 1 or result['bytes_written']:
+            raise AssertionError('textmap front/input guard failed')
+        counts['input/front guard'] += 1
+    ram[0x9B00 + 512:0x9B02 + 512] = [0, 0]
+    result = run_render_textmap(ram, half=1, previous=first['pages'])
+    if result['error'] != 2:
+        raise AssertionError('textmap source overflow not rejected')
+    counts['257-source rejection with preserved front'] += 1
+    # The old frame's actual scratch survives; missing reset must not reuse stale content.
+    code = bytes.fromhex(load_profile()['hooks']['textmap'])
+    ram[0x9B00 + 512:0x9B02 + 512] = [0, 3]
+    for tile in range(768, 1024):
+        ram[0xDC00 + tile * 8] ^= 255
+    rebuilt = run_render_textmap(ram, previous=first['pages'])
+    if rebuilt['error']:
+        raise AssertionError('same-ID live mutation was rejected')
+    counts['same-ID live mutation with retained scratch'] += 1
+    broken = bytearray(code)
+    off = broken.index(bytes([0xC5]) * 16)
+    broken[off:off + 16] = bytes(16)
+    try:
+        run_render_textmap(ram, previous=first['pages'], code=broken)
+    except AssertionError as e:
+        if 'pixel mismatch' not in str(e):
+            raise
+        counts['stale-source control detected'] += 1
+    else:
+        raise AssertionError('textmap stale-source control not detected')
+    broken = bytearray(code)
+    off = broken.index(bytes.fromhex('110046'))
+    broken[off + 1:off + 3] = bytes.fromhex('0040')
+    try:
+        run_render_textmap(ram, half=1, previous=first['pages'], code=broken)
+    except AssertionError as e:
+        if 'visible map' not in str(e):
+            raise
+        counts['front-write control detected'] += 1
+    else:
+        raise AssertionError('textmap front-write control not detected')
+    # A single-bit display error must fail independently of the compiler's tables.
+    broken = bytearray(code)
+    # Force FLASH lookup to phase 0 (ADD A,4 -> LD A,4); phase-1 pixels must disagree.
+    off = broken.index(bytes.fromhex('3A811EC604'))
+    broken[off + 3:off + 5] = bytes.fromhex('3E04')
+    try:
+        run_render_textmap(ram, flash=1, code=broken)
+    except AssertionError as e:
+        if 'pixel mismatch' not in str(e):
+            raise
+        counts['FLASH control detected'] += 1
+    else:
+        raise AssertionError('textmap FLASH control not detected')
+    return {'counts': dict(counts), 'cases': cases,
+            'scope': 'assembled textmap construction only; no display setup, frame commit, sprite renderer or raster proof'}
 
 
 class CapturePatch:
@@ -1893,6 +2087,9 @@ def continuation_tests(folder, pulse=False):
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     action = ap.add_mutually_exclusive_group(required=True)
+    action.add_argument('--textmap-check', type=Path)
+    action.add_argument('--textmap-all', type=Path)
+    action.add_argument('--textmap-units', type=Path)
     action.add_argument('--scenery-check', type=Path)
     action.add_argument('--scenery-all', type=Path)
     action.add_argument('--scene-renderer-checks', type=Path)
@@ -1913,6 +2110,18 @@ def main():
     ap.add_argument('--out', type=Path, default=Path('work/inferno'))
     ap.add_argument('--json', type=Path)
     a = ap.parse_args()
+    if a.textmap_check or a.textmap_units or a.textmap_all:
+        if a.quick <= 0:
+            ap.error('--quick must be positive')
+        result = (capture_all(a.textmap_all, a.out, a.quick, progress=print, scenery='textmap')
+                  if a.textmap_all else model_verify(a.textmap_check, a.quick, capture=True, scenery='textmap')
+                  if a.textmap_check else textmap_checks(a.textmap_units))
+        if a.textmap_check or a.textmap_all:
+            result['scope'] = 'capture + offline assembled textmap construction; no installed display or sprite/commit timing'
+        if a.json:
+            a.json.write_text(json.dumps(result, indent=2) + '\n')
+        print(json.dumps(result))
+        return int(any(v for k, v in result['counts'].items() if k.endswith('!')))
     if (a.model_check or a.capture_check or a.capture_all or a.scenery_all or a.scenery_check) and a.quick <= 0:
         ap.error('--quick must be positive')
     if a.scenery_check:
