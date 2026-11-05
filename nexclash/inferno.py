@@ -1097,8 +1097,9 @@ def scene_renderer_checks(reference, folder):
         raise AssertionError('stale-scene control was not detected')
     # Scratch survives real calls: forgetting to clear per-image validation flags must fail.
     broken = bytearray(code)
-    off = broken.index(bytes.fromhex('3600EDB0'), entry)
-    broken[off:off + 4] = bytes(4)
+    off = int(h['syms']['rs_clear_flags'], 16)
+    end = int(h['syms']['rs_flags_cleared'], 16)
+    broken[off:end] = bytes(end - off)
     try:
         run_render_scene(ram, previous=warm['pages'], code=broken)
     except AssertionError as e:
@@ -1127,6 +1128,22 @@ def scene_renderer_checks(reference, folder):
     if remapped['changed'] != 1:
         raise AssertionError('one-cell map change dirtied the wrong cells')
     counts['one-cell colliding map ID'] += 1
+    # Direct BC flag addressing must cover all four pages, including their boundaries.
+    edges = [0, 255, 256, 511, 512, 767, 768, 1023]
+    for cell in range(576):
+        tile = edges[cell % len(edges)]
+        synthetic[0x9B00 + 2 * cell:0x9B02 + 2 * cell] = [tile & 255, tile >> 8]
+        synthetic[0xFC00 + tile] = 7
+    edge_cold = run_render_scene(synthetic)
+    edge_warm = run_render_scene(synthetic, previous=edge_cold['pages'])
+    if edge_warm['changed'] or edge_warm['pixel_writes']:
+        raise AssertionError('flag-page boundary validation missed a clean source')
+    for tile in edges:
+        synthetic[0xDC00 + 8 * tile] ^= 255
+    edge_dirty = run_render_scene(synthetic, previous=edge_warm['pages'])
+    if edge_dirty['changed'] != 576:
+        raise AssertionError('flag-page boundary validation missed a changed source')
+    counts['validation flag page boundaries'] += len(edges)
     return {'counts': dict(counts), 'cases': cases,
             'scope': 'assembled complete scenery baseline on bounded stage-1 captures, not a frame hook, budgeted renderer, sprite display or hardware proof'}
 

@@ -1,7 +1,7 @@
 # Inferno
 
 ## Next session
-Stage: 2 (continued)    State: capture + assembled scenery baseline; no runtime sprite display
+Stage: 2 (continued)    State: optimized scenery validation baseline; no runtime sprite display
 Inputs: specnext/reference/inferno/    Branch: codex/inferno (both existing checkouts)
 Start: refresh main; read scenery results below and reference build/README.md. Do not re-clone.
 Read: inferno.py scenery_code/run_render_scene/model_verify; asm/inferno_hooks.asm render_scene.
@@ -137,6 +137,13 @@ codex/inferno checkouts, CLAUDE.md and games/inferno.md; use level 6 for the mai
   Later lifetime and continuous Nb/game/ending behavior remain unproved. Source/recipes: build/README.md.
 
 ## Stage-2 scenery baseline (2026-11-05)
+- Validation follow-up: page-aligned flags remove repeated map-cursor saves, DI/private-stack
+  clearing replaces the flag LDIR, and eight source-byte comparisons are unrolled. Six bounded
+  scenes plus eight flag-page boundary cases PASS, retaining stale-source/retained-flag controls.
+  Level-6 quick 2,000 still passes 347 scenes / 12,791,808 pixels, 2,966 capture events,
+  347 map / 346 ULA checks. Unchanged maximum falls 37,782.875 -> 32,738.5 equivalent T;
+  bounded-scene maximum 37,198.625 -> 32,219. Cold level-6 maximum remains 455,240.75.
+  TOTAL budget still FAILS: capture, dirty rendering, sprites and commit need further work.
 - Assembled page-69 routines: live 8x8 tile expansion, 64-slot content cache, preflighted batch
   blit, and a complete clean-map worker. Pixels go through shadow write-only 123B paging;
   DI/28MHz, private stack, front-bank/visibility protection, original RAM and top-48 HUD preserved.
@@ -153,13 +160,8 @@ codex/inferno checkouts, CLAUDE.md and games/inferno.md; use level 6 for the mai
   match 663,552 RGB pixels across cold/unchanged/live-mutation cases; independent buffer keys,
   whole-scene FLASH/attribute invalidation and one-cell colliding map changes also pass.
 - Cost model: (Z80 T + one per modeled read)/8, excluding entry/exit/commit, palette and sprites.
-  Sample tile max 708.25; cache miss 1,238.375, hit 484.5; prepared batch ~307.12 per tile. Complete
-  scene cold <=459,051.75 and unchanged <=37,198.625. The quiet gate reduced unchanged maximum
-  from 84,392.125; the TOTAL 35,000/tick gate still FAILS. This is a correctness baseline, not a
-  hardware-speed claim or releasable renderer. Budgeted cache validation/scheduling is next.
-- Level-6 quick 2,000: 347 scenery images / 12,791,808 pixels, 2,966 capture events,
-  347 tile-map / 346 ULA checks PASS; max unchanged cost 37,782.875. Reports/PNGs in build/.
-  Host-selected back buffers exercise the worker; no runtime hook, atomic commit or sprite upload.
+  Primitive and historical timings: reference build/README.md. Host-selected back buffers only;
+  no runtime hook, atomic commit, sprite upload or hardware timing proof.
 
 ## Stage-2 capture kernel results (2026-11-05; mid-stage checkpoint)
 - New capture code: 352 bytes at 3A00-3B5F, in the exact original alt-ROM image. Patches:
@@ -202,6 +204,9 @@ Preview MD5 `cf3fda58c14e87d91c55fe2773165d6a`, model_checks.json
 Other checksums: design/manifest.json. Stage-1 tools/canary/doccheck PASS; no sprite stamp.
 
 ## Lessons
+- [local: Inferno validation loops] Demonstrated: aligned flags, stack clearing under the existing
+  DI/private-stack contract and unrolled comparisons reduce level-6 unchanged work by 13.35%.
+  All four flag pages have boundary tests; this does not resolve cold/dirty or total tick costs.
 - [local: Inferno scenery budget] Measured: per-cell source checks exceed the tick budget even
   with no writes. The quiet gate validates distinct sources once; reports retain the failed total
   gate rather than treating primitive timing or host scheduling as full-render performance.
@@ -274,19 +279,17 @@ Other checksums: design/manifest.json. Stage-1 tools/canary/doccheck PASS; no sp
 - detect.buffer-layout-producer: corrected: visible colour checks distinguish black-masked stale bitmap data.
 
 ## Stage log
-- 2026-11-05: stage 2 scenery checkpoint; main 9484427/6bce6aa already included. Assembled
-  tile/cache/batch/complete-scenery tests and six bounded scenes PASS; representative level-6
-  quick replay retained. User requested one-level iteration, other levels at milestones.
-  Assembly/doccheck/diff PASS. Only Inferno sections changed; no other engine read whole. No stamp.
-  Scenery cost gate fails; runtime frame integration, sprites and continuous frontend remain open.
+- 2026-11-05: validation optimization checkpoint. Repositories were absent in the attached
+  environment; cloned both codex/inferno branches after explicit user instruction to add them.
+  Main included. Six bounded scenes, eight flag boundaries,
+  level-6 quick 2,000, pinned assembly and doccheck PASS. No runtime integration milestone,
+  other-level replay/shop checks not repeated. Frame switching and sprites remain unimplemented.
+- 2026-11-05: scenery checkpoint, main 9484427/6bce6aa included. Tile/cache/batch/scene units,
+  six bounded scenes, level-6 quick, assembly/doccheck/diff PASS. Cost gate fails; no stamp.
 - 2026-11-05: stage 2 capture checkpoint (~100 calls, 0 design questions), main 9484427/6bce6aa.
   Six quick replays, original state, IRQ/unwind, pulse transport and seven loading prefixes PASS;
   canary/pinned assembly/doccheck/diff PASS. Engine sections only; no full verify/stamp.
 - 2026-11-05: stage 2 loader checkpoint (~25 min/~80 calls), main unchanged. Decoder units,
   seven Na/Nb prefixes, bootstrap and assembly/doccheck/diff PASS. New engine only; no stamp.
-- 2026-11-05: stage 1 (~18 min/~80 calls): approved after one clarification + approval;
-  six-level 25-tick model, full level-2 census and tools/canary/doccheck PASS. Detection card/census
-  revised, no engine module read. Disposable preview calculations dropped; captures retained.
-- 2026-11-05: stage 0 (~40 min/~120 calls, 3 user rounds), main 9484427/6bce6aa. Full raw
-  replays, sampled gates and tools/canary/doccheck PASS; shared diagnostics corrected, no engine
-  read whole. Intake evidence retained in specnext.
+- 2026-11-05: stages 0/1: intake/full raw replays, approved design, six-level 25-tick model,
+  level-2 census and tools/canary/doccheck PASS. Cards/diagnostics revised; evidence in specnext.

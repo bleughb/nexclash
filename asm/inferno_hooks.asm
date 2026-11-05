@@ -1023,7 +1023,7 @@ S_PAGE      EQU 0x1E44
 S_CHANGED   EQU 0x1E45
 S_LEFT      EQU 0x1E47
 S_FLAGPTR   EQU 0x1E49
-S_FLAGS     EQU 0x1480
+S_FLAGS     EQU 0x1500          ; page aligned: BC can index flags without saving HL
         ORG 0x0A00
 render_scene:
         xor a
@@ -1058,11 +1058,19 @@ rs_bank:
         ld de,S_MAP
         ld bc,1152
         ldir
-        ld hl,S_FLAGS
-        ld de,S_FLAGS+1
-        ld bc,1023
-        ld (hl),0
-        ldir
+rs_clear_flags:
+        ld (R_SAVEDSP),sp
+        ld sp,S_FLAGS+1024
+        ld bc,0
+        ld a,32
+rs_clear_chunk:
+        DUP 16
+        push bc
+        EDUP
+        dec a
+        jr nz,rs_clear_chunk
+        ld sp,(R_SAVEDSP)
+rs_flags_cleared:
         ld a,(R_BANK)
         cp 28
         ld a,70
@@ -1220,11 +1228,11 @@ render_quiet:
 rq_cell:
         ld a,(de)
         cp 0xA5
-        jr nz,rq_dirty
+        jp nz,rq_dirty
         inc de
         ld a,(de)
         cp (hl)
-        jr nz,rq_dirty
+        jp nz,rq_dirty
         ld c,(hl)
         inc hl
         inc de
@@ -1233,21 +1241,24 @@ rq_cell:
         ld b,a
         ld a,(de)
         cp b
-        jr nz,rq_dirty
+        jp nz,rq_dirty
         inc hl
         inc de
-        push hl                 ; next map word
-        ld hl,S_FLAGS
-        add hl,bc
-        ld a,(hl)
+        ld a,b
+        add a,S_FLAGS/256
+        ld b,a
+        ld a,(bc)
         or a
         jr z,rq_source
-        pop hl
         ld a,10                 ; key already advanced past valid and ID
         add de,a
         jr rq_next
 rq_source:
-        ld (S_FLAGPTR),hl
+        push hl                 ; only distinct sources need to save the map cursor
+        ld (S_FLAGPTR),bc
+        ld a,b
+        sub S_FLAGS/256
+        ld b,a
         ld (R_TILE),bc
         ld h,b
         ld l,c
@@ -1256,14 +1267,14 @@ rq_source:
         add hl,hl
         ld bc,0xDC00
         add hl,bc
-        ld b,8
 rq_bytes:
+        DUP 8
         ld a,(de)
         cp (hl)
         jr nz,rq_dirty_pop
         inc de
         inc hl
-        djnz rq_bytes
+        EDUP
         ld hl,(R_TILE)
         ld bc,0xFC00
         add hl,bc

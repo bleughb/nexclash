@@ -125,16 +125,16 @@
  "scenery": {
   "scope": "offline assembled scenery baseline; no installed frame hook, sprites, palette, commit or continuous release; timing gate fails",
   "sources": {
-   "nexclash/inferno.py": "9c28f211610245f7f79288d8babf7d60",
-   "asm/inferno_hooks.asm": "52e8f885d07e0de69b5f0297e23b8ac6",
-   "docs/profiles/inferno.json": "101187403b24ed7b5e72fc7f842135a9"
+   "nexclash/inferno.py": "1b36a64eaec9012fa5b1567015e8b8fa",
+   "asm/inferno_hooks.asm": "da102f22708a0e90c8b0affe9e42331c",
+   "docs/profiles/inferno.json": "be6e09d9ae697f34fc1312200431c1cf"
   },
   "artifacts": {
    "tile_renderer_units.json": "cc5f6d1689152db766f43abb9d8283d6",
    "tile_cache_units.json": "11451d4d068ac6591962b8c6e6209195",
    "tile_batch_units.json": "661e8d79f6e01b680d0c11a657fec201",
-   "scene_renderer_checks.json": "d596e99887a8545ba083b4478b2956fa",
-   "scenery6_quick.json": "dc9d0c52de2f7aca240200740c8966f2",
+   "scene_renderer_checks.json": "a81e80078cfd7b5c8ef89eb5aea65cc5",
+   "scenery6_quick.json": "19cb25a7b2d7fae928583fc1ecce2c49",
    "scenery1.png": "d9161ac236cd5611f6f90dbc50a2394f",
    "scenery2.png": "55aa76bb3dea55fed98fc26154b7f719",
    "scenery3.png": "a42f91ac7c7a235975cc187639a1d7a5",
@@ -179,16 +179,17 @@
     "unchanged no-write scene": 6,
     "same-ID graphics mutation scene": 6,
     "viewport pixels compared": 663552,
-    "max cold equivalent T": 459051.75,
-    "max unchanged equivalent T": 37198.625,
-    "max mutated equivalent T": 278524.5,
+    "max cold equivalent T": 456830.75,
+    "max unchanged equivalent T": 32219.0,
+    "max mutated equivalent T": 276305.875,
     "independent buffer scene": 2,
     "scene input/front guard": 3,
     "stale-scene control detected": 1,
     "retained-validation control detected": 1,
     "whole-scene FLASH phase": 1,
     "whole-scene live attribute": 1,
-    "one-cell colliding map ID": 1
+    "one-cell colliding map ID": 1,
+    "validation flag page boundaries": 8
    }
   },
   "quick_counts": {
@@ -198,7 +199,7 @@
    "assembled scenery images": 347,
    "scenery viewport pixels compared": 12791808,
    "scenery changed cells": 18081,
-   "max scenery worker equivalent T": 457461.75,
+   "max scenery worker equivalent T": 455240.75,
    "scenery events": 347,
    "max kernel cost 96A1": 365.0,
    "actor events": 2272,
@@ -213,7 +214,7 @@
    "tile checks": 347,
    "ULA checks": 346,
    "unchanged scenery images": 239,
-   "max unchanged scenery equivalent T": 37782.875,
+   "max unchanged scenery equivalent T": 32738.5,
    "max kernel cost 959B": 365.375,
    "normal path": 371,
    "coordinate control detected": 103,
