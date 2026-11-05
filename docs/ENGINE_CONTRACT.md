@@ -3,7 +3,7 @@
 Start a new engine from this page; open a real engine only for the one function you need
 (`grep -n '^def \|^class ' nexclash/<engine>.py`, then Read that range). Template with everything
 in its simplest form: nexclash/chuckie.py. `tools/doccheck.py` checks the REQUIRED names below
-against every module in nexclash/engines.py, so this page cannot drift from the code.
+against every module in nexclash/engines.py; this is a structural check, not a behaviour check.
 
 ## Files (one game = one engine; CLAUDE.md "Keep changes additive")
 nexclash/<engine>.py, asm/<engine>_hooks.asm, docs/profiles/<record>.json (hook hex + symbols, from
@@ -22,7 +22,7 @@ REQUIRED (doccheck):
 | `unit_tests(patch, states, neg...)` | cases the RZX does not reach + the negative control (CLAUDE.md rule) -> Counter, failures end in `!` |
 | `CMP` | register indexes compared (all but R, T, MEMPTR) |
 
-OPTIONAL (when the engine has the feature):
+OPTIONAL for legacy engines; new engines must provide colour sheets and recolour (PLAYBOOK 5):
 
 | Name | Contract |
 |---|---|

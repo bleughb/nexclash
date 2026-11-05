@@ -26,3 +26,18 @@ re-verify it (`selftest.py --game <game> --verify --stamp`), run `selftest.py --
 release.
 
 By contributing you agree your contribution is licensed GPL-3.0-or-later.
+
+## Git and release packages
+In a Git checkout, start a branch from current main and record the starting commit.
+`contribute` compares against the merge base with origin/main, including committed and uncommitted
+changes. If main moved or the base is otherwise ambiguous, pass `--base COMMIT` with the recorded
+starting commit. Deletions and renames are refused: submit those through a pull request. Review
+the printed file list before uploading.
+
+An unpacked release has no Git history: preserve the entire modified package between sessions;
+its manifest identifies changed files. Do not run Git refresh or commit commands in it.
+
+For your new game, place the snapshot and recordings in a local reference directory outside the
+checkout, using the paths in the record's `inputs.snapshot.path` and `inputs.recordings[].path`.
+Run `python selftest.py /path/to/reference --game <record> --verify --stamp` (or set
+`NEXCLASH_REFERENCE` to that directory). Missing files are not verification passes.
