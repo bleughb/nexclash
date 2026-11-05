@@ -21,10 +21,12 @@
   ]
  },
  "modules": [
-  "loderunner"
+  "loderunner",
+  "loderunner_v2"
  ],
  "own_modules": [
-  "loderunner"
+  "loderunner",
+  "loderunner_v2"
  ],
  "data": [
   "docs/profiles/lode_runner.json",
@@ -127,5 +129,71 @@
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-05"
- }
+ },
+ "rework": [
+  {
+   "name": "v2",
+   "version": "1.0",
+   "snapshot": "Lode Runner (1984)(Software Projects)(128K).z80",
+   "args": [],
+   "inputs": [
+    {
+     "name": "Lode Runner (1984)(Software Projects)(128K).z80",
+     "md5": "41360f6c33e7a02ca6450881cb385ade",
+     "path": "lode_runner/Lode Runner (1984)(Software Projects)(128K).z80"
+    },
+    {
+     "name": "lr128_trap14.rzx",
+     "md5": "b77522111ee1ca126d23fffa87bc53b0",
+     "path": "lode_runner/lr128_trap14.rzx"
+    },
+    {
+     "name": "lr128_trap12.rzx",
+     "md5": "d2f3b75f743f236a5096ea616b96aea2",
+     "path": "lode_runner/lr128_trap12.rzx"
+    },
+    {
+     "name": "lr128_trap16.rzx",
+     "md5": "50647481fe0ef1ff25a3e80c29dfdc01",
+     "path": "lode_runner/lr128_trap16.rzx"
+    }
+   ],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ],
+    "decisions": {}
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [
+     "lr128_trap14.rzx",
+     "lr128_trap12.rzx",
+     "lr128_trap16.rzx"
+    ]
+   },
+   "outputs": {
+    "plain": {
+     "file": "Lode Runner (1984)(Software Projects)(128K).nex",
+     "md5": "1fa81bc6ff196c42b9ce87b527cd57fa"
+    },
+    "sprites": {
+     "file": "Lode Runner (1984)(Software Projects)(128K)_sprites.nex",
+     "md5": "1af2241781abac9709cd6c896d05fb91"
+    }
+   },
+   "rom_paths_known": [
+    {
+     "image": 1,
+     "from": "0x386E",
+     "to": "0x3881",
+     "why": "the start-up register block (the tail's LD SP / POPs), written by the stub into the keypad code of ROM 1, which the game never runs; only the fade reads these 20 bytes, as AND masks over the screen it then clears (visual, 2 frames, sprites hidden)"
+    }
+   ],
+   "proof": "4 recordings of the 128K release IDENTICAL on Dean's engine (rework v2): 3 bot RZX of 20,042 / 20,021 / 20,049 frames + a 6,000-frame free run (registers, memory, sprite pixels vs the plotter, the patched screen frame by frame, every screen / attribute read); every hook ran (draws 14,859 + 24 runner, erases 14,882, guard death 0x96B6 1 with its respawn draw 0x970C, level-start prints 60 + 240, paints 42,210, fades and clears 96); 6,074 unit cases PASS, 3 negative controls detected; clock matrix 8 hook sites x 4 incoming clocks = 32 cases, exit speed = the incoming one, a forced 3.5 MHz exit detected; ROM paths: every ROM byte as recorded but the 20-byte start-up register block (known, read only by the fade); start-up tail never read before written",
+   "note": "Jon Attree's Lode Runner 128K rework (2026-11-05): Dean's engine (hooks, profile, colours read, not copied) on the 128K release so the AY music plays; engine loderunner_v2 (engines.py: the 128K snapshot), whole alt ROM image = ROM 1 as the ROM path check takes a 128K recording's + the register block at 0x386E, the printer buffer put back after NEXLOAD (the fade reads it), the stack floor for the music handler, every recording replayed whole, the every-site clock matrix. Recordings: bot RZX made with the C simulator (work/bot.py: trap heuristic for a guard death). Published as Lode Runner (1984)(Software Projects)(128K).nxc v1.0 (pilot runs/dean_lode_runner). games/lode_runner.md \"Rework (opt-in)\"."
+  }
+ ]
 }
