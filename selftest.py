@@ -82,8 +82,25 @@ def stage(rec, src, work):
     return d, None
 
 
-def _run(cmd):
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+def _run(cmd, env=None):
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+
+
+def _audit_env(d, tag):
+    """Declared inputs only (nexclash/inputaudit.py): the run may read the repository and the staged folder d."""
+    log = os.path.join(d, 'input_audit_%s.log' % tag)
+    if os.path.exists(log):
+        os.remove(log)
+    return dict(os.environ, NEXCLASH_INPUT_AUDIT=log, NEXCLASH_INPUT_ROOT=d), log
+
+
+def _audit_check(rec, log, lines, tag):
+    from nexclash import inputaudit
+    extra = inputaudit.read(log)
+    if extra:
+        lines.append('FAIL %s %s read files the record does not declare: %s' % (rec['name'], tag, ', '.join(extra[:4])))
+        return 1
+    return 0
 
 
 def _report(out, name):
@@ -108,11 +125,16 @@ def _check_outputs(rec, out, lines, want=None, stage_='rebuild'):
     return bad
 
 
+BUILD_CHECKS = (('Boot      :', 'simulated boot'), ('Decrypter :', 'decrypter check'))   # build-time checks in a report
+
+
 def _boot_ok(rep, lines, label):
-    if 'Boot      :' in rep and 'MISMATCH' in rep.split('Boot      :', 1)[1].split('\n', 1)[0]:
-        lines.append('FAIL %s simulated boot' % label)
-        return 1
-    return 0
+    bad = 0
+    for key, what in BUILD_CHECKS:
+        if key in rep and 'MISMATCH' in rep.split(key, 1)[1].split('\n', 1)[0]:
+            lines.append('FAIL %s %s' % (label, what))
+            bad += 1
+    return bad
 
 
 def checks(rec, lines):
@@ -163,10 +185,11 @@ def rebuild(rec, d, lines):
     out = os.path.join(d, 'rebuild')
     os.makedirs(out, exist_ok=True)
     bad = checks(rec, lines)
+    env, alog = _audit_env(d, 'rebuild')
     if rb.get('cmd') == 'convert':
         o = next(iter(rec['outputs'].values()))['file']
-        _run([sys.executable, NEXCLASH, 'convert', z80, '-o', os.path.join(out, o)] + rb.get('args', []))
-        return bad + _check_outputs(rec, out, lines)
+        _run([sys.executable, NEXCLASH, 'convert', z80, '-o', os.path.join(out, o)] + rb.get('args', []), env)
+        return bad + _check_outputs(rec, out, lines) + _audit_check(rec, alog, lines, 'rebuild')
     cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80, '--no-record'] + rb.get('args', [])
     cmd = [c for i, c in enumerate(cmd) if c != '--no-record' or i == cmd.index('--no-record')]
     for r in rb.get('rzx', []):
@@ -175,20 +198,20 @@ def rebuild(rec, d, lines):
         dp = os.path.join(d, rec['name'] + '_decisions.json')
         json.dump(rb['decisions'], open(dp, 'w'))
         cmd += ['--decisions', dp]
-    _run(cmd + ['-o', out])
+    _run(cmd + ['-o', out], env)
     rep = _report(out, _snapname(rec))
     bad += _check_outputs(rec, out, lines) + _boot_ok(rep, lines, rec['name'])
     bad += recolour_guard(rec, out, lines, cmd, d)
     for x in rec.get('repro', []):
         ro = os.path.join(d, 'rebuild_' + x['strategy'])
-        _run(cmd + ['-o', ro, '--strategy', x['strategy']])
+        _run(cmd + ['-o', ro, '--strategy', x['strategy']], env)
         bad += _check_outputs(rec, ro, lines, {'repro': x}) + _boot_ok(_report(ro, _snapname(rec)), lines, rec['name'])
     for x in rec.get('rework', []):
         ro = os.path.join(d, 'rebuild_rework_' + x['name'])
-        _run(_rework_cmd(z80, x) + ['--decisions', os.devnull, '-o', ro])
+        _run(_rework_cmd(z80, x) + ['--decisions', os.devnull, '-o', ro], env)
         bad += _check_outputs(rec, ro, lines, x['outputs'], 'rebuild rework %s:' % x['name'])
         bad += _boot_ok(_report(ro, _snapname(rec)), lines, '%s rework %s' % (rec['name'], x['name']))
-    return bad
+    return bad + _audit_check(rec, alog, lines, 'rebuild')
 
 
 def _rework_cmd(z80, x):
@@ -248,7 +271,8 @@ def reverify(rec, d, lines, human=False):
     rz = list(v.get('rzx', [])) + (list(v.get('human_rzx', [])) if human else [])
     for r in rz:
         cmd += ['--rzx', os.path.join(d, r)]
-    _run(cmd + ['-o', out])
+    env, alog = _audit_env(d, 'verify')
+    _run(cmd + ['-o', out], env)
     name = _snapname(rec)
     bad = _check_outputs(rec, out, lines, stage_='verify') + _verify_report(_report(out, name), rec['name'], lines, rec)
     dec_p = os.path.join(out, name + '_decisions.json')
@@ -267,15 +291,15 @@ def reverify(rec, d, lines, human=False):
         rcmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80, '--no-record', '--strategy', x['strategy'], '-o', ro]
         for r in ([auto] if os.path.exists(auto) else []) + [os.path.join(d, r) for r in rz]:
             rcmd += ['--rzx', r]
-        _run(rcmd)
+        _run(rcmd, env)
         bad += _check_outputs(rec, ro, lines, {'repro': x}, 'verify')
         bad += _verify_report(_report(ro, name), '%s --strategy %s' % (rec['name'], x['strategy']), lines)
     for x in rec.get('rework', []):
         ro = os.path.join(d, 'verify_rework_' + x['name'])
-        _run(_rework_cmd(z80, x) + ['-o', ro])
+        _run(_rework_cmd(z80, x) + ['-o', ro], env)
         bad += _check_outputs(rec, ro, lines, x['outputs'], 'verify rework %s:' % x['name'])
         bad += _verify_report(_report(ro, name), '%s rework %s' % (rec['name'], x['name']), lines)
-    return bad
+    return bad + _audit_check(rec, alog, lines, 'verify')
 
 
 def run_one(rec, action, src, work, human):

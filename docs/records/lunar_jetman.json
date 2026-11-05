@@ -45,6 +45,12 @@
     "md5": "95d29dd6fb1cbbb5c04e734ced59f73a",
     "path": "lunar_jetman/Jetpac.256",
     "note": "not a recording: the Spec256 Jetpac conversion, source of Jetman's Enhanced suit"
+   },
+   {
+    "name": "spec256-palette.pal",
+    "md5": "b095dc99a047bab844b87b06657b0a7a",
+    "path": "lunar_jetman/spec256-palette.pal",
+    "note": "not a recording: the Spec256 palette (Spec256-Games' spec256-palette.pal), the Enhanced suit's colours; read beside Jetpac.256; licence not established, so private, never in the repo"
    }
   ]
  },

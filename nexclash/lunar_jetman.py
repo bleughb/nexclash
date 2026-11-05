@@ -428,9 +428,20 @@ def loading_nex(nex, scr):
     return bytes(hd) + scr + body[6912:] + o[off:]
 
 
-def decrypt_check(z80, s0):
+DECRYPT_STEPS = 400000         # the file's decrypter takes 95,484 instructions to 0x8000
+# s0 was stepped in an emulator with interrupts on (IM 1): the ROM's handler ran during the decrypter and left its
+# footprint, which the shipped build's run (no interrupts here) cannot reproduce: the keyboard state KSTATE
+# 0x5C00-0x5C07, LAST_K 0x5C08, FLAGS 0x5C3B, FRAMES 0x5C78-0x5C7A, and the dead stack below s0's SP (the handler's
+# pushes). Only these may differ; any other byte is a decrypter MISMATCH.
+ISR_VARS = set(range(0x5C00, 0x5C09)) | {0x5C3B} | set(range(0x5C78, 0x5C7B))
+ISR_STACK = 0x20               # dead stack bytes below s0's SP the handler may have written
+
+
+def decrypt_check(z80, s0, steps=DECRYPT_STEPS, mutate=None):
     """The shipped build starts at the file's own decrypter: the patched encrypted memory, run through it to
-    0x8000, against s0 + the patch sites. -> (instructions, differing addresses)."""
+    0x8000 (at most steps instructions), against s0 + the patch sites. mutate(mem): a negative control's change before
+    the run. -> (instructions or None if 0x8000 was never reached, differing addresses, accepted addresses: the IM 1
+    handler's footprint in s0, ISR_VARS + ISR_STACK)."""
     from skoolkit.snapshot import Snapshot
     from skoolkit.simulator import Simulator
     ram = bytes(Snapshot.get(z80).ram())
@@ -441,17 +452,62 @@ def decrypt_check(z80, s0):
     sn = S()
     q.apply(sn)
     mem = bytearray(16384) + bytearray(sn.banks[5] + sn.banks[2] + sn.banks[0])
+    if mutate:
+        mutate(mem)
     sim = Simulator(mem, {})
     R = sim.registers
     R[24] = 0x5B80
     n = 0
     while R[24] != 0x8000:
+        if n >= steps:
+            return None, [], []
         sim.opcodes[mem[R[24]]]()
         n += 1
-    want = bytearray(bytes(16384) + bytes(Snapshot.get(s0).ram()))
+    ss = Snapshot.get(s0)
+    want = bytearray(bytes(16384) + bytes(ss.ram()))
     for a, old, new in LunarJetmanPatch().sites:
         want[a:a + len(new)] = new
-    return n, [a for a in range(0x4000, 0x10000) if mem[a] != want[a]]
+    diff = [a for a in range(0x4000, 0x10000) if mem[a] != want[a]]
+    ok = ISR_VARS | set(range(ss.sp - ISR_STACK, ss.sp))
+    return n, [a for a in diff if a not in ok], [a for a in diff if a in ok]
+
+
+def decrypt_negatives(z80, s0):
+    """Negative controls the decrypter check must catch: one encrypted byte of the game changed (a wrong decrypted
+    byte), and the decrypter's final JP 0x8000 made a jump to itself (it never ends: the step bound stops it).
+    -> {name: detected}"""
+    def wrong_byte(mem):
+        mem[0x9000] ^= 0x10
+
+    def endless(mem):
+        mem[0x5B8F:0x5B92] = bytes([0xC3, 0x8F, 0x5B])
+    out = {}
+    for name, f in (('a wrong decrypted byte', wrong_byte), ('a decrypter that never reaches 0x8000', endless)):
+        n, d, _ = decrypt_check(z80, s0, mutate=f)
+        out[name] = n is None or bool(d)
+    return out
+
+
+def decrypt_line(z80, s0):
+    """-> (ok, the report's Decrypter line)."""
+    n, d, acc = decrypt_check(z80, s0)
+    negs = decrypt_negatives(z80, s0)
+    ok = n is not None and not d and all(negs.values())
+    if n is None:
+        head = 'MISMATCH: the decrypter did not reach 0x8000 in %d instructions' % DECRYPT_STEPS
+    elif d:
+        head = '%d instructions to 0x8000; MISMATCH: differs from %s + the sites at %d bytes (%s)' % (
+            n, S0_NAME, len(d), ', '.join('0x%04X' % a for a in d[:16]))
+    else:
+        head = '%d instructions to 0x8000; equals %s + the sites' % (n, S0_NAME)
+    head += ' (accepted: %d bytes of the IM 1 handler\'s footprint in %s, KSTATE / FRAMES / dead stack)' % (len(acc), S0_NAME)
+    head += '; negatives %d/%d DETECTED%s' % (sum(negs.values()), len(negs), '' if all(negs.values()) else ' - MISMATCH: '
+                                              + ', '.join(k for k, v in negs.items() if not v) + ' NOT DETECTED')
+    return ok, head
+
+
+def enhanced_inputs(j256):
+    return os.path.exists(j256) and os.path.exists(pal_path(j256))
 
 
 def build(z80, out, name, say=print):
@@ -468,14 +524,15 @@ def build(z80, out, name, say=print):
         bad = check(plain, s0, None, (c[1], c[1] + len(c[2])))
         ok = ok and not bad
         say('Plain     : %s  %s  boot %s  (from %s)' % (os.path.basename(plain), md5(plain), 'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:300], S0_NAME))
-        n, d = decrypt_check(z80, s0)
-        say('Decrypter : %d instructions to 0x8000; differs from %s + the sites at %d bytes (%s)' % (
-            n, S0_NAME, len(d), ', '.join('0x%04X' % a for a in d[:16])))
+        dok, line = decrypt_line(z80, s0)
+        ok = ok and dok
+        say('Decrypter : ' + line)
     else:
         say('Plain     : no %s beside the snapshot: no plain build, no decrypter check' % S0_NAME)
-    sets = [('sprites', False)] + ([('enhanced', True)] if os.path.exists(j256) else [])
+    sets = [('sprites', False)] + ([('enhanced', True)] if enhanced_inputs(j256) else [])
     if len(sets) == 1:
-        say('Enhanced  : no %s beside the snapshot: no Enhanced build' % J256_NAME)
+        say('Enhanced  : no %s beside the snapshot: no Enhanced build' % ' + '.join(
+            n for n, p in ((J256_NAME, j256), (PAL_NAME, pal_path(j256))) if not os.path.exists(p)))
     for tag, enh in sets:
         p = LunarJetmanPatch(enhanced=enh, encrypted=True, j256=j256)
         f = os.path.join(out, '%s_%s.nex' % (name, tag))
@@ -546,7 +603,7 @@ def auto(a, z80, name, out, say):
     stop = getattr(a, 'quick', None)
     if rzxs:
         say('ROM model : %s' % rom_model())
-    enh_ok = os.path.exists(j256)
+    enh_ok = enhanced_inputs(j256)
 
     def one(r, n, neg, enh):
         t = time.time()
@@ -597,6 +654,8 @@ def auto(a, z80, name, out, say):
 # ---------------------------------------------------------------------------------------------
 J256 = os.environ.get('NEXCLASH_JETPAC256')     # the Spec256 Jetpac.256 (game data, never in the repo); build(): beside the snapshot
 J256_NAME = 'Jetpac.256'
+PAL_NAME = 'spec256-palette.pal'                 # Spec256-Games' palette (licence not established: never in the repo)
+PAL_MD5 = 'b095dc99a047bab844b87b06657b0a7a'
 JET_TEMPLATES = {0xBCC2: 0x79AD, 0xBDA3: 0x7AA9}     # Lunar Jetman graphic -> Jetpac address
 JETMAN = range(0xBCC0, 0xBE94)                       # Jetman's frames (types 1-17)
 # shared Enhanced palette, index: colour. OUTLINE is black like BLACK but its own index, so a tile holding only
@@ -657,9 +716,21 @@ def _fig_ink(m, p):
     return ink
 
 
-def _spec256_palette():
-    from pathlib import Path
-    v = [int(x) for x in Path('/home/jon/Downloads/Spec256-Games-master/spec256-palette.pal').read_text().split()]
+def pal_path(j256):
+    """The Spec256 palette is read beside the Jetpac.256 (the record stages both beside the snapshot)."""
+    return os.path.join(os.path.dirname(os.path.abspath(j256)), PAL_NAME)
+
+
+def _spec256_palette(j256):
+    """The Spec256 palette (PAL_NAME beside the .256; a declared, MD5-pinned input, never in the repo) -> 256 RGB."""
+    import hashlib
+    p = pal_path(j256)
+    if not os.path.isfile(p):
+        raise ValueError('no %s beside %s: the Enhanced colours need it' % (PAL_NAME, os.path.basename(j256)))
+    raw = open(p, 'rb').read()
+    if hashlib.md5(raw).hexdigest() != PAL_MD5:
+        raise ValueError('%s MD5 %s, the approved build used %s' % (PAL_NAME, hashlib.md5(raw).hexdigest(), PAL_MD5))
+    v = [int(x) for x in raw.decode('ascii').split()]
     ch = [255 * (x >> 2) // 63 for x in v]
     return [tuple(ch[i:i + 3]) for i in range(0, 768, 3)]
 
@@ -673,7 +744,7 @@ def jet_templates(m, path=None):
 
     def at(a):
         return banks[(a >> 14) - 1] * 16384 * 9 + (a & 0x3FFF) * 9
-    pal = _spec256_palette()
+    pal = _spec256_palette(path)
     out = []
     for p, a in JET_TEMPLATES.items():
         H = m[p]
