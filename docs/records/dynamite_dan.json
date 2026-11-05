@@ -1,0 +1,137 @@
+{
+ "name": "dynamite_dan",
+ "order": 108,
+ "game": "Dynamite Dan",
+ "doc": "dynamite_dan.md",
+ "engine": "dynamite_dan",
+ "representative": true,
+ "reference": "dynamite_dan",
+ "inputs": {
+  "snapshot": {
+   "name": "dynamite_dan.z80",
+   "md5": "3470d12b21edb24d6b665dfac5e8d84d",
+   "path": "dynamite_dan/dynamite_dan.z80"
+  },
+  "recordings": [
+   {
+    "name": "t1.rzx",
+    "md5": "f11c4b5902bfd78eb20b7515db1d9d29",
+    "path": "dynamite_dan/t1.rzx"
+   },
+   {
+    "name": "n1.rzx",
+    "md5": "55dd68308812cf2490e6e15330e81b79",
+    "path": "dynamite_dan/n1.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "dynamite_dan"
+ ],
+ "own_modules": [
+  "dynamite_dan"
+ ],
+ "data": [
+  "docs/profiles/dynamite_dan.json",
+  "asm/dynamite_dan_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "t1.rzx",
+   "n1.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 30,
+  "note": "Random-play recordings, no human: t1 from the TOSEC .z80's own BASIC start (2026-11-05), n1 from the derived start; the pilot's 50 further recordings (census, a1, c1) verified outside the record. Ported from Jon Attree's .nxc work (pilot runs/dynamite_dan), 2026-11-05."
+ },
+ "outputs": {
+  "plain": {
+   "file": "dynamite_dan.nex",
+   "md5": "3ad20495c5183b20030190d6abdd479f"
+  },
+  "sprites": {
+   "file": "dynamite_dan_sprites.nex",
+   "md5": "1ab3348d3a2619f534d8907a1d89e09e"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Dynamite Dan",
+  "engine_col": "dynamite_dan (dynamite_dan.md)",
+  "build": "dynamite_dan_sprites.nex 1ab3348d (Dan as overlay sprites, bright cyan; the airship's hull and cables above him in room 43; whole alt ROM image; the snapshot's own BASIC start; R preserved; the plot hook at 28 MHz with the speed latch)",
+  "software": "Verify IDENTICAL on 52 random-play recordings; unit PASS incl. every-site clock matrix; negatives detected; ROM path check pass; JNext 1.1.104 reaches play",
+  "hardware": "untested",
+  "next": "the owner plays the .nxc; hardware test"
+ },
+ "checks": [
+  "asm2profile:dynamite_dan"
+ ],
+ "techniques": [
+  {
+   "application": "dynamite_dan.overlay",
+   "id": "patch.xor-overlay-keep-ula",
+   "revision": 1,
+   "target": "Dan plot 0xD1CE: sprites over his own ULA pixels, the ULA unchanged",
+   "phases": [
+    "entry"
+   ]
+  },
+  {
+   "application": "dynamite_dan.whole-altrom",
+   "id": "patch.whole-altrom-image",
+   "revision": 1,
+   "target": "both builds: Sinclair's ROM as alt image 1, so the snapshot's BASIC (PAUSE 0, RANDOMIZE USR 51200) starts the game",
+   "phases": [
+    "setup"
+   ]
+  },
+  {
+   "application": "dynamite_dan.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "e_dan: NR 7 latched on the stack at entry, restored at exit; the clears at the game's clock",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "dynamite_dan.preserve-r",
+   "id": "patch.preserve-r",
+   "revision": 1,
+   "target": "R read at entry onto the stack, RSET before the return; compared at every hook",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "dynamite_dan.pace",
+   "id": "verify.update-locked-pace",
+   "revision": 1,
+   "target": "nexclash.pace, probe 0xC80A (main loop tick)",
+   "phases": []
+  }
+ ],
+ "results": [
+  {
+   "application": "dynamite_dan.overlay",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "1ab3348d",
+   "scope": "52 random-play recordings, 122,380 frames; t1 from the BASIC start; the ending (0xE60B) only in unit cases; no hardware",
+   "evidence": "games/dynamite_dan.md \"Results\""
+  }
+ ]
+}

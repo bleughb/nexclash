@@ -73,6 +73,14 @@
     "sprites": "f491e1f6621559ccc4d36de3535ff5d0"
    }
   },
+  "3470d12b21edb24d6b665dfac5e8d84d": {
+   "game": "Dynamite Dan",
+   "doc": "dynamite_dan.md",
+   "nex": {
+    "plain": "3ad20495c5183b20030190d6abdd479f",
+    "sprites": "1ab3348d3a2619f534d8907a1d89e09e"
+   }
+  },
   "a9eeb555a327e5794b0ba19bc80dccf0": {
    "game": "Everyone's a Wally",
    "doc": "everyones_a_wally.md",
