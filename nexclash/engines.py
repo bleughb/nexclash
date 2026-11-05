@@ -34,6 +34,7 @@ ENGINES = [
     ('atic_atac', 'is_atic_atac', None),                                  # Atic Atac (48K)
     ('cauldron', 'is_cauldron', None),                                    # Cauldron (48K)
     ('nightshade', 'is_nightshade', None),                                # Nightshade (48K)
+    ('knight_tyme', 'is_knight_tyme', None),                              # Knight Tyme (128K)
 ]
 
 
