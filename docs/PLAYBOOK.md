@@ -184,13 +184,13 @@ Colour sheets and recolour: docs/COLOURS.md (built in stage 2, sent in stage 3).
   what stays on the ULA (scenery, HUD, text, cases the hooks cannot do) is the question to ask.
   The sheet still shows only what the recording drew: ask for a recording that reaches every
   level, weapon and collectable the user can, before the sheet goes out.
-- Speed budget: `cost GAME.z80 --rzx R --at PLOTTER --group IX` gives the original's cost per
-  draw (T-states), draws per frame and per object; set the allowed hook cost per draw now, and design to it (caching, fewer
-  uploads). Commando's first solid hooks cost ~18x the original draw and were redesigned.
-  Measure the HOOK cost too, before the user tests: T per game frame of the patched runs in the
-  verifier's pair runs (no tool yet, BRIEFING C2 #1); code under NEXTREG $07=3 costs (T + memory reads)
-  / 8 in 3.5 MHz T - about 6x faster, not 8x (LEARNINGS 2.1f). Midnight Resistance's first commit cost ~1.5 TV frames per game
-  frame; a pattern-slot cache brought it to 15-60K T.
+- Speed: pace target ORIGINAL by default (its slowdowns kept; SLOWDOWN REMOVED / TURBO only when the
+  owner names it). `cost GAME.z80 --rzx R --at PLOTTER --group IX`: the original's T
+  per draw, draws per frame and per object; design the hooks to it (content cache, fewer uploads:
+  Commando's first hooks cost ~18x the draw). Code at NEXTREG
+  $07=3 runs about 6x faster, not 8x (LEARNINGS 2.1f). New engines use the hook library (ENGINE_CONTRACT
+  "Hook library"): the caller's speed and R kept, and a hook faster than the code it displaces waits for
+  its time (card patch.pace-limiter). Measure: `python -m nexclash.pace` (docs/CHECKS.md).
 
 ## 4. Decide the design (decision table)
 | Finding | Action |
@@ -225,7 +225,7 @@ Stage 1 ends: decisions in games/<game>.md, the question sent, the Next session 
 # Stage 2 - Build (session 2)
 
 ## 5. Build
-Hooks: asm/<engine>_hooks.asm with `SAVEBIN "<prefix>_<key>.bin"` per block and
+Hooks: asm/<engine>_hooks.asm (+ asm/lib, ENGINE_CONTRACT) with `SAVEBIN "<prefix>_<key>.bin"` per block and
 `"hooks": {"source": "asm/<engine>_hooks.asm", ...}` in the profile; after every edit
 `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex + symbols).
 What the module must provide: docs/ENGINE_CONTRACT.md (doccheck-checked). The cards' example

@@ -11,7 +11,8 @@
     python selftest.py --game NAME [--verify]   one game
     python selftest.py --plan              what --affected would do, without running anything
     python selftest.py --tools             the analysis commands (inspect/scan/isr/cost) and the .nxc output
-                                           on Chuckie Egg, and records.plan() on synthetic stamps
+                                           on Chuckie Egg, records.plan() on synthetic stamps, and the shared
+                                           hook library's unit tests + negative controls (nexclash/hooklib.py)
     python selftest.py --canary            two-stage tool-chain check (Dean, 2026-10-13): stage 1 = the
                                            record marked "canary": 1 (Chuckie Egg) rebuilt, MD5s, seconds;
                                            if it fails, stage 2 = "canary": 2 (Midnight Resistance) rebuilt
@@ -339,6 +340,10 @@ def tools_check(src):
     print('%-4s tools: nxc - nexclash/nxc.py and tools/zx0 match their pins; PRF1, target, patch_by rules%s' % (
         'OK' if not nbad else 'FAIL', '' if not nbad else ' (%s)' % str(nbad)[:200]))
     cbad += len(nbad)
+    from nexclash import hooklib                # shared hook library for new engines (asm/lib; refactor plan 26)
+    for name, hbad in hooklib.selfcheck():
+        print('%-4s tools: %s%s' % ('OK' if not hbad else 'FAIL', name, '' if not hbad else ' (%s)' % str(hbad)[:200]))
+        cbad += len(hbad)
     rec = R.load('chuckie_egg')
     work = tempfile.mkdtemp(prefix='nexclash_tools_')
     d, why = stage(rec, src, work)

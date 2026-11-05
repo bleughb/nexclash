@@ -47,7 +47,8 @@ on 20 lines a frame), the longest gap between interrupts taken (a held-off music
 addresses: lockstep checked at every update. No probe: the detector plays the original with JNext's
 profiler and picks the commonest once-per-update count (slower, ~1 min). Warns beyond +-`--limit` (2%: a
 build faster than the original misses the ORIGINAL target too) and on interrupts held off over 5 ms longer
-than in the original.
+than in the original. ORIGINAL is the default pace target: a negative penalty means a hook needs the pace
+limiter (card patch.pace-limiter; new engines have it in asm/lib).
 Three Weeks, plain .nex control, probe 0xA8ED, 600 updates in lockstep: d386a699 **+11.38%** (busy third
 +11.30%, hook 9.1 ms an update), 25eab33d **+0.05%** (the approved hook-speed build; the pilot's own
 route measured +9.8% and +0.15%). Automatic probe (0x8B5D): d386a699 +10.94%.

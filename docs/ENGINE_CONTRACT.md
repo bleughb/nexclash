@@ -20,7 +20,7 @@ REQUIRED (doccheck):
 | `auto(a, z80, name, out, say)` | the whole run: plain + sprite build with boot checks, autosaves stripped, verify each `a.rzx` (`a.quick` = frames), unit tests + negative control, `say()` report lines `Plain`, `Sprites`, `Verify`, `Unit`, `Result : PASSED / FAILED`; returns True on PASS |
 | `verify(patch, rzx_path, stop=None, collect=0, progress=None)` | differential test (PLAYBOOK 6) -> `(Counter, examples[, states])`; failure keys end in `!`; `collect=N` keeps N machine states per site kind for the unit tests. Free-run engines (no RZX: jetpac, loderunner) take `(patch, z80, rzx=None, frames, keys, ...)` |
 | `unit_tests(patch, states, neg...)` | cases the RZX does not reach + the negative control (CLAUDE.md rule) -> Counter, failures end in `!` |
-| `CMP` | register indexes compared (all but R, T, MEMPTR) |
+| `CMP` | register indexes compared: all but T, MEMPTR (`hooklib.CMP_R`); R left out only without the library |
 
 OPTIONAL (when the engine has the feature):
 
@@ -44,6 +44,12 @@ ROM routine, Cauldron): `altrom_low = (RAM page, 8K image of 0x0000-0x1FFF)` - w
 z80tonex.altrom_fill copies it, nextboot.check compares it); a 128K game that reads ROM 0 with the
 alt ROM on: `altrom0 = (lo, hi)` (image 0 = the 128K ROM 0 + those bytes, z80tonex.altrom0); older strategies `slot1`,
 `keep_printer_buffer`, `max_tail`. A new engine's verifier takes its alt ROM image from nextboot.alt_image.
+
+## Hook library (new engines' default; existing ones keep their copies)
+asm/lib/hlib_*.asm (each file's head: its EQUs) + nexclash/hooklib.py (verifier tools). Hooks:
+HLIB_SPEED_IN / _OUT, HLIB_R_IN / _OUT; pace ORIGINAL: hlib_pace_wait (card patch.pace-limiter); sprites:
+hlib_pc_upload + hlib_commit. unit_tests: `hooklib.every_site` (four clocks). Record: `hooklib.FILES` in
+`shared_data`. Not using a part: a decision in games/<game>.md.
 
 ## Verify loop (the part every engine repeats; copy it from chuckie.verify)
 Replay the RZX with the opcode table wrapped: at a hook site copy the state, run original and
