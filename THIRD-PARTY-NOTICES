@@ -1,0 +1,17 @@
+nexclash is GPL-3.0-or-later (LICENSE). It bundles these, each unmodified, under its own licence:
+
+nexclash/nxc.py - the .nxc packager
+    tools/nxc.py of https://github.com/jattree/nxc at commit 391e72a086fa6017e31123f84cc31467ba7bf2ef
+    (SHA-256 f286b3f16e76fbda3d225f75eb00c086bbd3993ce6b5cdd1d81f93c1f3f84f92; selftest --tools checks it).
+    GPL-3.0 (that repository's LICENSE). Format: spec/NXC-FORMAT.md there. Its .z80 reader follows
+    nexclash's own (nexclash/z80tonex.py), as that repository's THIRD-PARTY-NOTICES says.
+    To update: copy the new tools/nxc.py, put its commit and SHA-256 here and in nexclash/nxcout.py
+    (NXC_PIN), run `python selftest.py --tools`.
+
+tools/zx0/ - the ZX0 compressor (sources, LICENSE-zx0, zx0.exe)
+    https://github.com/einar-saukas/ZX0 at commit ecde3a2ae05061fe06469ed46df81a33b7de7d86
+    (tools/zx0/pin.json). BSD-3-Clause, Copyright (c) 2021 Einar Saukas: tools/zx0/LICENSE-zx0.
+
+tools/sjasmplus/ - the pinned assembler
+    https://github.com/z00m128/sjasmplus (tools/sjasmplus/pin.json). BSD-3-Clause:
+    tools/sjasmplus/LICENSE-sjasmplus.md.

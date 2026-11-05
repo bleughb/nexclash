@@ -1,0 +1,18 @@
+{
+ "_note": "The ZX0 compressor the .nxc packager (nexclash/nxc.py `make`) runs. Sources and zx0.exe are upstream's, unmodified, from this commit; nexclash/nxcout.py checks them by SHA-256 and checks a built binary against the golden output below before using it.",
+ "repo": "https://github.com/einar-saukas/ZX0",
+ "commit": "ecde3a2ae05061fe06469ed46df81a33b7de7d86",
+ "date": "2021-12-17",
+ "licence": "BSD-3-Clause (LICENSE-zx0)",
+ "sources": {
+  "zx0.c": "8649b67476d359b69b12a25bc3fb82023506b2e106c1b4b7dfff6a595f324c4a",
+  "optimize.c": "131f269d1462f159e8ab551ce6975a48b3e92b5afe78d4c18d5286f3a27f4b8c",
+  "compress.c": "2ad938c072c41207f8f0d3d046c01ed1076640e7b30042ee93788ad1b912b63b",
+  "memory.c": "bd61dc1e9cc16f6b2dc71a2fea390104e68a382ecc73d5d95856bcf36857e905",
+  "zx0.h": "1f4981f3d604bd99a67bd22e4af2b89aaa63b2480b0ffc2d5feb0e403f3edc2f"
+ },
+ "windows_binary": "zx0.exe",
+ "windows_binary_sha256": "e6aec5cdfc3535b808610cb54412ce375b5b13e17b59f2bc878a54a00a8acbac",
+ "golden": {"input": "bytes((i*7+(i>>5))&255 for i in range(4096)) + bytes(1024) + b'NexClash .nxc ' * 40",
+            "zx0_md5": "8e940cbc29cac8d59b79ed95aa031401", "zx0_size": 623}
+}
