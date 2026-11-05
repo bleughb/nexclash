@@ -237,6 +237,14 @@
     "enhanced": "8cb149338c77f85a088e3ddf220ed05b"
    }
   },
+  "d8fb649ba5d8fa086cac43d0cd1c497e": {
+   "game": "Sabre Wulf",
+   "doc": "sabre_wulf.md",
+   "nex": {
+    "plain": "06fbcf5016f77b868b3d754f621974ab",
+    "sprites": "332c9526cf6ab6b4adb5c1dc2d170969"
+   }
+  },
   "3b89344c6d7e6433bf044bef1880a2f1": {
    "game": "Smash TV",
    "doc": "smash_tv.md",

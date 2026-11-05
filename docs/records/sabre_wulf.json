@@ -1,0 +1,162 @@
+{
+ "name": "sabre_wulf",
+ "order": 106,
+ "game": "Sabre Wulf",
+ "doc": "sabre_wulf.md",
+ "engine": "sabre_wulf",
+ "representative": true,
+ "reference": "sabre_wulf",
+ "inputs": {
+  "snapshot": {
+   "name": "sabre_wulf.z80",
+   "md5": "d8fb649ba5d8fa086cac43d0cd1c497e",
+   "path": "sabre_wulf/sabre_wulf.z80"
+  },
+  "recordings": [
+   {
+    "name": "sw_nocheat.rzx",
+    "md5": "61160ddc364b44c924a4549f4e471f56",
+    "path": "sabre_wulf/sw_nocheat.rzx"
+   },
+   {
+    "name": "sw_two.rzx",
+    "md5": "c9bda75a5ef909f4582774b2ca3a29ca",
+    "path": "sabre_wulf/sw_two.rzx"
+   },
+   {
+    "name": "sw_roam1.rzx",
+    "md5": "b6854ee3d38138bb9464b908b0b42684",
+    "path": "sabre_wulf/sw_roam1.rzx"
+   },
+   {
+    "name": "sw_roam2.rzx",
+    "md5": "0bd6e245010f778d21e1584fb5e800cd",
+    "path": "sabre_wulf/sw_roam2.rzx"
+   },
+   {
+    "name": "sw_ending.rzx",
+    "md5": "d1f764a839eb30f6550fa45a1f409518",
+    "path": "sabre_wulf/sw_ending.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "sabre_wulf"
+ ],
+ "own_modules": [
+  "sabre_wulf"
+ ],
+ "data": [
+  "docs/profiles/sabre_wulf.json",
+  "asm/sabre_wulf_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "sw_nocheat.rzx",
+   "sw_two.rzx",
+   "sw_roam1.rzx",
+   "sw_roam2.rzx",
+   "sw_ending.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 60,
+  "note": "Bot recordings, no human player; cheats live in the RZX snapshots only. Ported from Jon Attree's .nxc work (pilot runs/sabre_wulf), 2026-11-05."
+ },
+ "outputs": {
+  "plain": {
+   "file": "sabre_wulf.nex",
+   "md5": "06fbcf5016f77b868b3d754f621974ab"
+  },
+  "sprites": {
+   "file": "sabre_wulf_sprites.nex",
+   "md5": "332c9526cf6ab6b4adb5c1dc2d170969"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Sabre Wulf",
+  "engine_col": "sabre_wulf (sabre_wulf.md)",
+  "build": "sabre_wulf_sprites.nex 332c9526 (every figure a sprite in the game's own colours; whole alt ROM image; the snapshot's own BASIC start; speed latch, R preserved, frame cache)",
+  "software": "Verify IDENTICAL on 5 bot recordings, default and Enhanced; unit PASS incl. every-site clock matrix; negatives detected; ROM path check pass; JNext 1.1.104 reaches play; pace ORIGINAL",
+  "hardware": "untested",
+  "next": "the owner plays the .nxc; hardware test"
+ },
+ "checks": [
+  "asm2profile:sabre_wulf"
+ ],
+ "techniques": [
+  {
+   "application": "sabre_wulf.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "scan --writers over the ULA: XOR plotter and paint routine are the only readers",
+   "phases": []
+  },
+  {
+   "application": "sabre_wulf.whole-altrom",
+   "id": "patch.whole-altrom-image",
+   "revision": 1,
+   "target": "both builds: Sinclair's ROM as alt image 1, so the snapshot's BASIC return runs as on a 48K and IM 1 never meets the hooks",
+   "phases": [
+    "setup"
+   ]
+  },
+  {
+   "application": "sabre_wulf.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "speed_in / leave at every hook: NR 7 latched in the state page, restored at exit",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "sabre_wulf.preserve-r",
+   "id": "patch.preserve-r",
+   "revision": 1,
+   "target": "R read at entry, set in leave to entry + D_xxx; compared at every hook",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "sabre_wulf.frame-cache",
+   "id": "optimise.pattern-cache",
+   "revision": 1,
+   "target": "128 pattern units hold canonical frames; clock hand, never a unit of a shown frame",
+   "phases": [
+    "entry"
+   ]
+  },
+  {
+   "application": "sabre_wulf.pace",
+   "id": "verify.update-locked-pace",
+   "revision": 1,
+   "target": "nexclash.pace, probe 39453 (round end), fixture with time taken out of the logic in both runs",
+   "phases": []
+  }
+ ],
+ "results": [
+  {
+   "application": "sabre_wulf.screen-readers",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "332c9526",
+   "scope": "5 bot recordings, 123,765 frames, default and Enhanced; cheats in 3; no human recording; no hardware",
+   "evidence": "games/sabre_wulf.md \"Results\""
+  }
+ ]
+}
