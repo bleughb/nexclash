@@ -137,6 +137,15 @@
     "sprites": "31ad4ab5b7507b6289ffe30f82c7d6bb"
    }
   },
+  "7b4e8280896d7ff34b93e83ddba9d01c": {
+   "game": "Nightshade",
+   "doc": "nightshade.md",
+   "nex": {
+    "plain": "e4d954de899563af241cb8db84114654",
+    "sprites": "1cf6b27644a2b7941b3d80a1aaa87ef5",
+    "enhanced": "37f970019aa9443669a5ca8f0fef0613"
+   }
+  },
   "4c98b980b1726af545fccc99665ef29b": {
    "game": "Rainbow Islands (128K, Z80N)",
    "doc": "rainbow_z80n.md",

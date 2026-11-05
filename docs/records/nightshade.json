@@ -1,0 +1,145 @@
+{
+ "name": "nightshade",
+ "order": 50,
+ "game": "Nightshade",
+ "doc": "nightshade.md",
+ "engine": "nightshade",
+ "representative": true,
+ "reference": "nightshade",
+ "inputs": {
+  "snapshot": {
+   "name": "nightshade.z80",
+   "md5": "7b4e8280896d7ff34b93e83ddba9d01c",
+   "path": "nightshade/nightshade.z80"
+  },
+  "recordings": [
+   {
+    "name": "a1.rzx",
+    "md5": "bff8d8a4c819f9714a68c6213d7df88b",
+    "path": "nightshade/a1.rzx"
+   },
+   {
+    "name": "a2.rzx",
+    "md5": "564cd4d483a8fc4e318a5f55fbc5123e",
+    "path": "nightshade/a2.rzx"
+   },
+   {
+    "name": "rec1.rzx",
+    "md5": "1917b7f9e3de5f56b96c84d7b216a9c6",
+    "path": "nightshade/rec1.rzx"
+   },
+   {
+    "name": "rec2.rzx",
+    "md5": "4a8df473b12443ef0a01b6db39fe987e",
+    "path": "nightshade/rec2.rzx"
+   },
+   {
+    "name": "nightshade.tap",
+    "md5": "f2ce6ca797c754e8cb776fc9f73c6b9b",
+    "path": "nightshade/nightshade.tap",
+    "role": "tape, not a recording: the archive's [a][a].tap, staged beside the snapshot for its loading screen (nightshade.find_screen); selftest.stage copies only the snapshot and the recordings list"
+   }
+  ]
+ },
+ "modules": [
+  "nightshade"
+ ],
+ "own_modules": [
+  "nightshade",
+  "nightshade_paint",
+  "nightshade_paint_v2"
+ ],
+ "data": [
+  "docs/profiles/nightshade.json",
+  "asm/nightshade_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": []
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "a1.rzx",
+   "a2.rzx",
+   "rec1.rzx",
+   "rec2.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 8,
+  "note": "auto: plain + default + Enhanced built, boot check of both bases with and without NEXLOAD, the loading stub run on a model (no key / a key); replay of each recording for the default and the Enhanced build against the original (registers incl. R at every hook site and after the blits, all RAM but the stub area / dead stack / the hero's 8 attribute cells, the sprite layer against an independent model of the game's own plot loop, the screen final before any sprite switch, no pattern rewritten while shown); 16 negative controls on a1.rzx (1500 frames each, the margin one all of it)"
+ },
+ "outputs": {
+  "plain": {
+   "file": "nightshade.nex",
+   "md5": "e4d954de899563af241cb8db84114654"
+  },
+  "sprites": {
+   "file": "nightshade_sprites.nex",
+   "md5": "1cf6b27644a2b7941b3d80a1aaa87ef5"
+  },
+  "enhanced": {
+   "file": "nightshade_enhanced.nex",
+   "md5": "37f970019aa9443669a5ca8f0fef0613"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Nightshade",
+  "engine_col": "nightshade (nightshade.md)",
+  "build": "nightshade_sprites.nex 1cf6b276 (figures as 4-bit sprites over the kept plot, switched with the game's blits at 28 MHz; R kept; loading screen) + Enhanced 37f97001 (painted by parts); = runs/nightshade/out/nightshade.nxc b8c3754c --bare",
+  "software": "replay IDENTICAL default + Enhanced on a1 / a2 / rec1 / rec2, negatives 16/16 (imported 2026-11-04 from Jon Attree's .nxc work)",
+  "hardware": "none (JNext only)",
+  "next": "end-to-end run of the refactored pipeline (docs/REFACTOR.md, NEXCLASH-CHANGES final step)"
+ },
+ "checks": [
+  "asm2profile:nightshade"
+ ],
+ "checked": {
+  "deps": {
+   "asm/nightshade_hooks.asm": "4753957db02a2c08",
+   "docs/profiles/nightshade.json": "31e32c4809c8b853",
+   "nexclash.py": "ce784cd6cd1eb043",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "d533d74a670e7e5f",
+   "nexclash/nextboot.py": "13c3ba6016db4c6f",
+   "nexclash/nightshade.py": "50b3da4d5fb80dad",
+   "nexclash/nightshade_paint.py": "545473757f20eac9",
+   "nexclash/nightshade_paint_v2.py": "a42a1660bf68133f",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "9e111968561fe668",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-11-04"
+ },
+ "verified": {
+  "deps": {
+   "asm/nightshade_hooks.asm": "4753957db02a2c08",
+   "docs/profiles/nightshade.json": "31e32c4809c8b853",
+   "nexclash.py": "ce784cd6cd1eb043",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "d533d74a670e7e5f",
+   "nexclash/nextboot.py": "13c3ba6016db4c6f",
+   "nexclash/nightshade.py": "50b3da4d5fb80dad",
+   "nexclash/nightshade_paint.py": "545473757f20eac9",
+   "nexclash/nightshade_paint_v2.py": "a42a1660bf68133f",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "9e111968561fe668",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-11-04"
+ }
+}
