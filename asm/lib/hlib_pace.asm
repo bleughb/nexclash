@@ -22,9 +22,9 @@
 ; The engine defines, before the INCLUDE:
 ;   HLIB_V_PACE EQU <14 bytes of hook RAM, zero at start>
 ;       +0 last line read, +2 lines elapsed in the window, +4 debt (1/16 lines), +6 lines a frame
-;       (learned at a wrap; 0 = HLIB_PACE_NL), +8 line at an outside hook's start, +10 window open,
-;       +12 polls left
-;   HLIB_PACE_NL EQU <lines a frame until learned: 312 48K, 311 128K / +3 (50 Hz)>
+;       (the engine's setup stores the timing mode's when it is chosen at run time, 60 Hz; 0 = HLIB_PACE_NL;
+;       never learned from a poll), +8 line at an outside hook's start, +10 window open, +12 polls left
+;   HLIB_PACE_NL EQU <lines a frame of the game's timing mode: 312 48K, 311 128K / +3 (50 Hz)>
 ; hlib_line keeps DE; the others keep nothing but IX, IY and the alternate set.
 
 ; hlib_line: HL = the video line (0 = the first ULA pixel row), read until the MSB holds still. AF, BC lost.
@@ -138,9 +138,12 @@ hlib_pace_wait:
         or a
         sbc hl,bc               ; lines since the last poll
         jr nc,.d
-        inc bc                  ; a wrap: the last poll saw the frame's last line
-        ld (HLIB_V_PACE + 6),bc
-        add hl,bc
+        ld bc,(HLIB_V_PACE + 6) ; a wrap: + the timing mode's lines a frame, never learned from a poll (at
+        ld a,b                  ; 3.5 MHz a poll can miss the frame's last line)
+        or c
+        jr nz,.wr
+        ld bc,HLIB_PACE_NL
+.wr:    add hl,bc
 .d:     pop de
         pop bc
         add hl,bc

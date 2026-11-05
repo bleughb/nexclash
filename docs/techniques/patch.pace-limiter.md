@@ -69,6 +69,7 @@ HLIB_V_PACE, 14 bytes of hook RAM.
 | faster than the original | no wait, or target too small | pace | the limiter, measure the target | slowing the game's code |
 | slower by the outside hooks' time | no debt | pace busy third | debt open / close | - |
 | a long room build measured short | over a frame without a tick | the debt lines | hlib_debt_tick a frame | - |
+| waits run a few lines long after a wrap | frame length learned from a poll (3.5 MHz misses the last line) | hooklib._t_wrap | the timing mode's length (+6 / HLIB_PACE_NL) | learning it |
 
 ## Verification
 `hooklib.pace_check` on the simulator (NextModel times both clocks); the pace meter on the build. Negative

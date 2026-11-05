@@ -399,6 +399,54 @@ def _t_pace(code, syms, fast_set=(8.0, 6.4)):
     return c
 
 
+PACE_MODES = (('48K', 224, 312, 0), ('128K', 228, 311, 311), ('60 Hz', 224, 264, 264))
+
+
+def _t_wrap(code, syms, target=700):
+    """A wait of `target` lines across two frame wraps from every start phase (16 per line), at all four clocks, in
+    48K / 128K / 60 Hz timing (the frame length the engine stores at +6, 0 = HLIB_PACE_NL), plain and with an
+    interrupt taking 30 lines every 40 polls: the wait is short by less than 2 lines (whole lines are counted from a
+    start inside one, the target is floored to lines), long by at most 3 (a 3.5 MHz poll gap; + an interrupt's 30
+    lines when interrupted), and the frame length is never learned from a poll (3.5 MHz polls can miss a frame's last
+    line: the old rule learned 310 / 311 of 312 and waited up to 705.4 lines for 700)."""
+    c = collections.Counter()
+    p6 = syms['HLIB_V_PACE'] + 6
+    for mode, t_line, lines, nl in PACE_MODES:
+        for speed in range(4):
+            for phase in range(0, t_line, t_line // 16):
+                for isr in (0, 30):
+                    from skoolkit.simulator import Simulator
+                    m = [0] * 65536
+                    m[0x8000:0x8000 + len(code)] = code
+                    m[p6], m[p6 + 1] = nl & 255, nl >> 8
+                    sim = Simulator(m, {'SP': 0xFF00})
+                    nm = NextModel(sim, speed, t_line=t_line, lines=lines)
+                    nm.real = 300 * t_line + phase
+                    if isr:
+                        line, polls = nm.line, [0]
+
+                        def interrupted(line=line, polls=polls):
+                            polls[0] += 1
+                            if polls[0] % 40 == 0:
+                                nm.real += isr * t_line
+                            return line()
+                        nm.line = interrupted
+                    call(sim, syms['hlib_pace_open'])
+                    t0 = nm.now()
+                    call(sim, syms['hlib_pace_wait'], {H: (target * 16) >> 8, L: (target * 16) & 255, A: speed})
+                    got = (nm.now() - t0) / t_line
+                    want = target / (1 << speed)
+                    c['waits'] += 1
+                    if sim.memory[p6] | sim.memory[p6 + 1] << 8 != nl:
+                        c['frame length changed by a poll (%s)!' % mode] += 1
+                    if got < want - 2:
+                        c['wait short (%s, %d MHz)!' % (mode, 3.5 * (1 << speed))] += 1
+                    if got > want + 3 + isr:
+                        c['wait long (%s, %d MHz)!' % (mode, 3.5 * (1 << speed))] += 1
+                    c['worst, lines x100'] = max(c['worst, lines x100'], int(100 * abs(got - want - (isr / 2))))
+    return c
+
+
 def _t_nolines(code, syms):
     """A frozen line counter (an emulator without NR 0x1E / 0x1F): the wait gives up, the hook returns."""
     c = collections.Counter()
@@ -536,6 +584,9 @@ def selfcheck():
                     [k for k in pc if k.endswith('!')]))
     nc = _t_nolines(code, syms)
     out.append(('hooklib pace limiter: no line counter -> gives up, no hang', [k for k in nc if k.endswith('!')]))
+    wc = _t_wrap(code, syms)
+    out.append(('hooklib pace limiter across frame wraps: %d waits of 700 lines (16 start phases, 4 clocks, 48K / 128K / '
+                '60 Hz timing, plain and interrupted), frame length kept' % wc['waits'], [k for k in wc if k.endswith('!')]))
     for form, (cd, sy) in (('256 x OUTI', (code, syms)), ('OTIR', assemble(HARNESS, ('HLIB_PC_OTIR',)))):
         cc = _t_cache(cd, sy)
         out.append(('hooklib content cache (%s): rules (miss, hit, mutable invalidates, hide keeps, inval, reset) + '
