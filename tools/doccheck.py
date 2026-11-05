@@ -43,8 +43,10 @@ SKIP_WORDS = {'the', 'and', 'is', 'with', 'or', 'in', 'to', 'only'}
 def cli_flags():
     out = {}
     src = open(os.path.join(ROOT, 'nexclash.py')).read()
-    m = re.search(r"\{(auto,patch[^}]*)\}", subprocess.run([sys.executable, 'nexclash.py', '--help'], cwd=ROOT,
-                                                             capture_output=True, text=True).stdout)
+    help_run = subprocess.run([sys.executable, 'nexclash.py', '--help'], cwd=ROOT, capture_output=True, text=True)
+    if help_run.returncode:
+        sys.exit('doccheck: cannot inspect nexclash CLI; install requirements.txt with this Python.\n' + help_run.stderr)
+    m = re.search(r"\{(auto,patch[^}]*)\}", help_run.stdout)
     cmds = m.group(1).split(',') if m else re.findall(r"add_parser\('(\w+)'", src)
     for c in cmds:
         h = subprocess.run([sys.executable, 'nexclash.py', c, '--help'], cwd=ROOT, capture_output=True, text=True).stdout

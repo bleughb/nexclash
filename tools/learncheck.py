@@ -277,6 +277,8 @@ def check(ctx=None):
     changed = changed_games(base)
     if changed is None and os.environ.get('CI'):
         bad.append('no merge base with origin/main (CI checkout needs fetch-depth: 0): changed game files not checked')
+    elif changed is None:
+        print('learncheck: no Git merge base with origin/main; changed-game checks skipped')
     rdocs = record_docs()
     for g in sorted(glob.glob(os.path.join(ROOT, 'games', '*.md'))):
         rel = os.path.relpath(g, ROOT)

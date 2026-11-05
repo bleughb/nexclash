@@ -70,13 +70,12 @@ def cmd_patch(a, cmd_auto):
         print('Sprite build FAILED its checks - do not use it. Start a session: python nexclash.py new %s' % z80)
         return 1
     if known and getattr(a, 'allow_60hz', False):
-        print('VERIFIED snapshot: %s (games/%s), built with --allow-60hz: the .nex differs from the verified '
-              'build only by the video setting.' % (known['game'], known.get('doc', '?')))
+        print('Recognised snapshot: %s (games/%s); --allow-60hz output has not been compared to the reference.' % (known['game'], known.get('doc', '?')))
     elif known:
         want = known.get('nex', {})
         got = {'plain': md5(plain) if os.path.exists(plain) else None, 'sprites': md5(spr)}
-        same = all(want.get(k) in (None, got[k]) for k in got)
-        print('VERIFIED snapshot: %s (games/%s). Output %s the verified build%s.' % (
+        same = all(want.get(k) is not None and want[k] == got[k] for k in got)
+        print('Recognised snapshot: %s (games/%s). Output %s the reference build%s.' % (
             known['game'], known.get('doc', '?'), 'is identical to' if same else 'DIFFERS from',
             '' if same else ' (report this: %s)' % got))
     else:
@@ -84,6 +83,8 @@ def cmd_patch(a, cmd_auto):
         print('held the original bytes, so the same patch applied. To prove it for YOUR snapshot, record')
         print('an RZX in Fuse (docs/RECORDING_CHECKLIST.md) and run:')
         print('    python nexclash.py verify %s --rzx YOUR.rzx' % z80)
+    if known and not getattr(a, 'allow_60hz', False) and not same:
+        return 1
     print('Copy %s to the Next\'s SD card. Hardware checklist: games/ (your game\'s file).' % os.path.basename(spr))
     return 0
 
@@ -114,8 +115,8 @@ next chat, e.g.
 Reply to the design question with "defaults" or the numbers to change.
 
 ## When the session is done
-1. `python nexclash.py patch {z80}` builds it; test on the Next with the session's checklist.
-2. `python nexclash.py contribute {game} --report {game}_nexclash/{game}_report.txt`
+1. `python nexclash.py patch "{z80path}"` builds it; test on the Next with the session's checklist.
+2. `python nexclash.py contribute "{game}" --report "{report}"`
    makes nexclash_contribution_{game}.zip: code, profile, notes and results only - no game data.
 3. Upload that zip: {upload}
 '''
@@ -140,7 +141,9 @@ def cmd_new(a, cmd_auto):
     c = json.load(open(CONTRIB)) if os.path.exists(CONTRIB) else {}
     upload = c.get('upload_url') or 'see CONTRIBUTING.md in the package'
     open(os.path.join(folder, 'SESSION.md'), 'w').write(SESSION.format(
-        game=game, z80=os.path.basename(z80), md5=md5(z80), why=why, upload=upload,
+        game=game, z80=os.path.basename(z80), z80path=os.path.abspath(z80),
+        report=os.path.join(os.path.dirname(os.path.abspath(z80)), game + '_nexclash', game + '_report.txt'),
+        md5=md5(z80), why=why, upload=upload,
         date=time.strftime('%Y-%m-%d')))
     rc = os.path.join(ROOT, 'docs', 'RECORDING_CHECKLIST.md')
     if os.path.exists(rc):
@@ -153,11 +156,14 @@ def cmd_new(a, cmd_auto):
 
 # ------------------------------------------------------------------------------------- contribute
 
-def changed_files():
+def changed_files(base_ref=None):
     """Package-relative files added or changed since the release (MANIFEST.json), or, in a git
-    checkout without a manifest, since the last commit (uncommitted + untracked)."""
+    checkout without a manifest, since the chosen base (including committed and untracked work)."""
     if os.path.exists(MANIFEST):
         base = json.load(open(MANIFEST))['files']
+        deleted = [f for f in base if not os.path.exists(os.path.join(ROOT, f))]
+        if deleted:
+            sys.exit('Contribution contains deletions (including renames); submit a pull request: ' + ', '.join(deleted))
         out = []
         for d, _, fs in os.walk(ROOT):
             if '.git' in d.split(os.sep) or '__pycache__' in d:
@@ -169,9 +175,21 @@ def changed_files():
                 if base.get(rel) != md5(os.path.join(ROOT, rel)):
                     out.append(rel)
         return sorted(out)
-    if os.path.isdir(os.path.join(ROOT, '.git')):
-        r = subprocess.run(['git', '-C', ROOT, 'status', '--porcelain', '-uall'], capture_output=True, text=True)
-        return sorted(l[3:].strip().strip('"') for l in r.stdout.splitlines() if not l.startswith(' D'))
+    if os.path.exists(os.path.join(ROOT, '.git')):
+        def git(*args):
+            r = subprocess.run(['git', '-C', ROOT, *args], capture_output=True, text=True)
+            if r.returncode:
+                sys.exit('Cannot determine contribution baseline: ' + r.stderr.strip())
+            return r.stdout
+        base = base_ref or git('merge-base', 'HEAD', 'origin/main').strip()
+        changed = git('diff', '--name-only', '-z', '--no-renames', base).split('\0')
+        untracked = git('ls-files', '--others', '--exclude-standard', '-z').split('\0')
+        files = sorted(set(filter(None, changed + untracked)))
+        deleted = [f for f in files if not os.path.exists(os.path.join(ROOT, f))]
+        if deleted:
+            sys.exit('Contribution contains deletions (including renames); submit a pull request: ' + ', '.join(deleted))
+        print('Contribution baseline: ' + base)
+        return files
     sys.exit('No MANIFEST.json and not a git checkout: cannot tell what the session changed.')
 
 
@@ -192,7 +210,7 @@ def screen(files):
 
 
 def cmd_contribute(a):
-    files = changed_files()
+    files = changed_files(getattr(a, 'base', None))
     keep, refused = screen(files)
     for f, why in refused:
         print('left out: %s (%s)' % (f, why))
