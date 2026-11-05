@@ -1,6 +1,7 @@
 """User-facing commands of the nexclash package (GPL-3.0-or-later).
 
-  patch GAME.z80        build plain + sprite .nex for a supported game (your own snapshot)
+  patch GAME.z80        build a supported game (your own snapshot): GAME.nxc, the file to share
+                        (it needs the player's own game; --nex keeps the plain + sprite .nex too)
   new GAME.z80          unsupported game: make a session folder to add it with Claude
   contribute NAME       zip what a session added (code, profiles, docs, results - never game
                         data) for upload, so everyone gets the game in the next release
@@ -84,7 +85,11 @@ def cmd_patch(a, cmd_auto):
         print('held the original bytes, so the same patch applied. To prove it for YOUR snapshot, record')
         print('an RZX in Fuse (docs/RECORDING_CHECKLIST.md) and run:')
         print('    python nexclash.py verify %s --rzx YOUR.rzx' % z80)
-    print('Copy %s to the Next\'s SD card. Hardware checklist: games/ (your game\'s file).' % os.path.basename(spr))
+    from nexclash import nxcout                 # GAME.nxc (nexclash/nxcout.py); the .nex files only with --nex
+    nxc = nxcout.package(a)
+    print('Share %s; to play it, the loader and card setup: %s. Hardware checklist: games/ (your game\'s file).' % (
+        os.path.basename(nxc), nxcout.SHARE) if nxc else 'Copy %s to the Next\'s SD card. Hardware checklist: games/ '
+        '(your game\'s file).' % os.path.basename(spr))
     return 0
 
 
@@ -114,7 +119,8 @@ next chat, e.g.
 Reply to the design question with "defaults" or the numbers to change.
 
 ## When the session is done
-1. `python nexclash.py patch {z80}` builds it; test on the Next with the session's checklist.
+1. `python nexclash.py patch {z80}` builds {game}.nxc (add `--nex` for the .nex files to test on
+   the Next with the session's checklist; the .nxc loader: github.com/jattree/nxc).
 2. `python nexclash.py contribute {game} --report {game}_nexclash/{game}_report.txt`
    makes nexclash_contribution_{game}.zip: code, profile, notes and results only - no game data.
 3. Upload that zip: {upload}
@@ -130,6 +136,8 @@ def cmd_new(a, cmd_auto):
     why = 'unknown engine'
     try:
         cmd_auto(a)
+        from nexclash import nxcout             # a game an engine already builds still gets its .nxc
+        nxcout.package(a)
         rep = os.path.join(a.out, game + '_report.txt')
         if os.path.exists(rep):
             lines = [x for x in open(rep).read().split('\n') if x.startswith(('Engine', 'Sprites'))]

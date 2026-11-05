@@ -164,7 +164,7 @@ def rebuild(rec, d, lines):
         o = next(iter(rec['outputs'].values()))['file']
         _run([sys.executable, NEXCLASH, 'convert', z80, '-o', os.path.join(out, o)] + rb.get('args', []))
         return bad + _check_outputs(rec, out, lines)
-    cmd = [sys.executable, NEXCLASH, 'auto', z80, '--no-record'] + rb.get('args', [])
+    cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80, '--no-record'] + rb.get('args', [])
     cmd = [c for i, c in enumerate(cmd) if c != '--no-record' or i == cmd.index('--no-record')]
     for r in rb.get('rzx', []):
         cmd += ['--rzx', os.path.join(d, r)]
@@ -230,7 +230,7 @@ def reverify(rec, d, lines, human=False):
     v = rec['verify']
     z80 = os.path.join(d, rec['inputs']['snapshot']['name'])
     out = os.path.join(d, 'verify')
-    cmd = [sys.executable, NEXCLASH, 'auto', z80] + v.get('args', [])
+    cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80] + v.get('args', [])
     rz = list(v.get('rzx', [])) + (list(v.get('human_rzx', [])) if human else [])
     for r in rz:
         cmd += ['--rzx', os.path.join(d, r)]
@@ -250,7 +250,7 @@ def reverify(rec, d, lines, human=False):
                      % (rec['name'], md5(auto), v['auto_rzx_md5']))
     for x in rec.get('repro', []):
         ro = os.path.join(d, 'verify_' + x['strategy'])
-        rcmd = [sys.executable, NEXCLASH, 'auto', z80, '--no-record', '--strategy', x['strategy'], '-o', ro]
+        rcmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80, '--no-record', '--strategy', x['strategy'], '-o', ro]
         for r in ([auto] if os.path.exists(auto) else []) + [os.path.join(d, r) for r in rz]:
             rcmd += ['--rzx', r]
         _run(rcmd)
@@ -611,7 +611,7 @@ def canary2(src):
     bad = rebuild(rec, d, lines)
     v = rec['verify']
     out = os.path.join(d, 'canary')
-    cmd = [sys.executable, NEXCLASH, 'auto', os.path.join(d, rec['inputs']['snapshot']['name'])] + \
+    cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', os.path.join(d, rec['inputs']['snapshot']['name'])] + \
         v.get('args', []) + ['--quick', str(rec.get('canary_quick', 300)), '-o', out]
     for r in v.get('rzx', []):
         cmd += ['--rzx', os.path.join(d, r)]

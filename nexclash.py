@@ -2,10 +2,10 @@
 """nexclash - ZX Spectrum .z80 -> Spectrum Next .nex, with the player drawn as hardware sprites.
 Copyright (C) 2026 the nexclash contributors. GPL-3.0-or-later (see LICENSE).
 
-  python nexclash.py patch GAME.z80                     YOUR game: plain + sprite .nex, says if verified
+  python nexclash.py patch GAME.z80                     YOUR game: GAME.nxc to share (--nex: the .nex files too)
   python nexclash.py new GAME.z80                       not supported yet: session folder to add it
   python nexclash.py contribute NAME [--report R]       zip what a session added, for upload
-  python nexclash.py auto GAME.z80 [--rzx MY.rzx ...]   everything: plain + patched .nex + report
+  python nexclash.py auto GAME.z80 [--rzx MY.rzx ...]   everything: GAME.nxc (+ .nex with --nex) + report
       --strategy altrom|printer|slot1   patch memory (default: altrom where proven; old builds: printer/slot1)
       --allow-60hz                      keep the Next's video rate (default: 50 Hz forced, as verified)
       --altrom-fill whole|rom3          alt ROM fill (default whole; existing games: rom3 via their record pin)
@@ -537,6 +537,7 @@ def _finish(out, name, rep):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest='cmd', required=True)
+    from nexclash import nxcout                         # .nxc output of patch / new / auto
     for cmd in ('auto', 'patch', 'new'):
         p = sub.add_parser(cmd); p.add_argument('z80'); p.add_argument('--rzx', action='append')
         p.add_argument('--no-record', action='store_true'); p.add_argument('-o', '--out')
@@ -556,6 +557,7 @@ def main():
         p.add_argument('--decisions', help='rebuild from stored build decisions (docs/records); no recording, no verification')
         p.add_argument('--engine', choices=['wally', 'rainbow'], help="the frozen / deprecated first version instead of its successor: "
                        "wally (record wally) instead of wally2, rainbow (record rainbow) instead of rainbow_z80n")
+        nxcout.add_args(p)
     p = sub.add_parser('contribute'); p.add_argument('name', help='game name (zip name)')
     p.add_argument('--report', action='append', help='nexclash report(s) to include (GAME_report.txt)')
     p.add_argument('--note', help='one line for the maintainers'); p.add_argument('-o', '--output')
@@ -624,6 +626,7 @@ def main():
         print(preview.preview(a.z80, a.rzx, a.out, at, a.every, a.plot, buf, a.frames, a.keys, a.stop)[0])
     elif a.cmd == 'auto':
         cmd_auto(a)
+        nxcout.package(a)
     elif a.cmd in ('patch', 'new', 'contribute'):
         from nexclash import userflow as U
         sys.exit(U.cmd_patch(a, cmd_auto) if a.cmd == 'patch' else U.cmd_new(a, cmd_auto) if a.cmd == 'new'
