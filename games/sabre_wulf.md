@@ -105,7 +105,22 @@ Builds: sabre_wulf.nex 06fbcf50, sabre_wulf_sprites.nex 332c9526, Enhanced f156d
 | sw_ending | 3745 | 206 | 7 | 0 | 313 | 7 | 1038 | 333 | IDENTICAL |
 Every hook ran (old: 91 calls in all). A' probe: no effect on all 5. ROM paths: both builds, every ROM byte the game runs as
 recorded; the tail never read before written.
-RESULTS-PENDING
+Enhanced (verify enh=, pilot work2/verify_all.py): all 283,009 hook events beside the default, the same registers, memory,
+state and attributes, every shown unit the set's bytes. Unit PASS: frames 3,276 positions, guards, colours, states; the
+every-site clock matrix 268 cases in each set. Negatives, each a replay of sw_roam1's first 10,000 frames (pilot
+work2/negative.py): 14 of 14 DETECTED (patterns shifted, one row write left, HL and DE swapped, clear leaves sprites on,
+move ignores the old image, colour ignored, x off, y off, never uploaded, slot 7 not restored, forced 3.5 MHz exit at
+7 MHz, R one off, the cache replaces a shown frame, player frames point elsewhere); controls at 3.5 and 7 MHz clean;
+Enhanced: default patterns shown, x off: both DETECTED, control clean.
+JNext 1.1.104 (pilot runs/sabre_wulf/jn2): pace, pilot work2/trials.py, fixture 2, probe 39453, 10 trials a scene:
+| Scene | approved build b60fd71e | this build | Enhanced, approved b5dce79b | Enhanced, this build |
+|---|---|---|---|---|
+| quiet | +2.58 % | +1.67 % | +2.58 % | +1.67 % |
+| busy | +2.49 % | +1.48 % | +2.49 % | +1.48 % |
+| sound (fight held) | +2.61 % | +1.68 % (9 measured) | +2.61 % | +1.68 % |
+Hook time 0.9 % of the time at 28 MHz, the rest the 3.5 MHz entries and exits. Flicker 300 frames, both sets: 0 out of
+step, 0 vanished, 0 transients. Soak 15 minutes, both sets, against the .z80: no freeze, loop or crash; play, game overs,
+restarts on the sheet. The .nxc's menu builds reach play in both sets, cheats on and off.
 
 ## Hardware checklist (nothing here has run on hardware)
 1. Boot the .nex: the loading screen waits for a key (BASIC's PAUSE 0); any key, the title; 0 starts.
