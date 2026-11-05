@@ -312,10 +312,15 @@ def rom128_0():
 
 def altrom0(patch):
     """(lo, hi) when the stub fills alt ROM image 0 (what a 128K game sees with ROM 0 selected) from the
-    128K editor ROM + the build's bytes lo..hi of patch.page: patch.altrom0, with the whole-image fill.
-    Target Renegade reads its sound data at 0x3500 there; the Next's own ROM0 has other bytes."""
+    128K editor ROM + the build's bytes lo..hi of patch.page: patch.altrom0 on any alt ROM build of the new
+    fill, whether image 1 takes Sinclair's ROM as its source (altrom_whole) or is the build's own complete image
+    (altrom (0x2000, 0x4000) + altrom_low): image 0 does not depend on that choice. The legacy pin (ALTROM_FILL
+    'rom3') never fills it. Target Renegade reads its sound data at 0x3500 there; the Next's own ROM0 has other
+    bytes."""
     a0 = getattr(patch, 'altrom0', None)
-    return tuple(a0) if a0 is not None and altrom_whole(patch) else None
+    if a0 is None or getattr(patch, 'altrom', None) is None or ALTROM_FILL == 'rom3':
+        return None
+    return tuple(a0)
 
 
 def altrom_whole(patch):

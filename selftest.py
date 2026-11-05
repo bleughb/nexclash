@@ -582,6 +582,7 @@ def tools_check(src):
            rt[43899]['calls'] == 1059 and rt.get(40000, {}).get('calls') == 814 and
            len(rt[40000]['callers_seen']) == 6 and rt[40000]['T_median'] == 665, r['routines'][:2])
         rom_paths_check(src, ez, er, work, ok)
+        altrom0_check(src, work, ok)
     finally:
         sys.stderr = old
     shutil.rmtree(work, ignore_errors=True)
@@ -614,6 +615,35 @@ def _short_rzx(path, frames, cut_at, out):
     f = tr.frames[tr.frame_index + cut_at - 1]
     tr.frames[tr.frame_index + cut_at - 1] = type(f)(f.fetch_counter, f.start, f.start)
     rp.write_rzx(out, ctx, [])
+
+
+def altrom0_check(src, work, ok):
+    """An explicit patch.altrom0 fills alt ROM image 0 for both kinds of image-1 build (refactor plan 2): Chuckie Egg
+    (Sinclair's ROM + hooks, altrom_whole) and Knight Tyme (its own complete image 1, altrom_low), each built with the
+    new fill and altrom0 = 0x3500-0x3600, booted in the Next model: image 0 = the 128K ROM 0 + the build's bytes."""
+    import copy
+    from nexclash import chuckie, knight_tyme as kt, nextboot as nb, z80tonex as zt
+    for game, mk in (('chuckie_egg', lambda z: chuckie.ChuckiePatch()),
+                     ('knight_tyme', lambda z: (kt.use_game(z), kt.KnightTymePatch())[1])):
+        rec = R.load(game)
+        z80 = os.path.join(src, rec['inputs']['snapshot']['path'])
+        if not os.path.isfile(z80) or md5(z80) != rec['inputs']['snapshot']['md5']:
+            print('SKIP tools: alt image 0 on %s (reference snapshot not found)' % game)
+            continue
+        fill, zt.ALTROM_FILL = zt.ALTROM_FILL, 'whole'
+        try:
+            p = mk(z80)
+            p.altrom0 = (0x3500, 0x3600)
+            nex = os.path.join(work, 'img0_%s.nex' % game)
+            zt.convert(z80, nex, quiet=True, patch=copy.deepcopy(p))
+            st = nb.boot(nex, zt.Z80Snapshot(z80).pc, sysrom=nb.system_rom3()[0])
+            want = bytearray(zt.rom128_0())
+            want[0x3500:0x3600] = p.page[0x1500:0x1600]
+            kind = 'Sinclair\'s ROM + hooks' if zt.altrom_whole(p) else 'its own complete image 1'
+            ok('alt image 0: %s (%s) with altrom0 0x3500-0x3600 boots with image 0 = the 128K ROM 0 + its bytes'
+               % (game, kind), zt.altrom0(p) == (0x3500, 0x3600) and bytes(st['alt'][0]) == bytes(want), zt.altrom0(p))
+        finally:
+            zt.ALTROM_FILL = fill
 
 
 def keypad_check():
