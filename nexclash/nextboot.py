@@ -151,7 +151,8 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=()):
     recording keeps sync only on Sinclair's 48K ROM as ROM 1 (Knight Tyme), which the check then compares with;
     segments True when it keeps sync only with each segment started from its own snapshot (kt_rooms 48, Spellbound's
     t_rooms 57: a room per segment). On SkoolKit's 128K ROM 1 its keypad code (0x386E-0x3CFF) is listed,
-    not compared (the Next's ROM 3 has none), its call sites (0x004B ...) against the 48K ROM's bytes. faults = ROM addresses the game RUNS
+    not compared, while it runs (the Next's ROM 3 has none: its fetches and its own reads, PC inside it); its call sites
+    (0x004B ...) against the 48K ROM's bytes; game code reading those bytes as data is compared like any other read. faults = ROM addresses the game RUNS
     whose byte differs on the Next ('alt' / 'slot1': the build owns that ROM, each is a fault; 'plain':
     the Next's own ROM3 runs, reported only), and data reads of differing bytes that come from the Next's
     own ROM (the byte equals NextZXOS's there: Target Renegade e0b246e3's sound data); data reads of bytes
@@ -234,13 +235,13 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=()):
             def on_read(h, a, pc, mem):
                 if a >= 0x4000:
                     if a in watch and a not in written and a not in tread and not later[0]:   # data or code fetch
-                        if not (pc in k128 and (mem.o7ffd >> 4) & 1):               # not by 128K-only ROM code
+                        if not (KEYPAD_CODE <= pc < 0x4000 and (mem.o7ffd >> 4) & 1):   # not by 128K-only ROM code
                             tread[a] = (pc, frame[0])
                     return
                 sel = (mem.o7ffd >> 4) & 1 if h.is128 else 1
                 seen.add((sel, a))
-                if sel and a in k128:            # the 128K Spectrum's keypad path: no Next ROM has it
-                    only.setdefault(a, (pc, frame[0]))
+                if sel and a in k128 and KEYPAD_CODE <= pc < 0x4000:   # the 128K keypad code running: no Next ROM has
+                    only.setdefault(a, (pc, frame[0]))       # it; a read of these bytes by any other code is compared
                     return
                 ex = pc <= a <= pc + 3
                 for nex, nx, d, orig, diff in tabs:

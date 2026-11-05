@@ -520,6 +520,7 @@ def tools_check(src):
     checks_ = []
 
     def ok(name, cond, info=''):
+        cond = bool(cond)                       # a falsy [] / 0 / None is a failure too, not only False
         checks_.append(cond)
         print('%-4s tools: %s%s' % ('OK' if cond else 'FAIL', name, '' if cond else ' (%s)' % str(info)[:200]))
 
@@ -615,6 +616,46 @@ def _short_rzx(path, frames, cut_at, out):
     rp.write_rzx(out, ctx, [])
 
 
+def keypad_check():
+    """The 128K ROM 1 keypad exception is scoped to the keypad code running (no game data: one synthetic replay frame,
+    modelled Next image 1 differing from SkoolKit's 128K ROM 1 at its first keypad byte): run or read by the keypad
+    code itself (PC inside it) -> listed, not compared; the same byte read as data by game code in RAM (PC 0x8000)
+    -> MISMATCH. -> [(name, ok, info)]"""
+    from types import SimpleNamespace
+    from unittest import mock
+    from skoolkit import ROM48, ROM128, read_bin_file
+    from nexclash import nextboot as nb, simrun
+    r48, r128 = list(read_bin_file(ROM48, 16384)), list(read_bin_file(ROM128[1], 16384))
+    a = next(x for x in range(nb.KEYPAD_CODE, 0x4000) if r48[x] != r128[x])
+    images = [bytearray(r48), bytearray(r48)]
+    images[1][a] = r128[a] ^ 0xFF
+    st = dict(nr={0x8C: 0x80}, mmu=[255] * 8, p1ffd=4, alt=images, mem=list(images[1]) + [0] * 49152)
+
+    class Mem(list):
+        o7ffd = 0x10
+    out = []
+    for pc, want in ((a, 'keypad code'), (0x8000, 'game code in RAM')):
+        def replay(path, hooks, stop=None, keep_snapshots=False, pc=pc):
+            mem = Mem(r128 + [0] * 49152)
+            hooks.on_sim(SimpleNamespace(memory=mem))
+            hooks.on_frame(1)
+            hooks.on_read(a, pc, mem)
+            return 1
+        with mock.patch.object(nb, 'tail_of', return_value=(0x8000, 0x5B00, 20)), \
+                mock.patch.object(nb, 'boot', return_value=st), \
+                mock.patch.object(simrun, 'rzx_frames', return_value=(1, 1)), \
+                mock.patch.object(simrun, 'play_rzx', replay):
+            kind, lines, faults, cover = nb.rom_paths(['k_sprites.nex'], ['k.rzx'], sysrom=bytes(images[1]))['k_sprites.nex']
+        if pc == a:
+            out.append(('rom paths: the 128K ROM 1 keypad code reading its own byte 0x%04X: listed, not compared' % a,
+                        not faults and any('128K ROM 1 only' in x for x in lines), lines[:2]))
+        else:
+            out.append(('rom paths: negative - game code (PC 0x8000) reading keypad byte 0x%04X as data, the Next\'s '
+                        'differing: MISMATCH' % a, bool(faults.get('k.rzx')) and any('MISMATCH' in x for x in lines),
+                        lines[:2]))
+    return out
+
+
 def rom_paths_check(src, ez, er, work, ok):
     """nextboot.rom_paths on what real recordings contain (2026-11-04; BRIEFING A2): input that runs out at the
     end of a recording or before it (Chuckie Egg, cut), a 128K recording made with the 48K ROM as ROM 1 and one
@@ -624,6 +665,8 @@ def rom_paths_check(src, ez, er, work, ok):
     bad = nb.selfcheck()
     ok('rom paths: nextboot.selfcheck - raster line ends a 250-frame hold (frozen line: never), NR 0x1E/0x1F, '
        'a .nex that does not boot is reported', not bad, bad)
+    for x in keypad_check():
+        ok(*x)
     plain = os.path.join(work, 'rp_chuckie.nex')
     zt.convert(ez, plain, None, True, quiet=True)
     for cut, how in ((30, 'last frame'), (12, 'partial')):
@@ -639,11 +682,17 @@ def rom_paths_check(src, ez, er, work, ok):
         z80, rz, nex = kt
         r = nb.rom_paths([nex], [rz['kt_t1.rzx']], stop=940, z80=z80)[nex]
         c, f = r[3]['kt_t1.rzx'], r[2].get('kt_t1.rzx', [])
-        ok("rom paths: Knight Tyme kt_t1 (940 frames) replays on the 48K ROM as ROM 1; MISMATCH only the Bridge star "
-           "map, image 0 0x0D00- read at frame 937 (the Next's ROM 0; REFACTOR 2)",
-           c['rom1'] == '48K' and c['how'] == 'as recorded' and c['frames'] == 940 and f and
-           all(k[0] == 0 and k[2] == 'next' and 0x0D00 <= k[1] < 0x0E00 for k in f) and
-           any('MISMATCH' in x and 'frame 937' in x for x in r[1]), (c, f[:4], r[1][:3]))
+        if nb.system_roms() is None:                   # the star map differs from NextZXOS's ROM 0 only
+            ok('rom paths: Knight Tyme kt_t1 (940 frames) replays on the 48K ROM as ROM 1, in sync',
+               c['rom1'] == '48K' and c['how'] == 'as recorded' and c['frames'] == 940, (c, r[1][:3]))
+            print("SKIP tools: rom paths: Knight Tyme's Bridge star map MISMATCH (NextZXOS's ROM 0 not modelled: set "
+                  "NEXCLASH_NEXT_ROM to the 64K enNextZX.rom)")
+        else:
+            ok("rom paths: Knight Tyme kt_t1 (940 frames) replays on the 48K ROM as ROM 1; MISMATCH only the Bridge star "
+               "map, image 0 0x0D00- read at frame 937 (the Next's ROM 0; REFACTOR 2)",
+               c['rom1'] == '48K' and c['how'] == 'as recorded' and c['frames'] == 940 and f and
+               all(k[0] == 0 and k[2] == 'next' and 0x0D00 <= k[1] < 0x0E00 for k in f) and
+               any('MISMATCH' in x and 'frame 937' in x for x in r[1]), (c, f[:4], r[1][:3]))
         known = [(k['image'], int(k['from'], 16), int(k['to'], 16), k['why']) for k in R.load('knight_tyme')['rom_paths_known']]
         r = nb.rom_paths([nex], [rz['kt_t1.rzx']], stop=940, z80=z80, known=known)[nex]
         ok("rom paths: Knight Tyme with its record's rom_paths_known: the star map KNOWN, no fault, no MISMATCH",
