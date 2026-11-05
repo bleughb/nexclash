@@ -154,6 +154,15 @@
     "sprites": "03979d5438cf55410ecec8aac76f05ec"
    }
   },
+  "b94691b08d31386d3e5661d04e6c164f": {
+   "game": "Starquake",
+   "doc": "starquake.md",
+   "nex": {
+    "plain": "f447d9b3d937837d2427e021002a9648",
+    "sprites": "4efee1728e8092cdfd9f0e4ad859cf52",
+    "loading": "2e2f107e95cf80ea9412ba7023e819ee"
+   }
+  },
   "1895877d638a4a5f37a9402bed18f59a": {
    "game": "Target Renegade (128K)",
    "doc": "target_renegade.md",

@@ -34,6 +34,7 @@ ENGINES = [
     ('atic_atac', 'is_atic_atac', None),                                  # Atic Atac (48K)
     ('cauldron', 'is_cauldron', None),                                    # Cauldron (48K)
     ('three_weeks', 'is_three_weeks', None),                              # Three Weeks in Paradise (128K)
+    ('starquake', 'is_starquake', None),                                  # Starquake (48K)
 ]
 
 

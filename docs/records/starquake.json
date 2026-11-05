@@ -1,0 +1,199 @@
+{
+ "name": "starquake",
+ "order": 102,
+ "game": "Starquake",
+ "doc": "starquake.md",
+ "engine": "starquake",
+ "representative": true,
+ "reference": "starquake",
+ "inputs": {
+  "snapshot": {
+   "name": "starquake.z80",
+   "md5": "b94691b08d31386d3e5661d04e6c164f",
+   "path": "starquake/starquake.z80"
+  },
+  "recordings": [
+   {
+    "name": "t1.rzx",
+    "md5": "f65b348e7df3df65685547dff6730351",
+    "path": "starquake/t1.rzx"
+   },
+   {
+    "name": "b1.rzx",
+    "md5": "f97002a92782a9bc3878f4827778b2db",
+    "path": "starquake/b1.rzx"
+   },
+   {
+    "name": "b2.rzx",
+    "md5": "ec808caa0cb5935c51051949d908b5bf",
+    "path": "starquake/b2.rzx"
+   },
+   {
+    "name": "b3.rzx",
+    "md5": "2c341560a2903edf4cb6e6aef95f94d0",
+    "path": "starquake/b3.rzx"
+   },
+   {
+    "name": "m1.rzx",
+    "md5": "3ce343cd05406ca27d827f4e2ea73038",
+    "path": "starquake/m1.rzx"
+   },
+   {
+    "name": "m2.rzx",
+    "md5": "3c920c963bdd102f096c2019c8d7d925",
+    "path": "starquake/m2.rzx"
+   },
+   {
+    "name": "m3.rzx",
+    "md5": "483901c4dbebd1c4395eb315c8815f8c",
+    "path": "starquake/m3.rzx"
+   },
+   {
+    "name": "m4.rzx",
+    "md5": "d40bf1abe2ddc8274ff226fc338184b3",
+    "path": "starquake/m4.rzx"
+   },
+   {
+    "name": "m5.rzx",
+    "md5": "121d358946ced6caab126a9e76510a08",
+    "path": "starquake/m5.rzx"
+   },
+   {
+    "name": "starquake_loading.scr",
+    "md5": "f95de364dbb9372fb8dc2af543a0de71",
+    "path": "starquake/starquake_loading.scr",
+    "note": "not a recording: the tape's loading screen (6,912 bytes), which the build puts in the .nex; records have no other slot for a build input"
+   }
+  ]
+ },
+ "modules": [
+  "starquake"
+ ],
+ "own_modules": [
+  "starquake"
+ ],
+ "data": [
+  "docs/profiles/starquake.json",
+  "docs/profiles/starquake_colours.json",
+  "asm/starquake_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": []
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "t1.rzx",
+   "b1.rzx",
+   "b2.rzx",
+   "b3.rzx",
+   "m1.rzx",
+   "m2.rzx",
+   "m3.rzx",
+   "m4.rzx",
+   "m5.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 45,
+  "note": "auto: three simulators in lockstep over each recording (original, patched, original with each frame's attribute paint undone), hook fetches not counted; the patched alt ROM built as the stub fills it over the system ROM3 (set NEXCLASH_NEXT_ROM to enNextZX.rom: without it Sinclair's ROM stands in and the 30763c45 negative cannot be seen); all memory but the screen against the original, everything against the paint-undone original (bitmap with the figures XORed out); sprite layer against an independent model every plot; 12 negatives (NEG_PLAN: m1, the paint overflow on b1 to frame 5500)"
+ },
+ "outputs": {
+  "plain": {
+   "file": "starquake.nex",
+   "md5": "f447d9b3d937837d2427e021002a9648"
+  },
+  "sprites": {
+   "file": "starquake_sprites.nex",
+   "md5": "4efee1728e8092cdfd9f0e4ad859cf52"
+  },
+  "loading": {
+   "file": "starquake_sprites_loading.nex",
+   "md5": "2e2f107e95cf80ea9412ba7023e819ee"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Starquake",
+  "engine_col": "starquake (starquake.md)",
+  "build": "starquake_sprites_loading.nex 2e2f107e (six figures solid sprites, game ink, black fill, no outline; attribute paint put back; whole alt ROM image from the build; tape loading screen held by bank 22) = the published .nxc v1.0",
+  "software": "replay IDENTICAL on 9 recordings; 12 negatives detected (games/starquake.md Results)",
+  "hardware": "none (JNext through the real loader only)",
+  "next": "hardware round; ported from Jon Attree's .nxc work, 2026-11-04"
+ },
+ "checks": [
+  "asm2profile:starquake"
+ ],
+ "techniques": [
+  {
+   "application": "starquake.whole-altrom",
+   "id": "patch.whole-altrom-image",
+   "revision": 1,
+   "target": "alt ROM image 1 = Sinclair's 48K ROM + the hooks at 0x386E- (altrom 0x2000-0x4000 + altrom_low page 25), so NextZXOS ROM3's IM 1 and UDG print never reach the hooks",
+   "phases": [
+    "setup"
+   ]
+  }
+ ],
+ "results": [
+  {
+   "application": "starquake.whole-altrom",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "2e2f107e",
+   "scope": "9 recordings, 40,884 frames IDENTICAL with the alt ROM modelled over NextZXOS ROM3; negative \"the 30763c45 build\" (hook bytes only over ROM3) detected (pilot, 2026-11-04; re-run by selftest at the import)",
+   "evidence": "games/starquake.md \"Results\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/starquake_hooks.asm": "19eff7ffdd4f7506",
+   "docs/profiles/starquake.json": "c2b57003351bdc33",
+   "docs/profiles/starquake_colours.json": "502c4f6db0e6869c",
+   "nexclash.py": "ce784cd6cd1eb043",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "699bff499f91147b",
+   "nexclash/nextboot.py": "13c3ba6016db4c6f",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/starquake.py": "11b077afed64196e",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "9e111968561fe668",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-11-04"
+ },
+ "verified": {
+  "deps": {
+   "asm/starquake_hooks.asm": "19eff7ffdd4f7506",
+   "docs/profiles/starquake.json": "c2b57003351bdc33",
+   "docs/profiles/starquake_colours.json": "502c4f6db0e6869c",
+   "nexclash.py": "ce784cd6cd1eb043",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "76c70db3122a43bf",
+   "nexclash/nextboot.py": "13c3ba6016db4c6f",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/starquake.py": "11b077afed64196e",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "9e111968561fe668",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-11-04"
+ }
+}

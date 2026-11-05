@@ -62,6 +62,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Cauldron (cauldron): `Cauldron_1985_Palace_Software_a.nex` b5b211f1fc6103ec0d42711dcc29cd0d, `Cauldron_1985_Palace_Software_a_sprites.nex` 43c1ca492d7c1cc68541f02aaed9cb4c; verified 2026-10-27
 - Nemesis the Warlock (nemesis_the_warlock): `nemesis_the_warlock.nex` f1497589ddf479e34d42f6ab0618954d, `nemesis_the_warlock_sprites.nex` 31ad4ab5b7507b6289ffe30f82c7d6bb; verified 2026-11-03
 - Three Weeks in Paradise (128K) (three_weeks): `three_weeks_128.nex` 1a6f1bbe0abfbcfbb5712ad4f4700e95, `three_weeks_128_sprites.nex` 90eeeb14fa20edc3585124422530a41d, `three_weeks_128_enhanced.nex` e6e6f6b06c3cff4f2cd259ce27de035a; verified 2026-11-04
+- Starquake (starquake): `starquake.nex` f447d9b3d937837d2427e021002a9648, `starquake_sprites.nex` 4efee1728e8092cdfd9f0e4ad859cf52, `starquake_sprites_loading.nex` 2e2f107e95cf80ea9412ba7023e819ee; verified 2026-11-04
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
