@@ -427,10 +427,119 @@ def tools_check(src):
            r['engine'] == 'chuckie' and r['plain']['boot'].startswith('OK') and r['routines'][0]['routine'] == 43899 and
            rt[43899]['calls'] == 1059 and rt.get(40000, {}).get('calls') == 814 and
            len(rt[40000]['callers_seen']) == 6 and rt[40000]['T_median'] == 665, r['routines'][:2])
+        rom_paths_check(src, ez, er, work, ok)
     finally:
         sys.stderr = old
     shutil.rmtree(work, ignore_errors=True)
     return checks_.count(False) + len(bad) + cbad
+
+
+def _ref_build(src, game, which):
+    """-> (snapshot, {recording name: path}, the record's built .nex) from the reference folder, or None when
+    a file is missing or its MD5 is not the record's (the check is then skipped, not failed)."""
+    rec = R.load(game)
+    base = os.path.dirname(rec['inputs']['snapshot']['path'])
+    z80 = os.path.join(src, rec['inputs']['snapshot']['path'])
+    rz = {r['name']: os.path.join(src, r['path']) for r in rec['inputs']['recordings']}
+    o = rec['outputs'][which]
+    nex = os.path.join(src, base, o['file'])
+    for p in [z80, nex] + list(rz.values()):
+        if not os.path.isfile(p):
+            return None
+    return (z80, rz, nex) if md5(nex) == o['md5'] else None
+
+
+def _short_rzx(path, frames, cut_at, out):
+    """`out`: the first `frames` frames of `path`, frame `cut_at` (1-based) without its port readings - a
+    recording whose input runs out there, as one that ends early does."""
+    import skoolkit.rzxplay as rp
+    from nexclash import rzx as RZ
+    ctx, _ = RZ._replay(path, stop=1)
+    tr = ctx.simulator.tracer
+    tr.frames = tr.frames[:tr.frame_index + frames]
+    f = tr.frames[tr.frame_index + cut_at - 1]
+    tr.frames[tr.frame_index + cut_at - 1] = type(f)(f.fetch_counter, f.start, f.start)
+    rp.write_rzx(out, ctx, [])
+
+
+def rom_paths_check(src, ez, er, work, ok):
+    """nextboot.rom_paths on what real recordings contain (2026-11-04; BRIEFING A2): input that runs out at the
+    end of a recording or before it (Chuckie Egg, cut), a 128K recording made with the 48K ROM as ROM 1 and one
+    made of segments with their own snapshots (Knight Tyme), set-ups that hold the loading picture on the raster line (Spellbound, Three Weeks), and the negatives:
+    Knight Tyme's real alt image 0 difference (the Bridge star map) and one alt ROM byte changed under Spellbound."""
+    from nexclash import nextboot as nb, simrun, z80tonex as zt
+    bad = nb.selfcheck()
+    ok('rom paths: nextboot.selfcheck - raster line ends a 250-frame hold (frozen line: never), NR 0x1E/0x1F, '
+       'a .nex that does not boot is reported', not bad, bad)
+    plain = os.path.join(work, 'rp_chuckie.nex')
+    zt.convert(ez, plain, None, True, quiet=True)
+    for cut, how in ((30, 'last frame'), (12, 'partial')):
+        short = os.path.join(work, 'rp_short%d.rzx' % cut)
+        _short_rzx(er, 30, cut, short)
+        n = simrun.run(None, [short], type('NoHooks', (), {})())       # "Port readings exhausted": warns, no raise
+        r = nb.rom_paths([plain], [short])[plain]
+        c = r[3].get(os.path.basename(short), {})
+        ok('rom paths: input runs out in frame %d of 30 (%s): frames 1-%d checked, no raise' % (cut, how, cut - 1),
+           n == cut and c.get('how') == how and c.get('frames') == cut - 1 and not r[2], (n, c, r[1][:3]))
+    kt = _ref_build(src, 'knight_tyme', 'sprites')
+    if kt:
+        z80, rz, nex = kt
+        r = nb.rom_paths([nex], [rz['kt_t1.rzx']], stop=940, z80=z80)[nex]
+        c, f = r[3]['kt_t1.rzx'], r[2].get('kt_t1.rzx', [])
+        ok("rom paths: Knight Tyme kt_t1 (940 frames) replays on the 48K ROM as ROM 1; MISMATCH only the Bridge star "
+           "map, image 0 0x0D00- read at frame 937 (the Next's ROM 0; REFACTOR 2)",
+           c['rom1'] == '48K' and c['how'] == 'as recorded' and c['frames'] == 940 and f and
+           all(k[0] == 0 and k[2] == 'next' and 0x0D00 <= k[1] < 0x0E00 for k in f) and
+           any('MISMATCH' in x and 'frame 937' in x for x in r[1]), (c, f[:4], r[1][:3]))
+        known = [(k['image'], int(k['from'], 16), int(k['to'], 16), k['why']) for k in R.load('knight_tyme')['rom_paths_known']]
+        r = nb.rom_paths([nex], [rz['kt_t1.rzx']], stop=940, z80=z80, known=known)[nex]
+        ok("rom paths: Knight Tyme with its record's rom_paths_known: the star map KNOWN, no fault, no MISMATCH",
+           not r[2] and any('KNOWN' in x for x in r[1]) and not any('MISMATCH' in x for x in r[1]), r[1][:3])
+        r = nb.rom_paths([nex], [rz['kt_rooms.rzx']], stop=300, z80=z80, known=known)[nex]
+        c = r[3]['kt_rooms.rzx']
+        ok('rom paths: Knight Tyme kt_rooms (300 frames, a room per segment by poke): replayed per segment, in sync',
+           c['segments'] and c['how'] == 'as recorded' and c['frames'] == 300 and not r[2], (c, r[1][:3]))
+    else:
+        print('SKIP tools: rom paths on Knight Tyme (reference files not found)')
+    sb = _ref_build(src, 'spellbound_magic_knight', 'sprites')
+    if sb:
+        z80, rz, nex = sb
+        r = nb.rom_paths([nex], [rz['t1.rzx']], stop=30, z80=z80)[nex]
+        ok("rom paths: Spellbound boots through its picture hold; t1 (30 frames) every byte as recorded, the 128K "
+           "ROM 1's keypad code listed, not compared", r[0] == 'alt' and not r[2] and
+           any('every byte the game runs is as recorded' in x for x in r[1]) and
+           any('128K ROM 1 only' in x for x in r[1]), r[1][:3])
+        boot = nb.boot
+
+        def flipped(*a, **k):                    # negative: alt image 1 0x0038 (IM 1, run every frame) changed
+            st = boot(*a, **k)
+            st['alt'][1][0x38] ^= 0xFF
+            return st
+        nb.boot = flipped
+        try:
+            r = nb.rom_paths([nex], [rz['t1.rzx']], stop=30, z80=z80)[nex]
+        finally:
+            nb.boot = boot
+        ok('rom paths: negative - Spellbound with alt image 1 0x0038 changed: MISMATCH at 0x0038 (run)',
+           (1, 0x38, 'run') in r[2].get('t1.rzx', []) and any('MISMATCH' in x and '0x0038 run' in x for x in r[1]),
+           r[1][:2])
+    else:
+        print('SKIP tools: rom paths on Spellbound (reference files not found)')
+    tw = _ref_build(src, 'three_weeks', 'sprites')
+    if tw:
+        from nexclash import three_weeks
+        z80, rz, nex = tw
+        fill, zt.ALTROM_FILL = zt.ALTROM_FILL, 'rom3'     # its record pin
+        try:
+            _, ta, tn = nb.tail_of(nex)
+            chk = nb.check(nex, z80, three_weeks.ThreeWeeksPatch(), (ta, ta + tn))
+        finally:
+            zt.ALTROM_FILL = fill
+        r = nb.rom_paths([nex], [rz['t128_r6.rzx']], stop=30, z80=z80)[nex]
+        ok('rom paths: Three Weeks boots through its picture hold; nextboot.check OK (128K paging as saved); '
+           't128_r6 (30 frames) checked', not chk and r[0] == 'alt' and r[3]['t128_r6.rzx']['frames'] == 30, (chk, r[1][:2]))
+    else:
+        print('SKIP tools: rom paths on Three Weeks (reference files not found)')
 
 
 def coloursheet_check():

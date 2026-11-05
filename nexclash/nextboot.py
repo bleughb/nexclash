@@ -8,6 +8,9 @@ alt ROM $8C: bit 7 enable, bit 6 write mode (reads ROM, writes alt), image = ROM
 NEX launch state: paging UNLOCKED (every hardware-tested build pages with legacy writes without
 unlocking first) and ROM 0 selected (worst case: the stub must select ROM3 itself). Only ROM3 (48K
 BASIC) is modelled (ROMs 0-2 too when the 64K enNextZX.rom is given); reading another ROM fails the check.
+NR 0x1E/0x1F read a line counter that steps one line per NR 0x1F read (raster()), so a set-up's wait on the
+raster line (a loading picture's hold) ends; no key is ever pressed. The NEX entry bank is ignored: the boot
+starts at bank 10's stub, so a _loading.nex's picture stub is not run here (its engine's loading_check runs it).
 
 The system ROM3 is what the Next really has (docs/REFACTOR.md 7): ROM3 of NextZXOS's enNextZX.rom
 (enNextLG.rom's ROM3 is byte-identical), from the file named by $NEXCLASH_NEXT_ROM or `--next-rom PATH`
@@ -135,13 +138,20 @@ def tail_of(nex):
     raise ValueError('%s: no z80tonex start-up tail found' % nex)
 
 
-def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None):
+def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=()):
     """Every ROM byte the ORIGINAL game runs or reads in its recordings, against what each built .nex
     gives it on the Next: the .nex booted over the system ROM3 (system_rom3(): NextZXOS's when given) to
     the game start - its alt ROM images, slot-1 page or the ROM3 itself. The per-event verifiers run
     patched code only from a hook to its return, so a ROM path outside the hooks (IM 1, a ROM print) never
     runs there: Starquake's UDG print into the hooks passed them. One replay per recording for all builds.
-    -> {nex: (kind, lines, faults)}: kind 'alt' / 'slot1' / 'plain'; faults = ROM addresses the game RUNS
+    -> {nex: (kind, lines, faults, coverage)}: kind 'alt' / 'slot1' / 'plain' ('boot': the .nex never reached the
+    game start in boot(), a BOOT FAILED line, nothing replayed); coverage {recording: {frames, of, how, desync, rom1}}:
+    how 'as recorded', 'last frame' (its port readings run out in the recording's last frame) or 'partial' (the
+    replay desyncs earlier: frames 1..frames checked, said in the lines; never a raise); rom1 '48K' when a 128K
+    recording keeps sync only on Sinclair's 48K ROM as ROM 1 (Knight Tyme), which the check then compares with;
+    segments True when it keeps sync only with each segment started from its own snapshot (kt_rooms 48, Spellbound's
+    t_rooms 57: a room per segment). On SkoolKit's 128K ROM 1 its keypad code (0x386E-0x3CFF) is listed,
+    not compared (the Next's ROM 3 has none), its call sites (0x004B ...) against the 48K ROM's bytes. faults = ROM addresses the game RUNS
     whose byte differs on the Next ('alt' / 'slot1': the build owns that ROM, each is a fault; 'plain':
     the Next's own ROM3 runs, reported only), and data reads of differing bytes that come from the Next's
     own ROM (the byte equals NextZXOS's there: Target Renegade e0b246e3's sound data); data reads of bytes
@@ -149,19 +159,29 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None):
     game RAM, so the game must never read one before writing it (Match Day: the trophy's attributes).
     z80 (the build's snapshot): also the printer buffer bytes the .nex starts with differently, booted
     as NEXLOAD leaves it (NEXLOAD_PRINTER) - a warning: the stub puts it back only with
-    keep_printer_buffer (BRIEFING C2 #36)."""
+    keep_printer_buffer (BRIEFING C2 #36).
+    known: [(image, lo, hi, why)] differences a game's record accepts (its "rom_paths_known": Knight Tyme's Bridge
+    star map, read from alt image 0 = the Next's ROM 0): listed as KNOWN, not faults; any other is a MISMATCH."""
     from skoolkit import ROM48, ROM128, read_bin_file
-    from .simrun import run
+    from .simrun import play_rzx, rzx_frames
     builds, sysr = [], system_roms() or [None, None, None, sysrom or system_rom3()[0]]
     if sysrom is not None:
         sysr[3] = sysrom
-    tails = {nex: tail_of(nex) for nex in nexes}
+    tails, out = {}, {}
     for nex in nexes:
-        st = boot(nex, tails[nex][0], sysrom=sysrom or system_rom3()[0], nexload=z80 is not None)
+        try:
+            tails[nex] = tail_of(nex)
+            st = boot(nex, tails[nex][0], sysrom=sysrom or system_rom3()[0], nexload=z80 is not None)
+        except (ValueError, RuntimeError) as e:          # no tail / the boot never reaches the game start
+            out[nex] = ('boot', ['%s: BOOT FAILED in the Next model (%s): its ROM paths are not checked'
+                                 % (os.path.basename(nex), e)], {'boot': str(e)}, {})
+            continue
         alt_on = bool(st['nr'].get(0x8C, 0) & 0x80)
         kind = 'alt' if alt_on else ('slot1' if st['mmu'][1] != 0xFF else 'plain')
         builds.append((nex, kind, alt_on, st, bytes(st['mem'][a] for a in range(0x4000)), 2 if st['p1ffd'] & 4 else 0))
-    out = {nex: (kind, [], {}) for nex, kind, *_ in builds}
+    out.update({nex: (kind, [], {}, {}) for nex, kind, *_ in builds})
+    if not builds:
+        return out
     o48 = list(read_bin_file(ROM48, 16384))
     o128 = [list(read_bin_file(ROM128[0], 16384)), list(read_bin_file(ROM128[1], 16384))]
     pbuf = {}
@@ -169,14 +189,38 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None):
         snap = zt.Z80Snapshot(z80)
         for nex, kind, alt_on, st, *_x in builds:
             pbuf[nex] = [a for a in range(0x5B00, 0x5C00) if st['mem'][a] != snap.read(a)]
-    watch = {a for n in nexes for a in range(tails[n][1], tails[n][1] + tails[n][2])} | {a for v in pbuf.values() for a in v}
-    for r in rzxs:
-        frame, seen, tabs, written, tread = [0], set(), [], set(), {}
+    watch = {a for n in tails for a in range(tails[n][1], tails[n][1] + tails[n][2])} | {a for v in pbuf.values() for a in v}
+
+    def replay(r, rom1, segs=False):
+        """One replay of r; rom1: the ROM 1 a 128K recording ran on (None: SkoolKit's 128K ROM 1); segs: each
+        segment from its own snapshot (simrun.play_rzx keep_snapshots)."""
+        frame, seen, tabs, written, tread, desync, is128, only = [0], set(), [], set(), {}, [], [False], {}
+        k128 = set()            # ROM 1 bytes only SkoolKit's 128K ROM 1 has (its keypad code; set in on_sim)
+        later = [False]         # a later segment: the tail / printer buffer reads concern only the first
 
         class H:
             def on_sim(h, sim):
-                h.is128 = hasattr(sim.memory, 'o7ffd')
-                orig = o128 if h.is128 else [o48, o48]
+                h.is128 = is128[0] = hasattr(sim.memory, 'o7ffd')
+                if h.is128 and rom1 is not None:            # the recording's ROM 1 (Knight Tyme: Sinclair's 48K ROM)
+                    m = sim.memory
+                    m.roms = (m.roms[0], list(rom1))
+                    m.out7ffd(m.o7ffd)
+                if tabs:                                    # the next segment's snapshot: same tables, same results;
+                    later[0] = True                         # its RAM is that snapshot's, not the .nex's start state
+                    return
+                orig = ([o128[0], list(rom1)] if rom1 is not None else o128) if h.is128 else [o48, o48]
+                if h.is128 and rom1 is None:
+                    # SkoolKit's 128K ROM 1 is the 48K ROM + keypad code: new code at 0x386E-0x3CFF and 6 call sites
+                    # into it (0x004B ...). The Next's ROM 3, a 128K game's ROM 1 there, is the 48K ROM: the call
+                    # sites are compared with the 48K ROM's bytes, the keypad code is listed, not compared.
+                    hy = list(o128[1])
+                    for a in range(0x4000):
+                        if hy[a] != o48[a]:
+                            if a < KEYPAD_CODE:
+                                hy[a] = o48[a]
+                            else:
+                                k128.add(a)
+                    orig = [o128[0], hy]
                 tabs[:] = []
                 for nex, kind, alt_on, st, view, hi_rom in builds:
                     nx, d = {}, {}
@@ -189,11 +233,15 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None):
 
             def on_read(h, a, pc, mem):
                 if a >= 0x4000:
-                    if a in watch and a not in written and a not in tread:          # data or code fetch
-                        tread[a] = (pc, frame[0])
+                    if a in watch and a not in written and a not in tread and not later[0]:   # data or code fetch
+                        if not (pc in k128 and (mem.o7ffd >> 4) & 1):               # not by 128K-only ROM code
+                            tread[a] = (pc, frame[0])
                     return
                 sel = (mem.o7ffd >> 4) & 1 if h.is128 else 1
                 seen.add((sel, a))
+                if sel and a in k128:            # the 128K Spectrum's keypad path: no Next ROM has it
+                    only.setdefault(a, (pc, frame[0]))
+                    return
                 ex = pc <= a <= pc + 3
                 for nex, nx, d, orig, diff in tabs:
                     ds = d[sel]
@@ -211,15 +259,45 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None):
 
             def on_frame(h, n):
                 frame[0] = n
-        n = run(None, [r], H(), stop=stop)
-        name = os.path.basename(r)
+
+            def on_desync(h, n, msg):
+                desync[:] = [n, msg]
+        n = play_rzx(r, H(), stop=stop, keep_snapshots=segs)
+        return dict(n=n, seen=seen, tabs=tabs, tread=tread, desync=desync, is128=is128[0], rom1=rom1, only=only,
+                    segs=segs)
+
+    for r in rzxs:
+        name, (total, snaps) = os.path.basename(r), rzx_frames(r)
+        want = min(stop, total) if stop else total
+        # What real recordings contain (2026-11-04): a 128K recording made with Sinclair's 48K ROM as ROM 1 (Knight
+        # Tyme: the 128K ROM 1 has keypad code at 0x386E on its ISR path), and one made of segments, each a new
+        # start state (kt_rooms: a room per segment, by poke), where the stripped replay (autosaves) desyncs at the
+        # second. A replay that desyncs before its last frame is tried that way too; the one that keeps sync longest
+        # is the recording's, and says so.
+        rp, early = replay(r, None), (lambda x: x['desync'] and x['desync'][0] < want)
+        for rom1, segs in ((o48, False), (None, True), (o48, True)):
+            if not early(rp) or (rom1 is not None and not rp['is128']) or (segs and snaps < 2):
+                continue
+            alt = replay(r, rom1, segs)
+            if not alt['desync'] or alt['desync'][0] > rp['desync'][0]:
+                rp = dict(alt, other=rp.get('other') or rp['desync'][0])
+        seen, tabs, tread = rp['seen'], rp['tabs'], rp['tread']
+        done = rp['desync'][0] - 1 if rp['desync'] else want         # frames replayed in sync
+        how = ('as recorded' if not rp['desync'] else 'last frame' if rp['desync'][0] >= total else 'partial')
+        rom1 = '; '.join(x for x in ("ROM 1 = Sinclair's 48K ROM" if rp['rom1'] is not None else '',
+                                     'each of its %d segments from its own snapshot' % snaps if rp['segs'] else '') if x)
+        rom1 = '%s (the first replay desyncs at frame %d)' % (rom1, rp['other']) if rp.get('other') else ''
         for (nex, nx, d, orig, diff), (_, kind, alt_on, *_x) in zip(tabs, builds):
-            lines, faults = out[nex][1], out[nex][2]
-            run_d = sorted(k for k in diff if k[0] != '?' and k[2] in ('run', 'next'))
-            data_d = sorted(k for k in diff if k[0] != '?' and k[2] == 'data')
+            lines, faults, cover = out[nex][1], out[nex][2], out[nex][3]
+            cover[name] = dict(frames=done, of=want, how=how, desync=rp['desync'][1] if rp['desync'] else None,
+                               rom1='48K' if rp['rom1'] is not None else ('128K' if rp['is128'] else '48K machine'),
+                               segments=rp['segs'])
+            kn = sorted(k for k in diff if k[0] != '?' and any(k[0] == i and lo <= k[1] <= hi for i, lo, hi, _ in known))
+            run_d = sorted(k for k in diff if k[0] != '?' and k[2] in ('run', 'next') and k not in kn)
+            data_d = sorted(k for k in diff if k[0] != '?' and k[2] == 'data' and k not in kn)
             unk = sorted({k[1] for k in diff if k[0] == '?'})
             img = (lambda sel: 'image %d ' % sel) if alt_on else (lambda sel: '')
-            head = '%s: %s %d frames, %d ROM bytes used' % (os.path.basename(nex), name, n, len(seen))
+            head = '%s: %s %d frames, %d ROM bytes used' % (os.path.basename(nex), name, done, len(seen))
             if run_d and kind != 'plain':
                 faults[name] = run_d
                 lines.append('%s; MISMATCH: the Next gives other ROM bytes at %d addresses the game runs or reads '
@@ -228,10 +306,29 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None):
                                      (img(k[0]), k[1], 'run' if k[2] == 'run' else 'read') + (diff[k][3], diff[k][2]) + diff[k][:2])
                                  for k in run_d[:4])))
             elif run_d:
+                ad = sorted({k[1] for k in run_d})
                 lines.append('%s; plain build (the Next\'s own ROM3 runs): %d bytes it runs or reads differ from the recording\'s ROM, e.g. %s'
-                             % (head, len(run_d), ', '.join('0x%04X' % k[1] for k in run_d[:6])))
+                             % (head, len(ad), ', '.join('0x%04X' % a for a in ad[:6])))
             else:
                 lines.append('%s; every byte the game runs is as recorded' % head)
+            if kn:
+                lines.append('            KNOWN (the record\'s rom_paths_known): %d addresses, first %s0x%04X %s (PC 0x%04X frame %d): %s'
+                             % (len(kn), img(kn[0][0]), kn[0][1], 'run' if kn[0][2] == 'run' else 'read', diff[kn[0]][0],
+                                diff[kn[0]][1], '; '.join(sorted({w for i, lo, hi, w in known
+                                                                  if any(k[0] == i and lo <= k[1] <= hi for k in kn)}))))
+            if rom1:
+                lines.append('            %s' % rom1)
+            if rp['only']:
+                o = sorted(rp['only'])
+                lines.append('            128K ROM 1 only: %d bytes the game runs or reads are the 128K ROM 1\'s keypad code '
+                             '(first 0x%04X, PC 0x%04X frame %d), which the Next\'s ROM 3 never had: not compared; its call '
+                             'sites are compared with the 48K ROM'
+                             % (len(o), o[0], rp['only'][o[0]][0], rp['only'][o[0]][1]))
+            if how == 'last frame':
+                lines.append('            port readings end in the recording\'s last frame (%d): frames 1-%d checked' % (total, done))
+            elif how == 'partial':
+                lines.append('            partial coverage: the replay desyncs at frame %d of %d (%s): frames 1-%d checked'
+                             % (rp['desync'][0], want, rp['desync'][1], done))
             if data_d:
                 lines.append('            reads %d ROM bytes held differently on the Next (data: the build\'s own, e.g. a '
                              'vector, or a fault): %s' % (len(data_d), ', '.join('%s0x%04X' % (img(k[0]), k[1]) for k in data_d[:8])))
@@ -258,6 +355,23 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None):
 # system variables live at 0x5B00-0x5BFF; hardware 2026-10-20, Match Day): modelled as a pattern no
 # game data matches, so a check with nexload=True shows every byte the stub does not put back.
 NEXLOAD_PRINTER = bytes((0xA5 ^ k) for k in range(256))
+
+
+RASTER_LINES = 312          # video lines a frame (50 Hz, 48K timing)
+KEYPAD_CODE = 0x386E        # SkoolKit's 128K ROM 1: its keypad code from here (the 48K ROM's spare 0xFF bytes)
+
+
+def raster(st, reg):
+    """The raster line as NR 0x1E (bit 8) / NR 0x1F (bits 0-7) read it during boot: a model beam that moves one
+    line on at every NR 0x1F read and wraps after RASTER_LINES, so a set-up's wait for a line (the loading
+    picture's hold: one frame = until line 192, then until not 192; 250 frames or a key) ends, and a read of
+    0x1E, 0x1F, 0x1E sees a stable bit 8 (Spellbound, Three Weeks). No key is ever pressed (port 0xFE reads 0xFF), so
+    a hold runs its full timeout. Not cycle-timed: a hook that paces itself by the line is checked by its
+    engine's own model (Three Weeks, Nightshade)."""
+    if reg == 0x1F:
+        st['line'] = (st.get('line', -1) + 1) % RASTER_LINES
+        return st['line'] & 0xFF
+    return max(st.get('line', 0), 0) >> 8
 
 
 def boot(nex, pc_stop, limit=5_000_000, nexload=False, sysrom=None):
@@ -331,6 +445,8 @@ def boot(nex, pc_stop, limit=5_000_000, nexload=False, sysrom=None):
 
     class Tr:
         def read_port(s, regs, port):
+            if port == 0x253B and st['sel'] in (0x1E, 0x1F):
+                return raster(st, st['sel'])
             return st['nr'].get(st['sel'], 0) if port == 0x253B else 0xFF
 
         def write_port(s, regs, port, value, *x):
@@ -403,11 +519,58 @@ def check(nex, z80, patch=None, tail=None, nexload=False, sysrom=None):
     if view != bytes(img):
         d = [a for a in range(0x4000) if view[a] != img[a]]
         bad.append(('slots 0/1 differ from the expected ROM image', len(d), d[:6]))
-    if st['p7ffd'] & 0x30 != 0x30 or not st['p1ffd'] & 4:
+    locked = st['p7ffd'] & 0x30 == 0x30
+    as_saved = s.is128 and st['p7ffd'] & 0x30 == s.port7ffd & 0x30      # a 128K game pages: unlocked as saved
+    if not (locked or as_saved) or not st['p1ffd'] & 4:                 # (Three Weeks, 2026-11-04)
         bad.append(('paging', hex(st['p7ffd']), hex(st['p1ffd'])))
     s1 = patch.slot1[0] if getattr(patch, 'slot1', None) and not getattr(patch, 'altrom', None) else 0xFF
     if st['mmu'] != [0xFF, s1, 10, 11, 4, 5, 0, 1]:
         bad.append(('MMU', st['mmu']))
+    return bad
+
+
+def selfcheck():
+    """Synthetic cases (no game data; selftest --tools): the raster model ends a loading picture's hold (and a
+    frozen line, the old model, never does), NR 0x1E/0x1F read as the hardware counts, and rom_paths reports a
+    .nex whose boot never reaches the game start instead of raising (Spellbound, Three Weeks, Knight Tyme). -> list of failures."""
+    import tempfile
+    bad = []
+    st = {}
+    lo = [raster(st, 0x1F) for _ in range(RASTER_LINES)]
+    hi = [raster(st, 0x1E) for _ in range(1)]
+    if lo != [n & 0xFF for n in range(RASTER_LINES)] or hi != [1] or raster(st, 0x1F) != 0 or raster(st, 0x1E) != 0:
+        bad.append('raster: NR 0x1F / 0x1E do not count lines 0-%d' % (RASTER_LINES - 1))
+    # the set-up's hold (Spellbound / Three Weeks / the loading stubs): 250 frames of "until line 192, until not"
+    code = bytes.fromhex('21FA00' 'CD10C0' '2B' '7C' 'B5' '20F8' '00' + '00' * 4 +      # C000: LD HL,250 / CALL fr / ..
+                         'CD20C0' 'FEC0' '20F9' 'CD20C0' 'FEC0' '28F9' 'C9' + '00' +   # C010 fr: one frame
+                         '013B24' '3E1F' 'ED79' '04' 'ED78' 'C9')                     # C020 po: A = NR 0x1F
+    hdr = bytearray(512)
+    hdr[0:8] = b'NextV1.2'
+    hdr[12:16] = bytes((0xF0, 0xBF, 0x00, 0xC0))             # SP 0xBFF0, PC 0xC000
+    hdr[18 + 10] = 1
+    fd, nex = tempfile.mkstemp(suffix='.nex')
+    os.write(fd, bytes(hdr) + code + bytes(16384 - len(code)))
+    os.close(fd)
+    try:
+        st = boot(nex, 0xC00B)
+        if st.get('line') != 193:
+            bad.append('raster: the hold ended at line %s, want 193 after 250 frames' % st.get('line'))
+        old = globals()['raster']
+        globals()['raster'] = lambda st, reg: 0              # the old model: NR 0x1F reads 0, the hold never ends
+        try:
+            boot(nex, 0xC00B, limit=300000)
+            bad.append('raster control: a frozen line still ended the hold')
+        except RuntimeError:
+            pass
+        finally:
+            globals()['raster'] = old
+        r = rom_paths([nex], [nex + '.rzx'])                 # no start-up tail: reported, nothing replayed
+        if r[nex][0] != 'boot' or 'BOOT FAILED' not in r[nex][1][0]:
+            bad.append('rom_paths: a .nex that does not boot was not reported (%s)' % (r[nex][:2],))
+    except Exception as e:                                   # noqa: BLE001
+        bad.append('nextboot selfcheck raised %r' % e)
+    finally:
+        os.remove(nex)
     return bad
 
 

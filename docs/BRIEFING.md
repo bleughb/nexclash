@@ -137,8 +137,9 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
   7FFD=$10 (ROM3), $8C=$C0, LDIR 0000->0000 (16K; new builds: Sinclair's ROM from bank 47, card
   patch.whole-altrom-image; pinned games keep this), LDIR the patch bytes lo..hi from page 24,
   $8C=0, restores slots 6/7, jumps back, restores slots 4/5. No stack use in between.
-- nextboot.py simulates that boot on a Next model (every sprite build prints a `Boot` line). New
-  builds add `ROM paths` (nextboot.rom_paths; $NEXCLASH_NEXT_ROM = your card's enNextZX.rom).
+- nextboot.py simulates that boot on a Next model (every sprite build prints a `Boot` line; NR 0x1F steps
+  a line per read). New builds add `ROM paths` (nextboot.rom_paths, docstring: what recordings it copes
+  with; $NEXCLASH_NEXT_ROM = your card's enNextZX.rom; a record's `rom_paths_known` = accepted).
 - 48K and 128K: the tail must end below 0xC000. The stub runs with its own bank 10 at C000-FFFF and
   the tail's OUT 0x7FFD maps bank 0 back under the PC (El Capitan Trueno: a 48K tail at 0xFF97
   never reached the game); z80tonex refuses it, nextboot.check catches it too.
@@ -311,8 +312,6 @@ Verification and speed
    alt ROM games. Open: slot1 builds keep NextZXOS's ROM3 at 0x0000-0x1FFF.
 6. `nexclash.py patch` (the users' command) writes the plain .nex WITHOUT nextboot.check (El Capitan
    Trueno's first plain build crashed at once: 48K tail above 0xC000). Run it in `patch`; refuse or warn.
-7. "Port readings exhausted": scan / preview on Jetpac's _auto.rzx (frame 532), and rom_paths on Knight
-   Tyme's kt_t1.rzx (frame 1; 48K ROM as ROM 1) ends `auto`: only ValueError caught (knight_tyme.md).
 8. selftest has no dependency check: without SkoolKit every rebuild prints "got None" and the canary
    blames the TOOL CHAIN. Check the imports (skoolkit, PIL) first; golden check in tools_check.
 
@@ -468,9 +467,9 @@ Designs not built yet (use when a game needs them)
    in write / choose and report them; add a tools_check case.
 44. sjasm.py on Windows: no binary, no make; a cached 1.24.0 `sjasmplus` (+ .exe) gave --check --all
    IDENTICAL (2026-10-31): accept it.
-45. nextboot.boot has no raster line: Spellbound's picture hold never ends; rom_paths raises "boot did
-   not reach PC 26627", ending `auto` (spellbound_magic_knight.md). Three Weeks too; check() wants 128K
-   paging locked (three_weeks.boot_check models both).
+45. Spellbound's _boot and three_weeks.boot_check still copy the raster line (+ 128K paging) nextboot has
+   now: drop them at their next rework. nextboot.boot ignores a NEX's entry bank: a _loading.nex's picture
+   stub runs only in its engine's loading_check.
 
 ### C3b. Two verification levels (agreed with Dean 2026-09-29; how to run them: PLAYBOOK 6)
 - ITERATE (per change): original bytes at every site, boot check, unit tests (with negative
@@ -492,9 +491,10 @@ as arguments (addresses, ranges, keys).
   the top routines. Writes <game>_survey/survey.md (+ .json, preview.png, the plain .nex). Its
   coverage line is C2 #11's byte scan only (CALL / JP nn to each top routine, rated by code run
   within 24 bytes), not the recursive static pass.
-- simrun: plays an RZX (autosave snapshots stripped to a temp copy) or free-runs a snapshot with
-  a key schedule ("5-14:SPACE; 30-:N", K:LEFT... = Kempston); hooks before/after every
-  instruction, on every memory access, interrupt and frame. 128K memory hooks swap the Memory
+- simrun: plays an RZX (autosave snapshots stripped to a temp copy, or keep_snapshots: per segment)
+  or free-runs a snapshot with a key schedule ("5-14:SPACE; 30-:N", K:LEFT... = Kempston); hooks
+  before/after every instruction, on every memory access, interrupt, frame, desync (on_desync; else
+  a WARNING). 128K memory hooks swap the Memory
   object's class (rzxplay tests isinstance(memory, Memory)); 48K memory is wrapped.
 - inspect: machine, 7FFD/ROM, where PC is (ROM routine names), BASIC listing + USR targets, IM /
   I / vector chain, stack; warnings (loader, 128K BASIC = ROM 0, ROM 0 selected).

@@ -38,6 +38,10 @@ Record fields (docs/records/<name>.json; copy the nearest record, then edit):
   repro           extra builds (old strategies) with their own outputs
   status          STATUS.md columns: title, engine_col, build, software, hardware, next
   checks          quick per-game checks run with every rebuild (e.g. "asm2profile:<profile>")
+  pin             shared behaviour the game keeps ({"altrom_fill": "rom3"}): auto rebuilds it so and skips the ROM
+                  path check (it verifies as it was verified)
+  rom_paths_known ROM differences the ROM path check lists as KNOWN, not faults: [{image, from, to, why}]
+                  (hex addresses; nextboot.rom_paths known; Knight Tyme's Bridge star map)
   excluded        reason string: plan() never rebuilds or re-verifies this game (--affected, release,
                   --full); `selftest.py --game NAME [--verify]` still runs it explicitly
   canary          1 = tool-chain canary stage 1, 2 = stage 2 (selftest --canary); canary_quick =

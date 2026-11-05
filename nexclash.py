@@ -503,6 +503,18 @@ def _write_decisions(out, name, an, extra=None):
 _AUTO = {}                  # cmd_auto's recordings, for the ROM path check in _finish
 
 
+def _rom_paths_known(z80):
+    """The ROM differences this snapshot's record accepts ("rom_paths_known": [{image, from, to, why}], hex
+    addresses; Knight Tyme's Bridge star map): [(image, lo, hi, why)] for nextboot.rom_paths, () when none."""
+    import hashlib
+    from nexclash import records
+    if not z80:
+        return ()
+    h = hashlib.md5(open(z80, 'rb').read()).hexdigest()
+    rec = next((r for r in records.all_records() if r['inputs']['snapshot'].get('md5') == h and r.get('rom_paths_known')), None)
+    return [(k['image'], int(k['from'], 16), int(k['to'], 16), k['why']) for k in rec['rom_paths_known']] if rec else ()
+
+
 def _rom_paths(out, rep):
     """docs/REFACTOR.md 7: every ROM byte the original game uses in the recordings against what each
     built .nex gives it on the Next (nextboot.rom_paths; ROM model: nextboot.rom_model()). New builds
@@ -515,9 +527,14 @@ def _rom_paths(out, rep):
         return
     t = time.time()
     try:
-        res = nextboot.rom_paths(nexes, rzxs, stop=quick, z80=_AUTO.get('z80'))
-    except ValueError as e:
-        rep.append('ROM paths : not checked (%s)' % e)
+        known = _rom_paths_known(_AUTO.get('z80'))
+        res = nextboot.rom_paths(nexes, rzxs, stop=quick, z80=_AUTO.get('z80'), known=known)
+    except Exception as e:                  # noqa: BLE001 - the check never ends auto (Knight Tyme, 2026-11-04)
+        import traceback
+        tb = traceback.extract_tb(e.__traceback__)[-1]
+        rep.append('ROM paths : NOT CHECKED: the check itself failed (%s: %s, %s line %d); the builds above stand, '
+                   'their ROM paths are unproven' % (type(e).__name__, e, os.path.basename(tb.filename), tb.lineno))
+        print(rep[-1])
         return
     rep.append('ROM paths : ROM model %s (%.0fs)' % (nextboot.rom_model(), time.time() - t))
     for nex in nexes:
