@@ -216,7 +216,7 @@
  "status": {
   "title": "Rainbow Islands (128K, Z80N)",
   "engine_col": "rainbow_z80n (rainbow_z80n.md)",
-  "build": "rainbow_z80n_sprites.nex 69369c89 (bda21ab6 + overrun recovery: interrupts a long game frame misses are credited to the limiter) + rainbow_z80n_sprites_diag.nex 24e547de",
+  "build": "rainbow_z80n_sprites.nex 69369c89 (bda21ab6 + overrun recovery: interrupts a long game frame misses are credited to the limiter) + rainbow_z80n_sprites_diag.nex 24e547de + opt-in rework sky (`NEXCLASH_REWORK=rainbow_z80n_sky`; sky fix, published .nxc v1.0): sprites d7b2345c",
   "software": "RZX IDENTICAL x2 (rainbow 7178 frames, rainbownew 11799) + diagnostic IDENTICAL, unit PASS (recovery 9 cases + control; Z80N as-NOP controls); every simulated overrun frame credited as the beam model",
   "hardware": "bda21ab6 works but slows down in busy scenes (user, 2026-10-31); 69369c89 untested",
   "next": "hardware test of 69369c89 (rainbow_z80n.md checklist); everything open in rainbow_islands.md; speed ideas in rainbow_z80n.md"

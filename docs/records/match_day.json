@@ -124,7 +124,7 @@
  "status": {
   "title": "Match Day",
   "engine_col": "matchday (match_day.md)",
-  "build": "match_day_sprites.nex f0aecd13",
+  "build": "match_day_sprites.nex f0aecd13 + opt-in rework v2 (`--altrom-fill whole`; trophy screen fix): sprites ec0706e9",
   "software": "RZX IDENTICAL (2 recordings), unit PASS",
   "hardware": "round 1 (6188bacd): printer buffer overwritten by NEXLOAD (both builds), slowdown, dark fill - fixed in round 2, untested",
   "next": "hardware round 2"

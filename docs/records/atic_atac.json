@@ -165,7 +165,7 @@
  "status": {
   "title": "Atic Atac",
   "engine_col": "atic_atac (atic_atac.md)",
-  "build": "atic_atac_sprites.nex 59493b75 (every figure an outlined, solid hardware-sprite image; image groups with row masks for the appear / death effect; XOR shadow screen; hooks: alt ROM + pages 26 / 28, 28 MHz)",
+  "build": "atic_atac_sprites.nex 59493b75 (every figure an outlined, solid hardware-sprite image; image groups with row masks for the appear / death effect; XOR shadow screen; hooks: alt ROM + pages 26 / 28, 28 MHz) + opt-in rework v1.3 (`NEXCLASH_REWORK=atic_atac_v13`): sprites b87774a2, Enhanced 47f0e72c, QAOP toggle 19318e4f / 1f58e936",
   "software": "full RZX IDENTICAL (18,279 frames: registers, memory, ULA ^ shadow, attributes, entries, 47.3M sprite pixels vs the original's plots), unit 1,473 cases + negative controls 3/3 PASS (2026-10-26; not yet stamped by selftest)",
   "hardware": "untested",
   "next": "stage 3: selftest --verify --stamp, colour sheets, hardware checklist"

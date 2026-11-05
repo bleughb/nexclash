@@ -130,7 +130,24 @@ STATUS.md lists every supported game, its engine, what the sprite build does and
 proven (generated from the evidence records, so it is always complete). Games whose engine is
 generic (the Codemasters TID engine: Fantasy World Dizzy, Magicland Dizzy and relocated copies;
 Dizzy V) are recognised automatically; anything else gets a plain `.nex` plus a report to guide
-the next step.
+the next step. New engines (2026-11): three_weeks, starquake, lunar_jetman, robin_of_the_wood, nightshade,
+knight_tyme, spellbound_magic_knight, rambo, ikari_warriors, renegade128 (Renegade).
+
+Existing games are frozen: each builds what it was validated against. Improvements come as opt-in
+reworks, each with its own proof and version (games/<game>.md "Rework"):
+| Game | Rework | Choose it with |
+|---|---|---|
+| Jet Pac | v1.1: rocket / fuel / flames fix, Enhanced, loading screen | `--altrom-fill whole` |
+| Match Day | v2: the trophy screen drawn clean (start-up tail moved) | `--altrom-fill whole` |
+| Atic Atac | v1.3: faster hooks, flicker fix, QAOP toggle, Enhanced | `NEXCLASH_REWORK=atic_atac_v13` |
+| Rainbow Islands (Z80N) | the sky fix: the squares round objects match the bright sky | `NEXCLASH_REWORK=rainbow_z80n_sky` |
+
+## For patch makers: new tools
+- The painter that follows the drawing, sprite sheet export / import: docs/COLOURS.md (PAINTER).
+- Play checks soak, pace, flicker and looksheet: docs/CHECKS.md.
+- Shared hook library for new engines (speed restore, pace limiter, preserving R, image cache, atomic
+  switch): docs/ENGINE_CONTRACT.md and the cards in docs/techniques/.
+- Pace target ORIGINAL by default: a new build runs no faster than the original (card patch.pace-limiter).
 
 ## Testing on the Next (details per game: games/)
 Build with `--nex` and copy `GAME_sprites.nex` to the SD card and run it (or `GAME.nxc` with the loader). Check: it starts; every converted figure is

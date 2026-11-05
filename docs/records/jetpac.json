@@ -126,7 +126,7 @@
  "status": {
   "title": "Jetpac",
   "engine_col": "jetpac (jetpac.md)",
-  "build": "jetpac_sprites.nex 3cf8fbd2",
+  "build": "jetpac_sprites.nex 3cf8fbd2 + opt-in rework v1.1 (`--altrom-fill whole`; rocket / fuel / flames fix, Enhanced, loading screen)",
   "software": "free run IDENTICAL (no RZX), unit PASS (rocket, fuel, flames: round 2)",
   "hardware": "round 1: rocket / fuel / flames faults (fixed, round 2 untested)",
   "next": "hardware round 2; a real RZX"
