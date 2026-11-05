@@ -157,6 +157,7 @@ class Figure:
         self.box = (min(xs), min(ys), max(xs) + 1, max(ys) + 1)
         self.line_cls = line
         self.facing = None           # author's label: 'R' / 'L' (profile, face to that side), 'F' front, 'B' back
+        self.family = None           # its family's name (analyse): parts.json "colours" presets are keyed by it
         self.regions, self.line, self.region_of = [], set(), {}
 
     @property
@@ -853,6 +854,7 @@ def analyse(layout_path, parts_json=None, fill_holes=False, line=None):
         for c in fam['figures']:
             if c in pos:
                 figs[pos[c]][1].facing = fam.get('facing')
+                figs[pos[c]][1].family = fam['name']
     for ci, f, _ in figs:
         f.line_cls = line
         segment(f, fill_holes)
@@ -867,6 +869,16 @@ def analyse(layout_path, parts_json=None, fill_holes=False, line=None):
     return lay, figs, fams, rep
 
 
+def preset_for(presets, lay, ci, f):
+    """A figure's preset: its family's (parts.json "colours" keyed by family name, as the template says), else its
+    sheet group's, else "*"."""
+    presets = presets or {}
+    for k in (getattr(f, 'family', None), lay['composites'][ci]['group'], '*'):
+        if k is not None and k in presets:
+            return presets[k]
+    return None
+
+
 def paint_map(lay, figs, presets=None, refs=None):
     """-> (colour map, report): each (key, bit) the commonest index its figures give it (a graphic drawn in
     several figures gets one colour); today's default where the index equals it."""
@@ -875,8 +887,7 @@ def paint_map(lay, figs, presets=None, refs=None):
     votes = collections.defaultdict(collections.Counter)
     meta = {}
     for ci, f, keys in figs:
-        grp = lay['composites'][ci]['group']
-        pre = (presets or {}).get(grp) or (presets or {}).get('*')
+        pre = preset_for(presets, lay, ci, f)
         idx = colour_figure(f, rgb16, pre, (refs or {}).get(ci))
         for p, v in idx.items():
             key, bit, code, dflt = keys[p]
@@ -1014,7 +1025,7 @@ def parts_template(lay, figs, fams):
     out = {'note': 'Label each family\'s key frame: region number (regions.png) -> part (%s). The labels '
                    'carry to every figure of the family; edit "figures" and "key" to regroup; "facing" R / L / '
                    'F / B puts the face on that side (B: none). "colours": '
-                   '{part: "#RRGGBB"} per family name or "*" (a preset).' % ', '.join(PARTS),
+                   '{part: "#RRGGBB"} per family name (or sheet group, or "*": a preset).' % ', '.join(PARTS),
            'families': [], 'colours': {}}
     pos = {ci: n for n, (ci, _, _) in enumerate(figs)}
     for fam in fams:
@@ -1078,8 +1089,7 @@ def cmd_paint(a, say=print):
         outs.append(png)
     cj = os.path.join(a.out, os.path.basename(a.layout).replace('_layout.json', '') + '_paint_colours.json')
     cs.save(cmap, cj, 'nexclash.paint (follows the drawing)')
-    idxs = {ci: colour_figure(f, rgb16, presets.get(lay['composites'][ci]['group']) or presets.get('*'),
-                              refs.get(ci)) for ci, f, _ in figs}
+    idxs = {ci: colour_figure(f, rgb16, preset_for(presets, lay, ci, f), refs.get(ci)) for ci, f, _ in figs}
     strip([(f.name, [tile(f, 'original'), tile(f, 'regions'), tile(f, 'parts'), tile(f, 'painted', rgb16=rgb16,
                                                                                    idx=idxs[ci])])
            for ci, f, _ in figs], os.path.join(a.out, 'compare.png'))
@@ -1250,6 +1260,46 @@ def selfcheck():
     if len([r for r in fd.regions if r.speck_of is None]) != 2:
         bad.append('dumbbell not split at its neck: %s' % [len(r.pixels) for r in fd.regions])
     bad += _sheet_check(cls)
+    bad += _family_presets_check()
+    return bad
+
+
+def _family_presets_check():
+    """Two families in one sheet group, each with its own author colours (parts.json "colours" by family name): each
+    figure takes its family's, a group preset reaches both. -> failures"""
+    import tempfile
+    from . import coloursheet as cs
+    bad = []
+
+    def part(pid, w, h, x0):
+        px = [(x, y, '%s%d_%d' % (pid, y, x // 8), x % 8, 1, 15) for y in range(h) for x in range(w)]
+        return dict(id=pid, size=max(8, w, h), w=w, h=h, x=x0, y=0, mir=0, group='Fig', pixels=px,
+                    entries={'%s%d_%d' % (pid, y, c): [0, 1] for y in range(h) for c in range((w + 7) // 8)})
+    col = cs.Collector()
+    col.add_frame([part('a', 8, 8, 0)])
+    col.add_frame([part('b', 16, 4, 40)])
+    pal = cs.palette_rgb([0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x00, 0x03, 0xE0, 0xE7, 0x1C, 0x1F, 0xFC, 0xFF])
+    with tempfile.TemporaryDirectory() as d:
+        cs.write(col.composites(['Fig']), os.path.join(d, 'f.png'), os.path.join(d, 'f_layout.json'), pal, paint_clear=False)
+        lay, figs, fams, _ = analyse(os.path.join(d, 'f_layout.json'))
+    names = sorted(f['name'] for f in fams)
+    if len(fams) != 2 or {getattr(f, 'family', None) for _, f, _ in figs} != set(names):
+        return ['two families in one group: %s' % [(f['name'], f['figures']) for f in fams]]
+    for _, f, _ in figs:
+        for r in f.regions:
+            r.label = 'body'
+    rgb = [tuple(c) for c in lay['palette']]
+    want = {names[0]: (255, 0, 0), names[1]: (0, 255, 0)}
+    pre = {n: {'body': c} for n, c in want.items()}
+    for ci, f, _ in figs:
+        idx = colour_figure(f, rgb, preset_for(pre, lay, ci, f))
+        got = {rgb[v] for v in idx.values()}
+        near = min(range(16), key=lambda i: sum((a - b) ** 2 for a, b in zip(rgb[i], want[f.family])))
+        if got != {rgb[near]}:
+            bad.append('family %s painted %s, wanted its preset %s' % (f.family, sorted(got), rgb[near]))
+    base = paint_map(lay, figs)[0]
+    if paint_map(lay, figs, {'Fig': {'body': (255, 0, 0)}})[0] == base or paint_map(lay, figs, pre)[0] == base:
+        bad.append('a group or family preset left the map unchanged')
     return bad
 
 
