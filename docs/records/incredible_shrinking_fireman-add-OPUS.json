@@ -69,6 +69,10 @@
   }
  },
  "repro": [],
+ "pin": {
+  "altrom_fill": "rom3",
+  "note": "verified before the shared defaults of 2026-11-04 (docs/REFACTOR.md 1-3, 7): the old alt ROM fill, no ROM path / tail check; `--altrom-fill whole` opts in to the rework"
+ },
  "status": {
   "title": "The Incredible Shrinking Fireman",
   "engine_col": "incredible_shrinking_fireman_add_opus (incredible_shrinking_fireman-add-OPUS.md)",

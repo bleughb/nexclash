@@ -81,7 +81,9 @@ BRIEFING - with its reason.
   into the ULA until the build copied 0xFF over 0x3B00-0x3CFF). nextboot.check uses rom48() for
   ROM3 unless given `sysrom=` (BRIEFING C2 #5). A game that runs ROM code (KEY-SCAN, PRINT) from
   the image runs NextZXOS's on hardware: Cauldron's menu hung, keys dead, until the build wrote the
-  whole image (patch.altrom_low) and a foreign-ROM3 boot proved it (2026-10-27).
+  whole image (patch.altrom_low) and a foreign-ROM3 boot proved it (2026-10-27). NextZXOS's ROM3 also
+  JUMPS into 0x386E- (IM 1 0x004A, UDG print 0x0B52): Starquake crashed at its first UDG. New builds
+  write the whole image (card patch.whole-altrom-image); older games are pinned, rework opt-in.
 - A legacy 1FFD/7FFD write from the stub remaps slots 6/7, where the stub runs: page the stub into
   slot 4 as an alias and run the paging + copy there (no stack), restore 6/7, jump back.
 - UNLOCKED legacy paging writes (7FFD/1FFD) remap MMU slots (most recent change wins); map

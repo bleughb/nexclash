@@ -8,6 +8,7 @@ Copyright (C) 2026 the nexclash contributors. GPL-3.0-or-later (see LICENSE).
   python nexclash.py auto GAME.z80 [--rzx MY.rzx ...]   everything: plain + patched .nex + report
       --strategy altrom|printer|slot1   patch memory (default: altrom where proven; old builds: printer/slot1)
       --allow-60hz                      keep the Next's video rate (default: 50 Hz forced, as verified)
+      --altrom-fill whole|rom3          alt ROM fill (default whole; existing games: rom3 via their record pin)
   python nexclash.py identify GAME.z80                  which engine (and the derived profile)
   python nexclash.py record GAME.z80 [-o OUT.rzx]       automatic (or scripted) RZX recording
   python nexclash.py convert GAME.z80 [--rzx R]         plain .nex only (tail placement checked)
@@ -153,6 +154,22 @@ def _auto_dizzy6(a, s, z80, name, out, rzxs, prof, say, rep, dec=None):
         say('RESULT    : sprite build FAILED verification - do not use; send this folder to the agent')
     _finish(out, name, rep)
 
+def _record_pin(z80, a):
+    """An existing game keeps the shared behaviour it was verified with (Dean, 2026-11-04: games are
+    self-contained, validated against what made them): a record whose snapshot this is may carry
+    "pin" {"altrom_fill": "rom3"}, applied unless the command line names its own --altrom-fill (the
+    opt-in rework to the new standard). New games and other snapshots get the new defaults."""
+    import hashlib
+    from nexclash import records
+    h = hashlib.md5(open(z80, 'rb').read()).hexdigest()
+    rec = next((r for r in records.all_records() if r['inputs']['snapshot'].get('md5') == h and r.get('pin')), None)
+    if rec is None:
+        return None
+    if rec['pin'].get('altrom_fill') and not getattr(a, 'altrom_fill', None):
+        zt.ALTROM_FILL = rec['pin']['altrom_fill']
+    return rec
+
+
 def cmd_auto(a):
     from nexclash.analyse import analyse
     from nexclash.verify import verify
@@ -162,6 +179,10 @@ def cmd_auto(a):
     os.makedirs(out, exist_ok=True)
     rep = []
     say = lambda s='': (rep.append(s), print(s))
+    pin = _record_pin(z80, a)
+    if pin is not None:
+        print('Pinned    : %s: --altrom-fill %s (record pin)%s' % (pin['name'], zt.ALTROM_FILL, '' if not getattr(
+            a, 'altrom_fill', None) else ', overridden on the command line: an opt-in rework, not the verified build'))
     s = Snapshot.get(z80)
     from nexclash.engines import find                       # dedicated engines: nexclash/engines.py
     eng_mod = find(s, a)
@@ -497,6 +518,9 @@ def main():
         p.add_argument('--outline', help="rainbow engine: mask-only pixels (black, blue, transparent, #RRGGBB)")
         p.add_argument('--class-colours', help='rainbow engine: JSON {"pages": {"D6": 1}, "palettes": {"1": {"ink": "#00FF00"}}}')
         p.add_argument('--allow-60hz', action='store_true', help='do not force 50 Hz video (outputs then differ from the verified MD5s)')
+        p.add_argument('--altrom-fill', choices=['whole', 'rom3'], help="alt ROM image 1: whole = Sinclair's ROM + the "
+                       "build's bytes (default for new builds), rom3 = NextZXOS's ROM3 + the hook bytes (the games verified "
+                       "before 2026-11-04 keep it through their record's pin; naming either here overrides the pin)")
         p.add_argument('--decisions', help='rebuild from stored build decisions (docs/records); no recording, no verification')
         p.add_argument('--engine', choices=['wally', 'rainbow'], help="the frozen / deprecated first version instead of its successor: "
                        "wally (record wally) instead of wally2, rainbow (record rainbow) instead of rainbow_z80n")
@@ -541,6 +565,8 @@ def main():
             p.add_argument('--buffer', help='back buffer ADDR:STRIDE:LINES (e.g. 0x5B00:32:128) drawn next to the screen')
             p.add_argument('-o', '--out', default='preview.png', help='contact sheet (PNG)')
     a = ap.parse_args()
+    if getattr(a, 'altrom_fill', None):
+        zt.ALTROM_FILL = a.altrom_fill
     if getattr(a, 'allow_60hz', False):
         zt.ALLOW_60HZ = True
         print('Video     : --allow-60hz: 50 Hz is NOT forced; the .nex MD5s differ from the verified builds')

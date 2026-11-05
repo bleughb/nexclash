@@ -134,7 +134,8 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 - altrom stub (z80tonex.altrom_fill): after writing the register block into RAM page 24 it maps
   the stub page (20) at slot 4 and page 24 at slot 5, jumps into the slot-4 alias (an unlocked
   1FFD/7FFD write remaps slots 6/7 = where the stub runs), unlocks ($08 |= $80), 1FFD=$04 /
-  7FFD=$10 (ROM3), $8C=$C0, LDIR 0000->0000 (16K), LDIR the patch bytes lo..hi from page 24,
+  7FFD=$10 (ROM3), $8C=$C0, LDIR 0000->0000 (16K; new builds: Sinclair's ROM from bank 47, card
+  patch.whole-altrom-image; pinned games keep this), LDIR the patch bytes lo..hi from page 24,
   $8C=0, restores slots 6/7, jumps back, restores slots 4/5. No stack use in between.
 - nextboot.py simulates that boot on a Next model (every sprite build prints a `Boot` line).
 - 48K and 128K: the tail must end below 0xC000. The stub runs with its own bank 10 at C000-FFFF and
@@ -307,12 +308,9 @@ Verification and speed
    be the WHOLE hook RAM. Tool: `scan --frames N --keys K --after ENTRY --range ...` (C4).
 4. Treasure Island (dedicated builder) is not re-verified differentially by any tool: selftest
    re-proves only the plain tail (access scan) and the boot (record: verify.differential false).
-5. nextboot.check models the alt ROM with rom48(), but the Next copies the system ROM3 (NextZXOS,
-   data at 0x3B00-0x3CFF): check against the real ROM3, or make the builder copy every ROM area a
-   patch relies on (LEARNINGS 1.3). Now possible (2026-10-27, Cauldron): `patch.altrom_low` +
-   `altrom = (0x2000, 0x4000)` writes the WHOLE image from the build, and nextboot.check(...,
-   sysrom=) boots with another ROM3 to prove it (cauldron.rom3_independent). Other engines still
-   copy only their hook range.
+5. Whole alt ROM image: the default for new builds (2026-11-04, card patch.whole-altrom-image). The
+   games verified before keep the ROM3 + hook-bytes fill (record pin); each has an opt-in rework line.
+   Open: slot1 builds keep NextZXOS's ROM3 at 0x0000-0x1FFF.
 6. `nexclash.py patch` (the users' command) writes the plain .nex WITHOUT nextboot.check (El Capitan
    Trueno's first plain build crashed at once: 48K tail above 0xC000). Run it in `patch`; refuse or warn.
 7. `auto` on an unknown engine made Jetpac's synthetic _auto.rzx (6410 frames), but `scan` / `preview`

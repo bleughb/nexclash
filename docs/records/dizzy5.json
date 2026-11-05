@@ -82,6 +82,10 @@
    "note": "re-checked 2026-09-28; 00a7c496... had an EMPTY font page: dialogue text blank on hardware"
   }
  ],
+ "pin": {
+  "altrom_fill": "rom3",
+  "note": "verified before the shared defaults of 2026-11-04 (docs/REFACTOR.md 1-3, 7): the old alt ROM fill, no ROM path / tail check; `--altrom-fill whole` opts in to the rework"
+ },
  "status": {
   "title": "Spellbound Dizzy (Dizzy V)",
   "engine_col": "dizzy5 (spellbound_dizzy.md)",

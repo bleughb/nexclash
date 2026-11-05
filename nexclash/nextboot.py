@@ -150,7 +150,8 @@ def check(nex, z80, patch=None, tail=None, nexload=False, sysrom=None):
     diffs = [a for a in range(0x4000, 0x10000) if mem[a] != ram[a - 0x4000] and not t0 <= a < t1]
     if diffs:
         bad.append(('RAM differs', len(diffs), diffs[:6]))
-    img = bytearray(sysrom if sysrom is not None else rom48())
+    # the whole-image fill (z80tonex.altrom_whole) writes Sinclair's ROM whatever the system ROM3 is
+    img = bytearray(rom48() if zt.altrom_whole(patch) or sysrom is None else sysrom)
     if getattr(patch, 'altrom', None) or getattr(patch, 'slot1', None):
         regs = zt.build_tail(s, 0x8000, patch.slot1, bool(getattr(patch, 'altrom', None)))[3]
         rb = patch.slot1[1]
