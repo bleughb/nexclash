@@ -1,0 +1,177 @@
+{
+ "name": "renegade",
+ "order": 92,
+ "game": "Renegade (128K)",
+ "doc": "renegade.md",
+ "engine": "renegade128",
+ "representative": true,
+ "reference": "renegade",
+ "inputs": {
+  "snapshot": {
+   "name": "renegade.z80",
+   "md5": "1a931038f3d0152477b7d7e30390f997",
+   "path": "renegade/start.z80"
+  },
+  "recordings": [
+   {
+    "name": "nocheat.rzx",
+    "md5": "8c9784064feee5b0d1db23c215c9f3ce",
+    "path": "renegade/nocheat.rzx"
+   },
+   {
+    "name": "levels.rzx",
+    "md5": "ee8b83e19b6cba4676df5ffa8f6d8bfb",
+    "path": "renegade/levels.rzx"
+   },
+   {
+    "name": "nodeath1.rzx",
+    "md5": "38bca63dd3e6bc3c4f8fea7c39b750c4",
+    "path": "renegade/nodeath1.rzx"
+   },
+   {
+    "name": "run2.rzx",
+    "md5": "005970e558a2623abb33ccdfc9de73c3",
+    "path": "renegade/run2.rzx"
+   },
+   {
+    "name": "renegade_enhanced_colours.json",
+    "md5": "1cdd863a0f86d96b8c7f08492b8298b8",
+    "path": "renegade/renegade_enhanced_colours.json"
+   }
+  ]
+ },
+ "modules": [
+  "renegade128",
+  "renegade"
+ ],
+ "own_modules": [
+  "renegade128"
+ ],
+ "data": [
+  "docs/profiles/renegade128.json",
+  "asm/renegade128_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "nocheat.rzx",
+   "levels.rzx",
+   "nodeath1.rzx",
+   "run2.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 25,
+  "note": "Bot recordings, no human player; cheats live in the RZX snapshots only. renegade_enhanced_colours.json is an input, not a recording: the Enhanced map (MVV Spec256 colours, local only), which the engine finds beside the snapshot; the Enhanced .nex is recolour() of the verified sprite build plus the palette and floors from the profile."
+ },
+ "outputs": {
+  "plain": {
+   "file": "renegade.nex",
+   "md5": "62a06036dec229a7d19821df2cca6a04"
+  },
+  "sprites": {
+   "file": "renegade_sprites.nex",
+   "md5": "a670c5b19d254f367f6471bc5efd8df4"
+  },
+  "enhanced": {
+   "file": "renegade_enhanced.nex",
+   "md5": "82b45f46c01c6b188ee28c2e76adbde2"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Renegade (128K)",
+  "engine_col": "renegade128 (renegade.md)",
+  "build": "sprites a670c5b1 (.nxc v1.0)",
+  "software": "Verify on 4 bot recordings, whole game; unit PASS; negatives detected; reaches gameplay in JNext 1.1.104 (no human recording)",
+  "hardware": "untested",
+  "next": "hardware test"
+ },
+ "checks": [
+  "asm2profile:renegade128"
+ ],
+ "techniques": [
+  {
+   "application": "renegade128.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "as renegade1: the masked stores and the copy are the only figure paths",
+   "phases": []
+  }
+ ],
+ "results": [
+  {
+   "application": "renegade128.screen-readers",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "a670c5b1",
+   "scope": "4 bot recordings, 106,055 frames; pokes in 3; whole game by play in one; no human recording; start-up checked only in JNext; no hardware",
+   "evidence": "games/renegade.md \"Results\""
+  }
+ ],
+ "pin": {
+  "altrom_fill": "rom3",
+  "note": "rebuilds the owner-approved .nxc v1.0 (built 2026-11-03 with the fill before the shared defaults of 2026-11-04, docs/REFACTOR.md 1): the old alt ROM fill; `--altrom-fill whole` would be a rework with new MD5s"
+ },
+ "checked": {
+  "deps": {
+   "asm/renegade128_hooks.asm": "531b406dbe9edecc",
+   "docs/profiles/renegade128.json": "e8734b99c223dee8",
+   "nexclash.py": "ce784cd6cd1eb043",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "f001b5c686897841",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "13c3ba6016db4c6f",
+   "nexclash/rainbow.py": "e247f602b7cecb7b",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/renegade.py": "4729669c9ba0b9f3",
+   "nexclash/renegade128.py": "02c31a5a6b41aed8",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "9e111968561fe668",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-11-04"
+ },
+ "verified": {
+  "deps": {
+   "asm/renegade128_hooks.asm": "531b406dbe9edecc",
+   "docs/profiles/renegade128.json": "e8734b99c223dee8",
+   "nexclash.py": "ce784cd6cd1eb043",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "f001b5c686897841",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "13c3ba6016db4c6f",
+   "nexclash/rainbow.py": "e247f602b7cecb7b",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/renegade.py": "4729669c9ba0b9f3",
+   "nexclash/renegade128.py": "02c31a5a6b41aed8",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "9e111968561fe668",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-11-04"
+ }
+}

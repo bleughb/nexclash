@@ -81,6 +81,15 @@
     "sprites": "9182f2f8b4b0dc55b59a69728568b403"
    }
   },
+  "54ad66af6678df22a9d4443e3d04aadb": {
+   "game": "Ikari Warriors (48K form)",
+   "doc": "ikari_warriors.md",
+   "nex": {
+    "plain": "2d56c304bcb21619d8402d64804fef75",
+    "sprites": "e740ae71fd47dc06c1a752bf150afb77",
+    "enhanced": "22be808b58eb8444c57277c176f8a741"
+   }
+  },
   "fc8e7535fc42afb60c12625b5fdfd064": {
    "game": "The Incredible Shrinking Fireman",
    "doc": "incredible_shrinking_fireman-add-OPUS.md",
@@ -172,6 +181,24 @@
     "plain": "7ac543fb51c7a3c4137778eeb3cdc175",
     "sprites": "69369c89035d39eac8e4211c2686503c",
     "diagnostic": "24e547de8e2e28982fe155611068f039"
+   }
+  },
+  "3eb7a65e19c9ffa82a49654d31a41886": {
+   "game": "Rambo",
+   "doc": "rambo.md",
+   "nex": {
+    "plain": "434a84778881e230d0c930677abad0b4",
+    "sprites": "9ebfe9c8a88d3b2ca1fa9067e3abf2d5",
+    "enhanced": "c2395f02f504d4f38ccc2e0d12973b44"
+   }
+  },
+  "1a931038f3d0152477b7d7e30390f997": {
+   "game": "Renegade (128K)",
+   "doc": "renegade.md",
+   "nex": {
+    "plain": "62a06036dec229a7d19821df2cca6a04",
+    "sprites": "a670c5b19d254f367f6471bc5efd8df4",
+    "enhanced": "82b45f46c01c6b188ee28c2e76adbde2"
    }
   },
   "d2fa7f2eeb8ccb75c30edbacb432a8b5": {

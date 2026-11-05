@@ -20,7 +20,10 @@ ENGINES = [
     ('wally2', 'is_wally2', lambda a: getattr(a, 'engine', None) != 'wally'),  # Everyone's a Wally, updated
     ('wally', 'is_wally', None),                                          # Everyone's a Wally (frozen: --engine wally)
     ('chuckie', 'is_chuckie', None),                                      # Chuckie Egg (48K)
+    ('rambo', 'is_rambo', None),                                          # Rambo (48K)
+    ('ikari_warriors', 'is_ikari_warriors', None),                        # Ikari Warriors (48K)
     ('nemesis', 'is_nemesis', None),                                      # Nemesis the Warlock (48K)
+    ('jetpac_v11', 'is_jetpac', lambda a: getattr(a, 'altrom_fill', None) == 'whole'),  # Jet Pac v1.1: opt-in rework of jetpac
     ('jetpac', 'is_jetpac', None),                                        # Jetpac (16K)
     ('loderunner', 'is_loderunner', None),                                # Lode Runner (48K)
     ('commando', 'is_commando', None),                                    # Commando (128K)
@@ -32,6 +35,7 @@ ENGINES = [
     ('incredible_shrinking_fireman_add_GPT6_ASTRA', 'is_fireman', lambda a: getattr(a, 'z80', '').endswith('-add-GPT6_ASTRA.z80')),
     ('incredible_shrinking_fireman_add_opus', 'is_incredible_shrinking_fireman_add_opus', None),  # The Incredible Shrinking Fireman (48K)
     ('atic_atac', 'is_atic_atac', None),                                  # Atic Atac (48K)
+    ('renegade128', 'is_renegade128', None),                              # Renegade (128K release)
     ('cauldron', 'is_cauldron', None),                                    # Cauldron (48K)
     ('nightshade', 'is_nightshade', None),                                # Nightshade (48K)
     ('knight_tyme', 'is_knight_tyme', None),                              # Knight Tyme (128K)

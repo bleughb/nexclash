@@ -1,0 +1,186 @@
+{
+ "name": "ikari_warriors",
+ "order": 91,
+ "game": "Ikari Warriors (48K form)",
+ "doc": "ikari_warriors.md",
+ "engine": "ikari_warriors",
+ "representative": true,
+ "reference": "ikari_warriors",
+ "inputs": {
+  "snapshot": {
+   "name": "ikari_warriors.z80",
+   "md5": "54ad66af6678df22a9d4443e3d04aadb",
+   "path": "ikari_warriors/ikari_warriors.z80"
+  },
+  "recordings": [
+   {
+    "name": "ik_play1.rzx",
+    "md5": "aa9446c86c779acce7069ce72f60ede7",
+    "path": "ikari_warriors/ik_play1.rzx"
+   },
+   {
+    "name": "ik_cheat1.rzx",
+    "md5": "856299605798df587b18624efd579a09",
+    "path": "ikari_warriors/ik_cheat1.rzx"
+   },
+   {
+    "name": "ik_bot2_1.rzx",
+    "md5": "d7161332ec81549162a5895f13d071d5",
+    "path": "ikari_warriors/ik_bot2_1.rzx"
+   },
+   {
+    "name": "ik_2p.rzx",
+    "md5": "ae13f910692376158e218a6623ccaf3b",
+    "path": "ikari_warriors/ik_2p.rzx"
+   },
+   {
+    "name": "ik_2pw.rzx",
+    "md5": "08f44dc34a3407b9ce5beb103b4de5c8",
+    "path": "ikari_warriors/ik_2pw.rzx"
+   },
+   {
+    "name": "ik_att.rzx",
+    "md5": "b946a703910347ec2751de4d99f2a26c",
+    "path": "ikari_warriors/ik_att.rzx"
+   },
+   {
+    "name": "ik_gameover.rzx",
+    "md5": "00ed15d1e411c4d98d4ce1b47afdf594",
+    "path": "ikari_warriors/ik_gameover.rzx"
+   },
+   {
+    "name": "ik_tank.rzx",
+    "md5": "f8d67aa1a577e5eb87db89cc51dc737c",
+    "path": "ikari_warriors/ik_tank.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "ikari_warriors"
+ ],
+ "own_modules": [
+  "ikari_warriors"
+ ],
+ "data": [
+  "docs/profiles/ikari_warriors.json",
+  "asm/ikari_warriors_hooks.asm",
+  "docs/profiles/ikari_warriors_edges.json",
+  "docs/profiles/ikari_warriors_enhanced.json"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "ik_play1.rzx",
+   "ik_cheat1.rzx",
+   "ik_bot2_1.rzx",
+   "ik_2p.rzx",
+   "ik_2pw.rzx",
+   "ik_att.rzx",
+   "ik_gameover.rzx",
+   "ik_tank.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 60,
+  "note": "8 scripted recordings, no human player; per recording the first default build for the classing patterns, then default (edge_patch) and Enhanced through the colour-set checker (set_check, from work/enh2/venh5.py); its 12 negatives on ik_2pw, the engine's 7 on ik_cheat1 / ik_att."
+ },
+ "outputs": {
+  "plain": {
+   "file": "ikari_warriors.nex",
+   "md5": "2d56c304bcb21619d8402d64804fef75"
+  },
+  "sprites": {
+   "file": "ikari_warriors_sprites.nex",
+   "md5": "e740ae71fd47dc06c1a752bf150afb77"
+  },
+  "enhanced": {
+   "file": "ikari_warriors_enhanced.nex",
+   "md5": "22be808b58eb8444c57277c176f8a741"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Ikari Warriors (48K form)",
+  "engine_col": "ikari_warriors (ikari_warriors.md)",
+  "build": "ikari_warriors_sprites.nex e740ae71 (.nxc v1.0)",
+  "software": "lockstep on 8 scripted recordings, default and Enhanced through the colour-set checker: game memory and registers, the picture classed by the first default; 12/12 colour-set and 7/7 engine negatives; JNext reaches play",
+  "hardware": "untested",
+  "next": "hardware test; a human recording"
+ },
+ "checks": [
+  "asm2profile:ikari_warriors"
+ ],
+ "techniques": [
+  {
+   "application": "ikari_warriors.commit.pattern-cache",
+   "id": "optimise.pattern-cache",
+   "revision": 1,
+   "target": "32-entry image cache, 4 patterns each",
+   "phases": [
+    "commit"
+   ]
+  }
+ ],
+ "pin": {
+  "altrom_fill": "rom3",
+  "note": "rebuilds the owner-approved .nxc v1.0 (built 2026-11-03 with the fill before the shared defaults of 2026-11-04, docs/REFACTOR.md 1): the old alt ROM fill; `--altrom-fill whole` would be a rework with new MD5s"
+ },
+ "results": [],
+ "checked": {
+  "deps": {
+   "asm/ikari_warriors_hooks.asm": "c298a7c655648389",
+   "docs/profiles/ikari_warriors.json": "e29290b713741d54",
+   "docs/profiles/ikari_warriors_edges.json": "f76b8547bdb8142c",
+   "docs/profiles/ikari_warriors_enhanced.json": "623b373594f6a998",
+   "nexclash.py": "ce784cd6cd1eb043",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "dd3235ab51813ea7",
+   "nexclash/ikari_warriors.py": "86bf4a58b4f60f86",
+   "nexclash/nextboot.py": "13c3ba6016db4c6f",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "9e111968561fe668",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-11-04"
+ },
+ "verified": {
+  "deps": {
+   "asm/ikari_warriors_hooks.asm": "c298a7c655648389",
+   "docs/profiles/ikari_warriors.json": "e29290b713741d54",
+   "docs/profiles/ikari_warriors_edges.json": "f76b8547bdb8142c",
+   "docs/profiles/ikari_warriors_enhanced.json": "623b373594f6a998",
+   "nexclash.py": "ce784cd6cd1eb043",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "dd3235ab51813ea7",
+   "nexclash/ikari_warriors.py": "86bf4a58b4f60f86",
+   "nexclash/nextboot.py": "13c3ba6016db4c6f",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "9e111968561fe668",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-11-04"
+ }
+}
