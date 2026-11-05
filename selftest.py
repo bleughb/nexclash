@@ -10,8 +10,8 @@
     python selftest.py --full              every game rebuilt AND re-verified against its recordings (~2.5 h)
     python selftest.py --game NAME [--verify]   one game
     python selftest.py --plan              what --affected would do, without running anything
-    python selftest.py --tools             the analysis commands (inspect/scan/isr/cost) on Chuckie Egg,
-                                           and records.plan() on synthetic stamps
+    python selftest.py --tools             the analysis commands (inspect/scan/isr/cost) and the .nxc output
+                                           on Chuckie Egg, and records.plan() on synthetic stamps
     python selftest.py --canary            two-stage tool-chain check (Dean, 2026-10-13): stage 1 = the
                                            record marked "canary": 1 (Chuckie Egg) rebuilt, MD5s, seconds;
                                            if it fails, stage 2 = "canary": 2 (Midnight Resistance) rebuilt
@@ -328,6 +328,11 @@ def tools_check(src):
     for name, jbad in jnext.selfcheck():
         print('%-4s tools: %s%s' % ('OK' if not jbad else 'FAIL', name, '' if not jbad else ' (%s)' % str(jbad)[:200]))
         cbad += len(jbad)
+    from nexclash import nxcout                 # .nxc output: vendored packager + ZX0 pinned, metadata rules
+    nbad = nxcout.selfcheck()
+    print('%-4s tools: nxc - nexclash/nxc.py and tools/zx0 match their pins; PRF1, target, patch_by rules%s' % (
+        'OK' if not nbad else 'FAIL', '' if not nbad else ' (%s)' % str(nbad)[:200]))
+    cbad += len(nbad)
     rec = R.load('chuckie_egg')
     work = tempfile.mkdtemp(prefix='nexclash_tools_')
     d, why = stage(rec, src, work)
@@ -379,6 +384,8 @@ def tools_check(src):
         _, r = drawcost.cost(ez, 39500, [er], stop=1500)
         ok('cost plotter 39500 (1500 frames): 1402 calls, median 19535 T',
            r['calls'] == 1402 and r['median'] == 19535, r)
+        for name, cond, info in nxcout.chuckie_check(ez, work, NEXCLASH, sys.executable):
+            ok(name, cond, info)                # default output GAME.nxc = the --nex sprite build when applied
         live = jnext.live_check(ez, work)       # JNext + card ($NEXCLASH_JNEXT_CARD) present
         if live:
             ok(*live)
