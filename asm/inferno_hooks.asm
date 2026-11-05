@@ -1915,3 +1915,141 @@ prepare_frame:
 prepare_frame_end:
         ASSERT prepare_frame_end < 0x0800
         SAVEBIN "inferno_prepare.bin",prepare_frame,prepare_frame_end-prepare_frame
+
+; Packed actor tile primitive, private worker page 75 at slot 0, DI / 28MHz.
+; Lookup pages 96..111: 128 attribute pairs * 256 bitmap rows * 4 bytes.
+; Canvas pages 112..115: up to 65536 pixels, two nibbles per byte.
+; Black is zero here: whole-actor exterior classification follows composition.
+; Caller supplies tile, aligned packed offset, stride 4..512 (multiple of 4), phase 0/1.
+; Reject invalid inputs before any canvas write. Restore slot 1=68 / slot 2=10.
+        ORG 0
+P_TILE  EQU 0x1ED0
+P_DEST  EQU 0x1ED2
+P_STRIDE EQU 0x1ED4
+P_FLASH EQU 0x1ED6
+P_ERROR EQU 0x1ED7
+P_PAIR  EQU 0x1ED8
+P_XOR   EQU 0x1ED9
+P_ROWS  EQU 0x1EDA
+pack_actor_tile:
+        xor a
+        ld (P_ERROR),a
+        ld hl,(P_TILE)
+        ld a,h
+        cp 4
+        jp nc,pack_bad
+        ld a,(P_FLASH)
+        cp 2
+        jp nc,pack_bad
+        ld hl,(P_STRIDE)
+        ld a,l
+        and 3
+        jp nz,pack_bad
+        ld de,4
+        or a
+        sbc hl,de
+        jp c,pack_bad
+        ld de,509
+        or a
+        sbc hl,de
+        jp nc,pack_bad
+        ld hl,(P_DEST)
+        ld a,l
+        and 3
+        jp nz,pack_bad
+        bit 7,h
+        jp nz,pack_bad
+        ld de,(P_STRIDE)
+        ld b,7
+pack_bound:
+        add hl,de
+        jp c,pack_bad
+        djnz pack_bound
+        ld de,3
+        add hl,de
+        jp c,pack_bad
+        bit 7,h
+        jp nz,pack_bad
+        ld hl,(P_TILE)
+        ld de,0xFC00
+        add hl,de
+        ld a,(hl)
+        ld c,a
+        and 7
+        rlca
+        rlca
+        or 0x40
+        ld (P_PAIR),a
+        ld a,c
+        and 127
+        rrca
+        rrca
+        rrca
+        and 15
+        add a,96
+        nextreg 0x52,a
+        ld a,c
+        and 128
+        ld c,a
+        ld a,(P_FLASH)
+        neg
+        and c
+        rlca
+        neg
+        ld (P_XOR),a
+        ld hl,(P_TILE)
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,0xDC00
+        add hl,de
+        push hl
+        pop ix
+        ld a,8
+        ld (P_ROWS),a
+pack_row:
+        ld hl,(P_DEST)
+        ld a,h
+        rlca
+        rlca
+        rlca
+        and 3
+        add a,112
+        nextreg 0x51,a
+        ld a,h
+        and 31
+        or 32
+        ld d,a
+        ld e,l
+        ld a,(P_XOR)
+        xor (ix+0)
+        inc ix
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        ld a,(P_PAIR)
+        or h
+        ld h,a
+        ldi
+        ldi
+        ldi
+        ldi
+        ld hl,(P_DEST)
+        ld de,(P_STRIDE)
+        add hl,de
+        ld (P_DEST),hl
+        ld a,(P_ROWS)
+        dec a
+        ld (P_ROWS),a
+        jr nz,pack_row
+        nextreg 0x51,68
+        nextreg 0x52,10
+        ret
+pack_bad:
+        ld a,1
+        ld (P_ERROR),a
+        ret
+pack_actor_tile_end:
+        ASSERT pack_actor_tile_end < 0x0400
+        SAVEBIN "inferno_pack.bin",pack_actor_tile,pack_actor_tile_end-pack_actor_tile

@@ -149,6 +149,19 @@ def visible_patterns(actor, memory):
 
 
 
+def canvas_visible(actor, left, top, width, height):
+    """Conservative whole-canvas visibility, including gaps that B may fill black.
+
+    Geometry is tile-aligned and wraps in the original unsigned 8-bit tile space.
+    This is a census model, not an installed runtime culling hook.
+    """
+    def axis(origin, offset, length, limit):
+        start = (origin + offset//8) & 255
+        count = length//8
+        return count > 0 and (count >= 256 or start < limit or start+count > 256)
+    return axis(actor['x'],left,width,32) and axis(actor['y'],top,height,18)
+
+
 def render_model_units():
     """Whole-image B silhouettes, content-key changes, palette and clip/wrap controls."""
     counts = Counter()
@@ -232,7 +245,7 @@ def scenery_delta(old, new):
     return best
 
 
-def model_verify(path, stop=2000, capture=False, scenery=False, frame=False):
+def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pack=False):
     """Original-image reconstruction and resource census, NOT a sprite hook verifier.
 
     C replay is only the source machine. Process live producer events immediately, keeping
@@ -255,6 +268,7 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False):
             pass
     ctx.tracefile = Sink()
     counts, errors, dirty_counts, shifts, graphics = Counter(), [], Counter(), Counter(), set()
+    actor_cache, visible_cache = {}, set()
     kernel = CapturePatch() if capture else None
     frame_patch, frame_pages = FramePatch() if frame else None, None
     frame_state = None
@@ -291,6 +305,7 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False):
                 if pc not in tests:
                     tests[pc] = (list(m), list(r), bytearray(private))
             if pc == 0x8F7C:
+                st['pack_cost'] = st['culled_pack_cost'] = 0
                 base = map_tiles(m)
                 dirty, shift = scenery_delta(st['previous'], base)
                 if st['previous'] is not None:
@@ -328,6 +343,40 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False):
                 if scenery == 'textmap':
                     st['actor_sources'].append({tile:raw_tile(m, tile) for dx,dy,tile in a['tiles']})
                 pats = visible_patterns(a, m)
+                image_key = tuple((dx,dy,t,raw_tile(m,t)) for dx,dy,t in a['tiles'])
+                left,top,width,height,pixels = solid_image(tuple((dx,dy,raw) for dx,dy,t,raw in image_key))
+                identity = image_key  # Exact bytes/geometry; never accept a hash-only match.
+                counts['max actor canvas width'] = max(counts['max actor canvas width'],width)
+                counts['max actor canvas height'] = max(counts['max actor canvas height'],height)
+                counts['max actor canvas pixels'] = max(counts['max actor canvas pixels'],width*height)
+                if identity in actor_cache:
+                    counts['actor content cache hits (model)'] += 1
+                else:
+                    actor_cache[identity] = 0
+                    counts['actor content cache misses (model)'] += 1
+                    counts['actor content cache bytes (model)'] += len(image_key)*15+(width*height+1)//2
+                    if pack:
+                        for dx,dy,t,raw in image_key:
+                            dest = ((dy*8-top)*width+dx*8-left)//2
+                            packed = run_actor_pack(m,t,dest,width//2)
+                            if not packed['valid']:
+                                raise AssertionError('observed actor tile rejected by packer')
+                            st['pack_cost'] += packed['equivalent_T']
+                            actor_cache[identity] += packed['equivalent_T']
+                            counts['assembled actor tiles on model cache misses'] += 1
+                        counts['max cold colour expansion tick equivalent T'] = max(
+                            counts['max cold colour expansion tick equivalent T'],st['pack_cost'])
+                if pack:
+                    if not canvas_visible(a,left,top,width,height):
+                        if pats:
+                            raise AssertionError('bounding cull removed visible pixels')
+                        counts['wholly offscreen actor calls (model)'] += 1
+                    elif identity not in visible_cache:
+                        visible_cache.add(identity)
+                        st['culled_pack_cost'] += actor_cache[identity]
+                        counts['visible content cache misses (model)'] += 1
+                    counts['max culled cold colour expansion tick equivalent T'] = max(
+                        counts['max culled cold colour expansion tick equivalent T'],st['culled_pack_cost'])
                 st['chunks'] += len(pats)
                 st['patterns'].update(pats.values())
                 counts['actor events'] += 1
@@ -379,6 +428,13 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False):
                     counts['scenery viewport pixels compared'] += 36864
                     counts['max post-copy frame hook equivalent T'] = max(counts['max post-copy frame hook equivalent T'], result['equivalent_T'])
                     counts['max capture plus frame hook equivalent T'] = max(counts['max capture plus frame hook equivalent T'], st['capture_cost'] + result['equivalent_T'])
+                    if pack:
+                        counts['max capture scenery and cold colour expansion equivalent T'] = max(
+                            counts['max capture scenery and cold colour expansion equivalent T'],
+                            st['capture_cost']+result['equivalent_T']+st['pack_cost'])
+                        counts['max capture scenery and culled cold expansion equivalent T'] = max(
+                            counts['max capture scenery and culled cold expansion equivalent T'],
+                            st['capture_cost']+result['equivalent_T']+st['culled_pack_cost'])
                 differences = ula_matches(m, st['tiles'])
                 if differences:
                     fail('ULA reconstruction', differences)
@@ -458,14 +514,14 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False):
 
 
 
-def capture_all(reference, folder, stop=2000, progress=None, scenery=False, frame=False):
+def capture_all(reference, folder, stop=2000, progress=None, scenery=False, frame=False, pack=False):
     """All six quick capture checks in one process, including cross-level simulator/cache reuse."""
     reference, folder = Path(reference), Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
     counts, cases, frames = Counter(), [], 0
     for level in range(1, 7):
-        result = model_verify(reference / ('Inferno%d.rzx' % level), stop, capture=True, scenery=scenery, frame=frame)
-        filename = ('frame%d.json' if frame else 'textmap%d.json' if scenery == 'textmap' else 'scenery%d.json' if scenery else 'capture%d.json') % level
+        result = model_verify(reference / ('Inferno%d.rzx' % level), stop, capture=True, scenery=scenery, frame=frame, pack=pack)
+        filename = ('actor_pack%d.json' if pack else 'frame%d.json' if frame else 'textmap%d.json' if scenery == 'textmap' else 'scenery%d.json' if scenery else 'capture%d.json') % level
         (folder / filename).write_text(json.dumps(result, indent=2) + '\n')
         bad = {k: v for k, v in result['counts'].items() if k.endswith('!') and v}
         for k, v in result['counts'].items():
@@ -1370,6 +1426,163 @@ def textmap_checks(reference):
         raise AssertionError('textmap FLASH control not detected')
     return {'counts': dict(counts), 'cases': cases,
             'scope': 'assembled textmap construction only; no display setup, frame commit, sprite renderer or raster proof'}
+
+
+@lru_cache(maxsize=1)
+def actor_row_lookup():
+    """128KiB immutable row decoder; no game assets or silhouette decisions."""
+    data = bytearray()
+    for attr in range(128):
+        bright = 8 if attr & 64 else 0
+        ink, paper = attr & 7, (attr >> 3) & 7
+        ink = (ink | bright) if bright and ink else ink + 1 if ink else 0
+        paper = (paper | bright) if bright and paper else paper + 1 if paper else 0
+        for row in range(256):
+            for shift in (6, 4, 2, 0):
+                pair = (row >> shift) & 3
+                data.append(((ink if pair & 2 else paper) << 4) | (ink if pair & 1 else paper))
+    return bytes(data)
+
+
+class ActorPackMemory(TextMapMemory):
+    """Execute the packed tile worker with guarded expanded-memory mappings."""
+    def __init__(self, ram, tile, dest, stride, flash, code):
+        super().__init__(ram, 0, 0, 1, None, code)
+        # The inherited worker array represents physical page 75, not page 69.
+        self.pages[75] = self.pages.pop(69)
+        table = actor_row_lookup()
+        self.pages.update({p: bytearray(table[(p-96)*8192:(p-95)*8192]) for p in range(96,112)})
+        self.pages.update({p: bytearray([0xE3]*8192) for p in range(112,116)})
+        self.pages[75][0x1ED0:0x1ED7] = (tile.to_bytes(2,'little') + dest.to_bytes(2,'little')
+                                               + stride.to_bytes(2,'little') + bytes((flash,)))
+        self.canvas_writes = set()
+
+    def __getitem__(self, a):
+        if isinstance(a,slice):
+            return [self[i] for i in range(*a.indices(65536))]
+        self.reads += 1
+        if a < 0x2000:
+            return self.pages[75][a]
+        if a < 0x4000:
+            return self.pages[self.mmu1][a & 8191]
+        if a < 0x6000 and self.mmu2 != 10:
+            return self.pages[self.mmu2][a & 8191]
+        return self.ram[a]
+
+    def __setitem__(self, a, v):
+        if a < 0x2000:
+            if not (0x1ED0 <= a < 0x1EE0 or 0x1FE0 <= a < 0x1FF0):
+                raise AssertionError('actor pack changed code or unowned state')
+            self.pages[75][a] = v
+        elif 0x2000 <= a < 0x4000 and 112 <= self.mmu1 <= 115:
+            self.canvas_writes.add((self.mmu1-112)*8192+(a & 8191))
+            self.pages[self.mmu1][a & 8191] = v
+        else:
+            raise AssertionError('actor pack wrote game RAM, capture or lookup')
+
+    def nextreg(self, reg, value):
+        if reg == 0x51 and value in (68,112,113,114,115):
+            self.mmu1 = value
+        elif reg == 0x52 and (value == 10 or 96 <= value <= 111):
+            self.mmu2 = value
+        else:
+            raise AssertionError('actor pack changed an unowned register')
+
+
+def run_actor_pack(ram, tile=0, dest=0, stride=4, flash=0, code=None):
+    from . import simpool, z80n
+    from .dizzy6 import _rw_simulator
+    code = bytes.fromhex(load_profile()['hooks']['pack']) if code is None else code
+    mem = ActorPackMemory(ram,tile,dest,stride,flash,code)
+    regs = [0]*30
+    regs[12],regs[14],regs[27] = 0x1FF0,0xFE,2
+    sim = simpool.machine(_rw_simulator(),mem,regs,'inferno.actor.pack')
+    sim.set_tracer(mem)
+    z80n.install(sim,mem.nextreg)
+    r,steps = sim.registers,0
+    while r[24] != 0x1D00:
+        if steps >= 2000:
+            raise AssertionError('actor pack failed to return')
+        sim.opcodes[mem[r[24]]]()
+        if r[26] or mem.nr[0x07] != 3:
+            raise AssertionError('actor pack left DI/28MHz domain')
+        steps += 1
+    if r[12] != 0x1FF2 or mem.mmu1 != 68 or mem.mmu2 != 10 or mem.ram != list(ram):
+        raise AssertionError('actor pack did not restore mapping/stack/game RAM')
+    canvas = b''.join(mem.pages[p] for p in range(112,116))
+    expected = bytearray([0xE3]*32768)
+    valid = tile < 1024 and flash < 2 and 4 <= stride <= 512 and not (stride & 3 or dest & 3) and dest+7*stride+3 < 32768
+    if bool(mem.pages[75][0x1ED7]) == valid:
+        raise AssertionError('actor pack guard disagrees')
+    allowed = set()
+    if valid:
+        pixels = expected_tile(ram,tile,flash)
+        for y in range(8):
+            for x in range(0,8,2):
+                a,b = pixels[y*8+x:y*8+x+2]
+                a = a+1 if 0 < a < 8 else a
+                b = b+1 if 0 < b < 8 else b
+                off = dest+y*stride+x//2
+                expected[off] = a*16+b
+                allowed.add(off)
+    if canvas != expected or mem.canvas_writes != allowed:
+        raise AssertionError('actor packed pixels or write footprint differ')
+    return {'instructions':steps,'equivalent_T':(r[25]+mem.reads)/8,'valid':valid}
+
+
+def actor_pack_checks():
+    counts,peak = Counter(),0
+    ram = [0]*65536
+    # Every attribute/phase in assembled code, including both black brightnesses.
+    for attr in range(256):
+        tile = (attr*37) & 1023
+        ram[0xDC00+tile*8:0xDC08+tile*8] = [0,255,85,170,129,126,24,231]
+        ram[0xFC00+tile] = attr
+        for phase in (0,1):
+            result = run_actor_pack(ram,tile,8188,132,phase)
+            peak = max(peak,result['equivalent_T'])
+            counts['assembled attribute/phase cases'] += 1
+    # Every bitmap value and colour pair against independent original-tile pixels.
+    table = actor_row_lookup()
+    for attr in range(128):
+        for row in range(256):
+            pixel = tile_pixels(bytes([row]*8+[attr]))[:8]
+            pixel = bytes(c+1 if 0<c<8 else c for c in pixel)
+            want = bytes(pixel[i]*16+pixel[i+1] for i in range(0,8,2))
+            off = attr*1024+row*4
+            assert table[off:off+4] == want
+            counts['lookup rows'] += 1
+    for tile,dest,stride in ((0,0,4),(1023,32736,4),(512,24572,512),(1,16380,4)):
+        result = run_actor_pack(ram,tile,dest,stride)
+        peak = max(peak,result['equivalent_T'])
+        counts['source/canvas boundary cases'] += 1
+    for kw in ({'tile':1024},{'tile':65535},{'dest':32740},{'dest':65532},
+               {'dest':2},{'stride':0},{'stride':3},{'stride':513},{'stride':65532},{'flash':2}):
+        assert not run_actor_pack(ram,**kw)['valid']
+        counts['rejected before canvas writes'] += 1
+    for origin in range(256):
+        for length in (0,1,2,18,32,128,255,256,383):
+            for limit in (18,32):
+                want = any(((origin+x)&255) < limit for x in range(length))
+                actor = {'x':origin if limit == 32 else 0,'y':origin if limit == 18 else 0}
+                got = canvas_visible(actor,0,0,length*8 if limit == 32 else 8,length*8 if limit == 18 else 8)
+                assert got == want
+                counts['conservative wrapped bounds cases (model)'] += 1
+    code = bytes.fromhex(load_profile()['hooks']['pack'])
+    ram[0xDC00:0xDC08],ram[0xFC00] = [129]*8,0xC7
+    for old,new in ((bytes.fromhex('C660ED9252'),bytes.fromhex('C661ED9252')),
+                    (bytes.fromhex('ED44A107ED44'),bytes.fromhex('ED44A107AF00')),
+                    (bytes.fromhex('ED915144'),bytes.fromhex('ED915170'))):
+        assert code.count(old) == 1
+        try:
+            run_actor_pack(ram,flash=1,code=code.replace(old,new))
+        except AssertionError:
+            counts['negative controls detected'] += 1
+        else:
+            raise AssertionError('actor pack negative control passed')
+    return {'counts':dict(counts),'max_equivalent_T':peak,'max_ms':peak/3500,
+            'lookup_bytes':len(table),'canvas_bytes':32768,
+            'scope':'assembled colour expansion only; whole-image fill/cache/uploads and frame integration remain open'}
 
 
 class DisplayMemory(TextMapMemory):
@@ -2760,6 +2973,9 @@ def continuation_tests(folder, pulse=False):
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     action = ap.add_mutually_exclusive_group(required=True)
+    action.add_argument('--actor-pack-checks', action='store_true')
+    action.add_argument('--actor-pack-check', type=Path)
+    action.add_argument('--actor-pack-all', type=Path)
     action.add_argument('--modal-checks', type=Path)
     action.add_argument('--queue-checks', action='store_true')
     action.add_argument('--display-checks', action='store_true')
@@ -2788,6 +3004,22 @@ def main():
     ap.add_argument('--out', type=Path, default=Path('work/inferno'))
     ap.add_argument('--json', type=Path)
     a = ap.parse_args()
+    if a.actor_pack_checks:
+        result = actor_pack_checks()
+        if a.json:
+            a.json.write_text(json.dumps(result,indent=2)+'\n')
+        print(json.dumps(result))
+        return 0
+    if a.actor_pack_check or a.actor_pack_all:
+        if a.quick <= 0:
+            ap.error('--quick must be positive')
+        result = (capture_all(a.actor_pack_all,a.out,a.quick,progress=print,scenery='textmap',frame=True,pack=True)
+                  if a.actor_pack_all else model_verify(a.actor_pack_check,a.quick,capture=True,scenery='textmap',frame=True,pack=True))
+        result['scope'] = 'frame preservation plus offline assembled actor colour expansion on host-model cache misses; no runtime cache, silhouette fill, upload or sprite display'
+        if a.json:
+            a.json.write_text(json.dumps(result,indent=2)+'\n')
+        print(json.dumps(result))
+        return int(any(v for k,v in result['counts'].items() if k.endswith('!')))
     if a.frame_check or a.frame_all:
         if a.quick <= 0:
             ap.error('--quick must be positive')

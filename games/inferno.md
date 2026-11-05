@@ -1,18 +1,18 @@
 # Inferno
 
 ## Next session
-Stage: 2 (continued)    State: post-copy/setup/Copper/modal checks pass; sprite rendering remains open
-Inputs: specnext/reference/inferno/    Branch: codex/inferno (both existing checkouts)
-Start: refresh main; read reference build/frame_pipeline.md and build/README.md. Do not re-clone.
-Read: inferno.py FramePatch/run_frame/queue_checks/display_checks; matching Inferno ASM blocks.
-Next: implement approved B sprite compilation/cache/uploads, then connect complete-frame readiness.
-  Preserve RAM/appearance; prove FLASH clock sync, remaining modal paths and whole-tick timing.
-Workflow: iterate on Inferno6.rzx --quick 2000; run the other levels at integration milestones,
-  plus targeted level-specific paths (e.g. level-4 shop). Compare each with its own original replay.
-Open: modal hooks, palette/recolour/sheets, continuous original-BASIC startup/Nb/game/ending,
-  startup-tail lifetime, full ROM-reader coverage and resource maxima. Engine stays unregistered.
-Next prompt: "Continue Inferno stage 2 from the checked frame pipeline. Use existing
-codex/inferno checkouts, CLAUDE.md and games/inferno.md; use level 6 for the main iteration loop."
+Stage: 2 (continued)    State: colour-packing primitive passes; total sprite timing still fails
+Inputs: specnext/reference/inferno/    Branch: codex/inferno (both existing checkouts; do not clone)
+Start: refresh main; read build/actor_packing.md, frame_pipeline.md and README.md.
+Read: inferno.py actor_pack_checks/model_verify/FramePatch; matching Inferno ASM blocks.
+Next: implement exact-content actor cache and whole-image B fill, addressing cold construction
+  with safe prewarming and conservative offscreen rejection; then uploads and complete-frame readiness.
+  A decoded tile costs 0.164 ms; level-6 cold capture/scenery/packing reaches 11.88 ms before uploads.
+Workflow: Inferno6.rzx --quick 2000 for iteration; other original levels at milestones, level-4 shop targeted.
+Open: FLASH clock, remaining modal paths, recolour/sheets, continuous BASIC/Nb/game/ending,
+  tail/ROM-reader lifetime and whole-tick budget. No sprite NEX; engine stays unregistered.
+Next prompt: "Continue Inferno stage 2 from build/actor_packing.md; preserve original RAM/registers
+and approved B visuals. Solve cold construction costs before enabling sprite display."
 
 ## Inputs and facts
 - Inferno.tzx: supplied tape, MD5 `335eec35a526f2044455cb87e8c77206`.
@@ -163,14 +163,15 @@ codex/inferno checkouts, CLAUDE.md and games/inferno.md; use level 6 for the mai
   No NEX includes this pipeline. Hardware raster/IRQ timing, continuous startup and sprite output
   remain unproved. Current recipes/evidence: build/frame_pipeline.md; older results are historical.
 
+- Actor packer: 233-byte page-75 worker; generic 128 KiB row lookup in pages 96-111,
+  32 KiB packed canvas in 112-115. Attribute/FLASH, boundaries, guards and broken-worker checks
+  pass. Black classification/cache/uploads are absent; display remains disabled. Evidence and
+  per-level cold-cache costs: build/actor_packing.md. Bounds culling is a census model only.
+
 ## Capture/loader foundation (historical details: reference build/README.md)
-- Capture patches: 8F7C CALL 9535, 8F92 CALL 9790, and single DD 6E 04 lookups at 959B/96A1.
-  Original LD H,C1 remains intact, preserving legitimate ISR resumes. Page 68 holds SP/flags
-  at 03F0, scenery 0400-087F, whole run-list log from 0900 and private stack below 1FF0.
-  Original CALL stack bytes are reproduced exactly; no game-RAM/stack exclusions beyond sites.
-- Six quick runs cover 13,194 actor draws; original map/ULA reconstruction and coordinate,
-  overflow, ordinal, inactive, snapshot-site and live-write controls pass. IRQ tests execute
-  FFFF/FFF4 through RET, including forced stack unwinds. B model tests are not a sprite rasterizer.
+- Capture sites 8F7C/8F92/959B/96A1 preserve original CALL stack bytes and LD H,C1.
+  Page 68: state 03F0, scenery 0400-087F, whole run-list log 0900, private stack 1FF0.
+  Original state, IRQ RET/forced-unwind and negative controls pass; detailed evidence in README.
 - Sample maxima: 21 image calls, 58 visible chunks, 56 patterns, 64 old+new pattern union.
   Graphics have 9-109 distinct states per quick run; pointer-only persistent caching is unsafe.
 - Initial intro/level-4 ROM scans are bounded to 2,001 frames. Other/full ROM-reader coverage
@@ -188,6 +189,8 @@ Preview MD5 `cf3fda58c14e87d91c55fe2773165d6a`, model_checks.json
 Other checksums: design/manifest.json. Stage-1 tools/canary/doccheck PASS; no sprite stamp.
 
 ## Lessons
+- [local: Inferno cold actor construction] Whole-content reuse is high, but first-use conversion
+  alone exceeds the tick budget. Record cold costs separately; prewarm from live data, never replay assets.
 - [local: Inferno frame pipeline] Demonstrated: post-copy source lifetime, private register/stack
   restoration and Copper cancellation at shop return pass sampled tests. Real FLASH clock and
   other modal entries remain open; synthetic commit attributes are not a sprite-rendering proof.
@@ -269,6 +272,8 @@ Other checksums: design/manifest.json. Stage-1 tools/canary/doccheck PASS; no sp
 - detect.buffer-layout-producer: corrected: visible colour checks distinguish black-masked stale bitmap data.
 
 ## Stage log
+- 2026-11-05: resumed; merged main 7e9b31c (workflow fixes), canary PASS. Added checked actor
+  packing and exact-content/culling census; six-level evidence in build/actor_packing.md. No sprite NEX.
 - 2026-11-06: resumed preserved workspace; six quick frame-hook replays, display/queue/modal
   units and source-lifetime checks PASS. Evidence in build/frame_pipeline.md; sprites remain open.
 - 2026-11-05: textmap architecture checkpoint. Reviewed Next instruction/DMA/tilemap/memory
