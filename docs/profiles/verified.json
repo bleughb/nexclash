@@ -105,6 +105,17 @@
     "sprites": "85fe6afd593679bf59c787230ba0eaca"
    }
   },
+  "426084d3d941fd7452d6bebf726d9746": {
+   "game": "Lunar Jetman",
+   "doc": "lunar_jetman.md",
+   "nex": {
+    "plain": "3e5ca3908616f76a33f864be57baef95",
+    "sprites": "e33f68c4fc0dca007daf14e99188ecfd",
+    "sprites_loading": "4634886880940d0db5e4cee9c1113819",
+    "enhanced": "dfeb2cf9d184d6672f2c1448c0d9b805",
+    "enhanced_loading": "62f7e914c390fcce7477d5efd2423cad"
+   }
+  },
   "53078ac60141cd808b609600b85f4094": {
    "game": "Magicland Dizzy",
    "doc": "magicland_dizzy.md",

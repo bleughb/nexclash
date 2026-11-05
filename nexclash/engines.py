@@ -35,6 +35,7 @@ ENGINES = [
     ('cauldron', 'is_cauldron', None),                                    # Cauldron (48K)
     ('three_weeks', 'is_three_weeks', None),                              # Three Weeks in Paradise (128K)
     ('starquake', 'is_starquake', None),                                  # Starquake (48K)
+    ('lunar_jetman', 'is_lunar_jetman', None),                            # Lunar Jetman (48K)
 ]
 
 
