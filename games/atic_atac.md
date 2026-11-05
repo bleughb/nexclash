@@ -212,6 +212,30 @@ docs/records/atic_atac.json.
   (setups ~2.5k T each: the OTIR upload and the table scans; rows -62M T, cheaper than the original;
   text +5M T, the start screens). Whether the game has that much spare per frame: hardware.
 
+## Rework (opt-in): Atic Atac .nxc v1.3 (engine atic_atac_v13, `NEXCLASH_REWORK=atic_atac_v13`)
+Ported from Jon Attree's .nxc work, 2026-11-04 (pilot runs/atic_atac/nexclash: d7abd1c + d12f9d9, 0dff248, 9d44fb7).
+Published .nxc: **Atic Atac v1.3** (github.com/jattree/nxc, patch ed872411). Dean's files and build (59493b75, pin
+rom3) are untouched and stay the default.
+- What and why: v1.1 hook speed (image cache, row-mask table, bounded scans, unrolled OUTI, caller's speed
+  restored; penalty +8-10% -> about -1..-3%, picture unchanged). v1.2 flicker (REFACTOR.md 5): the figure painter's
+  nine `LD (HL),E` vacated-cell writes (0xA091-0xA132) are NOPs like its `LD (HL),D`: with the D writes gone they
+  only turned door / furniture cells by a moving figure to the room colour; and the menu clear 0x80B4 is hooked
+  (h_cls; before, menu icons stayed as sprites for 7 frames). v1.3: the "QAOP + Space" toggle (profile _qaop; hooks
+  0x93CD key read, 0x948A pause: Caps Shift alone pauses).
+- Kept apart: nexclash/atic_atac_v13.py, asm/atic_atac_v13_hooks.asm + _qaop.asm, docs/profiles/atic_atac_v13*.json;
+  engines.py picks it only with that switch; the pinned rom3 fill stays (as published). Moved in:
+  the Enhanced set (atic_atac_enhanced_colours.json, read back from the published store; from the MVV .256) and the
+  loading screen (atic_atac_loading.scr, bank 23 stub `ldscr`); both specnext inputs only.
+- Rebuild = `nxc.py --bare`, every set and option: default b87774a2, Enhanced 47f0e72c, + QAOP 19318e4f / 1f58e936;
+  one .nxc holds all four, QAOP + Space as a toggle.
+- Verify (`selftest.py --game atic_atac --verify`, 2026-11-04, ~15 min wall): all four builds
+  IDENTICAL on walk1, walk2, t (21,003 frames; per build 40,623 setups, 91,084 vacated sites with no attribute
+  written, 45.1M sprite pixels; Enhanced as ink; toggle builds with every QWERT read
+  translated: 16,148 key reads, 6,252 pause checks). Units per set: 1,483 cases, controls 3/3, the rework negatives
+  (7 kinds) detected, 432 incoming-clock cases PASS. Toggle units: on 924 / off 832 PASS; O-P swapped and on-as-off
+  detected. Replay negatives on t detected. Dean's verify skipped: AticAtac.rzx missing (record "missing").
+- Hardware: none. Checklist: below + no red flash by doors, no menu icons left, QAOP+Space.
+
 ## Hardware checklist (atic_atac_sprites.nex)
 1. Boots to the game's start screens; text prints as the original; keys / joystick work.
 2. Player appears row by row from the bottom (no extra copy left behind after the first move).
@@ -232,42 +256,39 @@ docs/records/atic_atac.json.
 - Test cheat (immortality / no chicken drain): offered 2026-10-26.
 - Game-over path (35893) not in the recording.
 
-## Lesson candidates
-- A .z80 at the loader does not mean the RZX is: an RZX carries its OWN start snapshot (rzxinfo
-  "Start address"); the survey and every --rzx analysis start there. Stage 0 read the .z80's loader
-  state as the recording's and planned a prerun that was not needed (loader.prerun then "finds"
-  frame 0). Check `rzxinfo` in stage 0 before calling a recording loader-stage.
-- A run-time screen-dependency check for an XOR engine is cheap with simrun hooks: shadow ^= each
-  plotter delta, report non-plotter reads / writes where shadow != 0 (figdep, ~15 min for 18K
-  frames). Candidate for a shared `scan --xor-owner ENTRY` option (BRIEFING C4).
+## Lessons
+- [tool nexclash.survey] An RZX carries its OWN start snapshot (rzxinfo "Start address"): stage 0 took the .z80's
+  loader state for the recording's and planned a prerun not needed. Check `rzxinfo` first. (Migrated 2026-11-04.)
+- [deferred Open: reconsider when a second XOR engine needs a run-time screen-dependency check] figdep (shadow ^=
+  each plotter delta, report other reads / writes where shadow != 0; ~15 min / 18K frames) could be `scan --xor-owner`.
+- [tool nexclash.survey] "Free RAM" = untouched by the recording, not free (0xB536-, 0xD2EE-: graphics never drawn).
+- [local: Atic Atac's appear / death strips read graphics from other data] heights up to 248 rows write far above
+  line 0 into ROM: check H per row (row hooks fall back for H < 0x40).
+- [card detect.tracked-unit §Recognise] Per-key XOR parity breaks when parts XOR-cancel an image (death: 18 one-row
+  slices; 19 sprites over a blank screen). Group by graphic + base line with a row mask and check the group.
+- [local: a hook remapping slot 6 / 7 before reading the IX object] read game bytes first, then remap.
+- [local: an sjasmplus syntax trap met once] `ld a,(EXPR)` is a memory read even for a constant EXPR: use an EQU.
+- [local: this verifier's fork] map pages before overlaying the run's game writes.
+- [local: the published patch carried build steps outside the engine] (rework import, 2026-11-04) the v1.3 .nxc =
+  engine output + the v1.0 package's Enhanced store and screen bank, carried by delta scripts; moved into
+  atic_atac_v13.auto (colour map read back and checked byte for byte, stub as asm).
+- [tool selftest.py] (rework import) Dean's AticAtac.rzx is in no reference folder, so the whole record was skipped:
+  a record input may now say "missing": that verify is skipped (reported, nothing stamped), its reworks still run.
 
-- The survey's "Free RAM" list is memory the RECORDING never touched, not free memory: here 0xB536-,
-  0xB786-, 0xBB60-, 0xD2EE- are graphics of the characters and figures the recording never drew
-  (the graphic pointer table points into them). Check a span against the game's own tables (or a
-  static reference scan) before putting anything there; the printer buffer / alt ROM need no such
-  proof once the scan shows them untouched. Candidate: the survey line should say "untouched".
-- An XOR plotter whose effect draws "graphics" from inside other data with heights up to 248 rows
-  (Atic Atac's appear / death strips, ids past the real table) writes far above line 0, into ROM
-  (discarded): a shadow address trick that offsets H would move those writes into RAM; check H per
-  row (row hooks fall back to the original for H < 0x40).
+## Friction
+- reuse: [local: add_screen.py's stub now in three engines' asm] Jet Pac (bank 13), Rambo (older), this (bank 23).
+- retries: [none: every set rebuilt the published MD5s first time in today's tree]
+- environment: [none: Python 3.14 forkserver workers get their data by initializer]
+- hand-rolled: [local: the colour map was read back from the published build once] format in atic_atac_v13.paint().
+- scratch: [none: import scripts stayed in the session scratchpad]
 
-- XOR parity per image key (graphic, x, y) breaks when a game composes an image from PARTS that
-  XOR-cancel it (Atic Atac's death: 18 one-row slices over the shown figure; the screen ends blank,
-  per-key parity shows 19 sprites). The per-image pixel check cannot see it (each sprite matches its
-  own plot); only a global view does (union of sprites vs the screen). Group by what the parts
-  belong to (the graphic + base line, a row mask) and check the group, not the part.
-- A hook that remaps slot 6 / 7 hides the game RAM there from everything it reads afterwards, IX
-  records included (Atic Atac: IX 0xEA90, colour read through IX+5 after slot 7 = work page: palette
-  offset 0). Read every game byte first, then remap; a verifier memory model with the MMU slots
-  catches it (it did: colours wrong in the 600-frame run).
-- sjasmplus: `ld a,(EXPR)` is a memory READ even when EXPR is a constant expression - `ld a,(OB >>
-  8)` loaded from 0x00E6 and the builder wrote a random page. Use an EQU (`OBH EQU 0xE6`) or no
-  outer parentheses for immediates.
-- Fork the patched and original runs on a memory model that maps pages BEFORE the overlay of this
-  run's game writes: a hook reading a mapped page at an address the game wrote in the same run must
-  see the page.
+## Technique use
+- patch.xor-shadow: used: unchanged from Dean's engine; the rework's replays check ULA ^ shadow as before
+- detect.tracked-unit: used: lesson migrated to its Recognise case (parts that XOR-cancel)
+- patch.restore-speed: no help: v1.3's hooks restore the incoming speed in their own code (v1.1)
 
 ## Stage log
+- 2026-11-04 Atic Atac v1.3 imported as an opt-in rework (phase 7); Dean's build unchanged. 0 user rounds.
 - 2026-10-26 stage 0 (intake): ~20 min wall, ~30 tool calls, 0 user rounds.
 - 2026-10-26 stage 1 (design): ~1 h wall, ~60 tool calls, 2 user rounds (the design question + answer).
 - 2026-10-26 stage 2 part 1 (build design + hooks asm): ~1.5 h wall, ~80 tool calls, 0 user rounds.

@@ -10,8 +10,9 @@
     python selftest.py --full              every game rebuilt AND re-verified against its recordings (~2.5 h)
     python selftest.py --game NAME [--verify]   one game
     python selftest.py --plan              what --affected would do, without running anything
-    python selftest.py --tools             the analysis commands (inspect/scan/isr/cost) on Chuckie Egg,
-                                           and records.plan() on synthetic stamps
+    python selftest.py --tools             the analysis commands (inspect/scan/isr/cost) and the .nxc output
+                                           on Chuckie Egg, records.plan() on synthetic stamps, and the shared
+                                           hook library's unit tests + negative controls (nexclash/hooklib.py)
     python selftest.py --canary            two-stage tool-chain check (Dean, 2026-10-13): stage 1 = the
                                            record marked "canary": 1 (Chuckie Egg) rebuilt, MD5s, seconds;
                                            if it fails, stage 2 = "canary": 2 (Midnight Resistance) rebuilt
@@ -24,7 +25,11 @@
 
 Rebuild = the record's recipe: snapshot (+ the recordings it names) + the stored build decisions, no
 analysis, no verification - seconds per game. Re-verify = the record's verify recipe: auto recording or
-the reference recordings, differential verification, simulated boot, the old-strategy builds (repro).
+the reference recordings, differential verification, simulated boot, the old-strategy builds (repro),
+and a record's opt-in reworks ("rework": [{name, version, args, env, inputs, rebuild, verify, outputs, proof, note}],
+rebuilt and re-verified with the record: auto with those args, environment and recipes; only a record that lists one
+runs it - Jetpac's v1.1, 2026-11-04). A record input marked "missing" (not in the references) is not staged: the
+verification that needs it is skipped (reported, nothing stamped), the rebuild and the reworks still run.
 Which games need which is plan() in nexclash/records.py: own files changed -> re-verify that game;
 shared files changed -> rebuild everything that depends on them + re-verify one representative per
 engine. Exit 0 = all good; 1 = a failure; 2 = no failure but games skipped (reference files missing).
@@ -69,18 +74,50 @@ def stage(rec, src, work):
     -> (dir, None) or (None, why)."""
     d = os.path.join(work, rec['name'])
     os.makedirs(d, exist_ok=True)
+    rec['_gone'] = []
     for it in [rec['inputs']['snapshot']] + rec['inputs']['recordings']:
-        p = os.path.join(src, it.get('path', ''))
-        if not it.get('path') or not os.path.isfile(p):
-            return None, 'missing %s' % (it.get('path') or it['name'])
-        if it.get('md5') and md5(p) != it['md5']:
-            return None, '%s md5 %s, record says %s' % (it['path'], md5(p), it['md5'])
-        shutil.copy(p, os.path.join(d, it['name']))
+        if it.get('missing') and not os.path.isfile(os.path.join(src, it.get('path', ''))):
+            rec['_gone'].append(it['name'])     # the record says it is not in the references: the verify that
+            continue                            # needs it is skipped (reverify), the rest runs
+        why = _stage_one(it, src, d)
+        if why:
+            return None, why
+    for x in rec.get('rework', []):             # a rework's own inputs: missing ones skip the rework, never the base
+        miss = [w for w in (_stage_one(it, src, d) for it in x.get('inputs', [])) if w]
+        if miss:
+            x['_missing'] = '; '.join(miss)
     return d, None
 
 
-def _run(cmd):
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+def _stage_one(it, src, d):
+    p = os.path.join(src, it.get('path', ''))
+    if not it.get('path') or not os.path.isfile(p):
+        return 'missing %s' % (it.get('path') or it['name'])
+    if it.get('md5') and md5(p) != it['md5']:
+        return '%s md5 %s, record says %s' % (it['path'], md5(p), it['md5'])
+    shutil.copy(p, os.path.join(d, it['name']))
+    return None
+
+
+def _run(cmd, env=None):
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+
+
+def _audit_env(d, tag):
+    """Declared inputs only (nexclash/inputaudit.py): the run may read the repository and the staged folder d."""
+    log = os.path.join(d, 'input_audit_%s.log' % tag)
+    if os.path.exists(log):
+        os.remove(log)
+    return dict(os.environ, NEXCLASH_INPUT_AUDIT=log, NEXCLASH_INPUT_ROOT=d), log
+
+
+def _audit_check(rec, log, lines, tag):
+    from nexclash import inputaudit
+    extra = inputaudit.read(log)
+    if extra:
+        lines.append('FAIL %s %s read files the record does not declare: %s' % (rec['name'], tag, ', '.join(extra[:4])))
+        return 1
+    return 0
 
 
 def _report(out, name):
@@ -105,11 +142,16 @@ def _check_outputs(rec, out, lines, want=None, stage_='rebuild'):
     return bad
 
 
+BUILD_CHECKS = (('Boot      :', 'simulated boot'), ('Decrypter :', 'decrypter check'))   # build-time checks in a report
+
+
 def _boot_ok(rep, lines, label):
-    if 'Boot      :' in rep and 'MISMATCH' in rep.split('Boot      :', 1)[1].split('\n', 1)[0]:
-        lines.append('FAIL %s simulated boot' % label)
-        return 1
-    return 0
+    bad = 0
+    for key, what in BUILD_CHECKS:
+        if key in rep and 'MISMATCH' in rep.split(key, 1)[1].split('\n', 1)[0]:
+            lines.append('FAIL %s %s' % (label, what))
+            bad += 1
+    return bad
 
 
 def checks(rec, lines):
@@ -160,11 +202,12 @@ def rebuild(rec, d, lines):
     out = os.path.join(d, 'rebuild')
     os.makedirs(out, exist_ok=True)
     bad = checks(rec, lines)
+    env, alog = _audit_env(d, 'rebuild')
     if rb.get('cmd') == 'convert':
         o = next(iter(rec['outputs'].values()))['file']
-        _run([sys.executable, NEXCLASH, 'convert', z80, '-o', os.path.join(out, o)] + rb.get('args', []))
-        return bad + _check_outputs(rec, out, lines)
-    cmd = [sys.executable, NEXCLASH, 'auto', z80, '--no-record'] + rb.get('args', [])
+        _run([sys.executable, NEXCLASH, 'convert', z80, '-o', os.path.join(out, o)] + rb.get('args', []), env)
+        return bad + _check_outputs(rec, out, lines) + _audit_check(rec, alog, lines, 'rebuild')
+    cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80, '--no-record'] + rb.get('args', [])
     cmd = [c for i, c in enumerate(cmd) if c != '--no-record' or i == cmd.index('--no-record')]
     for r in rb.get('rzx', []):
         cmd += ['--rzx', os.path.join(d, r)]
@@ -172,15 +215,41 @@ def rebuild(rec, d, lines):
         dp = os.path.join(d, rec['name'] + '_decisions.json')
         json.dump(rb['decisions'], open(dp, 'w'))
         cmd += ['--decisions', dp]
-    _run(cmd + ['-o', out])
+    _run(cmd + ['-o', out], env)
     rep = _report(out, _snapname(rec))
     bad += _check_outputs(rec, out, lines) + _boot_ok(rep, lines, rec['name'])
     bad += recolour_guard(rec, out, lines, cmd, d)
     for x in rec.get('repro', []):
         ro = os.path.join(d, 'rebuild_' + x['strategy'])
-        _run(cmd + ['-o', ro, '--strategy', x['strategy']])
+        _run(cmd + ['-o', ro, '--strategy', x['strategy']], env)
         bad += _check_outputs(rec, ro, lines, {'repro': x}) + _boot_ok(_report(ro, _snapname(rec)), lines, rec['name'])
-    return bad
+    for x in rec.get('rework', []):
+        if x.get('_missing'):
+            lines.append('SKIP %s rework %s (%s)' % (rec['name'], x['name'], x['_missing']))
+            continue
+        ro = os.path.join(d, 'rebuild_rework_' + x['name'])
+        _run(_rework_cmd(z80, x, 'rebuild', d) + ['-o', ro], dict(env, **x.get('env', {})))
+        bad += _check_outputs(rec, ro, lines, x['outputs'], 'rebuild rework %s:' % x['name'])
+        bad += _boot_ok(_report(ro, _snapname(rec)), lines, '%s rework %s' % (rec['name'], x['name']))
+    return bad + _audit_check(rec, alog, lines, 'rebuild')
+
+
+def _rework_cmd(z80, x, stage_, d):
+    """An opt-in rework of an existing game (record "rework"): auto with the rework's own args, e.g.
+    `--altrom-fill whole`, which overrides the record pin (Jetpac v1.1: engines.py picks jetpac_v11), plus its own
+    "rebuild" / "verify" recipe (args, rzx, stored decisions), as a record's, and its own environment ("env", e.g.
+    NEXCLASH_REWORK=atic_atac_v13 for a rework that keeps the pinned fill; the callers add it)."""
+    rc = x.get(stage_) or {}
+    cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80] + list(x.get('args', [])) + list(rc.get('args', []))
+    if stage_ == 'rebuild' and '--no-record' not in cmd:
+        cmd.append('--no-record')
+    for r in rc.get('rzx', []):
+        cmd += ['--rzx', os.path.join(d, r)]
+    if stage_ == 'rebuild' and rc.get('decisions'):
+        dp = os.path.join(d, 'rework_%s_decisions.json' % x['name'])
+        json.dump(rc['decisions'], open(dp, 'w'))
+        cmd += ['--decisions', dp]
+    return cmd
 
 
 def recolour_guard(rec, out, lines, cmd, d):
@@ -208,6 +277,31 @@ def recolour_guard(rec, out, lines, cmd, d):
     return 0 if ok else 1
 
 
+def _checks_status(out, name, label, lines, had_rzx, rec=None):
+    """The run's structured check status (nexclash/runchecks.py, NAME_checks.json) -> failures (int); a check left
+    incomplete, or a required one not run (recordings given, ROM path check 'not run'), is listed INCOMPLETE and kept in
+    rec['_incomplete']: the run is no full verification and gets no stamp."""
+    from nexclash import runchecks
+    ck = runchecks.read(out, name)
+    if ck is None:
+        why = ['no check status (%s)' % os.path.basename(runchecks.path(out, name))]
+    else:
+        f = [c for c in ck['checks'] if c['status'] == 'fail']
+        if f:
+            lines.append('FAIL %s checks: %s' % (label, runchecks.line(f)))
+            return 1
+        why = ['%s %s: %s' % (c['check'], c['status'], c['why'][:200]) for c in ck['checks']
+               if c['required'] and c['status'] not in runchecks.DONE]
+        if had_rzx:
+            why += ['%s not run although recordings were given' % c['check'] for c in ck['checks']
+                    if c['status'] == 'not run']
+    if why:
+        lines.append('INCOMPLETE %s: %s' % (label, '; '.join(why)))
+        if rec is not None:
+            rec.setdefault('_incomplete', []).extend('%s: %s' % (label, w) for w in why)
+    return 0
+
+
 def _verify_report(rep, label, lines, rec=None):
     if not rep or 'FAILED' in rep or 'MISMATCH' in rep:
         lines.append('FAIL %s verification' % label)
@@ -230,13 +324,21 @@ def reverify(rec, d, lines, human=False):
     v = rec['verify']
     z80 = os.path.join(d, rec['inputs']['snapshot']['name'])
     out = os.path.join(d, 'verify')
-    cmd = [sys.executable, NEXCLASH, 'auto', z80] + v.get('args', [])
+    cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80] + v.get('args', [])
     rz = list(v.get('rzx', [])) + (list(v.get('human_rzx', [])) if human else [])
     for r in rz:
         cmd += ['--rzx', os.path.join(d, r)]
-    _run(cmd + ['-o', out])
+    env, alog = _audit_env(d, 'verify')
     name = _snapname(rec)
+    gone = [r for r in rz if r in rec.get('_gone', [])]
+    if gone:                                    # inputs the record marks "missing": no base verification, no stamp
+        rec['_vskip'] = gone
+        lines.append('SKIP %s verification: %s not in the reference folder (record: "missing"); its reworks run' % (
+            rec['name'], ', '.join(gone)))
+        return _reverify_reworks(rec, d, lines, z80, name, env) + _audit_check(rec, alog, lines, 'verify')
+    _run(cmd + ['-o', out], env)
     bad = _check_outputs(rec, out, lines, stage_='verify') + _verify_report(_report(out, name), rec['name'], lines, rec)
+    bad += _checks_status(out, name, rec['name'], lines, bool(rz), rec)
     dec_p = os.path.join(out, name + '_decisions.json')
     stored = (rec.get('rebuild') or {}).get('decisions')
     if stored is not None:
@@ -250,12 +352,28 @@ def reverify(rec, d, lines, human=False):
                      % (rec['name'], md5(auto), v['auto_rzx_md5']))
     for x in rec.get('repro', []):
         ro = os.path.join(d, 'verify_' + x['strategy'])
-        rcmd = [sys.executable, NEXCLASH, 'auto', z80, '--no-record', '--strategy', x['strategy'], '-o', ro]
+        rcmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80, '--no-record', '--strategy', x['strategy'], '-o', ro]
         for r in ([auto] if os.path.exists(auto) else []) + [os.path.join(d, r) for r in rz]:
             rcmd += ['--rzx', r]
-        _run(rcmd)
+        _run(rcmd, env)
         bad += _check_outputs(rec, ro, lines, {'repro': x}, 'verify')
         bad += _verify_report(_report(ro, name), '%s --strategy %s' % (rec['name'], x['strategy']), lines)
+        bad += _checks_status(ro, name, '%s --strategy %s' % (rec['name'], x['strategy']), lines, True, rec)
+    return bad + _reverify_reworks(rec, d, lines, z80, name, env) + _audit_check(rec, alog, lines, 'verify')
+
+
+def _reverify_reworks(rec, d, lines, z80, name, env):
+    """Each opt-in rework: auto with its args, environment and verify recipe (its own recordings)."""
+    bad = 0
+    for x in rec.get('rework', []):
+        if x.get('_missing'):
+            continue                            # said by rebuild()
+        ro = os.path.join(d, 'verify_rework_' + x['name'])
+        _run(_rework_cmd(z80, x, 'verify', d) + ['-o', ro], dict(env, **x.get('env', {})))
+        bad += _check_outputs(rec, ro, lines, x['outputs'], 'verify rework %s:' % x['name'])
+        bad += _verify_report(_report(ro, name), '%s rework %s' % (rec['name'], x['name']), lines)
+        bad += _checks_status(ro, name, '%s rework %s' % (rec['name'], x['name']), lines,
+                              bool((x.get('verify') or {}).get('rzx')), rec)
     return bad
 
 
@@ -270,7 +388,12 @@ def run_one(rec, action, src, work, human):
         bad += reverify(rec, d, lines, human)
     else:
         action = 'rebuild'                      # no verify recipe: only a rebuild was proven
-    return rec, action, bad, lines, None
+    miss = ['rework %s: %s' % (x['name'], x['_missing']) for x in rec.get('rework', []) if x.get('_missing')]
+    if rec.get('_vskip'):
+        miss.insert(0, 'verification skipped: %s missing (record)' % ', '.join(rec['_vskip']))
+    if rec.get('_incomplete'):
+        return rec, action, bad, lines, 'verification incomplete: ' + '; '.join(rec['_incomplete'])
+    return rec, action, bad, lines, ('partial: ' + '; '.join(miss)) if miss else None
 
 
 def smoke_rzx_census(ez, er, ok):
@@ -294,13 +417,81 @@ def smoke_attr_census(ez, er, ok):
 PROBE_SMOKE = {'rzx_census.py': smoke_rzx_census, 'attr_census.py': smoke_attr_census}
 
 
+def verification_selfcheck():
+    """Fault injection at the stamp and packaging boundary, no game data: nexclash.py's ROM path check (its nextboot
+    call replaced) and _finish write the check status; selftest's verification reads it and nxcout's PRF1 says it.
+    A checker exception, an early partial replay, no coverage, a ROM select not modelled, recordings given but no check
+    run -> INCOMPLETE (no stamp; PRF1 checks=INCOMPLETE, except the last, which only selftest knows); a fault -> FAIL; the record pin (waived) and a last-frame
+    truncation -> complete. -> failures"""
+    import importlib.util
+    from unittest import mock
+    from nexclash import nextboot, nxcout
+    spec = importlib.util.spec_from_file_location('nexclash_cli_selfcheck', NEXCLASH)
+    cli = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(cli)
+    bad = []
+    rep0 = ['Verify    : synthetic.rzx 100 frames -> IDENTICAL', 'Result    : PASSED']
+
+    def cov(how, frames=100, unmodelled=()):
+        return {'synthetic.rzx': dict(frames=frames, of=100, how=how, desync=None, rom1='48K machine', segments=False,
+                                      unmodelled=list(unmodelled))}
+
+    def res(nex, kind='alt', faults=None, c=None):
+        return {nex: (kind, ['synthetic'], faults or {}, cov('as recorded') if c is None else c)}
+    cases = [('checker exception', RuntimeError('injected'), False, 'incomplete'),
+             ('early partial replay', lambda n: res(n, c=cov('partial', 40)), False, 'incomplete'),
+             ('no coverage', lambda n: res(n, c={}), False, 'incomplete'),
+             ('ROM select not modelled', lambda n: res(n, c=cov('as recorded', unmodelled=[2])), False, 'incomplete'),
+             ('a fault', lambda n: res(n, faults={'synthetic.rzx': [(1, 0x38, 'run')]}), False, 'fail'),
+             ('boot failed', lambda n: res(n, kind='boot'), False, 'fail'),
+             ('last-frame truncation (accepted)', lambda n: res(n, c=cov('last frame', 99)), False, 'complete'),
+             ('record pin (waived)', None, True, 'complete'),
+             ('recordings given, no check run', None, False, 'incomplete')]
+    with tempfile.TemporaryDirectory() as d:
+        for label, inj, frozen, want in cases:
+            out = os.path.join(d, label.split()[0])
+            os.makedirs(out, exist_ok=True)
+            nex = os.path.join(out, 'synthetic_sprites.nex')
+            open(nex, 'wb').write(b'')
+            cli._CHECKS.clear()
+            cli._AUTO.clear()
+            cli._AUTO.update(rzx=[] if frozen or inj is None else ['synthetic.rzx'], quick=None, z80=None)
+            if frozen:
+                cli.runchecks.add(cli._CHECKS, 'rom_paths', 'waived', 'record x pin: synthetic', required=False)
+            side = inj if isinstance(inj, Exception) else None
+            ret = inj(nex) if callable(inj) else None
+            rep = list(rep0)
+            with mock.patch.object(nextboot, 'rom_paths', side_effect=side, return_value=ret), \
+                    mock.patch.object(cli, 'print', create=True), mock.patch('builtins.print'):
+                cli._finish(out, 'synthetic', rep)
+            lines, rec = [], {'name': 'synthetic'}
+            f = _checks_status(out, 'synthetic', 'synthetic', lines, True, rec)
+            got = 'fail' if f else 'incomplete' if rec.get('_incomplete') else 'complete'
+            # PRF1: what the run itself knows (its structured status, with and without the Verify line); a run given
+            # no recordings cannot know some were expected (free-run engines verify without any): only selftest's
+            # boundary, which gave them, catches that case
+            ck = cli.runchecks.read(out, 'synthetic')
+            for text in ('\n'.join(rep), '\n'.join(l for l in rep if not l.startswith('Verify'))):
+                prf = nxcout.proof(text, 'no-such-md5', 'no-such-md5', checks=ck)
+                prf_ok = nxcout.qualified(prf) == (want != 'complete' and inj is not None or frozen and want != 'complete')
+                if got != want or not prf_ok:
+                    bad.append('%s: %s (want %s), PRF1 %s' % (label, got, want, prf.get(nxcout.QUALIFY, 'complete')))
+    return bad
+
+
 def tools_check(src):
     """The shared analysis commands (inspect / scan / isr / cost / preview / survey) against known Chuckie Egg facts
     (~1 min). Returns the number of failures. A session that improves a command keeps these passing
     and adds a check for what it added (one easy game is enough: the commands are game-independent)."""
     from nexclash import snapinfo, memscan, isrinfo, drawcost
     bad = R.selfcheck()
-    print('%-4s tools: records plan() on synthetic stamps%s' % ('OK' if not bad else 'FAIL', '' if not bad else ' (%s)' % bad[:3]))
+    print('%-4s tools: records plan() on synthetic stamps, recipe digest and ROM identity mutations%s' % (
+        'OK' if not bad else 'FAIL', '' if not bad else ' (%s)' % bad[:3]))
+    vb = verification_selfcheck()
+    print('%-4s tools: check status at the stamp / PRF1 boundary (checker exception, partial, no coverage, unmodelled '
+          'ROM, missing run -> INCOMPLETE; fault, boot -> FAIL; pin, last frame -> complete)%s' % (
+              'OK' if not vb else 'FAIL', '' if not vb else ' (%s)' % vb[:3]))
+    bad = list(bad) + vb
     global _PUSH
     keep, _PUSH = _PUSH, False                  # the no-push-access gate (Dean 2026-10-21)
     try:
@@ -319,11 +510,30 @@ def tools_check(src):
     print('%-4s tools: recolour .nex offsets / splice / refusals on a synthetic .nex%s' % (
         'OK' if not rbad else 'FAIL', '' if not rbad else ' (%s)' % rbad))
     cbad += len(rbad)
+    from nexclash import paint                  # the shared painter (refactor plan 19-22, docs/COLOURS.md)
+    pbad = paint.selfcheck()
+    print('%-4s tools: paint - regions closed off by drawn lines, neck split, no straight cut, head guess, labels '
+          'carried to a mirrored frame, sheet read-back, row-band control flagged%s' % (
+              'OK' if not pbad else 'FAIL', '' if not pbad else ' (%s)' % pbad[:3]))
+    cbad += len(pbad)
     from nexclash import z80n
     zbad = z80n.selfcheck()
     print('%-4s tools: z80n - every Z80N instruction against worked results (core 3.02.05 / guide r3)%s' % (
         'OK' if not zbad else 'FAIL', '' if not zbad else ' (%s)' % zbad[:3]))
     cbad += len(zbad)
+    from nexclash import jnext                  # play checks: soak / pace / flicker / looksheet (docs/CHECKS.md)
+    for name, jbad in jnext.selfcheck():
+        print('%-4s tools: %s%s' % ('OK' if not jbad else 'FAIL', name, '' if not jbad else ' (%s)' % str(jbad)[:200]))
+        cbad += len(jbad)
+    from nexclash import nxcout                 # .nxc output: vendored packager + ZX0 pinned, metadata rules
+    nbad = nxcout.selfcheck()
+    print('%-4s tools: nxc - nexclash/nxc.py and tools/zx0 match their pins; PRF1, target, patch_by rules%s' % (
+        'OK' if not nbad else 'FAIL', '' if not nbad else ' (%s)' % str(nbad)[:200]))
+    cbad += len(nbad)
+    from nexclash import hooklib                # shared hook library for new engines (asm/lib; refactor plan 26)
+    for name, hbad in hooklib.selfcheck():
+        print('%-4s tools: %s%s' % ('OK' if not hbad else 'FAIL', name, '' if not hbad else ' (%s)' % str(hbad)[:200]))
+        cbad += len(hbad)
     rec = R.load('chuckie_egg')
     work = tempfile.mkdtemp(prefix='nexclash_tools_')
     d, why = stage(rec, src, work)
@@ -334,6 +544,7 @@ def tools_check(src):
     checks_ = []
 
     def ok(name, cond, info=''):
+        cond = bool(cond)                       # a falsy [] / 0 / None is a failure too, not only False
         checks_.append(cond)
         print('%-4s tools: %s%s' % ('OK' if cond else 'FAIL', name, '' if cond else ' (%s)' % str(info)[:200]))
 
@@ -375,6 +586,19 @@ def tools_check(src):
         _, r = drawcost.cost(ez, 39500, [er], stop=1500)
         ok('cost plotter 39500 (1500 frames): 1402 calls, median 19535 T',
            r['calls'] == 1402 and r['median'] == 19535, r)
+        for name, cond, info in nxcout.chuckie_check(ez, work, NEXCLASH, sys.executable):
+            ok(name, cond, info)                # default output GAME.nxc = the --nex sprite build when applied
+        for x in nxcout.multi_check(src, work, NEXCLASH, sys.executable, stage) + \
+                nxcout.proof_check(src, work, NEXCLASH, sys.executable, stage):
+            if x[0] == 'SKIP':
+                print('SKIP tools: %s' % x[1])
+            else:
+                ok(*x)                          # every variant / toggle packaged and read back; PRF1 keeps open checks
+        live = jnext.live_check(ez, work)       # JNext + card ($NEXCLASH_JNEXT_CARD) present
+        if live:
+            ok(*live)
+        else:
+            print('SKIP tools: play checks in JNext (no jnext or no $NEXCLASH_JNEXT_CARD)')
         from nexclash import survey
         _, r = survey.survey(ez, [er], os.path.join(work, 'survey'), stop=600, log=lambda m: None)
         rt = {x['routine']: x for x in r['routines']}
@@ -382,10 +606,197 @@ def tools_check(src):
            r['engine'] == 'chuckie' and r['plain']['boot'].startswith('OK') and r['routines'][0]['routine'] == 43899 and
            rt[43899]['calls'] == 1059 and rt.get(40000, {}).get('calls') == 814 and
            len(rt[40000]['callers_seen']) == 6 and rt[40000]['T_median'] == 665, r['routines'][:2])
+        rom_paths_check(src, ez, er, work, ok)
+        altrom0_check(src, work, ok)
     finally:
         sys.stderr = old
     shutil.rmtree(work, ignore_errors=True)
     return checks_.count(False) + len(bad) + cbad
+
+
+def _ref_build(src, game, which):
+    """-> (snapshot, {recording name: path}, the record's built .nex) from the reference folder, or None when
+    a file is missing or its MD5 is not the record's (the check is then skipped, not failed)."""
+    rec = R.load(game)
+    base = os.path.dirname(rec['inputs']['snapshot']['path'])
+    z80 = os.path.join(src, rec['inputs']['snapshot']['path'])
+    rz = {r['name']: os.path.join(src, r['path']) for r in rec['inputs']['recordings']}
+    o = rec['outputs'][which]
+    nex = os.path.join(src, base, o['file'])
+    for p in [z80, nex] + list(rz.values()):
+        if not os.path.isfile(p):
+            return None
+    return (z80, rz, nex) if md5(nex) == o['md5'] else None
+
+
+def _short_rzx(path, frames, cut_at, out):
+    """`out`: the first `frames` frames of `path`, frame `cut_at` (1-based) without its port readings - a
+    recording whose input runs out there, as one that ends early does."""
+    import skoolkit.rzxplay as rp
+    from nexclash import rzx as RZ
+    ctx, _ = RZ._replay(path, stop=1)
+    tr = ctx.simulator.tracer
+    tr.frames = tr.frames[:tr.frame_index + frames]
+    f = tr.frames[tr.frame_index + cut_at - 1]
+    tr.frames[tr.frame_index + cut_at - 1] = type(f)(f.fetch_counter, f.start, f.start)
+    rp.write_rzx(out, ctx, [])
+
+
+def altrom0_check(src, work, ok):
+    """An explicit patch.altrom0 fills alt ROM image 0 for both kinds of image-1 build (refactor plan 2): Chuckie Egg
+    (Sinclair's ROM + hooks, altrom_whole) and Knight Tyme (its own complete image 1, altrom_low), each built with the
+    new fill and altrom0 = 0x3500-0x3600, booted in the Next model: image 0 = the 128K ROM 0 + the build's bytes."""
+    import copy
+    from nexclash import chuckie, knight_tyme as kt, nextboot as nb, z80tonex as zt
+    for game, mk in (('chuckie_egg', lambda z: chuckie.ChuckiePatch()),
+                     ('knight_tyme', lambda z: (kt.use_game(z), kt.KnightTymePatch())[1])):
+        rec = R.load(game)
+        z80 = os.path.join(src, rec['inputs']['snapshot']['path'])
+        if not os.path.isfile(z80) or md5(z80) != rec['inputs']['snapshot']['md5']:
+            print('SKIP tools: alt image 0 on %s (reference snapshot not found)' % game)
+            continue
+        fill, zt.ALTROM_FILL = zt.ALTROM_FILL, 'whole'
+        try:
+            p = mk(z80)
+            p.altrom0 = (0x3500, 0x3600)
+            nex = os.path.join(work, 'img0_%s.nex' % game)
+            zt.convert(z80, nex, quiet=True, patch=copy.deepcopy(p))
+            st = nb.boot(nex, zt.Z80Snapshot(z80).pc, sysrom=nb.system_rom3()[0])
+            want = bytearray(zt.rom128_0())
+            want[0x3500:0x3600] = p.page[0x1500:0x1600]
+            kind = 'Sinclair\'s ROM + hooks' if zt.altrom_whole(p) else 'its own complete image 1'
+            ok('alt image 0: %s (%s) with altrom0 0x3500-0x3600 boots with image 0 = the 128K ROM 0 + its bytes'
+               % (game, kind), zt.altrom0(p) == (0x3500, 0x3600) and bytes(st['alt'][0]) == bytes(want), zt.altrom0(p))
+        finally:
+            zt.ALTROM_FILL = fill
+
+
+def keypad_check():
+    """The 128K ROM 1 keypad exception is scoped to the keypad code running (no game data: one synthetic replay frame,
+    modelled Next image 1 differing from SkoolKit's 128K ROM 1 at its first keypad byte): run or read by the keypad
+    code itself (PC inside it) -> listed, not compared; the same byte read as data by game code in RAM (PC 0x8000)
+    -> MISMATCH. -> [(name, ok, info)]"""
+    from types import SimpleNamespace
+    from unittest import mock
+    from skoolkit import ROM48, ROM128, read_bin_file
+    from nexclash import nextboot as nb, simrun
+    r48, r128 = list(read_bin_file(ROM48, 16384)), list(read_bin_file(ROM128[1], 16384))
+    a = next(x for x in range(nb.KEYPAD_CODE, 0x4000) if r48[x] != r128[x])
+    images = [bytearray(r48), bytearray(r48)]
+    images[1][a] = r128[a] ^ 0xFF
+    st = dict(nr={0x8C: 0x80}, mmu=[255] * 8, p1ffd=4, alt=images, mem=list(images[1]) + [0] * 49152)
+
+    class Mem(list):
+        o7ffd = 0x10
+    out = []
+    for pc, want in ((a, 'keypad code'), (0x8000, 'game code in RAM')):
+        def replay(path, hooks, stop=None, keep_snapshots=False, pc=pc):
+            mem = Mem(r128 + [0] * 49152)
+            hooks.on_sim(SimpleNamespace(memory=mem))
+            hooks.on_frame(1)
+            hooks.on_read(a, pc, mem)
+            return 1
+        with mock.patch.object(nb, 'tail_of', return_value=(0x8000, 0x5B00, 20)), \
+                mock.patch.object(nb, 'boot', return_value=st), \
+                mock.patch.object(simrun, 'rzx_frames', return_value=(1, 1)), \
+                mock.patch.object(simrun, 'play_rzx', replay):
+            kind, lines, faults, cover = nb.rom_paths(['k_sprites.nex'], ['k.rzx'], sysrom=bytes(images[1]))['k_sprites.nex']
+        if pc == a:
+            out.append(('rom paths: the 128K ROM 1 keypad code reading its own byte 0x%04X: listed, not compared' % a,
+                        not faults and any('128K ROM 1 only' in x for x in lines), lines[:2]))
+        else:
+            out.append(('rom paths: negative - game code (PC 0x8000) reading keypad byte 0x%04X as data, the Next\'s '
+                        'differing: MISMATCH' % a, bool(faults.get('k.rzx')) and any('MISMATCH' in x for x in lines),
+                        lines[:2]))
+    return out
+
+
+def rom_paths_check(src, ez, er, work, ok):
+    """nextboot.rom_paths on what real recordings contain (2026-11-04; BRIEFING A2): input that runs out at the
+    end of a recording or before it (Chuckie Egg, cut), a 128K recording made with the 48K ROM as ROM 1 and one
+    made of segments with their own snapshots (Knight Tyme), set-ups that hold the loading picture on the raster line (Spellbound, Three Weeks), and the negatives:
+    Knight Tyme's real alt image 0 difference (the Bridge star map) and one alt ROM byte changed under Spellbound."""
+    from nexclash import nextboot as nb, simrun, z80tonex as zt
+    bad = nb.selfcheck()
+    ok('rom paths: nextboot.selfcheck - raster line ends a 250-frame hold (frozen line: never), NR 0x1E/0x1F, '
+       'a .nex that does not boot is reported', not bad, bad)
+    for x in keypad_check():
+        ok(*x)
+    plain = os.path.join(work, 'rp_chuckie.nex')
+    zt.convert(ez, plain, None, True, quiet=True)
+    for cut, how in ((30, 'last frame'), (12, 'partial')):
+        short = os.path.join(work, 'rp_short%d.rzx' % cut)
+        _short_rzx(er, 30, cut, short)
+        n = simrun.run(None, [short], type('NoHooks', (), {})())       # "Port readings exhausted": warns, no raise
+        r = nb.rom_paths([plain], [short])[plain]
+        c = r[3].get(os.path.basename(short), {})
+        ok('rom paths: input runs out in frame %d of 30 (%s): frames 1-%d checked, no raise' % (cut, how, cut - 1),
+           n == cut and c.get('how') == how and c.get('frames') == cut - 1 and not r[2], (n, c, r[1][:3]))
+    kt = _ref_build(src, 'knight_tyme', 'sprites')
+    if kt:
+        z80, rz, nex = kt
+        r = nb.rom_paths([nex], [rz['kt_t1.rzx']], stop=940, z80=z80)[nex]
+        c, f = r[3]['kt_t1.rzx'], r[2].get('kt_t1.rzx', [])
+        if nb.system_roms() is None:                   # the star map differs from NextZXOS's ROM 0 only
+            ok('rom paths: Knight Tyme kt_t1 (940 frames) replays on the 48K ROM as ROM 1, in sync',
+               c['rom1'] == '48K' and c['how'] == 'as recorded' and c['frames'] == 940, (c, r[1][:3]))
+            print("SKIP tools: rom paths: Knight Tyme's Bridge star map MISMATCH (NextZXOS's ROM 0 not modelled: set "
+                  "NEXCLASH_NEXT_ROM to the 64K enNextZX.rom)")
+        else:
+            ok("rom paths: Knight Tyme kt_t1 (940 frames) replays on the 48K ROM as ROM 1; MISMATCH only the Bridge star "
+               "map, image 0 0x0D00- read at frame 937 (the Next's ROM 0; REFACTOR 2)",
+               c['rom1'] == '48K' and c['how'] == 'as recorded' and c['frames'] == 940 and f and
+               all(k[0] == 0 and k[2] == 'next' and 0x0D00 <= k[1] < 0x0E00 for k in f) and
+               any('MISMATCH' in x and 'frame 937' in x for x in r[1]), (c, f[:4], r[1][:3]))
+        known = [(k['image'], int(k['from'], 16), int(k['to'], 16), k['why']) for k in R.load('knight_tyme')['rom_paths_known']]
+        r = nb.rom_paths([nex], [rz['kt_t1.rzx']], stop=940, z80=z80, known=known)[nex]
+        ok("rom paths: Knight Tyme with its record's rom_paths_known: the star map KNOWN, no fault, no MISMATCH",
+           not r[2] and any('KNOWN' in x for x in r[1]) and not any('MISMATCH' in x for x in r[1]), r[1][:3])
+        r = nb.rom_paths([nex], [rz['kt_rooms.rzx']], stop=300, z80=z80, known=known)[nex]
+        c = r[3]['kt_rooms.rzx']
+        ok('rom paths: Knight Tyme kt_rooms (300 frames, a room per segment by poke): replayed per segment, in sync',
+           c['segments'] and c['how'] == 'as recorded' and c['frames'] == 300 and not r[2], (c, r[1][:3]))
+    else:
+        print('SKIP tools: rom paths on Knight Tyme (reference files not found)')
+    sb = _ref_build(src, 'spellbound_magic_knight', 'sprites')
+    if sb:
+        z80, rz, nex = sb
+        r = nb.rom_paths([nex], [rz['t1.rzx']], stop=30, z80=z80)[nex]
+        ok("rom paths: Spellbound boots through its picture hold; t1 (30 frames) every byte as recorded, the 128K "
+           "ROM 1's keypad code listed, not compared", r[0] == 'alt' and not r[2] and
+           any('every byte the game runs is as recorded' in x for x in r[1]) and
+           any('128K ROM 1 only' in x for x in r[1]), r[1][:3])
+        boot = nb.boot
+
+        def flipped(*a, **k):                    # negative: alt image 1 0x0038 (IM 1, run every frame) changed
+            st = boot(*a, **k)
+            st['alt'][1][0x38] ^= 0xFF
+            return st
+        nb.boot = flipped
+        try:
+            r = nb.rom_paths([nex], [rz['t1.rzx']], stop=30, z80=z80)[nex]
+        finally:
+            nb.boot = boot
+        ok('rom paths: negative - Spellbound with alt image 1 0x0038 changed: MISMATCH at 0x0038 (run)',
+           (1, 0x38, 'run') in r[2].get('t1.rzx', []) and any('MISMATCH' in x and '0x0038 run' in x for x in r[1]),
+           r[1][:2])
+    else:
+        print('SKIP tools: rom paths on Spellbound (reference files not found)')
+    tw = _ref_build(src, 'three_weeks', 'sprites')
+    if tw:
+        from nexclash import three_weeks
+        z80, rz, nex = tw
+        fill, zt.ALTROM_FILL = zt.ALTROM_FILL, 'rom3'     # its record pin
+        try:
+            _, ta, tn = nb.tail_of(nex)
+            chk = nb.check(nex, z80, three_weeks.ThreeWeeksPatch(), (ta, ta + tn))
+        finally:
+            zt.ALTROM_FILL = fill
+        r = nb.rom_paths([nex], [rz['t128_r6.rzx']], stop=30, z80=z80)[nex]
+        ok('rom paths: Three Weeks boots through its picture hold; nextboot.check OK (128K paging as saved); '
+           't128_r6 (30 frames) checked', not chk and r[0] == 'alt' and r[3]['t128_r6.rzx']['frames'] == 30, (chk, r[1][:2]))
+    else:
+        print('SKIP tools: rom paths on Three Weeks (reference files not found)')
 
 
 def coloursheet_check():
@@ -602,7 +1013,7 @@ def canary2(src):
     bad = rebuild(rec, d, lines)
     v = rec['verify']
     out = os.path.join(d, 'canary')
-    cmd = [sys.executable, NEXCLASH, 'auto', os.path.join(d, rec['inputs']['snapshot']['name'])] + \
+    cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', os.path.join(d, rec['inputs']['snapshot']['name'])] + \
         v.get('args', []) + ['--quick', str(rec.get('canary_quick', 300)), '-o', out]
     for r in v.get('rzx', []):
         cmd += ['--rzx', os.path.join(d, r)]
@@ -771,10 +1182,14 @@ def main():
         futs = [ex.submit(run_one, r, act, src, work, human) for r, act, _ in todo]
         for f in concurrent.futures.as_completed(futs):
             rec, act, bad, lines, why = f.result()
-            if why:
+            if lines:
+                print('\n'.join(lines), flush=True)
+            if why:                             # not run, or run in part (a rework's inputs missing): no stamp
                 skipped.append('%s (%s)' % (rec['name'], why))
+                fails += bad
+                if bad:
+                    failed.append(rec['name'])
                 continue
-            print('\n'.join(lines), flush=True)
             fails += bad
             if bad:
                 failed.append(rec['name'])

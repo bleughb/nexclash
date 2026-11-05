@@ -14,6 +14,8 @@ turn into a sprite, in every situation it can be in:
    bullets, pickups, lifts, water, conveyor belts.
 7. Return to a place you already visited.
 8. Later levels matter: a trainer / infinite-lives option makes them reachable (say which you used).
+9. Every menu the game has: options, define keys (redefine, then play with the new keys), pause and
+   resume, high-score entry; game over back to the title and a second game (docs/CHECKS.md "Coverage").
 
 Name files consistently: `<game>.z80` and `<game>.rzx`. Fuse may still autosave: `nexclash.py`
 strips autosave snapshots itself (`nexclash.py rzx info` shows how many there were).

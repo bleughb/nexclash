@@ -175,6 +175,34 @@ Limit: transparent paint and keys outside player / rainbow are reported, not app
    Not useful here: LDIX family (transparency is per nibble), PIXELAD / PIXELDN (INC H already),
    LDWS / LDPIRX.
 
+## Rework (opt-in): the sky fix, Rainbow Islands .nxc v1.0 (engine rainbow_z80n_sky, `NEXCLASH_REWORK=rainbow_z80n_sky`)
+Ported from Jon Attree's .nxc work, 2026-11-04 (pilot runs/rainbow_sky/nexclash: d7abd1c + 8e111d0, the clone's
+NEXCLASH_RAINBOW_SKY=1 test variant). Published .nxc: **Rainbow Islands v1.0** (github.com/jattree/nxc, patch
+38e9cead; its immunity-bank cheat fix is .nxc-level only, outside the engine). Dean's files and build (69369c89,
+pin rom3) are untouched and stay the default.
+- What and why: partial map tiles have NON-bright blue paper (ULA palette entry 17) beside the bright blue sky
+  (entry 25): dim blue squares round objects on the bright-sky islands. Entry 17 is set to bright blue at every game
+  frame start on islands 1 and 4-7 (rounds 0-3, 12-27), the Next's default blue on islands 2-3 (blue paper is their
+  sky / scenery, on purpose) and after the ending (round 255). s_lim's `LD (V_LON),A` becomes a JP to the sky code
+  appended to the alt ROM block (A and F only, both dead there). Inks and game code untouched.
+- Kept apart: nexclash/rainbow_z80n_sky.py (a copy of the clone's rainbow_z80n.py, sky always on), the loading
+  stub asm/rainbow_z80n_sky_ldscr.asm + docs/profiles/rainbow_z80n_sky.json; Dean's hooks, profile and colours
+  are read, not copied. engines.py picks it only with NEXCLASH_REWORK=rainbow_z80n_sky; the pinned rom3 fill
+  stays (as published). Moved in: the loading screen (rainbow_z80n_loading.scr, tape screen d91477c3, bank 32
+  above the pattern store), as the .nxc.
+- Rebuild = `nxc.py --bare`: sprites d7b2345c (2a63fc03 before the screen); plain 7ac543fb (Dean's); diagnostic
+  305a6ed7 (sky on, not in the .nxc).
+- Verify: `selftest.py --game rainbow_z80n --verify` (excluded record, run explicitly, 2026-11-04/05:
+  7,479 s = 2 h 05 min: Dean's verify ~45 min, then the rework's 15 replays in parallel, 4,778 s wall). Dean's
+  builds rebuilt and verified as before; the rework's three = recorded. Every recording IDENTICAL with ULA entry 17
+  = the model at every game frame start: Dean's rainbow.rzx / rainbownew.rzx (BRIGHT, rounds 0-2) and 13 LeeBee
+  cuts (islands 1, 4-7 BRIGHT; islands 2-3 default; the ending writes none), 110,962 frames; sky palette negatives
+  7/7 detected, the good patch IDENTICAL on the same frames; diagnostic build IDENTICAL; unit tests PASS (rainbownew).
+  That run's one FAIL was the recolour guard on Dean's build: the copy's RECOLOUR shadowed Dean's in
+  recolour.engines(); removed from the copy, `selftest.py --game rainbow_z80n` (rebuild + guard) then PASSED.
+- Hardware: none (JNext only: the owner played it through the real loader, 2026-11-03). Checklist: islands 1 and
+  4-7 show no dim squares round objects; islands 2-3 as Dean's; the ending; the loading screen.
+
 ## Open
 - Everything open in games/rainbow_islands.md (painted colours + recolour, bookmark verify of the
   boss rounds, Dean's rework).
@@ -209,13 +237,29 @@ Limit: transparent paint and keys outside player / rainbow are reported, not app
   entry between graphics with equal bytes: colours need the address (+ shift) in the key (tag after
   the stream, compared on a match; control: tag not compared -> detected).
 
+- [tool nexclash/engines.py] (rework import, 2026-11-04) the clone selected its variant with its own environment
+  switch; the copy keeps the sky always on and the engine registry selects it by NEXCLASH_REWORK; the LeeBee round cuts are replay-only
+  (they start mid-game), so the units run on Dean's rainbownew as before.
+- [tool nexclash/recolour.py] (rework import) recolour.engines() takes the last own module of a record that defines
+  RECOLOUR, so a copied engine module must drop it or it takes over the record's recolour guard (it did: "refused
+  its own build").
+
+## Friction
+- reuse: [local: add_screen.py's stub, the fourth engine copy (bank 32)] a shared stub is the maintainers' call.
+- retries: [none: the published sprites MD5 rebuilt first time in today's tree]
+- environment: [none: replays in worker processes; Dean's verify unchanged]
+- hand-rolled: [none: the clone's sky controls moved into the module (sky_controls)]
+- scratch: [none: import scripts stayed in the session scratchpad]
+
 ## Technique use
 - patch.runtime-colour-map: helped (override nibble rule, controls list); adapted: tables at the miss
   path instead of the upload, keys follow an in-place shift.
 - patch.isr-deferral: no help: about re-entrancy of a game ISR under hook time, not about pacing
   (judged from index.json; no card covers limiter pacing - written to LEARNINGS 2.1f instead)
+- patch.whole-altrom-image: no help: the sky rework keeps the pinned rom3 fill, as published
 
 ## Stage log
+- 2026-11-04 the sky fix imported as an opt-in rework (phase 7); Dean's build unchanged. 0 user rounds.
 - 2026-10-31 stage 4 speed round (user: "significant slowdowns"; profile, overrun recovery, verifier
   T fix + exact beam, 9 unit cases + control, quick 2000 x2, full verify stamped, 28 LeeBee rounds
   verified; knowledge from main 806937d, no merge needed: branch made from it): ~110 tool calls,

@@ -44,6 +44,13 @@ STUB_ORG = 0xC000       # entry bank is mapped at C000..FFFF by the loader
 STUB_PAGE_HI = 21      # upper 8K page of the stub bank (mapped at E000 by the loader)
 STUB_PAGE_LO = 20      # lower 8K page of the stub bank (mapped at C000 by the loader)
 STUB_SP = 0xDFFE       # top of the stub's 8K page (C000-DFFF)
+ROM48_BANK = 47         # Sinclair's 48K ROM, the source of the whole alt ROM image (pages 94/95, the last
+                        # bank of a 768K Next); read only by the stub, before the game starts
+ROM128_0_BANK = 46      # the 128K editor ROM (ROM 0), source of alt ROM image 0 for builds that set
+                        # patch.altrom0 (pages 92/93; read only by the stub)
+ALTROM_FILL = 'whole'   # alt ROM image 1 = Sinclair's ROM + the build's bytes (2026-11-04, docs/REFACTOR.md 1).
+                        # 'rom3' = the fill before it (the system ROM3, NextZXOS's, + the hook bytes only):
+                        # `nexclash.py ... --altrom-fill rom3` reproduces those builds for the records
 
 
 # --------------------------------------------------------------------------
@@ -291,14 +298,54 @@ def build_tail(snap, org, slot1=None, altrom=False):
 # Setup stub (runs from the entry bank at C000)
 # --------------------------------------------------------------------------
 
-def altrom_fill(org, page, lo, hi, low=None):
+def rom48():
+    """Sinclair's 48K ROM (SkoolKit's copy; never in this repo)."""
+    from skoolkit import ROM48, read_bin_file
+    return bytes(read_bin_file(ROM48, 16384))
+
+
+def rom128_0():
+    """The 128K editor ROM, ROM 0 (SkoolKit's copy): NOT NextZXOS's ROM0, which the Next pages as ROM 0."""
+    from skoolkit import ROM128, read_bin_file
+    return bytes(read_bin_file(ROM128[0], 16384))
+
+
+def altrom0(patch):
+    """(lo, hi) when the stub fills alt ROM image 0 (what a 128K game sees with ROM 0 selected) from the
+    128K editor ROM + the build's bytes lo..hi of patch.page: patch.altrom0 on any alt ROM build of the new
+    fill, whether image 1 takes Sinclair's ROM as its source (altrom_whole) or is the build's own complete image
+    (altrom (0x2000, 0x4000) + altrom_low): image 0 does not depend on that choice. The legacy pin (ALTROM_FILL
+    'rom3') never fills it. Target Renegade reads its sound data at 0x3500 there; the Next's own ROM0 has other
+    bytes."""
+    a0 = getattr(patch, 'altrom0', None)
+    if a0 is None or getattr(patch, 'altrom', None) is None or ALTROM_FILL == 'rom3':
+        return None
+    return tuple(a0)
+
+
+def altrom_whole(patch):
+    """True when the stub writes alt ROM image 1 from Sinclair's ROM (bank ROM48_BANK) + the build's bytes
+    lo..hi: every alt ROM build, except one that already writes all of 0x0000-0x3FFF itself (altrom =
+    (0x2000, 0x4000) + altrom_low: Cauldron, unchanged) and the old builds (ALTROM_FILL 'rom3')."""
+    alt = getattr(patch, 'altrom', None)
+    if alt is None or ALTROM_FILL == 'rom3':
+        return False
+    return not (tuple(alt) == (0x2000, 0x4000) and getattr(patch, 'altrom_low', None))
+
+
+def altrom_fill(org, page, lo, hi, low=None, whole=False, img0=None):
     """Stub code (assembled for address org in the stub page at C000) that fills alt ROM image 1:
     ROM3 (48K BASIC) copied 0x0000-0x3FFF in write mode ($8C bits 7+6), then bytes lo..hi-1 of
     RAM page `page` (the patch image of 0x2000-0x3FFF) written over it, then, with `low`
     (patch.altrom_low: a RAM page holding an image of 0x0000-0x1FFF), all of 0x0000-0x1FFF from that
     page. With lo..hi = 0x2000..0x4000 and `low` the image no longer depends on the system ROM3,
     which is NextZXOS's, not Sinclair's (BRIEFING C2 #5; Cauldron's hooks in ROM routines below
-    0x2000). $8C is left at 0 (the tail enables reads). The legacy 1FFD/7FFD writes that select ROM3
+    0x2000). whole=True (the default, altrom_whole): the first copy is Sinclair's ROM from bank
+    ROM48_BANK (pages 94/95, two 8K copies through slot 5) instead of the system ROM3, so every byte of
+    0x0000-0x3FFF comes from the build: NextZXOS's ROM3 sends IM 1 (0x004A CALL 0x386E) and the UDG print
+    (0x0B52 JP 0x387E) into the hook area (Starquake). img0 = (lo0, hi0) (altrom0): then alt image 0
+    too, ROM 0 selected (1FFD = 0, 7FFD = 0): the 128K editor ROM from bank ROM128_0_BANK, then bytes
+    lo0..hi0 of the page. $8C is left at 0 (the tail enables reads). The legacy 1FFD/7FFD writes that select ROM3
     remap MMU slots 6/7 (where the stub runs), so the routine runs from an alias of the stub page in
     slot 4, with the patch page in slot 5 as the copy source, restores slots 6/7 and jumps back; no
     stack use in between."""
@@ -308,10 +355,25 @@ def altrom_fill(org, page, lo, hi, low=None):
     c += read_nextreg(0x08) + b'\xF6\x80' + nextreg_a(0x08)     # OR $80: unlock 7FFD paging
     c += out_port(0x1FFD, 0x04) + out_port(0x7FFD, 0x10)         # ROM3 (alt image 1)
     c += nextreg(0x8C, 0xC0)                                     # alt ROM write mode
-    c += b'\x21\x00\x00\x11\x00\x00\x01\x00\x40\xED\xB0'       # LD HL,0 / LD DE,0 / LD BC,$4000 / LDIR
+    if whole:                                                    # Sinclair's ROM, 8K at a time
+        for k in range(2):
+            c += nextreg(0x55, 2 * ROM48_BANK + k)
+            c += b'\x21\x00\xA0\x11' + w16(0x2000 * k) + b'\x01\x00\x20\xED\xB0'
+        c += nextreg(0x55, page)
+    else:
+        c += b'\x21\x00\x00\x11\x00\x00\x01\x00\x40\xED\xB0'   # LD HL,0 / LD DE,0 / LD BC,$4000 / LDIR
     c += b'\x21' + w16(0xA000 + lo - 0x2000) + b'\x11' + w16(lo) + b'\x01' + w16(hi - lo) + b'\xED\xB0'
     if low is not None:
         c += nextreg(0x55, low) + b'\x21\x00\xA0\x11\x00\x00\x01\x00\x20\xED\xB0'
+    if img0 is not None:
+        c += out_port(0x1FFD, 0x00) + out_port(0x7FFD, 0x00)     # ROM 0 = alt image 0 (still write mode)
+        for k in range(2):
+            c += nextreg(0x55, 2 * ROM128_0_BANK + k)
+            c += b'\x21\x00\xA0\x11' + w16(0x2000 * k) + b'\x01\x00\x20\xED\xB0'
+        c += nextreg(0x55, page)
+        if img0[1] > img0[0]:
+            c += b'\x21' + w16(0xA000 + img0[0] - 0x2000) + b'\x11' + w16(img0[0]) + b'\x01' + w16(img0[1] - img0[0])
+            c += b'\xED\xB0'
     c += nextreg(0x8C, 0x00)
     c += nextreg(0x56, STUB_PAGE_LO) + nextreg(0x57, STUB_PAGE_HI)
     c += b'\xC3' + w16(org + len(c) + 3)                          # JP back to C000 space
@@ -320,7 +382,7 @@ def altrom_fill(org, page, lo, hi, low=None):
 
 
 def build_stub(snap, tail, tail_addr, p3_off, force50, setup_call=None, slot1=None, regs=None, altrom=None,
-               printer=None, altrom_low=None):
+               printer=None, altrom_low=None, altrom_whole=False, altrom0=None):
     code = bytearray()
     code += b'\xF3'                          # DI
     code += b'\x31' + w16(STUB_SP)           # LD SP,$FFFE
@@ -365,7 +427,7 @@ def build_stub(snap, tail, tail_addr, p3_off, force50, setup_call=None, slot1=No
         code += b'\xED\xB0'                                     # LDIR
         code += nextreg(0x57, STUB_PAGE_HI)
         if altrom is not None:                  # (lo, hi): patch bytes of the page for the alt ROM
-            code += altrom_fill(STUB_ORG + len(code), slot1[0], altrom[0], altrom[1], altrom_low)
+            code += altrom_fill(STUB_ORG + len(code), slot1[0], altrom[0], altrom[1], altrom_low, altrom_whole, altrom0)
 
     # Peripheral 3 ($08) value for the tail:
     #   keep bit 5 (AY stereo) and bit 4 (internal speaker) from the current setting,
@@ -510,7 +572,8 @@ def convert(src, dst, tail_req=None, force50=True, quiet=False, patch=None, keep
         printer = bytes(snap.banks[5][0x1B00:0x1C00])
     stub = build_stub(snap, tail, tail_addr, p3_off, force50,
                       patch.setup_call if patch is not None else None, slot1, regs, altrom, printer,
-                      getattr(patch, 'altrom_low', (None,))[0] if patch is not None and getattr(patch, 'altrom_low', None) else None)
+                      getattr(patch, 'altrom_low', (None,))[0] if patch is not None and getattr(patch, 'altrom_low', None) else None,
+                      altrom_whole(patch), altrom0(patch))
     if len(stub) > 0x1000:
         raise ValueError('stub too long')
 
@@ -521,6 +584,16 @@ def convert(src, dst, tail_req=None, force50=True, quiet=False, patch=None, keep
         bank10[0x1000:0x1000 + len(patch.stub_extra)] = patch.stub_extra
         bank10[0x2000:0x2000 + len(patch.hook_page_data)] = patch.hook_page_data
         banks.update(patch.extra_banks)
+    if altrom_whole(patch):
+        if ROM48_BANK in banks:
+            raise ValueError('bank %d holds the whole alt ROM image source (z80tonex.ROM48_BANK); the build uses it'
+                             % ROM48_BANK)
+        banks[ROM48_BANK] = rom48()
+    if altrom0(patch):
+        if ROM128_0_BANK in banks:
+            raise ValueError('bank %d holds alt image 0\'s source (z80tonex.ROM128_0_BANK); the build uses it'
+                             % ROM128_0_BANK)
+        banks[ROM128_0_BANK] = rom128_0()
     banks[STUB_BANK] = bytes(bank10)
     size = write_nex(dst, snap, banks)
 

@@ -34,6 +34,7 @@ Continue GAME NAME in nexclash (as above). Hardware round: here is my whole list
 
 Turns a ZX Spectrum `.z80` snapshot of a game into Spectrum Next `.nex` files: a plain conversion
 and a sprite build in which the game's figures are Next hardware sprites (no attribute clash).
+`patch` packages the sprite build as a `.nxc` patch to share (`--nex` keeps the `.nex` files too).
 Verification coverage varies by game and build; see STATUS.md and games/ for recordings, tests and hardware results.
 
 No game files are included in the release. Contribution packaging excludes known game-data file
@@ -44,12 +45,26 @@ service uploads it. GPL-3.0-or-later (LICENSE). Status of every game: STATUS.md.
 1. Download and unzip the latest release, or clone this repository, then enter its directory.
 2. With Python 3.10+, create a virtual environment (`python -m venv .venv`), activate it,
    then run `python -m pip install -r requirements.txt`.
+3. For the `.nxc`: a C compiler (`cc`, `gcc` or `clang`) builds the bundled ZX0 compressor once; on Windows
+   without one, download upstream's zx0.exe into tools/zx0/ (tools/zx0/README.md). Without either the build
+   keeps its `.nex` files and the report says why.
 
 ## Patch your game
 ```
 python nexclash.py patch MyGame.z80
 ```
-Output in `MyGame_nexclash/`: `MyGame.nex` (plain), `MyGame_sprites.nex` (sprites) and a report.
+Output in `MyGame_nexclash/`: `MyGame.nxc` and a report. **The `.nxc` is the file to share**: it
+holds the sprite build as a patch and needs the player's own copy of the game (the `.z80` it was built
+from, same MD5), so no game data travels with it. To play it on the Next, put it beside the game on
+the SD card with the `.nxc` loader: loader, card setup and the `nxc.py` tool at
+https://github.com/jattree/nxc. The `.nxc` holds every variant of the sprite build (its colour sets and toggles, the
+tape's loading screen), each checked on read-back; outputs it does not hold stay beside it, named in the
+report (`MyGame.nex`, the plain conversion). `--nex` also keeps `MyGame_sprites.nex` (sprites), to copy
+straight to the card. Once only: `--patch-by "Your Name"` puts you on the menu's
+credit line and is saved for later builds (or set `NEXCLASH_PATCH_BY`). Optional: `--publisher
+"Ocean, 1986"`, `--pok cheats.pok` (default `MyGame.pok` beside the snapshot), `--target-file` (the
+name players have the game under; default the snapshot's own, best in TOSEC style), `--no-nxc`.
+The `.nxc` carries the proof the report gives (`PRF1`), and says "not verified" when there is none.
 The last lines tell you how far it is proven:
 - **Recognised snapshot** - check whether the output matches the reference; see the game notes for its verification and hardware coverage.
 - **PATCHED** - a different dump of a supported game: every patch site held the original bytes,
@@ -72,8 +87,8 @@ execution) that follows this package's CLAUDE.md to add the game. When it works:
 ```
 python nexclash.py contribute MyGame --report MyGame_session/MyGame_nexclash/MyGame_report.txt
 ```
-builds `nexclash_contribution_MyGame.zip` - only the new code, profile, notes and results (game
-files are refused). Upload it as CONTRIBUTING.md says (no GitHub account needed); after review it
+builds `nexclash_contribution_MyGame.zip` - only the new code, profile, notes, results and the
+`MyGame.nxc` beside the report (game files and `.nex` files are refused). Upload it as CONTRIBUTING.md says (no GitHub account needed); after review it
 ships in the next release, for everyone.
 
 ## When the report says something is missing
@@ -116,10 +131,27 @@ STATUS.md lists every supported game, its engine, what the sprite build does and
 proven (generated from the evidence records, so it is always complete). Games whose engine is
 generic (the Codemasters TID engine: Fantasy World Dizzy, Magicland Dizzy and relocated copies;
 Dizzy V) are recognised automatically; anything else gets a plain `.nex` plus a report to guide
-the next step.
+the next step. New engines (2026-11): three_weeks, starquake, lunar_jetman, robin_of_the_wood, nightshade,
+knight_tyme, spellbound_magic_knight, rambo, ikari_warriors, renegade128 (Renegade).
+
+Existing games are frozen: each builds what it was validated against. Improvements come as opt-in
+reworks, each with its own proof and version (games/<game>.md "Rework"):
+| Game | Rework | Choose it with |
+|---|---|---|
+| Jet Pac | v1.1: rocket / fuel / flames fix, Enhanced, loading screen | `--altrom-fill whole` |
+| Match Day | v2: the trophy screen drawn clean (start-up tail moved) | `--altrom-fill whole` |
+| Atic Atac | v1.3: faster hooks, flicker fix, QAOP toggle, Enhanced | `NEXCLASH_REWORK=atic_atac_v13` |
+| Rainbow Islands (Z80N) | the sky fix: the squares round objects match the bright sky | `NEXCLASH_REWORK=rainbow_z80n_sky` |
+
+## For patch makers: new tools
+- The painter that follows the drawing, sprite sheet export / import: docs/COLOURS.md (PAINTER).
+- Play checks soak, pace, flicker and looksheet: docs/CHECKS.md.
+- Shared hook library for new engines (speed restore, pace limiter, preserving R, image cache, atomic
+  switch): docs/ENGINE_CONTRACT.md and the cards in docs/techniques/.
+- Pace target ORIGINAL by default: a new build runs no faster than the original (card patch.pace-limiter).
 
 ## Testing on the Next (details per game: games/)
-Copy `GAME_sprites.nex` to the SD card and run it. Check: it starts; every converted figure is
+Build with `--nex` and copy `GAME_sprites.nex` to the SD card and run it (or `GAME.nxc` with the loader). Check: it starts; every converted figure is
 visible, animates and is never left behind on screen; figures disappear where the original hides
 or covers them (boxes, dialogue, room changes, screen clears, scenery in front); music and speed
 are as the plain `.nex`. Each game's own checklist is in games/<game>.md. If something is wrong,
@@ -129,6 +161,7 @@ record an RZX in Fuse (autosave OFF) showing it and send it with the report.
 
 ## Per-game options (maintainers rebuild with their recordings)
 Dedicated engines (below) never auto-record: they only use the recordings you pass with `--rzx`.
+`auto` writes GAME.nxc like `patch`; the .nex files named below need `--nex`.
 ### Everyone's a Wally (128K snapshot)
     python nexclash.py auto wally.z80 --rzx my_play.rzx
 Outputs wally.nex (plain) and wally_sprites.nex (gang members and masked objects as sprites).

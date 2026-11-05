@@ -1,0 +1,187 @@
+{
+ "name": "lunar_jetman",
+ "order": 103,
+ "game": "Lunar Jetman",
+ "doc": "lunar_jetman.md",
+ "engine": "lunar_jetman",
+ "representative": true,
+ "reference": "lunar_jetman",
+ "inputs": {
+  "snapshot": {
+   "name": "lunar_jetman.z80",
+   "md5": "426084d3d941fd7452d6bebf726d9746",
+   "path": "lunar_jetman/lunar_jetman.z80"
+  },
+  "recordings": [
+   {
+    "name": "p1.rzx",
+    "md5": "11d459e3c9bf5c5903e46cce9faaf412",
+    "path": "lunar_jetman/p1.rzx"
+   },
+   {
+    "name": "p2.rzx",
+    "md5": "771af9512d0f03138e8abec05440502f",
+    "path": "lunar_jetman/p2.rzx"
+   },
+   {
+    "name": "p3.rzx",
+    "md5": "f2046105a166fe0cfdf8fbc12cc3b681",
+    "path": "lunar_jetman/p3.rzx"
+   },
+   {
+    "name": "lunar_jetman_s0.z80",
+    "md5": "94791e329fe984c2a9f599f27ac16b55",
+    "path": "lunar_jetman/lunar_jetman_s0.z80",
+    "note": "not a recording: the stepped start state at 0x8000 (the plain build and the verifier's start); the snapshot is the archive file's own state at the decrypter"
+   },
+   {
+    "name": "lunar_jetman.scr",
+    "md5": "29c0896bcb0190572962ad46aad275a7",
+    "path": "lunar_jetman/lunar_jetman.scr",
+    "note": "not a recording: the tape's loading screen (6,912 bytes)"
+   },
+   {
+    "name": "Jetpac.256",
+    "md5": "95d29dd6fb1cbbb5c04e734ced59f73a",
+    "path": "lunar_jetman/Jetpac.256",
+    "note": "not a recording: the Spec256 Jetpac conversion, source of Jetman's Enhanced suit"
+   },
+   {
+    "name": "spec256-palette.pal",
+    "md5": "b095dc99a047bab844b87b06657b0a7a",
+    "path": "lunar_jetman/spec256-palette.pal",
+    "note": "not a recording: the Spec256 palette (Spec256-Games' spec256-palette.pal), the Enhanced suit's colours; read beside Jetpac.256; licence not established, so private, never in the repo"
+   }
+  ]
+ },
+ "modules": [
+  "lunar_jetman"
+ ],
+ "own_modules": [
+  "lunar_jetman"
+ ],
+ "data": [
+  "docs/profiles/lunar_jetman.json",
+  "asm/lunar_jetman_hooks.asm",
+  "asm/lunar_jetman_palette.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": []
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "p1.rzx",
+   "p2.rzx",
+   "p3.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 80,
+  "note": "auto: at every hook call (h_new, h_tnew, h_clr, h_eo, h_teo, h_cls, h_msg) original and patched code from the same state to the same continuation, registers and 48K memory (dead stack aside), slot 4 restored; at every IM 1 the alt ROM image's handler against the original's (the image as the stub fills it over the system ROM3: set NEXCLASH_NEXT_ROM to enNextZX.rom, else rom3left cannot be seen); at every interrupt outside the plot code each object's sprite ink = the pixels its own XOR stores put on the original screen, palette = its colour; Enhanced tiles against their default tiles; default and Enhanced on every recording; 16 negatives on p1 (700 frames); the decrypter run to 0x8000 against s0 + the sites"
+ },
+ "outputs": {
+  "plain": {
+   "file": "lunar_jetman.nex",
+   "md5": "3e5ca3908616f76a33f864be57baef95"
+  },
+  "sprites": {
+   "file": "lunar_jetman_sprites.nex",
+   "md5": "e33f68c4fc0dca007daf14e99188ecfd"
+  },
+  "sprites_loading": {
+   "file": "lunar_jetman_sprites_loading.nex",
+   "md5": "4634886880940d0db5e4cee9c1113819"
+  },
+  "enhanced": {
+   "file": "lunar_jetman_enhanced.nex",
+   "md5": "dfeb2cf9d184d6672f2c1448c0d9b805"
+  },
+  "enhanced_loading": {
+   "file": "lunar_jetman_enhanced_loading.nex",
+   "md5": "62f7e914c390fcce7477d5efd2423cad"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Lunar Jetman",
+  "engine_col": "lunar_jetman (lunar_jetman.md)",
+  "build": "lunar_jetman_sprites_loading.nex 46348868 + lunar_jetman_enhanced_loading.nex 62f7e914 (every object a sprite from build-time images, XOR stores and colour painters NOP; whole alt ROM image from the build; starts at the file's decrypter; tape loading screen) = the published .nxc v1.0",
+  "software": "replay IDENTICAL on 3 recordings, default and Enhanced; negatives detected (games/lunar_jetman.md Results)",
+  "hardware": "none (JNext only)",
+  "next": "hardware round; ported from Jon Attree's .nxc work, 2026-11-04"
+ },
+ "checks": [
+  "asm2profile:lunar_jetman"
+ ],
+ "techniques": [
+  {
+   "application": "lunar_jetman.whole-altrom",
+   "id": "patch.whole-altrom-image",
+   "revision": 1,
+   "target": "alt ROM image 1 = Sinclair's 48K ROM + the hooks at 0x386E- (altrom 0x2000-0x4000 + altrom_low page 25): NextZXOS ROM3's IM 1 never reaches the hooks",
+   "phases": [
+    "setup"
+   ]
+  }
+ ],
+ "results": [
+  {
+   "application": "lunar_jetman.whole-altrom",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "46348868",
+   "scope": "3 recordings, 22,090 frames IDENTICAL default and Enhanced, every IM 1 handler compared over NextZXOS ROM3; rom3left negative detected (pilot, 2026-11-04; re-run by selftest at the import)",
+   "evidence": "games/lunar_jetman.md \"Results\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/lunar_jetman_hooks.asm": "6182c08be1845639",
+   "asm/lunar_jetman_palette.asm": "b8bd4aa764472e51",
+   "docs/profiles/lunar_jetman.json": "391d89e2b9253839",
+   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "28f3c5d8b1333ba6",
+   "nexclash/lunar_jetman.py": "64e422b7780c676a",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "6d6706710bce0b55",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-05"
+ },
+ "verified": {
+  "deps": {
+   "asm/lunar_jetman_hooks.asm": "6182c08be1845639",
+   "asm/lunar_jetman_palette.asm": "b8bd4aa764472e51",
+   "docs/profiles/lunar_jetman.json": "391d89e2b9253839",
+   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "28f3c5d8b1333ba6",
+   "nexclash/lunar_jetman.py": "64e422b7780c676a",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "6d6706710bce0b55",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-05"
+ }
+}

@@ -11,3 +11,7 @@ except ImportError:
         if _os.path.isdir(_p) and _p not in _sys.path:
             _sys.path.insert(0, _p)
     # still missing: modules that need it say so (build.rom48); records/views work without it
+
+if _os.environ.get('NEXCLASH_INPUT_AUDIT'):          # selftest: declared inputs only (nexclash/inputaudit.py)
+    from . import inputaudit as _inputaudit
+    _inputaudit.install(_os.environ['NEXCLASH_INPUT_AUDIT'])

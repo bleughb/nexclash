@@ -1,0 +1,266 @@
+{
+ "name": "three_weeks",
+ "order": 101,
+ "game": "Three Weeks in Paradise (128K)",
+ "doc": "three_weeks.md",
+ "engine": "three_weeks",
+ "representative": true,
+ "reference": "three_weeks",
+ "inputs": {
+  "snapshot": {
+   "name": "three_weeks_128.z80",
+   "md5": "72bcb108d7baec2ee10ede47594010dd",
+   "path": "three_weeks/three_weeks_128.z80"
+  },
+  "recordings": [
+   {
+    "name": "t128_tour.rzx",
+    "md5": "6689a6c612186e7fce3f8f051d303441",
+    "path": "three_weeks/t128_tour.rzx"
+   },
+   {
+    "name": "t128_gameover.rzx",
+    "md5": "22ed255e693cd39e1a84f1e2608171e8",
+    "path": "three_weeks/t128_gameover.rzx"
+   },
+   {
+    "name": "t128_pend.rzx",
+    "md5": "3b8f4683e13141c62c19f48a2f72b72f",
+    "path": "three_weeks/t128_pend.rzx"
+   },
+   {
+    "name": "t128_r6.rzx",
+    "md5": "9ea08b1411f65683c3275266f0d46040",
+    "path": "three_weeks/t128_r6.rzx"
+   },
+   {
+    "name": "t128_r8.rzx",
+    "md5": "bbc31538d37f6ed4b8de1f78ccec488e",
+    "path": "three_weeks/t128_r8.rzx"
+   },
+   {
+    "name": "t128_r9.rzx",
+    "md5": "76fcc2e50a738f5d57e81ef825fdea56",
+    "path": "three_weeks/t128_r9.rzx"
+   },
+   {
+    "name": "t128_r10.rzx",
+    "md5": "0041375479a49faf6a36751fee8103c9",
+    "path": "three_weeks/t128_r10.rzx"
+   },
+   {
+    "name": "t128_r11.rzx",
+    "md5": "8c373185e227895438a191c81fa4b3fa",
+    "path": "three_weeks/t128_r11.rzx"
+   },
+   {
+    "name": "t128_r12.rzx",
+    "md5": "06b30e5e253075cac8a2bbcf39656b30",
+    "path": "three_weeks/t128_r12.rzx"
+   },
+   {
+    "name": "t128_r18.rzx",
+    "md5": "f635d0534c4551403c9f1929bfde9d62",
+    "path": "three_weeks/t128_r18.rzx"
+   },
+   {
+    "name": "t128_r19.rzx",
+    "md5": "dc5cbcb8c2f3d6cbac4cb846972e3fc2",
+    "path": "three_weeks/t128_r19.rzx"
+   },
+   {
+    "name": "t128_r20.rzx",
+    "md5": "6b1513cbaa9a8bd137f62388bbda4056",
+    "path": "three_weeks/t128_r20.rzx"
+   },
+   {
+    "name": "t128_r21.rzx",
+    "md5": "d31d1f40b0566bf83e29b17bc9076a53",
+    "path": "three_weeks/t128_r21.rzx"
+   },
+   {
+    "name": "t128_r23.rzx",
+    "md5": "f7b4bdaa21acec23c4cf571f492ac99a",
+    "path": "three_weeks/t128_r23.rzx"
+   },
+   {
+    "name": "t128_r24.rzx",
+    "md5": "1601dd27fd05bbe6a17846ecfae35aa5",
+    "path": "three_weeks/t128_r24.rzx"
+   },
+   {
+    "name": "t128_r31.rzx",
+    "md5": "d7bcd5c156f298c174e40ac6374e6bac",
+    "path": "three_weeks/t128_r31.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "three_weeks"
+ ],
+ "own_modules": [
+  "three_weeks"
+ ],
+ "data": [
+  "docs/profiles/three_weeks.json",
+  "docs/profiles/three_weeks_figs.json",
+  "docs/profiles/three_weeks_gb.json",
+  "docs/profiles/three_weeks_enhanced.json",
+  "asm/three_weeks_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": []
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "t128_tour.rzx",
+   "t128_gameover.rzx",
+   "t128_pend.rzx",
+   "t128_r6.rzx",
+   "t128_r8.rzx",
+   "t128_r9.rzx",
+   "t128_r10.rzx",
+   "t128_r11.rzx",
+   "t128_r12.rzx",
+   "t128_r18.rzx",
+   "t128_r19.rzx",
+   "t128_r20.rzx",
+   "t128_r21.rzx",
+   "t128_r23.rzx",
+   "t128_r24.rzx",
+   "t128_r31.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 45,
+  "note": "auto: the build input is the archive file (bf0eff84) stepped from its 128 BASIC PAUSE to USR 0x6C00 (games/three_weeks.md). Differential verify at every hook site (5 plotters, save-under restore 0xB7D7, blit 0xA8ED with the pace window, wipe 0xA89C, room build 0xA9B8, clear 0x6F09, room 21 effect 0xA3F1, front cells 0xA1E9 / 0xA204, tiles 0xB78E): all registers, memory outside the screen and two dead-stack bytes, MMU and speed restored; sprite layer and Layer 2 (front cells, go-behind items) against an independent model; go-behind rules (Wally and every creature at least half visible, no item hidden or split, black never covers); default colours on all 16 recordings, Enhanced on 5 (ENH_VERIFY); unit 80 cases + guard and effect negatives; 21 negative patches on the recordings that reach them (NEG_PLAN)"
+ },
+ "outputs": {
+  "plain": {
+   "file": "three_weeks_128.nex",
+   "md5": "1a6f1bbe0abfbcfbb5712ad4f4700e95"
+  },
+  "sprites": {
+   "file": "three_weeks_128_sprites.nex",
+   "md5": "90eeeb14fa20edc3585124422530a41d"
+  },
+  "enhanced": {
+   "file": "three_weeks_128_enhanced.nex",
+   "md5": "e6e6f6b06c3cff4f2cd259ce27de035a"
+  }
+ },
+ "repro": [],
+ "pin": {
+  "altrom_fill": "rom3",
+  "note": "approved and published before the import (.nxc v1.0, 2026-11-04) with the old alt ROM fill (NextZXOS's ROM3 + the hook bytes 0x386E-): pinned so the rebuild is the approved build; `--altrom-fill whole` is the opt-in rework"
+ },
+ "status": {
+  "title": "Three Weeks in Paradise (128K)",
+  "engine_col": "three_weeks (three_weeks.md)",
+  "build": "three_weeks_128_sprites.nex 90eeeb14 (every figure a sprite, fixed colours by graphics, outline + fill; front cells and go-behind scenery on Layer 2; pace window ORIGINAL) + three_weeks_128_enhanced.nex e6e6f6b0 (menu set); published .nxc v1.0",
+  "software": "replay IDENTICAL, 16 recordings default + 5 Enhanced; negatives detected (games/three_weeks.md Results)",
+  "hardware": "none (JNext through the real loader only)",
+  "next": "hardware round; ported from Jon Attree's .nxc work, 2026-11-04"
+ },
+ "checks": [
+  "asm2profile:three_weeks"
+ ],
+ "techniques": [
+  {
+   "application": "three_weeks.figures.pattern-cache",
+   "id": "optimise.pattern-cache",
+   "revision": 2,
+   "target": "patterns built at run time from the game's bytes, cached by kind, graphics address, a rotating hash and inks (48 small, 20 large entries)",
+   "phases": [
+    "commit"
+   ]
+  },
+  {
+   "application": "three_weeks.pace",
+   "id": "verify.update-locked-pace",
+   "revision": 1,
+   "target": "headless JNext, input and captures by game update (the blit 0xA8ED), updates 21-561 of the walk",
+   "phases": []
+  }
+ ],
+ "results": [
+  {
+   "application": "three_weeks.figures.pattern-cache",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "90eeeb14",
+   "scope": "16 recordings, 62,696 frames IDENTICAL default; Enhanced e6e6f6b0 5 recordings, 28,930 frames (pilot run, 2026-11-04; re-run by selftest at the import)",
+   "evidence": "games/three_weeks.md \"Results\""
+  },
+  {
+   "application": "three_weeks.pace",
+   "check": "pace.update-locked",
+   "status": "pass",
+   "build": "90eeeb14",
+   "scope": "+0.15% against the plain build over updates 21-561 (JNext 1.1.104)",
+   "evidence": "games/three_weeks.md \"Pace\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/three_weeks_hooks.asm": "69167bf1c229fd3f",
+   "docs/profiles/three_weeks.json": "9fa7de0bcde41396",
+   "docs/profiles/three_weeks_enhanced.json": "1eee83a4fb08ecb2",
+   "docs/profiles/three_weeks_figs.json": "6b77fe72ae0fc63b",
+   "docs/profiles/three_weeks_gb.json": "9bb865de25bd51d0",
+   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "28f3c5d8b1333ba6",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/rainbow.py": "e247f602b7cecb7b",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/three_weeks.py": "588e7a94a3218480",
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "a11adbc9bd45494a",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-05"
+ },
+ "verified": {
+  "deps": {
+   "asm/three_weeks_hooks.asm": "69167bf1c229fd3f",
+   "docs/profiles/three_weeks.json": "9fa7de0bcde41396",
+   "docs/profiles/three_weeks_enhanced.json": "1eee83a4fb08ecb2",
+   "docs/profiles/three_weeks_figs.json": "6b77fe72ae0fc63b",
+   "docs/profiles/three_weeks_gb.json": "9bb865de25bd51d0",
+   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "28f3c5d8b1333ba6",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/rainbow.py": "e247f602b7cecb7b",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/three_weeks.py": "588e7a94a3218480",
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "a11adbc9bd45494a",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-05"
+ }
+}

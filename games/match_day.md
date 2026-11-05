@@ -169,6 +169,36 @@ Phase A done and agreed (2026-10-20 16:43). Phase B (build) in progress.
   and the game takes interrupts with SP inside its 0xFFB8 copy buffer (shift-6 copy builder).
 - See-through fill dark green (0x14): the pitch is attr 0x67 = BRIGHT green; fill = 0x1C (index 13).
 
+## Rework (opt-in): whole alt ROM image + start-up tail (engine matchday_v2, `--altrom-fill whole`)
+Ported from Jon Attree's .nxc work, 2026-11-04: refactor-unpinned 70a2529 (the tail, the verifier's alt ROM model;
+built, not verified) combined with pilot runs/match_day 4a6493d (the IM 1 handler compared at every 0x0038 and the
+rom3_left negative; its .nxc d7a7aaf9 was the alt ROM fix only). Not published as a .nxc: the proof is the
+verification below. Dean's files and build (f0aecd13 / 612761ec, pin rom3) are untouched and stay the default.
+- What and why:
+  - Whole alt ROM image: the shared fill (z80tonex, `--altrom-fill whole`) writes Sinclair's ROM + the hooks over
+    all of 0x0000-0x3FFF. Before, only 0x2300-0x3C01 went over NextZXOS's ROM3, whose IM 1 handler CALLs 0x386E and
+    UDG print JPs to 0x387E: here 0xFF bytes (RST 38). The menus run IM 1; only NextZXOS's DivMMC trap hid it.
+  - Start-up tail at 0xBE00 in both builds (TAIL_ADDR): the converter's default put it below SP (0xBD5D plain,
+    0xBD77 sprites), on the trophy screen's attribute data 0xBD40-0xBDBB (read first by PC 46378, frame 140):
+    white blocks and colour squares under the trophy. 0xBDC0-0xBFFF is written first by PC 34581 in both RZX.
+  - Verifier: the alt ROM image as the Next holds it (nextboot.alt_image), the IM 1 handler run against the
+    original's at every 0x0038 (NextZXOS's ROM3 modelled: enNextZX.rom, a record input), bytes outside the hooks
+    = Sinclair's; `auto` proves the tail with nextboot.rom_paths.
+- Kept apart: nexclash/matchday_v2.py (a copy of matchday.py with those changes; Dean's hooks, profile and colours
+  read, not copied); engines.py picks it before `matchday` for `--altrom-fill whole`, the opt-in the pin names.
+- Builds (= refactor-unpinned's): plain 02fd1835, sprites ec0706e9.
+- Results: `auto --altrom-fill whole` with both recordings (the record's rework recipe; 2026-11-04, ~48 min):
+  plain 02fd1835, sprites ec0706e9, boot OK; match_day.rzx 6,211 frames IDENTICAL (36,605 objects, 1.80M sprite
+  pixels, IM 1 handler = the original's at all 1,232 interrupts), spectrumcomputing 50,404 frames IDENTICAL (376,695
+  objects, 20.6M sprite pixels, 1,073 IM 1 interrupts); unit 461 cases PASS, 3 negative controls detected; rom3_left
+  detected at 1,232 of 1,232 IM 1 interrupts; the old tail (0xBD5D) detected by rom_paths (read before written).
+  ROM paths: the sprite build runs every ROM byte as recorded (reads only its IM 2 vector 0x3BFF-0x3C00); both
+  tails never read before written. Speed +2.3 % / +3.5 % (simulated, as Dean's). `selftest --game match_day`:
+  Dean's builds and the rework's rebuilt = recorded.
+  JNext 1.1.104 headless (read-only card copy, a key at the title, frame +50): the trophy screen drawn clean in
+  both rework builds, corrupted in Dean's 612761ec / f0aecd13 (specnext match_day/match_day_v2_JNEXT_trophy.png).
+- Hardware: none. Checklist: below, plus the trophy screen after the title (clean), the menus (IM 1).
+
 ## Hardware checklist
 - Plain match_day.nex and match_day_sprites.nex both start (title, menu, match).
 - Players, ball and shadow as sprites; no clash; pitch lines hidden behind players (green fill).
@@ -179,3 +209,23 @@ Phase A done and agreed (2026-10-20 16:43). Phase B (build) in progress.
 - Game speed equal to the plain build (round 2: +2.7 % measured); match sound / music at its normal
   pitch and tempo; any tearing.
 - Title picture, menu icons, team names (and the cup's team names) intact in both builds.
+
+## Lessons
+- [card patch.whole-altrom-image §Use / do not use] opt-in rework available: whole alt ROM image (see card patch.whole-altrom-image): its menus run IM 1 into 0xFF bytes once DivMMC no longer traps 0x0038 (RST 38 recursion; runs/altrom_audit; ROM paths: 0x004A from frame 1). Output pinned.
+- [tool nextboot.rom_paths] opt-in rework available: start-up tail. The trophy corruption is the tail the converter put below SP (0xBD5D plain, 0xBD77 sprites) on the trophy screen's attribute data 0xBD40-0xBDBB, read first by PC 46378 at frame 140; not the printer buffer, not the alt ROM. JNext: restoring those bytes at game start draws it clean. Fix: tail 0xBE00 (0xBDC0-0xBFFF written first by PC 34581 in both RZX); trial on refactor-unpinned (70a2529, JNext clean, not fully verified). Output pinned. New builds: `auto` proves every tail.
+
+- [card patch.whole-altrom-image §Verification] (rework, 2026-11-04) with the shared whole fill the verifier's
+  model comes from nextboot.alt_image, so the old-image negative (rom3_left) is a flag on the patch, not a second
+  build; detected by the IM 1 check at every menu interrupt. The tail proof's negative (the old tail) runs
+  rom_paths on a build kept out of `auto`'s own .nex list.
+
+## Technique use
+- patch.whole-altrom-image: no help: rework not applied, output pinned (record pin)
+- patch.whole-altrom-image: used: matchday_v2 builds with the shared whole fill and verifies against the Next's image
+
+## Friction
+- reuse: [tool nextboot.rom_paths] the tail proof and the alt ROM model are the shared ones; only the IM 1 check is per engine
+- retries: [none: both builds equal refactor-unpinned's first time]
+- environment: [none: headless JNext with HOME in the scratchpad, a read-only card copy]
+- hand-rolled: [local: one JNext key script for the trophy capture] (a key at the title, frames +50 and +450)
+- scratch: [none: JNext scripts stayed in the session scratchpad; the capture is in specnext]

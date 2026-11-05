@@ -13,6 +13,8 @@ Hooks object (any attribute may be missing):
     on_write(addr, value, pc, mem)       the opcode fetch); mem: the memory object (128K: .o7ffd)
     on_interrupt(sim, prev_pc)       just before an interrupt is accepted
     on_frame(n)                      at the end of frame n (1-based)
+    on_desync(f, message)            the replay lost sync in frame f, 1-based (SkoolKit's "Port readings exhausted"
+                                     / "port reading(s) left"): frames 1..f-1 ran in sync; without it a WARNING
 Memory hooks slow the run down ~2x; only installed when on_read / on_write exist.
 """
 import os
@@ -106,7 +108,7 @@ def _sim_class(hooks):
         def __init__(self, memory, registers=None, state=None, config=None):
             memory = _watch(memory, hooks, regs_ref)
             super().__init__(memory, registers, state, config)
-            regs_ref.append(self.registers)
+            regs_ref[:] = [self.registers]          # a new simulator per RZX segment: hooks see its PC
             R, ops = self.registers, self.opcodes
             before, after = getattr(hooks, 'before', None), getattr(hooks, 'after', None)
             if before or after:
@@ -131,14 +133,16 @@ def _sim_class(hooks):
     return S
 
 
-def play_rzx(path, hooks, stop=None):
+def play_rzx(path, hooks, stop=None, keep_snapshots=False):
     """Replay an RZX (autosave snapshots stripped to a temp copy first) with the hooks.
+    keep_snapshots: replay each segment from its own snapshot instead (a recording made of several, each a
+    new start state: Knight Tyme's kt_rooms, a room per segment entered by poke); on_sim runs per segment.
     Returns the number of frames played."""
     import skoolkit.rzxplay as rz
     from skoolkit.snapshot import Snapshot
     from . import rzx as RZ
     tmp, name = None, os.path.basename(path)
-    if sum(1 for b in rz.parse_rzx(path) if isinstance(b.obj, Snapshot)) > 1:
+    if not keep_snapshots and sum(1 for b in rz.parse_rzx(path) if isinstance(b.obj, Snapshot)) > 1:
         fd, tmp = tempfile.mkstemp(suffix='.rzx')
         os.close(fd)
         RZ.strip(path, tmp)
@@ -159,17 +163,33 @@ def play_rzx(path, hooks, stop=None):
     except SystemExit:
         pass
     except Exception as e:                      # SkoolKitError: the replay lost sync with the recording
-        if 'port reading' not in str(e):
+        if 'port reading' not in str(e).lower():    # "Port readings exhausted" too (Knight Tyme, Jetpac)
             raise
+        import re
         import sys
+        m = re.search(r'for frame (\d+)', str(e))
+        f = int(m.group(1)) + 1 if m else n[0]      # SkoolKit counts frames from 0: its frame F is frame F + 1 here
+        if hasattr(hooks, 'on_desync'):
+            hooks.on_desync(f, str(e))
+            return n[0]
         print('WARNING   : %s desyncs at frame %d (%s): the results below cover frames 1-%d only. '
               'Use --stop %d, or record it again in Fuse (docs/RECORDING_CHECKLIST.md); the built-in '
-              'recorder is 48K-only.' % (name, n[0], e, n[0] - 1, n[0] - 1), file=sys.stderr)
+              'recorder is 48K-only.' % (name, f, e, f - 1, f - 1), file=sys.stderr)
     finally:
         rz.Simulator, rz.CSimulator, rz.RZXTracer.next_frame = old
         if tmp:
             os.remove(tmp)
     return n[0]
+
+
+def rzx_frames(path):
+    """-> (frames the RZX's input recordings hold, snapshots in it): what a replay that keeps sync plays without
+    --stop; more than one snapshot = autosaves (play_rzx strips them) or segments (keep_snapshots)."""
+    import skoolkit.rzxplay as rz
+    from skoolkit.snapshot import Snapshot
+    bl = rz.parse_rzx(path)
+    return (sum(len(b.obj.frames) for b in bl if isinstance(b.obj, rz.InputRecording)),
+            sum(1 for b in bl if isinstance(b.obj, Snapshot)))
 
 
 def free_run(z80, frames, hooks, keys=None, stop_pc=None):

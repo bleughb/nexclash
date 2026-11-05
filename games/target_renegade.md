@@ -117,3 +117,16 @@ Reference (specnext/reference/target_renegade/):
 - Windows over the play area (pause, messages) and a test cheat: Dean, later.
 - ROM 0 bytes 0x3500-0x3508 (sound data) come from the Next's ROM 0 on hardware, Sinclair's in the RZX.
 - Painted colours: none yet (sheet sent; `recolour` takes the painted PNG).
+
+## Lessons
+- [card patch.whole-altrom-image §Use / do not use] opt-in rework available: whole alt ROM image (see card patch.whole-altrom-image), and image 0 from the 128K ROM 0 (`altrom0`, z80tonex.altrom0): the pinned build reads its 9 sound bytes at 0x3500 from NextZXOS's ROM 0 (JNext dump in play; ROM paths). Output pinned; refactor-unpinned has a trial build (4c68e258, quick verify only).
+
+## Technique use
+- patch.whole-altrom-image: no help: rework not applied, output pinned (record pin)
+
+## Friction
+- reuse: [none: maintainer note only, no work on this game]
+- retries: [none: no work on this game]
+- environment: [none: no work on this game]
+- hand-rolled: [none: no work on this game]
+- scratch: [none: no work on this game]
