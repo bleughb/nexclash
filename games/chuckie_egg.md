@@ -91,3 +91,16 @@ write-first player buffer). Unit tests: player/duck 1,560, hens 1,764, hen guard
 4. Level change, game over, high-score entry: all sprites gone on the cleared screen.
 5. Lifts (level 3+): lifts drawn as before, player standing on a lift fully visible.
 6. Faults: Fuse "Record from snapshot" on Chuckie_Egg.z80, autosave off, send the RZX.
+
+## Lessons
+- [card patch.whole-altrom-image §Use / do not use] opt-in rework available: whole alt ROM image (see card patch.whole-altrom-image). Pinned build bfad6be1, booted over NextZXOS's ROM3, runs its IM 1 (0x004A) and calculator (0x2AB7) bytes, and reads 89 ROM data bytes that differ (ROM paths, 2026-11-04; demonstrated in simulation, not on hardware). `--altrom-fill whole` builds df3e97f0, which shows none. Chuckie Egg stays the canary as pinned.
+
+## Technique use
+- patch.whole-altrom-image: no help: rework not applied, output pinned (record pin)
+
+## Friction
+- reuse: [none: maintainer note only, no work on this game]
+- retries: [none: no work on this game]
+- environment: [none: no work on this game]
+- hand-rolled: [none: no work on this game]
+- scratch: [none: no work on this game]

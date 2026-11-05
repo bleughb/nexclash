@@ -179,3 +179,17 @@ Phase A done and agreed (2026-10-20 16:43). Phase B (build) in progress.
 - Game speed equal to the plain build (round 2: +2.7 % measured); match sound / music at its normal
   pitch and tempo; any tearing.
 - Title picture, menu icons, team names (and the cup's team names) intact in both builds.
+
+## Lessons
+- [card patch.whole-altrom-image §Use / do not use] opt-in rework available: whole alt ROM image (see card patch.whole-altrom-image): its menus run IM 1 into 0xFF bytes once DivMMC no longer traps 0x0038 (RST 38 recursion; runs/altrom_audit; ROM paths: 0x004A from frame 1). Output pinned.
+- [tool nextboot.rom_paths] opt-in rework available: start-up tail. The trophy corruption is the tail the converter put below SP (0xBD5D plain, 0xBD77 sprites) on the trophy screen's attribute data 0xBD40-0xBDBB, read first by PC 46378 at frame 140; not the printer buffer, not the alt ROM. JNext: restoring those bytes at game start draws it clean. Fix: tail 0xBE00 (0xBDC0-0xBFFF written first by PC 34581 in both RZX); trial on refactor-unpinned (70a2529, JNext clean, not fully verified). Output pinned. New builds: `auto` proves every tail.
+
+## Technique use
+- patch.whole-altrom-image: no help: rework not applied, output pinned (record pin)
+
+## Friction
+- reuse: [none: maintainer note only, no work on this game]
+- retries: [none: no work on this game]
+- environment: [none: no work on this game]
+- hand-rolled: [none: no work on this game]
+- scratch: [none: no work on this game]

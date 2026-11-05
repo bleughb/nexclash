@@ -135,7 +135,7 @@ def tail_of(nex):
     raise ValueError('%s: no z80tonex start-up tail found' % nex)
 
 
-def rom_paths(nexes, rzxs, stop=None, sysrom=None):
+def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None):
     """Every ROM byte the ORIGINAL game runs or reads in its recordings, against what each built .nex
     gives it on the Next: the .nex booted over the system ROM3 (system_rom3(): NextZXOS's when given) to
     the game start - its alt ROM images, slot-1 page or the ROM3 itself. The per-event verifiers run
@@ -145,7 +145,11 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None):
     whose byte differs on the Next ('alt' / 'slot1': the build owns that ROM, each is a fault; 'plain':
     the Next's own ROM3 runs, reported only), and data reads of differing bytes that come from the Next's
     own ROM (the byte equals NextZXOS's there: Target Renegade e0b246e3's sound data); data reads of bytes
-    the build wrote (an IM 2 vector) are listed only."""
+    the build wrote (an IM 2 vector) are listed only. Also the start-up tail (z80tonex): its bytes stay in
+    game RAM, so the game must never read one before writing it (Match Day: the trophy's attributes).
+    z80 (the build's snapshot): also the printer buffer bytes the .nex starts with differently, booted
+    as NEXLOAD leaves it (NEXLOAD_PRINTER) - a warning: the stub puts it back only with
+    keep_printer_buffer (BRIEFING C2 #36)."""
     from skoolkit import ROM48, ROM128, read_bin_file
     from .simrun import run
     builds, sysr = [], system_roms() or [None, None, None, sysrom or system_rom3()[0]]
@@ -153,15 +157,21 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None):
         sysr[3] = sysrom
     tails = {nex: tail_of(nex) for nex in nexes}
     for nex in nexes:
-        st = boot(nex, tails[nex][0], sysrom=sysrom or system_rom3()[0])
+        st = boot(nex, tails[nex][0], sysrom=sysrom or system_rom3()[0], nexload=z80 is not None)
         alt_on = bool(st['nr'].get(0x8C, 0) & 0x80)
         kind = 'alt' if alt_on else ('slot1' if st['mmu'][1] != 0xFF else 'plain')
         builds.append((nex, kind, alt_on, st, bytes(st['mem'][a] for a in range(0x4000)), 2 if st['p1ffd'] & 4 else 0))
     out = {nex: (kind, [], {}) for nex, kind, *_ in builds}
     o48 = list(read_bin_file(ROM48, 16384))
     o128 = [list(read_bin_file(ROM128[0], 16384)), list(read_bin_file(ROM128[1], 16384))]
+    pbuf = {}
+    if z80 is not None:
+        snap = zt.Z80Snapshot(z80)
+        for nex, kind, alt_on, st, *_x in builds:
+            pbuf[nex] = [a for a in range(0x5B00, 0x5C00) if st['mem'][a] != snap.read(a)]
+    watch = {a for n in nexes for a in range(tails[n][1], tails[n][1] + tails[n][2])} | {a for v in pbuf.values() for a in v}
     for r in rzxs:
-        frame, seen, tabs = [0], set(), []
+        frame, seen, tabs, written, tread = [0], set(), [], set(), {}
 
         class H:
             def on_sim(h, sim):
@@ -179,6 +189,8 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None):
 
             def on_read(h, a, pc, mem):
                 if a >= 0x4000:
+                    if a in watch and a not in written and a not in tread:          # data or code fetch
+                        tread[a] = (pc, frame[0])
                     return
                 sel = (mem.o7ffd >> 4) & 1 if h.is128 else 1
                 seen.add((sel, a))
@@ -194,7 +206,8 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None):
                             diff[k] = (pc, frame[0], orig[sel][a], nx[sel][a])
 
             def on_write(h, a, v, pc, mem):
-                pass
+                if a in watch:
+                    written.add(a)
 
             def on_frame(h, n):
                 frame[0] = n
@@ -224,7 +237,20 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None):
                              'vector, or a fault): %s' % (len(data_d), ', '.join('%s0x%04X' % (img(k[0]), k[1]) for k in data_d[:8])))
             if unk:
                 lines.append('            ROM select %s not modelled (a Next system ROM other than ROM3)' % ', '.join(map(str, unk)))
-
+            ta, tn = tails[nex][1], tails[nex][2]
+            rd = sorted(a for a in tread if ta <= a < ta + tn)
+            if rd:
+                faults.setdefault(name, []).append(('tail', rd[0]))
+                lines.append('            MISMATCH: the game reads the start-up tail\'s bytes before writing them: %d of '
+                             '0x%04X-0x%04X, first 0x%04X (PC %d, frame %d); they hold the tail, not the snapshot\'s'
+                             % (len(rd), ta, ta + tn - 1, rd[0], tread[rd[0]][0], tread[rd[0]][1]))
+            else:
+                lines.append('            tail 0x%04X-0x%04X: never read before written' % (ta, ta + tn - 1))
+            pb = sorted(a for a in tread if a in pbuf.get(nex, ()) and not ta <= a < ta + tn)
+            if pb:
+                lines.append('            WARNING: the game reads %d printer buffer bytes before writing them, which the .nex '
+                             'leaves as NEXLOAD wrote them (first 0x%04X, PC %d, frame %d): keep_printer_buffer '
+                             '(BRIEFING C2 #36)' % (len(pb), pb[0], tread[pb[0]][0], tread[pb[0]][1]))
     return out
 
 

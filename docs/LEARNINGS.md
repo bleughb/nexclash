@@ -610,7 +610,7 @@ Grouped by question; add a new lesson to its group.
   Everyone's a Wally uses it (0x5B00-0x7AFF write-first).
 - Default "below SP" tail placement can hit data (Dizzy 1: font at 0xFF9E) or
   code (Dizzy 4: code directly below the stack). Always check the printed tail.
-- Dead stack below SP is free at start-up; the tail is dead once the game runs.
+- Below SP is NOT free by default (Match Day's trophy data, 2026-11-04): prove a tail write-first.
 - A game reading the ROM font needs a slot-1 page that is a copy of ROM 0x2000-0x3FFF, with
   hooks only where the game never reads (prefer `altrom`: the alt ROM is that copy, read-only).
 - An undo buffer (or back buffer) written before read in every RZX is a stronger tail site than
@@ -619,7 +619,8 @@ Grouped by question; add a new lesson to its group.
 - A screen effect that uses MEMORY AS MASKS reads all of it (Lode Runner's fade: screen AND bytes
   0x0000-0x6BFF, 4 passes): the alt ROM hook area and the printer buffer then change what the effect
   draws, so neither is free. Look at what a reader reads (scan --range ROM range, readers by PC)
-  before choosing altrom; Lode Runner's hooks went into game RAM proven never touched (A3 "ram").
+  before choosing altrom; Lode Runner's hooks went into game RAM (A3 "ram") - but with no alt ROM
+  its fade reads NextZXOS's ROM3 on the Next (6,423 bytes differ; ROM paths, 2026-11-04).
 
 ## 2.3 Our toolkit (nexclash) and host tools
 - A verifier that under-counts T hides beam races: rainbow.py's own NEXTREG handlers cost 0 T, so its

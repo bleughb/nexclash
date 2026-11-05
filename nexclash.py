@@ -515,7 +515,7 @@ def _rom_paths(out, rep):
         return
     t = time.time()
     try:
-        res = nextboot.rom_paths(nexes, rzxs, stop=quick)
+        res = nextboot.rom_paths(nexes, rzxs, stop=quick, z80=_AUTO.get('z80'))
     except ValueError as e:
         rep.append('ROM paths : not checked (%s)' % e)
         return

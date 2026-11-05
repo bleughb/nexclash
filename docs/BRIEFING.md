@@ -138,8 +138,7 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
   patch.whole-altrom-image; pinned games keep this), LDIR the patch bytes lo..hi from page 24,
   $8C=0, restores slots 6/7, jumps back, restores slots 4/5. No stack use in between.
 - nextboot.py simulates that boot on a Next model (every sprite build prints a `Boot` line). New
-  builds verified with recordings add `ROM paths` (nextboot.rom_paths; $NEXCLASH_NEXT_ROM = your
-  card's enNextZX.rom, else Sinclair's ROM stands in); pinned games verify as before.
+  builds add `ROM paths` (nextboot.rom_paths; $NEXCLASH_NEXT_ROM = your card's enNextZX.rom).
 - 48K and 128K: the tail must end below 0xC000. The stub runs with its own bank 10 at C000-FFFF and
   the tail's OUT 0x7FFD maps bank 0 back under the PC (El Capitan Trueno: a 48K tail at 0xFF97
   never reached the game); z80tonex refuses it, nextboot.check catches it too.
@@ -180,8 +179,8 @@ must be a copy of ROM 0x2000-0x3FFF, hooks only in bytes the game never reads (0
 for Dizzy V), register block after the hooks - NOT at 0x3FE0 (font data there).
 
 Tail sites, strongest proof first: (1) printer buffer never touched; (2) an undo buffer that
-every plot writes before the erase reads it; (3) dead stack between SP and the low-water mark;
-(4) bytes whose first access in the recording is a write.
+every plot writes before the erase reads it; (3) dead stack proven write-first (the lowest SP is no
+proof: Match Day's trophy data sat below SP); (4) write-first bytes. `auto` proves new builds' tails.
 
 
 --------------------------------------------------------------------------------
@@ -310,9 +309,9 @@ Verification and speed
    be the WHOLE hook RAM. Tool: `scan --frames N --keys K --after ENTRY --range ...` (C4).
 4. Treasure Island (dedicated builder) is not re-verified differentially by any tool: selftest
    re-proves only the plain tail (access scan) and the boot (record: verify.differential false).
-5. Whole alt ROM image: the default for new builds (2026-11-04, card patch.whole-altrom-image). The
-   games verified before keep the ROM3 + hook-bytes fill (record pin); each has an opt-in rework line.
-   Open: slot1 builds keep NextZXOS's ROM3 at 0x0000-0x1FFF.
+5. Whole alt ROM image: new builds' default (card patch.whole-altrom-image); older games pinned.
+   Opt-in rework, path reached: Chuckie Egg, Jet Pac, Match Day, Target Renegade; latent: the other
+   alt ROM games. Open: slot1 builds keep NextZXOS's ROM3 at 0x0000-0x1FFF.
 6. `nexclash.py patch` (the users' command) writes the plain .nex WITHOUT nextboot.check (El Capitan
    Trueno's first plain build crashed at once: 48K tail above 0xC000). Run it in `patch`; refuse or warn.
 7. `auto` on an unknown engine made Jetpac's synthetic _auto.rzx (6410 frames), but `scan` / `preview`
@@ -390,10 +389,9 @@ Hardware to confirm
    50 Hz or the CPU speed. Cheap guard: NEXTREG $62,0 / $64,0 / $22,0 / $C4 bit 0 / $68,0 / $26,0 /
    $27,0 + $06 AND $5F in the stub - changes every game's .nex bytes: a maintainer decision with a
    full `selftest.py --stamp`. Check NEXLOAD's reset list first (ped7g NEXLOAD2 source).
-27. Alt image 0 (the game selects ROM 0 in play): a copy of ROM 0 on the Next is NextZXOS's, not the
-   128K's (Target Renegade's 9 sound bytes at 0x3500; Knight Tyme's star map, local engine). New engines:
-   `patch.altrom0` = the 128K ROM 0 (bank 46) + hooks. Unconfirmed on hardware, as OUT (0x1FFD) in 128K
-   timing (LEARNINGS 1.2). `scan` cannot split ROM reads by the selected ROM.
+27. Alt image 0: a copy of ROM 0 on the Next is NextZXOS's (Target Renegade's sound bytes, Knight
+   Tyme's star map). New engines: `patch.altrom0` (128K ROM 0 + hooks). Unconfirmed on hardware, as OUT
+   (0x1FFD) in 128K timing (LEARNINGS 1.2). `scan` cannot split ROM reads by ROM.
 28. Copper facts to confirm before an engine relies on the copper: a WAIT for a LINE already passed
    holds the rest of the list until the next frame (inferred from guide r3; an h passed on the
    CURRENT line does not wait - hardware-tested, TECHNIQUES "Hardware ground truth"); $64 = 33 aligns
@@ -448,7 +446,8 @@ Designs not built yet (use when a game needs them)
    Unconfirmed: that the Next's bus reads $FF in pulse mode on every core (we rely on it).
 36. `inspect` should warn when CODE runs in the printer buffer (0x5B00-0x5BFF): NEXLOAD overwrites it,
    so the build needs keep_printer_buffer (Match Day: data; Cyclone: the main loop - its first plain
-   build, without it, would not run on hardware). An access scan (`scan --range 0x5B00-0x5BFF`) shows it.
+   build, without it, would not run on hardware). `auto` warns (new builds). Read first, not put back:
+   Lode Runner, Magicland, Midnight Resistance, Dizzy 6, Target Renegade (as code), Smash TV, Dizzy 1.
 37. Beeper sound independent of CPU speed (idea, 2026-10-22; TECHNIQUES 2.6, sample sound by copper):
    timed beeper loops play 8x fast at 28 MHz (Match Day isr_w; LEARNINGS 2.1f), so today any code
    that beeps must stay at 3.5 MHz. Instead a hook on the game's OUT ($FE) could log (beeper bit,
