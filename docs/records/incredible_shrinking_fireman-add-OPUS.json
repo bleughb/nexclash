@@ -88,44 +88,49 @@
   "deps": {
    "asm/incredible_shrinking_fireman-add-OPUS_hooks.asm": "6bb0c3241848f5e3",
    "docs/profiles/incredible_shrinking_fireman-add-OPUS.json": "9792d2898267df38",
-   "nexclash.py": "19b2cd33813cac01",
+   "nexclash.py": "b7f49876a97b1f48",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "6b69f9b06b029515",
+   "nexclash/engines.py": "28f3c5d8b1333ba6",
    "nexclash/incredible_shrinking_fireman_add_opus.py": "228162fb87110d12",
-   "nexclash/nextboot.py": "13c3ba6016db4c6f",
+   "nexclash/nextboot.py": "e57136059969ba67",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/records.py": "273dab19dfcd9e27",
    "nexclash/rzx.py": "fda23afec57aec5e",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/simrun.py": "9c4802548f78f40b",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "9e111968561fe668",
-   "skoolkit": "10.1"
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "9f228030cc11e9ff",
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-04"
+  "date": "2026-11-05"
  },
  "verified": {
   "deps": {
    "asm/incredible_shrinking_fireman-add-OPUS_hooks.asm": "6bb0c3241848f5e3",
    "docs/profiles/incredible_shrinking_fireman-add-OPUS.json": "9792d2898267df38",
-   "nexclash.py": "7a4b0e6f5b61aaef",
+   "nexclash.py": "b7f49876a97b1f48",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "bc87a441d6f36e56",
+   "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "3073cd845adc75aa",
+   "nexclash/engines.py": "28f3c5d8b1333ba6",
    "nexclash/incredible_shrinking_fireman_add_opus.py": "228162fb87110d12",
-   "nexclash/nextboot.py": "a6e46fbbe842b376",
-   "nexclash/recolour.py": "a5744dcf6e6c059c",
-   "nexclash/records.py": "37b0e84f39f58243",
-   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/rzx.py": "fda23afec57aec5e",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "9c4802548f78f40b",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "cfe7f2701eddfe6e",
-   "skoolkit": "10.1"
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "9f228030cc11e9ff",
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-10-25"
+  "date": "2026-11-05"
  },
  "techniques": [
   {

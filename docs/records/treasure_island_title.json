@@ -70,27 +70,29 @@
  "status": {},
  "checked": {
   "deps": {
-   "nexclash.py": "19b2cd33813cac01",
+   "nexclash.py": "b7f49876a97b1f48",
    "nexclash/analyse.py": "5bdd8b073cc95624",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
    "nexclash/dizzy_patch.py": "27472fb03d88fcfb",
-   "nexclash/engines.py": "6b69f9b06b029515",
+   "nexclash/engines.py": "28f3c5d8b1333ba6",
    "nexclash/evidence.json": "a6c823114223e2c3",
    "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "13c3ba6016db4c6f",
+   "nexclash/nextboot.py": "e57136059969ba67",
    "nexclash/recorder.py": "8b959db3b8dc838b",
    "nexclash/rzx.py": "fda23afec57aec5e",
-   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/simrun.py": "9c4802548f78f40b",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/templates.json": "e93f585833e72628",
    "nexclash/verify.py": "3dcc48bdab8bd67b",
-   "nexclash/z80tonex.py": "9e111968561fe668",
-   "skoolkit": "10.1"
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "3357d0ebe1cebb01",
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-04"
+  "date": "2026-11-05"
  },
  "verified": {
   "deps": {

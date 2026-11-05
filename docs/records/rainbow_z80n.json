@@ -228,42 +228,58 @@
  "excluded": "as rainbow (Dean 2026-10-13): too slow for the automatic checks (~50 min verify); run it explicitly with selftest.py --game rainbow_z80n [--verify]",
  "checked": {
   "deps": {
-   "asm/rainbow_z80n_hooks.asm": "479b511766e0b070",
-   "docs/profiles/rainbow_z80n.json": "011cfef7c19bc948",
-   "nexclash.py": "71dc4c592918bff8",
+   "asm/rainbow_z80n_hooks.asm": "be382fcc4d6b1243",
+   "asm/rainbow_z80n_sky_ldscr.asm": "64297fd37bb19d62",
+   "docs/profiles/rainbow_z80n.json": "d972a279f4966e23",
+   "docs/profiles/rainbow_z80n_sky.json": "0877b0dada51c97f",
+   "nexclash.py": "b7f49876a97b1f48",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "d7317a7d9ec89979",
-   "nexclash/nextboot.py": "44c08db48a1bf32d",
-   "nexclash/rainbow_z80n.py": "ab6bf4da4371f015",
-   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/engines.py": "28f3c5d8b1333ba6",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/rainbow_z80n.py": "2ec50c9485a72c80",
+   "nexclash/rainbow_z80n_sky.py": "b58cf03589f36650",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/rzx.py": "fda23afec57aec5e",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "9c4802548f78f40b",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "a6ff9eef9ca737b3",
-   "skoolkit": "10.1"
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "788df8dcf60b016e",
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-10-31"
+  "date": "2026-11-05"
  },
  "verified": {
   "deps": {
-   "asm/rainbow_z80n_hooks.asm": "479b511766e0b070",
-   "docs/profiles/rainbow_z80n.json": "011cfef7c19bc948",
-   "nexclash.py": "71dc4c592918bff8",
+   "asm/rainbow_z80n_hooks.asm": "be382fcc4d6b1243",
+   "asm/rainbow_z80n_sky_ldscr.asm": "64297fd37bb19d62",
+   "docs/profiles/rainbow_z80n.json": "d972a279f4966e23",
+   "docs/profiles/rainbow_z80n_sky.json": "0877b0dada51c97f",
+   "nexclash.py": "b7f49876a97b1f48",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "d7317a7d9ec89979",
-   "nexclash/nextboot.py": "44c08db48a1bf32d",
-   "nexclash/rainbow_z80n.py": "ab6bf4da4371f015",
-   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/engines.py": "28f3c5d8b1333ba6",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/rainbow_z80n.py": "2ec50c9485a72c80",
+   "nexclash/rainbow_z80n_sky.py": "b58cf03589f36650",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/rzx.py": "fda23afec57aec5e",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "9c4802548f78f40b",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "a6ff9eef9ca737b3",
-   "skoolkit": "10.1"
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "788df8dcf60b016e",
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-10-31"
+  "date": "2026-11-05"
  }
 }

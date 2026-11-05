@@ -117,44 +117,48 @@
   "deps": {
    "asm/rambo_hooks.asm": "55d6492a5e84a0ba",
    "docs/profiles/rambo.json": "5ab4f0b3a7250939",
-   "nexclash.py": "ce784cd6cd1eb043",
+   "nexclash.py": "b7f49876a97b1f48",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "cf3dba7a808ca601",
-   "nexclash/nextboot.py": "13c3ba6016db4c6f",
+   "nexclash/engines.py": "28f3c5d8b1333ba6",
+   "nexclash/nextboot.py": "e57136059969ba67",
    "nexclash/rambo.py": "b1a408bdf6a94440",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/records.py": "273dab19dfcd9e27",
    "nexclash/rzx.py": "fda23afec57aec5e",
-   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/simrun.py": "9c4802548f78f40b",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "9e111968561fe668",
-   "skoolkit": "10.1"
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "e7dd9ffae7279aa9",
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-04"
+  "date": "2026-11-05"
  },
  "verified": {
   "deps": {
    "asm/rambo_hooks.asm": "55d6492a5e84a0ba",
    "docs/profiles/rambo.json": "5ab4f0b3a7250939",
-   "nexclash.py": "ce784cd6cd1eb043",
+   "nexclash.py": "b7f49876a97b1f48",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "cf3dba7a808ca601",
-   "nexclash/nextboot.py": "13c3ba6016db4c6f",
+   "nexclash/engines.py": "28f3c5d8b1333ba6",
+   "nexclash/nextboot.py": "e57136059969ba67",
    "nexclash/rambo.py": "b1a408bdf6a94440",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/records.py": "273dab19dfcd9e27",
    "nexclash/rzx.py": "fda23afec57aec5e",
-   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/simrun.py": "9c4802548f78f40b",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "9e111968561fe668",
-   "skoolkit": "10.1"
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "e7dd9ffae7279aa9",
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-04"
+  "date": "2026-11-05"
  }
 }

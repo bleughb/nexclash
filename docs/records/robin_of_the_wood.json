@@ -109,34 +109,38 @@
   "deps": {
    "asm/robin_of_the_wood_hooks.asm": "528f1305e224d2b4",
    "docs/profiles/robin_of_the_wood.json": "8d012f27b506c68a",
-   "nexclash.py": "ce784cd6cd1eb043",
+   "nexclash.py": "b7f49876a97b1f48",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/engines.py": "699bff499f91147b",
+   "nexclash/engines.py": "28f3c5d8b1333ba6",
    "nexclash/robin_enhanced.py": "6851a8763bffc824",
    "nexclash/robin_of_the_wood.py": "c0a486b6e13eff13",
    "nexclash/rzx.py": "fda23afec57aec5e",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "9e111968561fe668",
-   "skoolkit": "10.1"
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "1bc1806965a6d02a",
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-04"
+  "date": "2026-11-05"
  },
  "verified": {
   "deps": {
    "asm/robin_of_the_wood_hooks.asm": "528f1305e224d2b4",
    "docs/profiles/robin_of_the_wood.json": "8d012f27b506c68a",
-   "nexclash.py": "ce784cd6cd1eb043",
+   "nexclash.py": "b7f49876a97b1f48",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/engines.py": "699bff499f91147b",
+   "nexclash/engines.py": "28f3c5d8b1333ba6",
    "nexclash/robin_enhanced.py": "6851a8763bffc824",
    "nexclash/robin_of_the_wood.py": "c0a486b6e13eff13",
    "nexclash/rzx.py": "fda23afec57aec5e",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "9e111968561fe668",
-   "skoolkit": "10.1"
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "1bc1806965a6d02a",
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-04"
+  "date": "2026-11-05"
  }
 }
