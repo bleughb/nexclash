@@ -8,7 +8,7 @@ nexclash/nxc.py - the .nxc packager
     To update: copy the new tools/nxc.py, put its commit and SHA-256 here and in nexclash/nxcout.py
     (NXC_PIN), run `python selftest.py --tools`.
 
-tools/zx0/ - the ZX0 compressor (sources, LICENSE-zx0, zx0.exe)
+tools/zx0/ - the ZX0 compressor (C sources and LICENSE-zx0; no binary: tools/zx0/README.md)
     https://github.com/einar-saukas/ZX0 at commit ecde3a2ae05061fe06469ed46df81a33b7de7d86
     (tools/zx0/pin.json). BSD-3-Clause, Copyright (c) 2021 Einar Saukas: tools/zx0/LICENSE-zx0.
 

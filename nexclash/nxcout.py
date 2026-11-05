@@ -138,21 +138,23 @@ def zx0_dir():
         if _sha(os.path.join(ZX0_SRC, f)) != h:
             raise RuntimeError('tools/zx0/%s does not match tools/zx0/pin.json' % f)
     os.makedirs(cache, exist_ok=True)
-    if os.name == 'nt':                         # nxc.py looks for 'zx0'; Windows runs zx0.exe for it
-        src = os.path.join(ZX0_SRC, pin['windows_binary'])
-        if _sha(src) != pin['windows_binary_sha256']:
-            raise RuntimeError('tools/zx0/zx0.exe does not match tools/zx0/pin.json')
-        shutil.copy(src, exe)
-        shutil.copy(src, os.path.join(cache, 'zx0'))
-    else:
-        ccs = [c for c in (os.environ.get('CC'), 'cc', 'gcc', 'clang') if c and shutil.which(c)]
-        if not ccs:
-            raise RuntimeError('no zx0: no C compiler (cc, gcc, clang) to build tools/zx0, and $NXC_ZX0_DIR is not set')
+    win = os.path.join(ZX0_SRC, 'zx0.exe')      # Windows: upstream's own build, downloaded (never in Git)
+    ccs = [c for c in (os.environ.get('CC'), 'cc', 'gcc', 'clang') if c and shutil.which(c)]
+    if os.name == 'nt' and os.path.exists(win):
+        if _sha(win) != pin['windows_binary_sha256']:
+            raise RuntimeError('tools/zx0/zx0.exe is not upstream\'s build of ZX0 %s (tools/zx0/pin.json)' % pin['commit'][:7])
+        shutil.copy(win, exe)
+    elif ccs:
         srcs = [os.path.join(ZX0_SRC, f) for f in pin['sources'] if f.endswith('.c')]
         r = subprocess.run([ccs[0], '-O2', '-o', exe + '.tmp'] + srcs, capture_output=True, text=True)
         if r.returncode:
             raise RuntimeError('building tools/zx0 with %s failed: %s' % (ccs[0], r.stderr.strip()[-200:]))
         os.replace(exe + '.tmp', exe)
+    else:
+        raise RuntimeError('no zx0: no C compiler (cc, gcc, clang) to build tools/zx0%s, and $NXC_ZX0_DIR is not set' % (
+            ', no tools/zx0/zx0.exe (download: %s)' % pin['windows_binary_url'] if os.name == 'nt' else ''))
+    if os.name == 'nt':                         # nxc.py looks for 'zx0'; Windows runs zx0.exe for it
+        shutil.copy(exe, os.path.join(cache, 'zx0'))
     if not _golden(exe, pin):
         raise RuntimeError('%s does not give the golden output of ZX0 %s' % (exe, pin['commit'][:7]))
     return cache
