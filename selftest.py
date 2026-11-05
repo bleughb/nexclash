@@ -73,13 +73,24 @@ def stage(rec, src, work):
     d = os.path.join(work, rec['name'])
     os.makedirs(d, exist_ok=True)
     for it in [rec['inputs']['snapshot']] + rec['inputs']['recordings']:
-        p = os.path.join(src, it.get('path', ''))
-        if not it.get('path') or not os.path.isfile(p):
-            return None, 'missing %s' % (it.get('path') or it['name'])
-        if it.get('md5') and md5(p) != it['md5']:
-            return None, '%s md5 %s, record says %s' % (it['path'], md5(p), it['md5'])
-        shutil.copy(p, os.path.join(d, it['name']))
+        why = _stage_one(it, src, d)
+        if why:
+            return None, why
+    for x in rec.get('rework', []):             # a rework's own inputs: missing ones skip the rework, never the base
+        miss = [w for w in (_stage_one(it, src, d) for it in x.get('inputs', [])) if w]
+        if miss:
+            x['_missing'] = '; '.join(miss)
     return d, None
+
+
+def _stage_one(it, src, d):
+    p = os.path.join(src, it.get('path', ''))
+    if not it.get('path') or not os.path.isfile(p):
+        return 'missing %s' % (it.get('path') or it['name'])
+    if it.get('md5') and md5(p) != it['md5']:
+        return '%s md5 %s, record says %s' % (it['path'], md5(p), it['md5'])
+    shutil.copy(p, os.path.join(d, it['name']))
+    return None
 
 
 def _run(cmd, env=None):
@@ -207,17 +218,31 @@ def rebuild(rec, d, lines):
         _run(cmd + ['-o', ro, '--strategy', x['strategy']], env)
         bad += _check_outputs(rec, ro, lines, {'repro': x}) + _boot_ok(_report(ro, _snapname(rec)), lines, rec['name'])
     for x in rec.get('rework', []):
+        if x.get('_missing'):
+            lines.append('SKIP %s rework %s (%s)' % (rec['name'], x['name'], x['_missing']))
+            continue
         ro = os.path.join(d, 'rebuild_rework_' + x['name'])
-        _run(_rework_cmd(z80, x) + ['--decisions', os.devnull, '-o', ro], env)
+        _run(_rework_cmd(z80, x, 'rebuild', d) + ['-o', ro], env)
         bad += _check_outputs(rec, ro, lines, x['outputs'], 'rebuild rework %s:' % x['name'])
         bad += _boot_ok(_report(ro, _snapname(rec)), lines, '%s rework %s' % (rec['name'], x['name']))
     return bad + _audit_check(rec, alog, lines, 'rebuild')
 
 
-def _rework_cmd(z80, x):
+def _rework_cmd(z80, x, stage_, d):
     """An opt-in rework of an existing game (record "rework"): auto with the rework's own args, e.g.
-    `--altrom-fill whole`, which overrides the record pin (Jetpac v1.1: engines.py picks jetpac_v11)."""
-    return [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80, '--no-record'] + list(x.get('args', []))
+    `--altrom-fill whole`, which overrides the record pin (Jetpac v1.1: engines.py picks jetpac_v11), plus its own
+    "rebuild" / "verify" recipe (args, rzx, stored decisions), as a record's."""
+    rc = x.get(stage_) or {}
+    cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80] + list(x.get('args', [])) + list(rc.get('args', []))
+    if stage_ == 'rebuild' and '--no-record' not in cmd:
+        cmd.append('--no-record')
+    for r in rc.get('rzx', []):
+        cmd += ['--rzx', os.path.join(d, r)]
+    if stage_ == 'rebuild' and rc.get('decisions'):
+        dp = os.path.join(d, 'rework_%s_decisions.json' % x['name'])
+        json.dump(rc['decisions'], open(dp, 'w'))
+        cmd += ['--decisions', dp]
+    return cmd
 
 
 def recolour_guard(rec, out, lines, cmd, d):
@@ -295,8 +320,10 @@ def reverify(rec, d, lines, human=False):
         bad += _check_outputs(rec, ro, lines, {'repro': x}, 'verify')
         bad += _verify_report(_report(ro, name), '%s --strategy %s' % (rec['name'], x['strategy']), lines)
     for x in rec.get('rework', []):
+        if x.get('_missing'):
+            continue                            # said by rebuild()
         ro = os.path.join(d, 'verify_rework_' + x['name'])
-        _run(_rework_cmd(z80, x) + ['-o', ro], env)
+        _run(_rework_cmd(z80, x, 'verify', d) + ['-o', ro], env)
         bad += _check_outputs(rec, ro, lines, x['outputs'], 'verify rework %s:' % x['name'])
         bad += _verify_report(_report(ro, name), '%s rework %s' % (rec['name'], x['name']), lines)
     return bad + _audit_check(rec, alog, lines, 'verify')
@@ -313,7 +340,8 @@ def run_one(rec, action, src, work, human):
         bad += reverify(rec, d, lines, human)
     else:
         action = 'rebuild'                      # no verify recipe: only a rebuild was proven
-    return rec, action, bad, lines, None
+    miss = ['rework %s: %s' % (x['name'], x['_missing']) for x in rec.get('rework', []) if x.get('_missing')]
+    return rec, action, bad, lines, ('partial: ' + '; '.join(miss)) if miss else None
 
 
 def smoke_rzx_census(ez, er, ok):
@@ -439,6 +467,11 @@ def tools_check(src):
            r['calls'] == 1402 and r['median'] == 19535, r)
         for name, cond, info in nxcout.chuckie_check(ez, work, NEXCLASH, sys.executable):
             ok(name, cond, info)                # default output GAME.nxc = the --nex sprite build when applied
+        for x in nxcout.multi_check(src, work, NEXCLASH, sys.executable, stage):
+            if x[0] == 'SKIP':
+                print('SKIP tools: %s' % x[1])
+            else:
+                ok(*x)                          # every variant packaged and read back; outputs not held kept
         live = jnext.live_check(ez, work)       # JNext + card ($NEXCLASH_JNEXT_CARD) present
         if live:
             ok(*live)
@@ -949,10 +982,14 @@ def main():
         futs = [ex.submit(run_one, r, act, src, work, human) for r, act, _ in todo]
         for f in concurrent.futures.as_completed(futs):
             rec, act, bad, lines, why = f.result()
-            if why:
+            if lines:
+                print('\n'.join(lines), flush=True)
+            if why:                             # not run, or run in part (a rework's inputs missing): no stamp
                 skipped.append('%s (%s)' % (rec['name'], why))
+                fails += bad
+                if bad:
+                    failed.append(rec['name'])
                 continue
-            print('\n'.join(lines), flush=True)
             fails += bad
             if bad:
                 failed.append(rec['name'])

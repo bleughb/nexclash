@@ -38,6 +38,8 @@ Record fields (docs/records/<name>.json; copy the nearest record, then edit):
   repro           extra builds (old strategies) with their own outputs
   status          STATUS.md columns: title, engine_col, build, software, hardware, next
   checks          quick per-game checks run with every rebuild (e.g. "asm2profile:<profile>")
+  rework          opt-in reworks: [{name, version, args, inputs (its own: missing ones skip the rework, never the
+                  base), rebuild / verify (as the record's), outputs, proof (PRF1 line), note}]
   pin             shared behaviour the game keeps ({"altrom_fill": "rom3"}): auto rebuilds it so and skips the ROM
                   path check (it verifies as it was verified)
   rom_paths_known ROM differences the ROM path check lists as KNOWN, not faults: [{image, from, to, why}]

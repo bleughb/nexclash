@@ -1,9 +1,9 @@
 # Engine contract (what every dedicated engine provides; read this before any engine's code)
 
 Start a new engine from this page; open a real engine only for the one function you need
-(`grep -n '^def \|^class ' nexclash/<engine>.py`, then Read that range). Template with everything
-in its simplest form: nexclash/chuckie.py. `tools/doccheck.py` checks the REQUIRED names below
-against every module in nexclash/engines.py, so this page cannot drift from the code.
+(`grep -n '^def \|^class ' nexclash/<engine>.py`, then Read that range). Template:
+nexclash/chuckie.py. `tools/doccheck.py` checks the REQUIRED names below
+against every module in nexclash/engines.py.
 
 ## Files (one game = one engine; CLAUDE.md "Keep changes additive")
 nexclash/<engine>.py, asm/<engine>_hooks.asm, docs/profiles/<record>.json (hook hex + symbols, from
@@ -34,6 +34,9 @@ OPTIONAL (when the engine has the feature):
 | `DECISIONS` | stored build facts for `auto --decisions` (docs/records `rebuild.decisions`) |
 | `INTERIORS`, `TAIL_ADDR`, `ROM_ORG`, `ALT_PAGE` | patched-instruction interiors (no jumps into them), tail and hook addresses |
 
+Outputs (nxcout.manifest): `NAME_sprites[_loading].nex`, colour sets `NAME_SET[_loading].nex`,
+`NAME.nex` plain; other names: `NAME_outputs.json`.
+
 ## The patch object (what z80tonex.convert and nextboot.check read)
 `name`; `sites` = [(addr, original bytes, new bytes)] - `apply(snap)` refuses a snapshot whose
 bytes differ; `stub_extra` + `setup_call` (setup code the stub runs), `hook_page_data`,
@@ -61,10 +64,9 @@ A hook that runs the routine itself (CALL body / the routine's RET comes back to
 the next routine starts right after the RET, so no exit JP fits: Cauldron 0x6357) meets the original
 at the CALLER's return: the replay must skip sites nested inside it until that point (Cauldron
 `span`), or they are applied twice.
-Return shortcut (Nemesis): a hook on a long routine the replay runs anyway (a 68K T screen copy)
+Return shortcut (Nemesis): a hook on a long routine the replay runs anyway
 pushes a return trampoline and lets the original run; the verifier runs the full patched path for
-the first N calls, then only the trampoline's code from the original's state at the routine's RET -
-a full verify in 14 min instead of hours. Slots: `simpool.machine` keeps ONE simulator per slot
+the first N calls, then only the trampoline's code from the original's state at the routine's RET. Slots: `simpool.machine` keeps ONE simulator per slot
 name; two alive at once (original + patched in one event) need different slots, or the second
 resets the first (a false "memory differs").
 

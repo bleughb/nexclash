@@ -54,8 +54,10 @@ Output in `MyGame_nexclash/`: `MyGame.nxc` and a report. **The `.nxc` is the fil
 holds the sprite build as a patch and needs the player's own copy of the game (the `.z80` it was built
 from, same MD5), so no game data travels with it. To play it on the Next, put it beside the game on
 the SD card with the `.nxc` loader: loader, card setup and the `nxc.py` tool at
-https://github.com/jattree/nxc. `--nex` also keeps `MyGame.nex` (plain) and `MyGame_sprites.nex`
-(sprites), to copy straight to the card. Once only: `--patch-by "Your Name"` puts you on the menu's
+https://github.com/jattree/nxc. The `.nxc` holds every variant of the sprite build (its colour sets, the
+tape's loading screen), each checked on read-back; outputs it does not hold stay beside it, named in the
+report (`MyGame.nex`, the plain conversion). `--nex` also keeps `MyGame_sprites.nex` (sprites), to copy
+straight to the card. Once only: `--patch-by "Your Name"` puts you on the menu's
 credit line and is saved for later builds (or set `NEXCLASH_PATCH_BY`). Optional: `--publisher
 "Ocean, 1986"`, `--pok cheats.pok` (default `MyGame.pok` beside the snapshot), `--target-file` (the
 name players have the game under; default the snapshot's own, best in TOSEC style), `--no-nxc`.

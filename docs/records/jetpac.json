@@ -12,23 +12,7 @@
    "md5": "5875d535442974a0de82737652854f1f",
    "path": "jetpac/Jetpac_1983_Ultimate_Play_The_Game_a_16K.z80"
   },
-  "recordings": [
-   {
-    "name": "jetpac_loading.scr",
-    "md5": "68737f5cb1fe8a7d0a022c71aa1dd475",
-    "path": "jetpac/jetpac_loading.scr"
-   },
-   {
-    "name": "jetpac_enhanced_colours.json",
-    "md5": "0f01efde1f477d593b50c168fa288d0c",
-    "path": "jetpac/jetpac_enhanced_colours.json"
-   },
-   {
-    "name": "enNextZX.rom",
-    "md5": "8c34d957fb2cbbd0be423cea3b370fd5",
-    "path": "jetpac/enNextZX.rom"
-   }
-  ]
+  "recordings": []
  },
  "modules": [
   "jetpac",
@@ -85,10 +69,42 @@
  "rework": [
   {
    "name": "v11",
+   "version": "1.1",
    "args": [
     "--altrom-fill",
     "whole"
    ],
+   "inputs": [
+    {
+     "name": "jetpac_loading.scr",
+     "md5": "68737f5cb1fe8a7d0a022c71aa1dd475",
+     "path": "jetpac/jetpac_loading.scr"
+    },
+    {
+     "name": "jetpac_enhanced_colours.json",
+     "md5": "0f01efde1f477d593b50c168fa288d0c",
+     "path": "jetpac/jetpac_enhanced_colours.json"
+    },
+    {
+     "name": "enNextZX.rom",
+     "md5": "8c34d957fb2cbbd0be423cea3b370fd5",
+     "path": "jetpac/enNextZX.rom"
+    }
+   ],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ],
+    "decisions": {
+     "engine": "jetpac",
+     "strategy": "altrom",
+     "verify": "free run 6000 frames (no recording)"
+    }
+   },
+   "verify": {
+    "args": [],
+    "rzx": []
+   },
    "outputs": {
     "plain": {
      "file": "jetpac.nex",
@@ -103,6 +119,7 @@
      "md5": "00cce39c4321ab787fbf8c838e546ab0"
     }
    },
+   "proof": "free run 6000 frames IDENTICAL, the IM 1 handler compared at every 0x0038 against NextZXOS's ROM3, unit tests + pattern negative, rom3_left negative",
    "note": "Jon Attree's Jet Pac .nxc v1.1 (published, github.com/jattree/nxc): engine jetpac_v11, picked by engines.py for `--altrom-fill whole` on this snapshot. Dean's jetpac as of d7abd1c with Jon's rocket / fuel / flames fix (2026-11-02, not Dean's round 2), the whole alt ROM image, Enhanced (recolour with jetpac_enhanced_colours.json, Spectrum Magic's Spec256 colours, local only) and the loading screen (jetpac_loading.scr, bank 13). Verify: free run 6000 frames IDENTICAL with the IM 1 handler compared at every 0x0038 against NextZXOS's ROM3 (enNextZX.rom, staged), unit tests + pattern negative, rom3_left negative. games/jetpac.md \"Rework v1.1\"."
   }
  ],
