@@ -359,9 +359,8 @@ Toolkit structure
    done: a `nexclash.py sheet` command (today `python -m nexclash.<engine> sheet`).
 21. [MAME] A scripted MAME run (put the .nex in the SD image, load, snapshot) next to run_cspect.bat
    (LEARNINGS 2.7).
-22. nexpatch (contributor's proposal): a .nex delivered as an HTML page that rebuilds it from the
-   user's own .z80 (CRC32 match, bytes ChaCha20-encrypted under SHA-256 of the .z80); checked
-   2026-10-14 byte-identical, no network code. Maintainers' decision pending.
+22. nexpatch (contributor's proposal: an HTML page that rebuilds the .nex from the user's own .z80;
+   checked 2026-10-14): the .nxc output (C4, 2026-11-04) now does that job; decision pending.
 23. `selftest.py --affected` is not run automatically on each PR (needs a GitHub Action with the
    private references via a secret); a maintainer runs it before merging.
 
@@ -483,16 +482,16 @@ Logic must be exact at both levels; visuals "good enough" where Dean agreed (gam
 ### C4. Shared analysis commands (any game; Dean 2026-10-12: harness stays per engine)
 `nexclash.py inspect | scan | isr | cost | preview` (modules snapinfo, memscan, isrinfo, drawcost, preview on the
 runner simrun.py) and `python -m nexclash.survey` (stage 0: all of them in one pass + plain build,
-boot, engine, plot routines, coverage; not in nexclash.py because every game's evidence depends on
-nexclash.py and a new subcommand would put them all up for re-verification). Game-independent: game
-facts come in as arguments (addresses, ranges, keys).
+boot, engine, plot routines, coverage; a module, not a subcommand: every game's evidence depends on
+nexclash.py, so a change there puts them all up for a rebuild). Game-independent: game facts come in
+as arguments (addresses, ranges, keys).
 - survey: inspect + engine detectors + the plain conversion as `convert` does it (autosave snapshots
   stripped first: analyse() desyncs on them) + the 48K boot check, then ONE pass with memscan.Scanner,
   isrinfo.IsrTracker and survey.PlotTracker (shadow call stack: each screen write -> the innermost
   CALL or interrupt running; calls, callers, T per call from its own T count), then a preview pass for
   the top routines. Writes <game>_survey/survey.md (+ .json, preview.png, the plain .nex). Its
-  coverage line is the byte scan of C2 #11 only (CALL / JP nn to each top routine, rated by whether
-  code ran within 24 bytes), not the recursive static pass.
+  coverage line is C2 #11's byte scan only (CALL / JP nn to each top routine, rated by code run
+  within 24 bytes), not the recursive static pass.
 - simrun: plays an RZX (autosave snapshots stripped to a temp copy) or free-runs a snapshot with
   a key schedule ("5-14:SPACE; 30-:N", K:LEFT... = Kempston); hooks before/after every
   instruction, on every memory access, interrupt and frame. 128K memory hooks swap the Memory
@@ -522,5 +521,7 @@ facts come in as arguments (addresses, ranges, keys).
   address on the stack: time its caller instead.
 - play checks on a BUILD in JNext, original as control (docs/CHECKS.md): `python -m nexclash.soak`
   (freezes), `pace` (penalty, input keyed to game updates), `flicker` (every frame), `looksheet` (flags).
-Improving them is welcome: keep existing report lines and arguments (add, don't rename), add a
-golden check for the new behaviour to selftest.py tools_check, run `python selftest.py --tools`.
+- .nxc output (2026-11-04): nexclash/nxcout.py runs the vendored nexclash/nxc.py (THIRD-PARTY-NOTICES)
+  for patch / new / auto -> GAME.nxc (README); `--nex` keeps the .nex, `--no-nxc` = old output (selftest).
+Improving them: keep report lines and arguments (add, don't rename), a golden check in selftest.py
+tools_check, `python selftest.py --tools`.

@@ -31,8 +31,9 @@ Continue GAME NAME in nexclash (as above). Hardware round: here is my whole list
 
 # nexclash - colour-clash-free ZX Spectrum games on the Spectrum Next
 
-Turns a ZX Spectrum `.z80` snapshot of a game into Spectrum Next `.nex` files: a plain conversion
-and a sprite build in which the game's figures are Next hardware sprites (no attribute clash).
+Turns a ZX Spectrum `.z80` snapshot of a game into a sprite build for the Spectrum Next in which the
+game's figures are Next hardware sprites (no attribute clash), packaged as a `.nxc` patch to share
+(`--nex`: the `.nex` files too, a plain conversion and the sprite build).
 Every supported game was proven to play exactly like the original by replaying real recordings
 through the original and the patched code side by side (paths no recording reaches are covered by
 unit tests; per-game details in games/).
@@ -49,7 +50,16 @@ is built on your machine. GPL-3.0-or-later (LICENSE). Status of every game: STAT
 ```
 python nexclash.py patch MyGame.z80
 ```
-Output in `MyGame_nexclash/`: `MyGame.nex` (plain), `MyGame_sprites.nex` (sprites) and a report.
+Output in `MyGame_nexclash/`: `MyGame.nxc` and a report. **The `.nxc` is the file to share**: it
+holds the sprite build as a patch and needs the player's own copy of the game (the `.z80` it was built
+from, same MD5), so no game data travels with it. To play it on the Next, put it beside the game on
+the SD card with the `.nxc` loader: loader, card setup and the `nxc.py` tool at
+https://github.com/jattree/nxc. `--nex` also keeps `MyGame.nex` (plain) and `MyGame_sprites.nex`
+(sprites), to copy straight to the card. Once only: `--patch-by "Your Name"` puts you on the menu's
+credit line and is saved for later builds (or set `NEXCLASH_PATCH_BY`). Optional: `--publisher
+"Ocean, 1986"`, `--pok cheats.pok` (default `MyGame.pok` beside the snapshot), `--target-file` (the
+name players have the game under; default the snapshot's own, best in TOSEC style), `--no-nxc`.
+The `.nxc` carries the proof the report gives (`PRF1`), and says "not verified" when there is none.
 The last lines tell you how far it is proven:
 - **VERIFIED** - your snapshot is byte-identical to one we verified, and so is the output.
 - **PATCHED** - a different dump of a supported game: every patch site held the original bytes,
@@ -72,8 +82,8 @@ execution) that follows this package's CLAUDE.md to add the game. When it works:
 ```
 python nexclash.py contribute MyGame --report MyGame_session/MyGame_nexclash/MyGame_report.txt
 ```
-builds `nexclash_contribution_MyGame.zip` - only the new code, profile, notes and results (game
-files are refused). Upload it as CONTRIBUTING.md says (no GitHub account needed); after review it
+builds `nexclash_contribution_MyGame.zip` - only the new code, profile, notes, results and the
+`MyGame.nxc` beside the report (game files and `.nex` files are refused). Upload it as CONTRIBUTING.md says (no GitHub account needed); after review it
 ships in the next release, for everyone.
 
 ## When the report says something is missing
@@ -119,7 +129,7 @@ Dizzy V) are recognised automatically; anything else gets a plain `.nex` plus a 
 the next step.
 
 ## Testing on the Next (details per game: games/)
-Copy `GAME_sprites.nex` to the SD card and run it. Check: it starts; every converted figure is
+Build with `--nex` and copy `GAME_sprites.nex` to the SD card and run it (or `GAME.nxc` with the loader). Check: it starts; every converted figure is
 visible, animates and is never left behind on screen; figures disappear where the original hides
 or covers them (boxes, dialogue, room changes, screen clears, scenery in front); music and speed
 are as the plain `.nex`. Each game's own checklist is in games/<game>.md. If something is wrong,
@@ -129,6 +139,7 @@ record an RZX in Fuse (autosave OFF) showing it and send it with the report.
 
 ## Per-game options (maintainers rebuild with their recordings)
 Dedicated engines (below) never auto-record: they only use the recordings you pass with `--rzx`.
+`auto` writes GAME.nxc like `patch`; the .nex files named below need `--nex`.
 ### Everyone's a Wally (128K snapshot)
     python nexclash.py auto wally.z80 --rzx my_play.rzx
 Outputs wally.nex (plain) and wally_sprites.nex (gang members and masked objects as sprites).

@@ -21,13 +21,12 @@ Only disassemble routines the tools flag as unclassified.
 Write decisions and open questions to games/<game>.md as they happen, so a new session can pick up
 any stage - and in stage 2 the build's DESIGN too (sites, memory used, how each figure becomes a
 sprite, what the verify checks), before the first quick run.
-Why: Match Day (2026-10-20) lost the session's context mid-phase-B; the whole build existed only as
-code and a running job, and the next turn had to rediscover it from files and the process list.
+Why: Match Day (2026-10-20) lost the session's context mid-phase-B; the build existed only as
+code and a running job; the next turn had to rediscover it from files and the process list.
 Why: Commando took five hardware rounds, each finding something a step below now covers.
 Rounds on a long game (stage 4): offer to collect the user's whole list in one pass through the
 game, fix all of it, then check everything in ONE new pass; never restart the emulator unasked.
-Why: the places are far from the start, and every restart costs the user the walk there
-(El Capitan Trueno, 2026-10-13).
+Why: each restart costs the user the walk back (El Capitan Trueno, 2026-10-13).
 
 ("The user" below = whoever runs the session: Dean in maintainer sessions, the contributor in an
 add-a-game session.)
@@ -244,9 +243,9 @@ functions first; then copy the nearest engine
 | smashtv.py | the game's own plotters into a scratch buffer at slot 7, no frame sync, see-through outline |
 | commando.py | 128K BASIC loader, front end, depth from walk boxes, cached solid sprites |
 | renegade.py | alt ROM images 0 + 1, loading-screen front end |
-| rainbow.py | full redraw / tile composer, 128K (large; excluded from automatic checks) |
-Change the profile block and site list, rebuild the asm.
-Every site keeps its original-byte check.
+| rainbow.py | full redraw / tile composer, 128K (excluded from automatic checks) |
+Change the profile block + site list, rebuild the asm; every site keeps its original-byte check.
+Sessions build with `--nex`: tests, recolour and play checks use the .nex.
 Colour map (every game, docs/COLOURS.md): the sprite builder applies `<record>_colours.json` per pixel -
 key = the graphics byte the pixel comes from, a non-zero nibble replaces the default colour of an
 opaque pixel - and, in an engine with outlines (paint_clear), makes a PAPER pixel opaque in that
@@ -305,7 +304,7 @@ of each colour set, soak before the release; explain or fix each warning (games/
 Ask the user to try CSpect first if a build changes memory layout or start-up.
 
 ## 7. Deliver
-`<game>_sprites.nex`, `<game>.nex`, builder, asm sources; a short results
+`<game>.nxc` + the `--nex` builds, builder, asm; a short results
 table; a hardware checklist. Add the new profile (and signature if a new
 engine) to docs/profiles/, games/<game>.md, and the evidence record docs/records/<game>.json
 (copy the nearest engine's record; `modules` = the modules your build imports, `own_modules` /
