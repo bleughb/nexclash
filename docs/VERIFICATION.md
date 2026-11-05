@@ -63,6 +63,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Nemesis the Warlock (nemesis_the_warlock): `nemesis_the_warlock.nex` f1497589ddf479e34d42f6ab0618954d, `nemesis_the_warlock_sprites.nex` 31ad4ab5b7507b6289ffe30f82c7d6bb; verified 2026-11-03
 - Nightshade (nightshade): `nightshade.nex` e4d954de899563af241cb8db84114654, `nightshade_sprites.nex` 1cf6b27644a2b7941b3d80a1aaa87ef5, `nightshade_enhanced.nex` 37f970019aa9443669a5ca8f0fef0613; verified 2026-11-04
 - Knight Tyme (128K) (knight_tyme): `knight_tyme.nex` 0f91cab91a9261bb8645a0ec9cc871f2, `knight_tyme_sprites.nex` 645401e4e42dbc80cfcb04954773ecd4; verified 2026-11-04
+- Spellbound (128K, Magic Knight 2) (spellbound_magic_knight): `spellbound_magic_knight.nex` 656c71c4b2ebb8318f3ad442d70b0ab9, `spellbound_magic_knight_sprites.nex` 379e61b026044552437b22e117ecfd1b, `spellbound_magic_knight_enhanced.nex` 3a824f3a78d11d6cee6bc6a3b37b222c; verified 2026-11-04
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

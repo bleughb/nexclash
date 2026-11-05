@@ -171,6 +171,15 @@
     "sprites": "03979d5438cf55410ecec8aac76f05ec"
    }
   },
+  "3bca7e72f3c9c3abd104b8c92f35d5d4": {
+   "game": "Spellbound (128K, Magic Knight 2)",
+   "doc": "spellbound_magic_knight.md",
+   "nex": {
+    "plain": "656c71c4b2ebb8318f3ad442d70b0ab9",
+    "sprites": "379e61b026044552437b22e117ecfd1b",
+    "enhanced": "3a824f3a78d11d6cee6bc6a3b37b222c"
+   }
+  },
   "1895877d638a4a5f37a9402bed18f59a": {
    "game": "Target Renegade (128K)",
    "doc": "target_renegade.md",

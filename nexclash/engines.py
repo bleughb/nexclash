@@ -35,6 +35,7 @@ ENGINES = [
     ('cauldron', 'is_cauldron', None),                                    # Cauldron (48K)
     ('nightshade', 'is_nightshade', None),                                # Nightshade (48K)
     ('knight_tyme', 'is_knight_tyme', None),                              # Knight Tyme (128K)
+    ('spellbound_magic_knight', 'is_spellbound_magic_knight', None),      # Spellbound (128K, Magic Knight 2)
 ]
 
 
