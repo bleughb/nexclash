@@ -27,7 +27,8 @@ Record fields (docs/records/<name>.json; copy the nearest record, then edit):
   representative  true = the game re-verified when shared files change (one per engine)
   reference       folder under specnext/reference/
   inputs          snapshot + recordings: name (canonical name selftest copies to), md5, path (under
-                  the reference folder; maintainers fill it)
+                  the reference folder; maintainers fill it); "missing": why = not in the references yet (the
+                  verify that needs it is skipped, nothing stamped; the rebuild and the reworks run)
   modules         nexclash modules the build imports (closure computed); own_modules = the engine's
   data            own data files (profile, .asm, ...); shared_data = data shared with other games
   rebuild         auto args (no recording), rzx used by the build, decisions (stored analysis facts)
@@ -38,8 +39,8 @@ Record fields (docs/records/<name>.json; copy the nearest record, then edit):
   repro           extra builds (old strategies) with their own outputs
   status          STATUS.md columns: title, engine_col, build, software, hardware, next
   checks          quick per-game checks run with every rebuild (e.g. "asm2profile:<profile>")
-  rework          opt-in reworks: [{name, version, args, inputs (its own: missing ones skip the rework, never the
-                  base), rebuild / verify (as the record's), outputs, proof (PRF1 line), note}]
+  rework          opt-in reworks: [{name, version, args, env (e.g. NEXCLASH_REWORK), inputs (its own: missing ones
+                  skip the rework, never the base), rebuild / verify (as the record's), outputs, proof (PRF1 line), note}]
   pin             shared behaviour the game keeps ({"altrom_fill": "rom3"}): auto rebuilds it so and skips the ROM
                   path check (it verifies as it was verified)
   rom_paths_known ROM differences the ROM path check lists as KNOWN, not faults: [{image, from, to, why}]

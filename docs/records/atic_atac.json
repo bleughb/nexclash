@@ -16,19 +16,26 @@
    {
     "name": "AticAtac.rzx",
     "md5": "3e3845a6391f2533d7fa45d4ad828e79",
-    "path": "atic_atac/AticAtac.rzx"
+    "path": "atic_atac/AticAtac.rzx",
+    "missing": "Dean's recording is not in specnext/reference (phase 1, 2026-11-04) nor anywhere on Jon's machine: Dean's verify is skipped until it is added; the rework v13 has its own recordings"
    }
   ]
  },
  "modules": [
-  "atic_atac"
+  "atic_atac",
+  "atic_atac_v13"
  ],
  "own_modules": [
-  "atic_atac"
+  "atic_atac",
+  "atic_atac_v13"
  ],
  "data": [
   "docs/profiles/atic_atac.json",
-  "asm/atic_atac_hooks.asm"
+  "asm/atic_atac_hooks.asm",
+  "docs/profiles/atic_atac_v13.json",
+  "docs/profiles/atic_atac_v13_qaop.json",
+  "asm/atic_atac_v13_hooks.asm",
+  "asm/atic_atac_v13_qaop.asm"
  ],
  "shared_data": [],
  "rebuild": {
@@ -73,6 +80,88 @@
   "altrom_fill": "rom3",
   "note": "verified before the shared defaults of 2026-11-04 (docs/REFACTOR.md 1-3, 7): the old alt ROM fill, no ROM path / tail check; `--altrom-fill whole` opts in to the rework"
  },
+ "rework": [
+  {
+   "name": "v13",
+   "version": "1.3",
+   "args": [],
+   "env": {
+    "NEXCLASH_REWORK": "atic_atac_v13"
+   },
+   "inputs": [
+    {
+     "name": "walk1.rzx",
+     "md5": "7775e035f5ba77dfe1339dabe5a1fa82",
+     "path": "atic_atac/walk1.rzx"
+    },
+    {
+     "name": "walk2.rzx",
+     "md5": "9915aed994a27fc36e8cd37c37614d2b",
+     "path": "atic_atac/walk2.rzx"
+    },
+    {
+     "name": "t.rzx",
+     "md5": "c289ea58d3462e6f036a89217c676be1",
+     "path": "atic_atac/t.rzx"
+    },
+    {
+     "name": "atic_atac_enhanced_colours.json",
+     "md5": "cce668d14e82468c245b2f8f5a1be98c",
+     "path": "atic_atac/atic_atac_enhanced_colours.json"
+    },
+    {
+     "name": "atic_atac_loading.scr",
+     "md5": "ae29b447e706bd270c7eaea8efb67891",
+     "path": "atic_atac/atic_atac_loading.scr"
+    }
+   ],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ],
+    "decisions": {
+     "engine": "atic_atac_v13",
+     "start": "as atic_atac",
+     "sets": [
+      "sprites",
+      "enhanced",
+      "sprites_qaop",
+      "enhanced_qaop"
+     ]
+    }
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [
+     "walk1.rzx",
+     "walk2.rzx",
+     "t.rzx"
+    ]
+   },
+   "outputs": {
+    "sprites": {
+     "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites.nex",
+     "md5": "b87774a2b07d5767d5cda49798b4d058"
+    },
+    "enhanced": {
+     "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_enhanced.nex",
+     "md5": "47f0e72ce1adc328716e90288d05aa45"
+    },
+    "sprites_qaop": {
+     "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites_qaop.nex",
+     "md5": "19318e4f550aedb7cdb12a15d1b9bb50"
+    },
+    "enhanced_qaop": {
+     "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_enhanced_qaop.nex",
+     "md5": "1f58e93618f566d6d62d03faa83826cf"
+    }
+   },
+   "proof": "walk1, walk2 and t IDENTICAL for every build (toggle builds with each QWERT read translated), unit tests + 3 negative controls and 7 rework negatives per colour set, 4 incoming clocks, the toggle's key / pause units with 2 negatives, 3 replay negatives on t",
+   "note": "Jon Attree's Atic Atac .nxc v1.3 (published, github.com/jattree/nxc, patch md5 ed872411): engine atic_atac_v13, picked by engines.py only with NEXCLASH_REWORK=atic_atac_v13 (the build keeps the record's pinned rom3 fill, as published). Dean's atic_atac as of d7abd1c + the hook speed pass (v1.1), the figure painter's vacated-cell writes NOPed and the menu clear 0x80B4 hooked (v1.2), the QAOP + Space toggle (v1.3, profile atic_atac_v13_qaop); Enhanced (atic_atac_enhanced_colours.json, from the MVV package's .256, local only) and the loading screen (atic_atac_loading.scr, bank 23). Outputs = nxc.py --bare: default, Enhanced, and each with the toggle. Verify: every build replayed in lockstep on walk1, walk2 and t (toggle builds with each QWERT read translated), unit tests + 3 negative controls and 7 rework negatives per colour set, 4 incoming clocks, the toggle's key / pause units on the built bytes with 2 negatives, 3 replay negatives on t. games/atic_atac.md \"Rework (opt-in)\"."
+  }
+ ],
  "status": {
   "title": "Atic Atac",
   "engine_col": "atic_atac (atic_atac.md)",
@@ -82,7 +171,9 @@
   "next": "stage 3: selftest --verify --stamp, colour sheets, hardware checklist"
  },
  "checks": [
-  "asm2profile:atic_atac"
+  "asm2profile:atic_atac",
+  "asm2profile:atic_atac_v13",
+  "asm2profile:atic_atac_v13_qaop"
  ],
  "techniques": [
   {

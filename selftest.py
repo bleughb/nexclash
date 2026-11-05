@@ -26,8 +26,10 @@
 Rebuild = the record's recipe: snapshot (+ the recordings it names) + the stored build decisions, no
 analysis, no verification - seconds per game. Re-verify = the record's verify recipe: auto recording or
 the reference recordings, differential verification, simulated boot, the old-strategy builds (repro),
-and a record's opt-in reworks ("rework": [{name, args, outputs, note}], rebuilt and re-verified with the
-record: auto with those args; only a record that lists one runs it - Jetpac's v1.1, 2026-11-04).
+and a record's opt-in reworks ("rework": [{name, version, args, env, inputs, rebuild, verify, outputs, proof, note}],
+rebuilt and re-verified with the record: auto with those args, environment and recipes; only a record that lists one
+runs it - Jetpac's v1.1, 2026-11-04). A record input marked "missing" (not in the references) is not staged: the
+verification that needs it is skipped (reported, nothing stamped), the rebuild and the reworks still run.
 Which games need which is plan() in nexclash/records.py: own files changed -> re-verify that game;
 shared files changed -> rebuild everything that depends on them + re-verify one representative per
 engine. Exit 0 = all good; 1 = a failure; 2 = no failure but games skipped (reference files missing).
@@ -72,7 +74,11 @@ def stage(rec, src, work):
     -> (dir, None) or (None, why)."""
     d = os.path.join(work, rec['name'])
     os.makedirs(d, exist_ok=True)
+    rec['_gone'] = []
     for it in [rec['inputs']['snapshot']] + rec['inputs']['recordings']:
+        if it.get('missing') and not os.path.isfile(os.path.join(src, it.get('path', ''))):
+            rec['_gone'].append(it['name'])     # the record says it is not in the references: the verify that
+            continue                            # needs it is skipped (reverify), the rest runs
         why = _stage_one(it, src, d)
         if why:
             return None, why
@@ -222,7 +228,7 @@ def rebuild(rec, d, lines):
             lines.append('SKIP %s rework %s (%s)' % (rec['name'], x['name'], x['_missing']))
             continue
         ro = os.path.join(d, 'rebuild_rework_' + x['name'])
-        _run(_rework_cmd(z80, x, 'rebuild', d) + ['-o', ro], env)
+        _run(_rework_cmd(z80, x, 'rebuild', d) + ['-o', ro], dict(env, **x.get('env', {})))
         bad += _check_outputs(rec, ro, lines, x['outputs'], 'rebuild rework %s:' % x['name'])
         bad += _boot_ok(_report(ro, _snapname(rec)), lines, '%s rework %s' % (rec['name'], x['name']))
     return bad + _audit_check(rec, alog, lines, 'rebuild')
@@ -231,7 +237,8 @@ def rebuild(rec, d, lines):
 def _rework_cmd(z80, x, stage_, d):
     """An opt-in rework of an existing game (record "rework"): auto with the rework's own args, e.g.
     `--altrom-fill whole`, which overrides the record pin (Jetpac v1.1: engines.py picks jetpac_v11), plus its own
-    "rebuild" / "verify" recipe (args, rzx, stored decisions), as a record's."""
+    "rebuild" / "verify" recipe (args, rzx, stored decisions), as a record's, and its own environment ("env", e.g.
+    NEXCLASH_REWORK=atic_atac_v13 for a rework that keeps the pinned fill; the callers add it)."""
     rc = x.get(stage_) or {}
     cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80] + list(x.get('args', [])) + list(rc.get('args', []))
     if stage_ == 'rebuild' and '--no-record' not in cmd:
@@ -322,8 +329,14 @@ def reverify(rec, d, lines, human=False):
     for r in rz:
         cmd += ['--rzx', os.path.join(d, r)]
     env, alog = _audit_env(d, 'verify')
-    _run(cmd + ['-o', out], env)
     name = _snapname(rec)
+    gone = [r for r in rz if r in rec.get('_gone', [])]
+    if gone:                                    # inputs the record marks "missing": no base verification, no stamp
+        rec['_vskip'] = gone
+        lines.append('SKIP %s verification: %s not in the reference folder (record: "missing"); its reworks run' % (
+            rec['name'], ', '.join(gone)))
+        return _reverify_reworks(rec, d, lines, z80, name, env) + _audit_check(rec, alog, lines, 'verify')
+    _run(cmd + ['-o', out], env)
     bad = _check_outputs(rec, out, lines, stage_='verify') + _verify_report(_report(out, name), rec['name'], lines, rec)
     bad += _checks_status(out, name, rec['name'], lines, bool(rz), rec)
     dec_p = os.path.join(out, name + '_decisions.json')
@@ -346,16 +359,22 @@ def reverify(rec, d, lines, human=False):
         bad += _check_outputs(rec, ro, lines, {'repro': x}, 'verify')
         bad += _verify_report(_report(ro, name), '%s --strategy %s' % (rec['name'], x['strategy']), lines)
         bad += _checks_status(ro, name, '%s --strategy %s' % (rec['name'], x['strategy']), lines, True, rec)
+    return bad + _reverify_reworks(rec, d, lines, z80, name, env) + _audit_check(rec, alog, lines, 'verify')
+
+
+def _reverify_reworks(rec, d, lines, z80, name, env):
+    """Each opt-in rework: auto with its args, environment and verify recipe (its own recordings)."""
+    bad = 0
     for x in rec.get('rework', []):
         if x.get('_missing'):
             continue                            # said by rebuild()
         ro = os.path.join(d, 'verify_rework_' + x['name'])
-        _run(_rework_cmd(z80, x, 'verify', d) + ['-o', ro], env)
+        _run(_rework_cmd(z80, x, 'verify', d) + ['-o', ro], dict(env, **x.get('env', {})))
         bad += _check_outputs(rec, ro, lines, x['outputs'], 'verify rework %s:' % x['name'])
         bad += _verify_report(_report(ro, name), '%s rework %s' % (rec['name'], x['name']), lines)
         bad += _checks_status(ro, name, '%s rework %s' % (rec['name'], x['name']), lines,
                               bool((x.get('verify') or {}).get('rzx')), rec)
-    return bad + _audit_check(rec, alog, lines, 'verify')
+    return bad
 
 
 def run_one(rec, action, src, work, human):
@@ -370,6 +389,8 @@ def run_one(rec, action, src, work, human):
     else:
         action = 'rebuild'                      # no verify recipe: only a rebuild was proven
     miss = ['rework %s: %s' % (x['name'], x['_missing']) for x in rec.get('rework', []) if x.get('_missing')]
+    if rec.get('_vskip'):
+        miss.insert(0, 'verification skipped: %s missing (record)' % ', '.join(rec['_vskip']))
     if rec.get('_incomplete'):
         return rec, action, bad, lines, 'verification incomplete: ' + '; '.join(rec['_incomplete'])
     return rec, action, bad, lines, ('partial: ' + '; '.join(miss)) if miss else None
