@@ -1,14 +1,12 @@
 # Colour sheets and recolour (PLAYBOOK stage 3-4; read when you build or read back a sheet)
 
-The rules for the colour sheets the user paints, the read-back into the colour map, and `recolour`.
-Moved out of PLAYBOOK 3b (2026-10-26) so a session reads them only when it works on colours. Since
-2026-10-26 the sheets go out with the first sprite build (stage 3), not with the design question:
-recolour makes a repaint free (no rebuild, no re-verify), so colour is not a design decision.
-"Phase-A question" below = that delivery.
+The colour sheets the user paints, their read-back, `recolour` and the painter (from PLAYBOOK 3b,
+2026-10-26). Sheets go out with the first sprite build (stage 3): recolour makes a repaint free, so
+colour is not a design decision ("phase-A question" below = that delivery).
 
 - COLOUR SHEET - every game from Midnight Resistance on (Dean, 2026-10-13). Colours are not
   settled in words: the user paints them.
-  - What to send (with the first sprite build since 2026-10-26, before that with the phase-A question; Dean 2026-10-14, rules of 2026-10-19 for ALL games):
+  - What to send (Dean 2026-10-14; rules of 2026-10-19, ALL games):
     - `<game>_PAINTING_SPRITES.png`: the fewest WHOLE figures that show every graphics byte
       (`coloursheet.choose`, then `write(..., unique=False)`), in the colours the build draws today.
       Why whole: "only the new pixels" of a figure that shares graphics with an earlier one looked
@@ -94,7 +92,9 @@ recolour makes a repaint free (no rebuild, no re-verify), so colour is not a des
     function: "unverified" in the report, the engine's build checks still apply. Change the keys
     meaning -> bump `keys`.
 
-- Pixel art is the user's. Say so: an AI is not a good pixel artist (it sees a pixel grid
-  coarsely). The AI prepares the sheets - cells or frames copied exactly as the game draws them,
-  each distinct look once - and builds the user's drawing in; it does not draw drafts by rules.
-  (Trueno: automatic drafts cost many rounds; a copied sheet and the user's hand took minutes.)
+- PAINTER - the default first step of an Enhanced set (Dean, Jon 2026-11-04; refactor plan 19-22):
+  `python -m nexclash.paint regions SHEET_layout.json -o D` (regions, guesses, D/parts.json: label one
+  key frame per family), `paint SHEET_layout.json --parts D/parts.json -o D` (painted sheet for
+  `recolour`, compare.png, look sheet: CUT 0), `export` / `import` (repaint anywhere; recolour puts it
+  back). Parts follow the drawn lines; no white outline; block or row colouring only if the author
+  asks. It follows the game's pixels, not hand drawing (Trueno); the author's labels and touch-ups win.

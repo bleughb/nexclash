@@ -320,8 +320,8 @@ checklist, so the user tests and paints in the same pass.
 
 # Stage 4 - Hardware and colour rounds (one session per round)
 - Collect the user's whole list per round (above); 6b before every build the user tests.
-- A painted sheet: `recolour` (the recolour skill; seconds, no rebuild, no re-verify). Making the
-  painting the build default is its own task (docs/COLOURS.md RECOLOUR: rebuild + verify + stamp).
+- Enhanced set: the painter first (docs/COLOURS.md PAINTER), blocks only if asked. A painted sheet:
+  `recolour` (seconds, no rebuild); as the build default: rebuild + verify + stamp (COLOURS.md).
 - A fix: stage 2 rules (quick runs), then the full verification again as in 6a.
 - A figure or screen the first recording never showed: its own question to the user (CLAUDE.md).
 

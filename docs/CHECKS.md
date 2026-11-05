@@ -78,6 +78,10 @@ back view with the hood cut straight at row 12 into the tunic (the owner's "the 
 wrong colour"); the drawn-region maps (b8c3754c, 37f97001) no longer have that cut. One 3-pixel shoulder
 cut stays in both, and the newer front views have a 4-pixel collar cut: judge them on the sheet. RIM and
 VANISH did not fire on these builds (synthetic checks only).
+The painter (`python -m nexclash.paint paint`, docs/COLOURS.md PAINTER) runs the look sheet on every
+painted sheet and merges away any colour boundary that would be a CUT. Its samples (2026-11-04, Jon's
+pilot evidence, no build changed): Target: Renegade's whole sheet (89 figures), Nightshade's 22 hero
+graphics and Robin's 8 walk / front / back graphics: CUT 0, VANISH 0, RIM 0.
 
 ## Coverage: recordings and soak profiles that visit everything (plan 9)
 A recording or a soak that only plays the first screen proves only that. Cover, besides play

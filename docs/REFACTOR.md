@@ -54,6 +54,9 @@ These warn and never refuse. Their results go into the patch's proof record.
 22. **Sprite sheet export and import** (Dean's idea), building on the existing `recolour`. Export every image as a PNG
     sheet, repaint it anywhere, and import it straight into the build's reserved sprite memory as a new Enhanced set.
     No recompile.
+    Built (branch refactor-painter): `python -m nexclash.paint` (regions, paint, export, import; docs/COLOURS.md
+    PAINTER, card verify.paint-follows-drawing), proved on samples only, no game repainted. Engines that build images
+    at run time (Nightshade, Lunar Jetman) still need item 24 before export and import reach them.
 
 ## 6. Output and workflow
 23. **.nxc as the default output,** with the packager inside NexClash (both GPL-3). `--nex` keeps today's .nex.
