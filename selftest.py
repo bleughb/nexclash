@@ -319,6 +319,12 @@ def tools_check(src):
     print('%-4s tools: recolour .nex offsets / splice / refusals on a synthetic .nex%s' % (
         'OK' if not rbad else 'FAIL', '' if not rbad else ' (%s)' % rbad))
     cbad += len(rbad)
+    from nexclash import paint                  # the shared painter (refactor plan 19-22, docs/COLOURS.md)
+    pbad = paint.selfcheck()
+    print('%-4s tools: paint - regions closed off by drawn lines, neck split, no straight cut, head guess, labels '
+          'carried to a mirrored frame, sheet read-back, row-band control flagged%s' % (
+              'OK' if not pbad else 'FAIL', '' if not pbad else ' (%s)' % pbad[:3]))
+    cbad += len(pbad)
     from nexclash import z80n
     zbad = z80n.selfcheck()
     print('%-4s tools: z80n - every Z80N instruction against worked results (core 3.02.05 / guide r3)%s' % (
