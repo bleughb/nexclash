@@ -170,6 +170,40 @@ defaults all white until painted).
   flames - the fault cannot show), the build dropping part 3 (neg_pt) 16/16 fuel cases.
 - Full verification (selftest --game jetpac --verify --stamp, 6000-frame free run + unit + boot): PASSED, stamped 2026-11-03.
 
+## Rework v1.1 (Jon Attree's published .nxc; imported 2026-11-04, opt-in, `--altrom-fill whole`)
+Ported from Jon Attree's .nxc work, 2026-11-04 (pilot runs/jetpac/nexclash, a32739b..9c8dcb3 on d7abd1c). Published
+.nxc: **Jet Pac v1.1** (github.com/jattree/nxc, patch md5 dbe99515; "Coloured build (not Dean's Jetpac build)").
+- Which it is: Dean's engine reworked, not a separate engine. The clone's base commit is this engine as of d7abd1c
+  (same module, hooks, tables, profile, record); Jon's work changed those files only: a rocket / fuel / flames fix
+  of 2026-11-02 (format-study/jetpac: one IX, table layout bits 2-3 pick a sprite group 102 / 108 / flames 114,
+  half-filled section = palette offset 7), then the whole alt ROM image (2026-11-04: altrom 0x2000-0x4000 from a
+  page of Sinclair's ROM + hooks, altrom_low = Sinclair 0x0000-0x1FFF in page 25; the verifier models the image as
+  the Next fills it from NextZXOS's ROM3 and compares the IM 1 handler at every 0x0038). Dean fixed the same three
+  faults on 2026-11-03 in other code (round 2 above: a pair per rocket figure, 102-109); his build stays the
+  record's default, unchanged (3cf8fbd2, pin rom3).
+- How it is kept apart: its own files, a copy of the clone's renamed `jetpac_v11` (nexclash/jetpac_v11.py,
+  asm/jetpac_v11_hooks.asm + _tables.asm, docs/profiles/jetpac_v11.json); engines.py picks it before `jetpac` only
+  for `--altrom-fill whole` on this snapshot, the opt-in the record's pin names. Dean's jetpac files are untouched.
+  The record's "rework" field (selftest.py: rebuilt and re-verified with the record, only where a record lists one)
+  holds its args and outputs. Under `--altrom-fill whole` the stub's fill is the old one for this build:
+  z80tonex.altrom_whole() leaves a build that writes 0x2000-0x4000 + altrom_low itself alone (as Cauldron).
+- Moved into the engine from the run folder (work/build.py, work/load.py): the Enhanced set (recolour() with
+  jetpac_enhanced_colours.json, Spectrum Magic's jetpac_.zip Spec256 colours, 967 entries, local only) and the
+  loading screen (nexclash-patch build/all2/add_screen.py's stub, bank 13: `loading_nex` + the `ldscr` blocks of
+  asm/jetpac_v11_hooks.asm; the pinned sjasmplus gives the published stub bank byte for byte). Screen
+  (JETPAC.scr from the tape), colour map and NextZXOS's enNextZX.rom (MD5 8c34d957, the verifier's ROM3) are record
+  inputs in specnext/reference/jetpac/, never in this repo.
+- Rebuild = the .nxc: `nxc.py --bare` default bd4a51d1, Enhanced 00cce39c = `auto --altrom-fill whole`'s
+  jetpac_sprites.nex / jetpac_enhanced.nex (before the screen 6f9f5e20 / 515ba243; plain feff51b7, Dean's).
+- Results (today's tree, `selftest.py --game jetpac --verify --stamp`, the rework beside Dean's build): rebuild
+  bd4a51d1 / 00cce39c / plain feff51b7 = recorded; free run 6000 frames IDENTICAL (20,433 draws, 100 erases, 23,192
+  colour paints, 5 clears, 2,193,166 sprite pixels), the IM 1 handler compared with the original's at all 5,149
+  interrupts against NextZXOS's ROM3; unit 6,816 graphic cases PASS, pattern negative 40/40; rom3_left negative
+  (the previous hook-bytes-only image) detected at 5,149 of 5,149 interrupts and by 5,367 image bytes. The Enhanced
+  set and the loading screen are not replayed: recolour() of the verified build and a stub bank, each checked for
+  the bytes it may change. No RZX exists (as Dean's); emulator and owner checks are the .nxc's (JNext, 2026-11-04).
+- Hardware: none. Checklist: Dean's round-2 list above, plus the loading screen (a key or 5 s) and Enhanced colours.
+
 ## Lessons
 - [card patch.whole-altrom-image §Use / do not use] opt-in rework available: whole alt ROM image (see card patch.whole-altrom-image). IM 1 in play reaches hook code at 0x386E once DivMMC no longer traps 0x0038 (runs/altrom_audit, JNext; masked under NextZXOS). Output pinned.
 - [card detect.tracked-unit §Recognise] One object drew 4 figures a frame (the rocket: 3 sections in a loop + flames, same IX); a sprite set per object showed only the last, and the per-draw check passed because it compares each draw alone. Observed on hardware (user), demonstrated by the neg_rk build failing 36/37 whole-routine cases. Card: Recognise bullet + failure row.
@@ -178,17 +212,26 @@ defaults all white until painted).
 - [local: game-specific colour rule] Rocket fuel rows (per character row) done with two-index patterns (top 8 lines index 2) and the unused palette offset 8 (magenta below, white above); valid because partial fuel occurs only standing at y 183, where rows and sections align.
 - [doc docs/LEARNINGS.md §2.6 Process / tokens (this sandbox)] `$!` after `setsid nohup` is the wrapper's PID: a `kill -0` wait on it ended at once (independent check, 2026-11-03); the job's PID comes from `ps`.
 
+- [deferred Open: reconsider when the owner and Dean choose one Jetpac] observed (import, 2026-11-04): two fixes of the
+  same rocket faults exist from one base (Dean's round 2, Jon's v1.1 of 2026-11-02); the import keeps both, Dean's as
+  the default and Jon's as an opt-in rework with its own files, so neither build changes.
+- [local: the published patch carried build steps that ran outside the engine] observed (import, 2026-11-04): the
+  v1.1 .nxc = engine + recolour() + a loading-screen stub from nexclash-patch; the clone's record held only the
+  engine's MD5s. An import checks against `nxc.py --bare`, and the steps moved into jetpac_v11.auto.
+
 ## Technique use
 - patch.whole-altrom-image: no help: rework not applied, output pinned (record pin)
+- patch.whole-altrom-image: used: the v1.1 rework writes the whole image itself (altrom 0x2000-0x4000 + altrom_low), the card's Cauldron case
 - detect.tracked-unit: corrected: its composite question missed one object drawing several figures; card amended with that case
 
 ## Stage log
 - 2026-11-03 stage 4 (round 1 hardware report: 3 faults): ~2 h, ~60 tool calls, 0 user rounds; main had nothing new at the start (fetch).
+- 2026-11-04 import of Jon's Jet Pac v1.1 as an opt-in rework (phase 7, group 3): jetpac_v11 files, record "rework"; Dean's build unchanged. 0 user rounds.
 - 2026-11-03 stage 4 check (no hardware report yet): independent re-verify `selftest --game jetpac --verify` PASSED (rebuild MD5s, free run IDENTICAL, unit + rocket 37 PASS, boot OK); specnext files match; two stale Patch-design / results lines corrected. ~25 tool calls.
 
 ## Friction
-- reuse: [none: maintainer note only, no work on this game]
-- retries: [none: no work on this game]
-- environment: [none: no work on this game]
-- hand-rolled: [none: no work on this game]
-- scratch: [none: no work on this game]
+- reuse: [local: the v1.1 loading stub is add_screen.py's template for bank 13] the same stub as Rambo's (bank 23) came in in this import; a shared helper is the maintainers' call.
+- retries: [none: the rework rebuilt the published MD5s first time]
+- environment: [local: the v1.1 verifier needs NextZXOS's ROM3] enNextZX.rom is staged as a record input; without it the rework's verify refuses rather than model Sinclair's ROM.
+- hand-rolled: [none: no scratch tool kept]
+- scratch: [none: import scripts stayed in the session scratchpad]

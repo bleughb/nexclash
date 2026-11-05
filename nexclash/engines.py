@@ -23,6 +23,7 @@ ENGINES = [
     ('rambo', 'is_rambo', None),                                          # Rambo (48K)
     ('ikari_warriors', 'is_ikari_warriors', None),                        # Ikari Warriors (48K)
     ('nemesis', 'is_nemesis', None),                                      # Nemesis the Warlock (48K)
+    ('jetpac_v11', 'is_jetpac', lambda a: getattr(a, 'altrom_fill', None) == 'whole'),  # Jet Pac v1.1: opt-in rework of jetpac
     ('jetpac', 'is_jetpac', None),                                        # Jetpac (16K)
     ('loderunner', 'is_loderunner', None),                                # Lode Runner (48K)
     ('commando', 'is_commando', None),                                    # Commando (128K)
