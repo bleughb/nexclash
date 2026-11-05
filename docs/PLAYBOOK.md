@@ -293,14 +293,15 @@ The full verification runs ONCE, on the build that goes to the user, and it is t
 write the evidence record first (step 7), commit, then `python selftest.py --game <record> --verify
 --stamp` (the record's verify recipe + the rebuild MD5s; it stamps the record, so the maintainers'
 `--affected` before the merge has nothing left to do for this game). Never a separate full `auto`
-as well (Commando ran the ~55 min full check five or six times).
-Long runs (the full verification, selftest): detached + polled, LEARNINGS 2.6: one
-`sleep 540; tail -3 LOG` per poll (call timeout 10 min), nothing faster; write the record and the notes meanwhile.
+as well (Commando ran the ~55 min full check five or six times). Long runs: detached + polled
+(CLAUDE.md "Tokens", LEARNINGS 2.6); write the record and the notes meanwhile.
 
 ## 6b. Hardware risk review (before every build the user tests)
 Go through BRIEFING A1 "Simulator blind spots" item by item for what changed since the last
 hardware round (DivMMC trap, interrupts inside hooks, raster/tearing, speed, emulator
 differences); each item must be covered by a toolkit check or named in the hardware checklist.
+Then the play checks on that build (docs/CHECKS.md): pace and flicker against the original, a look sheet
+of each colour set, soak before the release; explain or fix each warning (games/<game>.md).
 Ask the user to try CSpect first if a build changes memory layout or start-up.
 
 ## 7. Deliver
@@ -326,6 +327,5 @@ checklist, so the user tests and paints in the same pass.
 - A figure or screen the first recording never showed: its own question to the user (CLAUDE.md).
 
 # Stage 5 - Close (the session that finishes the game, or a round)
-CLAUDE.md "End of every stage": games/<game>.md (status, checklist, Stage log), the record and
-`records views`, the learning loop (docs/LEARNING.md), `python tools/doccheck.py`; contributors
-`contribute`, maintainers the PR (docs/MAINTAIN.md).
+CLAUDE.md "End of every stage" (games/<game>.md, the record + `records views`, the learning loop,
+doccheck; then `contribute`, or the maintainers' PR).

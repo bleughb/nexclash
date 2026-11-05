@@ -295,13 +295,11 @@ Open items only: a finished item is deleted (history lives in git), a new one go
 with the next free number. STATUS.md "Open work" holds only release state and points here.
 
 Verification and speed
-1. No hook speed report: Commando's and Midnight Resistance's hook costs were measured with scratch
-   scripts (T per plot / commit from the pair runs). Wanted: an `auto` line with hook T per call
-   (median / max) against a documented budget per game frame; Smash TV's per-engine `Speed` line is
-   the pattern to lift into a shared helper. On the real core model: MAME breakpoints on every hook
-   entry and every exit back to the game (TECHNIQUES "NextMasterSystem"). Without MAME: 28 MHz cycles
-   = T-states + 1 per memory read (their MAME measurement), not T / 8. Matters most for games without
-   frame sync, where hook cost changes the game's speed (LEARNINGS 2.1).
+1. Hook speed: `python -m nexclash.pace` measures the pace penalty and hook time (NR 7) in JNext
+   (docs/CHECKS.md). Still wanted: an `auto` line with hook T per call against a budget per game frame
+   (Smash TV's `Speed` line is the pattern); hooks with no NR 7 switch read 0 in pace. Core-exact:
+   MAME breakpoints on hook entry / exit (TECHNIQUES "NextMasterSystem"); 28 MHz cycles = T + 1 per
+   memory read, not T / 8. Matters most without frame sync (LEARNINGS 2.1).
 2. Interrupt injection: in verify / unit tests, run the game's ISR at random hook instructions and
    require identical results (would have caught Commando's IY bug directly; the per-instruction
    invariant check is the stand-in).
@@ -522,5 +520,7 @@ facts come in as arguments (addresses, ranges, keys).
 - cost: T per call of a routine entered by CALL (interrupt time excluded), calls per frame,
   share of frame time, per register value at entry. A routine reached by JP has no return
   address on the stack: time its caller instead.
+- play checks on a BUILD in JNext, original as control (docs/CHECKS.md): `python -m nexclash.soak`
+  (freezes), `pace` (penalty, input keyed to game updates), `flicker` (every frame), `looksheet` (flags).
 Improving them is welcome: keep existing report lines and arguments (add, don't rename), add a
 golden check for the new behaviour to selftest.py tools_check, run `python selftest.py --tools`.

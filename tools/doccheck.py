@@ -33,7 +33,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BUDGET = {'docs/ENGINE_CONTRACT.md': 6000, 'CLAUDE.md': 10500, 'docs/PLAYBOOK.md': 27000, 'docs/COLOURS.md': 9000, 'docs/MAINTAIN.md': 6000,
           'docs/BRIEFING.md': 56000, 'docs/LEARNINGS.md': 90000, 'docs/TECHNIQUES.md': 68000,
           'docs/VERIFICATION.md': 82000, 'README.md': 12000, 'docs/techniques/STANDARD.md': 32000,
-          'docs/LEARNING.md': 6000, 'tools/probes/README.md': 3000}
+          'docs/LEARNING.md': 6000, 'tools/probes/README.md': 3000, 'docs/CHECKS.md': 8500}
 GAME_BUDGET = 25000          # games/<game>.md; older notes over it are listed and must not grow
 GAME_GRANDFATHERED = {'games/rainbow_islands.md': 72000}
 SIBLING = ('nexclash/CLAUDE.md', 'nexclash/requirements.txt', 'nexclash/nexclash.py')   # ../nexclash/... in specnext sessions
