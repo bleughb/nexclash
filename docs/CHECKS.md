@@ -60,11 +60,12 @@ attributes, patterns and palette (pixel-exact against JNext's picture). Flags (c
 verify.frame-layer-capture): OUT OF STEP (the sprite layer and the ULA under the figures change on different
 frames, and the picture in the figures' box shows it), VANISHED (a figure missing for one frame), picture
 changes per game update above the original's, attribute cells that change for one frame and back (Atic
-Atac's red doors), one-frame picture transients. strip.png: each flagged frame between its neighbours.
+Atac's red doors), one-frame picture transients. strip.png: flagged frames + neighbours. Frames missing / JNext failed:
+NOT MEASURED / INCOMPLETE.
 Nightshade walk (frames 400-699, probe 0xE200, plain .nex control at 1.12 changes an update): a94ebbb5
 (the round-2 blink build) **6 out of step, 2 vanished, 2.62 changes an update**; 1cf6b276 (the fix)
-**0, 0, 1.00** (3 mismatches at the frame edge only: its attribute burst ends on lines 0-7, before the
-play area is drawn; counted, not flagged).
+**0, 0, 1.00** (3 at the frame edge only: its attribute burst ends on lines 0-7, before the play area;
+counted, not flagged).
 
 ## looksheet: look sheet with flags (plan 13)
 `python -m nexclash.looksheet BUILD.nex --at 600,900,1200 --profile P.json` (or `--jns FILES`, or

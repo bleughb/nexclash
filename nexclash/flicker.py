@@ -24,6 +24,7 @@ import glob
 import json
 import os
 import shutil
+import sys
 from . import jnext as J
 
 
@@ -150,6 +151,12 @@ def load_states(d, a, b):
     return out
 
 
+def captures(d, a, b):
+    """-> (pictures, machine states) present among video frames a..b: a frame is observed only with both."""
+    ex = lambda f, x: os.path.exists(os.path.join(d, 'f%06d.%s' % (f, x)))
+    return sum(1 for f in range(a, b + 1) if ex(f, 'png')), sum(1 for f in range(a, b + 1) if ex(f, 'jns'))
+
+
 def strip(d, frames, out):
     from PIL import Image, ImageDraw
     rows = []
@@ -216,7 +223,7 @@ def main(argv=None):
             os.remove(x)
         jobs.append((prog, script(prog, prof, a.start, a.frames, a.seed, orig, d, probe), d, a.start + a.frames + 5,
                      card, a.jnext_home))
-    J.run_all(jobs)
+    rcs = dict(zip([tag for tag, _, _ in runs], J.run_all(jobs))) if jobs else {}
     b0, b1 = a.start, a.start + a.frames - 1
     lines = ['FLICKER  %s (%s)%s, video frames %d-%d, probe %s, profile %s' % (
         os.path.basename(a.build), J.md5(a.build)[:8],
@@ -225,9 +232,18 @@ def main(argv=None):
     res, flagged = {}, []
     for tag, prog, orig in runs:
         d = os.path.join(out, tag)
-        errs = J.errors(os.path.join(d, 'run.log'))
+        lg = os.path.join(d, 'run.log')
+        errs = J.errors(lg) if os.path.exists(lg) else ['no run.log']
         if errs:
             lines.append('%-9s: JNext errors: %s' % (tag, '; '.join(errs[:2])))
+        npic, nst = captures(d, b0, b1)
+        want, rc = b1 - b0 + 1, rcs.get(tag)
+        cap = dict(pictures=npic, states=nst, requested=want, exit=rc,
+                   complete=npic == want and nst == want and rc in (None, 0) and not errs)
+        if not cap['complete']:
+            lines.append('%-9s: INCOMPLETE captures: %d of %d pictures, %d of %d machine states%s%s' % (
+                tag, npic, want, nst, want, '; JNext exit %s' % rc if rc not in (None, 0) else '',
+                '; JNext errors' if errs else ''))
         ims = pictures(d, b0, b1)
         ch, tr = picture_stats(ims, b0, b1)
         up = updates(d, J.start_frame(prog), b0, b1) if probe is not None else []
@@ -235,10 +251,11 @@ def main(argv=None):
         cand, van, attr = analyse(st)
         step = [(f, k) for f, k, box in cand if seen(ims, f, box)]
         van = [(f, box) for f, box in van if seen(ims, f, tuple(max(0, v) for v in box))]
-        res[tag] = dict(changes=len(ch), updates=len(up), transients=tr, step=step, vanish=van,
+        res[tag] = dict(changes=len(ch), updates=len(up), transients=tr, step=step, vanish=van, captures=cap,
                         attr=[(f, len(c)) for f, c in attr], step_state_only=len(cand) - len(step))
         per = ' = %.2f a game update' % (len(ch) / len(up)) if up else ''
-        lines.append('%-9s: picture changes %d in %d frames, game updates %d%s' % (tag, len(ch), b1 - b0 + 1, len(up), per))
+        lines.append('%-9s: picture changes %d in %d frames%s, game updates %d%s' % (
+            tag, len(ch), want, '' if cap['complete'] else ' (%d observed)' % min(npic, nst), len(up), per))
         if tag == 'build' or step or van:
             lines.append('  out of step (sprites and the ULA under them on different frames, seen): %d frames%s%s' % (
                 len(step), ' [%s]' % short(['%d %s' % x for x in step], 6) if step else '',
@@ -263,7 +280,15 @@ def main(argv=None):
             rb['changes'] / rb['updates'], ro['changes'] / ro['updates']))
     if ro and len(rb['attr']) > len(ro['attr']):
         warn.append('more one-frame attribute changes than the original (%d against %d frames)' % (len(rb['attr']), len(ro['attr'])))
-    lines.append('RESULT: %s (warns only)%s' % ('WARNING: ' + '; '.join(warn) if warn else 'no flicker found',
+    inc = [t for t in res if not res[t]['captures']['complete']]
+    seen_any = any(min(res[t]['captures']['pictures'], res[t]['captures']['states']) for t in res)
+    head = ('NOT MEASURED (no frame captured: %s)' % ', '.join(inc) if not seen_any else
+            'INCOMPLETE (%s: frames missing or JNext failed): ' % ', '.join(inc) if inc else '')
+    if head.startswith('NOT MEASURED'):
+        verdict = head
+    else:
+        verdict = head + ('WARNING: ' + '; '.join(warn) if warn else 'no flicker found' + (' in the frames captured' if inc else ''))
+    lines.append('RESULT: %s (warns only)%s' % (verdict,
                                                  '; strip %s' % os.path.join(a.out, 'strip.png') if flagged or rb['attr'] else ''))
     J.result_block(lines, os.path.join(a.out, 'RESULT.txt'))
     json.dump(res, open(os.path.join(a.out, 'flicker.json'), 'w'), indent=1, default=list)
@@ -316,6 +341,51 @@ def selfcheck():
         bad.append(('attr', analyse(st)[2]))
     if cell_of(0x0100) != 0 or cell_of(0x0020) != 32 or cell_of(6144 + 33) != 33:
         bad.append('cell_of')
+    bad += _capture_check()
+    return bad
+
+
+def _capture_check():
+    """Missing captures are never a clean run: a middle frame missing (counted), no captures at all (--reuse of an
+    empty run: NOT MEASURED), JNext failing (exit 1, nothing written: NOT MEASURED), most frames captured but one
+    missing (INCOMPLETE ... in the frames captured). The command still exits 0 (warns only)."""
+    import contextlib
+    import io
+    import tempfile
+    from unittest import mock
+    bad = []
+    with tempfile.TemporaryDirectory() as d:
+        for f in range(10, 20):
+            if f != 15:
+                for x in ('png', 'jns'):
+                    open(os.path.join(d, 'f%06d.%s' % (f, x)), 'w').close()
+        if captures(d, 10, 19) != (9, 9):
+            bad.append(('missing middle frame counted', captures(d, 10, 19)))
+        prog = os.path.join(d, 'synthetic.nex')
+        open(prog, 'wb').write(b'Next' + bytes(508))
+
+        def run(argv, **patches):
+            with contextlib.ExitStack() as es:
+                es.enter_context(mock.patch.object(J, 'card', return_value='unused'))
+                for k, v in patches.items():
+                    es.enter_context(mock.patch.object(*v) if isinstance(v, tuple) else mock.patch.object(J, k, v))
+                out = es.enter_context(contextlib.redirect_stdout(io.StringIO()))
+                rc = main([prog, '--from', '10', '--frames', '10', '-o', os.path.join(d, 'o%d' % len(bad))] + argv)
+            res = [ln for ln in open(os.path.join(d, 'o%d' % len(bad), 'RESULT.txt')).read().splitlines()
+                   if ln.startswith('RESULT')] if os.path.exists(os.path.join(d, 'o%d' % len(bad), 'RESULT.txt')) else []
+            return rc, (res or [ln for ln in out.getvalue().splitlines() if ln.startswith('RESULT')] or [''])[-1]
+        rc, r = run(['--reuse'])
+        if rc != 0 or 'NOT MEASURED' not in r:
+            bad.append(('empty --reuse', rc, r))
+        rc, r = run([], run_all=mock.Mock(return_value=[1]), launch=mock.Mock())
+        if rc != 0 or 'NOT MEASURED' not in r:
+            bad.append(('JNext exit 1', rc, r))
+        one = lambda dd, a, b: (b - a, b - a)
+        rc, r = run(['--reuse'], c=(sys.modules[__name__], 'captures', one),
+                    p=(sys.modules[__name__], 'pictures', lambda dd, a, b: {}),
+                    s=(sys.modules[__name__], 'load_states', lambda dd, a, b: []))
+        if rc != 0 or 'INCOMPLETE' not in r or 'no flicker found in the frames captured' not in r:
+            bad.append(('one frame missing', rc, r))
     return bad
 
 
