@@ -28,6 +28,7 @@ ENGINES = [
     ('jetpac', 'is_jetpac', None),                                        # Jetpac (16K)
     ('tid128', 'is_tid128', None),                                        # Treasure Island Dizzy 128K: opt-in rework of dizzy_patch
     ('loderunner_v2', 'is_loderunner_v2', None),                          # Lode Runner 128K: opt-in rework of loderunner
+    ('fwd128', 'is_fwd128', None),                                        # Fantasy World Dizzy 128K: opt-in rework of the generic TID build
     ('loderunner', 'is_loderunner', None),                                # Lode Runner (48K)
     ('commando', 'is_commando', None),                                    # Commando (128K)
     ('midres', 'is_midres', None),                                        # Midnight Resistance (128K)
