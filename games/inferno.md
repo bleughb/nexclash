@@ -1,16 +1,16 @@
 # Inferno
 
 ## Next session
-Stage: 2 (continued)    State: loading experiments L1/L6 pass; runtime timing FAIL
+Stage: 2 (continued)    State: loading experiments all six pass; runtime timing FAIL
 Inputs: specnext/reference/inferno/    Branch: codex/inferno (build/CONTINUE.md)
 Start: refresh main; read build/actor_jobs.md, actor_b_compiler.md, actor_packing.md and frame_pipeline.md.
 Read: inferno.py run_actor_job/actor_job_checks/model_verify/run_actor_pack and matching ASM.
 Next: user approves a brief "Loading…" screen before gameplay. Prepare from initialized live
   tables, keep completed images in high RAM, DMA changed patterns during play. Prove a safe
   post-initialization loading boundary and continuous loader/state contracts before installation.
-  --loading-prep-check models frozen live tables at first 8F7C, using assembled snapshot/colour/B.
-  L6: 118 images / 110875 bytes / 6320 ms preparation; all 2272 sampled draws reuse prepared content.
-  Exact validation remains costly: warm capture/scenery/validation 20.957 ms vs 10 ms total.
+  --loading-prep-all models frozen live tables at first 8F7C, using assembled snapshot/colour/B.
+  Six quicks: 624 prepared candidates / 13194 warm draws; no sampled cold misses; 11.95M pixels.
+  Unrolled exact bitmap checks reduce validation; optimized warm L1 is 18.194 ms, still FAIL.
   Host dispatch/allocation and first-draw pause are experiments, not installed cache/loading hooks.
   Preserve exact content/phase/paint validity, current/pending ownership and complete-frame readiness.
   Page 78 snapshot / 122 pinned stream; cache 136–215; high staging 216–223 via physical DDMA.

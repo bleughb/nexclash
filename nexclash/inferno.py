@@ -624,14 +624,14 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
 
 
 
-def capture_all(reference, folder, stop=2000, progress=None, scenery=False, frame=False, pack=False):
+def capture_all(reference, folder, stop=2000, progress=None, scenery=False, frame=False, pack=False, loading=False):
     """All six quick capture checks in one process, including cross-level simulator/cache reuse."""
     reference, folder = Path(reference), Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
     counts, cases, frames = Counter(), [], 0
     for level in range(1, 7):
-        result = model_verify(reference / ('Inferno%d.rzx' % level), stop, capture=True, scenery=scenery, frame=frame, pack=pack)
-        filename = ('actor_pack%d.json' if pack else 'frame%d.json' if frame else 'textmap%d.json' if scenery == 'textmap' else 'scenery%d.json' if scenery else 'capture%d.json') % level
+        result = model_verify(reference / ('Inferno%d.rzx' % level), stop, capture=True, scenery=scenery, frame=frame, pack=pack,loading=loading)
+        filename = ('loading_prep%d.json' if loading else 'actor_pack%d.json' if pack else 'frame%d.json' if frame else 'textmap%d.json' if scenery == 'textmap' else 'scenery%d.json' if scenery else 'capture%d.json') % level
         (folder / filename).write_text(json.dumps(result, indent=2) + '\n')
         bad = {k: v for k, v in result['counts'].items() if k.endswith('!') and v}
         for k, v in result['counts'].items():
@@ -641,7 +641,7 @@ def capture_all(reference, folder, stop=2000, progress=None, scenery=False, fram
         if progress:
             progress('%s level %d: %s (%d frames)' % ('Scenery/capture' if scenery else 'Capture', level, 'FAIL' if bad else 'PASS', result['frames']))
     return {'frames': frames, 'counts': dict(counts), 'cases': cases,
-            'scope': ('standalone assembled snapshots/exact validations/pinned B construction plus frame preservation; host cache/census only, no installed scheduler/cache/display' if pack else 'capture plus offline assembled scenery worker; host alternates target banks, no runtime commit, sprite display or continuous release' if scenery else 'capture/model/invariant checks only; no sprite/Layer 2 renderer or continuous release')}
+            'scope': ('frozen live loading experiment; host scan/dispatch/packing, assembled source/colour/B and exact checks; no installed loading hook/cache/display' if loading else 'standalone assembled snapshots/exact validations/pinned B construction plus frame preservation; host cache/census only, no installed scheduler/cache/display' if pack else 'capture plus offline assembled scenery worker; host alternates target banks, no runtime commit, sprite display or continuous release' if scenery else 'capture/model/invariant checks only; no sprite/Layer 2 renderer or continuous release')}
 
 
 def tape_blocks(path):
@@ -1900,12 +1900,20 @@ def actor_job_checks():
     counts['overflow unpublished'] += 1
     code = bytes.fromhex(load_profile()['hooks']['job'])
     # Skip byte comparison: own pinned tables remain intact, live mutation must then be missed.
-    old = bytes.fromhex('BE EB C2')
+    old = bytes.fromhex('B9 C2')
     assert code.count(old) == 1
-    broken = code.replace(old,bytes.fromhex('BF EB C2'))
+    broken = code.replace(old,bytes.fromhex('BF C2'))
     source = list(ram)
-    source[0xDC00+8*768] ^= 1
+    source[0xD002] ^= 1
     assert run_actor_job(source,op=2,previous=job['pages'],code=broken)['match']
+    old_block = bytes.fromhex('1ABE C2')
+    assert code.count(old_block) == 8
+    broken_block = code.replace(old_block,bytes.fromhex('1ABF C2'))
+    for row in range(8):
+        source = list(ram)
+        source[0xDC00+8*768+row] ^= 1
+        assert run_actor_job(source,op=2,previous=job['pages'],code=broken_block)['match']
+        counts['missing bitmap comparison control detected'] += 1
     counts['missing exact comparison control detected'] += 1
     return {'counts':dict(counts),'timing':dict(peaks),'snapshot_capacity':8192,
             'scope':'assembled standalone pinned snapshot/exact validation and pinned tile consumer; no installed cache, scheduler, wrapper or display; software timings only'}
@@ -3876,6 +3884,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     action = ap.add_mutually_exclusive_group(required=True)
     action.add_argument('--loading-prep-check', type=Path)
+    action.add_argument('--loading-prep-all', type=Path)
     action.add_argument('--actor-job-checks', action='store_true')
     action.add_argument('--actor-pack-checks', action='store_true')
     action.add_argument('--actor-fill-checks', action='store_true')
@@ -3910,12 +3919,13 @@ def main():
     ap.add_argument('--out', type=Path, default=Path('work/inferno'))
     ap.add_argument('--json', type=Path)
     a = ap.parse_args()
-    if a.loading_prep_check:
-        result = model_verify(a.loading_prep_check,a.quick,capture=True,scenery='textmap',frame=True,pack=True,loading=True)
+    if a.loading_prep_check or a.loading_prep_all:
+        result = (capture_all(a.loading_prep_all,a.out,a.quick,progress=print,scenery='textmap',frame=True,pack=True,loading=True)
+                  if a.loading_prep_all else model_verify(a.loading_prep_check,a.quick,capture=True,scenery='textmap',frame=True,pack=True,loading=True))
         if a.json:
             a.json.write_text(json.dumps(result,indent=2)+'\n')
         print(json.dumps(result))
-        return int(bool(result['examples']))
+        return int(any(c['failures'] for c in result['cases'])) if a.loading_prep_all else int(bool(result['examples']))
     if a.actor_job_checks:
         result = actor_job_checks()
         if a.json:

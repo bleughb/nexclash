@@ -1045,5 +1045,293 @@
    "doccheck": "PASS: 90 docs",
    "hardware": "UNPROVED"
   }
+ },
+ "loading_fast": {
+  "scope": "frozen live loading experiment; host scan/dispatch/packing, assembled source/colour/B and exact checks; no installed loading hook/cache/display",
+  "sources": {
+   "nexclash/inferno.py": "0cf3e7131656ef0b0463f394de00e62c",
+   "asm/inferno_hooks.asm": "de2d9abee5bd0129f94e8d6bf9a15d8f",
+   "docs/profiles/inferno.json": "08b479868dffff6dd4a511d8fd7139d6"
+  },
+  "artifacts": {
+   "loading_preparation.md": "b48a1d77683e4b44e5fcd0ced1ebe3aa",
+   "loading_fast_job_checks.json": "5f3561c1a5eaace8e2f4eccafc3b63fb",
+   "loading_fast_assembly.txt": "8564454b36cfb09e83a16ae13a528129",
+   "loading_fast_doccheck.txt": "6b4d3adca81f1d5107e1da3ca9519e60",
+   "loading_fast_modal.json": "0468d475015f3919788ef98e85106965",
+   "loading_fast_summary.json": "8903b50f9f34f8e01aa1036ec279f72d",
+   "loading_fast_blit.json": "fdbe4c705e03d72c165da36ae416588b",
+   "loading_fast_quick/loading_prep1.json": "c4d69c619c5ff8ba31cd9b3a3374b1ca",
+   "loading_fast_quick/loading_prep3.json": "385bf33c832214c2e64f5b4a9644c607",
+   "loading_fast_quick/loading_prep5.json": "96f960df380f299249443dfb73bd7996",
+   "loading_fast_quick/loading_prep4.json": "8c9026d248e880d6491043e64801bca9",
+   "loading_fast_quick/loading_prep2.json": "939739245eb01577df17553ff459340e",
+   "loading_fast_quick/loading_prep6.json": "16b078aa9de11e465c60ab8d2ee177de",
+   "loading_fast_pack_checks.json": "de4d35f0d9fc3965e901de293b86f412",
+   "loading_fast_fill_checks.json": "41af4630cda28f50da96057d2c2d59d9"
+  },
+  "levels": {
+   "1": {
+    "preparation": {
+     "prepared_images": 103,
+     "packed_source_and_canvas_bytes": 86299,
+     "cache_capacity_bytes": 655360,
+     "assembled_tiles": 1523,
+     "assembled_B_pixels": 139392,
+     "preparation_cpu_ms": 4740.944,
+     "rejected": {
+      "malformed/unsupported live candidate": 143
+     },
+     "scope": "frozen live-table loading experiment with assembled snapshot/colour/B; host scan/dispatch/allocation; excludes scan, zeroing, cache-store copies, wrappers and hardware stalls",
+     "frame": 682,
+     "pc": "8F7C"
+    },
+    "timing": {
+     "target_total_added_ms": 10,
+     "cold_capture_scenery_colour_fill_max_ms": 6.595,
+     "cold_with_snapshot_validation_max_ms": 18.193714285714286,
+     "live_snapshot_validation_tick_max_ms": 11.608714285714285,
+     "status": "FAIL",
+     "excluded": "cache lookup/allocation, uploads, queue and external snapshot/fill wrappers",
+     "hardware_proof": false
+    },
+    "cached_draws": 2216,
+    "unexpected_misses": 0
+   },
+   "2": {
+    "preparation": {
+     "prepared_images": 109,
+     "packed_source_and_canvas_bytes": 57129,
+     "cache_capacity_bytes": 655360,
+     "assembled_tiles": 993,
+     "assembled_B_pixels": 92096,
+     "preparation_cpu_ms": 3161.44175,
+     "rejected": {
+      "malformed/unsupported live candidate": 136
+     },
+     "scope": "frozen live-table loading experiment with assembled snapshot/colour/B; host scan/dispatch/allocation; excludes scan, zeroing, cache-store copies, wrappers and hardware stalls",
+     "frame": 439,
+     "pc": "8F7C"
+    },
+    "timing": {
+     "target_total_added_ms": 10,
+     "cold_capture_scenery_colour_fill_max_ms": 8.353821428571429,
+     "cold_with_snapshot_validation_max_ms": 14.877392857142857,
+     "live_snapshot_validation_tick_max_ms": 6.523571428571429,
+     "status": "FAIL",
+     "excluded": "cache lookup/allocation, uploads, queue and external snapshot/fill wrappers",
+     "hardware_proof": false
+    },
+    "cached_draws": 1868,
+    "unexpected_misses": 0
+   },
+   "3": {
+    "preparation": {
+     "prepared_images": 88,
+     "packed_source_and_canvas_bytes": 52370,
+     "cache_capacity_bytes": 655360,
+     "assembled_tiles": 962,
+     "assembled_B_pixels": 83648,
+     "preparation_cpu_ms": 2752.219642857143,
+     "rejected": {
+      "malformed/unsupported live candidate": 152
+     },
+     "scope": "frozen live-table loading experiment with assembled snapshot/colour/B; host scan/dispatch/allocation; excludes scan, zeroing, cache-store copies, wrappers and hardware stalls",
+     "frame": 476,
+     "pc": "8F7C"
+    },
+    "timing": {
+     "target_total_added_ms": 10,
+     "cold_capture_scenery_colour_fill_max_ms": 7.015285714285715,
+     "cold_with_snapshot_validation_max_ms": 11.517035714285715,
+     "live_snapshot_validation_tick_max_ms": 4.659178571428572,
+     "status": "FAIL",
+     "excluded": "cache lookup/allocation, uploads, queue and external snapshot/fill wrappers",
+     "hardware_proof": false
+    },
+    "cached_draws": 2544,
+    "unexpected_misses": 0
+   },
+   "4": {
+    "preparation": {
+     "prepared_images": 122,
+     "packed_source_and_canvas_bytes": 77545,
+     "cache_capacity_bytes": 655360,
+     "assembled_tiles": 1559,
+     "assembled_B_pixels": 121472,
+     "preparation_cpu_ms": 4134.215357142857,
+     "rejected": {
+      "malformed/unsupported live candidate": 114
+     },
+     "scope": "frozen live-table loading experiment with assembled snapshot/colour/B; host scan/dispatch/allocation; excludes scan, zeroing, cache-store copies, wrappers and hardware stalls",
+     "frame": 432,
+     "pc": "8F7C"
+    },
+    "timing": {
+     "target_total_added_ms": 10,
+     "cold_capture_scenery_colour_fill_max_ms": 8.038142857142857,
+     "cold_with_snapshot_validation_max_ms": 16.465821428571427,
+     "live_snapshot_validation_tick_max_ms": 8.432678571428571,
+     "status": "FAIL",
+     "excluded": "cache lookup/allocation, uploads, queue and external snapshot/fill wrappers",
+     "hardware_proof": false
+    },
+    "cached_draws": 3755,
+    "unexpected_misses": 0
+   },
+   "5": {
+    "preparation": {
+     "prepared_images": 84,
+     "packed_source_and_canvas_bytes": 54795,
+     "cache_capacity_bytes": 655360,
+     "assembled_tiles": 1057,
+     "assembled_B_pixels": 86656,
+     "preparation_cpu_ms": 3029.159357142857,
+     "rejected": {
+      "malformed/unsupported live candidate": 159
+     },
+     "scope": "frozen live-table loading experiment with assembled snapshot/colour/B; host scan/dispatch/allocation; excludes scan, zeroing, cache-store copies, wrappers and hardware stalls",
+     "frame": 468,
+     "pc": "8F7C"
+    },
+    "timing": {
+     "target_total_added_ms": 10,
+     "cold_capture_scenery_colour_fill_max_ms": 6.5071071428571425,
+     "cold_with_snapshot_validation_max_ms": 10.56625,
+     "live_snapshot_validation_tick_max_ms": 4.0641428571428575,
+     "status": "FAIL",
+     "excluded": "cache lookup/allocation, uploads, queue and external snapshot/fill wrappers",
+     "hardware_proof": false
+    },
+    "cached_draws": 539,
+    "unexpected_misses": 0
+   },
+   "6": {
+    "preparation": {
+     "prepared_images": 118,
+     "packed_source_and_canvas_bytes": 110875,
+     "cache_capacity_bytes": 655360,
+     "assembled_tiles": 1534,
+     "assembled_B_pixels": 188288,
+     "preparation_cpu_ms": 6262.739642857143,
+     "rejected": {
+      "malformed/unsupported live candidate": 119
+     },
+     "scope": "frozen live-table loading experiment with assembled snapshot/colour/B; host scan/dispatch/allocation; excludes scan, zeroing, cache-store copies, wrappers and hardware stalls",
+     "frame": 453,
+     "pc": "8F7C"
+    },
+    "timing": {
+     "target_total_added_ms": 10,
+     "cold_capture_scenery_colour_fill_max_ms": 8.71525,
+     "cold_with_snapshot_validation_max_ms": 14.674428571428571,
+     "live_snapshot_validation_tick_max_ms": 6.164107142857143,
+     "status": "FAIL",
+     "excluded": "cache lookup/allocation, uploads, queue and external snapshot/fill wrappers",
+     "hardware_proof": false
+    },
+    "cached_draws": 2272,
+    "unexpected_misses": 0
+   }
+  },
+  "quick_counts": {
+   "live table scans (host prewarm census)": 12000,
+   "max live table candidates (host prewarm census)": 124,
+   "max live candidate source bytes (host prewarm census)": 28935,
+   "kernel events": 16903,
+   "kernel instructions": 4172369,
+   "max kernel cost 8F7C": 2960.0,
+   "loading prepared images (host selected)": 624,
+   "scenery events": 1855,
+   "max kernel cost 96A1": 758.0,
+   "loading prepared pixels checked at draw": 11948096,
+   "assembled exact live job validations": 13194,
+   "max live job call equivalent T": 14975.25,
+   "max job source bytes": 1121,
+   "max actor canvas width": 136,
+   "max actor canvas height": 120,
+   "max actor canvas pixels": 10880,
+   "actor content cache hits (model)": 13194,
+   "visible content cache misses (model)": 128,
+   "max culled cold colour expansion tick equivalent T": 0,
+   "actor events": 13194,
+   "wrapped path": 10005,
+   "max kernel cost 959B": 758.375,
+   "normal path": 3189,
+   "max capture tick cost": 7740.0,
+   "max kernel cost 8F92": 97.75,
+   "dropped writer detected": 1666,
+   "max image calls": 21,
+   "max visible chunks": 58,
+   "max unique patterns": 56,
+   "max pending pattern union": 64,
+   "tile checks": 1854,
+   "post-copy scenery source lifetime": 1850,
+   "post-copy actor source lifetime": 13159,
+   "post-copy assembled frame hooks": 1850,
+   "scenery viewport pixels compared": 68198400,
+   "max post-copy frame hook equivalent T": 23565.375,
+   "max capture plus frame hook equivalent T": 30503.375,
+   "max live job tick equivalent T": 40630.5,
+   "max capture scenery snapshot cold colour and B fill equivalent T": 63678.0,
+   "max capture scenery cold colour and B fill equivalent T": 30503.375,
+   "max capture scenery and cold colour expansion equivalent T": 30503.375,
+   "max capture scenery and culled cold expansion equivalent T": 30503.375,
+   "ULA checks": 1850,
+   "coordinate control detected": 841,
+   "wholly offscreen actor calls (model)": 932,
+   "position unit": 240,
+   "inactive unit": 24,
+   "full log unit": 12,
+   "overflow skip unit": 12,
+   "ordinal full unit": 12,
+   "commit phase unit": 18,
+   "site refusal unit": 24,
+   "ISR entry unit": 24,
+   "ISR forced unwind unit": 24,
+   "unsafe DI control detected": 6,
+   "interior jump control detected": 6,
+   "game RAM control detected": 6,
+   "frame inactive buffer unit": 12,
+   "frame pending/ack unit": 12,
+   "frame phase guard": 12,
+   "frame unsafe-DI control detected": 6,
+   "frame skipped-render control detected": 6
+  },
+  "units": {
+   "counts": {
+    "ordered live geometry/bitmap/attribute capture": 1,
+    "pinned assembled tile after original mutation": 3,
+    "pinned/invalid operation rejection": 3,
+    "live content mutation rejected": 29,
+    "phase/paint generation rejected": 3,
+    "relocated content and C1FF wrap": 1,
+    "release and recapture": 1,
+    "malformed unpublished": 5,
+    "invalid phase/inactive validation": 2,
+    "exact 8K snapshot boundary": 1,
+    "overflow unpublished": 1,
+    "missing bitmap comparison control detected": 8,
+    "missing exact comparison control detected": 1
+   },
+   "timing": {
+    "capture_ms": 23.112035714285714,
+    "exact_hit_ms": 0.20075,
+    "capacity_exact_hit_ms": 29.84325
+   },
+   "snapshot_capacity": 8192,
+   "scope": "assembled standalone pinned snapshot/exact validation and pinned tile consumer; no installed cache, scheduler, wrapper or display; software timings only"
+  },
+  "checks": {
+   "six_own_original_quick": "PASS:12000 frames; all sampled actor content prepared",
+   "source_mutation_and_negative_controls": "PASS",
+   "assembly": "PASS:17 blocks/108 symbols",
+   "sampled_shop": "PASS",
+   "blit_high_SRAM_fallbacks": "PASS",
+   "doccheck": "PASS:90 docs",
+   "total_runtime_timing": "FAIL",
+   "hardware": "UNPROVED",
+   "colour_and_fill_units": "PASS: 512 original +512 pinned attribute/phase cases; fill quota/connectivity/negative controls"
+  }
  }
 }

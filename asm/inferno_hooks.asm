@@ -2917,12 +2917,29 @@ job_tile:
         add hl,hl
         ld bc,0xDC00
         add hl,bc
-        ld b,8
-job_bitmap:
-        ld a,(hl)
+        push hl
+        ld hl,7
+        add hl,de
+        ld a,h
+        cp 0x40
+        jp nc,job_bad          ; whole bitmap span must fit the pinned page
+        pop hl
+        ld a,(J_OP)
+        or a
+        jr nz,job_bitmap_compare
+        DUP 8
+        ldi
+        EDUP
+        jr job_bitmap_done
+job_bitmap_compare:
+        DUP 8
+        ld a,(de)
+        cp (hl)
+        jp nz,job_miss
+        inc de
         inc hl
-        call job_emit
-        djnz job_bitmap
+        EDUP
+job_bitmap_done:
         pop hl
         ld bc,0xFC00
         add hl,bc
@@ -2932,7 +2949,7 @@ job_bitmap:
         ld a,(J_LEFT)
         dec a
         ld (J_LEFT),a
-        jr nz,job_tile
+        jp nz,job_tile
         ld a,(J_ROWS)
         dec a
         ld (J_ROWS),a
@@ -2944,25 +2961,22 @@ job_address:
         ret nc
         jp job_bad
 job_emit:
-        push af
+        ld c,a                 ; parser keeps run counters in private state, BC is scratch
         ld a,d
         cp 0x40
         jp nc,job_bad
         ld a,(J_OP)
         or a
         jr nz,job_compare
-        pop af
+        ld a,c
         ld (de),a
         inc de
         ret
 job_compare:
-        pop af
-        push af
-        ex de,hl
-        cp (hl)
-        ex de,hl
+        ld a,(de)
+        cp c
         jp nz,job_miss
-        pop af
+        ld a,c
         inc de
         ret
 job_complete:
