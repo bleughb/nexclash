@@ -1925,31 +1925,36 @@ def negative_patches(patch):
     sv = 0xC6E0
     # e_bd's ENTERST maps the state page at slot 3 instead of slot 6 (where the IM 2 handler reads
     # the key table): the hook would read / write slot 3 state with interrupts on
-    enter = bytes([0xED, 0x91, 0x07, 0x03, 0xED, 0x91, 0x56, STATE_PG, 0xED, 0x73, sv & 255, sv >> 8])
+    # v2.1: HOOKIN = PUSH AF / PUSH BC / NR 7 read / NEXTREG 7,3 / LD B,A / LD A,R / NEXTREG 0x56,STATE_PG
+    enter = bytes([0xF5, 0xC5, 0x01, 0x3B, 0x24, 0x3E, 0x07, 0xED, 0x79, 0x04, 0xED, 0x78, 0xED, 0x91, 0x07, 0x03,
+                   0x47, 0xED, 0x5F, 0xED, 0x91, 0x56, STATE_PG])
     code = patch.rom_code
-    if code[:12] != enter:                  # e_bd is the first routine: its ENTERST
+    if code[:len(enter)] != enter:          # e_bd is the first routine: its ENTERST
         raise ValueError('negative control enter: e_bd does not start with ENTERST')
     # ENTERST is the same in every hook: take e_bd's entry up to its first own instructions (unique)
-    n = 12
+    n = len(enter)
     while code.find(code[:n], 1) >= 0:
         n += 1
     bad = bytearray(code[:n])
-    bad[6] = 0x53
+    bad[21] = 0x53
     q = _rom_variant(patch, code[:n], bytes(bad), 'enter')
     return neg, q
 
 
 def negative_stack(patch):
-    """3. every LEAVEST skips putting the game's bytes back at 0x5BA8-0x5BFF (the cup team names
-    under the hook stack): LDIR -> NOP NOP in the copy PBSAVE -> 0x5BA8."""
+    """3. every LEAVEST skips putting the game's bytes back at 0x5BC0-0x5BFF (the cup team names
+    under the hook stack; v2.1): CALL pbcopy -> 3 NOPs in the copy PBSAVE -> 0x5BC0."""
     import copy
-    seq = bytes([0x21, 0x00, 0xDC, 0x11, 0xA8, 0x5B, 0x01, 0x58, 0x00, 0xED, 0xB0])
-    code = patch.rom_code
-    n = code.count(seq)
-    if n < 7:                               # one per LEAVEST use (7 in the source, +1 per copy)
+    import re
+    code = patch.rom_code                   # v2.1: LD HL,PBSAVE / LD DE,0x5BC0 / CALL pbcopy (unrolled LDI)
+    seqs = set(re.findall(re.escape(bytes([0x21, 0x00, 0xDC, 0x11, 0xC0, 0x5B])) + b'\xCD..', code, re.S))
+    n = sum(code.count(x) for x in seqs)
+    if n < 7:                               # one per LEAVEST / LEAVEPAY / LEAVEKEEP use
         raise ValueError('negative control stack: only %d LEAVEST copies found' % n)
     q = copy.copy(patch)
-    q.rom_code = code.replace(seq, seq[:-2] + b'\x00\x00')
+    for x in seqs:
+        code = code.replace(x, x[:-3] + b'\x00\x00\x00')
+    q.rom_code = code
     page = bytearray(patch.page)
     page[ROM_ORG - 0x2000:ROM_ORG - 0x2000 + len(q.rom_code)] = q.rom_code
     q.page = bytes(page)
