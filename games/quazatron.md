@@ -120,3 +120,20 @@ ends. Neither asks for a value.
   scroll off; ROLETAB moved to the sprite store page; a monochrome gate (V_MONO): the .nxc base is the monochrome
   build and Colour is its Enhanced colours set, as Nightshade and Pyjamarama offer theirs; a recording with t_su
   (the down-scroll edge lowered in its own first snapshot, test only).
+
+## Session 4 (2026-11-06): v1.1, Centred view (opt-in toggle; changes the game logic)
+- Trigger: the edge bursts (E1AF: 8 steps past x 9 / 247, y 24 / 151) never start (E1B3 -> JP E1EC). Before each update
+  (E0DC: CALL c_pre, was CALL D5BB) c_pre, pure Z80 at 0x3CAC in the alt ROM image, takes ONE scroll step (the game's
+  own E0FB .. E1AC) when the player (AF94, AF95) is more than one step off the centre (128, 88): x < 112 or x >= 145,
+  y < 80 or y >= 97. After the step: the game's copy (C05A), AF2B = 0, then D5BB as a normal update, so droids move
+  (D666 / C30F freeze them while AF2B is set). At most one step an update; AF2B 1-6 (special modes): no step.
+- Droids outside the view: C300 marks them off-screen and D5BB skips their logic (D61A-D633): frozen, not despawned;
+  shots leaving the view are removed (D92D). The view therefore decides which droids are active, in the original too;
+  Centred view changes where the view is, not that rule.
+- Deck edges: the game has no edge check (none in the original either); the view follows the player into the void
+  beside the deck. Every settled scroll's background equals a full render at the same origin (verifier).
+- Engine: VCENTRE (0x4CE2) implies fast scroll + smooth (p_pre); a step's time is a window (mv_in .. cw_close) whose
+  length (ISR bodies left out) replaces the debt added inside it, repaid from the game's delay; the glide moved to
+  page 27 (slot 6, inside isr_step only) with v1.0's rule unchanged for Smooth alone and glide_c for Centred view.
+- Proof: the reference game = the original + the same patches and c_pre (the verifier injects c_pre into the replay's
+  ROM; rzx.trace rom=); quazatron.verify checks the rule at every decision and the full-render equality at every step.

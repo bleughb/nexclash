@@ -56,6 +56,11 @@ FLAGS_OFF = 0x1200          # in S0 (0xD200): 40 x 32 canvas cells, 0xFF = rewri
 V_OX, V_OY, V_L2ON, V_DECKP = 0x4BC4, 0x4BC6, 0x4BC7, 0x4BC8
 V_FAST, V_SMOOTH, V_DX, V_DY = 0x4BE8, 0x4BE9, 0x4BEA, 0x4BEC
 V_MONO = 0x4CE0              # session 3: 1 = monochrome (the .nxc base), 0 = colour
+V_CENTRE = 0x4CE2            # session 4: 1 = Centred view (with the E0DC / E1B3 patches; implies fast + smooth)
+C_PRE = 0x3CAC               # session 4: c_pre (pure Z80) in the alt ROM image; the reference game has it there too
+# session 4, Centred view: CALL D5BB at E0DC -> CALL c_pre; LD A,(AF94) at E1B3 -> JP E1EC (the edge bursts never start)
+CENTRE_SITES = ((0xE0DC, bytes.fromhex('cdbbd5'), bytes([0xCD, C_PRE & 255, C_PRE >> 8])),
+                (0xE1B3, bytes.fromhex('3a94af'), bytes.fromhex('c3ece1')))
 TAGS = 0x4D00
 
 # --- the painting (our own; docs: games/quazatron.md "Colour") -------------------------------------------------
@@ -144,18 +149,32 @@ def is_quazatron(snap):
     return bytes(snap.memory[sg['addr']:sg['addr'] + len(sig)]) == sig
 
 
-def _whole_rom_page(code=b''):
-    """Image of 0x2000-0x3FFF for alt ROM image 1: Sinclair's ROM with `code` at ROM_ORG (its 0xFF area)."""
+def _whole_rom_page(code=b'', centre=b''):
+    """Image of 0x2000-0x3FFF for alt ROM image 1: Sinclair's ROM with `code` at ROM_ORG (its 0xFF area) and the
+    session-4 c_pre (`centre`) at C_PRE."""
     from .build import rom48
     rom = rom48()
-    if any(b != 0xFF for b in rom[ROM_ORG:ROM_ORG + len(code) + 20]):
+    if any(b != 0xFF for b in rom[ROM_ORG:ROM_ORG + len(code) + 20]) or ROM_ORG + len(code) + 20 > C_PRE:
         raise ValueError('alt ROM hook range is not free ($FF) in the 48K ROM')
+    if centre and any(b != 0xFF for b in rom[C_PRE:C_PRE + len(centre)]):
+        raise ValueError('c_pre range is not free')
     page = bytearray(rom[0x2000:0x4000])
     page[ROM_ORG - 0x2000:ROM_ORG - 0x2000 + len(code)] = code
+    page[C_PRE - 0x2000:C_PRE - 0x2000 + len(centre)] = centre
     return bytes(page)
 
 
-def hook_page(prof, fast=False, smooth=False, mono=False):
+def ref_rom(prof=None):
+    """The 16K ROM of the Centred-view REFERENCE game (the proofs' 'original' side): Sinclair's ROM with c_pre."""
+    from .build import rom48
+    prof = prof or load_profile()
+    c = bytes.fromhex(prof['hooks']['centre'])
+    rom = bytearray(rom48())
+    rom[C_PRE:C_PRE + len(c)] = c
+    return bytes(rom)
+
+
+def hook_page(prof, fast=False, smooth=False, mono=False, centre=False):
     """The 8K hook page (slot 2 inside hooks): code, tables, state, FLAGS 0xFF (every cell rewritten at the first
     commit), TAGS 0. fast / smooth: the fast-scroll option (scroll steps at 28 MHz) and the smooth display."""
     code = bytes.fromhex(prof['hooks']['page'])
@@ -164,6 +183,7 @@ def hook_page(prof, fast=False, smooth=False, mono=False):
     put = lambda a, b: pg.__setitem__(slice(a - 0x4000, a - 0x4000 + len(b)), b)
     put(V_FAST, bytes([3 if fast else 0, 1 if smooth else 0]))
     put(V_MONO, bytes([1 if mono else 0]))
+    put(V_CENTRE, bytes([1 if centre else 0]))
     put(V_DX, (32).to_bytes(2, 'little'))
     put(V_DY, bytes([32]))
     put(0x4BF3, (32).to_bytes(2, 'little') + bytes([32]))     # TX, TY
@@ -172,6 +192,12 @@ def hook_page(prof, fast=False, smooth=False, mono=False):
     put(V_L2ON, bytes([0]))
     put(V_DECKP, bytes([0xFF]))
     return bytes(pg)
+
+
+def page2(prof):
+    """Page 27 (GPAGE): the glide (session 4), mapped at slot 6 only inside isr_step."""
+    g = bytes.fromhex(prof['hooks']['page2'])
+    return g + bytes(8192 - len(g))
 
 
 class PlainPatch:
@@ -199,7 +225,7 @@ class PlainPatch:
 class QuazatronPatch:
     name = 'Quazatron colour: scenery canvas on Layer 2 (session 1; droid sprites, smooth mode and pace to come)'
 
-    def __init__(self, prof=None, fast=False, smooth=False, mono=False):
+    def __init__(self, prof=None, fast=False, smooth=False, mono=False, centre=False):
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         self.rom_code = bytes.fromhex(h['rom'])
@@ -208,7 +234,7 @@ class QuazatronPatch:
         if len(setup) > PALINIT_OFF:
             raise ValueError('setup code runs into its palette')
         self.stub_extra = setup + bytes(PALINIT_OFF - len(setup)) + palinit()
-        self.fast, self.smooth = fast, smooth
+        self.fast, self.smooth, self.centre = fast, smooth, centre
         self.setup_call = SETUP
         self.hook_page_data = b''
         self.uses_printer_buffer = False
@@ -217,11 +243,15 @@ class QuazatronPatch:
         if self.regblock + 20 > 0x3D00:
             raise ValueError('ROM hooks too long')
         self.slot1 = (ALT_PAGE, self.regblock)
-        self.altrom = (ROM_ORG, self.regblock + 20)
-        self.page = _whole_rom_page(self.rom_code)
+        centre_code = bytes.fromhex(h['centre'])
+        self.altrom = (ROM_ORG, C_PRE + len(centre_code))   # session 4: the stub's fill reaches c_pre
+        self.page = _whole_rom_page(self.rom_code, centre_code)
         self.sites = [(a, bytes.fromhex(old), bytes([op]) + self.syms[sym].to_bytes(2, 'little'))
                       for a, (old, op, sym) in SITES.items()]
-        self.extra_banks = {12: self.page + bytes(8192), 13: hook_page(self.prof, fast, smooth, mono) + bytes(8192)}
+        if centre:
+            assert self.syms['c_pre'] == C_PRE
+            self.sites += list(CENTRE_SITES)
+        self.extra_banks = {12: self.page + bytes(8192), 13: hook_page(self.prof, fast, smooth, mono, centre) + page2(self.prof)}
 
     def apply(self, snap):
         if snap.is128:
@@ -256,7 +286,10 @@ def build(z80, out, name='quazatron', say=print):
                                          ('Fast+smooth', True, True, False, name + '_colour_fastscroll.nex'),
                                          ('Mono', False, False, True, name + '_mono.nex'),
                                          ('Mono+toggle', True, True, True, name + '_mono_fastscroll.nex')):
-        patch = QuazatronPatch(fast=fast, smooth=smooth, mono=mono)
+      for centre in (False, True):          # session 4: each with Centred view (the toggle's bytes only)
+        if centre:
+            kind, fn = kind + '+centre', fn[:-4] + '_centred.nex'
+        patch = QuazatronPatch(fast=fast, smooth=smooth, mono=mono, centre=centre)
         patch.extra_banks.update(banks)
         builds.append((kind, patch, fn))
     for kind, patch, fn in builds:
@@ -414,7 +447,10 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
     c = collections.Counter()
     ex = collections.defaultdict(list)
     alt = alt_image(patch)
-    rom = rom48()
+    centre = getattr(patch, 'centre', False)
+    rom = ref_rom(patch.prof) if centre else rom48()     # session 4: Centred view's reference = the original + c_pre
+    if centre and bytes(alt[C_PRE:C_PRE + 82]) != bytes(rom[C_PRE:C_PRE + 82]):
+        c['centre: the build\'s alt ROM lacks c_pre!'] += 1      # (what the stub leaves on the Next: alt_image)
     psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
     sym = {v: k for k, v in patch.syms.items()}
     sites = {a: SITES[a][2] for a in SITES}
@@ -592,7 +628,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
         """At every frame (each ISR) and update: the scroll registers show the shown origin (DX, DY); every group's
         3 sprites sit at its base + (TX - DX, TY - DY): locked to the scenery the canvas shows. Off mode: no offset."""
         sx, sy, dx, dy = sdxy()
-        if not patch.smooth and (sx or sy):
+        if not (patch.smooth or getattr(patch, "centre", False)) and (sx or sy):     # session 4: Centred view implies smooth
             fail('off mode: the shown origin is not the committed one!', (sx, sy))
         if (ns.nr.get(0x16, 0) | (ns.nr.get(0x71, 0) & 1) << 8) != (dx - 32) % 320 or ns.nr.get(0x17, 0) != (dy - 32) & 255:
             fail('Layer 2 scroll is not the shown origin!', (ns.nr.get(0x16), ns.nr.get(0x71), ns.nr.get(0x17), dx, dy))
@@ -651,17 +687,79 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
         c['commits checked'] += 1
 
     mpcs = model.pcs()
+    cst = {'exp': None, 'steps': 0}
+    c_ret = patch.syms['c_ret']
+
+    def on_centre(pc, sim):
+        """Session 4: the one-step trigger against its rule, at most one step an update, and every settled step's
+        background = a full render at the same origin (no corrupt strip)."""
+        m = sim.memory
+        if pc == C_PRE:
+            if m[0xAF2C] == 0 and m[0xAF2B] == 0:
+                x, y = m[0xAF94], m[0xAF95]
+                exp = 0x14 if x < 112 else 0x0A if x >= 145 else 0x28 if y < 80 else 0x1E if y >= 97 else 0
+                cst['exp'] = exp
+                c['centre: decisions'] += 1
+                c['centre: steps %02X' % exp if exp else 'centre: no step (within one step of the centre)'] += 1
+        elif pc == 0xE0FB:
+            if cst['exp'] is None or not cst['exp']:
+                fail('centre: a step the rule did not ask for!', (hex(m[0xAF2B]), m[0xAF2C], m[0xAF94], m[0xAF95]))
+            elif m[0xAF2B] != cst['exp'] or sim.registers[0] != 1:      # A = AF2C: one step
+                fail('centre: the step differs from the rule!', (hex(m[0xAF2B]), sim.registers[0], hex(cst['exp'])))
+            cst['exp'] = None
+            cst['steps'] += 1
+            if cst['steps'] > 1:
+                fail('centre: two steps in one update!', cst['steps'])
+        elif pc == 0xD5BB:
+            if cst['exp']:
+                fail('centre: the rule asked for a step that did not come!', hex(cst['exp']))
+            cst['exp'] = None
+            cst['steps'] = 0
+        elif pc == c_ret:
+            bg, tab = full_render(m)
+            c['centre: settled steps checked (background = a full render)'] += 1
+            if bg != bytes(m[0x8300:0x9600]) or tab != bytes(m[0xB024:0xB044]):
+                fail('centre: a scrolled background differs from a full render!', (m[0xAF1C], m[0xAF1D]))
+            v = (m[0xAF1C], m[0xAF1D])
+            cst.setdefault('views', set()).add(v)
+
+    cpcs = {C_PRE, 0xE0FB, 0xD5BB, c_ret} if centre else set()
 
     def hook(pc, sim):
+        if pc in cpcs:
+            on_centre(pc, sim)
         if pc in mpcs:
             model.on(pc, sim)
         if pc in sites:
             event(pc, sim)
-    frames, err = rzx.trace(rzx_path, mpcs | set(sites), hook, stop=stop)
+    frames, err = rzx.trace(rzx_path, mpcs | set(sites) | cpcs, hook, stop=stop,
+                            rom={C_PRE: bytes.fromhex(patch.prof['hooks']['centre'])} if centre else None)
+    if centre and cst.get('views'):
+        vs = cst['views']
+        c['centre: distinct view origins'] = len(vs)
     c['frames'] = frames
     if err:
         fail('replay desync!', err)
     return c, dict(ex), []
+
+
+def full_render(mem):
+    """Session 4: a full view render (E013-E043's set-up, then BE38) on a copy of memory at the same origin (AF1C,
+    AF1D) -> (the background 0x8300-0x95FF, the column table B024-B043)."""
+    from skoolkit.simulator import Simulator
+    m = bytearray(mem[:65536])
+    m[0xAF2C:0xAF36] = m[0xAF36:0xAF40]
+    m[0xB024:0xB044] = bytes([0xFF]) * 32
+    m[0xAF2B] = 0
+    m[0x5EFE] = m[0x5EFF] = 0
+    sim = Simulator(m, {'SP': 0x5EFE, 'PC': 0xBE38})
+    R, ops, n = sim.registers, sim.opcodes, 0
+    while R[PC] != 0:
+        ops[m[R[PC]]]()
+        n += 1
+        if n > 3000000:
+            raise RuntimeError('full render did not return')
+    return bytes(m[0x8300:0x9600]), bytes(m[0xB024:0xB044])
 
 
 def unit_tests(patch, states, neg=None):

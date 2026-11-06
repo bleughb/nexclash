@@ -82,6 +82,18 @@ VSPD2   EQU 0x4BE6              ; the caller's speed at an outer fast-section ho
 GSPD    EQU 0x4BE7              ; the game's speed (the last outer latch): the ISR body runs at it
 VFASTT  EQU 0x4BE8              ; 3: scroll steps at 28 MHz (fast-scroll option), 0: off (from quazatron.py; the toggle)
 VFAST   EQU 0x4CE1              ; in use: VFASTT from the first commit on, 0 in monochrome (session 3)
+VCENTRE EQU 0x4CE2              ; session 4: 1 = Centred view (the toggle: with E0DC / E1B3 patched to c_pre); it implies
+                                ; fast scroll and the smooth display (p_pre sets VFASTT / VSMOOTH at each commit)
+CWD     EQU 0x4CE3              ; 2: the debt when a Centred step's window opened (mv_in); cw_close sets DEBT from it
+GXI     EQU 0x4CE5              ; glide (page 27): x: frames between the last two x commits (6-32)
+GXA     EQU 0x4CE6              ;   frames since the last x commit
+GXF     EQU 0x4CE7              ;   x fraction (1/256 px)
+GYI     EQU 0x4CE8              ;   y: the same
+GYA     EQU 0x4CE9
+GYF     EQU 0x4CEA
+LTX     EQU 0x4CEB              ; 2: TX the glide last saw
+LTY     EQU 0x4CED              ;   TY
+GPAGE   EQU 27                  ; page 27 (bank 13 upper half): the glide, mapped at slot 6 only inside isr_step
 VMONO   EQU 0x4CE0              ; 1: monochrome (the base of the .nxc: Layer 2 and the sprites never on, the ULA shows the
                                 ; game's own picture; the hooks and the limiter run as in colour), 0: colour (the set)
 VSMOOTH EQU 0x4BE9              ; 1: smooth display (the shown origin glides to the game's), 0: off
@@ -605,7 +617,12 @@ p_off:  xor a
 
 ; p_pre: after p_inks (C05A done): the shown origin (snap, or left to the smooth step), the deck's palette, Layer 2
 ; and the sprites on.
-p_pre:  call rd56
+p_pre:  ld a,(VCENTRE)          ; session 4: Centred view implies fast scroll and the smooth display
+        or a
+        jr z,.nc
+        ld hl,0x0103
+        ld (VFASTT),hl
+.nc:    call rd56
         ld (SLOT6),a
         ld hl,(OX)              ; the committed origin
         ld (TX),hl
@@ -1155,52 +1172,9 @@ isr_step:
         or a
         jp z,.done
         call offs
-        ld hl,(SDX)             ; x: 2 px a frame, 4 when more than 16 behind
-        ld a,h
-        or l
-        jr z,.y
-        bit 7,h
-        push af
-        jr z,.xp
-        call neghl
-.xp:    ld de,17
-        or a
-        sbc hl,de
-        add hl,de
-        ld de,2
-        jr c,.xs
-        ld de,4
-.xs:    or a
-        sbc hl,de               ; |d| - step
-        jr nc,.xf
-        add hl,de
-        ex de,hl                ; step = |d|
-.xf:    pop af
-        ld hl,(DX)
-        jr nz,.xm
-        add hl,de
-        call mod320
-        jr .xw
-.xm:    or a
-        sbc hl,de
-        jr nc,.xw
-        ld de,320
-        add hl,de
-.xw:    ld (DX),hl
-.y:     ld a,(SDY)              ; y: 1 line a frame, 2 when more than 8 behind
-        or a
-        jr z,.w
-        ld b,1
-        bit 7,a
-        jr z,.yp
-        neg
-        ld b,-1
-.yp:    cp 9
-        jr c,.ys
-        sla b
-.ys:    ld a,(DY)
-        add a,b
-        ld (DY),a
+        nextreg 0x56,GPAGE      ; session 4: the glide (v1.0's, or Centred view's) runs from page 27 at slot 6
+        call glide
+        nextreg 0x56,0
 .w:     call wregs
         call offs
         ld a,(GPREV)
@@ -1527,8 +1501,15 @@ mv_in:  call spd_fast
         nextreg 0x07,3
         ld a,(VFAST)
         or a
-        ret nz
+        jr z,.win
+        ld a,(VCENTRE)          ; session 4: Centred view (fast): the step's window opens here and closes after its
+        or a                    ; copy (cw_close): the step costs no game time, its time goes to the debt
+        ret z
         push hl
+        ld hl,(DEBT)
+        ld (CWD),hl
+        pop hl
+.win:   push hl
         call qline
         ld (MVL),hl
         ld hl,0
@@ -1872,8 +1853,8 @@ fw_bs_out:
         push de
         push hl
         ld a,(WOPEN)
-        or a
-        jr z,fw_bs_x
+        cp 1                    ; (session 4: not a Centred step's window, 3)
+        jr nz,fw_bs_x
         call fw_mark
 fw_bs_m:
         ld a,C_FW
@@ -1893,17 +1874,24 @@ fw_cpy_in:
         ld hl,10
         add hl,sp
         ld a,(hl)
-        cp 0x9D
-        jr nz,.first
         inc hl
-        ld a,(hl)
-        cp 0xDD
+        ld h,(hl)
+        ld l,a                  ; HL = the copy's return address
+        ld de,0xDD9D
+        or a
+        sbc hl,de
+        jr z,.step
+        ld de,c_ret - 0xDD9D    ; session 4: from c_pre (Centred view: the step's copy before the update)
+        or a
+        sbc hl,de
         jr nz,.first
-        ld e,KCPY
+.step:  ld e,KCPY
         call fw_step
         jr .x
 .first: ld hl,0
         ld (DEBT),hl
+        xor a
+        ld (WOPEN),a
         call spd_latch
 .x:     ld a,-10 & 0x7F
         jp fw_in_x
@@ -1916,8 +1904,8 @@ fw_cpy_out:
         push hl
         nextreg 0x07,3
         ld a,(WOPEN)
-        or a
-        call nz,fw_mark
+        cp 1
+        call z,fw_mark
 fw_cpy_m:
         call dbg_open
         call p_inks
@@ -1925,10 +1913,27 @@ fw_cpy_m:
         ld a,C_C05A
         call dbg_close
         ld a,(WOPEN)
-        or a
-        call nz,fw_wait
+        cp 2
+        call z,fw_wait
+        cp 3
+        call z,cw_close
         ld a,-9 & 0x7F
         jp fw_out_x
+
+; cw_close: a Centred step's window ends (after its copy, inks and origin): DEBT = the debt at its start + the window's
+; time (ISR bodies left out); what nested hooks added inside it is replaced. WOPEN = 0. AF, DE, HL lost.
+cw_close:
+        call mvtick
+        ld hl,(CWD)
+        ld (DEBT),hl
+        ld hl,(MVE)
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        xor a
+        ld (WOPEN),a
+        jp dadd.add
 
 TCODE_END:
         DISPLAY "TCODE_END ",/H,TCODE_END
@@ -2333,8 +2338,260 @@ t_dly:  nextreg 0x52,HPAGE
         nextreg 0x52,ULAPAGE
         jp 0xDD8D
 ROM_END:
-        ASSERT ROM_END + 20 <= 0x3D00
+        ASSERT ROM_END + 20 <= 0x3CAC  ; session 4: c_pre at 0x3CAC
         SAVEBIN "quazatron_rom.bin",0x386E,ROM_END-0x386E
+
+; ============================================================================================================
+; Page 27 (GPAGE, bank 13 upper half), mapped at slot 6 only inside isr_step (interrupts off; the hook page at slot 2).
+        ORG 0xC000
+; glide: the shown origin (DX, DY) one frame toward the committed one (TX, TY); SDX / SDY current (offs). Smooth
+; scrolling alone: v1.0's rule, moved here unchanged (2 px a frame, 4 when more than 16 behind; 1 line, 2 when more
+; than 8). Centred view: glide_c. AF, BC, DE, HL lost.
+glide:  ld a,(VCENTRE)
+        or a
+        jp nz,glide_c
+        ld hl,(SDX)             ; x: 2 px a frame, 4 when more than 16 behind
+        ld a,h
+        or l
+        jr z,.y
+        bit 7,h
+        push af
+        jr z,.xp
+        call neghl
+.xp:    ld de,17
+        or a
+        sbc hl,de
+        add hl,de
+        ld de,2
+        jr c,.xs
+        ld de,4
+.xs:    or a
+        sbc hl,de               ; |d| - step
+        jr nc,.xf
+        add hl,de
+        ex de,hl                ; step = |d|
+.xf:    pop af
+        ld hl,(DX)
+        jr nz,.xm
+        add hl,de
+        call mod320
+        jr .xw
+.xm:    or a
+        sbc hl,de
+        jr nc,.xw
+        ld de,320
+        add hl,de
+.xw:    ld (DX),hl
+.y:     ld a,(SDY)              ; y: 1 line a frame, 2 when more than 8 behind
+        or a
+        ret z
+        ld b,1
+        bit 7,a
+        jr z,.yp
+        neg
+        ld b,-1
+.yp:    cp 9
+        jr c,.ys
+        sla b
+.ys:    ld a,(DY)
+        add a,b
+        ld (DY),a
+        ret
+
+; glide_c (session 4, Centred view): per axis the shown origin moves at the speed that reaches the committed one just as
+; the next step is due: |d| / max(4, I + 3 - A) a frame (8.8 fixed point, the fraction kept), I = the frames between the
+; last two commits on that axis (6-32), A = the frames since the last one. A steady walk gives a steady camera; when the
+; player stops, it eases out over at least 4 frames; never past the target.
+glide_c:
+        ld hl,(TX)
+        ld de,(LTX)
+        or a
+        sbc hl,de
+        jr z,.x1
+        add hl,de
+        ld (LTX),hl
+        ld hl,GXA
+        call g_new
+.x1:    ld hl,GXA
+        call g_inc
+        ld hl,(SDX)
+        ld a,h
+        or l
+        jr z,.x0
+        bit 7,h
+        push af
+        jr z,.xp
+        call neghl
+.xp:    ld a,(GXI)
+        ld b,a
+        ld a,(GXA)
+        ld c,a
+        ld a,(GXF)
+        ld d,a
+        call g_step
+        ld (GXF),a
+        pop af
+        ld hl,(DX)
+        jr nz,.xm
+        add hl,de
+        call mod320
+        jr .xw
+.xm:    or a
+        sbc hl,de
+        jr nc,.xw
+        ld de,320
+        add hl,de
+.xw:    ld (DX),hl
+        jr .y
+.x0:    ld (GXF),a
+.y:     ld a,(TY)
+        ld hl,LTY
+        cp (hl)
+        jr z,.y1
+        ld (hl),a
+        ld hl,GYA
+        call g_new
+.y1:    ld hl,GYA
+        call g_inc
+        ld hl,(SDY)
+        ld a,h
+        or l
+        jr z,.y0
+        bit 7,h
+        push af
+        jr z,.yp
+        call neghl
+.yp:    ld a,(GYI)
+        ld b,a
+        ld a,(GYA)
+        ld c,a
+        ld a,(GYF)
+        ld d,a
+        call g_step
+        ld (GYF),a
+        pop af
+        ld a,(DY)
+        jr nz,.ym
+        add a,e
+        jr .yw
+.ym:    sub e
+.yw:    ld (DY),a
+        ret
+.y0:    ld (GYF),a
+        ret
+
+; g_step: HL = |d| (1-319), B = I, C = A, D = the fraction -> DE = the pixels to move now (never over |d|), A = the
+; new fraction. v = min(|d|, 255) x 256 / max(4, I + 3 - A); acc = v + fraction. BC lost.
+g_step: ld a,b
+        add a,3                 ; aim 3 frames past the predicted step: the camera keeps moving (no stop before a step
+        sub c                   ; that comes a little late); the leftover is taken up in the next interval
+        jr c,.r4
+        cp 4
+        jr nc,.r
+.r4:    ld a,4
+.r:     ld c,a
+        push hl
+        ld a,h
+        or a
+        jr z,.lo
+        ld l,255
+.lo:    ld h,l
+        ld l,0
+        xor a
+        ld b,16
+.dv:    add hl,hl
+        rla
+        jr c,.sb
+        cp c
+        jr c,.nx
+.sb:    sub c
+        inc l
+.nx:    djnz .dv
+        ld e,d
+        ld d,0
+        add hl,de
+        ld a,l
+        ld e,h
+        ld d,0
+        pop hl
+        push hl
+        or a                    ; (A kept: OR A only clears the carry)
+        sbc hl,de
+        pop hl
+        ret nc
+        ex de,hl
+        xor a
+        ret
+
+; g_new: HL = an axis's age (its I the byte below): I = the age held to 6-32, the age = 0. AF lost.
+g_new:  ld a,(hl)
+        cp 6
+        jr nc,.a
+        ld a,6
+.a:     cp 33
+        jr c,.b
+        ld a,32
+.b:     ld (hl),0
+        dec hl
+        ld (hl),a
+        ret
+
+; g_inc: (HL) + 1, held at 255.
+g_inc:  inc (hl)
+        ret nz
+        dec (hl)
+        ret
+GPAGE_END:
+        ASSERT GPAGE_END <= 0xE000
+        SAVEBIN "quazatron_page2.bin",0xC000,GPAGE_END-0xC000
+
+; ============================================================================================================
+; c_pre (session 4, Centred view): CALL at E0DC (was CALL D5BB) and JP E1EC at E1B3 (the edge bursts never start), in the
+; Centred builds only. Pure Z80 at the game's speed, the same bytes in the reference game the proofs replay: before
+; each update, when the player is more than one step off the play area's centre (128, 88), ONE scroll step that way
+; (the game's own step: E0FB .. E1AC, which returns here); after it, the game's copy to the screen and AF2B = 0, so the
+; update that follows is a normal one (droids move). AF2B 1-6 (the transfer and lift modes): no step.
+        ORG 0x3CAC
+c_pre:  ld a,(0xAF2C)
+        and a
+        jr nz,c_step
+        ld a,(0xAF2B)
+        and a
+        jr z,c_chk
+        cp 7
+        jp c,0xD5BB
+        call 0xC05A
+c_ret:  xor a
+        ld (0xAF2B),a
+        jp 0xD5BB
+c_chk:  ld a,(0xAF94)
+        ld e,0x14
+        cp 112
+        jr c,c_go
+        ld e,0x0A
+        cp 145
+        jr nc,c_go
+        ld a,(0xAF95)
+        ld e,0x28
+        cp 80
+        jr c,c_go
+        ld e,0x1E
+        cp 97
+        jp c,0xD5BB
+c_go:   ld a,e
+        ld (0xAF2B),a
+        ld d,0
+        ld hl,0xAF36
+        add hl,de
+        ld de,0xAF2C
+        ld bc,10
+        ldir
+        ld a,1
+c_step: pop hl
+        jp 0xE0FB
+C_END:
+        ASSERT C_END <= 0x3D00
+        SAVEBIN "quazatron_centre.bin",0x3CAC,C_END-0x3CAC
 
 ; ============================================================================================================
 ; setup: called by the stub (DI, 3.5 MHz, slot 2 = the screen page) before the tail. Layer 2 320 x 256 on banks
