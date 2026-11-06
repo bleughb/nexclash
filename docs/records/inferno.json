@@ -960,5 +960,90 @@
    "doccheck": "PASS: 90 docs",
    "hardware": "UNPROVED"
   }
+ },
+ "loading_preparation": {
+  "scope": "frozen live tables at first 8F7C; host scan/dispatch/cache packing with assembled snapshots/colour/B and exact validation; no installed loading hook/UI/cache or complete-frame display",
+  "sources": {
+   "nexclash/inferno.py": "862b4a5a799c4339605768f035bbc6f0",
+   "asm/inferno_hooks.asm": "b65dc187047733dca20b39273bef4f9a",
+   "docs/profiles/inferno.json": "6cd095f322e513375857a2e94b8d2425"
+  },
+  "artifacts": {
+   "loading_preparation.md": "f11a49c442cc65a7dd9e9fbd4be7ba61",
+   "loading_prep1.json": "4a448bc79a1c28bc8f90eb85c90a868d",
+   "loading_prep6.json": "1c84617a71d45feda71513fa68f2bbcb",
+   "loading_assembly.txt": "8564454b36cfb09e83a16ae13a528129",
+   "loading6_points.json": "54a498551979291c6d3ded84ac914d89",
+   "loading_doccheck.txt": "6b4d3adca81f1d5107e1da3ca9519e60"
+  },
+  "levels": {
+   "1": {
+    "loading": {
+     "prepared_images": 103,
+     "packed_source_and_canvas_bytes": 86299,
+     "cache_capacity_bytes": 655360,
+     "assembled_tiles": 1523,
+     "assembled_B_pixels": 139392,
+     "preparation_cpu_ms": 4797.920571428572,
+     "rejected": {
+      "malformed/unsupported live candidate": 143
+     },
+     "scope": "frozen live-table loading experiment with assembled snapshot/colour/B; host scan/dispatch/allocation; excludes scan, zeroing, cache-store copies, wrappers and hardware stalls",
+     "frame": 682,
+     "pc": "8F7C"
+    },
+    "timing": {
+     "target_total_added_ms": 10,
+     "cold_capture_scenery_colour_fill_max_ms": 6.595,
+     "cold_with_snapshot_validation_max_ms": 31.235285714285713,
+     "live_snapshot_validation_tick_max_ms": 24.650285714285715,
+     "status": "FAIL",
+     "excluded": "cache lookup/allocation, uploads, queue and external snapshot/fill wrappers",
+     "hardware_proof": false
+    },
+    "cached_draws": 2216,
+    "cached_pixels_compared": 5902976,
+    "unexpected_cold_misses": 0,
+    "errors": []
+   },
+   "6": {
+    "loading": {
+     "prepared_images": 118,
+     "packed_source_and_canvas_bytes": 110875,
+     "cache_capacity_bytes": 655360,
+     "assembled_tiles": 1534,
+     "assembled_B_pixels": 188288,
+     "preparation_cpu_ms": 6320.133035714286,
+     "rejected": {
+      "malformed/unsupported live candidate": 119
+     },
+     "scope": "frozen live-table loading experiment with assembled snapshot/colour/B; host scan/dispatch/allocation; excludes scan, zeroing, cache-store copies, wrappers and hardware stalls",
+     "frame": 453,
+     "pc": "8F7C"
+    },
+    "timing": {
+     "target_total_added_ms": 10,
+     "cold_capture_scenery_colour_fill_max_ms": 8.71525,
+     "cold_with_snapshot_validation_max_ms": 20.957071428571428,
+     "live_snapshot_validation_tick_max_ms": 12.44675,
+     "status": "FAIL",
+     "excluded": "cache lookup/allocation, uploads, queue and external snapshot/fill wrappers",
+     "hardware_proof": false
+    },
+    "cached_draws": 2272,
+    "cached_pixels_compared": 1057472,
+    "unexpected_cold_misses": 0,
+    "errors": []
+   }
+  },
+  "total_timing": "FAIL: warm validation-inclusive 31.235 ms L1 / 20.957 ms L6, before lookup/allocation/uploads/queue/wrappers",
+  "preparation_excluded": "host scan, zeroing, cache-store copies, allocation/dispatch, wrappers, physical waits",
+  "user_authorization": "Loading screen/pause before gameplay approved 2026-11-07; preserve original state/flow on resume",
+  "checks": {
+   "L1_L6_original_2000": "PASS: retained prepared pixels and original-state/frame/IRQ controls",
+   "assembly": "PASS: unchanged 17 blocks /108 symbols",
+   "doccheck": "PASS: 90 docs",
+   "hardware": "UNPROVED"
+  }
  }
 }

@@ -1,25 +1,25 @@
 # Inferno
 
 ## Next session
-Stage: 2 (continued)    State: immutable source components pass; total timing FAIL
+Stage: 2 (continued)    State: loading experiments L1/L6 pass; runtime timing FAIL
 Inputs: specnext/reference/inferno/    Branch: codex/inferno (build/CONTINUE.md)
 Start: refresh main; read build/actor_jobs.md, actor_b_compiler.md, actor_packing.md and frame_pipeline.md.
 Read: inferno.py run_actor_job/actor_job_checks/model_verify/run_actor_pack and matching ASM.
-Next: make exact live validation affordable; prove any source-lifetime deduplication. Then assembled
-  stream dispatch, runtime content cache/allocator and safe early hook/preparation schedule.
-  Page 78 pins ordered original run-list/bitmap/attribute bytes in page 122. Page 75 accepts copied
-  raw tiles. Six quick correctness runs PASS: 128 captures / 13,066 exact validations / 128 B fills.
-  Host selects cache entries; no installed cache/scheduler. Never accept pointer/hash-only validity.
-  Source work alone reaches 24.650 ms/update; cold snapshot-inclusive L1 899.447 / L6 84.289 ms,
-  target 10 ms TOTAL, excluding lookup/allocation/uploads/queue/wrappers. Long DI walker is not safe.
-  Page 77: physical DDMA high staging 216–223; DMA/CPU fallback (build/actor_high_dma.md).
-  Physical stalls/ownership/IRQ proof remains open. Keep current AND pending pattern allocations.
+Next: user approves a brief "Loading…" screen before gameplay. Prepare from initialized live
+  tables, keep completed images in high RAM, DMA changed patterns during play. Prove a safe
+  post-initialization loading boundary and continuous loader/state contracts before installation.
+  --loading-prep-check models frozen live tables at first 8F7C, using assembled snapshot/colour/B.
+  L6: 118 images / 110875 bytes / 6320 ms preparation; all 2272 sampled draws reuse prepared content.
+  Exact validation remains costly: warm capture/scenery/validation 20.957 ms vs 10 ms total.
+  Host dispatch/allocation and first-draw pause are experiments, not installed cache/loading hooks.
+  Preserve exact content/phase/paint validity, current/pending ownership and complete-frame readiness.
+  Page 78 snapshot / 122 pinned stream; cache 136–215; high staging 216–223 via physical DDMA.
+  Runtime dispatch, faster validation, ownership/IRQ and physical stalls remain open.
 Workflow: Inferno6.rzx --quick 2000; six original level replays at milestones; targeted level-4 shop.
 Open: pattern layout/protected uploads/complete-frame switch, FLASH/modal/frontend/ROM lifetime,
   recolour/sheets and hardware/whole-tick timing. Apply caller-speed/R and ORIGINAL-pace before build.
-Next prompt: "Continue Inferno stage 2 from build/actor_jobs.md and CONTINUE.md. Preserve pinned exact
-live data, original RAM/registers/priority and approved B visuals. Solve validation cost and safe live
-preparation, retain profitable gated blitter/DMA paths; keep sprites disabled until complete."
+Next prompt: "Continue from build/loading_preparation.md: prove loading-time preparation,
+reduce exact validation, retain DMA fallback and original state; sprites stay disabled."
 
 ## Inputs and facts
 - Inferno.tzx: supplied tape, MD5 `335eec35a526f2044455cb87e8c77206`.
@@ -201,8 +201,8 @@ Approved preview/model/contact-sheet hashes and recipes: specnext design/manifes
 build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 
 ## Lessons
-- [local: Inferno immutable sources] Pin complete ordered original bytes before resumable work;
-  exact validation can itself exceed the budget. DI component correctness does not prove safe entry.
+- [local: Inferno immutable sources] Loading-time live preparation removes sampled cold construction;
+  exact validation still exceeds budget. A first-draw host pause does not prove safe initialization.
 - [local: Inferno B fill] Bitset connectivity preserves whole-image fill; a bounded call is not a cold
   latency/schedule proof. Frame-boundary source availability does not establish a safe hook.
 - [local: Inferno blitter] Physical SRAM includes 040000 aperture offset; high staging is 216–223.
@@ -275,7 +275,7 @@ build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 - detect.buffer-layout-producer: corrected: visible colour checks distinguish black-masked stale bitmap data.
 
 ## Stage log
-- 2026-11-07: stage 2 continued; pinned sources and physical high-SRAM DDMA added, scratch preserved.
+- 2026-11-07: stage 2: loading experiments L1/L6, pinned sources and high-SRAM DDMA; scratch preserved.
   Six quick correctness, shop, assembly/tools/canary PASS; high-DMA units/L6 regression PASS. DMA span
   evaluation removes tiny-copy setup. Total timing FAIL (899.447 / 84.289 ms L1/L6); no sprite NEX.
 - 2026-11-06: continued from GitHub; restored work; integrated remote 6aa2992 (main 3efa10f),

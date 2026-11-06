@@ -272,7 +272,7 @@ def scenery_delta(old, new):
     return best
 
 
-def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pack=False):
+def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pack=False, loading=False):
     """Original-image reconstruction and resource census, NOT a sprite hook verifier.
 
     C replay is only the source machine. Process live producer events immediately, keeping
@@ -297,6 +297,7 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
     counts, errors, dirty_counts, shifts, graphics = Counter(), [], Counter(), Counter(), set()
     actor_cache, visible_cache = {}, set()
     actor_jobs = {}
+    loading_result = loading_store = None
     prewarm_seen,prewarm_first_use,prewarm_frame = {},[],None
     kernel = CapturePatch() if capture else None
     frame_patch, frame_pages = FramePatch() if frame else None, None
@@ -329,7 +330,7 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
         sim = context.simulator
         m, r = sim.memory, sim.registers
         try:
-            nonlocal private, display_pages, scene_number, frame_pages, frame_state
+            nonlocal private, display_pages, scene_number, frame_pages, frame_state, loading_result, loading_store, actor_cache, actor_jobs
             if kernel and pc in kernel.sites and (pc == 0x8F7C or st['base'] is not None):
                 private, cost, steps = run_capture(kernel, m, list(r), private, pc)
                 counts['kernel events'] += 1
@@ -345,6 +346,10 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
                 if pc not in tests:
                     tests[pc] = (list(m), list(r), bytearray(private))
             if pc == 0x8F7C:
+                if loading and loading_result is None:
+                    actor_cache,actor_jobs,loading_result,loading_store = prepare_loading_cache(m)
+                    loading_result.update(frame=context.frame_count,pc='8F7C')
+                    counts['loading prepared images (host selected)'] = len(actor_cache)
                 st['pack_cost'] = st['culled_pack_cost'] = 0
                 st['fill_cost'] = st['snapshot_cost'] = 0
                 base = map_tiles(m)
@@ -387,6 +392,13 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
                 image_key = tuple((dx,dy,t,raw_tile(m,t)) for dx,dy,t in a['tiles'])
                 left,top,width,height,pixels = solid_image(tuple((dx,dy,raw) for dx,dy,t,raw in image_key))
                 identity = image_key  # Exact bytes/geometry; never accept a hash-only match.
+                if loading_store and identity in loading_store[1]:
+                    start,size = loading_store[1][identity]
+                    packed_image = loading_store[0][start:start+size]
+                    cached_pixels = bytes(c for b in packed_image for c in (b >> 4,b & 15))
+                    if cached_pixels != pixels:
+                        raise AssertionError('loading cache image differs at actual draw')
+                    counts['loading prepared pixels checked at draw'] += len(pixels)
                 if pack:
                     previous_job = actor_jobs.get(identity)
                     snapshot = run_actor_job(m,op=2 if previous_job else 0,image=a['image'],previous=previous_job)
@@ -597,13 +609,15 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
             'scenery_dirty_histogram': dict(sorted(dirty_counts.items())), 'scenery_shifts': dict(shifts),
             'graphics_content_versions': len(graphics),
             'scope': ('capture kernel + offline complete scenery worker; no frame hook/commit/sprites or total-render timing' if scenery else 'capture kernel + original reconstruction; no display layer, loader integration or total-render timing' if capture else 'original reconstruction/resource census; no sprite hooks or timings')}
+    if loading:
+        result['loading_preparation'] = loading_result
     if pack:
         result['scope'] = 'original frame preservation plus standalone assembled live-source snapshots/exact validations and pinned colour/B construction on host-model cache misses; no installed cache/scheduler/uploads/display'
         cold = counts['max capture scenery cold colour and B fill equivalent T']/3500
         result['timing_gate'] = {'target_total_added_ms':10,'cold_capture_scenery_colour_fill_max_ms':cold,
                                 'cold_with_snapshot_validation_max_ms':counts['max capture scenery snapshot cold colour and B fill equivalent T']/3500,
                                 'live_snapshot_validation_tick_max_ms':counts['max live job tick equivalent T']/3500,
-                                'status':'FAIL' if cold > 10 else 'UNPROVED',
+                                'status':'FAIL' if max(cold,counts['max capture scenery snapshot cold colour and B fill equivalent T']/3500) > 10 else 'UNPROVED',
                                 'excluded':'cache lookup/allocation, uploads, queue and external snapshot/fill wrappers',
                                 'hardware_proof':False}
     return result
@@ -1727,6 +1741,69 @@ def actor_job_tiles(stream):
                 raise ValueError('short snapshot tile')
             tiles.append((dx+j,dy,tile+page*256,raw))
             pos += 10
+
+
+def prepare_loading_cache(ram):
+    """Frozen-live-RAM loading experiment; host dispatch/allocation, assembled workers.
+
+    No RZX-derived catalogue. Every possible C100 index is scanned at this instant.
+    A real wrapper/safe initialization boundary is still required before installation.
+    """
+    cache,jobs,contents,locations = {},{},bytearray(80*8192),{}
+    used,cost,tiles_count,pixels_count = 0,0,0,0
+    rejected = Counter()
+    for image in range(256):
+        try:
+            actor = actor_descriptor(ram,image)
+            key = tuple((x,y,t,raw_tile(ram,t)) for x,y,t in actor['tiles'])
+            if not key or key in cache:
+                continue
+            left,top,width,height,pixels = solid_image(tuple((x,y,raw) for x,y,t,raw in key))
+            if width > 1024:
+                raise ValueError('canvas stride')
+        except (ValueError,IndexError):
+            rejected['malformed/unsupported live candidate'] += 1
+            continue
+        job = run_actor_job(ram,image=image)
+        cost += job['equivalent_T']
+        if not job['done'] or job['error']:
+            rejected['snapshot capacity/record refusal'] += 1
+            continue
+        if actor_job_tiles(job['stream']) != key:
+            raise AssertionError('loading snapshot differs from original')
+        size = width*height//2
+        needed = len(job['stream'])+size
+        if used+needed > len(contents):
+            rejected['expanded cache capacity'] += 1
+            continue
+        canvas = bytes(32768)
+        for x,y,t,raw in actor_job_tiles(job['stream']):
+            dest = ((y*8-top)*width+x*8-left)//2
+            result = run_actor_pack(ram,t,dest,width//2,raw=raw,canvas=canvas)
+            if not result['valid']:
+                raise AssertionError('loading tile rejected')
+            canvas = result['canvas']
+            cost += result['equivalent_T']
+            tiles_count += 1
+        filled = run_actor_fill(canvas,width//2,size)
+        cost += filled['equivalent_T']
+        actual = bytes(c for b in filled['canvas'][:size] for c in (b >> 4,b & 15))
+        if actual != pixels:
+            raise AssertionError('loading B pixels differ')
+        payload = job['stream']+filled['canvas'][:size]
+        contents[used:used+needed] = payload
+        # Host packing of complete owned images in proposed pages 136..215.
+        # No display/pattern allocation or runtime readiness flag is published.
+        cache[key] = 0
+        jobs[key] = {p:job['pages'][p] for p in (78,122)}
+        locations[key] = (used+len(job['stream']),size)
+        used += needed
+        pixels_count += len(pixels)
+    return cache,jobs,{'prepared_images':len(cache),'packed_source_and_canvas_bytes':used,
+                      'cache_capacity_bytes':len(contents),'assembled_tiles':tiles_count,
+                      'assembled_B_pixels':pixels_count,'preparation_cpu_ms':cost/3500,
+                      'rejected':dict(rejected),
+                      'scope':'frozen live-table loading experiment with assembled snapshot/colour/B; host scan/dispatch/allocation; excludes scan, zeroing, cache-store copies, wrappers and hardware stalls'},(bytes(contents[:used]),locations)
 
 
 def actor_job_checks():
@@ -3798,6 +3875,7 @@ def continuation_tests(folder, pulse=False):
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     action = ap.add_mutually_exclusive_group(required=True)
+    action.add_argument('--loading-prep-check', type=Path)
     action.add_argument('--actor-job-checks', action='store_true')
     action.add_argument('--actor-pack-checks', action='store_true')
     action.add_argument('--actor-fill-checks', action='store_true')
@@ -3832,6 +3910,12 @@ def main():
     ap.add_argument('--out', type=Path, default=Path('work/inferno'))
     ap.add_argument('--json', type=Path)
     a = ap.parse_args()
+    if a.loading_prep_check:
+        result = model_verify(a.loading_prep_check,a.quick,capture=True,scenery='textmap',frame=True,pack=True,loading=True)
+        if a.json:
+            a.json.write_text(json.dumps(result,indent=2)+'\n')
+        print(json.dumps(result))
+        return int(bool(result['examples']))
     if a.actor_job_checks:
         result = actor_job_checks()
         if a.json:
