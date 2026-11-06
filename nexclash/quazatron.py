@@ -261,9 +261,275 @@ def build(z80, out, name='quazatron', say=print):
     return ok, paths
 
 
-def verify(patch, rzx_path, stop=None, collect=0, progress=None):
-    """Not built yet (session 2): lockstep at every site against the original, and the canvas against the model."""
-    return collections.Counter({'verifier not built!': 1}), {}, []
+# --- verifier (session 1 start; session 2 completes it: clock matrix, sprites, per-frame lock, negatives) -----------
+ULAPAGE, L2PAGE, PC, SP, TS = 10, 36, 24, 12, 25
+CMPV = list(range(0, 13)) + [14, 15] + list(range(16, 25))       # all but T, IFF/IM, MEMPTR; R included
+NESTED = ('t_list', 't_clr', 't_paste')                         # inside BE38: run as part of t_bs when it is the caller
+
+
+class NextState:
+    """The Next side the hooks see: NR 0x52 / 0x56 / 7 and the rest, the pages (hook page, sprite store, canvas),
+    the Layer 2 enable, sprite attributes and patterns. Carried from event to event."""
+    def __init__(self, patch):
+        self.nr = {7: 0, 0x52: ULAPAGE, 0x56: 0}
+        self.pages = {}
+        for bank, data in patch.extra_banks.items():
+            self.pages[2 * bank] = bytearray(data[:8192])
+            self.pages[2 * bank + 1] = bytearray(data[8192:16384])
+        for p in range(L2PAGE, L2PAGE + 10):
+            self.pages[p] = bytearray(8192)
+        self.sel = 0
+        self.l2 = 0
+        self.attr = [[0] * 5 for _ in range(128)]
+        self.pat = bytearray(16384)
+        self.sidx = self.aidx = self.ptr = 0
+
+    def nextreg(self, reg, val):
+        self.nr[reg] = val
+
+    def read_port(self, regs, port):
+        if port & 0xFFFF == 0x253B:
+            v = self.nr.get(self.sel, 0)
+            return (v & 3) * 17 if self.sel == 7 else v
+        return 0xFF
+
+    def write_port(self, regs, port, value, *x):
+        p = port & 0xFFFF
+        if p == 0x243B:
+            self.sel = value
+        elif p == 0x123B:
+            self.l2 = value
+        elif p == 0x303B:
+            self.sidx, self.aidx, self.ptr = value & 0x7F, 0, (value & 0x3F) * 256
+        elif p & 0xFF == 0x57:
+            self.attr[self.sidx & 0x7F][self.aidx] = value
+            self.aidx += 1
+            if (self.aidx == 4 and not value & 0x40) or self.aidx == 5:
+                self.sidx, self.aidx = (self.sidx + 1) & 0x7F, 0
+        elif p & 0xFF == 0x5B:
+            self.pat[self.ptr & 0x3FFF] = value
+            self.ptr += 1
+
+    def var(self, a, n=1):
+        pg = self.pages[HPAGE]
+        return pg[a - 0x4000] if n == 1 else pg[a - 0x4000] | pg[a - 0x3FFF] << 8
+
+    def canvas(self, x, y):
+        return self.pages[L2PAGE + (x >> 5)][(x & 31) * 256 + (y & 255)]
+
+
+def _mem(get, alt, ns, psite):
+    class M:
+        def __init__(s):
+            s.ov = {}
+
+        def __getitem__(s, a):
+            if a < 0x4000:
+                return alt[a]
+            if a < 0x6000 and ns.nr[0x52] != ULAPAGE:
+                return ns.pages[ns.nr[0x52]][a - 0x4000]
+            if 0xC000 <= a < 0xE000 and ns.nr[0x56] != 0:
+                if ns.nr[0x56] == ULAPAGE:
+                    a -= 0x8000                 # the screen page at slot 6: the game's 0x4000-0x5FFF
+                else:
+                    return ns.pages[ns.nr[0x56]][a - 0xC000]
+            v = s.ov.get(a)
+            if v is None:
+                v = psite.get(a)
+            return get(a) if v is None else v
+
+        def __setitem__(s, a, v):
+            if a < 0x4000:
+                return
+            if a < 0x6000 and ns.nr[0x52] != ULAPAGE:
+                ns.pages[ns.nr[0x52]][a - 0x4000] = v
+            elif 0xC000 <= a < 0xE000 and ns.nr[0x56] not in (0, ULAPAGE):
+                ns.pages[ns.nr[0x56]][a - 0xC000] = v
+            else:
+                s.ov[a - 0x8000 if 0xC000 <= a < 0xE000 and ns.nr[0x56] == ULAPAGE else a] = v
+
+        def __len__(s):
+            return 65536
+    return M()
+
+
+def _run(mem, regs, ns, stop_pc, stop_sp, slot, limit=3000000):
+    from skoolkit.simulator import Simulator
+    from .simpool import machine
+    from . import z80n
+    sim = machine(Simulator, mem, regs, slot)
+    sim.set_tracer(ns)
+    z80n.install(sim, ns.nextreg)
+    R, ops, n = sim.registers, sim.opcodes, 0
+    while not (R[PC] == stop_pc and R[SP] == stop_sp):
+        ops[mem[R[PC]]]()
+        n += 1
+        if n > limit:
+            return list(R), False
+    return list(R), True
+
+
+class _OrigNS(NextState):
+    """The original's side: no pages mapped, no Next ports."""
+    def __init__(self):
+        self.nr = {7: 0, 0x52: ULAPAGE, 0x56: 0}
+        self.pages, self.sel, self.l2 = {}, 0, 0
+        self.attr = [[0] * 5 for _ in range(128)]
+        self.pat = bytearray(16384)
+        self.sidx = self.aidx = self.ptr = 0
+
+
+def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None):
+    """Differential test, session 1 start. Replays the original; at every site runs the original and the patched code
+    from the same state to the return point and compares the registers (R included) and the game memory written
+    (writes below the entry SP are dead stack); the Next side is carried. At every commit (C05A): the canvas under the
+    view = the colour model (pilot work/s1/mockup3.py Model3, the v3 rules) pixel for pixel: paper = the list role,
+    ink = the cell's attribute ink (a wall face's ink: the face tone on the deck), a console's OR ink = its screen.
+    model_dir: the folder of the pilot's model (default $QUAZATRON_MODEL)."""
+    import sys
+    from . import rzx
+    from .nextboot import alt_image
+    from .build import rom48
+    model_dir = model_dir or os.environ.get('QUAZATRON_MODEL')
+    sys.path.insert(0, model_dir)
+    sys.path.insert(0, os.path.dirname(model_dir.rstrip('/')))
+    import mockup3 as M3
+    import cmodel2 as cm
+    cm.REPO = os.path.dirname(_HERE)
+    model = M3.Model3()
+    c = collections.Counter()
+    ex = collections.defaultdict(list)
+    alt = alt_image(patch)
+    rom = rom48()
+    psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
+    sym = {v: k for k, v in patch.syms.items()}
+    sites = {a: SITES[a][2] for a in SITES}
+    ns = NextState(patch)
+    span = [None]
+    dbg_prev = [0]
+    role_idx = {M3.F: R_FLOOR, M3.W: R_WALL, M3.R: R_RAMP, M3.FR: R_FRINGE, M3.A: R_ARROW, M3.O: R_OBJECT,
+                M3.PD: R_PAD, M3.C: R_CONSOLE}
+
+    def fail(k, e):
+        c[k] += 1
+        if len(ex[k]) < 5:
+            ex[k].append(e)
+
+    def event(pc, sim):
+        r, m = sim.registers, sim.memory
+        name = sites[pc]
+        sp = r[SP]
+        if name in NESTED and span[0] is not None and sp < span[0]:
+            c['nested in t_bs (run inside it)'] += 1
+            return
+        if name not in NESTED and name != 't_isr':      # an interrupt inside BE38 does not end t_bs's span
+            span[0] = sp if name == 't_bs' else None
+        get = lambda a: m[a]
+        regs = list(r)
+        if name in ('t_list', 't_clr', 't_paste', 't_spr', 't_bs'):
+            stop_pc, stop_sp = pc + 3, sp
+        elif name in ('t_c05a', 't_isr'):
+            stop_pc, stop_sp = m[sp] | m[sp + 1] << 8, sp + 2
+        else:
+            stop_pc, stop_sp = {'t_sd': 0xE119, 't_su': 0xE128, 't_sl': 0xE137, 't_sr': 0xE151, 't_cls': 0xB2CC,
+                                't_prn': 0xB1FF}[name], sp
+        if name == 't_list' and os.environ.get('QZ_TAGDEBUG') and m[0xAF17] == 8 and not c.get('dbg'):
+            before = c.get('tags differ from the model!', 0)
+            check_tags(m, after_list=True)
+            if c.get('tags differ from the model!', 0) > before:
+                c['dbg'] = 1
+                l = r[6] << 8 | r[7]
+                for row in range(8):
+                    mrow, trow = '', ''
+                    for px in range(32):
+                        v = model.sh[(0x8080 + row * 4 + (px >> 3)) * 8 + (px & 7)]
+                        k = model.tagkey.get(v & 0xFFFF, ('n',))
+                        mrow += ('#' if v & cm.INK else '') + (k[1][:2] if k[0] == 'role' else k[0][:2]) + ' '
+                        trow += '%02d ' % ns.pages[HPAGE][TAGS - 0x4000 + px * 152 + row]
+                    print('M', row, mrow)
+                    print('T', row, trow)
+                print('FIRST DIVERGENCE before list (the previous list is %04x)' % dbg_prev[0], 'this list %04x AF0E %d AF10 %d AF16 %d AF17 %d parts %s' % (
+                    l, m[0xAF0E] | m[0xAF0F] << 8, m[0xAF10], m[0xAF16], m[0xAF17],
+                    [(x, y, op, len(rw)) for x, y, op, rw in list_parts(m, l)]))
+        if name == 't_list':
+            dbg_prev[0] = r[6] << 8 | r[7]
+        on = _OrigNS()
+        mo = _mem(get, rom, on, {})
+        ro, ok_o = _run(mo, regs, on, stop_pc, stop_sp, 'qo')
+        mp = _mem(get, alt, ns, psite)
+        rp, ok_p = _run(mp, regs, ns, stop_pc, stop_sp, 'qp')
+        c[name] += 1
+        if not ok_o or not ok_p:
+            fail('did not return!', (name, hex(pc), ok_o, ok_p))
+            return
+        bad = [(i, ro[i], rp[i]) for i in CMPV if ro[i] != rp[i]]
+        if bad:
+            fail('registers differ!' if any(i != 15 for i, a, b in bad) else 'R differs!', (name, hex(pc), bad[:4]))
+        lo = sp - 64
+        keys = {a for a in set(mo.ov) | set(mp.ov) if not lo <= a < sp}
+        diff = [a for a in keys if mo.ov.get(a, get(a)) != mp.ov.get(a, get(a))]
+        if diff:
+            fail('memory differs!', (name, hex(pc), [hex(a) for a in sorted(diff)[:6]], len(diff)))
+        if name == 't_c05a' and ns.var(V_L2ON):
+            check_canvas(m, mo)
+        if name == 't_paste':
+            check_tags(m)
+
+    def check_tags(m, after_list=False):
+        rows, sh, pg = m[0xAF17], model.sh, ns.pages[HPAGE]
+        for row in range(rows):
+            for px in range(32):
+                v = sh[(0x8080 + row * 4 + (px >> 3)) * 8 + (px & 7)]
+                key = model.tagkey.get(v & 0xFFFF, ('none',))
+                exp = (24 if key[0] == 'screen' else R_FACE if key[0] == 'face' else 0) if v & cm.INK else \
+                    role_idx.get(key[1]) if key[0] == 'role' else None
+                if exp is None:
+                    c['tag pixels the model cannot name'] += 1
+                    continue
+                got = pg[TAGS - 0x4000 + px * 152 + row]
+                if got != exp:
+                    fail('tags differ from the model!', (m[0xAF15], m[0xAF17], px, row, exp, got, key))
+                else:
+                    c['tag pixels equal'] += 1
+
+    def check_canvas(m, mo):
+        tx, ty = ns.var(0x4BF3, 2), ns.var(0x4BF5)
+        sh = model.sh
+        n_ok = 0
+        for by in range(152):
+            for bx in range(256):
+                v = sh[(0x8300 + by * 32 + (bx >> 3)) * 8 + (bx & 7)]
+                key = model.tagkey.get(v & 0xFFFF, ('none',))
+                at = mo.ov.get(0x5800 + (by >> 3) * 32 + (bx >> 3), m[0x5800 + (by >> 3) * 32 + (bx >> 3)])
+                atink = (at & 7) | (8 if at & 0x40 else 0)
+                if v & cm.INK:
+                    exp = 24 if key[0] == 'screen' else (20 if at & 7 == 0 else atink) if key[0] == 'face' else atink
+                elif key[0] == 'role':
+                    exp = role_idx[key[1]]
+                else:
+                    c['canvas pixels the model cannot name (snapshot bytes)'] += 1
+                    continue
+                got = ns.canvas((tx + bx) % 320, ty + by)
+                if got != exp:
+                    fail('canvas differs from the model!', (bx, by, exp, got, key))
+                    c['canvas differs at commit %d, row band %d' % (c['commits checked'], by // 8)] += 1
+                else:
+                    n_ok += 1
+        c['canvas pixels equal to the model'] += n_ok
+        c['commits checked'] += 1
+
+    mpcs = model.pcs()
+
+    def hook(pc, sim):
+        if pc in mpcs:
+            model.on(pc, sim)
+        if pc in sites:
+            event(pc, sim)
+    frames, err = rzx.trace(rzx_path, mpcs | set(sites), hook, stop=stop)
+    c['frames'] = frames
+    if err:
+        fail('replay desync!', err)
+    return c, dict(ex), []
 
 
 def unit_tests(patch, states, neg=None):

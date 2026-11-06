@@ -716,10 +716,10 @@ recell: ld e,a
 .j:     ld a,(hl)
         cp 16
         jr c,.j0
-        cp R_FACE               ; a wall face's ink: the void's ink in a void cell, kept on the deck
-        jr nz,.j1
-        inc e
-        dec e
+        cp R_FACE               ; a wall face's ink: the void's ink in a void cell, kept on the deck (black ink,
+        jr nz,.j1               ; bright or not)
+        ld a,e
+        and 7
         jr z,.j1
 .j0:    ld (hl),e
 .j1:    inc l
