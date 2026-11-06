@@ -34,14 +34,20 @@ SITES = {
     0xB2C9: ('210040', 0xC3, 't_cls'),
     0xB1FB: ('ed5363b2', 0xC3, 't_prn'),
     0xE0DF: ('cd56e6', 0xCD, 't_spr'),
+    0xE1A9: ('cd38be', 0xCD, 't_bs'),
+    0xE6E6: ('c32dbd', 0xC3, 't_isr'),
 }
 INTERIORS = (0xBE2F, 0xBE30, 0xBE83, 0xBE84, 0xBFED, 0xBFEE, 0xBFFC, 0xBFFD, 0xE10F, 0xE110, 0xE11E, 0xE11F, 0xE12D,
-             0xE12E, 0xE147, 0xE148, 0xC05B, 0xC05C, 0xB2CA, 0xB2CB, 0xB1FC, 0xB1FD, 0xB1FE, 0xE0E0, 0xE0E1)
+             0xE12E, 0xE147, 0xE148, 0xC05B, 0xC05C, 0xB2CA, 0xB2CB, 0xB1FC, 0xB1FD, 0xB1FE, 0xE0E0, 0xE0E1, 0xE1AA, 0xE1AB, 0xE6E7, 0xE6E8)
 
 # hook page layout (asm EQUs)
-TCOL, PALINIT, DECKPAL, ROLETAB = 0x4600, 0x4640, 0x4680, 0x4700
-V_OX, V_OY, V_L2ON, V_DECKP = 0x47C4, 0x47C6, 0x47C7, 0x47C8
-FLAGS, TAGS = 0x4800, 0x4D00
+ROLETAB = 0x4B00
+PALINIT_OFF = 0x80          # in the setup block (0xD080)
+DECKPAL_OFF = 0x1100        # in sprite store page S0 (0xD100 at slot 6)
+FLAGS_OFF = 0x1200          # in S0 (0xD200): 40 x 32 canvas cells, 0xFF = rewrite at the first commit
+V_OX, V_OY, V_L2ON, V_DECKP = 0x4BC4, 0x4BC6, 0x4BC7, 0x4BC8
+V_FAST, V_SMOOTH, V_DX, V_DY = 0x4BE8, 0x4BE9, 0x4BEA, 0x4BEC
+TAGS = 0x4D00
 
 # --- the painting (our own; docs: games/quazatron.md "Colour") -------------------------------------------------
 # Layer 2 palette: 0-15 the ZX inks (the ink a cell's attribute gives), 16-19 the deck's floor / wall / ramp / fringe
@@ -140,21 +146,22 @@ def _whole_rom_page(code=b''):
     return bytes(page)
 
 
-def hook_page(prof):
+def hook_page(prof, fast=False, smooth=False):
     """The 8K hook page (slot 2 inside hooks): code, tables, state, FLAGS 0xFF (every cell rewritten at the first
-    commit), TAGS 0."""
+    commit), TAGS 0. fast / smooth: the fast-scroll option (scroll steps at 28 MHz) and the smooth display."""
     code = bytes.fromhex(prof['hooks']['page'])
     pg = bytearray(8192)
     pg[0:len(code)] = code
     put = lambda a, b: pg.__setitem__(slice(a - 0x4000, a - 0x4000 + len(b)), b)
-    put(PALINIT, palinit())
-    put(DECKPAL, deckpal())
     put(ROLETAB, roletab())
+    put(V_FAST, bytes([3 if fast else 0, 1 if smooth else 0]))
+    put(V_DX, (32).to_bytes(2, 'little'))
+    put(V_DY, bytes([32]))
+    put(0x4BF3, (32).to_bytes(2, 'little') + bytes([32]))     # TX, TY
     put(V_OX, (32).to_bytes(2, 'little'))
     put(V_OY, bytes([32]))
     put(V_L2ON, bytes([0]))
     put(V_DECKP, bytes([0xFF]))
-    put(FLAGS, bytes([0xFF]) * 1280)
     return bytes(pg)
 
 
@@ -183,12 +190,16 @@ class PlainPatch:
 class QuazatronPatch:
     name = 'Quazatron colour: scenery canvas on Layer 2 (session 1; droid sprites, smooth mode and pace to come)'
 
-    def __init__(self, prof=None):
+    def __init__(self, prof=None, fast=False, smooth=False):
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         self.rom_code = bytes.fromhex(h['rom'])
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
-        self.stub_extra = bytes.fromhex(h['setup'])
+        setup = bytes.fromhex(h['setup'])
+        if len(setup) > PALINIT_OFF:
+            raise ValueError('setup code runs into its palette')
+        self.stub_extra = setup + bytes(PALINIT_OFF - len(setup)) + palinit()
+        self.fast, self.smooth = fast, smooth
         self.setup_call = SETUP
         self.hook_page_data = b''
         self.uses_printer_buffer = False
@@ -201,7 +212,7 @@ class QuazatronPatch:
         self.page = _whole_rom_page(self.rom_code)
         self.sites = [(a, bytes.fromhex(old), bytes([op]) + self.syms[sym].to_bytes(2, 'little'))
                       for a, (old, op, sym) in SITES.items()]
-        self.extra_banks = {12: self.page + bytes(8192), 13: hook_page(self.prof) + bytes(8192)}
+        self.extra_banks = {12: self.page + bytes(8192), 13: hook_page(self.prof, fast, smooth) + bytes(8192)}
 
     def apply(self, snap):
         if snap.is128:
@@ -225,11 +236,19 @@ def build(z80, out, name='quazatron', say=print):
     from .nextboot import check
     md5 = lambda p: hashlib.md5(open(p, 'rb').read()).hexdigest()
     ok, paths = True, {}
-    colour = QuazatronPatch()
     banks, info = sprite_store(play_memory(z80))
-    colour.extra_banks.update(banks)
+    s0 = bytearray(banks[STORE_BANK][:8192])
+    s0[DECKPAL_OFF:DECKPAL_OFF + 80] = deckpal()
+    s0[FLAGS_OFF:FLAGS_OFF + 1280] = bytes([0xFF]) * 1280
+    banks[STORE_BANK] = bytes(s0) + banks[STORE_BANK][8192:]
     say('Sprites   : %s' % info)
-    for kind, patch, fn in (('Plain', PlainPatch(), name + '.nex'), ('Colour', colour, name + '_colour.nex')):
+    builds = [('Plain', PlainPatch(), name + '.nex')]
+    for kind, fast, smooth, fn in (('Colour', False, False, name + '_colour.nex'),
+                                   ('Fast+smooth', True, True, name + '_colour_fastscroll.nex')):
+        patch = QuazatronPatch(fast=fast, smooth=smooth)
+        patch.extra_banks.update(banks)
+        builds.append((kind, patch, fn))
+    for kind, patch, fn in builds:
         p = os.path.join(out, fn)
         conv = zt.convert(z80, p, None, True, quiet=True, patch=patch)
         if conv[1] >= 0xC000 or conv[1] + len(conv[2]) > 0xC000:

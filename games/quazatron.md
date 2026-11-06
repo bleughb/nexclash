@@ -1,7 +1,10 @@
 # Quazatron (Hewson, 1986; 48K) - colourisation, engine not yet built (stages 0-1, emulator only)
 
 ## Next session
-Stage: 1 -> 2 (build)    State: scoped and designed 2026-11-06; colour model exact on 3 recordings; no engine.
+Stage: 2 (build, session 2 of the build: verifier + pace)    State: 2026-11-06 session 1: engine 'quazatron' built
+(opt-in NEXCLASH_REWORK=quazatron, UNPROVEN): scenery canvas on Layer 2 + droid sprites painted by parts (v3, owner
+approved), fast-scroll and smooth options; JNext 1.1.104 reaches play in colour and scrolls. No verifier, no pace
+limiter, no menu. Handoff: pilot runs/quazatron/HANDOFF-SESSION2.md (start there), SCOPE.md "Session 1".
 Inputs (pilot run folder runs/quazatron, private): the archive's "Quazatron (1986)(Hewson Consultants)[aka
 Ziggurat].z80", md5 ac51eb58af87fdac9c0c7077db98c90a; recordings work/b1, work/b2, work/c1 (rec.rzx, Kempston).
 Start with: "Build plan" below; the reference model is the pilot's work/cmodel.py (port it into the verifier).
@@ -65,12 +68,15 @@ ends. Neither asks for a value.
 0-3 of the first city and the transfer game reached. No bug found, so no fix is proposed.
 
 ## Open
-- The player and droid classes: the body list is shared between types and AF76 holds 0x7F at draw time; find the
-  droid's type for the colour per class.
+- (done 2026-11-06) The player and droid classes: keyed from the draw record (A320 byte 1 bit 7 = the player, byte 7
+  = the A000 type); SCOPE.md "Session 1: inventory".
 - Scenery lists of the other decks and cities: unknown lists fall back to the deck's floor tone.
 - Never run on hardware. JNext only.
 
 ## Lessons
+- [local: this game's drawing] observed: every enemy type draws the same 4 body frames; only the number plate (DDB0, two font characters) differs, so a per-type colour must come from the draw record (A320 byte 7), never from the body list.
+- [local: this game's hooks] observed: an ISR hook that sets the game's speed for the ISR body must put the interrupted speed back afterwards (CALL the body), or every interrupt that lands in a 28 MHz hook leaves the rest of the hook at 3.5 MHz (fast build 21% slower in JNext until fixed).
+- [deferred Pace: session 2] observed: JNext runs of different builds play different games (deck colour and droids follow timing), so pace must be measured update-keyed in lockstep (nexclash.pace), never from free-running logs.
 - [local: this game's drawing] observed: masks over an ink fill draw the surfaces; colouring by the list that cleared a pixel follows the drawing (verified by eye on the mock-up), where colouring by the list that set it gave nothing.
 - [local: this game's pace] observed: the update delay scales with the droid count (DD80), so hook time is not absorbed by a frame lock; it must be repaid.
 - [deferred Open: reconsider when the engine is built] inferred: the colour shadow can hold final Layer 2 bytes with ink transparent, so no conversion is needed at the copies.
@@ -92,3 +98,7 @@ ends. Neither asks for a value.
 ## Stage log
 - 2026-11-06 stages 0-1 (pilot runs/quazatron): scope, colour model, mock-up, scroll and pace measurements, cheats
   proven, bug hunt; engine not built (budget).
+- 2026-11-06 stage 2 session 1 (pilot runs/quazatron): inventory (A000 / A320 fields, 32 types in 9 plate classes,
+  one static set of 46 scenery lists for every deck, at most 7 records on screen), droid painting by regions (mock-ups
+  v2, v3; approved), engine built around a wrapping Layer 2 canvas + sprites, fast-scroll and smooth options; JNext
+  play in colour; burst timings. Not proven: verifier, pace, menu are session 2.
