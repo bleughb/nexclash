@@ -85,15 +85,22 @@ VFAST   EQU 0x4CE1              ; in use: VFASTT from the first commit on, 0 in 
 VCENTRE EQU 0x4CE2              ; session 4: 1 = Centred view (the toggle: with E0DC / E1B3 patched to c_pre); it implies
                                 ; fast scroll and the smooth display (p_pre sets VFASTT / VSMOOTH at each commit)
 CWD     EQU 0x4CE3              ; 2: the debt when a Centred step's window opened (mv_in); cw_close sets DEBT from it
-GXI     EQU 0x4CE5              ; glide (page 27): x: frames between the last two x commits (6-32)
-GXA     EQU 0x4CE6              ;   frames since the last x commit
-GXF     EQU 0x4CE7              ;   x fraction (1/256 px)
-GYI     EQU 0x4CE8              ;   y: the same
-GYA     EQU 0x4CE9
-GYF     EQU 0x4CEA
-LTX     EQU 0x4CEB              ; 2: TX the glide last saw
-LTY     EQU 0x4CED              ;   TY
-GPAGE   EQU 27                  ; page 27 (bank 13 upper half): the glide, mapped at slot 6 only inside isr_step
+STX     EQU 0x4CE5              ; session 5 (Centred view): 2: TX when the last update's sprites were placed (p_spr)
+STY     EQU 0x4CE7              ;   TY then
+PSX     EQU 0x4CE8              ;   the player's AF94 then
+PSY     EQU 0x4CE9              ;   AF95 (PSX, PSY adjacent)
+PKX     EQU 0x4CEA              ; 2: a player group's offset: base + PKX = its screen X (PKX, PKY adjacent)
+PKY     EQU 0x4CEC              ; 2
+PSCX    EQU 0x4CEE              ; 2: the shown player's screen x (Pd - DX), from the last frame step
+PSCY    EQU 0x4CF0              ; 2: its screen y
+PG0     EQU 0x4CF2              ; the player's first sprite group this update (PG0, PG1 adjacent)
+PG1     EQU 0x4CF3              ;   the group after its last
+PLR     EQU 0x4CF4              ; p_spr: 1 while the player's groups are placed (Centred view)
+FRESH   EQU 0x4CF5              ; 1: a view's first copy since the last frame step (the camera starts again)
+SSX     EQU 0x4CF6              ; 2: the frame step's sprite offset (droids, shots): STX - DX (SSX, SSY adjacent)
+SSY     EQU 0x4CF8              ; 2: STY - DY
+SBUSY   EQU 0x4CFA              ; 1 while p_spr writes the sprite ports: an ISR in the hook page skips the frame step
+GPAGE   EQU 27                  ; page 27 (bank 13 upper half): the frame step, mapped at slot 7 only inside isr_step
 VMONO   EQU 0x4CE0              ; 1: monochrome (the base of the .nxc: Layer 2 and the sprites never on, the ULA shows the
                                 ; game's own picture; the hooks and the limiter run as in colour), 0: colour (the set)
 VSMOOTH EQU 0x4BE9              ; 1: smooth display (the shown origin glides to the game's), 0: off
@@ -837,6 +844,27 @@ p_spr:  ld a,(L2ON)
         or a
         ret z
         call offs
+        ld hl,(TX)              ; session 5: the view these records belong to, and the player in it
+        ld (STX),hl
+        ld a,(TY)
+        ld (STY),a
+        ld hl,(0xAF94)
+        ld (PSX),hl
+        ld e,l
+        ld d,0
+        push hl
+        ld hl,(PSCX)            ; a player group's offset from the shown player (screen) and this update's AF94 / 95
+        or a
+        sbc hl,de
+        ld (PKX),hl
+        pop hl
+        ld e,h
+        ld hl,(PSCY)
+        or a
+        sbc hl,de
+        ld (PKY),hl
+        ld hl,0
+        ld (PG0),hl
         ld hl,(0xDDAE)          ; the drive list (DDAE is in slot 6: read before any mapping)
         ld a,(hl)
         inc hl
@@ -889,6 +917,10 @@ p_spr:  ld a,(L2ON)
         jr .nx
 .pl:    xor a
         ld (TYP),a
+        ld a,(VCENTRE)
+        ld (PLR),a
+        ld a,(GRP)
+        ld (PG0),a
         ld hl,(0xAF9C)
         call grp_ind
         ld de,(0xAF9E)
@@ -902,6 +934,10 @@ p_spr:  ld a,(L2ON)
         call group
         ld hl,(0xAFA0)
         call grp_ind
+        ld a,(GRP)
+        ld (PG1),a
+        xor a
+        ld (PLR),a
 .nx:    ld hl,(REC)
         ld de,-8
         add hl,de
@@ -1050,10 +1086,24 @@ group:  ld a,(GRP)
         ld (hl),c
         inc l
         ld (hl),b
-        ld hl,(SDX)
+        ld hl,SDX               ; session 5: a player group in Centred view: PKX / PKY (the shown player)
+        ld a,(PLR)
+        or a
+        jr z,.np
+        ld hl,PKX
+.np:    ld a,(hl)
+        inc hl
+        push hl
+        ld h,(hl)
+        ld l,a
         add hl,de
         ex de,hl
-        ld hl,(SDY)
+        pop hl
+        inc hl
+        ld a,(hl)
+        inc hl
+        ld h,(hl)
+        ld l,a
         add hl,bc
         ld a,(GRP)
         ld b,a
@@ -1165,66 +1215,9 @@ isr_step:
         or a
         call nz,mvtick
         call dbg_open
-        ld a,(VSMOOTH)
-        or a
-        jp z,.done
-        ld a,(L2ON)
-        or a
-        jp z,.done
-        call offs
-        nextreg 0x56,GPAGE      ; session 4: the glide (v1.0's, or Centred view's) runs from page 27 at slot 6
-        call glide
-        nextreg 0x56,0
-.w:     call wregs
-        call offs
-        ld a,(GPREV)
-        or a
-        jr z,.done
-        nextreg 0x56,S0
-        ld b,a
-        ld hl,SPOS
-        xor a
-.g:     push bc
-        push af                 ; A = group
-        ld e,(hl)
-        inc hl
-        ld d,(hl)
-        inc hl
-        push hl
-        ld hl,(SDX)
-        add hl,de
-        ex de,hl                ; DE = X
-        pop hl
-        ld c,(hl)
-        inc hl
-        ld b,(hl)
-        inc hl
-        push hl
-        ld hl,(SDY)
-        add hl,bc               ; HL = Y
-        pop bc                  ; BC = SPOS pointer
-        pop af
-        push af
-        push bc
-        push hl
-        push af
-        add a,low GPAT
-        ld l,a
-        ld h,high GPAT
-        ld a,(hl)
-        ld (PPAT),a
-        pop af
-        pop hl
-        ld b,a
-        add a,a
-        add a,b                 ; first sprite = 3 g
-        call put3
-        pop hl
-        pop af
-        inc a
-        pop bc
-        djnz .g
-        nextreg 0x56,0
+        nextreg 0x57,GPAGE      ; session 5: the whole frame step (glide or camera, the scroll registers, the
+        call glide              ; sprites) runs from page 27 at slot 7 (interrupts are off; slot 6 stays free for S0)
+        nextreg 0x57,1
 .done:  ld a,C_ISR               ; (the same at any interrupted clock: the hook's state never depends on it)
         call dbg_close_r
         ld a,(GSPD)
@@ -1396,8 +1389,14 @@ isr_in: call qline
         ld (ISRL),hl
         ld a,(WOPEN)            ; a pace window: its time counted up to here
         or a
-        ret z
-        jp mvtick
+        call nz,mvtick
+        ld a,(SBUSY)            ; session 5: the frame step here too (not while p_spr writes the sprite ports), so
+        or a                    ; the picture moves every frame
+        ret nz
+        nextreg 0x57,GPAGE
+        call glide
+        nextreg 0x57,1
+        ret
 isr_out:
         call qline
         ld a,(WOPEN)            ; a pace window: the ISR body left out (it goes on from here)
@@ -1821,7 +1820,11 @@ fw_spr_out:
         call fw_mark
 fw_spr_m:
         call dbg_open
+        ld a,1
+        ld (SBUSY),a
         call p_spr
+        xor a
+        ld (SBUSY),a
         ld a,C_FW
         call dbg_close
         call fw_wait
@@ -1852,14 +1855,7 @@ fw_bs_out:
         push bc
         push de
         push hl
-        ld a,(WOPEN)
-        cp 1                    ; (session 4: not a Centred step's window, 3)
-        jr nz,fw_bs_x
-        call fw_mark
-fw_bs_m:
-        ld a,C_FW
-        call dconst
-        call fw_wait
+fw_bs_m:                        ; (session 5: its window branch removed: BE38 never runs in a window)
 fw_bs_x:
         ld a,-9 & 0x7F
         jp fw_out_x
@@ -1892,6 +1888,8 @@ fw_cpy_in:
         ld (DEBT),hl
         xor a
         ld (WOPEN),a
+        inc a
+        ld (FRESH),a
         call spd_latch
 .x:     ld a,-10 & 0x7F
         jp fw_in_x
@@ -2338,18 +2336,26 @@ t_dly:  nextreg 0x52,HPAGE
         nextreg 0x52,ULAPAGE
         jp 0xDD8D
 ROM_END:
-        ASSERT ROM_END + 20 <= 0x3CAC  ; session 4: c_pre at 0x3CAC
+        ; (session 5: c_pre ends at 0x3D00, after ROM_END + 20: asserted there)
         SAVEBIN "quazatron_rom.bin",0x386E,ROM_END-0x386E
 
 ; ============================================================================================================
-; Page 27 (GPAGE, bank 13 upper half), mapped at slot 6 only inside isr_step (interrupts off; the hook page at slot 2).
-        ORG 0xC000
-; glide: the shown origin (DX, DY) one frame toward the committed one (TX, TY); SDX / SDY current (offs). Smooth
-; scrolling alone: v1.0's rule, moved here unchanged (2 px a frame, 4 when more than 16 behind; 1 line, 2 when more
-; than 8). Centred view: glide_c. AF, BC, DE, HL lost.
-glide:  ld a,(VCENTRE)
+; Page 27 (GPAGE, bank 13 upper half), mapped at slot 7 (0xE000) only inside isr_step (interrupts off; the hook page
+; at slot 2, slot 6 free for S0). The smooth display's frame step.
+        ORG 0xE000
+; glide: Smooth scrolling alone: v1.0's glide (2 px a frame, 4 when more than 16 behind; 1 line, 2 when more than 8),
+; the scroll registers, every sprite group at its base + (TX - DX, TY - DY): unchanged, moved here. Centred view: cam.
+; SDX / SDY current (offs). AF, BC, DE, HL lost.
+glide:  ld a,(VSMOOTH)
         or a
-        jp nz,glide_c
+        ret z
+        ld a,(L2ON)
+        or a
+        ret z
+        call offs
+        ld a,(VCENTRE)
+        or a
+        jp nz,cam
         ld hl,(SDX)             ; x: 2 px a frame, 4 when more than 16 behind
         ld a,h
         or l
@@ -2384,7 +2390,7 @@ glide:  ld a,(VCENTRE)
 .xw:    ld (DX),hl
 .y:     ld a,(SDY)              ; y: 1 line a frame, 2 when more than 8 behind
         or a
-        ret z
+        jr z,gl_w
         ld b,1
         bit 7,a
         jr z,.yp
@@ -2396,188 +2402,557 @@ glide:  ld a,(VCENTRE)
 .ys:    ld a,(DY)
         add a,b
         ld (DY),a
-        ret
-
-; glide_c (session 4, Centred view): per axis the shown origin moves at the speed that reaches the committed one just as
-; the next step is due: |d| / max(4, I + 3 - A) a frame (8.8 fixed point, the fraction kept), I = the frames between the
-; last two commits on that axis (6-32), A = the frames since the last one. A steady walk gives a steady camera; when the
-; player stops, it eases out over at least 4 frames; never past the target.
-glide_c:
-        ld hl,(TX)
-        ld de,(LTX)
-        or a
-        sbc hl,de
-        jr z,.x1
-        add hl,de
-        ld (LTX),hl
-        ld hl,GXA
-        call g_new
-.x1:    ld hl,GXA
-        call g_inc
+gl_w:   call wregs
+        call offs
         ld hl,(SDX)
-        ld a,h
-        or l
-        jr z,.x0
-        bit 7,h
-        push af
-        jr z,.xp
-        call neghl
-.xp:    ld a,(GXI)
-        ld b,a
-        ld a,(GXA)
-        ld c,a
-        ld a,(GXF)
-        ld d,a
-        call g_step
-        ld (GXF),a
-        pop af
-        ld hl,(DX)
-        jr nz,.xm
-        add hl,de
-        call mod320
-        jr .xw
-.xm:    or a
-        sbc hl,de
-        jr nc,.xw
-        ld de,320
-        add hl,de
-.xw:    ld (DX),hl
-        jr .y
-.x0:    ld (GXF),a
-.y:     ld a,(TY)
-        ld hl,LTY
-        cp (hl)
-        jr z,.y1
-        ld (hl),a
-        ld hl,GYA
-        call g_new
-.y1:    ld hl,GYA
-        call g_inc
+        ld (SSX),hl
         ld hl,(SDY)
-        ld a,h
-        or l
-        jr z,.y0
-        bit 7,h
-        push af
-        jr z,.yp
-        call neghl
-.yp:    ld a,(GYI)
-        ld b,a
-        ld a,(GYA)
-        ld c,a
-        ld a,(GYF)
-        ld d,a
-        call g_step
-        ld (GYF),a
-        pop af
-        ld a,(DY)
-        jr nz,.ym
-        add a,e
-        jr .yw
-.ym:    sub e
-.yw:    ld (DY),a
-        ret
-.y0:    ld (GYF),a
-        ret
+        ld (SSY),hl
+        jp sprites
 
-; g_step: HL = |d| (1-319), B = I, C = A, D = the fraction -> DE = the pixels to move now (never over |d|), A = the
-; new fraction. v = min(|d|, 255) x 256 / max(4, I + 3 - A); acc = v + fraction. BC lost.
-g_step: ld a,b
-        add a,3                 ; aim 3 frames past the predicted step: the camera keeps moving (no stop before a step
-        sub c                   ; that comes a little late); the leftover is taken up in the next interval
-        jr c,.r4
-        cp 4
-        jr nc,.r
-.r4:    ld a,4
-.r:     ld c,a
-        push hl
-        ld a,h
+; cam (session 5, Centred view): the camera is the player. Pd (the shown player, world position on the canvas, 8.8)
+; moves at a constant speed from where it is to the player of the last update (STX + PSX, STY + PSY) over one update
+; interval + 1 frame (U, measured in frames between updates): one update of latency, no stop while he walks steadily.
+; The shown origin (DX, DY) = Pd - (128, 88), exactly, kept inside the area the canvas holds (LO..HI from the game's
+; view, grown by each step, reset by a view's first copy); when that limit moves, it eases by half the gap a frame.
+; Droids and shots: their base + (STX - DX, STY - DY): where the game put them, locked to the scenery. The player's
+; groups: their base + PKX / PKY, so the player sits at (Pd - DX) on the screen.
+cam:    ld a,(FRESH)
         or a
-        jr z,.lo
-        ld l,255
-.lo:    ld h,l
-        ld l,0
-        xor a
-        ld b,16
-.dv:    add hl,hl
-        rla
-        jr c,.sb
-        cp c
-        jr c,.nx
-.sb:    sub c
-        inc l
-.nx:    djnz .dv
-        ld e,d
-        ld d,0
-        add hl,de
+        jr z,.c1
+        xor a                   ; a view's first copy: start again (the area = the view; Pd = the player now)
+        ld (FRESH),a
+        ld (LEFT),a
+        ld hl,0
+        ld (LOX),hl
+        ld (LOY),hl
+        ld hl,(TX)
+        ld (LTX),hl
+        ld a,(TY)
+        ld (LTY),a
+        call pnew
+        call psnap
+        jr .c3
+.c1:    ld hl,(TX)              ; a step's commit: the area grows by the new view (canvas 320 x 256: at most 64 px /
+        ld de,(LTX)             ; 104 lines more than the view)
+        or a
+        sbc hl,de
+        jr z,.cy
+        call n320
         ld a,l
+        ld hl,(TX)
+        ld (LTX),hl
+        ld hl,LOX
+        ld c,64
+        call vupd
+.cy:    ld a,(LTY)
+        ld b,a
+        ld a,(TY)
+        cp b
+        jr z,.c3
+        ld (LTY),a
+        sub b
+        ld hl,LOY
+        ld c,104
+        call vupd
+.c3:    ld a,(STAMP)            ; a new update: Pd heads for its player
+        ld hl,STAMPL
+        cp (hl)
+        jr z,.u1
+        ld (hl),a
+        ld a,(FCNT)             ; U = the mean of the last 4 intervals + 2 frames: the game's intervals vary (4, 5, a
+        cp 17                   ; long step update, a short one after it); the camera rides over them without a stop
+        jr c,.u2
+        ld a,16
+.u2:    ld hl,IH + 1
+        ld de,IH
+        ld bc,3
+        ldir
+        ld (de),a
+        ld hl,IH
+        add a,(hl)
+        inc hl
+        add a,(hl)
+        inc hl
+        add a,(hl)
+        srl a
+        srl a
+        add a,2
+.u3:    ld (UU),a
+        ld (LEFT),a
+        xor a
+        ld (FCNT),a
+        call pnew
+        ld hl,(PNX)             ; x: D = Pn - Pd (normalised), then V = (D x 256 - fraction) / U
+        ld de,(PDXI)
+        or a
+        sbc hl,de
+        call n320
+        call far
+        jr c,.ux
+        call psnap              ; more than 64 px or lines: a jump (a new place), not a walk
+        jr .u1
+.ux:    ld h,l
+        ld l,0
+        ld a,(PDXF)
+        ld e,a
+        ld d,0
+        or a
+        sbc hl,de
+        call sdiv
+        ld (VX),hl
+        ld a,(PNY)              ; y: the same in 8 bits
+        ld hl,PDY + 1
+        sub (hl)
+        ld h,a
+        ld l,0
+        ld a,(PDY)
+        ld e,a
+        ld d,0
+        or a
+        sbc hl,de
+        call sdiv
+        ld (VY),hl
+.u1:    ld hl,FCNT
+        inc (hl)
+        jr nz,.a0
+        dec (hl)
+.a0:    ld a,(LEFT)             ; Pd one frame on
+        or a
+        jr z,.cam
+        dec a
+        ld (LEFT),a
+        jr nz,.a1
+        call psnap              ; the interval's end: exactly the target
+        jr .cam
+.a1:    ld hl,(VX)
+        ld a,(PDXF)
+        add a,l
+        ld (PDXF),a
         ld e,h
         ld d,0
-        pop hl
-        push hl
-        or a                    ; (A kept: OR A only clears the carry)
+        bit 7,h
+        jr z,.a2
+        dec d
+.a2:    ld hl,(PDXI)
+        adc hl,de
+        call w320
+        ld (PDXI),hl
+        ld hl,(PDY)
+        ld de,(VY)
+        add hl,de
+        ld (PDY),hl
+.cam:   ld hl,(PDXI)            ; x: the target origin = Pd - 128, held inside LOX..HIX of TX
+        ld de,128
+        or a
         sbc hl,de
-        pop hl
-        ret nc
         ex de,hl
+        ld hl,(TX)
+        ex de,hl
+        or a
+        sbc hl,de
+        call n320               ; HL = the offset from TX
+        ld a,(LOX)
+        call clo
+        ld a,(HIX)
+        call chi
+        ld de,(TX)
+        add hl,de
+        call w320               ; HL = the target
+        ld de,(DX)
+        or a
+        sbc hl,de
+        call n320               ; the gap
+        call ease
+        ld de,(DX)
+        add hl,de
+        call w320
+        ld (DX),hl
+        ld a,(PDY + 1)          ; y: Pd - 88 in LOY..HIY of TY
+        sub 88
+        ld hl,TY
+        sub (hl)
+        ld hl,LOY
+        call clo8
+        ld hl,HIY
+        call chi8
+        ld hl,TY
+        add a,(hl)
+        ld hl,DY
+        sub (hl)                ; the gap
+        ld l,a
+        rla
+        sbc a,a
+        ld h,a
+        call ease
+        ld a,(DY)
+        add a,l
+        ld (DY),a
+        call wregs
+        ld hl,(PDXI)            ; the shown player on the screen, and its groups' offsets
+        ld de,(DX)
+        or a
+        sbc hl,de
+        call n320
+        ld (PSCX),hl
+        ld a,(PSX)
+        ld e,a
+        ld d,0
+        or a
+        sbc hl,de
+        ld (PKX),hl
+        ld a,(PDY + 1)
+        ld hl,DY
+        sub (hl)
+        ld l,a
+        ld h,0
+        ld (PSCY),hl
+        ld a,(PSY)
+        ld e,a
+        or a
+        sbc hl,de
+        ld (PKY),hl
+        ld hl,(STX)             ; droids and shots: the view their records belong to
+        ld de,(DX)
+        or a
+        sbc hl,de
+        call n320
+        ld (SSX),hl
+        ld a,(DY)
+        ld e,a
+        ld a,(STY)
+        sub e
+        ld l,a
+        rla
+        sbc a,a
+        ld h,a
+        ld (SSY),hl
+        ; (falls into sprites)
+
+; sprites: every group at its base + SSX / SSY, a player group (Centred view, PG0 <= g < PG1) at its base + PKX / PKY.
+sprites:
+        ld a,(GPREV)
+        or a
+        ret z
+        nextreg 0x50,S0         ; SPOS through slot 0 (interrupts are off; the ROM is back before the ISR body)
+        ld b,a
+        ld hl,SPOS - 0xC000
         xor a
+.g:     push bc
+        push af                 ; A = group
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+        push hl
+        ld hl,SSX
+        call ispl
+        jr z,.o
+        ld hl,PKX
+.o:     ld (SOFF),hl
+        ld a,(hl)
+        inc hl
+        ld h,(hl)
+        ld l,a
+        add hl,de
+        ex de,hl                ; DE = X
+        pop hl
+        ld c,(hl)
+        inc hl
+        ld b,(hl)
+        inc hl
+        push hl
+        ld hl,(SOFF)
+        inc hl
+        inc hl
+        ld a,(hl)
+        inc hl
+        ld h,(hl)
+        ld l,a
+        add hl,bc               ; HL = Y
+        pop bc                  ; BC = SPOS pointer
+        pop af
+        push af
+        push bc
+        push hl
+        push af
+        add a,low GPAT
+        ld l,a
+        ld h,high GPAT
+        ld a,(hl)
+        ld (PPAT),a
+        pop af
+        pop hl
+        ld b,a
+        add a,a
+        add a,b                 ; first sprite = 3 g
+        call put3
+        pop hl
+        pop af
+        inc a
+        pop bc
+        djnz .g
+        nextreg 0x50,0xFF
         ret
 
-; g_new: HL = an axis's age (its I the byte below): I = the age held to 6-32, the age = 0. AF lost.
-g_new:  ld a,(hl)
-        cp 6
-        jr nc,.a
-        ld a,6
-.a:     cp 33
-        jr c,.b
-        ld a,32
-.b:     ld (hl),0
+; ispl: A = group -> NZ for a player group in Centred view (PG0 <= A < PG1). Keeps A, BC, DE, HL.
+ispl:   push bc
+        ld c,a
+        ld a,(VCENTRE)
+        or a
+        jr z,.x
+        ld a,(PG0)
+        ld b,a
+        ld a,c
+        cp b
+        jr c,.no
+        ld a,(PG1)
+        ld b,a
+        ld a,c
+        cp b
+        jr nc,.no
+        or 1
+        jr .x
+.no:    xor a
+.x:     ld a,c
+        pop bc
+        ret
+
+; pnew: PNX = STX + PSX (mod 320), PNY = STY + PSY: the player of the last update on the canvas. AF, DE, HL lost.
+pnew:   ld hl,(STX)
+        ld a,(PSX)
+        ld e,a
+        ld d,0
+        add hl,de
+        call w320
+        ld (PNX),hl
+        ld a,(STY)
+        ld hl,PSY
+        add a,(hl)
+        ld (PNY),a
+        ret
+; psnap: Pd = the target exactly (fractions 0, no segment left). AF, HL lost.
+psnap:  ld hl,(PNX)
+        ld (PDXI),hl
+        xor a
+        ld (PDXF),a
+        ld (LEFT),a
+        ld (PDY),a
+        ld a,(PNY)
+        ld (PDY + 1),a
+        ret
+; far: HL signed -> C when |HL| < 65 (a walk), NC for a jump. AF lost.
+far:    push hl
+        bit 7,h
+        jr z,.p
+        call neghl
+.p:     ld de,65
+        or a
+        sbc hl,de
+        pop hl
+        ret
+; sdiv: HL signed (8.8) / UU -> HL (8.8 a frame), rounded toward zero. AF, BC, DE lost.
+sdiv:   bit 7,h
+        push af
+        jr z,.p
+        call neghl
+.p:     ld a,(UU)
+        ld c,a
+        xor a
+        ld b,16
+.d:     add hl,hl
+        rla
+        jr c,.s
+        cp c
+        jr c,.n
+.s:     sub c
+        inc l
+.n:     djnz .d
+        pop af
+        ret z
+        jp neghl
+; n320: HL in -319..319 -> -160..159 (mod 320). AF, DE lost.
+n320:   ld de,160
+        bit 7,h
+        jr nz,.neg
+        push hl
+        or a
+        sbc hl,de
+        pop hl
+        ret c
+        ld de,-320
+        add hl,de
+        ret
+.neg:   add hl,de
+        bit 7,h
+        ld de,-160
+        add hl,de
+        ret z
+        ld de,320
+        add hl,de
+        ret
+; w320: HL in -320..639 -> 0..319. AF, DE lost.
+w320:   bit 7,h
+        jr z,.p
+        ld de,320
+        add hl,de
+        ret
+.p:     jp mod320
+; clo / chi: HL signed, A = a signed 8-bit limit: HL = max(HL, A) / min(HL, A). AF, DE lost.
+clo:    call sx8
+        push hl
+        or a
+        sbc hl,de
+        pop hl
+        ret p                   ; HL >= limit (the offsets stay well inside 16 bits)
+        ex de,hl
+        ret
+chi:    call sx8
+        push hl
+        or a
+        sbc hl,de
+        pop hl
+        ret m
+        ex de,hl
+        ret
+sx8:    ld e,a
+        rla
+        sbc a,a
+        ld d,a
+        ret
+; clo8 / chi8: A signed, (HL) a signed limit: A = max / min. F lost.
+clo8:   push bc
+        ld b,a
+        sub (hl)
+        jp po,.v
+        xor 0x80
+.v:     ld a,b
+        pop bc
+        ret p
+        ld a,(hl)
+        ret
+chi8:   push bc
+        ld b,a
+        sub (hl)
+        jp po,.v
+        xor 0x80
+.v:     ld a,b
+        pop bc
+        ret m
+        ret z
+        ld a,(hl)
+        ret
+; ease: HL = the gap (signed px) -> HL = the move now: the whole gap up to 8 px (a walk is followed exactly),
+; else half of it (an eased catch-up, never past). AF, DE lost.
+ease:   push hl
+        bit 7,h
+        jr z,.p
+        call neghl
+.p:     ld de,9
+        or a
+        sbc hl,de
+        pop hl
+        ret c
+        sra h
+        rr l
+        ret
+; vupd: A = the view's move (signed), HL -> lo, hi (signed bytes, the canvas area held around the view), C = the
+; most it can exceed the view: lo = min(lo - d, 0), hi = max(hi - d, 0), then the far side trimmed. AF, B, HL lost.
+vupd:   ld b,a
+        ld a,(hl)
+        sub b
+        bit 7,a
+        jr nz,.l
+        xor a
+.l:     ld (hl),a
+        inc hl
+        ld a,(hl)
+        sub b
+        bit 7,a
+        jr z,.h
+        xor a
+.h:     ld (hl),a
+        dec hl
+        sub (hl)                ; hi - lo
+        cp c
+        ret c
+        ret z
+        ld a,b
+        bit 7,a
+        jr nz,.n
+        inc hl                  ; moved + : lo = hi - C
+        ld a,(hl)
+        sub c
         dec hl
         ld (hl),a
         ret
-
-; g_inc: (HL) + 1, held at 255.
-g_inc:  inc (hl)
-        ret nz
-        dec (hl)
+.n:     ld a,(hl)               ; moved - : hi = lo + C
+        add a,c
+        inc hl
+        ld (hl),a
         ret
+
+; page 27's own state
+        ORG 0xFF00
+STAMPL: DB 0
+FCNT:   DB 0
+UU:     DB 2
+LEFT:   DB 0
+PDXF:   DB 0
+PDXI:   DW 0
+PDY:    DW 0                    ; fraction, line
+VX:     DW 0
+VY:     DW 0
+PNX:    DW 0
+PNY:    DB 0
+LOX:    DB 0
+HIX:    DB 0
+LOY:    DB 0
+HIY:    DB 0
+LTX:    DW 0
+LTY:    DB 0
+SOFF:   DW 0
+IH:     DB 0, 0, 0, 0           ; the last 4 update intervals (frames)
 GPAGE_END:
-        ASSERT GPAGE_END <= 0xE000
-        SAVEBIN "quazatron_page2.bin",0xC000,GPAGE_END-0xC000
+        SAVEBIN "quazatron_page2.bin",0xE000,GPAGE_END-0xE000
 
 ; ============================================================================================================
-; c_pre (session 4, Centred view): CALL at E0DC (was CALL D5BB) and JP E1EC at E1B3 (the edge bursts never start), in the
-; Centred builds only. Pure Z80 at the game's speed, the same bytes in the reference game the proofs replay: before
-; each update, when the player is more than one step off the play area's centre (128, 88), ONE scroll step that way
-; (the game's own step: E0FB .. E1AC, which returns here); after it, the game's copy to the screen and AF2B = 0, so the
+; c_pre (Centred view): CALL at E0DC (was CALL D5BB) and JP E1EC at E1B3 (the edge bursts never start), in the
+; Centred builds only. Pure Z80 at the game's speed, the same bytes in the reference game the proofs replay. Before
+; each update, per axis, ONE of the game's own scroll steps (E0FB .. E1AC, which returns here) when the player moves
+; that way and has passed the play area's centre (x 128, y 88) - session 5: the game's view always leads a camera
+; that follows the player, so the shown window never reaches undrawn canvas. Velocity: the player's map dx, dy
+; (AF90, AF91): screen x moves with dx + dy, screen y with dy - dx. Not moving on an axis: no step on it. A horizontal
+; step, then a vertical one in the same update if needed, then the game's copy to the screen and AF2B = 0, so the
 ; update that follows is a normal one (droids move). AF2B 1-6 (the transfer and lift modes): no step.
-        ORG 0x3CAC
-c_pre:  ld a,(0xAF2C)
+C_ORG   EQU 0x3D00 - (C_END_ - c_pre_)
+        ORG C_ORG
+c_pre_:
+c_pre:  ld a,(0xAF2B)
         and a
-        jr nz,c_step
-        ld a,(0xAF2B)
-        and a
-        jr z,c_chk
+        jr z,c_h
         cp 7
         jp c,0xD5BB
-        call 0xC05A
+        cp 0x1E
+        jr c,c_v                ; after a horizontal step: the vertical check
+c_cp:   call 0xC05A
 c_ret:  xor a
         ld (0xAF2B),a
         jp 0xD5BB
-c_chk:  ld a,(0xAF94)
-        ld e,0x14
-        cp 112
-        jr c,c_go
-        ld e,0x0A
-        cp 145
-        jr nc,c_go
-        ld a,(0xAF95)
-        ld e,0x28
-        cp 80
-        jr c,c_go
-        ld e,0x1E
-        cp 97
-        jp c,0xD5BB
+c_h:    ld hl,(0xAF90)          ; L = dx, H = dy
+        ld a,(0xAF94)
+        ld d,a
+        ld a,l
+        add a,h
+        ld c,128
+        ld hl,0x0A14            ; + : right (0A), - : left (14)
+        call c_ax
+        jr nz,c_go
+        call c_vd
+        jr nz,c_go
+        jp 0xD5BB
+c_v:    call c_vd
+        jr z,c_cp
 c_go:   ld a,e
         ld (0xAF2B),a
         ld d,0
@@ -2587,11 +2962,33 @@ c_go:   ld a,e
         ld bc,10
         ldir
         ld a,1
-c_step: pop hl
+        pop hl
         jp 0xE0FB
-C_END:
-        ASSERT C_END <= 0x3D00
-        SAVEBIN "quazatron_centre.bin",0x3CAC,C_END-0x3CAC
+c_vd:   ld hl,(0xAF90)
+        ld a,(0xAF95)
+        ld d,a
+        ld a,h
+        sub l
+        ld c,88
+        ld hl,0x1E28            ; + : down (1E), - : up (28)
+; c_ax: A = the velocity on the axis, D = the player's position, C = the centre, H / L = the step for + / -:
+; -> NZ and E = the step when moving + and past the centre (D > C) or - and before it (D < C); else Z.
+c_ax:   or a
+        ret z
+        ld e,h
+        ld a,d
+        jp p,c_ap
+        ld e,l
+        cp c
+        jr c_ar
+c_ap:   ld a,c
+        cp d
+c_ar:   sbc a,a
+        ret
+C_END_:
+c_END:
+        ASSERT C_ORG >= ROM_END + 20
+        SAVEBIN "quazatron_centre.bin",C_ORG,C_END_-C_ORG
 
 ; ============================================================================================================
 ; setup: called by the stub (DI, 3.5 MHz, slot 2 = the screen page) before the tail. Layer 2 320 x 256 on banks

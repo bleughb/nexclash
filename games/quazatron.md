@@ -137,3 +137,13 @@ ends. Neither asks for a value.
   page 27 (slot 6, inside isr_step only) with v1.0's rule unchanged for Smooth alone and glide_c for Centred view.
 - Proof: the reference game = the original + the same patches and c_pre (the verifier injects c_pre into the replay's
   ROM; rzx.trace rom=); quazatron.verify checks the rule at every decision and the full-render equality at every step.
+
+## Session 5 (2026-11-06): Centred view made smooth
+- Camera = the player: page 27 (`cam`, at slot 7 inside the ISR) moves the shown player Pd at a constant speed toward
+  each update's player over the mean of the last 4 update intervals + 2 frames (one update of latency, about 0.1 s);
+  the shown origin is exactly Pd - (128, 88); the player's groups at Pd, droids and shots where the game put them
+  against the view their records belong to (fixes v1.1's 16 px sprite jump after each step's commit).
+- The frame step runs every frame: also from the ISR's hook-page path (isr_in), except while p_spr writes the sprite
+  ports; SPOS through slot 0. Interrupts in the alt ROM still skip it (about 1 frame in 1,000).
+- Edge: c_pre steps per axis when the player moves that way (AF90 / AF91: screen x with dx + dy, y with dy - dx) and has
+  passed the centre, so the game's view leads the camera; a canvas-area clamp holds the camera at deck starts.

@@ -57,7 +57,12 @@ V_OX, V_OY, V_L2ON, V_DECKP = 0x4BC4, 0x4BC6, 0x4BC7, 0x4BC8
 V_FAST, V_SMOOTH, V_DX, V_DY = 0x4BE8, 0x4BE9, 0x4BEA, 0x4BEC
 V_MONO = 0x4CE0              # session 3: 1 = monochrome (the .nxc base), 0 = colour
 V_CENTRE = 0x4CE2            # session 4: 1 = Centred view (with the E0DC / E1B3 patches; implies fast + smooth)
-C_PRE = 0x3CAC               # session 4: c_pre (pure Z80) in the alt ROM image; the reference game has it there too
+C_PRE = int(json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'docs', 'profiles',
+                                       'quazatron.json')))['hooks']['syms']['c_pre'], 16)
+                             # c_pre (pure Z80) in the alt ROM image, ending at 0x3D00; the reference game has it there too
+GPAGE = 27                   # session 5: the frame step's page (bank 13 upper half), at slot 7 only inside isr_step
+PG27 = {'PDXI': 0xFF05, 'PDY': 0xFF07, 'VX': 0xFF09, 'VY': 0xFF0B, 'LOX': 0xFF10, 'HIX': 0xFF11, 'LOY': 0xFF12,
+        'HIY': 0xFF13, 'UU': 0xFF02, 'LEFT': 0xFF03, 'PDXF': 0xFF04}
 # session 4, Centred view: CALL D5BB at E0DC -> CALL c_pre; LD A,(AF94) at E1B3 -> JP E1EC (the edge bursts never start)
 CENTRE_SITES = ((0xE0DC, bytes.fromhex('cdbbd5'), bytes([0xCD, C_PRE & 255, C_PRE >> 8])),
                 (0xE1B3, bytes.fromhex('3a94af'), bytes.fromhex('c3ece1')))
@@ -371,6 +376,8 @@ def _mem(get, alt, ns, psite):
             s.ov = {}
 
         def __getitem__(s, a):
+            if a < 0x2000 and ns.nr.get(0x50, 0xFF) != 0xFF:     # session 5: S0 at slot 0 inside the frame step
+                return ns.pages[ns.nr[0x50]][a]
             if a < 0x4000:
                 return alt[a]
             if a < 0x6000 and ns.nr[0x52] != ULAPAGE:
@@ -380,18 +387,25 @@ def _mem(get, alt, ns, psite):
                     a -= 0x8000                 # the screen page at slot 6: the game's 0x4000-0x5FFF
                 else:
                     return ns.pages[ns.nr[0x56]][a - 0xC000]
+            if a >= 0xE000 and ns.nr.get(0x57, 1) != 1:      # session 5: page 27 at slot 7 inside isr_step
+                return ns.pages[ns.nr[0x57]][a - 0xE000]
             v = s.ov.get(a)
             if v is None:
                 v = psite.get(a)
             return get(a) if v is None else v
 
         def __setitem__(s, a, v):
+            if a < 0x2000 and ns.nr.get(0x50, 0xFF) != 0xFF:
+                ns.pages[ns.nr[0x50]][a] = v
+                return
             if a < 0x4000:
                 return
             if a < 0x6000 and ns.nr[0x52] != ULAPAGE:
                 ns.pages[ns.nr[0x52]][a - 0x4000] = v
             elif 0xC000 <= a < 0xE000 and ns.nr[0x56] not in (0, ULAPAGE):
                 ns.pages[ns.nr[0x56]][a - 0xC000] = v
+            elif a >= 0xE000 and ns.nr.get(0x57, 1) != 1:
+                ns.pages[ns.nr[0x57]][a - 0xE000] = v
             else:
                 s.ov[a - 0x8000 if 0xC000 <= a < 0xE000 and ns.nr[0x56] == ULAPAGE else a] = v
 
@@ -449,7 +463,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
     alt = alt_image(patch)
     centre = getattr(patch, 'centre', False)
     rom = ref_rom(patch.prof) if centre else rom48()     # session 4: Centred view's reference = the original + c_pre
-    if centre and bytes(alt[C_PRE:C_PRE + 82]) != bytes(rom[C_PRE:C_PRE + 82]):
+    if centre and bytes(alt[C_PRE:0x3D00]) != bytes(rom[C_PRE:0x3D00]):
         c['centre: the build\'s alt ROM lacks c_pre!'] += 1      # (what the stub leaves on the Next: alt_image)
     psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
     sym = {v: k for k, v in patch.syms.items()}
@@ -530,6 +544,10 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
             check_sprites(get)
         if ns.var(V_L2ON) and name in ('t_isr', 't_spr'):      # every frame, and every update's placing
             check_lock()
+            if centre:      # (an interrupt in a ROM trampoline or c_pre runs no frame step: .rom path)
+                check_smooth(name == 't_isr' and stop_pc >= 0x4000)
+                if name == 't_isr' and stop_pc < 0x4000:
+                    c['centre: frames without a frame step (interrupt in the alt ROM)'] += 1
         if ns.var(V_MONO):          # session 3: monochrome never shows Layer 2 or a sprite, nor runs a scroll step fast
             if ns.var(V_L2ON) or ns.l2 & 2 or ns.nr.get(0x15, 0) & 1 or ns.var(0x4CE1):
                 fail('monochrome shows Layer 2 or sprites, or scrolls fast!', (name, hex(pc), ns.var(V_L2ON), ns.l2, ns.nr.get(0x15)))
@@ -583,6 +601,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
         s0 = ns.pages[STORE_BANK * 2]
         n = min(get(0xAF09), 7)
         groups = []
+        lk.update(pg0=0, pg1=0, stx=ns.var(0x4BF3, 2), sty=ns.var(0x4BF5), psx=get(0xAF94), psy=get(0xAF95))
 
         def group(lst, rows, typ, x, y):
             if len(groups) >= 21:
@@ -603,11 +622,13 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
             r = 0xA320 + 8 * k
             x, y = get(r + 2) | get(r + 3) << 8, get(r + 4)
             if get(r + 1) & 0x80:
+                lk['pg0'] = len(groups)
                 group(w(w(0xAF9C)), 0, 0, x, y)
                 group(w(0xAF9E), get(0xAFA4), 0, x, y)
                 group(w(w(0xAF9A)), 0, 0, x, y)
                 group(w(w(0xDDAE)), 0, 0, x, y)
                 group(w(w(0xAFA0)), 0, 0, x, y)
+                lk['pg1'] = len(groups)
             else:
                 group(get(r + 5) | get(r + 6) << 8, 0, get(r + 7), x, y)
         if ns.var(0x4BDE) != len(groups):
@@ -624,22 +645,100 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
                 c['sprite groups equal to the model'] += 1
         c['sprite checks (E656)'] += 1
 
+    lk = {'pg0': 0, 'pg1': 0, 'stx': 32, 'sty': 32, 'psx': 0, 'psy': 0}
+    sm = {'prev': None, 'seg': None, 'frames': 0}
+
+    def pg27(name, n=1):
+        a = PG27[name] - 0xE000
+        pg = ns.pages[GPAGE]
+        return pg[a] if n == 1 else pg[a] | pg[a + 1] << 8
+
+    def check_smooth(on_frame):
+        if not on_frame:
+            return
+        """Session 5, Centred view, at every frame: (1) the player's shown position moves linearly between updates:
+        each frame by V = (the last update's player - where it was shown) x 256 / (the frames between the last two
+        updates + 1), computed here from the records, the frame count and the hook's own start point; (2) while the
+        camera is free (its target inside the canvas area it holds) the player sits at (128, 88) on the screen to the
+        pixel; plus the per-frame camera move and the player's screen position, as statistics."""
+        dx, dy = ns.var(V_DX, 2), ns.var(V_DY)
+        tx, ty = ns.var(0x4BF3, 2), ns.var(0x4BF5)
+        pdx, pdy = pg27('PDXI', 2), pg27('PDY', 2)
+        n320 = lambda v: (v + 160) % 320 - 160
+        s8 = lambda v: (v + 128) % 256 - 128
+        scx, scy = n320(pdx - dx), (pdy >> 8) - dy & 255
+        ox, oy = n320(pdx - 128 - tx), s8((pdy >> 8) - 88 - ty)
+        lox, hix, loy, hiy = (s8(pg27(k)) for k in ('LOX', 'HIX', 'LOY', 'HIY'))
+        freex, freey = lox <= ox <= hix, loy <= oy <= hiy
+        if on_frame and sm['prev'] is not None:
+            p = sm['prev']
+            if freex and p['freex'] and scx != 128:
+                fail('centre: the player is not at the fixed point while the camera is free!', ('x', scx))
+            if freey and p['freey'] and scy != 88:
+                fail('centre: the player is not at the fixed point while the camera is free!', ('y', scy))
+            if freex and freey and p['freex'] and p['freey']:
+                c['centre: frames with the camera free, the player at (128, 88)'] += 1
+            mvx, mvy = n320(dx - p['dx']), s8(dy - p['dy'])
+            c['centre: camera move a frame |dx|+|dy| = %d' % min(abs(mvx) + abs(mvy), 9)] += 1
+            # the interpolation: the expected speed from this verifier's own count
+            if pg27('LEFT') and p['left'] == pg27('LEFT') + 1 and p['stamp'] == ns.var(0x4CC9):
+                vx = (pdx * 256 + pg27('PDXF')) - (p['pdx'] * 256 + p['pdxf'])
+                vx = (vx + 160 * 256) % (320 * 256) - 160 * 256
+                vy = s8((pdy - p['pdy']) >> 8) * 256 + ((pdy - p['pdy']) & 255) if False else ((pdy - p['pdy'] + 32768) % 65536 - 32768)
+                if sm['seg'] and (vx, vy) != sm['seg']:
+                    fail('centre: the shown player does not move at the interval\'s speed!', ((vx, vy), sm['seg']))
+                else:
+                    c['centre: frames on a linear segment'] += 1
+            if p['stamp'] != ns.var(0x4CC9):     # a new update this frame: U from this verifier's own frame count
+                sm['ih'] = sm.get('ih', [0, 0, 0, 0])[1:] + [min(sm['frames'], 16)]
+            if p['stamp'] != ns.var(0x4CC9) and not pg27('LEFT'):
+                pnx = (lk['stx'] + lk['psx']) % 320
+                if 1 < abs(n320(pnx - p['pdx'])) < 65:
+                    fail('centre: the shown player jumped to the update\'s player (no interpolation)!', (pnx, p['pdx']))
+            if p['stamp'] != ns.var(0x4CC9) and pg27('LEFT'):     # the segment's speed
+                u = (sum(sm['ih']) >> 2) + 2
+                pnx, pny = (lk['stx'] + lk['psx']) % 320, (lk['sty'] + lk['psy']) & 255
+                d = n320(pnx - p['pdx'])
+                if abs(d) < 65:
+                    def q(v):
+                        r = abs(v) // u
+                        return r if v >= 0 else -r
+                    ex = q(d * 256 - p['pdxf'])
+                    ey = q(s8(pny - (p['pdy'] >> 8)) * 256 - (p['pdy'] & 255))
+                    if (pg27('VX', 2), pg27('VY', 2)) != (ex & 0xFFFF, ey & 0xFFFF):
+                        fail('centre: the segment speed differs from the interval model!', ((ex, ey), pg27('VX', 2), pg27('VY', 2), u))
+                    sm['seg'] = ((ex + 32768) % 65536 - 32768, (ey + 32768) % 65536 - 32768)
+                    c['centre: segments checked'] += 1
+                sm['frames'] = 0
+            sm['frames'] += 1
+        sm['prev'] = dict(dx=dx, dy=dy, pdx=pdx, pdy=pdy, pdxf=pg27('PDXF'), left=pg27('LEFT'), stamp=ns.var(0x4CC9),
+                          freex=freex, freey=freey)
+        c['centre: player screen x %+d' % max(-9, min(9, scx - 128))] += 0
+
     def check_lock():
         """At every frame (each ISR) and update: the scroll registers show the shown origin (DX, DY); every group's
-        3 sprites sit at its base + (TX - DX, TY - DY): locked to the scenery the canvas shows. Off mode: no offset."""
+        3 sprites sit at its base + (TX - DX, TY - DY): locked to the scenery the canvas shows. Off mode: no offset.
+        Session 5, Centred view: a droid's or shot's group at its base + (the view its record belongs to - DX, DY);
+        the player's groups at their base - the player's record + the shown player (Pd - DX, Pd - DY)."""
         sx, sy, dx, dy = sdxy()
+        if centre:
+            n320 = lambda v: (v + 160) % 320 - 160
+            sx, sy = n320(lk['stx'] - dx), (lk['sty'] - dy + 128) % 256 - 128
+            pkx = n320(pg27('PDXI', 2) - dx) - lk['psx']
+            pky = ((pg27('PDY', 2) >> 8) - dy & 255) - lk['psy']
         if not (patch.smooth or getattr(patch, "centre", False)) and (sx or sy):     # session 4: Centred view implies smooth
             fail('off mode: the shown origin is not the committed one!', (sx, sy))
         if (ns.nr.get(0x16, 0) | (ns.nr.get(0x71, 0) & 1) << 8) != (dx - 32) % 320 or ns.nr.get(0x17, 0) != (dy - 32) & 255:
             fail('Layer 2 scroll is not the shown origin!', (ns.nr.get(0x16), ns.nr.get(0x71), ns.nr.get(0x17), dx, dy))
         for g in range(ns.var(0x4BDF)):
             bx, by = spos(g)
+            ox, oy = (pkx, pky) if centre and lk['pg0'] <= g < lk['pg1'] else (sx, sy)
             for i in range(3):
                 a = ns.attr[3 * g + i]
                 X = a[0] | (a[2] & 1) << 8
                 Y = a[1] | (a[4] & 1) << 8
-                if X != (bx + sx) & 0x1FF or Y != (by + sy + 16 * i) & 0x1FF or a[3] != 0xC0 | (ns.var(GPAT_ADDR + g) + i):
-                    fail('sprite not locked to the scenery!', (g, i, X, Y, (bx + sx) & 0x1FF, (by + sy + 16 * i) & 0x1FF))
+                if X != (bx + ox) & 0x1FF or Y != (by + oy + 16 * i) & 0x1FF or a[3] != 0xC0 | (ns.var(GPAT_ADDR + g) + i):
+                    fail('sprite not locked to the scenery!', (g, i, X, Y, (bx + ox) & 0x1FF, (by + oy + 16 * i) & 0x1FF))
                     return
         c['frames locked (sprites + scroll = shown origin)'] += 1
 
@@ -696,23 +795,31 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
         m = sim.memory
         if pc == C_PRE:
             if m[0xAF2C] == 0 and m[0xAF2B] == 0:
+                s8 = lambda v: v - 256 if v > 127 else v
+                dx, dy = s8(m[0xAF90]), s8(m[0xAF91])
+                vx, vy = s8((dx + dy) & 255), s8((dy - dx) & 255)
                 x, y = m[0xAF94], m[0xAF95]
-                exp = 0x14 if x < 112 else 0x0A if x >= 145 else 0x28 if y < 80 else 0x1E if y >= 97 else 0
-                cst['exp'] = exp
+                h = 0x0A if vx > 0 and x > 128 else 0x14 if vx < 0 and x < 128 else 0
+                v = 0x1E if vy > 0 and y > 88 else 0x28 if vy < 0 and y < 88 else 0
+                cst['exp'] = [e for e in (h, v) if e]
                 c['centre: decisions'] += 1
-                c['centre: steps %02X' % exp if exp else 'centre: no step (within one step of the centre)'] += 1
+                for e in cst['exp']:
+                    c['centre: steps %02X' % e] += 1
+                if not cst['exp']:
+                    c['centre: no step'] += 1
         elif pc == 0xE0FB:
-            if cst['exp'] is None or not cst['exp']:
+            if not cst['exp']:
                 fail('centre: a step the rule did not ask for!', (hex(m[0xAF2B]), m[0xAF2C], m[0xAF94], m[0xAF95]))
-            elif m[0xAF2B] != cst['exp'] or sim.registers[0] != 1:      # A = AF2C: one step
-                fail('centre: the step differs from the rule!', (hex(m[0xAF2B]), sim.registers[0], hex(cst['exp'])))
-            cst['exp'] = None
+            elif m[0xAF2B] != cst['exp'][0] or sim.registers[0] != 1:      # A = AF2C: one step
+                fail('centre: the step differs from the rule!', (hex(m[0xAF2B]), sim.registers[0], cst['exp']))
+            if cst['exp']:
+                cst['exp'].pop(0)
             cst['steps'] += 1
-            if cst['steps'] > 1:
-                fail('centre: two steps in one update!', cst['steps'])
+            if cst['steps'] > 2:
+                fail('centre: more than one step an axis in one update!', cst['steps'])
         elif pc == 0xD5BB:
             if cst['exp']:
-                fail('centre: the rule asked for a step that did not come!', hex(cst['exp']))
+                fail('centre: the rule asked for a step that did not come!', cst['exp'])
             cst['exp'] = None
             cst['steps'] = 0
         elif pc == c_ret:
