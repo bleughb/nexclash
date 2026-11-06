@@ -42,12 +42,14 @@ No DMA read uses a CPU-only alt ROM view. Stack tests reserve $00EE-$00FF and ke
 The three-interrupt pacing and existing missed-interrupt credit remain. Stable raster samples
 bracket the bounded transfer. The immediate-commit map allowance increases from 20 to 64 lines
 (about 4.1 ms at 28 MHz); otherwise commit is deferred to the next interrupt, never beam-waited.
+More commits may be deferred, changing display latency by up to one video frame without changing the game-update grid.
 This is an experimental budget, not a measured hardware guarantee. The deferred path retains
 its top-to-bottom publication and non-play cancellation; it still needs a raster/visual check.
 
 The verifier advances elapsed T by an explicit assumed DMA transfer stall, default 4 MB/s.
 It reports complete hook costs, including mapping, setup, cache work and deferred interrupt commits,
-plus frame profiles and separate injected stalls. It does not infer transfer time from OTIR cost.
+plus frame profiles and separate injected stalls. Matched active-boss policy profiles also account for
+NextReg $07 speed changes across complete interrupt hooks; raw instruction T is labelled separately. It does not infer transfer time from OTIR cost.
 Whole tcommit synthetic CPU costs plus assumed stalls: see the benchmark report. Sensitivity checks
 use 8, 4, 1 and 0.5 MB/s; no reported rate is a Next measurement or a speedup claim.
 
@@ -69,6 +71,8 @@ Autosave snapshots are stripped as in the sky auto engine; original input identi
 Omitting `--frames` requests a complete supplied recording. LeeBee cuts start mid-game: replay-only.
 
 ## Software evidence
+Software results: complete rainbow.rzx, 7,178 observed replay frames, 2,212 commits; rainbownew.rzx sampled at 2,000 requested frames (2,008 observed), 489 commits; no-blitter, CPU-only, old-core and hardware-IM2 routes sampled at 200 requested frames each on an active island-1 boss segment. Twelve LeeBee gameplay cuts sampled (five boss cuts at 200 and seven round-start cuts at 1,200 requested frames), plus a 200-frame ending sample with no commit hook reached. All reported comparisons pass. The full recording still has 60 modeled frames over 20 ms, max 25.666 ms before wait states; recovery comparisons pass. The latter ending sample is not DMA gameplay proof. The legacy game unit suite uses six captured dispatch states from a 1,200-frame capture, plus its object/AY/raster cases and negative controls. Hardware is untested.
+
 The benchmark report records exact recording hashes, requested/observed coverage, commits, DMA
 jobs and failures. Functional DMA callbacks access Rainbow's own PMem, including its actual MMU
 mapping and overlay; tilemap rows and tile definitions are checked against the existing game model.

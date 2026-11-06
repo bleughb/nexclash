@@ -360,7 +360,9 @@
      "boot_check": "PASS, including loading-screen wrapper and pulse-mode entry"
     }
    ],
-   "hardware": "untested"
+   "hardware": "untested",
+   "validation_report": "docs/benchmarks/rainbow_dma_v01.json",
+   "software_scope": "Actual sky game rework. One complete supplied recording; other routes/LeeBee sampled. No full playthrough or hardware stamp."
   }
  ]
 }

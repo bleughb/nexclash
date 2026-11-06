@@ -74,6 +74,8 @@ class RainbowDMA(game.RainbowPatch):
         # Legacy object fixtures randomize the entire shadow page. Its upper half is
         # now an owned code allocation, so seed it exactly as the NEX loader does.
         if game.PAGE_SH in pages:
+            if isinstance(pages[game.PAGE_SH], bytes):
+                pages[game.PAGE_SH] = bytearray(pages[game.PAGE_SH])
             pages[game.PAGE_SH][0x1000:0x1000+len(self.extension)] = self.extension
 
     def configure_nextstate(self, ns):
@@ -84,6 +86,23 @@ class RainbowDMA(game.RainbowPatch):
         ns.dma_jobs = []
         ns.hook_times = collections.defaultdict(list)
         ns.base_out = ns.out
+        base_nextreg = ns.nextreg
+        ns.clock_raw = ns.clock_total = 0
+        ns.clock_speed = 0
+        def account_clock(raw):
+            ns.clock_total += (raw-ns.clock_raw) * (8 >> ns.clock_speed)
+            ns.clock_raw = raw
+        def nextreg(reg, value):
+            if reg == 7 and ns.R is not None:
+                # Speed takes effect after the NEXTREG instruction, as in hookprofile.
+                pc = ns.R[24]
+                cost = 0
+                if ns.dma_mem is not None and ns.dma_mem[pc] == 0xED:
+                    cost = {0x91: 20, 0x92: 17}.get(ns.dma_mem[pc+1], 0)
+                account_clock(ns.R[25]+cost)
+                ns.clock_speed = value & 3
+            base_nextreg(reg, value)
+        ns.nextreg = nextreg
 
         def elapsed(count):
             ticks = math.ceil(count * 28 / self.mbps) if self.mbps else 0
@@ -124,8 +143,10 @@ class RainbowDMA(game.RainbowPatch):
             ns.dma_mem = sim.memory     # Rainbow PMem: actual per-hook mapped/overlay memory
             ns.decision_line = None
             entry, start, stalls = ns.R[24], ns.R[25], ns.dma_ticks
+            ns.clock_raw, ns.clock_total, ns.clock_speed = start, 0, ns.nr.get(7, 0) & 3
             def completed():
-                ns.hook_times[entry].append((ns.R[25]-start, ns.dma_ticks-stalls))
+                account_clock(ns.R[25])
+                ns.hook_times[entry].append((ns.R[25]-start, ns.dma_ticks-stalls, ns.clock_total))
             sim.rainbow_hook_completed = completed
             original_load = sim.opcodes[0x3A]
             def load_absolute():
@@ -141,7 +162,7 @@ class RainbowDMA(game.RainbowPatch):
         counters['DMA assumed stall T'] = ns.dma_ticks
         self.report = {'version': VERSION, 'policy': self.policy, 'core': self.core,
                        'hardware_im2': self.hwim2, 'assumed_dma_MBps': self.mbps,
-                       'timing_scope': 'simulator CPU T plus injected transfer stalls; no contention or hardware measurement',
+                       'timing_scope': 'Raw CPU T includes injected stalls. clock_adjusted_T fields normalize NR7 speed changes to 28MHz-equivalent elapsed T, with changes after NEXTREG. Legacy frame profiles use the inherited game-frame convention. No contention or hardware measurement.',
                        'counters': dict(counters), 'frame_profile_columns':
                        ['recording_frame', 'elapsed_T', 'original_T', 'pieces_extra_T', 'render_start_extra_T',
                         'band_extra_T', 'cell_extra_T', 'render_end_extra_T', 'render_end_start_T'],
@@ -151,7 +172,11 @@ class RainbowDMA(game.RainbowPatch):
                            'elapsed_T_mean': sum(v[0] for v in values)/len(values),
                            'elapsed_T_p95': sorted(v[0] for v in values)[int((len(values)-1)*.95)],
                            'elapsed_T_max': max(v[0] for v in values),
-                           'assumed_stall_T_total': sum(v[1] for v in values)}
+                           'assumed_stall_T_total': sum(v[1] for v in values),
+                           'clock_adjusted_T_median': statistics.median(v[2] for v in values),
+                           'clock_adjusted_T_mean': sum(v[2] for v in values)/len(values),
+                           'clock_adjusted_T_p95': sorted(v[2] for v in values)[int((len(values)-1)*.95)],
+                           'clock_adjusted_T_max': max(v[2] for v in values)}
                            for pc, values in ns.hook_times.items()}}
 
 

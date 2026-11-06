@@ -148,6 +148,18 @@ class Checks(unittest.TestCase):
             state = nextboot.boot(str(path), 0xC002)
             self.assertEqual(state['R'][0], 0x22)
 
+    def test_clock_adjusted_complete_hook(self):
+        from skoolkit.simulator import Simulator
+        patch = RainbowDMA()
+        ns = g.NextState(patch)
+        mem = bytearray(65536)
+        mem[0x8000:0x800A] = bytes.fromhex('ed91070300ed91070000')
+        sim = g._machine(Simulator, mem, Simulator(mem, {'PC': 0x8000}).registers[:], ns)
+        self.assertTrue(g._run(sim, (0x800A,)))
+        raw, stalls, elapsed = ns.hook_times[0x8000][0]
+        self.assertEqual((raw, stalls, elapsed), (48, 0, 216))
+        self.assertEqual(sim.registers[25], 48, 'profiling changed emulated CPU time')
+
     def test_setup_palette_and_control(self):
         for policy in (0, 1, 2):
             setup_case(RainbowDMA(policy))
