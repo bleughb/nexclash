@@ -12,7 +12,7 @@ Next: make exact live validation affordable; prove any source-lifetime deduplica
   Host selects cache entries; no installed cache/scheduler. Never accept pointer/hash-only validity.
   Source work alone reaches 24.650 ms/update; cold snapshot-inclusive L1 899.447 / L6 84.289 ms,
   target 10 ms TOTAL, excluding lookup/allocation/uploads/queue/wrappers. Long DI walker is not safe.
-  Page 77 prefers gated DDMA / DMA with no-blitter/CPU fallback; spans <64 bytes now bypass setup.
+  Page 77: physical DDMA high staging 216–223; DMA/CPU fallback (build/actor_high_dma.md).
   Physical stalls/ownership/IRQ proof remains open. Keep current AND pending pattern allocations.
 Workflow: Inferno6.rzx --quick 2000; six original level replays at milestones; targeted level-4 shop.
 Open: pattern layout/protected uploads/complete-frame switch, FLASH/modal/frontend/ROM lifetime,
@@ -205,8 +205,8 @@ build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
   exact validation can itself exceed the budget. DI component correctness does not prove safe entry.
 - [local: Inferno B fill] Bitset connectivity preserves whole-image fill; a bounded call is not a cold
   latency/schedule proof. Frame-boundary source availability does not establish a safe hook.
-- [local: Inferno blitter] Narrow row-DMA setup can exceed CPU copying. Charge unknown stalls separately;
-  protect current AND pending pairs. Prepared transfer checks do not establish integrated ownership.
+- [local: Inferno blitter] Physical SRAM includes 040000 aperture offset; high staging is 216–223.
+  Tiny copies prefer CPU. Charge stalls separately; protect current AND pending pairs/allocations.
 - [local: Inferno cold actor construction] Exact reuse is high; first-use work exceeds 10 ms. Prewarm
   live snapshots, never a recording catalogue; retain exact-content validation.
 - [local: Inferno frame pipeline] Post-copy restoration/Copper shop cancellation pass sampled checks;
@@ -275,8 +275,8 @@ build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 - detect.buffer-layout-producer: corrected: visible colour checks distinguish black-masked stale bitmap data.
 
 ## Stage log
-- 2026-11-07: stage 2 continued, mains refreshed, scratch preserved. Assembled pinned source/exact
-  validation and raw-tile consumer; six quick correctness, shop, assembly/tools/canary PASS. DMA span
+- 2026-11-07: stage 2 continued; pinned sources and physical high-SRAM DDMA added, scratch preserved.
+  Six quick correctness, shop, assembly/tools/canary PASS; high-DMA units/L6 regression PASS. DMA span
   evaluation removes tiny-copy setup. Total timing FAIL (899.447 / 84.289 ms L1/L6); no sprite NEX.
 - 2026-11-06: continued from GitHub; restored work; integrated remote 6aa2992 (main 3efa10f),
   specnext main cc9c7df. Added quota-serviced whole-image B fill, live prewarm census and

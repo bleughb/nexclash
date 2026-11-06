@@ -2499,6 +2499,10 @@ actor_blit:
         cp 118
         jp c,blit_bad
         cp 122
+        jr c,.dest_ok
+        cp 216
+        jp c,blit_bad
+        cp 224
         jp nc,blit_bad
 .dest_ok:
         ld a,(DB_ROWS)
@@ -2564,6 +2568,17 @@ actor_blit:
         xor a                  ; row-DMA setup costs more than these narrow CPU rows
         ld (DB_BACKEND),a
 .backend_ready:
+        ld a,(DB_BACKEND)
+        cp 2
+        jr nz,.mapped
+        ld a,(DB_DST_PAGE)
+        cp 216
+        jr c,.mapped
+        ld a,(DB_SRC_PAGE)
+        cp 136
+        jr c,.mapped
+        jp blit_physical
+.mapped:
         ld a,(DB_DST_PAGE)
         nextreg 0x52,a
         ld hl,(DB_SRC)
@@ -2716,6 +2731,67 @@ blit_restore:
         nextreg 0x51,68
         nextreg 0x52,10
         ret
+ ; Physical SRAM = 040000 + 8K page * 2000. High staging only, no BRAM alias.
+blit_physical:
+        ld a,(DB_SRC_PAGE)
+        ld hl,(DB_SRC)
+        call blit_address
+        ld (blit_phys_src),hl
+        ld (blit_phys_ahi),a
+        ld a,(DB_DST_PAGE)
+        ld hl,(DB_DST)
+        call blit_address
+        ld (blit_phys_dst),hl
+        ld (blit_phys_bhi),a
+        ld hl,(DB_WIDTH)
+        ld (blit_phys_width),hl
+        ld hl,(DB_ASTRIDE)
+        ld (blit_phys_astride),hl
+        ld hl,(DB_BSTRIDE)
+        ld (blit_phys_bstride),hl
+        ld a,(DB_ROWS)
+        ld l,a
+        ld h,0
+        ld (blit_phys_rows),hl
+        ld hl,blit_phys_packet
+        ld bc,(blit_phys_end-blit_phys_packet)*256+0x6B
+        otir
+        jp blit_restore
+blit_address:
+        ld d,a
+        and 7
+        rrca
+        rrca
+        rrca
+        or h
+        ld h,a
+        ld a,d
+        rrca
+        rrca
+        rrca
+        and 31
+        add a,4
+        ret
+blit_phys_packet:
+        db 0x83,0xC3,0x7D
+blit_phys_src: dw 0
+        dw 0
+        db 0x14,0x10,0xAD
+blit_phys_dst: dw 0
+        db 0x82,0xD7
+blit_phys_ahi: db 0
+        db 0xDB
+blit_phys_bhi: db 0
+        db 0xDF,3,0xE3
+blit_phys_width: dw 0
+        db 0xE7
+blit_phys_rows: dw 0
+        db 0xEB
+blit_phys_astride: dw 0
+        db 0xEF
+blit_phys_bstride: dw 0
+        db 0xCF,0x87
+blit_phys_end:
 actor_blit_end:
         ASSERT actor_blit_end < 0x1D00
         SAVEBIN "inferno_blit.bin",hlib_dma_policy,actor_blit_end-hlib_dma_policy

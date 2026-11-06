@@ -2141,6 +2141,28 @@ def actor_fill_checks():
             'scope':'assembled resumable whole-image B fill in private page 76/canvas; fixed work quota; no installed scheduler/cache/uploads/display or hardware timing'}
 
 
+class ActorPhysicalRAM:
+    """SRAM physical aperture; explicitly excludes firmware and BRAM aliases."""
+    def __init__(self, owner, source_page, dest_page):
+        self.owner,self.source,self.dest = owner,source_page,dest_page
+
+    def __len__(self):
+        return 0x200000
+
+    def __getitem__(self, address):
+        page,off = divmod(address-0x40000,8192)
+        if page != self.source or not 136 <= page <= 223:
+            raise AssertionError('physical read outside owned high source')
+        return self.owner.pages[page][off]
+
+    def __setitem__(self, address, value):
+        page,off = divmod(address-0x40000,8192)
+        if page != self.dest or not 216 <= page <= 223:
+            raise AssertionError('physical write outside owned high staging')
+        self.owner.pages[page][off] = value
+        self.owner.writes.add(off)
+
+
 class ActorBlitMemory:
     """Guarded Inferno MMU/pattern adapter for the shared synchronous DMA model."""
     def __init__(self, code, job, core, hwim2, source, current, pending):
@@ -2166,7 +2188,13 @@ class ActorBlitMemory:
                     'rect_rows','rect_astride','rect_bstride'):
             off = int(syms['hlib_dma_'+key],16)
             self.mutable.update((off,off+1))
-        self.dma = DMA(self.__getitem__,self.__setitem__,self.pattern_out,blitter=0x33 <= core < 0xFF)
+        for key in ('src','dst','ahi','bhi','width','rows','astride','bstride'):
+            off = int(syms['blit_phys_'+key],16)
+            self.mutable.add(off)
+            if key not in ('ahi','bhi'):
+                self.mutable.add(off+1)
+        self.dma = DMA(self.__getitem__,self.__setitem__,self.pattern_out,blitter=0x33 <= core < 0xFF,
+                       physical=ActorPhysicalRAM(self,job['source_page'],job['dest_page']))
 
     def __getitem__(self, a):
         if isinstance(a,slice):
@@ -2184,7 +2212,7 @@ class ActorBlitMemory:
     def __setitem__(self, a, v):
         if a < 8192 and (a in self.mutable or 0x1E11 <= a < 0x1E18 or 0x1FC0 <= a < 0x1FF0):
             self.pages[77][a] = v
-        elif 0x4000 <= a < 0x6000 and self.mmu2 in (112,113,114,115,118,119,120,121):
+        elif 0x4000 <= a < 0x6000 and self.mmu2 in (*range(112,116),*range(118,122),*range(216,224)):
             self.pages[self.mmu2][a & 8191] = v
             self.writes.add(a & 8191)
         else:
@@ -2193,7 +2221,7 @@ class ActorBlitMemory:
     def nextreg(self, reg, value):
         if reg == 0x51 and (value == 68 or 112 <= value <= 115 or 136 <= value <= 223):
             self.mmu1 = value
-        elif reg == 0x52 and value in (10,112,113,114,115,118,119,120,121):
+        elif reg == 0x52 and value in (10,*range(112,116),*range(118,122),*range(216,224)):
             self.mmu2 = value
         else:
             raise AssertionError('actor blit changed unowned Next register')
@@ -2258,7 +2286,7 @@ def run_actor_blit(core=0x33, hwim2=0, current=0, pending=0, code=None, **kw):
     valid_source = sp in range(112,116) or sp in range(136,224)
     valid = valid_source and job['policy'] in (0,1,2)
     if job['op'] == 0:
-        valid &= dp in (*range(112,116),*range(118,122)) and sp != dp and 0 < w <= 256 and 0 < n <= 16
+        valid &= dp in (*range(112,116),*range(118,122),*range(216,224)) and sp != dp and 0 < w <= 256 and 0 < n <= 16
         for off,stride in ((job['source'],job['astride']),(job['dest'],job['bstride'])):
             valid &= 0 <= off < 8192 and stride >= w and off+(n-1)*stride+w <= 8192
     elif job['op'] == 1:
@@ -2333,8 +2361,35 @@ def actor_blit_checks():
         for owner in ('current','pending'):
             assert not run_actor_blit(op=1,slot=slot,**{owner:1 << slot})['valid']
             counts['current/pending pair protection'] += 1
+    for sp,dp in ((136,216),(215,223),(223,216)):
+        for policy in (0,1,2):
+            for core,irq,owned in ((0x33,0,1),(0x32,0,1),(0x33,1,1),(0x33,0,0)):
+                result = run_actor_blit(source_page=sp,dest_page=dp,source=4096,dest=4096,
+                                        width=256,rows=16,astride=256,bstride=256,
+                                        policy=policy,core=core,hwim2=irq,owned=owned)
+                cases.append(dict(result,source_page=sp,dest_page=dp,policy=policy,core=core,hwim2=irq,owned=owned))
+                counts['high SRAM exact-end copy/fallback cases'] += 1
+    for policy in (0,1,2):
+        assert run_actor_blit(source_page=215,dest_page=223,width=8,rows=16,
+                              astride=11,bstride=80,policy=policy)['valid']
+        counts['high SRAM strided gaps'] += 1
+    assert not run_actor_blit(source_page=223,dest_page=223)['valid']
+    counts['high SRAM same-page rejection'] += 1
+    for page in (122,135,215,224,255):
+        assert not run_actor_blit(dest_page=page)['valid']
+        counts['high staging aperture rejects'] += 1
     code = bytes.fromhex(load_profile()['hooks']['blit'])
     syms = load_profile()['hooks']['syms']
+    broken = bytearray(code)
+    broken[int(syms['blit_phys_ahi'],16)] = 0
+    # Replace the extended-address command, retaining its parameter and wrong worker's tables.
+    broken[int(syms['blit_phys_ahi'],16)-1] = 0x83
+    try:
+        run_actor_blit(source_page=215,dest_page=223,width=64,astride=64,code=broken)
+    except (AssertionError,ValueError):
+        counts['physical high-address control detected'] += 1
+    else:
+        raise AssertionError('missing physical address control passed')
     broken = bytearray(code)
     broken[int(syms['hlib_dma_rect_bstride'],16)-1] = 0xEB
     try:

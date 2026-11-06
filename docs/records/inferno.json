@@ -921,5 +921,44 @@
    "nexclash/hookprofile.py": "897b271fe850c597aab718478eea6a4b",
    "selftest.py": "5572dbbb7506698d777862b670a0dcac"
   }
+ },
+ "actor_high_dma": {
+  "scope": "standalone assembled physical-DDMA high SRAM staging; original level-6 regression does not execute transfers; no runtime ownership/IRQ/hardware proof",
+  "sources": {
+   "nexclash/inferno.py": "aca37f7ae75fca370d21acdbf6ad41c6",
+   "asm/inferno_hooks.asm": "b65dc187047733dca20b39273bef4f9a",
+   "docs/profiles/inferno.json": "6cd095f322e513375857a2e94b8d2425"
+  },
+  "artifacts": {
+   "actor_high_dma.md": "bc70cc58177a01f619fae01b3189bb83",
+   "actor_high_dma_checks.json": "fdbe4c705e03d72c165da36ae416588b",
+   "actor_high_dma6.json": "524dd13249e26a305ef7fc8e702ff035",
+   "actor_high_dma_assembly.txt": "8564454b36cfb09e83a16ae13a528129",
+   "actor_high_dma_doccheck.txt": "6b4d3adca81f1d5107e1da3ca9519e60"
+  },
+  "counts": {
+   "exact page/pattern-end boundaries": 9,
+   "capability/policy/operation cases": 36,
+   "wide rectangle backend cases": 18,
+   "snapshot span prepared-copy proxies": 27,
+   "bounds reject before transfer": 20,
+   "current/pending pair protection": 12,
+   "high SRAM exact-end copy/fallback cases": 36,
+   "high SRAM strided gaps": 3,
+   "high SRAM same-page rejection": 1,
+   "high staging aperture rejects": 5,
+   "physical high-address control detected": 1,
+   "wrong stride control detected": 1,
+   "pending overwrite control detected": 1
+  },
+  "memory": "216\u2013223 exclusive inactive staging; general proposed cache 136\u2013215; source reads may also use owned staging",
+  "timing": "4096-byte copy: CPU about 3.74 ms; ordinary DMA CPU setup 0.514 ms; physical DDMA setup 0.165 ms. Stalls unknown. Total target 10 ms remains FAIL; unchanged snapshot-inclusive cold L1 899.447 / L6 84.289 ms.",
+  "checks": {
+   "assembly": "PASS: 17 blocks / 108 symbols",
+   "level6_original_quick": "PASS: 2000 frames, no transfer integration",
+   "synthetic_high_SRAM": "PASS",
+   "doccheck": "PASS: 90 docs",
+   "hardware": "UNPROVED"
+  }
  }
 }
