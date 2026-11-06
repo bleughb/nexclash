@@ -1,6 +1,7 @@
 # Rainbow Islands (Ocean, 128K), Z80N version - engine `rainbow_z80n`, record `rainbow_z80n`
 
 ## Next session
+Experimental DMA hardware round: [rainbow_dma.md](rainbow_dma.md); versioned sky rework, separate outputs.
 Stage: 4 (hardware round for the overrun-recovery build)    Branch: claude/rainbow-overrun
 State: 69369c89 = bda21ab6 + overrun recovery ("Overrun recovery" below); full verification stamped
   2026-10-31; all 28 LeeBee rounds verified ("Status"). Not yet on a real Next. PR to main open.
@@ -210,6 +211,8 @@ pin rom3) are untouched and stay the default.
   deprecated engine's on the same recording.
 
 ## Lessons
+- [tool nexclash/rainbow_dma.py] Experimental DMA uses the sky variant and checks the baseline MD5;
+  original pinned outputs and prior verification stamps are retained. New replay scope is separate.
 - [doc LEARNINGS 2.1f] A turbo limiter running the game frame with interrupts off loses the
   interrupts a long frame spans (a hitch each); recover them from raster wraps sampled by the hooks
   and credit the limiter (demonstrated: verify + 9 unit cases + control; hardware not yet).

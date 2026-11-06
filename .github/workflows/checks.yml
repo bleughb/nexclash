@@ -27,3 +27,5 @@ jobs:
         run: python tools/doccheck.py
       - name: DMA functional checks (no game data; includes no-blitter and CPU fallback)
         run: python -m nexclash.dma_check
+      - name: Rainbow game tcommit DMA checks (mapped RAM, policies, stalls and negative controls)
+        run: python -m nexclash.rainbow_dma_check

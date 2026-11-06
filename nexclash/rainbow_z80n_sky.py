@@ -846,6 +846,8 @@ class NextState:
         self.clip_tm, self.clip_i = [None] * 4, 0
         self.pal_sel, self.pal_idx = 0, 0   # palette writes ($43 / $40 / $41), sky fix variant
         self.ulapal = {}                    # (ULA palette 0/1, index) -> value written by $41
+        if hasattr(patch, "configure_nextstate"):
+            patch.configure_nextstate(self)
 
     def video_line(self):
         if self.line_x is not None:                 # exact: the frame's patched T since the interrupt
@@ -1296,6 +1298,8 @@ def _machine(Sim, mem, regs, ns, slot=None):
     from . import z80n
     R, ed = sim.registers, sim.after_ED
     ns.R = R
+    if hasattr(ns, "attach_machine"):
+        ns.attach_machine(sim)
     nops = {op: ed[op] for op in getattr(ns, 'no_z80n', ())}   # SkoolKit's own (NOP) handlers
     z80n.install(sim, ns.nextreg)
     for op, fn in nops.items():
@@ -1319,6 +1323,8 @@ def _run(sim, stops, limit=200000):
         n += 1
         if n > limit:
             return False
+    if hasattr(sim, "rainbow_hook_completed"):
+        sim.rainbow_hook_completed()
     return True
 
 
@@ -1902,8 +1908,10 @@ def verify(patch, rzx_path, progress=None, stop=None):
         if ns.nr.get(0x50) != 0xFF:
             fail('render end: slot 0 not restored', ())
         N = MG(real, 58850)
-        line0 = ns.last_line                        # the beam as the render end read it
-        now = line0 >= RS_LINE and 327 - line0 - 20 >= n
+        line0 = getattr(ns, "decision_line", None)
+        if line0 is None:
+            line0 = ns.last_line                    # rsafe decision before any commit samples
+        now = line0 >= RS_LINE and 327 - line0 - getattr(patch, "commit_margin", 20) >= n
         if ns.scratch[V_PEND] == (0 if now else 1) and ns.scratch[V_N58] == N:
             c['render end: commit %s' % ('at once' if now else 'deferred to the next interrupt')] += 1
         else:
@@ -2150,6 +2158,8 @@ def verify(patch, rzx_path, progress=None, stop=None):
     c['render start T max (28 MHz us)'] = st.get('tsmax', 0) * 1000000 // 28000000
     for k, name in (('T0', 'render start'), ('T1', 'bands'), ('T2', 'cell hooks')):
         c['_T %s total (28 MHz ms)' % name] = st.get(k, 0) // 28000
+    if hasattr(patch, "finish_verify"):
+        patch.finish_verify(ns, c, st.get("prof", []))
     verify.profile = st.get('prof', [])     # per game frame: (frame, total T, original T, extra T per PROF_KEYS)
     return c, dict(ex)
 
@@ -2182,6 +2192,8 @@ def _pair(patch, bm, regs, n_before, scratch=None, pat=None, pages=None, stops=(
     alt = bytearray(rom48())
     alt[0x2000:0x4000] = patch.page
     psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
+    if pages is not None and hasattr(patch, "prepare_unit_pages"):
+        patch.prepare_unit_pages(pages)  # fixtures must reserve the rework's code allocation
     ns = NextState(patch)
     if scratch is not None:
         ns.scratch[:] = scratch
@@ -3259,7 +3271,7 @@ def obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path):
         for l0 in (100, 175, 15, 176, 200, 239, 240, 300, 307, 308):
             sc, tm, shm = fresh(pt)
             f, _, exp, ns = render_case(pt, m, R0, sh, bytearray(pg), tm, shm, sc, line_t=l0)
-            now = l0 >= RS_LINE and l0 + ns.scratch[V_S] <= 307
+            now = l0 >= RS_LINE and l0 + ns.scratch[V_S] <= 327 - getattr(patch, "commit_margin", 20)
             if now:
                 l6e = None if ns.t6e is None else (l0 + ns.t6e // LINE_T) % 312
                 ok &= not f and ns.scratch[V_PEND] == 0 and l6e is not None and l6e - l0 < 30
