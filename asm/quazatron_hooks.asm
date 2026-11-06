@@ -22,7 +22,12 @@
 ; inside a hook (the ISR at E6E6 / BD2D never touches 0x4000-0x5FFF); canvas pages at slot 6 (0xC000) only inside a
 ; hook's work (the ISR never touches 0xC000-0xDFFF). The game's stack is at 0x61xx (slot 3): never remapped.
 ; R: the game reads R (B5B1, in the ISR); every trampoline brackets its extra M1s with HLIB_R_IN / HLIB_R_OUT.
-; Speed: the work runs at 28 MHz, the caller's speed restored (hlib_speed). Pace: not yet repaid (session 2).
+; Speed: the work runs at 28 MHz, the caller's speed restored (hlib_speed).
+; Pace (session 2, target ORIGINAL): every hook's added time goes to a debt (its 28 MHz work measured on the video line,
+; its entry and exit at the caller's clock as a constant) that the game's own delay (DD80) repays: t_dly starts the
+; loop shorter, R kept exact. Fast scroll off: each scroll move runs at 28 MHz in a pace window that lasts the
+; original LDDR's exact time less the debt. Sprite patterns: an image-keyed slot cache (21 slots of 3 patterns).
+; DD8A 67 2E 00  LD H,A / LD L,0 (the delay loop's start)  -> JP t_dly
 
         DEVICE ZXSPECTRUMNEXT
         INCLUDE "lib/hlib_speed.asm"
@@ -85,6 +90,38 @@ XHB     EQU 0x4BF1              ; put3: X bit 8
 ISRSPD  EQU 0x4BF2              ; t_isr: the interrupted code's speed
 TX      EQU 0x4BF3              ; 2: the origin at the last commit (the shown origin's target; sprites are placed
 TY      EQU 0x4BF5              ;    from the view the game last drew, which is this one)
+DEBT    EQU 0x4BF6              ; 2: the pace limiter's debt, 1/16 video lines (14 T at 3.5 MHz) of hook time not yet repaid
+DST     EQU 0x4BF8              ; 2: the video line at the open debt window's start
+ISRL    EQU 0x4BFA              ; 2: the video line at an ISR's start inside the hook page
+DH0     EQU 0x4BFC              ; t_dly: the delay's outer count
+GIMG    EQU 0x4BFD              ; group: the image number
+MVE     EQU 0x4C80              ; 2: a move's pace window: lines elapsed (ISR bodies left out)
+MVT     EQU 0x4C82              ; 2: its target (1/16 lines)
+MVP     EQU 0x4C84              ; polls left with the line counter still (no counter: give up)
+MVL     EQU 0x4C85              ; 2: the last line read in the wait
+DEBTCAP EQU 312 * 16 * 4        ; four frames: crowds (6+ blocks, no delay) repaid by the next updates with a delay
+O_MOVEV EQU (30 + 21 * 0x1200 - 5) / 14       ; a scroll move's original time at 3.5 MHz (LD HL / DE / BC, LDDR or
+O_MOVEH EQU (30 + 21 * 0x12FE - 5) / 14       ; LDIR; 0x8300-0x95FF and the code are uncontended), 1/16 lines
+SKEY    EQU 0x4C60              ; 21: the image (+1) each pattern slot (3 patterns) holds, 0: none. The images are
+                                ; immutable (built into the sprite store): a group whose image is in a slot uses it
+SUSE    EQU 0x4C90              ; 21: the update (STAMP) a slot was last used in: never replaced in the same update
+GPAT    EQU 0x4CB0              ; 21: each group's first pattern (3 x its slot), for the smooth step's put3
+SCLK    EQU 0x4CC8              ; the next slot to try for a new image (clock)
+STAMP   EQU 0x4CC9              ; this update's number (p_spr)
+PPAT    EQU 0x4CCA              ; put3: the first sprite's pattern
+HLIB_PACE_NL EQU 312            ; 48K timing (z80tonex: NR 3 = 48K)
+; the hooks' unmeasured parts (1/16 lines): their entry and exit at the caller's clock, counted in the simulator
+; (session 2: work/s2/calib.py; median extra T at 3.5 MHz / 14, rounded down, plus the 28 MHz part outside a window)
+        IFNDEF C_LIST
+C_LIST  EQU 34                  ; t_list 484 T
+C_TW    EQU 33                  ; t_clr, t_paste, t_spr 463 T
+C_C05A  EQU 68                  ; t_c05a 953 T
+C_MOVE  EQU 15                  ; the moves outside their pace window (about 300 T; the window has the rest)
+C_BS    EQU 0                   ; t_bs: its own part is small (its nested hooks count their own)
+C_ISR   EQU 37                  ; t_isr from game code 521 T (every frame)
+C_CLS   EQU 44                  ; t_prn 630-711 T (t_cls clears the debt)
+KDLY    EQU 40                  ; t_dly 652 T, in delay steps (16 T)
+        ENDIF
 S0      EQU 46                  ; sprite store: page 46 = (list - 0x9C00) >> 1 -> 0-3 enemy frame / image / 255,
                                 ; pages 47.. = images (16 x 48 x 8 bits, 10 a page), from quazatron.py sprite_store
 MAXG    EQU 21
@@ -414,13 +451,25 @@ p_paste:
         inc l
         ld h,(hl)
         ld l,a                  ; HL = tag column
-        ld a,(G_AF17)
+        ld a,(G_AF17)           ; the column: LDIR, split where the canvas y wraps (256) inside its column
+        ld c,a
+        ld a,e
+        neg                     ; bytes to the column's end (0: 256)
+        jr z,.one
+        cp c
+        jr nc,.one
         ld b,a
-.cp:    ld a,(hl)
-        ld (de),a
-        inc hl
-        inc e
-        djnz .cp
+        ld a,c
+        sub b
+        push af                 ; the rest, from y 0
+        ld c,b
+        ld b,0
+        ldir
+        dec d                   ; DE ran into the next column: back to this one's y 0
+        pop af
+        ld c,a
+.one:   ld b,0
+        ldir
         ld hl,(CX)              ; next canvas column
         inc hl
         call mod320
@@ -611,9 +660,24 @@ p_pre:  call rd56
 ; p_inks: after C05A + C0C3 (the attributes are current): every view cell's ink bytes = its attribute's ink.
 p_inks: call rd56
         ld (SLOT6),a
+        ld hl,(OX)              ; the view's first canvas cell: column OX >> 3 (0-39), row (OY >> 3) & 31
+        ld a,l
+        srl h
+        rra
+        srl h
+        rra
+        srl h
+        rra
+        ld (CC),a
+        ld a,(OY)
+        rrca
+        rrca
+        rrca
+        and 31
+        ld (TINK),a             ; (TINK: the canvas row of view row CR)
         xor a
         ld (CR),a
-.crow:  ; this row's 32 attributes -> ROWBUF (the ULA page at slot 6)
+.crow:  ; this row's 32 attributes -> ROWBUF (the ULA page at slot 6), then FLAGS (S0) mapped for the row's walk
         nextreg 0x56,ULAPAGE
         ld a,(CR)
         ld l,a
@@ -628,58 +692,49 @@ p_inks: call rd56
         ld de,ROWBUF
         ld bc,32
         ldir
-        xor a
-        ld (CC),a
-.ccol:  ld a,(CC)
-        add a,low ROWBUF
-        ld l,a
-        ld h,high ROWBUF
-        ld a,(hl)
-        ld b,a
-        and 7
-        bit 6,b
-        jr z,.nb
-        or 8
-.nb:    ld (TINK),a
-        ; canvas cell: column ((OX >> 3) + CC) mod 40, row ((OY >> 3) + CR) & 31
-        ld hl,(OX)
-        ld a,l
-        srl h
-        rra
-        srl h
-        rra
-        srl h
-        rra
-        ld b,a
-        ld a,(CC)
-        add a,b
-        cp 40
-        jr c,.c40
-        sub 40
-.c40:   ld c,a
-        ld a,(OY)
-        rrca
-        rrca
-        rrca
-        and 31
-        ld b,a
-        ld a,(CR)
-        add a,b
-        and 31
-        push af
         nextreg 0x56,S0
-        call cellptr
-        pop de                  ; D = cell row
+        ld a,(CC)
+        ld c,a                  ; C = canvas column
         ld a,(TINK)
-        cp (hl)
+        call cellptr            ; HL = FLAGS + row * 40 + C
+        ld de,ROWBUF
+        ld b,32
+.ccol:  ld a,(de)               ; the attribute's ink, 0-15
+        and 0x47
+        cp 0x40
+        jr c,.nb
+        sub 0x38
+.nb:    cp (hl)
         jr z,.same
         ld (hl),a
+        push bc
+        push de
+        push hl
+        ld b,a
+        ld a,(TINK)
+        ld d,a
+        ld a,b
         call recell             ; C = cell column, D = cell row, A = ink
-.same:  ld hl,CC
-        inc (hl)
-        ld a,(hl)
-        cp 32
-        jr c,.ccol
+        nextreg 0x56,S0
+        pop hl
+        pop de
+        pop bc
+.same:  inc e                   ; ROWBUF (0x4C40-0x4C5F: E never wraps)
+        inc hl
+        inc c
+        ld a,c
+        cp 40
+        jr c,.c1
+        ld c,0
+        push de
+        ld de,-40
+        add hl,de
+        pop de
+.c1:    djnz .ccol
+        ld a,(TINK)
+        inc a
+        and 31
+        ld (TINK),a
         ld hl,CR
         inc (hl)
         ld a,(hl)
@@ -746,6 +801,8 @@ p_spr:  ld a,(L2ON)
         ld (DRV),hl
         call rd56
         ld (SLOT6),a
+        ld hl,STAMP
+        inc (hl)
         xor a
         ld (GRP),a
         ld a,(0xAF09)
@@ -872,7 +929,8 @@ group:  ld a,(GRP)
         add a,a
         add a,a
         add a,c
-.img:   ld c,0
+.img:   ld (GIMG),a
+        ld c,0
 .d10:   cp 10
         jr c,.dd
         sub 10
@@ -893,13 +951,29 @@ group:  ld a,(GRP)
         add a,e
         ld e,a                  ; E = first pattern / sprite
         push bc
+        push hl
+        call slot_of            ; A = 3 x the slot holding the image, Z = it is there already
+        pop hl
+        push af
+        ld (PPAT),a
+        ld a,(GRP)
+        add a,low GPAT
+        ld e,a
+        ld d,high GPAT
+        ld a,(PPAT)
+        ld (de),a
+        pop af
+        jr z,.hit               ; the slot holds this image: no upload
         ld bc,0x303B
         out (c),a
-        ld bc,0x005B
-        otir
-        otir
-        otir
-        pop bc                  ; B = rows down
+        ld c,0x5B               ; only the low byte is decoded: B may count down
+        ld d,24
+.u:     DUP 32
+        outi                    ; 16 T a byte (OTIR 21)
+        EDUP
+        dec d
+        jr nz,.u
+.hit:   pop bc                  ; B = rows down
         ; base Y = y (signed: >= 200 is above the top) - 8 + B; base X = x + 24 (at the game's origin)
         ld a,(SPY)
         ld l,a
@@ -1038,6 +1112,7 @@ wregs:  ld hl,(DX)
 ; 28 MHz, then NR 7 = the game's speed for the ISR body. Keeps IX, IY, the alternate set; AF, BC, DE, HL lost.
 isr_step:
         nextreg 0x07,3
+        call dbg_open
         ld a,(VSMOOTH)
         or a
         jp z,.done
@@ -1122,6 +1197,15 @@ isr_step:
         pop af
         push af
         push bc
+        push hl
+        push af
+        add a,low GPAT
+        ld l,a
+        ld h,high GPAT
+        ld a,(hl)
+        ld (PPAT),a
+        pop af
+        pop hl
         ld b,a
         add a,a
         add a,b                 ; first sprite = 3 g
@@ -1132,7 +1216,9 @@ isr_step:
         pop bc
         djnz .g
         nextreg 0x56,0
-.done:  ld a,(GSPD)
+.done:  ld a,C_ISR
+        call dbg_close
+        ld a,(GSPD)
         nextreg 0x07,a
         ret
 
@@ -1146,6 +1232,7 @@ put3:   push de
         pop af
         ld bc,0x303B
         out (c),a
+        ld a,(PPAT)             ; the first sprite's pattern (the image's slot)
         ld d,a
         ld b,3
         ld c,0x57
@@ -1168,8 +1255,354 @@ put3:   push de
         pop de
         ret
 
+; ---- the pace limiter (card patch.pace-limiter; target ORIGINAL). Every hook's added time goes to DEBT: its work at
+; 28 MHz measured on the video line (dbg_open .. dbg_close; an ISR inside the window is left out: isr_in / isr_out),
+; its entry and exit at the caller's clock as a constant per hook (C_*). The game's own delay at DD80 repays it (t_dly:
+; the loop starts shorter). With 6 or more blocks the game has no delay: the debt waits for the next update's.
+
+; qline: HL = the video line (0-311), the reads with interrupts held off (then put back as they were: inside the ISR
+; they stay off); NR 7 is selected again after (HLIB_SPEED_IN reads it). AF, BC lost.
+qline:  ld a,i
+        di
+        push af
+        ld bc,0x243B
+.r:     ld a,0x1E
+        out (c),a
+        inc b
+        in h,(c)
+        dec b
+        ld a,0x1F
+        out (c),a
+        inc b
+        in l,(c)
+        dec b
+        ld a,0x1E
+        out (c),a
+        inc b
+        in a,(c)
+        dec b
+        xor h
+        and 1
+        jr nz,.r
+        ld a,h
+        and 1
+        ld h,a
+        ld a,7
+        out (c),a
+        pop af
+        ret po
+        ei
+        ret
+
+; dbg_open: a debt window starts (at 28 MHz). AF, BC, HL lost.
+dbg_open:
+        call qline
+        ld (DST),hl
+        ret
+
+; dbg_close: A = the hook's unmeasured part (1/16 lines). DEBT += 16 x lines since dbg_open + A. AF, BC, DE, HL lost.
+dbg_close:
+        push af
+        call qline
+        ld de,(DST)
+        or a
+        sbc hl,de
+        jr nc,.p
+        ld de,HLIB_PACE_NL
+        add hl,de
+.p:     add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        pop af
+        jr dadd.add
+
+; dadd: DEBT += A (1/16 lines), capped at 0xBFFF (about 10 frames). AF, DE, HL lost.
+dadd:   ld hl,0
+.add:   ld e,a
+        ld d,0
+        add hl,de
+        ld de,(DEBT)
+        add hl,de
+        jr c,.cap
+        push hl
+        ld de,DEBTCAP
+        or a
+        sbc hl,de
+        pop hl
+        jr c,.w
+.cap:   ld hl,DEBTCAP
+.w:     ld (DEBT),hl
+        ret
+
+; dconst: DEBT += A; keeps BC, DE, HL. AF lost.
+dconst: push hl
+        push de
+        call dadd
+        pop de
+        pop hl
+        ret
+
+; isr_in / isr_out: t_isr in the hook page (interrupts off): the ISR body's time is left out of an open debt window
+; (DST moves on by it). AF, BC, DE, HL lost.
+isr_in: call qline
+        ld (ISRL),hl
+        ret
+isr_out:
+        call qline
+        ld de,(ISRL)
+        or a
+        sbc hl,de
+        jr nc,.p
+        ld de,HLIB_PACE_NL
+        add hl,de
+.p:     ld de,(DST)
+        add hl,de
+        ld de,HLIB_PACE_NL
+        or a
+        sbc hl,de
+        jr nc,.w
+        add hl,de
+.w:     ld (DST),hl
+        ret
+
+; p_dly: from t_dly, at the game's clock. A = h0 = 8 (6 - AF09): the original's loop is N0 = 256 h0 steps of
+; DEC L / JR NZ (16 T each) and h0 of DEC H / JR NZ. It now starts k = DEBT x 7/8 + KDLY steps short (KDLY: this
+; hook's own time), at most N0 - 1; what is not repaid stays in DEBT. -> H, L the loop's start (N' = N0 - k steps:
+; h' = ceil(N' / 256), l' = N' mod 256), A = t_dly's R delta: the original runs 2 + 2 N0 + 2 h0 M1s from DD8A to DD93,
+; the hook E = 6 and N = 4, the loop 2 N' + 2 h': delta = 2 (h0 - h' - (l' & 63)) - 8 (mod 128; 2 N0 = 0).
+; BC, DE lost.
+p_dly:  ld (DH0),a
+        ld hl,(DEBT)
+        ld d,h
+        ld e,l
+        srl d
+        rr e
+        srl d
+        rr e
+        srl d
+        rr e
+        or a
+        sbc hl,de               ; debt - debt / 8 (14 T a unit, 16 T a step)
+        ld de,KDLY
+        add hl,de
+        ex de,hl                ; DE = k
+        ld a,(DH0)
+        ld h,a
+        ld l,0
+        or a
+        sbc hl,de               ; N' = N0 - k
+        jr z,.cap
+        jr c,.cap
+        ld de,0
+        ld (DEBT),de            ; all repaid
+        jr .go
+.cap:   ld a,(DH0)              ; k = N0 - 1: N0 - 1 - KDLY steps from the debt, x 8 / 7 in units
+        ld h,a
+        ld l,0
+        ld de,-(KDLY + 1)
+        add hl,de
+        ld d,h
+        ld e,l
+        ld b,3
+.s1:    srl d
+        rr e
+        djnz .s1
+        add hl,de               ; + s / 8
+        ld b,3
+.s2:    srl d
+        rr e
+        djnz .s2
+        add hl,de               ; + s / 64
+        ld b,3
+.s3:    srl d
+        rr e
+        djnz .s3
+        add hl,de               ; + s / 512 (x 1.1426, under 8 / 7: the rest is never under-counted)
+        ex de,hl
+        ld hl,(DEBT)
+        or a
+        sbc hl,de
+        jr nc,.d
+        ld hl,0
+.d:     ld (DEBT),hl
+        ld hl,1                 ; N' = 1
+.go:    ld a,l
+        or a
+        jr z,.h
+        inc h                   ; h' = ceil(N' / 256)
+.h:     and 63
+        ld b,a
+        ld a,(DH0)
+        sub h
+        sub b
+        add a,a
+        sub 8
+        and 0x7F
+        ret
+
+; mv_in: a scroll move starts: the caller's speed latched (VSPD2, GSPD), then 28 MHz in both modes; with fast scroll
+; off, its pace window opens. AF, BC lost.
+mv_in:  call spd_fast
+        nextreg 0x07,3
+        ld a,(VFAST)
+        or a
+        ret nz
+        push hl
+        call qline
+        ld (MVL),hl
+        ld hl,0
+        ld (MVE),hl
+        pop hl
+        ret
+
+; mv_out: HL = the move's original time (1/16 lines). Fast scroll off: wait until the window has lasted that, less
+; the debt (an ISR body inside it is left out, as it lengthened the original's move too); a debt over it is cut by
+; what the move saved. Then the caller's speed. Keeps BC, DE; AF, HL lost.
+mv_out: ld a,(VFAST)
+        or a
+        jr nz,.back             ; fast scroll: the burst's saving is its own (never in the debt)
+        push bc
+        push de
+        ld (MVT),hl             ; O
+        ex de,hl
+        ld hl,(DEBT)
+        ex de,hl                ; HL = O, DE = debt
+        or a
+        sbc hl,de
+        jr c,.paid
+        ld (MVT),hl             ; wait until the window has lasted O - debt
+        ld hl,0
+        ld (DEBT),hl
+        ld a,0
+        ld (MVP),a
+.w:     call mvtick
+        ld hl,(MVE)
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,(MVT)
+        or a
+        sbc hl,de
+        jr c,.w
+        jr .done
+.paid:  call mvtick             ; the debt is more than the move: no wait; debt -= O - W
+        ld hl,(MVE)
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,(DEBT)
+        add hl,de               ; W + debt
+        ld de,(MVT)
+        or a
+        sbc hl,de               ; - O
+        jr nc,.st
+        ld hl,0
+.st:    ld (DEBT),hl
+.done:  pop de
+        pop bc
+.back:  ld a,(VSPD2)
+        nextreg 0x07,a
+        ret
+
+; mvtick: MVE += lines since MVL (one wrap allowed), MVL = now; interrupts held off throughout, so an ISR's isr_out
+; (which moves DST) cannot fall between. The line counter still for 256 polls: MVE is forced past any target (an
+; emulator without one). AF, DE, HL lost.
+mvtick: ld a,i
+        di
+        push af
+        push bc
+        call qline
+        ld de,(MVL)
+        ld (MVL),hl
+        or a
+        sbc hl,de
+        jr nz,.m
+        ld a,(MVP)
+        dec a
+        ld (MVP),a
+        jr nz,.z
+        ld hl,0x0FFF            ; no line counter: give up (x 16 is past any target)
+        ld (MVE),hl
+        jr .z
+.m:     push af
+        xor a
+        ld (MVP),a
+        pop af
+        jr nc,.m2
+        ld de,HLIB_PACE_NL
+        add hl,de
+.m2:    ld de,(MVE)
+        add hl,de
+        ld (MVE),hl
+.z:     pop bc
+        pop af
+        ret po
+        ei
+        ret
+
+; slot_of: the pattern slot for image GIMG: -> A = its first pattern (3 x slot), Z when the slot holds it already
+; (no upload), NZ for a slot given to it now (the caller uploads), never one used earlier in this update (at most
+; MAXG = 21 groups an update: one is always free). BC, DE, HL lost.
+slot_of:
+        ld a,(GIMG)
+        inc a
+        ld hl,SKEY
+        ld bc,21
+        cpir
+        jr nz,.miss
+        ld a,20
+        sub c                   ; the slot
+        call .use
+        cp a                    ; Z
+        ret
+.miss:  ld a,(SCLK)
+        ld b,21
+.f:     cp 21
+        jr c,.f1
+        xor a
+.f1:    ld e,a
+        ld d,high SUSE
+        add a,low SUSE
+        ld l,a
+        ld h,d
+        ld a,(STAMP)
+        cp (hl)
+        ld a,e
+        jr nz,.got
+        inc a
+        djnz .f
+.got:   ld e,a                  ; E = the slot
+        inc a
+        ld (SCLK),a
+        ld a,e
+        add a,low SKEY
+        ld l,a
+        ld h,high SKEY
+        ld a,(GIMG)
+        inc a
+        ld (hl),a
+        ld a,e
+        call .use
+        or 1                    ; NZ
+        ld a,c
+        ret
+.use:   ld e,a                  ; SUSE[slot] = STAMP; A = C = 3 x slot
+        add a,low SUSE
+        ld l,a
+        ld h,high SUSE
+        ld a,(STAMP)
+        ld (hl),a
+        ld a,e
+        add a,a
+        add a,e
+        ld c,a
+        ret
+
 TCODE_END:
-        ASSERT TCODE_END <= TCOL
+        ASSERT TCODE_END <= ROLETAB
         ORG TCOL
         DUP 32, n
         DW TAGS + n * TS
@@ -1190,7 +1623,12 @@ t_list: push hl
         push bc
         push de
         HLIB_SPEED_IN VSPD
+        push hl
+        call dbg_open
+        pop hl
         call p_tags
+        ld a,C_LIST
+        call dbg_close
         ld a,-11 & 0x7F
         call hlib_r_set
         HLIB_SPEED_OUT VSPD
@@ -1211,6 +1649,7 @@ t_clr:  call 0xC044
         push de
         push hl
         HLIB_SPEED_IN VSPD
+        call dbg_open
         call p_clr
         jr tw_exit
 
@@ -1224,8 +1663,11 @@ t_paste:
         push de
         push hl
         HLIB_SPEED_IN VSPD
+        call dbg_open
         call p_paste
 tw_exit:
+        ld a,C_TW
+        call dbg_close
         ld a,-10 & 0x7F
         call hlib_r_set
         HLIB_SPEED_OUT VSPD
@@ -1246,6 +1688,7 @@ t_spr:  call 0xE656
         push de
         push hl
         HLIB_SPEED_IN VSPD
+        call dbg_open
         call p_spr
         jp tw_exit
 
@@ -1271,7 +1714,9 @@ t_c05a: nextreg 0x52,HPAGE
         jr nz,.slow
         call spd_fast           ; a scroll step's copy (from DD9A): fast with the option
         jr .s1
-.slow:  ld a,(VFAST)
+.slow:  ld hl,0
+        ld (DEBT),hl            ; a view's first copy (play starts, a new deck): earlier debt (the menu's) never repaid
+        ld a,(VFAST)
         push af
         xor a
         ld (VFAST),a
@@ -1294,8 +1739,11 @@ t_c05a: nextreg 0x52,HPAGE
         push de
         push hl
         nextreg 0x07,3
+        call dbg_open
         call p_inks             ; the new inks, then the origin and Layer 2 on: the picture changes once, complete
         call p_pre
+        ld a,C_C05A
+        call dbg_close
         ld a,-9 & 0x7F
         call hlib_r_set
         call spd_back
@@ -1317,15 +1765,22 @@ t_sd:   nextreg 0x52,HPAGE
         ld a,(OY)
         sub 8
         ld (OY),a
+        ld a,C_MOVE
+        call dadd
         ld a,-7 & 0x7F
         call hlib_r_set
-        call spd_fast
+        call mv_in
         pop af
         ld hl,0x94FF
         ld de,0x95FF
         ld bc,0x1200
         lddr
-        call spd_back
+        push af
+        push hl
+        ld hl,O_MOVEV
+        call mv_out
+        pop hl
+        pop af
         HLIB_R_OUT
         nextreg 0x52,ULAPAGE
         jp 0xE119
@@ -1335,15 +1790,22 @@ t_su:   nextreg 0x52,HPAGE
         ld a,(OY)
         add a,8
         ld (OY),a
+        ld a,C_MOVE
+        call dadd
         ld a,-7 & 0x7F
         call hlib_r_set
-        call spd_fast
+        call mv_in
         pop af
         ld hl,0x8400
         ld de,0x8300
         ld bc,0x1200
         ldir
-        call spd_back
+        push af
+        push hl
+        ld hl,O_MOVEV
+        call mv_out
+        pop hl
+        pop af
         HLIB_R_OUT
         nextreg 0x52,ULAPAGE
         jp 0xE128
@@ -1352,13 +1814,18 @@ t_sl:   nextreg 0x52,HPAGE
         push af
         ld de,16
         call s_x
-        call spd_fast
+        call mv_in
         pop af
         ld hl,0x8302
         ld de,0x8300
         ld bc,0x12FE
         ldir
-        call spd_back
+        push af
+        push hl
+        ld hl,O_MOVEH
+        call mv_out
+        pop hl
+        pop af
         HLIB_R_OUT
         nextreg 0x52,ULAPAGE
         jp 0xE137
@@ -1367,13 +1834,18 @@ t_sr:   nextreg 0x52,HPAGE
         push af
         ld de,320-16
         call s_x
-        call spd_fast
+        call mv_in
         pop af
         ld hl,0x95FD
         ld de,0x95FF
         ld bc,0x12FE
         lddr
-        call spd_back
+        push af
+        push hl
+        ld hl,O_MOVEH
+        call mv_out
+        pop hl
+        pop af
         HLIB_R_OUT
         nextreg 0x52,ULAPAGE
         jp 0xE151
@@ -1381,6 +1853,8 @@ s_x:    ld hl,(OX)
         add hl,de
         call mod320
         ld (OX),hl
+        ld a,C_MOVE
+        call dadd
         ld a,117
         jp hlib_r_set
 
@@ -1402,6 +1876,8 @@ t_bs:   nextreg 0x52,HPAGE
         HLIB_R_IN
         call spd_back
         push af
+        ld a,C_BS
+        call dconst
         ld a,-9 & 0x7F
         call hlib_r_set
         pop af
@@ -1426,6 +1902,9 @@ t_isr:  push af
         push hl
         push bc
         push de
+        call rd7                ; A = the interrupted speed, then the hook's own parts at 28 MHz
+        nextreg 0x07,3
+        ld c,a
         ld hl,10
         add hl,sp
         ld e,(hl)
@@ -1438,8 +1917,9 @@ t_isr:  push af
         jr nc,.game
         ; in the hook page (inside a hook's R bracket, the page mapped): the ISR body at the game's speed, then the
         ; hook's own speed back (the port is safe: the page's own reads are DI-protected)
-        call rd7
+        ld a,c
         ld (ISRSPD),a
+        call isr_in             ; the ISR body's time is left out of an open debt window
         ld a,(GSPD)
         nextreg 0x07,a
         pop de
@@ -1451,9 +1931,18 @@ t_isr:  push af
         push af
         ld a,(ISRSPD)
         nextreg 0x07,a
+        push bc
+        push de
+        push hl
+        call isr_out
+        pop hl
+        pop de
+        pop bc
         pop af
         ret
-.rom:   pop de                  ; a ROM trampoline: nothing
+.rom:   ld a,c                  ; a ROM trampoline: nothing (the interrupted speed back)
+        nextreg 0x07,a
+        pop de
         pop bc
         pop hl
         ld a,l
@@ -1461,8 +1950,8 @@ t_isr:  push af
         ld r,a
         pop af
         jp 0xBD2D
-.game:  call rd7                ; game code: the frame step, the ISR body, then the interrupted speed and R
-        nextreg 0x52,HPAGE
+.game:  nextreg 0x52,HPAGE      ; game code: the frame step, the ISR body, then the interrupted speed and R
+        ld a,c
         ld (ISRSPD),a
         call isr_step           ; NR 7 = the game's speed at its end
         nextreg 0x52,ULAPAGE
@@ -1474,14 +1963,15 @@ t_isr:  push af
         ld r,a
         pop af
         call 0xBD2D             ; (CALL, 1 M1, as the JP: R exact at BD2D)
+        nextreg 0x07,3
         push af
-        ld a,r                  ; R read = R at the ISR's return + 3; set = that - 2 (POP AF, RET follow)
+        ld a,r                  ; R read = R at the ISR's return + 2 + 3; set = that - 2 (POP AF, RET follow)
         push hl
         ld l,a
         and 0x80
         ld h,a
         ld a,l
-        sub 5
+        sub 7
         and 0x7F
         or h
         ld l,a
@@ -1510,6 +2000,10 @@ t_cls:  nextreg 0x52,HPAGE
         push af
         push bc
         call p_off
+        push hl
+        ld hl,0
+        ld (DEBT),hl            ; the screen clear (a new deck, the menu): the debt so far is never repaid
+        pop hl
         ld a,-10 & 0x7F
         call hlib_r_set
         pop bc
@@ -1534,7 +2028,9 @@ t_prn:  nextreg 0x52,HPAGE
         cp 0x60
         jr nc,.no
 .off:   call p_off
-.no:    ld a,-10 & 0x7F
+.no:    ld a,C_CLS
+        call dconst
+        ld a,-10 & 0x7F
         call hlib_r_set
         pop bc
         pop af
@@ -1542,6 +2038,21 @@ t_prn:  nextreg 0x52,HPAGE
         nextreg 0x52,ULAPAGE
         ld (0xB263),de
         jp 0xB1FF
+; JP at DD8A (LD H,A / LD L,0: the game's delay, H x 256 steps of DEC L / JR NZ at DD8D). The pace limiter: the
+; loop starts shorter by the debt (p_dly), at the game's clock; R is the original's again at DD93 (delta from p_dly).
+t_dly:  nextreg 0x52,HPAGE
+        HLIB_R_IN
+        push af
+        push bc
+        push de
+        call p_dly
+        call hlib_r_set
+        pop de
+        pop bc
+        pop af
+        HLIB_R_OUT
+        nextreg 0x52,ULAPAGE
+        jp 0xDD8D
 ROM_END:
         ASSERT ROM_END + 20 <= 0x3D00
         SAVEBIN "quazatron_rom.bin",0x386E,ROM_END-0x386E

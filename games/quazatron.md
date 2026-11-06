@@ -79,6 +79,9 @@ ends. Neither asks for a value.
 - [deferred Open: reconsider when the pace limiter is built (session 2)] observed: JNext runs of different builds play different games (deck colour and droids follow timing), so pace must be measured update-keyed in lockstep (nexclash.pace), never from free-running logs.
 - [local: this game's drawing] observed: masks over an ink fill draw the surfaces; colouring by the list that cleared a pixel follows the drawing (verified by eye on the mock-up), where colouring by the list that set it gave nothing.
 - [local: this game's pace] observed: the update delay scales with the droid count (DD80), so hook time is not absorbed by a frame lock; it must be repaid.
+- [local: this game's pace] observed: with 4-5 blocks the delay is only 33-66k T, and with 6 or more there is none; per-update sprite pattern uploads (about 20k T) alone overran it, so an image-keyed pattern cache came before any limiter tuning.
+- [local: this game's pace] observed: a debt kept through the menu (the ISR hook's cost every frame, no delay to repay it) made the first 25 updates of play run 15% fast; the debt is capped at one frame and cleared at the screen clear.
+- [local: this game's pace] observed: a scroll move (LDDR / LDIR of a fixed length on uncontended RAM) has an exact original time, so it is a pace window that can repay a step's hook time; the strip render and copy are not exact (contended screen writes).
 - [deferred Open: reconsider when the engine is built] inferred: the colour shadow can hold final Layer 2 bytes with ink transparent, so no conversion is needed at the copies.
 
 ## Friction
@@ -102,3 +105,8 @@ ends. Neither asks for a value.
   one static set of 46 scenery lists for every deck, at most 7 records on screen), droid painting by regions (mock-ups
   v2, v3; approved), engine built around a wrapping Layer 2 canvas + sprites, fast-scroll and smooth options; JNext
   play in colour; burst timings. Not proven: verifier, pace, menu are session 2.
+- 2026-11-06 stage 2 session 2 (pilot runs/quazatron): the pace limiter (t_dly at DD8A: the delay loop starts shorter
+  by the debt, R exact; pace windows on the scroll moves with fast scroll off), an image-keyed sprite pattern cache, a
+  faster ink pass and paste; verifier: sprites = model at every E656, the lock at every frame, the every-site clock
+  matrix, negatives; pace trials in JNext (fixture: R read and the ISR's RNG call constant in all builds); the menu
+  (main line Colour, toggle Smooth scrolling, the two .pok trainers) and the .nxc package.

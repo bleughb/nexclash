@@ -4,8 +4,10 @@ Opt-in (unproven): NEXCLASH_REWORK=quazatron. Facts and design: games/quazatron.
 Session 1 (2026-11-06) builds the scenery path: the game's background has a colour twin on a 320 x 256 Layer 2
 canvas that wraps; scroll moves become an origin change; colour = the role of the drawing list that last cleared a
 pixel (tag strip mirror of the game's column strip); inks follow the game's attributes at the commit (C05A).
-Not built yet (session 2): droids as hardware sprites (paint: pilot runs/quazatron/work/s1/paint2.py), smooth
-mode, the pace limiter (debt repaid from DD80), the menu, the verifier (lockstep + canvas = model), negatives.
+Session 2 (2026-11-06): the pace limiter (a debt of hook time repaid from the game's delay at DD80, t_dly; a pace
+window on each scroll move with fast scroll off), an image-keyed sprite pattern cache, a faster ink pass and paste;
+the verifier checks sprites = model at every E656, the lock at every frame, the every-site clock matrix. The menu's
+'Smooth scrolling' toggle is the fast+smooth build; 'Colour' is the main line.
 """
 import collections
 import json
@@ -36,9 +38,11 @@ SITES = {
     0xE0DF: ('cd56e6', 0xCD, 't_spr'),
     0xE1A9: ('cd38be', 0xCD, 't_bs'),
     0xE6E6: ('c32dbd', 0xC3, 't_isr'),
+    0xDD8A: ('672e00', 0xC3, 't_dly'),       # the pace limiter: the game's delay loop starts shorter by the debt
 }
 INTERIORS = (0xBE2F, 0xBE30, 0xBE83, 0xBE84, 0xBFED, 0xBFEE, 0xBFFC, 0xBFFD, 0xE10F, 0xE110, 0xE11E, 0xE11F, 0xE12D,
-             0xE12E, 0xE147, 0xE148, 0xC05B, 0xC05C, 0xB2CA, 0xB2CB, 0xB1FC, 0xB1FD, 0xB1FE, 0xE0E0, 0xE0E1, 0xE1AA, 0xE1AB, 0xE6E7, 0xE6E8)
+             0xE12E, 0xE147, 0xE148, 0xC05B, 0xC05C, 0xB2CA, 0xB2CB, 0xB1FC, 0xB1FD, 0xB1FE, 0xE0E0, 0xE0E1, 0xE1AA, 0xE1AB, 0xE6E7, 0xE6E8,
+             0xDD8B, 0xDD8C)
 
 # hook page layout (asm EQUs)
 ROLETAB = 0x4B00
@@ -263,6 +267,9 @@ def build(z80, out, name='quazatron', say=print):
 
 # --- verifier (session 1 start; session 2 completes it: clock matrix, sprites, per-frame lock, negatives) -----------
 ULAPAGE, L2PAGE, PC, SP, TS = 10, 36, 24, 12, 25
+SPOS_OFF = 0x1000          # SPOS (0xD000 at slot 6) in sprite store page S0
+GPAT_ADDR = 0x4CB0         # each group's first pattern (asm GPAT)
+SPEED_LATCHES = (0x4BC0, 0x4BE6, 0x4BE7, 0x4BF2)
 CMPV = list(range(0, 13)) + [14, 15] + list(range(16, 25))       # all but T, IFF/IM, MEMPTR; R included
 NESTED = ('t_list', 't_clr', 't_paste')                         # inside BE38: run as part of t_bs when it is the caller
 
@@ -379,7 +386,7 @@ class _OrigNS(NextState):
         self.sidx = self.aidx = self.ptr = 0
 
 
-def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None):
+def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None, clocks=0):
     """Differential test, session 1 start. Replays the original; at every site runs the original and the patched code
     from the same state to the return point and compares the registers (R included) and the game memory written
     (writes below the entry SP are dead stack); the Next side is carried. At every commit (C05A): the canvas under the
@@ -431,7 +438,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None)
         elif name in ('t_c05a', 't_isr'):
             stop_pc, stop_sp = m[sp] | m[sp + 1] << 8, sp + 2
         else:
-            stop_pc, stop_sp = {'t_sd': 0xE119, 't_su': 0xE128, 't_sl': 0xE137, 't_sr': 0xE151, 't_cls': 0xB2CC,
+            stop_pc, stop_sp = {'t_dly': 0xDD93, 't_sd': 0xE119, 't_su': 0xE128, 't_sl': 0xE137, 't_sr': 0xE151, 't_cls': 0xB2CC,
                                 't_prn': 0xB1FF}[name], sp
         if name == 't_list' and os.environ.get('QZ_TAGDEBUG') and m[0xAF17] == 8 and not c.get('dbg'):
             before = c.get('tags differ from the model!', 0)
@@ -456,6 +463,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None)
         on = _OrigNS()
         mo = _mem(get, rom, on, {})
         ro, ok_o = _run(mo, regs, on, stop_pc, stop_sp, 'qo')
+        if clocks and c['clock ' + name] < clocks:
+            clock_matrix(name, pc, get, regs, stop_pc, stop_sp)
         mp = _mem(get, alt, ns, psite)
         rp, ok_p = _run(mp, regs, ns, stop_pc, stop_sp, 'qp')
         c[name] += 1
@@ -474,6 +483,117 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None)
             check_canvas(m, mo)
         if name == 't_paste':
             check_tags(m)
+        if name == 't_spr' and ns.var(V_L2ON):
+            check_sprites(get)
+        if ns.var(V_L2ON) and name in ('t_isr', 't_spr'):      # every frame, and every update's placing
+            check_lock()
+
+    def clock_matrix(name, pc, get, regs, stop_pc, stop_sp):
+        """The every-site matrix (hooklib.every_site): this event's hook entered at 3.5, 7, 14 and 28 MHz from the same
+        state exits at the incoming clock with the same registers, game memory and Next state."""
+        import copy
+        import hashlib
+        from . import hooklib
+        out = {}
+
+        def run(site, k):
+            n2 = copy.deepcopy(ns)
+            n2.nr[7] = k
+            m2 = _mem(get, alt, n2, psite)
+            r2, ok = _run(m2, regs, n2, stop_pc, stop_sp, 'qc')
+            hp = bytearray(n2.pages[HPAGE])
+            for a in SPEED_LATCHES:             # the latched incoming clock itself (VSPD, VSPD2, GSPD, ISRSPD)
+                hp[a - 0x4000] = 0
+            h = hashlib.md5(b''.join(bytes(hp if x == HPAGE else n2.pages[x]) for x in sorted(n2.pages)) + bytes(n2.pat)
+                            + repr(sorted(m2.ov.items())).encode() + repr([r2[i] for i in CMPV]).encode()
+                            + repr(n2.attr).encode()).hexdigest()
+            return n2.nr.get(7, 0) & 3, (ok, h)
+        cc, rows = hooklib.every_site([name], run)
+        c['clock ' + name] += 1
+        c['clock matrix cases'] += cc['cases']
+        for k, v in cc.items():
+            if k.endswith('!'):
+                fail('clock matrix: %s' % k, (name, hex(pc)))
+
+    def sdxy():
+        tx, ty, dx, dy = ns.var(0x4BF3, 2), ns.var(0x4BF5), ns.var(V_DX, 2), ns.var(V_DY)
+        sx = (tx - dx) % 320
+        if sx >= 160:
+            sx -= 320
+        sy = (ty - dy) & 255
+        if sy >= 128:
+            sy -= 256
+        return sx, sy, dx, dy
+
+    def spos(g):
+        b = ns.pages[STORE_BANK * 2][SPOS_OFF + 4 * g:SPOS_OFF + 4 * g + 4]
+        return b[0] | b[1] << 8, b[2] | b[3] << 8
+
+    def check_sprites(get):
+        """At every E656: each draw record (last first) -> its groups, as p_spr makes them: the painted image
+        (sprite_store's table), the pattern bytes in the group's slot = that image, the base position = the record's."""
+        s0 = ns.pages[STORE_BANK * 2]
+        n = min(get(0xAF09), 7)
+        groups = []
+
+        def group(lst, rows, typ, x, y):
+            if len(groups) >= 21:
+                return
+            idx = lst - 0x9C00
+            if idx < 0 or idx >= 0x1400:
+                return
+            v = s0[idx >> 1]
+            if v == 255:
+                return
+            if v < 4:
+                if not 1 <= typ <= 32:
+                    return
+                v = 4 * (typ - 1) + v
+            groups.append((v, (x + 24) & 0xFFFF, ((y - 256 if y >= 200 else y) - 8 + rows) & 0xFFFF))
+        w = lambda a: get(a) | get(a + 1) << 8
+        for k in range(n - 1, -1, -1):
+            r = 0xA320 + 8 * k
+            x, y = get(r + 2) | get(r + 3) << 8, get(r + 4)
+            if get(r + 1) & 0x80:
+                group(w(w(0xAF9C)), 0, 0, x, y)
+                group(w(0xAF9E), get(0xAFA4), 0, x, y)
+                group(w(w(0xAF9A)), 0, 0, x, y)
+                group(w(w(0xDDAE)), 0, 0, x, y)
+                group(w(w(0xAFA0)), 0, 0, x, y)
+            else:
+                group(get(r + 5) | get(r + 6) << 8, 0, get(r + 7), x, y)
+        if ns.var(0x4BDE) != len(groups):
+            fail('sprite group count differs from the records!', (len(groups), ns.var(0x4BDE)))
+            return
+        for g, (img, bx, by) in enumerate(groups):
+            if spos(g) != (bx, by):
+                fail('sprite base differs from the record!', (g, spos(g), (bx, by)))
+            pat = ns.var(GPAT_ADDR + g)
+            src = ns.pages[STORE_BANK * 2 + 1 + img // 10][(img % 10) * 768:(img % 10) * 768 + 768]
+            if bytes(ns.pat[pat * 256:pat * 256 + 768]) != bytes(src):
+                fail('sprite pattern is not the painted image!', (g, img, pat))
+            else:
+                c['sprite groups equal to the model'] += 1
+        c['sprite checks (E656)'] += 1
+
+    def check_lock():
+        """At every frame (each ISR) and update: the scroll registers show the shown origin (DX, DY); every group's
+        3 sprites sit at its base + (TX - DX, TY - DY): locked to the scenery the canvas shows. Off mode: no offset."""
+        sx, sy, dx, dy = sdxy()
+        if not patch.smooth and (sx or sy):
+            fail('off mode: the shown origin is not the committed one!', (sx, sy))
+        if (ns.nr.get(0x16, 0) | (ns.nr.get(0x71, 0) & 1) << 8) != (dx - 32) % 320 or ns.nr.get(0x17, 0) != (dy - 32) & 255:
+            fail('Layer 2 scroll is not the shown origin!', (ns.nr.get(0x16), ns.nr.get(0x71), ns.nr.get(0x17), dx, dy))
+        for g in range(ns.var(0x4BDF)):
+            bx, by = spos(g)
+            for i in range(3):
+                a = ns.attr[3 * g + i]
+                X = a[0] | (a[2] & 1) << 8
+                Y = a[1] | (a[4] & 1) << 8
+                if X != (bx + sx) & 0x1FF or Y != (by + sy + 16 * i) & 0x1FF or a[3] != 0xC0 | (ns.var(GPAT_ADDR + g) + i):
+                    fail('sprite not locked to the scenery!', (g, i, X, Y, (bx + sx) & 0x1FF, (by + sy + 16 * i) & 0x1FF))
+                    return
+        c['frames locked (sprites + scroll = shown origin)'] += 1
 
     def check_tags(m, after_list=False):
         rows, sh, pg = m[0xAF17], model.sh, ns.pages[HPAGE]
