@@ -930,21 +930,20 @@ Grouped by question; add a new lesson to its group.
   all held the same MD5s). Keep one source (the record) and generate the rest.
 
 ## 2.6 Process / tokens (this sandbox)
-- Shallow clones (`git clone --depth 1`) fetch only the default branch: a work branch pushed from one
-  has no remote-tracking ref, so `git status` shows no upstream and the stop hook keeps reporting
-  "no remote branch". Fix: `git config --add remote.origin.fetch +refs/heads/B:refs/remotes/origin/B`,
+- Shallow clones fetch only the default branch; a pushed work branch may lack its tracking ref,
+  leaving `git status` without an upstream and the stop hook reporting "no remote branch".
+  Fix: `git config --add remote.origin.fetch +refs/heads/B:refs/remotes/origin/B`,
   `git fetch origin B`, `git branch -u origin/B` (Nemesis 2026-11-02).
-- Detached jobs need their OWN session to survive a turn/shell ending:
-  `setsid nohup sh -c 'cd DIR && a; b' > log 2>&1 < /dev/null &`, then poll inside the turn. Plain
-  `nohup cmd &` and `( a; b ) &` can die silently (Midnight Resistance: two verifies lost).
-  Check `ps -eo pid,sid,args`: SID must equal PID. On 1-2 CPUs: `--jobs 2` max; one long job at a time.
-  A heredoc-fed `python -` must not also get `< /dev/null`: the last input redirect wins and
-  the script never runs. Use a file or module CLI before detaching.
-- `$!` after `setsid nohup job &` is the wrapper's PID, not the job's (setsid forks): a `until ! kill -0 $!`
-  wait ends at once and looks like a finished run (Jetpac check, 2026-11-03). Read the job's PID from
-  `ps -eo pid,sid,args` (or wait on the log's last line) before waiting on it.
-- Start the job on its own: in `a && b && setsid nohup job &` the `&` backgrounds the WHOLE chain,
-  so a failed `a` silently skips the job and its output is lost.
+- Background jobs need their OWN session to survive a turn/shell reset:
+  `setsid nohup sh -c 'cd DIR && a; b' > log 2>&1 < /dev/null &`; poll inside the turn.
+  Plain `nohup cmd &` and `( a; b ) &` died silently twice during Midnight Resistance verification.
+  Check `ps -eo pid,sid,args`: the job's SID must equal its PID. On 1-2 CPUs use at most `--jobs 2`,
+  one long job at a time. A heredoc-fed `python -` cannot also use `< /dev/null`: the last redirect
+  wins and the script never runs. Use a file or module CLI before detaching.
+- `setsid` forks, so `$!` can be the wrapper PID: waiting on it ends early (Jetpac, 2026-11-03).
+  Read the job PID from `ps -eo pid,sid,args`, or wait for the log's final result.
+- Start the job separately: `a && b && setsid nohup job &` backgrounds the WHOLE chain;
+  a failed `a` silently skips the job and loses its output.
 - A single tool call is capped at 10 minutes: poll a background job with ONE call per ~9 minutes,
   `sleep 540; tail -3 LOG` with the call's timeout raised to 10 minutes (the default is 2: a plain
   call is killed mid-sleep); where calls are capped lower, sleep just under the cap (Chuckie Egg RELEASE run ~15 min: verify 8626 frames ~5 min, unit tests

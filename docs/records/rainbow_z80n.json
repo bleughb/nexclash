@@ -281,5 +281,88 @@
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-05"
- }
+ },
+ "experimental_reworks": [
+  {
+   "name": "sky_dma",
+   "version": "0.1-experimental",
+   "module": "nexclash.rainbow_dma",
+   "base_rework": "sky",
+   "doc": "rainbow_dma.md",
+   "automatic_selftest": false,
+   "note": "Explicit experimental game-build command; prior outputs, rework recipes and verification stamps remain pinned. No new full-game or hardware stamp. Exact run scope is in docs/benchmarks/rainbow_dma_v01.json.",
+   "build_command": "python -m nexclash.rainbow_dma build --snapshot SNAPSHOT --out OUT",
+   "policies": {
+    "blitter": [],
+    "no_blitter": [
+     "--no-blitter"
+    ],
+    "cpu_only": [
+     "--cpu-only"
+    ],
+    "blitter_diag": [
+     "--diagnostic"
+    ]
+   },
+   "verify_command": "python -m nexclash.rainbow_dma verify --rzx RECORDING --frames N --report REPORT",
+   "inputs": "inputs and rework[name=sky].inputs above",
+   "data": [
+    "asm/rainbow_dma_hooks.asm",
+    "asm/lib/hlib_dma.asm",
+    "docs/profiles/rainbow_dma.json"
+   ],
+   "modules": [
+    "nexclash/rainbow_dma.py",
+    "nexclash/rainbow_dma_check.py",
+    "nexclash/rainbow_z80n_sky.py",
+    "nexclash/dma.py",
+    "nexclash/nextboot.py"
+   ],
+   "outputs": [
+    {
+     "file": "rainbow_sky_dma_v01_blitter.nex",
+     "sha256": "9e041148906e23c5443dd4abfd7c8e71c5654c88ed7a7f896997ad97c6b0af23",
+     "md5": "b7c96a5ec9d6bbf764ba4c24dd986158",
+     "bytes": 213504,
+     "policy": "blitter",
+     "experimental_version": "0.1",
+     "sky": true,
+     "boot_check": "PASS, including loading-screen wrapper and pulse-mode entry"
+    },
+    {
+     "file": "rainbow_sky_dma_v01_no_blitter.nex",
+     "sha256": "ae534b561e3942cef52e939f0632ef109998db8f2a70ad6d7d7c44484c7130bb",
+     "md5": "ed439dadd141fb385b2de71e81fbcf66",
+     "bytes": 213504,
+     "policy": "no_blitter",
+     "experimental_version": "0.1",
+     "sky": true,
+     "boot_check": "PASS, including loading-screen wrapper and pulse-mode entry"
+    },
+    {
+     "file": "rainbow_sky_dma_v01_cpu_only.nex",
+     "sha256": "d59f014d0c52b70f4e5a05813d8c24e5ded1bad307406e1730892bf0e3a18e6b",
+     "md5": "a92c2c1ee8583c982d40be1914be3791",
+     "bytes": 213504,
+     "policy": "cpu_only",
+     "experimental_version": "0.1",
+     "sky": true,
+     "boot_check": "PASS, including loading-screen wrapper and pulse-mode entry"
+    },
+    {
+     "file": "rainbow_sky_dma_v01_blitter_diag.nex",
+     "sha256": "a849bcf85c031fc0dfb5fd8dd532267d56f7ec9624aa8cc6464b3ece2f0acdc0",
+     "md5": "658a2647c74956a5d8652d4555b9050b",
+     "bytes": 213504,
+     "policy": "blitter",
+     "experimental_version": "0.1",
+     "sky": true,
+     "boot_check": "PASS, including loading-screen wrapper and pulse-mode entry"
+    }
+   ],
+   "hardware": "untested",
+   "validation_report": "docs/benchmarks/rainbow_dma_v01.json",
+   "software_scope": "Actual sky game rework. One complete supplied recording; other routes/LeeBee sampled. No full playthrough or hardware stamp."
+  }
+ ]
 }

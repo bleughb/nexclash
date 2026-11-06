@@ -383,6 +383,10 @@ def boot(nex, pc_stop, limit=5_000_000, nexload=False, sysrom=None):
     checks expect; check() and rom_paths() pass system_rom3(), NextZXOS's when given; pass a different
     ROM to prove an image does not depend on it, BRIEFING C2 #5)."""
     banks, sp, pc = load_nex(nex)
+    with open(nex, 'rb') as f:
+        entry_bank = f.read(512)[139]  # NEX entry bank; loading wrappers may use bank 32
+    if entry_bank not in banks:
+        raise ValueError('NEX entry bank %d is not present' % entry_bank)
     pages = {}
     for b, data in banks.items():
         pages[2 * b] = bytearray(data[0:8192])
@@ -391,7 +395,7 @@ def boot(nex, pc_stop, limit=5_000_000, nexload=False, sysrom=None):
         pages[10][0x1B00:0x1C00] = NEXLOAD_PRINTER
     rom = sysrom if sysrom is not None else rom48()
     others = system_roms()                     # NextZXOS's ROMs 0-2 when the 64K file is given
-    st = {'mmu': [0xFF, 0xFF, 10, 11, 4, 5, 20, 21], 'nr': {0x8C: 0, 0x08: 0}, 'p7ffd': 0x00, 'p1ffd': 0,
+    st = {'mmu': [0xFF, 0xFF, 10, 11, 4, 5, 2 * entry_bank, 2 * entry_bank + 1], 'nr': {0x8C: 0, 0x08: 0}, 'p7ffd': 0x00, 'p1ffd': 0,
           'alt': [bytearray(16384), bytearray(16384)], 'bad': [], 'sel': 0, 'ports': {}, 'nrlog': []}
 
     def page(n):
@@ -550,6 +554,7 @@ def selfcheck():
     hdr[0:8] = b'NextV1.2'
     hdr[12:16] = bytes((0xF0, 0xBF, 0x00, 0xC0))             # SP 0xBFF0, PC 0xC000
     hdr[18 + 10] = 1
+    hdr[139] = 10
     fd, nex = tempfile.mkstemp(suffix='.nex')
     os.write(fd, bytes(hdr) + code + bytes(16384 - len(code)))
     os.close(fd)
