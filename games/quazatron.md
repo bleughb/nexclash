@@ -147,3 +147,10 @@ ends. Neither asks for a value.
   ports; SPOS through slot 0. Interrupts in the alt ROM still skip it (about 1 frame in 1,000).
 - Edge: c_pre steps per axis when the player moves that way (AF90 / AF91: screen x with dx + dy, y with dy - dx) and has
   passed the centre, so the game's view leads the camera; a canvas-area clamp holds the camera at deck starts.
+
+## Session 6 (2026-11-06): interrupts, camera filter
+- Missed ULA interrupts (also in v1.0, about 2% on a walk): `LD A,I` read during an interrupt's acceptance gives IFF2 0
+  and `RET PO` then left interrupts off (now read twice); mvtick's DI covered its whole poll (now only the update);
+  the pace waits' polls held interrupts off most of the time (now 256 DJNZ with them on after each). About 0.4% remain.
+- Centred view's camera is a velocity filter (page 27 `filt`; `CamModel` in the verifier is the same arithmetic):
+  steady px a frame while walking, no overshoot past the player when he stops, about 6 frames behind.

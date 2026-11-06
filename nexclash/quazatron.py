@@ -62,7 +62,62 @@ C_PRE = int(json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__
                              # c_pre (pure Z80) in the alt ROM image, ending at 0x3D00; the reference game has it there too
 GPAGE = 27                   # session 5: the frame step's page (bank 13 upper half), at slot 7 only inside isr_step
 PG27 = {'PDXI': 0xFF05, 'PDY': 0xFF07, 'VX': 0xFF09, 'VY': 0xFF0B, 'LOX': 0xFF10, 'HIX': 0xFF11, 'LOY': 0xFF12,
-        'HIY': 0xFF13, 'UU': 0xFF02, 'LEFT': 0xFF03, 'PDXF': 0xFF04}
+        'HIY': 0xFF13, 'UU': 0xFF02, 'LEFT': 0xFF03, 'PDXF': 0xFF04, 'FRESH': 0x4CF5}
+FK, FD = 8, 8                # session 6: the camera filter: updates held, frames behind the newest (asm FK, FD)
+
+
+class CamModel:
+    """Session 6: the camera filter in the same integer arithmetic as page 27 (asm freset / hpush / filt), for the
+    verifier. Per axis (x mod 320, y mod 256): VE = trunc(256 x the distance over the last FK updates / their frames)
+    (0 over 255 frames; x distance held to +-127); target offset = VE x (frames since the newest - FD) while that is
+    negative; err = the newest - PC (8.8) + the offset; V += ((VE + (err >> 4)) - V) >> 3; PC += V. A new update 65+ px
+    or lines from PC on either axis, or a view's first copy, starts again at the player."""
+    def __init__(self):
+        self.fc = 0; self.hist = []; self.px = self.py = 0; self.vx = self.vy = 0     # px: 1/256 px (x mod 320 x 256)
+
+    @staticmethod
+    def tdiv(n, d):
+        q = abs(n) // d
+        return q if n >= 0 else -q
+
+    def reset(self, x, y):
+        self.hist = [(self.fc, x, y)]; self.px = x * 256; self.py = y * 256; self.vx = self.vy = 0
+
+    def update(self, x, y):
+        n320 = lambda v: (v + 160) % 320 - 160
+        s8 = lambda v: (v + 128) % 256 - 128
+        if abs(n320(x - (self.px >> 8))) >= 65 or abs(s8(y - (self.py >> 8))) >= 65:
+            self.reset(x, y)
+        else:
+            self.hist = (self.hist + [(self.fc, x, y)])[-FK:]
+
+    def frame(self):
+        if len(self.hist) < 2:
+            return
+        n320 = lambda v: (v + 160) % 320 - 160
+        s8 = lambda v: (v + 128) % 256 - 128
+        (t0, x0, y0), (t1, x1, y1) = self.hist[0], self.hist[-1]
+        dt = t1 - t0
+        n = self.fc - t1 - FD
+        for ax in 'xy':
+            if ax == 'x':
+                dp = max(-127, min(127, n320(x1 - x0))); pc, v, p1, mod = self.px, self.vx, x1, 320
+                gap = n320(p1 - (pc >> 8))
+            else:
+                dp = s8(y1 - y0); pc, v, p1, mod = self.py, self.vy, y1, 256
+                gap = s8(p1 - (pc >> 8))
+            ve = self.tdiv(dp * 256, dt) if dt <= 255 else 0
+            ve = (ve + 32768) % 65536 - 32768
+            off = ve * n if n < 0 else 0
+            err = gap * 256 - (pc & 255) + off
+            v = v + (((ve + (err >> 4)) - v) >> 3)
+            v = (v + 32768) % 65536 - 32768
+            pc = (pc + v) % (mod * 256)
+            if ax == 'x':
+                self.px, self.vx = pc, v
+            else:
+                self.py, self.vy = pc, v
+
 # session 4, Centred view: CALL D5BB at E0DC -> CALL c_pre; LD A,(AF94) at E1B3 -> JP E1EC (the edge bursts never start)
 CENTRE_SITES = ((0xE0DC, bytes.fromhex('cdbbd5'), bytes([0xCD, C_PRE & 255, C_PRE >> 8])),
                 (0xE1B3, bytes.fromhex('3a94af'), bytes.fromhex('c3ece1')))
@@ -542,6 +597,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
             check_tags(m)
         if name == 't_spr' and ns.var(V_L2ON):
             check_sprites(get)
+        if centre and ns.var(0x4CF5):        # session 6: FRESH set (a view's first copy): the model starts again
+            sm['fresh'] = True
         if ns.var(V_L2ON) and name in ('t_isr', 't_spr'):      # every frame, and every update's placing
             check_lock()
             if centre:      # (an interrupt in a ROM trampoline or c_pre runs no frame step: .rom path)
@@ -645,7 +702,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
                 c['sprite groups equal to the model'] += 1
         c['sprite checks (E656)'] += 1
 
-    lk = {'pg0': 0, 'pg1': 0, 'stx': 32, 'sty': 32, 'psx': 0, 'psy': 0}
+    lk = {'pg0': 0, 'pg1': 0, 'stx': 0, 'sty': 0, 'psx': 0, 'psy': 0}
     sm = {'prev': None, 'seg': None, 'frames': 0}
 
     def pg27(name, n=1):
@@ -656,9 +713,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
     def check_smooth(on_frame):
         if not on_frame:
             return
-        """Session 5, Centred view, at every frame: (1) the player's shown position moves linearly between updates:
-        each frame by V = (the last update's player - where it was shown) x 256 / (the frames between the last two
-        updates + 1), computed here from the records, the frame count and the hook's own start point; (2) while the
+        """Centred view, at every frame: (1, session 6) the shown player equals this verifier's own run of the camera
+        filter (CamModel) on the game's updates and the frame count; (2) while the
         camera is free (its target inside the canvas area it holds) the player sits at (128, 88) on the screen to the
         pixel; plus the per-frame camera move and the player's screen position, as statistics."""
         dx, dy = ns.var(V_DX, 2), ns.var(V_DY)
@@ -680,37 +736,21 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
                 c['centre: frames with the camera free, the player at (128, 88)'] += 1
             mvx, mvy = n320(dx - p['dx']), s8(dy - p['dy'])
             c['centre: camera move a frame |dx|+|dy| = %d' % min(abs(mvx) + abs(mvy), 9)] += 1
-            # the interpolation: the expected speed from this verifier's own count
-            if pg27('LEFT') and p['left'] == pg27('LEFT') + 1 and p['stamp'] == ns.var(0x4CC9):
-                vx = (pdx * 256 + pg27('PDXF')) - (p['pdx'] * 256 + p['pdxf'])
-                vx = (vx + 160 * 256) % (320 * 256) - 160 * 256
-                vy = s8((pdy - p['pdy']) >> 8) * 256 + ((pdy - p['pdy']) & 255) if False else ((pdy - p['pdy'] + 32768) % 65536 - 32768)
-                if sm['seg'] and (vx, vy) != sm['seg']:
-                    fail('centre: the shown player does not move at the interval\'s speed!', ((vx, vy), sm['seg']))
-                else:
-                    c['centre: frames on a linear segment'] += 1
-            if p['stamp'] != ns.var(0x4CC9):     # a new update this frame: U from this verifier's own frame count
-                sm['ih'] = sm.get('ih', [0, 0, 0, 0])[1:] + [min(sm['frames'], 16)]
-            if p['stamp'] != ns.var(0x4CC9) and not pg27('LEFT'):
-                pnx = (lk['stx'] + lk['psx']) % 320
-                if 1 < abs(n320(pnx - p['pdx'])) < 65:
-                    fail('centre: the shown player jumped to the update\'s player (no interpolation)!', (pnx, p['pdx']))
-            if p['stamp'] != ns.var(0x4CC9) and pg27('LEFT'):     # the segment's speed
-                u = (sum(sm['ih']) >> 2) + 2
-                pnx, pny = (lk['stx'] + lk['psx']) % 320, (lk['sty'] + lk['psy']) & 255
-                d = n320(pnx - p['pdx'])
-                if abs(d) < 65:
-                    def q(v):
-                        r = abs(v) // u
-                        return r if v >= 0 else -r
-                    ex = q(d * 256 - p['pdxf'])
-                    ey = q(s8(pny - (p['pdy'] >> 8)) * 256 - (p['pdy'] & 255))
-                    if (pg27('VX', 2), pg27('VY', 2)) != (ex & 0xFFFF, ey & 0xFFFF):
-                        fail('centre: the segment speed differs from the interval model!', ((ex, ey), pg27('VX', 2), pg27('VY', 2), u))
-                    sm['seg'] = ((ex + 32768) % 65536 - 32768, (ey + 32768) % 65536 - 32768)
-                    c['centre: segments checked'] += 1
-                sm['frames'] = 0
-            sm['frames'] += 1
+            c['centre: frames checked against the filter model'] += 1
+        # session 6: the camera filter, run here in the same integer arithmetic (CamModel) and compared every frame
+        cm_ = sm.setdefault('cm', CamModel())
+        if sm.get('fresh'):                 # a view's first copy: start again (no count, no update this frame)
+            cm_.reset((lk['stx'] + lk['psx']) % 320, (lk['sty'] + lk['psy']) & 255)
+            sm['fresh'] = False
+        else:
+            cm_.fc += 1
+            if sm.get('stampl', 0) != ns.var(0x4CC9):
+                sm['stampl'] = ns.var(0x4CC9)
+                cm_.update((lk['stx'] + lk['psx']) % 320, (lk['sty'] + lk['psy']) & 255)
+        cm_.frame()
+        if (pdx * 256 + pg27('PDXF'), pdy) != (cm_.px, cm_.py):
+            fail('centre: the shown player differs from the filter model!', ((pdx, pg27('PDXF'), pdy), (cm_.px, cm_.py)))
+            cm_.px, cm_.py = pdx * 256 + pg27('PDXF'), pdy        # follow the hook from here (one report per divergence)
         sm['prev'] = dict(dx=dx, dy=dy, pdx=pdx, pdy=pdy, pdxf=pg27('PDXF'), left=pg27('LEFT'), stamp=ns.var(0x4CC9),
                           freex=freex, freey=freey)
         c['centre: player screen x %+d' % max(-9, min(9, scx - 128))] += 0

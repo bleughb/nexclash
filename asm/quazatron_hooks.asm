@@ -1264,7 +1264,8 @@ put3:   push de
 
 ; qline: HL = the video line (0-311), the reads with interrupts held off (then put back as they were: inside the ISR
 ; they stay off); NR 7 is selected again after (HLIB_SPEED_IN reads it). AF, BC lost.
-qline:  ld a,i
+qline:  ld a,i                  ; (session 6: read twice: an interrupt taken during the first LD A,I makes it read
+        ld a,i                  ; IFF2 as 0, and RET PO would then leave interrupts off: the next one was missed)
         di
         push af
         ld bc,0x243B
@@ -1583,10 +1584,11 @@ mv_out: ld a,(VFAST)
 ; (which moves DST) cannot fall between. The line counter still for 256 polls: MVE is forced past any target (an
 ; emulator without one). AF, DE, HL lost.
 mvtick: ld a,i
-        di
+        ld a,i
         push af
         push bc
-        call qline
+        call qline              ; (session 6: its own short DI; the update below is the only other one: a long DI
+        di                      ; window made the ULA's interrupt fall wholly inside it)
         ld de,(MVL)
         ld (MVL),hl
         or a
@@ -1612,7 +1614,11 @@ mvtick: ld a,i
 .z:     pop bc
         pop af
         ret po
-        ei
+        ei                      ; session 6: interrupts then stay on for about 120 us (256 DJNZ at 28 MHz, half a line)
+        push bc                 ; before the caller's next poll holds them off again: the wait loops of polls (fw_wait,
+        ld b,0                  ; mv_out) held them off most of the time, and the ULA's interrupt, sampled inside such
+.e:     djnz .e                 ; a window, was missed about once a second (v1.0 too)
+        pop bc
         ret
 
 ; slot_of: the pattern slot for image GIMG: -> A = its first pattern (3 x slot), Z when the slot holds it already
@@ -2431,8 +2437,8 @@ cam:    ld a,(FRESH)
         ld a,(TY)
         ld (LTY),a
         call pnew
-        call psnap
-        jr .c3
+        call freset
+        jr .fr
 .c1:    ld hl,(TX)              ; a step's commit: the area grows by the new view (canvas 320 x 256: at most 64 px /
         ld de,(LTX)             ; 104 lines more than the view)
         or a
@@ -2455,93 +2461,35 @@ cam:    ld a,(FRESH)
         ld hl,LOY
         ld c,104
         call vupd
-.c3:    ld a,(STAMP)            ; a new update: Pd heads for its player
+.c3:    ld hl,(FCW)             ; session 6: the frame count, then a new update's player into the history
+        inc hl
+        ld (FCW),hl
+        ld a,(STAMP)
         ld hl,STAMPL
         cp (hl)
-        jr z,.u1
+        jr z,.fr
         ld (hl),a
-        ld a,(FCNT)             ; U = the mean of the last 4 intervals + 2 frames: the game's intervals vary (4, 5, a
-        cp 17                   ; long step update, a short one after it); the camera rides over them without a stop
-        jr c,.u2
-        ld a,16
-.u2:    ld hl,IH + 1
-        ld de,IH
-        ld bc,3
-        ldir
-        ld (de),a
-        ld hl,IH
-        add a,(hl)
-        inc hl
-        add a,(hl)
-        inc hl
-        add a,(hl)
-        srl a
-        srl a
-        add a,2
-.u3:    ld (UU),a
-        ld (LEFT),a
-        xor a
-        ld (FCNT),a
         call pnew
-        ld hl,(PNX)             ; x: D = Pn - Pd (normalised), then V = (D x 256 - fraction) / U
+        ld hl,(PNX)             ; a jump of 65+ px or lines (a new place, not a walk): start again at the player
         ld de,(PDXI)
         or a
         sbc hl,de
         call n320
         call far
-        jr c,.ux
-        call psnap              ; more than 64 px or lines: a jump (a new place), not a walk
-        jr .u1
-.ux:    ld h,l
-        ld l,0
-        ld a,(PDXF)
-        ld e,a
-        ld d,0
-        or a
-        sbc hl,de
-        call sdiv
-        ld (VX),hl
-        ld a,(PNY)              ; y: the same in 8 bits
+        jr nc,.rs
+        ld a,(PNY)
         ld hl,PDY + 1
         sub (hl)
+        ld l,a
+        rla
+        sbc a,a
         ld h,a
-        ld l,0
-        ld a,(PDY)
-        ld e,a
-        ld d,0
-        or a
-        sbc hl,de
-        call sdiv
-        ld (VY),hl
-.u1:    ld hl,FCNT
-        inc (hl)
-        jr nz,.a0
-        dec (hl)
-.a0:    ld a,(LEFT)             ; Pd one frame on
-        or a
-        jr z,.cam
-        dec a
-        ld (LEFT),a
-        jr nz,.a1
-        call psnap              ; the interval's end: exactly the target
-        jr .cam
-.a1:    ld hl,(VX)
-        ld a,(PDXF)
-        add a,l
-        ld (PDXF),a
-        ld e,h
-        ld d,0
-        bit 7,h
-        jr z,.a2
-        dec d
-.a2:    ld hl,(PDXI)
-        adc hl,de
-        call w320
-        ld (PDXI),hl
-        ld hl,(PDY)
-        ld de,(VY)
-        add hl,de
-        ld (PDY),hl
+        call far
+        jr nc,.rs
+        call hpush
+        jr .fr
+.rs:    call freset
+.fr:    call filt
 .cam:   ld hl,(PDXI)            ; x: the target origin = Pd - 128, held inside LOX..HIX of TX
         ld de,128
         or a
@@ -2716,6 +2664,257 @@ ispl:   push bc
 .no:    xor a
 .x:     ld a,c
         pop bc
+        ret
+
+; session 6: the camera filter (work/s6/camint.py is the same arithmetic, and the verifier runs it): the shown player PC
+; (PDXI.PDXF, PDY) moves at a velocity V that eases (1/8 a frame) toward the player's mean velocity over the last 8
+; updates (VE = distance / frames) plus a pull (1/16 of the gap a frame) toward the newest player as he was D frames
+; ago on that line, never past him. Steady walking: a constant px a frame; a stop: no overshoot past where he stopped.
+FK      EQU 8
+FD      EQU 8
+; freset: the history = the player now; PC = him, V = 0. AF, BC, DE, HL lost.
+freset: ld a,1
+        ld (HN),a
+        ld hl,(FCW)
+        ld (HT),hl
+        ld hl,(PNX)
+        ld (HSX),hl
+        ld a,(PNY)
+        ld (HSY),a
+        call psnap
+        ld hl,0
+        ld (VX),hl
+        ld (VY),hl
+        ret
+; hpush: the player (PNX, PNY) at frame FCW into the history (the oldest out when 8 are held). AF, BC, DE, HL lost.
+hpush:  ld a,(HN)
+        cp FK
+        jr c,.n
+        ld hl,HT + 2
+        ld de,HT
+        ld bc,2 * FK - 2
+        ldir
+        ld hl,HSX + 2
+        ld de,HSX
+        ld bc,2 * FK - 2
+        ldir
+        ld hl,HSY + 1
+        ld de,HSY
+        ld bc,FK - 1
+        ldir
+        jr .s
+.n:     inc a
+        ld (HN),a
+.s:     ld a,(HN)
+        dec a
+        ld e,a
+        ld d,0
+        ld hl,HSY
+        add hl,de
+        ld a,(PNY)
+        ld (hl),a
+        ex de,hl
+        add hl,hl
+        push hl
+        ld de,HT
+        add hl,de
+        ld de,(FCW)
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        pop hl
+        ld de,HSX
+        add hl,de
+        ld de,(PNX)
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        ret
+; filt: one frame of the filter (nothing with fewer than 2 updates held). AF, BC, DE, HL lost.
+filt:   ld a,(HN)
+        cp 2
+        ret c
+        dec a
+        ld l,a
+        ld h,0
+        ld de,HSY
+        add hl,de
+        ld a,(hl)
+        ld (P1Y),a
+        ld a,(HN)
+        dec a
+        ld l,a
+        ld h,0
+        add hl,hl
+        push hl
+        ld de,HSX
+        add hl,de
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ld (P1X),de
+        pop hl
+        ld de,HT
+        add hl,de
+        ld e,(hl)
+        inc hl
+        ld d,(hl)               ; DE = t1
+        ld hl,(FCW)
+        or a
+        sbc hl,de
+        push de
+        ld de,-FD
+        add hl,de
+        ld (FN),hl              ; n = frames since the newest - D
+        pop de
+        ld hl,(HT)
+        ex de,hl
+        or a
+        sbc hl,de               ; t1 - t0
+        ld a,h
+        or a
+        jr z,.d1
+        xor a                   ; over 255 frames: no velocity
+        jr .d2
+.d1:    ld a,l
+.d2:    ld (UU),a
+        ; x
+        ld hl,(P1X)
+        ld de,(HSX)
+        or a
+        sbc hl,de
+        call n320
+        call c127
+        ld h,l
+        ld l,0
+        call vest
+        ld (VEX),hl
+        call voff               ; DE = the offset along the line
+        push de
+        ld hl,(P1X)
+        ld de,(PDXI)
+        or a
+        sbc hl,de
+        call n320
+        ld h,l
+        ld l,0
+        ld a,(PDXF)
+        ld e,a
+        ld d,0
+        or a
+        sbc hl,de
+        pop de
+        add hl,de               ; err
+        ld de,(VEX)
+        ld bc,VX
+        call vnext              ; HL = V
+        ld a,(PDXF)
+        add a,l
+        ld (PDXF),a
+        ld e,h
+        ld d,0
+        bit 7,h
+        jr z,.x2
+        dec d
+.x2:    ld hl,(PDXI)
+        adc hl,de
+        call w320
+        ld (PDXI),hl
+        ; y
+        ld a,(P1Y)
+        ld hl,HSY
+        sub (hl)
+        ld h,a
+        ld l,0
+        call vest
+        ld (VEY),hl
+        call voff
+        push de
+        ld a,(P1Y)
+        ld hl,PDY + 1
+        sub (hl)
+        ld h,a
+        ld l,0
+        ld a,(PDY)
+        ld e,a
+        ld d,0
+        or a
+        sbc hl,de
+        pop de
+        add hl,de
+        ld de,(VEY)
+        ld bc,VY
+        call vnext
+        ld de,(PDY)
+        add hl,de
+        ld (PDY),hl
+        ret
+; c127: HL signed -> L = HL held to -127..127. AF lost.
+c127:   bit 7,h
+        jr nz,.n
+        ld a,h
+        or a
+        jr nz,.p
+        bit 7,l
+        ret z
+.p:     ld l,127
+        ret
+.n:     ld a,h
+        inc a
+        jr nz,.m
+        bit 7,l
+        ret nz
+.m:     ld l,-127
+        ret
+; vest: HL = distance x 256 (signed) -> HL = VE = it / UU (the frames; 0: VE = 0), toward zero. AF, BC, DE lost.
+vest:   ld a,(UU)
+        or a
+        jp nz,sdiv
+        ld hl,0
+        ret
+; voff: HL = VE -> DE = VE x n when n = FN < 0 (behind the newest on its line), else 0. AF, BC, HL lost.
+voff:   ld de,0
+        ld a,(FN + 1)
+        bit 7,a
+        ret z
+        ld a,(FN)
+        neg                     ; -n: 1..D
+        ld b,a
+.l:     ex de,hl
+        or a
+        sbc hl,de               ; DE - HL ... (DE - VE)
+        ex de,hl
+        djnz .l
+        ret
+; vnext: HL = err (8.8), DE = VE, BC -> V: V += ((VE + err >> 4) - V) >> 3; -> HL = the new V. AF, DE lost.
+vnext:  sra h
+        rr l
+        sra h
+        rr l
+        sra h
+        rr l
+        sra h
+        rr l
+        add hl,de               ; desired
+        ld a,(bc)
+        ld e,a
+        inc bc
+        ld a,(bc)
+        ld d,a                  ; DE = V
+        or a
+        sbc hl,de               ; desired - V
+        sra h
+        rr l
+        sra h
+        rr l
+        sra h
+        rr l
+        add hl,de               ; V + that
+        ld a,h
+        ld (bc),a
+        dec bc
+        ld a,l
+        ld (bc),a
         ret
 
 ; pnew: PNX = STX + PSX (mod 320), PNY = STY + PSY: the player of the last update on the canvas. AF, DE, HL lost.
@@ -2912,7 +3111,17 @@ HIY:    DB 0
 LTX:    DW 0
 LTY:    DB 0
 SOFF:   DW 0
-IH:     DB 0, 0, 0, 0           ; the last 4 update intervals (frames)
+IH:     DB 0, 0, 0, 0           ; (session 5, unused)
+FCW:    DW 0                    ; session 6: frames counted by the frame step
+HN:     DB 0                    ; updates held in the history (1-8)
+HT:     DS 16                   ; their frame counts (oldest first)
+HSX:     DS 16                   ; the player's x (canvas, 0-319)
+HSY:     DS 8                    ; his y (canvas line)
+P1X:    DW 0
+P1Y:    DB 0
+FN:     DW 0
+VEX:    DW 0
+VEY:    DW 0
 GPAGE_END:
         SAVEBIN "quazatron_page2.bin",0xE000,GPAGE_END-0xE000
 
