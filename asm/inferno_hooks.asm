@@ -2959,12 +2959,21 @@ job_bitmap_done:
         jp nz,job_row
         jp job_bad
 ; Exact-hit walker: inline byte comparisons; capture retains its original path.
-; Bounds remain checked before EVERY serialized byte and bitmap span.
+; Header/width are bounded individually; each nonempty row bounds its complete
+; live record and serialized payload before any unchecked row-byte comparison.
         MACRO JOB_EXACT_BYTE
         ld c,a
         ld a,d
         cp 0x40
         jp nc,job_bad
+        ld a,(de)
+        cp c
+        jp nz,job_miss
+        ld a,c
+        inc de
+        ENDM
+        MACRO JOB_EXACT_ROW_BYTE
+        ld c,a
         ld a,(de)
         cp c
         jp nz,job_miss
@@ -3003,19 +3012,45 @@ job_exact_row:
         cp 129
         jp nc,job_bad
         ld (J_LEFT),a
-        call job_address
+        ; Stream row remainder: dx,dy plus width * (ID,bitmap[8],attribute).
+        ; Check its last byte, so an exact page-end payload remains legal.
+        push hl
+        push de
+        ld e,a
+        ld d,10
+        mul d,e
+        ld hl,1
+        add hl,de
+        pop de
+        add hl,de
+        ld a,h
+        cp 0x40
+        jp nc,job_bad
+        pop hl
+        ; Live remainder: dx,dy and width IDs; reject wrap before reading it.
+        push de
+        ld a,(J_LEFT)
+        ld e,a
+        ld d,0
+        inc de
+        ex de,hl
+        add hl,de
+        jp c,job_bad
+        ld a,h
+        cp 0x40
+        jp c,job_bad
+        ex de,hl
+        pop de
         ld a,(hl)
         inc hl
-        JOB_EXACT_BYTE
-        call job_address
+        JOB_EXACT_ROW_BYTE
         ld a,(hl)
         inc hl
-        JOB_EXACT_BYTE
+        JOB_EXACT_ROW_BYTE
 job_exact_tile:
-        call job_address
         ld a,(hl)
         inc hl
-        JOB_EXACT_BYTE
+        JOB_EXACT_ROW_BYTE
         push hl
         ld l,a
         ld a,(J_PAGE)
@@ -3026,13 +3061,7 @@ job_exact_tile:
         add hl,hl
         ld bc,0xDC00
         add hl,bc
-        push hl
-        ld hl,7
-        add hl,de
-        ld a,h
-        cp 0x40
-        jp nc,job_bad          ; whole bitmap span must fit the pinned page
-        pop hl
+job_exact_bitmap:
         DUP 8
         ld a,(de)
         cp (hl)
@@ -3045,7 +3074,7 @@ job_exact_bitmap_done:
         ld bc,0xFC00
         add hl,bc
         ld a,(hl)
-        JOB_EXACT_BYTE
+        JOB_EXACT_ROW_BYTE
         pop hl
         ld a,(J_LEFT)
         dec a

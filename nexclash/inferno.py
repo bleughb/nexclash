@@ -297,6 +297,7 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
     counts, errors, dirty_counts, shifts, graphics = Counter(), [], Counter(), Counter(), set()
     actor_cache, visible_cache = {}, set()
     actor_jobs = {}
+    update_timings = []
     loading_result = loading_store = None
     prewarm_seen,prewarm_first_use,prewarm_frame = {},[],None
     kernel = CapturePatch() if capture else None
@@ -347,7 +348,9 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
                 counts['kernel instructions'] += steps
                 if pc == 0x8F7C:
                     st['capture_cost'] = 0
+                    st['capture_components'] = Counter()
                 st['capture_cost'] = st.get('capture_cost', 0) + cost
+                st['capture_components']['capture_%04X' % pc] += cost
                 if pc in (0x959B, 0x96A1) and cost > 2000:
                     fail('capture bookkeeping budget', cost)
                 if pc == 0x8F92:
@@ -360,6 +363,10 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
                     raise AssertionError('loading initialization boundary not reached before gameplay')
                 st['pack_cost'] = st['culled_pack_cost'] = 0
                 st['fill_cost'] = st['snapshot_cost'] = 0
+                st['job_components'] = Counter()
+                st['dispatch_cost'] = 0
+                st['source_calls'] = Counter()
+                st['repeated_source_cost'] = 0
                 base = map_tiles(m)
                 dirty, shift = scenery_delta(st['previous'], base)
                 if st['previous'] is not None:
@@ -418,6 +425,7 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
                         raise AssertionError('owned high-RAM canvas differs')
                     owned_view = dict(bank=e[1],offset=int.from_bytes(e[2:4],'little'),owned=dispatched['pages'])
                     st['snapshot_cost'] += dispatched['equivalent_T']
+                    st['dispatch_cost'] += dispatched['equivalent_T']
                     counts['assembled owned candidate dispatches'] += 1
                     counts['max owned candidate dispatch equivalent T'] = max(counts['max owned candidate dispatch equivalent T'],dispatched['equivalent_T'])
                 if pack:
@@ -429,6 +437,10 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
                         raise AssertionError('assembled source snapshot differs from original live draw')
                     actor_jobs[identity] = {p:snapshot['pages'][p] for p in (78,122)}
                     st['snapshot_cost'] += snapshot['equivalent_T']
+                    st['job_components'].update(snapshot['cost_components_T'])
+                    if previous_job and st['source_calls'][snapshot['stream']]:
+                        st['repeated_source_cost'] += snapshot['equivalent_T']
+                    st['source_calls'][snapshot['stream']] += 1
                     counts['assembled exact live job validations' if previous_job else 'assembled immutable live job captures'] += 1
                     counts['max live job call equivalent T'] = max(counts['max live job call equivalent T'],snapshot['equivalent_T'])
                     counts['max job source bytes'] = max(counts['max job source bytes'],snapshot['size'])
@@ -539,6 +551,20 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
                     counts['max post-copy frame hook equivalent T'] = max(counts['max post-copy frame hook equivalent T'], result['equivalent_T'])
                     counts['max capture plus frame hook equivalent T'] = max(counts['max capture plus frame hook equivalent T'], st['capture_cost'] + result['equivalent_T'])
                     if pack:
+                        components = dict(st['capture_components'])
+                        components.update(result['cost_components_T'])
+                        components.update({'source_'+k:v for k,v in st['job_components'].items()})
+                        components.update(candidate_dispatch=st['dispatch_cost'],
+                                          cold_colour=st['pack_cost'], cold_fill=st['fill_cost'])
+                        total = st['capture_cost']+result['equivalent_T']+st['snapshot_cost']+st['pack_cost']+st['fill_cost']
+                        if abs(sum(components.values())-total) > 1e-6:
+                            raise AssertionError('per-update timing attribution does not reconcile')
+                        update_timings.append({'update':len(update_timings), 'frame':context.frame_count,
+                                               'actors':len(st['actors']), 'total_ms':total/3500,
+                                               'distinct_source_streams':len(st['source_calls']),
+                                               'repeated_source_calls':sum(n-1 for n in st['source_calls'].values()),
+                                               'repeated_source_ms':st['repeated_source_cost']/3500,
+                                               'components_ms':{k:v/3500 for k,v in components.items()}})
                         counts['max live job tick equivalent T'] = max(
                             counts['max live job tick equivalent T'],st['snapshot_cost'])
                         counts['max capture scenery snapshot cold colour and B fill equivalent T'] = max(
@@ -633,13 +659,21 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
     if loading:
         result['loading_preparation'] = loading_result
     if pack:
+        if frame and len(update_timings) != counts['post-copy assembled frame hooks']:
+            raise AssertionError('missing per-update timing records')
+        result['update_timings'] = update_timings
+        result['timing_attribution'] = {
+            'units':'ms at modeled 28 MHz, with existing per-read allowance',
+            'method':'instruction PC ranges for source/scenery; full differential capture/frame hook costs',
+            'repeated_sources':'identical complete streams within one update; diagnostic only, every draw still validates',
+            'scope':'executed assembly CPU model; host work and physical waits are not timed'}
         result['scope'] = 'original frame preservation plus standalone assembled live-source snapshots/exact validations and pinned colour/B construction on host-model cache misses; no installed cache/scheduler/uploads/display'
         cold = counts['max capture scenery cold colour and B fill equivalent T']/3500
         result['timing_gate'] = {'target_total_added_ms':10,'cold_capture_scenery_colour_fill_max_ms':cold,
                                 'cold_with_snapshot_validation_max_ms':counts['max capture scenery snapshot cold colour and B fill equivalent T']/3500,
                                 'live_snapshot_validation_tick_max_ms':counts['max live job tick equivalent T']/3500,
                                 'status':'FAIL' if max(cold,counts['max capture scenery snapshot cold colour and B fill equivalent T']/3500) > 10 else 'UNPROVED',
-                                'excluded':'runtime scan/selection and wrappers, uploads, queue and physical waits; loading mode includes assembled candidate dispatch',
+                                'excluded':'runtime scan/selection, source/dispatch external wrappers, uploads, queue and physical waits; capture/frame hooks and loading candidate dispatch included',
                                 'hardware_proof':False}
     return result
 
@@ -1733,10 +1767,19 @@ def run_actor_job(ram, op=0, image=0, flash=0, paint=0, previous=None, code=None
     sim.set_tracer(mem)
     z80n.install(sim,mem.nextreg)
     r,steps = sim.registers,0
+    syms = {k:int(v,16) for k,v in load_profile()['hooks']['syms'].items()}
+    costs = Counter()
     while r[24] != 0x1D00:
         if steps >= 400000:
             raise AssertionError('job failed to return')
-        sim.opcodes[mem[r[24]]]()
+        pc,before,reads = r[24],r[25],mem.reads
+        sim.opcodes[mem[pc]]()
+        kind = ('capture_release' if op != 2 else
+                'bitmap_compare' if syms['job_exact_bitmap'] <= pc < syms['job_exact_bitmap_done'] else
+                'tile_address_attribute' if syms['job_exact_tile'] <= pc < syms['job_address'] else
+                'geometry_parse_compare' if syms['job_exact_walk'] <= pc < syms['job_exact_tile'] or syms['job_address'] <= pc < syms['job_complete'] else
+                'setup_finish')
+        costs[kind] += (r[25]-before+mem.reads-reads)/8
         if r[26] or mem.nr[0x07] != 3:
             raise AssertionError('job left DI/28MHz domain')
         steps += 1
@@ -1744,10 +1787,13 @@ def run_actor_job(ram, op=0, image=0, flash=0, paint=0, previous=None, code=None
         raise AssertionError('job did not restore mapping/stack/game RAM')
     state = mem.pages[78]
     size = int.from_bytes(state[0x1E89:0x1E8B],'little')
+    if sum(costs.values()) != (r[25]+mem.reads)/8:
+        raise AssertionError('source timing attribution does not reconcile')
     return {'pages':mem.pages,'active':state[0x1E85],'done':state[0x1E86],
             'error':state[0x1E87],'match':state[0x1E88],'size':size,
             'stream':bytes(mem.pages[bank][offset:offset+size]),'writes':len(mem.snapshot_writes),
-            'equivalent_T':(r[25]+mem.reads)/8,'instructions':steps}
+            'equivalent_T':(r[25]+mem.reads)/8,'instructions':steps,
+            'cost_components_T':dict(costs)}
 
 
 def actor_job_tiles(stream):
@@ -2102,6 +2148,31 @@ def actor_job_checks():
     assert run_actor_job(source,op=2,previous=edge['pages'])['match']
     peaks['capacity_exact_hit_ms'] = run_actor_job(source,op=2,previous=edge['pages'])['equivalent_T']/3500
     counts['exact 8K snapshot boundary'] += 1
+    capacity_source = source
+    # Row spans ending at the last RAM byte and stored page boundary. Relocation
+    # may wrap midway through geometry/IDs; reject it without accepting a prefix.
+    for width in (1,2,16,128):
+        body = [0,width,0,0]+[0]*width+[0]
+        source = list(ram)
+        pointer = 65536-len(body)
+        source[pointer:] = body
+        source[0xC100:0xC102] = [pointer & 255,pointer >> 8]
+        boundary = run_actor_job(source)
+        assert boundary['done'] and not boundary['error']
+        offset = 8192-boundary['size']
+        owned = {136:bytearray([0xE3]*8192)}
+        owned[136][offset:] = boundary['stream']
+        exact = run_actor_job(source,op=2,previous=boundary['pages'],bank=136,offset=offset,owned=owned)
+        assert exact['match'] and not exact['error'] and not exact['writes']
+        for shift in (1,2,3):
+            wrapped = list(source)
+            wrapped[pointer+shift:] = body[:-shift]
+            wrapped[0xC100:0xC102] = [(pointer+shift)&255,(pointer+shift)>>8]
+            miss = run_actor_job(wrapped,op=2,previous=boundary['pages'],bank=136,offset=offset,owned=owned)
+            assert not miss['match'] and not miss['writes']
+        counts['row spans at RAM/store end and wrapped relocations'] += 4
+    # Restore the capacity case after the independent row-boundary fixtures.
+    source = capacity_source
     source[0xD001] += 1
     overflow = run_actor_job(source)
     assert overflow['error'] and not overflow['done'] and not overflow['active']
@@ -3168,10 +3239,17 @@ def run_capture(patch, memory, registers, state, site, memory_class=CaptureMemor
             raise AssertionError('capture jumped into a patched instruction interior')
         # Fetching the opcode is a real memory read too; charge the extra 28MHz wait below.
         before, speed, reads = r[25], mem.speed, mem.fast_reads
+        pc, page = r[24], mem.mmu0
         opcode = mem[r[24]]
         sim.opcodes[opcode]()
         # Transition instructions charged at 3.5MHz is a conservative bound.
-        elapsed += (r[25] - before + (mem.fast_reads - reads if speed == 3 else 0)) / (8 if speed == 3 and mem.speed == 3 else 1)
+        instruction_cost = (r[25] - before + (mem.fast_reads - reads if speed == 3 else 0)) / (8 if speed == 3 and mem.speed == 3 else 1)
+        elapsed += instruction_cost
+        if hasattr(mem, 'cost_components'):
+            syms = patch.syms
+            kind = ('scenery_source_compile' if page == 69 and syms['render_textmap.tm_source'] <= pc < syms['render_textmap.tm_full'] else
+                    'scenery_map_bookkeeping' if page == 69 and pc < syms['render_textmap_end'] else 'frame_wrapper_prepare')
+            mem.cost_components[kind] += instruction_cost
         if r[26]:
             if mem.mmu0 != 255 or mem.speed != 0 or getattr(mem,'mmu1',255) != 255 or getattr(mem,'mmu2',10) != 10:
                 raise AssertionError('interrupt-enabled scratch mapping/fast beeper')
@@ -3192,6 +3270,8 @@ def run_capture(patch, memory, registers, state, site, memory_class=CaptureMemor
     if mem.pages[STATE_PAGE][:0x3F0] != state[:0x3F0]:
         raise AssertionError('capture touched loader descriptors/cursor')
     added = elapsed - (original.registers[25] - registers[25])
+    if hasattr(mem, 'cost_components'):
+        mem.cost_components['frame_wrapper_prepare'] -= original.registers[25] - registers[25]
     return mem.pages[STATE_PAGE], added, steps
 
 
@@ -3432,6 +3512,7 @@ class FrameMemory(CaptureMemory):
         self.mmu1, self.mmu2 = 255, 10
         self.nr = dict(display or {0x6B:0x0B, 0x6E:0x80, 0x7F:0})
         self.selected, self.text_writes = 0, set()
+        self.cost_components = Counter()
 
     def __getitem__(self, a):
         if isinstance(a,slice):
@@ -3515,6 +3596,7 @@ def run_frame(patch, ram, registers, state, previous=None, display=None):
     elif mem.text_writes:
         raise AssertionError('unready frame wrote display memory')
     return {'ready':ready,'equivalent_T':cost,'added_ms':cost/3500,'instructions':steps,
+            'cost_components_T':dict(mem.cost_components),
             'pages':{p:bytes(v) for p,v in mem.pages.items()}}
 
 
