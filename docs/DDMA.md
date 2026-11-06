@@ -44,7 +44,8 @@ observation, not a guaranteed rate or a per-hook cost. Do not substitute it into
    state, negative controls, clipping/zero-size/bank-boundary and fallback tests, original gameplay
    and sprite/layer comparisons, and hardware timing plus interrupt/raster checks. If the simulator
    cannot model DDMA, mark verification incomplete and add a model or independent oracle first;
-   do not claim replay proves the new DMA path. No DDMA game change has been implemented here.
+   do not claim replay proves the new DMA path. The opt-in shared backend and synthetic Rainbow rectangle prototype are described in
+   [DDMA_IMPLEMENTATION.md](DDMA_IMPLEMENTATION.md); pinned game builds remain unchanged.
 
 ## Addressing and setup traps
 
@@ -82,19 +83,22 @@ semantics avoid repeated CPU/setup work. Frozen/deprecated variants are not auto
 
 | Priority / games | Evidence and candidate | Stop / verify |
 |---|---|---|
-| 1 Rainbow Islands Z80N | `games/rainbow_z80n.md` reports slow busy scenes; tcommit copies 20 x 64 bytes (~27K T) per render. Benchmark one strided 2D transfer vs LDIR and existing DMA; profile cache misses. | Prove 2D layout and display timing; handler executes game frame in IM2, so DMA stalls and interrupts can change pace. 69369c89 hardware timing still open. |
-| 2 Everyone's a Wally updated | `games/everyones_a_wally_updated.md`: double-buffered Layer 2 commit mean ~0.3 frame, max ~1.3 (simulator T/8). Profile clearing and figure composition for 2D transparent/fill and direct hidden bank. | Transparent skip is not masked compositing; prove draw order, old-pixel clearing, unchanged game reads and atomic bank switch. |
-| 3 Midnight Resistance | `games/midnight_resistance.md`: tank commit 340–410K simulated T with 16-entry cache thrash. Measure upload misses and scratch-buffer rectangles. | Increase cache first if it wins; background masks, cell colours, ISR and sound DMA must be preserved. This number is simulator T, not measured DDMA savings. |
-| 4 Smash TV | `games/smash_tv.md`: ~6% slower simulated play, scratch restore ~5.4K T and per-plot decision ~750 T; check if restore is a byte copy/fill or actual game logic. | DDMA does not accelerate lookup or replace masked plots/XOR; game runs DI, so check hardware-IM2 state and do not change timing semantics. |
-| 5 Atic Atac / Match Day | `games/atic_atac.md` reports setup/upload and scans; `games/match_day.md` has a no-sync loop and measured hook overhead. Profile the active reworks and cache misses before memory-to-port DMA. | Existing newer Atic cache can change cost; compare active versions. Small transfers and interrupt beeper timing may outweigh gains. |
-| 6 Target Renegade / Cyclone / Commando | Cache misses and pattern uploads are plausible ordinary-DMA candidates; target has ~145K simulated T in 28 MHz hooks, Cyclone cache reuse was limited, Commando reuses patterns. | Measure miss counts, exact lengths and setup; do not overwrite visible slots or assume DDMA fixes cache misses. |
-| 7 Cauldron / Dizzy 1 / Fireman (both variants) | XOR shadow/overlay and upload paths merit profiling only if speed is problematic; Cauldron already runs at full speed on the reported board. | Byte copy/transparent is not XOR; no removal of shadow, mask or existing verification. |
-| 8 Three Weeks in Paradise / Nightshade / Knight Tyme / Spellbound Magic Knight | Layer 2 or sprite commit paths may have copy/upload work; measure before proposing changes. | Existing notes do not establish a DDMA bottleneck or hardware speedup. |
-| Lower evidence: Chuckie Egg; Dizzy V, Dizzy 6, Fantasy World Dizzy, Magicland Dizzy, Treasure Island Dizzy; Jetpac; Lode Runner; Nemesis; Rambo; Ikari Warriors; Renegade 128; Starquake; Lunar Jetman; Robin of the Wood | No documented DDMA-specific bottleneck established in this review. Profile the active engine and recordings first. | Do not alter working conversions on throughput claims alone. |
+| Investigate first: Ikari Warriors / Nightshade | Recent docs/REFACTOR.md pilot reports 42% / 26% hook time; these outrank Rainbow by reported total hook cost. Ikari's new instruction profile separates generation, colour lookup, cache and I/O (DDMA_IMPLEMENTATION.md). | Total hook time is not transferable time. Nightshade's current DMA-port counter is not a transfer model. Use the active variant checker and real recordings. |
+| Prototype Rainbow Islands Z80N | `games/rainbow_z80n.md` reports slow busy scenes; tcommit copies 20 x 64 bytes (~27K T) per render. Benchmark one strided 2D transfer vs LDIR and existing DMA; profile cache misses. | Prove 2D layout and display timing; handler executes game frame in IM2, so DMA stalls and interrupts can change pace. 69369c89 hardware timing still open. |
+| Layer 2 Everyone's a Wally updated | `games/everyones_a_wally_updated.md`: double-buffered Layer 2 commit mean ~0.3 frame, max ~1.3 (simulator T/8). Profile clearing and figure composition for 2D transparent/fill and direct hidden bank. | Transparent skip is not masked compositing; prove draw order, old-pixel clearing, unchanged game reads and atomic bank switch. |
+| Cache/miss Midnight Resistance | `games/midnight_resistance.md`: tank commit 340–410K simulated T with 16-entry cache thrash. Measure upload misses and scratch-buffer rectangles. | Increase cache first if it wins; background masks, cell colours, ISR and sound DMA must be preserved. This number is simulator T, not measured DDMA savings. |
+| Small-copy Smash TV | `games/smash_tv.md`: ~6% slower simulated play, scratch restore ~5.4K T and per-plot decision ~750 T; check if restore is a byte copy/fill or actual game logic. | DDMA does not accelerate lookup or replace masked plots/XOR; game runs DI, so check hardware-IM2 state and do not change timing semantics. |
+| Upload Atic Atac / Match Day | `games/atic_atac.md` reports setup/upload and scans; `games/match_day.md` has a no-sync loop and measured hook overhead. Profile the active reworks and cache misses before memory-to-port DMA. | Existing newer Atic cache can change cost; compare active versions. Small transfers and interrupt beeper timing may outweigh gains. |
+| Upload Target Renegade / Cyclone / Commando | Cache misses and pattern uploads are plausible ordinary-DMA candidates; target has ~145K simulated T in 28 MHz hooks, Cyclone cache reuse was limited, Commando reuses patterns. | Measure miss counts, exact lengths and setup; do not overwrite visible slots or assume DDMA fixes cache misses. |
+| Profile Cauldron / Dizzy 1 / Fireman (both variants) | XOR shadow/overlay and upload paths merit profiling only if speed is problematic; Cauldron already runs at full speed on the reported board. | Byte copy/transparent is not XOR; no removal of shadow, mask or existing verification. |
+| Profile Three Weeks in Paradise / Knight Tyme / Spellbound Magic Knight | Layer 2 or sprite commit paths may have copy/upload work; measure before proposing changes. | Existing notes do not establish a DDMA bottleneck or hardware speedup. |
+| Lower evidence: Chuckie Egg; Dizzy V, Dizzy 6, Fantasy World Dizzy, Magicland Dizzy, Treasure Island Dizzy; Jetpac; Lode Runner; Nemesis; Rambo; Renegade 128; Starquake; Lunar Jetman; Robin of the Wood | No documented DDMA-specific bottleneck established in this review. Profile the active engine and recordings first. | Do not alter working conversions on throughput claims alone. |
 | No conversion to optimise: Crystal Kingdom Dizzy | Plain-only conversion; include this checklist if sprite work is resumed. | No current sprite hook to benchmark. |
 | Frozen/superseded: original Rainbow and original Everyone's a Wally | Consider only if explicitly requested; use their successors for the first experiment. | Keep excluded/frozen builds unchanged. |
 
-First experiment: replay Rainbow's two recordings and instrument tcommit distributions and exact
+Prototype implemented: synthetic differential check of Rainbow’s exact 20 x 64-byte rectangle,
+source stride 64 and destination stride 80, using CPU / ordinary DMA / DDMA. No Layer 2 XY.
+Next hardware/rework experiment: replay Rainbow's two recordings and instrument tcommit distributions and exact
 memory geometry; compare CPU, existing DMA and DDMA on a 3.03.00 board, including setup, frame
 stall and overrun. Then re-run differential and negative controls and hardware-play busy scenes;
 retain baseline and fallback until all pass. Report measurements and core requirements in the

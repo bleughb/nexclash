@@ -1,0 +1,102 @@
+{
+  "units": "simulated 3.5MHz-equivalent T; no contention or DMA timing",
+  "sync_intervals": 221,
+  "calls": {
+    "find": 901,
+    "uploadn": 97,
+    "colour": 41904,
+    "upload": 11
+  },
+  "pattern_bytes": 55296,
+  "raw_cpu_t": {
+    "other hooks": 26382331,
+    "cache search": 1531895,
+    "colour and seam extension": 8536,
+    "pixel generation and upload setup": 59009232,
+    "colour lookup": 22246348,
+    "pattern port instructions": 663552
+  },
+  "equivalent_t": {
+    "other hooks": 3404239.5,
+    "cache search": 191486.875,
+    "colour and seam extension": 1067.0,
+    "pixel generation and upload setup": 7376154.0,
+    "colour lookup": 2780793.5,
+    "pattern port instructions": 82944.0
+  },
+  "per_sync": {
+    "cache search": {
+      "median": 702.625,
+      "max": 2831.5,
+      "mean": 866.4564479638009
+    },
+    "colour and seam extension": {
+      "median": 0,
+      "max": 33.0,
+      "mean": 4.828054298642534
+    },
+    "colour lookup": {
+      "median": 0,
+      "max": 86307.0,
+      "mean": 12582.776018099548
+    },
+    "other hooks": {
+      "median": 14669.375,
+      "max": 25803.875,
+      "mean": 15403.798642533937
+    },
+    "pattern port instructions": {
+      "median": 0,
+      "max": 3072.0,
+      "mean": 375.3122171945701
+    },
+    "pixel generation and upload setup": {
+      "median": 0,
+      "max": 242370.625,
+      "mean": 33376.262443438914
+    }
+  },
+  "recording": "ik_2pw.rzx",
+  "recording_md5": "08f44dc34a3407b9ce5beb103b4de5c8",
+  "hook_sha256": "02f67a6c7652f375275c620f7901428e8e93bdcc0ad761f238dd873a885a1915",
+  "mode": "default",
+  "requested_frames": 1200,
+  "verify_counters": {
+    "e_pre": 221,
+    "e_k1": 701,
+    "k1 capture pass": 194,
+    "e_bl": 221,
+    "e_post": 221,
+    "commits": 221,
+    "patched T": 150259555,
+    "attribute cells the debris no longer toggles": 0,
+    "sprite pixels compared": 143263,
+    "torn image lines (original glitch, sprite whole)": 0,
+    "max sprites": 37,
+    "stolen": 0,
+    "max log": 10,
+    "patched T per sync max": 0,
+    "sprites figure": 2533,
+    "e_k4": 160,
+    "upload": 11,
+    "sprites dot": 80,
+    "e_k2": 95,
+    "sprites bullet": 95,
+    "e_k3": 50,
+    "sprites xor figure": 100,
+    "frames": 1200
+  },
+  "picture_checks": {
+    "pixel default 15 -> 0": 5149,
+    "pixel default 1 -> 0": 3194,
+    "pixel default 1 -> 2": 990,
+    "pixel default 1 -> 14": 5218,
+    "images checked": 697,
+    "K1 images checked": 516,
+    "outside pixels": 78193,
+    "seam pixels": 1038,
+    "enclosed pixels": 5262,
+    "pixel default 15 -> 2": 48
+  },
+  "failures": {}
+}

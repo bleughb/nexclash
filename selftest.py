@@ -534,6 +534,11 @@ def tools_check(src):
     for name, hbad in hooklib.selfcheck():
         print('%-4s tools: %s%s' % ('OK' if not hbad else 'FAIL', name, '' if not hbad else ' (%s)' % str(hbad)[:200]))
         cbad += len(hbad)
+    from nexclash import dma_check
+    dbad = dma_check.selfcheck()
+    print('%-4s tools: DMA policies, assembled hooks, functional model, negative controls and profiler%s' % (
+        'OK' if not dbad else 'FAIL', '' if not dbad else ' (%s)' % str(dbad)[:300]))
+    cbad += len(dbad)
     rec = R.load('chuckie_egg')
     work = tempfile.mkdtemp(prefix='nexclash_tools_')
     d, why = stage(rec, src, work)
