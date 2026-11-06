@@ -30,6 +30,7 @@ ENGINES = [
     ('loderunner_v2', 'is_loderunner_v2', None),                          # Lode Runner 128K: opt-in rework of loderunner
     ('fwd128', 'is_fwd128', None),                                        # Fantasy World Dizzy 128K: opt-in rework of the generic TID build
     ('magicland128', 'is_magicland128', None),                            # Magicland Dizzy 128K: opt-in rework of the generic TID build
+    ('yolk128', 'is_yolk128', None),                                      # Prince of the Yolkfolk 128K: opt-in rework of tid_mirror
     ('loderunner', 'is_loderunner', None),                                # Lode Runner (48K)
     ('commando', 'is_commando', None),                                    # Commando (128K)
     ('midres', 'is_midres', None),                                        # Midnight Resistance (128K)
