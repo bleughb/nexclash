@@ -2053,3 +2053,638 @@ pack_bad:
 pack_actor_tile_end:
         ASSERT pack_actor_tile_end < 0x0400
         SAVEBIN "inferno_pack.bin",pack_actor_tile,pack_actor_tile_end-pack_actor_tile
+
+; Whole-image B construction on private page 76; not installed in a NEX.
+; Canvas 112..115; passable bits 116; exterior bits 117; horizontal closure
+; lookup 128..135 (64KiB, generic byte connectivity, no game image catalogue).
+; Every work unit remaps its inputs, so quota yields restore slots 1/2/3 safely.
+        ORG 0
+F_STRIDE EQU 0x1E90
+F_SIZE EQU 0x1E92
+F_DONE EQU 0x1E94
+F_ERROR EQU 0x1E95
+F_POS EQU 0x1E96
+F_REVERSE EQU 0x1E98
+F_CHANGED EQU 0x1E99
+F_SIDE EQU 0x1E9A
+F_COLUMN EQU 0x1E9B
+F_OLD EQU 0x1E9D
+F_PASSES EQU 0x1E9E
+F_COMMAND EQU 0x1EA0
+F_BUDGET EQU 0x1EA1
+F_LEFT EQU 0x1EA2
+F_ACTIVE EQU 0x1EA3
+F_SAVED_SP EQU 0x1EA4
+F_MASK_SIZE EQU 0x1EA6
+F_MASK_STRIDE EQU 0x1EA8
+fill_actor_image:
+        xor a
+        ld (F_ERROR),a
+        ld (F_PASSES),a
+        ld (F_PASSES+1),a
+        ld a,(F_DONE)
+        or a
+        jp nz,fill_bad
+        ld hl,(F_STRIDE)
+        ld a,l
+        and 3
+        jp nz,fill_bad
+        ld de,4
+        or a
+        sbc hl,de
+        jp c,fill_bad
+        ld de,509
+        or a
+        sbc hl,de
+        jp nc,fill_bad
+        ld hl,(F_SIZE)
+        ld a,h
+        or l
+        jp z,fill_bad
+        ld de,0x8001
+        or a
+        sbc hl,de
+        jp nc,fill_bad
+        ld hl,(F_SIZE)
+        ld de,(F_STRIDE)
+.geometry:
+        call fill_checkpoint
+        or a
+        sbc hl,de
+        jp c,fill_bad
+        ld a,h
+        or l
+        jr nz,.geometry
+        ld hl,(F_SIZE)
+        srl h
+        rr l
+        srl h
+        rr l
+        ld (F_MASK_SIZE),hl
+        ld hl,(F_STRIDE)
+        srl h
+        rr l
+        srl h
+        rr l
+        ld (F_MASK_STRIDE),hl
+        ld hl,0
+        ld (F_POS),hl
+.opacity:
+        call fill_checkpoint
+        call fill_canvas
+        ld de,(F_POS)
+        set 6,d
+        nextreg 0x52,116
+        ld b,0
+        DUP 4
+        ld a,(hl)
+        inc hl
+        push hl
+        ld l,a
+        ld h,6
+        ld a,(hl)              ; two passable bits (black pixels)
+        pop hl
+        rlc b
+        rlc b
+        or b
+        ld b,a
+        EDUP
+        ld a,b
+        ld (de),a
+        nextreg 0x52,117
+        xor a
+        ld (de),a              ; clear retained exterior state on every new image
+        call fill_advance
+        jr nz,.opacity
+.iteration:
+        ld hl,(F_PASSES)
+        inc hl
+        ld (F_PASSES),hl
+        xor a
+        ld (F_CHANGED),a
+        ld (F_REVERSE),a
+        ld hl,0
+        ld (F_POS),hl
+        call fill_sweep
+        ld a,1
+        ld (F_REVERSE),a
+        ld hl,(F_MASK_SIZE)
+        dec hl
+        ld (F_POS),hl
+        call fill_sweep
+        ld a,(F_CHANGED)
+        or a
+        jr nz,.iteration
+        ld hl,0
+        ld (F_POS),hl
+.finish:
+        call fill_checkpoint
+        call fill_canvas
+        nextreg 0x52,117
+        ld de,(F_POS)
+        set 6,d
+        ld a,(de)
+        ld c,a
+        DUP 4
+        rlc c
+        rlc c
+        ld a,c
+        and 3
+        add a,8
+        ld b,a
+        ld a,(hl)
+        push hl
+        ld l,a
+        ld h,b
+        ld a,(hl)              ; zero -> black only when exterior bit is clear
+        pop hl
+        ld (hl),a
+        inc hl
+        EDUP
+        call fill_advance
+        jp nz,.finish
+        ld a,1
+        ld (F_DONE),a
+        ld a,2
+        ld (F_ACTIVE),a
+        jp fill_restore
+fill_bad:
+        ld a,1
+        ld (F_ERROR),a
+        ld a,2
+        ld (F_ACTIVE),a
+        jp fill_restore
+fill_sweep:
+        ld hl,(F_MASK_STRIDE)
+        ld (F_COLUMN),hl
+        ld a,(F_REVERSE)
+        or a
+        ld a,128
+        jr z,.edge
+        ld a,1
+.edge:
+        ld (F_SIDE),a
+.pair:
+        call fill_checkpoint
+        nextreg 0x51,116
+        nextreg 0x52,117
+        ld hl,(F_POS)
+        ld de,(F_MASK_STRIDE)
+        ld a,(F_REVERSE)
+        or a
+        jr nz,.below
+        or a
+        sbc hl,de
+        jr c,.boundary
+        jr .neighbour
+.below:
+        add hl,de
+        ld de,(F_MASK_SIZE)
+        or a
+        sbc hl,de
+        jr nc,.boundary
+        add hl,de
+.neighbour:
+        set 6,h
+        ld a,(hl)
+        jr .seed
+.boundary:
+        ld a,255
+.seed:
+        ld c,a
+        ld a,(F_SIDE)
+        or c
+        ld c,a
+        ld hl,(F_POS)
+        set 6,h
+        ld a,(hl)
+        ld (F_OLD),a
+        or c
+        ld c,a
+        ld d,h
+        ld e,l                 ; current exterior destination
+        res 6,h
+        set 5,h                ; passable source in slot 1
+        ld a,(hl)
+        push af
+        rrca
+        rrca
+        rrca
+        rrca
+        rrca
+        and 7
+        add a,128
+        nextreg 0x53,a
+        pop af
+        and 31
+        or 0x60
+        ld h,a
+        ld l,c
+        ld a,(hl)
+        ld (de),a
+        ld c,a
+        ld a,(F_OLD)
+        cp c
+        jr z,.side
+        ld a,1
+        ld (F_CHANGED),a
+.side:
+        ld a,(F_REVERSE)
+        or a
+        ld a,c
+        jr nz,.right
+        rrca                    ; low bit -> next byte's high-bit seed
+        and 128
+        jr .set_side
+.right:
+        rlca                    ; high bit -> preceding byte's low-bit seed
+        and 1
+.set_side:
+        ld (F_SIDE),a
+        ld hl,(F_POS)
+        ld a,(F_REVERSE)
+        or a
+        jr nz,.back
+        inc hl
+        ld (F_POS),hl
+        ld de,(F_MASK_SIZE)
+        or a
+        sbc hl,de
+        ret z
+        jr .column
+.back:
+        ld a,h
+        or l
+        ret z
+        dec hl
+        ld (F_POS),hl
+.column:
+        ld hl,(F_COLUMN)
+        dec hl
+        ld (F_COLUMN),hl
+        ld a,h
+        or l
+        jp nz,.pair
+        jp fill_sweep
+fill_canvas:
+        ld hl,(F_POS)
+        add hl,hl
+        add hl,hl
+        ld a,h
+        rlca
+        rlca
+        rlca
+        and 3
+        add a,112
+        nextreg 0x51,a
+        ld a,h
+        and 31
+        or 0x20
+        ld h,a
+        ret
+fill_advance:
+        ld hl,(F_POS)
+        inc hl
+        ld (F_POS),hl
+        ld de,(F_MASK_SIZE)
+        or a
+        sbc hl,de
+        ret
+fill_actor_image_end:
+        ASSERT fill_actor_image_end < 0x0400
+        ORG 0x0400
+fill_actor_service:
+        ld a,(F_BUDGET)
+        dec a
+        cp 16
+        jp nc,fill_service_bad
+        inc a
+        ld (F_LEFT),a
+        ld a,(F_COMMAND)
+        or a
+        jr z,.start
+        cp 1
+        jp nz,fill_service_bad
+        ld a,(F_ACTIVE)
+        cp 1
+        jp nz,fill_service_bad
+        ld sp,(F_SAVED_SP)
+        pop iy
+        pop ix
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ret
+.start:
+        ld a,(F_ACTIVE)
+        or a
+        jp nz,fill_service_bad
+        inc a
+        ld (F_ACTIVE),a
+        jp fill_actor_image
+fill_checkpoint:
+        push af
+        ld a,(F_LEFT)
+        or a
+        jr z,.yield
+        dec a
+        ld (F_LEFT),a
+        pop af
+        ret
+.yield:
+        push bc
+        push de
+        push hl
+        push ix
+        push iy
+        ld (F_SAVED_SP),sp
+        call fill_restore_maps
+        ld sp,0x1FF0
+        ret
+fill_restore:
+        call fill_restore_maps
+        ret
+fill_restore_maps:
+        nextreg 0x51,68
+        nextreg 0x52,10
+        nextreg 0x53,11
+        ret
+fill_service_bad:
+        ld a,1
+        ld (F_ERROR),a
+        ret
+fill_actor_service_end:
+        ASSERT fill_actor_service_end < 0x0600
+        SAVEBIN "inferno_fill.bin",fill_actor_image,fill_actor_service_end-fill_actor_image
+
+; Inferno bounded prepared-data transfer worker, private writable page 77.
+; Reuses the gated shared backend and packets; no game/display hook installs it.
+; Caller owns source cache and destination canvas; uploads protect BOTH halves
+; of each 256-byte hardware pair using current and pending ownership bitsets.
+; No image is published by this worker. OP=0 rectangle, OP=1 hardware pair.
+        ORG 0
+        DEFINE HLIB_PC_OTIR
+        INCLUDE "lib/hlib_dma.asm"
+        UNDEFINE HLIB_PC_OTIR
+DB_SRC_PAGE EQU 0x1E00
+DB_DST_PAGE EQU 0x1E01
+DB_SRC EQU 0x1E02
+DB_DST EQU 0x1E04
+DB_WIDTH EQU 0x1E06
+DB_ASTRIDE EQU 0x1E08
+DB_BSTRIDE EQU 0x1E0A
+DB_ROWS EQU 0x1E0C
+DB_OP EQU 0x1E0D
+DB_SLOT EQU 0x1E0E
+DB_OWNED EQU 0x1E0F
+DB_POLICY EQU 0x1E10
+DB_ERROR EQU 0x1E11
+DB_LEFT EQU 0x1E12
+DB_BACKEND EQU 0x1E13
+DB_ABUMP EQU 0x1E14
+DB_BBUMP EQU 0x1E16
+DB_CURRENT EQU 0x1F00
+DB_PENDING EQU 0x1F08
+        ASSERT $ < 0x0800
+        ORG 0x0800
+actor_blit:
+        xor a
+        ld (DB_ERROR),a
+        ld a,(DB_POLICY)
+        cp 3
+        jp nc,blit_bad
+        ld (hlib_dma_policy),a
+        ld a,(DB_SRC_PAGE)
+        cp 112
+        jp c,blit_bad
+        cp 116
+        jr c,.source_ok
+        cp 136
+        jp c,blit_bad
+        cp 224
+        jp nc,blit_bad
+.source_ok:
+        ld a,(DB_OP)
+        cp 1
+        jp z,blit_sprite
+        or a
+        jp nz,blit_bad
+        ld a,(DB_DST_PAGE)
+        ld b,a
+        ld a,(DB_SRC_PAGE)
+        cp b
+        jp z,blit_bad
+        ld a,b
+        cp 112
+        jp c,blit_bad
+        cp 116
+        jr c,.dest_ok
+        cp 118
+        jp c,blit_bad
+        cp 122
+        jp nc,blit_bad
+.dest_ok:
+        ld a,(DB_ROWS)
+        dec a
+        cp 16
+        jp nc,blit_bad
+        ld hl,(DB_WIDTH)
+        ld a,h
+        cp 2
+        jp nc,blit_bad
+        or a
+        jr z,.small
+        ld a,l
+        or a
+        jp nz,blit_bad
+        jr .width_ok
+.small:
+        ld a,l
+        or a
+        jp z,blit_bad
+.width_ok:
+        ld bc,(DB_WIDTH)
+        ld hl,(DB_SRC)
+        ld de,(DB_ASTRIDE)
+        call blit_extent
+        ld hl,(DB_DST)
+        ld de,(DB_BSTRIDE)
+        call blit_extent
+        ld hl,(DB_ASTRIDE)
+        or a
+        sbc hl,bc
+        ld (DB_ABUMP),hl
+        ld hl,(DB_BSTRIDE)
+        or a
+        sbc hl,bc
+        ld (DB_BBUMP),hl
+        call blit_init
+        ld a,(DB_BACKEND)
+        cp 1
+        jr nz,.backend_ready
+        ld hl,(DB_WIDTH)
+        ld a,h
+        or a
+        jr nz,.backend_ready
+        ld a,l
+        cp 64
+        jr nc,.backend_ready
+        xor a                  ; row-DMA setup costs more than these narrow CPU rows
+        ld (DB_BACKEND),a
+.backend_ready:
+        ld a,(DB_DST_PAGE)
+        nextreg 0x52,a
+        ld hl,(DB_SRC)
+        set 5,h
+        ld de,(DB_DST)
+        set 6,d
+        ld a,(DB_BACKEND)
+        cp 2
+        jr z,.ddma
+        ld a,(DB_ROWS)
+        ld (DB_LEFT),a
+.row:
+        ld a,(DB_BACKEND)
+        or a
+        jr nz,.dma_row
+        ld bc,(DB_WIDTH)
+        ldir
+        ld bc,(DB_ABUMP)
+        add hl,bc
+        ex de,hl
+        ld bc,(DB_BBUMP)
+        add hl,bc
+        ex de,hl
+        jr .next
+.dma_row:
+        ld (hlib_dma_row_src),hl
+        ld (hlib_dma_row_dst),de
+        push hl
+        ld hl,(DB_WIDTH)
+        ld (hlib_dma_row_len),hl
+        ld hl,hlib_dma_row
+        push de
+        ld bc,(hlib_dma_row_end-hlib_dma_row)*256+0x6B
+        otir
+        pop de
+        pop hl
+        ld bc,(DB_ASTRIDE)
+        add hl,bc
+        ex de,hl
+        ld bc,(DB_BSTRIDE)
+        add hl,bc
+        ex de,hl
+.next:
+        ld a,(DB_LEFT)
+        dec a
+        ld (DB_LEFT),a
+        jr nz,.row
+        jp blit_restore
+.ddma:
+        ld (hlib_dma_rect_src),hl
+        ld (hlib_dma_rect_dst),de
+        ld hl,(DB_WIDTH)
+        ld (hlib_dma_rect_width),hl
+        ld hl,(DB_ASTRIDE)
+        ld (hlib_dma_rect_astride),hl
+        ld hl,(DB_BSTRIDE)
+        ld (hlib_dma_rect_bstride),hl
+        ld a,(DB_ROWS)
+        ld l,a
+        ld h,0
+        ld (hlib_dma_rect_rows),hl
+        ld hl,hlib_dma_rect_prog
+        ld bc,(hlib_dma_rect_end-hlib_dma_rect_prog)*256+0x6B
+        otir
+        jp blit_restore
+blit_sprite:
+        ld hl,(DB_SRC)
+        ld a,h
+        and 0xE0
+        jp nz,blit_bad
+        ld de,256
+        add hl,de
+        ld de,0x2001
+        or a
+        sbc hl,de
+        jp nc,blit_bad
+        ld a,(DB_SLOT)
+        cp 64
+        jp nc,blit_bad
+        ld c,a
+        and 7
+        ld b,a
+        ld a,1
+        jr z,.mask
+.shift:
+        add a,a
+        djnz .shift
+.mask:
+        ld b,a
+        ld a,c
+        rrca
+        rrca
+        rrca
+        and 7
+        ld l,a
+        ld h,DB_CURRENT/256
+        ld a,(hl)
+        set 3,l
+        or (hl)
+        and b
+        jp nz,blit_bad
+        call blit_init
+        ld a,(DB_SLOT)
+        ld bc,0x303B
+        out (c),a
+        ld hl,(DB_SRC)
+        set 5,h
+        call hlib_dma_sprite
+        jp blit_restore
+blit_init:
+        ld a,(DB_SRC_PAGE)
+        nextreg 0x51,a
+        ld a,(DB_OWNED)
+        call hlib_dma_init
+        call hlib_dma_backend
+        ld (DB_BACKEND),a
+        ret
+blit_extent:
+        ld a,h
+        and 0xE0
+        jp nz,blit_bad
+        push hl
+        ld h,d
+        ld l,e
+        or a
+        sbc hl,bc
+        pop hl
+        jp c,blit_bad
+        ld a,(DB_ROWS)
+        dec a
+        jr z,.end
+.add:
+        add hl,de
+        jp c,blit_bad
+        dec a
+        jr nz,.add
+.end:
+        add hl,bc
+        jp c,blit_bad
+        ld de,0x2001
+        or a
+        sbc hl,de
+        jp nc,blit_bad
+        ret
+blit_bad:
+        ld a,1
+        ld (DB_ERROR),a
+        ld sp,0x1FF0
+blit_restore:
+        nextreg 0x51,68
+        nextreg 0x52,10
+        ret
+actor_blit_end:
+        ASSERT actor_blit_end < 0x1D00
+        SAVEBIN "inferno_blit.bin",hlib_dma_policy,actor_blit_end-hlib_dma_policy

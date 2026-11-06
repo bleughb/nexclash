@@ -156,7 +156,7 @@ hlib_dma_rect:
 hlib_dma_row:
         db 0x83,0xC3,0x7D
 hlib_dma_row_src: dw 0
-        dw 64
+hlib_dma_row_len: dw 64
         db 0x14,0x10,0xAD
 hlib_dma_row_dst: dw 0
         db 0x82,0xCF,0x87
@@ -168,9 +168,13 @@ hlib_dma_rect_src: dw 0
         db 0x14,0x10,0xAD
 hlib_dma_rect_dst: dw 0
         db 0x82,0xDF,2          ; virtual memory + 2D, all other flags off
-        db 0xE3 : dw 64
-        db 0xE7 : dw 20
-        db 0xEB : dw 64
-        db 0xEF : dw 80
+        db 0xE3
+hlib_dma_rect_width: dw 64
+        db 0xE7
+hlib_dma_rect_rows: dw 20
+        db 0xEB
+hlib_dma_rect_astride: dw 64
+        db 0xEF
+hlib_dma_rect_bstride: dw 80
         db 0xCF,0x87
 hlib_dma_rect_end:

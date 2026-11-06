@@ -934,11 +934,10 @@ Grouped by question; add a new lesson to its group.
   has no remote-tracking ref, so `git status` shows no upstream and the stop hook keeps reporting
   "no remote branch". Fix: `git config --add remote.origin.fetch +refs/heads/B:refs/remotes/origin/B`,
   `git fetch origin B`, `git branch -u origin/B` (Nemesis 2026-11-02).
-- Background jobs die when the turn ends (or the shell resets) unless started in their OWN session:
+- Detached jobs need their OWN session to survive a turn/shell ending:
   `setsid nohup sh -c 'cd DIR && a; b' > log 2>&1 < /dev/null &`, then poll inside the turn. Plain
-  `nohup cmd &` and `( a; b ) &` die silently - the log just stops (Midnight Resistance session:
-  a 20-min `selftest --verify` lost twice). Check with `ps -eo pid,sid,args`: the job's SID must
-  be its own PID. 1-2 CPUs: `--jobs 2` at most; one long job at a time.
+  `nohup cmd &` and `( a; b ) &` can die silently (Midnight Resistance: two verifies lost).
+  Check `ps -eo pid,sid,args`: SID must equal PID. On 1-2 CPUs: `--jobs 2` max; one long job at a time.
   A heredoc-fed `python -` must not also get `< /dev/null`: the last input redirect wins and
   the script never runs. Use a file or module CLI before detaching.
 - `$!` after `setsid nohup job &` is the wrapper's PID, not the job's (setsid forks): a `until ! kill -0 $!`

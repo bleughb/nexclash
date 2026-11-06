@@ -16,7 +16,8 @@
   "recordings": []
  },
  "modules": [
-  "inferno"
+  "inferno",
+  "dma"
  ],
  "own_modules": [
   "inferno"
@@ -25,7 +26,9 @@
   "docs/profiles/inferno.json",
   "asm/inferno_hooks.asm"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_dma.asm"
+ ],
  "rebuild": {
   "cmd": "convert",
   "args": [
@@ -45,16 +48,16 @@
  "repro": [],
  "status": {
   "title": "Inferno",
-  "engine_col": "inferno scenery (inferno.md)",
-  "build": "scenery/capture diagnostics",
-  "software": "L6 2000-frame scenery PASS; timing gate fails",
+  "engine_col": "inferno B components (inferno.md)",
+  "build": "B fill / transfer components",
+  "software": "six quick correctness PASS; total timing FAIL",
   "hardware": "untested",
-  "next": "budgeted frame renderer and continuous frontend"
+  "next": "runtime exact cache, live prewarm and complete frame integration"
  },
  "checks": [
   "asm2profile:inferno"
  ],
- "excluded": "Stage 2 incomplete: offline assembled scenery baseline and capture/loader diagnostics; total tick budget fails, no sprite/frame/auto/verify/recolour or continuous release. No full proof/stamp. Rebuild recipe retains plain baseline only.",
+ "excluded": "Stage 2 incomplete: assembled quota-serviced B fill and protected prepared blit/upload components only; runtime cache/prewarm/pattern allocation/frame integration and continuous frontend remain open. Total cold timing FAIL; no sprite NEX, hardware proof or full stamp. Rebuild retains plain baseline.",
  "foundation": {
   "scope": "capture kernel and TZX pulse transport; no replacement display or continuous release",
   "artifacts": {
@@ -573,5 +576,178 @@
    "python -m nexclash.inferno --actor-pack-check ../specnext/reference/inferno/Inferno6.rzx --quick 2000",
    "python -m nexclash.inferno --actor-pack-all ../specnext/reference/inferno --quick 2000 --out work/actor_pack_quick"
   ]
+ },
+ "actor_b": {
+  "scope": "frame preservation plus offline assembled colour expansion and quota-serviced whole-image B fill on host-model exact-content misses; live-table preparation census is a host model; no installed cache/scheduler/upload/sprite display",
+  "sources": {
+   "nexclash/inferno.py": "a688526482778850838a3c5b75a6c366",
+   "asm/inferno_hooks.asm": "cfc34bc8bcec38402b1041a9b9b8da9c",
+   "docs/profiles/inferno.json": "a5abf0a24b2338187781f74dfa08d52e",
+   "asm/lib/hlib_dma.asm": "bc3db6211d837dd4a7ef33624d371500",
+   "nexclash/dma.py": "d9a31c7876224fcf58ccede9f3519379"
+  },
+  "shared_library_origin": "PR #93 head 449682f, integrated through remote Inferno 6aa2992 / main 3efa10f. Upstream selfchecks retained; only assembly packet labels added for Inferno.",
+  "artifacts": {
+   "actor_b_compiler.md": "767570ae172b68075f8abc5be6fdd51f",
+   "actor_b_fill_checks.json": "41af4630cda28f50da96057d2c2d59d9",
+   "actor_b_pack_checks.json": "5c6288f1de9a697a2408c7d3f0cb2b84",
+   "actor_blit_checks.json": "3314a4cd57160773f69b283ed944c309",
+   "actor_b_summary.json": "34232908fa3334c7684deb811f38bd14",
+   "actor_b_modal_checks.json": "0468d475015f3919788ef98e85106965",
+   "actor_b_quick/actor_pack1.json": "2cb851651599a6e197362c1d5fb30961",
+   "actor_b_quick/actor_pack2.json": "e693b758541bd8573d8a0dbe4a93358b",
+   "actor_b_quick/actor_pack3.json": "f9f77cb1222900c12ffb071b60e56466",
+   "actor_b_quick/actor_pack4.json": "707550d91e1a78e5766fd68d4984158b",
+   "actor_b_quick/actor_pack5.json": "03d22f0d854bc8abddab4f345054856a",
+   "actor_b_quick/actor_pack6.json": "92ed397a41773a2a8172ec3f7d4e509f",
+   "actor_b_tools_checks.txt": "e501631a76fc95145f1c9ce7317a9abb",
+   "actor_b_canary_checks.txt": "566690246a5a76957a48f44bee3e66c9",
+   "actor_b_doccheck.txt": "5cf65e037fadba6cd3568bfe6f04193e",
+   "actor_b_assembly.txt": "86452609722334eb0f19aaed358f155c"
+  },
+  "quick_counts": {
+   "live table scans (host prewarm census)": 12000,
+   "max live table candidates (host prewarm census)": 124,
+   "max live candidate source bytes (host prewarm census)": 28935,
+   "kernel events": 16903,
+   "kernel instructions": 4172369,
+   "max kernel cost 8F7C": 2960.0,
+   "scenery events": 1855,
+   "max kernel cost 96A1": 758.0,
+   "max actor canvas width": 136,
+   "max actor canvas height": 120,
+   "max actor canvas pixels": 10880,
+   "actor content cache misses (model)": 128,
+   "actor content cache bytes (model)": 73929,
+   "first-use content available in earlier sampled frame (host census)": 128,
+   "assembled actor tiles on model cache misses": 1319,
+   "assembled whole actor B fills on model misses": 128,
+   "assembled whole actor B pixels": 108288,
+   "max actor B fill sweep pairs": 4,
+   "max cold B fill tick equivalent T": 2924856.375,
+   "max cold colour expansion tick equivalent T": 141019.5,
+   "visible content cache misses (model)": 128,
+   "max culled cold colour expansion tick equivalent T": 141019.5,
+   "actor events": 13194,
+   "wrapped path": 10005,
+   "max kernel cost 959B": 758.375,
+   "normal path": 3189,
+   "max capture tick cost": 7740.0,
+   "max kernel cost 8F92": 97.75,
+   "dropped writer detected": 1666,
+   "max image calls": 21,
+   "max visible chunks": 58,
+   "max unique patterns": 56,
+   "max pending pattern union": 64,
+   "tile checks": 1854,
+   "post-copy scenery source lifetime": 1850,
+   "post-copy actor source lifetime": 13159,
+   "post-copy assembled frame hooks": 1850,
+   "scenery viewport pixels compared": 68198400,
+   "max post-copy frame hook equivalent T": 23565.375,
+   "max capture plus frame hook equivalent T": 30503.375,
+   "max capture scenery cold colour and B fill equivalent T": 3087528.375,
+   "max capture scenery and cold colour expansion equivalent T": 162672.0,
+   "max capture scenery and culled cold expansion equivalent T": 162672.0,
+   "ULA checks": 1850,
+   "actor content cache hits (model)": 13066,
+   "coordinate control detected": 841,
+   "wholly offscreen actor calls (model)": 932,
+   "position unit": 240,
+   "inactive unit": 24,
+   "full log unit": 12,
+   "overflow skip unit": 12,
+   "ordinal full unit": 12,
+   "commit phase unit": 18,
+   "site refusal unit": 24,
+   "ISR entry unit": 24,
+   "ISR forced unwind unit": 24,
+   "unsafe DI control detected": 6,
+   "interior jump control detected": 6,
+   "game RAM control detected": 6,
+   "frame inactive buffer unit": 12,
+   "frame pending/ack unit": 12,
+   "frame phase guard": 12,
+   "frame unsafe-DI control detected": 6,
+   "frame skipped-render control detected": 6
+  },
+  "fill_units": {
+   "counts": {
+    "independent horizontal connectivity entries": 65536,
+    "uniform": 10,
+    "closed seam": 3,
+    "open seam": 3,
+    "winding exterior": 1,
+    "random": 12,
+    "reject before writes": 7,
+    "quota rejects before writes": 3,
+    "inactive/invalid resume rejects": 3,
+    "quota / clobbered-register resume cases": 4,
+    "negative controls detected": 4
+   },
+   "max_ms": 1985.5272142857143,
+   "max_sweep_pairs": 9,
+   "four_unit_service_max_ms": 0.20342857142857143,
+   "lookup_bytes": 66816,
+   "mask_bytes": 16384,
+   "scope": "assembled resumable whole-image B fill in private page 76/canvas; fixed work quota; no installed scheduler/cache/uploads/display or hardware timing"
+  },
+  "blit_counts": {
+   "exact page/pattern-end boundaries": 9,
+   "capability/policy/operation cases": 36,
+   "wide rectangle backend cases": 18,
+   "bounds reject before transfer": 20,
+   "current/pending pair protection": 12,
+   "wrong stride control detected": 1,
+   "pending overwrite control detected": 1
+  },
+  "timing_gate": {
+   "target_total_added_ms": 10,
+   "status": "FAIL",
+   "cold_capture_scenery_colour_fill_max_ms": 882.1509642857143,
+   "excluded": "runtime cache validation/allocation, uploads, queue and external fill-service wrapper",
+   "hardware_proof": false
+  },
+  "dma_elapsed_time": "UNKNOWN: setup CPU timings exclude transfer stalls; hardware proof absent",
+  "memory": "75 colour worker; 76 fill worker; 77 prepared transfers; 96-111 row lookup; 112-115 canvas; 116-117 masks; 118-121 staging; 128-135 generic connectivity; 136-223 proposed cache",
+  "recipes": [
+   "python -m nexclash.inferno --actor-pack-checks",
+   "python -m nexclash.inferno --actor-fill-checks",
+   "python -m nexclash.inferno --actor-blit-checks",
+   "python -m nexclash.inferno --actor-pack-check ../specnext/reference/inferno/Inferno6.rzx --quick 2000",
+   "python -m nexclash.inferno --actor-pack-all ../specnext/reference/inferno --quick 2000 --out work/actor_b_quick",
+   "python -m nexclash.inferno --modal-checks ../specnext/reference/inferno/build/modal4_entry.json"
+  ],
+  "shared_sources": {
+   "asm/lib/hlib_speed.asm": "71cde98489087d0e8b7460944830aad7",
+   "asm/lib/hlib_r.asm": "ea416fd01aa691b7223d8bcd09921540",
+   "asm/lib/hlib_pace.asm": "c0cdd4e5569202a6e66dffefaaa8fa16",
+   "asm/lib/hlib_pcache.asm": "dc50c50310c9cbc5e2f687ff797827e5",
+   "asm/lib/hlib_commit.asm": "0fe47084f64aeabda9766588d8db0774",
+   "asm/lib/hlib_dma.asm": "bc3db6211d837dd4a7ef33624d371500",
+   "asm/lib/hlib_selftest.asm": "c7bf864101b04bdfeab8c8e01d78f1a9",
+   "nexclash/hooklib.py": "d34f712cbe200995f3c31f729bf55626",
+   "nexclash/dma.py": "d9a31c7876224fcf58ccede9f3519379",
+   "nexclash/dma_check.py": "dc6ef13484087eee5627a28a33de8cb4",
+   "nexclash/hookprofile.py": "897b271fe850c597aab718478eea6a4b",
+   "selftest.py": "5572dbbb7506698d777862b670a0dcac"
+  },
+  "required_checks": {
+   "assembly": "PASS: 16 blocks / 100 exported symbols",
+   "doccheck": "PASS: 89 docs; existing warnings retained; inherited LEARNINGS budget consolidated",
+   "shared_tools": "PASS; upstream optional reference-dependent cases skipped, see actor_b_tools_checks.txt",
+   "canary": "PASS: Chuckie Egg unchanged",
+   "six_quick_correctness": "PASS: 12000 frames, repeated after remote main/DMA integration; counts/timings identical",
+   "level4_shop": "PASS: sampled original return only",
+   "total_timing": "FAIL",
+   "hardware": "UNPROVED"
+  },
+  "replay_dependencies": {
+   "nexclash/rzx.py": "4ecfeee968868ba0b1ffa79d7524096d",
+   "nexclash/simpool.py": "12dcaf21ad0fb3a5e6f2ce218a59cd89",
+   "nexclash/z80n.py": "b7390d3ab1734c9b70d495d64f38dc72",
+   "nexclash/dizzy6.py": "98156355c29f4a5d6c7f2d9bb3e8dd28",
+   "nexclash/build.py": "16f8e0f0314f9e28116be3034e35c7a6"
+  }
  }
 }
