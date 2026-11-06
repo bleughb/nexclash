@@ -1,0 +1,80 @@
+{
+  "version": "0.1-experimental",
+  "status": "replay validation in progress",
+  "hardware": "not tested",
+  "timing": "assumed rates; not measurements",
+  "complete_tcommit_costs": [
+    {
+      "policy": "blitter",
+      "assumed_MBps": 8,
+      "complete_tcommit_T": 6783,
+      "complete_tcommit_us": 242.25,
+      "injected_stall_T": 4480,
+      "jobs": 1
+    },
+    {
+      "policy": "blitter",
+      "assumed_MBps": 4,
+      "complete_tcommit_T": 11468,
+      "complete_tcommit_us": 409.57142857142856,
+      "injected_stall_T": 8960,
+      "jobs": 1
+    },
+    {
+      "policy": "blitter",
+      "assumed_MBps": 1,
+      "complete_tcommit_T": 38348,
+      "complete_tcommit_us": 1369.5714285714287,
+      "injected_stall_T": 35840,
+      "jobs": 1
+    },
+    {
+      "policy": "blitter",
+      "assumed_MBps": 0.5,
+      "complete_tcommit_T": 74188,
+      "complete_tcommit_us": 2649.5714285714284,
+      "injected_stall_T": 71680,
+      "jobs": 1
+    },
+    {
+      "policy": "no_blitter",
+      "assumed_MBps": 8,
+      "complete_tcommit_T": 16039,
+      "complete_tcommit_us": 572.8214285714286,
+      "injected_stall_T": 4480,
+      "jobs": 20
+    },
+    {
+      "policy": "no_blitter",
+      "assumed_MBps": 4,
+      "complete_tcommit_T": 20519,
+      "complete_tcommit_us": 732.8214285714286,
+      "injected_stall_T": 8960,
+      "jobs": 20
+    },
+    {
+      "policy": "no_blitter",
+      "assumed_MBps": 1,
+      "complete_tcommit_T": 47399,
+      "complete_tcommit_us": 1692.8214285714287,
+      "injected_stall_T": 35840,
+      "jobs": 20
+    },
+    {
+      "policy": "no_blitter",
+      "assumed_MBps": 0.5,
+      "complete_tcommit_T": 83239,
+      "complete_tcommit_us": 2972.8214285714284,
+      "injected_stall_T": 71680,
+      "jobs": 20
+    },
+    {
+      "policy": "cpu_only",
+      "assumed_MBps": null,
+      "complete_tcommit_T": 29456,
+      "complete_tcommit_us": 1052.0,
+      "injected_stall_T": 0,
+      "jobs": 0
+    }
+  ]
+}

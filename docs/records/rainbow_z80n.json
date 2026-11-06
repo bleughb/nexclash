@@ -281,5 +281,86 @@
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-05"
- }
+ },
+ "experimental_reworks": [
+  {
+   "name": "sky_dma",
+   "version": "0.1-experimental",
+   "module": "nexclash.rainbow_dma",
+   "base_rework": "sky",
+   "doc": "rainbow_dma.md",
+   "automatic_selftest": false,
+   "note": "Explicit experimental game-build command; prior outputs, rework recipes and verification stamps remain pinned. No new full-game or hardware stamp. Exact run scope is in docs/benchmarks/rainbow_dma_v01.json.",
+   "build_command": "python -m nexclash.rainbow_dma build --snapshot SNAPSHOT --out OUT",
+   "policies": {
+    "blitter": [],
+    "no_blitter": [
+     "--no-blitter"
+    ],
+    "cpu_only": [
+     "--cpu-only"
+    ],
+    "blitter_diag": [
+     "--diagnostic"
+    ]
+   },
+   "verify_command": "python -m nexclash.rainbow_dma verify --rzx RECORDING --frames N --report REPORT",
+   "inputs": "inputs and rework[name=sky].inputs above",
+   "data": [
+    "asm/rainbow_dma_hooks.asm",
+    "asm/lib/hlib_dma.asm",
+    "docs/profiles/rainbow_dma.json"
+   ],
+   "modules": [
+    "nexclash/rainbow_dma.py",
+    "nexclash/rainbow_dma_check.py",
+    "nexclash/rainbow_z80n_sky.py",
+    "nexclash/dma.py",
+    "nexclash/nextboot.py"
+   ],
+   "outputs": [
+    {
+     "file": "rainbow_sky_dma_v01_blitter.nex",
+     "sha256": "fc26cac6f63eefe7792dcfa1500a5db96c6e4dbe22c7a25ee5d72151211c69d7",
+     "md5": "505e27a12077926a9bc55ca645c30644",
+     "bytes": 213504,
+     "policy": "blitter",
+     "experimental_version": "0.1",
+     "sky": true,
+     "boot_check": "PASS, including loading-screen wrapper and pulse-mode entry"
+    },
+    {
+     "file": "rainbow_sky_dma_v01_no_blitter.nex",
+     "sha256": "7b7e1e29d3f4a68425b0804ac9a0562eabe454de366f97e8f4185c6a5ce6fae1",
+     "md5": "04d68dedb46de2c937b90ef7ade9e49c",
+     "bytes": 213504,
+     "policy": "no_blitter",
+     "experimental_version": "0.1",
+     "sky": true,
+     "boot_check": "PASS, including loading-screen wrapper and pulse-mode entry"
+    },
+    {
+     "file": "rainbow_sky_dma_v01_cpu_only.nex",
+     "sha256": "9f802db73410bdaeb2e75248021537ce86af008139246c8b8231c797253ac0d2",
+     "md5": "6beabfecf7c882e8535e3290cc015df8",
+     "bytes": 213504,
+     "policy": "cpu_only",
+     "experimental_version": "0.1",
+     "sky": true,
+     "boot_check": "PASS, including loading-screen wrapper and pulse-mode entry"
+    },
+    {
+     "file": "rainbow_sky_dma_v01_blitter_diag.nex",
+     "sha256": "d04ad176e7b8a9c0fd5637833cc3e17163943811295272626b81c4814f6f4eb9",
+     "md5": "d6b90405d29face3f58938d69b1ec598",
+     "bytes": 213504,
+     "policy": "blitter",
+     "experimental_version": "0.1",
+     "sky": true,
+     "boot_check": "PASS, including loading-screen wrapper and pulse-mode entry"
+    }
+   ],
+   "hardware": "untested"
+  }
+ ]
 }

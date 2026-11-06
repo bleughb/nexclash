@@ -126,3 +126,13 @@ median/tail/worst timings. Test fallback on a pre-DDMA core and explicit no-blit
 check sound, interrupt delivery, raster overruns and original pacing. Only then adopt the prototype
 in a versioned game rework with its full replay, negative controls and new output hashes. The
 owner's >8 MB/s observation is encouraging but does not establish a particular hook's speedup.
+
+## Rainbow game integration
+
+The versioned experiment in [games/rainbow_dma.md](../games/rainbow_dma.md) integrates the rectangle
+backend into the actual sky rework's `tcommit`. `python -m nexclash.rainbow_dma build` provides real
+`--no-blitter` and `--cpu-only` game builds; pinned engines remain unchanged. Its mapped-memory
+verifier executes DMA effects, adds explicitly assumed elapsed stalls, and checks the existing
+pixel/register/memory/AY/commit models. Legacy Spectrum IM2 runs with $C0=0; unexpected hardware
+IM2 falls back without changing interrupt masks. Source and mutable packets are ordinary RAM.
+Experimental timing and partial/full replay scope are recorded separately; hardware is untested.
