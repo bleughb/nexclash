@@ -87,6 +87,19 @@ def commit_case(policy=2, core=0x33, hwim2=0, mbps=4, broken=None, start_line=30
     return ns, sim.registers[25]
 
 
+def setup_case(patch):
+    from skoolkit.simulator import Simulator
+    mem = bytearray(65536)
+    mem[0xD000:0xD000+len(patch.stub_extra)] = patch.stub_extra
+    mem[0x8000:0x8003] = b'\xCD' + patch.setup_call.to_bytes(2, 'little')
+    ns = g.NextState(patch)
+    sim = g._machine(Simulator, mem, Simulator(mem, {'PC': 0x8000, 'SP': 0x7FF0}).registers[:], ns)
+    assert g._run(sim, (0x8003,), 2000000), 'startup did not return'
+    got = bytes(e[2] for e in ns.events if e[0] == 'nr' and e[1] == 0x41)
+    assert got == patch.cfg.palette() + patch.cfg.tile_palette(), 'startup palette mismatch'
+    assert ns.dma.stats['jobs'] == 0, 'startup initiated a transfer'
+
+
 class Checks(unittest.TestCase):
     def test_game_policies_and_core_gate(self):
         for policy in (0, 1, 2):
@@ -134,6 +147,19 @@ class Checks(unittest.TestCase):
                              bytes.fromhex('3e22') + bytes(16382))
             state = nextboot.boot(str(path), 0xC002)
             self.assertEqual(state['R'][0], 0x22)
+
+    def test_setup_palette_and_control(self):
+        for policy in (0, 1, 2):
+            setup_case(RainbowDMA(policy))
+        patch = RainbowDMA()
+        # A stale absolute palette operand must fail, even though setup still returns.
+        bad = bytearray(patch.stub_extra)
+        at = bad.index(0x21) + 1  # first LD HL,pal operand
+        address = int.from_bytes(bad[at:at+2], 'little')
+        bad[at:at+2] = (address+4).to_bytes(2, 'little')
+        patch.stub_extra = bytes(bad)
+        with self.assertRaises(AssertionError):
+            setup_case(patch)
 
     def test_negative_controls(self):
         for name in ('wrong stride', 'no enable', 'wrong mapping'):

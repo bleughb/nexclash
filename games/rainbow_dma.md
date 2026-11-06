@@ -12,6 +12,8 @@ The base is `rainbow_z80n_sky` v1.0, including the loading screen, sky palette e
 class colours (the thrown rainbow has no outline), pattern cache, tile composer, queued AY,
 3-interrupt limiter and overrun recovery. The original sky build rebuilds to MD5
 `d7b2345c8f1fd35f592324740ec4daae`. No graphic, colour, plotter or gameplay patch changes.
+A startup trampoline follows the fixed-address palette block; setup labels and all 512 palette
+upload bytes are checked, including a stale-address negative control.
 PR #93 merged at `3efa10f370b21ba7d8cdb6021ac68f32b483b839`; its branch head remains
 `449682f2fe987e71e68a254e771efd424681d90d`.
 
@@ -73,7 +75,7 @@ mapping and overlay; tilemap rows and tile definitions are checked against the e
 Port counts alone never prove a transfer. Data-free tests execute the real assembled tcommit for
 24 policy/core/IM2 combinations, preserve untouched gaps and the source, test elapsed stalls and
 wrap credit, and detect five controls (stride, missing enable, wrong mapping, old-core gate bypass,
-missing post-transfer sample). Assembly/profile checks, canary and doccheck are separate gates.
+missing post-transfer sample), plus the startup palette-address control. Assembly/profile checks, canary and doccheck are separate gates.
 Partial replays do not replace the sky rework's prior proof or certify this new build for a full game.
 
 ## Hardware checklist
@@ -93,6 +95,8 @@ older supported cores fall back to ordinary DMA. Keep pinned builds available fo
   core, build hash and policy. No hardware run has been performed for these builds.
 
 ## Lessons
+- [tool nexclash/rainbow_dma.py] Legacy randomized object fixtures must reserve the rework's
+  shadow-page code region before executing hooks; the loader initializes that allocation.
 - [tool nexclash/nextboot.py] Boot simulation must honor the NEX entry bank: a bank-32 loading-screen
   wrapper was otherwise bypassed. Both wrapped and unwrapped game-entry states now compare equal.
 - [tool nexclash/rainbow_dma.py] A virtual DMA transfer needs the game's actual mapped-memory callbacks;

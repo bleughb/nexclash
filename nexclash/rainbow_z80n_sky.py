@@ -2192,6 +2192,8 @@ def _pair(patch, bm, regs, n_before, scratch=None, pat=None, pages=None, stops=(
     alt = bytearray(rom48())
     alt[0x2000:0x4000] = patch.page
     psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
+    if pages is not None and hasattr(patch, "prepare_unit_pages"):
+        patch.prepare_unit_pages(pages)  # fixtures must reserve the rework's code allocation
     ns = NextState(patch)
     if scratch is not None:
         ns.scratch[:] = scratch

@@ -62,9 +62,19 @@ class RainbowDMA(game.RainbowPatch):
         self.extra_banks[14] = bytes(shadow)
         # Loader has returned and the original Spectrum game never owns DMA. Revoke any
         # inherited burst channel before the game starts; setup then sets its own registers.
-        self.setup = bytes.fromhex('3e83d36b') + self.setup
-        self.stub_extra = self.setup + self.cfg.palette() + self.cfg.tile_palette()
+        # Do not move setup or palette bytes: its assembled LD HL,pal operands and
+        # exported symbols are absolute. Enter via a trampoline AFTER the palettes.
+        setup_entry = self.setup_call
+        self.setup_call = 0xD000 + len(self.stub_extra)
+        self.stub_extra += bytes.fromhex('3e83d36bc3') + setup_entry.to_bytes(2, 'little')
+        assert self.setup_call + 7 < 0xDFFE
         self.report = {}
+
+    def prepare_unit_pages(self, pages):
+        # Legacy object fixtures randomize the entire shadow page. Its upper half is
+        # now an owned code allocation, so seed it exactly as the NEX loader does.
+        if game.PAGE_SH in pages:
+            pages[game.PAGE_SH][0x1000:0x1000+len(self.extension)] = self.extension
 
     def configure_nextstate(self, ns):
         ns.pages[game.PAGE_SH][0x1000:0x1000+len(self.extension)] = self.extension
@@ -204,6 +214,9 @@ def build(snapshot, out, policy=2, diag=False):
     before = nextboot.boot(str(path), stop_pc)
     path.write_bytes(data)
     after = nextboot.boot(str(path), stop_pc)
+    expected_palette = patch.cfg.palette() + patch.cfg.tile_palette()
+    if bytes(value for reg, value in after['nrlog'] if reg == 0x41) != expected_palette:
+        raise RuntimeError('startup palette upload differs from the sky game')
     if after['bad'] or any(before['R'][i] != after['R'][i] for i in range(29) if i != 25) or \
             any(before['mem'][a] != after['mem'][a] for a in range(65536)) or after['nr'].get(0xC0) != 0:
         raise RuntimeError('loading-screen wrapper changed the game entry state')
