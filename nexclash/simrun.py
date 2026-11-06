@@ -150,15 +150,22 @@ def play_rzx(path, hooks, stop=None, keep_snapshots=False):
     n = [0]
     old = rz.Simulator, rz.CSimulator, rz.RZXTracer.next_frame
     nf = rz.RZXTracer.next_frame
+    fast = getattr(hooks, 'frame_only', False) and old[1] is not None
+
+    def frame_sim(*args, **kwargs):
+        sim = old[1](*args, **kwargs)
+        if hasattr(hooks, 'on_sim'):
+            hooks.on_sim(sim)
+        return sim
 
     def next_frame(self):
         n[0] += 1
         if hasattr(hooks, 'on_frame'):
             hooks.on_frame(n[0])
         return nf(self)
-    rz.Simulator, rz.CSimulator, rz.RZXTracer.next_frame = _sim_class(hooks), None, next_frame
+    rz.Simulator, rz.CSimulator, rz.RZXTracer.next_frame = _sim_class(hooks), frame_sim if fast else None, next_frame
     try:
-        rz.main(['--python', '--quiet', '--no-screen', '--fps', '0'] +
+        rz.main(([] if fast else ['--python']) + ['--quiet', '--no-screen', '--fps', '0'] +
                 (['--stop', str(stop)] if stop else []) + [path])
     except SystemExit:
         pass

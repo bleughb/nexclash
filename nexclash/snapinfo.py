@@ -80,6 +80,12 @@ def inspect(path):
     else:
         where = 'RAM'
     facts.append(('PC', '%d (0x%04X) - %s' % (pc, pc, where)))
+    # At the IM 1 entry the interrupt has pushed only the interrupted PC. A RAM
+    # return is evidence of game code calling the ROM, even if its BASIC loader
+    # is still present. Do not extend this inference into the handler's pushes.
+    game_interrupt = pc == 0x0038 and s.im == 1 and s.sp >= 0x4000 and _w(m, s.sp) >= 0x5CC0
+    if game_interrupt:
+        facts.append(('Resume', 'IM 1 stack return to RAM at 0x%04X; BASIC execution not established' % _w(m, s.sp)))
     prog, vars_ = _w(m, 23635), _w(m, 23627)
     basic = 23755 <= prog < vars_ and m[prog] < 64
     usr = _usr_targets(m) if basic else []
@@ -93,7 +99,7 @@ def inspect(path):
             prog, vars_ - 1, len(lines), ', '.join('%d (0x%04X)' % (u, u) for u in usr) or 'none')))
         for ln in lines[:8]:
             facts.append(('', '  ' + ln[:110]))
-    if pc < 0x4000 and basic and s.im == 1:
+    if pc < 0x4000 and basic and s.im == 1 and not game_interrupt:
         warn.append('loader snapshot: a BASIC program is running (PC in ROM). The game starts at a USR '
                     'target; run the loader to it in the toolkit (keys with `scan --keys`), build from there')
         if is128:

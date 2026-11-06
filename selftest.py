@@ -398,10 +398,21 @@ def run_one(rec, action, src, work, human):
 
 def smoke_rzx_census(ez, er, ok):
     import rzx_census                           # probe (tools/probes/README.md): C-simulator PC census
-    r = rzx_census.census(er, [40092, 43909], stop=300)
+    r = rzx_census.census(er, [40092, 43909], stop=300, sample_frames=[0, 1, 2],
+                          memory=[(40092, 4)])
     ok('probe rzx_census (300 frames): ISR 40092 x299 from frame 0, 43909 x141017 (= scan --writers)',
        r['frames'] == 300 and not r['desync'] and r['pcs'][40092]['count'] == 299 and
        r['pcs'][40092]['first'] == 0 and r['pcs'][43909]['count'] == 141017, r)
+    ok('probe rzx_census captures first hit per PC/frame before execution, exact code bytes',
+       [(s['pc'], s['frame']) for s in r['samples']] ==
+       [(pc, f) for f in range(3) for pc in (40092, 43909)] and
+       all(s['registers'][24] == s['pc'] and s['memory'] == {'40092': [195, 194, 156, 0]}
+           for s in r['samples']), r['samples'])
+    bounded = rzx_census.census(er, [40092, 43909], stop=3, sample_frames=[0, 1, 2, 999],
+                               sample_limit=2)
+    ok('probe rzx_census: two-hit bound per PC/frame, absent frame has no sample',
+       [(s['pc'], s['frame']) for s in bounded['samples']] ==
+       [(pc, f) for f in range(3) for pc in (40092, 43909, 43909)], bounded['samples'])
 
 
 # Every tools/probes/<name>.py -> its smoke test on Chuckie Egg (ez, er, ok), run by tools_check;
@@ -563,6 +574,24 @@ def tools_check(src):
         facts, warn = snapinfo.inspect(ez)
         txt = '\n'.join(v for k, v in facts)
         ok('inspect: 48K, IM 2, no loader warning', '48K' in txt and 'IM 2' in txt and not warn, (txt, warn))
+        from skoolkit.snapshot import Snapshot, write_snapshot
+        imem = snapinfo.addr_view(Snapshot.get(ez))
+        imem[23755:23761] = [0, 10, 2, 0, 234, 13]  # 10 REM, retained BASIC loader
+        for addr, value in ((23635, 23755), (23627, 23761), (0x9000, 0x8000)):
+            imem[addr:addr + 2] = [value & 255, value >> 8]
+        ipath = os.path.join(work, 'interrupt.z80')
+        write_snapshot(ipath, imem[16384:], ['pc=56', 'sp=36864'], ['im=1'])
+        inf, iwarn = snapinfo.inspect(ipath)
+        ok('inspect: retained BASIC at IM 1 entry returning to RAM is not a running loader',
+           any(k == 'Resume' and '0x8000' in v for k, v in inf) and not iwarn, (inf, iwarn))
+        write_snapshot(ipath, imem[16384:], ['pc=4770', 'sp=36864'], ['im=1'])
+        _, iwarn = snapinfo.inspect(ipath)
+        ok('inspect: BASIC MAIN-EXEC still warns about a loader', any('loader snapshot' in w for w in iwarn), iwarn)
+        imem[0x9000:0x9002] = [0xA2, 0x12]
+        write_snapshot(ipath, imem[16384:], ['pc=56', 'sp=36864'], ['im=1'])
+        _, iwarn = snapinfo.inspect(ipath)
+        ok('inspect: IM 1 returning to ROM does not suppress a possible loader warning',
+           any('loader snapshot' in w for w in iwarn), iwarn)
         _, r = isrinfo.isr(ez, [er], stop=150)
         ok('isr: handler 40092, no IX/IY reads', 40092 in r['entries'] and not any(r['reads_entry'].values()), r)
         ok('isr: slots touched 0 r, 3 r, 4 x, 5 r, 7 rw (slot 2 free for a hook page)',
@@ -588,6 +617,13 @@ def tools_check(src):
         ok('preview: 2 shots, plotter 39500 in 4 caller groups (40385: 184 calls, 8832 bytes)',
            r['shots'] == [400, 800] and len(g) == 4 and g.get((39500, 40385), {}).get('calls') == 184 and
            g[(39500, 40385)]['bytes'] == 8832 and os.path.getsize(pv) > 1000, g)
+        from unittest.mock import patch
+        fast_png, slow_png = os.path.join(work, 'frame_fast.png'), os.path.join(work, 'frame_python.png')
+        _, fast_frames = preview.preview(ez, [er], fast_png, at=[400, 800], buffer=(0x5B00, 32, 128))
+        with patch('skoolkit.rzxplay.CSimulator', None):
+            _, slow_frames = preview.preview(ez, [er], slow_png, at=[400, 800], buffer=(0x5B00, 32, 128))
+        ok('preview: frame-only C/Python capture identical (autosave RZX, ULA and buffer)',
+           fast_frames == slow_frames and md5(fast_png) == md5(slow_png), (fast_frames, slow_frames))
         _, r = drawcost.cost(ez, 39500, [er], stop=1500)
         ok('cost plotter 39500 (1500 frames): 1402 calls, median 19535 T',
            r['calls'] == 1402 and r['median'] == 19535, r)
@@ -611,6 +647,13 @@ def tools_check(src):
            r['engine'] == 'chuckie' and r['plain']['boot'].startswith('OK') and r['routines'][0]['routine'] == 43899 and
            rt[43899]['calls'] == 1059 and rt.get(40000, {}).get('calls') == 814 and
            len(rt[40000]['callers_seen']) == 6 and rt[40000]['T_median'] == 665, r['routines'][:2])
+
+        with patch('nexclash.engines.find', return_value=None), patch('nexclash.identify.identify', return_value={'engine': 'unknown'}):
+            text, _ = survey.survey(ez, out=os.path.join(work, 'unknown_survey'), frames=1, log=lambda m: None)
+        engine_text = text.split('## Engine\n', 1)[1].split('\n## ', 1)[0]
+        ok('survey: unknown engine directs stage 1 rather than recommending auto',
+           'Unknown: no detector' in engine_text and 'auto' not in engine_text, engine_text)
+
         rom_paths_check(src, ez, er, work, ok)
         altrom0_check(src, work, ok)
     finally:

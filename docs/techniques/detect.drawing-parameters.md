@@ -2,9 +2,9 @@
 
 ```json
 {
-  "schema": 3,
+  "schema": 4,
   "id": "detect.drawing-parameters",
-  "revision": 1,
+  "revision": 2,
   "kind": "detect",
   "title": "Observe drawing parameters at execution time",
   "question": "Which live registers, stack values and memory fields describe a draw?",
@@ -35,6 +35,12 @@ Capture a small set of live drawing parameters when static bytes or caller inspe
 Use after survey identifies candidate routines; this does not discover an unknown entry automatically.
 Do not add an external viewer when existing preview and cost output answer the question.
 
+**Assumptions.** Registers, source bytes and writes are observed in the same mapped view;
+coordinate arithmetic follows the original instruction width before clipping.
+
+**Validation gap.** Inferno has quick-run original-image reconstruction, not completed sprite
+hooks or full-game/hardware proof; other games may use different arithmetic and clipping.
+
 ## Recognise
 A graphic changes at one address; effects temporarily replace a height; the same routine serves
 several callers; coordinates appear inverted or offset. A register holding a plausible address
@@ -48,6 +54,9 @@ is a hypothesis, not proof of a graphics pointer or stable object identity.
    implementation example, not an existing Nexclash CLI command for this capture.
 3. Compare two objects, animation changes, both directions and reached appear/death effects.
    Match candidate coordinates and dimensions to actual destination writes; retain exceptions.
+4. Test byte wrap before clipping, not just signed offsets: Inferno's x=255 plus dx=1 is 0,
+   not 256. Sample appear/exit paths outside the design-preview window; retain a control with
+   the incorrect transform and require a mismatch on the original writes.
 Stop when each needed parameter has a scoped mapping, or name the unresolved parameter and next probe.
 Keep one representative event per distinct case plus counts; retain the full trace privately.
 
@@ -68,10 +77,14 @@ None; observation must not alter the game state being measured.
 
 ## Verification
 Predict writes for a held-out draw and compare positions, dimensions and source bytes. A deliberately
-wrong coordinate transform or stale height must disagree on a discriminating case. This proposed
-probe has not been run here; no game result or hardware status changes.
+wrong coordinate transform or stale height must disagree on a discriminating case. Inferno's
+broader original-image quick runs detect the missing eight-bit wrap; this validates that observed
+transform, not the safety or completeness of replacement hooks.
 
 ## Evidence
+- Inferno: games/inferno.md; nexclash/inferno.py actor_tiles / compose_tiles / model_verify.
+  Original map and visible ULA checks on held-out quick ticks caught missing modulo-256 x;
+  the incorrect-coordinate control is checked against the same original events and tile data.
 - External source (metadata), source-reviewed only: Elite's `OnDrawLine` captures B/C/D/E/H/L at
   hard-coded 0xEE9D; the viewer transforms endpoints. It assumes the routine is already known.
 - Local motivation, not an application of this card: games/atic_atac.md records the static-height

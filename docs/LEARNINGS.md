@@ -939,6 +939,8 @@ Grouped by question; add a new lesson to its group.
   `nohup cmd &` and `( a; b ) &` die silently - the log just stops (Midnight Resistance session:
   a 20-min `selftest --verify` lost twice). Check with `ps -eo pid,sid,args`: the job's SID must
   be its own PID. 1-2 CPUs: `--jobs 2` at most; one long job at a time.
+  A heredoc-fed `python -` must not also get `< /dev/null`: the last input redirect wins and
+  the script never runs. Use a file or module CLI before detaching.
 - `$!` after `setsid nohup job &` is the wrapper's PID, not the job's (setsid forks): a `until ! kill -0 $!`
   wait ends at once and looks like a finished run (Jetpac check, 2026-11-03). Read the job's PID from
   `ps -eo pid,sid,args` (or wait on the log's last line) before waiting on it.

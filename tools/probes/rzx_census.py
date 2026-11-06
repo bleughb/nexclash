@@ -10,12 +10,16 @@ Output: per address: count, first frame, last frame (+ HL buckets); --json print
 Speed: SkoolKit's C simulator through rzxplay's trace hook, ~400 frames/s with a hook (a 90K-frame
   recording in ~4 min) - the Python simulator commands (`scan`, `survey`) take ~1 h for the same.
 Limits: instruction fetches only (no memory reads / writes: use `nexclash.py scan --writers`);
+  --sample-frames 0,100 --memory 0x8000:0x8000 --json optionally captures registers and address-space
+  bytes BEFORE the first hit per requested PC/frame; --sample-limit N retains up to N hits.
+  Frames without a hit produce no sample. Sample order is execution order, not PC order.
+  This is a point capture, not a write trace; banked memory is the currently mapped view.
   frames are rzxplay's frame counter (context.frame_count, from 0); a recording that desyncs stops with the frame reported;
   autosave snapshots inside the RZX are not stripped (strip first: nexclash.rzx strip).
 Origin: Cauldron 2026-10-27 (first frame of each attribute hook, plot geometries, PEEK targets);
-  disposition in games/cauldron.md "Lessons" (docs/LEARNING.md).
+  Inferno 2026-11-05 added bounded point captures; dispositions in the games' "Lessons".
 Smoke test: `python selftest.py --tools` runs it on Chuckie Egg (frames counted by the ROM
-  interrupt entry 0x0038 must match the frames replayed).
+  interrupt entry 0x0038 must match the frames replayed); sampled PCs/frames and code bytes checked.
 """
 import argparse
 import collections
@@ -26,7 +30,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 
-def census(rzx_path, pcs, stop=None, hl=False):
+def census(rzx_path, pcs, stop=None, hl=False, sample_frames=(), memory=(), sample_limit=1):
     """-> {'frames': n, 'desync': None or message, 'pcs': {pc: {'count', 'first', 'last'[, 'hl']}}}"""
     import skoolkit.rzxplay as rp
     from types import SimpleNamespace
@@ -50,6 +54,8 @@ def census(rzx_path, pcs, stop=None, hl=False):
     want = frozenset(pcs)
     out = {pc: {'count': 0, 'first': None, 'last': None} for pc in pcs}
     hls = {pc: collections.Counter() for pc in pcs}
+    sample_frames = frozenset(sample_frames)
+    samples, sampled = [], collections.Counter()
 
     def hook(tf, context, fc, pc):
         if pc in want:
@@ -59,6 +65,12 @@ def census(rzx_path, pcs, stop=None, hl=False):
             if o['first'] is None:
                 o['first'] = f
             o['last'] = f
+            if f in sample_frames and sampled[pc, f] < sample_limit:
+                sim = context.simulator
+                samples.append({'pc': pc, 'frame': f, 'registers': list(sim.registers),
+                                'memory': {str(lo): list(sim.memory[lo:lo + size])
+                                           for lo, size in memory}})
+                sampled[pc, f] += 1
             if hl:
                 r = context.simulator.registers
                 v = r[6] << 8 | r[7]
@@ -79,7 +91,10 @@ def census(rzx_path, pcs, stop=None, hl=False):
     if hl:
         for pc in pcs:
             out[pc]['hl'] = dict(hls[pc])
-    return {'frames': ctx.frame_count, 'desync': err, 'pcs': out}
+    result = {'frames': ctx.frame_count, 'desync': err, 'pcs': out}
+    if sample_frames:
+        result['samples'] = samples
+    return result
 
 
 def main(argv=None):
@@ -88,13 +103,27 @@ def main(argv=None):
     ap.add_argument('--pc', required=True, help='comma-separated addresses (0x.. or decimal)')
     ap.add_argument('--stop', type=int, help='stop after N frames')
     ap.add_argument('--hl', action='store_true', help='HL buckets per address')
+    ap.add_argument('--sample-frames', default='', help='zero-based frames: first hit per PC captures registers')
+    ap.add_argument('--memory', action='append', default=[], help='capture ADDR:SIZE at sampled hits (repeatable; JSON only)')
+    ap.add_argument('--sample-limit', type=int, default=1, help='maximum hits captured per PC/frame (default 1)')
     ap.add_argument('--json', action='store_true')
     a = ap.parse_args(argv)
     pcs = [int(x, 0) for x in a.pc.split(',') if x]
-    r = census(a.rzx, pcs, a.stop, a.hl)
+    frames = [int(x, 0) for x in a.sample_frames.split(',') if x]
+    memory = [tuple(int(x, 0) for x in span.split(':')) for span in a.memory]
+    if any(len(span) != 2 or not 0 <= span[0] < 65536 or not 0 < span[1] <= 65536 - span[0]
+           for span in memory):
+        ap.error('--memory requires ADDR:SIZE within the 64K address space')
+    if (frames or memory) and not a.json:
+        ap.error('sample capture requires --json')
+    if memory and not frames:
+        ap.error('--memory requires --sample-frames')
+    if a.sample_limit < 1:
+        ap.error('--sample-limit must be positive')
+    r = census(a.rzx, pcs, a.stop, a.hl, frames, memory, a.sample_limit)
     if a.json:
-        print(json.dumps({'frames': r['frames'], 'desync': r['desync'],
-                          'pcs': {'0x%04X' % k: v for k, v in r['pcs'].items()}}))
+        r['pcs'] = {'0x%04X' % k: v for k, v in r['pcs'].items()}
+        print(json.dumps(r))
         return 0
     print('frames %d%s' % (r['frames'], '' if not r['desync'] else '  DESYNC: %s' % r['desync']))
     for pc, o in r['pcs'].items():

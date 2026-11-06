@@ -33,6 +33,9 @@ class Preview:
     def __init__(self, frames, plots, buffer):
         self.want = set(frames)
         self.plots = set(plots or ())
+        self.frame_only = not self.plots
+        if self.frame_only:
+            self.before = self.on_write = None      # plain contact sheets need only frame boundaries
         self.buffer = buffer                        # (addr, stride, lines) or None
         self.sim = None
         self.frame = 0

@@ -2,9 +2,9 @@
 
 ```json
 {
-  "schema": 3,
+  "schema": 4,
   "id": "detect.buffer-layout-producer",
-  "revision": 1,
+  "revision": 2,
   "kind": "detect",
   "title": "Trace a screen copy back to its graphics producer",
   "question": "Which buffer and producer create the figure before the final screen copy?",
@@ -32,10 +32,12 @@
 ```
 
 ## Use / do not use
-Follow a screen copy upstream to identify the buffer layout and the routines that construct its figures.
-Use when survey finds a copier or tile renderer instead of the figure composer. Direct-to-screen
-plotters need no extra buffer viewer. An attractive decoded buffer is only a candidate until
-its relationship to the final screen writes is demonstrated.
+**Assumptions.** Producer and consumer share the observed mapped memory view.
+
+**Validation gap.** No full-recording patch verification; Inferno covers 25 ticks, six levels.
+
+Follow a copier or tile renderer upstream to the figure composer. A decoded buffer remains
+a candidate until its relationship to the screen writes is demonstrated.
 
 ## Recognise
 Large LDI/LDIR or stack copies, dynamic tile definitions, screen writes that mix scenery and
@@ -52,6 +54,8 @@ may run at different points in a frame or use different memory banks.
    visual inspection helps; the external Lua examples are not automatic layout detectors.
 4. Observe before/after one producer call and confirm which changes reach the screen, and when.
    For dynamic tiles, follow the tile-map references as well as the pixel storage.
+   Compare colours too: stale pixels under black attributes are invisible, but game logic may
+   still read them. Retain original memory for the State check.
 Stop when the producer-to-buffer-to-screen path is supported within scope, or report the missing
 link. Keep a compact mapping, writer list and representative events; store raw captures privately.
 
@@ -81,9 +85,10 @@ row mapping must fail on nonuniform rows; include scroll/wrap cases when observe
 required checks for future applications, not results of this documentation change.
 
 ## Evidence
-- External sources (metadata), source-reviewed only: Ranarama's handler uses room dimensions and
-  maps display positions to offsets; Chase HQ's `DrawBackBufferToView` permutes row-address bits
-  from known 0xF000. Both depend on already-identified game layouts.
+- External sources (metadata), source-reviewed only: Ranarama and Chase HQ decode known layouts.
 - Local: games/nemesis_the_warlock.md (save-under overlay, 2026-11-02).
 - Local motivation: games/midnight_resistance.md describes a linear buffer and shared address
   helper; games/cyclone.md documents figures composed into dynamic tiles rather than the screen.
+- Inferno stage 1 (2026-11-05): 25 ticks across levels 1-6 reconstruct actor tile writes and
+  36,864 viewport pixels with zero mismatches. Black cells retain stale bitmap bytes.
+  Design-model check only, not hook verification.
