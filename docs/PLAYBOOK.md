@@ -184,7 +184,8 @@ Colour sheets and recolour: docs/COLOURS.md (built in stage 2, sent in stage 3).
 - Speed: pace target ORIGINAL by default (its slowdowns kept; SLOWDOWN REMOVED / TURBO only when the
   owner names it). `cost GAME.z80 --rzx R --at PLOTTER --group IX`: the original's T
   per draw, draws per frame and per object; design the hooks to it (content cache, fewer uploads:
-  Commando's first hooks cost ~18x the draw). Code at NEXTREG
+  Commando's first hooks cost ~18x the draw). Evaluate DMA/DDMA and compatibility for each new
+  design using docs/DDMA.md; include setup, stalls and fallback, not just transfer rate. Code at NEXTREG
   $07=3 runs about 6x faster, not 8x (LEARNINGS 2.1f). New engines use the hook library (ENGINE_CONTRACT
   "Hook library"): the caller's speed and R kept, and a hook faster than the code it displaces waits for
   its time (card patch.pace-limiter). Measure: `python -m nexclash.pace` (docs/CHECKS.md).
