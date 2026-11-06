@@ -16,7 +16,9 @@
     "boot": "All four delivered NEX files, including bank-32 wrapper, PASS",
     "hardware": "not run",
     "full_game_stamp": "none",
-    "diagnostic_replay": "boot and unit checks only; no separate diagnostic RZX replay"
+    "diagnostic_replay": "boot and unit checks only; no separate diagnostic RZX replay",
+    "pinned_original_z80n_md5": "69369c89035d39eac8e4211c2686503c",
+    "stack": "deferred-ISR tcommit entry SP=0xF4; low-water guard 0xE7 preserved; IFF remains disabled"
   },
   "snapshot_md5": "4c98b980b1726af545fccc99665ef29b",
   "loading_screen_md5": "d91477c36ad36ad42b2b915bf6a1a953",
@@ -67,7 +69,7 @@
     "asm/lib/hlib_dma.asm": "7e84a24ec373277b4fc04a9aefec96061836bd943d2e73d9ab061b2946bb6a9d",
     "docs/profiles/rainbow_dma.json": "c6ef37080e6882cd0068a71e6afe0fc7f0dc18ac848990f4a7a8f3667635dd94",
     "nexclash/rainbow_dma.py": "ba7c6e1e0f00953473e0a1a3fb90e61e5903239c4156c8dcbe67319d4f3e8a61",
-    "nexclash/rainbow_dma_check.py": "20ffd739be55f4128734cdd7d0509ff45a2d3ff33f7eac4f7a737a29d326095c",
+    "nexclash/rainbow_dma_check.py": "b286a7177552648b2e302a37e757f7ca881395afa8bf5d32d128b6cb6531f6dd",
     "nexclash/rainbow_z80n_sky.py": "2008e90ca1e148422b8c8d88544de46044fb89b53aed38d7be20cc9fca4db74d",
     "nexclash/nextboot.py": "b87029cb9187ab28c5dccb1647b78d7fcdf104c0531f71718ba2a26820fb29a2"
   },

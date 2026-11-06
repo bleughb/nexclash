@@ -32,7 +32,7 @@ def commit_case(policy=2, core=0x33, hwim2=0, mbps=4, broken=None, start_line=30
     ns.scratch[g.V_N58] = 160
     ns.scratch[g.V_MSB] = 3
     ns.scratch[g.V_LL:g.V_LL+2] = start_line.to_bytes(2, 'little')
-    ns.scratch[0xFA:0xFC] = b'\x00\x80'
+    ns.scratch[0xF4:0xF6] = b'\x00\x80'
     mem = list(rom48()) + [0] * 49152
     mem[0x2000:0x4000] = patch.page
     if broken == 'wrong stride':
@@ -73,7 +73,7 @@ def commit_case(policy=2, core=0x33, hwim2=0, mbps=4, broken=None, start_line=30
                 mem[a] = v
     ram = M()
     from .dizzy6 import _rw_simulator
-    sim = g._machine(_rw_simulator(), ram, Simulator([0]*65536, {'PC': patch.syms['tcommit'], 'SP': 0xFA}).registers[:], ns)
+    sim = g._machine(_rw_simulator(), ram, Simulator([0]*65536, {'PC': patch.syms['tcommit'], 'SP': 0xF4}).registers[:], ns)
     ns.line_x = (start_line - g.INT_LINE) * g.LINE_T
     if not g._run(sim, (0x8000,), 200000):
         raise AssertionError('tcommit did not return')
@@ -83,7 +83,7 @@ def commit_case(policy=2, core=0x33, hwim2=0, mbps=4, broken=None, start_line=30
     assert ns.clip_tm == [16, 143, 48, 207] and ns.nr[0x6B] == 0x81, 'clip/enable changed'
     assert {r: ns.nr[r] for r in before_nr} == before_nr, 'interrupt state changed'
     assert ns.R[26] == 0, 'IFF enabled within ISR'
-    assert ns.scratch[0xED] == 0, 'private stack exceeded lower bound'
+    assert ns.scratch[0xE7] == 0, 'private stack exceeded lower bound'
     return ns, sim.registers[25]
 
 

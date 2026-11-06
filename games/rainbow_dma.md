@@ -36,7 +36,7 @@ Source $4000-$44FF is ordinary mapped shadow RAM. Destination $61E8 through $681
 virtual memory (physical SRAM addressing cannot reach its block RAM). Both mappings remain until
 completion and are restored to 10/11. The backend and mutable packets live at $5000-$52F9
 (page 28 offset $1000), beyond shadow rows, LASTT and X8T; page 28 is now initialized in the NEX.
-No DMA read uses a CPU-only alt ROM view. Stack tests reserve $00EE-$00FF and keep IFF disabled.
+No DMA read uses a CPU-only alt ROM view. Stack tests reserve $00E8-$00FF and keep IFF disabled.
 
 ## Pacing and timing
 The three-interrupt pacing and existing missed-interrupt credit remain. Stable raster samples
