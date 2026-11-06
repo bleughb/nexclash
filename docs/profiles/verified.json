@@ -97,6 +97,15 @@
     "sprites": "9182f2f8b4b0dc55b59a69728568b403"
    }
   },
+  "fdab5fb61b2cb01ce38edcfa85ea9e80": {
+   "game": "Gryzor",
+   "doc": "gryzor.md",
+   "nex": {
+    "plain": "180adc9071309e8c9a5a10789040d3a1",
+    "sprites": "81f84fdbceb9f6b493140e196de4af99",
+    "outline": "827a770f7964fc8c21d038dfa99b7a00"
+   }
+  },
   "54ad66af6678df22a9d4443e3d04aadb": {
    "game": "Ikari Warriors (48K form)",
    "doc": "ikari_warriors.md",

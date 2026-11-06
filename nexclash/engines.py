@@ -49,6 +49,7 @@ ENGINES = [
     ('dynamite_dan', 'is_dynamite_dan', None),                            # Dynamite Dan (48K)
     ('robin_of_the_wood', 'is_robin_of_the_wood', None),                  # Robin of the Wood (128K)
     ('cobra', 'is_cobra', None),                                          # Cobra (48K)
+    ('gryzor', 'is_gryzor', None),                                        # Gryzor (48K)
 ]
 
 
