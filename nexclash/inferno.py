@@ -325,12 +325,22 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
                 prewarm_seen.setdefault(key,(context.frame_count,pc))
         if kernel and pc in interiors:
             fail('instruction interior entry', '%04X' % pc)
-        if pc not in (0x8F7C, 0x959B, 0x96A1, 0x8F92, 0x8F95):
+        if pc not in (0x8EF9, 0x8F7C, 0x959B, 0x96A1, 0x8F92, 0x8F95):
             return
         sim = context.simulator
         m, r = sim.memory, sim.registers
         try:
             nonlocal private, display_pages, scene_number, frame_pages, frame_state, loading_result, loading_store, actor_cache, actor_jobs
+            if loading and pc == 0x8EF9 and loading_result is None:
+                if bytes(m[pc:pc+3]) != bytes.fromhex('329891') or r[26] or r[27] != 1:
+                    raise AssertionError('loading entry is not original DI/IM1 initialization boundary')
+                for name,value in loading_pause_checks(m,list(r)).items():
+                    counts[name] += value
+                actor_cache,actor_jobs,loading_result,loading_store = prepare_loading_cache(m)
+                loading_result.update(frame=context.frame_count,pc='8EF9',iff=r[26],im=r[27])
+                counts['loading prepared images (host selected)'] = len(actor_cache)
+            if pc == 0x8EF9:
+                return
             if kernel and pc in kernel.sites and (pc == 0x8F7C or st['base'] is not None):
                 private, cost, steps = run_capture(kernel, m, list(r), private, pc)
                 counts['kernel events'] += 1
@@ -347,9 +357,7 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
                     tests[pc] = (list(m), list(r), bytearray(private))
             if pc == 0x8F7C:
                 if loading and loading_result is None:
-                    actor_cache,actor_jobs,loading_result,loading_store = prepare_loading_cache(m)
-                    loading_result.update(frame=context.frame_count,pc='8F7C')
-                    counts['loading prepared images (host selected)'] = len(actor_cache)
+                    raise AssertionError('loading initialization boundary not reached before gameplay')
                 st['pack_cost'] = st['culled_pack_cost'] = 0
                 st['fill_cost'] = st['snapshot_cost'] = 0
                 base = map_tiles(m)
@@ -392,6 +400,7 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
                 image_key = tuple((dx,dy,t,raw_tile(m,t)) for dx,dy,t in a['tiles'])
                 left,top,width,height,pixels = solid_image(tuple((dx,dy,raw) for dx,dy,t,raw in image_key))
                 identity = image_key  # Exact bytes/geometry; never accept a hash-only match.
+                owned_view = {}
                 if loading_store and identity in loading_store[1]:
                     start,size = loading_store[1][identity]
                     packed_image = loading_store[0][start:start+size]
@@ -399,9 +408,21 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
                     if cached_pixels != pixels:
                         raise AssertionError('loading cache image differs at actual draw')
                     counts['loading prepared pixels checked at draw'] += len(pixels)
+                    selected = loading_store[3][identity]
+                    dispatched = run_owned_cache(previous=loading_store[2],op=2,image=selected)
+                    if dispatched['error'] or not dispatched['found']:
+                        raise AssertionError('owned prepared candidate dispatch rejected')
+                    e = dispatched['entry']
+                    packed = owned_payload(dispatched['pages'],e[6],int.from_bytes(e[7:9],'little'),int.from_bytes(e[9:11],'little'))
+                    if packed != packed_image:
+                        raise AssertionError('owned high-RAM canvas differs')
+                    owned_view = dict(bank=e[1],offset=int.from_bytes(e[2:4],'little'),owned=dispatched['pages'])
+                    st['snapshot_cost'] += dispatched['equivalent_T']
+                    counts['assembled owned candidate dispatches'] += 1
+                    counts['max owned candidate dispatch equivalent T'] = max(counts['max owned candidate dispatch equivalent T'],dispatched['equivalent_T'])
                 if pack:
                     previous_job = actor_jobs.get(identity)
-                    snapshot = run_actor_job(m,op=2 if previous_job else 0,image=a['image'],previous=previous_job)
+                    snapshot = run_actor_job(m,op=2 if previous_job else 0,image=a['image'],previous=previous_job,**owned_view)
                     if snapshot['error'] or (not snapshot['match'] if previous_job else not snapshot['done']):
                         raise AssertionError('observed live snapshot capture/validation rejected')
                     if actor_job_tiles(snapshot['stream']) != image_key:
@@ -618,7 +639,7 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
                                 'cold_with_snapshot_validation_max_ms':counts['max capture scenery snapshot cold colour and B fill equivalent T']/3500,
                                 'live_snapshot_validation_tick_max_ms':counts['max live job tick equivalent T']/3500,
                                 'status':'FAIL' if max(cold,counts['max capture scenery snapshot cold colour and B fill equivalent T']/3500) > 10 else 'UNPROVED',
-                                'excluded':'cache lookup/allocation, uploads, queue and external snapshot/fill wrappers',
+                                'excluded':'runtime scan/selection and wrappers, uploads, queue and physical waits; loading mode includes assembled candidate dispatch',
                                 'hardware_proof':False}
     return result
 
@@ -641,7 +662,7 @@ def capture_all(reference, folder, stop=2000, progress=None, scenery=False, fram
         if progress:
             progress('%s level %d: %s (%d frames)' % ('Scenery/capture' if scenery else 'Capture', level, 'FAIL' if bad else 'PASS', result['frames']))
     return {'frames': frames, 'counts': dict(counts), 'cases': cases,
-            'scope': ('frozen live loading experiment; host scan/dispatch/packing, assembled source/colour/B and exact checks; no installed loading hook/cache/display' if loading else 'standalone assembled snapshots/exact validations/pinned B construction plus frame preservation; host cache/census only, no installed scheduler/cache/display' if pack else 'capture plus offline assembled scenery worker; host alternates target banks, no runtime commit, sprite display or continuous release' if scenery else 'capture/model/invariant checks only; no sprite/Layer 2 renderer or continuous release')}
+            'scope': ('initialization-boundary experiment; assembled pause gate, owned high-RAM store/dispatch and direct exact checks; host scan/content selection; no connected loading driver or display' if loading else 'standalone assembled snapshots/exact validations/pinned B construction plus frame preservation; host cache/census only, no installed scheduler/cache/display' if pack else 'capture plus offline assembled scenery worker; host alternates target banks, no runtime commit, sprite display or continuous release' if scenery else 'capture/model/invariant checks only; no sprite/Layer 2 renderer or continuous release')}
 
 
 def tape_blocks(path):
@@ -1658,7 +1679,7 @@ def run_actor_pack(ram, tile=0, dest=0, stride=4, flash=0, code=None, canvas=Non
 
 class ActorJobMemory(Layer2Memory):
     """Single owned immutable source slot; writes to pinned bytes fail immediately."""
-    def __init__(self, ram, op, image, flash, paint, previous, code):
+    def __init__(self, ram, op, image, flash, paint, previous, code, bank=122, offset=0, owned=None):
         super().__init__(ram,code,0,0,0,31,0,False)
         self.pages[78] = self.pages.pop(69)
         self.pages[122] = bytearray([0xE3]*8192)
@@ -1666,6 +1687,14 @@ class ActorJobMemory(Layer2Memory):
             self.pages[78][0x1E85:0x1E93] = previous[78][0x1E85:0x1E93]
             self.pages[122][:] = previous[122]
         self.pages[78][0x1E80:0x1E85] = bytes((op,image,flash))+paint.to_bytes(2,'little')
+        if owned is not None:
+            if op != 2 or not 136 <= bank < 216 or not previous or offset+int.from_bytes(previous[78][0x1E89:0x1E8B],'little')>8192:
+                raise ValueError('invalid owned source view')
+            self.pages[bank] = bytearray(owned[bank])
+        elif bank != 122 or offset:
+            raise ValueError('unowned source view')
+        self.bank = bank
+        self.pages[78][0x1E93:0x1E96] = bytes((bank,))+(0x2000+offset).to_bytes(2,'little')
         self.pinned = bool(self.pages[78][0x1E85])
         self.snapshot_writes = set()
 
@@ -1685,7 +1714,7 @@ class ActorJobMemory(Layer2Memory):
             raise AssertionError('job wrote pinned bytes, code, game RAM or unowned state')
 
     def nextreg(self, reg, value):
-        if reg != 0x51 or value not in (68,122):
+        if reg != 0x51 or value not in (68,self.bank):
             raise AssertionError('job changed unowned mapping/display register')
         self.mmu1 = value
 
@@ -1693,11 +1722,11 @@ class ActorJobMemory(Layer2Memory):
         raise AssertionError('job changed display/IO')
 
 
-def run_actor_job(ram, op=0, image=0, flash=0, paint=0, previous=None, code=None):
+def run_actor_job(ram, op=0, image=0, flash=0, paint=0, previous=None, code=None, bank=122, offset=0, owned=None):
     from . import simpool, z80n
     from .dizzy6 import _rw_simulator
     code = bytes.fromhex(load_profile()['hooks']['job']) if code is None else code
-    mem = ActorJobMemory(ram,op,image,flash,paint,previous,code)
+    mem = ActorJobMemory(ram,op,image,flash,paint,previous,code,bank,offset,owned)
     regs = [0]*30
     regs[12],regs[14],regs[27] = 0x1FF0,0xFE,2
     sim = simpool.machine(_rw_simulator(),mem,regs,'inferno.actor.job')
@@ -1717,7 +1746,7 @@ def run_actor_job(ram, op=0, image=0, flash=0, paint=0, previous=None, code=None
     size = int.from_bytes(state[0x1E89:0x1E8B],'little')
     return {'pages':mem.pages,'active':state[0x1E85],'done':state[0x1E86],
             'error':state[0x1E87],'match':state[0x1E88],'size':size,
-            'stream':bytes(mem.pages[122][:size]),'writes':len(mem.snapshot_writes),
+            'stream':bytes(mem.pages[bank][offset:offset+size]),'writes':len(mem.snapshot_writes),
             'equivalent_T':(r[25]+mem.reads)/8,'instructions':steps}
 
 
@@ -1744,12 +1773,15 @@ def actor_job_tiles(stream):
 
 
 def prepare_loading_cache(ram):
-    """Frozen-live-RAM loading experiment; host dispatch/allocation, assembled workers.
+    """Frozen-live-RAM loading experiment; host scan/selection, assembled workers and owned store.
 
     No RZX-derived catalogue. Every possible C100 index is scanned at this instant.
-    A real wrapper/safe initialization boundary is still required before installation.
+    The pause gate is checked separately; a runtime scan/worker driver is still required.
     """
     cache,jobs,contents,locations = {},{},bytearray(80*8192),{}
+    owned = run_owned_cache()['pages']
+    owned_slots = {}
+    owned_cost = 0
     used,cost,tiles_count,pixels_count = 0,0,0,0
     rejected = Counter()
     for image in range(256):
@@ -1791,6 +1823,13 @@ def prepare_loading_cache(ram):
         if actual != pixels:
             raise AssertionError('loading B pixels differ')
         payload = job['stream']+filled['canvas'][:size]
+        stored = run_owned_cache(job['stream'],filled['canvas'][:size],owned,op=1,image=image)
+        if stored['error'] or not stored['found']:
+            rejected['owned cache capacity/entry refusal'] += 1
+            continue
+        owned = stored['pages']
+        owned_slots[key] = image
+        owned_cost += stored['equivalent_T']
         contents[used:used+needed] = payload
         # Host packing of complete owned images in proposed pages 136..215.
         # No display/pattern allocation or runtime readiness flag is published.
@@ -1802,8 +1841,163 @@ def prepare_loading_cache(ram):
     return cache,jobs,{'prepared_images':len(cache),'packed_source_and_canvas_bytes':used,
                       'cache_capacity_bytes':len(contents),'assembled_tiles':tiles_count,
                       'assembled_B_pixels':pixels_count,'preparation_cpu_ms':cost/3500,
+                      'owned_store_cpu_ms':owned_cost/3500,
                       'rejected':dict(rejected),
-                      'scope':'frozen live-table loading experiment with assembled snapshot/colour/B; host scan/dispatch/allocation; excludes scan, zeroing, cache-store copies, wrappers and hardware stalls'},(bytes(contents[:used]),locations)
+                      'scope':'frozen live-table loading experiment with assembled snapshot/colour/B and owned high-RAM store/candidate dispatch; host scan/content selection; excludes scan, zeroing, external wrappers and hardware stalls'},(bytes(contents[:used]),locations,owned,owned_slots)
+
+
+class OwnedCacheMemory:
+    """Physical high-RAM store; candidate dispatch never means exact-valid or display-ready."""
+    def __init__(self, source, canvas, previous, code, op, image, flash, paint, current, pending):
+        self.pages = ({p:bytearray(v) for p,v in previous.items()} if previous else
+                      {p:bytearray(8192) for p in (79,122,112,113,114,115,*range(136,216))})
+        self.pages[79][:len(code)] = code
+        self.pages[79][0x1FF0:0x1FF2] = b'\x00\x1D'
+        self.pages[122][:] = source.ljust(8192,b'\0')
+        for i in range(4):
+            self.pages[112+i][:] = canvas[i*8192:(i+1)*8192].ljust(8192,b'\0')
+        self.pages[79][0x1E80:0x1E8B] = (bytes((op,image,flash))+paint.to_bytes(2,'little')+
+                len(source).to_bytes(2,'little')+len(canvas).to_bytes(2,'little')+bytes((current,pending)))
+        self.mmu1,self.mmu2,self.reads = 68,10,0
+        self.writes,self.maps = [],[]
+
+    def __getitem__(self,a):
+        if isinstance(a,slice):
+            return [self[i] for i in range(*a.indices(65536))]
+        self.reads += 1
+        if a < 8192:
+            return self.pages[79][a]
+        if a < 16384:
+            return self.pages[self.mmu1][a & 8191]
+        if a < 24576:
+            return self.pages[self.mmu2][a & 8191]
+        raise AssertionError('owned cache read original RAM')
+
+    def __setitem__(self,a,v):
+        if a < 8192 and (0x800 <= a < 0x1800 or 0x1E8B <= a < 0x1EA0 or 0x1F00 <= a < 0x1FF0):
+            self.pages[79][a] = v
+        elif 16384 <= a < 24576 and 136 <= self.mmu2 < 216:
+            self.pages[self.mmu2][a & 8191] = v
+        else:
+            raise AssertionError('owned cache wrote source/game/code/staging RAM')
+        self.writes.append((a,v,self.mmu2))
+
+    def nextreg(self,reg,value):
+        if reg == 0x51 and value in (68,122,112,113,114,115):
+            self.mmu1 = value
+        elif reg == 0x52 and (value == 10 or 136 <= value < 216):
+            self.mmu2 = value
+        else:
+            raise AssertionError('owned cache changed unowned register/mapping')
+        self.maps.append((reg,value))
+
+    def read_port(self,*args):
+        raise AssertionError('owned cache read IO')
+
+    def write_port(self,*args):
+        raise AssertionError('owned cache wrote IO')
+
+
+def run_owned_cache(source=b'',canvas=b'',previous=None,op=0,image=0,flash=0,paint=0,current=0,pending=0,code=None):
+    from . import simpool,z80n
+    from .dizzy6 import _rw_simulator
+    if len(source)>8192 or len(canvas)>32768:
+        raise ValueError('owned input capacity')
+    code = bytes.fromhex(load_profile()['hooks']['owned']) if code is None else code
+    mem = OwnedCacheMemory(source,canvas,previous,code,op,image,flash,paint,current,pending)
+    regs = [0]*30
+    regs[12],regs[14],regs[27] = 0x1FF0,0xFE,2
+    sim = simpool.machine(_rw_simulator(),mem,regs,'inferno.owned.cache')
+    sim.set_tracer(mem)
+    z80n.install(sim,mem.nextreg)
+    steps = 0
+    while sim.registers[24] != 0x1D00:
+        if steps > 1000000:
+            raise AssertionError('owned cache failed to return')
+        sim.opcodes[mem[sim.registers[24]]]()
+        if sim.registers[26]:
+            raise AssertionError('owned cache enabled interrupts')
+        steps += 1
+    if sim.registers[12] != 0x1FF2 or (mem.mmu1,mem.mmu2) != (68,10):
+        raise AssertionError('owned cache failed to restore stack/mappings')
+    state = mem.pages[79]
+    entry = bytes(state[0x800+16*image:0x810+16*image])
+    return {'pages':mem.pages,'error':state[0x1E8B],'found':state[0x1E8C],
+            'entry':entry,'writes':mem.writes,'maps':mem.maps,
+            'equivalent_T':(sim.registers[25]+mem.reads)/8}
+
+
+def owned_payload(pages,page,offset,size):
+    result = bytearray()
+    while size:
+        count = min(size,8192-offset)
+        result += pages[page][offset:offset+count]
+        page,offset,size = page+1,0,size-count
+    return bytes(result)
+
+
+def owned_cache_checks():
+    counts = Counter()
+    reset = run_owned_cache()
+    source,canvas = bytes(range(256))*3,bytes(range(255,-1,-1))*128
+    first = run_owned_cache(source,canvas,reset['pages'],op=1,image=255,flash=1,paint=513)
+    assert first['found'] and not first['error']
+    def payloads(result):
+        e = result['entry']
+        return (owned_payload(result['pages'],e[1],int.from_bytes(e[2:4],'little'),int.from_bytes(e[4:6],'little')),
+                owned_payload(result['pages'],e[6],int.from_bytes(e[7:9],'little'),int.from_bytes(e[9:11],'little')))
+    assert payloads(first) == (source,canvas)
+    counts['source and full canvas exact across page boundaries'] += 1
+    payload_writes = [i for i,(a,v,p) in enumerate(first['writes']) if a>=16384]
+    publication = [i for i,(a,v,p) in enumerate(first['writes']) if a==0x17F0 and v==1]
+    assert len(publication)==1 and publication[0]>max(payload_writes)
+    counts['valid published after complete payload'] += 1
+    for kw in ({'flash':0,'paint':513},{'flash':1,'paint':512},{'flash':1,'paint':257}):
+        miss=run_owned_cache(previous=first['pages'],op=2,image=255,**kw)
+        assert not miss['found'] and not miss['error']
+        assert miss['pages'][79][0x800:0x1800] == first['pages'][79][0x800:0x1800]
+        counts['phase/paint candidate rejection'] += 1
+    hit=run_owned_cache(previous=first['pages'],op=2,image=255,flash=1,paint=513)
+    assert hit['found'] and not hit['error'] and payloads(hit)==(source,canvas)
+    counts['immutable dispatch after scratch mutation'] += 1
+    for owners in ({'current':1},{'pending':1}):
+        denied=run_owned_cache(previous=first['pages'],image=255,**owners)
+        assert denied['error'] and payloads(denied)==(source,canvas)
+        counts['owned reset rejected'] += 1
+    denied=run_owned_cache(b'x',b'y',first['pages'],op=1,image=255)
+    assert denied['error'] and payloads(denied)==(source,canvas)
+    counts['immutable entry overwrite rejected'] += 1
+    # Exact final-byte capacity and refusal retain metadata/payload/cursor.
+    edge={p:bytearray(v) for p,v in reset['pages'].items()}
+    edge[79][0x1E8D:0x1E90]=bytes((215,0,0))
+    full=run_owned_cache(bytes(8192),previous=edge,op=1)
+    assert full['found'] and not full['error']
+    assert full['pages'][79][0x1E8D:0x1E90]==bytes((216,0,0))
+    refused=run_owned_cache(b'x',previous=full['pages'],op=1,image=1)
+    assert refused['error'] and not refused['entry'][0]
+    assert refused['pages'][79][0x800:0x1800]==full['pages'][79][0x800:0x1800]
+    assert not any(a>=16384 for a,v,p in refused['writes'])
+    counts['exact cache capacity and unpublished overflow'] += 1
+    # Force alignment to keep the exact source stream within one mapped page.
+    edge={p:bytearray(v) for p,v in reset['pages'].items()}
+    edge[79][0x1E8D:0x1E90]=bytes((136,255,31))
+    aligned=run_owned_cache(b'ab',b'cd',edge,op=1)
+    assert aligned['entry'][1:4]==bytes((137,0,0)) and payloads(aligned)==(b'ab',b'cd')
+    counts['single-page source alignment'] += 1
+    for kw in ({'op':3},{'op':1},{'op':1,'source':b'x','flash':2}):
+        denied=run_owned_cache(previous=reset['pages'],**kw)
+        assert denied['error'] and not any(a>=16384 for a,v,p in denied['writes'])
+        counts['invalid request unpublished'] += 1
+    # Missing final publication and missing phase check must be observable.
+    code=bytes.fromhex(load_profile()['hooks']['owned'])
+    publish=bytes.fromhex('3601C3')
+    assert code.count(publish)==1
+    broken=run_owned_cache(b'a',b'b',reset['pages'],op=1,code=code.replace(publish,bytes.fromhex('3600C3')))
+    assert not broken['found']
+    counts['missing publication control detected'] += 1
+    return {'counts':dict(counts),'dispatch_ms':hit['equivalent_T']/3500,
+            'loading_store_ms':first['equivalent_T']/3500,'capacity_bytes':80*8192,
+            'scope':'assembled owned high-RAM append/store and candidate dispatch; exact live validation required separately; no game wrapper, loading UI, pattern ownership integration or display readiness'}
 
 
 def actor_job_checks():
@@ -1823,6 +2017,20 @@ def actor_job_checks():
     job = capture()
     want = tuple((x,y,t,raw_tile(ram,t)) for x,y,t in actor_descriptor(ram,0)['tiles'])
     assert actor_job_tiles(job['stream']) == want
+    # Validate straight from a nonzero-offset owned high page, after scratch changes.
+    empty = run_owned_cache()['pages']
+    prefix = run_owned_cache(b'prefix',b'canvas',empty,op=1,image=1)
+    stored = run_owned_cache(job['stream'],b'pixels',prefix['pages'],op=1)
+    entry = stored['entry']
+    owned_view = dict(bank=entry[1],offset=int.from_bytes(entry[2:4],'little'),owned=stored['pages'])
+    assert owned_view['offset'] > 0
+    direct = run_actor_job(ram,op=2,previous=job['pages'],**owned_view)
+    assert direct['match'] and direct['stream']==job['stream'] and not direct['writes']
+    for address in (0xD002,0xDC00+8*768,0xFC00+768):
+        changed = list(ram)
+        changed[address] ^= 1
+        assert not run_actor_job(changed,op=2,previous=job['pages'],**owned_view)['match']
+    counts['direct owned high-RAM exact validation and live mutations'] += 4
     counts['ordered live geometry/bitmap/attribute capture'] += 1
     # Pinned worker consumes only copied raw bytes after all original sources change.
     changed = [v ^ 255 for v in ram]
@@ -1901,13 +2109,13 @@ def actor_job_checks():
     code = bytes.fromhex(load_profile()['hooks']['job'])
     # Skip byte comparison: own pinned tables remain intact, live mutation must then be missed.
     old = bytes.fromhex('B9 C2')
-    assert code.count(old) == 1
+    assert code.count(old) == 7
     broken = code.replace(old,bytes.fromhex('BF C2'))
     source = list(ram)
     source[0xD002] ^= 1
     assert run_actor_job(source,op=2,previous=job['pages'],code=broken)['match']
     old_block = bytes.fromhex('1ABE C2')
-    assert code.count(old_block) == 8
+    assert code.count(old_block) == 16
     broken_block = code.replace(old_block,bytes.fromhex('1ABF C2'))
     for row in range(8):
         source = list(ram)
@@ -2989,6 +3197,114 @@ def run_capture(patch, memory, registers, state, site, memory_class=CaptureMemor
 
 
 
+class PausePatch(CapturePatch):
+    """One checked initialization boundary, after original DI and before IM2 setup."""
+    def __init__(self,code=None):
+        h=load_profile()['hooks']
+        self.code=bytes.fromhex(h['pause']) if code is None else code
+        self.rom=loader_rom()
+        org=int(h['syms']['pause_loading'],16)
+        if org+len(self.code)>=0x3D00 or any(b!=255 for b in self.rom[org:org+len(self.code)]):
+            raise ValueError('loading pause overlaps live ROM')
+        self.rom[org:org+len(self.code)]=self.code
+        self.sites={0x8EF9:(bytes.fromhex('329891'),b'\xC3'+org.to_bytes(2,'little'))}
+        self.stops={0x8EF9:0x8EFC}
+        self.site_bytes=set(range(0x8EF9,0x8EFC))
+
+
+class PauseMemory(CaptureMemory):
+    def __init__(self,ram,state,patch,speed):
+        super().__init__(ram,state,patch)
+        self.speed=speed
+        self.selected=0
+
+    def nextreg(self,reg,value):
+        if reg==7 and value in range(4):
+            self.speed=value
+        else:
+            super().nextreg(reg,value)
+
+    def read_port(self,registers,port):
+        if port!=0x253B or self.selected!=7:
+            raise AssertionError('pause read unexpected IO')
+        return self.speed | (self.speed<<4)
+
+    def write_port(self,registers,port,value,*args):
+        if port!=0x243B or value!=7:
+            raise AssertionError('pause wrote original IO/display')
+        self.selected=value
+
+    def __setitem__(self,a,v):
+        if a<8192 and self.mmu0==68 and 0x1D00<=a<0x1EF0:
+            self.pages[68][a]=v
+        elif a==0x9198 and self.mmu0==255:
+            self.ram[a]=v
+        else:
+            raise AssertionError('pause touched original stack/code/RAM')
+
+
+def run_loading_pause(memory,registers,speed=0,code=None,worker=None,check_r=True):
+    from . import simpool,z80n
+    from .dizzy6 import _rw_simulator
+    from skoolkit.simulator import Simulator
+    if registers[24]!=0x8EF9 or registers[26] or registers[27]!=1:
+        raise ValueError('unproved loading pause entry domain')
+    patch=PausePatch(code)
+    original=simpool.machine(Simulator,list(memory),registers,'inferno.pause.original',copy=True)
+    original.opcodes[original.memory[0x8EF9]]()
+    state=bytearray(8192)
+    # Variable-duration clobbering private worker, never a stand-in for an installed scheduler.
+    worker=worker or bytes.fromhex('0100100B78B120FB110102210304DD210506FD210708D901090A110B0C210D0ED9083E9B08C9')
+    state[0x1D80:0x1D80+len(worker)]=worker
+    mem=PauseMemory(patch.apply_memory(memory),state,patch,speed)
+    sim=simpool.machine(_rw_simulator(),mem,registers,'inferno.pause.patched')
+    sim.set_tracer(mem)
+    z80n.install(sim,mem.nextreg)
+    steps=0
+    while sim.registers[24]!=0x8EFC:
+        if steps>400000:
+            raise AssertionError('pause worker failed to return')
+        sim.opcodes[mem[sim.registers[24]]]()
+        if sim.registers[26] or sim.registers[27]!=1 or sim.registers[14]!=registers[14]:
+            raise AssertionError('pause changed IFF/IM/I')
+        steps+=1
+    compared=tuple(i for i in range(30) if i not in (25,29) and (check_r or i!=15))
+    if any(sim.registers[i]!=original.registers[i] for i in compared):
+        raise AssertionError('pause changed original registers: '+str([(i,original.registers[i],sim.registers[i]) for i in compared if sim.registers[i]!=original.registers[i]]))
+    expected=list(original.memory)
+    expected[0x8EF9:0x8EFC]=patch.sites[0x8EF9][1]
+    if mem.ram!=expected or mem.mmu0!=255 or mem.speed!=speed:
+        raise AssertionError('pause failed original RAM/mapping/caller-speed contract')
+    return {'instructions':steps,'refresh_delta':(original.registers[15]-sim.registers[15])&127}
+
+
+def loading_pause_checks(memory=None,registers=None):
+    if memory is None:
+        memory=[0]*65536
+        memory[0x8EF9:0x8EFC]=bytes.fromhex('329891')
+        registers=[(i*17)&255 for i in range(30)]
+        registers[12],registers[24],registers[26],registers[27],registers[28]=0xF000,0x8EF9,0,1,0
+    counts=Counter()
+    for speed in range(4):
+        for refresh in (0,1,126,127,128,255):
+            regs=list(registers)
+            regs[15]=refresh
+            run_loading_pause(memory,regs,speed=speed)
+            counts['all-register/R/RAM/stack/IFF/caller-speed pause restoration']+=1
+    for worker in (b'\xC9',bytes.fromhex('01FFFF0B78B120FBC9')):
+        run_loading_pause(memory,registers,worker=worker)
+        counts['variable worker M1 duration restoration']+=1
+    code=bytes.fromhex(load_profile()['hooks']['pause'])
+    broken=code.replace(bytes.fromhex('ED4F'),bytes.fromhex('0000'))
+    try:
+        run_loading_pause(memory,registers,code=broken)
+    except AssertionError:
+        counts['missing R restoration control detected']+=1
+    else:
+        raise AssertionError('missing R control not informative')
+    return dict(counts)
+
+
 class ModalPatch(CapturePatch):
     """Original gameplay-return boundary; no modal drawing instruction is bypassed."""
     def __init__(self, code=None):
@@ -3745,10 +4061,12 @@ def pulse_tests(path):
             'scope': 'unmodified ROM, actual TZX pulses, polarity 0, no fast load/accelerators; strict CMP/live RAM; short-tape timeout and other EAR polarities not proved'}
 
 
-def continuation_case(snapshot, blocks, level, limit=2_000_000, pulse_blocks=None):
+def continuation_case(snapshot, blocks, level, limit=2_000_000, pulse_blocks=None, handoff=0x718C, input_byte=255):
     """Crafted original 7131 invocation, not a recorded transition or full-game proof.
 
-    Both machines run the game's 7131 loader and Na initializer up to CALL Nb (718C). One uses the original ROM decoder;
+    Default stops at CALL Nb (718C). Extended initialization stops in Nb's A2FF input
+    routine, with common logical HALT wake-ups, not timed IRQ or continuous-game proof.
+    Both machines run the game's 7131 loader and Na initializer. One uses the original ROM decoder;
     the other runs the assembled bank hook. Any differing hook stack bytes must be overwritten
     before a later read. No timed interrupts are supplied; HALT before the handoff fails this prefix test.
     """
@@ -3791,7 +4109,7 @@ def continuation_case(snapshot, blocks, level, limit=2_000_000, pulse_blocks=Non
             self.outputs = []
 
         def read_port(self, regs, port):
-            return 255
+            return input_byte
 
         def write_port(self, regs, port, value, *args):
             self.outputs.append((port, value))
@@ -3805,11 +4123,11 @@ def continuation_case(snapshot, blocks, level, limit=2_000_000, pulse_blocks=Non
     for sim, tracer in zip((original, patched), traces):
         sim.registers[:] = regs
         sim.set_tracer(tracer)
-    calls, steps = 0, 0
+    calls, steps, halt_irqs = 0, 0, 0
     refresh_reads = Counter()
     convergences, pending = [], False
     original_cursor = cursor
-    while patched.registers[24] != 0x718C or steps == 0:
+    while patched.registers[24] != handoff or steps == 0:
         pc = patched.registers[24]
         if pc != original.registers[24]:
             raise AssertionError('continuation diverged at %04X / %04X' % (pc, original.registers[24]))
@@ -3833,7 +4151,7 @@ def continuation_case(snapshot, blocks, level, limit=2_000_000, pulse_blocks=Non
             dead = differences
             calls += 1
         else:
-            if po[pc] == 0x76:
+            if po[pc] == 0x76 and handoff == 0x718C:
                 raise RuntimeError('unexpected HALT before Nb handoff at %04X' % pc)
             if oo[pc] == 0xED and oo[(pc + 1) & 65535] == 0x5F:
                 # R is a nondeterministic input (tape pulse acquisition and bank hooks have
@@ -3843,6 +4161,16 @@ def continuation_case(snapshot, blocks, level, limit=2_000_000, pulse_blocks=Non
                 refresh_reads['%04X' % pc] += 1
             original.opcodes[oo[pc]]()
             patched.opcodes[po[pc]]()
+            if po[pc] == 0x76 and handoff != 0x718C:
+                if not original.registers[26] or not patched.registers[26]:
+                    raise AssertionError('initialization HALT with interrupts disabled')
+                for machine in (original,patched):
+                    # Logical common wake-up, not wall-clock IRQ scheduling. SkoolKit's
+                    # HALT opcode itself advances PC only inside its timed IRQ window.
+                    machine.registers[24] = (pc+1) & 65535
+                    if not machine.accept_interrupt(machine.registers,machine.memory,pc):
+                        raise AssertionError('initialization HALT IRQ rejected')
+                halt_irqs += 1
         differences = [i for i in CMP if patched.registers[i] != original.registers[i]]
         if differences:
             raise AssertionError('continuation register difference after %04X: %s' %
@@ -3861,12 +4189,16 @@ def continuation_case(snapshot, blocks, level, limit=2_000_000, pulse_blocks=Non
     if traces[0].outputs != traces[1].outputs:
         raise AssertionError('continuation I/O differs')
     return {'io_writes': len(traces[0].outputs), 'level': level, 'calls': calls, 'instructions': steps, 'unread_dead_stack': len(dead),
+            'halt_irqs': halt_irqs,
+            'boundary_iff': patched.registers[26], 'boundary_im': patched.registers[27],
+            'boundary_bytes': bytes(po.ram[handoff:handoff+16]).hex(),
+            'boundary_live_candidates': len(live_actor_candidates(po.ram)),
             'next_block': po.pages[STATE_PAGE][0], 'handoff_sp': patched.registers[12], 'handoff_pc': patched.registers[24],
             'synchronized_refresh_reads': dict(refresh_reads),
             'physical_return_convergences': convergences}
 
 
-def continuation_tests(folder, pulse=False):
+def continuation_tests(folder, pulse=False, initialization=False):
     folder = Path(folder)
     blocks = tape_blocks(folder / 'Inferno.tzx')
     results = []
@@ -3874,9 +4206,13 @@ def continuation_tests(folder, pulse=False):
     if pulse:
         from skoolkit.tape import parse_tzx
         timed = [b for b in parse_tzx(str(folder / 'Inferno.tzx'), timings=True).blocks if b.data]
-    for level in range(7):
+    # Tape ordinals 0..5 initialize the six levels; ordinal 6 is the ending.
+    for level in (range(6) if initialization else range(7)):
         # Every pair loads from the live level-1 state; no independent target-level restore.
-        results.append(continuation_case(folder / 'Inferno.z80', blocks, level, pulse_blocks=timed))
+        results.append(continuation_case(folder / 'Inferno.z80', blocks, level, pulse_blocks=timed,
+                                         handoff=0xA2FF if initialization else 0x718C))
+    if initialization:
+        return {'cases':results,'scope':'crafted 7131 invocations through Nb to A2FF input routine; common logical HALT IRQ wake-up, byte ROM oracle/equal R inputs; not timed IRQ or continuous gameplay'}
     return {'cases': results, 'scope': ('actual TZX pulses versus bank loader to 718C; equal R inputs; Nb not executed' if pulse else 'crafted 7131 invocations to 718C; Na executed, Nb loaded but not executed; canonical bytes/equal R inputs')}
 
 
@@ -3885,6 +4221,9 @@ def main():
     action = ap.add_mutually_exclusive_group(required=True)
     action.add_argument('--loading-prep-check', type=Path)
     action.add_argument('--loading-prep-all', type=Path)
+    action.add_argument('--loading-pause-checks', action='store_true')
+    action.add_argument('--initialization-tests', type=Path)
+    action.add_argument('--owned-cache-checks', action='store_true')
     action.add_argument('--actor-job-checks', action='store_true')
     action.add_argument('--actor-pack-checks', action='store_true')
     action.add_argument('--actor-fill-checks', action='store_true')
@@ -3919,6 +4258,12 @@ def main():
     ap.add_argument('--out', type=Path, default=Path('work/inferno'))
     ap.add_argument('--json', type=Path)
     a = ap.parse_args()
+    if a.initialization_tests:
+        result = continuation_tests(a.initialization_tests,initialization=True)
+        if a.json:
+            a.json.write_text(json.dumps(result,indent=2)+'\n')
+        print(json.dumps(result))
+        return 0
     if a.loading_prep_check or a.loading_prep_all:
         result = (capture_all(a.loading_prep_all,a.out,a.quick,progress=print,scenery='textmap',frame=True,pack=True,loading=True)
                   if a.loading_prep_all else model_verify(a.loading_prep_check,a.quick,capture=True,scenery='textmap',frame=True,pack=True,loading=True))
@@ -3926,6 +4271,18 @@ def main():
             a.json.write_text(json.dumps(result,indent=2)+'\n')
         print(json.dumps(result))
         return int(any(c['failures'] for c in result['cases'])) if a.loading_prep_all else int(bool(result['examples']))
+    if a.loading_pause_checks:
+        result = loading_pause_checks()
+        if a.json:
+            a.json.write_text(json.dumps(result,indent=2)+'\n')
+        print(json.dumps(result))
+        return 0
+    if a.owned_cache_checks:
+        result = owned_cache_checks()
+        if a.json:
+            a.json.write_text(json.dumps(result,indent=2)+'\n')
+        print(json.dumps(result))
+        return 0
     if a.actor_job_checks:
         result = actor_job_checks()
         if a.json:

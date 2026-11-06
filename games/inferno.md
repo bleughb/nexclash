@@ -1,25 +1,23 @@
 # Inferno
 
 ## Next session
-Stage: 2 (continued)    State: loading experiments all six pass; runtime timing FAIL
+Stage: 2 (continued)    State: initialization pause/owned cache components; runtime timing FAIL
 Inputs: specnext/reference/inferno/    Branch: codex/inferno (build/CONTINUE.md)
-Start: refresh main; read build/actor_jobs.md, actor_b_compiler.md, actor_packing.md and frame_pipeline.md.
-Read: inferno.py run_actor_job/actor_job_checks/model_verify/run_actor_pack and matching ASM.
-Next: user approves a brief "Loading…" screen before gameplay. Prepare from initialized live
-  tables, keep completed images in high RAM, DMA changed patterns during play. Prove a safe
-  post-initialization loading boundary and continuous loader/state contracts before installation.
-  --loading-prep-all models frozen live tables at first 8F7C, using assembled snapshot/colour/B.
-  Six quicks: 624 prepared candidates / 13194 warm draws; no sampled cold misses; 11.95M pixels.
-  Unrolled exact bitmap checks reduce validation; optimized warm L1 is 18.194 ms, still FAIL.
-  Host dispatch/allocation and first-draw pause are experiments, not installed cache/loading hooks.
-  Preserve exact content/phase/paint validity, current/pending ownership and complete-frame readiness.
-  Page 78 snapshot / 122 pinned stream; cache 136–215; high staging 216–223 via physical DDMA.
-  Runtime dispatch, faster validation, ownership/IRQ and physical stalls remain open.
-Workflow: Inferno6.rzx --quick 2000; six original level replays at milestones; targeted level-4 shop.
-Open: pattern layout/protected uploads/complete-frame switch, FLASH/modal/frontend/ROM lifetime,
-  recolour/sheets and hardware/whole-tick timing. Apply caller-speed/R and ORIGINAL-pace before build.
-Next prompt: "Continue from build/loading_preparation.md: prove loading-time preparation,
-reduce exact validation, retain DMA fallback and original state; sprites stay disabled."
+Start: build/loading_owned.md, loading_preparation.md and actor_jobs.md; main refreshed this session.
+Read: inferno.py run_loading_pause/run_owned_cache/run_actor_job/prepare_loading_cache and matching ASM.
+Next: connect an assembled live-table scan/worker driver to the 8EF9 pause gate, replace host
+  content selection/duplicate-index resolution with runtime exact dispatch, then first complete
+  pattern/frame state, protected uploads and further runtime cost reduction. Keep sprites disabled.
+Boundary: 8EF9 follows original DI, before game IM2 initialization. Pause gate preserves all
+  registers/R/RAM/stack and all four caller clocks. Six RZX initialization states are checked;
+  crafted tape-ordinal 0..5 Nb prefixes reach A2FF, not continuous gameplay or timed IRQ proof.
+  Reject 86C5: repeated decompressor PC, overwritten before gameplay, not a hook.
+Memory: owned append-only cache 136–215, metadata/code page 79, pinned stream 122; staging 216–223
+  retained. Store publishes valid last; candidate dispatch still requires exact live validation.
+Open: connected loading driver/UI, duplicate-index and unseen/mutated content scheduling, runtime
+  current/pending ownership, complete-frame reveal, FLASH/modal/frontend/ROM lifetime, hardware waits.
+Workflow: Inferno6.rzx --quick 2000; six own original quicks at milestones; targeted level-4 shop.
+No sprite NEX or total timing PASS. Caller-speed/R and ORIGINAL pacing remain release obligations.
 
 ## Inputs and facts
 - Inferno.tzx: supplied tape, MD5 `335eec35a526f2044455cb87e8c77206`.
@@ -164,31 +162,20 @@ reduce exact validation, retain DMA fallback and original state; sprites stay di
 - Historical colour-only packer: 233-byte page 75, generic 128 KiB row table 96-111, canvas 112-115;
   build/actor_packing.md records that checkpoint's checks/cold costs. Culling remains a host model.
 
-## Immutable job checkpoint (2026-11-07; build/actor_jobs.md)
-- Page 78 / stream page 122 captures ordered original geometry, IDs and bitmap/attribute bytes.
-  Exact byte/length/phase/paint comparison preserves pinned data; malformed/overflow jobs never publish.
-- Page 75 pinned input forbids original graphics reads. Host dispatch/cache selection remain models.
-  Six quick replays: 128 captures / 13,066 validations / 128 complete B fills pass; no display enabled.
-- DMA/DDMA prepared-span evaluation adds 27 cases. Single spans <64 bytes bypass setup with CPU;
-  larger copies/uploads keep gated shared backend, no-blitter and CPU fallback. Stalls remain unknown.
-- Snapshot-inclusive cold totals FAIL: L1 899.447 / L6 84.289 ms, target 10 ms total, excluding
-  lookup/allocation/uploads/queue/wrappers. Source work alone peaks at 24.650 ms/update. No safe hook.
-
-## Whole-image B / prepared transfer checkpoint (2026-11-06)
-- Page-76 bitset flood fills complete images before clipping; masks 116/117, generic lookup 128-135.
-  Four-unit service <=0.204 ms sampled, excluding external wrapper. Private DONE never enables display.
-- Six original quick replays: 128 assembled B fills / 108,288 actor pixels, 1,319 decoded tiles,
-  16,903 capture and 1,850 post-copy comparisons PASS. Seam/capacity/resume/negative units pass.
-- All 128 sampled first-use keys exist >=85 recorded frames early in live C100 data. This is a
-  host census, not a safe preparation hook, schedule, catalogue or installed exact-content cache.
-- Page 77 reuses PR #93's gated DMA functions for prepared rectangles and protected hardware pairs.
-  Both current/pending owners are guarded. Policy 1 disables blitter; narrow ordinary-DMA rows use
-  CPU. CPU costs: 128-byte rectangle 0.338 ms / DDMA setup 0.148 ms; pair 0.267 / DMA setup 0.068 ms.
-  Transfer stalls, real ownership/IRQ safety and integrated allocation remain UNPROVED.
-- Cold capture/scenery/colour/fill FAILS 10 ms total: L1 882.151, L2 70.787, L3 131.485, L4 387.688,
-  L5 74.742, L6 77.563 ms; excludes cache validation/allocation, uploads, queue and service wrapper.
-- No NEX includes this work. Runtime snapshots/cache/prewarming, actor pattern layout, full switch,
-  FLASH/modal/frontend/recolour/hardware remain open. Recipes/evidence: build/actor_b_compiler.md.
+## Immutable jobs / B fill / transfers (historical; build/actor_jobs.md and actor_b_compiler.md)
+- Page 78 / stream 122 pins ordered original geometry, IDs, bitmap and attributes. Exact
+  length/phase/paint validation; malformed/overflow jobs never publish. Page 75 reads pinned raw
+  bytes; page 76 bitset B fill completes the whole image before clipping, masks 116/117 and
+  lookup 128–135. Four-unit fill calls <=0.204 ms, excluding wrapper; DONE never enables display.
+- Six quicks: 128 captures/B fills, 13,066 validations, 108,288 actor pixels, 1,319 decoded tiles,
+  16,903 capture and 1,850 post-copy comparisons pass. Seam/capacity/resume/negative units pass.
+- Historical snapshot-inclusive cold totals FAIL: L1 899.447 / L6 84.289 ms; source alone reaches
+  24.650 ms/update. Live first-use census >=85 frames early is not a runtime schedule or catalogue.
+- Page 77 reuses PR #93 gated DMA for prepared rectangles and protected hardware pairs. Both
+  current/pending owners are guarded. Single spans <64 bytes use CPU; no-blitter/CPU fallbacks
+  remain. Rectangle 128-byte CPU 0.338 ms / DDMA setup 0.148; pair CPU 0.267 / DMA setup 0.068.
+  Physical stalls and integrated ownership/IRQ remain unproved; newer loading work supersedes
+  construction/validation timing only. No NEX includes these workers or enables sprites.
 
 ## Capture foundation (historical; build/README.md)
 - Hooks 8F7C/8F92/959B/96A1 preserve original CALL stack and LD H,C1; page 68 owns state/log/stack.
@@ -201,6 +188,12 @@ Approved preview/model/contact-sheet hashes and recipes: specnext design/manifes
 build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 
 ## Lessons
+- [local: Inferno initialization pause] 86C5 is a repeated, overwritten decompressor address.
+  Checked 8EF9 DI/IM1 entry permits a private pause with exact R/caller-clock restoration; separate
+  Nb prefix and replay-domain checks do not establish timed continuous loading or an installed driver.
+- [local: Inferno owned cache] Append complete streams/canvases in 136–215, publish valid last,
+  align each source within one page and validate live bytes directly. Dispatch is only a candidate;
+  no reset with current/pending owners and no immutable overwrite. Full-frame readiness stays closed.
 - [local: Inferno immutable sources] Loading-time live preparation removes sampled cold construction;
   exact validation still exceeds budget. A first-draw host pause does not prove safe initialization.
 - [local: Inferno B fill] Bitset connectivity preserves whole-image fill; a bounded call is not a cold
@@ -275,6 +268,9 @@ build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 - detect.buffer-layout-producer: corrected: visible colour checks distinguish black-masked stale bitmap data.
 
 ## Stage log
+- 2026-11-07: stage 2 continued: checked initialization pause/R/caller clocks, owned high-RAM
+  store/dispatch and direct exact validator; six quick milestone and timing in build/loading_owned.md.
+  Main refreshed; archived work restored only into absent work/. No sprite build; runtime budget open.
 - 2026-11-07: stage 2: loading experiments L1/L6, pinned sources and high-SRAM DDMA; scratch preserved.
   Six quick correctness, shop, assembly/tools/canary PASS; high-DMA units/L6 regression PASS. DMA span
   evaluation removes tiny-copy setup. Total timing FAIL (899.447 / 84.289 ms L1/L6); no sprite NEX.
