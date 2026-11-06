@@ -31,6 +31,7 @@ ENGINES = [
     ('midres', 'is_midres', None),                                        # Midnight Resistance (128K)
     ('smashtv', 'is_smashtv', None),                                      # Smash TV (48K, BASIC loader)
     ('renegade', 'is_renegade', None),                                    # Target Renegade (128K, BASIC loader)
+    ('matchday_v21', 'is_matchday_v21', lambda a: getattr(a, 'altrom_fill', None) == 'whole'),  # Match Day v2.1: speed pass of matchday_v2 (NEXCLASH_REWORK)
     ('matchday_v2', 'is_matchday', lambda a: getattr(a, 'altrom_fill', None) == 'whole'),  # Match Day: opt-in rework of matchday
     ('matchday', 'is_matchday', None),                                    # Match Day (48K)
     ('cyclone', 'is_cyclone', None),                                      # Cyclone (48K)

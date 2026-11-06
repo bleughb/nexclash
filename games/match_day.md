@@ -229,3 +229,33 @@ verification below. Dean's files and build (f0aecd13 / 612761ec, pin rom3) are u
 - environment: [none: headless JNext with HOME in the scratchpad, a read-only card copy]
 - hand-rolled: [local: one JNext key script for the trophy capture] (a key at the title, frames +50 and +450)
 - scratch: [none: JNext scripts stayed in the session scratchpad; the capture is in specnext]
+
+## Rework v2.1 (opt-in): speed pass (engine matchday_v21, NEXCLASH_REWORK=matchday_v21 + `--altrom-fill whole`)
+Jon Attree, 2026-11-05 (pilot runs/dean_match_day "Speed pass"). Target ORIGINAL (within 2 %, never faster than -2 %
+in a trial). v2.0's hooks left every exit at 3.5 MHz (NEXTREG 7,0) and ran the game's own drawing at 28 MHz unpaid:
++2.4 to +4.1 %, the fastest third of updates +11 %. A copy of matchday_v2.py (nexclash/matchday_v21.py) with its own
+hooks (asm/matchday_v21_hooks.asm, a copy of Dean's with the changes below; docs/profiles/match_day_v21.json) and pace
+model (docs/profiles/match_day_v21_pace.json). Dean's files, matchday_v2 and both earlier builds are unchanged.
+- Speed: every entry selects NR 7 at 0x243B and reads it (the stub's start-up leaves NR 8 selected; LINEHL and
+  isr_x select 7 again, so an interrupt between an entry's OUT and IN changes nothing), latches it, runs at 28 MHz and
+  gives the latch back on exit (never a fixed 3.5 MHz). isr_w / isr_x keep
+  the handler at 3.5 MHz as Dean's did (its beeper loops are timed), now with the slot-6 page and R kept as well.
+- Pace windows: e_objs (new site 0x8194, CALL 0x81FB: the 16 figures' draw calls), e_obj (new site 0x8B45, a light
+  path inside e_objs' window), e_ball, e_frame (the crowd copier 0x9898 now inside the window at 28 MHz). Each window's
+  target is the original's T for the code it runs fast, built up by the hooks: the image build (exact: 4 paths x B +
+  the 0xFFB8 copy), the code after it (by return address), the XOR draw + cell paints (base[key] + adjust[key2], fitted
+  on both recordings: mean error 21 T of 6,817, bias 0.003 %), the call's own code (433 T, +1014 T when it draws, +493 T
+  with the clear), the loop (1328 / about 1880 T), the copier (10 / 18359 / 19316 T), the ball (mean 1950 T). The
+  window's real time is read from the video line (NR 0x1E / 0x1F) less the interrupt handler's lines (ISRACC, added by
+  isr_x), long windows ticked at each inner close. DEBT (1/16 lines) = real - target, carried (at most ~4 frames behind),
+  paid in e_frpost once per match-loop pass by waiting on the line when the build is ahead.
+- R: every hook leaves R as the original's count at its resume point (the game reads R at 0x8443); the verifier now
+  compares R at every event (CMP includes R).
+- Printer-buffer hook stack: 64 bytes (deepest hook 24 + the interrupt's 26), copied with unrolled LDI.
+- Verifier: models the NextReg port pair (NR 7, 0x56, the line from a 3.5 MHz-rate clock), runs the figures' events
+  inside 0x81FB as in e_objs' window (28 MHz, W_OBJ), checks every e_objs call against the original (side check at
+  0x8194 with a copy of the Next state), every build / draw / copier target against the original's own T, the exit
+  speed = the incoming one, the safety check against the registers at the last game instruction.
+- Proof scripts (pilot runs/dean_match_day/work/v21): matrix_neg.py (every-site clock matrix + negatives: forced
+  3.5 MHz exit, limiter removed, R one off), isr_unit.py (isr_w / isr_x on the simulator + negatives), mkpace.py and
+  events*.py (the pace model's fit).
