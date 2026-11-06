@@ -46,6 +46,8 @@ version; tools/sjasmplus/README.md). Maintainers: repos and private files in doc
 - No subagents unless the user asks: each starts cold and re-reads the docs.
 
 ## Rules (contributions are checked against them)
+- For every new game, evaluate DMA and core 3.03.00 DDMA for hook cost, compatibility and fallback
+  using docs/DDMA.md; measure the full workload, do not assume the blitter is faster or modelled.
 - Style: terse. Results, decisions and files first.
 - Verify the original bytes at every patch site (the engine refuses a snapshot that differs).
 - Z80N instructions may always be used in hooks; a verifier gets them from `z80n.install(sim,
