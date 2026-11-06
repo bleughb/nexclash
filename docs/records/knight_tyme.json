@@ -1,0 +1,149 @@
+{
+ "name": "knight_tyme",
+ "order": 52,
+ "game": "Knight Tyme (128K)",
+ "doc": "knight_tyme.md",
+ "engine": "knight_tyme",
+ "representative": true,
+ "reference": "knight_tyme",
+ "inputs": {
+  "snapshot": {
+   "name": "knight_tyme.z80",
+   "md5": "8e720b5cc11fe0d9445fe0af4825c8bf",
+   "path": "knight_tyme/knight_tyme.z80"
+  },
+  "recordings": [
+   {
+    "name": "kt_t1.rzx",
+    "md5": "71bd4d94e1f66b6c05901e5757e77713",
+    "path": "knight_tyme/kt_t1.rzx"
+   },
+   {
+    "name": "kt_rooms.rzx",
+    "md5": "c326031537b36a0999f853ea74a59c8f",
+    "path": "knight_tyme/kt_rooms.rzx"
+   },
+   {
+    "name": "kt_over.rzx",
+    "md5": "8484e46662805162d6b34a2d2094702a",
+    "path": "knight_tyme/kt_over.rzx"
+   },
+   {
+    "name": "kt_cmds.rzx",
+    "md5": "e6477aaaca1122d281ae6b5b24b73c36",
+    "path": "knight_tyme/kt_cmds.rzx"
+   },
+   {
+    "name": "knight_tyme.tzx",
+    "md5": "659d95c34afe122e5a0716021f1f7b6e",
+    "path": "knight_tyme/knight_tyme.tzx",
+    "role": "tape, not a recording: the archive's (128K)[Magic Knight 3].tzx, staged beside the snapshot for its loading screen (knight_tyme.find_screen); selftest.stage copies only the snapshot and the recordings list"
+   }
+  ]
+ },
+ "modules": [
+  "knight_tyme"
+ ],
+ "own_modules": [
+  "knight_tyme"
+ ],
+ "data": [
+  "docs/profiles/knight_tyme.json",
+  "asm/knight_tyme_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": []
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "kt_t1.rzx",
+   "kt_rooms.rzx",
+   "kt_over.rzx",
+   "kt_cmds.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 12,
+  "note": "needs NEXCLASH_NEXT_ROM (NextZXOS's enNextZX.rom): the lockstep reads ROM 1 from alt image 1 as the Next fills it (NextZXOS's ROM3, then the build), and the previous-build negative needs it. auto: plain + sprite build, boot check, the loading stub run on a model; lockstep of the whole 128K machine per frame against the original on all four recordings (hook instructions counted as nothing; sprite layer and ULA against the model at stable frames, registers at every hook exit, crew layer on the Bridge), unit tests (figure cases, pool full, window pictures), 19 negatives (kt_cmds 1500 frames; the crew ones on kt_t1 1500 frames)"
+ },
+ "outputs": {
+  "plain": {
+   "file": "knight_tyme.nex",
+   "md5": "0f91cab91a9261bb8645a0ec9cc871f2"
+  },
+  "sprites": {
+   "file": "knight_tyme_sprites.nex",
+   "md5": "645401e4e42dbc80cfcb04954773ecd4"
+  }
+ },
+ "repro": [],
+ "rom_paths_known": [
+  {
+   "image": 0,
+   "from": "0x0D00",
+   "to": "0x0D20",
+   "why": "the Bridge star map: 0xC10D (bank 1) reads ROM 0 as data; alt image 0 is the set-up's copy of the Next's ROM 0, not the 128K editor ROM (REFACTOR item 2; hardware checklist 4: the star pattern differs from a 128K). The opt-in rework `altrom0` removes it; this build keeps it"
+  }
+ ],
+ "status": {
+  "title": "Knight Tyme (128K)",
+  "engine_col": "knight_tyme (knight_tyme.md)",
+  "build": "knight_tyme_sprites.nex 645401e4 (v1.1: Knight, characters, objects as sprites with outline, Bridge crew tiles, whole alt ROM image from the build, loading screen) = published Knight Tyme v1.1 .nxc --bare",
+  "software": "lockstep IDENTICAL on 4 recordings (33,534 frames), unit tests, negatives 19/19 (imported 2026-11-04 from Jon Attree's .nxc work)",
+  "hardware": "none (JNext, played by Jon Attree through the real loader 2026-11-03)",
+  "next": "hardware test; opt-in: alt image 0 from the 128K ROM 0 (star map)"
+ },
+ "checks": [
+  "asm2profile:knight_tyme"
+ ],
+ "checked": {
+  "deps": {
+   "asm/knight_tyme_hooks.asm": "4061179f2a069912",
+   "docs/profiles/knight_tyme.json": "c7ebc7115a0c394c",
+   "nexclash.py": "ce784cd6cd1eb043",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "9e1d66275a630898",
+   "nexclash/knight_tyme.py": "7e9fc6a2f5871428",
+   "nexclash/nextboot.py": "13c3ba6016db4c6f",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "9e111968561fe668",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-11-04"
+ },
+ "verified": {
+  "deps": {
+   "asm/knight_tyme_hooks.asm": "4061179f2a069912",
+   "docs/profiles/knight_tyme.json": "c7ebc7115a0c394c",
+   "nexclash.py": "ce784cd6cd1eb043",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "9e1d66275a630898",
+   "nexclash/knight_tyme.py": "7e9fc6a2f5871428",
+   "nexclash/nextboot.py": "13c3ba6016db4c6f",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "9e111968561fe668",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-11-04"
+ }
+}

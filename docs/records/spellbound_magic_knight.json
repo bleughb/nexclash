@@ -1,0 +1,177 @@
+{
+ "name": "spellbound_magic_knight",
+ "order": 53,
+ "game": "Spellbound (128K, Magic Knight 2)",
+ "doc": "spellbound_magic_knight.md",
+ "engine": "spellbound_magic_knight",
+ "representative": true,
+ "reference": "spellbound_magic_knight",
+ "inputs": {
+  "snapshot": {
+   "name": "spellbound_magic_knight.z80",
+   "md5": "3bca7e72f3c9c3abd104b8c92f35d5d4",
+   "path": "spellbound_magic_knight/spellbound_magic_knight.z80",
+   "note": "the pilot's rzx/s0.z80: the archive's (128K)[Magic Knight 2].z80 (929d9e7f, the .nxc's game file) stepped from PAUSE 0 to PC 0x6803; 41 bytes of bank 5 differ"
+  },
+  "recordings": [
+   {
+    "name": "t1.rzx",
+    "md5": "cffcfedb21ec24ed8f1b73e0770f72c3",
+    "path": "spellbound_magic_knight/t1.rzx"
+   },
+   {
+    "name": "t2.rzx",
+    "md5": "2a3e914408590fbc20dd1869f7d1874c",
+    "path": "spellbound_magic_knight/t2.rzx"
+   },
+   {
+    "name": "t3.rzx",
+    "md5": "fa2fc4736732ecdc4dd34ba48fa5c98e",
+    "path": "spellbound_magic_knight/t3.rzx"
+   },
+   {
+    "name": "t4.rzx",
+    "md5": "69d49f418626f928cd42eedc07df990f",
+    "path": "spellbound_magic_knight/t4.rzx"
+   },
+   {
+    "name": "t_over.rzx",
+    "md5": "9c64ad064c3ec7e652fe2cc2c5f43272",
+    "path": "spellbound_magic_knight/t_over.rzx"
+   },
+   {
+    "name": "t_walk.rzx",
+    "md5": "a973d466126cd7c8cc82ac62afa8e13c",
+    "path": "spellbound_magic_knight/t_walk.rzx"
+   },
+   {
+    "name": "t_rooms.rzx",
+    "md5": "eb35179bb10cf85c84c876d6f7bec7f3",
+    "path": "spellbound_magic_knight/t_rooms.rzx"
+   },
+   {
+    "name": "t_chars.rzx",
+    "md5": "7df3f5fa22f71ebcde4cc4091605b028",
+    "path": "spellbound_magic_knight/t_chars.rzx"
+   },
+   {
+    "name": "t_balls.rzx",
+    "md5": "7d129df10d7d0bc4a3ef2427ca3fb19e",
+    "path": "spellbound_magic_knight/t_balls.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "spellbound_magic_knight"
+ ],
+ "own_modules": [
+  "spellbound_magic_knight"
+ ],
+ "data": [
+  "docs/profiles/spellbound_magic_knight.json",
+  "asm/spellbound_magic_knight_hooks.asm",
+  "docs/profiles/spellbound_magic_knight_enhanced.json"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": []
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "t1.rzx",
+   "t2.rzx",
+   "t3.rzx",
+   "t4.rzx",
+   "t_over.rzx",
+   "t_walk.rzx",
+   "t_rooms.rzx",
+   "t_chars.rzx",
+   "t_balls.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 15,
+  "note": "needs NEXCLASH_NEXT_ROM (NextZXOS's enNextZX.rom): the lockstep reads ROM 1 from alt image 1 as the Next fills it, and the previous-build negative needs it. auto: plain, default and Enhanced builds with the engine's boot check (nextboot.boot + the raster line model the set-up's picture hold needs, in the engine); lockstep of the whole 128K machine per frame for both sets on all nine recordings (39,222 frames), unit tests (t1 500 frames' states), 23 negatives (t1 1400 frames, then t_balls, then t_chars, until one detects), 7 Enhanced palette negatives"
+ },
+ "outputs": {
+  "plain": {
+   "file": "spellbound_magic_knight.nex",
+   "md5": "656c71c4b2ebb8318f3ad442d70b0ab9"
+  },
+  "sprites": {
+   "file": "spellbound_magic_knight_sprites.nex",
+   "md5": "379e61b026044552437b22e117ecfd1b"
+  },
+  "enhanced": {
+   "file": "spellbound_magic_knight_enhanced.nex",
+   "md5": "3a824f3a78d11d6cee6bc6a3b37b222c"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Spellbound (128K, Magic Knight 2)",
+  "engine_col": "spellbound_magic_knight (spellbound_magic_knight.md)",
+  "build": "spellbound_magic_knight_sprites.nex 379e61b0 (v1.1: Knight, characters, objects, smoke, balls as sprites with outline, whole alt ROM image from the build) + Enhanced 3a824f3a (by parts, own palette entries 1-5) = published Spellbound v1.1 .nxc --bare",
+  "software": "lockstep IDENTICAL default + Enhanced on 9 recordings (39,222 frames), unit tests, negatives 23/23 + palette 7/7 (imported 2026-11-04 from Jon Attree's .nxc work)",
+  "hardware": "none (JNext)",
+  "next": "hardware test"
+ },
+ "checks": [
+  "asm2profile:spellbound_magic_knight"
+ ],
+ "checked": {
+  "deps": {
+   "asm/spellbound_magic_knight_hooks.asm": "2a049083624eb81a",
+   "docs/profiles/spellbound_magic_knight.json": "98020931c84ac9a1",
+   "docs/profiles/spellbound_magic_knight_enhanced.json": "795579a61b4da48b",
+   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "28f3c5d8b1333ba6",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/spellbound_magic_knight.py": "5f44dd9ebeaa59a0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "b43986454302f5f8",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-05"
+ },
+ "verified": {
+  "deps": {
+   "asm/spellbound_magic_knight_hooks.asm": "2a049083624eb81a",
+   "docs/profiles/spellbound_magic_knight.json": "98020931c84ac9a1",
+   "docs/profiles/spellbound_magic_knight_enhanced.json": "795579a61b4da48b",
+   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "28f3c5d8b1333ba6",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/spellbound_magic_knight.py": "5f44dd9ebeaa59a0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "b43986454302f5f8",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-05"
+ }
+}

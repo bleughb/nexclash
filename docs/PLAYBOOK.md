@@ -23,8 +23,7 @@ any stage - and in stage 2 the build's DESIGN too (sites, memory used, how each 
 sprite, what the verify checks), before the first quick run.
 Rounds on a long game (stage 4): offer to collect the user's whole list in one pass through the
 game, fix all of it, then check everything in ONE new pass; never restart the emulator unasked.
-Why: the places are far from the start, and every restart costs the user the walk there
-(El Capitan Trueno, 2026-10-13).
+Why: each restart costs the user the walk back (El Capitan Trueno, 2026-10-13).
 
 ("The user" below = whoever runs the session: Dean in maintainer sessions, the contributor in an
 add-a-game session.)
@@ -182,13 +181,16 @@ Colour sheets and recolour: docs/COLOURS.md (built in stage 2, sent in stage 3).
   what stays on the ULA (scenery, HUD, text, cases the hooks cannot do) is the question to ask.
   The sheet still shows only what the recording drew: ask for a recording that reaches every
   level, weapon and collectable the user can, before the sheet goes out.
-- Speed budget: `cost GAME.z80 --rzx R --at PLOTTER --group IX` gives the original's cost per
-  draw (T-states), draws per frame and per object; set the allowed hook cost per draw now, and design to it (caching, fewer
-  uploads). Commando's first solid hooks cost ~18x the original draw and were redesigned.
-  Measure the HOOK cost too, before the user tests: T per game frame of the patched runs in the
-  verifier's pair runs (no tool yet, BRIEFING C2 #1); code under NEXTREG $07=3 costs (T + memory reads)
-  / 8 in 3.5 MHz T - about 6x faster, not 8x (LEARNINGS 2.1f). Midnight Resistance's first commit cost ~1.5 TV frames per game
-  frame; a pattern-slot cache brought it to 15-60K T.
+- Speed: pace target ORIGINAL by default (its slowdowns kept; SLOWDOWN REMOVED / TURBO only when the
+  owner names it). `cost GAME.z80 --rzx R --at PLOTTER --group IX`: the original's T
+  per draw, draws per frame and per object; design the hooks to it (content cache, fewer uploads:
+  Commando's first hooks cost ~18x the draw). Evaluate DMA/DDMA and compatibility for each new
+  design using docs/DDMA.md; include setup, stalls and fallback, not just transfer rate. Default
+  preference is blitter with capability gating; expose no-blitter and record both routes
+  (docs/DDMA_IMPLEMENTATION.md). Code at NEXTREG
+  $07=3 runs about 6x faster, not 8x (LEARNINGS 2.1f). New engines use the hook library (ENGINE_CONTRACT
+  "Hook library"): the caller's speed and R kept, and a hook faster than the code it displaces waits for
+  its time (card patch.pace-limiter). Measure: `python -m nexclash.pace` (docs/CHECKS.md).
 
 ## 4. Decide the design (decision table)
 | Finding | Action |
@@ -224,7 +226,7 @@ next session must resume the design question; do not start stage 2.
 # Stage 2 - Build (session 2)
 
 ## 5. Build
-Hooks: asm/<engine>_hooks.asm with `SAVEBIN "<prefix>_<key>.bin"` per block and
+Hooks: asm/<engine>_hooks.asm (+ asm/lib, ENGINE_CONTRACT) with `SAVEBIN "<prefix>_<key>.bin"` per block and
 `"hooks": {"source": "asm/<engine>_hooks.asm", ...}` in the profile; after every edit
 `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex + symbols).
 What the module must provide: docs/ENGINE_CONTRACT.md (doccheck-checked). The cards' example
@@ -242,9 +244,9 @@ functions first; then copy the nearest engine
 | smashtv.py | the game's own plotters into a scratch buffer at slot 7, no frame sync, see-through outline |
 | commando.py | 128K BASIC loader, front end, depth from walk boxes, cached solid sprites |
 | renegade.py | alt ROM images 0 + 1, loading-screen front end |
-| rainbow.py | full redraw / tile composer, 128K (large; excluded from automatic checks) |
-Change the profile block and site list, rebuild the asm.
-Every site keeps its original-byte check.
+| rainbow.py | full redraw / tile composer, 128K (excluded from automatic checks) |
+Change the profile block + site list, rebuild the asm; every site keeps its original-byte check.
+Sessions build with `--nex`: tests, recolour and play checks use the .nex.
 Colour map (every game, docs/COLOURS.md): the sprite builder applies `<record>_colours.json` per pixel -
 key = the graphics byte the pixel comes from, a non-zero nibble replaces the default colour of an
 opaque pixel - and, in an engine with outlines (paint_clear), makes a PAPER pixel opaque in that
@@ -292,16 +294,18 @@ write the evidence record first (step 7), commit, then `python selftest.py --gam
 --stamp` (the record's verify recipe + the rebuild MD5s; it stamps the record, so the maintainers'
 `--affected` before the merge has nothing left to do for this game). Never a separate full `auto`
 as well (Commando ran the ~55 min full check five or six times).
-Long runs: use the environment's supported background execution and retain logs and exit status.
+Long runs: use the environment's supported background execution and retain logs and exit status; write the record and the notes meanwhile.
 
 ## 6b. Hardware risk review (before every build the user tests)
 Go through BRIEFING A1 "Simulator blind spots" item by item for what changed since the last
 hardware round (DivMMC trap, interrupts inside hooks, raster/tearing, speed, emulator
 differences); each item must be covered by a toolkit check or named in the hardware checklist.
+Then the play checks on that build (docs/CHECKS.md): pace and flicker against the original, a look sheet
+of each colour set, soak before the release; explain or fix each warning (games/<game>.md).
 Ask the user to try CSpect first if a build changes memory layout or start-up.
 
 ## 7. Deliver
-`<game>_sprites.nex`, `<game>.nex`, builder, asm sources; a short results
+`<game>.nxc` + the `--nex` builds, builder, asm; a short results
 table; a hardware checklist. Add the new profile (and signature if a new
 engine) to docs/profiles/, games/<game>.md, and the evidence record docs/records/<game>.json
 (copy the nearest engine's record; `modules` = the modules your build imports, `own_modules` /
@@ -317,12 +321,11 @@ checklist, so the user tests and paints in the same pass.
 
 # Stage 4 - Hardware and colour rounds (one session per round)
 - Collect the user's whole list per round (above); 6b before every build the user tests.
-- A painted sheet: `recolour` (the recolour skill; seconds, no rebuild, no re-verify). Making the
-  painting the build default is its own task (docs/COLOURS.md RECOLOUR: rebuild + verify + stamp).
+- Enhanced set: the painter first (docs/COLOURS.md PAINTER), blocks only if asked. A painted sheet:
+  `recolour` (seconds, no rebuild); as the build default: rebuild + verify + stamp (COLOURS.md).
 - A fix: stage 2 rules (quick runs), then the full verification again as in 6a.
 - A figure or screen the first recording never showed: its own question to the user (CLAUDE.md).
 
 # Stage 5 - Close (the session that finishes the game, or a round)
-CLAUDE.md "End of every stage": games/<game>.md (status, checklist, Stage log), the record and
-`records views`, the learning loop (docs/LEARNING.md), `python tools/doccheck.py`; contributors
-`contribute`, maintainers the PR (docs/MAINTAIN.md).
+CLAUDE.md "End of every stage" (games/<game>.md, the record + `records views`, the learning loop,
+doccheck; then `contribute`, or the maintainers' PR).

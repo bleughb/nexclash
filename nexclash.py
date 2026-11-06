@@ -2,12 +2,14 @@
 """nexclash - ZX Spectrum .z80 -> Spectrum Next .nex, with the player drawn as hardware sprites.
 Copyright (C) 2026 the nexclash contributors. GPL-3.0-or-later (see LICENSE).
 
-  python nexclash.py patch GAME.z80                     YOUR game: plain + sprite .nex, says if verified
+  python nexclash.py patch GAME.z80                     YOUR game: GAME.nxc to share (--nex: the .nex files too)
   python nexclash.py new GAME.z80                       not supported yet: session folder to add it
   python nexclash.py contribute NAME [--report R]       zip what a session added, for upload
-  python nexclash.py auto GAME.z80 [--rzx MY.rzx ...]   everything: plain + patched .nex + report
+  python nexclash.py auto GAME.z80 [--rzx MY.rzx ...]   everything: GAME.nxc (+ .nex with --nex) + report
       --strategy altrom|printer|slot1   patch memory (default: altrom where proven; old builds: printer/slot1)
       --allow-60hz                      keep the Next's video rate (default: 50 Hz forced, as verified)
+      --altrom-fill whole|rom3          alt ROM fill (default whole; existing games: rom3 via their record pin)
+      --next-rom enNextZX.rom           the Next's ROMs for the boot model + ROM path check (or $NEXCLASH_NEXT_ROM)
   python nexclash.py identify GAME.z80                  which engine (and the derived profile)
   python nexclash.py record GAME.z80 [-o OUT.rzx]       automatic (or scripted) RZX recording
   python nexclash.py convert GAME.z80 [--rzx R]         plain .nex only (tail placement checked)
@@ -46,7 +48,7 @@ except ImportError:
 
 from skoolkit.snapshot import Snapshot
 from nexclash.identify import identify
-from nexclash import recorder, rzx as rzxmod, build as B, z80tonex as zt
+from nexclash import recorder, rzx as rzxmod, build as B, z80tonex as zt, runchecks
 from nexclash.machine import parse_inputs, FAST
 
 
@@ -153,6 +155,22 @@ def _auto_dizzy6(a, s, z80, name, out, rzxs, prof, say, rep, dec=None):
         say('RESULT    : sprite build FAILED verification - do not use; send this folder to the agent')
     _finish(out, name, rep)
 
+def _record_pin(z80, a):
+    """An existing game keeps the shared behaviour it was verified with (Dean, 2026-11-04: games are
+    self-contained, validated against what made them): a record whose snapshot this is may carry
+    "pin" {"altrom_fill": "rom3"}, applied unless the command line names its own --altrom-fill (the
+    opt-in rework to the new standard). New games and other snapshots get the new defaults."""
+    import hashlib
+    from nexclash import records
+    h = hashlib.md5(open(z80, 'rb').read()).hexdigest()
+    rec = next((r for r in records.all_records() if r['inputs']['snapshot'].get('md5') == h and r.get('pin')), None)
+    if rec is None:
+        return None
+    if rec['pin'].get('altrom_fill') and not getattr(a, 'altrom_fill', None):
+        zt.ALTROM_FILL = rec['pin']['altrom_fill']
+    return rec
+
+
 def cmd_auto(a):
     from nexclash.analyse import analyse
     from nexclash.verify import verify
@@ -162,6 +180,17 @@ def cmd_auto(a):
     os.makedirs(out, exist_ok=True)
     rep = []
     say = lambda s='': (rep.append(s), print(s))
+    pin = _record_pin(z80, a)
+    frozen = pin is not None and not getattr(a, 'altrom_fill', None)
+    _AUTO.update(rzx=[] if getattr(a, 'decisions', None) or frozen else list(a.rzx or []),
+                 quick=getattr(a, 'quick', None), z80=z80, frozen=frozen)
+    _CHECKS.clear()
+    if frozen:
+        runchecks.add(_CHECKS, 'rom_paths', 'waived', 'record %s pin: %s' % (pin['name'], pin['pin'].get('note', '')),
+                      required=False)
+    if pin is not None:
+        print('Pinned    : %s: %s' % (pin['name'], '--altrom-fill %s (record pin)' % zt.ALTROM_FILL if frozen else
+              'pin %s overridden by --altrom-fill %s: an opt-in rework, not the verified build' % (pin['pin'].get('altrom_fill'), zt.ALTROM_FILL)))
     s = Snapshot.get(z80)
     from nexclash.engines import find                       # dedicated engines: nexclash/engines.py
     eng_mod = find(s, a)
@@ -195,6 +224,8 @@ def cmd_auto(a):
         if r['inputs'].startswith('none') or r['start'] == 'none detected':
             say('            weak recording: try --start/--keys, or send your own RZX (--rzx)')
         rzxs.insert(0, auto)
+        if not frozen:
+            _AUTO['rzx'] = list(rzxs)           # the ROM path check replays the automatic recording too
     if not rzxs and dec is None:
         say('No recording: plain conversion uses the converter default tail (unchecked).')
     if eng in ('dizzy5', 'dizzy5_like'):
@@ -475,7 +506,71 @@ def _write_decisions(out, name, an, extra=None):
     return d
 
 
+_AUTO = {}                  # cmd_auto's recordings, for the ROM path check in _finish
+_CHECKS = runchecks.RUN     # this run's check status (nexclash/runchecks.py): NAME_checks.json + the Checks line
+
+
+def _rom_paths_known(z80):
+    """The ROM differences this snapshot's record accepts ("rom_paths_known": [{image, from, to, why}], hex
+    addresses; Knight Tyme's Bridge star map): [(image, lo, hi, why)] for nextboot.rom_paths, () when none."""
+    import hashlib
+    from nexclash import records
+    if not z80:
+        return ()
+    h = hashlib.md5(open(z80, 'rb').read()).hexdigest()
+    rec = next((r for r in records.all_records() if r['inputs']['snapshot'].get('md5') == h and r.get('rom_paths_known')), None)
+    return [(k['image'], int(k['from'], 16), int(k['to'], 16), k['why']) for k in rec['rom_paths_known']] if rec else ()
+
+
+def rom_identity():
+    """The system ROM verification modelled (NEXCLASH_NEXT_ROM's MD5, else Sinclair's fallback): records.rom_identity."""
+    from nexclash import records
+    return records.rom_identity() or 'sinclair (no NEXCLASH_NEXT_ROM)'
+
+
+def _rom_paths(out, rep):
+    """docs/REFACTOR.md 7: every ROM byte the original game uses in the recordings against what each
+    built .nex gives it on the Next (nextboot.rom_paths; ROM model: nextboot.rom_model()). New builds
+    only: a pinned game verifies as it was verified (record pin), a --decisions rebuild replays nothing."""
+    import glob
+    from nexclash import nextboot
+    rzxs, quick = _AUTO.get('rzx'), _AUTO.get('quick')
+    nexes = sorted(glob.glob(os.path.join(out, '*.nex')))
+    if any(c['check'] == 'rom_paths' for c in _CHECKS):      # waived: the record pin
+        return
+    if not rzxs or not nexes:
+        runchecks.add(_CHECKS, 'rom_paths', 'not run', 'no recordings' if not rzxs else 'no .nex built', required=False)
+        return
+    t = time.time()
+    try:
+        known = _rom_paths_known(_AUTO.get('z80'))
+        res = nextboot.rom_paths(nexes, rzxs, stop=quick, z80=_AUTO.get('z80'), known=known)
+    except Exception as e:                  # noqa: BLE001 - the check never ends auto (Knight Tyme, 2026-11-04)
+        import traceback
+        tb = traceback.extract_tb(e.__traceback__)[-1]
+        why = 'the check itself failed (%s: %s, %s line %d)' % (type(e).__name__, e, os.path.basename(tb.filename), tb.lineno)
+        rep.append('ROM paths : NOT CHECKED: %s; the builds above stand, their ROM paths are unproven' % why)
+        print(rep[-1])
+        runchecks.add(_CHECKS, 'rom_paths', 'incomplete', why)
+        return
+    st, why, cov = runchecks.rom_paths(res, rzxs, nexes)
+    runchecks.add(_CHECKS, 'rom_paths', st, why, coverage=cov)
+    rep.append('ROM paths : ROM model %s (%.0fs)' % (nextboot.rom_model(), time.time() - t))
+    for nex in nexes:
+        rep.extend('            ' + x for x in res[nex][1])
+    print('\n'.join(rep[-1 - sum(len(res[x][1]) for x in nexes):]))
+
+
 def _finish(out, name, rep):
+    _rom_paths(out, rep)
+    from nexclash import nextboot
+    try:
+        model = nextboot.rom_model()
+    except Exception as e:                  # noqa: BLE001 - the model's name is information only
+        model = 'unknown (%s)' % e
+    rep.append('Checks    : %s' % runchecks.line(_CHECKS))
+    print(rep[-1])
+    runchecks.write(out, name, _CHECKS, {'rom_model': model, 'rom': rom_identity()})
     rep.append('')
     rep.append('Hardware checklist: starts; player visible and animating; hidden in boxes/room changes;')
     rep.append('title music unchanged. Problems: record an RZX (Fuse, autosave OFF) and send it.')
@@ -486,6 +581,7 @@ def _finish(out, name, rep):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest='cmd', required=True)
+    from nexclash import nxcout                         # .nxc output of patch / new / auto
     for cmd in ('auto', 'patch', 'new'):
         p = sub.add_parser(cmd); p.add_argument('z80'); p.add_argument('--rzx', action='append')
         p.add_argument('--no-record', action='store_true'); p.add_argument('-o', '--out')
@@ -497,9 +593,15 @@ def main():
         p.add_argument('--outline', help="rainbow engine: mask-only pixels (black, blue, transparent, #RRGGBB)")
         p.add_argument('--class-colours', help='rainbow engine: JSON {"pages": {"D6": 1}, "palettes": {"1": {"ink": "#00FF00"}}}')
         p.add_argument('--allow-60hz', action='store_true', help='do not force 50 Hz video (outputs then differ from the verified MD5s)')
+        p.add_argument('--next-rom', help="NextZXOS's enNextZX.rom (or its 16K ROM3), copied from your card: the boot "
+                       "model and the ROM path check use its ROMs as the Next's (default $NEXCLASH_NEXT_ROM; never in the repo)")
+        p.add_argument('--altrom-fill', choices=['whole', 'rom3'], help="alt ROM image 1: whole = Sinclair's ROM + the "
+                       "build's bytes (default for new builds), rom3 = NextZXOS's ROM3 + the hook bytes (the games verified "
+                       "before 2026-11-04 keep it through their record's pin; naming either here overrides the pin)")
         p.add_argument('--decisions', help='rebuild from stored build decisions (docs/records); no recording, no verification')
         p.add_argument('--engine', choices=['wally', 'rainbow'], help="the frozen / deprecated first version instead of its successor: "
                        "wally (record wally) instead of wally2, rainbow (record rainbow) instead of rainbow_z80n")
+        nxcout.add_args(p)
     p = sub.add_parser('contribute'); p.add_argument('name', help='game name (zip name)')
     p.add_argument('--report', action='append', help='nexclash report(s) to include (GAME_report.txt)')
     p.add_argument('--note', help='one line for the maintainers'); p.add_argument('--base', help='starting git commit (default: merge base with origin/main)'); p.add_argument('-o', '--output')
@@ -541,6 +643,11 @@ def main():
             p.add_argument('--buffer', help='back buffer ADDR:STRIDE:LINES (e.g. 0x5B00:32:128) drawn next to the screen')
             p.add_argument('-o', '--out', default='preview.png', help='contact sheet (PNG)')
     a = ap.parse_args()
+    if getattr(a, 'altrom_fill', None):
+        zt.ALTROM_FILL = a.altrom_fill
+    if getattr(a, 'next_rom', None):
+        from nexclash import nextboot
+        nextboot.NEXT_ROM = a.next_rom
     if getattr(a, 'allow_60hz', False):
         zt.ALLOW_60HZ = True
         print('Video     : --allow-60hz: 50 Hz is NOT forced; the .nex MD5s differ from the verified builds')
@@ -563,6 +670,7 @@ def main():
         print(preview.preview(a.z80, a.rzx, a.out, at, a.every, a.plot, buf, a.frames, a.keys, a.stop)[0])
     elif a.cmd == 'auto':
         cmd_auto(a)
+        nxcout.package(a)
     elif a.cmd in ('patch', 'new', 'contribute'):
         from nexclash import userflow as U
         sys.exit(U.cmd_patch(a, cmd_auto) if a.cmd == 'patch' else U.cmd_new(a, cmd_auto) if a.cmd == 'new'

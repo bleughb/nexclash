@@ -65,8 +65,9 @@ BRIEFING - with its reason.
   7FFD, 1FFD or both is not known: build from the state AFTER such a write (the tail then writes 7FFD
   and 1FFD itself) - games/target_renegade.md.
 - A game may run with ROM 0 selected in play (Target Renegade: 7FFD = 0). The alt ROM image the hooks
-  live in is the one the game selects: fill image 0 too (setup: 1FFD = 0, 7FFD = 0, write mode, LDIR
-  0000->0000, hook bytes over it) and keep the bytes the game reads (scan --range 0x0000-0x3FFF).
+  live in is the one the game selects: fill image 0 too (`patch.altrom0`: the 128K ROM 0 + the hook
+  bytes; a copy of ROM 0 on the Next is NextZXOS's: Target Renegade's sound data, Knight Tyme's star
+  map) and keep the bytes the game reads (scan --range 0x0000-0x3FFF).
 
 ## 1.3 Spectrum Next: MMU, legacy paging, alt ROM, NextRegs
 - `$8C alt ROM verified on hardware 2026-09-27: write-mode copy, read-only, 7FFD b4 switch, MMU $FF, IM1, font - all PASS; $8C=00 at NEX launch.`
@@ -81,7 +82,9 @@ BRIEFING - with its reason.
   into the ULA until the build copied 0xFF over 0x3B00-0x3CFF). nextboot.check uses rom48() for
   ROM3 unless given `sysrom=` (BRIEFING C2 #5). A game that runs ROM code (KEY-SCAN, PRINT) from
   the image runs NextZXOS's on hardware: Cauldron's menu hung, keys dead, until the build wrote the
-  whole image (patch.altrom_low) and a foreign-ROM3 boot proved it (2026-10-27).
+  whole image (patch.altrom_low) and a foreign-ROM3 boot proved it (2026-10-27). NextZXOS's ROM3 also
+  JUMPS into 0x386E- (IM 1 0x004A, UDG print 0x0B52): Starquake crashed at its first UDG. New builds
+  write the whole image (card patch.whole-altrom-image); older games are pinned, rework opt-in.
 - A legacy 1FFD/7FFD write from the stub remaps slots 6/7, where the stub runs: page the stub into
   slot 4 as an alias and run the paging + copy there (no stack), restore 6/7, jump back.
 - UNLOCKED legacy paging writes (7FFD/1FFD) remap MMU slots (most recent change wins); map
@@ -607,7 +610,7 @@ Grouped by question; add a new lesson to its group.
   Everyone's a Wally uses it (0x5B00-0x7AFF write-first).
 - Default "below SP" tail placement can hit data (Dizzy 1: font at 0xFF9E) or
   code (Dizzy 4: code directly below the stack). Always check the printed tail.
-- Dead stack below SP is free at start-up; the tail is dead once the game runs.
+- Below SP is NOT free by default (Match Day's trophy data, 2026-11-04): prove a tail write-first.
 - A game reading the ROM font needs a slot-1 page that is a copy of ROM 0x2000-0x3FFF, with
   hooks only where the game never reads (prefer `altrom`: the alt ROM is that copy, read-only).
 - An undo buffer (or back buffer) written before read in every RZX is a stronger tail site than
@@ -616,7 +619,8 @@ Grouped by question; add a new lesson to its group.
 - A screen effect that uses MEMORY AS MASKS reads all of it (Lode Runner's fade: screen AND bytes
   0x0000-0x6BFF, 4 passes): the alt ROM hook area and the printer buffer then change what the effect
   draws, so neither is free. Look at what a reader reads (scan --range ROM range, readers by PC)
-  before choosing altrom; Lode Runner's hooks went into game RAM proven never touched (A3 "ram").
+  before choosing altrom; Lode Runner's hooks went into game RAM (A3 "ram") - but with no alt ROM
+  its fade reads NextZXOS's ROM3 on the Next (6,423 bytes differ; ROM paths, 2026-11-04).
 
 ## 2.3 Our toolkit (nexclash) and host tools
 - A verifier that under-counts T hides beam races: rainbow.py's own NEXTREG handlers cost 0 T, so its
@@ -756,6 +760,8 @@ Grouped by question; add a new lesson to its group.
   "Record from snapshot" case: nothing unverified between them).
 
 ## 2.5 Verification method
+- Per-event verifiers never run ROM code a game runs outside hooks (IM 1, prints), whatever ROM they
+  model (Starquake passed): `auto` checks it against the booted .nex (nextboot.rom_paths).
 - "Never jump into a patched instruction" needs the ORIGINAL instruction boundaries under each JP:
   a byte that starts an original instruction must be reached only through the site, a byte inside
   one must never be a PC. Counting every byte of the 3 bytes as "must equal the site's count" fails

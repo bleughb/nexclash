@@ -1,0 +1,164 @@
+{
+ "name": "rambo",
+ "order": 90,
+ "game": "Rambo",
+ "doc": "rambo.md",
+ "engine": "rambo",
+ "representative": true,
+ "reference": "rambo",
+ "inputs": {
+  "snapshot": {
+   "name": "rambo.z80",
+   "md5": "3eb7a65e19c9ffa82a49654d31a41886",
+   "path": "rambo/rambo.z80"
+  },
+  "recordings": [
+   {
+    "name": "play1.rzx",
+    "md5": "6b7160ce81c84b44698c33f44dfadd71",
+    "path": "rambo/play1.rzx"
+   },
+   {
+    "name": "north1.rzx",
+    "md5": "bb38c96d3c3abb7578efb8e02cd58dad",
+    "path": "rambo/north1.rzx"
+   },
+   {
+    "name": "mix2.rzx",
+    "md5": "ed370e68f21dd067092c784ae9781611",
+    "path": "rambo/mix2.rzx"
+   },
+   {
+    "name": "rambo_loading.scr",
+    "md5": "f045fa38bff86e1d21f182b7b6ea3e07",
+    "path": "rambo/rambo_loading.scr"
+   }
+  ]
+ },
+ "modules": [
+  "rambo"
+ ],
+ "own_modules": [
+  "rambo"
+ ],
+ "data": [
+  "docs/profiles/rambo.json",
+  "asm/rambo_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "play1.rzx",
+   "north1.rzx",
+   "mix2.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 25,
+  "note": "Batch: recordings made by script, no human player; two use the archive .pok's cheats. Default and Enhanced verified on each. rambo_loading.scr (the archive tape's screen block) is an input, not a recording: the engine finds it beside the snapshot and adds the loading screen to both sprite builds."
+ },
+ "outputs": {
+  "plain": {
+   "file": "rambo.nex",
+   "md5": "434a84778881e230d0c930677abad0b4"
+  },
+  "sprites": {
+   "file": "rambo_sprites.nex",
+   "md5": "9ebfe9c8a88d3b2ca1fa9067e3abf2d5"
+  },
+  "enhanced": {
+   "file": "rambo_enhanced.nex",
+   "md5": "c2395f02f504d4f38ccc2e0d12973b44"
+  }
+ },
+ "repro": [],
+ "pin": {
+  "altrom_fill": "rom3",
+  "note": "rebuilds the owner-approved .nxc v1.0 (built 2026-11-03, before the shared defaults of 2026-11-04, docs/REFACTOR.md 1-3, 7). No alt ROM hooks, so the fill changes no byte; the pin keeps the approved build and skips the new ROM path / start-up tail check, which it fails only at the end-of-game fade: 0x6CA9 ANDs the screen with 0x0000-0x6BFF as masks, so 78 tail bytes (0x5B00-0x5B4E) and 176 printer-buffer bytes mask differently from the original's zeros (cosmetic; games/rambo.md \"Import\")"
+ },
+ "status": {
+  "title": "Rambo",
+  "engine_col": "rambo (rambo.md)",
+  "build": "rambo_sprites.nex 9ebfe9c8 (.nxc v1.0)",
+  "software": "lockstep IDENTICAL on 3 script recordings, default and Enhanced; unit PASS; 17/17 negatives detected (no human recording)",
+  "hardware": "untested (JNext only)",
+  "next": "hardware test; a human's design answers"
+ },
+ "checks": [
+  "asm2profile:rambo"
+ ],
+ "techniques": [
+  {
+   "application": "rambo.buffer-layout",
+   "id": "detect.buffer-layout-producer",
+   "revision": 1,
+   "target": "display list 0x83D1, plots 0x8052 / 0x8670, buffer 0xC000, blit 0x814A",
+   "phases": []
+  },
+  {
+   "application": "rambo.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "scan --writers over 0xC000-0xCEFF and the ULA: no logic reads a figure pixel",
+   "phases": []
+  }
+ ],
+ "results": [],
+ "checked": {
+  "deps": {
+   "asm/rambo_hooks.asm": "55d6492a5e84a0ba",
+   "docs/profiles/rambo.json": "5ab4f0b3a7250939",
+   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "28f3c5d8b1333ba6",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/rambo.py": "b1a408bdf6a94440",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "e7dd9ffae7279aa9",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-05"
+ },
+ "verified": {
+  "deps": {
+   "asm/rambo_hooks.asm": "55d6492a5e84a0ba",
+   "docs/profiles/rambo.json": "5ab4f0b3a7250939",
+   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "28f3c5d8b1333ba6",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/rambo.py": "b1a408bdf6a94440",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "e7dd9ffae7279aa9",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-05"
+ }
+}

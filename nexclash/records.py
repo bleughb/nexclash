@@ -27,7 +27,8 @@ Record fields (docs/records/<name>.json; copy the nearest record, then edit):
   representative  true = the game re-verified when shared files change (one per engine)
   reference       folder under specnext/reference/
   inputs          snapshot + recordings: name (canonical name selftest copies to), md5, path (under
-                  the reference folder; maintainers fill it)
+                  the reference folder; maintainers fill it); "missing": why = not in the references yet (the
+                  verify that needs it is skipped, nothing stamped; the rebuild and the reworks run)
   modules         nexclash modules the build imports (closure computed); own_modules = the engine's
   data            own data files (profile, .asm, ...); shared_data = data shared with other games
   rebuild         auto args (no recording), rzx used by the build, decisions (stored analysis facts)
@@ -38,6 +39,12 @@ Record fields (docs/records/<name>.json; copy the nearest record, then edit):
   repro           extra builds (old strategies) with their own outputs
   status          STATUS.md columns: title, engine_col, build, software, hardware, next
   checks          quick per-game checks run with every rebuild (e.g. "asm2profile:<profile>")
+  rework          opt-in reworks: [{name, version, args, env (e.g. NEXCLASH_REWORK), inputs (its own: missing ones
+                  skip the rework, never the base), rebuild / verify (as the record's), outputs, proof (PRF1 line), note}]
+  pin             shared behaviour the game keeps ({"altrom_fill": "rom3"}): auto rebuilds it so and skips the ROM
+                  path check (it verifies as it was verified)
+  rom_paths_known ROM differences the ROM path check lists as KNOWN, not faults: [{image, from, to, why}]
+                  (hex addresses; nextboot.rom_paths known; Knight Tyme's Bridge star map)
   excluded        reason string: plan() never rebuilds or re-verifies this game (--affected, release,
                   --full); `selftest.py --game NAME [--verify]` still runs it explicitly
   canary          1 = tool-chain canary stage 1, 2 = stage 2 (selftest --canary); canary_quick =
@@ -126,8 +133,9 @@ def deps(rec):
 
 
 def own(rec):
-    """The game's own files: its engine modules and data (a change -> re-verify this game)."""
-    return {'nexclash/%s.py' % m for m in rec.get('own_modules', [])} | set(rec.get('data', []))
+    """The game's own files: its engine modules and data, and its recipe and ROM identity (PSEUDO): a change ->
+    re-verify this game."""
+    return {'nexclash/%s.py' % m for m in rec.get('own_modules', [])} | set(rec.get('data', [])) | set(PSEUDO)
 
 
 def _skoolkit_version():
@@ -149,10 +157,58 @@ def hashes(paths, root=ROOT):
     return out
 
 
-def changed(stamp, now):
-    """Paths whose hash differs between a stamp {path: hash} and now (added / removed count)."""
-    keys = set(stamp or {}) | set(now)
-    return sorted(k for k in keys if (stamp or {}).get(k) != now.get(k))
+# The record's own recipe and the ROM verification modelled are part of what a stamp proves (pseudo entries beside
+# the file hashes): 'recipe' = recipe_digest(rec), 'rom' = rom_identity(). A stamp written before they existed has
+# neither: such a stamp is taken as it is until the next one (migration). 'rom' counts only when a ROM is supplied
+# now (NEXCLASH_NEXT_ROM): a plan without one cannot judge a stamp made with one; a stamp made without one
+# ('sinclair') is due when one is supplied.
+PSEUDO = ('recipe', 'rom')
+# Fields that decide what a build makes and what its verification proves; prose (note, why, minutes) is left out.
+RECIPE_FIELDS = ('inputs', 'modules', 'own_modules', 'data', 'shared_data', 'rebuild', 'verify', 'outputs', 'repro',
+                 'pin', 'rom_paths_known', 'rework', 'checks')
+PROSE = ('note', 'why', 'minutes')
+SINCLAIR = 'sinclair'
+
+
+def _semantic(v):
+    if isinstance(v, dict):
+        return {k: _semantic(x) for k, x in sorted(v.items()) if k not in PROSE and not k.startswith('_')}
+    if isinstance(v, list):
+        return [_semantic(x) for x in v]
+    return v
+
+
+def recipe_digest(rec):
+    """Canonical digest of the record's recipe: inputs, build / verify arguments, decisions, pins, waivers, reworks,
+    expected outputs (RECIPE_FIELDS; stamps, status and prose left out)."""
+    d = {k: _semantic(rec[k]) for k in RECIPE_FIELDS if k in rec}
+    return hashlib.sha256(json.dumps(d, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:16]
+
+
+def rom_identity():
+    """MD5 (16 hex) of the system ROM a verification models now ($NEXCLASH_NEXT_ROM), None without one."""
+    p = os.environ.get('NEXCLASH_NEXT_ROM')
+    return hashlib.md5(open(p, 'rb').read()).hexdigest()[:16] if p and os.path.isfile(p) else None
+
+
+def state(rec):
+    """What a stamp records now: the dependency hashes + the recipe digest + the ROM identity."""
+    now = hashes(deps(rec))
+    now['recipe'] = recipe_digest(rec)
+    now['rom'] = rom_identity() or SINCLAIR
+    return now
+
+
+def changed(stamp, now, build=False):
+    """Paths whose hash differs between a stamp {path: hash} and now (added / removed count). Pseudo entries
+    (PSEUDO): absent from the stamp = not compared (migration); 'rom' only when a ROM is supplied now, and never for a
+    build (build=True: the checked stamp; the ROM changes no byte)."""
+    stamp = stamp or {}
+    keys = set(stamp) | set(now)
+
+    def skip(k):
+        return k in PSEUDO and (k not in stamp or (k == 'rom' and (build or now.get(k) in (None, SINCLAIR))))
+    return sorted(k for k in keys if not skip(k) and stamp.get(k) != now.get(k))
 
 
 def plan(recs=None, full=False):
@@ -163,9 +219,9 @@ def plan(recs=None, full=False):
     shared_hit = {}                             # engine -> shared files changed since a verification
     now_all = {}
     for r in recs:
-        now = hashes(deps(r))
+        now = state(r)
         now_all[r['name']] = now
-        ch_checked = changed(r.get('checked', {}).get('deps'), now)
+        ch_checked = changed(r.get('checked', {}).get('deps'), now, build=True)
         ch_verified = changed(r.get('verified', {}).get('deps'), now)
         mine = [p for p in ch_verified if p in own(r)]
         shared = [p for p in ch_verified if p not in own(r) and p not in REBUILD_ONLY]
@@ -204,7 +260,7 @@ def selfcheck():
     record is never planned. -> failures"""
     import copy
     recs = [r for r in all_records() if r.get('rebuild') and not r.get('excluded')]
-    base = {r['name']: hashes(deps(r)) for r in recs}
+    base = {r['name']: state(r) for r in recs}
 
     def run(edit=None, verified_edit=None):
         rs = copy.deepcopy(recs)
@@ -247,6 +303,71 @@ def selfcheck():
     acts = [a for r, a, _ in plan([ex])[0]]
     if acts != ['none']:
         bad.append('excluded record planned: %s' % acts)
+    # recipe and ROM identity (PSEUDO): a stamped record whose recipe changes is due; prose and stamps are not recipe
+    by = {r['name']: r for r in recs}
+
+    def one(name, edit, want, env_rom=None, legacy=False):
+        r = copy.deepcopy(by[name])
+        keep = os.environ.get('NEXCLASH_NEXT_ROM')
+        try:
+            if env_rom is not None:
+                os.environ['NEXCLASH_NEXT_ROM'] = env_rom
+            now = state(r)
+            if legacy:
+                now = {k: v for k, v in now.items() if k not in PSEUDO}
+            stamp(r, 'verified', now, 'selfcheck')
+            edit(r)
+            got = plan([r])[0][0][1]
+        finally:
+            if keep is None:
+                os.environ.pop('NEXCLASH_NEXT_ROM', None)
+            else:
+                os.environ['NEXCLASH_NEXT_ROM'] = keep
+        return got == want or bad.append('recipe: %s %s -> %s, want %s' % (name, edit.__doc__, got, want))
+
+    def rework_arg(r):
+        """a rework argument"""
+        r['rework'][0]['args'].append('--allow-60hz')
+
+    def pin(r):
+        """the pin rom3 -> whole"""
+        r['pin']['altrom_fill'] = 'whole'
+
+    def waiver(r):
+        """rom_paths_known removed"""
+        r.pop('rom_paths_known', None)
+
+    def input_md5(r):
+        """a recording's MD5"""
+        (r['inputs']['recordings'] or [r['inputs']['snapshot']])[0]['md5'] = '0' * 32
+
+    def build_arg(r):
+        """a rebuild argument"""
+        r['rebuild'].setdefault('args', []).append('--quick')
+
+    def output(r):
+        """an expected output MD5"""
+        next(iter(r['outputs'].values()))['md5'] = '0' * 32
+
+    def prose(r):
+        """a note and a status line (prose)"""
+        r['verify']['note'] = 'changed'
+        r.setdefault('status', {})['next'] = 'changed'
+
+    def nothing(r):
+        """no change"""
+    one('jetpac', rework_arg, 'reverify')
+    one('chuckie_egg', pin, 'reverify')
+    one('knight_tyme', waiver, 'reverify')
+    one('lunar_jetman', input_md5, 'reverify')
+    one('commando', build_arg, 'reverify')
+    one('smash_tv', output, 'reverify')
+    one('midnight_resistance', prose, 'skip')
+    one('commando', pin, 'skip', legacy=True)                  # a stamp before the digest: taken as it is
+    rom = os.path.join(ROOT, 'docs', 'records', 'chuckie_egg.json')   # any file: a stand-in "ROM"
+    one('chuckie_egg', lambda r: os.environ.__setitem__('NEXCLASH_NEXT_ROM', os.path.join(ROOT, 'README.md')),
+        'reverify', env_rom=rom)                                # another ROM supplied
+    one('chuckie_egg', lambda r: os.environ.pop('NEXCLASH_NEXT_ROM'), 'skip', env_rom=rom)   # none supplied now
     return bad
 
 

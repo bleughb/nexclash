@@ -114,7 +114,7 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 | MMU | slots 0-7 = NextReg $50-$57, 8K pages; 16K bank n = pages 2n, 2n+1; $FF in slot 0/1 = ROM |
 | Legacy paging | legacy and MMU paging are interchangeable, most recent change wins (guide 3.2.6): an UNLOCKED 7FFD/1FFD write remaps slot 0/1 (ROM) and 6/7 - so the tail maps slot-1 RAM AFTER its own paging writes |
 | 7FFD lock | The lock IS 7FFD bit 5 (the 48K tail writes 7FFD=$30). NextReg $08 bit 7: write 1 = clear the lock; write 0 = no effect (does NOT lock); read 1 = unlocked. VHDL (core 3.01.09): while locked, writes to 7FFD, 1FFD and DFFD are ignored and trigger NO MMU remap (port_memory_change needs 'not port_7ffd_locked'), so a RAM slot-1 page survives a locked game's 7FFD writes (documented from source; hardware still to confirm for Dizzy 6). UNLOCKED writes to 7FFD/DFFD/1FFD/EFF7 set MMU0/1=$FF (ROM) and MMU6/7 to the selected bank (ports.txt). At NEX launch paging is UNLOCKED (all hardware-tested builds page with legacy writes without unlocking); the altrom stub still sets $08 bit 7 before its own 1FFD/7FFD writes. |
-| Alt ROM ($8C) | Whole 0x2000-0x3FFF of image 1 usable when the game never reads that ROM range (Commando d601385e: data + code from 0x2000, runs on hardware 2026-10-12; no code at 0x3D00-0x3DFF). $8C alt ROM verified on hardware 2026-09-27: write-mode copy, read-only, 7FFD b4 switch, MMU $FF, IM1, font — all PASS; $8C=00 at NEX launch. Bits: 7 enable, 6 visible only during writes (write mode), 5/4 lock ROM1/ROM0; low nibble = same after soft reset (leave 0). 32K = two 16K images (ROM0 128K, ROM1 48K), selected by the normal ROM select: with 1FFD=$04, 7FFD bit 4 = 0/1 selects ROM2/ROM3 = image 0/1 (hardware test used exactly this); a game that selects ROM 0 in play sees image 0, which the stub does not fill (Target Renegade's setup fills it; C2 #27). Write mode: reads come from the real ROM, so LDIR 0000->0000 copies the selected ROM into its image. MMU0/1 = $FF shows the alt ROM. |
+| Alt ROM ($8C) | Whole 0x2000-0x3FFF of image 1 usable when the game never reads that ROM range (Commando d601385e: data + code from 0x2000, runs on hardware 2026-10-12; no code at 0x3D00-0x3DFF). $8C alt ROM verified on hardware 2026-09-27: write-mode copy, read-only, 7FFD b4 switch, MMU $FF, IM1, font — all PASS; $8C=00 at NEX launch. Bits: 7 enable, 6 visible only during writes (write mode), 5/4 lock ROM1/ROM0; low nibble = same after soft reset (leave 0). 32K = two 16K images (ROM0 128K, ROM1 48K), selected by the normal ROM select: with 1FFD=$04, 7FFD bit 4 = 0/1 selects ROM2/ROM3 = image 0/1 (hardware test used exactly this); a game that selects ROM 0 in play sees image 0: `patch.altrom0` (C2 #27). Write mode: reads come from the real ROM, so LDIR 0000->0000 copies the selected ROM into its image. MMU0/1 = $FF shows the alt ROM. |
 | Hardware sprites | 16x16, 4-bit patterns (128 bytes each), attributes via NextReg $34 (select) then $35 X low, $36 Y, $37 = bit0 X8, bit3 X-mirror, bit2 Y-mirror, $38/$39 pattern+visible; sprites on NextReg $15 bit 0; coords = screen + 32. A mirrored 2x2 box needs left/right quads swapped, and a frame narrower than 32 px an x offset (Dizzy V: -8) |
 | Setup template (0xD000) | sprites off; uploads N x 256 bytes of patterns from bank 11 via port 0x5B; sprite palette 0 = 0, 1 = 0 (black), 2 = $B6 (white, the player colour); NextReg $4B = 0; sprites 0-3 cleared. Stub leaves $15 = 0; hooks show with NEXTREG $15,1 |
 | User register | NextReg $7F: free 8-bit storage; write with NEXTREG, read via ports 243B (select) / 253B (data) |
@@ -134,9 +134,12 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 - altrom stub (z80tonex.altrom_fill): after writing the register block into RAM page 24 it maps
   the stub page (20) at slot 4 and page 24 at slot 5, jumps into the slot-4 alias (an unlocked
   1FFD/7FFD write remaps slots 6/7 = where the stub runs), unlocks ($08 |= $80), 1FFD=$04 /
-  7FFD=$10 (ROM3), $8C=$C0, LDIR 0000->0000 (16K), LDIR the patch bytes lo..hi from page 24,
+  7FFD=$10 (ROM3), $8C=$C0, LDIR 0000->0000 (16K; new builds: Sinclair's ROM from bank 47, card
+  patch.whole-altrom-image; pinned games keep this), LDIR the patch bytes lo..hi from page 24,
   $8C=0, restores slots 6/7, jumps back, restores slots 4/5. No stack use in between.
-- nextboot.py simulates that boot on a Next model (every sprite build prints a `Boot` line).
+- nextboot.py simulates that boot on a Next model (every sprite build prints a `Boot` line; NR 0x1F steps
+  a line per read). New builds add `ROM paths` (nextboot.rom_paths, docstring: what recordings it copes
+  with; $NEXCLASH_NEXT_ROM = your card's enNextZX.rom; a record's `rom_paths_known` = accepted).
 - 48K and 128K: the tail must end below 0xC000. The stub runs with its own bank 10 at C000-FFFF and
   the tail's OUT 0x7FFD maps bank 0 back under the PC (El Capitan Trueno: a 48K tail at 0xFF97
   never reached the game); z80tonex refuses it, nextboot.check catches it too.
@@ -177,8 +180,8 @@ must be a copy of ROM 0x2000-0x3FFF, hooks only in bytes the game never reads (0
 for Dizzy V), register block after the hooks - NOT at 0x3FE0 (font data there).
 
 Tail sites, strongest proof first: (1) printer buffer never touched; (2) an undo buffer that
-every plot writes before the erase reads it; (3) dead stack between SP and the low-water mark;
-(4) bytes whose first access in the recording is a write.
+every plot writes before the erase reads it; (3) dead stack proven write-first (the lowest SP is no
+proof: Match Day's trophy data sat below SP); (4) write-first bytes. `auto` proves new builds' tails.
 
 
 --------------------------------------------------------------------------------
@@ -293,39 +296,29 @@ Open items only: a finished item is deleted (history lives in git), a new one go
 with the next free number. STATUS.md "Open work" holds only release state and points here.
 
 Verification and speed
-1. No hook speed report: Commando's and Midnight Resistance's hook costs were measured with scratch
-   scripts (T per plot / commit from the pair runs). Wanted: an `auto` line with hook T per call
-   (median / max) against a documented budget per game frame; Smash TV's per-engine `Speed` line is
-   the pattern to lift into a shared helper. On the real core model: MAME breakpoints on every hook
-   entry and every exit back to the game (TECHNIQUES "NextMasterSystem"). Without MAME: 28 MHz cycles
-   = T-states + 1 per memory read (their MAME measurement), not T / 8. Matters most for games without
-   frame sync, where hook cost changes the game's speed (LEARNINGS 2.1).
+1. Hook speed: `python -m nexclash.pace` measures the pace penalty and hook time (NR 7) in JNext
+   (docs/CHECKS.md). Wanted: an `auto` line, hook T per call against a per-frame budget (Smash TV's
+   `Speed` line); hooks with no NR 7 switch read 0 in pace. Core-exact:
+   MAME breakpoints on hook entry / exit (TECHNIQUES "NextMasterSystem"); 28 MHz cycles = T + 1 per
+   memory read, not T / 8. Matters most without frame sync (LEARNINGS 2.1).
 2. Interrupt injection: in verify / unit tests, run the game's ISR at random hook instructions and
    require identical results (would have caught Commando's IY bug directly; the per-instruction
    invariant check is the stand-in).
-3. Boot-path RAM check (entry -> menu, in no RZX) is not automatic in `auto`: the checked range must
-   be the WHOLE hook RAM. Tool: `scan --frames N --keys K --after ENTRY --range ...` (C4).
+3. Boot-path RAM check (entry -> menu, in no RZX) is not automatic in `auto`: check the WHOLE hook RAM. Tool: `scan --frames N --keys K --after ENTRY --range ...` (C4).
 4. Treasure Island (dedicated builder) is not re-verified differentially by any tool: selftest
    re-proves only the plain tail (access scan) and the boot (record: verify.differential false).
-5. nextboot.check models the alt ROM with rom48(), but the Next copies the system ROM3 (NextZXOS,
-   data at 0x3B00-0x3CFF): check against the real ROM3, or make the builder copy every ROM area a
-   patch relies on (LEARNINGS 1.3). Now possible (2026-10-27, Cauldron): `patch.altrom_low` +
-   `altrom = (0x2000, 0x4000)` writes the WHOLE image from the build, and nextboot.check(...,
-   sysrom=) boots with another ROM3 to prove it (cauldron.rom3_independent). Other engines still
-   copy only their hook range.
+5. Whole alt ROM image: new builds' default (card patch.whole-altrom-image); older games pinned.
+   Opt-in rework, path reached: Chuckie Egg, Jet Pac, Match Day, Target Renegade; latent: the other
+   alt ROM games. Open: slot1 builds keep NextZXOS's ROM3 at 0x0000-0x1FFF.
 6. `nexclash.py patch` (the users' command) writes the plain .nex WITHOUT nextboot.check (El Capitan
    Trueno's first plain build crashed at once: 48K tail above 0xC000). Run it in `patch`; refuse or warn.
-7. `auto` on an unknown engine made Jetpac's synthetic _auto.rzx (6410 frames), but `scan` / `preview`
-   on it stop with "Port readings exhausted for frame 532": recorder and replay disagree on one
-   frame's port reads. Not investigated (Jetpac used free runs).
 8. selftest has no dependency check: without SkoolKit every rebuild prints "got None" and the canary
-   says "the TOOL CHAIN is broken". Check the imports (skoolkit, PIL) first; golden check in tools_check.
+   blames the TOOL CHAIN. Check the imports (skoolkit, PIL) first; golden check in tools_check.
 
 Analysis tools
-9. Explorer reach is LOW (1-4 real rooms in 6,000-60,000 frames on the Dizzy games). Next step:
-   goal-directed exploration for the TID engine from the player X/Y variables (walk to screen
-   edges, jump when X stops changing). Until then a short human RZX covers more; puzzle-gated
-   content always needs one.
+9. Explorer reach is LOW (1-4 real rooms in 6,000-60,000 frames, Dizzy games). Next: goal-directed
+   exploration for TID from the player X/Y (walk to screen edges, jump when X stops). Until then a
+   short human RZX covers more; puzzle-gated content needs one.
 10. classify() assumes "overwrite" for unrecognised writers - should flag for review.
 11. Static caller scan: `scan` sees only what the RZX ran, but PLAYBOOK 3c wants every caller of every
    plotter. Add `scan --static` (recursive descent from entry + ISR, RZX PCs as seeds, object handler
@@ -362,9 +355,8 @@ Toolkit structure
    done: a `nexclash.py sheet` command (today `python -m nexclash.<engine> sheet`).
 21. [MAME] A scripted MAME run (put the .nex in the SD image, load, snapshot) next to run_cspect.bat
    (LEARNINGS 2.7).
-22. nexpatch (contributor's proposal): a .nex delivered as an HTML page that rebuilds it from the
-   user's own .z80 (CRC32 match, bytes ChaCha20-encrypted under SHA-256 of the .z80); checked
-   2026-10-14 byte-identical, no network code. Maintainers' decision pending.
+22. nexpatch (contributor's proposal: an HTML page that rebuilds the .nex from the user's own .z80;
+   checked 2026-10-14): the .nxc output (C4, 2026-11-04) now does that job; decision pending.
 23. `selftest.py --affected` is not run automatically on each PR (needs a GitHub Action with the
    private references via a secret); a maintainer runs it before merging.
 
@@ -390,10 +382,9 @@ Hardware to confirm
    50 Hz or the CPU speed. Cheap guard: NEXTREG $62,0 / $64,0 / $22,0 / $C4 bit 0 / $68,0 / $26,0 /
    $27,0 + $06 AND $5F in the stub - changes every game's .nex bytes: a maintainer decision with a
    full `selftest.py --stamp`. Check NEXLOAD's reset list first (ped7g NEXLOAD2 source).
-27. Alt ROM image 0 (the game selects ROM 0 in play; Target Renegade fills image 0 from ROM 0 in
-   write mode): not confirmed on hardware; nor whether the Next decodes OUT (0x1FFD) as 7FFD in 128K
-   timing (LEARNINGS 1.2). The ROM 0 bytes a game reads come from the Next's ROM 0, not the Sinclair
-   128 ROM 0 the RZX model uses (Target Renegade: 9 bytes of sound data).
+27. Alt image 0: a copy of ROM 0 on the Next is NextZXOS's (Target Renegade's sound bytes, Knight
+   Tyme's star map). New engines: `patch.altrom0` (128K ROM 0 + hooks). Unconfirmed on hardware, as OUT
+   (0x1FFD) in 128K timing (LEARNINGS 1.2). `scan` cannot split ROM reads by ROM.
 28. Copper facts to confirm before an engine relies on the copper: a WAIT for a LINE already passed
    holds the rest of the list until the next frame (inferred from guide r3; an h passed on the
    CURRENT line does not wait - hardware-tested, TECHNIQUES "Hardware ground truth"); $64 = 33 aligns
@@ -448,7 +439,8 @@ Designs not built yet (use when a game needs them)
    Unconfirmed: that the Next's bus reads $FF in pulse mode on every core (we rely on it).
 36. `inspect` should warn when CODE runs in the printer buffer (0x5B00-0x5BFF): NEXLOAD overwrites it,
    so the build needs keep_printer_buffer (Match Day: data; Cyclone: the main loop - its first plain
-   build, without it, would not run on hardware). An access scan (`scan --range 0x5B00-0x5BFF`) shows it.
+   build, without it, would not run on hardware). `auto` warns (new builds). Read first, not put back:
+   Lode Runner, Magicland, Midnight Resistance, Dizzy 6, Target Renegade (as code), Smash TV, Dizzy 1.
 37. Beeper sound independent of CPU speed (idea, 2026-10-22; TECHNIQUES 2.6, sample sound by copper):
    timed beeper loops play 8x fast at 28 MHz (Match Day isr_w; LEARNINGS 2.1f), so today any code
    that beeps must stay at 3.5 MHz. Instead a hook on the game's OUT ($FE) could log (beeper bit,
@@ -463,18 +455,21 @@ Designs not built yet (use when a game needs them)
 39. `isr` should list, for every routine the ISR's call tree reaches, the main-code callers too, and
    the original's slack at each (T from the main-code call's return to the next interrupt, over an
    RZX): a routine on both lists with little slack is a nesting risk once hooks add cost (LEARNINGS
-   2.1f; Incredible Shrinking Fireman found it only on hardware, 2026-10-25).
+   2.1f; Fireman found it only on hardware).
 41. survey: compare the RZX's embedded snapshot with the delivered .z80 and WARN when they differ
    (Cauldron 2026-10-26: 11,283 bytes, the code shifted; found only at tool call ~60, after a stale
    disassembly). Both start states are at hand in survey.analyse.
 42. inspect: the "loader snapshot" WARNING fires when PC is in ROM only because an IM 1 interrupt was
-   just taken with the BASIC loader still in memory (Cauldron: PC 0x0038, stacked return 0x613E =
-   game code). Check the stacked return address before warning; add a tools_check case.
+   just taken (Cauldron: PC 0x0038, stacked return 0x613E = game code). Check the stacked return
+   address before warning; add a tools_check case.
 43. coloursheet.write crashes (max() of an empty sequence) on a figure with no opaque pixel (Cauldron
    2026-10-27: image D710 3 x 24 is all zero bytes; the engine now leaves such images off). Skip them
    in write / choose and report them; add a tools_check case.
-44. sjasm.py on Windows: no binary, no make. A local 1.24.0 copied to the cache as `sjasmplus`
-   (+ .exe) gave --check --all IDENTICAL (2026-10-31); accept a cached .exe.
+44. sjasm.py on Windows: no binary, no make; a cached 1.24.0 `sjasmplus` (+ .exe) gave --check --all
+   IDENTICAL (2026-10-31): accept it.
+45. Spellbound's _boot and three_weeks.boot_check still copy the raster line (+ 128K paging) nextboot has
+   now: drop them at their next rework. nextboot.boot ignores a NEX's entry bank: a _loading.nex's picture
+   stub runs only in its engine's loading_check.
 
 ### C3b. Two verification levels (agreed with Dean 2026-09-29; how to run them: PLAYBOOK 6)
 - ITERATE (per change): original bytes at every site, boot check, unit tests (with negative
@@ -486,19 +481,20 @@ Logic must be exact at both levels; visuals "good enough" where Dean agreed (gam
 ### C4. Shared analysis commands (any game; Dean 2026-10-12: harness stays per engine)
 `nexclash.py inspect | scan | isr | cost | preview` (modules snapinfo, memscan, isrinfo, drawcost, preview on the
 runner simrun.py) and `python -m nexclash.survey` (stage 0: all of them in one pass + plain build,
-boot, engine, plot routines, coverage; not in nexclash.py because every game's evidence depends on
-nexclash.py and a new subcommand would put them all up for re-verification). Game-independent: game
-facts come in as arguments (addresses, ranges, keys).
+boot, engine, plot routines, coverage; a module, not a subcommand: every game's evidence depends on
+nexclash.py, so a change there puts them all up for a rebuild). Game-independent: game facts come in
+as arguments (addresses, ranges, keys).
 - survey: inspect + engine detectors + the plain conversion as `convert` does it (autosave snapshots
   stripped first: analyse() desyncs on them) + the 48K boot check, then ONE pass with memscan.Scanner,
   isrinfo.IsrTracker and survey.PlotTracker (shadow call stack: each screen write -> the innermost
   CALL or interrupt running; calls, callers, T per call from its own T count), then a preview pass for
   the top routines. Writes <game>_survey/survey.md (+ .json, preview.png, the plain .nex). Its
-  coverage line is the byte scan of C2 #11 only (CALL / JP nn to each top routine, rated by whether
-  code ran within 24 bytes), not the recursive static pass.
-- simrun: plays an RZX (autosave snapshots stripped to a temp copy) or free-runs a snapshot with
-  a key schedule ("5-14:SPACE; 30-:N", K:LEFT... = Kempston); hooks before/after every
-  instruction, on every memory access, interrupt and frame. 128K memory hooks swap the Memory
+  coverage line is C2 #11's byte scan only (CALL / JP nn to each top routine, rated by code run
+  within 24 bytes), not the recursive static pass.
+- simrun: plays an RZX (autosave snapshots stripped to a temp copy, or keep_snapshots: per segment)
+  or free-runs a snapshot with a key schedule ("5-14:SPACE; 30-:N", K:LEFT... = Kempston); hooks
+  before/after every instruction, on every memory access, interrupt, frame, desync (on_desync; else
+  a WARNING). 128K memory hooks swap the Memory
   object's class (rzxplay tests isinstance(memory, Memory)); 48K memory is wrapped.
 - inspect: machine, 7FFD/ROM, where PC is (ROM routine names), BASIC listing + USR targets, IM /
   I / vector chain, stack; warnings (loader, 128K BASIC = ROM 0, ROM 0 selected).
@@ -523,5 +519,9 @@ facts come in as arguments (addresses, ranges, keys).
 - cost: T per call of a routine entered by CALL (interrupt time excluded), calls per frame,
   share of frame time, per register value at entry. A routine reached by JP has no return
   address on the stack: time its caller instead.
-Improving them is welcome: keep existing report lines and arguments (add, don't rename), add a
-golden check for the new behaviour to selftest.py tools_check, run `python selftest.py --tools`.
+- play checks on a BUILD in JNext, original as control (docs/CHECKS.md): `python -m nexclash.soak`
+  (freezes), `pace` (penalty, input keyed to game updates), `flicker` (every frame), `looksheet` (flags).
+- .nxc output (2026-11-04): nexclash/nxcout.py runs the vendored nexclash/nxc.py (THIRD-PARTY-NOTICES)
+  for patch / new / auto -> GAME.nxc (README); `--nex` keeps the .nex, `--no-nxc` = old output (selftest).
+Improving them: keep report lines and arguments (add, don't rename), a golden check in selftest.py
+tools_check, `python selftest.py --tools`.

@@ -1,9 +1,10 @@
 """User-facing commands of the nexclash package (GPL-3.0-or-later).
 
-  patch GAME.z80        build plain + sprite .nex for a supported game (your own snapshot)
+  patch GAME.z80        build a supported game (your own snapshot): GAME.nxc, the file to share
+                        (it needs the player's own game; --nex keeps the plain + sprite .nex too)
   new GAME.z80          unsupported game: make a session folder to add it with Claude
-  contribute NAME       zip what a session added (code, profiles, docs, results - never game
-                        data) for upload, so everyone gets the game in the next release
+  contribute NAME       zip what a session added (code, profiles, docs, results, the game's .nxc -
+                        never game data) for upload, so everyone gets the game in the next release
 
 Your snapshot never has to match ours byte for byte: every engine checks the ORIGINAL bytes at
 each patch site and refuses if they differ. A snapshot identical to one we verified is reported
@@ -30,6 +31,7 @@ ALLOWED = ('nexclash/*', 'asm/*', 'docs/*', 'games/*', 'tools/*', 'nexclash.py',
 GAME_DATA = ('.z80', '.rzx', '.nex', '.sna', '.szx', '.tap', '.tzx', '.dsk', '.scr', '.bin', '.rom', '.pzx',
              '.zip', '.png', '.gif')
 MAX_FILE = 512 * 1024
+MAX_NXC = 4 * 1024 * 1024        # a .nxc: the patch to share (encrypted with the game; no game data in clear)
 
 
 def md5(p):
@@ -85,7 +87,11 @@ def cmd_patch(a, cmd_auto):
         print('    python nexclash.py verify %s --rzx YOUR.rzx' % z80)
     if known and not getattr(a, 'allow_60hz', False) and not same:
         return 1
-    print('Copy %s to the Next\'s SD card. Hardware checklist: games/ (your game\'s file).' % os.path.basename(spr))
+    from nexclash import nxcout                 # GAME.nxc (nexclash/nxcout.py); the .nex files only with --nex
+    nxc = nxcout.package(a)
+    print('Share %s; to play it, the loader and card setup: %s. Hardware checklist: games/ (your game\'s file).' % (
+        os.path.basename(nxc), nxcout.SHARE) if nxc else 'Copy %s to the Next\'s SD card. Hardware checklist: games/ '
+        '(your game\'s file).' % os.path.basename(spr))
     return 0
 
 
@@ -115,9 +121,10 @@ next chat, e.g.
 Reply to the design question with "defaults" or the numbers to change.
 
 ## When the session is done
-1. `python nexclash.py patch "{z80path}"` builds it; test on the Next with the session's checklist.
+1. `python nexclash.py patch "{z80path}"` builds {game}.nxc (add `--nex` for the .nex files to test on
+   the Next with the session's checklist; the .nxc loader: github.com/jattree/nxc).
 2. `python nexclash.py contribute "{game}" --report "{report}"`
-   makes nexclash_contribution_{game}.zip: code, profile, notes and results only - no game data.
+   makes nexclash_contribution_{game}.zip: code, profile, notes, results and {game}.nxc - no game data.
 3. Upload that zip: {upload}
 '''
 
@@ -131,6 +138,8 @@ def cmd_new(a, cmd_auto):
     why = 'unknown engine'
     try:
         cmd_auto(a)
+        from nexclash import nxcout             # a game an engine already builds still gets its .nxc
+        nxcout.package(a)
         rep = os.path.join(a.out, game + '_report.txt')
         if os.path.exists(rep):
             lines = [x for x in open(rep).read().split('\n') if x.startswith(('Engine', 'Sprites'))]
@@ -175,7 +184,7 @@ def changed_files(base_ref=None):
                 if base.get(rel) != md5(os.path.join(ROOT, rel)):
                     out.append(rel)
         return sorted(out)
-    if os.path.exists(os.path.join(ROOT, '.git')):
+    if os.path.exists(os.path.join(ROOT, '.git')):          # a dir, or a file in a git worktree
         def git(*args):
             r = subprocess.run(['git', '-C', ROOT, *args], capture_output=True, text=True)
             if r.returncode:
@@ -221,7 +230,7 @@ def cmd_contribute(a):
     meta = {'game': a.name, 'date': time.strftime('%Y-%m-%d'), 'note': a.note or '',
             'package_version': open(os.path.join(ROOT, 'VERSION')).read().strip()
             if os.path.exists(os.path.join(ROOT, 'VERSION')) else 'git',
-            'files': {f: md5(os.path.join(ROOT, f)) for f in keep}, 'reports': []}
+            'files': {f: md5(os.path.join(ROOT, f)) for f in keep}, 'reports': [], 'patches': {}}
     with zipfile.ZipFile(zname, 'w', zipfile.ZIP_DEFLATED) as z:
         for f in keep:
             z.write(os.path.join(ROOT, f), 'files/' + f)
@@ -229,10 +238,16 @@ def cmd_contribute(a):
             if os.path.getsize(r) <= MAX_FILE and not r.lower().endswith(GAME_DATA):
                 z.write(r, 'reports/' + os.path.basename(r))
                 meta['reports'].append(os.path.basename(r))
+            if r.endswith('_report.txt'):           # the build's .nxc beside its report (nexclash/nxcout.py), never the .nex
+                nxc = r[:-len('_report.txt')] + '.nxc'
+                if os.path.isfile(nxc) and os.path.getsize(nxc) <= MAX_NXC:
+                    z.write(nxc, 'patches/' + os.path.basename(nxc))
+                    meta['patches'][os.path.basename(nxc)] = md5(nxc)
         z.writestr('CONTRIBUTION.json', json.dumps(meta, indent=1))
     c = json.load(open(CONTRIB)) if os.path.exists(CONTRIB) else {}
-    print('Contribution: %s (%d files%s)' % (zname, len(keep), ', %d reports' % len(meta['reports'])
-                                             if meta['reports'] else ''))
+    print('Contribution: %s (%d files%s%s)' % (zname, len(keep), ', %d reports' % len(meta['reports'])
+                                               if meta['reports'] else '', ', %s' % ', '.join(meta['patches'])
+                                               if meta['patches'] else ''))
     for f in keep:
         print('  ' + f)
     print('Upload it: %s' % (c.get('upload_url') or 'see CONTRIBUTING.md'))

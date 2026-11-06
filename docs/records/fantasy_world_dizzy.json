@@ -74,6 +74,10 @@
    "md5": "c09213beaec1572c0228985dae89bd77"
   }
  ],
+ "pin": {
+  "altrom_fill": "rom3",
+  "note": "verified before the shared defaults of 2026-11-04 (docs/REFACTOR.md 1-3, 7): the old alt ROM fill, no ROM path / tail check; `--altrom-fill whole` opts in to the rework"
+ },
  "status": {
   "title": "Fantasy World Dizzy",
   "engine_col": "tid generic (fantasy_world_dizzy.md)",
@@ -84,44 +88,52 @@
  },
  "checked": {
   "deps": {
-   "nexclash.py": "5eeaaae9ae6e4a3c",
+   "nexclash.py": "b7f49876a97b1f48",
    "nexclash/analyse.py": "5bdd8b073cc95624",
-   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
-   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "28f3c5d8b1333ba6",
    "nexclash/evidence.json": "a6c823114223e2c3",
    "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/nextboot.py": "e57136059969ba67",
    "nexclash/recorder.py": "8b959db3b8dc838b",
-   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simrun.py": "9c4802548f78f40b",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/templates.json": "e93f585833e72628",
    "nexclash/verify.py": "3dcc48bdab8bd67b",
-   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
-   "skoolkit": "10.1"
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "97dc0c163c81e215",
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-10-13"
+  "date": "2026-11-05"
  },
  "verified": {
   "deps": {
-   "nexclash.py": "5eeaaae9ae6e4a3c",
+   "nexclash.py": "b7f49876a97b1f48",
    "nexclash/analyse.py": "5bdd8b073cc95624",
-   "nexclash/build.py": "a60e4d3c5945c94a",
+   "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
-   "nexclash/dizzy6.py": "89c8ba59fc762962",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "28f3c5d8b1333ba6",
    "nexclash/evidence.json": "a6c823114223e2c3",
    "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "c71aaed434e73ef1",
+   "nexclash/nextboot.py": "e57136059969ba67",
    "nexclash/recorder.py": "8b959db3b8dc838b",
-   "nexclash/rzx.py": "e3e783e4cc235d85",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simrun.py": "9c4802548f78f40b",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/templates.json": "e93f585833e72628",
    "nexclash/verify.py": "3dcc48bdab8bd67b",
-   "nexclash/z80tonex.py": "7b5a0d633ccf369d",
-   "skoolkit": "10.1"
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "97dc0c163c81e215",
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-10-13"
+  "date": "2026-11-05"
  }
 }

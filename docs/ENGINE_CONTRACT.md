@@ -20,7 +20,7 @@ REQUIRED (doccheck):
 | `auto(a, z80, name, out, say)` | the whole run: plain + sprite build with boot checks, autosaves stripped, verify each `a.rzx` (`a.quick` = frames), unit tests + negative control, `say()` report lines `Plain`, `Sprites`, `Verify`, `Unit`, `Result : PASSED / FAILED`; returns True on PASS |
 | `verify(patch, rzx_path, stop=None, collect=0, progress=None)` | differential test (PLAYBOOK 6) -> `(Counter, examples[, states])`; failure keys end in `!`; `collect=N` keeps N machine states per site kind for the unit tests. Free-run engines (no RZX: jetpac, loderunner) take `(patch, z80, rzx=None, frames, keys, ...)` |
 | `unit_tests(patch, states, neg...)` | cases the RZX does not reach + the negative control (CLAUDE.md rule) -> Counter, failures end in `!` |
-| `CMP` | register indexes compared (all but R, T, MEMPTR) |
+| `CMP` | register indexes compared: all but T, MEMPTR (`hooklib.CMP_R`; R too without the library) |
 
 OPTIONAL for legacy engines; new engines must provide colour sheets and recolour (PLAYBOOK 5):
 
@@ -34,15 +34,25 @@ OPTIONAL for legacy engines; new engines must provide colour sheets and recolour
 | `DECISIONS` | stored build facts for `auto --decisions` (docs/records `rebuild.decisions`) |
 | `INTERIORS`, `TAIL_ADDR`, `ROM_ORG`, `ALT_PAGE` | patched-instruction interiors (no jumps into them), tail and hook addresses |
 
+Outputs (nxcout.manifest): `NAME_sprites[_loading].nex`, sets `NAME_SET[_loading].nex`,
+`NAME.nex` plain; others, toggles: `NAME_outputs.json`.
+
 ## The patch object (what z80tonex.convert and nextboot.check read)
 `name`; `sites` = [(addr, original bytes, new bytes)] - `apply(snap)` refuses a snapshot whose
 bytes differ; `stub_extra` + `setup_call` (setup code the stub runs), `hook_page_data`,
 `extra_banks` {bank: bytes}, `uses_printer_buffer`, `tail_addr` (below 0xC000); alt-ROM hooks:
-`altrom = (lo, hi)` + `page` (the 8K image); ROM bytes below 0x2000 (a JP into the hooks at a
+`altrom = (lo, hi)` + `page` (8K image over Sinclair's ROM, z80tonex.altrom_whole); ROM bytes below 0x2000 (a JP into the hooks at a
 ROM routine, Cauldron): `altrom_low = (RAM page, 8K image of 0x0000-0x1FFF)` - with `altrom =
-(0x2000, 0x4000)` the whole image is the build's, not the Next's NextZXOS ROM3 (BRIEFING C2 #5;
-z80tonex.altrom_fill copies it, nextboot.check compares it); older strategies `slot1`,
-`keep_printer_buffer`, `max_tail`.
+(0x2000, 0x4000)` the whole image is the build's, not NextZXOS's ROM3 (BRIEFING C2 #5;
+z80tonex.altrom_fill copies it, nextboot.check compares it); 128K ROM 0 read with the
+alt ROM on: `altrom0 = (lo, hi)` (ROM 0 + those bytes, z80tonex.altrom0); older strategies `slot1`,
+`keep_printer_buffer`, `max_tail`. New verifiers' alt ROM image: nextboot.alt_image.
+
+## Hook library (new engines; old ones keep theirs)
+asm/lib/hlib_*.asm (EQUs at each head) + nexclash/hooklib.py (verifier tools). Hooks:
+HLIB_SPEED_IN / _OUT, HLIB_R_IN / _OUT; pace ORIGINAL: hlib_pace_wait (card patch.pace-limiter); sprites:
+hlib_pc_upload + hlib_commit. unit_tests: `hooklib.every_site` (four clocks). Record: `hooklib.FILES` in
+`shared_data`. Unused parts: decided in games/<game>.md.
 
 ## Verify loop (the part every engine repeats; copy it from chuckie.verify)
 Replay the RZX with the opcode table wrapped: at a hook site copy the state, run original and
@@ -54,10 +64,9 @@ A hook that runs the routine itself (CALL body / the routine's RET comes back to
 the next routine starts right after the RET, so no exit JP fits: Cauldron 0x6357) meets the original
 at the CALLER's return: the replay must skip sites nested inside it until that point (Cauldron
 `span`), or they are applied twice.
-Return shortcut (Nemesis): a hook on a long routine the replay runs anyway (a 68K T screen copy)
+Return shortcut (Nemesis): a hook on a long routine the replay runs anyway
 pushes a return trampoline and lets the original run; the verifier runs the full patched path for
-the first N calls, then only the trampoline's code from the original's state at the routine's RET -
-a full verify in 14 min instead of hours. Slots: `simpool.machine` keeps ONE simulator per slot
+the first N calls, then only the trampoline's code from the original's state at the routine's RET. Slots: `simpool.machine` keeps ONE simulator per slot
 name; two alive at once (original + patched in one event) need different slots, or the second
 resets the first (a false "memory differs").
 

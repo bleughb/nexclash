@@ -25,3 +25,5 @@ jobs:
         run: python tools/learncheck.py --selfcheck
       - name: doccheck (references, budgets, technique cards, learncheck)
         run: python tools/doccheck.py
+      - name: DMA functional checks (no game data; includes no-blitter and CPU fallback)
+        run: python -m nexclash.dma_check
