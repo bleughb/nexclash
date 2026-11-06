@@ -1931,6 +1931,8 @@ P_ERROR EQU 0x1ED7
 P_PAIR  EQU 0x1ED8
 P_XOR   EQU 0x1ED9
 P_ROWS  EQU 0x1EDA
+P_SOURCE EQU 0x1EDB
+P_RAW   EQU 0x1EC0
 pack_actor_tile:
         xor a
         ld (P_ERROR),a
@@ -1970,10 +1972,19 @@ pack_bound:
         jp c,pack_bad
         bit 7,h
         jp nz,pack_bad
+        ld a,(P_SOURCE)
+        cp 2
+        jp nc,pack_bad
+        or a
+        jr nz,pack_pinned_attr
         ld hl,(P_TILE)
         ld de,0xFC00
         add hl,de
         ld a,(hl)
+        jr pack_attr
+pack_pinned_attr:
+        ld a,(P_RAW+8)
+pack_attr:
         ld c,a
         and 7
         rlca
@@ -1997,12 +2008,17 @@ pack_bound:
         rlca
         neg
         ld (P_XOR),a
+        ld a,(P_SOURCE)
+        or a
+        ld hl,P_RAW
+        jr nz,pack_source
         ld hl,(P_TILE)
         add hl,hl
         add hl,hl
         add hl,hl
         ld de,0xDC00
         add hl,de
+pack_source:
         push hl
         pop ix
         ld a,8
@@ -2519,6 +2535,20 @@ actor_blit:
         or a
         sbc hl,bc
         ld (DB_BBUMP),hl
+        ld a,(DB_ROWS)
+        cp 1
+        jr nz,.init_backend
+        ld hl,(DB_WIDTH)
+        ld a,h
+        or a
+        jr nz,.init_backend
+        ld a,l
+        cp 64
+        jr nc,.init_backend
+        ld a,(DB_SRC_PAGE)
+        nextreg 0x51,a
+        jr .cpu                ; tiny span: avoid DMA capability/setup overhead too
+.init_backend:
         call blit_init
         ld a,(DB_BACKEND)
         cp 1
@@ -2530,6 +2560,7 @@ actor_blit:
         ld a,l
         cp 64
         jr nc,.backend_ready
+.cpu:
         xor a                  ; row-DMA setup costs more than these narrow CPU rows
         ld (DB_BACKEND),a
 .backend_ready:
@@ -2688,3 +2719,215 @@ blit_restore:
 actor_blit_end:
         ASSERT actor_blit_end < 0x1D00
         SAVEBIN "inferno_blit.bin",hlib_dma_policy,actor_blit_end-hlib_dma_policy
+
+; Private page 78, snapshot page 122. Standalone DI/28MHz component, no game hook.
+; Stream: original header; repeated width,dx,dy,(tile ID,bitmap[8],attribute)*width; zero.
+; OP 0 captures only when unowned, OP 1 releases, OP 2 compares all live bytes.
+; A successful capture pins page 122 until release. Validation never writes pinned data.
+; Invalid/overflow captures leave DONE=0, ACTIVE=0; never publish a partial stream.
+        ORG 0
+J_OP    EQU 0x1E80
+J_IMAGE EQU 0x1E81
+J_FLASH EQU 0x1E82
+J_PAINT EQU 0x1E83
+J_ACTIVE EQU 0x1E85
+J_DONE  EQU 0x1E86
+J_ERROR EQU 0x1E87
+J_MATCH EQU 0x1E88
+J_SIZE  EQU 0x1E89
+J_PHASE EQU 0x1E8B
+J_GEN   EQU 0x1E8C
+J_SP    EQU 0x1E8E
+J_PAGE  EQU 0x1E90
+J_ROWS  EQU 0x1E91
+J_LEFT  EQU 0x1E92
+job_snapshot:
+        ld (J_SP),sp
+        xor a
+        ld (J_ERROR),a
+        ld (J_MATCH),a
+        ld a,(J_OP)
+        cp 1
+        jp z,job_release
+        cp 3
+        jp nc,job_reject
+        ld a,(J_FLASH)
+        cp 2
+        jp nc,job_reject
+        ld a,(J_OP)
+        or a
+        jr nz,job_validate
+        ld a,(J_ACTIVE)
+        or a
+        jp nz,job_reject
+        ld a,1
+        ld (J_ACTIVE),a
+        xor a
+        ld (J_DONE),a
+        ld (J_SIZE),a
+        ld (J_SIZE+1),a
+        ld a,(J_FLASH)
+        ld (J_PHASE),a
+        ld hl,(J_PAINT)
+        ld (J_GEN),hl
+        jr job_walk
+job_validate:
+        ld a,(J_ACTIVE)
+        cp 1
+        jp nz,job_reject
+        ld a,(J_DONE)
+        cp 1
+        jp nz,job_reject
+        ld a,(J_FLASH)
+        ld hl,J_PHASE
+        cp (hl)
+        jp nz,job_return
+        ld hl,(J_PAINT)
+        ld de,(J_GEN)
+        or a
+        sbc hl,de
+        jp nz,job_return
+job_walk:
+        nextreg 0x51,122
+        ld a,(J_IMAGE)
+        ld l,a
+        ld h,0xC1
+        ld c,(hl)
+        inc l                   ; original C1FF -> C100 pointer wrap
+        ld b,(hl)
+        ld h,b
+        ld l,c
+        ld a,h
+        cp 0x40
+        jp c,job_bad
+        ld de,0x2000
+        ld a,(hl)
+        call job_emit
+        and 3
+        ld (J_PAGE),a
+        inc hl
+        ld a,0
+        ld (J_ROWS),a           ; 256 bounded row attempts, including terminator
+job_row:
+        call job_address
+        ld a,(hl)
+        inc hl
+        call job_emit
+        or a
+        jp z,job_complete
+        cp 129
+        jp nc,job_bad
+        ld (J_LEFT),a
+        call job_address
+        ld a,(hl)
+        inc hl
+        call job_emit
+        call job_address
+        ld a,(hl)
+        inc hl
+        call job_emit
+job_tile:
+        call job_address
+        ld a,(hl)
+        inc hl
+        call job_emit
+        push hl
+        ld l,a
+        ld a,(J_PAGE)
+        ld h,a
+        push hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld bc,0xDC00
+        add hl,bc
+        ld b,8
+job_bitmap:
+        ld a,(hl)
+        inc hl
+        call job_emit
+        djnz job_bitmap
+        pop hl
+        ld bc,0xFC00
+        add hl,bc
+        ld a,(hl)
+        call job_emit
+        pop hl
+        ld a,(J_LEFT)
+        dec a
+        ld (J_LEFT),a
+        jr nz,job_tile
+        ld a,(J_ROWS)
+        dec a
+        ld (J_ROWS),a
+        jp nz,job_row
+        jp job_bad
+job_address:
+        ld a,h
+        cp 0x40                ; also refuses original record wrap to 0000
+        ret nc
+        jp job_bad
+job_emit:
+        push af
+        ld a,d
+        cp 0x40
+        jp nc,job_bad
+        ld a,(J_OP)
+        or a
+        jr nz,job_compare
+        pop af
+        ld (de),a
+        inc de
+        ret
+job_compare:
+        pop af
+        push af
+        ex de,hl
+        cp (hl)
+        ex de,hl
+        jp nz,job_miss
+        pop af
+        inc de
+        ret
+job_complete:
+        ex de,hl
+        ld de,0x2000
+        or a
+        sbc hl,de
+        ld a,(J_OP)
+        or a
+        jr nz,job_compare_size
+        ld (J_SIZE),hl
+        ld a,1
+        ld (J_DONE),a
+        jp job_return
+job_compare_size:
+        ld de,(J_SIZE)
+        or a
+        sbc hl,de
+        jp nz,job_miss
+        ld a,1
+        ld (J_MATCH),a
+        jp job_return
+job_reject:
+        ld a,1
+        ld (J_ERROR),a
+        jp job_return
+job_bad:
+        ld a,1
+        ld (J_ERROR),a
+job_miss:
+        ld a,(J_OP)
+        or a
+        jr nz,job_return
+job_release:
+        xor a
+        ld (J_ACTIVE),a
+        ld (J_DONE),a
+job_return:
+        nextreg 0x51,68
+        ld sp,(J_SP)           ; abort may unwind an emit/bitmap call
+        ret
+job_snapshot_end:
+        ASSERT job_snapshot_end < 0x1D00
+        SAVEBIN "inferno_job.bin",job_snapshot,job_snapshot_end-job_snapshot

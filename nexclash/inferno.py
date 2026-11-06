@@ -296,6 +296,7 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
     ctx.tracefile = Sink()
     counts, errors, dirty_counts, shifts, graphics = Counter(), [], Counter(), Counter(), set()
     actor_cache, visible_cache = {}, set()
+    actor_jobs = {}
     prewarm_seen,prewarm_first_use,prewarm_frame = {},[],None
     kernel = CapturePatch() if capture else None
     frame_patch, frame_pages = FramePatch() if frame else None, None
@@ -345,7 +346,7 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
                     tests[pc] = (list(m), list(r), bytearray(private))
             if pc == 0x8F7C:
                 st['pack_cost'] = st['culled_pack_cost'] = 0
-                st['fill_cost'] = 0
+                st['fill_cost'] = st['snapshot_cost'] = 0
                 base = map_tiles(m)
                 dirty, shift = scenery_delta(st['previous'], base)
                 if st['previous'] is not None:
@@ -386,6 +387,18 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
                 image_key = tuple((dx,dy,t,raw_tile(m,t)) for dx,dy,t in a['tiles'])
                 left,top,width,height,pixels = solid_image(tuple((dx,dy,raw) for dx,dy,t,raw in image_key))
                 identity = image_key  # Exact bytes/geometry; never accept a hash-only match.
+                if pack:
+                    previous_job = actor_jobs.get(identity)
+                    snapshot = run_actor_job(m,op=2 if previous_job else 0,image=a['image'],previous=previous_job)
+                    if snapshot['error'] or (not snapshot['match'] if previous_job else not snapshot['done']):
+                        raise AssertionError('observed live snapshot capture/validation rejected')
+                    if actor_job_tiles(snapshot['stream']) != image_key:
+                        raise AssertionError('assembled source snapshot differs from original live draw')
+                    actor_jobs[identity] = {p:snapshot['pages'][p] for p in (78,122)}
+                    st['snapshot_cost'] += snapshot['equivalent_T']
+                    counts['assembled exact live job validations' if previous_job else 'assembled immutable live job captures'] += 1
+                    counts['max live job call equivalent T'] = max(counts['max live job call equivalent T'],snapshot['equivalent_T'])
+                    counts['max job source bytes'] = max(counts['max job source bytes'],snapshot['size'])
                 counts['max actor canvas width'] = max(counts['max actor canvas width'],width)
                 counts['max actor canvas height'] = max(counts['max actor canvas height'],height)
                 counts['max actor canvas pixels'] = max(counts['max actor canvas pixels'],width*height)
@@ -405,9 +418,9 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
                         counts['first-use content available in earlier sampled frame (host census)' if lead else
                                'first-use content without sampled preparation lead (host census)'] += 1
                         canvas = bytes(32768)
-                        for dx,dy,t,raw in image_key:
+                        for dx,dy,t,raw in actor_job_tiles(snapshot['stream']):
                             dest = ((dy*8-top)*width+dx*8-left)//2
-                            packed = run_actor_pack(m,t,dest,width//2,canvas=canvas)
+                            packed = run_actor_pack(m,t,dest,width//2,canvas=canvas,raw=raw)
                             canvas = packed['canvas']
                             if not packed['valid']:
                                 raise AssertionError('observed actor tile rejected by packer')
@@ -493,6 +506,11 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
                     counts['max post-copy frame hook equivalent T'] = max(counts['max post-copy frame hook equivalent T'], result['equivalent_T'])
                     counts['max capture plus frame hook equivalent T'] = max(counts['max capture plus frame hook equivalent T'], st['capture_cost'] + result['equivalent_T'])
                     if pack:
+                        counts['max live job tick equivalent T'] = max(
+                            counts['max live job tick equivalent T'],st['snapshot_cost'])
+                        counts['max capture scenery snapshot cold colour and B fill equivalent T'] = max(
+                            counts['max capture scenery snapshot cold colour and B fill equivalent T'],
+                            st['capture_cost']+result['equivalent_T']+st['snapshot_cost']+st['pack_cost']+st['fill_cost'])
                         counts['max capture scenery cold colour and B fill equivalent T'] = max(
                             counts['max capture scenery cold colour and B fill equivalent T'],
                             st['capture_cost']+result['equivalent_T']+st['pack_cost']+st['fill_cost'])
@@ -580,11 +598,13 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
             'graphics_content_versions': len(graphics),
             'scope': ('capture kernel + offline complete scenery worker; no frame hook/commit/sprites or total-render timing' if scenery else 'capture kernel + original reconstruction; no display layer, loader integration or total-render timing' if capture else 'original reconstruction/resource census; no sprite hooks or timings')}
     if pack:
-        result['scope'] = 'original frame preservation plus offline assembled colour expansion and quota-serviced whole-image B fill on host-model exact-content misses; live-table census only, no installed cache/scheduler/uploads/display'
+        result['scope'] = 'original frame preservation plus standalone assembled live-source snapshots/exact validations and pinned colour/B construction on host-model cache misses; no installed cache/scheduler/uploads/display'
         cold = counts['max capture scenery cold colour and B fill equivalent T']/3500
         result['timing_gate'] = {'target_total_added_ms':10,'cold_capture_scenery_colour_fill_max_ms':cold,
+                                'cold_with_snapshot_validation_max_ms':counts['max capture scenery snapshot cold colour and B fill equivalent T']/3500,
+                                'live_snapshot_validation_tick_max_ms':counts['max live job tick equivalent T']/3500,
                                 'status':'FAIL' if cold > 10 else 'UNPROVED',
-                                'excluded':'runtime key validation, cache allocation, uploads, queue and external fill-service wrapper',
+                                'excluded':'cache lookup/allocation, uploads, queue and external snapshot/fill wrappers',
                                 'hardware_proof':False}
     return result
 
@@ -607,7 +627,7 @@ def capture_all(reference, folder, stop=2000, progress=None, scenery=False, fram
         if progress:
             progress('%s level %d: %s (%d frames)' % ('Scenery/capture' if scenery else 'Capture', level, 'FAIL' if bad else 'PASS', result['frames']))
     return {'frames': frames, 'counts': dict(counts), 'cases': cases,
-            'scope': ('capture plus offline assembled scenery worker; host alternates target banks, no runtime commit, sprite display or continuous release' if scenery else 'capture/model/invariant checks only; no sprite/Layer 2 renderer or continuous release')}
+            'scope': ('standalone assembled snapshots/exact validations/pinned B construction plus frame preservation; host cache/census only, no installed scheduler/cache/display' if pack else 'capture plus offline assembled scenery worker; host alternates target banks, no runtime commit, sprite display or continuous release' if scenery else 'capture/model/invariant checks only; no sprite/Layer 2 renderer or continuous release')}
 
 
 def tape_blocks(path):
@@ -1522,7 +1542,7 @@ def actor_row_lookup():
 
 class ActorPackMemory(TextMapMemory):
     """Execute the packed tile worker with guarded expanded-memory mappings."""
-    def __init__(self, ram, tile, dest, stride, flash, code, canvas=None):
+    def __init__(self, ram, tile, dest, stride, flash, code, canvas=None, raw=None):
         super().__init__(ram, 0, 0, 1, None, code)
         # The inherited worker array represents physical page 75, not page 69.
         self.pages[75] = self.pages.pop(69)
@@ -1534,6 +1554,12 @@ class ActorPackMemory(TextMapMemory):
         self.pages.update({p: bytearray(canvas[(p-112)*8192:(p-111)*8192]) for p in range(112,116)})
         self.pages[75][0x1ED0:0x1ED7] = (tile.to_bytes(2,'little') + dest.to_bytes(2,'little')
                                                + stride.to_bytes(2,'little') + bytes((flash,)))
+        self.pinned = raw is not None
+        self.pages[75][0x1EDB] = int(self.pinned)
+        if self.pinned:
+            if len(raw) != 9:
+                raise ValueError('pinned tile must contain bitmap and attribute')
+            self.pages[75][0x1EC0:0x1EC9] = raw
         self.canvas_writes = set()
 
     def __getitem__(self, a):
@@ -1546,6 +1572,8 @@ class ActorPackMemory(TextMapMemory):
             return self.pages[self.mmu1][a & 8191]
         if a < 0x6000 and self.mmu2 != 10:
             return self.pages[self.mmu2][a & 8191]
+        if self.pinned and a >= 0xDC00:
+            raise AssertionError('pinned pack read original live graphics')
         return self.ram[a]
 
     def __setitem__(self, a, v):
@@ -1568,11 +1596,11 @@ class ActorPackMemory(TextMapMemory):
             raise AssertionError('actor pack changed an unowned register')
 
 
-def run_actor_pack(ram, tile=0, dest=0, stride=4, flash=0, code=None, canvas=None):
+def run_actor_pack(ram, tile=0, dest=0, stride=4, flash=0, code=None, canvas=None, raw=None):
     from . import simpool, z80n
     from .dizzy6 import _rw_simulator
     code = bytes.fromhex(load_profile()['hooks']['pack']) if code is None else code
-    mem = ActorPackMemory(ram,tile,dest,stride,flash,code,canvas)
+    mem = ActorPackMemory(ram,tile,dest,stride,flash,code,canvas,raw)
     initial = b''.join(mem.pages[p] for p in range(112,116))
     regs = [0]*30
     regs[12],regs[14],regs[27] = 0x1FF0,0xFE,2
@@ -1596,7 +1624,11 @@ def run_actor_pack(ram, tile=0, dest=0, stride=4, flash=0, code=None, canvas=Non
         raise AssertionError('actor pack guard disagrees')
     allowed = set()
     if valid:
-        pixels = expected_tile(ram,tile,flash)
+        source = list(ram)
+        if raw is not None:
+            source[0xDC00+8*tile:0xDC08+8*tile] = raw[:8]
+            source[0xFC00+tile] = raw[8]
+        pixels = expected_tile(source,tile,flash)
         for y in range(8):
             for x in range(0,8,2):
                 a,b = pixels[y*8+x:y*8+x+2]
@@ -1608,6 +1640,198 @@ def run_actor_pack(ram, tile=0, dest=0, stride=4, flash=0, code=None, canvas=Non
     if canvas != expected or mem.canvas_writes != allowed:
         raise AssertionError('actor packed pixels or write footprint differ')
     return {'instructions':steps,'equivalent_T':(r[25]+mem.reads)/8,'valid':valid,'canvas':canvas}
+
+
+class ActorJobMemory(Layer2Memory):
+    """Single owned immutable source slot; writes to pinned bytes fail immediately."""
+    def __init__(self, ram, op, image, flash, paint, previous, code):
+        super().__init__(ram,code,0,0,0,31,0,False)
+        self.pages[78] = self.pages.pop(69)
+        self.pages[122] = bytearray([0xE3]*8192)
+        if previous:
+            self.pages[78][0x1E85:0x1E93] = previous[78][0x1E85:0x1E93]
+            self.pages[122][:] = previous[122]
+        self.pages[78][0x1E80:0x1E85] = bytes((op,image,flash))+paint.to_bytes(2,'little')
+        self.pinned = bool(self.pages[78][0x1E85])
+        self.snapshot_writes = set()
+
+    def __getitem__(self, a):
+        if isinstance(a,slice):
+            return [self[i] for i in range(*a.indices(65536))]
+        self.reads += 1
+        return self.pages[78][a] if a < 8192 else self.pages[self.mmu1][a & 8191] if a < 16384 else self.ram[a]
+
+    def __setitem__(self, a, v):
+        if a < 8192 and (0x1E85 <= a < 0x1E93 or 0x1F00 <= a < 0x1FF0):
+            self.pages[78][a] = v
+        elif 8192 <= a < 16384 and self.mmu1 == 122 and not self.pinned:
+            self.pages[122][a & 8191] = v
+            self.snapshot_writes.add(a & 8191)
+        else:
+            raise AssertionError('job wrote pinned bytes, code, game RAM or unowned state')
+
+    def nextreg(self, reg, value):
+        if reg != 0x51 or value not in (68,122):
+            raise AssertionError('job changed unowned mapping/display register')
+        self.mmu1 = value
+
+    def write_port(self, *args):
+        raise AssertionError('job changed display/IO')
+
+
+def run_actor_job(ram, op=0, image=0, flash=0, paint=0, previous=None, code=None):
+    from . import simpool, z80n
+    from .dizzy6 import _rw_simulator
+    code = bytes.fromhex(load_profile()['hooks']['job']) if code is None else code
+    mem = ActorJobMemory(ram,op,image,flash,paint,previous,code)
+    regs = [0]*30
+    regs[12],regs[14],regs[27] = 0x1FF0,0xFE,2
+    sim = simpool.machine(_rw_simulator(),mem,regs,'inferno.actor.job')
+    sim.set_tracer(mem)
+    z80n.install(sim,mem.nextreg)
+    r,steps = sim.registers,0
+    while r[24] != 0x1D00:
+        if steps >= 400000:
+            raise AssertionError('job failed to return')
+        sim.opcodes[mem[r[24]]]()
+        if r[26] or mem.nr[0x07] != 3:
+            raise AssertionError('job left DI/28MHz domain')
+        steps += 1
+    if r[12] != 0x1FF2 or mem.mmu1 != 68 or mem.ram != list(ram):
+        raise AssertionError('job did not restore mapping/stack/game RAM')
+    state = mem.pages[78]
+    size = int.from_bytes(state[0x1E89:0x1E8B],'little')
+    return {'pages':mem.pages,'active':state[0x1E85],'done':state[0x1E86],
+            'error':state[0x1E87],'match':state[0x1E88],'size':size,
+            'stream':bytes(mem.pages[122][:size]),'writes':len(mem.snapshot_writes),
+            'equivalent_T':(r[25]+mem.reads)/8,'instructions':steps}
+
+
+def actor_job_tiles(stream):
+    """Decode owned serialized bytes, never consult original RAM across a yield."""
+    pos,tiles = 1,[]
+    page = stream[0] & 3
+    while True:
+        width = stream[pos]
+        pos += 1
+        if not width:
+            if pos != len(stream):
+                raise ValueError('snapshot trailing bytes')
+            return tuple(tiles)
+        dx,dy = stream[pos:pos+2]
+        dx,dy = dx-256 if dx > 127 else dx,dy-256 if dy > 127 else dy
+        pos += 2
+        for j in range(width):
+            tile,raw = stream[pos],bytes(stream[pos+1:pos+10])
+            if len(raw) != 9:
+                raise ValueError('short snapshot tile')
+            tiles.append((dx+j,dy,tile+page*256,raw))
+            pos += 10
+
+
+def actor_job_checks():
+    counts,peaks = Counter(),Counter()
+    ram = [0]*65536
+    ram[0xC100:0xC102] = [0,0xD0]
+    # Overwrite order, negative offsets, width one, repeated tile, FLASH bitmap.
+    ram[0xD000:0xD00C] = [3,2,255,254,0,1,1,0,254,0,0,0]
+    for t in (768,769):
+        ram[0xDC00+8*t:0xDC08+8*t] = [255,129,129,129,129,129,129,255]
+        ram[0xFC00+t] = 0xC2+t%2
+    def capture(source=ram, **kw):
+        result = run_actor_job(source,**kw)
+        assert result['done'] == result['active'] == 1 and not result['error']
+        peaks['capture_ms'] = max(peaks['capture_ms'],result['equivalent_T']/3500)
+        return result
+    job = capture()
+    want = tuple((x,y,t,raw_tile(ram,t)) for x,y,t in actor_descriptor(ram,0)['tiles'])
+    assert actor_job_tiles(job['stream']) == want
+    counts['ordered live geometry/bitmap/attribute capture'] += 1
+    # Pinned worker consumes only copied raw bytes after all original sources change.
+    changed = [v ^ 255 for v in ram]
+    for x,y,t,raw in want:
+        run_actor_pack(changed,t,raw=raw)
+        counts['pinned assembled tile after original mutation'] += 1
+    for op in (0,3,255):
+        rejected = run_actor_job(ram,op=op,previous=job['pages'])
+        assert rejected['error'] and rejected['done'] and rejected['active'] and not rejected['writes']
+        assert rejected['stream'] == job['stream']
+        counts['pinned/invalid operation rejection'] += 1
+    matched = run_actor_job(ram,op=2,previous=job['pages'])
+    assert matched['match'] and not matched['error'] and not matched['writes']
+    peaks['exact_hit_ms'] = matched['equivalent_T']/3500
+    # Every serialized byte matters, including same-address source mutations and terminator.
+    addresses = [0xD000+i for i in range(11)] + [0xDC00+8*t+i for t in (768,769) for i in range(8)] + [0xFC00+768,0xFC00+769]
+    for addr in addresses:
+        source = list(ram)
+        source[addr] ^= 1
+        miss = run_actor_job(source,op=2,previous=job['pages'])
+        assert not miss['match'] and not miss['writes'] and miss['stream'] == job['stream']
+        counts['live content mutation rejected'] += 1
+    for kw in ({'flash':1},{'paint':1},{'paint':256}):
+        miss = run_actor_job(ram,op=2,previous=job['pages'],**kw)
+        assert not miss['match'] and not miss['writes']
+        counts['phase/paint generation rejected'] += 1
+    # Different pointer/image is fine only when complete contents are identical.
+    source = list(ram)
+    source[0xD100:0xD10C] = source[0xD000:0xD00C]
+    source[0xC1FF],source[0xC100] = 0,0xD1
+    assert run_actor_job(source,op=2,image=255,previous=job['pages'])['match']
+    counts['relocated content and C1FF wrap'] += 1
+    release = run_actor_job(ram,op=1,previous=job['pages'])
+    assert not release['active'] and not release['done'] and not release['writes']
+    assert capture(previous=release['pages'])['stream'] == job['stream']
+    counts['release and recapture'] += 1
+    malformed = []
+    for pointer in (0,0x3FFF,0xFFFF):
+        source = list(ram)
+        source[0xC100:0xC102] = [pointer & 255,pointer >> 8]
+        malformed.append(source)
+    source = list(ram)
+    source[0xD001] = 129
+    malformed.append(source)
+    source = list(ram)
+    body = [0]+[v for row in range(256) for v in (1,0,0,0)]+[0]
+    source[0xD000:0xD000+len(body)] = body
+    malformed.append(source)
+    for source in malformed:
+        bad = run_actor_job(source)
+        assert bad['error'] and not bad['done'] and not bad['active']
+        counts['malformed unpublished'] += 1
+    for kw in ({'flash':2},{'op':2}):
+        bad = run_actor_job(ram,**kw)
+        assert bad['error'] and not bad['done'] and not bad['writes']
+        counts['invalid phase/inactive validation'] += 1
+    # Header + 816 ten-byte tile payloads + ten three-byte rows + zero = 8192.
+    source = list(ram)
+    body = [0]
+    remaining = 816
+    for row in range(10):
+        width = min(128,remaining-(9-row))
+        body += [width,0,row]+[0]*width
+        remaining -= width
+    body += [0]
+    source[0xD000:0xD000+len(body)] = body
+    edge = capture(source)
+    assert edge['size'] == 8192 and edge['writes'] == 8192
+    assert run_actor_job(source,op=2,previous=edge['pages'])['match']
+    peaks['capacity_exact_hit_ms'] = run_actor_job(source,op=2,previous=edge['pages'])['equivalent_T']/3500
+    counts['exact 8K snapshot boundary'] += 1
+    source[0xD001] += 1
+    overflow = run_actor_job(source)
+    assert overflow['error'] and not overflow['done'] and not overflow['active']
+    counts['overflow unpublished'] += 1
+    code = bytes.fromhex(load_profile()['hooks']['job'])
+    # Skip byte comparison: own pinned tables remain intact, live mutation must then be missed.
+    old = bytes.fromhex('BE EB C2')
+    assert code.count(old) == 1
+    broken = code.replace(old,bytes.fromhex('BF EB C2'))
+    source = list(ram)
+    source[0xDC00+8*768] ^= 1
+    assert run_actor_job(source,op=2,previous=job['pages'],code=broken)['match']
+    counts['missing exact comparison control detected'] += 1
+    return {'counts':dict(counts),'timing':dict(peaks),'snapshot_capacity':8192,
+            'scope':'assembled standalone pinned snapshot/exact validation and pinned tile consumer; no installed cache, scheduler, wrapper or display; software timings only'}
 
 
 @lru_cache(maxsize=1)
@@ -1774,6 +1998,9 @@ def actor_pack_checks():
         for phase in (0,1):
             result = run_actor_pack(ram,tile,8188,132,phase)
             peak = max(peak,result['equivalent_T'])
+            pinned = run_actor_pack([0]*65536,tile,8188,132,phase,raw=raw_tile(ram,tile))
+            assert pinned['canvas'] == result['canvas']
+            counts['assembled pinned attribute/phase cases'] += 1
             counts['assembled attribute/phase cases'] += 1
     # Every bitmap value and colour pair against independent original-tile pixels.
     table = actor_row_lookup()
@@ -2059,7 +2286,7 @@ def run_actor_blit(core=0x33, hwim2=0, current=0, pending=0, code=None, **kw):
     if not valid and mem.dma.stats['program bytes']:
         raise AssertionError('actor blit rejected after programming DMA')
     backend = min(job['policy'],2 if core >= 0x33 else 1) if job['owned'] == 1 and not hwim2 & 1 and 0x30 <= core < 0xFF else 0
-    if job['op'] == 0 and backend == 1 and w < 64:
+    if job['op'] == 0 and (backend == 1 and w < 64 or n == 1 and w < 64):
         backend = 0
     jobs = (1 if job['op'] == 1 or backend == 2 else n) if valid and backend else 0
     if mem.dma.stats['jobs'] != jobs:
@@ -2088,6 +2315,13 @@ def actor_blit_checks():
             r = run_actor_blit(core=core,hwim2=hwim2,owned=owned,policy=policy,width=64,astride=64)
             cases.append(dict(r,core=core,hwim2=hwim2,owned=owned,policy=policy,op=0,width=64))
             counts['wide rectangle backend cases'] += 1
+    # Prepared-buffer copy proxies for source spans/cache staging, not live-source DMA.
+    # Include one tile's bitmap and attribute-sized spans; never infer stall-free elapsed time.
+    for width in (1,8,9,16,31,32,63,64,256):
+        for policy in (0,1,2):
+            result = run_actor_blit(width=width,rows=1,astride=width,bstride=width,policy=policy)
+            cases.append(dict(result,core=0x33,hwim2=0,owned=1,policy=policy,op=0,width=width,rows=1))
+            counts['snapshot span prepared-copy proxies'] += 1
     for kw in ({'source':8192},{'dest':8192},{'width':0},{'width':257},{'rows':0},{'rows':17},
                {'astride':7},{'bstride':7},{'source':8189},{'dest':8189},
                {'source_page':135},{'source_page':224},{'dest_page':116},{'dest_page':117},
@@ -3509,6 +3743,7 @@ def continuation_tests(folder, pulse=False):
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     action = ap.add_mutually_exclusive_group(required=True)
+    action.add_argument('--actor-job-checks', action='store_true')
     action.add_argument('--actor-pack-checks', action='store_true')
     action.add_argument('--actor-fill-checks', action='store_true')
     action.add_argument('--actor-blit-checks', action='store_true')
@@ -3542,6 +3777,12 @@ def main():
     ap.add_argument('--out', type=Path, default=Path('work/inferno'))
     ap.add_argument('--json', type=Path)
     a = ap.parse_args()
+    if a.actor_job_checks:
+        result = actor_job_checks()
+        if a.json:
+            a.json.write_text(json.dumps(result,indent=2)+'\n')
+        print(json.dumps(result))
+        return 0
     if a.actor_blit_checks:
         result = actor_blit_checks()
         if a.json:

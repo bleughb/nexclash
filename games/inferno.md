@@ -1,23 +1,25 @@
 # Inferno
 
 ## Next session
-Stage: 2 (continued)    State: quota-serviced B fill and prepared blit/upload components pass; total timing FAIL
-Inputs: specnext/reference/inferno/    Branch: codex/inferno (GitHub handoff build/CONTINUE.md)
-Start: refresh main; read build/actor_b_compiler.md, actor_packing.md, frame_pipeline.md and README.md.
-Read: inferno.py live_actor_candidates/run_actor_fill/run_actor_blit/model_verify/FramePatch; matching ASM.
-Next: implement immutable live-source job snapshots, exact-content runtime cache and safe early
-  preparation hook/scheduler. Then actor pattern layout/allocation, protected uploads and complete-frame readiness.
-  Every sampled first-use key had >=85 recorded frames of lead; this is a host census, not a proved schedule.
-  Four-unit B fill service <=0.204 ms sampled; all cold work totals 77.56 ms L6 / 882.15 ms L1, target 10 ms.
-  Shared DMA backend is factored into page-77 prepared transfers. Prefer DDMA, retain policy 1 no-blitter;
-  narrow ordinary-DMA rows use CPU. Transfer stall time, real DMA ownership/IRQ safety remain unproved.
-  Integrate current hook-library caller-speed/R and ORIGINAL-pace contracts before any sprite build.
-Workflow: Inferno6.rzx --quick 2000 for iteration; other original levels at milestones, level-4 shop targeted.
-Open: FLASH clock, remaining modal paths, recolour/sheets, continuous BASIC/Nb/game/ending,
-  tail/ROM-reader lifetime and whole-tick budget. No sprite NEX; engine stays unregistered.
-Next prompt: "Continue Inferno stage 2 from build/actor_b_compiler.md and CONTINUE.md; preserve original
-RAM/registers and approved B visuals. Install exact-content cache and safe live prewarming, use the
-gated blitter functions where profitable, and keep sprite display disabled until the pipeline is complete."
+Stage: 2 (continued)    State: immutable source components pass; total timing FAIL
+Inputs: specnext/reference/inferno/    Branch: codex/inferno (build/CONTINUE.md)
+Start: refresh main; read build/actor_jobs.md, actor_b_compiler.md, actor_packing.md and frame_pipeline.md.
+Read: inferno.py run_actor_job/actor_job_checks/model_verify/run_actor_pack and matching ASM.
+Next: make exact live validation affordable; prove any source-lifetime deduplication. Then assembled
+  stream dispatch, runtime content cache/allocator and safe early hook/preparation schedule.
+  Page 78 pins ordered original run-list/bitmap/attribute bytes in page 122. Page 75 accepts copied
+  raw tiles. Six quick correctness runs PASS: 128 captures / 13,066 exact validations / 128 B fills.
+  Host selects cache entries; no installed cache/scheduler. Never accept pointer/hash-only validity.
+  Source work alone reaches 24.650 ms/update; cold snapshot-inclusive L1 899.447 / L6 84.289 ms,
+  target 10 ms TOTAL, excluding lookup/allocation/uploads/queue/wrappers. Long DI walker is not safe.
+  Page 77 prefers gated DDMA / DMA with no-blitter/CPU fallback; spans <64 bytes now bypass setup.
+  Physical stalls/ownership/IRQ proof remains open. Keep current AND pending pattern allocations.
+Workflow: Inferno6.rzx --quick 2000; six original level replays at milestones; targeted level-4 shop.
+Open: pattern layout/protected uploads/complete-frame switch, FLASH/modal/frontend/ROM lifetime,
+  recolour/sheets and hardware/whole-tick timing. Apply caller-speed/R and ORIGINAL-pace before build.
+Next prompt: "Continue Inferno stage 2 from build/actor_jobs.md and CONTINUE.md. Preserve pinned exact
+live data, original RAM/registers/priority and approved B visuals. Solve validation cost and safe live
+preparation, retain profitable gated blitter/DMA paths; keep sprites disabled until complete."
 
 ## Inputs and facts
 - Inferno.tzx: supplied tape, MD5 `335eec35a526f2044455cb87e8c77206`.
@@ -132,15 +134,13 @@ gated blitter functions where profitable, and keep sprite display disabled until
   stage 2 needs original-tape versus bank-loader continuation tests, success/failure checks and
   state comparisons, plus Next hardware testing in stage 3. At design approval no loader was implemented; the foundation below is now available.
 
-## Stage-2 loader foundation
-- Original TZX/BASIC reaches first USR 24200 before compressed main runs; bootstrap snapshot
-  MD5 `9814983816aafb2b9efd99344dd8c221`. No synthesized BASIC or independent level-start restores.
-- Loader at 386E-3944, register block 3945; alt-ROM sources 24/26, immutable tape pages 32-55,
-  descriptors/cursor page 68. Replace only 0562 (original bytes checked), preserve the 7319 wrapper.
-- Abstract byte-decoder units: 16,946,824 hook instructions; load/verify/capacity/error/EOF/wrap
-  and two broken controls PASS. Pulse-level extension and seven Na/Nb prefixes are below.
-- Bootstrap tail 5D30-5D65 is untouched only in the initial 2,000-frame scan (span 5D30-5E59).
-  Later lifetime and continuous Nb/game/ending behavior remain unproved. Source/recipes: build/README.md.
+## Stage-2 loader foundation (build/README.md)
+- Original TZX/BASIC reaches first USR 24200; bootstrap MD5 9814983816aafb2b9efd99344dd8c221.
+- Decoder 386E-3944, registers 3945, alt-ROM 24/26, tape 32-55, descriptors/cursor 68.
+  Replaces only checked ROM 0562; retains 7319. Byte/pulse oracles, seven Na/Nb prefixes and
+  negative controls pass; canonical C=7E. Continuous Nb/game/ending and physical timing unproved.
+- Tail 5D30-5D65 only has an initial 2,000-frame lifetime scan. Loader/capture diagnostic NEX boot
+  checks pass with NEXLOAD/foreign ROM3; neither installs the frame/actor pipeline or is a release.
 
 ## Stage-2 frame pipeline (build/frame_pipeline.md)
 - Textmap compiler replaces the historical 130.069 ms Layer 2 path with live one-bit tiles.
@@ -164,6 +164,16 @@ gated blitter functions where profitable, and keep sprite display disabled until
 - Historical colour-only packer: 233-byte page 75, generic 128 KiB row table 96-111, canvas 112-115;
   build/actor_packing.md records that checkpoint's checks/cold costs. Culling remains a host model.
 
+## Immutable job checkpoint (2026-11-07; build/actor_jobs.md)
+- Page 78 / stream page 122 captures ordered original geometry, IDs and bitmap/attribute bytes.
+  Exact byte/length/phase/paint comparison preserves pinned data; malformed/overflow jobs never publish.
+- Page 75 pinned input forbids original graphics reads. Host dispatch/cache selection remain models.
+  Six quick replays: 128 captures / 13,066 validations / 128 complete B fills pass; no display enabled.
+- DMA/DDMA prepared-span evaluation adds 27 cases. Single spans <64 bytes bypass setup with CPU;
+  larger copies/uploads keep gated shared backend, no-blitter and CPU fallback. Stalls remain unknown.
+- Snapshot-inclusive cold totals FAIL: L1 899.447 / L6 84.289 ms, target 10 ms total, excluding
+  lookup/allocation/uploads/queue/wrappers. Source work alone peaks at 24.650 ms/update. No safe hook.
+
 ## Whole-image B / prepared transfer checkpoint (2026-11-06)
 - Page-76 bitset flood fills complete images before clipping; masks 116/117, generic lookup 128-135.
   Four-unit service <=0.204 ms sampled, excluding external wrapper. Private DONE never enables display.
@@ -180,22 +190,19 @@ gated blitter functions where profitable, and keep sprite display disabled until
 - No NEX includes this work. Runtime snapshots/cache/prewarming, actor pattern layout, full switch,
   FLASH/modal/frontend/recolour/hardware remain open. Recipes/evidence: build/actor_b_compiler.md.
 
-## Capture/loader foundation (historical; build/README.md)
-- Capture sites 8F7C/8F92/959B/96A1 preserve original CALL stack bytes and LD H,C1. Page 68:
-  state 03F0, scenery 0400-087F, log 0900, stack 1FF0. Original state/IRQ/unwind/negative checks pass.
-- Sample maxima: 21 calls, 58 chunks, 56 patterns, 64 old+new union. Graphics mutate in place;
-  pointer-only caching is unsafe. Intro/L4 ROM scans cover only 2,001 frames; lifetime remains open.
-- TZX/ROM pulse oracle matches 32 loads, 32 verifies, three errors and seven Na/Nb prefixes,
-  equal R inputs at beeper; C=7E. Polarity 0 only. Timeouts/continuous Nb/game/ending unproved.
-- Loader/bootstrap and capture diagnostic NEX boot checks pass with NEXLOAD/foreign ROM3.
-  Neither contains the frame/actor pipeline. Plain NEX unchanged; no sprite stamp or registration.
+## Capture foundation (historical; build/README.md)
+- Hooks 8F7C/8F92/959B/96A1 preserve original CALL stack and LD H,C1; page 68 owns state/log/stack.
+  Original RAM/register/IRQ/unwind and negative checks pass. Sampled maxima: 21 calls, 58 chunks,
+  56 patterns and 64 old+new union. Mutable graphics forbid persistent pointer-only keys.
+- Intro/L4 ROM scans cover 2,001 frames only; startup/reader lifetime remains open.
 
 ## Stage-1 results
-Preview MD5 `cf3fda58c14e87d91c55fe2773165d6a`, model_checks.json
-`e2b72180a10af6a7261fab91a131ca69`, level-2 census `46261ceb27a13580bddf0ea50d67ec5b`.
-Other checksums: design/manifest.json. Stage-1 tools/canary/doccheck PASS; no sprite stamp.
+Approved preview/model/contact-sheet hashes and recipes: specnext design/manifest.json and
+build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 
 ## Lessons
+- [local: Inferno immutable sources] Pin complete ordered original bytes before resumable work;
+  exact validation can itself exceed the budget. DI component correctness does not prove safe entry.
 - [local: Inferno B fill] Bitset connectivity preserves whole-image fill; a bounded call is not a cold
   latency/schedule proof. Frame-boundary source availability does not establish a safe hook.
 - [local: Inferno blitter] Narrow row-DMA setup can exceed CPU copying. Charge unknown stalls separately;
@@ -242,6 +249,8 @@ Other checksums: design/manifest.json. Stage-1 tools/canary/doccheck PASS; no sp
 - [local: Inferno startup] L1 map is write-first, permitting plain tail 9A80. Later lifetime is separate.
 
 ## Friction
+- environment: [local: Inferno source jobs] Restored archived work only into absent work/, merged both mains
+  preserving Inferno status/process guidance; measured shared adapter spans instead of new DMA code.
 - reuse: [local: Inferno shared DMA] Reused upstream library/model/selfchecks; merged remote 6aa2992
   after its concurrent main refresh, retaining upstream tests and the packet labels needed here.
   No other game's output changed. New game/reference data stays in specnext.
@@ -249,18 +258,14 @@ Other checksums: design/manifest.json. Stage-1 tools/canary/doccheck PASS; no sp
   no parallel game tracer. Existing flags/output are preserved when capture is not requested.
 - retries: [tool nexclash/inferno.py] Pulse emulation caught canonical EAR state; complete IRQ
   tracing caught the truncated ISR test. Actor hooks now replace one complete lookup instruction.
-- environment: [local: managed executor] Waited for startup, installed requirements, cloned both
-  complete branches and refreshed main. Reproducible evidence lives in the authorised specnext branch.
 - hand-rolled: [local: Inferno verification] Uses SkoolKit's original ROM/pulse loader and native
   RZX source; per-engine hook/log/model comparisons remain in the engine, not a parallel toolkit.
-- scratch: [local: Inferno probes] Kept structured checks/scans/builds; insertion scripts stay ignored.
-  capture-all/scenery-check retain replay drivers; use one level during iteration (user preference).
+- scratch: [local: Inferno probes] Preserve structured checks/scans/builds; insertion scripts stay local.
 
 ## Technique use
 - optimise.pattern-cache: helped: full-content census finds early live candidates; runtime snapshots,
   cache and scheduling remain open. Prepared uploads now reject both current/pending pattern owners.
 - patch.display-atomic-switch: helped: front-bank/visibility guards pass; runtime atomic commit remains open.
-- optimise.pattern-cache: helped: assembled full-content/phase keys, collision controls and measured cache costs.
 - verify.model-reconstruction: used: quick tile/ULA closure, dropped-writer and incorrect-coordinate controls.
 - detect.buffer-layout-producer: helped: followed the 0x9790 copier to its tile map and source tables.
 - detect.tracked-unit: helped: the screen-copy routine is not a figure; producers remain to classify.
@@ -270,6 +275,9 @@ Other checksums: design/manifest.json. Stage-1 tools/canary/doccheck PASS; no sp
 - detect.buffer-layout-producer: corrected: visible colour checks distinguish black-masked stale bitmap data.
 
 ## Stage log
+- 2026-11-07: stage 2 continued, mains refreshed, scratch preserved. Assembled pinned source/exact
+  validation and raw-tile consumer; six quick correctness, shop, assembly/tools/canary PASS. DMA span
+  evaluation removes tiny-copy setup. Total timing FAIL (899.447 / 84.289 ms L1/L6); no sprite NEX.
 - 2026-11-06: continued from GitHub; restored work; integrated remote 6aa2992 (main 3efa10f),
   specnext main cc9c7df. Added quota-serviced whole-image B fill, live prewarm census and
   shared gated blitter/CPU prepared transfers. Six quick correctness runs and shop units PASS;
@@ -282,14 +290,9 @@ Other checksums: design/manifest.json. Stage-1 tools/canary/doccheck PASS; no sp
   references and local board benchmarks. New standalone worker, six quick replays, palette/
   capacity/negative units PASS; shop census exposes missing modal hook. Expanded RAM authorized.
   Assembly/doccheck/diff PASS; main unchanged; no sprite NEX. Evidence: build/timing_architecture.md.
-- 2026-11-05: validation checkpoint: restored missing repos at user request; bounded/level-6
-  tests, assembly/doccheck PASS. No runtime integration; details in reference build/README.md.
-- 2026-11-05: scenery checkpoint, main 9484427/6bce6aa included. Tile/cache/batch/scene units,
-  six bounded scenes, level-6 quick, assembly/doccheck/diff PASS. Cost gate fails; no stamp.
-- 2026-11-05: stage 2 capture checkpoint (~100 calls, 0 design questions), main 9484427/6bce6aa.
-  Six quick replays, original state, IRQ/unwind, pulse transport and seven loading prefixes PASS;
-  canary/pinned assembly/doccheck/diff PASS. Engine sections only; no full verify/stamp.
-- 2026-11-05: stage 2 loader checkpoint (~25 min/~80 calls), main unchanged. Decoder units,
-  seven Na/Nb prefixes, bootstrap and assembly/doccheck/diff PASS. New engine only; no stamp.
-- 2026-11-05: stages 0/1: intake/full raw replays, approved design, six-level 25-tick model,
-  level-2 census and tools/canary/doccheck PASS. Cards/diagnostics revised; evidence in specnext.
+- 2026-11-05: earlier stage-2 checkpoints built the bank loader, pulse continuation, capture and
+  scenery components. Bundled assembly, bounded/six quick differential checks, tools/canary/doccheck
+  passed at the recorded checkpoints; timing and continuous release remained open. Detailed counts,
+  hashes, recipes and individual checkpoints are retained in build/README.md and the evidence record.
+- 2026-11-05: stages 0/1 intake/full raw replays and approved design; six-level model/level-2 census
+  and tools/canary/doccheck PASS. Cards/diagnostics revised; evidence in specnext design/.
