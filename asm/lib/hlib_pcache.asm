@@ -17,10 +17,13 @@
 ; The engine defines, before the INCLUDE:
 ;   HLIB_PCACHE EQU <128 bytes of hook RAM, 256-aligned, zero at start>  +slot key low, +64+slot key high
 
+        INCLUDE "hlib_dma.asm"
+
         ASSERT (HLIB_PCACHE & 0xFF) == 0
 
 ; hlib_pc_upload: A = pattern slot 0-63, DE = key (0 = mutable), HL = the 256 source bytes.
-; AF, BC, HL lost; DE kept. Hit: 101 T; miss: 256 x OUTI (4,096 T; OTIR 5,371 T) + about 130 T.
+; AF, BC, HL lost; DE kept. Hit: 101 T; miss: selected synchronous transport + cache/setup.
+; Initialize hlib_dma_init before enabling DMA (see hlib_dma.asm); otherwise CPU fallback.
 hlib_pc_upload:
         push hl
         ld l,a
@@ -50,15 +53,7 @@ hlib_pc_upload:
         pop hl
         ld bc,0x303B
         out (c),a
-    IFDEF HLIB_PC_OTIR
-        ld bc,0x005B            ; B = 0: 256 bytes; 21 T a byte, 4 bytes of code
-        otir
-    ELSE
-        ld bc,0x005B            ; 0x5B: only the low byte is decoded, B may count down
-        DUP 256                 ; 16 T a byte, 512 bytes of code (DEFINE HLIB_PC_OTIR for the short form)
-        outi
-        EDUP
-    ENDIF
+        call hlib_dma_sprite   ; synchronous; capability-gated, cache hits never enter here
         ret
 
 ; hlib_pc_inval: A = slot -> its key 0 (pattern RAM overwritten by other code). AF lost.

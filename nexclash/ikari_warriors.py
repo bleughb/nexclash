@@ -492,7 +492,7 @@ def make_machine(patch, om, regs):
     return sim, ns, mem
 
 
-def run_to(sim, stop, hooks=None, counts=None, limit=8000000):
+def run_to(sim, stop, hooks=None, counts=None, limit=8000000, observer=None):
     R, ops, mem = sim.registers, sim.opcodes, sim.memory
     n = 0
     if R[24] == stop:           # leave the stop first: a sync site is reached again a whole frame on
@@ -504,7 +504,11 @@ def run_to(sim, stop, hooks=None, counts=None, limit=8000000):
                 return True
             if pc in hooks:
                 counts[hooks[pc]] += 1
+            if observer is not None:
+                observer.before(sim)
             ops[mem[pc]]()
+            if observer is not None:
+                observer.after(sim)
             n += 1
             if n > limit:
                 return False
@@ -584,7 +588,7 @@ def compose(ns, scr, om=None):
     return bits, nspx, kinds, torn
 
 
-def verify(patch, rzx_path, stop=None, collect=0, progress=None, capture=None, picture=True, compose_fn=None):
+def verify(patch, rzx_path, stop=None, collect=0, progress=None, capture=None, picture=True, compose_fn=None, profiler=None):
     import skoolkit.rzxplay as rp
     from .rzx import trace
     c = collections.Counter()
@@ -701,6 +705,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, capture=None, p
         if pc == 0xEBAA and 'sim' not in st:
             sim, ns, mem = make_machine(patch, bytes(O.memory[0:0x10000]), list(O.registers))
             st.update(sim=sim, ns=ns, mem=mem)
+            if profiler is not None:
+                profiler.ns = ns
             inlog.clear()
             st['attr'] = bytes(O.memory[0xE000:0xE400])
             return
@@ -712,10 +718,12 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, capture=None, p
             ns.ins.extend(inlog)
             inlog.clear()
             t0 = sim.registers[25]
-            if not run_to(sim, 0x6711, hooks, c):
+            if not run_to(sim, 0x6711, hooks, c, observer=profiler):
                 fail('run', 'no sync')
                 raise SystemExit('lost sync')
             c['commits'] += 1
+            if profiler is not None:
+                profiler.end_frame()
             c['patched T'] += sim.registers[25] - t0
             compare(c['commits'], O)
             if progress and c['commits'] % 200 == 0:
@@ -1109,7 +1117,7 @@ def set_patch(mode, neg=None, cols=None):
 
 
 
-def set_check(P, rzx, D, mode, stop=None):
+def set_check(P, rzx, D, mode, stop=None, profiler=None):
     """One colour-set build (mode 'default' or 'enhanced') on a recording: verify() with the classed picture and the
     per-image checks. -> (verify counters, check counters, failures)."""
     MODE = mode
@@ -1336,7 +1344,7 @@ def set_check(P, rzx, D, mode, stop=None):
                             bits[(x, y)] = 0 if cd == 1 or (cd == I_DET and fol) else 1
         return bits, nspx, kinds, torn
 
-    c, exv, _ = verify(P, rzx, stop=stop, compose_fn=mycompose)
+    c, exv, _ = verify(P, rzx, stop=stop, compose_fn=mycompose, profiler=profiler)
     fails = {k: v for k, v in c.items() if k.endswith('!')}
     fails.update({k: v for k, v in st.items() if k.endswith('!')})
     return c, st, fails

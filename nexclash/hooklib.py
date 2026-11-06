@@ -36,7 +36,7 @@ from nexclash import z80n
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LIB = os.path.join(ROOT, 'asm', 'lib')
 FILES = ['asm/lib/hlib_speed.asm', 'asm/lib/hlib_r.asm', 'asm/lib/hlib_pace.asm', 'asm/lib/hlib_pcache.asm',
-         'asm/lib/hlib_commit.asm']
+         'asm/lib/hlib_commit.asm', 'asm/lib/hlib_dma.asm']
 HARNESS = os.path.join(LIB, 'hlib_selftest.asm')
 
 A, F, B, C, D, E, H, L, SP, I, R, PC, T, IFF = 0, 1, 2, 3, 4, 5, 6, 7, 12, 14, 15, 24, 25, 26
@@ -117,6 +117,9 @@ class NextModel(object):
         self.events = []                        # ('p', slot) a run of pattern bytes, ('a', sprite), ('s', speed)
         self.c = collections.Counter()
         self._shown = None
+        from .dma import DMA
+        self.dma = DMA(lambda a: sim.memory[a], lambda a, v: sim.memory.__setitem__(a, v),
+                       lambda p, v: self.write_port(self.R, p, v))
         z80n.install(sim, self.nextreg)
         sim.set_tracer(self)
 
@@ -169,6 +172,8 @@ class NextModel(object):
         elif port == 0x303B:
             self.pidx = (value & 63) << 8 | (128 if value & 128 else 0)
             self.aidx, self.abyte = value & 127, 0
+        elif port & 255 == 0x6B:
+            self.dma.feed(value)
         elif port & 255 == 0x5B:
             slot = self.pidx >> 8
             if slot in self.shown():
@@ -286,12 +291,14 @@ def assemble(src=HARNESS, defines=()):
         if r.returncode or 'error' in msg.lower() or 'warning' in msg.lower():
             raise RuntimeError('sjasmplus %s:\n%s' % (src, msg.strip()))
         bins = [f for f in os.listdir(tmp) if f.endswith('.bin')]
-        code = open(os.path.join(tmp, bins[0]), 'rb').read()
+        with open(os.path.join(tmp, bins[0]), 'rb') as f:
+            code = f.read()
         syms = {}
-        for line in open(os.path.join(tmp, 'h.sym')):
-            m = SYM.match(line)
-            if m:
-                syms[m.group(1)] = int(m.group(2), 16)
+        with open(os.path.join(tmp, 'h.sym')) as f:
+            for line in f:
+                m = SYM.match(line)
+                if m:
+                    syms[m.group(1)] = int(m.group(2), 16)
     _BUILT[key] = (code, syms)
     return code, syms
 
@@ -460,12 +467,14 @@ def _t_nolines(code, syms):
     return c
 
 
-def _t_cache(code, syms):
+def _t_cache(code, syms, setup=None):
     """Scripted cases + a random sequence against a reference: pattern RAM always holds the image last asked
     for; repeats of an immutable image are not uploaded; mutable images always are."""
     c, rnd = collections.Counter(), random.Random(4)
     imgs = {0x9000 + 256 * i: bytes(rnd.randrange(256) for _ in range(256)) for i in range(8)}
     sim, nm = _machine(code, 0, data=imgs)
+    if setup:
+        setup(sim, nm, syms)
     keys = {0x9000 + 256 * i: pcache_key(30 + i, i) for i in range(6)}   # images 6, 7: mutable buffers
     want = {}
 
@@ -511,13 +520,15 @@ def _t_cache(code, syms):
     return c
 
 
-def _t_commit(code, syms):
+def _t_commit(code, syms, setup=None):
     """Frames of figures (counts up and down, images repeated): each frame's images go to the back half
     through the cache, then one attribute burst. Per frame: nothing written into a shown pattern, one
     burst, the visible sprites = the frame's figures with their images, the rest hidden."""
     c, rnd = collections.Counter(), random.Random(12)
     imgs = {0x9000 + 256 * i: bytes(rnd.randrange(256) for _ in range(256)) for i in range(24)}
     sim, nm = _machine(code, 0, data=imgs)
+    if setup:
+        setup(sim, nm, syms)
     srcs = sorted(imgs)
     frames = [[srcs[i] for i in range(5)], [srcs[i] for i in range(5, 9)], [srcs[i] for i in range(5)]]
     for _ in range(30):
