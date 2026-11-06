@@ -82,6 +82,9 @@ ends. Neither asks for a value.
 - [local: this game's pace] observed: with 4-5 blocks the delay is only 33-66k T, and with 6 or more there is none; per-update sprite pattern uploads (about 20k T) alone overran it, so an image-keyed pattern cache came before any limiter tuning.
 - [local: this game's pace] observed: a debt kept through the menu (the ISR hook's cost every frame, no delay to repay it) made the first 25 updates of play run 15% fast; the debt is capped at one frame and cleared at the screen clear.
 - [local: this game's pace] observed: a scroll move (LDDR / LDIR of a fixed length on uncontended RAM) has an exact original time, so it is a pace window that can repay a step's hook time; the strip render and copy are not exact (contended screen writes).
+- [local: this game's pace] observed: JNext's 28 MHz runs this game's routines only 5 to 6.5 times as fast as 3.5 MHz (wait states at 28 MHz; contention at 3.5 MHz), and the ratio moves with the routine (BE38 5.0 to 6.0 by strip, E656 about 6.2, C05A about 6.6): a game routine run fast in a pace window needs its ratio measured per routine in JNext, and a strip render whose ratio varies stays at the game's clock.
+- [local: this game's pace] observed: a pace window that counts its time from the ISR hook alone loses a frame when an interrupt lands in a ROM trampoline (the ISR's ROM path does not count); counting at every nested hook's close too keeps every gap under a frame.
+- [local: this game's pace] observed: the ISR plays the sound effects (B060 / B065, BD2D); a sound that starts or ends one update apart in two runs moves every update's time by about 50k T for its length, so the pace lockstep compares B065 and B060 too.
 - [deferred Open: reconsider when the engine is built] inferred: the colour shadow can hold final Layer 2 bytes with ink transparent, so no conversion is needed at the copies.
 
 ## Friction
@@ -110,3 +113,10 @@ ends. Neither asks for a value.
   faster ink pass and paste; verifier: sprites = model at every E656, the lock at every frame, the every-site clock
   matrix, negatives; pace trials in JNext (fixture: R read and the ISR's RNG call constant in all builds); the menu
   (main line Colour, toggle Smooth scrolling, the two .pok trainers) and the .nxc package.
+- 2026-11-06 stage 2 session 3 (pilot runs/quazatron): game-routine pace windows (E656 in every update, C05A's
+  scroll-step copy with fast scroll off: 28 MHz, the original's time from JNext-measured ratios, the debt repaid,
+  the rest waited on the video line); the scroll moves run in the hook page (an interrupt in them takes the
+  hook-page path: its body at the game's speed, left out of the window); BE38 back at the game's clock with fast
+  scroll off; ROLETAB moved to the sprite store page; a monochrome gate (V_MONO): the .nxc base is the monochrome
+  build and Colour is its Enhanced colours set, as Nightshade and Pyjamarama offer theirs; a recording with t_su
+  (the down-scroll edge lowered in its own first snapshot, test only).

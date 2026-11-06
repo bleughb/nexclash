@@ -8,6 +8,9 @@ Session 2 (2026-11-06): the pace limiter (a debt of hook time repaid from the ga
 window on each scroll move with fast scroll off), an image-keyed sprite pattern cache, a faster ink pass and paste;
 the verifier checks sprites = model at every E656, the lock at every frame, the every-site clock matrix. The menu's
 'Smooth scrolling' toggle is the fast+smooth build; 'Colour' is the main line.
+Session 3 (2026-11-06): pace windows on the game's own E656 and scroll-step C05A (28 MHz, the original's time from
+JNext-measured ratios, the debt repaid, the rest waited); the scroll moves run in the hook page; a monochrome gate
+(V_MONO): the .nxc base is the monochrome build, Colour its Enhanced colours set; ROLETAB in sprite store page S0.
 """
 import collections
 import json
@@ -45,12 +48,14 @@ INTERIORS = (0xBE2F, 0xBE30, 0xBE83, 0xBE84, 0xBFED, 0xBFEE, 0xBFFC, 0xBFFD, 0xE
              0xDD8B, 0xDD8C)
 
 # hook page layout (asm EQUs)
-ROLETAB = 0x4B00
+ROLETAB = 0xD800            # session 3: in sprite store page S0 (0xD800 at slot 6), sprite_store() puts it
+ROLETAB_OFF = 0x1800
 PALINIT_OFF = 0x80          # in the setup block (0xD080)
 DECKPAL_OFF = 0x1100        # in sprite store page S0 (0xD100 at slot 6)
 FLAGS_OFF = 0x1200          # in S0 (0xD200): 40 x 32 canvas cells, 0xFF = rewrite at the first commit
 V_OX, V_OY, V_L2ON, V_DECKP = 0x4BC4, 0x4BC6, 0x4BC7, 0x4BC8
 V_FAST, V_SMOOTH, V_DX, V_DY = 0x4BE8, 0x4BE9, 0x4BEA, 0x4BEC
+V_MONO = 0x4CE0              # session 3: 1 = monochrome (the .nxc base), 0 = colour
 TAGS = 0x4D00
 
 # --- the painting (our own; docs: games/quazatron.md "Colour") -------------------------------------------------
@@ -150,15 +155,15 @@ def _whole_rom_page(code=b''):
     return bytes(page)
 
 
-def hook_page(prof, fast=False, smooth=False):
+def hook_page(prof, fast=False, smooth=False, mono=False):
     """The 8K hook page (slot 2 inside hooks): code, tables, state, FLAGS 0xFF (every cell rewritten at the first
     commit), TAGS 0. fast / smooth: the fast-scroll option (scroll steps at 28 MHz) and the smooth display."""
     code = bytes.fromhex(prof['hooks']['page'])
     pg = bytearray(8192)
     pg[0:len(code)] = code
     put = lambda a, b: pg.__setitem__(slice(a - 0x4000, a - 0x4000 + len(b)), b)
-    put(ROLETAB, roletab())
     put(V_FAST, bytes([3 if fast else 0, 1 if smooth else 0]))
+    put(V_MONO, bytes([1 if mono else 0]))
     put(V_DX, (32).to_bytes(2, 'little'))
     put(V_DY, bytes([32]))
     put(0x4BF3, (32).to_bytes(2, 'little') + bytes([32]))     # TX, TY
@@ -194,7 +199,7 @@ class PlainPatch:
 class QuazatronPatch:
     name = 'Quazatron colour: scenery canvas on Layer 2 (session 1; droid sprites, smooth mode and pace to come)'
 
-    def __init__(self, prof=None, fast=False, smooth=False):
+    def __init__(self, prof=None, fast=False, smooth=False, mono=False):
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         self.rom_code = bytes.fromhex(h['rom'])
@@ -216,7 +221,7 @@ class QuazatronPatch:
         self.page = _whole_rom_page(self.rom_code)
         self.sites = [(a, bytes.fromhex(old), bytes([op]) + self.syms[sym].to_bytes(2, 'little'))
                       for a, (old, op, sym) in SITES.items()]
-        self.extra_banks = {12: self.page + bytes(8192), 13: hook_page(self.prof, fast, smooth) + bytes(8192)}
+        self.extra_banks = {12: self.page + bytes(8192), 13: hook_page(self.prof, fast, smooth, mono) + bytes(8192)}
 
     def apply(self, snap):
         if snap.is128:
@@ -247,9 +252,11 @@ def build(z80, out, name='quazatron', say=print):
     banks[STORE_BANK] = bytes(s0) + banks[STORE_BANK][8192:]
     say('Sprites   : %s' % info)
     builds = [('Plain', PlainPatch(), name + '.nex')]
-    for kind, fast, smooth, fn in (('Colour', False, False, name + '_colour.nex'),
-                                   ('Fast+smooth', True, True, name + '_colour_fastscroll.nex')):
-        patch = QuazatronPatch(fast=fast, smooth=smooth)
+    for kind, fast, smooth, mono, fn in (('Colour', False, False, False, name + '_colour.nex'),
+                                         ('Fast+smooth', True, True, False, name + '_colour_fastscroll.nex'),
+                                         ('Mono', False, False, True, name + '_mono.nex'),
+                                         ('Mono+toggle', True, True, True, name + '_mono_fastscroll.nex')):
+        patch = QuazatronPatch(fast=fast, smooth=smooth, mono=mono)
         patch.extra_banks.update(banks)
         builds.append((kind, patch, fn))
     for kind, patch, fn in builds:
@@ -487,6 +494,11 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
             check_sprites(get)
         if ns.var(V_L2ON) and name in ('t_isr', 't_spr'):      # every frame, and every update's placing
             check_lock()
+        if ns.var(V_MONO):          # session 3: monochrome never shows Layer 2 or a sprite, nor runs a scroll step fast
+            if ns.var(V_L2ON) or ns.l2 & 2 or ns.nr.get(0x15, 0) & 1 or ns.var(0x4CE1):
+                fail('monochrome shows Layer 2 or sprites, or scrolls fast!', (name, hex(pc), ns.var(V_L2ON), ns.l2, ns.nr.get(0x15)))
+            else:
+                c['monochrome: Layer 2, sprites and fast scroll off after the hook'] += 1
 
     def clock_matrix(name, pc, get, regs, stop_pc, stop_sp):
         """The every-site matrix (hooklib.every_site): this event's hook entered at 3.5, 7, 14 and 28 MHz from the same
@@ -869,6 +881,7 @@ def sprite_store(mem):
         images.append(b)
     if len(images) > 255:
         raise ValueError('too many sprite images')
+    table[ROLETAB_OFF:ROLETAB_OFF + 192] = roletab()      # p_tags reads it with S0 at slot 6 (session 3)
     pages = [bytes(table)]
     for k in range(0, len(images), 10):
         pg = b''.join(images[k:k + 10])

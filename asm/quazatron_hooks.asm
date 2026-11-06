@@ -48,7 +48,7 @@ PALINIT EQU 0xD080              ; 32 Layer 2 palette entries (2 bytes each) in t
 ROWBUF  EQU 0x4C40              ; 32 attributes
 DECKPAL EQU 0xD100              ; in page S0 at slot 6: 8 papers x 5 entries (16-20) x 2 bytes, from quazatron.py
 SPOS    EQU 0xD000              ; in page S0 at slot 6: per sprite group, base X (2), base Y (2) at the game origin
-ROLETAB EQU 0x4B00              ; (list - 0x9600) >> 3 -> role, from quazatron.py
+ROLETAB EQU 0xD800              ; in page S0 at slot 6: (list - 0x9600) >> 3 -> role, from quazatron.py sprite_store
 VSPD    EQU 0x4BC0
 HLIB_V_R EQU 0x4BC1             ; 3
 OX      EQU 0x4BC4              ; 2: canvas x of the view's left edge (0-319)
@@ -80,7 +80,10 @@ DRV     EQU 0x4BE3              ; 2: the player's drive list
 NREC    EQU 0x4BE5
 VSPD2   EQU 0x4BE6              ; the caller's speed at an outer fast-section hook
 GSPD    EQU 0x4BE7              ; the game's speed (the last outer latch): the ISR body runs at it
-VFAST   EQU 0x4BE8              ; 3: scroll steps at 28 MHz (fast-scroll option), 0: off (from quazatron.py)
+VFASTT  EQU 0x4BE8              ; 3: scroll steps at 28 MHz (fast-scroll option), 0: off (from quazatron.py; the toggle)
+VFAST   EQU 0x4CE1              ; in use: VFASTT from the first commit on, 0 in monochrome (session 3)
+VMONO   EQU 0x4CE0              ; 1: monochrome (the base of the .nxc: Layer 2 and the sprites never on, the ULA shows the
+                                ; game's own picture; the hooks and the limiter run as in colour), 0: colour (the set)
 VSMOOTH EQU 0x4BE9              ; 1: smooth display (the shown origin glides to the game's), 0: off
 DX      EQU 0x4BEA              ; 2: the shown origin
 DY      EQU 0x4BEC
@@ -110,6 +113,23 @@ SCLK    EQU 0x4CC8              ; the next slot to try for a new image (clock)
 STAMP   EQU 0x4CC9              ; this update's number (p_spr)
 PPAT    EQU 0x4CCA              ; put3: the first sprite's pattern
 HLIB_PACE_NL EQU 312            ; 48K timing (z80tonex: NR 3 = 48K)
+; session 3: game-routine pace windows (fw_*). The game's own E656 (block blits, every update), and with fast scroll off
+; a scroll step's BE38 (strip render) and its C05A copy (from DD9A), run at 28 MHz; their time there (WP, ISR bodies and
+; nested hook work left out) x K/16 is the original's time (WO); the saving repays DEBT, and what DEBT does not take is
+; waited out on the video line. K per routine: JNext's ratio of the original's time at 3.5 MHz (48K contention) to the
+; routine's at 28 MHz, measured in session 3 (work/s3/kcal.py), rounded down (never faster than the original).
+WOPEN   EQU 0x4CD0              ; 0: no window, 1: the game routine runs (nested hooks: WNEST), 2: the hook's own work
+WK      EQU 0x4CD1              ; K (x 16)
+WNEST   EQU 0x4CD6              ; 2: nested / own hook time inside the window (1/16 lines)
+WO      EQU 0x4CD8              ; 2: the original's time (1/16 lines)
+WP      EQU 0x4CDA              ; 2: the routine's time at 28 MHz
+WT      EQU 0x4CDC              ; 2: fw_wait's target
+        IFNDEF KSPR
+KSPR    EQU 104                 ; E656 (JNext: 98.8 off, 102.1 on over 1,051 calls)
+KBS     EQU 98                  ; BE38: not used (its ratio varies 5 to 6 with the strip: it runs at the caller's speed)
+KCPY    EQU 141                 ; C05A (JNext: the copy from DD9A, about 170k T without its interrupts, against WP 1,360)
+        ENDIF
+C_FW    EQU 34                  ; a window hook's entry and exit at the caller's clock (about 480 T)
 ; the hooks' unmeasured parts (1/16 lines): their entry and exit at the caller's clock, counted in the simulator
 ; (session 2: work/s2/calib.py; median extra T at 3.5 MHz / 14, rounded down, plus the 28 MHz part outside a window)
         IFNDEF C_LIST
@@ -158,7 +178,9 @@ p_tags: ld (LST),hl
         srl h
         rr l
         ld h,high ROLETAB
+        nextreg 0x56,S0         ; (t_list runs inside BE38: slot 6 is the game's page 0)
         ld a,(hl)
+        nextreg 0x56,0
         jr .rok
 .floor: ld a,R_FLOOR
 .rok:   ld (ROLE),a
@@ -646,7 +668,12 @@ p_pre:  call rd56
         djnz .pl
         ld a,(SLOT6)
         nextreg 0x56,a
-.pal:   ld a,(L2ON)
+.pal:   ld a,(VMONO)
+        or a
+        ret nz                  ; monochrome: Layer 2, the sprites and fast scroll never on
+        ld a,(VFASTT)
+        ld (VFAST),a
+        ld a,(L2ON)
         or a
         ret nz
         inc a
@@ -1066,6 +1093,15 @@ neghl:  xor a
 ; spd_fast: latch the caller's speed (VSPD2, GSPD), then NR 7 = it | VFAST. The port read is DI-protected (the ISR
 ; hook never touches the ports, but this keeps the read atomic). AF, BC lost.
 spd_fast:
+        call spd_latch
+        ld b,a
+        ld a,(VFAST)
+        or b
+        nextreg 0x07,a
+        ret
+
+; spd_latch: VSPD2 = GSPD = A = the caller's speed (NR 7 bits 1:0); the speed is not changed. AF, BC lost.
+spd_latch:
         ld bc,0x243B
         ld a,7
         di
@@ -1076,10 +1112,6 @@ spd_fast:
         and 3
         ld (VSPD2),a
         ld (GSPD),a
-        ld b,a
-        ld a,(VFAST)
-        or b
-        nextreg 0x07,a
         ret
 
 ; spd_back: NR 7 = VSPD2. Keeps every register and flag.
@@ -1112,6 +1144,9 @@ wregs:  ld hl,(DX)
 ; 28 MHz, then NR 7 = the game's speed for the ISR body. Keeps IX, IY, the alternate set; AF, BC, DE, HL lost.
 isr_step:
         nextreg 0x07,3
+        ld a,(WOPEN)            ; a game routine's pace window: its time so far counted, the ISR's left out (wskipc)
+        or a
+        call nz,mvtick
         call dbg_open
         ld a,(VSMOOTH)
         or a
@@ -1216,8 +1251,8 @@ isr_step:
         pop bc
         djnz .g
         nextreg 0x56,0
-.done:  ld a,C_ISR
-        call dbg_close
+.done:  ld a,C_ISR               ; (the same at any interrupted clock: the hook's state never depends on it)
+        call dbg_close_r
         ld a,(GSPD)
         nextreg 0x07,a
         ret
@@ -1300,10 +1335,49 @@ dbg_open:
         ld (DST),hl
         ret
 
-; dbg_close: A = the hook's unmeasured part (1/16 lines). DEBT += 16 x lines since dbg_open + A. AF, BC, DE, HL lost.
+; dbg_close: A = the hook's unmeasured part (1/16 lines). DEBT += 16 x lines since dbg_open + A. Inside a game routine's
+; pace window (WOPEN 1: a nested hook, its entry and exit at 28 MHz: A / 8) or after it (WOPEN 2: the window hook's own
+; work; A is its 3.5 MHz part, outside the window) the measured time also goes to WNEST. AF, BC, DE, HL lost.
 dbg_close:
         push af
-        call qline
+        call dlines
+        ld a,(WOPEN)
+        or a
+        jr z,.plain
+        dec a
+        jr nz,.post
+        pop af
+        rrca
+        rrca
+        rrca
+        and 0x1F
+        ld e,a
+        ld d,0
+        add hl,de
+        call .nest
+        xor a
+        call dadd.add
+        jp mvtick               ; the window's count goes on here too: never a frame between two counts (an
+                                ; interrupt in a ROM trampoline is not counted), so no wrap is lost
+.post:  call .nest
+.plain: pop af
+        jr dadd.add
+.nest:  push hl
+        ld de,(WNEST)
+        add hl,de
+        ld (WNEST),hl
+        pop hl
+        ret
+
+; dbg_close_r: as dbg_close, never WNEST (isr_step: the ISR is left out of a window by mvtick / wskipc).
+dbg_close_r:
+        push af
+        call dlines
+        pop af
+        jr dadd.add
+
+; dlines: HL = 16 x lines since dbg_open. AF, BC, DE lost.
+dlines: call qline
         ld de,(DST)
         or a
         sbc hl,de
@@ -1314,8 +1388,7 @@ dbg_close:
         add hl,hl
         add hl,hl
         add hl,hl
-        pop af
-        jr dadd.add
+        ret
 
 ; dadd: DEBT += A (1/16 lines), capped at 0xBFFF (about 10 frames). AF, DE, HL lost.
 dadd:   ld hl,0
@@ -1347,10 +1420,17 @@ dconst: push hl
 ; (DST moves on by it). AF, BC, DE, HL lost.
 isr_in: call qline
         ld (ISRL),hl
-        ret
+        ld a,(WOPEN)            ; a pace window: its time counted up to here
+        or a
+        ret z
+        jp mvtick
 isr_out:
         call qline
-        ld de,(ISRL)
+        ld a,(WOPEN)            ; a pace window: the ISR body left out (it goes on from here)
+        or a
+        jr z,.nw
+        ld (MVL),hl
+.nw:    ld de,(ISRL)
         or a
         sbc hl,de
         jr nc,.p
@@ -1453,7 +1533,17 @@ mv_in:  call spd_fast
         ld (MVL),hl
         ld hl,0
         ld (MVE),hl
+        ld a,3                  ; session 3: an ISR inside the move (now run here, in the page) is left out of the
+        ld (WOPEN),a            ; window (isr_in / isr_out), and its body runs at the game's speed, as in the original
         pop hl
+        ret
+
+; mv_lddr / mv_ldir: the game's own block move, run in the page (an interrupt in it takes t_isr's hook-page path).
+mv_lddr:
+        lddr
+        ret
+mv_ldir:
+        ldir
         ret
 
 ; mv_out: HL = the move's original time (1/16 lines). Fast scroll off: wait until the window has lasted that, less
@@ -1501,7 +1591,9 @@ mv_out: ld a,(VFAST)
         jr nc,.st
         ld hl,0
 .st:    ld (DEBT),hl
-.done:  pop de
+.done:  xor a
+        ld (WOPEN),a
+        pop de
         pop bc
 .back:  ld a,(VSPD2)
         nextreg 0x07,a
@@ -1601,8 +1693,246 @@ slot_of:
         ld c,a
         ret
 
+; ---- session 3: game-routine pace windows (see WOPEN). With 6 or more blocks the game has no delay, so the hooks'
+; time is repaid inside the update: the game's own routine runs at 28 MHz and the window lasts the original's time
+; less the debt.
+
+; The window's time: MVE (lines) and MVL as the scroll moves' windows (never at the same time), counted by mvtick; an
+; ISR body is left out (isr_in / isr_step: mvtick, isr_out / wskipc: MVL = now).
+
+; wskipc: from t_isr (game code) after the ISR body: a window goes on from now. Keeps BC, DE, HL; AF lost.
+wskipc: ld a,(WOPEN)
+        or a
+        ret z
+        push bc
+        push hl
+        call qline
+        ld (MVL),hl
+        pop hl
+        pop bc
+        ret
+
+; fw_open: A = K: the window opens, at 28 MHz. AF, BC, DE, HL lost.
+fw_open:
+        ld (WK),a
+        nextreg 0x07,3
+        ld hl,0
+        ld (MVE),hl
+        ld (WNEST),hl
+        xor a
+        ld (MVP),a
+        call qline
+        ld (MVL),hl
+        ld a,1
+        ld (WOPEN),a
+        ret
+
+; wown: HL = 16 MVE - WNEST (the routine and the wait so far), C when negative. AF, DE lost.
+wown:   call mvtick
+        ld hl,(MVE)
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,(WNEST)
+        or a
+        sbc hl,de
+        ret
+
+; fw_mark: the game routine has returned: WP = its time, WO = WP x K / 16, WOPEN = 2. AF, BC, DE, HL lost.
+fw_mark:
+        call wown
+        jr nc,.p
+        ld hl,0
+.p:     ld (WP),hl
+        ex de,hl                ; C:HL = DE x K
+        ld hl,0
+        ld c,0
+        ld a,(WK)
+        ld b,8
+.m:     add hl,hl
+        rl c
+        rla
+        jr nc,.n
+        add hl,de
+        jr nc,.n
+        inc c
+.n:     djnz .m
+        ld a,c
+        ld b,4
+.s:     srl a
+        rr h
+        rr l
+        djnz .s
+        or a
+        jr z,.o
+        ld hl,0xFFFF
+.o:     ld (WO),hl
+        ld a,2
+        ld (WOPEN),a
+        ret
+
+; fw_wait: the routine's saving (WO - WP) repays DEBT; what DEBT does not take is waited out: until 16 MVE - WNEST (the
+; routine and the wait) reaches WO - DEBT (no line counter: mvtick gives up). WOPEN = 0. AF, BC, DE, HL lost.
+fw_wait:
+        ld hl,(WO)
+        ld de,(WP)
+        or a
+        sbc hl,de
+        jr c,.done
+        ex de,hl                ; DE = the saving
+        ld hl,(DEBT)
+        or a
+        sbc hl,de
+        jr c,.wait
+        ld (DEBT),hl            ; the saving all taken by the debt
+        jr .done
+.wait:  ld hl,(WO)
+        ld de,(DEBT)
+        or a
+        sbc hl,de
+        ld (WT),hl
+        ld hl,0
+        ld (DEBT),hl
+.w:     call wown
+        jr c,.w
+        ld de,(WT)
+        or a
+        sbc hl,de
+        jr c,.w
+.done:  xor a
+        ld (WOPEN),a
+        ret
+
+; fw_step: E = K. Fast scroll: 28 MHz (spd_fast), the saving its own; off: a window. AF, BC lost.
+fw_step:
+        ld a,(VFAST)
+        or a
+        jp nz,spd_fast
+        call spd_latch
+        ld a,e
+        jp fw_open
+
+; the window hooks' page parts (called from their ROM trampolines inside an R bracket; every register kept).
+; fw_spr_in: before E656: always a window.
+fw_spr_in:
+        push af
+        push bc
+        push de
+        push hl
+        call spd_latch
+        ld a,KSPR
+        call fw_open
+        ld a,-9 & 0x7F
+fw_in_x:
+        call hlib_r_set
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ret
+; fw_spr_out: after E656: the sprites (p_spr), then the wait.
+fw_spr_out:
+        push af
+        push bc
+        push de
+        push hl
+        call fw_mark
+fw_spr_m:
+        call dbg_open
+        call p_spr
+        ld a,C_FW
+        call dbg_close
+        call fw_wait
+        ld a,-9 & 0x7F
+fw_out_x:
+        call hlib_r_set
+        call spd_back
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ret
+
+; fw_bs_in: before BE38 (a scroll step's strip): fast scroll: 28 MHz, its saving its own; off: the caller's speed.
+fw_bs_in:
+        push af
+        push bc
+        push de
+        push hl
+        ld a,(VFAST)            ; off: the caller's speed (the original's time exactly; its nested hooks' time goes to
+        or a                    ; the debt, repaid by the copy's window, the move's and the delay)
+        call nz,spd_fast
+        call z,spd_latch
+        ld a,-9 & 0x7F
+        jp fw_in_x
+fw_bs_out:
+        push af
+        push bc
+        push de
+        push hl
+        ld a,(WOPEN)
+        or a
+        jr z,fw_bs_x
+        call fw_mark
+fw_bs_m:
+        ld a,C_FW
+        call dconst
+        call fw_wait
+fw_bs_x:
+        ld a,-9 & 0x7F
+        jp fw_out_x
+
+; fw_cpy_in: before C05A's copy (C05D). From DD9A (a scroll step's copy): fast scroll: 28 MHz, its saving its own;
+; off: a window. Otherwise (E0CE: a view's first copy) the caller's speed, and earlier debt (the menu's) dropped.
+fw_cpy_in:
+        push af
+        push bc
+        push de
+        push hl
+        ld hl,10
+        add hl,sp
+        ld a,(hl)
+        cp 0x9D
+        jr nz,.first
+        inc hl
+        ld a,(hl)
+        cp 0xDD
+        jr nz,.first
+        ld e,KCPY
+        call fw_step
+        jr .x
+.first: ld hl,0
+        ld (DEBT),hl
+        call spd_latch
+.x:     ld a,-10 & 0x7F
+        jp fw_in_x
+; fw_cpy_out: after the copy: the inks and the origin (p_inks, p_pre: the picture changes once, complete), then the
+; wait.
+fw_cpy_out:
+        push af
+        push bc
+        push de
+        push hl
+        nextreg 0x07,3
+        ld a,(WOPEN)
+        or a
+        call nz,fw_mark
+fw_cpy_m:
+        call dbg_open
+        call p_inks
+        call p_pre
+        ld a,C_C05A
+        call dbg_close
+        ld a,(WOPEN)
+        or a
+        call nz,fw_wait
+        ld a,-9 & 0x7F
+        jp fw_out_x
+
 TCODE_END:
-        ASSERT TCODE_END <= ROLETAB
+        DISPLAY "TCODE_END ",/H,TCODE_END
+        ASSERT TCODE_END <= VSPD
         ORG TCOL
         DUP 32, n
         DW TAGS + n * TS
@@ -1679,78 +2009,38 @@ tw_exit:
         nextreg 0x52,ULAPAGE
         ret
 
-; CALL E656 at E0DF (the blocks blitted to the screen): the sprites follow
-t_spr:  call 0xE656
+; CALL E656 at E0DF (the blocks blitted to the screen): E656 itself in a pace window (fw_spr_in / fw_spr_out: 28 MHz,
+; the original's time less the debt), then the sprites follow. Bracket 1 makes R exact at E656's entry (O = 1 (CALL),
+; E = 1 + 2 + 3, N = 1 + 2 + 1: -9); bracket 2 from its RET (O = 0, E = 2 + 3, N = 1 + 2 + 1 (RET): -9).
+t_spr:  nextreg 0x52,HPAGE
+        HLIB_R_IN
+        call fw_spr_in
+        HLIB_R_OUT
+        nextreg 0x52,ULAPAGE
+        call 0xE656
         nextreg 0x52,HPAGE
         HLIB_R_IN
-        push af
-        push bc
-        push de
-        push hl
-        HLIB_SPEED_IN VSPD
-        call dbg_open
-        call p_spr
-        jp tw_exit
+        call fw_spr_out
+        HLIB_R_OUT
+        nextreg 0x52,ULAPAGE
+        ret
 
 ; JP at C05A (background to screen, then the attributes). The commit runs after the game's copy, so the shown canvas
 ; changes once, complete (during the copy the original shows its new bitmap under the old attributes; we keep showing
 ; the last complete picture; at the first view Layer 2 is still off and the ULA shows exactly the original). Two
 ; brackets, so that R is the original's exactly while the game's own copy runs (the ISR reads R); the first does no
-; work: (1) O = 1 (LD DE) to the copy's entry, E = 1 + 2 + 3, N = 1 + 2 + 1
+; work but the speed and the window (fw_cpy_in): (1) O = 1 (LD DE) to the copy's entry, E = 1 + 2 + 3, N = 1 + 2 + 1
 ; (LD DE) + 1 (CALL): delta 1 - 6 - 5 = -10; (2) from the copy's RET: E = 2 + 3, N = 1 + 2 + 1 (RET): delta -9.
 t_c05a: nextreg 0x52,HPAGE
         HLIB_R_IN
-        push af
-        push bc
-        push hl
-        ld hl,6
-        add hl,sp
-        ld a,(hl)
-        cp 0x9D
-        jr nz,.slow
-        inc hl
-        ld a,(hl)
-        cp 0xDD
-        jr nz,.slow
-        call spd_fast           ; a scroll step's copy (from DD9A): fast with the option
-        jr .s1
-.slow:  ld hl,0
-        ld (DEBT),hl            ; a view's first copy (play starts, a new deck): earlier debt (the menu's) never repaid
-        ld a,(VFAST)
-        push af
-        xor a
-        ld (VFAST),a
-        call spd_fast           ; the view's first copy (E0CE): the caller's speed
-        pop af
-        ld (VFAST),a
-.s1:    ld a,-10 & 0x7F
-        call hlib_r_set
-        pop hl
-        pop bc
-        pop af
+        call fw_cpy_in
         HLIB_R_OUT
         nextreg 0x52,ULAPAGE
         ld de,0x8300
         call 0xC05D
         nextreg 0x52,HPAGE
         HLIB_R_IN
-        push af
-        push bc
-        push de
-        push hl
-        nextreg 0x07,3
-        call dbg_open
-        call p_inks             ; the new inks, then the origin and Layer 2 on: the picture changes once, complete
-        call p_pre
-        ld a,C_C05A
-        call dbg_close
-        ld a,-9 & 0x7F
-        call hlib_r_set
-        call spd_back
-        pop hl
-        pop de
-        pop bc
-        pop af
+        call fw_cpy_out
         HLIB_R_OUT
         nextreg 0x52,ULAPAGE
         ret
@@ -1774,7 +2064,7 @@ t_sd:   nextreg 0x52,HPAGE
         ld hl,0x94FF
         ld de,0x95FF
         ld bc,0x1200
-        lddr
+        call mv_lddr
         push af
         push hl
         ld hl,O_MOVEV
@@ -1799,7 +2089,7 @@ t_su:   nextreg 0x52,HPAGE
         ld hl,0x8400
         ld de,0x8300
         ld bc,0x1200
-        ldir
+        call mv_ldir
         push af
         push hl
         ld hl,O_MOVEV
@@ -1819,7 +2109,7 @@ t_sl:   nextreg 0x52,HPAGE
         ld hl,0x8302
         ld de,0x8300
         ld bc,0x12FE
-        ldir
+        call mv_ldir
         push af
         push hl
         ld hl,O_MOVEH
@@ -1839,7 +2129,7 @@ t_sr:   nextreg 0x52,HPAGE
         ld hl,0x95FD
         ld de,0x95FF
         ld bc,0x12FE
-        lddr
+        call mv_lddr
         push af
         push hl
         ld hl,O_MOVEH
@@ -1858,29 +2148,17 @@ s_x:    ld hl,(OX)
         ld a,117
         jp hlib_r_set
 
-; CALL BE38 at E1A9 (a scroll step's new strip): at 28 MHz with the fast-scroll option. Bracket 1 makes R exact at
-; BE38's entry (O = 1, E = 6, N = 1 + 2 + 1: -9); bracket 2 from its RET (E = 2 + 3, N = 4: -9).
+; CALL BE38 at E1A9 (a scroll step's new strip): at 28 MHz; with fast scroll off in a pace window (fw_bs_in / out).
+; Bracket 1 makes R exact at BE38's entry (O = 1, E = 6, N = 1 + 2 + 1: -9); bracket 2 from its RET (E = 2 + 3, N = 4: -9).
 t_bs:   nextreg 0x52,HPAGE
         HLIB_R_IN
-        push af
-        push bc
-        call spd_fast
-        ld a,-9 & 0x7F
-        call hlib_r_set
-        pop bc
-        pop af
+        call fw_bs_in
         HLIB_R_OUT
         nextreg 0x52,ULAPAGE
         call 0xBE38
         nextreg 0x52,HPAGE
         HLIB_R_IN
-        call spd_back
-        push af
-        ld a,C_BS
-        call dconst
-        ld a,-9 & 0x7F
-        call hlib_r_set
-        pop af
+        call fw_bs_out
         HLIB_R_OUT
         nextreg 0x52,ULAPAGE
         ret
@@ -1976,6 +2254,7 @@ t_isr:  push af
         or h
         ld l,a
         nextreg 0x52,HPAGE
+        call wskipc             ; a game routine's pace window goes on from here (the ISR left out)
         ld a,(ISRSPD)
         nextreg 0x07,a
         nextreg 0x52,ULAPAGE
