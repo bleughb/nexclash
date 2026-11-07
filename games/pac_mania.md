@@ -47,6 +47,11 @@ Negative controls on pm_idle, 7 of 7 detected: patterns shifted, y + 1, Pac-Man'
 Census, non-yellow rooms: figure ink pixels in a foreign colour 2,389 of 284,223 (0.84 %, pm_idle) and 8,619 of 1,046,888 (0.82 %, pm_b11); about 7 scenery pixels per yellow cell in play. Small in numbers, plain to see around Pac-Man, who is always in the middle of it.
 Hook R: the game's RNG reads R (0x8F57, 0x92EE, 0x9318), so on a real machine hook fetches shift it. The lockstep holds R across hooks; the game's randomness differs, its logic does not.
 
+## Enhanced, hand-painted (owner's round, 2026-11-03)
+Ghost identity: the game's graphics have no Blinky, Pinky, Inky or Clyde. All six ghost records share the frames. 20-22, 26-31 are the ordinary ghost; 54-62 a ghost with (IY+2) bit 0, which jumps with Pac-Man (0x95D0), always record 1; 45-53 any ghost for 10 steps after 0x9636 sets (IY+0B); 23-25, the back view, all of them. Colours: 20-31 red, 54-62 cyan, 45-53 orange. No frames are left for pink, and a cyan ghost going up turns red. One hook line (palette offset by record) could give each record a colour: a code change, not done.
+Frightened 32-40, 82-84 blue. Flash: 0x915E alternates the frightened and normal frames, so blue and red; no white in the game's data. Eyes 63-66 white. Rising 76-79 red. Pac-Man 0-19, 41-44 yellow, red mouth; the theatre's white Pac-Man is yellow in Enhanced (the plain sprite build keeps it white).
+Palette in bank 10 offset 4239 (setup): slots 3 0xE0 red, 6 0x1F cyan, 7 0x27 blue, 14 0xF0 orange. Shifted by that: banana and 800 (lime to amber), R (to amber), mug and 3200 (teal to cyan), candy and G (bluer). Banks changed from the sprite build: 10 and 11. Map paint/pac_mania_enhanced_map.json, work/handpaint.py.
+
 ## Open
 - Uncovered by recordings (unit tests cover their pixels): see the report's frame list. A bot that hunts pills and fruit would reach them.
 - Ghost-eaten scores and fruit shown rarely; the owner should see the painted fruit on a long game.
