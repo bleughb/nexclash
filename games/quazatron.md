@@ -74,6 +74,8 @@ ends. Neither asks for a value.
 - Never run on hardware. JNext only.
 
 ## Lessons
+- [card patch.iff-safe-read §Recognise] Reading LD A,I twice back to back is not enough: the second read can be the
+  one an interrupt lands on. Only an after-an-off second read is safe (the shared audit flags the pair).
 - [local: this game's drawing] observed: every enemy type draws the same 4 body frames; only the number plate (DDB0, two font characters) differs, so a per-type colour must come from the draw record (A320 byte 7), never from the body list.
 - [local: this game's hooks] observed: an ISR hook that sets the game's speed for the ISR body must put the interrupted speed back afterwards (CALL the body), or every interrupt that lands in a 28 MHz hook leaves the rest of the hook at 3.5 MHz (fast build 21% slower in JNext until fixed).
 - [deferred Open: reconsider when the pace limiter is built (session 2)] observed: JNext runs of different builds play different games (deck colour and droids follow timing), so pace must be measured update-keyed in lockstep (nexclash.pace), never from free-running logs.
@@ -121,6 +123,7 @@ ends. Neither asks for a value.
   build and Colour is its Enhanced colours set, as Nightshade and Pyjamarama offer theirs; a recording with t_su
   (the down-scroll edge lowered in its own first snapshot, test only).
 
+- 2026-11-07 shared engine refactor: the IFF read in qline / mvtick made safe (goal 1); 0 user rounds.
 ## Session 4 (2026-11-06): v1.1, Centred view (opt-in toggle; changes the game logic)
 - Trigger: the edge bursts (E1AF: 8 steps past x 9 / 247, y 24 / 151) never start (E1B3 -> JP E1EC). Before each update
   (E0DC: CALL c_pre, was CALL D5BB) c_pre, pure Z80 at 0x3CAC in the alt ROM image, takes ONE scroll step (the game's
@@ -154,3 +157,17 @@ ends. Neither asks for a value.
   the pace waits' polls held interrupts off most of the time (now 256 DJNZ with them on after each). About 0.4% remain.
 - Centred view's camera is a velocity filter (page 27 `filt`; `CamModel` in the verifier is the same arithmetic):
   steady px a frame while walking, no overshoot past the player when he stops, about 6 frames behind.
+
+## Interrupts: the IFF read made safe (2026-11-07, shared engine refactor, goal 1)
+- qline read `LD A,I` twice back to back and trusted the second; an interrupt accepted at the end of the second still
+  read as off (hooklib.iff_audit 'pair'). Now the second read runs only after an off (`jp pe,$+5`, as HLIB_IFF_DI).
+  mvtick no longer reads IFF itself: qline's exit keeps its flags, so mvtick pushes them after the call. The page
+  stays within VSPD (TCODE_END 0x4BBF); nothing else changed.
+- Proof (pilot work/s4 negs4.py on this clone): IDENTICAL on 6 recordings x 4 states and 4 Centred recordings x 4
+  states (164,468 frames; 124 clock-matrix cases a run); negatives: forced 3.5 MHz exit, camera filter off: DETECTED.
+- JNext walks (session 6's jnwalk.py, the same six walks, frames 900-2519): interrupts missed, before -> after:
+  colour 9 -> 11, Centred 8 -> 5 (session 6: 31 -> 5, 18 -> 7). The misses left are not this race: at the interrupt
+  line IFF1 is 1 in most of them (PC in the pace waits), so a DI window that JNext's short interrupt falls into is the
+  likelier cause. 10-minute soaks (Kempston profile): no freeze; interrupts a second vary with the play (colour 48.9 ->
+  49.3, original 49.2).
+
