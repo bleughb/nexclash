@@ -17,7 +17,7 @@ Memory: owned cache 136–215, metadata/code 79, pinned stream 122, DDMA staging
   window 80. Store publishes valid last; dispatch still requires exact live validation.
 Open: loading driver/UI, unseen/mutated content, current/pending ownership, complete-frame reveal,
   FLASH/modal/frontend/ROM lifetime, hardware waits, contention. No sprite NEX.
-Workflow: Inferno6.rzx --quick 2000; six own original quicks at milestones; level-4 shop.
+Workflow: Inferno6.rzx --quick 2000; six quicks at milestones; level-4 shop.
 
 ## Inputs and facts
 - Inferno.tzx: supplied tape, MD5 `335eec35a526f2044455cb87e8c77206`.
@@ -56,7 +56,7 @@ Workflow: Inferno6.rzx --quick 2000; six own original quicks at milestones; leve
   nextboot checks PASS, MD5 0a3bde4734c5b3f15ad0f2a55cc81e19. Default-tail survey builds superseded.
 - Contact sheets: recording_overview.png (L4 reaches the shop). Ending BE69 scrolls, BCDF draws
   text/medals, BC64 clears. Preserve the ULA sequence.
-- No test cheat or game patch. Independent level snapshots do not prove continuous TZX loads.
+- No test cheat or game patch; level snapshots do not prove continuous TZX loads.
 
 ## Hardware checklist
 - Plain level-1 Inferno.nex: try CSpect first, then the Next; check title/text to gameplay,
