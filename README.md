@@ -1,4 +1,4 @@
-# nexclash - BASIC USE FOR AI Tools (tested with OPUS 5.5 and CPT6 Astra)
+# nexclash - BASIC USE FOR AI Tools (tested with OPUS 5.5 and GPT-6 Astra)
 
 ## Maintainers: put the below two line prompt into an AI Agent chat and hit enter
 (Contributors cannot clone the private bleughb/specnext: run `python nexclash.py new MyGame.z80`
