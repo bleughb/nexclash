@@ -29,7 +29,9 @@ Every NEW engine's hooks: `INCLUDE "lib/hlib_speed.asm"`, `HLIB_SPEED_IN latch` 
 latch` at every exit (ENGINE_CONTRACT "Hook library"). The old convention `NEXTREG $07,0` at exit is harmless
 while every caller runs at 3.5 MHz, but breaks any speed option, a "slowdown removed" mode, the F8 key (NR 6
 bit 7 is left on, C2 #26) and a hook called from another hook. Existing engines keep it until a rework. A hook
-with no RAM (alt ROM only: Jet Pac v1.1) keeps the read value on the stack instead of a latch.
+with no RAM (alt ROM only: Jet Pac v1.1) keeps the read value on the stack instead of a latch. An exit with no stack or
+flags to spare restores through its page before unmapping it: `ld (V_A),a / ld a,(latch) / nextreg 7,a / ld a,(V_A)`
+(Midnight Resistance's loop exits, Wally 2, Smash TV).
 
 **Assumptions.** NR 7 reads back bits 1:0 = the programmed speed (core 3.02 zxnext.vhd 5902; JNext 1.1.104
 composes the same); the game and its ROM ISR never use ports 0x243B / 0x253B (a Spectrum game cannot).

@@ -55,7 +55,7 @@
   },
   "sprites": {
    "file": "nemesis_the_warlock_sprites.nex",
-   "md5": "31ad4ab5b7507b6289ffe30f82c7d6bb"
+   "md5": "642fdf0707db7f6f78727e2335d2fd0e"
   }
  },
  "repro": [],
@@ -66,7 +66,7 @@
  "status": {
   "title": "Nemesis the Warlock",
   "engine_col": "nemesis (nemesis_the_warlock.md)",
-  "build": "nemesis_the_warlock_sprites.nex 36c8a2e8",
+  "build": "nemesis_the_warlock_sprites.nex 642fdf07 (2026-11-07: the hook restores the caller's CPU speed, lib/hlib_speed.asm; was 31ad4ab5); earlier 36c8a2e8",
   "software": "quick 20000 IDENTICAL, unit PASS",
   "hardware": "round 1 OK (basic play, 2026-11-03)",
   "next": "more play: later levels, define keys, speed"
@@ -76,50 +76,50 @@
  ],
  "checked": {
   "deps": {
-   "asm/nemesis_hooks.asm": "f54982d794be8865",
-   "docs/profiles/nemesis_the_warlock.json": "f392a3a7f8bffc35",
-   "nexclash.py": "b7f49876a97b1f48",
+   "asm/nemesis_hooks.asm": "4c7a6e859218de36",
+   "docs/profiles/nemesis_the_warlock.json": "fdcbddf714b8d3fe",
+   "nexclash.py": "9028c4ca12045d70",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/nemesis.py": "5a005d109288c95b",
-   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/engines.py": "00d01102bda98ad5",
+   "nexclash/nemesis.py": "48f7849cc65c8f62",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "273dab19dfcd9e27",
-   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "16876c7c03555aee",
+   "recipe": "e98a74c1e947b68e",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-07"
  },
  "verified": {
   "deps": {
-   "asm/nemesis_hooks.asm": "f54982d794be8865",
-   "docs/profiles/nemesis_the_warlock.json": "f392a3a7f8bffc35",
-   "nexclash.py": "b7f49876a97b1f48",
+   "asm/nemesis_hooks.asm": "4c7a6e859218de36",
+   "docs/profiles/nemesis_the_warlock.json": "fdcbddf714b8d3fe",
+   "nexclash.py": "9028c4ca12045d70",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/nemesis.py": "5a005d109288c95b",
-   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/engines.py": "00d01102bda98ad5",
+   "nexclash/nemesis.py": "48f7849cc65c8f62",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "273dab19dfcd9e27",
-   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "16876c7c03555aee",
+   "recipe": "e98a74c1e947b68e",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-07"
  }
 }

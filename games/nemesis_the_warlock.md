@@ -152,7 +152,16 @@ Open: stamps (bodies) on the ULA; speed spikes (129K T max at 3.5 MHz, cache-mis
 - 6 (user 2026-11-02): SOLID sprites (mask-outline pixels opaque in the paper colour). Spikes: not
   answered; they are scenery in the buffer (blitters 0x82C3..), so they stay on the ULA by rule 2.
 
+## Speed restored (2026-11-07, shared engine refactor, goal 2)
+- post (after the screen copy) latches the caller's CPU speed (HLIB_SPEED_IN_ABC: A and BC are already saved; latch
+  `spd` beside the hook state) and gives it back instead of NEXTREG 7,0. The verifier's NextState answers NR reads.
+- Sprites 31ad4ab5 -> 642fdf07; plain unchanged. RZX IDENTICAL (134,977 frames, 47,173,776 sprite pixels), unit
+  PASS, negative control 1/1; stamped.
+- JNext pace (v2.09 card, 600 updates at 0x70E0 (automatic), Sinclair-keys profile, seed 1, plain build control):
+  main's build +4.97%, this one +5.03% (already over 2% on main). The game runs with interrupts off.
+
 ## Lessons
+- [card patch.restore-speed §Use / do not use] A hook that saves A and BC itself takes HLIB_SPEED_IN_ABC (no pushes).
 - [card detect.buffer-layout-producer §Contract] Overlay from save-under: with a masked back-buffer plotter that saves the background (IY), the hooks leave the plotters and all game memory untouched and rebuild the screen from the save-unders after the copy; the verifier then compares ALL game memory. Card amended with this as a second producer pattern.
 - [local: game-specific] A plot whose save-under pointer is in ROM is a permanent stamp (scenery), not a figure: check every plot caller's save pointer before treating it as a sprite.
 - [doc CLAUDE.md §Rules] I wrote `kill -0 $(pgrep -o -f X)` in a wait loop - the warned pattern in a new form; CLAUDE.md's rule now names it.
@@ -175,10 +184,12 @@ Open: stamps (bodies) on the ULA; speed spikes (129K T max at 3.5 MHz, cache-mis
 - scratch: [probe tools/probes/attr_census.py] kept; probe_model / probe2 / probe_keys / probe_prof dropped [none: they monkeypatch nemesis.py functions; nothing for another game].
 
 ## Technique use
+- patch.restore-speed: helped: HLIB_SPEED_IN_ABC in post (2026-11-07).
 - patch.runtime-colour-map: helped: Cauldron template (tables, recolour, identity) reused nearly as is
 - detect.buffer-layout-producer: helped: copy -> buffer -> masked plotters with save-under found in 3 scans
 
 ## Stage log
+- 2026-11-07 shared engine refactor session 3: hooks restore the caller's speed (goal 2); 0 user rounds.
 - 2026-11-02 stage 0: ~2 h wall (survey ~1.8 h for 135K frames), ~25 tool calls, 4 user rounds; menus found in code.
 - 2026-11-03 learning capture: rzx extract, attr_census probe, verify card, contract / LEARNINGS / LEARNING 2b, learncheck friction sweep.
 - 2026-11-03 stage 3 gap (colour map, sheets, recolour): ~1.5 h, ~45 tool calls, 0 user rounds (two full verifications: record MD5 first).
