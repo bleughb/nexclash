@@ -18,7 +18,7 @@ REQUIRED (doccheck):
 | `auto(a, z80, name, out, say)` | the whole run: plain + sprite build with boot checks, autosaves stripped, verify each `a.rzx` (`a.quick` = frames), unit tests + negative control, `say()` report lines `Plain`, `Sprites`, `Verify`, `Unit`, `Result : PASSED / FAILED`; returns True on PASS |
 | `verify(patch, rzx_path, stop=None, collect=0, progress=None)` | differential test (PLAYBOOK 6) -> `(Counter, examples[, states])`; failure keys end in `!`; `collect=N` keeps N machine states per site kind for the unit tests. Free-run engines (no RZX: jetpac, loderunner) take `(patch, z80, rzx=None, frames, keys, ...)` |
 | `unit_tests(patch, states, neg...)` | cases the RZX does not reach + the negative control (CLAUDE.md rule) -> Counter, failures end in `!` |
-| `CMP` | register indexes compared: all but T, MEMPTR (`hooklib.CMP_R`; R too without the library) |
+| `CMP` | register indexes compared: new engines: all but T, MEMPTR; include R (`hooklib.CMP_R`) |
 
 OPTIONAL for legacy engines; new engines must provide colour sheets and recolour (PLAYBOOK 5):
 

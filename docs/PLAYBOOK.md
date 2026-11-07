@@ -224,7 +224,7 @@ Colour sheets and recolour: docs/COLOURS.md (built in stage 2, sent in stage 3).
 Stage 1 ends after the user answers and decisions are recorded. If the answer is pending, the
 next session must resume the design question; do not start stage 2.
 
-# Stage 2 - Build (session 2)
+# Stage 2 - Build
 
 ## 5. Build
 Hooks: asm/<engine>_hooks.asm (+ asm/lib, ENGINE_CONTRACT) with `SAVEBIN "<prefix>_<key>.bin"` per block and
