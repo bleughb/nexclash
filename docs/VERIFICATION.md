@@ -72,6 +72,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Starquake (starquake): `starquake.nex` f447d9b3d937837d2427e021002a9648, `starquake_sprites.nex` 4efee1728e8092cdfd9f0e4ad859cf52, `starquake_sprites_loading.nex` 2e2f107e95cf80ea9412ba7023e819ee; verified 2026-11-05
 - Lunar Jetman (lunar_jetman): `lunar_jetman.nex` 3e5ca3908616f76a33f864be57baef95, `lunar_jetman_sprites.nex` e33f68c4fc0dca007daf14e99188ecfd, `lunar_jetman_sprites_loading.nex` 4634886880940d0db5e4cee9c1113819, `lunar_jetman_enhanced.nex` dfeb2cf9d184d6672f2c1448c0d9b805, `lunar_jetman_enhanced_loading.nex` 62f7e914c390fcce7477d5efd2423cad; verified 2026-11-05
 - Robin of the Wood (128K) (robin_of_the_wood): `robin_of_the_wood.nex` d6e8b01ea8b94970ef102afca79e611b, `robin_of_the_wood_sprites_raw.nex` 7cedff6b61b71f7d94330fc9e5936d57, `robin_of_the_wood_sprites.nex` 1d07361f9c04903643a06cc1a8d6c88a, `robin_of_the_wood_enhanced_raw.nex` 425259deba42b667a01e2ece96c9b1ea, `robin_of_the_wood_enhanced.nex` 8cb149338c77f85a088e3ddf220ed05b; verified 2026-11-05
+- Nodes of Yesod (nodes_of_yesod): `nodes_of_yesod.nex` b578764fc922295ec75a6358d762b397, `nodes_of_yesod_sprites.nex` 81db9019df732c102e0f98aa8eb84227, `nodes_of_yesod_enhanced.nex` 698e791437ff07dc6c9b8a59d6f44bd6, `nodes_of_yesod_backdrops.nex` 138662b51b2b78cb73393e27ff81654f, `nodes_of_yesod_enhanced_backdrops.nex` 1a1987d524fd539bf02a16d6b0bbf3aa; verified never
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
