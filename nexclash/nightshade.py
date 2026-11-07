@@ -980,9 +980,10 @@ NEG_STOP = 1500             # frames of the first recording each negative contro
 
 def _job(z80, rzx, enhanced, neg, stop):
     """One replay in a worker process -> (counter, examples as text)."""
-    edit = negative_patches()[neg][1] if neg is not None else None
+    name, edit = negative_patches()[neg][:2] if neg is not None else (None, None)
     p = NightshadePatch(edit=edit, enhanced=enhanced, game=z80)
-    c, ex = verify(p, rzx, stop=stop)
+    speed = 3 if name and 'verify at speed 3' in name else 0     # a forced 3.5 MHz exit shows only at 28 MHz
+    c, ex = verify(p, rzx, stop=stop, speed=speed)
     return dict(c), {k: str(v[:3])[:300] for k, v in ex.items()}
 
 
