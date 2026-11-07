@@ -29,3 +29,14 @@ the QAOP + Space toggle and the trainers as v1.3; R still changes with the hooks
   scene, JNext 1.2.0 = 1.1.104): busy +0.83%, sound +0.53%, quiet +14.53% (encounters; encounter-free runs -0.3 to
   +1.2%); v1.3 -1.83% / -1.74% / +12.85%; limiter removed busy -1.74%. Flicker 3 windows clean; soak 15 min clean.
   Hardware: none. Real-hardware caveat: NR 0x1E / 0x1F and 312 lines (50 Hz) assumed; contention figures are JNext's.
+
+## Shared pace library (engine refactor, 2026-11-07): not ported, by decision
+- Interrupts: v1.4 runs Sinclair's IM 1 handler untouched from the alt ROM image and credits each interrupt from
+  FRAMES (KISR 44 units). hlib_pace leaves interrupt time out only through an ISR wrapper (hold / resume): 0x0038 would
+  have to change, and the image outside the hooks is Sinclair's by design.
+- Debt: v1.4's is signed and carries "ahead" time up to +312 lines (WMAX waits of 300 lines). The per-shift costs (CRA /
+  CRB) were tuned against that over ten builds (runs/atic_atac/v14 b14v14b..j). hlib_pace's debt is behind-only, so
+  the port is a re-tune, and the published pace (10 runs a scene: busy +0.83 %, sound +0.53 %) a re-proof.
+- RAM: the printer buffer is full (variables 0x5B80-0x5BAF, the hook stack down to HSTK_MIN 0x5BC2, atic_atac_v14.py). The library's 26 bytes
+  could go only in the shadow page's table area (0x7800-), which is at slot 3 only part of each hook. Every pace call would
+  need that mapping, so the room is not clean.

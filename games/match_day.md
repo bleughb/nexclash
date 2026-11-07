@@ -211,6 +211,10 @@ verification below. Dean's files and build (f0aecd13 / 612761ec, pin rom3) are u
 - Title picture, menu icons, team names (and the cup's team names) intact in both builds.
 
 ## Lessons
+- [card patch.pace-limiter §Use / do not use] (engine refactor, 2026-11-07) A limiter that pays a signed debt once per
+  pass (v2.1's w_pay) does not swap onto hlib_pace: the library waits at each window's close and carries only time
+  behind. Moving it changes when the waits happen (and the draws' beam times), so it is a re-tune and a pace re-proof,
+  not a change of calls. Check this before planning a port.
 - [card patch.whole-altrom-image §Use / do not use] opt-in rework available: whole alt ROM image (see card patch.whole-altrom-image): its menus run IM 1 into 0xFF bytes once DivMMC no longer traps 0x0038 (RST 38 recursion; runs/altrom_audit; ROM paths: 0x004A from frame 1). Output pinned.
 - [tool nextboot.rom_paths] opt-in rework available: start-up tail. The trophy corruption is the tail the converter put below SP (0xBD5D plain, 0xBD77 sprites) on the trophy screen's attribute data 0xBD40-0xBDBB, read first by PC 46378 at frame 140; not the printer buffer, not the alt ROM. JNext: restoring those bytes at game start draws it clean. Fix: tail 0xBE00 (0xBDC0-0xBFFF written first by PC 34581 in both RZX); trial on refactor-unpinned (70a2529, JNext clean, not fully verified). Output pinned. New builds: `auto` proves every tail.
 
@@ -260,3 +264,11 @@ model (docs/profiles/match_day_v21_pace.json). Dean's files, matchday_v2 and bot
 - Proof scripts (pilot runs/dean_match_day/work/v21): matrix_neg.py (every-site clock matrix + negatives: forced
   3.5 MHz exit, limiter removed, R one off), isr_unit.py (isr_w / isr_x on the simulator + negatives), mkpace.py and
   events*.py (the pace model's fit).
+- Shared pace library (engine refactor, 2026-11-07): **not ported, by decision**. Its limiter's model differs:
+  - v2.1's windows never wait at their close. A signed DEBT (ahead or behind, clamped -16128 .. +9984) is paid once
+    per match-loop pass (w_pay in e_frpost). Several hooks share one window (W_ON: e_bd, the game's build and the XOR
+    draw).
+  - hlib_pace waits at each window's close, and its debt is behind-only.
+  - A port moves every wait from the pass end into the windows. The beam time of the XOR draws changes, and v2.1's
+    published pace (quiet -0.61 %, busy -0.23 %, sound -0.55 %, 10 trials a scene) would have to be re-tuned and
+    re-proved. ISRACC itself maps onto hlib_pace_hold / _resume; that alone does not justify the move.
