@@ -14,6 +14,7 @@
 ; Stubs in the alt ROM's free area 0x386E-.
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_speed.asm"    ; macros only
 
 HPG     EQU 26
 GP3     EQU 11                  ; the game's page at slot 3
@@ -116,15 +117,17 @@ ITF     EQU 0x1B00              ; MAXLOG: 1 if the plot is an item (a collectabl
 V_PASS  EQU 0x0150              ; commit pass: 0 items, 1 the rest
 HLIB_V_PACE EQU 0x0170          ; (26) the shared pace limiter's state (lib/hlib_pace.asm, HLIB_PACE_LEAN): +0 the last line
                                 ; read, +2 lines since the blit's start, +4 the debt (1/16 lines), +10 the blit opened the window
+V_SPD   EQU 0x01A0              ; the caller's CPU speed (hooks other than the blit window)
+V_SPDW  EQU 0x01A1              ; the caller's CPU speed at e_bl (the blit window, e_bl .. e_at)
 HLIB_PACE_NL EQU 311            ; 128K timing: the frame length is never learned from a poll (was: V_NL, learned at a wrap)
 V_LLN   EQU HLIB_V_PACE         ; the names the hooks below use
 V_EL    EQU HLIB_V_PACE + 2
 V_DEBT  EQU HLIB_V_PACE + 4
 V_PADON EQU HLIB_V_PACE + 10
-TGT16   EQU 8592                ; x 16: the original blit, 0xA8ED to its RET, 538.6 lines (JNext, 128K timing, mean of 768), less the fixed
+TGT16   EQU 8592 - 17           ; (- 17: e_bl's latch and e_at's exit at the caller's clock, 2026-11-07) x 16: the original blit, 0xA8ED to its RET, 538.6 lines (JNext, 128K timing, mean of 768), less the fixed
                                 ; 3.5 MHz hook time outside it (0xA1E9, 0xA204, 0xB7D7: about 1.5 lines) and the window's lead-in
-DPLOT   EQU 2                   ; a plot's 3.5 MHz part (NEXTREG 7 and the JP), not measured, 1/16 lines
-DTILE   EQU 5                   ; a tile print's
+DPLOT   EQU 20                  ; a plot's 3.5 MHz part (page, stack, the speed latch, the exit's pops and JP: about 300 T), not measured, 1/16 lines
+DTILE   EQU 5 + 18              ; a tile print's (+ 18: the speed latch and the exit at the caller's clock, 2026-11-07)
 V_NB    EQU 0x0151              ; parts of one figure abutting this plot: 1 right, 2 left, 4 below, 8 above (no outline there)
 V_SOL   EQU 0x014F              ; 0x80: the go-behind cell being drawn is solid
 V_NOGB  EQU 0x014E              ; 1 during the commit after a wipe: no go-behind work there (room change no slower)
@@ -154,23 +157,23 @@ HSTK    EQU 0x1F00
         ORG 0x386E
 
         MACRO PLOTSTUB kind, back
-        nextreg 0x07,3
         nextreg 0x50,HPG
         ld (V_SP),sp
         ld sp,HSTK
+        call spd_in                 ; the caller's speed latched (lib/hlib_speed.asm), then 28 MHz
         push af
         push bc
         push de
         push hl
         ld b,kind
         call x_plot
+        call spd_out                    ; the caller's speed back (never a fixed 3.5 MHz)
         pop hl
         pop de
         pop bc
         pop af
         ld sp,(V_SP)
         nextreg 0x50,0xFF
-        nextreg 0x07,0
         push iy
         exx
         jp back
@@ -198,10 +201,10 @@ e_und:  nextreg 0x50,HPG
 ; The pace: from here to the end of the attributes (e_at) the machine stays at 28 MHz, the game's own blit included,
 ; and e_at waits until the original's blit time has passed (less the hook time spent since the last blit): the game
 ; updates at the original's rate. Game memory and registers are as before; only time differs.
-e_bl:   nextreg 0x07,3
-        nextreg 0x50,HPG
+e_bl:   nextreg 0x50,HPG
         ld (V_SP),sp
         ld sp,HSTK
+        call spd_inw                 ; the caller's speed latched (lib/hlib_speed.asm), then 28 MHz
         call x_line
         ld (V_LLN),hl
         ld hl,0
@@ -217,8 +220,7 @@ e_bl:   nextreg 0x07,3
 
 ; 0xA905: the blit's attributes: the clean copy, or the effect's 0x7600. Ends as the original's LDI chain does.
 ; The copy runs at 28 MHz (it replaces the game's 512 LDIs, which took about 2.3 ms at 3.5 MHz)
-e_at:   nextreg 0x07,3
-        nextreg 0x50,HPG
+e_at:   nextreg 0x50,HPG
         ld (V_SP),sp
         ld sp,HSTK
         push af
@@ -237,13 +239,13 @@ e_at:   nextreg 0x07,3
         push bc
         push de
         call x_pad
+        call spd_outw                   ; e_bl's latched speed back (the window ran at 28 MHz)
         pop de
         pop bc
         pop af
         ld sp,(V_SP)
         nextreg 0x50,0xFF
         ld hl,0x7800
-        nextreg 0x07,0
         ret
 
 ; The pace (card patch.pace-limiter): the shared limiter, lib/hlib_pace.asm (HLIB_PACE_LEAN), in the alt ROM span;
@@ -277,14 +279,14 @@ x_eld:  call x_tick
 ; wait until the window e_bl opened has lasted TGT16 - V_DEBT sixteenths of a line (at 28 MHz: speed 0, the target is
 ; the original's); what is left over (a long build, a room change) carries in V_DEBT, at most 0xBFFF
 x_pad:  ld hl,TGT16
-        xor a
+        ld a,(V_SPDW)                   ; the target at the caller's clock
         jp hlib_pace_wait
 
 ; 0xA89C: the room wipe shows the buffer: without figures; the old room's sprites go
-e_wp:   nextreg 0x07,3
-        nextreg 0x50,HPG
+e_wp:   nextreg 0x50,HPG
         ld (V_SP),sp
         ld sp,HSTK
+        call spd_in                 ; the caller's speed latched (lib/hlib_speed.asm), then 28 MHz
         push af
         push bc
         push de
@@ -299,21 +301,21 @@ e_wp:   nextreg 0x07,3
         call h_hide
         call h_l2clr
         call x_eld              ; repaid by the next blits' windows
+        call spd_out                    ; the caller's speed back (never a fixed 3.5 MHz)
         pop hl
         pop de
         pop bc
         pop af
         ld sp,(V_SP)
         nextreg 0x50,0xFF
-        nextreg 0x07,0
         ld a,(ROOM)
         jp 0xA89F
 
 ; 0xA9B8: JP 0xB7D7 after the wipe: the new room's figures
-e_aw:   nextreg 0x07,3
-        nextreg 0x50,HPG
+e_aw:   nextreg 0x50,HPG
         ld (V_SP),sp
         ld sp,HSTK
+        call spd_in                 ; the caller's speed latched (lib/hlib_speed.asm), then 28 MHz
         push af
         push bc
         push de
@@ -328,13 +330,13 @@ e_aw:   nextreg 0x07,3
         xor a
         ld (V_NOGB),a
         call x_eld              ; repaid by the next blits' windows
+        call spd_out                    ; the caller's speed back (never a fixed 3.5 MHz)
         pop hl
         pop de
         pop bc
         pop af
         ld sp,(V_SP)
         nextreg 0x50,0xFF
-        nextreg 0x07,0
         jp 0xB7D7
 
 ; 0x6F09: clear screen (menu, messages): no sprites. Interrupts may be on: page H is not used
@@ -375,10 +377,10 @@ e_fof:  nextreg 0x50,HPG
         jp 0xA207
 
 ; 0xB78E: the tile printer into the buffer: d = row, e = column; in the front routine, note the cell
-e_tile: nextreg 0x07,3
-        nextreg 0x50,HPG
+e_tile: nextreg 0x50,HPG
         ld (V_SP),sp
         ld sp,HSTK
+        call spd_in                 ; the caller's speed latched (lib/hlib_speed.asm), then 28 MHz
         push af
         push hl
         ld hl,(V_DEBT)
@@ -400,11 +402,11 @@ e_tile: nextreg 0x07,3
         ld (hl),d
         inc hl
         ld (V_FCP),hl
-.x:     pop hl
+.x:     call spd_out                ; the caller's speed back (never a fixed 3.5 MHz)
+        pop hl
         pop af
         ld sp,(V_SP)
         nextreg 0x50,0xFF
-        nextreg 0x07,0
         push af
         push hl
         push bc
@@ -2393,6 +2395,17 @@ h_store:
         ld b,REVT
         ld a,(bc)
         ld (V_CLR),a
+        ret
+; spd_in / spd_inw: the caller's CPU speed latched (lib/hlib_speed.asm HLIB_SPEED_IN), then 28 MHz; on the hook
+; stack, every register kept. spd_out / spd_outw: that speed back; every register kept.
+spd_in: HLIB_SPEED_IN V_SPD
+        ret
+spd_inw:HLIB_SPEED_IN V_SPDW
+        ret
+spd_out:HLIB_SPEED_OUT V_SPD
+        ret
+spd_outw:
+        HLIB_SPEED_OUT V_SPDW
         ret
 h_end:
 
