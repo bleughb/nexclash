@@ -188,21 +188,10 @@ CAP_K_WRAPPED EQU 174
 CAP_KR_SCENE   EQU 96            ; R: original M1 to the target - hook M1 (calibrated)
 CAP_KR_NORMAL  EQU 97
 CAP_KR_WRAPPED EQU 97
-CAP_KLOST   EQU -94-6*0x26+54   ; T: X - 94 + 6 per /INT wait loop (E starts at 0x25) + the path (calibrated)
+CAP_KLOST   EQU -94-CW_KSPIN*0x26+54   ; T: X - 94 + KSPIN per /INT wait loop (E starts at 0x25) + the path (calibrated)
 CAP_KLR     EQU 10+9            ; R: the ISR's 10 + the fast path's M1 after its LD R,A (calibrated)
 
-        ORG 0x3948
-cap_in:                         ; A = entry R; registers pushed (helper in page 80)
-        ld b,a
-        nextreg 0x50,CW_PAGE
-        call cw_tin             ; its return address lands in page 80 (1FE0s, unused)
-        nextreg 0x50,68
-        ret
-cap_out:                        ; HL = K (T), A = KR (R), E = 0 set X / 1 add -> A = R to restore
-        nextreg 0x50,CW_PAGE
-        call cw_tout
-        nextreg 0x50,68
-        ret
+        ORG 0x3960                ; NOT lower: the stub writes its 20-byte register block at rom_end
 cap_chk:                        ; last check before the exit: NextReg $C8 (selected by cw_tout), A only
         ld a,0x24+1
         in a,(0x3B)
@@ -284,7 +273,8 @@ cap_done_tail:                  ; copier-window builds replace these 12 bytes by
         jp 0x9790
 cap_lo_end:
         ASSERT cap_lo_end <= 0x3A00
-        SAVEBIN "inferno_caplo.bin",cap_in,cap_lo_end-cap_in
+        ASSERT cap_chk >= rom_end + 20  ; z80tonex.build_tail: BC' DE' HL' AF' IX IY BC DE HL AF at rom_end
+        SAVEBIN "inferno_caplo.bin",cap_chk,cap_lo_end-cap_chk
 
 
         ORG 0x3A00
@@ -334,8 +324,8 @@ cap_scene:
         ei                      ; an IRQ is taken after the speed switch (game ISR at 3.5MHz)
         nextreg 0x07,0
         jp 0x9535
-cap_dma:                        ; disable; A = 9B00, 0480 bytes; A memory +1; B memory +1; continuous,
-        DB 0x83,0x7D,0x00,0x9B,0x80,0x04,0x14,0x10,0xAD,low CAP_MAP,high CAP_MAP,0x82,0xCF,0x87
+cap_dma:                        ; disable, reset; A = 9B00, 0480 bytes; A memory +1; B memory +1; continuous,
+        DB 0x83,0xC3,0x7D,0x00,0x9B,0x80,0x04,0x14,0x10,0xAD,low CAP_MAP,high CAP_MAP,0x82,0xCF,0x87
 cap_dma_end:                    ; B = CAP_MAP (slot 0, page 68); stop at end; load; enable
 
 cap_normal:
@@ -473,6 +463,17 @@ cap_wrapped_out:
         nextreg 0x07,0
         jp 0x96A4
 
+cap_in:                         ; A = entry R; registers pushed (helper in page 80)
+        ld b,a
+        nextreg 0x50,CW_PAGE
+        call cw_tin             ; its return address lands in page 80 (1FE0s, unused)
+        nextreg 0x50,68
+        ret
+cap_out:                        ; HL = K (T), A = KR (R), E = 0 set X / 1 add -> A = R to restore
+        nextreg 0x50,CW_PAGE
+        call cw_tout
+        nextreg 0x50,68
+        ret
 cap_end:
         ASSERT cap_end < 0x3B90
         SAVEBIN "inferno_capture.bin",cap_scene,cap_end-cap_scene
@@ -3662,7 +3663,7 @@ CW_HN0    EQU 0x1842            ; sync loops left at the entry edge
 CW_HCLK   EQU 0x1844            ; 1: CTC counts
 CW_HRN    EQU 0x1845            ; R to restore
 CW_HXT    EQU 0x1846            ; 0: set X (8F7C), 1: add
-CW_KSPIN  EQU 6                 ; T per /INT wait loop at 28MHz
+CW_KSPIN  EQU 4                 ; T per /INT wait loop (INC E / IN A,(C) / JP M) at 28MHz
 CW_KH8    EQU 28                ; 8 x T per cw_edge check (calibrated)
 CW_KT     EQU 0x1847            ; signed T: a speed-switch pair on this machine less the model's (cw_cal)
 CW_KTPAIR EQU 46                ; the model's charge per pair + DJNZ, T (calibrated: CW_KT = 0 in the model)
