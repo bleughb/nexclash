@@ -205,6 +205,7 @@ Hardware risk review: hooks 0x386E-0x3B71, not in DivMMC's 0x3D00-0x3DFF. IM 1 n
 - [local: this game's pace trials] demonstrated: enemy pace follows rounds per second and the player's once-a-frame gate makes runs drift apart; with every time source of the logic read from the round counter in both runs (pilot work2/fixture2) the trials stay in lockstep for 160-600 rounds.
 - [local: this game's RNG] observed: R at 39376, 40484, 41707 and FRAMES in ten places give the game its chance; the hooks preserve R, the pace trials take both out.
 - [local: the archive's trainers] observed: of 16 .pok trainers, See Ending and Paralyzed Enemies freeze the game, Keep SabreMan cyan sets colour 186 and stops the orchid effects ending, Immunity still loses lives; the menu keeps the six shown to work (pilot work2/cheats).
+- [local: this game's Enhanced map] demonstrated: a fixed palette entry painted on a pixel the game colours at run time (the orchid bloom, 2026-11-07, jattree/nxc issue #1) hides the game's cue; the orchid's upper cell row now takes the run-time colour and Sabreman's helmet, shirt and trousers follow his effect colour (5 recordings identical, pilot work4).
 
 ## Friction
 - reuse: [local: the round-counter fixture is this game's; nexclash.pace has no fixture support]
