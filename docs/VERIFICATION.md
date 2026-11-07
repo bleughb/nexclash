@@ -84,6 +84,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - The New Zealand Story (new_zealand_story): `new_zealand_story_sprites.nex` 70174ecba93626def54d6776c1ff4b32, `new_zealand_story_smooth.nex` 7d9898e87499c310700fd71bdd6d2469, `new_zealand_story_backdrops.nex` d6ccac8fa3a3cd4508463b3bbd98b32d, `new_zealand_story_smooth_backdrops.nex` 891397ef8c8c9846eba7d8e972867746; verified never
 - Beyond the Ice Palace (128K) (beyond_the_ice_palace): `beyond_the_ice_palace_sprites.nex` da668eb8e6bd5e6ab2b90cf9a103459d, `beyond_the_ice_palace_sprites_loading.nex` d53ac5f52471b674354caf96cd94221e; verified 2026-11-06
 - Pac-Mania (128K) (pac_mania): `pac_mania_sprites.nex` 431698a4d2e8a0a67ff50c44c4475b14, `pac_mania_enhanced.nex` acfbc75c7ce9d78840fec348ae2f2654; verified never
+- Abu Simbel Profanation (abu_simbel): `abu_simbel.nex` 82c1349ae5d34e68a67a7aabc68e039f, `abu_simbel_sprites.nex` c2dd86f174c55a4ae9155abb90689d8b, `abu_simbel_enhanced.nex` b45603707d1f71bb7704436dbe0c3169, `abu_simbel_english.nex` 2e3aa22510d9a925a5b0800aad3f26c9, `abu_simbel_english_enhanced.nex` 053806e52684ce68b89a020a848e7196; verified 2026-11-07
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

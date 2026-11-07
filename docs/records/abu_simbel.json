@@ -1,0 +1,298 @@
+{
+ "name": "abu_simbel",
+ "order": 205,
+ "game": "Abu Simbel Profanation",
+ "doc": "abu_simbel.md",
+ "engine": "abu_simbel",
+ "representative": true,
+ "reference": "abu_simbel",
+ "inputs": {
+  "snapshot": {
+   "name": "abu_simbel.z80",
+   "md5": "2909c2f0f18eca08479a74ad6dc8d193",
+   "path": "abu_simbel/abu_simbel.z80"
+  },
+  "recordings": [
+   {
+    "name": "attract.rzx",
+    "md5": "3928e5ffbdeacc81d1161ba09bd3619e",
+    "path": "abu_simbel/attract.rzx"
+   },
+   {
+    "name": "gameover.rzx",
+    "md5": "fc18efd4ebca20d01057d685ae40c9a1",
+    "path": "abu_simbel/gameover.rzx"
+   },
+   {
+    "name": "nocheat1.rzx",
+    "md5": "8f65776f3040ec82e7ecbe5ecee5d15e",
+    "path": "abu_simbel/nocheat1.rzx"
+   },
+   {
+    "name": "rand1.rzx",
+    "md5": "93ef3855c756bed29709ec3a267ed027",
+    "path": "abu_simbel/rand1.rzx"
+   },
+   {
+    "name": "c_r1.rzx",
+    "md5": "7f4a377fc80f09762d7631a240b72529",
+    "path": "abu_simbel/c_r1.rzx"
+   },
+   {
+    "name": "c_r8.rzx",
+    "md5": "82ef895cf62b88b51fb8cbe2f8071a12",
+    "path": "abu_simbel/c_r8.rzx"
+   },
+   {
+    "name": "c_r16.rzx",
+    "md5": "7fbabfb46a9aa13385daf5f190197b21",
+    "path": "abu_simbel/c_r16.rzx"
+   },
+   {
+    "name": "c_r24.rzx",
+    "md5": "c40116b8e408eec357b11bf4a2113291",
+    "path": "abu_simbel/c_r24.rzx"
+   },
+   {
+    "name": "c_r32.rzx",
+    "md5": "11bfd0bdd6f50129f5a588d26bb1a73c",
+    "path": "abu_simbel/c_r32.rzx"
+   },
+   {
+    "name": "c_r40.rzx",
+    "md5": "44700a0525e54f94d7a2fa842b733120",
+    "path": "abu_simbel/c_r40.rzx"
+   },
+   {
+    "name": "abu_simbel.pok",
+    "md5": "b7b419c0beebc02d18d6fec8e2520b60",
+    "path": "abu_simbel/abu_simbel.pok",
+    "note": "not a recording: the three archive cheats (Immunity B0EF, Infinite lives BA44, No enemies B335), each tested alone on this release, for the .nxc"
+   }
+  ]
+ },
+ "modules": [
+  "abu_simbel"
+ ],
+ "own_modules": [
+  "abu_simbel"
+ ],
+ "data": [
+  "docs/profiles/abu_simbel.json",
+  "docs/profiles/abu_simbel_enhanced.json",
+  "docs/profiles/abu_simbel_english.json",
+  "asm/abu_simbel_hooks.asm"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "attract.rzx",
+   "gameover.rzx",
+   "nocheat1.rzx",
+   "rand1.rzx",
+   "c_r1.rzx",
+   "c_r8.rzx",
+   "c_r16.rzx",
+   "c_r24.rzx",
+   "c_r32.rzx",
+   "c_r40.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 10,
+  "note": "Pilot: scripted random-key recordings and the game's own attract mode; c_r* have the archive .pok cheats and a poked start room in the RZX snapshots only. No human player."
+ },
+ "outputs": {
+  "plain": {
+   "file": "abu_simbel.nex",
+   "md5": "82c1349ae5d34e68a67a7aabc68e039f"
+  },
+  "sprites": {
+   "file": "abu_simbel_sprites.nex",
+   "md5": "c2dd86f174c55a4ae9155abb90689d8b"
+  },
+  "enhanced": {
+   "file": "abu_simbel_enhanced.nex",
+   "md5": "b45603707d1f71bb7704436dbe0c3169"
+  },
+  "english": {
+   "file": "abu_simbel_english.nex",
+   "md5": "2e3aa22510d9a925a5b0800aad3f26c9"
+  },
+  "english_enhanced": {
+   "file": "abu_simbel_english_enhanced.nex",
+   "md5": "053806e52684ce68b89a020a848e7196"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Abu Simbel Profanation",
+  "engine_col": "abu_simbel (abu_simbel.md)",
+  "build": "abu_simbel_sprites.nex c2dd86f1 (v1.0, as published in nxc 1.0: player and enemies sprites in the game's ink; plotter whole at 28 MHz into page 31; pace ORIGINAL; whole Sinclair alt ROM; Enhanced abu_simbel_enhanced.nex b4560370 (Spec256 colours approved 2026-11-03), English abu_simbel_english.nex 2e3aa225, both 053806e5; three cheats in the .nxc)",
+  "software": "replay IDENTICAL with R on 10 recordings (75,427 plots); unit PASS (4-clock sites, positions, depth, guard); 18 negatives detected; JNext pace -0.7 to -1.7 %; real loader",
+  "hardware": "untested",
+  "next": "hardware test (EAR bit 6); owner play of v1.0"
+ },
+ "checks": [
+  "asm2profile:abu_simbel"
+ ],
+ "techniques": [
+  {
+   "application": "abu_simbel.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "scan --writers over the ULA; attributes read only against values >= 0x40",
+   "phases": []
+  },
+  {
+   "application": "abu_simbel.colour-map",
+   "id": "patch.runtime-colour-map",
+   "revision": 1,
+   "target": "upload applies per-byte nibbles (pages 28-30, slot 5); the pattern builder in page 31 at slot 7",
+   "phases": [
+    "entry"
+   ]
+  },
+  {
+   "application": "abu_simbel.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "HLIB_SPEED_IN / OUT (V_SPD latch) in the plot hooks",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "abu_simbel.preserve-r",
+   "id": "patch.preserve-r",
+   "revision": 1,
+   "target": "hlib_r_set / HLIB_R_OUT in the plot and hide hooks; the plotter's own M1s measured by LD A,R before and after it",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "abu_simbel.pace-limiter",
+   "id": "patch.pace-limiter",
+   "revision": 2,
+   "target": "plot = game-routine window x K_PLOT 100 (hlib_pace_waitk; measured 110.6-111.6, set under it so the game is never slower); the pattern is debt (+UNMEAS 96 sixteenths); interrupts off through the hook as through the original plot",
+   "phases": [
+    "commit"
+   ]
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/abu_simbel_hooks.asm": "c7321e0ce2f444c7",
+   "asm/lib/hlib_iff.asm": "725067425cd27122",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/abu_simbel.json": "3bffa87190cf6b3a",
+   "docs/profiles/abu_simbel_english.json": "27f3a29d17e5e2ae",
+   "docs/profiles/abu_simbel_enhanced.json": "6f1b9e43021fe7c0",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/abu_simbel.py": "5f4f62def145356e",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "153b46cedb1a84a7",
+   "nexclash/hooklib.py": "aee2b8793e4227d7",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "038b2ebf518eca31",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "99f677e899a1d9be",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-07"
+ },
+ "results": [
+  {
+   "application": "abu_simbel.screen-readers",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "c2dd86f1",
+   "scope": "10 recordings, 69,928 frames, 75,427 plots + 87 clears, registers with R; Enhanced table on 3 (18,609 frames); 18 negatives; 4-clock every-site matrix; scripted keys and attract, pokes in 7; no human recording; no hardware",
+   "evidence": "games/abu_simbel.md \"Results\""
+  },
+  {
+   "application": "abu_simbel.colour-map",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "c2dd86f1",
+   "scope": "as above; Enhanced = the Spec256 table approved 2026-11-03, byte for byte",
+   "evidence": "games/abu_simbel.md \"Results\""
+  },
+  {
+   "application": "abu_simbel.pace-limiter",
+   "check": "time.pace",
+   "status": "pass",
+   "build": "c2dd86f1",
+   "scope": "JNext 1.1.104, nexclash.pace vs the original .z80 (RND-seed fixture, lockstep), rooms 1/16/32 x seeds + attract, base / Enhanced / English: 19 runs -0.73 to -1.70 %, quiet thirds to -2.08 %; slowest 20-update window +0.17 %; no hardware",
+   "evidence": "games/abu_simbel.md \"Results\""
+  }
+ ],
+ "verified": {
+  "deps": {
+   "asm/abu_simbel_hooks.asm": "c7321e0ce2f444c7",
+   "asm/lib/hlib_iff.asm": "725067425cd27122",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/abu_simbel.json": "3bffa87190cf6b3a",
+   "docs/profiles/abu_simbel_english.json": "27f3a29d17e5e2ae",
+   "docs/profiles/abu_simbel_enhanced.json": "6f1b9e43021fe7c0",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/abu_simbel.py": "5f4f62def145356e",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "153b46cedb1a84a7",
+   "nexclash/hooklib.py": "aee2b8793e4227d7",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "038b2ebf518eca31",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "99f677e899a1d9be",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-07"
+ }
+}
