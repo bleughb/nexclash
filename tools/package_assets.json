@@ -1,11 +1,13 @@
 {
-  "reason": "Tracked owner artwork used by Nodes of Yesod; games/nodes_of_yesod.md. Only these exact bytes are exceptions to the package extension filter.",
+  "reason": "Tracked owner artwork: Nodes of Yesod (games/nodes_of_yesod.md); Sabre Wulf's Jungle floor, art by Jon Attree (games/sabre_wulf.md). Only these exact bytes are exceptions to the package extension filter.",
   "sha256": {
     "assets/nodes_of_yesod/aurora.bin": "9dca6b2b335700be2fdc76b22110c726f5e6bebe489a10c1ec09fd044bbf0f41",
     "assets/nodes_of_yesod/aurora.png": "b1f4b2231cc53e5238fe9d34d64832f3ae6d4aadbcca61e2b51e1d22585c193c",
     "assets/nodes_of_yesod/cavern.bin": "10b0f9f7f112339e41e3142c6822c47090855a9ef1452cf1ff2c0ddc003723cf",
     "assets/nodes_of_yesod/cavern.png": "cb0b32240f4938de8d155d07e6c23ab361234213f29a90c75e5e016902f78258",
     "assets/nodes_of_yesod/hud.png": "af753b7f7137a72dd06a0d3db2b63ce8cc454018be68559207fa54949c980569",
-    "assets/nodes_of_yesod/hud_tiles.bin": "f04260c8c63ff868a36d87b6a022b3eb5ba0b4f129d66516ce22a264be72193a"
+    "assets/nodes_of_yesod/hud_tiles.bin": "f04260c8c63ff868a36d87b6a022b3eb5ba0b4f129d66516ce22a264be72193a",
+    "assets/sabre_wulf/cave.png": "90ec196971151452609a91798306f2d4cbba04b30afc894ba9a4b7574d440b51",
+    "assets/sabre_wulf/jungle.png": "7c6898fe76cdf31b22eaa05944f433567aa637f8373d0489e4943b573c443fc4"
   }
 }
