@@ -38,7 +38,14 @@ Colours: record 0xB3B4 bright yellow in play, every other figure the room's ink;
 1. Every figure a sprite. 2. Scenery, dots, HUD, text on the ULA. 3. Depth: the game's plot order, sprites over scenery. 4. Colours: the game's own: ghosts in the room's ink, so cyan ghosts on a cyan maze. They were before. 5. See-through: the game's mask, paper black and solid. 6. Theatre Pac-Man stays white as drawn. 7. The painted set is a second .nex, not the default.
 
 ## Results
-See the run folder's report and out/*_report.txt. Hook R: the game's RNG reads R (0x8F57, 0x92EE, 0x9318), so on a real machine hook fetches shift it. The lockstep holds R across hooks; the game's randomness differs, its logic does not.
+| Output | MD5 | Status |
+|---|---|---|
+| pac_mania.nex (plain) | 40b61432324ebdfa31b1707cc8c7ab78 | boot sim OK, reaches play in JNext |
+| pac_mania_sprites.nex | 3dc17a0ac38f447bad16b8cfd724c96b | 8 RZX IDENTICAL, 108,396 frames, out/pac_mania_report.txt; unit PASS; reaches play in JNext; hardware untested |
+| painted/pac_mania_enhanced.nex | 7d019dcebbbbd941d180f44d7a42afc1 | patterns only (bank 11); colours from the MVV package's Spec256 conversion, painter unknown; owner decides |
+Negative controls on pm_idle, 7 of 7 detected: patterns shifted, y + 1, Pac-Man's ink, height ignored, no hide, plotter writes left in, yellow cells left in.
+Census, non-yellow rooms: figure ink pixels in a foreign colour 2,389 of 284,223 (0.84 %, pm_idle) and 8,619 of 1,046,888 (0.82 %, pm_b11); about 7 scenery pixels per yellow cell in play. Small in numbers, plain to see around Pac-Man, who is always in the middle of it.
+Hook R: the game's RNG reads R (0x8F57, 0x92EE, 0x9318), so on a real machine hook fetches shift it. The lockstep holds R across hooks; the game's randomness differs, its logic does not.
 
 ## Open
 - Uncovered by recordings (unit tests cover their pixels): see the report's frame list. A bot that hunts pills and fruit would reach them.
