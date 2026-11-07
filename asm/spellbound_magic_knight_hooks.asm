@@ -22,6 +22,7 @@
 ; interrupts off (the ISR touches every slot). The plotter and blit themselves run with interrupts on.
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_speed.asm"    ; macros only: HLIB_SPEED_IN
 
 HPG     EQU 26                  ; hook page, MMU slot 4 while a hook runs
 GP4     EQU 4                   ; the game's page at slot 4
@@ -40,6 +41,7 @@ MAXROOM EQU 118                 ; room figure sprites 0-117
 
 ; ---- page H at 0x8000 ----
 V_SP    EQU 0x8000
+V_SPD   EQU 0x80FF              ; the caller's CPU speed (lib/hlib_speed.asm latch)
 V_K     EQU 0x8002              ; kind: 0 character, 1 object
 V_A     EQU 0x8003              ; plot: graphic, row, column
 V_B     EQU 0x8004
@@ -96,10 +98,10 @@ GTAB    EQU 0xC544              ; graphic table: graphics, mask
 
         MACRO ENTER
         di
-        nextreg 0x07,3
         nextreg 0x54,HPG
         ld (V_SP),sp
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPD             ; the caller's speed latched (hook stack), then 28 MHz
         push af
         push bc
         push de
@@ -112,10 +114,11 @@ GTAB    EQU 0xC544              ; graphic table: graphics, mask
         pop hl
         pop de
         pop bc
+        ld a,(V_SPD)                    ; the caller's speed back (never a fixed 3.5 MHz), then A
+        nextreg 0x07,a
         pop af
         ld sp,(V_SP)
         nextreg 0x54,GP4
-        nextreg 0x07,0
         ei
         ENDM
 

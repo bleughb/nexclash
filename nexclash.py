@@ -512,13 +512,17 @@ _CHECKS = runchecks.RUN     # this run's check status (nexclash/runchecks.py): N
 
 def _rom_paths_known(z80):
     """The ROM differences this snapshot's record accepts ("rom_paths_known": [{image, from, to, why}], hex
-    addresses; Knight Tyme's Bridge star map): [(image, lo, hi, why)] for nextboot.rom_paths, () when none."""
+    addresses; Knight Tyme's Bridge star map), or a rework's whose inputs hold this snapshot (Lode Runner 128K):
+    [(image, lo, hi, why)] for nextboot.rom_paths, () when none."""
     import hashlib
     from nexclash import records
     if not z80:
         return ()
     h = hashlib.md5(open(z80, 'rb').read()).hexdigest()
     rec = next((r for r in records.all_records() if r['inputs']['snapshot'].get('md5') == h and r.get('rom_paths_known')), None)
+    if rec is None:                 # an opt-in rework built from its own snapshot (rework "snapshot", its inputs)
+        rec = next((x for r in records.all_records() for x in r.get('rework', []) if x.get('rom_paths_known')
+                    and any(i.get('md5') == h for i in x.get('inputs', []))), None)
     return [(k['image'], int(k['from'], 16), int(k['to'], 16), k['why']) for k in rec['rom_paths_known']] if rec else ()
 
 

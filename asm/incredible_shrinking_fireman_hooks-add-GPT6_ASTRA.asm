@@ -11,6 +11,7 @@
 ; All patch original bytes are checked by incredible_shrinking_fireman_add_GPT6_ASTRA.py.
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_iff.asm"      ; macros only: HLIB_IFF_DI
 
 HS      EQU 0xF400              ; hook state (zero span the game never touches): SHOW[3], SHOWD[5], LASTF[3]
 SHOWD   EQU HS + 3
@@ -334,10 +335,10 @@ e_ep:   push af
 
 ; ---- the interrupt handler after the game tick (49804: EXX / POP HL / POP DE), sprite update ----
 ; Some recorded entries have interrupts enabled. Save IFF, disable during MMU mapping, restore it.
-; Keep every main register as well.
+; Keep every main register as well. IFF read twice (lib/hlib_iff.asm): an interrupt taken during a single
+; LD A,I reads as off and left interrupts off at the exit.
 e_isr:  push af
-        ld a,i
-        di
+        HLIB_IFF_DI
         push af
         push bc
         push de

@@ -12,6 +12,7 @@ engine's own verifier calls - verifiers stay per engine (CLAUDE.md), these are p
   CMP_R, r_span, r_delta, r_check     preserving R (card patch.preserve-r)
   lines16, pace_check     the pace limiter's target and its check (card patch.pace-limiter)
   pcache_key              a content-cache key (card optimise.pattern-cache)
+  iff_audit()             every LD A,I / LD A,R in asm/ that decides on P/V: read twice (card patch.iff-safe-read)
   call(sim, addr, regs)   run one hook / original to its RET
 
 Existing engines keep their own copies (frozen games: their outputs never change); a rework that opts in
@@ -23,6 +24,7 @@ limiter that never waits, a missing cache invalidation, one pattern buffer, attr
 must be caught. selftest.py --tools runs it.
 """
 import collections
+import glob
 import hashlib
 import os
 import random
@@ -36,7 +38,7 @@ from nexclash import z80n
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LIB = os.path.join(ROOT, 'asm', 'lib')
 FILES = ['asm/lib/hlib_speed.asm', 'asm/lib/hlib_r.asm', 'asm/lib/hlib_pace.asm', 'asm/lib/hlib_pcache.asm',
-         'asm/lib/hlib_commit.asm', 'asm/lib/hlib_dma.asm']
+         'asm/lib/hlib_commit.asm', 'asm/lib/hlib_dma.asm', 'asm/lib/hlib_iff.asm']
 HARNESS = os.path.join(LIB, 'hlib_selftest.asm')
 
 A, F, B, C, D, E, H, L, SP, I, R, PC, T, IFF = 0, 1, 2, 3, 4, 5, 6, 7, 12, 14, 15, 24, 25, 26
@@ -273,6 +275,7 @@ NEGATIVES = {           # control -> (defines, (label, byte offset, new bytes)..
     'missing cache invalidation': ((), (('hlib_pc_upload.inv', 0, b'\x00'), ('hlib_pc_upload.inv2', 0, b'\x00'))),
     'one pattern buffer': ((), (('hlib_commit.flip', 1, b'\x00'),)),
     'attributes split by uploads': (('NEG_SPLIT',), ()),
+    'IFF read once': (('NEG_IFF1',), ()),
 }
 SYM = re.compile(r'^([A-Za-z_][\w.]*):\s+EQU\s+0x([0-9A-Fa-f]+)')
 
@@ -575,6 +578,108 @@ def _t_matrix(code, syms):
     return every_site(sorted(regs), run)
 
 
+IFF1 = 26                                       # SkoolKit's IFF register index (IFF1 = IFF2 here)
+_IFF_RE = re.compile(r'^\s*(?:[A-Za-z_.][\w.]*:?)?\s*ld\s+a\s*,\s*([ir])\s*(?:;.*)?$', re.I)
+_PV_RE = re.compile(r'\b(?:jp|ret|call)\s+p[oe]\b', re.I)
+_CODE_RE = re.compile(r'^(?:[A-Za-z_.][\w.]*:?)?\s+([a-z].*?)\s*(?:;.*)?$', re.I)   # a label only in column 0
+
+
+def _step_iff(sim, addr, regs, inject):
+    """Run addr to its RET one instruction at a time. inject: an interrupt is accepted at the end of the first
+    LD A,I / LD A,R (P/V forced to 0, as the NMOS Z80 and JNext do; the handler returns with EI, so IFF stays
+    on). -> (IFF at exit, longest run of T with IFF = 0 that began inside the hook)."""
+    Rg, m, ops = sim.registers, sim.memory, sim.opcodes
+    for k, v in regs.items():
+        Rg[k] = v
+    sp = (Rg[SP] - 2) & 0xFFFF
+    m[sp], m[sp + 1] = STOP & 255, STOP >> 8
+    Rg[SP], Rg[PC] = sp, addr
+    Rg[T] = 1000                    # past SkoolKit's own /INT window (its LD A,I reads P/V = 0 in a frame's first
+    hit, off, worst, n = False, None, 0, 0     # 32 T): the injection below is the only interrupt
+    while Rg[PC] != STOP:
+        pc = Rg[PC]
+        ldai = m[pc] == 0xED and m[(pc + 1) & 0xFFFF] in (0x57, 0x5F)
+        ops[m[pc]]()
+        if ldai and inject and not hit and Rg[IFF1]:
+            Rg[F] &= ~0x04 & 0xFF
+            hit = True
+        if not Rg[IFF1]:
+            off = Rg[T] if off is None else off
+        elif off is not None:
+            worst, off = max(worst, Rg[T] - off), None
+        n += 1
+        if n > 100000:
+            raise RuntimeError('call %04X: no RET' % addr)
+    if off is not None and regs.get(IFF1):
+        worst = max(worst, Rg[T] - off)
+    return Rg[IFF1], worst
+
+
+def _t_iff(code, syms):
+    """t_iff entered with interrupts on / off, with and without an interrupt accepted during its first read: the
+    caller's IFF must come back. t_line_di at 28 MHz: interrupts off for under 256 T (32 T at 3.5 MHz, /INT)."""
+    c = collections.Counter()
+    for iff in (0, 1):
+        for inject in (False, True):
+            sim, nm = _machine(code, 3)
+            got, _ = _step_iff(sim, syms['t_iff'], {IFF1: iff, B: 3, C: 4, F: 0x41}, inject)
+            c['cases'] += 1
+            if got != iff:
+                c['interrupts left %s!' % ('off' if iff else 'on')] += 1
+    for line in (0, 100, 311):
+        sim, nm = _machine(code, 3)
+        nm.real = float(line * nm.t_line)
+        got, win = _step_iff(sim, syms['t_line_di'], {IFF1: 1}, False)
+        c['cases'] += 1
+        c['window T'] = max(c['window T'], win)
+        if not got:
+            c['interrupts left off!'] += 1
+        if win >= 256:
+            c['DI window over 256 T at 28 MHz!'] += 1
+    return c
+
+
+def iff_audit(root=ROOT):
+    """Every LD A,I / LD A,R in asm/*.asm and asm/lib/*.asm: 'twice' (the second read only after a JP PE past
+    it: safe), 'pair' (two reads back to back, the second trusted: an interrupt at the end of the second
+    still reads as off),
+    'value' (LD A,R with no P/V condition before the next flag-setting code: R as a value), 'once' (a single
+    LD A,I - hooks read I for IFF - or LD A,R tested on P/V: an interrupt during the read leaves interrupts off).
+    The harness's NEG_IFF1 control is the one expected 'once'. -> [(file, line, register, verdict)]."""
+    out = []
+    files = sorted(glob.glob(os.path.join(root, 'asm', '*.asm')) + glob.glob(os.path.join(root, 'asm', 'lib', '*.asm')))
+    for path in files:
+        lines = open(path, encoding='utf-8', errors='replace').read().split('\n')
+        code = []
+        for i, ln in enumerate(lines):
+            mc = _CODE_RE.match(ln)
+            if mc and not ln.lstrip().startswith(';'):
+                code.append((i + 1, mc.group(1).strip().lower(), ln))
+        for k, (num, ins, ln) in enumerate(code):
+            mi = _IFF_RE.match(ln)
+            if not mi:
+                continue
+            reg = mi.group(1).upper()
+            pair = [j for j in range(max(0, k - 4), min(len(code), k + 5)) if j != k and _IFF_RE.match(code[j][2])]
+            if pair:
+                lo, hi = sorted((k, pair[0]))
+                # safe only when the second read runs ONLY after the first read said off (JP PE past it): two
+                # reads back to back, the second trusted, can still meet an interrupt at the end of the second
+                verdict = 'twice' if any(_PV_RE.search(x[1]) for x in code[lo + 1:hi]) else 'pair'
+            elif reg == 'I':
+                verdict = 'once'            # LD A,I is read for IFF (pushed, tested later): one read is the fault
+            else:
+                verdict = 'value'           # LD A,R: R as a value unless a P/V condition follows at once
+                for _, ins2, _ in code[k + 1:k + 13]:
+                    if _PV_RE.search(ins2):
+                        verdict = 'once'
+                        break
+                    if re.match(r'(add|adc|sub|sbc|and|or|xor|cp|inc|dec|rl|rr|sl|sr|bit|neg|daa|pop\s+af)\b', ins2):
+                        break
+            out.append((os.path.relpath(path, root).replace(os.sep, '/'), num, reg, verdict))
+    return out
+
+
 def selfcheck():
     """-> [(name, failures)]: the unit tests, then each negative control must be caught."""
     out = []
@@ -603,6 +708,15 @@ def selfcheck():
         out.append(('hooklib content cache (%s): rules (miss, hit, mutable invalidates, hide keeps, inval, reset) + '
                     '600 random uploads, %d hits / %d uploads' % (form, cc['random hits'], cc['random uploads']),
                     [k for k in cc if k.endswith('!')]))
+    ic = _t_iff(code, syms)
+    out.append(('hooklib interrupt state: %d cases (IFF on / off, an interrupt during the first LD A,I) caller\'s IFF '
+                'back; line read with interrupts off %d T at 28 MHz (< 256)' % (ic['cases'], ic['window T']),
+                [k for k in ic if k.endswith('!')]))
+    au = iff_audit()
+    once = ['%s:%d' % (f, n) for f, n, _, v in au if v in ('once', 'pair') and not f.endswith('hlib_selftest.asm')]
+    out.append(('hooklib IFF audit: %d LD A,I / LD A,R in asm/ (%d read twice, %d values), none trusted after one read'
+                % (len(au), sum(v == 'twice' for *_, v in au), sum(v == 'value' for *_, v in au)),
+                ['IFF read once: %s!' % x for x in once]))
     tc = _t_commit(code, syms)
     out.append(('hooklib atomic commit: %d frames, back half only, one burst, the right images shown' % tc['frames'],
                 [k for k in tc if k.endswith('!')]))
@@ -612,7 +726,8 @@ def selfcheck():
                                     'hook faster than the original (limiter not waiting)!'),
             'missing cache invalidation': (_t_cache, 'stale pattern!'),
             'one pattern buffer': (_t_commit, 'upload into a shown pattern!'),
-            'attributes split by uploads': (_t_commit, 'attribute writes split by uploads!')}
+            'attributes split by uploads': (_t_commit, 'attribute writes split by uploads!'),
+            'IFF read once': (_t_iff, 'interrupts left off!')}
     for neg, (test, key) in want.items():
         cd, sy = _build(neg)
         got = test(cd, sy)

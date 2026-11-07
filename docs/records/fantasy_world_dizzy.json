@@ -28,9 +28,12 @@
   "nextboot",
   "recorder",
   "machine",
-  "rzx"
+  "rzx",
+  "fwd128"
  ],
- "own_modules": [],
+ "own_modules": [
+  "fwd128"
+ ],
  "data": [],
  "shared_data": [
   "nexclash/templates.json",
@@ -135,5 +138,68 @@
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-05"
- }
+ },
+ "rework": [
+  {
+   "name": "v128",
+   "version": "1.0",
+   "snapshot": "Dizzy 3 - Fantasy World Dizzy (1989)(Code Masters)(128K)[a2][a2].z80",
+   "args": [],
+   "inputs": [
+    {
+     "name": "Dizzy 3 - Fantasy World Dizzy (1989)(Code Masters)(128K)[a2][a2].z80",
+     "md5": "2f84d85c52046a8b7a2ec6f2ebd415bc",
+     "path": "fantasy_world_dizzy/Dizzy 3 - Fantasy World Dizzy (1989)(Code Masters)(128K)[a2][a2].z80"
+    },
+    {
+     "name": "fwd128_walk1.rzx",
+     "md5": "2ea8320807e3cf4be249466615a71b70",
+     "path": "fantasy_world_dizzy/fwd128_walk1.rzx"
+    },
+    {
+     "name": "fwd128_walk2.rzx",
+     "md5": "0569e9599e83d7d6dfc935e798b88771",
+     "path": "fantasy_world_dizzy/fwd128_walk2.rzx"
+    },
+    {
+     "name": "fwd128_walk3.rzx",
+     "md5": "9ac08c47f585a31db23d38964a41057b",
+     "path": "fantasy_world_dizzy/fwd128_walk3.rzx"
+    }
+   ],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ],
+    "decisions": {
+     "engine": "fwd128",
+     "base": "Dean's generic TID build (build.TidPatch, templates.json slot1 hooks, identify's profile)",
+     "input": "the 128K release (AY music from bank 3 in the game ISR)",
+     "strategy": "altrom: hooks at 0x386E in alt ROM image 1 (Sinclair's ROM + the hook bytes); tail at 0x5B00 and the speed latch at 0x5BFF in the printer buffer the game never touches; plot hook at 28 MHz"
+    }
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [
+     "fwd128_walk1.rzx",
+     "fwd128_walk2.rzx",
+     "fwd128_walk3.rzx"
+    ]
+   },
+   "outputs": {
+    "plain": {
+     "file": "Dizzy 3 - Fantasy World Dizzy (1989)(Code Masters)(128K)[a2][a2].nex",
+     "md5": "9efc6a2062c141acda244b44909137b7"
+    },
+    "sprites": {
+     "file": "Dizzy 3 - Fantasy World Dizzy (1989)(Code Masters)(128K)[a2][a2]_sprites.nex",
+     "md5": "4dc1f8c667e5a0baaae63ed24c2b175a"
+    }
+   },
+   "proof": "3 recordings of the 128K release IDENTICAL on rework v128 (bot walks of 12,010 / 12,007 / 12,004 frames: the dungeon, the troll's dialogue, deaths in the fire, a game over and restart, the inventory, the Smuggler's Hideout): 5,983 plots pixel-perfect, 5,935 erases, 12,122 ISR hide checks (104 on the hide path), 100 room wipes and 96 boxes hiding Dizzy, equal to the original's; the game never touches the tail and latch in the printer buffer nor the alt ROM hook bytes; 4 negative controls detected; clock matrix 5 hook sites x 4 incoming clocks = 20 cases PASS, a forced 3.5 MHz exit detected; ROM paths: every ROM byte as recorded; start-up tail never read before written",
+   "note": "Jon Attree's Fantasy World Dizzy 128K rework (2026-11-05): engine fwd128 (engines.py: the 128K snapshot), Dean's generic TID build (build.TidPatch, templates.json slot1 hooks, identify's profile: used, not copied) on the 128K release so the AY music plays; whole alt ROM image (the build's own complete image 1 in bank 12); tail and a speed latch in the printer buffer the game never touches; a 128K copy of the generic TID verifier; the plot hook at 28 MHz through a wrapper that restores the incoming speed; the every-site clock matrix. Recordings: bot walks on SkoolKit's C simulator. Published as Dizzy 3 - Fantasy World Dizzy (1989)(Code Masters)(128K)[a2][a2].nxc v1.0 (pilot runs/dean_fantasy_world_dizzy). games/fantasy_world_dizzy.md."
+  }
+ ]
 }
