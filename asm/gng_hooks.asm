@@ -5,8 +5,9 @@
 ; the screen. Three plot loops' stores become NOPs; each loop's LD (49060),SP becomes JP e_x: image, screen and rows
 ; give sprites. Interrupts are off at the three sites (the verifier counts IFF). Game memory is never written, but 49060.
 ;
-; Cache: 32 groups of 4 patterns (4-bit), key = image address, kind + rows, and a checksum of the image: the game
-; rewrites images at the same address (armour, levels), and one kind plots from a buffer.
+; Cache: 32 groups of 4 patterns (4-bit), key = image address + kind + rows; every hit is checked byte for byte
+; against the atlas (or parent) copy it was made from: the game rewrites images at the same address (armour, levels),
+; and one kind plots from a buffer. A miss checksums the image and reads one bucket of the atlas index.
 ; Colour plane (Next pages PLANE.., CHECK.., built by gng.py, also in recolour): for each graphics byte in
 ; 0xC000-0xFFFF 4 bytes of nibbles (0 = default) and a check byte: colours apply only if the byte holds that value.
 
@@ -37,6 +38,7 @@ e_m3:   ld (SPSAVE),sp
         ld sp,hstack
         push af
         HLIB_R_IN
+        HLIB_SPEED_IN speed            ; the whole hook at 28 MHz (the stand-in loop too)
         push bc
         push de
         push hl
@@ -111,7 +113,8 @@ e_m3:   ld (SPSAVE),sp
         or a
         ld b,a
         jr nz,.d
-.e:     HLIB_R_OUT
+.e:     HLIB_SPEED_OUT speed
+        HLIB_R_OUT
         ld sp,(SPSAVE)
         jp 36601
 .d:     ex af,af'
@@ -122,6 +125,7 @@ e_o3:   ld (SPSAVE),sp
         ld sp,hstack
         push af
         HLIB_R_IN
+        HLIB_SPEED_IN speed
         ld a,-14
         call hlib_r_set
         push bc
@@ -141,6 +145,7 @@ e_o3:   ld (SPSAVE),sp
         ld b,c
         ld c,KO3
         call plot
+        HLIB_SPEED_OUT speed
         HLIB_R_OUT
         pop hl
         pop de
@@ -154,6 +159,7 @@ e_x2:   ld (SPSAVE),sp
         ld sp,hstack
         push af
         HLIB_R_IN
+        HLIB_SPEED_IN speed
         ld a,-14
         call hlib_r_set
         push bc
@@ -162,6 +168,7 @@ e_x2:   ld (SPSAVE),sp
         ld b,4
         ld c,KX2
         call plot
+        HLIB_SPEED_OUT speed
         HLIB_R_OUT
         pop hl
         pop de
@@ -438,7 +445,6 @@ plot:   ld a,b
         ld a,(nsp)
         cp NMAX-3
         ret nc
-        HLIB_SPEED_IN speed
         call sm_begin
         call gc_prepare
         ld (gfx),hl
@@ -451,10 +457,9 @@ plot:   ld a,b
         and 0x80
         jr nz,.visible
         call attrs
-        HLIB_SPEED_OUT speed
         ret
 .visible:
-; length of the image, and its checksum (Fletcher)
+; the image's length; the checksum only on a miss (the atlas index), never on a hit
         ld a,c
         add a,low rowsz
         ld e,a
@@ -467,6 +472,63 @@ plot:   ld a,b
         mul d,e
         ld a,e
         ld (rawlen),a
+        ld a,(kind)
+        rrca
+        rrca
+        rrca
+        ld c,a
+        ld a,(rows)
+        or c
+        ld (shape),a
+; find the image: key = address + shape. kx (low ^ high ^ shape) by CPIR, then the whole key; every hit is
+; then checked byte for byte against its atlas or parent copy (cached_match), so a rewritten image misses.
+        ld hl,(gfx)
+        xor l
+        xor h
+        ld (kxv),a
+        ld hl,kx
+        ld bc,NC
+.s:     cpir
+        jr nz,.miss
+        push hl
+        push bc
+        ld de,kx+1
+        or a
+        sbc hl,de
+        ld a,l                  ; the group
+        ld (grp),a
+        add a,a
+        ld e,a
+        add a,l
+        ld l,a
+        ld h,0
+        ld de,keys
+        add hl,de               ; keys + 3 * group
+        ld de,(gfx)
+        ld a,e
+        cp (hl)
+        jr nz,.n
+        inc hl
+        ld a,d
+        cp (hl)
+        jr nz,.n
+        inc hl
+        ld a,(shape)
+        cp (hl)
+        jr nz,.n
+        call cached_match
+        jr c,.hit
+.n:     pop bc
+        pop hl
+        ld a,b
+        or c
+        ld a,(kxv)
+        jr nz,.s
+.miss:
+; miss: the next group in rotation not on show: not used this tick or the last, whose sprites stay up until this
+; tick replaces them. After NC tries the group is taken anyway.
+        ld hl,(gfx)
+        ld a,(rawlen)
         ld b,a                  ; all bytes, including masks and even graphics bytes
         ld de,0
 .ck:    ld a,(hl)
@@ -477,50 +539,6 @@ plot:   ld a,b
         ld d,a
         djnz .ck
         ld (sum),de
-        ld a,(kind)
-        rrca
-        rrca
-        rrca
-        ld c,a
-        ld a,(rows)
-        or c
-        ld (shape),a
-; find the image
-        ld hl,keys
-        ld b,NC
-.s:     push hl
-        ld a,(gfx)
-        cp (hl)
-        jr nz,.n
-        inc hl
-        ld a,(gfx+1)
-        cp (hl)
-        jr nz,.n
-        inc hl
-        ld a,(shape)
-        cp (hl)
-        jr nz,.n
-        inc hl
-        ld a,(sum)
-        cp (hl)
-        jr nz,.n
-        inc hl
-        ld a,(sum+1)
-        cp (hl)
-        jr nz,.n
-        push bc
-        ld a,NC
-        sub b
-        ld (grp),a
-        call cached_match
-        pop bc
-        jr c,.hit
-.n:     pop hl
-        ld de,5
-        add hl,de
-        djnz .s
-; miss: the next group in rotation not on show: not used this tick or the last, whose sprites stay up until this
-; tick replaces them. After NC tries the group is taken anyway.
         ld a,(rr)
         ld e,a
         ld d,0
@@ -542,31 +560,29 @@ plot:   ld a,b
         and NC-1
         ld (rr),a
         ld a,(grp)
-        ld d,a
-        ld e,5
-        mul d,e
+        ld e,a
+        ld d,0
+        ld hl,kx
+        add hl,de
+        ld a,(kxv)
+        ld (hl),a
+        ld a,e
+        add a,a
+        add a,e
+        ld e,a
         ld hl,keys
         add hl,de
-        ld a,(gfx)
-        ld (hl),a
+        ld de,(gfx)
+        ld (hl),e
         inc hl
-        ld a,(gfx+1)
-        ld (hl),a
+        ld (hl),d
         inc hl
         ld a,(shape)
         ld (hl),a
-        inc hl
-        ld a,(sum)
-        ld (hl),a
-        inc hl
-        ld a,(sum+1)
-        ld (hl),a
         call upload
         jr .mark
-.hit:   pop hl
-        ld a,NC
-        sub b
-        ld (grp),a
+.hit:   pop bc
+        pop hl
 .mark:  ld a,(grp)
         ld e,a
         ld d,0
@@ -575,7 +591,6 @@ plot:   ld a,b
         ld a,(tick)
         ld (hl),a
         call attrs
-        HLIB_SPEED_OUT speed
         ret
 
 ; --- the sprites: 16 x 16 cells, in plot order, so later is in front, as the game ---------------------------
@@ -1027,25 +1042,31 @@ cached_match:
         jp z,parent_cached_match
         inc hl
         ld h,(hl)
-        ld l,0
-        call atlas_compare
-        ret
+        jp atlas_compare
 
-; A page, H offset high. Compare the entire current source image against the
-; atlas's source bytes. Carry means exact identity; all exits restore slot 2.
+; A page, H offset high (L = 0: an entry's raw bytes never cross a 256-byte boundary). Compare the entire current
+; source image against the atlas's source bytes, two a step (every length is even). Carry means exact identity;
+; all exits restore slot 2.
 atlas_compare:
         nextreg 0x52,a
         ld a,h
         or 0x40
         ld h,a
+        ld l,0
         ld de,(gfx)
         ld a,(rawlen)
+        rrca
         ld b,a
 .c:     ld a,(de)
         cp (hl)
         jr nz,.no
         inc de
-        inc hl
+        inc l
+        ld a,(de)
+        cp (hl)
+        jr nz,.no
+        inc de
+        inc l
         djnz .c
         nextreg 0x52,SLOT2
         scf
@@ -1054,6 +1075,8 @@ atlas_compare:
         or a
         ret
 
+; The atlas index (page 36, gng_art.atlas): 256 bucket pointers at 0x4000 (bucket = checksum low ^ high), each to
+; that bucket's 5-byte entries (shape, checksum low, high, page, offset high) in catalogue order, a 0 after them.
 atlas_upload:
         call parent_key
         ld (hl),0
@@ -1065,21 +1088,31 @@ atlas_upload:
         ld (hl),0               ; fallback has no cache identity
         call gc_atlas
         jp c,.found
-        ld hl,0x4000
-.find:  nextreg 0x52,36
+        ld de,(sum)
+        ld a,e
+        xor d
+        ld l,a
+        ld h,0x20
+        add hl,hl               ; 0x4000 + 2 * bucket
+        nextreg 0x52,36
         ld a,(hl)
+        inc hl
+        ld h,(hl)
+        ld l,a
+.find:  ld a,(shape)
+        ld c,a
+.f2:    ld a,(hl)
         or a
         jr z,.none
-        ld a,(shape)
-        cp (hl)
+        cp c
         jr nz,.next0
         inc hl
-        ld a,(sum)
-        cp (hl)
+        ld a,(hl)
+        cp e
         jr nz,.next1
         inc hl
-        ld a,(sum+1)
-        cp (hl)
+        ld a,(hl)
+        cp d
         jr nz,.next2
         inc hl
         ld a,(hl)
@@ -1090,18 +1123,19 @@ atlas_upload:
         inc hl
         ld (atlas_next),hl
         ld h,a
-        ld l,0
         ld a,(atlas_page)
         call atlas_compare
         jr c,.found
         ld hl,(atlas_next)
+        ld de,(sum)
+        nextreg 0x52,36
         jr .find
 .next0: inc hl
 .next1: inc hl
 .next2: inc hl
         inc hl
         inc hl
-        jr .find
+        jr .f2
 .none:  nextreg 0x52,SLOT2
         or a
         ret
@@ -1298,6 +1332,7 @@ atlas_next: dw 0
 atlas_page: db 0
 atlas_off: db 0
 rawlen: db 0
+kxv:    db 0
 atlas_keys: ds NC*2
 
 ; --- tables: per kind, for line 0 columns 0-2 then line 1 columns 0-2: (graphics offset, mask offset), 255 = none
@@ -1338,7 +1373,8 @@ usenb:  db 0
 hv:     db 0
 nb:     ds 4
 regs:   ds 20               ; register block for the start-up tail
-keys:   ds NC*5
+kx:     ds NC
+keys:   ds NC*3
 used:   ds NC
 lb:     ds LBSIZE
         ds 64
@@ -1761,7 +1797,6 @@ gc_atlas:
         add a,a
         ld (atlas_off),a
         ld h,a
-        ld l,0
         ld a,e
         srl a
         srl a
