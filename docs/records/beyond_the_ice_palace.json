@@ -1,0 +1,240 @@
+{
+ "name": "beyond_the_ice_palace",
+ "order": 203,
+ "game": "Beyond the Ice Palace (128K)",
+ "doc": "beyond_the_ice_palace.md",
+ "engine": "ice_palace",
+ "representative": true,
+ "reference": "beyond_the_ice_palace",
+ "inputs": {
+  "snapshot": {
+   "name": "beyond_the_ice_palace.z80",
+   "md5": "1c1af4775bc0114f7b94edb7de2d4070",
+   "path": "beyond_the_ice_palace/beyond_the_ice_palace.z80"
+  },
+  "recordings": [
+   {
+    "name": "intake.rzx",
+    "md5": "13acb231b6461b7b1e45f111a631e4af",
+    "path": "beyond_the_ice_palace/intake.rzx"
+   },
+   {
+    "name": "explore.rzx",
+    "md5": "cfeb20c2020750571f452ca27c72c4f3",
+    "path": "beyond_the_ice_palace/explore.rzx"
+   },
+   {
+    "name": "death.rzx",
+    "md5": "5384195b422d93678a7452119585efd3",
+    "path": "beyond_the_ice_palace/death.rzx",
+    "note": "a one-life fixture: explore's state at frame 9,999 with 0x7AC0 = 1 (lives) and 0x7AD1 bit 5 cleared (start invulnerability), to reach death, game over and attract"
+   },
+   {
+    "name": "beyond_the_ice_palace.scr",
+    "md5": "a3b227dd3655d4d4db6ad5960b9c83cb",
+    "path": "beyond_the_ice_palace/beyond_the_ice_palace.scr",
+    "note": "not a recording: the matching tape's loading screen (6,912 bytes)"
+   },
+   {
+    "name": "beyond_the_ice_palace.pok",
+    "md5": "8bbdf4702cfaf4ba950e93496fb034b8",
+    "path": "beyond_the_ice_palace/beyond_the_ice_palace.pok",
+    "note": "not a recording: the five archive cheats translated to this 128K release (the archive's POK has 48K addresses), for the .nxc"
+   }
+  ]
+ },
+ "modules": [
+  "ice_palace"
+ ],
+ "own_modules": [
+  "ice_palace"
+ ],
+ "data": [
+  "asm/ice_palace_hooks.asm",
+  "docs/profiles/ice_palace.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "intake.rzx",
+   "explore.rzx",
+   "death.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 20,
+  "note": "Scripted-key recordings made with the pilot's 128K frame model (no human player). auto: per recording two replays - every hook call paired with the original from the same state (registers with R and PC, NextREGs 7 / 0x50 / 0x55 back, memory outside the sites, dead stack and copier attribute rows, the original's I/O; jumps into patched instructions; site bytes) and the pixel oracle (after each screen copy the sprite layer against the original plotters run on black / white buffers; wrong-x negative); boot tail with and without NEXLOAD; unit: every site at 4 incoming clocks, 64 IDs x mirror x phase + edges, 8 broken builds. JNext pace, AY order, native pictures, cheats and the real .NEXCLASH loader: pilot runs/beyond_the_ice_palace (games/beyond_the_ice_palace.md Results)."
+ },
+ "outputs": {
+  "sprites": {
+   "file": "beyond_the_ice_palace_sprites.nex",
+   "md5": "da668eb8e6bd5e6ab2b90cf9a103459d"
+  },
+  "sprites_loading": {
+   "file": "beyond_the_ice_palace_sprites_loading.nex",
+   "md5": "d53ac5f52471b674354caf96cd94221e"
+  }
+ },
+ "repro": [],
+ "checks": [
+  "asm2profile:ice_palace"
+ ],
+ "techniques": [
+  {
+   "application": "ice_palace.copier",
+   "id": "detect.buffer-layout-producer",
+   "revision": 2,
+   "target": "screen copy 0x6C03 (callers 0x6B36, 0x79CF, 0x94D9): back buffer 0xE400-0xF5FF, attributes 0xE100-0xE33F",
+   "phases": []
+  },
+  {
+   "application": "ice_palace.figures",
+   "id": "detect.tracked-unit",
+   "revision": 3,
+   "target": "one plot call = one whole figure: 0xBEE6 (callers 0x7407, 0x7457, 0x7C9A), 0xBD9F (caller 0x8ECE)",
+   "phases": []
+  },
+  {
+   "application": "ice_palace.plot-parameters",
+   "id": "detect.drawing-parameters",
+   "revision": 2,
+   "target": "ID in A (bit 7 mirror), world X in HL, Y in DE, camera 0x6DAE / 0x6DB0; 50 large and 14 small IDs",
+   "phases": []
+  },
+  {
+   "application": "ice_palace.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "HLIB_SPEED_IN / OUT (V_SPEED latch) at every hook entry and exit; the copier's latch kept across its exit hook (V_CPSPEED)",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "ice_palace.preserve-r",
+   "id": "patch.preserve-r",
+   "revision": 1,
+   "target": "hlib_r_set / HLIB_R_OUT at every exit and the boot tail: the particle and damage effects read R",
+   "phases": [
+    "entry",
+    "exit",
+    "setup"
+   ]
+  },
+  {
+   "application": "ice_palace.pace-limiter",
+   "id": "patch.pace-limiter",
+   "revision": 2,
+   "target": "copier window (open at the copy, wait at its exit hook, 5584 sixteenths); plot hooks pay into the debt; HLIB_PACE_V1",
+   "phases": [
+    "commit"
+   ]
+  }
+ ],
+ "results": [
+  {
+   "application": "ice_palace.figures",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "d53ac5f5",
+   "scope": "3 recordings, 24,700 frames, 105,855 paired calls; 7 of 8 sites (0x79CF by unit cases only); emulator only, no hardware",
+   "evidence": "games/beyond_the_ice_palace.md \"Results\""
+  },
+  {
+   "application": "ice_palace.pace-limiter",
+   "check": "time.pace",
+   "status": "pass",
+   "build": "d53ac5f5",
+   "scope": "JNext 1.1.104, 3 scenes x 3 repeated 200-update trials: -0.17 / -0.50 / -0.37 %; no hardware",
+   "evidence": "games/beyond_the_ice_palace.md \"Results\""
+  }
+ ],
+ "status": {
+  "title": "Beyond the Ice Palace (128K)",
+  "engine_col": "ice_palace (beyond_the_ice_palace.md)",
+  "build": "beyond_the_ice_palace_sprites_loading.nex d53ac5f5 (figures as sprites in their original ink, original masks; ULA bitmap and scenery colours kept; no outline; pace ORIGINAL; tape loading screen; five optional cheats in the .nxc)",
+  "software": "replay IDENTICAL with R on 3 recordings (105,855 paired calls); pixel oracle; unit PASS (4-clock sites, 298 figure / edge cases); 8 negatives detected; JNext pace within -0.5 %; real loader",
+  "hardware": "none (JNext only)",
+  "next": "owner review; hardware test; ported from Jon Attree's .nxc work, 2026-11-06"
+ },
+ "checked": {
+  "deps": {
+   "asm/ice_palace_hooks.asm": "31a513e56309db84",
+   "asm/lib/hlib_pace.asm": "ae09ef0db9a851a2",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/ice_palace.json": "ac4d7718a270d1e0",
+   "nexclash.py": "8eb7d621324c5aa6",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "00d01102bda98ad5",
+   "nexclash/hooklib.py": "01735476afb99e8f",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ice_palace.py": "3d370c421069cb61",
+   "nexclash/ikari_warriors.py": "5a65c75c8686ea84",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "37cfadbd5e643344",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-06"
+ },
+ "verified": {
+  "deps": {
+   "asm/ice_palace_hooks.asm": "31a513e56309db84",
+   "asm/lib/hlib_pace.asm": "ae09ef0db9a851a2",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/ice_palace.json": "ac4d7718a270d1e0",
+   "nexclash.py": "8eb7d621324c5aa6",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "00d01102bda98ad5",
+   "nexclash/hooklib.py": "01735476afb99e8f",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ice_palace.py": "3d370c421069cb61",
+   "nexclash/ikari_warriors.py": "5a65c75c8686ea84",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "37cfadbd5e643344",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-06"
+ }
+}

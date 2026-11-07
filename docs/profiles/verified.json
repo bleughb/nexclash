@@ -9,6 +9,14 @@
     "sprites": "6aa7e780f4ec7892d862c675e61b7fba"
    }
   },
+  "1c1af4775bc0114f7b94edb7de2d4070": {
+   "game": "Beyond the Ice Palace (128K)",
+   "doc": "beyond_the_ice_palace.md",
+   "nex": {
+    "sprites": "da668eb8e6bd5e6ab2b90cf9a103459d",
+    "sprites_loading": "d53ac5f52471b674354caf96cd94221e"
+   }
+  },
   "00ee637a4f63ffe61fc3503de42d7822": {
    "game": "Cauldron",
    "doc": "cauldron.md",
