@@ -1,0 +1,149 @@
+{
+ "name": "pac_mania",
+ "order": 204,
+ "game": "Pac-Mania (128K)",
+ "doc": "pac_mania.md",
+ "engine": "pacmania",
+ "representative": true,
+ "reference": "pac_mania",
+ "inputs": {
+  "snapshot": {
+   "name": "pac_mania.z80",
+   "md5": "e9cb908bc86661ff81732665741393cc",
+   "path": "pac_mania/pac_mania.z80"
+  },
+  "recordings": [
+   {
+    "name": "pm_first.rzx",
+    "md5": "d1085f0bba37802a4b1209df81fa1801",
+    "path": "pac_mania/pm_first.rzx"
+   },
+   {
+    "name": "pm_idle.rzx",
+    "md5": "3ad2e8684720618ebb49c9a55a703da6",
+    "path": "pac_mania/pm_idle.rzx"
+   },
+   {
+    "name": "pm_lives.rzx",
+    "md5": "0112720b53aadc53b750780e96278137",
+    "path": "pac_mania/pm_lives.rzx"
+   },
+   {
+    "name": "pm_rounds.rzx",
+    "md5": "47dca4b8476cb9338246abc710c416f7",
+    "path": "pac_mania/pm_rounds.rzx"
+   },
+   {
+    "name": "pm_l4.rzx",
+    "md5": "f6ca1e8e257f99a53fdde2da09e4ead9",
+    "path": "pac_mania/pm_l4.rzx"
+   },
+   {
+    "name": "pm_l5.rzx",
+    "md5": "2ec3290fe8eee523604b39450ad51ccf",
+    "path": "pac_mania/pm_l5.rzx"
+   },
+   {
+    "name": "pm_b11.rzx",
+    "md5": "8bc6d4b11ea67f4284a0818e35244656",
+    "path": "pac_mania/pm_b11.rzx"
+   },
+   {
+    "name": "pm_b12.rzx",
+    "md5": "5d182d4cecc0d468e69052287f872773",
+    "path": "pac_mania/pm_b12.rzx"
+   },
+   {
+    "name": "pac_mania.pok",
+    "md5": "6cdf764c7aae80aee48fecfe5f7310e9",
+    "path": "pac_mania/pac_mania.pok",
+    "note": "not a recording: the five archive cheats, each tested alone on this release, values fixed, for the .nxc"
+   }
+  ]
+ },
+ "modules": [
+  "pacmania"
+ ],
+ "own_modules": [
+  "pacmania"
+ ],
+ "data": [
+  "asm/pacmania_hooks.asm",
+  "docs/profiles/pac_mania.json",
+  "docs/profiles/pac_mania_enhanced.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "pm_first.rzx",
+   "pm_idle.rzx",
+   "pm_lives.rzx",
+   "pm_rounds.rzx",
+   "pm_l4.rzx",
+   "pm_l5.rzx",
+   "pm_b11.rzx",
+   "pm_b12.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 10,
+  "note": "Scripted-key recordings from the release's start state (PC 0x7530), made with the pilot's 128K frame model, Sinclair's 48K ROM as ROM 1 (no human player). auto: per recording, original and patched side by side, every frame all registers with R, the paging and all RAM banks; ULA + sprites against the original at each blit and idle frame; boot with and without NEXLOAD; unit: every frame at the edges against the original plotter, every hook at 4 speeds x 7 R values. Negatives, JNext pace, cheats and the real .NEXCLASH loader: pilot runs/pac_mania (HANDOFF-V1.0.md)."
+ },
+ "outputs": {
+  "sprites": {
+   "file": "pac_mania_sprites.nex",
+   "md5": "431698a4d2e8a0a67ff50c44c4475b14"
+  },
+  "enhanced": {
+   "file": "pac_mania_enhanced.nex",
+   "md5": "acfbc75c7ce9d78840fec348ae2f2654"
+  }
+ },
+ "repro": [],
+ "checks": [
+  "asm2profile:pac_mania"
+ ],
+ "techniques": [
+  {
+   "application": "pacmania.figures",
+   "id": "detect.tracked-unit",
+   "revision": 3,
+   "target": "one plot call AE73 (caller 0xA932) = one whole figure",
+   "phases": []
+  },
+  {
+   "application": "pacmania.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "the four commits c1-c4 at 28 MHz, HLIB_SPEED_IN / _OUT",
+   "phases": []
+  },
+  {
+   "application": "pacmania.preserve-r",
+   "id": "patch.preserve-r",
+   "revision": 1,
+   "target": "all nine hooks: R as the original at the same point (RNG reads R at 0x8F57, 0x92EE, 0x9318)",
+   "phases": []
+  }
+ ],
+ "status": {
+  "title": "Pac-Mania (128K)",
+  "engine_col": "pacmania (pac_mania.md)",
+  "build": "pac_mania_sprites.nex 431698a4 (every figure a sprite; Pac-Man bright yellow, ghosts in the room ink; Enhanced set pac_mania_enhanced.nex acfbc75c, the owner-approved paint; 128K release with AY; five cheats in the .nxc)",
+  "software": "replay IDENTICAL with R on 8 recordings (96,520 frames); unit PASS (1,376 figure / edge cases, 252 hook cases at 4 speeds); 10 negatives detected; JNext pace +0.4 % to +0.5 % steady; real loader v2.09 + v2.10",
+  "hardware": "none (JNext only)",
+  "next": "owner review of v1.0; hardware test"
+ }
+}

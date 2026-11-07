@@ -1,8 +1,12 @@
-; Pac-Mania (Grandslam 1988, Teque; 48K form) - hardware sprites for every figure.
+; Pac-Mania (Grandslam 1988, Teque; the 128K release, AY music) - hardware sprites for every figure.
 ; The plotter keeps running with its three buffer writes NOPed (same registers, same time), so the back
 ; buffer stays scenery only and the ULA never shows a figure. All hooks live in alt ROM image 1 at
-; 0x386E, are stateless, read only the game's own tables and leave interrupts on: the game's ISR uses
-; no NEXTREG, IX or IY.
+; 0x386E and read only the game's own tables. They leave interrupts as they are (no DI / EI, no LD A,I):
+; the game's ISR (music, bank 1 at 0xC000) uses no NEXTREG, IX or IY.
+; Each hook leaves R as the original would (lib/hlib_r.asm; the game's RNG reads R at 0x8F57, 0x92EE,
+; 0x9318); the commit runs at 28 MHz and puts the caller's speed back (lib/hlib_speed.asm).
+; Hook RAM: 4 bytes at 0x5B70 (the 128K system variables' unused N_STR1 / HD_ area, zero in the release
+; and never read or written by the game: games/pac_mania.md "Hook RAM"). Hooks never nest.
 ;
 ; Patch sites (original bytes checked by pacmania.py):
 ;   0x87AA 0x88E9 0x891B 0x7B9A  CALL 0xB090 (blit after a figure pass) -> CALL e_b1..e_b4
@@ -14,6 +18,7 @@
 ; Nibbles: 0 transparent, 1 the figure's ink (palette offset picks it), 2-14 fixed colours, 15 black paper.
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_speed.asm"
 
 BLIT    EQU 0xB090
 ADDR    EQU 0xAF1F
@@ -23,37 +28,51 @@ ORDER   EQU 0xA982
 PACREC  EQU 0xB3B4
 NSLOT   EQU 12
 NFRAME  EQU 86
+HLIB_V_R EQU 0x5B70             ; 3 bytes: R at entry, R to set, A at the exit
+V_SPEED EQU 0x5B73              ; the caller's programmed speed (NextREG 7 bits 1:0)
+R_DELTA EQU 128-5               ; every hook: O (0: the original reaches the same point) - E (3) - N (2)
 
         ORG 0x386E
+        INCLUDE "lib/hlib_r.asm"     ; hlib_r_set / hlib_r_add (code) and the R macros
 ; ---- blit after a figure pass: the blit returns to c_n, which commits the sprites as it ends.
-; ex (sp),hl twice swaps the return address without touching flags or SP.
-e_b1:   ex (sp),hl
-        ld hl,c1
+; ex (sp),hl twice swaps the return address without touching flags or SP. R as at the original's 0xB090.
+        MACRO BLITCALL back
+        HLIB_R_IN
         ex (sp),hl
-        jp BLIT
-e_b2:   ex (sp),hl
-        ld hl,c2
+        ld hl,back
         ex (sp),hl
+        R_EXIT
         jp BLIT
-e_b3:   ex (sp),hl
-        ld hl,c3
-        ex (sp),hl
-        jp BLIT
-e_b4:   ex (sp),hl
-        ld hl,c4
-        ex (sp),hl
-        jp BLIT
-c1:     call com_p
-        jp 0x87AD
-c2:     call com_p
-        jp 0x88EC
-c3:     call com_p
-        jp 0x891E
-c4:     call com_a              ; the theatre: no yellow cells, Pac-Man has the room's ink as well
-        jp 0x7B9D
+        ENDM
+; R_EXIT: R = the entry's R + R_DELTA, then (N = 2) the LD A of HLIB_R_OUT and the hook's JP.
+        MACRO R_EXIT
+        push af
+        ld a,R_DELTA
+        call hlib_r_set
+        pop af
+        HLIB_R_OUT
+        ENDM
+; the commit, at 28 MHz; R and the caller's speed as on entry
+        MACRO COMMIT routine, back
+        HLIB_R_IN
+        HLIB_SPEED_IN V_SPEED
+        call routine
+        HLIB_SPEED_OUT V_SPEED
+        R_EXIT
+        jp back
+        ENDM
+e_b1:   BLITCALL c1
+e_b2:   BLITCALL c2
+e_b3:   BLITCALL c3
+e_b4:   BLITCALL c4
+c1:     COMMIT com_p, 0x87AD
+c2:     COMMIT com_p, 0x88EC
+c3:     COMMIT com_p, 0x891E
+c4:     COMMIT com_a, 0x7B9D    ; the theatre: no yellow cells, Pac-Man has the room's ink as well
 
 ; ---- the blit's address call: any blit not from c_n shows a screen with no figures ----
-e_hide: push af
+e_hide: HLIB_R_IN
+        push af
         push hl
         ld hl,7
         add hl,sp               ; high byte of the blit's return address
@@ -68,6 +87,7 @@ e_hide: push af
         jr nz,.h
 .keep:  pop hl
         pop af
+        R_EXIT
         jp ADDR
 
 com_p:  push af
