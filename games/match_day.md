@@ -218,6 +218,7 @@ verification below. Dean's files and build (f0aecd13 / 612761ec, pin rom3) are u
   model comes from nextboot.alt_image, so the old-image negative (rom3_left) is a flag on the patch, not a second
   build; detected by the IM 1 check at every menu interrupt. The tail proof's negative (the old tail) runs
   rom_paths on a build kept out of `auto`'s own .nex list.
+- [none: v2.1 ported onto main unchanged; its findings are in "Rework v2.1" below]
 
 ## Technique use
 - patch.whole-altrom-image: no help: rework not applied, output pinned (record pin)

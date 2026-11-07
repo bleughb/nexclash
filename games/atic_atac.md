@@ -234,7 +234,7 @@ rom3) are untouched and stay the default.
   translated: 16,148 key reads, 6,252 pause checks). Units per set: 1,483 cases, controls 3/3, the rework negatives
   (7 kinds) detected, 432 incoming-clock cases PASS. Toggle units: on 924 / off 832 PASS; O-P swapped and on-as-off
   detected. Replay negatives on t detected. Dean's verify skipped: AticAtac.rzx missing (record "missing").
-- Hardware: none. Checklist below + no red door flash, no menu icons, QAOP. v1.4: _v14.md
+- Hardware: none. Checklist: below + no red flash by doors, no menu icons left, QAOP+Space.
 
 ## Hardware checklist (atic_atac_sprites.nex)
 1. Boots to the game's start screens; text prints as the original; keys / joystick work.
