@@ -201,6 +201,29 @@ incredible_shrinking_fireman-add-OPUS_three_windows.png.
 - Speed: busy rooms (several figures) no slower than the plain build; beeper sound unchanged.
 - Recolour: python nexclash.py recolour incredible_shrinking_fireman-add-OPUS_sprites.nex PAINTED.png.
 
+## Speed restored (2026-11-07, shared engine refactor, goal 2)
+- e_ent, e_plot and e_item latch the caller's CPU speed (NR 7 bits 1:0) into V_SPD = 0xDE32 in page 30 (CPAGE + 4,
+  mapped first; e_item now maps it too) through the ROM routine spdin, and write it back at exit instead of a fixed
+  NEXTREG 7,0. The hooks run with interrupts off, so the NextREG select cannot be disturbed. The verifier answers IN
+  (0x253B) from its NextREG model.
+- Sprites 283d6a59 -> 284d6a11; plain unchanged. RZX IDENTICAL (32,492 frames, 27,883 plots, 29,891 interrupts, 54
+  deferred), unit PASS, stamped. JNext pace (600 updates keyed to 0xB950, Kempston, seed 1): -0.00%
+  before, +0.00% after (quiet / busy 0.00%); interrupts 48.81 a second both (original 48.81), longest gap 39.9 ms.
+
+## Lessons
+- [card patch.restore-speed §Use / do not use] A hook whose state page is mapped only inside it: map it, then latch
+  (spdin), and map it again at an exit where other pages were mapped (e_item after item).
+
+## Technique use
+- patch.restore-speed: helped: one ROM routine (spdin) for the three entries (2026-11-07).
+
+## Friction
+- reuse: [tool asm/lib/hlib_speed.asm] the latch's NR 7 read, as a ROM routine
+- retries: [none: verified first time]
+- environment: [none: the usual references and JNext card]
+- hand-rolled: [none: the session-1 Kempston pace profile]
+- scratch: [none: no scratch scripts]
+
 ## Open
 - Hardware test of 53f2665e (mask colour black: confirm). Mask on the diamonds: not asked for. Painted sheet (Dean) -> recolour, then the map becomes the build default.
 - A pair-hidden figure (objects 1 and 2 on one spot, XOR cancel) that starts to move: its old pixels

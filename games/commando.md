@@ -239,3 +239,27 @@ negative controls. Report: auto's commando_report.txt.
 - Speed: hook code per converted plot (simulated T-states, run at 28 MHz): ~15k (0.55 ms) when
   the image is reused (64 %), ~70k (2.5 ms) when built (new frame or scenery in front); the
   original plot is ~4.5k T at 3.5 MHz (1.3 ms). Hardware to judge (checklist 12).
+
+## Speed restored (2026-11-07, shared engine refactor, goal 2)
+- The two places that switch to 28 MHz (around svsave, and around svrest + show) latch the caller's CPU speed (spdi:
+  HLIB_SPEED_IN, lib/hlib_speed.asm, V_SPD = 0x5C0F) and give it back (spdo) instead of a fixed NEXTREG 7,0. Called
+  routines, not the macros inline: the alt ROM had 36 bytes left (now 0x3CF9 of 0x3D00). The verifier (rainbow's
+  NextState) already answers NR reads.
+- Sprites c42d3f53 -> 6a547a86; plain unchanged. RZX IDENTICAL (3,279 frames, 4,332 converted plots), unit PASS,
+  negative control 6/6, stamped. JNext: the game has no frame sync and its runs part at once, so pace against the
+  original is not measurable here; against main's build (probe 39120, keys S to start, QAOP M): +0.00% (quiet -0.28%,
+  busy +0.12%), interrupts 50.00 a second both.
+
+## Lessons
+- [card patch.restore-speed §Use / do not use] A full alt ROM: call one latch routine pair instead of the macros
+  inline (25 bytes against 38 for two sites).
+
+## Technique use
+- patch.restore-speed: helped: the macros in a called routine pair (2026-11-07).
+
+## Friction
+- reuse: [tool asm/lib/hlib_speed.asm] the shared latch
+- retries: [local: ROM full] the inline macros did not fit; routines did
+- environment: [none: the usual references and JNext card]
+- hand-rolled: [local: a JNext screenshot strip to find the start key (S)] pace profile cm in the run folder
+- scratch: [none: no scratch scripts in the repo]

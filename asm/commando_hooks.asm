@@ -45,6 +45,7 @@
 ; LIVES(Y/N)?" (128K BASIC pages ROM 0, absent on the Next), then enters the game at 25089.
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_speed.asm"    ; macros only: the caller's speed latched and given back
 
 NENT    EQU 12                  ; sprite entries (4 sprites, 2 x 4 patterns each)
 NTYPES  EQU 41
@@ -61,6 +62,7 @@ V_R0    EQU 0x5C0A              ; rect clear: first line
 V_R1    EQU 0x5C0B              ; rect clear: line after
 V_C0    EQU 0x5C0C              ; rect clear: first byte column
 V_C1    EQU 0x5C0D              ; rect clear: column after
+V_SPD   EQU 0x5C0F              ; the caller's CPU speed (lib/hlib_speed.asm latch)
 V_CLK   EQU 0x5C0E              ; last pattern slot allocated (round robin)
 ENT     EQU 0x5C10              ; NENT x 8: used, ix lo, ix hi, col, y, pattern slot (0xFF none),
                                 ; lines, spare
@@ -128,9 +130,9 @@ e_ent:  ld (V_SP),sp
         jr nz,.out
         ld a,b
         ld (V_FREED),a              ; updated in place (converted) or hidden (any other exit)
-        nextreg 0x07,3
+        call spdi                   ; the caller's speed latched (hook stack), then 28 MHz
         call svsave
-        nextreg 0x07,0
+        call spdo                   ; the caller's speed back (never a fixed 3.5 MHz)
 .out:   pop hl
         pop de
         pop bc
@@ -231,10 +233,10 @@ e_x:    ld sp,(64898)
         push bc
         push de
         push hl
-        nextreg 0x07,3
+        call spdi                   ; the caller's speed latched (hook stack), then 28 MHz
         call svrest                 ; scenery the erase cut back first: the ULA is as before the plot
         call show
-        nextreg 0x07,0
+        call spdo                   ; the caller's speed back (never a fixed 3.5 MHz)
         pop hl
         pop de
         pop bc
@@ -1132,6 +1134,11 @@ occl:   xor a                       ; MASK is cleared when the first object over
         ld l,(hl)
         jp .obj
 
+; spdi / spdo: the caller's CPU speed latched, then 28 MHz / that speed back (lib/hlib_speed.asm); every register kept
+spdi:   HLIB_SPEED_IN V_SPD
+        ret
+spdo:   HLIB_SPEED_OUT V_SPD
+        ret
 rom_end:
         ASSERT rom_end <= 0x3D00        ; no code at 0x3D00-0x3DFF (BRIEFING A1: probable DivMMC trap)
 

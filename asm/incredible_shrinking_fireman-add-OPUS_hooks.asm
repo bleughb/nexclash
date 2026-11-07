@@ -42,6 +42,7 @@ NIB16   EQU 0xDE00              ; 16 bytes: pixel-pair code -> pattern byte (mkt
 TINK    EQU 0xDE20              ; per object a: the ink its tables hold (0 = none: inks are 1-15)
 DEPTH   EQU 0xDE30              ; plots in progress (the plotter is not re-entrant)
 PENDING EQU 0xDE31              ; a frame interrupt deferred until the running plot's exit
+V_SPD   EQU 0xDE32              ; the caller's CPU speed (NR 7 bits 1:0; card patch.restore-speed)
 TABS    EQU 0xC200              ; object a: 0xC200 + 0x200 a (high pair), + 0x100 (low pair)
 FLAGS   EQU 0xDF00              ; bits 0-2 object a shown, 3-5 the buffer its own pair shows
 PEND    EQU 0xDF01              ; bits 0-2 the pending pair is up, 3-5 the buffer it shows
@@ -71,8 +72,8 @@ e_ent:  push af
         push bc
         push de
         push hl
-        nextreg 0x07,3
         nextreg 0x56,CPAGE+4
+        call spdin              ; the caller's speed latched, then 28 MHz
         ld hl,DEPTH             ; a plot in progress (e_isr defers an interrupt until it ends)
         inc (hl)
         ld hl,9                 ; HL, DE, BC, AF(IFF) pushed; + 9 = A of the first push
@@ -80,8 +81,9 @@ e_ent:  push af
         ld a,(hl)
         cp 3
         call c,n_obj
+        ld a,(V_SPD)            ; the caller's speed back (never a fixed 3.5 MHz); A is popped below
+        nextreg 0x07,a
         nextreg 0x56,0
-.x:     nextreg 0x07,0
         pop hl
         pop de
         pop bc
@@ -108,8 +110,8 @@ e_plot: pop ix                  ; the replaced instruction
         push bc
         push de
         push hl
-        nextreg 0x07,3
         nextreg 0x56,CPAGE+4
+        call spdin              ; the caller's speed latched, then 28 MHz
         ld a,(DEPTH)
         or a
         jr z,.d0                ; (no entry seen: leave it 0)
@@ -134,8 +136,9 @@ e_plot: pop ix                  ; the replaced instruction
         ld hl,7                 ; HL, DE, BC pushed; + 7 = A of the IFF push: the marker
         add hl,sp
         ld (hl),0xA5
-.np:    nextreg 0x56,0
-.x:     nextreg 0x07,0
+.np:    ld a,(V_SPD)            ; the caller's speed back; A is popped below
+        nextreg 0x07,a
+        nextreg 0x56,0
         pop hl
         pop de
         pop bc
@@ -181,15 +184,18 @@ e_item: push af
         push bc
         push de
         push hl
-        nextreg 0x07,3
+        nextreg 0x56,CPAGE+4
+        call spdin              ; the caller's speed latched, then 28 MHz
         ld hl,15                ; AF x2, BC, DE, HL pushed + 5 = the loop counter B
         add hl,sp
         ld a,5
         sub (hl)
         cp 5
         call c,item             ; A = k (0-4), B = bottom line, C = pixel x
+        nextreg 0x56,CPAGE+4
+        ld a,(V_SPD)            ; the caller's speed back; A is popped below
+        nextreg 0x07,a
         nextreg 0x56,0
-        nextreg 0x07,0
         pop hl
         pop de
         pop bc
@@ -244,6 +250,18 @@ t_c2:   ld hl,0x4800
 t_c3:   ld hl,0x4000
         jp 0xB4B0
 
+; spdin: V_SPD = the caller's speed (NR 7 bits 1:0; page CPAGE+4 at slot 6), then 28 MHz. A lost. Interrupts are off.
+spdin:  push bc
+        ld bc,0x243B
+        ld a,7
+        out (c),a
+        inc b
+        in a,(c)
+        and 3
+        ld (V_SPD),a
+        nextreg 0x07,3
+        pop bc
+        ret
 rom_end:
 
 ; ---- second block: 0x386E-0x39FE (free in the 48K ROM, below the IM 2 vector bytes) ----------
