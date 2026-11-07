@@ -11,12 +11,24 @@ sys.path.insert(0, ROOT)
 from nexclash.userflow import GAME_DATA  # noqa: E402
 
 
+def rejected_files(files, root=ROOT):
+    with open(os.path.join(root, 'tools', 'package_assets.json')) as f:
+        approved = json.load(f)['sha256']
+    bad = []
+    for name in files:
+        if name.lower().endswith(GAME_DATA):
+            digest = hashlib.sha256(open(os.path.join(root, name), 'rb').read()).hexdigest()
+            if approved.get(name) != digest:
+                bad.append(name)
+    return bad
+
+
 def main():
     out = sys.argv[sys.argv.index('-o') + 1] if '-o' in sys.argv else os.path.join(ROOT, 'dist')
     ver = open(os.path.join(ROOT, 'VERSION')).read().strip()
     files = subprocess.run(['git', '-C', ROOT, 'ls-files'], capture_output=True, text=True, check=True).stdout.split('\n')
     files = sorted(f for f in files if f)
-    bad = [f for f in files if f.lower().endswith(GAME_DATA)]
+    bad = rejected_files(files)
     if bad:
         sys.exit('game data in the repo, refusing: %s' % bad)
     man = {'version': ver, 'files': {f: hashlib.md5(open(os.path.join(ROOT, f), 'rb').read()).hexdigest() for f in files}}

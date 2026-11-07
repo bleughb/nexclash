@@ -46,9 +46,12 @@ against CLAUDE.md's rules, put a copy of the game in specnext/reference/, then `
 re-deriving their MD5s: LEARNINGS 2.6 (last two items).
 
 ## Release
+Package binary exceptions are exact paths + SHA256 in tools/package_assets.json (documented owner
+artwork only); changing an exception needs provenance review. Snapshots/builds remain rejected.
 Bump VERSION, merge, then publish a release with tag v<VERSION> in the GitHub UI: the release
-workflow builds the zip (tools/make_package.py; version = the tag) and attaches it. Missing zip:
-Actions -> release -> Run workflow with the tag. Before a release: `python selftest.py --stamp`
+workflow checks the committed VERSION against the tag, builds and smoke-tests the zip, and attaches it. Missing zip:
+Actions -> release -> Run workflow with the tag. Historical tags such as v0.1.5 used a packaging-time
+VERSION override and fail the current strict check; keep their assets, publish fixes under a new tag. Before a release: `python selftest.py --stamp`
 (every game rebuilt + the re-verifications due) must PASS.
 
 ## Lesson consolidation (old notes; new lessons are dispositioned at once, docs/LEARNING.md)

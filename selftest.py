@@ -573,7 +573,8 @@ def tools_check(src):
     (~1 min). Returns the number of failures. A session that improves a command keeps these passing
     and adds a check for what it added (one easy game is enough: the commands are game-independent)."""
     from nexclash import snapinfo, memscan, isrinfo, drawcost
-    bad = R.selfcheck()
+    workflow = subprocess.run([sys.executable, os.path.join(HERE, 'tools', 'workflow_check.py')])
+    bad = R.selfcheck() + ([] if workflow.returncode == 0 else ['workflow checks'])
     print('%-4s tools: records plan() on synthetic stamps, recipe digest and ROM identity mutations%s' % (
         'OK' if not bad else 'FAIL', '' if not bad else ' (%s)' % bad[:3]))
     from nexclash import tapeset                # tape-set inputs: reader, set matching, the records' inputs.tapes
@@ -729,7 +730,7 @@ def tools_check(src):
         else:
             print('SKIP tools: play checks in JNext (no jnext or no $NEXCLASH_JNEXT_CARD)')
         from nexclash import survey
-        _, r = survey.survey(ez, [er], os.path.join(work, 'survey'), stop=600, log=lambda m: None)
+        _, r = survey.survey(ez, [er], os.path.join(work, 'survey'), stop=600, log=lambda m: None, full=True)
         rt = {x['routine']: x for x in r['routines']}
         ok('survey (600 frames): engine chuckie, plain boot OK, 43899 x1059 calls on top, 40000 x814 from 6 callers at 665 T',
            r['engine'] == 'chuckie' and r['plain']['boot'].startswith('OK') and r['routines'][0]['routine'] == 43899 and

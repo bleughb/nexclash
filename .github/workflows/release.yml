@@ -29,8 +29,12 @@ jobs:
           [[ "$TAG" =~ ^[vV][0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid release tag"; exit 1; }
           echo "TAG=$TAG" >> "$GITHUB_ENV"
           test "$(cat VERSION)" = "${TAG#[vV]}" || { echo "VERSION does not match tag"; exit 1; }
+      - name: Install smoke-test dependencies
+        run: python -m pip install -r requirements.txt
       - name: Build package (refuses game data)
         run: python tools/make_package.py -o dist
+      - name: Smoke-test archive and contribution workflow
+        run: python tools/workflow_check.py --package "dist/nexclash-$(cat VERSION).zip"
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}

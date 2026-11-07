@@ -3,19 +3,17 @@
 | Stage | Who | Ends with (the gate) |
 |---|---|---|
 | 0 Intake | tools: `python -m nexclash.survey` | the recording reaches every plotter's callers, or the user records more (before any design work) |
-| 1 Design | session 1 | recorded user answers and approved design in games/<game>.md |
-| 2 Build | session 2 | quick runs PASS, evidence record written, committed |
-| 3 Prove + deliver | session 3 (small) | the one full verification stamped; sprite build + colour sheets to the user |
-| 4 Hardware + colour | one session per round | the user's checklist and painted sheet handled (recolour: seconds, no rebuild) |
+| 1 Design | design | recorded user answers and approved design in games/<game>.md |
+| 2 Build | build | quick runs PASS, evidence record written, committed |
+| 3 Prove + deliver | proof boundary | the one full verification stamped; sprite build + colour sheets to the user |
+| 4 Hardware + colour | one collected round | the user's checklist and painted sheet handled (recolour: seconds, no rebuild) |
 | 5 Close | the session that finishes | status, lessons as candidates, contribution / PR |
 
-Why this order (Dean 2026-10-26): tools do the mechanical work and the agent only the judgement;
-cheap checks before expensive ones; the user is asked three times (recording, the design question,
-hardware + painting), not five; colour comes after the build because recolour makes a repaint free.
-Read this intro, "Sessions" and YOUR stage only (`grep -n '^# Stage' docs/PLAYBOOK.md`, then Read
-with offset/limit); look the rest up when a step points there.
+Tools do mechanical work; the agent handles judgement. Cheap checks precede expensive ones.
+Collect recording, design and hardware/painting feedback in batches; recolour follows the build.
+Read this intro, Sessions and your stage; look up other sections as needed.
 
-Budget rule: a game the tools already convert (`auto` PASS) -> a few tool runs and one short report.
+Known games (`auto` PASS): a few tool runs and a short report.
 Only disassemble routines the tools flag as unclassified.
 
 Write decisions and open questions to games/<game>.md as they happen, so a new session can pick up
@@ -29,7 +27,8 @@ Why: each restart costs the user the walk back (El Capitan Trueno, 2026-10-13).
 add-a-game session.)
 
 ## Sessions
-Use a new session when helpful for the execution environment; preserve the handoff either way.
+Use a new session at a meaningful boundary when context is large or the environment must change;
+preserve the handoff either way. Stages do not force new chats.
 - A session may cover one or more stages or hardware rounds. A game the tools already convert
   (`auto` PASS) may need only one session.
 - A stage ends with the "Next session" block right under the title line of games/<game>.md; in
@@ -46,12 +45,12 @@ Use a new session when helpful for the execution environment; preserve the hando
   branch and commit before reading its handoff. Zip users preserve and reopen the modified package.
 - Stage log: one line per finished session under "## Stage log" in games/<game>.md: date, stage,
   wall time, tool calls (roughly), user rounds. It shows which stage costs the most.
-- Mid-stage: when the session is long (roughly 80+ tool calls, or several hours) and a natural
-  break comes (a quick run passed, a design step done), write the block, commit, and say so: the
-  user starts a new session. Never break in the middle of an edit that does not build.
+- Mid-stage: a completed design, passing quick run or delivered build is a handoff boundary.
+  When context is large, save the block and work (commit in Git; retain the package otherwise),
+  then provide the continuation prompt. Tool-call counts alone do not force a restart.
 - The block replaces any older one; the facts it points to (decisions, design, open items) stay in
   their sections of games/<game>.md, written as they happen (above).
-- Start of every Git stage: the knowledge refresh from main (docs/LEARNING.md 1); end: the learning
+- Git source refresh and proof freeze: docs/LEARNING.md 1; end: the learning
   loop (dispositioned "## Lessons", "## Technique use", probes kept).
 
 # Stage 0 - Intake (tools, before any design work)
@@ -62,7 +61,8 @@ frames ~15 min, the analysis pass silent for ~12 - not a hang; `--stop N` for a 
 the snapshot check (0b), the plain conversion with its boot check (1; 48K only), engine identification (2) and one analysis pass (3: screen writers by routine, callers, T per call,
 ISR, free memory), then a preview pass, and writes `<game>_survey/`: survey.md (one page, ~2K
 tokens), survey.json, preview.png (what each top plot routine draws, per caller), the plain .nex.
-A KNOWN engine there -> `auto`, no stage 1-2. Read survey.md first; run the single commands below
+A KNOWN engine returns a recognition-only report before replay/conversion; use `auto`, no stage 1-2.
+`survey --full` explicitly analyses a known game; recognition is not verification. Read survey.md first; run the single commands below
 only for what it leaves open. Its routine attribution is a shadow call stack (BRIEFING C4): a game
 that drops return addresses or blits with SP can blur it - check a surprising row with `cost --at`.
 Coverage gate (survey.md GATE line): CALL sites near executed code; JP sites are listed but not
@@ -100,7 +100,7 @@ reading(s) left for frame 0"; prove the tail with `scan --range` instead.)
 Check where the tail went (the converter prints it). It must be in memory the
 game never touches (step 3 proves this: `scan`); override with `--tail ADDR`.
 
-# Stage 1 - Design (session 1)
+# Stage 1 - Design
 
 ## 2. Identify the engine (fast path) or the patch plan
 `python nexclash.py identify GAME.z80` covers the TID and Dizzy 1 engines (docs/profiles/
@@ -261,7 +261,7 @@ Also build the colour-sheet capture and `recolour` now (docs/COLOURS.md): stage 
 ## 6. Verify (differential test)
 At every patched routine in the real recording: copy the machine state, run the
 original and the patched routine to their return, compare all registers
-(except R/T/MEMPTR; AF' included), all memory outside the never-read draw buffers (patch area
+(except T/MEMPTR; R and AF' included, ENGINE_CONTRACT.md), all memory outside the never-read draw buffers (patch area
 and sites excluded; dead stack only where a documented convergence check applies - a hook that
 returns into the game's own loop must leave it identical), the patched screen against the
 model, and the sprite pixels against the original plot (masked figures: run the plot on a 0x00
@@ -287,13 +287,14 @@ not every combination (Jetpac: 117 graphics x 8 positions, inks and slots once e
 Stage 2 ends: quick runs PASS (counters in games/<game>.md), the evidence record written (step 7),
 committed; the Next session block (stage 3).
 
-# Stage 3 - Prove and deliver (session 3, small)
+# Stage 3 - Prove and deliver
 
 ## 6a. The one full verification
 The full verification runs ONCE, on the build that goes to the user, and it is the stamping run:
-write the evidence record first (step 7), commit, then `python selftest.py --game <record> --verify
---stamp` (the record's verify recipe + the rebuild MD5s; it stamps the record, so the maintainers'
-`--affected` before the merge has nothing left to do for this game). Never a separate full `auto`
+refresh source before this boundary (docs/LEARNING.md 1), write the record (step 7), commit, then
+`python selftest.py --game <record> --verify --stamp`. Preserve this source/dependency state through
+delivery; record the source commit and output hashes. A later relevant change supersedes this proof
+and requires verification again; unchanged stamps can be reused by --affected. Never a separate full `auto`
 as well (Commando ran the ~55 min full check five or six times).
 Long runs: use the environment's supported background execution and retain logs and exit status; write the record and the notes meanwhile.
 
@@ -314,13 +315,12 @@ engine) to docs/profiles/, games/<game>.md, and the evidence record docs/records
 the STATUS row, `techniques` + `results` = the recipe and checks, docs/techniques/STANDARD.md 3), then
 `python -m nexclash.records views` (regenerates STATUS / VERIFICATION
 checksums / verified.json). Check it: `python -m nexclash.records deps <game>` lists what your
-game's evidence depends on; the one full verification (6a) stamps it. The engine's line in
-nexclash/engines.py is not shared code (rebuild-only); anything else outside your engine is:
-`python selftest.py --canary`.
+game's evidence depends on; the one full verification (6a) stamps it. Canary scope follows CLAUDE.md: shared build/runtime/verifier changes; documentation and
+registry-only additions do not trigger it.
 Send with the sprite build: the colour sheets (docs/COLOURS.md "What to send") and the hardware
 checklist, so the user tests and paints in the same pass.
 
-# Stage 4 - Hardware and colour rounds (one session per round)
+# Stage 4 - Hardware and colour rounds
 - Collect the user's whole list per round (above); 6b before every build the user tests.
 - Enhanced set: the painter first (docs/COLOURS.md PAINTER), blocks only if asked. A painted sheet:
   `recolour` (seconds, no rebuild); as the build default: rebuild + verify + stamp (COLOURS.md).
