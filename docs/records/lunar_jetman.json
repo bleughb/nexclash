@@ -92,19 +92,19 @@
   },
   "sprites": {
    "file": "lunar_jetman_sprites.nex",
-   "md5": "e33f68c4fc0dca007daf14e99188ecfd"
+   "md5": "aca1c90c9f90a719d9a3ee8d0e694c80"
   },
   "sprites_loading": {
    "file": "lunar_jetman_sprites_loading.nex",
-   "md5": "4634886880940d0db5e4cee9c1113819"
+   "md5": "a0af30ca8016214a145f9165ffae6a53"
   },
   "enhanced": {
    "file": "lunar_jetman_enhanced.nex",
-   "md5": "dfeb2cf9d184d6672f2c1448c0d9b805"
+   "md5": "555af3ceaf9073f267b42c3912b2068b"
   },
   "enhanced_loading": {
    "file": "lunar_jetman_enhanced_loading.nex",
-   "md5": "62f7e914c390fcce7477d5efd2423cad"
+   "md5": "9df3d4f64ffaec160ef42fc5357f57e9"
   }
  },
  "repro": [],
@@ -142,46 +142,46 @@
  ],
  "checked": {
   "deps": {
-   "asm/lunar_jetman_hooks.asm": "6182c08be1845639",
+   "asm/lunar_jetman_hooks.asm": "be34ac42ac46671f",
    "asm/lunar_jetman_palette.asm": "b8bd4aa764472e51",
-   "docs/profiles/lunar_jetman.json": "391d89e2b9253839",
-   "nexclash.py": "b7f49876a97b1f48",
+   "docs/profiles/lunar_jetman.json": "a5df7d585f476818",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/lunar_jetman.py": "64e422b7780c676a",
-   "nexclash/nextboot.py": "e57136059969ba67",
-   "nexclash/rzx.py": "fda23afec57aec5e",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/engines.py": "00d01102bda98ad5",
+   "nexclash/lunar_jetman.py": "424aa1b1c81dbae4",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "6d6706710bce0b55",
+   "recipe": "a040400e34af6a5c",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-07"
  },
  "verified": {
   "deps": {
-   "asm/lunar_jetman_hooks.asm": "6182c08be1845639",
+   "asm/lunar_jetman_hooks.asm": "be34ac42ac46671f",
    "asm/lunar_jetman_palette.asm": "b8bd4aa764472e51",
-   "docs/profiles/lunar_jetman.json": "391d89e2b9253839",
-   "nexclash.py": "b7f49876a97b1f48",
+   "docs/profiles/lunar_jetman.json": "a5df7d585f476818",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/lunar_jetman.py": "64e422b7780c676a",
-   "nexclash/nextboot.py": "e57136059969ba67",
-   "nexclash/rzx.py": "fda23afec57aec5e",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/engines.py": "00d01102bda98ad5",
+   "nexclash/lunar_jetman.py": "424aa1b1c81dbae4",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "6d6706710bce0b55",
+   "recipe": "a040400e34af6a5c",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-07"
  }
 }

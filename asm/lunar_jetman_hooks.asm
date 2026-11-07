@@ -36,6 +36,13 @@ h_new:  push af
         push bc
         push de
         push hl
+        ld bc,0x243B            ; the caller's CPU speed (NR 7 bits 1:0, card patch.restore-speed), kept on the
+        ld a,7                  ; stack: these hooks live in the alt ROM (no RAM for a latch)
+        out (c),a
+        inc b
+        in a,(c)
+        and 3
+        push af
         nextreg 0x07,3
         call objn               ; A = n, carry = not an object
         jp c,.out
@@ -116,7 +123,8 @@ h_new:  push af
 .hid:   ld a,b
         ld b,4
         call hide
-.out:   nextreg 0x07,0
+.out:   pop af
+        nextreg 0x07,a          ; the caller's speed back (never a fixed 3.5 MHz)
         pop hl
         pop de
         pop bc
@@ -167,6 +175,13 @@ h_tnew: push af
         push bc
         push de
         push hl
+        ld bc,0x243B            ; the caller's CPU speed (NR 7 bits 1:0, card patch.restore-speed), kept on the
+        ld a,7                  ; stack: these hooks live in the alt ROM (no RAM for a latch)
+        out (c),a
+        inc b
+        in a,(c)
+        and 3
+        push af
         nextreg 0x07,3
         call trk                ; A = first sprite (0 / 10), carry = not a truck
         jp c,.out
@@ -275,7 +290,8 @@ h_tnew: push af
 .hid:   ld a,b
         ld b,10
         call hide
-.out:   nextreg 0x07,0
+.out:   pop af
+        nextreg 0x07,a          ; the caller's speed back (never a fixed 3.5 MHz)
         pop hl
         pop de
         pop bc
