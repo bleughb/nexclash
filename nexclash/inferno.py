@@ -297,7 +297,7 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
     counts, errors, dirty_counts, shifts, graphics = Counter(), [], Counter(), Counter(), set()
     actor_cache, visible_cache = {}, set()
     actor_jobs = {}
-    update_timings = []
+    update_timings, pre_window = [], []
     loading_result = loading_store = None
     prewarm_seen,prewarm_first_use,prewarm_frame = {},[],None
     kernel = CapturePatch() if capture else None
@@ -355,6 +355,7 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
                     fail('capture bookkeeping budget', cost)
                 if pc == 0x8F92:
                     counts['max capture tick cost'] = max(counts['max capture tick cost'], st['capture_cost'])
+                    pre_window.append(st['capture_cost'] - cost)   # copier window X (8F7C/959B/96A1)
                 counts['max kernel cost %04X' % pc] = max(counts['max kernel cost %04X' % pc], cost)
                 if pc not in tests:
                     tests[pc] = (list(m), list(r), bytearray(private))
@@ -658,6 +659,8 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
             'scope': ('capture kernel + offline complete scenery worker; no frame hook/commit/sprites or total-render timing' if scenery else 'capture kernel + original reconstruction; no display layer, loader integration or total-render timing' if capture else 'original reconstruction/resource census; no sprite hooks or timings')}
     if loading:
         result['loading_preparation'] = loading_result
+    if capture:
+        result['capture_pre_window_T'] = pre_window
     if pack:
         if frame and len(update_timings) != counts['post-copy assembled frame hooks']:
             raise AssertionError('missing per-update timing records')
@@ -4300,13 +4303,19 @@ def continuation_tests(folder, pulse=False, initialization=False):
 
 # --- Copier window (claude/inferno-copier-window) ------------------------------------------
 # Original pacing: the copier 9790 OUTs the A700 beeper buffer once per cell and calls the 9907
-# limiter after row 6; the next interrupt resumes it. Milestone 1 replaces 9790..97FB by the
-# translated head in page 80 (no OUT, exact RAM/registers/R, logged OUT changes). Pad and OUT
-# replay are later milestones; this path alone is not pace-preserving and is never installed.
+# limiter after row 6; the next interrupt resumes it. Milestone 1 replaced 9790..97FB by the
+# translated head in page 80 (no OUT, exact RAM/registers/R, logged OUT changes). Milestone 2
+# OUTs each change at its original T and enters 9907 at the original time, polled on CTC
+# channel 3, with frame IRQs inside the window taken by cw_irq (page 80 byte 0 = IM2 JR offset).
 CW_PAGE = 80
 CW_ROWS = 13
 CW_CELLS = 32 * CW_ROWS
 CW_HEAD_T0, CW_HEAD_PER_G = 79477, 101
+CW_CLK, CW_X, CW_NIRQ = 0x1810, 0x1811, 0x181D   # page-80 variables (asm EQUs)
+CW_CTC_PORT, CW_TICK = 0x1B3B, 32                # CTC channel 3, prescaler 256
+CW_ISR = (94, 10)          # original no-op ISR (998E = 0): T and M1 incl. the IM2 acknowledge
+CW_INT_PULSE = 32          # /INT length, 3.5MHz T
+CW_TOL = 48                # OUT/9907 tolerance: one tick, rounding and poll latency
 
 
 def cw_out_t(k, g):
@@ -4316,11 +4325,14 @@ def cw_out_t(k, g):
 
 
 class CopierWindowPatch(CapturePatch):
-    """Capture patch whose 8F92 tail enters the translated copier head instead of JP 9790."""
-    def __init__(self, head=None):
+    """Capture patch whose 8F92 tail enters the copier window instead of JP 9790.
+
+    window_only: the milestone-2 vehicle installs only the 8F92 site (cap_done, then the window);
+    no capture hooks run before it, so the earlier-hook time X is 0 at run time."""
+    def __init__(self, head=None, window_only=False, rom_code=None):
         super().__init__()
         h = load_profile()['hooks']
-        rom_code = bytes.fromhex(h['cwrom'])
+        rom_code = bytes.fromhex(h['cwrom']) if rom_code is None else bytes(rom_code)
         org = self.syms['cw_go']
         if org + len(rom_code) >= 0x3D00 or any(v != 255 for v in self.rom[org:org + len(rom_code)]):
             raise ValueError('copier-window trampoline overlaps live ROM')
@@ -4330,15 +4342,28 @@ class CopierWindowPatch(CapturePatch):
             raise ValueError('unexpected cap_done tail')
         self.rom[tail:tail + 3] = b'\xC3' + org.to_bytes(2, 'little')
         self.head = bytes.fromhex(h['cwhead']) if head is None else bytes(head)
+        if self.head[0] != self.syms['cw_irq'] - 1:
+            raise ValueError('page-80 byte 0 is not the IM2 JR offset to cw_irq')
+        if window_only:
+            self.sites = {a: v for a, v in self.sites.items() if a == 0x8F92}
+            self.site_bytes = {a + j for a, (old, new) in self.sites.items() for j in range(len(old))}
+            self.stops = {}
         self.stops = dict(self.stops)
         self.stops[0x8F92] = 0x9907
 
 
 class CopierWindowMemory(CaptureMemory):
-    def __init__(self, ram, state, patch):
+    """Page 80 window state, a CTC channel 3 down counter on the model's wall clock, port FE log."""
+    def __init__(self, ram, state, patch, clk=1, x=0, ctc=True, phase=0, count0=0):
         super().__init__(ram, state, patch)
-        self.pages[CW_PAGE] = bytearray(8192)
-        self.pages[CW_PAGE][:len(patch.head)] = patch.head
+        page = bytearray(8192)
+        page[:len(patch.head)] = patch.head
+        page[CW_CLK] = clk
+        page[CW_X:CW_X + 2] = x.to_bytes(2, 'little')
+        self.pages[CW_PAGE] = page
+        self.ctc, self.phase, self.count0 = ctc, phase, count0
+        self.wall = 0.0
+        self.outs, self.ctc_writes = [], []
 
     def nextreg(self, reg, value):
         if reg == 0x50 and value == CW_PAGE:
@@ -4347,94 +4372,213 @@ class CopierWindowMemory(CaptureMemory):
             return
         super().nextreg(reg, value)
 
+    def read_port(self, regs, port):
+        if port != CW_CTC_PORT:
+            raise AssertionError('unexpected port read %04X' % port)
+        if not self.ctc:
+            return 255                      # no CTC: floating bus, never counts
+        return (self.count0 - int((self.wall + self.phase) // CW_TICK)) & 255
 
-def run_cw_head(patch, memory, registers, limit=200000):
-    """8F92 -> 9907 differentially: original CALL 9790 path versus cap_done + translated head.
+    def write_port(self, regs, port, value, *args):
+        if port & 0xFF == 0xFE:
+            self.outs.append((self.wall, value))
+        elif port == CW_CTC_PORT:
+            self.ctc_writes.append(value)
+        else:
+            raise AssertionError('unexpected port write %04X' % port)
 
-    Compared at 9907 entry: every register in CMP plus R, all game RAM (patch sites only
-    excluded), and the logged OUT changes against the original OUT stream (values, cells and
-    uncontended T). Returns cost in equivalent 3.5MHz T for the patched path."""
+
+def _cost(r, before, speed, reads, mem):
+    """Equivalent 3.5MHz T of one step; 28MHz reads carry one wait; transitions charged at 3.5MHz."""
+    return (r[25] - before + (mem.fast_reads - reads if speed == 3 else 0)) / (8 if speed == 3 and mem.speed == 3 else 1)
+
+
+def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count0=0, irqs=(), limit=600000):
+    """8F92 -> 9907 differentially, on one wall clock (3.5MHz T from the 8F92 state).
+
+    Original: CALL 9790 path with frame IRQs (if any) at the given wall times. Patched: cap_done +
+    window, entered x late (the time earlier hooks would have added; written to CW_X), CTC model with
+    the given phase. Checked: every register incl. R; all RAM except, with IRQs, the 4 bytes below the
+    final SP, which 9907's PUSH DE / PUSH HL overwrite (run in both, then all RAM must match); the
+    OUT (254) stream = the original's value changes in order, each at its original T within CW_TOL,
+    or late (head not yet there); 9907 at its original time within CW_TOL. Without IRQs also the
+    milestone-1 log against cw_out_t and the head T model."""
     from skoolkit.simulator import Simulator
     from .dizzy6 import _rw_simulator
     from . import z80n, simpool
     source = list(memory)
     if registers[24] != 0x8F92:
         raise AssertionError('state is not at 8F92')
+    if source[0x998E]:
+        raise AssertionError('998E set at 8F92')
+    start = registers[25]
     original = simpool.machine(Simulator, source, registers, 'inferno.cw.original', copy=True)
-    o = original.registers
-    outs, t0 = [], None
+    o, om = original.registers, original.memory
+    pending, o_taken, outs, t0, prev = sorted(irqs), [], [], None, registers[24]
     while o[24] != 0x9907:
+        now = o[25] - start
+        while pending and now >= pending[0] + CW_INT_PULSE:
+            raise AssertionError('original held interrupts off at %d' % pending[0])
+        if pending and now >= pending[0] and o[26] and original.accept_interrupt(o, om, prev):
+            o_taken.append(pending.pop(0))
+            prev = o[24]
+            continue
         if o[24] == 0x9790 and t0 is None:
             t0 = o[25]
         if o[24] == 0x97C5:
-            outs.append((o[25] - t0, o[0]))
-        original.opcodes[original.memory[o[24]]]()
-    head_t = o[25] - t0
-    mem = CopierWindowMemory(patch.apply_memory(source), bytearray(8192), patch)
+            outs.append((o[25] - start, o[0]))
+        if om[0x998E]:
+            raise AssertionError('998E set inside the original head')
+        prev = o[24]
+        original.opcodes[om[o[24]]]()
+    head_t, o9907 = o[25] - t0, o[25] - start
+    o_regs, o_ram = list(o), bytes(om[16384:])
+    for _ in range(2):                      # 9907: PUSH DE / PUSH HL
+        original.opcodes[om[o[24]]]()
+    mem = CopierWindowMemory(patch.apply_memory(source), bytearray(8192), patch, clk, x, ctc, phase, count0)
     sim = simpool.machine(_rw_simulator(), mem, registers, 'inferno.cw.patched')
     sim.set_tracer(mem)
     r = sim.registers
     z80n.install(sim, mem.nextreg)
-    elapsed, steps = 0.0, 0
+    syms = patch.syms
+    waits = [(syms['cw_wait'], syms['cw_wait_end'])]
+    elapsed, steps, wait_t = float(x), 0, 0.0
+    pending, p_taken, p_lost, prev = sorted(irqs), [], [], registers[24]
+    di_spans, di_start, entered_9790 = [], None, False
     while r[24] != 0x9907:
         if steps >= limit:
-            raise AssertionError('copier head did not reach 9907')
-        if r[24] in patch.site_bytes and r[24] not in patch.sites:
+            raise AssertionError('copier window did not reach 9907')
+        pc = r[24]
+        if pc in patch.site_bytes and pc not in patch.sites:
             raise AssertionError('jumped into a patched instruction interior')
-        before, speed, reads = r[25], mem.speed, mem.fast_reads
-        sim.opcodes[mem[r[24]]]()
-        elapsed += (r[25] - before + (mem.fast_reads - reads if speed == 3 else 0)) / (8 if speed == 3 and mem.speed == 3 else 1)
-        if r[26] and (mem.mmu0 != 255 or mem.speed != 0):
-            raise AssertionError('interrupt-enabled private mapping or fast clock')
+        if r[26]:
+            if di_start is not None:
+                di_spans.append((di_start - x, elapsed - di_start))
+                di_start = None
+            if not ((mem.mmu0 == 255 and mem.speed == 0) or (mem.mmu0 == CW_PAGE and mem.speed == 3)
+                    or (mem.mmu0 == 255 and mem[prev] == 0xFB)):   # EI: no IRQ before the next instruction
+                raise AssertionError('interrupt-enabled scratch mapping or fast game code')
+        elif di_start is None:
+            di_start = elapsed
+        while pending and elapsed >= pending[0] + CW_INT_PULSE:
+            p_lost.append(pending.pop(0))
+        if pending and elapsed >= pending[0] and r[26]:
+            if mem[0x998E]:
+                raise AssertionError('998E set at an IRQ inside the window')
+            before, speed, reads = r[25], mem.speed, mem.fast_reads
+            if sim.accept_interrupt(r, mem, prev):
+                p_taken.append(pending.pop(0))
+                elapsed += _cost(r, before, speed, reads, mem)
+                prev = r[24]
+                continue
+        if pc == 0x9790:
+            entered_9790 = True
+        mem.wall = elapsed
+        before, speed, reads, page = r[25], mem.speed, mem.fast_reads, mem.mmu0
+        prev = pc
+        sim.opcodes[mem[pc]]()
+        cost = _cost(r, before, speed, reads, mem)
+        elapsed += cost
+        if page == CW_PAGE and any(a <= pc < b for a, b in waits):
+            wait_t += cost
         steps += 1
+    if di_start is not None:
+        di_spans.append((di_start - x, elapsed - di_start))
     errors = []
-    diffs = [i for i in CMP if r[i] != o[i]]
+    diffs = [i for i in CMP if r[i] != o_regs[i]]
     if diffs:
         errors.append('registers ' + str(diffs))
-    if r[15] != o[15]:
-        errors.append('R %02X != %02X' % (r[15], o[15]))
-    expected = original.memory[16384:]
+    if r[15] != o_regs[15]:
+        errors.append('R %02X != %02X' % (r[15], o_regs[15]))
+    expected = bytearray(o_ram)
     for a, (old, new) in patch.sites.items():
         expected[a - 16384:a - 16384 + len(new)] = new
-    if mem.ram[16384:] != expected:
-        bad = [i + 16384 for i, (x, y) in enumerate(zip(mem.ram[16384:], expected)) if x != y]
+    sp = o_regs[12]
+    dead = {(sp - j) & 0xFFFF for j in range(1, 5)}   # window CALLs / IRQ pushes; 9907 overwrites them
+    early = set()   # an IRQ before the copier's own SP: its pushes lie below the caller's SP, as in the original
+    if irqs:
+        sp0 = registers[12]
+        early = {(sp0 - j) & 0xFFFF for j in range(1, 7)}
+    bad = [i + 16384 for i, (u, v) in enumerate(zip(mem.ram[16384:], expected)) if u != v and i + 16384 not in dead | early]
+    if bad:
         errors.append('RAM %s' % [hex(a) for a in bad[:6]])
-    page = mem.pages[CW_PAGE]
-    end = page[0x1805] | page[0x1806] << 8
-    rows = list(page[0x1700:0x1700 + CW_ROWS])
-    logged = []
-    for e in range(0x1004, end + 4, 4):
-        value, e_lo, d, c = page[e:e + 4]
-        k = (0xFF - e_lo) + 256 * ((0x50 - d) >> 3)
-        g = sum(rows[:k // 32]) + c
-        logged.append((cw_out_t(k, g), value, k))
-    changes = [(t, v) for i, (t, v) in enumerate(outs) if i == 0 or v != outs[i - 1][1]]
-    if [(t, v) for t, v, _ in logged] != changes:
-        errors.append('OUT log differs (%d logged, %d original changes)' % (len(logged), len(changes)))
-    if len(outs) != CW_CELLS or CW_HEAD_T0 + CW_HEAD_PER_G * sum(rows) != head_t:
-        errors.append('head T model')
-    return {'errors': errors, 'equivalent_T': elapsed - (o[25] - registers[25]) + (o[25] - registers[25]),
-            'original_T': o[25] - registers[25], 'head_T': head_t, 'changes': len(changes), 'G': sum(rows),
-            'steps': steps}
+    if dead:
+        for _ in range(2):
+            sim.opcodes[mem[r[24]]]()
+        after = bytearray(original.memory[16384:])
+        for a, (old, new) in patch.sites.items():
+            after[a - 16384:a - 16384 + len(new)] = new
+        left = [i + 16384 for i, (u, v) in enumerate(zip(mem.ram[16384:], after)) if u != v and i + 16384 not in early]
+        if left:
+            errors.append('bytes below SP not overwritten by 9907 PUSH DE / PUSH HL: %s' % [hex(a) for a in left[:4]])
+    change_k = [i for i, (t, v) in enumerate(outs) if i == 0 or v != outs[i - 1][1]]
+    changes = [outs[i] for i in change_k]
+    fallback = entered_9790
+    stream = outs if fallback else changes
+    if [v for t, v in mem.outs] != [v for t, v in stream]:
+        errors.append('OUT values differ (%d written, %d expected)' % (len(mem.outs), len(stream)))
+        dts = []
+    else:
+        dts = [pt - ot for (pt, pv), (ot, ov) in zip(mem.outs, stream)]
+    d9907 = elapsed - o9907
+    # an IRQ handled inside the window delays an OUT due within one cell after it (handler + /INT wait)
+    irq_near = {i for i, (t, v) in enumerate(stream) for w in o_taken if 0 <= t - w <= 400}
+    # an OUT due within 64 T of an IRQ: the 32 T clock cannot order them, so it may move by one ISR
+    irq_edge = {i for i, (t, v) in enumerate(stream) for w in o_taken if -64 <= t - w <= CW_ISR[0] + 64}
+    irq_delayed = [i for i, d in enumerate(dts) if (i in irq_near and CW_TOL < d <= CW_TOL + 40)
+                   or (i in irq_edge and CW_TOL < abs(d) <= CW_TOL + CW_ISR[0] + 8)]
+    late = [i for i, d in enumerate(dts) if d > CW_TOL and i not in irq_delayed]
+    if not fallback:
+        if any(d < -CW_TOL for i, d in enumerate(dts) if i not in irq_delayed):
+            errors.append('OUT early by %.0f T' % -min(dts))
+        first_ok = min([i for i, d in enumerate(dts) if abs(d) <= CW_TOL], default=len(dts))
+        if any(i > first_ok for i in late):
+            errors.append('late OUT after an on-time OUT')
+        if abs(d9907) > CW_TOL:
+            errors.append('9907 off by %.0f T' % d9907)
+        if not irqs:
+            rows = list(mem.pages[CW_PAGE][0x1700:0x1700 + CW_ROWS])
+            if len(outs) != CW_CELLS or CW_HEAD_T0 + CW_HEAD_PER_G * sum(rows) != head_t:
+                errors.append('head T model')
+            model, g = _cw_out_model(source)
+            if [t - (t0 - start) for t, v in outs] != model or g != sum(rows):
+                errors.append('OUT T model')
+    return {'values': [v for t, v in stream], 'change_k': change_k, 'irq_delayed': [round(dts[i]) for i in irq_delayed], 'errors': errors, 'fallback': fallback, 'dts': dts, 'late': len(late),
+            'late_T': max([dts[i] for i in late], default=0), 'd9907': d9907, 'o9907': o9907,
+            'changes': len(changes), 'G': None if irqs else sum(mem.pages[CW_PAGE][0x1700:0x1700 + CW_ROWS]),
+            'wait_T': wait_t, 'busy_T': elapsed - x - wait_t, 'di_spans': di_spans,
+            'irqs_taken': len(p_taken), 'irqs_lost': p_lost, 'original_irqs': len(o_taken),
+            'clk': mem.pages[CW_PAGE][CW_CLK], 'ctc_writes': mem.ctc_writes, 'steps': steps}
+
+
+def _cw_out_model(memory):
+    """Original T (from 9790 entry) of all 416 head OUTs, from the tile map alone; and G."""
+    g, ts = 0, []
+    for k in range(CW_CELLS):
+        ts.append(cw_out_t(k, g))
+        g += memory[0x9F7E - 2 * k] >= 16
+    return ts, g
 
 
 def _cw_states(reference, levels, stop, every):
-    """8F92 entry states (RAM, registers) from the original recordings."""
+    """8F92 entry states (RAM, registers, last port FE value) from the original recordings."""
     from .simrun import run
 
     class Grab:
         def __init__(self):
-            self.sim, self.n, self.states = None, 0, []
+            self.sim, self.n, self.states, self.port = None, 0, [], None
 
         def on_sim(self, sim):
             self.sim = sim
 
         def before(self, pc):
+            m = self.sim.memory
+            if m[pc] == 0xD3 and m[(pc + 1) & 0xFFFF] == 0xFE:
+                self.port = self.sim.registers[0]
             if pc == 0x8F92:
                 self.n += 1
                 if self.n % every == 0:
-                    m = self.sim.memory
-                    self.states.append((bytes(m[a] for a in range(65536)), list(self.sim.registers)))
+                    self.states.append((bytes(m[a] for a in range(65536)), list(self.sim.registers), self.port))
     out = {}
     for level in levels:
         g = Grab()
@@ -4443,51 +4587,222 @@ def _cw_states(reference, levels, stop, every):
     return out
 
 
-def copier_window_checks(reference, levels=('1', '2', '3', '4', '5', '6'), stop=2000, every=1):
-    """Translated copier head: every sampled 8F92 state plus three negative controls."""
+def _cw_variant(patch_head, old, new, offset=0):
+    """Head bytes with one unique pattern changed (negative controls)."""
+    at = patch_head.find(old)
+    if at < 0 or patch_head.find(old, at + 1) >= 0:
+        raise AssertionError('control pattern not unique: ' + old.hex())
+    code = bytearray(patch_head)
+    code[at + offset:at + offset + len(new)] = new
+    return code
+
+
+def copier_window_controls(head, syms):
+    """Broken windows that the checks must reject (each uses its own changed bytes)."""
+    c = {}
+    c['change detection removed (JP Z -> JP)'] = (_cw_variant(head, bytes.fromhex('FDBE00CA'), b'\xC3', 3), False)
+    c['tile count INC C removed'] = (_cw_variant(head, bytes.fromhex('D50C'), b'\x00', 1), False)
+    rk = head.find(bytes.fromhex('3A02186FC6'))   # LD A,(CW_R) / LD L,A / ADD A,CW_M1K
+    if rk < 0 or head.find(bytes.fromhex('3A02186FC6'), rk + 1) >= 0:
+        raise AssertionError('CW_M1K pattern')
+    code = bytearray(head)
+    code[rk + 5] = (code[rk + 5] + 1) & 0xFF
+    c['R constant off by one'] = (code, False)
+    a, b = syms['cw_irq'], syms['cw_head']
+    c['IRQ T not added'] = (head[:a] + _cw_variant(head[a:b], bytes.fromhex('ED34') + CW_ISR[0].to_bytes(2, 'little'),
+                                                   bytes.fromhex('ED340000')) + head[b:], True)
+    c['IRQ M1 not added'] = (head[:a] + _cw_variant(head[a:b], bytes((0xC6, CW_ISR[1])), b'\xC6\x00') + head[b:], True)
+    c['pad 3 ticks late'] = (_cw_pad_variant(head, syms, 96), False)
+    c['OUT deadlines 3 ticks early'] = (_cw_krb_variant(head, -96), False)
+    return c
+
+
+def _cw_pad_variant(head, syms, delta):
+    pat = bytes.fromhex('3A191821')         # LD A,(CW_RBF) / LD HL,6104+1024+16-CW_KPAD
+    at = head.find(pat)
+    if at < 0 or head.find(pat, at + 1) >= 0:
+        raise AssertionError('CW_KPAD pattern')
+    code = bytearray(head)
+    v = (int.from_bytes(code[at + 4:at + 6], 'little') + delta) & 0xFFFF
+    code[at + 4:at + 6] = v.to_bytes(2, 'little')
+    return code
+
+
+def _cw_krb_variant(head, delta):
+    at = head.find(bytes.fromhex('23ED34'))  # INC HL / ADD HL,CW_KRB
+    if at < 0 or head.find(bytes.fromhex('23ED34'), at + 1) >= 0:
+        raise AssertionError('CW_KRB pattern not unique')
+    code = bytearray(head)
+    v = (int.from_bytes(code[at + 3:at + 5], 'little') + delta) & 0xFFFF
+    code[at + 3:at + 5] = v.to_bytes(2, 'little')
+    return code
+
+
+def copier_window_checks(reference, levels=('1', '2', '3', '4', '5', '6'), stop=2000, every=1, xs=None):
+    """Copier window milestone 2 on every sampled 8F92 state.
+
+    Per state: window-only patch (x = 0), CTC phase varied per state. With xs (per-level lists of the
+    capture hooks' measured time before 8F92, aligned with the states): the same state entered x late
+    (accumulate-X), which must still enter 9907 on time; late OUTs are reported. Every 50th state: IRQ
+    injection at 20 points over 8F92..9907, units (untested/absent CTC) and negative controls."""
     reference = Path(reference)
-    patch = CopierWindowPatch()
-    head = patch.head
-    controls = {
-        'change detection removed (JR Z -> JR)': (bytes.fromhex('FDBE0028'), bytes.fromhex('FDBE0018')),
-        'tile count INC C removed': (bytes.fromhex('D50C'), bytes.fromhex('D500')),
-        'R constant off by one': (bytes.fromhex('3A0B18C6'), None),
-    }
-    broken = {}
-    for name, (old, new) in controls.items():
-        at = head.find(old)
-        if at < 0 or head.find(old, at + 1) >= 0:
-            raise AssertionError('control pattern not unique: ' + name)
-        code = bytearray(head)
-        if new is None:
-            code[at + 4] = (code[at + 4] + 1) & 0xFF
-        else:
-            code[at:at + len(new)] = new
-        broken[name] = CopierWindowPatch(code)
-    counts, worst, failures, detected = Counter(), {}, [], Counter()
+    patch = CopierWindowPatch(window_only=True)
+    syms = patch.syms
+    controls = {name: (CopierWindowPatch(code, window_only=True), needs_irq)
+                for name, (code, needs_irq) in copier_window_controls(patch.head, syms).items()}
+    counts, failures, detected, per = Counter(), [], Counter(), {}
+    dts_all, late_x, d9907s = [], [], []
     states = _cw_states(reference, levels, stop, every)
+
+    def fail(level, i, what, res):
+        if len(failures) < 12:
+            failures.append({'level': level, 'state': i, 'case': what, 'errors': res['errors'][:3] if isinstance(res, dict) else [str(res)]})
+        counts['failures'] += 1
+
     for level, cases in states.items():
-        for ram, regs in cases:
-            res = run_cw_head(patch, ram, regs)
+        w = per.setdefault(level, Counter())
+        xlist = (xs or {}).get(level)
+        if xlist is not None and len(xlist) != len(cases):
+            raise AssertionError('X list does not align with level %s states' % level)
+        for i, (ram, regs, port) in enumerate(cases):
+            n = counts['states']
             counts['states'] += 1
+            phase, count0 = (n * 13) % CW_TICK, (n * 37) & 255
+            res = run_cw_window(patch, ram, regs, phase=phase, count0=count0)
             counts['OUT changes'] += res['changes']
-            if res['errors']:
-                failures.append({'level': level, 'errors': res['errors'][:3]})
-            w = worst.setdefault(level, {'max_head_ms_patched': 0, 'max_head_ms_original': 0, 'max_G': 0})
-            w['max_head_ms_patched'] = max(w['max_head_ms_patched'], round(res['equivalent_T'] / 3500, 3))
-            w['max_head_ms_original'] = max(w['max_head_ms_original'], round(res['original_T'] / 3500, 3))
-            w['max_G'] = max(w['max_G'], res['G'])
-            if counts['states'] % 50 == 1:
-                for name, bp in broken.items():
+            if res['errors'] or res['fallback']:
+                fail(level, i, 'x=0', res)
+            dts_all.extend(res['dts'])
+            d9907s.append(res['d9907'])
+            counts['late OUTs at x=0'] += res['late']
+            if res['late'] - (1 if res['values'] and res['values'][0] == port else 0) > 0:
+                counts['states with late level changes at x=0'] += 1
+                counts['max late T at x=0'] = max(counts['max late T at x=0'], round(res['late_T']))
+            w['max_window_ms'] = max(w['max_window_ms'], round(res['o9907'] / 3500, 3))
+            w['max_busy_ms'] = max(w['max_busy_ms'], round(res['busy_T'] / 3500, 3))
+            w['min_wait_ms'] = min(w.get('min_wait_ms', 99), round(res['wait_T'] / 3500, 3))
+            spans = [s for t, s in res['di_spans']]
+            counts['max entry DI span T'] = max(counts['max entry DI span T'], round(spans[0]))
+            counts['max exit DI span T'] = max(counts['max exit DI span T'], round(spans[-1]))
+            counts['max other DI span T'] = max([counts['max other DI span T']] + [round(s) for s in spans[1:-1]])
+            if xlist is not None:
+                x = int(round(xlist[i]))
+                rx = run_cw_window(patch, ram, regs, x=x, phase=phase, count0=count0)
+                counts['accumulate-X states'] += 1
+                if rx['errors']:
+                    fail(level, i, 'x=%d' % x, rx)
+                d9907s.append(rx['d9907'])
+                if rx['late']:
+                    counts['accumulate-X states with late OUTs'] += 1
+                    counts['accumulate-X late OUTs'] += rx['late']
+                    late_x.append(rx['late_T'])
+                    # a late first OUT that repeats the port's current value changes nothing physical
+                    physical = rx['late'] - (1 if rx['values'][0] == port else 0)
+                    if physical > 0:
+                        counts['accumulate-X states with late level changes'] += 1
+            if n % 50 == 0:
+                end = res['o9907']
+                for j, t in enumerate([1 + j * (end - 300) / 19 for j in range(20)] + [40.0, 80.0, 120.0]):
+                    ri = run_cw_window(patch, ram, regs, phase=phase, count0=count0, irqs=(t,))
+                    counts['IRQ injections'] += 1
+                    if ri['irqs_lost']:
+                        counts['IRQ lost (DI span)'] += 1
+                        counts['IRQ lost max at T'] = max(counts['IRQ lost max at T'], round(t))
+                        continue
+                    counts['IRQ taken in window' if ri['irqs_taken'] else 'IRQ taken by game code'] += 1
+                    if ri['irq_delayed']:
+                        counts['OUTs delayed by an IRQ handler'] += len(ri['irq_delayed'])
+                        counts['max IRQ-delayed OUT T'] = max(counts['max IRQ-delayed OUT T'], max(ri['irq_delayed']))
+                    if ri['errors'] or ri['original_irqs'] != 1:
+                        fail(level, i, 'irq at %.0f' % t, ri)
+                if end * 0.2 + 69888 < end - 500:
+                    ri = run_cw_window(patch, ram, regs, phase=phase, count0=count0, irqs=(end * 0.2, end * 0.2 + 69888))
+                    counts['IRQ double injections'] += 1
+                    if ri['errors'] or ri['irqs_taken'] != 2:
+                        fail(level, i, 'two irqs', ri)
+                for name, (bp, needs_irq) in controls.items():
                     try:
-                        bad = run_cw_head(bp, ram, regs)['errors']
+                        bad = run_cw_window(bp, ram, regs, phase=phase, count0=count0,
+                                            irqs=(end * 0.5,) if needs_irq else ())['errors']
                     except AssertionError as e:
                         bad = [str(e)]
                     detected[name + (' detected' if bad else ' MISSED')] += 1
-    return {'counts': dict(counts), 'failures': failures[:10], 'per_level': worst,
+                for clk, ctc, want in ((0, True, 1), (0, False, 2), (2, True, 2)):
+                    ru = run_cw_window(patch, ram, regs, clk=clk, ctc=ctc, phase=phase, count0=count0)
+                    counts['CTC unit clk=%d ctc=%s' % (clk, ctc)] += 1
+                    if want == 1:   # first window after boot: the test runs before the time base read
+                        ok = (ru['clk'] == 1 and not ru['fallback'] and ru['ctc_writes'] == [0x27, 0] and ru['d9907'] > 0
+                              and not [e for e in ru['errors'] if not e.startswith('9907 off')])
+                        counts['max first-window late T'] = max(counts['max first-window late T'], round(ru['d9907']))
+                    else:           # original copier at original speed; R not restored
+                        ok = ru['clk'] == 2 and ru['fallback'] and not [e for e in ru['errors'] if not e.startswith('R ')]
+                        counts['max fallback 9907 late T'] = max(counts['max fallback 9907 late T'], round(ru['d9907']))
+                    if not ok:
+                        fail(level, i, 'CTC unit %d/%s' % (clk, ctc), ru)
+    for level, w in per.items():
+        per[level] = dict(w)
+    dts_all.sort()
+    q = lambda v, f: round(v[min(len(v) - 1, int(f * len(v)))]) if v else None
+    return {'counts': dict(counts), 'failures': failures, 'per_level': per,
+            'out_offset_T': {'min': q(dts_all, 0), 'p1': q(dts_all, .01), 'median': q(dts_all, .5), 'p99': q(dts_all, .99), 'max': q(dts_all, 1)},
+            'd9907_T': {'min': round(min(d9907s)), 'max': round(max(d9907s))},
+            'accumulate_X_late_T': {'max': round(max(late_x, default=0)), 'median': q(sorted(late_x), .5)},
             'negative_controls': dict(detected),
-            'scope': 'translated copier head 8F92->9907 in the simulator, interrupts not delivered; '
-                     'no pad, no OUT replay, not installed, no hardware'}
+            'scope': 'copier window 8F92->9907 in the simulator (uncontended T, 28MHz read waits, CTC and IRQ '
+                     'models); no contention, no hardware'}
+
+
+class CopierWindowSnapshotPatch(BootstrapPatch):
+    """Software diagnostic from level 1: ONLY the copier window at 8F92 (cap_done + page 80), the
+    bank loader as in the capture diagnostic; no capture hooks, no sprite/Layer 2 display.
+    Hardware test vehicle for pace and sound against the plain Inferno.nex; not a release."""
+    name = 'Inferno copier-window diagnostic (no sprites; not a release)'
+    tail_addr, max_tail = 0x9A80, 128
+
+    def __init__(self, blocks):
+        super().__init__(blocks)
+        self.window = CopierWindowPatch(window_only=True)
+        self.page = bytes(self.window.rom[8192:])
+        self.extra_banks[12] = self.page + bytes(8192)
+        head = bytearray(8192)
+        head[:len(self.window.head)] = self.window.head      # CW_CLK = 0: CTC tested at first use
+        if CW_PAGE // 2 in self.extra_banks:
+            raise ValueError('page 80 already allocated')
+        self.extra_banks[CW_PAGE // 2] = bytes(head) + bytes(8192)
+        self.sites = [(a, old, new) for a, (old, new) in self.window.sites.items()]
+
+    def apply(self, snap):
+        if snap.is128:
+            raise ValueError('copier-window diagnostic expects original 48K Inferno')
+        source = [0] * 16384 + list(snap.banks[5] + snap.banks[2] + snap.banks[0])
+        ram = self.window.apply_memory(source)[16384:]
+        snap.banks[5], snap.banks[2], snap.banks[0] = bytes(ram[:16384]), bytes(ram[16384:32768]), bytes(ram[32768:])
+
+
+def copier_window_build(reference, folder):
+    """Inferno_copier_window_diagnostic.nex + boot checks (NEXLOAD and foreign ROM3) + page-80 bytes."""
+    from . import z80tonex, nextboot
+    from .build import rom48
+    from hashlib import md5
+    reference, folder = Path(reference), Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    snapshot = reference / 'Inferno.z80'
+    patch = CopierWindowSnapshotPatch(tape_blocks(reference / 'Inferno.tzx'))
+    nex = folder / 'Inferno_copier_window_diagnostic.nex'
+    _, tail, data, _ = z80tonex.convert(str(snapshot), str(nex), quiet=True, patch=patch)
+    checks = {}
+    for name, foreign in [('Sinclair', None), ('foreign ROM3', bytes(v ^ 0xA5 for v in rom48()))]:
+        checks[name] = nextboot.check(str(nex), str(snapshot), patch, (tail, tail + len(data)),
+                                      nexload=True, sysrom=foreign)
+    raw = nex.read_bytes()
+    if raw.find(patch.extra_banks[CW_PAGE // 2]) < 0:
+        checks['page 80'] = ['window page not in the NEX']
+    if raw.find(patch.page[0x3CB0 - 0x2000:0x3CB0 - 0x2000 + len(bytes.fromhex(load_profile()['hooks']['cwrom']))]) < 0:
+        checks['alt ROM'] = ['window trampoline not in the NEX']
+    return {'boot_checks': checks, 'tail': [tail, tail + len(data)], 'sites': ['%04X' % a for a, o, n in patch.sites],
+            'nex_md5': md5(raw).hexdigest(), 'cwhead_md5': md5(patch.window.head).hexdigest(),
+            'scope': 'level-1 snapshot; copier window only (8F92), bank loader as the capture diagnostic; '
+                     'boot state checked in software, the window itself only in the simulator; not a release'}
 
 
 def main():
@@ -4500,6 +4815,7 @@ def main():
     action.add_argument('--owned-cache-checks', action='store_true')
     action.add_argument('--copier-window-checks', type=Path)
     ap.add_argument('--every', type=int, default=1)
+    ap.add_argument('--cw-x', type=Path, help='per-level capture X (JSON) for the accumulate-X runs')
     action.add_argument('--actor-job-checks', action='store_true')
     action.add_argument('--actor-pack-checks', action='store_true')
     action.add_argument('--actor-fill-checks', action='store_true')
@@ -4523,6 +4839,7 @@ def main():
     action.add_argument('--render-model-units', action='store_true')
     action.add_argument('--capture-all', type=Path)
     action.add_argument('--capture-build', type=Path)
+    action.add_argument('--copier-window-build', type=Path)
     action.add_argument('--capture-check', type=Path)
     action.add_argument('--model-check', type=Path)
     ap.add_argument('--quick', type=int, default=2000)
@@ -4554,7 +4871,10 @@ def main():
         print(json.dumps(result))
         return 0
     if a.copier_window_checks:
-        result = copier_window_checks(a.copier_window_checks, stop=a.quick, every=a.every)
+        xs = None
+        if a.cw_x:
+            xs = {k: (v['X'] if isinstance(v, dict) else v) for k, v in json.loads(a.cw_x.read_text()).items()}
+        result = copier_window_checks(a.copier_window_checks, stop=a.quick, every=a.every, xs=xs)
         if a.json:
             a.json.write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps(result))
@@ -4694,6 +5014,12 @@ def main():
             a.json.write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps(result))
         return int(any(v for k, v in result['counts'].items() if k.endswith('!')))
+    if a.copier_window_build:
+        result = copier_window_build(a.copier_window_build, a.out)
+        if a.json:
+            a.json.write_text(json.dumps(result, indent=2) + '\n')
+        print(json.dumps(result))
+        return int(any(result['boot_checks'].values()))
     if a.capture_build:
         result = capture_build(a.capture_build, a.out)
         if a.json:
