@@ -27,10 +27,21 @@ from . import z80tonex as zt
 from .build import rom48
 
 
+def nex_screen_size(flags):
+    """Bytes between a .nex header and its first bank, from header byte 10 (as NEXLOAD and nxc.screen_size read
+    them): a 512-byte palette unless bit 7 or a ULA / hi-res / hi-colour screen, then each screen. 0 = none."""
+    if not flags:
+        return 0
+    if flags & 0x60:
+        raise ValueError('a .nex V1.3 loading screen (byte 10 bit 5 or 6) is not modelled')
+    sizes = ((1, 49152), (2, 6912), (4, 12288), (8, 12288), (16, 12288))
+    return (0 if flags & 0x9A else 512) + sum(n for bit, n in sizes if flags & bit)
+
+
 def load_nex(path):
     d = open(path, 'rb').read()
     present = [b for b in range(112) if d[18 + b]]
-    banks, off = {}, 512
+    banks, off = {}, 512 + nex_screen_size(d[10])     # a header loading screen (Beyond the Ice Palace) comes first
     for b in zt.BANK_FILE_ORDER:
         if b in present:
             banks[b] = d[off:off + 16384]
@@ -142,6 +153,23 @@ def tail_of(nex):
     raise ValueError('%s: no z80tonex start-up tail found' % nex)
 
 
+def boot_restores(nex, tail_pc, z80, sysrom=None):
+    """A build whose start-up tail jumps to its own boot code instead of the game (the patch moved the snapshot PC:
+    Beyond the Ice Palace's boot_resume puts 0x5B00-0x5BFF back): the addresses 0x5B00-0xBFFF holding the snapshot's
+    bytes when the game starts, booted as NEXLOAD leaves the printer buffer. Empty when the tail jumps straight to the
+    game (every other build: nothing changes for it) or that boot does not reach the snapshot's PC."""
+    if z80 is None:
+        return set()
+    snap = zt.Z80Snapshot(z80)
+    if snap.pc == tail_pc:
+        return set()
+    try:
+        st = boot(nex, snap.pc, sysrom=sysrom, nexload=True)
+    except (ValueError, RuntimeError):
+        return set()
+    return {a for a in range(0x5B00, 0xC000) if st['mem'][a] == snap.read(a)}
+
+
 def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=()):
     """Every ROM byte the ORIGINAL game runs or reads in its recordings, against what each built .nex
     gives it on the Next: the .nex booted over the system ROM3 (system_rom3(): NextZXOS's when given) to
@@ -164,7 +192,8 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=()):
     game RAM, so the game must never read one before writing it (Match Day: the trophy's attributes).
     z80 (the build's snapshot): also the printer buffer bytes the .nex starts with differently, booted
     as NEXLOAD leaves it (NEXLOAD_PRINTER) - a warning: the stub puts it back only with
-    keep_printer_buffer (BRIEFING C2 #36).
+    keep_printer_buffer (BRIEFING C2 #36). A build whose tail jumps to its own boot code (boot_restores) is
+    credited with the bytes that code puts back before the game starts: neither list holds those.
     known: [(image, lo, hi, why)] differences a game's record accepts (its "rom_paths_known": Knight Tyme's Bridge
     star map, read from alt image 0 = the Next's ROM 0): listed as KNOWN, not faults; any other is a MISMATCH."""
     from skoolkit import ROM48, ROM128, read_bin_file
@@ -172,11 +201,12 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=()):
     builds, sysr = [], system_roms() or [None, None, None, sysrom or system_rom3()[0]]
     if sysrom is not None:
         sysr[3] = sysrom
-    tails, out = {}, {}
+    tails, out, restored = {}, {}, {}
     for nex in nexes:
         try:
             tails[nex] = tail_of(nex)
             st = boot(nex, tails[nex][0], sysrom=sysrom or system_rom3()[0], nexload=z80 is not None)
+            restored[nex] = boot_restores(nex, tails[nex][0], z80, sysrom or system_rom3()[0])
         except (ValueError, RuntimeError) as e:          # no tail / the boot never reaches the game start
             out[nex] = ('boot', ['%s: BOOT FAILED in the Next model (%s): its ROM paths are not checked'
                                  % (os.path.basename(nex), e)], {'boot': str(e)}, {})
@@ -193,7 +223,7 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=()):
     if z80 is not None:
         snap = zt.Z80Snapshot(z80)
         for nex, kind, alt_on, st, *_x in builds:
-            pbuf[nex] = [a for a in range(0x5B00, 0x5C00) if st['mem'][a] != snap.read(a)]
+            pbuf[nex] = [a for a in range(0x5B00, 0x5C00) if st['mem'][a] != snap.read(a) and a not in restored[nex]]
     watch = {a for n in tails for a in range(tails[n][1], tails[n][1] + tails[n][2])} | {a for v in pbuf.values() for a in v}
 
     def replay(r, rom1, segs=False):
@@ -341,12 +371,16 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=()):
             if unk:
                 lines.append('            ROM select %s not modelled (a Next system ROM other than ROM3)' % ', '.join(map(str, unk)))
             ta, tn = tails[nex][1], tails[nex][2]
-            rd = sorted(a for a in tread if ta <= a < ta + tn)
+            rd = sorted(a for a in tread if ta <= a < ta + tn and a not in restored.get(nex, ()))
+            back = all(a in restored.get(nex, ()) for a in range(ta, ta + tn))
             if rd:
                 faults.setdefault(name, []).append(('tail', rd[0]))
                 lines.append('            MISMATCH: the game reads the start-up tail\'s bytes before writing them: %d of '
                              '0x%04X-0x%04X, first 0x%04X (PC %d, frame %d); they hold the tail, not the snapshot\'s'
                              % (len(rd), ta, ta + tn - 1, rd[0], tread[rd[0]][0], tread[rd[0]][1]))
+            elif back:
+                lines.append('            tail 0x%04X-0x%04X: put back to the snapshot\'s bytes by the build\'s boot code '
+                             'before the game starts' % (ta, ta + tn - 1))
             else:
                 lines.append('            tail 0x%04X-0x%04X: never read before written' % (ta, ta + tn - 1))
             pb = sorted(a for a in tread if a in pbuf.get(nex, ()) and not ta <= a < ta + tn)
