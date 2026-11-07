@@ -72,7 +72,9 @@
   "asm/spellbound_magic_knight_hooks.asm",
   "docs/profiles/spellbound_magic_knight_enhanced.json"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"
@@ -105,18 +107,18 @@
   },
   "sprites": {
    "file": "spellbound_magic_knight_sprites.nex",
-   "md5": "379e61b026044552437b22e117ecfd1b"
+   "md5": "dad191ba4e6eb97e63b6ff0c8870f903"
   },
   "enhanced": {
    "file": "spellbound_magic_knight_enhanced.nex",
-   "md5": "3a824f3a78d11d6cee6bc6a3b37b222c"
+   "md5": "979c73f4ff9631d9fa20c9e535eea1aa"
   }
  },
  "repro": [],
  "status": {
   "title": "Spellbound (128K, Magic Knight 2)",
   "engine_col": "spellbound_magic_knight (spellbound_magic_knight.md)",
-  "build": "spellbound_magic_knight_sprites.nex 379e61b0 (v1.1: Knight, characters, objects, smoke, balls as sprites with outline, whole alt ROM image from the build) + Enhanced 3a824f3a (by parts, own palette entries 1-5) = published Spellbound v1.1 .nxc --bare",
+  "build": "spellbound_magic_knight_sprites.nex dad191ba + Enhanced 979c73f4 (v1.1 + 2026-11-07: hooks restore the caller's speed, lib/hlib_speed.asm; 379e61b0 / 3a824f3a = published Spellbound v1.1 .nxc --bare)",
   "software": "lockstep IDENTICAL default + Enhanced on 9 recordings (39,222 frames), unit tests, negatives 23/23 + palette 7/7 (imported 2026-11-04 from Jon Attree's .nxc work)",
   "hardware": "none (JNext)",
   "next": "hardware test"
@@ -126,52 +128,54 @@
  ],
  "checked": {
   "deps": {
-   "asm/spellbound_magic_knight_hooks.asm": "2a049083624eb81a",
-   "docs/profiles/spellbound_magic_knight.json": "98020931c84ac9a1",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/spellbound_magic_knight_hooks.asm": "0ddbef4e655730a0",
+   "docs/profiles/spellbound_magic_knight.json": "b2b8e5a2dc2135a2",
    "docs/profiles/spellbound_magic_knight_enhanced.json": "795579a61b4da48b",
-   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash.py": "4bd8267e3abba47c",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
    "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/nextboot.py": "b87029cb9187ab28",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "273dab19dfcd9e27",
    "nexclash/rzx.py": "fda23afec57aec5e",
-   "nexclash/simrun.py": "9c4802548f78f40b",
-   "nexclash/spellbound_magic_knight.py": "5f44dd9ebeaa59a0",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/spellbound_magic_knight.py": "25582afd0c068a21",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "621a37b897680c01",
    "skoolkit": "10.1",
-   "recipe": "b43986454302f5f8",
+   "recipe": "63772cab43cf1f88",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-06"
  },
  "verified": {
   "deps": {
-   "asm/spellbound_magic_knight_hooks.asm": "2a049083624eb81a",
-   "docs/profiles/spellbound_magic_knight.json": "98020931c84ac9a1",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/spellbound_magic_knight_hooks.asm": "0ddbef4e655730a0",
+   "docs/profiles/spellbound_magic_knight.json": "b2b8e5a2dc2135a2",
    "docs/profiles/spellbound_magic_knight_enhanced.json": "795579a61b4da48b",
-   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash.py": "4bd8267e3abba47c",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
    "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/nextboot.py": "b87029cb9187ab28",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "273dab19dfcd9e27",
    "nexclash/rzx.py": "fda23afec57aec5e",
-   "nexclash/simrun.py": "9c4802548f78f40b",
-   "nexclash/spellbound_magic_knight.py": "5f44dd9ebeaa59a0",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/spellbound_magic_knight.py": "25582afd0c068a21",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "621a37b897680c01",
    "skoolkit": "10.1",
-   "recipe": "b43986454302f5f8",
+   "recipe": "63772cab43cf1f88",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-06"
  }
 }
