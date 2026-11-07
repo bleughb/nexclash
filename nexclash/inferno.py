@@ -636,7 +636,7 @@ def model_verify(path, stop=2000, capture=False, scenery=False, frame=False, pac
             # private page and tables. This specifically exercises the whole-RAM comparator.
             bad_address = next(a for a in range(16384, 65536) if a not in kernel.site_bytes and mem0[a] != r0[0])
             broken = bytearray(kernel.code)
-            off = broken.index(bytes.fromhex('21009B'))
+            off = broken.index(bytes.fromhex('210009'))   # LD HL,CAP_LOG (the map copy is DMA since m3)
             broken[off:off + 3] = b'\x32' + bad_address.to_bytes(2, 'little')
             try:
                 run_capture(CapturePatch(broken), mem0, r0, state0, 0x8F7C)
@@ -3164,6 +3164,12 @@ class CapturePatch:
         if org + len(self.code) >= 0x3D00 or any(v != 255 for v in self.rom[org:org + len(self.code)]):
             raise ValueError('capture code overlaps live ROM')
         self.rom[org:org + len(self.code)] = self.code
+        lo, low = self.syms['cap_in'], bytes.fromhex(prof['hooks']['caplo'])
+        if lo + len(low) > 0x3A00 or any(v != 255 for v in self.rom[lo:lo + len(low)]):
+            raise ValueError('capture entry block overlaps live ROM')
+        self.rom[lo:lo + len(low)] = low
+        # page 80: the copier window and the hooks' timing helpers (cw_tin / cw_tout)
+        self.head = bytes.fromhex(prof['hooks']['cwhead'])
         self.sites, self.stops = {}, {}
         for address, spec in prof['capture_sites'].items():
             a = int(address, 16)
@@ -3183,11 +3189,60 @@ class CapturePatch:
 
 
 class CaptureMemory(LoaderMemory):
-    def __init__(self, ram, state, patch):
+    """Page 68 state, page 80 (window + hook timing helpers), CTC channel 3 on the wall clock
+    (`wall`, 3.5MHz T, set by the runner), NextReg $C8 (ULA interrupt seen) / $22 bit 7 (/INT) from
+    the frame IRQ pulses in `irqs` (wall times; a pulse lasts CW_INT_PULSE T)."""
+    def __init__(self, ram, state, patch, clk=1, ctc=True, phase=0, count0=0, irqs=()):
         self.ram, self.rom = ram, patch.rom
         self.pages = {STATE_PAGE: bytearray(state)}
+        head = getattr(patch, 'head', None)
+        if head is not None:
+            page = bytearray(8192)
+            page[:len(head)] = head
+            page[CW_CLK] = clk
+            self.pages[CW_PAGE] = page
         self.mmu0, self.speed = 255, 0
         self.writes, self.maps, self.fast_reads = [], [], 0
+        self.ctc, self.phase, self.count0 = ctc, phase, count0
+        self.wall, self.irqs, self.c8_clear, self.nr_sel, self.c8_reads = 0.0, sorted(irqs), -1e9, None, []
+        self.ctc_writes = []
+
+    def int_active(self):
+        return any(t <= self.wall < t + CW_INT_PULSE for t in self.irqs)
+
+    def c8(self):
+        """Bit 0 set by a pulse since the last clear; a clear during a pulse does not take."""
+        return int(any(t + CW_INT_PULSE > self.c8_clear and t <= self.wall for t in self.irqs))
+
+    def read_port(self, regs, port):
+        if port == CW_CTC_PORT:
+            if not self.ctc:
+                return 255                      # no CTC: floating bus, never counts
+            return (self.count0 - int((self.wall + self.phase) // CW_TICK)) & 255
+        if port == 0x253B and self.nr_sel == 0xC8:
+            self.c8_reads.append(self.wall)
+            return self.c8()
+        if port == 0x253B and self.nr_sel == 0x22:
+            return 0x80 if self.int_active() else 0
+        if self.mmu0 == 255 and self.speed == 0 and port & 0xFF in (0x1F, 0xFE):
+            return 255                          # game code (update model): as the original simulator
+        raise AssertionError('unexpected port read %04X' % port)
+
+    def write_port(self, regs, port, value, *args):
+        if port == 0x243B and value in (0xC8, 0x22):
+            self.nr_sel = value
+        elif port == CW_CTC_PORT:
+            self.ctc_writes.append(value)
+        elif port & 0xFF == 0x6B and self.speed == 3:
+            if getattr(self, 'dma', None) is None:   # the 8F7C map copy (zxnDMA, continuous)
+                from .dma import DMA
+
+                def stall(n):                       # CPU held while it runs: TECHNIQUES 1.0 2K copy,
+                    regs[25] += round(n * CAP_DMA_CYCLES)   # 381.6 us at 28MHz (28MHz cycles a byte)
+                self.dma = DMA(lambda a: LoaderMemory.__getitem__(self, a), self.__setitem__, None, stall=stall)
+            self.dma.feed(value)
+        else:
+            raise AssertionError('unexpected port write %04X' % port)
 
     def __getitem__(self, a):
         if self.speed == 3 and isinstance(a, int):
@@ -3199,9 +3254,11 @@ class CaptureMemory(LoaderMemory):
             if value not in (0, 3):
                 raise AssertionError('unexpected CPU speed')
             self.speed = value
-        elif reg == 0x50 and value in (255, STATE_PAGE):
+        elif reg == 0x50 and (value in (255, STATE_PAGE) or (value == CW_PAGE and CW_PAGE in self.pages)):
             self.mmu0 = value
             self.maps.append(value)
+        elif reg == 0xC8 and value == 1:
+            self.c8_clear = self.wall
         else:
             raise AssertionError('capture changed an unowned register/page')
 
@@ -3235,6 +3292,9 @@ def run_capture(patch, memory, registers, state, site, memory_class=CaptureMemor
     z80n.install(sim, mem.nextreg)
     elapsed, steps = 0.0, 0
     safe = [i for i in CMP if i != 24]
+    timed = site in HOOK_TIMED and CW_PAGE in getattr(mem, 'pages', {})
+    if timed:
+        x0 = int.from_bytes(mem.pages[CW_PAGE][CW_X:CW_X + 2], 'little')
     while r[24] != end:
         if steps >= limit:
             raise AssertionError('capture did not return')
@@ -3243,17 +3303,18 @@ def run_capture(patch, memory, registers, state, site, memory_class=CaptureMemor
         # Fetching the opcode is a real memory read too; charge the extra 28MHz wait below.
         before, speed, reads = r[25], mem.speed, mem.fast_reads
         pc, page = r[24], mem.mmu0
+        mem.wall = elapsed
         opcode = mem[r[24]]
         sim.opcodes[opcode]()
         # Transition instructions charged at 3.5MHz is a conservative bound.
-        instruction_cost = (r[25] - before + (mem.fast_reads - reads if speed == 3 else 0)) / (8 if speed == 3 and mem.speed == 3 else 1)
+        instruction_cost = _cost(r, before, speed, reads, mem)
         elapsed += instruction_cost
         if hasattr(mem, 'cost_components'):
             syms = patch.syms
             kind = ('scenery_source_compile' if page == 69 and syms['render_textmap.tm_source'] <= pc < syms['render_textmap.tm_full'] else
                     'scenery_map_bookkeeping' if page == 69 and pc < syms['render_textmap_end'] else 'frame_wrapper_prepare')
             mem.cost_components[kind] += instruction_cost
-        if r[26]:
+        if r[26] and opcode != 0xFB:   # EI: no IRQ before the next instruction
             if mem.mmu0 != 255 or mem.speed != 0 or getattr(mem,'mmu1',255) != 255 or getattr(mem,'mmu2',10) != 10:
                 raise AssertionError('interrupt-enabled scratch mapping/fast beeper')
             if not (all(r[i] == registers[i] for i in safe) or
@@ -3263,6 +3324,8 @@ def run_capture(patch, memory, registers, state, site, memory_class=CaptureMemor
     diffs = [i for i in CMP if r[i] != original.registers[i]]
     if diffs:
         raise AssertionError('capture registers differ: ' + str(diffs))
+    if timed and r[15] != original.registers[15]:
+        raise AssertionError('capture R %02X != %02X' % (r[15], original.registers[15]))
     expected_ram = original.memory[16384:]
     for a, (old, new) in patch.sites.items():
         expected_ram[a - 16384:a - 16384 + len(new)] = new
@@ -3273,11 +3336,23 @@ def run_capture(patch, memory, registers, state, site, memory_class=CaptureMemor
     if mem.pages[STATE_PAGE][:0x3F0] != state[:0x3F0]:
         raise AssertionError('capture touched loader descriptors/cursor')
     added = elapsed - (original.registers[25] - registers[25])
+    if timed and mem.pages[CW_PAGE][CW_CLK] == 1:
+        x1 = int.from_bytes(mem.pages[CW_PAGE][CW_X:CW_X + 2], 'little')
+        measured = x1 if site == 0x8F7C else (x1 - x0) & 0xFFFF
+        measured -= 65536 if measured >= 32768 else 0
+        mem.x_measured = measured
+        if abs(measured - added) > HOOK_X_TOL:
+            raise AssertionError('capture X %d != added %.1f' % (measured, added))
     if hasattr(mem, 'cost_components'):
         mem.cost_components['frame_wrapper_prepare'] -= original.registers[25] - registers[25]
     return mem.pages[STATE_PAGE], added, steps
 
 
+
+
+HOOK_TIMED = (0x8F7C, 0x959B, 0x96A1)   # hooks that measure X and restore R (milestone 3)
+CAP_DMA_CYCLES = 381.6 * 28 / 2048      # zxnDMA memory copy, 28MHz cycles a byte (hardware 2K figure)
+HOOK_X_TOL = 12                         # T: two sync-loop latencies (KSYNC 6) + 28MHz rounding
 
 
 class PausePatch(CapturePatch):
@@ -3857,6 +3932,9 @@ class CaptureSnapshotPatch(BootstrapPatch):
         self.capture = CapturePatch()
         self.page = bytes(self.capture.rom[8192:])
         self.extra_banks[12] = self.page + bytes(8192)
+        head = bytearray(8192)                  # page 80: the hooks' timing helpers (CW_CLK = 0:
+        head[:len(self.capture.head)] = self.capture.head   # no window runs, so no X is measured)
+        self.extra_banks[CW_PAGE // 2] = bytes(head) + bytes(8192)
         self.sites = [(a, old, new) for a, (old, new) in self.capture.sites.items()]
 
     def apply(self, snap):
@@ -4312,6 +4390,7 @@ CW_ROWS = 13
 CW_CELLS = 32 * CW_ROWS
 CW_HEAD_T0, CW_HEAD_PER_G = 79477, 101
 CW_CLK, CW_X, CW_NIRQ = 0x1810, 0x1811, 0x181D   # page-80 variables (asm EQUs)
+CW_KT = 0x1847             # signed T: measured speed-switch pair excess over the model (cw_cal)
 CW_CTC_PORT, CW_TICK = 0x1B3B, 32                # CTC channel 3, prescaler 256
 CW_ISR = (94, 10)          # original no-op ISR (998E = 0): T and M1 incl. the IM2 acknowledge
 CW_INT_PULSE = 32          # /INT length, 3.5MHz T
@@ -4354,46 +4433,27 @@ class CopierWindowPatch(CapturePatch):
 
 class CopierWindowMemory(CaptureMemory):
     """Page 80 window state, a CTC channel 3 down counter on the model's wall clock, port FE log."""
-    def __init__(self, ram, state, patch, clk=1, x=0, ctc=True, phase=0, count0=0):
-        super().__init__(ram, state, patch)
-        page = bytearray(8192)
-        page[:len(patch.head)] = patch.head
-        page[CW_CLK] = clk
-        page[CW_X:CW_X + 2] = x.to_bytes(2, 'little')
-        self.pages[CW_PAGE] = page
-        self.ctc, self.phase, self.count0 = ctc, phase, count0
-        self.wall = 0.0
-        self.outs, self.ctc_writes = [], []
-
-    def nextreg(self, reg, value):
-        if reg == 0x50 and value == CW_PAGE:
-            self.mmu0 = value
-            self.maps.append(value)
-            return
-        super().nextreg(reg, value)
-
-    def read_port(self, regs, port):
-        if port != CW_CTC_PORT:
-            raise AssertionError('unexpected port read %04X' % port)
-        if not self.ctc:
-            return 255                      # no CTC: floating bus, never counts
-        return (self.count0 - int((self.wall + self.phase) // CW_TICK)) & 255
+    def __init__(self, ram, state, patch, clk=1, x=0, ctc=True, phase=0, count0=0, irqs=()):
+        super().__init__(ram, state, patch, clk, ctc, phase, count0, irqs)
+        self.pages[CW_PAGE][CW_X:CW_X + 2] = (x & 0xFFFF).to_bytes(2, 'little')
+        self.outs, self.game_outs, self.log_outs = [], [], True
 
     def write_port(self, regs, port, value, *args):
         if port & 0xFF == 0xFE:
-            self.outs.append((self.wall, value))
-        elif port == CW_CTC_PORT:
-            self.ctc_writes.append(value)
+            (self.outs if self.log_outs else self.game_outs).append((self.wall, value))
         else:
-            raise AssertionError('unexpected port write %04X' % port)
+            super().write_port(regs, port, value)
 
 
 def _cost(r, before, speed, reads, mem):
-    """Equivalent 3.5MHz T of one step; 28MHz reads carry one wait; transitions charged at 3.5MHz."""
-    return (r[25] - before + (mem.fast_reads - reads if speed == 3 else 0)) / (8 if speed == 3 and mem.speed == 3 else 1)
+    """Equivalent 3.5MHz T of one step; 28MHz reads carry one wait; transitions charged at 3.5MHz
+    (mem.fast_switch: at 28MHz instead - the other bound, for the self-calibration check)."""
+    fast = speed == 3 and mem.speed == 3 or (speed != mem.speed and getattr(mem, 'fast_switch', False))
+    return (r[25] - before + (mem.fast_reads - reads if speed == 3 else 0)) / (8 if fast else 1)
 
 
-def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count0=0, irqs=(), limit=600000):
+def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count0=0, irqs=(), limit=600000,
+                  fast_switch=False, kt=0):
     """8F92 -> 9907 differentially, on one wall clock (3.5MHz T from the 8F92 state).
 
     Original: CALL 9790 path with frame IRQs (if any) at the given wall times. Patched: cap_done +
@@ -4407,35 +4467,20 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
     from .dizzy6 import _rw_simulator
     from . import z80n, simpool
     source = list(memory)
-    if registers[24] != 0x8F92:
-        raise AssertionError('state is not at 8F92')
+    site = registers[24]
+    if site not in (0x8F92, 0x8F7C):
+        raise AssertionError('state is not at 8F92 or 8F7C')
+    if site == 0x8F7C and (x or 0x8F7C not in patch.sites):
+        raise AssertionError('an 8F7C state needs the capture hooks (they measure X)')
     if source[0x998E]:
-        raise AssertionError('998E set at 8F92')
+        raise AssertionError('998E set at %04X' % site)
     start = registers[25]
-    original = simpool.machine(Simulator, source, registers, 'inferno.cw.original', copy=True)
-    o, om = original.registers, original.memory
-    pending, o_taken, outs, t0, prev = sorted(irqs), [], [], None, registers[24]
-    while o[24] != 0x9907:
-        now = o[25] - start
-        while pending and now >= pending[0] + CW_INT_PULSE:
-            raise AssertionError('original held interrupts off at %d' % pending[0])
-        if pending and now >= pending[0] and o[26] and original.accept_interrupt(o, om, prev):
-            o_taken.append(pending.pop(0))
-            prev = o[24]
-            continue
-        if o[24] == 0x9790 and t0 is None:
-            t0 = o[25]
-        if o[24] == 0x97C5:
-            outs.append((o[25] - start, o[0]))
-        if om[0x998E]:
-            raise AssertionError('998E set inside the original head')
-        prev = o[24]
-        original.opcodes[om[o[24]]]()
-    head_t, o9907 = o[25] - t0, o[25] - start
-    o_regs, o_ram = list(o), bytes(om[16384:])
-    for _ in range(2):                      # 9907: PUSH DE / PUSH HL
-        original.opcodes[om[o[24]]]()
-    mem = CopierWindowMemory(patch.apply_memory(source), bytearray(8192), patch, clk, x, ctc, phase, count0)
+    foot = set()
+    game_pc = lambda pc: pc >= 0x4000 and not (0x998B <= pc < 0x99BC or pc >= 0xFFF4)   # not the ISR
+    mem = CopierWindowMemory(patch.apply_memory(source), bytearray(8192), patch, clk, x, ctc, phase, count0, irqs)
+    mem.log_outs = site == 0x8F92
+    mem.fast_switch = fast_switch
+    mem.pages[CW_PAGE][CW_KT] = kt & 0xFF
     sim = simpool.machine(_rw_simulator(), mem, registers, 'inferno.cw.patched')
     sim.set_tracer(mem)
     r = sim.registers
@@ -4444,7 +4489,13 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
     waits = [(syms['cw_wait'], syms['cw_wait_end'])]
     elapsed, steps, wait_t = float(x), 0, 0.0
     pending, p_taken, p_lost, prev = sorted(irqs), [], [], registers[24]
-    di_spans, di_start, entered_9790 = [], None, False
+    di_spans, di_start, entered_9790, reached_8f92, x_window, p8f92 = [], None, False, site == 0x8F92, None, None
+    # Where each IRQ meets the game: a game-code IRQ before 8F92, or one a hook lost and compensated
+    # (cap_lost), acts at a game instruction - the hooks shift the game by X, so the original takes it
+    # at that same instruction (as an RZX does), not at the same wall time; level code reads R. IRQs
+    # in the window (and pulses nothing compensated) keep their wall time.
+    anchors, gcount, unanchored = {}, 0, []
+    lost_at = syms_lost = patch.syms.get('cap_lost')
     while r[24] != 0x9907:
         if steps >= limit:
             raise AssertionError('copier window did not reach 9907')
@@ -4462,17 +4513,29 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
             di_start = elapsed
         while pending and elapsed >= pending[0] + CW_INT_PULSE:
             p_lost.append(pending.pop(0))
+            unanchored.append(p_lost[-1])
         if pending and elapsed >= pending[0] and r[26]:
             if mem[0x998E]:
                 raise AssertionError('998E set at an IRQ inside the window')
-            before, speed, reads = r[25], mem.speed, mem.fast_reads
+            before, speed, reads, sp, game_isr = r[25], mem.speed, mem.fast_reads, r[12], mem.mmu0 == 255
+            mem.wall = elapsed
             if sim.accept_interrupt(r, mem, prev):
                 p_taken.append(pending.pop(0))
+                if game_isr and not reached_8f92:
+                    foot.update((sp - j) & 0xFFFF for j in range(1, 5))
+                    anchors[p_taken[-1]] = gcount
                 elapsed += _cost(r, before, speed, reads, mem)
                 prev = r[24]
                 continue
         if pc == 0x9790:
             entered_9790 = True
+        if pc == lost_at and mem.mmu0 != CW_PAGE and unanchored and not reached_8f92:
+            anchors[unanchored.pop(0)] = gcount     # compensated as an ISR before the next game instruction
+        if game_pc(pc) and not reached_8f92:
+            gcount += 1
+        if pc == 0x8F92 and not reached_8f92:
+            reached_8f92, p8f92, mem.log_outs = True, elapsed, True
+            x_window = int.from_bytes(mem.pages[CW_PAGE][CW_X:CW_X + 2], 'little')
         mem.wall = elapsed
         before, speed, reads, page = r[25], mem.speed, mem.fast_reads, mem.mmu0
         prev = pc
@@ -4484,6 +4547,47 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
         steps += 1
     if di_start is not None:
         di_spans.append((di_start - x, elapsed - di_start))
+    original = simpool.machine(Simulator, source, registers, 'inferno.cw.original', copy=True)
+    o, om = original.registers, original.memory
+    pending = sorted(w for w in irqs if w not in anchors)
+    at_game = sorted(anchors.values())
+    o_taken, outs, t0, prev, ocount = [], [], None, registers[24], 0
+    sp92, o8f92 = (registers[12] if site == 0x8F92 else None), None
+    while o[24] != 0x9907:
+        now = o[25] - start
+        while pending and now >= pending[0] + CW_INT_PULSE:
+            raise AssertionError('original held interrupts off at %d' % pending[0])
+        due = (pending and now >= pending[0]) or (at_game and o8f92 is None and ocount >= at_game[0])
+        if due and o[26]:
+            sp = o[12]
+            if original.accept_interrupt(o, om, prev):
+                if at_game and o8f92 is None and ocount >= at_game[0]:
+                    at_game.pop(0)
+                else:
+                    pending.pop(0)
+                o_taken.append(now)
+                if o8f92 is None:           # game-code IRQ before 8F92: PC and the ISR's AF below SP
+                    foot.update((sp - j) & 0xFFFF for j in range(1, 5))
+                prev = o[24]
+                continue
+        if o[24] == 0x8F92 and o8f92 is None:
+            sp92, o8f92 = o[12], now
+            if at_game:
+                raise AssertionError('game-instruction IRQ anchor not reached before 8F92')
+        if game_pc(o[24]) and o8f92 is None:
+            ocount += 1
+        if o[24] == 0x9790 and t0 is None:
+            t0, map9790 = o[25], bytes(om[0x9B00:0x9F80])
+        if o[24] == 0x97C5:
+            outs.append((o[25] - start, o[0]))
+        if om[0x998E]:
+            raise AssertionError('998E set inside the original head')
+        prev = o[24]
+        original.opcodes[om[o[24]]]()
+    head_t, o9907 = o[25] - t0, o[25] - start
+    o_regs, o_ram = list(o), bytes(om[16384:])
+    for _ in range(2):                      # 9907: PUSH DE / PUSH HL
+        original.opcodes[om[o[24]]]()
     errors = []
     diffs = [i for i in CMP if r[i] != o_regs[i]]
     if diffs:
@@ -4497,8 +4601,10 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
     dead = {(sp - j) & 0xFFFF for j in range(1, 5)}   # window CALLs / IRQ pushes; 9907 overwrites them
     early = set()   # an IRQ before the copier's own SP: its pushes lie below the caller's SP, as in the original
     if irqs:
-        sp0 = registers[12]
-        early = {(sp0 - j) & 0xFFFF for j in range(1, 7)}
+        early = {(sp92 - j) & 0xFFFF for j in range(1, 7)}
+        # game-code IRQs between 8F7C and 8F92 come at other instructions in the two runs (the hooks
+        # shift the game by X): their PC/AF pushes are garbage below the caller's SP in both
+        early |= {a for a in foot if (sp92 - a) & 0xFFFF <= 0x400}
     bad = [i + 16384 for i, (u, v) in enumerate(zip(mem.ram[16384:], expected)) if u != v and i + 16384 not in dead | early]
     if bad:
         errors.append('RAM %s' % [hex(a) for a in bad[:6]])
@@ -4540,7 +4646,7 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
             rows = list(mem.pages[CW_PAGE][0x1700:0x1700 + CW_ROWS])
             if len(outs) != CW_CELLS or CW_HEAD_T0 + CW_HEAD_PER_G * sum(rows) != head_t:
                 errors.append('head T model')
-            model, g = _cw_out_model(source)
+            model, g = _cw_out_model(bytes(0x9B00) + map9790)
             if [t - (t0 - start) for t, v in outs] != model or g != sum(rows):
                 errors.append('OUT T model')
     return {'values': [v for t, v in stream], 'change_k': change_k, 'irq_delayed': [round(dts[i]) for i in irq_delayed], 'errors': errors, 'fallback': fallback, 'dts': dts, 'late': len(late),
@@ -4548,7 +4654,14 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
             'changes': len(changes), 'G': None if irqs else sum(mem.pages[CW_PAGE][0x1700:0x1700 + CW_ROWS]),
             'wait_T': wait_t, 'busy_T': elapsed - x - wait_t, 'di_spans': di_spans,
             'irqs_taken': len(p_taken), 'irqs_lost': p_lost, 'original_irqs': len(o_taken),
-            'clk': mem.pages[CW_PAGE][CW_CLK], 'ctc_writes': mem.ctc_writes, 'steps': steps}
+            'clk': mem.pages[CW_PAGE][CW_CLK], 'ctc_writes': mem.ctc_writes, 'steps': steps,
+            'x_window': x_window, 'x_true': None if p8f92 is None or o8f92 is None else p8f92 - o8f92,
+            'p8f92': p8f92 if site == 0x8F7C else 0.0,
+            'kt': mem.pages[CW_PAGE][CW_KT] - (256 if mem.pages[CW_PAGE][CW_KT] > 127 else 0),
+            # lost pulses that began just after a hook's last $C8 read: between that read and the IRQ
+            # sample after its EI + NEXTREG 7,0 (charged at 3.5MHz here) nothing can see them
+            'irqs_gap': [w for w in p_lost if any(w - 16 <= c <= w for c in mem.c8_reads)],
+            'irqs_anchored': len(anchors)}
 
 
 def _cw_out_model(memory):
@@ -4560,13 +4673,15 @@ def _cw_out_model(memory):
     return ts, g
 
 
-def _cw_states(reference, levels, stop, every):
-    """8F92 entry states (RAM, registers, last port FE value) from the original recordings."""
+def _cw_states(reference, levels, stop, every, sites=(0x8F92,)):
+    """Entry states (RAM, registers, last port FE value) at 8F92 (and/or 8F7C: the update model)
+    from the original recordings. One site: {level: states}; several: {site: {level: states}}."""
     from .simrun import run
 
     class Grab:
         def __init__(self):
-            self.sim, self.n, self.states, self.port = None, 0, [], None
+            self.sim, self.n, self.port = None, {s: 0 for s in sites}, None
+            self.states = {s: [] for s in sites}
 
         def on_sim(self, sim):
             self.sim = sim
@@ -4575,16 +4690,17 @@ def _cw_states(reference, levels, stop, every):
             m = self.sim.memory
             if m[pc] == 0xD3 and m[(pc + 1) & 0xFFFF] == 0xFE:
                 self.port = self.sim.registers[0]
-            if pc == 0x8F92:
-                self.n += 1
-                if self.n % every == 0:
-                    self.states.append((bytes(m[a] for a in range(65536)), list(self.sim.registers), self.port))
-    out = {}
+            if pc in self.n:
+                self.n[pc] += 1
+                if self.n[pc] % every == 0:
+                    self.states[pc].append((bytes(m[a] for a in range(65536)), list(self.sim.registers), self.port))
+    out = {s: {} for s in sites}
     for level in levels:
         g = Grab()
         run(str(reference / ('Inferno%s.z80' % level)), [str(reference / ('Inferno%s.rzx' % level))], g, stop=stop)
-        out[level] = g.states
-    return out
+        for s in sites:
+            out[s][level] = g.states[s]
+    return out[sites[0]] if len(sites) == 1 else out
 
 
 def _cw_variant(patch_head, old, new, offset=0):
@@ -4638,7 +4754,263 @@ def _cw_krb_variant(head, delta):
     return code
 
 
-def copier_window_checks(reference, levels=('1', '2', '3', '4', '5', '6'), stop=2000, every=1, xs=None):
+def _cw_rom_variant(patch, lo, hi, old, new, count=1):
+    """The patch with a byte pattern in its ROM range [lo, hi) changed (negative controls)."""
+    rom = bytes(patch.rom[lo:hi])
+    at = [i for i in range(len(rom)) if rom.startswith(old, i)]
+    if len(at) != count:
+        raise AssertionError('control pattern %s found %d times' % (old.hex(), len(at)))
+    for i in at:
+        patch.rom[lo + i:lo + i + len(new)] = new
+    return patch
+
+
+def copier_window_update_controls():
+    """Broken hooks / window entries the update model must reject: name -> (patch, IRQ kind). IRQ
+    kind: None; 'hook' (a pulse inside the 8F7C hook: lost); 'entry' (inside the window's entry DI
+    span: lost); 'before' (a pulse taken by game code before an actor hook)."""
+    p = CopierWindowPatch
+    s = p().syms
+    hooks = load_profile()['hooks']
+    cap, lo = bytes.fromhex(hooks['capture']), bytes.fromhex(hooks['caplo'])
+    a0, l0 = s['cap_scene'], s['cap_in']
+    at = cap.find(b'\x1E\x00\xCD')          # LD HL,K / LD A,KR / LD E,0 / CALL cap_out (scene)
+    pat = cap[at - 5:at]
+    if at < 5 or pat[0] != 0x21 or pat[3] != 0x3E or cap.find(b'\x1E\x00\xCD', at + 1) >= 0:
+        raise AssertionError('scene exit constants not found')
+    kx = (int.from_bytes(pat[1:3], 'little') + 96) & 0xFFFF
+    c = {}
+    c['hook X constant 3 ticks high'] = (_cw_rom_variant(p(), a0, a0 + len(cap), pat, b'\x21' + kx.to_bytes(2, 'little')), None)
+    c['hook R constant off by one'] = (_cw_rom_variant(p(), a0, a0 + len(cap), pat, pat[:4] + bytes(((pat[4] + 1) & 0xFF,))), None)
+    klr = lo.find(b'\xAA\xE6\x7F\xAA') - 2   # ADD A,CAP_KLR / XOR D / AND 7F / XOR D (R + 10 in cap_lost)
+    ka = lo.find(b'\xED\x35')                  # ADD DE,CAP_KLOST
+    if klr < 0 or lo[klr] != 0xC6 or ka < 0:
+        raise AssertionError('cap_lost constants not found')
+    c['lost IRQ: R not added'] = (_cw_rom_variant(p(), l0, l0 + len(lo), lo[klr:klr + 2], bytes((0xC6, (lo[klr + 1] - 10) & 0xFF))), 'hook')
+    kl = int.from_bytes(lo[ka + 2:ka + 4], 'little')
+    c['lost IRQ: X not adjusted'] = (_cw_rom_variant(p(), l0, l0 + len(lo), lo[ka:ka + 4], b'\xED\x35' + ((kl + 94) & 0xFFFF).to_bytes(2, 'little')), 'hook')
+    c['hook $C8 clear removed'] = (_cw_rom_variant(p(), 0x3900, 0x3C00, b'\xED\x91\xC8\x01', bytes(4), 4), 'before')
+    c['window entry lost IRQ not counted'] = (p(_cw_variant(p().head, bytes.fromhex('ED780F30'), b'\x18', 3)), 'entry')
+    return c
+
+
+def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, only=None):
+    """Milestone 3 update model: 8F7C -> 9907 with the capture hooks (X measured on the CTC, R
+    restored) and the window, on one wall clock. Per state: registers incl. R, RAM, OUT changes and
+    9907 on time; X measured against the true added time. Every every_irq-th state: frame IRQs before,
+    inside and after the hooks and in the window's entry DI span (lost pulses compensated), and the
+    negative controls."""
+    patch = CopierWindowPatch()
+    ctl = copier_window_update_controls() if controls else {}
+    counts, failures, detected = Counter(), [], Counter()
+    xerr, d9907s, xs, busy, wait, gaps = [], [], [], [], [], []
+    first = next(c for c in states.values() if c)[0]   # any state: cw_cal's result does not depend on it
+    # the other bound for the speed switches: charged at 28MHz; the first window measures them (cw_cal)
+    kt_fast = run_cw_window(patch, first[0], first[1], clk=0, fast_switch=True)['kt']
+    if kt_fast > -30:
+        raise AssertionError('cw_cal did not measure the fast speed switches (%d)' % kt_fast)
+    head = bytearray(patch.head)
+    at = head.find(bytes.fromhex('3A4718' '5F879F5719'))   # cw_tout: LD A,(CW_KT) .. ADD HL,DE
+    if at < 0 or head.find(bytes.fromhex('3A4718' '5F879F5719'), at + 1) >= 0:
+        raise AssertionError('cw_tout KT pattern')
+    head[at + 7] = 0
+    ctl_kt = CopierWindowPatch(bytes(head))
+
+    def fail(level, i, what, res):
+        if len(failures) < 80:
+            failures.append({'level': level, 'state': i, 'case': what,
+                             'errors': res['errors'][:3] if isinstance(res, dict) else [str(res)]})
+        counts['failures'] += 1
+
+    for level, cases in states.items():
+        for i, (ram, regs, port) in enumerate(cases):
+            if not _cw_pick(level, i, sample, only):
+                continue
+            n = _cw_n(level, i)
+            counts['states'] += 1
+            phase, count0 = (n * 13) % CW_TICK, (n * 37) & 255
+            try:
+                res = run_cw_window(patch, ram, regs, phase=phase, count0=count0)
+            except AssertionError as e:
+                fail(level, i, 'no IRQ', e)
+                continue
+            if res['errors'] or res['fallback']:
+                fail(level, i, 'no IRQ', res)
+            xw = res['x_window'] - (65536 if res['x_window'] >= 32768 else 0)
+            xerr.append(xw - res['x_true'])
+            xs.append(res['x_true'])
+            d9907s.append(res['d9907'])
+            busy.append(res['busy_T'] - res['p8f92'])   # the window's own busy time
+            wait.append(res['wait_T'])
+            counts['OUT changes'] += res['changes']
+            counts['late OUTs (burst prefix after X)'] += res['late']
+            if n % every_irq:
+                continue
+            spans = [(s, l) for s, l in res['di_spans'] if s < res['p8f92'] - 1]
+            entry = [(s, l) for s, l in res['di_spans'] if s >= res['p8f92'] - 1][:1]
+            points = []
+            for s, l in spans[:3] + spans[-1:]:
+                points += [s - 28, s - 8, s + 4, s + l / 2, s + l - 24, s + l - 8, s + l + 4]
+            for s, l in entry:
+                points += [s + 2, s + l / 2, s + l - 4]
+            points += [j * res['o9907'] / 9 for j in range(1, 9)]
+            for t in sorted(set(round(v, 1) for v in points if 0 < v < res['o9907'] - 300)):
+                try:
+                    ri = run_cw_window(patch, ram, regs, phase=phase, count0=count0, irqs=(t,))
+                except AssertionError as e:
+                    fail(level, i, 'IRQ at %.0f' % t, e)
+                    continue
+                counts['IRQ injections'] += 1
+                if ri['irqs_gap']:     # unseen by design in this model: the game may diverge (it reads R)
+                    counts['IRQ in a post-check gap (model; lost uncompensated)'] += 1
+                    gaps.append(ri['d9907'])
+                    continue
+                counts['IRQ in a DI span (lost, compensated)'] += bool(ri['irqs_lost'])
+                counts['IRQ at a game instruction (original anchored there)'] += ri['irqs_anchored']
+                d9907s.append(ri['d9907'])
+                if ri['errors'] or ri['original_irqs'] != 1:
+                    fail(level, i, 'IRQ at %.0f' % t, ri)
+            rf = run_cw_window(patch, ram, regs, phase=phase, count0=count0, fast_switch=True, kt=kt_fast)
+            counts['fast speed-switch runs (cw_cal correction)'] += 1
+            d9907s.append(rf['d9907'])
+            if rf['errors']:
+                fail(level, i, 'fast speed switches', rf)
+            bad = run_cw_window(ctl_kt, ram, regs, phase=phase, count0=count0, fast_switch=True, kt=kt_fast)['errors']
+            detected['speed-switch correction not applied in hooks' + (' detected' if bad else ' MISSED')] += 1
+            for name, (bp, kind) in ctl.items():
+                irq = ()
+                if kind == 'hook' and spans:
+                    irq = (spans[0][0] + spans[0][1] / 2,)
+                elif kind == 'entry' and entry:
+                    irq = (entry[0][0] + entry[0][1] / 2,)
+                elif kind == 'before' and len(spans) > 1:
+                    irq = ((spans[0][0] + spans[0][1] + spans[1][0]) / 2,)
+                if kind and not irq:
+                    continue
+                try:
+                    bad = run_cw_window(bp, ram, regs, phase=phase, count0=count0, irqs=irq)['errors']
+                except AssertionError as e:
+                    bad = [str(e)]
+                detected[name + (' detected' if bad else ' MISSED')] += 1
+    q = lambda v, f: round(sorted(v)[min(len(v) - 1, int(f * len(v)))], 1) if v else None
+    return {'counts': dict(counts), 'failures': failures,
+            'x_error_T': {'min': q(xerr, 0), 'p1': q(xerr, .01), 'median': q(xerr, .5), 'p99': q(xerr, .99), 'max': q(xerr, 1)},
+            'x_T': {'min': q(xs, 0), 'median': q(xs, .5), 'max': q(xs, 1)},
+            'd9907_T': {'min': q(d9907s, 0), 'max': q(d9907s, 1)},
+            'kt_fast_switches_T': kt_fast,
+            'post_check_gap_d9907_T': {'min': q(gaps, 0), 'max': q(gaps, 1)},
+            'window_busy_ms_max': round(max(busy, default=0) / 3500, 3),
+            'window_wait_ms_min': round(min(wait, default=0) / 3500, 3),
+            'negative_controls': dict(detected),
+            'scope': 'update model 8F7C -> 9907 in the simulator: capture hooks + copier window, CTC, frame '
+                     'IRQ and NextReg $C8/$22 models (a $C8 clear during a pulse does not take); uncontended '
+                     'T with 28MHz read waits, speed transitions charged at 3.5MHz; no hardware'}
+
+
+def _cw_n(level, i):
+    """State number: sets the CTC phase and the every-50th IRQ/control sample. Depends only on
+    (level, index), so one level, a sample or a single state checks exactly what the full run does."""
+    return int(level) * 1000 + i
+
+
+def _cw_pick(level, i, sample=1, only=None):
+    if only:
+        return '%s:%d' % (level, i) in only
+    return i % sample == 0
+
+
+def _cw_load_states(reference, levels, stop, every, cache):
+    """{site: {level: states}} for 8F92 and 8F7C; with cache, one pickle per level (<cache>.<level>)."""
+    import pickle
+    both, missing = {0x8F92: {}, 0x8F7C: {}}, []
+    for level in levels:
+        f = Path('%s.%s' % (cache, level)) if cache else None
+        if f is not None and f.exists():
+            d = pickle.loads(f.read_bytes())
+            for s in both:
+                both[s][level] = d[s]
+        else:
+            missing.append(level)
+    if missing:
+        got = _cw_states(Path(reference), missing, stop, every, sites=(0x8F92, 0x8F7C))
+        for level in missing:
+            for s in both:
+                both[s][level] = got[s][level]
+            if cache:
+                Path('%s.%s' % (cache, level)).write_bytes(pickle.dumps({s: both[s][level] for s in both}))
+    return both
+
+
+def _cw_merge(parts):
+    """Merge per-level results: counts add ('max ...'/'min ...' keep the extreme), failures concatenate,
+    T ranges keep min/max (percentiles stay per level, under 'per_level_results')."""
+    def counts(dicts):
+        out = Counter()
+        for d in dicts:
+            for k, v in d.items():
+                if k.startswith('max'):
+                    out[k] = max(out.get(k, v), v)
+                elif k.startswith('min'):
+                    out[k] = min(out.get(k, v), v)
+                else:
+                    out[k] += v
+        return dict(out)
+
+    def ranges(dicts):
+        dicts = [d for d in dicts if d and d.get('min') is not None]
+        return {'min': min(d['min'] for d in dicts), 'max': max(d['max'] for d in dicts)} if dicts else {}
+
+    def merge(rs):
+        out = {'counts': counts([r['counts'] for r in rs]), 'failures': sum((r['failures'] for r in rs), []),
+               'negative_controls': counts([r['negative_controls'] for r in rs])}
+        for k in rs[0]:
+            if k.endswith('_T') and isinstance(rs[0][k], dict):
+                out[k] = ranges([r[k] for r in rs])
+            elif k.endswith('_ms_max'):
+                out[k] = max(r[k] for r in rs)
+            elif k.endswith('_ms_min'):
+                out[k] = min(r[k] for r in rs)
+            elif k in ('scope', 'kt_fast_switches_T'):
+                out[k] = rs[0][k]
+        return out
+    out = merge(parts)
+    out['per_level'] = {}
+    for r in parts:
+        out['per_level'].update(r.get('per_level', {}))
+    if all('update' in r for r in parts):
+        out['update'] = merge([r['update'] for r in parts])
+        out['update']['scope'] = parts[0]['update']['scope']
+    out['per_level_results'] = parts
+    return out
+
+
+def copier_window_parallel(reference, levels, jobs, args):
+    """One process per level (`--jobs`): the same checks, about 6x faster on 6 cores; merged JSON."""
+    import subprocess
+    import sys
+    import tempfile
+    tmp = Path(tempfile.mkdtemp(prefix='cw_levels_'))
+    procs, outs = [], []
+    for level in levels:
+        out = tmp / ('level%s.json' % level)
+        cmd = [sys.executable, '-m', 'nexclash.inferno', '--copier-window-checks', str(reference),
+               '--cw-levels', level, '--json', str(out)] + args
+        procs.append((level, subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=open(tmp / ('level%s.err' % level), 'w'))))
+        outs.append(out)
+        while sum(p.poll() is None for _, p in procs) >= jobs:
+            procs[[p.poll() is None for _, p in procs].index(True)][1].wait()
+    for level, p in procs:
+        p.wait()
+    parts = []
+    for level, out in zip(levels, outs):
+        if not out.exists():
+            raise AssertionError('level %s produced no result: %s' % (level, (tmp / ('level%s.err' % level)).read_text()[-2000:]))
+        parts.append(json.loads(out.read_text()))
+    return _cw_merge(parts)
+
+
+def copier_window_checks(reference, levels=('1', '2', '3', '4', '5', '6'), stop=2000, every=1, xs=None, cache=None,
+                         update=True, sample=1, only=None):
     """Copier window milestone 2 on every sampled 8F92 state.
 
     Per state: window-only patch (x = 0), CTC phase varied per state. With xs (per-level lists of the
@@ -4652,7 +5024,8 @@ def copier_window_checks(reference, levels=('1', '2', '3', '4', '5', '6'), stop=
                 for name, (code, needs_irq) in copier_window_controls(patch.head, syms).items()}
     counts, failures, detected, per = Counter(), [], Counter(), {}
     dts_all, late_x, d9907s = [], [], []
-    states = _cw_states(reference, levels, stop, every)
+    both = _cw_load_states(reference, levels, stop, every, cache)
+    states = both[0x8F92]
 
     def fail(level, i, what, res):
         if len(failures) < 12:
@@ -4665,7 +5038,9 @@ def copier_window_checks(reference, levels=('1', '2', '3', '4', '5', '6'), stop=
         if xlist is not None and len(xlist) != len(cases):
             raise AssertionError('X list does not align with level %s states' % level)
         for i, (ram, regs, port) in enumerate(cases):
-            n = counts['states']
+            if not _cw_pick(level, i, sample, only):
+                continue
+            n = _cw_n(level, i)
             counts['states'] += 1
             phase, count0 = (n * 13) % CW_TICK, (n * 37) & 255
             res = run_cw_window(patch, ram, regs, phase=phase, count0=count0)
@@ -4705,11 +5080,11 @@ def copier_window_checks(reference, levels=('1', '2', '3', '4', '5', '6'), stop=
                 for j, t in enumerate([1 + j * (end - 300) / 19 for j in range(20)] + [40.0, 80.0, 120.0]):
                     ri = run_cw_window(patch, ram, regs, phase=phase, count0=count0, irqs=(t,))
                     counts['IRQ injections'] += 1
-                    if ri['irqs_lost']:
-                        counts['IRQ lost (DI span)'] += 1
-                        counts['IRQ lost max at T'] = max(counts['IRQ lost max at T'], round(t))
-                        continue
-                    counts['IRQ taken in window' if ri['irqs_taken'] else 'IRQ taken by game code'] += 1
+                    if ri['irqs_lost']:     # entry DI span: compensated from NextReg $C8 (milestone 3)
+                        counts['IRQ in the entry DI span (compensated)'] += 1
+                        counts['IRQ in the entry DI span max at T'] = max(counts['IRQ in the entry DI span max at T'], round(t))
+                    else:
+                        counts['IRQ taken in window' if ri['irqs_taken'] else 'IRQ taken by game code'] += 1
                     if ri['irq_delayed']:
                         counts['OUTs delayed by an IRQ handler'] += len(ri['irq_delayed'])
                         counts['max IRQ-delayed OUT T'] = max(counts['max IRQ-delayed OUT T'], max(ri['irq_delayed']))
@@ -4743,25 +5118,30 @@ def copier_window_checks(reference, levels=('1', '2', '3', '4', '5', '6'), stop=
         per[level] = dict(w)
     dts_all.sort()
     q = lambda v, f: round(v[min(len(v) - 1, int(f * len(v)))]) if v else None
-    return {'counts': dict(counts), 'failures': failures, 'per_level': per,
-            'out_offset_T': {'min': q(dts_all, 0), 'p1': q(dts_all, .01), 'median': q(dts_all, .5), 'p99': q(dts_all, .99), 'max': q(dts_all, 1)},
-            'd9907_T': {'min': round(min(d9907s)), 'max': round(max(d9907s))},
-            'accumulate_X_late_T': {'max': round(max(late_x, default=0)), 'median': q(sorted(late_x), .5)},
-            'negative_controls': dict(detected),
-            'scope': 'copier window 8F92->9907 in the simulator (uncontended T, 28MHz read waits, CTC and IRQ '
-                     'models); no contention, no hardware'}
+    out = {'counts': dict(counts), 'failures': failures, 'per_level': per,
+           'out_offset_T': {'min': q(dts_all, 0), 'p1': q(dts_all, .01), 'median': q(dts_all, .5), 'p99': q(dts_all, .99), 'max': q(dts_all, 1)},
+           'd9907_T': {'min': round(min(d9907s)) if d9907s else None, 'max': round(max(d9907s)) if d9907s else None},
+           'accumulate_X_late_T': {'max': round(max(late_x, default=0)), 'median': q(sorted(late_x), .5)},
+           'negative_controls': dict(detected),
+           'scope': 'copier window 8F92->9907 in the simulator (uncontended T, 28MHz read waits, CTC and IRQ '
+                    'models); no contention, no hardware'}
+    if update:
+        out['update'] = copier_window_update_checks(both[0x8F7C], sample=sample, only=only)
+        out['failures'] = failures + out['update']['failures']
+    return out
 
 
 class CopierWindowSnapshotPatch(BootstrapPatch):
-    """Software diagnostic from level 1: ONLY the copier window at 8F92 (cap_done + page 80), the
-    bank loader as in the capture diagnostic; no capture hooks, no sprite/Layer 2 display.
-    Hardware test vehicle for pace and sound against the plain Inferno.nex; not a release."""
+    """Software diagnostic from level 1: the copier window at 8F92 (cap_done + page 80), the bank
+    loader as in the capture diagnostic; no sprite/Layer 2 display. window_only: no capture hooks
+    (milestone 2, X = 0); else the capture hooks too (milestone 3: X measured, R restored, map copy
+    by DMA). Hardware test vehicle for pace and sound against the plain Inferno.nex; not a release."""
     name = 'Inferno copier-window diagnostic (no sprites; not a release)'
     tail_addr, max_tail = 0x9A80, 128
 
-    def __init__(self, blocks):
+    def __init__(self, blocks, window_only=True):
         super().__init__(blocks)
-        self.window = CopierWindowPatch(window_only=True)
+        self.window = CopierWindowPatch(window_only=window_only)
         self.page = bytes(self.window.rom[8192:])
         self.extra_banks[12] = self.page + bytes(8192)
         head = bytearray(8192)
@@ -4779,16 +5159,17 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
         snap.banks[5], snap.banks[2], snap.banks[0] = bytes(ram[:16384]), bytes(ram[16384:32768]), bytes(ram[32768:])
 
 
-def copier_window_build(reference, folder):
-    """Inferno_copier_window_diagnostic.nex + boot checks (NEXLOAD and foreign ROM3) + page-80 bytes."""
+def copier_window_build(reference, folder, hooks=False):
+    """Inferno_copier_window_diagnostic.nex (window only) or, with hooks, Inferno_copier_window_m3_
+    diagnostic.nex (capture hooks + window) + boot checks (NEXLOAD and foreign ROM3) + page-80 bytes."""
     from . import z80tonex, nextboot
     from .build import rom48
     from hashlib import md5
     reference, folder = Path(reference), Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
     snapshot = reference / 'Inferno.z80'
-    patch = CopierWindowSnapshotPatch(tape_blocks(reference / 'Inferno.tzx'))
-    nex = folder / 'Inferno_copier_window_diagnostic.nex'
+    patch = CopierWindowSnapshotPatch(tape_blocks(reference / 'Inferno.tzx'), window_only=not hooks)
+    nex = folder / ('Inferno_copier_window_m3_diagnostic.nex' if hooks else 'Inferno_copier_window_diagnostic.nex')
     _, tail, data, _ = z80tonex.convert(str(snapshot), str(nex), quiet=True, patch=patch)
     checks = {}
     for name, foreign in [('Sinclair', None), ('foreign ROM3', bytes(v ^ 0xA5 for v in rom48()))]:
@@ -4801,8 +5182,9 @@ def copier_window_build(reference, folder):
         checks['alt ROM'] = ['window trampoline not in the NEX']
     return {'boot_checks': checks, 'tail': [tail, tail + len(data)], 'sites': ['%04X' % a for a, o, n in patch.sites],
             'nex_md5': md5(raw).hexdigest(), 'cwhead_md5': md5(patch.window.head).hexdigest(),
-            'scope': 'level-1 snapshot; copier window only (8F92), bank loader as the capture diagnostic; '
-                     'boot state checked in software, the window itself only in the simulator; not a release'}
+            'scope': 'level-1 snapshot; %s, bank loader as the capture diagnostic; boot state checked in '
+                     'software, the window itself only in the simulator; not a release'
+                     % ('capture hooks (X, R, DMA map copy) + copier window' if hooks else 'copier window only (8F92)')}
 
 
 def main():
@@ -4816,6 +5198,12 @@ def main():
     action.add_argument('--copier-window-checks', type=Path)
     ap.add_argument('--every', type=int, default=1)
     ap.add_argument('--cw-x', type=Path, help='per-level capture X (JSON) for the accumulate-X runs')
+    ap.add_argument('--cw-cache', type=Path, help='state cache prefix: one pickle per level, <prefix>.<level> (written if absent)')
+    ap.add_argument('--cw-levels', help='copier-window checks: these levels only, e.g. 3,6')
+    ap.add_argument('--cw-sample', type=int, default=1, help='copier-window checks: every Nth state (same per-state cases)')
+    ap.add_argument('--cw-only', help='copier-window checks: just these states, e.g. 3:182,6:27 (rerun failures)')
+    ap.add_argument('--jobs', type=int, default=1, help='copier-window checks: one process per level, this many at once')
+    ap.add_argument('--cw-hooks', action='store_true', help='--copier-window-build with the capture hooks (milestone 3)')
     action.add_argument('--actor-job-checks', action='store_true')
     action.add_argument('--actor-pack-checks', action='store_true')
     action.add_argument('--actor-fill-checks', action='store_true')
@@ -4874,7 +5262,19 @@ def main():
         xs = None
         if a.cw_x:
             xs = {k: (v['X'] if isinstance(v, dict) else v) for k, v in json.loads(a.cw_x.read_text()).items()}
-        result = copier_window_checks(a.copier_window_checks, stop=a.quick, every=a.every, xs=xs)
+        levels = tuple(a.cw_levels.split(',')) if a.cw_levels else ('1', '2', '3', '4', '5', '6')
+        only = set(a.cw_only.split(',')) if a.cw_only else None
+        if only and not a.cw_levels:
+            levels = tuple(sorted({s.split(':')[0] for s in only}))
+        if a.jobs > 1 and len(levels) > 1:
+            passed = ['--quick', str(a.quick), '--cw-sample', str(a.cw_sample)]
+            for flag, value in (('--cw-x', a.cw_x), ('--cw-cache', a.cw_cache), ('--cw-only', a.cw_only)):
+                if value:
+                    passed += [flag, str(value)]
+            result = copier_window_parallel(a.copier_window_checks, levels, a.jobs, passed)
+        else:
+            result = copier_window_checks(a.copier_window_checks, levels=levels, stop=a.quick, every=a.every, xs=xs,
+                                          cache=a.cw_cache, sample=a.cw_sample, only=only)
         if a.json:
             a.json.write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps(result))
@@ -5015,7 +5415,7 @@ def main():
         print(json.dumps(result))
         return int(any(v for k, v in result['counts'].items() if k.endswith('!')))
     if a.copier_window_build:
-        result = copier_window_build(a.copier_window_build, a.out)
+        result = copier_window_build(a.copier_window_build, a.out, hooks=a.cw_hooks)
         if a.json:
             a.json.write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps(result))
