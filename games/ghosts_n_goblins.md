@@ -34,21 +34,47 @@ Techniques: detect.gameplay-screen-readers
   JNext pace (600 updates keyed to 0x82DC, the play profile's state checked every update, seed 1): +0.23% before and
   after, quiet -0.00%, busy +0.61%; interrupts 23.08 a second both (original 23.16); lockstep to update 600.
 
+## Image cache lookup (2026-11-07, engine refactor goal 4: the level-3 ladder flicker)
+- Cause (codex-flicker REPORT.md): the masked-plot hook delayed the band's ladder restore past the beam. Profile of
+  the hooks over c8 (1,200 frames): 45% was finding the image (a linear walk of the atlas index, then a byte compare)
+  and 17% a checksum of every image on every plot. Hits 3,073, misses 747 of 3,820 visible plots.
+- Now: the group cache is keyed by address + shape (an XOR byte found by CPIR, then the whole key); every hit is
+  still checked byte for byte against the atlas or parent copy (rewritten images: armour, levels), so the checksum
+  runs on a miss only. The atlas index (page 36, gng_art.index_page) has 256 buckets by checksum low ^ high, each in
+  catalogue order: a miss reads 1.5 entries instead of about 250. atlas_compare two bytes a step. e_m3 / e_o3 / e_x2
+  run wholly at 28 MHz (the stand-in loop too); the caller's speed is restored at their exits. Same groups, same
+  atlas entries as before: only the time changes. Hook T over c8 80.7M -> 47.1M.
+- JNext, the level-3 same scene, nine masked plots a pass (master cycles): original 165K; before 290K steady
+  (489K cold); now 138K (cold 1st pass under 240K).
+- Flicker (c8 fixture, frames 600-849, `nexclash.flicker`): out of step 4 -> 2 (630 / 631: a zombie rising beside
+  its dust cloud, away from the ladder), vanished 0 -> 1 (813: the dagger at the
+  right edge, visible in all three pictures). 1,000 frames: out of step 23 -> 4, vanished 5 -> 8. Not 0.
+- Pace (JNext, play profile, lockstep): level 3 (c8, 400 updates) +6.56% -> -0.00%; level 1 (600 updates) seed 1
+  +0.23% -> -0.00%, seed 2 +0.72% -> -0.00%; interrupts 23.16 / 23.96 a second = the original.
+- Proof: 8 recordings IDENTICAL (52,063 frames, 23,741 ticks), unit PASS, negatives 20/20, stamped. Two new negatives: a hit that skips the byte check (caught on c0: 'sprite differs from the
+  plot') and a parent hit that skips it (no recording reaches a parent hit: caught by the unit case
+  `_parent_stale`, a clipped fragment rewritten in place). Unit: the atlas index, every entry in its bucket.
+- Sprites cf933c18 -> 26742ac4, Enhanced 34e5d058 -> c2e6e56f; plain unchanged.
+
 ## Lessons
 - [card patch.iff-safe-read §Use / do not use] A hook that keeps R pays for the second read in M1s: count every path
   to the R-in point and lower the delta (here by 3), or the R check fails.
+- [card optimise.pattern-cache §Use / do not use] Images rewritten at the same address need a byte check on every
+  hit; the checksum then only indexes the store on a miss. Checksum + linear walks were 3x the lookup (demonstrated:
+  hook T -42%, level-3 pace +6.56% -> -0.00%).
 - [local: a build that needs game images it cannot find in the snapshot can name where they appear instead]
   content ids plus snapshot / recording / parent sources made the catalogue byte-free with the same output.
 
 ## Friction
-- reuse: [none: rzx.scan and the content ids already existed]
-- retries: [none: every image was found in the first three recordings]
-- environment: [none: the pilot venv and references as for the other imports]
-- hand-rolled: [none: one catalogue converter, run once, not kept]
-- scratch: [none: the converter stayed in the session scratchpad]
+- reuse: [none: the verifier's own hook runs, bucketed by label, answered where the time went]
+- retries: [none: the first lookup rewrite replayed clean; the speed-guard move needed one negative retargeted]
+- environment: [none: headless JNext, two instances at most, card read-only, as before]
+- hand-rolled: [none: nexclash.flicker and nexclash.pace covered the scene; the c8 fixture builds by script]
+- scratch: [none: the label profiler and scene timing patch gng internals and hard-code the c8 scene; kept with the session evidence, not promoted]
 
 ## Technique use
 - detect.gameplay-screen-readers: helped (the plot loops' own reads are the only screen readers).
+- optimise.pattern-cache: corrected: images rewritten at one address need a byte check on each hit (card amended)
 
 ## Release notes (from the .nxc work)
 
@@ -247,7 +273,7 @@ All in `work/cheats15/` unless stated otherwise:
 ## Open items
 
 - **The nfo line.** The public tool `make_nfo.py` always writes "Cheats come from the archive's POKEs". `package15.py` replaced that one line in our .nfo, because only Infinite lives is from the archive. The tool needs a field for this; it was not edited here.
-- **Level 3 out-of-step flicker.** The warning above, pre-existing in the engine.
+- **Level 3 out-of-step flicker.** 4 -> 2 in 250 frames ("Image cache lookup"); the two left are a zombie rising beside its dust cloud, not the ladder; a pace window per plot (hlib_pace, page room needed) is the next step.
 - **Not covered:** the ending, mid-map checkpoint starts, joystick and hardware.
 - **Doc cleanup.** The archive .pok's "forget all problems" entry does not match this dump. It writes `JP 0x60A3` (a re-encode-and-jump-to-0x8003 routine), so it was not used.
 

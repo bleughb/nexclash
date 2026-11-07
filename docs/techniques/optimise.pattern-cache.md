@@ -4,7 +4,7 @@
 {
   "schema": 4,
   "id": "optimise.pattern-cache",
-  "revision": 2,
+  "revision": 3,
   "kind": "optimise",
   "title": "Pattern cache: reuse sprite patterns instead of re-uploading",
   "question": "Do figures show far fewer distinct images than plots, so uploads can be skipped?",
@@ -21,20 +21,19 @@
               "a mutable image's upload invalidates its slot's key"]
   },
   "owns": {"pattern_slots": "param", "memory": "param", "hook_state": ["HLIB_PCACHE"]},
-  "examples": ["midnight_resistance", "commando", "target_renegade", "cyclone"],
+  "examples": ["midnight_resistance", "commando", "target_renegade", "cyclone", "ghosts_n_goblins"],
   "sources": ["pilot runs/atic_atac SPEED.md, work/PERFORMANCE.md (content cache after Rainbow Islands)",
               "asm/lib/hlib_pcache.asm + nexclash/hooklib.py (the shared library)"]
 }
 ```
 
 ## Use / do not use
-Key pattern slots by image identity and reuse a slot when the same image is shown again, when the
-working set fits. Not when graphics change in place without a stable key, or the worst scene's
-distinct images exceed the cache. NEW engines: the library's content cache (`hlib_pc_upload`):
+Reuse a slot when the same image shows again and the working set fits. Not when graphics change in
+place with no stable key, or the worst scene's distinct images exceed the cache. NEW engines: the library's content cache (`hlib_pc_upload`):
 - an immutable image's key names its bytes for good (`hooklib.pcache_key(page, row)`, never 0);
-- a mutable image (a work buffer the hook rebuilds) has key 0: always uploaded, and the slot's key
-  invalidated, so the next immutable image there is uploaded again;
+- a mutable image (a work buffer the hook rebuilds): key 0, always uploaded, the slot's key invalidated;
 - free, hide and clear keep pattern RAM and the keys; other pattern writers call `hlib_pc_inval` / `_reset`.
+- rewritten in place (GnG): address key, each hit checked byte for byte.
 
 **Assumptions.** The game never rewrites the bytes behind an immutable key; keys are per physical slot.
 
@@ -48,7 +47,7 @@ distinct images exceed the cache. NEW engines: the library's content cache (`hli
 ## Probe and stop
 1. `cost GAME.z80 --rzx R --at PLOTTER --group IX`: draws per frame and per object.
 2. Distinct images per frame in the worst scene; graphics changed in place (values per address)?
-Stop when the worst scene's working set is known against the planned size.
+Stop when the worst scene's working set is known.
 
 ## Contract
 - State: none.
@@ -79,7 +78,8 @@ reused. Negative control: the invalidation removed (`hooklib.NEGATIVES`
 | Midnight Resistance | 2 RZX | 16 entries | not recorded | tank: 340-410K T (thrash) | 28 MHz hooks |
 | Cyclone | RZX + bookmarks | mask cache, 3 entries | 157 distinct in 682 renders | - | 28 MHz hooks |
 | Atic Atac v1.1 | walk1, 1,300 frames | 4-bit pairs by page + row | not recorded; draw 2.98M -> 0.25M T | setup 20 ms | JNext 1.1.104 |
-When it does not help: Cyclone (images rarely repeat). Setup cost: record it next time.
+| Ghosts 'n Goblins | c8 | 32 groups | 3,073 / 747 | hooks -42% T | 28 MHz |
+No help: Cyclone (images rarely repeat).
 
 ## Evidence
 - games/commando.md, midnight_resistance.md, cyclone.md; LEARNINGS 2.1e.
