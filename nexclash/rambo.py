@@ -511,6 +511,9 @@ class Patched:
 
     def read_port(self, regs, port):
         pc = regs[24]
+        if port == 0x253B and getattr(self, 'nrsel', None) == 0x07:   # the hooks' speed latch: NR 7 as the core
+            sp = self.nr.get(0x07, 0) & 3                             # composes it (actual << 4 | programmed)
+            return sp << 4 | sp
         if pc == WAIT_IN:
             return 0xFF
         if not self.inq:
@@ -524,6 +527,9 @@ class Patched:
 
     def write_port(self, regs, port, value, *x):
         p = port & 0xFF
+        if port == 0x243B:                  # NextREG select (the speed latch reads NR 7)
+            self.nrsel = value
+            return
         if port == 0x303B:
             self.sel_a = value & 0x7F
             self.sel_p = ((value & 0x3F) << 8) | (0x80 if value & 0x80 else 0)
@@ -1139,7 +1145,7 @@ def negative_patches():
         'dirt registers swapped in the copper list': many(page('h_cw', 11, 0x17), page('h_cw', 19, 0x16)),
         'copper waits for line 100, mid-picture': page('h_cw', 7, 100),
         'copper never started': page('h_cw', 35, 0),
-        'Layer 2 on during the life tune': ram('s_tn', 18, 0x80),
+        'Layer 2 on during the life tune': ram('s_tn', 17, 0x80),   # NEXTREG 0x69,0's operand (after CALL spdi)
     }
 
 
