@@ -60,9 +60,22 @@ Hardware, CSpect. Speed on a board. Puzzles, spells that succeed, the ending, ch
   +2.67% after (quiet +5.04%, busy -0.00%), lockstep equal at every update. Both over the 2% target: the build on
   main already was (the first room build +52% over 20 updates; hook time 1.5 ms an update in the quiet third).
   Interrupts 49.45 a second before and after (original 50.00), longest gap 60.8 ms (20.3): whole-hook DI windows,
-  fixed separately (interrupts on in hooks, branch nexttang/spellbound-interrupts).
+  fixed below (Interrupts on in hooks).
+
+## Interrupts on in hooks (2026-11-07, shared engine refactor, goal 1)
+- ENTER no longer DIs and LEAVE no longer EIs: the hooks run with interrupts as the game had them. `nexclash.py isr`
+  (600 frames, and t1 6,000 frames): the handler never touches slot 4 (hook page, hook stack: 256 bytes free below
+  0x9440 for its 42), reads IY (hooks never change it), executes from slot 5; no hook site is on its path. colents
+  maps slot 5 to the colour store: there, and only there, HLIB_IFF_DI / HLIB_IFF_EI (lib/hlib_iff.asm).
+- Sprites ce8e1c6f, Enhanced 06fe3d18 (after the speed change: dad191ba / 979c73f4). Replay IDENTICAL on all 9
+  recordings, default and Enhanced, unit PASS, negatives 23/23 + palette 7/7.
+- JNext pace (as above): interrupts 49.45 -> 50.00 a second (original 50.00), longest gap 60.8 -> 20.3 ms, interrupts
+  held off 16.3 -> 14.8 % of the time (original 14.9 %); penalty unchanged, +2.67 % (hook time, not interrupts).
+  Flicker (frames 1000-1299): 0 out of step, 0 vanished, 0 one-frame attribute changes.
 
 ## Lessons
+- [card patch.iff-safe-read §Use / do not use] A hook pair that held DI for every hook lost two interrupts in a row at room
+  builds (JNext: 49.45 a second, gap 60.8 ms); with the handler's slots known (`isr`), only the slot-5 remap needs DI.
 - [card patch.restore-speed §Verification] The lockstep verifier fed every port read from the recording, so the latch's
   IN (0x253B) took a game input and the replay failed at once; it now answers 0x253B from its NextREG model.
 - [card patch.restore-speed §Use / do not use] An engine with one ENTER / LEAVE pair takes the latch in one place; a
@@ -157,7 +170,7 @@ bank 12 (the image's page bytes). Emulator only.
 - 2026-11-04 import into nexclash (phase 7, group 2): renamed, record, stamped verify; 0 user rounds.
 - 2026-11-04 ROM path check fixed for this game (raster line, segments); record unpinned; 0 user rounds.
 
-- 2026-11-07 shared engine refactor: hooks restore the caller's speed (goal 2); 0 user rounds.
+- 2026-11-07 shared engine refactor: hooks restore the caller's speed (goal 2); interrupts on in hooks (goal 1); 0 user rounds.
 ## Friction
 - reuse: [local: rebuild and boot model are today's shared code; the raster line model is the engine's copy of the boot]
 - retries: [local: the first verify failed the recolour guard (map form); fixed in the engine before the stamped run]
