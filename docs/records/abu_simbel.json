@@ -1,0 +1,187 @@
+{
+ "name": "abu_simbel",
+ "order": 27,
+ "game": "Abu Simbel Profanation",
+ "doc": "abu_simbel.md",
+ "engine": "abu_simbel",
+ "representative": true,
+ "reference": "abu_simbel",
+ "inputs": {
+  "snapshot": {
+   "name": "abu_simbel.z80",
+   "md5": "2909c2f0f18eca08479a74ad6dc8d193",
+   "path": "abu_simbel/abu_simbel.z80"
+  },
+  "recordings": [
+   {
+    "name": "attract.rzx",
+    "md5": "3928e5ffbdeacc81d1161ba09bd3619e",
+    "path": "abu_simbel/attract.rzx"
+   },
+   {
+    "name": "gameover.rzx",
+    "md5": "fc18efd4ebca20d01057d685ae40c9a1",
+    "path": "abu_simbel/gameover.rzx"
+   },
+   {
+    "name": "nocheat1.rzx",
+    "md5": "8f65776f3040ec82e7ecbe5ecee5d15e",
+    "path": "abu_simbel/nocheat1.rzx"
+   },
+   {
+    "name": "rand1.rzx",
+    "md5": "93ef3855c756bed29709ec3a267ed027",
+    "path": "abu_simbel/rand1.rzx"
+   },
+   {
+    "name": "c_r1.rzx",
+    "md5": "7f4a377fc80f09762d7631a240b72529",
+    "path": "abu_simbel/c_r1.rzx"
+   },
+   {
+    "name": "c_r8.rzx",
+    "md5": "82ef895cf62b88b51fb8cbe2f8071a12",
+    "path": "abu_simbel/c_r8.rzx"
+   },
+   {
+    "name": "c_r16.rzx",
+    "md5": "7fbabfb46a9aa13385daf5f190197b21",
+    "path": "abu_simbel/c_r16.rzx"
+   },
+   {
+    "name": "c_r24.rzx",
+    "md5": "c40116b8e408eec357b11bf4a2113291",
+    "path": "abu_simbel/c_r24.rzx"
+   },
+   {
+    "name": "c_r32.rzx",
+    "md5": "11bfd0bdd6f50129f5a588d26bb1a73c",
+    "path": "abu_simbel/c_r32.rzx"
+   },
+   {
+    "name": "c_r40.rzx",
+    "md5": "44700a0525e54f94d7a2fa842b733120",
+    "path": "abu_simbel/c_r40.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "abu_simbel"
+ ],
+ "own_modules": [
+  "abu_simbel"
+ ],
+ "data": [
+  "docs/profiles/abu_simbel.json",
+  "asm/abu_simbel_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "attract.rzx",
+   "gameover.rzx",
+   "nocheat1.rzx",
+   "rand1.rzx",
+   "c_r1.rzx",
+   "c_r8.rzx",
+   "c_r16.rzx",
+   "c_r24.rzx",
+   "c_r32.rzx",
+   "c_r40.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 10,
+  "note": "Pilot: scripted random-key recordings and the game's own attract mode; c_r* have the archive .pok cheats and a poked start room in the RZX snapshots only. No human player."
+ },
+ "outputs": {
+  "plain": {
+   "file": "abu_simbel.nex",
+   "md5": "82c1349ae5d34e68a67a7aabc68e039f"
+  },
+  "sprites": {
+   "file": "abu_simbel_sprites.nex",
+   "md5": "102c92e393c7eaa4aa416dc1542abb2e"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Abu Simbel Profanation",
+  "engine_col": "abu_simbel (abu_simbel.md)",
+  "build": "abu_simbel_sprites.nex (pilot, unattended): player and enemies sprites; scenery, HUD, text ULA",
+  "software": "site differential on 10 recordings, whole-game plot-sequence differential, negatives; JNext both builds reach play",
+  "hardware": "untested",
+  "next": "hardware test; EAR bit 6 on real Next; the owner reviews the Spec256 set"
+ },
+ "checks": [
+  "asm2profile:abu_simbel"
+ ],
+ "techniques": [
+  {
+   "application": "abu_simbel.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "scan --writers over the ULA; attributes read only against values >= 0x40",
+   "phases": []
+  },
+  {
+   "application": "abu_simbel.colour-map",
+   "id": "patch.runtime-colour-map",
+   "revision": 1,
+   "target": "upload applies per-byte nibbles (pages 28-30, slot 5)",
+   "phases": [
+    "entry"
+   ]
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/altered_beast_hooks.asm": "dc4dd517246b27b1",
+   "docs/profiles/altered_beast.json": "df2950658eed9da7",
+   "nexclash.py": "71dc4c592918bff8",
+   "nexclash/altered_beast.py": "2f49613b151580f7",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "29b12c4b09c7a1f5",
+   "nexclash/nextboot.py": "44c08db48a1bf32d",
+   "nexclash/rainbow.py": "e247f602b7cecb7b",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "a6ff9eef9ca737b3",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-11-02"
+ },
+ "results": [
+  {
+   "application": "abu_simbel.screen-readers",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "102c92e3",
+   "scope": "10 recordings; scripted keys and attract mode, pokes in 7; no human recording; start-up checked only in JNext; no hardware",
+   "evidence": "games/abu_simbel.md \"Results\""
+  },
+  {
+   "application": "abu_simbel.colour-map",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "102c92e3",
+   "scope": "10 recordings; scripted keys and attract mode, pokes in 7; no human recording; start-up checked only in JNext; no hardware; Spec256 set applied by recolour, viewed in JNext",
+   "evidence": "games/abu_simbel.md \"Results\""
+  }
+ ]
+}
