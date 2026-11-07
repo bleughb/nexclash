@@ -361,6 +361,7 @@ cap_done:
         pop hl
         pop af
         ld sp,(CAP_SP)
+cap_done_tail:                  ; copier-window builds replace these 12 bytes by JP cw_go
         nextreg 0x50,255
         nextreg 0x07,0
         ei
@@ -1931,6 +1932,8 @@ P_ERROR EQU 0x1ED7
 P_PAIR  EQU 0x1ED8
 P_XOR   EQU 0x1ED9
 P_ROWS  EQU 0x1EDA
+P_SOURCE EQU 0x1EDB
+P_RAW   EQU 0x1EC0
 pack_actor_tile:
         xor a
         ld (P_ERROR),a
@@ -1970,10 +1973,19 @@ pack_bound:
         jp c,pack_bad
         bit 7,h
         jp nz,pack_bad
+        ld a,(P_SOURCE)
+        cp 2
+        jp nc,pack_bad
+        or a
+        jr nz,pack_pinned_attr
         ld hl,(P_TILE)
         ld de,0xFC00
         add hl,de
         ld a,(hl)
+        jr pack_attr
+pack_pinned_attr:
+        ld a,(P_RAW+8)
+pack_attr:
         ld c,a
         and 7
         rlca
@@ -1997,12 +2009,17 @@ pack_bound:
         rlca
         neg
         ld (P_XOR),a
+        ld a,(P_SOURCE)
+        or a
+        ld hl,P_RAW
+        jr nz,pack_source
         ld hl,(P_TILE)
         add hl,hl
         add hl,hl
         add hl,hl
         ld de,0xDC00
         add hl,de
+pack_source:
         push hl
         pop ix
         ld a,8
@@ -2053,3 +2070,1634 @@ pack_bad:
 pack_actor_tile_end:
         ASSERT pack_actor_tile_end < 0x0400
         SAVEBIN "inferno_pack.bin",pack_actor_tile,pack_actor_tile_end-pack_actor_tile
+
+; Whole-image B construction on private page 76; not installed in a NEX.
+; Canvas 112..115; passable bits 116; exterior bits 117; horizontal closure
+; lookup 128..135 (64KiB, generic byte connectivity, no game image catalogue).
+; Every work unit remaps its inputs, so quota yields restore slots 1/2/3 safely.
+        ORG 0
+F_STRIDE EQU 0x1E90
+F_SIZE EQU 0x1E92
+F_DONE EQU 0x1E94
+F_ERROR EQU 0x1E95
+F_POS EQU 0x1E96
+F_REVERSE EQU 0x1E98
+F_CHANGED EQU 0x1E99
+F_SIDE EQU 0x1E9A
+F_COLUMN EQU 0x1E9B
+F_OLD EQU 0x1E9D
+F_PASSES EQU 0x1E9E
+F_COMMAND EQU 0x1EA0
+F_BUDGET EQU 0x1EA1
+F_LEFT EQU 0x1EA2
+F_ACTIVE EQU 0x1EA3
+F_SAVED_SP EQU 0x1EA4
+F_MASK_SIZE EQU 0x1EA6
+F_MASK_STRIDE EQU 0x1EA8
+fill_actor_image:
+        xor a
+        ld (F_ERROR),a
+        ld (F_PASSES),a
+        ld (F_PASSES+1),a
+        ld a,(F_DONE)
+        or a
+        jp nz,fill_bad
+        ld hl,(F_STRIDE)
+        ld a,l
+        and 3
+        jp nz,fill_bad
+        ld de,4
+        or a
+        sbc hl,de
+        jp c,fill_bad
+        ld de,509
+        or a
+        sbc hl,de
+        jp nc,fill_bad
+        ld hl,(F_SIZE)
+        ld a,h
+        or l
+        jp z,fill_bad
+        ld de,0x8001
+        or a
+        sbc hl,de
+        jp nc,fill_bad
+        ld hl,(F_SIZE)
+        ld de,(F_STRIDE)
+.geometry:
+        call fill_checkpoint
+        or a
+        sbc hl,de
+        jp c,fill_bad
+        ld a,h
+        or l
+        jr nz,.geometry
+        ld hl,(F_SIZE)
+        srl h
+        rr l
+        srl h
+        rr l
+        ld (F_MASK_SIZE),hl
+        ld hl,(F_STRIDE)
+        srl h
+        rr l
+        srl h
+        rr l
+        ld (F_MASK_STRIDE),hl
+        ld hl,0
+        ld (F_POS),hl
+.opacity:
+        call fill_checkpoint
+        call fill_canvas
+        ld de,(F_POS)
+        set 6,d
+        nextreg 0x52,116
+        ld b,0
+        DUP 4
+        ld a,(hl)
+        inc hl
+        push hl
+        ld l,a
+        ld h,6
+        ld a,(hl)              ; two passable bits (black pixels)
+        pop hl
+        rlc b
+        rlc b
+        or b
+        ld b,a
+        EDUP
+        ld a,b
+        ld (de),a
+        nextreg 0x52,117
+        xor a
+        ld (de),a              ; clear retained exterior state on every new image
+        call fill_advance
+        jr nz,.opacity
+.iteration:
+        ld hl,(F_PASSES)
+        inc hl
+        ld (F_PASSES),hl
+        xor a
+        ld (F_CHANGED),a
+        ld (F_REVERSE),a
+        ld hl,0
+        ld (F_POS),hl
+        call fill_sweep
+        ld a,1
+        ld (F_REVERSE),a
+        ld hl,(F_MASK_SIZE)
+        dec hl
+        ld (F_POS),hl
+        call fill_sweep
+        ld a,(F_CHANGED)
+        or a
+        jr nz,.iteration
+        ld hl,0
+        ld (F_POS),hl
+.finish:
+        call fill_checkpoint
+        call fill_canvas
+        nextreg 0x52,117
+        ld de,(F_POS)
+        set 6,d
+        ld a,(de)
+        ld c,a
+        DUP 4
+        rlc c
+        rlc c
+        ld a,c
+        and 3
+        add a,8
+        ld b,a
+        ld a,(hl)
+        push hl
+        ld l,a
+        ld h,b
+        ld a,(hl)              ; zero -> black only when exterior bit is clear
+        pop hl
+        ld (hl),a
+        inc hl
+        EDUP
+        call fill_advance
+        jp nz,.finish
+        ld a,1
+        ld (F_DONE),a
+        ld a,2
+        ld (F_ACTIVE),a
+        jp fill_restore
+fill_bad:
+        ld a,1
+        ld (F_ERROR),a
+        ld a,2
+        ld (F_ACTIVE),a
+        jp fill_restore
+fill_sweep:
+        ld hl,(F_MASK_STRIDE)
+        ld (F_COLUMN),hl
+        ld a,(F_REVERSE)
+        or a
+        ld a,128
+        jr z,.edge
+        ld a,1
+.edge:
+        ld (F_SIDE),a
+.pair:
+        call fill_checkpoint
+        nextreg 0x51,116
+        nextreg 0x52,117
+        ld hl,(F_POS)
+        ld de,(F_MASK_STRIDE)
+        ld a,(F_REVERSE)
+        or a
+        jr nz,.below
+        or a
+        sbc hl,de
+        jr c,.boundary
+        jr .neighbour
+.below:
+        add hl,de
+        ld de,(F_MASK_SIZE)
+        or a
+        sbc hl,de
+        jr nc,.boundary
+        add hl,de
+.neighbour:
+        set 6,h
+        ld a,(hl)
+        jr .seed
+.boundary:
+        ld a,255
+.seed:
+        ld c,a
+        ld a,(F_SIDE)
+        or c
+        ld c,a
+        ld hl,(F_POS)
+        set 6,h
+        ld a,(hl)
+        ld (F_OLD),a
+        or c
+        ld c,a
+        ld d,h
+        ld e,l                 ; current exterior destination
+        res 6,h
+        set 5,h                ; passable source in slot 1
+        ld a,(hl)
+        push af
+        rrca
+        rrca
+        rrca
+        rrca
+        rrca
+        and 7
+        add a,128
+        nextreg 0x53,a
+        pop af
+        and 31
+        or 0x60
+        ld h,a
+        ld l,c
+        ld a,(hl)
+        ld (de),a
+        ld c,a
+        ld a,(F_OLD)
+        cp c
+        jr z,.side
+        ld a,1
+        ld (F_CHANGED),a
+.side:
+        ld a,(F_REVERSE)
+        or a
+        ld a,c
+        jr nz,.right
+        rrca                    ; low bit -> next byte's high-bit seed
+        and 128
+        jr .set_side
+.right:
+        rlca                    ; high bit -> preceding byte's low-bit seed
+        and 1
+.set_side:
+        ld (F_SIDE),a
+        ld hl,(F_POS)
+        ld a,(F_REVERSE)
+        or a
+        jr nz,.back
+        inc hl
+        ld (F_POS),hl
+        ld de,(F_MASK_SIZE)
+        or a
+        sbc hl,de
+        ret z
+        jr .column
+.back:
+        ld a,h
+        or l
+        ret z
+        dec hl
+        ld (F_POS),hl
+.column:
+        ld hl,(F_COLUMN)
+        dec hl
+        ld (F_COLUMN),hl
+        ld a,h
+        or l
+        jp nz,.pair
+        jp fill_sweep
+fill_canvas:
+        ld hl,(F_POS)
+        add hl,hl
+        add hl,hl
+        ld a,h
+        rlca
+        rlca
+        rlca
+        and 3
+        add a,112
+        nextreg 0x51,a
+        ld a,h
+        and 31
+        or 0x20
+        ld h,a
+        ret
+fill_advance:
+        ld hl,(F_POS)
+        inc hl
+        ld (F_POS),hl
+        ld de,(F_MASK_SIZE)
+        or a
+        sbc hl,de
+        ret
+fill_actor_image_end:
+        ASSERT fill_actor_image_end < 0x0400
+        ORG 0x0400
+fill_actor_service:
+        ld a,(F_BUDGET)
+        dec a
+        cp 16
+        jp nc,fill_service_bad
+        inc a
+        ld (F_LEFT),a
+        ld a,(F_COMMAND)
+        or a
+        jr z,.start
+        cp 1
+        jp nz,fill_service_bad
+        ld a,(F_ACTIVE)
+        cp 1
+        jp nz,fill_service_bad
+        ld sp,(F_SAVED_SP)
+        pop iy
+        pop ix
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ret
+.start:
+        ld a,(F_ACTIVE)
+        or a
+        jp nz,fill_service_bad
+        inc a
+        ld (F_ACTIVE),a
+        jp fill_actor_image
+fill_checkpoint:
+        push af
+        ld a,(F_LEFT)
+        or a
+        jr z,.yield
+        dec a
+        ld (F_LEFT),a
+        pop af
+        ret
+.yield:
+        push bc
+        push de
+        push hl
+        push ix
+        push iy
+        ld (F_SAVED_SP),sp
+        call fill_restore_maps
+        ld sp,0x1FF0
+        ret
+fill_restore:
+        call fill_restore_maps
+        ret
+fill_restore_maps:
+        nextreg 0x51,68
+        nextreg 0x52,10
+        nextreg 0x53,11
+        ret
+fill_service_bad:
+        ld a,1
+        ld (F_ERROR),a
+        ret
+fill_actor_service_end:
+        ASSERT fill_actor_service_end < 0x0600
+        SAVEBIN "inferno_fill.bin",fill_actor_image,fill_actor_service_end-fill_actor_image
+
+; Inferno bounded prepared-data transfer worker, private writable page 77.
+; Reuses the gated shared backend and packets; no game/display hook installs it.
+; Caller owns source cache and destination canvas; uploads protect BOTH halves
+; of each 256-byte hardware pair using current and pending ownership bitsets.
+; No image is published by this worker. OP=0 rectangle, OP=1 hardware pair.
+        ORG 0
+        DEFINE HLIB_PC_OTIR
+        INCLUDE "lib/hlib_dma.asm"
+        UNDEFINE HLIB_PC_OTIR
+DB_SRC_PAGE EQU 0x1E00
+DB_DST_PAGE EQU 0x1E01
+DB_SRC EQU 0x1E02
+DB_DST EQU 0x1E04
+DB_WIDTH EQU 0x1E06
+DB_ASTRIDE EQU 0x1E08
+DB_BSTRIDE EQU 0x1E0A
+DB_ROWS EQU 0x1E0C
+DB_OP EQU 0x1E0D
+DB_SLOT EQU 0x1E0E
+DB_OWNED EQU 0x1E0F
+DB_POLICY EQU 0x1E10
+DB_ERROR EQU 0x1E11
+DB_LEFT EQU 0x1E12
+DB_BACKEND EQU 0x1E13
+DB_ABUMP EQU 0x1E14
+DB_BBUMP EQU 0x1E16
+DB_CURRENT EQU 0x1F00
+DB_PENDING EQU 0x1F08
+        ASSERT $ < 0x0800
+        ORG 0x0800
+actor_blit:
+        xor a
+        ld (DB_ERROR),a
+        ld a,(DB_POLICY)
+        cp 3
+        jp nc,blit_bad
+        ld (hlib_dma_policy),a
+        ld a,(DB_SRC_PAGE)
+        cp 112
+        jp c,blit_bad
+        cp 116
+        jr c,.source_ok
+        cp 136
+        jp c,blit_bad
+        cp 224
+        jp nc,blit_bad
+.source_ok:
+        ld a,(DB_OP)
+        cp 1
+        jp z,blit_sprite
+        or a
+        jp nz,blit_bad
+        ld a,(DB_DST_PAGE)
+        ld b,a
+        ld a,(DB_SRC_PAGE)
+        cp b
+        jp z,blit_bad
+        ld a,b
+        cp 112
+        jp c,blit_bad
+        cp 116
+        jr c,.dest_ok
+        cp 118
+        jp c,blit_bad
+        cp 122
+        jr c,.dest_ok
+        cp 216
+        jp c,blit_bad
+        cp 224
+        jp nc,blit_bad
+.dest_ok:
+        ld a,(DB_ROWS)
+        dec a
+        cp 16
+        jp nc,blit_bad
+        ld hl,(DB_WIDTH)
+        ld a,h
+        cp 2
+        jp nc,blit_bad
+        or a
+        jr z,.small
+        ld a,l
+        or a
+        jp nz,blit_bad
+        jr .width_ok
+.small:
+        ld a,l
+        or a
+        jp z,blit_bad
+.width_ok:
+        ld bc,(DB_WIDTH)
+        ld hl,(DB_SRC)
+        ld de,(DB_ASTRIDE)
+        call blit_extent
+        ld hl,(DB_DST)
+        ld de,(DB_BSTRIDE)
+        call blit_extent
+        ld hl,(DB_ASTRIDE)
+        or a
+        sbc hl,bc
+        ld (DB_ABUMP),hl
+        ld hl,(DB_BSTRIDE)
+        or a
+        sbc hl,bc
+        ld (DB_BBUMP),hl
+        ld a,(DB_ROWS)
+        cp 1
+        jr nz,.init_backend
+        ld hl,(DB_WIDTH)
+        ld a,h
+        or a
+        jr nz,.init_backend
+        ld a,l
+        cp 64
+        jr nc,.init_backend
+        ld a,(DB_SRC_PAGE)
+        nextreg 0x51,a
+        jr .cpu                ; tiny span: avoid DMA capability/setup overhead too
+.init_backend:
+        call blit_init
+        ld a,(DB_BACKEND)
+        cp 1
+        jr nz,.backend_ready
+        ld hl,(DB_WIDTH)
+        ld a,h
+        or a
+        jr nz,.backend_ready
+        ld a,l
+        cp 64
+        jr nc,.backend_ready
+.cpu:
+        xor a                  ; row-DMA setup costs more than these narrow CPU rows
+        ld (DB_BACKEND),a
+.backend_ready:
+        ld a,(DB_BACKEND)
+        cp 2
+        jr nz,.mapped
+        ld a,(DB_DST_PAGE)
+        cp 216
+        jr c,.mapped
+        ld a,(DB_SRC_PAGE)
+        cp 136
+        jr c,.mapped
+        jp blit_physical
+.mapped:
+        ld a,(DB_DST_PAGE)
+        nextreg 0x52,a
+        ld hl,(DB_SRC)
+        set 5,h
+        ld de,(DB_DST)
+        set 6,d
+        ld a,(DB_BACKEND)
+        cp 2
+        jr z,.ddma
+        ld a,(DB_ROWS)
+        ld (DB_LEFT),a
+.row:
+        ld a,(DB_BACKEND)
+        or a
+        jr nz,.dma_row
+        ld bc,(DB_WIDTH)
+        ldir
+        ld bc,(DB_ABUMP)
+        add hl,bc
+        ex de,hl
+        ld bc,(DB_BBUMP)
+        add hl,bc
+        ex de,hl
+        jr .next
+.dma_row:
+        ld (hlib_dma_row_src),hl
+        ld (hlib_dma_row_dst),de
+        push hl
+        ld hl,(DB_WIDTH)
+        ld (hlib_dma_row_len),hl
+        ld hl,hlib_dma_row
+        push de
+        ld bc,(hlib_dma_row_end-hlib_dma_row)*256+0x6B
+        otir
+        pop de
+        pop hl
+        ld bc,(DB_ASTRIDE)
+        add hl,bc
+        ex de,hl
+        ld bc,(DB_BSTRIDE)
+        add hl,bc
+        ex de,hl
+.next:
+        ld a,(DB_LEFT)
+        dec a
+        ld (DB_LEFT),a
+        jr nz,.row
+        jp blit_restore
+.ddma:
+        ld (hlib_dma_rect_src),hl
+        ld (hlib_dma_rect_dst),de
+        ld hl,(DB_WIDTH)
+        ld (hlib_dma_rect_width),hl
+        ld hl,(DB_ASTRIDE)
+        ld (hlib_dma_rect_astride),hl
+        ld hl,(DB_BSTRIDE)
+        ld (hlib_dma_rect_bstride),hl
+        ld a,(DB_ROWS)
+        ld l,a
+        ld h,0
+        ld (hlib_dma_rect_rows),hl
+        ld hl,hlib_dma_rect_prog
+        ld bc,(hlib_dma_rect_end-hlib_dma_rect_prog)*256+0x6B
+        otir
+        jp blit_restore
+blit_sprite:
+        ld hl,(DB_SRC)
+        ld a,h
+        and 0xE0
+        jp nz,blit_bad
+        ld de,256
+        add hl,de
+        ld de,0x2001
+        or a
+        sbc hl,de
+        jp nc,blit_bad
+        ld a,(DB_SLOT)
+        cp 64
+        jp nc,blit_bad
+        ld c,a
+        and 7
+        ld b,a
+        ld a,1
+        jr z,.mask
+.shift:
+        add a,a
+        djnz .shift
+.mask:
+        ld b,a
+        ld a,c
+        rrca
+        rrca
+        rrca
+        and 7
+        ld l,a
+        ld h,DB_CURRENT/256
+        ld a,(hl)
+        set 3,l
+        or (hl)
+        and b
+        jp nz,blit_bad
+        call blit_init
+        ld a,(DB_SLOT)
+        ld bc,0x303B
+        out (c),a
+        ld hl,(DB_SRC)
+        set 5,h
+        call hlib_dma_sprite
+        jp blit_restore
+blit_init:
+        ld a,(DB_SRC_PAGE)
+        nextreg 0x51,a
+        ld a,(DB_OWNED)
+        call hlib_dma_init
+        call hlib_dma_backend
+        ld (DB_BACKEND),a
+        ret
+blit_extent:
+        ld a,h
+        and 0xE0
+        jp nz,blit_bad
+        push hl
+        ld h,d
+        ld l,e
+        or a
+        sbc hl,bc
+        pop hl
+        jp c,blit_bad
+        ld a,(DB_ROWS)
+        dec a
+        jr z,.end
+.add:
+        add hl,de
+        jp c,blit_bad
+        dec a
+        jr nz,.add
+.end:
+        add hl,bc
+        jp c,blit_bad
+        ld de,0x2001
+        or a
+        sbc hl,de
+        jp nc,blit_bad
+        ret
+blit_bad:
+        ld a,1
+        ld (DB_ERROR),a
+        ld sp,0x1FF0
+blit_restore:
+        nextreg 0x51,68
+        nextreg 0x52,10
+        ret
+ ; Physical SRAM = 040000 + 8K page * 2000. High staging only, no BRAM alias.
+blit_physical:
+        ld a,(DB_SRC_PAGE)
+        ld hl,(DB_SRC)
+        call blit_address
+        ld (blit_phys_src),hl
+        ld (blit_phys_ahi),a
+        ld a,(DB_DST_PAGE)
+        ld hl,(DB_DST)
+        call blit_address
+        ld (blit_phys_dst),hl
+        ld (blit_phys_bhi),a
+        ld hl,(DB_WIDTH)
+        ld (blit_phys_width),hl
+        ld hl,(DB_ASTRIDE)
+        ld (blit_phys_astride),hl
+        ld hl,(DB_BSTRIDE)
+        ld (blit_phys_bstride),hl
+        ld a,(DB_ROWS)
+        ld l,a
+        ld h,0
+        ld (blit_phys_rows),hl
+        ld hl,blit_phys_packet
+        ld bc,(blit_phys_end-blit_phys_packet)*256+0x6B
+        otir
+        jp blit_restore
+blit_address:
+        ld d,a
+        and 7
+        rrca
+        rrca
+        rrca
+        or h
+        ld h,a
+        ld a,d
+        rrca
+        rrca
+        rrca
+        and 31
+        add a,4
+        ret
+blit_phys_packet:
+        db 0x83,0xC3,0x7D
+blit_phys_src: dw 0
+        dw 0
+        db 0x14,0x10,0xAD
+blit_phys_dst: dw 0
+        db 0x82,0xD7
+blit_phys_ahi: db 0
+        db 0xDB
+blit_phys_bhi: db 0
+        db 0xDF,3,0xE3
+blit_phys_width: dw 0
+        db 0xE7
+blit_phys_rows: dw 0
+        db 0xEB
+blit_phys_astride: dw 0
+        db 0xEF
+blit_phys_bstride: dw 0
+        db 0xCF,0x87
+blit_phys_end:
+actor_blit_end:
+        ASSERT actor_blit_end < 0x1D00
+        SAVEBIN "inferno_blit.bin",hlib_dma_policy,actor_blit_end-hlib_dma_policy
+
+; Private page 78, snapshot page 122. Standalone DI/28MHz component, no game hook.
+; Stream: original header; repeated width,dx,dy,(tile ID,bitmap[8],attribute)*width; zero.
+; OP 0 captures only when unowned, OP 1 releases, OP 2 compares all live bytes.
+; A successful capture pins page 122 until release. Validation never writes pinned data.
+; Invalid/overflow captures leave DONE=0, ACTIVE=0; never publish a partial stream.
+        ORG 0
+J_OP    EQU 0x1E80
+J_IMAGE EQU 0x1E81
+J_FLASH EQU 0x1E82
+J_PAINT EQU 0x1E83
+J_ACTIVE EQU 0x1E85
+J_DONE  EQU 0x1E86
+J_ERROR EQU 0x1E87
+J_MATCH EQU 0x1E88
+J_SIZE  EQU 0x1E89
+J_PHASE EQU 0x1E8B
+J_GEN   EQU 0x1E8C
+J_SP    EQU 0x1E8E
+J_PAGE  EQU 0x1E90
+J_ROWS  EQU 0x1E91
+J_LEFT  EQU 0x1E92
+J_BANK  EQU 0x1E93
+J_BASE  EQU 0x1E94
+job_snapshot:
+        ld (J_SP),sp
+        xor a
+        ld (J_ERROR),a
+        ld (J_MATCH),a
+        ld a,(J_OP)
+        cp 1
+        jp z,job_release
+        cp 3
+        jp nc,job_reject
+        ld a,(J_FLASH)
+        cp 2
+        jp nc,job_reject
+        ld a,(J_OP)
+        or a
+        jr nz,job_validate
+        ld a,(J_ACTIVE)
+        or a
+        jp nz,job_reject
+        ld a,1
+        ld (J_ACTIVE),a
+        xor a
+        ld (J_DONE),a
+        ld (J_SIZE),a
+        ld (J_SIZE+1),a
+        ld a,(J_FLASH)
+        ld (J_PHASE),a
+        ld hl,(J_PAINT)
+        ld (J_GEN),hl
+        jr job_walk
+job_validate:
+        ld a,(J_ACTIVE)
+        cp 1
+        jp nz,job_reject
+        ld a,(J_DONE)
+        cp 1
+        jp nz,job_reject
+        ld a,(J_FLASH)
+        ld hl,J_PHASE
+        cp (hl)
+        jp nz,job_return
+        ld hl,(J_PAINT)
+        ld de,(J_GEN)
+        or a
+        sbc hl,de
+        jp nz,job_return
+        jp job_exact_walk
+job_walk:
+        nextreg 0x51,122
+        ld a,(J_IMAGE)
+        ld l,a
+        ld h,0xC1
+        ld c,(hl)
+        inc l                   ; original C1FF -> C100 pointer wrap
+        ld b,(hl)
+        ld h,b
+        ld l,c
+        ld a,h
+        cp 0x40
+        jp c,job_bad
+        ld de,0x2000
+        ld a,(hl)
+        call job_emit
+        and 3
+        ld (J_PAGE),a
+        inc hl
+        ld a,0
+        ld (J_ROWS),a           ; 256 bounded row attempts, including terminator
+job_row:
+        call job_address
+        ld a,(hl)
+        inc hl
+        call job_emit
+        or a
+        jp z,job_complete
+        cp 129
+        jp nc,job_bad
+        ld (J_LEFT),a
+        call job_address
+        ld a,(hl)
+        inc hl
+        call job_emit
+        call job_address
+        ld a,(hl)
+        inc hl
+        call job_emit
+job_tile:
+        call job_address
+        ld a,(hl)
+        inc hl
+        call job_emit
+        push hl
+        ld l,a
+        ld a,(J_PAGE)
+        ld h,a
+        push hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld bc,0xDC00
+        add hl,bc
+        push hl
+        ld hl,7
+        add hl,de
+        ld a,h
+        cp 0x40
+        jp nc,job_bad          ; whole bitmap span must fit the pinned page
+        pop hl
+        ld a,(J_OP)
+        or a
+        jr nz,job_bitmap_compare
+        DUP 8
+        ldi
+        EDUP
+        jr job_bitmap_done
+job_bitmap_compare:
+        DUP 8
+        ld a,(de)
+        cp (hl)
+        jp nz,job_miss
+        inc de
+        inc hl
+        EDUP
+job_bitmap_done:
+        pop hl
+        ld bc,0xFC00
+        add hl,bc
+        ld a,(hl)
+        call job_emit
+        pop hl
+        ld a,(J_LEFT)
+        dec a
+        ld (J_LEFT),a
+        jp nz,job_tile
+        ld a,(J_ROWS)
+        dec a
+        ld (J_ROWS),a
+        jp nz,job_row
+        jp job_bad
+; Exact-hit walker: inline byte comparisons; capture retains its original path.
+; Header/width are bounded individually; each nonempty row bounds its complete
+; live record and serialized payload before any unchecked row-byte comparison.
+        MACRO JOB_EXACT_BYTE
+        ld c,a
+        ld a,d
+        cp 0x40
+        jp nc,job_bad
+        ld a,(de)
+        cp c
+        jp nz,job_miss
+        ld a,c
+        inc de
+        ENDM
+        MACRO JOB_EXACT_ROW_BYTE
+        ld c,a
+        ld a,(de)
+        cp c
+        jp nz,job_miss
+        ld a,c
+        inc de
+        ENDM
+job_exact_walk:
+        ld a,(J_BANK)
+        nextreg 0x51,a
+        ld a,(J_IMAGE)
+        ld l,a
+        ld h,0xC1
+        ld c,(hl)
+        inc l                   ; original C1FF -> C100 pointer wrap
+        ld b,(hl)
+        ld h,b
+        ld l,c
+        ld a,h
+        cp 0x40
+        jp c,job_bad
+        ld de,(J_BASE)
+        ld a,(hl)
+        JOB_EXACT_BYTE
+        and 3
+        ld (J_PAGE),a
+        inc hl
+        ld a,0
+        ld (J_ROWS),a           ; 256 bounded row attempts, including terminator
+job_exact_row:
+        call job_address
+        ld a,(hl)
+        inc hl
+        JOB_EXACT_BYTE
+        or a
+        jp z,job_complete
+        cp 129
+        jp nc,job_bad
+        ld (J_LEFT),a
+        ; Stream row remainder: dx,dy plus width * (ID,bitmap[8],attribute).
+        ; Check its last byte, so an exact page-end payload remains legal.
+        push hl
+        push de
+        ld e,a
+        ld d,10
+        mul d,e
+        ld hl,1
+        add hl,de
+        pop de
+        add hl,de
+        ld a,h
+        cp 0x40
+        jp nc,job_bad
+        pop hl
+        ; Live remainder: dx,dy and width IDs; reject wrap before reading it.
+        push de
+        ld a,(J_LEFT)
+        ld e,a
+        ld d,0
+        inc de
+        ex de,hl
+        add hl,de
+        jp c,job_bad
+        ld a,h
+        cp 0x40
+        jp c,job_bad
+        ex de,hl
+        pop de
+        ld a,(hl)
+        inc hl
+        JOB_EXACT_ROW_BYTE
+        ld a,(hl)
+        inc hl
+        JOB_EXACT_ROW_BYTE
+job_exact_tile:
+        ld a,(hl)
+        inc hl
+        JOB_EXACT_ROW_BYTE
+        push hl
+        ld l,a
+        ld a,(J_PAGE)
+        ld h,a
+        push hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld bc,0xDC00
+        add hl,bc
+job_exact_bitmap:
+        DUP 8
+        ld a,(de)
+        cp (hl)
+        jp nz,job_miss
+        inc de
+        inc hl
+        EDUP
+job_exact_bitmap_done:
+        pop hl
+        ld bc,0xFC00
+        add hl,bc
+        ld a,(hl)
+        JOB_EXACT_ROW_BYTE
+        pop hl
+        ld a,(J_LEFT)
+        dec a
+        ld (J_LEFT),a
+        jp nz,job_exact_tile
+        ld a,(J_ROWS)
+        dec a
+        ld (J_ROWS),a
+        jp nz,job_exact_row
+        jp job_bad
+job_address:
+        ld a,h
+        cp 0x40                ; also refuses original record wrap to 0000
+        ret nc
+        jp job_bad
+job_emit:
+        ld c,a                 ; parser keeps run counters in private state, BC is scratch
+        ld a,d
+        cp 0x40
+        jp nc,job_bad
+        ld a,(J_OP)
+        or a
+        jr nz,job_compare
+        ld a,c
+        ld (de),a
+        inc de
+        ret
+job_compare:
+        ld a,(de)
+        cp c
+        jp nz,job_miss
+        ld a,c
+        inc de
+        ret
+job_complete:
+        ex de,hl
+        ld de,0x2000
+        ld a,(J_OP)
+        or a
+        jr z,.base_ready
+        ld de,(J_BASE)
+.base_ready:
+        or a
+        sbc hl,de
+        ld a,(J_OP)
+        or a
+        jr nz,job_compare_size
+        ld (J_SIZE),hl
+        ld a,1
+        ld (J_DONE),a
+        jp job_return
+job_compare_size:
+        ld de,(J_SIZE)
+        or a
+        sbc hl,de
+        jp nz,job_miss
+        ld a,1
+        ld (J_MATCH),a
+        jp job_return
+job_reject:
+        ld a,1
+        ld (J_ERROR),a
+        jp job_return
+job_bad:
+        ld a,1
+        ld (J_ERROR),a
+job_miss:
+        ld a,(J_OP)
+        or a
+        jr nz,job_return
+job_release:
+        xor a
+        ld (J_ACTIVE),a
+        ld (J_DONE),a
+job_return:
+        nextreg 0x51,68
+        ld sp,(J_SP)           ; abort may unwind an emit/bitmap call
+        ret
+job_snapshot_end:
+        ASSERT job_snapshot_end < 0x1D00
+        SAVEBIN "inferno_job.bin",job_snapshot,job_snapshot_end-job_snapshot
+
+; Owned loading store, page 79. DI/28MHz private worker, NOT a game entry wrapper.
+; 256 immutable image slots, append-only pages 136..215; 216..223 never borrowed.
+; OP 0 reset (only with no current/pending owners), 1 insert, 2 dispatch.
+; Source page 122 and canvas pages 112..115 are complete private worker results.
+; Entry: valid, source page, offset16, length16, canvas page, offset16,
+; length16, FLASH, paint16, reserved16. Valid published last; never enables display.
+        ORG 0
+C_OP EQU 0x1E80
+C_IMAGE EQU 0x1E81
+C_FLASH EQU 0x1E82
+C_PAINT EQU 0x1E83
+C_SOURCE_SIZE EQU 0x1E85
+C_CANVAS_SIZE EQU 0x1E87
+C_CURRENT EQU 0x1E89
+C_PENDING EQU 0x1E8A
+C_ERROR EQU 0x1E8B
+C_FOUND EQU 0x1E8C
+C_PAGE EQU 0x1E8D
+C_OFFSET EQU 0x1E8E
+C_ENTRY EQU 0x1E90
+C_SP EQU 0x1E92
+C_SRC_PAGE EQU 0x1E94
+C_SRC_OFFSET EQU 0x1E95
+C_CAN_PAGE EQU 0x1E97
+C_CAN_OFFSET EQU 0x1E98
+C_END_PAGE EQU 0x1E9A
+C_END_OFFSET EQU 0x1E9B
+cache_owned:
+        ld (C_SP),sp
+        xor a
+        ld (C_ERROR),a
+        ld (C_FOUND),a
+        ld a,(C_OP)
+        or a
+        jp z,cache_reset
+        cp 3
+        jp nc,cache_error
+        ld a,(C_IMAGE)
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,0x0800
+        add hl,de
+        ld (C_ENTRY),hl
+        ld a,(C_OP)
+        cp 2
+        jp z,cache_lookup
+        ld a,(hl)
+        or a
+        jp nz,cache_error       ; no overwrite, including currently owned entries
+        ld hl,(C_SOURCE_SIZE)
+        ld a,h
+        or l
+        jp z,cache_error
+        ld de,8193
+        or a
+        sbc hl,de
+        jp nc,cache_error
+        ld hl,(C_CANVAS_SIZE)
+        ld de,32769
+        or a
+        sbc hl,de
+        jp nc,cache_error
+        ld a,(C_FLASH)
+        cp 2
+        jp nc,cache_error
+        ld a,(C_PAGE)
+        cp 136
+        jp c,cache_error
+        cp 216
+        jp nc,cache_error
+        ld hl,(C_OFFSET)
+        ld a,h
+        cp 32
+        jp nc,cache_error
+        ld de,(C_SOURCE_SIZE)
+        add hl,de
+        ld de,8193
+        or a
+        sbc hl,de
+        ld a,(C_PAGE)
+        ld hl,(C_OFFSET)
+        jr c,.aligned
+        inc a
+        ld hl,0
+.aligned:
+        ld (C_SRC_PAGE),a
+        ld (C_SRC_OFFSET),hl
+        ld de,(C_SOURCE_SIZE)
+        call cache_advance
+        ld (C_CAN_PAGE),a
+        ld (C_CAN_OFFSET),hl
+        ld de,(C_CANVAS_SIZE)
+        call cache_advance
+        cp 216
+        jp c,.fits
+        jp nz,cache_error
+        ld b,a
+        ld a,h
+        or l
+        jp nz,cache_error
+        ld a,b
+.fits:  ld (C_END_PAGE),a
+        ld (C_END_OFFSET),hl
+        ; Copy complete source into one high page, keeping live graphics mapped.
+        ld a,(C_SRC_PAGE)
+        nextreg 0x52,a
+        nextreg 0x51,122
+        ld de,(C_SRC_OFFSET)
+        ld hl,0x4000
+        add hl,de
+        ex de,hl
+        ld hl,0x2000
+        ld bc,(C_SOURCE_SIZE)
+        ldir
+        ; Canvas byte loop is deliberately loading-only; handles both page edges.
+        ld bc,(C_CANVAS_SIZE)
+        ld a,b
+        or c
+        jr z,.copied
+        ld a,(C_CAN_PAGE)
+        nextreg 0x52,a
+        ld a,(C_CAN_OFFSET+1)
+        add a,0x40
+        ld d,a
+        ld a,(C_CAN_OFFSET)
+        ld e,a
+        nextreg 0x51,112
+        ld hl,0x2000
+        exx
+        ld b,112
+        ld a,(C_CAN_PAGE)
+        ld c,a
+        exx
+.copy:  ld a,(hl)
+        ld (de),a
+        inc hl
+        inc de
+        ld a,h
+        cp 0x40
+        jr nz,.src_ok
+        ld h,0x20
+        exx
+        inc b
+        ld a,b
+        cp 116
+        jr z,.last_source
+        nextreg 0x51,a
+.last_source:
+        exx
+.src_ok:
+        ld a,d
+        cp 0x60
+        jr nz,.dst_ok
+        ld d,0x40
+        exx
+        inc c
+        ld a,c
+        ; A final byte at the very end must not map reserved staging page 216.
+        cp 216
+        jr z,.last_page
+        nextreg 0x52,a
+.last_page:
+        exx
+.dst_ok:
+        dec bc
+        ld a,b
+        or c
+        jr nz,.copy
+.copied:
+        ld hl,(C_ENTRY)
+        inc hl
+        ld a,(C_SRC_PAGE)
+        ld (hl),a
+        inc hl
+        ld de,(C_SRC_OFFSET)
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        inc hl
+        ld de,(C_SOURCE_SIZE)
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        inc hl
+        ld a,(C_CAN_PAGE)
+        ld (hl),a
+        inc hl
+        ld de,(C_CAN_OFFSET)
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        inc hl
+        ld de,(C_CANVAS_SIZE)
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        inc hl
+        ld a,(C_FLASH)
+        ld (hl),a
+        inc hl
+        ld de,(C_PAINT)
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        ld a,(C_END_PAGE)
+        ld (C_PAGE),a
+        ld hl,(C_END_OFFSET)
+        ld (C_OFFSET),hl
+        ld hl,(C_ENTRY)
+        ld (hl),1             ; only publication point, after EVERY payload write
+        jp cache_lookup
+; A page, HL offset, DE length -> advanced A/HL, no memory writes.
+cache_advance:
+        add hl,de
+.loop:  ld b,a
+        ld a,h
+        cp 32
+        ld a,b
+        ret c
+.page:  ld de,8192
+        or a
+        sbc hl,de
+        inc a
+        jr .loop
+cache_lookup:
+        ld hl,(C_ENTRY)
+        ld a,(hl)
+        cp 1
+        jp nz,cache_return
+        ld de,11
+        add hl,de
+        ld a,(C_FLASH)
+        cp (hl)
+        jp nz,cache_return
+        inc hl
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ld hl,(C_PAINT)
+        or a
+        sbc hl,de
+        jp nz,cache_return
+        ld a,1
+        ld (C_FOUND),a         ; candidate only: exact live validation still REQUIRED
+        jp cache_return
+cache_reset:
+        ld a,(C_CURRENT)
+        ld hl,C_PENDING
+        or (hl)
+        jp nz,cache_error
+        ld hl,0x0800
+        ld de,16
+        ld b,0
+.clear: ld (hl),0
+        add hl,de
+        djnz .clear
+        ld a,136
+        ld (C_PAGE),a
+        ld hl,0
+        ld (C_OFFSET),hl
+        jr cache_return
+cache_error:
+        ld a,1
+        ld (C_ERROR),a
+cache_return:
+        nextreg 0x51,68
+        nextreg 0x52,10
+        ld sp,(C_SP)
+        ret
+cache_owned_end:
+        ASSERT cache_owned_end < 0x0800
+        SAVEBIN "inferno_owned.bin",cache_owned,cache_owned_end-cache_owned
+
+; Initialization pause/resume gate. Original 8EF8 DI has already executed;
+; IM1 remains in force until the unchanged game establishes IM2 at 8F35.
+; No CALL/push touches the original stack. A worker may run only in DI and
+; must return with slot 0 = 68, slots 1/2 restored and I/IM unchanged.
+        INCLUDE "lib/hlib_speed.asm"
+        ORG 0x3C40
+P_SP EQU 0x1D00
+P_R EQU 0x1D02
+P_SPEED EQU 0x1D03
+pause_loading:
+        nextreg 0x50,68
+        ld (P_SP),sp
+        ld sp,0x1EF0
+        push af
+        push bc
+        push de
+        push hl
+        push ix
+        push iy
+        exx
+        push bc
+        push de
+        push hl
+        exx
+        ex af,af'
+        push af
+        ex af,af'
+        ld a,r
+        ld (P_R),a
+        HLIB_SPEED_IN_ABC P_SPEED
+pause_service:
+        call 0x1D80
+        HLIB_SPEED_OUT_A P_SPEED
+        ld a,(P_R)
+        ld b,a
+        add a,83                ; original M1 minus entry/save and restore/exit M1, mod 128
+        and 0x7F
+        ld c,a
+        ld a,b
+        and 0x80
+        or c
+        ld r,a
+        ex af,af'
+        pop af
+        ex af,af'
+        exx
+        pop hl
+        pop de
+        pop bc
+        exx
+        pop iy
+        pop ix
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(P_SP)
+        nextreg 0x50,255
+        ld (0x9198),a           ; displaced original instruction, after state restoration
+        jp 0x8EFC
+pause_loading_end:
+        ASSERT pause_loading_end < 0x3D00
+        SAVEBIN "inferno_pause.bin",pause_loading,pause_loading_end-pause_loading
+
+; ---------------------------------------------------------------------------
+; Copier window, milestone 1: translated copier head (claude/inferno-copier-window).
+; The original copier 9790 plays the A700 beeper buffer with one OUT (254),A per cell and
+; calls the 9907 limiter from inside itself after row 6 (97FB). cw_head replays 9790..97FB
+; instruction for instruction (same RAM writes, work-stack pushes and PUSH AF flags) without
+; the OUT. Each change of the OUT value is logged as [value, E, D, C] (main DE/C at that
+; cell) so the original T of every OUT is BASE(k) + 101*g(k); head total = 79477 + 101*G.
+; Exit state equals the original at 9907 entry, R included (entry R + original M1, bit 7
+; kept). No pad and no OUT replay yet: this block alone is NOT pace-preserving.
+CW_PAGE   EQU 80
+CW_SCHED  EQU 0x1000            ; sentinel entry, then 4-byte entries
+CW_ROWC   EQU 0x1700            ; 13 row counts, 256-aligned (self-modified low byte)
+CW_SP     EQU 0x1800
+CW_R      EQU 0x1802
+CW_IY     EQU 0x1803
+CW_END    EQU 0x1805
+CW_WSP    EQU 0x1807
+CW_HL     EQU 0x1809
+CW_RSUM   EQU 0x180B
+CW_STACK  EQU 0x1A00            ; 19FE: game AF, 19FC: game AF'
+CW_M1K    EQU 0x3A              ; R: -70 mod 128, end-to-end 8F92->9907 M1 difference (calibrated, then checked on every state)
+
+        ORG 0x3CB0
+cw_go:                          ; from cap_done_tail: DI, 28MHz, all registers = 9790 entry
+        nextreg 0x50,CW_PAGE
+        jp cw_head
+cw_exit:                        ; from page 80 with exact 9907-entry state
+        nextreg 0x50,255
+        nextreg 0x07,0
+        ei
+        jp 0x9907
+cw_rom_end:
+        ASSERT cw_rom_end < 0x3D00
+        SAVEBIN "inferno_cwrom.bin",cw_go,cw_rom_end-cw_go
+
+        ORG 0
+cw_head:
+        ld (CW_SP),sp
+        ld sp,CW_STACK
+        push af                 ; game AF
+        ex af,af'
+        push af                 ; game AF'
+        ex af,af'
+        ld a,r
+        ld (CW_R),a
+        ld (CW_IY),iy
+        ld iy,CW_SCHED
+        ld a,(0xA741)           ; first cell's OUT value: force its entry with a complement sentinel
+        cpl
+        ld (iy+0),a
+        xor a
+        ld (CW_RSUM),a
+        ld a,CW_ROWC & 0xFF
+        ld (cw_rp+1),a
+        ld sp,CW_STACK-2
+        pop af                  ; game AF and flags, exactly
+        ld sp,(CW_SP)
+        ; --- original 9790 prologue ---
+        ld (0x9878),sp          ; LD (39032),SP: the copier's own SP save
+        ld sp,0xA6FE
+        ld hl,0x9877
+        push hl
+        scf
+        push af
+        ld hl,0x9F7F
+        ld de,0x50FF
+        exx
+        ld de,0xAB41
+        ld hl,0x5AFF
+        ld ixh,18
+cw_row:                         ; alt set (97AD)
+        push de
+        push hl
+        ld bc,0xFFE0
+        add hl,bc
+        exx
+        ld c,0
+cw_cell:                        ; main set (97B6)
+        ld a,(hl)
+        and 3
+        ld b,a
+        ld ixl,b
+        dec l
+        ld a,(hl)
+        dec hl
+        exx
+        ld c,a
+        ld a,0xFC
+        add a,ixl
+        ld b,a
+        ld a,(bc)
+        ld (de),a
+        ld b,d
+        ld d,0xA7
+        ld a,(de)               ; the value the original OUTs for this cell
+        ld d,b
+        ld ixl,a
+        dec de
+        ld a,c
+        exx
+        ex af,af'
+        ld a,ixl
+        cp (iy+0)
+        jr z,cw_same
+        ld (iy+4),a
+        ld a,e
+        ld (iy+5),a
+        ld a,d
+        ld (iy+6),a
+        ld a,c
+        ld (iy+7),a
+        inc iy
+        inc iy
+        inc iy
+        inc iy
+cw_same:
+        ex af,af'
+        cp 16
+        jp c,cw_low
+        push hl
+        ld l,a
+        ld h,b
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld a,h
+        add a,220
+        ld h,a
+        ex (sp),hl
+        push de
+        inc c
+cw_low:
+        dec e
+        ld a,e
+        inc a
+        jp nz,cw_nowrap
+        ld a,d
+        sub 8
+        ld d,a
+        xor a
+cw_nowrap:
+        and 31
+        jp nz,cw_cell
+        ld a,c                  ; row end (97F4)
+        or a
+        push af
+cw_rp:  ld (CW_ROWC),a
+        ld a,c                  ; RSUM += 12*C: the >=16 path is 12 M1 (mod 256; R needs mod 128)
+        add a,a
+        add a,c
+        add a,a
+        add a,a
+        ld ixl,a
+        ld a,(CW_RSUM)
+        add a,ixl
+        ld (CW_RSUM),a
+        ld a,(cw_rp+1)
+        inc a
+        ld (cw_rp+1),a
+        ld a,ixh
+        cp 6
+        jr z,cw_done
+        dec ixh
+        exx
+        jp cw_row
+cw_done:                        ; main set, as the original at CALL Z,9907
+        ld (CW_END),iy
+        ld iy,(CW_IY)
+        ld a,b                  ; alt B = FC + page of the last cell (97CC)
+        add a,0xFC
+        exx
+        ld b,a
+        exx
+        ld (CW_WSP),sp
+        ld sp,CW_STACK-4
+        ex af,af'
+        pop af                  ; game AF'
+        ex af,af'
+        ld sp,(CW_WSP)
+        ld (CW_HL),hl
+        ld hl,0x97FE            ; the CALL Z,9907 return address
+        push hl
+        ld hl,(CW_HL)
+        ld a,(CW_RSUM)
+        add a,CW_M1K
+        ld ixl,a
+        ld a,(CW_R)
+        add a,ixl
+        and 0x7F
+        ld ixl,a
+        ld a,(CW_R)
+        and 0x80
+        or ixl
+        ld r,a
+        ld a,b
+        ld ixl,a                ; IXl = page of the last cell (97BA)
+        ld a,ixh
+        cp 6                    ; A and F exactly as at the original CALL
+        jp cw_exit
+cw_head_end:
+        ASSERT cw_head_end < CW_SCHED
+        SAVEBIN "inferno_cwhead.bin",cw_head,cw_head_end-cw_head
