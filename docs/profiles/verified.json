@@ -81,6 +81,15 @@
     "sprites": "9182f2f8b4b0dc55b59a69728568b403"
    }
   },
+  "23d69f517506104c36ba429cb2148fa5": {
+   "game": "Ghosts 'n Goblins",
+   "doc": "ghosts_n_goblins.md",
+   "nex": {
+    "plain": "3d71dd0e63371c4cf06f919d46bc2315",
+    "sprites": "34c142677dbfebad66eb3585e158537c",
+    "enhanced": "4a76d9bfe562d46ba88808f0e76c9540"
+   }
+  },
   "54ad66af6678df22a9d4443e3d04aadb": {
    "game": "Ikari Warriors (48K form)",
    "doc": "ikari_warriors.md",
