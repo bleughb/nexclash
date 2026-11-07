@@ -492,7 +492,9 @@ class NextState:
         self.events.append(('nr', reg, val))
 
     def port(self, port, v):
-        if port & 0xFF == 0x3B and port >> 8 == 0x30:
+        if port == 0x243B:                  # NextREG select (the speed latch reads NR 7)
+            self.sel = v
+        elif port & 0xFF == 0x3B and port >> 8 == 0x30:
             self.pidx = (v & 0x3F) * 256 + (128 if v & 0x80 else 0)
         elif port & 0xFF == 0x5B:
             self.pat[self.pidx % 16384] = v
@@ -546,6 +548,9 @@ def _machine(Sim, mem, regs, ns, slot='o'):
 
     class Tr:
         def read_port(s, regs_, port):
+            if port == 0x253B and getattr(ns, 'sel', None) == 0x07:   # NR 7 as the core composes it
+                sp = ns.nr.get(0x07, 0) & 3
+                return sp << 4 | sp
             ns.bad.append(('IN 0x%04X' % port,))
             return 0xFF
 
