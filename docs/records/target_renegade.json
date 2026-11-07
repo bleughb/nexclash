@@ -30,7 +30,9 @@
   "docs/profiles/target_renegade.json",
   "asm/renegade_hooks.asm"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"
@@ -55,7 +57,7 @@
   },
   "sprites": {
    "file": "target_renegade_sprites.nex",
-   "md5": "e0b246e35d028c34170e1d1c52f00f5f"
+   "md5": "8e5f8f0be205aade316106a6db7d4aac"
   }
  },
  "repro": [],
@@ -66,7 +68,7 @@
  "status": {
   "title": "Target Renegade (128K)",
   "engine_col": "renegade (target_renegade.md)",
-  "build": "target_renegade_sprites.nex e0b246e3 (every figure a sprite, ink black, body grey 7 (Dean); alt ROM images 0 + 1, page 26 at slot 2, copy into page 27; loading-screen front end)",
+  "build": "target_renegade_sprites.nex 8e5f8f0b (2026-11-07: hooks restore the caller's speed, lib/hlib_speed.asm; e0b246e3 before the v2.10 stub fix and this; every figure a sprite, ink black, body grey 7 (Dean); alt ROM images 0 + 1, page 26 at slot 2, copy into page 27; loading-screen front end)",
   "software": "RZX IDENTICAL (level 1), unit + guard + cache / log full + map + 5 negative controls PASS; recolour round trip",
   "hardware": "untested",
   "next": "hardware test (ROM 0 alt image, speed); recordings of levels 2-5; paint the colour sheet"
@@ -76,52 +78,54 @@
  ],
  "checked": {
   "deps": {
-   "asm/renegade_hooks.asm": "6b93706aa09d65f5",
-   "docs/profiles/target_renegade.json": "07ce117a0fd59422",
-   "nexclash.py": "b7f49876a97b1f48",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/renegade_hooks.asm": "bf70261ac1b9e14e",
+   "docs/profiles/target_renegade.json": "c2279bbf071346cf",
+   "nexclash.py": "3e9043d14edb7db1",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/engines.py": "17cc64b9bb99e469",
+   "nexclash/nextboot.py": "e6624bfe14a62e21",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "273dab19dfcd9e27",
-   "nexclash/renegade.py": "4729669c9ba0b9f3",
-   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/renegade.py": "bb48b18bfc6b3ad5",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "f5450e2505a93690",
+   "recipe": "07e5f28fe4efeb81",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-06"
  },
  "verified": {
   "deps": {
-   "asm/renegade_hooks.asm": "6b93706aa09d65f5",
-   "docs/profiles/target_renegade.json": "07ce117a0fd59422",
-   "nexclash.py": "b7f49876a97b1f48",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/renegade_hooks.asm": "bf70261ac1b9e14e",
+   "docs/profiles/target_renegade.json": "c2279bbf071346cf",
+   "nexclash.py": "3e9043d14edb7db1",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/engines.py": "17cc64b9bb99e469",
+   "nexclash/nextboot.py": "e6624bfe14a62e21",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "273dab19dfcd9e27",
-   "nexclash/renegade.py": "4729669c9ba0b9f3",
-   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/renegade.py": "bb48b18bfc6b3ad5",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "f5450e2505a93690",
+   "recipe": "07e5f28fe4efeb81",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-06"
  }
 }

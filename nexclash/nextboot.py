@@ -69,7 +69,8 @@ def alt_image(patch, sysrom=None):
     lo..hi from patch.page and patch.altrom_low. The shared base of every verifier's alt ROM model:
     bytes outside lo..hi are what the Next has, not the page's (BRIEFING C2 #5)."""
     lo, hi = patch.altrom
-    img = bytearray(rom48() if zt.altrom_whole(patch) else (sysrom or system_rom3()[0]))
+    rom3 = sysrom or system_rom3()[0]
+    img = bytearray(rom48()) if zt.altrom_whole(patch) else zt.rom3_fixups(bytearray(rom3), rom3)
     img[lo:hi] = patch.page[lo - 0x2000:hi - 0x2000]
     if getattr(patch, 'altrom_low', None):
         img[0:0x2000] = patch.altrom_low[1]
@@ -111,7 +112,10 @@ def rom_view(patch, sysrom=None):
     (alt_image), or for a slot-1 build the system ROM3's 0x0000-0x1FFF + its RAM page, or the ROM3."""
     rom = sysrom or system_rom3()[0]
     if getattr(patch, 'altrom', None):
-        return alt_image(patch, rom)
+        image = alt_image(patch, rom)
+        if getattr(patch, 'ram_slot1_after_alt', False):
+            image[0x2000:0x4000] = patch.page
+        return image
     if getattr(patch, 'slot1', None) is not None and getattr(patch, 'page', None) is not None:
         return bytearray(rom[0:0x2000]) + bytearray(patch.page)
     return bytearray(rom)
@@ -503,10 +507,10 @@ def check(nex, z80, patch=None, tail=None, nexload=False, sysrom=None):
         bad.append(('RAM differs', len(diffs), diffs[:6]))
     img = bytearray(sysrom)
     if getattr(patch, 'altrom', None) or getattr(patch, 'slot1', None):
-        regs = zt.build_tail(s, 0x8000, patch.slot1, bool(getattr(patch, 'altrom', None)))[3]
+        regs = zt.build_tail(s, 0x8000, patch.slot1, bool(getattr(patch, 'altrom', None)), getattr(patch, 'ram_slot1_after_alt', False))[3]
         rb = patch.slot1[1]
         if getattr(patch, 'altrom', None):
-            img = alt_image(patch, sysrom)                   # what the stub writes (z80tonex.altrom_fill)
+            img = rom_view(patch, sysrom)                    # hidden ROM with optional writable hook page
         else:
             img[0x2000:0x4000] = patch.page
         img[rb:rb + len(regs)] = regs                    # register block written by the stub
@@ -529,7 +533,7 @@ def check(nex, z80, patch=None, tail=None, nexload=False, sysrom=None):
     as_saved = s.is128 and st['p7ffd'] & 0x30 == s.port7ffd & 0x30      # a 128K game pages: unlocked as saved
     if not (locked or as_saved) or not st['p1ffd'] & 4:                 # (Three Weeks, 2026-11-04)
         bad.append(('paging', hex(st['p7ffd']), hex(st['p1ffd'])))
-    s1 = patch.slot1[0] if getattr(patch, 'slot1', None) and not getattr(patch, 'altrom', None) else 0xFF
+    s1 = patch.slot1[0] if getattr(patch, 'slot1', None) and (not getattr(patch, 'altrom', None) or getattr(patch, 'ram_slot1_after_alt', False)) else 0xFF
     if st['mmu'] != [0xFF, s1, 10, 11, 4, 5, 0, 1]:
         bad.append(('MMU', st['mmu']))
     return bad

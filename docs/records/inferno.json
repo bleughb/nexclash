@@ -49,11 +49,11 @@
  "repro": [],
  "status": {
   "title": "Inferno",
-  "engine_col": "inferno pinned B components (inferno.md)",
-  "build": "immutable source / B / transfer components",
-  "software": "six quick correctness PASS; total timing FAIL",
+  "engine_col": "inferno copier window (inferno.md)",
+  "build": "translated copier head (page 80) + pinned B components; not installed",
+  "software": "six quick correctness PASS; copier head exact on 1,854 states; pacing gate open",
   "hardware": "untested",
-  "next": "affordable exact validation, safe prewarm and complete frame integration"
+  "next": "copier window milestone 2: replay copier OUTs at original T and pad to original 9907 time"
  },
  "checks": [
   "asm2profile:inferno"
@@ -952,7 +952,7 @@
    "wrong stride control detected": 1,
    "pending overwrite control detected": 1
   },
-  "memory": "216\u2013223 exclusive inactive staging; general proposed cache 136\u2013215; source reads may also use owned staging",
+  "memory": "216–223 exclusive inactive staging; general proposed cache 136–215; source reads may also use owned staging",
   "timing": "4096-byte copy: CPU about 3.74 ms; ordinary DMA CPU setup 0.514 ms; physical DDMA setup 0.165 ms. Stalls unknown. Total target 10 ms remains FAIL; unchanged snapshot-inclusive cold L1 899.447 / L6 84.289 ms.",
   "checks": {
    "assembly": "PASS: 17 blocks / 108 symbols",

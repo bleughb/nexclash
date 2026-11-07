@@ -25,7 +25,8 @@
 ;       (the engine's setup stores the timing mode's when it is chosen at run time, 60 Hz; 0 = HLIB_PACE_NL;
 ;       never learned from a poll), +8 line at an outside hook's start, +10 window open, +12 polls left
 ;   HLIB_PACE_NL EQU <lines a frame of the game's timing mode: 312 48K, 311 128K / +3 (50 Hz)>
-; hlib_line keeps DE; the others keep nothing but IX, IY and the alternate set.
+; hlib_line keeps DE; the others keep nothing but IX, IY and the alternate set. An engine that calls hlib_line_di
+; INCLUDEs hlib_iff.asm (macros) first; it is assembled only when used (IFUSED), so the others need nothing more.
 
 ; hlib_line: HL = the video line (0 = the first ULA pixel row), read until the MSB holds still. AF, BC lost.
 hlib_line:
@@ -52,6 +53,22 @@ hlib_line:
         and 1
         ld h,a
         ret
+
+    IFUSED hlib_line_di          ; assembled only when an engine calls it (it needs hlib_iff.asm's macros):
+                                ; engines that never call it keep their bytes and need no hlib_iff.asm
+; hlib_line_di: HL = the video line (hlib_line) with interrupts off only for the
+; reading (under 256 T at 28 MHz = 32 T at 3.5 MHz, the /INT length, so no interrupt is lost; hooklib
+; checks the window), then the caller's IFF back. With interrupts on, a NEXTREG selection made by an
+; interrupt between OUT (0x243B) and IN (0x253B) would read the wrong register (an ISR wrapper that
+; saves the speed selects register 7). AF, BC lost; DE kept.
+hlib_line_di:
+        HLIB_IFF_DI
+        push af
+        call hlib_line
+        pop af
+        HLIB_IFF_EI
+        ret
+    ENDIF
 
 ; hlib_since: HL = lines from DE (an earlier reading) to now, one unseen wrap allowed; +0 = now. AF, BC, DE lost
 hlib_since:

@@ -71,11 +71,11 @@
   },
   "sprites": {
    "file": "rainbow_z80n_sprites.nex",
-   "md5": "69369c89035d39eac8e4211c2686503c"
+   "md5": "76d5da1acc29c86bf1cd3676577538dc"
   },
   "diagnostic": {
    "file": "rainbow_z80n_sprites_diag.nex",
-   "md5": "24e547de8e2e28982fe155611068f039"
+   "md5": "4482096ee56a4c686dd07b2cf997ab95"
   }
  },
  "repro": [],
@@ -202,11 +202,11 @@
     },
     "sprites": {
      "file": "rainbow_z80n_sprites.nex",
-     "md5": "d7b2345c8f1fd35f592324740ec4daae"
+     "md5": "33639cabd1e265a5db75c35097c09170"
     },
     "diagnostic": {
      "file": "rainbow_z80n_sprites_diag.nex",
-     "md5": "305a6ed7bdd1dd93821c028ea4012297"
+     "md5": "efa6e588e7d72a58355c3c48784731df"
     }
    },
    "proof": "the 13 LeeBee round cuts (islands 1-7 and the ending) and Dean's two recordings IDENTICAL with palette entry 17 = the model at every game frame start, unit tests and the diagnostic build on rainbownew, 7 sky palette negatives",
