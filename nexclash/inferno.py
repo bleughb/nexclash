@@ -4315,7 +4315,7 @@ CW_CLK, CW_X, CW_NIRQ = 0x1810, 0x1811, 0x181D   # page-80 variables (asm EQUs)
 CW_CTC_PORT, CW_TICK = 0x1B3B, 32                # CTC channel 3, prescaler 256
 CW_ISR = (94, 10)          # original no-op ISR (998E = 0): T and M1 incl. the IM2 acknowledge
 CW_INT_PULSE = 32          # /INT length, 3.5MHz T
-CW_TOL = 48                # OUT/9907 tolerance: one tick, rounding and poll latency
+CW_TOL = 56                # OUT/9907 tolerance: one 32 T tick, +-16 rounding, poll latency
 
 
 def cw_out_t(k, g):
