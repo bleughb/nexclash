@@ -33,6 +33,7 @@
         INCLUDE "lib/hlib_speed.asm"
 
 HPAGE   EQU 26                  ; bank 13 lower half
+XPAGE   EQU 25                  ; session 9: bank 12 upper half, code at slot 1 inside hook work (see x_tags)
 ULAPAGE EQU 10
 L2BANK  EQU 18                  ; Layer 2 canvas: banks 18-22 = pages 36-45
 L2PAGE  EQU 36
@@ -99,6 +100,13 @@ PLR     EQU 0x4CF4              ; p_spr: 1 while the player's groups are placed 
 FRESH   EQU 0x4CF5              ; 1: a view's first copy since the last frame step (the camera starts again)
 SSX     EQU 0x4CF6              ; 2: the frame step's sprite offset (droids, shots): STX - DX (SSX, SSY adjacent)
 SSY     EQU 0x4CF8              ; 2: STY - DY
+CFX0    EQU 0x4C78              ; session 10: x_cfr's rectangle: 2: canvas x (0-319), the first column
+CFY0    EQU 0x4C7A              ;   canvas line of its top (cell-aligned)
+CFW     EQU 0x4C7B              ;   width in cells (32 = 256 px)
+CFH     EQU 0x4C7C              ;   height in cells (32 = 256 lines)
+CFV     EQU 0x4C7D              ;   the value: the deck's void ink (0-15)
+CFS6    EQU 0x4C7E              ;   NR 0x56 on entry
+FRSH2   EQU 0x4CFB              ; session 10: 1 = a view's first copy (fw_cpy_in): p_pre snaps the shown origin
 SBUSY   EQU 0x4CFA              ; 1 while p_spr writes the sprite ports: an ISR in the hook page skips the frame step
 GPAGE   EQU 27                  ; page 27 (bank 13 upper half): the frame step, mapped at slot 7 only inside isr_step
 VMONO   EQU 0x4CE0              ; 1: monochrome (the base of the .nxc: Layer 2 and the sprites never on, the ULA shows the
@@ -121,7 +129,7 @@ MVE     EQU 0x4C80              ; 2: a move's pace window: lines elapsed (ISR bo
 MVT     EQU 0x4C82              ; 2: its target (1/16 lines)
 MVP     EQU 0x4C84              ; polls left with the line counter still (no counter: give up)
 MVL     EQU 0x4C85              ; 2: the last line read in the wait
-DEBTCAP EQU 312 * 16 * 4        ; four frames: crowds (6+ blocks, no delay) repaid by the next updates with a delay
+DEBTCAP EQU 312 * 16 * 8        ; session 8: eight frames (was four): a Centred step pair (H + V) leaves more than four
 O_MOVEV EQU (30 + 21 * 0x1200 - 5) / 14       ; a scroll move's original time at 3.5 MHz (LD HL / DE / BC, LDDR or
 O_MOVEH EQU (30 + 21 * 0x12FE - 5) / 14       ; LDIR; 0x8300-0x95FF and the code are uncontended), 1/16 lines
 SKEY    EQU 0x4C60              ; 21: the image (+1) each pattern slot (3 patterns) holds, 0: none. The images are
@@ -144,6 +152,7 @@ WO      EQU 0x4CD8              ; 2: the original's time (1/16 lines)
 WP      EQU 0x4CDA              ; 2: the routine's time at 28 MHz
 WT      EQU 0x4CDC              ; 2: fw_wait's target
         IFNDEF KSPR
+KCMP    EQU 96                  ; session 9: 6.0 (session 8: 6.31). Calibrated in lockstep against the Centred reference game (work/s9/anal9c.py: the original with Centred view's logic only, its step time left out): 101 ran +1.8% slow, 96 -0.4% quiet, +1.3% scroll (JNext measured 6.10 time-weighted in session 8)
 KSPR    EQU 104                 ; E656 (JNext: 98.8 off, 102.1 on over 1,051 calls)
 KBS     EQU 98                  ; BE38: not used (its ratio varies 5 to 6 with the strip: it runs at the caller's speed)
 KCPY    EQU 141                 ; C05A (JNext: the copy from DD9A, about 170k T without its interrupts, against WP 1,360)
@@ -166,6 +175,29 @@ S0      EQU 46                  ; sprite store: page 46 = (list - 0x9C00) >> 1 -
 MAXG    EQU 21
 FLAGS   EQU 0xD200              ; in page S0 at slot 6: 40 x 32 canvas cells, the ink their ink bytes hold (0xFF: unknown)
 TAGS    EQU 0x4D00              ; 32 columns x 152 rows
+TINK8   EQU 8                   ; session 9: a tag's ink value (was 0): the deck's bright black, so a fully pasted cell
+                                ; on the deck needs no recell (x_paste flags it 8)
+XW      EQU 0x4C76              ; session 9: x_tags: the strip's pasted width (16 or 32)
+IPV     EQU 0x4B00              ; session 9: droid and shot interpolation (Centred view), page 26 state:
+IOX     EQU IPV                 ;   1: ipol's offset x (px, signed)
+IOY     EQU IPV + 1             ;   1: its offset y
+IKY     EQU IPV + 2             ;   the group's key
+ICXV    EQU IPV + 3             ;   2: its canvas x
+ICYV    EQU IPV + 5             ;   its canvas y
+IBST    EQU IPV + 6             ;   the best match's distance (0xFF: none)
+IBQ     EQU IPV + 7             ;   its QKEY index (low byte)
+IT      EQU IPV + 8             ;   frames over which the offsets are drawn in (the last update's interval, 2-8)
+IR      EQU IPV + 9             ;   frames left of that (the frame step counts it down)
+FRMC    EQU IPV + 10            ;   frame steps counted (cam)
+FRML    EQU IPV + 11            ;   FRMC at the last update's sprites
+IRAD    EQU 24                  ; the farthest a droid or a shot is matched to its last place (|dx| + |dy| each <= it)
+IKEYA   EQU 0xDA00              ; in S0 (slot 6): + g this update's keys (0xFF: none), + 0x20 / 0x40 canvas x low /
+                                ; high, + 0x60 canvas y; + 0x80 .. the last update's (0xFE: taken)
+DXA     EQU 0xDB00              ; in S0: per group (+ g) its offset from its last place, x (px, signed; 0: none) and
+DYA     EQU 0xDC00              ; y: written by ipol (slot 6), read by the frame step (slot 0: never written there)
+FCT     EQU IPV + 12            ; the frame step's share of the offset still shown: IR x 256 / IT (0-255)
+LZONE   EQU 244                 ; session 9: mvtick's guard zone (lines 244-248; JNext takes the interrupt at line 248)
+XFL     EQU 0x4C77              ; session 9: x_paste: the flag of the cells it touched
 
 ; game variables
 G_AF0E  EQU 0xAF0E
@@ -181,244 +213,14 @@ G_DECK  EQU 0xB044
         ORG 0x4000
         INCLUDE "lib/hlib_r.asm"        ; HLIB_R_IN / OUT, hlib_r_set
 
-; p_tags: HL = the list just drawn into the strip. Repeat its geometry (B07F) into the tag strip: mask bits -> the
-; list's role, OR bits -> 0 (ink), overwrite bits -> ink / role. A part of height 0 ends the list, as in B0EC.
-p_tags: ld (LST),hl
-        ld de,-0x9600
-        add hl,de
-        jr nc,.floor
-        ld a,h
-        cp 6
-        jr nc,.floor
-        srl h
-        rr l
-        srl h
-        rr l
-        srl h
-        rr l
-        ld h,high ROLETAB
-        nextreg 0x56,S0         ; (t_list runs inside BE38: slot 6 is the game's page 0)
-        ld a,(hl)
-        nextreg 0x56,0
-        jr .rok
-.floor: ld a,R_FLOOR
-.rok:   ld (ROLE),a
-        ld hl,(LST)
-        ld b,(hl)
-        inc hl
-.part:  push bc
-        ld a,(hl)               ; x offset (signed)
-        ld e,a
-        rla
-        sbc a,a
-        ld d,a
-        push hl
-        ld hl,(G_AF0E)
-        add hl,de               ; HL = x
-        ld b,h
-        ld c,l
-        ld de,7
-        add hl,de
-        ld a,h
-        or a
-        jr nz,.xskip
-        ld a,l
-        cp 39
-        jr nc,.xskip
-        ; visible bits: jstart = max(0, -x), jend = min(8, 32 - x)
-        xor a
-        bit 7,b
-        jr z,.js
-        ld a,c
-        neg                     ; -x (1..7)
-.js:    ld (JST),a
-        ld e,a                  ; E = jstart
-        ld a,32
-        sub c                   ; 32 - x (x in -7..31 -> 1..39)
-        cp 8
-        jr c,.je
-        ld a,8
-.je:    sub e
-        ld (JN),a
-        ld a,c
-        add a,e                 ; x + jstart (0..31)
-        add a,a
-        add a,low TCOL
-        ld l,a
-        ld h,high TCOL
-        ld a,(hl)
-        inc l
-        ld h,(hl)
-        ld l,a
-        ld (P0),hl
-        pop hl
-        inc hl
-        ld a,(G_AF10)
-        add a,(hl)
-        ld d,a                  ; D = row
-        inc hl
-        ld a,(hl)
-        inc hl                  ; HL = glyph
-        ld (OPF),a
-        and 63
-        jr z,.endl              ; RET Z in the original
-        ld e,a                  ; E = height
-        push hl
-        ld c,e
-        ld b,0
-        add hl,bc
-        ex (sp),hl              ; (SP) = next part, HL = glyph
-        ld a,(G_AF16)
-        cp d
-        jr nc,.noclip
-        ld a,d
-        add a,e
-        jr nc,.vskip
-        jr z,.vskip
-        ld e,a                  ; rows left
-        ld a,d
-        neg
-        add a,l
-        ld l,a
-        adc a,h
-        sub l
-        ld h,a                  ; glyph += -D
-        ld d,0
-.noclip:
-        ld a,(G_AF17)
-        sub d
-        cp e
-        jr nc,.rows
-        ld e,a
-.rows:  ld a,d
-        ld (TROW),a
-        ld a,e
-        ld (NROWS),a
-        or a
-        jr z,.vskip
-        call rowloop
-.vskip: pop hl                  ; next part
-        pop bc
-        dec b
-        jp nz,.part
+; session 9: p_tags, rowloop and p_clr run from page 25 (XPAGE, slot 1): x_tags, x_clr
+p_tags: nextreg 0x51,XPAGE
+        call x_tags
+        nextreg 0x51,0xFF
         ret
-.xskip: pop hl                  ; the x byte: skip y, read the height, as B178
-        inc hl
-        inc hl
-        ld a,(hl)
-        and 63
-        inc hl
-        ld e,a
-        ld d,0
-        add hl,de
-        pop bc
-        dec b
-        jp nz,.part
-        ret
-.endl:  pop bc
-        ret
-
-; rowloop: HL = the first drawn glyph row; TROW, NROWS, P0, JST, JN, OPF, ROLE set.
-rowloop:
-        ld a,(NROWS)
-        ld b,a
-.row:   push bc
-        ld c,(hl)               ; glyph byte
-        inc hl
-        push hl
-        ld a,(JST)
-        or a
-        jr z,.sh0
-        ld b,a
-.shl:   sla c
-        djnz .shl
-.sh0:   ld hl,(P0)
-        ld a,(TROW)
-        add a,l
-        ld l,a
-        adc a,h
-        sub l
-        ld h,a
-        ld de,TS
-        ld a,(JN)
-        ld b,a
-        ld a,(OPF)
-        bit 7,a
-        jr nz,.mask
-        bit 6,a
-        jr nz,.set
-.or:    ld a,(ROLE)
-        cp R_CONSOLE
-        ld a,0
-        jr nz,.or0
-        ld a,R_SCREEN           ; a console's OR ink is its screen
-.or0:   sla c
-        jr nc,.or1
-        ld (hl),a
-.or1:   add hl,de
-        djnz .or0
-        jr .next
-.mask:  ld a,(ROLE)
-        cp R_WALL
-        jr z,.mw
-.mk:    sla c
-        jr nc,.mk1
-        ld (hl),a
-.mk1:   add hl,de
-        djnz .mk
-        jr .next
-.mw:    sla c                   ; a wall part: its 0 bits over ink become the face tone
-        jr c,.mw1
-        inc (hl)
-        dec (hl)
-        jr nz,.mw2
-        ld (hl),R_FACE
-        jr .mw2
-.mw1:   ld (hl),a
-.mw2:   add hl,de
-        djnz .mw
-        jr .next
-.set:   ld a,(ROLE)
-.st:    sla c
-        jr nc,.st1
-        ld (hl),0
-        jr .st2
-.st1:   ld (hl),a
-.st2:   add hl,de
-        djnz .st
-.next:  ld hl,TROW
-        inc (hl)
-        pop hl
-        pop bc
-        djnz .row
-        ret
-
-; p_clr: the strip was cleared to ink (C044): tag rows 0 .. AF17-1 of all 32 columns = 0.
-p_clr:  ld a,(G_AF17)
-        or a
-        ret z
-        ld hl,TCOL
-        ld b,32
-.c:     push bc
-        ld e,(hl)
-        inc l
-        ld d,(hl)
-        inc l
-        push hl
-        ex de,hl
-        ld (hl),0
-        ld d,h
-        ld e,l
-        inc de
-        ld a,(G_AF17)
-        dec a
-        jr z,.c1
-        ld c,a
-        ld b,0
-        ldir
-.c1:    pop hl
-        pop bc
-        djnz .c
+p_clr:  nextreg 0x51,XPAGE
+        call x_clr
+        nextreg 0x51,0xFF
         ret
 
 ; rd56: A = NR 0x56
@@ -431,158 +233,11 @@ rd56:   ld bc,0x243B
         ei
         ret
 
-; p_paste: after C1A5: strip columns 0..W-1 (W = 16 if AF2D = 1, else 32), rows 0..AF17-1 -> canvas at
-; (OX + AF14 * 8 + px, OY + AF15 + row); the canvas cells touched -> FLAGS 0xFF.
+; session 9: p_paste runs from page 25 (x_paste)
 p_paste:
-        call rd56
-        ld (SLOT6),a
-        ld a,(G_AF2D)
-        cp 1
-        ld a,16
-        jr z,.w
-        ld a,32
-.w:     ld (PW),a
-        ld a,(G_AF14)
-        ld l,a
-        ld h,0
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        ld de,(OX)
-        add hl,de
-        call mod320
-        ld (CX),hl
-        ld a,(OY)
-        ld b,a
-        ld a,(G_AF15)
-        add a,b
-        ld (CY),a
-        ld a,(G_AF17)
-        or a
-        jp z,.done
-        ld hl,TCOL
-        ld a,(PW)
-        ld b,a
-.col:   push bc
-        push hl                 ; TCOL entry
-        ld hl,(CX)
-        ld a,l                  ; page = L2PAGE + (cx >> 5)
-        srl h
-        rra
-        srl h
-        rra
-        srl h
-        rra
-        srl h
-        rra
-        srl h
-        rra
-        add a,L2PAGE
-        nextreg 0x56,a
-        ld hl,(CX)
-        ld a,l
-        and 31
-        add a,0xC0
-        ld d,a
-        ld a,(CY)
-        ld e,a
-        pop hl
-        push hl
-        ld a,(hl)
-        inc l
-        ld h,(hl)
-        ld l,a                  ; HL = tag column
-        ld a,(G_AF17)           ; the column: LDIR, split where the canvas y wraps (256) inside its column
-        ld c,a
-        ld a,e
-        neg                     ; bytes to the column's end (0: 256)
-        jr z,.one
-        cp c
-        jr nc,.one
-        ld b,a
-        ld a,c
-        sub b
-        push af                 ; the rest, from y 0
-        ld c,b
-        ld b,0
-        ldir
-        dec d                   ; DE ran into the next column: back to this one's y 0
-        pop af
-        ld c,a
-.one:   ld b,0
-        ldir
-        ld hl,(CX)              ; next canvas column
-        inc hl
-        call mod320
-        ld (CX),hl
-        pop hl
-        inc l
-        inc l
-        pop bc
-        djnz .col
-        ; flags: cell columns (cx0 >> 3) .. + W/8 - 1, cell rows (CY >> 3) .. ((CY + rows - 1) >> 3), wrapping
-        ld a,(PW)
-        rrca
-        rrca
-        rrca
-        and 7
-        ld b,a                  ; cell columns
-        ld hl,(CX)              ; CX is now cx0 + W: step back
-        ld a,(PW)
-        ld e,a
-        ld d,0
-        or a
-        sbc hl,de
-        jr nc,.f0
-        ld de,320
-        add hl,de
-.f0:    ld a,l
-        srl h
-        rra
-        srl h
-        rra
-        srl h
-        rra
-        ld c,a                  ; C = first cell column (0..39)
-        nextreg 0x56,S0         ; FLAGS
-.fc:    push bc
-        ld a,(CY)
-        rrca
-        rrca
-        rrca
-        and 31
-        ld e,a                  ; first cell row
-        ld a,(G_AF17)
-        dec a
-        ld d,a
-        ld a,(CY)
-        and 7
-        add a,d                 ; offset of the last row from the first cell's top
-        rrca
-        rrca
-        rrca
-        and 31
-        inc a
-        ld b,a                  ; cell rows touched
-.fr:    push bc
-        push de
-        ld a,e
-        and 31
-        call cellptr            ; HL = FLAGS + row * 40 + C
-        ld (hl),0xFF
-        pop de
-        inc e
-        pop bc
-        djnz .fr
-        pop bc
-        inc c
-        ld a,c
-        cp 40
-        jr c,.fc1
-        ld c,0
-.fc1:   djnz .fc
-.done:  ld a,(SLOT6)
-        nextreg 0x56,a
+        nextreg 0x51,XPAGE
+        call x_paste
+        nextreg 0x51,0xFF
         ret
 
 ; cellptr: A = cell row (0..31), C = cell column (0..39) -> HL = FLAGS + A * 40 + C. DE lost.
@@ -636,7 +291,17 @@ p_pre:  ld a,(VCENTRE)          ; session 4: Centred view implies fast scroll an
         ld a,(OY)
         ld (TY),a
         call offs
-        ld a,(VSMOOTH)
+        ld a,(FRSH2)            ; session 10: a view's first copy (a new deck, a restart): the canvas holds nothing of
+        or a                    ; the last view, so the shown origin snaps (it glided over stale canvas cells), and in
+        jr z,.nf                ; Centred view every canvas cell outside the view takes the void's ink (x_ffill): the
+        ld a,(VCENTRE)          ; camera's margins hold no other place's scenery nor black
+        or a
+        jr z,.snap
+        nextreg 0x51,XPAGE
+        call x_ffill
+        nextreg 0x51,0xFF
+        jr .snap
+.nf:    ld a,(VSMOOTH)
         or a
         jr z,.snap
         ld a,(L2ON)
@@ -658,7 +323,9 @@ p_pre:  ld a,(VCENTRE)          ; session 4: Centred view implies fast scroll an
         or a
         sbc hl,de
         jr c,.nos
-.snap:  ld hl,(OX)
+.snap:  xor a
+        ld (FRSH2),a
+        ld hl,(OX)
         ld (DX),hl
         ld a,(OY)
         ld (DY),a
@@ -702,142 +369,23 @@ p_pre:  ld a,(VCENTRE)          ; session 4: Centred view implies fast scroll an
         ret nz
         inc a
         ld (L2ON),a
-        nextreg 0x15,0x01       ; sprites visible, S L U
+        nextreg 0x15,0x41       ; sprites visible, S L U, sprite 0 on top (session 10: p_spr numbers the front
+                                ; record's groups first; with bit 6 clear, sprite 127 was on top and the droids
+                                ; behind the player were drawn in front of him)
         ld a,2
         ld bc,0x123B
         out (c),a
         ret
 
-; p_inks: after C05A + C0C3 (the attributes are current): every view cell's ink bytes = its attribute's ink.
-p_inks: call rd56
-        ld (SLOT6),a
-        ld hl,(OX)              ; the view's first canvas cell: column OX >> 3 (0-39), row (OY >> 3) & 31
-        ld a,l
-        srl h
-        rra
-        srl h
-        rra
-        srl h
-        rra
-        ld (CC),a
-        ld a,(OY)
-        rrca
-        rrca
-        rrca
-        and 31
-        ld (TINK),a             ; (TINK: the canvas row of view row CR)
-        xor a
-        ld (CR),a
-.crow:  ; this row's 32 attributes -> ROWBUF (the ULA page at slot 6), then FLAGS (S0) mapped for the row's walk
-        nextreg 0x56,ULAPAGE
-        ld a,(CR)
-        ld l,a
-        ld h,0
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        ld de,0xD800
-        add hl,de
-        ld de,ROWBUF
-        ld bc,32
-        ldir
-        nextreg 0x56,S0
-        ld a,(CC)
-        ld c,a                  ; C = canvas column
-        ld a,(TINK)
-        call cellptr            ; HL = FLAGS + row * 40 + C
-        ld de,ROWBUF
-        ld b,32
-.ccol:  ld a,(de)               ; the attribute's ink, 0-15
-        and 0x47
-        cp 0x40
-        jr c,.nb
-        sub 0x38
-.nb:    cp (hl)
-        jr z,.same
-        ld (hl),a
-        push bc
-        push de
-        push hl
-        ld b,a
-        ld a,(TINK)
-        ld d,a
-        ld a,b
-        call recell             ; C = cell column, D = cell row, A = ink
-        nextreg 0x56,S0
-        pop hl
-        pop de
-        pop bc
-.same:  inc e                   ; ROWBUF (0x4C40-0x4C5F: E never wraps)
-        inc hl
-        inc c
-        ld a,c
-        cp 40
-        jr c,.c1
-        ld c,0
-        push de
-        ld de,-40
-        add hl,de
-        pop de
-.c1:    djnz .ccol
-        ld a,(TINK)
-        inc a
-        and 31
-        ld (TINK),a
-        ld hl,CR
-        inc (hl)
-        ld a,(hl)
-        cp 19
-        jp c,.crow
-        ld a,(SLOT6)
-        nextreg 0x56,a
-        ret
-
-; recell: canvas cell (C column, D row): every ink byte (< 16) of its 8 x 8 -> A. Maps its page at slot 6.
-recell: ld e,a
-        ld a,c
-        rrca
-        rrca
-        and 0x3F
-        add a,L2PAGE
-        nextreg 0x56,a
-        ld a,c
-        and 3
-        add a,a
-        add a,a
-        add a,a
-        add a,0xC0
-        ld h,a                  ; column (C & 3) * 8 -> 0xC000 + that * 256
-        ld a,d
-        add a,a
-        add a,a
-        add a,a
-        ld l,a                  ; row * 8
-        ld b,8
-.k:     push bc
-        push hl
-        ld b,8
-.j:     ld a,(hl)
-        cp 16
-        jr c,.j0
-        cp R_FACE               ; a wall face's ink: the void's ink in a void cell, kept on the deck (black ink,
-        jr nz,.j1               ; bright or not)
-        ld a,e
-        and 7
-        jr z,.j1
-.j0:    ld (hl),e
-.j1:    inc l
-        djnz .j
-        pop hl
-        inc h
-        pop bc
-        djnz .k
+; session 9: p_inks and recell run from page 25 (x_inks, x_recell)
+p_inks: nextreg 0x51,XPAGE
+        call x_inks
+        nextreg 0x51,0xFF
         ret
 
 ;p_spr: after E656 (the blocks are on the screen): every draw record (A320, AF09 of them) as sprites, the last
-; record (drawn last, in front) first, so it takes the lowest sprite numbers (sprite 0 on top). Enemies: one group
+; record (drawn last, in front) first, so it takes the lowest sprite numbers (sprite 0 on top: NR 0x15 bit 6,
+; set by p_pre). Enemies: one group
 ; (image 4 (type - 1) + frame); the player: a group per part (second weapon, dome + AFA4, weapon, drive, chassis);
 ; others: the record's list. Groups not used since the last update are hidden.
 p_spr:  ld a,(L2ON)
@@ -875,6 +423,7 @@ p_spr:  ld a,(L2ON)
         ld (SLOT6),a
         ld hl,STAMP
         inc (hl)
+        call ipre               ; session 9: Centred view: this update's interpolation starts
         xor a
         ld (GRP),a
         ld a,(0xAF09)
@@ -1086,6 +635,7 @@ group:  ld a,(GRP)
         ld (hl),c
         inc l
         ld (hl),b
+        call ipol               ; session 9: a droid's or shot's offset from its last place (Centred view)
         ld hl,SDX               ; session 5: a player group in Centred view: PKX / PKY (the shown player)
         ld a,(PLR)
         or a
@@ -1219,7 +769,10 @@ isr_step:
         call glide              ; sprites) runs from page 27 at slot 7 (interrupts are off; slot 6 stays free for S0)
         nextreg 0x57,1
 .done:  ld a,C_ISR               ; (the same at any interrupted clock: the hook's state never depends on it)
-        call dbg_close_r
+        push af                 ; (session 8: dbg_close_r inlined: never WNEST; the ISR is left out of a window by
+        call dlines             ; mvtick / wskipc)
+        pop af
+        call dadd.add
         ld a,(GSPD)
         nextreg 0x07,a
         ret
@@ -1264,9 +817,7 @@ put3:   push de
 
 ; qline: HL = the video line (0-311), the reads with interrupts held off (then put back as they were: inside the ISR
 ; they stay off); NR 7 is selected again after (HLIB_SPEED_IN reads it). AF, BC lost.
-qline:  ld a,i                  ; (session 6: an interrupt taken during LD A,I makes it read IFF2 as 0, and RET PO then
-        jp pe,$+5               ; left interrupts off. 2026-11-07: read again only after an off (lib/hlib_iff.asm
-        ld a,i                  ; HLIB_IFF_DI): two reads back to back could still meet one at the end of the second)
+qline:  call iffq                ; (session 8: P/V = interrupts on, by iffq)
         di
         push af
         ld bc,0x243B
@@ -1339,11 +890,14 @@ dbg_close:
         ret
 
 ; dbg_close_r: as dbg_close, never WNEST (isr_step: the ISR is left out of a window by mvtick / wskipc).
-dbg_close_r:
-        push af
-        call dlines
-        pop af
-        jr dadd.add
+
+; iffq: P/V = IFF2 (interrupts on). LD A,I taken while an interrupt is accepted reads 0 (the ISR then runs and
+; returns with them on): so if the first read shows them on they are on; if not, a second read decides (after such
+; an interrupt it shows them on; in an ISR, or with them really off, both read 0). AF lost.
+iffq:   ld a,i
+        ret pe
+        ld a,i
+        ret
 
 ; dlines: HL = 16 x lines since dbg_open. AF, BC, DE lost.
 dlines: call qline
@@ -1378,12 +932,6 @@ dadd:   ld hl,0
         ret
 
 ; dconst: DEBT += A; keeps BC, DE, HL. AF lost.
-dconst: push hl
-        push de
-        call dadd
-        pop de
-        pop hl
-        ret
 
 ; isr_in / isr_out: t_isr in the hook page (interrupts off): the ISR body's time is left out of an open debt window
 ; (DST moves on by it). AF, BC, DE, HL lost.
@@ -1506,6 +1054,9 @@ mv_in:  call spd_fast
         ld a,(VCENTRE)          ; session 4: Centred view (fast): the step's window opens here and closes after its
         or a                    ; copy (cw_close): the step costs no game time, its time goes to the debt
         ret z
+        ld a,(WOPEN)            ; session 9: a second step before the copy (horizontal, then vertical, in one update):
+        cp 3                    ; the window goes on. Restarting it here lost the first step's time from the debt (in
+        ret z                   ; JNext about 68k T an update with two steps), so long scrolling ran slow
         push hl
         ld hl,(DEBT)
         ld (CWD),hl
@@ -1584,10 +1135,11 @@ mv_out: ld a,(VFAST)
 ; mvtick: MVE += lines since MVL (one wrap allowed), MVL = now; interrupts held off throughout, so an ISR's isr_out
 ; (which moves DST) cannot fall between. The line counter still for 256 polls: MVE is forced past any target (an
 ; emulator without one). AF, DE, HL lost.
-mvtick: push bc
+mvtick: call iffq
+        push af
+        push bc
         call qline              ; (session 6: its own short DI; the update below is the only other one: a long DI
-        push af                 ; window made the ULA's interrupt fall wholly inside it). F's P/V = the caller's IFF:
-        di                      ; qline read it (twice-safe) and its exit keeps the flags (2026-11-07)
+        di                      ; window made the ULA's interrupt fall wholly inside it)
         ld de,(MVL)
         ld (MVL),hl
         or a
@@ -1610,13 +1162,29 @@ mvtick: push bc
 .m2:    ld de,(MVE)
         add hl,de
         ld (MVE),hl
-.z:     pop af
-        pop bc
+.z:     pop bc
+        pop af
         ret po
         ei                      ; session 6: interrupts then stay on for about 120 us (256 DJNZ at 28 MHz, half a line)
         push bc                 ; before the caller's next poll holds them off again: the wait loops of polls (fw_wait,
-        ld b,0                  ; mv_out) held them off most of the time, and the ULA's interrupt, sampled inside such
-.e:     djnz .e                 ; a window, was missed about once a second (v1.0 too)
+        push hl                 ; mv_out) held them off most of the time, and the ULA's interrupt, sampled inside such
+        ld hl,(MVL)             ; a window, was missed about once a second (v1.0 too).
+        ld bc,-LZONE            ; session 9: at 28 MHz the interrupt is 32 T long, shorter than one poll's DI (about
+        add hl,bc               ; 400 T): a poll that reads a line in LZONE .. LZONE + 4 (just before the interrupt's
+        ld c,1                  ; line, 248) waits 4 x 256 DJNZ (about 7 lines) with interrupts on instead, so the
+        jr nc,.e1               ; next poll comes after the interrupt has been taken. Polls are about 2.4 lines apart,
+        ld a,h                  ; so none starts its DI inside the interrupt's line
+        or a
+        jr nz,.e1
+        ld a,l
+        cp 5
+        jr nc,.e1
+        ld c,4
+.e1:    ld b,0
+.e:     djnz .e
+        dec c
+        jr nz,.e
+        pop hl
         pop bc
         ret
 
@@ -1895,6 +1463,7 @@ fw_cpy_in:
         ld (WOPEN),a
         inc a
         ld (FRESH),a
+        ld (FRSH2),a
         call spd_latch
 .x:     ld a,-10 & 0x7F
         jp fw_in_x
@@ -1938,15 +1507,965 @@ cw_close:
         ld (WOPEN),a
         jp dadd.add
 
+; ---- session 9: droid and shot interpolation (Centred view). The camera glides, the player is drawn at it, and the
+; droids and shots used to jump each update. Now each droid's or shot's group is matched to the nearest group of the
+; same key (an enemy's type; else its image) in the last update, within IRAD px on each axis, each taken once; its
+; sprites are drawn at the last place and glide to this one over IT frames (the last update's interval): the frame
+; step (idec, page 27) counts the offset down. No match (a new droid, a new shot): no offset. Display only.
+
+; ipre: from p_spr: IT = IR = the frames since the last update's sprites (2-8); this update's keys and places become
+; the last update's; this update's keys = none. AF, BC, DE, HL lost; slot 6 = S0.
+ipre:   ld a,(VCENTRE)
+        or a
+        ret z
+        ld a,(FRMC)
+        ld hl,FRML
+        ld b,(hl)
+        ld (hl),a
+        sub b
+        cp 2
+        jr nc,.t1
+        ld a,2
+.t1:    cp 9
+        jr c,.t2
+        ld a,8
+.t2:    ld (IT),a
+        ld (IR),a
+        nextreg 0x56,S0
+        ld hl,IKEYA
+        ld de,IKEYA + 0x80
+        ld bc,0x80
+        ldir
+        ld hl,IKEYA
+        ld b,MAXG
+.f:     ld (hl),0xFF
+        inc l
+        djnz .f
+        ret
+
+; ipol: from group, S0 at slot 6, DE = base X, BC = base Y (SPOS stored): the group's offset DXA / DYA (0 for the
+; player's groups and for no match); a droid's or shot's key and canvas place recorded, its match found. DE, BC += the
+; offset (the update's own placing shows all of it). AF, HL lost.
+ipol:   ld a,(VCENTRE)
+        or a
+        ret z
+        ld a,(GRP)
+        ld l,a
+        xor a
+        ld h,high DXA
+        ld (hl),a
+        ld h,high DYA
+        ld (hl),a
+        ld a,(PLR)
+        or a
+        ret nz
+        push bc
+        push de
+        ld a,(GIMG)
+        cp 128
+        jr nc,.k
+        and 0xFC                ; an enemy: its type (the image's frame dropped)
+.k:     ld (IKY),a
+        ld hl,(STX)             ; canvas x = STX + base X (mod 320)
+        add hl,de
+        bit 7,h
+        jr z,.x1
+        ld de,320
+        add hl,de
+        jr .x2
+.x1:    call mod320
+.x2:    ld (ICXV),hl
+        ld a,(STY)
+        add a,c
+        ld (ICYV),a
+        ld a,(GRP)
+        ld l,a
+        ld h,high IKEYA
+        ld a,(IKY)
+        ld (hl),a
+        set 5,l
+        ld a,(ICXV)
+        ld (hl),a
+        res 5,l
+        set 6,l
+        ld a,(ICXV + 1)
+        ld (hl),a
+        set 5,l
+        ld a,(ICYV)
+        ld (hl),a
+        ld a,0xFF
+        ld (IBST),a
+        ld l,0x80
+.q:     ld a,(IKY)
+        cp (hl)
+        jr nz,.qn
+        push hl
+        set 5,l
+        ld e,(hl)
+        res 5,l
+        set 6,l
+        ld d,(hl)               ; DE = its canvas x
+        set 5,l
+        ld a,(hl)
+        ld hl,ICYV
+        sub (hl)
+        ld c,a                  ; C = dy (its - this)
+        ex de,hl
+        ld de,(ICXV)
+        or a
+        sbc hl,de
+        call n320b              ; HL = dx
+        ld a,h
+        or a
+        jr z,.p
+        inc a
+        jr nz,.no
+        ld a,l
+        neg
+        jr .ab
+.p:     ld a,l
+.ab:    cp IRAD + 1
+        jr nc,.no
+        ld b,a
+        ld a,c
+        bit 7,a
+        jr z,.p2
+        neg
+.p2:    cp IRAD + 1
+        jr nc,.no
+        add a,b                 ; |dx| + |dy|
+        ld b,a
+        ld a,(IBST)
+        cp b
+        jr c,.no
+        jr z,.no                ; (a tie: the first)
+        ld a,b
+        ld (IBST),a
+        ld a,l
+        ld (IOX),a
+        ld a,c
+        ld (IOY),a
+        pop hl
+        push hl
+        ld a,l
+        ld (IBQ),a
+.no:    pop hl
+.qn:    inc l
+        ld a,l
+        cp 0x80 + MAXG
+        jr c,.q
+        pop de
+        pop bc
+        ld a,(IBST)
+        inc a
+        ret z                   ; no match
+        ld a,(IBQ)
+        ld l,a
+        ld h,high IKEYA
+        ld (hl),0xFE            ; taken
+        ld a,(GRP)
+        ld l,a
+        ld h,high DXA
+        ld a,(IOX)
+        ld (hl),a
+        ld h,high DYA
+        ld a,(IOY)
+        ld (hl),a
+        ld a,(IOX)
+        ld l,a
+        rla
+        sbc a,a
+        ld h,a
+        add hl,de
+        ex de,hl                ; DE += dx
+        ld a,(IOY)
+        ld l,a
+        rla
+        sbc a,a
+        ld h,a
+        add hl,bc
+        ld b,h
+        ld c,l                  ; BC += dy
+        ret
+
+RTAB:   DB 128, 85, 64, 51, 43, 37, 32          ; 256 / T, T = 2..8 (the frame step's FCT)
+
+; n320b: HL in -319..319 -> -160..159 (page 27's n320, here). AF, DE lost.
+n320b:  ld de,160
+        bit 7,h
+        jr nz,.neg
+        push hl
+        or a
+        sbc hl,de
+        pop hl
+        ret c
+        ld de,-320
+        add hl,de
+        ret
+.neg:   add hl,de
+        bit 7,h
+        ld de,-160
+        add hl,de
+        ret z
+        ld de,320
+        add hl,de
+        ret
+
 TCODE_END:
         DISPLAY "TCODE_END ",/H,TCODE_END
-        ASSERT TCODE_END <= VSPD
+        ASSERT TCODE_END <= IPV         ; (session 9: the interpolation state above it)
         ORG TCOL
         DUP 32, n
         DW TAGS + n * TS
         EDUP
 PAGE_END:
         SAVEBIN "quazatron_page.bin",0x4000,PAGE_END-0x4000
+
+; ============================================================================================================
+; session 9: page 25 (XPAGE: bank 12's upper half, unused before), mapped at slot 1 (0x2000) only while a page-26 stub
+; calls into it (p_tags, p_clr, p_paste, p_inks; NR 0x51 = XPAGE, then 0xFF: the alt ROM again). Page 25 also holds a
+; copy of the ROM trampolines at their own addresses (quazatron.py xpage_image), so an interrupt taken here reaches
+; t_isr as from the alt ROM; t_isr takes a PC below 0x3800 as hook-page code. Nothing here reads ROM bytes.
+        ORG 0x2000
+; x_tags: HL = the list just drawn into the strip. Repeat its geometry (B07F) into the tag strip: mask bits -> the
+; list's role, OR bits -> 0 (ink), overwrite bits -> ink / role. A part of height 0 ends the list, as in B0EC.
+x_tags: ld (LST),hl
+        ld a,(G_AF2D)           ; session 9: W = the columns the paste takes (16 when AF2D = 1, else 32): parts wholly
+        cp 1                    ; past it are skipped, the rest clipped to it (the canvas never sees columns >= W)
+        ld a,16
+        jr z,.w
+        ld a,32
+.w:     ld (XW),a
+        ld de,-0x9600
+        add hl,de
+        jr nc,.floor
+        ld a,h
+        cp 6
+        jr nc,.floor
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ld h,high ROLETAB
+        nextreg 0x56,S0         ; (t_list runs inside BE38: slot 6 is the game's page 0)
+        ld a,(hl)
+        nextreg 0x56,0
+        jr .rok
+.floor: ld a,R_FLOOR
+.rok:   ld (ROLE),a
+        ld hl,(LST)
+        ld b,(hl)
+        inc hl
+.part:  push bc
+        ld a,(hl)               ; x offset (signed)
+        ld e,a
+        rla
+        sbc a,a
+        ld d,a
+        push hl
+        ld hl,(G_AF0E)
+        add hl,de               ; HL = x
+        ld b,h
+        ld c,l
+        ld de,7
+        add hl,de
+        ld a,h
+        or a
+        jr nz,.xskip
+        ld a,(XW)
+        add a,7
+        sub l                   ; x + 7 < W + 7
+        jr c,.xskip
+        jr z,.xskip
+        ; visible bits: jstart = max(0, -x), jend = min(8, 32 - x)
+        xor a
+        bit 7,b
+        jr z,.js
+        ld a,c
+        neg                     ; -x (1..7)
+.js:    ld (JST),a
+        ld e,a                  ; E = jstart
+        ld a,(XW)
+        sub c                   ; W - x (x in -7..W-1 -> 1..W+7)
+        cp 8
+        jr c,.je
+        ld a,8
+.je:    sub e
+        ld (JN),a
+        ld a,c
+        add a,e                 ; x + jstart (0..31)
+        add a,a
+        add a,low TCOL
+        ld l,a
+        ld h,high TCOL
+        ld a,(hl)
+        inc l
+        ld h,(hl)
+        ld l,a
+        ld (P0),hl
+        pop hl
+        inc hl
+        ld a,(G_AF10)
+        add a,(hl)
+        ld d,a                  ; D = row
+        inc hl
+        ld a,(hl)
+        inc hl                  ; HL = glyph
+        ld (OPF),a
+        and 63
+        jr z,.endl              ; RET Z in the original
+        ld e,a                  ; E = height
+        push hl
+        ld c,e
+        ld b,0
+        add hl,bc
+        ex (sp),hl              ; (SP) = next part, HL = glyph
+        ld a,(G_AF16)
+        cp d
+        jr nc,.noclip
+        ld a,d
+        add a,e
+        jr nc,.vskip
+        jr z,.vskip
+        ld e,a                  ; rows left
+        ld a,d
+        neg
+        add a,l
+        ld l,a
+        adc a,h
+        sub l
+        ld h,a                  ; glyph += -D
+        ld d,0
+.noclip:
+        ld a,(G_AF17)
+        sub d
+        cp e
+        jr nc,.rows
+        ld e,a
+.rows:  ld a,d
+        ld (TROW),a
+        ld a,e
+        ld (NROWS),a
+        or a
+        jr z,.vskip
+        call x_row
+.vskip: pop hl                  ; next part
+        pop bc
+        dec b
+        jp nz,.part
+        ret
+.xskip: pop hl                  ; the x byte: skip y, read the height, as B178
+        inc hl
+        inc hl
+        ld a,(hl)
+        and 63
+        inc hl
+        ld e,a
+        ld d,0
+        add hl,de
+        pop bc
+        dec b
+        jp nz,.part
+        ret
+.endl:  pop bc
+        ret
+
+; x_row: HL = the first drawn glyph row; TROW, NROWS, P0, JST, JN, OPF, ROLE set.
+x_row:
+        ld a,(NROWS)
+        ld b,a
+.row:   push bc
+        ld c,(hl)               ; glyph byte
+        inc hl
+        push hl
+        ld a,(JST)
+        or a
+        jr z,.sh0
+        ld b,a
+.shl:   sla c
+        djnz .shl
+.sh0:   ld hl,(P0)
+        ld a,(TROW)
+        add a,l
+        ld l,a
+        adc a,h
+        sub l
+        ld h,a
+        ld de,TS
+        ld a,(JN)
+        ld b,a
+        ld a,(OPF)
+        bit 7,a
+        jr nz,.mask
+        bit 6,a
+        jr nz,.set
+.or:    ld a,(ROLE)
+        cp R_CONSOLE
+        ld a,TINK8
+        jr nz,.or0
+        ld a,R_SCREEN           ; a console's OR ink is its screen
+.or0:   sla c
+        jr nc,.or1
+        ld (hl),a
+.or1:   add hl,de
+        djnz .or0
+        jr .next
+.mask:  ld a,(ROLE)
+        cp R_WALL
+        jr z,.mw
+.mk:    sla c
+        jr nc,.mk1
+        ld (hl),a
+.mk1:   add hl,de
+        djnz .mk
+        jr .next
+.mw:    sla c                   ; a wall part: its 0 bits over ink become the face tone
+        jr c,.mw1
+        bit 4,(hl)              ; session 9: ink tags are 8 (bit 4 clear), roles 16-25 (bit 4 set)
+        jr nz,.mw2
+        ld (hl),R_FACE
+        jr .mw2
+.mw1:   ld (hl),a
+.mw2:   add hl,de
+        djnz .mw
+        jr .next
+.set:   ld a,(ROLE)
+.st:    sla c
+        jr nc,.st1
+        ld (hl),TINK8
+        jr .st2
+.st1:   ld (hl),a
+.st2:   add hl,de
+        djnz .st
+.next:  ld hl,TROW
+        inc (hl)
+        pop hl
+        pop bc
+        djnz .row
+        ret
+
+; x_clr: the strip was cleared to ink (C044): tag rows 0 .. AF17-1 of all 32 columns = 0.
+x_clr:  ld a,(G_AF17)           ; session 9: the W columns the paste takes (16 when AF2D = 1, else 32), rows 0 ..
+        or a                    ; AF17 - 1, = TINK8 (the ink tag); the columns are TS apart, so a full-height strip is
+        ret z                   ; one block
+        ld c,a
+        ld a,(G_AF2D)
+        cp 1
+        ld b,16
+        jr z,.w
+        ld b,32
+.w:     ld hl,TAGS
+        ld a,c
+        cp TS
+        jr z,.all
+.c:     push bc
+        push hl
+        ld (hl),TINK8
+        dec c
+        jr z,.c1
+        ld d,h
+        ld e,l
+        inc de
+        ld b,0
+        ldir
+.c1:    pop hl
+        ld de,TS
+        add hl,de
+        pop bc
+        djnz .c
+        ret
+.all:   ld (hl),TINK8           ; W x 152 bytes (2,432 or 4,864)
+        ld d,h
+        ld e,l
+        inc de
+        ld a,b
+        cp 16
+        ld bc,16 * TS - 1
+        jr z,.a1
+        ld bc,32 * TS - 1
+.a1:    ldir
+        ret
+
+
+; x_paste: after C1A5: strip columns 0..W-1 (W = 16 if AF2D = 1, else 32), rows 0..AF17-1 -> canvas at
+; (OX + AF14 * 8 + px, OY + AF15 + row); the canvas cells touched -> FLAGS XFL (session 9: TINK8 or 0xFF).
+x_paste:
+        call rd56
+        ld (SLOT6),a
+        ld a,(G_AF2D)
+        cp 1
+        ld a,16
+        jr z,.w
+        ld a,32
+.w:     ld (PW),a
+        ld a,(G_AF14)
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,(OX)
+        add hl,de
+        call mod320
+        ld (CX),hl
+        ld a,(OY)
+        ld b,a
+        ld a,(G_AF15)
+        add a,b
+        ld (CY),a
+        ld a,(G_AF17)
+        or a
+        jp z,.done
+        ld hl,TCOL
+        ld a,(PW)
+        ld b,a
+.col:   push bc
+        push hl                 ; TCOL entry
+        ld hl,(CX)
+        ld a,l                  ; page = L2PAGE + (cx >> 5)
+        srl h
+        rra
+        srl h
+        rra
+        srl h
+        rra
+        srl h
+        rra
+        srl h
+        rra
+        add a,L2PAGE
+        nextreg 0x56,a
+        ld hl,(CX)
+        ld a,l
+        and 31
+        add a,0xC0
+        ld d,a
+        ld a,(CY)
+        ld e,a
+        pop hl
+        push hl
+        ld a,(hl)
+        inc l
+        ld h,(hl)
+        ld l,a                  ; HL = tag column
+        ld a,(G_AF17)           ; the column: LDIR, split where the canvas y wraps (256) inside its column
+        ld c,a
+        ld a,e
+        neg                     ; bytes to the column's end (0: 256)
+        jr z,.one
+        cp c
+        jr nc,.one
+        ld b,a
+        ld a,c
+        sub b
+        push af                 ; the rest, from y 0
+        ld c,b
+        ld b,0
+        ldir
+        dec d                   ; DE ran into the next column: back to this one's y 0
+        pop af
+        ld c,a
+.one:   ld b,0
+        ldir
+        ld hl,(CX)              ; next canvas column
+        inc hl
+        call mod320
+        ld (CX),hl
+        pop hl
+        inc l
+        inc l
+        pop bc
+        djnz .col
+        ; flags: cell columns (cx0 >> 3) .. + W/8 - 1, cell rows (CY >> 3) .. ((CY + rows - 1) >> 3), wrapping
+        ld a,(PW)
+        rrca
+        rrca
+        rrca
+        and 7
+        ld b,a                  ; cell columns
+        ld hl,(CX)              ; CX is now cx0 + W: step back
+        ld a,(PW)
+        ld e,a
+        ld d,0
+        or a
+        sbc hl,de
+        jr nc,.f0
+        ld de,320
+        add hl,de
+.f0:    ld a,(CY)               ; session 9: the cells' flag: TINK8 when every touched cell is wholly pasted (the strip's
+        ld d,a                  ; top, height and left edge on the 8 x 8 grid: all its ink bytes are TINK8 now), else
+        ld a,(G_AF17)           ; 0xFF (unknown)
+        or d
+        or l
+        and 7
+        ld a,TINK8
+        jr z,.fl
+        ld a,0xFF
+.fl:    ld (XFL),a
+        ld a,l
+        srl h
+        rra
+        srl h
+        rra
+        srl h
+        rra
+        ld c,a                  ; C = first cell column (0..39)
+        nextreg 0x56,S0         ; FLAGS
+.fc:    push bc
+        ld a,(CY)
+        rrca
+        rrca
+        rrca
+        and 31
+        ld e,a                  ; first cell row
+        ld a,(G_AF17)
+        dec a
+        ld d,a
+        ld a,(CY)
+        and 7
+        add a,d                 ; offset of the last row from the first cell's top
+        rrca
+        rrca
+        rrca
+        and 31
+        inc a
+        ld b,a                  ; cell rows touched
+.fr:    push bc
+        push de
+        ld a,e
+        and 31
+        push af
+        call cellptr            ; HL = FLAGS + row * 40 + C (DE lost)
+        pop de                  ; D = the cell row
+        ld a,(hl)               ; session 10: a cell whose ink bytes held a known ink k (not TINK8): the bytes just
+        cp 0xFF                 ; pasted take k now (ink bytes only; a wall face's tone is kept), so a cell the camera
+        jr z,.fx                ; shows before the commit (a void cell, blue ink) is never drawn in the tag's black.
+        cp TINK8                ; FLAGS = 0x80 + k: ink bytes k, faces not resolved, so the commit's x_inks recells it
+        jr z,.fk                ; whole from the attribute (a face in a void cell, or a cell that now holds another
+        and 0x0F                ; place); a second paste before the commit keeps k. TINK8: every ink byte is TINK8.
+        ld b,a
+        or 0x80
+        ld (hl),a
+        ld a,b
+        call x_rcink            ; C = cell column, D = cell row, A = ink (maps a Layer 2 page at slot 6)
+        nextreg 0x56,S0
+        jr .fk
+.fx:    ld a,(XFL)
+        ld (hl),a
+.fk:    pop de
+        inc e
+        pop bc
+        djnz .fr
+        pop bc
+        inc c
+        ld a,c
+        cp 40
+        jr c,.fc1
+        ld c,0
+.fc1:   djnz .fc
+.done:  ld a,(SLOT6)
+        nextreg 0x56,a
+        ret
+
+
+; x_inks: after C05A + C0C3 (the attributes are current): every view cell's ink bytes = its attribute's ink.
+x_inks: call rd56
+        ld (SLOT6),a
+        ld hl,(OX)              ; the view's first canvas cell: column OX >> 3 (0-39), row (OY >> 3) & 31
+        ld a,l
+        srl h
+        rra
+        srl h
+        rra
+        srl h
+        rra
+        ld (CC),a
+        ld a,(OY)
+        rrca
+        rrca
+        rrca
+        and 31
+        ld (TINK),a             ; (TINK: the canvas row of view row CR)
+        xor a
+        ld (CR),a
+.crow:  ; this row's 32 attributes -> ROWBUF (the ULA page at slot 6), then FLAGS (S0) mapped for the row's walk
+        nextreg 0x56,ULAPAGE
+        ld a,(CR)
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,0xD800
+        add hl,de
+        ld de,ROWBUF
+        ld bc,32
+        ldir
+        nextreg 0x56,S0
+        ld a,(CC)
+        ld c,a                  ; C = canvas column
+        ld a,(TINK)
+        call cellptr            ; HL = FLAGS + row * 40 + C
+        ld de,ROWBUF
+        ld b,32
+.ccol:  ld a,(de)               ; the attribute's ink, 0-15
+        and 0x47
+        cp 0x40
+        jr c,.nb
+        sub 0x38
+.nb:    cp (hl)
+        jr z,.same
+        ld (hl),a
+        push bc
+        push de
+        push hl
+        ld b,a
+        ld a,(TINK)
+        ld d,a
+        ld a,b
+        call x_recell             ; C = cell column, D = cell row, A = ink
+        nextreg 0x56,S0
+        pop hl
+        pop de
+        pop bc
+.same:  inc e                   ; ROWBUF (0x4C40-0x4C5F: E never wraps)
+        inc hl
+        inc c
+        ld a,c
+        cp 40
+        jr c,.c1
+        ld c,0
+        push de
+        ld de,-40
+        add hl,de
+        pop de
+.c1:    djnz .ccol
+        ld a,(TINK)
+        inc a
+        and 31
+        ld (TINK),a
+        ld hl,CR
+        inc (hl)
+        ld a,(hl)
+        cp 19
+        jp c,.crow
+        ld a,(SLOT6)
+        nextreg 0x56,a
+        ret
+
+; x_rcink (session 10): as x_recell, but only the ink bytes (< 16) -> A, whatever A is (a wall face's tone kept).
+x_rcink: ld e,a
+        ld a,c
+        rrca
+        rrca
+        and 0x3F
+        add a,L2PAGE
+        nextreg 0x56,a
+        ld a,c
+        and 3
+        add a,a
+        add a,a
+        add a,a
+        add a,0xC0
+        ld h,a
+        ld a,d
+        add a,a
+        add a,a
+        add a,a
+        ld l,a
+        ld c,l
+        ld b,8
+        jr x_recell.blk
+
+; x_recell: canvas cell (C column, D row): every ink byte (< 16) of its 8 x 8 -> A. Maps its page at slot 6.
+x_recell: ld e,a
+        ld a,c
+        rrca
+        rrca
+        and 0x3F
+        add a,L2PAGE
+        nextreg 0x56,a
+        ld a,c
+        and 3
+        add a,a
+        add a,a
+        add a,a
+        add a,0xC0
+        ld h,a                  ; column (C & 3) * 8 -> 0xC000 + that * 256
+        ld a,d
+        add a,a
+        add a,a
+        add a,a
+        ld l,a                  ; row * 8
+        ld c,l                  ; session 9: unrolled, one loop per ink kind (the same bytes as before)
+        ld b,8
+        ld a,e
+        and 7
+        jr z,.blk
+.col:   DUP 8                   ; a coloured ink: every ink byte (< 16) and a wall face's ink (R_FACE) -> E
+        ld a,(hl)
+        cp 16
+        jr c,$+6
+        cp R_FACE
+        jr nz,$+3
+        ld (hl),e
+        inc l
+        EDUP
+        ld l,c
+        inc h
+        djnz .col
+        ret
+.blk:   DUP 8                   ; black ink (0 or 8): the ink bytes -> E, a wall face's ink kept (the face tone)
+        ld a,(hl)
+        cp 16
+        jr nc,$+3
+        ld (hl),e
+        inc l
+        EDUP
+        ld l,c
+        inc h
+        djnz .blk
+        ret
+
+; x_cvoid (session 10): CFV = the deck's void ink (B045's ink, bright -> 8-15). AF, B lost.
+x_cvoid: ld a,(0xB045)
+        ld b,a
+        and 7
+        bit 6,b
+        jr z,.n
+        or 8
+.n:     ld (CFV),a
+        ret
+
+; x_ffill (session 10, p_pre at a view's first copy, Centred view): every canvas cell outside the committed view
+; (OX, OY) -> the void's ink: columns OX + 256 .. + 319 at all lines, then columns OX .. + 255 at lines OY + 152 ..
+; + 255. FLAGS of those cells = that ink.
+x_ffill: call x_cvoid
+        ld hl,(OX)
+        ld de,256
+        add hl,de
+        call mod320
+        ld (CFX0),hl
+        ld a,8
+        ld (CFW),a
+        ld a,(OY)
+        ld (CFY0),a
+        ld a,32
+        ld (CFH),a
+        call x_cfr
+        ld hl,(OX)
+        ld (CFX0),hl
+        ld a,32
+        ld (CFW),a
+        ld a,(OY)
+        add a,152
+        ld (CFY0),a
+        ld a,13
+        ld (CFH),a
+        ; (falls into x_cfr)
+
+; x_cfr (session 10): the canvas cells from (CFX0, CFY0), CFW x CFH cells (each 1-32), -> CFV, pixels and FLAGS
+; (wrapping at 320 and 256). Uses slot 6 and gives back its page. AF, BC, DE, HL lost. Interrupts as on entry.
+x_cfr:  ld bc,0x243B
+        ld a,0x56
+        out (c),a
+        inc b
+        in a,(c)
+        ld (CFS6),a
+        ld hl,(CFX0)
+        ld a,(CFW)
+        ld b,a
+.cc:    push bc                 ; a cell column: its 8 canvas columns
+        ld b,8
+.col:   push bc
+        push hl
+        ld a,l                  ; page = L2PAGE + (x >> 5)
+        srl h
+        rra
+        srl h
+        rra
+        srl h
+        rra
+        srl h
+        rra
+        srl h
+        rra
+        add a,L2PAGE
+        nextreg 0x56,a
+        pop hl
+        push hl
+        ld a,l
+        and 31
+        add a,0xC0
+        ld h,a
+        ld a,(CFY0)
+        ld l,a
+        ld a,(CFH)
+        ld b,a
+        ld a,(CFV)
+.f:     DUP 8
+        ld (hl),a
+        inc l
+        EDUP
+        djnz .f
+        pop hl
+        inc hl
+        call mod320
+        pop bc
+        djnz .col
+        pop bc
+        djnz .cc
+        nextreg 0x56,S0         ; FLAGS: the cells' ink
+        ld hl,(CFX0)
+        ld a,l
+        srl h
+        rra
+        srl h
+        rra
+        srl h
+        rra
+        ld c,a                  ; first cell column (0-39)
+        ld a,(CFW)
+        ld b,a
+.fc:    push bc
+        ld a,(CFY0)
+        rrca
+        rrca
+        rrca
+        and 31
+        ld e,a
+        ld a,(CFH)
+        ld b,a
+.fr:    push bc
+        push de
+        ld a,e
+        and 31
+        call cellptr
+        ld a,(CFV)
+        ld (hl),a
+        pop de
+        inc e
+        pop bc
+        djnz .fr
+        pop bc
+        inc c
+        ld a,c
+        cp 40
+        jr c,.fc1
+        ld c,0
+.fc1:   djnz .fc
+        ld a,(CFS6)
+        nextreg 0x56,a
+        ret
+
+XCODE_END:
+        DISPLAY "XCODE_END ",/H,XCODE_END
+        ASSERT XCODE_END <= 0x386E
+        SAVEBIN "quazatron_xpage.bin",0x2000,XCODE_END-0x2000
 
 ; ============================================================================================================
         ORG 0x386E
@@ -2197,10 +2716,13 @@ t_isr:  push af
         inc hl
         ld d,(hl)
         ld a,d
+        cp 0x38                 ; session 9: page 25's code (slot 1, below the trampolines) is hook-page code
+        jr c,.hk
         cp 0x40
         jr c,.rom
-        cp 0x60
+        cp high TCODE_END + 1   ; session 8: only the hook page's code (c_pre in the printer buffer is game-side code)
         jr nc,.game
+.hk:
         ; in the hook page (inside a hook's R bracket, the page mapped): the ISR body at the game's speed, then the
         ; hook's own speed back (the port is safe: the page's own reads are DI-protected)
         ld a,c
@@ -2316,7 +2838,11 @@ t_prn:  nextreg 0x52,HPAGE
         jr nc,.no
 .off:   call p_off
 .no:    ld a,C_CLS
-        call dconst
+        push hl                 ; (session 8: dconst inlined, its page bytes freed)
+        push de
+        call dadd
+        pop de
+        pop hl
         ld a,-10 & 0x7F
         call hlib_r_set
         pop bc
@@ -2340,8 +2866,52 @@ t_dly:  nextreg 0x52,HPAGE
         HLIB_R_OUT
         nextreg 0x52,ULAPAGE
         jp 0xDD8D
+
+; session 8, Centred view only (the sites are part of its toggle): a pace window over the game's figure compositing
+; (DC24 .. DD79: each block gets its background (C20D) and every record's lists drawn into it (B07D)), run at 28 MHz:
+; its original time is its 28 MHz time x KCMP; that saving repays the debt a scroll step leaves, the rest is waited
+; out (fw_mark / fw_wait). JP at DC24 (LD HL,E700): O = 1, E = 1 + 2 + 3, N = 1 + 2 + 1 (LD HL) + 1 (JP): delta -10.
+t_cmp:  nextreg 0x52,HPAGE
+        HLIB_R_IN
+        push af
+        push bc
+        push de
+        push hl
+        call spd_latch
+        ld a,KCMP
+        call fw_open
+        ld a,-10 & 0x7F
+        call hlib_r_set
+        pop hl
+        pop de
+        pop bc
+        pop af
+        HLIB_R_OUT
+        nextreg 0x52,ULAPAGE
+        ld hl,0xE700
+        jp 0xDC27
+; CALL at DD79 (CALL B77D, after the last block): the window's end. O = 1 (CALL) to B77D, E = 1 + 2 + 3,
+; N = 1 + 2 + 1 (JP): delta -9.
+t_cmpo: nextreg 0x52,HPAGE
+        HLIB_R_IN
+        push af
+        push bc
+        push de
+        push hl
+        call fw_mark
+        call fw_wait
+        ld a,-9 & 0x7F
+        call hlib_r_set
+        call spd_back
+        pop hl
+        pop de
+        pop bc
+        pop af
+        HLIB_R_OUT
+        nextreg 0x52,ULAPAGE
+        jp 0xB77D
 ROM_END:
-        ; (session 5: c_pre ends at 0x3D00, after ROM_END + 20: asserted there)
+        ASSERT ROM_END + 20 <= 0x3D00  ; (session 8: c_pre is in RAM now)
         SAVEBIN "quazatron_rom.bin",0x386E,ROM_END-0x386E
 
 ; ============================================================================================================
@@ -2437,14 +3007,22 @@ cam:    ld a,(FRESH)
         ld (LTY),a
         call pnew
         call freset
-        jr .fr
-.c1:    ld hl,(TX)              ; a step's commit: the area grows by the new view (canvas 320 x 256: at most 64 px /
+        jp .fr
+.c1:    ld hl,LOX               ; session 10: the area before this commit (cfill)
+        ld de,OLDA
+        ld bc,4
+        ldir
+        xor a
+        ld (CFX),a
+        ld (CFY),a
+        ld hl,(TX)              ; a step's commit: the area grows by the new view (canvas 320 x 256: at most 64 px /
         ld de,(LTX)             ; 104 lines more than the view)
         or a
         sbc hl,de
         jr z,.cy
         call n320
         ld a,l
+        ld (CFX),a
         ld hl,(TX)
         ld (LTX),hl
         ld hl,LOX
@@ -2457,10 +3035,12 @@ cam:    ld a,(FRESH)
         jr z,.c3
         ld (LTY),a
         sub b
+        ld (CFY),a
         ld hl,LOY
         ld c,104
         call vupd
-.c3:    ld hl,(FCW)             ; session 6: the frame count, then a new update's player into the history
+.c3:    call cfill              ; session 10: the area's cells no committed view drew -> the void's ink
+           ld hl,(FCW)             ; session 6: the frame count, then a new update's player into the history
         inc hl
         ld (FCW),hl
         ld a,(STAMP)
@@ -2574,6 +3154,7 @@ cam:    ld a,(FRESH)
         sbc a,a
         ld h,a
         ld (SSY),hl
+        call idec               ; session 9: the droids' and shots' offsets one frame on
         ; (falls into sprites)
 
 ; sprites: every group at its base + SSX / SSY, a player group (Centred view, PG0 <= g < PG1) at its base + PKX / PKY.
@@ -2619,6 +3200,7 @@ sprites:
         add hl,bc               ; HL = Y
         pop bc                  ; BC = SPOS pointer
         pop af
+        call iadd               ; session 9: a droid's or shot's interpolation offset (Centred view)
         push af
         push bc
         push hl
@@ -3090,6 +3672,240 @@ vupd:   ld b,a
         ld (hl),a
         ret
 
+; ---- session 9 (page 27): idec, from cam each frame: FRMC + 1; while IR: IR - 1 and FCT = IR x 256 / IT (from RTAB),
+; the share of each droid's or shot's offset still shown (0 when IR reaches 0). iadd, from sprites: that share of a
+; droid's or shot's offset (DXA / DYA in S0, read through slot 0) added to its place. Nothing here writes S0.
+idec:   ld hl,FRMC
+        inc (hl)
+        ld a,(IR)
+        or a
+        ret z
+        dec a
+        ld (IR),a
+        ld e,a                  ; FCT = IR x RTAB[IT - 2]
+        ld hl,RTAB - 2
+        ld a,(IT)
+        add a,l
+        ld l,a
+        adc a,h
+        sub l
+        ld h,a
+        ld d,(hl)
+        xor a
+        inc e
+.m:     dec e
+        jr z,.w
+        add a,d
+        jr .m
+.w:     ld (FCT),a
+        ret
+; iadd: A = group, DE = X, HL = Y -> + round(its offset x FCT / 256) for a droid's or shot's group in Centred view.
+; Keeps A, BC.
+iadd:   push bc
+        push af
+        ld c,a
+        ld a,(VCENTRE)
+        or a
+        jr z,.x
+        ld a,c
+        call ispl
+        jr nz,.x
+        ld a,(IR)
+        or a
+        jr z,.x                 ; the offsets all drawn in
+        push hl
+        ld l,c
+        ld h,high (DXA - 0xC000)
+        ld a,(hl)
+        call ishr
+        ld l,a
+        rla
+        sbc a,a
+        ld h,a
+        add hl,de
+        ex de,hl
+        ld l,c
+        ld h,high (DYA - 0xC000)
+        ld a,(hl)
+        call ishr
+        pop hl
+        ld c,a
+        rla
+        sbc a,a
+        ld b,a
+        add hl,bc
+.x:     pop af
+        pop bc
+        ret
+; ishr: A = an offset (px, signed) -> A = its share: sign x ((|A| x FCT + 128) >> 8). BC kept; AF lost.
+ishr:   push bc
+        push de
+        push hl
+        ld c,a
+        bit 7,a
+        jr z,.p
+        neg
+.p:     ld e,a
+        ld d,0
+        ld a,(FCT)
+        ld hl,0
+        ld b,8
+.m:     add hl,hl
+        rla
+        jr nc,.n
+        add hl,de
+.n:     djnz .m
+        ld a,l                  ; (HL + 128) >> 8
+        add a,0x80
+        ld a,h
+        adc a,0
+        bit 7,c
+        jr z,.q
+        neg
+.q:     pop hl
+        pop de
+        pop bc
+        ret
+
+; cfill (session 10, Centred view, from cam at a step's commit): the area the camera may show (LO..HI around the
+; view) is a box; the views it was grown from are not. After an x step the new strip's columns were drawn for the
+; view's lines only, so in the area's y margins they hold another place (or nothing): those cells, and after a y step
+; the new band's lines in the x margins, take the deck's void ink (x_cfr) before the camera can reach them. Columns
+; the old area already held are left alone. AF, BC, DE, HL lost.
+cfill:  ld a,(CFX)
+        or a
+        call nz,cf_x
+        ld a,(CFY)
+        or a
+        ret z
+        ld b,a                  ; dy
+        bit 7,a
+        jr nz,.n
+        ld a,(OLDA + 3)         ; down: lines 152 + HIYo - dy .. 151 are new where HIYo < dy
+        ld c,a
+        ld a,b
+        sub c
+        ret c
+        ret z
+        ld c,a
+        ld a,(TY)
+        add a,152
+        sub c
+        jr .r
+.n:     ld a,(OLDA + 2)         ; up: lines 0 .. LOYo - dy - 1 are new where LOYo - dy > 0
+        sub b
+        ret z
+        ret m
+        ld c,a
+        ld a,(TY)
+.r:     ld (CFY0),a
+        ld a,c
+        rrca
+        rrca
+        rrca
+        and 31
+        ld (CFH),a
+        ld a,(LOX)              ; the x margins
+        or a
+        jr z,.h
+        neg
+        rrca
+        rrca
+        rrca
+        and 31
+        ld (CFW),a
+        ld a,(LOX)
+        ld l,a
+        rla
+        sbc a,a
+        ld h,a
+        ld de,(TX)
+        add hl,de
+        call w320
+        ld (CFX0),hl
+        call cfr
+.h:     ld a,(HIX)
+        or a
+        ret z
+        rrca
+        rrca
+        rrca
+        and 31
+        ld (CFW),a
+        ld hl,(TX)
+        ld de,256
+        add hl,de
+        call mod320
+        ld (CFX0),hl
+        jr cfr
+cf_x:   ld b,a                  ; dx
+        bit 7,a
+        jr nz,.n
+        ld a,(OLDA + 1)         ; right: columns 256 + HIXo - dx .. 255 are new where HIXo < dx
+        ld c,a
+        ld a,b
+        sub c
+        ret c
+        ret z
+        ld c,a
+        ld hl,(TX)
+        ld de,256
+        add hl,de
+        ld e,c
+        ld d,0
+        or a
+        sbc hl,de
+        call mod320
+        jr .r
+.n:     ld a,(OLDA)             ; left: columns 0 .. LOXo - dx - 1 are new where LOXo - dx > 0
+        sub b
+        ret z
+        ret m
+        ld c,a
+        ld hl,(TX)
+.r:     ld (CFX0),hl
+        ld a,c
+        rrca
+        rrca
+        rrca
+        and 31
+        ld (CFW),a
+        ld a,(LOY)              ; the y margins
+        or a
+        jr z,.h
+        neg
+        rrca
+        rrca
+        rrca
+        and 31
+        ld (CFH),a
+        ld a,(LOY)
+        ld hl,TY
+        add a,(hl)
+        ld (CFY0),a
+        call cfr
+.h:     ld a,(HIY)
+        or a
+        ret z
+        rrca
+        rrca
+        rrca
+        and 31
+        ld (CFH),a
+        ld a,(TY)
+        add a,152
+        ld (CFY0),a
+cfr:    call x_cvoid_g
+        nextreg 0x51,XPAGE      ; (interrupts are off in the frame step)
+        call x_cfr
+        nextreg 0x51,0xFF
+        ret
+x_cvoid_g:
+        nextreg 0x51,XPAGE
+        call x_cvoid
+        nextreg 0x51,0xFF
+        ret
+
 ; page 27's own state
         ORG 0xFF00
 STAMPL: DB 0
@@ -3121,6 +3937,9 @@ P1Y:    DB 0
 FN:     DW 0
 VEX:    DW 0
 VEY:    DW 0
+CFX:    DB 0                    ; session 10: cfill: this commit's x move (px, signed), y move, the area before it
+CFY:    DB 0
+OLDA:   DS 4
 GPAGE_END:
         SAVEBIN "quazatron_page2.bin",0xE000,GPAGE_END-0xE000
 
@@ -3133,8 +3952,8 @@ GPAGE_END:
 ; (AF90, AF91): screen x moves with dx + dy, screen y with dy - dx. Not moving on an axis: no step on it. A horizontal
 ; step, then a vertical one in the same update if needed, then the game's copy to the screen and AF2B = 0, so the
 ; update that follows is a normal one (droids move). AF2B 1-6 (the transfer and lift modes): no step.
-C_ORG   EQU 0x3D00 - (C_END_ - c_pre_)
-        ORG C_ORG
+C_ORG   EQU 0x5B40                ; session 8: in RAM (the printer buffer above the start-up tail, which the game never
+        ORG C_ORG                 ; reads or writes: work/s8/ramfree.py), freeing the ROM area for the pace hooks
 c_pre_:
 c_pre:  ld a,(0xAF2B)
         and a
@@ -3195,8 +4014,72 @@ c_ar:   sbc a,a
         ret
 C_END_:
 c_END:
-        ASSERT C_ORG >= ROM_END + 20
+        ASSERT C_END_ <= 0x5BB0
         SAVEBIN "quazatron_centre.bin",C_ORG,C_END_-C_ORG
+
+; ============================================================================================================
+; kmap (session 8, the 'Cursor keys + Space' toggle): CALL at B645 (was LD BC,001F / IN A,(C), then 2 NOPs): the
+; game's Kempston read with the cursor keys and SPACE folded in - 5 left, 6 down, 7 up, 8 right (the Next's cursor keys
+; are CAPS + these; an emulator's arrow keys press them) and SPACE fire - as Kempston bits (0 right, 1 left, 2 down,
+; 3 up, 4 fire), ORed with the joystick. Pure Z80 at the game's speed, no branches: R is put back to what the
+; original's LD BC / IN A,(C) leave (R read here = site + 3; after LD R,A: POP DE, LD A, RET, NOP, NOP = 5; want +3).
+; BC = 001F and A = the value at the return, as the original; DE kept (B61F's destination pointer).
+        ORG 0x5BB0
+kmap:   ld a,r
+        ld (KR),a
+        push de
+        ld bc,0xEFFE            ; 0 9 8 7 6: bit 2 = 8 (right), 3 = 7 (up), 4 = 6 (down)
+        in a,(c)
+        cpl
+        ld e,a
+        and 0x08                ; up -> bit 3
+        ld d,a
+        ld a,e
+        rrca
+        rrca
+        and 0x05                ; 8 -> bit 0 (right), 6 -> bit 2 (down)
+        or d
+        ld d,a
+        ld b,0xF7               ; 1 2 3 4 5: bit 4 = 5 (left)
+        in a,(c)
+        cpl
+        rrca
+        rrca
+        rrca
+        and 0x02                ; -> bit 1
+        or d
+        ld d,a
+        ld b,0x7F               ; SPACE: bit 0
+        in a,(c)
+        cpl
+        rlca
+        rlca
+        rlca
+        rlca
+        and 0x10                ; -> bit 4 (fire)
+        or d
+        ld d,a
+        ld bc,0x001F
+        in a,(c)                ; the joystick
+        or d
+        ld (KJ),a
+        ld a,(KR)
+        ld e,a
+        and 0x80
+        ld d,a
+        ld a,e
+        sub 5
+        and 0x7F
+        or d
+        ld r,a
+        pop de
+        ld a,(KJ)
+        ret
+KR:     DB 0
+KJ:     DB 0
+KMAP_END:
+        ASSERT KMAP_END <= 0x5C00
+        SAVEBIN "quazatron_kmap.bin",0x5BB0,KMAP_END-0x5BB0
 
 ; ============================================================================================================
 ; setup: called by the stub (DI, 3.5 MHz, slot 2 = the screen page) before the tail. Layer 2 320 x 256 on banks
