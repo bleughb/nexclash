@@ -1,14 +1,14 @@
 # Inferno
 
 ## Next session
-Stage: 2 (continued)    Branch: claude/inferno-copier-window (from codex/inferno 4bfa72c)
+Stage: 2 (continued)    Branch: claude/inferno-copier-window (only line; codex/inferno superseded)
 State: copier window milestone 1 (translated copier head) PASS, not installed; timing gate open.
 Inputs: specnext/reference/inferno/    Start: specnext build/CONTINUE_copier_window.md.
 Read: "Copier window" below; inferno.py copier_window_checks/run_cw_head; asm cw_head/cw_go.
 Next: (2) replay logged OUTs at original T (CTC, core-gated; raster fallback) and pad to the
   original 9907 time; model every update of six full recordings; (3) move hook work into the
   window, measure whole updates; (4) IRQ injection over the head, JNext pace, hardware. Then the
-  codex/inferno items: assembled live-table scan/driver at the 8EF9 gate, runtime exact dispatch
+  earlier items: assembled live-table scan/driver at the 8EF9 gate, runtime exact dispatch
   and duplicate indices, complete pattern/frame state, protected uploads. Keep sprites disabled.
 Gate: zero frame slips and the original 9907 time per update with sound kept (replaces 10 ms).
 Boundary: 8EF9 follows original DI, before IM2 setup; the pause gate preserves all registers/R/RAM/
