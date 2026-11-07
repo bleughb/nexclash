@@ -52,7 +52,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Midnight Resistance (128K) (midnight_resistance): `midnight_resistance.nex` 17239acaaf67b0f8011478053e17829d, `midnight_resistance_sprites.nex` 2aacd11c2872b4df1dce1ca7ceb80bfd; verified 2026-11-05
 - Smash TV (smash_tv): `smash_tv.nex` c72ea298486b14036ac1a87ac89c3f0e, `smash_tv_sprites.nex` af0298e2cad56d8fb992caaba77a6549; verified 2026-11-05
 - Target Renegade (128K) (target_renegade): `target_renegade.nex` a0be8dc03a1be8c6d67dc3e0229abc35, `target_renegade_sprites.nex` 8e5f8f0be205aade316106a6db7d4aac; verified 2026-11-06
-- Jetpac (jetpac): `jetpac.nex` feff51b7038606d21c03c260055481e4, `jetpac_sprites.nex` 72e3cc193325cc8166f8e7d7b6481327; verified 2026-11-05
+- Jetpac (jetpac): `jetpac.nex` feff51b7038606d21c03c260055481e4, `jetpac_sprites.nex` 72e3cc193325cc8166f8e7d7b6481327; verified 2026-11-06
 - Lode Runner (lode_runner): `lode_runner.nex` cd0c1659c8569b2fa80da74962af90d2, `lode_runner_sprites.nex` 85fe6afd593679bf59c787230ba0eaca; verified 2026-11-05
 - Match Day (match_day): `match_day.nex` 612761ec2772c5a7dcd27f939588d227, `match_day_sprites.nex` 0ec500534baae17cd5ce91eae3c13a7d; verified 2026-11-05
 - Cyclone (cyclone): `cyclone.nex` 390516396ca4d385c94b7f7bd2315d31, `cyclone_sprites.nex` 49fb6d39732f4e77c69e5dabfe88ad58; verified 2026-11-06
@@ -69,7 +69,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Spellbound (128K, Magic Knight 2) (spellbound_magic_knight): `spellbound_magic_knight.nex` 656c71c4b2ebb8318f3ad442d70b0ab9, `spellbound_magic_knight_sprites.nex` ce8e1c6fb0dad558928880a8bf01e13d, `spellbound_magic_knight_enhanced.nex` 06fe3d18161f3f130372c8003def03da; verified 2026-11-06
 - Rambo (rambo): `rambo.nex` 434a84778881e230d0c930677abad0b4, `rambo_sprites.nex` 9ebfe9c8a88d3b2ca1fa9067e3abf2d5, `rambo_enhanced.nex` c2395f02f504d4f38ccc2e0d12973b44; verified 2026-11-05
 - Ikari Warriors (48K form) (ikari_warriors): `ikari_warriors.nex` 2d56c304bcb21619d8402d64804fef75, `ikari_warriors_sprites.nex` c90fab6ffc1698d98d21ca8bfffd311e, `ikari_warriors_enhanced.nex` 118a55f6a81bb022fad627426b225221; verified 2026-11-05
-- Renegade (128K) (renegade): `renegade.nex` 62a06036dec229a7d19821df2cca6a04, `renegade_sprites.nex` 93cb8bc9616dd41bfdc2f906d513cf35, `renegade_enhanced.nex` 3a9ceaf98b376bda76936fbd2e524eb4; verified 2026-11-05
+- Renegade (128K) (renegade): `renegade.nex` 62a06036dec229a7d19821df2cca6a04, `renegade_sprites.nex` 510cdd297b85a68b46bbc045a2ceb767, `renegade_enhanced.nex` 001b8f0cfc8fc1b709419cf5fba47c54; verified 2026-11-06
 - Three Weeks in Paradise (128K) (three_weeks): `three_weeks_128.nex` 1a6f1bbe0abfbcfbb5712ad4f4700e95, `three_weeks_128_sprites.nex` 468b17528c4c1659a2087bbe2d8cc8d1, `three_weeks_128_enhanced.nex` b38d048f254302fe942eb2ac58bbf463; verified 2026-11-06
 - Starquake (starquake): `starquake.nex` f447d9b3d937837d2427e021002a9648, `starquake_sprites.nex` 4efee1728e8092cdfd9f0e4ad859cf52, `starquake_sprites_loading.nex` 2e2f107e95cf80ea9412ba7023e819ee; verified 2026-11-05
 - Lunar Jetman (lunar_jetman): `lunar_jetman.nex` 3e5ca3908616f76a33f864be57baef95, `lunar_jetman_sprites.nex` e33f68c4fc0dca007daf14e99188ecfd, `lunar_jetman_sprites_loading.nex` 4634886880940d0db5e4cee9c1113819, `lunar_jetman_enhanced.nex` dfeb2cf9d184d6672f2c1448c0d9b805, `lunar_jetman_enhanced_loading.nex` 62f7e914c390fcce7477d5efd2423cad; verified 2026-11-05
