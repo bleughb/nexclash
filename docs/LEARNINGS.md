@@ -743,6 +743,10 @@ Grouped by question; add a new lesson to its group.
 - A .z80 saved MID TAPE LOAD (PC in ROM LD-BYTES, Cyclone 2026-10-21) is not a start state: a .nex of
   it waits in LD-BYTES forever. `inspect` says "ROM LD-BYTES (tape load)"; take the RZX's first snapshot
   instead (the next point).
+- A tape multiload's start state holds only the levels loaded so far: the tapes are inputs too (`auto --tape`);
+  find blocks by content (NZS's Side A .tap and .tzx number them differently).
+- Importing a build made on an older main: rebuild on main first, compare MD5s (NZS: the 'rom3' fill gained v2.10
+  fix-ups); check the published .nxc with its nxc.py for every toggle and trainer combination.
 - Fuse RZX first snapshot is SZX ("ZXPR" warning harmless) and is a later moment than the .z80
   unless recorded with "Record from snapshot".
 - Auto-recorder: rooms are matched by attribute SIMILARITY (<=25% cells differ = same room);
@@ -946,12 +950,10 @@ Grouped by question; add a new lesson to its group.
   Read the job PID from `ps -eo pid,sid,args`, or wait for the log's final result.
 - Start the job separately: `a && b && setsid nohup job &` backgrounds the WHOLE chain;
   a failed `a` silently skips the job and loses its output.
-- A single tool call is capped at 10 minutes: poll a background job with ONE call per ~9 minutes,
-  `sleep 540; tail -3 LOG` with the call's timeout raised to 10 minutes (the default is 2: a plain
-  call is killed mid-sleep); where calls are capped lower, sleep just under the cap (Chuckie Egg RELEASE run ~15 min: verify 8626 frames ~5 min, unit tests
-  ~10 min). Why not faster: every tool call resends the whole conversation, so ten 1-minute polls of
-  an hour-old session cost about ten times one 9-minute poll and tell you nothing more. Never `cat`
-  a log; `tail -3` or `grep -c '!'` for the counters.
+- A tool call is capped at 10 minutes: poll a background job ONCE per ~9 minutes, `sleep 540; tail -3
+  LOG` with the call's timeout raised to 10 minutes (default 2 kills it mid-sleep; lower caps: sleep just
+  under). Every call resends the whole conversation: ten 1-minute polls cost ten times one 9-minute
+  poll and tell nothing more (Chuckie Egg release run ~15 min). Never `cat` a log; `tail -3` or `grep -c '!'`.
 - Run a stamping selftest in a separate git worktree (`git worktree add ../nexclash-verify BRANCH`)
   so its record stamps do not collide with edits in the main checkout; commit them from there.
 - `cd X; cmd` runs cmd in the OLD directory when X does not exist - use `cd X && cmd` (a selftest
@@ -968,20 +970,18 @@ Grouped by question; add a new lesson to its group.
   to the font, so a game that never reads the font looked exempt - and code at 0x3Dxx crashed it
   (probably the DivMMC automap). Write the WHY with every limit, and mark an inferred why as such.
 - Name scratch scripts uniquely, NEVER after a stdlib module (dis, code, io, json, types, ...):
-  Python imports the script's own directory first, so a dis.py shadows the stdlib and breaks
-  SkoolKit (happened twice, the second time with this line already here).
+  Python imports the script's own directory first: a dis.py shadows the stdlib and breaks SkoolKit
+  (twice; the second time this line was here).
 - Before starting a long run, `pgrep -fa` for one already running with the same output folder:
-  Match Day 2026-10-20 had two identical full `auto` runs writing one folder for 76 minutes, both on
-  code that had been edited since they started (their results were stale). Kill by PID, never -f.
+  Match Day 2026-10-20 had two identical `auto` runs writing one folder for 76 minutes, on code edited
+  since (stale). Kill by PID, never -f.
 - Do all analyses in one simulator pass.
 - Profile a slow run before redesigning it (`python -m cProfile -s tottime nexclash.py auto ...
   --quick 300`). 2026-10-20: two thirds of Lode Runner's and Jetpac's verify time was BUILDING
-  SkoolKit simulators (~3 ms each, two or three per patched call), and Target Renegade compiled the
-  whole patched simulator module (~30 ms) twice per call via `_rw_simulator()`. Fixes: the class is
-  built once per process, per-event simulators come from nexclash/simpool.py (same output, 3-4x
-  faster), and deterministic helper runs are memoised (Jetpac's graphic builders: 4,008 runs ->
-  a few dozen). Check a speed-up with the same quick run before and after: the reports must match
-  line for line apart from elapsed times.
+  SkoolKit simulators (~3 ms each), and Target Renegade compiled the patched simulator module twice
+  per call (`_rw_simulator()`). Fixes: the class built once per process, per-event simulators from
+  nexclash/simpool.py (3-4x faster), deterministic helper runs memoised (Jetpac: 4,008 runs -> a few
+  dozen). Check a speed-up with one quick run before and after: reports equal bar elapsed times.
 - Keep per-instruction work in an analysis hook O(1) (a dict SCAN per opcode turned a 2-minute pass
   into a 10-minute timeout); simple per-instruction hooks are fine (simrun: 1,500 frames ~15 s).
 - Print summaries, not listings. Disassemble only flagged routines.

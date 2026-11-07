@@ -28,7 +28,10 @@ Record fields (docs/records/<name>.json; copy the nearest record, then edit):
   reference       folder under specnext/reference/
   inputs          snapshot + recordings: name (canonical name selftest copies to), md5, path (under
                   the reference folder; maintainers fill it); "missing": why = not in the references yet (the
-                  verify that needs it is skipped, nothing stamped; the rebuild and the reworks run)
+                  verify that needs it is skipped, nothing stamped; the rebuild and the reworks run);
+                  tapes (a game built from its tape files, nexclash/tapeset.py): [{set, files: [{name, md5, path}]}]
+                  alternative releases, each its files in order; the rebuild and verify pass set 0 (`--tape`), every
+                  other set must rebuild the same outputs; a file two sets share has one name (staged once)
   modules         nexclash modules the build imports (closure computed); own_modules = the engine's
   data            own data files (profile, .asm, ...); shared_data = data shared with other games
   rebuild         auto args (no recording), rzx used by the build, decisions (stored analysis facts)
@@ -341,6 +344,10 @@ def selfcheck():
         """a recording's MD5"""
         (r['inputs']['recordings'] or [r['inputs']['snapshot']])[0]['md5'] = '0' * 32
 
+    def tape_md5(r):
+        """a tape's MD5 (inputs.tapes)"""
+        r['inputs']['tapes'][-1]['files'][0]['md5'] = '0' * 32
+
     def build_arg(r):
         """a rebuild argument"""
         r['rebuild'].setdefault('args', []).append('--quick')
@@ -360,6 +367,10 @@ def selfcheck():
     one('chuckie_egg', pin, 'reverify')
     one('knight_tyme', waiver, 'reverify')
     one('lunar_jetman', input_md5, 'reverify')
+    for r in recs:                              # a tape-set game: its tapes are inputs like any other (rebuild = due)
+        if r['inputs'].get('tapes'):
+            one(r['name'], tape_md5, 'reverify' if r.get('verify') else 'rebuild')
+            break
     one('commando', build_arg, 'reverify')
     one('smash_tv', output, 'reverify')
     one('midnight_resistance', prose, 'skip')

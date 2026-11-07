@@ -324,8 +324,7 @@ Analysis tools
    plotter. Add `scan --static` (recursive descent from entry + ISR, RZX PCs as seeds, object handler
    fields `LD L,(IX+d)/LD H,(IX+d+1)/JP (HL)` and the stores into them, a byte scan for `CD/C3/CA..
    lo hi` at a plotter rated by code-likeness; design: TECHNIQUES "NextMasterSystem"). Keep the
-   existing output; golden check in tools_check. (The byte scan part exists in survey.static_sites,
-   2026-10-26; the recursive descent does not.)
+   existing output; golden check in tools_check. (survey.static_sites has the byte scan, not the descent.)
 12. A shared fast mode for frame-level questions (C simulator + RZXTracer.next_frame, seconds per RZX)
    next to the per-instruction simrun commands (LEARNINGS 2.3); `rzx.trace` could also speed older
    engines' capture and verify passes.
@@ -338,8 +337,7 @@ Analysis tools
    a user RZX).
 40. `nexclash.py convert GAME.z80 --rzx R` stops with "Port readings exhausted" on a recording with
    Fuse autosave snapshots (Chuckie_Egg.rzx: 9; found 2026-10-26): analyse() replays the RZX as it is,
-   while simrun / auto strip autosaves first. survey strips them before analyse(); `convert` (in
-   nexclash.py: every game's dependency) still needs it.
+   while simrun / auto strip autosaves first. survey strips them before analyse(); `convert` still needs it.
 Toolkit structure
 17. Generic builder = TID engine only. Next: an XOR template (generalise dizzy1.py: 1-bit shadow screen
    + Layer 2), then non-Codemasters engines; virtual read is in dedicated builders only (the generic
@@ -359,6 +357,7 @@ Toolkit structure
    checked 2026-10-14): the .nxc output (C4, 2026-11-04) now does that job; decision pending.
 23. `selftest.py --affected` is not run automatically on each PR (needs a GitHub Action with the
    private references via a secret); a maintainer runs it before merging.
+46. Tape sets: no .nxc from `auto` (nxcout skips it); wanted: nxc.py make --also --start.
 
 Hardware to confirm
 24. The 0x3D00 cause (A1): a test build with one harmless routine at 0x3D00 (emulator with DivMMC, or

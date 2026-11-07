@@ -72,14 +72,15 @@ recording halfway through its build); to a text / score printer it is usually a 
 not come up - note it in games/<game>.md.
 
 ## 0. Inputs (ask once, up front)
-- `.z80` snapshot, 48K or 128K, ideally at the title screen or in game, keyboard controls (not
+- `.z80` snapshot, 48K or 128K, at the title or in game, keyboard controls (not
   joystick mode - e.g. Fantasy World Dizzy byte 62569=255 enables Kempston and caused phantom
-  input). A loader snapshot works but needs extra steps (0b).
+  input). A loader snapshot needs extra steps (0b).
 - RZX recording made per RECORDING_CHECKLIST.md, from that same snapshot.
+- A tape multiload: the start state after loading + every tape file (`auto --tape`).
 - Menus and windows: ask whether the game opens a pause, menus or message windows over the play
-  area (and the screens without play: end of a part, codes). They are drawn in the ULA, so Layer 2
-  and the sprites cover them (step 4). If the user does not know, offer to find them in the code:
-  PC and stack while one is up, the key poll that leads there (Trueno: pause menu, access code).
+  area (and screens without play: end of a part, codes). They are drawn in the ULA, so Layer 2
+  and the sprites cover them (step 4). Else offer to find them in the code:
+  PC and stack while one is up, the key poll leading there (Trueno's pause menu).
 - A test cheat: offer to find one now (immortality: the store of the reduced energy -> NOP),
   marked TEMPORARY in games/<game>.md; remove it before delivery and check the game over.
   Why: rounds reach far into the game only with it (Trueno).
