@@ -3500,26 +3500,80 @@ pause_loading_end:
         SAVEBIN "inferno_pause.bin",pause_loading,pause_loading_end-pause_loading
 
 ; ---------------------------------------------------------------------------
-; Copier window, milestone 1: translated copier head (claude/inferno-copier-window).
-; The original copier 9790 plays the A700 beeper buffer with one OUT (254),A per cell and
-; calls the 9907 limiter from inside itself after row 6 (97FB). cw_head replays 9790..97FB
-; instruction for instruction (same RAM writes, work-stack pushes and PUSH AF flags) without
-; the OUT. Each change of the OUT value is logged as [value, E, D, C] (main DE/C at that
-; cell) so the original T of every OUT is BASE(k) + 101*g(k); head total = 79477 + 101*G.
-; Exit state equals the original at 9907 entry, R included (entry R + original M1, bit 7
-; kept). No pad and no OUT replay yet: this block alone is NOT pace-preserving.
+; Copier window (claude/inferno-copier-window). The original copier 9790 plays the A700 beeper
+; buffer with one OUT (254),A per cell and calls the 9907 limiter from inside itself after row 6
+; (97FB). cw_head replays 9790..97FB instruction for instruction (same RAM writes, work-stack
+; pushes and PUSH AF flags) at 28MHz (milestone 1). Original T of the OUT of cell k = 244 + 120r
+; + 187k + 19[k>255] + 101g(k) after 9790 entry (g = tiles >= 16 before k); head = 79477 + 101G.
+; Milestone 2: each change of the OUT value is OUT at its original T and 9907 is entered at its
+; original time, polled on CTC channel 3 (prescaler 256: 32 T a tick in every video timing; no
+; interrupt). Time base: the first CTC edge after entry (= tick 1024), timed by counting the sync
+; loop. Row base RBT:RBF (ticks, T) = 32768 + T of the current row's first OUT after that edge
+; (CW_KRB calibrated, less CW_X = time earlier hooks added this update: 0 in the milestone-2
+; build). A change the head reaches late is OUT at once; cell 415's is OUT after the row end and
+; epilogue (the original's 169 T from it to 9907 is too short for them). The window runs EI:
+; page 80 byte 0 is the offset of the IM2 JR at FFFF, so a frame IRQ enters cw_irq, which adds
+; the original's no-op ISR (998E = 0 for the whole window) T to the deadlines and M1 to R. Calls
+; and IRQ pushes leave bytes only below the copier's SP, in the 4 that 9907 overwrites first
+; (PUSH DE / PUSH HL). No CTC (CW_CLK = 2): the original copier at original speed.
 CW_PAGE   EQU 80
-CW_SCHED  EQU 0x1000            ; sentinel entry, then 4-byte entries
 CW_ROWC   EQU 0x1700            ; 13 row counts, 256-aligned (self-modified low byte)
 CW_SP     EQU 0x1800
 CW_R      EQU 0x1802
 CW_IY     EQU 0x1803
-CW_END    EQU 0x1805
+CW_PREV   EQU 0x1805            ; last OUT value (IY points here in the head)
 CW_WSP    EQU 0x1807
-CW_HL     EQU 0x1809
 CW_RSUM   EQU 0x180B
-CW_STACK  EQU 0x1A00            ; 19FE: game AF, 19FC: game AF'
-CW_M1K    EQU 0x3A              ; R: -70 mod 128, end-to-end 8F92->9907 M1 difference (calibrated, then checked on every state)
+CW_CLK    EQU 0x1810            ; 0 untested, 1 CTC counts, 2 absent
+CW_X      EQU 0x1811            ; T added by earlier hooks this update (accumulate-X input)
+CW_CCD    EQU 0x1813            ; CTC count after the time-base edge
+CW_NOW    EQU 0x1814            ; 1024 + ticks since the time-base edge
+CW_LAST   EQU 0x1816            ; CTC count at the last CW_NOW update
+CW_RBT    EQU 0x1817            ; row base, whole ticks
+CW_RBF    EQU 0x1819            ; row base, T within the tick (0..31)
+CW_IRQT   EQU 0x181A            ; T of the original's no-op ISRs inside the window so far
+CW_RIRQ   EQU 0x181C            ; their M1 (R)
+CW_NIRQ   EQU 0x181D
+CW_SVHL   EQU 0x181E
+CW_SVDE   EQU 0x1820
+CW_SVBC   EQU 0x1822
+CW_DL     EQU 0x1824            ; current wait: T above CW_DBASE ticks, +16 rounding, no CW_IRQT
+CW_DBASE  EQU 0x1826
+CW_DTK    EQU 0x1828            ; current wait: deadline, ticks
+CW_IRQSP  EQU 0x182A
+CW_DNIRQ  EQU 0x182D
+CW_RS     EQU 0x182E            ; R low bits before the window's IRQs
+CW_RH     EQU 0x182F            ; entry R bit 7
+CW_PEND   EQU 0x1830            ; 1: cell 415 changed; OUT after the epilogue
+CW_PC     EQU 0x1831            ; its c (tiles >= 16 before it in row 6)
+CW_PADL   EQU 0x1832            ; pad target: T above CW_PADB ticks, +16 rounding
+CW_PADB   EQU 0x1834
+CW_IRQRAW EQU 0x1836            ; CTC count when the last IRQ came
+CW_IRQSTK EQU 0x1900
+CW_STACK  EQU 0x1A00            ; 19FE: game AF', 19FC: game AF
+CW_CTC    EQU 0x1B3B            ; CTC channel 3
+CW_ISR_T  EQU 94                ; IM2 ack 19, JR 12, JP 10, 998B PUSH AF..RET 53 (998E = 0)
+CW_ISR_M1 EQU 10                ; ack + 9 instructions
+CW_INTDLY EQU 14                ; ~28 T at 28MHz + handler body: the /INT pulse (32 T) ends before EI
+CW_KSYNC  EQU 6                 ; T per sync-loop iteration at 28MHz
+CW_M1K    EQU 0x3C              ; R: end-to-end 8F92->9907 M1 difference (calibrated, then checked on every state)
+CW_KRB    EQU 32895             ; 32768 + 261 (8F92 -> first OUT) - time-base offset (calibrated)
+CW_KPAD   EQU 204               ; row-6 base + 6104 + 101 C -> clock target for 9907 entry (calibrated)
+
+        MACRO CW_TICK           ; CW_NOW += CTC ticks since CW_LAST (down counter); A, F, HL
+        ld a,CW_CTC >> 8
+        in a,(CW_CTC & 0xFF)
+        ld h,a
+        ld a,(CW_LAST)
+        sub h
+        ld l,a
+        ld a,h
+        ld (CW_LAST),a
+        ld a,l
+        ld hl,(CW_NOW)
+        add hl,a
+        ld (CW_NOW),hl
+        ENDM
 
         ORG 0x3CB0
 cw_go:                          ; from cap_done_tail: DI, 28MHz, all registers = 9790 entry
@@ -3527,38 +3581,220 @@ cw_go:                          ; from cap_done_tail: DI, 28MHz, all registers =
         jp cw_head
 cw_exit:                        ; from page 80 with exact 9907-entry state
         nextreg 0x50,255
+        ei                      ; an IRQ pending since the pad is taken by the game ISR before 9907,
+        nextreg 0x07,0          ; as the original takes it inside its head
+        jp 0x9907
+cw_orig:                        ; no CTC: the original copier, registers = 9790 entry
+        nextreg 0x50,255
         nextreg 0x07,0
         ei
-        jp 0x9907
+        jp 0x9790
 cw_rom_end:
         ASSERT cw_rom_end < 0x3D00
         SAVEBIN "inferno_cwrom.bin",cw_go,cw_rom_end-cw_go
 
         ORG 0
+        DB cw_irq-1             ; IM2: FFFF is JR, its offset byte is read from 0000
+        DB 0
+cw_irq:                         ; frame IRQ inside the window; IFF = 0, SP = work stack
+        ld (CW_IRQSP),sp
+        ld sp,CW_IRQSTK
+        push af
+        push hl
+        ld a,CW_CTC >> 8
+        in a,(CW_CTC & 0xFF)
+        ld (CW_IRQRAW),a
+        ld hl,(CW_IRQT)
+        add hl,CW_ISR_T
+        ld (CW_IRQT),hl
+        ld a,(CW_RIRQ)
+        add a,CW_ISR_M1
+        ld (CW_RIRQ),a
+        ld hl,CW_NIRQ
+        inc (hl)
+        ld a,CW_INTDLY
+.dly:   dec a
+        jr nz,.dly
+        pop hl
+        pop af
+        ld sp,(CW_IRQSP)
+        ei
+        ret
+
+cw_wait:                        ; HL = T above DE ticks (+16 rounding, no CW_IRQT); returns DI at
+        ld (CW_DL),hl           ; that tick + CW_IRQT (the caller OUTs, then EIs). A, F, B, DE, HL
+        ld (CW_DBASE),de        ; changed; CW_NOW kept current whenever it waited.
+.recalc:
+        ld a,(CW_NIRQ)
+        ld (CW_DNIRQ),a
+        ld de,(CW_IRQT)
+        add hl,de
+        ex de,hl
+        ld b,5
+        bsrl de,b
+        ld hl,(CW_DBASE)
+        add hl,de
+        ld (CW_DTK),hl
+        ld de,(CW_NOW)
+        or a
+        sbc hl,de               ; ticks to go after the last clock update
+        jr c,.done              ; due (a change the head reached late)
+        jr z,.done
+.class: ld a,h
+        or a
+        jr nz,.coarse
+        ld a,l
+        cp 128
+        jr nc,.coarse
+        ld e,a                  ; fine: spin on the count until (LAST - count) & 255 >= E
+        ld a,(CW_LAST)
+        ld l,a
+        ld a,(CW_DNIRQ)
+        ld d,a
+.fine:  ld a,CW_CTC >> 8
+        in a,(CW_CTC & 0xFF)
+        ld h,a
+        ld a,(CW_NIRQ)
+        cp d
+        jr nz,.irq
+        ld a,l
+        sub h
+        cp e
+        jr c,.fine
+        ld l,a                  ; book the ticks: CW_NOW += LAST - count, CW_LAST = count
+        ld a,h
+        ld (CW_LAST),a
+        ld a,l
+        ld hl,(CW_NOW)
+        add hl,a
+        ld (CW_NOW),hl
+.done:  di                      ; no IRQ between this check and the caller's OUT
+        ld a,(CW_NIRQ)
+        ld hl,CW_DNIRQ
+        cp (hl)
+        ret z
+        ei
+        jr .irq
+.coarse:
+        ld a,(CW_NIRQ)
+        ld hl,CW_DNIRQ
+        cp (hl)
+        jr nz,.irq
+        CW_TICK
+        ld hl,(CW_DTK)
+        ld de,(CW_NOW)
+        or a
+        sbc hl,de
+        jr c,.done
+        jr z,.done
+        jr .class
+.irq:   ld a,(CW_NIRQ)          ; an IRQ came: did the original make this OUT before it?
+        ld (CW_DNIRQ),a
+        ld a,(CW_IRQRAW)
+        ld h,a
+        ld a,(CW_LAST)
+        sub h                   ; ticks from the last clock update to the IRQ (>= 128: before it)
+        cp 128
+        jr c,.at
+        xor a
+.at:    ld hl,(CW_NOW)
+        add hl,a
+        ld de,(CW_DTK)
+        or a
+        sbc hl,de
+        jr nc,.done             ; IRQ at/after the deadline: the original OUT came first
+        CW_TICK                 ; before it: the original's OUT moves by its ISR time
+        ld hl,(CW_DL)
+        jp .recalc
+cw_wait_end:
+
 cw_head:
         ld (CW_SP),sp
         ld sp,CW_STACK
-        push af                 ; game AF
         ex af,af'
-        push af                 ; game AF'
+        push af                 ; game AF' (19FE)
         ex af,af'
+        push af                 ; game AF (19FC)
         ld a,r
         ld (CW_R),a
+        ld a,(CW_CLK)
+        dec a
+        jp nz,cw_noclock
+cw_clocked:
+        ld (CW_SVHL),hl
+        ld (CW_SVDE),de
+        ld (CW_SVBC),bc
+        ld a,CW_CTC >> 8
+        in a,(CW_CTC & 0xFF)
+        ld c,a
+        ld b,24
+cw_sync:                        ; the next CTC edge is the time base (24 - B loops of CW_KSYNC T)
+        ld a,CW_CTC >> 8
+        in a,(CW_CTC & 0xFF)
+        cp c
+        jr nz,cw_synced
+        djnz cw_sync
+        ld a,2                  ; the counter stopped: original copier from now on
+        ld (CW_CLK),a
+        ld hl,(CW_SVHL)
+        ld de,(CW_SVDE)
+        ld bc,(CW_SVBC)
+        jp cw_absent
+cw_synced:
+        ld (CW_CCD),a
+        ld (CW_LAST),a
+        xor a
+        ld (CW_RIRQ),a
+        ld (CW_NIRQ),a
+        ld (CW_PEND),a
+        ld l,a
+        ld h,a
+        ld (CW_IRQT),hl
+        ei                      ; IRQs from here on enter cw_irq (no SP below a live saved value)
+        ld hl,1024
+        ld (CW_NOW),hl
+        ld a,24
+        sub b
+        ld e,a
+        ld d,CW_KSYNC
+        mul d,e
+        ld hl,(CW_X)
+        add hl,de
+        ld a,l
+        cpl
+        ld l,a
+        ld a,h
+        cpl
+        ld h,a
+        inc hl
+        add hl,CW_KRB           ; first-row base = KRB - X - sync time
+        ld a,l
+        and 31
+        ld (CW_RBF),a
+        ex de,hl
+        ld b,5
+        bsrl de,b
+        ld (CW_RBT),de
+        ld hl,(CW_SVHL)
+        ld de,(CW_SVDE)
+        ld bc,(CW_SVBC)
         ld (CW_IY),iy
-        ld iy,CW_SCHED
-        ld a,(0xA741)           ; first cell's OUT value: force its entry with a complement sentinel
+        ld iy,CW_PREV
+        ld a,(0xA741)           ; first cell's OUT value: its complement forces the first OUT
         cpl
         ld (iy+0),a
         xor a
         ld (CW_RSUM),a
         ld a,CW_ROWC & 0xFF
         ld (cw_rp+1),a
-        ld sp,CW_STACK-2
+        di                      ; a few instructions: the caller's stack stays untouched by IRQ pushes
+        ld sp,CW_STACK-4
         pop af                  ; game AF and flags, exactly
         ld sp,(CW_SP)
         ; --- original 9790 prologue ---
         ld (0x9878),sp          ; LD (39032),SP: the copier's own SP save
         ld sp,0xA6FE
+        ei
         ld hl,0x9877
         push hl
         scf
@@ -3602,18 +3838,45 @@ cw_cell:                        ; main set (97B6)
         ex af,af'
         ld a,ixl
         cp (iy+0)
-        jr z,cw_same
-        ld (iy+4),a
-        ld a,e
-        ld (iy+5),a
-        ld a,d
-        ld (iy+6),a
-        ld a,c
-        ld (iy+7),a
-        inc iy
-        inc iy
-        inc iy
-        inc iy
+        jp z,cw_same
+        ld (iy+0),a
+        ld a,e                  ; j = cell within the row
+        cpl
+        and 31
+        cp 31
+        jr nz,cw_chg
+        ld a,ixh
+        cp 6
+        ld a,31
+        jr nz,cw_chg
+        ld a,c                  ; cell 415: OUT after the row end and epilogue
+        ld (CW_PC),a
+        ld a,1
+        ld (CW_PEND),a
+        jp cw_same
+cw_chg:                         ; deadline = RBT + (RBF + 16 + 187 j + 101 c) / 32 ticks
+        ld (CW_SVHL),hl
+        ld (CW_SVDE),de
+        ld (CW_SVBC),bc
+        ld e,a
+        ld d,187
+        mul d,e
+        ld a,(CW_RBF)
+        add a,16
+        add de,a
+        ex de,hl
+        ld e,c
+        ld d,101
+        mul d,e
+        add hl,de
+        ld de,(CW_RBT)
+        call cw_wait            ; the return address lands below SP; the next push overwrites it
+        ld a,ixl
+        out (0xFE),a            ; the original's OUT (254),A of this cell, at its T
+        ei
+        ld hl,(CW_SVHL)
+        ld de,(CW_SVDE)
+        ld bc,(CW_SVBC)
 cw_same:
         ex af,af'
         cp 16
@@ -3660,44 +3923,149 @@ cw_rp:  ld (CW_ROWC),a
         ld (cw_rp+1),a
         ld a,ixh
         cp 6
-        jr z,cw_done
+        jp z,cw_done            ; row 6: the pad target is taken from this row's base
+        ld (CW_SVHL),hl         ; row base += 32*187 + 120 + 101*C (+19 from cell 256 on)
+        ld (CW_SVDE),de
+        ld (CW_SVBC),bc
+        ld e,c
+        ld d,101
+        mul d,e
+        add de,6104
+        cp 11
+        jr nz,cw_rb_add
+        add de,19
+cw_rb_add:
+        ld a,(CW_RBF)
+        add de,a
+        ld a,e
+        and 31
+        ld (CW_RBF),a
+        ld b,5
+        bsrl de,b
+        ld hl,(CW_RBT)
+        add hl,de
+        ld (CW_RBT),hl
+        CW_TICK                 ; at least once a row (< 8192 T) so the 8-bit count never laps
+        ld a,ixh
+        cp 7
+        jr nz,cw_rb_next
+        ld hl,(CW_RBT)          ; row 6 next: the parts of the pad target and R that need no row-6 data
+        ld de,-32
+        add hl,de
+        ld (CW_PADB),hl
+        ld a,(CW_RBF)
+        ld hl,6104+1024+16-CW_KPAD
+        add hl,a
+        ld (CW_PADL),hl
+        ld a,(CW_R)
+        ld l,a
+        add a,CW_M1K
+        ld (CW_RS),a
+        ld a,l
+        and 0x80
+        ld (CW_RH),a
+cw_rb_next:
+        ld hl,(CW_SVHL)
+        ld de,(CW_SVDE)
+        ld bc,(CW_SVBC)
         dec ixh
         exx
         jp cw_row
-cw_done:                        ; main set, as the original at CALL Z,9907
-        ld (CW_END),iy
+cw_done:                        ; main set, as the original at CALL Z,9907: last OUT, finish, pad
+        ld (CW_SVHL),hl
+        ld (CW_SVDE),de
+        ld (CW_SVBC),bc
+        ld a,(CW_PEND)
+        or a
+        jr z,cw_epilogue
+        ld a,(CW_PC)            ; cell 415: RBT + (RBF + 16 + 187*31 + 101 c) / 32
+        ld e,a
+        ld d,101
+        mul d,e
+        ld a,(CW_RBF)
+        add a,16
+        add de,a
+        ex de,hl
+        ld de,187*31
+        add hl,de
+        ld de,(CW_RBT)
+        call cw_wait
+        ld a,(CW_PREV)          ; cell 415's value (IXl is the row end's scratch by now)
+        out (0xFE),a
+        ei
+cw_epilogue:                    ; after the last OUT: everything but R and the exit
         ld iy,(CW_IY)
-        ld a,b                  ; alt B = FC + page of the last cell (97CC)
+        ld a,(CW_SVBC+1)        ; alt B = FC + page of the last cell (97CC)
         add a,0xFC
         exx
         ld b,a
         exx
         ld (CW_WSP),sp
-        ld sp,CW_STACK-4
+        ld sp,CW_STACK-2
         ex af,af'
         pop af                  ; game AF'
         ex af,af'
         ld sp,(CW_WSP)
-        ld (CW_HL),hl
         ld hl,0x97FE            ; the CALL Z,9907 return address
         push hl
-        ld hl,(CW_HL)
-        ld a,(CW_RSUM)
-        add a,CW_M1K
-        ld ixl,a
-        ld a,(CW_R)
-        add a,ixl
-        and 0x7F
-        ld ixl,a
-        ld a,(CW_R)
-        and 0x80
-        or ixl
-        ld r,a
+        ld a,(CW_SVBC)          ; pad target = row-6 base + 6104 + 101 C - KPAD
+        ld e,a
+        ld d,101
+        mul d,e
+        ld hl,(CW_PADL)
+        add hl,de
+        ld de,(CW_PADB)
+        call cw_wait
+        ei                      ; (an IRQ here still reaches R through CW_RIRQ)
+        ld de,(CW_SVDE)
+        ld bc,(CW_SVBC)
         ld a,b
         ld ixl,a                ; IXl = page of the last cell (97BA)
+cw_pad_end:
+        di
+        ld a,(CW_RSUM)          ; R = entry R + M1 constant + 12 G + the window's IRQs
+        ld hl,CW_RS
+        add a,(hl)
+        ld hl,CW_RIRQ
+        add a,(hl)
+        and 0x7F
+        ld hl,CW_RH
+        or (hl)
+        ld r,a
+        ld hl,(CW_SVHL)
         ld a,ixh
         cp 6                    ; A and F exactly as at the original CALL
         jp cw_exit
+cw_noclock:                     ; A = CW_CLK - 1: FF untested, 01 absent
+        inc a
+        jr nz,cw_absent
+        ld (CW_SVBC),bc         ; test once: does CTC channel 3 count?
+        ld bc,CW_CTC
+        ld a,0x27               ; timer, prescaler 256, time constant follows, reset; no interrupt
+        out (c),a
+        xor a                   ; time constant 256
+        out (c),a
+        in a,(c)
+        ld (CW_DNIRQ),a
+        ld a,100                ; ~200 T: at least 5 ticks
+.spin:  dec a
+        jr nz,.spin
+        in a,(c)
+        ld b,a
+        ld a,(CW_DNIRQ)
+        cp b
+        ld a,1
+        jr nz,.ok
+        inc a
+.ok:    ld (CW_CLK),a
+        ld bc,(CW_SVBC)
+        dec a
+        jp z,cw_clocked
+cw_absent:
+        ld sp,CW_STACK-4
+        pop af
+        ld sp,(CW_SP)
+        jp cw_orig
 cw_head_end:
-        ASSERT cw_head_end < CW_SCHED
-        SAVEBIN "inferno_cwhead.bin",cw_head,cw_head_end-cw_head
+        ASSERT cw_head_end < 0x1000
+        SAVEBIN "inferno_cwhead.bin",0,cw_head_end

@@ -50,10 +50,10 @@
  "status": {
   "title": "Inferno",
   "engine_col": "inferno copier window (inferno.md)",
-  "build": "translated copier head (page 80) + pinned B components; not installed",
-  "software": "six quick correctness PASS; copier head exact on 1,854 states; pacing gate open",
+  "build": "copier window milestone 2 at 8F92 (diagnostic NEX, window only); no hook work in it, no sprites",
+  "software": "window model PASS on 1,854 states (OUT/9907 timing, R, RAM, IRQ injection, 7 controls); full-recording timeline",
   "hardware": "untested",
-  "next": "copier window milestone 2: replay copier OUTs at original T and pad to original 9907 time"
+  "next": "copier window milestone 3: capture hooks measure X and restore R; hook work in cw_wait; hardware/JNext pace"
  },
  "checks": [
   "asm2profile:inferno"
@@ -1985,6 +1985,46 @@
    "sprite_display": "DISABLED",
    "hardware": "UNPROVED",
    "cold_content_path": "PASS: L6 2000 frames, runtime_profile_cold6.json; 600-frame probe lacked site coverage"
+  }
+ },
+ "copier_window": {
+  "scope": "translated copier head + OUT replay at original T + pad to original 9907 (CTC ch3), IRQs compensated; simulator (uncontended T), not hardware",
+  "sources": {
+   "nexclash/inferno.py": "1236d5acd69d3169e57b89a8329b5e25",
+   "asm/inferno_hooks.asm": "24bcbad0702435f7629628d94e1125e5",
+   "docs/profiles/inferno.json": "9e838ae6411780dcee6b53dc26aa7f9e"
+  },
+  "artifacts": "specnext/reference/inferno/build/copier_window.md §6, copier_window/cw_window_checks.json, cw_timeline.json, capture_x.json, cw_build.json",
+  "checks": {
+   "states": 1854,
+   "out_changes": 119363,
+   "out_offset_T": [
+    -24,
+    56
+   ],
+   "late_cells": "0/1, <= 114 T",
+   "d9907_T": [
+    -24,
+    42
+   ],
+   "irq_injections": 874,
+   "irq_double": 38,
+   "irq_lost_entry_di": 82,
+   "negative_controls": "7/7 x 38",
+   "busy_max_ms": 11.3,
+   "wait_min_ms": 15.1,
+   "tolerance_T": 56
+  },
+  "full_recordings": {
+   "updates": 88187,
+   "irqs_lost": 76,
+   "slack_below_32T": 27,
+   "free_min_ms": 14.6
+  },
+  "diagnostic_nex": {
+   "file": "Inferno_copier_window_diagnostic.nex",
+   "md5": "4f7fef40b4a50b7f1ba7c82d064e851b",
+   "boot_checks": "PASS (Sinclair, foreign ROM3)"
   }
  }
 }

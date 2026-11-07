@@ -1,15 +1,15 @@
 # Inferno
 
 ## Next session
-Stage: 2 (continued)    Branch: claude/inferno-copier-window (only line; codex/inferno superseded)
-State: copier window milestone 1 (translated copier head) PASS, not installed; timing gate open.
+Stage: 2 (continued)    Branch: claude/inferno-copier-window-m2 (codex/inferno superseded)
+State: copier window milestone 2 (OUT replay + pad at 8F92) PASS in the model; diagnostic NEX
+  boots; hardware/JNext untested. Timing gate open (no hook work in the window yet).
 Inputs: specnext/reference/inferno/    Start: specnext build/CONTINUE_copier_window.md.
-Read: "Copier window" below; inferno.py copier_window_checks/run_cw_head; asm cw_head/cw_go.
-Next: (2) replay logged OUTs at original T (CTC, core-gated; raster fallback) and pad to the
-  original 9907 time; model every update of six full recordings; (3) move hook work into the
-  window, measure whole updates; (4) IRQ injection over the head, JNext pace, hardware. Then the
-  earlier items: assembled live-table scan/driver at the 8EF9 gate, runtime exact dispatch
-  and duplicate indices, complete pattern/frame state, protected uploads. Keep sprites disabled.
+Read: "Copier window"; inferno.py run_cw_window/copier_window_checks; asm cw_wait/cw_irq.
+Next: (3) capture hooks measure X on the CTC and restore R; move 8F95 work into cw_wait; shrink X;
+  JNext pace + user hardware result of the diagnostic NEX. Then the earlier items: live-table
+  scan/driver at the 8EF9 gate, runtime exact dispatch and duplicate indices, complete
+  pattern/frame state, protected uploads. Keep sprites disabled.
 Gate: zero frame slips and the original 9907 time per update with sound kept (replaces 10 ms).
 Boundary: 8EF9 follows original DI, before IM2 setup; the pause gate preserves all registers/R/RAM/
   stack and caller clocks (six RZX initialization states). Reject 86C5 (decompressor, overwritten).
@@ -17,7 +17,7 @@ Memory: owned cache 136–215, metadata/code 79, pinned stream 122, DDMA staging
   window 80. Store publishes valid last; dispatch still requires exact live validation.
 Open: loading driver/UI, unseen/mutated content, current/pending ownership, complete-frame reveal,
   FLASH/modal/frontend/ROM lifetime, hardware waits, contention. No sprite NEX.
-Workflow: Inferno6.rzx --quick 2000; six own original quicks at milestones; level-4 shop.
+Workflow: Inferno6.rzx --quick 2000; six quicks at milestones; level-4 shop.
 
 ## Inputs and facts
 - Inferno.tzx: supplied tape, MD5 `335eec35a526f2044455cb87e8c77206`.
@@ -45,9 +45,8 @@ Workflow: Inferno6.rzx --quick 2000; six own original quicks at milestones; leve
   recordings, snapshots, previews and builds there on 2026-11-05; do not re-ask in this session.
 
 ## Status and open items
-- Intake PASS: eight original recordings, 449,659 frames, no desync (replay_checks.txt); sampled
-  surveys 2,001 frames each (16,008 total), caller/plain boot gates PASS. No supported engine.
-  Original copier median 200,191-212,139 T, max 214,693-274,392 T across sampled levels.
+- Intake PASS: eight original recordings, 449,659 frames, no desync; sampled surveys and
+  caller/plain boot gates PASS. No supported engine.
 - Initial surveys/full producer census remain in specnext; Stage-1 findings supersede preliminary
   ownership/layout conclusions. Runtime draw-list loop 93E0 reads C000 and writes tile IDs/flags;
   operand 9419 changes 0 to FC, so nearby code cannot be assumed immutable.
@@ -55,14 +54,17 @@ Workflow: Inferno6.rzx --quick 2000; six own original quicks at milestones; leve
   334 bytes below interrupted SP. Its union does not prove safety at a particular hook.
 - Plain Inferno.nex uses 79-byte tail 9A80-9ACE, below C000: initial 1,000-frame write-first and
   nextboot checks PASS, MD5 0a3bde4734c5b3f15ad0f2a55cc81e19. Default-tail survey builds superseded.
-- Original full-recording contact sheets: recording_overview.png; level 4 reaches the equipment
-  shop grid. Ending BE69 scrolls, BCDF draws text/medals, BC64 clears. Preserve the ULA sequence.
-- Shared tools/canary passed intake/capture checkpoints (Chuckie unchanged). No test cheat or game
-  patch. Independent level snapshots do not establish continuous TZX transitions; see Approved design.
+- Contact sheets: recording_overview.png (L4 reaches the shop). Ending BE69 scrolls, BCDF draws
+  text/medals, BC64 clears. Preserve the ULA sequence.
+- No test cheat or game patch; level snapshots do not prove continuous TZX loads.
 
 ## Hardware checklist
 - Plain level-1 Inferno.nex: try CSpect first, then the Next; check title/text to gameplay,
   controls, scrolling, sound, death/restart and the shop. Boot is software-checked only.
+- Inferno_copier_window_diagnostic.nex (specnext build/; window only, NOT a release): play it and
+  the plain Inferno.nex side by side for a minute of level 1: same speed (enemies, scrolling,
+  stopwatch), same beeper sound (shots, explosions, pickups: pitch, length), no hang at the first
+  gameplay frame, no extra border stripes. Report core/video mode.
 - This is a plain conversion, with original colour clash; it does not provide subsequent
   tape loads. No sprite build or all-level hardware test is ready.
 - Proposed sprite release: check intro beeper speed; title/start; all six continuous loads with
@@ -138,13 +140,21 @@ Workflow: Inferno6.rzx --quick 2000; six own original quicks at milestones; leve
   2.9-13.2 k T, so +10 ms of hook work slips 56-81 % of updates a frame; "10 ms total" is no gate.
 - The copier head 9790..97FB (416 cells, 25.2-30.8 ms) OUTs the A700 beeper buffer per cell.
   Head T = 79,477 + 101*G; per-OUT T in cw_out_t. Graphics are mutable (F400-FA36, L3 ED00-F0AF).
-- Design: translated head at 28 MHz logs OUT changes; replay them at original T, pad to the
-  original 9907 time, do hook work in the freed ~19 ms. Pace and sound match by construction.
-- Milestone 1: page 80 cw_head (293 B) + alt-ROM cw_go/cw_exit at 3CB0 (19 B) via cap_done_tail.
-  `--copier-window-checks`: 1,854 states, six levels PASS (registers incl. R, RAM, 119,363 OUT
-  changes with original T); controls 3/3. Max 7.2-7.6 ms vs original 26.9-29.7 ms. Not installed.
-- Original IRQs leave 2-4 bytes below SP (A1FA-A6FD work stack, or FFF0); only pops read that area
-  and bytes below the final SP are never popped. Verifier must enforce it (milestone 4).
+- Milestone 1: translated head (page 80), exact incl. R, 1,854 states.
+- Milestone 2: each OUT change at its original T (lockstep in the head; "head then replay" cannot
+  meet the first OUT at 244 T), 9907 at the original time; CTC ch 3 polled (32 T ticks, any video
+  timing), time base = first edge after entry; no counting CTC -> original copier. Window runs EI:
+  page 80 byte 0 = IM2 JR offset to cw_irq, which adds the no-op ISR (94 T, 10 M1). Cell 415's OUT
+  waits until after the epilogue. X (earlier hooks): accumulate (bounded shift needs X <= 169 T;
+  capture X = 3,198-7,642 T). Model, 1,854 states (CTC phase varied): registers
+  incl. R and RAM exact; OUT changes on time (-24..+31 T) except cells 0/1 (<= 114 T late, entry);
+  9907 -24..+42 T; with measured X 9907 still on time. 874+38 IRQ injections PASS (82 in the entry
+  DI span, <= 120 T after 8F92, lost; an OUT within one tick of an IRQ may move one ISR); controls
+  7/7; busy <= 11.3 ms, wait >= 15.1 ms. Full recordings (88,187 updates): an IRQ in every window,
+  76 lost (0.09 %), 27 slack < 32 T, free >= 14.6 ms. Diagnostic NEX (window only) boots, MD5
+  4f7fef40b4a50b7f1ba7c82d064e851b; no JNext here; hardware untested.
+- Never-read rule: window CALLs/IRQ pushes leave bytes only in the 4 below the copier's SP, which
+  9907's PUSH DE / PUSH HL overwrite first (checked by running them; 9907 = D5 E5 in all 88,187).
 
 ## Stage-2 loader foundation (build/README.md)
 - Original TZX/BASIC reaches first USR 24200; bootstrap MD5 9814983816aafb2b9efd99344dd8c221.
@@ -178,14 +188,17 @@ Workflow: Inferno6.rzx --quick 2000; six own original quicks at milestones; leve
 - Pages 78/122 pin exact source bytes; 75 consumes tiles; 76 completes whole-image B before
   clipping; masks 116/117, lookup 128–135; 77 keeps gated DMA/DDMA, no-blitter and CPU fallbacks
   with current AND pending guards (spans <64 bytes by CPU). DONE never enables display.
-- Hooks 8F7C/8F92/959B/96A1 preserve the original CALL stack and LD H,C1; page 68 owns
-  state/log/stack. Sampled maxima: 21 calls, 58 chunks, 56 patterns, 64 old+new union.
+- Hooks 8F7C/8F92/959B/96A1 keep the CALL stack and LD H,C1; page 68 owns state/log/stack.
 
 ## Stage-1 results
 Approved preview/model/contact-sheet hashes and recipes: specnext design/manifest.json and
 build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 
 ## Lessons
+- [local: Inferno copier window] A replay cannot follow the code that produces it when the first
+  event is due sooner than that code takes: interleave (lockstep); defer only what the tail can't fit.
+- [local: Inferno IRQ in a timed window] The IM2 JR at FFFF reads its offset from 0000: the slot-0
+  page owns the IRQ; count the original's no-op ISR (T, M1) rather than lose it under DI.
 - [local: Inferno pacing] Find where the frame is paced before setting a hook budget; here the
   limiter is inside the copier, which also plays the beeper. Prove immutability on full recordings.
 - [local: Inferno runtime attribution] Retain simultaneous per-update totals; address/row bookkeeping
@@ -247,18 +260,16 @@ build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 ## Friction
 - retries: [local: Inferno timing reconciliation] Require one timing row per completed hook and
   reconcile component sums; an empty timing list must not look like successful profiling.
-- environment: [local: Inferno source jobs] Restored archived work only into absent work/, merged both mains
-  preserving Inferno status/process guidance; measured shared adapter spans instead of new DMA code.
-- reuse: [local: Inferno shared DMA] Reused upstream library/model/selfchecks; merged remote 6aa2992
-  after its concurrent main refresh, retaining upstream tests and the packet labels needed here.
-  No other game's output changed. New game/reference data stays in specnext.
+- environment: [local: Inferno Windows checkout] No JNext/SD image here; doccheck counts CRLF bytes.
+- reuse: [local: Inferno shared DMA] Upstream DMA library/model/selfchecks reused; data in specnext.
 - reuse: [tool tools/probes/rzx_census.py] Extended the existing census with bounded point captures;
   no parallel game tracer. Existing flags/output are preserved when capture is not requested.
 - retries: [tool nexclash/inferno.py] Pulse emulation caught canonical EAR state; complete IRQ
   tracing caught the truncated ISR test. Actor hooks now replace one complete lookup instruction.
 - hand-rolled: [local: Inferno verification] Uses SkoolKit's original ROM/pulse loader and native
   RZX source; per-engine hook/log/model comparisons remain in the engine, not a parallel toolkit.
-- scratch: [local: Inferno probes] Preserve structured checks/scans/builds; insertion scripts stay local.
+- scratch: [local: Inferno probes] Checks/builds stay in inferno.py; one-off probes (pacing, OUT,
+  window timeline) live in specnext build/copier_window/, edit scripts stay local.
 
 ## Technique use
 - optimise.pattern-cache: helped: full-content census finds early live candidates; runtime snapshots,
@@ -273,17 +284,14 @@ build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 - detect.buffer-layout-producer: corrected: visible colour checks distinguish black-masked stale bitmap data.
 
 ## Stage log
+- 2026-11-07 (claude/inferno-copier-window-m2): copier window milestone 2: OUT replay at original T
+  and pad to the original 9907 time on CTC ch 3, IRQs in the window compensated (R, T); six-level
+  model, injection and controls PASS; full-recording timeline; diagnostic NEX boot checks PASS.
 - 2026-11-07 (claude/inferno-copier-window): measured original pacing and copier sound over all
   six full recordings; translated copier head (page 80) exact on 1,854 states, controls 3/3.
   Existing pause/owned/job checks and assembler check PASS. Not installed; no pad; no sprite NEX.
-- 2026-11-07: restored absent work/ from the published archive; both mains already incorporated
-  (nexclash main 03e0579). Profiled L1/L4/L6, bounded exact rows once, retained byte/bitmap
-  controls and added RAM/store-end relocation cases. Six own-original quicks PASS (12,000 frames,
-  13,194 exact validations); new warm maxima L1 14.907, L2 13.380, L3 10.548, L4 14.470, L5 9.791, L6 13.245 ms.
-  No total timing PASS (L5 subtotal UNPROVED, others FAIL). Initialization/ownership/fallback/shop PASS. Runtime driver/UI open; no sprite NEX.
-- 2026-11-07: stage 2 continued: checked initialization pause/R/caller clocks, owned high-RAM
-  store/dispatch and direct exact validator; six quick milestone and timing in build/loading_owned.md.
-  Main refreshed; archived work restored only into absent work/. No sprite build; runtime budget open.
+- 2026-11-07: profiled/bounded exact rows (warm max 9.8-14.9 ms, timing FAIL); initialization
+  pause/R, owned high-RAM store/dispatch; six quicks PASS (build/loading_owned.md). No sprite NEX.
 - 2026-11-05..07: stage-2 checkpoints (codex/inferno): bank loader, pulse continuation, capture,
   textmap scenery, frame/modal/queue, actor packing, B fill, gated transfers, pinned sources,
   high-SRAM DDMA. Six quicks/shop/component checks PASS at each; cold and total timing FAIL; no
