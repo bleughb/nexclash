@@ -43,6 +43,8 @@ FRAME_T, LINE_T, LINES = 69888, 224, 312
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', 'abu_simbel_colours.json')
+ENHANCED = os.path.join(_HERE, '..', 'docs', 'profiles', 'abu_simbel_enhanced.json')   # the .nxc's Enhanced set
+ENGLISH = os.path.join(_HERE, '..', 'docs', 'profiles', 'abu_simbel_english.json')     # the .nxc's English set
 
 
 def _profile_path():
@@ -859,6 +861,77 @@ def recolour(nex, cmap):
     return out, info
 
 
+def enhanced(nex):
+    """The Enhanced colour set (the .nxc's colour set, off by default): the sprite build recoloured with
+    docs/profiles/abu_simbel_enhanced.json, the Spec256 colours approved 2026-11-03. Bank 14 only. -> (nex, info)"""
+    return recolour(nex, load_colours(ENHANCED))
+
+
+# ---------------------------------------------------------------------------------------------
+# English language set (docs/profiles/abu_simbel_english.json; English text: NextTang)
+# ---------------------------------------------------------------------------------------------
+
+def _scr(y, c):
+    return 0x4000 | (y & 0xC0) << 5 | (y & 7) << 8 | (y & 0x38) << 2 | c
+
+
+def english_edits(mem, path=ENGLISH):
+    """The English set's bytes on the snapshot's 64K memory -> ({address: byte}, report).
+    Each rule's Spanish text is found in RAM from 0x5B00 as often as the set says, and its English (same length)
+    written over it. A line of it already on the snapshot's screen (a whole string, or each 32-character line of a
+    longer one) is drawn again from the game's own font, as the game printed it, so the first menu reads English
+    before the game prints it again."""
+    d = json.load(open(path))
+    font = int(d['font'], 16)
+    if mem[0x5C36] | mem[0x5C37] << 8 != font:
+        raise ValueError('CHARS is not the set\'s font 0x%04X' % font)
+    gl = lambda code, r: mem[font + code * 8 + r]
+    ram = bytes(mem[0x5B00:0x10000])
+    edits, rep = {}, {'text': [], 'screen': []}
+    for o, n, cnt in d['rules']:
+        o, n = o.encode('ascii'), n.encode('ascii')
+        if len(o) != len(n):
+            raise ValueError('rule %r changes the length' % o)
+        at = [0x5B00 + i for i in range(len(ram)) if ram.startswith(o, i)]
+        if len(at) != cnt:
+            raise ValueError('rule %r: found %d times, the set says %d' % (o, len(at), cnt))
+        for a in at:
+            for i, b in enumerate(n):
+                if mem[a + i] != b:
+                    edits[a + i] = b
+        rep['text'].append((at[0], len(o)))
+        lines = [(o[s:s + 32], n[s:s + 32]) for s in range(0, len(o), 32)] if len(o) > 32 else [(o, n)]
+        for lo, ln in lines:
+            if not any(gl(c, r) for c in lo for r in range(8)):
+                continue
+            for y in range(192 - 7):
+                for col in range(32 - len(lo) + 1):
+                    if all(mem[_scr(y + r, col + i)] == gl(c, r) for i, c in enumerate(lo) for r in range(8)):
+                        rep['screen'].append((lo.decode(), y, col))
+                        for i, c in enumerate(ln):
+                            for r in range(8):
+                                if mem[_scr(y + r, col + i)] != gl(c, r):
+                                    edits[_scr(y + r, col + i)] = gl(c, r)
+    return edits, rep
+
+
+def english(nex, mem, path=ENGLISH):
+    """A build (sprite or Enhanced) with the English set: text bytes in banks 5, 2 and 0 only. Every byte it
+    changes must still be the game's own in the build, so no hook site is touched. -> (nex, info)"""
+    from .recolour import banks, splice
+    edits, rep = english_edits(mem, path)
+    have = banks(nex)
+    new = {k: bytearray(have[k]) for k in (5, 2, 0)}
+    for a, v in edits.items():
+        k = {1: 5, 2: 2, 3: 0}[a >> 14]
+        if new[k][a & 0x3FFF] != mem[a]:
+            raise ValueError('0x%04X is not the game\'s byte in this build (a hook site?)' % a)
+        new[k][a & 0x3FFF] = v
+    out, changed = splice(nex, {k: bytes(v) for k, v in new.items()})
+    return out, {'bytes': len(edits), 'rules': len(rep['text']), 'redrawn on screen': [x[0] for x in rep['screen']],
+                 'banks changed': changed}
+
+
 def capture(rzx_paths):
     """Images the recordings plot, with the first ink: {(group, graphic): ink}."""
     from . import rzx as RZ
@@ -928,6 +1001,18 @@ def auto(a, z80, name, out, say):
     say('Sprites   : %s  %s  boot %s' % (os.path.basename(spr), md5(spr),
                                          'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200]))
     ok = not bad and not bad2
+    from skoolkit.snapshot import Snapshot
+    mem = Snapshot.get(z80).memory
+    base = open(spr, 'rb').read()
+    enh, info = enhanced(base)
+    sets = [('Enhanced', name + '_enhanced.nex', enh, info)]
+    for label, fn, nex in (('English', name + '_english.nex', base), ('Eng + Enh', name + '_english_enhanced.nex', enh)):
+        b, info = english(nex, mem)
+        sets.append((label, fn, b, info))
+    for label, fn, b, info in sets:
+        with open(os.path.join(out, fn), 'wb') as f:
+            f.write(b)
+        say('%-10s: %s  %s  %s' % (label, fn, hashlib.md5(b).hexdigest(), info))
     states = []
     for r in list(a.rzx or []):
         v = verify(patch, r, stop=getattr(a, 'quick', None), collect=2)

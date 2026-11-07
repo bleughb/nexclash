@@ -1,6 +1,6 @@
 {
  "name": "abu_simbel",
- "order": 27,
+ "order": 205,
  "game": "Abu Simbel Profanation",
  "doc": "abu_simbel.md",
  "engine": "abu_simbel",
@@ -62,6 +62,12 @@
     "name": "c_r40.rzx",
     "md5": "44700a0525e54f94d7a2fa842b733120",
     "path": "abu_simbel/c_r40.rzx"
+   },
+   {
+    "name": "abu_simbel.pok",
+    "md5": "b7b419c0beebc02d18d6fec8e2520b60",
+    "path": "abu_simbel/abu_simbel.pok",
+    "note": "not a recording: the three archive cheats (Immunity B0EF, Infinite lives BA44, No enemies B335), each tested alone on this release, for the .nxc"
    }
   ]
  },
@@ -73,6 +79,8 @@
  ],
  "data": [
   "docs/profiles/abu_simbel.json",
+  "docs/profiles/abu_simbel_enhanced.json",
+  "docs/profiles/abu_simbel_english.json",
   "asm/abu_simbel_hooks.asm"
  ],
  "shared_data": [
@@ -115,17 +123,29 @@
   },
   "sprites": {
    "file": "abu_simbel_sprites.nex",
-   "md5": "ff1868c39ac40268f5bb5b5ec5bb2498"
+   "md5": "c2dd86f174c55a4ae9155abb90689d8b"
+  },
+  "enhanced": {
+   "file": "abu_simbel_enhanced.nex",
+   "md5": "b45603707d1f71bb7704436dbe0c3169"
+  },
+  "english": {
+   "file": "abu_simbel_english.nex",
+   "md5": "2e3aa22510d9a925a5b0800aad3f26c9"
+  },
+  "english_enhanced": {
+   "file": "abu_simbel_english_enhanced.nex",
+   "md5": "053806e52684ce68b89a020a848e7196"
   }
  },
  "repro": [],
  "status": {
   "title": "Abu Simbel Profanation",
   "engine_col": "abu_simbel (abu_simbel.md)",
-  "build": "abu_simbel_sprites.nex ff1868c3 (v1.0: player and enemies sprites in the game's ink; plotter whole at 28 MHz into page 31; pace ORIGINAL; whole Sinclair alt ROM; Spec256 Enhanced and English sets, three cheats in the .nxc)",
+  "build": "abu_simbel_sprites.nex c2dd86f1 (v1.0, as published in nxc 1.0: player and enemies sprites in the game's ink; plotter whole at 28 MHz into page 31; pace ORIGINAL; whole Sinclair alt ROM; Enhanced abu_simbel_enhanced.nex b4560370 (Spec256 colours approved 2026-11-03), English abu_simbel_english.nex 2e3aa225, both 053806e5; three cheats in the .nxc)",
   "software": "replay IDENTICAL with R on 10 recordings (75,427 plots); unit PASS (4-clock sites, positions, depth, guard); 18 negatives detected; JNext pace -0.7 to -1.7 %; real loader",
   "hardware": "untested",
-  "next": "owner review of v1.0; hardware test (EAR bit 6)"
+  "next": "hardware test (EAR bit 6); owner play of v1.0"
  },
  "checks": [
   "asm2profile:abu_simbel"
@@ -179,33 +199,46 @@
  ],
  "checked": {
   "deps": {
-   "asm/altered_beast_hooks.asm": "dc4dd517246b27b1",
-   "docs/profiles/altered_beast.json": "df2950658eed9da7",
-   "nexclash.py": "71dc4c592918bff8",
-   "nexclash/altered_beast.py": "2f49613b151580f7",
+   "asm/abu_simbel_hooks.asm": "c7321e0ce2f444c7",
+   "asm/lib/hlib_iff.asm": "725067425cd27122",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/abu_simbel.json": "3bffa87190cf6b3a",
+   "docs/profiles/abu_simbel_english.json": "27f3a29d17e5e2ae",
+   "docs/profiles/abu_simbel_enhanced.json": "6f1b9e43021fe7c0",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/abu_simbel.py": "5f4f62def145356e",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "29b12c4b09c7a1f5",
-   "nexclash/nextboot.py": "44c08db48a1bf32d",
-   "nexclash/rainbow.py": "e247f602b7cecb7b",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "153b46cedb1a84a7",
+   "nexclash/hooklib.py": "aee2b8793e4227d7",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "038b2ebf518eca31",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "37b0e84f39f58243",
-   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "2409732095c0bfd3",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "a6ff9eef9ca737b3",
-   "skoolkit": "10.1"
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "99f677e899a1d9be",
+   "rom": "sinclair"
   },
-  "date": "2026-11-02"
+  "date": "2026-11-07"
  },
  "results": [
   {
    "application": "abu_simbel.screen-readers",
    "check": "state.rzx-differential",
    "status": "pass",
-   "build": "ff1868c3",
+   "build": "c2dd86f1",
    "scope": "10 recordings, 69,928 frames, 75,427 plots + 87 clears, registers with R; Enhanced table on 3 (18,609 frames); 18 negatives; 4-clock every-site matrix; scripted keys and attract, pokes in 7; no human recording; no hardware",
    "evidence": "games/abu_simbel.md \"Results\""
   },
@@ -213,7 +246,7 @@
    "application": "abu_simbel.colour-map",
    "check": "state.rzx-differential",
    "status": "pass",
-   "build": "ff1868c3",
+   "build": "c2dd86f1",
    "scope": "as above; Enhanced = the Spec256 table approved 2026-11-03, byte for byte",
    "evidence": "games/abu_simbel.md \"Results\""
   },
@@ -221,9 +254,45 @@
    "application": "abu_simbel.pace-limiter",
    "check": "time.pace",
    "status": "pass",
-   "build": "ff1868c3",
+   "build": "c2dd86f1",
    "scope": "JNext 1.1.104, nexclash.pace vs the original .z80 (RND-seed fixture, lockstep), rooms 1/16/32 x seeds + attract, base / Enhanced / English: 19 runs -0.73 to -1.70 %, quiet thirds to -2.08 %; slowest 20-update window +0.17 %; no hardware",
    "evidence": "games/abu_simbel.md \"Results\""
   }
- ]
+ ],
+ "verified": {
+  "deps": {
+   "asm/abu_simbel_hooks.asm": "c7321e0ce2f444c7",
+   "asm/lib/hlib_iff.asm": "725067425cd27122",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/abu_simbel.json": "3bffa87190cf6b3a",
+   "docs/profiles/abu_simbel_english.json": "27f3a29d17e5e2ae",
+   "docs/profiles/abu_simbel_enhanced.json": "6f1b9e43021fe7c0",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/abu_simbel.py": "5f4f62def145356e",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "153b46cedb1a84a7",
+   "nexclash/hooklib.py": "aee2b8793e4227d7",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "038b2ebf518eca31",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "99f677e899a1d9be",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-07"
+ }
 }

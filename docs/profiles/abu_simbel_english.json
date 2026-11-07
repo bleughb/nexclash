@@ -1,0 +1,79 @@
+{
+ "note": "English text set (the .nxc's Language: English). English text: NextTang. Each rule: the game's Spanish text, its English of the same length, the times this snapshot holds it. Lines already on the snapshot's screen are drawn again from the game's font at 'font'. 'DINAMIC PRESENTA......' is printed before the menu and is no longer in this snapshot, so it has no rule here.",
+ "text_by": "NextTang",
+ "language": "en",
+ "game_language": "es",
+ "font": "9ECE",
+ "rules": [
+  [
+   "CODIGO ?",
+   "CODE ?  ",
+   1
+  ],
+  [
+   "ABUSIMBEL COPYRIGHT DINAMIC SOFT    PROGRAMA REALIZADO POR :              VICTOR  RUIZ.                  HAN COLABORADO :              FLORENTINO PERTREJO,             SANTIAGO  MORGA B.                 Y  SNATCHO.                 DESCUBRE EL SECRETO         DE ABU SIMBEL PARA LIBERAR     A JOHNY  JONES  DEL MALEFICIO.Y RECUERDA LAS  DOS LEYENDAS QUESOBRE EL TEMPLO DE ABUSIMBEL NOSDEJARON LOS ANTIGUOS LIBROS....  ",
+   "ABUSIMBEL COPYRIGHT DINAMIC SOFT        PROGRAMMED BY :                   VICTOR  RUIZ.                WITH THE HELP OF :              FLORENTINO PERTREJO,             SANTIAGO  MORGA B.               AND  SNATCHO.                DISCOVER THE SECRET            OF ABU SIMBEL TO FREE       JOHNY  JONES  FROM THE CURSE.    AND REMEMBER THE TWO LEGENDS  THE ANCIENT BOOKS LEFT US ABOUT   THE TEMPLE OF ABU SIMBEL....   ",
+   1
+  ],
+  [
+   "...ESPERA,CALCULA Y",
+   "...WAIT, RECKON AND",
+   1
+  ],
+  [
+   "PIENSA ANTES DE ACTUAR...",
+   "THINK BEFORE YOU ACT...  ",
+   1
+  ],
+  [
+   "PROVERBIOS EGIPCIOS",
+   "EGYPTIAN PROVERBS  ",
+   1
+  ],
+  [
+   "CAP.XXII  ",
+   "CH.XXII   ",
+   1
+  ],
+  [
+   "...EL DIAMANTE TE MOSTRARA",
+   "...THE DIAMOND SHALL SHOW ",
+   1
+  ],
+  [
+   "EL CAMINO...",
+   "THE WAY...  ",
+   1
+  ],
+  [
+   "TEMPLOS PERDIDOS",
+   "LOST TEMPLES    ",
+   1
+  ],
+  [
+   "CAP.IX PG.6  ",
+   "CH.IX PG.6   ",
+   1
+  ],
+  [
+   "  PANTALLAS - 00   VIDAS - 10   ",
+   "  SCREENS   - 00   LIVES - 10   ",
+   1
+  ],
+  [
+   "EL SECRETO ES : CONTINUARA EN ICE GLUB AUNQUE NUNCA SE SABE...",
+   "THE SECRET IS : TO BE CONTINUED IN ICE GLUB, BUT WHO KNOWS... ",
+   1
+  ],
+  [
+   "3-TECLADO",
+   "3-KEYS   ",
+   1
+  ],
+  [
+   "4-INSTRUCCIONES",
+   "4-INSTRUCTIONS ",
+   1
+  ]
+ ]
+}

@@ -1,9 +1,9 @@
 # Abu Simbel Profanation (Dinamic 1985, 48K) - engine `abu_simbel` (pilot game: unattended, no hardware)
 
 ## Next session
-Stage: 4 (owner review of v1.0, hardware)    State: v1.0 built and proven in the simulator and JNext 2026-11-07; never run on a Next.
+Stage: 4 (hardware)    State: v1.0 published as nxc 1.0 (2026-11-07), proven in the simulator and JNext; never run on a Next.
 Inputs: the run folder (abu_simbel.z80 md5 2909c2f0, recordings rzx/*.rzx, pace fixtures v10/pace/), handoff HANDOFF-V1.0.md.
-Start with: the owner's play of out/abu_simbel_v1.0-menu.nex, then the hardware checklist below.
+Start with: the hardware checklist below (EAR bit 6, 28 MHz pace).
 Read: "v1.0" first (it replaces the design below where they differ). Open: "Open".
 
 Techniques: `detect.gameplay-screen-readers`, `patch.runtime-colour-map`, `patch.restore-speed`, `patch.preserve-r`,
@@ -32,7 +32,13 @@ the game prints through RST 10 and beeps through the ROM. OPT1 top bank 47: fits
 | Output | MD5 |
 |---|---|
 | abu_simbel.nex (plain) | 82c1349ae5d34e68a67a7aabc68e039f |
-| abu_simbel_sprites.nex (v1.0) | ff1868c39ac40268f5bb5b5ec5bb2498 |
+| abu_simbel_sprites.nex (v1.0) | c2dd86f174c55a4ae9155abb90689d8b |
+| abu_simbel_enhanced.nex | b45603707d1f71bb7704436dbe0c3169 |
+| abu_simbel_english.nex | 2e3aa22510d9a925a5b0800aad3f26c9 |
+| abu_simbel_english_enhanced.nex | 053806e52684ce68b89a020a848e7196 |
+The sprite build and the three sets are the bare builds of the published nxc 1.0 (`nxc.py --bare`, nothing chosen /
+Enhanced / English / both), byte for byte. With the three cheats as well (abu_simbel.pok, the record's reference input)
+the all-options build is fda9c1b267aeb6220ad0bb8032e54895, also the published one.
 Replay (auto, 10 recordings, 69,928 frames): player 26,065, enemies 49,362, clears 87, 6,367,816 sprite pixels, CMP_R
 registers, IDENTICAL; the model pace (28 MHz = K/16) -0.18 to -0.55 % per recording. Enhanced table on attract, gameover,
 c_r32: IDENTICAL. Unit PASS: 630 positions, 78 graphics, 48 inks, depth 12, guard 4, every-site matrix 48 cases; 18
@@ -100,6 +106,8 @@ v1.0: two Failure lookup rows for card patch.pace-limiter (K-window overhead as 
 - [local: the picture check found the depth rule] Verify passed with figures showing over water and ice, because its model was mine; only frames beside the original showed the balls should sink. The rule then went into the model and the negatives.
 - [local: dead registers pass a compare at the return] A stand-in that left C wrong passed at the plot's return, as the next row reloads it; compare at the stand-in.
 - [local: a negative control is only as good as its recording] The depth controls were missed on room 1 and detected on attract, which reaches solid cells.
+- [local: outputs moved after the last tuning] The record and notes kept the K 111 build's MD5 after K went to 100; rebuilding
+  against the published patch found it. Rebuild from the record after the final change, not before.
 
 ## Friction
 - reuse: [local: nexclash.pace and hooklib.every_site used as they are; the verifier's Next model follows hooklib.NextModel]
@@ -114,8 +122,14 @@ v1.0: two Failure lookup rows for card patch.pace-limiter (K-window overhead as 
 ## Stage log
 2026-11-03 stages 0-3, about 50 min wall, one session, no user rounds.
 
+## Enhanced and English sets (in the engine since nxc 1.0)
+`auto` writes both from the sprite build: `enhanced()` recolours it with docs/profiles/abu_simbel_enhanced.json (the
+Spec256 colours approved 2026-11-03, from Spectrum Magic's older Spec256 conversion, painter not established; bank 14
+only); `english()` writes docs/profiles/abu_simbel_english.json's text (English text: NextTang) into banks 5, 2 and 0,
+refusing any byte that is not the game's own in the build, so no hook site can be touched. The two are disjoint.
+
 ## English language set (2026-11-03, owner's request)
-Rules from NextTang's patch for the .256, applied to this snapshot's bytes (work in run folder lang/mk_en.py): 14 of 15 rules, 465 bytes, banks 5, 2, 0. Every string keeps its length, so nothing had to be cut.
+Rules from NextTang's patch for the .256, applied to this snapshot's bytes (`english_edits`; first in the run folder's lang/mk_en.py, the same 465 bytes): 14 of 15 rules, 465 bytes, banks 5, 2, 0. Every string keeps its length, so nothing had to be cut.
 "DINAMIC PRESENTA......" is not in this snapshot: in the .256 it sits at 0x5D1D, over which this file's loader has already run, and it is printed before the menu, so nothing to change.
 `font-lines`: the .256 stops during the intro scroll; this snapshot stops at the menu, so no scrolled line is on screen. `redraw`: 3-TECLADO and 4-INSTRUCCIONES are on the snapshot's screen and the game does not print them again until the menu comes round; both drawn from the game's font (0x9ECE) at their places, row 9 and 11, column 9. No copy of those lines exists in RAM, so nothing is restored over them.
 Enhanced colours: bank 14 only, disjoint. All four combinations byte-exact through `apply` and, by MD5 of /tmp/NEXCLASH.NEX, through the loader in JNext.
