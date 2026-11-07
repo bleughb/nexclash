@@ -91,17 +91,38 @@ User run confirmation is recorded above; no particular emulator/hardware platfor
 checklist pass is claimed. Pre-merge affected-game checking remains the maintainer
 workflow; no release or merge is part of this run.
 
-## Lesson candidates
-- Removed bitmap differences must be tracked at each actual store, including diamond overwrites;
-  speculative plot-entry/end updates hid errors. Collectable virtual reads have350 unit cases.
-- Full replay exposed19 IFF-enabled sprite updates: entry state is now explicitly saved/restored.
-- Per-event overlay classes caused simpool's type cache to retain closures until an8GiB OOM kill.
-  Stable overlay types fixed the leak; final replay stayed around360MB for the environment.
-  Kept local under the current documentation workflow. Earlier interrupted/failed runs received no stamp.
-- Tool-managed sessions were required on this host; a session reset lost an earlier partial run.
-  Final acceptance retained stderr and completed. No new hardware/platform claim was inferred.
+## Interrupt safety (2026-11-07, shared engine refactor)
+- e_isr read IFF with one `LD A,I`; an interrupt accepted at its end reads as off, and the exit then left
+  interrupts off (found by `hooklib.iff_audit`). Now `HLIB_IFF_DI` (asm/lib/hlib_iff.asm): read again only
+  after an off. 5 bytes more in the alt ROM span (rom_end 0x3CAF, below 0x3D00). Nothing else changed.
+- Sprites build a6586b5e (was 1ea61f0b); plain f8f213e5 unchanged. Verify: the record's full replay (results in
+  the record's stamp). JNext soak, v2.09 card, 5 emulated min, Kempston profile, seed 1: interrupts 14,995 in
+  both builds (1ea61f0b and a6586b5e), original 15,000; no freeze.
+
+## Lessons
+- [tool hooklib.iff_audit] The one `LD A,I` (e_isr) was trusted after a single read; the shared audit now
+  fails any such read in asm/ (demonstrated: it flagged this file, selftest --tools).
+- [local: verifier detail] Removed bitmap differences must be tracked at each actual store, including diamond
+  overwrites; speculative plot-entry/end updates hid errors. Collectable virtual reads have 350 unit cases.
+- [card patch.iff-safe-read §Recognise] Full replay exposed 19 IFF-enabled sprite updates: the entry state is
+  explicitly saved and restored (observed, RZX).
+- [local: this verifier's overlay classes] Per-event overlay classes kept closures alive until an 8 GiB OOM
+  kill; stable overlay types fixed the leak (final replay about 360 MB).
+- [local: host session handling] Tool-managed sessions were required on this host; a session reset lost an
+  earlier partial run. No hardware or platform claim was inferred.
+
+## Friction
+- reuse: [tool hooklib.iff_audit] the audit and the IFF macros are shared; this engine only includes them
+- retries: [none: the fix assembled and verified first time]
+- environment: [none: the usual JNext card and reference folder]
+- hand-rolled: [local: the soak profile (Kempston, S to start) was written for the measurement, kept in the PR]
+- scratch: [none: no scratch scripts]
+
+## Technique use
+- patch.iff-safe-read: helped: its audit found the single read and its macro replaced it.
 
 ## Stage log
+- 2026-11-07: shared engine refactor (interrupt safety): e_isr's IFF read twice, record and lessons migrated.
 - 2026-10-26: stage3 continuation, roughly1hour/150tool calls,0new user rounds; recovered interrupted
   acceptance, fixed verifier memory growth and rare enabled-IFF entry, full acceptance PASS,
   published draft PRs and reconciled concurrent main changes. Earlier stage1/2 approved by continue.

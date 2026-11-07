@@ -1500,7 +1500,7 @@ def negative_patches(patch, states):
         out.append(('IY corruption in interruptible hook', bp, run_irq))
     bp = copy.copy(patch)
     pg = bytearray(patch.page)
-    di = patch.syms['e_isr'] - 0x2000 + 3
+    di = patch.syms['e_isr'] - 0x2000 + 8      # after PUSH AF, LD A,I, JP PE, LD A,I (HLIB_IFF_DI)
     assert pg[di] == 0xF3
     pg[di] = 0  # remove the interrupt guard, keeping this broken patch's display tables
     bp.page = bytes(pg)
