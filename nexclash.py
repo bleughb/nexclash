@@ -198,8 +198,8 @@ def cmd_auto(a):
         sys.exit('Error: --tape given, but no engine that builds from tapes recognises %s (nexclash/tapeset.py)' % z80)
     if eng_mod is not None:
         ok = eng_mod.auto(a, z80, name, out, say)
-        _finish(out, name, rep)
-        return ok
+        finished = _finish(out, name, rep)
+        return finished and ok is not False
     if s.machine != '48K' and len(s.ram()) > 49152:
         say('128K snapshot: sprite patching supports 48K games only; plain conversion only.')
     prof = identify(s.memory[0:65536])
@@ -317,7 +317,7 @@ def cmd_auto(a):
             say('RESULT    : sprite build FAILED verification - do not use; send this folder to the agent')
     else:
         say('Sprites   : not built - unknown engine. Add it with Claude: python nexclash.py new %s' % os.path.basename(z80))
-    _finish(out, name, rep)
+    return _finish(out, name, rep)
 
 
 def _auto_dizzy5(a, s, z80, name, out, rzxs, say, rep, dec=None):
@@ -418,7 +418,7 @@ def _auto_dizzy5(a, s, z80, name, out, rzxs, say, rep, dec=None):
             say('            example: %s' % (e,))
     if not ok:
         say('RESULT    : sprite build FAILED verification - do not use; send this folder to the agent')
-    _finish(out, name, rep)
+    return _finish(out, name, rep)
 
 
 def _boot(say, src, nex, patch, conv):
@@ -582,6 +582,8 @@ def _finish(out, name, rep):
     rep.append('title music unchanged. Problems: record an RZX (Fuse, autosave OFF) and send it.')
     open(os.path.join(out, name + '_report.txt'), 'w').write('\n'.join(rep) + '\n')
     print('Output    : %s' % out)
+    return not any('FAILED' in line or 'MISMATCH' in line for line in rep) and not any(
+        c['status'] == 'fail' for c in _CHECKS)
 
 
 def main():
@@ -677,8 +679,10 @@ def main():
         at = [int(x) for x in a.at.split(',')] if a.at else None
         print(preview.preview(a.z80, a.rzx, a.out, at, a.every, a.plot, buf, a.frames, a.keys, a.stop)[0])
     elif a.cmd == 'auto':
-        cmd_auto(a)
+        if cmd_auto(a) is False:
+            return 1
         nxcout.package(a)
+        return 0
     elif a.cmd in ('patch', 'new', 'contribute'):
         from nexclash import userflow as U
         sys.exit(U.cmd_patch(a, cmd_auto) if a.cmd == 'patch' else U.cmd_new(a, cmd_auto) if a.cmd == 'new'
@@ -706,7 +710,7 @@ def main():
         a.no_record, a.out, a.quick = True, None, None
         a.start = a.script = a.keys = None
         a.strategy = getattr(a, 'strategy', None)
-        cmd_auto(a)
+        return 1 if cmd_auto(a) is False else 0
     elif a.cmd == 'recolour':
         from nexclash import recolour
         try:
@@ -730,4 +734,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

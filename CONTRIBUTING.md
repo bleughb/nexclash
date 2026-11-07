@@ -22,7 +22,9 @@
 
 ## What happens next (maintainers)
 `python tools/merge_contribution.py nexclash_contribution_MyGame.zip` puts the files on a new
-branch and lists them (the report and the .nxc go to contrib_reports/, outside git). The maintainers review against CLAUDE.md's rules, put their own copy of
+branch after checking a clean checkout, archive hashes and original-file hashes (the report and
+the .nxc go to contrib_reports/, outside git). Conflicts with newer files are refused before writes;
+use a PR to merge them. Legacy zips without original hashes can add files, but cannot replace files. The maintainers review against CLAUDE.md's rules, put their own copy of
 the game in the private reference repo (the game's record, docs/records/<game>.json, names it),
 re-verify it (`selftest.py --game <game> --verify --stamp`), run `selftest.py --affected --verify
 --stamp` (every other game the change reaches; nothing else) and merge. The game is in the next
@@ -38,7 +40,8 @@ starting commit. Deletions and renames are refused: submit those through a pull 
 the printed file list before uploading.
 
 An unpacked release has no Git history: preserve the entire modified package between sessions;
-its manifest identifies changed files. Do not run Git refresh or commit commands in it.
+its manifest identifies changed files and their originals. Do not run Git refresh or commit commands in it.
+Contribution metadata records the source baseline and original hashes; retain them for safe import.
 
 For your new game, place the snapshot and recordings in a local reference directory outside the
 checkout, using the paths in the record's `inputs.snapshot.path` and `inputs.recordings[].path`.
