@@ -97,6 +97,14 @@
     "sprites": "fb77af62c5ce975802c354dd8b1943ee"
    }
   },
+  "c1a76349d08289810323bae0e62a9102": {
+   "game": "Green Beret",
+   "doc": "green_beret.md",
+   "nex": {
+    "plain": "f4d4e3d43e47102af66fb3a7e6e022ab",
+    "sprites": "d982d5ae83e2d54e3fc750006322c25e"
+   }
+  },
   "fdab5fb61b2cb01ce38edcfa85ea9e80": {
    "game": "Gryzor",
    "doc": "gryzor.md",
@@ -197,6 +205,17 @@
     "plain": "e4d954de899563af241cb8db84114654",
     "sprites": "697ee0152f6a2f5d92cdc17bc51c674d",
     "enhanced": "ebe5cc7225b41c3d04f073947f7b6a98"
+   }
+  },
+  "4dd5e967592f0eabd20f113cb64f740e": {
+   "game": "Nodes of Yesod",
+   "doc": "nodes_of_yesod.md",
+   "nex": {
+    "plain": "b578764fc922295ec75a6358d762b397",
+    "sprites": "81db9019df732c102e0f98aa8eb84227",
+    "enhanced": "698e791437ff07dc6c9b8a59d6f44bd6",
+    "backdrops": "138662b51b2b78cb73393e27ff81654f",
+    "enhanced_backdrops": "1a1987d524fd539bf02a16d6b0bbf3aa"
    }
   },
   "1ff279754d0730e503816199ac6976f3": {
