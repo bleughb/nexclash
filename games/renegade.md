@@ -98,7 +98,18 @@ Never run on hardware. Upload timing, 28 MHz hooks with the AY handler inside th
 ## Hardware checklist
 Loading screen; a key or 5 seconds; menu; 1. Music plays and keeps time. Timer counts seconds at the plain build's rate. Figures keep their colours across scenery, with outlines. Each trainer. Game over, menu, restart. Enhanced from the menu: all four levels, no half-painted figures.
 
+## Speed restored (2026-11-07, shared engine refactor, goal 2)
+- commit and hideall latch the caller's CPU speed after mapping the state page (HLIB_SPEED_IN, lib/hlib_speed.asm: 4
+  bytes of the game's stack, which the stubs already push on); leave writes it back before the slot-2 page instead of a
+  fixed NEXTREG 7,0. V_SPD = 0x4D1E. The verifier answers IN (0x253B) from its NextREG model (NextState.sel); the
+  "speed not restored" negative now removes leave's NEXTREG 7,A.
+- Sprites 93cb8bc9 -> 510cdd29, Enhanced 3a9ceaf9 -> 001b8f0c; plain unchanged. Replay: see the record's stamp
+  (4 recordings). JNext pace (600 updates keyed to 0x9332, seed 1, keys K L Q A SPACE): +0.48% before and after
+  (quiet +0.07%, busy +0.66 / +0.67%); interrupts 50.00 a second in all three, longest gap 20.3 ms.
+
 ## Lessons
+- [card patch.restore-speed §Use / do not use] A hook on the game's stack latches after its page switch (the latch
+  byte lives in that page); the stubs' pushes already make room for the macro's 4 bytes.
 - [local: time a build against the plain one on the game's own clock: a fast timer in JNext showed what the replays could not]
 - [local: the .pok in the archive names a release loosely: check each poke's site against the disassembly before importing it]
 - [local: the same .256 serves another release by matching graphics by bytes, then position]

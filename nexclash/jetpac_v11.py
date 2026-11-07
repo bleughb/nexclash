@@ -401,6 +401,7 @@ class NextState:
         self.attr = [[0, 0, 0, 0, 0] for _ in range(128)]
         self.pat = bytes(pats)
         self.events = []
+        self.sel = None                     # NextREG selected at 0x243B (the speed read takes NR 7)
 
     def nextreg(self, reg, val):
         self.nr[reg] = val
@@ -448,10 +449,18 @@ def _machine(Sim, mem, regs, ns, slot='o'):
 
     class Tr:
         def read_port(s, regs_, port):
+            if port == 0x253B and getattr(ns, 'sel', None) is not None:   # a NextREG read: NR 7 as the core
+                if ns.sel == 0x07:                                      # composes it (actual << 4 | programmed)
+                    sp = ns.nr.get(0x07, 0) & 3
+                    return sp << 4 | sp
+                return ns.nr.get(ns.sel, 0)
             ns.events.append(('in', port))
             return 0xFF
 
         def write_port(s, regs_, port, value, *x):
+            if port == 0x243B and hasattr(ns, 'sel'):                  # NextREG select
+                ns.sel = value
+                return
             ns.events.append(('out', port, value))
     sim.set_tracer(Tr())
     return sim
