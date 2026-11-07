@@ -123,7 +123,7 @@
   "title": "Abu Simbel Profanation",
   "engine_col": "abu_simbel (abu_simbel.md)",
   "build": "abu_simbel_sprites.nex ff1868c3 (v1.0: player and enemies sprites in the game's ink; plotter whole at 28 MHz into page 31; pace ORIGINAL; whole Sinclair alt ROM; Spec256 Enhanced and English sets, three cheats in the .nxc)",
-  "software": "replay IDENTICAL with R on 10 recordings (75,427 plots); unit PASS (4-clock sites, positions, depth, guard); 18 negatives detected; JNext pace +0.3 to +0.7 %; real loader",
+  "software": "replay IDENTICAL with R on 10 recordings (75,427 plots); unit PASS (4-clock sites, positions, depth, guard); 18 negatives detected; JNext pace -0.7 to -1.7 %; real loader",
   "hardware": "untested",
   "next": "owner review of v1.0; hardware test (EAR bit 6)"
  },
@@ -171,7 +171,7 @@
    "application": "abu_simbel.pace-limiter",
    "id": "patch.pace-limiter",
    "revision": 2,
-   "target": "plot = game-routine window x K_PLOT 111 (hlib_pace_waitk); the pattern is debt (+UNMEAS 96 sixteenths); interrupts off through the hook as through the original plot",
+   "target": "plot = game-routine window x K_PLOT 100 (hlib_pace_waitk; measured 110.6-111.6, set under it so the game is never slower); the pattern is debt (+UNMEAS 96 sixteenths); interrupts off through the hook as through the original plot",
    "phases": [
     "commit"
    ]
@@ -222,7 +222,7 @@
    "check": "time.pace",
    "status": "pass",
    "build": "ff1868c3",
-   "scope": "JNext 1.1.104, nexclash.pace vs the original .z80 (RND-seed fixture, lockstep), rooms 1/16/32 x seeds + attract, base / Enhanced / English: 25 runs +0.31 to +0.67 %; no hardware",
+   "scope": "JNext 1.1.104, nexclash.pace vs the original .z80 (RND-seed fixture, lockstep), rooms 1/16/32 x seeds + attract, base / Enhanced / English: 19 runs -0.73 to -1.70 %, quiet thirds to -2.08 %; slowest 20-update window +0.17 %; no hardware",
    "evidence": "games/abu_simbel.md \"Results\""
   }
  ]

@@ -18,8 +18,9 @@ written back). Sites: AD1D, B465 (plots), BD36, A361 (hides), DE98 EI -> NOP (an
 hook's restore of slot 2 would run the ROM ISR on page 31's sysvars); the old LDIR stand-ins and the attribute NOP are gone.
 The stack is in slot 3 (0x65xx), checked at every site.
 Libraries: HLIB_SPEED_IN/OUT, HLIB_R_IN/OUT + hlib_r_set (delta = R after - R before the plotter - 22), hlib_pace (full).
-Pace: the plot is a game-routine window x K_PLOT 111 (JNext: the original's plot time over the plotter's 28 MHz time, 110.6
-player / 111.6 enemy); the pattern work is debt (UNMEAS 96/16 lines: entry, exit, gaps and the window's own 28 MHz overhead
+Pace: the plot is a game-routine window x K_PLOT 100 (JNext measured the original's plot time over the plotter's 28 MHz
+time at 110.6 player / 111.6 enemy; at 111 the game ran +0.3 to +0.7 %, as the rest of the Next build runs about 0.4 % slower
+than the .z80 on a 48K machine; owner's rule 2026-11-07: never slower, so 100); the pattern work is debt (UNMEAS 96/16 lines: entry, exit, gaps and the window's own 28 MHz overhead
 x K, less the wait's rounding, +6 from JNext). Interrupts stay off through the hook, as through the original plot.
 Pace control: the original .z80 on a 48K machine, not the plain .nex: NextZXOS's ROM3 BEEP (the game's sound, ROM 0x03F8)
 runs 12% faster than Sinclair's, so the plain .nex is faster than the original in sound scenes. Fixture: RND's seed moved
@@ -37,8 +38,8 @@ registers, IDENTICAL; the model pace (28 MHz = K/16) -0.18 to -0.55 % per record
 c_r32: IDENTICAL. Unit PASS: 630 positions, 78 graphics, 48 inks, depth 12, guard 4, every-site matrix 48 cases; 18
 negatives caught (x/y off by one, ink ignored, depth both ways, slot 2/5/7 left mapped, screen not redirected, EI kept,
 R off by one, R in the hides, limiter never waits, speed forced to 3.5, HL clobbered, enemy index, no hide, wrong image).
-JNext pace (nexclash.pace vs the original .z80, lockstep): 25 runs, base / Enhanced / English, rooms 1, 16, 32, attract,
-+0.31 to +0.67 %; 26.11 card the same (+0.43 %). English builds stay in lockstep with the Spanish original.
+JNext pace (nexclash.pace vs the original .z80, lockstep), K 100: 19 runs, base / Enhanced / English, rooms 1, 16, 32,
+attract, -0.73 to -1.70 % (quiet thirds to -2.08 %, slowest 20-update window +0.17 % in attract); 26.11 card the same. English builds stay in lockstep with the Spanish original.
 Cheats (simulator, alone, 3 seeds): Immunity B0EF C3, Infinite lives BA44 00, No enemies B335 C9 (the archive's
 "Transform objects"); left out: BA4D (same as BA44), Lives (asks), Invulnerability (hangs in water), BA28 (unclear).
 
@@ -86,17 +87,26 @@ Enemies in all 44 rooms that have them (attract); room 33 has none. Player in 13
 
 ## Open
 Hardware: bit 6; speed; tearing. A figure whose erase was relied on by scenery: none seen. Spec256 set is the owner's to judge.
+v1.0: two Failure lookup rows for card patch.pace-limiter (K-window overhead as debt; the .z80 as control for ROM-beep games), deferred while the card is at its word budget. The real loader on the 26.11 card for this patch (its welcome screen needs other keys; JNext ran slowly on it).
+
 
 ## Lessons
-- [card: patch.pace-limiter] The plain .nex is not always the pace control: its ROM is NextZXOS's ROM3, whose BEEP ran 12%
+- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget (Failure lookup row)] The plain .nex is not always the pace control: its ROM is NextZXOS's ROM3, whose BEEP ran 12%
   faster than Sinclair's in JNext; a game that beeps through the ROM needs the original .z80 (48K machine) as control.
 - [local: redirecting a routine's screen by MMU] Reads in the remapped slot can still decide the path (BIT 6 on attributes):
   R and time differed until the box's attributes were copied into the scratch page.
-- [card: patch.pace-limiter] Window overhead at 28 MHz is multiplied by K: account it as debt, or the target grows.
+- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget (Failure lookup row)] Window overhead at 28 MHz is multiplied by K: account it as debt, or the target grows.
 - [local: a game that compares whole port values] `record` returns 0xFF on port FE and the game ignores every key, with no warning: an Issue 3 recorder (work/lib.py) fixed it. The recorder could offer this.
 - [local: the picture check found the depth rule] Verify passed with figures showing over water and ice, because its model was mine; only frames beside the original showed the balls should sink. The rule then went into the model and the negatives.
 - [local: dead registers pass a compare at the return] A stand-in that left C wrong passed at the plot's return, as the next row reloads it; compare at the stand-in.
 - [local: a negative control is only as good as its recording] The depth controls were missed on room 1 and detected on attract, which reaches solid cells.
+
+## Friction
+- reuse: [local: nexclash.pace and hooklib.every_site used as they are; the verifier's Next model follows hooklib.NextModel]
+- retries: [local: the first pace runs used the plain .nex as control and read +4 %; the per-plot JNext timing found the BEEP difference]
+- environment: [local: the shared venv has no `z80` package, so the nxc repo's menu tests ran from a private venv; JNext was slow with other agents' runs]
+- hand-rolled: [local: an RND-seed pace fixture (run folder v10/work/fixture.py), test only]
+- scratch: [none: the run folder's v10/work scripts stay there; nothing added to tools/]
 
 ## Technique use
 - detect.gameplay-screen-readers: helped. patch.runtime-colour-map: helped, 4 bytes per graphics byte.
