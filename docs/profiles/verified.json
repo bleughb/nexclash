@@ -25,6 +25,14 @@
     "sprites": "bfad6be1e7c8a2c797a6242d7f339e35"
    }
   },
+  "0268fb4d76200708849269c9747b65ff": {
+   "game": "Cobra",
+   "doc": "cobra.md",
+   "nex": {
+    "plain": "2ec883ba2f88ef4fcda0623c2b985777",
+    "sprites": "00ead70a486598fb9b908feb675680ee"
+   }
+  },
   "c9af5668191462d77c5859900268c24b": {
    "game": "Commando",
    "doc": "commando.md",
@@ -65,6 +73,14 @@
     "sprites": "f491e1f6621559ccc4d36de3535ff5d0"
    }
   },
+  "3470d12b21edb24d6b665dfac5e8d84d": {
+   "game": "Dynamite Dan",
+   "doc": "dynamite_dan.md",
+   "nex": {
+    "plain": "3ad20495c5183b20030190d6abdd479f",
+    "sprites": "1ab3348d3a2619f534d8907a1d89e09e"
+   }
+  },
   "a9eeb555a327e5794b0ba19bc80dccf0": {
    "game": "Everyone's a Wally",
    "doc": "everyones_a_wally.md",
@@ -79,6 +95,15 @@
    "nex": {
     "plain": "cd620010e2f61af0002e76718945716f",
     "sprites": "9182f2f8b4b0dc55b59a69728568b403"
+   }
+  },
+  "fdab5fb61b2cb01ce38edcfa85ea9e80": {
+   "game": "Gryzor",
+   "doc": "gryzor.md",
+   "nex": {
+    "plain": "180adc9071309e8c9a5a10789040d3a1",
+    "sprites": "81f84fdbceb9f6b493140e196de4af99",
+    "outline": "827a770f7964fc8c21d038dfa99b7a00"
    }
   },
   "54ad66af6678df22a9d4443e3d04aadb": {
@@ -212,12 +237,28 @@
     "enhanced": "8cb149338c77f85a088e3ddf220ed05b"
    }
   },
+  "d8fb649ba5d8fa086cac43d0cd1c497e": {
+   "game": "Sabre Wulf",
+   "doc": "sabre_wulf.md",
+   "nex": {
+    "plain": "06fbcf5016f77b868b3d754f621974ab",
+    "sprites": "332c9526cf6ab6b4adb5c1dc2d170969"
+   }
+  },
   "3b89344c6d7e6433bf044bef1880a2f1": {
    "game": "Smash TV",
    "doc": "smash_tv.md",
    "nex": {
     "plain": "c72ea298486b14036ac1a87ac89c3f0e",
     "sprites": "03979d5438cf55410ecec8aac76f05ec"
+   }
+  },
+  "23ee5b2123dbc8a9a5daccbd51db4db0": {
+   "game": "Solomon's Key",
+   "doc": "solomons_key.md",
+   "nex": {
+    "plain": "3ad529e40439ad0ee5fbbb67f66d9170",
+    "sprites": "80e83ae3cab8adf6e58085261517a80f"
    }
   },
   "3bca7e72f3c9c3abd104b8c92f35d5d4": {

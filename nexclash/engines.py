@@ -55,7 +55,12 @@ ENGINES = [
     ('three_weeks', 'is_three_weeks', None),                              # Three Weeks in Paradise (128K)
     ('starquake', 'is_starquake', None),                                  # Starquake (48K)
     ('lunar_jetman', 'is_lunar_jetman', None),                            # Lunar Jetman (48K)
+    ('dynamite_dan', 'is_dynamite_dan', None),                            # Dynamite Dan (48K)
+    ('sabre_wulf', 'is_sabre_wulf', None),                                # Sabre Wulf (48K)
+    ('solomons_key', 'is_solomons_key', None),                            # Solomon's Key (48K)
     ('robin_of_the_wood', 'is_robin_of_the_wood', None),                  # Robin of the Wood (128K)
+    ('cobra', 'is_cobra', None),                                          # Cobra (48K)
+    ('gryzor', 'is_gryzor', None),                                        # Gryzor (48K)
 ]
 
 

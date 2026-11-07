@@ -1,0 +1,234 @@
+{
+ "name": "gryzor",
+ "game": "Gryzor",
+ "doc": "gryzor.md",
+ "engine": "gryzor",
+ "representative": true,
+ "reference": "gryzor",
+ "inputs": {
+  "snapshot": {
+   "name": "gryzor.z80",
+   "md5": "fdab5fb61b2cb01ce38edcfa85ea9e80",
+   "path": "gryzor/gryzor.z80"
+  },
+  "recordings": [
+   {
+    "name": "c1.rzx",
+    "md5": "d0108afb83091d38879e88035c02a7da",
+    "path": "gryzor/c1.rzx"
+   },
+   {
+    "name": "c2.rzx",
+    "md5": "6b28d0e61c7dc9d98657d8534026b7c1",
+    "path": "gryzor/c2.rzx"
+   },
+   {
+    "name": "c3.rzx",
+    "md5": "0397361333782305c0d856d54817c262",
+    "path": "gryzor/c3.rzx"
+   },
+   {
+    "name": "n2.rzx",
+    "md5": "a0458e0b8cefd70f9f42ccd69eaf7b6e",
+    "path": "gryzor/n2.rzx"
+   },
+   {
+    "name": "n3.rzx",
+    "md5": "27dd03cde109598268e0698aae17d789",
+    "path": "gryzor/n3.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "gryzor"
+ ],
+ "own_modules": [
+  "gryzor"
+ ],
+ "order": 106,
+ "data": [
+  "docs/profiles/gryzor.json",
+  "asm/gryzor_hooks.asm",
+  "docs/profiles/gryzor_outline.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "c1.rzx",
+   "c2.rzx",
+   "c3.rzx",
+   "n2.rzx",
+   "n3.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 120,
+  "note": "Bot recordings, no human player; the lives cheat lives in the RZX snapshots of c1-c3 only. Ported from Jon Attree's .nxc work (pilot runs/gryzor), 2026-11-05."
+ },
+ "outputs": {
+  "plain": {
+   "file": "gryzor.nex",
+   "md5": "180adc9071309e8c9a5a10789040d3a1"
+  },
+  "sprites": {
+   "file": "gryzor_sprites.nex",
+   "md5": "81f84fdbceb9f6b493140e196de4af99"
+  },
+  "outline": {
+   "file": "gryzor_sprites_outline.nex",
+   "md5": "827a770f7964fc8c21d038dfa99b7a00"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Gryzor",
+  "engine_col": "gryzor (gryzor.md)",
+  "build": "gryzor_sprites_outline.nex 827a770f (figures and bullets as sprites, black outline (owner 2026-11-05); whole alt ROM image with the hook gate in its 0xFF area; 28 MHz hooks, R kept, whole-loop plot hooks with the pace limiter, prepared patterns)",
+  "software": "Verify IDENTICAL on 5 bot recordings (R compared); unit PASS incl. every-site clock matrix; 23 negatives detected; ROM path check pass; JNext 1.1.104 reaches play; pace ORIGINAL (+0.00/+0.39/+0.38 %); soak clean; flicker 2-18 out-of-step frames in 220 (open)",
+  "hardware": "untested",
+  "next": "the owner plays the .nxc; hardware test; the 128K form for the later levels"
+ },
+ "checks": [
+  "asm2profile:gryzor"
+ ],
+ "techniques": [
+  {
+   "application": "gryzor.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "every PC reading the screen: the plot loops' own reads, the star routine (path length, so R), clears",
+   "phases": []
+  },
+  {
+   "application": "gryzor.whole-altrom",
+   "id": "patch.whole-altrom-image",
+   "revision": 1,
+   "target": "both builds: Sinclair's ROM as alt image 1; the hook gate and the register block in its 0xFF area, the hook code in RAM page 24 mapped under the gate",
+   "phases": [
+    "setup"
+   ]
+  },
+  {
+   "application": "gryzor.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "HLIB_SPEED_IN_ABC / HLIB_SPEED_OUT at every hook entry and exit; latch vspd in the hook page",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "gryzor.preserve-r",
+   "id": "patch.preserve-r",
+   "revision": 1,
+   "target": "every hook leaves R as the original at its return point: plots by the loop's own M1 count (lsim), the star hook by the original's path from the figures in each star byte",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "gryzor.pace-limiter",
+   "id": "patch.pace-limiter",
+   "revision": 1,
+   "target": "each plot hook replaces its whole loop and waits for the loop's T-states (lsim, + contention estimate); the star hook for the star routine's; the tick and clear hooks pay into the debt",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "gryzor.pattern-store",
+   "id": "optimise.pattern-cache",
+   "revision": 2,
+   "target": "the listed images' patterns prepared at build time (pages 36+), OTIR runs of 128; unlisted from the plane; 32-group key cache by CPIR",
+   "phases": [
+    "entry"
+   ]
+  }
+ ],
+ "results": [
+  {
+   "application": "gryzor.screen-readers",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "827a770f",
+   "scope": "5 bot recordings, 33,038 frames; lives cheat in 3; the first section only; no human recording; start-up by the ROM path check and in JNext; no hardware",
+   "evidence": "games/gryzor.md \"Results\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/gryzor_hooks.asm": "23ca3578d8ae2f03",
+   "asm/lib/hlib_pace.asm": "c952498961b21022",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/gryzor.json": "12339d086f5d948b",
+   "docs/profiles/gryzor_outline.json": "0a9b9d03616c4f9d",
+   "nexclash.py": "4bd8267e3abba47c",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "ffc12f0af7111c5a",
+   "nexclash/gryzor.py": "7797117923c72d0c",
+   "nexclash/hooklib.py": "a877bac70d417c69",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "7c0a1764b19d4806",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-05"
+ },
+ "verified": {
+  "deps": {
+   "asm/gryzor_hooks.asm": "23ca3578d8ae2f03",
+   "asm/lib/hlib_pace.asm": "c952498961b21022",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/gryzor.json": "12339d086f5d948b",
+   "docs/profiles/gryzor_outline.json": "0a9b9d03616c4f9d",
+   "nexclash.py": "4bd8267e3abba47c",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "ffc12f0af7111c5a",
+   "nexclash/gryzor.py": "7797117923c72d0c",
+   "nexclash/hooklib.py": "a877bac70d417c69",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "7c0a1764b19d4806",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-05"
+ }
+}

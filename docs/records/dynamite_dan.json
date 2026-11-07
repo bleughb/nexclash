@@ -1,0 +1,222 @@
+{
+ "name": "dynamite_dan",
+ "order": 108,
+ "game": "Dynamite Dan",
+ "doc": "dynamite_dan.md",
+ "engine": "dynamite_dan",
+ "representative": true,
+ "reference": "dynamite_dan",
+ "inputs": {
+  "snapshot": {
+   "name": "dynamite_dan.z80",
+   "md5": "3470d12b21edb24d6b665dfac5e8d84d",
+   "path": "dynamite_dan/dynamite_dan.z80"
+  },
+  "recordings": [
+   {
+    "name": "t1.rzx",
+    "md5": "f11c4b5902bfd78eb20b7515db1d9d29",
+    "path": "dynamite_dan/t1.rzx"
+   },
+   {
+    "name": "n1.rzx",
+    "md5": "55dd68308812cf2490e6e15330e81b79",
+    "path": "dynamite_dan/n1.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "dynamite_dan"
+ ],
+ "own_modules": [
+  "dynamite_dan"
+ ],
+ "data": [
+  "docs/profiles/dynamite_dan.json",
+  "asm/dynamite_dan_hooks.asm",
+  "asm/dynamite_dan_keys.asm",
+  "docs/profiles/dynamite_dan_keys.json"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "t1.rzx",
+   "n1.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 30,
+  "note": "Random-play recordings, no human: t1 from the TOSEC .z80's own BASIC start (2026-11-05), n1 from the derived start; the pilot's 50 further recordings (census, a1, c1) verified outside the record. Ported from Jon Attree's .nxc work (pilot runs/dynamite_dan), 2026-11-05."
+ },
+ "outputs": {
+  "plain": {
+   "file": "dynamite_dan.nex",
+   "md5": "3ad20495c5183b20030190d6abdd479f"
+  },
+  "sprites": {
+   "file": "dynamite_dan_sprites.nex",
+   "md5": "1ab3348d3a2619f534d8907a1d89e09e"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Dynamite Dan",
+  "engine_col": "dynamite_dan (dynamite_dan.md)",
+  "build": "dynamite_dan_sprites.nex 1ab3348d (Dan as overlay sprites, bright cyan; the airship's hull and cables above him in room 43; whole alt ROM image; the snapshot's own BASIC start; R preserved; the plot hook at 28 MHz with the speed latch)",
+  "software": "Verify IDENTICAL on 52 random-play recordings; unit PASS incl. every-site clock matrix; negatives detected; ROM path check pass; JNext 1.1.104 reaches play",
+  "hardware": "untested",
+  "next": "the owner plays the .nxc; hardware test"
+ },
+ "checks": [
+  "asm2profile:dynamite_dan",
+  "asm2profile:dynamite_dan_keys"
+ ],
+ "techniques": [
+  {
+   "application": "dynamite_dan.overlay",
+   "id": "patch.xor-overlay-keep-ula",
+   "revision": 1,
+   "target": "Dan plot 0xD1CE: sprites over his own ULA pixels, the ULA unchanged",
+   "phases": [
+    "entry"
+   ]
+  },
+  {
+   "application": "dynamite_dan.whole-altrom",
+   "id": "patch.whole-altrom-image",
+   "revision": 1,
+   "target": "both builds: Sinclair's ROM as alt image 1, so the snapshot's BASIC (PAUSE 0, RANDOMIZE USR 51200) starts the game",
+   "phases": [
+    "setup"
+   ]
+  },
+  {
+   "application": "dynamite_dan.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "e_dan: NR 7 latched on the stack at entry, restored at exit; the clears at the game's clock",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "dynamite_dan.preserve-r",
+   "id": "patch.preserve-r",
+   "revision": 1,
+   "target": "R read at entry onto the stack, RSET before the return; compared at every hook",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "dynamite_dan.pace",
+   "id": "verify.update-locked-pace",
+   "revision": 1,
+   "target": "nexclash.pace, probe 0xC80A (main loop tick)",
+   "phases": []
+  }
+ ],
+ "results": [
+  {
+   "application": "dynamite_dan.overlay",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "1ab3348d",
+   "scope": "52 random-play recordings, 122,380 frames; t1 from the BASIC start; the ending (0xE60B) only in unit cases; no hardware",
+   "evidence": "games/dynamite_dan.md \"Results\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/dynamite_dan_hooks.asm": "ce3ec490046eed1a",
+   "docs/profiles/dynamite_dan.json": "cd9aee2ce45dff5e",
+   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dynamite_dan.py": "293e5ba3f665d0f1",
+   "nexclash/engines.py": "759eb115daf9e15d",
+   "nexclash/hooklib.py": "a877bac70d417c69",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "a127ac798fc13054",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-05"
+ },
+ "verified": {
+  "deps": {
+   "asm/dynamite_dan_hooks.asm": "ce3ec490046eed1a",
+   "docs/profiles/dynamite_dan.json": "cd9aee2ce45dff5e",
+   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dynamite_dan.py": "293e5ba3f665d0f1",
+   "nexclash/engines.py": "759eb115daf9e15d",
+   "nexclash/hooklib.py": "a877bac70d417c69",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "a127ac798fc13054",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-05"
+ },
+ "rework": [
+  {
+   "name": "v11",
+   "version": "1.1",
+   "args": [],
+   "env": {
+    "NEXCLASH_REWORK": "dynamite_dan_v11"
+   },
+   "inputs": [],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ]
+   },
+   "outputs": {
+    "plain": {
+     "file": "dynamite_dan.nex",
+     "md5": "3ad20495c5183b20030190d6abdd479f"
+    },
+    "sprites": {
+     "file": "dynamite_dan_sprites.nex",
+     "md5": "ce8f0762e8654a76817183a713f2079e"
+    }
+   },
+   "proof": "v1.0's hooks as the base (its replay, 52 recordings, is unchanged); the 246 define-keys bytes, disjoint from the hooks: the original against the original with them, in lockstep on the same 52 recordings (192,925 IN reads served in order, all 22,425 main-loop passes compared, R included, all RAM outside the patch): IDENTICAL with Q and P and with QUIT X / PAUSE H set by the build's own define routine; 3 broken builds detected (play reading the old P, the old Q; R 4 off); 6,290 unit cases. Proof scripts in the pilot (runs/dynamite_dan/work3: lockstep.py, make_proof11.py), not in this repo",
+   "note": "Jon Attree's Dynamite Dan .nxc v1.1 default (published, github.com/jattree/nxc): QUIT and PAUSE definable on the game's own define-keys screen. asm/dynamite_dan_keys.asm (our code and data only) + the page text rewritten from the player's snapshot (dynamite_dan.keys_ram); laid over the sprite build's RAM banks, every other byte v1.0's. The .nxc's 'Original keys (Q,P fixed)' toggle is the base build (1ab3348d)."
+  }
+ ]
+}
