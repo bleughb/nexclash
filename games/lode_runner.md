@@ -133,3 +133,44 @@ docs/profiles/lode_runner_colours.json (record name lode_runner).
 - Not proven: tape LOAD / SAVE SCREENS (the toolkit cannot run a tape), hall of fame name entry,
   level 2+ (same code paths; graphics 16-30 unit-tested), a guard trapped + respawned in a real
   recording (unit tests only: 0x96B6 / 0x970C).
+
+## Rework (opt-in) v2: the 128K release (engine `loderunner_v2`; Jon Attree, 2026-11-05)
+Dean's build (cd0c1659 / 85fe6afd, pin rom3) is untouched and stays his record's default; `selftest --game
+lode_runner` rebuilds both his and this rework = recorded.
+- Why: the 128K file (TOSEC `Lode Runner (1984)(Software Projects)(128K).z80`, 41360f6c) plays AY music from bank 4
+  in its IM 2 handler (0x6060 -> 0x73CA). Its code at every patch site is byte-identical to the 48K file's.
+- What `loderunner_v2.py` changes (a copy; Dean's hooks, profile and colours are read, not copied): the detector takes
+  the 128K snapshot; apply() patches banks 5 / 2; the whole alt ROM image = ROM 1 as the ROM path check takes a 128K
+  recording's (SkoolKit's 128K ROM 1 with its keypad call sites as the 48K ROM has them) + the register block at
+  0x386E (keypad code, never run; the record's rom_paths_known: the fade reads those 20 bytes as masks); a wrapper
+  round Dean's set-up puts 0x5B00-0x5BFF back after NEXLOAD (the fade's 4th pass reads it); the stack floor allows
+  the music handler's 16 bytes; a 128K boot check (bank 4 at 0xC000, paging unlocked); every recording replayed
+  whole (Dean's stopped at 6,000 frames); the every-site clock matrix (Dean's hooks never write NR 7).
+- Keys (128K defaults): I left, P right, Q up, A down, N / M dig; menu 1 keyboard, 0 start, any key; a level waits
+  for a key after it is drawn.
+- Results (2026-11-05): plain 1fa81bc6, sprites 1af22417, boot OK; 3 bot RZX (lr128_trap14 / 12 / 16, 20,042 /
+  20,021 / 20,049 frames) + the 6,000-frame free run IDENTICAL (draws 14,859 + 24, erases 14,882, guard death 1,
+  prints 60 + 240, paints 42,210, fades 96); 6,074 unit cases PASS, 3 negatives detected; clock matrix 8 sites x 4
+  clocks PASS, forced 3.5 MHz exit detected (9 cases); ROM paths pass (known: the register block); tail never read
+  before written. JNext: pace ORIGINAL (probe 0x92FC, 10 trials a scene: quiet -0.00 %, busy +0.09 %, sound
+  +0.04 %), flicker 300 frames clean, soak 15 min no freeze, AY written as the original. Cheats (128K .pok):
+  Infinite Lives, Immunity (guards) proved in the simulator; Entry Code Always Correct dropped (0x5D1E is not code
+  in this snapshot: no effect). No standard loading screen on the 128K tape (headerless code blocks only).
+- Hardware: none.
+
+## Lessons
+- [deferred Open: reconsider when a third engine needs a 128K game's whole alt ROM image in ROM 1: a shared helper
+  (copied in loderunner_v2 and tid128)] The 128K release's ROM 1 differs from the 48K ROM in its keypad code; the fade reads every ROM byte, so the
+  image is ROM 1 as nextboot.rom_paths models it, not Sinclair's 48K ROM (observed: 29 MISMATCH reads with the 48K ROM).
+- [local: Dean's verify replays an RZX only to FREE_FRAMES (6,000): the rework replays each recording whole]
+
+## Technique use
+- patch.whole-altrom-image: used (a RAM-hook engine given a whole image only so the fade reads the original's ROM)
+- verify.update-locked-pace: helped (probe 0x92FC; a level waits for a key, so the start keys press one)
+
+## Friction
+- reuse: [tool nextboot.rom_paths] the ROM path and tail checks are the shared ones; the boot check follows rainbow_z80n's
+- retries: [local: three verify runs: the 128K raw-memory view (recursion), the RZX length cap, the clock matrix added]
+- environment: [local: setsid nohup jobs died with the tool call; the harness's own background mode worked]
+- hand-rolled: [local: bot recorder on SkoolKit's C simulator (pilot platoon m128.py), pace trials from Cobra's script]
+- scratch: [none: bot, cheat and trial scripts stay in the pilot run folder runs/dean_lode_runner/work]
