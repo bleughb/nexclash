@@ -1340,6 +1340,442 @@ def sabreman_banks(nex):
     return out
 
 
+# ---------------------------------------------------------------------------------------------
+# The "Jungle floor" toggle (display only, with the Enhanced colours)
+# ---------------------------------------------------------------------------------------------
+# asm/sabre_wulf_floor.asm (profile sabre_wulf_floor). Jungle floor art: Jon Attree, assets/sabre_wulf: jungle.png and
+# cave.png are the 128 x 96 tiles as Layer 2 palette indices (0 black, 1-5 FLOOR_PAL), jungle.rle and cave.rle their
+# rows as the asm includes them. The toggle's bytes: the floor block at FLOOR_ORG in the state page (zero in every build:
+# past the tables, DRAWN and the row buffer) and e_clr's CALL leave -> CALL floor in the alt ROM image; the same in every
+# build of the engine, so jungle_floor(nex) adds it to the default, the QAOP + Space build and their Enhanced sets.
+FLOOR_NAME = 'Jungle floor'         # the toggle's menu name in the .nxc (it needs Enhanced: a rule in the .nxc)
+FLOOR_ORG = 0xF200
+FLOOR_FREE = 0xF17F                 # DRAWN (the pictures drawn), the row buffer 0xF180-0xF1FF, then the block
+FLOOR_ART = os.path.join(_HERE, '..', 'assets', 'sabre_wulf')
+FLOOR_SHOWN = (45399, 45543, 45582, 41550)  # return addresses of the clears after which a room is shown (asm)
+FLOOR_ROOM, FLOOR_ROCK = 38659, 0x847C      # the room drawn next; the cave's rock graphic in a room's item list
+FLOOR_PAL = {0: (0, 0, 0), 1: (1, 2, 0), 2: (2, 2, 0), 3: (2, 1, 0), 4: (1, 1, 1), 5: (2, 2, 1)}   # RGB333 (asm l2pal)
+FLOOR_NR = {0x07, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x56, 0x57, 0x12, 0x14, 0x15, 0x16, 0x17, 0x18, 0x1C, 0x40,
+            0x41, 0x43, 0x44, 0x4A}     # the NEXTREGs a clear may write: the base's and the floor's
+
+
+def load_fprofile():
+    return json.load(open(os.path.join(_HERE, '..', 'docs', 'profiles', 'sabre_wulf_floor.json')))
+
+
+def floor_rle(tile):
+    """128 x 96 indices -> the rows as the asm decodes them: b < 0x80: b + 1 zeros; b >= 0x80: (b & 0x7F) + 1 pixels
+    follow. Runs never cross a row."""
+    out = bytearray()
+    for y in range(96):
+        row, x = tile[128 * y:128 * y + 128], 0
+        while x < 128:
+            z, n = row[x] == 0, 1
+            while x + n < 128 and (row[x + n] == 0) == z:
+                n += 1
+            if z:
+                out.append(n - 1)
+            else:
+                out.append(0x80 | (n - 1))
+                out += row[x:x + n]
+            x += n
+    return bytes(out)
+
+
+def floor_tiles():
+    """The art: {'jungle': 12,288 indices, 'cave': ...}, rows top down, from assets/sabre_wulf/*.png."""
+    from PIL import Image
+    out = {}
+    for k in ('jungle', 'cave'):
+        im = Image.open(os.path.join(FLOOR_ART, k + '.png'))
+        t = im.tobytes()
+        if im.mode != 'P' or im.size != (128, 96) or max(t) >= len(FLOOR_PAL):
+            raise ValueError('assets/sabre_wulf/%s.png: not a 128 x 96 palette image in entries 0-5' % k)
+        out[k] = t
+    return out
+
+
+def floor_code(prof=None):
+    """-> (the floor block, its address). Refuses a profile whose pictures are not the art's (the .png files) or not
+    the .rle files the asm includes."""
+    h = (prof or load_fprofile())['hooks']
+    code, s = bytes.fromhex(h['floor']), {k: int(v, 16) for k, v in h['syms'].items()}
+    if s['floor'] != FLOOR_ORG or s['floor_end'] != FLOOR_ORG + len(code) or s['floor_end'] > 0x10000:
+        raise ValueError('floor block outside its room')
+    tiles = floor_tiles()
+    for k, nxt in (('jungle', 'cave'), ('cave', 'floor_end')):
+        r = floor_rle(tiles[k])
+        if code[s[k] - FLOOR_ORG:s[nxt] - FLOOR_ORG] != r or open(os.path.join(FLOOR_ART, k + '.rle'), 'rb').read() != r:
+            raise ValueError('the floor\'s %s picture is not assets/sabre_wulf/%s.png (write the .rle from it, then '
+                             'python tools/asm2profile.py sabre_wulf_floor)' % (k, k))
+    return code, FLOOR_ORG
+
+
+def _floor_call(p):
+    """Offset in p.page (alt ROM image 1, 0x2000-0x3FFF) of the operand of e_clr's CALL leave (after LD C,D_CLR)."""
+    leave = p.syms['leave']
+    k = p.page.index(bytes([0xCD, leave & 255, leave >> 8]), p.syms['e_clr'] - 0x2000)
+    if p.page[k - 2] != 0x0E:
+        raise ValueError("e_clr's CALL leave not found")
+    return k + 1
+
+
+def jungle_floor(nex, code=None):
+    """A built sprite .nex of this engine (default or QAOP + Space; recoloured or not; with the Enhanced hooks of
+    sabreman_banks or not) -> the same with the Jungle floor on. The last step: recolour and sabreman_banks refuse a
+    floor build. code: another floor block (negatives). Refuses anything else, the floor already on among them."""
+    from .recolour import banks, splice
+    org = FLOOR_ORG
+    if code is None:
+        code, org = floor_code()
+    have = banks(nex)
+    pages = {}
+    for prof in (load_profile(), load_qprofile(), load_eprofile(), load_eprofile(True)):
+        p = SabreWulfPatch(prof=prof, colours={})
+        pages[p.page + bytes(8192)] = p
+    p = pages.get(have.get(ALT_BANK))
+    if p is None:
+        raise ValueError('not a Sabre Wulf sprite build of this version, or the Jungle floor is on already')
+    k = _floor_call(p)
+    st = bytearray(have[STATE_BANK])
+    lo, hi = FLOOR_FREE - 0xE000, org - 0xE000 + len(code)
+    if any(st[lo:hi]):
+        raise ValueError('the state page is not free at 0x%04X-0x%04X' % (FLOOR_FREE, org + len(code) - 1))
+    st[org - 0xE000:hi] = code
+    pg = bytearray(have[ALT_BANK])
+    pg[k:k + 2] = org.to_bytes(2, 'little')
+    return splice(nex, {STATE_BANK: bytes(st), ALT_BANK: bytes(pg)})[0]
+
+
+def floor_negatives(code):
+    """Broken floor blocks, each the same length: [(name, code)]. verify_floor must detect each."""
+    n = int(load_fprofile()['hooks']['syms']['jungle'], 16) - FLOOR_ORG     # the code, not the pictures
+
+    def sub(old, new, name):
+        assert code[:n].count(old) == 1, name
+        k = code.index(old)
+        return name, code[:k] + new + code[k + len(old):]
+    dy = bytes(16 * (i % 6) for i in range(32))
+    return [sub(dy, dy[1:] + dy[:1], "the wrong room's arrangement (Y of the next row of rooms)"),
+            sub(bytes([0xED, 0x91, 0x15, 0x09]), bytes([0xED, 0x91, 0x15, 0x01]), 'the floor over the ULA'),
+            sub(bytes([0x06, 21]), bytes([0x06, 18]), 'no cave variant')]
+
+
+def _rgb8(v):
+    """An 8-bit palette value -> RGB333 (blue's low bit = B1 | B0, as the Next)."""
+    bb = v & 3
+    return (v >> 5, (v >> 2) & 7, bb << 1 | (1 if bb else 0))
+
+
+class FloorState(NextState):
+    """NextState with Layer 2's RAM (pages 36-47), port 0x123B, the palettes and the clip window."""
+
+    def __init__(self, patch):
+        NextState.__init__(self, patch)
+        self.l2 = {p: bytearray(8192) for p in range(36, 48)}
+        self.l2w = self.l2port = self.clipi = 0
+        self.pal = {'ula': {i: _rgb8(SPECCY[i & 15]) for i in range(32)}, 'l2': {i: _rgb8(i) for i in range(256)}}
+        self.palw, self.half, self.clip = [], None, [0, 255, 0, 191]
+        self.nr.update({0x15: 0x01, 0x12: 8, 0x16: 0, 0x17: 0, 0x14: 0xE3, 0x4A: 0xE3, 0x43: 0x20, 0x40: 0})
+
+    def nextreg(self, reg, val):
+        NextState.nextreg(self, reg, val)
+        sel = (self.nr.get(0x43, 0) >> 4) & 7
+        if reg == 0x40:
+            self.half = None
+        elif reg == 0x41:
+            self._pw(sel, self.nr[0x40], _rgb8(val))
+        elif reg == 0x44:
+            if self.half is None:
+                self.half = val
+            else:
+                hv, self.half = self.half, None
+                self._pw(sel, self.nr[0x40], (hv >> 5, (hv >> 2) & 7, (hv & 3) << 1 | (val & 1)))
+        elif reg == 0x1C and val & 1:
+            self.clipi = 0
+        elif reg == 0x18:
+            self.clip[self.clipi] = val
+            self.clipi = (self.clipi + 1) & 3
+
+    def _pw(self, sel, idx, rgb):
+        name = {0: 'ula', 1: 'l2', 2: 'spr'}.get(sel, 'other%d' % sel)
+        self.palw.append((name, idx))
+        if name in self.pal:
+            self.pal[name][idx] = rgb
+        if not self.nr.get(0x43, 0) & 0x80:
+            self.nr[0x40] = (idx + 1) & 255
+
+    def out(self, port, val):
+        if port == 0x123B:
+            self.l2port = val
+            self.events.append(('l2port', port, val))
+            return
+        NextState.out(self, port, val)
+
+    def page_byte(self, page, off):
+        if page in self.l2:
+            return self.l2[page][off]
+        return NextState.page_byte(self, page, off)
+
+
+class _FP(_P):
+    """_P with Layer 2's pages at slot 6."""
+
+    def __getitem__(s, a):
+        if 0xC000 <= a < 0xE000 and s.ns.nr[0x56] in s.ns.l2:
+            return s.ns.l2[s.ns.nr[0x56]][a - 0xC000]
+        return _P.__getitem__(s, a)
+
+    def __setitem__(s, a, v):
+        if 0xC000 <= a < 0xE000 and s.ns.nr[0x56] in s.ns.l2:
+            s.ns.l2[s.ns.nr[0x56]][a - 0xC000] = v
+            s.ns.l2w += 1
+            return
+        _P.__setitem__(s, a, v)
+
+
+def floor_is_cave(get, room):
+    """The room's item list (type 24678 + room, list at word 24934 + 2 type; graphic, position; 0 ends), as the game
+    draws it (48093), holds the cave rock."""
+    t = get(24678 + room)
+    p = get(24934 + 2 * t) | get(24935 + 2 * t) << 8
+    while True:
+        d = get(p) | get(p + 1) << 8
+        if d == 0:
+            return False
+        if d == FLOOR_ROCK:
+            return True
+        p += 4
+
+
+def floor_model(room, cave):
+    """-> (Layer 2's first bank, scroll X, scroll Y) for a room, made here, not from the Z80 code."""
+    return (21 if cave else 18), 16 * (room & 7), 16 * ((room >> 3) % 6)
+
+
+def floor_rooms(z80, code=None):
+    """The floor routine for every room 0-255 (38659 set, a room-showing caller's return on the stack, the pictures
+    marked drawn) from the snapshot's memory: Layer 2's bank and scroll against floor_model, C and SP kept.
+    -> (mismatches, cave rooms)."""
+    from skoolkit.snapshot import Snapshot
+    if code is None:
+        code = floor_code()[0]
+    mem = bytearray(65536)
+    mem[16384:] = bytes(Snapshot.get(z80).ram())
+    patch = SabreWulfPatch()
+    patch.add_screen_sites(mem.__getitem__)
+    patch.tables(mem.__getitem__)
+    alt, bad, caves = _alt(patch), [], []
+    leave = patch.syms['leave']
+    for room in range(256):
+        m = bytearray(mem)
+        m[FLOOR_ROOM] = room
+        sp = 0x5F00
+        for k, w in enumerate([0x390B, 0, 0, 0, 0, FLOOR_SHOWN[0]]):     # [ret to e_clr][HL][DE][BC][AF][game return]
+            m[sp + 2 * k], m[sp + 2 * k + 1] = w & 255, w >> 8
+        ns = FloorState(patch)
+        o = FLOOR_ORG - 0xE000
+        ns.state[o:o + len(code)] = code
+        ns.state[FLOOR_FREE - 0xE000] = 1
+        ns.nr[0x57] = STATE_PAGE
+        p = _FP(m.__getitem__, alt, {}, ns)
+        regs = [0] * 32
+        regs[12], regs[24], regs[3] = sp, FLOOR_ORG, 0x62
+        sim = _machine(_rw(), p, regs, ns, 'p')
+        ok = _run(sim, lambda r: r[24] == leave, limit=100000)
+        cave = floor_is_cave(m.__getitem__, room)
+        if cave:
+            caves.append(room)
+        want, got = floor_model(room, cave), (ns.nr.get(0x12), ns.nr.get(0x16), ns.nr.get(0x17))
+        if not ok or got != want or sim.registers[3] != 0x62 or sim.registers[12] != sp:
+            bad.append((room, ok, got, want))
+    return bad, caves
+
+
+def verify_floor(rzx_path, code=None, stop=None):
+    """The Jungle floor build against the original at every clear (47964) of a recording. Both run from the same state
+    to the routine's return, as event(): every register, R included; IX, IY, I, IFF never changed; the hook's stack;
+    game memory (outside the dead stack below the return) and the screen writes; slots 6 and 7, the caller's clock and
+    port 0x243B put back; every sprite off. Ports: only 0x123B besides the base's; NEXTREGs only FLOOR_NR; palette
+    writes only Layer 2 0-5 and ULA 0, 8, 16, 24. Layer 2 against floor_model: shown after a clear whose caller shows a
+    room, hidden after any other; order sprites / ULA / Layer 2 (0x15 = 0x09); clip 0-255 x 16-191; its 96K equal to
+    the two pictures (each tile 2 x 2) from the first clear on, never written again. At the first loop top after each
+    room's clear, the picture the Next shows (the ULA from screen and attributes in its palette as written, Layer 2,
+    composed in the order 0x15 says) is the original's wherever the ULA is not black and the room's floor wherever it
+    is (lines 16-191; black above). Needs numpy. -> (counts, examples, {rooms, cave rooms, frames, desync})."""
+    import numpy as np
+    from . import rzx as RZ
+    if code is None:
+        code = floor_code()[0]
+    tiles = {k: np.frombuffer(v, np.uint8).reshape(96, 128) for k, v in floor_tiles().items()}
+    pic = {18: np.tile(tiles['jungle'], (2, 2)), 21: np.tile(tiles['cave'], (2, 2))}
+    patch = SabreWulfPatch()
+    k = _floor_call(patch)
+    pg = bytearray(patch.page)
+    pg[k:k + 2] = FLOOR_ORG.to_bytes(2, 'little')
+    patch.page = bytes(pg)
+    alt, Sim = _alt(patch), _rw()
+    c, ex = collections.Counter(), collections.defaultdict(list)
+    st = {'ns': None, 'psite': {}, 'pending': None, 'drawn': False, 'rooms': set(), 'caves': set()}
+    trans_rgb = _rgb8(0xE3)
+
+    def fail(key, info=()):
+        c[key + '!'] += 1
+        if len(ex[key]) < 5:
+            ex[key].append(info)
+
+    def check_picture(M, ns, room, cave):
+        scr = np.frombuffer(bytes(M[0x4000:0x5800]), np.uint8)
+        att = np.frombuffer(bytes(M[0x5800:0x5B00]), np.uint8).reshape(24, 32)
+        ys = np.arange(192)
+        rowaddr = ((ys & 0xC0) << 5) | ((ys & 7) << 8) | ((ys & 0x38) << 2)
+        bits = np.unpackbits(scr[rowaddr[:, None] + np.arange(32)[None, :]], axis=1)
+        a = np.repeat(np.repeat(att, 8, 0), 8, 1)
+        br = (a >> 6) & 1
+        idx = np.where(bits == 1, (a & 7) + 8 * br, 16 + ((a >> 3) & 7) + 8 * br)
+        ula = np.array([ns.pal['ula'][i] for i in range(32)])[idx]
+        trans = np.all(ula == np.array(trans_rgb), -1)
+        ram = np.frombuffer(b''.join(bytes(ns.l2[2 * ns.nr[0x12] + j]) for j in range(6)), np.uint8).reshape(192, 256)
+        l2 = np.roll(np.roll(ram, -ns.nr[0x17], 0), -ns.nr[0x16], 1)
+        l2rgb = np.array([ns.pal['l2'][i] for i in range(256)])[l2]
+        yy = np.arange(192)[:, None] + np.zeros((1, 256), int)
+        inclip = (yy >= ns.clip[2]) & (yy <= ns.clip[3]) & bool(ns.l2port & 2)
+        fb = np.array(_rgb8(ns.nr[0x4A]))
+        if (ns.nr[0x15] >> 2) & 7 == 2:     # S U L
+            shown = np.where(trans[..., None], np.where(inclip[..., None], l2rgb, fb), ula)
+        else:                               # S L U and the rest: Layer 2 (never transparent here) over the ULA
+            shown = np.where(inclip[..., None], l2rgb, np.where(trans[..., None], fb, ula))
+        orig = np.array([_rgb8(SPECCY[i & 15]) for i in range(32)])[idx]
+        black = (idx & 7) == 0
+        want_floor = np.roll(np.roll(pic[21 if cave else 18], -16 * ((room >> 3) % 6), 0), -16 * (room & 7), 1)
+        want = np.where(black[..., None], np.array([FLOOR_PAL[v] for v in range(6)])[want_floor], orig)
+        want[:16] = np.where(black[:16, :, None], 0, orig[:16])
+        diff = np.any(shown != want, -1)
+        c['pictures composed'] += 1
+        c['floor pixels shown'] += int((black[16:] & (want_floor[16:] > 0)).sum())
+        if ((~black) & diff).any():
+            fail('the floor shows over a non-black ULA pixel', (room, int(((~black) & diff).sum())))
+        if (black & diff).any():
+            fail("a black pixel does not show the room's floor", (room, int((black & diff).sum())))
+
+    def on(pc, sim):
+        R, M = sim.registers, sim.memory
+        get = M.__getitem__
+        if st['ns'] is None:
+            patch.add_screen_sites(get)
+            patch.tables(get)
+            for a, old, new in patch.sites:
+                for j, v in enumerate(new):
+                    st['psite'][a + j] = v
+            ns = FloorState(patch)
+            ns.state[FLOOR_ORG - 0xE000:FLOOR_ORG - 0xE000 + len(code)] = code
+            st['ns'] = ns
+        ns = st['ns']
+        if pc == LOOP_TOP:
+            if st['pending'] is not None:
+                check_picture(M, ns, *st['pending'])
+                st['pending'] = None
+            return
+        sp0 = R[12]
+        ret = get(sp0) | get(sp0 + 1) << 8
+        done = lambda r: r[24] == ret and r[12] == sp0 + 2
+        o = _O(get)
+        so = _machine(Sim, o, list(R), _NullNs(), 'o')
+        ns.events, ns.written, ns.palw = [], set(), []
+        ns.nr[0x07] = ns.speed_in
+        l2w0 = ns.l2w
+        p = _FP(get, alt, st['psite'], ns)
+        sp_ = _machine(Sim, p, list(R), ns, 'p')
+        low, iv = [sp0], (R[8], R[9], R[10], R[11], R[14], R[26])
+
+        def watch(r):
+            if r[12] < low[0]:
+                low[0] = r[12]
+            if (r[8], r[9], r[10], r[11], r[14], r[26]) != iv:
+                low.append('IX, IY, I or IFF changed')
+        if not _run(so, done):
+            fail('original did not return')
+            return
+        if not _run(sp_, done, watch, limit=20000000):
+            fail('patched did not return')
+            return
+        ro, rp = so.registers, sp_.registers
+        c['clears'] += 1
+        diff = [j for j in CMP if ro[j] != rp[j]]
+        if diff:
+            fail('registers differ', (diff, [ro[j] for j in diff], [rp[j] for j in diff]))
+        if p.romw or p.pagew:
+            fail('wrote ROM or a page other than Layer 2 and the state page', (p.romw, p.pagew))
+        if len(low) > 1:
+            fail(low[1])
+        if sp0 - low[0] > 40:
+            fail('hook stack too deep', sp0 - low[0])
+        c['deepest stack'] = max(c['deepest stack'], sp0 - low[0])
+        if ns.nr[0x56] != 0 or ns.nr[0x57] != 1 or ns.nr[0x07] != ns.speed_in or ns.sel != 7:
+            fail('slots, clock or 0x243B not put back', (ns.nr[0x56], ns.nr[0x57], ns.nr[0x07], ns.sel))
+            ns.nr[0x56], ns.nr[0x57], ns.nr[0x07], ns.sel = 0, 1, ns.speed_in, 7
+        if any(e[0] in ('in', 'out') for e in ns.events):
+            fail('port other than the sprite ports and 0x123B', [e for e in ns.events if e[0] in ('in', 'out')][:3])
+        if any(e[0] == 'nr' and e[1] not in FLOOR_NR for e in ns.events):
+            fail('NEXTREG outside the set', sorted({e[1] for e in ns.events if e[0] == 'nr' and e[1] not in FLOOR_NR}))
+        dead, keys = range(ro[12] - 64, ro[12]), set(o.ov) | set(p.ov)
+        md = [a for a in keys if not 0x4000 <= a < 0x5B00 and a not in dead and o[a] != _pv(p, a, get)]
+        if md:
+            fail('game memory differs', (len(md), sorted(md)[:4]))
+        if any(0x4000 <= a < 0x5B00 and o.ov.get(a) != p.ov.get(a) for a in keys):
+            fail('screen writes differ')
+        if any(ns.attr[s][3] & 0x80 for s in range(128)):
+            fail('sprite visible after a clear')
+        bad_pal = [w for w in ns.palw if not ((w[0] == 'l2' and w[1] < 6) or (w[0] == 'ula' and w[1] in (0, 8, 16, 24)))]
+        if bad_pal:
+            fail('palette write outside the floor entries', bad_pal[:4])
+        ula_black = [ns.pal['ula'][i] for i in (0, 8, 16, 24)] == [trans_rgb] * 4
+        l2pal = all(ns.pal['l2'][i] == FLOOR_PAL[i] for i in FLOOR_PAL)
+        if not st['drawn']:
+            st['drawn'] = True
+            c['first clear (pictures drawn) caller %d' % (ret - 3)] += 1
+            for bk, want in pic.items():
+                ram = np.frombuffer(b''.join(bytes(ns.l2[2 * bk + j]) for j in range(6)), np.uint8).reshape(192, 256)
+                if not (ram == want).all():
+                    fail('Layer 2 picture differs from the art', (bk, int((ram != want).sum())))
+            c['pictures checked (96K)'] += 1
+            if not ula_black or not l2pal:
+                fail('palettes not set at the first clear')
+        elif ns.l2w != l2w0:
+            fail('Layer 2 written again after the first clear', ns.l2w - l2w0)
+        c['caller %d' % (ret - 3)] += 1
+        if ret in FLOOR_SHOWN:
+            room = get(FLOOR_ROOM)
+            cave = floor_is_cave(get, room)
+            st['rooms'].add(room)
+            if cave:
+                st['caves'].add(room)
+            c['rooms shown'] += 1
+            c['cave rooms shown'] += cave
+            got = (ns.nr[0x12], ns.nr[0x16], ns.nr[0x17])
+            if got != floor_model(room, cave):
+                fail('room arrangement or bank differs from the model', (room, cave, got, floor_model(room, cave)))
+            if not ns.l2port & 2:
+                fail('Layer 2 not shown in a room', room)
+            if ns.nr[0x15] != 0x09:
+                fail('layer order not sprites / ULA / Layer 2', ns.nr[0x15])
+            if ns.clip != [0, 255, 16, 191]:
+                fail('clip window', ns.clip)
+            if not ula_black or ns.nr[0x14] != 0xE3 or ns.nr[0x4A] != 0:
+                fail('ULA black not the transparent colour, or the fallback not black')
+            if not l2pal:
+                fail('Layer 2 palette differs', [ns.pal['l2'][i] for i in FLOOR_PAL])
+            st['pending'] = (room, cave)
+        else:
+            c['clears hiding Layer 2'] += 1
+            if ns.l2port & 2:
+                fail('Layer 2 shown after a clear that shows no room', ret - 3)
+            st['pending'] = None
+
+    n, err = RZ.trace(rzx_path, {47964, LOOP_TOP}, on, stop=stop)
+    return c, dict(ex), dict(rooms=len(st['rooms']), cave_rooms=sorted(st['caves']), frames=n, desync=err)
+
+
 def _orig_byte(peek, a):
     """In a built .nex a row site holds LD A,(HL): read back as the original so the site list comes out the same."""
     v = peek(a)

@@ -76,7 +76,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Robin of the Wood (128K) (robin_of_the_wood): `robin_of_the_wood.nex` d6e8b01ea8b94970ef102afca79e611b, `robin_of_the_wood_sprites_raw.nex` 27f9ce7f210c00dae3a01b532a6a5669, `robin_of_the_wood_sprites.nex` fcd321af900797294353a155bfaebfe0, `robin_of_the_wood_enhanced_raw.nex` 0d0d7ee180ae921023738cae8e5967be, `robin_of_the_wood_enhanced.nex` d2d4d23b5aded923839ce281bd2271f1; verified 2026-11-05
 - Cobra (cobra): `cobra.nex` 2ec883ba2f88ef4fcda0623c2b985777, `cobra_sprites.nex` 82b05dafa0ec1049141db188840d775a; verified 2026-11-06
 - Gryzor (gryzor): `gryzor.nex` 180adc9071309e8c9a5a10789040d3a1, `gryzor_sprites.nex` 444e3f9f018e01c056923ca6b622a811, `gryzor_sprites_outline.nex` c165f41f9cfbbda74a8b6ee85a80694f; verified 2026-11-06
-- Sabre Wulf (sabre_wulf): `sabre_wulf.nex` 06fbcf5016f77b868b3d754f621974ab, `sabre_wulf_sprites.nex` 332c9526cf6ab6b4adb5c1dc2d170969; verified 2026-11-05
+- Sabre Wulf (sabre_wulf): `sabre_wulf.nex` 06fbcf5016f77b868b3d754f621974ab, `sabre_wulf_sprites.nex` 332c9526cf6ab6b4adb5c1dc2d170969; verified 2026-11-07
 - Solomon's Key (solomons_key): `solomons_key.nex` 3ad529e40439ad0ee5fbbb67f66d9170, `solomons_key_sprites.nex` 80e83ae3cab8adf6e58085261517a80f; verified 2026-11-05
 - Dynamite Dan (dynamite_dan): `dynamite_dan.nex` 3ad20495c5183b20030190d6abdd479f, `dynamite_dan_sprites.nex` 1ab3348d3a2619f534d8907a1d89e09e; verified 2026-11-05
 - Pyjamarama (pyjamarama): `pyjamarama.nex` 19c7f0ac1c7178839a01b0fc42e47732, `pyjamarama_sprites.nex` fad103126004e18132c9877d7a7606e6, `pyjamarama_enhanced.nex` 3ca79dd93d0fdc46968a22382deac6fe; verified never

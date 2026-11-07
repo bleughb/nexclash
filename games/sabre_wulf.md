@@ -1,7 +1,7 @@
 # Sabre Wulf (Ultimate Play The Game, 1984; 48K) - engine `sabre_wulf` (pilot game: unattended, emulator only)
 
 ## Next session
-Stage: 4 (hardware + colour)    State: imported into the repo 2026-11-05 (record sabre_wulf); JNext only, never on a Next.
+Stage: 4 (hardware + colour)    State: imported into the repo 2026-11-05 (record sabre_wulf); toggles QAOP + Space, Jungle floor (1.3, engine 2026-11-07); JNext only, never on a Next.
 Inputs: specnext/reference/sabre_wulf/ (sabre_wulf.z80 md5 d8fb649b = TOSEC "Sabre Wulf (1984)(Ultimate Play The Game).z80";
 sw_nocheat, sw_two, sw_roam1, sw_roam2, sw_ending). Verify with NEXCLASH_NEXT_ROM = enNextZX.rom from the card.
 Start with: the hardware checklist below. Open: under "Open".
@@ -148,6 +148,39 @@ full bloom. Painted pixels are fixed, so a painted set loses both cues.
   1.1's palette, 1.1's hooks, 1.1's map) detected. JNext: 1.1 against 1.2 Enhanced 30 pace trials -0.01 to +0.03%.
   Never run on hardware.
 
+## Jungle floor toggle (.nxc v1.3, 2026-11-07; profile sabre_wulf_floor, asm/sabre_wulf_floor.asm)
+Display only, with the Enhanced colours: a dim floor of grass tufts, stones and twigs on the black ground of each room,
+pebbles in the six cave rooms. Off by default; with it off every build is 1.2's byte for byte. Jungle floor art: Jon
+Attree (assets/sabre_wulf: jungle.png and cave.png, the 128 x 96 tiles as Layer 2 palette indices 0-5; jungle.rle and
+cave.rle, their rows as the asm includes them; `floor_code` refuses a profile whose pictures are not the .png files).
+- `jungle_floor(nex)`: the last step on a built .nex of this engine (default, QAOP + Space, either with its Enhanced
+  set): the 1,504-byte block at 0xF200 in the state page (bank 11 offset 0x1200; zero in every build, as are DRAWN
+  0xF17F and the row buffer 0xF180-0xF1FF) and e_clr's CALL leave (0x3908) -> CALL floor (bank 12 offset 0x1909).
+  1,456 bytes change, the same in all four builds. recolour and sabreman_banks refuse a floor build; so does a second
+  jungle_floor.
+- The floor runs at the end of every clear (47964), before leave (R, slots, clock: leave's). The game's return
+  address says what comes next: a room (45399, 45543, 45582, 41550) -> Layer 2 shown for room (38659), anything else
+  (title, game over, ending, amulet display) -> hidden. Cave = the room's item list holds the rock 0x847C (rooms
+  135-137, 151-153). A room's arrangement is Layer 2's scroll, X 16 (room & 7), Y 16 ((room >> 3) mod 6): the tile
+  2 x 2 in banks 18-20 (jungle) and 21-23 (cave), drawn once at the first clear (the title's). Layer 2 under the ULA
+  (0x15 = 0x09), the ULA's black (palette 0, 8, 16, 24) the transparent colour, fallback black, clip lines 16-191.
+- In the .nxc: menu name `FLOOR_NAME` ("Jungle floor"), kind 3 (display only), with the rule "Jungle floor needs
+  Enhanced". The engine builds equal the published 1.3 (jattree/nxc d4aeed3) for every combination it allows:
+  332c9526, +QAOP 72f236e2, Enhanced edb28374, Enhanced + floor 3a69c783, Enhanced + QAOP 471d4bef, Enhanced + QAOP +
+  floor 95cfba3e (Enhanced = the pilot's colour map and palette as 1.2's, then jungle_floor). Default + floor (not
+  allowed by the rule): 8c3af3e5, + QAOP b3508eed.
+- Verify: `verify_floor(rzx)` (needs numpy): at every clear the original and the floor build from one state, as
+  `event`: every register with R, IX IY I IFF, stack, game memory, screen writes, slots, clock and 0x243B; only the
+  floor's NEXTREGs, port 0x123B and palette entries; Layer 2 against `floor_model` (bank, scroll, order, clip,
+  palettes, its 96K the art 2 x 2, never written after the first clear); and each room's picture composed as the Next
+  shows it: the original's where the ULA is not black, the room's floor where it is. `floor_rooms(z80)`: all 256 rooms
+  in the simulator. `floor_negatives`: wrong arrangement, the floor over the ULA, no cave variant.
+- Results (2026-11-07, simulation): 5 recordings IDENTICAL, 821 clears, 808 rooms shown (158 in the cave, rooms
+  151-153), 808 pictures composed; floor_rooms 256 of 256 match, caves 135-137 and 151-153; negatives on sw_nocheat 3 of
+  3 detected, in floor_rooms 2 of 2 (the floor over the ULA does not change the bank or scroll). JNext 1.1.104 (pilot
+  runs/sabre_wulf work5): Enhanced + floor flicker and 15-minute soak clean; pace against 1.2's Enhanced -0.04 to
+  +0.05 % (30 trials). Never played by a person; never on hardware.
+
 ## Verify (what it checks)
 Per hook event, original and patched run from the same state to the enclosing routine's return: every register but T /
 MEMPTR, R included (A' excluded after a plot, above); IX, IY, I, IFF never changed; hook stack depth; no screen writes;
@@ -192,6 +225,8 @@ restarts on the sheet. The .nxc's menu builds reach play in both sets, cheats on
 3. Enemy speed as the plain build. Fight (T). A hit flash on the player.
 4. Lose all lives: game over text with no figures left over, hall of fame, restart.
 5. Enhanced (menu): the painted colours; the speed key F8 mid-game changes the game's speed and the hooks keep it.
+6. Jungle floor (menu; turns Enhanced on): a dim floor on the black ground in each room, none over the panel or
+   the plants' colours; pebbles in the cave rooms; the title, game over and hall of fame show no floor.
 Hardware risk review: hooks 0x386E-0x3B71, not in DivMMC's 0x3D00-0x3DFF. IM 1 needs ROM 0x0038 = Sinclair's (the image).
 
 ## Open
@@ -199,6 +234,8 @@ Hardware risk review: hooks 0x386E-0x3B71, not in DivMMC's 0x3D00-0x3DFF. IM 1 n
 - Pace: the hooks cost about 1.5 % of the rounds' time (below 2 %, never faster); a pace window over the paint loop could
   repay it, not built.
 - Joysticks not exercised; the amulet and the cave not played.
+- Jungle floor: shows through the black between the plants' leaves too (accepted for 1.3); the first title screen
+  after loading waits about a tenth of a second while the pictures are drawn.
 
 ## Lessons
 - [local: this game's pace] demonstrated: the approved build's paint NOP made each painted cell 3 T faster; CP (HL) keeps 7 T and the cell access, and a build with only the screen sites stays in lockstep with the plain build for 600 rounds (+0.00 %).
@@ -206,6 +243,9 @@ Hardware risk review: hooks 0x386E-0x3B71, not in DivMMC's 0x3D00-0x3DFF. IM 1 n
 - [local: this game's RNG] observed: R at 39376, 40484, 41707 and FRAMES in ten places give the game its chance; the hooks preserve R, the pace trials take both out.
 - [local: the archive's trainers] observed: of 16 .pok trainers, See Ending and Paralyzed Enemies freeze the game, Keep SabreMan cyan sets colour 186 and stops the orchid effects ending, Immunity still loses lives; the menu keeps the six shown to work (pilot work2/cheats).
 - [local: this game's Enhanced map] demonstrated: a fixed palette entry painted on a pixel the game colours at run time (the orchid bloom, 2026-11-07, jattree/nxc issue #1) hides the game's cue; the orchid's upper cell row now takes the run-time colour and Sabreman's helmet, shirt and trousers follow his effect colour (5 recordings identical, pilot work4).
+- [local: this game's Jungle floor] demonstrated: a display-only toggle whose bytes are one block in free state-page
+  space and one CALL operand is the same in every build, so the engine adds it as a last step (jungle_floor) on any of
+  the four builds instead of four more hook profiles; the published 1.3 builds come out byte for byte (2026-11-07).
 
 ## Friction
 - reuse: [local: the round-counter fixture is this game's; nexclash.pace has no fixture support]
@@ -225,3 +265,5 @@ Hardware risk review: hooks 0x386E-0x3B71, not in DivMMC's 0x3D00-0x3DFF. IM 1 n
 - 2026-11-03 stages 0-3, one unattended session, no user rounds.
 - 2026-11-05 import (pilot runs/sabre_wulf/nexclash2 on refactor-final f6b8ac0): new defaults, start without the stub, speed
   latch, R, frame cache, every-site matrix, Enhanced replay, negatives, pace / flicker / soak in JNext, .nxc v1.0.
+- 2026-11-07 Jungle floor toggle (.nxc v1.3) moved into the engine: asm/sabre_wulf_floor.asm, profile sabre_wulf_floor,
+  art in assets/sabre_wulf, jungle_floor / verify_floor / floor_rooms; the published builds reproduced byte for byte.
