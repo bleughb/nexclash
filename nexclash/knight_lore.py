@@ -7,12 +7,30 @@ makes them from the approved PNGs and the user's own copy of the game.
 
     python -m nexclash.knight_lore SNAPSHOT ASSETS OUT.nex            the Enhanced build
     python -m nexclash.knight_lore SNAPSHOT - OUT.nex --original      the default: the original game, whole alt ROM
+
+`nexclash.py auto` (nexclash/engines.py: is_knight_lore) builds the default only, GAME.nex, and boots it; the Enhanced
+set needs the private ASSETS, so it is built with the command above.
 """
 import json, sys
 from pathlib import Path
 from .build import rom48
 
 ROOT = Path(__file__).resolve().parents[1]
+from .hooklib import CMP_R as CMP     # the pilot's replay compared every register, R included
+
+def load_profile():
+    return json.loads((ROOT/'docs/profiles/knight_lore.json').read_text())
+
+
+def is_knight_lore(snap):
+    """48K snapshot with Knight Lore's actor-update entry at the profile's signature address."""
+    ram=bytes(snap.ram(-1))
+    if len(ram)!=49152:
+        return False
+    s=load_profile()['signature']
+    want=bytes.fromhex(s['hex'])
+    return ram[s['addr']-16384:s['addr']-16384+len(want)]==want
+
 
 class KnightLorePatch:
     name='Knight Lore masked colour renderer'
@@ -77,6 +95,55 @@ def restore_tail(p,snap):
     p.extra_banks[12]=p.page+p.extra_banks[12][8192:]
     p.altrom=(min(backup,p.altrom[0]),p.altrom[1])
     p.original_pc=snap.pc;p.tail_restore_bytes=len(tail);snap.pc=entry
+
+
+def boot_problems(nex, z80, patch):
+    """Boot NEX (as the converter's loader and as NEXLOAD leaves the machine) to the game's own entry, after the tail
+    restorer: every register including R, and RAM 0x4000-0xFFFF, must equal the snapshot after patch.apply."""
+    from . import z80tonex as Z, nextboot
+    import copy
+    s=Z.Z80Snapshot(z80);q=copy.deepcopy(patch);q.apply(s)
+    ram=s.banks[5]+s.banks[2]+s.banks[0]
+    bad=[]
+    for nexload in (False,True):
+        st=nextboot.boot(nex,q.original_pc,nexload=nexload);R=st['R'];w=lambda n:R[n]*256+R[n+1]
+        bad+=[('nexload' if nexload else 'loader',)+tuple(x) for x in st['bad']]
+        for k,v in ((0,s.a),(1,s.f),(12,s.sp),(14,s.i),(15,s.r),(26,s.iff1),(27,s.im)):
+            if R[k]!=v:bad.append(('register',k,R[k],v))
+        for k,v in ((2,s.bc),(4,s.de),(6,s.hl),(8,s.ix),(10,s.iy),(16,s.a_*256+s.f_),(18,s.bc_),(20,s.de_),(22,s.hl_)):
+            if w(k)!=v:bad.append(('register',k,w(k),v))
+        diff=[a for a in range(0x4000,0x10000) if st['mem'][a]!=ram[a-0x4000]]
+        if diff:bad.append(('RAM differs',len(diff),diff[:6]))
+    return bad
+
+
+def verify(patch, rzx_path, stop=None, collect=0, progress=None):
+    """Not an RZX verifier yet: Knight Lore's proof is the pilot run's replay oracle, soaks and negatives
+    (games/knight_lore.md "Evidence"). Porting that harness is the open item; until then this says so."""
+    raise NotImplementedError('knight_lore: no RZX verifier yet (games/knight_lore.md "Evidence")')
+
+
+def unit_tests(patch, states, neg=None):
+    """No unit tests in the engine yet: the ABI, wrapper, compositor and negative cases ran in the pilot run
+    (games/knight_lore.md "Evidence")."""
+    raise NotImplementedError('knight_lore: no unit tests yet (games/knight_lore.md "Evidence")')
+
+
+def auto(a, z80, name, out, say):
+    """nexclash.py auto: the default build (the original game, whole Sinclair alt ROM, tail restored) and its boot
+    check. Knight Lore has no clash to fix; the Enhanced set needs private ASSETS (module docstring)."""
+    import hashlib, os
+    from . import z80tonex as Z
+    say('Game      : %s' % name)
+    say('Engine    : knight_lore (default: original game, whole alt ROM; Enhanced needs private ASSETS: python -m nexclash.knight_lore)')
+    nex=os.path.join(out,name+'.nex')
+    patch=KnightLoreOriginal()
+    Z.convert(z80,nex,patch=patch,quiet=True)
+    bad=boot_problems(nex,z80,KnightLoreOriginal())
+    say('Default   : %s  %s  tail %d bytes restored' % (os.path.basename(nex),hashlib.md5(open(nex,'rb').read()).hexdigest(),patch.tail_restore_bytes))
+    say('Boot      : %s' % ('OK (registers with R, RAM; converter loader and NEXLOAD)' if not bad else 'MISMATCH %s' % str(bad[:3])[:300]))
+    say('Result    : %s' % ('PASSED' if not bad else 'FAILED'))
+    return not bad
 
 
 def main(argv=None):

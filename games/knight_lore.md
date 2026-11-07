@@ -8,9 +8,13 @@ includes `asm/knight_lore_{packed,actor,grid_commit,sprite_cache}.asm` and `asm/
 `docs/profiles/knight_lore.json`, `docs/profiles/knight_lore_sound_sites.json`. Build:
 `python -m nexclash.knight_lore SNAPSHOT ASSETS OUT.nex` (Enhanced) or `... SNAPSHOT - OUT.nex --original` (default).
 ASSETS (page-*.bin, floor-selector.bin) are Spec256-derived art: private reference inputs, never in the repository.
-Not done: an engines.py detector, an `auto` adapter, a record and a generic `selftest --verify --stamp`; the build and
-proof recipes are the pilot run's (runs/knight_lore/release-20261106/work). Both builds made from this repository are
-byte-identical to the pilot's frozen ones, so its proof carries.
+Registered (2026-11-07): `is_knight_lore` in nexclash/engines.py (profile signature at 55044, 48K only); `auto`
+builds the default `knight_lore.nex` and boot-checks it (registers with R, RAM, converter loader and NEXLOAD), and
+docs/records/knight_lore.json makes `selftest --game knight_lore` rebuild it (MD5). The Enhanced set needs the private
+ASSETS, so selftest does not rebuild it. `verify` and `unit_tests` raise NotImplementedError (as New Zealand Story's):
+not done: an in-repository verifier and unit tests, and a generic `selftest --verify --stamp`; the proof recipes are the
+pilot run's (runs/knight_lore/release-20261106/work). Both builds made from this repository are byte-identical to the
+pilot's frozen ones, so its proof carries.
 
 ## Input and presentation
 Target `Knight Lore (1984)(Ultimate Play The Game).z80`, MD5 `0f2006bf897b786f48e8dd3d68924046`, the original 48K
@@ -78,7 +82,7 @@ Inventory, parameterised or one-shot day changes, duplicate lives and novelty op
 Frozen hook ROM SHA-256 `10083e7dba7eaacf630e98646587aa232c435c78136693e4bbf40b8c91d117a2`.
 Known issues: a room entry costs about 0.2 s more than the original before the limiter repays it. Synthetic IFF1
 interrupts inside R capture/restore can lose the ISR's R contribution (gameplay is IFF0). Missing: hardware; natural
-full-game completion; generic engine registration, record and stamp.
+full-game completion; a generic verify and stamp.
 
 ## Hardware checklist
 Default and Enhanced: room entries (pause length against the original), transformations, deaths, the cauldron, each
@@ -100,6 +104,8 @@ trainer, the loading screen; look for tearing at publication; beeper effects aga
 - [doc docs/LEARNING.md §1. Source refresh and verification freeze] Integration onto main 213a238 (2026-11-07):
   includes moved into asm/, the palette INCBIN turned into DB lines, private art read from a directory: the profile and
   both NEX files rebuild byte for byte, so the proof carried; shown by rebuilding, not assumed.
+- [local: this game's Enhanced art is a private input] Register what the repository can rebuild: `auto` and the record
+  cover the default build only; a build that needs private files keeps its own command and is named as such.
 
 ## Friction
 - reuse: [local: the Filmation renderer is per game; Alien 8 has its own copy]
@@ -118,3 +124,4 @@ trainer, the loading screen; look for tearing at publication; beeper effects aga
 2026-11-07: integrated on main 213a238 (branch nexttang/knight-lore-1.0): repository-relative includes and assets,
 byte-identical rebuild of the profile and both builds; selftest --tools and --canary, asm2profile --check, doccheck
 PASS; .nxc v1.0 review package with real-loader runs on NextZXOS v2.09 and 26.11 card copies.
+2026-11-07: engine registered (detector, `auto` for the default build with a boot check, record); rebased on b37b4f3.

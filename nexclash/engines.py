@@ -70,6 +70,7 @@ ENGINES = [
     ('ice_palace', 'is_ice_palace', None),                                # Beyond the Ice Palace (128K)
     ('pacmania', 'is_pacmania', None),                                    # Pac-Mania (128K)
     ('abu_simbel', 'is_abu_simbel', None),                                # Abu Simbel Profanation (48K)
+    ('knight_lore', 'is_knight_lore', None),                              # Knight Lore (48K): default build; Enhanced needs private assets
 ]
 
 

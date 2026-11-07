@@ -86,6 +86,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Pac-Mania (128K) (pac_mania): `pac_mania_sprites.nex` 431698a4d2e8a0a67ff50c44c4475b14, `pac_mania_enhanced.nex` acfbc75c7ce9d78840fec348ae2f2654; verified never
 - Abu Simbel Profanation (abu_simbel): `abu_simbel.nex` 82c1349ae5d34e68a67a7aabc68e039f, `abu_simbel_sprites.nex` c2dd86f174c55a4ae9155abb90689d8b, `abu_simbel_enhanced.nex` b45603707d1f71bb7704436dbe0c3169, `abu_simbel_english.nex` 2e3aa22510d9a925a5b0800aad3f26c9, `abu_simbel_english_enhanced.nex` 053806e52684ce68b89a020a848e7196; verified 2026-11-07
 - Underwurlde (underwurlde): `underwurlde.nex` a6e6b38e9e8be1d2b5c32f08ab3c3833, `underwurlde_sprites.nex` 07dff80327ed247a38780413e01a2325; verified never
+- Knight Lore (knight_lore): `knight_lore.nex` 02a997936f991061b18589266767d36c; verified never
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
