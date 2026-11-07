@@ -1,0 +1,147 @@
+{
+ "name": "ghosts_n_goblins",
+ "order": 25,
+ "game": "Ghosts 'n Goblins",
+ "doc": "ghosts_n_goblins.md",
+ "engine": "gng",
+ "representative": true,
+ "reference": "ghosts_n_goblins",
+ "inputs": {
+  "snapshot": {
+   "name": "ghosts_n_goblins.z80",
+   "md5": "23d69f517506104c36ba429cb2148fa5",
+   "path": "ghosts_n_goblins/ghosts_n_goblins.z80"
+  },
+  "recordings": [
+   {
+    "name": "c0.rzx",
+    "md5": "d084850ff6f30fb556ea20e98fd1fd4d",
+    "path": "ghosts_n_goblins/c0.rzx"
+   },
+   {
+    "name": "c2.rzx",
+    "md5": "68327e074a999bd6743931cbd8300b4d",
+    "path": "ghosts_n_goblins/c2.rzx"
+   },
+   {
+    "name": "c4.rzx",
+    "md5": "01e8345a498a3d04010da94fe3f727fe",
+    "path": "ghosts_n_goblins/c4.rzx"
+   },
+   {
+    "name": "c6.rzx",
+    "md5": "73f4c9ac745a18b4cb01757e8368800a",
+    "path": "ghosts_n_goblins/c6.rzx"
+   },
+   {
+    "name": "c8.rzx",
+    "md5": "8215dbe936fa91f5e4a3d5a07e3e2a20",
+    "path": "ghosts_n_goblins/c8.rzx"
+   },
+   {
+    "name": "c10.rzx",
+    "md5": "42d602dadef75d3bf5cbd622a965828d",
+    "path": "ghosts_n_goblins/c10.rzx"
+   },
+   {
+    "name": "n1.rzx",
+    "md5": "5736dfb21cc73cb00679447f6526094f",
+    "path": "ghosts_n_goblins/n1.rzx"
+   },
+   {
+    "name": "n2.rzx",
+    "md5": "37fa00cab6a4c003b0ae65f1794e0d91",
+    "path": "ghosts_n_goblins/n2.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "gng",
+  "gng_art"
+ ],
+ "own_modules": [
+  "gng",
+  "gng_art"
+ ],
+ "data": [
+  "asm/gng_hooks.asm",
+  "asm/gng_r_table.inc",
+  "docs/profiles/ghosts_n_goblins.json",
+  "docs/profiles/ghosts_n_goblins_colours.json",
+  "docs/profiles/ghosts_n_goblins_graphics.json",
+  "docs/profiles/ghosts_n_goblins_palette.json"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record",
+   "--no-nxc"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "c0.rzx",
+   "c2.rzx",
+   "c4.rzx",
+   "c6.rzx",
+   "c8.rzx",
+   "c10.rzx",
+   "n1.rzx",
+   "n2.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 10,
+  "note": "Eight established bot recordings plus two local 390-frame ladder fixtures documented in the game notes; local verification scripts use their explicit paths. Not a human playthrough."
+ },
+ "outputs": {
+  "plain": {
+   "file": "ghosts_n_goblins.nex",
+   "md5": "3d71dd0e63371c4cf06f919d46bc2315"
+  },
+  "sprites": {
+   "file": "ghosts_n_goblins_sprites.nex",
+   "md5": "34c142677dbfebad66eb3585e158537c"
+  },
+  "enhanced": {
+   "file": "ghosts_n_goblins_enhanced.nex",
+   "md5": "4a76d9bfe562d46ba88808f0e76c9540"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Ghosts 'n Goblins",
+  "engine_col": "gng (ghosts_n_goblins.md)",
+  "build": "ghosts_n_goblins_sprites.nex 34c14267 + enhanced 4a76d9bf = the published .nxc 1.6 --bare apart from the NEX loading-screen block (cheats live in the .nxc); graphics read from the player's snapshot and recordings",
+  "software": "Both sets: 53063 replay frames; intermediate positions, carried-pot ground clipping, owner art; 648 clipping cases, 40 negative controls, 3120 clock/R/IFF cases and 15 pace trials per set; actual-loader targets exact.",
+  "hardware": "untested",
+  "next": "hardware test; late-game coverage"
+ },
+ "checks": [
+  "asm2profile:ghosts_n_goblins"
+ ],
+ "techniques": [
+  {
+   "application": "gng.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "every PC reading the screen: the plot loops' own reads only",
+   "phases": []
+  }
+ ],
+ "results": [
+  {
+   "application": "gng.screen-readers",
+   "check": "v1.4 integrated-engine release proof",
+   "status": "pass",
+   "build": "4a76d9bf/34c14267",
+   "scope": "Both sets: 11 recordings, 53063 frames, 331570 exact patterns; ground oracle 567/960/1517; 648 clipping cases; 34 replay + 5 clipping + 1 stale-history negative controls; 3120 clock/R/IFF cases; 15 pace trials (means +0.208/+0.208/+0.309%, worst 20-update window +7.50%); actual loader byte exact for Default, Enhanced and Enhanced-on-then-off.",
+   "evidence": "games/ghosts_n_goblins.md \"Proof\""
+  }
+ ],
+ "version": "1.6"
+}

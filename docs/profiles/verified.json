@@ -97,6 +97,15 @@
     "sprites": "fb77af62c5ce975802c354dd8b1943ee"
    }
   },
+  "23d69f517506104c36ba429cb2148fa5": {
+   "game": "Ghosts 'n Goblins",
+   "doc": "ghosts_n_goblins.md",
+   "nex": {
+    "plain": "3d71dd0e63371c4cf06f919d46bc2315",
+    "sprites": "34c142677dbfebad66eb3585e158537c",
+    "enhanced": "4a76d9bfe562d46ba88808f0e76c9540"
+   }
+  },
   "c1a76349d08289810323bae0e62a9102": {
    "game": "Green Beret",
    "doc": "green_beret.md",
