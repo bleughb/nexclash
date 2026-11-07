@@ -39,18 +39,18 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Rainbow Islands (128K) (rainbow): `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_sprites.nex` df95daa5ef60116c994ffbde1f5f8fbb, `rainbow_sprites_diag.nex` afe331001c58e21cd7a4524ed045f229; verified 2026-10-13
 - Rainbow Islands (128K, Z80N) (rainbow_z80n): `rainbow_z80n.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_z80n_sprites.nex` 76d5da1acc29c86bf1cd3676577538dc, `rainbow_z80n_sprites_diag.nex` 4482096ee56a4c686dd07b2cf997ab95; verified 2026-11-05
 - Everyone's a Wally (wally): `wally.nex` 2e615b3e7ae995e6d6a6ed9e3f586d4d, `wally_sprites.nex` 8c05c0be92150c29153ed28c41b44842; verified 2026-10-13
-- Everyone's a Wally (updated) (everyones_a_wally_updated): `everyones_a_wally_updated.nex` 2e615b3e7ae995e6d6a6ed9e3f586d4d, `everyones_a_wally_updated_sprites.nex` 07cfcb5c5da0ef59262f6baef96b5672; verified 2026-11-05
+- Everyone's a Wally (updated) (everyones_a_wally_updated): `everyones_a_wally_updated.nex` 2e615b3e7ae995e6d6a6ed9e3f586d4d, `everyones_a_wally_updated_sprites.nex` a6acbff44a2681ded8b94fd3670339cb; verified 2026-11-07
 - Spellbound Dizzy (Dizzy V) (dizzy5): `dizzy5.nex` c99189f3274a4803f0b25b0217206bdb, `dizzy5_sprites.nex` 67bc34ff273c2dd45ff9e222e6d56436, `dizzy5_sprites.nex --strategy slot1` a59c1fd91ec5c32e549526dbc08d2e69 (re-checked 2026-09-28; 00a7c496... had an EMPTY font page: dialogue text blank on hardware); verified 2026-11-05
 - Prince of the Yolkfolk (Dizzy 6) (dizzy6): `Dizzy6.nex` e02faca34df9504cc1f2f162e0ef791e, `Dizzy6_sprites.nex` f491e1f6621559ccc4d36de3535ff5d0; verified 2026-11-05
 - Fantasy World Dizzy (fantasy_world_dizzy): `fantasy_world_dizzy.nex` cd620010e2f61af0002e76718945716f, `fantasy_world_dizzy_sprites.nex` fb77af62c5ce975802c354dd8b1943ee, `fantasy_world_dizzy_sprites.nex --strategy printer` c09213beaec1572c0228985dae89bd77; verified 2026-11-05
 - Magicland Dizzy (magicland_dizzy): `magicland_dizzy.nex` 09eb18496cff334ea17bfc0b0c94585d, `magicland_dizzy_sprites.nex` ab66b5011a3e87a54f561502ded0ac24, `magicland_dizzy_sprites.nex --strategy slot1` d3b37c05d4c47ada07294fa2d7c1ae76; verified 2026-10-13
 - Treasure Island Dizzy (treasure_island_dizzy): `treasure_island_dizzy.nex` 4dae1a3a15b2158642a5d5b82de92ef7, `treasure_island_dizzy_sprites.nex` 8b4d0847d68fce3215bd43a0e116e682; verified 2026-11-05
 - Treasure Island Dizzy (title screen) (treasure_island_title): `treasure_island_title.nex` 70890aba7d821fba8a41e63636eb58be, `treasure_island_title_sprites.nex` 85e054fe4bce8e4b3a8e336aac432f58; verified 2026-10-13
-- Dizzy: The Ultimate Cartoon Adventure (dizzy1): `dizzy1.nex` 7892b2e0f1f3f9f19165516db307cbe0, `dizzy1_sprites.nex` 6ac7a3d6fbf45699b486916f91ae225f; verified 2026-11-05
+- Dizzy: The Ultimate Cartoon Adventure (dizzy1): `dizzy1.nex` 7892b2e0f1f3f9f19165516db307cbe0, `dizzy1_sprites.nex` 07d09c8079f46fbeaa5e8a15563f3b10; verified 2026-11-07
 - Commando (commando): `commando.nex` a206f950c12f58a8e7f26b366f5a2480, `commando_sprites.nex` 6a547a86166a553b68e05360f1f83b78; verified 2026-11-06
 - Crystal Kingdom Dizzy (128K) (crystal_kingdom_dizzy): `crystal_kingdom_dizzy.nex` 99975f65172dc86ecefbac07db2c0c00; verified never
-- Midnight Resistance (128K) (midnight_resistance): `midnight_resistance.nex` 17239acaaf67b0f8011478053e17829d, `midnight_resistance_sprites.nex` 2aacd11c2872b4df1dce1ca7ceb80bfd; verified 2026-11-05
-- Smash TV (smash_tv): `smash_tv.nex` c72ea298486b14036ac1a87ac89c3f0e, `smash_tv_sprites.nex` af0298e2cad56d8fb992caaba77a6549; verified 2026-11-05
+- Midnight Resistance (128K) (midnight_resistance): `midnight_resistance.nex` 17239acaaf67b0f8011478053e17829d, `midnight_resistance_sprites.nex` 947dc8a9553732eb3dbf64525b1df8c2; verified 2026-11-07
+- Smash TV (smash_tv): `smash_tv.nex` c72ea298486b14036ac1a87ac89c3f0e, `smash_tv_sprites.nex` 68cd80b38b58b5578a5d135136850736; verified 2026-11-07
 - Target Renegade (128K) (target_renegade): `target_renegade.nex` a0be8dc03a1be8c6d67dc3e0229abc35, `target_renegade_sprites.nex` 8e5f8f0be205aade316106a6db7d4aac; verified 2026-11-06
 - Jetpac (jetpac): `jetpac.nex` feff51b7038606d21c03c260055481e4, `jetpac_sprites.nex` 72e3cc193325cc8166f8e7d7b6481327; verified 2026-11-06
 - Lode Runner (lode_runner): `lode_runner.nex` cd0c1659c8569b2fa80da74962af90d2, `lode_runner_sprites.nex` 85fe6afd593679bf59c787230ba0eaca; verified 2026-11-05
@@ -60,7 +60,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Atic Atac (atic_atac): `Atic_Atac_1983_Ultimate_Play_The_Game_a.nex` e710fa8785802f1aa51f214d95c82343, `Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites.nex` 6aa7e780f4ec7892d862c675e61b7fba; verified never
 - The Incredible Shrinking Fireman (GPT6_ASTRA) (incredible_shrinking_fireman-add-GPT6_ASTRA): `incredible_shrinking_fireman_plain-add-GPT6_ASTRA.nex` f8f213e55e3da01349827f8ae7d93bee, `incredible_shrinking_fireman_sprites-add-GPT6_ASTRA.nex` 437680af4aa9722e7058b2df6baf0cdb; verified 2026-11-06
 - Cauldron (cauldron): `Cauldron_1985_Palace_Software_a.nex` b5b211f1fc6103ec0d42711dcc29cd0d, `Cauldron_1985_Palace_Software_a_sprites.nex` 43c1ca492d7c1cc68541f02aaed9cb4c; verified 2026-11-05
-- Nemesis the Warlock (nemesis_the_warlock): `nemesis_the_warlock.nex` f1497589ddf479e34d42f6ab0618954d, `nemesis_the_warlock_sprites.nex` 31ad4ab5b7507b6289ffe30f82c7d6bb; verified 2026-11-05
+- Nemesis the Warlock (nemesis_the_warlock): `nemesis_the_warlock.nex` f1497589ddf479e34d42f6ab0618954d, `nemesis_the_warlock_sprites.nex` 642fdf0707db7f6f78727e2335d2fd0e; verified 2026-11-07
 - Inferno (inferno): `inferno.nex` 0a3bde4734c5b3f15ad0f2a55cc81e19; verified never
 - Ghosts 'n Goblins (ghosts_n_goblins): `ghosts_n_goblins.nex` 3d71dd0e63371c4cf06f919d46bc2315, `ghosts_n_goblins_sprites.nex` cf933c183149dab497e6d737b46ab601, `ghosts_n_goblins_enhanced.nex` 34e5d0588cd2705958ac1961f1f59f66; verified 2026-11-06
 - Green Beret (green_beret): `green_beret.nex` f4d4e3d43e47102af66fb3a7e6e022ab, `green_beret_sprites.nex` d982d5ae83e2d54e3fc750006322c25e; verified 2026-11-03

@@ -278,6 +278,7 @@ class NextState:
         self.pat_ptr = 0
         self.events = []
         self.t3 = 0                 # T-states run at 28 MHz (counted by the runner)
+        self.sel = None             # NextREG selected at port 0x243B
 
     def nextreg(self, reg, val):
         self.nr[reg] = val
@@ -285,7 +286,9 @@ class NextState:
             self.attr[self.nr.get(0x34, 0) & 0x7F][reg - 0x35] = val
 
     def out(self, port, val):
-        if port == 0x303B:
+        if port == 0x243B:
+            self.sel = val
+        elif port == 0x303B:
             self.pat_ptr = (val & 0x3F) * 256 + (128 if val & 0x80 else 0)
         elif port & 0xFF == 0x5B:
             self.pat[self.pat_ptr & 0x3FFF] = val
@@ -334,6 +337,9 @@ def _machine(Sim, mem, regs, ns, slot='o'):
 
     class Tr:
         def read_port(s, regs_, port):
+            if port == 0x253B and ns.sel is not None:   # NextREG read: the hooks' speed latch (NR 7)
+                v = ns.nr.get(ns.sel, 0)
+                return (v & 3) << 4 | (v & 3) if ns.sel == 0x07 else v
             ns.events.append(('in', port))
             return 0xFF
 

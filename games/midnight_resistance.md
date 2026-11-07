@@ -263,3 +263,28 @@ Techniques: `patch.scratch-redirect`, `optimise.pattern-cache`
 (recipe, owns and results: docs/records/midnight_resistance.json; cards: docs/techniques/).
 - Scratch redirect: back-buffer composer, five plotters share CALL 0x7EC1, slot 5 free from the ISR.
 - Pattern cache: 16 entries; thrashes in the tank scene (see the card's Measurements).
+
+## Speed restored (2026-11-07, shared engine refactor, goal 2)
+- c_go (every plot's CALL 0x7EC1 hook) and commit latch the caller's CPU speed (HLIB_SPEED_IN, V_SPD = 0xB03E in
+  page 26) instead of NEXTREG 7,3 and give it back instead of NEXTREG 7,0: the pass path before its POP AF, commit at its
+  end, and the six loop exits (FIXDE / FIXDEF: no stack, no flags) through V_A = 0xB03F before page 26 is unmapped.
+  The verifier (rainbow's NextState) already answers NR reads.
+- Sprites 2aacd11c -> 947dc8a9; plain unchanged. 2 RZX IDENTICAL (16,513 frames, 25,527 plots converted), unit 8,856
+  cases, negative control 48/48; stamped.
+- JNext pace (v2.09 card, 600 updates at 0x8187 (automatic), Kempston profile, seed 1, plain build control):
+  main's build -4.24%, this one -3.69% (both faster than the original: the game has no limiter); the latch reads cost
+  +0.57% at 3.5 MHz. Interrupts 50.00 a second and longest gap 20.3 ms in all four runs.
+
+## Lessons
+- [card patch.restore-speed §Use / do not use] The plot-loop exits keep no stack and no flags: they restore the speed
+  through a byte of page 26 before unmapping it (`ld (V_A),a / ld a,(V_SPD) / nextreg 7,a / ld a,(V_A)`). Card amended.
+
+## Technique use
+- patch.restore-speed: helped: the macros at two entries; the A-saving form at the loop exits (2026-11-07).
+
+## Friction
+- reuse: [tool asm/lib/hlib_speed.asm] the shared latch macros
+- retries: [none: the first build verified]
+- environment: [none: the usual references and the JNext card, read-only]
+- hand-rolled: [local: a JNext profile for the pace (start keys from screenshots), kept in the pilot run folder]
+- scratch: [none: no scratch scripts in the repo]

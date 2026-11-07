@@ -437,7 +437,7 @@ SPB = 15                           # sprite patterns: bank 15 (pages 30-31), upl
 QUADS = ((0, 0), (16, 0), (0, 16), (16, 16))   # TL, TR, BL, BR = sprites 0-3
 P2LEN, DZLEN = 9663, 4760          # plane: plotter 2 graphics 43485-53147, Dizzy 24290-29049
 HOOK_RAM = (0x5B40, 0x5BC0)        # variables + hook stack (printer buffer, never touched by the game)
-HSTK_MIN = 0x5B58 + 18             # lowest SP allowed in a hook (variables end + an interrupt's room)
+HSTK_MIN = 0x5B6A + 18             # lowest SP allowed in a hook (variables end at 0x5B69 + an interrupt's room)
 TAIL_ADDR = 0x5B00                 # never touched by the game (RZX scan); the plain build uses it too
 PROFILE = os.path.join(_HERE, '..', 'docs', 'profiles', 'dizzy1_ultimate_cartoon_adventure.json')
 SITES = ((57983, 'cb83326de1', 'e_p2'), (58076, '7e4f1a', 'e_p2w'), (58113, '326de1', 'e_dz'),
@@ -944,6 +944,19 @@ def run_pair(patch, alt, mem, regs, model, site, check_int=True, limit=2000000, 
         p = P[24]
         setreg(pm[(p + 2) & 0xFFFF], P[0])
         P[15] = R2[P[15]]; P[24] = (p + 3) & 0xFFFF; P[25] += 17
+    class _Ports:                       # NextREG reads (0x243B select, 0x253B read): the hooks' speed latch
+        sel = None
+
+        def read_port(self, registers, port):
+            if port == 0x253B and self.sel is not None:
+                v = nr.get(self.sel, 0)
+                return (v & 3) << 4 | (v & 3) if self.sel == 0x07 else v
+            return 255
+
+        def write_port(self, registers, port, value, offset=0):
+            if port == 0x243B:
+                self.sel = value
+    sp_.set_tracer(_Ports())
     sp_.after_ED[0x91], sp_.after_ED[0x92] = nn, na
     ops = sp_.opcodes
     keep = [P[i] for i in (10, 11, 14, 16, 17, 18, 19, 20, 21, 22, 23, 26, 27)]
