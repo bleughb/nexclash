@@ -1,0 +1,169 @@
+{
+ "name": "green_beret",
+ "order": 26,
+ "game": "Green Beret",
+ "doc": "green_beret.md",
+ "engine": "green_beret",
+ "representative": true,
+ "reference": "green_beret",
+ "inputs": {
+  "snapshot": {
+   "name": "green_beret.z80",
+   "md5": "c1a76349d08289810323bae0e62a9102",
+   "path": "green_beret/green_beret.z80"
+  },
+  "recordings": [
+   {
+    "name": "gb_nocheat.rzx",
+    "md5": "611ba6de6e0153c602c902b6364e4939",
+    "path": "green_beret/gb_nocheat.rzx"
+   },
+   {
+    "name": "gb_cheat.rzx",
+    "md5": "0bcc05b3d80db4bceadc34612b213f59",
+    "path": "green_beret/gb_cheat.rzx"
+   },
+   {
+    "name": "gb_weap.rzx",
+    "md5": "1c17398d4693cd650925a084aa085215",
+    "path": "green_beret/gb_weap.rzx"
+   },
+   {
+    "name": "gb_stage4.rzx",
+    "md5": "215f89d38964f24b0d34881ad1b6469d",
+    "path": "green_beret/gb_stage4.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "green_beret"
+ ],
+ "own_modules": [
+  "green_beret"
+ ],
+ "data": [
+  "docs/profiles/green_beret.json",
+  "asm/green_beret_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "gb_nocheat.rzx",
+   "gb_cheat.rzx",
+   "gb_weap.rzx",
+   "gb_stage4.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 15,
+  "note": "Pilot: scripted random-key recordings; cheats live in the RZX snapshots only. No human player."
+ },
+ "outputs": {
+  "plain": {
+   "file": "green_beret.nex",
+   "md5": "f4d4e3d43e47102af66fb3a7e6e022ab"
+  },
+  "sprites": {
+   "file": "green_beret_sprites.nex",
+   "md5": "d982d5ae83e2d54e3fc750006322c25e"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Green Beret",
+  "engine_col": "green_beret (green_beret.md)",
+  "build": "green_beret_sprites.nex (pilot, unattended): figures, plot2 objects, small objects and mines sprites, the plot code writes a scratch page; white body, black dark pixels",
+  "software": "RZX replay verify on 4 scripted recordings, unit + negative controls; JNext both builds reach play",
+  "hardware": "untested",
+  "next": "hardware test; the owner paints the sheets (recolour)"
+ },
+ "checks": [
+  "asm2profile:green_beret"
+ ],
+ "techniques": [
+  {
+   "application": "green_beret.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "scan --writers over the ULA: readers are plotters and the in-place scroll; no logic reads figure pixels",
+   "phases": []
+  },
+  {
+   "application": "green_beret.tracked-unit",
+   "id": "detect.tracked-unit",
+   "revision": 2,
+   "target": "one plot call = one whole figure",
+   "phases": []
+  },
+  {
+   "application": "green_beret.colour-map",
+   "id": "patch.runtime-colour-map",
+   "revision": 1,
+   "target": "upload applies per-image planes (pages 28-51, slot 6)",
+   "phases": [
+    "entry"
+   ]
+  }
+ ],
+ "results": [
+  {
+   "application": "green_beret.screen-readers",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "462c599c",
+   "scope": "4 recordings; random keys, cheats in 3; no human recording; start-up checked only in JNext; no hardware",
+   "evidence": "games/green_beret.md \"Results\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/green_beret_hooks.asm": "6d575dc50250a854",
+   "docs/profiles/green_beret.json": "d28c9b9ceb4aa797",
+   "nexclash.py": "71dc4c592918bff8",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "9b8914eeef5dae39",
+   "nexclash/green_beret.py": "4b670b407f6e236a",
+   "nexclash/nextboot.py": "44c08db48a1bf32d",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "a6ff9eef9ca737b3",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-11-03"
+ },
+ "verified": {
+  "deps": {
+   "asm/green_beret_hooks.asm": "6d575dc50250a854",
+   "docs/profiles/green_beret.json": "d28c9b9ceb4aa797",
+   "nexclash.py": "71dc4c592918bff8",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "9b8914eeef5dae39",
+   "nexclash/green_beret.py": "4b670b407f6e236a",
+   "nexclash/nextboot.py": "44c08db48a1bf32d",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "37b0e84f39f58243",
+   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "a6ff9eef9ca737b3",
+   "skoolkit": "10.1"
+  },
+  "date": "2026-11-03"
+ }
+}

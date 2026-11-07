@@ -97,6 +97,14 @@
     "sprites": "fb77af62c5ce975802c354dd8b1943ee"
    }
   },
+  "c1a76349d08289810323bae0e62a9102": {
+   "game": "Green Beret",
+   "doc": "green_beret.md",
+   "nex": {
+    "plain": "f4d4e3d43e47102af66fb3a7e6e022ab",
+    "sprites": "d982d5ae83e2d54e3fc750006322c25e"
+   }
+  },
   "fdab5fb61b2cb01ce38edcfa85ea9e80": {
    "game": "Gryzor",
    "doc": "gryzor.md",
