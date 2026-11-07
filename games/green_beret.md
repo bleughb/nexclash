@@ -31,6 +31,18 @@ the characters outline, then thats ready to push."
 - Verifier: the picture check counts the trimmed pixels (the original's mask erased them; the build shows what is
   under them) only where a plot of a trimmed image put them; a unit case per figure image (106) against the rule;
   the every-site clock matrix (52 cases); negatives "edge rule left out" and "exit forced to 3.5 MHz".
+- **Results (2026-11-06, simulation and JNext 1.1.104 headless; pilot runs/green_beret/work/v1).** Builds: plain
+  f4d4e3d4, sprites d982d5ae. Replay IDENTICAL on the 4 recordings (84,814 frames, 91,412 figure plots; 310,485 trimmed
+  pixels allowed where a trimmed plot put them; no plot of a trimmed graphic with another mask). Units: 106 figure
+  images against the rule, 52 clock-matrix cases, the rest as before. Negatives 18 of 18 detected (work/v1/proof_neg.json).
+  R test EQUAL on all 4 (283,838 randomisations). Pace (10 trials a scene, probe 0xA38C, lockstep on lives 0xFFE3 and
+  stage 0xFFDF): quiet +0.00%, busy +0.09%, sound +0.06% (single trials 0 to +0.21%); no limiter: the loop waits on the
+  ISR, so the build is never faster. Port 0xFE writes 5-7% fewer than the original (beeper loops end at the interrupt,
+  hook time comes out of them). Flicker 300 frames clean; 15-minute soak clean. 26.11 and v2.09 card copies, Browser +
+  loader: /tmp/NEXCLASH.NEX = d982d5ae on both, play reached, the same frames on both.
+  .nxc: pilot out/green_beret_v1.0.nxc (= out/v1/Green Beret (1986)(Imagine)/...[a2][a2].nxc), MD5 975489b8.
+- **Open.** Title screen on the menu (the 128K file has it): not done; that file is another snapshot (layout, signature,
+  sites to re-check), not a small change. Trainers carried from the INF1 build, not re-run in JNext this session.
 
 ## Inputs
 Snapshot: archive "Green Beret (1986)(Imagine)[a2][a2].z80", md5 c1a76349d08289810323bae0e62a9102. 48K, at the control menu, PC 0x8273 in RAM, IM 2, EI, SP 0xFEFB, no BASIC, ROM used only as harmless data reads (0x0000, 0x0100, 0x0200: erases at an unset address).
