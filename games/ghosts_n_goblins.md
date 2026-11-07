@@ -16,6 +16,9 @@ Techniques: detect.gameplay-screen-readers
 - The Enhanced map (ghosts_n_goblins_colours.json, the owner's painting) is keyed by image id and byte offset with
   its check values null; gng.fill_checks puts each image's own byte back at load. After importing a repainted
   sheet run gng.strip_checks on the map before committing.
+- verify includes the 1.4+ checks the published build was proved with (nexclash/gng_verify.py, from the pilot's
+  movement01/verify_smooth.py and ground01/verify.py): the Copper commit of full positions, intermediate positions,
+  the carried item clipped at its zombie. Without them the base checker fails every tick on the Copper writes.
 - RECOLOUR's guard runs on the Enhanced build (an empty map builds with the default palette, as recolour).
 - The cheats (v1.5 / v1.6: invincibility, level 2 / 3 start, always the dagger, infinite time) are .nxc trainers
   from the archive's .pok; they live in the .nxc, not here.

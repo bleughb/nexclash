@@ -533,6 +533,21 @@ def replay_bare(patch, rzx_path, stop):
 
 
 def verify(patch, rzx_path, stop=None, collect=0, progress=None, stop_on_failure=False):
+    """The differential replay with the 1.4+ checks (gng_verify: the Copper commit of full positions, intermediate
+    positions against independently tracked originals, the carried item clipped at its zombie): installed for the
+    replay and taken out after, so the unit tests and negative controls keep the base engine."""
+    from . import gng_verify
+    with gng_verify.installed():
+        if patch.pl is None:
+            patch.build_plane()
+        gng_verify.oracle(patch)
+        try:
+            return _verify(patch, rzx_path, stop, collect, progress, stop_on_failure)
+        except AssertionError as e:      # the extended checks assert: a failure, reported as one
+            return collections.Counter({'gng_verify check!': 1}), {'gng_verify check!': [str(e)[:300]]}, []
+
+
+def _verify(patch, rzx_path, stop=None, collect=0, progress=None, stop_on_failure=False):
     from . import rzx as RZ
     if patch.pl is None:
         patch.build_plane()
