@@ -26,10 +26,18 @@ VERIFIED = os.path.join(ROOT, 'docs', 'profiles', 'verified.json')
 CONTRIB = os.path.join(ROOT, 'docs', 'contribute.json')
 MANIFEST = os.path.join(ROOT, 'MANIFEST.json')
 # what a contribution may contain (package-relative), and what it never may
-ALLOWED = ('nexclash/*', 'asm/*', 'docs/*', 'games/*', 'tools/*', 'nexclash.py', 'selftest.py', 'STATUS.md',
-           'README.md', 'CLAUDE.md')
+ALLOWED = ('nexclash/*', 'asm/*', 'docs/*', 'games/*', 'tools/*', '.github/*', '.claude/*',
+           'nexclash.py', 'selftest.py', 'STATUS.md', 'README.md', 'CLAUDE.md', 'CONTRIBUTING.md',
+           'requirements.txt', 'VERSION', 'LICENSE', 'THIRD-PARTY-NOTICES', '.gitignore')
 GAME_DATA = ('.z80', '.rzx', '.nex', '.sna', '.szx', '.tap', '.tzx', '.dsk', '.scr', '.bin', '.rom', '.pzx',
              '.zip', '.png', '.gif')
+CACHE_DIRS = ('.git', '__pycache__', '.venv', '.tox', '.nox', '.pytest_cache', '.mypy_cache', '.ruff_cache')
+GENERATED_ROOTS = ('venv', 'env', 'node_modules', 'dist', 'build', 'htmlcov', 'contrib_reports',
+                   '*_nexclash', '*_out', '*_session', '*_survey', 'out_*', '.recolour_*')
+GENERATED_FILES = ('*.pyc', '*.pyo', '*.log', '.coverage')
+DISCOVERY_EXCLUDES = tuple(x + '/' for x in CACHE_DIRS) + tuple('/' + x + '/' for x in GENERATED_ROOTS) + GENERATED_FILES
+
+
 MAX_FILE = 512 * 1024
 MAX_NXC = 4 * 1024 * 1024        # a .nxc: the patch to share (encrypted with the game; no game data in clear)
 
@@ -183,36 +191,66 @@ def cmd_new(a, cmd_auto):
 
 # ------------------------------------------------------------------------------------- contribute
 
+def generated_path(relative, directory=False):
+    """Generated files are excluded from discovery; tracked/manifest changes are still checked."""
+    parts = relative.split('/')
+    directories = parts if directory else parts[:-1]
+    return (any(p in CACHE_DIRS for p in directories)
+            or bool(directories and any(fnmatch.fnmatch(parts[0], g) for g in GENERATED_ROOTS))
+            or (not directory and any(fnmatch.fnmatch(parts[-1], g) for g in GENERATED_FILES)))
+
+
+def resolve_git_base(base_ref=None):
+    """A reviewed ancestor of HEAD, never a stale starting point that re-exports merged upstream work."""
+    def git(*args):
+        return subprocess.run(['git', '-C', ROOT, *args], capture_output=True, text=True)
+    default = git('merge-base', 'HEAD', 'origin/main')
+    if base_ref is None and default.returncode:
+        sys.exit('Cannot find origin/main merge base; fetch main or provide a reviewed ancestor with --base.')
+    chosen = git('rev-parse', '--verify', (base_ref or default.stdout.strip()) + '^{commit}')
+    if chosen.returncode:
+        sys.exit('Invalid contribution baseline: ' + (base_ref or 'origin/main'))
+    base = chosen.stdout.strip()
+    if git('merge-base', '--is-ancestor', base, 'HEAD').returncode:
+        sys.exit('Contribution --base must be an ancestor of HEAD.')
+    current = default.stdout.strip()
+    if base_ref and not default.returncode and base != current and git('merge-base', '--is-ancestor', current, base).returncode:
+        sys.exit('--base does not include the current merge base and would include upstream changes; omit --base after refreshing main.')
+    return base
+
+
 def changed_files(base_ref=None):
-    """Package-relative files added or changed since the release (MANIFEST.json), or, in a git
-    checkout without a manifest, since the chosen base (including committed and untracked work)."""
+    """Committed/uncommitted toolkit work, with generated directories pruned before discovery/hashing."""
     if os.path.exists(MANIFEST):
+        if base_ref:
+            sys.exit('--base applies only to Git checkouts; release packages use their original manifest.')
         base = json.load(open(MANIFEST))['files']
-        deleted = [f for f in base if not os.path.exists(os.path.join(ROOT, f))]
+        deleted = [f for f in base if not os.path.isfile(os.path.join(ROOT, f))]
         if deleted:
             sys.exit('Contribution contains deletions (including renames); submit a pull request: ' + ', '.join(deleted))
-        out = []
-        for d, _, fs in os.walk(ROOT):
-            if '.git' in d.split(os.sep) or '__pycache__' in d:
-                continue
+        # Always inspect original files, even if they now match an ignore pattern.
+        out = {f for f, h in base.items() if md5(os.path.join(ROOT, f)) != h}
+        for d, dirs, fs in os.walk(ROOT):
+            relative = os.path.relpath(d, ROOT).replace(os.sep, '/')
+            prefix = '' if relative == '.' else relative + '/'
+            dirs[:] = [x for x in dirs if not generated_path(prefix + x, directory=True)]
             for f in fs:
-                rel = os.path.relpath(os.path.join(d, f), ROOT).replace(os.sep, '/')
-                if rel == 'MANIFEST.json':
-                    continue
-                if base.get(rel) != md5(os.path.join(ROOT, rel)):
-                    out.append(rel)
+                rel = prefix + f
+                if rel not in base and rel != 'MANIFEST.json' and not generated_path(rel):
+                    out.add(rel)  # New files need no hash until they pass the export policy.
         return sorted(out)
-    if os.path.exists(os.path.join(ROOT, '.git')):          # a dir, or a file in a git worktree
+    if os.path.exists(os.path.join(ROOT, '.git')):
         def git(*args):
-            r = subprocess.run(['git', '-C', ROOT, *args], capture_output=True, text=True)
-            if r.returncode:
-                sys.exit('Cannot determine contribution baseline: ' + r.stderr.strip())
-            return r.stdout
-        base = base_ref or git('merge-base', 'HEAD', 'origin/main').strip()
+            result = subprocess.run(['git', '-C', ROOT, *args], capture_output=True, text=True)
+            if result.returncode:
+                sys.exit('Cannot determine contribution changes: ' + result.stderr.strip())
+            return result.stdout
+        base = resolve_git_base(base_ref)
         changed = git('diff', '--name-only', '-z', '--no-renames', base).split('\0')
-        untracked = git('ls-files', '--others', '--exclude-standard', '-z').split('\0')
+        untracked = git('ls-files', '--others', '--exclude-standard', '-z',
+                        *['--exclude=' + g for g in DISCOVERY_EXCLUDES]).split('\0')
         files = sorted(set(filter(None, changed + untracked)))
-        deleted = [f for f in files if not os.path.exists(os.path.join(ROOT, f))]
+        deleted = [f for f in files if not os.path.isfile(os.path.join(ROOT, f))]
         if deleted:
             sys.exit('Contribution contains deletions (including renames); submit a pull request: ' + ', '.join(deleted))
         print('Contribution baseline: ' + base)
@@ -244,16 +282,7 @@ def contribution_base(files, base_ref=None):
                 {f: manifest['files'].get(f) for f in files})
     def git(*args):
         return subprocess.run(['git', '-C', ROOT, *args], capture_output=True)
-    base = base_ref
-    if not base:
-        result = git('merge-base', 'HEAD', 'origin/main')
-        if result.returncode:
-            sys.exit('Cannot determine contribution baseline: ' + result.stderr.decode(errors='replace'))
-        base = result.stdout.decode().strip()
-    revision = git('rev-parse', '--verify', base + '^{commit}')
-    if revision.returncode:
-        sys.exit('Invalid contribution baseline: ' + base)
-    base = revision.stdout.decode().strip()
+    base = resolve_git_base(base_ref)
     originals = {}
     for f in files:
         result = git('show', base + ':' + f)
@@ -263,15 +292,32 @@ def contribution_base(files, base_ref=None):
 
 def cmd_contribute(a):
     files = changed_files(getattr(a, 'base', None))
+    excluded = sorted(set(getattr(a, 'exclude', None) or []))
+    if set(excluded) - set(files):
+        sys.exit('--exclude does not name changed files: ' + ', '.join(sorted(set(excluded) - set(files))))
+    files = [f for f in files if f not in excluded]
     keep, refused = screen(files)
-    for f, why in refused:
-        print('left out: %s (%s)' % (f, why))
+    # Player inputs outside toolkit paths are expected; unsupported source changes require a decision.
+    data = [f for f, _ in refused if f.lower().endswith(GAME_DATA) and not f.startswith('assets/')
+            and not any(fnmatch.fnmatch(f, g) for g in ALLOWED)]
+    blocked = [(f, why) for f, why in refused if f not in data]
+    if data:
+        print('Excluded %d game-data/binary file(s); these are never exported.' % len(data))
+    for f in excluded:
+        print('Explicitly excluded: ' + f)
+    if blocked:
+        for f, why in blocked[:10]:
+            print('Cannot include: %s (%s)' % (f, why))
+        if len(blocked) > 10:
+            print('... %d more unsupported changes' % (len(blocked) - 10))
+        print('No archive written: move unrelated files out, explicitly --exclude them, or use a PR for required unsupported files.')
+        return 1
     if not keep:
         print('Nothing to contribute: no toolkit file was added or changed.')
         return 1
     source, originals = contribution_base(keep, getattr(a, 'base', None))
     zname = os.path.abspath(a.output or 'nexclash_contribution_%s.zip' % a.name)
-    meta = {'schema': 2, 'source': source, 'base_files': originals, 'game': a.name, 'date': time.strftime('%Y-%m-%d'), 'note': a.note or '',
+    meta = {'schema': 2, 'source': source, 'base_files': originals, 'excluded': excluded, 'game': a.name, 'date': time.strftime('%Y-%m-%d'), 'note': a.note or '',
             'package_version': open(os.path.join(ROOT, 'VERSION')).read().strip()
             if os.path.exists(os.path.join(ROOT, 'VERSION')) else 'git',
             'files': {f: md5(os.path.join(ROOT, f)) for f in keep}, 'reports': [], 'patches': {}}

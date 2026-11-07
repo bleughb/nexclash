@@ -42,6 +42,8 @@ jobs:
           NOTES="Download nexclash-$(cat VERSION).zip, unzip, \`pip install -r requirements.txt\`, then \`python nexclash.py patch MyGame.z80\`. Supported games: STATUS.md. No game files included - bring your own snapshot. GPL-3.0-or-later."
           if gh release view "$TAG" > /dev/null 2>&1; then
             gh release upload "$TAG" dist/nexclash-*.zip --clobber
+          elif test -f "docs/releases/v$(cat VERSION).md"; then
+            gh release create "$TAG" dist/nexclash-*.zip --title "nexclash $(cat VERSION)" --notes-file "docs/releases/v$(cat VERSION).md"
           else
             gh release create "$TAG" dist/nexclash-*.zip --title "nexclash $(cat VERSION)" --notes "$NOTES"
           fi

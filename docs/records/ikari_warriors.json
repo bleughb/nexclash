@@ -100,18 +100,18 @@
   },
   "sprites": {
    "file": "ikari_warriors_sprites.nex",
-   "md5": "c90fab6ffc1698d98d21ca8bfffd311e"
+   "md5": "2b9f431b69b87877d66f035a00c04baa"
   },
   "enhanced": {
    "file": "ikari_warriors_enhanced.nex",
-   "md5": "118a55f6a81bb022fad627426b225221"
+   "md5": "1bf270bf3b444531c5067d2450a3dabd"
   }
  },
  "repro": [],
  "status": {
   "title": "Ikari Warriors (48K form)",
   "engine_col": "ikari_warriors (ikari_warriors.md)",
-  "build": "ikari_warriors_sprites.nex e740ae71 (.nxc v1.0)",
+  "build": "ikari_warriors_sprites.nex 2b9f431b (2026-11-07: hooks restore the caller's CPU speed, the blit at 14 MHz or the caller's if faster, lib/hlib_speed.asm; was c90fab6f; .nxc v1.0 e740ae71)",
   "software": "lockstep on 8 scripted recordings, default and Enhanced through the colour-set checker: game memory and registers, the picture classed by the first default; 12/12 colour-set and 7/7 engine negatives; JNext reaches play",
   "hardware": "untested",
   "next": "hardware test; a human recording"
@@ -137,54 +137,54 @@
  "results": [],
  "checked": {
   "deps": {
-   "asm/ikari_warriors_hooks.asm": "c298a7c655648389",
-   "docs/profiles/ikari_warriors.json": "e29290b713741d54",
+   "asm/ikari_warriors_hooks.asm": "57e8c234bfff4aae",
+   "docs/profiles/ikari_warriors.json": "02a44a8446481ff8",
    "docs/profiles/ikari_warriors_edges.json": "f76b8547bdb8142c",
    "docs/profiles/ikari_warriors_enhanced.json": "623b373594f6a998",
-   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash.py": "9028c4ca12045d70",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/ikari_warriors.py": "86bf4a58b4f60f86",
-   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/engines.py": "00d01102bda98ad5",
+   "nexclash/ikari_warriors.py": "038b2ebf518eca31",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "273dab19dfcd9e27",
-   "nexclash/rzx.py": "fda23afec57aec5e",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "6dafb7bb9224c021",
+   "recipe": "9e9d50cd74d3629c",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-07"
  },
  "verified": {
   "deps": {
-   "asm/ikari_warriors_hooks.asm": "c298a7c655648389",
-   "docs/profiles/ikari_warriors.json": "e29290b713741d54",
+   "asm/ikari_warriors_hooks.asm": "57e8c234bfff4aae",
+   "docs/profiles/ikari_warriors.json": "02a44a8446481ff8",
    "docs/profiles/ikari_warriors_edges.json": "f76b8547bdb8142c",
    "docs/profiles/ikari_warriors_enhanced.json": "623b373594f6a998",
-   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash.py": "9028c4ca12045d70",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/ikari_warriors.py": "86bf4a58b4f60f86",
-   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/engines.py": "00d01102bda98ad5",
+   "nexclash/ikari_warriors.py": "038b2ebf518eca31",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "273dab19dfcd9e27",
-   "nexclash/rzx.py": "fda23afec57aec5e",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "6dafb7bb9224c021",
+   "recipe": "9e9d50cd74d3629c",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-07"
  }
 }
