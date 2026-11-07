@@ -65,24 +65,26 @@ def archive(path, files=None, originals=None, legacy=False, corrupt=False, extra
 
 class FailureChecks(unittest.TestCase):
     def test_cli_failure_and_success_exit_status(self):
-        script = '''import importlib.util, sys
-spec = importlib.util.spec_from_file_location('entry', sys.argv[1])
-entry = importlib.util.module_from_spec(spec); spec.loader.exec_module(entry)
-from nexclash import nxcout
+        from skoolkit.snapshot import write_snapshot
+        script = """import runpy, sys, types
+entry, success = sys.argv[1], sys.argv[2] == 'success'
+from nexclash import engines, nxcout
+engines.find = lambda *args: types.SimpleNamespace(auto=lambda *args: success)
 nxcout.package = lambda a: print('PACKAGED')
-success = sys.argv[2] == 'success'
-entry.cmd_auto = lambda a: success
-sys.argv = ['nexclash.py'] + sys.argv[3:]
-sys.exit(entry.main())
-'''
-        for command in ['auto', 'verify']:
-            for success in [False, True]:
-                with self.subTest(command=command, success=success):
-                    args = [command, 'fake.z80'] + (['--rzx', 'fake.rzx'] if command == 'verify' else [])
-                    result = subprocess.run([sys.executable, '-c', script, str(ROOT/'nexclash.py'),
-                                             'success' if success else 'failure', *args], capture_output=True, text=True)
-                    self.assertEqual(result.returncode, 0 if success else 1, result.stderr)
-                    self.assertEqual('PACKAGED' in result.stdout, success and command == 'auto')
+sys.argv = [entry] + sys.argv[3:]
+runpy.run_path(entry, run_name='__main__')
+"""
+        with tempfile.TemporaryDirectory() as d:
+            snapshot = Path(d)/'synthetic.z80'
+            write_snapshot(str(snapshot), [0]*49152, ['pc=32768', 'sp=65500'], ['im=1'])
+            for command in ['auto', 'verify']:
+                for success in [False, True]:
+                    with self.subTest(command=command, success=success):
+                        args = [command, str(snapshot)] + (['--rzx', 'fake.rzx'] if command == 'verify' else [])
+                        result = subprocess.run([sys.executable, '-c', script, str(ROOT/'nexclash.py'),
+                                                 'success' if success else 'failure', *args], capture_output=True, text=True)
+                        self.assertEqual(result.returncode, 0 if success else 1, result.stderr)
+                        self.assertEqual('PACKAGED' in result.stdout, success and command == 'auto')
 
     def test_finish_and_engine_failure_are_not_overridden(self):
         entry = load('nexclash.py')
@@ -215,6 +217,16 @@ sys.exit(entry.main())
                     self.assertEqual(git('branch', '--show-current'), 'contrib-example')
                     self.assertEqual((root/'contrib_reports/contrib-example/run.txt').read_bytes(), b'proof')
                     self.assertEqual((root/'contrib_reports/contrib-example/game.nxc').read_bytes(), b'synthetic patch')
+
+    def test_legacy_archive_can_add_a_new_file(self):
+        module = load('tools/merge_contribution.py')
+        with repository() as (root, git):
+            path = root.parent/'legacy.zip'
+            archive(path, files={'nexclash/new.py': b'new module'}, legacy=True)
+            with patch.object(module, 'ROOT', str(root)), patch.object(sys, 'argv', ['merge', str(path)]), redirect_stdout(io.StringIO()):
+                module.main()
+            self.assertEqual((root/'nexclash/new.py').read_bytes(), b'new module')
+            self.assertEqual((root/'nexclash/shared.py').read_bytes(), b'original')
 
     def test_export_import_roundtrip_on_another_worktree(self):
         from nexclash import userflow as u
