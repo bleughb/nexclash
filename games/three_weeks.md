@@ -66,18 +66,19 @@ Verify: the model draws the same items on the same commits from the module's tab
 ## Pace (owner: "the patched version could be a little slower", 2026-11-04)
 Headless JNext, update-locked (work/pace/cap.py, lock.py): input and pictures by game update, the state (X, room, lives, frame) checked at all 561 updates. The game runs DI throughout (no interrupt in play, 0 counted), never sync'd to the frame: an update is 1,190-1,530 lines. The blit 0xA8ED (128 lines by LDIR, then 512 attribute LDIs) alone is 538.6 lines at 3.5 MHz (JNext, contended, mean of 768, sd 12).
 Music: the in-game tune is the beeper, not the AY (AY writes in play: 0). 0xBEAF plays one step every second main-loop pass (counter in 27909, bit 7 = tune off, key 5). The effects (0x718B, a table of pitch sweeps: the hurt tick/tweet) are cycle-timed OUT loops inside the update, DI. An update with an effect lasted about 1.5 times a normal one in the original (JNext), so the tune's next steps come late: the lag is the original's own, and the d386a699 build only added its hook time on top.
-d386a699: hooks cost 5-11 ms an update, 8-13 % slower (e_at by LDIR at 3.5 MHz was slower than the LDI chain it replaced).
+d386a699: hooks 5-11 ms an update, 8-13 % slower (e_at by LDIR at 3.5 MHz).
 Now: (1) cheaper hooks with the same results: h_find's and h_front's hash unrolled (the same function, so the same cache keys and patterns), h_rest unrolled, h_ink memo (32 entries; INKT is fixed). Simulator, t128_walk 3,000 frames: h_find 48.6 -> 30.4K T a commit, h_front 34.9 -> 24.0K, h_rest 18.5 -> 13.4K, h_ink 11.9 -> 1.8K. (2) The pace window: from e_bl (video line read) through the hooks, the game's blit and the attributes (e_at) at 28 MHz; x_pad waits until the original blit's 538.6 lines have passed, less V_DEBT (hook time outside the window: plots by the video line, tiles 5/16 line each, room changes ticked per figure and row). Time over a window carries in V_DEBT (at most 3,072 lines). No game byte, register or flag differs (verified); only time.
 Results (update-locked, seconds, plain / d386a699 / this): room 0 with bats 5.66 / 6.24 / 5.66; hurt with effects 9.54 / 10.82 / 9.56; room 2 across 9.55 / 10.27 / 9.63; room 3 across 9.07 / 9.92 / 9.04; updates 21-561 in all 46.73 / 51.29 / 46.80 (+0.15 %).
-Left: a room change's hook time (about 100 ms) is a hitch, repaid within the next one or two updates. JNext only, not measured on a Next. Lines a frame: 311, fixed (2026-11-07; 60 Hz would need +6 set by the setup).
+Left: a room change's hook time (about 100 ms) is a hitch, repaid by the next updates. JNext only. Lines a frame: 311, fixed (2026-11-07; 60 Hz would need +6 set by the setup).
 Negatives (timing, JNext): the window without the wait (TGT16 0): -18 to -32 %; V_DEBT ignored: +1.2 to +2.7 %. Replay: "the pace wait loses AF" (registers differ: 373), "the blit left at 28 MHz" (MMU / speed not restored: 224).
-Captures after the blit, d386a699 against this build: 7 of 7 pixel-identical (work/pace/out/).
 Note: the game reads R (LD A,R at 0xAD85); hooks change R in every build, so random choices can differ from the original's (the update-locked runs stayed in step).
 
 ## Pace on the shared limiter (2026-11-07, goal 3)
 x_line/x_tick/x_dbt/x_pad = lib/hlib_pace.asm (HLIB_PACE_LEAN; rom_end 0x3CDC; state 0x0170). Frame length 311, never
 learned from a poll. 181da4bd / Enh 2fceecaa (were 74af7179 / c139f040). replay IDENTICAL, 16 recordings + 5 Enhanced, negatives 22/22. JNext pace (600 updates, 0xA8ED):
 main +0.29%, now +0.50% (busy +0.73%), lockstep equal.
+Speed (goal 2): spd_in / spd_out latch the caller's speed (V_SPD; V_SPDW for e_bl .. e_at); DPLOT 20, DTILE 23,
+TGT16 -17 for the 3.5 MHz part. 468b1752 / Enh b38d048f; pace +0.46%.
 
 ## Enhanced (menu set, off by default)
 work/paint128.py, method of paint256.py: master bits must equal the game's, then palette index per bit -> RGB. .256 master: every non-zero byte of banks 0, 3, 4, 6 the same; bank 1 same; bank 2 all but 2. Colours from the MVV package's older Spec256 conversion (SOURCES.txt: mvv_games/Spec256-Games-master/TreeWeeks128k), painter not established. No --colours-by.
@@ -135,7 +136,7 @@ Techniques: `optimise.pattern-cache`, `verify.update-locked-pace` (docs/records/
 - verify.update-locked-pace: helped: input and captures by game update made the +0.15% measurable.
 
 ## Stage log
-- 2026-11-07: shared engine refactor: the pace window on lib/hlib_pace.asm (goal 3). 0 user rounds.
+- 2026-11-07: shared engine refactor: pace on lib/hlib_pace.asm (goal 3), speed latch (goal 2). 0 user rounds.
 - 2026-11-04: imported into the repo (refactor phase 7): rebuild = the published v1.0, record pinned, full verify stamped. 0 user rounds.
 - 2026-11-03 night: go-behind by whole items after the owner's play (split plants); 37 items, 16 rooms. 1 user round.
 - 2026-11-03 evening: outline margin (88d3f7a) checked and packaged; go-behind scenery in 14 rooms, survey of all 37. 0 user rounds.

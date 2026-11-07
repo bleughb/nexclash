@@ -109,7 +109,8 @@
   "asm/three_weeks_hooks.asm"
  ],
  "shared_data": [
-  "asm/lib/hlib_pace.asm"
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_speed.asm"
  ],
  "rebuild": {
   "args": [
@@ -150,11 +151,11 @@
   },
   "sprites": {
    "file": "three_weeks_128_sprites.nex",
-   "md5": "181da4bd04c28dec0222623752092265"
+   "md5": "468b17528c4c1659a2087bbe2d8cc8d1"
   },
   "enhanced": {
    "file": "three_weeks_128_enhanced.nex",
-   "md5": "2fceecaabcb6ba884b1b38de15756441"
+   "md5": "b38d048f254302fe942eb2ac58bbf463"
   }
  },
  "repro": [],
@@ -165,7 +166,7 @@
  "status": {
   "title": "Three Weeks in Paradise (128K)",
   "engine_col": "three_weeks (three_weeks.md)",
-  "build": "three_weeks_128_sprites.nex 181da4bd (2026-11-07: the pace window on the shared limiter, lib/hlib_pace.asm; 90eeeb14 = published .nxc v1.0; every figure a sprite, fixed colours by graphics, outline + fill; front cells and go-behind scenery on Layer 2; pace window ORIGINAL) + three_weeks_128_enhanced.nex 2fceecaa (menu set)",
+  "build": "three_weeks_128_sprites.nex 468b1752 (2026-11-07: the pace window on the shared limiter, lib/hlib_pace.asm, and the caller's speed restored, lib/hlib_speed.asm; 90eeeb14 = published .nxc v1.0; every figure a sprite, fixed colours by graphics, outline + fill; front cells and go-behind scenery on Layer 2; pace window ORIGINAL) + three_weeks_128_enhanced.nex b38d048f (menu set)",
   "software": "replay IDENTICAL, 16 recordings default + 5 Enhanced; negatives detected (games/three_weeks.md Results)",
   "hardware": "none (JNext through the real loader only)",
   "next": "hardware round; ported from Jon Attree's .nxc work, 2026-11-04"
@@ -212,8 +213,9 @@
  "checked": {
   "deps": {
    "asm/lib/hlib_pace.asm": "ae09ef0db9a851a2",
-   "asm/three_weeks_hooks.asm": "4dc8b84701935e38",
-   "docs/profiles/three_weeks.json": "eb72fdb472dc94dd",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/three_weeks_hooks.asm": "4b6cf39840088d13",
+   "docs/profiles/three_weeks.json": "a6587efd73a95789",
    "docs/profiles/three_weeks_enhanced.json": "1eee83a4fb08ecb2",
    "docs/profiles/three_weeks_figs.json": "6b77fe72ae0fc63b",
    "docs/profiles/three_weeks_gb.json": "9bb865de25bd51d0",
@@ -230,10 +232,10 @@
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/three_weeks.py": "588e7a94a3218480",
+   "nexclash/three_weeks.py": "a85e06a098347de0",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "eee99cc324ff3461",
+   "recipe": "61e0eb166de609d4",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-06"
@@ -241,8 +243,9 @@
  "verified": {
   "deps": {
    "asm/lib/hlib_pace.asm": "ae09ef0db9a851a2",
-   "asm/three_weeks_hooks.asm": "4dc8b84701935e38",
-   "docs/profiles/three_weeks.json": "eb72fdb472dc94dd",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/three_weeks_hooks.asm": "4b6cf39840088d13",
+   "docs/profiles/three_weeks.json": "a6587efd73a95789",
    "docs/profiles/three_weeks_enhanced.json": "1eee83a4fb08ecb2",
    "docs/profiles/three_weeks_figs.json": "6b77fe72ae0fc63b",
    "docs/profiles/three_weeks_gb.json": "9bb865de25bd51d0",
@@ -259,10 +262,10 @@
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/three_weeks.py": "588e7a94a3218480",
+   "nexclash/three_weeks.py": "a85e06a098347de0",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "eee99cc324ff3461",
+   "recipe": "61e0eb166de609d4",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-06"
