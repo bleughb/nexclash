@@ -74,6 +74,20 @@ def load_qprofile():
     return json.load(open(os.path.join(_HERE, '..', 'docs', 'profiles', 'sabre_wulf_qaop.json')))
 
 
+def load_eprofile(qaop=False):
+    """The Enhanced colour set's hooks (asm/sabre_wulf_enhanced.asm, SABREMAN_BANKS): Sabreman in his own palette
+    offsets 0-7, so his part entries can take the game's colour under an orchid and keep the painted ones otherwise.
+    The same length as the base; with qaop, the "QAOP + Space" toggle's build of it."""
+    n = 'sabre_wulf_enhanced_qaop.json' if qaop else 'sabre_wulf_enhanced.json'
+    return json.load(open(os.path.join(_HERE, '..', 'docs', 'profiles', n)))
+
+
+def palette_offset(col, i, sabreman_banks=False):
+    """The sprites' palette offset for object i with colour col: ink + 8 if bright; with the Enhanced hooks
+    (sabreman_banks) Sabreman (i = 0) keeps the ink alone, offsets 0-7 being his."""
+    return (col & 7) | (8 if col & 0x40 and not (sabreman_banks and i == 0) else 0)
+
+
 def is_sabre_wulf(snap):
     try:
         sg = load_profile()['signature']
@@ -269,6 +283,7 @@ class SabreWulfPatch:
         for a, (old, sym) in SITES_ORIG.items():
             self.sites.append((a, bytes.fromhex(old), bytes([0xC3]) + self.syms[sym].to_bytes(2, 'little')))
         self.qaop = 'h_qaop' in self.syms
+        self.sabreman_banks = bool(self.prof.get('sabreman_banks'))
         if self.qaop:                       # the toggle build: its code at QAOP_ORG, past the base and its register block
             self.qaop_code = bytes.fromhex(h['qaop'])
             if self.syms['h_qaop'] != QAOP_ORG or QAOP_ORG < self.regblock + 20 or QAOP_ORG + len(self.qaop_code) > 0x3D00:
@@ -599,6 +614,7 @@ def event(patch, kind, get, R, ns, alt, psite, Sim):
         return ['patched code raised %s' % str(e)[:80]], 0
     ro, rp = so.registers, sp_.registers
     event.last = (list(rp), dict(p.ov))
+    event.patch = patch
     # A' after a plot holds the last row byte, which depends on the screen. aprime_probe() shows the game never reads it.
     diff = [k for k in CMP if ro[k] != rp[k] and not (k == 16 and kind in ('mov', 'tog', 'old'))]
     if diff:
@@ -661,7 +677,7 @@ def event(patch, kind, get, R, ns, alt, psite, Sim):
         if got != want:
             f.append(('sprite change differs from the original XOR', len(got ^ want), sorted(got ^ want)[:3]))
     col = get(ix + 5) if kind != 'col' else o[ix + 5]
-    want_off = (col & 7) | (8 if col & 0x40 else 0)
+    want_off = palette_offset(col, i, getattr(patch, 'sabreman_banks', False))
     for s in obj_sprites(i):
         if ns.attr[s][3] & 0x80 and ns.attr[s][2] >> 4 != want_off:
             f.append(('palette offset is not the colour', s, ns.attr[s][2] >> 4, col))
@@ -678,10 +694,30 @@ def enh_event(ok, regs, pe, nse, ns, enh):
     d = [k for k in CMP if regs[k] != rd[k]]
     if d:
         f.append(('registers differ from the default build', d))
-    if pe.ov != ovd:
-        f.append(('memory differs from the default build', len(set(pe.ov.items()) ^ set(ovd.items()))))
-    if nse.attr != ns.attr or nse.state != ns.state or nse.nr != ns.nr:
-        f.append(('sprites or state differ from the default build',))
+    dead = range(rd[12] - 66, rd[12])       # below the stack at the return: return addresses into hook code, dead
+    md = {a for a in set(pe.ov) | set(ovd) if a not in dead and pe.ov.get(a) != ovd.get(a)}
+    if md:
+        f.append(('memory differs from the default build', len(md), sorted(md)[:4]))
+    attr, state, nr = ns.attr, ns.state, ns.nr
+    if getattr(enh, 'sabreman_banks', False) and not getattr(event.patch, 'sabreman_banks', False):
+        # the Enhanced hooks show Sabreman (object 0) in offsets 0-7: the bright bit (offset bit 3, attribute 2 bit 7)
+        # is clear on his sprites and in his state's +6, and in the last attribute 2 written if it was one of his
+        attr = [list(a) for a in ns.attr]
+        for s_ in obj_sprites(0):
+            attr[s_][2] &= 0x7F
+        state = bytearray(ns.state)
+        state[OBJ - 0xE000 + 6] &= 0x7F
+        sc = 0xF108 - 0xE000                # SCOL (asm): the offset the last apply worked out
+        if nse.state[sc] == state[sc] & 0x7F:
+            state[sc] = nse.state[sc]
+        nr = dict(ns.nr)
+        if nse.nr.get(0x37) == nr.get(0x37, 0) & 0x7F:
+            nr[0x37] = nse.nr[0x37]
+    if nse.attr != attr or nse.state != state or nse.nr != nr:
+        f.append(('sprites or state differ from the default build',
+                  [(s_, nse.attr[s_], attr[s_]) for s_ in range(128) if nse.attr[s_] != attr[s_]][:2],
+                  [(k, nse.state[k], state[k]) for k in range(8192) if nse.state[k] != state[k]][:3],
+                  {k: (nse.nr.get(k), nr.get(k)) for k in set(nr) | set(nse.nr) if nse.nr.get(k) != nr.get(k)}))
     st = nse.state
     for i in range(NOBJ):
         o = OBJ - 0xE000 + OBJW * i
@@ -1040,6 +1076,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, cloc
                     if b and 0 <= bx + k < 32:
                         cur[base + bx + k] ^= b
         if shot:
+            ns.enh_state = nse[0]                # the Enhanced build's sprites beside it (None without enh=)
             shot(st['frame'], M, ns, cur, painted)
         if st['base'] is None:
             st['base'] = cur
@@ -1164,7 +1201,7 @@ def unit_tests(patch, states, neg=None):
                 ns2.state[o:o + 3] = bytes([50, 100, 100])
                 (fl, _), n3 = one(patch, 'col', list(R), m2, ns2)
                 seen = {n3.attr[s][2] >> 4 for s in obj_sprites(i) if n3.attr[s][3] & 0x80}
-                ok = not fl and seen == {col | (8 if br else 0)}
+                ok = not fl and seen == {palette_offset(col | br, i, patch.sabreman_banks)}
                 c['colour cases %s' % ('ok' if ok else 'FAIL!')] += 1
     for kind in ('tog', 'old', 'clr', 'col'):
         for kk, R, mem, ns in states:
@@ -1280,6 +1317,27 @@ def recolour(nex, cmap):
     out, changed = splice(nex, new)
     used = [k for k in cmap if cmap[k][0] == peek(int(k, 16))]
     return out, {'banks changed': changed, 'map entries used': len(used), 'map entries ignored': len(cmap) - len(used)}
+
+
+def sabreman_banks(nex):
+    """A built sprite .nex (the base or the "QAOP + Space" build, recoloured or not) -> the same with the Enhanced
+    hooks (load_eprofile): their alt ROM image (bank ALT_BANK) and setup (bank 10 at 0x1000), nothing else. For a
+    colour set whose painted Sabreman would otherwise hide the colour the game gives him under an orchid."""
+    from .recolour import banks, splice
+    have = banks(nex)
+    for q in (False, True):
+        p = SabreWulfPatch(prof=load_qprofile() if q else None, colours={})
+        if have.get(ALT_BANK) == p.page + bytes(8192):
+            break
+    else:
+        raise ValueError('not a Sabre Wulf sprite build of this version')
+    e = SabreWulfPatch(prof=load_eprofile(q), colours={})
+    b10 = bytearray(have[10])
+    if bytes(b10[0x1000:0x1000 + len(p.stub_extra)]) != p.stub_extra or any(b10[0x1000 + len(p.stub_extra):0x1000 + len(e.stub_extra)]):
+        raise ValueError('the setup in bank 10 is not this version\'s')
+    b10[0x1000:0x1000 + len(e.stub_extra)] = e.stub_extra
+    out, changed = splice(nex, {ALT_BANK: e.page + bytes(8192), 10: bytes(b10)})
+    return out
 
 
 def _orig_byte(peek, a):

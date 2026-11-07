@@ -274,6 +274,11 @@ apply:  ld a,(ix+5)             ; palette offset << 4: ink + 8 if bright
         and 7
         bit 6,c
         jr z,.nb
+        IFDEF SABREMAN_BANKS
+        inc l                   ; HL = state, L = 8i: Sabreman (object 0) keeps offsets 0-7, his own
+        dec l
+        jr z,.nb
+        ENDIF
         or 8
 .nb:    rlca
         rlca
@@ -290,8 +295,10 @@ apply:  ld a,(ix+5)             ; palette offset << 4: ink + 8 if bright
         inc hl
         cp (hl)                 ; +3
         jr nz,.chg
+        IFNDEF SABREMAN_BANKS
         inc hl
         dec hl
+        ENDIF
         dec hl
         dec hl
         ld a,(hl)               ; +1 x
@@ -464,8 +471,10 @@ show:   push hl
         ld e,(hl)               ; y = bottom line
         inc hl
         ld c,(hl)               ; frame on the sprites
+        IFNDEF SABREMAN_BANKS
         inc hl
         dec hl
+        ENDIF
         dec hl
         dec hl
         ld a,(hl)               ; +1
@@ -600,6 +609,35 @@ setup:  nextreg 0x43,0x20       ; sprite palette 0, auto-increment
         ld a,d
         cp 16
         jr nz,.k
+        IFDEF SABREMAN_BANKS
+        ld d,0                  ; offsets 0-6: Sabreman under an orchid (apply): his parts in the bright ink
+.sk:    ld hl,sabparts
+.sp:    ld a,(hl)
+        or a
+        jr z,.sn
+        ld e,a
+        ld a,d
+        rlca
+        rlca
+        rlca
+        rlca
+        or e
+        nextreg 0x40,a          ; entry 16 * offset + part
+        ld a,d
+        add a,low (gamecol+8)
+        ld c,a
+        ld a,0
+        adc a,high (gamecol+8)
+        ld b,a
+        ld a,(bc)
+        nextreg 0x41,a
+        inc hl
+        jr .sp
+.sn:    inc d
+        ld a,d
+        cp 7
+        jr nz,.sk
+        ENDIF
         nextreg 0x4B,0
         xor a
 .h:     nextreg 0x34,a
@@ -609,10 +647,17 @@ setup:  nextreg 0x43,0x20       ; sprite palette 0, auto-increment
         jr nz,.h
         nextreg 0x15,0x01
         ret
+        IFNDEF SABREMAN_BANKS
 gamecol: DB 0x00,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6     ; RRRGGGBB: ink 0-7
+        ELSE
+gamecol: DB 0x00,0x03,0xE0,0xE7,0x1C,0x1F,0xFC,0xFF     ; offsets 0-7 are Sabreman's: his colour bright
+        ENDIF
         DB 0x00,0x03,0xE0,0xE7,0x1C,0x1F,0xFC,0xFF      ; bright
 pal:    DB 0x00,0x00,0x02,0xA0,0xA2,0x14,0x16,0xB4      ; entry 0 unused, entry 1 unused, 2-7 blue..yellow
         DB 0xB6,0x03,0xE0,0xE7,0x1C,0x1F,0xFC,0xFF      ; white, then bright blue..white
+        IFDEF SABREMAN_BANKS
+sabparts: DB 5,6,0                                      ; his entries that take the ink under an orchid; 0 ends
+        ENDIF
 setup_end:
 
         IFDEF QAOP
