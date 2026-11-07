@@ -180,7 +180,17 @@ calibrated in JNext only.
 - Random-key recordings only; no human recording.
 - 128K form not studied: it would have all the levels.
 
+## On the current pace library (2026-11-07, shared engine refactor, goal 3)
+- HLIB_PACE_V1 dropped: lib/hlib_pace.asm's current code (consistent line / held readings, the frame length never
+  learned from a poll). vpace grows from 14 to 26 bytes (after code_end). The verifier's clock matrix leaves out all 26
+  bytes. Nothing else changed: every call site already saved what the library loses.
+- Sprites 81f84fdb -> 444e3f9f, outline 827a770f -> c165f41f; plain unchanged. 5 recordings IDENTICAL (33,038
+  frames, 13,466 ticks, screens and memory every tick), unit PASS (R 64, matrix 152), negatives 23/23, stamped.
+  JNext pace (600 updates keyed to 0x8175, cursor keys, seed 1): +0.08% before and after (quiet +0.01%, busy +0.22 /
+  +0.23%); interrupts 24.38 a second both (original 24.35).
+
 ## Lessons
+- [none: the port changed nothing at the call sites; the 26-byte state and the matrix exclusion are in the section above]
 - [local: this game's loops] demonstrated: NOPing a plotter's stores saves only 3 T a byte, less than a hook's fixed entry and exit at 3.5 MHz (about 250 T), so a 28 MHz plot hook in front of the loop made the game slower (pace model +3,800 T a tick); replacing the whole loop, with its exit registers from the geometry, gave the window the loop's whole time (+36 T a tick).
 - [local: this game's RNG] demonstrated: the star routine's path depends on the figures in its bytes; a star hook that works out the original's bytes from the tick's plot list keeps R exact, and the pace runs stay in lockstep with the original with no fixture.
 - [local: this game's menu] observed: the menu reads the keyboard from its interrupt every few frames; a 1-frame JNext keypress is often missed, in the plain build and the original alike; hold the key.

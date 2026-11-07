@@ -56,8 +56,7 @@ FIXT    EQU 237
 
         INCLUDE "lib/hlib_speed.asm"
         INCLUDE "lib/hlib_r.asm"
-        DEFINE HLIB_PACE_V1                ; the first pace library, as this engine was verified with
-        INCLUDE "lib/hlib_pace.asm"
+        INCLUDE "lib/hlib_pace.asm"        ; the current library (consistent readings; was HLIB_PACE_V1 until 2026-11-07)
 
 ; ---------------------------------------------------------------------------------------------------------------
 ; plot hooks. Entered from the gate with the game's registers; interrupts off. Each replaces its whole loop: the
@@ -1298,7 +1297,7 @@ code_end:
 vspd:   db 0
 vr:     ds 3
 HLIB_V_R EQU vr
-vpace:  ds 14
+vpace:  ds 26
 HLIB_V_PACE EQU vpace
 w:      db 0
 skip:   db 0

@@ -39,7 +39,7 @@ SPECCY = [0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x00, 0x03, 0xE0, 0xE3
 PC, TS = 24, 25
 SP = 12
 RR = 15                     # R: the game reads only bit 7 (LD A,R / RET M, the ISR's LD R,255 frame flag); hooks never write R
-V_PACE = 0x60               # HLIB_V_PACE in the hook page (14 bytes)
+V_PACE = 0x60               # HLIB_V_PACE in the hook page (26 bytes)
 HSTK0 = 0x80                # the hook stack's lowest use (HSTK 0x4100, about 40 bytes deep)
 VSPD = 0x5E                 # the hook page's speed latch (asm vspd): holds the incoming clock, left out of the matrix compare
 CMP = list(range(0, 13)) + [14] + list(range(16, 25)) + [26, 27]   # all but R, T, MEMPTR
@@ -1095,7 +1095,7 @@ def clock_matrix(patch, states):
         Rp, ov, ok = _hook_run(patch, lambda a: mem[a], ns, alt, list(regs), stop_, ov=dict(ov_))
         page = bytearray(ns.scratch)
         page[VSPD] = 0
-        page[V_PACE:V_PACE + 14] = bytes(14)     # the limiter's lines and debt: timing state, not results
+        page[V_PACE:V_PACE + 26] = bytes(26)     # the limiter's lines, held time and debt: timing state, not results
         page[HSTK0:0x100] = bytes(0x100 - HSTK0)   # the hook stack, and below the game's SP only the addresses:
         return ns.nr.get(7, 0), (ok, [Rp[j] for j in CMP], Rp[RR] & 0x80, sorted(ov),   # dead stack holds timing values
                                  [tuple(a) for a in ns.attr], bytes(ns.pat), sorted(ns.pal.items()),

@@ -1130,7 +1130,7 @@ def _matrix_state(eng, rr, ov):
     pg = bytearray(eng.page)
     for a in range(s['vspd'], s['vspd'] + 1):
         pg[a - 0x2000] = 0
-    for a in range(s['vpace'], s['vpace'] + 14):
+    for a in range(s['vpace'], s['vpace'] + 26):         # the limiter's 26 bytes of state
         pg[a - 0x2000] = 0
     for a in range(s['recs'] + 8 * 40, s['hstack']):     # the hook stacks: what the waits pushed
         pg[a - 0x2000] = 0
