@@ -34,23 +34,24 @@ Targets: **ORIGINAL** (default), SLOWDOWN REMOVED (owner's choice), TURBO (menu 
 hook faster than the timed work it replaces (blit, plot, copy) waits: `hlib_pace_open` at the window's start, `hlib_pace_wait` (HL = the original's time in 1/16 lines,
 `hooklib.lines16`; A = the latched speed) at its end. Hooks outside a window that add time measure it with
 `hlib_debt_open` / `_tick` / `_close` (`hlib_debt_add` for a constant); the next window repays it, and time
-over a window carries (capped: HLIB_PACE_CAP). Also: a game routine run at 28 MHz: open, CALL it, `hlib_pace_waitk` (K = original time per 28 MHz
-time x 16, measured in JNext); `hlib_debt_repay` shortens the game's own delay by the debt; the ISR
-wrapper calls `hlib_pace_hold` / `_resume` so interrupt time is in no window. Not for code that is not timed (a menu wait loop) or sound code (never touched).
+over a window carries (capped: HLIB_PACE_CAP). Also: a game routine run at 28 MHz: open, CALL it, `hlib_pace_waitk` (K = original / 28 MHz
+time x 16, from JNext); `hlib_debt_repay` shortens the game's own delay by the debt; the ISR
+wrapper calls `hlib_pace_hold` / `_resume` so interrupt time is in no window. A CPU-bound game slowed by its
+hooks: a long game routine in a K window repays them. Not for untimed code (a menu wait) or sound code.
 
 **Assumptions.** The window's original time is measured and near constant; NR 0x1E / 0x1F give the
-video line; the target scales with the incoming speed.
+line.
 
-**Validation gap.** Three Weeks on the library (HLIB_PACE_LEAN) in JNext +0.50%; Quazatron, Match Day: their own
-copies (within 2%); the full library on the simulator only. No board run.
+**Validation gap.** Three Weeks on the library (HLIB_PACE_LEAN) in JNext +0.50%; Cyclone within 1%; Quazatron, Match Day: own
+copies (within 2%). No board run.
 
 ## Recognise
 The pace meter reads a negative penalty (Atic Atac v1.1: -0.8 to -2.8%).
 
 ## Probe and stop
 1. `python -m nexclash.pace` on the build without the wait: the penalty (negative = faster).
-2. The window's original time, less the hook's fixed parts outside the polling (hlib_selftest.asm T_FIX).
-3. With the wait: the penalty about 0 in quiet and busy thirds. Stop there.
+2. The window's original time, less the hook's fixed parts (T_FIX).
+3. With the wait: about 0 in quiet and busy thirds.
 
 ## Contract
 - State: none of the game's; the waits keep IX, IY and the alternate set; the caller saves the rest.
@@ -79,4 +80,5 @@ controls (`hooklib.NEGATIVES`): no wait, resume / waitk as RET, a repay that ski
 ## Evidence
 - `grep -n '^hlib_' asm/lib/hlib_pace.asm`; `grep -n 'def _t_' nexclash/hooklib.py`.
 - Three Weeks x_pad / x_tick (three_weeks_hooks.asm), observed in JNext.
+- Cyclone h_r1 / h_r2: a K window on the game's renderer.
 - Quazatron fw_wait / t_dly / isr_in (PR #98), Match Day v2.1 w_close / ISRACC (PR #99): per-game forms.
