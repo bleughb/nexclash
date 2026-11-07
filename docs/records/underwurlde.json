@@ -1,0 +1,279 @@
+{
+ "name": "underwurlde",
+ "order": 224,
+ "game": "Underwurlde",
+ "doc": "underwurlde.md",
+ "engine": "underwurlde",
+ "representative": true,
+ "reference": "underwurlde",
+ "inputs": {
+  "snapshot": {
+   "name": "underwurlde.z80",
+   "md5": "9f2db0ec44da647aa1d7469f1f25ed67",
+   "path": "underwurlde/underwurlde.z80",
+   "note": "Derived exact archive bootstrap before USR26610 LDIR; NXC targets the original archive MD5 9a031797ed0cc96a9ec286ed22a32317. work/bootstrap.py reproduces this input."
+  },
+  "recordings": [
+   {
+    "name": "end.rzx",
+    "md5": "8d8296b9bcb323cd7c2edfdad3338cb1",
+    "path": "underwurlde/end.rzx"
+   },
+   {
+    "name": "g0.rzx",
+    "md5": "a9857876d1865cb42cea16f16d9c23c3",
+    "path": "underwurlde/g0.rzx"
+   },
+   {
+    "name": "over.rzx",
+    "md5": "60096c4c2788a401145b15f4c0ad70ff",
+    "path": "underwurlde/over.rzx"
+   },
+   {
+    "name": "play1.rzx",
+    "md5": "e7e28999ed3c7cf2c5df426d3278cbe0",
+    "path": "underwurlde/play1.rzx"
+   },
+   {
+    "name": "play2.rzx",
+    "md5": "c3aaaab602d38fea827888db5420f031",
+    "path": "underwurlde/play2.rzx"
+   },
+   {
+    "name": "rand1.rzx",
+    "md5": "b740d0f756239dd2f8ece3af6eb51a74",
+    "path": "underwurlde/rand1.rzx"
+   },
+   {
+    "name": "t00.rzx",
+    "md5": "6fb2a98aa862516d3fc539ce6d1e4bdf",
+    "path": "underwurlde/t00.rzx"
+   },
+   {
+    "name": "t01.rzx",
+    "md5": "4eb39b79e9a1e17836e5807b3a4f1023",
+    "path": "underwurlde/t01.rzx"
+   },
+   {
+    "name": "t02.rzx",
+    "md5": "af20101773a4500aebf120f95cd5a7df",
+    "path": "underwurlde/t02.rzx"
+   },
+   {
+    "name": "t03.rzx",
+    "md5": "86c228056d533c71017c18220c03623a",
+    "path": "underwurlde/t03.rzx"
+   },
+   {
+    "name": "t04.rzx",
+    "md5": "fddc19627ef25fd51f4472b6965c6d0d",
+    "path": "underwurlde/t04.rzx"
+   },
+   {
+    "name": "t05.rzx",
+    "md5": "ce5335f41c626594730c22ee03e1ca80",
+    "path": "underwurlde/t05.rzx"
+   },
+   {
+    "name": "t06.rzx",
+    "md5": "4d9ff33ebb302461dd6bfc70e4b7b668",
+    "path": "underwurlde/t06.rzx"
+   },
+   {
+    "name": "t07.rzx",
+    "md5": "a2d12a7295a68169c7e16cfd58dac704",
+    "path": "underwurlde/t07.rzx"
+   },
+   {
+    "name": "t08.rzx",
+    "md5": "598db3e7f4ecebe23be668eec9d6c36c",
+    "path": "underwurlde/t08.rzx"
+   },
+   {
+    "name": "t09.rzx",
+    "md5": "3b66a420c9de4de9eb32484283c0ef3c",
+    "path": "underwurlde/t09.rzx"
+   },
+   {
+    "name": "t10.rzx",
+    "md5": "78f24a5ea0e02d90b18db30ddd799d3a",
+    "path": "underwurlde/t10.rzx"
+   },
+   {
+    "name": "t11.rzx",
+    "md5": "209c077adc177389e8eefe61520d79be",
+    "path": "underwurlde/t11.rzx"
+   },
+   {
+    "name": "t12.rzx",
+    "md5": "4004697e49729a3c154943c165d27e4d",
+    "path": "underwurlde/t12.rzx"
+   },
+   {
+    "name": "t13.rzx",
+    "md5": "040b600a9f67f57a18eae06f9c39bfad",
+    "path": "underwurlde/t13.rzx"
+   },
+   {
+    "name": "t14.rzx",
+    "md5": "f82ebca34a8c66f1b3037d9dd0956aa2",
+    "path": "underwurlde/t14.rzx"
+   },
+   {
+    "name": "t15.rzx",
+    "md5": "59162d4fc233c690d5d6496d4f50dedc",
+    "path": "underwurlde/t15.rzx"
+   },
+   {
+    "name": "t16.rzx",
+    "md5": "9602e860ff663077be7d57fb19e56ab9",
+    "path": "underwurlde/t16.rzx"
+   },
+   {
+    "name": "t17.rzx",
+    "md5": "65b4a7ce4c03f2127e74c315ffcf5e91",
+    "path": "underwurlde/t17.rzx"
+   },
+   {
+    "name": "t18.rzx",
+    "md5": "36984012b3c860048b3de98e3c9fc3eb",
+    "path": "underwurlde/t18.rzx"
+   },
+   {
+    "name": "t19.rzx",
+    "md5": "dddce99e1f7274e1c9e6fbb19088db7a",
+    "path": "underwurlde/t19.rzx"
+   },
+   {
+    "name": "t20.rzx",
+    "md5": "fa2764459dd053439de6b86067aacf42",
+    "path": "underwurlde/t20.rzx"
+   },
+   {
+    "name": "t21.rzx",
+    "md5": "b71ff0683fd9418e9872f49312274c16",
+    "path": "underwurlde/t21.rzx"
+   },
+   {
+    "name": "t22.rzx",
+    "md5": "cacabdc880172176481f5abbf4c29275",
+    "path": "underwurlde/t22.rzx"
+   },
+   {
+    "name": "t23.rzx",
+    "md5": "cd9e25046dcd952ed3b781f73bc00d33",
+    "path": "underwurlde/t23.rzx"
+   },
+   {
+    "name": "t24.rzx",
+    "md5": "ddd125781373fb032828ac00cce5b815",
+    "path": "underwurlde/t24.rzx"
+   },
+   {
+    "name": "t25.rzx",
+    "md5": "47ffbda181dc3791a887df3d411c93cb",
+    "path": "underwurlde/t25.rzx"
+   },
+   {
+    "name": "t26.rzx",
+    "md5": "7991879a5c34e5d74a303cbffd317fec",
+    "path": "underwurlde/t26.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "underwurlde"
+ ],
+ "own_modules": [
+  "underwurlde"
+ ],
+ "data": [
+  "asm/underwurlde_hooks.asm",
+  "docs/profiles/underwurlde.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_iff.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": []
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "end.rzx",
+   "g0.rzx",
+   "over.rzx",
+   "play1.rzx",
+   "play2.rzx",
+   "rand1.rzx",
+   "t00.rzx",
+   "t01.rzx",
+   "t02.rzx",
+   "t03.rzx",
+   "t04.rzx",
+   "t05.rzx",
+   "t06.rzx",
+   "t07.rzx",
+   "t08.rzx",
+   "t09.rzx",
+   "t10.rzx",
+   "t11.rzx",
+   "t12.rzx",
+   "t13.rzx",
+   "t14.rzx",
+   "t15.rzx",
+   "t16.rzx",
+   "t17.rzx",
+   "t18.rzx",
+   "t19.rzx",
+   "t20.rzx",
+   "t21.rzx",
+   "t22.rzx",
+   "t23.rzx",
+   "t24.rzx",
+   "t25.rzx",
+   "t26.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 30,
+  "note": "Final frozen-source release suite is authoritative, including all negatives, IRQ/ABI, dead-register, pace, sound, ROM and private actual-loader checks. No generic --verify stamp claimed."
+ },
+ "outputs": {
+  "plain": {
+   "file": "underwurlde.nex",
+   "md5": "a6e6b38e9e8be1d2b5c32f08ab3c3833"
+  },
+  "sprites": {
+   "file": "underwurlde_sprites.nex",
+   "md5": "07dff80327ed247a38780413e01a2325"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Underwurlde",
+  "engine_col": "underwurlde (underwurlde.md)",
+  "build": "v1.1; original colours by default, approved Enhanced optional; full hidden ROM",
+  "software": "Differential replay PASS on 33 recordings, 131,756 frames (all registers with R, working RAM, sprite pixels); 14 of 14 negatives; 176 ABI and 2,114 IRQ cases; pace worst 0.96% (controlled quiet / busy / beeper); six native soaks; real loader exact on v2.09 and 26.11 card copies",
+  "hardware": "untested",
+  "next": "Owner plays the .nxc v1.1 review package; hardware checklist"
+ },
+ "checks": [
+  "asm2profile:underwurlde"
+ ],
+ "results": [
+  {
+   "check": "external release suite",
+   "status": "pass",
+   "scope": "33 recordings, 131756 recorded frames; 131789 replay frame callbacks incl initial states; 249111 figure plots, 125499 screen checks. 14 negatives; 176 ABI and 2114 IRQ injections; controlled pace and beeper fixtures; six native soaks; private-card loader three modes exact.",
+   "evidence": "games/underwurlde.md"
+  }
+ ]
+}

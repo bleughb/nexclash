@@ -15,6 +15,7 @@ import importlib
 
 # (module, detector, extra condition on the auto arguments or None)
 ENGINES = [
+    ('underwurlde', 'is_underwurlde', None),                              # Underwurlde (48K)
     ('gng', 'is_gng', None),                                            # Ghosts 'n Goblins (48K)
     ('quazatron', 'is_quazatron', None),                                  # Quazatron colour (48K): opt-in, unproven (NEXCLASH_REWORK=quazatron)
     ('rainbow_z80n_sky', 'is_rainbow_sky', None),                          # Rainbow Islands sky fix: opt-in rework of rainbow_z80n (NEXCLASH_REWORK)

@@ -20,10 +20,23 @@
 ; HLIB_IFF_DI: P/V = the caller's IFF (PE = on), then DI. A = I; the other flags lost; nothing else changed.
 ; Push AF after it to keep the state across the hook. 2 or 4 M1 + 1 (DI).
         MACRO HLIB_IFF_DI
+        IFDEF HLIB_IFF_FIXED_R
+        ; A refresh-preserving hook may capture R after this macro. Keep
+        ; both read paths at six M1s, including when an interrupt makes the
+        ; first read report PO while IFF is on. Existing callers keep the
+        ; original bytes unless they explicitly select this variant.
+        ld a,i
+        jp po,$+7
+        nop
+        jp $+5
+        ld a,i
+        di
+        ELSE
         ld a,i
         jp pe,$+5               ; on: no second read (JP 3 bytes + LD A,I 2 bytes)
         ld a,i                  ; off, or an interrupt was accepted at the end of the first read
         di
+        ENDIF
         ENDM
 
 ; HLIB_IFF_EI: F's P/V from HLIB_IFF_DI (PE = were on) -> EI when they were. Keeps every register and flag.

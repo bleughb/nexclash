@@ -667,7 +667,9 @@ def iff_audit(root=ROOT):
             if not mi:
                 continue
             reg = mi.group(1).upper()
-            pair = [j for j in range(max(0, k - 4), min(len(code), k + 5)) if j != k and _IFF_RE.match(code[j][2])]
+            pair = [j for j in range(max(0, k - 4), min(len(code), k + 5)) if j != k and _IFF_RE.match(code[j][2])
+                    and not any(re.match(r'(else|endif|ifdef|ifndef)\b', x[1])
+                                for x in code[min(j, k) + 1:max(j, k)])]
             if pair:
                 lo, hi = sorted((k, pair[0]))
                 # safe only when the second read runs ONLY after the first read said off (JP PE past it): two
@@ -685,6 +687,38 @@ def iff_audit(root=ROOT):
                         break
             out.append((os.path.relpath(path, root).replace(os.sep, '/'), num, reg, verdict))
     return out
+
+
+def _t_iff_fixed(code, syms):
+    """The opt-in fixed-R read: both branches take six M1s, including a false
+    PO caused by an interrupt at the first read. The original variant stays unchanged."""
+    c = _t_iff(code, syms)
+    for iff in (0, 1):
+        for inject in (False, True):
+            for refresh in (0, 0x7F, 0x80, 0xFF):
+                sim, _ = _machine(code, 3)
+                rr, mem = sim.registers, sim.memory
+                rr[PC], rr[IFF1], rr[R], rr[T] = syms['t_iff'], iff, refresh, 1000
+                hit = False
+                for _ in range(20):
+                    pc = rr[PC]
+                    first = tuple(mem[pc:pc + 2]) == (0xED, 0x57)
+                    sim.opcodes[mem[pc]]()
+                    if first and inject and not hit and iff:
+                        rr[F] &= 0xFB
+                        hit = True
+                    if mem[pc] == 0xF3:
+                        break
+                else:
+                    c['fixed IFF did not reach DI!'] += 1
+                c['fixed cases'] += 1
+                if inject and iff and not hit:
+                    c['fixed IFF injection not reached!'] += 1
+                if r_span(refresh, rr[R]) != 6:
+                    c['IFF capture M1 count differs!'] += 1
+                if bool(rr[F] & 4) != bool(iff):
+                    c['fixed IFF read wrong!'] += 1
+    return c
 
 
 def _pv(sim, syms, off):
@@ -898,6 +932,13 @@ def selfcheck():
     out.append(('hooklib interrupt state: %d cases (IFF on / off, an interrupt during the first LD A,I) caller\'s IFF '
                 'back; line read with interrupts off %d T at 28 MHz (< 256)' % (ic['cases'], ic['window T']),
                 [k for k in ic if k.endswith('!')]))
+    fixed_code, fixed_syms = assemble(HARNESS, ('HLIB_IFF_FIXED_R',))
+    fixed = _t_iff_fixed(fixed_code, fixed_syms)
+    out.append(('hooklib fixed-R IFF: %d captures, six M1s for both paths including the interrupted read'
+                % fixed['fixed cases'], [k for k in fixed if k.endswith('!')]))
+    unpadded = _t_iff_fixed(code, syms)
+    out.append(('hooklib fixed-R IFF negative: omitted padding detected',
+                [] if unpadded['IFF capture M1 count differs!'] else ['unpadded IFF read not caught!']))
     au = iff_audit()
     once = ['%s:%d' % (f, n) for f, n, _, v in au if v in ('once', 'pair') and not f.endswith('hlib_selftest.asm')]
     out.append(('hooklib IFF audit: %d LD A,I / LD A,R in asm/ (%d read twice, %d values), none trusted after one read'
