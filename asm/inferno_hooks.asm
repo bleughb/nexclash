@@ -166,6 +166,13 @@ rom_end:
 
 ; Capture kernel (no display layer is enabled). All scratch and stack writes are in page 68.
 ; Original CALL return bytes are reproduced exactly; JP sites displace complete instructions.
+; Copier-window milestone 3: each hook measures the time it adds on CTC channel 3 (sync to an
+; edge at entry, run to the next edge at exit, then a constant path to the target) and writes it
+; to page-80 CW_X (8F7C sets, 959B/96A1 add). R is restored (entry R + per-hook M1 constant).
+; Frame IRQs: the hooks are DI (page 68 at slot 0); NextReg $C8 bit 0 is cleared at entry and read
+; at exit: a pulse that came and went is lost, so the hook adds the original's no-op ISR (R + 10,
+; X - 94). A game ISR taken on the site's JP (before DI) left the hook's address below the game
+; SP: X - 94 (that ISR is the original's too).
 CAP_SP      EQU 0x03F0
 CAP_PTR     EQU 0x03F2
 CAP_COUNT   EQU 0x03F4
@@ -175,25 +182,128 @@ CAP_MODE    EQU 0x03F7
 CAP_MAP     EQU 0x0400
 CAP_LOG     EQU 0x0900
 CAP_STACK   EQU 0x1FF0
-        ORG 0x3A00
-cap_scene:
+CAP_K_SCENE   EQU 170           ; T: entry + exit constant path - CALL 9535 (17) (calibrated)
+CAP_K_NORMAL  EQU 174           ; T: ... - LD L,(IX+4) (19) (calibrated)
+CAP_K_WRAPPED EQU 174
+CAP_KR_SCENE   EQU 96            ; R: original M1 to the target - hook M1 (calibrated)
+CAP_KR_NORMAL  EQU 97
+CAP_KR_WRAPPED EQU 97
+CAP_KLOST   EQU -94-6*0x26+54   ; T: X - 94 + 6 per /INT wait loop (E starts at 0x25) + the path (calibrated)
+CAP_KLR     EQU 10+9            ; R: the ISR's 10 + the fast path's M1 after its LD R,A (calibrated)
+
+        ORG 0x3948
+cap_in:                         ; A = entry R; registers pushed (helper in page 80)
+        ld b,a
+        nextreg 0x50,CW_PAGE
+        call cw_tin             ; its return address lands in page 80 (1FE0s, unused)
+        nextreg 0x50,68
+        ret
+cap_out:                        ; HL = K (T), A = KR (R), E = 0 set X / 1 add -> A = R to restore
+        nextreg 0x50,CW_PAGE
+        call cw_tout
+        nextreg 0x50,68
+        ret
+cap_chk:                        ; last check before the exit: NextReg $C8 (selected by cw_tout), A only
+        ld a,0x24+1
+        in a,(0x3B)
+        rrca
+        ret nc                  ; no /INT pulse since the hook's entry
+cap_lost:                       ; a pulse came while DI: it is lost. The original's no-op ISR: R + 10,
+        push hl                 ; X - 94 (+ the wait for /INT to drop + this path). HL DE BC are the game's
+        push de
+        push bc
+        ld bc,0x243B
+        ld a,0x22
+        out (c),a
+        inc b
+        ld e,b
+.int:   inc e
+        in a,(c)
+        jp m,.int
+        ld d,CW_KSPIN
+        mul d,e
+        add de,CAP_KLOST
+        nextreg 0x50,CW_PAGE
+        ld hl,(CW_X)
+        add hl,de
+        ld (CW_X),hl
+        ld a,(CW_HRN)
+        ld d,a
+        add a,CAP_KLR
+        xor d
+        and 0x7F
+        xor d
+        nextreg 0x50,68
+        pop bc
+        pop de
+        pop hl
+        ld r,a
+        ret
+
+cap_done:
         di
         nextreg 0x07,3
+        nextreg 0xC8,1          ; clear "ULA interrupt seen": the window's entry reads it (cw_synced)
         nextreg 0x50,68
         ld (CAP_SP),sp
         ld sp,CAP_STACK
         push af
+        push hl
+        ld a,(CAP_PHASE)
+        cp 1
+        jr nz,.keep
+        ld a,(CAP_OVER)
+        or a
+        jr nz,.invalid
+        ld a,2
+        jr .set_phase
+.invalid:
+        xor a
+        nop
+.set_phase:
+        ld (CAP_PHASE),a
+        jr .phase_done
+.keep:                          ; as many M1 as the phase-1 paths: the window reads R at a fixed offset
+        DUP 7
+        nop
+        EDUP
+.phase_done:
+        ld hl,(CAP_SP)
+        dec hl
+        ld (hl),0x8F
+        dec hl
+        ld (hl),0x95
+        ld (CAP_SP),hl
+        pop hl
+        pop af
+        ld sp,(CAP_SP)
+cap_done_tail:                  ; copier-window builds replace these 12 bytes by JP cw_go
+        nextreg 0x50,255
+        nextreg 0x07,0
+        ei
+        jp 0x9790
+cap_lo_end:
+        ASSERT cap_lo_end <= 0x3A00
+        SAVEBIN "inferno_caplo.bin",cap_in,cap_lo_end-cap_in
+
+
+        ORG 0x3A00
+cap_scene:
+        di
+        nextreg 0x07,3
+        nextreg 0xC8,1          ; clear "ULA interrupt seen" (a pulse still active keeps it set)
+        nextreg 0x50,68
+        ld (CAP_SP),sp
+        ld sp,CAP_STACK
+        push af
+        ld a,r
         push bc
         push de
         push hl
-        ld hl,0x9B00
-        ld de,CAP_MAP
-        ld bc,0x0480
-.copy_map:
-        DUP 16
-        ldi
-        EDUP
-        jp pe,.copy_map
+        call cap_in
+        ld hl,cap_dma           ; 9B00..9F7F -> CAP_MAP by zxnDMA (port 6B, every core): about
+        ld bc,(cap_dma_end-cap_dma)*256+0x6B    ; 0.75 k T against 2.9 k T for 1152 LDI
+        otir
         ld hl,CAP_LOG
         ld (CAP_PTR),hl
         xor a
@@ -207,37 +317,57 @@ cap_scene:
         dec hl
         ld (hl),0x7F
         ld (CAP_SP),hl
+        ld hl,CAP_K_SCENE
+        ld a,CAP_KR_SCENE
+        ld e,0
+        call cap_out
+        ld r,a
         pop hl
         pop de
+        nop                     ; as many M1 as the actors' LD L,(IX+4): one cap_lost R constant
+        nop
         pop bc
+        call cap_chk
         pop af
         ld sp,(CAP_SP)
         nextreg 0x50,255
+        ei                      ; an IRQ is taken after the speed switch (game ISR at 3.5MHz)
         nextreg 0x07,0
-        ei
         jp 0x9535
+cap_dma:                        ; disable; A = 9B00, 0480 bytes; A memory +1; B memory +1; continuous,
+        DB 0x83,0x7D,0x00,0x9B,0x80,0x04,0x14,0x10,0xAD,low CAP_MAP,high CAP_MAP,0x82,0xCF,0x87
+cap_dma_end:                    ; B = CAP_MAP (slot 0, page 68); stop at end; load; enable
 
 cap_normal:
         di
         nextreg 0x07,3
+        nextreg 0xC8,1
         nextreg 0x50,68
         ld (CAP_SP),sp
         ld sp,CAP_STACK
         push af
+        ld a,r
+        push bc
+        push de
+        push hl
+        call cap_in
         xor a
         jp cap_actor
 cap_wrapped:
         di
         nextreg 0x07,3
+        nextreg 0xC8,1
         nextreg 0x50,68
         ld (CAP_SP),sp
         ld sp,CAP_STACK
         push af
-        ld a,1
-cap_actor:
+        ld a,r
         push bc
         push de
         push hl
+        call cap_in
+        ld a,1
+cap_actor:
         ld (CAP_MODE),a
         ld a,(CAP_PHASE)
         cp 1
@@ -309,65 +439,42 @@ cap_actor_out:
         ld a,(CAP_MODE)
         or a
         jr nz,cap_wrapped_out
+        ld hl,CAP_K_NORMAL
+        ld a,CAP_KR_NORMAL
+        ld e,1
+        call cap_out
+        ld r,a
         pop hl
         pop de
+        ld l,(ix+4)
         pop bc
+        call cap_chk
         pop af
         ld sp,(CAP_SP)
         nextreg 0x50,255
-        nextreg 0x07,0
-        ld l,(ix+4)
         ei
+        nextreg 0x07,0
         jp 0x959E
 cap_wrapped_out:
+        ld hl,CAP_K_WRAPPED
+        ld a,CAP_KR_WRAPPED
+        ld e,1
+        call cap_out
+        ld r,a
         pop hl
         pop de
+        ld l,(ix+4)
         pop bc
+        call cap_chk
         pop af
         ld sp,(CAP_SP)
         nextreg 0x50,255
-        nextreg 0x07,0
-        ld l,(ix+4)
         ei
+        nextreg 0x07,0
         jp 0x96A4
 
-cap_done:
-        di
-        nextreg 0x07,3
-        nextreg 0x50,68
-        ld (CAP_SP),sp
-        ld sp,CAP_STACK
-        push af
-        push hl
-        ld a,(CAP_PHASE)
-        cp 1
-        jr nz,.phase_done
-        ld a,(CAP_OVER)
-        or a
-        jr nz,.invalid
-        ld a,2
-        jr .set_phase
-.invalid:
-        xor a
-.set_phase:
-        ld (CAP_PHASE),a
-.phase_done:
-        ld hl,(CAP_SP)
-        dec hl
-        ld (hl),0x8F
-        dec hl
-        ld (hl),0x95
-        ld (CAP_SP),hl
-        pop hl
-        pop af
-        ld sp,(CAP_SP)
-cap_done_tail:                  ; copier-window builds replace these 12 bytes by JP cw_go
-        nextreg 0x50,255
-        nextreg 0x07,0
-        ei
-        jp 0x9790
 cap_end:
-        ASSERT cap_end < 0x3D00
+        ASSERT cap_end < 0x3B90
         SAVEBIN "inferno_capture.bin",cap_scene,cap_end-cap_scene
 
 ; Renderer tile primitive, page 69 mapped at 0000, DI and 28MHz; private stack in that page.
@@ -3549,6 +3656,16 @@ CW_PC     EQU 0x1831            ; its c (tiles >= 16 before it in row 6)
 CW_PADL   EQU 0x1832            ; pad target: T above CW_PADB ticks, +16 rounding
 CW_PADB   EQU 0x1834
 CW_IRQRAW EQU 0x1836            ; CTC count when the last IRQ came
+CW_HR     EQU 0x1840            ; capture-hook timing: entry R
+CW_HC0    EQU 0x1841            ; CTC count after the entry edge
+CW_HN0    EQU 0x1842            ; sync loops left at the entry edge
+CW_HCLK   EQU 0x1844            ; 1: CTC counts
+CW_HRN    EQU 0x1845            ; R to restore
+CW_HXT    EQU 0x1846            ; 0: set X (8F7C), 1: add
+CW_KSPIN  EQU 6                 ; T per /INT wait loop at 28MHz
+CW_KH8    EQU 28                ; 8 x T per cw_edge check (calibrated)
+CW_KT     EQU 0x1847            ; signed T: a speed-switch pair on this machine less the model's (cw_cal)
+CW_KTPAIR EQU 46                ; the model's charge per pair + DJNZ, T (calibrated: CW_KT = 0 in the model)
 CW_IRQSTK EQU 0x1900
 CW_STACK  EQU 0x1A00            ; 19FE: game AF', 19FC: game AF
 CW_CTC    EQU 0x1B3B            ; CTC channel 3
@@ -3556,9 +3673,9 @@ CW_ISR_T  EQU 94                ; IM2 ack 19, JR 12, JP 10, 998B PUSH AF..RET 53
 CW_ISR_M1 EQU 10                ; ack + 9 instructions
 CW_INTDLY EQU 14                ; ~28 T at 28MHz + handler body: the /INT pulse (32 T) ends before EI
 CW_KSYNC  EQU 6                 ; T per sync-loop iteration at 28MHz
-CW_M1K    EQU 0x3C              ; R: end-to-end 8F92->9907 M1 difference (calibrated, then checked on every state)
-CW_KRB    EQU 32895             ; 32768 + 261 (8F92 -> first OUT) - time-base offset (calibrated)
-CW_KPAD   EQU 204               ; row-6 base + 6104 + 101 C -> clock target for 9907 entry (calibrated)
+CW_M1K    EQU 0x33              ; R: end-to-end 8F92->9907 M1 difference (calibrated, then checked on every state)
+CW_KRB    EQU 32880             ; 32768 + 261 (8F92 -> first OUT) - time-base offset (calibrated)
+CW_KPAD   EQU 214               ; row-6 base + 6104 + 101 C -> clock target for 9907 entry (calibrated)
 
         MACRO CW_TICK           ; CW_NOW += CTC ticks since CW_LAST (down counter); A, F, HL
         ld a,CW_CTC >> 8
@@ -3750,15 +3867,43 @@ cw_synced:
         ld l,a
         ld h,a
         ld (CW_IRQT),hl
+        ld d,b                  ; sync loops left (B is the port's high byte below)
+        ld bc,0x243B            ; an IRQ lost in the entry DI span (cap_done + sync): $C8 bit 0,
+        ld a,0xC8               ; cleared at 8F92, is set
+        out (c),a
+        inc b
+        in a,(c)
+        rrca
+        jr nc,cw_nolost
+        dec b
+        ld a,0x22
+        out (c),a
+        inc b
+cw_intw:
+        in a,(c)                ; wait until /INT drops: the pulse is lost (DI)
+        rlca
+        jr c,cw_intw
+        ld hl,CW_ISR_T          ; as the original's no-op ISR early in its head
+        ld (CW_IRQT),hl
+        ld a,CW_ISR_M1
+        ld (CW_RIRQ),a
+cw_nolost:
         ei                      ; IRQs from here on enter cw_irq (no SP below a live saved value)
         ld hl,1024
         ld (CW_NOW),hl
         ld a,24
-        sub b
+        sub d
         ld e,a
         ld d,CW_KSYNC
         mul d,e
         ld hl,(CW_X)
+        add hl,de
+        ld a,(CW_KT)            ; + the entry speed switch's measured excess (half a pair)
+        sra a
+        ld e,a
+        add a,a
+        sbc a,a
+        ld d,a
         add hl,de
         ld a,l
         cpl
@@ -3956,6 +4101,14 @@ cw_rb_add:
         ld a,(CW_RBF)
         ld hl,6104+1024+16-CW_KPAD
         add hl,a
+        ld a,(CW_KT)            ; - the exit speed switch's measured excess (half a pair)
+        sra a
+        neg
+        ld e,a
+        add a,a
+        sbc a,a
+        ld d,a
+        add hl,de
         ld (CW_PADL),hl
         ld a,(CW_R)
         ld l,a
@@ -4058,14 +4211,165 @@ cw_noclock:                     ; A = CW_CLK - 1: FF untested, 01 absent
         jr nz,.ok
         inc a
 .ok:    ld (CW_CLK),a
+        dec a
+        call z,cw_cal           ; the CTC counts: measure the speed switches once
         ld bc,(CW_SVBC)
+        ld a,(CW_CLK)
         dec a
         jp z,cw_clocked
+        jr cw_absent
+cw_cal:                       ; CW_KT = T per (NEXTREG 7,0 / NEXTREG 7,3) pair less the model's charge
+        call cw_edge            ; (hooks and window constants assume the model; hardware may differ)
+        ld (CW_HC0),a
+        ld b,64
+.pair:  nextreg 0x07,0
+        nextreg 0x07,3
+        djnz .pair
+        call cw_edge
+        ld b,a
+        ld a,(CW_HC0)
+        sub b                   ; ticks for 64 pairs: T per pair = ticks / 2
+        srl a
+        sub CW_KTPAIR
+        ld (CW_KT),a
+        ret
 cw_absent:
         ld sp,CW_STACK-4
         pop af
         ld sp,(CW_SP)
         jp cw_orig
+; Capture-hook timing (milestone 3), called from cap_in/cap_out with page 80 at slot 0, DI, 28MHz,
+; SP in page 80's unused 1FE0s. X = 32 * CTC ticks between the hook's entry and exit edges - KSYNC *
+; sync loops left at the entry edge + K (per hook: its constant paths less the displaced original).
+cw_tin:                         ; B = entry R. A F B C
+        ld a,b
+        ld (CW_HR),a
+        ld a,(CW_CLK)
+        cp 1
+        ld a,0
+        jr nz,.clk
+        inc a
+.clk:   ld (CW_HCLK),a
+        or a
+        ret z
+        call cw_edge            ; (a game ISR on the site's JP came before this edge: not in X, as it
+        ld (CW_HC0),a           ; is the original's too; its M1 are in the R read)
+        ld a,b
+        ld (CW_HN0),a
+        ret
+cw_edge:                        ; -> A = CTC count after the next edge, B = the check that saw it
+        ld bc,CW_CTC            ; (12 evenly spaced checks, CW_KH8 / 8 T apart; B = 12: none). A B C E
+        in e,(c)
+        in a,(c)
+        cp e
+        jr nz,.x0
+        in a,(c)
+        cp e
+        jr nz,.x1
+        in a,(c)
+        cp e
+        jr nz,.x2
+        in a,(c)
+        cp e
+        jr nz,.x3
+        in a,(c)
+        cp e
+        jr nz,.x4
+        in a,(c)
+        cp e
+        jr nz,.x5
+        in a,(c)
+        cp e
+        jr nz,.x6
+        in a,(c)
+        cp e
+        jr nz,.x7
+        in a,(c)
+        cp e
+        jr nz,.x8
+        in a,(c)
+        cp e
+        jr nz,.x9
+        in a,(c)
+        cp e
+        jr nz,.x10
+        in a,(c)
+        cp e
+        jr nz,.x11
+        ld b,12
+        ret
+.x0:    ld b,0
+        jr .done
+.x1:    ld b,1
+        jr .done
+.x2:    ld b,2
+        jr .done
+.x3:    ld b,3
+        jr .done
+.x4:    ld b,4
+        jr .done
+.x5:    ld b,5
+        jr .done
+.x6:    ld b,6
+        jr .done
+.x7:    ld b,7
+        jr .done
+.x8:    ld b,8
+        jr .done
+.x9:    ld b,9
+        jr .done
+.x10:    ld b,10
+        jr .done
+.x11:    ld b,11
+        jr .done
+.done:  ret
+cw_tout:                        ; HL = K, A = KR, E = 0 set X / 1 add -> A = R to restore. A F B C D E H L
+        ld c,e
+        ld e,a
+        ld a,(CW_HR)
+        ld d,a
+        add a,e
+        xor d
+        and 0x7F
+        xor d                   ; bit 7 kept
+        ld (CW_HRN),a
+        ld a,(CW_HCLK)
+        or a
+        jr z,.r
+        ld a,c
+        ld (CW_HXT),a
+        call cw_edge            ; the exit edge: constant time from here to the hook's exit
+        ld b,a
+        ld a,(CW_HC0)
+        sub b
+        ld e,a
+        ld d,32
+        mul d,e
+        add hl,de               ; + 32 * ticks between the edges
+        ld a,(CW_HN0)
+        ld e,a
+        ld d,CW_KH8
+        mul d,e
+        ld b,3
+        bsrl de,b
+        add hl,de               ; + KH8 / 8 * the check that saw the entry edge
+        ld a,(CW_KT)            ; + the measured excess of the hook's two speed switches
+        ld e,a
+        add a,a
+        sbc a,a
+        ld d,a
+        add hl,de
+        ld a,(CW_HXT)
+        or a
+        jr z,.set
+        ld de,(CW_X)
+        add hl,de
+.set:   ld (CW_X),hl
+.r:     ld bc,0x243B            ; select NextReg $C8 for cap_chk's one-register read
+        ld a,0xC8
+        out (c),a
+        ld a,(CW_HRN)
+        ret
 cw_head_end:
         ASSERT cw_head_end < 0x1000
         SAVEBIN "inferno_cwhead.bin",0,cw_head_end
