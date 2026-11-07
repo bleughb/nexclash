@@ -114,16 +114,16 @@ V_GBN   EQU 0x014D              ; go-behind items drawn so far in this room (tab
 MEMO    EQU 0x1B80              ; h_ink's memo: 32 x 4 (gfx, ink, line)
 ITF     EQU 0x1B00              ; MAXLOG: 1 if the plot is an item (a collectable): items go first, under every figure
 V_PASS  EQU 0x0150              ; commit pass: 0 items, 1 the rest
-V_L0    EQU 0x0160              ; (2) video line at the blit's start (the pace: the original blit's time is kept)
-V_DEBT  EQU 0x0162              ; (2) hook time outside the blit since the last one, 1/16 lines (estimated per call)
-V_NL    EQU 0x0164              ; (2) lines a video frame, learned at a wrap (0 = 311 until then)
-V_LLN   EQU 0x0166              ; (2) the last line read
-V_EL    EQU 0x0168              ; (2) lines since the blit's start, counted at each x_tick
-V_PADON EQU 0x016A              ; 1: the blit started the pace window
+HLIB_V_PACE EQU 0x0170          ; (26) the shared pace limiter's state (lib/hlib_pace.asm, HLIB_PACE_LEAN): +0 the last line
+                                ; read, +2 lines since the blit's start, +4 the debt (1/16 lines), +10 the blit opened the window
+HLIB_PACE_NL EQU 311            ; 128K timing: the frame length is never learned from a poll (was: V_NL, learned at a wrap)
+V_LLN   EQU HLIB_V_PACE         ; the names the hooks below use
+V_EL    EQU HLIB_V_PACE + 2
+V_DEBT  EQU HLIB_V_PACE + 4
+V_PADON EQU HLIB_V_PACE + 10
 TGT16   EQU 8592                ; x 16: the original blit, 0xA8ED to its RET, 538.6 lines (JNext, 128K timing, mean of 768), less the fixed
                                 ; 3.5 MHz hook time outside it (0xA1E9, 0xA204, 0xB7D7: about 1.5 lines) and the window's lead-in
 DPLOT   EQU 2                   ; a plot's 3.5 MHz part (NEXTREG 7 and the JP), not measured, 1/16 lines
-V_HS    EQU 0x016C              ; (2) the line at the start of a hook outside the blit
 DTILE   EQU 5                   ; a tile print's
 V_NB    EQU 0x0151              ; parts of one figure abutting this plot: 1 right, 2 left, 4 below, 8 above (no outline there)
 V_SOL   EQU 0x014F              ; 0x80: the go-behind cell being drawn is solid
@@ -246,164 +246,39 @@ e_at:   nextreg 0x07,3
         nextreg 0x07,0
         ret
 
-; hl = the video line (NR 0x1E/0x1F, read until the high bit holds still); a, f, bc used
-x_line: ld bc,0x243B
-.r:     ld a,0x1E
-        out (c),a
-        inc b
-        in h,(c)
-        dec b
-        ld a,0x1F
-        out (c),a
-        inc b
-        in l,(c)
-        dec b
-        ld a,0x1E
-        out (c),a
-        inc b
-        in a,(c)
-        dec b
-        xor h
-        and 1
-        jr nz,.r
-        ld a,h
-        and 1
-        ld h,a
-        ret
+; The pace (card patch.pace-limiter): the shared limiter, lib/hlib_pace.asm (HLIB_PACE_LEAN), in the alt ROM span;
+; page H mapped at every call. x_line = hlib_line.
+        DEFINE HLIB_PACE_LEAN
+        INCLUDE "lib/hlib_pace.asm"
+x_line  EQU hlib_line
 
-; V_EL += the lines since the last reading. Callers are under a frame apart (a build ticks once a row), so at most one
-; wrap is unseen: it counts V_NL lines (311 until a wait has seen one). Page H mapped; a, f, bc, hl used
-x_tick: call x_line
-        push de
-        ld de,(V_LLN)
-        ld (V_LLN),hl
-        or a
-        sbc hl,de
-        jr nc,.p
-        ld de,(V_NL)
-        ld a,d
-        or e
-        jr nz,.n
-        ld de,311
-.n:     add hl,de
-.p:     ld de,(V_EL)
-        add hl,de
-        ld (V_EL),hl
+; V_EL += the lines since the last reading. Callers are under a frame apart (a build ticks once a row). Keeps DE
+x_tick: push de
+        call hlib_pace_tick
         pop de
         ret
 
 ; a plot: its hook time measured by the video line (short hooks: 0 or 1 line, right on average) into V_DEBT
 x_plot: push af
         push bc
-        call x_line
-        ld (V_HS),hl
+        call hlib_debt_open
         pop bc
         pop af
         call h_plot
-        ld c,DPLOT
-; V_DEBT += 16 x (lines since V_HS) + c
-x_dbt:  push bc
-        call x_line
-        ld de,(V_HS)
-        or a
-        sbc hl,de
-        jr nc,.p
-        ld de,(V_NL)
-        ld a,d
-        or e
-        jr nz,.n
-        ld de,311
-.n:     add hl,de
-.p:     add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        pop bc
-        ld b,0
-        add hl,bc
-        ld de,(V_DEBT)
-        add hl,de
-        ld (V_DEBT),hl
-        ret
+        ld a,DPLOT
+        jp hlib_debt_close
 
 ; V_DEBT += 16 x V_EL, after a last tick
 x_eld:  call x_tick
         ld hl,(V_EL)
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        ld de,(V_DEBT)
-        add hl,de
-        ld (V_DEBT),hl
-        ret
+        call hlib_pace_wait.x16
+        jp hlib_debt_add
 
-; wait until the window e_bl opened has lasted TGT16 - V_DEBT sixteenths of a line; what is left over (a long build,
-; a room change) carries in V_DEBT to the next windows, at most 0xBFFF (3072 lines, 196 ms). Page H mapped
-x_pad:  ld a,(V_PADON)
-        or a
-        ret z
+; wait until the window e_bl opened has lasted TGT16 - V_DEBT sixteenths of a line (at 28 MHz: speed 0, the target is
+; the original's); what is left over (a long build, a room change) carries in V_DEBT, at most 0xBFFF
+x_pad:  ld hl,TGT16
         xor a
-        ld (V_PADON),a
-        call x_tick
-        ld hl,TGT16
-        ld de,(V_DEBT)
-        or a
-        sbc hl,de               ; target, sixteenths
-        jr c,.neg
-        push hl
-        ld b,4
-.q:     srl h
-        rr l
-        djnz .q
-        ex de,hl                ; de = lines to reach
-        ld hl,(V_EL)
-.lp:    push hl
-        or a
-        sbc hl,de
-        pop hl
-        jr nc,.ok
-        push hl
-        call x_line
-        ld bc,(V_LLN)
-        ld (V_LLN),hl
-        or a
-        sbc hl,bc               ; lines since the last poll
-        jr nc,.d
-        inc bc                  ; a wrap: the last poll saw the frame's last line
-        ld (V_NL),bc
-        add hl,bc               ; = the new line + 1
-.d:     pop bc
-        add hl,bc
-        jr .lp
-.ok:    ld (V_EL),hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        pop de
-        or a
-        sbc hl,de               ; past the target (under a line), sixteenths
-        jr nc,.st
-        ld hl,0
-        jr .st
-.neg:   ld hl,(V_DEBT)          ; no wait: the debt beyond this window, and all of the window's time
-        ld de,TGT16
-        or a
-        sbc hl,de
-        ex de,hl
-        ld hl,(V_EL)
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,de
-.st:    ld a,h
-        cp 0xC0
-        jr c,.w
-        ld hl,0xBFFF
-.w:     ld (V_DEBT),hl
-        ret
+        jp hlib_pace_wait
 
 ; 0xA89C: the room wipe shows the buffer: without figures; the old room's sprites go
 e_wp:   nextreg 0x07,3

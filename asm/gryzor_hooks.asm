@@ -56,6 +56,7 @@ FIXT    EQU 237
 
         INCLUDE "lib/hlib_speed.asm"
         INCLUDE "lib/hlib_r.asm"
+        DEFINE HLIB_PACE_V1                ; the first pace library, as this engine was verified with
         INCLUDE "lib/hlib_pace.asm"
 
 ; ---------------------------------------------------------------------------------------------------------------

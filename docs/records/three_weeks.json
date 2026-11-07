@@ -108,7 +108,9 @@
   "docs/profiles/three_weeks_enhanced.json",
   "asm/three_weeks_hooks.asm"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_pace.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"
@@ -148,11 +150,11 @@
   },
   "sprites": {
    "file": "three_weeks_128_sprites.nex",
-   "md5": "74af7179b23098c66b0f8e2b5e3a0bf2"
+   "md5": "181da4bd04c28dec0222623752092265"
   },
   "enhanced": {
    "file": "three_weeks_128_enhanced.nex",
-   "md5": "c139f040ee2ea5e2c22c1c66799e6e49"
+   "md5": "2fceecaabcb6ba884b1b38de15756441"
   }
  },
  "repro": [],
@@ -163,7 +165,7 @@
  "status": {
   "title": "Three Weeks in Paradise (128K)",
   "engine_col": "three_weeks (three_weeks.md)",
-  "build": "three_weeks_128_sprites.nex 90eeeb14 (every figure a sprite, fixed colours by graphics, outline + fill; front cells and go-behind scenery on Layer 2; pace window ORIGINAL) + three_weeks_128_enhanced.nex e6e6f6b0 (menu set); published .nxc v1.0",
+  "build": "three_weeks_128_sprites.nex 181da4bd (2026-11-07: the pace window on the shared limiter, lib/hlib_pace.asm; 90eeeb14 = published .nxc v1.0; every figure a sprite, fixed colours by graphics, outline + fill; front cells and go-behind scenery on Layer 2; pace window ORIGINAL) + three_weeks_128_enhanced.nex 2fceecaa (menu set)",
   "software": "replay IDENTICAL, 16 recordings default + 5 Enhanced; negatives detected (games/three_weeks.md Results)",
   "hardware": "none (JNext through the real loader only)",
   "next": "hardware round; ported from Jon Attree's .nxc work, 2026-11-04"

@@ -2371,6 +2371,8 @@ PT:     ; 1/16 lines a row: index (width - 1) + 8 shifted + 16 type 2 (ptable.py
         defb 58,85,112,139,167,194,221,248
         defb 102,138,174,211,247,255,255,255
 
+        DEFINE HLIB_PACE_V1                ; the first pace library, as this engine was verified with
+
         INCLUDE "lib/hlib_pace.asm"
 
 p27_end:
