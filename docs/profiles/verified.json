@@ -174,6 +174,15 @@
     "enhanced": "37f970019aa9443669a5ca8f0fef0613"
    }
   },
+  "1ff279754d0730e503816199ac6976f3": {
+   "game": "Pyjamarama",
+   "doc": "pyjamarama.md",
+   "nex": {
+    "plain": "19c7f0ac1c7178839a01b0fc42e47732",
+    "sprites": "fad103126004e18132c9877d7a7606e6",
+    "enhanced": "3ca79dd93d0fdc46968a22382deac6fe"
+   }
+  },
   "4c98b980b1726af545fccc99665ef29b": {
    "game": "Rainbow Islands (128K, Z80N)",
    "doc": "rainbow_z80n.md",

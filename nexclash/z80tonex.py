@@ -204,7 +204,7 @@ def out_port(port, val):            # LD BC,port / LD A,val / OUT (C),A
 # Tail routine (runs from game memory, restores the CPU state)
 # --------------------------------------------------------------------------
 
-def build_tail(snap, org, slot1=None, altrom=False):
+def build_tail(snap, org, slot1=None, altrom=False, ram_slot1_after_alt=False):
     """Return (tail bytes, offset of the NextReg $08 value byte, offset of restore label,
     register block or None).
 
@@ -245,7 +245,7 @@ def build_tail(snap, org, slot1=None, altrom=False):
     if slot1 is not None:
         if altrom:
             code += nextreg(0x8C, 0x80)                   # alt ROM on for reads (low nibble 0)
-        else:
+        if not altrom or ram_slot1_after_alt:
             code += nextreg(0x51, slot1[0])               # patch page into slot 1
     else:
         # Border (port FE bits 0-2; MIC/EAR bits left at 0)
@@ -362,7 +362,8 @@ def altrom_fill(org, page, lo, hi, low=None, whole=False, img0=None):
         c += nextreg(0x55, page)
     else:
         c += b'\x21\x00\x00\x11\x00\x00\x01\x00\x40\xED\xB0'   # LD HL,0 / LD DE,0 / LD BC,$4000 / LDIR
-    c += b'\x21' + w16(0xA000 + lo - 0x2000) + b'\x11' + w16(lo) + b'\x01' + w16(hi - lo) + b'\xED\xB0'
+    if hi > lo:  # zero-length LDIR would copy 65536 bytes
+        c += b'\x21' + w16(0xA000 + lo - 0x2000) + b'\x11' + w16(lo) + b'\x01' + w16(hi - lo) + b'\xED\xB0'
     if low is not None:
         c += nextreg(0x55, low) + b'\x21\x00\xA0\x11\x00\x00\x01\x00\x20\xED\xB0'
     if img0 is not None:
@@ -557,14 +558,14 @@ def convert(src, dst, tail_req=None, force50=True, quiet=False, patch=None, keep
     avoid = bool(patch is not None and patch.uses_printer_buffer) or keep_printer_buffer
     slot1 = getattr(patch, 'slot1', None) if patch is not None else None
     altrom = getattr(patch, 'altrom', None) if patch is not None else None
-    probe = build_tail(snap, 0x8000, slot1, altrom is not None)[0]
+    probe = build_tail(snap, 0x8000, slot1, altrom is not None, getattr(patch, 'ram_slot1_after_alt', False))[0]
     if tail_req is None and patch is not None and getattr(patch, 'tail_addr', None) is not None:
         tail_req = patch.tail_addr
     tail_addr, why = choose_tail_addr(snap, len(probe), tail_req, avoid)
     max_tail = getattr(patch, 'max_tail', None) if patch is not None else None
     if max_tail is not None and len(probe) > max_tail:
         raise ValueError('start-up tail is %d bytes but only %d are free' % (len(probe), max_tail))
-    tail, p3_off, restore_off, regs = build_tail(snap, tail_addr, slot1, altrom is not None)
+    tail, p3_off, restore_off, regs = build_tail(snap, tail_addr, slot1, altrom is not None, getattr(patch, 'ram_slot1_after_alt', False))
     printer = None
     if keep_printer_buffer or getattr(patch, 'keep_printer_buffer', False):
         if snap.is128:
