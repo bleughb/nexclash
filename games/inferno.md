@@ -197,8 +197,8 @@ build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 ## Lessons
 - [local: Inferno copier window] A replay cannot follow the code that produces it when the first
   event is due sooner than that code takes: interleave (lockstep); defer only what the tail can't fit.
-- [local: Inferno IRQ in a timed window] The IM2 JR at FFFF takes its offset from 0000, so the page
-  in slot 0 can own the IRQ; count the original's no-op ISR (T, M1) instead of losing it under DI.
+- [local: Inferno IRQ in a timed window] The IM2 JR at FFFF reads its offset from 0000: the slot-0
+  page owns the IRQ; count the original's no-op ISR (T, M1) rather than lose it under DI.
 - [local: Inferno pacing] Find where the frame is paced before setting a hook budget; here the
   limiter is inside the copier, which also plays the beeper. Prove immutability on full recordings.
 - [local: Inferno runtime attribution] Retain simultaneous per-update totals; address/row bookkeeping
