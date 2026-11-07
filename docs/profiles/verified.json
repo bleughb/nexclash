@@ -375,6 +375,14 @@
     "plain": "70890aba7d821fba8a41e63636eb58be",
     "sprites": "85e054fe4bce8e4b3a8e336aac432f58"
    }
+  },
+  "9f2db0ec44da647aa1d7469f1f25ed67": {
+   "game": "Underwurlde",
+   "doc": "underwurlde.md",
+   "nex": {
+    "plain": "a6e6b38e9e8be1d2b5c32f08ab3c3833",
+    "sprites": "07dff80327ed247a38780413e01a2325"
+   }
   }
  }
 }
