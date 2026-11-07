@@ -72,6 +72,11 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Starquake (starquake): `starquake.nex` f447d9b3d937837d2427e021002a9648, `starquake_sprites.nex` 4efee1728e8092cdfd9f0e4ad859cf52, `starquake_sprites_loading.nex` 2e2f107e95cf80ea9412ba7023e819ee; verified 2026-11-05
 - Lunar Jetman (lunar_jetman): `lunar_jetman.nex` 3e5ca3908616f76a33f864be57baef95, `lunar_jetman_sprites.nex` e33f68c4fc0dca007daf14e99188ecfd, `lunar_jetman_sprites_loading.nex` 4634886880940d0db5e4cee9c1113819, `lunar_jetman_enhanced.nex` dfeb2cf9d184d6672f2c1448c0d9b805, `lunar_jetman_enhanced_loading.nex` 62f7e914c390fcce7477d5efd2423cad; verified 2026-11-05
 - Robin of the Wood (128K) (robin_of_the_wood): `robin_of_the_wood.nex` d6e8b01ea8b94970ef102afca79e611b, `robin_of_the_wood_sprites_raw.nex` 7cedff6b61b71f7d94330fc9e5936d57, `robin_of_the_wood_sprites.nex` 1d07361f9c04903643a06cc1a8d6c88a, `robin_of_the_wood_enhanced_raw.nex` 425259deba42b667a01e2ece96c9b1ea, `robin_of_the_wood_enhanced.nex` 8cb149338c77f85a088e3ddf220ed05b; verified 2026-11-05
+- Cobra (cobra): `cobra.nex` 2ec883ba2f88ef4fcda0623c2b985777, `cobra_sprites.nex` 00ead70a486598fb9b908feb675680ee; verified 2026-11-05
+- Gryzor (gryzor): `gryzor.nex` 180adc9071309e8c9a5a10789040d3a1, `gryzor_sprites.nex` 81f84fdbceb9f6b493140e196de4af99, `gryzor_sprites_outline.nex` 827a770f7964fc8c21d038dfa99b7a00; verified 2026-11-05
+- Sabre Wulf (sabre_wulf): `sabre_wulf.nex` 06fbcf5016f77b868b3d754f621974ab, `sabre_wulf_sprites.nex` 332c9526cf6ab6b4adb5c1dc2d170969; verified 2026-11-05
+- Solomon's Key (solomons_key): `solomons_key.nex` 3ad529e40439ad0ee5fbbb67f66d9170, `solomons_key_sprites.nex` 80e83ae3cab8adf6e58085261517a80f; verified 2026-11-05
+- Dynamite Dan (dynamite_dan): `dynamite_dan.nex` 3ad20495c5183b20030190d6abdd479f, `dynamite_dan_sprites.nex` 1ab3348d3a2619f534d8907a1d89e09e; verified 2026-11-05
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
