@@ -369,7 +369,29 @@ def _allocate():
 ALLOC = _allocate()
 
 
-def palette():
+# ---------------------------------------------------------------------------------------------------------------
+# A painted source: Jon's hand-painted sheets (pilot/runs/nightshade/paint_v1, tools/import.py) read back as every
+# graphic's per-pixel codes and the 256-entry palette. When one is given, it is the Enhanced set; the rules above
+# then only make the sheets. Given by the environment (NIGHTSHADE_PAINT_SOURCE, a path) or installed beside this
+# module as nightshade_paint_source.json; none: the rules.
+# ---------------------------------------------------------------------------------------------------------------
+_SRC = {}
+
+
+def source():
+    """-> the painted source dict, or None"""
+    import json
+    import os
+    path = os.environ.get('NIGHTSHADE_PAINT_SOURCE') or os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                                                      'nightshade_paint_source.json')
+    if not os.path.exists(path):
+        return None
+    if path not in _SRC:
+        _SRC[path] = json.load(open(path))
+    return _SRC[path]
+
+
+def rule_palette():
     pal = bytearray(256)
     for off, a in ALLOC.items():
         if off in (12, 14, 15):
@@ -380,6 +402,11 @@ def palette():
         for code, col in hero_colours(k).items():
             pal[16 * (8 + k) + code] = col
     return bytes(pal)
+
+
+def palette():
+    src = source()
+    return bytes.fromhex(src['palette']) if src else rule_palette()
 
 
 def offsets():
@@ -484,8 +511,21 @@ def paint_one(mem, t, maps=True):
     return g, w, h, mem[g], codes
 
 
-def paint_all(mem, maps=True):
-    """-> {g: (w, h, base header byte, codes, first type)} for every figure graphic, keyed by its address"""
+def paint_all(mem, maps=True, rules=False):
+    """-> {g: (w, h, base header byte, codes, first type)} for every figure graphic, keyed by its address: from the
+    painted source when there is one (maps=False, the negative, and rules=True use the rules)"""
+    src = None if (rules or not maps) else source()
+    if src:
+        res = {}
+        for gk, d in src['codes'].items():
+            g = int(gk, 16)
+            t = d['t']
+            g2, w, h = graphic(mem, t)
+            if g2 != g or (w, h) != (d['w'], d['h']):
+                raise ValueError('painted source: graphic %04X does not match the game' % g)
+            codes = {(x, h - 1 - y): int(ch) for y, row in enumerate(d['rows']) for x, ch in enumerate(row) if ch != '0'}
+            res[g] = (w, h, mem[g], codes, t)
+        return res
     res = {}
     for t in FIG_TYPES:
         g, w, h = graphic(mem, t)
@@ -510,3 +550,32 @@ def planes(mem, maps=True):
         for o in ORIENTS:
             out[g][o] = tuple(_orient(mem, t, g, bytes(pk), o) if (hdr & 0xC0) != o else bytes(pk) for pk in p)
     return out, paint
+
+
+def code_images(mem, maps=True):
+    """-> {g: {orientation: bytes}}: every figure graphic's painted codes as a 4-bit image in the plane banks' space
+    (4 bytes a data byte: byte 4c + k = code(8c + 2k) << 4 | code(8c + 2k + 1), rows in data order), the mirrored
+    orientation from the game's own flip routine applied to the three code bit-planes (as the planes were)."""
+    paint = paint_all(mem, maps)
+    out = {}
+    for g, (w, h, hdr, codes, t) in paint.items():
+        bp = [bytearray(2 * w * h) for _ in range(3)]
+        for (x, r), code in codes.items():
+            for k in range(3):
+                if code >> k & 1:
+                    bp[k][2 * (r * w + x // 8) + 1] |= 0x80 >> (x & 7)
+        out[g] = {}
+        for o in ORIENTS:
+            pk = [_orient(mem, t, g, bytes(b), o) if (hdr & 0xC0) != o else bytes(b) for b in bp]
+            img = bytearray(4 * w * h)
+            for r in range(h):
+                for c in range(w):
+                    v = [pk[k][2 * (r * w + c) + 1] for k in range(3)]
+                    for kk in range(4):
+                        nib = []
+                        for px in (2 * kk, 2 * kk + 1):
+                            bit = 0x80 >> px
+                            nib.append(sum(1 << k for k in range(3) if v[k] & bit))
+                        img[4 * (r * w + c) + kk] = nib[0] << 4 | nib[1]
+            out[g][o] = bytes(img)
+    return out
