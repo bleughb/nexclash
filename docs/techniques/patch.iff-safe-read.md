@@ -32,7 +32,7 @@ Line reads with interrupts on: `hlib_line_di` (hlib_pace.asm), called at 28 MHz.
 
 **Assumptions.** An interrupt accepted at the end of LD A,I / LD A,R leaves P/V = 0 (NMOS Z80; JNext
 does it, SkoolKit's simulator too; the Next's core untested - the double read is right either way). The
-Next's /INT lasts about 32 T at 3.5 MHz.
+/INT lasts 32 T at 3.5 MHz on a Spectrum; at 28 MHz JNext loses interrupts in DI windows of a few hundred T (Quazatron).
 
 **Validation gap.** Library unit tests on the simulator with the interrupt injected; JNext interrupt counts
 on the games that changed. No board run.
@@ -49,7 +49,7 @@ build against original. Stop when the audit lists no 'once' / 'pair' and the cou
 ## Contract
 - State: HLIB_IFF_DI loses A (= I) and F (P/V = IFF); HLIB_IFF_EI keeps everything; stack: hook stack: the
   caller's PUSH AF only; interrupt headroom: the game's ISR depth, as without the hook.
-- Time: 2 or 4 M1 + DI at entry, one JP at exit; a DI window under 256 T at 28 MHz loses no interrupt.
+- Time: 2 or 4 M1 + DI at entry, one JP at exit; every DI window kept as short as the work allows.
 - Display: software = return/boundary only; hardware = checklist item "music and game clock at the original's tempo"
 
 ## Resources owned

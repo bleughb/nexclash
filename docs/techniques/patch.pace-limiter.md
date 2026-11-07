@@ -4,7 +4,7 @@
 {
   "schema": 4,
   "id": "patch.pace-limiter",
-  "revision": 1,
+  "revision": 2,
   "kind": "patch",
   "title": "Pace limiter: a faster hook waits until the displaced original's time has passed",
   "question": "Under the ORIGINAL pace target, does a hook take less time than the code it displaces, so the game would run faster than the original?",
@@ -17,64 +17,66 @@
   "phases": ["entry", "exit"],
   "order": {"entry": {"after": ["patch.restore-speed"]}, "exit": {"before": ["patch.restore-speed"]},
             "cross": ["outside hooks add their time to the debt; the next window repays it",
-                      "never a debt hook inside an open window (counted twice)"]},
+                      "never a debt hook inside an open window (counted twice)",
+                      "the ISR wrapper calls hlib_pace_hold / _resume: interrupt time is in no window"]},
   "owns": {"hook_state": ["HLIB_V_PACE"]},
-  "examples": [],
+  "examples": ["three_weeks"],
   "sources": ["pilot runs/three_weeks games/three_weeks.md 'Pace' (x_pad, V_DEBT; d386a699 +11.38% -> 25eab33d +0.05%)",
+              "pilot runs/quazatron REPORT.md sessions 2-3 (game-routine windows x K, the debt repaid from DD80, isr_in / isr_out)",
+              "pilot runs/dean_match_day REPORT.md v2.1 (per-call targets, ISRACC: interrupt time left out; -0.61 / -0.23 / -0.55 %)",
               "pilot NEXCLASH-CHANGES.md: owner decision, the limiter by default for ORIGINAL (2026-11-04)",
               "asm/lib/hlib_pace.asm + nexclash/hooklib.py (the shared library)"]
 }
 ```
 
 ## Use / do not use
-Pace targets (the pilot's hook-speed study): **ORIGINAL** (the default for every new build: zero penalty, the
-original's slowdowns kept), SLOWDOWN REMOVED (owner's choice per game: capped at the original's quiet-scene
-pace), TURBO (a menu option only). Under ORIGINAL a hook that replaces timed work (a blit, a plot, a copy)
-can be faster than it - sprite drawing costs less than the ULA plot, its own work runs at 28 MHz - so it
-waits: `hlib_pace_open` at the window's start, `hlib_pace_wait` (HL = the original's time in 1/16 lines,
+Targets: **ORIGINAL** (default), SLOWDOWN REMOVED (owner's choice), TURBO (menu option). Under ORIGINAL a
+hook faster than the timed work it replaces (blit, plot, copy) waits: `hlib_pace_open` at the window's start, `hlib_pace_wait` (HL = the original's time in 1/16 lines,
 `hooklib.lines16`; A = the latched speed) at its end. Hooks outside a window that add time measure it with
-`hlib_debt_open` / `_tick` / `_close`; the next window repays it, and time over a window carries. Not for
-code that is not timed (a menu wait loop) or sound code (never touched).
+`hlib_debt_open` / `_tick` / `_close` (`hlib_debt_add` for a constant); the next window repays it, and time
+over a window carries (capped: HLIB_PACE_CAP). Also: a game routine run at 28 MHz: open, CALL it, `hlib_pace_waitk` (K = original time per 28 MHz
+time x 16, measured in JNext); `hlib_debt_repay` shortens the game's own delay by the debt; the ISR
+wrapper calls `hlib_pace_hold` / `_resume` so interrupt time is in no window. Not for code that is not timed (a menu wait loop) or sound code (never touched).
 
-**Assumptions.** The original's time for the window is measured (pace meter, `cost --at`, or the verifier's T
-at 3.5 MHz) and is near constant; NR 0x1E / 0x1F give the video line; the target scales with the incoming
-speed (>> NR 7).
+**Assumptions.** The window's original time is measured and near constant; NR 0x1E / 0x1F give the
+video line; the target scales with the incoming speed.
 
-**Validation gap.** Three Weeks in JNext (+0.05% over 600 updates); the library on the simulator only (windows
-within 2 lines, debt runs within 0.3%). No board run.
+**Validation gap.** Three Weeks on the library (HLIB_PACE_LEAN) in JNext +0.50%; Quazatron, Match Day: their own
+copies (within 2%); the full library on the simulator only. No board run.
 
 ## Recognise
-The pace meter reads a negative penalty (Atic Atac v1.1: -0.8 to -2.8%) or "Net ... negative means a
-limiter is needed".
+The pace meter reads a negative penalty (Atic Atac v1.1: -0.8 to -2.8%).
 
 ## Probe and stop
 1. `python -m nexclash.pace` on the build without the wait: the penalty (negative = faster).
-2. The window's original time; subtract the hook's fixed parts outside the polling (its 3.5 MHz entry and
-   exit, and with a slow wait the wait's tail, about 600 T): hlib_selftest.asm T_FIX.
+2. The window's original time, less the hook's fixed parts outside the polling (hlib_selftest.asm T_FIX).
 3. With the wait: the penalty about 0 in quiet and busy thirds. Stop there.
 
 ## Contract
 - State: none of the game's; the waits keep IX, IY and the alternate set; the caller saves the rest.
 - Time: with interrupts on at the site, wait at the caller's speed (HLIB_SPEED_OUT first) so the game's ISR
-  runs at its own clock; no wait longer than the original's window plus a line; at most 65536 polls (no line
-  counter: gives up). Hook stack: 12 bytes; interrupt headroom: as the hook.
+  runs at its own clock; a 3.5 MHz wait ends up to 5 lines late (a poll); at most 65536 polls. K windows
+  scale their own readings (+2% at K = 128): measure K on the built hook. Hook stack: 12 bytes; interrupt
+  headroom: as the hook, + 4 bytes in hold / resume.
 - Display: software = return/boundary only; hardware = checklist item "game speed as the original in quiet and busy scenes"
 
 ## Resources owned
-HLIB_V_PACE, 14 bytes of hook RAM.
+HLIB_V_PACE, 26 bytes (14: HLIB_PACE_V1, the first library: Cobra, Gryzor, Cauldron 1.1).
 
 ## Failure lookup
 | Symptom | Cause | Probe | Fix | Rejected |
 |---|---|---|---|---|
-| faster than the original | no wait, or target too small | pace | the limiter, measure the target | slowing the game's code |
-| slower by the outside hooks' time | no debt | pace busy third | debt open / close | - |
-| a long room build measured short | over a frame without a tick | the debt lines | hlib_debt_tick a frame | - |
-| waits run a few lines long after a wrap | frame length learned from a poll (3.5 MHz misses the last line) | hooklib._t_wrap | the timing mode's length (+6 / HLIB_PACE_NL) | learning it |
+| faster than the original | no wait / target too small | pace | the limiter | slowing the game's code |
+| slower by outside hooks | no debt | pace busy third | debt open / close | - |
+| long room build measured short | no tick in a frame | debt lines | hlib_debt_tick | - |
+| interrupt time in a window | no hold / resume | _t_hold | hold / resume in the ISR wrapper | DI round the wait |
+| waits long after a wrap | frame length learned from a poll | _t_wrap | +6 / HLIB_PACE_NL | learning it |
 
 ## Verification
 `hooklib.pace_check` on the simulator (NextModel times both clocks); the pace meter on the build. Negative
-control: a limiter that never waits (`hooklib.NEGATIVES`) must read faster than the original.
+controls (`hooklib.NEGATIVES`): no wait, resume / waitk as RET, a repay that skips nothing: each caught.
 
 ## Evidence
-- `grep -n '^hlib_' asm/lib/hlib_pace.asm`; `grep -n 'def _t_pace\|def lines16\|def pace_check' nexclash/hooklib.py`.
-- Three Weeks x_pad, x_tick, x_dbt (pilot copy of three_weeks_hooks.asm), observed in JNext.
+- `grep -n '^hlib_' asm/lib/hlib_pace.asm`; `grep -n 'def _t_' nexclash/hooklib.py`.
+- Three Weeks x_pad / x_tick (three_weeks_hooks.asm), observed in JNext.
+- Quazatron fw_wait / t_dly / isr_in (PR #98), Match Day v2.1 w_close / ISRACC (PR #99): per-game forms.

@@ -15,7 +15,8 @@ V_I     EQU 0xC00A
 V_SL    EQU 0xC00B
 V_FP    EQU 0xC00C              ; 2
 V_AP    EQU 0xC00E              ; 2
-HLIB_V_PACE EQU 0xC010          ; 14
+V_K     EQU 0xC030              ; h_kblit's K (x 16)
+HLIB_V_PACE EQU 0xC040          ; 26
 HLIB_PACE_NL EQU 312            ; 48K timing in the tests
 HLIB_V_DB EQU 0xC020            ; 2
 HLIB_DB_HALF EQU 32
@@ -26,8 +27,8 @@ FRAME   EQU 0xB000              ; n, then n x (key 2, source 2, x, y), written b
 BLITN   EQU 2048                ; o_blit: 2048 bytes by LDIR
 T_BLIT  EQU 30 + 21 * (BLITN - 1) + 16 + 10    ; its T at 3.5 MHz, CALL excluded
     IFDEF PACE_SLOWWAIT
-T_FIX   EQU 97 + 10 + 600       ; h_blit's 3.5 MHz part outside the polling: HLIB_SPEED_IN, RET, the wait's tail
-                                ; from its last line reading (about 600 T at 3.5 MHz)
+T_FIX   EQU 97 + 10 + 900       ; h_blit's 3.5 MHz part outside the polling: HLIB_SPEED_IN, RET, the wait's tail
+                                ; from its last line reading (about 900 T at 3.5 MHz: a poll is about 650 T)
     ELSE
 T_FIX   EQU 97 + 10             ; h_blit's 3.5 MHz part outside the window (HLIB_SPEED_IN, RET)
     ENDIF
@@ -273,6 +274,18 @@ t_iff:
         ld d,a
         pop af
         HLIB_IFF_EI
+        ret
+
+; ---- a game-routine window: the original's own routine at 28 MHz, its time x K / 16 is the target ---
+h_kblit:
+        HLIB_SPEED_IN V_SPD
+        call hlib_pace_open
+        call o_blit             ; the game's routine, run by the hook at 28 MHz
+        ld a,(V_SPD)
+        ld c,a
+        ld a,(V_K)
+        call hlib_pace_waitk
+        HLIB_SPEED_OUT V_SPD
         ret
 
 t_line_di:                      ; a video line read with the shortest DI window
