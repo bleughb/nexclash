@@ -1,0 +1,224 @@
+{
+ "name": "cobra",
+ "order": 105,
+ "game": "Cobra",
+ "doc": "cobra.md",
+ "engine": "cobra",
+ "representative": true,
+ "reference": "cobra",
+ "inputs": {
+  "snapshot": {
+   "name": "cobra.z80",
+   "md5": "0268fb4d76200708849269c9747b65ff",
+   "path": "cobra/cobra.z80"
+  },
+  "recordings": [
+   {
+    "name": "cobra_colour_lives.rzx",
+    "md5": "fc88a7c3a48ca12986a21665c01c67dc",
+    "path": "cobra/cobra_colour_lives.rzx"
+   },
+   {
+    "name": "cobra_colour_all.rzx",
+    "md5": "03fd4a0c9201a852cec29cf71f2d6553",
+    "path": "cobra/cobra_colour_all.rzx"
+   },
+   {
+    "name": "cobra_mono_all.rzx",
+    "md5": "91a9635ae07cfcda15f69c22e476cd78",
+    "path": "cobra/cobra_mono_all.rzx"
+   },
+   {
+    "name": "cobra_colour_nocheat.rzx",
+    "md5": "9fca29663b99a44dd2422312d58a6ae1",
+    "path": "cobra/cobra_colour_nocheat.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "cobra"
+ ],
+ "own_modules": [
+  "cobra"
+ ],
+ "data": [
+  "docs/profiles/cobra.json",
+  "asm/cobra_hooks.asm"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "cobra_colour_lives.rzx",
+   "cobra_colour_all.rzx",
+   "cobra_mono_all.rzx",
+   "cobra_colour_nocheat.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 40,
+  "note": "Random-key recordings with a floating-bus model; cheats live in the RZX snapshots only. No human player. Ported from Jon Attree's .nxc work (pilot runs/cobra), 2026-11-05."
+ },
+ "outputs": {
+  "plain": {
+   "file": "cobra.nex",
+   "md5": "2ec883ba2f88ef4fcda0623c2b985777"
+  },
+  "sprites": {
+   "file": "cobra_sprites.nex",
+   "md5": "00ead70a486598fb9b908feb675680ee"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Cobra",
+  "engine_col": "cobra (cobra.md)",
+  "build": "cobra_sprites.nex 00ead70a (figures and bullets as sprites, white body, black dark pixels, no outline; whole alt ROM image; the snapshot's own BASIC start; pace limiter, prepared patterns)",
+  "software": "Verify IDENTICAL on 4 random-key recordings (COLOUR + MONO); unit PASS incl. every-site clock matrix; negatives detected; ROM path check pass; JNext 1.1.104 reaches play; pace ORIGINAL",
+  "hardware": "untested",
+  "next": "the owner plays the .nxc; hardware test"
+ },
+ "checks": [
+  "asm2profile:cobra"
+ ],
+ "techniques": [
+  {
+   "application": "cobra.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "scan --writers over the ULA: the plotter's own AND, stars after the redraw, a wipe; no logic reads figure pixels",
+   "phases": []
+  },
+  {
+   "application": "cobra.tracked-unit",
+   "id": "detect.tracked-unit",
+   "revision": 2,
+   "target": "one plot call = one whole figure (39865 loop)",
+   "phases": []
+  },
+  {
+   "application": "cobra.colour-map",
+   "id": "patch.runtime-colour-map",
+   "revision": 1,
+   "target": "upload applies per-image planes (pages 28-35, slot 6 for one LDIR)",
+   "phases": [
+    "entry"
+   ]
+  },
+  {
+   "application": "cobra.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "spd_in / spd_out (HLIB_SPEED_IN / OUT) at every hook entry and exit; latch in the hook page",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "cobra.whole-altrom",
+   "id": "patch.whole-altrom-image",
+   "revision": 1,
+   "target": "both builds: Sinclair's ROM as alt image 1, so the snapshot's BASIC return runs as on a 48K",
+   "phases": [
+    "setup"
+   ]
+  },
+  {
+   "application": "cobra.pace-limiter",
+   "id": "patch.pace-limiter",
+   "revision": 1,
+   "target": "every plot hook waits for the original loop's time (pace_plot); e_frame, hide_rest, e_bul pay into the debt",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "cobra.pattern-store",
+   "id": "optimise.pattern-cache",
+   "revision": 2,
+   "target": "the 91 listed images' patterns prepared at build time (banks 18-20), one OTIR a band (pstore)",
+   "phases": [
+    "entry"
+   ]
+  }
+ ],
+ "results": [
+  {
+   "application": "cobra.screen-readers",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "00ead70a",
+   "scope": "4 recordings; random keys, cheats in 3; no human recording; start-up checked by the ROM path check and in JNext; no hardware",
+   "evidence": "games/cobra.md \"Results\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/cobra_hooks.asm": "d167408e3d6c07e7",
+   "asm/lib/hlib_pace.asm": "c952498961b21022",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/cobra.json": "cc366120f8ddb4d8",
+   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/cobra.py": "c90d2db5857f15e4",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "ec410ffbb6d0a884",
+   "nexclash/hooklib.py": "a877bac70d417c69",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "b0b474eeb5934639",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-05"
+ },
+ "verified": {
+  "deps": {
+   "asm/cobra_hooks.asm": "d167408e3d6c07e7",
+   "asm/lib/hlib_pace.asm": "c952498961b21022",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/cobra.json": "cc366120f8ddb4d8",
+   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/cobra.py": "c90d2db5857f15e4",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "ec410ffbb6d0a884",
+   "nexclash/hooklib.py": "a877bac70d417c69",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "b0b474eeb5934639",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-05"
+ }
+}

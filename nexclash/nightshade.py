@@ -56,9 +56,11 @@ def plane_banks(mem, swap=False, flip_lost=False, enhanced=False, maps_lost=Fals
     banks get the v3 planes made without the hero's part maps, the returned planes (the model's) keep them."""
     from . import nightshade_paint as NP
     from . import nightshade_paint_v2 as NP2
+    cim = None
     if enhanced:
         pl, paint = NP.planes(mem)
         pl_b = NP.planes(mem, maps=False)[0] if maps_lost else pl
+        cim = NP.code_images(mem, maps=not maps_lost)      # what the Enhanced hooks read (the planes: the model's)
     else:
         pl, paint = NP2.planes(mem)
         pl_b = pl
@@ -73,7 +75,14 @@ def plane_banks(mem, swap=False, flip_lost=False, enhanced=False, maps_lost=Fals
             if off + n > 8192:
                 page, off = page + 1, 0
             buf = pages.setdefault(page, bytearray(8192))
-            buf[off:off + n] = p0 + p1
+            if cim is not None:             # Enhanced: the code image, the same size as the two planes
+                im = cim[g][0x00 if flip_lost else o]
+                if swap:                    # the planes swapped: code bits 1 and 2 exchanged
+                    im = bytes((v & 0x99) | (v & 0x22) << 1 | (v & 0x44) >> 1 for v in im)
+                assert len(im) == n
+                buf[off:off + n] = im
+            else:
+                buf[off:off + n] = p0 + p1
             where[(g, o)] = (page, off)
             off += n
     plt = bytearray(8192)
@@ -105,12 +114,13 @@ def game_mem(z80):
 CMP = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 26, 27]
 
 
-def _profile_path():
-    return os.path.join(_HERE, '..', 'docs', 'profiles', RECORD + '.json')
+def _profile_path(enhanced=False):
+    """the hooks: the default build's profile, or the Enhanced build's (code images, asm/nightshade_hooks_enh.asm)"""
+    return os.path.join(_HERE, '..', 'docs', 'profiles', RECORD + ('_enh' if enhanced else '') + '.json')
 
 
-def load_profile():
-    return json.load(open(_profile_path()))
+def load_profile(enhanced=False):
+    return json.load(open(_profile_path(enhanced)))
 
 
 def is_nightshade(snap):
@@ -131,13 +141,33 @@ def palette(colours=None):
     return bytes(pal)
 
 
+CIM_BPT, CIM_T2B = 0x0B00, 0x0F00     # in the hook page (0x2B00, 0x2F00): the Enhanced build's code-image tables
+
+
+def cim_tables():
+    """BP_k (4 x 256): the T2 page for pixel pair k's two bits of a buffer byte; T2 (4 x 256): for those two bits, a
+    code byte's shown nibbles: an odd (ink) code shows where its bit is set, an even (gap) code where it is clear."""
+    t = bytearray(0x800)
+    for k in range(4):
+        for v in range(256):
+            bp = (2 if v & (0x80 >> (2 * k)) else 0) + (1 if v & (0x40 >> (2 * k)) else 0)
+            t[256 * k + v] = ((0x2000 + CIM_T2B) >> 8) + bp
+    for bp in range(4):
+        bh, bl = bp >> 1, bp & 1
+        for c in range(256):
+            hi, lo = c >> 4, c & 15
+            t[0x400 + 256 * bp + c] = (hi if (hi & 1) == bh else 0) << 4 | (lo if (lo & 1) == bl else 0)
+    return bytes(t)
+
+
 def nib_table():
+    """4 page-aligned tables of 256: NIB_k[v] = pixels 2k, 2k+1 of byte v as two nibbles (1 = ink)"""
     t = bytearray(1024)
     for v in range(256):
         for k in range(4):
             hi = 1 if v & (0x80 >> (2 * k)) else 0
             lo = 1 if v & (0x40 >> (2 * k)) else 0
-            t[4 * v + k] = hi << 4 | lo
+            t[256 * k + v] = hi << 4 | lo
     return bytes(t)
 
 
@@ -145,7 +175,7 @@ class NightshadePatch:
     name = 'Nightshade figures -> hardware sprites (game plot kept; RAM stubs, Next page at slot 1 during hooks)'
 
     def __init__(self, prof=None, edit=None, colours=None, enhanced=False, game=None):
-        self.prof = prof or load_profile()
+        self.prof = prof or load_profile(enhanced)
         h = self.prof['hooks']
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
         self.ram_code = bytearray.fromhex(h['ram'])
@@ -183,6 +213,10 @@ class NightshadePatch:
                 enhanced, getattr(self, 'maps_lost', False))
             self.planes_by = {(g, o): v for g, d in pl.items() for o, v in d.items()}
         pg[NIB_AT:NIB_AT + 1024] = nib_table()
+        if enhanced and 'cimrec' in self.syms:     # the Enhanced hooks' tables and code, in the figure scratch they never use
+            pg[CIM_BPT:CIM_BPT + 0x800] = cim_tables()
+            c3 = bytes.fromhex(h['page3'])
+            pg[0x1300:0x1300 + len(c3)] = c3
         pg[POFF_AT:POFF_AT + 256] = self.poff
         self.page = bytes(pg[:8192])
         self.extra_banks = {H_BANK: bytes(pg)}
@@ -323,6 +357,9 @@ class Patched:
                 return v
             if self.nr_sel == 0x05:
                 return 0
+            if self.nr_sel == 0x07:             # the CPU speed: bits 1-0 programmed (bits 5-4 as running)
+                v = self.nr.get(0x07, 0) & 3
+                return v | v << 4
             self.c['NEXTREG read other!'] += 1
             return 0
         if not self.ins:
@@ -380,6 +417,7 @@ class Patched:
                 return True
             if pc in entries:
                 self.inhook = True
+                self.spd_in = self.nr.get(0x07, 0)
                 self.c[entries[pc]] += 1
                 if R[26]:
                     self.c['interrupts on at a hook!'] += 1
@@ -390,6 +428,8 @@ class Patched:
                 ops[op]()
                 if pc in self.exits:
                     self.inhook = False
+                    if self.nr.get(0x07, 0) != self.spd_in:
+                        self.c['CPU speed not restored at a hook exit!'] += 1
             elif op == 0xDD or op == 0xFD:
                 r0 = R[15]
                 ops[op]()
@@ -551,7 +591,7 @@ def _masks(patch, sp):
     return [(0x5B00, 0x5B80), (sp - 64, sp)] + [(a, a + len(new)) for a, old, new in patch.sites if a != RAM_ORG]
 
 
-def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None, model=True):
+def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None, model=True, speed=0):
     """-> (Counter, examples); failure keys end in '!'."""
     from . import rzx as RZ
     c = collections.Counter()
@@ -562,6 +602,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None, mod
     snap, rec = segs[0][0], segs[0][1]
     ins = [v for f in rec.frames for v in rec.data[f.start:f.end]]
     p = Patched(patch, snap, [f.fetch_counter for f in rec.frames], ins)
+    p.nr[0x07] = speed          # the clock matrix: the game running at 3.5, 7, 14 or 28 MHz when each hook is entered
     st = {'figs': [], 'hero_before': None}
     from . import nightshade_paint as NP
     epal, epoff = NP.palette(), NP.offsets()     # the painter's own tables, not the build's bytes
@@ -711,14 +752,22 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None, mod
 
 def negative_patches():
     """Broken builds: each must be DETECTED on the real recording. -> [(name, edit, enhanced)]"""
+    def at3(p, pat, k, val):     # in the Enhanced build's code-image block (page3, written into the hook page)
+        h = p.prof['hooks']
+        c3 = bytearray.fromhex(h['page3'])
+        i = c3.find(bytes.fromhex(pat))
+        assert i >= 0 and c3.count(bytes.fromhex(pat)) == 1, pat
+        c3[i + k] = val
+        h['page3'] = c3.hex()
+
     def at(p, pat, k, val):
         code = p.page2_code if p.page2_code.count(bytes.fromhex(pat)) else p.page_code
         i = code.find(bytes.fromhex(pat))
         assert i >= 0 and p.page_code.count(bytes.fromhex(pat)) + p.page2_code.count(bytes.fromhex(pat)) == 1, pat
         code[i + k] = val
 
-    def no_and(p):          # sprites show the whole ink, not what later plots left (LD A,(HL) / LD B,A / AND C -> OR C)
-        at(p, '7e47a1', 2, 0xB1)
+    def no_and(p):          # sprites show the whole ink, not what later plots left (the default row: AND (HL) -> OR (HL))
+        at(p, 'a64f3a', 0, 0xB6)
     def y_off(p):           # one row low (LD A,160 / SUB L)
         at(p, '3ea091', 1, 161)
     def white_hero(p):      # the hero's colour lost (LD E,0xFF)
@@ -747,6 +796,20 @@ def negative_patches():
         p.flip_lost = True
     def enh_swap(p):        # Enhanced: the two planes swapped
         p.swap_planes = True
+    def clock35(p):         # every exit forces 3.5 MHz (LD A,(vspd) / NEXTREG 0x07,A -> NEXTREG 0x07,0 / JR $+2): run at 28 MHz
+        for code in (p.page_code, p.page2_code):
+            i = 0
+            while True:
+                i = code.find(bytes.fromhex('3a'), i)
+                if i < 0:
+                    break
+                if code[i + 3:i + 6] == bytes.fromhex('ed9207'):
+                    code[i:i + 6] = bytes.fromhex('ed9107001800')    # NEXTREG 0x07,0 / JR $+2: 3 M1 as before
+                i += 1
+
+    def cim_shift(p):       # Enhanced code images: the figure's 2-pixel shift ignored (LD A,(IX+14) / AND 6 -> AND 0)
+        at3(p, 'dd7e0ee606', 4, 0)
+
     def enh_maps(p):        # Enhanced: the hero's part maps dropped (legs and arms in the tunic colour, no belt)
         p.maps_lost = True
 
@@ -763,7 +826,9 @@ def negative_patches():
             ('Enhanced palette entry wrong', enh_pal, True), ('Enhanced hero health colour lost', enh_hero, True),
             ('Enhanced orientation ignored', enh_orient, True), ('Enhanced planes swapped', enh_swap, True),
             ('Enhanced horned demon in the dome colours', enh_group, True),
-            ('Enhanced hero part maps dropped', enh_maps, True)]
+            ('Enhanced hero part maps dropped', enh_maps, True),
+            ('every hook exit forces 3.5 MHz (verify at speed 3)', clock35, False),
+            ('Enhanced code image shift ignored', cim_shift, True)]
 
 
 # ---------------------------------------------------------------------------------------------
@@ -915,9 +980,10 @@ NEG_STOP = 1500             # frames of the first recording each negative contro
 
 def _job(z80, rzx, enhanced, neg, stop):
     """One replay in a worker process -> (counter, examples as text)."""
-    edit = negative_patches()[neg][1] if neg is not None else None
+    name, edit = negative_patches()[neg][:2] if neg is not None else (None, None)
     p = NightshadePatch(edit=edit, enhanced=enhanced, game=z80)
-    c, ex = verify(p, rzx, stop=stop)
+    speed = 3 if name and 'verify at speed 3' in name else 0     # a forced 3.5 MHz exit shows only at 28 MHz
+    c, ex = verify(p, rzx, stop=stop, speed=speed)
     return dict(c), {k: str(v[:3])[:300] for k, v in ex.items()}
 
 

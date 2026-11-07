@@ -148,11 +148,11 @@
   },
   "sprites": {
    "file": "three_weeks_128_sprites.nex",
-   "md5": "90eeeb14fa20edc3585124422530a41d"
+   "md5": "74af7179b23098c66b0f8e2b5e3a0bf2"
   },
   "enhanced": {
    "file": "three_weeks_128_enhanced.nex",
-   "md5": "e6e6f6b06c3cff4f2cd259ce27de035a"
+   "md5": "c139f040ee2ea5e2c22c1c66799e6e49"
   }
  },
  "repro": [],

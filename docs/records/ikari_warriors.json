@@ -100,11 +100,11 @@
   },
   "sprites": {
    "file": "ikari_warriors_sprites.nex",
-   "md5": "e740ae71fd47dc06c1a752bf150afb77"
+   "md5": "c90fab6ffc1698d98d21ca8bfffd311e"
   },
   "enhanced": {
    "file": "ikari_warriors_enhanced.nex",
-   "md5": "22be808b58eb8444c57277c176f8a741"
+   "md5": "118a55f6a81bb022fad627426b225221"
   }
  },
  "repro": [],

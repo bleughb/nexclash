@@ -49,10 +49,10 @@ alt ROM on: `altrom0 = (lo, hi)` (ROM 0 + those bytes, z80tonex.altrom0); older 
 `keep_printer_buffer`, `max_tail`. New verifiers' alt ROM image: nextboot.alt_image.
 
 ## Hook library (new engines; old ones keep theirs)
-asm/lib/hlib_*.asm (EQUs at each head) + nexclash/hooklib.py (verifier tools). Hooks:
-HLIB_SPEED_IN / _OUT, HLIB_R_IN / _OUT; pace ORIGINAL: hlib_pace_wait (card patch.pace-limiter); sprites:
-hlib_pc_upload + hlib_commit. unit_tests: `hooklib.every_site` (four clocks). Record: `hooklib.FILES` in
-`shared_data`. Unused parts: decided in games/<game>.md.
+asm/lib/hlib_*.asm (EQUs at each head) + nexclash/hooklib.py (verifier tools). Hooks: HLIB_SPEED_IN /
+_OUT, HLIB_R_IN / _OUT, HLIB_IFF_DI / _EI; pace: hlib_pace_wait (card patch.pace-limiter); sprites:
+hlib_pc_upload + hlib_commit. unit_tests: `hooklib.every_site`. Record: `hooklib.FILES` in
+`shared_data`. Unused parts: games/<game>.md.
 
 ## Verify loop (the part every engine repeats; copy it from chuckie.verify)
 Replay the RZX with the opcode table wrapped: at a hook site copy the state, run original and

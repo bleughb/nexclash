@@ -51,7 +51,10 @@
  ],
  "data": [
   "docs/profiles/nightshade.json",
-  "asm/nightshade_hooks.asm"
+  "asm/nightshade_hooks.asm",
+  "asm/nightshade_hooks_enh.asm",
+  "docs/profiles/nightshade_enh.json",
+  "nexclash/nightshade_paint_source.json"
  ],
  "shared_data": [],
  "rebuild": {
@@ -81,24 +84,25 @@
   },
   "sprites": {
    "file": "nightshade_sprites.nex",
-   "md5": "1cf6b27644a2b7941b3d80a1aaa87ef5"
+   "md5": "697ee0152f6a2f5d92cdc17bc51c674d"
   },
   "enhanced": {
    "file": "nightshade_enhanced.nex",
-   "md5": "37f970019aa9443669a5ca8f0fef0613"
+   "md5": "ebe5cc7225b41c3d04f073947f7b6a98"
   }
  },
  "repro": [],
  "status": {
   "title": "Nightshade",
   "engine_col": "nightshade (nightshade.md)",
-  "build": "nightshade_sprites.nex 1cf6b276 (figures as 4-bit sprites over the kept plot, switched with the game's blits at 28 MHz; R kept; loading screen) + Enhanced 37f97001 (painted by parts); = runs/nightshade/out/nightshade.nxc b8c3754c --bare",
+  "build": "nightshade_sprites.nex 697ee015 (figures as 4-bit sprites over the kept plot, switched with the game's blits at 28 MHz; R kept; original pace: pace-matched blit hook with hook-time debt; loading screen) + Enhanced ebe5cc72 (painted by parts from the owner's sheets, code images at the original pace) = the published Nightshade 1.0 .nxc --bare",
   "software": "replay IDENTICAL default + Enhanced on a1 / a2 / rec1 / rec2, negatives 16/16 (imported 2026-11-04 from Jon Attree's .nxc work)",
   "hardware": "none (JNext only)",
   "next": "end-to-end run of the refactored pipeline (docs/REFACTOR.md, NEXCLASH-CHANGES final step)"
  },
  "checks": [
-  "asm2profile:nightshade"
+  "asm2profile:nightshade",
+  "asm2profile:nightshade_enh"
  ],
  "checked": {
   "deps": {
