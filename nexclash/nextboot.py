@@ -69,7 +69,8 @@ def alt_image(patch, sysrom=None):
     lo..hi from patch.page and patch.altrom_low. The shared base of every verifier's alt ROM model:
     bytes outside lo..hi are what the Next has, not the page's (BRIEFING C2 #5)."""
     lo, hi = patch.altrom
-    img = bytearray(rom48() if zt.altrom_whole(patch) else (sysrom or system_rom3()[0]))
+    rom3 = sysrom or system_rom3()[0]
+    img = bytearray(rom48()) if zt.altrom_whole(patch) else zt.rom3_fixups(bytearray(rom3), rom3)
     img[lo:hi] = patch.page[lo - 0x2000:hi - 0x2000]
     if getattr(patch, 'altrom_low', None):
         img[0:0x2000] = patch.altrom_low[1]

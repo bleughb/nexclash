@@ -78,7 +78,7 @@
   },
   "sprites": {
    "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites.nex",
-   "md5": "59493b7563e6dd1c7141a6763cf52d73"
+   "md5": "6aa7e780f4ec7892d862c675e61b7fba"
   }
  },
  "repro": [],
@@ -149,19 +149,19 @@
    "outputs": {
     "sprites": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites.nex",
-     "md5": "b87774a2b07d5767d5cda49798b4d058"
+     "md5": "1e4bf321b4c966ad29122af27ee78ae5"
     },
     "enhanced": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_enhanced.nex",
-     "md5": "47f0e72ce1adc328716e90288d05aa45"
+     "md5": "7d1c3edb6ec45d65051cd80bf281e3ac"
     },
     "sprites_qaop": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites_qaop.nex",
-     "md5": "19318e4f550aedb7cdb12a15d1b9bb50"
+     "md5": "790913d272dff61612a04276d10609d3"
     },
     "enhanced_qaop": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_enhanced_qaop.nex",
-     "md5": "1f58e93618f566d6d62d03faa83826cf"
+     "md5": "3ec65a501753f603bdcc570d0f02a9f6"
     }
    },
    "proof": "walk1, walk2 and t IDENTICAL for every build (toggle builds with each QWERT read translated), unit tests + 3 negative controls and 7 rework negatives per colour set, 4 incoming clocks, the toggle's key / pause units with 2 negatives, 3 replay negatives on t",

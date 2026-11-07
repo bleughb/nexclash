@@ -655,17 +655,19 @@ def chuckie_check(z80, work, nexclash_py, python):
     res = [('nxc: `patch` Chuckie Egg writes chuckie_egg.nxc and keeps only the plain chuckie_egg.nex (not in the .nxc)',
             left == [name + '.nex', name + '.nxc'], left)]
     ls = subprocess.run([python, os.path.join(ROOT, 'nexclash', 'nxc.py'), pa], capture_output=True, text=True).stdout
+    from nexclash import records
+    rec_md5 = records.load('chuckie_egg')['outputs']['sprites']['md5']     # the record's, not a copy of it here
     want = ['accepts %s, z80, 19515 bytes' % os.path.basename(z80), 'version=1.0', 'patch_by=selftest',
             'credit=Built with NexClash by Dean Woodyatt (Bleugh.biz, bleughb/nexclash, GPL-3.0-or-later)',
-            'replay=RZX IDENTICAL, unit PASS (NexClash record chuckie_egg', 'nex_md5=bfad6be1e7c8a2c797a6242d7f339e35']
+            'replay=RZX IDENTICAL, unit PASS (NexClash record chuckie_egg', 'nex_md5=' + rec_md5]
     res.append(('nxc: nxc.py lists it (target, version 1.0, patch_by, credit, PRF1 from the record)',
                 all(w in ls for w in want), [w for w in want if w not in ls] or ls[-300:]))
     got = None
     if os.path.exists(pa) and os.path.exists(spr):
         from nexclash import nxc
         got = hashlib.md5(nxc.apply(open(pa, 'rb').read(), game=open(z80, 'rb').read())).hexdigest()
-    res.append(('nxc: applied to the game it gives the `--nex` sprite build exactly (bfad6be1)',
-                got == (md5(spr) if os.path.exists(spr) else None) == 'bfad6be1e7c8a2c797a6242d7f339e35',
+    res.append(('nxc: applied to the game it gives the `--nex` sprite build exactly (%s)' % rec_md5[:8],
+                got == (md5(spr) if os.path.exists(spr) else None) == rec_md5,
                 (got, md5(spr) if os.path.exists(spr) else None)))
     return res
 
