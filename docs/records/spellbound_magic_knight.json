@@ -73,7 +73,8 @@
   "docs/profiles/spellbound_magic_knight_enhanced.json"
  ],
  "shared_data": [
-  "asm/lib/hlib_speed.asm"
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_iff.asm"
  ],
  "rebuild": {
   "args": [
@@ -107,18 +108,18 @@
   },
   "sprites": {
    "file": "spellbound_magic_knight_sprites.nex",
-   "md5": "dad191ba4e6eb97e63b6ff0c8870f903"
+   "md5": "ce8e1c6fb0dad558928880a8bf01e13d"
   },
   "enhanced": {
    "file": "spellbound_magic_knight_enhanced.nex",
-   "md5": "979c73f4ff9631d9fa20c9e535eea1aa"
+   "md5": "06fe3d18161f3f130372c8003def03da"
   }
  },
  "repro": [],
  "status": {
   "title": "Spellbound (128K, Magic Knight 2)",
   "engine_col": "spellbound_magic_knight (spellbound_magic_knight.md)",
-  "build": "spellbound_magic_knight_sprites.nex dad191ba + Enhanced 979c73f4 (v1.1 + 2026-11-07: hooks restore the caller's speed, lib/hlib_speed.asm; 379e61b0 / 3a824f3a = published Spellbound v1.1 .nxc --bare)",
+  "build": "spellbound_magic_knight_sprites.nex ce8e1c6f + Enhanced 06fe3d18 (v1.1 + 2026-11-07: hooks restore the caller's speed and keep interrupts on, lib/hlib_speed.asm + hlib_iff.asm; 379e61b0 / 3a824f3a = published Spellbound v1.1 .nxc --bare)",
   "software": "lockstep IDENTICAL default + Enhanced on 9 recordings (39,222 frames), unit tests, negatives 23/23 + palette 7/7 (imported 2026-11-04 from Jon Attree's .nxc work)",
   "hardware": "none (JNext)",
   "next": "hardware test"
@@ -128,9 +129,10 @@
  ],
  "checked": {
   "deps": {
+   "asm/lib/hlib_iff.asm": "3a24fe226c7ceadd",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "asm/spellbound_magic_knight_hooks.asm": "0ddbef4e655730a0",
-   "docs/profiles/spellbound_magic_knight.json": "b2b8e5a2dc2135a2",
+   "asm/spellbound_magic_knight_hooks.asm": "9983ebf030141023",
+   "docs/profiles/spellbound_magic_knight.json": "994ae03fec077c30",
    "docs/profiles/spellbound_magic_knight_enhanced.json": "795579a61b4da48b",
    "nexclash.py": "4bd8267e3abba47c",
    "nexclash/build.py": "7a7bb03de0547247",
@@ -147,16 +149,17 @@
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "621a37b897680c01",
    "skoolkit": "10.1",
-   "recipe": "63772cab43cf1f88",
+   "recipe": "cdc80d47e521fb34",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-06"
  },
  "verified": {
   "deps": {
+   "asm/lib/hlib_iff.asm": "3a24fe226c7ceadd",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "asm/spellbound_magic_knight_hooks.asm": "0ddbef4e655730a0",
-   "docs/profiles/spellbound_magic_knight.json": "b2b8e5a2dc2135a2",
+   "asm/spellbound_magic_knight_hooks.asm": "9983ebf030141023",
+   "docs/profiles/spellbound_magic_knight.json": "994ae03fec077c30",
    "docs/profiles/spellbound_magic_knight_enhanced.json": "795579a61b4da48b",
    "nexclash.py": "4bd8267e3abba47c",
    "nexclash/build.py": "7a7bb03de0547247",
@@ -173,7 +176,7 @@
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "621a37b897680c01",
    "skoolkit": "10.1",
-   "recipe": "63772cab43cf1f88",
+   "recipe": "cdc80d47e521fb34",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-06"
