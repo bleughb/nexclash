@@ -903,6 +903,71 @@ def sheets(z80, out_dir, prefix=RECORD, colours=None, say=print):
     say('Sheets    : painting %d figures, reference %d' % (n1, n2))
 
 
+
+# ---------------------------------------------------------------------------------------------
+# v1.1 define keys (rework v11, NEXCLASH_REWORK=dynamite_dan_v11): QUIT and PAUSE definable on the game's own
+# define-keys screen. Our code is asm/dynamite_dan_keys.asm (profile dynamite_dan_keys); the page text is rewritten
+# from the player's own snapshot (no game bytes stored). Laid over the sprite build's RAM banks 5/2/0 (the bytes
+# that differ from the snapshot only), so every other byte of the .nex is the v1.0 build's.
+# ---------------------------------------------------------------------------------------------
+
+KEYS_REWORK = 'dynamite_dan_v11'
+KEYS_TEXT = 0xFD93              # the define-keys page's text records (row, column, characters; 0xFE between, 0xFF last)
+KEYS_TEXT_END = 0xFE0C          # where the rewritten text ends and our data starts
+KEYS_ALLOWED = (set(range(0xC835, 0xC837)) | set(range(0xC83A, 0xC83D)) | set(range(0xF2EE, 0xF2F1))
+                | set(range(KEYS_TEXT, 0xFE2B)) | set(range(0xFF11, 0xFFA0)))
+
+
+def _page_records(get, a):
+    out = []
+    while True:
+        s = a
+        a += 2
+        while get(a) not in (0xFE, 0xFF):
+            a += 1
+        out.append(bytes(get(x) for x in range(s, a)))
+        if get(a) == 0xFF:
+            return out
+        a += 1
+
+
+def keys_ram(get):
+    """{address: byte} of the v1.1 define-keys build over the snapshot's RAM (get = the original's peek): our blocks
+    from the profile, and the page text with the Q / P warning record (row 7) dropped and "CHOOSE 3" made
+    "CHOOSE 5". Only addresses whose byte changes; refuses a snapshot whose page is not the expected one."""
+    h = json.load(open(os.path.join(_HERE, '..', 'docs', 'profiles', 'dynamite_dan_keys.json')))['hooks']
+    new = {}
+    ro = _page_records(get, KEYS_TEXT)
+    if len(ro) != 6 or ro[2][:2] != b'\x07\x03' or b'\x27\x03\x27' not in ro[1]:
+        raise ValueError('define-keys page text is not the expected one')
+    text = b'\xFE'.join([ro[0], ro[1].replace(b'\x27\x03\x27', b'\x27\x05\x27'), ro[3], ro[4], ro[5]]) + b'\xFF'
+    if KEYS_TEXT + len(text) != KEYS_TEXT_END:
+        raise ValueError('define-keys page text: %d bytes, want %d' % (len(text), KEYS_TEXT_END - KEYS_TEXT))
+    for i, v in enumerate(text):
+        new[KEYS_TEXT + i] = v
+    for key, at in (('c834', 0xC834), ('c83a', 0xC83A), ('f2ee', 0xF2EE), ('data', 0xFE0C), ('code', 0xFF11)):
+        for i, v in enumerate(bytes.fromhex(h[key])):
+            new[at + i] = v
+    diff = {a: v for a, v in new.items() if get(a) != v}
+    bad = sorted(a for a in diff if a not in KEYS_ALLOWED)
+    hooks = set().union(*(range(a, SITE_NEXT[a]) for a in SITES_ORIG))
+    if bad or set(diff) & hooks:
+        raise ValueError('define keys would write outside its ranges: %s' % ['%04X' % a for a in (bad or sorted(set(diff) & hooks))])
+    return diff
+
+
+def define_keys(nex, z80):
+    """The sprite build (.nex bytes) with the v1.1 define-keys bytes laid over banks 5/2/0 -> .nex bytes."""
+    from . import z80tonex as zt
+    from .recolour import banks, splice
+    snap = zt.Z80Snapshot(z80)
+    diff = keys_ram(snap.read)
+    have = banks(nex)
+    new = {b: bytearray(have[b]) for b in (5, 2, 0)}
+    for a, v in diff.items():
+        new[(5, 2, 0)[(a >> 14) - 1]][a & 0x3FFF] = v
+    return splice(nex, {b: bytes(d) for b, d in new.items()})[0]
+
 # ---------------------------------------------------------------------------------------------
 # auto
 # ---------------------------------------------------------------------------------------------
@@ -930,6 +995,10 @@ def auto(a, z80, name, out, say):
     bad2 = check(spr, src, patch, (conv[1], conv[1] + len(conv[2])))
     say('Sprites   : %s  %s  boot %s' % (os.path.basename(spr), md5(spr),
                                           'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200]))
+    if os.environ.get('NEXCLASH_REWORK') == KEYS_REWORK:   # v1.1: QUIT and PAUSE definable (the published default)
+        data = define_keys(open(spr, 'rb').read(), src)
+        open(spr, 'wb').write(data)
+        say('Keys      : v1.1 define keys (QUIT, PAUSE) laid over the RAM banks: %s  %s' % (os.path.basename(spr), md5(spr)))
     ok = not bad and not bad2
     states = []
     negs = negative_patches(patch)

@@ -33,7 +33,9 @@
  ],
  "data": [
   "docs/profiles/dynamite_dan.json",
-  "asm/dynamite_dan_hooks.asm"
+  "asm/dynamite_dan_hooks.asm",
+  "asm/dynamite_dan_keys.asm",
+  "docs/profiles/dynamite_dan_keys.json"
  ],
  "shared_data": [],
  "rebuild": {
@@ -75,7 +77,8 @@
   "next": "the owner plays the .nxc; hardware test"
  },
  "checks": [
-  "asm2profile:dynamite_dan"
+  "asm2profile:dynamite_dan",
+  "asm2profile:dynamite_dan_keys"
  ],
  "techniques": [
   {
@@ -187,5 +190,33 @@
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-05"
- }
+ },
+ "rework": [
+  {
+   "name": "v11",
+   "version": "1.1",
+   "args": [],
+   "env": {
+    "NEXCLASH_REWORK": "dynamite_dan_v11"
+   },
+   "inputs": [],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ]
+   },
+   "outputs": {
+    "plain": {
+     "file": "dynamite_dan.nex",
+     "md5": "3ad20495c5183b20030190d6abdd479f"
+    },
+    "sprites": {
+     "file": "dynamite_dan_sprites.nex",
+     "md5": "ce8f0762e8654a76817183a713f2079e"
+    }
+   },
+   "proof": "v1.0's hooks as the base (its replay, 52 recordings, is unchanged); the 246 define-keys bytes, disjoint from the hooks: the original against the original with them, in lockstep on the same 52 recordings (192,925 IN reads served in order, all 22,425 main-loop passes compared, R included, all RAM outside the patch): IDENTICAL with Q and P and with QUIT X / PAUSE H set by the build's own define routine; 3 broken builds detected (play reading the old P, the old Q; R 4 off); 6,290 unit cases. Proof scripts in the pilot (runs/dynamite_dan/work3: lockstep.py, make_proof11.py), not in this repo",
+   "note": "Jon Attree's Dynamite Dan .nxc v1.1 default (published, github.com/jattree/nxc): QUIT and PAUSE definable on the game's own define-keys screen. asm/dynamite_dan_keys.asm (our code and data only) + the page text rewritten from the player's snapshot (dynamite_dan.keys_ram); laid over the sprite build's RAM banks, every other byte v1.0's. The .nxc's 'Original keys (Q,P fixed)' toggle is the base build (1ab3348d)."
+  }
+ ]
 }

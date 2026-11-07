@@ -76,6 +76,19 @@ ahead of his own ULA pixels, the same cyan; the approved build 0 in the same win
 attribute change, also in the approved build: warnings. Soak 15 minutes against the .z80: no freeze, loop or crash. The
 .nxc's menu build reaches play, cheats on and off.
 
+## v1.1 define keys (rework v11, `NEXCLASH_REWORK=dynamite_dan_v11`; the published .nxc v1.1 default)
+- QUIT and PAUSE are definable on the game's own define-keys screen (after JUMP: "QUIT:", "PAUSE:", read with the
+  game's own key reader 0xF300 and decoded as 0xF32A does). Play checks them at 0xC83A -> KCHK; the delay at 0xC834
+  is one iteration shorter, so every path to the tick's exit has the original's R and the tick is 3 T longer.
+- Source: asm/dynamite_dan_keys.asm (our code at 0xFF11-0xFF9F, prompts and key codes at 0xFE0C-0xFE1E, three
+  in-place JP / LD), profile dynamite_dan_keys. The page text at 0xFD93 is rewritten from the player's own snapshot
+  (dynamite_dan.keys_ram: the Q / P warning record dropped, CHOOSE 3 -> CHOOSE 5), so no game bytes are stored.
+- define_keys lays the 246 changed bytes over the sprite build's banks 5/2/0; everything else is v1.0's 1ab3348d.
+- Output ce8f0762 = the published .nxc v1.1 --bare (default); its "Original keys (Q,P fixed)" toggle = 1ab3348d.
+- Proof (pilot work3, JNext + simulator, no hardware): the original against the original with the keys, lockstep on
+  the 52 recordings (192,925 IN reads, 22,425 main-loop passes, R included): IDENTICAL with Q / P and with QUIT X /
+  PAUSE H set by the build's own routine; 3 broken builds detected; 6,290 unit cases.
+
 ## Open
 Ending (needs all 8 dynamite, airship) not reached: hide covered by unit case only. Lifts stay ULA, not measured.
 Never run on hardware or in CSpect.
@@ -91,6 +104,8 @@ Dan solid cyan in room 43, cables in front of him, legs hidden in the basket; hu
 - [local: this game] bot rollouts get stuck in room 6 (the lives cheat keeps them alive): 49,000 frames of nothing.
 - [local: this engine] a negative control mutating one table entry passes on states that use another frame: mutate all.
 - [local: this game's start] demonstrated: with the whole alt ROM image the TOSEC snapshot's BASIC runs to USR 51200 as on a 48K (t1: 775 ROM bytes as recorded), so no derived start is needed.
+
+- [none: the v1.1 keys came in from the pilot as they were published; the only change is that the page text is now derived from the snapshot instead of stored]
 
 ## Friction
 - reuse: [local: the TOSEC-start recorder (pilot work2/rec_tosec.py) is this game's]
