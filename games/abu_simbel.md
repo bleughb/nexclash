@@ -1,12 +1,46 @@
 # Abu Simbel Profanation (Dinamic 1985, 48K) - engine `abu_simbel` (pilot game: unattended, no hardware)
 
 ## Next session
-Stage: 4 (hardware + colour)    State: stages 0-3 done unattended; never run on a Next or in CSpect; JNext only.
-Inputs: the pilot's run folder (abu_simbel.z80 md5 2909c2f0, recordings rzx/*.rzx, sheets/)
-Start with: the hardware checklist below.
-Read: this file. Open: "Open".
+Stage: 4 (owner review of v1.0, hardware)    State: v1.0 built and proven in the simulator and JNext 2026-11-07; never run on a Next.
+Inputs: the run folder (abu_simbel.z80 md5 2909c2f0, recordings rzx/*.rzx, pace fixtures v10/pace/), handoff HANDOFF-V1.0.md.
+Start with: the owner's play of out/abu_simbel_v1.0-menu.nex, then the hardware checklist below.
+Read: "v1.0" first (it replaces the design below where they differ). Open: "Open".
 
-Techniques: `detect.gameplay-screen-readers`, `patch.runtime-colour-map` (recipe, owns and results: docs/records/abu_simbel.json)
+Techniques: `detect.gameplay-screen-readers`, `patch.runtime-colour-map`, `patch.restore-speed`, `patch.preserve-r`,
+`patch.pace-limiter` (recipe, owns and results: docs/records/abu_simbel.json)
+
+## v1.0 (2026-11-07): rebased on main 102091f, shared hook library, original pace
+Design change: the plotter is no longer edited. The hook builds the sprite pattern (page 31 code at slot 7), copies the box's
+attributes into page 31, maps page 31 into slot 2 and CALLs the plotter whole at 28 MHz: every screen and attribute byte it
+writes lands in page 31 (below 0x1B00; the hook's state is above), never shown. Its only slot-2 reads are the box's
+attributes (BIT 6 decides whether it reloads ATTR-T, so the copy keeps its path, R and time the original's) and ATTR-T (only
+written back). Sites: AD1D, B465 (plots), BD36, A361 (hides), DE98 EI -> NOP (an interrupt between the plotter's EI and the
+hook's restore of slot 2 would run the ROM ISR on page 31's sysvars); the old LDIR stand-ins and the attribute NOP are gone.
+The stack is in slot 3 (0x65xx), checked at every site.
+Libraries: HLIB_SPEED_IN/OUT, HLIB_R_IN/OUT + hlib_r_set (delta = R after - R before the plotter - 22), hlib_pace (full).
+Pace: the plot is a game-routine window x K_PLOT 111 (JNext: the original's plot time over the plotter's 28 MHz time, 110.6
+player / 111.6 enemy); the pattern work is debt (UNMEAS 96/16 lines: entry, exit, gaps and the window's own 28 MHz overhead
+x K, less the wait's rounding, +6 from JNext). Interrupts stay off through the hook, as through the original plot.
+Pace control: the original .z80 on a 48K machine, not the plain .nex: NextZXOS's ROM3 BEEP (the game's sound, ROM 0x03F8)
+runs 12% faster than Sinclair's, so the plain .nex is faster than the original in sound scenes. Fixture: RND's seed moved
+from FRAMES to 0x5CB0 in both (test only), so original and build stay in lockstep.
+26.11: alt ROM image 1 is Sinclair's whole 48K ROM (bank 47, z80tonex ALTROM_FILL whole), so NextZXOS's ROM3 is never run;
+the game prints through RST 10 and beeps through the ROM. OPT1 top bank 47: fits a 1MB Next with every option.
+
+### v1.0 results
+| Output | MD5 |
+|---|---|
+| abu_simbel.nex (plain) | 82c1349ae5d34e68a67a7aabc68e039f |
+| abu_simbel_sprites.nex (v1.0) | ff1868c39ac40268f5bb5b5ec5bb2498 |
+Replay (auto, 10 recordings, 69,928 frames): player 26,065, enemies 49,362, clears 87, 6,367,816 sprite pixels, CMP_R
+registers, IDENTICAL; the model pace (28 MHz = K/16) -0.18 to -0.55 % per recording. Enhanced table on attract, gameover,
+c_r32: IDENTICAL. Unit PASS: 630 positions, 78 graphics, 48 inks, depth 12, guard 4, every-site matrix 48 cases; 18
+negatives caught (x/y off by one, ink ignored, depth both ways, slot 2/5/7 left mapped, screen not redirected, EI kept,
+R off by one, R in the hides, limiter never waits, speed forced to 3.5, HL clobbered, enemy index, no hide, wrong image).
+JNext pace (nexclash.pace vs the original .z80, lockstep): 25 runs, base / Enhanced / English, rooms 1, 16, 32, attract,
++0.31 to +0.67 %; 26.11 card the same (+0.43 %). English builds stay in lockstep with the Spanish original.
+Cheats (simulator, alone, 3 seeds): Immunity B0EF C3, Infinite lives BA44 00, No enemies B335 C9 (the archive's
+"Transform objects"); left out: BA4D (same as BA44), Lives (asks), Invulnerability (hangs in water), BA28 (unclear).
 
 ## Inputs
 Snapshot: archive "Abu Simbel Profanation (1985)(Dinamic)(ES)[a][a].z80", md5 2909c2f0f18eca08479a74ad6dc8d193, chosen against its .256: 99.12 % of non-zero bytes match and all 3,456 graphics bytes plotted. The clean (Dinamic)(ES) file matched 98.71 % and stayed on the menu for 1,200 frames with no attract. Gremlin re-releases matched 95 %. ZXDB filecheck: 502, tried once; no ZXDB id in the patch.
@@ -54,6 +88,11 @@ Enemies in all 44 rooms that have them (attract); room 33 has none. Player in 13
 Hardware: bit 6; speed; tearing. A figure whose erase was relied on by scenery: none seen. Spec256 set is the owner's to judge.
 
 ## Lessons
+- [card: patch.pace-limiter] The plain .nex is not always the pace control: its ROM is NextZXOS's ROM3, whose BEEP ran 12%
+  faster than Sinclair's in JNext; a game that beeps through the ROM needs the original .z80 (48K machine) as control.
+- [local: redirecting a routine's screen by MMU] Reads in the remapped slot can still decide the path (BIT 6 on attributes):
+  R and time differed until the box's attributes were copied into the scratch page.
+- [card: patch.pace-limiter] Window overhead at 28 MHz is multiplied by K: account it as debt, or the target grows.
 - [local: a game that compares whole port values] `record` returns 0xFF on port FE and the game ignores every key, with no warning: an Issue 3 recorder (work/lib.py) fixed it. The recorder could offer this.
 - [local: the picture check found the depth rule] Verify passed with figures showing over water and ice, because its model was mine; only frames beside the original showed the balls should sink. The rule then went into the model and the negatives.
 - [local: dead registers pass a compare at the return] A stand-in that left C wrong passed at the plot's return, as the next row reloads it; compare at the stand-in.

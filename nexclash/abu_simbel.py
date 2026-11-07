@@ -38,7 +38,7 @@ INTERIORS = (0xAD1E, 0xAD1F, 0xB466, 0xB467, 0xBD37, 0xBD38, 0xA362, 0xA363)
 PALETTE = [0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x00, 0x03, 0xE0, 0xE3, 0x1C, 0x1F, 0xFC, 0xFF]
 from .hooklib import CMP_R as CMP   # every register, R included; not T, PC (checked by the stop), MEMPTR
 FE_COMPARE_LIMIT = 0x40     # every compare of a stored attribute is against a value >= this (0xAFDC-0xB095, 0xFEB8)
-K_PLOT = 111                # asm K_PLOT: the model's 28 MHz factor is K_PLOT / 16
+K_PLOT = 100                # asm K_PLOT: the model's 28 MHz factor is K_PLOT / 16
 FRAME_T, LINE_T, LINES = 69888, 224, 312
 
 _HERE = os.path.dirname(os.path.abspath(__file__))

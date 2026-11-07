@@ -64,6 +64,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Inferno (inferno): `inferno.nex` 0a3bde4734c5b3f15ad0f2a55cc81e19; verified never
 - Ghosts 'n Goblins (ghosts_n_goblins): `ghosts_n_goblins.nex` 3d71dd0e63371c4cf06f919d46bc2315, `ghosts_n_goblins_sprites.nex` 26742ac4bb3f55b52de0fb4997199447, `ghosts_n_goblins_enhanced.nex` c2e6e56f2411a18b287b8e4694e1198a; verified 2026-11-07
 - Green Beret (green_beret): `green_beret.nex` f4d4e3d43e47102af66fb3a7e6e022ab, `green_beret_sprites.nex` d982d5ae83e2d54e3fc750006322c25e; verified 2026-11-03
+- Abu Simbel Profanation (abu_simbel): `abu_simbel.nex` 82c1349ae5d34e68a67a7aabc68e039f, `abu_simbel_sprites.nex` ff1868c39ac40268f5bb5b5ec5bb2498; verified never
 - Nightshade (nightshade): `nightshade.nex` e4d954de899563af241cb8db84114654, `nightshade_sprites.nex` 697ee0152f6a2f5d92cdc17bc51c674d, `nightshade_enhanced.nex` ebe5cc7225b41c3d04f073947f7b6a98; verified 2026-11-05
 - Knight Tyme (128K) (knight_tyme): `knight_tyme.nex` 0f91cab91a9261bb8645a0ec9cc871f2, `knight_tyme_sprites.nex` 6222fc964abca3ccaca3871d4f843396; verified 2026-11-04
 - Spellbound (128K, Magic Knight 2) (spellbound_magic_knight): `spellbound_magic_knight.nex` 656c71c4b2ebb8318f3ad442d70b0ab9, `spellbound_magic_knight_sprites.nex` b679ae970a270e89c80979b2eb618026, `spellbound_magic_knight_enhanced.nex` 33f251edab40d1ce2f223981409f2bbe; verified 2026-11-07

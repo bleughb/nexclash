@@ -37,8 +37,10 @@ GAMEPAGE7 EQU 1             ; the 48K game's pages at slots 7 and 5
 GAMEPAGE5 EQU 5
 N_SPR     EQU 4
 SPR_PLAY  EQU 3
-K_PLOT    EQU 111           ; the plotter's original time per unit of its 28 MHz time, x 16: JNext 1.1.104,
-                            ; 299 player plots 110.6, 517 enemy plots 111.6 (runs/abu_simbel v10/work/plottime.py)
+K_PLOT    EQU 100           ; the window's factor, x 16: JNext 1.1.104 measured the original's plot time over the plotter's
+                            ; 28 MHz time at 110.6 (299 player plots) and 111.6 (517 enemy plots) (v10/work/plottime.py);
+                            ; 100 keeps the game a little under the original's time in every scene (owner's rule
+                            ; 2026-11-07: never slower than the original; 111 measured +0.3 to +0.7 %)
 UNMEAS    EQU 47+59-16+6    ; debt the lines do not see, 1/16 lines (abu_simbel.py pace model, 2026-11-07): the
                             ; 3.5 MHz entry and exit + the gap between the debt window and the plot's (659 T), and
                             ; the plot window's own 28 MHz overhead around the plotter (128 T real), which x K
