@@ -656,6 +656,7 @@ def tools_check(src):
 
         rom_paths_check(src, ez, er, work, ok)
         altrom0_check(src, work, ok)
+        rom3_v210_check(src, work, ok)
     finally:
         sys.stderr = old
     shutil.rmtree(work, ignore_errors=True)
@@ -717,6 +718,48 @@ def altrom0_check(src, work, ok):
                % (game, kind), zt.altrom0(p) == (0x3500, 0x3600) and bytes(st['alt'][0]) == bytes(want), zt.altrom0(p))
         finally:
             zt.ALTROM_FILL = fill
+
+
+def rom3_v210_check(src, work, ok):
+    """The 'rom3' fill's NextZXOS v2.10 fix-ups (z80tonex.ROM3_V210_FIXUPS, 2026-11-06): Chuckie Egg built as its
+    record pin ('rom3') and booted in the Next model over three system ROM3s made from Sinclair's (no NextZXOS
+    data): unchanged (no site matches: the image is the plain copy + the build's bytes, as before the fix), every
+    site holding v2.10's bytes (the stub restores v2.09's = Sinclair's), and a negative with BEEPER's last byte
+    different (that site left alone, the others restored). Each image must equal nextboot.alt_image's model."""
+    import copy
+    from nexclash import chuckie, nextboot as nb, z80tonex as zt
+    rec = R.load('chuckie_egg')
+    z80 = os.path.join(src, rec['inputs']['snapshot']['path'])
+    if not os.path.isfile(z80) or md5(z80) != rec['inputs']['snapshot']['md5']:
+        print('SKIP tools: rom3 v2.10 fix-ups on chuckie_egg (reference snapshot not found)')
+        return
+    s48 = bytes(zt.rom48())
+    v210 = bytearray(s48)
+    for at, new, old in zt.ROM3_V210_FIXUPS:
+        v210[at:at + len(new)] = new
+    near = bytearray(v210)
+    near[0x03C4] ^= 0xFF                                   # BEEPER: 3 of its 4 v2.10 bytes
+    fill, zt.ALTROM_FILL = zt.ALTROM_FILL, 'rom3'
+    try:
+        p = chuckie.ChuckiePatch()
+        nex = os.path.join(work, 'rom3fix_chuckie.nex')
+        zt.convert(z80, nex, quiet=True, patch=copy.deepcopy(p))
+        lo, hi = p.altrom
+        for label, rom, restored in (('no v2.10 bytes: plain copy', s48, 0),
+                                     ('v2.10 bytes at all 11 sites: v2.09 bytes back', bytes(v210), 11),
+                                     ('negative: BEEPER 3 of 4 bytes: left alone, 10 sites back', bytes(near), 10)):
+            st = nb.boot(nex, zt.Z80Snapshot(z80).pc, sysrom=rom)
+            img, model = bytes(st['alt'][1]), bytes(nb.alt_image(p, rom))
+            out = [a for a in range(0x4000) if not lo <= a < hi]      # lo..hi: the build's bytes (and its state)
+            back = [at for at, new, old in zt.ROM3_V210_FIXUPS if img[at:at + len(old)] == old != rom[at:at + len(old)]]
+            diff = [a for a in out if img[a] != rom[a]]
+            want_diff = sum(sum(a != b for a, b in zip(new, old)) for at, new, old in zt.ROM3_V210_FIXUPS
+                            if rom[at:at + len(new)] == new)
+            ok('rom3 v2.10 fix-ups: chuckie_egg boot, %s (outside the hook bytes: %d bytes differ from the system ROM3, '
+               'image = alt_image model)' % (label, len(diff)), len(back) == restored and len(diff) == want_diff and
+               all(img[a] == model[a] for a in out), (len(back), len(diff), want_diff))
+    finally:
+        zt.ALTROM_FILL = fill
 
 
 def keypad_check():
