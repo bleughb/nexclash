@@ -84,11 +84,18 @@ Colour route: docs/COLOURS.md. Palette 1 white, 2 black, 3-15 Spectrum colours. 
 ALWAYS-ASK, decided here: solid: follows the mask everywhere, so in the sky (y < 82), where the original has no mask, bodies are opaque white rather than see-through. Bullets and mines: mines as sprites with body; bullets dark only. The weapon shot (0xAB60) stays on the ULA: behind figures here, in front in the original; its body is the cell's paper. CLOSE CALL for a human.
 
 ## Lessons
-- [local: the picture check named what the survey missed] The survey's routine table missed the mine plotter and the small plotter's order; a comparison of original pixels and sprites found both, by frame.
+- [deferred Open: reconsider when a second game's survey misses a plotter that a pixel-vs-sprite check finds] The survey's routine table missed the mine plotter and the small plotter's order; a comparison of original pixels and sprites found both, by frame.
 - [local: a plot that keeps running into a scratch page] Redirecting slot 2 keeps every register and the timing with almost no hook code: no padding, no register model. Works where the game does not read the screen for logic and the ISR stays out of slot 2.
 - [local: a scan on one stage is not enough for a tail] 0x9400 looked untouched until the fourth stage's recording.
 - [local: my error, nothing general to change] `dec l` between CP and JR NZ made every cache lookup hit: use `dec hl`, which keeps the flags.
 - [local: stage poke] 0xFFDF poked just after the start reaches a later stage; the display's STAGE shows 01.
+
+## Friction
+- reuse: [none: the engine came in whole from the pilot clone]
+- retries: [none: the rebuild gave the published d982d5ae first time]
+- environment: [none: the record's sprite MD5 still named the build before the edge trim; corrected on import]
+- hand-rolled: [none: nothing written by hand in the import]
+- scratch: [none: no scratch scripts added]
 
 ## Technique use
 - detect.gameplay-screen-readers: helped. detect.tracked-unit: helped. patch.runtime-colour-map: helped, simplified to a keep plane.
