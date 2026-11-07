@@ -50,6 +50,13 @@ Techniques: detect.gameplay-screen-readers
   its dust cloud, away from the ladder; the same with the smoothing off; the original's own pictures of that band
   tear at least as much: at its frame 620 every figure there is missing for a frame), vanished 0 -> 1 (813: the dagger at the
   right edge, visible in all three pictures). 1,000 frames: out of step 23 -> 4, vanished 5 -> 8. Not 0.
+- The 630 / 631 pair is the original's behaviour, not a defect (2026-11-07). Matched by game RAM (0x5C00-0xFFFF in each
+  frame's state), build frame f is the original's f - 5 throughout 612-639. So 630 / 631 are the original's 625 / 626.
+  At 626 the original's own picture of that band is torn: Arthur is down to a dot and the zombie is half drawn. Five
+  frames earlier (its 620, the dust cloud's first update) the whole band, ladder included, is missing for a frame. The
+  build's sprites cannot tear, so the same redraw-against-the-beam shows as one out-of-step pair instead. It stays
+  with the smoothing off. A pace window per masked plot would be the only fix: library room this page does not have.
+  Not done.
 - Pace (JNext, play profile, lockstep): level 3 (c8, 400 updates) +6.56% -> -0.00%; level 1 (600 updates) seed 1
   +0.23% -> -0.00%, seed 2 +0.72% -> -0.00%; interrupts 23.16 / 23.96 a second = the original.
 - Proof: 8 recordings IDENTICAL (52,063 frames, 23,741 ticks), unit PASS, negatives 20/20, stamped. Two new negatives: a hit that skips the byte check (caught on c0: 'sprite differs from the
@@ -274,7 +281,7 @@ All in `work/cheats15/` unless stated otherwise:
 ## Open items
 
 - **The nfo line.** The public tool `make_nfo.py` always writes "Cheats come from the archive's POKEs". `package15.py` replaced that one line in our .nfo, because only Infinite lives is from the archive. The tool needs a field for this; it was not edited here.
-- **Level 3 out-of-step flicker.** 4 -> 2 in 250 frames ("Image cache lookup"); the two left are a zombie rising beside its dust cloud, not the ladder; a pace window per plot (hlib_pace, page room needed) is the next step.
+- **Level 3 out-of-step flicker.** 4 -> 2 in 250 frames ("Image cache lookup"); the two left are a zombie rising beside its dust cloud, not the ladder. Closed as the original's behaviour: at the same game state the original's own picture of that band tears (see "Image cache lookup"). A pace window per plot would remove the pair; not planned.
 - **Not covered:** the ending, mid-map checkpoint starts, joystick and hardware.
 - **Doc cleanup.** The archive .pok's "forget all problems" entry does not match this dump. It writes `JP 0x60A3` (a re-encode-and-jump-to-0x8003 routine), so it was not used.
 
