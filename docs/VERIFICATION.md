@@ -55,7 +55,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Jetpac (jetpac): `jetpac.nex` feff51b7038606d21c03c260055481e4, `jetpac_sprites.nex` 72e3cc193325cc8166f8e7d7b6481327; verified 2026-11-05
 - Lode Runner (lode_runner): `lode_runner.nex` cd0c1659c8569b2fa80da74962af90d2, `lode_runner_sprites.nex` 85fe6afd593679bf59c787230ba0eaca; verified 2026-11-05
 - Match Day (match_day): `match_day.nex` 612761ec2772c5a7dcd27f939588d227, `match_day_sprites.nex` 0ec500534baae17cd5ce91eae3c13a7d; verified 2026-11-05
-- Cyclone (cyclone): `cyclone.nex` 390516396ca4d385c94b7f7bd2315d31, `cyclone_sprites.nex` ba42f5ce35e1dcf5e59df020b0934d37; verified 2026-11-06
+- Cyclone (cyclone): `cyclone.nex` 390516396ca4d385c94b7f7bd2315d31, `cyclone_sprites.nex` 49fb6d39732f4e77c69e5dabfe88ad58; verified 2026-11-06
 - The Incredible Shrinking Fireman (incredible_shrinking_fireman-add-OPUS): `incredible_shrinking_fireman-add-OPUS.nex` feb706fcdaa29f13844a7b4982dc21fa, `incredible_shrinking_fireman-add-OPUS_sprites.nex` 283d6a59a92940a31c9cfe21159fabb7; verified 2026-11-05
 - Atic Atac (atic_atac): `Atic_Atac_1983_Ultimate_Play_The_Game_a.nex` e710fa8785802f1aa51f214d95c82343, `Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites.nex` 6aa7e780f4ec7892d862c675e61b7fba; verified never
 - The Incredible Shrinking Fireman (GPT6_ASTRA) (incredible_shrinking_fireman-add-GPT6_ASTRA): `incredible_shrinking_fireman_plain-add-GPT6_ASTRA.nex` f8f213e55e3da01349827f8ae7d93bee, `incredible_shrinking_fireman_sprites-add-GPT6_ASTRA.nex` 437680af4aa9722e7058b2df6baf0cdb; verified 2026-11-06

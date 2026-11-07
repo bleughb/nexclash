@@ -87,7 +87,7 @@
   },
   "sprites": {
    "file": "cyclone_sprites.nex",
-   "md5": "ba42f5ce35e1dcf5e59df020b0934d37"
+   "md5": "49fb6d39732f4e77c69e5dabfe88ad58"
   }
  },
  "repro": [],
@@ -98,7 +98,7 @@
  "status": {
   "title": "Cyclone",
   "engine_col": "cyclone (cyclone.md)",
-  "build": "cyclone_sprites.nex ba42f5ce (2026-11-07: hooks restore the caller's speed, lib/hlib_speed.asm; was 7db0bdd5; helicopter + aircraft = 4-bit sprites, black with a white 4-neighbour mask, behind scenery as the original; shadows dithered; strip shows its scenery; hooks: alt ROM stubs + page 26 at slot 6, 28 MHz inside hooks)",
+  "build": "cyclone_sprites.nex 49fb6d39 (2026-11-07: original pace - the renderer at 28 MHz in a lib/hlib_pace.asm game-routine window repays the hooks, JNext +0.30 / +0.02 / -0.93% on 3 seeds (main +16.6 / +20.6 / +16.6%); strip and sprites change in one frame (double-buffered patterns, the switch after the renderer): flicker 11 -> 0 out-of-step frames; was ba42f5ce, the caller's speed restored (lib/hlib_speed.asm), and 7db0bdd5; helicopter + aircraft = 4-bit sprites, black with a white 4-neighbour mask, behind scenery as the original; shadows dithered; strip shows its scenery; hooks: alt ROM stubs + page 26 at slot 6, 28 MHz inside hooks)",
   "software": "RZX + 4 whole-game bookmarks IDENTICAL (registers, memory, interrupt safety, screen vs model, sprite pixels vs model), unit cases + negative control PASS",
   "hardware": "25c1b1e0 loads, runs and plays for a few minutes (user, 2026-10-21; not fully tested)",
   "next": "full hardware pass (checklist: aircraft, map screen, crash, game over, speed); user paints the PAINTING_SPRITES sheet; per-pixel colour map + recolour"
@@ -108,50 +108,50 @@
  ],
  "checked": {
   "deps": {
-   "asm/cyclone_hooks.asm": "72cb8582a1980549",
+   "asm/cyclone_hooks.asm": "8c99fe21dde8e10d",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/cyclone.json": "621f57dd1934b8e5",
-   "nexclash.py": "3e9043d14edb7db1",
+   "docs/profiles/cyclone.json": "5c2d01c71dea32e7",
+   "nexclash.py": "8eb7d621324c5aa6",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
-   "nexclash/cyclone.py": "c65abefab8398f9b",
+   "nexclash/cyclone.py": "6468eed2c3e77c08",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "17cc64b9bb99e469",
+   "nexclash/engines.py": "e5e8ff401baf2257",
    "nexclash/nextboot.py": "e6624bfe14a62e21",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/records.py": "85f7a2ad3b78d411",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "9eba9e1420607f0b",
+   "recipe": "3031bf56e6cbba76",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-06"
  },
  "verified": {
   "deps": {
-   "asm/cyclone_hooks.asm": "72cb8582a1980549",
+   "asm/cyclone_hooks.asm": "8c99fe21dde8e10d",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/cyclone.json": "621f57dd1934b8e5",
-   "nexclash.py": "3e9043d14edb7db1",
+   "docs/profiles/cyclone.json": "5c2d01c71dea32e7",
+   "nexclash.py": "8eb7d621324c5aa6",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
-   "nexclash/cyclone.py": "c65abefab8398f9b",
+   "nexclash/cyclone.py": "6468eed2c3e77c08",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "17cc64b9bb99e469",
+   "nexclash/engines.py": "e5e8ff401baf2257",
    "nexclash/nextboot.py": "e6624bfe14a62e21",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/records.py": "85f7a2ad3b78d411",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "9eba9e1420607f0b",
+   "recipe": "3031bf56e6cbba76",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-06"
