@@ -1,0 +1,204 @@
+{
+ "name": "martianoids",
+ "order": 207,
+ "game": "Martianoids",
+ "doc": "martianoids.md",
+ "engine": "martianoids",
+ "representative": true,
+ "reference": "martianoids",
+ "inputs": {
+  "snapshot": {
+   "name": "martianoids.z80",
+   "md5": "5df07fbd5dabdcb9a909b86cf690a4e8",
+   "path": "martianoids/martianoids.z80"
+  },
+  "recordings": [
+   {
+    "name": "original-continuous.rzx",
+    "md5": "83ea476571bebcf1aa4be185a8b66e96",
+    "path": "martianoids/original-continuous.rzx"
+   },
+   {
+    "name": "martianoids.tap",
+    "md5": "136c04825eab6559ea001dadfcf6b832",
+    "path": "martianoids/martianoids.tap",
+    "role": "Original loading-screen tape, staged beside the snapshot; not a recording."
+   }
+  ]
+ },
+ "modules": [
+  "martianoids"
+ ],
+ "own_modules": [
+  "martianoids",
+  "martianoids_art"
+ ],
+ "data": [
+  "asm/martianoids_hooks.asm",
+  "asm/martianoids_colour.inc",
+  "docs/profiles/martianoids.json",
+  "docs/profiles/martianoids_colours.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_pcache.asm",
+  "asm/lib/hlib_commit.asm",
+  "asm/lib/hlib_dma.asm",
+  "asm/lib/hlib_iff.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": []
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "original-continuous.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 45,
+  "note": "Default and optional owner-painted Enhanced: exact original CALL-body entry, all registers including R, full 48K RAM, ordered complete Layer 2 canvas at every publication; private state persists. No dead-stack exclusions. Original loading screen and bootstrap with/without NEXLOAD. Native timing and independent negative controls retained in release evidence."
+ },
+ "outputs": {
+  "plain": {
+   "file": "martianoids.nex",
+   "md5": "d7216a9d7cdbed5b819026e7cd71e9d8"
+  },
+  "sprites": {
+   "file": "martianoids_sprites.nex",
+   "md5": "cb9e4e2542c5a36fed139e4c7114f673"
+  },
+  "enhanced": {
+   "file": "martianoids_enhanced.nex",
+   "md5": "09b5741f14d9efc011808b10bb3ce52e"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Martianoids",
+  "engine_col": "martianoids (martianoids.md)",
+  "build": "Original monochrome default; optional approved owner-painted Layer 2 viewport, off by default; original loading screen, complete hidden ROM, 1MB.",
+  "software": "Verified 18k archive replay: default 5,872 and Enhanced 5,875 exact R/RAM hooks, 2,936 exact colour canvases; 448 ABI cases; recolour roundtrip; 18 native pace trials; supplementary game-over/restart and nine real-loader selections on v2.09/v2.10 pass.",
+  "hardware": "none (JNext only)",
+  "next": "Physical Next review of frozen default/Enhanced and trainer options; preserve owner painting sheet."
+ },
+ "checks": [
+  "asm2profile:martianoids"
+ ],
+ "techniques": [
+  {
+   "application": "martianoids.pace",
+   "id": "patch.pace-limiter",
+   "revision": 3,
+   "target": "Sound-free original render span 99EF..99FE, K104; no accelerated I/O.",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "martianoids.speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "Latch and restore the actual incoming Next clock.",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "martianoids.measure",
+   "id": "verify.update-locked-pace",
+   "revision": 1,
+   "target": "Unique outer-loop player update 9967 / record 9690; separate scenes and raster/R phases; collision redispatches excluded.",
+   "phases": []
+  }
+ ],
+ "results": [],
+ "checked": {
+  "deps": {
+   "asm/lib/hlib_commit.asm": "c696d3eee26ec9a4",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "725067425cd27122",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_pcache.asm": "e312737f71ce583c",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/martianoids_colour.inc": "14dd808ac318fd6e",
+   "asm/martianoids_hooks.asm": "d8af2f5455efc2b2",
+   "docs/profiles/martianoids.json": "2f9cf6fbf0da6bae",
+   "docs/profiles/martianoids_colours.json": "dffe132b055cba15",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "2fc0f83602e3d757",
+   "nexclash/hooklib.py": "aee2b8793e4227d7",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "038b2ebf518eca31",
+   "nexclash/martianoids.py": "31847d2311204705",
+   "nexclash/martianoids_art.py": "8babf1ed194264c7",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "4cce32a1c0a17a11",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-07"
+ },
+ "verified": {
+  "deps": {
+   "asm/lib/hlib_commit.asm": "c696d3eee26ec9a4",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "725067425cd27122",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_pcache.asm": "e312737f71ce583c",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/martianoids_colour.inc": "14dd808ac318fd6e",
+   "asm/martianoids_hooks.asm": "d8af2f5455efc2b2",
+   "docs/profiles/martianoids.json": "2f9cf6fbf0da6bae",
+   "docs/profiles/martianoids_colours.json": "dffe132b055cba15",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "2fc0f83602e3d757",
+   "nexclash/hooklib.py": "aee2b8793e4227d7",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "038b2ebf518eca31",
+   "nexclash/martianoids.py": "31847d2311204705",
+   "nexclash/martianoids_art.py": "8babf1ed194264c7",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "4cce32a1c0a17a11",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-07"
+ }
+}
