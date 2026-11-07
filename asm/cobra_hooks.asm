@@ -41,7 +41,7 @@ PIDX    EQU 0x5800      ; the prepared-pattern store (cobra.py store_index): (ad
 PENT    EQU 0x5240      ; entries: address lo, hi, row pairs, page, offset lo, hi (0xC000 + offset in that page)
 PBASE   EQU 46544       ; the first image's graphics (profile colour_images)
 PIDXN   EQU 1812        ; (61040 - PBASE) / 8: entries of PIDX
-HLIB_V_PACE EQU 0x4060  ; 14 bytes of hook page RAM, zero at start (asm/lib/hlib_pace.asm)
+HLIB_V_PACE EQU 0x4060  ; 26 bytes of hook page RAM (0x4060-0x4079), zero at start (asm/lib/hlib_pace.asm)
 HLIB_PACE_NL EQU 312    ; 48K timing, 50 Hz: lines a frame
 
 nslot   EQU 0x4000
@@ -800,8 +800,7 @@ em_p:   push hl                 ; as em, then the plane at vpl: AND mask, keep, 
         pop hl
         ret
 ; ---- the pace limiter (asm/lib/hlib_pace.asm) and the prepared-pattern store, run with the page mapped ----
-        DEFINE HLIB_PACE_V1                ; the first pace library, as this engine was verified with
-        INCLUDE "lib/hlib_pace.asm"
+        INCLUDE "lib/hlib_pace.asm"        ; the current library (consistent readings; was HLIB_PACE_V1 until 2026-11-07)
 
 ; pace_plot: the original loop's time for vrows row pairs from screen row vscr: 252 T a pair (18 sixteenths) less 5,
 ; and about 32 T more at each character row it enters (y0 + 2B) / 8 times; less T_FIX16. Waits at 28 MHz: interrupts
@@ -842,9 +841,11 @@ pace_plot:
 dbt_open:
         push af
         push bc
+        push de                 ; the current library's hlib_debt_open loses DE (its consistent reading); V1's kept it
         push hl
         call hlib_debt_open
         pop hl
+        pop de
         pop bc
         pop af
         ret

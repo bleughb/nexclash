@@ -130,7 +130,19 @@ Hardware risk review: DivMMC: hooks 0x386E-0x3CD2, not in 0x3D00-0x3DFF. IM 2 ve
   shows it, and the store and the cache assume the graphics stay as loaded.
 - The flicker check reads a .z80 control's screen from bank 5's VRAM file, where a 48K JNext run does not keep it.
 
+## On the current pace library (2026-11-07, shared engine refactor, goal 3)
+- HLIB_PACE_V1 dropped: lib/hlib_pace.asm's current code (consistent line / held readings, the frame length never
+  learned from a poll). HLIB_V_PACE 14 -> 26 bytes (0x4060-0x4079, free). dbt_open now keeps DE: the current
+  hlib_debt_open loses it (V1's kept it; the first try failed the replay on D / E at every frame hook). The verifier's
+  clock matrix leaves out all 26 bytes of limiter state.
+- Sprites 00ead70a -> 82b05daf; plain unchanged. 4 recordings IDENTICAL (37,054 frames, 42,192 plots), unit PASS
+  (clock matrix 340 cases), stamped. JNext pace on the pace fixture (300 updates keyed to 0xA5CD, state checked
+  every update, lockstep to 300): -0.00% before, +0.00% after (quiet / busy 0.00%); port FE writes 437 / 436 a second
+  (original 437); interrupts 33.53 a second all three.
+
 ## Lessons
+- [local: hlib_pace.asm's header already says only hlib_line keeps DE] The current library's hlib_pace_open / hlib_debt_open lose DE (V1's kept it): an
+  engine moving off HLIB_PACE_V1 saves DE around them.
 - [local: this game's start] observed: the whole alt ROM image made the key-wait stub unnecessary: Sinclair's ROM runs the snapshot's own BASIC return, and the ROM path check proves it on the recordings.
 - [local: this game's RNG] observed: the RNG runs in the wait-for-interrupt sound loop, so any timing change gives other enemies; pace trials ran on a fixture (that call and the lives decrement removed, in the original and the build alike), in lockstep for every update.
 - [local: this game's sound] demonstrated: frame-locked pace hid a slower figure phase: game updates equal, but the beeper plays only while waiting for the interrupt, so port FE writes fell 8 % in busy scenes. The limiter and the prepared patterns brought them back (510.4 / 509.6 a second).
