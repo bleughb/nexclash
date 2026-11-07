@@ -1,0 +1,247 @@
+{
+  "scope": "Proposed CALL operand substitutions; retain original opcode including condition. No kernel/note/nested pause wrappers.",
+  "sites": [
+    {
+      "pc": 46668,
+      "op": "CALL 46126",
+      "target": 46126,
+      "pc_hex": "B64C",
+      "target_hex": "B42E",
+      "label": "h_as_B42E"
+    },
+    {
+      "pc": 46748,
+      "op": "CALL 46161",
+      "target": 46161,
+      "pc_hex": "B69C",
+      "target_hex": "B451",
+      "label": "h_as_B451"
+    },
+    {
+      "pc": 46769,
+      "op": "CALL 46178",
+      "target": 46178,
+      "pc_hex": "B6B1",
+      "target_hex": "B462",
+      "label": "h_as_B462"
+    },
+    {
+      "pc": 46777,
+      "op": "CALL 46173",
+      "target": 46173,
+      "pc_hex": "B6B9",
+      "target_hex": "B45D",
+      "label": "h_as_B45D"
+    },
+    {
+      "pc": 46851,
+      "op": "CALL 46253",
+      "target": 46253,
+      "pc_hex": "B703",
+      "target_hex": "B4AD",
+      "label": "h_as_B4AD"
+    },
+    {
+      "pc": 47062,
+      "op": "CALL 46161",
+      "target": 46161,
+      "pc_hex": "B7D6",
+      "target_hex": "B451",
+      "label": "h_as_B451"
+    },
+    {
+      "pc": 47105,
+      "op": "CALL 46173",
+      "target": 46173,
+      "pc_hex": "B801",
+      "target_hex": "B45D",
+      "label": "h_as_B45D"
+    },
+    {
+      "pc": 47139,
+      "op": "CALL 46178",
+      "target": 46178,
+      "pc_hex": "B823",
+      "target_hex": "B462",
+      "label": "h_as_B462"
+    },
+    {
+      "pc": 47159,
+      "op": "CALL 46126",
+      "target": 46126,
+      "pc_hex": "B837",
+      "target_hex": "B42E",
+      "label": "h_as_B42E"
+    },
+    {
+      "pc": 47225,
+      "op": "CALL 46161",
+      "target": 46161,
+      "pc_hex": "B879",
+      "target_hex": "B451",
+      "label": "h_as_B451"
+    },
+    {
+      "pc": 47247,
+      "op": "CALL 46126",
+      "target": 46126,
+      "pc_hex": "B88F",
+      "target_hex": "B42E",
+      "label": "h_as_B42E"
+    },
+    {
+      "pc": 48496,
+      "op": "CALL NZ,46243",
+      "target": 46243,
+      "pc_hex": "BD70",
+      "target_hex": "B4A3",
+      "label": "h_as_B4A3"
+    },
+    {
+      "pc": 48907,
+      "op": "CALL 46105",
+      "target": 46105,
+      "pc_hex": "BF0B",
+      "target_hex": "B419",
+      "label": "h_as_B419"
+    },
+    {
+      "pc": 48945,
+      "op": "CALL 46083",
+      "target": 46083,
+      "pc_hex": "BF31",
+      "target_hex": "B403",
+      "label": "h_as_B403"
+    },
+    {
+      "pc": 49217,
+      "op": "CALL 46243",
+      "target": 46243,
+      "pc_hex": "C041",
+      "target_hex": "B4A3",
+      "label": "h_as_B4A3"
+    },
+    {
+      "pc": 49634,
+      "op": "CALL 46243",
+      "target": 46243,
+      "pc_hex": "C1E2",
+      "target_hex": "B4A3",
+      "label": "h_as_B4A3"
+    },
+    {
+      "pc": 49714,
+      "op": "CALL 46183",
+      "target": 46183,
+      "pc_hex": "C232",
+      "target_hex": "B467",
+      "label": "h_as_B467"
+    },
+    {
+      "pc": 49853,
+      "op": "CALL 46083",
+      "target": 46083,
+      "pc_hex": "C2BD",
+      "target_hex": "B403",
+      "label": "h_as_B403"
+    },
+    {
+      "pc": 49999,
+      "op": "CALL 46194",
+      "target": 46194,
+      "pc_hex": "C34F",
+      "target_hex": "B472",
+      "label": "h_as_B472"
+    },
+    {
+      "pc": 50352,
+      "op": "CALL 46057",
+      "target": 46057,
+      "pc_hex": "C4B0",
+      "target_hex": "B3E9",
+      "label": "h_as_B3E9"
+    },
+    {
+      "pc": 50682,
+      "op": "CALL 46183",
+      "target": 46183,
+      "pc_hex": "C5FA",
+      "target_hex": "B467",
+      "label": "h_as_B467"
+    },
+    {
+      "pc": 50909,
+      "op": "CALL 46217",
+      "target": 46217,
+      "pc_hex": "C6DD",
+      "target_hex": "B489",
+      "label": "h_as_B489"
+    },
+    {
+      "pc": 50926,
+      "op": "CALL 46183",
+      "target": 46183,
+      "pc_hex": "C6EE",
+      "target_hex": "B467",
+      "label": "h_as_B467"
+    },
+    {
+      "pc": 51473,
+      "op": "CALL 46273",
+      "target": 46273,
+      "pc_hex": "C911",
+      "target_hex": "B4C1",
+      "label": "h_as_B4C1"
+    },
+    {
+      "pc": 51556,
+      "op": "CALL 46145",
+      "target": 46145,
+      "pc_hex": "C964",
+      "target_hex": "B441",
+      "label": "h_as_B441"
+    },
+    {
+      "pc": 51579,
+      "op": "CALL 46267",
+      "target": 46267,
+      "pc_hex": "C97B",
+      "target_hex": "B4BB",
+      "label": "h_as_B4BB"
+    },
+    {
+      "pc": 51670,
+      "op": "CALL M,46161",
+      "target": 46161,
+      "pc_hex": "C9D6",
+      "target_hex": "B451",
+      "label": "h_as_B451"
+    },
+    {
+      "pc": 45077,
+      "op": "CALL 54542",
+      "target": 54542,
+      "pc_hex": "B015",
+      "target_hex": "D50E",
+      "label": "h_as_D50E"
+    }
+  ],
+  "targets": [
+    "B3E9",
+    "B403",
+    "B419",
+    "B42E",
+    "B441",
+    "B451",
+    "B45D",
+    "B462",
+    "B467",
+    "B472",
+    "B489",
+    "B4A3",
+    "B4AD",
+    "B4BB",
+    "B4C1",
+    "D50E"
+  ]
+}
