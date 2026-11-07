@@ -40,6 +40,9 @@ contribution, a release, lesson consolidation. An add-a-game session by a contri
   re-verify every game a change reaches - hours, the maintainers' job before a merge.
 
 ## A contribution arrived
+Start from a clean checkout/worktree. The importer checks every payload hash and original-file
+baseline before creating a branch; changed baselines need a PR. Legacy replacement archives must
+be regenerated. Failed command logs are retained at the path printed by selftest.
 `python tools/merge_contribution.py nexclash_contribution_<GAME>.zip` (branch + file list), review
 against CLAUDE.md's rules, put a copy of the game in specnext/reference/, then `selftest.py --game
 <game> --verify --stamp` and `--affected --verify --stamp`; PR; merge. Plain-diff contributions and

@@ -44,6 +44,15 @@ def verified():
 
 # ------------------------------------------------------------------------------------------ patch
 
+def artifact_state(path):
+    """Distinguish this run's writes, including byte-identical rebuilds, from old outputs."""
+    try:
+        st = os.stat(path)
+        return st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns, st.st_ctime_ns
+    except FileNotFoundError:
+        return None
+
+
 def cmd_patch(a, cmd_auto):
     """Build for the user's own snapshot; then say how much of it is proven."""
     z80 = a.z80
@@ -51,19 +60,26 @@ def cmd_patch(a, cmd_auto):
     out = a.out or os.path.join(os.path.dirname(os.path.abspath(z80)), name + '_nexclash')
     h = md5(z80)
     known = verified().get('snapshots', {}).get(h)
+    plain, spr = os.path.join(out, name + '.nex'), os.path.join(out, name + '_sprites.nex')
+    previous = artifact_state(spr)
     try:
-        cmd_auto(a)
+        if cmd_auto(a) is False:
+            print('Sprite build FAILED its checks; previous output files are not a new build.')
+            return 1
     except ValueError as e:                     # an engine's site check refused this snapshot
         print()
         print('Not patched: %s' % e)
         print('This version of the game differs where the patch goes. Start a session to add it:')
         print('    python nexclash.py new %s' % z80)
         return 1
-    plain, spr = os.path.join(out, name + '.nex'), os.path.join(out, name + '_sprites.nex')
     rep = open(os.path.join(out, name + '_report.txt')).read() if os.path.exists(
         os.path.join(out, name + '_report.txt')) else ''
     print()
-    if not os.path.exists(spr):
+    current = artifact_state(spr)
+    if current is not None and current == previous:
+        print('No sprite build from this run: %s is an earlier output, kept unchanged. Do not use it as this run\'s result.' % spr)
+        return 2
+    if current is None:
         print('No sprite build: this game is not supported yet (plain .nex only: %s).' % (
             'built' if os.path.exists(plain) else 'not built'))
         print('Add it with Claude:  python nexclash.py new %s' % z80)
@@ -220,6 +236,31 @@ def screen(files):
     return keep, refused
 
 
+def contribution_base(files, base_ref=None):
+    """Original hashes let the importer refuse replacements of newer maintainer files."""
+    if os.path.exists(MANIFEST):
+        manifest = json.load(open(MANIFEST))
+        return ({'kind': 'package', 'version': manifest.get('version'), 'manifest_md5': md5(MANIFEST)},
+                {f: manifest['files'].get(f) for f in files})
+    def git(*args):
+        return subprocess.run(['git', '-C', ROOT, *args], capture_output=True)
+    base = base_ref
+    if not base:
+        result = git('merge-base', 'HEAD', 'origin/main')
+        if result.returncode:
+            sys.exit('Cannot determine contribution baseline: ' + result.stderr.decode(errors='replace'))
+        base = result.stdout.decode().strip()
+    revision = git('rev-parse', '--verify', base + '^{commit}')
+    if revision.returncode:
+        sys.exit('Invalid contribution baseline: ' + base)
+    base = revision.stdout.decode().strip()
+    originals = {}
+    for f in files:
+        result = git('show', base + ':' + f)
+        originals[f] = hashlib.md5(result.stdout).hexdigest() if not result.returncode else None
+    return {'kind': 'git', 'commit': base}, originals
+
+
 def cmd_contribute(a):
     files = changed_files(getattr(a, 'base', None))
     keep, refused = screen(files)
@@ -228,8 +269,9 @@ def cmd_contribute(a):
     if not keep:
         print('Nothing to contribute: no toolkit file was added or changed.')
         return 1
+    source, originals = contribution_base(keep, getattr(a, 'base', None))
     zname = os.path.abspath(a.output or 'nexclash_contribution_%s.zip' % a.name)
-    meta = {'game': a.name, 'date': time.strftime('%Y-%m-%d'), 'note': a.note or '',
+    meta = {'schema': 2, 'source': source, 'base_files': originals, 'game': a.name, 'date': time.strftime('%Y-%m-%d'), 'note': a.note or '',
             'package_version': open(os.path.join(ROOT, 'VERSION')).read().strip()
             if os.path.exists(os.path.join(ROOT, 'VERSION')) else 'git',
             'files': {f: md5(os.path.join(ROOT, f)) for f in keep}, 'reports': [], 'patches': {}}

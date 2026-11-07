@@ -115,6 +115,8 @@ class WorkflowChecks(unittest.TestCase):
                 meta = json.loads(contribution.read('CONTRIBUTION.json'))
                 self.assertEqual(set(meta['files']), {'README.md'})
                 self.assertEqual(meta['package_version'], manifest['version'])
+                self.assertEqual(meta['source']['kind'], 'package')
+                self.assertEqual(meta['base_files'], {'README.md': manifest['files']['README.md']})
                 self.assertEqual(contribution.read('files/README.md'), p.read_bytes())
 
 
@@ -125,6 +127,7 @@ def main():
     args = ap.parse_args()
     PACKAGE = args.package
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(WorkflowChecks)
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromModule(load(ROOT/'tools/failure_checks.py')))
     return 0 if unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful() else 1
 
 

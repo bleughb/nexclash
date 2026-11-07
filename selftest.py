@@ -120,8 +120,25 @@ def _tapes(rec, d, k=0):
     return [a for it in sets[k]['files'] for a in ('--tape', os.path.join(d, it['name']))]
 
 
-def _run(cmd, env=None):
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+def _run(cmd, env=None, lines=None):
+    """Count subprocess failures even if it wrote expected outputs; retain its full diagnostic log."""
+    fd, log = tempfile.mkstemp(prefix='nexclash_command_', suffix='.log')
+    with os.fdopen(fd, 'wb') as stream:
+        try:
+            result = subprocess.run(cmd, stdout=stream, stderr=subprocess.STDOUT, env=env)
+            code = result.returncode
+        except OSError as error:
+            stream.write(('Could not start command: %s\n' % error).encode())
+            code = 127
+    if not code:
+        os.remove(log)
+        return 0
+    message = 'FAIL command exited %s: %s; log: %s' % (code, cmd, log)
+    if lines is None:
+        print(message)
+    else:
+        lines.append(message)
+    return 1
 
 
 def _audit_env(d, tag):
@@ -231,7 +248,7 @@ def rebuild(rec, d, lines):
     env, alog = _audit_env(d, 'rebuild')
     if rb.get('cmd') == 'convert':
         o = next(iter(rec['outputs'].values()))['file']
-        _run([sys.executable, NEXCLASH, 'convert', z80, '-o', os.path.join(out, o)] + rb.get('args', []), env)
+        bad += _run([sys.executable, NEXCLASH, 'convert', z80, '-o', os.path.join(out, o)] + rb.get('args', []), env, lines)
         return bad + _check_outputs(rec, out, lines) + _audit_check(rec, alog, lines, 'rebuild')
     cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80, '--no-record'] + rb.get('args', []) + _tapes(rec, d)
     cmd = [c for i, c in enumerate(cmd) if c != '--no-record' or i == cmd.index('--no-record')]
@@ -241,7 +258,7 @@ def rebuild(rec, d, lines):
         dp = os.path.join(d, rec['name'] + '_decisions.json')
         json.dump(rb['decisions'], open(dp, 'w'))
         cmd += ['--decisions', dp]
-    _run(cmd + ['-o', out], env)
+    bad += _run(cmd + ['-o', out], env, lines)
     rep = _report(out, _snapname(rec))
     bad += _check_outputs(rec, out, lines) + _boot_ok(rep, lines, rec['name'])
     bad += recolour_guard(rec, out, lines, cmd, d)
@@ -252,18 +269,18 @@ def rebuild(rec, d, lines):
             continue
         base = [c for i, c in enumerate(cmd) if c != '--tape' and (i == 0 or cmd[i - 1] != '--tape')]
         to = os.path.join(d, 'rebuild_tapes_' + ts['set'])
-        _run(base + targs + ['-o', to], env)
+        bad += _run(base + targs + ['-o', to], env, lines)
         bad += _check_outputs(rec, to, lines, stage_='rebuild (tape set %s)' % ts['set'])
     for x in rec.get('repro', []):
         ro = os.path.join(d, 'rebuild_' + x['strategy'])
-        _run(cmd + ['-o', ro, '--strategy', x['strategy']], env)
+        bad += _run(cmd + ['-o', ro, '--strategy', x['strategy']], env, lines)
         bad += _check_outputs(rec, ro, lines, {'repro': x}) + _boot_ok(_report(ro, _snapname(rec)), lines, rec['name'])
     for x in rec.get('rework', []):
         if x.get('_missing'):
             lines.append('SKIP %s rework %s (%s)' % (rec['name'], x['name'], x['_missing']))
             continue
         ro = os.path.join(d, 'rebuild_rework_' + x['name'])
-        _run(_rework_cmd(z80, x, 'rebuild', d) + ['-o', ro], dict(env, **x.get('env', {})))
+        bad += _run(_rework_cmd(z80, x, 'rebuild', d) + ['-o', ro], dict(env, **x.get('env', {})), lines)
         bad += _check_outputs(rec, ro, lines, x['outputs'], 'rebuild rework %s:' % x['name'])
         bad += _boot_ok(_report(ro, _xname(rec, x)), lines, '%s rework %s' % (rec['name'], x['name']))
     return bad + _audit_check(rec, alog, lines, 'rebuild')
@@ -303,8 +320,8 @@ def recolour_guard(rec, out, lines, cmd, d):
     os.makedirs(bo, exist_ok=True)
     empty = os.path.join(d, 'empty_colours.json')
     cs.save({}, empty, 'selftest: empty colour map')
-    subprocess.run(cmd + ['-o', bo], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                   env=dict(os.environ, NEXCLASH_COLOURS=empty))
+    if _run(cmd + ['-o', bo], dict(os.environ, NEXCLASH_COLOURS=empty), lines):
+        return 1
     p, pb = os.path.join(out, o), os.path.join(bo, o)
     if not (os.path.exists(p) and os.path.exists(pb)):
         lines.append('FAIL %s recolour: %s not built %s' % (rec['name'], o, 'with an empty map' if os.path.exists(p)
@@ -374,8 +391,8 @@ def reverify(rec, d, lines, human=False):
         lines.append('SKIP %s verification: %s not in the reference folder (record: "missing"); its reworks run' % (
             rec['name'], ', '.join(gone)))
         return _reverify_reworks(rec, d, lines, z80, name, env) + _audit_check(rec, alog, lines, 'verify')
-    _run(cmd + ['-o', out], env)
-    bad = _check_outputs(rec, out, lines, stage_='verify') + _verify_report(_report(out, name), rec['name'], lines, rec)
+    bad = _run(cmd + ['-o', out], env, lines)
+    bad += _check_outputs(rec, out, lines, stage_='verify') + _verify_report(_report(out, name), rec['name'], lines, rec)
     bad += _checks_status(out, name, rec['name'], lines, bool(rz), rec)
     dec_p = os.path.join(out, name + '_decisions.json')
     stored = (rec.get('rebuild') or {}).get('decisions')
@@ -393,7 +410,7 @@ def reverify(rec, d, lines, human=False):
         rcmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80, '--no-record', '--strategy', x['strategy'], '-o', ro]
         for r in ([auto] if os.path.exists(auto) else []) + [os.path.join(d, r) for r in rz]:
             rcmd += ['--rzx', r]
-        _run(rcmd, env)
+        bad += _run(rcmd, env, lines)
         bad += _check_outputs(rec, ro, lines, {'repro': x}, 'verify')
         bad += _verify_report(_report(ro, name), '%s --strategy %s' % (rec['name'], x['strategy']), lines)
         bad += _checks_status(ro, name, '%s --strategy %s' % (rec['name'], x['strategy']), lines, True, rec)
@@ -407,7 +424,7 @@ def _reverify_reworks(rec, d, lines, z80, name, env):
         if x.get('_missing'):
             continue                            # said by rebuild()
         ro = os.path.join(d, 'verify_rework_' + x['name'])
-        _run(_rework_cmd(z80, x, 'verify', d) + ['-o', ro], dict(env, **x.get('env', {})))
+        bad += _run(_rework_cmd(z80, x, 'verify', d) + ['-o', ro], dict(env, **x.get('env', {})), lines)
         bad += _check_outputs(rec, ro, lines, x['outputs'], 'verify rework %s:' % x['name'])
         xn = os.path.splitext(x['snapshot'])[0] if x.get('snapshot') else name
         bad += _verify_report(_report(ro, xn), '%s rework %s' % (rec['name'], x['name']), lines)
@@ -1197,7 +1214,7 @@ def canary2(src):
         v.get('args', []) + ['--quick', str(rec.get('canary_quick', 300)), '-o', out]
     for r in v.get('rzx', []):
         cmd += ['--rzx', os.path.join(d, r)]
-    _run(cmd)
+    bad += _run(cmd, lines=lines)
     bad += _verify_report(_report(out, _snapname(rec)), '%s quick (%d frames)' % (rec['name'], rec.get('canary_quick', 300)),
                           lines, rec)
     shutil.rmtree(work, ignore_errors=True)
@@ -1259,10 +1276,13 @@ def push_access():
     if _PUSH is None:
         if os.environ.get('NEXCLASH_MAINTAINER') == '1':
             _PUSH = True
-        elif not os.path.isdir(os.path.join(HERE, '.git')):
-            _PUSH = False
         else:
             try:
+                checkout = subprocess.run(['git', 'rev-parse', '--is-inside-work-tree'], cwd=HERE,
+                                          capture_output=True, text=True, timeout=30)
+                if checkout.returncode or checkout.stdout.strip() != 'true':
+                    _PUSH = False
+                    return _PUSH
                 r = subprocess.run(['git', 'push', '--dry-run', '--porcelain', 'origin',
                                     'HEAD:refs/heads/selftest-push-probe'], cwd=HERE,
                                    capture_output=True, text=True, timeout=30)
