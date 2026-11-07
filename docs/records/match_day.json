@@ -65,7 +65,7 @@
   },
   "sprites": {
    "file": "match_day_sprites.nex",
-   "md5": "f0aecd138d1668ff057318c2545f539d"
+   "md5": "0ec500534baae17cd5ce91eae3c13a7d"
   }
  },
  "repro": [],
@@ -119,6 +119,56 @@
    },
    "proof": "both recordings IDENTICAL with the IM 1 handler compared at every 0x0038 against NextZXOS's ROM3, unit tests + controls, ROM paths with the start-up tail proof, negatives rom3_left and the old tail",
    "note": "Jon Attree's Match Day rework (no published .nxc; the proof is the verification): engine matchday_v2, picked by engines.py for `--altrom-fill whole` on this snapshot, the opt-in the pin names. Dean's matchday with the whole alt ROM image (the shared fill: Sinclair's ROM + the hooks) and the start-up tail at 0xBE00 in both builds, the cure for the trophy screen's corruption (the converter's default tail sat on its attribute data below SP). Combines refactor-unpinned 70a2529 (tail, the verifier's alt ROM model) and pilot runs/match_day 4a6493d (IM 1 handler compared at every 0x0038, rom3_left). Verify: both recordings IDENTICAL with the IM 1 check against NextZXOS's ROM3 (enNextZX.rom, staged), unit tests + controls, ROM paths with the tail proof, negatives rom3_left and the old tail; JNext: the trophy drawn clean (specnext match_day_v2_JNEXT_trophy.png). games/match_day.md \"Rework (opt-in)\"."
+  },
+  {
+   "name": "v21",
+   "version": "2.1",
+   "args": [
+    "--altrom-fill",
+    "whole"
+   ],
+   "inputs": [
+    {
+     "name": "enNextZX.rom",
+     "md5": "8c34d957fb2cbbd0be423cea3b370fd5",
+     "path": "match_day/enNextZX.rom"
+    }
+   ],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ],
+    "decisions": {
+     "engine": "matchday_v21",
+     "altrom_fill": "whole",
+     "tail": "0xBE00 in both builds",
+     "pace": "docs/profiles/match_day_v21_pace.json"
+    }
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [
+     "match_day.rzx",
+     "match_day_spectrumcomputing.rzx"
+    ]
+   },
+   "outputs": {
+    "plain": {
+     "file": "match_day.nex",
+     "md5": "02fd183587897ea65aaaca5a0d1db36e"
+    },
+    "sprites": {
+     "file": "match_day_sprites.nex",
+     "md5": "0b10aeb4219b470a3d9de97b05a9daa1"
+    }
+   },
+   "proof": "both recordings IDENTICAL with R compared at every event and every e_objs call (0x8194) checked against the original, every build / draw / copier target against the original T; unit tests + controls, rom3_left and the old tail; the every-site clock matrix (4 incoming clocks) and the forced 3.5 MHz exit, limiter removed and R one off negatives (pilot runs/dean_match_day work/v21); isr_w / isr_x on the simulator with 3 negatives",
+   "note": "Jon Attree's Match Day v2.1 speed pass: engine matchday_v21 (a copy of matchday_v2 with its own hooks asm/matchday_v21_hooks.asm and pace model docs/profiles/match_day_v21_pace.json), picked by engines.py only with NEXCLASH_REWORK=matchday_v21 and --altrom-fill whole. Hooks latch and give back the incoming speed; the game's builds, draws, figure calls, crowd copier and ball run at 28 MHz in pace windows paid back to the original's T on the video line; R preserved. games/match_day.md \"Rework v2.1\".",
+   "env": {
+    "NEXCLASH_REWORK": "matchday_v21"
+   }
   }
  ],
  "status": {

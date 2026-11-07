@@ -51,7 +51,9 @@
   "docs/profiles/knight_tyme.json",
   "asm/knight_tyme_hooks.asm"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"
@@ -79,7 +81,7 @@
   },
   "sprites": {
    "file": "knight_tyme_sprites.nex",
-   "md5": "645401e4e42dbc80cfcb04954773ecd4"
+   "md5": "6222fc964abca3ccaca3871d4f843396"
   }
  },
  "repro": [],
@@ -94,7 +96,7 @@
  "status": {
   "title": "Knight Tyme (128K)",
   "engine_col": "knight_tyme (knight_tyme.md)",
-  "build": "knight_tyme_sprites.nex 645401e4 (v1.1: Knight, characters, objects as sprites with outline, Bridge crew tiles, whole alt ROM image from the build, loading screen) = published Knight Tyme v1.1 .nxc --bare",
+  "build": "knight_tyme_sprites.nex 6222fc96 (v1.1 + 2026-11-07: hooks restore the caller's speed, lib/hlib_speed.asm; 645401e4 = published Knight Tyme v1.1 .nxc --bare)",
   "software": "lockstep IDENTICAL on 4 recordings (33,534 frames), unit tests, negatives 19/19 (imported 2026-11-04 from Jon Attree's .nxc work)",
   "hardware": "none (JNext, played by Jon Attree through the real loader 2026-11-03)",
   "next": "hardware test; opt-in: alt image 0 from the 128K ROM 0 (star map)"

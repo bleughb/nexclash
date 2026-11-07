@@ -1,6 +1,7 @@
 # Cauldron (Palace Software, 1985; 48K) - engine `cauldron` (colour map; 43c1ca49 works on the Next)
 
 ## Next session
+Rework v11 (2026-11-05, "Rework (opt-in) v11", round 2 done: no one-frame vanish, pace at the original's): owner + hardware.
 Stage: 4 (hardware + colour round 3)    Branch: claude/cauldron (PR to main: process + Cauldron)
 State: 43c1ca49 = 55ed40f8 + colour map, sheets, recolour; full verification IDENTICAL, stamped
   2026-10-27 ("Results"); sheets in specnext reference/cauldron/; works on the Next (Dean).
@@ -263,6 +264,8 @@ unpainted images unchanged, transparent pixels show the scenery (try CSpect firs
 - [local: the engine's own `colours` subcommand wrote the build default from a sheet with no merge;
   removed - one recolour workflow (Dizzy 1 still has one: flagged in PR #80)]
 
+- [local: a colour rule taken from a figure's first cell carries the clash into the sprite's colour (v11)]
+
 ## Technique use
 - patch.xor-overlay-keep-ula: helped (the design; lacked the other-writers failure row: corrected)
 - detect.gameplay-screen-readers: corrected: listing readers has a shared command; compiled BASIC method added
@@ -274,16 +277,19 @@ unpainted images unchanged, transparent pixels show the scenery (try CSpect firs
 - patch.xor-overlay-keep-ula: helped (its canvas-at-the-draw upload is where the map applies)
 
 ## Stage log
-- 2026-10-27 colour workflow (GPT6 review, steps 1-4: recolour merge + bundle, identity, contract; shared code, PR #80): ~50 tool calls, 4 user rounds.
-- 2026-10-27 stage 4 colour round (capture, colour tables + upload override, sheets, recolour, 12 unit cases + 3 negatives, card patch.runtime-colour-map, full verify stamped): ~75 tool calls, 2 user rounds (merge questions).
-- 2026-10-27 stage 3 for round 2 (full verify stamped) + learning loop (docs/LEARNING.md, learncheck, probes, schema-4 cards; Cauldron migrated; main merged at the stage boundary, knowledge revision 639d585): ~40 tool calls, 2 user rounds.
-- 2026-10-27 round 2 (Q7 outline + Q8 attribute shadow: 12 new sites, page 27, verify spans + attribute model, 32 new unit cases, 8 negatives; quick 9000 PASS): ~70 tool calls, 1 user round.
-- 2026-10-27 hardware round 1 (menu hang -> whole alt ROM from the build; outline + clash requests recorded): ~45 tool calls, 3 user rounds.
-- 2026-10-26 stage 0+1 (survey, patch plan, design question; pilot): see Pilot log.
-- 2026-10-26 stage 1 answers: RZX snapshot, all figures sprites, overlay, keep attr painting (3a), defaults 4/5.
-- 2026-10-26 stage 2 part 1 (analysis: snapshot extract, plotter decode, 3 whole-RZX probes, Q6): ~85 tool calls, ~1h20, 2 user rounds.
-- 2026-10-26 stage 2 part 2 (engine: module, asm, profile, verify, 43 unit cases + 9 negatives, quick 2000 + 9000 PASS, record; shared altrom0 + canary): ~100 tool calls, 0 user rounds. Whole engine modules read: none (fireman template functions only).
+Full lines in git history (2026-10-26 / 27: stage 0+1 pilot ~85 calls; stage 2 parts 1-2 ~185 calls; hardware round
+1 ~45; round 2 ~70; stage 3 ~40; colour round ~75; colour workflow ~50).
+- 2026-11-05 rework v11 (Jon Attree: bat colour rule, trainer, loading screen, .nxc; pilot runs/dean_cauldron).
 
 ## Pilot log
-Technique-card pilot, stage 0 + 1, 2026-10-26: ~85 tool calls, ~78 min to the design question
-(~58 min the survey); 3 cards opened, 5 judged from index.json. Full log in git history.
+Technique-card pilot, stage 0 + 1, 2026-10-26: ~85 calls, ~78 min; full log in git history.
+
+## Rework (opt-in) v11
+Jon Attree's v1.1 (engine `cauldron_v11`, 2026-11-05): games/cauldron_v11.md.
+
+## Friction
+- reuse: [tool nextboot.rom_paths] the ROM path and tail checks; rom_paths_known for the ROM-site JPs
+- retries: [none: one run]
+- environment: [none: as usual]
+- hand-rolled: [local: a colour census probe on the C simulator, in the pilot run folder]
+- scratch: [none: scripts stay in pilot runs/dean_cauldron/work]

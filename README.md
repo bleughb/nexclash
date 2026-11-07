@@ -141,6 +141,7 @@ reworks, each with its own proof and version (games/<game>.md "Rework"):
 | Jet Pac | v1.1: rocket / fuel / flames fix, Enhanced, loading screen | `--altrom-fill whole` |
 | Match Day | v2: the trophy screen drawn clean (start-up tail moved) | `--altrom-fill whole` |
 | Atic Atac | v1.3: faster hooks, flicker fix, QAOP toggle, Enhanced | `NEXCLASH_REWORK=atic_atac_v13` |
+| Atic Atac | v1.4: v1.3 + the pace limiter (original pace, never faster) | `NEXCLASH_REWORK=atic_atac_v14` |
 | Rainbow Islands (Z80N) | the sky fix: the squares round objects match the bright sky | `NEXCLASH_REWORK=rainbow_z80n_sky` |
 
 ## For patch makers: new tools

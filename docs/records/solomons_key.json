@@ -1,0 +1,229 @@
+{
+ "name": "solomons_key",
+ "order": 107,
+ "game": "Solomon's Key",
+ "doc": "solomons_key.md",
+ "engine": "solomons_key",
+ "representative": true,
+ "reference": "solomons_key",
+ "inputs": {
+  "snapshot": {
+   "name": "solomons_key.z80",
+   "md5": "23ee5b2123dbc8a9a5daccbd51db4db0",
+   "path": "solomons_key/solomons_key.z80"
+  },
+  "recordings": [
+   {
+    "name": "sk_d1.rzx",
+    "md5": "785be81e3687d020cdc1a19459745729",
+    "path": "solomons_key/sk_d1.rzx"
+   },
+   {
+    "name": "sk_o1.rzx",
+    "md5": "f676e9060e332eb628c44c25fb4ebac7",
+    "path": "solomons_key/sk_o1.rzx"
+   },
+   {
+    "name": "sk_l0.rzx",
+    "md5": "39cdc4b5799519a44864bae08f5f70e2",
+    "path": "solomons_key/sk_l0.rzx"
+   },
+   {
+    "name": "sk_l1.rzx",
+    "md5": "8c7ff6d9839bdaf55ee00f7e735d4366",
+    "path": "solomons_key/sk_l1.rzx"
+   },
+   {
+    "name": "sk_h1.rzx",
+    "md5": "1f9641efabdfdd94f46d671ac35e0a70",
+    "path": "solomons_key/sk_h1.rzx"
+   },
+   {
+    "name": "sk_x1.rzx",
+    "md5": "ff23a6db99c0add81afcc68d1a1692b5",
+    "path": "solomons_key/sk_x1.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "solomons_key"
+ ],
+ "own_modules": [
+  "solomons_key"
+ ],
+ "data": [
+  "docs/profiles/solomons_key.json",
+  "asm/solomons_key_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "sk_d1.rzx",
+   "sk_o1.rzx",
+   "sk_l0.rzx",
+   "sk_l1.rzx",
+   "sk_h1.rzx",
+   "sk_x1.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 60,
+  "note": "Random-walk recordings, no human player; cheats live in the RZX snapshots only. Ported from Jon Attree's .nxc work (pilot runs/solomons_key), 2026-11-05."
+ },
+ "outputs": {
+  "plain": {
+   "file": "solomons_key.nex",
+   "md5": "3ad529e40439ad0ee5fbbb67f66d9170"
+  },
+  "sprites": {
+   "file": "solomons_key_sprites.nex",
+   "md5": "80e83ae3cab8adf6e58085261517a80f"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Solomon's Key",
+  "engine_col": "solomons_key (solomons_key.md)",
+  "build": "solomons_key_sprites.nex 80e83ae3 (every figure a sprite, bright white ink, black body; hooks in the whole alt ROM image; R preserved; pace ORIGINAL by the pass padding; plot, commit and clear at 28 MHz)",
+  "software": "Verify IDENTICAL on 6 random-walk recordings with the pace accounting; unit PASS incl. every-site clock matrix; negatives detected; ROM path check pass; JNext 1.1.104 reaches play; pace ORIGINAL",
+  "hardware": "untested",
+  "next": "the owner plays the .nxc; hardware test"
+ },
+ "checks": [
+  "asm2profile:solomons_key"
+ ],
+ "techniques": [
+  {
+   "application": "solomons_key.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "no reader of the screen in play: the ULA may differ",
+   "phases": []
+  },
+  {
+   "application": "solomons_key.whole-altrom",
+   "id": "patch.whole-altrom-image",
+   "revision": 1,
+   "target": "both builds: Sinclair's ROM as alt image 1 (the delay LDIR reads 0x0000-0x01F3); the hooks at 0x386E",
+   "phases": [
+    "setup"
+   ]
+  },
+  {
+   "application": "solomons_key.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "e_plot, post, e_cls: NR 7 latched in the state page at entry, restored at exit; e_pad at the caller clock",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "solomons_key.preserve-r",
+   "id": "patch.preserve-r",
+   "revision": 1,
+   "target": "R read at entry, set at exit to entry + D_xxx; compared at every hook",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "solomons_key.pace-limiter",
+   "id": "patch.pace-limiter",
+   "revision": 1,
+   "target": "every hook's time and the blit's extra contention in a debt (21 T steps); e_pad runs the game's pass padding shorter by it",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "solomons_key.pace",
+   "id": "verify.update-locked-pace",
+   "revision": 1,
+   "target": "nexclash.pace, probe 37799 (main loop pass), lockstep on the pass and bonus counters",
+   "phases": []
+  }
+ ],
+ "results": [
+  {
+   "application": "solomons_key.screen-readers",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "80e83ae3",
+   "scope": "6 random-walk recordings; cheats in 5; no human recording; no hardware",
+   "evidence": "games/solomons_key.md \"Results\""
+  }
+ ],
+ "rom_paths_known": [
+  {
+   "image": 1,
+   "from": "0x386E",
+   "to": "0x3B12",
+   "why": "the game's delay 39194 copies ROM onto itself (LDIR from 0x0000, writes ignored); with BC = 16384 (sk_o1 frame 5214, PC 0x9923) it reads the alt ROM image's hook bytes and register block, where a 48K has 0xFF; nothing uses what it reads, and the time is the same"
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/solomons_key_hooks.asm": "55be5c99b9a76a87",
+   "docs/profiles/solomons_key.json": "8cc819d9b848f6b4",
+   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "162037ccf3614b62",
+   "nexclash/hooklib.py": "a877bac70d417c69",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/solomons_key.py": "0fbed929c04294ec",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "41ce4c58aec118d3",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-05"
+ },
+ "verified": {
+  "deps": {
+   "asm/solomons_key_hooks.asm": "55be5c99b9a76a87",
+   "docs/profiles/solomons_key.json": "8cc819d9b848f6b4",
+   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "162037ccf3614b62",
+   "nexclash/hooklib.py": "a877bac70d417c69",
+   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "273dab19dfcd9e27",
+   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/solomons_key.py": "0fbed929c04294ec",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "621a37b897680c01",
+   "skoolkit": "10.1",
+   "recipe": "41ce4c58aec118d3",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-05"
+ }
+}
