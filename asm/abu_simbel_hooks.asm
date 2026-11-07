@@ -37,11 +37,12 @@ GAMEPAGE7 EQU 1             ; the 48K game's pages at slots 7 and 5
 GAMEPAGE5 EQU 5
 N_SPR     EQU 4
 SPR_PLAY  EQU 3
-K_PLOT    EQU 104           ; the plotter's original time per unit of its 28 MHz time, x 16 (JNext)
-UNMEAS    EQU 47+59-16         ; debt the lines do not see, 1/16 lines (abu_simbel.py pace model, 2026-11-07): the
+K_PLOT    EQU 111           ; the plotter's original time per unit of its 28 MHz time, x 16: JNext 1.1.104,
+                            ; 299 player plots 110.6, 517 enemy plots 111.6 (runs/abu_simbel v10/work/plottime.py)
+UNMEAS    EQU 47+59-16      ; debt the lines do not see, 1/16 lines (abu_simbel.py pace model, 2026-11-07): the
                             ; 3.5 MHz entry and exit + the gap between the debt window and the plot's (659 T), and
                             ; the plot window's own 28 MHz overhead around the plotter (128 T real), which x K
-                            ; would otherwise lengthen the target
+                            ; would otherwise lengthen the target; less one line, the wait's own rounding down
 R_FIX     EQU 22            ; delta = (R after - R before the plotter) - R_FIX (hooklib.r_delta)
 R_CLS     EQU 117           ; the hide hooks' constant delta: 1 - 7 - 5 (mod 128)
 
