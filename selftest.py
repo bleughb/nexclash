@@ -129,6 +129,11 @@ def _snapname(rec):
     return os.path.splitext(rec['inputs']['snapshot']['name'])[0]
 
 
+def _xname(rec, x):
+    """The report name of a rework's build: its own snapshot's when it has one (rework "snapshot")."""
+    return os.path.splitext(x['snapshot'])[0] if x.get('snapshot') else _snapname(rec)
+
+
 def _check_outputs(rec, out, lines, want=None, stage_='rebuild'):
     bad = 0
     for k, o in (want or rec['outputs']).items():
@@ -230,7 +235,7 @@ def rebuild(rec, d, lines):
         ro = os.path.join(d, 'rebuild_rework_' + x['name'])
         _run(_rework_cmd(z80, x, 'rebuild', d) + ['-o', ro], dict(env, **x.get('env', {})))
         bad += _check_outputs(rec, ro, lines, x['outputs'], 'rebuild rework %s:' % x['name'])
-        bad += _boot_ok(_report(ro, _snapname(rec)), lines, '%s rework %s' % (rec['name'], x['name']))
+        bad += _boot_ok(_report(ro, _xname(rec, x)), lines, '%s rework %s' % (rec['name'], x['name']))
     return bad + _audit_check(rec, alog, lines, 'rebuild')
 
 
@@ -238,8 +243,11 @@ def _rework_cmd(z80, x, stage_, d):
     """An opt-in rework of an existing game (record "rework"): auto with the rework's own args, e.g.
     `--altrom-fill whole`, which overrides the record pin (Jetpac v1.1: engines.py picks jetpac_v11), plus its own
     "rebuild" / "verify" recipe (args, rzx, stored decisions), as a record's, and its own environment ("env", e.g.
-    NEXCLASH_REWORK=atic_atac_v13 for a rework that keeps the pinned fill; the callers add it)."""
+    NEXCLASH_REWORK=atic_atac_v13 for a rework that keeps the pinned fill; the callers add it). "snapshot": the
+    name of one of the rework's inputs to build from instead of the record's (a rework on another release of the game)."""
     rc = x.get(stage_) or {}
+    if x.get('snapshot'):                       # a rework built from its own snapshot, one of its inputs (Lode Runner 128K)
+        z80 = os.path.join(d, x['snapshot'])
     cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80] + list(x.get('args', [])) + list(rc.get('args', []))
     if stage_ == 'rebuild' and '--no-record' not in cmd:
         cmd.append('--no-record')
@@ -371,8 +379,9 @@ def _reverify_reworks(rec, d, lines, z80, name, env):
         ro = os.path.join(d, 'verify_rework_' + x['name'])
         _run(_rework_cmd(z80, x, 'verify', d) + ['-o', ro], dict(env, **x.get('env', {})))
         bad += _check_outputs(rec, ro, lines, x['outputs'], 'verify rework %s:' % x['name'])
-        bad += _verify_report(_report(ro, name), '%s rework %s' % (rec['name'], x['name']), lines)
-        bad += _checks_status(ro, name, '%s rework %s' % (rec['name'], x['name']), lines,
+        xn = os.path.splitext(x['snapshot'])[0] if x.get('snapshot') else name
+        bad += _verify_report(_report(ro, xn), '%s rework %s' % (rec['name'], x['name']), lines)
+        bad += _checks_status(ro, xn, '%s rework %s' % (rec['name'], x['name']), lines,
                               bool((x.get('verify') or {}).get('rzx')), rec)
     return bad
 

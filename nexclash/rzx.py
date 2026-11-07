@@ -151,10 +151,12 @@ def cut(path, start, frames, out):
     return n
 
 
-def trace(path, pcs, on_pc, stop=None):
+def trace(path, pcs, on_pc, stop=None, rom=None):
     """Replay `path` with the C simulator (rzxplay; ~400 frames/s with a hook) and call
     on_pc(pc, simulator) before every instruction whose address is in `pcs`. A recording that
-    desyncs does not stop the caller: -> (frames replayed, None or the desync message)."""
+    desyncs does not stop the caller: -> (frames replayed, None or the desync message).
+    rom: {address: bytes} written into the simulator's ROM before the first instruction (a recording
+    of a game whose ROM differs from Sinclair's, such as Quazatron's Centred-view reference)."""
     import skoolkit.rzxplay as rp
     from types import SimpleNamespace
     from skoolkit import SkoolKitError
@@ -174,7 +176,13 @@ def trace(path, pcs, on_pc, stop=None):
     ctx.tracefile = Sink()
     pcs = frozenset(pcs)
 
+    fresh = [rom]
+
     def hook(tf, context, fc, pc):
+        if fresh[0]:
+            for a, b in fresh[0].items():
+                context.simulator.memory[a:a + len(b)] = b
+            fresh[0] = None
         if pc in pcs:
             on_pc(pc, context.simulator)
     old = rp.trace_exec

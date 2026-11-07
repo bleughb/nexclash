@@ -39,10 +39,12 @@
   "recorder",
   "machine",
   "rzx",
-  "dizzy6"
+  "dizzy6",
+  "yolk128"
  ],
  "own_modules": [
-  "dizzy6"
+  "dizzy6",
+  "yolk128"
  ],
  "data": [],
  "shared_data": [
@@ -149,5 +151,81 @@
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-05"
- }
+ },
+ "rework": [
+  {
+   "name": "v128",
+   "version": "1.0",
+   "snapshot": "Dizzy 6 - Dizzy, Prince of the YolkFolk (1991)(Code Masters)(128K)[a][a][aka Dizzy VI - Prince of the Yolkfolk].z80",
+   "args": [],
+   "inputs": [
+    {
+     "name": "Dizzy 6 - Dizzy, Prince of the YolkFolk (1991)(Code Masters)(128K)[a][a][aka Dizzy VI - Prince of the Yolkfolk].z80",
+     "md5": "292c1b1ca9f78dac32045533c9ba5361",
+     "path": "prince_of_the_yolkfolk/Dizzy 6 - Dizzy, Prince of the YolkFolk (1991)(Code Masters)(128K)[a][a][aka Dizzy VI - Prince of the Yolkfolk].z80"
+    },
+    {
+     "name": "yolk128_mirror1.rzx",
+     "md5": "799703ff63220929af245dbbcf75aeea",
+     "path": "prince_of_the_yolkfolk/yolk128_mirror1.rzx"
+    },
+    {
+     "name": "yolk128_mirror2.rzx",
+     "md5": "08eed9332c80ee1a05c65a9222a33195",
+     "path": "prince_of_the_yolkfolk/yolk128_mirror2.rzx"
+    },
+    {
+     "name": "yolk128_walk1.rzx",
+     "md5": "c9fbe93155bdbcdd8985057c88638e12",
+     "path": "prince_of_the_yolkfolk/yolk128_walk1.rzx"
+    },
+    {
+     "name": "yolk128_walk2.rzx",
+     "md5": "2310ad59c3765fb38bbeb2fb17705ed2",
+     "path": "prince_of_the_yolkfolk/yolk128_walk2.rzx"
+    },
+    {
+     "name": "yolk128_walk3.rzx",
+     "md5": "2cf991742abda5d53090066658407881",
+     "path": "prince_of_the_yolkfolk/yolk128_walk3.rzx"
+    }
+   ],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ],
+    "decisions": {
+     "engine": "yolk128",
+     "base": "Dean's tid_mirror build (dizzy6.py: build.TidPatch + the mirror copy)",
+     "input": "the 128K release (AY music from bank 3 in the game ISR)",
+     "strategy": "altrom: hooks + table + register block at 0x386E and the mirror copy at 0x2000 in alt image 1 = Sinclair's 48K ROM (whole image); image 0 = the 128K ROM 0; the mirror erase through a slot-1 map of RAM page 24; tail in the undo buffer 0x5C00; printer buffer put back; plot hook at 28 MHz"
+    }
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [
+     "yolk128_mirror1.rzx",
+     "yolk128_mirror2.rzx",
+     "yolk128_walk1.rzx",
+     "yolk128_walk2.rzx",
+     "yolk128_walk3.rzx"
+    ]
+   },
+   "outputs": {
+    "plain": {
+     "file": "Dizzy 6 - Dizzy, Prince of the YolkFolk (1991)(Code Masters)(128K)[a][a][aka Dizzy VI - Prince of the Yolkfolk].nex",
+     "md5": "6ace08da93a2002cb7aeddc0d1be0b2f"
+    },
+    "sprites": {
+     "file": "Dizzy 6 - Dizzy, Prince of the YolkFolk (1991)(Code Masters)(128K)[a][a][aka Dizzy VI - Prince of the Yolkfolk]_sprites.nex",
+     "md5": "74e0da60b06921ed6cc19567e8f33431"
+    }
+   },
+   "proof": "5 recordings of the 128K release on rework v128 (bot walks: mirror1 6,013 / mirror2 6,330 frames in room 40 'DOUBLE TROUBLE!' through the game's own room skip, walk1-3 12,008 / 12,015 / 12,163 frames from the start): every hook event identical: 8,182 player plots (8,779 sprite pictures pixel-perfect), 8,686 erases, 18,603 ISR, 130 wipes and 90 boxes hiding Dizzy, 1,022 mirror plots and 989 mirror erases (the original routine on the patched-screen model against the copy); mirror1, mirror2, walk2 IDENTICAL; walk1 and walk3 FAILED on 5 of 171,382 pixel tests (cells 0x48C5 / 0x4DC6 in the start room, PC 0x9B78 / 0x9B7D), where the original's eraser XOR leaves a hole or a ghost pixel in an object drawn over Dizzy (Dean's 48K build has the same design); 2 player plots in mirror1 differ only in register B (the original plots over the mirrored Dizzy's pixels), dead by a 20,000-instruction run with either value; 8 negative controls detected; clock matrix 7 hook sites x 4 incoming clocks = 28 cases PASS, a forced 3.5 MHz exit detected; ROM paths pass; start-up tail never read before written; R never read; hook stack low water 0x9C5F (code ends 0x9C32)",
+   "note": "Jon Attree's Prince of the Yolkfolk 128K rework (2026-11-06): engine yolk128 (engines.py: the 128K snapshot), Dean's tid_mirror build (build.TidPatch altrom, dizzy6.layout / relocated_copy: used, not copied) on the 128K release so the AY music plays; whole alt ROM image 1 with his hooks at 0x386E and the mirror copy at 0x2000; the mirror erase through NEXTREG 0x51,24 (RAM page 24, the alt ROM's copy source); tail in the undo buffer 0x5C00; printer buffer put back after NEXLOAD; plot hook at 28 MHz, incoming speed restored; a 128K TID verifier with the mirror events. Recordings: bot walks on SkoolKit's C simulator (the mirror ones poke the game's room-skip flag 0x77C2 = 0 into their first snapshot). Packaged as a v1.0 .nxc candidate (pilot runs/dean_prince_of_the_yolkfolk). games/prince_of_the_yolkfolk.md.",
+   "status": "partial"
+  }
+ ]
 }

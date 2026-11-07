@@ -119,7 +119,7 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 | Setup template (0xD000) | sprites off; uploads N x 256 bytes of patterns from bank 11 via port 0x5B; sprite palette 0 = 0, 1 = 0 (black), 2 = $B6 (white, the player colour); NextReg $4B = 0; sprites 0-3 cleared. Stub leaves $15 = 0; hooks show with NEXTREG $15,1 |
 | User register | NextReg $7F: free 8-bit storage; write with NEXTREG, read via ports 243B (select) / 253B (data) |
 | Interrupts | IM2 games keep working; hooks that page slot 0 must DI (IM1 vector 0x38 is in slot 0) |
-| NMOS quirk | `LD A,I` P/V reads 0 if an interrupt is accepted during it: read twice (`ld a,i / jp pe,ok / ld a,i`) |
+| NMOS quirk | `LD A,I` P/V reads 0 if an interrupt is accepted during it (JNext too): `ld a,i / jp pe,ok / ld a,i` (HLIB_IFF_DI; hooklib.iff_audit) |
 
 ### A2. .nex conversion (nexclash/z80tonex.py) - how every file starts
 - NEX V1.2 header (verified against ped7g NEXLOAD2). Game RAM = banks 5,2,0 (48K); 128K: all 8 banks.

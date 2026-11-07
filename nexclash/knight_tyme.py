@@ -464,6 +464,7 @@ class _NS:
         self.pat_ptr = 0
         self.H = bytearray(patch.hpage[:8192])
         self.ports = 0
+        self.sel = None                     # NextREG selected at port 0x243B (HLIB_SPEED_IN reads NR 7)
 
     def nextreg(self, reg, val):
         self.nr[reg] = val
@@ -471,6 +472,9 @@ class _NS:
             self.attr[self.nr.get(0x34, 0) & 0x7F][reg - 0x35] = val
 
     def out(self, port, val):
+        if port == 0x243B:
+            self.sel = val
+            return True
         if port == 0x303B:
             self.pat_ptr = (val & 0x3F) * 256 + (128 if val & 0x80 else 0)
             return True
@@ -479,6 +483,13 @@ class _NS:
             self.pat_ptr += 1
             return True
         return False
+
+    def nr_read(self):
+        """Port 0x253B: the selected NextREG; NR 7 as the core composes it (bits 5:4 actual, 1:0 programmed)."""
+        if self.sel == 0x07:
+            sp = self.nr.get(0x07, 0) & 3
+            return sp << 4 | sp
+        return self.nr.get(self.sel, 0)
 
     def sprite_layer(self):
         out = {}
@@ -571,6 +582,8 @@ class _Ports:
         self.bad = 0
 
     def read_port(self, registers, port):
+        if port == 0x253B and self.ns is not None and self.ns.sel is not None:
+            return self.ns.nr_read()        # a hook reading NR 7 (HLIB_SPEED_IN): no recorded input consumed
         if self.i < len(self.ins):
             self.i += 1
             return self.ins[self.i - 1]
@@ -1208,6 +1221,8 @@ class _UPorts:
         self.ns = ns
 
     def read_port(self, registers, port):
+        if port == 0x253B and self.ns.sel is not None:
+            return self.ns.nr_read()
         return 255
 
     def write_port(self, registers, port, value, offset=0):
