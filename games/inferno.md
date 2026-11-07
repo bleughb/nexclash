@@ -203,6 +203,7 @@ Approved preview/model/contact-sheet hashes and recipes: specnext design/manifes
 build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 
 ## Lessons
+- [none: hardware result only]
 - [doc BRIEFING A1] Hook code under the stub's register block (rom_end) is lost
   at boot; models without the stub cannot see it: compare hook bytes after a simulated boot.
 - [local: Inferno timed hooks] Calibrate tick-quantized constants over all CTC phases (5 phases left
