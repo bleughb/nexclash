@@ -101,6 +101,14 @@ Reference (specnext/reference/target_renegade/):
 - Speed: +145K simulator T per game frame in the 28 MHz hooks (~18K at 3.5 MHz) + 3.8K T in the plot
   hooks; the game HALTs ~35K T per 3-frame game frame - expect no slowdown, to confirm on hardware.
 
+## Speed restored (2026-11-07, shared engine refactor, goal 2)
+- e_dr / e_cm / e_clr latch the caller's CPU speed on the hook stack (HLIB_SPEED_IN, lib/hlib_speed.asm) and give it
+  back before AF instead of a fixed 3.5 MHz (V_SPD = 0x403F in page H, unused before). The verifier answers the
+  latch's IN (0x253B) from its NextREG model (_NS.read) instead of counting it as a port access.
+- Sprites 8e5f8f0b (main: 3581022b). Replay IDENTICAL (7,039 frames, 24,670 plots, 2,257 commits), unit PASS,
+  negatives 5/5; selftest --verify --stamp PASSED. JNext pace (600 updates, probe 0xF465, against the plain
+  build): +0.45% before and after (busy +0.81%); interrupts 17.68 a second both (original 17.73); flicker clean.
+
 ## Hardware checklist (e0b246e3)
 1. Loads and shows the loading screen; a key starts the game menu (plain build too). A crash at the
    start: alt ROM image 0 (BRIEFING C2 #27) - report it.
@@ -119,9 +127,12 @@ Reference (specnext/reference/target_renegade/):
 - Painted colours: none yet (sheet sent; `recolour` takes the painted PNG).
 
 ## Lessons
+- [card patch.restore-speed §Verification] The verifier failed "port access in a hook" on the latch's IN: a
+  NextREG read belongs to the NextREG model, as in Knight Tyme and Spellbound.
 - [card patch.whole-altrom-image §Use / do not use] opt-in rework available: whole alt ROM image (see card patch.whole-altrom-image), and image 0 from the 128K ROM 0 (`altrom0`, z80tonex.altrom0): the pinned build reads its 9 sound bytes at 0x3500 from NextZXOS's ROM 0 (JNext dump in play; ROM paths). Output pinned; refactor-unpinned has a trial build (4c68e258, quick verify only).
 
 ## Technique use
+- patch.restore-speed: helped: three hooks, one latch each (2026-11-07).
 - patch.whole-altrom-image: no help: rework not applied, output pinned (record pin)
 
 ## Friction
