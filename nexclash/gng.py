@@ -920,6 +920,38 @@ def _plot_case(eng, m, kind, g, col, y, rows, c, what):
     return slots
 
 
+def _parent_stale(patch, m, c):
+    """A clipped fragment no atlas entry holds (found through its complete parent), plotted, then one byte of it
+    rewritten in place: the next plot must not reuse the parent-identified group (parent_cached_match's check)."""
+    from . import gng_art as art
+    if patch.pl is None:
+        patch.build_plane()
+    eng = Engine(patch)
+    s = patch.syms
+    tick = lambda mm: eng.hook(mm.__getitem__, [0] * 12 + [0xFF00] + [0] * 16, s['e_tick'], TICK_BACK)
+    qs = art.catalog()
+    have = {(q['kind'], q['rows'], q['data']) for q in qs}
+    for q in qs:
+        if q['parents'] or q['kind'] != 'm3' or q['rows'] < 6 or not q['addresses']:
+            continue
+        raw, r = bytes.fromhex(q['data']), q['rows'] - 2
+        if ('m3', r, raw[10:10 + 10 * r].hex()) in have:
+            continue
+        a = q['addresses'][0]
+        if a in art.POT_ADDRESSES:
+            continue
+        mm = bytearray(m)
+        mm[a:a + len(raw)] = raw
+        g = a + 10
+        _plot_case(eng, mm, 'm3', g, 8, 40, r, c, 'parent fragment')
+        tick(mm)
+        mm[g + 1] ^= 0x18
+        _plot_case(eng, mm, 'm3', g, 8, 40, r, c, 'parent fragment rewritten')
+        tick(mm)
+        return
+    c['parent fragment: no case!'] += 1
+
+
 def unit_tests(patch, states, neg=None):
     c = collections.Counter()
     if patch.pl is None:
@@ -964,6 +996,18 @@ def unit_tests(patch, states, neg=None):
     mm[g + 10 * rows - 1] ^= 0x18
     _plot_case(eng, mm, kind, g, 8, 40, rows, c, 'contents')
     tick(mm)
+    _parent_stale(patch, images[0][3], c)
+    # the atlas index: every entry in its checksum's bucket, as atlas_upload reads it
+    from . import gng_art as art
+    ix = (art.INDEX_PAGE - 2 * PLANE_BANKS[0]) * 8192
+    page = patch.pl[ix:ix + 8192]
+    for b in range(256):
+        at = int.from_bytes(page[2 * b:2 * b + 2], 'little') - 0x4000
+        while page[at]:
+            c['atlas index entries'] += 1
+            if art.bucket(page[at + 1], page[at + 2]) != b:
+                c['atlas index bucket!'] += 1
+            at += 5
     # eviction: more images than groups, tick after tick
     mi = bytearray(images[0][3])
     for j in range(80):
@@ -1079,8 +1123,10 @@ def negative_patches(patch):
         'clear hides nothing': P(page_code=_code_patch(s, 'hideall', b'\xCD' + s.syms['hide'].to_bytes(2, 'little'), b'\0\0\0')),
         'hook loses BC': P(page_code=_code_patch(s, 'e_x2', bytes.fromhex('C1') * 0 + bytes.fromhex('E1D1C1F1ED7BA4BF'), bytes.fromhex('E1D1E1F1ED7BA4BF'))),
         'hook writes game memory': P(page_code=_code_patch(s, 'plot', bytes.fromhex('ED53') + s.syms.get('sum', 0).to_bytes(2, 'little'), bytes.fromhex('ED530060'))),
+        'stale cache: a hit skips the byte check': P(page_code=_code_patch(s, 'cached_match', b'\xC3' + s.syms['atlas_compare'].to_bytes(2, 'little'), b'\x37\xC9\x00')),
+        'stale cache: a parent hit skips the byte check': P(page_code=_code_patch(s, 'parent_cached_match', b'\xC3' + s.syms['parent_compare'].to_bytes(2, 'little'), b'\x37\xC9\x00')),
         'plane left mapped': P(page_code=_code_patch(s, 'atlas_compare', bytes.fromhex('ED91520A'), bytes.fromhex('ED91521A'))),
-        'speed left high': P(page_code=_code_patch(s, 'plot', b'\x3A' + s.syms['speed'].to_bytes(2,'little') + bytes.fromhex('ED9207'), bytes.fromhex('3E0100ED9207'))),
+        'speed left high': P(page_code=_code_patch(s, 'e_m3', b'\x3A' + s.syms['speed'].to_bytes(2,'little') + bytes.fromhex('ED9207'), bytes.fromhex('3E0100ED9207'))),
         'R advanced by one less': P(page_code=_code_patch(s, 'm3_r_target', bytes.fromhex('D60C'), bytes.fromhex('D60D'))),
         'score bar copy broken': P(page_code=_code_patch(s, 'e_hud', bytes.fromhex('D17EA3B2772D'), bytes.fromhex('D17EA3B2002D'))),
         'tick IY wrong': P(page_code=_code_patch(s, 'e_tick', bytes.fromhex('FD2170BF'), bytes.fromhex('FD2171BF'))),
@@ -1101,6 +1147,10 @@ def negative_real(patch, rzx_path, stop=3000, others=()):
             n = sum(v for kk, v in c.items() if kk.endswith('!'))
             if n:
                 break
+        if not n and k.startswith('stale cache'):   # parent-identified fragments: no recording reaches them
+            u = collections.Counter()
+            _parent_stale(p, RZ_first_snapshot(rzx_path), u)
+            n = sum(v for kk, v in u.items() if kk.endswith('!'))
         res[k] = n
     return res
 
