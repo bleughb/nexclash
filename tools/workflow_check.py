@@ -128,6 +128,7 @@ def main():
     PACKAGE = args.package
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(WorkflowChecks)
     suite.addTests(unittest.defaultTestLoader.loadTestsFromModule(load(ROOT/'tools/failure_checks.py')))
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromModule(load(ROOT/'tools/export_checks.py')))
     return 0 if unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful() else 1
 
 

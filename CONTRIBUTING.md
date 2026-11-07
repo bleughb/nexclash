@@ -35,9 +35,18 @@ By contributing you agree your contribution is licensed GPL-3.0-or-later.
 ## Git and release packages
 In a Git checkout, start a branch from current main and record the starting commit.
 `contribute` compares against the merge base with origin/main, including committed and uncommitted
-changes. If main moved or the base is otherwise ambiguous, pass `--base COMMIT` with the recorded
-starting commit. Deletions and renames are refused: submit those through a pull request. Review
-the printed file list before uploading.
+changes. After merging newer main, keep the default merge base: the original starting commit
+would include unrelated upstream changes. `--base COMMIT` is a reviewed ancestor override for
+a deliberately narrower comparison (or when origin/main is unavailable); stale pre-refresh
+bases are refused. The chosen commit is recorded in the archive. Deletions and renames need a PR.
+Review the printed file list before uploading.
+
+Shared toolkit configuration, dependencies, workflows and skills are included. Unsupported or
+oversized source changes stop export before writing a zip; required unsupported files need a PR.
+For an unrelated scratch file, use repeatable `--exclude PATH` (exact repository-relative paths);
+these explicit omissions are recorded in the metadata. Game inputs outside toolkit folders are
+excluded with one summary. Environments, caches and generated session/output folders are pruned
+before discovery; original tracked/manifest files remain checked even when ignored.
 
 An unpacked release has no Git history: preserve the entire modified package between sessions;
 its manifest identifies changed files and their originals. Do not run Git refresh or commit commands in it.
