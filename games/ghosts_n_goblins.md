@@ -35,7 +35,7 @@ Techniques: detect.gameplay-screen-readers
   after, quiet -0.00%, busy +0.61%; interrupts 23.08 a second both (original 23.16); lockstep to update 600.
 
 ## Image cache lookup (2026-11-07, engine refactor goal 4: the level-3 ladder flicker)
-- Cause (codex-flicker REPORT.md): the masked-plot hook delayed the band's ladder restore past the beam. Profile of
+- Cause (the 2026-11-05 level-3 flicker investigation): the masked-plot hook delayed the band's ladder restore past the beam. Profile of
   the hooks over c8 (1,200 frames): 45% was finding the image (a linear walk of the atlas index, then a byte compare)
   and 17% a checksum of every image on every plot. Hits 3,073, misses 747 of 3,820 visible plots.
 - Now: the group cache is keyed by address + shape (an XOR byte found by CPIR, then the whole key); every hit is
