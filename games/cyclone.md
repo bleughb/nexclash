@@ -195,3 +195,28 @@ and shadow at the map edges and with a cell hidden; negative control (ink / mask
   defaults only, sprite palette 1 = black, 2 = white). PLAYBOOK 3b requires recolour: not built yet.
 - Speed: ~10-13 % slower; candidates: zxnDMA fills / copies, fewer swaps, a smaller window.
 - The cyclone itself never appeared in play in the recordings.
+
+## Speed restored (2026-11-07, shared engine refactor, goal 2)
+- Every hook latches the caller's CPU speed after its pushes (spd_in: HLIB_SPEED_IN, lib/hlib_speed.asm, on the hook
+  stack) and gives it back before its pops (spd_out) instead of a fixed 3.5 MHz; V_SPD = 0xD490. The verifier answers
+  the latch's IN (0x253B) from its NextREG model (NextState.sel) instead of logging a port access.
+- Sprites ba42f5ce (was 7db0bdd5); plain unchanged. RZX + 4 bookmarks IDENTICAL (9,851 frames), unit PASS, stamped.
+  JNext pace (600 updates, auto probe 0x5B67): +15.08% before, +15.24% after: the build on main is already far over
+  2% (hook time 22.9 ms an update); interrupts 49.62 -> 49.66 a second (original 49.67). Flicker 1000-1299: 11 out-of-
+  step frames before, 8 after (pre-existing).
+
+## Lessons
+- [deferred Open: reconsider when the hooks get a pace pass] Cyclone is +15% against the original on main (JNext pace
+  meter, 2026-11-07): its hooks need a pace pass (cheaper hooks; the limiter cannot make a slow build faster).
+- [card patch.restore-speed §Verification] As in Knight Tyme, Spellbound and Target Renegade: the verifier logged the
+  latch's IN as a port access; a NextREG read belongs to the NextREG model.
+
+## Technique use
+- patch.restore-speed: helped: five entries, three exits, one routine pair in the hook page.
+
+## Friction
+- reuse: [tool asm/lib/hlib_speed.asm] the shared latch, called as routines
+- retries: [none: assembled and verified first time]
+- environment: [none: the usual references and JNext card]
+- hand-rolled: [local: a Kempston pace profile (4, 6) written for the measurement]
+- scratch: [none: no scratch scripts]

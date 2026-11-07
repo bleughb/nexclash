@@ -22,6 +22,7 @@
 ; x 72, y 32), 25-28 aircraft. Palette offset 0: index 1 = ink, index 2 = mask.
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_speed.asm"    ; macros only
 
 PG      EQU 26
 NSPR    EQU 29
@@ -66,6 +67,7 @@ SY0     EQU 0xD462
 AFND    EQU 0xD464              ; bit 0 aircraft found, bit 1 shadow found
 ACOL    EQU 0xD465              ; anchor column, row (signed)
 AROW    EQU 0xD466
+V_SPD   EQU 0xD490              ; the caller's CPU speed (lib/hlib_speed.asm latch)
 TBASE   EQU 0xD467              ; tile base being built
 MAPR    EQU 0xD468
 MAPC    EQU 0xD469
@@ -156,7 +158,7 @@ h_s0:   ld (SVSP),sp
         push bc
         push de
         push hl
-        nextreg 0x07,3
+        call spd_in                 ; the caller's speed latched (lib/hlib_speed.asm), then 28 MHz
         ld hl,TILES
         ld de,S0T
         ld bc,264
@@ -167,7 +169,7 @@ h_s0:   ld (SVSP),sp
         ldir
         ld a,1
         ld (FLG),a
-        nextreg 0x07,0
+        call spd_out                ; the caller's speed back (never a fixed 3.5 MHz)
         pop hl
         pop de
         pop bc
@@ -182,7 +184,7 @@ h_s1:   ld (SVSP),sp
         push bc
         push de
         push hl
-        nextreg 0x07,3
+        call spd_in                 ; the caller's speed latched (lib/hlib_speed.asm), then 28 MHz
         ld hl,TILES
         ld de,S1T
         ld bc,264
@@ -198,7 +200,7 @@ h_h:    ld (SVSP),sp
         push bc
         push de
         push hl
-        nextreg 0x07,3
+        call spd_in                 ; the caller's speed latched (lib/hlib_speed.asm), then 28 MHz
         ld hl,HBUF
         ld de,HB
         ld bc,72
@@ -207,7 +209,7 @@ h_h:    ld (SVSP),sp
         ld (VA),a
         ld hl,FLG
         set 2,(hl)
-h_x:     nextreg 0x07,0
+h_x:    call spd_out
         pop hl
         pop de
         pop bc
@@ -222,7 +224,7 @@ h_r1:   ld (SVSP),sp
         push bc
         push de
         push hl
-        nextreg 0x07,3
+        call spd_in                 ; the caller's speed latched (lib/hlib_speed.asm), then 28 MHz
         call aircraft               ; (uses AP; packs into ASH / AIW / AWW)
         call canvas                 ; (uses AP for W)
         ld a,(FLG)                  ; swap the scenery in
@@ -259,7 +261,7 @@ h_r1:   ld (SVSP),sp
         ld de,AGFX+1
         ld bc,143
         ldir
-.na:    nextreg 0x07,0
+.na:    call spd_out
         pop hl
         pop de
         pop bc
@@ -274,7 +276,7 @@ h_r2:   ld (SVSP),sp
         push bc
         push de
         push hl
-        nextreg 0x07,3
+        call spd_in                 ; the caller's speed latched (lib/hlib_speed.asm), then 28 MHz
         ld hl,FLG
         bit 3,(hl)
         jr z,.nr
@@ -1647,6 +1649,12 @@ attrs:  ld b,0
         ld a,b
         cp NSPR
         jp nz,.s
+        ret
+; spd_in / spd_out: the caller's CPU speed latched, then 28 MHz / that speed back (lib/hlib_speed.asm); on the hook
+; stack, every register kept
+spd_in: HLIB_SPEED_IN V_SPD
+        ret
+spd_out:HLIB_SPEED_OUT V_SPD
         ret
 code_end:
         ASSERT code_end <= AP

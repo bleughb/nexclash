@@ -444,6 +444,7 @@ class NextState:
         self.pidx = 0
         self.page = bytearray(hook_page)
         self.events = []
+        self.sel = None                     # NextREG selected at 0x243B (the speed latch reads NR 7)
 
     def nextreg(self, reg, val):
         self.nr[reg] = val
@@ -452,7 +453,9 @@ class NextState:
         self.events.append(('nr', reg, val))
 
     def port(self, port, v):
-        if port == 0x303B:
+        if port == 0x243B:
+            self.sel = v
+        elif port == 0x303B:
             self.pidx = (v & 0x3F) * 256 + (128 if v & 0x80 else 0)
         elif port & 0xFF == 0x5B:
             self.pat[self.pidx & 0x3FFF] = v
@@ -511,6 +514,9 @@ def _machine(Sim, mem, regs, ns, slot='o'):
 
     class Tr:
         def read_port(s, regs_, port):
+            if port == 0x253B and ns.sel is not None:   # a NextREG read: NR 7 as the core composes it
+                sp = ns.nr.get(ns.sel, 0) & 3 if ns.sel == 0x07 else None
+                return sp << 4 | sp if sp is not None else ns.nr.get(ns.sel, 0)
             ns.events.append(('in', port))
             return 0xFF
 
