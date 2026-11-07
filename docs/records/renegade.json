@@ -80,11 +80,11 @@
   },
   "sprites": {
    "file": "renegade_sprites.nex",
-   "md5": "a670c5b19d254f367f6471bc5efd8df4"
+   "md5": "93cb8bc9616dd41bfdc2f906d513cf35"
   },
   "enhanced": {
    "file": "renegade_enhanced.nex",
-   "md5": "82b45f46c01c6b188ee28c2e76adbde2"
+   "md5": "3a9ceaf98b376bda76936fbd2e524eb4"
   }
  },
  "repro": [],

@@ -23,6 +23,7 @@
 
         DEVICE ZXSPECTRUMNEXT
         INCLUDE "lib/hlib_speed.asm"    ; macros only: HLIB_SPEED_IN
+        INCLUDE "lib/hlib_iff.asm"      ; macros only: HLIB_IFF_DI / HLIB_IFF_EI
 
 HPG     EQU 26                  ; hook page, MMU slot 4 while a hook runs
 GP4     EQU 4                   ; the game's page at slot 4
@@ -96,8 +97,7 @@ OBJCOL  EQU 23695               ; ATTR T, set by the object loop
 CHCOL   EQU 0x7303              ; self-modified LD A,n: the character's colour
 GTAB    EQU 0xC544              ; graphic table: graphics, mask
 
-        MACRO ENTER
-        di
+        MACRO ENTER                     ; interrupts as the caller had them: the game's handler never touches slot 4
         nextreg 0x54,HPG
         ld (V_SP),sp
         ld sp,HSTK
@@ -119,7 +119,6 @@ GTAB    EQU 0xC544              ; graphic table: graphics, mask
         pop af
         ld sp,(V_SP)
         nextreg 0x54,GP4
-        ei
         ENDM
 
 ; ---- alt ROM stubs ----
@@ -870,6 +869,10 @@ colents:
         rrca
         and 0x3F
         add a,STORE
+        ld c,a
+        HLIB_IFF_DI                     ; slot 5 holds the game's interrupt handler: interrupts off while it is
+        push af                         ; remapped, and only then (P/V = the caller's IFF)
+        ld a,c
         nextreg 0x55,a
         ld a,b
         and 3
@@ -900,6 +903,8 @@ colents:
         ld a,(hl)
         ld (V_CL),a
 .out:   nextreg 0x55,GP5
+        pop af
+        HLIB_IFF_EI
         ret
 
 ; pack: canvas tile (D = column, E = row) -> TILEB, NZ if any pixel
