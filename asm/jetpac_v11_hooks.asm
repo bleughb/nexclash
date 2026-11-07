@@ -42,9 +42,17 @@ e_nw:   push af
         push bc
         push de
         push hl
+        ld bc,0x243B            ; the caller's CPU speed (NR 7 bits 1:0, card patch.restore-speed), kept on the
+        ld a,7                  ; stack: these hooks have no RAM. A and B are set again after the hook
+        out (c),a
+        inc b
+        in a,(c)
+        and 3
+        push af
         nextreg 0x07,3          ; the hook at 28 MHz (~4K T per draw: table search + 6 sprites)
         call draw
-        nextreg 0x07,0          ; the game runs at 3.5 MHz (stub: NEXTREG $07,0)
+        pop af
+        nextreg 0x07,a          ; the caller's speed back (never a fixed 3.5 MHz)
         pop hl
         pop de
         pop bc

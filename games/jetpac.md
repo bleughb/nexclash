@@ -204,7 +204,19 @@ Ported from Jon Attree's .nxc work, 2026-11-04 (pilot runs/jetpac/nexclash, a327
   the bytes it may change. No RZX exists (as Dean's); emulator and owner checks are the .nxc's (JNext, 2026-11-04).
 - Hardware: none. Checklist: Dean's round-2 list above, plus the loading screen (a key or 5 s) and Enhanced colours.
 
+## Speed restored in rework v1.1 (2026-11-07, shared engine refactor, goal 2)
+- jetpac_v11 e_nw reads NR 7 (bits 1:0) before switching to 28 MHz and keeps it on the stack: these hooks live in the
+  alt ROM and have no RAM for HLIB_SPEED_IN's latch. The exit writes it back instead of a fixed NEXTREG 7,0. The
+  verifier answers IN (0x253B) from its NextREG model.
+- Sprites bd4a51d1 -> 52bd7310, Enhanced 00cce39c -> e59a4b25; plain unchanged. Free run 6,000 frames IDENTICAL (IM 1
+  handler compared at 5,149 interrupts), unit PASS, negatives 40/40. JNext pace (keyed to 0x73D3, seed 1; the run
+  reaches 160 updates): +0.30% before, +0.63% after; interrupts 0.95 / 0.96 a frame (original 0.95).
+- The base engine `jetpac` keeps NEXTREG 7,0: its alt ROM block is full (the 13 bytes would end 12 bytes into the ROM
+  font at 0x3D00). Not behind a published patch.
+
 ## Lessons
+- [card patch.restore-speed §Use / do not use] A stateless alt-ROM hook keeps the caller's speed on the stack
+  (read NR 7, AND 3, PUSH AF ... POP AF, NEXTREG 7,A): 13 bytes more than a fixed exit.
 - [card patch.whole-altrom-image §Use / do not use] opt-in rework available: whole alt ROM image (see card patch.whole-altrom-image). IM 1 in play reaches hook code at 0x386E once DivMMC no longer traps 0x0038 (runs/altrom_audit, JNext; masked under NextZXOS). Output pinned.
 - [card detect.tracked-unit §Recognise] One object drew 4 figures a frame (the rocket: 3 sections in a loop + flames, same IX); a sprite set per object showed only the last, and the per-draw check passed because it compares each draw alone. Observed on hardware (user), demonstrated by the neg_rk build failing 36/37 whole-routine cases. Card: Recognise bullet + failure row.
 - [doc docs/PLAYBOOK.md §6. Verify (differential test)] No RZX and a free run that never builds the rocket: the unit tests now run the game's own routines (26217 flames, 26419 sections) from a captured state with the rocket's fields poked. The lookup guard `part < 3` came from the name ("3 parts"); the game writes 3 = fuel (24858, 26041). PLAYBOOK 6 line added.

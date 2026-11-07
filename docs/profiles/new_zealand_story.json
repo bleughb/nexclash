@@ -1,0 +1,28 @@
+{
+ "game": "The New Zealand Story (Ocean, 1989, 128K)",
+ "engine": "new_zealand_story",
+ "signature": [
+  {"addr": 41879, "bytes": "cd2ec2", "what": "0xA397 CALL $C22E (player update)"},
+  {"addr": 41864, "bytes": "cd14d8", "what": "0xA388 CALL $D814 (scroll)"},
+  {"addr": 42081, "bytes": "fbed4d", "what": "0xA461 EI / RETI (interrupt return)"},
+  {"addr": 41697, "bytes": "21b5d1", "what": "0xA2E1 LD HL,$D1B5 (READY)"}
+ ],
+ "start": {
+  "md5": "737d576c8cd067fbeded45de1dbc208f",
+  "what": "the emulator start state: the 128K game loaded from Side A, world 1 in memory, 500 frames into the title (port 7FFD bank 0, SP 0xFFFC)"
+ },
+ "tape_sets": [
+  {"set": "tap", "md5": ["d5f47d90cbfbed45a4da7bf86637dfd3", "f1c1ee16beacf5c9b4ef19c5b539765e"],
+   "files": ["New Zealand Story, The (1989)(Ocean)(48K-128K).tap", "New Zealand Story, The (1989)(Ocean)(48K-128K)(Side B).tzx"]},
+  {"set": "tzx", "md5": ["b0711e0daa7e1906e641ecfe513a0c7e", "f1c1ee16beacf5c9b4ef19c5b539765e"],
+   "files": ["New Zealand Story, The (1989)(Ocean)(48K-128K).tzx", "New Zealand Story, The (1989)(Ocean)(48K-128K)(Side B).tzx"]}
+ ],
+ "published": {
+  "nxc": "github.com/jattree/nxc 11f90ba, patches/New Zealand Story, The (1989)(Ocean)(48K-128K), version 1.2",
+  "sprites": "70174ecba93626def54d6776c1ff4b32",
+  "smooth": "7d9898e87499c310700fd71bdd6d2469",
+  "backdrops": "d6ccac8fa3a3cd4508463b3bbd98b32d",
+  "smooth_backdrops": "891397ef8c8c9846eba7d8e972867746",
+  "menu_backdrops": "805e17c8716897796dec0988c47f8f4e"
+ }
+}

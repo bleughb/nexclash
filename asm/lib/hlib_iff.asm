@@ -10,10 +10,11 @@
 ; be hit the same way: the handler has already run, and an interrupt line still held after its EI / RET
 ; is taken at the end of that RET, before the second read. So: read once; on PO read again; then DI.
 ;
-; Long DI windows lose interrupts too: the Next's /INT lasts about 32 T at 3.5 MHz (9 us); interrupts
-; off across that moment lose the frame's interrupt. Keep every DI window short (a line read, an MMU
-; switch: well under 9 us at 28 MHz) and open interrupts between polls (hlib_pace.asm hlib_line_di); a hook that must
-; hold them off for longer defers the handler instead (card patch.isr-deferral).
+; Long DI windows lose interrupts too: /INT is short (32 T at 3.5 MHz on a Spectrum; at 28 MHz JNext
+; loses interrupts in DI windows of a few hundred T - Quazatron 2026-11-07 - so do not count on 9 us).
+; Keep every DI window as short as the work allows (a line read, an MMU switch) and open interrupts
+; between polls (hlib_pace.asm hlib_line_di); a hook that must hold them off for longer defers the
+; handler instead (card patch.isr-deferral).
 ; Macros only (no code): INCLUDE it before hlib_pace.asm. No IX / IY / alternate registers. Any speed.
 
 ; HLIB_IFF_DI: P/V = the caller's IFF (PE = on), then DI. A = I; the other flags lost; nothing else changed.

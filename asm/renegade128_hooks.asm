@@ -10,6 +10,7 @@
 ; Hooks: alt ROM images 0 and 1 at 0x386E. Hooks keep IX, IY, alternates; state page at slot 2, pattern pages at slot 6 only while uploading.
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_speed.asm"    ; macros only: HLIB_SPEED_IN
 
 STATE   EQU 22                  ; bank 11, first 8K
 SLOT2   EQU 10                  ; the page that belongs at slot 2
@@ -40,6 +41,7 @@ V_DROP  EQU 0x4D18              ; parts that could not be shown (2 bytes): verif
 V_LV    EQU 0x4D1C
 V_IE    EQU 0x4D1D
 V_FB    EQU 0x4D1A              ; graphics found by address alone (2 bytes)
+V_SPD   EQU 0x4D1E              ; the caller's CPU speed (lib/hlib_speed.asm latch)
 MAXSPR  EQU 124
 
         ORG 0x386E
@@ -138,8 +140,8 @@ e_front:
         jp 31814
 
 hideall:
-        nextreg 0x07,3
         nextreg 0x52,STATE
+        HLIB_SPEED_IN V_SPD     ; the caller's speed latched (game stack, 4 bytes), then 28 MHz
         xor a
         ld (V_N),a
         call hide
@@ -151,8 +153,8 @@ commit: ld a,(28840)
         and 3
         ld c,a                  ; level
         ld b,a
-        nextreg 0x07,3
         nextreg 0x52,STATE
+        HLIB_SPEED_IN V_SPD     ; the caller's speed latched (game stack, 4 bytes), then 28 MHz
         ld (V_LV),a
         ld a,e
         add a,a
@@ -184,8 +186,9 @@ commit: ld a,(28840)
         pop bc
         djnz .loop
 .done:  call hide
-leave:  nextreg 0x52,SLOT2
-        nextreg 0x07,0
+leave:  ld a,(V_SPD)             ; the caller's speed back (never a fixed 3.5 MHz); A is free (the stubs keep AF)
+        nextreg 0x07,a
+        nextreg 0x52,SLOT2
         ret
 
 ; hide sprites V_N .. V_LAST-1, V_LAST = V_N

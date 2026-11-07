@@ -800,6 +800,7 @@ em_p:   push hl                 ; as em, then the plane at vpl: AND mask, keep, 
         pop hl
         ret
 ; ---- the pace limiter (asm/lib/hlib_pace.asm) and the prepared-pattern store, run with the page mapped ----
+        DEFINE HLIB_PACE_V1                ; the first pace library, as this engine was verified with
         INCLUDE "lib/hlib_pace.asm"
 
 ; pace_plot: the original loop's time for vrows row pairs from screen row vscr: 252 T a pair (18 sixteenths) less 5,

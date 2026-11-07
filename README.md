@@ -13,8 +13,8 @@ Add GAME NAME to nexclash. Snapshot and my RZX are attached.
 Clone bleughb/nexclash and bleughb/specnext side by side and follow nexclash/CLAUDE.md
 ```
 
-### Continue a game (a NEW chat for each stage - much cheaper than one long chat)
-Each stage ends by telling you to start a new chat with:
+### Continue a game (handoff at meaningful boundaries)
+Preserve a handoff at each stage. When context is large or the environment changes, start a new chat with:
 ```
 Continue GAME NAME in nexclash. Clone bleughb/nexclash and bleughb/specnext side by side,
 check out the working branch and commit from the previous handoff, then follow nexclash/CLAUDE.md

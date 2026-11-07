@@ -112,11 +112,11 @@
     },
     "sprites": {
      "file": "jetpac_sprites.nex",
-     "md5": "bd4a51d1f85db0bf890413ce7c487f5b"
+     "md5": "52bd7310b8a19797803a5b86a59b3565"
     },
     "enhanced": {
      "file": "jetpac_enhanced.nex",
-     "md5": "00cce39c4321ab787fbf8c838e546ab0"
+     "md5": "e59a4b255b3bf95c5f8ea9b9fa814bd1"
     }
    },
    "proof": "free run 6000 frames IDENTICAL, the IM 1 handler compared at every 0x0038 against NextZXOS's ROM3, unit tests + pattern negative, rom3_left negative",
@@ -139,58 +139,58 @@
   "deps": {
    "asm/jetpac_hooks.asm": "c921a922c1a204dd",
    "asm/jetpac_tables.asm": "984f098f1493af23",
-   "asm/jetpac_v11_hooks.asm": "dd43faef5c3260cf",
+   "asm/jetpac_v11_hooks.asm": "4a49d8ab6a066c64",
    "asm/jetpac_v11_tables.asm": "c5f7194c16f40145",
    "docs/profiles/jetpac.json": "db55f7d408d51cdd",
-   "docs/profiles/jetpac_v11.json": "fe0f00c7f169e4d7",
-   "nexclash.py": "b7f49876a97b1f48",
+   "docs/profiles/jetpac_v11.json": "f76b8a5683d7ed34",
+   "nexclash.py": "8eb7d621324c5aa6",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
+   "nexclash/engines.py": "e5e8ff401baf2257",
    "nexclash/jetpac.py": "84ceef2f70f3ed11",
-   "nexclash/jetpac_v11.py": "7c5132d9a9fd72d3",
-   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/jetpac_v11.py": "ad942e785afdcc3e",
+   "nexclash/nextboot.py": "e6624bfe14a62e21",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "273dab19dfcd9e27",
-   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "eae62c6c941e82b0",
+   "recipe": "b7827bdda6ca3d82",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-06"
  },
  "verified": {
   "deps": {
    "asm/jetpac_hooks.asm": "c921a922c1a204dd",
    "asm/jetpac_tables.asm": "984f098f1493af23",
-   "asm/jetpac_v11_hooks.asm": "dd43faef5c3260cf",
+   "asm/jetpac_v11_hooks.asm": "4a49d8ab6a066c64",
    "asm/jetpac_v11_tables.asm": "c5f7194c16f40145",
    "docs/profiles/jetpac.json": "db55f7d408d51cdd",
-   "docs/profiles/jetpac_v11.json": "fe0f00c7f169e4d7",
-   "nexclash.py": "b7f49876a97b1f48",
+   "docs/profiles/jetpac_v11.json": "f76b8a5683d7ed34",
+   "nexclash.py": "8eb7d621324c5aa6",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
+   "nexclash/engines.py": "e5e8ff401baf2257",
    "nexclash/jetpac.py": "84ceef2f70f3ed11",
-   "nexclash/jetpac_v11.py": "7c5132d9a9fd72d3",
-   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/jetpac_v11.py": "ad942e785afdcc3e",
+   "nexclash/nextboot.py": "e6624bfe14a62e21",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "273dab19dfcd9e27",
-   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "eae62c6c941e82b0",
+   "recipe": "b7827bdda6ca3d82",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-06"
  }
 }

@@ -276,6 +276,9 @@ NEGATIVES = {           # control -> (defines, (label, byte offset, new bytes)..
     'one pattern buffer': ((), (('hlib_commit.flip', 1, b'\x00'),)),
     'attributes split by uploads': (('NEG_SPLIT',), ()),
     'IFF read once': (('NEG_IFF1',), ()),
+    'interrupt time counted': ((), (('hlib_pace_resume', 0, b'\xC9'),)),
+    'K window never waits': ((), (('hlib_pace_waitk', 0, b'\xC9'),)),
+    'debt never repaid': ((), (('hlib_debt_repay', 0, b'\x21\x00\x00\xC9'),)),
 }
 SYM = re.compile(r'^([A-Za-z_][\w.]*):\s+EQU\s+0x([0-9A-Fa-f]+)')
 
@@ -416,8 +419,8 @@ def _t_wrap(code, syms, target=700):
     """A wait of `target` lines across two frame wraps from every start phase (16 per line), at all four clocks, in
     48K / 128K / 60 Hz timing (the frame length the engine stores at +6, 0 = HLIB_PACE_NL), plain and with an
     interrupt taking 30 lines every 40 polls: the wait is short by less than 2 lines (whole lines are counted from a
-    start inside one, the target is floored to lines), long by at most 3 (a 3.5 MHz poll gap; + an interrupt's 30
-    lines when interrupted), and the frame length is never learned from a poll (3.5 MHz polls can miss a frame's last
+    start inside one, the target is floored to lines), long by at most 5 at 3.5 MHz (a poll, about 650 T: a consistent
+    line / held reading), 3 above it (+ an interrupt's 30 lines when interrupted), and the frame length is never learned from a poll (3.5 MHz polls can miss a frame's last
     line: the old rule learned 310 / 311 of 312 and waited up to 705.4 lines for 700)."""
     c = collections.Counter()
     p6 = syms['HLIB_V_PACE'] + 6
@@ -451,9 +454,11 @@ def _t_wrap(code, syms, target=700):
                         c['frame length changed by a poll (%s)!' % mode] += 1
                     if got < want - 2:
                         c['wait short (%s, %d MHz)!' % (mode, 3.5 * (1 << speed))] += 1
-                    if got > want + 3 + isr:
+                    if got > want + (5 if speed == 0 else 3) + isr:
                         c['wait long (%s, %d MHz)!' % (mode, 3.5 * (1 << speed))] += 1
                     c['worst, lines x100'] = max(c['worst, lines x100'], int(100 * abs(got - want - (isr / 2))))
+                    c['worst over at %d, lines x100' % speed] = max(c['worst over at %d, lines x100' % speed],
+                                                                  int(100 * (got - want - isr)))
     return c
 
 
@@ -680,6 +685,117 @@ def iff_audit(root=ROOT):
     return out
 
 
+def _pv(sim, syms, off):
+    a = syms['HLIB_V_PACE'] + off
+    return sim.memory[a] | sim.memory[a + 1] << 8
+
+
+def _t_k(code, syms):
+    """Game-routine windows: o_blit run by h_kblit at 28 MHz, K = 16 x the 28 MHz factor, at each clock and 16
+    start phases of the first line: each window within K / 16 + 2 lines of the original (whole lines are counted,
+    then scaled), the mean of the 16 within 2 % - the pace target - or 3 lines for a short window (the hook's own
+    entry and exit). The window's own readings are scaled too (+1.9 % at K = 128 here): an engine measures K in
+    JNext on the built hook, which takes them in."""
+    c = collections.Counter()
+    for fast in (8.0, 6.4):
+        k16 = int(round(16 * fast))
+        for clk in CLOCKS:
+            to, _ = _timed(code, syms, 'o_blit', clk, fast)
+            got = []
+            for ph in range(16):
+                sim, nm = _machine(code, clk, fast)
+                sim.memory[syms['V_K']] = k16
+                nm.real = 300 * 224 + ph * 14
+                t0 = nm.now()
+                call(sim, syms['h_kblit'], {})
+                got.append(nm.now() - t0)
+                c['windows'] += 1
+                if abs(got[-1] - to) > (k16 / 16.0 + 2) * 224:
+                    c['K window off by more than K / 16 + 2 lines!'] += 1
+            mean = sum(got) / len(got)
+            c['worst mean, % x100'] = max(c['worst mean, % x100'], int(abs(mean - to) * 10000 / to))
+            if abs(mean - to) > max(0.02 * to, 3 * 224):
+                c['K window mean off by more than 2%!'] += 1
+    return c
+
+
+def _t_hold(code, syms):
+    """Interrupt time left out: a window and a debt window with a 30-line handler between hlib_pace_hold and
+    hlib_pace_resume, also one landing between a reading's line and its held total (the reading starts again)."""
+    c = collections.Counter()
+    for speed in (2, 3):                                # the wrappers' own calls at 3.5 MHz are a line each
+        for mid in (False, True):
+            sim, nm = _machine(code, speed)
+            nm.real = 100 * 224
+            t0 = nm.now()
+            call(sim, syms['hlib_pace_open'])
+            if mid:                                     # the handler lands inside a poll of the wait
+                line, n = nm.line, [0]
+                held = syms['HLIB_V_PACE'] + 14
+
+                def isr(line=line, n=n):
+                    n[0] += 1
+                    if n[0] == 5:
+                        h0 = nm.line()
+                        nm.real += 30 * 224
+                        h = (sim.memory[held] | sim.memory[held + 1] << 8) + (nm.line() - h0) % 312
+                        sim.memory[held], sim.memory[held + 1] = h & 255, h >> 8 & 255
+                    return line()
+                nm.line = isr
+            else:
+                call(sim, syms['hlib_pace_hold'])
+                nm.real += 30 * 224
+                call(sim, syms['hlib_pace_resume'])
+            call(sim, syms['hlib_pace_wait'], {H: (100 * 16) >> 8, L: (100 * 16) & 255, A: 0})
+            got = (nm.now() - t0) / 224
+            c['cases'] += 1
+            if got < 130 - 2:
+                c['interrupt time counted in the window!'] += 1
+            if got > 130 + 3:
+                c['window too long!'] += 1
+        sim, nm = _machine(code, speed)
+        nm.real = 50 * 224
+        call(sim, syms['hlib_debt_open'])
+        nm.real += 10 * 224
+        call(sim, syms['hlib_pace_hold'])
+        nm.real += 30 * 224
+        call(sim, syms['hlib_pace_resume'])
+        nm.real += 10 * 224
+        call(sim, syms['hlib_debt_close'], {A: 0})
+        d = _pv(sim, syms, 4)
+        c['cases'] += 1
+        if d > 21 * 16:
+            c['interrupt time counted in the debt!'] += 1
+        if d < 19 * 16:
+            c['debt short!'] += 1
+    return c
+
+
+def _t_repay(code, syms, cap=0xBFFF):
+    """hlib_debt_repay: the part of the game's delay to skip = min(debt, delay), the debt less it; hlib_debt_add
+    capped at HLIB_PACE_CAP."""
+    c, rnd = collections.Counter(), random.Random(3)
+    for _ in range(200):
+        d, ln = rnd.randrange(0, 0x3000), rnd.randrange(0, 0x3000)
+        sim, nm = _machine(code, 3)
+        a = syms['HLIB_V_PACE'] + 4
+        sim.memory[a], sim.memory[a + 1] = d & 255, d >> 8
+        call(sim, syms['hlib_debt_repay'], {H: ln >> 8, L: ln & 255})
+        skip = sim.registers[H] << 8 | sim.registers[L]
+        c['cases'] += 1
+        if skip != min(d, ln) or _pv(sim, syms, 4) != d - min(d, ln):
+            c['debt not repaid from the delay!'] += 1
+    for add in (0x100, 0x8000, 0xF000):
+        sim, nm = _machine(code, 3)
+        a = syms['HLIB_V_PACE'] + 4
+        sim.memory[a], sim.memory[a + 1] = 0x10, 0x40
+        call(sim, syms['hlib_debt_add'], {H: add >> 8, L: add & 255})
+        c['cases'] += 1
+        if _pv(sim, syms, 4) != min(0x4010 + add, cap):
+            c['debt cap not kept!'] += 1
+    return c
+
+
 def selfcheck():
     """-> [(name, failures)]: the unit tests, then each negative control must be caught."""
     out = []
@@ -698,6 +814,17 @@ def selfcheck():
                         name, pc['windows'], pc['worst window, lines x100'] / 100.0, pc['debt runs'],
                         pc['worst debt run, % x100'] / 100.0),
                     [k for k in pc if k.endswith('!')]))
+    kc = _t_k(code, syms)
+    out.append(('hooklib pace limiter, game-routine windows (x K): %d windows (2 factors, 4 clocks, 16 phases) '
+                'within K / 16 + 2 lines, means within 2%% (worst %.2f%%)' % (kc['windows'], kc['worst mean, % x100'] / 100.0),
+                [k for k in kc if k.endswith('!')]))
+    hc = _t_hold(code, syms)
+    out.append(('hooklib pace limiter, interrupt time left out: %d windows / debt windows with a 30-line handler, '
+                'also inside a reading' % hc['cases'], [k for k in hc if k.endswith('!')]))
+    for cap, (cd, sy) in ((0xBFFF, (code, syms)), (0x1000, assemble(HARNESS, ('HLIB_PACE_CAP=0x1000',)))):
+        rp = _t_repay(cd, sy, cap)
+        out.append(('hooklib pace limiter, debt repaid from the game\'s delay + cap 0x%04X: %d cases' % (cap, rp['cases']),
+                    [k for k in rp if k.endswith('!')]))
     nc = _t_nolines(code, syms)
     out.append(('hooklib pace limiter: no line counter -> gives up, no hang', [k for k in nc if k.endswith('!')]))
     wc = _t_wrap(code, syms)
@@ -727,7 +854,10 @@ def selfcheck():
             'missing cache invalidation': (_t_cache, 'stale pattern!'),
             'one pattern buffer': (_t_commit, 'upload into a shown pattern!'),
             'attributes split by uploads': (_t_commit, 'attribute writes split by uploads!'),
-            'IFF read once': (_t_iff, 'interrupts left off!')}
+            'IFF read once': (_t_iff, 'interrupts left off!'),
+            'interrupt time counted': (_t_hold, 'interrupt time counted in the window!'),
+            'K window never waits': (_t_k, 'K window mean off by more than 2%!'),
+            'debt never repaid': (_t_repay, 'debt not repaid from the delay!')}
     for neg, (test, key) in want.items():
         cd, sy = _build(neg)
         got = test(cd, sy)

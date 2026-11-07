@@ -487,6 +487,7 @@ class NextState:
         self.cache = {}
         self.ports = 0
         self.floor = None
+        self.sel = None                     # NextREG selected at 0x243B (the speed latch reads NR 7)
 
     def copy(self):
         q = NextState.__new__(NextState)
@@ -507,6 +508,9 @@ class NextState:
 
     def out(self, port, val):
         p = port & 0xFF
+        if port == 0x243B:                  # NextREG select (the speed latch reads NR 7)
+            self.sel = val
+            return
         if port == 0x303B:
             self.patptr = (val & 0x3F) * 256 + (128 if val & 0x80 else 0)
         elif p == 0x5B:
@@ -697,6 +701,11 @@ def _machine(Sim, mem, regs, ns, slot):
 
     class Tr:
         def read_port(self, regs_, port):
+            if port == 0x253B and getattr(ns, 'sel', None) is not None:   # a NextREG read: NR 7 as the core
+                if ns.sel == 0x07:                                      # composes it (actual << 4 | programmed)
+                    sp = ns.nr.get(0x07, 0) & 3
+                    return sp << 4 | sp
+                return ns.nr.get(ns.sel, 0)
             return 0xFF
 
         def write_port(self, regs_, port, value, *x):
@@ -1294,8 +1303,8 @@ def negative_patches(patch):
     k = code.index(bytes([0xED, 0x91, 0x52, SLOT2_PAGE]))
     out.append(('slot 2 not restored', _rom_patch(patch, k, bytes(4))))
     # 11 28 MHz left on
-    k = code.index(bytes([0xED, 0x91, 0x07, 0x00]))
-    out.append(('speed not restored', _rom_patch(patch, k, bytes(4))))
+    k = code.index(bytes([0xED, 0x92, 0x07]))         # leave's NEXTREG 7,A (the latched speed) gone: 28 MHz stays
+    out.append(('speed not restored', _rom_patch(patch, k, bytes(3))))
     # 12 body and ink swapped in the patterns
     q = copy.copy(patch)
     q.pages = {}

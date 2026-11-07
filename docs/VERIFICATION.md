@@ -52,25 +52,25 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Midnight Resistance (128K) (midnight_resistance): `midnight_resistance.nex` 17239acaaf67b0f8011478053e17829d, `midnight_resistance_sprites.nex` 2aacd11c2872b4df1dce1ca7ceb80bfd; verified 2026-11-05
 - Smash TV (smash_tv): `smash_tv.nex` c72ea298486b14036ac1a87ac89c3f0e, `smash_tv_sprites.nex` af0298e2cad56d8fb992caaba77a6549; verified 2026-11-05
 - Target Renegade (128K) (target_renegade): `target_renegade.nex` a0be8dc03a1be8c6d67dc3e0229abc35, `target_renegade_sprites.nex` 8e5f8f0be205aade316106a6db7d4aac; verified 2026-11-06
-- Jetpac (jetpac): `jetpac.nex` feff51b7038606d21c03c260055481e4, `jetpac_sprites.nex` 72e3cc193325cc8166f8e7d7b6481327; verified 2026-11-05
+- Jetpac (jetpac): `jetpac.nex` feff51b7038606d21c03c260055481e4, `jetpac_sprites.nex` 72e3cc193325cc8166f8e7d7b6481327; verified 2026-11-06
 - Lode Runner (lode_runner): `lode_runner.nex` cd0c1659c8569b2fa80da74962af90d2, `lode_runner_sprites.nex` 85fe6afd593679bf59c787230ba0eaca; verified 2026-11-05
 - Match Day (match_day): `match_day.nex` 612761ec2772c5a7dcd27f939588d227, `match_day_sprites.nex` 0ec500534baae17cd5ce91eae3c13a7d; verified 2026-11-05
-- Cyclone (cyclone): `cyclone.nex` 390516396ca4d385c94b7f7bd2315d31, `cyclone_sprites.nex` 7db0bdd53e509b91f1ddda60a607aaf8; verified 2026-11-05
+- Cyclone (cyclone): `cyclone.nex` 390516396ca4d385c94b7f7bd2315d31, `cyclone_sprites.nex` 49fb6d39732f4e77c69e5dabfe88ad58; verified 2026-11-06
 - The Incredible Shrinking Fireman (incredible_shrinking_fireman-add-OPUS): `incredible_shrinking_fireman-add-OPUS.nex` feb706fcdaa29f13844a7b4982dc21fa, `incredible_shrinking_fireman-add-OPUS_sprites.nex` 283d6a59a92940a31c9cfe21159fabb7; verified 2026-11-05
 - Atic Atac (atic_atac): `Atic_Atac_1983_Ultimate_Play_The_Game_a.nex` e710fa8785802f1aa51f214d95c82343, `Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites.nex` 6aa7e780f4ec7892d862c675e61b7fba; verified never
 - The Incredible Shrinking Fireman (GPT6_ASTRA) (incredible_shrinking_fireman-add-GPT6_ASTRA): `incredible_shrinking_fireman_plain-add-GPT6_ASTRA.nex` f8f213e55e3da01349827f8ae7d93bee, `incredible_shrinking_fireman_sprites-add-GPT6_ASTRA.nex` 437680af4aa9722e7058b2df6baf0cdb; verified 2026-11-06
 - Cauldron (cauldron): `Cauldron_1985_Palace_Software_a.nex` b5b211f1fc6103ec0d42711dcc29cd0d, `Cauldron_1985_Palace_Software_a_sprites.nex` 43c1ca492d7c1cc68541f02aaed9cb4c; verified 2026-11-05
 - Nemesis the Warlock (nemesis_the_warlock): `nemesis_the_warlock.nex` f1497589ddf479e34d42f6ab0618954d, `nemesis_the_warlock_sprites.nex` 31ad4ab5b7507b6289ffe30f82c7d6bb; verified 2026-11-05
 - Inferno (inferno): `inferno.nex` 0a3bde4734c5b3f15ad0f2a55cc81e19; verified never
-- Ghosts 'n Goblins (ghosts_n_goblins): `ghosts_n_goblins.nex` 3d71dd0e63371c4cf06f919d46bc2315, `ghosts_n_goblins_sprites.nex` 34c142677dbfebad66eb3585e158537c, `ghosts_n_goblins_enhanced.nex` 4a76d9bfe562d46ba88808f0e76c9540; verified never
+- Ghosts 'n Goblins (ghosts_n_goblins): `ghosts_n_goblins.nex` 3d71dd0e63371c4cf06f919d46bc2315, `ghosts_n_goblins_sprites.nex` cf933c183149dab497e6d737b46ab601, `ghosts_n_goblins_enhanced.nex` 34e5d0588cd2705958ac1961f1f59f66; verified 2026-11-06
 - Green Beret (green_beret): `green_beret.nex` f4d4e3d43e47102af66fb3a7e6e022ab, `green_beret_sprites.nex` d982d5ae83e2d54e3fc750006322c25e; verified 2026-11-03
 - Nightshade (nightshade): `nightshade.nex` e4d954de899563af241cb8db84114654, `nightshade_sprites.nex` 697ee0152f6a2f5d92cdc17bc51c674d, `nightshade_enhanced.nex` ebe5cc7225b41c3d04f073947f7b6a98; verified 2026-11-05
 - Knight Tyme (128K) (knight_tyme): `knight_tyme.nex` 0f91cab91a9261bb8645a0ec9cc871f2, `knight_tyme_sprites.nex` 6222fc964abca3ccaca3871d4f843396; verified 2026-11-04
 - Spellbound (128K, Magic Knight 2) (spellbound_magic_knight): `spellbound_magic_knight.nex` 656c71c4b2ebb8318f3ad442d70b0ab9, `spellbound_magic_knight_sprites.nex` ce8e1c6fb0dad558928880a8bf01e13d, `spellbound_magic_knight_enhanced.nex` 06fe3d18161f3f130372c8003def03da; verified 2026-11-06
 - Rambo (rambo): `rambo.nex` 434a84778881e230d0c930677abad0b4, `rambo_sprites.nex` 9ebfe9c8a88d3b2ca1fa9067e3abf2d5, `rambo_enhanced.nex` c2395f02f504d4f38ccc2e0d12973b44; verified 2026-11-05
 - Ikari Warriors (48K form) (ikari_warriors): `ikari_warriors.nex` 2d56c304bcb21619d8402d64804fef75, `ikari_warriors_sprites.nex` c90fab6ffc1698d98d21ca8bfffd311e, `ikari_warriors_enhanced.nex` 118a55f6a81bb022fad627426b225221; verified 2026-11-05
-- Renegade (128K) (renegade): `renegade.nex` 62a06036dec229a7d19821df2cca6a04, `renegade_sprites.nex` 93cb8bc9616dd41bfdc2f906d513cf35, `renegade_enhanced.nex` 3a9ceaf98b376bda76936fbd2e524eb4; verified 2026-11-05
-- Three Weeks in Paradise (128K) (three_weeks): `three_weeks_128.nex` 1a6f1bbe0abfbcfbb5712ad4f4700e95, `three_weeks_128_sprites.nex` 74af7179b23098c66b0f8e2b5e3a0bf2, `three_weeks_128_enhanced.nex` c139f040ee2ea5e2c22c1c66799e6e49; verified 2026-11-05
+- Renegade (128K) (renegade): `renegade.nex` 62a06036dec229a7d19821df2cca6a04, `renegade_sprites.nex` 510cdd297b85a68b46bbc045a2ceb767, `renegade_enhanced.nex` 001b8f0cfc8fc1b709419cf5fba47c54; verified 2026-11-06
+- Three Weeks in Paradise (128K) (three_weeks): `three_weeks_128.nex` 1a6f1bbe0abfbcfbb5712ad4f4700e95, `three_weeks_128_sprites.nex` 468b17528c4c1659a2087bbe2d8cc8d1, `three_weeks_128_enhanced.nex` b38d048f254302fe942eb2ac58bbf463; verified 2026-11-06
 - Starquake (starquake): `starquake.nex` f447d9b3d937837d2427e021002a9648, `starquake_sprites.nex` 4efee1728e8092cdfd9f0e4ad859cf52, `starquake_sprites_loading.nex` 2e2f107e95cf80ea9412ba7023e819ee; verified 2026-11-05
 - Lunar Jetman (lunar_jetman): `lunar_jetman.nex` 3e5ca3908616f76a33f864be57baef95, `lunar_jetman_sprites.nex` e33f68c4fc0dca007daf14e99188ecfd, `lunar_jetman_sprites_loading.nex` 4634886880940d0db5e4cee9c1113819, `lunar_jetman_enhanced.nex` dfeb2cf9d184d6672f2c1448c0d9b805, `lunar_jetman_enhanced_loading.nex` 62f7e914c390fcce7477d5efd2423cad; verified 2026-11-05
 - Robin of the Wood (128K) (robin_of_the_wood): `robin_of_the_wood.nex` d6e8b01ea8b94970ef102afca79e611b, `robin_of_the_wood_sprites_raw.nex` 27f9ce7f210c00dae3a01b532a6a5669, `robin_of_the_wood_sprites.nex` fcd321af900797294353a155bfaebfe0, `robin_of_the_wood_enhanced_raw.nex` 0d0d7ee180ae921023738cae8e5967be, `robin_of_the_wood_enhanced.nex` d2d4d23b5aded923839ce281bd2271f1; verified 2026-11-05
@@ -81,6 +81,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Dynamite Dan (dynamite_dan): `dynamite_dan.nex` 3ad20495c5183b20030190d6abdd479f, `dynamite_dan_sprites.nex` 1ab3348d3a2619f534d8907a1d89e09e; verified 2026-11-05
 - Pyjamarama (pyjamarama): `pyjamarama.nex` 19c7f0ac1c7178839a01b0fc42e47732, `pyjamarama_sprites.nex` fad103126004e18132c9877d7a7606e6, `pyjamarama_enhanced.nex` 3ca79dd93d0fdc46968a22382deac6fe; verified never
 - Nodes of Yesod (nodes_of_yesod): `nodes_of_yesod.nex` b578764fc922295ec75a6358d762b397, `nodes_of_yesod_sprites.nex` 81db9019df732c102e0f98aa8eb84227, `nodes_of_yesod_enhanced.nex` 698e791437ff07dc6c9b8a59d6f44bd6, `nodes_of_yesod_backdrops.nex` 138662b51b2b78cb73393e27ff81654f, `nodes_of_yesod_enhanced_backdrops.nex` 1a1987d524fd539bf02a16d6b0bbf3aa; verified never
+- The New Zealand Story (new_zealand_story): `new_zealand_story_sprites.nex` 70174ecba93626def54d6776c1ff4b32, `new_zealand_story_smooth.nex` 7d9898e87499c310700fd71bdd6d2469, `new_zealand_story_backdrops.nex` d6ccac8fa3a3cd4508463b3bbd98b32d, `new_zealand_story_smooth_backdrops.nex` 891397ef8c8c9846eba7d8e972867746; verified never
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

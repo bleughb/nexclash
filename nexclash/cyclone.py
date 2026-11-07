@@ -270,8 +270,10 @@ class CyclonePatch:
         self.tail_addr = TAIL_ADDR
         self.max_tail = 0x5FDC - TAIL_ADDR       # to 0x5FDB: never read or written (RZX scans)
         self.regblock = ROM_ORG + len(self.rom_code)
-        if self.regblock + 20 > 0x3AFF:
-            raise ValueError('ROM hooks too long (the IM 2 vector at 0x3AFF must stay FF FF)')
+        if self.regblock + 20 > 0x3D00:
+            raise ValueError('ROM hooks too long (they end below the ROM font at 0x3D00)')
+        if self.regblock > 0x3AFF and self.rom_code[0x3AFF - ROM_ORG:0x3B01 - ROM_ORG] != b'\xff\xff':
+            raise ValueError('ROM hooks over 0x3AFF / 0x3B00: the IM 2 vector there must stay FF FF')
         self.slot1 = (ALT_PAGE, self.regblock)
         self.altrom = (ROM_ORG, self.regblock + 20)
         from .build import rom48
@@ -444,6 +446,8 @@ class NextState:
         self.pidx = 0
         self.page = bytearray(hook_page)
         self.events = []
+        self.sel = None                     # NextREG selected at 0x243B (the speed latch reads NR 7)
+        self.halts = []                     # IFF1 at each HALT (the render's frame wait): 0 would hang
 
     def nextreg(self, reg, val):
         self.nr[reg] = val
@@ -452,7 +456,9 @@ class NextState:
         self.events.append(('nr', reg, val))
 
     def port(self, port, v):
-        if port == 0x303B:
+        if port == 0x243B:
+            self.sel = v
+        elif port == 0x303B:
             self.pidx = (v & 0x3F) * 256 + (128 if v & 0x80 else 0)
         elif port & 0xFF == 0x5B:
             self.pat[self.pidx & 0x3FFF] = v
@@ -509,8 +515,19 @@ def _machine(Sim, mem, regs, ns, slot='o'):
         R[15] = R2[R[15]]; R[24] = (R[24] + 2) % 65536; R[25] += 8
     ed[0x31], ed[0x30] = add_hl_a, mul_de
 
+    def halt():                             # the render's frame wait: the interrupt arrives, the game's handler
+        ns.halts.append(R[26])              # (not modelled, as everywhere in this verifier) returns after it
+        R[15] = R2[R[15]]; R[24] = (R[24] + 1) % 65536; R[25] += 4
+    sim.opcodes[0x76] = halt
+
     class Tr:
         def read_port(s, regs_, port):
+            if port == 0x253B and ns.sel in (0x1E, 0x1F):   # the video line (pace limiter): from T, 224 T a line
+                v = (regs_[25] // 224) % 312
+                return v >> 8 & 1 if ns.sel == 0x1E else v & 255
+            if port == 0x253B and ns.sel is not None:   # a NextREG read: NR 7 as the core composes it
+                sp = ns.nr.get(ns.sel, 0) & 3 if ns.sel == 0x07 else None
+                return sp << 4 | sp if sp is not None else ns.nr.get(ns.sel, 0)
             ns.events.append(('in', port))
             return 0xFF
 
@@ -643,6 +660,9 @@ def event(patch, kind, site, get, R, ns, model, alt, Sim, keep=None):
         f.append(('NEXTREG other than speed / MMU6 / sprite attributes',))
     if ns.nr.get(0x56) != 0 or ns.nr.get(0x07) != 0:
         f.append(('MMU6 or speed not restored', ns.nr.get(0x56), ns.nr.get(0x07)))
+    if not all(ns.halts):
+        f.append(('HALT with interrupts off (would never end)',))
+    ns.halts = []
     spend = ro[12]
     dead = range(spend - 64, spend)
     keys = set(o.ov) | set(p.ov)

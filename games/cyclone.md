@@ -195,3 +195,68 @@ and shadow at the map edges and with a cell hidden; negative control (ink / mask
   defaults only, sprite palette 1 = black, 2 = white). PLAYBOOK 3b requires recolour: not built yet.
 - Speed: ~10-13 % slower; candidates: zxnDMA fills / copies, fewer swaps, a smaller window.
 - The cyclone itself never appeared in play in the recordings.
+
+## Speed restored (2026-11-07, shared engine refactor, goal 2)
+- Every hook latches the caller's CPU speed after its pushes (spd_in: HLIB_SPEED_IN, lib/hlib_speed.asm, on the hook
+  stack) and gives it back before its pops (spd_out) instead of a fixed 3.5 MHz; V_SPD = 0xD490. The verifier answers
+  the latch's IN (0x253B) from its NextREG model (NextState.sel) instead of logging a port access.
+- Sprites ba42f5ce (was 7db0bdd5); plain unchanged. RZX + 4 bookmarks IDENTICAL (9,851 frames), unit PASS, stamped.
+  JNext pace (600 updates, auto probe 0x5B67): +15.08% before, +15.24% after: the build on main is already far over
+  2% (hook time 22.9 ms an update); interrupts 49.62 -> 49.66 a second (original 49.67). Flicker 1000-1299: 11 out-of-
+  step frames before, 8 after (pre-existing).
+
+## Original pace and no out-of-step frames (2026-11-07, shared engine refactor, goal 1)
+- Measured (JNext, v2.09 card, plain build, frames 1500-1800): the renderer 0x762C takes 37.6 ms at 3.5 MHz (29.0-46.6),
+  0x7E10 51.8 ms, 0x76D2 9.6 ms; an update about 135-190 ms. The hooks before the render cost 18.4 ms at 28 MHz
+  (aircraft + canvas), the sprite upload 5.5 ms. The build on main was +15-21% (seeds 1-3) and showed 11 out-of-step
+  frames: sprites set after a renderer that ran two frames at 3.5 MHz.
+- The renderer now runs at 28 MHz (4.7 ms) as a game-routine window of the shared limiter (lib/hlib_pace.asm, card
+  patch.pace-limiter): target = its 28 MHz lines x K_REND (127 = 37.6 / 4.72 x 16), less the debt of every other hook
+  (debt_open / close in each, ticked under a frame apart in h_r1). The wait runs at the caller's speed, so the game's
+  handler keeps its clock.
+- One frame for the strip and the sprites: patterns are double-buffered (PB: bank 0 / 32), uploaded before the render;
+  the attributes switch to the new bank right after the renderer. Before the renderer, when fewer than L_NEED (100)
+  lines remain to the frame interrupt (line L_INT = 248), the hook waits for it (HALT at the caller's speed, interrupts
+  on only; off: no wait). Measured: renderer + switch at most 85 lines.
+- Room: the limiter (618 bytes with the stubs) fills the alt ROM span below the IM 2 vector; attrs, spd_in / spd_out
+  moved to 0x3B01-0x3BDC (the rest of the 48K ROM's FF block above the vector; 0x3AFF / 0x3B00 stay FF FF:
+  CyclonePatch checks). The hook page had 3 bytes left.
+- Verifier: the video line from T (224 T a line) for the limiter's reads; HALT steps on (the handler is not modelled,
+  as elsewhere) and is a failure with IFF1 = 0.
+- Sprites 49fb6d39 (was ba42f5ce); plain unchanged. RZX + 4 bookmarks IDENTICAL (9,851 frames: 1,152 renders, 41
+  with an aircraft), unit PASS (negative control 14/14), stamped. JNext pace (600 updates keyed to 0x5B67, X / heading /
+  altitude / map checked every update; lockstep to update 228 / 353 / 228, where the original's own timing makes the
+  runs part): seeds 1-3 +0.30% / +0.02% / -0.93% (main +16.58% / +20.57% / +16.6%); interrupts over those updates 49.72 /
+  49.59 / 49.38 a second (main 49.72 / 49.67 / 49.47, original 49.81 / 49.65 / 49.46). Flicker 1000-1299: 0 out-of-step
+  frames (main 11); one HUD attribute (row 10, column 30) blinks once (47 -> 00 -> 47): the game's own HUD redraw at 3.5
+  MHz meeting a frame boundary at a different phase, not a figure.
+- The published Cyclone 1.1 (jattree/nxc, built with nexclash-patch tools/nxc.py --bare) measures as main: +16.67%
+  over the same 220 lockstep updates (+17.5% over 600 unchecked).
+
+## Lessons
+- [card patch.pace-limiter §Use] A CPU-bound game whose hooks cost more than the original's idle time: run one of the
+  game's own long routines (here the renderer, 38 ms) at 28 MHz in a game-routine window; its saved time repays the
+  other hooks' debt. +15% -> within 1% (2026-11-07). The earlier "the limiter cannot make a slow build faster" was wrong.
+- [card patch.pace-limiter §Failure lookup] A debt window longer than a frame loses whole frames (one unseen wrap): the first
+  build ticked once in a 35 ms h_r1 and measured +8.8%; with a tick after each long step it is +0.3%.
+- [card patch.display-atomic-switch §Failure lookup] Out-of-step frames went 11 -> 0 by putting the ULA change and the sprite switch in
+  one frame: patterns uploaded early to the bank not shown, then render + attribute switch (85 lines) only when enough
+  lines remain before the interrupt, else wait for it.
+- [card patch.restore-speed §Verification] As in Knight Tyme, Spellbound and Target Renegade: the verifier logged the
+  latch's IN as a port access; a NextREG read belongs to the NextREG model.
+
+## Technique use
+- patch.restore-speed: helped: five entries, three exits, one routine pair in the hook page.
+- patch.pace-limiter: helped: the renderer as a game-routine window (hlib_mul8 for the target, the wait after the
+  attribute switch), debt in every other hook (2026-11-07).
+- patch.display-atomic-switch: helped: double-buffered patterns, the switch right after the ULA change.
+
+## Friction
+- reuse: [tool asm/lib/hlib_speed.asm] the shared latch, called as routines
+- retries: [none: assembled and verified first time]
+- environment: [none: the usual references and JNext card]
+- hand-rolled: [local: a Kempston pace profile (4, 6) written for the measurement]
+- scratch: [none: no scratch scripts]
+- reuse: [tool asm/lib/hlib_pace.asm] the pace pass (2026-11-07), measured with nexclash.pace and nexclash.flicker
+- retries: [local: a debt tick missing] the first pace build ticked its debt once in a 35 ms hook (+8.8%)
+- hand-rolled: [local: a JNext probe of routine cycles] pace state for Cyclone: 0x7507, 0x750D, 0xF74E, 0xF7F0, 0xF8A0

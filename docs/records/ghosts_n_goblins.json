@@ -105,18 +105,18 @@
   },
   "sprites": {
    "file": "ghosts_n_goblins_sprites.nex",
-   "md5": "34c142677dbfebad66eb3585e158537c"
+   "md5": "cf933c183149dab497e6d737b46ab601"
   },
   "enhanced": {
    "file": "ghosts_n_goblins_enhanced.nex",
-   "md5": "4a76d9bfe562d46ba88808f0e76c9540"
+   "md5": "34e5d0588cd2705958ac1961f1f59f66"
   }
  },
  "repro": [],
  "status": {
   "title": "Ghosts 'n Goblins",
   "engine_col": "gng (ghosts_n_goblins.md)",
-  "build": "ghosts_n_goblins_sprites.nex 34c14267 + enhanced 4a76d9bf = the published .nxc 1.6 --bare apart from the NEX loading-screen block (cheats live in the .nxc); graphics read from the player's snapshot and recordings",
+  "build": "ghosts_n_goblins_sprites.nex cf933c18 + enhanced 34e5d058 (2026-11-07: the IFF read in e_cls / e_cls2 / e_init made safe, R kept); 34c14267 + 4a76d9bf before it = the published .nxc 1.6 --bare apart from the NEX loading-screen block (cheats live in the .nxc); graphics read from the player's snapshot and recordings",
   "software": "Both sets: 53063 replay frames; intermediate positions, carried-pot ground clipping, owner art; 648 clipping cases, 40 negative controls, 3120 clock/R/IFF cases and 15 pace trials per set; actual-loader targets exact.",
   "hardware": "untested",
   "next": "hardware test; late-game coverage"
@@ -143,5 +143,67 @@
    "evidence": "games/ghosts_n_goblins.md \"Proof\""
   }
  ],
- "version": "1.6"
+ "version": "1.6",
+ "checked": {
+  "deps": {
+   "asm/gng_hooks.asm": "e59ed3689f8e0613",
+   "asm/gng_r_table.inc": "e12d62110a2ca664",
+   "docs/profiles/ghosts_n_goblins.json": "9f5a99c54a0a9eec",
+   "docs/profiles/ghosts_n_goblins_colours.json": "7f306b99f30da2ab",
+   "docs/profiles/ghosts_n_goblins_graphics.json": "694d7dac076560a5",
+   "docs/profiles/ghosts_n_goblins_palette.json": "ed2afefbd2346f9b",
+   "nexclash.py": "8eb7d621324c5aa6",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "e5e8ff401baf2257",
+   "nexclash/gng.py": "c701ccf0c40238ec",
+   "nexclash/gng_art.py": "b72a8c42e91d8dcd",
+   "nexclash/gng_verify.py": "4f02b14cc81ca479",
+   "nexclash/nextboot.py": "e6624bfe14a62e21",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "5dbea2a023a7c21d",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-06"
+ },
+ "verified": {
+  "deps": {
+   "asm/gng_hooks.asm": "e59ed3689f8e0613",
+   "asm/gng_r_table.inc": "e12d62110a2ca664",
+   "docs/profiles/ghosts_n_goblins.json": "9f5a99c54a0a9eec",
+   "docs/profiles/ghosts_n_goblins_colours.json": "7f306b99f30da2ab",
+   "docs/profiles/ghosts_n_goblins_graphics.json": "694d7dac076560a5",
+   "docs/profiles/ghosts_n_goblins_palette.json": "ed2afefbd2346f9b",
+   "nexclash.py": "8eb7d621324c5aa6",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/engines.py": "e5e8ff401baf2257",
+   "nexclash/gng.py": "c701ccf0c40238ec",
+   "nexclash/gng_art.py": "b72a8c42e91d8dcd",
+   "nexclash/gng_verify.py": "4f02b14cc81ca479",
+   "nexclash/nextboot.py": "e6624bfe14a62e21",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "5dbea2a023a7c21d",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-06"
+ }
 }

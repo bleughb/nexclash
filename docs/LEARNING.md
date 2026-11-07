@@ -1,20 +1,22 @@
 # The learning loop (every stage; CLAUDE.md "End of every stage")
 
-**A stage is not complete until its reusable learning is incorporated or explicitly dispositioned,
-and its evidence record matches the implementation.** `python tools/learncheck.py` (run by
-`python tools/doccheck.py`, and on every pull request by .github/workflows/checks.yml) checks the
-structural part; the rest is the session's job. Why: lesson
-lists that wait for a later consolidation pass are not read, and scratch scripts vanish with the
-container (Cauldron, 2026-10-27: a census script, a card warning and two tool fixes were left behind).
+**At each stage, incorporate or disposition reusable learning and keep the record consistent.**
+`python tools/learncheck.py` (via doccheck and PR CI) checks structure; the session checks substance.
+Capture lessons and reusable scripts before the container disappears.
 
-## 1. Knowledge refresh (stage start, at a safe boundary)
-After reading the Next session block: `git status` clean, no verification of this branch running.
+## 1. Source refresh and verification freeze
+Git only: refresh when starting development or before final verification, with `git status` clean
+and no verification running. Read the Next session block first. Do not merge at every stage.
 Then `git fetch origin main`, `git log --oneline HEAD..origin/main`, `git diff --stat HEAD...origin/main`;
 read what changed in docs/techniques and in the docs your stage uses; `git merge origin/main`.
 `python -m nexclash.records deps <game>` says what the game's stamp depends on: a merge that touches
 none of those files (docs, cards) invalidates nothing. If the merge must wait (a verification is
 running, a conflict with work in flight), say in the Stage log line why and which main commit the
 session's knowledge is from.
+Freeze source and dependencies from the stamping run through delivery. Record source commit,
+output hashes and stamp in the handoff. A required merge/fix changing those dependencies supersedes
+the proof: use records plan and rerun the affected verification. Package users preserve the entire
+modified package and manifest; do not run Git refresh or commit commands.
 
 ## 2. Capture (as you go)
 games/<game>.md "## Lessons": one bullet per finding - a new fact, a failed approach, a probe that

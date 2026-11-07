@@ -1,49 +1,86 @@
-# The New Zealand Story (Ocean, 1989, 128K) - NOT imported: PARTIAL (refactor phase 7, 2026-11-04)
+# The New Zealand Story (Ocean, 1989, 128K) - colour v1.2, built from its tapes (engine new_zealand_story)
 
 ## Next session
-Stage: import PARTIAL    State: the approved build is not in this repo; no engine, no record, nothing in engines.py.
-Approved: New Zealand Story v1.1 .nxc (nexclash-patch patches/, nex_md5 70174ecb, toggle Smooth scrolling), made from
-Jon Attree's .nxc work in runs/new_zealand_story (stage 1: work/build.py; colour: colour/build/make.py, gen.py,
-hooks.asm; 1.1 speed pass: colour/speedup, its sources hashed in the run clone's probe snapshot nzs_speedup/sources.json).
-Start with: the decisions under "Open" (the owner's and the maintainers').
+Stage: 5 (imported; rebuild byte-exact)    State: engine + record on main's tape-set inputs (nexclash/tapeset.py); the
+four published v1.2 builds rebuild byte for byte from either tape set; no RZX verifier in the engine (the proof is the
+run folder's replay suite, below).
+Start with: "Open" - the replay proof as this engine's verify(), then the v2.10 start-up fix as a new version.
 
-## Why it stops (checked 2026-11-04 against refactor 884d31a)
-- Not an engine: three run-folder stages built on each other, none a nexclash module. Stage 1 turns the tape set into
-  a multiload .nex (the 36 world blocks raw in banks 12-21, a 12-byte stub in bank 1, a loader hook in bank 11) from a
-  start state taken in an emulator (sim/title500.z80); make.py reads that .nex back and adds the colour (tilemap
-  scenery generated from the game's own map and char sets by gen.py, painted sprite programs, hooks in alt ROM image 1
-  and pages 14-15, 46-80); the speed pass edits the hooks (speedup/work/edit_engine.py). The run clone
-  (runs/new_zealand_story/colour/nexclash) holds the 1.1 sources only as a probe snapshot, "not an upstream engine
-  registration".
-- Inputs: a tape SET. The game is two files, Side A .tap (or .tzx) and Side B .tzx (block 37 is on side B only).
-  `nexclash.py auto` / `patch` take one snapshot; a record's inputs are one snapshot plus RZX recordings
-  (selftest.stage copies only those two lists, so extra files ride in "recordings"), and no command builds from
-  tape files. The .nxc format accepts the set; NexClash itself cannot take it.
-- Proof: not RZX. The replays are JSON input logs (sim/rec_*.json) run on the run's own Next simulator
-  (colour/tools/simnext.py, 3,004 lines; nzmach.py), 52 replays / 141,000 frames, plus JNext pace and flicker runs.
-  A verify(patch, rzx_path) per the contract would be a new verifier, not a port.
-- So the rebuild cannot be proven byte for byte in today's tree without writing the engine: per the import brief this
-  game stops here.
+## Inputs (the first tape-set game)
+- Start state = the record's snapshot: the 128K game loaded from Side A in an emulator, world 1 in memory, 500 frames
+  into the title (port 7FFD bank 0, SP 0xFFFC); md5 737d576c. It is what `auto` detects (profile signature) and what
+  the stub starts. The worlds the game loads later are not in it.
+- Tapes = `inputs.tapes`, two alternative sets, each in order: Side A .tap (d5f47d90) or Side A .tzx (b0711e0d), then
+  Side B .tzx (f1c1ee16; world block 37, 'M@', is on Side B only). The same releases the published .nxc accepts.
+- Build: `python nexclash.py auto new_zealand_story.z80 --no-record --tape SIDE_A.tap --tape SIDE_B.tzx`. The engine
+  checks the tapes against the profile's tape_sets (wrong order, unknown file, none given: refused with what it wants)
+  and finds the 37 world blocks by content (header flag 0xAA + sequence, the data block after it), so the .tap and
+  the .tzx (different block numbers) give the same bytes.
+
+## Design (the published build, folded into one engine)
+- Stage 1, multiload from RAM: the 37 raw world blocks in banks 12-22 (largest first, none across an 8K page),
+  headers + directory + loader (asm/new_zealand_story_loader.asm) in bank 11; a 12-byte stub over the game's LD-BYTES
+  entry (bank 1 0x11EA, copied to 0x43AF) maps the loader page and returns as a good load would.
+- Colour (nexclash/new_zealand_story_paint.py): each level's tilemap from its own map and char set, coloured by
+  collision type per world; every figure a painted 4-bit sprite program (rules: body / second colour / ink / outline,
+  items solid, mouths filled); hooks in alt ROM image 1 0x2000-0x3FFF (asm/new_zealand_story_hooks.asm) with the 1.1
+  speed pass (drawing at 28 MHz, a PAL-line cap before the player update). Toggle "Smooth scrolling".
+- Backdrops (v1.2, nexclash/new_zealand_story_backdrops.py, asm/new_zealand_story_backdrop.asm at alt ROM 0x3300):
+  Layer 2 320x256 in banks 42-46 behind the sky, one tile set per world varied per stage; tiles in
+  assets/new_zealand_story/backdrops (original art by Jon Attree; colour data and tile maps only).
+- Nothing of the game is stored: graphics, maps and frames come from the tapes and the start state at build time.
+- Frozen to keep the published bytes: alt ROM image 1 filled the pre-2026-11-06 way (NextZXOS's ROM3 + hooks, no v2.10
+  fix-ups: the .nfo says "lacks the v2.10 start-up fix"); the start-up tail in the dead stack below SP in bank 0
+  (setup maps page 1 at MMU7 for the copy; the tail writes 7FFD before 1FFD). Both local to the engine; the z80tonex
+  functions it wraps are restored after its convert().
+- Hooks are assembled at build time (pinned sjasmplus; SETOF / DIR / layout tables come from the tapes), so no hook
+  hex in the profile and no asm2profile check (as herbert).
+
+## Results (2026-11-07, emulator and simulator only)
+- Rebuild, both tape sets (selftest --game new_zealand_story): sprites 70174ecba93626def54d6776c1ff4b32, smooth
+  7d9898e87499c310700fd71bdd6d2469, backdrops d6ccac8fa3a3cd4508463b3bbd98b32d, smooth_backdrops
+  891397ef8c8c9846eba7d8e972867746 = the published v1.2 (jattree/nxc 11f90ba) bare builds.
+- Against the published .nxc with its nxc.py: all 4 toggle combinations x 16 trainer subsets x both targets (128
+  outputs) identical between the published patch and one repacked from these four builds with the v1.2 pack steps; the
+  four bare builds equal the engine's; the menu .nex with Backdrops on is 805e17c8716897796dec0988c47f8f4e from both.
+- Inherited evidence (the run folder, same bytes): v1.1 52 normalized replays / 141,000 frames IDENTICAL, 467 figure
+  cases per option, negatives detected; v1.2 34 lockstep runs / 51,000 frames, game state identical, Layer 2 equal to
+  the model at 28,780 interrupts, negatives (scroll +1, wrong level, opaque sky) detected; JNext pace, flicker,
+  15-minute soak. Hardware: none for 1.1 / 1.2 (1.0 played by Dean Woodyatt).
+
+## Hardware checklist
+Menu .nex: Backdrops on and off reach play; worlds 1-5 backdrops line up with the scenery while scrolling (Smooth on
+and off); a new life redraws the backdrop; title music and sound unchanged.
 
 ## Open
-- To import: one module that does stage 1 + colour + speed from the two tapes and the start state; a record input
-  form for a tape set (or the start state as the snapshot and both tapes staged beside it); the simnext replay as
-  this engine's verify, or RZX recordings made for it. Maintainers decide the input form (shared: selftest, records).
-- Alt ROM: image 1 is ROM3 + hooks (INTEGRATION.md "Alt ROM"), written over 0x2000-0x3FFF only: check it against the
-  whole-image default (REFACTOR item 1) when it is imported.
+- Verifier: the replay suite (JSON input logs on the run's Next simulator) is not in the engine; verify() /
+  unit_tests() say so. Port it, or record RZX for a contract verifier. Colour sheets / recolour: not provided yet.
+- Start state from the tapes: only its MD5 is checked; a check that the tapes' bytes sit where it has them is open.
+- v2.10: the published 1.2 keeps the older ROM3 fill; a new version takes main's fill and is a new set of MD5s.
+- .nxc from `auto`: not made for tape sets yet (BRIEFING C2 #46); the published one was made with nxc.py make --also.
+- Reference files: the start state and both tape sets go in specnext/reference/new_zealand_story/ (record paths).
 
 ## Lessons
-- [deferred Open: reconsider when the maintainers choose an input form for tape sets] A game whose approved build
-  starts from a tape set and an emulator start state has no path into the records (one snapshot + RZX) or `auto`.
-- [local: NZS was built as run-folder stages, never as an engine] An import needs the stages folded into one module
-  and a verifier on the contract's terms; neither exists for this game.
+- [doc docs/ENGINE_CONTRACT.md §Module names] A game whose build reads its tapes: snapshot = the emulator start
+  state, tapes = inputs.tapes alternative sets in order; `auto --tape`; every set must rebuild the same outputs.
+- [tool nexclash.tapeset] Tape reading (.tap / .tzx data blocks as the .nxc format counts them) and set matching are
+  shared; an engine finds its blocks by content: the .tap and .tzx of one side number their blocks differently.
+- [backlog C2 #46] `auto` makes no .nxc for a tape-set build (nxcout skips it); nxc.py make --also does it by hand.
+- [deferred Open: reconsider when the replay harness is ported or RZX are recorded] NZS's proof is a JSON-input
+  replay suite outside the contract; until then the record is rebuild-only and auto's Result says BUILT, never PASSED.
+- [doc docs/LEARNINGS.md §2.4 Recordings (Fuse / RZX)] Importing a build made on an older main: rebuild on main first
+  (a shared stub piece had moved: 436 bytes); the engine's wrapper of the start-up tail takes *args and is restored.
+- [deferred Open: reconsider when the next NZS version is made] The published 1.2 keeps the older ROM3 fill, frozen in the engine;
+  the .nfo states the gap, a new version closes it.
+- [deferred Open: reconsider when a second tape game is imported] Nothing checks the start state came from the tapes
+  (the .nxc TAP1 rule: every 16+-byte run the tapes hold, in place); one more game makes it a shared check.
 
 ## Technique use
-- patch.whole-altrom-image: no help: not imported; its image 1 is ROM3 + hooks over 0x2000-0x3FFF, to check at the import
+- patch.whole-altrom-image: no help: the published 1.2 keeps the ROM3 fill (pinned locally); a later version takes it
 
 ## Friction
-- reuse: [none: nothing ported]
-- retries: [none: nothing run]
-- environment: [none: nothing run]
-- hand-rolled: [none: nothing ported]
-- scratch: [none: no scratch files]
+- reuse: [tool nexclash.tapeset] the tape reader and set matcher are shared, written once for every tape game
+- retries: [doc docs/LEARNINGS.md §2.4 Recordings (Fuse / RZX)] one TypeError: the run's tail wrapper on main's build_tail
+- environment: [none: no workaround needed]
+- hand-rolled: [backlog C2 #46] the published-.nxc comparison ran the host nxc.py by hand (repack + 128 combinations)
+- scratch: [none: the comparison script needs the host nxc.py and the .pok outside the repo; dropped, result above]

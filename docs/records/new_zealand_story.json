@@ -1,0 +1,107 @@
+{
+ "name": "new_zealand_story",
+ "order": 202,
+ "game": "The New Zealand Story",
+ "doc": "new_zealand_story.md",
+ "engine": "new_zealand_story",
+ "representative": true,
+ "reference": "new_zealand_story",
+ "verified_json": false,
+ "inputs": {
+  "snapshot": {
+   "name": "new_zealand_story.z80",
+   "md5": "737d576c8cd067fbeded45de1dbc208f",
+   "path": "new_zealand_story/new_zealand_story.z80"
+  },
+  "recordings": [],
+  "tapes": [
+   {
+    "set": "tap",
+    "files": [
+     {
+      "name": "nzs_side_a.tap",
+      "md5": "d5f47d90cbfbed45a4da7bf86637dfd3",
+      "path": "new_zealand_story/New Zealand Story, The (1989)(Ocean)(48K-128K).tap"
+     },
+     {
+      "name": "nzs_side_b.tzx",
+      "md5": "f1c1ee16beacf5c9b4ef19c5b539765e",
+      "path": "new_zealand_story/New Zealand Story, The (1989)(Ocean)(48K-128K)(Side B).tzx"
+     }
+    ]
+   },
+   {
+    "set": "tzx",
+    "files": [
+     {
+      "name": "nzs_side_a.tzx",
+      "md5": "b0711e0daa7e1906e641ecfe513a0c7e",
+      "path": "new_zealand_story/New Zealand Story, The (1989)(Ocean)(48K-128K).tzx"
+     },
+     {
+      "name": "nzs_side_b.tzx",
+      "md5": "f1c1ee16beacf5c9b4ef19c5b539765e",
+      "path": "new_zealand_story/New Zealand Story, The (1989)(Ocean)(48K-128K)(Side B).tzx"
+     }
+    ]
+   }
+  ]
+ },
+ "modules": [
+  "new_zealand_story"
+ ],
+ "own_modules": [
+  "new_zealand_story",
+  "new_zealand_story_paint",
+  "new_zealand_story_backdrops"
+ ],
+ "data": [
+  "asm/new_zealand_story_hooks.asm",
+  "asm/new_zealand_story_setup.asm",
+  "asm/new_zealand_story_backdrop.asm",
+  "asm/new_zealand_story_loader.asm",
+  "docs/profiles/new_zealand_story.json",
+  "assets/new_zealand_story/backdrops/w1.json",
+  "assets/new_zealand_story/backdrops/w2.json",
+  "assets/new_zealand_story/backdrops/w3.json",
+  "assets/new_zealand_story/backdrops/w4.json",
+  "assets/new_zealand_story/backdrops/w5.json",
+  "assets/new_zealand_story/backdrops/floors.json"
+ ],
+ "shared_data": [
+  "tools/sjasmplus/pin.json",
+  "tools/sjasmplus/sjasm.py"
+ ],
+ "rebuild": {
+  "args": [],
+  "rzx": []
+ },
+ "outputs": {
+  "sprites": {
+   "file": "new_zealand_story_sprites.nex",
+   "md5": "70174ecba93626def54d6776c1ff4b32"
+  },
+  "smooth": {
+   "file": "new_zealand_story_smooth.nex",
+   "md5": "7d9898e87499c310700fd71bdd6d2469"
+  },
+  "backdrops": {
+   "file": "new_zealand_story_backdrops.nex",
+   "md5": "d6ccac8fa3a3cd4508463b3bbd98b32d"
+  },
+  "smooth_backdrops": {
+   "file": "new_zealand_story_smooth_backdrops.nex",
+   "md5": "891397ef8c8c9846eba7d8e972867746"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "The New Zealand Story",
+  "engine_col": "new_zealand_story (new_zealand_story.md)",
+  "build": "v1.2 (published .nxc, jattree/nxc 11f90ba): default, Smooth scrolling, Backdrops, both; built from the two tapes + start state",
+  "software": "Rebuild byte-exact to the published builds from either tape set. Proof: the run's lockstep replays (v1.1 52/141000 frames, v1.2 34/51000 frames, negatives) on these bytes; no RZX verifier in the engine",
+  "hardware": "none for 1.1/1.2 (1.0 played by Dean Woodyatt)",
+  "next": "Port the replay proof as the engine's verifier; v2.10 start-up fix (new version)"
+ },
+ "checks": []
+}

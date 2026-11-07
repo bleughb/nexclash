@@ -22,6 +22,7 @@
 ; x 72, y 32), 25-28 aircraft. Palette offset 0: index 1 = ink, index 2 = mask.
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_speed.asm"    ; macros only
 
 PG      EQU 26
 NSPR    EQU 29
@@ -66,6 +67,14 @@ SY0     EQU 0xD462
 AFND    EQU 0xD464              ; bit 0 aircraft found, bit 1 shadow found
 ACOL    EQU 0xD465              ; anchor column, row (signed)
 AROW    EQU 0xD466
+V_SPD   EQU 0xD490              ; the caller's CPU speed (lib/hlib_speed.asm latch)
+HLIB_V_PACE EQU 0xD4A8          ; 26 bytes: the shared pace limiter's state (lib/hlib_pace.asm), zero at start
+HLIB_PACE_NL EQU 312            ; 48K: lines a frame
+K_REND  EQU 127                 ; the renderer's original time per unit of its 28 MHz time, x 16 (JNext, 2026-11-07:
+                                ; 37.6 ms at 3.5 MHz, 4.72 ms at 28 MHz, 31 / 22 renders)
+PB      EQU 0xD4C2              ; pattern bank: 0 or 32 (the next render's patterns go to the other bank)
+L_INT   EQU 248                 ; the video line of the frame interrupt (64 lines above the first pixel row)
+L_NEED  EQU 100                 ; lines the renderer at 28 MHz plus the attribute switch need (max 85 measured)
 TBASE   EQU 0xD467              ; tile base being built
 MAPR    EQU 0xD468
 MAPC    EQU 0xD469
@@ -144,7 +153,130 @@ hideall:
         jr nz,.h
         pop af
         ret
+; the shared pace limiter (game-routine window for the renderer, debt for the other hooks), in the alt ROM
+; span below the IM 2 vector (0x3AFF): the hook page has no room for it
+        INCLUDE "lib/hlib_pace.asm"
+        ASSERT $ <= 0x3AFF
+        DS 0x3AFF-$,0xFF
+        DB 0xFF,0xFF                ; ROM 0x3AFF / 0x3B00: the IM 2 vector (FF FF) stays as the 48K ROM has it
+; ---- 0x3B01-0x3CFF: the rest of the 48K ROM's unused block (hook-page routines that do not fit there) ----
+ROM_HI:
+; spd_in / spd_out: the caller's CPU speed latched, then 28 MHz / that speed back (lib/hlib_speed.asm); on the hook
+; stack, every register kept
+spd_in: HLIB_SPEED_IN V_SPD
+        ret
+spd_out:HLIB_SPEED_OUT V_SPD
+        ret
+; sprite attributes: 0-3 shadow (if found), 4-24 canvas, 25-28 aircraft (if found)
+attrs:  ld b,0
+.s:     ld a,b
+        nextreg 0x34,a
+        ld hl,VIS
+        add hl,a                    ; Z80N
+        ld a,(hl)
+        or a
+        ld a,b
+        jp z,.hide
+        cp 4
+        jr c,.sh
+        cp 25
+        jr nc,.ai
+        sub 4                       ; canvas: X = 104 + 16 sx, Y = 64 + 16 sy
+        ld c,0
+.d3:    cp 3
+        jr c,.d3e
+        sub 3
+        inc c
+        jr .d3
+.d3e:   add a,a
+        add a,a
+        add a,a
+        add a,a
+        add a,104
+        ld l,a
+        ld h,0
+        ld a,c
+        add a,a
+        add a,a
+        add a,a
+        add a,a
+        add a,64
+        ld e,a
+        ld d,0
+        jr .set
+.sh:    ld a,(AFND)
+        bit 1,a
+        jr z,.hide
+        ld hl,(SX0)
+        ld de,(SY0)
+        ld a,b
+        jr .q
+.ai:    ld a,(AFND)
+        bit 0,a
+        jr z,.hide
+        ld hl,(AX0)
+        ld de,(AY0)
+        ld a,b
+        sub 25
+.q:     ; quadrant A (0-3): x += 16 (A & 1), y += 16 (A >> 1); then + 32
+        push af
+        and 1
+        jr z,.q1
+        push de
+        ld de,16
+        add hl,de
+        pop de
+.q1:    pop af
+        and 2
+        jr z,.q2
+        ex de,hl
+        push de
+        ld de,16
+        add hl,de
+        pop de
+        ex de,hl
+.q2:    push de
+        ld de,32
+        add hl,de
+        pop de
+        ex de,hl
+        push de
+        ld de,32
+        add hl,de
+        pop de
+        ex de,hl
+.set:   ld a,l
+        nextreg 0x35,a
+        ld a,e
+        nextreg 0x36,a
+        ld a,h
+        and 1
+        nextreg 0x37,a
+        ld a,(PB)                   ; pattern = slot + the bank just uploaded
+        add a,b
+        ld c,a
+        srl a
+        or 0xC0
+        nextreg 0x38,a
+        ld a,c
+        and 1
+        rrca
+        rrca
+        or 0x80
+        ld c,a
+        ld a,d
+        and 1
+        or c
+        nextreg 0x39,a
+        jr .nx
+.hide:  nextreg 0x38,0
+.nx:    inc b
+        ld a,b
+        cp NSPR
+        jp nz,.s
+        ret
 rom_end:
+        ASSERT rom_end <= 0x3D00 - 20       ; + the stub's 20-byte register block, below the ROM font
 
 ; =============================================================================================
         ORG 0xC000
@@ -156,7 +288,8 @@ h_s0:   ld (SVSP),sp
         push bc
         push de
         push hl
-        nextreg 0x07,3
+        call spd_in                 ; the caller's speed latched (lib/hlib_speed.asm), then 28 MHz
+        call hlib_debt_open         ; the hook's time is paid back in the renderer's window
         ld hl,TILES
         ld de,S0T
         ld bc,264
@@ -167,7 +300,9 @@ h_s0:   ld (SVSP),sp
         ldir
         ld a,1
         ld (FLG),a
-        nextreg 0x07,0
+        ld a,7                      ; the 3.5 MHz entry and exit, 1/16 lines
+        call hlib_debt_close
+        call spd_out                ; the caller's speed back (never a fixed 3.5 MHz)
         pop hl
         pop de
         pop bc
@@ -182,7 +317,8 @@ h_s1:   ld (SVSP),sp
         push bc
         push de
         push hl
-        nextreg 0x07,3
+        call spd_in                 ; the caller's speed latched (lib/hlib_speed.asm), then 28 MHz
+        call hlib_debt_open
         ld hl,TILES
         ld de,S1T
         ld bc,264
@@ -198,7 +334,8 @@ h_h:    ld (SVSP),sp
         push bc
         push de
         push hl
-        nextreg 0x07,3
+        call spd_in                 ; the caller's speed latched (lib/hlib_speed.asm), then 28 MHz
+        call hlib_debt_open
         ld hl,HBUF
         ld de,HB
         ld bc,72
@@ -207,7 +344,9 @@ h_h:    ld (SVSP),sp
         ld (VA),a
         ld hl,FLG
         set 2,(hl)
-h_x:     nextreg 0x07,0
+h_x:    ld a,7
+        call hlib_debt_close
+        call spd_out
         pop hl
         pop de
         pop bc
@@ -222,9 +361,12 @@ h_r1:   ld (SVSP),sp
         push bc
         push de
         push hl
-        nextreg 0x07,3
+        call spd_in                 ; the caller's speed latched (lib/hlib_speed.asm), then 28 MHz
+        call hlib_debt_open         ; the work before the renderer: debt, ticked under a frame apart
         call aircraft               ; (uses AP; packs into ASH / AIW / AWW)
+        call hlib_debt_tick
         call canvas                 ; (uses AP for W)
+        call hlib_debt_tick
         ld a,(FLG)                  ; swap the scenery in
         and 3
         cp 3
@@ -259,22 +401,63 @@ h_r1:   ld (SVSP),sp
         ld de,AGFX+1
         ld bc,143
         ldir
-.na:    nextreg 0x07,0
+.na:    ld hl,PB                    ; the patterns go to the bank the sprites do not show
+        ld a,(hl)
+        xor 32
+        ld (hl),a
+        call upload
+        call hlib_debt_tick
+        ; the strip and the sprites change in one frame: the renderer (28 MHz) and the attribute switch need
+        ; L_NEED lines before the frame interrupt (line L_INT); fewer left: wait for the interrupt (the game's
+        ; handler runs at its own clock). Interrupts off: no wait (a HALT would never end)
+        call hlib_line
+        ld de,L_INT
+        ex de,hl
+        or a
+        sbc hl,de                   ; L_INT - line
+        jr nc,.lf
+        ld de,HLIB_PACE_NL
+        add hl,de
+.lf:    ld de,L_NEED
+        or a
+        sbc hl,de                   ; lines left before the interrupt - L_NEED
+        jr nc,.al
+        ld a,i
+        jp pe,.on
+        ld a,i                      ; off, or an interrupt taken at the end of the first read
+        jp po,.al
+.on:    call spd_out
+        halt
+        nextreg 0x07,3
+.al:    ld a,7
+        call hlib_debt_close
+        call hlib_pace_open         ; the renderer's window: its 28 MHz time x K_REND, less the debt
         pop hl
         pop de
         pop bc
         pop af
         ld sp,(SVSP)
-        jp r_r
+        jp r_r                      ; the game's renderer at 28 MHz
 
-; ---- render, after the game's renderer: restore, sprites ----
+; ---- render, after the game's renderer: sprites switched, the window's wait, restore ----
 h_r2:   ld (SVSP),sp
         ld sp,STK
         push af
         push bc
         push de
         push hl
+        call hlib_pace_tick         ; the renderer's lines; target = lines x K_REND (still 28 MHz: V_SPD is h_r1's)
+        ld hl,(HLIB_V_PACE + 2)
+        ld a,K_REND
+        call hlib_mul8
+        push hl
+        call attrs                  ; the sprites switch to the new bank, in the renderer's frame
+        pop hl
+        call spd_out                ; the wait at the caller's speed (the game's handler at its own clock)
+        ld a,(V_SPD)
+        call hlib_pace_wait         ; until the original renderer's time, less the debt
         nextreg 0x07,3
+        call hlib_debt_open
         ld hl,FLG
         bit 3,(hl)
         jr z,.nr
@@ -294,9 +477,7 @@ h_r2:   ld (SVSP),sp
         ld de,AGFX
         ld bc,144
         ldir
-.nb:    call upload
-        call attrs
-        jp h_x
+.nb:    jp h_x
 
 ; =============================================================================================
 ; canvas: CI (packed ink, 6 x 112, canvas x 0 = screen x 72, row 0 = screen y 32), PH / CW
@@ -1444,7 +1625,9 @@ emspr:  ld a,(NEF)
         ld (hl),a
         or a
         jr z,.done
-        ld a,(SPN)                  ; pattern select: slot n
+        ld a,(PB)                   ; pattern select: slot n in bank PB
+        ld hl,SPN
+        add a,(hl)
         ld b,a
         srl a
         bit 0,b
@@ -1542,112 +1725,6 @@ emb:    ld e,4
         ret
 
 ; =============================================================================================
-; sprite attributes: 0-3 shadow (if found), 4-24 canvas, 25-28 aircraft (if found)
-attrs:  ld b,0
-.s:     ld a,b
-        nextreg 0x34,a
-        ld hl,VIS
-        add hl,a                    ; Z80N
-        ld a,(hl)
-        or a
-        ld a,b
-        jp z,.hide
-        cp 4
-        jr c,.sh
-        cp 25
-        jr nc,.ai
-        sub 4                       ; canvas: X = 104 + 16 sx, Y = 64 + 16 sy
-        ld c,0
-.d3:    cp 3
-        jr c,.d3e
-        sub 3
-        inc c
-        jr .d3
-.d3e:   add a,a
-        add a,a
-        add a,a
-        add a,a
-        add a,104
-        ld l,a
-        ld h,0
-        ld a,c
-        add a,a
-        add a,a
-        add a,a
-        add a,a
-        add a,64
-        ld e,a
-        ld d,0
-        jr .set
-.sh:    ld a,(AFND)
-        bit 1,a
-        jr z,.hide
-        ld hl,(SX0)
-        ld de,(SY0)
-        ld a,b
-        jr .q
-.ai:    ld a,(AFND)
-        bit 0,a
-        jr z,.hide
-        ld hl,(AX0)
-        ld de,(AY0)
-        ld a,b
-        sub 25
-.q:     ; quadrant A (0-3): x += 16 (A & 1), y += 16 (A >> 1); then + 32
-        push af
-        and 1
-        jr z,.q1
-        push de
-        ld de,16
-        add hl,de
-        pop de
-.q1:    pop af
-        and 2
-        jr z,.q2
-        ex de,hl
-        push de
-        ld de,16
-        add hl,de
-        pop de
-        ex de,hl
-.q2:    push de
-        ld de,32
-        add hl,de
-        pop de
-        ex de,hl
-        push de
-        ld de,32
-        add hl,de
-        pop de
-        ex de,hl
-.set:   ld a,l
-        nextreg 0x35,a
-        ld a,e
-        nextreg 0x36,a
-        ld a,h
-        and 1
-        nextreg 0x37,a
-        ld a,b
-        srl a
-        or 0xC0
-        nextreg 0x38,a
-        ld a,b
-        and 1
-        rrca
-        rrca
-        or 0x80
-        ld c,a
-        ld a,d
-        and 1
-        or c
-        nextreg 0x39,a
-        jr .nx
-.hide:  nextreg 0x38,0
-.nx:    inc b
-        ld a,b
-        cp NSPR
-        jp nz,.s
-        ret
 code_end:
         ASSERT code_end <= AP
 

@@ -1575,8 +1575,9 @@ def negative_patches(patch):
     r[pos2 + 2] = 0
     mk('the pace wait loses AF', None, bytes(r))
     r = bytearray(rom)
-    pos = bytes(r).index(bytes([0xED, 0x91, 0x07, 0x00, 0xC9]), k)      # nextreg 7,0 ; ret
-    r[pos:pos + 4] = bytes(4)
+    a = sy['spd_outw']                                                  # call spd_outw: the latched speed back
+    pos = bytes(r).index(bytes([0xCD, a & 255, a >> 8]), k)
+    r[pos:pos + 3] = bytes(3)
     mk('the blit left at 28 MHz', None, bytes(r))
     return out
 

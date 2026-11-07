@@ -1,9 +1,7 @@
 # Engine contract (what every dedicated engine provides; read this before any engine's code)
 
-Start a new engine from this page; open a real engine only for the one function you need
-(`grep -n '^def \|^class ' nexclash/<engine>.py`, then Read that range). Template with everything
-in its simplest form: nexclash/chuckie.py. `tools/doccheck.py` checks the REQUIRED names below
-against every module in nexclash/engines.py; this is a structural check, not a behaviour check.
+Read relevant dependencies. Loop-shape example: nexclash/chuckie.py (legacy: its CMP omits R).
+For new engines use tools/templates/verify_contract.py and hooklib.CMP_R, never the legacy CMP. doccheck checks REQUIRED names (structure only).
 
 ## Files (one game = one engine; CLAUDE.md "Keep changes additive")
 nexclash/<engine>.py, asm/<engine>_hooks.asm, docs/profiles/<record>.json (hook hex + symbols, from
@@ -35,7 +33,8 @@ OPTIONAL for legacy engines; new engines must provide colour sheets and recolour
 | `INTERIORS`, `TAIL_ADDR`, `ROM_ORG`, `ALT_PAGE` | patched-instruction interiors (no jumps into them), tail and hook addresses |
 
 Outputs (nxcout.manifest): `NAME_sprites[_loading].nex`, sets `NAME_SET[_loading].nex`,
-`NAME.nex` plain; others, toggles: `NAME_outputs.json`.
+`NAME.nex` plain; others, toggles: `NAME_outputs.json`. Tape sets: snapshot = start state, `a.tape` ->
+nexclash/tapeset.py `load`, blocks by content; record `inputs.tapes`.
 
 ## The patch object (what z80tonex.convert and nextboot.check read)
 `name`; `sites` = [(addr, original bytes, new bytes)] - `apply(snap)` refuses a snapshot whose
@@ -54,7 +53,7 @@ _OUT, HLIB_R_IN / _OUT, HLIB_IFF_DI / _EI; pace: hlib_pace_wait (card patch.pace
 hlib_pc_upload + hlib_commit. unit_tests: `hooklib.every_site`. Record: `hooklib.FILES` in
 `shared_data`. Unused parts: games/<game>.md.
 
-## Verify loop (the part every engine repeats; copy it from chuckie.verify)
+## Verify loop (the part every engine repeats; adapt chuckie.verify with tools/templates/verify_contract.py)
 Replay the RZX with the opcode table wrapped: at a hook site copy the state, run original and
 patched code to their return (simulators from `simpool.machine`), compare CMP registers, memory,
 sprite pixels; `fail()` keeps 5 examples per key; also count writes to patch sites and jumps into
