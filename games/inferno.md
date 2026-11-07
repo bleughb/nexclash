@@ -1,9 +1,9 @@
 # Inferno
 
 ## Next session
-Stage: 2 (continued)    Branch: main (m3a merged from claude/inferno-copier-window-m3)
-State: copier window m3a (timed hooks, R, lost-IRQ compensation, cw_cal, DMA map copy) PASS in
-  the model; m2/m3 diagnostic NEXes boot; hardware/JNext untested. No hook work in the window yet.
+Stage: 2 (continued)    Branch: main (m3a + hardware fix claude/inferno-m3-hw-bisect)
+State: copier window m3a PASS in the model. Hardware: m2 runs; first m3 crashed (hooks under the
+  stub register block, fixed); fixed m3 + current window-only NEX await the user's test.
 Inputs: specnext/reference/inferno/    Start: specnext build/CONTINUE_copier_window.md.
 Read: "Copier window"; inferno.py run_cw_window/copier_window_update_checks; asm cap_in/cw_tout/cw_wait.
 Next: (3b) 8F95 work in cw_wait (coroutine design in the handover); shrink actor hooks; JNext pace
@@ -158,7 +158,9 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
   compensated; original IRQ anchored at the same game instruction, as an RZX: level code reads R);
   7 new controls; fast-switch bound (KT -38) PASS. Gap: a pulse starting in the ~6 T between
   a hook's last $C8 read and the IRQ sample after EI + NEXTREG 7,0 (model: 24 T) is lost (~0.07 %
-  of updates; none with 28 MHz switches). m3 NEX boots, MD5 9baec641...; hardware untested.
+  of updates; none with 28 MHz switches). Hardware: m3 9baec641... crashed (green bars): the stub
+  writes 20 register bytes at rom_end 3945, over cap_in; hooks now from 3960, build checks hook
+  bytes after a simulated boot. Fixed m3 68340edf..., window-only 692a8d92...: untested.
 - Never-read rule: window CALLs/IRQ pushes leave bytes only in the 4 below the copier's SP, which
   9907's PUSH DE / PUSH HL overwrite first (checked by running them; 9907 = D5 E5 in all 88,187).
 
@@ -201,6 +203,8 @@ Approved preview/model/contact-sheet hashes and recipes: specnext design/manifes
 build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 
 ## Lessons
+- [doc BRIEFING A1] Hook code under the stub's register block (rom_end) is lost
+  at boot; models without the stub cannot see it: compare hook bytes after a simulated boot.
 - [local: Inferno timed hooks] Calibrate tick-quantized constants over all CTC phases (5 phases left
   K 7 T off a hook); constants holding NEXTREG 7,x need the machine's own figure (cw_cal).
 - [local: Inferno IRQ anchoring] Hooks shift the game, so a wall-time IRQ meets other instructions;
@@ -223,16 +227,11 @@ build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
   cold-latency proof.
 - [local: Inferno blitter] Physical SRAM includes 040000 aperture offset; high staging is 216–223.
   Tiny copies prefer CPU. Charge stalls separately; protect current AND pending pairs/allocations.
-- [local: Inferno cold actor construction] Exact reuse is high; first-use work exceeds 10 ms. Prewarm
-  live snapshots, never a recording catalogue; retain exact-content validation.
-- [local: Inferno frame pipeline] Post-copy restoration/Copper shop cancellation pass sampled checks;
-  real FLASH, other modal entries and synthetic-attribute replacement remain open.
-- [local: Inferno representation] Hardware one-bit expansion cuts sampled scenery 130.069 to 6.547 ms;
-  capacity, display integration and total timing remain separate gates.
-- [local: Inferno validation loops] Aligned flags, DI stack clearing/unrolled comparisons save 13.35%
-  on unchanged L6 scenery; this does not solve cold or total cost.
-- [local: Inferno scenery budget] Validate distinct sources once; retain failed total gates instead
-  of calling primitive timings or host scheduling a full-render pass.
+- [local: Inferno cold actor construction] First-use work exceeds 10 ms: prewarm live snapshots.
+- [local: Inferno frame pipeline] Post-copy restoration/shop cancellation pass; FLASH/modal open.
+- [local: Inferno representation] One-bit expansion cuts sampled scenery 130.069 to 6.547 ms.
+- [local: Inferno validation loops] Aligned flags/unrolled compares save 13% on unchanged L6 scenery.
+- [local: Inferno scenery budget] Validate distinct sources once; keep failed total gates.
 - [tool nexclash/inferno.py] Retain scratch across cache tests; same-ID/attribute/FLASH/collision mutations
   and broken-clear controls detect stale validation.
 - [tool nexclash/inferno.py] IRQ injection must traverse FFFF/FFF4/998B through RET, including unwind;
@@ -247,8 +246,7 @@ build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 - [local: Inferno 0562 decoder] Tape flag consumes a byte, not DE capacity; compensate DEC DE.
 - [local: Inferno ROM destinations] On address wrap, preserve original below-4000 ROM semantics;
   guarded stores/ROM peek pass boundaries while slot 0 maps payload.
-- [local: Inferno continuation input] Beeper 7C37 consumes R; synchronize/count inputs and guard dead
-  stack reads. Prefix equality does not prove continuous-game or physical timing.
+- [local: Inferno continuation input] Beeper 7C37 consumes R; count inputs, guard dead stack reads.
 - [card detect.buffer-layout-producer §Probe and stop] Black attributes hide stale bitmap bytes;
   compare visible colours while retaining original bytes. Candidate migrated to schema 4.
 - [tool tools/probes/rzx_census.py] Bounded register/mapped-memory captures expose whole-image ownership;
@@ -291,8 +289,9 @@ build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 - detect.buffer-layout-producer: corrected: visible colour checks distinguish black-masked stale bitmap data.
 
 ## Stage log
-- 2026-11-07 (claude/inferno-copier-window-m3): m3a: hooks measure X on the CTC, restore R, lost
-  IRQs compensated from $C8, cw_cal, DMA map copy; update model + 7 controls PASS; m3 NEX boots.
+- 2026-11-08 (claude/inferno-m3-hw-bisect): m3 hardware crash = hooks under the stub register
+  block; moved, guarded, post-boot hook-byte check; gate PASS; fixed m3 for hardware.
+- 2026-11-07 (claude/inferno-copier-window-m3): m3a: timed hooks, R, $C8, cw_cal, DMA; PASS.
 - 2026-11-07 (claude/inferno-copier-window-m2): m2: OUT replay, pad, window IRQs; PASS.
 - 2026-11-07 (claude/inferno-copier-window): m1: pacing/sound measured; translated head exact.
 - 2026-11-07: exact rows profiled (timing FAIL); initialization pause/R; owned store/dispatch PASS.

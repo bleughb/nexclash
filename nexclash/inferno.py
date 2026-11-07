@@ -3164,9 +3164,10 @@ class CapturePatch:
         if org + len(self.code) >= 0x3D00 or any(v != 255 for v in self.rom[org:org + len(self.code)]):
             raise ValueError('capture code overlaps live ROM')
         self.rom[org:org + len(self.code)] = self.code
-        lo, low = self.syms['cap_in'], bytes.fromhex(prof['hooks']['caplo'])
-        if lo + len(low) > 0x3A00 or any(v != 255 for v in self.rom[lo:lo + len(low)]):
-            raise ValueError('capture entry block overlaps live ROM')
+        lo, low = self.syms['cap_chk'], bytes.fromhex(prof['hooks']['caplo'])
+        regblock = self.syms['rom_end']        # the stub writes 20 register bytes here at boot
+        if lo < regblock + 20 or lo + len(low) > 0x3A00 or any(v != 255 for v in self.rom[lo:lo + len(low)]):
+            raise ValueError('capture entry block overlaps live ROM or the stub register block')
         self.rom[lo:lo + len(low)] = low
         # page 80: the copier window and the hooks' timing helpers (cw_tin / cw_tout)
         self.head = bytes.fromhex(prof['hooks']['cwhead'])
@@ -3932,6 +3933,9 @@ class CaptureSnapshotPatch(BootstrapPatch):
         self.capture = CapturePatch()
         self.page = bytes(self.capture.rom[8192:])
         self.extra_banks[12] = self.page + bytes(8192)
+        rb = self.regblock - 0x2000            # the stub writes 20 register bytes there at boot
+        if any(v != 255 for v in self.page[rb:rb + 20]):
+            raise ValueError('hook code in the stub register block %04X-%04X' % (self.regblock, self.regblock + 19))
         head = bytearray(8192)                  # page 80: the hooks' timing helpers (CW_CLK = 0:
         head[:len(self.capture.head)] = self.capture.head   # no window runs, so no X is measured)
         self.extra_banks[CW_PAGE // 2] = bytes(head) + bytes(8192)
@@ -4529,8 +4533,14 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
                 continue
         if pc == 0x9790:
             entered_9790 = True
-        if pc == lost_at and mem.mmu0 != CW_PAGE and unanchored and not reached_8f92:
-            anchors[unanchored.pop(0)] = gcount     # compensated as an ISR before the next game instruction
+        if pc == lost_at and mem.mmu0 != CW_PAGE and not reached_8f92:
+            # compensated as an ISR before the next game instruction; the pulse may still be active
+            # (cap_lost waits for /INT to drop), so it can still be in `pending`
+            seen = [w for w in unanchored + pending if w <= elapsed and w not in anchors]
+            if seen:
+                anchors[min(seen)] = gcount
+                if min(seen) in unanchored:
+                    unanchored.remove(min(seen))
         if game_pc(pc) and not reached_8f92:
             gcount += 1
         if pc == 0x8F92 and not reached_8f92:
@@ -4660,7 +4670,10 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
             'kt': mem.pages[CW_PAGE][CW_KT] - (256 if mem.pages[CW_PAGE][CW_KT] > 127 else 0),
             # lost pulses that began just after a hook's last $C8 read: between that read and the IRQ
             # sample after its EI + NEXTREG 7,0 (charged at 3.5MHz here) nothing can see them
-            'irqs_gap': [w for w in p_lost if any(w - 16 <= c <= w for c in mem.c8_reads)],
+            # = lost before 8F92, not compensated, and no $C8 read while/just after it (a read that did see
+            # it and still did not compensate is a failure, not a gap)
+            'irqs_gap': [w for w in p_lost if w not in anchors and (p8f92 is None or w < p8f92)
+                         and not any(w <= c <= w + 60 for c in mem.c8_reads)],
             'irqs_anchored': len(anchors)}
 
 
@@ -4773,7 +4786,7 @@ def copier_window_update_controls():
     s = p().syms
     hooks = load_profile()['hooks']
     cap, lo = bytes.fromhex(hooks['capture']), bytes.fromhex(hooks['caplo'])
-    a0, l0 = s['cap_scene'], s['cap_in']
+    a0, l0 = s['cap_scene'], s['cap_chk']   # caplo starts at cap_chk
     at = cap.find(b'\x1E\x00\xCD')          # LD HL,K / LD A,KR / LD E,0 / CALL cap_out (scene)
     pat = cap[at - 5:at]
     if at < 5 or pat[0] != 0x21 or pat[3] != 0x3E or cap.find(b'\x1E\x00\xCD', at + 1) >= 0:
@@ -5144,6 +5157,9 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
         self.window = CopierWindowPatch(window_only=window_only)
         self.page = bytes(self.window.rom[8192:])
         self.extra_banks[12] = self.page + bytes(8192)
+        rb = self.regblock - 0x2000            # the stub writes 20 register bytes there at boot
+        if any(v != 255 for v in self.page[rb:rb + 20]):
+            raise ValueError('hook code in the stub register block %04X-%04X' % (self.regblock, self.regblock + 19))
         head = bytearray(8192)
         head[:len(self.window.head)] = self.window.head      # CW_CLK = 0: CTC tested at first use
         if CW_PAGE // 2 in self.extra_banks:
@@ -5175,6 +5191,13 @@ def copier_window_build(reference, folder, hooks=False):
     for name, foreign in [('Sinclair', None), ('foreign ROM3', bytes(v ^ 0xA5 for v in rom48()))]:
         checks[name] = nextboot.check(str(nex), str(snapshot), patch, (tail, tail + len(data)),
                                       nexload=True, sysrom=foreign)
+    # Hook bytes as the game finds them AFTER the stub (it writes its register block into the alt ROM;
+    # 3a's cap_in sat under it and every hook crashed on hardware, 2026-11-08).
+    from skoolkit.snapshot import Snapshot
+    alt = nextboot.boot(str(nex), Snapshot.get(str(snapshot)).pc, nexload=True)['alt'][1]
+    want = patch.window.rom
+    hit = ['%04X' % a for a in range(0x2000, 0x3D00) if want[a] != rom48()[a] and alt[a] != want[a]]
+    checks['hook bytes after boot'] = (['%d hook bytes overwritten, first %s' % (len(hit), hit[:4])] if hit else [])
     raw = nex.read_bytes()
     if raw.find(patch.extra_banks[CW_PAGE // 2]) < 0:
         checks['page 80'] = ['window page not in the NEX']
