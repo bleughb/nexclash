@@ -163,7 +163,14 @@ plain 2d56c304 and default e740ae71 rebuilt byte for byte.
 ## Colour route
 sheets/ in the run folder; `nexclash.py recolour` works (test painting: banks 13-15 only, 1,757 entries, seen in JNext). Paintable: K1 except wading and the AND-only variant, K5, K6. Not paintable: K2, K3, K4, K8. Index 1 is "the paper under the figure". Nothing painted by default.
 
+## Speed restored (2026-11-07, refactor goal 2)
+ENTER latches NR 7 (HLIB_SPEED_IN, V_SPD 0x8036) on the hook stack; LEAVE restores it (A via V_A). e_bl blits at
+max(14 MHz, V_SPD); e_post, entered at the blit's speed, keeps e_bl's latch (ENTERB). The verifier answers NR reads;
+O3_OUTLINE is the profile symbol uploadn.o3. Sprites c90fab6f -> 2b9f431b, Enhanced 118a55f6 -> 1bf270bf. 8 RZX x 2 sets IDENTICAL, negatives
+all DETECTED, stamped. JNext pace vs the plain build: main -0.89%, this +0.09%.
+
 ## Lessons
+- [local: this engine] The 14 MHz blit runs between two hooks: the hook after it must not latch (it would take 14 MHz).
 - [local: a buffer that is exactly one MMU slot lets a page swap do the work] Blit from a second page and run plot bodies on a third with no code change.
 - [local: LDI's flags 3 and 5 depend on the byte copied] A blit whose source changes differs there; check the bits are dead rather than masking all of F.
 - [local: the picture check found an original glitch] Torn lines came up as a mismatch, explained by the plotter's carry test.
@@ -179,6 +186,7 @@ sheets/ in the run folder; `nexclash.py recolour` works (test painting: banks 13
   first-pass MD5s (d0e7d8b5); the .nxc's default and Enhanced came from work/enh2/mkenh6.py. Moved into auto.
 
 ## Technique use
+- patch.restore-speed: helped: a latch per window; the one after the blit takes none (2026-11-07).
 - detect.gameplay-screen-readers: helped: no logic reads the buffer's pixels.
 - detect.tracked-unit: helped: one call draws one whole figure.
 - optimise.pattern-cache: helped: 32 images, none taken while on show in any recording.

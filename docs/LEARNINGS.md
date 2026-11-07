@@ -848,15 +848,15 @@ Grouped by question; add a new lesson to its group.
   pattern, then attributes). Verify pixels against the STAGED state and the commit against it.
 - Sprites are a separate layer: when the game leaves play (death, continue, round end), switch
   them off (NextReg $15) from its state-change path; the next commit switches them on.
-- Measure the original pace from the RZX (frames between handler entries; count frame resets of
-  the T counter): Rainbow 3 (95%) / 4 (5%).
+- Measure the original pace from the RZX (frames between handler entries): Rainbow 3 (95%) / 4.
 - Tile-drawn objects (Rainbow fruit/collectables) live in the scrolling background with the
   platforms: making them sprites is a persistence/scroll problem, not a drawing hook (solved
   2026-10-11 with a shadow map, 2.1).
 - Colour by graphics page works only for graphics at fixed addresses; a runtime graphics buffer
   (Rainbow 0x9500) holds different objects per level - key those on the copy source.
-- Full verification runs one at a time (BRIEFING C3b): parallel full runs on the 1-2 CPU sandbox
-  cost a whole extra turn (2026-09-29).
+- Iterate on failing cases, gate once: rerun the failed states (cases keyed by state index, so a
+  subset is exact), then a 1-in-10 sample, then ONE full run before commit (Inferno 2026-11-07:
+  four full runs bought what 25 s reruns showed). On 1-2 CPUs one full run at a time (BRIEFING C3b).
 - For a Z80N opcode in hooks (Rainbow SWAPNIB): install it in every simulator that runs hooks,
   test it exhaustively, and add a control that runs the hooks with it as SkoolKit's silent NOP -
   that control must fail.
@@ -866,8 +866,7 @@ Grouped by question; add a new lesson to its group.
   render end, two figure controls checked the (now unwritten) live attributes and reported "n/a"
   on all 40 states for 9 days. Read "detected" counts, not just "no FAIL"; check against the state
   the hook actually produces (staged).
-- A negative control on a state whose figure has no pixels (Chuckie duck blank frame 12) cannot
-  detect anything: count it n/a explicitly, never as a failure or a pass.
+- A control on a state with no figure pixels (Chuckie duck frame 12) detects nothing: count n/a.
 - Guards turn out-of-range plots (buffer/attr overflow, table full) into unchanged passthrough;
   unit-test every guard edge (converted vs passthrough must match the guard exactly).
 - Right-edge figures: the ULA wraps an overflowing byte into the next column/row (INC E / INC HL)
@@ -936,8 +935,7 @@ Grouped by question; add a new lesson to its group.
   all held the same MD5s). Keep one source (the record) and generate the rest.
 
 ## 2.6 Process / tokens (this sandbox)
-- Shallow clones fetch only the default branch; a pushed work branch may lack its tracking ref,
-  leaving `git status` without an upstream and the stop hook reporting "no remote branch".
+- Shallow clones fetch only the default branch; a pushed branch may lack its tracking ref.
   Fix: `git config --add remote.origin.fetch +refs/heads/B:refs/remotes/origin/B`,
   `git fetch origin B`, `git branch -u origin/B` (Nemesis 2026-11-02).
 - Background jobs need their OWN session to survive a turn/shell reset:

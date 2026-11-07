@@ -63,7 +63,7 @@ Pattern slots (or a pattern store in Next pages), the cache table (HLIB_PCACHE: 
 | Symptom | Cause | Probe | Fix | Rejected |
 |---|---|---|---|---|
 | Busy scenes slow (Midnight tank) | 16 entries thrash | distinct images there | larger cache | - |
-| Bigger cache no help (Cyclone) | images rarely repeat | distinct / renders | faster misses | larger cache |
+| Bigger cache no help (Cyclone; Spellbound colour cycling) | images rarely repeat | distinct / renders | faster misses | larger cache |
 | Wrong image flashes | evicted a slot still shown | unit: full cache case | never evict shown slots | - |
 | Old image after a partial one | key kept on a mutable upload | 'stale pattern!' | key 0 | - |
 

@@ -50,10 +50,10 @@
  "status": {
   "title": "Inferno",
   "engine_col": "inferno copier window (inferno.md)",
-  "build": "copier window milestone 2 at 8F92 (diagnostic NEX, window only); no hook work in it, no sprites",
-  "software": "window model PASS on 1,854 states (OUT/9907 timing, R, RAM, IRQ injection, 7 controls); full-recording timeline",
+  "build": "copier window milestone 3a: capture hooks timed on the CTC (X, R, lost-IRQ compensation, cw_cal, DMA map copy) + window; m2/m3 diagnostic NEXes; no hook work in the window, no sprites",
+  "software": "window-only model and update model 8F7C->9907 PASS on 1,854/1,855 states (OUT/9907 timing, R, RAM, IRQ injection anchored at game instructions, 14 controls); full-recording timeline",
   "hardware": "untested",
-  "next": "copier window milestone 3: capture hooks measure X and restore R; hook work in cw_wait; hardware/JNext pace"
+  "next": "copier window milestone 3b: 8F95 work in cw_wait (coroutine); JNext pace; hardware results"
  },
  "checks": [
   "asm2profile:inferno"
@@ -2025,6 +2025,51 @@
    "file": "Inferno_copier_window_diagnostic.nex",
    "md5": "4f7fef40b4a50b7f1ba7c82d064e851b",
    "boot_checks": "PASS (Sinclair, foreign ROM3)"
+  },
+  "milestone3a": {
+   "scope": "capture hooks 8F7C/959B/96A1 time themselves on CTC ch 3 (cw_edge: 12 checks, ~3.5 T), restore R; $C8 lost-IRQ compensation in hooks and the window entry; cw_cal speed-switch correction; 8F7C map copy by zxnDMA; simulator (uncontended T, transitions at 3.5MHz; fast-switch bound), not hardware",
+   "artifacts": "specnext/reference/inferno/build/copier_window.md §7, copier_window/cw_m3_checks.json, cw_m3_build.json",
+   "checks": {
+    "window_only_states": 1854,
+    "update_states": 1855,
+    "failures": 0,
+    "window_only_d9907_T": [
+     -41,
+     35
+    ],
+    "update_d9907_T": [
+     -52,
+     42
+    ],
+    "x_error_T": [
+     -12,
+     17
+    ],
+    "x_T": [
+     1444,
+     8905
+    ],
+    "irq_injections_update": 1485,
+    "irq_lost_compensated": 550,
+    "irq_anchored_game_instruction": 873,
+    "irq_post_check_gap_model": 82,
+    "controls_window": "7/7 x 40",
+    "controls_update": "7 x 40 (lost IRQ R: 39/40)",
+    "kt_fast_switches_T": -38,
+    "hook_T": {
+     "8F7C": 1087,
+     "actor": 252
+    },
+    "tolerance_T": 56,
+    "level6_loading_prep_quick": "PASS",
+    "workflow": "gate run with --jobs 6 (handover Check workflow)"
+   },
+   "diagnostic_nex": {
+    "file": "Inferno_copier_window_m3_diagnostic.nex",
+    "md5": "9baec6412f2c3b7974b0db74a7ab9b75",
+    "boot_checks": "PASS (Sinclair, foreign ROM3)"
+   },
+   "jnext": "not installed on this machine; JNext has no blitter (user, 2026-11-07)"
   }
  }
 }

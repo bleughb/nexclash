@@ -1,13 +1,13 @@
 # Inferno
 
 ## Next session
-Stage: 2 (continued)    Branch: claude/inferno-copier-window-m2 (codex/inferno superseded)
-State: copier window milestone 2 (OUT replay + pad at 8F92) PASS in the model; diagnostic NEX
-  boots; hardware/JNext untested. Timing gate open (no hook work in the window yet).
+Stage: 2 (continued)    Branch: main (m3a merged from claude/inferno-copier-window-m3)
+State: copier window m3a (timed hooks, R, lost-IRQ compensation, cw_cal, DMA map copy) PASS in
+  the model; m2/m3 diagnostic NEXes boot; hardware/JNext untested. No hook work in the window yet.
 Inputs: specnext/reference/inferno/    Start: specnext build/CONTINUE_copier_window.md.
-Read: "Copier window"; inferno.py run_cw_window/copier_window_checks; asm cw_wait/cw_irq.
-Next: (3) capture hooks measure X on the CTC and restore R; move 8F95 work into cw_wait; shrink X;
-  JNext pace + user hardware result of the diagnostic NEX. Then the earlier items: live-table
+Read: "Copier window"; inferno.py run_cw_window/copier_window_update_checks; asm cap_in/cw_tout/cw_wait.
+Next: (3b) 8F95 work in cw_wait (coroutine design in the handover); shrink actor hooks; JNext pace
+  (no blitter there) + user hardware results of both diagnostics. Then the earlier items: live-table
   scan/driver at the 8EF9 gate, runtime exact dispatch and duplicate indices, complete
   pattern/frame state, protected uploads. Keep sprites disabled.
 Gate: zero frame slips and the original 9907 time per update with sound kept (replaces 10 ms).
@@ -17,7 +17,8 @@ Memory: owned cache 136–215, metadata/code 79, pinned stream 122, DDMA staging
   window 80. Store publishes valid last; dispatch still requires exact live validation.
 Open: loading driver/UI, unseen/mutated content, current/pending ownership, complete-frame reveal,
   FLASH/modal/frontend/ROM lifetime, hardware waits, contention. No sprite NEX.
-Workflow: Inferno6.rzx --quick 2000; six quicks at milestones; level-4 shop.
+Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample, ONE gate,
+  --jobs 6); Inferno6.rzx --quick 2000; six quicks at milestones; level-4 shop.
 
 ## Inputs and facts
 - Inferno.tzx: supplied tape, MD5 `335eec35a526f2044455cb87e8c77206`.
@@ -61,10 +62,11 @@ Workflow: Inferno6.rzx --quick 2000; six quicks at milestones; level-4 shop.
 ## Hardware checklist
 - Plain level-1 Inferno.nex: try CSpect first, then the Next; check title/text to gameplay,
   controls, scrolling, sound, death/restart and the shop. Boot is software-checked only.
-- Inferno_copier_window_diagnostic.nex (specnext build/; window only, NOT a release): play it and
-  the plain Inferno.nex side by side for a minute of level 1: same speed (enemies, scrolling,
-  stopwatch), same beeper sound (shots, explosions, pickups: pitch, length), no hang at the first
-  gameplay frame, no extra border stripes. Report core/video mode.
+- Inferno_copier_window_diagnostic.nex (m2, window only) and Inferno_copier_window_m3_diagnostic.nex
+  (hooks + window; specnext build/; NOT releases): play each beside plain Inferno.nex for a minute
+  of level 1: same speed (enemies, scrolling, stopwatch), same beeper sound (shots, explosions,
+  pickups: pitch, length), no hang at the first gameplay frame (m3: ~1 ms one-off calibration), no
+  extra border stripes. Report core/video mode.
 - This is a plain conversion, with original colour clash; it does not provide subsequent
   tape loads. No sprite build or all-level hardware test is ready.
 - Proposed sprite release: check intro beeper speed; title/start; all six continuous loads with
@@ -141,18 +143,22 @@ Workflow: Inferno6.rzx --quick 2000; six quicks at milestones; level-4 shop.
 - The copier head 9790..97FB (416 cells, 25.2-30.8 ms) OUTs the A700 beeper buffer per cell.
   Head T = 79,477 + 101*G; per-OUT T in cw_out_t. Graphics are mutable (F400-FA36, L3 ED00-F0AF).
 - Milestone 1: translated head (page 80), exact incl. R, 1,854 states.
-- Milestone 2: each OUT change at its original T (lockstep in the head; "head then replay" cannot
-  meet the first OUT at 244 T), 9907 at the original time; CTC ch 3 polled (32 T ticks, any video
-  timing), time base = first edge after entry; no counting CTC -> original copier. Window runs EI:
-  page 80 byte 0 = IM2 JR offset to cw_irq, which adds the no-op ISR (94 T, 10 M1). Cell 415's OUT
-  waits until after the epilogue. X (earlier hooks): accumulate (bounded shift needs X <= 169 T;
-  capture X = 3,198-7,642 T). Model, 1,854 states (CTC phase varied): registers
-  incl. R and RAM exact; OUT changes on time (-24..+31 T) except cells 0/1 (<= 114 T late, entry);
-  9907 -24..+42 T; with measured X 9907 still on time. 874+38 IRQ injections PASS (82 in the entry
-  DI span, <= 120 T after 8F92, lost; an OUT within one tick of an IRQ may move one ISR); controls
-  7/7; busy <= 11.3 ms, wait >= 15.1 ms. Full recordings (88,187 updates): an IRQ in every window,
-  76 lost (0.09 %), 27 slack < 32 T, free >= 14.6 ms. Diagnostic NEX (window only) boots, MD5
-  4f7fef40b4a50b7f1ba7c82d064e851b; no JNext here; hardware untested.
+- Milestone 2: each OUT change at its original T (lockstep in the head), 9907 at the original time,
+  CTC ch 3 polled (32 T ticks, any video timing; no counting CTC -> original copier). Window EI:
+  page 80 byte 0 = IM2 JR offset to cw_irq (adds the no-op ISR: 94 T, 10 M1). Cell 415's OUT after
+  the epilogue. X accumulates. Model 1,854 states: OUT -24..+56 T (cells 0/1 later), 9907 -25..+43 T.
+  Full recordings: 88,187 updates, an IRQ in every window, free >= 14.6 ms. m2 NEX MD5 4f7fef40...
+- Milestone 3a: hooks 8F7C/959B/96A1 time themselves on the CTC (sync to an edge at entry, next
+  edge at exit, constant path out; helpers cw_tin/cw_tout in page 80): 8F7C sets CW_X, actors add;
+  R = entry R + M1 constant. DI hooks clear NextReg $C8 after the speed switch, read it last: a
+  pulse that came and went = the original ISR (R+10, X-94); the window entry likewise (the m2 0.09 %).
+  cw_cal (first window) times 64 speed-switch pairs: CW_KT corrects every NEXTREG 7,x constant.
+  8F7C map copy by zxnDMA: hook 3.1 k -> 1.1 k T; actor hook 252 T. Update model 8F7C->9907,
+  1,855 states: X error -12..+17 T, X 1,444-8,905 T; 9907 -52..+42 T; 1,485 IRQ injections (550 lost and
+  compensated; original IRQ anchored at the same game instruction, as an RZX: level code reads R);
+  7 new controls; fast-switch bound (KT -38) PASS. Gap: a pulse starting in the ~6 T between
+  a hook's last $C8 read and the IRQ sample after EI + NEXTREG 7,0 (model: 24 T) is lost (~0.07 %
+  of updates; none with 28 MHz switches). m3 NEX boots, MD5 9baec641...; hardware untested.
 - Never-read rule: window CALLs/IRQ pushes leave bytes only in the 4 below the copier's SP, which
   9907's PUSH DE / PUSH HL overwrite first (checked by running them; 9907 = D5 E5 in all 88,187).
 
@@ -182,7 +188,7 @@ Workflow: Inferno6.rzx --quick 2000; six quicks at milestones; level-4 shop.
   pause/message/intro/ending paths remain open. Hide 0.035 ms.
 - Capture + preparation max 8.715 ms; 58-sprite queue ~0.55 ms (~0.64 shrinking). Full capacity/
   FLASH-heavy cases exceed 10 ms before actor work. No total timing PASS or NEX integration.
-- ROM code: capture 3A00-3B80, modal 3B90-3BDF, frame 3BE0-3C30; all below 3D00.
+- ROM code: capture 3948-39F2 + 3A00-3B72, modal 3B90-3BDF, frame 3BE0-3C30; all below 3D00.
 
 ## Historical components (build/actor_jobs.md, actor_b_compiler.md, README.md)
 - Pages 78/122 pin exact source bytes; 75 consumes tiles; 76 completes whole-image B before
@@ -195,25 +201,26 @@ Approved preview/model/contact-sheet hashes and recipes: specnext design/manifes
 build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 
 ## Lessons
+- [local: Inferno timed hooks] Calibrate tick-quantized constants over all CTC phases (5 phases left
+  K 7 T off a hook); constants holding NEXTREG 7,x need the machine's own figure (cw_cal).
+- [local: Inferno IRQ anchoring] Hooks shift the game, so a wall-time IRQ meets other instructions;
+  compare against the original IRQ at the same game instruction (RZX semantics) where code reads R.
 - [local: Inferno copier window] A replay cannot follow the code that produces it when the first
   event is due sooner than that code takes: interleave (lockstep); defer only what the tail can't fit.
 - [local: Inferno IRQ in a timed window] The IM2 JR at FFFF reads its offset from 0000: the slot-0
   page owns the IRQ; count the original's no-op ISR (T, M1) rather than lose it under DI.
 - [local: Inferno pacing] Find where the frame is paced before setting a hook budget; here the
   limiter is inside the copier, which also plays the beeper. Prove immutability on full recordings.
-- [local: Inferno runtime attribution] Retain simultaneous per-update totals; address/row bookkeeping
-  is a major exact-validation cost. Row span proofs remove repeated bounds checks without skipping
-  byte equality. Repeated-stream counts do not authorize reuse across original draws.
-- [local: Inferno initialization pause] 86C5 is a repeated, overwritten decompressor address.
-  Checked 8EF9 DI/IM1 entry permits a private pause with exact R/caller-clock restoration; separate
-  Nb prefix and replay-domain checks do not establish timed continuous loading or an installed driver.
-- [local: Inferno owned cache] Append complete streams/canvases in 136–215, publish valid last,
-  align each source within one page and validate live bytes directly. Dispatch is only a candidate;
-  no reset with current/pending owners and no immutable overwrite. Full-frame readiness stays closed.
-- [local: Inferno immutable sources] Loading-time live preparation removes sampled cold construction;
-  exact validation still exceeds budget. A first-draw host pause does not prove safe initialization.
-- [local: Inferno B fill] Bitset connectivity preserves whole-image fill; a bounded call is not a cold
-  latency/schedule proof. Frame-boundary source availability does not establish a safe hook.
+- [local: Inferno runtime attribution] Keep per-update totals; row span proofs cut bounds checks,
+  never byte equality; repeated streams do not authorize reuse across draws.
+- [local: Inferno initialization pause] 86C5 is an overwritten decompressor; 8EF9 DI/IM1 permits a
+  private pause with exact R/clock restoration; not proof of timed continuous loading.
+- [local: Inferno owned cache] Append whole streams in 136–215, publish valid last, validate live
+  bytes; dispatch is a candidate; no reset with current/pending owners.
+- [local: Inferno immutable sources] Loading-time preparation removes sampled cold construction;
+  exact validation still exceeds budget.
+- [local: Inferno B fill] Bitset connectivity preserves whole-image fill; a bounded call is no
+  cold-latency proof.
 - [local: Inferno blitter] Physical SRAM includes 040000 aperture offset; high staging is 216–223.
   Tiny copies prefer CPU. Charge stalls separately; protect current AND pending pairs/allocations.
 - [local: Inferno cold actor construction] Exact reuse is high; first-use work exceeds 10 ms. Prewarm
@@ -284,18 +291,12 @@ build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 - detect.buffer-layout-producer: corrected: visible colour checks distinguish black-masked stale bitmap data.
 
 ## Stage log
-- 2026-11-07 (claude/inferno-copier-window-m2): copier window milestone 2: OUT replay at original T
-  and pad to the original 9907 time on CTC ch 3, IRQs in the window compensated (R, T); six-level
-  model, injection and controls PASS; full-recording timeline; diagnostic NEX boot checks PASS.
-- 2026-11-07 (claude/inferno-copier-window): measured original pacing and copier sound over all
-  six full recordings; translated copier head (page 80) exact on 1,854 states, controls 3/3.
-  Existing pause/owned/job checks and assembler check PASS. Not installed; no pad; no sprite NEX.
-- 2026-11-07: profiled/bounded exact rows (warm max 9.8-14.9 ms, timing FAIL); initialization
-  pause/R, owned high-RAM store/dispatch; six quicks PASS (build/loading_owned.md). No sprite NEX.
-- 2026-11-05..07: stage-2 checkpoints (codex/inferno): bank loader, pulse continuation, capture,
-  textmap scenery, frame/modal/queue, actor packing, B fill, gated transfers, pinned sources,
-  high-SRAM DDMA. Six quicks/shop/component checks PASS at each; cold and total timing FAIL; no
-  sprite NEX. Evidence: build/README.md, timing_architecture.md, frame_pipeline.md,
-  actor_packing.md, actor_b_compiler.md, actor_jobs.md and the evidence record.
+- 2026-11-07 (claude/inferno-copier-window-m3): m3a: hooks measure X on the CTC, restore R, lost
+  IRQs compensated from $C8, cw_cal, DMA map copy; update model + 7 controls PASS; m3 NEX boots.
+- 2026-11-07 (claude/inferno-copier-window-m2): m2: OUT replay, pad, window IRQs; PASS.
+- 2026-11-07 (claude/inferno-copier-window): m1: pacing/sound measured; translated head exact.
+- 2026-11-07: exact rows profiled (timing FAIL); initialization pause/R; owned store/dispatch PASS.
+- 2026-11-05..07 (codex/inferno): loader, capture, textmap, frame/modal/queue, actor packing/fill,
+  gated transfers, pinned sources, DDMA; checks PASS; cold/total timing FAIL (build/README.md).
 - 2026-11-05: stages 0/1 intake/full raw replays and approved design; six-level model/level-2 census
   and tools/canary/doccheck PASS. Cards/diagnostics revised; evidence in specnext design/.

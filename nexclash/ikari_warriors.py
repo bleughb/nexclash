@@ -203,7 +203,7 @@ def _asm(org, items):
     return bytes(out)
 
 
-O3_OUTLINE = 0x2EB5             # uploadn .o3: LD (HL),I_OUT, the only outline store (K1's upload; no other kind outlines)
+O3_OUTLINE = 'uploadn.o3'       # profile symbol: LD (HL),I_OUT, the only outline store (K1's upload; no other kind outlines)
 
 
 def enhanced_patch(colours, prof=None, outline=False, border='clear'):
@@ -275,7 +275,7 @@ def enhanced_patch(colours, prof=None, outline=False, border='clear'):
     elif border != 'paper':
         raise ValueError('border')
     if not outline:
-        put(O3_OUTLINE, [0x36, 0x00], [0x36, I_OUT_IDX])
+        put(y[O3_OUTLINE], [0x36, 0x00], [0x36, I_OUT_IDX])
     put(y['e_k5.c5'] + 1, [0], [5])
     put(y['e_k6.c6'] + 1, [0], [6])
     p = IkariPatch(prof, colours=colours, rom_code=bytes(base) + code)
@@ -331,7 +331,7 @@ def edge_patch(colours=None, prof=None, outline=False, border='clear'):
     if border == 'clear':
         put(y['e_k1.c_det'], [0xCD] + w(lab['ext_det']) + [0, 0], [0x21, 0x34, 0x80, 0x36, 0x01])
     if not outline:
-        put(O3_OUTLINE, [0x36, 0x00], [0x36, I_OUT_IDX])
+        put(y[O3_OUTLINE], [0x36, 0x00], [0x36, I_OUT_IDX])
     put(y['e_k5.c5'] + 1, [0], [5])
     put(y['e_k6.c6'] + 1, [0], [6])
     if colours is None:
@@ -408,9 +408,13 @@ class NS:
         self.pat_ptr = 0
         self.ins = collections.deque()
         self.errs = []
+        self.sel = None                 # NextREG selected at port 0x243B (the hooks' speed latch reads NR 7)
         self.written = bytearray(128)
 
     def read(self, port):
+        if port == 0x253B and self.sel is not None:     # a NextREG read: from this model, not the recording
+            v = self.nr.get(self.sel, 0)
+            return (v & 3) << 4 | (v & 3) if self.sel == 0x07 else v
         if not self.ins:
             self.errs.append('IN beyond the recording at port 0x%04X' % port)
             return 0xFF
@@ -433,7 +437,9 @@ class NS:
             self.attr[self.nr.get(0x34, 0) & 0x7F][reg - 0x35] = val
 
     def out(self, port, val):
-        if port == 0x303B:
+        if port == 0x243B:
+            self.sel = val
+        elif port == 0x303B:
             self.pat_ptr = (val & 0x3F) * 256 + (128 if val & 0x80 else 0)
         elif port & 0xFF == 0x5B:
             self.pat[self.pat_ptr & 0x3FFF] = val
