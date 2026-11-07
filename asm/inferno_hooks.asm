@@ -361,6 +361,7 @@ cap_done:
         pop hl
         pop af
         ld sp,(CAP_SP)
+cap_done_tail:                  ; copier-window builds replace these 12 bytes by JP cw_go
         nextreg 0x50,255
         nextreg 0x07,0
         ei
@@ -3497,3 +3498,206 @@ pause_service:
 pause_loading_end:
         ASSERT pause_loading_end < 0x3D00
         SAVEBIN "inferno_pause.bin",pause_loading,pause_loading_end-pause_loading
+
+; ---------------------------------------------------------------------------
+; Copier window, milestone 1: translated copier head (claude/inferno-copier-window).
+; The original copier 9790 plays the A700 beeper buffer with one OUT (254),A per cell and
+; calls the 9907 limiter from inside itself after row 6 (97FB). cw_head replays 9790..97FB
+; instruction for instruction (same RAM writes, work-stack pushes and PUSH AF flags) without
+; the OUT. Each change of the OUT value is logged as [value, E, D, C] (main DE/C at that
+; cell) so the original T of every OUT is BASE(k) + 101*g(k); head total = 79477 + 101*G.
+; Exit state equals the original at 9907 entry, R included (entry R + original M1, bit 7
+; kept). No pad and no OUT replay yet: this block alone is NOT pace-preserving.
+CW_PAGE   EQU 80
+CW_SCHED  EQU 0x1000            ; sentinel entry, then 4-byte entries
+CW_ROWC   EQU 0x1700            ; 13 row counts, 256-aligned (self-modified low byte)
+CW_SP     EQU 0x1800
+CW_R      EQU 0x1802
+CW_IY     EQU 0x1803
+CW_END    EQU 0x1805
+CW_WSP    EQU 0x1807
+CW_HL     EQU 0x1809
+CW_RSUM   EQU 0x180B
+CW_STACK  EQU 0x1A00            ; 19FE: game AF, 19FC: game AF'
+CW_M1K    EQU 0x3A              ; R: -70 mod 128, end-to-end 8F92->9907 M1 difference (calibrated, then checked on every state)
+
+        ORG 0x3CB0
+cw_go:                          ; from cap_done_tail: DI, 28MHz, all registers = 9790 entry
+        nextreg 0x50,CW_PAGE
+        jp cw_head
+cw_exit:                        ; from page 80 with exact 9907-entry state
+        nextreg 0x50,255
+        nextreg 0x07,0
+        ei
+        jp 0x9907
+cw_rom_end:
+        ASSERT cw_rom_end < 0x3D00
+        SAVEBIN "inferno_cwrom.bin",cw_go,cw_rom_end-cw_go
+
+        ORG 0
+cw_head:
+        ld (CW_SP),sp
+        ld sp,CW_STACK
+        push af                 ; game AF
+        ex af,af'
+        push af                 ; game AF'
+        ex af,af'
+        ld a,r
+        ld (CW_R),a
+        ld (CW_IY),iy
+        ld iy,CW_SCHED
+        ld a,(0xA741)           ; first cell's OUT value: force its entry with a complement sentinel
+        cpl
+        ld (iy+0),a
+        xor a
+        ld (CW_RSUM),a
+        ld a,CW_ROWC & 0xFF
+        ld (cw_rp+1),a
+        ld sp,CW_STACK-2
+        pop af                  ; game AF and flags, exactly
+        ld sp,(CW_SP)
+        ; --- original 9790 prologue ---
+        ld (0x9878),sp          ; LD (39032),SP: the copier's own SP save
+        ld sp,0xA6FE
+        ld hl,0x9877
+        push hl
+        scf
+        push af
+        ld hl,0x9F7F
+        ld de,0x50FF
+        exx
+        ld de,0xAB41
+        ld hl,0x5AFF
+        ld ixh,18
+cw_row:                         ; alt set (97AD)
+        push de
+        push hl
+        ld bc,0xFFE0
+        add hl,bc
+        exx
+        ld c,0
+cw_cell:                        ; main set (97B6)
+        ld a,(hl)
+        and 3
+        ld b,a
+        ld ixl,b
+        dec l
+        ld a,(hl)
+        dec hl
+        exx
+        ld c,a
+        ld a,0xFC
+        add a,ixl
+        ld b,a
+        ld a,(bc)
+        ld (de),a
+        ld b,d
+        ld d,0xA7
+        ld a,(de)               ; the value the original OUTs for this cell
+        ld d,b
+        ld ixl,a
+        dec de
+        ld a,c
+        exx
+        ex af,af'
+        ld a,ixl
+        cp (iy+0)
+        jr z,cw_same
+        ld (iy+4),a
+        ld a,e
+        ld (iy+5),a
+        ld a,d
+        ld (iy+6),a
+        ld a,c
+        ld (iy+7),a
+        inc iy
+        inc iy
+        inc iy
+        inc iy
+cw_same:
+        ex af,af'
+        cp 16
+        jp c,cw_low
+        push hl
+        ld l,a
+        ld h,b
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld a,h
+        add a,220
+        ld h,a
+        ex (sp),hl
+        push de
+        inc c
+cw_low:
+        dec e
+        ld a,e
+        inc a
+        jp nz,cw_nowrap
+        ld a,d
+        sub 8
+        ld d,a
+        xor a
+cw_nowrap:
+        and 31
+        jp nz,cw_cell
+        ld a,c                  ; row end (97F4)
+        or a
+        push af
+cw_rp:  ld (CW_ROWC),a
+        ld a,c                  ; RSUM += 12*C: the >=16 path is 12 M1 (mod 256; R needs mod 128)
+        add a,a
+        add a,c
+        add a,a
+        add a,a
+        ld ixl,a
+        ld a,(CW_RSUM)
+        add a,ixl
+        ld (CW_RSUM),a
+        ld a,(cw_rp+1)
+        inc a
+        ld (cw_rp+1),a
+        ld a,ixh
+        cp 6
+        jr z,cw_done
+        dec ixh
+        exx
+        jp cw_row
+cw_done:                        ; main set, as the original at CALL Z,9907
+        ld (CW_END),iy
+        ld iy,(CW_IY)
+        ld a,b                  ; alt B = FC + page of the last cell (97CC)
+        add a,0xFC
+        exx
+        ld b,a
+        exx
+        ld (CW_WSP),sp
+        ld sp,CW_STACK-4
+        ex af,af'
+        pop af                  ; game AF'
+        ex af,af'
+        ld sp,(CW_WSP)
+        ld (CW_HL),hl
+        ld hl,0x97FE            ; the CALL Z,9907 return address
+        push hl
+        ld hl,(CW_HL)
+        ld a,(CW_RSUM)
+        add a,CW_M1K
+        ld ixl,a
+        ld a,(CW_R)
+        add a,ixl
+        and 0x7F
+        ld ixl,a
+        ld a,(CW_R)
+        and 0x80
+        or ixl
+        ld r,a
+        ld a,b
+        ld ixl,a                ; IXl = page of the last cell (97BA)
+        ld a,ixh
+        cp 6                    ; A and F exactly as at the original CALL
+        jp cw_exit
+cw_head_end:
+        ASSERT cw_head_end < CW_SCHED
+        SAVEBIN "inferno_cwhead.bin",cw_head,cw_head_end-cw_head
