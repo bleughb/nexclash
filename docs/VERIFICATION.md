@@ -78,6 +78,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Sabre Wulf (sabre_wulf): `sabre_wulf.nex` 06fbcf5016f77b868b3d754f621974ab, `sabre_wulf_sprites.nex` 332c9526cf6ab6b4adb5c1dc2d170969; verified 2026-11-05
 - Solomon's Key (solomons_key): `solomons_key.nex` 3ad529e40439ad0ee5fbbb67f66d9170, `solomons_key_sprites.nex` 80e83ae3cab8adf6e58085261517a80f; verified 2026-11-05
 - Dynamite Dan (dynamite_dan): `dynamite_dan.nex` 3ad20495c5183b20030190d6abdd479f, `dynamite_dan_sprites.nex` 1ab3348d3a2619f534d8907a1d89e09e; verified 2026-11-05
+- Nodes of Yesod (nodes_of_yesod): `nodes_of_yesod.nex` b578764fc922295ec75a6358d762b397, `nodes_of_yesod_sprites.nex` 81db9019df732c102e0f98aa8eb84227, `nodes_of_yesod_enhanced.nex` 698e791437ff07dc6c9b8a59d6f44bd6, `nodes_of_yesod_backdrops.nex` 138662b51b2b78cb73393e27ff81654f, `nodes_of_yesod_enhanced_backdrops.nex` 1a1987d524fd539bf02a16d6b0bbf3aa; verified never
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

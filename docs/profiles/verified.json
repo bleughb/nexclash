@@ -207,6 +207,17 @@
     "enhanced": "ebe5cc7225b41c3d04f073947f7b6a98"
    }
   },
+  "4dd5e967592f0eabd20f113cb64f740e": {
+   "game": "Nodes of Yesod",
+   "doc": "nodes_of_yesod.md",
+   "nex": {
+    "plain": "b578764fc922295ec75a6358d762b397",
+    "sprites": "81db9019df732c102e0f98aa8eb84227",
+    "enhanced": "698e791437ff07dc6c9b8a59d6f44bd6",
+    "backdrops": "138662b51b2b78cb73393e27ff81654f",
+    "enhanced_backdrops": "1a1987d524fd539bf02a16d6b0bbf3aa"
+   }
+  },
   "4c98b980b1726af545fccc99665ef29b": {
    "game": "Rainbow Islands (128K, Z80N)",
    "doc": "rainbow_z80n.md",
