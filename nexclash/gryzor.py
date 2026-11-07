@@ -136,7 +136,7 @@ def _entry(cmap, m, key):
     if not cmap:
         return None
     e = cmap.get('%04X' % key)
-    if e is not None and e[0] != m[key]:
+    if e is not None and e[0] is not None and e[0] != m[key]:   # stored maps: null check (the byte is the game's)
         return None
     return e
 

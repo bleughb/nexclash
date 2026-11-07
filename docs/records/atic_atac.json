@@ -229,19 +229,19 @@
    "outputs": {
     "sprites": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites.nex",
-     "md5": "bc9657c5e4d550a311d8ec0292466ea2"
+     "md5": "beee8a9110b979dc6b043e64fabe7fcb"
     },
     "enhanced": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_enhanced.nex",
-     "md5": "b0209166ca4a098acf3b39aa559bf0e3"
+     "md5": "ac9a2dc21d56124f8dccef1a413865e0"
     },
     "sprites_qaop": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites_qaop.nex",
-     "md5": "9b6e6753655e19b151fea18fc0d366d3"
+     "md5": "f9f966b0d997e64f339c86c73f1107da"
     },
     "enhanced_qaop": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_enhanced_qaop.nex",
-     "md5": "f7376520454c24efc605c26715feb86d"
+     "md5": "d7234cd5726d09359b319c4660676974"
     }
    },
    "proof": "walk1, walk2 and t IDENTICAL for every build (the limiter waits in the replay, the video line modelled), unit tests + 3 negative controls and 22 rework negatives per colour set, 432 incoming-clock cases, the limiter on 72 setup cases with the limiter removed detected 36/36, the toggle's key / pause units with 2 negatives, 3 replay negatives on t; JNext pace (published method, 10 runs a scene, 1.2.0 = 1.1.104): busy +0.83%, sound +0.53%, quiet +14.53% (encounters)",
