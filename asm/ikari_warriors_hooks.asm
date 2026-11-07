@@ -15,6 +15,7 @@
 ; Hook code: alt ROM image 1, 0x2400 up, nothing at 0x3D00-. Page H = Next page 26 at slot 4 while a hook runs.
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_speed.asm"    ; macros only: HLIB_SPEED_IN
 
 HPG     EQU 26                  ; hook page, slot 4 while a hook runs
 CPG     EQU 27                  ; clean scenery, slot 6 during the blit
@@ -64,6 +65,9 @@ V_FILL  EQU 0x802C              ; fill index: 14 paper, 13 black
 V_OFS   EQU 0x802D
 V_CELL  EQU 0x802E
 V_HL    EQU 0x8030              ; e_ab
+V_SPD   EQU 0x8036              ; the caller's CPU speed (lib/hlib_speed.asm latch; e_bl's carries to e_post)
+V_A     EQU 0x8037              ; A while LEAVE restores the speed
+V_BSP   EQU 0x8038              ; the blit's speed: 14 MHz, or the caller's if faster
 V_DET   EQU 0x8034              ; K1: palette index of a cleared pixel: the paper, or I_DET in foliage
 I_DET   EQU 8                   ; yellow, the body colour on sand: a foliage figure's detail on its black fill
 V_RET   EQU 0x8032
@@ -87,16 +91,26 @@ I_FBLK  EQU 13                  ; palette: fill black
 I_FPAP  EQU 14                  ; fill in the paper under the figure
 I_OUT   EQU 15                  ; outline
 
-        MACRO ENTER
+        MACRO ENTER                     ; the caller's speed latched (on the hook stack), then 28 MHz
+        nextreg 0x54,HPG
+        ld (V_SP),sp
+        ld sp,HSTK
+        HLIB_SPEED_IN V_SPD
+        ENDM
+
+        MACRO ENTERB                    ; e_post, entered at the blit's speed: V_SPD stays e_bl's latch
         nextreg 0x54,HPG
         nextreg 0x07,3
         ld (V_SP),sp
         ld sp,HSTK
         ENDM
 
-        MACRO LEAVE
+        MACRO LEAVE                     ; the caller's speed back (never a fixed 3.5 MHz); A and the flags kept
         ld sp,(V_SP)
-        nextreg 0x07,0
+        ld (V_A),a
+        ld a,(V_SPD)
+        nextreg 0x07,a
+        ld a,(V_A)
         nextreg 0x54,GP4
         ENDM
 
@@ -173,16 +187,24 @@ neg_att:
         ld hl,LINES             ; the game's table sits on KSTATE, so the ROM's keyboard scan damages it in attract
 neg_lines:
         ld (LINEOP),hl
+        ld a,(V_SPD)            ; the blit at 14 MHz, pays for the hooks' time (the game has no frame sync); at the
+        cp 2                    ; caller's speed when that is faster
+        jr nc,.f
+        ld a,2
+.f:     ld (V_BSP),a
         POPALL
         ld sp,(V_SP)
 neg_blit:
         nextreg 0x56,CPG
-        nextreg 0x07,2          ; 14 MHz for the blit: pays for the hooks' time (the game has no frame sync)
+        ld (V_A),a
+        ld a,(V_BSP)
+        nextreg 0x07,a
+        ld a,(V_A)
         jp BLIT
 
 ; ---- 0xEBC8 CALL 0x6711 -> CALL e_post: the commit ------------------------------------------------
 e_post: nextreg 0x56,GP6
-        ENTER
+        ENTERB
         PUSHALL
         ld hl,0xE462            ; the blit's operands back
         ld (0x6340),hl
