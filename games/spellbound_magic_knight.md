@@ -47,33 +47,44 @@ Owner: "Thor looks like a devil and only half red"; the Knight wears armour, so 
 ## Open
 Hardware, CSpect. Speed on a board. Puzzles, spells that succeed, the ending, characters taking orders: not played. Two plots of an arriving character use the pool twice (duplicates, harmless, pool not filled on any recording).
 
-## Speed restored (2026-11-07, shared engine refactor, goal 2)
-- ENTER latches the caller's CPU speed (HLIB_SPEED_IN, lib/hlib_speed.asm) on the hook stack and LEAVE gives it back
-  (`ld a,(V_SPD) / nextreg 7,a`) instead of a fixed 3.5 MHz; V_SPD = 0x80FF in page 26 (unused before). The game's
-  one LD A,R (0x8ECB) times a beeper noise in game code; R was not kept before either.
-- Sprites dad191ba (was 379e61b0), Enhanced 979c73f4 (was 3a824f3a); plain unchanged. Replay: IDENTICAL on all 9 recordings default and Enhanced (39,222 frames each), unit PASS, negatives
-  23/23 + palette 7/7; selftest --verify --stamp PASSED.
-- The verifier models NextREG reads in hooks (_NS.sel / nr_read): 0x243B selects, 0x253B reads NR 7 as the core
-  composes it; before, a hook's IN took a recorded port input. Flicker (JNext, frames 1000-1299): 0 out of step,
-  0 vanished, 0 one-frame attribute changes, before and after.
-- JNext pace (v2.09 card, 600 updates keyed to 0xA4FF (automatic), seed 1, against the plain build): +2.68% before,
-  +2.67% after (quiet +5.04%, busy -0.00%), lockstep equal at every update. Both over the 2% target: the build on
-  main already was (the first room build +52% over 20 updates; hook time 1.5 ms an update in the quiet third).
-  Interrupts 49.45 a second before and after (original 50.00), longest gap 60.8 ms (20.3): whole-hook DI windows,
-  fixed below (Interrupts on in hooks).
-
-## Interrupts on in hooks (2026-11-07, shared engine refactor, goal 1)
-- ENTER no longer DIs and LEAVE no longer EIs: the hooks run with interrupts as the game had them. `nexclash.py isr`
-  (600 frames, and t1 6,000 frames): the handler never touches slot 4 (hook page, hook stack: 256 bytes free below
-  0x9440 for its 42), reads IY (hooks never change it), executes from slot 5; no hook site is on its path. colents
-  maps slot 5 to the colour store: there, and only there, HLIB_IFF_DI / HLIB_IFF_EI (lib/hlib_iff.asm).
-- Sprites ce8e1c6f, Enhanced 06fe3d18 (after the speed change: dad191ba / 979c73f4). Replay IDENTICAL on all 9
-  recordings, default and Enhanced, unit PASS, negatives 23/23 + palette 7/7.
-- JNext pace (as above): interrupts 49.45 -> 50.00 a second (original 50.00), longest gap 60.8 -> 20.3 ms, interrupts
-  held off 16.3 -> 14.8 % of the time (original 14.9 %); penalty unchanged, +2.67 % (hook time, not interrupts).
-  Flicker (frames 1000-1299): 0 out of step, 0 vanished, 0 one-frame attribute changes.
+## Shared engine refactor (2026-11-07)
+- Speed: ENTER latches the caller's CPU speed (HLIB_SPEED_IN, latch V_SPD = 0x80FF) and LEAVE restores it, not a
+  fixed 3.5 MHz. The verifier answers IN 0x253B from its NextREG model (_NS.sel / nr_read). The game's one LD A,R
+  (0x8ECB, beeper noise) is game code; R was not kept before either.
+- Interrupts: ENTER / LEAVE no longer DI / EI (`isr`: the handler never touches slot 4, needs 42 bytes of the hook
+  stack, reads IY, runs from slot 5); only colents' slot-5 remap keeps HLIB_IFF_DI / _EI. JNext: 49.45 -> 50.00
+  interrupts a second, longest gap 60.8 -> 20.3 ms (original 50.00, 20.3).
+- Knight conversion about 3x faster (session 3). The +2.67 % was the image conversions (cache misses: updates 2-33,
+  and every colour change: one entry per image, keyed with KCOL), 38 ms each, 2 frames lost each. Same pixels:
+  build clears lines 0-35 x columns 0-33 only (nothing reaches further), draws an unpainted byte in eight unrolled
+  steps (an all-clear byte in none), and keeps bit rows per line in canvas columns 40-63 (bit i = pixel 8W+2-i:
+  Z clear, ZR reversed, R reached, N earns a ring, K ink of a white figure). fillh: line passes down and up from
+  line 0 (all ones) until one finds nothing new; seeds fill their runs leftwards as S | ~(Z + S) & Z and rightwards
+  the same on ZR (REVT: 256 reversed bytes at 0x8500, written by Python; the Knight cache moved to 0x8040); Z and
+  not R become black. rings = R & (N << 1 | N >> 1 | N above | N below). pack: unrolled, lines past H+2 zeros.
+  Simulator (pilot work/s3/sb_diff.py, main's page code against this, random / blob / game graphics, every ink,
+  outline on / off, plain and painted entries): canvas, patterns, sprite table identical; a Knight miss 729K ->
+  260K T (x2.8), painted figures x1.6.
+- kwait (alt ROM, the end of a converting c_kn): the miss now ends 15-18 ms after the interrupt, where the game's DI
+  copy (0xA52F-0xA55B, 1.9-2.9 ms after the blit, 2 ms long) held the next one off (49.64 a second, seed 2). With
+  under 90 lines before line 248 and interrupts on, the hook waits for it at the caller's speed: that frame is lost
+  anyway (the game's work after the blit takes 7.3 ms or more). Unit cases: line bounds, interrupts off, no
+  conversion; the replay's video line reads 0.
+- Sprites b679ae97, Enhanced 33f251ed (were ce8e1c6f / 06fe3d18, dad191ba / 979c73f4, 379e61b0 / 3a824f3a); plain
+  unchanged. JNext pace (v2.09 card, 600 updates at 0xA4FF, plain build control): seed 1 +2.67 -> +1.34 % (quiet
+  +5.04 -> +2.53, busy -0.00), seed 2 +1.46 %; lockstep at every update; interrupts 50.00 a second, gap 20.3 ms,
+  held off 14.9 %: as the original. Flicker 1000-1299: 0 out of step, 0 vanished. A miss still costs one frame
+  (11-13 ms; none needs under 6.8 ms). Skipping the game's frame HALT after a miss: the owner's call, not done.
 
 ## Lessons
+- [card optimise.pattern-cache §Failure lookup] One cache entry per image, keyed with the colour: a colour animation
+  re-converts the image every 4 frames (Spellbound's Knight, JNext seed 2, frames 1214-1230); there the miss cost sets
+  the pace, not the hit rate. Observed (hook log).
+- [card verify.update-locked-pace §Failure lookup] A hook made faster lost interrupts the slower one kept: the game's own DI
+  stretch after the hook moved onto the frame interrupt (Spellbound 0xA52F copy; 49.64 a second). Waiting for the
+  interrupt when the frame is lost anyway (under 90 lines left) gave 50.00 back. Demonstrated (JNext, 2 seeds).
+- [deferred Open: reconsider when Knight Tyme is next changed] Knight Tyme's hooks (same author's engine) have the
+  same build / fillh / rings: the bit-row conversion would apply there too; not ported in this change.
 - [card patch.iff-safe-read §Use / do not use] A hook pair that held DI for every hook lost two interrupts in a row at room
   builds (JNext: 49.45 a second, gap 60.8 ms); with the handler's slots known (`isr`), only the slot-5 remap needs DI.
 - [card patch.restore-speed §Verification] The lockstep verifier fed every port read from the recording, so the latch's
@@ -92,6 +103,9 @@ Hardware, CSpect. Speed on a board. Puzzles, spells that succeed, the ending, ch
 - [local: negatives by colour] "Characters paint" went undetected where the character's colour equals the room's; a recording with another colour detects it.
 
 ## Technique use
+- optimise.pattern-cache: corrected: a colour-keyed, one-entry-per-image cache misses through colour animations (2026-11-07).
+- patch.pace-limiter: helped: Cyclone's wait for the frame interrupt (lines left, interrupts on, caller's speed) became kwait.
+- verify.update-locked-pace: helped: lockstep at every update on two seeds; its interrupt-gap warning found the lost interrupts.
 - patch.restore-speed: helped: the macro pair went into ENTER / LEAVE unchanged (2026-11-07).
 - detect.gameplay-screen-readers: no help: replaced by the lockstep, which compares the whole machine each frame
 - optimise.pattern-cache: used: Knight images only
@@ -171,9 +185,10 @@ bank 12 (the image's page bytes). Emulator only.
 - 2026-11-04 ROM path check fixed for this game (raster line, segments); record unpinned; 0 user rounds.
 
 - 2026-11-07 shared engine refactor: hooks restore the caller's speed (goal 2); interrupts on in hooks (goal 1); 0 user rounds.
+- 2026-11-07 shared engine refactor session 3: Knight conversion about 3x faster, kwait (goal 1); 0 user rounds.
 ## Friction
 - reuse: [local: rebuild and boot model are today's shared code; the raster line model is the engine's copy of the boot]
 - retries: [local: the first verify failed the recolour guard (map form); fixed in the engine before the stamped run]
 - environment: [local: needs NEXCLASH_NEXT_ROM=runs/altrom_audit/rom/enNextZX.rom]
 - hand-rolled: [local: _boot is a copy of the shared boot with three lines more, kept in the engine by the import rule]
-- scratch: [none: no scratch scripts kept]
+- scratch: [local: work/s3/sb_diff.py (old against new page code, same inputs), sb_diprobe.py / sb_hookprobe*.py (JNext: where an interrupt is lost) stay in the pilot's run folder: they drive this engine's routines and addresses]

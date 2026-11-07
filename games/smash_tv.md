@@ -163,3 +163,29 @@ controls (colours shifted; guard column 31) 24/24. Front end N / Y / SYM+Y PASS.
 6. "GO FOR IT" / "GAME OVER" text: figures in front (expected).
 7. Game over -> title: all sprites gone; a second game works.
 8. Faults: Fuse "Record from snapshot" on Smash_TV.z80, autosave OFF, send the RZX.
+
+## Speed restored (2026-11-07, shared engine refactor, goal 2)
+- Every hook latches the caller's CPU speed (HLIB_SPEED_IN, V_SPD = 0xE019 in page 26) once page 26 is mapped and
+  its stack is the hook stack, and gives it back instead of NEXTREG 7,0 (through V_A = 0xE01A where A and the flags
+  must stay). The game's own bodies (the plotters' and the restore's real-buffer runs) now run at the caller's speed,
+  not a fixed 3.5 MHz: the original's cost at any speed.
+- The verifier answers NR reads (0x243B / 0x253B) from its NextREG state; before, any read was an error.
+- Sprites af0298e2 -> 68cd80b3; plain unchanged. RZX IDENTICAL (4,085 frames, 7,010 plots converted, 669 restores),
+  unit 840 + 48 + 12 cases, negative controls 24/24; stamped.
+- JNext pace (v2.09 card, 600 updates at 53864, the commit, Kempston profile, seed 1): the plain build never runs
+  that address (it is the hook's jump target), so against main's build instead: -0.18% (quiet -0.24%, busy +0.11%);
+  interrupts 0.66 a second both (play runs DI).
+
+## Lessons
+- [local: this engine] The bodies the hooks run "at the original cost" ran at a fixed 3.5 MHz, which is the original
+  cost only for a 3.5 MHz caller: they run at the latched speed now.
+
+## Technique use
+- patch.restore-speed: helped: the macros in PLOTHOOK and the four other hooks (2026-11-07).
+
+## Friction
+- reuse: [tool asm/lib/hlib_speed.asm] the shared latch macros
+- retries: [none: the first build verified]
+- environment: [none: the usual references and the JNext card, read-only]
+- hand-rolled: [local: a JNext profile for the pace (start keys from screenshots), kept in the pilot run folder]
+- scratch: [none: no scratch scripts in the repo]

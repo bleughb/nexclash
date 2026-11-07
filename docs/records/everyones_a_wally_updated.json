@@ -55,7 +55,7 @@
   },
   "sprites": {
    "file": "everyones_a_wally_updated_sprites.nex",
-   "md5": "07cfcb5c5da0ef59262f6baef96b5672"
+   "md5": "a6acbff44a2681ded8b94fd3670339cb"
   }
  },
  "repro": [],
@@ -66,7 +66,7 @@
  "status": {
   "title": "Everyone's a Wally (updated)",
   "engine_col": "wally2 (everyones_a_wally_updated.md)",
-  "build": "everyones_a_wally_updated_sprites.nex 31c3ef13 (every figure - gang, masked and OR objects - on a double-buffered Layer 2 in plot order; one colour per figure, black 4-neighbour outline; default colours (nothing painted yet); recolour; altrom + pages 26/27)",
+  "build": "everyones_a_wally_updated_sprites.nex a6acbff4 (2026-11-07: hooks restore the caller's CPU speed, lib/hlib_speed.asm; was 07cfcb5c, earlier 31c3ef13: every figure - gang, masked and OR objects - on a double-buffered Layer 2 in plot order; one colour per figure, black 4-neighbour outline; default colours (nothing painted yet); recolour; altrom + pages 26/27)",
   "software": "RZX IDENTICAL (registers, memory, Layer 2 image at every commit vs the model), 930 + 921 graphic + joined / commit / restore unit cases, negative control PASS",
   "hardware": "untested",
   "next": "hardware test (checklist); Dean paints the PAINTING_SPRITES sheet; longer RZX (16 B / 7 C callers not reached)"
@@ -76,52 +76,52 @@
  ],
  "checked": {
   "deps": {
-   "asm/wally2_hooks.asm": "f0a62059c847ca83",
-   "docs/profiles/everyones_a_wally_updated.json": "de99c28e8b201859",
-   "nexclash.py": "b7f49876a97b1f48",
+   "asm/wally2_hooks.asm": "1579b9f60d94f994",
+   "docs/profiles/everyones_a_wally_updated.json": "8a0bc8c05e885468",
+   "nexclash.py": "9028c4ca12045d70",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/engines.py": "00d01102bda98ad5",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "273dab19dfcd9e27",
-   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/wally2.py": "1e1fa28496091737",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "c7b5b285d0b34c28",
+   "recipe": "7ce66a0484b8cd36",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-07"
  },
  "verified": {
   "deps": {
-   "asm/wally2_hooks.asm": "f0a62059c847ca83",
-   "docs/profiles/everyones_a_wally_updated.json": "de99c28e8b201859",
-   "nexclash.py": "b7f49876a97b1f48",
+   "asm/wally2_hooks.asm": "1579b9f60d94f994",
+   "docs/profiles/everyones_a_wally_updated.json": "8a0bc8c05e885468",
+   "nexclash.py": "9028c4ca12045d70",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/engines.py": "00d01102bda98ad5",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "273dab19dfcd9e27",
-   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/wally2.py": "1e1fa28496091737",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "c7b5b285d0b34c28",
+   "recipe": "7ce66a0484b8cd36",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-07"
  }
 }

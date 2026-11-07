@@ -64,6 +64,7 @@ None.
 | no updates in lockstep | the probe never runs, or start keys miss | the run's pictures | a probe in play, start keys | frame-timed comparison |
 | first difference early | input reaches the two runs at different states | the update of the difference | start keys keyed to updates | ignoring it |
 | penalty in the first window only | graphics cache warm-up | hook ms per update | pre-fill, or accept | averaging it away |
+| interrupt-gap warning after a hook got faster (Spellbound) | the game's own DI stretch now spans the frame interrupt | JNext: PC and IFF1 at each frame start | wait for the interrupt when that frame is lost anyway | - |
 
 ## Verification
 Negative control: the original against itself gives exactly 0.00% in lockstep (`selftest.py --tools`, Chuckie

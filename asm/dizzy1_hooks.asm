@@ -42,6 +42,7 @@
 ;   57095 DD 4E 0B        LD C,(IX+11)               -> JP e_f7   type-7 rotator
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_speed.asm"    ; macros only: HLIB_SPEED_IN
 
 PG      EQU 26                  ; shadow page (slot 3 during hooks): ink shadow + shadow attributes
 PG2     EQU 27                  ; fill shadow (figures' enclosed paper, display only)
@@ -83,7 +84,11 @@ V_VIS   EQU 0x5B61              ; 1 = shown
 V_PEND  EQU 0x5B62              ; 1 = erased, hide unless the next Dizzy draw comes first
 V_YY    EQU 0x5B63              ; sprite Y (+32)
 V_XX    EQU 0x5B64              ; sprite X (+32, 16 bits)
-HSTK    EQU 0x5BC0              ; hook stack top (grows down; the variables end at 0x5B58)
+V_SPDP  EQU 0x5B66              ; the caller's CPU speed (lib/hlib_speed.asm latches): plotter 2 (e_p2 .. t_p2),
+V_SPDD  EQU 0x5B67              ; the Dizzy plotter (e_dz .. t_dz),
+V_SPDH  EQU 0x5B68              ; every other hook (entry to exit inside the hook)
+V_A     EQU 0x5B69              ; A while an exit restores the speed (no flags)
+HSTK    EQU 0x5BC0              ; hook stack top (grows down; the variables end at 0x5B69)
 
 SH      EQU 0x6000              ; shadow screen in PG (offset = screen address - 0x4000)
 SA      EQU 0x7800              ; shadow attributes in PG
@@ -92,11 +97,11 @@ SA      EQU 0x7800              ; shadow attributes in PG
 
 ; ------------------------------------------------------------------------------------------
 ; plotter 2 entry: the caller decides convert / keep; B, C give the default colour
-e_p2:   nextreg 0x07,3          ; the whole plot at 28 MHz (the game has no frame sync: hook time
-        res 0,e                 ; would slow it down); t_p2 switches back at the plotter's RET
-        ld (57709),a
+e_p2:   res 0,e                 ; the whole plot at 28 MHz (the game has no frame sync: hook time
+        ld (57709),a            ; would slow it down); t_p2 gives the caller's speed back at the plotter's RET
         ld (V_SP),sp
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPDP    ; on the hook stack (the game's dead stack must stay as the original's)
         push af
         push hl
         push de
@@ -154,20 +159,26 @@ keep:   dw 58549, 62673, 62694, 62739, 60749   ; room renderer, score digits, li
 t_p2:   push hl                 ; SP = the slot
         ld hl,(V_R2)
         ex (sp),hl              ; slot = the caller's address, HL restored
-        nextreg 0x07,0
+        ld (V_A),a
+        ld a,(V_SPDP)           ; the caller's speed (never a fixed 3.5 MHz)
+        nextreg 0x07,a
+        ld a,(V_A)
         ret
 
 t_dz:   push hl
         ld hl,(V_R1)
         ex (sp),hl
-        nextreg 0x07,0
+        ld (V_A),a
+        ld a,(V_SPDD)
+        nextreg 0x07,a
+        ld a,(V_A)
         ret
 
 ; Dizzy plotter entry 58113: LD (57709),A -> JP e_dz (same speed-up, return via t_dz)
-e_dz:   nextreg 0x07,3
-        ld (57709),a
+e_dz:   ld (57709),a
         ld (V_SP),sp
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPDD
         push af
         push bc
         push de
@@ -426,8 +437,7 @@ e_at:   ld (V_T),hl
 ; attribute read 58712: CALL 58683 (cell address from L = line, E = x), LD A,(HL), RET.
 ; The routine 58683 is run here as a copy (bytes checked); its dead-stack word is written as
 ; the original's CALL leaves it (58715); A = the original's attribute.
-e_ar:   nextreg 0x07,3
-        ld (V_T),hl
+e_ar:   ld (V_T),hl
         ld hl,58715
         push hl
         pop hl
@@ -446,6 +456,7 @@ e_ar:   nextreg 0x07,3
         add hl,de
         ld (V_SP),sp
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPDH
         push af                 ; the copy's flags
         push bc
         ld a,h
@@ -470,29 +481,36 @@ e_ar:   nextreg 0x07,3
 .o:     ld (V_T),a
         pop bc
         pop af
+        ld a,(V_SPDH)           ; the caller's speed back
+        nextreg 0x07,a
         ld a,(V_T)
         ld sp,(V_SP)
-        nextreg 0x07,0
         ret
 
 ; ------------------------------------------------------------------------------------------
 ; collision reads 60244 / 60251: A = the original's screen byte, AND as the game
-e_c1:   nextreg 0x07,3
-        ld (V_SP),sp
+e_c1:   ld (V_SP),sp
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPDH
         call virt
         ld sp,(V_SP)
         and 240
-        nextreg 0x07,0
+        ld (V_A),a
+        ld a,(V_SPDH)
+        nextreg 0x07,a
+        ld a,(V_A)
         jp 60247
 
-e_c2:   nextreg 0x07,3
-        ld (V_SP),sp
+e_c2:   ld (V_SP),sp
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPDH
         call virt
         ld sp,(V_SP)
         and 15
-        nextreg 0x07,0
+        ld (V_A),a
+        ld a,(V_SPDH)
+        nextreg 0x07,a
+        ld a,(V_A)
         jp 60254
 
 virt:   ld a,h                  ; HL -> A = ULA ^ objects ^ Dizzy (the screen) / (HL) (elsewhere)
@@ -524,9 +542,9 @@ virt:   ld a,h                  ; HL -> A = ULA ^ objects ^ Dizzy (the screen) /
 
 ; ------------------------------------------------------------------------------------------
 ; room wipe 58634: lines 8-151 of the line table, columns 1-30 (the game zeroes them next)
-e_wipe: nextreg 0x07,3
-        ld (V_SP),sp
+e_wipe: ld (V_SP),sp
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPDH
         push af
         push bc
         push de
@@ -539,16 +557,17 @@ e_wipe: nextreg 0x07,3
         pop hl
         pop de
         pop bc
+        ld a,(V_SPDH)           ; the caller's speed back
+        nextreg 0x07,a
         pop af
         ld sp,(V_SP)
         ld ix,23766
-        nextreg 0x07,0
         jp 58638
 
 ; room wipe 58666: attribute rows 5-22, columns 1-30 (the game overwrites them next)
-e_wipea: nextreg 0x07,3
-        ld (V_SP),sp
+e_wipea: ld (V_SP),sp
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPDH
         push af
         push bc
         push de
@@ -578,18 +597,19 @@ e_wipea: nextreg 0x07,3
         pop hl
         pop de
         pop bc
+        ld a,(V_SPDH)           ; the caller's speed back
+        nextreg 0x07,a
         pop af
         ld sp,(V_SP)
         ld hl,22688
-        nextreg 0x07,0
         jp 58669
 
 ; ------------------------------------------------------------------------------------------
 ; type-3 effect (55935): IX+11 = 0 scroll-copy 55955, 2 rotate right 56083, 3 rotate left 56169,
 ; all on line-table lines IX+9..IX+10 and columns IX+7..IX+8: fold that rectangle first.
-e_f3:   nextreg 0x07,3
-        ld (V_SP),sp
+e_f3:   ld (V_SP),sp
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPDH
         push af
         push bc
         push de
@@ -616,16 +636,17 @@ e_f3:   nextreg 0x07,3
 .no:    pop hl
         pop de
         pop bc
+        ld a,(V_SPDH)           ; the caller's speed back
+        nextreg 0x07,a
         pop af
         ld sp,(V_SP)
         ld a,(ix+11)
-        nextreg 0x07,0
         jp 55938
 
 ; type-7 rotator (57095): 8 lines from IX+11, IX+12 bytes from column IX+10
-e_f7:   nextreg 0x07,3
-        ld (V_SP),sp
+e_f7:   ld (V_SP),sp
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPDH
         push af
         push bc
         push de
@@ -639,10 +660,11 @@ e_f7:   nextreg 0x07,3
         pop hl
         pop de
         pop bc
+        ld a,(V_SPDH)           ; the caller's speed back
+        nextreg 0x07,a
         pop af
         ld sp,(V_SP)
         ld c,(ix+11)
-        nextreg 0x07,0
         jp 57098
 
 lineptr: ld l,a                 ; A = line index -> HL = LTAB + 2A

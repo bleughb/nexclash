@@ -59,7 +59,22 @@ V_MONO = 0x4CE0              # session 3: 1 = monochrome (the .nxc base), 0 = co
 V_CENTRE = 0x4CE2            # session 4: 1 = Centred view (with the E0DC / E1B3 patches; implies fast + smooth)
 C_PRE = int(json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'docs', 'profiles',
                                        'quazatron.json')))['hooks']['syms']['c_pre'], 16)
-                             # c_pre (pure Z80) in the alt ROM image, ending at 0x3D00; the reference game has it there too
+                             # c_pre (pure Z80); session 8: in RAM at 0x5B40, the reference game has it there too
+# session 7, the 'Cursor keys + Space' toggle (data only; replaced in session 8 by CURSOR_SITES below): option 2 on CONTROL SELECTION (the game's own cursor-keys
+# table at AFE5: keys 7, 6, 5, 8 - the Next's cursor keys and an emulator's arrows) preselected, and its fire key 0
+# (port EFFE bit 0) made SPACE (port 7FFE bit 0). P still pauses (B6AA) and fire (AFCA) resumes.
+CURSOR_SITES_S7 = ((0xAFC4, bytes([0x01]), bytes([0x02])), (0xAFF2, bytes([0xEF]), bytes([0x7F])))   # (session 7's version)
+# session 8: the cursor keys and SPACE folded into the game's own Kempston read: CALL kmap at B645 (pure Z80 in the
+# printer buffer at 0x5BB0, its bytes a site of the toggle; R kept exact), the player chooses 4 (Kempston) as usual
+K_CODE = bytes.fromhex(json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'docs', 'profiles',
+                                                  'quazatron.json')))['hooks']['kmap'])
+CURSOR_SITES_S8 = ((0xB645, bytes.fromhex('011f00ed78'), bytes([0xCD, 0xB0, 0x5B, 0x00, 0x00])),
+                   (0x5BB0, bytes(len(K_CODE)), K_CODE))    # (session 8's version: it broke real joysticks)
+# session 10 (Jon: the game's own option 2 already reads the cursor keys): the 'Space also fires' toggle, one data
+# byte. Option 2's fire entry in the game's key table (AFF1-AFF3: port FE, row EF, mask FE = key 0) reads row 6F
+# instead: rows EFFE and 7FFE at once, so bit 0 is low when 0 OR SPACE is held. The other options' entries, the
+# Kempston read (option 4) and every other key are untouched.
+CURSOR_SITES = ((0xAFF2, bytes([0xEF]), bytes([0x6F])),)
 GPAGE = 27                   # session 5: the frame step's page (bank 13 upper half), at slot 7 only inside isr_step
 PG27 = {'PDXI': 0xFF05, 'PDY': 0xFF07, 'VX': 0xFF09, 'VY': 0xFF0B, 'LOX': 0xFF10, 'HIX': 0xFF11, 'LOY': 0xFF12,
         'HIY': 0xFF13, 'UU': 0xFF02, 'LEFT': 0xFF03, 'PDXF': 0xFF04, 'FRESH': 0x4CF5}
@@ -119,9 +134,18 @@ class CamModel:
                 self.py, self.vy = pc, v
 
 # session 4, Centred view: CALL D5BB at E0DC -> CALL c_pre; LD A,(AF94) at E1B3 -> JP E1EC (the edge bursts never start)
+# session 8: c_pre lives in RAM at C_PRE (0x5B40, unused by the game) - its bytes are a site of the toggle too - and the
+# compositing pace window: JP t_cmp at DC24 (LD HL,E700), CALL t_cmpo at DD79 (CALL B77D)
+_P = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'docs', 'profiles', 'quazatron.json')))['hooks']
+C_CODE = bytes.fromhex(_P['centre'])
 CENTRE_SITES = ((0xE0DC, bytes.fromhex('cdbbd5'), bytes([0xCD, C_PRE & 255, C_PRE >> 8])),
-                (0xE1B3, bytes.fromhex('3a94af'), bytes.fromhex('c3ece1')))
+                (0xE1B3, bytes.fromhex('3a94af'), bytes.fromhex('c3ece1')),
+                (C_PRE, bytes(len(C_CODE)), C_CODE),
+                (0xDC24, bytes.fromhex('2100e7'), bytes([0xC3]) + int(_P['syms']['t_cmp'], 16).to_bytes(2, 'little')),
+                (0xDD79, bytes.fromhex('cd7db7'), bytes([0xCD]) + int(_P['syms']['t_cmpo'], 16).to_bytes(2, 'little')))
+CENTRE_EVENTS = {0xDC24: 't_cmp', 0xDD79: 't_cmpo'}
 TAGS = 0x4D00
+TINK8 = 8                    # session 9: a tag's ink value (asm TINK8)
 
 # --- the painting (our own; docs: games/quazatron.md "Colour") -------------------------------------------------
 # Layer 2 palette: 0-15 the ZX inks (the ink a cell's attribute gives), 16-19 the deck's floor / wall / ramp / fringe
@@ -260,6 +284,19 @@ def page2(prof):
     return g + bytes(8192 - len(g))
 
 
+def xpage_image(prof, rom_code):
+    """Session 9: page 25 (XPAGE, bank 12's upper half), mapped at slot 1 (0x2000-0x3FFF) only while hook work runs
+    there: the moved hook routines (x_tags, x_clr, x_paste, x_inks, x_recell) from 0x2000, and a copy of the ROM
+    trampolines at ROM_ORG, so an interrupt taken in page 25 reaches t_isr exactly as from the alt ROM."""
+    x = bytes.fromhex(prof['hooks']['xpage'])
+    if 0x2000 + len(x) > ROM_ORG:
+        raise ValueError('page 25 code runs into the trampolines')
+    pg = bytearray(8192)
+    pg[0:len(x)] = x
+    pg[ROM_ORG - 0x2000:ROM_ORG - 0x2000 + len(rom_code)] = rom_code
+    return bytes(pg)
+
+
 class PlainPatch:
     """The plain .nex: no hooks; alt ROM image 1 = Sinclair's 48K ROM (the game reads ROM 0x0000-0x03FF as its random
     table, B5A3)."""
@@ -285,7 +322,7 @@ class PlainPatch:
 class QuazatronPatch:
     name = 'Quazatron colour: scenery canvas on Layer 2 (session 1; droid sprites, smooth mode and pace to come)'
 
-    def __init__(self, prof=None, fast=False, smooth=False, mono=False, centre=False):
+    def __init__(self, prof=None, fast=False, smooth=False, mono=False, centre=False, cursor=False):
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         self.rom_code = bytes.fromhex(h['rom'])
@@ -303,15 +340,18 @@ class QuazatronPatch:
         if self.regblock + 20 > 0x3D00:
             raise ValueError('ROM hooks too long')
         self.slot1 = (ALT_PAGE, self.regblock)
-        centre_code = bytes.fromhex(h['centre'])
-        self.altrom = (ROM_ORG, C_PRE + len(centre_code))   # session 4: the stub's fill reaches c_pre
-        self.page = _whole_rom_page(self.rom_code, centre_code)
+        self.altrom = (ROM_ORG, self.regblock + 20)          # session 8: c_pre is in RAM now
+        self.page = _whole_rom_page(self.rom_code)
         self.sites = [(a, bytes.fromhex(old), bytes([op]) + self.syms[sym].to_bytes(2, 'little'))
                       for a, (old, op, sym) in SITES.items()]
         if centre:
             assert self.syms['c_pre'] == C_PRE
             self.sites += list(CENTRE_SITES)
-        self.extra_banks = {12: self.page + bytes(8192), 13: hook_page(self.prof, fast, smooth, mono, centre) + page2(self.prof)}
+        self.cursor = cursor
+        if cursor:
+            self.sites += list(CURSOR_SITES)
+        self.extra_banks = {12: self.page + xpage_image(self.prof, self.rom_code),
+                            13: hook_page(self.prof, fast, smooth, mono, centre) + page2(self.prof)}
 
     def apply(self, snap):
         if snap.is128:
@@ -347,11 +387,15 @@ def build(z80, out, name='quazatron', say=print):
                                          ('Mono', False, False, True, name + '_mono.nex'),
                                          ('Mono+toggle', True, True, True, name + '_mono_fastscroll.nex')):
       for centre in (False, True):          # session 4: each with Centred view (the toggle's bytes only)
+       for cursor in (False, True):         # session 7: and with Cursor keys + Space (session 10: Space also fires)
+        k2, f2 = kind, fn
         if centre:
-            kind, fn = kind + '+centre', fn[:-4] + '_centred.nex'
-        patch = QuazatronPatch(fast=fast, smooth=smooth, mono=mono, centre=centre)
+            k2, f2 = k2 + '+centre', f2[:-4] + '_centred.nex'
+        if cursor:
+            k2, f2 = k2 + '+space', f2[:-4] + '_space.nex'
+        patch = QuazatronPatch(fast=fast, smooth=smooth, mono=mono, centre=centre, cursor=cursor)
         patch.extra_banks.update(banks)
-        builds.append((kind, patch, fn))
+        builds.append((k2, patch, f2))
     for kind, patch, fn in builds:
         p = os.path.join(out, fn)
         conv = zt.convert(z80, p, None, True, quiet=True, patch=patch)
@@ -433,6 +477,8 @@ def _mem(get, alt, ns, psite):
         def __getitem__(s, a):
             if a < 0x2000 and ns.nr.get(0x50, 0xFF) != 0xFF:     # session 5: S0 at slot 0 inside the frame step
                 return ns.pages[ns.nr[0x50]][a]
+            if 0x2000 <= a < 0x4000 and ns.nr.get(0x51, 0xFF) != 0xFF:     # session 9: page 25 at slot 1 in hooks
+                return ns.pages[ns.nr[0x51]][a - 0x2000]
             if a < 0x4000:
                 return alt[a]
             if a < 0x6000 and ns.nr[0x52] != ULAPAGE:
@@ -517,12 +563,13 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
     ex = collections.defaultdict(list)
     alt = alt_image(patch)
     centre = getattr(patch, 'centre', False)
-    rom = ref_rom(patch.prof) if centre else rom48()     # session 4: Centred view's reference = the original + c_pre
-    if centre and bytes(alt[C_PRE:0x3D00]) != bytes(rom[C_PRE:0x3D00]):
-        c['centre: the build\'s alt ROM lacks c_pre!'] += 1      # (what the stub leaves on the Next: alt_image)
+    rom = rom48()             # session 8: Centred view's reference = the original + c_pre in its own RAM (the recording)
+    cpre_build = {a: new for a, old, new in patch.sites if a == C_PRE}
     psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
     sym = {v: k for k, v in patch.syms.items()}
     sites = {a: SITES[a][2] for a in SITES}
+    if getattr(patch, 'centre', False):
+        sites.update(CENTRE_EVENTS)
     ns = NextState(patch)
     span = [None]
     dbg_prev = [0]
@@ -545,8 +592,16 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
             span[0] = sp if name == 't_bs' else None
         get = lambda a: m[a]
         regs = list(r)
+        if centre and not c.get('centre: the build\'s c_pre checked'):
+            c['centre: the build\'s c_pre checked'] = 1
+            if bytes(m[C_PRE + i] for i in range(len(C_CODE))) != cpre_build.get(C_PRE):
+                fail('centre: the build\'s c_pre differs from the reference\'s!', hex(C_PRE))
         if name in ('t_list', 't_clr', 't_paste', 't_spr', 't_bs'):
             stop_pc, stop_sp = pc + 3, sp
+        elif name == 't_cmp':
+            stop_pc, stop_sp = 0xDC27, sp
+        elif name == 't_cmpo':
+            stop_pc, stop_sp = 0xB77D, sp - 2
         elif name in ('t_c05a', 't_isr'):
             stop_pc, stop_sp = m[sp] | m[sp + 1] << 8, sp + 2
         else:
@@ -575,8 +630,22 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
         on = _OrigNS()
         mo = _mem(get, rom, on, {})
         ro, ok_o = _run(mo, regs, on, stop_pc, stop_sp, 'qo')
-        if clocks and c['clock ' + name] < clocks:
+        if clocks and c['clock ' + name] < clocks and name not in ('t_cmp', 't_cmpo'):
             clock_matrix(name, pc, get, regs, stop_pc, stop_sp)
+        if clocks and name in ('t_cmp', 't_cmpo') and c['clock ' + name] < clocks:
+            # session 8: the compositing window's two ends are one hook around game code that runs at 28 MHz: at
+            # every incoming clock t_cmp must leave 28 MHz and latch that clock, and t_cmpo must give it back
+            import copy
+            c['clock ' + name] += 1
+            for k in range(4):
+                n2 = copy.deepcopy(ns); n2.nr[7] = 3 if name == 't_cmpo' else k
+                if name == 't_cmpo':
+                    n2.pages[HPAGE][0x4BE6 - 0x4000] = k            # VSPD2: the clock t_cmp latched
+                r2, ok = _run(_mem(get, alt, n2, psite), regs, n2, stop_pc, stop_sp, 'qc')
+                want = 3 if name == 't_cmp' else k
+                c['clock matrix cases'] += 1
+                if not ok or n2.nr.get(7, 0) & 3 != want:
+                    fail('clock matrix: the compositing window\'s clock is wrong!', (name, k, n2.nr.get(7)))
         mp = _mem(get, alt, ns, psite)
         rp, ok_p = _run(mp, regs, ns, stop_pc, stop_sp, 'qp')
         c[name] += 1
@@ -600,16 +669,111 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
         if centre and ns.var(0x4CF5):        # session 6: FRESH set (a view's first copy): the model starts again
             sm['fresh'] = True
         if ns.var(V_L2ON) and name in ('t_isr', 't_spr'):      # every frame, and every update's placing
+            if centre and name == 't_isr' and stop_pc >= 0x4000:
+                ip_frame()                                       # session 9: the frame step's idec
             check_lock()
+            if centre:
+                ip_stats()
             if centre:      # (an interrupt in a ROM trampoline or c_pre runs no frame step: .rom path)
                 check_smooth(name == 't_isr' and stop_pc >= 0x4000)
                 if name == 't_isr' and stop_pc < 0x4000:
                     c['centre: frames without a frame step (interrupt in the alt ROM)'] += 1
+        if name == 't_c05a':
+            disp_commit(stop_pc not in (0xDD9D, patch.syms.get('c_ret')))
+        if name == 't_isr':
+            disp_frame(get)
         if ns.var(V_MONO):          # session 3: monochrome never shows Layer 2 or a sprite, nor runs a scroll step fast
             if ns.var(V_L2ON) or ns.l2 & 2 or ns.nr.get(0x15, 0) & 1 or ns.var(0x4CE1):
                 fail('monochrome shows Layer 2 or sprites, or scrolls fast!', (name, hex(pc), ns.var(V_L2ON), ns.l2, ns.nr.get(0x15)))
             else:
                 c['monochrome: Layer 2, sprites and fast scroll off after the hook'] += 1
+
+    import numpy as _np
+    dsp = {'valid': _np.zeros((320, 256), bool), 'snap': _np.zeros((320, 256), _np.uint8), 'on': 0, 'frame': 0,
+           'dump': os.environ.get('QZ_DISPDUMP'), 'saved': 0, 'wxs': _np.zeros((320, 256), _np.int32),
+           'wys': _np.zeros((320, 256), _np.int32), 'wx': 0, 'wy': 0, 'ptx': 0, 'pty': 0}
+
+    def canvas_np():
+        return _np.frombuffer(b''.join(bytes(ns.pages[L2PAGE + k]) for k in range(10)), _np.uint8).reshape(320, 256)
+
+    def disp_commit(first):
+        """Session 10: at every commit (C05A's hook: inks done, TX / TY set) the committed view's canvas pixels are
+        what a viewer may be shown for their world place, until the canvas changes under them."""
+        on = ns.var(V_L2ON)
+        if not on:
+            dsp['on'] = 0
+            return
+        tx, ty = ns.var(0x4BF3, 2), ns.var(0x4BF5)
+        if not dsp['on'] or first:
+            dsp['valid'][:] = False         # a view's first copy: nothing older is the same world place
+            dsp['wx'] = dsp['wy'] = 0
+        else:                               # the world place of the view: the canvas moves are its steps
+            dsp['wx'] += (tx - dsp['ptx'] + 160) % 320 - 160
+            dsp['wy'] += (ty - dsp['pty'] + 128) % 256 - 128
+        dsp['ptx'], dsp['pty'] = tx, ty
+        dsp['on'] = 1
+        cv = canvas_np()
+        xs = (_np.arange(256) + tx) % 320
+        ys = (_np.arange(152) + ty) % 256
+        ix = _np.ix_(xs, ys)
+        dsp['valid'][ix] = True
+        dsp['snap'][ix] = cv[ix]
+        dsp['wxs'][ix] = (dsp['wx'] + _np.arange(256))[:, None]
+        dsp['wys'][ix] = (dsp['wy'] + _np.arange(152))[None, :]
+        c['display: commits'] += 1
+
+    def disp_frame(get):
+        """Session 10, at every frame Layer 2 is on: every play-area pixel shown (the Layer 2 scroll registers over the
+        256 x 152 clip window) must be a pixel of a committed view, unchanged since: not a cell no view committed (a
+        stale or never-drawn canvas cell) and not one a scroll step's strip clear or paste has written since (raw tags,
+        before the commit's inks). The sprites are checked against their records by check_lock."""
+        if not ns.var(V_L2ON) or not dsp['on'] or not ns.l2 & 2:
+            return
+        dsp['frame'] += 1
+        sx = ((ns.nr.get(0x16, 0) | (ns.nr.get(0x71, 0) & 1) << 8) + 32) % 320
+        sy = (ns.nr.get(0x17, 0) + 32) & 255
+        xs = (_np.arange(256) + sx) % 320
+        ys = (_np.arange(152) + sy) % 256
+        ix = _np.ix_(xs, ys)
+        cv = canvas_np()[ix]
+        n320 = lambda v: (v + 160) % 320 - 160
+        wox = dsp['wx'] + n320(sx - dsp['ptx'])
+        woy = dsp['wy'] + (sy - dsp['pty'] + 128) % 256 - 128
+        same = (dsp['wxs'][ix] == (wox + _np.arange(256))[:, None]) & (dsp['wys'][ix] == (woy + _np.arange(152))[None, :])
+        at = get(0xB045)
+        void = (at & 7) | (8 if at & 0x40 else 0)
+        nv0 = ~dsp['valid'][ix] | ~same          # never committed for this place (or committed for another place)
+        hid = nv0 & (cv == void)                 # session 10: the void's ink (x_ffill / cfill): hidden, not a glitch
+        nv = nv0 & ~hid
+        ch = ~nv0 & (cv != dsp['snap'][ix])
+        bad = nv | ch
+        if hid.any():
+            c['display: frames with a margin cell in the void ink (no view drew it)'] += 1
+            c['display: shown pixels in the void ink (no view drew them)'] += int(hid.sum())
+        c['display: frames checked (every shown pixel from a committed view)'] += 1
+        c['display: shown pixels checked'] += 256 * 152
+        if bad.any():
+            cols = _np.nonzero(bad.any(axis=1))[0]
+            rows = _np.nonzero(bad.any(axis=0))[0]
+            dark = int((bad & (cv >= 8) & (cv < 16)).sum())
+            fail('display: a shown pixel is not from a committed view!', (dsp['frame'], int(nv.sum()), int(ch.sum()), dark,
+                 (int(cols.min()), int(cols.max())), (int(rows.min()), int(rows.max())),
+                 (sx, sy), (ns.var(0x4BF3, 2), ns.var(0x4BF5))))
+            c['display: frames with a bad shown pixel'] += 1
+            c['display: bad shown pixels: never committed'] += int(nv.sum())
+            c['display: bad shown pixels: changed since the commit'] += int(ch.sum())
+            c['display: bad shown pixels with an ink tag (8-15)'] += dark
+            kind = 'changed' if ch.any() else 'never'
+            if nv.any():
+                cn = _np.nonzero(nv.any(axis=1))[0]; rn = _np.nonzero(nv.any(axis=0))[0]
+                w_, h_ = int(cn.max() - cn.min() + 1), int(rn.max() - rn.min() + 1)
+                c['display: never-committed area, frames %s x %s' % ('<=4' if w_ <= 4 else '<=8' if w_ <= 8 else '<=16' if w_ <= 16 else '>16',
+                                                                      '<=4' if h_ <= 4 else '<=8' if h_ <= 8 else '>8')] += 1
+            c['display: frames with a bad shown pixel (%s)' % kind] += 1
+            if dsp['dump'] and dsp.setdefault('saved_' + kind, 0) < 40:
+                dsp['saved_' + kind] += 1
+                _np.savez_compressed('%s_%05d.npz' % (dsp['dump'], dsp['frame']), shown=cv, bad=bad, nv=nv,
+                                     snap=dsp['snap'][ix])
 
     def clock_matrix(name, pc, get, regs, stop_pc, stop_sp):
         """The every-site matrix (hooklib.every_site): this event's hook entered at 3.5, 7, 14 and 28 MHz from the same
@@ -652,6 +816,114 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
         b = ns.pages[STORE_BANK * 2][SPOS_OFF + 4 * g:SPOS_OFF + 4 * g + 4]
         return b[0] | b[1] << 8, b[2] | b[3] << 8
 
+    ip = {'frmc': 0, 'frml': 0, 'it': 0, 'ir': 0, 'fct': 0, 'full': False, 'prev': [], 'n': 0, 'd': {}, 'map': {}}
+    RT = {2: 128, 3: 85, 4: 64, 5: 51, 6: 43, 7: 37, 8: 32}
+
+    def ip_update(groups):
+        """Session 9, Centred view, at every E656 after p_spr: this verifier's own run of the droid and shot
+        interpolation (asm ipre / ipol): each droid's or shot's group matched to the nearest group of the same key in
+        the last update (within IRAD = 24 px on each axis, |dx| + |dy| least, the first on a tie, each taken once);
+        its offset = that place - this one (the update's own placing shows all of it); IT = IR = the frame steps since
+        the last update (2-8). Compared with the hook's DXA / DYA in S0 and IT / IR."""
+        n320 = lambda v: (v + 160) % 320 - 160
+        s8 = lambda v: (v + 128) % 256 - 128
+        d = (ip['frmc'] - ip['frml']) & 255
+        ip['frml'] = ip['frmc']
+        T = min(8, max(2, d))
+        ip['it'] = ip['ir'] = T
+        ip['full'] = True
+        prev = [list(x) if x else None for x in ip['prev']]
+        cur = []
+        ip['d'] = {}
+        ip['map'] = {}
+        ip['upd'] = True
+        for g, (img, bx, by) in enumerate(groups):
+            ip['d'][g] = (0, 0)
+            if lk['pg0'] <= g < lk['pg1']:
+                cur.append(None); continue
+            key = img & 0xFC if img < 128 else img
+            sbx = bx - 0x10000 if bx & 0x8000 else bx
+            cx, cy = (lk['stx'] + sbx) % 320, (lk['sty'] + by) & 255
+            cur.append([key, cx, cy])
+            best = None
+            for q, pv in enumerate(prev):
+                if pv is None or pv[0] != key:
+                    continue
+                dx, dy = n320(pv[1] - cx), s8(pv[2] - cy)
+                if abs(dx) > 24 or abs(dy) > 24:
+                    continue
+                if best is None or abs(dx) + abs(dy) < best[0]:
+                    best = (abs(dx) + abs(dy), q, dx, dy)
+            if best:
+                prev[best[1]][0] = 0xFE
+                ip['map'][g] = best[1]
+                ip['d'][g] = (best[2], best[3])
+                c['interpolation: droid / shot groups matched to their last place'] += 1
+            else:
+                c['interpolation: groups with no last place (new)'] += 1
+        ip['prev'] = cur
+        ip['n'] = len(groups)
+        s0 = ns.pages[STORE_BANK * 2]
+        sb = lambda v: v - 256 if v > 127 else v
+        for g in range(ip['n']):
+            got = (sb(s0[0x1B00 + g]), sb(s0[0x1C00 + g]))
+            if got != ip['d'][g]:
+                fail('interpolation: an offset differs from the model!', (g, got, ip['d'][g]))
+                ip['d'][g] = got
+        ip_regs('E656')
+
+    def ip_frame():
+        """Session 9: one frame step (asm idec): FRMC + 1; while IR: IR - 1, FCT = IR x RT[IT]."""
+        ip['frmc'] = (ip['frmc'] + 1) & 255
+        ip['full'] = False
+        if ip['ir']:
+            ip['ir'] -= 1
+            ip['fct'] = ip['ir'] * RT[ip['it']]
+        ip_regs('frame')
+
+    def ip_regs(where):
+        got = (ns.var(0x4B08), ns.var(0x4B09), ns.var(0x4B0A), ns.var(0x4B0C))
+        if got != (ip['it'], ip['ir'], ip['frmc'], ip['fct'] if where == 'frame' else got[3]):
+            fail('interpolation: IT / IR / FRMC / FCT differ from the model!', (where, got, ip['it'], ip['ir'], ip['frmc'], ip['fct']))
+            ip['it'], ip['ir'], ip['frmc'] = got[:3]
+            ip['fct'] = got[3]
+        c['interpolation: checks (' + where + ')'] += 1
+
+    def ip_px(g):
+        """the px of group g's offset shown now: all of it at the update's own placing, then sign x ((|d| x FCT +
+        128) >> 8) while IR, else 0 (asm iadd / ishr)"""
+        d = ip['d'].get(g, (0, 0))
+        if ip['full']:
+            return d
+        if not ip['ir']:
+            return 0, 0
+        r = lambda v: (1 if v >= 0 else -1) * ((abs(v) * ip['fct'] + 128) >> 8)
+        return r(d[0]), r(d[1])
+
+    def ip_stats():
+        """Session 9 statistic: each droid's or shot's shown place on the canvas (its base + the view + the offset
+        shown), against the frame before (the same group, or at an update the last update's group it was matched to):
+        the largest move a frame, in px. Interpolation off (the nointerp9 negative) gives the jumps it removes."""
+        n320 = lambda v: (v + 160) % 320 - 160
+        cur, raw = {}, {}
+        for g in range(ns.var(0x4BDF)):
+            if lk['pg0'] <= g < lk['pg1']:
+                continue
+            bx, by = spos(g)
+            sbx = bx - 0x10000 if bx & 0x8000 else bx
+            ix, iy = ip_px(g)
+            cur[g] = ((lk['stx'] + sbx + ix) % 320, (lk['sty'] + by + iy) & 255)
+            raw[g] = ((lk['stx'] + sbx) % 320, (lk['sty'] + by) & 255)
+        upd = ip.pop('upd', False)
+        for key, now, last in (('shown (session 9)', cur, ip.get('shown', {})), ('without it (v1.2 s8)', raw, ip.get('raw', {}))):
+            for g, (x, y) in now.items():
+                q = ip['map'].get(g) if upd else g
+                if q is None or q not in last:
+                    continue
+                m = max(abs(n320(x - last[q][0])), abs((y - last[q][1] + 128) % 256 - 128))
+                c['interpolation: droid / shot move a frame, %s: %s px' % (key, m if m < 6 else '6+')] += 1
+        ip['shown'], ip['raw'] = cur, raw
+
     def check_sprites(get):
         """At every E656: each draw record (last first) -> its groups, as p_spr makes them: the painted image
         (sprite_store's table), the pattern bytes in the group's slot = that image, the base position = the record's."""
@@ -675,7 +947,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
                 v = 4 * (typ - 1) + v
             groups.append((v, (x + 24) & 0xFFFF, ((y - 256 if y >= 200 else y) - 8 + rows) & 0xFFFF))
         w = lambda a: get(a) | get(a + 1) << 8
+        grec = []
         for k in range(n - 1, -1, -1):
+            grec.append((k, len(groups)))
             r = 0xA320 + 8 * k
             x, y = get(r + 2) | get(r + 3) << 8, get(r + 4)
             if get(r + 1) & 0x80:
@@ -700,7 +974,50 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
                 fail('sprite pattern is not the painted image!', (g, img, pat))
             else:
                 c['sprite groups equal to the model'] += 1
+        check_depth(groups, grec)
+        if centre:
+            ip_update(groups)
         c['sprite checks (E656)'] += 1
+
+    def check_depth(groups, grec):
+        """Session 10: the drawing order a viewer expects. The game draws the records in their depth-key order (C265
+        keeps them sorted by byte 0 = (y >> 1) - (x >> 1) + 128 from the world position, C69D), the front one last,
+        and a player's parts chassis, drive, weapon, dome, second weapon. Compose the groups' sprites as the Next
+        does (NR 0x15 bit 6: sprite 0 on top, else sprite 127) and check that at every pixel two or more groups
+        cover, the one shown is the one the game draws last."""
+        nr15 = ns.nr.get(0x15, 0)
+        if not nr15 & 1 or not groups:
+            return
+        rec_of = {}
+        for i, (k, g0) in enumerate(grec):
+            g1 = grec[i + 1][1] if i + 1 < len(grec) else len(groups)
+            for g in range(g0, g1):
+                rec_of[g] = k
+        cover = {}
+        for g in range(len(groups)):
+            for i in range(3):
+                a = ns.attr[3 * g + i]
+                if not a[3] & 0x80:
+                    continue
+                X = a[0] | (a[2] & 1) << 8
+                Y = a[1] | (a[4] & 1) << 8
+                pb = (a[3] & 0x3F) * 256
+                for yy in range(16):
+                    row = ns.pat[pb + yy * 16:pb + yy * 16 + 16]
+                    for xx in range(16):
+                        if row[xx] != 0xE3:
+                            cover.setdefault(((X + xx) & 0x1FF, (Y + yy) & 0x1FF), []).append(3 * g + i)
+        for px, sl in cover.items():
+            if len(sl) < 2:
+                continue
+            shown = min(sl) if nr15 & 0x40 else max(sl)
+            want = min(sl)                      # the lowest group = drawn last by the game (p_spr's order)
+            recs = {rec_of[s_ // 3] for s_ in sl}
+            kind = 'two records' if len(recs) > 1 else 'one record (player parts)'
+            if shown // 3 != want // 3:
+                c['depth: a sprite pixel shows a figure the game draws behind (%s)!' % kind] += 1
+            else:
+                c['depth: overlapping sprite pixels in the game\'s drawing order (%s)' % kind] += 1
 
     lk = {'pg0': 0, 'pg1': 0, 'stx': 0, 'sty': 0, 'psx': 0, 'psy': 0}
     sm = {'prev': None, 'seg': None, 'frames': 0}
@@ -773,6 +1090,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
         for g in range(ns.var(0x4BDF)):
             bx, by = spos(g)
             ox, oy = (pkx, pky) if centre and lk['pg0'] <= g < lk['pg1'] else (sx, sy)
+            if centre and not lk['pg0'] <= g < lk['pg1']:     # session 9: a droid's or shot's interpolation offset
+                ix, iy = ip_px(g)
+                ox, oy = ox + ix, oy + iy
             for i in range(3):
                 a = ns.attr[3 * g + i]
                 X = a[0] | (a[2] & 1) << 8
@@ -784,11 +1104,12 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
 
     def check_tags(m, after_list=False):
         rows, sh, pg = m[0xAF17], model.sh, ns.pages[HPAGE]
+        w = 16 if m[0xAF2D] == 1 else 32        # session 9: the columns the paste takes (x_tags / x_clr keep only those)
         for row in range(rows):
-            for px in range(32):
+            for px in range(w):
                 v = sh[(0x8080 + row * 4 + (px >> 3)) * 8 + (px & 7)]
                 key = model.tagkey.get(v & 0xFFFF, ('none',))
-                exp = (24 if key[0] == 'screen' else R_FACE if key[0] == 'face' else 0) if v & cm.INK else \
+                exp = (24 if key[0] == 'screen' else R_FACE if key[0] == 'face' else TINK8) if v & cm.INK else \
                     role_idx.get(key[1]) if key[0] == 'role' else None
                 if exp is None:
                     c['tag pixels the model cannot name'] += 1
@@ -879,8 +1200,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, model_dir=None,
             model.on(pc, sim)
         if pc in sites:
             event(pc, sim)
-    frames, err = rzx.trace(rzx_path, mpcs | set(sites) | cpcs, hook, stop=stop,
-                            rom={C_PRE: bytes.fromhex(patch.prof['hooks']['centre'])} if centre else None)
+    frames, err = rzx.trace(rzx_path, mpcs | set(sites) | cpcs, hook, stop=stop)
     if centre and cst.get('views'):
         vs = cst['views']
         c['centre: distinct view origins'] = len(vs)

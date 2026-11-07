@@ -22,7 +22,8 @@ KSLOT = 122
 BSLOT, BPAT, BINK = 118, 124, 13
 RFIRST = 48
 V_SP, V_K, V_A, V_NS, V_NP, V_HID, V_HASC, V_OL, V_DROP = 0, 2, 3, 6, 7, 8, 9, 10, 11
-SPRTAB, CACHE = 0x100, 0x500
+SPRTAB, CACHE = 0x100, 0x40
+REVT = 0x500                    # 256 bytes, each byte bit-reversed: the fill's right-hand runs (asm build)
 HSTK = 0x1440
 PAGE_ORG = 0x9440
 CBLACK, CWHITE = 8, 15
@@ -177,6 +178,7 @@ class SpellboundPatch:
         self.hpage[V_NP] = RFIRST
         self.hpage[V_HASC] = 1 if self.colours else 0
         self.hpage[V_OL] = 1 if outline else 0
+        self.hpage[REVT:REVT + 256] = bytes(int('{:08b}'.format(i)[::-1], 2) for i in range(256))
         self.hpage[PAGE_ORG - 0x8000:PAGE_ORG - 0x8000 + len(self.page_code)] = self.page_code
         self.store = store_pages(self.colours)
         self.sites = []
@@ -1480,6 +1482,43 @@ def unit_tests(patch, states, negatives=()):
         if res[1][1] != [list(x) for x in st['attr']]:
             fail('window picture made a sprite', idx)
         c['window pictures on the ULA'] += 1
+    # kwait (the end of a Knight conversion): a HALT for the frame interrupt only with under 90 lines left before line
+    # 248, interrupts on and a conversion made, at the caller's speed. The replay never reaches it (its line reads 0).
+    for line, iff, made, want in ((200, 1, 1, 'halt'), (158, 1, 1, 'halt'), (247, 1, 1, 'halt'), (157, 1, 1, 'ret'),
+                                  (0, 1, 1, 'ret'), (248, 1, 1, 'ret'), (300, 1, 1, 'ret'), (200, 0, 1, 'ret'),
+                                  (200, 1, 0, 'ret')):
+        st = states[0]
+        p = SpellboundPatch(colours={})
+        ns = _NS(p)
+        ns.H[:] = st['H']
+        m = Memory([list(b) for b in st['banks']], st['o7ffd'], '128K')
+        m.roms = (m.roms[0], list(rom48_image()))
+        m.memory[0] = m.roms[1]
+        err = []
+        _patched_memory(m, p, ns, err)
+        sim = Simulator(m, {})
+        z80n.install(sim, ns.nextreg, strict=False)
+        sim.set_tracer(_UPorts(ns))
+        R = sim.registers
+        ns.nr[0x54], ns.nr[0x07], ns.nr[0x1E], ns.nr[0x1F] = HPG, 3, line >> 8, line & 255
+        ns.H[0x3B], ns.H[0xFF] = made, 1                 # V_MS, V_SPD (the caller at 7 MHz)
+        R[12] = HSTK + 0x8000 - 2
+        ns.H[R[12] - 0x8000] = 0
+        ns.H[R[12] - 0x8000 + 1] = 0
+        R[26] = iff
+        R[24] = p.syms['kwait']
+        n, got = 0, 'ret'
+        while R[24] != 0 and n < 2000:
+            if m[R[24]] == 0x76:
+                got = 'halt'
+                if ns.nr[0x07] != 1:
+                    fail('kwait: HALT not at the caller speed', line, ns.nr[0x07])
+                break
+            sim.opcodes[m[R[24]]]()
+            n += 1
+        if got != want or (got == 'ret' and ns.nr[0x07] != 3) or ns.H[0x3B] or err:
+            fail('kwait', line, iff, made, got, want, ns.nr[0x07], ns.H[0x3B], err[:2])
+        c['kwait cases'] += 1
     return c, fails
 
 

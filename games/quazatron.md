@@ -1,13 +1,13 @@
 # Quazatron (Hewson, 1986; 48K) - colourisation, engine not yet built (stages 0-1, emulator only)
 
 ## Next session
-Stage: 2 (build, session 2 of the build: verifier + pace)    State: 2026-11-06 session 1: engine 'quazatron' built
-(opt-in NEXCLASH_REWORK=quazatron, UNPROVEN): scenery canvas on Layer 2 + droid sprites painted by parts (v3, owner
-approved), fast-scroll and smooth options; JNext 1.1.104 reaches play in colour and scrolls. No verifier, no pace
-limiter, no menu. Handoff: pilot runs/quazatron/HANDOFF-SESSION2.md (start there), SCOPE.md "Session 1".
+Stage: 4 (hardware + colour)    State: v1.2 published (jattree/nxc ea2a22f, the pilot clone's 9248a85), upstreamed
+2026-11-07 (engine refactor session 3): the 17 builds equal the published .nxc's 16 option combinations (nxc.py --bare)
+and the clone's own builds byte for byte. Emulator only; no board run. Open: Centred view's edge cells (821 of 14,765
+frames show a few pixels no view drew), the shared pace library (hlib_pace) in place of this engine's own limiter.
 Inputs (pilot run folder runs/quazatron, private): the archive's "Quazatron (1986)(Hewson Consultants)[aka
-Ziggurat].z80", md5 ac51eb58af87fdac9c0c7077db98c90a; recordings work/b1, work/b2, work/c1 (rec.rzx, Kempston).
-Start with: "Build plan" below; the reference model is the pilot's work/cmodel.py (port it into the verifier).
+Ziggurat].z80", md5 ac51eb58af87fdac9c0c7077db98c90a; recordings work/b1, b2, c1, s3/d1, u2, u3, s8/t5, r6, r7, r8.
+Start with: pilot runs/quazatron/HANDOFF-SESSION10.md; proofs: work/s10/runall10.sh (negs10.py), agg10.py.
 
 Techniques: `detect.buffer-layout-producer`, `detect.drawing-parameters`, `verify.model-reconstruction`,
 `verify.paint-follows-drawing`, `patch.pace-limiter`, `patch.preserve-r`, `patch.restore-speed`
@@ -74,6 +74,9 @@ ends. Neither asks for a value.
 - Never run on hardware. JNext only.
 
 ## Lessons
+- [local: this engine's history] A branch published from an older main is upstreamed by checking that main's copy of
+  the engine equals the branch's base, then taking the branch's files and judging each main-only fix against them
+  (#112 here: superseded by iffq); builds and the published .nxc compared byte for byte, the proof matrix rerun.
 - [card patch.iff-safe-read §Recognise] Reading LD A,I twice back to back is not enough: the second read can be the
   one an interrupt lands on. Only an after-an-off second read is safe (the shared audit flags the pair).
 - [local: this game's drawing] observed: every enemy type draws the same 4 body frames; only the number plate (DDB0, two font characters) differs, so a per-type colour must come from the draw record (A320 byte 7), never from the body list.
@@ -124,6 +127,7 @@ ends. Neither asks for a value.
   (the down-scroll edge lowered in its own first snapshot, test only).
 
 - 2026-11-07 shared engine refactor: the IFF read in qline / mvtick made safe (goal 1); 0 user rounds.
+- 2026-11-07 shared engine refactor session 3: v1.2 upstreamed (builds = the published .nxc, proof matrix rerun); 0 user rounds.
 ## Session 4 (2026-11-06): v1.1, Centred view (opt-in toggle; changes the game logic)
 - Trigger: the edge bursts (E1AF: 8 steps past x 9 / 247, y 24 / 151) never start (E1B3 -> JP E1EC). Before each update
   (E0DC: CALL c_pre, was CALL D5BB) c_pre, pure Z80 at 0x3CAC in the alt ROM image, takes ONE scroll step (the game's
@@ -158,7 +162,73 @@ ends. Neither asks for a value.
 - Centred view's camera is a velocity filter (page 27 `filt`; `CamModel` in the verifier is the same arithmetic):
   steady px a frame while walking, no overshoot past the player when he stops, about 6 frames behind.
 
-## Interrupts: the IFF read made safe (2026-11-07, shared engine refactor, goal 1)
+## Session 7 (2026-11-06): v1.2, Cursor keys + Space
+- A data-only menu toggle: option 2 on CONTROL SELECTION (the game's own cursor-keys table at AFE5: 7, 6, 5, 8, which
+  the Next's cursor keys and an emulator's arrow keys press) is preselected (AFC4 = 2) and its fire key 0 becomes SPACE
+  (AFF2: EFFE -> 7FFE). P still pauses (B6AA) and fire resumes. The game's Kempston path (B645) has no room for keys
+  without a new hook, and the ROM hook area is full, so the game's own cursor option carries it.
+- Measured on v1.1: Centred view runs slower than the original while scrolling (busy +5.4%, scroll +6.9% per update
+  against the original's non-scrolling updates): a step's work is repaid only from the game's delay. Open.
+
+## Session 8 (2026-11-06): Centred view's pace, the Kempston key map, the IFF read
+- Space: c_pre moved from the alt ROM to RAM at 0x5B40 (the printer buffer above the start-up tail; the game never reads
+  or writes 0x5B40-0x5BFF: work/s8/ramfree.py on c1 and b2). That freed 110 ROM bytes for two trampolines; the ISR's
+  hook-page path now takes only PCs below the page's code end (c_pre runs at game level).
+- Pace: a pace window on the game's figure compositing (DC24 .. DD79, JP t_cmp / CALL t_cmpo, Centred builds only): it
+  runs at 28 MHz, its original time is its 28 MHz time x KCMP (6.31; JNext 6.10 time-weighted over 1,805 updates), and
+  the saving repays a scroll step's debt. DEBTCAP 4 -> 8 frames. Centred pace: quiet -0.3%, busy +0.9%, scroll +3.8%
+  (v1.1 +2.2 / +5.4 / +6.9). Long scrolling is still slower than 2%.
+- Cursor keys + Space: kmap (pure Z80 at 0x5BB0) folds 5 / 6 / 7 / 8 and SPACE into the game's Kempston read at B645.
+- iffq: LD A,I read once more only when the first shows interrupts off (either read showing them on decides).
+
+## Session 9 (2026-11-06): step costs, the interrupt guard, droid and shot interpolation
+- Space: page 25 (bank 12's upper half, unused before) is a second code page, mapped at slot 1 (0x2000) only while a
+  page-26 stub calls into it (`nextreg 0x51,XPAGE` ... `nextreg 0x51,0xFF`): x_tags, x_clr, x_paste, x_inks, x_recell
+  moved there. It carries a copy of the ROM trampolines at their own addresses, so an interrupt taken in it reaches
+  t_isr as from the alt ROM; t_isr takes a PC below 0x3800 as hook-page code. Page 26 has about 350 bytes free again.
+  Nothing writes slot 0 or 1 (the simulator, like a ROM, drops such writes): the frame step only reads S0 there.
+- Cheaper scroll steps: the tag strip keeps only the columns the paste takes (16 on a 16-px step: x_clr and x_tags clip
+  to W); a full-height strip clears as one block; the ink tag is 8 (TINK8: the deck's bright black, was 0) and
+  x_paste flags a wholly pasted cell 8, so a deck cell needs no recell; x_recell unrolled per ink kind. JNext walk:
+  a step's copy + inks 73k -> 50k T, strip 62k -> 53k T (3.5 MHz T of wall time).
+- The Centred step window (mv_in .. cw_close) now stays open over a second step in the same update (horizontal, then
+  vertical): mv_in restarted it and lost the first step's time from the debt (about 68k T an update with two steps).
+- KCMP 101 -> 96 (6.0), calibrated in lockstep against the Centred REFERENCE game (the original with Centred view's
+  logic only: work/s9/mkref.py, test only): the reference pays each step at 3.5 MHz, so its time without the step is
+  the target (work/s9/anal9c.py). The per-update measure against the original's non-scrolling updates (sessions 7-8)
+  compares different games and moves by several % between trials.
+- Interrupts: at 28 MHz the ULA interrupt is 32 T long, shorter than one poll's DI (about 400 T), so a poll whose DI
+  covered it lost it. mvtick, after a poll that reads a line in 244-248 (JNext takes the interrupt at line 248), waits
+  about 7 lines with interrupts on instead of 2, so no poll's DI starts in the interrupt's line.
+- Droids and shots glide (Centred view): each droid's or shot's group is matched to the nearest group of the same key
+  (an enemy's type; else its image) in the last update, within 24 px on each axis; it is drawn at its last place and
+  glides to the new one over the last update's interval (the frame step's FCT = IR x 256 / IT). New ones: no glide.
+  Display only; the verifier runs the same matching and glide every frame.
+## Session 10 (2026-11-06): depth order, edge cells, Space also fires (v1.2 as published)
+- Depth: p_pre set NR 0x15 = 0x01 (sprite 127 on top) while p_spr gives the front record's groups the lowest numbers:
+  every overlap was the wrong way round. Now 0x41 (sprite 0 on top). The records are already in the game's depth order
+  (key (y >> 1) - (x >> 1) + 128, kept sorted by C265); the original composites in that order (3,020 of 3,039 pairs
+  nearer in front, 19 with a third figure, none farther in front). Verifier check_depth; negative prio.
+- Centred view's edges: pasted cells keep their known ink (x_rcink), a view's first copy snaps the shown origin (FRSH2),
+  the canvas outside a new view and the camera box's corners take the void's ink (x_ffill, cfill). Per-frame display
+  check disp_frame: 821 of 14,765 Centred frames still show a few pixels no view drew (v1.2's draft: 36%).
+- Space also fires: one data byte (AFF2 0xEF -> 0x6F): option 2's fire reads rows EFFE and 7FFE together, so 0 or
+  SPACE fires. The session 8 key map is gone.
+
+## Upstream (2026-11-07, shared engine refactor session 3)
+- The clone's 9248a85 engine files (asm, module, profile) over main's v1.1 + #112: main's v1.1 equals the clone's
+  v1.1 byte for byte, and v1.2's iffq (session 8) already reads LD A,I again only after an off, so #112's qline /
+  mvtick change is superseded, not merged. Pinned sjasmplus output IDENTICAL to the profile.
+- Builds: the 17 outputs equal the clone's session 10 builds, and the published .nxc (jattree/nxc ea2a22f) applied
+  with nexclash-patch's tools/nxc.py --bare gives the same .nex for all 16 option combinations (Colour, Smooth
+  scrolling, Centred view, Space also fires).
+- Proof, session 10's matrix (negs10.py) on this checkout: 43 replays, game state IDENTICAL in all; 88,174,592 canvas
+  pixels, 114,583 groups, 99,689 frames locked, 8,664 clock cases, 34,281 filter frames, 632,321 depth pixels;
+  negatives 16/16 DETECTED. The aggregate equals session 10's agg10.json. Display: the 9 Centred runs as above.
+
+## Interrupts: the IFF read made safe on v1.1 (2026-11-07, shared engine refactor, goal 1)
+- v1.2 does not carry this change: its iffq (session 8) reads LD A,I again only after an off, and qline and mvtick
+  call it, so the race is closed there the same way (hooklib.iff_audit passes on v1.2).
 - qline read `LD A,I` twice back to back and trusted the second; an interrupt accepted at the end of the second still
   read as off (hooklib.iff_audit 'pair'). Now the second read runs only after an off (`jp pe,$+5`, as HLIB_IFF_DI).
   mvtick no longer reads IFF itself: qline's exit keeps its flags, so mvtick pushes them after the call. The page
