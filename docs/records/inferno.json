@@ -52,7 +52,7 @@
   "engine_col": "inferno copier window (inferno.md)",
   "build": "copier window milestone 3a: capture hooks timed on the CTC (X, R, lost-IRQ compensation, cw_cal, DMA map copy) + window; m2/m3 diagnostic NEXes; no hook work in the window, no sprites",
   "software": "window-only model and update model 8F7C->9907 PASS on 1,854/1,855 states (OUT/9907 timing, R, RAM, IRQ injection anchored at game instructions, 14 controls); full-recording timeline",
-  "hardware": "m2 window-only diagnostic runs; first m3 crashed (fixed: hooks clear of the stub register block); fixed m3 untested",
+  "hardware": "fixed m3 (hooks + window) and current window-only diagnostics run on the user's Next (2026-11-08); speed/sound comparison pending",
   "next": "copier window milestone 3b: 8F95 work in cw_wait (coroutine); JNext pace; hardware results"
  },
  "checks": [
@@ -2071,12 +2071,14 @@
     "superseded": {
      "md5": "9baec6412f2c3b7974b0db74a7ab9b75",
      "hardware": "crashed (vertical green bars): caplo 3948 under the stub register block 3945-3958"
-    }
+    },
+    "hardware": "runs (user, 2026-11-08)"
    },
    "jnext": "not installed on this machine; JNext has no blitter (user, 2026-11-07)",
    "window_only_nex": {
     "file": "Inferno_copier_window_current_diagnostic.nex",
-    "md5": "692a8d92f123bf2c8c4d7a623a3b251a"
+    "md5": "692a8d92f123bf2c8c4d7a623a3b251a",
+    "hardware": "runs (user, 2026-11-08)"
    }
   }
  }
