@@ -108,18 +108,18 @@
   },
   "sprites": {
    "file": "spellbound_magic_knight_sprites.nex",
-   "md5": "ce8e1c6fb0dad558928880a8bf01e13d"
+   "md5": "b679ae970a270e89c80979b2eb618026"
   },
   "enhanced": {
    "file": "spellbound_magic_knight_enhanced.nex",
-   "md5": "06fe3d18161f3f130372c8003def03da"
+   "md5": "33f251edab40d1ce2f223981409f2bbe"
   }
  },
  "repro": [],
  "status": {
   "title": "Spellbound (128K, Magic Knight 2)",
   "engine_col": "spellbound_magic_knight (spellbound_magic_knight.md)",
-  "build": "spellbound_magic_knight_sprites.nex ce8e1c6f + Enhanced 06fe3d18 (v1.1 + 2026-11-07: hooks restore the caller's speed and keep interrupts on, lib/hlib_speed.asm + hlib_iff.asm; 379e61b0 / 3a824f3a = published Spellbound v1.1 .nxc --bare)",
+  "build": "spellbound_magic_knight_sprites.nex b679ae97 + Enhanced 33f251ed (v1.1 + 2026-11-07: Knight conversion about 3x faster (bit-row fill and rings), a wait for the frame interrupt after a late conversion: JNext +2.67 -> +1.34 / +1.46% on 2 seeds, interrupts as the original; before ce8e1c6f / 06fe3d18: hooks restore the caller's speed and keep interrupts on, lib/hlib_speed.asm + hlib_iff.asm; 379e61b0 / 3a824f3a = published Spellbound v1.1 .nxc --bare)",
   "software": "lockstep IDENTICAL default + Enhanced on 9 recordings (39,222 frames), unit tests, negatives 23/23 + palette 7/7 (imported 2026-11-04 from Jon Attree's .nxc work)",
   "hardware": "none (JNext)",
   "next": "hardware test"
@@ -129,56 +129,56 @@
  ],
  "checked": {
   "deps": {
-   "asm/lib/hlib_iff.asm": "3a24fe226c7ceadd",
+   "asm/lib/hlib_iff.asm": "725067425cd27122",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "asm/spellbound_magic_knight_hooks.asm": "9983ebf030141023",
-   "docs/profiles/spellbound_magic_knight.json": "994ae03fec077c30",
+   "asm/spellbound_magic_knight_hooks.asm": "86fddd04a30f3ad4",
+   "docs/profiles/spellbound_magic_knight.json": "0fa120dd6c4639df",
    "docs/profiles/spellbound_magic_knight_enhanced.json": "795579a61b4da48b",
-   "nexclash.py": "4bd8267e3abba47c",
+   "nexclash.py": "9028c4ca12045d70",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/nextboot.py": "b87029cb9187ab28",
+   "nexclash/engines.py": "00d01102bda98ad5",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "273dab19dfcd9e27",
-   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
-   "nexclash/spellbound_magic_knight.py": "25582afd0c068a21",
+   "nexclash/spellbound_magic_knight.py": "13b799bc97f4a9b2",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "cdc80d47e521fb34",
+   "recipe": "3699b8238859addf",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-06"
+  "date": "2026-11-07"
  },
  "verified": {
   "deps": {
-   "asm/lib/hlib_iff.asm": "3a24fe226c7ceadd",
+   "asm/lib/hlib_iff.asm": "725067425cd27122",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "asm/spellbound_magic_knight_hooks.asm": "9983ebf030141023",
-   "docs/profiles/spellbound_magic_knight.json": "994ae03fec077c30",
+   "asm/spellbound_magic_knight_hooks.asm": "86fddd04a30f3ad4",
+   "docs/profiles/spellbound_magic_knight.json": "0fa120dd6c4639df",
    "docs/profiles/spellbound_magic_knight_enhanced.json": "795579a61b4da48b",
-   "nexclash.py": "4bd8267e3abba47c",
+   "nexclash.py": "9028c4ca12045d70",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/nextboot.py": "b87029cb9187ab28",
+   "nexclash/engines.py": "00d01102bda98ad5",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "273dab19dfcd9e27",
-   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
-   "nexclash/spellbound_magic_knight.py": "25582afd0c068a21",
+   "nexclash/spellbound_magic_knight.py": "13b799bc97f4a9b2",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "cdc80d47e521fb34",
+   "recipe": "3699b8238859addf",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-06"
+  "date": "2026-11-07"
  }
 }
