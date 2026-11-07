@@ -3,7 +3,7 @@
 ## Next session
 Stage: 2 (continued)    Branch: claude/inferno-copier-window (from codex/inferno 4bfa72c)
 State: copier window milestone 1 (translated copier head) PASS, not installed; timing gate open.
-Inputs: specnext/reference/inferno/    Start: specnext build/copier_window.md, then CONTINUE.md.
+Inputs: specnext/reference/inferno/    Start: specnext build/CONTINUE_copier_window.md.
 Read: "Copier window" below; inferno.py copier_window_checks/run_cw_head; asm cw_head/cw_go.
 Next: (2) replay logged OUTs at original T (CTC, core-gated; raster fallback) and pad to the
   original 9907 time; model every update of six full recordings; (3) move hook work into the
