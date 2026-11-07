@@ -5,7 +5,7 @@ Stage: 2 (continued)    Branch: claude/inferno-copier-window-m2 (codex/inferno s
 State: copier window milestone 2 (OUT replay + pad at 8F92) PASS in the model; diagnostic NEX
   boots; hardware/JNext untested. Timing gate open (no hook work in the window yet).
 Inputs: specnext/reference/inferno/    Start: specnext build/CONTINUE_copier_window.md.
-Read: "Copier window" below; inferno.py run_cw_window/copier_window_checks; asm cw_wait/cw_irq.
+Read: "Copier window"; inferno.py run_cw_window/copier_window_checks; asm cw_wait/cw_irq.
 Next: (3) capture hooks measure X on the CTC and restore R; move 8F95 work into cw_wait; shrink X;
   JNext pace + user hardware result of the diagnostic NEX. Then the earlier items: live-table
   scan/driver at the 8EF9 gate, runtime exact dispatch and duplicate indices, complete
@@ -64,7 +64,7 @@ Workflow: Inferno6.rzx --quick 2000; six quicks at milestones; level-4 shop.
 - Inferno_copier_window_diagnostic.nex (specnext build/; window only, NOT a release): play it and
   the plain Inferno.nex side by side for a minute of level 1: same speed (enemies, scrolling,
   stopwatch), same beeper sound (shots, explosions, pickups: pitch, length), no hang at the first
-  gameplay frame, no extra border stripes. Report core and video mode.
+  gameplay frame, no extra border stripes. Report core/video mode.
 - This is a plain conversion, with original colour clash; it does not provide subsequent
   tape loads. No sprite build or all-level hardware test is ready.
 - Proposed sprite release: check intro beeper speed; title/start; all six continuous loads with
@@ -140,7 +140,7 @@ Workflow: Inferno6.rzx --quick 2000; six quicks at milestones; level-4 shop.
   2.9-13.2 k T, so +10 ms of hook work slips 56-81 % of updates a frame; "10 ms total" is no gate.
 - The copier head 9790..97FB (416 cells, 25.2-30.8 ms) OUTs the A700 beeper buffer per cell.
   Head T = 79,477 + 101*G; per-OUT T in cw_out_t. Graphics are mutable (F400-FA36, L3 ED00-F0AF).
-- Milestone 1: translated head in page 80, exact incl. R on 1,854 states.
+- Milestone 1: translated head (page 80), exact incl. R, 1,854 states.
 - Milestone 2: each OUT change at its original T (lockstep in the head; "head then replay" cannot
   meet the first OUT at 244 T), 9907 at the original time; CTC ch 3 polled (32 T ticks, any video
   timing), time base = first edge after entry; no counting CTC -> original copier. Window runs EI:
