@@ -1,9 +1,8 @@
 # Engine contract (what every dedicated engine provides; read this before any engine's code)
 
-Start a new engine from this page; open a real engine only for the one function you need
-(`grep -n '^def \|^class ' nexclash/<engine>.py`, then Read that range). Template with everything
-in its simplest form: nexclash/chuckie.py. `tools/doccheck.py` checks the REQUIRED names below
-against every module in nexclash/engines.py; this is a structural check, not a behaviour check.
+Start a new engine here; open a real engine only for the one function you need (`grep -n '^def \|^class '
+nexclash/<engine>.py`, then Read that range). Template: nexclash/chuckie.py. `tools/doccheck.py` checks the
+REQUIRED names below in every registered engine (structure).
 
 ## Files (one game = one engine; CLAUDE.md "Keep changes additive")
 nexclash/<engine>.py, asm/<engine>_hooks.asm, docs/profiles/<record>.json (hook hex + symbols, from
@@ -35,7 +34,8 @@ OPTIONAL for legacy engines; new engines must provide colour sheets and recolour
 | `INTERIORS`, `TAIL_ADDR`, `ROM_ORG`, `ALT_PAGE` | patched-instruction interiors (no jumps into them), tail and hook addresses |
 
 Outputs (nxcout.manifest): `NAME_sprites[_loading].nex`, sets `NAME_SET[_loading].nex`,
-`NAME.nex` plain; others, toggles: `NAME_outputs.json`.
+`NAME.nex` plain; others, toggles: `NAME_outputs.json`. Tape sets: snapshot = start state, `a.tape` ->
+nexclash/tapeset.py `load`, blocks by content; record `inputs.tapes`.
 
 ## The patch object (what z80tonex.convert and nextboot.check read)
 `name`; `sites` = [(addr, original bytes, new bytes)] - `apply(snap)` refuses a snapshot whose

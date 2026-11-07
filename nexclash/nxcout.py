@@ -499,6 +499,10 @@ def package(a):
     -> the .nxc path or None."""
     if getattr(a, 'no_nxc', False):
         return None
+    if getattr(a, 'tape', None):                # a tape-set build: the .nxc's targets are the tapes, not the start state
+        print('.nxc      : not made for a tape-set build (its targets are the tapes): make it with the nxc repository\'s '
+              'tools/nxc.py make SPRITES.nex SIDE_A --also SIDE_B --start START.z80 (games/new_zealand_story.md)')
+        return None
     z80 = a.z80
     name = os.path.splitext(os.path.basename(z80))[0]
     out = a.out or os.path.join(os.path.dirname(os.path.abspath(z80)), name + '_nexclash')

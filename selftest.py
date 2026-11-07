@@ -82,6 +82,18 @@ def stage(rec, src, work):
         why = _stage_one(it, src, d)
         if why:
             return None, why
+    staged = set()
+    for k, ts in enumerate(rec['inputs'].get('tapes', [])):   # tape sets (nexclash/tapeset.py): every file of every set
+        for it in ts['files']:
+            if it['name'] in staged:            # a file two sets share (Side B) is staged once
+                continue
+            if it.get('missing') and not os.path.isfile(os.path.join(src, it.get('path', ''))):
+                rec['_gone'].append(it['name'])
+                continue
+            why = _stage_one(it, src, d)
+            if why:
+                return None, why
+            staged.add(it['name'])
     for x in rec.get('rework', []):             # a rework's own inputs: missing ones skip the rework, never the base
         miss = [w for w in (_stage_one(it, src, d) for it in x.get('inputs', [])) if w]
         if miss:
@@ -97,6 +109,15 @@ def _stage_one(it, src, d):
         return '%s md5 %s, record says %s' % (it['path'], md5(p), it['md5'])
     shutil.copy(p, os.path.join(d, it['name']))
     return None
+
+
+def _tapes(rec, d, k=0):
+    """auto's --tape arguments for the record's tape set k (inputs.tapes; nexclash/tapeset.py), in order; [] for a
+    snapshot-only game or a set with a file the record marks missing (not staged)."""
+    sets = rec['inputs'].get('tapes', [])
+    if k >= len(sets) or any(it['name'] in rec.get('_gone', []) for it in sets[k]['files']):
+        return []
+    return [a for it in sets[k]['files'] for a in ('--tape', os.path.join(d, it['name']))]
 
 
 def _run(cmd, env=None):
@@ -212,7 +233,7 @@ def rebuild(rec, d, lines):
         o = next(iter(rec['outputs'].values()))['file']
         _run([sys.executable, NEXCLASH, 'convert', z80, '-o', os.path.join(out, o)] + rb.get('args', []), env)
         return bad + _check_outputs(rec, out, lines) + _audit_check(rec, alog, lines, 'rebuild')
-    cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80, '--no-record'] + rb.get('args', [])
+    cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80, '--no-record'] + rb.get('args', []) + _tapes(rec, d)
     cmd = [c for i, c in enumerate(cmd) if c != '--no-record' or i == cmd.index('--no-record')]
     for r in rb.get('rzx', []):
         cmd += ['--rzx', os.path.join(d, r)]
@@ -224,6 +245,15 @@ def rebuild(rec, d, lines):
     rep = _report(out, _snapname(rec))
     bad += _check_outputs(rec, out, lines) + _boot_ok(rep, lines, rec['name'])
     bad += recolour_guard(rec, out, lines, cmd, d)
+    for k, ts in enumerate(rec['inputs'].get('tapes', [])[1:], 1):   # every other tape set: the same outputs
+        targs = _tapes(rec, d, k)
+        if not targs:
+            lines.append('SKIP %s tape set %s (a file the record marks missing)' % (rec['name'], ts['set']))
+            continue
+        base = [c for i, c in enumerate(cmd) if c != '--tape' and (i == 0 or cmd[i - 1] != '--tape')]
+        to = os.path.join(d, 'rebuild_tapes_' + ts['set'])
+        _run(base + targs + ['-o', to], env)
+        bad += _check_outputs(rec, to, lines, stage_='rebuild (tape set %s)' % ts['set'])
     for x in rec.get('repro', []):
         ro = os.path.join(d, 'rebuild_' + x['strategy'])
         _run(cmd + ['-o', ro, '--strategy', x['strategy']], env)
@@ -332,7 +362,7 @@ def reverify(rec, d, lines, human=False):
     v = rec['verify']
     z80 = os.path.join(d, rec['inputs']['snapshot']['name'])
     out = os.path.join(d, 'verify')
-    cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80] + v.get('args', [])
+    cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80] + v.get('args', []) + _tapes(rec, d)
     rz = list(v.get('rzx', [])) + (list(v.get('human_rzx', [])) if human else [])
     for r in rz:
         cmd += ['--rzx', os.path.join(d, r)]
@@ -499,6 +529,45 @@ def verification_selfcheck():
     return bad
 
 
+def tape_stage_check():
+    """stage() and _tapes() on a synthetic record with two tape sets sharing a file (no game bytes) -> failures."""
+    bad = []
+    with tempfile.TemporaryDirectory() as t:
+        src, work = os.path.join(t, 'ref'), os.path.join(t, 'work')
+        os.makedirs(os.path.join(src, 'g'))
+        files = {'a.tap': b'\x02\x00\x00\x01', 'a.tzx': b'ZXTape!\x1a\x01\x14', 'b.tzx': b'ZXTape!\x1a\x01\x14\x20\x00\x00'}
+        for n, b in files.items():
+            open(os.path.join(src, 'g', n), 'wb').write(b)
+        open(os.path.join(src, 'g', 's.z80'), 'wb').write(b'z80')
+        f = {n: {'name': 'g_' + n, 'md5': hashlib.md5(b).hexdigest(), 'path': 'g/' + n} for n, b in files.items()}
+
+        def rec():
+            return {'name': 'g', 'inputs': {'snapshot': {'name': 's.z80', 'md5': hashlib.md5(b'z80').hexdigest(),
+                                                         'path': 'g/s.z80'}, 'recordings': [],
+                                            'tapes': [{'set': 'tap', 'files': [dict(f['a.tap']), dict(f['b.tzx'])]},
+                                                      {'set': 'tzx', 'files': [dict(f['a.tzx']), dict(f['b.tzx'])]}]}}
+        r = rec()
+        d, why = stage(r, src, work)
+        if d is None or sorted(os.listdir(d)) != ['g_a.tap', 'g_a.tzx', 'g_b.tzx', 's.z80']:
+            bad.append('staging: %s %s' % (why, d and sorted(os.listdir(d))))
+        elif _tapes(r, d) != ['--tape', os.path.join(d, 'g_a.tap'), '--tape', os.path.join(d, 'g_b.tzx')] or \
+                _tapes(r, d, 1)[1::2] != [os.path.join(d, 'g_a.tzx'), os.path.join(d, 'g_b.tzx')] or _tapes(r, d, 2):
+            bad.append('--tape arguments')
+        r = rec()
+        r['inputs']['tapes'][1]['files'][0]['md5'] = '0' * 32
+        if stage(r, src, os.path.join(t, 'w2'))[0] is not None:
+            bad.append('a wrong tape MD5 staged')
+        os.remove(os.path.join(src, 'g', 'a.tzx'))
+        if stage(rec(), src, os.path.join(t, 'w3'))[0] is not None:
+            bad.append('a missing tape staged')
+        r = rec()
+        r['inputs']['tapes'][1]['files'][0]['missing'] = 'not in the references'
+        d, why = stage(r, src, os.path.join(t, 'w4'))
+        if d is None or _tapes(r, d, 1) or not _tapes(r, d):
+            bad.append('a "missing" tape: %s' % why)
+    return bad
+
+
 def tools_check(src):
     """The shared analysis commands (inspect / scan / isr / cost / preview / survey) against known Chuckie Egg facts
     (~1 min). Returns the number of failures. A session that improves a command keeps these passing
@@ -507,6 +576,16 @@ def tools_check(src):
     bad = R.selfcheck()
     print('%-4s tools: records plan() on synthetic stamps, recipe digest and ROM identity mutations%s' % (
         'OK' if not bad else 'FAIL', '' if not bad else ' (%s)' % bad[:3]))
+    from nexclash import tapeset                # tape-set inputs: reader, set matching, the records' inputs.tapes
+    tb = tapeset.selfcheck() + [b for r in R.all_records() for b in tapeset.check_record(r)]
+    print('%-4s tools: tape sets - .tap / .tzx data blocks alike, damaged tapes refused, set matching (order, unknown file), '
+          'records\' inputs.tapes well formed%s' % ('OK' if not tb else 'FAIL', '' if not tb else ' (%s)' % tb[:3]))
+    bad = list(bad) + tb
+    sb = tape_stage_check()
+    print('%-4s tools: tape sets in selftest - every set staged MD5-checked, a shared file once, --tape per set in order, '
+          'a wrong MD5 or a missing file refused, a "missing" file skips its set%s' % (
+              'OK' if not sb else 'FAIL', '' if not sb else ' (%s)' % sb[:3]))
+    bad = list(bad) + sb
     vb = verification_selfcheck()
     print('%-4s tools: check status at the stamp / PRF1 boundary (checker exception, partial, no coverage, unmodelled '
           'ROM, missing run -> INCOMPLETE; fault, boot -> FAIL; pin, last frame -> complete)%s' % (

@@ -194,6 +194,8 @@ def cmd_auto(a):
     s = Snapshot.get(z80)
     from nexclash.engines import find                       # dedicated engines: nexclash/engines.py
     eng_mod = find(s, a)
+    if eng_mod is None and getattr(a, 'tape', None):            # tape sets: only an engine that reads them takes --tape
+        sys.exit('Error: --tape given, but no engine that builds from tapes recognises %s (nexclash/tapeset.py)' % z80)
     if eng_mod is not None:
         ok = eng_mod.auto(a, z80, name, out, say)
         _finish(out, name, rep)
@@ -589,6 +591,8 @@ def main():
     for cmd in ('auto', 'patch', 'new'):
         p = sub.add_parser(cmd); p.add_argument('z80'); p.add_argument('--rzx', action='append')
         p.add_argument('--no-record', action='store_true'); p.add_argument('-o', '--out')
+        p.add_argument('--tape', action='append', help='a tape file of the game (.tap/.tzx), for a game built from its '
+                       'tapes and a start state (nexclash/tapeset.py); repeatable, in order (Side A, then Side B)')
         p.add_argument('--quick', type=int, help='analyse/verify only the first N frames of each recording')
         p.add_argument('--strategy', choices=B.STRATEGIES,
                        help='patch memory: altrom (default where proven), printer or slot1 (reproduce old builds)')

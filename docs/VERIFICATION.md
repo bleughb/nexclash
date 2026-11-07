@@ -81,6 +81,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Dynamite Dan (dynamite_dan): `dynamite_dan.nex` 3ad20495c5183b20030190d6abdd479f, `dynamite_dan_sprites.nex` 1ab3348d3a2619f534d8907a1d89e09e; verified 2026-11-05
 - Pyjamarama (pyjamarama): `pyjamarama.nex` 19c7f0ac1c7178839a01b0fc42e47732, `pyjamarama_sprites.nex` fad103126004e18132c9877d7a7606e6, `pyjamarama_enhanced.nex` 3ca79dd93d0fdc46968a22382deac6fe; verified never
 - Nodes of Yesod (nodes_of_yesod): `nodes_of_yesod.nex` b578764fc922295ec75a6358d762b397, `nodes_of_yesod_sprites.nex` 81db9019df732c102e0f98aa8eb84227, `nodes_of_yesod_enhanced.nex` 698e791437ff07dc6c9b8a59d6f44bd6, `nodes_of_yesod_backdrops.nex` 138662b51b2b78cb73393e27ff81654f, `nodes_of_yesod_enhanced_backdrops.nex` 1a1987d524fd539bf02a16d6b0bbf3aa; verified never
+- The New Zealand Story (new_zealand_story): `new_zealand_story_sprites.nex` 70174ecba93626def54d6776c1ff4b32, `new_zealand_story_smooth.nex` 7d9898e87499c310700fd71bdd6d2469, `new_zealand_story_backdrops.nex` d6ccac8fa3a3cd4508463b3bbd98b32d, `new_zealand_story_smooth_backdrops.nex` 891397ef8c8c9846eba7d8e972867746; verified never
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

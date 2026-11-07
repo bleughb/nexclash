@@ -16,7 +16,8 @@ contribution, a release, lesson consolidation. An add-a-game session by a contri
   (no GraphQL, stacked PRs): LEARNINGS 2.6.
 - A new game's files go in specnext/reference/<game>/ (snapshot, recordings, the
   built <game>.nex + <game>_sprites.nex, both colour sheets + the painting sheet's _layout.json; the
-  colours json, once painted, goes in the record's data list), listed in its reference/README.md
+  colours json, once painted, goes in the record's data list; a tape-set game: its start state and every tape of
+  every set in the record's inputs.tapes), listed in its reference/README.md
   (edit by grepping for the game's heading; the index is long). specnext is public (checked 2026-11-05).
 - Every PR runs .github/workflows/checks.yml (learncheck self-check + doccheck, no game data); keep
   "checks / doccheck" a required status check on main (Settings -> Branches).
