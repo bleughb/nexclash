@@ -23,11 +23,13 @@
  },
  "modules": [
   "atic_atac",
-  "atic_atac_v13"
+  "atic_atac_v13",
+  "atic_atac_v14"
  ],
  "own_modules": [
   "atic_atac",
-  "atic_atac_v13"
+  "atic_atac_v13",
+  "atic_atac_v14"
  ],
  "data": [
   "docs/profiles/atic_atac.json",
@@ -35,7 +37,11 @@
   "docs/profiles/atic_atac_v13.json",
   "docs/profiles/atic_atac_v13_qaop.json",
   "asm/atic_atac_v13_hooks.asm",
-  "asm/atic_atac_v13_qaop.asm"
+  "asm/atic_atac_v13_qaop.asm",
+  "docs/profiles/atic_atac_v14.json",
+  "docs/profiles/atic_atac_v14_qaop.json",
+  "asm/atic_atac_v14_hooks.asm",
+  "asm/atic_atac_v14_qaop.asm"
  ],
  "shared_data": [],
  "rebuild": {
@@ -72,7 +78,7 @@
   },
   "sprites": {
    "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites.nex",
-   "md5": "59493b7563e6dd1c7141a6763cf52d73"
+   "md5": "6aa7e780f4ec7892d862c675e61b7fba"
   }
  },
  "repro": [],
@@ -143,23 +149,103 @@
    "outputs": {
     "sprites": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites.nex",
-     "md5": "b87774a2b07d5767d5cda49798b4d058"
+     "md5": "1e4bf321b4c966ad29122af27ee78ae5"
     },
     "enhanced": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_enhanced.nex",
-     "md5": "47f0e72ce1adc328716e90288d05aa45"
+     "md5": "7d1c3edb6ec45d65051cd80bf281e3ac"
     },
     "sprites_qaop": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites_qaop.nex",
-     "md5": "19318e4f550aedb7cdb12a15d1b9bb50"
+     "md5": "790913d272dff61612a04276d10609d3"
     },
     "enhanced_qaop": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_enhanced_qaop.nex",
-     "md5": "1f58e93618f566d6d62d03faa83826cf"
+     "md5": "3ec65a501753f603bdcc570d0f02a9f6"
     }
    },
    "proof": "walk1, walk2 and t IDENTICAL for every build (toggle builds with each QWERT read translated), unit tests + 3 negative controls and 7 rework negatives per colour set, 4 incoming clocks, the toggle's key / pause units with 2 negatives, 3 replay negatives on t",
    "note": "Jon Attree's Atic Atac .nxc v1.3 (published, github.com/jattree/nxc, patch md5 ed872411): engine atic_atac_v13, picked by engines.py only with NEXCLASH_REWORK=atic_atac_v13 (the build keeps the record's pinned rom3 fill, as published). Dean's atic_atac as of d7abd1c + the hook speed pass (v1.1), the figure painter's vacated-cell writes NOPed and the menu clear 0x80B4 hooked (v1.2), the QAOP + Space toggle (v1.3, profile atic_atac_v13_qaop); Enhanced (atic_atac_enhanced_colours.json, from the MVV package's .256, local only) and the loading screen (atic_atac_loading.scr, bank 23). Outputs = nxc.py --bare: default, Enhanced, and each with the toggle. Verify: every build replayed in lockstep on walk1, walk2 and t (toggle builds with each QWERT read translated), unit tests + 3 negative controls and 7 rework negatives per colour set, 4 incoming clocks, the toggle's key / pause units on the built bytes with 2 negatives, 3 replay negatives on t. games/atic_atac.md \"Rework (opt-in)\"."
+  },
+  {
+   "name": "v14",
+   "version": "1.4",
+   "args": [],
+   "env": {
+    "NEXCLASH_REWORK": "atic_atac_v14"
+   },
+   "inputs": [
+    {
+     "name": "walk1.rzx",
+     "md5": "7775e035f5ba77dfe1339dabe5a1fa82",
+     "path": "atic_atac/walk1.rzx"
+    },
+    {
+     "name": "walk2.rzx",
+     "md5": "9915aed994a27fc36e8cd37c37614d2b",
+     "path": "atic_atac/walk2.rzx"
+    },
+    {
+     "name": "t.rzx",
+     "md5": "c289ea58d3462e6f036a89217c676be1",
+     "path": "atic_atac/t.rzx"
+    },
+    {
+     "name": "atic_atac_enhanced_colours.json",
+     "md5": "cce668d14e82468c245b2f8f5a1be98c",
+     "path": "atic_atac/atic_atac_enhanced_colours.json"
+    },
+    {
+     "name": "atic_atac_loading.scr",
+     "md5": "ae29b447e706bd270c7eaea8efb67891",
+     "path": "atic_atac/atic_atac_loading.scr"
+    }
+   ],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ],
+    "decisions": {
+     "engine": "atic_atac_v14",
+     "start": "as atic_atac",
+     "sets": [
+      "sprites",
+      "enhanced",
+      "sprites_qaop",
+      "enhanced_qaop"
+     ]
+    }
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [
+     "walk1.rzx",
+     "walk2.rzx",
+     "t.rzx"
+    ]
+   },
+   "outputs": {
+    "sprites": {
+     "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites.nex",
+     "md5": "bc9657c5e4d550a311d8ec0292466ea2"
+    },
+    "enhanced": {
+     "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_enhanced.nex",
+     "md5": "b0209166ca4a098acf3b39aa559bf0e3"
+    },
+    "sprites_qaop": {
+     "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites_qaop.nex",
+     "md5": "9b6e6753655e19b151fea18fc0d366d3"
+    },
+    "enhanced_qaop": {
+     "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_enhanced_qaop.nex",
+     "md5": "f7376520454c24efc605c26715feb86d"
+    }
+   },
+   "proof": "walk1, walk2 and t IDENTICAL for every build (the limiter waits in the replay, the video line modelled), unit tests + 3 negative controls and 22 rework negatives per colour set, 432 incoming-clock cases, the limiter on 72 setup cases with the limiter removed detected 36/36, the toggle's key / pause units with 2 negatives, 3 replay negatives on t; JNext pace (published method, 10 runs a scene, 1.2.0 = 1.1.104): busy +0.83%, sound +0.53%, quiet +14.53% (encounters)",
+   "note": "Jon Attree's Atic Atac .nxc v1.4 (2026-11-06, not published): v1.3 (atic_atac_v13, unchanged) + the pace limiter, engine atic_atac_v14 picked by engines.py only with NEXCLASH_REWORK=atic_atac_v14. games/atic_atac.md \"Rework (opt-in): Atic Atac .nxc v1.4\"."
   }
  ],
  "status": {
@@ -173,7 +259,9 @@
  "checks": [
   "asm2profile:atic_atac",
   "asm2profile:atic_atac_v13",
-  "asm2profile:atic_atac_v13_qaop"
+  "asm2profile:atic_atac_v13_qaop",
+  "asm2profile:atic_atac_v14",
+  "asm2profile:atic_atac_v14_qaop"
  ],
  "techniques": [
   {

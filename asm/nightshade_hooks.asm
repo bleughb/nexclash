@@ -36,7 +36,7 @@ POFF    EQU 0x2600          ; Enhanced: figure type -> palette offset (0xFF the 
 LPAGE   EQU 28              ; the figure records, at slot 0 (0x0000) during the hooks (interrupts are off there)
 PLTPAGE EQU 29              ; Enhanced: type x orientation -> (page, address) of its two colour planes
 GTAB    EQU 28318           ; the game's graphic table
-NIB     EQU 0x2700          ; 256 x 4: a byte's 8 pixels as nibbles (1 = ink)
+NIB     EQU 0x2700          ; 4 x 256 (page-aligned): NIB_k[v] = pixels 2k, 2k+1 of byte v as nibbles (1 = ink)
 MAXF    EQU 24
 
         ORG 0x5B4F          ; after the start-up tail (0x5B00-0x5B4E); 0x5B4F-0x5B7F unused by the game
@@ -62,10 +62,27 @@ ram_end:
 h_fig:  push af
         ld a,r              ; E = 7 M1 since the site
         ld (vR),a
+        push bc             ; the incoming CPU speed (NR 0x07), restored at the exit (never a fixed 3.5 MHz)
+        ld bc,0x243B
+        ld a,0x07
+        out (c),a
+        inc b
+        in a,(c)
+        nextreg 0x07,3      ; 28 MHz from here: the 3.5 MHz part is as short as it can be
+        and 3
+        ld (vspd),a
+        pop bc
         ld a,115            ; 1 - 7 - 7
         call mkT
         pop af
-        nextreg 0x07,3
+        push bc
+        push de
+        push hl
+        call line           ; the raster at the start of the 28 MHz part: its lines become pace debt
+        ld (vfl),hl
+        pop hl
+        pop de
+        pop bc
         ld (sv_hl),hl
         ld (sv_de),de
         ld (sv_bc),bc
@@ -108,7 +125,13 @@ h_fig:  push af
         or a
         sbc hl,de
         jp nc,.full
-.n1:    ld hl,SCR-BUF
+.n1:
+    IFDEF ENHCIM
+        ld a,(enh_flag)     ; Enhanced with code images: a record, no plots (cimrec)
+        or a
+        jp nz,cimrec
+    ENDIF
+        ld hl,SCR-BUF
         add hl,bc
         ld (vscr),hl
         ld hl,(sv_de)
@@ -229,10 +252,14 @@ h_fig:  push af
         push hl
         ld hl,(sv_x)
         ld (sv_a),a
+        call fig_end        ; pace debt += the lines this hook took, and its 3.5 MHz part
+        ld a,(vspd)
+        nextreg 0x07,a      ; the incoming speed
         ld a,(vT)
         ld r,a
-        ld a,(sv_a)         ; N = 7 from here
-        nextreg 0x07,0
+        ld a,(sv_a)         ; N = 7 from here (the two NOPs stand for the NEXTREG that was here)
+        nop
+        nop
         jp s_x
 
 ; splot: the game's plot loop on the figure's clip and shift, with its data at (vsp), into the scratch at (vscr).
@@ -300,10 +327,15 @@ h_box:  ex af,af'
         and a
         jr nz,.nz
         ld (sv_a),a
+        push hl
+        ld hl,KBOX0
+        call debt_add       ; the hook's time against the original's (flag off)
+        pop hl
         ld a,(vT)
         ld r,a
         ld a,(sv_a)
-        nextreg 0x07,0
+        nop                 ; for the NEXTREG 0x07,0 that was here: h_box runs at the caller's speed
+        nop
         jp s_x
 .nz:    ex af,af'
         ld e,a
@@ -323,10 +355,15 @@ h_box:  ex af,af'
         add hl,de
         djnz .l
         ld (sv_a),a
+        push hl
+        ld hl,KBOX1
+        call debt_add       ; the hook's time against the original's (flag on: 4 rows)
+        pop hl
         ld a,(vT)
         ld r,a
         ld a,(sv_a)
-        nextreg 0x07,0
+        nop
+        nop
         jp s_x
 
 ; the screen clear: sprites off
@@ -359,7 +396,10 @@ mkT:    push bc
         pop bc
         ret
 
-; one 16 x 16 tile (vtx, vty) of the figure: ink AND the final buffer, columns >= 22 off
+; one 16 x 16 tile (vtx, vty) of the figure: ink AND the final buffer, columns >= 22 off.
+; Speed pass (2026-11-05): column masks once a tile (a tile with both columns hidden, or below the figure, is
+; skipped), row pointers stepped by the width and by 24, one call a byte (tbyte) and three page-aligned nibble
+; table look-ups an output byte (out4); the same pixels as before.
 tile:   ld a,(vn)
         cp 64               ; one half of the pattern memory a frame
         jr c,.ok
@@ -370,43 +410,180 @@ tile:   ld a,(vn)
 .ok:
         xor a
         ld (vany),a
-        ld de,PAT
+        ld a,(vtx)
+        add a,a
+        ld (vj),a
+        call colmask
+        ld (vm0),a
+        ld a,(vj)
+        inc a
+        ld (vj),a
+        call colmask
+        ld (vm1),a
+        ld b,a
+        ld a,(vm0)
+        or b
+        ret z               ; both columns hidden: no slot
         ld a,(vty)
         add a,a
         add a,a
         add a,a
         add a,a
-        ld (vrow),a         ; row from the top of the figure
-        ld a,16
-        ld (vyy),a
-.r:     ld a,(vrow)
-        ld c,a
+        ld c,a              ; the tile's first row from the figure's top
         ld a,(vh)
         dec a
         sub c               ; i = h - 1 - row
-        jr c,.blank
+        ret c               ; the tile is below the figure: no slot
         ld (vi),a
+        ld d,a
+        ld a,(vw)
+        ld e,a
+        mul d,e
+        ld hl,(vink)
+        add hl,de
         ld a,(vtx)
         add a,a
-        ld (vj),a
-        call vis
-        call nib
-        ld a,(vj)
-        inc a
-        ld (vj),a
-        call vis
-        call nib
-        jr .nr
-.blank: xor a
+        add hl,a
+        ld (vpi),hl         ; the ink byte (i, j0)
+        ld a,(vi)
+        ld d,a
+        ld e,24
+        mul d,e
+        ld hl,(vo)
+        add hl,de
+        ld de,BUF
+        add hl,de
+        ld a,(vtx)
+        add a,a
+        add hl,a
+        ld (vpb),hl         ; the final buffer byte (i, j0)
+    IFDEF ENHCIM
+        ld a,(enh_flag)
+        or a
+        call nz,cimtile     ; the code image's row and column offsets, edge masks
+    ENDIF
+        ld ix,PAT
+        ld a,16
+        ld (vyy),a
+    IFDEF ENHCIM
+        ld a,(enh_flag)
+        or a
+        jp nz,cimrows       ; the rows from the code image (returns to tile.end)
+    ENDIF
+.r:     ld a,(vi)
+        bit 7,a
+        jp nz,.blank        ; past the figure's bottom: the rest of the tile blank
+        ld hl,vr0           ; rows below 0 or past 111 are not shown
+        add a,(hl)
+        cp 112
+        jp nc,.zrow
+        ld a,(enh_flag)
+        or a
+        jp nz,.en
+        ld hl,(vpb)         ; default: visible ink = ink AND the final buffer, one look-up an output byte
+        ld a,(hl)
+        inc hl
+        ld b,(hl)           ; B = buffer byte 1
+        ld hl,(vpi)
+        and (hl)
+        ld c,a
+        ld a,(vm0)
+        and c
+        ld c,a              ; C = visible ink, column 0
+        inc hl
+        ld a,(hl)
+        and b
+        ld b,a
+        ld a,(vm1)
+        and b
+        ld b,a              ; B = visible ink, column 1
+        or c
+        ld hl,vany
+        or (hl)
+        ld (hl),a
+        ld h,NIB >> 8
+        ld l,c
+        ld a,(hl)
+        ld (ix+0),a
+        inc h
+        ld a,(hl)
+        ld (ix+1),a
+        inc h
+        ld a,(hl)
+        ld (ix+2),a
+        inc h
+        ld a,(hl)
+        ld (ix+3),a
+        ld h,NIB >> 8
+        ld l,b
+        ld a,(hl)
+        ld (ix+4),a
+        inc h
+        ld a,(hl)
+        ld (ix+5),a
+        inc h
+        ld a,(hl)
+        ld (ix+6),a
+        inc h
+        ld a,(hl)
+        ld (ix+7),a
+        ld de,8
+        add ix,de
+        jp .nx
+.en:
+        ld hl,(vpb)
+        ld a,(hl)
+        ld (vb0),a
+        inc hl
+        ld a,(hl)
+        ld (vb1),a
+        ld a,(vm0)
+        ld (vmk),a
+        ld hl,(vpi)
+        ld a,(vb0)
+        call tbyte
+        call out4
+        ld a,(vm1)
+        ld (vmk),a
+        ld hl,(vpi)
+        inc hl
+        ld a,(vb1)
+        call tbyte
+        call out4
+        jp .nx
+.zrow:  xor a
         ld b,8
-.bz:    ld (de),a
-        inc de
-        djnz .bz
-.nr:    ld hl,vrow
-        inc (hl)
+.zb:    ld (ix+0),a
+        inc ix
+        djnz .zb
+.nx:    ld hl,vi
+        dec (hl)
+        ld hl,(vpi)
+        ld a,(vw)
+        ld c,a
+        ld b,0
+        or a
+        sbc hl,bc
+        ld (vpi),hl
+        ld hl,(vpb)
+        ld bc,24
+        or a
+        sbc hl,bc
+        ld (vpb),hl
         ld hl,vyy
         dec (hl)
-        jr nz,.r
+        jp nz,.r
+        jp .end
+.blank: ld a,(vyy)
+        add a,a
+        add a,a
+        add a,a
+        ld b,a
+        xor a
+.bz:    ld (ix+0),a
+        inc ix
+        djnz .bz
+.end:
         ld a,(vany)
         or a
         ret z               ; nothing visible: no slot
@@ -481,138 +658,143 @@ tile:   ld a,(vn)
         inc (hl)
         ret
 
-; vis: A = byte (vi, vj) of the figure's ink AND the buffer (0 past its width or column 21); DE kept
-vis:    ld a,(vj)
+; colmask: A = 0xFF if column (vj) is shown (j < w, and c0 + j < 22 unsigned: not the hidden margin), else 0
+colmask:
+        ld a,(vj)
         ld hl,vw
         cp (hl)
-        jp nc,.z
-        ld a,(vi)           ; rows below 0 or past 111 are not shown
-        ld hl,vr0
-        add a,(hl)
-        cp 112
-        jp nc,.z
-        ld a,(vj)
+        jr nc,.z
         ld hl,vc0
         add a,(hl)
         cp 22
-        jp nc,.z
-        push de
-        ld a,(vi)
-        ld d,a
-        ld a,(vw)
-        ld e,a
-        mul d,e
-        ld hl,(vink)
-        add hl,de
-        ld a,(vj)
-        add hl,a
-        ld c,(hl)
-        ld a,(vi)
-        ld d,a
-        ld e,24
-        mul d,e
-        ld hl,(vo)
-        add hl,de
-        ld de,BUF
-        add hl,de
-        ld a,(vj)
-        add hl,a
-        ld a,(hl)           ; the final buffer
-        ld b,a
-        and c
-        ld (vv),a           ; visible ink
-        xor a
-        ld (va),a
-        ld (vb),a
-        ld a,(enh_flag)
-        or a
-        jr z,.e
-        ld a,b              ; hole = planes where neither the figure's ink nor anything after it drew
-        or c
-        cpl
-        ld b,a
-        ld hl,(vink)        ; p0, p1: the same byte w*h and 2*w*h on
-        ld de,(vwh)
-        add hl,de
-        ld a,(vi)
-        ld d,a
-        ld a,(vw)
-        ld e,a
-        mul d,e
-        add hl,de
-        ld a,(vj)
-        add hl,a
-        ld c,(hl)           ; p0
-        ld de,(vwh)
-        add hl,de
-        ld a,(hl)           ; p1
-        ld e,a
-        or c
-        and b               ; holes shown
-        ld d,a
-        ld a,(vv)
-        or d                ; D = every pixel shown
-        ld d,a
-        ld a,c
-        and d
-        ld (va),a
-        ld a,e
-        and d
-        ld (vb),a
-        ld a,d
-        jr .f
-.e:     ld a,(vv)
-.f:     ld hl,vany
-        or (hl)
-        ld (hl),a
-        ld a,(vv)
-        pop de
+        jr nc,.z
+        ld a,0xFF
         ret
 .z:     xor a
-        ld (vv),a
-        ld (va),a
-        ld (vb),a
         ret
 
-; nib: A's 8 pixels as 4 nibble bytes at DE (DE += 4); vany |= A
-nib:    ld a,(vv)           ; 4 bytes: NIB[visible ink] + 2 NIB[plane 0] + 4 NIB[plane 1], no carries (codes 1-7)
-        call nibp
-        ld (vn0),hl
-        ld a,(va)
-        call nibp
-        ld (vn1),hl
-        ld a,(vb)
-        call nibp
-        ld b,4
-.q:     ld a,(hl)
-        add a,a
-        add a,a
-        ld c,a
-        push hl
-        ld hl,(vn1)
-        ld a,(hl)
-        inc hl
-        ld (vn1),hl
-        add a,a
-        add a,c
-        ld c,a
-        ld hl,(vn0)
-        ld a,(hl)
-        inc hl
-        ld (vn0),hl
-        add a,c
-        ld (de),a
-        inc de
-        pop hl
-        inc hl
-        djnz .q
+; tbyte: HL = a figure ink byte, A = the final buffer's byte there, (vmk) = the column's mask ->
+;   E = visible ink, C = plane 0 shown, B = plane 1 shown (Enhanced; else 0); vany |= every pixel shown
+tbyte:  ld (vbf),a
+        ld a,(vmk)
+        and (hl)
+        ld e,a              ; the figure's ink
+        ld a,(enh_flag)
+        or a
+        jr nz,.en
+        ld a,(vbf)
+        and e
+        ld e,a              ; visible ink: the ink AND the final buffer
+        ld bc,0
+        ld a,(vany)
+        or e
+        ld (vany),a
         ret
-nibp:   ld l,a
-        ld h,0
-        add hl,hl
-        add hl,hl
-        ld bc,NIB
+.en:    push hl             ; p0, p1: the same byte w*h and 2*w*h on
+        ld bc,(vwh)
         add hl,bc
+        ld a,(vmk)
+        and (hl)
+        ld d,a              ; p0
+        add hl,bc
+        ld a,(vmk)
+        and (hl)
+        ld b,a              ; p1
+        pop hl
+        ld a,(vbf)
+        or e
+        cpl                 ; hole = planes where neither the figure's ink nor anything after it drew
+        ld c,a
+        ld a,b
+        or d
+        and c
+        ld c,a              ; holes shown
+        ld a,(vbf)
+        and e
+        ld e,a              ; visible ink
+        or c
+        ld c,a              ; every pixel shown
+        ld a,(vany)
+        or c
+        ld (vany),a
+        ld a,c
+        and b
+        ld b,a              ; p1 shown
+        ld a,c
+        and d
+        ld c,a              ; p0 shown
+        ret
+
+; out4: E, C, B -> 4 pattern bytes at IX (NIB_k[E] + 2 NIB_k[C] + 4 NIB_k[B], no carries: codes 1-7), IX += 4
+out4:   ld a,b
+        or c
+        jr nz,.full
+        ld a,e
+        or a
+        jr nz,.ink
+        ld (ix+0),a         ; nothing shown: four zero bytes
+        ld (ix+1),a
+        ld (ix+2),a
+        ld (ix+3),a
+        jr .adv
+.ink:   ld h,NIB >> 8       ; no plane shown in this byte: the ink's nibbles only
+        ld l,e
+        ld a,(hl)
+        ld (ix+0),a
+        inc h
+        ld a,(hl)
+        ld (ix+1),a
+        inc h
+        ld a,(hl)
+        ld (ix+2),a
+        inc h
+        ld a,(hl)
+        ld (ix+3),a
+        jr .adv
+.full:  ld h,NIB >> 8
+        ld l,b
+        ld a,(hl)
+        add a,a
+        ld l,c
+        add a,(hl)
+        add a,a
+        ld l,e
+        add a,(hl)
+        ld (ix+0),a
+        inc h
+        ld l,b
+        ld a,(hl)
+        add a,a
+        ld l,c
+        add a,(hl)
+        add a,a
+        ld l,e
+        add a,(hl)
+        ld (ix+1),a
+        inc h
+        ld l,b
+        ld a,(hl)
+        add a,a
+        ld l,c
+        add a,(hl)
+        add a,a
+        ld l,e
+        add a,(hl)
+        ld (ix+2),a
+        inc h
+        ld l,b
+        ld a,(hl)
+        add a,a
+        ld l,c
+        add a,(hl)
+        add a,a
+        ld l,e
+        add a,(hl)
+        ld (ix+3),a
+.adv:   inc ix
+        inc ix
+        inc ix
+        inc ix
         ret
 
 sv_hl:  dw 0
@@ -680,7 +862,7 @@ page_end:
         ORG 0x3700
 ATAB    EQU 0x3D00          ; the frame's sprite attributes, 5 bytes each (64 at most), sent in one go at the switch
 S0      EQU 132             ; the blits and the switch start no sooner than 4 lines below the play area (rows 16-127)
-WMIN    EQU 232             ; lines from the hook's start to the earliest blit: the original's 0xE200 -> 0xE206 takes
+WMIN    EQU 0             ; lines from the hook's start to the earliest blit: the original's 0xE200 -> 0xE206 takes
                             ; 295 lines at 3.5 MHz (JNext), the blits and switch at 28 MHz 43; 20 less for the wait
                             ; for the window, so the game's pace stays about the original's
 code2:
@@ -696,12 +878,30 @@ h_commit:
         push af
         ld a,r              ; E = 7
         ld (vR),a
+        push bc
+        ld bc,0x243B
+        ld a,0x07
+        out (c),a
+        inc b
+        in a,(c)
+        nextreg 0x07,3
+        and 3
+        ld (vspd),a
+        pop bc
         ld a,38             ; 55 - 7 - 10: the original's 0xE200 -> 0xE206 is 55 M1 (mod 128)
         call mkT
-        nextreg 0x07,3
         push bc
         push de
         push hl
+        push ix             ; the tiles' pattern pointer (restored before the game's blits)
+    IFDEF ENHCIM
+        push iy             ; the code-image rows' accumulator
+        exx                 ; and their alternate registers: the game's BC', DE', HL'
+        push bc
+        push de
+        push hl
+        exx
+    ENDIF
         call line           ; the beam at the start
         ld (vl),hl
         ld hl,0
@@ -808,6 +1008,14 @@ h_commit:
         ld a,e
         ld (vr0),a
         ld hl,(vink)        ; next record
+    IFDEF ENHCIM
+        ld a,(enh_flag)
+        or a
+        jr z,.dflt
+        call cimparse       ; the code image's page, row 0 address, stride, shift: HL = the next record
+        jr .r1
+.dflt:
+    ENDIF
         ld de,(vwh)
         add hl,de
         ld a,(enh_flag)
@@ -825,6 +1033,14 @@ h_commit:
         jr nc,.hk
         ld (hl),a
 .hk:
+    IFDEF ENHCIM
+        ld a,(enh_flag)
+        or a
+        jr z,.nm
+        ld a,(vpp)
+        nextreg 0x50,a      ; the figure's code image at slot 0 for its tiles
+.nm:
+    ENDIF
         xor a
         ld (vty),a
 .ty:    xor a
@@ -847,6 +1063,9 @@ h_commit:
         ld hl,vh
         cp (hl)
         jr c,.ty
+    IFDEF ENHCIM
+        nextreg 0x50,LPAGE  ; the records back
+    ENDIF
         ld hl,vleft
         dec (hl)
         jp nz,.fig
@@ -856,6 +1075,15 @@ h_commit:
         ld (lptr),hl
         nextreg 0x50,0xFF
         call wait
+    IFDEF ENHCIM
+        exx
+        pop hl
+        pop de
+        pop bc
+        exx
+        pop iy
+    ENDIF
+        pop ix
         pop hl
         pop de
         pop bc
@@ -869,18 +1097,22 @@ h_commit:
         push de
         push hl
         call burst
+        call pacewait       ; to the original's 0xE200 -> 0xE206 time, less the other hooks' extra time
         pop hl
         pop de
         pop bc
         pop af
         ld (sv_a),a
+        ld a,(vspd)
+        nextreg 0x07,a      ; the incoming speed
         ld a,(vT)
         ld r,a
-        ld a,(sv_a)         ; N = 10 from here
+        ld a,(sv_a)         ; N = 10 from here (the two NOPs stand for the NEXTREG that was here)
         push hl             ; the stack word the original's second CALL leaves (0xE206); s_x returns there
         ld hl,0xE206
         ex (sp),hl
-        nextreg 0x07,0
+        nop
+        nop
         jp s_x
 
 ; burst: the table -> sprite attributes from slot 0, slots used last time and not now off, sprites on,
@@ -995,7 +1227,643 @@ line:   ld bc,0x243B
         ret
 
 vpoll:  dw 0
+vpi:    dw 0
+vpb:    dw 0
+vm0:    db 0
+vm1:    db 0
+vmk:    db 0
+vbf:    db 0
+vb0:    db 0
+vb1:    db 0
+
+; Pace (2026-11-05): the build keeps the original's pace. Every hook's time beyond the original's is debt (signed,
+; 1/16 line); the blit hook, after its switch, waits until the original's 0xE200 -> 0xE206 time less the debt.
+; The constants are the hooks' 3.5 MHz parts in T-states, measured on the model (work/pace/consts.py); TGT is the
+; original's blit (295.25 lines in JNext, from 0xE200 to 0xE206) less the hook's 3.5 MHz parts, in 1/16 line.
+    IFDEF ENHCIM
+TGT     EQU 4703 - 64       ; Enhanced: 4 lines less, calibrated on the quiet scene (+0.71%: the hooks' stub code in
+                            ; contended RAM at 3.5 MHz costs more than its T-states); never below the original's pace
+    ELSE
+TGT     EQU 4703            ; 16 x (295.25 - (156 + 140) / 228)
+    ENDIF
+KFIG    EQU 17              ; 16 x (156 + 104 - 20) / 228: the 3.5 MHz parts against the original LD (0xBBAE),SP
+KBOX0   EQU 37              ; flag off: 575 - 49 T (counted)
+KBOX1   EQU 43              ; flag on: 932 - 315 T (measured)
+
+; fig_end: debt += 16 x (lines since vfl) + KFIG; all registers kept
+fig_end:
+        push af
+        push bc
+        push de
+        push hl
+        call line
+        ld de,(vfl)
+        or a
+        sbc hl,de
+        jr nc,.p
+        ld de,(vflen)
+        add hl,de
+.p:     add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,KFIG
+        add hl,de
+        call debt_hl
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ret
+
+; debt_add: debt += HL; AF, BC, DE kept (HL is the caller's to restore)
+debt_add:
+        push af
+        push de
+        call debt_hl
+        pop de
+        pop af
+        ret
+
+; debt_hl: debt += HL (signed), held in -2048..30000
+debt_hl:
+        ld de,(vdebt)
+        add hl,de
+        bit 7,h
+        jr z,.pos
+        ld de,-2048
+        ld a,h
+        cp 0xF8
+        jr nc,.st
+        ex de,hl
+        jr .st
+.pos:   ld de,30000
+        push hl
+        or a
+        sbc hl,de
+        pop hl
+        jr c,.st
+        ex de,hl
+.st:    ld (vdebt),hl
+        ret
+
+; pacewait: wait until 16 x vel >= TGT - debt (vel: lines since the hook's start), then debt = 16 x vel - (TGT - debt)
+pacewait:
+        ld hl,TGT
+        ld de,(vdebt)
+        or a
+        sbc hl,de           ; need (signed)
+        ld (vneed),hl
+.w:     ld hl,(vel)
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,(vneed)
+        or a
+        sbc hl,de           ; 16 vel - need
+        jp p,.done          ; >= 0 (16 vel is below 32768: vel at most a frame or two)
+        ld a,(vpoll+1)
+        cp 117              ; a bounded number of polls, as the window wait
+        jr nc,.done
+        call tick
+        jr .w
+.done:  ld (vdebt),hl
+        ld hl,0
+        call debt_hl        ; clamp
+        ret
+
+vdebt:  dw 0
+vneed:  dw 0
+vfl:    dw 0
+vspd:   db 0
 page2_end:
+
+    IFDEF ENHCIM
+; The Enhanced build's code-image routines, in the figure scratch it never uses (0x3300-0x36FF; tables 0x2B00-0x32FF);
+; saved by the generated asm/nightshade_hooks_enh.asm as ns_page3.bin
+        ORG 0x3300
+code3:
+BPT     EQU 0x2B00          ; Enhanced: 4 pages, BP_k[buffer byte] = the T2 page for pixel pair k's two bits
+T2B     EQU 0x2F00          ; Enhanced: 4 pages, T2[bits][code byte] = its shown nibbles (in the figure scratch:
+                            ; the Enhanced build plots no figure, so the scratch is free)
+; Enhanced with code images (2026-11-05, pace): each graphic's painted codes as a 4-bit image (4 bytes a data byte,
+; rows in data order, both orientations from the game's own flip) in the planes' space. The figure hook records
+; where the plot's first data byte is in the image and the 2-pixel shift; the blit builds each pattern byte as
+; code AND the shown mask: an ink nibble (odd code) shows where the final buffer is set, a gap nibble (even code)
+; where it is clear: out = code & ~(((code ^ NIB_k[buffer]) & 0x11) * 15). No plane plots.
+cimrec: ld a,(ix+0)         ; G = the type's graphic, its header (orientation bits 7, 6; width)
+        ld l,a
+        ld h,0
+        add hl,hl
+        ld de,GTAB
+        add hl,de
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ld a,(de)
+        ld (vhd),a
+        and 15
+        add a,a
+        add a,a
+        ld (vcst),a         ; stride: 4 x width
+        ld hl,(sv_de)       ; the plot's data pointer, from G (header included)
+        or a
+        sbc hl,de
+        ld (vdoff),hl
+        ld a,(ix+0)         ; PLT entry: (type * 4 + orientation) * 3
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        ld a,(vhd)
+        rlca
+        rlca
+        and 3
+        add hl,a
+        ld d,h
+        ld e,l
+        add hl,hl
+        add hl,de
+        nextreg 0x50,PLTPAGE
+        ld a,(hl)
+        ld (vpp),a
+        inc hl
+        ld e,(hl)
+        inc hl
+        ld d,(hl)           ; the entry's address (the image's start - 2)
+        ld hl,(vdoff)
+        add hl,hl
+        add hl,de
+        dec hl
+        dec hl              ; start + 2 (offset - 2): the first plotted data byte's 4 code bytes
+        ld (vcptr),hl
+        nextreg 0x50,LPAGE
+        ld hl,(lptr)
+        push hl
+        ld h,b              ; offset in the buffer = BC - BUF
+        ld l,c
+        ld de,BUF
+        or a
+        sbc hl,de
+        ex de,hl
+        pop hl
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        inc hl
+        ld a,(FW)
+        ld (hl),a
+        inc hl
+        ld a,(FH)
+        ld (hl),a
+        inc hl
+        ld e,7              ; bright white, or the hero (records 0xBC8E, 0xBC9E): his health colour at the blit
+        ld a,ixh
+        cp 0xBC
+        jr nz,.col
+        ld a,ixl
+        cp 0x8E
+        jr z,.hero
+        cp 0x9E
+        jr nz,.col
+.hero:  ld e,0xFF
+.col:   ld (hl),e
+        inc hl
+        ld a,(ix+0)
+        ld (hl),a
+        inc hl
+        ld a,(vpp)
+        ld (hl),a
+        inc hl
+        ld de,(vcptr)
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        inc hl
+        ld a,(vcst)
+        ld (hl),a
+        inc hl
+        ld a,(ix+14)        ; the 2-pixel shift: x AND 6, in code bytes
+        and 6
+        rrca
+        ld (hl),a
+        inc hl
+        ld (lptr),hl
+        jp h_fig.n2
+
+; cimparse: HL = the record's fields after its header -> vpp, vcptr, vcst, vshb; HL = the next record
+cimparse:
+        ld a,(hl)
+        ld (vpp),a
+        inc hl
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+        ld (vcptr),de
+        ld a,(hl)
+        ld (vcst),a
+        inc hl
+        ld a,(hl)
+        ld (vshb),a
+        inc hl
+        ret
+
+; cimtile: the tile's code-image row (vcrow = vcptr + i * stride) and column offsets (4 j - shift); for each column
+; its case, patched into cimrows' two CALLs: hidden (czero), inside the figure (cfast), or at its edge (cedge0 /
+; cedge1, the masks patched in: the column's where 0 <= 4 j + k - shift < stride, else 0)
+cimtile:
+        ld a,(vi)
+        ld d,a
+        ld a,(vcst)
+        ld e,a
+        mul d,e
+        ld hl,(vcptr)
+        add hl,de
+        ld (vcrow),hl
+        ld a,(vtx)
+        add a,a
+        add a,a
+        add a,a             ; 4 j0
+        ld l,a
+        ld h,0
+        ld a,(vshb)
+        ld e,a
+        ld d,0
+        or a
+        sbc hl,de
+        ld (vco0),hl
+        ld de,4
+        add hl,de
+        ld (vco1),hl
+        ld a,(vco0)         ; q = 4 j - shift (8-bit, signed)
+        ld c,a
+        ld a,(vm0)
+        ld b,a
+        ld ix,vkm0
+        call .case
+        ld a,h
+        or l
+        jr nz,.s0
+        ld a,(vkm0)         ; an edge: its masks into cedge0's AND immediates
+        ld (cedge0.m0 + 1),a
+        ld a,(vkm0 + 1)
+        ld (cedge0.m1 + 1),a
+        ld a,(vkm0 + 2)
+        ld (cedge0.m2 + 1),a
+        ld a,(vkm0 + 3)
+        ld (cedge0.m3 + 1),a
+        ld hl,cedge0
+.s0:    ld (cimrows.c0 + 1),hl
+        ld a,(vco0)
+        add a,4
+        ld c,a
+        ld a,(vm1)
+        ld b,a
+        ld ix,vkm1
+        call .case
+        ld a,h
+        or l
+        jr nz,.s1
+        ld a,(vkm1)
+        ld (cedge1.m0 + 1),a
+        ld a,(vkm1 + 1)
+        ld (cedge1.m1 + 1),a
+        ld a,(vkm1 + 2)
+        ld (cedge1.m2 + 1),a
+        ld a,(vkm1 + 3)
+        ld (cedge1.m3 + 1),a
+        ld hl,cedge1
+.s1:    ld (cimrows.c1 + 1),hl
+        ret
+; .case: B = the column's mask, C = its q; four masks at IX (B where 0 <= q + k < stride, else 0);
+; HL = czero (hidden), cfast (all four 0xFF) or 0 (an edge)
+.case:  ld a,b
+        or a
+        ld hl,czero
+        ret z
+        ld d,4
+        ld e,0xFF           ; AND of the four masks
+.k:     ld a,c
+        bit 7,a
+        jr nz,.no
+        ld h,a
+        ld a,(vcst)
+        cp h
+        jr c,.no
+        jr z,.no
+        ld a,b
+        jr .st
+.no:    xor a
+.st:    ld (ix+0),a
+        inc ix
+        and e
+        ld e,a
+        inc c
+        dec d
+        jr nz,.k
+        ld a,e
+        inc a
+        ld hl,cfast
+        ret z
+        ld hl,0
+        ret
+
+; cimrows: the tile's 16 rows from the code image, then tile.end. The alternate registers hold the final buffer's row
+; (HL'), the code image's row at column 0 (DE') and the stride (BC'); a row: the buffer's two bytes, column 0 through
+; its routine (patched by cimtile; DE += 3), column 1 from DE + 1; rows past the figure's bottom blank, rows off the
+; play area zero; one row up the figure: the buffer 24 bytes back, the code image one stride back. IYL gathers every
+; pixel shown (vany). The game's BC', DE', HL' are saved by h_commit.
+cimrows:
+        ld iyl,0
+        ld hl,(vcrow)
+        ld de,(vco0)
+        add hl,de
+        ex de,hl
+        ld hl,(vpb)
+        ld a,(vcst)
+        ld c,a
+        ld b,0
+        exx
+.r:     ld a,(vi)
+        bit 7,a
+        jp nz,.blank
+        ld hl,vr0
+        add a,(hl)
+        cp 112
+        jp nc,.zrow
+        exx
+        ld a,(hl)
+        ld (vb0),a
+        inc hl
+        ld a,(hl)
+        ld (vb1),a
+        dec hl
+        push de
+        exx
+        pop de
+        ld a,(vb0)
+        ld c,a
+.c0:    call cfast          ; patched: czero, cfast or cedge0
+        inc de              ; column 1's code bytes
+        ld bc,4
+        add ix,bc
+        ld a,(vb1)
+        ld c,a
+.c1:    call cfast          ; patched: czero, cfast or cedge1
+        ld bc,4
+        add ix,bc
+        jr .nx
+.zrow:  xor a
+        ld (ix+0),a
+        ld (ix+1),a
+        ld (ix+2),a
+        ld (ix+3),a
+        ld (ix+4),a
+        ld (ix+5),a
+        ld (ix+6),a
+        ld (ix+7),a
+        ld de,8
+        add ix,de
+.nx:    exx
+        ld a,l              ; the buffer: 24 bytes back
+        sub 24
+        ld l,a
+        jr nc,.nc
+        dec h
+.nc:    ex de,hl            ; the code image: one stride back
+        or a
+        sbc hl,bc
+        ex de,hl
+        exx
+        ld hl,vi
+        dec (hl)
+        ld hl,vyy
+        dec (hl)
+        jp nz,.r
+        jr .end
+.blank: ld a,(vyy)
+        add a,a
+        add a,a
+        add a,a
+        ld b,a
+        xor a
+.bz:    ld (ix+0),a
+        inc ix
+        djnz .bz
+.end:   ld a,iyl
+        ld (vany),a
+        jp tile.end
+
+; The column routines: DE = 4 code bytes, C = the final buffer's byte -> 4 pattern bytes at IX; IYL |= them.
+; Pattern byte k = T2[pair k of the buffer][code byte]: BP_k gives the page for the two buffer bits, the page maps a
+; code byte to its shown nibbles (an odd code where the bit is set, an even one where it is clear).
+czero:  xor a
+        ld (ix+0),a
+        ld (ix+1),a
+        ld (ix+2),a
+        ld (ix+3),a
+        inc de              ; as the other routines: DE += 3
+        inc de
+        inc de
+        ret
+cfast:
+        ld a,(de)
+        inc de
+        or a
+        ld (ix+0),a
+        jr z,.z0
+        ld b,a
+        ld l,c
+        ld h,(BPT >> 8) + 0
+        ld h,(hl)
+        ld l,b
+        ld a,(hl)
+        ld (ix+0),a
+        or iyl
+        ld iyl,a
+.z0:
+        ld a,(de)
+        inc de
+        or a
+        ld (ix+1),a
+        jr z,.z1
+        ld b,a
+        ld l,c
+        ld h,(BPT >> 8) + 1
+        ld h,(hl)
+        ld l,b
+        ld a,(hl)
+        ld (ix+1),a
+        or iyl
+        ld iyl,a
+.z1:
+        ld a,(de)
+        inc de
+        or a
+        ld (ix+2),a
+        jr z,.z2
+        ld b,a
+        ld l,c
+        ld h,(BPT >> 8) + 2
+        ld h,(hl)
+        ld l,b
+        ld a,(hl)
+        ld (ix+2),a
+        or iyl
+        ld iyl,a
+.z2:
+        ld a,(de)
+        or a
+        ld (ix+3),a
+        jr z,.z3
+        ld b,a
+        ld l,c
+        ld h,(BPT >> 8) + 3
+        ld h,(hl)
+        ld l,b
+        ld a,(hl)
+        ld (ix+3),a
+        or iyl
+        ld iyl,a
+.z3:
+        ret
+cedge0:
+        ld a,(de)
+        inc de
+.m0:    and 0xFF            ; patched: this column's mask for code byte 0
+        ld (ix+0),a
+        jr z,.z0
+        ld b,a
+        ld l,c
+        ld h,(BPT >> 8) + 0
+        ld h,(hl)
+        ld l,b
+        ld a,(hl)
+        ld (ix+0),a
+        or iyl
+        ld iyl,a
+.z0:
+        ld a,(de)
+        inc de
+.m1:    and 0xFF            ; patched: this column's mask for code byte 1
+        ld (ix+1),a
+        jr z,.z1
+        ld b,a
+        ld l,c
+        ld h,(BPT >> 8) + 1
+        ld h,(hl)
+        ld l,b
+        ld a,(hl)
+        ld (ix+1),a
+        or iyl
+        ld iyl,a
+.z1:
+        ld a,(de)
+        inc de
+.m2:    and 0xFF            ; patched: this column's mask for code byte 2
+        ld (ix+2),a
+        jr z,.z2
+        ld b,a
+        ld l,c
+        ld h,(BPT >> 8) + 2
+        ld h,(hl)
+        ld l,b
+        ld a,(hl)
+        ld (ix+2),a
+        or iyl
+        ld iyl,a
+.z2:
+        ld a,(de)
+.m3:    and 0xFF            ; patched: this column's mask for code byte 3
+        ld (ix+3),a
+        jr z,.z3
+        ld b,a
+        ld l,c
+        ld h,(BPT >> 8) + 3
+        ld h,(hl)
+        ld l,b
+        ld a,(hl)
+        ld (ix+3),a
+        or iyl
+        ld iyl,a
+.z3:
+        ret
+cedge1:
+        ld a,(de)
+        inc de
+.m0:    and 0xFF            ; patched: this column's mask for code byte 0
+        ld (ix+0),a
+        jr z,.z0
+        ld b,a
+        ld l,c
+        ld h,(BPT >> 8) + 0
+        ld h,(hl)
+        ld l,b
+        ld a,(hl)
+        ld (ix+0),a
+        or iyl
+        ld iyl,a
+.z0:
+        ld a,(de)
+        inc de
+.m1:    and 0xFF            ; patched: this column's mask for code byte 1
+        ld (ix+1),a
+        jr z,.z1
+        ld b,a
+        ld l,c
+        ld h,(BPT >> 8) + 1
+        ld h,(hl)
+        ld l,b
+        ld a,(hl)
+        ld (ix+1),a
+        or iyl
+        ld iyl,a
+.z1:
+        ld a,(de)
+        inc de
+.m2:    and 0xFF            ; patched: this column's mask for code byte 2
+        ld (ix+2),a
+        jr z,.z2
+        ld b,a
+        ld l,c
+        ld h,(BPT >> 8) + 2
+        ld h,(hl)
+        ld l,b
+        ld a,(hl)
+        ld (ix+2),a
+        or iyl
+        ld iyl,a
+.z2:
+        ld a,(de)
+.m3:    and 0xFF            ; patched: this column's mask for code byte 3
+        ld (ix+3),a
+        jr z,.z3
+        ld b,a
+        ld l,c
+        ld h,(BPT >> 8) + 3
+        ld h,(hl)
+        ld l,b
+        ld a,(hl)
+        ld (ix+3),a
+        or iyl
+        ld iyl,a
+.z3:
+        ret
+
+vhd:    db 0
+vcst:   db 0
+vshb:   db 0
+vcptr:  dw 0
+vcrow:  dw 0
+vco0:   dw 0
+vco1:   dw 0
+vkm0:   ds 4
+vkm1:   ds 4
+page3_end:
+        ASSERT page3_end <= 0x3700
+    ENDIF
 
         ORG 0xD000
 setup:  nextreg 0x43,0x20   ; sprite palette 0, auto-increment

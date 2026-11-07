@@ -18,7 +18,7 @@
   "order": {"entry": {"after": ["patch.preserve-r"]}, "exit": {"before": ["patch.preserve-r"]},
             "cross": ["the latch is read before the NEXTREG $07,3", "nested hooks use their own latch byte"]},
   "owns": {"speed": "28MHz-inside-hook, caller's NR 7 restored", "hook_state": ["latch"]},
-  "examples": [],
+  "examples": ["knight_tyme", "spellbound_magic_knight"],
   "sources": ["docs/REFACTOR.md item 4", "pilot runs/atic_atac work/PERFORMANCE.md (2026-11-04: save_speed, every_site.json 192 cases)",
               "asm/lib/hlib_speed.asm + nexclash/hooklib.py (the shared library, 2026-11-04)"]
 }
@@ -62,7 +62,9 @@ One latch byte per hook level, in hook RAM.
 
 ## Verification
 Every-site matrix (four clocks per site) in the engine's unit tests. Negative control: a forced 3.5 MHz
-exit (`hooklib.NEGATIVES`) must fail the matrix at clocks 1-3; selftest --tools runs it.
+exit (`hooklib.NEGATIVES`) must fail the matrix at clocks 1-3; selftest --tools runs it. An existing engine's
+verifier must answer the latch's IN (0x253B) from its NextREG model, not from recorded port input (Knight
+Tyme, Spellbound: `_NS.nr_read`).
 
 ## Evidence
 - `grep -n 'MACRO HLIB_SPEED' asm/lib/hlib_speed.asm`; `grep -n 'def every_site\|def _t_matrix' nexclash/hooklib.py`.

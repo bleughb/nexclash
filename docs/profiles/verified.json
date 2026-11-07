@@ -6,7 +6,7 @@
    "doc": "atic_atac.md",
    "nex": {
     "plain": "e710fa8785802f1aa51f214d95c82343",
-    "sprites": "59493b7563e6dd1c7141a6763cf52d73"
+    "sprites": "6aa7e780f4ec7892d862c675e61b7fba"
    }
   },
   "00ee637a4f63ffe61fc3503de42d7822": {
@@ -22,7 +22,15 @@
    "doc": "chuckie_egg.md",
    "nex": {
     "plain": "ec0df71e70fae35836eaed521f300777",
-    "sprites": "bfad6be1e7c8a2c797a6242d7f339e35"
+    "sprites": "1c31643371ea36f10175af308d6d01a3"
+   }
+  },
+  "0268fb4d76200708849269c9747b65ff": {
+   "game": "Cobra",
+   "doc": "cobra.md",
+   "nex": {
+    "plain": "2ec883ba2f88ef4fcda0623c2b985777",
+    "sprites": "00ead70a486598fb9b908feb675680ee"
    }
   },
   "c9af5668191462d77c5859900268c24b": {
@@ -30,7 +38,7 @@
    "doc": "commando.md",
    "nex": {
     "plain": "a206f950c12f58a8e7f26b366f5a2480",
-    "sprites": "d601385ee4aeb7f3d7c0771bdc27df6b"
+    "sprites": "c42d3f536cbde59ffb0d1896a0db7684"
    }
   },
   "745cb8f59f865db5118e6dc98d09e385": {
@@ -38,7 +46,7 @@
    "doc": "cyclone.md",
    "nex": {
     "plain": "390516396ca4d385c94b7f7bd2315d31",
-    "sprites": "25c1b1e070b07565fe4d1a38f69e3024"
+    "sprites": "7db0bdd53e509b91f1ddda60a607aaf8"
    }
   },
   "0659328fd54fd446e39d1740bafd02e7": {
@@ -46,7 +54,7 @@
    "doc": "dizzy_ultimate_cartoon_adventure.md",
    "nex": {
     "plain": "7892b2e0f1f3f9f19165516db307cbe0",
-    "sprites": "fb4cb1482b3e337374ca99c3ff58edad"
+    "sprites": "6ac7a3d6fbf45699b486916f91ae225f"
    }
   },
   "703c934aa64c1c1d37d5041dd28cf9c7": {
@@ -54,7 +62,7 @@
    "doc": "spellbound_dizzy.md",
    "nex": {
     "plain": "c99189f3274a4803f0b25b0217206bdb",
-    "sprites": "1f33c467e6aa55585cea79cfbb24bcfe"
+    "sprites": "67bc34ff273c2dd45ff9e222e6d56436"
    }
   },
   "dd6cd7a3af47a520a260376c6ad4b459": {
@@ -65,12 +73,20 @@
     "sprites": "f491e1f6621559ccc4d36de3535ff5d0"
    }
   },
+  "3470d12b21edb24d6b665dfac5e8d84d": {
+   "game": "Dynamite Dan",
+   "doc": "dynamite_dan.md",
+   "nex": {
+    "plain": "3ad20495c5183b20030190d6abdd479f",
+    "sprites": "1ab3348d3a2619f534d8907a1d89e09e"
+   }
+  },
   "a9eeb555a327e5794b0ba19bc80dccf0": {
    "game": "Everyone's a Wally",
    "doc": "everyones_a_wally.md",
    "nex": {
     "plain": "2e615b3e7ae995e6d6a6ed9e3f586d4d",
-    "sprites": "f7605489c3af55b8e8c6a580c1c26150"
+    "sprites": "8c05c0be92150c29153ed28c41b44842"
    }
   },
   "876f474b3441c08ed8ff25bd43d616a3": {
@@ -78,7 +94,7 @@
    "doc": "fantasy_world_dizzy.md",
    "nex": {
     "plain": "cd620010e2f61af0002e76718945716f",
-    "sprites": "9182f2f8b4b0dc55b59a69728568b403"
+    "sprites": "fb77af62c5ce975802c354dd8b1943ee"
    }
   },
   "23d69f517506104c36ba429cb2148fa5": {
@@ -90,13 +106,22 @@
     "enhanced": "4a76d9bfe562d46ba88808f0e76c9540"
    }
   },
+  "fdab5fb61b2cb01ce38edcfa85ea9e80": {
+   "game": "Gryzor",
+   "doc": "gryzor.md",
+   "nex": {
+    "plain": "180adc9071309e8c9a5a10789040d3a1",
+    "sprites": "81f84fdbceb9f6b493140e196de4af99",
+    "outline": "827a770f7964fc8c21d038dfa99b7a00"
+   }
+  },
   "54ad66af6678df22a9d4443e3d04aadb": {
    "game": "Ikari Warriors (48K form)",
    "doc": "ikari_warriors.md",
    "nex": {
     "plain": "2d56c304bcb21619d8402d64804fef75",
-    "sprites": "e740ae71fd47dc06c1a752bf150afb77",
-    "enhanced": "22be808b58eb8444c57277c176f8a741"
+    "sprites": "c90fab6ffc1698d98d21ca8bfffd311e",
+    "enhanced": "118a55f6a81bb022fad627426b225221"
    }
   },
   "fc8e7535fc42afb60c12625b5fdfd064": {
@@ -104,7 +129,7 @@
    "doc": "incredible_shrinking_fireman-add-OPUS.md",
    "nex": {
     "plain": "feb706fcdaa29f13844a7b4982dc21fa",
-    "sprites": "53f2665e76775f3c1b404aba74e93a7b"
+    "sprites": "283d6a59a92940a31c9cfe21159fabb7"
    }
   },
   "5875d535442974a0de82737652854f1f": {
@@ -112,7 +137,7 @@
    "doc": "jetpac.md",
    "nex": {
     "plain": "feff51b7038606d21c03c260055481e4",
-    "sprites": "3cf8fbd2762091244c7580ccfa79d82d"
+    "sprites": "72e3cc193325cc8166f8e7d7b6481327"
    }
   },
   "8e720b5cc11fe0d9445fe0af4825c8bf": {
@@ -120,7 +145,7 @@
    "doc": "knight_tyme.md",
    "nex": {
     "plain": "0f91cab91a9261bb8645a0ec9cc871f2",
-    "sprites": "645401e4e42dbc80cfcb04954773ecd4"
+    "sprites": "6222fc964abca3ccaca3871d4f843396"
    }
   },
   "47c265e30f51a9b7eb5c98db6cd994c5": {
@@ -147,7 +172,7 @@
    "doc": "magicland_dizzy.md",
    "nex": {
     "plain": "09eb18496cff334ea17bfc0b0c94585d",
-    "sprites": "bf137d41d3cc08221bf6fdda153c9de2"
+    "sprites": "ab66b5011a3e87a54f561502ded0ac24"
    }
   },
   "d5ea19e487141ce922d0e96c02fd9054": {
@@ -155,7 +180,7 @@
    "doc": "match_day.md",
    "nex": {
     "plain": "612761ec2772c5a7dcd27f939588d227",
-    "sprites": "f0aecd138d1668ff057318c2545f539d"
+    "sprites": "0ec500534baae17cd5ce91eae3c13a7d"
    }
   },
   "67bf05d356d51b2b402d88c5f0cdfb21": {
@@ -163,7 +188,7 @@
    "doc": "midnight_resistance.md",
    "nex": {
     "plain": "17239acaaf67b0f8011478053e17829d",
-    "sprites": "670f94034af175ed56df97f8cdb1ef29"
+    "sprites": "2aacd11c2872b4df1dce1ca7ceb80bfd"
    }
   },
   "f7d376977b93b515feaff1672c212b12": {
@@ -179,8 +204,8 @@
    "doc": "nightshade.md",
    "nex": {
     "plain": "e4d954de899563af241cb8db84114654",
-    "sprites": "1cf6b27644a2b7941b3d80a1aaa87ef5",
-    "enhanced": "37f970019aa9443669a5ca8f0fef0613"
+    "sprites": "697ee0152f6a2f5d92cdc17bc51c674d",
+    "enhanced": "ebe5cc7225b41c3d04f073947f7b6a98"
    }
   },
   "4c98b980b1726af545fccc99665ef29b": {
@@ -188,8 +213,8 @@
    "doc": "rainbow_z80n.md",
    "nex": {
     "plain": "7ac543fb51c7a3c4137778eeb3cdc175",
-    "sprites": "69369c89035d39eac8e4211c2686503c",
-    "diagnostic": "24e547de8e2e28982fe155611068f039"
+    "sprites": "76d5da1acc29c86bf1cd3676577538dc",
+    "diagnostic": "4482096ee56a4c686dd07b2cf997ab95"
    }
   },
   "3eb7a65e19c9ffa82a49654d31a41886": {
@@ -206,8 +231,8 @@
    "doc": "renegade.md",
    "nex": {
     "plain": "62a06036dec229a7d19821df2cca6a04",
-    "sprites": "a670c5b19d254f367f6471bc5efd8df4",
-    "enhanced": "82b45f46c01c6b188ee28c2e76adbde2"
+    "sprites": "93cb8bc9616dd41bfdc2f906d513cf35",
+    "enhanced": "3a9ceaf98b376bda76936fbd2e524eb4"
    }
   },
   "d2fa7f2eeb8ccb75c30edbacb432a8b5": {
@@ -215,10 +240,18 @@
    "doc": "robin_of_the_wood.md",
    "nex": {
     "plain": "d6e8b01ea8b94970ef102afca79e611b",
-    "sprites_raw": "7cedff6b61b71f7d94330fc9e5936d57",
-    "sprites": "1d07361f9c04903643a06cc1a8d6c88a",
-    "enhanced_raw": "425259deba42b667a01e2ece96c9b1ea",
-    "enhanced": "8cb149338c77f85a088e3ddf220ed05b"
+    "sprites_raw": "27f9ce7f210c00dae3a01b532a6a5669",
+    "sprites": "fcd321af900797294353a155bfaebfe0",
+    "enhanced_raw": "0d0d7ee180ae921023738cae8e5967be",
+    "enhanced": "d2d4d23b5aded923839ce281bd2271f1"
+   }
+  },
+  "d8fb649ba5d8fa086cac43d0cd1c497e": {
+   "game": "Sabre Wulf",
+   "doc": "sabre_wulf.md",
+   "nex": {
+    "plain": "06fbcf5016f77b868b3d754f621974ab",
+    "sprites": "332c9526cf6ab6b4adb5c1dc2d170969"
    }
   },
   "3b89344c6d7e6433bf044bef1880a2f1": {
@@ -226,7 +259,15 @@
    "doc": "smash_tv.md",
    "nex": {
     "plain": "c72ea298486b14036ac1a87ac89c3f0e",
-    "sprites": "03979d5438cf55410ecec8aac76f05ec"
+    "sprites": "af0298e2cad56d8fb992caaba77a6549"
+   }
+  },
+  "23ee5b2123dbc8a9a5daccbd51db4db0": {
+   "game": "Solomon's Key",
+   "doc": "solomons_key.md",
+   "nex": {
+    "plain": "3ad529e40439ad0ee5fbbb67f66d9170",
+    "sprites": "80e83ae3cab8adf6e58085261517a80f"
    }
   },
   "3bca7e72f3c9c3abd104b8c92f35d5d4": {
@@ -234,8 +275,8 @@
    "doc": "spellbound_magic_knight.md",
    "nex": {
     "plain": "656c71c4b2ebb8318f3ad442d70b0ab9",
-    "sprites": "379e61b026044552437b22e117ecfd1b",
-    "enhanced": "3a824f3a78d11d6cee6bc6a3b37b222c"
+    "sprites": "ce8e1c6fb0dad558928880a8bf01e13d",
+    "enhanced": "06fe3d18161f3f130372c8003def03da"
    }
   },
   "b94691b08d31386d3e5661d04e6c164f": {
@@ -252,7 +293,7 @@
    "doc": "target_renegade.md",
    "nex": {
     "plain": "a0be8dc03a1be8c6d67dc3e0229abc35",
-    "sprites": "e0b246e35d028c34170e1d1c52f00f5f"
+    "sprites": "3581022bd9f9fdc999eacee94034319d"
    }
   },
   "72bcb108d7baec2ee10ede47594010dd": {
@@ -260,8 +301,8 @@
    "doc": "three_weeks.md",
    "nex": {
     "plain": "1a6f1bbe0abfbcfbb5712ad4f4700e95",
-    "sprites": "90eeeb14fa20edc3585124422530a41d",
-    "enhanced": "e6e6f6b06c3cff4f2cd259ce27de035a"
+    "sprites": "74af7179b23098c66b0f8e2b5e3a0bf2",
+    "enhanced": "c139f040ee2ea5e2c22c1c66799e6e49"
    }
   },
   "7578947fcc8dbc4ba822e2c565499d54": {

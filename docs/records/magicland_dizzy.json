@@ -28,9 +28,12 @@
   "nextboot",
   "recorder",
   "machine",
-  "rzx"
+  "rzx",
+  "magicland128"
  ],
- "own_modules": [],
+ "own_modules": [
+  "magicland128"
+ ],
  "data": [],
  "shared_data": [
   "nexclash/templates.json",
@@ -64,7 +67,7 @@
   },
   "sprites": {
    "file": "magicland_dizzy_sprites.nex",
-   "md5": "bf137d41d3cc08221bf6fdda153c9de2"
+   "md5": "ab66b5011a3e87a54f561502ded0ac24"
   }
  },
  "repro": [
@@ -133,5 +136,69 @@
   "date": "2026-10-13",
   "tree": "main 32ad905",
   "run": "selftest.py full run (before records)"
- }
+ },
+ "rework": [
+  {
+   "name": "v128",
+   "version": "1.0",
+   "snapshot": "Dizzy 4 - Magicland Dizzy (1990)(Code Masters)(128K).z80",
+   "args": [],
+   "inputs": [
+    {
+     "name": "Dizzy 4 - Magicland Dizzy (1990)(Code Masters)(128K).z80",
+     "md5": "7ebfab28186697409f9026b552ccbf84",
+     "path": "magicland_dizzy/Dizzy 4 - Magicland Dizzy (1990)(Code Masters)(128K).z80"
+    },
+    {
+     "name": "ml128_walk1.rzx",
+     "md5": "6b75099b4b6c682d8a5af7008741c751",
+     "path": "magicland_dizzy/ml128_walk1.rzx"
+    },
+    {
+     "name": "ml128_walk2.rzx",
+     "md5": "e1b46f7a48c424a87739f834ace862ee",
+     "path": "magicland_dizzy/ml128_walk2.rzx"
+    },
+    {
+     "name": "ml128_walk3.rzx",
+     "md5": "577ac3970ed3e1249e299e04969955f8",
+     "path": "magicland_dizzy/ml128_walk3.rzx"
+    }
+   ],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ],
+    "decisions": {
+     "engine": "magicland128",
+     "base": "Dean's generic TID build (build.py TidPatch altrom: template, sites, patterns)",
+     "input": "the 128K release (AY music from bank 3 in the game ISR)",
+     "strategy": "altrom: hooks + table + register block at 0x386E in alt image 1 = Sinclair's 48K ROM (whole image); image 0 = the 128K ROM 0; tail in the dead stack 0xA2BD; printer buffer put back after NEXLOAD; plot hook at 28 MHz, incoming speed restored",
+     "stack_low_water": 41661
+    }
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [
+     "ml128_walk1.rzx",
+     "ml128_walk2.rzx",
+     "ml128_walk3.rzx"
+    ]
+   },
+   "outputs": {
+    "plain": {
+     "file": "Dizzy 4 - Magicland Dizzy (1990)(Code Masters)(128K).nex",
+     "md5": "36e1a1c896fe31fa5936cbacbfb5a96e"
+    },
+    "sprites": {
+     "file": "Dizzy 4 - Magicland Dizzy (1990)(Code Masters)(128K)_sprites.nex",
+     "md5": "67808068a9b0c653503b5a5583f88225"
+    }
+   },
+   "proof": "PARTIAL. 3 bot walks of the 128K release (12,013 / 12,028 / 12,020 frames) on rework v128: every hook event IDENTICAL (4,684 plots, 4,695 erases, 21,245 ISR hide checks, 135 room wipes, 47 boxes), 4,713 sprite plots pixel-perfect; but 5 of 101,594 pixel tests (0xA134) read a byte where the original's own erase had left a hole (Dizzy plotted, another routine (0x906F / 0x90DE) drew over him, the eraser 0x9CA0 XOR-restored a stale undo): the build keeps that background pixel, so those tests differ (Dean's 48K build has the same property: same code); negatives: pattern nibbles, frame table, ISR hide, box hide, ISR+wipe hide detected by their own signals, the wipe hide alone is masked by the ISR hide; clock matrix 5 sites x 4 clocks = 20 cases PASS, forced 3.5 MHz exit detected; ROM paths: every ROM byte as recorded; tail never read before written; printer buffer as the snapshot after NEXLOAD",
+   "note": "Jon Attree's Magicland Dizzy 128K rework (2026-11-05): engine magicland128 (engines.py: the 128K snapshot), Dean's generic TID build (build.py TidPatch altrom) on the 128K release so the AY music plays; whole alt ROM image; the printer buffer (the game's bit-reverse table) put back after NEXLOAD; the plot hook's sprite uploads at 28 MHz, the incoming speed restored; a 128K copy of the TID verifier with box, pixel tests and guards; the every-site clock matrix. Recordings: bot walks on SkoolKit's C simulator. Packaged as Dizzy 4 - Magicland Dizzy (1990)(Code Masters)(128K).nxc v1.0 (pilot runs/dean_magicland_dizzy). games/magicland_dizzy.md."
+  }
+ ]
 }

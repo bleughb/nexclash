@@ -333,6 +333,66 @@ def altrom_whole(patch):
     return not (tuple(alt) == (0x2000, 0x4000) and getattr(patch, 'altrom_low', None))
 
 
+# NextZXOS v2.10 (System/Next 26.11) replaces some ROM3 instructions with NEXTREG $8C,$80 trampolines into its own alt
+# ROM, and points PLOT/POINT/DRAW/CIRCLE at new layer-aware code that ends in one. A 'rom3' fill copies those into alt image
+# 1, where they no longer switch anything: BEEPER (0x03C1) then runs JP (IX) into RAM (Cyclone hangs). After the copy the
+# stub puts v2.09's bytes back at each site whose RUNNING ROM3 holds exactly v2.10's: on v2.09 nothing matches and the
+# image is unchanged. Every v2.09 sequence here is also Sinclair's. (site, v2.10 bytes, v2.09 bytes)
+ROM3_V210_FIXUPS = (
+    (0x03C1, b'\xED\x91\x8C\x80', b'\xDD\x21\xD1\x03'),                  # BEEPER: NEXTREG $8C,$80 -> LD IX,$03D1
+    (0x22CB, b'\xCD\xB6\x1F', b'\xCD\x07\x23'),                          # POINT-SUB: CALL $1FB6 -> CALL STK-TO-BC
+    (0x22DC, b'\xCD\xB6\x1F', b'\xCD\x07\x23'),                          # PLOT
+    (0x24B7, b'\xCD\xB6\x1F', b'\xCD\x07\x23'),                          # DRAW-LINE
+    (0x232D, b'\x00\xCD\xE5\x2B', b'\xEF\x2A\x3D\x38'),                  # CIRCLE: CALL $2BE5 -> RST 28 / abs / re-stack / end
+    (0x2408, b'\x21\x7D\x5C\xCD\x63\x18', b'\x3A\x7D\x5C\xCD\x28\x2D'),  # DRAW arcs: LD HL,COORDS / CALL $1863
+    (0x2413, b'\x21\x7E\x5C\xCD\x63\x18', b'\x3A\x7E\x5C\xCD\x28\x2D'),  #   -> LD A,(COORDS) / CALL STACK-A
+    (0x2441, b'\x21\x7D\x5C\xCD\x63\x18', b'\x3A\x7D\x5C\xCD\x28\x2D'),
+    (0x2450, b'\x21\x7E\x5C\xCD\x63\x18', b'\x3A\x7E\x5C\xCD\x28\x2D'),
+    (0x2464, b'\x21\x7D\x5C\xCD\x63\x18', b'\x3A\x7D\x5C\xCD\x28\x2D'),
+    (0x246E, b'\x21\x7E\x5C\xCD\x63\x18', b'\x3A\x7E\x5C\xCD\x28\x2D'),
+)
+
+
+def rom3_fixups(img, rom3):
+    """img (alt image 1 after the ROM3 copy, a bytearray) with ROM3_V210_FIXUPS applied as the stub applies them: only
+    where rom3 (the running ROM3) holds a site's v2.10 bytes exactly. For the models (nextboot.alt_image)."""
+    for at, new, old in ROM3_V210_FIXUPS:
+        if bytes(rom3[at:at + len(new)]) == new:
+            img[at:at + len(old)] = old
+    return img
+
+
+def rom3_fixup_sites(lo, hi, low=None):
+    """The ROM3_V210_FIXUPS entries a 'rom3' fill still needs: those with a byte the build does not write itself
+    (outside lo..hi, and outside 0x0000-0x1FFF when altrom_low supplies that half). A build that writes the whole
+    image (lo..hi = 0x2000..0x4000 + low: Cauldron, Knight Tyme, Spellbound) needs none and its stub is unchanged."""
+    def own(a):
+        return lo <= a < hi or (low is not None and a < 0x2000)
+    return tuple(x for x in ROM3_V210_FIXUPS if not all(own(a) for a in range(x[0], x[0] + len(x[2]))))
+
+
+def rom3_fixup_code(addr, sites=ROM3_V210_FIXUPS):
+    """Z80 for the fix-up sites (ROM3_V210_FIXUPS), run at addr right after the ROM3 copy (NR $8C=$C0: reads come
+    from the running ROM3, writes go to alt image 1) and before the build's bytes go over it: per site, compare, and
+    write v2.09's bytes on a full match. No stack (slots 6/7 are remapped there). Falls through to the byte after
+    its table; no sites, no code. Source (sjasmplus), as these bytes:
+        fix:  LD HL,table
+        next: LD E,(HL) / INC HL / LD D,(HL) / INC HL / LD A,(HL) / INC HL   ; DE = site, A = length (0 ends)
+              OR A / JR Z,done / LD C,A / LD B,A
+        cmp:  LD A,(DE) / CP (HL) / JR NZ,miss / INC DE / INC HL / DJNZ cmp ; the running ROM3 against v2.10's
+              LD A,E / SUB C / LD E,A / JR NC,$+3 / DEC D / LDIR / JR next   ; matched: v2.09's bytes over the copy
+        miss: LD A,B / ADD A,C / ADD A,L / LD L,A / JR NC,next / INC H / JR next   ; skip the rest of the entry
+        done: JP <after the table>
+        table: per site DW site / DB length / DB v2.10 bytes / DB v2.09 bytes; DW 0 / DB 0"""
+    if not sites:
+        return b''
+    table = b''.join(w16(at) + bytes((len(new),)) + new + old for at, new, old in sites) + b'\x00\x00\x00'
+    body = bytes.fromhex('5E2356237E23B7281D4F471ABE200E132310F87B915F30011' '5EDB018E3788185' '6F30DD2418DA')
+    code = b'\x21' + w16(addr + 3 + len(body) + 3) + body      # LD HL,table
+    code += b'\xC3' + w16(addr + len(code) + 3 + len(table))   # done: JP past the table
+    return code + table
+
+
 def altrom_fill(org, page, lo, hi, low=None, whole=False, img0=None):
     """Stub code (assembled for address org in the stub page at C000) that fills alt ROM image 1:
     ROM3 (48K BASIC) copied 0x0000-0x3FFF in write mode ($8C bits 7+6), then bytes lo..hi-1 of
@@ -362,6 +422,7 @@ def altrom_fill(org, page, lo, hi, low=None, whole=False, img0=None):
         c += nextreg(0x55, page)
     else:
         c += b'\x21\x00\x00\x11\x00\x00\x01\x00\x40\xED\xB0'   # LD HL,0 / LD DE,0 / LD BC,$4000 / LDIR
+        c += rom3_fixup_code(org + len(c) - 0x4000, rom3_fixup_sites(lo, hi, low))   # NextZXOS v2.10 (slot-4 alias)
     if hi > lo:  # zero-length LDIR would copy 65536 bytes
         c += b'\x21' + w16(0xA000 + lo - 0x2000) + b'\x11' + w16(lo) + b'\x01' + w16(hi - lo) + b'\xED\xB0'
     if low is not None:

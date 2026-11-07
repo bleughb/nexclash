@@ -209,6 +209,8 @@ card_test10.img): default, Enhanced, Enhanced + Infinite Lives MD5 exact with ap
   area; reported, not a fault by the check's rule). JNext ran the game on NextZXOS's ROM with no fault seen; still a
   question for the end-to-end run (an alt ROM image would make those bytes Sinclair's).
 
+## Rounds 7-11 (2026-11-05): games/nightshade_rounds7-11.md (painted Enhanced, original pace; the published 1.0)
+
 ## Hardware checklist
 1. Loading screen from the tape, a key or 5 s, then the title tune and menu; 0 starts.
 2. Hero and monsters as sprites over the scenery's colours; the hero in his health colour (white, yellow, green).
@@ -224,6 +226,8 @@ card_test10.img): default, Enhanced, Enhanced + Infinite Lives MD5 exact with ap
   replays of broken builds, so `unit_tests` here runs them (1500 frames each, the margin one the whole recording).
 - [deferred Open: reconsider when the end-to-end run reaches the ROM path stage] The ROM path check reports 192-231 ROM
   bytes per recording that differ on NextZXOS's ROM3 (0x0550-0x06A7) in a build with no alt ROM image.
+
+- [none: rounds 7-11 (games/nightshade_rounds7-11.md) were ported onto main unchanged; their findings are in that file]
 
 ## Technique use
 - patch.display-atomic-switch: used: the blit hook runs the game's blits and switches the sprites with them (round 3)

@@ -38,6 +38,7 @@ DPLOT   EQU 12                  ; h_plot's unmeasured time less o_plot's: HLIB_S
         ORG 0x8000
         INCLUDE "hlib_speed.asm"        ; macros only
         INCLUDE "hlib_r.asm"            ; macros + hlib_r_set / hlib_r_add
+        INCLUDE "hlib_iff.asm"          ; macros only
         INCLUDE "hlib_pace.asm"
         INCLUDE "hlib_pcache.asm"
         INCLUDE "hlib_commit.asm"
@@ -256,6 +257,26 @@ t_frame:
         call hlib_commit
     ENDIF
         HLIB_SPEED_OUT V_SPD
+        ret
+
+; ---- interrupt state: the caller's IFF back after a hook that holds interrupts off -----------------
+t_iff:
+    IFDEF NEG_IFF1
+        ld a,i                  ; the old form: one read, trusted
+        di
+    ELSE
+        HLIB_IFF_DI
+    ENDIF
+        push af
+        ld a,b                  ; the hook's work with interrupts off
+        add a,c
+        ld d,a
+        pop af
+        HLIB_IFF_EI
+        ret
+
+t_line_di:                      ; a video line read with the shortest DI window
+        call hlib_line_di
         ret
 
 code_end:

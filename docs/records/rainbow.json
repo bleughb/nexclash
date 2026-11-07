@@ -71,11 +71,11 @@
   },
   "sprites": {
    "file": "rainbow_sprites.nex",
-   "md5": "cf017271dfc01bdd0c7cf2f599b03628"
+   "md5": "df95daa5ef60116c994ffbde1f5f8fbb"
   },
   "diagnostic": {
    "file": "rainbow_sprites_diag.nex",
-   "md5": "c16751b0255ee3d83a4e342bf9a8c411"
+   "md5": "afe331001c58e21cd7a4524ed045f229"
   }
  },
  "repro": [],
