@@ -19,8 +19,12 @@
 ; Game-routine windows (the game's own routine run at 28 MHz, Quazatron's E656): open, CALL the routine,
 ;   A = K (the routine's original time per unit of its 28 MHz time, x 16: about 104 at JNext's 6.5),
 ;   C = the latched incoming speed, CALL hlib_pace_waitk. K comes from a JNext measurement per routine.
+; Nested hooks (a hook the window's game routine calls, or the window hook's own work before its wait): CALL
+;   hlib_nest_open / A = unmeasured part, CALL hlib_nest_close: its time is left out of the open window (never scaled
+;   by K) and goes to the debt, which that window's wait repays (Quazatron's WNEST). No window open: a debt window.
+;   Assembled only when called (IFUSED): engines that never call it keep their bytes.
 ; Debt (hook time outside any window): CALL hlib_debt_open / A = unmeasured part (1/16 lines), CALL
-;   hlib_debt_close around the hook (never inside an open window: counted twice); CALL hlib_debt_tick at
+;   hlib_debt_close around the hook (never inside an open window: counted twice; hlib_nest_* there); CALL hlib_debt_tick at
 ;   least once a frame in between when that hook can run longer than a frame; HL = sixteenths, CALL
 ;   hlib_debt_add for a constant cost (a hook's 3.5 MHz entry and exit).
 ; The game's own delay repays the debt (Quazatron's DD80): HL = the delay's time (1/16 lines, real),
@@ -559,6 +563,34 @@ hlib_pace_resume:
         add hl,de
         ld (HLIB_V_PACE + 14),hl        ; one 16-bit write: a reading sees it whole
         pop de
+        ret
+    ENDIF
+
+    IFUSED hlib_nest_open        ; assembled only when an engine calls it: the others keep their bytes
+; hlib_nest_open / hlib_nest_close: a hook that can run inside an open window (one the window's game routine calls:
+; Quazatron's WNEST; or the window hook's own work between the routine's return and the wait). Its time is left out
+; of the window (never scaled by K, never waited out as the routine's) and goes to the debt, which the same window's
+; wait then repays. With no window open they are hlib_debt_open / hlib_debt_close. One level: a nested hook never
+; nests another (the debt window's state is single); interrupts inside it are held as usual (hold / resume).
+; hlib_nest_open: AF, BC, DE, HL lost.
+hlib_nest_open:
+        ld a,(HLIB_V_PACE + 10)
+        or a
+        call nz,hlib_pace_tick  ; the window counted up to here
+        jp hlib_debt_open
+
+; hlib_nest_close: A = the hook's unmeasured part (1/16 lines; inside a window it ran at the window's clock, so its
+; real time: Quazatron passes A / 8 at 28 MHz). Debt += 16 x lines since hlib_nest_open + A; an open window goes on
+; from now (its last reading = this one). AF, BC, DE, HL lost.
+hlib_nest_close:
+        call hlib_debt_close    ; +22 / +24 = now (hlib_since_c's reading)
+.mv:    ld a,(HLIB_V_PACE + 10)
+        or a
+        ret z
+        ld hl,(HLIB_V_PACE + 22)
+        ld (HLIB_V_PACE),hl
+        ld hl,(HLIB_V_PACE + 24)
+        ld (HLIB_V_PACE + 18),hl
         ret
     ENDIF
     ENDIF
