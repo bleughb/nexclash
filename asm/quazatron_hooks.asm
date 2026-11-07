@@ -1264,8 +1264,9 @@ put3:   push de
 
 ; qline: HL = the video line (0-311), the reads with interrupts held off (then put back as they were: inside the ISR
 ; they stay off); NR 7 is selected again after (HLIB_SPEED_IN reads it). AF, BC lost.
-qline:  ld a,i                  ; (session 6: read twice: an interrupt taken during the first LD A,I makes it read
-        ld a,i                  ; IFF2 as 0, and RET PO would then leave interrupts off: the next one was missed)
+qline:  ld a,i                  ; (session 6: an interrupt taken during LD A,I makes it read IFF2 as 0, and RET PO then
+        jp pe,$+5               ; left interrupts off. 2026-11-07: read again only after an off (lib/hlib_iff.asm
+        ld a,i                  ; HLIB_IFF_DI): two reads back to back could still meet one at the end of the second)
         di
         push af
         ld bc,0x243B
@@ -1583,12 +1584,10 @@ mv_out: ld a,(VFAST)
 ; mvtick: MVE += lines since MVL (one wrap allowed), MVL = now; interrupts held off throughout, so an ISR's isr_out
 ; (which moves DST) cannot fall between. The line counter still for 256 polls: MVE is forced past any target (an
 ; emulator without one). AF, DE, HL lost.
-mvtick: ld a,i
-        ld a,i
-        push af
-        push bc
+mvtick: push bc
         call qline              ; (session 6: its own short DI; the update below is the only other one: a long DI
-        di                      ; window made the ULA's interrupt fall wholly inside it)
+        push af                 ; window made the ULA's interrupt fall wholly inside it). F's P/V = the caller's IFF:
+        di                      ; qline read it (twice-safe) and its exit keeps the flags (2026-11-07)
         ld de,(MVL)
         ld (MVL),hl
         or a
@@ -1611,8 +1610,8 @@ mvtick: ld a,i
 .m2:    ld de,(MVE)
         add hl,de
         ld (MVE),hl
-.z:     pop bc
-        pop af
+.z:     pop af
+        pop bc
         ret po
         ei                      ; session 6: interrupts then stay on for about 120 us (256 DJNZ at 28 MHz, half a line)
         push bc                 ; before the caller's next poll holds them off again: the wait loops of polls (fw_wait,
