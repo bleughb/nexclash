@@ -18,8 +18,10 @@ ROM_ORG = 0x386E
 ALT_PAGE = 24
 TAIL_ADDR = 0x5B00
 GFX, MASK, MASKTAB, NFRAME = 0xBB38, 0xC5F8, 0xB418, 86
-SCOREFR, SCORETAB, SCOREMASK, NFORM = 85, 0xCC18, 0xCD18, 16      # frame 85's top 8 rows are copied at run time (0x96B8)
-NPAT = NFRAME + NFORM
+# frames whose top 8 rows are copied at run time: frame -> (graphics table, mask table, forms, first pattern, gfx, mask)
+FORMS = {85: (0xCC18, 0xCD18, 10, 86, 0xC5D8, 0xCB98),    # fruit score, 0x96B8
+         81: (0xCBB8, 0xCCB8, 6, 96, 0xC558, 0xCB78)}     # ghost score, 0x9224
+NPAT = 102
 COUNT, ROOM, ORDER, RECS, SCROLL = 0xB335, 0xB336, 0xA982, 0xB3B4, 0xB3E6
 BUF = (0xE000, 0xF800)
 CALLS = {0x87AA: ('cd90b0', 'e_b1'), 0x88E9: ('cd90b0', 'e_b2'), 0x891B: ('cd90b0', 'e_b3'),
@@ -77,12 +79,14 @@ def key_of(frame, row, byte):
 
 def sources(peek, p, r, b):
     """Pattern p, row r, byte b -> (graphics address (the colour key), mask address). Patterns from 86:
-    the score frame with form p - 86 in its top 8 rows."""
+    a score frame with that form in its top 8 rows."""
     if p >= NFRAME:
-        v = p - NFRAME
-        if r < 8:
-            return SCORETAB + 16 * v + 2 * r + b, SCOREMASK + 16 * v + 2 * r + b
-        p = SCOREFR
+        for fr, (gt, mt, n, first, _, _) in FORMS.items():
+            if first <= p < first + n:
+                if r < 8:
+                    return gt + 16 * (p - first) + 2 * r + b, mt + 16 * (p - first) + 2 * r + b
+                p = fr
+                break
     return GFX + 32 * p + 2 * r + b, MASK + 32 * peek(MASKTAB + p) + 2 * r + b
 
 
@@ -120,7 +124,7 @@ def patterns(peek, cmap=None):
 
 
 def colour_inputs_md5(peek):
-    return hashlib.md5(bytes(peek(a) for a in list(range(GFX, MASK + 32 * 46)) + list(range(SCORETAB, SCOREMASK + 256)))).hexdigest()
+    return hashlib.md5(bytes(peek(a) for a in list(range(GFX, MASK + 32 * 46)) + list(range(0xCBB8, 0xCDB8)))).hexdigest()
 
 
 def colour_identity(peek):
@@ -676,13 +680,14 @@ def unit_tests(patch, base, neg=()):
             if b and c['  fail example'] < 4:
                 c['  fail example'] += 1
                 c['  f %d x %d y %d h %d sc %d: %d pixels' % (f, x, y, h, sc, b)] += 1
-    for v in range(NFORM):                       # the score frame's forms, as 0x96B8 copies them
-        b1 = bytearray(base)
-        b1[0xC5D8:0xC5E8] = base[SCORETAB + 16 * v:SCORETAB + 16 * v + 16]
-        b1[0xCB98:0xCBA8] = base[SCOREMASK + 16 * v:SCOREMASK + 16 * v + 16]
-        for x, y, h in ((100, 60, 0), (17, 100, 3), (160, 180, 0)):
-            b = one(patch, SCOREFR, x, y, h, 37, b0=bytes(b1))
-            c['score frame form cases %s' % ('ok' if not b else 'FAIL!')] += 1
+    for fr, (gt, mt, n, first, ga, ma) in FORMS.items():   # the score frames' forms, as the game copies them
+        for v in range(n):
+            b1 = bytearray(base)
+            b1[ga:ga + 16] = base[gt + 16 * v:gt + 16 * v + 16]
+            b1[ma:ma + 16] = base[mt + 16 * v:mt + 16 * v + 16]
+            for x, y, h in ((100, 60, 0), (17, 100, 3), (160, 180, 0)):
+                b = one(patch, fr, x, y, h, 37, b0=bytes(b1))
+                c['score frame form cases %s' % ('ok' if not b else 'FAIL!')] += 1
     # guards: frames 0x50 / 0xFF / >= 86 hide; count hides the rest; slot order; Pac-Man's ink
     recs = [(40 + 10 * i, 50, i, 0) for i in range(12)]
     for cnt in range(13):
@@ -786,7 +791,7 @@ def sheets(peek, out_dir, prefix='pac_mania', colours=None, say=print):
     from . import coloursheet as cs
     comps = []
     for f in range(NPAT):
-        if f == 80 or f == SCOREFR:                # 80 is "no figure"; 85's forms are 86 up
+        if f == 80 or f in FORMS:                  # 80 is "no figure"; 81 and 85 are shown by their forms, 86 up
             continue
         p = part_of(peek, f)
         if any(q[4] for q in p['pixels']):

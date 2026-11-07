@@ -10,7 +10,7 @@
 ;   0xAEED 0xAEF4 0xAEFB  LD (BC),A (plotter)                          -> NOP
 ;   0x8A17 0x8A1B  LD (HL),A (Pac-Man's yellow cells, rows 5-10, columns 11-12) -> NOP
 ; Sprites: slot n = n-th figure plotted (table 0xA982 of record pointers, sorted by y): a higher slot is on
-; top, as the later plot is. Record: +0 x, +1 y, +2 frame, +3 height above ground. Patterns 0-85 = frame, 86-101 = the score frame's forms.
+; top, as the later plot is. Record: +0 x, +1 y, +2 frame, +3 height above ground. Patterns 0-85 = frame, 86-95 fruit score forms, 96-101 ghost score forms.
 ; Nibbles: 0 transparent, 1 the figure's ink (palette offset picks it), 2-14 fixed colours, 15 black paper.
 
         DEVICE ZXSPECTRUMNEXT
@@ -23,9 +23,6 @@ ORDER   EQU 0xA982
 PACREC  EQU 0xB3B4
 NSLOT   EQU 12
 NFRAME  EQU 86
-SCOREFR EQU 85
-SCORETAB EQU 0xCC18
-SCOREGFX EQU 0xC5D8
 
         ORG 0x386E
 ; ---- blit after a figure pass: the blit returns to c_n, which commits the sprites as it ends.
@@ -118,8 +115,10 @@ com:    push bc
         jr z,.hide
         cp NFRAME
         jr nc,.hide
-        cp SCOREFR
-        call z,variant          ; frame 85 is rewritten at run time (0x96B8): patterns 86-101 are its forms
+        cp 85
+        call z,v85              ; frames 85 and 81 are rewritten at run time: patterns 86-95 and 96-101
+        cp 81
+        call z,v81
         ld c,a                  ; C = pattern
         dec hl
         dec hl
@@ -181,16 +180,27 @@ com:    push bc
         pop bc
         pop af
         ret
-; ---- which form of the score frame is in 0xC5D8: A = 86 + form, or 85 if none matches ----
-variant:
-        push bc
+; ---- frames rewritten at run time: which form is in the frame now? A = its pattern, or the frame if none ----
+v85:    push bc
         push de
         push hl
-        ld hl,SCORETAB
-        ld c,0
-.t:     ld de,SCOREGFX
-        ld b,16
+        ld hl,0xCC18            ; fruit score: 0x96B8 copies 16 bytes from here to 0xC5D8
+        ld de,0xC5D8
+        ld bc,10 << 8 | 86      ; B = forms, C = first pattern
+        ld a,85
+        jr vv
+v81:    push bc
+        push de
         push hl
+        ld hl,0xCBB8            ; ghost score: 0x9224 copies 16 bytes from here to 0xC558
+        ld de,0xC558
+        ld bc,6 << 8 | 96
+        ld a,81
+vv:     push af
+.t:     push bc
+        push de
+        push hl
+        ld b,16
 .c:     ld a,(de)
         cp (hl)
         jr nz,.no
@@ -198,17 +208,21 @@ variant:
         inc de
         djnz .c
         pop hl
+        pop de
+        pop bc
+        pop af
         ld a,c
-        add a,NFRAME
         jr .end
 .no:    pop hl
+        pop de
+        pop bc
+        push de
         ld de,16
         add hl,de
+        pop de
         inc c
-        ld a,c
-        cp 16
-        jr nz,.t
-        ld a,SCOREFR
+        djnz .t
+        pop af
 .end:   pop hl
         pop de
         pop bc
