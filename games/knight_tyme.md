@@ -48,7 +48,24 @@ Not replayed: option UPDATE (flag held at 0 on the patched machine, work/upd.py;
 Colours: sheets in sheets/, recolour run on a test painting (paint/); an empty map returns the build byte for byte.
 Cheats: archive .pok's [128K] entries; time and others' stats held in the simulator on the original code; strength, fuel not run. The file's other entries are 48K addresses (they land inside instructions here): left out.
 
+## Speed restored (2026-11-07, shared engine refactor, goal 2)
+- ENTER latches the caller's CPU speed (HLIB_SPEED_IN, lib/hlib_speed.asm) on the hook stack and LEAVE gives it back
+  (`ld a,(V_SPD) / nextreg 7,a`) instead of a fixed 3.5 MHz; V_SPD = 0x80FF in page 26 (unused before). The page
+  switch at entry now runs at the caller's clock. The game never reads R (no LD A,R in its banks).
+- Sprites 6222fc96 (was 645401e4); plain unchanged. Replay: lockstep IDENTICAL on all 4 recordings (33,534 frames, 25,064 hook exits with registers), unit PASS, negatives 19/19
+  (selftest: verification PASSED; the stamp is withheld as on main: the ROM path check does not model ROM 0).
+- The verifier models NextREG reads in hooks (_NS.sel / nr_read): 0x243B selects, 0x253B reads NR 7 as the core
+  composes it; before, a hook's IN took a recorded port input. Flicker (JNext, frames 1000-1299): 0 out of step,
+  0 vanished, 0 one-frame attribute changes, before and after.
+- JNext pace (v2.09 card, 600 updates keyed to 0xACE5, seed 1, against the plain build; work/kt_profile.json in
+  pilot runs/engine_refactor): +1.11% before and after (quiet +1.83%, busy -0.01% / -0.00%), lockstep equal at every
+  update; interrupts 50.00 a second in the original, before and after; longest gap 20.3 ms in all three.
+
 ## Lessons
+- [card patch.restore-speed §Verification] The lockstep verifier fed every port read from the recording, so the latch's
+  IN (0x253B) took a game input and the replay failed at once; it now answers 0x253B from its NextREG model.
+- [card patch.restore-speed §Use / do not use] An engine with one ENTER / LEAVE pair takes the latch in one place; a
+  stack-switching ENTER latches on the hook stack (HLIB_SPEED_IN pushes 4 bytes) and LEAVE restores before AF.
 - [local: the pilot added the loading screen after the build with its own script] Rebuilding the approved .nex
   needs the post-step in the engine: stub source in the .asm, the screen from the tape beside the snapshot.
 - [tool nextboot.rom_paths] The ROM path check replays these recordings now (2026-11-04): a 128K replay that
@@ -64,6 +81,7 @@ Cheats: archive .pok's [128K] entries; time and others' stats held in the simula
 - [local: tile-level window hide cuts figures beside a window] Store the figure's real extent per tile.
 
 ## Technique use
+- patch.restore-speed: helped: the macro pair went into ENTER / LEAVE unchanged (2026-11-07).
 - detect.gameplay-screen-readers: no help: the lockstep shows it directly, no memory outside the listed buffers ever differs
 - optimise.pattern-cache: used: Knight images only
 
@@ -80,6 +98,7 @@ Cheats: archive .pok's [128K] entries; time and others' stats held in the simula
 - 2026-11-04 import into nexclash (phase 7, group 2): loading screen in the engine, record, stamped verify; 0 user rounds.
 - 2026-11-04 ROM path check fixed for this game (48K ROM as ROM 1, segments); record unpinned, star map known; 0 user rounds.
 
+- 2026-11-07 shared engine refactor: hooks restore the caller's speed (goal 2); 0 user rounds.
 ## Open
 - Hardware, CSpect: never run.
 - Alt image 0 is the set-up's copy of the Next's ROM 0, so the Bridge's star map reads NextZXOS's ROM 0 (REFACTOR item 2):
