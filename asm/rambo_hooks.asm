@@ -12,6 +12,7 @@
 ;   0x6C8F 11 01 40, 0x7600 0E 13 3E, 0x74B3 0E 1F 3E -> JP s_h3 / s_h1 / s_h2: sprites and Layer 2 off
 ;   0x8EB4 DD 21 AE    LD IX,0x79AE    -> JP s_tn: the start of a life: portraits on during its tune
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_speed.asm"    ; macros only: the caller's speed latched and given back
 
 H_PAGE  EQU 26
 FIGTYPE EQU 0x40
@@ -33,7 +34,7 @@ s_f1:   ld a,(ix+9)         ; what the skipped plot leaves in memory
         ld (0x8078),a
         ld (0xFF2A),sp
         nextreg 0x51,H_PAGE
-        nextreg 0x07,3
+        call spdi               ; the caller's speed latched (page H), then 28 MHz
         xor a
         jp h_fig
 s_p2:   ld a,(iy+1)
@@ -46,24 +47,24 @@ s_f2:   ld a,b
         ld (0x8698),a
         ld (0xFF2A),sp
         nextreg 0x51,H_PAGE
-        nextreg 0x07,3
+        call spdi
         ld a,1
         jp h_fig
-s_ret:  nextreg 0x07,0
+s_ret:  call spdo               ; the caller's speed back (never a fixed 3.5 MHz)
         nextreg 0x51,0xFF
         ret
-s_fb0:  nextreg 0x07,0
+s_fb0:  call spdo
         nextreg 0x51,0xFF
         jp s_o1
-s_fb1:  nextreg 0x07,0
+s_fb1:  call spdo
         nextreg 0x51,0xFF
         jp s_o2
 s_bl:   nextreg 0x51,H_PAGE
-        nextreg 0x07,3
+        call spdi
         push bc             ; C = 0 from the wait loop: the blit's counter
 s_blc:  call h_commit
         pop bc
-        nextreg 0x07,0
+        call spdo
         nextreg 0x51,0xFF
         ld hl,0xC000
         ret
@@ -76,10 +77,10 @@ s_tn:   push af
         push de
         push hl
         nextreg 0x51,H_PAGE
-        nextreg 0x07,3
+        call spdi
         call h_commit
         nextreg 0x69,0      ; the play area is black ink on black during the tune: no dirt behind it yet
-        nextreg 0x07,0
+        call spdo
         nextreg 0x51,0xFF
         pop hl
         pop de
@@ -513,6 +514,12 @@ vlist:  dw 0
 vlim:   db 0
 vpo2:   db 0
 vlog:   dw LOG
+vspd:   db 0                ; the caller's CPU speed (lib/hlib_speed.asm latch)
+; spdi / spdo: the caller's speed latched, then 28 MHz / that speed back; every register kept (page H mapped)
+spdi:   HLIB_SPEED_IN vspd
+        ret
+spdo:   HLIB_SPEED_OUT vspd
+        ret
 page_end:
 
         ORG 0xD000

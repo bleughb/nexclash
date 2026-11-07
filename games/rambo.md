@@ -123,7 +123,19 @@ Hardware risk review (PLAYBOOK 6b): DivMMC: hooks at 0x2000-0x2200 and RAM, not 
 - A human's answers to "Defaults taken".
 - Trainers from the .pok: infinite lives and immunity drove two recordings; No enemy, All weapons unplayed.
 
+## Speed restored (2026-11-07, shared engine refactor, goal 2)
+- The four entries (s_f1, s_f2, s_bl, s_tn) call spdi after mapping page H (HLIB_SPEED_IN, lib/hlib_speed.asm, latch
+  vspd at the end of the page); the five exits call spdo before unmapping, instead of a fixed NEXTREG 7,0. The
+  verifier answers IN (0x253B) from its NextREG model; the "Layer 2 on during the life tune" negative's offset moves
+  from s_tn + 18 to + 17.
+- Sprites 9ebfe9c8 -> 1c5c71b7, Enhanced c2395f02 -> c40a49ae; plain unchanged. 3 recordings x 2 sets IDENTICAL
+  (55,281 frames each), unit PASS, negatives 17/17, stamped. JNext: no frame sync and interrupts off 99% of the time,
+  so the runs part from the original at once (main reads -5.40%, this branch -4.67%); against main's build (probe
+  0x7224, keys I P Q Z N): +0.77% over 580 updates (quiet +0.72%, busy +0.15%); interrupts 0.49 a second both.
+
 ## Lessons
+- [card patch.restore-speed §Use / do not use] A negative control that patches a hook by fixed offset moves when the
+  latch call goes in: recount it (Rambo s_tn + 18 -> + 17).
 - [local: only this game's stack and table are this direct] demonstrated: a display list with an object type gives the figure / scenery split in one comparison, and scrolling costs nothing when the world is objects on black.
 - [backlog C2 #35] observed: `inspect` warns "IM 2 handler in ROM"; the handler is RAM at 0xFFFF through the ROM's FF block.
 - [local: needed because this game's music takes its timing from interrupts] demonstrated: running the patched game beside the original on fetch counts with hooks left out keeps interrupt-driven code in step; T-state frames do not.
