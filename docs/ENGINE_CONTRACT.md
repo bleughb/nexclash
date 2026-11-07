@@ -1,8 +1,7 @@
 # Engine contract (what every dedicated engine provides; read this before any engine's code)
 
-Start a new engine here; open a real engine only for the one function you need (`grep -n '^def \|^class '
-nexclash/<engine>.py`, then Read that range). Template: nexclash/chuckie.py. `tools/doccheck.py` checks the
-REQUIRED names below in every registered engine (structure).
+Read relevant dependencies. Loop-shape example: nexclash/chuckie.py (legacy: its CMP omits R).
+For new engines use tools/templates/verify_contract.py and hooklib.CMP_R, never the legacy CMP. doccheck checks REQUIRED names (structure only).
 
 ## Files (one game = one engine; CLAUDE.md "Keep changes additive")
 nexclash/<engine>.py, asm/<engine>_hooks.asm, docs/profiles/<record>.json (hook hex + symbols, from
@@ -54,7 +53,7 @@ _OUT, HLIB_R_IN / _OUT, HLIB_IFF_DI / _EI; pace: hlib_pace_wait (card patch.pace
 hlib_pc_upload + hlib_commit. unit_tests: `hooklib.every_site`. Record: `hooklib.FILES` in
 `shared_data`. Unused parts: games/<game>.md.
 
-## Verify loop (the part every engine repeats; copy it from chuckie.verify)
+## Verify loop (the part every engine repeats; adapt chuckie.verify with tools/templates/verify_contract.py)
 Replay the RZX with the opcode table wrapped: at a hook site copy the state, run original and
 patched code to their return (simulators from `simpool.machine`), compare CMP registers, memory,
 sprite pixels; `fail()` keeps 5 examples per key; also count writes to patch sites and jumps into

@@ -29,3 +29,5 @@ jobs:
         run: python -m nexclash.dma_check
       - name: Rainbow game tcommit DMA checks (mapped RAM, policies, stalls and negative controls)
         run: python -m nexclash.rainbow_dma_check
+      - name: Workflow regression checks
+        run: python tools/workflow_check.py

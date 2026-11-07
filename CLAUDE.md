@@ -6,7 +6,7 @@ a maintainer's prompt) and **maintain** (toolkit, releases, contributions: docs/
 Never put game data (.z80/.rzx/.nex/.tap/...) in this repo or a contribution: the user's files stay
 on their machine; the maintainers' reference files live in bleughb/specnext (currently public).
 
-## A game, stage by stage (docs/PLAYBOOK.md; one session per stage)
+## A game, stage by stage (docs/PLAYBOOK.md; meaningful session boundaries)
 0. Intake: `python -m nexclash.survey GAME.z80 --rzx R` -> survey.md. Callers the recording never
    reached, or a recording that desyncs (WARNING with the frame) -> ask for a recording first.
 1. Design: ONE question - the design defaults + this game's exceptions, preview, plain .nex (3c).
@@ -15,9 +15,9 @@ on their machine; the maintainers' reference files live in bleughb/specnext (cur
    (6a); sprite build + colour sheets (docs/COLOURS.md) + hardware checklist to the user.
 4. Hardware + colour rounds: recolour (skill) for paintings; fixes as stage 2-3.
 5. Close: "End of every stage" below.
-Each stage ends with the "Next session" block in games/<game>.md and the prompt for the next chat
+Each stage preserves the "Next session" block in games/<game>.md; provide a new-chat prompt when handing off
 (PLAYBOOK "Sessions"); a continuing session starts from that block, never from chat history, then
-in a Git checkout refreshes its knowledge from main at a safe boundary (docs/LEARNING.md 1: fetch, read the incoming
+in a Git checkout follows the source-freeze and refresh rules (docs/LEARNING.md 1: fetch, read the incoming
 changes, merge). The game may already have notes and files (games/<game>.md, STATUS.md): read them
 first. Names: folder and games/<game>.md after the game, lower case, underscores.
 
@@ -32,15 +32,13 @@ version; tools/sjasmplus/README.md). Maintainers: repos and reference files in d
   BRIEFING (platform + toolkit facts, C2 = backlog), LEARNINGS (lessons), TECHNIQUES (Next techniques):
   `grep -n '^#' FILE` is the map, then grep the subject and Read +-30 lines - never end to end.
   MAME: `grep -n '\[MAME\]' docs/*.md`.
-- Patch plan first (PLAYBOOK 2): docs/techniques/index.json (whole, ~1.3K tokens), then at most 3
-  cards, then only the functions a card names (`grep -n '^def \|^class ' FILE`); a whole engine
-  module needs a reason in the Stage log line. Engine files: docs/ENGINE_CONTRACT.md. Read code
-  only in modules you will change; do not re-read a file you just wrote.
+- Patch plan first (PLAYBOOK 2): docs/techniques/index.json, then at most 3
+  cards initially; add cards required by the design, then targeted functions (`grep -n '^def \|^class ' FILE`); explain whole-module reads in the Stage log. Engine files: docs/ENGINE_CONTRACT.md. Read code
+  in changed modules and relevant callers/dependencies; avoid rereading unchanged material.
 - Write: change existing files with Edit, never rewrite a large file whole; write a new engine in
   stages (sites, hooks, verify, unit tests), each checked before the next.
-- Print: a command that may print more than ~50 lines: `CMD 2>&1 | tee run.log | tail -30; grep -E
-  'WARNING|FAILED|!' run.log | head -20` (tail alone drops the early desync WARNING; the pipe hides
-  the exit code). Reports: `grep -E 'Verify|Unit|Result|!'`. Disassemble only flagged routines.
+- Print: `python tools/run_logged.py --log run.log -- CMD ARG...` retains the full log and exit
+  status, prints bounded warnings and a tail, and returns the command status. Disassemble only flagged routines.
 - Replies: never re-summarize earlier turns or paste results already in files; say what changed.
 - Long runs: use the environment's supported background execution; retain logs and exit status.
 - No subagents unless the user asks: each starts cold and re-reads the docs.
@@ -68,10 +66,11 @@ version; tools/sjasmplus/README.md). Maintainers: repos and reference files in d
 - Ask the user before decisions that change what they see (figures, colours, anything left on the
   ULA): the stage-1 question; a new one later (a figure the first recording never showed) gets its
   own question - never decide it.
-- Do not change another game's output. After touching shared code (anything outside your engine's
-  module / .asm / profile) run `python selftest.py --canary`; never rebuild or verify other games
-  (the maintainers' `--affected` does, docs/MAINTAIN.md). Without the references, say in the
-  contribution note that shared code changed. Without push access selftest.py refuses the other runs.
+- Do not change another game's output. Shared build/runtime/verifier code changes require
+  `python selftest.py --canary`. Docs, handoffs and status prose use doccheck; record changes use
+  records views + plan (changed inputs/recipes/outputs need the affected game check). A registry-only
+  engine addition uses its game check. Maintainers run --affected (docs/MAINTAIN.md); contributors
+  report shared changes and missing references, without running other games beyond the canary.
 - Never `pkill -f` / kill by `pgrep -f` pattern (it matches your own shell): `pgrep -fa`, read, kill
   the PID in the next command. No `pgrep -f` anywhere in a loop (`! pgrep -f X`, `kill -0 $(pgrep -f
   X)`: it matches the loop itself, never ends; stages 1, 3): `kill -0 PID` read first or the log.

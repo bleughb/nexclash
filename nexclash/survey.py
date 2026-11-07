@@ -1,7 +1,8 @@
 """Stage 0 (PLAYBOOK): one command that does the mechanical part of a new game before any design work.
 
-    python -m nexclash.survey GAME.z80 [--rzx R ...] [--stop N] [--frames N --keys K] [-o DIR]
+    python -m nexclash.survey GAME.z80 [--rzx R ...] [--stop N] [--frames N --keys K] [--full] [-o DIR]
 
+Known engines return survey.md/json with recognition only; --full opts into all steps below.
 Writes DIR (default <game>_survey/ next to the snapshot): survey.md (one page: read it first),
 survey.json (the raw numbers), preview.png (what each plot routine draws, per caller), <game>.nex
 (the plain conversion). Steps:
@@ -138,7 +139,7 @@ def _h(a):
     return '%d (0x%04X)' % (a, a) if isinstance(a, int) else str(a)
 
 
-def survey(z80, rzx=None, out=None, stop=None, frames=None, keys=None, top=6, log=print):
+def survey(z80, rzx=None, out=None, stop=None, frames=None, keys=None, top=6, log=print, full=False):
     from skoolkit.snapshot import Snapshot
     from . import snapinfo, memscan, isrinfo, preview as P, build as B, z80tonex as zt, nextboot
     from .simrun import run
@@ -170,6 +171,16 @@ def survey(z80, rzx=None, out=None, stop=None, frames=None, keys=None, top=6, lo
     else:
         say('Unknown: no detector in nexclash/engines.py and no TID / Dizzy 1 signature -> stage 1 (a new engine).')
     say('')
+
+    if js['engine'] not in (None, 'unknown') and not full:
+        js['mode'] = 'recognition-only'
+        say('Recognition only: no recording replay, conversion or verification was run.')
+        say('Use --full to investigate this known game; use auto to build and check it.')
+        text = '\n'.join(md) + '\n'
+        open(os.path.join(out, 'survey.md'), 'w').write(text)
+        json.dump(js, open(os.path.join(out, 'survey.json'), 'w'), indent=1)
+        return text, js
+    js['mode'] = 'full'
 
     # recordings
     rz = []
@@ -329,10 +340,11 @@ def main(argv=None):
     ap.add_argument('--stop', type=int, help='RZX: stop after N frames')
     ap.add_argument('--frames', type=int, help='free run: frames (default 500)')
     ap.add_argument('--keys', help='free run: key schedule, e.g. "5-14:SPACE; 30-:N"')
+    ap.add_argument('--full', action='store_true', help='analyse even a recognised game (default: recognition only)')
     ap.add_argument('--top', type=int, default=6, help='plot routines to report (default 6)')
     ap.add_argument('-o', '--out', help='output folder (default <game>_survey next to the snapshot)')
     a = ap.parse_args(argv)
-    text, js = survey(a.z80, a.rzx, a.out, a.stop, a.frames, a.keys, a.top, log=lambda m: print(m, file=sys.stderr))
+    text, js = survey(a.z80, a.rzx, a.out, a.stop, a.frames, a.keys, a.top, log=lambda m: print(m, file=sys.stderr), full=a.full)
     print(text)
     return 0
 

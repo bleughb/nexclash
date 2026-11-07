@@ -114,11 +114,13 @@ nexclash could not patch it: {why}
 > attached. Show me the preview and the design defaults (PLAYBOOK 3c) and ask me before anything
 > that changes what I see.
 
-Work goes in stages, one chat each (PLAYBOOK "Sessions"): each stage ends with the prompt for the
-next chat, e.g.
+Work goes in stages (PLAYBOOK "Sessions"). Preserve a handoff at each stage; start a new chat at
+a meaningful boundary when context is large or the environment changes, e.g.
 > Continue {game} in nexclash (package attached / at <path>): follow its CLAUDE.md, start from the
 > "Next session" block in games/<game>.md.
 Reply to the design question with "defaults" or the numbers to change.
+Git: retain branch and commit; follow docs/LEARNING.md before final verification.
+Release zip: retain the whole modified package and MANIFEST.json; do not run Git refresh/commit.
 
 ## When the session is done
 1. `python nexclash.py patch "{z80path}"` builds {game}.nxc (add `--nex` for the .nex files to test on
