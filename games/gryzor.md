@@ -186,6 +186,8 @@ calibrated in JNext only.
 - [local: this game's menu] observed: the menu reads the keyboard from its interrupt every few frames; a 1-frame JNext keypress is often missed, in the plain build and the original alike; hold the key.
 - [local: the archive's trainers] observed: the .pok's [L1] lines name addresses of another release (data or mid-instruction in this file); only Infinite Lives (34919) and the unlabelled-version lines 35604 and 35651 work here, proven on the simulator.
 
+- [local: the outline map can keep only its bits] gryzor_outline.json's check values are null (each was the game's byte); _entry trusts a null check, and the image comes from the player's snapshot. Builds unchanged.
+
 ## Friction
 - reuse: [local: work2/trials.py, pace_summary.py, fixture.py, cheats.py in the pilot run folder, after Cobra's]
 - retries: [local: the first speed design (a 28 MHz hook in front of the NOPed loop) was slower than the original; measured on the verifier's time model before any JNext run]

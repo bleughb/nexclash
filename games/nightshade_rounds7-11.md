@@ -81,3 +81,8 @@
 - The seed-7 drift is the pace tool's key delivery at frame edges (one 0x7EFE read in update 75 differs), not the build.
 - out/nightshade.nxc 5785a638 (prev 378b872a). The asm source for the Enhanced build is generated
   (tools/nightshade_enh_asm.py).
+
+## In this repo (2026-11-06): the painted source without the game's pixels
+nexclash/nightshade_paint_source.json keeps the owner's painting as one code per figure pixel (ink or mask) of each
+graphic, in the game's data order, plus 17 painted pixels outside a figure's ink and mask by position; the shapes
+come from the player's snapshot at build time (nightshade_paint.paint_all). Builds unchanged (697ee015, ebe5cc72).

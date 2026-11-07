@@ -523,7 +523,19 @@ def paint_all(mem, maps=True, rules=False):
             g2, w, h = graphic(mem, t)
             if g2 != g or (w, h) != (d['w'], d['h']):
                 raise ValueError('painted source: graphic %04X does not match the game' % g)
-            codes = {(x, h - 1 - y): int(ch) for y, row in enumerate(d['rows']) for x, ch in enumerate(row) if ch != '0'}
+            codes, it = {}, iter(d['pixels'])     # one code per figure pixel (ink or mask) of the game's graphic, data order
+            for r in range(h):
+                for c in range(w):
+                    m, v = mem[g + 2 + 2 * (r * w + c)], mem[g + 2 + 2 * (r * w + c) + 1]
+                    for b in range(8):
+                        if (v | m) & (0x80 >> b):
+                            ch = next(it)
+                            if ch != '0':
+                                codes[(8 * c + b, r)] = int(ch)
+            if next(it, None) is not None:
+                raise ValueError('painted source: graphic %04X has more codes than figure pixels' % g)
+            for x, r, code in d.get('extra', ()):      # the few painted pixels outside the figure's ink and mask
+                codes[(x, r)] = code
             res[g] = (w, h, mem[g], codes, t)
         return res
     res = {}

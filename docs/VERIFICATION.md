@@ -58,11 +58,12 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Cyclone (cyclone): `cyclone.nex` 390516396ca4d385c94b7f7bd2315d31, `cyclone_sprites.nex` 7db0bdd53e509b91f1ddda60a607aaf8; verified 2026-11-05
 - The Incredible Shrinking Fireman (incredible_shrinking_fireman-add-OPUS): `incredible_shrinking_fireman-add-OPUS.nex` feb706fcdaa29f13844a7b4982dc21fa, `incredible_shrinking_fireman-add-OPUS_sprites.nex` 283d6a59a92940a31c9cfe21159fabb7; verified 2026-11-05
 - Atic Atac (atic_atac): `Atic_Atac_1983_Ultimate_Play_The_Game_a.nex` e710fa8785802f1aa51f214d95c82343, `Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites.nex` 6aa7e780f4ec7892d862c675e61b7fba; verified never
-- The Incredible Shrinking Fireman (GPT6_ASTRA) (incredible_shrinking_fireman-add-GPT6_ASTRA): `incredible_shrinking_fireman_plain-add-GPT6_ASTRA.nex` f8f213e55e3da01349827f8ae7d93bee, `incredible_shrinking_fireman_sprites-add-GPT6_ASTRA.nex` a6586b5ec24114a765711cab64ac8a25; verified 2026-11-06
+- The Incredible Shrinking Fireman (GPT6_ASTRA) (incredible_shrinking_fireman-add-GPT6_ASTRA): `incredible_shrinking_fireman_plain-add-GPT6_ASTRA.nex` f8f213e55e3da01349827f8ae7d93bee, `incredible_shrinking_fireman_sprites-add-GPT6_ASTRA.nex` 437680af4aa9722e7058b2df6baf0cdb; verified 2026-11-06
 - Cauldron (cauldron): `Cauldron_1985_Palace_Software_a.nex` b5b211f1fc6103ec0d42711dcc29cd0d, `Cauldron_1985_Palace_Software_a_sprites.nex` 43c1ca492d7c1cc68541f02aaed9cb4c; verified 2026-11-05
 - Nemesis the Warlock (nemesis_the_warlock): `nemesis_the_warlock.nex` f1497589ddf479e34d42f6ab0618954d, `nemesis_the_warlock_sprites.nex` 31ad4ab5b7507b6289ffe30f82c7d6bb; verified 2026-11-05
 - Inferno (inferno): `inferno.nex` 0a3bde4734c5b3f15ad0f2a55cc81e19; verified never
 - Ghosts 'n Goblins (ghosts_n_goblins): `ghosts_n_goblins.nex` 3d71dd0e63371c4cf06f919d46bc2315, `ghosts_n_goblins_sprites.nex` 34c142677dbfebad66eb3585e158537c, `ghosts_n_goblins_enhanced.nex` 4a76d9bfe562d46ba88808f0e76c9540; verified never
+- Green Beret (green_beret): `green_beret.nex` f4d4e3d43e47102af66fb3a7e6e022ab, `green_beret_sprites.nex` d982d5ae83e2d54e3fc750006322c25e; verified 2026-11-03
 - Nightshade (nightshade): `nightshade.nex` e4d954de899563af241cb8db84114654, `nightshade_sprites.nex` 697ee0152f6a2f5d92cdc17bc51c674d, `nightshade_enhanced.nex` ebe5cc7225b41c3d04f073947f7b6a98; verified 2026-11-05
 - Knight Tyme (128K) (knight_tyme): `knight_tyme.nex` 0f91cab91a9261bb8645a0ec9cc871f2, `knight_tyme_sprites.nex` 6222fc964abca3ccaca3871d4f843396; verified 2026-11-04
 - Spellbound (128K, Magic Knight 2) (spellbound_magic_knight): `spellbound_magic_knight.nex` 656c71c4b2ebb8318f3ad442d70b0ab9, `spellbound_magic_knight_sprites.nex` ce8e1c6fb0dad558928880a8bf01e13d, `spellbound_magic_knight_enhanced.nex` 06fe3d18161f3f130372c8003def03da; verified 2026-11-06
@@ -78,6 +79,8 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Sabre Wulf (sabre_wulf): `sabre_wulf.nex` 06fbcf5016f77b868b3d754f621974ab, `sabre_wulf_sprites.nex` 332c9526cf6ab6b4adb5c1dc2d170969; verified 2026-11-05
 - Solomon's Key (solomons_key): `solomons_key.nex` 3ad529e40439ad0ee5fbbb67f66d9170, `solomons_key_sprites.nex` 80e83ae3cab8adf6e58085261517a80f; verified 2026-11-05
 - Dynamite Dan (dynamite_dan): `dynamite_dan.nex` 3ad20495c5183b20030190d6abdd479f, `dynamite_dan_sprites.nex` 1ab3348d3a2619f534d8907a1d89e09e; verified 2026-11-05
+- Pyjamarama (pyjamarama): `pyjamarama.nex` 19c7f0ac1c7178839a01b0fc42e47732, `pyjamarama_sprites.nex` fad103126004e18132c9877d7a7606e6, `pyjamarama_enhanced.nex` 3ca79dd93d0fdc46968a22382deac6fe; verified never
+- Nodes of Yesod (nodes_of_yesod): `nodes_of_yesod.nex` b578764fc922295ec75a6358d762b397, `nodes_of_yesod_sprites.nex` 81db9019df732c102e0f98aa8eb84227, `nodes_of_yesod_enhanced.nex` 698e791437ff07dc6c9b8a59d6f44bd6, `nodes_of_yesod_backdrops.nex` 138662b51b2b78cb73393e27ff81654f, `nodes_of_yesod_enhanced_backdrops.nex` 1a1987d524fd539bf02a16d6b0bbf3aa; verified never
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

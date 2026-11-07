@@ -1,0 +1,531 @@
+{
+ "name": "pyjamarama",
+ "order": 200,
+ "game": "Pyjamarama",
+ "doc": "pyjamarama.md",
+ "engine": "pyjamarama",
+ "representative": true,
+ "reference": "pyjamarama",
+ "inputs": {
+  "snapshot": {
+   "name": "pyjamarama.z80",
+   "md5": "1ff279754d0730e503816199ac6976f3",
+   "path": "pyjamarama/pyjamarama.z80"
+  },
+  "recordings": [
+   {
+    "name": "p_o1.rzx",
+    "md5": "0e3386311123a506eb8e94d1d65db1a8",
+    "path": "pyjamarama/p_o1.rzx"
+   },
+   {
+    "name": "p_o2.rzx",
+    "md5": "1d913e85b3fce9bffa874d2a2505f1b3",
+    "path": "pyjamarama/p_o2.rzx"
+   },
+   {
+    "name": "p_r00.rzx",
+    "md5": "df28869e4204aa77ddfc73e8f7879951",
+    "path": "pyjamarama/p_r00.rzx"
+   },
+   {
+    "name": "p_r01.rzx",
+    "md5": "839e37dd4a4ae223c37a9a808d81a054",
+    "path": "pyjamarama/p_r01.rzx"
+   },
+   {
+    "name": "p_r02.rzx",
+    "md5": "7f2f0b5f72320a0fd90425b116093bb1",
+    "path": "pyjamarama/p_r02.rzx"
+   },
+   {
+    "name": "p_r03.rzx",
+    "md5": "f6820ca036475925867e9c21dd0b63b6",
+    "path": "pyjamarama/p_r03.rzx"
+   },
+   {
+    "name": "p_r04.rzx",
+    "md5": "0fbad0e4c20301b0cd20003665d61d9d",
+    "path": "pyjamarama/p_r04.rzx"
+   },
+   {
+    "name": "p_r05.rzx",
+    "md5": "1122adf17a4f5d21b0e3312b7317f2be",
+    "path": "pyjamarama/p_r05.rzx"
+   },
+   {
+    "name": "p_r06.rzx",
+    "md5": "1215db92b885dc8eff804a6ae0266b96",
+    "path": "pyjamarama/p_r06.rzx"
+   },
+   {
+    "name": "p_r07.rzx",
+    "md5": "69873b48939be2ee68a175c71a09c1d2",
+    "path": "pyjamarama/p_r07.rzx"
+   },
+   {
+    "name": "p_r08.rzx",
+    "md5": "0d51ed49b40719e9b290b4a63ba9de40",
+    "path": "pyjamarama/p_r08.rzx"
+   },
+   {
+    "name": "p_r09.rzx",
+    "md5": "70d7ddec3431e7c86fc46aba25647197",
+    "path": "pyjamarama/p_r09.rzx"
+   },
+   {
+    "name": "p_r10.rzx",
+    "md5": "e4416513833d7dda8f214ee95f200e8b",
+    "path": "pyjamarama/p_r10.rzx"
+   },
+   {
+    "name": "p_r11.rzx",
+    "md5": "b1c1bb9f5232f6bfff7e3d285042100d",
+    "path": "pyjamarama/p_r11.rzx"
+   },
+   {
+    "name": "p_r12.rzx",
+    "md5": "f35b497256bbf4b73b67b59daa3de733",
+    "path": "pyjamarama/p_r12.rzx"
+   },
+   {
+    "name": "p_r13.rzx",
+    "md5": "6a333349e939a50f1792b0a6f88c8d62",
+    "path": "pyjamarama/p_r13.rzx"
+   },
+   {
+    "name": "p_r14.rzx",
+    "md5": "da7829379d8139b4d3634ecc30e2b7be",
+    "path": "pyjamarama/p_r14.rzx"
+   },
+   {
+    "name": "p_r15.rzx",
+    "md5": "ddb8f14433687924568d71a5499ba396",
+    "path": "pyjamarama/p_r15.rzx"
+   },
+   {
+    "name": "p_r16.rzx",
+    "md5": "f451365a8831a3164f4e82265db044be",
+    "path": "pyjamarama/p_r16.rzx"
+   },
+   {
+    "name": "p_r17.rzx",
+    "md5": "84609ef7afd664a431e33c9979ad4fd2",
+    "path": "pyjamarama/p_r17.rzx"
+   },
+   {
+    "name": "p_r18.rzx",
+    "md5": "17417453a6ea0a74374bc909dbaf5096",
+    "path": "pyjamarama/p_r18.rzx"
+   },
+   {
+    "name": "p_r19.rzx",
+    "md5": "092106ac64f73fafd80e51d81a123d8d",
+    "path": "pyjamarama/p_r19.rzx"
+   },
+   {
+    "name": "p_r20.rzx",
+    "md5": "733ed47caf3e9aaaa052865d7837985f",
+    "path": "pyjamarama/p_r20.rzx"
+   },
+   {
+    "name": "p_r21.rzx",
+    "md5": "e7550e4311de847292c9d4cdf8b57857",
+    "path": "pyjamarama/p_r21.rzx"
+   },
+   {
+    "name": "p_r22.rzx",
+    "md5": "9a608d71d80a5cd828a89d7206d71c25",
+    "path": "pyjamarama/p_r22.rzx"
+   },
+   {
+    "name": "p_r23.rzx",
+    "md5": "e20df474b322deb3297573b3a3ec1115",
+    "path": "pyjamarama/p_r23.rzx"
+   },
+   {
+    "name": "p_r24.rzx",
+    "md5": "f983727ee301986fddf543f9d006ef3a",
+    "path": "pyjamarama/p_r24.rzx"
+   },
+   {
+    "name": "p_r25.rzx",
+    "md5": "4064aa8898c3ff462814b274a0fc01e9",
+    "path": "pyjamarama/p_r25.rzx"
+   },
+   {
+    "name": "p_r26.rzx",
+    "md5": "3397bf2d0a53a365922277978846b074",
+    "path": "pyjamarama/p_r26.rzx"
+   },
+   {
+    "name": "p_r27.rzx",
+    "md5": "d255573582405ffdfc40c4c1224fc4f6",
+    "path": "pyjamarama/p_r27.rzx"
+   },
+   {
+    "name": "p_r28.rzx",
+    "md5": "48ed8c343d2851109b6db07bf69e337f",
+    "path": "pyjamarama/p_r28.rzx"
+   },
+   {
+    "name": "p_r29.rzx",
+    "md5": "e5297273a027475cb90a504c48d89c84",
+    "path": "pyjamarama/p_r29.rzx"
+   },
+   {
+    "name": "p_s0.rzx",
+    "md5": "7f399f6f193c188304b6fa03f8224325",
+    "path": "pyjamarama/p_s0.rzx"
+   },
+   {
+    "name": "p_s1.rzx",
+    "md5": "45c9358142fa03b15912719828369056",
+    "path": "pyjamarama/p_s1.rzx"
+   },
+   {
+    "name": "p_s10.rzx",
+    "md5": "996526e211f39eac73b2b5e22f0090f1",
+    "path": "pyjamarama/p_s10.rzx"
+   },
+   {
+    "name": "p_s11.rzx",
+    "md5": "11cf1580c3260548e0d0ca4d0f0189dc",
+    "path": "pyjamarama/p_s11.rzx"
+   },
+   {
+    "name": "p_s12.rzx",
+    "md5": "90e9fe76ec757a0480575a31189bca95",
+    "path": "pyjamarama/p_s12.rzx"
+   },
+   {
+    "name": "p_s13.rzx",
+    "md5": "422976f0a4274bc16c1d5c78c155c56a",
+    "path": "pyjamarama/p_s13.rzx"
+   },
+   {
+    "name": "p_s14.rzx",
+    "md5": "c3abd7bd5b66c996e095a83616d8466d",
+    "path": "pyjamarama/p_s14.rzx"
+   },
+   {
+    "name": "p_s15.rzx",
+    "md5": "cd423ee5bcacf4d3c8dfde9b8dabdf7d",
+    "path": "pyjamarama/p_s15.rzx"
+   },
+   {
+    "name": "p_s16.rzx",
+    "md5": "6c783df504d50a20d8851868de662379",
+    "path": "pyjamarama/p_s16.rzx"
+   },
+   {
+    "name": "p_s17.rzx",
+    "md5": "b650508e65c3144db79f9807066f32c6",
+    "path": "pyjamarama/p_s17.rzx"
+   },
+   {
+    "name": "p_s18.rzx",
+    "md5": "de32d6425589416b4a1a8b08b3fe6d96",
+    "path": "pyjamarama/p_s18.rzx"
+   },
+   {
+    "name": "p_s19.rzx",
+    "md5": "e4c37b6c45f0efca5095919115df4329",
+    "path": "pyjamarama/p_s19.rzx"
+   },
+   {
+    "name": "p_s2.rzx",
+    "md5": "a0d4759f28a7cfdeeb27dd9061659812",
+    "path": "pyjamarama/p_s2.rzx"
+   },
+   {
+    "name": "p_s20.rzx",
+    "md5": "aad1ed9a00d22eb4c7cf518faeed8b22",
+    "path": "pyjamarama/p_s20.rzx"
+   },
+   {
+    "name": "p_s21.rzx",
+    "md5": "9d90a9d283ce6c1bab8c4329ea9db944",
+    "path": "pyjamarama/p_s21.rzx"
+   },
+   {
+    "name": "p_s22.rzx",
+    "md5": "40067e7417bf76d48b2c5319b4e06e7c",
+    "path": "pyjamarama/p_s22.rzx"
+   },
+   {
+    "name": "p_s23.rzx",
+    "md5": "983e3e3c206c0551b98fe2030a5c8999",
+    "path": "pyjamarama/p_s23.rzx"
+   },
+   {
+    "name": "p_s24.rzx",
+    "md5": "3ca45f5c29b2477e52a6da7d285365f3",
+    "path": "pyjamarama/p_s24.rzx"
+   },
+   {
+    "name": "p_s25.rzx",
+    "md5": "154c8d060aad9462bbcf8582ee15e30d",
+    "path": "pyjamarama/p_s25.rzx"
+   },
+   {
+    "name": "p_s26.rzx",
+    "md5": "724a50f6630bf58ac1b12f2c06dbcae0",
+    "path": "pyjamarama/p_s26.rzx"
+   },
+   {
+    "name": "p_s27.rzx",
+    "md5": "adfcadb849a9d8b5f454fa525e2edf47",
+    "path": "pyjamarama/p_s27.rzx"
+   },
+   {
+    "name": "p_s28.rzx",
+    "md5": "28e8b1b9bea613cfb7ee80abcf4ccac5",
+    "path": "pyjamarama/p_s28.rzx"
+   },
+   {
+    "name": "p_s29.rzx",
+    "md5": "9a436a51313965403df4ff5e6612a8a8",
+    "path": "pyjamarama/p_s29.rzx"
+   },
+   {
+    "name": "p_s3.rzx",
+    "md5": "ddaaec5d63a9a9f294dc9ac08c402492",
+    "path": "pyjamarama/p_s3.rzx"
+   },
+   {
+    "name": "p_s4.rzx",
+    "md5": "d1612a5c28bc927f0716db5f6a8205d8",
+    "path": "pyjamarama/p_s4.rzx"
+   },
+   {
+    "name": "p_s5.rzx",
+    "md5": "53918e772244a9cb6a52987937ecd070",
+    "path": "pyjamarama/p_s5.rzx"
+   },
+   {
+    "name": "p_s6.rzx",
+    "md5": "ea3bc9d674c278ac7184e88ebc623be9",
+    "path": "pyjamarama/p_s6.rzx"
+   },
+   {
+    "name": "p_s7.rzx",
+    "md5": "7709ce3f202857db456bb203b1ea3142",
+    "path": "pyjamarama/p_s7.rzx"
+   },
+   {
+    "name": "p_s8.rzx",
+    "md5": "11089d51c6573016b1778817cda3e049",
+    "path": "pyjamarama/p_s8.rzx"
+   },
+   {
+    "name": "p_s9.rzx",
+    "md5": "4094988c248bc6364692721111ecf05f",
+    "path": "pyjamarama/p_s9.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "pyjamarama"
+ ],
+ "own_modules": [
+  "pyjamarama"
+ ],
+ "data": [
+  "docs/profiles/pyjamarama.json",
+  "asm/pyjamarama_hooks.asm",
+  "docs/profiles/pyjamarama_colours.json",
+  "docs/profiles/pyjamarama_enhanced.json",
+  "docs/profiles/pyjamarama_palette.json"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "p_o1.rzx",
+   "p_o2.rzx",
+   "p_r00.rzx",
+   "p_r01.rzx",
+   "p_r02.rzx",
+   "p_r03.rzx",
+   "p_r04.rzx",
+   "p_r05.rzx",
+   "p_r06.rzx",
+   "p_r07.rzx",
+   "p_r08.rzx",
+   "p_r09.rzx",
+   "p_r10.rzx",
+   "p_r11.rzx",
+   "p_r12.rzx",
+   "p_r13.rzx",
+   "p_r14.rzx",
+   "p_r15.rzx",
+   "p_r16.rzx",
+   "p_r17.rzx",
+   "p_r18.rzx",
+   "p_r19.rzx",
+   "p_r20.rzx",
+   "p_r21.rzx",
+   "p_r22.rzx",
+   "p_r23.rzx",
+   "p_r24.rzx",
+   "p_r25.rzx",
+   "p_r26.rzx",
+   "p_r27.rzx",
+   "p_r28.rzx",
+   "p_r29.rzx",
+   "p_s0.rzx",
+   "p_s1.rzx",
+   "p_s10.rzx",
+   "p_s11.rzx",
+   "p_s12.rzx",
+   "p_s13.rzx",
+   "p_s14.rzx",
+   "p_s15.rzx",
+   "p_s16.rzx",
+   "p_s17.rzx",
+   "p_s18.rzx",
+   "p_s19.rzx",
+   "p_s2.rzx",
+   "p_s20.rzx",
+   "p_s21.rzx",
+   "p_s22.rzx",
+   "p_s23.rzx",
+   "p_s24.rzx",
+   "p_s25.rzx",
+   "p_s26.rzx",
+   "p_s27.rzx",
+   "p_s28.rzx",
+   "p_s29.rzx",
+   "p_s3.rzx",
+   "p_s4.rzx",
+   "p_s5.rzx",
+   "p_s6.rzx",
+   "p_s7.rzx",
+   "p_s8.rzx",
+   "p_s9.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 25,
+  "note": "Bot recordings, no human player; cheats live in the RZX snapshots only."
+ },
+ "outputs": {
+  "plain": {
+   "file": "pyjamarama.nex",
+   "md5": "19c7f0ac1c7178839a01b0fc42e47732"
+  },
+  "sprites": {
+   "file": "pyjamarama_sprites.nex",
+   "md5": "fad103126004e18132c9877d7a7606e6"
+  },
+  "enhanced": {
+   "file": "pyjamarama_enhanced.nex",
+   "md5": "3ca79dd93d0fdc46968a22382deac6fe"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Pyjamarama",
+  "engine_col": "pyjamarama (pyjamarama.md)",
+  "build": "pyjamarama_sprites.nex fad10312; optional Enhanced 293380d0",
+  "software": "v1.1: 62 recordings per set, 186686 frames each; 224 clock/R cases; 11 negatives; pace, flicker, soak and real loader in JNext passed. See game doc for coverage limits.",
+  "hardware": "untested",
+  "next": "Owner artwork review; hardware untested"
+ },
+ "checks": [
+  "asm2profile:pyjamarama"
+ ],
+ "techniques": [
+  {
+   "application": "pyjamarama.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "every PC reading the screen is listed: the XOR plotter, the clears, the player's saved block and the attribute under his feet",
+   "phases": []
+  }
+ ],
+ "results": [
+  {
+   "application": "pyjamarama.screen-readers",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "3b917bec",
+   "scope": "62 bot recordings, 186,686 frames; cheats in 60; no human recording; start-up checked only in JNext; no hardware",
+   "evidence": "games/pyjamarama.md \"Results\""
+  },
+  {
+   "check": "v1.1 external proof suite",
+   "status": "pass",
+   "scope": "v1.1 engine baseline: both sets, recorded-path equivalence. Owner revision 1: 56 colour pixels, identical code and geometry, two targeted replays and all-graphic tests. No ending or hardware claim.",
+   "evidence": "/home/jon/Dev_Projects/NextTang-evidence/2026-11-02-nexclash/pilot/runs/pyjamarama/enhanced-20261105/HANDOFF-V1.1.md",
+   "application": "pyjamarama.screen-readers"
+  }
+ ],
+ "historical_stamps_20261103": {
+  "checked": {
+   "deps": {
+    "asm/pyjamarama_hooks.asm": "65d15bf9b75c8e2c",
+    "docs/profiles/pyjamarama.json": "75aaf078c9f76c8a",
+    "nexclash.py": "71dc4c592918bff8",
+    "nexclash/build.py": "7a7bb03de0547247",
+    "nexclash/coloursheet.py": "e407745055645fc7",
+    "nexclash/dizzy6.py": "e606eb11f42382f6",
+    "nexclash/engines.py": "0abda5be00b4b434",
+    "nexclash/nextboot.py": "44c08db48a1bf32d",
+    "nexclash/pyjamarama.py": "4f2e456550aa62aa",
+    "nexclash/recolour.py": "091578827a6f24a5",
+    "nexclash/records.py": "37b0e84f39f58243",
+    "nexclash/rzx.py": "45f6a7e4fd28e07e",
+    "nexclash/simpool.py": "73ed4a6afdf8df3c",
+    "nexclash/sprites.py": "899f635303b25706",
+    "nexclash/z80tonex.py": "a6ff9eef9ca737b3",
+    "skoolkit": "10.1"
+   },
+   "date": "2026-11-03"
+  },
+  "verified": {
+   "deps": {
+    "asm/pyjamarama_hooks.asm": "65d15bf9b75c8e2c",
+    "docs/profiles/pyjamarama.json": "75aaf078c9f76c8a",
+    "nexclash.py": "71dc4c592918bff8",
+    "nexclash/build.py": "7a7bb03de0547247",
+    "nexclash/coloursheet.py": "e407745055645fc7",
+    "nexclash/dizzy6.py": "e606eb11f42382f6",
+    "nexclash/engines.py": "0abda5be00b4b434",
+    "nexclash/nextboot.py": "44c08db48a1bf32d",
+    "nexclash/pyjamarama.py": "4f2e456550aa62aa",
+    "nexclash/recolour.py": "091578827a6f24a5",
+    "nexclash/records.py": "37b0e84f39f58243",
+    "nexclash/rzx.py": "45f6a7e4fd28e07e",
+    "nexclash/simpool.py": "73ed4a6afdf8df3c",
+    "nexclash/sprites.py": "899f635303b25706",
+    "nexclash/z80tonex.py": "a6ff9eef9ca737b3",
+    "skoolkit": "10.1"
+   },
+   "date": "2026-11-03"
+  }
+ },
+ "version": "1.1",
+ "owner_art_revision": {
+  "revision": 1,
+  "changed_graphics": [
+   85,
+   100
+  ],
+  "ink_pixels": 56,
+  "code_unchanged": true,
+  "targeted_replay_frames": 4579,
+  "package_sha256": "cb17ba32fa801a334fbb6ea0f4ca74e91a003ccc5cf570f0fbda5d6f4905a9b5",
+  "enhanced_nex_md5": "17f853050ea6f38a99d9937291ccd254",
+  "evidence": "/home/jon/Dev_Projects/NextTang-evidence/2026-11-02-nexclash/pilot/runs/pyjamarama/enhanced-20261105/work/owner-import01/verification.json"
+ }
+}

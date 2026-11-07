@@ -1,0 +1,435 @@
+{
+ "name": "nodes_of_yesod",
+ "order": 201,
+ "game": "Nodes of Yesod",
+ "doc": "nodes_of_yesod.md",
+ "engine": "nodes_of_yesod",
+ "representative": true,
+ "reference": "nodes_of_yesod",
+ "inputs": {
+  "snapshot": {
+   "name": "nodes_of_yesod.z80",
+   "md5": "4dd5e967592f0eabd20f113cb64f740e",
+   "path": "nodes_of_yesod/nodes_of_yesod.z80"
+  },
+  "recordings": [
+   {
+    "name": "rzx_b1.rzx",
+    "md5": "7991fa22cfff8c41960027674e584208",
+    "path": "rzx/b1.rzx"
+   },
+   {
+    "name": "rzx_n1.rzx",
+    "md5": "abee5411e9ffb29340a023d465c6c294",
+    "path": "rzx/n1.rzx"
+   },
+   {
+    "name": "rzx_n2.rzx",
+    "md5": "31d68b21eaaba5b3cb324e32300586cb",
+    "path": "rzx/n2.rzx"
+   },
+   {
+    "name": "rzx_n3.rzx",
+    "md5": "d42f943e9de95a5880623f36308c6c89",
+    "path": "rzx/n3.rzx"
+   },
+   {
+    "name": "rzx_w1.rzx",
+    "md5": "0e759ba68c9c6d1f4304e4ac8ae8234a",
+    "path": "rzx/w1.rzx"
+   },
+   {
+    "name": "t_r100.rzx",
+    "md5": "cac6f482b3bd292eb7984a52a3061a4a",
+    "path": "rzx/t/r100.rzx"
+   },
+   {
+    "name": "t_r106.rzx",
+    "md5": "6c731067e4998f37acc320d4caef4e6a",
+    "path": "rzx/t/r106.rzx"
+   },
+   {
+    "name": "t_r112.rzx",
+    "md5": "dd99072732fd540b3e540e47c96b7554",
+    "path": "rzx/t/r112.rzx"
+   },
+   {
+    "name": "t_r118.rzx",
+    "md5": "be761dacf9a91d179126af6cad195ecd",
+    "path": "rzx/t/r118.rzx"
+   },
+   {
+    "name": "t_r124.rzx",
+    "md5": "3bfc714572fba4ad991c672a74730d42",
+    "path": "rzx/t/r124.rzx"
+   },
+   {
+    "name": "t_r130.rzx",
+    "md5": "6fcaaf4867813f2f3852add87d799496",
+    "path": "rzx/t/r130.rzx"
+   },
+   {
+    "name": "t_r136.rzx",
+    "md5": "b08196bbf1ac256ea9fe862c811ad73c",
+    "path": "rzx/t/r136.rzx"
+   },
+   {
+    "name": "t_r142.rzx",
+    "md5": "debb7ac14dc3e7ff225252ff10c5abd9",
+    "path": "rzx/t/r142.rzx"
+   },
+   {
+    "name": "t_r148.rzx",
+    "md5": "54ddc54c9c68f145456d78c398401dd0",
+    "path": "rzx/t/r148.rzx"
+   },
+   {
+    "name": "t_r154.rzx",
+    "md5": "144f43f37ac4419b3a0a2bd53c526a55",
+    "path": "rzx/t/r154.rzx"
+   },
+   {
+    "name": "t_r16.rzx",
+    "md5": "4cf5146bcc2085354c3cc8300e37d82a",
+    "path": "rzx/t/r16.rzx"
+   },
+   {
+    "name": "t_r160.rzx",
+    "md5": "670f794e8da8fe8171aba067384a74fd",
+    "path": "rzx/t/r160.rzx"
+   },
+   {
+    "name": "t_r166.rzx",
+    "md5": "0536a14fd29ac76457fb021ba13a84db",
+    "path": "rzx/t/r166.rzx"
+   },
+   {
+    "name": "t_r172.rzx",
+    "md5": "02e057c624a3ccde16c352ef90d7a11d",
+    "path": "rzx/t/r172.rzx"
+   },
+   {
+    "name": "t_r178.rzx",
+    "md5": "28e59f7dab40aa75b4507b087a27df11",
+    "path": "rzx/t/r178.rzx"
+   },
+   {
+    "name": "t_r18.rzx",
+    "md5": "c08d26446ecdb9e8adff8f46c163b1e7",
+    "path": "rzx/t/r18.rzx"
+   },
+   {
+    "name": "t_r184.rzx",
+    "md5": "b16bfda338606b96f278c85934bd6510",
+    "path": "rzx/t/r184.rzx"
+   },
+   {
+    "name": "t_r190.rzx",
+    "md5": "3352ead95d3c59c6267a775861c86bff",
+    "path": "rzx/t/r190.rzx"
+   },
+   {
+    "name": "t_r196.rzx",
+    "md5": "5290aec39b983cc6850beba5829783cb",
+    "path": "rzx/t/r196.rzx"
+   },
+   {
+    "name": "t_r202.rzx",
+    "md5": "f65a12b023abe1d51f1c101b855094b8",
+    "path": "rzx/t/r202.rzx"
+   },
+   {
+    "name": "t_r208.rzx",
+    "md5": "9f40cabe4b17e6bc06d76adf41a5e387",
+    "path": "rzx/t/r208.rzx"
+   },
+   {
+    "name": "t_r214.rzx",
+    "md5": "70a361795df698adacf0f6022cb6886f",
+    "path": "rzx/t/r214.rzx"
+   },
+   {
+    "name": "t_r22.rzx",
+    "md5": "8678099319a2f253eb605a5da9a73402",
+    "path": "rzx/t/r22.rzx"
+   },
+   {
+    "name": "t_r220.rzx",
+    "md5": "02220d6c3ddf72641aa6c25c0827dedf",
+    "path": "rzx/t/r220.rzx"
+   },
+   {
+    "name": "t_r226.rzx",
+    "md5": "7402a8e5405f771650945c2b5f180d64",
+    "path": "rzx/t/r226.rzx"
+   },
+   {
+    "name": "t_r232.rzx",
+    "md5": "6aa1308efa4bcf3e6b0424c4606d35ca",
+    "path": "rzx/t/r232.rzx"
+   },
+   {
+    "name": "t_r238.rzx",
+    "md5": "d181f11d4f8f97b7e8e06a89f0f1d2ef",
+    "path": "rzx/t/r238.rzx"
+   },
+   {
+    "name": "t_r244.rzx",
+    "md5": "953ebc78ef160432839988df1ab790e1",
+    "path": "rzx/t/r244.rzx"
+   },
+   {
+    "name": "t_r250.rzx",
+    "md5": "2bc6658894feee00ef21c72deb9d9690",
+    "path": "rzx/t/r250.rzx"
+   },
+   {
+    "name": "t_r28.rzx",
+    "md5": "2d9341338f2835da59b57791bb180c7f",
+    "path": "rzx/t/r28.rzx"
+   },
+   {
+    "name": "t_r34.rzx",
+    "md5": "73463cb572c299f182fb9a1d64795065",
+    "path": "rzx/t/r34.rzx"
+   },
+   {
+    "name": "t_r40.rzx",
+    "md5": "e28e7c91cefe2d07f37d329a93db03d0",
+    "path": "rzx/t/r40.rzx"
+   },
+   {
+    "name": "t_r46.rzx",
+    "md5": "7d64602ef343087d51403a525eac7641",
+    "path": "rzx/t/r46.rzx"
+   },
+   {
+    "name": "t_r52.rzx",
+    "md5": "f614e2c5bb16d36d8f44f43a7c7d866e",
+    "path": "rzx/t/r52.rzx"
+   },
+   {
+    "name": "t_r58.rzx",
+    "md5": "def4f8a5ba62b730414cdd4c997a42b8",
+    "path": "rzx/t/r58.rzx"
+   },
+   {
+    "name": "t_r60.rzx",
+    "md5": "47f444bc53e161b16821499f10aa99ef",
+    "path": "rzx/t/r60.rzx"
+   },
+   {
+    "name": "t_r64.rzx",
+    "md5": "48ad8513ff980a4826631e241ea577ae",
+    "path": "rzx/t/r64.rzx"
+   },
+   {
+    "name": "t_r70.rzx",
+    "md5": "01199af2353b5cac929492bd5a9234c1",
+    "path": "rzx/t/r70.rzx"
+   },
+   {
+    "name": "t_r76.rzx",
+    "md5": "237590006fa1d5f9f712f271851775ac",
+    "path": "rzx/t/r76.rzx"
+   },
+   {
+    "name": "t_r82.rzx",
+    "md5": "fbdfd800e76693cf6d9ab18ba66cf0d3",
+    "path": "rzx/t/r82.rzx"
+   },
+   {
+    "name": "t_r88.rzx",
+    "md5": "b2ac9afab2fdc5ab7bd58b486099ffe0",
+    "path": "rzx/t/r88.rzx"
+   },
+   {
+    "name": "t_r90.rzx",
+    "md5": "9dcefc56f7f649cda35fdde22e0e784b",
+    "path": "rzx/t/r90.rzx"
+   },
+   {
+    "name": "t_r94.rzx",
+    "md5": "0ff22e5df4e4af60ae59c6ed6fdab982",
+    "path": "rzx/t/r94.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "nodes_of_yesod"
+ ],
+ "own_modules": [
+  "nodes_of_yesod"
+ ],
+ "data": [
+  "asm/nodes_of_yesod_hooks.asm",
+  "docs/profiles/nodes_of_yesod.json",
+  "docs/profiles/nodes_of_yesod_colours.json",
+  "docs/profiles/nodes_of_yesod_palette.json",
+  "assets/nodes_of_yesod/aurora.bin",
+  "assets/nodes_of_yesod/aurora.pal",
+  "assets/nodes_of_yesod/aurora.png",
+  "assets/nodes_of_yesod/cavern.bin",
+  "assets/nodes_of_yesod/cavern.pal",
+  "assets/nodes_of_yesod/cavern.png",
+  "assets/nodes_of_yesod/hud_tiles.bin",
+  "assets/nodes_of_yesod/hud.pal",
+  "assets/nodes_of_yesod/hud_map.json",
+  "assets/nodes_of_yesod/hud.png"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [],
+  "rzx": []
+ },
+ "verify": {
+  "args": [],
+  "rzx": [
+   "rzx_b1.rzx",
+   "rzx_n1.rzx",
+   "rzx_n2.rzx",
+   "rzx_n3.rzx",
+   "rzx_w1.rzx",
+   "t_r100.rzx",
+   "t_r106.rzx",
+   "t_r112.rzx",
+   "t_r118.rzx",
+   "t_r124.rzx",
+   "t_r130.rzx",
+   "t_r136.rzx",
+   "t_r142.rzx",
+   "t_r148.rzx",
+   "t_r154.rzx",
+   "t_r16.rzx",
+   "t_r160.rzx",
+   "t_r166.rzx",
+   "t_r172.rzx",
+   "t_r178.rzx",
+   "t_r18.rzx",
+   "t_r184.rzx",
+   "t_r190.rzx",
+   "t_r196.rzx",
+   "t_r202.rzx",
+   "t_r208.rzx",
+   "t_r214.rzx",
+   "t_r22.rzx",
+   "t_r220.rzx",
+   "t_r226.rzx",
+   "t_r232.rzx",
+   "t_r238.rzx",
+   "t_r244.rzx",
+   "t_r250.rzx",
+   "t_r28.rzx",
+   "t_r34.rzx",
+   "t_r40.rzx",
+   "t_r46.rzx",
+   "t_r52.rzx",
+   "t_r58.rzx",
+   "t_r60.rzx",
+   "t_r64.rzx",
+   "t_r70.rzx",
+   "t_r76.rzx",
+   "t_r82.rzx",
+   "t_r88.rzx",
+   "t_r90.rzx",
+   "t_r94.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 20,
+  "note": "Final evidence is the external suite in enhanced-20261105/work. Generic auto negative runner assumes every control reaches its target in the first recording; captured reset/item and boundary controls are exercised separately. No generic verification stamp claimed."
+ },
+ "outputs": {
+  "plain": {
+   "file": "nodes_of_yesod.nex",
+   "md5": "b578764fc922295ec75a6358d762b397"
+  },
+  "sprites": {
+   "file": "nodes_of_yesod_sprites.nex",
+   "md5": "81db9019df732c102e0f98aa8eb84227"
+  },
+  "enhanced": {
+   "file": "nodes_of_yesod_enhanced.nex",
+   "md5": "698e791437ff07dc6c9b8a59d6f44bd6"
+  },
+  "backdrops": {
+   "file": "nodes_of_yesod_backdrops.nex",
+   "md5": "138662b51b2b78cb73393e27ff81654f"
+  },
+  "enhanced_backdrops": {
+   "file": "nodes_of_yesod_enhanced_backdrops.nex",
+   "md5": "1a1987d524fd539bf02a16d6b0bbf3aa"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Nodes of Yesod",
+  "engine_col": "nodes_of_yesod (nodes_of_yesod.md)",
+  "build": "v1.5 local NXC; final owner sprite revision 3; Enhanced HUD and independent Backdrops retained",
+  "software": "Current colour-only round: 2 replays/6194 frames, 136 graphic units, exact NEX pixels/edges, native cycles/AY identical to v1.4, four dot-loader rebuilds exact. Five changed poses unit-only. v1.4 full engine proof inherited; original limits remain.",
+  "hardware": "untested",
+  "next": "Owner art review; generic negative-runner integration; hardware untested"
+ },
+ "checks": [
+  "asm2profile:nodes_of_yesod"
+ ],
+ "techniques": [
+  {
+   "application": "nodes.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "Original R-based ROM and screen reads retain their original values",
+   "phases": []
+  }
+ ],
+ "results": [
+  {
+   "check": "external v1.1 proof suite",
+   "status": "pass",
+   "scope": "Recorded paths and isolated all-graphic boundary cases; original clipping exception. One malformed injected tour excluded. Ending not completed; no hardware.",
+   "evidence": "games/nodes_of_yesod.md",
+   "application": "nodes.screen-readers"
+  },
+  {
+   "check": "native soak",
+   "status": "partial",
+   "scope": "Seed 2 completes; menu-HALT warning identified. Seed 1 reproduces an original collision loop, not claimed clean.",
+   "evidence": "games/nodes_of_yesod.md",
+   "application": "nodes.screen-readers"
+  },
+  {
+   "check": "owner colour revision 1",
+   "status": "pass",
+   "scope": "2990 colour pixels; exact NEX pattern/sheet correspondence; two targeted replays; 136-graphic unit matrix; previous/current quiet timing and AY regression; actual loader. Baseline engine proof inherited, hardware untested.",
+   "evidence": "games/nodes_of_yesod.md",
+   "application": "nodes.screen-readers"
+  },
+  {
+   "check": "v1.2 surface aurora",
+   "status": "pass",
+   "scope": "Sky-only display toggle, original ULA/foreground retained, all four package combinations exact; current replay/IRQ/negative and native room/quiet-pace evidence. Hardware untested.",
+   "evidence": "games/nodes_of_yesod.md",
+   "application": "nodes.screen-readers"
+  },
+  {
+   "check": "v1.3 cavern backdrop",
+   "status": "pass",
+   "scope": "Automatic surface/cavern scenery, 59 on/off room pairs preserve ULA/coloured/black-ink/HUD pixels; current full replay, clock/IRQ, negative and loader evidence. Hardware and new long soak untested.",
+   "evidence": "games/nodes_of_yesod.md",
+   "application": "nodes.screen-readers"
+  },
+  {
+   "check": "v1.4 owner artwork and HUD",
+   "status": "pass",
+   "scope": "665 sprite pixels/52 graphics and 78 HUD pixels. Exact NEX paint and transparency checks; current replay, clock/IRQ, negative, native bank/HUD, pace and loader evidence. Hardware and new long soak untested.",
+   "evidence": "games/nodes_of_yesod.md",
+   "application": "nodes.screen-readers"
+  },
+  {
+   "check": "v1.5 final owner sprite pass",
+   "status": "pass",
+   "scope": "456 exact colour pixels across 12 graphics. Only sprite pattern banks changed; forward/reverse recolour exact. Two replays, all-graphic units, native timing/AY regression and four loader checks; five poses unit-only. v1.4 engine proof inherited; hardware untested.",
+   "evidence": "games/nodes_of_yesod.md",
+   "application": "nodes.screen-readers"
+  }
+ ]
+}

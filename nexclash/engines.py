@@ -18,6 +18,8 @@ ENGINES = [
     ('gng', 'is_gng', None),                                            # Ghosts 'n Goblins (48K)
     ('quazatron', 'is_quazatron', None),                                  # Quazatron colour (48K): opt-in, unproven (NEXCLASH_REWORK=quazatron)
     ('rainbow_z80n_sky', 'is_rainbow_sky', None),                          # Rainbow Islands sky fix: opt-in rework of rainbow_z80n (NEXCLASH_REWORK)
+    ('nodes_of_yesod', 'is_nodes_of_yesod', None),
+    ('pyjamarama', 'is_pyjamarama', None),
     ('rainbow_z80n', 'is_rainbow', lambda a: getattr(a, 'engine', None) != 'rainbow'),  # Rainbow Islands (128K), Z80N
     ('rainbow', 'is_rainbow', None),                                      # Rainbow Islands: deprecated (--engine rainbow)
     ('wally2', 'is_wally2', lambda a: getattr(a, 'engine', None) != 'wally'),  # Everyone's a Wally, updated
@@ -62,6 +64,7 @@ ENGINES = [
     ('robin_of_the_wood', 'is_robin_of_the_wood', None),                  # Robin of the Wood (128K)
     ('cobra', 'is_cobra', None),                                          # Cobra (48K)
     ('gryzor', 'is_gryzor', None),                                        # Gryzor (48K)
+    ('green_beret', 'is_green_beret', None),                              # Green Beret (48K)
 ]
 
 
