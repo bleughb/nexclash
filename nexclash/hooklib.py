@@ -279,6 +279,8 @@ NEGATIVES = {           # control -> (defines, (label, byte offset, new bytes)..
     'interrupt time counted': ((), (('hlib_pace_resume', 0, b'\xC9'),)),
     'K window never waits': ((), (('hlib_pace_waitk', 0, b'\xC9'),)),
     'debt never repaid': ((), (('hlib_debt_repay', 0, b'\x21\x00\x00\xC9'),)),
+    'nested time scaled by K': ((), (('hlib_nest_close.mv', 0, b'\xC9'),)),
+    'window time before a nested hook lost': ((), (('hlib_nest_open', 0, b'\xAF\x00\x00'),)),
 }
 SYM = re.compile(r'^([A-Za-z_][\w.]*):\s+EQU\s+0x([0-9A-Fa-f]+)')
 
@@ -771,6 +773,58 @@ def _t_hold(code, syms):
     return c
 
 
+def _t_nest(code, syms):
+    """Nested hooks (hlib_nest_open / _close): o_blit's routine run by h_knest at 28 MHz in a K window calls h_nest,
+    which burns 0 / 20 / 40 x 256 DJNZ (0 / about 37 / 75 lines at factor 8). Its time stays out of the window and
+    goes to the debt, which the window's wait repays: the window's real time less the debt it leaves (a nested hook
+    longer than the window's room carries) does not change with the nested hook's length - the mean of 16 start
+    phases within 2 lines or 1 % of the same window with an empty nested hook (2 factors, 4 clocks) - and that window
+    is within K / 16 + 2 lines of the original plus its own work in the window (scaled by K, as h_kblit's: _t_k).
+    With no window open: a plain debt window."""
+    c = collections.Counter()
+    for fast in (8.0, 6.4):
+        k16 = int(round(16 * fast))
+        for clk in CLOCKS:
+            to, _ = _timed(code, syms, 'o_blit', clk, fast)
+            means = {}
+            for nb in (0, 20, 40):
+                got = []
+                for ph in range(16):
+                    sim, nm = _machine(code, clk, fast)
+                    sim.memory[syms['V_K']] = k16
+                    sim.memory[syms['V_NB']] = nb
+                    nm.real = 300 * 224 + ph * 14
+                    t0 = nm.now()
+                    call(sim, syms['h_knest'], {})
+                    got.append(nm.now() - t0 - _pv(sim, syms, 4) * 14.0)
+                    c['windows'] += 1
+                means[nb] = sum(got) / len(got)
+                if nb:
+                    d = means[nb] - means[0]
+                    c['worst shift, lines x100'] = max(c['worst shift, lines x100'], int(abs(d) * 100 / 224))
+                    tol = max(2 * 224, 0.01 * to)
+                    if d > tol:
+                        c['nested hook time scaled by K!'] += 1
+                    if d < -tol:
+                        c['window time before a nested hook lost!'] += 1
+            tol0 = max(0.06 * to, (k16 / 16.0 + 2) * 224)
+            if means[0] - to > tol0:
+                c['nested window slower than the original!'] += 1
+            if to - means[0] > tol0:
+                c['window time before a nested hook lost!'] += 1
+    for nb in (20, 40):                                 # no window open: a plain debt window
+        sim, nm = _machine(code, 3)
+        sim.memory[syms['V_NB']] = nb
+        nm.real = 100 * 224
+        t0 = nm.now()
+        call(sim, syms['h_nest'], {})
+        lines = (nm.now() - t0) / 224
+        c['cases'] += 1
+        if abs(_pv(sim, syms, 4) / 16.0 - lines) > 2 or sim.memory[syms['HLIB_V_PACE'] + 10]:
+            c['nested hook outside a window not a debt window!'] += 1
+    return c
+
+
 def _t_repay(code, syms, cap=0xBFFF):
     """hlib_debt_repay: the part of the game's delay to skip = min(debt, delay), the debt less it; hlib_debt_add
     capped at HLIB_PACE_CAP."""
@@ -818,6 +872,11 @@ def selfcheck():
     out.append(('hooklib pace limiter, game-routine windows (x K): %d windows (2 factors, 4 clocks, 16 phases) '
                 'within K / 16 + 2 lines, means within 2%% (worst %.2f%%)' % (kc['windows'], kc['worst mean, % x100'] / 100.0),
                 [k for k in kc if k.endswith('!')]))
+    nc2 = _t_nest(code, syms)
+    out.append(('hooklib pace limiter, nested hooks left out of a K window, into the debt: %d windows (2 factors, 4 '
+                'clocks, nested 0 / 37 / 75 lines, 16 phases), time less debt unchanged by the nested length (worst %.2f '
+                'lines); %d with no window: debt windows' % (nc2['windows'], nc2['worst shift, lines x100'] / 100.0,
+                                                               nc2['cases']), [k for k in nc2 if k.endswith('!')]))
     hc = _t_hold(code, syms)
     out.append(('hooklib pace limiter, interrupt time left out: %d windows / debt windows with a 30-line handler, '
                 'also inside a reading' % hc['cases'], [k for k in hc if k.endswith('!')]))
@@ -857,7 +916,9 @@ def selfcheck():
             'IFF read once': (_t_iff, 'interrupts left off!'),
             'interrupt time counted': (_t_hold, 'interrupt time counted in the window!'),
             'K window never waits': (_t_k, 'K window mean off by more than 2%!'),
-            'debt never repaid': (_t_repay, 'debt not repaid from the delay!')}
+            'debt never repaid': (_t_repay, 'debt not repaid from the delay!'),
+            'nested time scaled by K': (_t_nest, 'nested hook time scaled by K!'),
+            'window time before a nested hook lost': (_t_nest, 'window time before a nested hook lost!')}
     for neg, (test, key) in want.items():
         cd, sy = _build(neg)
         got = test(cd, sy)

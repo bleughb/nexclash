@@ -21,6 +21,7 @@
 ; in reverse (XOR = toggle, plot = save-under), then toggles the XORs again (they stay on the ULA).
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_speed.asm"    ; macros only: HLIB_SPEED_IN_ABC
 
 NENT    EQU 24          ; events per frame: figures (4 sprites each) + XOR effects
 NSLOT   EQU 32          ; cached images (4 patterns each)
@@ -164,7 +165,7 @@ post:   push af
         push de
         push hl
         push ix
-        nextreg 0x07,3
+        HLIB_SPEED_IN_ABC spd           ; the caller's speed latched (A, BC saved above), then 28 MHz
         ld hl,frame
         inc (hl)
         ; palette: index 1 = room ink, 2 = room paper
@@ -253,7 +254,8 @@ post:   push af
         ld (old),a
         xor a
         ld (cnt),a
-        nextreg 0x07,0
+        ld a,(spd)                      ; the caller's speed back (never a fixed 3.5 MHz)
+        nextreg 0x07,a
         pop ix
         pop hl
         pop de
@@ -949,6 +951,7 @@ code_end:
 cnt:    db 0
 old:    db 0
 frame:  db 0
+spd:    db 0                    ; the caller's CPU speed (lib/hlib_speed.asm latch)
 rr:     db 0
 t_v:    db 0
 t_spr:  db 0

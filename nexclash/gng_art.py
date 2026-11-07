@@ -132,19 +132,39 @@ class PaintOracle:
     return patterns(dict(q,rows=rows,data=raw.hex(),paint_offset=off),self.cmap)
   return None
 
+def bucket(lo,hi):
+ return lo^hi
+def index_page(entries):
+ """5-byte atlas entries (shape, checksum low, high, page, offset high), in catalogue order -> the 8K index page:
+ 256 bucket pointers (slot-2 addresses, little-endian) at 0, then each bucket's entries in the same order and a 0."""
+ out=bytearray(8192);at=512;by=[[] for _ in range(256)]
+ for e in entries:by[bucket(e[1],e[2])].append(e)
+ for b in range(256):
+  out[2*b:2*b+2]=(0x4000+at).to_bytes(2,'little')
+  for e in by[b]:out[at:at+5]=e;at+=5
+  at+=1
+ assert at<=8192
+ return bytes(out)
+def index_entries(page):
+ """The index page -> its entries (catalogue order within each bucket, which is all a lookup sees)."""
+ out=[]
+ for b in range(256):
+  at=int.from_bytes(page[2*b:2*b+2],'little')-0x4000
+  while page[at]:out.append(bytes(page[at:at+5]));at+=5
+ return out
 def atlas(cmap=None):
  if not os.path.exists(GRAPHICS):raise FileNotFoundError(GRAPHICS)
  # Legacy byte-address maps keep using the verified old fallback route.
  if cmap and not any(':' in k for k in cmap):
-  disabled=bytearray(42*8192);disabled[41*8192]=255;return bytes(disabled)
- qs=catalog();safe=fast_safe_images(qs,cmap);out=bytearray(8192+math.ceil(len(qs)/8)*8192);at=0
+  disabled=bytearray(42*8192);disabled[:8192]=index_page([]);disabled[41*8192]=255;return bytes(disabled)
+ qs=catalog();safe=fast_safe_images(qs,cmap);out=bytearray(8192+math.ceil(len(qs)/8)*8192);entries=[]
  for i,q in enumerate(qs):
   raw=bytes.fromhex(q['data']);assert len(raw)<=160
   shape=q['rows']|({'m3':0,'o3':1,'x2':2}[q['kind']]<<5);lo,hi=checksum(raw);page=DATA_PAGE+i//8;off=(i%8)*1024
   if q['number'] in safe:
-   out[at:at+5]=bytes([shape,lo,hi,page,off>>8]);at+=5
+   entries.append(bytes([shape,lo,hi,page,off>>8]))
   o=8192+i*1024;out[o:o+len(raw)]=raw;out[o+256:o+768]=patterns(q,cmap)
- assert at<8192
+ out[:8192]=index_page(entries)
  # A compact parent-image colour table covers every possible clipped fragment,
  # including heights/offsets absent from the recordings. Whole-parent bytes must
  # match before these colours can be used.
@@ -218,16 +238,15 @@ def ground_atlas(pl,cmap,base_page):
  # every possible complete parent, with the current colours, first.
  safe=fast_safe_images(roots+children,cmap)
  assert all(q['number'] in safe for q in children),'Ambiguous partial pot colours'
- p=bytearray(pl);index=(INDEX_PAGE-base_page)*8192;at=index
- while p[at]:at+=5
- assert at+len(children)*5<index+8192
+ p=bytearray(pl);ix=(INDEX_PAGE-base_page)*8192;es=index_entries(p[ix:ix+8192])
  start=(GROUND_PAGES[0]-base_page)*8192;assert len(p)<=start
  p.extend(bytes(start+len(GROUND_PAGES)*8192-len(p)))
  for i,q in enumerate(children):
   raw=bytes.fromhex(q['data']);lo,hi=checksum(raw);page=GROUND_PAGES[0]+i//8;off=(i%8)*1024
-  p[at:at+5]=bytes([q['rows'],lo,hi,page,off>>8]);at+=5
+  es.append(bytes([q['rows'],lo,hi,page,off>>8]))
   dest=(page-base_page)*8192+off
   p[dest:dest+len(raw)]=raw;p[dest+256:dest+768]=patterns(q,cmap)
+ p[ix:ix+8192]=index_page(es)
  # The whole-ROM source pages stay empty here: the converter owns them.
  h0=(HIDDEN_ROM_PAGES[0]-base_page)*8192;assert not any(p[h0:h0+len(HIDDEN_ROM_PAGES)*8192])
  return bytes(p)

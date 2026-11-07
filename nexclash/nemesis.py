@@ -123,11 +123,13 @@ class NextState:
         self.ptr = 0
         self.pal = {}
         self.bad = []
+        self.sel = None                 # NextREG selected at port 0x243B (the speed latch reads NR 7)
 
     def copy(self):
         n = NextState()
         n.nr, n.attr, n.pat, n.ptr, n.pal = dict(self.nr), [list(a) for a in self.attr], \
             bytearray(self.pat), self.ptr, dict(self.pal)
+        n.sel = self.sel
         return n
 
     def nextreg(self, reg, val):
@@ -148,6 +150,8 @@ class NextState:
             self.ptr += 1
         elif port == 0x303B:
             self.ptr = (val & 0x3F) * 256 + (128 if val & 0x80 else 0)
+        elif port == 0x243B:
+            self.sel = val
         else:
             self.bad.append(('out', port))
 
@@ -341,6 +345,9 @@ def _machine(mem, regs, ns, slot='p'):
 
     class Tr:
         def read_port(s, regs_, port):
+            if port == 0x253B and ns.sel is not None:   # NextREG read: the hook's speed latch (NR 7)
+                v = ns.nr.get(ns.sel, 0)
+                return (v & 3) << 4 | (v & 3) if ns.sel == 0x07 else v
             ns.bad.append(('in', port))
             return 0xFF
 

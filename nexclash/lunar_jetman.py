@@ -1010,7 +1010,7 @@ def build_data_enh(m, path=None):
 # (the decrypted game at 0x8000) the patch is applied to; the shipped build starts at the decrypter.
 # ---------------------------------------------------------------------------------------------
 
-NEGATIVES = ('xoff', 'img', 'idx', 'keepstore', 'keeppaint', 'nobright', 'noslot', 'nocls', 'pal', 'rom3left')
+NEGATIVES = ('xoff', 'img', 'idx', 'keepstore', 'keeppaint', 'nobright', 'noslot', 'nocls', 'pal', 'rom3left', 'speed35')
 NEGATIVES_ENH = ('pal', 'img', 'idx', 'nobright', 'xoff', 'rom3left')
 
 
@@ -1032,6 +1032,13 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
         i = h.find(bytes([0xC6, 0x1F])); h[i + 1] = 32; prof['hooks']['rom'] = h.hex()
     if neg == 'nocls':
         pass
+    if neg == 'speed35':   # the old fixed 3.5 MHz exit: the speed read's 'and 3' (E6 03 F5) -> 'and 0'
+        h = bytearray.fromhex(prof['hooks']['rom'])
+        i = h.find(bytes([0xE6, 0x03, 0xF5]))
+        while i >= 0:
+            h[i + 1] = 0
+            i = h.find(bytes([0xE6, 0x03, 0xF5]), i + 1)
+        prof['hooks']['rom'] = h.hex()
     PREPAINT = {}
     ENH, RZX, STOP = enh, rzx, stop
     if neg == 'nobright':  # palette offset without the bright bit: 'or 8' (F6 08) -> 'or 0'
@@ -1100,6 +1107,7 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
             s.attr = [[0] * 5 for _ in range(128)]
             s.pat = bytearray(16384)
             s.pp = 0
+            s.sel = None                # NextREG selected at 0x243B (h_new / h_tnew read NR 7: the caller's speed)
 
     ns = NS()
     cnt = collections.Counter()
@@ -1152,12 +1160,19 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
 
         class Tr:
             def read_port(s, regs_, port):
+                if patched and port == 0x253B and ns.sel is not None:     # a NextREG read: NR 7 as the core
+                    if ns.sel == 0x07:                                      # composes it (actual << 4 | programmed)
+                        sp = ns.nr.get(0x07, 0) & 3
+                        return sp << 4 | sp
+                    return ns.nr.get(ns.sel, 0)
                 return 0xFF
 
             def write_port(s, regs_, port, value, *x):
                 if not patched:
                     return
-                if port == 0x303B:
+                if port == 0x243B:
+                    ns.sel = value
+                elif port == 0x303B:
                     ns.pp = (value & 0x3F) * 256 + (128 if value & 0x80 else 0)
                 elif port & 0xFF == 0x5B:
                     ns.pat[ns.pp & 0x3FFF] = value
@@ -1396,7 +1411,13 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
         p_mem = patched_mem(mem0)
         sp_, cur = mk(p_mem, regs0, True)
         t0 = regs0[25]
+        k_in = cnt['speed cases'] & 3           # the hook entered at each clock in turn (patch.restore-speed)
+        cnt['speed cases'] += 1
+        ns.nr[0x07] = k_in
         okp = run(sp_, stop)
+        if ns.nr.get(0x07, 0) & 3 != k_in:
+            fail('exit speed is not the incoming clock!', '%s in %d out %d' % (sym, k_in, ns.nr.get(0x07, 0) & 3))
+        ns.nr[0x07] = 0
         oko = run(so, stop)
         cnt['T added by hooks (sim T, all at 3.5 MHz)'] += (sp_.registers[25] - so.registers[25])
         cnt['T ' + sym] += (sp_.registers[25] - so.registers[25])

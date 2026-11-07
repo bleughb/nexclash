@@ -165,3 +165,27 @@ the corresponding builds byte for byte.
   constant frames from the code). Their graphics are converted already (all 307 have canvases).
 - The commit is not raster-synced: the Layer 2 bank switch can tear for one frame (hardware to say).
 - Commit cost worst case ~1.3 frames: optimise the draw loop if the game feels slower.
+
+## Speed restored (2026-11-07, shared engine refactor, goal 2)
+- The three plotter hooks and the render latch the caller's CPU speed (HLIB_SPEED_IN, V_SPD = 0x0020 in the hook
+  page) after their stack switch and give it back at every exit instead of NEXTREG 7,0 (the plotted exits through V_A
+  = 0x0021, keeping A and the flags the original's last OR A / ADD HL,DE left).
+- Sprites 07cfcb5c -> a6acbff4; plain unchanged. RZX IDENTICAL (15,225 frames, 8,360 plots converted, 2,219,552 Layer 2
+  pixels), unit 930 cases, negative control 3/3; stamped.
+- JNext pace (v2.09 card, 600 updates at 0xB716 (automatic), Sinclair-keys profile, seed 1, plain build control):
+  main's build and this one both -4.38% (2.27 s against 2.37 s for the same 600 updates). The game runs with
+  interrupts off (0 a second in both).
+
+## Lessons
+- [card patch.restore-speed §Use / do not use] Exits that hand back the plotter's A and flags restore the speed through
+  a page byte (the card's A-saving form); the .pass exits restore before POP AF.
+
+## Technique use
+- patch.restore-speed: helped: the macros at four entries, the A-saving form at the plotted exits (2026-11-07).
+
+## Friction
+- reuse: [tool asm/lib/hlib_speed.asm] the shared latch macros
+- retries: [none: the first build verified]
+- environment: [none: the usual references and the JNext card, read-only]
+- hand-rolled: [local: a JNext profile for the pace (start keys from screenshots), kept in the pilot run folder]
+- scratch: [none: no scratch scripts in the repo]

@@ -25,6 +25,7 @@
 ;   53868 AF 32 DC  XOR A / LD (24284),A -> JP e_end   game start / after game over: hide all
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_speed.asm"    ; macros only: HLIB_SPEED_IN
 
 PG      EQU 26                  ; hook page, MMU slot 7 while a hook runs
 GPG     EQU 1                   ; the game's page at slot 7 (48K: bank 0 upper half)
@@ -52,6 +53,8 @@ V_X     EQU 0xE014              ; sprite X (16 bits)
 V_Y     EQU 0xE016
 V_PAT   EQU 0xE017
 V_A2    EQU 0xE018              ; attr2 extra bits (mirror)
+V_SPD   EQU 0xE019              ; the caller's CPU speed (lib/hlib_speed.asm latch)
+V_A     EQU 0xE01A              ; A while the speed is restored (no flags)
 KEY     EQU 0xE020              ; 12 bytes: graphic pointer, size (0 = 24x24, 1 = 8x8), attribute bytes
 V_CC    EQU 0xE030              ; 9 colours * 4 (pixel table bases) of the figure's cells
 CACHE   EQU 0xE040              ; 32 x 16: +0 flags (bit 0 used since the commit, bit 1 on show), +1 key
@@ -77,10 +80,10 @@ t_rs:   ld (59641),sp
 
 ; ---- one plot hook per plotter ----
         MACRO PLOTHOOK kind, tramp, oper
-        nextreg 0x07,3              ; hook work at 28 MHz; the game's own bodies at 3.5 MHz
-        nextreg 0x57,PG
+        nextreg 0x57,PG             ; hook work at 28 MHz; the game's own bodies at the caller's speed
         ld (V_SP),sp
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPD
         push af
         push bc
         push de
@@ -102,8 +105,11 @@ t_rs:   ld (59641),sp
         jr z,.pass
         pop af
         ld sp,(V_SP)
-        nextreg 0x07,0
-        call tramp                  ; converted: into the scratch only, 3.5 MHz (original cost)
+        ld (V_A),a
+        ld a,(V_SPD)
+        nextreg 0x07,a
+        ld a,(V_A)
+        call tramp                  ; converted: into the scratch only, at the caller's speed (original cost)
         nextreg 0x07,3
         jp .done
 .pass:  pop af                      ; stays on the ULA: real buffer, then the scratch again
@@ -120,8 +126,11 @@ t_rs:   ld (59641),sp
         push af
         ex af,af'
         ld sp,(V_SP)
+        ld (V_A),a
+        ld a,(V_SPD)
+        nextreg 0x07,a
+        ld a,(V_A)
         nextreg 0x57,GPG
-        nextreg 0x07,0
         call tramp
         nextreg 0x07,3
         nextreg 0x57,PG
@@ -145,8 +154,11 @@ t_rs:   ld (59641),sp
         push hl
         pop hl
         ld hl,(V_T)
+        ld (V_A),a
+        ld a,(V_SPD)
+        nextreg 0x07,a
+        ld a,(V_A)
         nextreg 0x57,GPG
-        nextreg 0x07,0
         ret
         ENDM
 
@@ -156,10 +168,10 @@ e_b24:  PLOTHOOK 0, t_b24, 29971
 e_b24m: PLOTHOOK 1, t_b24m, 30105
 
 ; ---- background restore: real buffer (3.5 MHz), then the scratch copy (28 MHz) ----
-e_rs:   nextreg 0x07,3
-        nextreg 0x57,PG
+e_rs:   nextreg 0x57,PG
         ld (V_SP),sp
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPD
         push af
         push hl
         push de
@@ -185,9 +197,12 @@ e_rs:   nextreg 0x07,3
         push af
         ex af,af'
         ld sp,(V_SP)
+        ld (V_A),a
+        ld a,(V_SPD)
+        nextreg 0x07,a
+        ld a,(V_A)
         nextreg 0x57,GPG
-        nextreg 0x07,0
-        call t_rs                   ; real buffer at 3.5 MHz (original cost)
+        call t_rs                   ; real buffer at the caller's speed (original cost)
         nextreg 0x07,3
         nextreg 0x57,PG
         ld sp,HSTK-16
@@ -209,17 +224,20 @@ e_rs:   nextreg 0x07,3
         push hl
         pop hl
         ld hl,(V_T)
+        ld (V_A),a
+        ld a,(V_SPD)
+        nextreg 0x07,a
+        ld a,(V_A)
         nextreg 0x57,GPG
         ld (59641),sp               ; the game's own copy of the operand (slot 7 = game page)
-        nextreg 0x07,0
         ret
 
 ; ---- blit loop end: JP PE as the original; at the fall-through show the recorded sprites ----
 e_bl:   jp pe,53310
-        nextreg 0x07,3
         nextreg 0x57,PG
         ld (V_SP),sp                ; SP = the blit's row-table pointer: never push on it
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPD
         push af
         push bc
         push de
@@ -228,17 +246,18 @@ e_bl:   jp pe,53310
         pop hl
         pop de
         pop bc
+        ld a,(V_SPD)
+        nextreg 0x07,a
         pop af
         ld sp,(V_SP)
         nextreg 0x57,GPG
-        nextreg 0x07,0
         jp 53864
 
 ; ---- 53868 (game start, after game over): hide every sprite ----
-e_end:  nextreg 0x07,3
-        nextreg 0x57,PG
+e_end:  nextreg 0x57,PG
         ld (V_SP),sp
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPD
         push af
         push bc
         push de
@@ -247,10 +266,11 @@ e_end:  nextreg 0x07,3
         pop hl
         pop de
         pop bc
+        ld a,(V_SPD)
+        nextreg 0x07,a
         pop af
         ld sp,(V_SP)
         nextreg 0x57,GPG
-        nextreg 0x07,0
         xor a
         ld (24284),a
         jp 53872

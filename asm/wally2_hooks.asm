@@ -27,6 +27,7 @@
 ; stored or as mirrored in place by 33251); anything else runs the original plotter.
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_speed.asm"    ; macros only: HLIB_SPEED_IN
 
 PAGE_S  EQU 26
 TPAGE   EQU 27
@@ -54,6 +55,8 @@ V_ROW   EQU 0x001A
 V_CS    EQU 0x001B              ; first canvas column drawn
 V_CNT   EQU 0x001C              ; columns drawn
 V_BOX   EQU 0x001E
+V_SPD   EQU 0x0020              ; the caller's CPU speed (lib/hlib_speed.asm latch)
+V_A     EQU 0x0021              ; A while an exit restores it (no flags)
 STK     EQU 0x0100              ; hook stack top (grows down into 0x00C0-0x00FF)
 INKTAB  EQU 0x1800              ; attribute -> palette index of its ink (black = 8)
 PL      EQU 0x1900              ; plot list: 16 bytes per plot
@@ -121,7 +124,7 @@ s_a:    ld (V_SP),sp
         ld sp,STK
         push af
         exx                         ; the game's alternate set (all overwritten by the plotter)
-        nextreg 0x07,3
+        HLIB_SPEED_IN V_SPD         ; the caller's speed latched, then 28 MHz
         ld a,(V_N)
         cp MAXP
         jp nc,.pass
@@ -210,11 +213,15 @@ s_a:    ld (V_SP),sp
         or a                        ; flags exactly as OR A / ADD HL,DE in the last row
         add hl,de
         exx
-        nextreg 0x07,0
+        ld (V_A),a                  ; the caller's speed back, A and the flags kept
+        ld a,(V_SPD)
+        nextreg 0x07,a
+        ld a,(V_A)
         ld sp,(V_SP)
         jp x_ret
 .pass:  exx
-        nextreg 0x07,0
+        ld a,(V_SPD)
+        nextreg 0x07,a
         pop af
         ld sp,(V_SP)
         jp x_a
@@ -224,7 +231,7 @@ s_b:    ld (V_SP),sp
         ld sp,STK
         push af
         exx
-        nextreg 0x07,3
+        HLIB_SPEED_IN V_SPD
         ld a,(V_N)
         cp MAXP
         jp nc,.pass
@@ -276,13 +283,17 @@ s_b:    ld (V_SP),sp
         call bcend
         pop af
         exx
-        nextreg 0x07,0
+        ld (V_A),a
+        ld a,(V_SPD)
+        nextreg 0x07,a
+        ld a,(V_A)
         ld sp,(V_SP)
         jp x_ret
 .pass:  xor a
         ld (V_LAST),a               ; 61329 after this plot paints the ULA (as the original)
         exx
-        nextreg 0x07,0
+        ld a,(V_SPD)
+        nextreg 0x07,a
         pop af
         ld sp,(V_SP)
         jp x_b
@@ -292,7 +303,7 @@ s_c:    ld (V_SP),sp
         ld sp,STK
         push af
         exx
-        nextreg 0x07,3
+        HLIB_SPEED_IN V_SPD
         ld a,(V_N)
         cp MAXP
         jp nc,.pass
@@ -343,13 +354,17 @@ s_c:    ld (V_SP),sp
         call bcend
         pop af
         exx
-        nextreg 0x07,0
+        ld (V_A),a
+        ld a,(V_SPD)
+        nextreg 0x07,a
+        ld a,(V_A)
         ld sp,(V_SP)
         jp x_ret
 .pass:  xor a
         ld (V_LAST),a
         exx
-        nextreg 0x07,0
+        ld a,(V_SPD)
+        nextreg 0x07,a
         pop af
         ld sp,(V_SP)
         jp x_c
@@ -436,7 +451,7 @@ s_cm:   ld (V_SP),sp
         push hl
         push ix
         push iy
-        nextreg 0x07,3
+        HLIB_SPEED_IN V_SPD
         ld a,(V_BACK)
         or a
         ld a,32
@@ -464,7 +479,8 @@ s_cm:   ld (V_SP),sp
         xor a
         ld (V_N),a
         ld (V_LAST),a
-        nextreg 0x07,0
+        ld a,(V_SPD)                ; the caller's speed back
+        nextreg 0x07,a
         pop iy
         pop ix
         pop hl

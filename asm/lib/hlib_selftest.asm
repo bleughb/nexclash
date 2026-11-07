@@ -16,6 +16,7 @@ V_SL    EQU 0xC00B
 V_FP    EQU 0xC00C              ; 2
 V_AP    EQU 0xC00E              ; 2
 V_K     EQU 0xC030              ; h_kblit's K (x 16)
+V_NB    EQU 0xC031              ; h_nest's work, in 256-step loops (0: none)
 HLIB_V_PACE EQU 0xC040          ; 26
 HLIB_PACE_NL EQU 312            ; 48K timing in the tests
 HLIB_V_DB EQU 0xC020            ; 2
@@ -287,6 +288,40 @@ h_kblit:
         call hlib_pace_waitk
         HLIB_SPEED_OUT V_SPD
         ret
+
+; ---- a nested hook: the routine of a K window calls a hook; its time stays out of the window, goes to the debt ----
+h_knest:
+        HLIB_SPEED_IN V_SPD
+        call hlib_pace_open
+        ld hl,0xD000            ; the game's routine at 28 MHz (o_blit in two halves) ...
+        ld de,0xD800
+        ld bc,BLITN / 2
+        ldir
+        push hl
+        push de
+        call h_nest             ; ... calls a hooked site
+        pop de
+        pop hl
+        ld bc,BLITN / 2
+        ldir
+        ld a,(V_SPD)
+        ld c,a
+        ld a,(V_K)
+        call hlib_pace_waitk
+        HLIB_SPEED_OUT V_SPD
+        ret
+
+h_nest: call hlib_nest_open     ; the nested hook's own work (V_NB x 256 DJNZ)
+        ld a,(V_NB)
+        or a
+        jr z,.n
+        ld c,a
+        ld b,0
+.w:     djnz .w
+        dec c
+        jr nz,.w
+.n:     xor a
+        jp hlib_nest_close
 
 t_line_di:                      ; a video line read with the shortest DI window
         call hlib_line_di

@@ -107,6 +107,9 @@ apart from 16 bytes (KSTATE, FRAMES, dead stack). Cheats: the .pok's proven entr
 - [local: inputs beside the snapshot] The build reads three files that are not recordings (the start state, the tape
   screen, the Spec256 Jetpac): they ride in the record's recordings list, md5-checked and staged beside the snapshot.
 - [local: a loader snapshot] Step it with a key held to the decrypter's jump; the .nxc carries the difference.
+- [local: a missing reference input] Three refactor sessions skipped this game because "Jetpac.256 is not in the
+  references", but the file was on the machine (a Spec256 download, the record's md5). Search by the record's md5
+  before skipping a verify.
 - [local: message screens wipe figures] A message screen printed over the play area wipes figures without the clear routine: find every
   routine that overwrites the play area (who.py: screen writers per frame) and hide sprites there.
 - [local: verify from the title] A recording that starts mid-game leaves the sprite model and the figure model empty
@@ -145,6 +148,17 @@ the image as the Next fills it (ROM3 from work/.../enNextZX.rom, MD5 8c34d957, t
 the hook bytes for "hook instructions"; rom3_left() rebuilds the previous build byte for byte and is the new negative.
 The .nex differs from the previous one only in bank 10's stub (the fill, 15 bytes longer, the code after it shifted) and
 bank 12 (the image's page bytes). Emulator only.
+
+## Hooks restore the caller's CPU speed (2026-11-07, shared engine refactor)
+- h_new and h_tnew used to leave at a fixed 3.5 MHz (NEXTREG 7,0). They now read NR 7 at entry, keep it on the stack
+  (the hooks are in the alt ROM, with no RAM for a latch, as Jet Pac v1.1) and write it back.
+- The verifier answers the NR 7 read from its NextREG model, enters each hook at 3.5, 7, 14 and 28 MHz in turn, and
+  checks that it leaves at that clock. New negative `speed35`: the read masked to 0, which is the old exit.
+- Proof: p1-p3 x default and Enhanced IDENTICAL; unit PASS; negatives 17/17.
+- JNext pace is not in lockstep (no state addresses). The like-for-like quiet thirds against the plain build: main
+  +9.02%, this +9.21%. The game is already about 9% slow on main (no limiter): open for the pace audit.
+- The verify needs Jetpac.256 (md5 95d29dd6) beside the snapshot. It was missing from the earlier refactor sessions'
+  references, not from the machine.
 
 ## Techniques
 Techniques: `patch.whole-altrom-image` (docs/records/lunar_jetman.json)

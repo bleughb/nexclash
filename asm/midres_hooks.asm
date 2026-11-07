@@ -41,6 +41,7 @@
 ; font 0x3D00-0x3FFF).
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_speed.asm"    ; macros only: HLIB_SPEED_IN
 
 PAGE_S  EQU 26
 OFS     EQU 0x4500              ; scratch = buffer + OFS (0x5B00-0x6AFF -> 0xA000-0xAFFF)
@@ -102,6 +103,8 @@ V_PTL   EQU 0xB037              ; build: low byte of the set's page table
 V_LEN   EQU 0xB039              ; (2) decide: graphics length
 V_TP    EQU 0xB03B              ; (2) conv: source address of the current entry
 V_VF    EQU 0xB03D              ; decide: 0x80 = drawn vertically flipped (strides -32, D = bottom line)
+V_SPD   EQU 0xB03E              ; the caller's CPU speed (lib/hlib_speed.asm latch): plots to their loop exit, commit
+V_A     EQU 0xB03F              ; a loop exit's A while it restores the speed (no stack, no flags)
 FIG     EQU 0xB100              ; MAXF x 8: gfx lo, gfx hi, W, R, X, Y, flags, colour
 STK     EQU 0xB300              ; hook stack top (0xB200-0xB2FF)
 SPR     EQU 0xB300              ; MAXT x 5 sprite attributes (0xB300-0xB43F)
@@ -160,7 +163,7 @@ c_pm:   nextreg 0x55,PAGE_S
         push af
         ld a,5
 c_go:   ld (V_KIND),a
-        nextreg 0x07,3              ; 28 MHz from here to the loop exit (or the pass below)
+        HLIB_SPEED_IN V_SPD         ; the caller's speed latched; 28 MHz from here to the loop exit (or the pass below)
         push bc
         push de
         push hl
@@ -182,10 +185,11 @@ c_go:   ld (V_KIND),a
         nextreg 0x55,5
         nextreg 0x52,PAGE_U
         jp m7ec2
-.pass:  pop af
+.pass:  ld a,(V_SPD)                ; the caller's speed back (never a fixed 3.5 MHz)
+        nextreg 0x07,a
+        pop af
         ld sp,(V_SP)
         nextreg 0x55,5
-        nextreg 0x07,0
         jp 0x7EC1
 
 ; 0x7EC1 with the scratch base (flags at RET: OR A with A = 0, as the original)
@@ -210,16 +214,19 @@ m7c:    srl e
         jp .l
 
 ; ================= loop exits (every plot of these routines passes here) =================
-        MACRO FIXDE                 ; D: scratch -> buffer; unmap; normal speed (no stack, no flags)
+        MACRO FIXDE                 ; D: scratch -> buffer; the caller's speed; unmap (no stack, no flags)
         nextreg 0x55,PAGE_S
         ld (V_HL),hl
         ld h,high FIX
         ld l,d
         ld d,(hl)
         ld hl,(V_HL)
+        ld (V_A),a
+        ld a,(V_SPD)
+        nextreg 0x07,a
+        ld a,(V_A)
         nextreg 0x55,5
         nextreg 0x52,10
-        nextreg 0x07,0
         ENDM
 x_m:    jp nz,0x97EA
         FIXDE
@@ -251,9 +258,12 @@ x_om:   jp nz,0x7E16
         add hl,bc
         ld bc,(V_BC)
         ld hl,(V_HL)
+        ld (V_A),a
+        ld a,(V_SPD)
+        nextreg 0x07,a
+        ld a,(V_A)
         nextreg 0x55,5
         nextreg 0x52,10
-        nextreg 0x07,0
         ENDM
 x_p:    djnz .b
         FIXDEF
@@ -769,7 +779,7 @@ e_sx:   ld a,(0x9DFD)               ; 0xB8A5: LD A,(0x9DFD) / CP 200 / RET Z
         ret
 
 ; commit body (game loop and shop): the recorded figures -> patterns + sprite attributes
-commit: nextreg 0x07,3
+commit: HLIB_SPEED_IN_ABC V_SPD     ; the caller's speed latched (the callers keep A, BC), then 28 MHz
         ld hl,SLOTST                ; slots: "used by the last commit" becomes "on show"
         ld b,128
 .ag:    srl (hl)
@@ -834,7 +844,8 @@ commit: nextreg 0x07,3
         ld (V_NT),a
         ld a,1
         ld (V_LIVE),a
-        nextreg 0x07,0
+        ld a,(V_SPD)                ; the caller's speed back
+        nextreg 0x07,a
         ret
 
 ; ================= 0x8993: the game loop's exit test =================

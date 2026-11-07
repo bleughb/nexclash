@@ -181,3 +181,31 @@ converted, hook stack too deep, colour map left out. Results: docs/VERIFICATION.
 - A recording that reaches later rooms (the sheet's "from the code" group shows the figures no
   recording drew yet).
 - Generalise into a generic XOR-parity template (STATUS open work 3).
+
+## Speed restored (2026-11-07, shared engine refactor, goal 2)
+- Three latches (HLIB_SPEED_IN): V_SPDP for plotter 2 (e_p2 .. t_p2), V_SPDD for the Dizzy plotter (e_dz .. t_dz) and
+  V_SPDH for every other hook, since those can run inside a plotter's 28 MHz window. Each latch is taken on the hook
+  stack, after the switch, so the game's dead stack stays as the original's. Exits give the speed back instead of
+  NEXTREG 7,0 (t_p2 / t_dz and the collision reads through V_A, keeping A and the flags).
+- The verifier's hook simulator answers NR reads (0x243B / 0x253B) from its NextREG state; before, a read gave 0xFF.
+  HSTK_MIN (the lowest hook SP allowed) was 0x5B58 + 18 while the variables already ran to 0x5B65: now 0x5B6A + 18.
+- Sprites 6ac7a3d6 -> 07d09c80; plain unchanged. dizzy1.rzx PASSED (6,346 frames, 7,086 plotter-2 calls converted,
+  2,364 Dizzy draws, 2,050,456 figure pixels), unit 55 cases, negative controls 11/11; stamped.
+- JNext pace: not measured. The game has no frame sync, and the automatic probe found no routine run 2-50 times a
+  second in play (Space-to-start profile).
+
+## Lessons
+- [local: this engine's hook RAM] The verifier's lowest-SP bound named the variables' end as 0x5B58 while they ran to
+  0x5B65 (observed in the code): corrected with the new latch bytes (0x5B69).
+- [card patch.restore-speed §Failure lookup] A short hook can run inside a plotter's 28 MHz window: a latch per window
+  (three here), as the card's "a latch per level" row says.
+
+## Technique use
+- patch.restore-speed: helped: three latches, one per window (2026-11-07).
+
+## Friction
+- reuse: [tool asm/lib/hlib_speed.asm] the shared latch macros
+- retries: [none: the first build verified]
+- environment: [none: the usual references and the JNext card, read-only]
+- hand-rolled: [local: a JNext profile for the pace (start keys from screenshots), kept in the pilot run folder]
+- scratch: [none: no scratch scripts in the repo]

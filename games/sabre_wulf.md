@@ -121,7 +121,32 @@ Painted from the Spec256 conversion's colours: `Sabre Wulf.256` (Spec256-256-all
 Sabrew.zip, the same SABREW.GFX as the MVV package, whose readme says "Recolouring by: Spec256"; no painter named).
 100 % of 7,619 graphics bytes match; paint/colours.json (6,847 entries) applied by `recolour`, palette entries 2-15 from
 paint/palette.hex in the setup code. Khaki Sabreman, coloured parrot, pale spider, dusky scorpion. Painted pixels are fixed
-colours, so Sabreman's colour no longer shows the orchid effects. No white outlines in either set.
+colours (see the next section for the orchids and Sabreman). No white outlines in either set.
+
+### Orchids and Sabreman in a painted set (2026-11-07, reported by a player on jattree/nxc #1)
+In the original the orchid's colour tells the player its effect, and Sabreman takes it while it acts (colour table
+42749: 0x42 red slows him (max speed 32, 44997), 0x45 cyan speeds him (64), 0x43 magenta reverses the controls
+(44820), 0x46 yellow holds him (44792), 0x47 white is normal; timer 38576, the white flash below 47). A plant is painted
+by cell rows: the bottom row bright green (42674), the row above in IX+5 (42689; frame & 7 = 0: none); 3 cells wide at
+full bloom. Painted pixels are fixed, so a painted set loses both cues.
+- Orchids: the colour map gives the plant frames' upper cell row nibble 1 (the run-time colour) except black outline;
+  data only (the pilot's map, not in the repo).
+- Sabreman: the Enhanced hooks (`load_eprofile`, asm/sabre_wulf_enhanced.asm, SABREMAN_BANKS) show object 0 in palette
+  offsets 0-7 (his ink, no +8). Every colour the game gives an object is bright (39579, 40412, 41412, 42744, 42893;
+  tables 39608, 41895, 44151), so offsets 0-7 are his alone. The setup gives his part entries (`sabparts`: 5, 6 = helmet,
+  shirt, trousers in the painted set) the bright ink in offsets 0-6, offset 7 (white: no orchid acting) keeps the
+  painted colours, and entry 1 is bright in 0-7. Apply: INC L / DEC L / JR Z (L = 8i in the state pointer); the two
+  INC HL / DEC HL pairs in apply and show (no effect) go, so the image is the base's length and every address the
+  game and the stub use is the base's. The default build is unchanged byte for byte.
+- `sabreman_banks(nex)` swaps the Enhanced hooks and setup into a built (and recoloured) .nex, base or QAOP.
+- Verify: `enh=` with the Enhanced hooks accepts exactly the bright bit clear on Sabreman's sprites, his state +6 and
+  SCOL, and ignores the dead stack below the return (return addresses into hook code moved by 2 bytes); the unit
+  colour cases and `event` use `palette_offset`.
+- Results (pilot runs/sabre_wulf work4, simulation): 5 recordings IDENTICAL, all 283,009 events beside the default;
+  colour model at 85,046 frames (every orchid and Sabreman pixel in the palette the setup writes, also against the
+  original's attributes); unit tests and the 268-case clock matrix of the Enhanced hooks pass; negatives (1.1's set,
+  1.1's palette, 1.1's hooks, 1.1's map) detected. JNext: 1.1 against 1.2 Enhanced 30 pace trials -0.01 to +0.03%.
+  Never run on hardware.
 
 ## Verify (what it checks)
 Per hook event, original and patched run from the same state to the enclosing routine's return: every register but T /
@@ -180,6 +205,7 @@ Hardware risk review: hooks 0x386E-0x3B71, not in DivMMC's 0x3D00-0x3DFF. IM 1 n
 - [local: this game's pace trials] demonstrated: enemy pace follows rounds per second and the player's once-a-frame gate makes runs drift apart; with every time source of the logic read from the round counter in both runs (pilot work2/fixture2) the trials stay in lockstep for 160-600 rounds.
 - [local: this game's RNG] observed: R at 39376, 40484, 41707 and FRAMES in ten places give the game its chance; the hooks preserve R, the pace trials take both out.
 - [local: the archive's trainers] observed: of 16 .pok trainers, See Ending and Paralyzed Enemies freeze the game, Keep SabreMan cyan sets colour 186 and stops the orchid effects ending, Immunity still loses lives; the menu keeps the six shown to work (pilot work2/cheats).
+- [local: this game's Enhanced map] demonstrated: a fixed palette entry painted on a pixel the game colours at run time (the orchid bloom, 2026-11-07, jattree/nxc issue #1) hides the game's cue; the orchid's upper cell row now takes the run-time colour and Sabreman's helmet, shirt and trousers follow his effect colour (5 recordings identical, pilot work4).
 
 ## Friction
 - reuse: [local: the round-counter fixture is this game's; nexclash.pace has no fixture support]

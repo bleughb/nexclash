@@ -67,6 +67,7 @@ ENGINES = [
     ('green_beret', 'is_green_beret', None),                              # Green Beret (48K)
     ('new_zealand_story', 'is_new_zealand_story', None),                  # The New Zealand Story (128K, tape set: --tape)
     ('ice_palace', 'is_ice_palace', None),                                # Beyond the Ice Palace (128K)
+    ('pacmania', 'is_pacmania', None),                                    # Pac-Mania (128K)
 ]
 
 

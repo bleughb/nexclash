@@ -62,7 +62,7 @@
    "doc": "dizzy_ultimate_cartoon_adventure.md",
    "nex": {
     "plain": "7892b2e0f1f3f9f19165516db307cbe0",
-    "sprites": "6ac7a3d6fbf45699b486916f91ae225f"
+    "sprites": "07d09c8079f46fbeaa5e8a15563f3b10"
    }
   },
   "703c934aa64c1c1d37d5041dd28cf9c7": {
@@ -110,8 +110,8 @@
    "doc": "ghosts_n_goblins.md",
    "nex": {
     "plain": "3d71dd0e63371c4cf06f919d46bc2315",
-    "sprites": "cf933c183149dab497e6d737b46ab601",
-    "enhanced": "34e5d0588cd2705958ac1961f1f59f66"
+    "sprites": "26742ac4bb3f55b52de0fb4997199447",
+    "enhanced": "c2e6e56f2411a18b287b8e4694e1198a"
    }
   },
   "c1a76349d08289810323bae0e62a9102": {
@@ -177,10 +177,10 @@
    "doc": "lunar_jetman.md",
    "nex": {
     "plain": "3e5ca3908616f76a33f864be57baef95",
-    "sprites": "e33f68c4fc0dca007daf14e99188ecfd",
-    "sprites_loading": "4634886880940d0db5e4cee9c1113819",
-    "enhanced": "dfeb2cf9d184d6672f2c1448c0d9b805",
-    "enhanced_loading": "62f7e914c390fcce7477d5efd2423cad"
+    "sprites": "aca1c90c9f90a719d9a3ee8d0e694c80",
+    "sprites_loading": "a0af30ca8016214a145f9165ffae6a53",
+    "enhanced": "555af3ceaf9073f267b42c3912b2068b",
+    "enhanced_loading": "9df3d4f64ffaec160ef42fc5357f57e9"
    }
   },
   "53078ac60141cd808b609600b85f4094": {
@@ -204,7 +204,7 @@
    "doc": "midnight_resistance.md",
    "nex": {
     "plain": "17239acaaf67b0f8011478053e17829d",
-    "sprites": "2aacd11c2872b4df1dce1ca7ceb80bfd"
+    "sprites": "947dc8a9553732eb3dbf64525b1df8c2"
    }
   },
   "f7d376977b93b515feaff1672c212b12": {
@@ -212,7 +212,7 @@
    "doc": "nemesis_the_warlock.md",
    "nex": {
     "plain": "f1497589ddf479e34d42f6ab0618954d",
-    "sprites": "31ad4ab5b7507b6289ffe30f82c7d6bb"
+    "sprites": "642fdf0707db7f6f78727e2335d2fd0e"
    }
   },
   "7b4e8280896d7ff34b93e83ddba9d01c": {
@@ -233,6 +233,14 @@
     "enhanced": "698e791437ff07dc6c9b8a59d6f44bd6",
     "backdrops": "138662b51b2b78cb73393e27ff81654f",
     "enhanced_backdrops": "1a1987d524fd539bf02a16d6b0bbf3aa"
+   }
+  },
+  "e9cb908bc86661ff81732665741393cc": {
+   "game": "Pac-Mania (128K)",
+   "doc": "pac_mania.md",
+   "nex": {
+    "sprites": "431698a4d2e8a0a67ff50c44c4475b14",
+    "enhanced": "acfbc75c7ce9d78840fec348ae2f2654"
    }
   },
   "1ff279754d0730e503816199ac6976f3": {
@@ -295,7 +303,7 @@
    "doc": "smash_tv.md",
    "nex": {
     "plain": "c72ea298486b14036ac1a87ac89c3f0e",
-    "sprites": "af0298e2cad56d8fb992caaba77a6549"
+    "sprites": "68cd80b38b58b5578a5d135136850736"
    }
   },
   "23ee5b2123dbc8a9a5daccbd51db4db0": {
@@ -311,8 +319,8 @@
    "doc": "spellbound_magic_knight.md",
    "nex": {
     "plain": "656c71c4b2ebb8318f3ad442d70b0ab9",
-    "sprites": "ce8e1c6fb0dad558928880a8bf01e13d",
-    "enhanced": "06fe3d18161f3f130372c8003def03da"
+    "sprites": "b679ae970a270e89c80979b2eb618026",
+    "enhanced": "33f251edab40d1ce2f223981409f2bbe"
    }
   },
   "b94691b08d31386d3e5661d04e6c164f": {
