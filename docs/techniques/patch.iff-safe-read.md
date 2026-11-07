@@ -28,7 +28,8 @@
 Every hook that disables interrupts and must give the caller's state back: `INCLUDE "lib/hlib_iff.asm"`,
 `HLIB_IFF_DI` (then PUSH AF) at entry, POP AF + `HLIB_IFF_EI` at every exit. A hook that only runs where
 interrupts are always off (inside the ISR, with no EI in the game's handler) does not need it; say so.
-Line reads with interrupts on: `hlib_line_di` (hlib_pace.asm), called at 28 MHz.
+Line reads with interrupts on: `hlib_line_di` (hlib_pace.asm), called at 28 MHz. A hook that keeps R (hlib_r.asm): pad
+the paths to equal M1s and lower its delta (GnG).
 
 **Assumptions.** An interrupt accepted at the end of LD A,I / LD A,R leaves P/V = 0 (NMOS Z80; JNext
 does it, SkoolKit's simulator too; the Next's core untested - the double read is right either way). The

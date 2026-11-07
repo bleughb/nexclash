@@ -272,18 +272,24 @@ e_tick: ld (hsp),sp
 e_cls: ld (hsp),sp
         ld sp,hstack
         push af
-        ld a,i
+        ld a,i                  ; IFF read safely (lib/hlib_iff.asm, card patch.iff-safe-read): a second read
+        jp pe,.on               ; only after the first said off; every path runs 9 M1s to .saved (R kept:
+        ld a,i                  ; hlib_r_set's delta counts them)
         di                      ; bounded reset-only critical section; IFF is restored below
-        jp po,.off
-        ld a,1
+        jp pe,.on2
+        xor a
         jr .saved
-.off:   xor a
+.on:    di
         nop
+        nop
+        nop
+.on2:   ld a,1
+        jr .saved
 .saved: ld (irq_restore),a
         HLIB_R_IN
         push bc
         push hl
-        ld a,-26
+        ld a,-29                ; O - E - N: E is 3 M1s more with the safe IFF read
         call hlib_r_set
         HLIB_SPEED_IN speed
         call hideall
@@ -309,18 +315,24 @@ e_cls: ld (hsp),sp
 e_cls2: ld (hsp),sp
         ld sp,hstack
         push af
-        ld a,i
+        ld a,i                  ; IFF read safely (lib/hlib_iff.asm, card patch.iff-safe-read): a second read
+        jp pe,.on               ; only after the first said off; every path runs 9 M1s to .saved (R kept:
+        ld a,i                  ; hlib_r_set's delta counts them)
         di                      ; bounded reset-only critical section; IFF is restored below
-        jp po,.off
-        ld a,1
+        jp pe,.on2
+        xor a
         jr .saved
-.off:   xor a
+.on:    di
         nop
+        nop
+        nop
+.on2:   ld a,1
+        jr .saved
 .saved: ld (irq_restore),a
         HLIB_R_IN
         push bc
         push hl
-        ld a,-26
+        ld a,-29                ; O - E - N: E is 3 M1s more with the safe IFF read
         call hlib_r_set
         HLIB_SPEED_IN speed
         call hideall
@@ -346,18 +358,24 @@ e_cls2: ld (hsp),sp
 e_init: ld (hsp),sp
         ld sp,hstack
         push af
-        ld a,i
+        ld a,i                  ; IFF read safely (lib/hlib_iff.asm, card patch.iff-safe-read): a second read
+        jp pe,.on               ; only after the first said off; every path runs 9 M1s to .saved (R kept:
+        ld a,i                  ; hlib_r_set's delta counts them)
         di                      ; bounded reset-only critical section; IFF is restored below
-        jp po,.off
-        ld a,1
+        jp pe,.on2
+        xor a
         jr .saved
-.off:   xor a
+.on:    di
         nop
+        nop
+        nop
+.on2:   ld a,1
+        jr .saved
 .saved: ld (irq_restore),a
         HLIB_R_IN
         push bc
         push hl
-        ld a,-25
+        ld a,-28                ; O - E - N: E is 3 M1s more with the safe IFF read
         call hlib_r_set
         HLIB_SPEED_IN speed
         call hideall

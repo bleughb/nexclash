@@ -23,7 +23,20 @@ Techniques: detect.gameplay-screen-readers
 - The cheats (v1.5 / v1.6: invincibility, level 2 / 3 start, always the dagger, infinite time) are .nxc trainers
   from the archive's .pok; they live in the .nxc, not here.
 
+## Safe IFF read (2026-11-07, shared engine refactor)
+- e_cls, e_cls2 and e_init read IFF with one LD A,I (main's `selftest --tools` IFF audit failed since #109). Now the
+  shared idiom (card patch.iff-safe-read): a second LD A,I only after the first said off, DI after it. Every path runs 9
+  M1s to `.saved` (was 6), so each hook's R delta drops by 3 (-26 / -26 / -25 -> -29 / -29 / -28); the verifier's R
+  check stays equal.
+- Sprites 34c14267 -> cf933c18, Enhanced 4a76d9bf -> 34e5d058; plain unchanged. Replay: 8
+  recordings IDENTICAL (52,063 frames, 23,741 ticks; the changed hooks ran 128 clears and 125 level starts), unit PASS,
+  negatives 18/18.
+  JNext pace (600 updates keyed to 0x82DC, the play profile's state checked every update, seed 1): +0.23% before and
+  after, quiet -0.00%, busy +0.61%; interrupts 23.08 a second both (original 23.16); lockstep to update 600.
+
 ## Lessons
+- [card patch.iff-safe-read §Use / do not use] A hook that keeps R pays for the second read in M1s: count every path
+  to the R-in point and lower the delta (here by 3), or the R check fails.
 - [local: a build that needs game images it cannot find in the snapshot can name where they appear instead]
   content ids plus snapshot / recording / parent sources made the catalogue byte-free with the same output.
 
