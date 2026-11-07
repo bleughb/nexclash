@@ -81,6 +81,14 @@
     "sprites": "9182f2f8b4b0dc55b59a69728568b403"
    }
   },
+  "c1a76349d08289810323bae0e62a9102": {
+   "game": "Green Beret",
+   "doc": "green_beret.md",
+   "nex": {
+    "plain": "f4d4e3d43e47102af66fb3a7e6e022ab",
+    "sprites": "d982d5ae83e2d54e3fc750006322c25e"
+   }
+  },
   "54ad66af6678df22a9d4443e3d04aadb": {
    "game": "Ikari Warriors (48K form)",
    "doc": "ikari_warriors.md",
