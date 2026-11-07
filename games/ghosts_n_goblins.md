@@ -47,7 +47,8 @@ Techniques: detect.gameplay-screen-readers
 - JNext, the level-3 same scene, nine masked plots a pass (master cycles): original 165K; before 290K steady
   (489K cold); now 138K (cold 1st pass under 240K).
 - Flicker (c8 fixture, frames 600-849, `nexclash.flicker`): out of step 4 -> 2 (630 / 631: a zombie rising beside
-  its dust cloud, away from the ladder), vanished 0 -> 1 (813: the dagger at the
+  its dust cloud, away from the ladder; the same with the smoothing off; the original's own pictures of that band
+  tear at least as much: at its frame 620 every figure there is missing for a frame), vanished 0 -> 1 (813: the dagger at the
   right edge, visible in all three pictures). 1,000 frames: out of step 23 -> 4, vanished 5 -> 8. Not 0.
 - Pace (JNext, play profile, lockstep): level 3 (c8, 400 updates) +6.56% -> -0.00%; level 1 (600 updates) seed 1
   +0.23% -> -0.00%, seed 2 +0.72% -> -0.00%; interrupts 23.16 / 23.96 a second = the original.
