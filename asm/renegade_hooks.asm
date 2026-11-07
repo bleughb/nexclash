@@ -36,6 +36,7 @@
 ; inside a hook is harmless.
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_speed.asm"    ; macros only: HLIB_SPEED_IN
 
 HPG     EQU 26                  ; hook page, MMU slot 2 while a hook runs
 QPG     EQU 27                  ; dummy page: slot 2 during the game's copy
@@ -87,6 +88,7 @@ V_LI    EQU 0x4030              ; log index
 V_EI    EQU 0x4031              ; entry index loop counter
 V_DIRTY EQU 0x4032              ; (2) non-zero = the screen's play area needs the scenery again
 V_RP    EQU 0x4034              ; (2) graphic data of the current line (tile build)
+V_SPD   EQU 0x403F              ; the caller's CPU speed (lib/hlib_speed.asm latch)
 V_KEY   EQU 0x4040              ; 9-byte key of the current part
 LOG     EQU 0x4100              ; MAXLOG x 5: L, H, E, D, kind
 CE      EQU 0x4300              ; NCE x 32: +0 flags (7 valid, 0 used, 1 shown), +1 key (9), +10 n,
@@ -152,10 +154,10 @@ e_pn:   PLOTLOG 0, 55279
 e_pm:   PLOTLOG 1, 55725
 
 ; ---- 59531 draw all: log reset, scenery (the plain buffer) -> screen rows 1-16 ----
-e_dr:   nextreg 0x07,3
-        nextreg 0x52,HPG
+e_dr:   nextreg 0x52,HPG
         ld (V_SP),sp
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPD             ; the caller's speed latched (hook stack), then 28 MHz
         push af
         push bc
         push de
@@ -169,10 +171,11 @@ e_dr:   nextreg 0x07,3
         pop hl
         pop de
         pop bc
+        ld a,(V_SPD)                    ; the caller's speed back (never a fixed 3.5 MHz)
+        nextreg 0x07,a
         pop af
         ld sp,(V_SP)
         nextreg 0x52,SPG
-        nextreg 0x07,0
         ld hl,65344
         jp 59534
 
@@ -217,10 +220,10 @@ scrdown:inc d
         ret
 
 ; ---- 62565 copy entry (every caller): commit, then the game's copy into page Q ----
-e_cm:   nextreg 0x07,3
-        nextreg 0x52,HPG
+e_cm:   nextreg 0x52,HPG
         ld (V_SP),sp
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPD             ; the caller's speed latched (hook stack), then 28 MHz
         push af
         push bc
         push de
@@ -232,9 +235,10 @@ e_cm:   nextreg 0x07,3
         pop hl
         pop de
         pop bc
+        ld a,(V_SPD)                    ; the caller's speed back (never a fixed 3.5 MHz)
+        nextreg 0x07,a
         pop af
         ld sp,(V_SP)
-        nextreg 0x07,0
         nextreg 0x52,QPG
         ld hl,(62711)
         jp 62568
@@ -271,10 +275,10 @@ e_rs:   nextreg 0x52,HPG
         jp 56335
 
 ; ---- 62821 screen clear: hide every sprite, empty the cache ----
-e_clr:  nextreg 0x07,3
-        nextreg 0x52,HPG
+e_clr:  nextreg 0x52,HPG
         ld (V_SP),sp
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPD             ; the caller's speed latched (hook stack), then 28 MHz
         push af
         push bc
         push de
@@ -284,10 +288,11 @@ e_clr:  nextreg 0x07,3
         pop hl
         pop de
         pop bc
+        ld a,(V_SPD)                    ; the caller's speed back (never a fixed 3.5 MHz)
+        nextreg 0x07,a
         pop af
         ld sp,(V_SP)
         nextreg 0x52,SPG
-        nextreg 0x07,0
         ld hl,23295
         jp 62824
 

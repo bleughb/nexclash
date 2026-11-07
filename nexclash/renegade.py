@@ -737,9 +737,14 @@ class _NS:
         return self.R[24] if self.R is not None else 0
 
     def read(self, port):
+        if port == 0x253B:                  # a NextREG read (the hooks' speed latch reads NR 7): the model answers,
+            if self.rsel == 0x07:           # as the core composes it (bits 5:4 actual, 1:0 programmed)
+                sp = self.nr.get(0x07, 0) & 3
+                return sp << 4 | sp
+            return self.nr.get(self.rsel, 0)
         if self._pc() < 0x4000:
             self.events.append(('in', port))
-        return self.nr.get(self.rsel, 0) if port == 0x253B else 0xFF
+        return 0xFF
 
     def nextreg(self, reg, val):
         self.nr[reg] = val
