@@ -61,8 +61,8 @@ Platform on hardware: alt ROM ($8C) PASS 2026-09-27; plain 48K and 128K conversi
 
 ## Open work
 Toolkit backlog: BRIEFING C2 (the one list). Release and maintainer state:
-0. Release: v0.1.5 is published; v0.1.6 prepares the workflow fixes and archive smoke checks.
-   Release procedure and required validation: docs/MAINTAIN.md. A prepared package is not a published release.
+0. Release: v0.1.7 includes the workflow and contribution fixes; release notes: docs/releases/v0.1.7.md.
+   Release procedure: docs/MAINTAIN.md; the notes state the validation scope for this maintenance release.
 1. Stamps are stale on main (2026-10-20): `python -m nexclash.records plan` wants a re-verification
    of every engine. Clear it once with `selftest.py --affected --verify --stamp`; from then on each
    game's own PR stamps it (PLAYBOOK 6).
