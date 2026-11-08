@@ -40,9 +40,13 @@ NENT, ESZ, MAXP = 24, 26, 14       # asm/atic_atac_v14_hooks.asm (ENT + NENT * E
 MAXH = 24                           # tallest graphic whose rows can be drawn one by one (the row mask: 3 bytes)
 HOOK_RAM = (0x5B80, 0x5C00)         # variables + hook stack (printer buffer, never touched by the game)
 V_OP1 = 0x5B84
-HSTK_MIN = 0x5BB0 + 18              # lowest SP allowed in a hook (variables end + an interrupt's room; v1.4: + the pace limiter's)
+HSTK_MIN = 0x5BBA + 18              # lowest SP allowed in a hook (variables end + an interrupt's room; v1.4: + the pace limiter's)
 # v1.4 pace limiter (asm/atic_atac_v14_hooks.asm "pace limiter"): hook RAM V_DEBT (signed, 1/64 line), V_L0, V_FR, V_PG
 V_DEBT, V_L0, V_FR = 0x5BA9, 0x5BAB, 0x5BAD
+V_SPEED_ = 0x5BA7
+V_RW, V_RS, V_RN, V_BOOST, V_BL = 0x5BB0, 0x5BB1, 0x5BB4, 0x5BB7, 0x5BB8   # v1.6: room window open, the caller's speed, its lines, catch-up on, its line
+BCLK, KROOM, ROFF, RCAP = 1, 55, 280, 11232    # v1.6: asm/atic_atac_v14_hooks.asm "catch-up", "room window"
+BEEPB = (0xA3AA, 0xA3AB, 0xA3AC, 0xA46E, 0xA46F, 0xA470)  # v1.6: the sound routines' first bytes, JPs while catch-up is on (hook, not game)
 PNL = 312                           # lines a frame (48K timing); the model's video line = (wall T // 224) % PNL
 TAIL_ADDR = 0x5B00
 GTAB = 0xA4BE                       # graphic pointer table, index id - 1
@@ -60,14 +64,14 @@ SITES = ((0x9EA0, 'cddc9e', 'h_rowa', 'call'), (0x9EA9, 'cd219f', 'h_rowb', 'cal
          (0x8093, '210040', 'h_clear', 'jp'), (0x9C75, 'b677e1', 'h_line', 'jp'),
          (0x99D7, '00772c', 'h_o1', 'jp'), (0x9A36, '00772c', 'h_o2', 'jp'), (0x9A78, '00772c', 'h_o3', 'jp'),
          (0x9ADD, '00772c', 'h_o4', 'jp'), (0x9B88, '00772c', 'h_o5', 'jp'), (0xA1E6, '771324', 'h_txt', 'jp'), (0xA1D6, '6f2600', 'h_char', 'jp'),
-         (0x80B4, '210040', 'h_cls', 'jp'))
+         (0x80B4, '210040', 'h_cls', 'jp'), (0x9159, 'cd03a4', 'h_room', 'call'))
 # bytes the hooks rely on: the blitters they fall back to, the row advance, the self-modified JR
 # opcodes, the game's own bytes next to a patched instruction, the continuations
 FACTS = ((0x9EDC, 'ebd556235e23eb'), (0x9F21, 'ebd556235e23eb'), (0x9EE4, '18'), (0x9F29, '18'),
          (0x9F03, '257c2fe607c0'), (0x9F9A, '5e'), (0x9F9B, '0e00'), (0x9FC4, '5e'), (0x9FC5, '32115e'),
          (0x8096, '01c018af'), (0x9C78, 'c9'), (0x99DA, '10f9'), (0x9A39, '79a7'), (0x9A7B, '79a7'),
          (0x9AE0, '10f9'), (0x9B8B, '79a7'), (0xA1E9, '10fad1'), (0x9EA3, 'd9'), (0x9EAC, 'd918'),
-         (0x80B7, '06580e0071237cb820fac9'))
+         (0x80B7, '06580e0071237cb820fac9'), (0xA3AA, '3e10d3fec5'), (0xA46E, '013008'), (0xA403, '01'))
 # "QAOP + Space" toggle (asm/atic_atac_v14_qaop.asm; profile atic_atac_v14_qaop): only a profile with h_qaop has these
 # sites. 0x93CD: the keyboard read (LD A,0xFB / OUT (0xFD),A / IN A,(0xFE)), reached from 0x93BE only with the
 # keyboard chosen ((24064) & 6 = 0); 0x948A: the pause check's first read (LD A,0x7E / OUT (0xFD),A / IN A,(0xFE)).
@@ -80,9 +84,9 @@ QAOP_WHAT = ('QAOP + Space, changes the game logic: with the keyboard chosen, th
              'P right, Space fire in place of Q left, W right, E down, R up, T fire (hook at the key read 0x93CD), '
              'and pauses on Caps Shift alone (hook at 0x948A); Kempston, cursor and the menu keys are untouched')
 # where each forked segment ends (None: the routine's own return, with the return address at sp + off)
-SEG_END = {0xA1D6: 0xA1D9, 0x9EA0: 0x9EA3, 0x9EA9: 0x9EAC, 0x9F97: 0x9F9B, 0x9FC1: 0x9FC5, 0x99D7: 0x99DA, 0x9A36: 0x9A39,
+SEG_END = {0x9159: 0xA403, 0xA1D6: 0xA1D9, 0x9EA0: 0x9EA3, 0x9EA9: 0x9EAC, 0x9F97: 0x9F9B, 0x9FC1: 0x9FC5, 0x99D7: 0x99DA, 0x9A36: 0x9A39,
            0x9A78: 0x9A7B, 0x9ADD: 0x9AE0, 0x9B88: 0x9B8B, 0xA1E6: 0xA1E9, 0x93CD: 0x93E2, 0x948A: 0x9490}
-SEG_RET = {0x8093: 0, 0x80B4: 0, 0x9C75: 2}    # return address at sp + n; the hook / original run until it is popped
+SEG_RET = {0x8093: 0, 0x80B4: 0, 0x9C75: 2, 0xA3AA: 0, 0xA46E: 0}    # return address at sp + n; the hook / original run until it is popped
 CMP = list(range(0, 15)) + list(range(16, 25)) + [26, 27, 28]    # all registers but R, T, MEMPTR (AF' incl.)
 
 # Next palette (RRRGGGBB) of the 16 palette offsets (ink + 8 * BRIGHT); sprite colour index 1 = ink,
@@ -260,15 +264,14 @@ def palette(colours=None):
 
 
 def enhanced_edit(rom_code, org=ROM_ORG):
-    """{address: bytes} for the Enhanced build (atic256.hook_edit): in `build` (.cl), CP 1 / JR NZ,.cn ->
-    AND 0xFD / JR Z,.cn, so a painted nibble (3-15) of the stored image counts as ink when the hook builds an
+    """{address: bytes} for the Enhanced build (atic256.hook_edit): in `inkc`, CP 1 / JR NZ,.n ->
+    AND 0xFD / JR Z,.n, so a painted nibble (3-15) of the stored image counts as ink when the hook builds an
     appear / death image. Same size; for the default store (nibbles 0, 1, 2) it decides as CP 1 does."""
     import re
     hits = [m.start() for m in re.finditer(re.escape(b'\xFE\x01\x20'), rom_code)
-            if rom_code[m.start() - 3] == 0xCD and rom_code[m.start() + 4] == 0xCD and
-            rom_code[m.start() + 7:m.start() + 9] == b'\x36\x01']
+            if rom_code[m.start() + 4:m.start() + 7] == b'\x3E\x01\x12']
     if len(hits) != 1:
-        raise ValueError('build .cl site: %d candidates' % len(hits))
+        raise ValueError('build inkc site: %d candidates' % len(hits))
     i = hits[0]
     return {org + i: b'\xE6\xFD\x28' + rom_code[i + 3:i + 4]}
 
@@ -345,7 +348,7 @@ class AticAtacPatch:
     def _sites(self, ops):
         s = []
         for a, old, sym, kind in SITES:
-            if sym in ('h_char', 'h_cls') and sym not in self.syms:
+            if sym in ('h_char', 'h_cls', 'h_room') and sym not in self.syms:
                 continue  # permit comparison with the preserved earlier profiles (v1.0, v1.1)
             o = bytearray.fromhex(old)
             if a in OPSITES:
@@ -454,6 +457,7 @@ class HW:
         self.ink3 = False           # Enhanced: painted nibbles 3-15 compare as ink (1)
         self.cur3, self.cur6, self.cur7 = GPG, GP6, GP7
         self.bad = []
+        self.fe = []                # v1.6: beeper writes and the clock each ran at (catch-up's sound check)
 
     def nextreg(self, reg, val):
         if reg == 0x34:
@@ -476,6 +480,8 @@ class HW:
             self.nrsel = val
         elif port == 0x303B:
             self.ptr = (val & 0x3F) * 256 + (128 if val & 0x80 else 0)
+        elif port & 0xFF == 0xFE:
+            self.fe.append((val, self.cpu))
         elif port & 0xFF == 0x5B:
             self.pat[self.ptr] = val
             self.ptr = (self.ptr + 1) & 0x3FFF
@@ -491,6 +497,7 @@ class HW:
         h.ink3 = self.ink3
         h.pat = bytearray(self.pat)
         h.bad = []
+        h.fe = []
         return h
 
     def pixels(self, idx):
@@ -728,6 +735,15 @@ def event(patch, alt, psite, model, get, regs, pc, limit=3000000, ports=None):
             def write_port(s, regs_, port, value, *x):
                 o_io.append(('OUT', port, value))
         so.set_tracer(OTr())
+    o_fe = []
+    if pc in (0xA3AA, 0xA46E):
+        class OFe:
+            def read_port(s, regs_, port):
+                return 0xFF
+
+            def write_port(s, regs_, port, value, *x):
+                o_fe.append(value)
+        so.set_tracer(OFe())
     R, ops, mem = so.registers, so.opcodes, so.memory
     n = 0
     while not stop(R):
@@ -737,7 +753,10 @@ def event(patch, alt, psite, model, get, regs, pc, limit=3000000, ports=None):
             return [('original did not return', pc)], so, o, None, {}
     hw = model.hw
     incoming_speed = hw.cpu
+    # v1.6: in the room window or in catch-up a hook leaves 28 MHz on, and the speed they found is kept in V_RS
+    base_speed = model.hram[V_RS - HOOK_RAM[0]] if model.hram[V_RW - HOOK_RAM[0]] or model.hram[V_BOOST - HOOK_RAM[0]] else incoming_speed
     hw.bad = []
+    hw.fe = []
     hw.keys = ports[1] if ports is not None else None
     hw.io = p_io
     p = _P(get, model, alt, psite)
@@ -792,8 +811,16 @@ def event(patch, alt, psite, model, get, regs, pc, limit=3000000, ports=None):
         f.append(('registers differ', d, [(ro[i], rp[i]) for i in d][:4]))
     if hw.cur3 != GPG or hw.cur6 != GP6 or hw.cur7 != GP7:
         f.append(('slots 3 / 6 / 7 not given back', hw.cur3, hw.cur6, hw.cur7))
-    if hw.cpu != incoming_speed:
-        f.append(('incoming CPU speed not restored', incoming_speed, hw.cpu))
+    out_speed = 3 if model.hram[V_RW - HOOK_RAM[0]] else BCLK if model.hram[V_BOOST - HOOK_RAM[0]] else base_speed
+    if hw.cpu != out_speed:
+        f.append(('incoming CPU speed not restored', out_speed, hw.cpu))
+    if (model.hram[V_RW - HOOK_RAM[0]] or model.hram[V_BOOST - HOOK_RAM[0]]) and model.hram[V_RS - HOOK_RAM[0]] != base_speed:
+        f.append(('the caller\'s speed not kept', base_speed, model.hram[V_RS - HOOK_RAM[0]]))
+    if pc in (0xA3AA, 0xA46E):                # v1.6: every beeper write as the original's, at the caller's clock
+        if [v for v, c in hw.fe] != o_fe:
+            f.append(('beeper writes differ', len(o_fe), len(hw.fe)))
+        if any(c != base_speed for v, c in hw.fe):
+            f.append(('a beeper write at another clock', base_speed, sorted({c for v, c in hw.fe})))
     for b in hw.bad:
         f.append(('unexpected hardware access',) + tuple(b))
     if ports is not None:
@@ -816,7 +843,7 @@ def event(patch, alt, psite, model, get, regs, pc, limit=3000000, ports=None):
     spend = ro[12]
     dead = range(spend - 64, spend)
     for a in set(o.ov) | set(p.ov):
-        if a < 0x5B00 or HOOK_RAM[0] <= a < HOOK_RAM[1] or a in dead or a in OPSITES:
+        if a < 0x5B00 or HOOK_RAM[0] <= a < HOOK_RAM[1] or a in dead or a in OPSITES or a in BEEPB:
             continue                    # (an op byte: the hook keeps it in V_OP1.., checked by the caller)
         if o[a] != p[a]:
             f.append(('memory differs', a, o[a], p[a]))
@@ -866,7 +893,7 @@ def event(patch, alt, psite, model, get, regs, pc, limit=3000000, ports=None):
 # The expectation: which images must be shown, derived from the ORIGINAL's plots (not from the store)
 # ---------------------------------------------------------------------------------------------
 KIND = {0x9EA0: 'rowm', 0x9EA9: 'rowa', 0x9F97: 'setm', 0x9FC1: 'seta', 0x8093: 'clear', 0x9C75: 'line',
-        0xA1E6: 'txt', 0xA1D6: 'char', 0x80B4: 'clear'}
+        0xA1E6: 'txt', 0xA1D6: 'char', 0x80B4: 'clear', 0x9159: 'room'}
 KIND.update({a: 'obj' for a in OPSITES})
 KIND.update({a: 'opw' for a in OPWRITERS})
 KIND.update({a: 'paint' for a in PAINTER})
@@ -1164,8 +1191,24 @@ class Run:
             ports = self.ports(kind, regs, get)
             if regs[26]:
                 f.append(('a key read with interrupts on (the recording\'s next value may be the ISR\'s)',))
+        sp_ = regs[12]
+        room = pc == 0x8093 and (get(sp_) | get(sp_ + 1) << 8) == 0x9150
+        if kind == 'room':
+            rn0 = int.from_bytes(model.hram[V_RN - HOOK_RAM[0]:V_RN - HOOK_RAM[0] + 2], 'little')
+            db0 = int.from_bytes(model.hram[V_DEBT - HOOK_RAM[0]:V_DEBT - HOOK_RAM[0] + 2], 'little', signed=True)
         fl, so, o, p, stats = event(patch, self.alt, self.psite, model, get, regs, pc, ports=ports)
         f += fl
+        if room and not model.hram[V_RW - HOOK_RAM[0]]:
+            f.append(('room window not opened',))
+        if kind == 'room':                    # v1.6: the window closed, at least the target waited, catch-up on for the first pass
+            rn1 = int.from_bytes(model.hram[V_RN - HOOK_RAM[0]:V_RN - HOOK_RAM[0] + 2], 'little')
+            want = max(0, min(rn0 * KROOM // 16, RCAP) - ROFF) + (db0 >> 6)
+            if model.hram[V_RW - HOOK_RAM[0]]:
+                f.append(('room window left open',))
+            elif rn1 + 1 < want:
+                f.append(('room window did not wait', rn0, db0, rn1, want))
+            elif not model.hram[V_BOOST - HOOK_RAM[0]]:
+                f.append(('catch-up not on for the first pass',))
         self.c['events ' + kind] += 1
         if p is not None:
             self.c['T extra'] += stats['T patched'] - stats['T orig']
@@ -1775,9 +1818,16 @@ def rework_units(p, states):
             run, m, r = _restore(p, s_)
             run.model.hw.cpu = speed
             run.model.hram[0x5BA7 - HOOK_RAM[0]] = speed if s_[0] in (0x9EA0, 0x9EA9, 0xA1E6) else (speed + 1) % 4
+            run.model.hram[V_BOOST - HOOK_RAM[0]] = 0
+            if s_[0] == 0x9159:                 # the room window's end gives back the speed h_clear found
+                run.model.hram[V_RW - HOOK_RAM[0]], run.model.hram[V_RS - HOOK_RAM[0]] = 1, speed
+                run.model.hw.cpu = 3
+            else:
+                run.model.hram[V_RW - HOOK_RAM[0]] = 0
             fl = run.site(s_[0], r, lambda a, _m=m: _m[a & 65535])
             u['incoming clock cases'] += 1
-            if fl or run.model.hw.cpu != speed:
+            want_cpu = 3 if run.model.hram[V_RW - HOOK_RAM[0]] else BCLK if run.model.hram[V_BOOST - HOOK_RAM[0]] else speed
+            if fl or run.model.hw.cpu != want_cpu:
                 u['incoming clock not given back!'] += 1
                 ex.append(('clock %d at %04X' % (speed, s_[0]), fl[:2]))
     edits = {ROM_ORG + m_.start(): b'\xaf\x00\x00' for m_ in re.finditer(re.escape(b'\x3a\xa7\x5b\xed\x92\x07'), p.rom_code)}
@@ -1804,6 +1854,131 @@ def rework_units(p, states):
     return u, ex
 
 
+def catchup_units(p, states):
+    """v1.6: the room window and catch-up on captured states, with negatives on the engine's own code. -> (Counter, examples).
+    Window: h_clear from the room change opens it (28 MHz, the caller's speed kept), h_room closes it and waits; catch-up: a setup
+    well behind turns it on, a setup level leaves it off, a credit repays it; h_beep / h_noise run the sound routine at the caller's clock,
+    every beeper write as the original's."""
+    u, ex = collections.Counter(), []
+    hr = lambda a: a - HOOK_RAM[0]
+    code = p.rom_code
+
+    def check(name, fl):
+        u['catch-up cases'] += 1
+        if fl:
+            u['catch-up case fails!'] += 1
+            ex.append((name, fl[:2]))
+
+    def neg(name, fl):
+        u['catch-up negatives'] += 1
+        if fl:
+            u['catch-up negatives detected'] += 1
+        else:
+            u['catch-up negative not detected: %s!' % name] += 1
+
+    def room_open(q, st_):
+        run, m, r = _restore(q, st_)
+        run.model.hram[hr(V_RW)] = run.model.hram[hr(V_BOOST)] = 0
+        run.model.hw.cpu = 0
+        sp = r[12]
+        m[sp], m[(sp + 1) & 65535] = 0x50, 0x91
+        r[24] = 0x8093
+        return run.site(0x8093, r, lambda a, _m=m: _m[a & 65535]), run
+
+    def room_close(q, st_, rn=500):
+        run, m, r = _restore(q, st_)
+        h = run.model.hram
+        h[hr(V_RW)], h[hr(V_RS)], h[hr(V_BOOST)] = 1, 0, 0
+        h[hr(V_RN):hr(V_RN) + 2] = rn.to_bytes(2, 'little')
+        h[hr(V_DEBT):hr(V_DEBT) + 2] = bytes(2)
+        run.model.hw.cpu = 3
+        return run.site(0x9159, r, lambda a, _m=m: _m[a & 65535]), run
+
+    def behind(q, st_, lines):
+        run, m, r = _restore(q, st_)
+        h = run.model.hram
+        h[hr(V_RW)], h[hr(V_BOOST)] = 0, 0
+        h[hr(V_DEBT):hr(V_DEBT) + 2] = (-64 * lines).to_bytes(2, 'little', signed=True)
+        run.model.hw.cpu = 0
+        fl, so, o, pp, stats = event(q, run.alt, run.psite, run.model, lambda a, _m=m: _m[a & 65535], r, st_[0])
+        return fl, run, pp
+
+    def sound(q, st_, site, c):
+        run, m, r = _restore(q, st_)
+        h = run.model.hram
+        h[hr(V_RW)], h[hr(V_BOOST)], h[hr(V_RS)] = 0, 1, 0
+        h[hr(V_SPEED_):hr(V_SPEED_) + 1] = bytes([BCLK])
+        run.model.hw.cpu = BCLK
+        r[24], r[2], r[3] = site, c, 0x40          # B = 0x40, C = c (the tone routine's arguments)
+        sp = (r[12] - 2) & 65535
+        m[sp], m[(sp + 1) & 65535], r[12] = 0x34, 0x12, sp
+        ps = dict(run.psite)
+        jp = q.syms['h_beep' if site == 0xA3AA else 'h_noise']
+        ps.update({site: 0xC3, site + 1: jp & 255, site + 2: jp >> 8})
+        fl = event(q, run.alt, ps, run.model, lambda a, _m=m: _m[a & 65535], r, site)[0]
+        return fl, run
+
+    clears = [s_ for s_ in states if s_[0] in (0x8093, 0x80B4)]
+    rooms = [s_ for s_ in states if s_[0] == 0x9159] or clears
+    setups = [s_ for s_ in states if s_[0] in (0x9F97, 0x9FC1)][:12]
+    if not clears or not rooms or not setups:
+        u['catch-up states missing!'] += 1
+        return u, ex
+    # the room window: the good engine
+    for s_ in clears:
+        fl, run = room_open(p, s_)
+        check('window opens', fl)
+    for s_ in [x for x in rooms if x[0] == 0x9159]:
+        fl, run = room_close(p, s_)
+        check('window closes', fl)
+    # negatives on the engine's own code
+    i = code.index(bytes.fromhex('fe5020'))                                        # h_clear: CP 0x50 / JR NZ,.nw
+    bad = _broken(p, {ROM_ORG + i: bytes.fromhex('fe51')})
+    neg('window never opened', room_open(bad, clears[0])[0])
+    a = p.syms['h_room'] - ROM_ORG
+    i = code.index(b'\x30', code.index(bytes.fromhex('ed42'), code.index(bytes.fromhex('2ab45b'), a + 40)))
+    bad = _broken(p, {ROM_ORG + i: b'\x18'})                                        # JR NC -> JR: never waits
+    if [x for x in rooms if x[0] == 0x9159]:
+        neg('window never waits', room_close(bad, [x for x in rooms if x[0] == 0x9159][0])[0])
+    # catch-up on and off
+    for s_ in setups:
+        fl, run, pp = behind(p, s_, 200)
+        check('setup behind', fl)
+        h = run.model.hram
+        if pp is not None:
+            ok = h[hr(V_BOOST)] and run.model.hw.cpu == BCLK and h[hr(V_RS)] == 0 and pp.ov.get(0xA3AA) == 0xC3 and pp.ov.get(0xA46E) == 0xC3
+            check('catch-up on when behind', [] if ok else [('off', h[hr(V_BOOST)], run.model.hw.cpu)])
+        fl, run, pp = behind(p, s_, 0)
+        check('setup level', fl)
+        if run.model.hram[hr(V_BOOST)]:
+            check('catch-up off when level', [('on',)])
+    # a credit repays: catch-up on, a gap of 100 lines at the next setup
+    for s_ in setups:
+        run, m, r = _restore(p, s_)
+        h = run.model.hram
+        h[hr(V_RW)], h[hr(V_BOOST)], h[hr(V_RS)] = 0, 1, 0
+        h[hr(V_DEBT):hr(V_DEBT) + 2] = (-64 * 80).to_bytes(2, 'little', signed=True)
+        line = (int(r[25]) // 224 - 100) % PNL
+        h[hr(V_BL):hr(V_BL) + 2] = line.to_bytes(2, 'little')
+        run.model.hw.cpu = BCLK
+        fl = event(p, run.alt, run.psite, run.model, lambda a, _m=m: _m[a & 65535], r, s_[0])[0]
+        check('credit repays', fl)
+        if run.model.hram[hr(V_BOOST)] or run.model.hw.cpu != 0:
+            check('credit repays: catch-up off', [('still on', run.model.hram[hr(V_BOOST)], run.model.hw.cpu)])
+    # the sound routines
+    s_ = setups[0]
+    for site, c in ((0xA3AA, 3), (0xA3AA, 1), (0xA46E, 0x30)):
+        fl, run = sound(p, s_, site, c)
+        check('sound %04X C=%d' % (site, c), fl)
+        if run.model.hram[hr(V_BOOST)] and c == 1:
+            check('a sweep stays at the caller\'s clock', [('on',)])
+    for site, sym in ((0xA3AA, 'h_beep'), (0xA46E, 'h_noise')):
+        i = code.index(bytes.fromhex('ed9207'), p.syms[sym] - ROM_ORG)
+        bad = _broken(p, {ROM_ORG + i: bytes(3)})
+        neg('%s keeps the fast clock' % sym, sound(bad, s_, site, 3)[0])
+    return u, ex
+
+
 def limiter_units(p, states, n=40):
     """v1.4 pace limiter on captured figure setups (0x9F97 / 0x9FC1), each with interrupts off and on, V_DEBT 0 and 20
     lines ahead: the good engine passes the site check, keeps V_DEBT in UMIN..UMAX and, 20 lines ahead, takes at least
@@ -1821,6 +1996,8 @@ def limiter_units(p, states, n=40):
                     run, m, r = _restore(q, s_)
                     r = list(r)
                     r[26] = iff
+                    run.model.hram[V_RW - HOOK_RAM[0]] = run.model.hram[V_BOOST - HOOK_RAM[0]] = 0
+                    run.model.hw.cpu = 0
                     d0 = ahead * 64
                     run.model.hram[V_DEBT - HOOK_RAM[0]:V_DEBT - HOOK_RAM[0] + 2] = d0.to_bytes(2, 'little')
                     fl, so, o, pp, stats = event(q, run.alt, run.psite, run.model, lambda a, _m=m: _m[a & 65535], r, s_[0])
@@ -1828,7 +2005,7 @@ def limiter_units(p, states, n=40):
                     walls[(name, ahead)] = stats.get('T patched', 0)
                     if name == 'good':
                         u['limiter cases'] += 1
-                        if fl or not -12288 <= d1 <= 20000:
+                        if fl or not -28672 <= d1 <= 20000:
                             u['limiter case fails!'] += 1
                             ex.append(('limiter %04X iff %d ahead %d' % (s_[0], iff, ahead), fl[:2], d1))
             if walls[('good', 20)] < 17 * 224:
@@ -2154,6 +2331,13 @@ def auto(a, z80, name, out, say):
         say('Limiter   : %s %d cases (setups, interrupts off / on, 0 / 20 lines ahead), limiter removed detected %d/%d -> %s' % (
             sname, lu['limiter cases'], lu['limiter negatives detected'], lu['limiter negatives'], 'PASS' if not lf else 'FAIL %s' % lf))
         for k in (lex[:5] if lf else ()):
+            say('            example %s' % (str(k)[:240],))
+        cu, cex = catchup_units(p, states[sname])
+        cf = {k: v for k, v in cu.items() if k.endswith('!')}
+        ok = ok and not cf
+        say('Catch-up  : %s %d cases (room window, catch-up on and off, a credit, the sound routines), negatives detected %d/%d -> %s' % (
+            sname, cu['catch-up cases'], cu['catch-up negatives detected'], cu['catch-up negatives'], 'PASS' if not cf else 'FAIL %s' % cf))
+        for k in (cex[:5] if cf else ()):
             say('            example %s' % (str(k)[:240],))
     for sname, mode, neg, want_fail in (('sprites_qaop', 'on', False, False), ('sprites', 'off', False, False),
                                        ('sprites_qaop', 'on', True, True), ('sprites_qaop', 'off', False, True)):

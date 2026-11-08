@@ -275,6 +275,11 @@ rom3) are untouched and stay the default.
 - [tool selftest.py] (rework import) Dean's AticAtac.rzx is in no reference folder, so the whole record was skipped:
   a record input may now say "missing": that verify is skipped (reported, nothing stamped), its reworks still run.
 
+- [card patch.pace-limiter] (v1.6, 2026-11-08) A pace table with a slow stretch: read the debt's clamp first. v1.4's -192 lines threw away most of what room changes and the appear effect cost, and the audit's "the limiter cannot repay" was that clamp.
+- [local: Atic Atac's room change] Running game code at 28 MHz needs a sound check first: A403 only queues the room's sound (0 frames), so the window can end there; the first pass may beep, so it uses catch-up at 7 MHz with the sound routines' first bytes swapped while it is on.
+- [card patch.pace-limiter] A catch-up clock: the lower the better. At 28 MHz a gap's real gain runs from 3 to 8 times its lines (hooks in it against contended writes); at 7 MHz it is near 2 whatever the gap holds, so a fixed credit stays honest.
+- [tool: run_logged / hook cost] Profile a hook by the lines one call takes (a JDS rule at its entry and return) before optimising around it: `build` at 257 to 297 lines a call was hidden by the audit's per-update hook times.
+
 ## Friction
 - reuse: [local: add_screen.py's stub now in three engines' asm] Jet Pac (bank 13), Rambo (older), this (bank 23).
 - retries: [none: every set rebuilt the published MD5s first time in today's tree]

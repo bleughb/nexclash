@@ -96,7 +96,15 @@ V_DEBT  EQU 0x5BA9              ; 2 bytes, signed: the original's time not yet s
 V_L0    EQU 0x5BAB              ; 2 bytes: video line at the start of the measured setup window
 V_FR    EQU 0x5BAD              ; FRAMES (23672) low byte at the last setup: interrupts since
 V_PG    EQU 0x5BAE              ; 2 bytes: polls left in a wait
-HSTK    EQU 0x5C00              ; hook stack top (grows down; variables end at 0x5BB0)
+; v1.6 room window (see "room window" below)
+V_RW    EQU 0x5BB0              ; 1 while the room change runs at 28 MHz
+V_RS    EQU 0x5BB1              ; the caller's speed, given back at h_room
+V_RL    EQU 0x5BB2              ; 2 bytes: video line at the window's last reading
+V_RN    EQU 0x5BB4              ; 2 bytes: lines the window has lasted
+V_RC    EQU 0x5BB6              ; pixel hooks since the last reading
+V_BOOST EQU 0x5BB7              ; v1.6 catch-up: 1 while the game's code runs at 28 MHz to repay the account
+V_BL    EQU 0x5BB8              ; 2 bytes: video line when a setup hook left, in catch-up
+HSTK    EQU 0x5C00              ; hook stack top (grows down; variables end at 0x5BBA)
 
         MACRO restore_speed
         push af
@@ -398,7 +406,27 @@ h_clear: ld (V_SP),sp
         push de
         push hl
 
-        xor a
+        ld a,(V_BOOST)
+        or a
+        call nz,boost_off
+        ld hl,(V_SP)            ; called from the room change (return 0x9150)? v1.6: open the room window
+        ld a,(hl)
+        cp 0x50
+        jr nz,.nw
+        inc hl
+        ld a,(hl)
+        cp 0x91
+        jr nz,.nw
+        ld a,(V_SPEED)
+        ld (V_RS),a
+        ld a,3
+        ld (V_SPEED),a          ; every hook in the window keeps 28 MHz
+        ld (V_RW),a
+        call pace_line
+        ld (V_RL),hl
+        ld hl,0
+        ld (V_RN),hl
+.nw:    xor a
         ld (V_NENT),a
         nextreg 0x53,SHPG
         ld hl,SH
@@ -1147,30 +1175,60 @@ build:  ld hl,(V_E)
         inc de
         ldir                    ; every cell outside
         ld a,(V_DIR + 3)
-        ld b,a                  ; image rows r = H .. 1
-.r:     ld c,1
-        call celladr
-        ld d,h
-        ld e,l
-        inc de
-        ld (hl),0
-        push bc
-        ld bc,15
-        ldir                    ; columns 1-16 not reached
-        pop bc
-        ld a,(V_DIR + 3)
+        ld b,a                  ; image rows r = H .. 1; a row not in the mask stays outside: what the flood would make it
+.r:     ld a,(V_DIR + 3)
         sub b                   ; k = H - r
         call mbit
         jr z,.rn
-.cl:    call getnib             ; the stored image's pixel (r, c)
-        cp 1
-        jr nz,.cn
-        call celladr
-        ld (hl),1
-.cn:    inc c
+        push bc
+        ld c,1
+        call celladr            ; column 1 of the row (DE used)
+        ex de,hl
+        ld a,(V_SB)
+        call nibadr             ; HL = its stored byte: c = 1 is the low nibble, then 7 bytes high + low, c = 16 the high nibble at + 128
+        ld a,3
+        ld (V_VAL),a            ; the cell for paper: 3 (outside) until the row's first ink, then 0 (not yet reached)
+        ld a,(hl)
+        and 15
+        call inkc
+        inc de
+        ld b,7
+.by:    inc l
+        ld a,(hl)
+        ld c,a
+        rrca
+        rrca
+        rrca
+        rrca
+        and 15
+        call inkc
+        inc de
         ld a,c
-        cp 17
-        jr nz,.cl
+        and 15
+        call inkc
+        inc de
+        djnz .by
+        ld a,l
+        sub 7
+        or 128
+        ld l,a
+        ld a,(hl)
+        rrca
+        rrca
+        rrca
+        rrca
+        and 15
+        call inkc
+        ex de,hl
+        ld b,16                 ; back from column 16: paper after the row's last ink is outside too
+.tr:    ld a,(hl)
+        dec a
+        jr z,.trd               ; ink
+        ld (hl),3
+        dec hl
+        djnz .tr
+.trd:
+        pop bc
 .rn:    djnz .r
         nextreg 0x56,GP6
 .fl:    xor a                   ; spread "outside" through 4-neighbours until nothing changes
@@ -1179,60 +1237,65 @@ build:  ld hl,(V_E)
         add a,2
         call mul20              ; BC = cells of image rows 0 .. H + 1
         ld hl,GB + 20
-.ff:    ld a,(hl)
-        or a
-        jr nz,.fn
+.ff:    xor a
+        cpir                    ; to the next cell not yet reached
+        jr nz,.fbk
+        dec hl
         dec hl
         ld a,(hl)
         inc hl
         cp 3
         jr z,.fs
-        push hl
         ld de,-20
         add hl,de
         ld a,(hl)
-        pop hl
+        ld de,20
+        add hl,de
         cp 3
         jr nz,.fn
 .fs:    ld (hl),3
         ld a,1
         ld (V_CH),a
 .fn:    inc hl
-        dec bc
         ld a,b
         or c
         jr nz,.ff
-        dec hl
+.fbk:   dec hl
         ld a,(V_DIR + 3)
         add a,2
         call mul20
-.fb:    ld a,(hl)
-        or a
-        jr nz,.bn
+        xor a
+        cpdr
+        jr nz,.fdone            ; none left at all: done
+        jr .fb1
+.fb:    xor a
+        cpdr
+        jr nz,.fe
+.fb1:
+        inc hl
         inc hl
         ld a,(hl)
         dec hl
         cp 3
         jr z,.bs
-        push hl
         ld de,20
         add hl,de
         ld a,(hl)
-        pop hl
+        ld de,-20
+        add hl,de
         cp 3
         jr nz,.bn
 .bs:    ld (hl),3
         ld a,1
         ld (V_CH),a
 .bn:    dec hl
-        dec bc
         ld a,b
         or c
         jr nz,.fb
-        ld a,(V_CH)
+.fe:    ld a,(V_CH)
         or a
         jr nz,.fl
-        ld hl,OB                ; the patterns
+.fdone: ld hl,OB                ; the patterns
         ld de,OB + 1
         ld bc,511
         ld (hl),0
@@ -1241,64 +1304,98 @@ build:  ld hl,(V_E)
         add a,2
         ld b,a
 .o:     dec b                   ; image rows r = H + 1 .. 0
+        call rowlive
+        jr z,.oz
         ld c,0
-.oc:    call celladr
-        ld a,(hl)
-        cp 1
-        jr z,.o1
-        or a
-        jr z,.o2                ; enclosed paper
-        push bc                 ; outside: black next to ink / enclosed paper
-        ld de,-21
-        add hl,de
-        call nb3
-        jr nz,.ob
-        ld de,20
-        add hl,de
-        ld a,(hl)
+        call celladr
+.oc:    ld a,(hl)
         cp 3
-        jr nz,.ob
+        jr nz,.oi
+        ld de,-21               ; outside: black next to ink / enclosed paper (HL ends on the next cell)
+        add hl,de
+        ld a,(hl)
+        inc hl
+        and (hl)
+        inc hl
+        and (hl)
+        ld de,18
+        add hl,de
+        and (hl)
         inc hl
         inc hl
-        ld a,(hl)
-        dec hl
-        dec hl
-        cp 3
-        jr nz,.ob
+        and (hl)
         add hl,de
-        call nb3
-        jr nz,.ob
-        pop bc
-        jr .on
-.ob:    pop bc
-.o2:    ld a,2
+        and (hl)
+        inc hl
+        and (hl)
+        inc hl
+        and (hl)
+        ld de,-20
+        add hl,de
+        cp 3
+        jr z,.on
+        ld a,2
         jr .ow
-.o1:    ld a,1
-.ow:    call putnib
+.oi:    inc hl
+        or a                    ; ink 1, enclosed paper 2
+        ld a,2
+        jr z,.ow
+        ld a,1
+.ow:    push hl
+        call putnib
+        pop hl
 .on:    inc c
         ld a,c
         cp 18
         jr nz,.oc
-        ld a,b
+.oz:    ld a,b
         or a
         jr nz,.o
         ret
 
-; nb3: Z if (HL), (HL + 1), (HL + 2) are all 3 (HL kept)
-nb3:    ld a,(hl)
-        cp 3
+; inkc: A = a stored nibble: the cell at DE: 1 for ink (Enhanced's edit: a painted nibble counts as ink) and paper from now
+; on is 0, else the paper cell (V_VAL). HL, BC, DE kept.
+inkc:   cp 1
+        jr nz,.n
+        ld a,1
+        ld (de),a
+        dec a
+        ld (V_VAL),a
+        ret
+.n:     ld a,(V_VAL)
+        ld (de),a
+        ret
+
+; rowlive: B = image row r -> NZ if r - 1, r or r + 1 is an image row (1 .. H) in the mask: no other row can put a pixel here. B kept.
+rowlive:
+        ld a,(V_DIR + 3)
+        ld c,a                  ; H
+        ld a,b
+        cp c
+        jr nc,.m0
+        ld a,c                  ; r + 1: k = H - r - 1
+        sub b
+        dec a
+        call mbit
         ret nz
-        inc hl
-        ld a,(hl)
-        dec hl
-        cp 3
+.m0:    ld a,b                  ; r: k = H - r
+        or a
+        jr z,.m1
+        cp c
+        jr z,.k
+        jr nc,.m1
+.k:     ld a,c
+        sub b
+        call mbit
         ret nz
-        inc hl
-        inc hl
-        ld a,(hl)
-        dec hl
-        dec hl
-        cp 3
+.m1:    ld a,b                  ; r - 1: k = H - r + 1
+        cp 2
+        jr c,.no
+        ld a,c
+        sub b
+        inc a
+        jp mbit
+.no:    xor a
         ret
 
 ; mul20: A -> BC = 20 * A (HL kept)
@@ -1490,6 +1587,9 @@ h_cls:  ld (V_SP),sp
         push de
         push hl
 
+        ld a,(V_BOOST)
+        or a
+        call nz,boost_off
         xor a
         ld (V_NENT),a
         nextreg 0x53,SHPG
@@ -1528,14 +1628,14 @@ h_cls:  ld (V_SP),sp
 ; off it (pace_debit). V_DEBT carries the sum (> 0: the build is ahead). At the end of the setup the hook waits on the video line, at the
 ; caller's clock, until that time has passed: each plot then takes the original's time, in the same interrupt state
 ; (the game's pace depends on its masked stretches: an interrupt the original misses there delays its clock and its
-; frame waits). Time the build loses (a slow setup) is carried down to UMIN, about 0.6 frame; time it is ahead is
+; frame waits). Time the build loses (a slow setup) is carried down to UMIN, about 1.4 frames (v1.6: catch-up repays it); time it is ahead is
 ; carried up to UMAX. Units: 1/64 line = 28 master cycles = 3.5 T.
 PNL     EQU 312                 ; lines a frame, 48K timing
-UMIN    EQU -12288              ; at most 192 lines behind carried
+UMIN    EQU -28672              ; at most 448 lines behind carried (v1.6; the catch-up repays it)
 UMAX    EQU 20000               ; at most 312 lines ahead carried
 WMAX    EQU 300                 ; most lines waited at one setup
 KISR    EQU 44                  ; units an interrupt: 17-19% of them land at 28 MHz in v1.4 (6840 -> 1047 cycles busy, 9944 -> 1517 quiet), JNext 1.2.0
-SETK    EQU -76                 ; per setup: + 6 original + 6 painter NOPs - 106 entry / exit outside the measured interval, + 18 margin (a larger SETK waits longer)
+SETK    EQU -84                 ; per setup: + 6 original + 6 painter NOPs - 106 entry / exit outside the measured interval, + 18 margin (a larger SETK waits longer)
 
 ; pace_line: HL = the video line 0..PNL-1 (NR 0x1E bit 0 : NR 0x1F), read until the MSB holds. A, BC, F lost.
 pace_line:
@@ -1595,7 +1695,23 @@ pace_debit:
         ld e,(hl)
         inc hl
         push hl                 ; the return address, past the byte
-        ld d,0
+        ld a,(V_RW)
+        or a
+        jr z,.acc
+        ld a,(V_RC)             ; in the room window: no account, the window's clock kept
+        inc a
+        ld (V_RC),a
+        and 15
+        jr nz,.nt
+        push bc
+        call room_tick
+        pop bc
+.nt:    pop hl
+        pop de
+        pop af
+        ex (sp),hl
+        ret
+.acc:   ld d,0
         ld hl,(V_DEBT)
         or a
         sbc hl,de
@@ -1613,6 +1729,12 @@ pace_open:
         push bc
         push de
         push hl
+        ld a,(V_RW)
+        or a
+        jr nz,.win              ; in the room window: no account
+        ld a,(V_BOOST)
+        or a
+        call nz,boost_credit    ; the game's code since the last setup ran at 28 MHz
         ld hl,V_FR
         ld a,(23672)            ; FRAMES low byte (the ROM ISR counts every interrupt it takes)
         ld c,(hl)
@@ -1635,7 +1757,13 @@ pace_open:
         call pace_store
 .go:    call pace_line
         ld (V_L0),hl
-        pop hl
+        ld a,(V_BOOST)
+        or a
+        jr z,.win
+        ld a,(V_DEBT + 1)
+        bit 7,a
+        call z,boost_off        ; repaid
+.win:   pop hl
         pop de
         pop bc
         pop af
@@ -1656,6 +1784,15 @@ pace_close_b:
         push hl
         ld hl,CRB
 pace_close:
+        push af
+        ld a,(V_RW)
+        or a
+        jr z,.acc
+        pop af
+        pop hl                  ; in the room window: no account, no wait
+        pop de
+        ret
+.acc:   pop af
         cp 232
         jr nz,.i
         ld a,14
@@ -1742,6 +1879,9 @@ pace_close:
         pop bc
         ex de,hl                ; DE = lines since V_L0
 .done:  ex de,hl
+        ld a,h
+        or a
+        jr nz,.huge             ; 256 lines or more: past what the account holds
         ld b,6
 .m:     add hl,hl
         djnz .m                 ; 64 x lines this setup took, its wait included
@@ -1749,8 +1889,21 @@ pace_close:
         ld hl,(V_DEBT)
         or a
         sbc hl,de
-        call pace_store
-        pop hl
+        jp po,.st
+.huge:  ld hl,UMIN & 0xFFFF
+.st:    call pace_store
+        ld a,(V_BOOST)          ; behind: the game's code at 28 MHz until the next setup (catch-up)
+        or a
+        jr nz,.bl
+        ld de,BTHR
+        ld hl,(V_DEBT)
+        add hl,de
+        bit 7,h
+        jr z,.nb
+        call boost_on
+.bl:    call pace_line
+        ld (V_BL),hl
+.nb:    pop hl
         pop de
         ret
 
@@ -1764,6 +1917,272 @@ pace_since:
         ld bc,PNL
         add hl,bc
         ret
+
+; ---- v1.6 catch-up: time the account is behind (a hook slower than what it displaced: an image built for the appear effect,
+; scenery, text) is won back by running the game's own code at 7 MHz from one setup to the next, and crediting that gap x
+; (KB - 1) at the next setup, until the account is level. Nothing else changes: no plot, no wait. A gap can win more than was owed: that
+; is carried as ahead and the next setups wait it out. The beeper keeps its clock: while catch-up is on, the first bytes of the
+; two sound routines (0xA3AA tone, 0xA46E noise) are JPs to h_beep / h_noise, which end catch-up, give the speed back and run the
+; routine; off, they are the game's own bytes, so sound never pays a cycle for this. A one-call tone (C = 1, a sweep's step: the
+; code between its tones is part of the sound) stays at the caller's clock; after any other sound catch-up goes on.
+; KBOOST = (KB - 1) x 4 (a line at 7 MHz stands for 2 at 3.5, JNext). BTHR: catch-up starts 64 lines behind.
+KBOOST  EQU 4
+BCLK    EQU 1                   ; the clock in catch-up
+BTHR    EQU 4096                ; 64 lines behind
+
+; boost_credit: V_DEBT += lines since V_BL x KBOOST x 16. AF, BC, DE, HL lost.
+boost_credit:
+        call pace_line
+        ld bc,(V_BL)
+        or a
+        sbc hl,bc
+        jr nc,.p
+        ld bc,PNL
+        add hl,bc
+.p:     ld a,h
+        or a
+        jr z,.m
+        ld l,255                ; a gap past 255 lines counts as 255
+.m:     ld d,l
+        ld e,KBOOST
+        mul d,e
+        ex de,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,(V_DEBT)
+        or a
+        adc hl,de
+        jp po,pace_store        ; a gap can win more than was owed: carried as ahead, the next setups wait it out
+        ld hl,UMAX
+        jp pace_store
+
+; boost_on / boost_off: AF, HL lost. V_SPEED is what the hook gives back on leaving.
+boost_on:
+        ld a,(V_SPEED)
+        ld (V_RS),a
+        ld a,BCLK
+        ld (V_SPEED),a
+        ld (V_BOOST),a
+        ld a,0xC3
+        ld (0xA3AA),a
+        ld (0xA46E),a
+        ld hl,h_beep
+        ld (0xA3AB),hl
+        ld hl,h_noise
+        ld (0xA46F),hl
+        ret
+boost_off:
+        xor a
+        ld (V_BOOST),a
+        ld a,(V_RS)
+        ld (V_SPEED),a
+        ld a,0x3E               ; 0xA3AA: LD A,0x10 / OUT ..
+        ld (0xA3AA),a
+        ld hl,0xD310
+        ld (0xA3AB),hl
+        ld a,0x01               ; 0xA46E: LD BC,0x0830
+        ld (0xA46E),a
+        ld hl,0x0830
+        ld (0xA46F),hl
+        ret
+
+h_beep: ld (V_SP),sp
+        ld sp,HSTK
+        push af
+        push bc
+        push de
+        push hl
+        call boost_credit
+        call boost_off
+        ld a,(V_SPEED)
+        nextreg 0x07,a
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
+        ld a,c                  ; (the routine sets A first)
+        cp 1                    ; C = 1: a sweep (0xA3A8 from its loop): the code between its tones keeps its clock
+        jp z,0xA3AA
+        call 0xA3AA
+        jr boost_back
+h_noise:
+        ld (V_SP),sp
+        ld sp,HSTK
+        push af
+        push bc
+        push de
+        push hl
+        call boost_credit
+        call boost_off
+        ld a,(V_SPEED)
+        nextreg 0x07,a
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
+        call 0xA46E
+; back from a sound: catch-up goes on if the account is still behind. Keeps every register.
+boost_back:
+        ld (V_SP),sp
+        ld sp,HSTK
+        push af
+        push bc
+        push de
+        push hl
+        ld de,BTHR
+        ld hl,(V_DEBT)
+        add hl,de
+        bit 7,h
+        jr z,.n
+        call boost_on
+        nextreg 0x07,BCLK
+        call pace_line
+        ld (V_BL),hl
+.n:     pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
+        ret
+
+; ---- v1.6 room window (owner's rule 2026-11-07: within 2%, never slower) ---------------------------------------
+; A room change (0x914D clear, 0x9150 room drawing, 0x9153 panel, 0x9156 pocket icons) took 7 to 10 frames more than the
+; original's 16 to 25: every room-line pixel and scenery byte goes through a hook slower than the code it displaces,
+; and the account (UMIN) can carry at most 192 lines of that. So the whole sequence, the game's code and the hooks,
+; now runs at 28 MHz: h_clear (return 0x9150) opens the window, h_room (0x9159, the CALL that queues the room's sound)
+; closes it, waits at the caller's clock until the original's time has passed, less anything the account owes or plus anything
+; it is ahead, and gives the speed back, then catch-up runs the first pass (its doors and furniture go through the
+; slow scenery hooks). Nothing plays and no key is read in the window.
+;   lines x KROOM / 16 - ROFF: fit over 107 rooms, JNext: original = 3.41 x window - 0.78 frame, largest error 0.35 frame.
+KROOM   EQU 55
+ROFF    EQU 280
+RCAP    EQU 11232               ; most lines a room change's target can reach (36 frames; the longest measured is 25)
+
+; room_tick: V_RN += lines since the last reading. AF, BC, HL lost.
+room_tick:
+        call pace_line
+        ld bc,(V_RL)
+        ld (V_RL),hl
+        or a
+        sbc hl,bc
+        jr nc,.p
+        ld bc,PNL
+        add hl,bc
+.p:     ld bc,(V_RN)
+        add hl,bc
+        ld (V_RN),hl
+        ret
+
+h_room: ld (V_SP),sp
+        ld sp,HSTK
+        push af
+        push bc
+        push de
+        push hl
+        ld a,(V_RW)
+        or a
+        jp z,.out
+        call room_tick
+        ld hl,(V_RN)
+        ld d,h
+        ld e,KROOM
+        mul d,e
+        ld b,d
+        ld c,e                  ; BC = high x K
+        ld d,l
+        ld e,KROOM
+        mul d,e                 ; DE = low x K
+        ld l,e
+        ld a,d
+        add a,c
+        ld h,a
+        ld a,b
+        adc a,0                 ; A:H:L = lines x K
+        ld b,4
+.q:     srl a
+        rr h
+        rr l
+        djnz .q                 ; / 16
+        or a
+        jr nz,.cap
+        ld de,RCAP
+        or a
+        sbc hl,de
+        add hl,de
+        jr c,.ok
+.cap:   ld hl,RCAP
+.ok:    ld de,ROFF
+        or a
+        sbc hl,de
+        jr nc,.of
+        ld hl,0
+.of:    ld de,(V_DEBT)          ; the account: its sign is what the plots owe or are owed, repaid here
+        ld b,6
+.sd:    sra d
+        rr e
+        djnz .sd
+        add hl,de
+        bit 7,h
+        jr z,.tg
+        ld hl,0
+.tg:    ld b,h
+        ld c,l
+        push bc                 ; the line count to reach
+        ld hl,0
+        ld (V_DEBT),hl
+        ld (V_PG),hl            ; poll guard: 65,536 polls, then give up
+        xor a
+        ld (V_RW),a             ; closed
+        ld a,(V_RS)
+        ld (V_SPEED),a
+        nextreg 0x07,a          ; the wait, and the sound after it, at the caller's clock
+.w:     call room_tick
+        pop bc
+        push bc
+        ld hl,(V_RN)
+        or a
+        sbc hl,bc
+        jr nc,.paid
+        ld hl,(V_PG)
+        dec hl
+        ld (V_PG),hl
+        ld a,h
+        or l
+        jr nz,.w
+        ld hl,0
+.paid:  pop bc
+        ld a,h                  ; HL = lines past the target: carried as behind
+        or a
+        jr nz,.far
+        ld a,l
+        cp 192
+        jr nc,.far
+        ld b,6
+.m:     add hl,hl
+        djnz .m
+        ld de,0
+        ex de,hl
+        or a
+        sbc hl,de
+        jr .st
+.far:   ld hl,UMIN & 0xFFFF
+.st:    ld (V_DEBT),hl
+        ld a,(23672)            ; the window's interrupts are the window's: none for the next setup to credit
+        ld (V_FR),a
+        call boost_on           ; the first pass draws the room's doors and furniture through the slow scenery hooks
+        nextreg 0x07,BCLK
+        call pace_line
+        ld (V_BL),hl
+.out:   pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
+        jp 0xA403
 
 ; a row's saving in units, by shift: JR offset 0, 2, .. 12 (7..1 pixel pairs shifted), then aligned (232)
 CRA:    db 47, 43, 35, 31, 24, 19, 13, 18      ; set A (0x9EDC, the erase of a move)
