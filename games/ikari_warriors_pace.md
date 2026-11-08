@@ -33,8 +33,8 @@ for like for the first time (below), 1.1 broke it both ways: quiet -0.9..-17.8%,
 | 5 | +13.11 / -2.35 / +19.21 (-15.5, +64.4) | +0.64 / -0.51 / +1.81 (-3.5, +15.6) | not run |
 | 6 | +3.72 / +0.21 / +9.17 (-27.3, +50.5) | -0.47 / -0.95 / -0.21 (-4.2, +4.2) | not run |
 
-  What is left: the first sight of a new image still costs about 27 ms. A stretch with many of them runs up to +16% and
-  the following stretch catches up (-13%). It happens once for each image in a session. Hardware untested.
+  What is left: the first sight of a new image still costs about 29 ms (seed 2: hook time 23 ms an update with none, 52 with one; 138 of them in 600 updates, was 287). A stretch with many of them runs up to +16% and
+  the following stretch catches up (-13%). It happens once for each image in a session, while the store has room (255 images). Hardware untested.
 - R: not compared (CMP as before). The whole snapshot holds no LD A,R or LD R,A (scan of all three banks), so no hook can
   change a value the game reads. Game memory and all other registers are compared as before.
 
