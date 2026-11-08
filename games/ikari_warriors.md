@@ -72,14 +72,6 @@ Hide hooks: e_h2, e_h4 ran in lockstep on ik_gameover with no sprites left; e_h1
 One allowance: F bits 3 and 5 after the blit (its last LDI copied clean scenery, not a figure), counted, overwritten by the next flag-setting instruction, later memory equal.
 Speed: hooks 421K T a game frame at 28 MHz, about 70K in 3.5 MHz terms, 35 % of a game frame; worst frame 2.9M T (485K in 3.5 MHz terms), on a burst of new images. The 14 MHz blit gives back about 56K. Estimate from the simulator; not measured on a board.
 
-## Results in today's tree (`selftest.py --game ikari_warriors --verify --stamp`, 2026-11-04, after the import)
-Rebuild = recorded: plain 2d56c304, sprites e740ae71, Enhanced 22be808b (= the .nxc v1.0's default and Enhanced);
-recolour guard OK. Verify, per recording, default and Enhanced each IDENTICAL through the colour-set checker:
-ik_play1 4,829 frames / 1,446 commits, ik_cheat1 8,815 / 2,853, ik_bot2_1 16,879 / 6,286, ik_2p 6,877 / 2,004,
-ik_2pw 7,841 / 2,517, ik_att 5,025 / 925, ik_gameover 12,612 / 1,134, ik_tank 11,986 / 3,817 (20,982 commits);
-96,698 images checked; enemy faces checked in Enhanced 3,302. Negatives: colour sets 12/12 on ik_2pw, engine 7/7.
-Stamped verified 2026-11-04.
-
 ## Second pass (owner's findings on v1)
 - Release: no 128K .z80 exists. Both archive .z80s are 48K-format; this file holds the game's AY code (0xB6F0, 0xC14E, writing 0xFFFD / 0xBFFD with no machine check: 1,378 calls before play in ik_play1 and ik_att, none during play, work/ay4.py), at the same offsets as the +3 disk's. The Next has an AY, so this file is the 128K game. The only other forms are tapes and disks.
 - Loading screen: the snapshot's bank 5 is byte-identical to the tape's 6,912-byte screen (md5 4e023c22), on show until a key. Nothing to add, no stub.
@@ -163,13 +155,13 @@ plain 2d56c304 and default e740ae71 rebuilt byte for byte.
 ## Colour route
 sheets/ in the run folder; `nexclash.py recolour` works (test painting: banks 13-15 only, 1,757 entries, seen in JNext). Paintable: K1 except wading and the AND-only variant, K5, K6. Not paintable: K2, K3, K4, K8. Index 1 is "the paper under the figure". Nothing painted by default.
 
-## Speed restored (2026-11-07, refactor goal 2)
-ENTER latches NR 7 (HLIB_SPEED_IN, V_SPD 0x8036) on the hook stack; LEAVE restores it (A via V_A). e_bl blits at
-max(14 MHz, V_SPD); e_post, entered at the blit's speed, keeps e_bl's latch (ENTERB). The verifier answers NR reads;
-O3_OUTLINE is the profile symbol uploadn.o3. Sprites c90fab6f -> 2b9f431b, Enhanced 118a55f6 -> 1bf270bf. 8 RZX x 2 sets IDENTICAL, negatives
-all DETECTED, stamped. JNext pace vs the plain build: main -0.89%, this +0.09%.
+## Pace (2026-11-08)
+The blit in a limiter window, a pattern store (pages 32-47), K windows when in debt. 6 seeds in lockstep: quiet -1.84..-0.37%, busy -0.46..+1.81%.
+Details and tables: games/ikari_warriors_pace.md.
 
 ## Lessons
+- [local: pace measurement] demonstrated: JNext input arrives at the next frame boundary; applied after the game's read (0xEB5F) the runs stay in lockstep.
+- [local: hook time of an image cache] observed: the misses are the cost (38 ms against 0.1): count them per update before tuning a limiter.
 - [local: this engine] The 14 MHz blit runs between two hooks: the hook after it must not latch (it would take 14 MHz).
 - [local: a buffer that is exactly one MMU slot lets a page swap do the work] Blit from a second page and run plot bodies on a third with no code change.
 - [local: LDI's flags 3 and 5 depend on the byte copied] A blit whose source changes differs there; check the bits are dead rather than masking all of F.
@@ -187,6 +179,8 @@ all DETECTED, stamped. JNext pace vs the plain build: main -0.89%, this +0.09%.
 
 ## Technique use
 - patch.restore-speed: helped: a latch per window; the one after the blit takes none (2026-11-07).
+- patch.pace-limiter: helped: the blit window, debt, K windows when in debt (2026-11-08).
+- verify.update-locked-pace: corrected: input applied after the game's own read.
 - detect.gameplay-screen-readers: helped: no logic reads the buffer's pixels.
 - detect.tracked-unit: helped: one call draws one whole figure.
 - optimise.pattern-cache: helped: 32 images, none taken while on show in any recording.
@@ -196,6 +190,7 @@ all DETECTED, stamped. JNext pace vs the plain build: main -0.89%, this +0.09%.
 
 ## Stage log
 - 2026-11-03 stages 0-3 in one session (pilot, unattended), under 90 minutes, 0 user rounds.
+- 2026-11-08 pace: limiter and pattern store, measured against the plain build in lockstep; stamped; 0 user rounds.
 - 2026-11-04 import into `refactor` (phase 7, group 3): Enhanced build and negatives moved into auto, recolour fixed,
   pinned; rebuild = .nxc v1.0 byte for byte; full verification stamped. 0 user rounds.
 
@@ -205,6 +200,7 @@ all DETECTED, stamped. JNext pace vs the plain build: main -0.89%, this +0.09%.
 - environment: [none: the pinned sjasmplus gave the profile's bytes]
 - hand-rolled: [none: no scratch tool kept]
 - scratch: [none: the colour-set checks stay in the run folder, named under Import]
+- hand-rolled: [local: pace2.py, nexclash.pace with input at a second address, in the pilot run folder]
 
 ## Open
 - Hardware, CSpect: never run. Level end (0xF214 site) never reached; only level 1 up to the second bunker, no tank driven by the player seen in the recordings' frames.

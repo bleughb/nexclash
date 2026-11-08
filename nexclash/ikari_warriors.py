@@ -13,10 +13,12 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', 'ikari_warriors_colours.json')
 TAIL_ADDR = 0x5F00              # stale code copy, never read or written in any recording (scan; games file)
 ALT_PAGE, HPG, CPG, SPG, STORE = 24, 26, 27, 28, 29
+L2P0, L2PAGES = 32, 16          # the pattern store: images given up by the cache, RAM only (not in the .nex)
 GP4, GP6 = 4, 0
 ROM_LO = 0x2000
 CMP = list(range(0, 15)) + list(range(16, 25)) + [26, 27, 28]
 SITES_ORIG = {            # address: (original bytes, opcode, symbol)
+    0xEB3B: ('af3265', 'c3', 'e_lg'),
     0xEBAA: ('cdc8f8', 'cd', 'e_pre'),
     0xEBC5: ('cdb262', 'cd', 'e_bl'),
     0xEBC8: ('cd1167', 'cd', 'e_post'),
@@ -38,6 +40,7 @@ SITES_ORIG = {            # address: (original bytes, opcode, symbol)
 SIG = (0x6D0E, bytes.fromhex('ed73b0e46f2600'))
 # H page
 V_N, V_PREV, V_COL, V_STOLEN, ENT, LOG = 0x000, 0x001, 0x006, 0x008, 0x100, 0x300
+V_PACE = 0x040                  # HLIB_V_PACE; +10 = a window is open
 LINES = 0x1400                  # the private line table in page H
 WIN = (40, 215, 16, 183)        # the play window on screen, = the sprite clip window
 KIND = {1: 'figure', 2: 'bullet', 3: 'xor figure', 4: 'dot', 5: 'pick-up', 6: 'heavy', 8: 'debris'}
@@ -203,6 +206,7 @@ def _asm(org, items):
     return bytes(out)
 
 
+N0_ADDR = 0x8820                # N0, K1's image as palette indexes (asm)
 O3_OUTLINE = 'uploadn.o3'       # profile symbol: LD (HL),I_OUT, the only outline store (K1's upload; no other kind outlines)
 
 
@@ -276,6 +280,7 @@ def enhanced_patch(colours, prof=None, outline=False, border='clear'):
         raise ValueError('border')
     if not outline:
         put(y[O3_OUTLINE], [0x36, 0x00], [0x36, I_OUT_IDX])
+        put(y['uploadn.o0'], [0xC3] + w(y['uploadn.out']), [0x21] + w(N0_ADDR))     # no outline: the pass would store 0 in 0s
     put(y['e_k5.c5'] + 1, [0], [5])
     put(y['e_k6.c6'] + 1, [0], [6])
     p = IkariPatch(prof, colours=colours, rom_code=bytes(base) + code)
@@ -332,6 +337,7 @@ def edge_patch(colours=None, prof=None, outline=False, border='clear'):
         put(y['e_k1.c_det'], [0xCD] + w(lab['ext_det']) + [0, 0], [0x21, 0x34, 0x80, 0x36, 0x01])
     if not outline:
         put(y[O3_OUTLINE], [0x36, 0x00], [0x36, I_OUT_IDX])
+        put(y['uploadn.o0'], [0xC3] + w(y['uploadn.out']), [0x21] + w(N0_ADDR))     # no outline: the pass would store 0 in 0s
     put(y['e_k5.c5'] + 1, [0], [5])
     put(y['e_k6.c6'] + 1, [0], [6])
     if colours is None:
@@ -401,6 +407,8 @@ class NS:
         self.mem = mem
         self.nr = {0x54: GP4, 0x56: GP6, 0x07: 0, 0x15: 1}
         self.pages = {HPG: bytearray(patch.hpage), CPG: bytearray(8192), SPG: bytearray(8192)}
+        for n in range(L2PAGES):
+            self.pages[L2P0 + n] = bytearray(8192)      # the pattern store
         for n in range(3):
             self.pages[STORE + n] = bytearray(patch.store[8192 * n:8192 * (n + 1)])
         self.attr = [[0, 0, 0, 0, 0] for _ in range(128)]
@@ -409,9 +417,14 @@ class NS:
         self.ins = collections.deque()
         self.errs = []
         self.sel = None                 # NextREG selected at port 0x243B (the hooks' speed latch reads NR 7)
+        self.line, self.polls = 0, 0
         self.written = bytearray(128)
 
     def read(self, port):
+        if port == 0x253B and self.sel in (0x1E, 0x1F):  # the video line (pace limiter): moves on with every reading
+            self.polls += 1
+            self.line = (self.line + 6) % 312
+            return self.line >> 8 & 1 if self.sel == 0x1E else self.line & 255
         if port == 0x253B and self.sel is not None:     # a NextREG read: from this model, not the recording
             v = self.nr.get(self.sel, 0)
             return (v & 3) << 4 | (v & 3) if self.sel == 0x07 else v
@@ -638,6 +651,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, capture=None, p
                 fail('register', (c['commits'], i, ore[i], sim.registers[i]))
         if ns.nr[0x54] != GP4 or ns.nr[0x56] != GP6 or ns.nr[7] != 0:
             fail('paging', dict(ns.nr))
+        if ns.pages[HPG][V_PACE + 10]:
+            fail('the blit window left open', c['commits'])
         if ns.ins:
             fail('IN not consumed', len(ns.ins))
             ns.ins.clear()
@@ -802,6 +817,8 @@ def negative_patches():
         ('sprites one line low', mod((y['neg_pos'] - 1, [49]))),
         ('debris attributes left on the ULA', mod((y['neg_att'], [0, 0, 0]))),
         ('line table fix off (needs a recording through attract)', mod((y['neg_lines'], [0, 0, 0]))),
+        ('a limiter that never waits', mod((y['neg_wait'], [0, 0, 0]))),
+        ('the pattern store gives back image 0', mod((y['l2get.neg_l2'] - 1, [0xAF]))),
     ]
 
 

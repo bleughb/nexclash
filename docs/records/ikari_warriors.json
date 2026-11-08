@@ -100,19 +100,19 @@
   },
   "sprites": {
    "file": "ikari_warriors_sprites.nex",
-   "md5": "2b9f431b69b87877d66f035a00c04baa"
+   "md5": "8777f2c4c54afb99640dfe638d735ec2"
   },
   "enhanced": {
    "file": "ikari_warriors_enhanced.nex",
-   "md5": "1bf270bf3b444531c5067d2450a3dabd"
+   "md5": "4f3565baaf9b6137d270ffd9659dc1e0"
   }
  },
  "repro": [],
  "status": {
   "title": "Ikari Warriors (48K form)",
   "engine_col": "ikari_warriors (ikari_warriors.md)",
-  "build": "ikari_warriors_sprites.nex 2b9f431b (2026-11-07: hooks restore the caller's CPU speed, the blit at 14 MHz or the caller's if faster, lib/hlib_speed.asm; was c90fab6f; .nxc v1.0 e740ae71)",
-  "software": "lockstep on 8 scripted recordings, default and Enhanced through the colour-set checker: game memory and registers, the picture classed by the first default; 12/12 colour-set and 7/7 engine negatives; JNext reaches play",
+  "build": "ikari_warriors_sprites.nex 8777f2c4, Enhanced 4f3565ba (2026-11-08: pace limiter on the blit, K windows when in debt, pattern store in pages 32-47; was 2b9f431b; .nxc v1.1 2b9f431b)",
+  "software": "lockstep on 8 scripted recordings, default and Enhanced through the colour-set checker: game memory and registers, the picture classed by the first default; 12/12 colour-set and 9/9 engine negatives; JNext pace in lockstep, 6 seeds: quiet -1.84..-0.37%, busy -0.46..+1.81%",
   "hardware": "untested",
   "next": "hardware test; a human recording"
  },
@@ -128,6 +128,16 @@
    "phases": [
     "commit"
    ]
+  },
+  {
+   "application": "ikari_warriors.blit.pace",
+   "id": "patch.pace-limiter",
+   "revision": 3,
+   "target": "the blit window, hook debt, K windows when in debt",
+   "phases": [
+    "entry",
+    "exit"
+   ]
   }
  ],
  "pin": {
@@ -137,17 +147,17 @@
  "results": [],
  "checked": {
   "deps": {
-   "asm/ikari_warriors_hooks.asm": "57e8c234bfff4aae",
-   "docs/profiles/ikari_warriors.json": "02a44a8446481ff8",
+   "asm/ikari_warriors_hooks.asm": "92c612cef2b0b1a2",
+   "docs/profiles/ikari_warriors.json": "cfa9cf56e2c944d5",
    "docs/profiles/ikari_warriors_edges.json": "f76b8547bdb8142c",
    "docs/profiles/ikari_warriors_enhanced.json": "623b373594f6a998",
-   "nexclash.py": "9028c4ca12045d70",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "00d01102bda98ad5",
-   "nexclash/ikari_warriors.py": "038b2ebf518eca31",
-   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/engines.py": "8e1ee6bd49b54877",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/nextboot.py": "121a5912efae9b2a",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "85f7a2ad3b78d411",
    "nexclash/rzx.py": "5a55ee76b0f14989",
@@ -156,24 +166,24 @@
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "9e9d50cd74d3629c",
+   "recipe": "ebb1c0bbdbaa6fa1",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-07"
+  "date": "2026-11-08"
  },
  "verified": {
   "deps": {
-   "asm/ikari_warriors_hooks.asm": "57e8c234bfff4aae",
-   "docs/profiles/ikari_warriors.json": "02a44a8446481ff8",
+   "asm/ikari_warriors_hooks.asm": "92c612cef2b0b1a2",
+   "docs/profiles/ikari_warriors.json": "cfa9cf56e2c944d5",
    "docs/profiles/ikari_warriors_edges.json": "f76b8547bdb8142c",
    "docs/profiles/ikari_warriors_enhanced.json": "623b373594f6a998",
-   "nexclash.py": "9028c4ca12045d70",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "00d01102bda98ad5",
-   "nexclash/ikari_warriors.py": "038b2ebf518eca31",
-   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/engines.py": "8e1ee6bd49b54877",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/nextboot.py": "121a5912efae9b2a",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "85f7a2ad3b78d411",
    "nexclash/rzx.py": "5a55ee76b0f14989",
@@ -182,9 +192,9 @@
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "9e9d50cd74d3629c",
+   "recipe": "ebb1c0bbdbaa6fa1",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-07"
+  "date": "2026-11-08"
  }
 }
