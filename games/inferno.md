@@ -3,7 +3,7 @@
 ## Next session
 Stage: 2 (continued)    Branch: main (m3c from claude/inferno-copier-window-m3c)
 State: copier window m3c PASS in the model (8F95 work in the window's waits; unfinished = dropped). Hardware: m2/m3 run,
-  speed and sound = plain (user); m3b, m3c: game plays ok (user).
+  speed and sound = plain (user); m3b-m3d: plays ok; driver NEX: ok, pause ~4 s (user).
 Inputs: specnext/reference/inferno/    Start: specnext build/CONTINUE_copier_window.md.
 Read: "Copier window"; inferno.py run_cw_window/run_cw_frame/copier_window_update_checks; asm cw_work, wk_*.
 Next: sprite pipeline (handover "Sprite pipeline plan"): (1) 8EF9 driver, (2) window dispatch PASS in the model;
@@ -200,7 +200,7 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
   row splits differ, so the exact validator (not the tuple) defines duplicates.
 - [local: Inferno 8F95 budget] Finishing deferred work after the limiter eats the slack the window
   saved; drop the frame instead (display keeps the last one) and count run lengths of drops.
-- [none: m3b/m3c hardware: game plays ok, no new finding]
+- [none: m3b-m3d and driver NEX hardware: game plays ok, no new finding]
 - [local: Inferno coroutine] A loop using SP as data pointer yields without CALL: save SP + live regs.
 - [local: Inferno copied routine] Compare every hand-copied asm routine's results with the original.
 - [doc BRIEFING A1] Hook code under the stub's register block (rom_end) is lost
@@ -289,13 +289,4 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
 - detect.buffer-layout-producer: corrected: visible colour checks distinguish black-masked stale bitmap data.
 
 ## Stage log
-- 2026-11-08 (claude/inferno-pipeline-dispatch): window exact dispatch; gate PASS; NEX m3d boot PASS.
-- 2026-11-08 (claude/inferno-pipeline-driver): 8EF9 live-table driver page 81; PASS in the model.
-- 2026-11-08 (claude/inferno-copier-window-m3b/m3c): 8F95 work in cw_wait; unfinished dropped; PASS.
-- 2026-11-08 (claude/inferno-m3-hw-bisect): m3 hardware crash = hooks under the stub register
-  block; moved, guarded, post-boot hook-byte check; gate PASS; fixed m3 for hardware.
-- 2026-11-07 (claude/inferno-copier-window*): m1 pacing/head, m2 OUT replay/pad, m3a timed hooks; PASS.
-- 2026-11-07: exact rows profiled (timing FAIL); initialization pause/R; owned store/dispatch PASS.
-- 2026-11-05..07 (codex/inferno): loader, capture, textmap, frame/queue, actors, transfers; timing FAIL.
-- 2026-11-05: stages 0/1 intake/full raw replays and approved design; six-level model/level-2 census
-  and tools/canary/doccheck PASS. Cards/diagnostics revised; evidence in specnext design/.
+Moved to [inferno_stage_log.md](inferno_stage_log.md); new entries go at its top.
