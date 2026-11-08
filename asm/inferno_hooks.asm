@@ -2063,6 +2063,10 @@ wk_new:
         ld sp,WK_STACK
         call wk_prepare
         call wk_dispatch
+        nextreg 0x52,82         ; selection and store: code and tables in page 82 at slot 2
+        ld a,82
+        ld (WK_M2),a
+        call wk_select
         ld a,2
         ld (WK_STATE),a
         ld l,a
@@ -4890,7 +4894,21 @@ D_STORED EQU 0x181A            ; words: distinct streams stored, duplicate indic
 D_DUPS   EQU 0x181C
 D_REJ    EQU 0x181E
 D_FAIL  EQU 0x1820            ; 1 = a worker refused valid input (the run is not trusted)
+D_CANON  EQU 0x1830            ; duplicate: its canonical entry (slot-1 alias)
+D_PATS   EQU 0x1832            ; word: distinct 16x16 patterns stored
+D_CPTR   EQU 0x1834            ; word: next chunk record, page 83 offset
+D_H      EQU 0x1836            ; tiles (0 = 256)
+D_CX     EQU 0x1837
+D_CY     EQU 0x1838
+D_CHN    EQU 0x1839            ; chunks of this image
+D_CSTART EQU 0x183A
+D_ID     EQU 0x183C            ; chunk cell mask while hashing
+D_OFF    EQU 0x183E            ; canvas offset of the chunk's next row
+D_HEAD   EQU 0x1840
 D_STACK  EQU 0x1BF0
+D_BUF    EQU 0x1C00            ; 128-byte chunk
+PAT_BASE EQU 85                ; first pattern page; 11 pages of 64 patterns
+PAT_MAX  EQU 704
         ORG 0
 driver:
         ld (D_RETSP),sp
@@ -4912,6 +4930,7 @@ driver:
         ld (hl),a
         ld bc,0x1C
         ldir
+        call drv_sel_reset
 .next:  nextreg 0x51,78
         xor a
         ld (J_OP+W_A),a
@@ -4945,6 +4964,8 @@ driver:
         jp nz,.bad_worker
         call drv_fill
         jp nz,.bad_worker
+        call drv_index
+        jp nz,.reject_release    ; pattern capacity: unpublished, later draws miss
         nextreg 0x51,79
         ld a,1
         ld (C_OP+W_A),a
@@ -4973,6 +4994,7 @@ driver:
         ld (D_STORED),hl
         jp .release
 .duplicate:
+        call drv_dup_index
         ld hl,(D_DUPS)
         inc hl
         ld (D_DUPS),hl
@@ -5053,6 +5075,7 @@ drv_find:
         or c
         jr nz,.cmp
         pop hl                  ; entry found: copy the 15 metadata bytes, then publish
+        ld (D_CANON),hl
         pop bc
         ld a,(D_IMAGE)
         ld e,a
@@ -5371,6 +5394,408 @@ drv_fill:
         jr .again
 .ok:    xor a
         ret
+; Pattern index (selection, pipeline item 3), built at 8EF9 from each new canvas. Page 83: 6-byte header per
+; image (valid last, count, offset16, left, top) then 5-byte chunks (cx, cy in tiles, cell mask, id16), non-blank
+; only. Pages 85..95: 16x16 patterns, one copy per distinct content (hash chains in page 84: heads 0000, next 0200).
+drv_sel_reset:
+        nextreg 0x51,82
+        ld hl,0x3000
+        ld de,0x3001
+        ld (hl),0
+        ld bc,0x0FFF
+        ldir
+        ld a,0x24
+        ld (SEL_ROLE+SEL_A),a
+        ld hl,SLOT_PREV+SEL_A    ; recency list 0..63, head oldest
+        xor a
+.lr:    ld (hl),64
+        or a
+        jr z,.lr1
+        ld e,a
+        dec e
+        ld (hl),e
+.lr1:   push hl
+        ld de,0x40
+        add hl,de
+        inc a
+        ld (hl),a
+        pop hl
+        inc hl
+        cp 64
+        jr c,.lr
+        ld a,63
+        ld (LRU_TAIL+SEL_A),a
+        ld hl,SLOT_ID+SEL_A
+        ld de,SLOT_ID+SEL_A+1
+        ld (hl),0xFF
+        ld bc,127
+        ldir
+        ld hl,ID_SLOT+SEL_A
+        ld de,ID_SLOT+SEL_A+1
+        ld (hl),0xFF
+        ld bc,PAT_MAX-1
+        ldir
+        nextreg 0x51,83
+        ld hl,0x2000
+        ld de,0x2001
+        ld (hl),0
+        ld bc,0x5FF
+        ldir
+        nextreg 0x51,84
+        ld hl,0x2000
+        ld de,0x2001
+        ld (hl),0
+        ld bc,0x1FF
+        ldir
+        ld hl,0
+        ld (D_PATS),hl
+        ld hl,0x0600
+        ld (D_CPTR),hl
+        ret
+
+; Z = published.
+drv_index:
+        ld hl,(D_MAXY)
+        ld de,(D_MINY)
+        or a
+        sbc hl,de
+        inc l
+        ld a,l
+        ld (D_H),a
+        xor a
+        ld (D_CHN),a
+        ld (D_CY),a
+        ld hl,(D_CPTR)
+        ld (D_CSTART),hl
+.y:     xor a
+        ld (D_CX),a
+.x:     call drv_chunk
+        jr nz,.out
+        ld a,(D_CX)
+        add a,2
+        ld (D_CX),a
+        ld hl,D_W
+        cp (hl)
+        jr c,.x
+        ld a,(D_CY)
+        add a,2
+        ld (D_CY),a
+        jr c,.ok                ; 256 tiles
+        ld hl,D_H
+        cp (hl)
+        jr c,.y
+.ok:    nextreg 0x51,83
+        call drv_header
+        ex de,hl                ; DE = entry
+        inc de
+        ld a,(D_CHN)
+        ld (de),a
+        inc de
+        ld hl,(D_CSTART)
+        ld a,l
+        ld (de),a
+        inc de
+        ld a,h
+        ld (de),a
+        inc de
+        ld a,(D_MINX)
+        ld (de),a
+        inc de
+        ld a,(D_MINY)
+        ld (de),a
+        dec de
+        dec de
+        dec de
+        dec de
+        dec de
+        ld a,1
+        ld (de),a
+        xor a
+.out:   push af
+        nextreg 0x52,10
+        pop af
+        ret
+
+; HL = 0x2000 + index * 6 (D_IMAGE, or A at drv_header_a)
+drv_header:
+        ld a,(D_IMAGE)
+drv_header_a:
+        ld e,a
+        ld d,6
+        mul d,e
+        ld hl,0x2000
+        add hl,de
+        ret
+
+; The duplicate's canonical entry at D_CANON (alias 0x2800 + 16 * image).
+drv_dup_index:
+        ld hl,(D_CANON)
+        ld de,-0x2800
+        add hl,de
+        ld a,l
+        rrca
+        rrca
+        rrca
+        rrca
+        and 0x0F
+        ld l,a
+        ld a,h
+        add a,a
+        add a,a
+        add a,a
+        add a,a
+        or l
+        nextreg 0x51,83
+        call drv_header_a
+        push hl
+        call drv_header
+        ex de,hl
+        pop hl
+        push de
+        inc hl
+        inc de
+        ld bc,5
+        ldir
+        pop de
+        ld a,1
+        ld (de),a
+        ret
+
+; One chunk at (D_CX, D_CY) tiles. Z = ok (blank chunks emit nothing), NZ = capacity.
+drv_chunk:
+        ld hl,D_BUF
+        ld de,D_BUF+1
+        ld (hl),0
+        ld bc,127
+        ldir
+        ld a,(D_W)
+        ld e,a
+        ld a,(D_CY)
+        ld d,a
+        mul d,e                 ; tiles above
+        ex de,hl
+        ld b,5
+.s32:   add hl,hl
+        djnz .s32
+        ld a,(D_CX)
+        ld e,a
+        ld d,0
+        ex de,hl
+        add hl,hl
+        add hl,hl
+        add hl,de
+        ld (D_OFF),hl
+        ld a,(D_H)
+        ld hl,D_CY
+        sub (hl)
+        cp 2
+        ld b,16
+        jr nc,.rows
+        ld b,8
+.rows:  ld a,(D_W)              ; bytes of this chunk per row
+        ld hl,D_CX
+        sub (hl)
+        cp 2
+        ld c,8
+        jr nc,.cw
+        ld c,4
+.cw:    ld de,D_BUF
+.row:   push bc
+        push de
+        ld hl,(D_OFF)
+        ld a,h
+        rlca
+        rlca
+        rlca
+        and 7
+        add a,112
+        nextreg 0x51,a
+        inc a
+        nextreg 0x52,a
+        ld a,h
+        and 0x1F
+        add a,0x20
+        ld h,a
+        ld b,0
+        ldir
+        ld hl,(D_OFF)
+        ld de,(D_STRIDE)
+        add hl,de
+        ld (D_OFF),hl
+        pop de
+        ex de,hl
+        ld bc,8
+        add hl,bc
+        ex de,hl
+        pop bc
+        djnz .row
+        ld hl,D_BUF
+        ld e,0                  ; cell mask
+        ld d,1                  ; left-cell bit of this row
+        ld b,16
+.mr:    push bc
+        ld c,d
+        call .four
+        sla c
+        call .four
+        pop bc
+        ld a,b
+        cp 9
+        jr nz,.nd
+        ld d,4
+.nd:    djnz .mr
+        ld a,e
+        or a
+        ret z                   ; blank (Z, nothing emitted)
+        ld (D_ID),a
+        ld hl,D_BUF
+        ld b,128
+        xor a
+.h:     add a,(hl)
+        inc hl
+        djnz .h
+        nextreg 0x51,84
+        ld l,a
+        ld h,0
+        add hl,hl
+        ld de,0x2000
+        add hl,de
+        ld (D_HEAD),hl
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+.chain: ld a,d
+        or e
+        jp z,.new
+        dec de                  ; DE = id
+        call .patmap            ; HL = pattern at slot 2
+        push de
+        ld de,D_BUF
+        ld b,128
+.cmp:   ld a,(de)
+        cp (hl)
+        jr nz,.diff
+        inc de
+        inc hl
+        djnz .cmp
+        pop de
+        jr .emit
+.diff:  pop de
+        ld hl,0x2200
+        add hl,de
+        add hl,de
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        jr .chain
+.new:   ld de,(D_PATS)
+        ld hl,PAT_MAX
+        or a
+        sbc hl,de
+        jp z,.full
+        call .patmap
+        ex de,hl
+        push hl
+        ld hl,D_BUF
+        ld bc,128
+        ldir
+        pop de                  ; id
+        ld hl,0x2200            ; next[id] = head, head = id + 1
+        add hl,de
+        add hl,de
+        push hl
+        ld hl,(D_HEAD)
+        ld c,(hl)
+        inc hl
+        ld b,(hl)
+        pop hl
+        ld (hl),c
+        inc hl
+        ld (hl),b
+        ld hl,(D_HEAD)
+        inc de
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        ld (D_PATS),de
+        dec de
+.emit:  ld a,(D_ID)
+        ld c,a
+        ld a,(D_CHN)
+        inc a
+        jr z,.full
+        ld (D_CHN),a
+        nextreg 0x51,83
+        ld hl,(D_CPTR)
+        ld a,h
+        cp 0x1F
+        jr nz,.room
+        ld a,l
+        cp 0xFB
+        jr nc,.full
+.room:  push hl
+        ld a,h
+        add a,0x20
+        ld h,a
+        ld a,(D_CX)
+        ld (hl),a
+        inc hl
+        ld a,(D_CY)
+        ld (hl),a
+        inc hl
+        ld (hl),c
+        inc hl
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        pop hl
+        ld de,5
+        add hl,de
+        ld (D_CPTR),hl
+        xor a
+        ret
+.full:  or 1
+        ret
+.four:  ld a,(hl)               ; four bytes at HL; if any is non-zero, E |= C
+        inc hl
+        or (hl)
+        inc hl
+        or (hl)
+        inc hl
+        or (hl)
+        inc hl
+        ret z
+        ld a,e
+        or c
+        ld e,a
+        ret
+.patmap:                        ; DE = id: slot 2 = its page, HL = its bytes
+        ld a,e
+        rlca
+        rlca
+        and 3
+        ld l,a
+        ld a,d
+        add a,a
+        add a,a
+        or l
+        add a,PAT_BASE
+        nextreg 0x52,a
+        ld a,e
+        and 63
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld a,h
+        add a,0x40
+        ld h,a
+        ret
 driver_end:
         ASSERT driver_end < 0x1800
         SAVEBIN "inferno_driver.bin",driver,driver_end-driver
@@ -5676,3 +6101,437 @@ dx_ytile:
 wk_dispatch_end:
         ASSERT wk_dispatch_end <= 0x1A00
         SAVEBIN "inferno_cwdx.bin",wk_dispatch,wk_dispatch_end-wk_dispatch
+
+; Pattern selection and protected store (pipeline item 3). Page 82 in slot 2, inside the 8F95 coroutine after
+; dispatch; WK_M2 = 82 so wk_resume maps it. For every draw, the non-blank chunks with an on-screen cell go to
+; the frame list (slot, column, row) and to a 64-slot store (least recently used; slots in the
+; current, pending or building mask are never evicted; list walk from the oldest, O(1) per use). No free slot or > 128 chunks = not ready. Commit is
+; one byte (role rotation), so work dropped at any poll leaves current/pending untouched. SEL_READY is
+; meaningful only with DX_READY (cleared on the 8F95 drop path). FLASH phase 0 only (as the store).
+SEL_A     EQU -0x2000          ; alias of the page-82 state through slot 1 (load time)
+SEL_READY EQU 0x5000
+SEL_ROLE  EQU 0x5001           ; bits 0-1 current, 2-3 pending, 4-5 building: mask index
+SEL_N     EQU 0x5004
+SEL_LEFT  EQU 0x5005
+SEL_PTR   EQU 0x5006
+SEL_SP    EQU 0x5008
+SEL_M1    EQU 0x500A
+SEL_X     EQU 0x500B
+SEL_Y     EQU 0x500C
+SEL_IMAGE EQU 0x500D
+SEL_C     EQU 0x500E
+SEL_L     EQU 0x500F
+SEL_MASKS EQU 0x5010           ; 3 x 8 bytes
+SEL_T     EQU 0x5028
+SEL_HL    EQU 0x5029
+SEL_COL   EQU 0x502B
+SEL_ROW   EQU 0x502C
+SEL_ID    EQU 0x502D
+SEL_U     EQU 0x5030           ; 8 bytes: union of the masks for one allocation
+SEL_I     EQU 0x5038
+SEL_NEW   EQU 0x503C           ; patterns allocated this build (for reports)
+SEL_EVICT EQU 0x503D           ; evictions this build
+SLOT_ID   EQU 0x5100           ; 64 x word, FFFF empty
+SLOT_FLAG EQU 0x5200           ; 64: 1 = pattern not uploaded
+SLOT_PREV EQU 0x5240           ; recency list, 64 = none
+SLOT_NEXT EQU 0x5280
+LRU_HEAD  EQU 0x5040           ; oldest
+LRU_TAIL  EQU 0x5041           ; newest
+ID_SLOT   EQU 0x5300           ; PAT_MAX bytes, FF none
+SEL_LIST  EQU 0x5800           ; 128 x (slot, column, row)
+        ORG 0x4000
+        MACRO SL_POLL target
+        ld a,CW_CTC >> 8
+        in a,(CW_CTC & 0xFF)
+        sub iyl
+        dec a
+        jp m,target
+        ENDM
+wk_select:
+        xor a
+        ld (SEL_READY),a
+        ld (SEL_N),a
+        ld (SEL_NEW),a
+        ld (SEL_EVICT),a
+        ld a,(DX_READY)
+        or a
+        ret z
+        nextreg 0x51,68
+        ld a,68
+        ld (SEL_M1),a
+        ld (SEL_SP),sp
+        call sl_build_mask
+        xor a
+        DUP 8
+        ld (hl),a
+        inc hl
+        EDUP
+        ld a,(0x2000+CAP_COUNT)
+        ld (SEL_LEFT),a
+        ld hl,0x2000+CAP_LOG
+        ld (SEL_PTR),hl
+sl_rec: SL_POLL sl_yrec
+sl_rec_go:
+        ld a,(SEL_LEFT)
+        or a
+        jp z,sl_commit
+        dec a
+        ld (SEL_LEFT),a
+        nextreg 0x51,68
+        ld a,68
+        ld (SEL_M1),a
+        ld hl,(SEL_PTR)
+        inc hl
+        inc hl
+        ld a,(hl)
+        ld (SEL_X),a
+        inc hl
+        ld a,(hl)
+        ld (SEL_Y),a
+        inc hl
+        ld a,(hl)
+        ld (SEL_IMAGE),a
+        inc hl
+        inc hl
+sl_lrow:
+        SL_POLL sl_ylrow
+sl_lrow_go:
+        ld a,(hl)
+        inc hl
+        or a
+        jr z,.end
+        add a,2
+        add hl,a
+        jr sl_lrow
+.end:   ld (SEL_PTR),hl
+        nextreg 0x51,83
+        ld a,83
+        ld (SEL_M1),a
+        ld a,(SEL_IMAGE)
+        ld e,a
+        ld d,6
+        mul d,e
+        ld hl,0x2000
+        add hl,de
+        ld a,(hl)
+        cp 1
+        jp nz,sl_fail
+        inc hl
+        ld a,(hl)
+        ld (SEL_C),a
+        inc hl
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+        ld a,(hl)
+        ld (SEL_L),a
+        inc hl
+        ld a,(hl)
+        ld (SEL_T),a
+        ld a,d
+        add a,0x20
+        ld h,a
+        ld l,e
+sl_chunk:
+        ld a,(SEL_C)
+        or a
+        jp z,sl_rec
+        dec a
+        ld (SEL_C),a
+        SL_POLL sl_ychunk
+sl_chunk_go:
+        ld a,(SEL_L)
+        add a,(hl)
+        ld b,a
+        ld a,(SEL_X)
+        add a,b
+        ld b,a                  ; column of the chunk's left cell
+        inc hl
+        ld a,(SEL_T)
+        add a,(hl)
+        ld c,a
+        ld a,(SEL_Y)
+        add a,c
+        ld c,a                  ; row of its top cell
+        inc hl
+        ld e,(hl)               ; cell mask
+        inc hl
+        ld d,0
+        ld a,b
+        cp 32
+        jr nc,.c1
+        ld d,0b0101
+.c1:    ld a,b
+        inc a
+        cp 32
+        jr nc,.r0
+        ld a,d
+        or 0b1010
+        ld d,a
+.r0:    ld a,c
+        cp 18
+        jr c,.r1
+        ld a,d
+        and 0b1100
+        ld d,a
+.r1:    ld a,c
+        inc a
+        cp 18
+        jr c,.vis
+        ld a,d
+        and 0b0011
+        ld d,a
+.vis:   ld a,d
+        and e
+        jr nz,.visible
+        inc hl
+        inc hl
+        jp sl_chunk
+.visible:
+        ld a,b
+        ld (SEL_COL),a
+        ld a,c
+        ld (SEL_ROW),a
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+        ld (SEL_HL),hl
+        ld (SEL_ID),de
+        ld hl,ID_SLOT
+        add hl,de
+        ld a,(hl)
+        cp 0xFF
+        jp z,sl_alloc
+sl_have:                        ; A = slot; atomic: no poll until the next chunk
+        ld c,a
+        call sl_bit             ; HL = byte of the building mask, A = bit
+        or (hl)
+        ld (hl),a
+        call sl_touch
+        ld a,(SEL_N)
+        cp 128
+        jp nc,sl_fail
+        ld e,a
+        ld d,3
+        mul d,e
+        ld hl,SEL_LIST
+        add hl,de
+        ld (hl),c
+        inc hl
+        ld a,(SEL_COL)
+        ld (hl),a
+        inc hl
+        ld a,(SEL_ROW)
+        ld (hl),a
+        ld hl,SEL_N
+        inc (hl)
+        ld hl,(SEL_HL)
+        jp sl_chunk
+sl_alloc:
+        ld de,SEL_U             ; union of the three masks
+        ld hl,SEL_MASKS
+        ld b,8
+.u:     ld a,(hl)
+        push hl
+        push de
+        ld de,8
+        add hl,de
+        or (hl)
+        add hl,de
+        or (hl)
+        pop de
+        pop hl
+        ld (de),a
+        inc hl
+        inc de
+        djnz .u
+        ld a,(LRU_HEAD)
+        ld (SEL_I),a
+sl_scan:
+        SL_POLL sl_yscan
+sl_scan_go:
+        ld a,(SEL_I)
+        cp 64
+        jp nc,sl_fail           ; every slot protected: over capacity
+        ld c,a
+        rrca
+        rrca
+        rrca
+        and 7
+        ld hl,SEL_U
+        add hl,a
+        ld a,c
+        call sl_bit_a
+        and (hl)
+        jr z,sl_take
+        ld l,c                  ; protected: on to the next oldest
+        ld a,l
+        add a,0x80
+        ld l,a
+        ld h,SLOT_NEXT >> 8
+        ld a,(hl)
+        ld (SEL_I),a
+        jp sl_scan
+sl_take:
+        ld a,c                  ; evict the old owner, atomic with the new owner
+        add a,a
+        ld l,a
+        ld h,0
+        ld de,SLOT_ID
+        add hl,de
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ld a,d
+        and e
+        inc a
+        jr z,.empty
+        push hl
+        ld hl,ID_SLOT
+        add hl,de
+        ld (hl),0xFF
+        pop hl
+        ld a,(SEL_EVICT)
+        inc a
+        ld (SEL_EVICT),a
+.empty: ld de,(SEL_ID)
+        ld (hl),d
+        dec hl
+        ld (hl),e
+        ld hl,ID_SLOT
+        add hl,de
+        ld (hl),c
+        ld b,0
+        ld hl,SLOT_FLAG
+        add hl,bc
+        ld (hl),1
+        ld a,(SEL_NEW)
+        inc a
+        ld (SEL_NEW),a
+        ld a,c
+        jp sl_have
+; C = slot: move it to the newest end of the recency list.
+sl_touch:
+        ld a,(LRU_TAIL)
+        cp c
+        ret z
+        ld h,SLOT_PREV >> 8
+        ld a,c
+        add a,0x40
+        ld l,a
+        ld d,(hl)               ; D = previous
+        add a,0x40
+        ld l,a
+        ld e,(hl)               ; E = next (not 64: the slot is not the tail)
+        ld a,d
+        cp 64
+        jr nz,.mid
+        ld a,e
+        ld (LRU_HEAD),a
+        jr .link
+.mid:   add a,0x80              ; next[D] = E
+        ld l,a
+        ld (hl),e
+.link:  ld a,e                  ; prev[E] = D
+        add a,0x40
+        ld l,a
+        ld (hl),d
+        ld a,(LRU_TAIL)
+        ld b,a
+        add a,0x80              ; next[old tail] = C
+        ld l,a
+        ld (hl),c
+        ld a,c                  ; prev[C] = old tail, next[C] = none
+        add a,0x40
+        ld l,a
+        ld (hl),b
+        add a,0x40
+        ld l,a
+        ld (hl),64
+        ld a,c
+        ld (LRU_TAIL),a
+        ret
+sl_commit:                      ; roles rotate in one byte
+        ld a,(SEL_ROLE)
+        ld b,a
+        rrca
+        rrca
+        and 0b00001111          ; new current = old pending; new pending = old building
+        ld d,a
+        ld a,b
+        and 3
+        rlca
+        rlca
+        rlca
+        rlca
+        or d
+        ld (SEL_ROLE),a
+        ld a,1
+        ld (SEL_READY),a
+        nextreg 0x51,68
+        ret
+sl_fail:
+        ld sp,(SEL_SP)
+        nextreg 0x51,68
+        ret
+sl_build_mask:                  ; HL = the building mask
+        ld a,(SEL_ROLE)
+        rrca
+        rrca
+        rrca
+        rrca
+        and 3
+        add a,a
+        add a,a
+        add a,a
+        ld hl,SEL_MASKS
+        add hl,a
+        ret
+sl_bit:                         ; C = slot: HL = its byte of the building mask, A = bit
+        call sl_build_mask
+        ld a,c
+        rrca
+        rrca
+        rrca
+        and 7
+        add hl,a
+        ld a,c
+sl_bit_a:
+        and 7
+        ld b,a
+        ld a,1
+        jr z,.z
+.s:     add a,a
+        djnz .s
+.z:     ret
+sl_yrec:
+        ld hl,sl_rec_go
+        jp wk_yield
+sl_ylrow:
+        push hl
+        ld hl,.resume
+        jp wk_yield
+.resume:
+        pop hl
+        jp sl_lrow_go
+sl_ychunk:
+        push hl
+        ld hl,.resume
+        jp wk_yield
+.resume:
+        pop hl
+        ld a,(SEL_M1)
+        nextreg 0x51,a
+        jp sl_chunk_go
+sl_yscan:
+        ld hl,.resume
+        jp wk_yield
+.resume:
+        ld a,(SEL_M1)
+        nextreg 0x51,a
+        jp sl_scan_go
+wk_select_end:
+        ASSERT wk_select_end <= 0x5000
+        SAVEBIN "inferno_cwsel.bin",wk_select,wk_select_end-wk_select
