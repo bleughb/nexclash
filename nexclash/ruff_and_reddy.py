@@ -20,6 +20,7 @@ CALLS = {0xA468: (BIG, 'h_big', 'big'), 0xA484: (BIG, 'h_big', 'big'), 0xA4A0: (
          0x8B45: (0xAC70, 'h_over', 'hide'), 0x8B79: (0xAC70, 'h_over', 'hide'),
          0xFD75: (0xAC70, 'h_over', 'hide')}   # FD75, in bank 0: giving up in the pause, or the end of the game
 COPY_IN, COPY_OUT, COPY_RET = 0xA506, 0xA5E6, 0xA5E9
+MSG_SITE = 0xD42B      # in bank 0: the window is cleared for a message, such as LEVEL COMPLETE
 RENDER, WAIT, HALT = 0x81B2, 0xA4F7, 0xA4F8
 V_SPEED, V_Q = 0x3E30, 0x3E42
 SIGNATURE = {0xA506: '31A49E', 0xA5E6: '31BF5D', 0xA468: 'CD6CA6', 0xA4BC: 'CD67A8', 0x818B: 'CDDDAA'}
@@ -83,13 +84,15 @@ class Patch:
             self.sites.append((WAIT, b'\xfb\x76\xf3', b'\xc3' + zt.w16(self.syms['h_render_end'])))
             self.sites.append((COPY_IN, b'\x31\xa4\x9e', b'\xc3' + zt.w16(self.syms['h_copy'])))
             self.sites.append((COPY_OUT, b'\x31\xbf\x5d', b'\xc3' + zt.w16(self.syms['h_copy_end'])))
+            self.sites.append((MSG_SITE, b'\xed\x73\xa0', b'\xc3' + zt.w16(self.syms['h_msg'])))
+            self.site_info[MSG_SITE] = (0xD42F, 'h_msg', 'hide')
         self._banks()
 
     def _banks(self):
         # Hidden ROM (page 25): tiny entry and return veneers only. Code and writable state: page 24.
         from .build import rom48
         self.page = bytearray(rom48()[0x2000:0x4000])
-        for name in ('h_big', 'h_small', 'h_copy', 'h_room', 'h_title', 'h_over', 'h_render', 'h_render_end'):
+        for name in ('h_big', 'h_small', 'h_copy', 'h_room', 'h_title', 'h_over', 'h_msg', 'h_render', 'h_render_end'):
             at = self.syms[name] - 0x2000
             self.page[at:at + 4] = self.ram[at:at + 4]
         for i in range(len(self.code) - 4):
@@ -280,7 +283,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         c[key + '!'] += 1
         if len(examples[key]) < 5:
             examples[key].append(detail)
-    pcs = set(CALLS) | {COPY_IN, RENDER, WAIT}
+    pcs = set(CALLS) | {COPY_IN, RENDER, WAIT, MSG_SITE}
 
     def on_pc(pc, sim):
         mem = _flat(sim)
@@ -299,7 +302,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             ret, sp = HALT, regs[12]
         else:
             target, sym, kind = patch.site_info[pc]
-            if mem[pc:pc + 3] != bytes((0xCD, target & 255, target >> 8)):
+            if mem[pc:pc + 3] != (b'\xed\x73\xa0' if pc == MSG_SITE else bytes((0xCD, target & 255, target >> 8))):
                 if pc >= 0xC000:                # another bank at C000: not this site
                     return
                 fail('site bytes changed', {'pc': hex(pc)})

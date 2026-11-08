@@ -285,6 +285,22 @@ h_title:
         HIDE_HOOK 0xD332,R_HIDE
 h_over:
         HIDE_HOOK 0xAC70,R_HIDE
+; ---- D42B, in place of LD (D4A0),SP: the window is cleared for a message, such as LEVEL COMPLETE
+h_msg:
+        ENTER
+        nextreg 0x69,0
+        ld hl,(V_SP)
+        ld (0xD4A0),hl
+        ld a,R_MSG
+        call hlib_r_set
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
+        HLIB_R_OUT
+        nextreg 0x51,255
+        jp 0xD42F
 
 ; ---- Layer 2 ---------------------------------------------------------------
 ; A figure of 3 bytes x 32 rows: M1 M2 M3 G1 G2 G3 a row. Table A034. A = its number.
@@ -533,6 +549,7 @@ R_RENDER EQU -12
 R_PLOT EQU -12
 R_WAIT EQU -12
 R_HIDE EQU -12
+R_MSG EQU -11
 
 rom_end:
 regblock EQU 0x3C00

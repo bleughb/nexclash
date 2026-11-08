@@ -1,10 +1,10 @@
 # Ruff and Reddy in the Space Adventure (Hi-Tec, 1990, 128K)
 
 ## Next session
-Stage: 3 done for default and Enhanced (v1.1). Hardware: untested. Not yet played by the owner.
+Stage: 3 done for default and Enhanced (v1.0, not yet published). Hardware: untested. Not yet played by the owner.
 Inputs: Ruff and Reddy in the Space Adventure (1990)(Hi-Tec)(128K).z80, MD5 4b6c490438881cb23d0993d4b32788a2; the loading screen from the same game's 48K-128K tape, block 4. Review run: runs/ruff_and_reddy/release-20261108.
 Build: `nexclash.ruff_and_reddy.build(Z, OUT)`, then `loading_nex` with the screen. Not yet wired into `auto`, `engines.py` or a record: that comes when it goes upstream after the owner has played it.
-Pending: owner's play; the default's LEVEL COMPLETE (Open, below); hardware checklist below.
+Pending: owner's play; hardware checklist below.
 
 ## Facts
 - A true 128K release: 7FFD = 0x10 in play, 0x13 when the player in bank 3 runs (FAC7 and the screens at D1AD, D156, D130 reached through 5DCF, 5DDD, 5DEB). The .z80 was saved with bank 3 paged: game addresses from C000 up are in bank 0, so anything read from the snapshot at C000 is the wrong bank until it is asked for.
@@ -21,7 +21,7 @@ The owner's standard: the original look with colour clash removed. Layer 2, not 
 - Layer 2 (double buffered, published with the copy, below the play rows): each figure's ink in white, the colour a figure has in the open; its mask punches what it covers. Clip window 24..231 x 0..159: a figure's right edge wraps to the next row of the buffer in the original, so that ink stays on the ULA in the cell's colour.
 - The pass from A31E to A4F7 runs at 28 MHz as one K window; each plot hook only notes the figure, and the overlay is drawn once at the end, left out of the window: a nested reading at every plot cost plus or minus a line times K, which lost a frame at room changes.
 - The copy runs at 28 MHz, below the play rows, in a K window of its own, with the flip after it.
-- Hidden at a new room (818B), the title (80F7) and at game over or giving up (8B45, 8B79, FD75). No outlines: figures have their own black masks.
+- Hidden at a new room (818B), the title (80F7), at game over or giving up (8B45, 8B79, FD75) and for a message such as LEVEL COMPLETE (D42B). No outlines: figures have their own black masks.
 
 ## Known issues
 - Measured pace and the slowest stretches: the run's NOTES.md. Interrupts stay off during the windows, as in the original.
@@ -32,15 +32,12 @@ The owner's standard: the original look with colour clash removed. Layer 2, not 
 Replay of 8 recordings with R at every hook, an independent Layer 2 model, every lit pixel against the bitmap the copy wrote; ABI cases; broken builds; boot; flip audit; pace in four scenes x 3 seeds, soak, flicker, the real loader. All in the run's NOTES.md.
 
 ## Enhanced
-Built 2026-11-08, version 1.1: a menu option, off by default; the default stays the 1.0 build, byte for byte (fdd735ca). Own hooks and profile: asm/ruff_and_reddy_enh_hooks.asm, docs/profiles/ruff_and_reddy_enh.json, nexclash/ruff_and_reddy_enh.py.
+Built 2026-11-08: a menu option, off by default, in the first version, 1.0. The default's .nex is 6ea7afb9. Own hooks and profile: asm/ruff_and_reddy_enh_hooks.asm, docs/profiles/ruff_and_reddy_enh.json, nexclash/ruff_and_reddy_enh.py.
 - The set's code and art are this release's: 255 tiles at DDA7 (tile 255 runs into code, one byte differs, not a tile), 21 big and 45 small figure entries, master identical, so each takes its colours from its own address. Nothing repainted; the sea is black as the set paints it.
 - Value 255 stays transparent: the ULA shows, as Spec256 does. The lives heads recolour that way.
 - A room is painted on a clean canvas (pages 44-48) just before the game's own draw; the canvas goes to both buffers by DMA. Each pass restores last time's boxes from it and draws the figures in order.
 - A map can lie below 0x6000, where art is mapped: a row's tile numbers are copied to hook RAM first. The replay's level-complete test copy found this.
 - Panel: the set's panel, static on Layer 2; lives, the item boxes, score and time stay ULA. Menus and messages stay ULA, hidden at D332, D42B, FD75, 8B45, 8B79 and 818B.
-
-## Open: the default at LEVEL COMPLETE
-The default (v1.0 bytes) has no hide at D42B, so figures stay on Layer 2 over the LEVEL COMPLETE text until play goes on: seen in JNext on a test copy. Enhanced has the hide. The fix changes default bytes, so it waits for the owner.
 
 ## Hardware checklist
 Boot and loading screen; music; figures white on red, cyan, yellow and blue rock; no tear at the top of the play area; room change with no stale figures; pause; giving up; game over; each cheat.
@@ -51,6 +48,7 @@ Boot and loading screen; music; figures white on red, cyan, yellow and blue rock
 - [local: stale overlay] Giving up in the pause leaves through FD75 and a bank 3 screen before the title's hide: the overlay stayed over the title until the key test was looked at. The hide now covers FD75, and a recording goes through it.
 - [local: window noise] A nested debt reading at each of up to six plots adds about a line of error each, scaled by K: 37 lines of target, enough to miss a frame at a room change. One reading at the end of the pass fixed it.
 - [local: map below 0x6000] Art mapped in slot 2 hid a room map that lies below 0x6000: read the game's data before mapping over it. Only the level-complete test copy's room showed it.
+- [local: message hide] An earlier default had no hide at D42B, so figures stayed over LEVEL COMPLETE; only a test that reached the screen showed it.
 - [local: list on a page] The box list's empty test is a zero low byte, so each list must start on a page; a list at 0x3B40 ran a 64K LDIR over the hook code.
 
 ## Technique use
@@ -70,4 +68,4 @@ Boot and loading screen; music; figures white on red, cyan, yellow and blue rock
 
 ## Stage log
 - 2026-11-08 Stages 0-3 for the default; mock-up for Enhanced; review build for the owner.
-- 2026-11-08 Enhanced from the Spec256 set, version 1.1; review build for the owner.
+- 2026-11-08 Enhanced from the Spec256 set, and the message hide in the default; version 1.0 review build for the owner.
