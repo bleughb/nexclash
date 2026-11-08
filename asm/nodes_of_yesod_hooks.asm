@@ -613,7 +613,7 @@ original_m1:
 .next:  dec h
         jr nz,.row
         ld a,l
-        sub 59
+        sub 84                  ; 59 + 25, blit_tgt's M1s before R is read
         ret
 e_irq_in:
         push af

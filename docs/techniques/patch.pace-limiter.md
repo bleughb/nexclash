@@ -73,6 +73,8 @@ HLIB_V_PACE, 26 bytes (14: HLIB_PACE_V1, the first library: Cauldron 1.1, Beyond
 | interrupt time in a window | no hold / resume | _t_hold | hold / resume in the ISR wrapper | DI round the wait |
 | waits long after a wrap | frame length learned from a poll | _t_wrap | +6 / HLIB_PACE_NL | learning it |
 | K window slow, routine calls a hook | nested time x K | _t_nest | hlib_nest_* | debt window |
+| slow where the original is light, fast where busy | one floor per update | pace stretches | windows on each displaced job, sized from the plain build, and a carry | a tuned floor |
+| a window reads most of a frame long | line wrap and frame serial not in step | debt at an interrupt | a window under a frame uses the wrap alone | a phase constant |
 
 ## Verification
 `hooklib.pace_check` on the simulator (NextModel times both clocks); the pace meter on the build. Negative

@@ -81,6 +81,12 @@ Techniques: detect.gameplay-screen-readers
 
 - [local: an Enhanced set that also switches a HUD needs recolour to switch it too] the guard found the one byte (hud_enabled) recolour left as built.
 
+- [card patch.pace-limiter §Failure lookup] (v1.6, 2026-11-08) A single floor per update cannot hold a game whose displaced work varies by figure: it reads slow where the original is light and fast where it is busy, and its whole-run figure hides both. Windows on what was displaced, sized from the plain build, held nearly every stretch within 2%.
+- [card patch.pace-limiter §Failure lookup] A window that reads line + frame serial needs the two in step at the wrap; a window under a frame needs only the wrap. The mismatch here read as 164 lines of false time per interrupt and drove the account to its floor.
+- [local: pace audit state lists] Before trusting lockstep on a figure-heavy game, put the objects' own bytes in the state list and read every source of chance: a time-dependent read in front of a fixed random sequence moves the sequence. The audit's list, picked from addresses that agreed, could not see it.
+- [local: R span entry count] Code added to e_blit before ny_r_begin moves the count original_m1 subtracts (59 -> 84): the replay's R compare caught it at every copy, and JNext's lockstep with R fixed per site could not.
+- [local: fit by size] Screen contention moves a copy's cost 5% by scene; a fit by rows and columns is unbiased over a stretch, and the carry takes up the rest.
+
 ## Friction
 
 - reuse: [local: existing exact-palette importer accepted this complete pass] No importer or engine change was needed.
