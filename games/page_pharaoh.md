@@ -1,10 +1,10 @@
 # Page and the Curse of the Pharaoh (T.D.F. micro-visions, 2015, 48K-128K)
 
 ## Next session
-Stage: 4 (owner's play, then Enhanced). Hardware: untested. v1.0 review build, not published, not pushed; not wired into `auto`, `engines.py` or a record: that comes when it goes upstream after the owner has played it.
+Stage: 4 (owner's play). Hardware: untested. v1.1 review build (default as v1.0, Enhanced added), not published, not pushed; not wired into `auto`, `engines.py` or a record: that comes when it goes upstream after the owner has played it.
 Inputs: `Page and the Curse of the Pharaoh (2015-01-23)(T.D.F. micro-visions)(48K-128K).tap`, MD5 5237d25deb5ff67f461c7de61e5d2df3. The start state is the tape loaded by SkoolKit's tap2sna to the game's USR 32000 (`-s 32000`), kept in the review run; the tape block's screen is the loading screen.
-Build: `page_pharaoh.build(start.z80, nex)`, then the review run's `work/pkg.py`, a TAP1 target of the plain tape.
-Pending: the owner's verdict on the mock-up; Enhanced stops there.
+Build: `page_pharaoh.build(start.z80, nex)` and `page_pharaoh_enh.build(start.z80, nex)` (set path in NEXCLASH_PAGE_SET), then the review run's `work/pkg.py` in `release-20261108b`, a TAP1 target of the plain tape.
+Pending: the owner's play; after it, a mock-up step for the improvement ideas in that run's NOTES.md.
 
 ## Facts
 - A later homebrew. A BASIC loader, a screen and one code block, unprotected, so TAP1 takes it: 407 bytes of the start state are not on the tape.
@@ -20,18 +20,21 @@ Layer 2, not sprites: each plot is repeated on the overlay by toggling (255 <-> 
 No figure colours chosen: white is the figures' own in the open. No outline.
 Ropes (846F) and pick-ups (87AB) are not on the overlay: they are thin, still things that keep the cell's ink as in the original.
 
-## Known issues
-- Pace: see the review run's NOTES.md. Frame locked: whole runs within 0.1%.
-- Ropes and pick-ups take a cell's ink, as in the original.
+Enhanced (`page_pharaoh_enh.py`, off by default, a menu option; the default mode's bytes unchanged): the Spec256 set by Ynicky, as it is. Layer 2 holds the 8-bit value the set's planes would hold: tiles overwrite; figures and items XOR value by value, which is what XOR on eight planes is. So the unmasked figures, the risk named at the mock-up, need no composed overlay: value FF is the transparent colour and the ULA shows the attribute's colour through it. Figures do mix with painted scenery where they overlap, exactly as on Spec256. The game's ULA+ palette is off in this mode, as Spec256 has none. The room's draw runs at 28 MHz in a K window, closed at the game's next CALL; figures in the set are stored in pre-shift order, expanded to screen order in the tables.
 
-## Evidence (review run runs/page_pharaoh/release-20261108, JNext 1.1.104; emulator and simulator only)
+## Known issues
+- Pace: see the review run's NOTES.md. Frame locked: whole runs within 0.32%, and Enhanced's are in the same range.
+- Ropes and pick-ups take a cell's ink, as in the original (default mode).
+- Enhanced: figures mix with painted scenery, as on Spec256 itself. A set colour on exactly the transparent value moves one blue step.
+
+## Evidence (review run runs/page_pharaoh/release-20261108b for Enhanced, release-20261108 for the default, JNext 1.1.104; emulator and simulator only)
 Replay with R compared at every hook, ABI, deliberate negatives, pace over five levels, soak, flicker and the real loader: in that run's NOTES.md. Levels other than the first are reached by a test poke.
 
 ## Hardware checklist
 Nothing has run on a Next. To check: ULA+ on the core (the palette above), start-up from the tape through the loader, keyboard, Kempston and Sinclair, AY music, a death, a level change, game over and the menu, both cheats, a 1MB Next (top bank 47).
 
 ## Technique use
-- patch.pace-limiter: used: one K window, round the room draw.
+- patch.pace-limiter: used: one K window, round the room draw, in both modes.
 - patch.preserve-r: used: R compared at every hook.
 - patch.restore-speed: used: the incoming clock comes back after every hook.
 - patch.whole-altrom-image: used: Sinclair's ROM with veneers only.
@@ -42,6 +45,11 @@ Nothing has run on a Next. To check: ULA+ on the core (the palette above), start
 - [local: input phases] Two reads in an update at different phases of the frame cannot both be raced: a read near the frame boundary falls either side of it. A test-only copy that reads once an update gave lockstep at every update; applying input just after that read is then safe.
 - [local: frame-locked game] A game that waits for FRAMES needs no limiter round its plots: the wait takes up the time.
 
+- [local: unmasked XOR on values] XOR needs no masks on Layer 2 when the buffer holds the set's own 8-bit values: XOR on eight planes and XOR on the value are the same operation. Test a named risk before designing round it: the composed overlay this page's mock-up note asked for was not needed.
+- [local: K multiply saturates] hlib_mul8 saturates at 0xFFFF, so a K that looks too big has no effect at all: a long window showed no response to K until it came down below saturation.
+- [local: Layer 2 LDI at column 31] LDI's DE carries out of column 255 into the next row: a tile at the right edge needs its last byte by hand. The whole-picture replay model caught it; hook registers and RAM alone did not.
+- [local: negative aimed at a path the recording never takes] "XOR made plain" mutated the items' loop, which never undraws in the recording, and passed the replay. Aim each negative at the path the recording runs, and a MISSED one is a finding about the negative or the recording.
+
 ## Friction
 - reuse: [none: the shared libraries and Game Over's hook structure were enough]
 - retries: [local: pace start keys] A start key still held when play begins reads as input. Keep it short.
@@ -51,3 +59,4 @@ Nothing has run on a Next. To check: ULA+ on the core (the palette above), start
 
 ## Stage log
 - 2026-11-08 Stage 3: engine, proofs, review build, mock-up for Enhanced; waiting for the owner's play.
+- 2026-11-08 Stage 3: Enhanced built on the same review branch, Spec256 colours faithfully; proofs in release-20261108b; waiting for the owner's play.
