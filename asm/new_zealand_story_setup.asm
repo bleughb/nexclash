@@ -44,7 +44,7 @@ setup:
     out (0x57),a
     djnz .h
     IF BACKDROP
-bdfill:                         ; alt ROM image 1 0x3300-0x3FFF = page 82 0x1300-0x1FFF (backdrop.asm)
+bdfill:                         ; alt ROM image 1 0x34C0-0x3FFF = page 82 0x14C0-0x1FFF (backdrop.asm)
     INCBIN "bdfill.bin"
     nextreg 0x12,42             ; Layer 2 at 16K bank 42 (pages 84-93), 320x256, hidden until a backdrop is drawn
     nextreg 0x70,0x10

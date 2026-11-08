@@ -11,9 +11,9 @@ Three stages, as the published patch (github.com/jattree/nxc, v1.2; v1.3 = + the
      replaces the game's LD-BYTES entry (bank 1 0x11EA, copied to 0x43AF), so a world load reads RAM, not the tape.
   2. colour (nexclash/new_zealand_story_paint.py): tilemap scenery from each level's map and char set, every figure
      a painted 4-bit sprite program; hooks (asm/new_zealand_story_hooks.asm) in alt ROM image 1 0x2000-0x3FFF, the
-     1.1 speed pass in them (drawing at 28 MHz, a PAL-line cap before the player update); "Smooth scrolling" toggle.
+     1.1 speed pass in them (drawing at 28 MHz; before the player update a wait for the original's time, capped); "Smooth scrolling" toggle.
   3. "Backdrops" toggle (v1.2): Layer 2 backdrops behind the sky (nexclash/new_zealand_story_backdrops.py; original
-     tiles by Jon Attree, assets/new_zealand_story/backdrops), asm/new_zealand_story_backdrop.asm at alt ROM 0x3300.
+     tiles by Jon Attree, assets/new_zealand_story/backdrops), asm/new_zealand_story_backdrop.asm at alt ROM 0x34C0.
 The hooks are assembled at build time with the pinned sjasmplus (their tables come from the tapes; herbert does the
 same), so there is no hook hex in the profile and no asm2profile check.
 
@@ -69,7 +69,7 @@ SITES = {0xA397: ('cd2ec2', 'h_paced_player'), 0xA388: ('cd14d8', 'h_fast_scroll
          0xA200: ('f33100', 'h_title'), 0xDDCC: ('ebd5d9', 'h_plot'),
          0xDAC4: ('2100e7', 'bd_copy'), 0xA404: ('f5c5d5', 'bd_irq'), 0xA300: ('cd48a9', 'bd_ready'),
          0xA394: ('cd5da7', 'bd_pre')}     # the last four: Backdrops only
-BD_ORG = 0x3300
+BD_ORG = 0x34C0
 VARIANTS = (('sprites', 0, 0), ('smooth', 1, 0), ('backdrops', 0, 1), ('smooth_backdrops', 1, 1))
 TOGGLES = {'smooth': 'Smooth scrolling', 'backdrops': 'Backdrops'}
 
@@ -137,7 +137,7 @@ def assemble(src, out, defs, wd, raw_defs=None):
         s = s.replace('%s = %d' % (k, 1 if k == 'STAGEF' else 0), '%s = %d' % (k, v), 1)
     g = os.path.join(wd, 'gen_' + out + '.asm')
     open(g, 'w').write(s)
-    r = subprocess.run([_sjasm(), '--nologo', '--msg=war', '--lst=%s.lst' % out, g], cwd=wd, capture_output=True, text=True)
+    r = subprocess.run([_sjasm(), '--nologo', '--msg=war', '--inc=' + ASM, '--lst=%s.lst' % out, g], cwd=wd, capture_output=True, text=True)
     if r.returncode:
         raise RuntimeError('sjasmplus %s:\n%s' % (src, r.stdout + r.stderr))
     syms = {}
@@ -322,11 +322,11 @@ def variant(wd, smooth=0, bd=0, neg=None):
     from . import new_zealand_story_backdrops as BD
     bdpages, bdinfo = BD.layout()
     k = syms['speed_irq_original'] - syms['h_irq'] - (3 if smooth else 0)   # where the smooth build has its JP h_irq_smooth
-    assert k == 49, k
+    assert k == 63, k
     open(os.path.join(wd, 'bd_layout.inc'), 'w').write(BD.layout_inc(bdinfo, k))
     bdefs = {n: 1 for n in ('NEG_SCROLL', 'NEG_LEVEL') if neg == n}
     bcode, bsyms = assemble('new_zealand_story_backdrop.asm', 'backdrop', bdefs, wd)
-    assert bsyms['bd_start'] == BD_ORG and BD_ORG + len(bcode) <= 0x4000
+    assert bsyms['bd_start'] == BD_ORG and BD_ORG + len(bcode) <= 0x3D00   # 0x3D00-0x3DFF: no code (DivMMC automap)
     o = BD_ORG - 0x2000
     assert len(code) <= o and not any(img[o:o + len(bcode)])
     img[o:o + len(bcode)] = bcode
