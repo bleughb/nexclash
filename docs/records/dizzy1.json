@@ -73,7 +73,7 @@
   },
   "sprites": {
    "file": "dizzy1_sprites.nex",
-   "md5": "07d09c8079f46fbeaa5e8a15563f3b10"
+   "md5": "953cf4e72239b1450c3923e1aeb357cb"
   }
  },
  "repro": [],
@@ -84,24 +84,24 @@
  "status": {
   "title": "Dizzy: The Ultimate Cartoon Adventure (Dizzy 1)",
   "engine_col": "dizzy1 (dizzy_ultimate_cartoon_adventure.md)",
-  "build": "dizzy1_sprites.nex 07d09c80 (2026-11-07: hooks restore the caller's CPU speed, lib/hlib_speed.asm, three latches; was 6ac7a3d6, earlier fb4cb148: Dizzy = hardware sprites in front; every other figure on Layer 2 via a 1-bit shadow screen; solid: enclosed paper black; Dean's painted colours (633 graphics bytes; paper paintable: outlines), items pulse as the original; HUD and room tiles on the ULA; altrom + shadow pages at slot 3; plots at 28 MHz)",
+  "build": "dizzy1_sprites.nex 953cf4e7 (2026-11-08: 1.0's pace with the caller's speed kept: the speed latch is each hook's first instruction (51 T at the caller's clock) and the collision read routine runs whole at 28 MHz; was 07d09c80: hooks restore the caller's CPU speed, three latches; before that 6ac7a3d6, earlier fb4cb148: Dizzy = hardware sprites in front; every other figure on Layer 2 via a 1-bit shadow screen; solid: enclosed paper black; Dean's painted colours (633 graphics bytes; paper paintable: outlines), items pulse as the original; HUD and room tiles on the ULA; altrom + shadow pages at slot 3; plots at 28 MHz)",
   "software": "RZX IDENTICAL with the painted colour map (registers, memory, ULA ^ shadows, Layer 2, Dizzy sprite vs plotter), 55 unit cases + 11 negative controls PASS",
   "hardware": "83ea050d (default colours) works on a real Next, looks perfect (Dean, 2026-10-14); fb4cb148 = 38e1a491 drawn identically (only never-drawn paper nibbles differ), untested",
   "next": "hardware test of fb4cb148 and of the outlined painting (dizzy1_sprites_painted.nex 79218527, verify + unit PASS)"
  },
  "checked": {
   "deps": {
-   "asm/dizzy1_hooks.asm": "5f988b4555b77432",
+   "asm/dizzy1_hooks.asm": "caebf0627525fe89",
    "docs/profiles/dizzy1_colours.json": "55c7299b572b23bc",
-   "docs/profiles/dizzy1_ultimate_cartoon_adventure.json": "6e1ff8993d938b78",
-   "nexclash.py": "9028c4ca12045d70",
+   "docs/profiles/dizzy1_ultimate_cartoon_adventure.json": "efca50d5f71191d0",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/analyse.py": "5bdd8b073cc95624",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
-   "nexclash/dizzy1.py": "d16c6fa2f3a2c06c",
+   "nexclash/dizzy1.py": "a006bd3b4b619e3e",
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "00d01102bda98ad5",
+   "nexclash/engines.py": "2a90481848696085",
    "nexclash/evidence.json": "a6c823114223e2c3",
    "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/machine.py": "659903f13de0fcee",
@@ -116,24 +116,24 @@
    "nexclash/verify.py": "3dcc48bdab8bd67b",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "d00751cfd570a625",
+   "recipe": "24cc9bfa639ee561",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-07"
  },
  "verified": {
   "deps": {
-   "asm/dizzy1_hooks.asm": "5f988b4555b77432",
+   "asm/dizzy1_hooks.asm": "caebf0627525fe89",
    "docs/profiles/dizzy1_colours.json": "55c7299b572b23bc",
-   "docs/profiles/dizzy1_ultimate_cartoon_adventure.json": "6e1ff8993d938b78",
-   "nexclash.py": "9028c4ca12045d70",
+   "docs/profiles/dizzy1_ultimate_cartoon_adventure.json": "efca50d5f71191d0",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/analyse.py": "5bdd8b073cc95624",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
-   "nexclash/dizzy1.py": "d16c6fa2f3a2c06c",
+   "nexclash/dizzy1.py": "a006bd3b4b619e3e",
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "00d01102bda98ad5",
+   "nexclash/engines.py": "2a90481848696085",
    "nexclash/evidence.json": "a6c823114223e2c3",
    "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/machine.py": "659903f13de0fcee",
@@ -148,7 +148,7 @@
    "nexclash/verify.py": "3dcc48bdab8bd67b",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "d00751cfd570a625",
+   "recipe": "24cc9bfa639ee561",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-07"

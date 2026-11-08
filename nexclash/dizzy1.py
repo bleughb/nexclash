@@ -437,13 +437,13 @@ SPB = 15                           # sprite patterns: bank 15 (pages 30-31), upl
 QUADS = ((0, 0), (16, 0), (0, 16), (16, 16))   # TL, TR, BL, BR = sprites 0-3
 P2LEN, DZLEN = 9663, 4760          # plane: plotter 2 graphics 43485-53147, Dizzy 24290-29049
 HOOK_RAM = (0x5B40, 0x5BC0)        # variables + hook stack (printer buffer, never touched by the game)
-HSTK_MIN = 0x5B6A + 18             # lowest SP allowed in a hook (variables end at 0x5B69 + an interrupt's room)
+HSTK_MIN = 0x5B6B + 18             # lowest SP allowed in a hook (variables end at 0x5B6A + an interrupt's room)
 TAIL_ADDR = 0x5B00                 # never touched by the game (RZX scan); the plain build uses it too
 PROFILE = os.path.join(_HERE, '..', 'docs', 'profiles', 'dizzy1_ultimate_cartoon_adventure.json')
 SITES = ((57983, 'cb83326de1', 'e_p2'), (58076, '7e4f1a', 'e_p2w'), (58113, '326de1', 'e_dz'),
          (58182, '1aae77', 'e_dw'),
-         (58702, 'f5cd3be5f1', 'e_at'), (58712, 'cd3be57ec9', 'e_ar'), (60244, '7ee6f0e1c1c9', 'e_c1'),
-         (60251, '7ee60fe1c1c9', 'e_c2'), (58634, 'dd21d65c', 'e_wipe'), (58666, '21a058', 'e_wipea'),
+         (58702, 'f5cd3be5f1', 'e_at'), (58712, 'cd3be57ec9', 'e_ar'),
+         (60228, 'c5e53a7fe74f0600a7ed42cb393807097ee6f0e1c1c9097ee60fe1c1c9', 'e_col'), (58634, 'dd21d65c', 'e_wipe'), (58666, '21a058', 'e_wipea'),
          (55935, 'dd7e0bfe00', 'e_f3'), (57095, 'dd4e0b', 'e_f7'))
 # bytes the hooks rely on: continuations, the attribute routine run as a copy (58683), the row
 # helper and XOR mode the game sets, every caller of plotter 2 (KEEP decisions are return addresses)
@@ -453,7 +453,10 @@ FACTS = ((57988, 'ed436e'), (58116, 'cb3b30'), (58079, 'a91213'), (58010, 'abe1'
          (55938, 'fe0028'), (57098, 'cb2106'), (58546, 'cd7fe2'), (62670, 'cd7fe2'), (62691, 'cd7fe2'),
          (62736, 'cd7fe2'), (60746, 'cd7fe2'), (60698, 'c37fe2'), (60723, 'c37fe2'), (54805, 'cd7fe2'),
          (54958, 'cd7fe2'), (59488, 'cd01e3'), (59515, 'cd01e3'))
-CONT = {60244: 60247, 60251: 60254, 55935: 55938, 57095: 57098}   # segment sites; the rest: to RET
+CONT = {55935: 55938, 57095: 57098}   # segment sites; the rest: to RET
+DEEP = {}                             # sites whose pair runs to a RET deeper in the stack (offset of its address)
+COLL = 60228                          # the collision read routine (hooked whole)
+ENTRY = {'speed': 0, 'sel': 0x07}     # NR 7 and the 0x243B selection a hook is entered with (unit tests vary them)
 INTERIORS = {a + k for a, old, s in SITES for k in range(1, 3)}  # bytes 2-3 of each JP
 
 
@@ -880,7 +883,7 @@ def run_pair(patch, alt, mem, regs, model, site, check_int=True, limit=2000000, 
     Returns (orig sim, patched sim, failures, original writes)."""
     from skoolkit.simulator import Simulator, R2
     fails = []
-    sp0 = regs[12]
+    sp0 = (regs[12] + DEEP.get(site, 0)) & 0xFFFF
     ret = mem[sp0] | mem[(sp0 + 1) & 0xFFFF] << 8
     stop = stop_at if stop_at is not None else CONT.get(site)
     # original
@@ -921,7 +924,8 @@ def run_pair(patch, alt, mem, regs, model, site, check_int=True, limit=2000000, 
     sp_ = Simulator(pm, {})
     P = sp_.registers
     P[:] = regs
-    nr = {0x07: 0}
+    nr = {0x07: ENTRY['speed']}
+    nr.update(ENTRY.get('nr', {}))
 
     def setreg(reg, val):
         nr[reg] = val
@@ -945,7 +949,7 @@ def run_pair(patch, alt, mem, regs, model, site, check_int=True, limit=2000000, 
         setreg(pm[(p + 2) & 0xFFFF], P[0])
         P[15] = R2[P[15]]; P[24] = (p + 3) & 0xFFFF; P[25] += 17
     class _Ports:                       # NextREG reads (0x243B select, 0x253B read): the hooks' speed latch
-        sel = None
+        sel = ENTRY['sel']              # setup and every hook leave NR 7 selected
 
         def read_port(self, registers, port):
             if port == 0x253B and self.sel is not None:
@@ -956,7 +960,8 @@ def run_pair(patch, alt, mem, regs, model, site, check_int=True, limit=2000000, 
         def write_port(self, registers, port, value, offset=0):
             if port == 0x243B:
                 self.sel = value
-    sp_.set_tracer(_Ports())
+    ports = _Ports()
+    sp_.set_tracer(ports)
     sp_.after_ED[0x91], sp_.after_ED[0x92] = nn, na
     ops = sp_.opcodes
     keep = [P[i] for i in (10, 11, 14, 16, 17, 18, 19, 20, 21, 22, 23, 26, 27)]
@@ -980,7 +985,7 @@ def run_pair(patch, alt, mem, regs, model, site, check_int=True, limit=2000000, 
             break
         t0 = P[25]
         ops[pm[pc]]()
-        if nr.get(0x07, 0) == 3:
+        if nr.get(0x07, 0) == 3 and ENTRY['speed'] == 0:
             fast[0] += P[25] - t0             # run at 28 MHz (counted as T / 8 on the Next)
         n += 1
         if check_int and pc < 0x4000:
@@ -998,8 +1003,10 @@ def run_pair(patch, alt, mem, regs, model, site, check_int=True, limit=2000000, 
             break
     if pm.cur != GPG:
         fails.append(('slot 3 not given back', site, pm.cur))
-    if nr.get(0x07, 0) != 0:
-        fails.append(('left at 28 MHz', site))
+    if nr.get(0x07, 0) != ENTRY['speed']:
+        fails.append(('left at NR 7 = %d, entered at %d' % (nr.get(0x07, 0), ENTRY['speed']), site))
+    if ports.sel != 0x07:
+        fails.append(('0x243B left selecting %r, not NR 7' % ports.sel, site))
     model.hram = bytes(list.__getitem__(pm, a) for a in range(*HOOK_RAM))
     so.gw = gw
     so.t = so.registers[25] - regs[25]
@@ -1128,7 +1135,7 @@ def check_l2(model, f, full=False, bytes_=None):
             return
 
 
-FORK = {P2_ENTRY, DZ_ENTRY, 58702, 58712, 60244, 60251, WIPE, WIPE_ATTR, 55935, 57095}
+FORK = {P2_ENTRY, DZ_ENTRY, 58702, 58712, COLL, WIPE, WIPE_ATTR, 55935, 57095}
 
 
 def verify(patch, rzx, z80, stop=None, collect=0, progress=None):
@@ -1224,7 +1231,7 @@ def verify(patch, rzx, z80, stop=None, collect=0, progress=None):
                     if st['busy'] is None and pc in FORK:
                         event(pc, R, mem)
                         if pc not in CONT:
-                            sp0 = R[12]
+                            sp0 = (R[12] + DEEP.get(pc, 0)) & 0xFFFF
                             st['busy'] = (G(mem, sp0) | G(mem, sp0 + 1) << 8, (sp0 + 2) & 0xFFFF)
                         else:
                             st['busy'] = (CONT[pc], R[12])
@@ -1444,11 +1451,20 @@ def unit_tests(patch, states, z80=None):
         regs[7] = 200                          # L > 191: 58683 wraps outside the attributes
     run('attribute read outside the attributes', st, attr_off)
     run('attribute read over a figure cell', st, lambda m, r, md: [md.pages[PG].__setitem__(0x1800 + i, 0x45) for i in range(768)])
-    for site in (60244, 60251):
-        st = _pick(states, site)
-        run('collision read over figure bits (%d)' % site, st,
-            lambda m, r, md: _seed(md, ((r[6] << 8 | r[7]) - 0x4000) % 6144, 0xFF))
-        run('collision read off the screen (%d)' % site, st, lambda m, r, md: (r.__setitem__(6, 0x80)))
+    st = _pick(states, COLL)
+    for par in (0, 1):                         # (59263) even: AND 240 (60244), odd: AND 15 (60251)
+        def colrd(v, par=par):
+            def f(m, r, md):
+                m[59263] = (m[59263] & 0xFE) | par
+                if v == 'fig':
+                    hl = ((r[6] << 8 | r[7]) - ((m[59263] + 1) >> 1)) & 0xFFFF   # HL - C + C / 2: the byte read
+                    if 0x4000 <= hl < 0x5800:
+                        _seed(md, hl - 0x4000, 0xFF)
+                else:
+                    r[6] = 0x80
+            return f
+        run('collision read over figure bits (%s)' % ('AND 15' if par else 'AND 240'), st, colrd('fig'))
+        run('collision read off the screen (%s)' % ('AND 15' if par else 'AND 240'), st, colrd('off'))
 
     # 4. effects with figures inside their rectangle, every branch, run to the end of the effect
     def fx(kind):
@@ -1571,11 +1587,10 @@ def unit_tests(patch, states, z80=None):
 
     # 7. negative controls on the hooks
     S = patch.syms
-    cv = patch.rom_code.index(b'\xcd' + S['virt'].to_bytes(2, 'little'), S['e_c1'] - ROM_ORG)
+    cv = patch.rom_code.index(b'\xcd' + S['virt'].to_bytes(2, 'little'), S['e_col'] - ROM_ORG)
     nv = Dizzy1Patch(colours={}, edit={ROM_ORG + cv: b'\x7e\x00\x00'})          # raw read, no virtual
-    st = _pick(states, 60244)
-    run('no virtual read', st, lambda m, r, md: _seed(md, ((r[6] << 8 | r[7]) - 0x4000) % 6144, 0xFF),
-        p=nv, want_fail=True)
+    st = _pick(states, COLL)
+    run('no virtual read', st, colrd('fig', 0), p=nv, want_fail=True)
     nf = Dizzy1Patch(colours={}, edit={S['fold']: b'\xc9'})                     # fold does nothing
     run('no fold before the type-7 rotator', s7, fx(None), stop_at=EFFECT_END, p=nf, want_fail=True)
     run('no fold at the room wipe', sw, fx(None), p=nf, want_fail=True)
@@ -1591,6 +1606,43 @@ def unit_tests(patch, states, z80=None):
     npat.prepare(_mem(z80).__getitem__ if z80 else (lambda a: dz[2][a]))
     npat.patterns = bytes(16384)
     run('Dizzy patterns left out', _pick(states, DZ_ENTRY, lambda s: ret(s) == 59518), p=npat, want_fail=True)
+
+    # 8. the caller's speed: every hook kind entered at 7, 14 and 28 MHz leaves at that speed; a moved 0x243B
+    # selection keeps the latch's last speed and selects NR 7 again (DZ_SPEED_IN / spdfix)
+    kinds = (('plotter 2', p2c), ('Dizzy plotter', dz), ('attribute read', _pick(states, 58712)),
+             ('collision read', _pick(states, COLL)),
+             ('room wipe', sw), ('attribute wipe', swa))
+
+    def at(speed, sel=0x07, nrs=None):
+        def f(name, st, prep=None, stop_at=None, p=None, want_fail=False):
+            ENTRY.update(speed=speed, sel=sel, nr=nrs or {})
+            try:
+                run(name, st, prep, stop_at, p, want_fail)
+            finally:
+                ENTRY.update(speed=0, sel=0x07, nr={})
+        return f
+    for sp in (1, 2, 3):
+        for name, st in kinds:
+            at(sp)('%s entered at NR 7 = %d' % (name, sp), st)
+    at(1)('type-3 effect entered at NR 7 = 1', s3, fx(0), stop_at=EFFECT_END)
+    at(1)('type-7 rotator entered at NR 7 = 1', s7, fx(None), stop_at=EFFECT_END)
+
+    def latch(v):
+        def f(mem, regs, model):
+            h = bytearray(model.hram)
+            for a in (0x5B66, 0x5B67, 0x5B68):           # V_SPDP / V_SPDD / V_SPDH: the last speed
+                h[a - HOOK_RAM[0]] = v
+            model.hram = bytes(h)
+        return f
+    moved = at(1, sel=0x53, nrs={0x53: GPG})            # NR 0x53 = 11: not NR 7's layout
+    for name, st in kinds:
+        moved('%s with 0x243B moved: last speed kept' % name, st, latch(1))
+    sf = patch.rom_code.index(b'\xe6\xcc\x20', S['spdfix'] - ROM_ORG)          # AND 0xCC / JR NZ,.sel
+    nsel = Dizzy1Patch(colours={}, edit={ROM_ORG + sf + 2: b'\x00\x00'})      # moved selection read as NR 7
+    moved('moved selection taken as NR 7', _pick(states, COLL), latch(1), p=nsel, want_fail=True)
+    t2 = patch.rom_code.index(b'\x3a' + (0x5B66).to_bytes(2, 'little'), S['t_p2'] - ROM_ORG)
+    n35 = Dizzy1Patch(colours={}, edit={ROM_ORG + t2: b'\x3e\x00\x00'})       # t_p2 exits at a fixed 3.5 MHz
+    at(1)('plotter 2 exit at a fixed 3.5 MHz', p2c, p=n35, want_fail=True)
     return c, exs
 
 

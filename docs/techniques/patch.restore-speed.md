@@ -62,6 +62,8 @@ One latch byte per hook level, in hook RAM.
 |---|---|---|---|---|
 | a speed option resets after the first draw | fixed 3.5 MHz exit | every_site, clock 1-3 | the latch | - |
 | outer hook finishes at 3.5 MHz | nested hook shares the latch | read the hooks | a latch per level | DI around |
+| no-frame-sync game 1-2% slower | 97 T latch at 3.5 MHz per call | pace; calls per update | stack-free NR 7 read first (51 T), latch at 28 MHz; hook whole small routines (Dizzy 1) | - |
+| a hook body at 3.5 MHz | no switch at all | calls per update | switch, skip idle calls (Lunar Jetman) | - |
 
 ## Verification
 Every-site matrix (four clocks per site) in the engine's unit tests. Negative control: a forced 3.5 MHz
