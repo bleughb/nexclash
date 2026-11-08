@@ -44,7 +44,8 @@ The owner's rule (2026-11-08): no mock-up or approval to convert a Spec256 set. 
 - [local: fixture] Pace fixture: the handler does not step the RND seed (BA4B NOP), lives do not fall, part 2 skips the code screen.
 
 - [local: find by pointers] A graphic search over the whole snapshot finds 1,028 matches; only those the code points at, or that a replay really plots, are graphics: 166.
-- [local: a negative that passes] A broken build that changes only the clipped-row path was not caught over 3,000 frames: the case was not reached. Each negative has to hit a path the recording reaches; a pattern that finds the first of two copies of the code changes the rarer one.
+- [local: a negative that passes] A broken build that changes only the clipped-row path of a painted figure was not caught over 24,000 frames: the path is never reached in the recordings, so it stays untested and the notes say so. A pattern that finds the first of two copies of the code changes the rarer one: check what a negative really changed.
+- [local: which way to miss] With K 89 the whole was on the original's pace and the worst stretch +6.7%; Enhanced takes K 84, a little faster all round, because the rule allows faster where the original lags and never slower. The default's bytes keep K 89.
 
 ## Friction
 - reuse: [none: the Game Over engine and its run scripts were the base]
