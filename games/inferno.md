@@ -1,13 +1,13 @@
 # Inferno
 
 ## Next session
-Stage: 2 (continued)    Branch: main (m3a + hardware fix claude/inferno-m3-hw-bisect)
-State: copier window m3a PASS in the model. Hardware: m2 runs; first m3 crashed (hooks under the
-  stub register block, fixed); fixed m3 + window-only: run, speed and sound = plain (user).
+Stage: 2 (continued)    Branch: main (m3b from claude/inferno-copier-window-m3b)
+State: copier window m3b PASS in the model (8F95 work in the window's waits). Hardware: m2/m3 run,
+  speed and sound = plain (user); m3b diagnostic not yet run.
 Inputs: specnext/reference/inferno/    Start: specnext build/CONTINUE_copier_window.md.
-Read: "Copier window"; inferno.py run_cw_window/copier_window_update_checks; asm cap_in/cw_tout/cw_wait.
-Next: (3b) 8F95 work in cw_wait (coroutine design in the handover); shrink actor hooks; JNext pace
-  (no blitter there) + user hardware results of both diagnostics. Then the earlier items: live-table
+Read: "Copier window"; inferno.py run_cw_window/run_cw_frame/copier_window_update_checks; asm cw_work, wk_*.
+Next: m3b hardware result; busy-beeper updates (10 %: no slice, work ~5 ms at 8F95); shrink actor
+  hooks; JNext pace. Then the earlier items: live-table
   scan/driver at the 8EF9 gate, runtime exact dispatch and duplicate indices, complete
   pattern/frame state, protected uploads. Keep sprites disabled.
 Gate: zero frame slips and the original 9907 time per update with sound kept (replaces 10 ms).
@@ -62,8 +62,8 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
 ## Hardware checklist
 - Plain level-1 Inferno.nex: try CSpect first, then the Next; check title/text to gameplay,
   controls, scrolling, sound, death/restart and the shop. Boot is software-checked only.
-- Inferno_copier_window_diagnostic.nex (m2, window only) and Inferno_copier_window_m3_diagnostic.nex
-  (hooks + window; specnext build/; NOT releases): play each beside plain Inferno.nex for a minute
+- Inferno_copier_window_diagnostic.nex (m2, window only), Inferno_copier_window_m3_diagnostic.nex
+  (hooks + window) and Inferno_copier_window_m3b_diagnostic.nex (+ 8F95 work; specnext build/; NOT releases): play each beside plain Inferno.nex for a minute
   of level 1: same speed (enemies, scrolling, stopwatch), same beeper sound (shots, explosions,
   pickups: pitch, length), no hang at the first gameplay frame (m3: ~1 ms one-off calibration), no
   extra border stripes. Report core/video mode.
@@ -148,19 +148,14 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
   page 80 byte 0 = IM2 JR offset to cw_irq (adds the no-op ISR: 94 T, 10 M1). Cell 415's OUT after
   the epilogue. X accumulates. Model 1,854 states: OUT -24..+56 T (cells 0/1 later), 9907 -25..+43 T.
   Full recordings: 88,187 updates, an IRQ in every window, free >= 14.6 ms. m2 NEX MD5 4f7fef40...
-- Milestone 3a: hooks 8F7C/959B/96A1 time themselves on the CTC (sync to an edge at entry, next
-  edge at exit, constant path out; helpers cw_tin/cw_tout in page 80): 8F7C sets CW_X, actors add;
-  R = entry R + M1 constant. DI hooks clear NextReg $C8 after the speed switch, read it last: a
-  pulse that came and went = the original ISR (R+10, X-94); the window entry likewise (the m2 0.09 %).
-  cw_cal (first window) times 64 speed-switch pairs: CW_KT corrects every NEXTREG 7,x constant.
-  8F7C map copy by zxnDMA: hook 3.1 k -> 1.1 k T; actor hook 252 T. Update model 8F7C->9907,
-  1,855 states: X error -12..+17 T, X 1,444-8,905 T; 9907 -52..+42 T; 1,485 IRQ injections (550 lost and
-  compensated; original IRQ anchored at the same game instruction, as an RZX: level code reads R);
-  7 new controls; fast-switch bound (KT -38) PASS. Gap: a pulse starting in the ~6 T between
-  a hook's last $C8 read and the IRQ sample after EI + NEXTREG 7,0 (model: 24 T) is lost (~0.07 %
-  of updates; none with 28 MHz switches). Hardware: m3 9baec641... crashed (green bars): the stub
-  writes 20 register bytes at rom_end 3945, over cap_in; hooks now from 3960, build checks hook
-  bytes after a simulated boot. Fixed m3 68340edf..., window-only 692a8d92...: run, pace/sound = plain.
+- Milestone 3a: hooks 8F7C/959B/96A1 time themselves on the CTC (cw_tin/cw_tout; 8F7C sets CW_X,
+  actors add), restore R and count a $C8 pulse lost under DI as the original ISR (R+10, X-94; window
+  entry too); cw_cal measures speed switches; 8F7C map copy by zxnDMA. Gap ~6 T per hook exit.
+  Stub register-block crash fixed (hooks >= rom_end+20). m3 68340edf...: pace/sound = plain (§7).
+- Milestone 3b: prepare_frame + render_textmap = page-69 coroutine run in cw_wait slices (>= 12
+  ticks ahead, ends 9 before; poll per map cell; yield saves SP, no CALL; DI, $C8 as cw_irq), finished
+  at 8F95 (wk_hook, R restored). Gate 1,855 states: 0 failures, page 14/69/68 = run_frame; work in
+  the window 88 %, 8F95 168 T then; no slice in 10 % (busy beeper): ~4.5-7 ms at 8F95. NEX 2ca871c6...
 - Never-read rule: window CALLs/IRQ pushes leave bytes only in the 4 below the copier's SP, which
   9907's PUSH DE / PUSH HL overwrite first (checked by running them; 9907 = D5 E5 in all 88,187).
 
@@ -203,7 +198,10 @@ Approved preview/model/contact-sheet hashes and recipes: specnext design/manifes
 build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 
 ## Lessons
-- [none: hardware results only]
+- [local: Inferno coroutine] A loop using SP as its data pointer yields without CALL (save SP + live
+  registers at poll points); per-cell polls cost ~1 kT, so the finishing path JRs over them.
+- [local: Inferno copied routine] A hand copy of an asm loop moved a label past ADD HL,HL: compare
+  every copied routine's results with the original's (run_frame caught it).
 - [doc BRIEFING A1] Hook code under the stub's register block (rom_end) is lost
   at boot; models without the stub cannot see it: compare hook bytes after a simulated boot.
 - [local: Inferno timed hooks] Calibrate tick-quantized constants over all CTC phases (5 phases left
@@ -290,11 +288,10 @@ build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 - detect.buffer-layout-producer: corrected: visible colour checks distinguish black-masked stale bitmap data.
 
 ## Stage log
+- 2026-11-08 (claude/inferno-copier-window-m3b): m3b: 8F95 work in cw_wait (coroutine); gate PASS.
 - 2026-11-08 (claude/inferno-m3-hw-bisect): m3 hardware crash = hooks under the stub register
   block; moved, guarded, post-boot hook-byte check; gate PASS; fixed m3 for hardware.
-- 2026-11-07 (claude/inferno-copier-window-m3): m3a: timed hooks, R, $C8, cw_cal, DMA; PASS.
-- 2026-11-07 (claude/inferno-copier-window-m2): m2: OUT replay, pad, window IRQs; PASS.
-- 2026-11-07 (claude/inferno-copier-window): m1: pacing/sound measured; translated head exact.
+- 2026-11-07 (claude/inferno-copier-window*): m1 pacing/head, m2 OUT replay/pad, m3a timed hooks; PASS.
 - 2026-11-07: exact rows profiled (timing FAIL); initialization pause/R; owned store/dispatch PASS.
 - 2026-11-05..07 (codex/inferno): loader, capture, textmap, frame/modal/queue, actor packing/fill,
   gated transfers, pinned sources, DDMA; checks PASS; cold/total timing FAIL (build/README.md).

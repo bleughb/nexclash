@@ -50,10 +50,10 @@
  "status": {
   "title": "Inferno",
   "engine_col": "inferno copier window (inferno.md)",
-  "build": "copier window milestone 3a: capture hooks timed on the CTC (X, R, lost-IRQ compensation, cw_cal, DMA map copy) + window; m2/m3 diagnostic NEXes; no hook work in the window, no sprites",
-  "software": "window-only model and update model 8F7C->9907 PASS on 1,854/1,855 states (OUT/9907 timing, R, RAM, IRQ injection anchored at game instructions, 14 controls); full-recording timeline",
-  "hardware": "fixed m3 (hooks + window) and window-only diagnostics run on the user's Next with speed and beeper sound matching plain Inferno.nex (2026-11-08); no sprites yet",
-  "next": "copier window milestone 3b: 8F95 work in cw_wait (coroutine); JNext pace; hardware results"
+  "build": "copier window milestone 3b: timed capture hooks + window + the 8F95 work (textmap compile) as a coroutine in the window waits, finished at 8F95; m2/m3/m3b diagnostic NEXes; no sprites",
+  "software": "update model 8F7C->9907->8F98 PASS on 1,855 states (OUT/9907 timing, R, RAM, page 14/69 = 8F95 work, IRQs incl. work slices and the 8F95 hook, 18 controls); window-only 1,854 PASS",
+  "hardware": "m3 and window-only run on the Next with speed and sound matching plain Inferno.nex (2026-11-08); m3b not yet run; no sprites",
+  "next": "m3b hardware result; busy-beeper updates (no slice); shrink actor hooks; JNext pace"
  },
  "checks": [
   "asm2profile:inferno"
@@ -2079,6 +2079,43 @@
     "file": "Inferno_copier_window_current_diagnostic.nex",
     "md5": "692a8d92f123bf2c8c4d7a623a3b251a",
     "hardware": "runs; speed and sound match plain Inferno.nex (user, 2026-11-08)"
+   }
+  },
+  "milestone3b": {
+   "scope": "8F95 work (prepare_frame + render_textmap) as a page-69 coroutine in cw_wait slices (CW_FINE 12 / CW_WKM 9 ticks), DI with $C8 counting, finished at 8F95 (wk_hook, R restored, lost pulse compensated); simulator, not hardware",
+   "sources": {
+    "nexclash/inferno.py": "e9e6eaa7e6beaf81f4341b2bd1e25c99",
+    "asm/inferno_hooks.asm": "c5ba3c3a56d48ffe19d29cc83f6ecf91",
+    "docs/profiles/inferno.json": "5ff30f770af534c552d70f76a3b64f5c"
+   },
+   "artifacts": "specnext/reference/inferno/build/copier_window.md §8, copier_window/cw_m3b_checks.json, cw_m3b_margin64.json, cw_m3b_build.json",
+   "checks": {
+    "window_only_states": 1854,
+    "update_states": 1855,
+    "failures": 0,
+    "update_d9907_T": [
+     -51,
+     45
+    ],
+    "work_done_in_window": 1626,
+    "work_resumed_at_8f95": 42,
+    "work_all_at_8f95": 187,
+    "slices": 17833,
+    "frame_8f95_added_T": [
+     168,
+     24700
+    ],
+    "irq_injections_update": 1815,
+    "irq_8f95_hook": 40,
+    "controls_update": "11 (3b: 37-40 each, every applicable state)",
+    "margin_64_phases_min_T": 108,
+    "level6_loading_prep_quick": "PASS",
+    "workflow": "gate --jobs 6"
+   },
+   "diagnostic_nex": {
+    "file": "Inferno_copier_window_m3b_diagnostic.nex",
+    "md5": "2ca871c6d19550055811fb35ec299bd4",
+    "boot_checks": "PASS (Sinclair, foreign ROM3, hook bytes after boot)"
    }
   }
  }
