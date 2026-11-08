@@ -25,6 +25,7 @@ Enhanced (`page_pharaoh_enh.py`, off by default, a menu option; the default mode
 ## Known issues
 - Pace: see the review run's NOTES.md. Frame locked: whole runs within 0.32%, and Enhanced's are in the same range.
 - Ropes and pick-ups take a cell's ink, as in the original (default mode).
+- Enhanced: the menu's icons stay grey: the overlay is hidden there, though the set paints them. Next round: show the overlay at the menu's first item plot, then prove it again.
 - Enhanced: figures mix with painted scenery, as on Spec256 itself. A set colour on exactly the transparent value moves one blue step.
 
 ## Evidence (review run runs/page_pharaoh/release-20261108b for Enhanced, release-20261108 for the default, JNext 1.1.104; emulator and simulator only)
@@ -49,6 +50,8 @@ Nothing has run on a Next. To check: ULA+ on the core (the palette above), start
 - [local: K multiply saturates] hlib_mul8 saturates at 0xFFFF, so a K that looks too big has no effect at all: a long window showed no response to K until it came down below saturation.
 - [local: Layer 2 LDI at column 31] LDI's DE carries out of column 255 into the next row: a tile at the right edge needs its last byte by hand. The whole-picture replay model caught it; hook registers and RAM alone did not.
 - [local: negative aimed at a path the recording never takes] "XOR made plain" mutated the items' loop, which never undraws in the recording, and passed the replay. Aim each negative at the path the recording runs, and a MISSED one is a finding about the negative or the recording.
+
+- [local: compare every screen with the set] Level frames against the set's emulator matched, so the menu wasn't looked at; its painted icons are missing. Sweep menus too, not only play.
 
 ## Friction
 - reuse: [none: the shared libraries and Game Over's hook structure were enough]
