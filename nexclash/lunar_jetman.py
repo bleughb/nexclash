@@ -18,6 +18,15 @@ STATE_PAGE = 26          # bank 13 lower: caches + graphic lists
 IDX_PAGE = 27            # figure graphic & 0x1FFF -> id + 1
 TP0 = 28                 # truck images, 6 per page (1280 bytes each)
 FP0 = 36                 # figure images, 16 per page (512 bytes each)
+OBJP = 0x0600            # state page: object n's four patterns at +4n (the figure pattern pool, patterns 20-127)
+REFS = 0x0700            # state page: pattern p's holders at +p
+PCACHE = 0x0800          # state page: the 16-bit tile id each 4-bit pattern holds (pattern p at +2p; 0 = unknown)
+WHERE = 0x0C00           # state page: tile id -> the pool pattern holding it (0 = none)
+STCODE = 0x0900          # state page: hook code (the profile's stcode block, asm ORG 0x8900)
+OTAB = 0x1C00            # state page: 0x6000-0x63FF -> object number (IX = OBJ0 + 24n) or 0xFF (objn)
+V_RR = 0x0026            # state page: the pool's round robin (0-127)
+FTID = 0x1000            # state page: figure graphic k's four tile ids at +8k
+TTID = 0x1800            # state page: truck graphic k's ten tile ids at +20k
 SPECCY = [0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x00, 0x03, 0xE0, 0xE7, 0x1C, 0x1F, 0xFC, 0xFF]
 WHITE_INKS = (7, 15)
 
@@ -35,6 +44,8 @@ SITES[0] = (34558, '0e00c9', None, 'h_new')
 SITES[4] = (34958, '0e00c9', None, 'h_tnew')
 SITE_OP = {'h_cls': 0xCD}
 STORE_NOPS = [34245, 34249, 34282, 34286, 34290, 34314, 34318, 34755, 34793]   # LD (HL),A figure XOR
+XOR_NOPS = [34244, 34248, 34281, 34285, 34289, 34313, 34317, 34754, 34792]     # XOR (HL) before each: its A only fed the
+# store, its flags are overwritten before any test (AND 7 at 34297): one M1 for one, so R is unchanged (plot check)
 PAINT_NOPS = [(34663, 0x72), (35127, 0x72), (35104, 0x77)]                    # object colour over cells
 INTERIORS = (34559, 34560, 34432, 34433, 34434, 34369, 34370, 34371, 34384, 34385, 34386, 34959, 34960,
              34012, 34013, 35750, 35751)
@@ -183,7 +194,9 @@ def build_data(m):
     figs, trucks = graphic_lists(m)
     pages = {}
     st = bytearray(8192)
-    # 0x0000: figure caches (NOBJ), 0x0020: truck caches (2); 0x0040: figure list; 0x0400: truck list
+    # 0x0000: object n's graphic id + 1 (NOBJ), 0x0022 / 0x0024: the trucks' last graphic, V_RR, 0x0030-0x0039 hook
+    # variables; 0x0040: figure list; 0x0400: truck list; then the pattern pool (OBJP, REFS, PCACHE, WHERE) and the
+    # tile ids (FTID, TTID): tile_ids()
     o = 0x40
     for p in figs:
         st[o:o + 2] = p.to_bytes(2, 'little'); o += 2
@@ -208,7 +221,34 @@ def build_data(m):
         pg = TP0 + k // 6
         pages.setdefault(pg, bytearray(8192))[(k % 6) * 1280:(k % 6) * 1280 + 1280] = pat
     assert max(pages) < 96 and FP0 + (len(figs) - 1) // 16 < 96 and TP0 + (len(trucks) - 1) // 6 < FP0
-    return bytes(st), {k: bytes(v) for k, v in pages.items()}, {'figs': figs, 'trucks': trucks}
+    info = {'figs': figs, 'trucks': trucks}
+    return tile_ids(st, pages, info), {k: bytes(v) for k, v in pages.items()}, info
+
+
+def tile_ids(st, pages, info):
+    """The state page with the tile id tables (FTID, TTID): one 16-bit id (from 1) per distinct 128-byte tile, so a
+    pattern that already holds a tile's bytes is not uploaded again (h_new / h_tnew, PCACHE)."""
+    st = bytearray(st)
+    st[OBJP:0x2000] = bytes(0x2000 - OBJP)      # the pool's tables empty (build_data_enh calls it again)
+    ids = {}
+    for k in range(len(info['figs'])):
+        o = (k % 16) * 512
+        for t in range(4):
+            i = ids.setdefault(bytes(pages[FP0 + k // 16][o + 128 * t:o + 128 * t + 128]), len(ids) + 1)
+            st[FTID + 8 * k + 2 * t:FTID + 8 * k + 2 * t + 2] = i.to_bytes(2, 'little')
+    for k in range(len(info['trucks'])):
+        o = (k % 6) * 1280
+        for t in range(10):
+            i = ids.setdefault(bytes(pages[TP0 + k // 6][o + 128 * t:o + 128 * t + 128]), len(ids) + 1)
+            st[TTID + 20 * k + 2 * t:TTID + 20 * k + 2 * t + 2] = i.to_bytes(2, 'little')
+    assert FTID + 8 * len(info['figs']) <= TTID and TTID + 20 * len(info['trucks']) <= 0x2000
+    assert WHERE + len(ids) < FTID and 0x40 + 2 * len(info['figs']) <= 0x400 and 0x400 + 2 * len(info['trucks']) < OBJP
+    st[REFS] = 128              # the 108 object + 20 truck pool entries all start on pattern 0
+    assert TTID + 20 * len(info['trucks']) <= OTAB
+    st[OTAB:OTAB + 0x400] = bytes([0xFF]) * 0x400
+    for n in range(NOBJ):
+        st[OTAB + OBJ0 + OBJSZ * n - 0x6000] = n
+    return bytes(st)
 
 
 RGB = [(0, 0, 0), (0, 0, 0xD7), (0xD7, 0, 0), (0xD7, 0, 0xD7), (0, 0xD7, 0), (0, 0xD7, 0xD7), (0xD7, 0xD7, 0), (0xD7, 0xD7, 0xD7),
@@ -277,6 +317,7 @@ class LunarJetmanPatch:
         self.rom_code = bytes.fromhex(h['rom'])
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
         self.stub_extra = bytes.fromhex(h['setup'])
+        self.stcode = bytes.fromhex(h['stcode'])           # hook code run from the state page (asm ORG 0x8900)
         dp = palette(False)
         i = self.stub_extra.find(dp)
         if i < 0:
@@ -311,6 +352,8 @@ class LunarJetmanPatch:
             self.sites.append((a, bytes.fromhex(old), bytes([SITE_OP.get(sym, 0xC3)]) + self.syms[sym].to_bytes(2, 'little')))
         for a in STORE_NOPS:
             self.sites.append((a, b'\x77', b'\x00'))
+        for a in XOR_NOPS:
+            self.sites.append((a, b'\xae', b'\x00'))
         for a, o in PAINT_NOPS:
             self.sites.append((a, bytes([o]), b'\x00'))
         self.extra_banks = {}
@@ -331,6 +374,11 @@ class LunarJetmanPatch:
             raise ValueError('printer buffer 0x5B00-0x5B7F is not empty')
         m0 = bytes(0x4000) + bytes(ram)
         self.state, self.pages, self.info = build_data_enh(m0, self.j256) if self.enhanced else build_data(m0)
+        st = bytearray(self.state)
+        if any(st[STCODE:STCODE + len(self.stcode)]) or STCODE + len(self.stcode) > WHERE:
+            raise ValueError('state page code does not fit at 0x%04X' % STCODE)
+        st[STCODE:STCODE + len(self.stcode)] = self.stcode
+        self.state = bytes(st)
         for a, old, new in self.sites:
             ram[a - 0x4000:a - 0x4000 + len(new)] = new
         if self.encrypted:
@@ -999,7 +1047,7 @@ def build_data_enh(m, path=None):
             for sh_ in (4, 0):
                 if bool((a[i] >> sh_) & 15) != bool((b[i] >> sh_) & 15):
                     raise ValueError('Enhanced image changes the silhouette (page %d +%d)' % (pg, i))
-    return st, {k: bytes(v) for k, v in pages.items()}, info
+    return tile_ids(st, pages, info), {k: bytes(v) for k, v in pages.items()}, info
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1015,8 +1063,9 @@ def build_data_enh(m, path=None):
 # (the decrypted game at 0x8000) the patch is applied to; the shipped build starts at the decrypter.
 # ---------------------------------------------------------------------------------------------
 
-NEGATIVES = ('xoff', 'img', 'idx', 'keepstore', 'keeppaint', 'nobright', 'noslot', 'nocls', 'pal', 'rom3left', 'speed35')
-NEGATIVES_ENH = ('pal', 'img', 'idx', 'nobright', 'xoff', 'rom3left')
+NEGATIVES = ('xoff', 'img', 'idx', 'keepstore', 'keeppaint', 'nobright', 'noslot', 'nocls', 'pal', 'rom3left', 'speed35',
+             'tid', 'evict', 'r1', 'xorlive')
+NEGATIVES_ENH = ('pal', 'img', 'idx', 'nobright', 'xoff', 'rom3left', 'tid', 'evict')
 
 
 def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
@@ -1029,17 +1078,21 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
     from skoolkit.simutils import A, F, B, C, D, E, H, L, SP, REGISTERS
     LJ = sys.modules[__name__]
     IXh, IXl = REGISTERS['IXh'], REGISTERS['IXl']
-    CMP = list(range(0, 13)) + [14] + list(range(16, 25)) + [26, 27]
+    from .hooklib import CMP_R as CMP        # every register, R included (v0.1.7; card patch.preserve-r)
     prof = LJ.load_profile()
     if neg == 'xoff':      # sprite x one pixel right
         h = bytearray.fromhex(prof['hooks']['rom'])
         # 'add a,31' in h_new (C6 1F) -> add a,32
-        i = h.find(bytes([0xC6, 0x1F])); h[i + 1] = 32; prof['hooks']['rom'] = h.hex()
+        i = h.find(bytes([0xC6, 0x1F])); assert i >= 0; h[i + 1] = 32; prof['hooks']['rom'] = h.hex()
     if neg == 'nocls':
         pass
+    if neg == 'r1':        # R one off at h_new's return: its 'pop af / ld c,R_NEW / call rfix' (F1 0E xx CD) + 1
+        h = bytearray.fromhex(prof['hooks']['rom'])
+        i = h.find(bytes([0xF1, 0x0E])); assert i >= 0 and h[i + 3] == 0xCD; h[i + 2] = (h[i + 2] + 1) & 0x7F; prof['hooks']['rom'] = h.hex()
     if neg == 'speed35':   # the old fixed 3.5 MHz exit: the speed read's 'and 3' (E6 03 F5) -> 'and 0'
         h = bytearray.fromhex(prof['hooks']['rom'])
         i = h.find(bytes([0xE6, 0x03, 0xF5]))
+        assert i >= 0
         while i >= 0:
             h[i + 1] = 0
             i = h.find(bytes([0xE6, 0x03, 0xF5]), i + 1)
@@ -1047,12 +1100,16 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
     PREPAINT = {}
     ENH, RZX, STOP = enh, rzx, stop
     if neg == 'nobright':  # palette offset without the bright bit: 'or 8' (F6 08) -> 'or 0'
-        h = bytearray.fromhex(prof['hooks']['rom']); i = h.find(bytes([0xF6, 0x08])); h[i + 1] = 0; prof['hooks']['rom'] = h.hex()
+        h = bytearray.fromhex(prof['hooks']['stcode']); i = h.find(bytes([0xF6, 0x08])); assert i >= 0     # paloff: state page code
+        h[i + 1] = 0; prof['hooks']['stcode'] = h.hex()
     if neg == 'noslot':    # h_new leaves slot 4 on the state page: first 'nextreg 0x54,4' -> 0x54,26
-        h = bytearray.fromhex(prof['hooks']['rom']); i = h.find(bytes([0xED, 0x91, 0x54, 4])); h[i + 3] = 26; prof['hooks']['rom'] = h.hex()
+        h = bytearray.fromhex(prof['hooks']['rom']); i = h.find(bytes([0xED, 0x91, 0x54, 4])); assert i >= 0; h[i + 3] = 26; prof['hooks']['rom'] = h.hex()
     if neg == 'nocls':     # h_cls hides nothing: 'nextreg 0x38,0' in its loop -> 0x37,0
         h = bytearray.fromhex(prof['hooks']['rom'])
-        i = h.find(bytes([0xED, 0x92, 0x34, 0xED, 0x91, 0x38])); h[i + 5] = 0x37; prof['hooks']['rom'] = h.hex()
+        i = h.find(bytes([0xED, 0x92, 0x34, 0xED, 0x91, 0x38])); assert i >= 0; h[i + 5] = 0x37; prof['hooks']['rom'] = h.hex()
+    if neg == 'evict':     # the pool takes the next pattern even when an object holds it: 'jr nz,.v' after the holder
+        h = bytearray.fromhex(prof['hooks']['stcode'])  # test (CB BD 7E B7 20 xx) -> 'jr nz,+0' (victim: state page code)
+        i = h.find(bytes([0xCB, 0xBD, 0x7E, 0xB7, 0x20])); assert i >= 0; h[i + 5] = 0; prof['hooks']['stcode'] = h.hex()
     patch = LJ.LunarJetmanPatch(prof, enhanced=ENH, j256=j256)
     if neg == 'rom3left':  # the previous build: only the hook bytes 0x386E.. written over NextZXOS's ROM3 (IM 1 reaches 0x0038 here)
         LJ.rom3_left(patch)
@@ -1076,12 +1133,17 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
         patch.pages[LJ.FP0] = bytes(b)
     if neg == 'whiteedge':  # needs the pilot's lj_before.py (the images before the no-white change): not imported
         raise ValueError('negative whiteedge is not in the repo (pilot work/lj_before.py)')
+    if neg == 'tid':       # tile cache: Jetman's first graphic carries its neighbour's tile ids, so a pattern that holds
+        k = patch.info['figs'].index(0xbdd0)            # one of them is taken for the other and not uploaded
+        st = bytearray(patch.state); o = LJ.FTID + 8 * k; st[o:o + 8] = st[o + 8:o + 16]; patch.state = bytes(st)
     if neg == 'idx':       # index page points one graphic (Jetman 0xBDD0) at its neighbour's image
         b = bytearray(patch.pages[LJ.IDX_PAGE]); b[0xBDD0 & 0x1FFF] += 1; patch.pages[LJ.IDX_PAGE] = bytes(b)
     SITE = {a: (old, new) for a, old, new in patch.sites}
     HOOKS = {a: sym for a, _, _, sym in LJ.SITES}
     if neg == 'keepstore':
         del SITE[34282]
+    if neg == 'xorlive':   # a live instruction NOPed with the screen reads: INC L after the first store (plot check)
+        SITE[34246] = (b'\x2c', b'\x00')
     if neg == 'keeppaint':
         del SITE[34663]
 
@@ -1112,7 +1174,9 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
             s.attr = [[0] * 5 for _ in range(128)]
             s.pat = bytearray(16384)
             s.pp = 0
-            s.sel = None                # NextREG selected at 0x243B (h_new / h_tnew read NR 7: the caller's speed)
+            s.chg = set()               # tiles whose bytes the current upload changed (counters only)
+            s.ai = s.ab = 0             # port 0x57: the sprite and the attribute byte next written
+            s.sel = None               # NextREG selected at 0x243B (h_new / h_tnew read NR 7: the caller's speed)
             s.w7 = 0                    # NR 7 writes (replay pace: the hook's 28 MHz span)
 
     ns = NS()
@@ -1152,8 +1216,8 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
     def mk(mem, regs, patched):
         sim = Simulator(mem, {})
         sim.registers[:] = regs
-        cur = [4]
-        page4 = bytes(mem[0x8000:0xA000])
+        cur = [4, 5]                    # slots 4 and 5 (an upload maps the images at slot 5)
+        home = (bytes(mem[0x8000:0xA000]), bytes(mem[0xA000:0xC000]))
 
         def nextreg(r, v):
             ns.nr[r] = v
@@ -1163,11 +1227,15 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
                 raise RuntimeError('NEXTREG in original code')
             if 0x35 <= r <= 0x39:
                 ns.attr[ns.nr.get(0x34, 0) & 0x7F][r - 0x35] = v
-            if r == 0x54:
-                if cur[0] != 4:
-                    store[cur[0]][:] = mem[0x8000:0xA000]
-                mem[0x8000:0xA000] = page4 if v == 4 else store[v]
-                cur[0] = v
+            if r in (0x54, 0x55):
+                k = r - 0x54
+                a = 0x8000 + 0x2000 * k
+                if v in cur and cur[k] != v:
+                    raise RuntimeError('page %d mapped twice' % v)
+                if cur[k] != 4 + k:
+                    store[cur[k]][:] = mem[a:a + 0x2000]
+                mem[a:a + 0x2000] = home[k] if v == 4 + k else store[v]
+                cur[k] = v
         z80n.install(sim, nextreg)
 
         class Tr:
@@ -1184,11 +1252,28 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
                     return
                 if port == 0x243B:
                     ns.sel = value
-                elif port == 0x303B:
+                elif port == 0x303B:                # the pattern index and the 0x57 attribute index (bits 6:0)
                     ns.pp = (value & 0x3F) * 256 + (128 if value & 0x80 else 0)
+                    ns.ai, ns.ab = value & 0x7F, 0
                 elif port & 0xFF == 0x5B:
-                    ns.pat[ns.pp & 0x3FFF] = value
+                    q = ns.pp & 0x3FFF
+                    if ns.pat[q] != value:
+                        ns.chg.add(q >> 7)
+                    if q & 127 == 127:              # a tile's last byte: count it, and whether it changed
+                        cnt['pattern tiles uploaded'] += 1
+                        if q >> 7 not in ns.chg:
+                            cnt['pattern tiles uploaded unchanged'] += 1
+                        ns.chg.discard(q >> 7)
+                    ns.pat[q] = value
                     ns.pp += 1
+                elif port & 0xFF == 0x57:           # attributes: 4 bytes, or 5 when attribute 3 bit 6 is set, then
+                    ns.attr[ns.ai][ns.ab] = value   # the next sprite (as hooklib.NextModel)
+                    ns.ab += 1
+                    if ns.ab == 4 and not ns.attr[ns.ai][3] & 0x40:
+                        ns.attr[ns.ai][4] = 0
+                        ns.ab = 5
+                    if ns.ab == 5:
+                        ns.ai, ns.ab = (ns.ai + 1) & 0x7F, 0
                 else:
                     fail('port!', hex(port))
         sim.set_tracer(Tr())
@@ -1338,6 +1423,28 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
                 fail('sprite shown, no figure!', 'f%d ix %x %d px' % (frames[0], ix, len(ink)))
 
 
+    XORS = set(LJ.XOR_NOPS)
+
+    def plot_check(sim):
+        """From a screen read in the plot code to the line routine's AND 7 (34299), the original and the build (its
+        reads and stores NOPs) run from the same state: every register, R included, and memory outside the bitmap equal."""
+        mem0 = bytes(sim.memory)
+        regs0 = list(sim.registers)
+        stop = lambda R: R[24] == 34299
+        o_mem = bytearray(mem0)
+        so, _ = mk(o_mem, regs0, False)
+        p_mem = patched_mem(mem0)
+        sp_, _ = mk(p_mem, regs0, True)
+        if not (run(so, stop, 5000) and run(sp_, stop, 5000)):
+            fail('plot check: run limit!', hex(regs0[24])); return
+        d = [i for i in CMP if so.registers[i] != sp_.registers[i]]
+        if d:
+            fail('plot check: registers!', 'f%d %x %s' % (frames[0], regs0[24], d)); return
+        md = [a for a in range(0x5800, 0x10000) if o_mem[a] != p_mem[a] and a not in SITEB]
+        if md:
+            fail('plot check: memory!', 'f%d %x %s' % (frames[0], regs0[24], [hex(a) for a in md[:4]])); return
+        cnt['plot checks'] += 1
+
     def isr(sim):
         """An IM 1 interrupt the original takes at 0x0038: the original ROM's handler and the alt ROM image's handler run
         from the same state to the return; registers and 0x4000-0xFFFF compared, and no PC in the hook bytes. On the Next
@@ -1404,6 +1511,14 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
             if pc not in SITE:
                 fail('store site not patched!', pc)
             return
+        if pc in XORS:
+            pace['add'] -= 3                    # NOP (4 T) for XOR (HL) (7 T)
+            cnt['screen reads (original)'] += 1
+            if pc not in SITE:
+                fail('screen read site not patched!', pc)
+            if cnt['screen reads (original)'] % 32 == 1:
+                plot_check(sim)
+            return
         if pc in (34663, 35127, 35104):
             v = r[D] if pc != 35104 else r[A]
             hl = r[L] | r[H] << 8
@@ -1456,6 +1571,8 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
             fail('run limit!', sym); return
         if cur[0] != 4:
             fail('slot 4 not restored!', sym)
+        if cur[1] != 5:
+            fail('slot 5 not restored!', sym)
         if sym == 'h_new' and o_mem[regs0[IXl] | regs0[IXh] << 8 + 0] is not None:
             ix = regs0[IXl] | regs0[IXh] << 8
             o = owner(ix)
@@ -1467,6 +1584,9 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
                     fail('palette offset at the draw!', '%x %s %s' % (ix, got, want))
                 else:
                     cnt['palette offsets checked'] += 1
+        if so.registers[15] != sp_.registers[15]:
+            cnt['R to add at %s: %s' % (sym, (so.registers[15] - sp_.registers[15]) & 0x7F
+                                         if not (so.registers[15] ^ sp_.registers[15]) & 0x80 else 'bit 7')] += 1
         for i in CMP:
             if so.registers[i] != sp_.registers[i]:
                 fail('register!', '%s reg %d %x/%x' % (sym, i, so.registers[i], sp_.registers[i]))
@@ -1502,9 +1622,99 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
         cnt["alt ROM image bytes outside the hooks not Sinclair's!"] = len(_off)
         ex["alt ROM image bytes outside the hooks not Sinclair's!"].append([hex(a) for a in _off[:6]])
 
-    pcs = set(HOOKS) | set(LJ.STORE_NOPS) | {34663, 35127, 35104, 0x38, PACE_PROBE}
+    def pool_check(steps=2500, seed=8):
+        """The pattern pool full and churning, which no recording reaches (after the replay; its own sprite model):
+        random objects take random figure graphics (all of them: far more tiles than 128 patterns hold), some are
+        hidden (h_clr) and shown again with the graphic they had, the trucks take random rover frames. After each
+        call every shown object's sprites must show its graphic's tiles, every hidden one's none."""
+        import random
+        rnd = random.Random(seed)
+        m = patched_mem(bytes(16384) + snap.banks[5] + snap.banks[2] + snap.banks[0])
+        m[24226] = 0                                        # the plain graphic table for the trucks' types
+        figs, trucks = patch.info['figs'], patch.info['trucks']
+        ttypes = [t + 1 for t in range(255) if LJ.w16(m, LJ.GTAB1 + 2 * t) in trucks]    # GLOOK: entry IX+0 - 1
+        pg = store
+        ns.attr = [[0] * 5 for _ in range(128)]
+        shown, last = {}, {}
+
+        def tiles(k, fig):
+            if fig:
+                return [bytes(pg[LJ.FP0 + k // 16][(k % 16) * 512 + 128 * t:(k % 16) * 512 + 128 * t + 128]) for t in range(4)]
+            return [bytes(pg[LJ.TP0 + k // 6][(k % 6) * 1280 + 128 * t:(k % 6) * 1280 + 128 * t + 128]) for t in range(10)]
+        for i in range(steps):
+            r = rnd.random()
+            regs = [0] * 30
+            regs[SP] = 0x5E00
+            m[0x5E00:0x5E02] = b'\xf0\xff'
+            if r < 0.1 and shown:
+                s0_ = rnd.choice([q for q in shown if q >= 20])  if any(q >= 20 for q in shown) else None
+                if s0_ is None:
+                    continue
+                ix = LJ.OBJ0 + 24 * ((s0_ - 20) // 4)
+                pc, want = patch.syms['h_clr'], None
+                m[ix + 10] = 1
+                del shown[s0_]
+            elif r < 0.2 and shown and last:
+                s0_ = rnd.choice(list(last))
+                if s0_ in shown or s0_ < 20:
+                    continue
+                ix = LJ.OBJ0 + 24 * ((s0_ - 20) // 4)
+                g = last[s0_]
+                pc = patch.syms['h_new']
+                m[ix + 10] = m[g]
+                regs[D], regs[E] = (g + 1) >> 8, (g + 1) & 0xFF
+                shown[s0_] = tiles(figs.index(g), True)
+            elif r < 0.3:
+                ix = rnd.choice(LJ.TRUCKS)
+                m[ix] = rnd.choice(ttypes)
+                m[ix + 10] = m[ix + 11] = 1
+                m[ix + 1] = rnd.randrange(8, 200)
+                m[ix + 4] = rnd.randrange(60, 180)
+                pc = patch.syms['h_tnew']
+                s0_ = 0 if ix == 0x6090 else 10
+                shown[s0_] = 'truck'
+            else:
+                n = rnd.randrange(LJ.NOBJ)
+                ix = LJ.OBJ0 + 24 * n
+                g = rnd.choice(figs)
+                m[ix + 10] = m[g]
+                m[ix + 1] = rnd.randrange(1, 240)
+                m[ix + 4] = rnd.randrange(60, 180)
+                m[ix + 7] = rnd.randrange(1, 128)
+                regs[D], regs[E] = (g + 1) >> 8, (g + 1) & 0xFF
+                pc = patch.syms['h_new']
+                s0_ = 20 + 4 * n
+                shown[s0_] = tiles(figs.index(g), True)
+                last[s0_] = g
+            regs[24] = pc
+            regs[IXl], regs[IXh] = ix & 0xFF, ix >> 8
+            ns.nr[0x07] = 0
+            sim, cur = mk(m, regs, True)
+            if not run(sim, lambda R: R[24] == 0xFFF0, 200000):
+                fail('pool: run limit!', i); return
+            if cur != [4, 5]:
+                fail('pool: slots not restored!', i)
+            if shown.get(0 if ix == 0x6090 else 10) == 'truck' and pc == patch.syms['h_tnew']:
+                st_ = store[LJ.STATE_PAGE]
+                o = 0x22 if ix == 0x6090 else 0x24
+                shown[s0_] = tiles(trucks.index(LJ.w16(st_, o)), False)
+            for q, ts in shown.items():
+                for j, t in enumerate(ts):
+                    a = ns.attr[q + j]
+                    pn = (a[3] & 0x3F) << 1 | (a[4] >> 6 & 1)
+                    if not a[3] & 0x80 or bytes(ns.pat[pn * 128:pn * 128 + 128]) != t:
+                        fail('pool: a shown sprite lost its tile!', 'call %d sprite %d' % (i, q + j)); return
+            for q in range(20, 128, 4):
+                if q not in shown and any(ns.attr[q + j][3] & 0x80 for j in range(4)):
+                    fail('pool: hidden object shown!', 'call %d sprite %d' % (i, q)); return
+            cnt['pool calls checked'] += 1
+        cnt['pool tiles uploaded'] = cnt['pattern tiles uploaded'] - up0
+
+    pcs = set(HOOKS) | set(LJ.STORE_NOPS) | XORS | {34663, 35127, 35104, 0x38, PACE_PROBE}
     n, err = trace(RZX, pcs, on, stop=STOP)
     ex['replay pace'] = replay_pace(pace['upd'][1:])    # the first update holds the start
+    up0 = cnt['pattern tiles uploaded']
+    pool_check()
     return cnt, ex, n, err
 
 

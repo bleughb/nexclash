@@ -1,7 +1,8 @@
 # Lunar Jetman (Ultimate Play The Game, 1983, 48K) - engine `lunar_jetman` (unattended, emulator only)
 
 ## Next session
-Stage: 4 (hardware + colour)    State: imported into the repo 2026-11-04 (record lunar_jetman, stamped); JNext only, never on a Next.
+Stage: 4 (hardware + colour)    State: imported into the repo 2026-11-04 (record lunar_jetman, stamped); pace about +0.4% after
+the 2026-11-08b pattern pool, R kept as the original's (below); JNext only, never on a Next.
 Inputs: specnext/reference/lunar_jetman/ (lunar_jetman.z80 = the file's state at the decrypter, rzx/s_pre.z80 md5 426084d3;
 lunar_jetman_s0.z80 the stepped start; p1-p3; lunar_jetman.scr; Jetpac.256). Verify with NEXCLASH_NEXT_ROM = enNextZX.rom.
 Start with: the hardware checklist below. Open: under "Open".
@@ -53,7 +54,8 @@ Screen readers besides the plotters: ground scroll (RRD / RR (HL), rows 176-183)
 the text printer 35311: none branches on a pixel, so no figure collision reads the screen.
 
 ## Design
-- The nine figure XOR stores and the three colour painters are NOPs, one byte for one (the plot code still runs).
+- The nine figure XOR stores, the nine screen reads before them (XOR (HL), 2026-11-08b) and the three colour painters
+  are NOPs, one byte for one (the plot code still runs; R unchanged: one M1 for one).
 - Hooks (alt ROM 0x386E-, 799 bytes): h_new at 34558 and h_tnew at 34958 (the setups' LD C,0 / RET) show the object's
   current image as sprites; h_clr (34431, the state clear: only when something is drawn, since 2026-11-08), h_eo
   (34368), h_teo (34383) hide them; h_cls (34011, the whole-screen pixel clear) and h_msg (46433, the missile warning,
@@ -61,10 +63,11 @@ the text printer 35311: none branches on a pixel, so no figure collision reads t
 - Images precomputed at build time for every graphic in both tables (222 figure graphics, 22 truck graphics): 4-bit,
   ink, enclosed paper filled (a darker shade of the figure's own colour; trucks black), a one-pixel outline outside
   the silhouette (white; black for a white figure; none under 12 ink pixels). Figures 2 x 2 tiles at (x - 1, top - 1);
-  trucks 5 x 2. Pages: 26 state (caches, graphic lists), 27 index (graphic & 0x1FFF -> id + 1), 28-31 trucks, 36-49
-  figures; mapped at slot 4 only inside a hook (the ROM IM 1 handler uses slots 0 and 2; slot 4 back on page 4 before
-  any return). Patterns uploaded only when an object's graphic changes. Sprites: trucks 0-19, object n 20 + 4n (figures
-  in front of the rover). Palette offset = the object's ink + 8 * bright (IX+7) at each draw.
+  trucks 5 x 2. Pages: 26 state (caches, graphic lists, the pattern pool, tile ids, the objn table), 27 index (graphic
+  & 0x1FFF -> id + 1), 28-31 trucks, 36-49 figures; the state page at slot 4 and an image page at slot 5 only inside a
+  hook (the ROM IM 1 handler uses slots 0 and 2, the game's stack is at 0x5Exx; both back on pages 4 / 5 before any
+  return). Patterns: one pool of all 128 shared by tile content (2026-11-08b, below). Sprites: trucks 0-19, object n
+  20 + 4n (figures in front of the rover). Palette offset = the object's ink + 8 * bright (IX+7) at each draw.
 - Enhanced (colour set, off by default, no .256 for this game): Jetman from the Spec256 Jetpac (two of his frames are
   byte-identical with Jetpac's, one byte apart in one; the other frames take the colour of the nearest template pixel,
   mirrored or not, at the best overlap): orange suit, grey pack and visor. Other figures shaded in their own colour
@@ -100,7 +103,8 @@ apart from 16 bytes (KSTATE, FRAMES, dead stack). Cheats: the .pok's proven entr
 - Colour changes without a redraw (IX+7 changed between draws) are not followed: 8 in 1,500 frames on p1.
 - Not reached on the recordings: the alien base, the missile and its destruction, bombing, the rover carrying items,
   later levels. Their graphics are in the tables, so their images exist and are drawn by the same hooks.
-- Evidence record, doccheck, selftest stamp: not done.
+- Pace: about +0.4% on the replay, up to +1.8% in the quietest third of updates (2026-11-08b): what is left is per-call
+  fixed cost (h_clr's test and R fix for 10 objects an update, the speed switch at the caller's clock), not uploads.
 
 ## Lessons
 - [doc docs/ENGINE_CONTRACT.md §Module names] The contract's `verify(patch, rzx, stop, ...)` is a module function:
@@ -121,6 +125,24 @@ apart from 16 bytes (KSTATE, FRAMES, dead stack). Cheats: the .pok's proven entr
   The replay pace (the recording on both sides) is the like-for-like figure; JNext over 8 seeds is the cross-check.
 - [local: verify from the title] A recording that starts mid-game leaves the sprite model and the figure model empty
   while the screen has figures; start every recording at the title, cheats poked into the start state.
+- [card optimise.pattern-cache §Probe and stop] Simulate the cache on the hook call log before building it: a per-slot
+  tile cache (each object its own patterns) saved 60% of figure tile uploads, a pool shared by content 97% (p1: 7,055
+  against 162 misses; 48 distinct graphics in 4,532 draws). The card's probe 2 (distinct images in the worst scene)
+  says the same: the working set was a third of the pool.
+- [local: profile the hook by routine] After the uploads, the T per routine (assembler symbol file, simulator) showed
+  the pool's own bookkeeping (acq) and the attribute writes as the next costs, not what was guessed; the profile picked
+  each next step (register acq, port 0x57, the truck memo: 66% of h_tnew calls repeat the last placement).
+- [local: a negative the recordings cannot reach] The `evict` negative passed the 700-frame replay (the pool never fills
+  that early): a table-full case needs its own driven check (the pool check), as the rules say; run every new negative
+  once before trusting the list.
+- [local: ROM-resident hooks] The alt ROM leaves 1,150 bytes for hooks (to 0x3D00 less the register block): code that
+  runs only with the state page mapped (the pool, placement, objn, list search: 326 bytes) moved there (asm ORG 0x8900,
+  profile block stcode, put in by the build); the ROM keeps 914 bytes. Check the size after every assemble.
+- [card patch.preserve-r §Use / do not use] An existing engine whose game takes R for randomness (LD A,R 0x9466) gets
+  R kept in its first rework: read R at a fixed M1 count from the site, set it at a fixed count before the return; the
+  verifier's "R to add at <hook>" counter gives each constant from a run with K = 0 (all eight matched the count by
+  hand). Cost: about 48 T a call on h_clr's 3.5 MHz path (+0.5%), paid back by NOPing the screen reads whose results
+  only fed NOPed stores (-1.4%), proved by a plot check (registers with R and memory equal at the line routine's end).
 
 ## Enhanced, second version (2026-11-04, coordinator's ask: "colourise like the other Ultimate games")
 One shared 15-colour palette in every block; every figure painted by its parts (nexclash/lunar_jetman.py FAMILY):
@@ -157,72 +179,84 @@ The .nex differs from the previous one only in bank 10's stub (the fill, 15 byte
 bank 12 (the image's page bytes). Emulator only.
 
 ## Hooks restore the caller's CPU speed (2026-11-07, shared engine refactor)
-- h_new and h_tnew used to leave at a fixed 3.5 MHz (NEXTREG 7,0). They now read NR 7 at entry, keep it on the stack
-  (the hooks are in the alt ROM, with no RAM for a latch, as Jet Pac v1.1) and write it back.
-- The verifier answers the NR 7 read from its NextREG model, enters each hook at 3.5, 7, 14 and 28 MHz in turn, and
-  checks that it leaves at that clock. New negative `speed35`: the read masked to 0, which is the old exit.
-- Proof: p1-p3 x default and Enhanced IDENTICAL; unit PASS; negatives 17/17.
-- JNext pace is not in lockstep (no state addresses). The like-for-like quiet thirds against the plain build: main
-  +9.02%, this +9.21%. The game is already about 9% slow on main (no limiter): fixed 2026-11-08 (below).
-- The verify needs Jetpac.256 (md5 95d29dd6) beside the snapshot. It was missing from the earlier refactor sessions'
-  references, not from the machine.
+- h_new / h_tnew read NR 7 at entry, keep it on the stack (no RAM for a latch in the alt ROM) and write it back; the
+  verifier enters each hook at 3.5, 7, 14 and 28 MHz in turn and checks the exit clock (negative `speed35`).
+- The verify needs Jetpac.256 (md5 95d29dd6) beside the snapshot.
 
 ## Pace (2026-11-08): h_clr hid at 3.5 MHz with a loop, every update, for every object outside the window
-- Cause: the state clear 34431 runs every update for every object outside the window (JNext, seed 1: 10.0 calls an
-  update, against h_new 4.1, h_tnew 2.0). Its hook hid the object's 4 sprites at 3.5 MHz (no speed switch) after
-  objn, a subtract-24 loop (up to 27 x 42 T): about 950 T a call, some 7% of the original's update. objn also ran
-  twice in each h_new (at 28 MHz).
-- Fix: h_clr moves to the clear's entry 34431 (XOR A / LD (IX+9),A, 4 bytes checked; continues at 34435). Nothing
-  drawn (IX+10 = 0) means its sprites are already hidden (h_new hides them whenever it sees IX+10 = 0): the hook
-  passes in 43 T more than the original. Otherwise hidefig takes the caller's speed on the stack, as h_new, and hides
-  at 28 MHz. objn has no loop (Z80N MUL: (IX - 0x6078) / 8 * 86 / 256, checked x 3; every IX 0x6000-0x63FF tested in
-  a simulator against the loop's answer). h_new / h_tnew save DE / HL after the switch; pattern uploads by an unrolled
-  OUTI loop (16.6 T a byte against OTIR's 21).
-- Verifier: per game update (0x9ED2, the JNext pace probe) the original's time on the recording and the T the build
-  adds (each hook pair: patched minus original, its 28 MHz span at T / 8; the NOPed stores 3 T less): the replay pace,
-  the same game on both sides. Printed by auto as "Pace".
-- Replay pace, all / quiet third / busy third (Enhanced the same: the same hook calls):
+- Cause: the state clear 34431 runs every update for every object outside the window (about 10 calls an update); its
+  hook hid 4 sprites at 3.5 MHz after a subtract-24 loop: about 950 T a call, some 7% of the original's update.
+- Fix: h_clr at the clear's entry 34431 (4 bytes checked, continues at 34435); nothing drawn (IX+10 = 0) passes
+  straight on; otherwise hidefig at 28 MHz with the caller's speed kept. objn without a loop; uploads by OUTI.
+- Verifier: the replay pace per game update (0x9ED2): the original's time on the recording and the T the build adds
+  (each hook pair patched minus original, its 28 MHz span at T / 8, the NOPed instructions' saving); auto prints "Pace".
+- Replay pace +13.7 / +14.4 / +14.0% (p1-p3, main aca1c90c) -> about +4.3% (5c53849e; table in the next section);
+  JNext 8 seeds (not in lockstep, see Lessons): mean +17.05% -> +4.15%. Stamped; loader run on a private card copy.
 
-| recording | main (aca1c90c) | this (5c53849e) |
-|---|---|---|
-| p1 (1,466 updates) | +13.75 / +17.19 / +11.93% | +4.23 / +4.12 / +4.52% |
-| p2 (4,161) | +14.41 / +20.18 / +12.53% | +4.35 / +4.97 / +4.69% |
-| p3 (4,289) | +14.00 / +18.54 / +12.36% | +4.34 / +4.81 / +4.72% |
-- JNext pace (nexclash.pace, probe 0x9ED2, 300 updates, against the plain build; not in lockstep: each pair of runs
-  plays a different game, see Lessons). All / quiet third / busy third:
+## Uploads (2026-11-08b): one pattern pool shared by tile content; R as the original's
+- Cause: after 2026-11-08 pattern uploads were about 70% of h_new's added time (p1: 17,436 figure tile uploads in 4,532
+  draws, 60% of them bytes the pattern already held); only 48 figure graphics are drawn on p1, but each object had its
+  own four patterns and re-uploaded every animation frame.
+- Pool: every 128-byte tile of both image sets has a 16-bit content id (455 figure, 265 truck tiles; FTID / TTID).
+  All 128 patterns are one pool in the state page: WHERE (id -> pattern), PCACHE (pattern -> id), OBJP (4 patterns per
+  object, 10 per truck: 128 entries), REFS (entries naming a pattern). A new graphic releases the object's entries (rel)
+  and takes a pattern per tile (acq): one holding the tile, else the next round robin pattern no entry names, uploaded
+  (image page at slot 5). An object keeps its patterns until its next new graphic, hidden or not, so a free pattern
+  always exists. p1 uploads 19,516 tiles -> 681.
+- Also: attributes by port 0x57 (pattern bytes precomputed by acq); a truck placed as last time (graphic, x, y,
+  columns) is not rewritten (2 in 3 h_tnew calls on p2; hides clear the memo); the truck list searched only for a new
+  graphic; objn by table (OTAB). Code that runs only with the state page mapped (326 bytes) lives in page 26 at 0x0900
+  (asm ORG 0x8900, profile block stcode): the alt ROM keeps 914 of its 1,150 bytes.
+- R (card patch.preserve-r): every hook reads R at a fixed M1 count from its site and sets it (rfix, bit 7 kept) at a
+  fixed count before its return; constants R_NEW .. R_CLS in the asm (the verifier's "R to add" counter with K = 0
+  equals the count). Cost: about 48 T a call on h_clr's 3.5 MHz path (+0.5%); paid back by NOPing the nine XOR (HL)
+  screen reads before the NOPed stores (A only fed the store, flags overwritten before any test; one M1 each; -1.4%).
+- Shared code: none changed. hlib_pcache / hlib_commit / hlib_dma keep tables and DMA packets at fixed addresses in
+  hook RAM; these hooks are in the read-only alt ROM. hlib_pace: not needed (no frame sync, the build is not faster).
+  DMA (docs/DDMA.md): not used: uploads are now about 5% of the added time (at most about 0.1% to gain), interrupts
+  stay on in IM 1 through the hooks (a burst can cover the ULA interrupt pulse), and the replay cannot time DMA.
+- Verifier: R compared at every hook and IM 1 (hooklib.CMP_R); a plot check from every 32nd screen read to AND 7
+  (34299), original against build, registers with R and memory outside the bitmap equal; slot 5 and port 0x57
+  modelled; a pool check after the replay (2,500 random calls over all 222 graphics and the rover frames, the pool full
+  and churning: every shown sprite shows its graphic's tiles). New negatives: `tid` (tile ids moved), `evict` (a held
+  pattern reused; the 700-frame replay alone never fills the pool), `r1` (R one off), `xorlive` (INC L NOPed too).
+- Replay pace, all / quiet third / busy third (default):
 
-| seed | main (aca1c90c) | this (5c53849e) |
-|---|---|---|
-| 1 | +13.63 / +13.43 / +10.23% | -21.69 / +3.22 / -40.29% |
-| 2 | +11.03 / +9.11 / +15.31% | +12.41 / +10.45 / +14.61% |
-| 3 | +31.08 / +39.41 / +32.17% | +19.71 / +20.38 / +8.61% |
-| 4 | +14.44 / +21.31 / +9.16% | +8.93 / +9.52 / +8.40% |
-| 5 | +13.94 / +15.70 / +7.83% | +4.54 / +8.79 / -1.78% |
-| 6 | +29.28 / +35.72 / +17.44% | +1.19 / +4.50 / +0.44% |
-| 7 | +10.15 / +9.23 / +5.49% | +0.39 / +1.95 / -9.47% |
-| 8 | +12.84 / -1.60 / +23.89% | +7.70 / +6.45 / +5.96% |
-| mean (median) | +17.05 (+13.79) | +4.15 (+6.12) |
-- Sprites aca1c90c -> 5c53849e, sprites_loading a0af30ca -> 8bd7ab74, enhanced 555af3ce -> c0453b9c, enhanced_loading
-  9df3d4f6 -> ad21539c; plain unchanged. selftest --verify --stamp: p1-p3 default and
-  Enhanced IDENTICAL (22,090 frames, 155,561 hook calls), unit PASS, negatives 17/17. Still about 4% slow: open (pattern
-  uploads, about 1,060 T a draw at the Next clock; 51% of tile uploads rewrite the same bytes, p1 900 frames: a per-tile
-  cache, then DMA, or a K-window limiter). JNext loader run (private card copy): menu v1.1, play, Hall of Fame,
-  /tmp/NEXCLASH.NEX = the bare .nex.
+| recording | 1.0 (published 46348868) | 1.1 (8bd7ab74) | pool, R not kept (ed8f6108) | this (2fdd4986) |
+|---|---|---|---|---|
+| p1 (1,466 updates) | +13.47 / +16.88 / +11.67% | +4.23 / +4.12 / +4.52% | +1.15 / +1.33 / +1.20% | +0.37 / +0.80 / +0.31% |
+| p2 (4,161) | +14.13 / +19.84 / +12.26% | +4.35 / +4.97 / +4.69% | +1.27 / +1.91 / +1.27% | +0.57 / +1.74 / +0.33% |
+| p3 (4,289) | +13.71 / +18.20 / +12.08% | +4.34 / +4.81 / +4.72% | +1.20 / +1.71 / +1.24% | +0.43 / +1.36 / +0.29% |
+- Enhanced, this build: p1 +0.40 / +0.79 / +0.35%, p2 +0.61 / +1.76 / +0.39%, p3 +0.46 / +1.38 / +0.34%. 1.0 measured
+  with this verifier on the published hooks (its fixed exit clock fails the speed check; the pace still counts). JNext,
+  8 seeds (not in lockstep: interrupts land at other points in each build): mean +2.18% (median -1.00%), seeds -11.3%
+  to +17.9%; 1.1 +4.15% (+6.12%).
+- Sprites 5c53849e -> e5876b54, sprites_loading 8bd7ab74 -> 2fdd4986, enhanced c0453b9c -> 999da186,
+  enhanced_loading ad21539c -> b8062918; plain unchanged. selftest --verify --stamp: p1-p3 default and Enhanced
+  IDENTICAL with R compared (22,090 frames, 155,561 hook calls), unit PASS, negatives 23/23.
 
 ## Techniques
-Techniques: `patch.whole-altrom-image` (docs/records/lunar_jetman.json)
+Techniques: `patch.whole-altrom-image`, `optimise.pattern-cache`, `patch.preserve-r` (docs/records/lunar_jetman.json)
 
 ## Friction
 - reuse: [local: the loading hold is the same stub as Starquake's and Robin's, one copy per engine]
 - retries: [local: the detector missed the decrypter state; it now decrypts first]
 - environment: [local: needs NEXCLASH_NEXT_ROM=enNextZX.rom; full verify ~80 min detached]
 - hand-rolled: [local: the script verifier wrapped into verify() by a scratch converter]
-- scratch: [none: the converter and test scripts dropped]
+- scratch: [local: 2026-11-08b's probes (hook call log, pool simulation, per-routine T profile from the assembler's
+  symbols) stay in the pilot's work-20261108b, outside the repo]
 
 ## Technique use
 - patch.whole-altrom-image: helped: altrom 0x2000-0x4000 + altrom_low keeps NextZXOS ROM3's IM 1 out of the hooks.
+- patch.preserve-r: helped: R read and set at fixed M1 counts in all eight hook paths (own rfix: no hook RAM before the
+  state page is mapped); the counter "R to add at <hook>" gave each constant.
+- optimise.pattern-cache: helped: content keys (tile ids built at build time) over one pool of all 128 patterns, own
+  copy (the library needs hook RAM at a fixed address; these hooks are in the alt ROM): figure tile uploads -97% on p1.
 
 ## Stage log
 - 2026-11-04: imported into the repo (refactor phase 7): rebuild = the published v1.0, full verify stamped. 0 user rounds.
 - 2026-11-08: pace: h_clr at the clear's entry with a skip, hides at 28 MHz, objn without a loop; replay pace in the
+  verifier; full verify stamped. 0 user rounds.
+- 2026-11-08b: uploads: one pattern pool shared by tile content, attributes by port 0x57, the truck memo, objn table;
+  R kept and compared, the screen reads NOPed; pool check, plot check and negatives tid / evict / r1 / xorlive in the
   verifier; full verify stamped. 0 user rounds.
