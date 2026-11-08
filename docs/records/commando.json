@@ -76,15 +76,15 @@
  ],
  "checked": {
   "deps": {
-   "asm/commando_hooks.asm": "4e10c9f60a16557f",
-   "docs/profiles/commando.json": "33c3c96bbc485e9d",
-   "nexclash.py": "8eb7d621324c5aa6",
+   "asm/commando_hooks.asm": "59489cafde38ed11",
+   "docs/profiles/commando.json": "cb97f083c583c7c2",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
-   "nexclash/commando.py": "85b3a8736e4ecde3",
+   "nexclash/commando.py": "85b24d6fdaeb4c4a",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "e5e8ff401baf2257",
-   "nexclash/nextboot.py": "e6624bfe14a62e21",
+   "nexclash/engines.py": "2a90481848696085",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
@@ -95,19 +95,19 @@
    "recipe": "6f1a6011f02a4eb5",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-06"
+  "date": "2026-11-07"
  },
  "verified": {
   "deps": {
-   "asm/commando_hooks.asm": "4e10c9f60a16557f",
-   "docs/profiles/commando.json": "33c3c96bbc485e9d",
-   "nexclash.py": "8eb7d621324c5aa6",
+   "asm/commando_hooks.asm": "59489cafde38ed11",
+   "docs/profiles/commando.json": "cb97f083c583c7c2",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
-   "nexclash/commando.py": "85b3a8736e4ecde3",
+   "nexclash/commando.py": "85b24d6fdaeb4c4a",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "e5e8ff401baf2257",
-   "nexclash/nextboot.py": "e6624bfe14a62e21",
+   "nexclash/engines.py": "2a90481848696085",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
@@ -118,6 +118,6 @@
    "recipe": "6f1a6011f02a4eb5",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-06"
+  "date": "2026-11-07"
  }
 }
