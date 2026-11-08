@@ -4866,6 +4866,15 @@ def run_cw_frame(patch, original, pages, state68, phase=0, count0=0, irq=None, r
         errors.append('8F98 RAM %s' % [hex(a) for a in bad[:6]])
     good = run_frame(FramePatch(), list(ram), regs, bytearray(state68))
     gp = good['pages']
+    if resumed != 2:            # 3c: not finished in the window: dropped; 8F95 writes nothing but readiness 0
+        if mem.pages[69][0x1EAC] or mem.pages[69][0x1EA1]:
+            errors.append('dropped frame left readiness set')
+        if bytes(mem.pages[14]) != bytes(pages[14]) or bytes(mem.pages[STATE_PAGE]) != bytes(pages[STATE_PAGE]):
+            errors.append('8F95 wrote page 14/68 for a dropped frame')
+        if any(mem.pages[69][a] != pages[69][a] for a in range(0x0800, 0x1800)):
+            errors.append('8F95 wrote page 69 work data for a dropped frame')
+        return {'errors': errors, 'ready': False, 'state_at_8f95': resumed, 'hook_T': elapsed,
+                'added_T': elapsed - t_orig, 'reference_T': good['equivalent_T']}
     if bytes(mem.pages[14]) != gp[14]:
         errors.append('page 14 differs from the 8F95 work')
     if any(bytes(mem.pages[69][a:b]) != gp[69][a:b] for a, b in WK_RESULT):
@@ -5038,6 +5047,7 @@ def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, o
     counts, failures, detected = Counter(), [], Counter()
     xerr, d9907s, xs, busy, wait, gaps = [], [], [], [], [], []
     work_ms, f_added, f_full = [], [], []
+    run, prev_i = 0, None       # consecutive dropped frames (consecutive updates only when sample == 1)
     first = next(c for c in states.values() if c)[0]   # any state: cw_cal's result does not depend on it
     # the other bound for the speed switches: charged at 28MHz; the first window measures them (cw_cal)
     kt_fast = run_cw_window(patch, first[0], first[1], clk=0, fast_switch=True)['kt']
@@ -5075,9 +5085,13 @@ def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, o
                 fail(level, i, '8F95 finish', fr)
             counts['work slices'] += res['slices']
             counts['work done in the window'] += res['work_done']
-            counts['work resumed at 8F95'] += fr['state_at_8f95'] == 1
-            counts['work all at 8F95 (no slice)'] += fr['state_at_8f95'] == 0
+            counts['dropped: work started, not finished'] += fr['state_at_8f95'] == 1
+            counts['dropped: no slice'] += fr['state_at_8f95'] == 0
             counts['frames ready'] += fr['ready']
+            drop = fr['state_at_8f95'] != 2
+            run = run + 1 if drop and prev_i == (level, i - sample) else int(drop)
+            prev_i = (level, i)
+            counts['max consecutive dropped frames'] = max(counts['max consecutive dropped frames'], run)
             work_ms.append(res['work_T'])
             f_added.append(fr['added_T'])
             f_full.append(fr['reference_T'])

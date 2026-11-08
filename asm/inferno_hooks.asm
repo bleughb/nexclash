@@ -2027,7 +2027,8 @@ prepare_frame_end:
 
 ; Copier-window milestone 3b: the 8F95 work (prepare_frame + render_textmap, same results) as a
 ; coroutine in page 69 with its own stack, run in slices from cw_wait (cw_work -> wk_in -> wk_enter,
-; DI, 28MHz, IYl = CTC count at which the slice ends) and finished at 8F95 (wk_hook -> wk_frame).
+; DI, 28MHz, IYl = CTC count at which the slice ends); 8F95 (wk_hook -> wk_frame) restores R and
+; drops work the window did not finish (3c: ready stays 0, nothing runs there).
 ; Poll points (clear loop, every map cell) read the CTC and yield when the count reaches IYl. The
 ; textmap loop uses SP as its map pointer: a yield saves SP, BC, DE, IX and the resume address
 ; (HL is dead at both poll points), never CALLs. The work never touches IY (bar IYl), AF' or the
@@ -2035,7 +2036,6 @@ prepare_frame_end:
 WK_STACK  EQU 0x1C40            ; work stack (down to the display code end 1B19)
 WK_HSTACK EQU 0x1C80            ; 8F95: the game's registers (below D_COLOURS)
 WK_STATE  EQU 0x1EC0            ; 0 idle, 1 suspended, 2 done (this capture's work)
-WK_FIN    EQU 0x1EC1            ; 1: finishing at 8F95 (polls never yield)
 WK_M2     EQU 0x1EC2            ; slot-2 page of the suspended work (10 or 14)
 WK_PC     EQU 0x1EC3
 WK_SP     EQU 0x1EC5
@@ -2058,22 +2058,13 @@ wk_enter:                       ; from wk_in: A = 2 first slice of this window (
         ld l,a                  ; done already (cw_wkback stops the slices)
         jp wk_leave
 wk_new:
-        xor a
-        ld (WK_FIN),a
-        ld hl,0x1B3E            ; the polls' LD A,CW_CTC>>8 back (8F95 replaced it by JR over the poll)
-        ld (wk_clear),hl
-        ld (wk_cell),hl
-wk_start:                       ; (8F95 enters here with WK_FIN = 1)
         ld a,10
         ld (WK_M2),a
         ld sp,WK_STACK
         call wk_prepare
         ld a,2
         ld (WK_STATE),a
-        ld a,(WK_FIN)
-        or a
-        jp nz,wk_fdone
-        ld l,2
+        ld l,a
         jp wk_leave
 wk_resume:
         nextreg 0x51,68
@@ -2087,9 +2078,6 @@ wk_resume:
         jp (hl)
 wk_yield:                       ; HL = resume address; SP BC DE IX live
         ld (WK_PC),hl
-        ld a,(WK_FIN)
-        or a
-        jr nz,wk_yfin
         ld (WK_SP),sp
         ld (WK_BC),bc
         ld (WK_DE),de
@@ -2106,13 +2094,6 @@ wk_leave:                       ; L = state: original slot 1/2 mapping, then Nex
         inc b
         in a,(c)
         jp wk_out
-wk_yfin:                        ; finishing at 8F95: do not yield; the slice end moves on
-        ld a,CW_CTC >> 8
-        in a,(CW_CTC & 0xFF)
-        sub 120
-        ld iyl,a
-        jp (hl)
-
 wk_frame:                       ; from wk_hook: DI, 28MHz, $C8 cleared, all game registers
         ld (WK_GSP),sp
         ld sp,WK_HSTACK
@@ -2132,17 +2113,13 @@ wk_frame:                       ; from wk_hook: DI, 28MHz, $C8 cleared, all game
         push de
         push hl
         exx
-        ld a,1
-        ld (WK_FIN),a
-        ld hl,0x0818            ; JR +8 over each poll: no CTC reads while finishing (wk_new restores)
-        ld (wk_clear),hl
-        ld (wk_cell),hl
-        ld a,(WK_STATE)
-        cp 1
-        jp z,wk_resume          ; finish the suspended work (it ends in wk_start -> wk_fdone)
-        cp 2
-        jp nz,wk_start          ; nothing ran in the window: the whole work here
-wk_fdone:                       ; work done for this capture: restore the game state; R last
+        ld a,(WK_STATE)         ; 3c: work not finished in the window is dropped, never finished here
+        cp 2                    ; (it would eat this update's slack); the next window restarts on
+        jr z,wk_fdone           ; the new capture and the display keeps its last complete frame
+        xor a
+        ld (F_SCENE_READY),a
+        ld (Q_READY),a
+wk_fdone:                       ; restore the game state; R last
         xor a
         ld (WK_STATE),a
         nextreg 0x52,10
