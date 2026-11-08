@@ -2150,6 +2150,35 @@
     "boot_checks": "PASS (Sinclair, foreign ROM3, hook bytes after boot)",
     "hardware": "game plays ok (user, 2026-11-08); no detailed heavy-shooting pace/sound comparison reported"
    }
+  },
+  "pipeline_driver": {
+   "scope": "assembled 8EF9 live-table driver (page 81): simulator only, not installed in any NEX",
+   "sources": {
+    "nexclash/inferno.py": "715b180a329498fada6dbfea6984a352",
+    "asm/inferno_hooks.asm": "465fb3855b7c17ef176ccec7cbef3f5a",
+    "docs/profiles/inferno.json": "22fcb1ede69659518b64e43a7f6267f8"
+   },
+   "artifacts": "specnext/reference/inferno/build/pipeline.md 1, pipeline/driver<L>.json",
+   "checks": {
+    "levels": 6,
+    "distinct_stored": [
+     101,
+     109,
+     88,
+     122,
+     84,
+     118
+    ],
+    "driver_ms": [
+     4880,
+     3650,
+     3217,
+     4580,
+     3434,
+     6896
+    ],
+    "controls_detected": 4
+   }
   }
  }
 }
