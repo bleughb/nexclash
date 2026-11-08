@@ -202,6 +202,15 @@
     "sprites": "ab66b5011a3e87a54f561502ded0ac24"
    }
   },
+  "5df07fbd5dabdcb9a909b86cf690a4e8": {
+   "game": "Martianoids",
+   "doc": "martianoids.md",
+   "nex": {
+    "plain": "d7216a9d7cdbed5b819026e7cd71e9d8",
+    "sprites": "cb9e4e2542c5a36fed139e4c7114f673",
+    "enhanced": "09b5741f14d9efc011808b10bb3ce52e"
+   }
+  },
   "d5ea19e487141ce922d0e96c02fd9054": {
    "game": "Match Day",
    "doc": "match_day.md",
