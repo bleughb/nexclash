@@ -546,6 +546,24 @@ def verification_selfcheck():
     return bad
 
 
+def coverage_stamp_check():
+    """'not measured' reaches the stamp boundary as no stamp; 'not applicable' does not block it (no game data). -> failures"""
+    from nexclash import nxcout, runchecks
+    bad = runchecks.selfcheck()
+    with tempfile.TemporaryDirectory() as d:
+        for status, want in (('not measured', True), ('incomplete', True), ('not applicable', False), ('pass', False)):
+            c = []
+            runchecks.add(c, 'timing rows', status, 'synthetic')
+            runchecks.write(d, 'g', c)
+            lines, rec = [], {'name': 'g'}
+            if _checks_status(d, 'g', 'g', lines, False, rec) or bool(rec.get('_incomplete')) != want:
+                bad.append('%s at the stamp boundary: %s' % (status, lines))
+            prf = nxcout.proof('Result    : PASSED', 'no-such-md5', 'no-such-md5', checks=runchecks.read(d, 'g'))
+            if want and not nxcout.qualified(prf):
+                bad.append('%s: PRF1 not qualified' % status)
+    return bad
+
+
 def tape_stage_check():
     """stage() and _tapes() on a synthetic record with two tape sets sharing a file (no game bytes) -> failures."""
     bad = []
@@ -592,6 +610,7 @@ def tools_check(src):
     from nexclash import snapinfo, memscan, isrinfo, drawcost
     workflow = subprocess.run([sys.executable, os.path.join(HERE, 'tools', 'workflow_check.py')])
     bad = R.selfcheck() + ([] if workflow.returncode == 0 else ['workflow checks'])
+    bad += [b for r in R.all_records() for b in R.evidence_problems(r)]
     print('%-4s tools: records plan() on synthetic stamps, recipe digest and ROM identity mutations%s' % (
         'OK' if not bad else 'FAIL', '' if not bad else ' (%s)' % bad[:3]))
     from nexclash import tapeset                # tape-set inputs: reader, set matching, the records' inputs.tapes
@@ -609,6 +628,15 @@ def tools_check(src):
           'ROM, missing run -> INCOMPLETE; fault, boot -> FAIL; pin, last frame -> complete)%s' % (
               'OK' if not vb else 'FAIL', '' if not vb else ' (%s)' % vb[:3]))
     bad = list(bad) + vb
+    cb = coverage_stamp_check()
+    print('%-4s tools: empty evidence (no rows, states or cases) = not measured: no stamp, qualified PRF1; not applicable '
+          'stays distinct and does not block%s' % ('OK' if not cb else 'FAIL', '' if not cb else ' (%s)' % cb[:3]))
+    bad = list(bad) + cb
+    from nexclash import caseselect
+    sb2 = caseselect.selfcheck()
+    print('%-4s tools: case selection - failed cases, samples and the full set give each case the same phase and injections%s' % (
+        'OK' if not sb2 else 'FAIL', '' if not sb2 else ' (%s)' % sb2[:3]))
+    bad = list(bad) + sb2
     global _PUSH
     keep, _PUSH = _PUSH, False                  # the no-push-access gate (Dean 2026-10-21)
     try:

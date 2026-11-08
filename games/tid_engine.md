@@ -40,3 +40,15 @@ Per game (all verified; full maps in the *_dizzy*.json profiles):
 Game quirks: Fantasy World byte 62569=255 enables Kempston (use the keyboard snapshot);
 Fantasy World and Dizzy 1 execute `LD R,A`; Magicland's object plotter self-modifies
 36775 (NOP/XOR (HL)) and 36772 (JP 36795 = mirrored path via 0x5B00 table).
+
+## Locating sites
+(Moved from PLAYBOOK 2, 2026-11-08.)
+If a known engine matches, align its plotter/eraser instruction-by-instruction
+against the known game's (normalise 4-5 digit operands to N; where the opcode
+text matches, the numbers map old->new). Then locate by pattern:
+plot entry (JP/CALL to plotter), eraser (DI / LD (spsave),SP), screen-write
+sites (LD (HL),B after LD (DE),A in plotter; LD (HL),A after XOR C/B in
+eraser), wipe (LD IX,nn / LD A,136 / LD DE,1), box (LD A,(nn) / ADD A,4 /
+SRL A / LD (nn),A), ISR (IM2 vector -> handler; the CALL after the logic-tick
+CALL is the hide slot), pixel test (LD C,A / LD B,0 / SRL C / JR C).
+Verify every site's original bytes before building.
