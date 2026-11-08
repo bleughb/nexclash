@@ -31,7 +31,7 @@ STORE_BANKS = (13, 14, 15, 16, 17, 18, 19)
 SITES_CALL = {0xD9CE: ('cdb1d8', 'e_pl', 0xCD), 0x6194: ('cdd05f', 'e_cls', 0xCD),
               0x6618: ('cdd05f', 'e_cls', 0xCD), 0x672A: ('cdd05f', 'e_cls', 0xCD),
               0xA45F: ('cd47a6', 'e_rc', 0xCD), 0xA412: ('c347a6', 'e_rc', 0xC3),
-              0xD964: ('21205b', 'e_un', 0xC3)}
+              0xD964: ('21205b', 'e_un', 0xC3), 0xE06D: ('c272df', 'e_ob', 0xC3)}
 # the plot's 24 screen stores (erase and draw, after XOR (HL)): the ULA keeps no figure pixels.
 # No game code reads the bitmap but the plot itself (scan --writers); A is reloaded after each loop.
 NOPS = (0xDF97, 0xDF9C, 0xDFA1, 0xDFA9, 0xDFAE, 0xDFB3, 0xDFBB, 0xDFC0, 0xDFC5, 0xDFCD, 0xDFD2, 0xDFD7,
@@ -513,7 +513,7 @@ def xor_out(mem, on=(1,) * 6):
     return bytes(b)
 
 
-def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=1, model_colours=None):
+def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=1, model_colours=None, speed=0):
     """-> (Counter, examples). Failure keys end in '!'."""
     from skoolkit.snapshot import Snapshot
     import copy
@@ -532,6 +532,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=1, model_
     ram = bytes(snap0.memory[0x4000:0x10000])
     p2.store = store(lambda a: ram[a - 0x4000], p2.colours)
     ns = NS(p2.store)
+    ns.nr[0x07] = speed                    # the caller's speed: every hook gives it back
     A = _machine(snap0)
     B = _machine(s2, p2, ns)
     ns.mem = B.memory
@@ -589,6 +590,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=1, model_
             state['in'] = pc
             if pc == e_pl:
                 state['pre'] = bytes(mem[0x5800:0x5B00])
+                if ns.nr.get(0x07, 0) & 3 != 3:       # the plot's stretch: at 28 MHz from e_ob down to here
+                    fail('the plot stretch not at 28 MHz!', C['hook e_pl'])
             C['hook ' + {e_pl: 'e_pl', e_cls: 'e_cls', e_rc: 'e_rc'}[pc]] += 1
             state['sp'] = R[12]
             state['regs'] = list(R)
@@ -603,7 +606,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=1, model_
                     fail('hook changed a register!', hex(pc), k, R[k], state['regs'][k])
             if ns.nr.get(0x57) != 1:
                 fail('MMU7 not restored!', ns.nr.get(0x57))
-            if ns.nr.get(0x07, 0) & 3 != 0:
+            if ns.nr.get(0x07, 0) & 3 != speed:
                 fail('speed not restored!', ns.nr.get(0x07))
             get = mem.__getitem__
             if h == e_pl:
@@ -732,7 +735,10 @@ def negative_patches(z80=None):
     rep('x one pixel right (add a,28 -> 29)', bytes.fromhex('c61c'), bytes.fromhex('c61d'))
     rep('wrong image page (add a,STP -> STP+1)', bytes.fromhex('c61a'), bytes.fromhex('c61b'))
     rep('hook clobbers BC (pop bc -> pop de at exit)', bytes.fromhex('e1d1c1f1c3b1d8'), bytes.fromhex('e1d1d1f1c3b1d8'))
-    rep('MMU7 left on the store (nextreg 0x57,a -> nop nop nop)', bytes.fromhex('ed9257f1ed9207'), bytes.fromhex('000000f1ed9207'))
+    rep('MMU7 left on the store (nextreg 0x57,a -> nop nop nop)', bytes.fromhex('ed92577ced9207'), bytes.fromhex('0000007ced9207'))
+    rep('the plot stretch never opened (e_ob, nextreg 7,3 -> nops)', bytes.fromhex('ed910703c1f1'), bytes.fromhex('00000000c1f1'))
+    rep("the plot stretch never closed (e_pl, nextreg 7,a -> nops)", bytes.fromhex('ed92577ced9207'), bytes.fromhex('ed92577c000000'))
+    rep("the plot stretch at the wrong object (never reached)", bytes.fromhex('f5fe03'), bytes.fromhex('f5fe07'))
     rep('BLOB never hidden on a clear (hideall 24 -> 20)', bytes.fromhex('0618ed9234'), bytes.fromhex('0614ed9234'))
     sites = dict(SITES_CALL)
     del sites[0xD964]
@@ -977,6 +983,13 @@ def auto(a, z80, name, out, say):
         say('Verify    : %s  %s, %.0fs -> %s' % (os.path.basename(r), ', '.join('%s %s' % (k, v) for k, v in sorted(c.items())
                                                                               if not k.endswith('!'))[:700],
                                                time.time() - t, 'IDENTICAL' if not fails else 'FAILED %s' % fails))
+    if rzxs:                                    # the caller's speed comes back whatever it is (card patch.restore-speed)
+        for sp in (1, 2, 3):
+            c, ex = verify(patch, rzxs[0], stop=min(stop or 1500, 1500), speed=sp)
+            fails = {k: v for k, v in c.items() if k.endswith('!')}
+            ok = ok and not fails
+            say('Speed     : caller at NR 7 = %d, %s, %d frames -> %s' % (sp, os.path.basename(rzxs[0]), c['frames'],
+                                                                         'IDENTICAL' if not fails else 'FAILED %s' % fails))
     from . import runchecks
     if rzxs and stop:
         runchecks.add(runchecks.RUN, 'negatives', 'incomplete', '--quick %d: the negatives need whole recordings' % stop)
