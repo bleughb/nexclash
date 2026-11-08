@@ -656,6 +656,22 @@ def tools_check(src):
     print('%-4s tools: DMA policies, assembled hooks, functional model, negative controls and profiler%s' % (
         'OK' if not dbad else 'FAIL', '' if not dbad else ' (%s)' % str(dbad)[:300]))
     cbad += len(dbad)
+    import importlib.util
+    from nexclash import master_palette         # the palette standard (docs/COLOURS.md); off-standard games only warn
+    mbad = master_palette.selfcheck()
+    try:
+        pc_spec = importlib.util.spec_from_file_location('palette_check', os.path.join(HERE, 'tools', 'palette_check.py'))
+        pc = importlib.util.module_from_spec(pc_spec)
+        pc_spec.loader.exec_module(pc)
+        seen, off = pc.report(out=io.StringIO())
+        mbad += [] if seen else ['palette_check found no palettes']
+    except Exception as e:                      # the report never fails a build; a scanner that cannot run does
+        mbad.append('palette_check: %r' % e)
+        seen, off = 0, []
+    print('%-4s tools: master palette - 256 standard colours match coloursheet.palette_rgb, forms, nearest; '
+          'palette_check: %d palettes, %d warn (report only)%s' % (
+              'OK' if not mbad else 'FAIL', seen, len(off), '' if not mbad else ' (%s)' % str(mbad)[:200]))
+    cbad += len(mbad)
     rec = R.load('chuckie_egg')
     work = tempfile.mkdtemp(prefix='nexclash_tools_')
     d, why = stage(rec, src, work)
