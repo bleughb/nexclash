@@ -6,8 +6,8 @@ State: copier window m3c PASS in the model (8F95 work in the window's waits; unf
   speed and sound = plain (user); m3b, m3c: game plays ok (user).
 Inputs: specnext/reference/inferno/    Start: specnext build/CONTINUE_copier_window.md.
 Read: "Copier window"; inferno.py run_cw_window/run_cw_frame/copier_window_update_checks; asm cw_work, wk_*.
-Next: sprite pipeline (handover "Sprite pipeline plan"): (1) 8EF9 driver PASS in the model; (2) window
-  exact dispatch, (3) pattern/frame state, (4) protected uploads. Keep sprites disabled.
+Next: sprite pipeline (handover "Sprite pipeline plan"): (1) 8EF9 driver, (2) window dispatch PASS in the model;
+  (3) pattern/frame state, (4) protected uploads. Keep sprites disabled.
 Gate: zero frame slips and the original 9907 time per update with sound kept (replaces 10 ms).
 Boundary: 8EF9 follows original DI, before IM2 setup; the pause gate preserves all registers/R/RAM/
   stack and caller clocks (six RZX initialization states). Reject 86C5 (decompressor, overwritten).
@@ -138,12 +138,11 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
   2.9-13.2 k T, so +10 ms of hook work slips 56-81 % of updates a frame; "10 ms total" is no gate.
 - The copier head 9790..97FB (416 cells, 25.2-30.8 ms) OUTs the A700 beeper buffer per cell.
   Head T = 79,477 + 101*G; per-OUT T in cw_out_t. Graphics are mutable (F400-FA36, L3 ED00-F0AF).
-- Milestone 1: translated head (page 80), exact incl. R, 1,854 states.
 - Milestone 2: each OUT change at its original T (lockstep in the head), 9907 at the original time,
   CTC ch 3 polled (32 T ticks, any video timing; no counting CTC -> original copier). Window EI:
   page 80 byte 0 = IM2 JR offset to cw_irq (adds the no-op ISR: 94 T, 10 M1). Cell 415's OUT after
   the epilogue. X accumulates. Model 1,854 states: OUT -24..+56 T (cells 0/1 later), 9907 -25..+43 T.
-  Full recordings: 88,187 updates, an IRQ in every window, free >= 14.6 ms. m2 NEX MD5 4f7fef40...
+  Full recordings: 88,187 updates, free >= 14.6 ms.
 - Milestone 3a: hooks 8F7C/959B/96A1 time themselves on the CTC (cw_tin/cw_tout; 8F7C sets CW_X,
   actors add), restore R and count a $C8 pulse lost under DI as the original ISR (R+10, X-94; window
   entry too); cw_cal measures speed switches; 8F7C map copy by zxnDMA. Gap ~6 T per hook exit.
@@ -189,12 +188,15 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
 - Driver, page 81, from the 8EF9 gate: 256 C100 indices, snapshot, exact-stream duplicates (shared
   payload), colour, B, store; valid last. Model = independent oracle, all six levels; 3.2-6.9 s (L6).
   Not installed. Rule: nothing reads CAP_LOG before the window work.
+- Dispatch, page 69 1800, coroutine after the scene: each log record = entry + exact live compare,
+  polled per tile. Gate 0 failures, 0 misses; 14.9 % dropped (12.3 % before), runs to 14. NEX m3d.
 
 ## Historical components (build/actor_jobs.md, actor_b_compiler.md, README.md)
 - Pages 78/122 pin source bytes; 75 tiles; 76 whole-image B; masks 116/117, lookup 128–135; 77 gated
   DMA/DDMA with current AND pending guards. Hooks keep the CALL stack; page 68 owns state/log/stack.
 
 ## Lessons
+- [local: Inferno dispatch] Every added coroutine stage raises the drop rate: report drops and runs.
 - [local: Inferno driver oracle] A loader driver's dedupe is exact streams, not the host's tile tuples:
   row splits differ, so the exact validator (not the tuple) defines duplicates.
 - [local: Inferno 8F95 budget] Finishing deferred work after the limiter eats the slack the window
@@ -288,13 +290,13 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
 - detect.buffer-layout-producer: corrected: visible colour checks distinguish black-masked stale bitmap data.
 
 ## Stage log
+- 2026-11-08 (claude/inferno-pipeline-dispatch): window exact dispatch; gate PASS; NEX m3d boot PASS.
 - 2026-11-08 (claude/inferno-pipeline-driver): 8EF9 live-table driver page 81; PASS in the model.
 - 2026-11-08 (claude/inferno-copier-window-m3b/m3c): 8F95 work in cw_wait; unfinished dropped; PASS.
 - 2026-11-08 (claude/inferno-m3-hw-bisect): m3 hardware crash = hooks under the stub register
   block; moved, guarded, post-boot hook-byte check; gate PASS; fixed m3 for hardware.
 - 2026-11-07 (claude/inferno-copier-window*): m1 pacing/head, m2 OUT replay/pad, m3a timed hooks; PASS.
 - 2026-11-07: exact rows profiled (timing FAIL); initialization pause/R; owned store/dispatch PASS.
-- 2026-11-05..07 (codex/inferno): loader, capture, textmap, frame/modal/queue, actor packing/fill,
-  gated transfers, pinned sources, DDMA; checks PASS; cold/total timing FAIL (build/README.md).
+- 2026-11-05..07 (codex/inferno): loader, capture, textmap, frame/queue, actors, transfers; timing FAIL.
 - 2026-11-05: stages 0/1 intake/full raw replays and approved design; six-level model/level-2 census
   and tools/canary/doccheck PASS. Cards/diagnostics revised; evidence in specnext design/.

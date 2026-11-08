@@ -3755,6 +3755,242 @@ def driver_checks():
             'scope': 'assembled driver via the 8EF9 gate on a crafted table; simulator, DI, no hardware'}
 
 
+def driver_stream(ram, image):
+    """The exact serialized stream the store keeps for a C100 index; ValueError if malformed."""
+    actor = actor_descriptor(ram, image)
+    ptr, pos, stream = actor['pointer'], actor['pointer'] + 1, bytearray((ram[actor['pointer']],))
+    while ram[pos]:
+        width, dx, dy = ram[pos:pos + 3]
+        stream += bytes((width, dx, dy))
+        pos += 3
+        for j in range(width):
+            stream.append(ram[pos])
+            stream += raw_tile(ram, ram[pos] + 256 * (ram[ptr] & 3))
+            pos += 1
+    stream.append(0)
+    return bytes(stream)
+
+
+def dispatch_expected(store, live, page68):
+    """Oracle for the window dispatch: (ready, reasons), from the store and the live original RAM."""
+    if page68[0x3F5]:
+        return 0, ['log overflow']
+    for record in capture_log(page68):
+        image = record['image']
+        e = bytes(store[79][0x800 + 16 * image:0x810 + 16 * image])
+        if e[0] != 1:
+            return 0, ['no entry']
+        if e[11:14] != bytes(3):
+            return 0, ['phase/generation']
+        try:
+            stream = driver_stream(live, image)
+        except ValueError:
+            return 0, ['malformed live record']
+        if owned_payload(store, e[1], int.from_bytes(e[2:4], 'little'), int.from_bytes(e[4:6], 'little')) != stream:
+            return 0, ['changed content']
+    return 1, []
+
+
+def driver_store(result):
+    """Owned-store pages of a driver run: metadata page and the used pages only."""
+    pages = result['pages']
+    return {p: bytes(pages[p]) for p in (79, *range(136, 216)) if p == 79 or any(pages[p])}
+
+
+class DispatchMemory:
+    """Page 69 dispatch alone: slot 0 = 69, slot 1 mapped, the rest original RAM; CTC poll scripted."""
+    def __init__(self, ram, pages):
+        self.ram, self.pages = list(ram), pages
+        self.mmu1 = 68
+        self.polls = self.yield_every = 0
+        self.iyl = lambda: 0
+
+    def __getitem__(self, a):
+        if isinstance(a, slice):
+            return [self[i] for i in range(*a.indices(65536))]
+        if a < 8192:
+            return self.pages[69][a]
+        if a < 16384:
+            return self.pages[self.mmu1][a & 8191]
+        return self.ram[a]
+
+    def __setitem__(self, a, v):
+        if a < 8192 and (0x1C00 <= a < 0x1C40 or 0x1EC0 <= a < 0x1F00):
+            self.pages[69][a] = v
+        else:
+            raise AssertionError('dispatch wrote %04X (slot 1 page %d)' % (a, self.mmu1))
+
+    def nextreg(self, reg, value):
+        if reg == 0x51 and (value in (68, 79, 255) or 136 <= value < 216):
+            self.mmu1 = value
+        elif not (reg == 0x52 and value == 10):
+            raise AssertionError('dispatch set NextReg %02X to %d' % (reg, value))
+
+    def read_port(self, regs, port):
+        if port != 0x1B3B:
+            return 0                                     # NextReg $C8 read by wk_leave
+        self.polls += 1
+        if self.yield_every and self.polls % self.yield_every == 0:
+            return self.iyl()
+        return (self.iyl() + 1) & 255
+
+    def write_port(self, *args):
+        pass
+
+
+def run_dispatch(ram, store, log, yield_every=0, scene=1, code=None, overflow=0, slices=None):
+    """Assembled dispatch from wk_dispatch to its RET; a yield re-enters through wk_enter (resume)."""
+    from . import simpool, z80n
+    from .dizzy6 import _rw_simulator
+    syms = {k: int(v, 16) for k, v in load_profile()['hooks']['syms'].items()}
+    pages = {p: bytearray(v) for p, v in store.items()}
+    pages[69] = cw_work_renderer()
+    if code is not None:
+        org = syms['wk_dispatch']
+        pages[69][org:org + len(code)] = code
+    pages[68] = bytearray(8192)
+    at = 0x900
+    for record in log:
+        pages[68][at:at + len(record)] = record
+        at += len(record)
+    pages[68][0x3F2:0x3F4] = at.to_bytes(2, 'little')
+    pages[68][0x3F4], pages[68][0x3F5] = len(log), overflow
+    pages[69][0x1EAC], pages[69][0x1EC2] = scene, 10
+    mem = DispatchMemory(ram, pages)
+    mem.yield_every = yield_every
+    regs = [0] * 30
+    regs[12] = 0x1C3E                                    # WK_STACK - return address
+    regs[24], regs[14], regs[27] = syms['wk_dispatch'], 0xFE, 2
+    pages[69][0x1C3E:0x1C40] = (0x3333).to_bytes(2, 'little')
+    sim = simpool.machine(_rw_simulator(), mem, regs, 'inferno.dispatch')
+    sim.set_tracer(mem)
+    z80n.install(sim, mem.nextreg)
+    r, steps, yields = sim.registers, 0, 0
+    mem.iyl = lambda: r[11]                              # IYl
+    while r[24] != 0x3333:
+        if r[24] == syms['wk_out']:
+            yields += 1
+            r[0], r[24] = 1, syms['wk_enter']            # next slice: not the first, so resume
+            continue
+        if steps > 3_000_000:
+            raise AssertionError('dispatch did not return')
+        sim.opcodes[mem[r[24]]]()
+        steps += 1
+    if mem.mmu1 != 68 or mem.ram != list(ram):
+        raise AssertionError('dispatch failed slot/RAM contract')
+    return {'ready': pages[69][0x1EE0], 'matched': pages[69][0x1EEF], 'yields': yields, 'steps': steps}
+
+
+def dispatch_checks():
+    """Assembled window dispatch on a crafted store: exact hits, duplicates, yields and every miss."""
+    ram, regs = driver_fixture()
+    drv = run_loading_driver(ram, regs)
+    store = driver_store(drv)
+    expected = driver_expected(ram)
+    valid = [i for i, e in enumerate(expected) if e not in (None, 'reject') and store[79][0x800 + 16 * i]]
+    streams = {}
+    dup = next(i for i in valid if streams.setdefault(expected[i][0], i) != i)
+    canon = streams[expected[dup][0]]
+    def record(image, ptr=None):
+        d = actor_descriptor(ram, image)
+        pos = d['pointer'] + 1
+        out = bytearray((0, 0, 3, 4, image, ram[d['pointer']]))
+        while ram[pos]:
+            width = ram[pos]
+            out += bytes(ram[pos:pos + 3 + width])
+            pos += 3 + width
+        out.append(0)
+        return bytes(out)
+    log = [record(canon), record(dup), record(valid[0]), record(valid[-1])]
+    counts = Counter()
+    code = bytes.fromhex(load_profile()['hooks']['cwdx'])
+    def check(name, ram2=None, log2=None, store2=None, want=None, **kw):
+        ram2, log2, store2 = ram2 if ram2 is not None else ram, log2 if log2 is not None else log, store2 or store
+        result = run_dispatch(ram2, store2, log2, **kw)
+        state = bytearray(8192)
+        at = 0x900
+        for rec in log2:
+            state[at:at + len(rec)] = rec
+            at += len(rec)
+        state[0x3F2:0x3F4], state[0x3F4], state[0x3F5] = at.to_bytes(2, 'little'), len(log2), kw.get('overflow', 0)
+        oracle, reasons = dispatch_expected(store2, ram2, state)
+        oracle = 0 if kw.get('scene') == 0 else oracle
+        if want is not None and oracle != want:
+            raise AssertionError('%s: oracle says %d' % (name, oracle))
+        if result['ready'] != oracle:
+            raise AssertionError('%s: dispatch %d, oracle %d %s' % (name, result['ready'], oracle, reasons))
+        counts[name] += 1
+        return result
+    good = check('all draws exact, duplicate index included', want=1)
+    if good['matched'] != len(log):
+        raise AssertionError('matched count %d' % good['matched'])
+    for every in (1, 2, 3, 5, 7):
+        out = check('same result with a yield every Nth poll', want=1, yield_every=every)
+        if not out['yields']:
+            raise AssertionError('no yields at every=%d' % every)
+        counts['yields taken (control input)'] += out['yields']
+    check('scene not ready', want=0, scene=0)
+    check('log overflow', want=0, overflow=1)
+    bad_image = next(i for i, e in enumerate(expected) if e == 'reject')
+    check('no entry', want=0, log2=[record(valid[0])[:4] + bytes((bad_image,)) + record(valid[0])[5:]])
+    for what, delta in (('bitmap', 0), ('attribute', 8)):
+        d = actor_descriptor(ram, valid[0])
+        tile = d['tiles'][0][2]
+        mutated = list(ram)
+        a = 0xDC00 + 8 * tile if what == 'bitmap' else 0xFC00 + tile
+        mutated[a] ^= 1
+        check('live %s changed: miss' % what, ram2=mutated, want=0, yield_every=2)
+    # geometry: dy of the first run (first image in the log) changed
+    mutated = list(ram)
+    d = actor_descriptor(ram, canon)
+    mutated[d['pointer'] + 3] ^= 1
+    check('live geometry changed: miss', ram2=mutated, want=0)
+    # generation and FLASH in the entry
+    wrong = {p: bytearray(v) for p, v in store.items()}
+    wrong[79][0x800 + 16 * canon + 12] = 1
+    check('entry generation: miss', store2={p: bytes(v) for p, v in wrong.items()}, want=0)
+    # stored length one short: comparison of the terminator cannot pass unnoticed
+    short = {p: bytearray(v) for p, v in store.items()}
+    entry = 0x800 + 16 * canon
+    short[79][entry + 4] -= 1
+    short = {p: bytes(v) for p, v in short.items()}
+    check('stored length differs: miss', store2=short, want=0)
+    # negative controls (the broken dispatch's own code must disagree with the oracle)
+    h = code.hex().upper()
+    variants = {}
+    b = bytes.fromhex
+    pat = b('1ABE')
+    if code.count(pat + b('C2')) < 8:
+        raise AssertionError('bitmap compare pattern')
+    variants['bitmap comparison removed'] = code.replace(pat, b('1ABF'), 1)
+    resume = b('3AE51EED9251')                           # the tile yield's slot-1 remap
+    if code.count(resume) != 2:
+        raise AssertionError('resume remap pattern %d' % code.count(resume))
+    at = code.rindex(resume)
+    variants['slot-1 remap on resume removed'] = code[:at] + bytes(len(resume)) + code[at + len(resume):]
+    size = b('ED5BE81EB7ED52C2')
+    if code.count(size) != 1:
+        raise AssertionError('size compare pattern')
+    at = code.index(size)
+    variants['stored length not compared'] = code[:at + 7] + bytes(3) + code[at + 10:]
+    cases = {'bitmap comparison removed': {'ram2': None, 'mut': True},
+             'slot-1 remap on resume removed': {'yield_every': 2},
+             'stored length not compared': {'store2': short}}
+    for name, broken in variants.items():
+        kw = dict(cases[name])
+        if kw.pop('mut', False):
+            kw['ram2'] = list(ram)
+            kw['ram2'][0xDC00 + 8 * actor_descriptor(ram, valid[0])['tiles'][0][2]] ^= 1
+        kw = {k: v for k, v in kw.items() if v is not None}
+        try:
+            check(name, code=broken, **kw)
+        except (AssertionError, KeyError):
+            counts['control detected: ' + name] += 1
+        else:
+            raise AssertionError('control not informative: ' + name)
+    return {'counts': dict(counts), 'scope': 'assembled dispatch (page 69) from a crafted store and log; simulator, no hardware'}
+
+
 def driver_boundary_state(path):
     """Original RAM and registers at the first 8EF9 of a recording."""
     import skoolkit.rzxplay as rp
@@ -4793,11 +5029,17 @@ def cw_work_renderer(work_code=None):
     if any(page[org:org + len(code)]):
         raise ValueError('work code overlaps the renderer page')
     page[org:org + len(code)] = code
+    code = bytes.fromhex(h['cwdx'])
+    org = int(h['syms']['wk_dispatch'], 16)
+    if any(page[org:org + len(code)]):
+        raise ValueError('dispatch code overlaps the renderer page')
+    page[org:org + len(code)] = code
     return page
 
 
 CW_WKEN, CW_WKN = 0x1848, 0x1853        # page 80: work build flag (2), slices run
 WK_STATE = 0x1EC0                       # page 69: 0 idle, 1 suspended, 2 done
+DX_READY, DX_N = 0x1EE0, 0x1EEF         # page 69: dispatch result (item 2), records matched
 WK_SP = 0x1EC5                          # page 69: the suspended work's SP
 # page-69 bytes that are the 8F95 work's results (prepare_frame/render_textmap state; not its stack/SP saves)
 WK_RESULT = [(0x0800, 0x0C00), (0x1000, 0x1800), (0x1E80, 0x1E86), (0x1E88, 0x1E89), (0x1E8B, 0x1E8D),
@@ -4827,6 +5069,7 @@ class CopierWorkMemory(CopierWindowMemory):
         self.pages[CW_PAGE][CW_WKEN] = 2
         self.pages[69] = bytearray(pages[69]) if pages else bytearray(patch.renderer)
         self.pages[14] = bytearray(pages[14]) if pages else bytearray([0xE3] * 8192)
+        self.pages.setdefault(79, bytearray(8192))
         self.mmu1, self.mmu2 = 255, 10
         self.nr = dict(display or {0x6B: 0x0B, 0x6E: 0x80, 0x7F: 0})
 
@@ -4845,6 +5088,8 @@ class CopierWorkMemory(CopierWindowMemory):
 
     def __setitem__(self, a, v):
         if 8192 <= a < 16384 and self.mmu1 != 255:
+            if self.mmu1 == 79 or self.mmu1 >= 136:
+                raise AssertionError('dispatch wrote the owned store')
             self.pages[self.mmu1][a - 8192] = v
         elif 0x4000 <= a < 0x6000 and self.mmu2 == 14:
             self.pages[14][a - 0x4000] = v
@@ -4857,7 +5102,7 @@ class CopierWorkMemory(CopierWindowMemory):
         if reg == 0x50 and value == 69:
             self.mmu0 = value
             self.maps.append(value)
-        elif reg == 0x51 and value in (68, 255):
+        elif reg == 0x51 and (value in (68, 79, 255) or 136 <= value < 216):
             self.mmu1 = value
         elif reg == 0x52 and value in (14, 10):
             self.mmu2 = value
@@ -4886,7 +5131,7 @@ def _cost(r, before, speed, reads, mem):
 
 
 def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count0=0, irqs=(), limit=600000,
-                  fast_switch=False, kt=0, frame=False, frame_irq=None):
+                  fast_switch=False, kt=0, frame=False, frame_irq=None, store=None):
     """8F92 -> 9907 differentially, on one wall clock (3.5MHz T from the 8F92 state).
 
     Original: CALL 9790 path with frame IRQs (if any) at the given wall times. Patched: cap_done +
@@ -4916,6 +5161,8 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
     work = getattr(patch, 'work', False)
     mem = (CopierWorkMemory if work else CopierWindowMemory)(patch.apply_memory(source), bytearray(8192), patch,
                                                              clk, x, ctc, phase, count0, irqs)
+    if work and store:
+        mem.pages.update(store)
     mem.log_outs = site == 0x8F92
     mem.fast_switch = fast_switch
     mem.pages[CW_PAGE][CW_KT] = kt & 0xFF
@@ -5122,6 +5369,9 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
             'irqs_anchored': len(anchors),
             'work_T': work_t, 'work_spans': work_spans, 'slices': len(work_spans),
             'work_done': bool(work) and mem.pages[69][WK_STATE] == 2,
+            'dx': ((mem.pages[69][DX_READY], mem.pages[69][DX_N], bytes(mem.pages[STATE_PAGE]), list(mem.ram),
+                    mem.pages[69][0x1EAC])
+                   if work and store else None),
             'frame': (run_cw_frame(patch, original, mem.pages, state68, phase=phase, count0=count0, irq=frame_irq)
                       if work and frame else None)}
 
@@ -5368,7 +5618,7 @@ def copier_window_update_controls():
     return c
 
 
-def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, only=None):
+def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, only=None, stores=None):
     """Milestone 3 update model: 8F7C -> 9907 with the capture hooks (X measured on the CTC, R
     restored) and the window, on one wall clock. Per state: registers incl. R, RAM, OUT changes and
     9907 on time; X measured against the true added time. Every every_irq-th state: frame IRQs before,
@@ -5376,6 +5626,7 @@ def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, o
     negative controls."""
     patch = CopierWindowPatch(work=True)
     ctl = copier_window_update_controls() if controls else {}
+    stores = stores or {}
     counts, failures, detected = Counter(), [], Counter()
     xerr, d9907s, xs, busy, wait, gaps = [], [], [], [], [], []
     work_ms, f_added, f_full = [], [], []
@@ -5406,10 +5657,23 @@ def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, o
             counts['states'] += 1
             phase, count0 = (n * 13) % CW_TICK, (n * 37) & 255
             try:
-                res = run_cw_window(patch, ram, regs, phase=phase, count0=count0, frame=True)
+                res = run_cw_window(patch, ram, regs, phase=phase, count0=count0, frame=True, store=stores.get(level))
             except AssertionError as e:
                 fail(level, i, 'no IRQ', e)
                 continue
+            if res.get('dx') is not None and res['work_done']:
+                got, matched, page68, live, scene = res['dx']
+                try:
+                    want, reasons = dispatch_expected(stores[level], live, page68)
+                    want = want if scene else 0
+                except ValueError as e:
+                    fail(level, i, 'dispatch oracle', e)
+                    continue
+                counts['dispatch ready' if want else 'dispatch not ready'] += 1
+                counts.update({'dispatch miss: ' + k: 1 for k in reasons})
+                counts['dispatch records matched'] += matched
+                if got != want:
+                    fail(level, i, 'dispatch', {'errors': ['DX_READY %d, oracle %d: %s' % (got, want, reasons)]})
             if res['errors'] or res['fallback']:
                 fail(level, i, 'no IRQ', res)
             fr = res['frame']
@@ -5529,6 +5793,19 @@ def _cw_pick(level, i, sample=1, only=None):
     if only:
         return '%s:%d' % (level, i) in only
     return i % sample == 0
+
+
+def _cw_store(reference, level, cache):
+    """The owned store the 8EF9 driver builds for a level (cached beside the states)."""
+    import pickle
+    path = Path(str(cache) + '.store' + level) if cache else None
+    if path and path.exists():
+        return pickle.loads(path.read_bytes())
+    ram, regs, frame = driver_boundary_state(Path(reference) / ('Inferno%s.rzx' % level))
+    store = driver_store(run_loading_driver(ram, regs))
+    if path:
+        path.write_bytes(pickle.dumps(store))
+    return store
 
 
 def _cw_load_states(reference, levels, stop, every, cache):
@@ -5738,7 +6015,8 @@ def copier_window_checks(reference, levels=('1', '2', '3', '4', '5', '6'), stop=
            'scope': 'copier window 8F92->9907 in the simulator (uncontended T, 28MHz read waits, CTC and IRQ '
                     'models); no contention, no hardware'}
     if update:
-        out['update'] = copier_window_update_checks(both[0x8F7C], sample=sample, only=only)
+        stores = {level: _cw_store(reference, level, cache) for level in levels}
+        out['update'] = copier_window_update_checks(both[0x8F7C], sample=sample, only=only, stores=stores)
         out['failures'] = failures + out['update']['failures']
     return out
 
@@ -5772,6 +6050,9 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
                 raise ValueError('page 69 already allocated')
             image[8192:] = self.window.renderer
             self.extra_banks[69 // 2] = bytes(image)
+            if 79 // 2 in self.extra_banks:
+                raise ValueError('page 79 already allocated')
+            self.extra_banks[79 // 2] = bytes(16384)    # empty store (no driver in this build): every dispatch misses
         self.extra_banks[CW_PAGE // 2] = bytes(head) + bytes(8192)
         self.sites = [(a, old, new) for a, (old, new) in self.window.sites.items()]
 
@@ -5831,6 +6112,7 @@ def main():
     action.add_argument('--loading-prep-all', type=Path)
     action.add_argument('--loading-pause-checks', action='store_true')
     action.add_argument('--loading-driver-checks', action='store_true')
+    action.add_argument('--dispatch-checks', action='store_true')
     action.add_argument('--loading-driver-level', type=Path)
     ap.add_argument('--level', type=int, default=6)
     action.add_argument('--initialization-tests', type=Path)
@@ -5893,6 +6175,12 @@ def main():
             a.json.write_text(json.dumps(result,indent=2)+'\n')
         print(json.dumps(result))
         return int(any(c['failures'] for c in result['cases'])) if a.loading_prep_all else int(bool(result['examples']))
+    if a.dispatch_checks:
+        result = dispatch_checks()
+        if a.json:
+            a.json.write_text(json.dumps(result,indent=2)+'\n')
+        print(json.dumps(result))
+        return 0
     if a.loading_driver_checks or a.loading_driver_level:
         result = driver_checks() if a.loading_driver_checks else driver_level_check(a.loading_driver_level, a.level)
         if a.json:
