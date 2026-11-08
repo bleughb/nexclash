@@ -55,7 +55,7 @@
   },
   "sprites": {
    "file": "smash_tv_sprites.nex",
-   "md5": "68cd80b38b58b5578a5d135136850736"
+   "md5": "5987c29243f026022415bbfe965f7f56"
   }
  },
  "repro": [],
@@ -66,54 +66,66 @@
  "status": {
   "title": "Smash TV",
   "engine_col": "smashtv (smash_tv.md)",
-  "build": "smash_tv_sprites.nex 68cd80b3 (2026-11-07: hooks restore the caller's CPU speed and the game's own bodies run at it, lib/hlib_speed.asm; was af0298e2, earlier 03979d54: altrom + page 26 at slot 7: the game's own plotters into a scratch buffer; every figure 4-bit sprites in its cell inks, see-through outline; pattern cache; prompt front end)",
-  "software": "RZX IDENTICAL, front end + static + unit PASS",
+  "build": "smash_tv_sprites.nex 5987c292 (2026-11-08: pace limiter on the blit, hook time in the debt, lib/hlib_pace.asm; was 68cd80b3; earlier 03979d54: altrom + page 26 at slot 7: the game's own plotters into a scratch buffer; every figure 4-bit sprites in its cell inks, see-through outline; pattern cache; prompt front end)",
+  "software": "RZX IDENTICAL, front end + static + unit PASS, limiter negatives DETECTED; JNext pace of the clean-release build in lockstep, 4 seeds: quiet -0.34..-0.23%, busy -0.26..-0.19%",
   "hardware": "untested",
   "next": "hardware test (checklist); longer RZX (later arenas, bosses; Y = invulnerable)"
  },
  "checks": [
   "asm2profile:smash_tv"
  ],
+ "techniques": [
+  {
+   "application": "smash_tv.blit.pace",
+   "id": "patch.pace-limiter",
+   "revision": 3,
+   "target": "the blit window, hook debt",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  }
+ ],
  "checked": {
   "deps": {
-   "asm/smashtv_hooks.asm": "9e75f4cd7b7bbedf",
-   "docs/profiles/smash_tv.json": "0178a2a2c7ac25c5",
+   "asm/smashtv_hooks.asm": "0241dd2f3a6d2e84",
+   "docs/profiles/smash_tv.json": "943a848aeabb6e5e",
    "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "2a90481848696085",
-   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/engines.py": "b9b7538a34c912de",
+   "nexclash/nextboot.py": "121a5912efae9b2a",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
-   "nexclash/smashtv.py": "aa353de5054f7255",
+   "nexclash/smashtv.py": "e1a13abfd886482f",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "15be192fe751244f",
+   "recipe": "c1a69aafbbecdcbb",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-07"
+  "date": "2026-11-08"
  },
  "verified": {
   "deps": {
-   "asm/smashtv_hooks.asm": "9e75f4cd7b7bbedf",
-   "docs/profiles/smash_tv.json": "0178a2a2c7ac25c5",
+   "asm/smashtv_hooks.asm": "0241dd2f3a6d2e84",
+   "docs/profiles/smash_tv.json": "943a848aeabb6e5e",
    "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "2a90481848696085",
-   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/engines.py": "b9b7538a34c912de",
+   "nexclash/nextboot.py": "121a5912efae9b2a",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
-   "nexclash/smashtv.py": "aa353de5054f7255",
+   "nexclash/smashtv.py": "e1a13abfd886482f",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "15be192fe751244f",
+   "recipe": "c1a69aafbbecdcbb",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-07"
+  "date": "2026-11-08"
  }
 }
