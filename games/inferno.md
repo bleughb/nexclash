@@ -3,10 +3,10 @@
 ## Next session
 Stage: 2 (continued)    Branch: main (m3c from claude/inferno-copier-window-m3c)
 State: copier window m3c PASS in the model (8F95 work in the window's waits; unfinished = dropped). Hardware: m2/m3 run,
-  speed and sound = plain (user); m3b: gameplay ok (user); m3c not yet run.
+  speed and sound = plain (user); m3b, m3c: game plays ok (user).
 Inputs: specnext/reference/inferno/    Start: specnext build/CONTINUE_copier_window.md.
 Read: "Copier window"; inferno.py run_cw_window/run_cw_frame/copier_window_update_checks; asm cw_work, wk_*.
-Next: m3c pace/sound vs plain (heavy shooting); shrink actor hooks; JNext pace. Then the earlier items: live-table
+Next: user choice (handover): pipeline items first, or deferred actor row copy; JNext pace. Then the earlier items: live-table
   scan/driver at the 8EF9 gate, runtime exact dispatch and duplicate indices, complete
   pattern/frame state, protected uploads. Keep sprites disabled.
 Gate: zero frame slips and the original 9907 time per update with sound kept (replaces 10 ms).
@@ -201,7 +201,7 @@ build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 ## Lessons
 - [local: Inferno 8F95 budget] Finishing deferred work after the limiter eats the slack the window
   saved; drop the frame instead (display keeps the last one) and count run lengths of drops.
-- [none: m3b hardware: gameplay ok, no new finding]
+- [none: m3b/m3c hardware: game plays ok, no new finding]
 - [local: Inferno coroutine] A loop using SP as data pointer yields without CALL: save SP + live regs.
 - [local: Inferno copied routine] Compare every hand-copied asm routine's results with the original.
 - [doc BRIEFING A1] Hook code under the stub's register block (rom_end) is lost
