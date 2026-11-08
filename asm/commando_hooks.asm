@@ -8,6 +8,9 @@
 ; The main-path loops assume a column step of -1/0/+1 and a row step |dy| < row pairs: other steps
 ; stay on the ULA. Rows below line 191 are cut by the sprite clip window.
 ;
+; Pace (2026-11-08): the update's logic runs at 28 MHz from just past its frame sync to its sync or the first interrupt (e_fa, e_fb, e_isr, at 0x6100), which pays for the
+; hooks' time in advance; the game's own sync does the rest. R is kept at every hook (lib/hlib_r.asm): O - E - N counted per hook, compared by the verifier.
+;
 ; Interrupt safety: interrupts are ENABLED at every hook site and the game's IM2 handler (64764 ->
 ; 25173 -> 29527) restores every register it saves and then uses IY+7 as the game's flag byte. So
 ; no hook ever changes IY or IX (a build check rejects any IY/IX write), the hook stack has room
@@ -46,6 +49,18 @@
 
         DEVICE ZXSPECTRUMNEXT
         INCLUDE "lib/hlib_speed.asm"    ; macros only: the caller's speed latched and given back
+HLIB_V_R EQU 0x5E18             ; 3 bytes (hlib_r.asm): 0x5E00-0x5E1F is the front end's until the game starts
+D_ENT   EQU 117                 ; R: O - E - N of each hook (card patch.preserve-r), counted, compared by the verifier
+D_X     EQU 117
+D_P     EQU 115
+D_MAIN  EQU 127
+D_RC    EQU 116
+D_CLS   EQU 116
+D_INIT  EQU 117
+D_FA    EQU 118
+D_FB    EQU 117
+D_ISR   EQU 123
+V_RI    EQU 0x5E1B              ; e_isr's R to set (an interrupt can land in a hook, inside its HLIB_V_R)
 
 NENT    EQU 12                  ; sprite entries (4 sprites, 2 x 4 patterns each)
 NTYPES  EQU 41
@@ -92,6 +107,8 @@ D_DPTR  EQU 0x5E97              ; shape bitmap pointer for the current line (2)
 D_B0    EQU 0x5E99              ; fill: the row's ink bytes
 D_B1    EQU 0x5E9A
 D_B2    EQU 0x5E9B
+V_FAST  EQU 0x5E9D              ; 1: the update's logic is running at 28 MHz
+V_SPF   EQU 0x5E9E              ; the caller's speed, for e_fb
 D_MNZ   EQU 0x5E9C              ; occl: 1 = an object overlaps the figure (MASK may be non-empty)
 SAVE    EQU 0x5EA0              ; scenery save: up to 32 lines x 3 bytes
 INKB    EQU 0x5F20              ; 32 rows x 3 bytes: the frame's ink
@@ -110,11 +127,16 @@ PT1     EQU 0x3E00                  ; (DATA only in 0x3D00-0x3DFF: an instructio
                                     ; code there crashed 541e34e2; probable cause the DivMMC
                                     ; automap on fetch, BRIEFING A1 - never put code there)
 
+        ORG 0x3066
+        INCLUDE "lib/hlib_r.asm"        ; macros, and hlib_r_set, hlib_r_add, just past the shapes: the alt ROM has no other room
+        ASSERT $ <= 0x3080
         ORG 0x3600
 ; ---- 39120: every plot. Note the object's current sprite entry; save the scenery it will cut ----
 e_ent:  ld (V_SP),sp
         ld sp,STK
         push af
+        ld a,r
+        ld (HLIB_V_R),a
         push bc
         push de
         push hl
@@ -133,20 +155,25 @@ e_ent:  ld (V_SP),sp
         call spdi                   ; the caller's speed latched (hook stack), then 28 MHz
         call svsave
         call spdo                   ; the caller's speed back (never a fixed 3.5 MHz)
-.out:   pop hl
+.out:   ld a,D_ENT
+        call hlib_r_set
+        pop hl
         pop de
         pop bc
         pop af
+        call rout
         ld sp,(V_SP)
         jp 39202
 
 ; ---- 39366: main path. Converted -> new frame read from the zero page ----
 ; Runs on the game stack (the plotter's PUSH HL is still on it): no CALL/PUSH here.
-e_main: ld a,ixh                    ; A/F free: LD A,D / SUB E recompute both
+e_main: ld a,r                      ; A/F free: LD A,D / SUB E recompute both
+        ld (HLIB_V_R),a
+        ld a,ixh
         cp 0x5B
         jr z,.lo
         cp 0xFD
-        jr nz,.no
+        jp nz,.no
         ld a,ixl
         cp 0xCF
         jr nz,.no
@@ -187,27 +214,38 @@ e_main: ld a,ixh                    ; A/F free: LD A,D / SUB E recompute both
 .dy:    cp (ix+10)
         jr nc,.no
         ld a,1
-        ld (V_ON),a
+.st:    ld (V_ON),a
+        ld (V_SP),sp
+        ld sp,STK
+        ld a,D_MAIN
+        call hlib_r_set
+        ld sp,(V_SP)
+        ld a,(V_ON)
+        or a
+        jr z,.n2
         ld a,d
         sub e
         ex de,hl
         pop hl
         ld (V_HL),hl
         ld h,ZPH
-        jp 39370
-.no:    xor a
-        ld (V_ON),a
-        ld a,d
+        jr .rx
+.n2:    ld a,d
         sub e
         ex de,hl
         pop hl
+.rx:    HLIB_R_OUT
         jp 39370
+.no:    xor a
+        jr .st
 
 ; ---- 39529 / 40955: main-path exit. Converted: restore H, update the sprite; else hide it ----
 e_x:    ld sp,(64898)
         ld (V_SP),sp
         ld sp,STK
         push af
+        ld a,r
+        ld (HLIB_V_R),a
         ld a,(V_ON)
         or a
         jr z,.pass
@@ -250,7 +288,10 @@ e_x:    ld sp,(64898)
         call hidep                  ; drawn on the ULA this time: the old sprite goes now
         pop hl
         pop bc
-.out:   pop af
+.out:   ld a,D_X
+        call hlib_r_set
+        pop af
+        call rout
         ld sp,(V_SP)
         ret
 
@@ -260,15 +301,21 @@ e_x:    ld sp,(64898)
         MACRO PHIDE
         ld (V_SP),sp
         ld sp,STK
-        push af
+        call phid
+        ld sp,(V_SP)
+        ENDM
+phid:   push af
+        ld a,r
+        ld (HLIB_V_R),a
         push bc
         push hl
         call hidep
+        ld a,D_P
+        call hlib_r_set
         pop hl
         pop bc
         pop af
-        ld sp,(V_SP)
-        ENDM
+        jp rout
 e_p1:   PHIDE                       ; 39777 edge path (column >= 30)
         push de
         push hl
@@ -280,9 +327,10 @@ e_p2:   PHIDE                       ; 40733 top-clip path
         jp 40738
 e_p3:   PHIDE                       ; 40926 skip (both frames outside the window)
         res 5,(ix+11)
-        jr e_p4r
+        ld a,(ix+6)
+        jp 40933
 e_p4:   PHIDE                       ; 40930 skip 2
-e_p4r:  ld a,(ix+6)
+        ld a,(ix+6)
         jp 40933
 
 ; hidep: hide the entry in V_FREED (if any), V_FREED = none
@@ -307,6 +355,8 @@ hidep:  ld a,(V_FREED)
 e_rect: ld (V_SP),sp
         ld sp,STK
         push af
+        ld a,r
+        ld (HLIB_V_R),a
         push bc
         push de
         push hl
@@ -376,10 +426,13 @@ e_rect: ld (V_SP),sp
         ld a,b
         cp NENT
         jr c,.lp
+        ld a,D_RC
+        call hlib_r_set
         pop hl
         pop de
         pop bc
         pop af
+        call rout
         ld sp,(V_SP)
         sla c
         sla c
@@ -389,6 +442,8 @@ e_rect: ld (V_SP),sp
 e_cls:  ld (V_SP),sp
         ld sp,STK
         push af
+        ld a,r
+        ld (HLIB_V_R),a
         push bc
         push hl
         ld b,0
@@ -403,49 +458,15 @@ e_cls:  ld (V_SP),sp
         ld a,b
         cp NENT
         jr c,.lp
+        ld a,D_CLS
+        call hlib_r_set
         pop hl
         pop bc
         pop af
+        call rout
         ld sp,(V_SP)
         ld hl,16384
         jp 30600
-
-; ---- 25630: game entry (BASIC USR -> JP 25630). Hook state from scratch, all sprites hidden ----
-e_init: ld (V_SP),sp
-        ld sp,STK
-        push af
-        push bc
-        push de
-        push hl
-        ld hl,V_SP+2                ; vars + entry table (0x5C02-0x5C6F) = 0
-        ld b,ENT+8*NENT-V_SP-2
-.z1:    ld (hl),0
-        inc hl
-        djnz .z1
-        ld a,0xFF
-        ld (V_FREED),a
-        ld hl,SLOTK                 ; pattern slots: nothing reusable
-        ld b,4*NSLOT
-.z3:    ld (hl),a
-        inc l
-        djnz .z3
-        ld hl,ZPH*256               ; zero page = 0
-        xor a
-.z2:    ld (hl),a
-        inc l
-        jr nz,.z2
-        xor a                       ; sprites 0..4*NENT-1 hidden
-.h:     nextreg 0x34,a
-        nextreg 0x38,0
-        inc a
-        cp 4*NENT
-        jr c,.h
-        pop hl
-        pop de
-        pop bc
-        pop af
-        ld sp,(V_SP)
-        jp 27090
 
 ; ---- helpers ----
 ; Z if IX is a converted descriptor: player 23514, enemies 23313+20n (n<5), POW group 64975
@@ -1134,11 +1155,6 @@ occl:   xor a                       ; MASK is cleared when the first object over
         ld l,(hl)
         jp .obj
 
-; spdi / spdo: the caller's CPU speed latched, then 28 MHz / that speed back (lib/hlib_speed.asm); every register kept
-spdi:   HLIB_SPEED_IN V_SPD
-        ret
-spdo:   HLIB_SPEED_OUT V_SPD
-        ret
 rom_end:
         ASSERT rom_end <= 0x3D00        ; no code at 0x3D00-0x3DFF (BRIEFING A1: probable DivMMC trap)
 
@@ -1475,6 +1491,49 @@ fm:     ld d,high MASK
         ld (de),a
         ret
 
+; ---- 25630: game entry (BASIC USR -> JP 25630). Hook state from scratch, all sprites hidden ----
+e_init: ld (V_SP),sp
+        ld sp,STK
+        push af
+        ld a,r
+        ld (HLIB_V_R),a
+        push bc
+        push de
+        push hl
+        ld hl,V_SP+2                ; vars + entry table (0x5C02-0x5C6F) = 0
+        ld b,ENT+8*NENT-V_SP-2
+.z1:    ld (hl),0
+        inc hl
+        djnz .z1
+        ld a,0xFF
+        ld (V_FREED),a
+        ld hl,SLOTK                 ; pattern slots: nothing reusable
+        ld b,4*NSLOT
+.z3:    ld (hl),a
+        inc l
+        djnz .z3
+        ld hl,ZPH*256               ; zero page = 0
+        xor a
+.z2:    ld (hl),a
+        inc l
+        jr nz,.z2
+        xor a                       ; sprites 0..4*NENT-1 hidden
+        ld (V_FAST),a
+.h:     nextreg 0x34,a
+        nextreg 0x38,0
+        inc a
+        cp 4*NENT
+        jr c,.h
+        pop hl
+        pop de
+        pop bc
+        ld a,D_INIT
+        call hlib_r_set
+        pop af
+        call rout
+        ld sp,(V_SP)
+        jp 27090
+
 fill_end:
         ASSERT fill_end <= 0x3200
 
@@ -1570,6 +1629,14 @@ down:   inc h
         ld a,h
         sub 8
         ld h,a
+        ret
+; spdi / spdo: the caller's CPU speed latched, then 28 MHz / that speed back (lib/hlib_speed.asm); every register kept
+spdi:   HLIB_SPEED_IN V_SPD
+        ret
+spdo:   HLIB_SPEED_OUT V_SPD
+        ret
+; rout: HLIB_R_OUT, on the hook stack: keeps every register and flag
+rout:   HLIB_R_OUT
         ret
 svr_end:
         ASSERT svr_end <= 0x3600        ; main hooks from 0x3600
@@ -1787,8 +1854,80 @@ final:  nextreg 0x56,20
         ENDMODULE
 
         SAVEBIN "commando_front.bin",0x5D00,front_end-0x5D00
-        SAVEBIN "commando_fill.bin",0x3080,fill_end-0x3080
+        SAVEBIN "commando_fill.bin",0x3066,fill_end-0x3066
         SAVEBIN "commando_svr.bin",0x3550,svr_end-0x3550
+        ORG 0x6100
+; ---- 0x6100-0x61BF: bank 5, never read or written by the game (access scan, games/commando.md), and the alt ROM is full.
+; 0xDEB2 RES 0,(IY+7), past the frame sync -> JP e_fa: the update's logic runs at 28 MHz, as the hooks do, down to its frame sync (0xDF13 JP 0xDE91 ->
+; JP e_fb) or the first interrupt, whichever comes first (e_isr). The hooks' time is then paid for by logic that has already run faster, and the update
+; still ends at the game's own sync. The game's sound is played from the handler: e_isr gives the handler the game's clock. No wait and no K: the game's
+; frame sync does the pacing, so nothing here is tuned to JNext's timing.
+e_fa:   ld (V_SP),sp
+        ld sp,STK
+        push af
+        ld a,r
+        ld (HLIB_V_R),a
+        res 0,(iy+7)
+        call spdi
+        ld a,(V_SPD)
+        ld (V_SPF),a
+        ld a,1
+        ld (V_FAST),a
+        ld a,D_FA
+        call hlib_r_set
+        pop af
+        call rout
+        ld sp,(V_SP)
+        jp 0xDEB6
+e_fb:   ld (V_SP),sp
+        ld sp,STK
+        push af
+        ld a,r
+        ld (HLIB_V_R),a
+        ld a,(V_SPF)
+        nextreg 0x07,a
+        xor a
+        ld (V_FAST),a
+        ld a,D_FB
+        call hlib_r_set
+        pop af
+        call rout
+        ld sp,(V_SP)
+        jp 0xDE91
+e_isr:  push af                 ; 0x7357 LD (0xFD8F),HL, the handler's first instruction
+        ld a,r
+        push bc                 ; R to set, by the rule of hlib_r_set, in a byte of its own
+        ld b,a
+        add a,D_ISR
+        and 0x7F
+        ld c,a
+        ld a,b
+        and 0x80
+        or c
+        ld (V_RI),a
+        pop bc
+        ld (0xFD8F),hl          ; (the handler's own write: HL is then free for the test)
+        ld a,(V_FAST)
+        or a
+        jr z,.o
+        ld hl,0
+        add hl,sp
+        ld a,h
+        ld hl,(0xFD8F)
+        cp high STK - 1         ; inside a hook (its stack): the hook gives the speed back itself
+        jr z,.o
+        ld a,(V_SPF)
+        nextreg 0x07,a
+        xor a
+        ld (V_FAST),a
+.o:     ld a,(V_RI)
+        ld r,a
+        pop af
+        jp 0x735A
+ram_end:
+        ASSERT ram_end <= 0x61C0
+
+        SAVEBIN "commando_ram.bin",0x6100,ram_end-0x6100
         SAVEBIN "commando_rom.bin",0x3600,rom_end-0x3600
         SAVEBIN "commando_rom2.bin",0x3F00,rom2_end-0x3F00
         SAVEBIN "commando_setup.bin",0xD000,pal-0xD000

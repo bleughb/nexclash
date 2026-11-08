@@ -11,7 +11,7 @@ stripped by `auto`).
 | Output | MD5 | Status |
 |---|---|---|
 | commando.nex (plain, tail 0x6D00, starts in the front end) | a206f950c12f58a8e7f26b366f5a2480 | boot sim OK, front end PASS |
-| commando_sprites.nex (altrom + bank-5 state) | d601385ee4aeb7f3d7c0771bdc27df6b | solid figures + solid objects + pattern cache: RZX IDENTICAL, all tests PASS; runs on hardware (Dean) |
+| commando_sprites.nex (altrom + bank-5 state) | d601385ee4aeb7f3d7c0771bdc27df6b (2026-10-12; now ff488056, games/commando_pace.md) | solid figures + solid objects + pattern cache: RZX IDENTICAL, all tests PASS; runs on hardware (Dean) |
 
 Hardware 2026-10-12, first builds (5642e4b4 plain / f22a9452 sprites, started in the 128K BASIC
 loader): a key at the loading screen -> plain: minor corruption, screen stays (no game); sprites:
@@ -250,6 +250,9 @@ negative controls. Report: auto's commando_report.txt.
   original is not measurable here; against main's build (probe 39120, keys S to start, QAOP M): +0.00% (quiet -0.28%,
   busy +0.12%), interrupts 50.00 a second both.
 
+## Pace (2026-11-08, review 1.2)
+The logic at 28 MHz down to the frame sync; R kept at every hook; see games/commando_pace.md (split: size budget).
+
 ## Published .nxc build from main (2026-11-07)
 - The published Commando .nxc v1.1 (github.com/jattree/nxc) is main's build of its target, the clean release
   (48K .z80, MD5 ddd8f28c, saved at the IM 2 handler 0xFCFC): `python nexclash.py auto CLEAN.z80 --no-record
@@ -268,13 +271,18 @@ negative controls. Report: auto's commando_report.txt.
   outside the engine is not main's build: the derivation (clean_start) and the screen (loading_nex) now run in auto.
 - [card patch.restore-speed §Use / do not use] A full alt ROM: call one latch routine pair instead of the macros
   inline (25 bytes against 38 for two sites).
+- [local: no limiter needed] A game with its own frame sync and idle time at the end of the update needs no limiter: run its logic at 28 MHz down to the sync, back at any interrupt that plays its sound.
+- [local: verify a pace figure's input] The published +0.38% had keys the game does not read: a pace run shows the player moving in its pictures, or it is not a measurement of play.
+- [local: a game writes its own vector] 0xFCFC looked like a site; the verifier's write check caught it, and a JNext run looked right all the same.
 
 ## Technique use
 - patch.restore-speed: helped: the macros in a called routine pair (2026-11-07).
+- patch.preserve-r: helped: hlib_r whole; called routines on the hook stack.
+- patch.pace-limiter: no help: the game's own sync does it (2026-11-08).
 
 ## Friction
-- reuse: [tool asm/lib/hlib_speed.asm] the shared latch
-- retries: [local: ROM full] the inline macros did not fit; routines did
+- reuse: [tool asm/lib/hlib_speed.asm] the shared latch; asm/lib/hlib_r.asm whole
+- retries: [local: ROM full] the inline macros did not fit; routines did; for the pace hooks, code at 0x6100 in bank 5
 - environment: [none: the usual references and JNext card]
-- hand-rolled: [local: a JNext screenshot strip to find the start key (S)] pace profile cm in the run folder
+- hand-rolled: [local: a JNext screenshot strip to find the start key (S)] pace profile cm in the run folder; seg.py logs site times, run folder tools/
 - scratch: [none: no scratch scripts in the repo]
