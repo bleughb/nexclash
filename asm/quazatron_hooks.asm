@@ -120,16 +120,11 @@ XHB     EQU 0x4BF1              ; put3: X bit 8
 ISRSPD  EQU 0x4BF2              ; t_isr: the interrupted code's speed
 TX      EQU 0x4BF3              ; 2: the origin at the last commit (the shown origin's target; sprites are placed
 TY      EQU 0x4BF5              ;    from the view the game last drew, which is this one)
-DEBT    EQU 0x4BF6              ; 2: the pace limiter's debt, 1/16 video lines (14 T at 3.5 MHz) of hook time not yet repaid
-DST     EQU 0x4BF8              ; 2: the video line at the open debt window's start
-ISRL    EQU 0x4BFA              ; 2: the video line at an ISR's start inside the hook page
+HLIB_V_PACE EQU 0x4B40          ; 26: the shared pace library's state (lib/hlib_pace.asm), zero at start (session 11)
+DEBT    EQU HLIB_V_PACE + 4     ; 2: the pace limiter's debt, 1/16 video lines (14 T at 3.5 MHz) of hook time not yet repaid
 DH0     EQU 0x4BFC              ; t_dly: the delay's outer count
 GIMG    EQU 0x4BFD              ; group: the image number
-MVE     EQU 0x4C80              ; 2: a move's pace window: lines elapsed (ISR bodies left out)
-MVT     EQU 0x4C82              ; 2: its target (1/16 lines)
-MVP     EQU 0x4C84              ; polls left with the line counter still (no counter: give up)
-MVL     EQU 0x4C85              ; 2: the last line read in the wait
-DEBTCAP EQU 312 * 16 * 8        ; session 8: eight frames (was four): a Centred step pair (H + V) leaves more than four
+        DEFINE HLIB_PACE_CAP 0x9C00     ; session 8: eight frames, 312 x 16 x 8 (was four): a Centred step pair (H + V) leaves more
 O_MOVEV EQU (30 + 21 * 0x1200 - 5) / 14       ; a scroll move's original time at 3.5 MHz (LD HL / DE / BC, LDDR or
 O_MOVEH EQU (30 + 21 * 0x12FE - 5) / 14       ; LDIR; 0x8300-0x95FF and the code are uncontended), 1/16 lines
 SKEY    EQU 0x4C60              ; 21: the image (+1) each pattern slot (3 patterns) holds, 0: none. The images are
@@ -141,16 +136,16 @@ STAMP   EQU 0x4CC9              ; this update's number (p_spr)
 PPAT    EQU 0x4CCA              ; put3: the first sprite's pattern
 HLIB_PACE_NL EQU 312            ; 48K timing (z80tonex: NR 3 = 48K)
 ; session 3: game-routine pace windows (fw_*). The game's own E656 (block blits, every update), and with fast scroll off
-; a scroll step's BE38 (strip render) and its C05A copy (from DD9A), run at 28 MHz; their time there (WP, ISR bodies and
-; nested hook work left out) x K/16 is the original's time (WO); the saving repays DEBT, and what DEBT does not take is
+; a scroll step's BE38 (strip render) and its C05A copy (from DD9A), run at 28 MHz; their time there (ISR bodies and
+; nested hook work left out) x K/16 is the original's time (hlib_pace_waitk); the saving repays DEBT, and what DEBT does not take is
 ; waited out on the video line. K per routine: JNext's ratio of the original's time at 3.5 MHz (48K contention) to the
 ; routine's at 28 MHz, measured in session 3 (work/s3/kcal.py), rounded down (never faster than the original).
-WOPEN   EQU 0x4CD0              ; 0: no window, 1: the game routine runs (nested hooks: WNEST), 2: the hook's own work
+WOPEN   EQU 0x4CD0              ; 0: no window, 1: the game routine runs (nested hooks: hlib_nest_*), 2: the hook's own work,
+                                ; 3: a scroll move's window (fast scroll off) or a Centred step's (cw_close)
 WK      EQU 0x4CD1              ; K (x 16)
-WNEST   EQU 0x4CD6              ; 2: nested / own hook time inside the window (1/16 lines)
-WO      EQU 0x4CD8              ; 2: the original's time (1/16 lines)
-WP      EQU 0x4CDA              ; 2: the routine's time at 28 MHz
-WT      EQU 0x4CDC              ; 2: fw_wait's target
+WNS     EQU 0x4CD6              ; 2: the nested hooks' entries and exits inside the routine (1/16 lines, at 28 MHz):
+                                ; v1.2's WNEST left them out of the routine's time; the library's window keeps them
+NESTF   EQU 0x4CD8              ; 1: inside dbg_open .. dbg_close with a nest open (an ISR there leaves the window alone)
         IFNDEF KSPR
 KCMP    EQU 96                  ; session 9: 6.0 (session 8: 6.31). Calibrated in lockstep against the Centred reference game (work/s9/anal9c.py: the original with Centred view's logic only, its step time left out): 101 ran +1.8% slow, 96 -0.4% quiet, +1.3% scroll (JNext measured 6.10 time-weighted in session 8)
 KSPR    EQU 104                 ; E656 (JNext: 98.8 off, 102.1 on over 1,051 calls)
@@ -167,6 +162,12 @@ C_C05A  EQU 68                  ; t_c05a 953 T
 C_MOVE  EQU 15                  ; the moves outside their pace window (about 300 T; the window has the rest)
 C_BS    EQU 0                   ; t_bs: its own part is small (its nested hooks count their own)
 C_ISR   EQU 37                  ; t_isr from game code 521 T (every frame)
+C_LIBP  EQU 1                   ; refactor (v1.3): a nested hook's library work outside its two readings, counted
+C_LIB   EQU 8                   ; at 28 MHz T / 8 (1/16 lines, rounded down): before nest_open's reading about 160 T
+                                ; (C_LIBP; inside an open window, so WNS too), after nest_close's about 1,100 T (C_LIB:
+                                ; the debt sums, the window's re-read). v1.2's qline / dlines / dadd left about 600 T
+                                ; so; without these, JNext: a scroll step's strip (BE38, 3.5 MHz, many nested hooks)
+                                ; ran 2% longer than v1.2's and its time never reached the debt
 C_CLS   EQU 44                  ; t_prn 630-711 T (t_cls clears the debt)
 KDLY    EQU 40                  ; t_dly 652 T, in delay steps (16 T)
         ENDIF
@@ -196,7 +197,6 @@ IKEYA   EQU 0xDA00              ; in S0 (slot 6): + g this update's keys (0xFF: 
 DXA     EQU 0xDB00              ; in S0: per group (+ g) its offset from its last place, x (px, signed; 0: none) and
 DYA     EQU 0xDC00              ; y: written by ipol (slot 6), read by the frame step (slot 0: never written there)
 FCT     EQU IPV + 12            ; the frame step's share of the offset still shown: IR x 256 / IT (0-255)
-LZONE   EQU 244                 ; session 9: mvtick's guard zone (lines 244-248; JNext takes the interrupt at line 248)
 XFL     EQU 0x4C77              ; session 9: x_paste: the flag of the cells it touched
 
 ; game variables
@@ -758,22 +758,31 @@ wregs:  ld hl,(DX)
         ret
 
 ; isr_step: from the ISR hook, in game code (page mapped at slot 2 by t_isr): the smooth display's frame step at
-; 28 MHz, then NR 7 = the game's speed for the ISR body. Keeps IX, IY, the alternate set; AF, BC, DE, HL lost.
+; 28 MHz, then NR 7 = the game's speed for the ISR body. Its time goes to the debt, left out of a running game routine's
+; window (hlib_nest_open / _close); the ISR body is held out of every window (hlib_pace_hold here, hlib_pace_resume in
+; wskipc after it). In a Centred step's window (WOPEN 3) the frame step is held out too (cw_close: the step's own time
+; only). Keeps IX, IY, the alternate set; AF, BC, DE, HL lost.
 isr_step:
         nextreg 0x07,3
-        ld a,(WOPEN)            ; a game routine's pace window: its time so far counted, the ISR's left out (wskipc)
+        ld a,(HLIB_V_PACE + 10) ; an open window counted up to here (at least once a frame, as isr_in)
         or a
-        call nz,mvtick
-        call dbg_open
+        call nz,hlib_pace_tick
+        ld a,(WOPEN)
+        cp 3
+        call z,hlib_pace_hold
+        ld a,(WOPEN)
+        cp 3
+        call nz,hlib_nest_open
         nextreg 0x57,GPAGE      ; session 5: the whole frame step (glide or camera, the scroll registers, the
         call glide              ; sprites) runs from page 27 at slot 7 (interrupts are off; slot 6 stays free for S0)
         nextreg 0x57,1
-.done:  ld a,C_ISR               ; (the same at any interrupted clock: the hook's state never depends on it)
-        push af                 ; (session 8: dbg_close_r inlined: never WNEST; the ISR is left out of a window by
-        call dlines             ; mvtick / wskipc)
-        pop af
-        call dadd.add
-        ld a,(GSPD)
+        ld a,(WOPEN)
+        cp 3
+        jr z,.done
+        ld a,C_ISR              ; (the same at any interrupted clock: the hook's state never depends on it)
+        call hlib_nest_close
+        call hlib_pace_hold
+.done:  ld a,(GSPD)
         nextreg 0x07,a
         ret
 
@@ -810,136 +819,69 @@ put3:   push de
         pop de
         ret
 
-; ---- the pace limiter (card patch.pace-limiter; target ORIGINAL). Every hook's added time goes to DEBT: its work at
-; 28 MHz measured on the video line (dbg_open .. dbg_close; an ISR inside the window is left out: isr_in / isr_out),
-; its entry and exit at the caller's clock as a constant per hook (C_*). The game's own delay at DD80 repays it (t_dly:
-; the loop starts shorter). With 6 or more blocks the game has no delay: the debt waits for the next update's.
+; ---- the pace limiter (card patch.pace-limiter; target ORIGINAL), on the shared library (lib/hlib_pace.asm, below;
+; session 11 of the refactor: the engine's own qline, dlines, mvtick, wown, ... replaced, the maths as before). Every
+; hook's added time goes to the debt (DEBT = HLIB_V_PACE + 4): its work at 28 MHz measured on the video line (dbg_open ..
+; dbg_close), its entry and exit at the caller's clock as a constant per hook (C_*). The game's own delay at DD80 repays
+; it (t_dly: the loop starts shorter). With 6 or more blocks the game has no delay: a window's saving repays it, or the
+; next update's delay. Interrupts: t_isr holds the library's count over the ISR (hlib_pace_hold / _resume), so an ISR is
+; in no window and no debt window.
 
-; qline: HL = the video line (0-311), the reads with interrupts held off (then put back as they were: inside the ISR
-; they stay off); NR 7 is selected again after (HLIB_SPEED_IN reads it). AF, BC lost.
-qline:  call iffq                ; (session 8: P/V = interrupts on, by iffq)
-        di
-        push af
-        ld bc,0x243B
-.r:     ld a,0x1E
-        out (c),a
-        inc b
-        in h,(c)
-        dec b
-        ld a,0x1F
-        out (c),a
-        inc b
-        in l,(c)
-        dec b
-        ld a,0x1E
-        out (c),a
-        inc b
-        in a,(c)
-        dec b
-        xor h
-        and 1
-        jr nz,.r
-        ld a,h
-        and 1
-        ld h,a
-        ld a,7
-        out (c),a
-        pop af
-        ret po
-        ei
-        ret
-
-; dbg_open: a debt window starts (at 28 MHz). AF, BC, HL lost.
+; dbg_open: a hook's own work starts: its time goes to the debt, left out of a running window (hlib_nest_open). In a
+; Centred step's window (WOPEN 3) nothing: the step's whole time is the window's (cw_close). AF, BC, DE, HL lost.
 dbg_open:
-        call qline
-        ld (DST),hl
-        ret
-
-; dbg_close: A = the hook's unmeasured part (1/16 lines). DEBT += 16 x lines since dbg_open + A. Inside a game routine's
-; pace window (WOPEN 1: a nested hook, its entry and exit at 28 MHz: A / 8) or after it (WOPEN 2: the window hook's own
-; work; A is its 3.5 MHz part, outside the window) the measured time also goes to WNEST. AF, BC, DE, HL lost.
-dbg_close:
-        push af
-        call dlines
         ld a,(WOPEN)
-        or a
-        jr z,.plain
+        cp 3
+        ret z
+        ld a,1                  ; an ISR inside the hook ticks no window (isr_in / wtick, wsync): its time so far would be
+        ld (NESTF),a            ; counted in the window, x K (v1.2's mvtick there was undone by WNEST)
+        jp hlib_nest_open
+
+; dbg_close: A = the hook's unmeasured part (1/16 lines). Debt += 16 x lines since dbg_open + A; inside a game routine's
+; window (WOPEN 1: a nested hook, its entry and exit at 28 MHz) A / 8, that window going on without the hook's time
+; (hlib_nest_close: Quazatron's WNEST, now the library's). WOPEN 3: nothing. AF, BC, DE, HL lost.
+dbg_close:
+        ld b,a
+        ld a,(WOPEN)
+        cp 3
+        ret z
         dec a
-        jr nz,.post
-        pop af
+        ld a,b
+        jr nz,.n
         rrca
         rrca
         rrca
         and 0x1F
-        ld e,a
-        ld d,0
-        add hl,de
-        call .nest
-        xor a
-        call dadd.add
-        jp mvtick               ; the window's count goes on here too: never a frame between two counts (an
-                                ; interrupt in a ROM trampoline is not counted), so no wrap is lost
-.post:  call .nest
-.plain: pop af
-        jr dadd.add
-.nest:  push hl
-        ld de,(WNEST)
-        add hl,de
-        ld (WNEST),hl
-        pop hl
-        ret
+        add a,C_LIBP
+        ld b,a                  ; WNS += A / 8 + C_LIBP (fw_wait takes it out of the routine's time, as v1.2's WNEST)
+        ld hl,(WNS)
+        add a,l
+        ld l,a
+        jr nc,.c
+        inc h
+.c:     ld (WNS),hl
+        ld a,b
+        sub C_LIBP
+.n:     add a,C_LIBP + C_LIB    ; the library's own unmeasured work to the debt too
+        call hlib_nest_close
+        xor a                   ; (cleared after the close: an ISR before it ticks nothing, which is harmless)
+        ld (NESTF),a
+        jp wsync                ; a window goes on from here, after the close's own work (the library's reading is
+                                ; taken before its debt sums: that tail would be counted in the window, x K; it is
+                                ; in C_LIB, the hook's exit in A / 8, as v1.2's)
 
-; dbg_close_r: as dbg_close, never WNEST (isr_step: the ISR is left out of a window by mvtick / wskipc).
+; dadd: DEBT += A (1/16 lines), capped (HLIB_PACE_CAP). WOPEN 3: nothing (cw_close sets the debt). AF, DE, HL lost.
+dadd:   ld l,a
+        ld a,(WOPEN)
+        cp 3
+        ret z
+        ld h,0
+        jp hlib_debt_add
 
-; iffq: P/V = IFF2 (interrupts on). LD A,I taken while an interrupt is accepted reads 0 (the ISR then runs and
-; returns with them on): so if the first read shows them on they are on; if not, a second read decides (after such
-; an interrupt it shows them on; in an ISR, or with them really off, both read 0). AF lost.
-iffq:   ld a,i
-        ret pe
-        ld a,i
-        ret
-
-; dlines: HL = 16 x lines since dbg_open. AF, BC, DE lost.
-dlines: call qline
-        ld de,(DST)
-        or a
-        sbc hl,de
-        jr nc,.p
-        ld de,HLIB_PACE_NL
-        add hl,de
-.p:     add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        ret
-
-; dadd: DEBT += A (1/16 lines), capped at 0xBFFF (about 10 frames). AF, DE, HL lost.
-dadd:   ld hl,0
-.add:   ld e,a
-        ld d,0
-        add hl,de
-        ld de,(DEBT)
-        add hl,de
-        jr c,.cap
-        push hl
-        ld de,DEBTCAP
-        or a
-        sbc hl,de
-        pop hl
-        jr c,.w
-.cap:   ld hl,DEBTCAP
-.w:     ld (DEBT),hl
-        ret
-
-; dconst: DEBT += A; keeps BC, DE, HL. AF lost.
-
-; isr_in / isr_out: t_isr in the hook page (interrupts off): the ISR body's time is left out of an open debt window
-; (DST moves on by it). AF, BC, DE, HL lost.
-isr_in: call qline
-        ld (ISRL),hl
-        ld a,(WOPEN)            ; a pace window: its time counted up to here
-        or a
-        call nz,mvtick
+; isr_in / isr_out: t_isr in the hook page (interrupts off): the ISR's time (frame step and body) is held out of every
+; window and debt window (hlib_pace_hold / _resume). AF, BC, DE, HL lost.
+isr_in: call wtick              ; an open window counted up to here: at least once a frame (a Centred step's window
+        call hlib_pace_hold     ; lasts up to three; v1.2's mvtick did this), so no frame wrap is lost
         ld a,(SBUSY)            ; session 5: the frame step here too (not while p_spr writes the sprite ports), so
         or a                    ; the picture moves every frame
         ret nz
@@ -948,25 +890,31 @@ isr_in: call qline
         nextreg 0x57,1
         ret
 isr_out:
-        call qline
-        ld a,(WOPEN)            ; a pace window: the ISR body left out (it goes on from here)
+        call hlib_pace_resume
+; wsync: after an ISR (isr_out, wskipc) an open window goes on from now, as v1.2's MVL = now: the ISR's own work
+; after its tick (isr_in / isr_step), held or not (the frame step's close, the hold), stays out of the window. The
+; reading before the ISR would otherwise stand until the next interrupt's tick, a whole frame later, and the frame's
+; wrap was lost (a Centred step's window lasts up to three frames). Never inside a nested hook (NESTF):
+; hlib_nest_close moves the window on after it. AF, BC, DE, HL lost.
+wsync:  call wopen
+        ret z
+        call hlib_now
+        ld (HLIB_V_PACE),hl
+        ld (HLIB_V_PACE + 18),de
+        ret
+; wtick: an open window counted up to now (isr_in: at least once a frame), never inside a nested hook. AF, BC, DE,
+; HL lost.
+wtick:  call wopen
+        ret z
+        jp hlib_pace_tick
+; wopen: NZ when a window is open and no nested hook is (NESTF). AF lost.
+wopen:  ld a,(NESTF)
         or a
-        jr z,.nw
-        ld (MVL),hl
-.nw:    ld de,(ISRL)
+        jr nz,.no
+        ld a,(HLIB_V_PACE + 10)
         or a
-        sbc hl,de
-        jr nc,.p
-        ld de,HLIB_PACE_NL
-        add hl,de
-.p:     ld de,(DST)
-        add hl,de
-        ld de,HLIB_PACE_NL
-        or a
-        sbc hl,de
-        jr nc,.w
-        add hl,de
-.w:     ld (DST),hl
+        ret
+.no:    xor a
         ret
 
 ; p_dly: from t_dly, at the game's clock. A = h0 = 8 (6 - AF09): the original's loop is N0 = 256 h0 steps of
@@ -1061,14 +1009,13 @@ mv_in:  call spd_fast
         ld hl,(DEBT)
         ld (CWD),hl
         pop hl
-.win:   push hl
-        call qline
-        ld (MVL),hl
-        ld hl,0
-        ld (MVE),hl
-        ld a,3                  ; session 3: an ISR inside the move (now run here, in the page) is left out of the
-        ld (WOPEN),a            ; window (isr_in / isr_out), and its body runs at the game's speed, as in the original
-        pop hl
+.win:   push de
+        push hl
+        call hlib_pace_open     ; an ISR inside the move (run here, in the page) is held out of the window (isr_in /
+        pop hl                  ; isr_out), and its body runs at the game's speed, as in the original
+        pop de
+        ld a,3
+        ld (WOPEN),a
         ret
 
 ; mv_lddr / mv_ldir: the game's own block move, run in the page (an interrupt in it takes t_isr's hook-page path).
@@ -1080,112 +1027,21 @@ mv_ldir:
         ret
 
 ; mv_out: HL = the move's original time (1/16 lines). Fast scroll off: wait until the window has lasted that, less
-; the debt (an ISR body inside it is left out, as it lengthened the original's move too); a debt over it is cut by
-; what the move saved. Then the caller's speed. Keeps BC, DE; AF, HL lost.
+; the debt (hlib_pace_wait; an ISR body inside it is held out, as it lengthened the original's move too; a debt over it
+; is cut by what the move saved). Then the caller's speed. Keeps BC, DE; AF, HL lost.
 mv_out: ld a,(VFAST)
         or a
         jr nz,.back             ; fast scroll: the burst's saving is its own (never in the debt)
         push bc
         push de
-        ld (MVT),hl             ; O
-        ex de,hl
-        ld hl,(DEBT)
-        ex de,hl                ; HL = O, DE = debt
-        or a
-        sbc hl,de
-        jr c,.paid
-        ld (MVT),hl             ; wait until the window has lasted O - debt
-        ld hl,0
-        ld (DEBT),hl
-        ld a,0
-        ld (MVP),a
-.w:     call mvtick
-        ld hl,(MVE)
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        ld de,(MVT)
-        or a
-        sbc hl,de
-        jr c,.w
-        jr .done
-.paid:  call mvtick             ; the debt is more than the move: no wait; debt -= O - W
-        ld hl,(MVE)
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        ld de,(DEBT)
-        add hl,de               ; W + debt
-        ld de,(MVT)
-        or a
-        sbc hl,de               ; - O
-        jr nc,.st
-        ld hl,0
-.st:    ld (DEBT),hl
-.done:  xor a
+        xor a                   ; the target at 3.5 MHz, never scaled by the incoming clock (as v1.2)
+        call hlib_pace_wait
+        xor a
         ld (WOPEN),a
         pop de
         pop bc
 .back:  ld a,(VSPD2)
         nextreg 0x07,a
-        ret
-
-; mvtick: MVE += lines since MVL (one wrap allowed), MVL = now; interrupts held off throughout, so an ISR's isr_out
-; (which moves DST) cannot fall between. The line counter still for 256 polls: MVE is forced past any target (an
-; emulator without one). AF, DE, HL lost.
-mvtick: call iffq
-        push af
-        push bc
-        call qline              ; (session 6: its own short DI; the update below is the only other one: a long DI
-        di                      ; window made the ULA's interrupt fall wholly inside it)
-        ld de,(MVL)
-        ld (MVL),hl
-        or a
-        sbc hl,de
-        jr nz,.m
-        ld a,(MVP)
-        dec a
-        ld (MVP),a
-        jr nz,.z
-        ld hl,0x0FFF            ; no line counter: give up (x 16 is past any target)
-        ld (MVE),hl
-        jr .z
-.m:     push af
-        xor a
-        ld (MVP),a
-        pop af
-        jr nc,.m2
-        ld de,HLIB_PACE_NL
-        add hl,de
-.m2:    ld de,(MVE)
-        add hl,de
-        ld (MVE),hl
-.z:     pop bc
-        pop af
-        ret po
-        ei                      ; session 6: interrupts then stay on for about 120 us (256 DJNZ at 28 MHz, half a line)
-        push bc                 ; before the caller's next poll holds them off again: the wait loops of polls (fw_wait,
-        push hl                 ; mv_out) held them off most of the time, and the ULA's interrupt, sampled inside such
-        ld hl,(MVL)             ; a window, was missed about once a second (v1.0 too).
-        ld bc,-LZONE            ; session 9: at 28 MHz the interrupt is 32 T long, shorter than one poll's DI (about
-        add hl,bc               ; 400 T): a poll that reads a line in LZONE .. LZONE + 4 (just before the interrupt's
-        ld c,1                  ; line, 248) waits 4 x 256 DJNZ (about 7 lines) with interrupts on instead, so the
-        jr nc,.e1               ; next poll comes after the interrupt has been taken. Polls are about 2.4 lines apart,
-        ld a,h                  ; so none starts its DI inside the interrupt's line
-        or a
-        jr nz,.e1
-        ld a,l
-        cp 5
-        jr nc,.e1
-        ld c,4
-.e1:    ld b,0
-.e:     djnz .e
-        dec c
-        jr nz,.e
-        pop hl
-        pop bc
         ret
 
 ; slot_of: the pattern slot for image GIMG: -> A = its first pattern (3 x slot), Z when the slot holds it already
@@ -1250,18 +1106,18 @@ slot_of:
 ; time is repaid inside the update: the game's own routine runs at 28 MHz and the window lasts the original's time
 ; less the debt.
 
-; The window's time: MVE (lines) and MVL as the scroll moves' windows (never at the same time), counted by mvtick; an
-; ISR body is left out (isr_in / isr_step: mvtick, isr_out / wskipc: MVL = now).
+; The window's time: the library's (hlib_pace_open .. hlib_pace_waitk); an ISR is held out (isr_in / isr_step:
+; hlib_pace_hold, isr_out / wskipc: hlib_pace_resume), a nested hook's or the hook's own work's time is left out and goes
+; to the debt (dbg_open / dbg_close: hlib_nest_open / _close).
 
-; wskipc: from t_isr (game code) after the ISR body: a window goes on from now. Keeps BC, DE, HL; AF lost.
-wskipc: ld a,(WOPEN)
-        or a
-        ret z
-        push bc
+; wskipc: from t_isr (game code) after the ISR body: the held time ends (hlib_pace_resume). Keeps BC, DE, HL; AF lost.
+wskipc: push bc
+        push de
         push hl
-        call qline
-        ld (MVL),hl
+        call hlib_pace_resume
+        call wsync
         pop hl
+        pop de
         pop bc
         ret
 
@@ -1269,91 +1125,47 @@ wskipc: ld a,(WOPEN)
 fw_open:
         ld (WK),a
         nextreg 0x07,3
+        call hlib_pace_open
         ld hl,0
-        ld (MVE),hl
-        ld (WNEST),hl
-        xor a
-        ld (MVP),a
-        call qline
-        ld (MVL),hl
+        ld (WNS),hl
         ld a,1
         ld (WOPEN),a
         ret
 
-; wown: HL = 16 MVE - WNEST (the routine and the wait so far), C when negative. AF, DE lost.
-wown:   call mvtick
-        ld hl,(MVE)
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        ld de,(WNEST)
-        or a
-        sbc hl,de
-        ret
-
-; fw_mark: the game routine has returned: WP = its time, WO = WP x K / 16, WOPEN = 2. AF, BC, DE, HL lost.
+; fw_mark: the game routine has returned: WOPEN = 2 (the hook's own work follows: dbg_open / dbg_close leave it out of
+; the window with its full unmeasured part). AF lost.
 fw_mark:
-        call wown
-        jr nc,.p
-        ld hl,0
-.p:     ld (WP),hl
-        ex de,hl                ; C:HL = DE x K
-        ld hl,0
-        ld c,0
-        ld a,(WK)
-        ld b,8
-.m:     add hl,hl
-        rl c
-        rla
-        jr nc,.n
-        add hl,de
-        jr nc,.n
-        inc c
-.n:     djnz .m
-        ld a,c
-        ld b,4
-.s:     srl a
-        rr h
-        rr l
-        djnz .s
-        or a
-        jr z,.o
-        ld hl,0xFFFF
-.o:     ld (WO),hl
         ld a,2
         ld (WOPEN),a
         ret
 
-; fw_wait: the routine's saving (WO - WP) repays DEBT; what DEBT does not take is waited out: until 16 MVE - WNEST (the
-; routine and the wait) reaches WO - DEBT (no line counter: mvtick gives up). WOPEN = 0. AF, BC, DE, HL lost.
+; fw_wait: the window's target is the routine's time x K / 16: its saving repays the debt; what the debt does not take
+; is waited out (hlib_pace_wait; no line counter: the library gives up). The routine's time is the window's lines less
+; WNS (v1.2's WP = 16 MVE - WNEST); the window's count keeps WNS, so the target is lines x K - WNS x (K - 16) / 16
+; (= WP x K / 16 + WNS): the same wait and the same debt as v1.2's fw_wait. WOPEN = 0, A = 0. AF, BC, DE, HL lost.
 fw_wait:
-        ld hl,(WO)
-        ld de,(WP)
+        call hlib_pace_tick
+        ld hl,(HLIB_V_PACE + 2)
+        ld a,(WK)
+        call hlib_mul8          ; lines x K (saturating)
+        push hl
+        ld hl,(WNS)
+        ld a,(WK)
+        sub 16
+        call hlib_mul8          ; WNS x (K - 16)
+        ld b,4
+.q:     srl h
+        rr l
+        djnz .q
+        ex de,hl
+        pop hl
         or a
         sbc hl,de
-        jr c,.done
-        ex de,hl                ; DE = the saving
-        ld hl,(DEBT)
-        or a
-        sbc hl,de
-        jr c,.wait
-        ld (DEBT),hl            ; the saving all taken by the debt
-        jr .done
-.wait:  ld hl,(WO)
-        ld de,(DEBT)
-        or a
-        sbc hl,de
-        ld (WT),hl
+        jr nc,.t
         ld hl,0
-        ld (DEBT),hl
-.w:     call wown
-        jr c,.w
-        ld de,(WT)
-        or a
-        sbc hl,de
-        jr c,.w
-.done:  xor a
+.t:     xor a                   ; the target at 3.5 MHz, never scaled by the incoming clock (as v1.2)
+        call hlib_pace_wait
+        xor a
         ld (WOPEN),a
         ret
 
@@ -1461,6 +1273,7 @@ fw_cpy_in:
         ld (DEBT),hl
         xor a
         ld (WOPEN),a
+        ld (HLIB_V_PACE + 10),a ; (a window left open, if any, is dropped with the debt)
         inc a
         ld (FRESH),a
         ld (FRSH2),a
@@ -1493,19 +1306,20 @@ fw_cpy_m:
         jp fw_out_x
 
 ; cw_close: a Centred step's window ends (after its copy, inks and origin): DEBT = the debt at its start + the window's
-; time (ISR bodies left out); what nested hooks added inside it is replaced. WOPEN = 0. AF, DE, HL lost.
+; time (ISRs and frame steps held out; nested hooks add nothing in WOPEN 3, their time is the window's). WOPEN = 0.
+; AF, BC, DE, HL lost.
 cw_close:
-        call mvtick
-        ld hl,(CWD)
-        ld (DEBT),hl
-        ld hl,(MVE)
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
+        call hlib_pace_tick
         xor a
         ld (WOPEN),a
-        jp dadd.add
+        ld (HLIB_V_PACE + 10),a ; the window closes without a wait
+        ld hl,(HLIB_V_PACE + 2)
+        call hlib_pace_wait.x16
+        ld de,(CWD)
+        add hl,de
+        jp nc,hlib_debt_set
+        ld hl,0xFFFF
+        jp hlib_debt_set
 
 ; ---- session 9: droid and shot interpolation (Centred view). The camera glides, the player is drawn at it, and the
 ; droids and shots used to jump each update. Now each droid's or shot's group is matched to the nearest group of the
@@ -1711,6 +1525,7 @@ n320b:  ld de,160
         add hl,de
         ret
 
+        INCLUDE "lib/hlib_pace.asm"     ; session 11 (refactor): the shared pace limiter, nested hooks included
 TCODE_END:
         DISPLAY "TCODE_END ",/H,TCODE_END
         ASSERT TCODE_END <= IPV         ; (session 9: the interpolation state above it)

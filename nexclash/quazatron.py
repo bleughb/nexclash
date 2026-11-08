@@ -439,6 +439,9 @@ class NextState:
         self.nr[reg] = val
 
     def read_port(self, regs, port):
+        if port & 0xFFFF == 0x253B and self.sel in (0x1E, 0x1F):     # session 11: the video line from T (224 T a line,
+            v = (regs[25] // 224) % 312                                 # as cyclone.py): the shared limiter's waits end
+            return v >> 8 & 1 if self.sel == 0x1E else v & 255          # (its no-counter give-up is 65,536 polls)
         if port & 0xFFFF == 0x253B:
             v = self.nr.get(self.sel, 0)
             return (v & 3) * 17 if self.sel == 7 else v
