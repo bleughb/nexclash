@@ -1,0 +1,90 @@
+{
+ "name": "alien_8",
+ "order": 226,
+ "game": "Alien 8",
+ "doc": "alien_8.md",
+ "engine": "alien_8",
+ "representative": true,
+ "reference": "alien_8",
+ "verified_json": false,
+ "inputs": {
+  "snapshot": {
+   "name": "alien_8.z80",
+   "md5": "91a07828482c3e9b0fb76564abe3fe87",
+   "path": "alien_8/alien_8.z80",
+   "note": "Alien 8 (1985)(Ultimate Play The Game).z80, the original 48K release."
+  },
+  "recordings": [
+   {
+    "name": "alien_8.tap",
+    "md5": "59a600437365ada156ec9e7df54f99a2",
+    "path": "alien_8/alien_8.tap",
+    "role": "Original tape Alien 8 (1985)(Ultimate Play The Game).tap, staged beside the snapshot for the loading screen; not a recording."
+   }
+  ]
+ },
+ "modules": [
+  "alien_8"
+ ],
+ "own_modules": [
+  "alien_8"
+ ],
+ "data": [
+  "asm/alien_8_hooks.asm",
+  "asm/alien_8_actor.asm",
+  "asm/alien_8_sound_targets.asm",
+  "asm/alien_8_queue.asm",
+  "asm/alien_8_dirty.asm",
+  "asm/alien_8_sprites.asm",
+  "asm/alien_8_sprite_cache.asm",
+  "asm/alien_8_primitive.asm",
+  "docs/profiles/alien_8.json",
+  "docs/profiles/alien_8_sound_sites.json",
+  "docs/profiles/alien_8_colours.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_dma.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": null,
+ "outputs": {
+  "plain": {
+   "file": "alien_8.nex",
+   "md5": "aa9307fef20e25fd7bdce42ad9960f81"
+  },
+  "enhanced": {
+   "file": "alien_8_enhanced.nex",
+   "md5": "5c08c856c718a7e744282cd44372a6cf"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Alien 8",
+  "engine_col": "alien_8 (alien_8.md)",
+  "build": "v1.1; default alien_8.nex aa9307fe (original look, figures as hardware sprites over Layer 2, whole Sinclair alt ROM, original loading screen); Enhanced alien_8_enhanced.nex 5c08c856 (the owner's painting of every figure, dark grey floor); both equal the published .nxc 1.1's builds",
+  "software": "pilot release suite (outside selftest): 18,000-frame recording per mode, 57,730 hook comparisons with R and 48K RAM, source-pixel composition; 5 of 5 negatives; 88 ABI, 152 whole-sound, 1,504 IRQ cases; JNext pace 18 paired trials, steady idle and walking within 2%; 20,000-frame native soaks; real loader byte-exact (default, Enhanced, trainers); auto: both builds boot-checked with R",
+  "hardware": "untested",
+  "next": "hardware checklist; a cheaper cold room rebuild (death pause); an in-repository verify"
+ },
+ "checks": [
+  "asm2profile:alien_8"
+ ],
+ "results": [
+  {
+   "check": "external release suite",
+   "status": "pass",
+   "scope": "pilot release-20261106/art-update-20261107 (v27): per mode an 18,000-frame recording (registers with R, 48K RAM at every rejoin, independent source-pixel canvas); 5 negatives; 88 ABI, 152 whole-sound, 1,504 IRQ cases; native layers, beam and 20,000-frame soaks; 18 paired pace trials; private-card loader three selections exact. Not a selftest stamp.",
+   "evidence": "games/alien_8.md \"Evidence\""
+  }
+ ]
+}
