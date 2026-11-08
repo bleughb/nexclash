@@ -897,6 +897,8 @@ def event(patch, get, R, ns, Sim, cmap):
         f.append(('map window left open',))
     if kind == 'te' and ns.nr.get(7, 0) != ns.nr.get('clock', 0):
         f.append(('the print left the speed raised',))
+    if kind == 'ed' and any(p[a] != get(a) for a in EDIT_SWAP):
+        f.append(('the editor did not get the original prints and paints',))
     if kind in ('tl', 'xr'):
         ns.nr[7] = 0                                    # the replay's game runs on at its own speed; e_tend's latch is the hook's
     if kind in ('tl', 'xr') and any(o[a] != p[a] for a in range(spend, sp0)):
@@ -1502,7 +1504,7 @@ def clock_matrix(patch, states, neg=False):
         if not _run(sim, lambda r: r[24] == end and r[12] == sp0):
             return None, 'did not return'
         r = sim.registers
-        ram = hashlib.md5(bytes(m[a] for a in range(0x4000, 0x10000))).hexdigest()
+        ram = hashlib.md5(bytes(m[a] for a in range(0x4000, 0x10000) if not HOOK_RAM[0] <= a < HOOK_RAM[1])).hexdigest()   # the latch holds the clock
         return ns.nr.get(7, clock) & 3, (tuple(r[i] for i in CMP), ram, tuple(tuple(a) for a in ns.attr))
     return every_site(sorted(by), run)
 
