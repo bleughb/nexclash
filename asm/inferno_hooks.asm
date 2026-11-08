@@ -4314,7 +4314,94 @@ cw_wkback:                      ; from wk_out: slot 0 = page 80, DI; A = NextReg
         ld iy,(CW_WKIY)
         ld bc,(CW_WKBC)
         ei
-        jp cw_wait.coarse
+        ld hl,(CW_WKRET)
+        jp (hl)
+CW_WKRET:
+        dw cw_wait.coarse
+CW_WOT: dw 0                    ; ticks left in the replaced write-out
+; Copier write-out replaced (980B, DI in the original, no OUTs): the queued screen bytes are hidden by the tilemap,
+; so the pending work runs here for as long as the write-out would have taken, then pads to that time.
+; T = 18 rows * 564 + 198 per wide line + 49 + a measured 2,700 (replay error within about 600 T).
+wo_go:
+        ld a,(CW_CLK)
+        dec a
+        jp nz,wo_orig           ; no CTC: the original write-out
+        ld a,CW_CTC >> 8
+        in a,(CW_CTC & 0xFF)
+        ld (CW_LAST),a
+        ld hl,0
+        add hl,sp
+        ld de,0
+.walk:  ld a,(hl)               ; F of the row: carry marks the end
+        inc hl
+        rrca
+        jr c,.sum
+        ld c,(hl)               ; A of the row: wide lines
+        inc hl
+        ld b,0
+        ex de,hl
+        add hl,bc
+        ex de,hl
+        add hl,bc               ; skip 4 bytes per wide line, then the row's 4
+        add hl,bc
+        add hl,bc
+        add hl,bc
+        inc hl
+        inc hl
+        inc hl
+        inc hl
+        jr .walk
+.sum:   ld a,d                  ; lines * 99 >> 4 = lines * 198 / 32 ticks
+        ld d,99
+        mul d,e
+        push de
+        ld e,a
+        ld d,99
+        mul d,e
+        ld a,e
+        pop hl
+        add a,h
+        ld h,a
+        ex de,hl
+        ld b,4
+        bsrl de,b
+        ld hl,403
+        add hl,de
+        ld (CW_WOT),hl
+        ld hl,wo_back
+        ld (CW_WKRET),hl
+wo_loop:
+        ld a,CW_CTC >> 8
+        in a,(CW_CTC & 0xFF)
+        ld c,a
+        ld a,(CW_LAST)
+        sub c
+        ld e,a
+        ld d,0
+        ld a,c
+        ld (CW_LAST),a
+        ld hl,(CW_WOT)
+        or a
+        sbc hl,de
+        jr c,wo_end
+        ld (CW_WOT),hl
+        ld a,(CW_WKGO)          ; 0: the coroutine is idle or finished
+        or a
+        jr z,wo_loop
+        ld a,h
+        or a
+        jp nz,cw_work
+        ld a,l
+        cp CW_WKM+8
+        jp nc,cw_work           ; a slice needs room for its margin
+        jr wo_loop
+wo_back:
+        di
+        jr wo_loop
+wo_end:
+        ld hl,cw_wait.coarse
+        ld (CW_WKRET),hl
+        jp wo_out
 cw_work_end:
 
 cw_head:
@@ -6854,3 +6941,22 @@ modal_exit:
 modal_exit_end:
         ASSERT modal_exit_end <= 0x3C40
         SAVEBIN "inferno_modalx.bin",modal_exit,modal_exit_end-modal_exit
+
+; 980B site: the stub stays in the alt ROM because page 80 cannot be mapped before it runs.
+        ORG 0x3B90
+wo_hook:
+        di
+        nextreg 0x07,3
+        nextreg 0x50,CW_PAGE
+        jp wo_go
+wo_out:
+        nextreg 0x50,255
+        nextreg 0x07,0
+        jp 0x9877
+wo_orig:
+        nextreg 0x50,255
+        nextreg 0x07,0
+        jp 0x980C
+wo_hook_end:
+        ASSERT wo_hook_end <= 0x3BE0
+        SAVEBIN "inferno_wohook.bin",wo_hook,wo_hook_end-wo_hook

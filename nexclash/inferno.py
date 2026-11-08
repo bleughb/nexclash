@@ -6524,6 +6524,11 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
                 raise ValueError('modal hook overlaps the window ROM')
             self.window.rom[org:org + len(code)] = code
             self.window.sites[0x901C] = bytes.fromhex('FD213A5C'), b'\xC3' + org.to_bytes(2, 'little') + b'\x00'
+            code, org = bytes.fromhex(h['wohook']), 0x3B90       # the copier's write-out: time for the pending work
+            if any(b != 255 for b in self.window.rom[org:org + len(code)]):
+                raise ValueError('write-out hook overlaps the window ROM')
+            self.window.rom[org:org + len(code)] = code
+            self.window.sites[0x980B] = bytes.fromhex('F3F1D8'), b'\xC3' + org.to_bytes(2, 'little')
         self.page = bytes(self.window.rom[8192:])
         self.extra_banks[12] = self.page + bytes(8192)
         rb = self.regblock - 0x2000            # the stub writes 20 register bytes there at boot
