@@ -4506,7 +4506,7 @@ class CaptureSnapshotPatch(BootstrapPatch):
             raise ValueError('hook code in the stub register block %04X-%04X' % (self.regblock, self.regblock + 19))
         head = bytearray(8192)                  # page 80: the hooks' timing helpers (CW_CLK = 0:
         head[:len(self.capture.head)] = self.capture.head   # no window runs, so no X is measured)
-        self.extra_banks[CW_PAGE // 2] = bytes(head) + bytes(8192)
+        self.extra_banks[CW_PAGE // 2] = bytes(head) + (head_tail if work and driver else bytes(8192))
         self.sites = [(a, old, new) for a, (old, new) in self.capture.sites.items()]
 
     def apply(self, snap):
@@ -6031,9 +6031,17 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
     name = 'Inferno copier-window diagnostic (no sprites; not a release)'
     tail_addr, max_tail = 0x9A80, 128
 
-    def __init__(self, blocks, window_only=True, work=False):
+    def __init__(self, blocks, window_only=True, work=False, driver=False):
         super().__init__(blocks)
         self.window = CopierWindowPatch(window_only=window_only, work=work)
+        if driver:                             # the 8EF9 gate joins the alt ROM and the sites
+            gate = PausePatch()
+            org = int(load_profile()['hooks']['syms']['pause_loading'], 16)
+            code = gate.code
+            if any(b != 255 for b in self.window.rom[org:org + len(code)]):
+                raise ValueError('8EF9 gate overlaps the window ROM')
+            self.window.rom[org:org + len(code)] = code
+            self.window.sites[0x8EF9] = gate.sites[0x8EF9]
         self.page = bytes(self.window.rom[8192:])
         self.extra_banks[12] = self.page + bytes(8192)
         rb = self.regblock - 0x2000            # the stub writes 20 register bytes there at boot
@@ -6053,7 +6061,19 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
             if 79 // 2 in self.extra_banks:
                 raise ValueError('page 79 already allocated')
             self.extra_banks[79 // 2] = bytes(16384)    # empty store (no driver in this build): every dispatch misses
-        self.extra_banks[CW_PAGE // 2] = bytes(head) + bytes(8192)
+            if driver:
+                pages = driver_pages()
+                image = bytearray(self.extra_banks[69 // 2])
+                image[:8192] = pages[68]               # state page: only the gate's 1D80 stub is non-zero
+                self.extra_banks[69 // 2] = bytes(image)
+                for even in (74, 76, 78, *range(96, 112, 2), *range(128, 136, 2)):
+                    if even // 2 in self.extra_banks and even != 78:
+                        raise ValueError('page %d already allocated' % even)
+                    self.extra_banks[even // 2] = bytes(pages.get(even, bytes(8192))) + bytes(pages.get(even + 1, bytes(8192)))
+                head_tail = bytes(pages[81])
+        else:
+            head_tail = bytes(8192)
+        self.extra_banks[CW_PAGE // 2] = bytes(head) + (head_tail if work and driver else bytes(8192))
         self.sites = [(a, old, new) for a, (old, new) in self.window.sites.items()]
 
     def apply(self, snap):
@@ -6064,7 +6084,7 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
         snap.banks[5], snap.banks[2], snap.banks[0] = bytes(ram[:16384]), bytes(ram[16384:32768]), bytes(ram[32768:])
 
 
-def copier_window_build(reference, folder, hooks=False, work=False):
+def copier_window_build(reference, folder, hooks=False, work=False, driver=False):
     """Inferno_copier_window_diagnostic.nex (window only), with hooks Inferno_copier_window_m3_
     diagnostic.nex (capture hooks + window), with work Inferno_copier_window_m3b_diagnostic.nex (+ the
     8F95 work in the window's waits) + boot checks (NEXLOAD and foreign ROM3) + page-80/69 bytes."""
@@ -6074,11 +6094,16 @@ def copier_window_build(reference, folder, hooks=False, work=False):
     reference, folder = Path(reference), Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
     snapshot = reference / 'Inferno.z80'
+    work = work or driver
     hooks = hooks or work
-    patch = CopierWindowSnapshotPatch(tape_blocks(reference / 'Inferno.tzx'), window_only=not hooks, work=work)
-    nex = folder / ('Inferno_copier_window_m3b_diagnostic.nex' if work else
+    patch = CopierWindowSnapshotPatch(tape_blocks(reference / 'Inferno.tzx'), window_only=not hooks, work=work, driver=driver)
+    nex = folder / ('Inferno_driver_diagnostic.nex' if driver else 'Inferno_copier_window_m3b_diagnostic.nex' if work else
                     'Inferno_copier_window_m3_diagnostic.nex' if hooks else 'Inferno_copier_window_diagnostic.nex')
     _, tail, data, _ = z80tonex.convert(str(snapshot), str(nex), quiet=True, patch=patch)
+    if driver:                                  # tables sit in banks 48+: the loader must refuse a 1 MB machine
+        image = bytearray(nex.read_bytes())
+        image[8] = 1
+        nex.write_bytes(image)
     checks = {}
     for name, foreign in [('Sinclair', None), ('foreign ROM3', bytes(v ^ 0xA5 for v in rom48()))]:
         checks[name] = nextboot.check(str(nex), str(snapshot), patch, (tail, tail + len(data)),
@@ -6095,6 +6120,12 @@ def copier_window_build(reference, folder, hooks=False, work=False):
         checks['page 80'] = ['window page not in the NEX']
     if raw.find(patch.page[0x3CB0 - 0x2000:0x3CB0 - 0x2000 + len(bytes.fromhex(load_profile()['hooks']['cwrom']))]) < 0:
         checks['alt ROM'] = ['window trampoline not in the NEX']
+    if driver:
+        missing = [b for b in (37, 38, 39, 40, *range(48, 56), *range(64, 68)) if raw.find(patch.extra_banks[b]) < 0]
+        if missing:
+            checks['driver banks'] = ['not in the NEX: %s' % missing]
+        if raw[8] != 1:
+            checks['RAM required'] = ['header does not ask for the expanded machine']
     if work and raw.find(patch.extra_banks[69 // 2][8192:]) < 0:
         checks['page 69'] = ['work page not in the NEX']
     return {'boot_checks': checks, 'tail': [tail, tail + len(data)], 'sites': ['%04X' % a for a, o, n in patch.sites],
@@ -6127,6 +6158,7 @@ def main():
     ap.add_argument('--jobs', type=int, default=1, help='copier-window checks: one process per level, this many at once')
     ap.add_argument('--cw-hooks', action='store_true', help='--copier-window-build with the capture hooks (milestone 3)')
     ap.add_argument('--cw-work', action='store_true', help='--copier-window-build with hooks + the 8F95 work in the window (3b)')
+    ap.add_argument('--cw-driver', action='store_true', help='--copier-window-build with the 8EF9 driver and its pages too (no display)')
     action.add_argument('--actor-job-checks', action='store_true')
     action.add_argument('--actor-pack-checks', action='store_true')
     action.add_argument('--actor-fill-checks', action='store_true')
@@ -6350,7 +6382,7 @@ def main():
         print(json.dumps(result))
         return int(any(v for k, v in result['counts'].items() if k.endswith('!')))
     if a.copier_window_build:
-        result = copier_window_build(a.copier_window_build, a.out, hooks=a.cw_hooks, work=a.cw_work)
+        result = copier_window_build(a.copier_window_build, a.out, hooks=a.cw_hooks, work=a.cw_work, driver=a.cw_driver)
         if a.json:
             a.json.write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps(result))
