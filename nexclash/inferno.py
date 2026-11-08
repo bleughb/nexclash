@@ -3470,7 +3470,10 @@ DRIVER_WRITE = {
     76: [(0x1E90, 0x1EAA), (0x1F00, 0x1FF0)],
     78: [(0x1E80, 0x1E96), (0x1F00, 0x1FF0)],
     79: [(0x0800, 0x1800), (0x1E80, 0x1EA0), (0x1F00, 0x1FF0)],
-    81: [(0x1800, 0x1BF0)],
+    81: [(0x1800, 0x1BF0), (0x1C00, 0x1C80)],
+    82: [(0x1000, 0x2000)],                             # selection state, reset at load
+    83: [(0, 0x2000)], 84: [(0, 0x2000)],
+    **{p: [(0, 0x2000)] for p in range(85, 96)},
 }
 
 
@@ -3510,8 +3513,8 @@ class DriverMemory:
         self.pages[p][o] = v
 
     def nextreg(self, reg, value):
-        allowed = {0x50: (68, 75, 76, 78, 79, 81, 255), 0x51: (68, 75, 76, 78, 79, 112, 113, 114, 115, 116, 122, 255),
-                   0x52: (10, 116, 117, 122, *range(96, 112), *range(136, 216)),
+        allowed = {0x50: (68, 75, 76, 78, 79, 81, 255), 0x51: (68, 75, 76, 78, 79, 82, 83, 84, 112, 113, 114, 115, 116, 122, 255),
+                   0x52: (10, 113, 114, 115, 116, 117, 122, *range(85, 96), *range(96, 112), *range(136, 216)),
                    0x53: (11, *range(128, 136), *range(136, 216))}
         if reg == 7 and value in range(4):
             self.speed = value
@@ -3533,7 +3536,8 @@ class DriverMemory:
 
 def driver_pages(driver=None, owned=None):
     h = load_profile()['hooks']
-    pages = {p: bytearray(8192) for p in (68, 75, 76, 78, 79, 81, *range(136, 216))}
+    pages = {p: bytearray(8192) for p in (68, 75, 76, 78, 79, 81, *range(83, 96), *range(136, 216))}
+    pages[82] = select_page()
     for p in (*range(112, 118), 122):
         pages[p] = bytearray([0xE3]) * 8192             # exposes any byte the driver fails to set
     table = actor_row_lookup()
@@ -3659,6 +3663,150 @@ def driver_compare(result, expected, capacity=False):
     return dict(counts)
 
 
+SEL_STATE = 0x1000                      # page 82: state offsets (asm SEL_* - 0x4000)
+SEL_READY, SEL_ROLE, SEL_N, SEL_MASKS = 0x1000, 0x1001, 0x1004, 0x1010
+SEL_HEAD, SEL_TAIL, SEL_PREV, SEL_NEXT = 0x1040, 0x1041, 0x1240, 0x1280
+SEL_NEW, SEL_EVICT = 0x103C, 0x103D
+SEL_SLOT_ID, SEL_FLAG, SEL_ID_SLOT, SEL_LIST = 0x1100, 0x1200, 0x1300, 0x1800
+PAT_MAX = 704
+
+
+def select_page(code=None):
+    """Page 82: selection code at 0 (slot 2, 4000); state reset as the driver does it."""
+    page = bytearray(8192)
+    code = bytes.fromhex(load_profile()['hooks']['cwsel']) if code is None else code
+    page[:len(code)] = code
+    page[SEL_ROLE], page[SEL_HEAD], page[SEL_TAIL] = 0x24, 0, 63
+    page[SEL_PREV:SEL_PREV + 64] = bytes((i - 1) & 255 if i else 64 for i in range(64))
+    page[SEL_NEXT:SEL_NEXT + 64] = bytes(i + 1 for i in range(64))
+    page[SEL_SLOT_ID:SEL_SLOT_ID + 128] = b'\xFF' * 128
+    page[SEL_ID_SLOT:SEL_ID_SLOT + PAT_MAX] = b'\xFF' * PAT_MAX
+    return page
+
+
+def pattern_index_expected(ram, expected):
+    """Oracle for the 8EF9 index: {image: (left, top, [(cx, cy, mask, id)])}, patterns by id, in scan order."""
+    ids, patterns, out, canon = {}, [], {}, {}
+    for image, want in enumerate(expected):
+        if want is None or want == 'reject':
+            continue
+        if want[0] in canon:
+            out[image] = out[canon[want[0]]]
+            continue
+        canon[want[0]] = image
+        actor = actor_descriptor(ram, image)
+        left, top, w, h, px = solid_image(tuple((x, y, raw_tile(ram, t)) for x, y, t in actor['tiles']))
+        chunks = []
+        for cy in range(0, h, 16):
+            for cx in range(0, w, 16):
+                pattern, mask = bytearray(128), 0
+                for y in range(min(16, h - cy)):
+                    for x in range(min(16, w - cx)):
+                        c = px[(cy + y) * w + cx + x]
+                        if c:
+                            pattern[y * 8 + x // 2] |= c << (4 if not x & 1 else 0)
+                            mask |= 1 << (y // 8 * 2 + x // 8)
+                if mask:
+                    key = bytes(pattern)
+                    if key not in ids:
+                        ids[key] = len(patterns)
+                        patterns.append(key)
+                    chunks.append((cx // 8, cy // 8, mask, ids[key]))
+        out[image] = ((left // 8) & 255, (top // 8) & 255, chunks)
+    return out, patterns
+
+
+def index_tables(pages):
+    """Decode page 83 as the runtime reads it."""
+    p, out = pages[83], {}
+    for image in range(256):
+        h = p[image * 6:image * 6 + 6]
+        if h[0] == 1:
+            at = h[2] | h[3] << 8
+            out[image] = (h[4], h[5], [(p[at + 5 * i], p[at + 5 * i + 1], p[at + 5 * i + 2],
+                                        p[at + 5 * i + 3] | p[at + 5 * i + 4] << 8) for i in range(h[1])])
+    return out
+
+
+def driver_index_compare(result, ram, expected):
+    """The index and pattern pages against the oracle; published images only."""
+    pages, counts = result['pages'], Counter()
+    want, patterns = pattern_index_expected(ram, expected)
+    have = index_tables(pages)
+    for image in range(256):
+        if pages[79][0x800 + 16 * image] == 1:
+            if image not in want or have.get(image) != want[image]:
+                raise AssertionError('index %d: chunks differ\n%s\n%s' % (image, have.get(image), want.get(image)))
+            counts['indexed images'] += 1
+    used = result['pages'][81][0x1832] | result['pages'][81][0x1833] << 8
+    if used != len(patterns):
+        raise AssertionError('patterns stored %d, oracle %d' % (used, len(patterns)))
+    for i, pat in enumerate(patterns):
+        if bytes(pages[85 + i // 64][i % 64 * 128:i % 64 * 128 + 128]) != pat:
+            raise AssertionError('pattern %d differs' % i)
+    if bytes(pages[82][SEL_STATE:]) != bytes(select_page()[SEL_STATE:]):
+        raise AssertionError('page 82 state not reset to the runtime initial state')
+    counts['distinct patterns'] = len(patterns)
+    return dict(counts)
+
+
+class SelectState:
+    """Python model of the page-82 store; select_expected() is its only mutator."""
+    def __init__(self, page=None):
+        p = page if page is not None else select_page()
+        self.role = p[SEL_ROLE]
+        self.lru, s = [], p[SEL_HEAD]
+        while s != 64:
+            self.lru.append(s)
+            if len(self.lru) > 64 or p[SEL_NEXT + s] != 64 and p[SEL_PREV + p[SEL_NEXT + s]] != s:
+                raise AssertionError('recency list broken')
+            s = p[SEL_NEXT + s]
+        if len(self.lru) != 64 or self.lru[-1] != p[SEL_TAIL]:
+            raise AssertionError('recency list incomplete')
+        self.masks = [int.from_bytes(p[SEL_MASKS + 8 * i:SEL_MASKS + 8 * i + 8], 'little') for i in range(3)]
+        self.ids = [p[SEL_SLOT_ID + 2 * s] | p[SEL_SLOT_ID + 2 * s + 1] << 8 for s in range(64)]
+        self.flags = list(p[SEL_FLAG:SEL_FLAG + 64])
+        self.id_slot = {i: p[SEL_ID_SLOT + i] for i in range(PAT_MAX) if p[SEL_ID_SLOT + i] != 255}
+
+    def tuple(self):
+        return (self.role, tuple(self.lru), tuple(self.masks), tuple(self.ids), tuple(self.flags),
+                tuple(sorted(self.id_slot.items())))
+
+
+def select_expected(state, index, log):
+    """Oracle: (ready, [(slot, col, row)]) for one selection attempt; mutates state exactly as the assembly."""
+    b = (state.role >> 4) & 3
+    state.masks[b] = 0
+    out = []
+    for rec in log:
+        if rec['image'] not in index:
+            return 0, out
+        left, top, chunks = index[rec['image']]
+        for cx, cy, mask, pid in chunks:
+            col, row = (left + cx + rec['x']) & 255, (top + cy + rec['y']) & 255
+            if not any(mask & 1 << c and ((col + (c & 1)) & 255) < 32 and ((row + (c >> 1)) & 255) < 18 for c in range(4)):
+                continue
+            slot = state.id_slot.get(pid)
+            if slot is None:
+                used = state.masks[0] | state.masks[1] | state.masks[2]
+                best = next((s for s in state.lru if not used >> s & 1), None)
+                if best is None:
+                    return 0, out
+                if state.ids[best] != 0xFFFF:
+                    state.id_slot.pop(state.ids[best], None)
+                state.ids[best], state.flags[best] = pid, 1
+                state.id_slot[pid] = slot = best
+            state.masks[b] |= 1 << slot
+            state.lru.remove(slot)
+            state.lru.append(slot)
+            if len(out) >= 128:
+                return 0, out
+            out.append((slot, col, row))
+    c, p = state.role & 3, (state.role >> 2) & 3
+    state.role = c << 4 | b << 2 | p
+    return 1, out
+
+
 def driver_fixture():
     """Crafted C100 table: duplicates at distinct addresses, same-size different content, negative dx/dy,
     a hole in the tile grid, an enclosed black interior, empty, bad pointer and oversize images."""
@@ -3714,6 +3862,7 @@ def driver_checks():
     syms = load_profile()['hooks']['syms']
     result = run_loading_driver(ram, regs)
     counts = Counter(driver_compare(result, expected))
+    counts.update(driver_index_compare(result, ram, expected))
     if not counts['duplicate indices sharing a payload'] or not counts['rejected indices'] or not counts['indices with no tiles']:
         raise AssertionError('fixture does not exercise the driver: %s' % dict(counts))
     for speed in range(4):
@@ -3794,7 +3943,7 @@ def dispatch_expected(store, live, page68):
 def driver_store(result):
     """Owned-store pages of a driver run: metadata page and the used pages only."""
     pages = result['pages']
-    return {p: bytes(pages[p]) for p in (79, *range(136, 216)) if p == 79 or any(pages[p])}
+    return {p: bytes(pages[p]) for p in (79, 82, 83, *range(136, 216)) if p in (79, 82, 83) or any(pages[p])}
 
 
 class DispatchMemory:
@@ -3879,6 +4028,184 @@ def run_dispatch(ram, store, log, yield_every=0, scene=1, code=None, overflow=0,
     if mem.mmu1 != 68 or mem.ram != list(ram):
         raise AssertionError('dispatch failed slot/RAM contract')
     return {'ready': pages[69][0x1EE0], 'matched': pages[69][0x1EEF], 'yields': yields, 'steps': steps}
+
+
+class SelectMemory(DispatchMemory):
+    """+ page 82 at slot 2 (its state writable) and page 83 at slot 1."""
+    mmu2 = 82
+
+    def __getitem__(self, a):
+        if isinstance(a, slice):
+            return [self[i] for i in range(*a.indices(65536))]
+        if 0x4000 <= a < 0x6000:
+            return self.pages[82][a - 0x4000]
+        return super().__getitem__(a)
+
+    def __setitem__(self, a, v):
+        if 0x4000 <= a < 0x6000:
+            if a < 0x5000:
+                raise AssertionError('selection wrote its code')
+            self.pages[82][a - 0x4000] = v
+        else:
+            super().__setitem__(a, v)
+
+    def nextreg(self, reg, value):
+        if reg == 0x51 and value == 83:
+            self.mmu1 = value
+        elif reg == 0x52 and value == 82:
+            self.mmu2 = value
+        else:
+            super().nextreg(reg, value)
+
+
+def select_log(records):
+    """Page-68 log bytes for (image, x, y) draws with an empty stream (selection does not read the rows)."""
+    return [bytes((0, 0, x & 255, y & 255, image, 0, 0)) for image, x, y in records]
+
+
+def run_select(page82, page83, log, yield_every=0, drop_after=None, code=None):
+    """Assembled selection from wk_select to its RET (or abandoned after drop_after yields, as a 3c drop)."""
+    from . import simpool, z80n
+    from .dizzy6 import _rw_simulator
+    syms = {k: int(v, 16) for k, v in load_profile()['hooks']['syms'].items()}
+    pages = {69: cw_work_renderer(), 82: bytearray(page82), 83: bytearray(page83), 68: bytearray(8192)}
+    if code is not None:
+        pages[82][:len(code)] = code
+    at = 0x900
+    for record in log:
+        pages[68][at:at + len(record)] = record
+        at += len(record)
+    pages[68][0x3F4] = len(log)
+    pages[69][0x1EE0] = 1                                # DX_READY
+    pages[69][0x1EC2] = 82                               # WK_M2
+    mem = SelectMemory(bytes(65536), pages)
+    mem.yield_every = yield_every
+    regs = [0] * 30
+    regs[12], regs[24], regs[14], regs[27] = 0x1C3E, 0x4000, 0xFE, 2
+    pages[69][0x1C3E:0x1C40] = (0x3333).to_bytes(2, 'little')
+    sim = simpool.machine(_rw_simulator(), mem, regs, 'inferno.select')
+    sim.set_tracer(mem)
+    z80n.install(sim, mem.nextreg)
+    r, steps, yields, dropped = sim.registers, 0, 0, False
+    mem.iyl = lambda: r[11]
+    while r[24] != 0x3333:
+        if r[24] == syms['wk_out']:
+            yields += 1
+            if drop_after is not None and yields >= drop_after:
+                dropped = True
+                break
+            r[0], r[24] = 1, syms['wk_enter']
+            continue
+        if steps > 3_000_000:
+            raise AssertionError('selection did not return')
+        sim.opcodes[mem[r[24]]]()
+        steps += 1
+    if not dropped and mem.mmu1 != 68:
+        raise AssertionError('selection left slot 1 at page %d' % mem.mmu1)
+    return {'page': pages[82], 'ready': pages[82][SEL_READY], 'n': pages[82][SEL_N], 'yields': yields,
+            'steps': steps, 'cycles': r[25], 'dropped': dropped}
+
+
+def select_list(page):
+    n = page[SEL_N]
+    return [tuple(page[SEL_LIST + 3 * i:SEL_LIST + 3 * i + 3]) for i in range(n)]
+
+
+def select_checks():
+    """Assembled selection/store from a crafted index: against the oracle over a long scripted sequence with
+    yields, drops, eviction, protection, over-capacity, list overflow, wrap-around and every controlled edge."""
+    import random
+    rng = random.Random(0x1A2B)
+    page83 = bytearray(8192)
+    index, at, pid = {}, 0x600, 0
+    for image in range(180):                             # 1-3 chunks, cells and shared patterns
+        n = rng.randint(1, 3)
+        chunks = []
+        for j in range(n):
+            share = rng.random() < 0.2 and pid
+            chunks.append((2 * j, rng.choice((0, 2)), rng.randint(1, 15), rng.randrange(pid) if share else pid))
+            pid += 0 if share else 1
+        left, top = rng.choice((0, 255, 2)), rng.choice((0, 254, 1))
+        page83[image * 6:image * 6 + 6] = bytes((1, n, at & 255, at >> 8, left, top))
+        for i, c in enumerate(chunks):
+            page83[at + 5 * i:at + 5 * i + 5] = bytes((c[0], c[1], c[2], c[3] & 255, c[3] >> 8))
+        at += 5 * n
+        index[image] = (left, top, chunks)
+    missing = 200                                        # header invalid: not ready
+    code = bytes.fromhex(load_profile()['hooks']['cwsel'])
+    counts = Counter()
+
+    def scripted(code_used=None, frames=None):
+        page, state = select_page(), SelectState()
+        if code_used is not None:
+            page[:len(code_used)] = code_used
+        for k, f in enumerate(frames):
+            log, every, drop = f
+            before = SelectState(page).tuple()
+            if before != state.tuple():
+                raise AssertionError('state diverged before frame %d' % k)
+            r = run_select(page, page83, select_log(log), yield_every=every, drop_after=drop, code=code_used)
+            page = r['page']
+            if r['dropped']:
+                counts['dropped attempts'] += 1
+                state = SelectState(page)                 # whatever partial state it left is the new truth
+                continue
+            ready, out = select_expected(state, index, [dict(image=i, x=x, y=y) for i, x, y in log])
+            if r['ready'] != ready or select_list(page) != out:
+                raise AssertionError('frame %d: ready %d/%d or list differs' % (k, r['ready'], ready))
+            if SelectState(page).tuple() != state.tuple():
+                raise AssertionError('frame %d: state differs' % k)
+            counts['ready frames' if ready else 'not-ready frames'] += 1
+            counts['yields'] += r['yields']
+        return page
+
+    def frame_set(n, seed):
+        rn = random.Random(seed)
+        pool = rn.sample(range(180), 40)
+        out = []
+        for k in range(n):
+            if k % 37 == 36:
+                log = [(i, rn.randint(2, 20), rn.randint(2, 12)) for i in range(70)]   # over capacity
+            elif k % 53 == 52:
+                log = [(7, 5, 5)] * 130                  # list overflow
+            elif k % 41 == 40:
+                log = [(missing, 0, 0)]
+            else:
+                if k % 11 == 0:
+                    pool = rn.sample(range(180), 40)
+                log = [(rn.choice(pool), rn.choice((rn.randrange(256), 3, 30, 31, 32, 255, 250)),
+                        rn.choice((rn.randrange(256), 2, 17, 18, 255))) for _ in range(rn.randint(0, 14))]
+            out.append((log, rn.choice((0, 0, 1, 2, 3, 5)), (rn.randint(1, 8) if rn.random() < 0.15 else None)))
+        return out
+
+    scripted(frames=frame_set(400, 77))
+    # protection: slots of the current and pending frames survive a demanding frame
+    variants = {}
+    b = bytes.fromhex
+    at = code.index(b('A628'))                            # and (hl); jr z,sl_take
+    variants['protection ignored'] = code[:at] + b('AF') + code[at + 1:]
+    at = code.index(b('3A4050'))                          # ld a,(LRU_HEAD): walk from the newest instead
+    variants['eviction takes the newest'] = code[:at + 1] + b('4150') + code[at + 3:]
+    at = code.index(b('E60F57'))
+    variants['role rotation wrong'] = code[:at + 1] + b('03') + code[at + 2:]
+    at = code.index(b('FE12'))
+    variants['row limit 24'] = code[:at + 1] + b('18') + code[at + 2:]
+    at = code.index(b('3A0A50ED9251'))
+    variants['slot-1 remap on chunk resume removed'] = code[:at] + bytes(6) + code[at + 6:]
+    for name, broken in variants.items():
+        try:
+            scripted(code_used=broken, frames=frame_set(400, 77))
+        except (AssertionError, KeyError):
+            counts['control detected: ' + name] += 1
+        else:
+            raise AssertionError('control not informative: ' + name)
+    from . import runchecks
+    checks = []
+    runchecks.measured(checks, 'selection frames equal to the oracle', counts['ready frames'] + counts['not-ready frames'])
+    runchecks.measured(checks, 'yields exercised', counts['yields'])
+    runchecks.measured(checks, 'drops exercised', counts['dropped attempts'])
+    runchecks.measured(checks, 'negative controls detected', sum(v for k, v in counts.items() if k.startswith('control detected')), expected=len(variants))
+    return {'counts': dict(counts), 'checks': checks, 'scope': 'assembled selection/store (page 82) on a crafted index and scripted frames; simulator, no hardware'}
 
 
 def dispatch_checks():
@@ -4028,6 +4355,7 @@ def driver_level_check(reference, level):
     expected = driver_expected(ram)
     result = run_loading_driver(ram, regs)
     counts = driver_compare(result, expected)
+    counts.update(driver_index_compare(result, ram, expected))
     return {'level': level, 'frame': frame, 'counts': counts, 'driver_ms': result['equivalent_T'] / 3500,
             'instructions': result['instructions'], 'scope': 'executed assembly in the simulator; 28 MHz model, read allowance; no hardware'}
 
@@ -5070,6 +5398,7 @@ class CopierWorkMemory(CopierWindowMemory):
         self.pages[69] = bytearray(pages[69]) if pages else bytearray(patch.renderer)
         self.pages[14] = bytearray(pages[14]) if pages else bytearray([0xE3] * 8192)
         self.pages.setdefault(79, bytearray(8192))
+        self.pages.setdefault(82, select_page())
         self.mmu1, self.mmu2 = 255, 10
         self.nr = dict(display or {0x6B: 0x0B, 0x6E: 0x80, 0x7F: 0})
 
@@ -5082,17 +5411,21 @@ class CopierWorkMemory(CopierWindowMemory):
             return self.pages[self.mmu0][a]
         if 8192 <= a < 16384 and self.mmu1 != 255:
             return self.pages[self.mmu1][a - 8192]
-        if 0x4000 <= a < 0x6000 and self.mmu2 == 14:
-            return self.pages[14][a - 0x4000]
+        if 0x4000 <= a < 0x6000 and self.mmu2 in (14, 82):
+            return self.pages[self.mmu2][a - 0x4000]
         return self.rom[a] if a < 16384 else self.ram[a]
 
     def __setitem__(self, a, v):
         if 8192 <= a < 16384 and self.mmu1 != 255:
-            if self.mmu1 == 79 or self.mmu1 >= 136:
+            if self.mmu1 in (79, 83) or self.mmu1 >= 136:
                 raise AssertionError('dispatch wrote the owned store')
             self.pages[self.mmu1][a - 8192] = v
         elif 0x4000 <= a < 0x6000 and self.mmu2 == 14:
             self.pages[14][a - 0x4000] = v
+        elif 0x4000 <= a < 0x6000 and self.mmu2 == 82:
+            if a < 0x5000:
+                raise AssertionError('selection wrote its code')
+            self.pages[82][a - 0x4000] = v
         elif self.mmu0 == 69 and a >= 0x4000:
             raise AssertionError('8F95 work wrote game RAM %04X' % a)
         else:
@@ -5102,9 +5435,9 @@ class CopierWorkMemory(CopierWindowMemory):
         if reg == 0x50 and value == 69:
             self.mmu0 = value
             self.maps.append(value)
-        elif reg == 0x51 and (value in (68, 79, 255) or 136 <= value < 216):
+        elif reg == 0x51 and (value in (68, 79, 83, 255) or 136 <= value < 216):
             self.mmu1 = value
-        elif reg == 0x52 and value in (14, 10):
+        elif reg == 0x52 and value in (14, 10, 82):
             self.mmu2 = value
         else:
             if reg == 0x07 and value == 0 and (self.mmu1 != 255 or self.mmu2 != 10):
@@ -5162,7 +5495,7 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
     mem = (CopierWorkMemory if work else CopierWindowMemory)(patch.apply_memory(source), bytearray(8192), patch,
                                                              clk, x, ctc, phase, count0, irqs)
     if work and store:
-        mem.pages.update(store)
+        mem.pages.update({p: bytearray(v) for p, v in store.items()})
     mem.log_outs = site == 0x8F92
     mem.fast_switch = fast_switch
     mem.pages[CW_PAGE][CW_KT] = kt & 0xFF
@@ -5372,6 +5705,7 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
             'dx': ((mem.pages[69][DX_READY], mem.pages[69][DX_N], bytes(mem.pages[STATE_PAGE]), list(mem.ram),
                     mem.pages[69][0x1EAC])
                    if work and store else None),
+            'sel': bytes(mem.pages[82]) if work and store else None,
             'frame': (run_cw_frame(patch, original, mem.pages, state68, phase=phase, count0=count0, irq=frame_irq)
                       if work and frame else None)}
 
@@ -5630,6 +5964,7 @@ def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, o
     counts, failures, detected = Counter(), [], Counter()
     xerr, d9907s, xs, busy, wait, gaps = [], [], [], [], [], []
     work_ms, f_added, f_full = [], [], []
+    sel_pages, sel_index = {}, {}
     run, prev_i = 0, None       # consecutive dropped frames (consecutive updates only when sample == 1)
     first = next(c for c in states.values() if c)[0]   # any state: cw_cal's result does not depend on it
     # the other bound for the speed switches: charged at 28MHz; the first window measures them (cw_cal)
@@ -5656,8 +5991,11 @@ def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, o
             n = _cw_n(level, i)
             counts['states'] += 1
             phase, count0 = (n * 13) % CW_TICK, (n * 37) & 255
+            store = stores.get(level)
+            if store and level in sel_pages:
+                store = {**store, 82: sel_pages[level]}   # the store's state carries across consecutive updates
             try:
-                res = run_cw_window(patch, ram, regs, phase=phase, count0=count0, frame=True, store=stores.get(level))
+                res = run_cw_window(patch, ram, regs, phase=phase, count0=count0, frame=True, store=store)
             except AssertionError as e:
                 fail(level, i, 'no IRQ', e)
                 continue
@@ -5674,6 +6012,26 @@ def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, o
                 counts['dispatch records matched'] += matched
                 if got != want:
                     fail(level, i, 'dispatch', {'errors': ['DX_READY %d, oracle %d: %s' % (got, want, reasons)]})
+                if res['sel'] is not None:
+                    before = sel_pages.get(level, store[82])
+                    state, log = SelectState(before), capture_log(page68) if not page68[0x3F5] else []
+                    if want:
+                        index = sel_index.setdefault(level, index_tables({83: stores[level][83]}))
+                        ready, out = select_expected(state, index, log)
+                    else:
+                        ready, out = 0, []
+                    page = res['sel']
+                    if page[SEL_READY] != ready or (ready and select_list(page) != out) or (want and SelectState(page).tuple() != state.tuple()):
+                        fail(level, i, 'selection', {'errors': ['SEL_READY %d, oracle %d, lists %s' % (page[SEL_READY], ready, select_list(page) == out)]})
+                    counts['selection ready' if ready else 'selection not ready'] += 1
+                    if want and not ready:
+                        counts['selection not ready after dispatch ready'] += 1
+                    counts['selection chunks'] += len(out)
+                    counts['selection new patterns'] += page[SEL_NEW]
+                    counts['selection evictions'] += page[SEL_EVICT]
+                    counts['max frame chunks'] = max(counts['max frame chunks'], len(out))
+            if res.get('sel') is not None:
+                sel_pages[level] = res['sel']                    # a dropped attempt's partial state is the real next state
             if res['errors'] or res['fallback']:
                 fail(level, i, 'no IRQ', res)
             fr = res['frame']
@@ -5798,7 +6156,9 @@ def _cw_pick(level, i, sample=1, only=None):
 def _cw_store(reference, level, cache):
     """The owned store the 8EF9 driver builds for a level (cached beside the states)."""
     import pickle
-    path = Path(str(cache) + '.store' + level) if cache else None
+    from hashlib import md5
+    tag = md5(load_profile()['hooks']['driver'].encode()).hexdigest()[:8]
+    path = Path('%s.store%s.%s' % (cache, level, tag)) if cache else None
     if path and path.exists():
         return pickle.loads(path.read_bytes())
     ram, regs, frame = driver_boundary_state(Path(reference) / ('Inferno%s.rzx' % level))
@@ -6061,6 +6421,9 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
             if 79 // 2 in self.extra_banks:
                 raise ValueError('page 79 already allocated')
             self.extra_banks[79 // 2] = bytes(16384)    # empty store (no driver in this build): every dispatch misses
+            if 82 // 2 in self.extra_banks:
+                raise ValueError('page 82 already allocated')
+            self.extra_banks[82 // 2] = bytes(select_page()) + bytes(8192)   # 83: index, written at 8EF9; 84-95 too
             if driver:
                 pages = driver_pages()
                 image = bytearray(self.extra_banks[69 // 2])
@@ -6121,7 +6484,7 @@ def copier_window_build(reference, folder, hooks=False, work=False, driver=False
     if raw.find(patch.page[0x3CB0 - 0x2000:0x3CB0 - 0x2000 + len(bytes.fromhex(load_profile()['hooks']['cwrom']))]) < 0:
         checks['alt ROM'] = ['window trampoline not in the NEX']
     if driver:
-        missing = [b for b in (37, 38, 39, 40, *range(48, 56), *range(64, 68)) if raw.find(patch.extra_banks[b]) < 0]
+        missing = [b for b in (37, 38, 39, 40, 41, *range(48, 56), *range(64, 68)) if raw.find(patch.extra_banks[b]) < 0]
         if missing:
             checks['driver banks'] = ['not in the NEX: %s' % missing]
         if raw[8] != 1:
@@ -6144,6 +6507,7 @@ def main():
     action.add_argument('--loading-pause-checks', action='store_true')
     action.add_argument('--loading-driver-checks', action='store_true')
     action.add_argument('--dispatch-checks', action='store_true')
+    action.add_argument('--select-checks', action='store_true')
     action.add_argument('--loading-driver-level', type=Path)
     ap.add_argument('--level', type=int, default=6)
     action.add_argument('--initialization-tests', type=Path)
@@ -6207,6 +6571,12 @@ def main():
             a.json.write_text(json.dumps(result,indent=2)+'\n')
         print(json.dumps(result))
         return int(any(c['failures'] for c in result['cases'])) if a.loading_prep_all else int(bool(result['examples']))
+    if a.select_checks:
+        result = select_checks()
+        if a.json:
+            a.json.write_text(json.dumps(result,indent=2)+'\n')
+        print(json.dumps(result))
+        return 0
     if a.dispatch_checks:
         result = dispatch_checks()
         if a.json:

@@ -7,7 +7,7 @@ State: copier window m3c PASS in the model (8F95 work in the window's waits; unf
 Inputs: specnext/reference/inferno/    Start: specnext build/CONTINUE_copier_window.md.
 Read: "Copier window"; inferno.py run_cw_window/run_cw_frame/copier_window_update_checks; asm cw_work, wk_*.
 Next: sprite pipeline (handover "Sprite pipeline plan"): (1) 8EF9 driver, (2) window dispatch PASS in the model;
-  (3) pattern/frame state, (4) protected uploads. Keep sprites disabled.
+  selection + 64-slot store PASS in the model (18.5 % dropped, runs to 32: judge first); (4) uploads, one sprite. Keep sprites disabled.
 Gate: zero frame slips and the original 9907 time per update with sound kept (replaces 10 ms).
 Boundary: 8EF9 follows original DI, before IM2 setup; the pause gate preserves all registers/R/RAM/
   stack and caller clocks (six RZX initialization states). Reject 86C5 (decompressor, overwritten).
@@ -189,6 +189,8 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
   Not installed. Rule: nothing reads CAP_LOG before the window work.
 - Dispatch, page 69 1800, coroutine after the scene: each log record = entry + exact live compare,
   polled per tile. Gate 0 failures, 0 misses; 14.9 % dropped (12.3 % before), runs to 14. NEX m3d.
+- Selection, pages 82-95: 8EF9 chunk index by content; window list + store (recency list, role-byte commit).
+  Gate 0 failures; 18.5 % dropped, runs to 32, margin 66 T. Phase 0 only. No hardware yet.
 
 ## Historical components (build/actor_jobs.md, actor_b_compiler.md, README.md)
 - Pages 78/122 pin source bytes; 75 tiles; 76 whole-image B; masks 116/117, lookup 128–135; 77 gated
@@ -260,6 +262,7 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
   profiled 19.238 to 0.724 s. Autosave/buffer parity tested.
 - [doc docs/MAINTAIN.md §Commit, PR and the reference files] specnext is public; user authorized Inferno
   publication. Corrected visibility guidance in place.
+- [local: Inferno store] A 64-slot scan per new pattern cost 2.5k T and doubled drops; a recency list fixed it. Measure cold frames.
 - [local: Inferno startup] L1 map is write-first, permitting plain tail 9A80. Later lifetime is separate.
 
 ## Friction
