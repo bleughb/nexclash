@@ -1,0 +1,196 @@
+{
+ "name": "gunfright",
+ "order": 227,
+ "game": "Gunfright",
+ "doc": "gunfright.md",
+ "engine": "gunfright",
+ "representative": true,
+ "reference": "gunfright",
+ "inputs": {
+  "snapshot": {
+   "name": "gunfright.z80",
+   "md5": "0cd9e86a2c6c7afa22025f8d593af093",
+   "path": "gunfright/gunfright.z80",
+   "note": "Gunfright (1985)(Ultimate Play The Game).z80, the original 48K release (stopped in its BASIC loader)."
+  },
+  "recordings": [
+   {
+    "name": "gunfright.tap",
+    "md5": "374e052c7b423e12e3d68f701fa2f5e7",
+    "path": "gunfright/gunfright.tap",
+    "role": "Original tape Gunfright (1985)(Ultimate Play The Game).tap, staged beside the snapshot for the loading screen; not a recording."
+   },
+   {
+    "name": "town.rzx",
+    "md5": "0846333e993b8d8bc837dc9d4b499a06",
+    "path": "gunfright/town.rzx"
+   },
+   {
+    "name": "duel-trigger.rzx",
+    "md5": "bf4a5999c6132d683d74dc37fecc6215",
+    "path": "gunfright/duel-trigger.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "gunfright"
+ ],
+ "own_modules": [
+  "gunfright"
+ ],
+ "data": [
+  "asm/gunfright_hooks.asm",
+  "asm/gunfright_enhanced.asm",
+  "asm/gunfright_l2.asm",
+  "docs/profiles/gunfright.json",
+  "docs/profiles/gunfright_enhanced.json",
+  "docs/profiles/gunfright_colours.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_pcache.asm",
+  "asm/lib/hlib_commit.asm",
+  "asm/lib/hlib_dma.asm",
+  "asm/lib/hlib_iff.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record",
+   "--no-nxc"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record",
+   "--no-nxc"
+  ],
+  "rzx": [
+   "town.rzx",
+   "duel-trigger.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 3,
+  "note": "Default runtime: 8,000 original menu/prelude/town/death/game-over frames plus 3,500 frames from a labelled original-RAM duel trigger, every register with R and live RAM at each hook, 5 negatives. Enhanced is proved in the pilot run (games/gunfright.md \"Evidence\"); auto boot-checks both builds."
+ },
+ "outputs": {
+  "plain": {
+   "file": "gunfright.nex",
+   "md5": "f26d0a561e25a1a800b19787cd1fe41b"
+  },
+  "enhanced": {
+   "file": "gunfright_enhanced.nex",
+   "md5": "4ec70c827ae291ce273a09c508f95c87"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Gunfright",
+  "engine_col": "gunfright (gunfright.md)",
+  "build": "v1.1; default gunfright.nex f26d0a56 (original look, town and duels on a cached hardware sprite grid, whole Sinclair alt ROM, original loading screen; unchanged from 1.0); Enhanced gunfright_enhanced.nex 4ec70c82 (the owner's painting of the town, figures, street bandits and twenty duel opponents on an ordered double-buffered Layer 2); both equal the published .nxc 1.1 reconstructions",
+  "software": "default: 11,500 replay frames with R and live RAM, 5 negatives, 18 native pace trials within 2% (none slower), 17 full-48K/RGB freezes, original-clock sound; Enhanced (pilot): 159 complete updates equal to an independent painting with registers/R/48K/MMU/clock, 7 of 7 negatives, 9 native readbacks, 18 pace trials (steady and duel within 1%), 20,000-frame soaks; real loader 6/6 on two private cards",
+  "hardware": "untested",
+  "next": "hardware checklist; wanted-poster portrait (mock-up only); an in-repository Enhanced verify"
+ },
+ "checks": [
+  "asm2profile:gunfright",
+  "asm2profile:gunfright_enhanced"
+ ],
+ "results": [
+  {
+   "check": "external Enhanced release suite",
+   "status": "pass",
+   "scope": "pilot runs/gunfright work/enhanced-l2-v18 and release-1.1: reference model and emitted code equal to an independent painting of the original renderer in 159 complete updates (identity, opponent, complete, collapse, coverage) with registers incl. R, 48K, MMU and clock; CPU-only path 49 cases; 7 negatives; native readback 9/9; pace, transitions, beeper bursts and 20,000-frame soaks; real loader byte-exact on two private cards. Not a selftest stamp.",
+   "evidence": "games/gunfright.md \"Evidence\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/gunfright_enhanced.asm": "98d4f026860870e8",
+   "asm/gunfright_hooks.asm": "9be33773d1fe8adf",
+   "asm/gunfright_l2.asm": "51d5593fe9ee69dc",
+   "asm/lib/hlib_commit.asm": "c696d3eee26ec9a4",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_pcache.asm": "e312737f71ce583c",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/gunfright.json": "e623584f60d98c49",
+   "docs/profiles/gunfright_colours.json": "e119703c9ffe5d34",
+   "docs/profiles/gunfright_enhanced.json": "6f1aab0116e24f7e",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "8e1ee6bd49b54877",
+   "nexclash/gunfright.py": "151b2e2e32238c42",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "038b2ebf518eca31",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "121a5912efae9b2a",
+   "nexclash/nxc.py": "f286b3f16e76fbda",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "71062e656f10832b",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-07"
+ },
+ "verified": {
+  "deps": {
+   "asm/gunfright_enhanced.asm": "98d4f026860870e8",
+   "asm/gunfright_hooks.asm": "9be33773d1fe8adf",
+   "asm/gunfright_l2.asm": "51d5593fe9ee69dc",
+   "asm/lib/hlib_commit.asm": "c696d3eee26ec9a4",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_pcache.asm": "e312737f71ce583c",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/gunfright.json": "e623584f60d98c49",
+   "docs/profiles/gunfright_colours.json": "e119703c9ffe5d34",
+   "docs/profiles/gunfright_enhanced.json": "6f1aab0116e24f7e",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "8e1ee6bd49b54877",
+   "nexclash/gunfright.py": "151b2e2e32238c42",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "038b2ebf518eca31",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "121a5912efae9b2a",
+   "nexclash/nxc.py": "f286b3f16e76fbda",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "71062e656f10832b",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-07"
+ }
+}
