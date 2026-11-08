@@ -2,9 +2,10 @@
 
 ## Next session
 Stage: 4 (hardware + colour)    State: v1.2 published (jattree/nxc ea2a22f, the pilot clone's 9248a85), upstreamed
-2026-11-07 (engine refactor session 3): the 17 builds equal the published .nxc's 16 option combinations (nxc.py --bare)
-and the clone's own builds byte for byte. Emulator only; no board run. Open: Centred view's edge cells (821 of 14,765
-frames show a few pixels no view drew), the shared pace library (hlib_pace) in place of this engine's own limiter.
+2026-11-07 (engine refactor session 3). The engine now runs the shared pace library (hlib_pace, nested hooks) in place
+of its own limiter: v1.3, a review build only, not published, not yet played by the owner (below, "Shared pace
+library"). Emulator only; no board run. Open: Centred view's edge cells (821 of 14,765 frames show a few pixels no
+view drew).
 Inputs (pilot run folder runs/quazatron, private): the archive's "Quazatron (1986)(Hewson Consultants)[aka
 Ziggurat].z80", md5 ac51eb58af87fdac9c0c7077db98c90a; recordings work/b1, b2, c1, s3/d1, u2, u3, s8/t5, r6, r7, r8.
 Start with: pilot runs/quazatron/HANDOFF-SESSION10.md; proofs: work/s10/runall10.sh (negs10.py), agg10.py.
@@ -91,6 +92,9 @@ ends. Neither asks for a value.
 - [local: this game's pace] observed: a pace window that counts its time from the ISR hook alone loses a frame when an interrupt lands in a ROM trampoline (the ISR's ROM path does not count); counting at every nested hook's close too keeps every gap under a frame.
 - [local: this game's pace] observed: the ISR plays the sound effects (B060 / B065, BD2D); a sound that starts or ends one update apart in two runs moves every update's time by about 50k T for its length, so the pace lockstep compares B065 and B060 too.
 - [deferred Open: reconsider when the engine is built] inferred: the colour shadow can hold final Layer 2 bytes with ink transparent, so no conversion is needed at the copies.
+- [card patch.pace-limiter §Failure lookup] observed: a window ticked only at each interrupt, its reading left standing before the ISR's hold, is read again a whole frame later: one wrap is allowed, so that frame is lost (Centred view +10% slow); after the resume the window must go on from now.
+- [card patch.pace-limiter §Failure lookup] observed: an ISR that ticks an open window while a nested hook is open counts the hook's time so far in the window, scaled by K (colour 1-1.5% slower); the ISR must leave the window alone inside a nest.
+- [local: this engine's pace] observed: the library's readings sit before its own sums, so a nested hook's measuring work falls outside both readings; with about 100 nested hooks in a scroll strip it adds 2% unless counted as a constant (C_LIB).
 
 ## Friction
 - reuse: [local: the colour model (pilot work/cmodel.py) is this game's verifier reference, not shared code]
@@ -104,7 +108,7 @@ ends. Neither asks for a value.
 - detect.drawing-parameters: helped: the B07F part format and its op bytes.
 - verify.model-reconstruction: used: the colour model reproduces every buffer exactly.
 - verify.paint-follows-drawing: helped: colour by drawing list, not by attribute blocks.
-- patch.pace-limiter: used: planned for the B07D clone and the debt.
+- patch.pace-limiter: helped: v1.0-1.2 its own copy; v1.3 the shared library, nested hooks (hlib_nest_*) for WNEST.
 
 ## Stage log
 - 2026-11-06 stages 0-1 (pilot runs/quazatron): scope, colour model, mock-up, scroll and pace measurements, cheats
@@ -227,17 +231,29 @@ ends. Neither asks for a value.
   negatives 16/16 DETECTED. The aggregate equals session 10's agg10.json. Display: the 9 Centred runs as above.
 
 ## Interrupts: the IFF read made safe on v1.1 (2026-11-07, shared engine refactor, goal 1)
-- v1.2 does not carry this change: its iffq (session 8) reads LD A,I again only after an off, and qline and mvtick
-  call it, so the race is closed there the same way (hooklib.iff_audit passes on v1.2).
-- qline read `LD A,I` twice back to back and trusted the second; an interrupt accepted at the end of the second still
-  read as off (hooklib.iff_audit 'pair'). Now the second read runs only after an off (`jp pe,$+5`, as HLIB_IFF_DI).
-  mvtick no longer reads IFF itself: qline's exit keeps its flags, so mvtick pushes them after the call. The page
-  stays within VSPD (TCODE_END 0x4BBF); nothing else changed.
-- Proof (pilot work/s4 negs4.py on this clone): IDENTICAL on 6 recordings x 4 states and 4 Centred recordings x 4
-  states (164,468 frames; 124 clock-matrix cases a run); negatives: forced 3.5 MHz exit, camera filter off: DETECTED.
-- JNext walks (session 6's jnwalk.py, the same six walks, frames 900-2519): interrupts missed, before -> after:
-  colour 9 -> 11, Centred 8 -> 5 (session 6: 31 -> 5, 18 -> 7). The misses left are not this race: at the interrupt
-  line IFF1 is 1 in most of them (PC in the pace waits), so a DI window that JNext's short interrupt falls into is the
-  likelier cause. 10-minute soaks (Kempston profile): no freeze; interrupts a second vary with the play (colour 48.9 ->
-  49.3, original 49.2).
+- v1.1's qline read `LD A,I` twice back to back and trusted the second (hooklib.iff_audit 'pair'); fixed with the second
+  read only after an off, as v1.2's iffq already did. Proof: work/s4 negs4.py, IDENTICAL on 10 recordings x 4 states;
+  JNext walks and 10-minute soaks as before. Superseded in v1.3: qline, mvtick and iffq are gone (shared library).
 
+## Shared pace library (2026-11-08, engine refactor goal 2): v1.3, review build
+- qline, dlines, mvtick, wown, fw_wait's sums and isr_in / isr_out are the shared library now (hlib_pace: open, wait,
+  hold / resume, debt_add, nest_open / close for v1.2's WNEST). TCODE_END 0x4AFC (IPV 0x4B00).
+- Fixed against v1.2 in JNext (engine only; the library is unchanged):
+  - Lost frame wraps: the window's reading stood before an ISR's hold until the next interrupt, a frame later
+    (Centred view +10%). wsync (isr_out, wskipc) restarts it after every ISR, as v1.2's MVL = now.
+  - An ISR inside a nested hook ticked the window (the hook's time x K). NESTF: the ISR leaves it alone.
+  - The library's sums after its readings were in no count: C_LIBP / C_LIB (1 + 8 sixteenths a nested hook) go to
+    the debt; WNS takes A / 8 + C_LIBP out of the routine's time, as WNEST did.
+- Pace (JNext, trials9: pace fixture, 10 trials a scene, lockstep vs the original; Centred vs the Centred reference,
+  step time left out). v1.3 / v1.2 (main, measured the same day):
+
+  | Scene | mono | colour | Smooth | Centred |
+  |---|---|---|---|---|
+  | quiet | +0.88 / +0.52% | +0.73 / +0.63% | +0.90 / +0.56% | -0.20 / -0.16% |
+  | busy | +0.81 / +0.45% | +0.80 / +0.45% | +1.01 / +0.71% | no lockstep |
+  | scroll | +1.14 / +1.04% | +1.07 / +1.02% | +1.06 / +0.90% | +1.00 / +1.47% |
+
+  Every trial -1.14% .. +1.95%; the original's scroll bursts colour +1.49% (+1.73%), mono +1.60% (+1.61%).
+- Proofs (v1.2's matrix, pilot s5/qz runall): 43 replays and 16 negatives equal to v1.2's logs line for line
+  (175,717 frames, 8,664 clock cases; 16/16 detected): the picture is unchanged. Review build: pilot
+  runs/quazatron/rebuild-20261108 (not published).
