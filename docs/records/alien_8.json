@@ -60,7 +60,7 @@
  "outputs": {
   "plain": {
    "file": "alien_8.nex",
-   "md5": "aa9307fef20e25fd7bdce42ad9960f81"
+   "md5": "e89ed13af3af09b260cc266bc5b456e1"
   },
   "enhanced": {
    "file": "alien_8_enhanced.nex",
@@ -71,7 +71,7 @@
  "status": {
   "title": "Alien 8",
   "engine_col": "alien_8 (alien_8.md)",
-  "build": "v1.1; default alien_8.nex aa9307fe (original look, figures as hardware sprites over Layer 2, whole Sinclair alt ROM, original loading screen); Enhanced alien_8_enhanced.nex 5c08c856 (the owner's painting of every figure, dark grey floor); both equal the published .nxc 1.1's builds",
+  "build": "v1.2; default alien_8.nex e89ed13a (original look, figures as hardware sprites over Layer 2, whole Sinclair alt ROM, original loading screen; 1.2: palette entries are the Next's ULA colours, differs from 1.1 only in those bytes, nothing drawn differently); Enhanced alien_8_enhanced.nex 5c08c856 (the owner's painting of every figure, dark grey floor; unchanged, equals the published .nxc 1.1's)",
   "software": "pilot release suite (outside selftest): 18,000-frame recording per mode, 57,730 hook comparisons with R and 48K RAM, source-pixel composition; 5 of 5 negatives; 88 ABI, 152 whole-sound, 1,504 IRQ cases; JNext pace 18 paired trials, steady idle and walking within 2%; 20,000-frame native soaks; real loader byte-exact (default, Enhanced, trainers); auto: both builds boot-checked with R",
   "hardware": "untested",
   "next": "hardware checklist; a cheaper cold room rebuild (death pause); an in-repository verify"
@@ -83,7 +83,7 @@
   {
    "check": "external release suite",
    "status": "pass",
-   "scope": "pilot release-20261106/art-update-20261107 (v27): per mode an 18,000-frame recording (registers with R, 48K RAM at every rejoin, independent source-pixel canvas); 5 negatives; 88 ABI, 152 whole-sound, 1,504 IRQ cases; native layers, beam and 20,000-frame soaks; 18 paired pace trials; private-card loader three selections exact. Not a selftest stamp.",
+   "scope": "pilot release-20261106/art-update-20261107 (v27): per mode an 18,000-frame recording (registers with R, 48K RAM at every rejoin, independent source-pixel canvas); 5 negatives; 88 ABI, 152 whole-sound, 1,504 IRQ cases; native layers, beam and 20,000-frame soaks; 18 paired pace trials; private-card loader three selections exact. Not a selftest stamp. 1.2's default differs from v27's only in 48 palette bytes (8 colours, 4 copies); its colours are checked natively (games/alien_8.md).",
    "evidence": "games/alien_8.md \"Evidence\""
   }
  ]

@@ -1,7 +1,9 @@
 # Alien 8 (Ultimate Play The Game, 1985; 48K) - engine `alien_8` (pilot game: emulator only)
 
 ## Next session
-Stage: 4 (hardware). Hardware: untested. v1.1 published as .nxc 1.1 (2026-11-07), owner approved: runtime v27, actor
+Stage: 4 (hardware). Hardware: untested. v1.2 (2026-11-07, owner approved, review .nxc not yet published): the default
+build's palette holds the Next's own ULA colours instead of 205/255 shades; nothing else changes (below). v1.1 published
+as .nxc 1.1 (2026-11-07), owner approved: runtime v27, actor
 K98 / renderer K98, hook page SHA-256 de4df56e (before the start-up restore), auxiliary 9f921b99. The owner's full
 painting of the figures and both cleanup rounds are installed: 118 painted IDs; the 12 unpainted IDs are room
 structures in the original ink.
@@ -16,8 +18,14 @@ Registered (2026-11-07): `is_alien_8` in nexclash/engines.py (signature at A68E,
 docs/records/alien_8.json makes `selftest --game alien_8` rebuild both (MD5). `verify` and `unit_tests` raise
 NotImplementedError (as New Zealand Story's): the replay oracle and unit cases are the pilot run's
 (runs/alien_8/release-20261106/art-update-20261107/work), not yet in the repository.
-Both builds equal the published .nxc 1.1 reconstructions byte for byte: default SHA-256 4a8b3e95 (MD5 aa9307fe),
-Enhanced a897358a (MD5 5c08c856), so the pilot's proof carries.
+Both builds equalled the published .nxc 1.1 reconstructions byte for byte: default SHA-256 4a8b3e95 (MD5 aa9307fe),
+Enhanced a897358a (MD5 5c08c856), so the pilot's proof carries. v1.2: Enhanced unchanged (a897358a); default SHA-256
+1704c18d (MD5 e89ed13a) differs from 1.1's in 48 bytes only: 8 palette entries (the seven non-bright colours and bright
+magenta, 205/255 shades -> ULA colours), each in the Layer 2 and sprite tables and their bit-7 copies. Those entries
+were never drawn: default figures take entries 64 + ink (the ULA colours, unchanged) and static scenery shows the ULA
+through Layer 2. Native JNext, input only to the bright magenta room 0x13, 1.1 and 1.2: every coloured sprite pixel
+equals the ULA ink under it (287 / 19 / 349 pixels at 40 / 120 / 200 updates), pattern and Layer 2 bytes identical.
+`tools/palette_check.py`: default PAL on the master; ENHANCED_PAL (1.1's, kept) and the painting still warn.
 
 ## Input and presentation
 Target `Alien 8 (1985)(Ultimate Play The Game).z80`, MD5 `91a07828482c3e9b0fb76564abe3fe87`, the original 48K beeper
@@ -88,6 +96,9 @@ tearing at publication; beeper effects. Record board and core.
 - [local: owner art as text] Painting of the original figures goes in the repository as palette-indexed rows
   (docs/profiles/alien_8_colours.json) and the original graphics are decoded from the user's snapshot, so `auto` and
   the record rebuild Enhanced without private files and no game graphics are stored.
+- [local: palette_check reads tables, not draws] palette_check flagged 4 off-standard default entries (205/255 shades); the
+  native snapshot showed the build never draws them (figures use entries 64 + ink). Check the indices drawn before
+  saying a shade is seen.
 
 ## Friction
 - reuse: [local: the Filmation renderer is per game; Knight Lore has its own copy]
@@ -109,3 +120,5 @@ asm moved in, byte-identical rebuild of both modes; pace investigation of the de
 proof in the pilot; published as .nxc 1.1.
 2026-11-07: on main 83bd781: v1.1 sources, painting as text, engine registered (detector, `auto` for both builds with
 boot checks, record); both builds equal the published .nxc 1.1's.
+2026-11-07: v1.2: default palette = the Next's ULA colours (palette bytes only; Enhanced byte-identical); native check
+in room 0x13; review .nxc 1.2 in the pilot (runs/alien_8/package-v1.2).
