@@ -2005,6 +2005,59 @@ def recolour(nex, cmap):
     return bytes(d), {'banks changed': changed, 'patterns': p.num_patterns, 'map entries': len(cmap)}
 
 
+LOADING_SCREEN_MD5 = '05b41890bdaf609aa7815c981edc57d8'   # the picture on the original tape
+LOADING_BANK = 43                                         # free in both modes, below the hidden ROM's bank 47
+LOADING_PROFILE = os.path.join(_HERE, '..', 'docs', 'profiles', 'dizzy1_loading.json')
+
+
+def find_screen(folder):
+    """The original loading screen among the user's files beside the snapshot: a 6,912-byte .scr, or the headerless
+    screen block of a .tzx / .tap. Only the exact picture counts. -> (file name, screen) or (None, None)."""
+    import glob
+    import hashlib
+    for path in sorted(glob.glob(os.path.join(glob.escape(folder), '*'))):
+        kind = os.path.splitext(path)[1].lower()
+        if kind not in ('.scr', '.tzx', '.tap') or not os.path.isfile(path):
+            continue
+        data = open(path, 'rb').read()
+        at = -1
+        while kind != '.scr':
+            at = data.find(b'\x02\x1b\xff', at + 1)     # block length 6,914, flag 255: the picture, then its checksum
+            if at < 0:
+                break
+            scr = data[at + 3:at + 3 + 6912]
+            if hashlib.md5(scr).hexdigest() == LOADING_SCREEN_MD5:
+                return os.path.basename(path), scr
+        if kind == '.scr' and hashlib.md5(data).hexdigest() == LOADING_SCREEN_MD5:
+            return os.path.basename(path), data
+    return None, None
+
+
+def loading_nex(nex, screen):
+    """The bare build with the original loading screen, as published (.nxc 1.0 on): the screen in bank 5's screen area,
+    so it shows while bank 5 loads, and asm/dizzy1_loading.asm in bank 43, which holds it, puts bank 5's own bytes back
+    and starts the game exactly as .nexload would have. Three header bytes, the screen area and the new bank differ."""
+    import json
+    if len(screen) != 6912 or nex[10] or nex[139] != 10 or nex[140] or nex[141] or nex[12:16] != b'\xfe\xdf\x00\xc0':
+        raise ValueError('loading screen: expected the plain start (SP DFFE, PC C000, entry bank 10) and a 6912-byte screen')
+    order = [5, 2, 0, 1, 3, 4, 6, 7] + list(range(8, 112))
+    banks, at = {}, 512
+    for b in order:
+        if nex[18 + b]:
+            banks[b], at = nex[at:at + 16384], at + 16384
+    if at != len(nex) or 5 not in banks or LOADING_BANK in banks or max(banks) > 47:
+        raise ValueError('loading screen: bank 43 must be free, bank 5 present and every bank within a 1MB Next')
+    hooks = json.load(open(LOADING_PROFILE))['hooks']
+    head, tail = bytes.fromhex(hooks['head']), bytes.fromhex(hooks['tail'])
+    banks[LOADING_BANK] = head + banks[5][:6912] + bytes(16384 - len(head) - 6912 - len(tail)) + tail
+    banks[5] = screen + banks[5][6912:]
+    header = bytearray(nex[:512])
+    header[9] += 1
+    header[18 + LOADING_BANK] = 1
+    header[139] = LOADING_BANK
+    return bytes(header) + b''.join(banks[b] for b in order if b in banks)
+
+
 def auto(a, z80, sprites, say, rzxs, boot):
     """Build/prove the default and, when supplied, the separately approved Enhanced map."""
     import json
@@ -2048,6 +2101,15 @@ def _auto_variant(a, z80, sprites, say, rzxs, boot, enhanced=None):
                             else 'MISMATCH %s' % lb[:3]))
     say('Sprites   : %s  %s  (objects on Layer 2, Dizzy = hardware sprites 0-3 in front, %d patterns; '
         'hooks in the alt ROM, shadow pages at slot 3)' % (os.path.basename(sprites), md5(sprites), p.num_patterns))
+    screen_file, screen = find_screen(os.path.dirname(os.path.abspath(z80)))
+    if screen:
+        published = sprites[:-len('.nex')] + '_loading.nex'
+        with open(published, 'wb') as f:
+            f.write(loading_nex(open(sprites, 'rb').read(), screen))
+        say('Loading   : %s  %s  (as published: the screen from %s, its stub in bank %d)' % (
+            os.path.basename(published), md5(published), screen_file, LOADING_BANK))
+    else:
+        say('Loading   : no original screen beside the snapshot (.tzx, .tap or .scr, MD5 %s): not added' % LOADING_SCREEN_MD5)
     ok = not sc and not lb
     states = []
     for r in rzxs:

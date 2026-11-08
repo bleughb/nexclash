@@ -46,7 +46,9 @@
   "asm/lib/hlib_r.asm",
   "asm/lib/hlib_speed.asm",
   "asm/lib/hlib_iff.asm",
-  "asm/lib/hlib_pace.asm"
+  "asm/lib/hlib_pace.asm",
+  "asm/dizzy1_loading.asm",
+  "docs/profiles/dizzy1_loading.json"
  ],
  "shared_data": [
   "nexclash/templates.json",
@@ -93,14 +95,15 @@
  "status": {
   "title": "Dizzy: The Ultimate Cartoon Adventure (Dizzy 1)",
   "engine_col": "dizzy1 (dizzy_ultimate_cartoon_adventure.md)",
-  "build": "Version 1.2: published default appearance, approved Enhanced option off by default; full hidden ROM, caller-speed restore, per-hook R checks and original-pace drawing windows.",
+  "build": "Version 1.2 (published as .nxc 1.2): published default appearance, approved Enhanced option off by default; original loading screen, full hidden ROM, caller-speed restore, per-hook R checks and original-pace drawing windows.",
   "software": "Full 6346-frame replay in both modes; 126/136 unit cases, 15/15 and 22/22 fault controls. Native pace within 2%, sound, five-minute soak and byte-exact real-loader tests in three modes passed.",
   "hardware": "No hardware claim for version 1.2.",
-  "next": "Packaging handoff complete; physical test and later-room/full-game recording remain."
+  "next": "Physical test and later-room/full-game recording remain."
  },
  "checks": [
   "asm2profile:dizzy1_ultimate_cartoon_adventure",
-  "asm2profile:dizzy1_enhanced"
+  "asm2profile:dizzy1_enhanced",
+  "asm2profile:dizzy1_loading"
  ],
  "rework": [
   {
@@ -118,6 +121,12 @@
      "name": "dizzy1-enhanced-art.json",
      "md5": "2ff3c3c3333cc3590f70f37945114c9b",
      "path": "dizzy_ultimate_cartoon_adventure/dizzy1-enhanced-art.json"
+    },
+    {
+     "name": "dizzy1.tzx",
+     "md5": "8e405b0255997bcc3714cb26e7359160",
+     "path": "dizzy_ultimate_cartoon_adventure/Dizzy - The Ultimate Cartoon Adventure (1987)(Code Masters).tzx",
+     "role": "Original tape, staged beside the snapshot for the loading screen; not a recording."
     }
    ],
    "rebuild": {
@@ -154,34 +163,44 @@
     "enhanced": {
      "file": "dizzy1_enhanced.nex",
      "md5": "1e2853767d0f90cc243352641b1b2df9"
+    },
+    "sprites_loading": {
+     "file": "dizzy1_sprites_loading.nex",
+     "md5": "9b793fa3e0e709b154f75e687d1ae4c4"
+    },
+    "enhanced_loading": {
+     "file": "dizzy1_enhanced_loading.nex",
+     "md5": "b8a8e84e13636c42d732256d34f7afaf"
     }
    },
    "proof": "Enhanced colours: Jao Paulo (Spec256). Approved colour map; original executable code unchanged.",
-   "note": "The privately derived map is an input, never distributed with engine source. nexclash.dizzy1_art reproduces it from the matching source and colour conversion."
+   "note": "The privately derived map and the tape are inputs, never distributed with engine source. nexclash.dizzy1_art reproduces the map from the matching .256 and palette (python -m nexclash.dizzy1 enhanced). The _loading outputs are the published .nxc 1.2 reconstructions (nxc.py PATCH GAME --bare [--colours Enhanced])."
   }
  ],
  "checked": {
   "deps": {
    "asm/dizzy1_enhanced_hooks.asm": "dca18fad83d9dd2a",
    "asm/dizzy1_hooks.asm": "e9f8f56e5bf374c9",
+   "asm/dizzy1_loading.asm": "1ded2ae90a828ffb",
    "asm/lib/hlib_iff.asm": "b63b400926847660",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
    "docs/profiles/dizzy1_colours.json": "55c7299b572b23bc",
    "docs/profiles/dizzy1_enhanced.json": "7aab5b25ef8e5915",
+   "docs/profiles/dizzy1_loading.json": "44560aa4d080efa9",
    "docs/profiles/dizzy1_ultimate_cartoon_adventure.json": "9de1b2f24b5ffb17",
    "nexclash.py": "350128095535a2d4",
    "nexclash/analyse.py": "5bdd8b073cc95624",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
-   "nexclash/dizzy1.py": "144dbe39161f71e5",
-   "nexclash/dizzy1_art.py": "55dda2ecbdd4aa09",
+   "nexclash/dizzy1.py": "285d2d6f6fc6029d",
+   "nexclash/dizzy1_art.py": "76920ec459bbe32e",
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "d71288361daf13e6",
+   "nexclash/engines.py": "8e1ee6bd49b54877",
    "nexclash/evidence.json": "a6c823114223e2c3",
    "nexclash/flicker.py": "acbeab18d2daf133",
    "nexclash/hooklib.py": "ba4611f453c48aee",
@@ -206,33 +225,35 @@
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "3538d4e79d4cfcd4",
+   "recipe": "cc9f1bd0b33877ac",
    "rom": "e50ee485fb4a21d2"
   },
-  "date": "2026-11-07"
+  "date": "2026-11-08"
  },
  "verified": {
   "deps": {
    "asm/dizzy1_enhanced_hooks.asm": "dca18fad83d9dd2a",
    "asm/dizzy1_hooks.asm": "e9f8f56e5bf374c9",
+   "asm/dizzy1_loading.asm": "1ded2ae90a828ffb",
    "asm/lib/hlib_iff.asm": "b63b400926847660",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
    "docs/profiles/dizzy1_colours.json": "55c7299b572b23bc",
    "docs/profiles/dizzy1_enhanced.json": "7aab5b25ef8e5915",
+   "docs/profiles/dizzy1_loading.json": "44560aa4d080efa9",
    "docs/profiles/dizzy1_ultimate_cartoon_adventure.json": "9de1b2f24b5ffb17",
    "nexclash.py": "350128095535a2d4",
    "nexclash/analyse.py": "5bdd8b073cc95624",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
-   "nexclash/dizzy1.py": "144dbe39161f71e5",
-   "nexclash/dizzy1_art.py": "55dda2ecbdd4aa09",
+   "nexclash/dizzy1.py": "285d2d6f6fc6029d",
+   "nexclash/dizzy1_art.py": "76920ec459bbe32e",
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "d71288361daf13e6",
+   "nexclash/engines.py": "8e1ee6bd49b54877",
    "nexclash/evidence.json": "a6c823114223e2c3",
    "nexclash/flicker.py": "acbeab18d2daf133",
    "nexclash/hooklib.py": "ba4611f453c48aee",
@@ -257,9 +278,9 @@
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "3538d4e79d4cfcd4",
+   "recipe": "cc9f1bd0b33877ac",
    "rom": "e50ee485fb4a21d2"
   },
-  "date": "2026-11-07"
+  "date": "2026-11-08"
  }
 }

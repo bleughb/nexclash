@@ -19,10 +19,21 @@ windows, full hidden ROM and no added DI. Enhanced caches scenery lazily on firs
 bulk-copies complete colour bytes and skips unchanged pixels. Highest data bank 42, loading bank 43,
 hidden ROM 47: both modes fit 1MB. Original movement, sound and collision logic remain unchanged.
 
-| Final engine output (before loading screen) | MD5 |
+| Final engine output | MD5 |
 |---|---|
-| dizzy1_sprites.nex | ead92ef747096582da450f162d78e545 |
-| dizzy1_enhanced.nex | 1e2853767d0f90cc243352641b1b2df9 |
+| dizzy1_sprites.nex (before loading screen) | ead92ef747096582da450f162d78e545 |
+| dizzy1_enhanced.nex (before loading screen) | 1e2853767d0f90cc243352641b1b2df9 |
+| dizzy1_sprites_loading.nex = published default | 9b793fa3e0e709b154f75e687d1ae4c4 |
+| dizzy1_enhanced_loading.nex = published Enhanced | b8a8e84e13636c42d732256d34f7afaf |
+
+Rebuild of the published .nxc 1.2 (nxc repo 365d510; `nxc.py PATCH GAME --bare [--colours Enhanced]`, byte for byte):
+`selftest.py --game dizzy1` with the record's "enhanced" rework, or `auto` by hand. Two inputs stay out of this repository,
+from the user's own files. Without them the rework is skipped, the base build still runs and no stamp is written:
+- The original .tzx (8e405b02; or a .tap / .scr with the picture 05b41890) beside the snapshot. `find_screen` takes
+  the screen from it and `loading_nex` adds it with asm/dizzy1_loading.asm in bank 43. Without it, no `_loading` builds.
+- The Enhanced map, $NEXCLASH_DIZZY_ENHANCED (dizzy1-enhanced-art.json, 2ff3c3c3). It is derived from the Spec256 set, so
+  it is never committed (as Underwurlde's). `python -m nexclash.dizzy1 enhanced GAME --planes X.256 --palette X.pal -o MAP`
+  makes it again, byte for byte, from the conversion's .256 (5b8116cd) and palette (b095dc99). Enhanced needs that local input.
 
 Source-frozen `selftest.py --game dizzy1 --verify --stamp`: PASS, no ROM-path waiver. Each mode completes
 6,346 recording frames, 7,086 converted/1,356 kept object plots and 2,364 player plots. Default: 3,976,720
@@ -43,19 +54,11 @@ scenes; every write at 3.5 MHz; uninterrupted same-instruction periods differ by
 Five-minute native soak passes. Flicker: no lost/misaligned sprites or one-frame picture transients;
 room redraw yields two transient raw-attribute events versus one originally (warning retained).
 
-Release NXC v1.2 MD5 cea8a16d8931b6157a930522e18017a2; loading NEXs default 9b793fa3e0e709b154f75e687d1ae4c4,
-Enhanced b8a8e84e13636c42d732256d34f7afaf. Real .NEXCLASH on disposable v2.10 cards passes default,
+Release candidate NXC MD5 cea8a16d8931b6157a930522e18017a2 (metadata reworked before publication; same two NEXs). Real .NEXCLASH on disposable v2.10 cards passes default,
 Enhanced and Enhanced+four trainers, byte-exact rebuild and native play in each. Each trainer also
 passes separate original/default/Enhanced enabled-versus-disabled routine checks. Four fixed-value
 archive cheats; user-input POKs omitted. Original loading screen retained. No physical-hardware test
 or natural full-game completion is claimed. Original scrolling/rotating effect strips keep Spectrum rendering.
-
-Historical output (2026-10-14):
-
-| Output | MD5 |
-|---|---|
-| dizzy1_sprites.nex | 38e1a4916eaf8548d9ba8886861ca147 (Dean's painted colours; altrom + Layer 2) |
-| dizzy1.nex | 7892b2e0f1f3f9f19165516db307cbe0 (unchanged) |
 
 ## Build (2026-10-14, Midnight Resistance standard)
 - Every figure the game draws leaves the ULA: Dizzy, creatures, items, carts, clouds, the wizard,
@@ -193,16 +196,9 @@ the original rendering. Historical hardware reports below apply only to their na
 - The older `preview` command uses default colours; use the Enhanced sheet/export path for Enhanced.
 
 ## Speed restored (2026-11-07, shared engine refactor, goal 2)
-- Three latches (HLIB_SPEED_IN): V_SPDP for plotter 2 (e_p2 .. t_p2), V_SPDD for the Dizzy plotter (e_dz .. t_dz) and
-  V_SPDH for every other hook, since those can run inside a plotter's 28 MHz window. Each latch is taken on the hook
-  stack, after the switch, so the game's dead stack stays as the original's. Exits give the speed back instead of
-  NEXTREG 7,0 (t_p2 / t_dz and the collision reads through V_A, keeping A and the flags).
-- The verifier's hook simulator answers NR reads (0x243B / 0x253B) from its NextREG state; before, a read gave 0xFF.
-  HSTK_MIN (the lowest hook SP allowed) was 0x5B58 + 18 while the variables already ran to 0x5B65: now 0x5B6A + 18.
-- Sprites 6ac7a3d6 -> 07d09c80; plain unchanged. dizzy1.rzx PASSED (6,346 frames, 7,086 plotter-2 calls converted,
-  2,364 Dizzy draws, 2,050,456 figure pixels), unit 55 cases, negative controls 11/11; stamped.
-- JNext pace: not measured. The game has no frame sync, and the automatic probe found no routine run 2-50 times a
-  second in play (Space-to-start profile).
+- Three latches: plotter 2, the Dizzy plotter and every other hook (those can run inside a plotter's 28 MHz window).
+  Exits give the speed back. The verifier's hook simulator answers NR reads from its NextREG state. Sprites 6ac7a3d6 ->
+  07d09c80, slower (next section). JNext pace: the game has no frame sync.
 
 ## Pace back to 1.0's (2026-11-08)
 - Problem: with the speed restore (07d09c80) the game ran 1.3-1.7% slower than the original and 1.6-1.8% slower than 1.0
@@ -219,11 +215,8 @@ the original rendering. Historical hardware reports below apply only to their na
   whole at 28 MHz (PUSH BC / PUSH HL written to the game stack as the original, the virtual read, AND 240 / AND 15,
   POP / POP / RET), instead of two hooks per call at 60244 / 60251 around a routine at 3.5 MHz. That gives back the
   51 T the latch still costs over 1.0's switch.
-- Verifier: ENTRY (entry speed, 0x243B selection, other NextREGs) for every hook pair; exit speed = entry speed and
-  0x243B left at NR 7 checked on every pair. Unit cases: every hook kind entered at NR 7 = 1 / 2 / 3, the effects at
-  1, every kind with the selection moved (NR 0x53 selected: last speed kept, NR 7 selected again), the collision
-  routine on both nibbles over figure bits and off the screen. New negatives: a moved selection taken as NR 7, and
-  t_p2 exiting at a fixed 3.5 MHz. HSTK_MIN 0x5B6B + 18 (V_RAW at 0x5B6A).
+- Verifier: exit speed = entry speed and 0x243B left at NR 7 on every hook pair; unit cases enter every hook kind at
+  NR 7 = 1 / 2 / 3 and with the selection moved; new negatives for both. HSTK_MIN 0x5B6B + 18 (V_RAW at 0x5B6A).
 - JNext pace (nexclash.pace, probe 58113 = the Dizzy plotter, once per update; the plain build as the original; no
   lockstep check, as before). Penalty, all / quiet third / busy third:
 
@@ -272,6 +265,10 @@ the original rendering. Historical hardware reports below apply only to their na
 - [local: trainer intake] POK value 256 requests user input. Omit unsupported value-input trainers explicitly;
   do not turn them into zero pokes. Translate the lives address by checking the actual DEC A instruction.
 
+- [local: published build vs engine output, 2026-11-08] The published NEXs were the engine's output plus a private
+  loading-screen step, so main alone could not rebuild them. The step and its stub now live in the engine's own files, and
+  the record checks the published MD5s; hook bytes did not change (ead92ef7 and 1e285376 stayed).
+
 ## Technique use
 - patch.restore-speed: helped: three latches, one per window (2026-11-07); its 97 T latch was too slow for a game
   without frame sync: an engine-local 51 T first-instruction read (2026-11-08).
@@ -284,12 +281,13 @@ the original rendering. Historical hardware reports below apply only to their na
 - scratch: [none: no scratch scripts in the repo]
 
 ## Next session
-- Stage 3 complete: version 1.2 on game/dizzy-enhanced from main c09c54d. Full stamped acceptance,
-  repeated native pace, sound, soak, and three-mode disposable-card loader checks passed.
-- Packaging handoff and exact outputs are in the private pilot runs/dizzy_enhanced folder.
+- Version 1.2 is in main and rebuilds the published .nxc 1.2 byte for byte, with the two local inputs above.
+  Full stamped verification, repeated native pace, sound, soak and three-mode disposable-card loader checks passed.
+- Packaging evidence: private pilot runs/dizzy_enhanced.
   Keep the approved colour map and published default art; do not overwrite DIZZY_PAINTING_SPRITES.png.
-- Physical testing and natural full-game completion remain unclaimed. No pushes or shared-card writes.
+- Physical test and natural completion remain unclaimed.
 
 ## Stage log
 - 2026-11-07: Enhanced intake; fetched main, matched the published release and all graphics, produced three-room
   colour proposal, audited inherited refresh/pace checks. Jon approved the proposal; full source-frozen verification, native checks and release packaging passed.
+- 2026-11-08: merged to main on current base; loading-screen step moved from the private package helper into the engine, both published MD5s reproduced from the record; hook bytes unchanged; re-stamped.
