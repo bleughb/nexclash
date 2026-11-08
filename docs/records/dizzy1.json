@@ -30,22 +30,33 @@
   "machine",
   "rzx",
   "dizzy1",
-  "recolour"
+  "recolour",
+  "dizzy1_art"
  ],
  "own_modules": [
-  "dizzy1"
+  "dizzy1",
+  "dizzy1_art"
  ],
  "data": [
   "docs/profiles/dizzy1_ultimate_cartoon_adventure.json",
   "asm/dizzy1_hooks.asm",
-  "docs/profiles/dizzy1_colours.json"
+  "docs/profiles/dizzy1_colours.json",
+  "asm/dizzy1_enhanced_hooks.asm",
+  "docs/profiles/dizzy1_enhanced.json",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_pace.asm"
  ],
  "shared_data": [
   "nexclash/templates.json",
   "nexclash/evidence.json"
  ],
  "rebuild": {
-  "args": [],
+  "args": [
+   "--altrom-fill",
+   "whole"
+  ],
   "rzx": [],
   "decisions": {
    "stack_low_water": 65518,
@@ -57,7 +68,9 @@
  },
  "verify": {
   "args": [
-   "--no-record"
+   "--no-record",
+   "--altrom-fill",
+   "whole"
   ],
   "rzx": [
    "dizzy1.rzx"
@@ -73,87 +86,180 @@
   },
   "sprites": {
    "file": "dizzy1_sprites.nex",
-   "md5": "953cf4e72239b1450c3923e1aeb357cb"
+   "md5": "ead92ef747096582da450f162d78e545"
   }
  },
  "repro": [],
- "pin": {
-  "altrom_fill": "rom3",
-  "note": "verified before the shared defaults of 2026-11-04 (docs/REFACTOR.md 1-3, 7): the old alt ROM fill, no ROM path / tail check; `--altrom-fill whole` opts in to the rework"
- },
  "status": {
   "title": "Dizzy: The Ultimate Cartoon Adventure (Dizzy 1)",
   "engine_col": "dizzy1 (dizzy_ultimate_cartoon_adventure.md)",
-  "build": "dizzy1_sprites.nex 953cf4e7 (2026-11-08: 1.0's pace with the caller's speed kept: the speed latch is each hook's first instruction (51 T at the caller's clock) and the collision read routine runs whole at 28 MHz; was 07d09c80: hooks restore the caller's CPU speed, three latches; before that 6ac7a3d6, earlier fb4cb148: Dizzy = hardware sprites in front; every other figure on Layer 2 via a 1-bit shadow screen; solid: enclosed paper black; Dean's painted colours (633 graphics bytes; paper paintable: outlines), items pulse as the original; HUD and room tiles on the ULA; altrom + shadow pages at slot 3; plots at 28 MHz)",
-  "software": "RZX IDENTICAL with the painted colour map (registers, memory, ULA ^ shadows, Layer 2, Dizzy sprite vs plotter), 55 unit cases + 11 negative controls PASS",
-  "hardware": "83ea050d (default colours) works on a real Next, looks perfect (Dean, 2026-10-14); fb4cb148 = 38e1a491 drawn identically (only never-drawn paper nibbles differ), untested",
-  "next": "hardware test of fb4cb148 and of the outlined painting (dizzy1_sprites_painted.nex 79218527, verify + unit PASS)"
+  "build": "Version 1.2: published default appearance, approved Enhanced option off by default; full hidden ROM, caller-speed restore, per-hook R checks and original-pace drawing windows.",
+  "software": "Full 6346-frame replay in both modes; 126/136 unit cases, 15/15 and 22/22 fault controls. Native pace within 2%, sound, five-minute soak and byte-exact real-loader tests in three modes passed.",
+  "hardware": "No hardware claim for version 1.2.",
+  "next": "Packaging handoff complete; physical test and later-room/full-game recording remain."
  },
+ "checks": [
+  "asm2profile:dizzy1_ultimate_cartoon_adventure",
+  "asm2profile:dizzy1_enhanced"
+ ],
+ "rework": [
+  {
+   "name": "enhanced",
+   "version": "1.2",
+   "args": [
+    "--altrom-fill",
+    "whole"
+   ],
+   "env": {
+    "NEXCLASH_DIZZY_ENHANCED": "dizzy1-enhanced-art.json"
+   },
+   "inputs": [
+    {
+     "name": "dizzy1-enhanced-art.json",
+     "md5": "2ff3c3c3333cc3590f70f37945114c9b",
+     "path": "dizzy_ultimate_cartoon_adventure/dizzy1-enhanced-art.json"
+    }
+   ],
+   "rebuild": {
+    "args": [],
+    "rzx": [],
+    "decisions": {
+     "stack_low_water": 65518,
+     "rom_used": true,
+     "printer_buffer_touched": true,
+     "pb_5b00_5b50_touched": false,
+     "altrom_hooks_read": false
+    }
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [
+     "dizzy1.rzx"
+    ],
+    "auto_record": false,
+    "minutes": 20,
+    "note": "auto: full differential verify of dizzy1.rzx (every hooked routine, Layer 2 against the shadow model) + unit tests with negative controls"
+   },
+   "outputs": {
+    "plain": {
+     "file": "dizzy1.nex",
+     "md5": "7892b2e0f1f3f9f19165516db307cbe0"
+    },
+    "sprites": {
+     "file": "dizzy1_sprites.nex",
+     "md5": "ead92ef747096582da450f162d78e545"
+    },
+    "enhanced": {
+     "file": "dizzy1_enhanced.nex",
+     "md5": "1e2853767d0f90cc243352641b1b2df9"
+    }
+   },
+   "proof": "Enhanced colours: Jao Paulo (Spec256). Approved colour map; original executable code unchanged.",
+   "note": "The privately derived map is an input, never distributed with engine source. nexclash.dizzy1_art reproduces it from the matching source and colour conversion."
+  }
+ ],
  "checked": {
   "deps": {
-   "asm/dizzy1_hooks.asm": "caebf0627525fe89",
+   "asm/dizzy1_enhanced_hooks.asm": "dca18fad83d9dd2a",
+   "asm/dizzy1_hooks.asm": "e9f8f56e5bf374c9",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
    "docs/profiles/dizzy1_colours.json": "55c7299b572b23bc",
-   "docs/profiles/dizzy1_ultimate_cartoon_adventure.json": "efca50d5f71191d0",
+   "docs/profiles/dizzy1_enhanced.json": "7aab5b25ef8e5915",
+   "docs/profiles/dizzy1_ultimate_cartoon_adventure.json": "9de1b2f24b5ffb17",
    "nexclash.py": "350128095535a2d4",
    "nexclash/analyse.py": "5bdd8b073cc95624",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
-   "nexclash/dizzy1.py": "a006bd3b4b619e3e",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy1.py": "144dbe39161f71e5",
+   "nexclash/dizzy1_art.py": "55dda2ecbdd4aa09",
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "2a90481848696085",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "d71288361daf13e6",
    "nexclash/evidence.json": "a6c823114223e2c3",
+   "nexclash/flicker.py": "acbeab18d2daf133",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/ikari_warriors.py": "038b2ebf518eca31",
+   "nexclash/jnext.py": "2b318ab7bf0fd785",
+   "nexclash/looksheet.py": "d5cbf08c06f5d8d9",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/nextboot.py": "121a5912efae9b2a",
+   "nexclash/pace.py": "0f020f8809becb3a",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/recorder.py": "8b959db3b8dc838b",
    "nexclash/records.py": "85f7a2ad3b78d411",
    "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/soak.py": "88d45b5832823b43",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/templates.json": "e93f585833e72628",
    "nexclash/verify.py": "3dcc48bdab8bd67b",
+   "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "24cc9bfa639ee561",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "3538d4e79d4cfcd4",
+   "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-07"
  },
  "verified": {
   "deps": {
-   "asm/dizzy1_hooks.asm": "caebf0627525fe89",
+   "asm/dizzy1_enhanced_hooks.asm": "dca18fad83d9dd2a",
+   "asm/dizzy1_hooks.asm": "e9f8f56e5bf374c9",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
    "docs/profiles/dizzy1_colours.json": "55c7299b572b23bc",
-   "docs/profiles/dizzy1_ultimate_cartoon_adventure.json": "efca50d5f71191d0",
+   "docs/profiles/dizzy1_enhanced.json": "7aab5b25ef8e5915",
+   "docs/profiles/dizzy1_ultimate_cartoon_adventure.json": "9de1b2f24b5ffb17",
    "nexclash.py": "350128095535a2d4",
    "nexclash/analyse.py": "5bdd8b073cc95624",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
-   "nexclash/dizzy1.py": "a006bd3b4b619e3e",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy1.py": "144dbe39161f71e5",
+   "nexclash/dizzy1_art.py": "55dda2ecbdd4aa09",
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "2a90481848696085",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "d71288361daf13e6",
    "nexclash/evidence.json": "a6c823114223e2c3",
+   "nexclash/flicker.py": "acbeab18d2daf133",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/ikari_warriors.py": "038b2ebf518eca31",
+   "nexclash/jnext.py": "2b318ab7bf0fd785",
+   "nexclash/looksheet.py": "d5cbf08c06f5d8d9",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/nextboot.py": "121a5912efae9b2a",
+   "nexclash/pace.py": "0f020f8809becb3a",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/recorder.py": "8b959db3b8dc838b",
    "nexclash/records.py": "85f7a2ad3b78d411",
    "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/soak.py": "88d45b5832823b43",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/templates.json": "e93f585833e72628",
    "nexclash/verify.py": "3dcc48bdab8bd67b",
+   "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "24cc9bfa639ee561",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "3538d4e79d4cfcd4",
+   "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-07"
- },
- "checks": [
-  "asm2profile:dizzy1_ultimate_cartoon_adventure"
- ]
+ }
 }
