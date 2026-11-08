@@ -1,7 +1,7 @@
 # Ghosts 'n Goblins (Elite, 1986, 48K) - engine gng, .nxc 1.6 (Jon Attree's .nxc work)
 
 ## Next session
-Stage: 5 (published as .nxc 1.6 on jattree/nxc)    State: engine imported 2026-11-06; graphics read from the player's game.
+Stage: 5 (published as .nxc 1.6 on jattree/nxc; review 1.7 from this branch, not published)    State: engine imported 2026-11-06; graphics read from the player's game; pace pass 2026-11-08.
 Techniques: detect.gameplay-screen-readers
 
 ## In this repo (2026-11-06)
@@ -64,7 +64,29 @@ Techniques: detect.gameplay-screen-readers
   `_parent_stale`, a clipped fragment rewritten in place). Unit: the atlas index, every entry in its bucket.
 - Sprites cf933c18 -> 26742ac4, Enhanced 34e5d058 -> c2e6e56f; plain unchanged.
 
+## Pace (2026-11-08, local branch nexttang/ghosts_n_goblins-pace; review .nxc 1.7, not published)
+- Audit (pace-audit-20261108/REPORT-2.md): published 1.6 read +14.9 to +29.1% on level 3 and stretches to +22.5% on level 1. The game's HALT at
+  0x8CF3 locks an update to frames: its work takes 24 to 38 ms of the 40, and work past the frame edge costs a whole frame. Every late update
+  was under 2 ms late, so a small cut in the heaviest updates is worth a lot.
+- On top of 26742ac4 (the image lookup of 2026-11-07), three cuts of hook time, none visible and none in the plot's result:
+  an upload sends only the two patterns a shape up to 8 line pairs shows (the key holds rows; 69% of uploads in the worst level 3 stretch); a miss
+  replaces the group unused longest, not the next in rotation (fewer misses); the byte check on a hit walks the image with SP, four bytes a step
+  (interrupts are off at all three plot sites; the game's own plot does the same).
+- Hook time in that stretch 5.6 -> 4.3 ms an update (PC samples). Sprites 26742ac4 -> 9dc84645, Enhanced c2e6e56f -> 6f9e1906; plain unchanged.
+- JNext, lockstep at every update, 90 addresses, against the plain builds, published trainers for level 3 in both arms: level 1, 7 runs, -0.00 / 0.00 / 0.00,
+  no stretch over +0.0. Level 3 with Invincibility, 3 runs of 1,500, default and Enhanced the same: whole +0.07 to +0.36, quiet +0.00 to +0.60, busy -0.10 to
+  +0.20, slowest stretch +2.5 to +10.0, 3 to 14 updates of 1,500 at 3 frames (1.6: 880; the original 4). Level 3 with Infinite lives, 3 runs: whole -0.00 to
+  +0.19, slowest stretch +2.1 to +5.8. Level 2, late levels and bosses not measured. Rule: holds except 20-update stretches on level 3.
+- nexclash.soak flags a "loop" at the HALT when no frame is lost: samples every 10 frames all land on the HALT once the update is locked to 2 frames.
+  The pictures in that span move and the clock runs; the original's longest such run is as long. Not a freeze.
+
 ## Lessons
+- [local: this game's cache] When the images on show fit, a miss should replace the group unused longest: rotation throws out what is about to come
+  back. Level 3 whole-run pace on this alone: +0.93 -> +0.56, seed 1.
+- [local: this game's shapes] An upload sized to what the shape shows is a one-line test when the key already holds the shape; half the uploads were half empty.
+- [local: this game's frame lock] A frame-locked game needs lateness per update, not mean hook time: log where the HALT lands (work ms from the wake to the HALT)
+  and cut only until the late tail fits. Mean hook time moved 15% and lost frames fell by 98%.
+- [local: this game's frame lock] A soak's loop warning at the game's HALT is sampling at one phase once no frame is lost: check the pictures and the clock.
 - [card patch.iff-safe-read §Use / do not use] A hook that keeps R pays for the second read in M1s: count every path
   to the R-in point and lower the delta (here by 3), or the R check fails.
 - [card optimise.pattern-cache §Use / do not use] Images rewritten at the same address need a byte check on every
