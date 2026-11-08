@@ -5,7 +5,8 @@ Stage: 4 (hardware + colour)    State: imported into nexclash 2026-11-04 (ported
 2026-11-04); JNext only, never on a Next.
 Inputs: specnext/reference/knight_tyme/ (knight_tyme.z80 md5 8e720b5c, kt_t1 / kt_rooms / kt_over / kt_cmds .rzx,
 knight_tyme.tzx = the archive's (128K)[Magic Knight 3].tzx for the loading screen). Pilot run folder: runs/knight_tyme.
-Published .nxc: Knight Tyme v1.1 (nexclash-patch patches/, 23485e65): --bare 645401e4.
+Published .nxc: Knight Tyme v1.1 (nexclash-patch patches/, 23485e65): --bare 645401e4. Review builds, not published:
+1.2 (speed restore, --bare 6222fc96), 1.3 (faster Knight conversion, --bare bc2c840f; pilot runs/knight_tyme/rebuild-20261108).
 Start with: hardware checklist. Read: this file. Open: under "Open".
 
 Techniques: none of the cards fit whole; the method is below (see Technique use).
@@ -61,7 +62,56 @@ Cheats: archive .pok's [128K] entries; time and others' stats held in the simula
   pilot runs/engine_refactor): +1.11% before and after (quiet +1.83%, busy -0.01% / -0.00%), lockstep equal at every
   update; interrupts 50.00 a second in the original, before and after; longest gap 20.3 ms in all three.
 
+## Faster Knight conversion (2026-11-07, Spellbound's #132 re-derived)
+- Why: 1.2 was +1.11 / +1.24 % against the original (JNext, 2 seeds), nearly all of it the Knight's image conversions
+  (cache misses: the 8 images at the start, then each colour change), 22 ms each at 28 MHz: the first 20 updates were
+  +13 to +18 %.
+- Not a copy of #132: this engine never had Spellbound's fill (clear pixels inside a figure keep their rings here),
+  so there is no fillh / REVT / reversed rows; the cache stays at 0x8500.
+- build (asm `bldm`, `masks`, `rings`, `wrow`): clears only canvas lines 1-34 x columns 1-26, the only pixels any
+  figure writes (pack reads columns 1-32 and lines 1 .. H+2; the rest stays zero as the page loads). An unpainted byte
+  is drawn in eight unrolled steps, an all-clear byte in none; a painted byte goes through the old pixel loop. Each
+  canvas line keeps bit rows in its columns 40-63 (bit i = pixel 8W+2-i): Z clear (margins too), N earns a ring,
+  K ink of a white figure. Rings = Z & (N << 1 | N >> 1 | N above | N below), N = K (white figures) else not clear:
+  the old per-pixel ringt rule in bits. pack: unrolled, lines past H+2 stored as zeros. Knight checksum unrolled x8
+  (every Knight commit).
+- Same pixels: old (main) and new page code on the same machine state (pilot runs/knight_tyme/fastknight/kt_diff.py):
+  200 builds (random, any graphics / mask pair, blobs; W 2-3, H 16-32; 12 attributes; outline on / off; plain and
+  painted entries), 40 Knight misses (the game's 8 images and random ones, painted too), 20 room-figure plots: canvas,
+  patterns, sprite attributes and table identical in every case.
+- Cost (simulator T): a miss on the game's own Knight images 626K -> 196K (x3.2); room figures W2 x 32 lines 275K ->
+  91K; a hit 12.7K -> 10.5K; painted figures x1.2-1.5.
+- Interrupts stay off in the hook bodies, unlike Spellbound: `isr` (free run, 2,500 frames) shows this handler running
+  code at 0x88DB-0x88EB and reading 0x97DA-0x9817 (through 0xB0A7), both slot 4, where page 26 sits during a hook.
+  The faster conversion shortens those stretches; no interrupt is lost (below), so no kwait.
+- JNext pace (private copy of the v2.09 card, 600 updates at 0xACE5, plain build control; steady = updates 21-600):
+
+  | build | seed | all | steady | first 20 | quiet third | busy third | interrupts / s | longest gap |
+  |---|---|---|---|---|---|---|---|---|
+  | 1.2 (6222fc96) | 1 | +1.11 % | +0.52 % | +18.32 % | +1.83 % | -0.00 % | 50.00 | 20.3 ms |
+  | 1.2 (6222fc96) | 2 | +1.24 % | +0.83 % | +13.32 % | +1.33 % | +0.46 % | 49.45 | 40.5 ms |
+  | this (bc2c840f) | 1 | +0.11 % | +0.00 % | +3.05 % | +0.32 % | -0.01 % | 50.00 | 20.3 ms |
+  | this (bc2c840f) | 2 | +0.10 % | +0.00 % | +3.06 % | +0.30 % | -0.01 % | 49.83 | 40.5 ms |
+
+  The original: 50.00 / 49.75 interrupts a second, longest gap 20.3 / 40.5 ms (seed 1 / 2). Lockstep: game state
+  equal at every update on all four runs.
+- Sprites bc2c840f bare (was 6222fc96), 47fe12fb with the tape's loading screen (selftest stages the .tzx, so the
+  record names that one); plain 0f91cab9 unchanged. `selftest --game knight_tyme --verify`: lockstep IDENTICAL on
+  kt_t1 3,346 / kt_rooms 6,720 / kt_over 882 / kt_cmds 22,586 frames (33,534; 11,285 Knight commits, 25,064 hook
+  exits with registers, 3,625 layer and screen checks), unit PASS, negatives 19/19, loading stub OK, boot OK. Checks
+  INCOMPLETE only for rom_paths ("ROM select 0 not modelled", as on main), so not stamped. R is not compared at hook
+  exits (CMP): no LD A,R (ED 5F) in any of the 8 banks; keeping R (patch.preserve-r) stays an opt-in rework.
+- Real loader (JNext, private copy of the v2.09 card, the review 1.3 .nxc): /tmp/NEXCLASH.NEX = bc2c840f; title,
+  control menu, play: the Knight walks the Transporter Room, to the Transputer Room and back (frames viewed).
+
 ## Lessons
+- [local: Knight Tyme's handler runs code in slot 4 (0x88DB-0x88EB) and reads data there (0x97DA-0x9817), so its hooks
+  keep interrupts off where Spellbound's (same author) keep them on] Run `isr` on each sister engine; the recordings
+  were made on the 48K ROM and desync the 128K run at frame 2, so a keyed free run is the one that shows it.
+- [local: a conversion without a fill needs no reached set] Spellbound's ring rule is R & (...); here every clear pixel
+  of the rectangle may take a ring, so Z takes R's place and the fill's tables and passes fall away.
+- [local: clear only what any figure writes] The old build cleared 49 x 64 bytes per figure; lines 1-34 x columns
+  1-26 cover every write here, and pack never reads the rest past H+2. A third of the old clear's cost.
 - [card patch.restore-speed §Verification] The lockstep verifier fed every port read from the recording, so the latch's
   IN (0x253B) took a game input and the replay failed at once; it now answers 0x253B from its NextREG model.
 - [card patch.restore-speed §Use / do not use] An engine with one ENTER / LEAVE pair takes the latch in one place; a
@@ -83,7 +133,8 @@ Cheats: archive .pok's [128K] entries; time and others' stats held in the simula
 ## Technique use
 - patch.restore-speed: helped: the macro pair went into ENTER / LEAVE unchanged (2026-11-07).
 - detect.gameplay-screen-readers: no help: the lockstep shows it directly, no memory outside the listed buffers ever differs
-- optimise.pattern-cache: used: Knight images only
+- optimise.pattern-cache: used: Knight images only; the miss cost, not the hit rate, set the pace (2026-11-07)
+- verify.update-locked-pace: helped: lockstep at every update on two seeds, 1.2 and this build on the same runs (2026-11-07)
 
 ## Hardware checklist
 1. Loading screen shows, a key or 5 s, menu; Z down, SPACE; PLAY GAME.
@@ -99,6 +150,7 @@ Cheats: archive .pok's [128K] entries; time and others' stats held in the simula
 - 2026-11-04 ROM path check fixed for this game (48K ROM as ROM 1, segments); record unpinned, star map known; 0 user rounds.
 
 - 2026-11-07 shared engine refactor: hooks restore the caller's speed (goal 2); 0 user rounds.
+- 2026-11-07 faster Knight conversion (Spellbound's #132 re-derived; pace +1.11 -> +0.11 %); 0 user rounds.
 ## Open
 - Hardware, CSpect: never run.
 - Alt image 0 is the set-up's copy of the Next's ROM 0, so the Bridge's star map reads NextZXOS's ROM 0 (REFACTOR item 2):
