@@ -226,7 +226,7 @@ def install(sim, nextreg=None, strict=True):
         def f():
             hl, de, bc, a = R[H] << 8 | R[L], R[D] << 8 | R[E], (R[B] << 8 | R[C]) - 1, R[A]
             v = mem[hl & 0xFFF8 | R[E] & 7] if pattern else mem[hl]
-            if v != a and de > 0x3FFF:
+            if v != a and (de > 0x3FFF or getattr(sim, 'low_writes', False)):    # low_writes: a memory that models Layer 2 write paging
                 mem[de] = v
             hl = (hl + hl_step) % 65536
             de = (de + 1) % 65536                   # DE counts up for LDDX / LDDRX too
