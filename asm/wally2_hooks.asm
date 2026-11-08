@@ -18,7 +18,8 @@
 ;   43168  D9 F5 ED   EXX / PUSH AF / LD (nn),SP -> JP e_b   (plotter B)
 ;   43069  F3 D9 F5   DI / EXX / PUSH AF         -> JP e_c   (plotter C)
 ;   61329  F5 D9 3A   PUSH AF / EXX / LD A,(nn)  -> JP e_p   (attribute painter after B/C)
-;   47637  01 00 02   LD BC,512                  -> JP e_cm  (commit, after the pixel copy)
+;   47611  21 00 6B   LD HL,27392                -> JP e_cw  (pixel copy: pace window, at 28 MHz)
+;   47637  01 00 02   LD BC,512                  -> JP e_cm  (commit, after the pixel copy, and the wait)
 ;   61090  11 00 6B   LD DE,27392                -> JP e_rs  (buffer restore: drop pending plots)
 ;   47362  E5 C5 D5   PUSH HL / PUSH BC / PUSH DE -> JP e_cl (play-area clear: room change, hide L2)
 ; A converted plot leaves every register, the game stack and all RAM exactly as the original,
@@ -28,6 +29,11 @@
 
         DEVICE ZXSPECTRUMNEXT
         INCLUDE "lib/hlib_speed.asm"    ; macros only: HLIB_SPEED_IN
+        DEFINE HLIB_PACE_LEAN           ; windows and debt only: no interrupts ever, no K windows
+HLIB_V_PACE  EQU 0x0040         ; 26 bytes of page PAGE_S (0x0040-0x0059), zero at start (asm/lib/hlib_pace.asm)
+HLIB_PACE_NL EQU 312            ; 48K timing, 50 Hz: lines a frame
+T_COPY  EQU 6300                ; the pixel copy on the original: 27.3 ms in JNext, 1/16 lines, less the window hook's 3.5 MHz parts
+A_HOOK  EQU 32                  ; a plot hook's 3.5 MHz entry and exit, outside its readings: about 265 T, 1/16 lines
 
 PAGE_S  EQU 26
 TPAGE   EQU 27
@@ -57,6 +63,7 @@ V_CNT   EQU 0x001C              ; columns drawn
 V_BOX   EQU 0x001E
 V_SPD   EQU 0x0020              ; the caller's CPU speed (lib/hlib_speed.asm latch)
 V_A     EQU 0x0021              ; A while an exit restores it (no flags)
+V_CR    EQU 0x0022              ; the converted plots' time on the original since the last wait, 1/16 lines
 STK     EQU 0x0100              ; hook stack top (grows down into 0x00C0-0x00FF)
 INKTAB  EQU 0x1800              ; attribute -> palette index of its ink (black = 8)
 PL      EQU 0x1900              ; plot list: 16 bytes per plot
@@ -81,6 +88,8 @@ e_c:    di
         jp s_c
 e_p:    nextreg 0x50,PAGE_S
         jp s_p
+e_cw:   nextreg 0x50,PAGE_S
+        jp s_cw
 e_cm:   nextreg 0x50,PAGE_S
         jp s_cm
 e_rs:   nextreg 0x50,PAGE_S
@@ -110,6 +119,9 @@ x_p:    nextreg 0x50,0xFF
         exx
         ld a,(62063)
         jp 61334
+x_cw:   nextreg 0x50,0xFF
+        ld hl,27392
+        jp 47614
 x_cm:   nextreg 0x50,0xFF
         ld bc,512
         jp 47640
@@ -125,6 +137,7 @@ s_a:    ld (V_SP),sp
         push af
         exx                         ; the game's alternate set (all overwritten by the plotter)
         HLIB_SPEED_IN V_SPD         ; the caller's speed latched, then 28 MHz
+        call dbo
         ld a,(V_N)
         cp MAXP
         jp nc,.pass
@@ -184,6 +197,8 @@ s_a:    ld (V_SP),sp
         ld h,high INKTAB
         ld a,(hl)
         ld (V_COL),a
+        ld hl,CR_A
+        call cred
         xor a
         ld (V_KIND),a
         ld a,34
@@ -213,6 +228,7 @@ s_a:    ld (V_SP),sp
         or a                        ; flags exactly as OR A / ADD HL,DE in the last row
         add hl,de
         exx
+        call dbc
         ld (V_A),a                  ; the caller's speed back, A and the flags kept
         ld a,(V_SPD)
         nextreg 0x07,a
@@ -220,6 +236,7 @@ s_a:    ld (V_SP),sp
         ld sp,(V_SP)
         jp x_ret
 .pass:  exx
+        call dbc
         ld a,(V_SPD)
         nextreg 0x07,a
         pop af
@@ -232,6 +249,7 @@ s_b:    ld (V_SP),sp
         push af
         exx
         HLIB_SPEED_IN V_SPD
+        call dbo
         ld a,(V_N)
         cp MAXP
         jp nc,.pass
@@ -272,6 +290,8 @@ s_b:    ld (V_SP),sp
         call xcol
         ld (61359),a
         call ccol
+        ld hl,CR_B
+        call cred
         ld a,1
         ld (V_KIND),a
         ld a,18
@@ -283,6 +303,7 @@ s_b:    ld (V_SP),sp
         call bcend
         pop af
         exx
+        call dbc
         ld (V_A),a
         ld a,(V_SPD)
         nextreg 0x07,a
@@ -292,6 +313,7 @@ s_b:    ld (V_SP),sp
 .pass:  xor a
         ld (V_LAST),a               ; 61329 after this plot paints the ULA (as the original)
         exx
+        call dbc
         ld a,(V_SPD)
         nextreg 0x07,a
         pop af
@@ -304,6 +326,7 @@ s_c:    ld (V_SP),sp
         push af
         exx
         HLIB_SPEED_IN V_SPD
+        call dbo
         ld a,(V_N)
         cp MAXP
         jp nc,.pass
@@ -343,6 +366,8 @@ s_c:    ld (V_SP),sp
         call xcol
         ld (61359),a
         call ccol
+        ld hl,CR_C
+        call cred
         ld a,2
         ld (V_KIND),a
         ld a,18
@@ -354,6 +379,7 @@ s_c:    ld (V_SP),sp
         call bcend
         pop af
         exx
+        call dbc
         ld (V_A),a
         ld a,(V_SPD)
         nextreg 0x07,a
@@ -363,6 +389,7 @@ s_c:    ld (V_SP),sp
 .pass:  xor a
         ld (V_LAST),a
         exx
+        call dbc
         ld a,(V_SPD)
         nextreg 0x07,a
         pop af
@@ -442,7 +469,24 @@ s_rs:   ld (V_SP),sp
         ld sp,(V_SP)
         jp x_rs
 
-; ---- 47637 (pixel copy done): draw this render's figures into the hidden buffer, show it ----
+; ---- 47611: the pixel copy's pace window opens; the copy runs at 28 MHz and that repays the hooks' time (no frame sync) ----
+s_cw:   ld (V_SP),sp
+        ld sp,STK
+        HLIB_SPEED_IN V_SPD         ; s_cm's wait and exit use this latch
+        push af
+        push bc
+        push de
+        push hl
+neg_open:
+        call hlib_pace_open
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
+        jp x_cw
+
+; ---- 47637 (pixel copy done): draw this render's figures into the hidden buffer, show it, wait out the copy's time ----
 s_cm:   ld (V_SP),sp
         ld sp,STK
         push af
@@ -451,8 +495,11 @@ s_cm:   ld (V_SP),sp
         push hl
         push ix
         push iy
+        ld a,(HLIB_V_PACE + 10)     ; the window is open: 28 MHz already, V_SPD is s_cw's latch
+        or a
+        jr nz,.w
         HLIB_SPEED_IN V_SPD
-        ld a,(V_BACK)
+.w:     ld a,(V_BACK)
         or a
         ld a,32
         ld hl,BOX0
@@ -462,6 +509,7 @@ s_cm:   ld (V_SP),sp
 .b0:    ld (V_L2P),a
         ld (V_BOX),hl
         call clearbox
+        call tk                     ; a busy commit can pass a frame: its lines must not wrap unseen
         ld hl,(V_BOX)
         ld (hl),0
         call drawall
@@ -479,6 +527,14 @@ s_cm:   ld (V_SP),sp
         xor a
         ld (V_N),a
         ld (V_LAST),a
+        ld hl,T_COPY                ; the copy's time and the plots', on the original, less the hooks' since the last wait
+        ld de,(V_CR)
+        add hl,de
+        ld de,0
+        ld (V_CR),de
+        ld a,(V_SPD)
+neg_wait:
+        call hlib_pace_wait
         ld a,(V_SPD)                ; the caller's speed back
         nextreg 0x07,a
         pop iy
@@ -491,6 +547,56 @@ s_cm:   ld (V_SP),sp
         jp x_cm
 
 ; ---- helpers (plot hooks) ----
+; dbo / dbc: this hook's time goes to the debt. Every register and flag kept.
+dbo:    push af
+        push bc
+        push de
+        push hl
+        call hlib_debt_open
+dbx:    pop hl
+        pop de
+        pop bc
+        pop af
+        ret
+dbc:    push af
+        push bc
+        push de
+        push hl
+        ld a,A_HOOK
+        call hlib_debt_close
+        jr dbx
+
+; tk: the open window's lines brought up to now. Every register and flag kept.
+tk:     push af
+        push bc
+        push de
+        push hl
+        call hlib_pace_tick
+        jr dbx
+
+; cred: HL = the kind's table (1/16 lines by x & 7, JNext: the plain build's entry to RET, means over 600 updates): V_CR += its time on the
+; original. A converted plot saves that time, so the window's wait must give it back. AF, DE, HL lost; saturates.
+cred:   ld a,(V_X)
+        and 7
+        add a,a
+        ld e,a
+        ld d,0
+        add hl,de
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ld hl,(V_CR)
+        add hl,de
+        jr nc,.w
+        ld hl,0x7FFF
+.w:     ld (V_CR),hl
+neg_cred:
+        ret
+
+CR_A:   dw 561,743,925,1070,1214,1368,1521,1674
+CR_B:   dw 280,383,462,539,607,681,757,836
+CR_C:   dw 165,203,241,279,317,355,393,431
+
 xcol:   ld a,(V_X)                  ; A = x / 8
         rrca
         rrca
@@ -782,7 +888,8 @@ drawall:
         or a
         ret z
         ld c,a                      ; C = plots left
-.g:     push ix                     ; group: this plot and the joined ones after it
+.g:     call tk
+        push ix                     ; group: this plot and the joined ones after it
         pop iy
         ld b,1
 .j:     ld a,b
@@ -970,6 +1077,7 @@ draw:   ld a,(ix+0)
 .y1c:   ld a,191
 .y1:    ld (hl),a
         ret
+        INCLUDE "lib/hlib_pace.asm"
 code_end:
 
 ; --- setup routine (stub bank, 0xD000): Layer 2 palette and buffers, sprites off ----

@@ -1,5 +1,7 @@
 # Everyone's a Wally, updated (Mikro-Gen) - engine `wally2`, record `everyones_a_wally_updated`
 
+Techniques: `patch.pace-limiter`
+
 A new game to the 2026-10-14 standard (every figure converted, painted per-pixel colours, paintable
 outlines, recolour). The first version (engine `wally`, games/everyones_a_wally.md, record `wally`)
 is FROZEN (record "excluded"; Dean 2026-10-14): wally.py, asm/wally_hooks.asm, its profile and its
@@ -135,7 +137,7 @@ the corresponding builds byte for byte.
 5. Room changes: the old figures vanish as the new room draws; no stale pixels or figure left over.
 6. Edges: a figure at the left / right screen edge and at the top of the play area (line 64) clips
    cleanly; the top panel (lines 0-63) is never covered.
-7. Speed against the original in a busy room (several gang members + objects); any tearing (a
+7. Speed as the original in quiet and busy rooms (JNext: within 1%; the wait is tuned on JNext); any tearing (a
    figure split for a frame) while moving.
 8. Walk-in / walk-out sequences, game over, the end of the game: nothing left over a screen without
    play.
@@ -176,12 +178,36 @@ the corresponding builds byte for byte.
   main's build and this one both -4.38% (2.27 s against 2.37 s for the same 600 updates). The game runs with
   interrupts off (0 a second in both).
 
+## Pace (2026-11-08): the pixel copy's window, hook time in the debt, the plots' saved time credited
+Owner's pace rule: within 2% of the original where it runs steadily; never slower. Audit of the published 1.1 (f7f371e3, JNext, state in lockstep): whole +0.29..+2.16%,
+quiet +0.40..+3.99, busy +1.59..+2.45, slowest stretch of 20 updates +5.7.
+- Why: no frame sync, interrupts off for good, so speed is CPU time. The hooks replace the plots, so each update's time is the original's less the plots, plus the hooks: it read fast
+  with many plots and slow with few. No constant could fix that.
+- New site 47611 (0xB9FB, the pixel copy's `LD HL,27392`): s_cw opens hlib_pace's window, leaves at 28 MHz; 4,096 LDI in about 3 ms; s_cm (47637) commits to Layer 2 as before, then
+  waits T_COPY + V_CR less the debt. V_SPD stays s_cw's latch, so the exit gives the caller's speed back.
+- T_COPY: the plain build's 47611 to 47637 is 6,276 to 6,647 sixteenths of a line, mean 6,476 (27.3 ms; contention). 6300 reads -0.1 to -0.2%, on JNext.
+- Debt: every plot hook (dbo / dbc), A_HOOK 32 = its 3.5 MHz entry and exit. V_CR: a converted plot adds its time on the original, by kind and x & 7 (cred, CR_A / CR_B / CR_C):
+  the plain build's entry to RET in JNext, means over 400 updates of two seeds: A 561 + about 160 per rotation, B 280 to 836, C 165 at rotation 0, then 38 a rotation from the
+  loop's own T (C ran at one rotation in those seeds; A at even x only, odd x interpolated). A plot that runs (pass through) is not credited.
+- 61329's hook still runs at 3.5 MHz: about 36 sixteenths against the original's 24; left, too small to see.
+- lib/hlib_pace.asm unchanged, LEAN (no interrupts, no K windows), in the hook page.
+- R: not compared at any hook (CMP as before), and it cannot be without new work: the game reads R for random numbers (LD A,R at 0xEDCC, 0xF29C, 0xF4BC, 0xF695, 0xFA93, 0xFB0B, 0xFB14,
+  0xFB1A) and the hooks replace whole plotters, so R after a hook is not the original's. This was so in 1.0 and 1.1. Same keys, different random events from the original; the pace
+  runs fix R at the audit's four sites in both arms so the two games stay equal. Matching R would need hlib_r on loops of run-time length: for Jon / Dean to ask for.
+
 ## Lessons
+- [local: this engine] A window with the commit inside it ran over a frame: 21 ms lost on each of the first updates (+21 ms, a whole frame, every time). hlib_pace_tick's "at least once a
+  frame in a long window" is in the card; the fix was tk in clearbox's and drawall's loops. A fixed-looking +20 ms at one update reads as this wrap, not as a slow hook.
+- [local: this engine] Hooks that replace a plot rather than add to it need the plot's original time back in the wait (V_CR), or the pace still moves with the plot count.
+- [local: the pace check] The audit's input at the probe depends on the frame boundary here: three reads of row 0xEFFE come within 2 ms after the probe, so a build whose phase
+  differs can see a key one update off (Enhanced seed 3 parted at update 31). Keys given at the game's reads (profile inject) hold lockstep on every run.
 - [card patch.restore-speed §Use / do not use] Exits that hand back the plotter's A and flags restore the speed through
   a page byte (the card's A-saving form); the .pass exits restore before POP AF.
 
 ## Technique use
 - patch.restore-speed: helped: the macros at four entries, the A-saving form at the plotted exits (2026-11-07).
+- patch.pace-limiter: helped: LEAN, fixed window, debt, per-call target as Match Day's; second build -0.2% (2026-11-08).
+- verify.update-locked-pace: corrected: this game's reads follow the probe within a frame; keys at the reads.
 
 ## Friction
 - reuse: [tool asm/lib/hlib_speed.asm] the shared latch macros
