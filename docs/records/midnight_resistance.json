@@ -62,7 +62,7 @@
   },
   "sprites": {
    "file": "midnight_resistance_sprites.nex",
-   "md5": "947dc8a9553732eb3dbf64525b1df8c2"
+   "md5": "081de91a8427dc4b141574c40ab171d7"
   }
  },
  "repro": [],
@@ -73,8 +73,8 @@
  "status": {
   "title": "Midnight Resistance (128K)",
   "engine_col": "midres (midnight_resistance.md)",
-  "build": "midnight_resistance_sprites.nex 947dc8a9 (2026-11-07: hooks restore the caller's CPU speed, lib/hlib_speed.asm; was 2aacd11c; hardware-tested 670f9403: every figure a sprite, also flipped and in the shop; Dean's painted colours: 444 graphics bytes; altrom + page 26 at slot 5, page 27 at slot 2; sprites hidden on every loop exit)",
-  "software": "2 RZX IDENTICAL with the painted colour map, unit + interrupt + level / shop exit + full table + flipped + map PASS",
+  "build": "midnight_resistance_sprites.nex 081de91a (2026-11-08: pace limiter on the screen copy and before the game's frame sync, lib/hlib_pace.asm; was 947dc8a9; hardware-tested 670f9403: every figure a sprite, also flipped and in the shop; Dean's painted colours: 444 graphics bytes; altrom + page 26 at slot 5, page 27 at slot 2; sprites hidden on every loop exit)",
+  "software": "2 RZX IDENTICAL with the painted colour map, unit + interrupt + level / shop exit + full table + flipped + map PASS; JNext pace in lockstep, 6 seeds: quiet -1.59..+0.73%, busy -0.70..+0.95%",
   "hardware": "670f9403 tests OK on a real Next (Dean, 2026-10-14)",
   "next": "further painting on the PAINTING_SPRITES sheet (optional); level 2 RZX"
  },
@@ -83,16 +83,16 @@
  ],
  "checked": {
   "deps": {
-   "asm/midres_hooks.asm": "ed202c48d2c75aff",
-   "docs/profiles/midnight_resistance.json": "0e1a97f5c03161f9",
+   "asm/midres_hooks.asm": "a798572c7ae665eb",
+   "docs/profiles/midnight_resistance.json": "8f33ecb2ac63acb5",
    "docs/profiles/midnight_resistance_colours.json": "3ad5490830c3d01a",
-   "nexclash.py": "9028c4ca12045d70",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "00d01102bda98ad5",
-   "nexclash/midres.py": "4a7bcc85e2bef3af",
-   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/engines.py": "8e1ee6bd49b54877",
+   "nexclash/midres.py": "6d91451146885cda",
+   "nexclash/nextboot.py": "121a5912efae9b2a",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
@@ -100,23 +100,23 @@
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "18d0906911d8c44a",
+   "recipe": "2a77f54737a7be6d",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-07"
+  "date": "2026-11-08"
  },
  "verified": {
   "deps": {
-   "asm/midres_hooks.asm": "ed202c48d2c75aff",
-   "docs/profiles/midnight_resistance.json": "0e1a97f5c03161f9",
+   "asm/midres_hooks.asm": "a798572c7ae665eb",
+   "docs/profiles/midnight_resistance.json": "8f33ecb2ac63acb5",
    "docs/profiles/midnight_resistance_colours.json": "3ad5490830c3d01a",
-   "nexclash.py": "9028c4ca12045d70",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "00d01102bda98ad5",
-   "nexclash/midres.py": "4a7bcc85e2bef3af",
-   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/engines.py": "8e1ee6bd49b54877",
+   "nexclash/midres.py": "6d91451146885cda",
+   "nexclash/nextboot.py": "121a5912efae9b2a",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
@@ -124,10 +124,10 @@
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "18d0906911d8c44a",
+   "recipe": "2a77f54737a7be6d",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-07"
+  "date": "2026-11-08"
  },
  "canary": 2,
  "canary_quick": 300,
@@ -171,6 +171,16 @@
    "target": "commit 0x8950 (and the shop path 0xB893): 16-entry pattern-slot cache",
    "phases": [
     "commit"
+   ]
+  },
+  {
+   "application": "midnight_resistance.copy.pace",
+   "id": "patch.pace-limiter",
+   "revision": 3,
+   "target": "the screen copy window, the wait before the frame sync, K window when in debt",
+   "phases": [
+    "entry",
+    "exit"
    ]
   }
  ],

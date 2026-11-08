@@ -40,12 +40,15 @@ EXIT_SITES = {0x980F: ('C2EA97', 'x_m'), 0x9861: ('C22898', 'x_mf'), 0x7DE5: ('C
               0x7E39: ('C2167E', 'x_om'),
               0x9F3D: ('10B8C9', 'x_p'), 0x9FB7: ('1096D9', 'x_pm'),
               0x8950: ('ED5BEE', 'e_cm'), 0x8993: ('3A70FF', 'e_q'), 0x8988: ('CAE0B7', 'e_lv'),
-              0xB893: ('AF32D8', 'e_cs'), 0xB89B: ('3A70FF', 'e_s2'), 0xB8A5: ('3AFD9D', 'e_sx')}   # shop loop
+              0xB893: ('AF32D8', 'e_cs'), 0xB89B: ('3A70FF', 'e_s2'), 0xB8A5: ('3AFD9D', 'e_sx'),   # shop loop
+              0x8A60: ('C33087', 'e_bw')}   # the screen copy's pace window
+HOOK_CALLS = {0x8944: ('CDF5A2', 'e_hd'), 0x8A03: ('CD1E83', 'e_tw'), 0x8941: ('CD9B89', 'e_bg'), 0x89C3: ('CDB6B8', 'e_bk')}   # CALL targets: the window's hold, the wait before the frame sync
 KIND = {0x97E5: 0, 0x981E: 1, 0x7DC6: 2, 0x7E0E: 3, 0x9EF0: 4, 0x9F45: 5}
 # patched blocks (JP over these bytes): an address inside a block other than its start may be a PC
 # in the ORIGINAL run only as the next instruction of the same block (DJNZ falling through to RET /
 # EXX); instruction interiors never
-BLOCKS = {0xB893: 4, 0xB89B: 5, 0xB8A5: 6, 0x980F: 3, 0x9861: 3, 0x7DE5: 3, 0x7E39: 3, 0x9F3D: 3, 0x9FB7: 3, 0x8950: 4, 0x8993: 3, 0x8988: 3}
+V_PACE_OPEN = 0x10EA             # HLIB_V_PACE + 10, in page 26
+BLOCKS = {0x8A60: 3, 0x8944: 3, 0x8A03: 3, 0x8941: 3, 0x89C3: 3, 0xB893: 4, 0xB89B: 5, 0xB8A5: 6, 0x980F: 3, 0x9861: 3, 0x7DE5: 3, 0x7E39: 3, 0x9F3D: 3, 0x9FB7: 3, 0x8950: 4, 0x8993: 3, 0x8988: 3}
 FALLTHROUGH = {0x9F3F: 0x9F3D, 0x9FB9: 0x9FB7,           # instruction start -> previous instruction
                0xB894: 0xB893, 0xB89E: 0xB89B, 0xB89F: 0xB89E, 0xB8A8: 0xB8A5, 0xB8AA: 0xB8A8}   # shop
 INTERIORS = tuple(a + k for a, n in BLOCKS.items() for k in range(1, n) if a + k not in FALLTHROUGH)
@@ -196,6 +199,8 @@ class MidresPatch:
                       for a, s in CALL_SITES.items()]
         self.sites += [(a, bytes.fromhex(o), b'\xC3' + self.syms[s].to_bytes(2, 'little'))
                        for a, (o, s) in EXIT_SITES.items()]
+        self.sites += [(a, bytes.fromhex(o), b'\xCD' + self.syms[s].to_bytes(2, 'little'))
+                       for a, (o, s) in HOOK_CALLS.items()]
 
     @staticmethod
     def _bank_of(a):
@@ -434,8 +439,15 @@ class _Patched(_Orig):
             s.ov[a] = v
 
 
+class PaceState(NextState):
+    """The video line moves on with every reading, so a pace wait ends after a few polls; ns.polls counts them."""
+    def video_line(self):
+        self.line = (self.line + 6) % 311
+        return self.line
+
+
 def new_state(patch):
-    ns = NextState(patch)
+    ns = PaceState(patch)
     ns.nr[0x55] = 5
     ns.nr[0x54] = 4
     return ns
@@ -446,11 +458,12 @@ def _sim():
     return _rw_simulator()
 
 
-def pair(patch, get, regs, ns, stop, alt, psite, run_orig=True):
+def pair(patch, get, regs, ns, stop, alt, psite, run_orig=True, speed='in'):
     """Run the original (unless run_orig is False) and the patched code from one state until
     stop(registers) is true. Returns (so, o, sp_, p, err)."""
     Sim = _sim()
     err = []
+    speed = ns.nr.get(0x07, 0) if speed == 'in' else speed     # a plot inside e_bg's window comes and goes at 28 MHz
     o = _Orig(get)
     p = _Patched(get, patch, ns, alt, psite, err)
     ns.events = []
@@ -462,7 +475,7 @@ def pair(patch, get, regs, ns, stop, alt, psite, run_orig=True):
     sp_ = _machine(Sim, p, list(regs), ns, 'p')
     if not _run_until(sp_, stop, check=_isafe(sp_, regs, ns, err)):
         err.append('patched did not return')
-    if ns.nr.get(0x55) != 5 or ns.nr.get(0x07, 0) != 0 or ns.nr.get(0x54, 4) != 4 or ns.nr.get(0x52, 10) != 10:
+    if ns.nr.get(0x55) != 5 or speed not in (None, ns.nr.get(0x07, 0)) or ns.nr.get(0x54, 4) != 4 or ns.nr.get(0x52, 10) != 10:
         err.append(('MMU2 / MMU4 / MMU5 / speed not restored', ns.nr.get(0x52), ns.nr.get(0x54), ns.nr.get(0x55),
                     ns.nr.get(0x07)))
     if any(e[0] == 'in' for e in ns.events):
@@ -649,7 +662,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
     ns = new_state(patch)
     figs = []
     cnt = collections.Counter()
-    WATCH = set(CALL_SITES) | set(EXIT_SITES) | set(INTERIORS) | set(FALLTHROUGH)
+    WATCH = set(CALL_SITES) | set(EXIT_SITES) | set(HOOK_CALLS) | set(INTERIORS) | set(FALLTHROUGH)
     states = []
 
     def fail(k, info=()):
@@ -715,6 +728,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         d = _cmp_regs(so, sp_)
         if d or o.ov != p.ov:
             fail('commit: registers/memory differ', (d, len(set(o.ov) ^ set(p.ov))))
+        if ns.scratch[V_PACE_OPEN]:
+            fail('commit: the screen copy window left open')
         exp = expected_layer(figs, get, patch.colours)
         got = sprite_layer(ns)
         bad = len(set(exp) ^ set(got)) + sum(1 for k in exp if k in got and exp[k] != got[k])
@@ -768,8 +783,26 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                 fail('shop exit: sprites still visible / still live')
             figs.clear()
 
+    def pace_event(pc, real, R):
+        # the pace hooks: from one state to the game's routine, registers and memory as the original. e_bw / e_bg leave
+        # 28 MHz on inside their window (the game's own code ran in between, here at no clock); the window's state is
+        # carried in ns, and the next closing hook must bring back the caller's speed
+        get = lambda a: MG(real, a)
+        stop_at = {0x8A60: 0x8730, 0x8944: 0xA2F5, 0x8A03: 0x831E, 0x8941: 0x899B, 0x89C3: 0xB8B6}[pc]
+        so, o, sp_, p, err = pair(patch, get, R, ns, lambda r: r[24] == stop_at, alt, psite, speed=None)
+        if ns.nr.get(0x07, 0) not in (0, 3):
+            fail('pace hook: speed', (hex(pc), ns.nr.get(0x07, 0)))
+        for e in err:
+            fail('pace hook %04X: %s' % (pc, e))
+        d = _cmp_regs(so, sp_)
+        if d or o.ov != p.ov:
+            fail('pace hook: registers/memory differ', (hex(pc), d))
+        c['pace hook %04X' % pc] += 1
+
     def event(pc, real, R):
-        if pc == 0xB893:
+        if pc in (0x8A60, 0x8944, 0x8A03, 0x8941, 0x89C3):
+            pace_event(pc, real, R)
+        elif pc == 0xB893:
             commit_event(real, R, 0xB893, 0xB897)
         elif pc == 0xB89B:
             shop_exit_event(pc, real, R, 0xB8A0)
@@ -1139,6 +1172,7 @@ def auto(a, z80, name, out, say):
                                           'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200]))
     ok = not bad and not bad2 and not sc
     states = []
+    rzx0 = None
     for r in list(a.rzx or []):
         from skoolkit.rzxplay import parse_rzx
         from skoolkit.snapshot import Snapshot as SS
@@ -1149,6 +1183,7 @@ def auto(a, z80, name, out, say):
             say('RZX       : %s had %d autosave snapshots -> %s' % (os.path.basename(r), nsnap - 1,
                                                                    os.path.basename(s2)))
             r = s2
+        rzx0 = rzx0 or r
         c, ex, st = verify(patch, r, stop=getattr(a, 'quick', None), collect=3)
         states += st
         fails = {k: v for k, v in c.items() if k.endswith('!')}
@@ -1163,6 +1198,11 @@ def auto(a, z80, name, out, say):
                                          if k.startswith(('converted', 'passthrough', 'loop', 'level', 'shop'))))
         for k, v in ex.items():
             say('            %s: %s' % (k, str(v)[:240]))
+    if rzx0 and not getattr(a, 'quick', 0):     # the limiter's negative: a commit that never waits leaves its window open
+        cn = verify(MidresPatch(edit={patch.syms['commit.neg_w']: b'\xC9'}), rzx0, stop=400)[0]
+        hit = any(k.startswith('commit: the screen copy window left open') for k in cn)
+        ok = ok and hit
+        say('Pace neg  : a limiter that never waits %s' % ('DETECTED' if hit else 'NOT DETECTED!'))
     if states:
         u = unit_tests(patch, states, MidresPatch(swap=True), negative_int_patch(patch))
         uf = {k: v for k, v in u.items() if k.endswith('!')}
