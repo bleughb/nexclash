@@ -12,6 +12,14 @@
     "english_enhanced": "053806e52684ce68b89a020a848e7196"
    }
   },
+  "9c14e2564e3f9956ff6ff973dac77537": {
+   "game": "Army Moves",
+   "doc": "army_moves.md",
+   "nex": {
+    "sprites": "f29ce916ef3ba1e62c83d8fa992c3d39",
+    "loading": "85ba62ef5e47b72bb61220a8daf59809"
+   }
+  },
   "06b11e63d60401666332a61626a5789c": {
    "game": "Atic Atac",
    "doc": "atic_atac.md",
