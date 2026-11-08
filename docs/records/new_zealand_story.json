@@ -79,29 +79,57 @@
  "outputs": {
   "sprites": {
    "file": "new_zealand_story_sprites.nex",
-   "md5": "70174ecba93626def54d6776c1ff4b32"
+   "md5": "342c8397e811e7e1732db1a469d6e5c5"
   },
   "smooth": {
    "file": "new_zealand_story_smooth.nex",
-   "md5": "7d9898e87499c310700fd71bdd6d2469"
+   "md5": "cf5cadc53cbcb22b7e0994e767da0e10"
   },
   "backdrops": {
    "file": "new_zealand_story_backdrops.nex",
-   "md5": "d6ccac8fa3a3cd4508463b3bbd98b32d"
+   "md5": "679d8c14c0d046b435e581e8cea6bf4a"
   },
   "smooth_backdrops": {
    "file": "new_zealand_story_smooth_backdrops.nex",
-   "md5": "891397ef8c8c9846eba7d8e972867746"
+   "md5": "f74c3b34a4a1a036c0619815fbc0b389"
   }
  },
  "repro": [],
  "status": {
   "title": "The New Zealand Story",
   "engine_col": "new_zealand_story (new_zealand_story.md)",
-  "build": "v1.2 (published .nxc, jattree/nxc 11f90ba): default, Smooth scrolling, Backdrops, both; built from the two tapes + start state",
-  "software": "Rebuild byte-exact to the published builds from either tape set. Proof: the run's lockstep replays (v1.1 52/141000 frames, v1.2 34/51000 frames, negatives) on these bytes; no RZX verifier in the engine",
-  "hardware": "none for 1.1/1.2 (1.0 played by Dean Woodyatt)",
-  "next": "Port the replay proof as the engine's verifier; v2.10 start-up fix (new version)"
+  "build": "v1.3 (published .nxc: v1.2 + the v2.10 start-up fix): default, Smooth scrolling, Backdrops, both; built from the two tapes + start state",
+  "software": "Rebuild byte-exact to the published builds from either tape set. Proof: the run's lockstep replays (v1.1 52/141000 frames, v1.2 34/51000 frames, negatives) on these game bytes (v1.3 changes only the start-up stub); no RZX verifier in the engine",
+  "hardware": "none for 1.1-1.3 (1.0 played by Dean Woodyatt)",
+  "next": "Port the replay proof as the engine's verifier"
  },
- "checks": []
+ "checks": [],
+ "checked": {
+  "deps": {
+   "asm/new_zealand_story_backdrop.asm": "b9292395d2ec3d68",
+   "asm/new_zealand_story_hooks.asm": "bf3efe63a90f8e1a",
+   "asm/new_zealand_story_loader.asm": "28e188829534a64b",
+   "asm/new_zealand_story_setup.asm": "548e771bfc8244e2",
+   "assets/new_zealand_story/backdrops/floors.json": "8a3dd9c974c57959",
+   "assets/new_zealand_story/backdrops/w1.json": "7536bba587dd64c8",
+   "assets/new_zealand_story/backdrops/w2.json": "26954086cceeb77f",
+   "assets/new_zealand_story/backdrops/w3.json": "9093a1e04d2591ad",
+   "assets/new_zealand_story/backdrops/w4.json": "b875547db419ac79",
+   "assets/new_zealand_story/backdrops/w5.json": "f5005792e539d01d",
+   "docs/profiles/new_zealand_story.json": "46fccc3bda96fb52",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/engines.py": "2a90481848696085",
+   "nexclash/new_zealand_story.py": "2cc1db58986b9bc0",
+   "nexclash/new_zealand_story_backdrops.py": "83201feae444c076",
+   "nexclash/new_zealand_story_paint.py": "22926e50511be190",
+   "nexclash/tapeset.py": "86542e1752fb3110",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "tools/sjasmplus/pin.json": "f713de264030dc17",
+   "tools/sjasmplus/sjasm.py": "5fc4741a8e953aa0",
+   "skoolkit": "10.1",
+   "recipe": "beab789939b41c21",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-07"
+ }
 }
