@@ -50,6 +50,7 @@ L2_BANK_B EQU 19
 BEAM_LO EQU 124                ; below the play area, shake included
 BEAM_HI EQU 240
 K_PLOT EQU 100
+K_PLOT1 EQU 103
 K_COPY EQU 118
 K_REST EQU 118
 ATTR_P EQU 0x5C8F
@@ -118,7 +119,7 @@ rom_start:
         ENDM
 
 ; ---- plot: the original's body B4EF / B517, whole, K-windowed --------------
-        MACRO PLOT_HOOK flag, body
+        MACRO PLOT_HOOK flag, body, k
         ENTER
         HLIB_SPEED_IN V_SPEED
         call hlib_debt_open
@@ -130,16 +131,16 @@ rom_start:
         ld hl,(0x5C78)
         ld (V_FR),hl
         COPY_BODY body
-        WAIT_K K_PLOT
+        WAIT_K k
         LEAVE_R
         ret
         ENDM
 
 h_plot1:
-        PLOT_HOOK 0xB47E,0xB4EF
+        PLOT_HOOK 0xB47E,0xB4EF,K_PLOT1
         defs 0x2CC0-$,0
 h_plot2:
-        PLOT_HOOK 0xB4A6,0xB517
+        PLOT_HOOK 0xB4A6,0xB517,K_PLOT
         defs 0x2D80-$,0
 
 ; ---- restore: clean buffer to the work buffer at 28 MHz --------------------
