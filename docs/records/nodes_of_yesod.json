@@ -345,19 +345,19 @@
   },
   "sprites": {
    "file": "nodes_of_yesod_sprites.nex",
-   "md5": "81db9019df732c102e0f98aa8eb84227"
+   "md5": "27af075b9c95a3c5607420bad0e3718d"
   },
   "enhanced": {
    "file": "nodes_of_yesod_enhanced.nex",
-   "md5": "698e791437ff07dc6c9b8a59d6f44bd6"
+   "md5": "927dbd17bb5c359058a5471d899b5270"
   },
   "backdrops": {
    "file": "nodes_of_yesod_backdrops.nex",
-   "md5": "138662b51b2b78cb73393e27ff81654f"
+   "md5": "e34a60b2421797dfe332b3f5b26e6d24"
   },
   "enhanced_backdrops": {
    "file": "nodes_of_yesod_enhanced_backdrops.nex",
-   "md5": "1a1987d524fd539bf02a16d6b0bbf3aa"
+   "md5": "6ba0c90afb55cce0bee50a298bb7ce26"
   }
  },
  "repro": [],

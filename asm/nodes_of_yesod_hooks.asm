@@ -48,6 +48,14 @@ V_SAVE_SERIAL EQU 0xB411
 V_ATTR_SPEED EQU 0xB416
 V_BACKDROP EQU 0xB417
 V_HUD EQU 0xB418
+V_WT0 EQU 0xB419                ; 2 bytes: the open window's target, 1/16 lines
+V_WT  EQU 0xB41B                ; 2 bytes: that + the carry
+V_PD  EQU 0xB41D                ; 2 bytes, signed: time carried, 1/16 lines (+ = the build is ahead, - = behind)
+V_WL  EQU 0xB41F                ; 2 bytes: lines to reach
+V_WS  EQU 0xB421                ; the window's caller's speed
+ISRLINES EQU 43                 ; the game's interrupt handler, lines (9,631 T mean, plain build)
+PDMIN EQU -8192                 ; 512 lines behind at most
+A_PLAYER EQU 130                 ; e_player's time, 1/16 lines
 ; R bookkeeping remains interruptible; the ISR wrappers repair an interrupted capture or store.
 ny_r_begin:
         push af
@@ -86,9 +94,10 @@ e_player:
         call ny_r_set
         call ny_r_run
         call backdrop_update
-        call ny_speed_out
-        call pace_player
-        call ny_speed_in
+        ld hl,(V_PD)            ; this hook's own time goes to the account
+        ld de,0 - A_PLAYER
+        add hl,de
+        ld (V_PD),hl
         call ny_r_end
         call ny_speed_out
         pop hl
@@ -104,6 +113,7 @@ e_blit: push af
         push de
         push hl
         call ny_speed_in
+        call blit_tgt
         call original_m1
         ld (0xB412),a
         pop hl
@@ -118,6 +128,7 @@ e_blit: push af
         ld a,(0xB412)
         call ny_r_set
         call ny_r_run
+        call win_open
         call update
         pop hl
         pop de
@@ -154,6 +165,17 @@ e_blit: push af
 .j:     ex af,af'
         dec a
         jp nz,.row
+        push af
+        push bc
+        push de
+        push hl
+        ld hl,(V_WT0)
+        ld a,(V_SPEED)
+        call win_wait
+        pop hl
+        pop de
+        pop bc
+        pop af
         call ny_r_end
         call ny_speed_out
         jp 36843
@@ -787,6 +809,49 @@ e_random:
         pop bc
         and 15
         jp 31999
+; win_since: HL = lines since win_open (a window is under a frame), ISRLINES less if an interrupt came: it took its
+; time whichever clock it ran at, as in the original. A, BC, DE, F lost.
+win_since:
+        call pace_now
+        ld c,a
+        ld de,(V_LAST_LINE)
+        or a
+        sbc hl,de
+        jr nc,.p
+        ld de,311
+        add hl,de
+.p:     ld a,(V_LAST_FRAME)
+        cp c
+        ret z
+        ld de,ISRLINES
+        or a
+        sbc hl,de
+        ret nc
+        ld hl,0
+        ret
+
+; blit_tgt: A = rows, C = columns -> V_WT0 = 1.5 r c + 10 r: 21 T r c + 140 T r, in 1/16 lines. Keeps every register.
+blit_tgt:
+        push af
+        push de
+        push hl
+        ld d,a
+        ld e,c
+        mul d,e
+        ld h,d
+        ld l,e
+        srl d
+        rr e
+        add hl,de
+        ld e,a
+        ld d,10
+        mul d,e
+        add hl,de
+        ld (V_WT0),hl
+        pop hl
+        pop de
+        pop af
+        ret
 helpers_end:
         ASSERT helpers_end <= 0x1F50
         SAVEBIN "ny_helpers.bin",0x1E80,helpers_end-0x1E80
@@ -835,70 +900,71 @@ pace_now:
 .retry_pop:
         pop af
         jr .retry
-pace_player:
-        ld bc,0
-        ld (0xB414),bc
-.poll:
+; ---- pace (v1.6): the build skips the original's copy (LDIR, 36680) and runs its attribute walk (36851-36902) at 28 MHz. Each is now a
+; window: V_LAST_* at its start, the target = the original's time for its size (plain build, JNext; interrupts left out), waited for at
+; its end at the caller's clock, what is over or under carried in V_PD (1/16 line). No wait anywhere else. Interrupts stay on.
+win_open:
         call pace_now
-        ld c,a
-        ld de,(0xB414)
-        dec de
-        ld (0xB414),de
-        ld a,d
-        or e
-        jr z,pace_player.save
-        ld a,(V_HAVE_TIME)
-        or a
-        jr z,.save
-        ld a,c
-        ld b,a
-        ld a,(V_LAST_FRAME)
-        ld e,a
-        ld a,b
-        sub e
-        cp 8
-        jr nc,.save             ; menu or a pause: start a new window
-        push hl
-        push bc
-        ld e,a
-        ld d,0
-        ld hl,0
-        ld bc,311
-.frames:
-        ld a,e
-        or a
-        jr z,.elapsed
-        add hl,bc
-        dec e
-        jr .frames
-.elapsed:
-        ex de,hl
-        pop bc
-        pop hl
-        push hl
-        add hl,de
-        ld de,(V_LAST_LINE)
-        or a
-        sbc hl,de
-        ld de,332              ; calibrated against the original player update
-        ld a,(V_SPEED)
+        ld (V_LAST_LINE),hl
+        ld (V_LAST_FRAME),a
+        ret
+
+; win_wait: A = the caller's speed. HL = target (1/16 lines). Every register kept but HL, A, F (the callers save what they need).
+win_wait:
+        ld (V_WS),a
+        ld de,(V_PD)
+        add hl,de               ; HL: the time this window may take, signed
+        ld (V_WT),hl
+        bit 7,h
+        jr nz,.done             ; behind already: no wait
+        ld b,4
+.q:     srl h
+        rr l
+        djnz .q
+        ld a,(V_WS)
         ld b,a
         inc b
-        jr .scale_test
-.scale: srl d
-        rr e
-.scale_test:
-        djnz .scale
+        jr .st
+.sc:    srl h                   ; a caller above 3.5 MHz had the original at that clock
+        rr l
+.st:    djnz .sc
+        ld (V_WL),hl
+        ld a,(V_WS)
+        nextreg 0x07,a
+        ld hl,0
+        ld (0xB414),hl          ; poll guard: 65,536 polls, then give up
+.poll:  call win_since
+        ld de,(V_WL)
+        or a
+        sbc hl,de
+        jr nc,.met
+        ld hl,(0xB414)
+        dec hl
+        ld (0xB414),hl
+        ld a,h
+        or l
+        jr nz,.poll
+.met:   nextreg 0x07,3
+.done:  call win_since          ; HL = lines the window lasted (its interrupts left out)
+        ld b,4
+.m:     add hl,hl
+        djnz .m                 ; x 16
+        ex de,hl
+        ld hl,(V_WT)
+        or a
+        sbc hl,de               ; left over: carried (ahead by under a line; behind down to PDMIN)
+        bit 7,h
+        jr z,.w
+        ld de,PDMIN & 0xFFFF
+        push hl
         or a
         sbc hl,de
         pop hl
-        jr c,pace_player.poll
-.save:  ld (V_LAST_LINE),hl
-        ld a,c
-        ld (V_LAST_FRAME),a
-        ld a,1
-        ld (V_HAVE_TIME),a
+        jr nc,.w
+        ex de,hl
+.w:     ld (V_PD),hl
         ret
+
 ny_speed_in:
         HLIB_SPEED_IN V_SPEED
         ret
@@ -931,6 +997,27 @@ e_attr_enter:
         HLIB_SPEED_IN V_ATTR_SPEED
         call ny_r_begin
         push af
+        push bc
+        push de
+        push hl
+        ld c,d                  ; 11 D E + 3 D + 3: 155 T D E + 39 T D + 45 T, in 1/16 lines
+        mul d,e
+        ld d,e
+        ld e,11
+        mul d,e
+        ld a,c
+        add a,a
+        add a,c
+        add a,3
+        add a,e
+        ld e,a
+        jr nc,.h
+        inc d
+.h:     ld (V_WT0),de
+        call win_open
+        pop hl
+        pop de
+        pop bc
         ld a,-31                ; exact original LD A,(IX+5) span
         call ny_r_set
         pop af
@@ -943,6 +1030,15 @@ e_attr_row:
         jr nz,.again
         call ny_r_begin
         push af
+        push bc
+        push de
+        push hl
+        ld hl,(V_WT0)
+        ld a,(V_ATTR_SPEED)
+        call win_wait
+        pop hl
+        pop de
+        pop bc
         ld a,-21
         call ny_r_set
         pop af

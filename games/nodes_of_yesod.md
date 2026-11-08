@@ -47,6 +47,17 @@ Current JNext quiet regression against v1.4: **301 player-update records match e
 
 All four host and **actual dot-loader combinations rebuild byte for byte** with the original 6,912-byte loading screen. Seven imported trainers pass 28 combination checks. Native loader runs use private card-image copies, not a physical card. Current loader SHA256: `d7ea19ec1fd65a6a73b16fd896014a922794489a95b515f1eb24074196c8db61`; older loaders can omit the tenth menu option.
 
+## Pace, v1.6 (pace audit of 2026-11-08; review build, not published)
+Audit (pilot runs/pace-audit-20261108/REPORT-2.md): 1.5 whole -2.54 to -1.65%, busy -3.84 to -2.72%, stretches of 20 updates -13.1 to +13.9%, too fast and too slow, against the rule (Jon, 2026-11-07: within 2% where the original runs steadily, faster fine where it lags, never slower). Cause: one floor on the time of a player update (332 lines), which knew nothing of what the update had displaced.
+- The floor is gone. Each displaced job is a window: the copy (36680 to 36843), whose LDIR no longer runs, and the attribute walk (36851 to 36902), which runs at 28 MHz. win_open at the start; at the end win_wait waits at the caller's clock until the original's time for that size has passed, interrupts left out (ISRLINES 43, the handler's mean), and carries what is over or under in V_PD (1/16 line).
+- Targets, fitted on the plain build in JNext: copy 21 T r c + 140 T r (r rows, c columns; the fits by seed run 19.9 to 23.0 r c, 132 to 139 r: screen contention); walk 155 T D E + 39 T D + 45 T. e_player takes A_PLAYER, 130/16 lines, off V_PD for the hooks' own 3.5 MHz parts (tuned).
+- hlib_pace does not fit: LEAN needs 420 bytes and the alt ROM's low 8K holes hold about 300 after pace_player goes; the game's ROM reads pin the rest. hlib_speed stays as it was. pace_now's frame count and line wrap are not in step (the IRQ's phase differs by part of a frame), so windows, all under a frame, use the line wrap alone and the serial only to say an interrupt came.
+- Picture: pattern and table banks byte for byte as 1.5, default, Enhanced and Backdrops; only hook bytes differ (bank 12 + the JP targets in bank 2, bank 10's call of them). Jon's painting is untouched.
+- R: compared at every hook, as before (the windows sit inside the ny_r span).
+- Verifier: the state grows to 0xB422; a copy or the walk's last row must have taken its target less the carry; two new negatives, on the real recording: the copy's wait gone, its target too short.
+- Lockstep trap for the next audit: the state list without object records missed that the spawner at 0x5FBD reads the interrupt's seconds byte 0x5B17 before R, so an object started at different updates and R's fixture sequence moved with it (object 14 parted at updates 130 to 634, in 1.5 too). A fixture now holds that read to the update count, and the 16 object records are in the state list: 208 addresses (pilot runs/nodes_of_yesod/pacefix-20261108/nodes3).
+- Limits: surface rooms only by script, no cavern; JNext's timing; contention figures are JNext's. Results, before / after: NOTES.md there.
+
 ## Unchanged engine evidence and limits
 
 The v1.4 engine proof is inherited, not claimed as newly rerun: 48 valid RZX files / 243,719 frames, 59 paired surface/cavern fixtures, exact HUD/bank-7 checks, 240 speed/R cases, 60 IRQ injections and 28 negative-control types. No executable, palette, HUD or backdrop change was made in this colour round.

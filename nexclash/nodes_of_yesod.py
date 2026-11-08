@@ -14,7 +14,8 @@ ROM_ORG = 0x386E
 ALT_PAGE, ALT_BANK = 24, 12
 PAT_PAGE0 = 26
 TAIL_ADDR = 0xB440                  # 0xB3BB-0xB500 zero, never touched in the recordings
-STATE_LO, STATE_HI = 0xB3BB, 0xB419  # backdrop and Enhanced HUD flags
+STATE_LO, STATE_HI = 0xB3BB, 0xB422  # backdrop and Enhanced HUD flags; v1.6 pace windows
+V_WT0, V_PD, V_IRQ_SERIAL = 0xB419, 0xB41D, 0xB410
 BACKDROP_FLAG = 0xB417 - STATE_LO
 HUD_FLAG = 0xB418 - STATE_LO
 HELD, SHOWN, V_DROP, V_CLIP = 0xB3C0 - STATE_LO, 0xB3E0 - STATE_LO, 0xB3F0 - STATE_LO, 0xB3F2 - STATE_LO
@@ -703,18 +704,36 @@ def event(patch, pc, get, R, ns, alt, psite, Sim, st):
     fails = []
     stop = 36859 if pc == 36898 and R[4] != 1 else EXIT[pc]
     incoming_speed = ns.nr[0x07] & 3
+    serial0 = ns.state[V_IRQ_SERIAL - STATE_LO]
     o = _O(get)
     so = _machine(Sim, o, list(R), _NULL, 'o')
     so.registers[24] = pc
     if not _run(so, stop, 400000):
         fails.append('original did not reach its exit')
-    if pc == 40048:
-        ns.state[0xB40F - STATE_LO] = 0
+    # v1.6 pace windows: what the original's displaced work must still cost, from this state's sizes and the carry
+    hs = lambda a: ns.state[a - STATE_LO] | ns.state[a + 1 - STATE_LO] << 8
+    t0 = R[25]
+    want16 = None
+    if pc == BLIT:
+        rows, cols = R[0], R[3]
+        want16 = rows * cols * 3 // 2 + rows * 10
+    elif pc == 36851:
+        ns.attr_t0 = t0
+    elif pc == 36898 and R[4] == 1 and getattr(ns, 'attr_t0', None) is not None:
+        want16 = hs(V_WT0)
+        t0 = ns.attr_t0
+        ns.attr_t0 = None
+    pd0 = hs(V_PD)
+    pd0 = pd0 - 65536 if pd0 >= 32768 else pd0
     p = _P(get, alt, psite, ns)
     sp = _machine(Sim, p, list(R), ns, 'p')
     sp.registers[24] = pc
     if not _run_safe(sp, stop, ns, fails, 400000):
         fails.append('hook did not reach its exit')
+    if pc in (BLIT, 36898) and want16 is not None and incoming_speed == 0 and ns.state[V_IRQ_SERIAL - STATE_LO] == serial0:
+        need = (want16 + pd0) * 14                      # T at 3.5 MHz, the model's line clock; the wait polls at whole lines
+        if need > 672 and sp.registers[25] - t0 < need - 672:
+            fails.append(('pace window did not wait', pc, need, sp.registers[25] - t0))
     dt = sp.registers[25] - R[25]
     st['hook T'] += dt
     if dt > st['most hook T in one event']:
@@ -1446,6 +1465,16 @@ def negative_patches(patch):
     out['speed not restored'] = q
     out['R not restored'] = _rom_patch(patch, s['ny_r_out_set'] - ROM_ORG, bytes(2))
     out['interrupts disabled'] = _rom_patch(patch, s['ny_r_run'] - ROM_ORG, b'\xF3')
+    # v1.6 pace windows: the blit's call of win_wait gone, its target computed as zero (win_wait lives in the low 8K)
+    k = at('e_blit', bytes([0x2A, 0x19, 0xB4]))                  # LD HL,(V_WT0)
+    wait = code.index(bytes([0xCD, s['win_wait'] & 255, s['win_wait'] >> 8]), k)
+    out['pace window never waits'] = _rom_patch(patch, wait, bytes(3))
+    q = copy.copy(patch)
+    low = bytearray(patch.low)
+    k = s['blit_tgt'] + 3
+    low[k:k + 2] = bytes.fromhex('1600')        # LD D,A -> LD D,0: rows x columns gone, the target too short
+    q.low = bytes(low)
+    out['pace target too short'] = q
     k = at('update', bytes([0xED, 0x92, 0x19]))
     out['clip window not updated'] = _rom_patch(patch, k, bytes(3))
     k = at('show', bytes([0xED, 0x92, 0x37]), 0)
