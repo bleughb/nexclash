@@ -6940,10 +6940,10 @@ modal_exit:
         in a,(c)
         and 0xFE
         nextreg 0x15,a
-        nextreg 0x51,69
+        nextreg 0x52,69         ; slot 2: this code runs in slot 1
         xor a
-        ld (0x2000+Q_BUSY),a
-        nextreg 0x51,255
+        ld (0x4000+Q_BUSY),a
+        nextreg 0x52,10
         ld (CAP_PHASE),a
         pop bc
         pop af
