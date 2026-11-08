@@ -73,10 +73,78 @@ def is_smashtv(snap):
         sg = load_profile()['signature']
     except FileNotFoundError:
         return False
-    if snap.machine != '48K':
+    if snap.machine != '48K' and not is_locked48(snap):
         return False
     a, sig = int(sg['addr']), bytes.fromhex(sg['bytes'])
     return bytes(snap.memory[a:a + len(sig)]) == sig
+
+
+def is_locked48(snap):
+    """A 128K snapshot locked in 48K mode (7FFD bit 5): the clean release's .z80 (the published patch's target,
+    MD5 78a6c5b0), its BASIC loader waiting in the 48K ROM."""
+    return snap.machine != '48K' and bool(getattr(snap, 'out7ffd', 0) & 0x20)
+
+
+def to48(z80, out_z80):
+    """A 128K snapshot locked in 48K mode -> a 48K .z80: the same RAM (banks 5, 2, 0) and registers."""
+    from skoolkit.snapshot import Snapshot, write_snapshot
+    from skoolkit.simutils import from_snapshot, get_state
+    from skoolkit.simulator import Simulator
+    s = Snapshot.get(z80)
+    sim = from_snapshot(Simulator, s)
+
+    class Tr:
+        border = outfe = s.border
+        outfffd = 0
+        ay = [0] * 16
+        out7ffd = 0x30
+    sim.set_tracer(Tr())
+    ram, regs, state, machine = get_state(sim)
+    m = sim.memory
+    write_snapshot(out_z80, [m[a] for a in range(0x4000, 0x10000)], regs,
+                   [x for x in state if not x.startswith(('7ffd', 'fffd', 'ay'))], '48K')
+
+
+def has_trainer_prompt(z80):
+    """Whether the BASIC loader asks "DO YOU WANT TO BE INVULNERABLE ?" (the trained dump, Dean's snapshot). The
+    clean release's loader goes straight to its USR: no front end then, the start state is the USR's."""
+    from skoolkit.snapshot import Snapshot
+    m = Snapshot.get(z80).memory
+    prog, vars_ = m[23635] + 256 * m[23636], m[23627] + 256 * m[23628]
+    return b'INVULNERABLE' in bytes(m[a] for a in range(prog, vars_))
+
+
+LOAD_BANK = 14                          # the loading screen's entry bank (pages 28, 29), as the published .nxc
+LOAD_SCREEN = 'smash_tv_loading.scr'    # the tape's 6,912-byte screen (MD5 in games/smash_tv.md), beside the
+                                        # snapshot: game data, never in this repo
+
+
+def loading_nex(nex, scr):
+    """A built .nex -> the same with the loading screen (nexclash-patch build/all2/add_screen.py, bank 14, as the
+    published patch; the stub is jetpac_v11's for pages 28, 29: asm ldscr): bank 5's screen area in the file = the
+    screen, new bank 14 = the entry bank whose stub shows it for 250 frames or a key, puts bank 5's bytes back and
+    falls into 0xC000 of bank 10. -> (bytes, problems): its proof_of_change, every byte outside these checked."""
+    import struct
+    hk = load_profile()['hooks']
+    head, tail = bytes.fromhex(hk['ldhead']), bytes.fromhex(hk['ldtail'])
+    orig = nex[512:512 + 6912]
+    bank = head + bytes(0x200 - len(head)) + orig + bytes(0x3FD0 - 0x200 - 6912) + tail
+    bad = []
+    if len(scr) != 6912:
+        bad.append('screen is %d bytes, not 6912' % len(scr))
+    if struct.unpack_from('<HH', nex, 12) != (0xDFFE, 0xC000) or nex[10] or not nex[18 + 5] or nex[139] != 10 or \
+            nex[140] or nex[141] or any(nex[18 + k] for k in range(LOAD_BANK, 112)):
+        bad.append('start state, screen block, entry bank or bank %d+ not as the stub assumes' % LOAD_BANK)
+    h = bytearray(nex[:512])
+    h[9] += 1
+    h[18 + LOAD_BANK] = 1
+    h[139] = LOAD_BANK
+    n = bytes(h) + scr + nex[512 + 6912:] + bank
+    if [i for i in range(512) if nex[i] != n[i]] != [9, 18 + LOAD_BANK, 139]:
+        bad.append('header bytes')
+    if n[512 + 6912:len(nex)] != nex[512 + 6912:] or n[len(nex) + 0x200:len(nex) + 0x200 + 6912] != orig:
+        bad.append("rest of the file or the stub's copy of bank 5")
+    return n, bad
 
 
 def colour(attr):
@@ -117,6 +185,7 @@ class SmashPatch:
         self.setup_call = 0xD000
         self.hook_page_data = b''
         self.uses_printer_buffer = False
+        self.with_front = True                        # False: the clean release (no trainer prompt, no front end)
         self.tail_addr = TAIL_ADDR
         self.max_tail = 0xDE                          # 0x5B00-0x5BDD write-first
         self.regblock = ROM_ORG + len(self.rom_code)
@@ -147,7 +216,7 @@ class SmashPatch:
             cur = bytes(ram[a - 0x4000:a - 0x4000 + len(old)])
             if cur != old:
                 raise ValueError('unexpected code at %d (%s, expected %s)' % (a, cur.hex(), old.hex()))
-        if bytes(ram[FRONT - 0x4000:FRONT - 0x4000 + len(self.front)]) != self.front:
+        if self.with_front and bytes(ram[FRONT - 0x4000:FRONT - 0x4000 + len(self.front)]) != self.front:
             raise ValueError('the snapshot is not the Smash TV start snapshot (front end missing)')
         self.fill_code(lambda a: ram[a - 0x4000])
         for a, old, new in self.sites:
@@ -187,18 +256,20 @@ def _row_addrs(row):
 
 
 def make_start(loader_z80, entry_z80, start_z80, front):
-    """Start snapshot = entry state + front end at FRONT + the loader's prompt row; PC = FRONT."""
+    """Start snapshot = entry state + front end at FRONT + the loader's prompt row; PC = FRONT. front None (the
+    clean release, no prompt): the entry state as it is, PC = the USR."""
     from skoolkit.snapshot import Snapshot, write_snapshot
     from skoolkit.simutils import from_snapshot, get_state
     from skoolkit.simulator import Simulator
     ld = Snapshot.get(loader_z80).memory
     sim = from_snapshot(Simulator, Snapshot.get(entry_z80))
     mem = sim.memory
-    for a in _row_addrs(PROMPT_ROW) + list(range(0x5800 + 32 * PROMPT_ROW, 0x5820 + 32 * PROMPT_ROW)):
-        mem[a] = ld[a]
-    for i, v in enumerate(front):
-        mem[FRONT + i] = v
-    sim.registers[24] = FRONT
+    if front is not None:
+        for a in _row_addrs(PROMPT_ROW) + list(range(0x5800 + 32 * PROMPT_ROW, 0x5820 + 32 * PROMPT_ROW)):
+            mem[a] = ld[a]
+        for i, v in enumerate(front):
+            mem[FRONT + i] = v
+        sim.registers[24] = FRONT
 
     class Tr:
         border = outfe = outfffd = 0
@@ -920,6 +991,15 @@ def auto(a, z80, name, out, say):
     say('Game      : %s' % name)
     say('Engine    : smashtv (Smash TV: back-buffer composer, 24x24 / 8x8 masked plotters -> sprites)')
     md5 = lambda p: hashlib.md5(open(p, 'rb').read()).hexdigest()
+    from skoolkit.snapshot import Snapshot
+    src = z80
+    if is_locked48(Snapshot.get(z80)):
+        z48 = os.path.join(out, name + '_48.z80')
+        to48(z80, z48)
+        say('Snapshot  : 128K locked in 48K mode (the clean release) -> %s: the same RAM and registers as a 48K '
+            'snapshot' % os.path.basename(z48))
+        z80 = z48
+    front = has_trainer_prompt(z80)
     plain = os.path.join(out, name + '.nex')
     conv = zt.convert(z80, plain, TAIL_ADDR, True, quiet=True)
     bad = check(plain, z80, None, (conv[1], conv[1] + len(conv[2])))
@@ -930,13 +1010,19 @@ def auto(a, z80, name, out, say):
     start = os.path.join(out, name + '_start.z80')
     fr, eregs, emem = loader_entry(z80, ent)
     patch = SmashPatch()
-    make_start(z80, ent, start, patch.front)
-    ft = front_tests(start, eregs, emem)
-    fok = not any(ft.values())
-    say('Loader    : BASIC loader run in the simulator with N to USR %d (frame %d) -> %s; start = '
-        'that state + front end 0x%04X + the prompt row' % (ENTRY, fr, os.path.basename(start), FRONT))
-    say('Front end : "DO YOU WANT TO BE INVULNERABLE ?" -> N / Y / SYM+Y: state = the loader\'s at '
-        'its USR (Y: 33465 = 201) -> %s' % ('PASS' if fok else 'FAIL %s' % ft))
+    patch.with_front = front
+    make_start(z80, ent, start, patch.front if front else None)
+    if front:
+        ft = front_tests(start, eregs, emem)
+        fok = not any(ft.values())
+        say('Loader    : BASIC loader run in the simulator with N to USR %d (frame %d) -> %s; start = '
+            'that state + front end 0x%04X + the prompt row' % (ENTRY, fr, os.path.basename(start), FRONT))
+        say('Front end : "DO YOU WANT TO BE INVULNERABLE ?" -> N / Y / SYM+Y: state = the loader\'s at '
+            'its USR (Y: 33465 = 201) -> %s' % ('PASS' if fok else 'FAIL %s' % ft))
+    else:
+        fok = True
+        say('Loader    : BASIC loader (no trainer prompt: the clean release) run in the simulator to USR %d (frame '
+            '%d) -> %s; start = that state, no front end' % (ENTRY, fr, os.path.basename(start)))
     spr = os.path.join(out, name + '_sprites.nex')
     conv = zt.convert(start, spr, None, True, quiet=True, patch=patch)
     bad2 = check(spr, start, patch, (conv[1], conv[1] + len(conv[2])))
@@ -947,6 +1033,15 @@ def auto(a, z80, name, out, say):
     say('Static    : %d hook instructions; DI/EI/IM/LD I, IX/IY, code at 0x3D00-0x3DFF, ROM bytes the '
         'game reads (0x0000-0x20FF, 0x386E, font): %s -> %s' % (sn, sbad or 'none', 'PASS' if not sbad else 'FAIL'))
     ok = not bad and not bad2 and fok and not sbad
+    sc = os.path.join(os.path.dirname(os.path.abspath(src)), LOAD_SCREEN)
+    if not os.path.isfile(sc):
+        say('Loading   : no %s beside the snapshot: sprite build without the loading screen' % LOAD_SCREEN)
+    else:
+        n, lb = loading_nex(open(spr, 'rb').read(), open(sc, 'rb').read())
+        open(spr, 'wb').write(n)
+        ok = ok and not lb
+        say('Loading   : screen md5 %s -> %s  %s  bank %d stub, %s' % (
+            md5(sc), os.path.basename(spr), md5(spr), LOAD_BANK, 'the rest as built' if not lb else 'PROBLEM %s' % lb))
     states = []
     for r in list(a.rzx or []):
         from skoolkit.rzxplay import parse_rzx
@@ -985,7 +1080,7 @@ def auto(a, z80, name, out, say):
         for k, v in ex.items():
             say('            %s: %s' % (k, str(v)[:200]))
     if states:
-        u = unit_tests(_applied(start), states, negative_patches(_applied(start)))
+        u = unit_tests(_applied(start, front), states, negative_patches(_applied(start, front)))
         uf = {k: v for k, v in u.items() if k.endswith('!')}
         neg_ok = u['negative control cases'] and u['negative control detected'] == u['negative control cases']
         ok = ok and not uf and neg_ok
@@ -998,9 +1093,10 @@ def auto(a, z80, name, out, say):
     return ok
 
 
-def _applied(start):
+def _applied(start, front=True):
     """A SmashPatch with the restore copy filled from the start snapshot."""
     from . import z80tonex as zt
     p = SmashPatch()
+    p.with_front = front
     p.apply(zt.Z80Snapshot(start))
     return p
