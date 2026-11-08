@@ -3,10 +3,10 @@
 ## Next session
 Stage: 2 (continued)    Branch: main (m3b from claude/inferno-copier-window-m3b)
 State: copier window m3b PASS in the model (8F95 work in the window's waits). Hardware: m2/m3 run,
-  speed and sound = plain (user); m3b diagnostic not yet run.
+  speed and sound = plain (user); m3b: gameplay ok (user, no detail).
 Inputs: specnext/reference/inferno/    Start: specnext build/CONTINUE_copier_window.md.
 Read: "Copier window"; inferno.py run_cw_window/run_cw_frame/copier_window_update_checks; asm cw_work, wk_*.
-Next: m3b hardware result; busy-beeper updates (10 %: no slice, work ~5 ms at 8F95); shrink actor
+Next: m3b pace/sound vs plain in detail; busy-beeper updates (10 %: no slice, work ~5 ms at 8F95); shrink actor
   hooks; JNext pace. Then the earlier items: live-table
   scan/driver at the 8EF9 gate, runtime exact dispatch and duplicate indices, complete
   pattern/frame state, protected uploads. Keep sprites disabled.
@@ -198,6 +198,7 @@ Approved preview/model/contact-sheet hashes and recipes: specnext design/manifes
 build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 
 ## Lessons
+- [none: m3b hardware: gameplay ok, no new finding]
 - [local: Inferno coroutine] A loop using SP as its data pointer yields without CALL (save SP + live
   registers at poll points); per-cell polls cost ~1 kT, so the finishing path JRs over them.
 - [local: Inferno copied routine] A hand copy of an asm loop moved a label past ADD HL,HL: compare
