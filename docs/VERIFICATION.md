@@ -49,7 +49,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Dizzy: The Ultimate Cartoon Adventure (dizzy1): `dizzy1.nex` 7892b2e0f1f3f9f19165516db307cbe0, `dizzy1_sprites.nex` 953cf4e72239b1450c3923e1aeb357cb; verified 2026-11-07
 - Commando (commando): `commando.nex` a206f950c12f58a8e7f26b366f5a2480, `commando_sprites.nex` 6a547a86166a553b68e05360f1f83b78; verified 2026-11-07
 - Crystal Kingdom Dizzy (128K) (crystal_kingdom_dizzy): `crystal_kingdom_dizzy.nex` 99975f65172dc86ecefbac07db2c0c00; verified never
-- Midnight Resistance (128K) (midnight_resistance): `midnight_resistance.nex` 17239acaaf67b0f8011478053e17829d, `midnight_resistance_sprites.nex` 947dc8a9553732eb3dbf64525b1df8c2; verified 2026-11-07
+- Midnight Resistance (128K) (midnight_resistance): `midnight_resistance.nex` 17239acaaf67b0f8011478053e17829d, `midnight_resistance_sprites.nex` 081de91a8427dc4b141574c40ab171d7; verified 2026-11-08
 - Smash TV (smash_tv): `smash_tv.nex` c72ea298486b14036ac1a87ac89c3f0e, `smash_tv_sprites.nex` 68cd80b38b58b5578a5d135136850736; verified 2026-11-07
 - Target Renegade (128K) (target_renegade): `target_renegade.nex` a0be8dc03a1be8c6d67dc3e0229abc35, `target_renegade_sprites.nex` 8e5f8f0be205aade316106a6db7d4aac; verified 2026-11-07
 - Jetpac (jetpac): `jetpac.nex` feff51b7038606d21c03c260055481e4, `jetpac_sprites.nex` 72e3cc193325cc8166f8e7d7b6481327; verified 2026-11-06

@@ -42,6 +42,19 @@
 
         DEVICE ZXSPECTRUMNEXT
         INCLUDE "lib/hlib_speed.asm"    ; macros only: HLIB_SPEED_IN
+HLIB_V_PACE EQU 0xB0E0          ; 26 bytes of page PAGE_S (0xB0E0-0xB0F9), zero at start (asm/lib/hlib_pace.asm)
+HLIB_PACE_NL EQU 311            ; 128K timing, 50 Hz: lines a frame
+V_CRED  EQU 0xB0FA              ; (2) the time this game frame's converted plot loops saved, 1/16 lines (e_tw pays it)
+T_BLIT  EQU 6005                ; the screen copy 0x8730-0x8943 with its interrupt on the original: tuned on the meter, 1/16 lines
+C_M     EQU 72                  ; credit rates, 1/256 line per byte
+C_O     EQU 72
+C_P     EQU 93
+C_PM    EQU 110
+V_SPW   EQU 0xB0FC              ; the caller's speed through e_bg's window
+K_BG    EQU 133                 ; e_bg's window: the original's time per unit of 28 MHz time, x 16
+D_BG    EQU 256                  ; e_bg: least debt to act on, 1/16 lines
+C_PLOT  EQU 0                   ; a converted figure's fixed part, 1/16 lines
+A_HOOK  EQU 11                  ; a plot hook's 3.5 MHz entry and exit, 1/16 lines
 
 PAGE_S  EQU 26
 OFS     EQU 0x4500              ; scratch = buffer + OFS (0x5B00-0x6AFF -> 0xA000-0xAFFF)
@@ -167,9 +180,24 @@ c_go:   ld (V_KIND),a
         push bc
         push de
         push hl
+        call hlib_nest_open         ; the hook's own time goes to the debt; e_tw, e_bk and the screen copy's window repay it
+        pop hl
+        pop de
+        pop bc
+        push bc                     ; decide's arguments
+        push de
+        push hl
         xor a
         ld (V_UND),a
         call decide                 ; NC = convert (scratch prepared, figure recorded)
+        push af
+        jr c,.nc
+        ld a,(HLIB_V_PACE + 10)     ; its loop runs at 28 MHz: what that saves is owed back at e_tw (inside e_bg's
+        or a                        ; window it counts as that window's work)
+        call z,credit
+.nc:    ld a,A_HOOK
+        call hlib_nest_close
+        pop af
         pop hl
         pop de
         pop bc
@@ -212,6 +240,171 @@ m7c:    srl e
         add hl,hl
         ex de,hl
         jp .l
+
+; credit: V_CRED += this converted plot's loop time on the original less its time here (V_W x V_R bytes at the kind's
+; rate, plus a figure's fixed part), 1/16 lines. AF, BC, DE, HL lost.
+credit: ld a,(V_W)
+        ld d,a
+        ld a,(V_R)
+        ld e,a
+        mul d,e
+        ex de,hl
+        ld a,(V_KIND)
+        ld de,crate
+        add a,e
+        ld e,a
+        ld a,(de)
+        call hlib_mul8
+        ld b,4
+.s:     srl h
+        rr l
+        djnz .s
+        ld de,C_PLOT
+        add hl,de
+        ld de,(V_CRED)
+        add hl,de
+        ld (V_CRED),hl
+        ret
+crate:  db C_M,C_M,C_O,C_O,C_P,C_PM     ; 1/256 line per byte, by V_KIND (97E1, 9813, 7DC5, 7E06, 9E3F normal, mirrored)
+
+; ================= pace: the screen copy runs at 28 MHz in a window; the plots' saving is paid before the frame sync =================
+; 0x8A60 JP 0x8730 -> JP e_bw: the window opens, 28 MHz. Only in the game loop (V_LIVE); interrupts stay on.
+e_bw:   nextreg 0x55,PAGE_S
+        ld (V_SP),sp
+        ld sp,STK
+        HLIB_SPEED_IN V_SPD
+        push af
+        push bc
+        push de
+        push hl
+        ld a,(V_LIVE)
+        or a
+        jr z,.n
+        ld hl,(V_SP)
+        ld a,(hl)
+        cp 0x44                     ; called from the game loop (0x8941), so its blit returns to 0x8944; the shop's
+        jr nz,.n                    ; 0xB88A has no hold or wait
+        inc hl
+        ld a,(hl)
+        cp 0x89
+        jr nz,.n
+        call hlib_pace_open
+        jr .w
+.n:     ld a,(V_SPD)
+        nextreg 0x07,a
+.w:     pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
+        nextreg 0x55,5
+        jp 0x8730
+
+; 0x8944 CALL 0xA2F5 -> CALL e_hd: the copy has ended; the game's own routines up to the commit run at the caller's speed,
+; held out of the window.
+e_hd:   nextreg 0x55,PAGE_S
+        ld (V_SP),sp
+        ld sp,STK
+        push af
+        push bc
+        push de
+        push hl
+        ld a,(HLIB_V_PACE + 10)
+        or a
+        jr z,.x
+        call hlib_pace_hold
+        ld a,(V_SPD)
+        nextreg 0x07,a
+.x:
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
+        nextreg 0x55,5
+        jp 0xA2F5
+
+; 0x8941 CALL 0x899B -> CALL e_bg: the last commit overran its window. The scenery work up to the figures (0x89C3) then runs
+; at 28 MHz in a K window, and repays the debt before this game frame reaches the frame sync.
+e_bg:   nextreg 0x55,PAGE_S
+        ld (V_SP),sp
+        ld sp,STK
+        push af
+        push bc
+        push de
+        push hl
+        ld a,(V_LIVE)
+        or a
+        jr z,.x
+        ld hl,(HLIB_V_PACE + 4)     ; the debt, 1/16 lines
+        ld de,D_BG
+        or a
+        sbc hl,de
+        jr c,.x
+        HLIB_SPEED_IN V_SPW         ; its own latch: the plot hooks inside the window latch 28 MHz
+        call hlib_pace_open
+.x:
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
+        nextreg 0x55,5
+        jp 0x899B
+
+; 0x89C3 CALL 0xB8B6 -> CALL e_bk: the end of e_bg's window; the caller's speed, the wait at it.
+e_bk:   nextreg 0x55,PAGE_S
+        ld (V_SP),sp
+        ld sp,STK
+        push af
+        push bc
+        push de
+        push hl
+        ld a,(HLIB_V_PACE + 10)
+        or a
+        jr z,.x
+        ld a,(V_SPW)
+        ld (V_SPD),a
+        nextreg 0x07,a
+        ld c,a
+        ld a,K_BG
+        call hlib_pace_waitk
+.x:
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
+        nextreg 0x55,5
+        jp 0xB8B6
+
+; 0x8A03 CALL 0x831E -> CALL e_tw: the game's wait for the next interrupt (its tone plays until then, the frame sync). The
+; figures' loops saved V_CRED, the hooks since took the debt: wait out the difference here, at the caller's speed, so this
+; game frame reaches the wait when the original's does.
+e_tw:   nextreg 0x55,PAGE_S
+        ld (V_SP),sp
+        ld sp,STK
+        push af
+        push bc
+        push de
+        push hl
+        ld a,(V_LIVE)
+        or a
+        jr z,.x
+        call hlib_pace_open
+        ld hl,(V_CRED)
+        ld a,(V_SPD)
+        call hlib_pace_wait
+        ld hl,0
+        ld (V_CRED),hl
+.x:
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
+        nextreg 0x55,5
+        jp 0x831E
 
 ; ================= loop exits (every plot of these routines passes here) =================
         MACRO FIXDE                 ; D: scratch -> buffer; the caller's speed; unmap (no stack, no flags)
@@ -779,7 +972,10 @@ e_sx:   ld a,(0x9DFD)               ; 0xB8A5: LD A,(0x9DFD) / CP 200 / RET Z
         ret
 
 ; commit body (game loop and shop): the recorded figures -> patterns + sprite attributes
-commit: HLIB_SPEED_IN_ABC V_SPD     ; the caller's speed latched (the callers keep A, BC), then 28 MHz
+commit: ld a,(HLIB_V_PACE + 10)     ; the screen copy's window open: back from its hold
+        or a
+        call nz,hlib_pace_resume
+        HLIB_SPEED_IN_ABC V_SPD     ; the caller's speed latched (the callers keep A, BC), then 28 MHz
         ld hl,SLOTST                ; slots: "used by the last commit" becomes "on show"
         ld b,128
 .ag:    srl (hl)
@@ -798,6 +994,11 @@ commit: HLIB_SPEED_IN_ABC V_SPD     ; the caller's speed latched (the callers ke
         pop hl
         ld de,8
         add hl,de
+        push hl
+        ld a,(HLIB_V_PACE + 10)     ; a long commit: the window's lines read at least once a frame
+        or a
+        call nz,hlib_pace_tick
+        pop hl
         pop bc
         djnz .f
         nextreg 0x54,4              ; colour store page off slot 4
@@ -844,9 +1045,10 @@ commit: HLIB_SPEED_IN_ABC V_SPD     ; the caller's speed latched (the callers ke
         ld (V_NT),a
         ld a,1
         ld (V_LIVE),a
-        ld a,(V_SPD)                ; the caller's speed back
+        ld a,(V_SPD)                ; the caller's speed back; the wait at that speed, so the ISR runs at its own clock
         nextreg 0x07,a
-        ret
+        ld hl,T_BLIT                ; the copy took about 3 ms of the original's T_BLIT, this commit is in the window too
+.neg_w: jp hlib_pace_wait           ; A = the caller's speed; no window open: returns at once
 
 ; ================= 0x8993: the game loop's exit test =================
 e_q:    nextreg 0x55,PAGE_S
@@ -894,6 +1096,8 @@ hideall: push bc
         ld (V_LIVE),a
         pop bc
         ret
+
+        INCLUDE "lib/hlib_pace.asm"
 
 ; ================= build: one recorded figure -> patterns + SPR entries =================
 ; HL = FIG entry

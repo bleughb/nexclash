@@ -275,16 +275,30 @@ Techniques: `patch.scratch-redirect`, `optimise.pattern-cache`
   main's build -4.24%, this one -3.69% (both faster than the original: the game has no limiter); the latch reads cost
   +0.57% at 3.5 MHz. Interrupts 50.00 a second and longest gap 20.3 ms in all four runs.
 
+## Pace (2026-11-08)
+The game HAS a frame sync (the tone at 0x831E, on R's sign): every line above saying otherwise is wrong. Limiter on the screen copy and before
+the sync, 6 seeds in lockstep: quiet -1.59..+0.73%, busy -0.70..+0.95%. Details and tables: games/midnight_resistance_pace.md.
+
 ## Lessons
+- [local: a frame sync hidden in the sound] demonstrated: no HALT, no FRAMES read; check frames per update before writing "no frame sync".
+- [local: pace probe and input] demonstrated: 0x8950 can run twice an update; JNext input arrives at the next frame boundary: probe the screen copy, apply input after the game's read.
+- [local: hlib_pace windows over a frame] demonstrated: a commit over 20 ms lost whole frames until hlib_pace_tick ran per figure.
 - [card patch.restore-speed §Use / do not use] The plot-loop exits keep no stack and no flags: they restore the speed
   through a byte of page 26 before unmapping it (`ld (V_A),a / ld a,(V_SPD) / nextreg 7,a / ld a,(V_A)`). Card amended.
 
 ## Technique use
 - patch.restore-speed: helped: the macros at two entries; the A-saving form at the loop exits (2026-11-07).
 
+- patch.pace-limiter: helped: fixed window, hold, debt, nested hooks, K window; quiet and busy scenes within 2% (2026-11-08).
+- verify.update-locked-pace: corrected: input after the game's own read, probe on the screen copy.
+
+## Stage log
+- 2026-11-08 pace: frame sync found, limiter on the screen copy and before the sync; stamped; 0 user rounds.
+
 ## Friction
 - reuse: [tool asm/lib/hlib_speed.asm] the shared latch macros
 - retries: [none: the first build verified]
 - environment: [none: the usual references and the JNext card, read-only]
 - hand-rolled: [local: a JNext profile for the pace (start keys from screenshots), kept in the pilot run folder]
+- hand-rolled: [local: pace2.py, nexclash.pace with the input applied at a second address, and phase timers, kept in the pilot run folder (work-20261108)]
 - scratch: [none: no scratch scripts in the repo]
