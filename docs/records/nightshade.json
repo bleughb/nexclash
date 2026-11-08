@@ -84,11 +84,11 @@
   },
   "sprites": {
    "file": "nightshade_sprites.nex",
-   "md5": "697ee0152f6a2f5d92cdc17bc51c674d"
+   "md5": "2e062000bd1fa57919492cf12f9b2294"
   },
   "enhanced": {
    "file": "nightshade_enhanced.nex",
-   "md5": "ebe5cc7225b41c3d04f073947f7b6a98"
+   "md5": "35f38f7f899ebfe63f8df178915cfb56"
   }
  },
  "repro": [],

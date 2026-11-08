@@ -56,6 +56,8 @@ s_x:    nextreg 0x51,0xFF
         ret
 s_xc:   nextreg 0x51,0xFF
         jp 0xE5A8
+s_sn:   nextreg 0x51,H_PAGE     ; v1.1 catch-up: while it is on, 0xC471 (the beeper tone) jumps here
+        jp h_snd
 ram_end:
 
         ORG 0x2000
@@ -80,6 +82,7 @@ h_fig:  push af
         push bc
         push de
         push hl
+        call bc_gap         ; catch-up: the game's code since the last hook ran at 7 MHz
         call line           ; the raster at the start of the 28 MHz part: its lines become pace debt
         ld (vfl),hl
         pop hl
@@ -255,6 +258,7 @@ h_fig:  push af
         ld hl,(sv_x)
         ld (sv_a),a
         call fig_end        ; pace debt += the lines this hook took, and its 3.5 MHz part
+        call bc_ctl         ; catch-up on or off for the game's code from here
         ld a,(vspd)
         nextreg 0x07,a      ; the incoming speed
         ld a,(vT)
@@ -375,6 +379,7 @@ h_cls:  push af
         ld a,117            ; 1 - 7 - 5
         call mkT
         nextreg 0x15,0
+        call bc_stop        ; a clear leads to the menus and their tune: the caller's clock
         pop af
         ld (sv_a),a
         ld a,(vT)
@@ -904,6 +909,7 @@ h_commit:
         push hl
         exx
     ENDIF
+        call bc_gap
         call line           ; the beam at the start
         ld (vl),hl
         ld hl,0
@@ -1068,6 +1074,7 @@ h_commit:
     IFDEF ENHCIM
         nextreg 0x50,LPAGE  ; the records back
     ENDIF
+        call tick           ; v1.1: Enhanced's figures can take over a frame here, and the line count wrapped unseen (a frame lost an update)
         ld hl,vleft
         dec (hl)
         jp nz,.fig
@@ -1100,6 +1107,9 @@ h_commit:
         push hl
         call burst
         call pacewait       ; to the original's 0xE200 -> 0xE206 time, less the other hooks' extra time
+        ld a,(vbst)
+        or a
+        call nz,bc_off      ; the update's logic has no hook for over a frame: the line count could not credit it
         pop hl
         pop de
         pop bc
@@ -1287,15 +1297,15 @@ debt_add:
         pop af
         ret
 
-; debt_hl: debt += HL (signed), held in -2048..30000
+; debt_hl: debt += HL (signed), held in -16384..30000 (v1.1: catch-up's over-win carried, down to 1,024 lines)
 debt_hl:
         ld de,(vdebt)
         add hl,de
         bit 7,h
         jr z,.pos
-        ld de,-2048
+        ld de,-16384
         ld a,h
-        cp 0xF8
+        cp 0xC0
         jr nc,.st
         ex de,hl
         jr .st
@@ -1335,10 +1345,135 @@ pacewait:
         call debt_hl        ; clamp
         ret
 
+; ---- v1.1 catch-up (pace audit, 2026-11-08). In busy scenes a figure hook costs more than the blit's window has to give: the
+; debt was carried but could not be repaid (+7% over 20 updates). Now, with the debt over BTHR at a figure hook's exit, the game's
+; own code runs at 7 MHz up to the next hook, and each gap is credited there (a line at 7 MHz stands for 2 at 3.5); the
+; blit hook ends it and its wait takes any over-win out, as it does any debt. The beeper keeps its clock: while it is on, the first bytes of the
+; tone routine 0xC471 are a JP to s_sn; h_snd ends catch-up, gives the speed back and runs the routine as it was, with R as
+; the original's. A clear (the way to the menus and the title tune at 0xC689) ends it too. Off, 0xC471 is the game's own bytes.
+BTHR    EQU 512             ; 32 lines
+BCLK    EQU 1
+
+; bc_gap: at a hook's entry, 28 MHz: debt -= 16 x lines since vbl. AF, BC, DE, HL lost.
+bc_gap: ld a,(vbst)
+        or a
+        ret z
+        call line
+        ld de,(vbl)
+        or a
+        sbc hl,de
+        jr nc,.p
+        ld de,(vflen)
+        ld a,d
+        or e
+        jr nz,.w
+        ld de,311
+.w:     add hl,de
+.p:     add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ex de,hl
+        ld hl,0
+        or a
+        sbc hl,de
+        jp debt_hl
+
+; bc_ctl: at a hook's exit: catch-up on or off by the debt; vspd = what the hook gives back. Every register kept but F.
+bc_ctl: push af
+        push bc
+        push de
+        push hl
+        ld a,(vbst)
+        or a
+        jr nz,.on
+        ld hl,(vdebt)
+        bit 7,h
+        jr nz,.x
+        ld de,BTHR
+        or a
+        sbc hl,de
+        jr c,.x
+        ld a,(vspd)
+        ld (vbcs),a
+        ld a,BCLK
+        ld (vspd),a
+        ld (vbst),a
+        ld a,0xC3
+        ld (0xC471),a
+        ld hl,s_sn
+        ld (0xC472),hl
+        jr .ln
+.on:    ld hl,(vdebt)
+        ld a,h
+        or l
+        jr z,.off
+        bit 7,h
+        jr nz,.off
+.ln:    call line
+        ld (vbl),hl
+.x:     pop hl
+        pop de
+        pop bc
+        pop af
+        ret
+.off:   call bc_off
+        jr .x
+
+; bc_off: catch-up off, the game's bytes back, vspd the caller's. AF, HL lost.
+bc_off: xor a
+        ld (vbst),a
+        ld a,(vbcs)
+        ld (vspd),a
+        ld a,0x3E           ; LD A,0x10 / OUT (0xFE),A
+        ld (0xC471),a
+        ld hl,0xD310
+        ld (0xC472),hl
+        ret
+
+; bc_stop: catch-up off now, the clock too. Every register kept.
+bc_stop:
+        push af
+        push hl
+        ld a,(vbst)
+        or a
+        jr z,.x
+        call bc_off
+        ld a,(vspd)
+        nextreg 0x07,a
+.x:     pop hl
+        pop af
+        ret
+
+; h_snd: 0xC471 with catch-up on. E = 8 (JP, NEXTREG, JP, LD (nn),HL, PUSH, LD A,R), N = 5 (POP, JP, NEXTREG, RET), D = 0.
+h_snd:  ld (sv_hl),hl
+        push af
+        ld a,r
+        ld (vR),a
+        ld a,243            ; 0 - 8 - 5, mod 128
+        call mkT
+        ld hl,0xC471
+        ex (sp),hl
+        push hl             ; AF on top of the return to 0xC471
+        push bc
+        push de
+        call bc_gap
+        call bc_stop
+        pop de
+        pop bc
+        ld hl,(sv_hl)
+        ld a,(vT)
+        ld r,a
+        pop af
+        jp s_x
+
 vdebt:  dw 0
 vneed:  dw 0
 vfl:    dw 0
 vspd:   db 0
+vbst:   db 0
+vbcs:   db 0
+vbl:    dw 0
 page2_end:
 
     IFDEF ENHCIM
