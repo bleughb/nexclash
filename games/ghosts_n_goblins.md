@@ -72,7 +72,7 @@ Techniques: detect.gameplay-screen-readers
   an upload sends only the two patterns a shape up to 8 line pairs shows (the key holds rows; 69% of uploads in the worst level 3 stretch); a miss
   replaces the group unused longest, not the next in rotation (fewer misses); the byte check on a hit walks the image with SP, four bytes a step
   (interrupts are off at all three plot sites; the game's own plot does the same).
-- Hook time in that stretch 5.6 -> 4.3 ms an update (PC samples). Sprites 26742ac4 -> 9dc84645, Enhanced c2e6e56f -> 6f9e1906; plain unchanged.
+- Hook time in that stretch about 6.5 -> 5.5 ms an update by PC samples (whole of that run 4.1 -> 3.6 ms). Sprites 26742ac4 -> 9dc84645, Enhanced c2e6e56f -> 6f9e1906; plain unchanged.
 - JNext, lockstep at every update, 90 addresses, against the plain builds, published trainers for level 3 in both arms: level 1, 7 runs, -0.00 / 0.00 / 0.00,
   no stretch over +0.0. Level 3 with Invincibility, 3 runs of 1,500, default and Enhanced the same: whole +0.07 to +0.36, quiet +0.00 to +0.60, busy -0.10 to
   +0.20, slowest stretch +2.5 to +10.0, 3 to 14 updates of 1,500 at 3 frames (1.6: 880; the original 4). Level 3 with Infinite lives, 3 runs: whole -0.00 to
@@ -85,7 +85,7 @@ Techniques: detect.gameplay-screen-readers
   back. Level 3 whole-run pace on this alone: +0.93 -> +0.56, seed 1.
 - [local: this game's shapes] An upload sized to what the shape shows is a one-line test when the key already holds the shape; half the uploads were half empty.
 - [local: this game's frame lock] A frame-locked game needs lateness per update, not mean hook time: log where the HALT lands (work ms from the wake to the HALT)
-  and cut only until the late tail fits. Mean hook time moved 15% and lost frames fell by 98%.
+  and cut only until the late tail fits. From main's engine, hook time fell 12% and lost frames in that run 38 -> 8.
 - [local: this game's frame lock] A soak's loop warning at the game's HALT is sampling at one phase once no frame is lost: check the pictures and the clock.
 - [card patch.iff-safe-read §Use / do not use] A hook that keeps R pays for the second read in M1s: count every path
   to the R-in point and lower the delta (here by 3), or the R check fails.
