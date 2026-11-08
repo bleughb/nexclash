@@ -34,6 +34,7 @@
 ; right, up to 6 bytes wide): 4 sprites 4n..4n+3, 4-bit patterns 4n..4n+3 (slots 2n, 2n+1).
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_speed.asm"    ; macros only: HLIB_SPEED_IN
 PAGE_S  EQU 26              ; hook code, state, tables (slot 0 during a hook)
 PAGE_T  EQU 27              ; plotter layout tables (slot 1 while converting)
 PAGE_C2 EQU 29              ; canvas mapped over the screen (slot 2) for the register run
@@ -184,6 +185,7 @@ V_AYN   EQU 0x0083          ; ticks queued (0-4)
 V_AYO   EQU 0x0084          ; 1 = the newest queued tick is open for writes
 V_AYW   EQU 0x0085          ; slot being written
 V_AYSP  EQU 0x0086          ; game SP in the AY hooks (word)
+V_CSP   EQU 0x00A0          ; the cell hooks' latch of the caller's speed, outside a game frame
 AYQ     EQU 0x1FC0          ; page 26: 4 slots x 16 bytes: R0-R13 values, mask regs 0-7, mask regs 8-13
                             ; (bit 7 = the lowest register)
 CODE2   EQU 0x1F10          ; fourth code block (page 26, up to 0x1FFF)
@@ -704,6 +706,29 @@ tcommit:
 .off:   nextreg 0x6B,0
         ld a,0xFF
         ld (V_MSD),a
+        ret
+; cin / cout: outside a game frame (the redraw after a life is lost, main loop, interrupts off) the cell hooks' work runs at 28 MHz and the
+; game's own cell code carries on at RD_SPD or the caller's speed if faster, until lexit's NEXTREG 7,0 at the end of the next game frame: the hooks' cost at
+; 3.5 MHz (their entries and exits, the JP through the alt ROM) is repaid inside the redraw, which has to take what the original's takes. Inside a game
+; frame (V_LON = 1, 28 MHz) only the flag is read. cin: A, F, B, C lost; cout: A, F lost.
+RD_SPD  EQU 1               ; 7 MHz
+RD_DLY  EQU 20
+cin:    ld a,(V_LON)
+        or a
+        ret nz
+        HLIB_SPEED_IN_ABC V_CSP
+        ret
+cout:   ld a,(V_LON)
+        or a
+        ret nz
+        ld a,RD_DLY                 ; 7 MHz alone is 7% too quick (JNext): a cell's bookkeeping takes this much longer, so it stays in step with the cell count
+cout_d: dec a
+        jr nz,cout_d
+        ld a,(V_CSP)
+        cp RD_SPD
+        jr nc,cout_w                ; the caller is at RD_SPD or above: its speed (a cell ago, or the F8 key)
+neg_rd: ld a,RD_SPD
+cout_w: nextreg 0x07,a
         ret
 rom_end:
 
@@ -1499,6 +1524,7 @@ s_bt:   ld (V_IA),a                 ; 60853: base tile A -> TILES = A, known, no
         push bc
         push de
         push hl
+        call cin
         call ocell
         jr nc,.out
         nextreg 0x51,PAGE_T
@@ -1520,7 +1546,8 @@ s_bt:   ld (V_IA),a                 ; 60853: base tile A -> TILES = A, known, no
         ld (hl),0x80                ; FLAGS: tile known, item ink unknown
         call ocpost
         nextreg 0x51,0xFF
-.out:   pop hl
+.out:   call cout
+        pop hl
         pop de
         pop bc
         ld sp,(V_SP4)
@@ -1530,24 +1557,6 @@ s_bt:   ld (V_IA),a                 ; 60853: base tile A -> TILES = A, known, no
         ld h,0
         jp x_bt
 
-; ocpre: HL = TILES + cell -> V_OCC = OBJO | OBJM1 (before), HL = OBJO + cell, (V_OHL) = TILES + cell
-ocpre:  ld (V_OHL),hl
-        ld a,h
-        add a,high (OBJO-TILES)
-        ld h,a
-        ld a,(hl)
-        inc h
-        inc h
-        inc h
-        or (hl)
-        dec h
-        dec h
-        dec h
-        ld (V_OCC),a
-        ret
-ocpost: ld hl,(V_OHL)
-        jp oafter
-
 s_ov:   ld (V_IA),a                 ; 60839: opaque tile A (0xF700 + 8*(A-1)) over a blank cell:
         sbc a,a                     ; TILES = the map byte at BC', the object = A alone. Carry at
         ld (V_ICY),a                ; entry kept for the replaced DEC A.
@@ -1556,6 +1565,7 @@ s_ov:   ld (V_IA),a                 ; 60839: opaque tile A (0xF700 + 8*(A-1)) ov
         push bc
         push de
         push hl
+        call cin
         call ocell
         jr nc,.out
         exx                         ; map tile = the byte at BC' (all three callers)
@@ -1599,7 +1609,8 @@ s_ov:   ld (V_IA),a                 ; 60839: opaque tile A (0xF700 + 8*(A-1)) ov
         ld (hl),a                   ; FLAGS: known + the object's group bits
         call ocpost
         nextreg 0x51,0xFF
-.out:   pop hl
+.out:   call cout
+        pop hl
         pop de
         pop bc
         ld sp,(V_SP4)
@@ -1617,6 +1628,7 @@ s_it:   ld (V_IA),a                 ; 60965: masked object A (codes 1-14: 0xF600
         ld sp,STK
         push bc
         push de
+        call cin
         call ocell
         jr nc,.out
         nextreg 0x51,PAGE_T
@@ -1693,7 +1705,8 @@ s_it:   ld (V_IA),a                 ; 60965: masked object A (codes 1-14: 0xF600
         ld (hl),a
 .done:  call ocpost
         nextreg 0x51,0xFF
-.out:   pop de
+.out:   call cout
+        pop de
         pop bc
         ld sp,(V_SP4)
         ld hl,(V_IHL2)
@@ -2402,6 +2415,24 @@ code_end:
 
 ; --- raster wait (page 26 0x0E60-0x0EFF)
         ORG CODE3
+; ocpre: HL = TILES + cell -> V_OCC = OBJO | OBJM1 (before), HL = OBJO + cell, (V_OHL) = TILES + cell
+ocpre:  ld (V_OHL),hl
+        ld a,h
+        add a,high (OBJO-TILES)
+        ld h,a
+        ld a,(hl)
+        inc h
+        inc h
+        inc h
+        or (hl)
+        dec h
+        dec h
+        dec h
+        ld (V_OCC),a
+        ret
+ocpost: ld hl,(V_OHL)
+        jp oafter
+
 ; diagnostic build: red border while a tile is composed
 ocompd: ld a,2
         call dcol

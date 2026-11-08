@@ -37,7 +37,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 
 - Chuckie Egg (chuckie_egg): `chuckie_egg.nex` ec0df71e70fae35836eaed521f300777, `chuckie_egg_sprites.nex` 1c31643371ea36f10175af308d6d01a3; verified 2026-11-05
 - Rainbow Islands (128K) (rainbow): `rainbow.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_sprites.nex` df95daa5ef60116c994ffbde1f5f8fbb, `rainbow_sprites_diag.nex` afe331001c58e21cd7a4524ed045f229; verified 2026-10-13
-- Rainbow Islands (128K, Z80N) (rainbow_z80n): `rainbow_z80n.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_z80n_sprites.nex` 76d5da1acc29c86bf1cd3676577538dc, `rainbow_z80n_sprites_diag.nex` 4482096ee56a4c686dd07b2cf997ab95; verified 2026-11-05
+- Rainbow Islands (128K, Z80N) (rainbow_z80n): `rainbow_z80n.nex` 7ac543fb51c7a3c4137778eeb3cdc175, `rainbow_z80n_sprites.nex` e8ea8b0b1372671c6d40a5e865c15f3e, `rainbow_z80n_sprites_diag.nex` 997ffc529c33f8f7fe872df22c04b22d; verified 2026-11-05
 - Everyone's a Wally (wally): `wally.nex` 2e615b3e7ae995e6d6a6ed9e3f586d4d, `wally_sprites.nex` 8c05c0be92150c29153ed28c41b44842; verified 2026-10-13
 - Everyone's a Wally (updated) (everyones_a_wally_updated): `everyones_a_wally_updated.nex` 2e615b3e7ae995e6d6a6ed9e3f586d4d, `everyones_a_wally_updated_sprites.nex` 6f91f9fc4b6d4847629fc0e7de4f14c1; verified 2026-11-08
 - Spellbound Dizzy (Dizzy V) (dizzy5): `dizzy5.nex` c99189f3274a4803f0b25b0217206bdb, `dizzy5_sprites.nex` 67bc34ff273c2dd45ff9e222e6d56436, `dizzy5_sprites.nex --strategy slot1` a59c1fd91ec5c32e549526dbc08d2e69 (re-checked 2026-09-28; 00a7c496... had an EMPTY font page: dialogue text blank on hardware); verified 2026-11-05

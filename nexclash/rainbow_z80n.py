@@ -65,6 +65,7 @@ PBUF = 0x0EE6                 # page 26: rows of the object being drawn (+1..+8;
 V_PEND, V_N58 = 0x80, 0x81    # commit deferred to the next interrupt; (58850) at the render end
 V_TOK, V_MSB, V_MSD, V_FMAX = 0x3B, 0x3F, 0x40, 0x51
 PAGE_SH, LASTT = 28, 0x0600   # shadow map (row kk at kk*64, 2 bytes per column), last tile per cell
+RD_SPD = 1                  # asm cout: the game's own cell code outside a game frame, 7 MHz (NR 7)
 CODE2 = 0x1F10              # fourth page-26 code block (tile drawing), up to 0x1FFF
 CODE4 = 0x0D60              # third page-26 code block (object classes, inks), up to 0x0DFF
 CODE3 = 0x0E60              # second page-26 code block (raster wait, tilemap commit), up to 0x0EFF
@@ -1746,7 +1747,11 @@ def verify(patch, rzx_path, progress=None, stop=None):
             st['opq'][i] = (R[18] * 256 + R[19], MG(real, 48782))
             c['opaque object draws'] += 1
         fx0 = st.get('fx', 0)
+        lon = ns.scratch[V_LON]
+        sp0 = ns.nr.get(0x07)
         ev_simple(real, R, OBJ_SITES[pc], 'cell hook %d' % pc)
+        if ns.nr.get(0x07) != (sp0 if lon else max(sp0 or 0, RD_SPD)):      # the redraw's speed (asm cout)
+            fail('cell hook: CPU speed after it', (lon, sp0, ns.nr.get(0x07)))
         st['fxi'] = st.get('fxi', 0) + st.get('fx', 0) - fx0
         st['T2'] = st.get('T2', 0) + st.get('fx', 0) - fx0
         if i is None:
@@ -2766,6 +2771,12 @@ def _with_bytes(patch, sym, old, new):
     import copy
     b = copy.deepcopy(patch)
     a = patch.syms[sym]
+    if a >= 0x2000:                     # alt ROM code
+        pg = bytearray(b.page)
+        pg[a - 0x2000:a - 0x2000 + len(new)] = new
+        b.page = bytes(pg)
+        b.extra_banks = {12: b.page + b.fpage, 13: b.scratch + b.tpage}
+        return b
     sc = bytearray(b.scratch)
     if old is not None and bytes(sc[a:a + len(old)]) != old:
         raise ValueError('%s is not %s' % (sym, old.hex()))
@@ -2902,6 +2913,8 @@ def obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path):
                     sc = bytearray(pt.scratch)
                     sc[V_MSB] = rnd.choice((0xFF, 0, 8 * rnd.randrange(22)))
                     sc[V_MSD] = rnd.choice((0xFF, 8 * rnd.randrange(22)))
+                    lon = case % 2
+                    sc[V_LON] = lon
                     i, ct = sh.event(site, r[0], d, e, lambda a: bm[a], bc2, pg)
                     want, wsh = drop_tile(bytes(tm[:0x0A00]), bytes(shm[:20 * 64]), sc, i, ct)
                     ro, ov, rp, pv, ns, err = _pair(pt, bm, r, 0, scratch=sc,
@@ -2912,7 +2925,7 @@ def obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path):
                         ns.pages[PAGE_TM][0x0A00:] == tm[0x0A00:] and \
                         bytes(ns.pages[PAGE_SH][:20 * 64]) == wsh and ns.pages[PAGE_SH][20 * 64:] == shm[20 * 64:] and \
                         ns.nr.get(0x50) == 0xFF and ns.nr.get(0x51) == 0xFF and ns.nr.get(0x52) == 10 and \
-                        ns.nr.get(0x53) == 11
+                        ns.nr.get(0x53) == 11 and ns.nr.get(0x07, 0) == (0 if lon else RD_SPD)
                     out += 1
                     bad += not ok
         return out, bad
@@ -2920,7 +2933,9 @@ def obj_unit_tests(patch, rstates, cstates, rom, c, rzx_path):
     c['object cell hooks (registers incl. F, object map = model, dropped tiles) %s' % ('ok' if not bad else 'FAIL!')] += n
     for sym, new, what in (('s_ov.wr', b'\x00', 'opaque object not recorded'),
                            ('s_ov.rla', b'\x00', 'carry not restored'),
-                           ('oafter.tg', b'\x00', 'occupancy mask not kept')):
+                           ('oafter.tg', b'\x00', 'occupancy mask not kept'),
+                           ('neg_rd', b'\x3E\x00', 'the redraw left at 3.5 MHz'),
+                           ('neg_rd', b'\x3E\x03', 'the redraw left at 28 MHz')):
         n, bad = cell_cases(_with_bytes(patch, sym, None, new))
         c['object cell hook negative control (%s) %s' % (what, 'detected' if bad else 'NOT DETECTED!')] += 1
 

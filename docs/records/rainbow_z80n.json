@@ -71,11 +71,11 @@
   },
   "sprites": {
    "file": "rainbow_z80n_sprites.nex",
-   "md5": "76d5da1acc29c86bf1cd3676577538dc"
+   "md5": "e8ea8b0b1372671c6d40a5e865c15f3e"
   },
   "diagnostic": {
    "file": "rainbow_z80n_sprites_diag.nex",
-   "md5": "4482096ee56a4c686dd07b2cf997ab95"
+   "md5": "997ffc529c33f8f7fe872df22c04b22d"
   }
  },
  "repro": [],
@@ -202,11 +202,11 @@
     },
     "sprites": {
      "file": "rainbow_z80n_sprites.nex",
-     "md5": "33639cabd1e265a5db75c35097c09170"
+     "md5": "e66297fcaf5f22c919ddc52e69510051"
     },
     "diagnostic": {
      "file": "rainbow_z80n_sprites_diag.nex",
-     "md5": "efa6e588e7d72a58355c3c48784731df"
+     "md5": "5acf25256c7f75672e01cb9ea348213a"
     }
    },
    "proof": "the 13 LeeBee round cuts (islands 1-7 and the ending) and Dean's two recordings IDENTICAL with palette entry 17 = the model at every game frame start, unit tests and the diagnostic build on rainbownew, 7 sky palette negatives",
@@ -216,8 +216,8 @@
  "status": {
   "title": "Rainbow Islands (128K, Z80N)",
   "engine_col": "rainbow_z80n (rainbow_z80n.md)",
-  "build": "rainbow_z80n_sprites.nex 69369c89 (bda21ab6 + overrun recovery: interrupts a long game frame misses are credited to the limiter) + rainbow_z80n_sprites_diag.nex 24e547de + opt-in rework sky (`NEXCLASH_REWORK=rainbow_z80n_sky`; sky fix, published .nxc v1.0): sprites d7b2345c",
-  "software": "RZX IDENTICAL x2 (rainbow 7178 frames, rainbownew 11799) + diagnostic IDENTICAL, unit PASS (recovery 9 cases + control; Z80N as-NOP controls); every simulated overrun frame credited as the beam model",
+  "build": "rainbow_z80n_sprites.nex e8ea8b0b (2026-11-08: the cell hooks at 28 MHz and the game's cell code at 7 MHz outside a game frame, the redraw after a life is lost at the original's time; was 76d5da1a) + rainbow_z80n_sprites_diag.nex 997ffc52 + opt-in rework sky (`NEXCLASH_REWORK=rainbow_z80n_sky`; sky fix, published .nxc): sprites e66297fc",
+  "software": "RZX IDENTICAL x2 (rainbow 7178 frames, rainbownew 11799) + diagnostic IDENTICAL, unit PASS (recovery 9 cases + control; Z80N as-NOP controls); every simulated overrun frame credited as the beam model; JNext pace of the sky build in lockstep, 4 seeds: quiet +0.00, slowest stretch +0.0, redraw after a lost life 1,155 ms -> 1,155 or 1,135 ms (was 2,471)",
   "hardware": "bda21ab6 works but slows down in busy scenes (user, 2026-10-31); 69369c89 untested",
   "next": "hardware test of 69369c89 (rainbow_z80n.md checklist); everything open in rainbow_islands.md; speed ideas in rainbow_z80n.md"
  },
