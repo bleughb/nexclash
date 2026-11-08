@@ -323,8 +323,8 @@ def read(png, layout_path, clear=False):
             e = ent.setdefault(key, list(parts[n]['entries'][key]) + [[0] * 8])
             b0 = base.get(key) or [0, 0, [0] * 8]
             shown = 0 if clr(b0, bit) else (b0[2][bit] or dflt)        # 0 = shown transparent
-            if idx and shown and rgb16[idx] == rgb16[shown]:
-                idx = shown  # Equal-RGB palette aliases are not an owner edit.
+            if len(rgb16) > 16 and idx and shown and rgb16[idx] == rgb16[shown]:
+                idx = shown  # Wide palettes only: an equal-RGB alias is not an owner edit; 16-colour sheets unchanged.
             if idx == shown:
                 kept[(key, bit)].append(ci)
                 continue
@@ -456,8 +456,8 @@ def changes(png, layout_path, clear=False):
                 continue
             b = state(base, key, bit)
             shown = 0 if b == 'T' else ((b[1] if b != 'D' else 0) or (dflt if code else 0))
-            if idx and shown and rgb16[idx] == rgb16[shown]:
-                idx = shown  # Preserve the displayed index when RGB is unchanged.
+            if len(rgb16) > 16 and idx and shown and rgb16[idx] == rgb16[shown]:
+                idx = shown  # Wide palettes only, as in read().
             if idx == shown:
                 unchanged[(key, bit)] += 1
                 continue

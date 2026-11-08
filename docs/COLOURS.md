@@ -52,8 +52,8 @@ sprite build (stage 3); the user can then repaint without rebuilding the engine.
     with `coloursheet.write(..., paint_clear=True)`; a paper bit with a colour nibble is then opaque
     in that colour (Dizzy 1: fill_mask).
   - Maps: indexes 0-15 use eight hex nibbles; wider entries use eight integers, never
-    variable-width hex. Both load. Unchanged equal-RGB pixels retain their semantic index;
-    default/transparent remains distinct from opaque black.
+    variable-width hex. Both load. Wide palettes only: unchanged equal-RGB pixels keep
+    their index. Default/transparent is not opaque black.
   - Code: shared nexclash/coloursheet.py does the sheet side (joining plots into figures, the
     fewest figures showing every part, PNG, layout, read-back, merge, redraw); its docstring defines
     the part format. The engine supplies the parts: per plot its staging pixels, each with a key
