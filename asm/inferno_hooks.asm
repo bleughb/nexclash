@@ -6123,6 +6123,8 @@ SEL_C     EQU 0x500E
 SEL_L     EQU 0x500F
 SEL_MASKS EQU 0x5010           ; 3 x 8 bytes
 SEL_T     EQU 0x5028
+SEL_BM    EQU 0x5042           ; word: the building mask
+SEL_LP    EQU 0x5044           ; word: next list entry
 SEL_HL    EQU 0x5029
 SEL_COL   EQU 0x502B
 SEL_ROW   EQU 0x502C
@@ -6161,6 +6163,9 @@ wk_select:
         ld (SEL_M1),a
         ld (SEL_SP),sp
         call sl_build_mask
+        ld (SEL_BM),hl
+        ld de,SEL_LIST
+        ld (SEL_LP),de
         xor a
         DUP 8
         ld (hl),a
@@ -6224,10 +6229,12 @@ sl_lrow_go:
         inc hl
         ld d,(hl)
         inc hl
-        ld a,(hl)
+        ld a,(SEL_X)            ; per record: column and row of the image origin
+        add a,(hl)
         ld (SEL_L),a
         inc hl
-        ld a,(hl)
+        ld a,(SEL_Y)
+        add a,(hl)
         ld (SEL_T),a
         ld a,d
         add a,0x20
@@ -6243,20 +6250,21 @@ sl_chunk:
 sl_chunk_go:
         ld a,(SEL_L)
         add a,(hl)
-        ld b,a
-        ld a,(SEL_X)
-        add a,b
         ld b,a                  ; column of the chunk's left cell
         inc hl
         ld a,(SEL_T)
         add a,(hl)
-        ld c,a
-        ld a,(SEL_Y)
-        add a,c
         ld c,a                  ; row of its top cell
         inc hl
         ld e,(hl)               ; cell mask
         inc hl
+        ld a,b                  ; all four cells on screen and the chunk is non-blank: visible
+        cp 31
+        jr nc,.edge
+        ld a,c
+        cp 17
+        jr c,.visible
+.edge:
         ld d,0
         ld a,b
         cp 32
@@ -6306,18 +6314,27 @@ sl_chunk_go:
         jp z,sl_alloc
 sl_have:                        ; A = slot; atomic: no poll until the next chunk
         ld c,a
-        call sl_bit             ; HL = byte of the building mask, A = bit
+        rrca
+        rrca
+        rrca
+        and 7
+        ld hl,(SEL_BM)
+        add hl,a
+        ld a,c
+        and 7
+        add a,sl_bits & 0xFF
+        ld e,a
+        ld d,sl_bits >> 8
+        ld a,(de)
         or (hl)
         ld (hl),a
         call sl_touch
         ld a,(SEL_N)
         cp 128
         jp nc,sl_fail
-        ld e,a
-        ld d,3
-        mul d,e
-        ld hl,SEL_LIST
-        add hl,de
+        inc a
+        ld (SEL_N),a
+        ld hl,(SEL_LP)
         ld (hl),c
         inc hl
         ld a,(SEL_COL)
@@ -6325,8 +6342,8 @@ sl_have:                        ; A = slot; atomic: no poll until the next chunk
         inc hl
         ld a,(SEL_ROW)
         ld (hl),a
-        ld hl,SEL_N
-        inc (hl)
+        inc hl
+        ld (SEL_LP),hl
         ld hl,(SEL_HL)
         jp sl_chunk
 sl_alloc:
@@ -6489,15 +6506,6 @@ sl_build_mask:                  ; HL = the building mask
         ld hl,SEL_MASKS
         add hl,a
         ret
-sl_bit:                         ; C = slot: HL = its byte of the building mask, A = bit
-        call sl_build_mask
-        ld a,c
-        rrca
-        rrca
-        rrca
-        and 7
-        add hl,a
-        ld a,c
 sl_bit_a:
         and 7
         ld b,a
@@ -6506,6 +6514,9 @@ sl_bit_a:
 .s:     add a,a
         djnz .s
 .z:     ret
+sl_bits:
+        db 1,2,4,8,16,32,64,128
+        ASSERT (sl_bits & 0xFF) < 0xF8
 sl_yrec:
         ld hl,sl_rec_go
         jp wk_yield
