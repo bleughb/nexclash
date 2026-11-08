@@ -908,6 +908,35 @@ def keypad_check():
     return out
 
 
+def runtime_entry_check():
+    """A proven loader handoff excludes only its prefix, never later ROM faults."""
+    from types import SimpleNamespace
+    from unittest import mock
+    from nexclash import nextboot as nb, simrun, runchecks, z80tonex as zt
+    original=list(zt.rom48());image=bytearray(original);image[0x2C88]^=255
+    state=dict(nr={0x8C:0x80},mmu=[255]*8,p1ffd=4,alt=[image,image],mem=list(image)+[0]*49152)
+    result=[]
+    for mode in('prefix','later','missing'):
+        def replay(path,hooks,stop=None,keep_snapshots=False):
+            mem=original+[0]*49152;hooks.on_sim(SimpleNamespace(memory=mem))
+            hooks.on_read(0x2C88,0x2C88,mem)
+            hooks.on_frame(1)
+            if mode!='missing':hooks.on_read(0x8000,0x8000,mem)
+            if mode=='later':hooks.on_read(0x2C88,0x2C88,mem)
+            hooks.on_frame(2)
+            return 2
+        with mock.patch.object(nb,'tail_of',return_value=(0x7000,0x5B00,20)), \
+                mock.patch.object(nb,'boot',return_value=state) as boot, \
+                mock.patch.object(simrun,'rzx_frames',return_value=(2,1)), \
+                mock.patch.object(simrun,'play_rzx',replay):
+            report=nb.rom_paths(['runtime.nex'],['runtime.rzx'],start_pc=0x8000)
+            status,why,coverage=runchecks.rom_paths(report,['runtime.rzx'],['runtime.nex'])
+            expected={'prefix':'pass','later':'fail','missing':'incomplete'}[mode]
+            result.append(('rom paths: explicit runtime entry '+mode,status==expected and boot.call_args.args[1]==0x8000,
+                           (status,why,coverage)))
+    return result
+
+
 def rom_paths_check(src, ez, er, work, ok):
     """nextboot.rom_paths on what real recordings contain (2026-11-04; BRIEFING A2): input that runs out at the
     end of a recording or before it (Chuckie Egg, cut), a 128K recording made with the 48K ROM as ROM 1 and one
@@ -917,7 +946,7 @@ def rom_paths_check(src, ez, er, work, ok):
     bad = nb.selfcheck()
     ok('rom paths: nextboot.selfcheck - raster line ends a 250-frame hold (frozen line: never), NR 0x1E/0x1F, '
        'a .nex that does not boot is reported', not bad, bad)
-    for x in keypad_check():
+    for x in keypad_check()+runtime_entry_check():
         ok(*x)
     plain = os.path.join(work, 'rp_chuckie.nex')
     zt.convert(ez, plain, None, True, quiet=True)
@@ -1024,6 +1053,33 @@ def coloursheet_check():
     img = Image.open(png).convert('RGB')
     L = json.load(open(lay))
     res = []
+    widepal = pal + [(123, 45, 67), (17, 181, 91)]
+    wp = dict(part('wide', 0, 0, 0))
+    wp['pixels'] = [(c,r,k,b,code,16 if code else 0) for c,r,k,b,code,d in wp['pixels']]
+    wc = cs.Collector(); wc.add_frame([wp])
+    widepng, widelay = os.path.join(work,'wide.png'), os.path.join(work,'wide_layout.json')
+    cs.write(wc.composites(), widepng, widelay, widepal)
+    _, widechanges, _, wideconflicts, _ = cs.changes(widepng, widelay)
+    wideimage = Image.open(widepng).convert('RGB')
+    widebox = json.load(open(widelay))['composites'][0]
+    wideimage.putpixel((widebox['x']+1,widebox['y']),widepal[17]); wideimage.save(widepng)
+    _, wideedit, _, wideeditconflicts, _ = cs.changes(widepng,widelay)
+    res.append(('8-bit palette: unchanged colour16 retained; edit to17 read exactly',
+                not widechanges and not wideconflicts and not wideeditconflicts and wideedit=={('wide0',1):('C',17)}))
+    wide_map = {'wide0': [255, 1, [0, 1, 15, 16, 17, 127, 254, 255], 0x40],
+                'legacy': [85, 2, [0, 1, 2, 3, 4, 5, 14, 15]]}
+    wide_map_file = os.path.join(work, 'wide_colours.json')
+    cs.save(wide_map, wide_map_file, 'wide palette regression')
+    wide_encoded = json.load(open(wide_map_file))['entries']
+    res.append(('wide palette saved and reloaded without merging pixel indices',
+                cs.load(wide_map_file) == wide_map and
+                wide_encoded['wide0'][2] == wide_map['wide0'][2] and
+                wide_encoded['legacy'][2] == '012345EF'))
+    aliaspal = pal + [pal[2], widepal[17]]
+    cs.write(wc.composites(), widepng, widelay, aliaspal)
+    _, aliaschanges, _, aliasconflicts, _ = cs.changes(widepng, widelay)
+    res.append(('unchanged equal-RGB palette aliases preserve their displayed index',
+                not aliaschanges and not aliasconflicts))
     res.append(('2 figures (body + legs joined, mirrored copy the same one), 1:1', len(comps) == 2 and
                 sorted(len(c['parts']) for c in comps) == [1, 2] and comps[0]['count'] + comps[1]['count'] == 3))
     res.append(('same role again -> two figures; a repeating role (wheels) -> one',

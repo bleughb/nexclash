@@ -15,6 +15,7 @@ import importlib
 
 # (module, detector, extra condition on the auto arguments or None)
 ENGINES = [
+    ('bubbler', 'is_bubbler', None),                                    # Bubbler (48K), optional Enhanced
     ('underwurlde', 'is_underwurlde', None),                              # Underwurlde (48K)
     ('martianoids', 'is_martianoids', None),                            # Martianoids (48K)
     ('gng', 'is_gng', None),                                            # Ghosts 'n Goblins (48K)

@@ -58,6 +58,8 @@ def add_args(p):
     g.add_argument('--patch-by', help='your name for the menu credit; saved once for later builds ($NEXCLASH_PATCH_BY also works)')
     g.add_argument('--title', help='the game\'s title in the .nxc (default: the game nexclash knows the snapshot as)')
     g.add_argument('--publisher', help='the menu\'s publisher line, such as "Ocean, 1986"')
+    g.add_argument('--colours-by', help='Enhanced colour artist credit, when a colour set is offered')
+    g.add_argument('--fix-label', help='name of the main option (default: Colour clash fix)')
     g.add_argument('--target-file', help='the name players have the game under (default: the .z80\'s own; TOSEC style)')
     g.add_argument('--pok', help='cheats from a .pok (default: GAME.pok beside the .z80, if there)')
 
@@ -433,6 +435,8 @@ def make(a, z80, out, name, spr, rep, say, colours=None, toggles=None, checks=No
     argv += ['--title', t] if t else []
     argv += ['--publisher', a.publisher] if getattr(a, 'publisher', None) else []
     argv += ['--patch-by', who] if who else []
+    for option in ('colours_by','fix_label'):
+        if getattr(a,option,None):argv += ['--'+option.replace('_','-'),getattr(a,option)]
     for k, v in prf.items():
         argv += ['--proof', '%s=%s' % (k, v)]
     _run(nxc, argv)
