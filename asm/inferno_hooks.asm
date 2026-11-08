@@ -4861,3 +4861,547 @@ cw_tout:                        ; HL = K, A = KR, E = 0 set X / 1 add -> A = R t
 cw_head_end:
         ASSERT cw_head_end < 0x1000
         SAVEBIN "inferno_cwhead.bin",0,cw_head_end
+
+; Loading driver (pipeline item 1). Private page 81, entered from the 8EF9 gate (page-68 stub 1D80,
+; DI, 28 MHz, the gate's private stack). Enumerates all 256 C100 indices: snapshot (78), exact
+; stream duplicate search over published entries, colour (75), whole-image B (76), store (79).
+; Worker pages carry drvworker at 1D00 and the word 1D00 at 1FF0, so a worker's RET comes back
+; here; slots 1-3 are restored by the workers (1=68, 2=10, 3=11) and slot 1 to 255 before exit.
+W_A      EQU 0x2000            ; worker field alias through slot 1
+D_STATE  EQU 0x1800
+D_RETSP  EQU 0x1800
+D_CALLSP EQU 0x1802
+D_IMAGE  EQU 0x1804
+D_SIZE   EQU 0x1805
+D_MINX   EQU 0x1807
+D_MAXX   EQU 0x1809
+D_MINY   EQU 0x180B
+D_MAXY   EQU 0x180D
+D_W      EQU 0x180F            ; tiles
+D_STRIDE EQU 0x1810
+D_CSIZE  EQU 0x1812
+D_LEFT   EQU 0x1814
+D_RX     EQU 0x1815
+D_RY     EQU 0x1817
+D_PAGEB  EQU 0x1819
+D_STORED EQU 0x181A            ; words: distinct streams stored, duplicate indices, rejected
+D_DUPS   EQU 0x181C
+D_REJ    EQU 0x181E
+D_FAIL  EQU 0x1820            ; 1 = a worker refused valid input (the run is not trusted)
+D_STACK  EQU 0x1BF0
+        ORG 0
+driver:
+        ld (D_RETSP),sp
+        ld sp,D_STACK
+        nextreg 0x51,79
+        xor a
+        ld (C_OP+W_A),a
+        ld (C_CURRENT+W_A),a
+        ld (C_PENDING+W_A),a
+        ld hl,0
+        ld a,79
+        call drv_call
+        nextreg 0x51,78
+        xor a
+        ld (J_ACTIVE+W_A),a
+        ld (J_DONE+W_A),a
+        ld hl,D_STATE+4
+        ld de,D_STATE+5
+        ld (hl),a
+        ld bc,0x1C
+        ldir
+.next:  nextreg 0x51,78
+        xor a
+        ld (J_OP+W_A),a
+        ld (J_FLASH+W_A),a
+        ld (J_PAINT+W_A),a
+        ld (J_PAINT+W_A+1),a
+        ld a,(D_IMAGE)
+        ld (J_IMAGE+W_A),a
+        ld a,78
+        ld hl,0
+        call drv_call
+        nextreg 0x51,78
+        ld a,(J_ERROR+W_A)
+        or a
+        jp nz,.rejected
+        ld a,(J_DONE+W_A)
+        or a
+        jp z,.rejected
+        ld hl,(J_SIZE+W_A)
+        ld (D_SIZE),hl
+        ld de,2
+        or a
+        sbc hl,de
+        jp z,.release            ; no tiles: nothing to prepare
+        call drv_find
+        jp z,.duplicate
+        call drv_bounds
+        jp nz,.reject_release
+        call drv_clear
+        call drv_tiles
+        jp nz,.bad_worker
+        call drv_fill
+        jp nz,.bad_worker
+        nextreg 0x51,79
+        ld a,1
+        ld (C_OP+W_A),a
+        ld a,(D_IMAGE)
+        ld (C_IMAGE+W_A),a
+        xor a
+        ld (C_FLASH+W_A),a
+        ld (C_PAINT+W_A),a
+        ld (C_PAINT+W_A+1),a
+        ld hl,(D_SIZE)
+        ld (C_SOURCE_SIZE+W_A),hl
+        ld hl,(D_CSIZE)
+        ld (C_CANVAS_SIZE+W_A),hl
+        ld a,79
+        ld hl,0
+        call drv_call
+        nextreg 0x51,79
+        ld a,(C_ERROR+W_A)
+        or a
+        jp nz,.reject_release    ; capacity: unpublished, later draws miss
+        ld a,(C_FOUND+W_A)
+        or a
+        jp z,.reject_release
+        ld hl,(D_STORED)
+        inc hl
+        ld (D_STORED),hl
+        jp .release
+.duplicate:
+        ld hl,(D_DUPS)
+        inc hl
+        ld (D_DUPS),hl
+        jp .release
+.bad_worker:
+        ld a,1
+        ld (D_FAIL),a
+.reject_release:
+        ld hl,(D_REJ)
+        inc hl
+        ld (D_REJ),hl
+.release:
+        nextreg 0x51,78
+        ld a,1
+        ld (J_OP+W_A),a
+        ld a,78
+        ld hl,0
+        call drv_call
+        jr .step
+.rejected:
+        ld hl,(D_REJ)
+        inc hl
+        ld (D_REJ),hl
+.step:  ld hl,D_IMAGE
+        inc (hl)
+        jp nz,.next
+        nextreg 0x51,255
+        nextreg 0x52,10
+        nextreg 0x53,11
+        ld sp,(D_RETSP)
+        jp 0x1D90
+
+; A = page, HL = entry; the worker's stack is the top of its own page.
+drv_call:
+        ld (D_CALLSP),sp
+        ld sp,0x1FF0
+        jp 0x1D10
+
+; Exact search of published entries below D_IMAGE; Z = found, entry copied (valid last).
+drv_find:
+        nextreg 0x51,79
+        nextreg 0x52,122
+        ld hl,0x0800+W_A
+        ld a,(D_IMAGE)
+        or a
+        jr z,.none
+        ld b,a
+.loop:  push bc
+        push hl
+        ld a,(hl)
+        cp 1
+        jr nz,.skip
+        push hl
+        pop ix
+        ld a,(ix+4)
+        ld hl,D_SIZE
+        cp (hl)
+        jr nz,.skip
+        ld a,(ix+5)
+        inc hl
+        cp (hl)
+        jr nz,.skip
+        ld a,(ix+1)
+        nextreg 0x53,a
+        ld l,(ix+2)
+        ld h,(ix+3)
+        ld de,0x6000
+        add hl,de
+        ld de,0x4000
+        ld bc,(D_SIZE)
+.cmp:   ld a,(de)
+        cp (hl)
+        jr nz,.skip
+        inc de
+        inc hl
+        dec bc
+        ld a,b
+        or c
+        jr nz,.cmp
+        pop hl                  ; entry found: copy the 15 metadata bytes, then publish
+        pop bc
+        ld a,(D_IMAGE)
+        ld e,a
+        ld d,0
+        ex de,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld bc,0x0800+W_A
+        add hl,bc
+        ex de,hl
+        push de
+        inc de
+        inc hl
+        ld bc,15
+        ldir
+        pop hl
+        ld (hl),1
+        nextreg 0x52,10
+        nextreg 0x53,11
+        xor a
+        ret
+.skip:  pop hl
+        ld de,16
+        add hl,de
+        pop bc
+        djnz .loop
+.none:  nextreg 0x52,10
+        nextreg 0x53,11
+        or 1
+        ret
+
+; Geometry bounds of the stream at slot 2. NZ = outside the canvas limits.
+drv_bounds:
+        nextreg 0x52,122
+        ld a,(0x4000)
+        and 3
+        ld (D_PAGEB),a
+        ld hl,0x7FFF
+        ld (D_MINX),hl
+        ld (D_MINY),hl
+        ld hl,0x8000
+        ld (D_MAXX),hl
+        ld (D_MAXY),hl
+        ld hl,0x4001
+.row:   ld a,(hl)
+        inc hl
+        or a
+        jp z,.done
+        ld (D_LEFT),a
+        ld a,(hl)
+        inc hl
+        call .sign
+        ld (D_RX),de
+        ld a,(hl)
+        inc hl
+        call .sign
+        ld (D_RY),de
+        ld ix,D_MINY
+        call .bound
+        ld de,(D_RX)
+        ld ix,D_MINX
+        call .bound
+        ld a,(D_LEFT)
+        dec a
+        ld e,a
+        ld d,0
+        push hl
+        ld hl,(D_RX)
+        add hl,de
+        ex de,hl
+        pop hl
+        ld ix,D_MAXX-2          ; only the maximum applies
+        call .max
+        ld a,(D_LEFT)
+        ld e,a
+        ld d,0
+        ex de,hl
+        add hl,hl
+        ld c,l
+        ld b,h
+        add hl,hl
+        add hl,hl
+        add hl,bc
+        add hl,de               ; + 10 bytes per tile
+        jr .row
+.sign:  ld e,a
+        rla
+        sbc a,a
+        ld d,a
+        ret
+.bound: ; DE signed against the (min,max) pair at IX
+        ld c,(ix+0)
+        ld b,(ix+1)
+        push hl
+        ld l,c
+        ld h,b
+        or a
+        sbc hl,de
+        jp pe,.ovmin
+        jp p,.newmin
+        jr .chkmax
+.ovmin: jp m,.newmin
+        jr .chkmax
+.newmin:
+        ld (ix+0),e
+        ld (ix+1),d
+.chkmax:
+        pop hl
+.max:   ld c,(ix+2)
+        ld b,(ix+3)
+        push hl
+        ld l,c
+        ld h,b
+        or a
+        sbc hl,de
+        jp pe,.ovmax
+        jp m,.newmax
+        jr .outb
+.ovmax: jp p,.newmax
+        jr .outb
+.newmax:
+        ld (ix+2),e
+        ld (ix+3),d
+.outb:  pop hl
+        ret
+.done:  nextreg 0x52,10
+        ld hl,(D_MAXX)
+        ld de,(D_MINX)
+        or a
+        sbc hl,de
+        inc hl                  ; W tiles
+        ld a,h
+        or a
+        ret nz                  ; NZ: width beyond 128
+        ld a,l
+        cp 129
+        jr c,.w_ok
+        or 1
+        ret
+.w_ok:  ld (D_W),a
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        ld (D_STRIDE),hl        ; bytes per pixel row (4-bit pixels, 8 pixels a tile)
+        ld hl,(D_MAXY)
+        ld de,(D_MINY)
+        or a
+        sbc hl,de
+        inc hl                  ; H tiles, 1..256
+        ex de,hl
+        ld hl,0
+        ld a,(D_W)
+        ld b,a
+.mul:   add hl,de
+        djnz .mul
+        push hl
+        ld de,1025
+        or a
+        sbc hl,de
+        pop hl
+        jr nc,.far              ; W*H > 1024 tiles = over 65,536 pixels
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld (D_CSIZE),hl         ; W*H*32 bytes
+        xor a
+        ret
+.far:   or 1
+        ret
+
+; Zero the first D_CSIZE canvas bytes (pages 112..115).
+drv_clear:
+        ld a,112
+        ld (D_LEFT),a
+        ld hl,(D_CSIZE)
+.page:  ld a,h
+        or l
+        ret z
+        ld a,(D_LEFT)
+        nextreg 0x51,a
+        inc a
+        ld (D_LEFT),a
+        push hl
+        ld a,h
+        cp 0x20
+        jr c,.part
+        ld hl,0x2000
+.part:  ld c,l
+        ld b,h
+        ld hl,0x2000
+        ld de,0x2001
+        ld (hl),0
+        dec bc
+        ld a,b
+        or c
+        jr z,.one
+        ldir
+.one:   pop hl
+        ld de,-0x2000
+        add hl,de
+        jr c,.page
+        ret
+
+; Colour every stream tile into the canvas. NZ = pack refused valid input.
+drv_tiles:
+        ld hl,0x4001
+.row:   nextreg 0x52,122
+        ld a,(hl)
+        inc hl
+        or a
+        jr nz,.w
+        nextreg 0x52,10
+        xor a
+        ret
+.w:     ld (D_LEFT),a
+        ld a,(hl)
+        inc hl
+        call drv_bounds.sign
+        ld (D_RX),de
+        ld a,(hl)
+        inc hl
+        call drv_bounds.sign
+        ld (D_RY),de
+.tile:  push hl
+        nextreg 0x51,75
+        nextreg 0x52,122
+        ld a,1
+        ld (P_SOURCE+W_A),a
+        xor a
+        ld (P_FLASH+W_A),a
+        ld a,(hl)
+        ld (P_TILE+W_A),a
+        ld a,(D_PAGEB)
+        ld (P_TILE+W_A+1),a
+        inc hl
+        ld de,P_RAW+W_A
+        ld bc,9
+        ldir
+        ld hl,(D_STRIDE)
+        ld (P_STRIDE+W_A),hl
+        ld hl,(D_RY)            ; (y - top) * W * 32 + (x - left) * 4
+        ld de,(D_MINY)
+        or a
+        sbc hl,de
+        ld d,l
+        ld a,(D_W)
+        ld e,a
+        mul d,e
+        ex de,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        push hl
+        ld hl,(D_RX)
+        ld de,(D_MINX)
+        or a
+        sbc hl,de
+        add hl,hl
+        add hl,hl
+        pop de
+        add hl,de
+        ld (P_DEST+W_A),hl
+        nextreg 0x52,10
+        ld a,75
+        ld hl,0
+        call drv_call
+        nextreg 0x51,75
+        ld a,(P_ERROR+W_A)
+        or a
+        pop hl
+        ret nz
+        ld de,10
+        add hl,de
+        ld de,(D_RX)
+        inc de
+        ld (D_RX),de
+        ld a,(D_LEFT)
+        dec a
+        ld (D_LEFT),a
+        jp nz,.tile
+        jp .row
+
+; Whole-image B. NZ = fill refused.
+drv_fill:
+        nextreg 0x51,76
+        ld hl,(D_STRIDE)
+        ld (F_STRIDE+W_A),hl
+        ld hl,(D_CSIZE)
+        ld (F_SIZE+W_A),hl
+        xor a
+        ld (F_DONE+W_A),a
+        ld (F_ERROR+W_A),a
+        ld (F_ACTIVE+W_A),a
+        ld (F_COMMAND+W_A),a
+        ld a,16
+        ld (F_BUDGET+W_A),a
+.again: ld a,76
+        ld hl,fill_actor_service
+        call drv_call
+        nextreg 0x51,76
+        ld a,(F_ERROR+W_A)
+        or a
+        ret nz
+        ld a,(F_DONE+W_A)
+        or a
+        jr nz,.ok
+        ld a,1
+        ld (F_COMMAND+W_A),a
+        jr .again
+.ok:    xor a
+        ret
+driver_end:
+        ASSERT driver_end < 0x1800
+        SAVEBIN "inferno_driver.bin",driver,driver_end-driver
+
+; Tail of page 81 (runs after a page swap at the same addresses).
+        ORG 0x1D00
+drvpage:
+        ds 0x1D04-$,0
+        ld sp,(D_CALLSP)        ; a worker's RET arrives here after its 1D00 NEXTREG
+        ret
+        ds 0x1D10-$,0
+        nextreg 0x50,a          ; A = worker page; PC 1D13 continues in that page
+        ds 0x1D84-$,0
+        jp driver
+        ds 0x1D90-$,0
+        nextreg 0x50,68         ; back to page 68 at 1D94: RET to the gate
+drvpage_end:
+        SAVEBIN "inferno_drvpage.bin",drvpage,drvpage_end-drvpage
+
+; Copied to 1D00 of each worker page (75, 76, 78, 79).
+        ORG 0x1D00
+drvworker:
+        nextreg 0x50,81
+        ds 0x1D13-$,0
+        jp (hl)
+drvworker_end:
+        SAVEBIN "inferno_drvworker.bin",drvworker,drvworker_end-drvworker
+
+; Page 68 entry stub for the gate's CALL 1D80.
+        ORG 0x1D80
+drv68:
+        nextreg 0x50,81
+        ds 0x1D94-$,0
+        ret
+drv68_end:
+        SAVEBIN "inferno_drv68.bin",drv68,drv68_end-drv68

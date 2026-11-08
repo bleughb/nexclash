@@ -3464,6 +3464,338 @@ def loading_pause_checks(memory=None,registers=None):
     return dict(counts)
 
 
+DRIVER_WRITE = {
+    68: [(0x1D00, 0x1EF0)],
+    75: [(0x1EC0, 0x1EE0), (0x1F00, 0x1FF0)],
+    76: [(0x1E90, 0x1EAA), (0x1F00, 0x1FF0)],
+    78: [(0x1E80, 0x1E96), (0x1F00, 0x1FF0)],
+    79: [(0x0800, 0x1800), (0x1E80, 0x1EA0), (0x1F00, 0x1FF0)],
+    81: [(0x1800, 0x1BF0)],
+}
+
+
+class DriverMemory:
+    """Whole loading driver from the 8EF9 gate: every page and slot, guarded writes and mappings."""
+    def __init__(self, ram, rom, pages):
+        self.ram, self.rom, self.pages = list(ram), rom, pages
+        self.slots = [255, 255, 10, 11, 4, 5, 0, 1]
+        self.reads = self.speed = self.selected = 0
+
+    def __getitem__(self, a):
+        if isinstance(a, slice):
+            return [self[i] for i in range(*a.indices(65536))]
+        self.reads += 1
+        s, p = a >> 13, self.slots[a >> 13]
+        if p == 255:
+            return self.rom[a]
+        if s >= 2 and p in (10, 11, 4, 5, 0, 1):
+            return self.ram[a]
+        return self.pages[p][a & 8191]
+
+    def __setitem__(self, a, v):
+        s, p = a >> 13, self.slots[a >> 13]
+        if p == 255:
+            raise AssertionError('driver wrote ROM at %04X' % a)
+        if s >= 2 and p in (10, 11, 4, 5, 0, 1):
+            if a != 0x9198:
+                raise AssertionError('driver wrote original RAM at %04X' % a)
+            self.ram[a] = v
+            return
+        o = a & 8191
+        if p in DRIVER_WRITE:
+            if not any(l <= o < h for l, h in DRIVER_WRITE[p]):
+                raise AssertionError('driver wrote page %d offset %04X' % (p, o))
+        elif not (112 <= p <= 117 or p == 122 or 136 <= p < 216):
+            raise AssertionError('driver wrote unowned page %d' % p)
+        self.pages[p][o] = v
+
+    def nextreg(self, reg, value):
+        allowed = {0x50: (68, 75, 76, 78, 79, 81, 255), 0x51: (68, 75, 76, 78, 79, 112, 113, 114, 115, 116, 122, 255),
+                   0x52: (10, 116, 117, 122, *range(96, 112), *range(136, 216)),
+                   0x53: (11, *range(128, 136), *range(136, 216))}
+        if reg == 7 and value in range(4):
+            self.speed = value
+        elif reg in allowed and value in allowed[reg]:
+            self.slots[reg - 0x50] = value
+        else:
+            raise AssertionError('driver set NextReg %02X to %d' % (reg, value))
+
+    def read_port(self, registers, port):
+        if port != 0x253B or self.selected != 7:
+            raise AssertionError('driver read unexpected IO')
+        return self.speed | (self.speed << 4)
+
+    def write_port(self, registers, port, value, *args):
+        if port != 0x243B or value != 7:
+            raise AssertionError('driver wrote IO')
+        self.selected = value
+
+
+def driver_pages(driver=None, owned=None):
+    h = load_profile()['hooks']
+    pages = {p: bytearray(8192) for p in (68, 75, 76, 78, 79, 81, *range(136, 216))}
+    for p in (*range(112, 118), 122):
+        pages[p] = bytearray([0xE3]) * 8192             # exposes any byte the driver fails to set
+    table = actor_row_lookup()
+    pages.update({p: bytearray(table[(p - 96) * 8192:(p - 95) * 8192]) for p in range(96, 112)})
+    flags, finish, reach = actor_fill_lookup()
+    pages.update({p: bytearray(reach[(p - 128) * 8192:(p - 127) * 8192]) for p in range(128, 136)})
+    stub = bytes.fromhex(h['drvworker'])
+    for p, code in ((75, h['pack']), (76, h['fill']), (78, h['job']), (79, h['owned'] if owned is None else owned)):
+        code = bytes.fromhex(code)
+        pages[p][:len(code)] = code
+        pages[p][0x1D00:0x1D00 + len(stub)] = stub
+        pages[p][0x1FF0:0x1FF2] = b'\x00\x1D'
+    pages[76][0x600:0x700], pages[76][0x800:0xC00] = flags, finish
+    code = bytes.fromhex(h['driver'] if driver is None else driver)
+    pages[81][:len(code)] = code
+    tail = bytes.fromhex(h['drvpage'])
+    pages[81][0x1D00:0x1D00 + len(tail)] = tail
+    stub = bytes.fromhex(h['drv68'])
+    pages[68][0x1D80:0x1D80 + len(stub)] = stub
+    return pages
+
+
+def run_loading_driver(memory, registers, speed=0, driver=None, owned=None, limit=400_000_000):
+    """Gate + driver as assembled, from 8EF9 to 8EFC, against the original's single instruction."""
+    from . import simpool, z80n
+    from .dizzy6 import _rw_simulator
+    from skoolkit.simulator import Simulator
+    patch = PausePatch()
+    original = simpool.machine(Simulator, list(memory), registers, 'inferno.driver.original', copy=True)
+    original.opcodes[original.memory[0x8EF9]]()
+    mem = DriverMemory(patch.apply_memory(memory), patch.rom, driver_pages(driver, owned))
+    mem.speed = speed
+    regs = list(registers)
+    sim = simpool.machine(_rw_simulator(), mem, regs, 'inferno.driver.patched')
+    sim.set_tracer(mem)
+    z80n.install(sim, mem.nextreg)
+    r, steps = sim.registers, 0
+    while r[24] != 0x8EFC:
+        if steps > limit:
+            raise AssertionError('driver failed to return')
+        sim.opcodes[mem[r[24]]]()
+        if r[26] or r[27] != 1 or r[14] != registers[14]:
+            raise AssertionError('driver changed IFF/IM/I')
+        steps += 1
+    compared = tuple(i for i in range(30) if i not in (25, 29))
+    bad = [(i, original.registers[i], r[i]) for i in compared if r[i] != original.registers[i]]
+    if bad:
+        raise AssertionError('driver changed original registers: %s' % bad)
+    expected = list(original.memory)
+    expected[0x8EF9:0x8EFC] = patch.sites[0x8EF9][1]
+    if mem.ram != expected or mem.slots != [255, 255, 10, 11, 4, 5, 0, 1] or mem.speed != speed:
+        raise AssertionError('driver failed RAM/mapping/caller-speed contract')
+    state = mem.pages[81]
+    word = lambda a: int.from_bytes(state[a:a + 2], 'little')
+    return {'pages': mem.pages, 'stored': word(0x181A), 'duplicates': word(0x181C), 'rejected': word(0x181E),
+            'fail': state[0x1820], 'instructions': steps, 'equivalent_T': (r[25] + mem.reads) / 8}
+
+
+def driver_expected(ram):
+    """Independent oracle, per C100 index: 'none' (no tiles), 'reject', or the exact stream and packed canvas."""
+    out = []
+    for image in range(256):
+        try:
+            actor = actor_descriptor(ram, image)
+            if not actor['tiles']:
+                out.append(None)
+                continue
+            ptr, pos, stream = actor['pointer'], actor['pointer'] + 1, bytearray((ram[actor['pointer']],))
+            while ram[pos]:
+                width, dx, dy = ram[pos:pos + 3]
+                stream += bytes((width, dx, dy))
+                pos += 3
+                for j in range(width):
+                    stream.append(ram[pos])
+                    stream += raw_tile(ram, ram[pos] + 256 * (ram[ptr] & 3))
+                    pos += 1
+            stream.append(0)
+            if len(stream) > 8192:
+                raise ValueError('stream capacity')
+            left, top, width, height, pixels = solid_image(tuple((x, y, raw_tile(ram, t)) for x, y, t in actor['tiles']))
+            if width > 1024:
+                raise ValueError('canvas stride')
+        except (ValueError, IndexError):
+            out.append('reject')
+            continue
+        canvas = bytes(pixels[i] * 16 + pixels[i + 1] for i in range(0, len(pixels), 2))
+        out.append((bytes(stream), canvas))
+    return out
+
+
+def driver_compare(result, expected, capacity=False):
+    """The driver's published store against the oracle. capacity: a refused store is allowed."""
+    pages, counts = result['pages'], Counter()
+    canonical, stored = {}, 0
+    for image, want in enumerate(expected):
+        e = bytes(pages[79][0x800 + 16 * image:0x810 + 16 * image])
+        if want is None or want == 'reject':
+            if e[0]:
+                raise AssertionError('index %d published without valid content' % image)
+            counts['indices with no tiles' if want is None else 'rejected indices'] += 1
+            continue
+        if not e[0]:
+            if capacity:
+                counts['capacity refusals'] += 1
+                continue
+            raise AssertionError('index %d not published' % image)
+        source = owned_payload(pages, e[1], int.from_bytes(e[2:4], 'little'), int.from_bytes(e[4:6], 'little'))
+        canvas = owned_payload(pages, e[6], int.from_bytes(e[7:9], 'little'), int.from_bytes(e[9:11], 'little'))
+        if (source, canvas) != want:
+            raise AssertionError('index %d: stored stream/canvas differ (source %s canvas %s)' % (image, source == want[0], canvas == want[1]))
+        if e[11:] != bytes(5):
+            raise AssertionError('index %d: phase/generation' % image)
+        if want[0] in canonical:
+            if e[1:11] != canonical[want[0]]:
+                raise AssertionError('index %d: duplicate does not share the stored payload' % image)
+            counts['duplicate indices sharing a payload'] += 1
+        else:
+            canonical[want[0]] = e[1:11]
+            stored += 1
+            counts['distinct streams stored'] += 1
+    if result['fail'] or result['stored'] != stored:
+        raise AssertionError('driver counters: %s' % {k: result[k] for k in ('stored', 'duplicates', 'rejected', 'fail')})
+    return dict(counts)
+
+
+def driver_fixture():
+    """Crafted C100 table: duplicates at distinct addresses, same-size different content, negative dx/dy,
+    a hole in the tile grid, an enclosed black interior, empty, bad pointer and oversize images."""
+    ram = [0] * 65536
+    ram[0x8EF9:0x8EFC] = bytes.fromhex('329891')
+    for i in range(256):
+        ram[0xC100 + i] = 0x20                          # default target is below 4000: rejected
+    def tile(index, bits, attr):
+        ram[0xDC00 + 8 * index:0xDC08 + 8 * index] = bits
+        ram[0xFC00 + index] = attr
+    tile(1, [0xFF, 0x81, 0x81, 0x81, 0x81, 0x81, 0x81, 0xFF], 0x07)    # enclosed black interior
+    tile(2, [0xFF] * 8, 0x02)
+    tile(3, [0xFE] * 8, 0x02)                           # same size as tile 2, different bytes
+    tile(4, [0xF0, 0xF0, 0, 0, 0x0F, 0x0F, 0, 0], 0x42)
+    records = {
+        0xD000: bytes((0, 2, 0xFF, 0xFE, 1, 2)) + bytes((1, 3, 1, 4, 0)),       # negative dx/dy; hole (grid gap)
+        0xD040: bytes((0, 2, 0xFF, 0xFE, 1, 2)) + bytes((1, 3, 1, 4, 0)),       # exact duplicate elsewhere
+        0xD080: bytes((0, 2, 0xFF, 0xFE, 1, 3)) + bytes((1, 3, 1, 4, 0)),       # same size, different tile
+        0xD0C0: bytes((0, 0)),                                                  # no tiles
+        0xD0D0: bytes((1, 1, 0, 0, 1, 0)),                                      # header page 1: different ID
+        0xD100: bytes((0, 3, 0, 0, 1, 1, 1, 0)),                                # tile 1 x3 (whole-image B)
+        0xD180: bytes((0, 1, 100, 0, 2, 1, 0x9C, 0, 2, 0)),                     # W 129: outside the limit
+        0xD1A0: bytes((0, 129)),                                                # invalid width
+        0xD200: bytes(b for y in range(8) for b in (64, 0, y, *([2] * 64)))[:0] + bytes((0,)) + bytes(b for y in range(8) for b in (64, 0, y, *([2] * 64))) + bytes((0,)),  # 16 K canvas: refused at the last store page
+    }
+    for a, b in records.items():
+        ram[a:a + len(b)] = b
+    # Page 1 tile IDs reach 256+: give index 257 content.
+    ram[0xDC00 + 8 * 257:0xDC00 + 8 * 258] = [0x18] * 8
+    ram[0xFC00 + 257] = 0x05
+    # C100 pointers are two consecutive bytes, the next index shares one: even indices only.
+    for i, a in enumerate(sorted(records)):
+        ram[0xC100 + 2 * i], ram[0xC101 + 2 * i] = a & 255, a >> 8
+    regs = [(i * 17) & 255 for i in range(30)]
+    regs[12], regs[24], regs[26], regs[27], regs[28], regs[15] = 0xF000, 0x8EF9, 0, 1, 0, 0x55
+    return ram, regs
+
+
+def _driver_variant(block, old, new, occurrence=0):
+    code = load_profile()['hooks'][block]
+    h = code.upper()
+    o, n = old.upper(), new.upper()
+    at = -2
+    for _ in range(occurrence + 1):
+        at = h.index(o, at + 2)
+    return h[:at] + n + h[at + len(o):]
+
+
+def driver_checks():
+    """Crafted-table checks and negative controls for the assembled loading driver (no recording needed)."""
+    ram, regs = driver_fixture()
+    expected = driver_expected(ram)
+    syms = load_profile()['hooks']['syms']
+    result = run_loading_driver(ram, regs)
+    counts = Counter(driver_compare(result, expected))
+    if not counts['duplicate indices sharing a payload'] or not counts['rejected indices'] or not counts['indices with no tiles']:
+        raise AssertionError('fixture does not exercise the driver: %s' % dict(counts))
+    for speed in range(4):
+        for refresh in (0, 127, 128, 255):
+            r = list(regs)
+            r[15] = refresh
+            driver_compare(run_loading_driver(ram, r, speed=speed), expected)
+            counts['gate register/R/speed restoration around the whole driver'] += 1
+    # Capacity: store pinned at the last page, only some images fit; nothing partial is published.
+    h = load_profile()['hooks']['owned'].upper()
+    if h.count('3E88') != 1:
+        raise AssertionError('capacity control: reset page constant not unique')
+    owned = h.replace('3E88', '3ED7')                   # first store page 215
+    capped = run_loading_driver(ram, regs, owned=owned)
+    capped_counts = driver_compare(capped, expected, capacity=True)
+    if not capped_counts.get('capacity refusals'):
+        raise AssertionError('capacity control not informative')
+    counts['capacity refusal unpublished (control)'] += capped_counts['capacity refusals']
+    # Negative controls: each broken driver must fail the oracle or the run's own contract.
+    controls = {
+        'duplicate search compares size only': _driver_variant('driver', '1ABE20', '1ABF20'),
+        'canvas not cleared': None,
+        'B fill skipped': None,
+        'unsigned dx/dy': _driver_variant('driver', '5F179F57', '5F00AF57'),
+    }
+    source = load_profile()['hooks']['driver'].upper()
+    clear_at = int(syms['drv_clear'], 16) * 2
+    fill_at = int(syms['drv_fill'], 16) * 2
+    controls['canvas not cleared'] = source[:clear_at] + 'C9' + source[clear_at + 2:]
+    controls['B fill skipped'] = source[:fill_at] + 'AFC9' + source[fill_at + 4:]
+    for name, code in controls.items():
+        try:
+            driver_compare(run_loading_driver(ram, regs, driver=code), expected)
+        except (AssertionError, KeyError):
+            counts['control detected: ' + name] += 1
+        else:
+            raise AssertionError('control not informative: ' + name)
+    return {'counts': dict(counts), 'driver_ms_fixture': result['equivalent_T'] / 3500,
+            'scope': 'assembled driver via the 8EF9 gate on a crafted table; simulator, DI, no hardware'}
+
+
+def driver_boundary_state(path):
+    """Original RAM and registers at the first 8EF9 of a recording."""
+    import skoolkit.rzxplay as rp
+    from skoolkit.snapshot import Snapshot
+    from types import SimpleNamespace
+    from .rzx import parse_rzx, InputRecording
+    blocks = parse_rzx(str(path))
+    while blocks and isinstance(blocks[-1].obj, Snapshot):
+        blocks.pop()
+    ctx = rp.RZXContext(None)
+    ctx.total_frames = 2000
+    class Sink:
+        def write(self, text):
+            pass
+    ctx.tracefile, hold = Sink(), []
+    def event(tf, context, fc, pc):
+        if pc == 0x8EF9 and not hold:
+            hold.append((list(context.simulator.memory), list(context.simulator.registers), context.frame_count))
+            context.stop = True
+    old, rp.trace_exec = rp.trace_exec, event
+    try:
+        opts = SimpleNamespace(cmio=False, python=False, quiet=True, stop=2000, force=False)
+        while blocks and not ctx.stop:
+            rp.process_block(blocks.pop(0).obj, opts, 0, ctx)
+    finally:
+        rp.trace_exec = old
+    if not hold:
+        raise AssertionError('8EF9 not reached in %s' % path)
+    return hold[0]
+
+
+def driver_level_check(reference, level):
+    """One level: run the assembled driver on the real table at 8EF9, against the oracle."""
+    ram, regs, frame = driver_boundary_state(Path(reference) / ('Inferno%d.rzx' % level))
+    expected = driver_expected(ram)
+    result = run_loading_driver(ram, regs)
+    counts = driver_compare(result, expected)
+    return {'level': level, 'frame': frame, 'counts': counts, 'driver_ms': result['equivalent_T'] / 3500,
+            'instructions': result['instructions'], 'scope': 'executed assembly in the simulator; 28 MHz model, read allowance; no hardware'}
+
+
 class ModalPatch(CapturePatch):
     """Original gameplay-return boundary; no modal drawing instruction is bypassed."""
     def __init__(self, code=None):
@@ -5498,6 +5830,9 @@ def main():
     action.add_argument('--loading-prep-check', type=Path)
     action.add_argument('--loading-prep-all', type=Path)
     action.add_argument('--loading-pause-checks', action='store_true')
+    action.add_argument('--loading-driver-checks', action='store_true')
+    action.add_argument('--loading-driver-level', type=Path)
+    ap.add_argument('--level', type=int, default=6)
     action.add_argument('--initialization-tests', type=Path)
     action.add_argument('--owned-cache-checks', action='store_true')
     action.add_argument('--copier-window-checks', type=Path)
@@ -5558,6 +5893,12 @@ def main():
             a.json.write_text(json.dumps(result,indent=2)+'\n')
         print(json.dumps(result))
         return int(any(c['failures'] for c in result['cases'])) if a.loading_prep_all else int(bool(result['examples']))
+    if a.loading_driver_checks or a.loading_driver_level:
+        result = driver_checks() if a.loading_driver_checks else driver_level_check(a.loading_driver_level, a.level)
+        if a.json:
+            a.json.write_text(json.dumps(result,indent=2)+'\n')
+        print(json.dumps(result))
+        return 0
     if a.loading_pause_checks:
         result = loading_pause_checks()
         if a.json:

@@ -6,9 +6,8 @@ State: copier window m3c PASS in the model (8F95 work in the window's waits; unf
   speed and sound = plain (user); m3b, m3c: game plays ok (user).
 Inputs: specnext/reference/inferno/    Start: specnext build/CONTINUE_copier_window.md.
 Read: "Copier window"; inferno.py run_cw_window/run_cw_frame/copier_window_update_checks; asm cw_work, wk_*.
-Next: user choice (handover): pipeline items first, or deferred actor row copy; JNext pace. Then the earlier items: live-table
-  scan/driver at the 8EF9 gate, runtime exact dispatch and duplicate indices, complete
-  pattern/frame state, protected uploads. Keep sprites disabled.
+Next: sprite pipeline (handover "Sprite pipeline plan"): (1) 8EF9 driver PASS in the model; (2) window
+  exact dispatch, (3) pattern/frame state, (4) protected uploads. Keep sprites disabled.
 Gate: zero frame slips and the original 9907 time per update with sound kept (replaces 10 ms).
 Boundary: 8EF9 follows original DI, before IM2 setup; the pause gate preserves all registers/R/RAM/
   stack and caller clocks (six RZX initialization states). Reject 86C5 (decompressor, overwritten).
@@ -61,11 +60,9 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
 ## Hardware checklist
 - Plain level-1 Inferno.nex: try CSpect first, then the Next; check title/text to gameplay,
   controls, scrolling, sound, death/restart and the shop. Boot is software-checked only.
-- Inferno_copier_window_diagnostic.nex (m2, window only), Inferno_copier_window_m3_diagnostic.nex
-  (hooks + window), ..._m3b_ and ..._m3c_diagnostic.nex (+ 8F95 work; specnext build/; NOT releases): play each beside plain Inferno.nex for a minute
-  of level 1: same speed (enemies, scrolling, stopwatch), same beeper sound (shots, explosions,
-  pickups: pitch, length), no hang at the first gameplay frame (m3: ~1 ms one-off calibration), no
-  extra border stripes. Report core/video mode.
+- Inferno_copier_window_*_diagnostic.nex (m2/m3/m3b/m3c; specnext build/; NOT releases): play each
+  beside plain Inferno.nex for a minute of level 1: same speed, same beeper sound, no hang at the
+  first gameplay frame, no extra border stripes. Report core/video mode.
 - This is a plain conversion, with original colour clash; it does not provide subsequent
   tape loads. No sprite build or all-level hardware test is ready.
 - Proposed sprite release: check intro beeper speed; title/start; all six continuous loads with
@@ -188,17 +185,18 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
   FLASH-heavy cases exceed 10 ms before actor work. No total timing PASS or NEX integration.
 - ROM code: capture 3948-39F2 + 3A00-3B72, modal 3B90-3BDF, frame 3BE0-3C30; all below 3D00.
 
-## Historical components (build/actor_jobs.md, actor_b_compiler.md, README.md)
-- Pages 78/122 pin exact source bytes; 75 consumes tiles; 76 completes whole-image B before
-  clipping; masks 116/117, lookup 128–135; 77 keeps gated DMA/DDMA, no-blitter and CPU fallbacks
-  with current AND pending guards (spans <64 bytes by CPU). DONE never enables display.
-- Hooks 8F7C/8F92/959B/96A1 keep the CALL stack and LD H,C1; page 68 owns state/log/stack.
+## Sprite pipeline (build/pipeline.md)
+- Driver, page 81, from the 8EF9 gate: 256 C100 indices, snapshot, exact-stream duplicates (shared
+  payload), colour, B, store; valid last. Model = independent oracle, all six levels; 3.2-6.9 s (L6).
+  Not installed. Rule: nothing reads CAP_LOG before the window work.
 
-## Stage-1 results
-Approved preview/model/contact-sheet hashes and recipes: specnext design/manifest.json and
-build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
+## Historical components (build/actor_jobs.md, actor_b_compiler.md, README.md)
+- Pages 78/122 pin source bytes; 75 tiles; 76 whole-image B; masks 116/117, lookup 128–135; 77 gated
+  DMA/DDMA with current AND pending guards. Hooks keep the CALL stack; page 68 owns state/log/stack.
 
 ## Lessons
+- [local: Inferno driver oracle] A loader driver's dedupe is exact streams, not the host's tile tuples:
+  row splits differ, so the exact validator (not the tuple) defines duplicates.
 - [local: Inferno 8F95 budget] Finishing deferred work after the limiter eats the slack the window
   saved; drop the frame instead (display keeps the last one) and count run lengths of drops.
 - [none: m3b/m3c hardware: game plays ok, no new finding]
@@ -290,6 +288,7 @@ build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 - detect.buffer-layout-producer: corrected: visible colour checks distinguish black-masked stale bitmap data.
 
 ## Stage log
+- 2026-11-08 (claude/inferno-pipeline-driver): 8EF9 live-table driver page 81; PASS in the model.
 - 2026-11-08 (claude/inferno-copier-window-m3b/m3c): 8F95 work in cw_wait; unfinished dropped; PASS.
 - 2026-11-08 (claude/inferno-m3-hw-bisect): m3 hardware crash = hooks under the stub register
   block; moved, guarded, post-boot hook-byte check; gate PASS; fixed m3 for hardware.
