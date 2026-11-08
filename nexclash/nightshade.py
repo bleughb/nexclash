@@ -292,6 +292,7 @@ class Patched:
                         s['s_cls']: 'clear hook', s['s_sn']: 'sound hook'}
         self.exits = {s['s_x'] + 4, s['s_xc'] + 4}
         self.inhook = False
+        self.force_bc = False       # v1.1 catch-up: a debt at every figure hook, so the replay runs it (verify force_bc)
         self.frames = frames
         self.fi = -1
         self.fc = self.next_frame()
@@ -423,6 +424,9 @@ class Patched:
             if pc in entries:
                 self.inhook = True
                 self.spd_in = self.nr.get(0x07, 0)
+                if self.force_bc and entries[pc] == 'figure hook':   # the model's beam barely moves: a real debt never builds
+                    pg, k = self.pages[H_PAGE], self.patch.syms['vdebt'] - 0x2000
+                    pg[k], pg[k + 1] = 0xD0, 0x07   # 2,000 / 16 lines
                 self.c[entries[pc]] += 1
                 if R[26]:
                     self.c['interrupts on at a hook!'] += 1
@@ -595,10 +599,10 @@ def _trace(path, pcs, on_pc, stop=None):
 
 def _masks(patch, sp):
     """Address ranges the patch owns: the tail and stubs, the dead stack below SP."""
-    return [(0x5B00, 0x5B80), (sp - 64, sp), (0xC471, 0xC474)] + [(a, a + len(new)) for a, old, new in patch.sites if a != RAM_ORG]   # 0xC471: catch-up's JP
+    return [(0x5B00, 0x5B80), (sp - 64, sp), (0xC471, 0xC474), (0xC661, 0xC664)] + [(a, a + len(new)) for a, old, new in patch.sites if a != RAM_ORG]   # 0xC471: catch-up's JP
 
 
-def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None, model=True, speed=0):
+def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None, model=True, speed=0, force_bc=False):
     """-> (Counter, examples); failure keys end in '!'."""
     from . import rzx as RZ
     c = collections.Counter()
@@ -611,6 +615,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None, mod
     p = Patched(patch, snap, [f.fetch_counter for f in rec.frames], ins)
     p.nr[0x07] = speed          # the clock matrix: the game running at 3.5, 7, 14 or 28 MHz when each hook is entered
     p.base_speed = speed
+    p.force_bc = force_bc
     st = {'figs': [], 'hero_before': None}
     from . import nightshade_paint as NP
     epal, epoff = NP.palette(), NP.offsets()     # the painter's own tables, not the build's bytes
@@ -827,13 +832,13 @@ def negative_patches():
             g[t] = g[0x48]
         p.poff = bytes(g)
     def bc_nojp(p):         # catch-up on, 0xC471 not patched (LD (0xC471),A -> LD (0xC4FF) in its own scratch): no JP
-        at(p, '3ec33271c4', 3, 0xFF)
+        at(p, '3ecd3271c4', 3, 0xFF)
     def bc_noclk(p):        # bc_stop: NEXTREG 0x07,A gone
         at(p, 'ed9207e1f1c9', 0, 0)
         at(p, '009207e1f1c9', 1, 0)
         at(p, '000007e1f1c9', 2, 0)
-    def bc_r(p):            # h_snd: LD A,243 -> 244
-        at(p, '3ef3cd', 1, 244)
+    def bc_r(p):            # h_snd: LD A,242 -> 243
+        at(p, '3ef2cd', 1, 243)
     return [('sprites not ANDed with the final buffer', no_and, False), ('sprites one row low', y_off, False),
             ('hero colour lost', white_hero, False), ('hero box painted', paint_box, False),
             ('sprites left on at a clear', no_hide, False), ('margin columns shown', col22, False),
@@ -997,12 +1002,12 @@ def loading_check(base, nex, screen, frames_key=None):
 NEG_STOP = 1500             # frames of the first recording each negative control replays (the margin one: all)
 
 
-def _job(z80, rzx, enhanced, neg, stop):
+def _job(z80, rzx, enhanced, neg, stop, force_bc=False):
     """One replay in a worker process -> (counter, examples as text)."""
     name, edit = negative_patches()[neg][:2] if neg is not None else (None, None)
     p = NightshadePatch(edit=edit, enhanced=enhanced, game=z80)
     speed = 3 if name and 'verify at speed 3' in name else 0     # a forced 3.5 MHz exit shows only at 28 MHz
-    c, ex = verify(p, rzx, stop=stop, speed=speed)
+    c, ex = verify(p, rzx, stop=stop, speed=speed, force_bc=force_bc or bool(name and name.startswith('catch-up')))
     return dict(c), {k: str(v[:3])[:300] for k, v in ex.items()}
 
 
@@ -1014,13 +1019,22 @@ def unit_tests(patch=None, states=None, neg=None, z80=None, rzx=None, jobs=None)
     u = collections.Counter()
     negs = negative_patches()
     with cf.ProcessPoolExecutor(jobs or min(16, os.cpu_count() or 4)) as ex:
-        fut = {k: ex.submit(_job, z80, rzx, negs[k][2], k, None if negs[k][0] == 'margin columns shown' else NEG_STOP)
+        fut = {k: ex.submit(_job, z80, rzx, negs[k][2], k, None if negs[k][0] == 'margin columns shown' else
+                         NEG_STOP * 4 if negs[k][0].startswith('catch-up') else NEG_STOP)
                for k in range(len(negs))}
+        forced = {e: ex.submit(_job, z80, rzx, e, None, NEG_STOP * 4, True) for e in (False, True)}   # catch-up run in the replay
         for k, f in fut.items():
             c, _ = f.result()
             hit = any(x.endswith('!') for x in c)
             u['negative control detected' if hit else 'negative control NOT DETECTED!'] += 1
             u['neg %02d %s: %s' % (k, negs[k][0], 'DETECTED' if hit else 'NOT DETECTED')] = 1
+        for e, f in forced.items():
+            c, x = f.result()
+            bad = [k for k in c if k.endswith('!')]
+            u['catch-up replay %s: %d sound hooks, %d beeper writes, %s' % ('Enhanced' if e else 'default', c.get('sound hook', 0),
+                                                                             c.get('beeper writes', 0), 'IDENTICAL' if not bad else str(bad)[:80])] = 1
+            if bad or not c.get('sound hook', 0):
+                u['catch-up replay failed!'] += 1
     return u
 
 

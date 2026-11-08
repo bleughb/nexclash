@@ -56,7 +56,7 @@ s_x:    nextreg 0x51,0xFF
         ret
 s_xc:   nextreg 0x51,0xFF
         jp 0xE5A8
-s_sn:   nextreg 0x51,H_PAGE     ; v1.1 catch-up: while it is on, 0xC471 (the beeper tone) jumps here
+s_sn:   nextreg 0x51,H_PAGE     ; v1.1 catch-up: while it is on, 0xC471 (tone) and 0xC661 (a tune's note) CALL here
         jp h_snd
 ram_end:
 
@@ -1349,8 +1349,8 @@ pacewait:
 ; debt was carried but could not be repaid (+7% over 20 updates). Now, with the debt over BTHR at a figure hook's exit, the game's
 ; own code runs at 7 MHz up to the next hook, and each gap is credited there (a line at 7 MHz stands for 2 at 3.5); the
 ; blit hook ends it and its wait takes any over-win out, as it does any debt. The beeper keeps its clock: while it is on, the first bytes of the
-; tone routine 0xC471 are a JP to s_sn; h_snd ends catch-up, gives the speed back and runs the routine as it was, with R as
-; the original's. A clear (the way to the menus and the title tune at 0xC689) ends it too. Off, 0xC471 is the game's own bytes.
+; tone routine 0xC471 and the tune's note routine 0xC661 are a CALL to s_sn; h_snd ends catch-up, gives the speed back and runs the
+; routine as it was, with R as the original's. A clear ends it too. Off, those are the game's own bytes.
 BTHR    EQU 512             ; 32 lines
 BCLK    EQU 1
 
@@ -1399,10 +1399,12 @@ bc_ctl: push af
         ld a,BCLK
         ld (vspd),a
         ld (vbst),a
-        ld a,0xC3
+        ld a,0xCD
         ld (0xC471),a
+        ld (0xC661),a
         ld hl,s_sn
         ld (0xC472),hl
+        ld (0xC662),hl
         jr .ln
 .on:    ld hl,(vdebt)
         ld a,h
@@ -1429,6 +1431,10 @@ bc_off: xor a
         ld (0xC471),a
         ld hl,0xD310
         ld (0xC472),hl
+        ld a,0xE6           ; AND 0x3F / JR Z
+        ld (0xC661),a
+        ld hl,0x283F
+        ld (0xC662),hl
         ret
 
 ; bc_stop: catch-up off now, the clock too. Every register kept.
@@ -1445,16 +1451,20 @@ bc_stop:
         pop af
         ret
 
-; h_snd: 0xC471 with catch-up on. E = 8 (JP, NEXTREG, JP, LD (nn),HL, PUSH, LD A,R), N = 5 (POP, JP, NEXTREG, RET), D = 0.
+; h_snd: 0xC471 or 0xC661 with catch-up on: the CALL's return says which. E = 9 (CALL, NEXTREG, JP, LD (nn),HL, POP, PUSH, LD A,R),
+; N = 5 (POP, JP, NEXTREG, RET), D = 0.
 h_snd:  ld (sv_hl),hl
+        pop hl
         push af
         ld a,r
         ld (vR),a
-        ld a,243            ; 0 - 8 - 5, mod 128
+        ld a,242            ; 0 - 9 - 5, mod 128
         call mkT
-        ld hl,0xC471
+        dec hl
+        dec hl
+        dec hl              ; the routine
         ex (sp),hl
-        push hl             ; AF on top of the return to 0xC471
+        push hl             ; AF on top of the return to it
         push bc
         push de
         call bc_gap

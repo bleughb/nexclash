@@ -209,16 +209,7 @@ card_test10.img): default, Enhanced, Enhanced + Infinite Lives MD5 exact with ap
   area; reported, not a fault by the check's rule). JNext ran the game on NextZXOS's ROM with no fault seen; still a
   question for the end-to-end run (an alt ROM image would make those bytes Sinclair's).
 
-## Pace, v1.1 (pace audit of 2026-11-08; review build, not published)
-Audit (pilot runs/pace-audit-20261108/REPORT-2.md): 1.0 whole +0.02 to +1.90%, quiet up to +2.45%, stretches of 20 updates up to +8.7%, against the rule (Jon, 2026-11-07: within 2% where the original runs steadily, faster fine where it lags, never slower). The debt was right but could only be repaid in the blit's window, 295 lines an update less what the window takes; a busy scene's figure hooks cost up to 560.
-- Catch-up: with the debt over 32 lines at a figure hook's exit, the game's own code runs at 7 MHz to the next hook, which credits the gap x 2 (bc_gap, bc_ctl). The blit hook ends it: the update's logic after the blit has no hook for over a frame, and the line count could not credit it (first build: 5% fast). The debt's floor moved from -128 to -1,024 lines, so an over-win is carried and the blit's wait takes it out.
-- Sound keeps its clock without paying for it: while catch-up is on, 0xC471's first bytes (the tone) are a JP to s_sn; h_snd ends catch-up and gives the speed back, R exact. Off, those are the game's own bytes. A clear ends it too: the way to the menus and the title tune.
-- Enhanced: its figures in the blit hook can take over a frame, and the line count wrapped unseen, so the debt lost a frame an update in heavy scenes (+12% stretch). The hook now ticks once a figure. That also helps default a little.
-- hlib_pace and hlib_speed stay out: the engine's own debt and speed latch predate them and fit its exact R count; hlib_pace would add no way to repay.
-- Picture: pattern banks as 1.0. R: compared at every hook, as before, and after the blits; the new sound hook keeps it. Verifier: hook exit speed = 7 MHz in catch-up, else the speed the game runs at; every beeper write at that speed; three new negatives: the JP not set, the sound hook keeping the fast clock, R one off after it.
-- Limits: rooms by script, interiors and bosses not reached; JNext's timing only. Before / after: pilot runs/nightshade/pacefix-20261108/NOTES.md.
-
-## Rounds 7-11 (2026-11-05): games/nightshade_rounds7-11.md (painted Enhanced, original pace; the published 1.0)
+## Rounds 7-11 (2026-11-05) and pace v1.1 (2026-11-08): games/nightshade_rounds7-11.md (painted Enhanced, original pace; the published 1.0; catch-up)
 
 ## Hardware checklist
 1. Loading screen from the tape, a key or 5 s, then the title tune and menu; 0 starts.
@@ -238,8 +229,8 @@ Audit (pilot runs/pace-audit-20261108/REPORT-2.md): 1.0 whole +0.02 to +1.90%, q
 
 - [none: rounds 7-11 (games/nightshade_rounds7-11.md) were ported onto main unchanged; their findings are in that file]
 
-- [card patch.pace-limiter] (2026-11-08) A limiter that only waits cannot repay a debt larger than its window. Check its capacity against the worst update: here 240 lines a blit against 560 of hooks.
-- [card patch.pace-limiter] A catch-up gap must be measurable: credit by line count only over gaps under a frame, and end it before any longer stretch.
+- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget] (2026-11-08) A limiter that only waits cannot repay a debt larger than its window. Check its capacity against the worst update: here 240 lines a blit against 560 of hooks.
+- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget] A catch-up gap must be measurable: credit by line count only over gaps under a frame, and end it before any longer stretch.
 - [local: Nightshade's blit hook] A clock read once a frame or less often loses frames silently: count the worst case of every long hook. Enhanced's figures took 582 lines before the first tick.
 
 ## Technique use
