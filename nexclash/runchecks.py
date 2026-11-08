@@ -41,6 +41,8 @@ def rom_paths(res, rzxs, nexes):
                 probs.append('%s: %s never replayed' % (b, n))
                 continue
             cov[b][n] = dict(frames=c['frames'], of=c['of'], how=c['how'])
+            if 'start_pc' in c:
+                cov[b][n].update(start_pc=c['start_pc'], entry_frame=c['entry_frame'])
             if c['how'] == 'partial' or not c['frames']:
                 probs.append('%s: %s partial, frames 1-%d of %d' % (b, n, c['frames'], c['of']))
             if c.get('unmodelled'):

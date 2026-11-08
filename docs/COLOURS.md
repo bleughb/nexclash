@@ -1,18 +1,16 @@
 # Colour sheets and recolour (PLAYBOOK stage 3-4; read when you build or read back a sheet)
 
-The colour sheets the user paints, their read-back, `recolour` and the painter (from PLAYBOOK 3b,
-2026-10-26). Sheets go out with the first sprite build (stage 3): recolour makes a repaint free, so
-colour is not a design decision ("phase-A question" below = that delivery).
+Sheets, read-back, `recolour` and painter (PLAYBOOK 3b). Send sheets with the first
+sprite build (stage 3); the user can then repaint without rebuilding the engine.
 
 - COLOUR SHEET - every game from Midnight Resistance on (Dean, 2026-10-13). Colours are not
   settled in words: the user paints them.
   - What to send (Dean 2026-10-14; rules of 2026-10-19, ALL games):
     - `<game>_PAINTING_SPRITES.png`: the fewest WHOLE figures that show every graphics byte
       (`coloursheet.choose`, then `write(..., unique=False)`), in the colours the build draws today.
-      Why whole: "only the new pixels" of a figure that shares graphics with an earlier one looked
-      like corrupted characters to Dean. A pixel shown in two figures is one colour-map entry: `read`
-      takes a changed copy over an unchanged one and reports two different paints. (Engines written
-      before Rainbow still write unique=True: BRIEFING C2.)
+      Shared pixels use one map entry: `read` prefers a changed copy over an unchanged
+      one and rejects conflicting paints. Partial figures looked corrupted; older engines
+      using unique=True remain in BRIEFING C2.
     - `<game>_REFERENCE_ALL_SPRITES.png` (`unique=False`, every figure): to see the result; not read back.
     - Items with their own colours (collectables, fruit): ONE COPY PER COLOUR the game draws them in,
       each painted apart (its own keys).
@@ -30,7 +28,7 @@ colour is not a design decision ("phase-A question" below = that delivery).
       level: graphics bytes drawn vs the level's graphics data, so a gap is visible, not guessed.
   - Sheet rules (Dean): 1:1 (one PNG pixel = one Spectrum pixel; an enlarged sheet is too big to
     paint), multi-part figures JOINED as the game draws them, a row of 8x8 swatches of the sprite
-    palette (1-15) at the top, no text. "Paintable only" (2026-10-14): inside a figure's box only
+    palette at the top, no text (1-15 for 4bpp; the full declared palette for indexed Layer 2). "Paintable only" (2026-10-14): inside a figure's box only
     the pixels the read-back uses are grey (or coloured); a part's gap, paper the engine cannot draw
     and a pixel already shown on an earlier figure keep the background colour (read back as no paint).
   - Read-back: the user paints, keeps the size, sends it back -> the colour map
@@ -53,6 +51,9 @@ colour is not a design decision ("phase-A question" below = that delivery).
     games"): give every bit of a plot's graphics bytes, paper bits as code 0, and write the sheets
     with `coloursheet.write(..., paint_clear=True)`; a paper bit with a colour nibble is then opaque
     in that colour (Dizzy 1: fill_mask).
+  - Maps: indexes 0-15 use eight hex nibbles; wider entries use eight integers, never
+    variable-width hex. Both load. Unchanged equal-RGB pixels retain their semantic index;
+    default/transparent remains distinct from opaque black.
   - Code: shared nexclash/coloursheet.py does the sheet side (joining plots into figures, the
     fewest figures showing every part, PNG, layout, read-back, merge, redraw); its docstring defines
     the part format. The engine supplies the parts: per plot its staging pixels, each with a key

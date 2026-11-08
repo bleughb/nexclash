@@ -28,6 +28,15 @@
     "sprites_loading": "d53ac5f52471b674354caf96cd94221e"
    }
   },
+  "85d7841306333321838d372ea8797ff2": {
+   "game": "Bubbler",
+   "doc": "bubbler.md",
+   "nex": {
+    "plain": "deb79b213eb0d9c11a4e05607a87a3ef",
+    "sprites": "82d178a4d92771e42a9d558a5e2b4940",
+    "enhanced": "7236f0945f5944dea62f6ddb2280cb9e"
+   }
+  },
   "00ee637a4f63ffe61fc3503de42d7822": {
    "game": "Cauldron",
    "doc": "cauldron.md",

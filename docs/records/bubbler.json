@@ -1,0 +1,265 @@
+{
+ "name": "bubbler",
+ "order": 205,
+ "game": "Bubbler",
+ "doc": "bubbler.md",
+ "engine": "bubbler",
+ "representative": true,
+ "reference": "bubbler",
+ "inputs": {
+  "snapshot": {
+   "name": "bubbler.z80",
+   "md5": "85d7841306333321838d372ea8797ff2",
+   "path": "bubbler/bubbler.z80"
+  },
+  "recordings": [
+   {
+    "name": "continuous-play.rzx",
+    "md5": "284fab24e97cc2e3b7665cf7379a7c34",
+    "path": "bubbler/continuous-play.rzx",
+    "role": "Clean original play, including death."
+   },
+   {
+    "name": "next-level-complete-coverage.rzx",
+    "md5": "6b77f6cf7d446e9370300e4b2302a885",
+    "path": "bubbler/next-level-complete-coverage.rzx",
+    "role": "Explicit next-level trainer coverage across all five stages; separate from clean proof."
+   }
+  ]
+ },
+ "modules": [
+  "bubbler"
+ ],
+ "own_modules": [
+  "bubbler",
+  "bubbler_art",
+  "bubbler_verify"
+ ],
+ "data": [
+  "asm/bubbler_hooks.asm",
+  "asm/bubbler_enhanced_hooks.asm",
+  "asm/bubbler_copy.inc",
+  "asm/bubbler_buffer.inc",
+  "docs/profiles/bubbler.json",
+  "docs/profiles/bubbler_enhanced.json",
+  "docs/profiles/bubbler_art.json",
+  "docs/profiles/bubbler_colours.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_dma.asm",
+  "asm/lib/hlib_iff.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": []
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "continuous-play.rzx",
+   "next-level-complete-coverage.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 25,
+  "note": "Both modes: exact all registers/R and full 48K at each hook; Enhanced retains private state and independently runs original mask/ink plotters to compare every canvas and published Layer 2 image. The BASIC loader prefix is excluded only after a separately exact full-state decoded-entry boot check."
+ },
+ "outputs": {
+  "plain": {
+   "file": "bubbler.nex",
+   "md5": "deb79b213eb0d9c11a4e05607a87a3ef"
+  },
+  "sprites": {
+   "file": "bubbler_sprites.nex",
+   "md5": "82d178a4d92771e42a9d558a5e2b4940"
+  },
+  "enhanced": {
+   "file": "bubbler_enhanced.nex",
+   "md5": "7236f0945f5944dea62f6ddb2280cb9e"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Bubbler",
+  "engine_col": "bubbler (bubbler.md)",
+  "build": "Original monochrome default; approved MatGubbins Enhanced optional/off; original loading screen, full hidden ROM and 1MB budget.",
+  "software": "Verified/stamped: clean 10000-frame plus separate five-stage 21901-frame replay; exact hook/R/48K/canvas/front images, six broken builds; 27 native pace trials, 20000-frame archive soaks and all seven private-card loader selections.",
+  "hardware": "none (JNext only)",
+  "next": "Independent clean source rebuild and packaging handoff; physical hardware and natural completion remain untested."
+ },
+ "checks": [
+  "asm2profile:bubbler",
+  "asm2profile:bubbler_enhanced"
+ ],
+ "results": [
+  {
+   "application": "bubbler.iff-safe-read",
+   "status": "pass",
+   "scope": "Recorded hook induction plus bounded clock/IFF/R matrix and native caller/pace audit; no physical hardware claim.",
+   "evidence": "games/bubbler.md",
+   "check": "Recorded hook differential, direct ABI matrix and matched native audit"
+  },
+  {
+   "application": "bubbler.restore-speed",
+   "status": "pass",
+   "scope": "Recorded hook induction plus bounded clock/IFF/R matrix and native caller/pace audit; no physical hardware claim.",
+   "evidence": "games/bubbler.md",
+   "check": "Recorded hook differential, direct ABI matrix and matched native audit"
+  },
+  {
+   "application": "bubbler.pace-limiter",
+   "status": "pass",
+   "scope": "Recorded hook induction plus bounded clock/IFF/R matrix and native caller/pace audit; no physical hardware claim.",
+   "evidence": "games/bubbler.md",
+   "check": "Recorded hook differential, direct ABI matrix and matched native audit"
+  },
+  {
+   "application": "bubbler.preserve-r",
+   "status": "pass",
+   "scope": "Recorded hook induction plus bounded clock/IFF/R matrix and native caller/pace audit; no physical hardware claim.",
+   "evidence": "games/bubbler.md",
+   "check": "Recorded hook differential, direct ABI matrix and matched native audit"
+  }
+ ],
+ "version": "1.0",
+ "techniques": [
+  {
+   "application": "bubbler.iff-safe-read",
+   "id": "patch.iff-safe-read",
+   "revision": 1,
+   "target": "Preserve caller IFF; actual native game callers are IFF0.",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "bubbler.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "Incoming clock latch across renderer, copy and scenery windows.",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "bubbler.pace-limiter",
+   "id": "patch.pace-limiter",
+   "revision": 3,
+   "target": "Separate original-time budgets; no debt carried to the next update.",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "bubbler.preserve-r",
+   "id": "patch.preserve-r",
+   "revision": 1,
+   "target": "Every hook compares R; original HALT fetch differences are accounted separately.",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/bubbler_buffer.inc": "a65214cc7ec1228a",
+   "asm/bubbler_copy.inc": "fdefae41c0127ea0",
+   "asm/bubbler_enhanced_hooks.asm": "d2d91abf06f28550",
+   "asm/bubbler_hooks.asm": "d3f7d8be79eb0689",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/bubbler.json": "c10dded81cb62007",
+   "docs/profiles/bubbler_art.json": "e717381a105043f9",
+   "docs/profiles/bubbler_colours.json": "cee6aeeff8b51a60",
+   "docs/profiles/bubbler_enhanced.json": "2f71af9f618e2a48",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/bubbler.py": "d364fadbb2ea6627",
+   "nexclash/bubbler_art.py": "b18a74b2e5fb6673",
+   "nexclash/bubbler_verify.py": "23afd3da36ef472d",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "27ff443cf789bd56",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "d71288361daf13e6",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "038b2ebf518eca31",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "121a5912efae9b2a",
+   "nexclash/nxc.py": "f286b3f16e76fbda",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/runchecks.py": "029595f14b4481cf",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "14cf416c0860c804",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-07"
+ },
+ "verified": {
+  "deps": {
+   "asm/bubbler_buffer.inc": "a65214cc7ec1228a",
+   "asm/bubbler_copy.inc": "fdefae41c0127ea0",
+   "asm/bubbler_enhanced_hooks.asm": "d2d91abf06f28550",
+   "asm/bubbler_hooks.asm": "d3f7d8be79eb0689",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/bubbler.json": "c10dded81cb62007",
+   "docs/profiles/bubbler_art.json": "e717381a105043f9",
+   "docs/profiles/bubbler_colours.json": "cee6aeeff8b51a60",
+   "docs/profiles/bubbler_enhanced.json": "2f71af9f618e2a48",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/bubbler.py": "d364fadbb2ea6627",
+   "nexclash/bubbler_art.py": "b18a74b2e5fb6673",
+   "nexclash/bubbler_verify.py": "23afd3da36ef472d",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "27ff443cf789bd56",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "d71288361daf13e6",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "038b2ebf518eca31",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "121a5912efae9b2a",
+   "nexclash/nxc.py": "f286b3f16e76fbda",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/runchecks.py": "029595f14b4481cf",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "14cf416c0860c804",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-07"
+ }
+}

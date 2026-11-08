@@ -1,7 +1,7 @@
-# Engine contract (what every dedicated engine provides; read this before any engine's code)
+# Engine contract
 
-Read relevant dependencies. Loop-shape example: nexclash/chuckie.py (legacy: its CMP omits R).
-For new engines use tools/templates/verify_contract.py and hooklib.CMP_R, never the legacy CMP. doccheck checks REQUIRED names (structure only).
+Use tools/templates/verify_contract.py and hooklib.CMP_R; legacy
+nexclash/chuckie.py omits R. doccheck checks REQUIRED names, not behaviour.
 
 ## Files (one game = one engine; CLAUDE.md "Keep changes additive")
 nexclash/<engine>.py, asm/<engine>_hooks.asm, docs/profiles/<record>.json (hook hex + symbols, from
@@ -32,6 +32,9 @@ OPTIONAL for legacy engines; new engines must provide colour sheets and recolour
 | `DECISIONS` | stored build facts for `auto --decisions` (docs/records `rebuild.decisions`) |
 | `INTERIORS`, `TAIL_ADDR`, `ROM_ORG`, `ALT_PAGE` | patched-instruction interiors (no jumps into them), tail and hook addresses |
 
+In `auto`, default unset `a.publisher`, `a.colours_by`, `a.fix_label` only; packaging
+preserves user overrides. These metadata fields do not change NEX bytes.
+
 Outputs (nxcout.manifest): `NAME_sprites[_loading].nex`, sets `NAME_SET[_loading].nex`,
 `NAME.nex` plain; others, toggles: `NAME_outputs.json`. Tape sets: snapshot = start state, `a.tape` ->
 nexclash/tapeset.py `load`, blocks by content; record `inputs.tapes`.
@@ -47,6 +50,11 @@ z80tonex.altrom_fill copies it, nextboot.check compares it); 128K ROM 0 read wit
 alt ROM on: `altrom0 = (lo, hi)` (ROM 0 + those bytes, z80tonex.altrom0); older strategies `slot1`,
 `keep_printer_buffer`, `max_tail`. New verifiers' alt ROM image: nextboot.alt_image.
 
+For replaced loader prefixes, `nextboot.rom_paths(..., start_pc=ENTRY)` requires exact
+boot register/R/RAM proof with and without NEXLOAD. It reports the first entry frame;
+missing entry is incomplete. Decoded recordings use the full audit. Never waive
+loader addresses through `rom_paths_known`.
+
 ## Hook library (new engines; old ones keep theirs)
 asm/lib/hlib_*.asm (EQUs at each head) + nexclash/hooklib.py (verifier tools). Hooks: HLIB_SPEED_IN /
 _OUT, HLIB_R_IN / _OUT, HLIB_IFF_DI / _EI; pace: hlib_pace_wait (card patch.pace-limiter); sprites:
@@ -59,15 +67,12 @@ patched code to their return (simulators from `simpool.machine`), compare CMP re
 sprite pixels; `fail()` keeps 5 examples per key; also count writes to patch sites and jumps into
 INTERIORS (a site whose first instruction is 1 byte: the original itself runs the next bytes - count
 them against the site's own count, SEQUELS; Fireman, Cauldron). Hook asm may use Z80N: the verifier installs it with `z80n.install(sim, nextreg)`.
-A hook that runs the routine itself (CALL body / the routine's RET comes back to the hook, e.g. when
-the next routine starts right after the RET, so no exit JP fits: Cauldron 0x6357) meets the original
-at the CALLER's return: the replay must skip sites nested inside it until that point (Cauldron
-`span`), or they are applied twice.
-Return shortcut (Nemesis): a hook on a long routine the replay runs anyway
-pushes a return trampoline and lets the original run; the verifier runs the full patched path for
-the first N calls, then only the trampoline's code from the original's state at the routine's RET. Slots: `simpool.machine` keeps ONE simulator per slot
-name; two alive at once (original + patched in one event) need different slots, or the second
-resets the first (a false "memory differs").
+A hook wrapping a routine meets the original at its CALLER return (Cauldron 0x6357).
+Skip nested sites until then (Cauldron `span`) or they are applied twice.
+Return shortcut (Nemesis): push a trampoline and run the original routine. Verify the
+full patched path for the first N calls, then the trampoline from the original RET state.
+`simpool.machine` keeps ONE simulator per slot: concurrent original/patched instances
+need distinct names or the second resets the first.
 
 ## Record (docs/records/<record>.json)
 Fields: nexclash/records.py docstring; copy the nearest record. `python -m nexclash.records deps

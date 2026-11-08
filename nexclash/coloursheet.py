@@ -248,8 +248,12 @@ def background(c):
 
 
 def nearest(c, rgb16):
-    """-> (palette index 1-15, or 0 for the transparent grey; squared distance)."""
-    best = min((sum((a - b) ** 2 for a, b in zip(c, rgb16[i])), i) for i in range(1, 16))
+    """-> (nonzero palette index, or 0 for transparent grey; squared distance).
+
+    Most engines supply 16 colours. An 8-bit canvas may supply more: retain its
+    complete palette on read-back rather than silently changing indices >15.
+    """
+    best = min((sum((a - b) ** 2 for a, b in zip(c, rgb16[i])), i) for i in range(1, len(rgb16)))
     dt = sum((a - b) ** 2 for a, b in zip(c, TRANSP_RGB))
     return (0, dt) if dt < best[0] else (best[1], best[0])
 
@@ -319,6 +323,8 @@ def read(png, layout_path, clear=False):
             e = ent.setdefault(key, list(parts[n]['entries'][key]) + [[0] * 8])
             b0 = base.get(key) or [0, 0, [0] * 8]
             shown = 0 if clr(b0, bit) else (b0[2][bit] or dflt)        # 0 = shown transparent
+            if idx and shown and rgb16[idx] == rgb16[shown]:
+                idx = shown  # Equal-RGB palette aliases are not an owner edit.
             if idx == shown:
                 kept[(key, bit)].append(ci)
                 continue
@@ -354,18 +360,22 @@ def read(png, layout_path, clear=False):
 
 
 def save(ent, path, note):
-    json.dump({'note': note, 'entries': {k: [e[0], e[1], ''.join('%X' % n for n in e[2])]
+    # Keep legacy 4-bit maps byte-for-byte stable. A wider palette needs an
+    # explicit list: concatenated variable-width hex loses pixel boundaries.
+    json.dump({'note': note, 'entries': {k: [e[0], e[1], (list(e[2]) if any(n > 15 for n in e[2])
+                                                       else ''.join('%X' % n for n in e[2]))]
                                          + (['%02X' % e[3]] if len(e) > 3 and e[3] else [])
                                          for k, e in sorted(ent.items())}}, open(path, 'w'), indent=0)
 
 
 def load(path):
-    """-> {key: [check, kind, [8 nibbles](, transparent mask)]}; {} when the file does not exist."""
+    """Read legacy hex nibbles or explicit palette-index lists; {} if absent."""
     import os
     if not os.path.exists(path):
         return {}
     d = json.load(open(path))['entries']
-    return {k: [v[0], v[1], [int(ch, 16) for ch in v[2]]] + ([int(v[3], 16)] if len(v) > 3 else [])
+    return {k: [v[0], v[1], ([int(ch, 16) for ch in v[2]] if isinstance(v[2], str) else list(v[2]))]
+            + ([int(v[3], 16)] if len(v) > 3 else [])
             for k, v in d.items()}
 
 
@@ -446,6 +456,8 @@ def changes(png, layout_path, clear=False):
                 continue
             b = state(base, key, bit)
             shown = 0 if b == 'T' else ((b[1] if b != 'D' else 0) or (dflt if code else 0))
+            if idx and shown and rgb16[idx] == rgb16[shown]:
+                idx = shown  # Preserve the displayed index when RGB is unchanged.
             if idx == shown:
                 unchanged[(key, bit)] += 1
                 continue

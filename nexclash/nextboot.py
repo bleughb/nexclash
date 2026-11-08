@@ -170,7 +170,7 @@ def boot_restores(nex, tail_pc, z80, sysrom=None):
     return {a for a in range(0x5B00, 0xC000) if st['mem'][a] == snap.read(a)}
 
 
-def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=()):
+def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=(), start_pc=None):
     """Every ROM byte the ORIGINAL game runs or reads in its recordings, against what each built .nex
     gives it on the Next: the .nex booted over the system ROM3 (system_rom3(): NextZXOS's when given) to
     the game start - its alt ROM images, slot-1 page or the ROM3 itself. The per-event verifiers run
@@ -194,6 +194,10 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=()):
     as NEXLOAD leaves it (NEXLOAD_PRINTER) - a warning: the stub puts it back only with
     keep_printer_buffer (BRIEFING C2 #36). A build whose tail jumps to its own boot code (boot_restores) is
     credited with the bytes that code puts back before the game starts: neither list holds those.
+    start_pc: optional proven post-loader entry. Boot each NEX to this PC and begin ROM/tail
+    observation only when the original replay reaches it. The engine must separately prove exact
+    boot registers and game RAM there. A missing entry is INCOMPLETE, never silently skipped;
+    the coverage records the excluded loader prefix. Default checks the entire recording.
     known: [(image, lo, hi, why)] differences a game's record accepts (its "rom_paths_known": Knight Tyme's Bridge
     star map, read from alt image 0 = the Next's ROM 0): listed as KNOWN, not faults; any other is a MISMATCH."""
     from skoolkit import ROM48, ROM128, read_bin_file
@@ -205,7 +209,7 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=()):
     for nex in nexes:
         try:
             tails[nex] = tail_of(nex)
-            st = boot(nex, tails[nex][0], sysrom=sysrom or system_rom3()[0], nexload=z80 is not None)
+            st = boot(nex, tails[nex][0] if start_pc is None else start_pc, sysrom=sysrom or system_rom3()[0], nexload=z80 is not None)
             restored[nex] = boot_restores(nex, tails[nex][0], z80, sysrom or system_rom3()[0])
         except (ValueError, RuntimeError) as e:          # no tail / the boot never reaches the game start
             out[nex] = ('boot', ['%s: BOOT FAILED in the Next model (%s): its ROM paths are not checked'
@@ -231,6 +235,7 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=()):
         segment from its own snapshot (simrun.play_rzx keep_snapshots)."""
         frame, seen, tabs, written, tread, desync, is128, only = [0], set(), [], set(), {}, [], [False], {}
         k128 = set()            # ROM 1 bytes only SkoolKit's 128K ROM 1 has (its keypad code; set in on_sim)
+        entry_frame = [None if start_pc is not None else 0]
         later = [False]         # a later segment: the tail / printer buffer reads concern only the first
 
         class H:
@@ -267,6 +272,10 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=()):
                     tabs.append((nex, nx, d, orig, {}))
 
             def on_read(h, a, pc, mem):
+                if entry_frame[0] is None:
+                    if pc != start_pc:
+                        return
+                    entry_frame[0] = frame[0]
                 if a >= 0x4000:
                     if a in watch and a not in written and a not in tread and not later[0]:   # data or code fetch
                         if not (KEYPAD_CODE <= pc < 0x4000 and (mem.o7ffd >> 4) & 1):   # not by 128K-only ROM code
@@ -289,7 +298,7 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=()):
                             diff[k] = (pc, frame[0], orig[sel][a], nx[sel][a])
 
             def on_write(h, a, v, pc, mem):
-                if a in watch:
+                if entry_frame[0] is not None and a in watch:
                     written.add(a)
 
             def on_frame(h, n):
@@ -299,7 +308,7 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=()):
                 desync[:] = [n, msg]
         n = play_rzx(r, H(), stop=stop, keep_snapshots=segs)
         return dict(n=n, seen=seen, tabs=tabs, tread=tread, desync=desync, is128=is128[0], rom1=rom1, only=only,
-                    segs=segs)
+                    segs=segs, entry_frame=entry_frame[0])
 
     for r in rzxs:
         name, (total, snaps) = os.path.basename(r), rzx_frames(r)
@@ -332,6 +341,14 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=()):
             data_d = sorted(k for k in diff if k[0] != '?' and k[2] == 'data' and k not in kn)
             unk = sorted({k[1] for k in diff if k[0] == '?'})
             cover[name]['unmodelled'] = unk
+            if start_pc is not None:
+                cover[name]['start_pc'] = start_pc
+                cover[name]['entry_frame'] = rp['entry_frame']
+                if rp['entry_frame'] is None:
+                    cover[name]['how'] = 'partial'
+                    lines.append('Original replay never reached required runtime entry 0x%04X' % start_pc)
+                else:
+                    lines.append('ROM observation starts at proven runtime entry 0x%04X in frame %d; earlier loader prefix excluded' % (start_pc, rp['entry_frame']))
             img = (lambda sel: 'image %d ' % sel) if alt_on else (lambda sel: '')
             head = '%s: %s %d frames, %d ROM bytes used' % (os.path.basename(nex), name, done, len(seen))
             if run_d and kind != 'plain':
