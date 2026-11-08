@@ -1,4 +1,4 @@
-# Atic Atac v1.4 rework: the pace limiter (opt-in; games/atic_atac.md "Rework (opt-in)" is v1.3)
+# Atic Atac reworks (opt-in): v1.3 at the end, v1.4 the pace limiter, v1.6 the room window and catch-up
 
 ## Rework (opt-in): Atic Atac .nxc v1.4, the pace limiter (engine atic_atac_v14, `NEXCLASH_REWORK=atic_atac_v14`)
 Jon Attree, 2026-11-06: the published v1.3 ran slightly FAST (JNext 1.2.0 sweep, the published method: busy -2.79%); his
@@ -50,3 +50,28 @@ Audit (pilot runs/pace-audit-20261108/REPORT-2.md): 1.5 whole +1.82 to +4.52%, b
 - hlib_pace stays out, for the reasons above; hlib_speed too (v1.3's save_speed latches at any clock).
 - Verifier: every hook's exit speed against the state (28 MHz in the window, 7 MHz in catch-up, else the caller's), V_RS kept; h_room's wait against its target from the state; catch-up_units with negatives: window never opened, never waits, h_beep / h_noise keeping the fast clock; beeper writes compared with the original's, at the caller's clock. BEEPB bytes are the hook's, left out of the memory compare.
 - Measurement limits: the audit's fixture in both arms (R per site, FRAMES reads, the player group's decision from a table); as shipped the arms do not hold lockstep. Three recordings, few rooms walked; JNext's timing only, KROOM, KBOOST and SETK tuned on it. Results and the before / after tables: pilot runs/atic_atac/pacefix-20261108/NOTES.md.
+
+## Rework (opt-in): Atic Atac .nxc v1.3 (engine atic_atac_v13, `NEXCLASH_REWORK=atic_atac_v13`)
+Ported from Jon Attree's .nxc work, 2026-11-04 (pilot runs/atic_atac/nexclash: d7abd1c + d12f9d9, 0dff248, 9d44fb7).
+Published .nxc: **Atic Atac v1.3** (github.com/jattree/nxc, patch ed872411). Dean's files and build (59493b75, pin
+rom3) are untouched and stay the default.
+- What and why: v1.1 hook speed (image cache, row-mask table, bounded scans, unrolled OUTI, caller's speed
+  restored; penalty +8-10% -> about -1..-3%, picture unchanged). v1.2 flicker (REFACTOR.md 5): the figure painter's
+  nine `LD (HL),E` vacated-cell writes (0xA091-0xA132) are NOPs like its `LD (HL),D`: with the D writes gone they
+  only turned door / furniture cells by a moving figure to the room colour; and the menu clear 0x80B4 is hooked
+  (h_cls; before, menu icons stayed as sprites for 7 frames). v1.3: the "QAOP + Space" toggle (profile _qaop; hooks
+  0x93CD key read, 0x948A pause: Caps Shift alone pauses).
+- Kept apart: nexclash/atic_atac_v13.py, asm/atic_atac_v13_hooks.asm + _qaop.asm, docs/profiles/atic_atac_v13*.json;
+  engines.py picks it only with that switch; the pinned rom3 fill stays (as published). Moved in:
+  the Enhanced set (atic_atac_enhanced_colours.json, read back from the published store; from the MVV .256) and the
+  loading screen (atic_atac_loading.scr, bank 23 stub `ldscr`); both specnext inputs only.
+- Rebuild = `nxc.py --bare`, every set and option: default b87774a2, Enhanced 47f0e72c, + QAOP 19318e4f / 1f58e936;
+  one .nxc holds all four, QAOP + Space as a toggle.
+- Verify (`selftest.py --game atic_atac --verify`, 2026-11-04, ~15 min wall): all four builds
+  IDENTICAL on walk1, walk2, t (21,003 frames; per build 40,623 setups, 91,084 vacated sites with no attribute
+  written, 45.1M sprite pixels; Enhanced as ink; toggle builds with every QWERT read
+  translated: 16,148 key reads, 6,252 pause checks). Units per set: 1,483 cases, controls 3/3, the rework negatives
+  (7 kinds) detected, 432 incoming-clock cases PASS. Toggle units: on 924 / off 832 PASS; O-P swapped and on-as-off
+  detected. Replay negatives on t detected. Dean's verify skipped: AticAtac.rzx missing (record "missing").
+- Hardware: none. Checklist: below + no red flash by doors, no menu icons left, QAOP+Space.
+

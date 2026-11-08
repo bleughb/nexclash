@@ -212,29 +212,8 @@ docs/records/atic_atac.json.
   (setups ~2.5k T each: the OTIR upload and the table scans; rows -62M T, cheaper than the original;
   text +5M T, the start screens). Whether the game has that much spare per frame: hardware.
 
-## Rework (opt-in): Atic Atac .nxc v1.3 (engine atic_atac_v13, `NEXCLASH_REWORK=atic_atac_v13`)
-Ported from Jon Attree's .nxc work, 2026-11-04 (pilot runs/atic_atac/nexclash: d7abd1c + d12f9d9, 0dff248, 9d44fb7).
-Published .nxc: **Atic Atac v1.3** (github.com/jattree/nxc, patch ed872411). Dean's files and build (59493b75, pin
-rom3) are untouched and stay the default.
-- What and why: v1.1 hook speed (image cache, row-mask table, bounded scans, unrolled OUTI, caller's speed
-  restored; penalty +8-10% -> about -1..-3%, picture unchanged). v1.2 flicker (REFACTOR.md 5): the figure painter's
-  nine `LD (HL),E` vacated-cell writes (0xA091-0xA132) are NOPs like its `LD (HL),D`: with the D writes gone they
-  only turned door / furniture cells by a moving figure to the room colour; and the menu clear 0x80B4 is hooked
-  (h_cls; before, menu icons stayed as sprites for 7 frames). v1.3: the "QAOP + Space" toggle (profile _qaop; hooks
-  0x93CD key read, 0x948A pause: Caps Shift alone pauses).
-- Kept apart: nexclash/atic_atac_v13.py, asm/atic_atac_v13_hooks.asm + _qaop.asm, docs/profiles/atic_atac_v13*.json;
-  engines.py picks it only with that switch; the pinned rom3 fill stays (as published). Moved in:
-  the Enhanced set (atic_atac_enhanced_colours.json, read back from the published store; from the MVV .256) and the
-  loading screen (atic_atac_loading.scr, bank 23 stub `ldscr`); both specnext inputs only.
-- Rebuild = `nxc.py --bare`, every set and option: default b87774a2, Enhanced 47f0e72c, + QAOP 19318e4f / 1f58e936;
-  one .nxc holds all four, QAOP + Space as a toggle.
-- Verify (`selftest.py --game atic_atac --verify`, 2026-11-04, ~15 min wall): all four builds
-  IDENTICAL on walk1, walk2, t (21,003 frames; per build 40,623 setups, 91,084 vacated sites with no attribute
-  written, 45.1M sprite pixels; Enhanced as ink; toggle builds with every QWERT read
-  translated: 16,148 key reads, 6,252 pause checks). Units per set: 1,483 cases, controls 3/3, the rework negatives
-  (7 kinds) detected, 432 incoming-clock cases PASS. Toggle units: on 924 / off 832 PASS; O-P swapped and on-as-off
-  detected. Replay negatives on t detected. Dean's verify skipped: AticAtac.rzx missing (record "missing").
-- Hardware: none. Checklist: below + no red flash by doors, no menu icons left, QAOP+Space.
+## Rework (opt-in)
+v1.3, v1.4 and v1.6: games/atic_atac_v14.md.
 
 ## Hardware checklist (atic_atac_sprites.nex)
 1. Boots to the game's start screens; text prints as the original; keys / joystick work.
@@ -275,10 +254,10 @@ rom3) are untouched and stay the default.
 - [tool selftest.py] (rework import) Dean's AticAtac.rzx is in no reference folder, so the whole record was skipped:
   a record input may now say "missing": that verify is skipped (reported, nothing stamped), its reworks still run.
 
-- [card patch.pace-limiter] (v1.6, 2026-11-08) A pace table with a slow stretch: read the debt's clamp first. v1.4's -192 lines threw away most of what room changes and the appear effect cost, and the audit's "the limiter cannot repay" was that clamp.
+- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget] (v1.6, 2026-11-08) A pace table with a slow stretch: read the debt's clamp first. v1.4's -192 lines threw away most of what room changes and the appear effect cost, and the audit's "the limiter cannot repay" was that clamp.
 - [local: Atic Atac's room change] Running game code at 28 MHz needs a sound check first: A403 only queues the room's sound (0 frames), so the window can end there; the first pass may beep, so it uses catch-up at 7 MHz with the sound routines' first bytes swapped while it is on.
-- [card patch.pace-limiter] A catch-up clock: the lower the better. At 28 MHz a gap's real gain runs from 3 to 8 times its lines (hooks in it against contended writes); at 7 MHz it is near 2 whatever the gap holds, so a fixed credit stays honest.
-- [tool: run_logged / hook cost] Profile a hook by the lines one call takes (a JDS rule at its entry and return) before optimising around it: `build` at 257 to 297 lines a call was hidden by the audit's per-update hook times.
+- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget] A catch-up clock: the lower the better. At 28 MHz a gap's real gain runs from 3 to 8 times its lines (hooks in it against contended writes); at 7 MHz it is near 2 whatever the gap holds, so a fixed credit stays honest.
+- [local: hook cost] Profile a hook by the lines one call takes (a JDS rule at its entry and return) before optimising around it: `build` at 257 to 297 lines a call was hidden by the audit's per-update hook times.
 
 ## Friction
 - reuse: [local: add_screen.py's stub now in three engines' asm] Jet Pac (bank 13), Rambo (older), this (bank 23).
