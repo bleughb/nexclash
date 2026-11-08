@@ -3,7 +3,7 @@
 ## Next session
 Stage: 2 (continued)    Branch: main (m3a + hardware fix claude/inferno-m3-hw-bisect)
 State: copier window m3a PASS in the model. Hardware: m2 runs; first m3 crashed (hooks under the
-  stub register block, fixed); fixed m3 and window-only NEX run (user, 2026-11-08).
+  stub register block, fixed); fixed m3 + window-only: run, speed and sound = plain (user).
 Inputs: specnext/reference/inferno/    Start: specnext build/CONTINUE_copier_window.md.
 Read: "Copier window"; inferno.py run_cw_window/copier_window_update_checks; asm cap_in/cw_tout/cw_wait.
 Next: (3b) 8F95 work in cw_wait (coroutine design in the handover); shrink actor hooks; JNext pace
@@ -160,7 +160,7 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
   a hook's last $C8 read and the IRQ sample after EI + NEXTREG 7,0 (model: 24 T) is lost (~0.07 %
   of updates; none with 28 MHz switches). Hardware: m3 9baec641... crashed (green bars): the stub
   writes 20 register bytes at rom_end 3945, over cap_in; hooks now from 3960, build checks hook
-  bytes after a simulated boot. Fixed m3 68340edf..., window-only 692a8d92...: both run.
+  bytes after a simulated boot. Fixed m3 68340edf..., window-only 692a8d92...: run, pace/sound = plain.
 - Never-read rule: window CALLs/IRQ pushes leave bytes only in the 4 below the copier's SP, which
   9907's PUSH DE / PUSH HL overwrite first (checked by running them; 9907 = D5 E5 in all 88,187).
 
@@ -203,7 +203,7 @@ Approved preview/model/contact-sheet hashes and recipes: specnext design/manifes
 build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 
 ## Lessons
-- [none: hardware result only]
+- [none: hardware results only]
 - [doc BRIEFING A1] Hook code under the stub's register block (rom_end) is lost
   at boot; models without the stub cannot see it: compare hook bytes after a simulated boot.
 - [local: Inferno timed hooks] Calibrate tick-quantized constants over all CTC phases (5 phases left
