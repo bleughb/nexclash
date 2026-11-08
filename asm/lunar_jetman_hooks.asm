@@ -7,7 +7,9 @@
 ;
 ; Sites (original bytes checked by lunar_jetman.py):
 ;   34558  0E 00 C9  LD C,0 / RET  end of the figure plotter's new-image setup     -> JP h_new
-;   34462  0E 00 C9  LD C,0 / RET  object left the window, state cleared           -> JP h_clr
+;   34431  AF DD 77 09  XOR A / LD (IX+9),A  object outside the window: state clear  -> JP h_clr
+;                    (every update for every such object: only an object with something drawn, IX+10 > 0,
+;                    can have sprites showing; the rest pass at 3.5 MHz in 43 T more than the original)
 ;   34368  AF 32 59 5E  XOR A / LD (24153),A  erase-only entry                       -> JP h_eo
 ;   34383  AF 32 59 5E  XOR A / LD (24153),A  truck erase-only entry                 -> JP h_teo
 ;   34958  0E 00 C9  LD C,0 / RET  end of the truck plotter's setup                -> JP h_tnew
@@ -34,8 +36,6 @@ TLIST   EQU 0x8400
 ; ---- figure: new image set up (IX+9..15 = what is drawn) ----
 h_new:  push af
         push bc
-        push de
-        push hl
         ld bc,0x243B            ; the caller's CPU speed (NR 7 bits 1:0, card patch.restore-speed), kept on the
         ld a,7                  ; stack: these hooks live in the alt ROM (no RAM for a latch)
         out (c),a
@@ -44,6 +44,8 @@ h_new:  push af
         and 3
         push af
         nextreg 0x07,3
+        push de                 ; DE / HL saved at 28 MHz
+        push hl
         call objn               ; A = n, carry = not an object
         jp c,.out
         ld c,a                  ; C = n
@@ -81,8 +83,8 @@ h_new:  push af
         ld h,a
         ld l,0                  ; HL = 0x8000 + (id & 15) * 512
         ld bc,0x005B
-        otir
-        otir
+        call up256              ; 512 bytes
+        call up256
 .cached:
         nextreg 0x54,4
         call objn
@@ -123,19 +125,22 @@ h_new:  push af
 .hid:   ld a,b
         ld b,4
         call hide
-.out:   pop af
-        nextreg 0x07,a          ; the caller's speed back (never a fixed 3.5 MHz)
-        pop hl
+.out:   pop hl
         pop de
+        pop af
+        nextreg 0x07,a          ; the caller's speed back (never a fixed 3.5 MHz)
         pop bc
         pop af
         ld c,0
         ret
 
-; ---- figure state cleared / erase only: hide its sprites ----
-h_clr:  call hidefig
-        ld c,0
-        ret
+; ---- figure outside the window (the state clear 34431) / erase only: hide its sprites ----
+h_clr:  ld a,(ix+10)            ; the drawn image's height: 0 = nothing drawn, its sprites already hidden
+        or a                    ; (h_new hides them whenever it sees IX+10 = 0)
+        call nz,hidefig
+        xor a                   ; the original's XOR A / LD (IX+9),A (its flags)
+        ld (ix+9),a
+        jp 34435
 h_eo:   call hidefig
         xor a
         ld (24153),a
@@ -148,6 +153,14 @@ h_teo:  call hidetruck
 hidefig:
         push af
         push bc
+        ld bc,0x243B            ; the caller's CPU speed, kept on the stack, then 28 MHz (as h_new)
+        ld a,7
+        out (c),a
+        inc b
+        in a,(c)
+        and 3
+        push af
+        nextreg 0x07,3
         call objn
         jr c,.x
         add a,a
@@ -155,7 +168,9 @@ hidefig:
         add a,20
         ld b,4
         call hide
-.x:     pop bc
+.x:     pop af
+        nextreg 0x07,a          ; the caller's speed back
+        pop bc
         pop af
         ret
 
@@ -173,8 +188,6 @@ hidetruck:
 ; ---- truck: new image set up ----
 h_tnew: push af
         push bc
-        push de
-        push hl
         ld bc,0x243B            ; the caller's CPU speed (NR 7 bits 1:0, card patch.restore-speed), kept on the
         ld a,7                  ; stack: these hooks live in the alt ROM (no RAM for a latch)
         out (c),a
@@ -183,6 +196,8 @@ h_tnew: push af
         and 3
         push af
         nextreg 0x07,3
+        push de                 ; DE / HL saved at 28 MHz
+        push hl
         call trk                ; A = first sprite (0 / 10), carry = not a truck
         jp c,.out
         ld b,a
@@ -230,11 +245,11 @@ h_tnew: push af
         ld l,0                  ; 0x8000 + (id % 6) * 1280
         ld a,b
         ld bc,0x005B
-        otir
-        otir
-        otir
-        otir
-        otir
+        call up256              ; 1280 bytes
+        call up256
+        call up256
+        call up256
+        call up256
         ld b,a
 .cached:
         nextreg 0x54,4
@@ -290,10 +305,10 @@ h_tnew: push af
 .hid:   ld a,b
         ld b,10
         call hide
-.out:   pop af
-        nextreg 0x07,a          ; the caller's speed back (never a fixed 3.5 MHz)
-        pop hl
+.out:   pop hl
         pop de
+        pop af
+        nextreg 0x07,a          ; the caller's speed back (never a fixed 3.5 MHz)
         pop bc
         pop af
         ld c,0
@@ -339,7 +354,7 @@ allhide:
         ret
 
 ; ---- helpers ----
-; objn: A = (IX - OBJ0) / 24, carry if IX is not an object record start
+; objn: A = (IX - OBJ0) / 24, carry if IX is not an object record start (no loop: was up to 27 x 42 T)
 objn:   push hl
         push de
         push ix
@@ -348,19 +363,29 @@ objn:   push hl
         or a
         sbc hl,de
         jr c,.no
-        ld de,24
-        xor a
-.l:     or a
-        sbc hl,de
-        jr c,.r
-        inc a
-        jr .l
-.r:     add hl,de
-        ld e,a
+        ld a,l
+        and 7
+        jr nz,.no               ; not a multiple of 8
         ld a,h
-        or l
-        ld a,e
-        jr nz,.no
+        cp 3
+        jr nc,.no               ; 768 or more (27 records = 648 bytes)
+        ld a,l
+        srl h
+        rra
+        srl h
+        rra
+        srl h
+        rra                     ; A = (IX - OBJ0) / 8 (< 96)
+        ld l,a
+        ld e,a
+        ld d,86
+        mul d,e                 ; D = A * 86 / 256 = A / 3 (exact for A < 96 when A is a multiple of 3)
+        ld a,d
+        add a,a
+        add a,d
+        cp l
+        jr nz,.no               ; not a multiple of 24
+        ld a,d
         cp NOBJ
         ccf
         jr .x
@@ -452,6 +477,26 @@ find:   push bc
         ret
 .no:    scf
         pop bc
+        ret
+
+; up256: 256 bytes from HL to port C (B = 0 on entry and exit); 16.6 T a byte against OTIR's 21
+up256:  outi
+        outi
+        outi
+        outi
+        outi
+        outi
+        outi
+        outi
+        outi
+        outi
+        outi
+        outi
+        outi
+        outi
+        outi
+        outi
+        jp nz,up256
         ret
 
 ; hide: B sprites from A

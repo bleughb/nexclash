@@ -54,9 +54,10 @@ the text printer 35311: none branches on a pixel, so no figure collision reads t
 
 ## Design
 - The nine figure XOR stores and the three colour painters are NOPs, one byte for one (the plot code still runs).
-- Hooks (alt ROM 0x386E-, 728 bytes): h_new at 34558 and h_tnew at 34958 (the setups' LD C,0 / RET) show the object's
-  current image as sprites; h_clr (34462), h_eo (34368), h_teo (34383) hide them; h_cls (34011, the whole-screen pixel
-  clear) and h_msg (46433, the missile warning, which prints over the play area) hide every sprite.
+- Hooks (alt ROM 0x386E-, 799 bytes): h_new at 34558 and h_tnew at 34958 (the setups' LD C,0 / RET) show the object's
+  current image as sprites; h_clr (34431, the state clear: only when something is drawn, since 2026-11-08), h_eo
+  (34368), h_teo (34383) hide them; h_cls (34011, the whole-screen pixel clear) and h_msg (46433, the missile warning,
+  which prints over the play area) hide every sprite.
 - Images precomputed at build time for every graphic in both tables (222 figure graphics, 22 truck graphics): 4-bit,
   ink, enclosed paper filled (a darker shade of the figure's own colour; trucks black), a one-pixel outline outside
   the silhouette (white; black for a white figure; none under 12 ink pixels). Figures 2 x 2 tiles at (x - 1, top - 1);
@@ -112,6 +113,12 @@ apart from 16 bytes (KSTATE, FRAMES, dead stack). Cheats: the .pok's proven entr
   before skipping a verify.
 - [local: message screens wipe figures] A message screen printed over the play area wipes figures without the clear routine: find every
   routine that overwrites the play area (who.py: screen writers per frame) and hide sprites there.
+- [card patch.restore-speed §Failure lookup] A hook with no speed switch at all, run for every object every update
+  (h_clr), cost about 7% where the hooks that switch cost 2-6%: count calls per update before trusting "small" hooks;
+  skip the call when the game's own state says there is nothing to do (IX+10 = 0).
+- [local: pace not in lockstep] The game takes LD A,R (0x9466) for its randomness and runs its frame tasks on interrupts,
+  so JNext runs of two builds play different games (port 0xFE writes 106 against 179): pace by seed varies -25% to +18%.
+  The replay pace (the recording on both sides) is the like-for-like figure; JNext over 8 seeds is the cross-check.
 - [local: verify from the title] A recording that starts mid-game leaves the sprite model and the figure model empty
   while the screen has figures; start every recording at the title, cheats poked into the start state.
 
@@ -156,9 +163,51 @@ bank 12 (the image's page bytes). Emulator only.
   checks that it leaves at that clock. New negative `speed35`: the read masked to 0, which is the old exit.
 - Proof: p1-p3 x default and Enhanced IDENTICAL; unit PASS; negatives 17/17.
 - JNext pace is not in lockstep (no state addresses). The like-for-like quiet thirds against the plain build: main
-  +9.02%, this +9.21%. The game is already about 9% slow on main (no limiter): open for the pace audit.
+  +9.02%, this +9.21%. The game is already about 9% slow on main (no limiter): fixed 2026-11-08 (below).
 - The verify needs Jetpac.256 (md5 95d29dd6) beside the snapshot. It was missing from the earlier refactor sessions'
   references, not from the machine.
+
+## Pace (2026-11-08): h_clr hid at 3.5 MHz with a loop, every update, for every object outside the window
+- Cause: the state clear 34431 runs every update for every object outside the window (JNext, seed 1: 10.0 calls an
+  update, against h_new 4.1, h_tnew 2.0). Its hook hid the object's 4 sprites at 3.5 MHz (no speed switch) after
+  objn, a subtract-24 loop (up to 27 x 42 T): about 950 T a call, some 7% of the original's update. objn also ran
+  twice in each h_new (at 28 MHz).
+- Fix: h_clr moves to the clear's entry 34431 (XOR A / LD (IX+9),A, 4 bytes checked; continues at 34435). Nothing
+  drawn (IX+10 = 0) means its sprites are already hidden (h_new hides them whenever it sees IX+10 = 0): the hook
+  passes in 43 T more than the original. Otherwise hidefig takes the caller's speed on the stack, as h_new, and hides
+  at 28 MHz. objn has no loop (Z80N MUL: (IX - 0x6078) / 8 * 86 / 256, checked x 3; every IX 0x6000-0x63FF tested in
+  a simulator against the loop's answer). h_new / h_tnew save DE / HL after the switch; pattern uploads by an unrolled
+  OUTI loop (16.6 T a byte against OTIR's 21).
+- Verifier: per game update (0x9ED2, the JNext pace probe) the original's time on the recording and the T the build
+  adds (each hook pair: patched minus original, its 28 MHz span at T / 8; the NOPed stores 3 T less): the replay pace,
+  the same game on both sides. Printed by auto as "Pace".
+- Replay pace, all / quiet third / busy third (Enhanced the same: the same hook calls):
+
+| recording | main (aca1c90c) | this (5c53849e) |
+|---|---|---|
+| p1 (1,466 updates) | +13.75 / +17.19 / +11.93% | +4.23 / +4.12 / +4.52% |
+| p2 (4,161) | +14.41 / +20.18 / +12.53% | +4.35 / +4.97 / +4.69% |
+| p3 (4,289) | +14.00 / +18.54 / +12.36% | +4.34 / +4.81 / +4.72% |
+- JNext pace (nexclash.pace, probe 0x9ED2, 300 updates, against the plain build; not in lockstep: each pair of runs
+  plays a different game, see Lessons). All / quiet third / busy third:
+
+| seed | main (aca1c90c) | this (5c53849e) |
+|---|---|---|
+| 1 | +13.63 / +13.43 / +10.23% | -21.69 / +3.22 / -40.29% |
+| 2 | +11.03 / +9.11 / +15.31% | +12.41 / +10.45 / +14.61% |
+| 3 | +31.08 / +39.41 / +32.17% | +19.71 / +20.38 / +8.61% |
+| 4 | +14.44 / +21.31 / +9.16% | +8.93 / +9.52 / +8.40% |
+| 5 | +13.94 / +15.70 / +7.83% | +4.54 / +8.79 / -1.78% |
+| 6 | +29.28 / +35.72 / +17.44% | +1.19 / +4.50 / +0.44% |
+| 7 | +10.15 / +9.23 / +5.49% | +0.39 / +1.95 / -9.47% |
+| 8 | +12.84 / -1.60 / +23.89% | +7.70 / +6.45 / +5.96% |
+| mean (median) | +17.05 (+13.79) | +4.15 (+6.12) |
+- Sprites aca1c90c -> 5c53849e, sprites_loading a0af30ca -> 8bd7ab74, enhanced 555af3ce -> c0453b9c, enhanced_loading
+  9df3d4f6 -> ad21539c; plain unchanged. selftest --verify --stamp: p1-p3 default and
+  Enhanced IDENTICAL (22,090 frames, 155,561 hook calls), unit PASS, negatives 17/17. Still about 4% slow: open (pattern
+  uploads, about 1,060 T a draw at the Next clock; 51% of tile uploads rewrite the same bytes, p1 900 frames: a per-tile
+  cache, then DMA, or a K-window limiter). JNext loader run (private card copy): menu v1.1, play, Hall of Fame,
+  /tmp/NEXCLASH.NEX = the bare .nex.
 
 ## Techniques
 Techniques: `patch.whole-altrom-image` (docs/records/lunar_jetman.json)
@@ -175,3 +224,5 @@ Techniques: `patch.whole-altrom-image` (docs/records/lunar_jetman.json)
 
 ## Stage log
 - 2026-11-04: imported into the repo (refactor phase 7): rebuild = the published v1.0, full verify stamped. 0 user rounds.
+- 2026-11-08: pace: h_clr at the clear's entry with a skip, hides at 28 MHz, objn without a loop; replay pace in the
+  verifier; full verify stamped. 0 user rounds.
