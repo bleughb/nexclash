@@ -6728,6 +6728,8 @@ sl_clear_go:
 sl_done:
         ld a,(SEL_N)
         ld (SEL_PREV),a
+        nextreg 0x6B,0x8B       ; every complete publish: layers on (the 9019 exit hides them)
+        nextreg 0x15,1
         ret
 sl_init:
         nextreg 0x4B,0          ; 4-bit transparency index
@@ -6745,8 +6747,6 @@ sl_init:
         nextreg 0x41,a
         djnz .p
         nextreg 0x43,0
-        nextreg 0x6B,0x8B       ; clean scenery on, hiding the original figures
-        nextreg 0x15,1          ; sprites on
         ld a,1
         ld (SEL_INIT),a
         ret
@@ -6815,3 +6815,42 @@ sl_yscan:
 wk_select_end:
         ASSERT wk_select_end <= 0x5000
         SAVEBIN "inferno_cwsel.bin",wk_select,wk_select_end-wk_select
+
+; Leaving gameplay in the sprite builds (death, break): 901C, after the game's own LD SP,nn (9019 is self-modified, its
+; operand is written at run time, so it cannot carry a patch). Hides the new layers; the next complete publish restores them.
+        ORG 0x3BE0
+modal_exit:
+        di
+        nextreg 0x07,3
+        nextreg 0x50,68
+        ld (CAP_SP),sp
+        ld sp,CAP_STACK
+        push af
+        push bc
+        nextreg 0x62,0
+        ld bc,0x243B
+        ld a,0x6B
+        out (c),a
+        inc b
+        in a,(c)
+        and 0x7F
+        nextreg 0x6B,a
+        dec b
+        ld a,0x15
+        out (c),a
+        inc b
+        in a,(c)
+        and 0xFE
+        nextreg 0x15,a
+        xor a
+        ld (CAP_PHASE),a
+        pop bc
+        pop af
+        ld sp,(CAP_SP)
+        nextreg 0x50,255
+        nextreg 0x07,0
+        ld iy,0x5C3A
+        jp 0x9020
+modal_exit_end:
+        ASSERT modal_exit_end <= 0x3C40
+        SAVEBIN "inferno_modalx.bin",modal_exit,modal_exit_end-modal_exit

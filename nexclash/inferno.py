@@ -6518,6 +6518,12 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
                 raise ValueError('8EF9 gate overlaps the window ROM')
             self.window.rom[org:org + len(code)] = code
             self.window.sites[0x8EF9] = gate.sites[0x8EF9]
+            h = load_profile()['hooks']                # leaving gameplay (death, break): hide the new layers
+            code, org = bytes.fromhex(h['modalx']), 0x3BE0
+            if any(b != 255 for b in self.window.rom[org:org + len(code)]):
+                raise ValueError('modal hook overlaps the window ROM')
+            self.window.rom[org:org + len(code)] = code
+            self.window.sites[0x901C] = bytes.fromhex('FD213A5C'), b'\xC3' + org.to_bytes(2, 'little') + b'\x00'
         self.page = bytes(self.window.rom[8192:])
         self.extra_banks[12] = self.page + bytes(8192)
         rb = self.regblock - 0x2000            # the stub writes 20 register bytes there at boot
