@@ -77,6 +77,8 @@ V_CT    EQU 0x802E              ; tile counter
 V_OP    EQU 0x8030              ; (2) overlay: position pointer
 V_OD    EQU 0x8032              ; (2) overlay: tile data pointer
 V_OC2   EQU 0x8034              ; overlay: tiles left
+V_PW    EQU 0x8036              ; rectangle width in pixels: 8W + 2
+V_T     EQU 0x8037              ; pack: lines of this tile row inside the rectangle
 SPRTAB  EQU 0x8100              ; 128 x 8: X (2), Y (2), a3, a4, shown (1, 2 hidden; 0x10 left edge is ring, 0x20 top edge), size
                                 ; size: (pixels wide - 1) << 4 | (lines - 1): the figure's part of this tile
 CACHE   EQU 0x8500              ; Knight: 8 x 8: valid, colour, sum (2), tile mask
@@ -84,6 +86,11 @@ SAVE    EQU 0x8600              ; cells under a figure
 TILEB   EQU 0x8680              ; 128 bytes: tile being packed
 CANVAS  EQU 0x8700              ; 49 lines x 64: figure at (2,2), rings at 1, zeros at 0; pack reads 3 x 16 lines from line 1
 HSTK    EQU 0x9440
+; bit rows, canvas columns 40-63 of each line of the rectangle (build): bit i = pixel PW - i of that line
+MZ      EQU 40                  ; (4) clear pixels (the margins too)
+MN      EQU 44                  ; (4) earns a ring
+MK      EQU 48                  ; (4) neither clear nor black (a white figure's ring rule; written when V_OK)
+MX      EQU 52                  ; (4) scratch: the ring pixels
 
 LINES   EQU 0x6680              ; the game's line address table
 KX      EQU 25694               ; Knight: column of the new box
@@ -106,6 +113,30 @@ GTAB    EQU 0xC544              ; graphic table: graphics, mask
         push de
         push hl
         push ix
+        ENDM
+
+        MACRO PIX                       ; one pixel: D ink bits (ink C), E clear bits, else black B
+        sla d
+        jr nc,1F
+        ld (hl),c
+        sla e
+        jr 2F
+1:      sla e
+        jr c,2F
+        ld (hl),b
+2:      inc l
+        ENDM
+
+        MACRO PACK2                     ; two canvas pixels -> a pattern byte; C collects them
+        ld a,(hl)
+        inc l
+        swapnib
+        or (hl)
+        inc l
+        ld (de),a
+        inc e
+        or c
+        ld c,a
         ENDM
 
         MACRO LEAVE
@@ -390,20 +421,66 @@ setcol: ld b,a
         ld (V_OK),a
         ret
 
+; ---- figure -> canvas. Besides the pixels, each canvas line L of the rectangle (lines 1 .. H+2, pixels 1 .. PW = 8W+2)
+; holds bit rows in its columns 40-63 (pack reads 1-32, figures reach 26): bit i = pixel PW - i of that line.
+; The rule is the one the pixel loop had: a ring (V_OC) on each clear pixel of the rectangle with a 4-neighbour that
+; earns one (not clear; V_OK: neither clear nor black). No fill: clear pixels inside a figure take rings too.
 ; build: V_G, V_M, V_WB, V_HL, V_INK, V_OC -> the canvas
-build:  ld hl,CANVAS
-        ld de,CANVAS+1
-        ld bc,49*64-1
-        ld (hl),0
-        ldir
-        ld hl,CANVAS+2*64+2         ; line pointer
+build:  call bldm
+        ld a,(V_OL)
+        or a
+        ret z
+        jp rings
+
+; bldm: canvas lines 1-34, columns 1-26 cleared: the only pixels any figure writes (the Knight's rectangle, 3 bytes x
+; 32 lines + the ring margin); pack reads columns 1-32 and lines 1 .. H+2, so the rest stays as the page was loaded,
+; zero. Then the figure's pixels, and the bit rows Z (clear) and K (neither clear nor black; white figures).
+bldm:   ld hl,CANVAS+64+1
+        ld de,64-26
+        ld c,34
+        xor a
+.cl:    REPT 26
+        ld (hl),a
+        inc l
+        ENDR
+        add hl,de
+        dec c
+        jr nz,.cl
+        ld a,(V_WB)
+        add a,a
+        add a,a
+        add a,a
+        add a,2
+        ld (V_PW),a
+        ld ix,CANVAS+64             ; line 1: the top margin
+        call mline
+        ld ix,CANVAS+128
+        ld a,(V_INK)
+        ld c,a                      ; C = ink
         ld a,(V_HL)
         ld b,a
 .line:  push bc
-        push hl
+        push ix
+        pop hl
+        inc l
+        inc l                       ; pixel 2
         ld a,(V_WB)
         ld b,a
-.byte:  push bc
+.byte:  ld a,(V_HASC)
+        or a
+        jr nz,.cb
+        push hl
+        ld hl,(V_G)
+        ld d,(hl)
+        inc hl
+        ld (V_G),hl
+        ld hl,(V_M)
+        ld e,(hl)
+        inc hl
+        ld (V_M),hl
+        pop hl
+        jr .fast
+.cb:    push bc
         push hl
         call colents
         ld hl,(V_G)
@@ -415,6 +492,61 @@ build:  ld hl,CANVAS
         inc hl
         ld (V_M),hl
         pop hl
+        pop bc
+        push hl
+        ld hl,V_NB
+        ld a,(V_CL)
+        or (hl)
+        inc hl
+        or (hl)
+        inc hl
+        or (hl)
+        inc hl
+        or (hl)
+        pop hl
+        jp nz,.slow                 ; painted: pixel by pixel
+.fast:  ld a,d
+        cpl
+        and e
+        ld e,a                      ; E = clear (paper with mask 1), D = ink
+        push de                     ; this byte's bits: D earns a white figure's ring, E clear
+        inc a
+        jr nz,.draw
+        ld a,l                      ; all clear: the canvas already is
+        add a,8
+        ld l,a
+        jr .bn
+.draw:  push bc
+        ld a,CBLACK                 ; the game's knocked-out paper (mask 0): black
+        ld b,a
+        PIX
+        PIX
+        PIX
+        PIX
+        PIX
+        PIX
+        PIX
+        PIX
+        pop bc
+.bn:    dec b
+        jp nz,.byte
+        call masks
+        ld a,(V_WB)
+        add a,a
+        ld l,a
+        ld h,0
+        add hl,sp
+        ld sp,hl                    ; the byte pairs go
+        ld de,64
+        add ix,de
+        pop bc
+        dec b
+        jp nz,.line
+        jp mline                    ; line H+2: the bottom margin
+
+; .slow: a painted byte, D graphics, E mask, V_NB / V_CL its colours: eight pixels as the pixel loop drew them, then
+; its bits from them
+.slow:  push bc
         ld b,0
 .bit:   ld a,b                      ; colour nibble of pixel B
         rra
@@ -462,102 +594,236 @@ build:  ld hl,CANVAS
         ld a,b
         cp 8
         jr nz,.bit
-        pop bc
-        djnz .byte
-        pop hl
-        ld bc,64
-        add hl,bc
-        pop bc
-        djnz .line
-        ld a,(V_OL)
+        ld a,l
+        sub 8
+        ld l,a
+        ld de,0
+        ld b,8
+.zk:    ld a,(hl)
+        inc l
+        sla e
+        sla d
         or a
-        ret z
-        ; outline: rings in 0x10, a pass then gives them the colour
-        ld a,(V_HL)
-        add a,2
-        ld b,a                      ; lines 1 .. H+2
-        ld hl,CANVAS+64+1
-.ol:    push bc
-        push hl
+        jr nz,.nz
+        inc e                       ; clear
+        jr .zn
+.nz:    cp CBLACK
+        jr z,.zn
+        inc d                       ; neither clear nor black
+.zn:    djnz .zk
+        pop bc
+        push de
+        jp .bn
+
+; mline: IX = a margin line: Z all the rectangle, K none
+mline:  ld a,(V_WB)
+        ld b,a
+        ld de,0x00FF
+.p:     push de
+        djnz .p
+        call masks
         ld a,(V_WB)
         add a,a
-        add a,a
-        add a,a
-        add a,2
-        ld b,a                      ; pixels 1 .. 8W+2
-.op:    ld a,(hl)
-        or a
-        jr nz,.nx
-        push hl
-        dec hl
-        ld a,(hl)
-        call ringt
-        jr nz,.yes
-        inc hl
-        inc hl
-        ld a,(hl)
-        call ringt
-        jr nz,.yes
-        ld de,-65
-        add hl,de
-        ld a,(hl)
-        call ringt
-        jr nz,.yes
-        ld de,128
-        add hl,de
-        ld a,(hl)
-        call ringt
-.yes:   pop hl
-        jr z,.nx
-        ld (hl),0x10
-.nx:    inc hl
-        djnz .op
-        pop hl
-        ld bc,64
-        add hl,bc
-        pop bc
-        djnz .ol
-        ld a,(V_HL)
-        add a,2
-        ld b,a
-        ld hl,CANVAS+64+1
-.o2:    push bc
-        push hl
-        ld a,(V_WB)
-        add a,a
-        add a,a
-        add a,a
-        add a,2
-        ld b,a
-.o3:    ld a,(hl)
-        cp 0x10
-        jr nz,.o4
-        ld a,(V_OC)
-        ld (hl),a
-.o4:    inc hl
-        djnz .o3
-        pop hl
-        ld bc,64
-        add hl,bc
-        pop bc
-        djnz .o2
+        ld l,a
+        ld h,0
+        add hl,sp
+        ld sp,hl
         ret
 
-; ringt: A = a neighbour. NZ = this neighbour earns a ring. Rings themselves (0x10) do not.
-ringt:  cp 0x10
-        jr z,.no
-        or a
-        ret z
-        ld c,a
+; masks: IX = line; under the return address W byte pairs (D, E), the last byte on top ->
+; Z = (1 << 8W | E bytes) << 1 | 1 (the margins are clear), K = D bytes << 1 (V_OK only)
+masks:  ld hl,2
+        add hl,sp                   ; the last byte's pair: E, D
+        push ix
+        pop de
+        ld a,e
+        add a,MZ
+        ld e,a                      ; DE = Z
+        ld a,(V_WB)
+        ld b,a
+        scf                         ; the right margin
+.z:     ld a,(hl)
+        rla
+        ld (de),a
+        inc hl
+        inc hl
+        inc e
+        djnz .z
+        ld a,1                      ; the left margin
+        rla
+.z2:    ld (de),a                   ; then zeros up to MN
+        xor a
+        inc e
+        bit 2,e
+        jr z,.z2
         ld a,(V_OK)
         or a
-        jr z,.yes
-        ld a,c                      ; ring on ink only: black paper is the game's own halo
-        cp CBLACK
-        jr z,.no
-.yes:   or 1
+        ret z
+        ld a,e
+        add a,MK-MN
+        ld e,a                      ; K
+        ld hl,3
+        add hl,sp
+        ld a,(V_WB)
+        ld b,a
+        or a
+.k:     ld a,(hl)
+        rla
+        ld (de),a
+        inc hl
+        inc hl
+        inc e
+        djnz .k
+        ld a,0
+        rla
+.k2:    ld (de),a
+        xor a
+        inc e
+        bit 2,e
+        jr z,.k2
         ret
-.no:    xor a
+
+; rings: a one-pixel ring in V_OC on the clear pixels beside any that earn one: N = K (V_OK: ink only, the game's
+; mask is a white figure's black halo), else every pixel of the rectangle that is not clear;
+; ring = Z & (N << 1 | N >> 1 | N above | N below)
+rings:  ld ix,CANVAS+64
+        ld a,(V_HL)
+        add a,2
+        ld b,a
+.n:     ld a,(V_OK)
+        or a
+        jr nz,.k
+        ld hl,CANVAS+64+MZ          ; line 1's Z: the rectangle
+        ld a,(ix+MZ)
+        cpl
+        and (hl)
+        ld (ix+MN),a
+        inc l
+        ld a,(ix+MZ+1)
+        cpl
+        and (hl)
+        ld (ix+MN+1),a
+        inc l
+        ld a,(ix+MZ+2)
+        cpl
+        and (hl)
+        ld (ix+MN+2),a
+        inc l
+        ld a,(ix+MZ+3)
+        cpl
+        and (hl)
+        ld (ix+MN+3),a
+        jr .nn
+.k:     ld a,(ix+MK)
+        ld (ix+MN),a
+        ld a,(ix+MK+1)
+        ld (ix+MN+1),a
+        ld a,(ix+MK+2)
+        ld (ix+MN+2),a
+        ld a,(ix+MK+3)
+        ld (ix+MN+3),a
+.nn:    ld de,64
+        add ix,de
+        djnz .n
+        xor a                       ; line H+3 earns none (line 0's N is never written: always none)
+        ld (ix+MN),a
+        ld (ix+MN+1),a
+        ld (ix+MN+2),a
+        ld (ix+MN+3),a
+        ld ix,CANVAS+64
+        ld a,(V_HL)
+        add a,2
+        ld b,a
+.r:     push bc
+        ld e,(ix+MN)
+        ld d,(ix+MN+1)
+        ld c,(ix+MN+2)
+        ld b,(ix+MN+3)
+        sla e
+        rl d
+        rl c
+        rl b
+        ld a,e
+        or (ix+MN-64)
+        or (ix+MN+64)
+        ld (ix+MX),a
+        ld a,d
+        or (ix+MN-63)
+        or (ix+MN+65)
+        ld (ix+MX+1),a
+        ld a,c
+        or (ix+MN-62)
+        or (ix+MN+66)
+        ld (ix+MX+2),a
+        ld a,b
+        or (ix+MN-61)
+        or (ix+MN+67)
+        ld (ix+MX+3),a
+        ld e,(ix+MN)
+        ld d,(ix+MN+1)
+        ld c,(ix+MN+2)
+        ld b,(ix+MN+3)
+        srl b
+        rr c
+        rr d
+        rr e
+        ld a,e
+        or (ix+MX)
+        and (ix+MZ)
+        ld (ix+MX),a
+        ld a,d
+        or (ix+MX+1)
+        and (ix+MZ+1)
+        ld (ix+MX+1),a
+        ld a,c
+        or (ix+MX+2)
+        and (ix+MZ+2)
+        ld (ix+MX+2),a
+        ld a,b
+        or (ix+MX+3)
+        and (ix+MZ+3)
+        ld (ix+MX+3),a
+        ld a,(V_OC)
+        ld c,a
+        call wrow
+        ld de,64
+        add ix,de
+        pop bc
+        dec b
+        jp nz,.r
+        ret
+
+; wrow: IX = line, bits at MX -> colour C at those pixels
+wrow:   ld a,(ix+MX)
+        or (ix+MX+1)
+        or (ix+MX+2)
+        or (ix+MX+3)
+        ret z
+        push ix
+        pop hl
+        ld a,(V_PW)
+        add a,l
+        ld l,a                      ; pixel of bit 0
+        ld a,(ix+MX)
+        call wbyte
+        ld a,(ix+MX+1)
+        call wbyte
+        ld a,(ix+MX+2)
+        call wbyte
+        ld a,(ix+MX+3)
+; wbyte: A = 8 bits, bit 0 at HL, leftwards -> colour C; HL -> bit 0 of the next byte
+wbyte:  ld d,l
+        or a
+        jr z,.e
+.b:     srl a
+        jr nc,.n
+        ld (hl),c
+        jr z,.e                     ; that was the last
+.n:     dec l
+        jr .b
+.e:     ld a,d
+        sub 8
+        ld l,a
         ret
 
 ; colents: the colour store entry of the graphics byte at V_G -> V_NB, V_CL (zeros when absent or stale)
@@ -621,6 +887,13 @@ colents:
 pack:   ld a,e
         swapnib                     ; row * 16 lines
         ld l,a
+        ld a,(V_HL)                 ; lines of this row inside the rectangle (to H+2); below it the canvas is clear
+        add a,2
+        sub l
+        cp 16
+        jr c,.k
+        ld a,16
+.k:     ld (V_T),a
         ld h,0
         ld b,6
 .m:     add hl,hl
@@ -632,30 +905,36 @@ pack:   ld a,e
         ld bc,CANVAS+64
         add hl,bc
         ld de,TILEB
+        ld a,(V_T)
+        ld b,a
+        ld c,0                      ; B lines, C any pixel
+.y:     PACK2
+        PACK2
+        PACK2
+        PACK2
+        PACK2
+        PACK2
+        PACK2
+        PACK2
+        ld a,l                      ; the next line, the same 16 pixels
+        add a,48
+        ld l,a
+        jr nc,.n
+        inc h
+.n:     djnz .y
+        ld a,(V_T)                  ; the clear lines
+        sub 16
+        jr z,.d
+        neg
+        add a,a
+        add a,a
+        add a,a
+        ld b,a
         xor a
-        ld (V_ANY),a
-        ld b,16
-.y:     push bc
-        push hl
-        ld b,8
-.x:     ld a,(hl)
-        inc hl
-        swapnib
-        or (hl)
-        inc hl
-        ld (de),a
-        inc de
-        ld c,a
-        ld a,(V_ANY)
-        or c
-        ld (V_ANY),a
-        djnz .x
-        pop hl
-        ld bc,64
-        add hl,bc
-        pop bc
-        djnz .y
-        ld a,(V_ANY)
+.zl:    ld (de),a
+        inc e
+        djnz .zl
+.d:     ld a,c
         or a
         ret
 
@@ -861,16 +1140,20 @@ c_kn:   ld hl,(V_SP)                ; the dead stack word holds e_kn2 here, the 
         push hl
         ld hl,(V_G)                 ; checksum of the 192 bytes
         ld de,0
-        ld b,96
-.s1:    ld a,(hl)
+        ld b,12
+.s1:    REPT 8
+        ld a,(hl)
         add de,a
         inc hl
+        ENDR
         djnz .s1
         ld hl,(V_M)
-        ld b,96
-.s2:    ld a,(hl)
+        ld b,12
+.s2:    REPT 8
+        ld a,(hl)
         add de,a
         inc hl
+        ENDR
         djnz .s2
         pop hl
         ld a,(hl)
