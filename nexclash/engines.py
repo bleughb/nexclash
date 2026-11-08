@@ -77,6 +77,7 @@ ENGINES = [
     ('alien_8', 'is_alien_8', None),                                      # Alien 8 (48K): default and Enhanced
     ('gunfright', 'is_gunfright', None),                                  # Gunfright (48K): default and Enhanced
     ('army_moves', 'is_army_moves', None),                                # Army Moves (128K, both parts)
+    ('game_over', 'is_game_over', None),                                  # Game Over (128K, both worlds)
 ]
 
 

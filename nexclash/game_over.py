@@ -27,6 +27,12 @@ DECISIONS = {'figures': 'original bitmap on the ULA; figure ink in its own colou
              'enhanced': 'waiting for the mock-up'}
 
 
+LOAD_SCREEN = 'game_over_loading.scr'     # the same re-release's 48K-128K tape's 6,912-byte screen, beside the snapshot: game data, never in this repo
+LOAD_MD5 = '3cdb0cbbd8b15c7eae4c3d52b7f6b4b5'
+PUBLISHER = 'Imagine / Dinamic, 1987'
+NEG_STOP = 900                            # frames of the first recording each deliberately broken build replays
+
+
 def _profile_path():
     return PROFILE
 
@@ -36,12 +42,17 @@ def load_profile():
 
 
 def is_game_over(snap):
-    if not getattr(snap, 'is128', False) and getattr(snap, 'machine', '') != '128K':
+    """The 128K re-release at its first world's code: zt.Z80Snapshot (banks) or skoolkit's Snapshot (memory, nexclash.py auto)."""
+    banks = getattr(snap, 'banks', None)
+    if banks is None:
+        if getattr(snap, 'machine', '48K') == '48K':
+            return False
+        return all(bytes(snap.memory[a:a + len(v) // 2]) == bytes.fromhex(v) for a, v in SIGNATURE.items())
+    if not getattr(snap, 'is128', False):
         return False
     try:
-        banks = snap.banks
-        return all(bytes(banks[2][a - 0x8000:a - 0x8000 + len(bytes.fromhex(v))]) == bytes.fromhex(v) for a, v in SIGNATURE.items())
-    except (AttributeError, KeyError, TypeError, IndexError):
+        return all(bytes(banks[2][a - 0x8000:a - 0x8000 + len(v) // 2]) == bytes.fromhex(v) for a, v in SIGNATURE.items())
+    except (KeyError, TypeError, IndexError):
         return False
 
 
@@ -542,3 +553,118 @@ def _finds(code, old):
 def run_negative(b, rzx, stop):
     c, ex = verify(b, rzx, stop=stop)
     return {k: v for k, v in c.items() if k.endswith('!')}
+
+
+def loading_nex(nex, screen):
+    """A built .nex -> the same with the loading screen in the NEX file (header byte 10 = 2), as the published .nxc."""
+    if len(screen) != 6912 or nex[10] != 0:
+        raise ValueError('Expected a .nex without a screen and a 6,912-byte loading screen')
+    head = bytearray(nex[:512])
+    head[10] = 2
+    return bytes(head) + screen + nex[512:]
+
+
+def find_screen(z80):
+    """The original loading screen beside the snapshot, or None. A different file there is refused."""
+    path = Path(z80).resolve().parent / LOAD_SCREEN
+    if not path.is_file():
+        return None
+    data = path.read_bytes()
+    if hashlib.md5(data).hexdigest() != LOAD_MD5:
+        raise ValueError('%s is not the original loading screen (MD5 %s)' % (LOAD_SCREEN, LOAD_MD5))
+    return data
+
+
+def boot_check(nex, z80, patch):
+    """Booted with and without NEXLOAD's printer buffer: every register with R and all 48K RAM against the patched
+    snapshot, except the start-up tail's own bytes (and the printer buffer NEXLOAD overwrites). -> problems."""
+    from . import nextboot
+    s = zt.Z80Snapshot(str(z80))
+    patch.apply(s)
+    size = len(zt.build_tail(s, 0x8000, patch.slot1, True)[0])
+    tail = zt.choose_tail_addr(s, size, None, False)[0]
+    want = {0: s.a, 1: s.f, 2: s.bc >> 8, 3: s.bc & 255, 4: s.de >> 8, 5: s.de & 255, 6: s.hl >> 8, 7: s.hl & 255,
+            8: s.ix >> 8, 9: s.ix & 255, 10: s.iy >> 8, 11: s.iy & 255, 12: s.sp, 14: s.i, 15: s.r, 16: s.a_, 17: s.f_,
+            18: s.bc_ >> 8, 19: s.bc_ & 255, 20: s.de_ >> 8, 21: s.de_ & 255, 22: s.hl_ >> 8, 23: s.hl_ & 255, 26: s.iff1, 27: s.im}
+    bad = []
+    for nexload in (False, True):
+        st = nextboot.boot(str(nex), s.pc, nexload=nexload)
+        bad += [('register', nexload, i, v, st['R'][i]) for i, v in want.items()
+                if (bool(st['R'][i]) != bool(v) if i == 26 else st['R'][i] != v)]
+        for a in range(0x4000, 65536):
+            if tail <= a < tail + size or (nexload and 0x5B00 <= a < 0x5C00):
+                continue
+            bank = 5 if a < 0x8000 else 2 if a < 0xC000 else s.port7ffd & 7
+            if st['mem'][a] != s.banks[bank][a & 16383]:
+                bad.append(('RAM', nexload, hex(a), s.banks[bank][a & 16383], st['mem'][a]))
+    return bad
+
+
+def _negative(z80, name, rzx, stop):
+    """One deliberately broken build's replay (a process of its own): -> (name, its failure keys)."""
+    return name, sorted(run_negative(negative_patches(Patch(z80))[name], rzx, stop))
+
+
+def auto(a, z80, name, out, say):
+    """nexclash.py auto: the sprite build (the overlay), with the loading screen when it is beside the snapshot, each
+    boot-checked; with --rzx the replay proof, the ABI cases and the broken builds. The pace, soak, flicker and real
+    loader proofs are the review run's (games/game_over.md "Evidence")."""
+    import concurrent.futures, os, tempfile
+    from skoolkit.rzxplay import parse_rzx
+    from skoolkit.snapshot import Snapshot
+    from . import rzx as RZ
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    if not getattr(a, 'publisher', None):
+        a.publisher = PUBLISHER
+    say('Game      : Game Over (Imagine / Dinamic, 1987, 128K, both worlds)')
+    say('Engine    : game_over; original bitmap and scenery attributes on the ULA, figures\' ink on a double-buffered Layer 2; original pace')
+    ok = True
+    patch = Patch(z80)
+    sprites = out / (name + '_sprites.nex')
+    zt.convert(str(z80), str(sprites), patch=patch, quiet=True)
+    nexes = [('Sprites', sprites)]
+    screen = find_screen(z80)
+    if screen is None:
+        say('Loading   : no %s beside the snapshot: sprite build without the loading screen' % LOAD_SCREEN)
+    else:
+        loading = out / (name + '_sprites_loading.nex')
+        loading.write_bytes(loading_nex(sprites.read_bytes(), screen))
+        nexes.append(('Loading', loading))
+    for label, nex in nexes:
+        bad = boot_check(nex, z80, Patch(z80))
+        ok = ok and not bad
+        say('%-10s: %s  %s' % (label, nex.name, hashlib.md5(nex.read_bytes()).hexdigest()))
+        say('Boot      : %s' % ('simulated, OK (registers with R, all 48K RAM; converter loader and NEXLOAD)' if not bad else 'MISMATCH %s' % str(bad[:3])[:300]))
+    states, replayed = [], []
+    with tempfile.TemporaryDirectory(prefix='game_over_') as temp:
+        for path in list(getattr(a, 'rzx', None) or []):
+            if sum(isinstance(b.obj, Snapshot) for b in parse_rzx(path)) > 1:
+                stripped = str(Path(temp) / Path(path).name)
+                RZ.strip(path, stripped)
+                path = stripped
+            replayed.append(path)
+            c, ex, got = verify(Patch(z80), path, stop=getattr(a, 'quick', None), collect=1)
+            states += got
+            fail = {k: v for k, v in c.items() if k.endswith('!')}
+            ok = ok and not fail
+            say('Verify    : %s %d frames, %d hooks, %d R comparisons, %d Layer 2 pictures, %d pixels: %s' % (
+                Path(path).name, c['frames'], c['hooks'], c['R comparisons'], c['publications'], c['overlay pixels compared'],
+                'IDENTICAL' if not fail else str(fail)))
+            for k, v in ex.items():
+                say('            %s: %s' % (k, v))
+        if states:
+            counts = unit_tests(Patch(z80), states)
+            fail = {k: v for k, v in counts.items() if k.endswith('!')}
+            ok = ok and not fail
+            say('Unit      : %s' % dict(counts))
+            names = list(negative_patches(Patch(z80)))
+            with concurrent.futures.ProcessPoolExecutor(min(len(names), os.cpu_count() or 1)) as pool:
+                done = list(pool.map(_negative, [z80] * len(names), names, [replayed[0]] * len(names), [NEG_STOP] * len(names)))
+            missed = [n for n, keys in done if not keys]
+            ok = ok and not missed
+            say('Negatives : %d of %d broken builds caught%s' % (len(done) - len(missed), len(done), '; MISSED %s' % missed if missed else ''))
+        else:
+            say('Verify    : not requested; boot evidence only')
+    say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
+    return bool(ok)

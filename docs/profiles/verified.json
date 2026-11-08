@@ -133,6 +133,14 @@
     "sprites": "fb77af62c5ce975802c354dd8b1943ee"
    }
   },
+  "e1c2ff3cfbd4f6f5a84034d57b666acf": {
+   "game": "Game Over",
+   "doc": "game_over.md",
+   "nex": {
+    "sprites": "8c3152e36baa285b4a1407e011a95baa",
+    "loading": "66d8145473890323dd279cfec7d28859"
+   }
+  },
   "23d69f517506104c36ba429cb2148fa5": {
    "game": "Ghosts 'n Goblins",
    "doc": "ghosts_n_goblins.md",
