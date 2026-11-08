@@ -5,7 +5,7 @@ The first engine whose build reads tapes (nexclash/tapeset.py): the snapshot is 
 loaded from Side A, world 1 in memory, on the title screen); the worlds the game loads later come from the tapes,
 `--tape SIDE_A.tap|.tzx --tape SIDE_B.tzx`, checked against the releases in the profile (tape_sets).
 
-Three stages, as the published patch (github.com/jattree/nxc, v1.2) was built, now one engine:
+Three stages, as the published patch (github.com/jattree/nxc, v1.2; v1.3 = + the v2.10 fix-up) was built, now one engine:
   1. multiload from RAM (stage1()): the 37 world-load blocks raw from the tapes in banks 12-22 (no block across an 8K
      page), their headers and directory and the loader (asm/new_zealand_story_loader.asm) in bank 11; a 12-byte stub
      replaces the game's LD-BYTES entry (bank 1 0x11EA, copied to 0x43AF), so a world load reads RAM, not the tape.
@@ -17,12 +17,14 @@ Three stages, as the published patch (github.com/jattree/nxc, v1.2) was built, n
 The hooks are assembled at build time with the pinned sjasmplus (their tables come from the tapes; herbert does the
 same), so there is no hook hex in the profile and no asm2profile check.
 
-Outputs (the four builds of the published patch, byte for byte): NAME_sprites.nex (default), NAME_smooth.nex,
+Outputs (the four builds of the published patch v1.3, byte for byte): NAME_sprites.nex (default), NAME_smooth.nex,
 NAME_backdrops.nex, NAME_smooth_backdrops.nex; NAME_outputs.json names the two toggles.
 
-Two things are frozen to reproduce the published bytes, both local to this engine:
-  - alt ROM image 1 is filled the pre-2026-11-06 way (_altrom_fill_v209: NextZXOS's ROM3 + the hooks, no v2.10
-    fix-ups): the published 1.2 "lacks the v2.10 start-up fix" (its .nfo); a later version takes main's fill;
+Two things are kept as published, both local to this engine:
+  - alt ROM image 1 is filled as v1.2 filled it (_altrom_fill_v209: NextZXOS's ROM3 + the hooks) plus, since v1.3,
+    NextZXOS v2.10's ROM3 fix-ups (_altrom_fill_v210): the 11-byte ROM3 copy becomes a JP to the copy + the fix-ups
+    (z80tonex.rom3_fixup_code, every site) in the stub page's free tail at V210_AT, which jumps back, so every other
+    stub byte keeps its v1.2 address (the bytes the v2.10 fix's patch_nex gave the published v1.3);
   - the start-up tail goes in the game's dead stack below SP in bank 0 (0xFFxx), with a setup that maps bank 0's upper
     page at MMU7 for the copy and a tail that writes 7FFD before 1FFD (_stage1_tail(), patched into z80tonex for the
     one convert() call and restored).
@@ -216,6 +218,43 @@ def _altrom_fill_v209(org, page, lo, hi):
     return bytes(c)
 
 
+ROM3_COPY = bytes.fromhex('210000110000010040EDB0')     # LD HL,0 / LD DE,0 / LD BC,$4000 / LDIR (the ROM3 copy)
+V210_AT = 0x1D3B                            # stub page offset of the v2.10 fix-up routine: the page's free tail, below
+                                            # the stub's stack (0x1E00-0x1FFF), as the v2.10 fix's patch_nex put it
+
+
+def _v210_routine(at, back):
+    """The 1.3 ROM3 copy with NextZXOS v2.10's fix-ups (v2.10 fix tools/patch_nex.py + fix/rom3fix.asm, bytes as the
+    published 1.3): run at `at` (slot-4 alias), the 11-byte copy, then z80tonex.rom3_fixup_code for every site of
+    ROM3_V210_FIXUPS (this build writes none of them itself: the hooks are 0x2000-0x3FFF) ending in JP back."""
+    Z = z80tonex
+    fx = bytearray(Z.rom3_fixup_code(at + len(ROM3_COPY)))
+    tlen = sum(3 + len(new) + len(old) for _, new, old in Z.ROM3_V210_FIXUPS) + 3
+    j = len(fx) - tlen - 3
+    assert fx[j] == 0xC3, fx[j]
+    fx[j + 1:j + 3] = Z.w16(back)
+    return ROM3_COPY + bytes(fx)
+
+
+def _altrom_fill_v210(org, page, lo, hi):
+    """_altrom_fill_v209 with the v2.10 fix-up (1.3): its 11-byte ROM3 copy becomes JP to _v210_routine at V210_AT
+    (the copy and the fix-ups there, then back to the overlay copy) + 8 zero bytes, so every other byte stays at its
+    1.2 address. -> (fill code, routine at V210_AT)."""
+    c = bytearray(_altrom_fill_v209(org, page, lo, hi))
+    k = c.find(ROM3_COPY)
+    assert k > 0 and c.count(ROM3_COPY) == 1
+    at = org - 0x4000 - (SETUP - 0xC000) + V210_AT          # the routine's address in the slot-4 alias of the page
+    c[k:k + len(ROM3_COPY)] = b'\xC3' + z80tonex.w16(at) + bytes(8)
+    return bytes(c), _v210_routine(at, org - 0x4000 + k + len(ROM3_COPY))
+
+
+def _with_v210(setup, routine):
+    """The setup code (stub_extra at SETUP) padded with zeros to V210_AT, then the fix-up routine."""
+    o = V210_AT - (SETUP - 0xC000)
+    assert len(setup) <= o and o + len(routine) <= 0x2000 - 0x200, (len(setup), o)
+    return setup + bytes(o - len(setup)) + routine
+
+
 def _bd_fill(org, page, lo, hi):
     """_altrom_fill_v209 without its ROM3 copy: only bytes lo..hi-1 of page into alt ROM image 1 (run after the colour
     fill, so the colour hooks stay), alt ROM left on for reads as the setup left it."""
@@ -275,10 +314,11 @@ def variant(wd, smooth=0, bd=0, neg=None):
     img = bytearray(8192)
     img[0:len(code)] = code
     pages[G.ALTPG] = bytes(img)
-    open(os.path.join(wd, 'altfill.bin'), 'wb').write(_altrom_fill_v209(SETUP, G.ALTPG, 0x2000, 0x2000 + len(code)))
+    fill, v210 = _altrom_fill_v210(SETUP, G.ALTPG, 0x2000, 0x2000 + len(code))
+    open(os.path.join(wd, 'altfill.bin'), 'wb').write(fill)
     if not bd:
         setup, _ = assemble('new_zealand_story_setup.asm', 'setup', {}, wd)
-        return pages, info, code, syms, setup
+        return pages, info, code, syms, _with_v210(setup, v210)
     from . import new_zealand_story_backdrops as BD
     bdpages, bdinfo = BD.layout()
     k = syms['speed_irq_original'] - syms['h_irq'] - (3 if smooth else 0)   # where the smooth build has its JP h_irq_smooth
@@ -304,7 +344,7 @@ def variant(wd, smooth=0, bd=0, neg=None):
     setup, ss2 = assemble('new_zealand_story_setup.asm', 'setup', {'BACKDROP': 1}, wd)
     assert ss2['bdfill'] == ss['bdfill']
     info['bd'] = bdinfo
-    return pages, info, code, syms, setup
+    return pages, info, code, syms, _with_v210(setup, v210)
 
 
 class Patch:
