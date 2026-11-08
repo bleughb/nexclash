@@ -1,10 +1,10 @@
 # Atom Ant (Hi-Tec, 1990; 128K form of the tape)
 
 ## Next session
-Stage: 3 done for the default; Enhanced waiting on the owner's mock-up approval. Hardware: untested. Not yet played by the owner.
+Stage: 3 done for default and Enhanced (v1.1). Hardware: untested. Not yet played by the owner.
 Inputs: Atom Ant (1990)(Hi-Tec)(48K-128K).tap, MD5 404e992b4edceb10ef8fae9dfaac364b. Start state: that tape on a 128K machine stopped at 9FF4 (`tap2sna.py -c machine=128 -s 0x9FF4 --press 7:ENTER`); derived game data, never in this repo. Review run: runs/atom_ant/release-20261108.
 Build: `nexclash.atom_ant.build(START, OUT)`, then `loading_nex` with the tape's screen. Not yet wired into `auto`, `engines.py` or a record: that comes when it goes upstream after the owner has played it.
-Pending: owner's play; Enhanced mock-up; hardware checklist below.
+Pending: owner's play; hardware checklist below. Enhanced: `nexclash.atom_ant_enh.Patch(start, set256, panel, palette)`; the review run's work folder holds the panel and palette dumps.
 
 ## Facts
 - The archive's .z80 is a 48K dump: no music. The tape's last block (6,305 bytes to E75E in bank 3) loads only when 5B5C is non-zero, that is on a 128K machine. Code paging 9EEB/9EFB, music init E75E.
@@ -25,13 +25,20 @@ No hooks. The default is the tape's 128K form with the original look. The menu's
 Final bare .nex MD5 66d682f8cbe184c00ad2271ed8cf2a33. Three seeds of 800 updates at 9E4A, input applied at A778, lockstep at every update; soak 15 emulated minutes, same pictures as the original; flicker none; real .NEXCLASH on 26.11 card copies, default, each cheat and all, byte for byte, 5B5C = 0x10 in play, AY writes present. Full tables: the run's NOTES.md.
 
 ## Enhanced
-Mock-up only (run's MOCKUP-Enhanced.png). Rated MODERATE: the set's code matches this release (99.97% of 9E2C-E75E, tiles 100%), the back buffer suits the Layer 2 route, and all of the scenery is painted. Painter not named in the local files.
+Built 2026-11-08, version 1.1: a menu option, off by default; the default stays the 1.0 build, byte for byte (66d682f8).
+- The set's code and art are this release's, so each graphic takes its colours from its own address: 256 tiles at 5DC2 (master identical), 28 figures at F877, F88D, F8A3 with their pre-shifted images. Nothing repainted.
+- Value 255 ("use the attribute") stays transparent: the ULA shows, which is what Spec256 renders. So the ULA is kept as the original's, byte for byte.
+- Route: full Layer 2, double buffered, tiles redrawn every pass. The pass 9E3E..9E44 and the copy each run at 28 MHz in one K window; the picture is drawn once at 9E44, left out of the window (nest), with hlib_debt_tick per tile row because it takes over a frame.
+- Panel: the set's panel, static on Layer 2 in both buffers; the digits BD76..BDFD print (row 23: 4, 10, 15, 17, 18, 20-25, 29) stay ULA text in the original's colours. Menus, stage screens and the end text stay ULA too.
+- A figure pixel the set paints with its mask open (112 pixels in all) is OR in Spec256, a plain colour here. Level-end attribute fade shows only on value-255 pixels, until the screen clears.
+- Painter not named in the local files: "Spec256 team".
 
 ## Hardware checklist
 Boot and loading screen; the music on the menu and between levels; keys, Kempston, Interface 2; pause and quit; each cheat; the level end with Infinite time.
 
 ## Lessons
 - [local: 128K form] The archive's label 48K-128K is true only of the tape: the 48K .z80 lacks the music block. Check the loader's own paging before picking the target.
+- [local: debt tick] The picture takes over a frame in one nest: without hlib_debt_tick a whole frame of debt was lost (one wrap allowed), and the run was 36% slow. Found by timing the hook's parts, not by reasoning.
 - [local: no clash] A monochrome play area needs no hooks; the build is the conversion, and its proof is the boot check plus lockstep runs against the original. R has no hook to be compared at, and the notes say so.
 - [local: the nxc repo's make_nfo is outside this repo] tools/make_nfo.py there always writes the clash-fix paragraph; a game with no clash needs it reworded by hand. Noted in the run's NOTES.md, not changed here.
 
@@ -48,3 +55,4 @@ Boot and loading screen; the music on the menu and between levels; keys, Kempsto
 
 ## Stage log
 - 2026-11-08 Stages 0-3 for the default; mock-up for Enhanced; review build for the owner.
+- 2026-11-08 Enhanced from the Spec256 set, version 1.1; review build for the owner.
