@@ -116,9 +116,45 @@ def identify_commando(mem):
 
 def is_commando(snap):
     try:
-        return snap.machine != '48K' and identify_commando(mem64(snap))
+        if snap.machine == '48K':
+            return is_clean_release(snap)
+        return identify_commando(mem64(snap))
     except FileNotFoundError:
         return False
+
+
+CLEAN_PC = 0xFCFC                               # the clean release (.z80, 48K): saved at the IM 2 handler's entry
+
+
+def is_clean_release(snap):
+    """The clean (untrained) release as a 48K .z80, saved in play at the IM 2 handler (64764): the published
+    patch's target (MD5 ddd8f28c). Built from its RAM re-entered at the game entry 25630 (clean_start)."""
+    return snap.machine == '48K' and snap.pc == CLEAN_PC and identify_commando(
+        bytes(16384) + bytes(snap.memory[0x4000:0x10000]))
+
+
+def clean_start(z80, out_path):
+    """The clean release -> the published build's start state (.z80): its RAM and registers as a 128K
+    snapshot (7FFD 0x10: ROM 1, bank 0, unlocked; banks 1, 3, 4, 6, 7 zero; AY zero), PC = 25630, the game
+    entry (e_init sets up the game from there). The same file as dean_rebuild's commando_start128.z80."""
+    from skoolkit.snapshot import Snapshot, write_snapshot
+    from skoolkit.simutils import from_snapshot, get_state
+    from skoolkit.simulator import Simulator
+    s = Snapshot.get(z80)
+    sim = from_snapshot(Simulator, s)
+
+    class Tr:
+        border = outfe = s.border
+        outfffd = 0
+        ay = [0] * 16
+    sim.set_tracer(Tr())
+    sim.registers[24] = INIT
+    ram, regs, state, machine = get_state(sim)
+    m = bytes(sim.memory)
+    z = [0] * 16384
+    banks = [list(m[0xC000:0x10000]), z, list(m[0x8000:0xC000]), z, z, list(m[0x4000:0x8000]), z, z]
+    write_snapshot(out_path, banks, regs, list(state) + ['ay[%d]=0' % i for i in range(16)] + ['7ffd=16', 'fffd=0'],
+                   '128K')
 
 
 YELLOW = 0xB4                               # body fill: the play area's paper (Dean)
@@ -1000,7 +1036,9 @@ def _visible_ok(world):
     return bad
 
 
-def verify(patch, rzx_path, stop=None, collect=0, progress=None, dtab=None):
+def verify(patch, rzx_path, stop=None, collect=0, progress=None, dtab=None, entry_once=False):
+    """entry_once: the recording starts at the game entry 25630 (the clean release's start state), so the
+    entry runs once at the start; any later run is still a re-init failure."""
     import skoolkit.rzxplay as rzxplay
     from skoolkit.simulator import Simulator
     from skoolkit.pagingtracer import Memory
@@ -1127,7 +1165,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, dtab=None):
                     pc = R[24]
                     if pc in WATCH:
                         cnt[pc] += 1
-                        if pc == INIT:
+                        if pc == INIT and not (entry_once and cnt[pc] == 1):
                             fail('game entry 25630 executed during the recording (re-init)')
                         if pc in (39120, 27468, 30597):
                             event(pc, mem, R)
@@ -1582,6 +1620,39 @@ def negative_patch():
     return CommandoPatch(swap_pairs=True)
 
 
+LOAD_BANK = 13                          # the loading screen's entry bank (pages 26, 27), as the published .nxc
+LOAD_SCREEN = 'commando_loading.scr'    # the tape's 6,912-byte screen (MD5 65e617ac), beside the snapshot: game data,
+                                        # never in this repo
+
+
+def loading_nex(nex, scr):
+    """A built .nex -> the same with the loading screen (nexclash-patch build/all2/add_screen.py, bank 13, as the
+    published patch; the stub is jetpac_v11's, asm ldscr): bank 5's screen area in the file = the screen, new bank 13
+    = the entry bank whose stub shows it for 250 frames or a key, puts bank 5's bytes back and falls into 0xC000 of
+    bank 10. -> (bytes, problems): its proof_of_change, every byte outside these checked."""
+    import struct
+    hk = load_profile()['hooks']
+    head, tail = bytes.fromhex(hk['ldhead']), bytes.fromhex(hk['ldtail'])
+    orig = nex[512:512 + 6912]
+    bank = head + bytes(0x200 - len(head)) + orig + bytes(0x3FD0 - 0x200 - 6912) + tail
+    bad = []
+    if len(scr) != 6912:
+        bad.append('screen is %d bytes, not 6912' % len(scr))
+    if struct.unpack_from('<HH', nex, 12) != (0xDFFE, 0xC000) or nex[10] or not nex[18 + 5] or nex[139] != 10 or \
+            nex[140] or nex[141] or any(nex[18 + k] for k in range(LOAD_BANK, 112)):
+        bad.append('start state, screen block, entry bank or bank %d+ not as the stub assumes' % LOAD_BANK)
+    h = bytearray(nex[:512])
+    h[9] += 1
+    h[18 + LOAD_BANK] = 1
+    h[139] = LOAD_BANK
+    n = bytes(h) + scr + nex[512 + 6912:] + bank
+    if [i for i in range(512) if nex[i] != n[i]] != [9, 18 + LOAD_BANK, 139]:
+        bad.append('header bytes')
+    if n[512 + 6912:len(nex)] != nex[512 + 6912:] or n[len(nex) + 0x200:len(nex) + 0x200 + 6912] != orig:
+        bad.append("rest of the file or the stub's copy of bank 5")
+    return n, bad
+
+
 def auto(a, z80, name, out, say):
     import hashlib
     from . import z80tonex as zt, rzx as RZ
@@ -1589,6 +1660,7 @@ def auto(a, z80, name, out, say):
     say('Engine    : commando (Commando: differential OR plotter, player/soldiers/POWs -> sprites)')
     md5 = lambda p: hashlib.md5(open(p, 'rb').read()).hexdigest()
     from skoolkit.snapshot import Snapshot as _S
+    src = z80
     if is_loader(_S.get(z80)):
         ent = os.path.join(out, name + '_entry.z80')
         fr, info = advance_loader(z80, ent)
@@ -1601,6 +1673,14 @@ def auto(a, z80, name, out, say):
         say('Front end : loading screen -> any key -> "INFY LIVES(Y/N)?" -> Y/N -> game entry 25089 '
             '(N: state = the loader\'s; Y: also 27653 = 182) -> %s' % ('PASS' if fok else 'FAIL %s' % ft))
         z80 = ent
+    elif is_clean_release(_S.get(z80)):
+        st = os.path.join(out, name + '_start.z80')
+        clean_start(z80, st)
+        say('Start     : clean release (48K, saved at 0x%04X) -> %s: its RAM and registers as a 128K snapshot, '
+            're-entered at the game entry %d (the published patch\'s start state; no front end)' % (
+                CLEAN_PC, os.path.basename(st), INIT))
+        z80 = st
+        ok_front = True
     else:
         ok_front = True
     plain = os.path.join(out, name + '.nex')
@@ -1619,13 +1699,32 @@ def auto(a, z80, name, out, say):
     ok = ok and not sbad
     say('Static    : %d hook instructions disassembled; IX/IY writes, code in 0x3D00-0x3DFF (probable DivMMC trap): %s -> %s' % (
         sn, sbad or 'none', 'PASS' if not sbad else 'FAIL'))
+    sc = os.path.join(os.path.dirname(os.path.abspath(src)), LOAD_SCREEN)
+    if not os.path.isfile(sc):
+        say('Loading   : no %s beside the snapshot: sprite build without the loading screen' % LOAD_SCREEN)
+    else:
+        n, lb = loading_nex(open(spr, 'rb').read(), open(sc, 'rb').read())
+        open(spr, 'wb').write(n)
+        ok = ok and not lb
+        say('Loading   : screen md5 %s -> %s  %s  bank %d stub, %s' % (
+            md5(sc), os.path.basename(spr), md5(spr), LOAD_BANK, 'the rest as built' if not lb else 'PROBLEM %s' % lb))
     ISAFE['checked'] = 0
     states = []
     dtab = None
+    at_entry = {}
+    for r in list(a.rzx or []):
+        from skoolkit.rzxplay import parse_rzx
+        from skoolkit.snapshot import Snapshot as SS
+        at_entry[r] = [b.obj for b in parse_rzx(r) if isinstance(b.obj, SS)][0].pc == INIT
     for r in list(a.rzx or [])[:1]:
         from skoolkit.rzxplay import parse_rzx
         from skoolkit.snapshot import Snapshot as SS
         s0 = [b.obj for b in parse_rzx(r) if isinstance(b.obj, SS)][0]
+        if at_entry[r]:
+            dtab = patch.dtab
+            say('Depth     : %s starts at the game entry %d (no objects set up yet to derive from): table + solid '
+                'shapes from the profile; the entry may run once, at the start' % (os.path.basename(r), INIT))
+            continue
         dtab, blob, model = _derive_depth(s0)
         dok = dtab == patch.dtab and blob == patch.shapes
         ok = ok and dok
@@ -1638,6 +1737,7 @@ def auto(a, z80, name, out, say):
     for r in list(a.rzx or []):
         from skoolkit.rzxplay import parse_rzx
         from skoolkit.snapshot import Snapshot as SS
+        once = at_entry[r]
         nsnap = sum(1 for b in parse_rzx(r) if isinstance(b.obj, SS))
         if nsnap > 1:
             s2 = os.path.join(out, os.path.splitext(os.path.basename(r))[0] + '_stripped.rzx')
@@ -1645,7 +1745,7 @@ def auto(a, z80, name, out, say):
             say('RZX       : %s had %d autosave snapshots -> %s' % (os.path.basename(r), nsnap - 1,
                                                                    os.path.basename(s2)))
             r = s2
-        c, ex, st = verify(patch, r, stop=getattr(a, 'quick', None), collect=12, dtab=dtab)
+        c, ex, st = verify(patch, r, stop=getattr(a, 'quick', None), collect=12, dtab=dtab, entry_once=once)
         states += st
         fails = {k: v for k, v in c.items() if k.endswith('!')}
         ok = ok and not fails
@@ -1665,7 +1765,7 @@ def auto(a, z80, name, out, say):
                                       c['sprite-frames mostly covered/erased on the original']))
         for k, v in ex.items():
             say('            %s: %s' % (k, str(v)[:200]))
-        nc, nex = verify(negative_cache_patch(), r, stop=NEG_CACHE_FRAMES, dtab=dtab)
+        nc, nex = verify(negative_cache_patch(), r, stop=NEG_CACHE_FRAMES, dtab=dtab, entry_once=once)
         cneg = any('sprite pixels differ' in k for k in nc if k.endswith('!'))
         ok = ok and cneg and c['converted, image reused from a pattern slot'] > 0
         say('Cache     : %d of %d converted plots reused an image already in a pattern slot (no upload); '

@@ -250,7 +250,22 @@ negative controls. Report: auto's commando_report.txt.
   original is not measurable here; against main's build (probe 39120, keys S to start, QAOP M): +0.00% (quiet -0.28%,
   busy +0.12%), interrupts 50.00 a second both.
 
+## Published .nxc build from main (2026-11-07)
+- The published Commando .nxc v1.1 (github.com/jattree/nxc) is main's build of its target, the clean release
+  (48K .z80, MD5 ddd8f28c, saved at the IM 2 handler 0xFCFC): `python nexclash.py auto CLEAN.z80 --no-record
+  --altrom-fill rom3`, with the tape's loading screen as commando_loading.scr (6,912 bytes, MD5 65e617ac) beside it.
+  `auto` writes NAME_start.z80 (clean_start: its RAM and registers as a 128K snapshot, 7FFD 0x10, PC 25630 =
+  dean_rebuild's commando_start128.z80, 714b56c0), builds from it, then loading_nex puts the screen in bank 5 and
+  the stub (asm ldscr, jetpac_v11's for bank 13) in bank 13. Sprites 5362a84ef1566ccc7bb234669daa3725 = the
+  published bare .nex (nxc.py --bare), byte for byte; without the screen 43a6e419. Dean's snapshot builds as before.
+- Recordings that start at the game entry 25630 (made from that start state): the depth table and shapes come from
+  the profile (nothing set up yet to derive from) and the entry may run once, at the start (any later run is still a
+  re-init failure). Was a local env switch (COMMANDO_NO_DERIVE). walk1 + walk2 from the clean release: IDENTICAL
+  (24,002 frames, 22,176 plots), 32,256 position cases, negatives 14/14; selftest --game commando --verify PASSED.
+
 ## Lessons
+- [local: Commando's start state] A published build made from a derived start state and a loading-screen step
+  outside the engine is not main's build: the derivation (clean_start) and the screen (loading_nex) now run in auto.
 - [card patch.restore-speed §Use / do not use] A full alt ROM: call one latch routine pair instead of the macros
   inline (25 bytes against 38 for two sites).
 
