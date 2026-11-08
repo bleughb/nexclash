@@ -52,8 +52,8 @@
   "engine_col": "inferno copier window (inferno.md)",
   "build": "copier window milestone 3b: timed capture hooks + window + the 8F95 work (textmap compile) as a coroutine in the window waits, unfinished work dropped at 8F95 (3c); m2/m3/m3b/m3c diagnostic NEXes; no sprites",
   "software": "update model 8F7C->9907->8F98 PASS on 1,855 states (OUT/9907 timing, R, RAM, page 14/69 = 8F95 work, IRQs incl. work slices and the 8F95 hook, 18 controls); window-only 1,854 PASS",
-  "hardware": "m3 and window-only run on the Next with speed and sound matching plain Inferno.nex (2026-11-08); m3b: gameplay ok (user, 2026-11-08); m3c not yet run; no sprites",
-  "next": "m3c hardware pace/sound (heavy shooting); shrink actor hooks; JNext pace"
+  "hardware": "m3 and window-only run on the Next with speed and sound matching plain Inferno.nex (2026-11-08); m3b: gameplay ok (user, 2026-11-08); m3c: game plays ok (user, 2026-11-08); no sprites",
+  "next": "choose: live-table/dispatch pipeline items or deferred actor row copy; JNext pace"
  },
  "checks": [
   "asm2profile:inferno"
@@ -2147,7 +2147,8 @@
    "diagnostic_nex": {
     "file": "Inferno_copier_window_m3c_diagnostic.nex",
     "md5": "ac3be35a00830b05028fa766d568e307",
-    "boot_checks": "PASS (Sinclair, foreign ROM3, hook bytes after boot)"
+    "boot_checks": "PASS (Sinclair, foreign ROM3, hook bytes after boot)",
+    "hardware": "game plays ok (user, 2026-11-08); no detailed heavy-shooting pace/sound comparison reported"
    }
   }
  }
