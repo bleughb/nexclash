@@ -26,8 +26,13 @@ TAPE_SHA256 = 'ab08ab65d1e086aa34ab8cce70e7499f234f1033084304ccea322028790e0c2f'
 TAPE_SCREEN = 479                     # the 6,912-byte loading screen's offset in that tape
 SOURCE0 = 58
 FLOORS = (82, 88, 46)
-PAL = [(0, 0, 0), (0, 0, 205), (205, 0, 0), (205, 0, 205), (0, 205, 0), (0, 205, 205), (205, 205, 0), (205, 205, 205),
-       (0, 0, 0), (0, 0, 255), (255, 0, 0), (255, 0, 255), (0, 255, 0), (0, 255, 255), (255, 255, 0), (255, 255, 255)]
+# Original-colour ink entries: the Next's own ULA colours (RRRGGGBB), the shades of the Spectrum screen (1.2). 1.1's
+# 205/255 values read back a level off; no default graphic draws these entries (figures take 64 + ink, the ULA set).
+PAL = [0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x00, 0x03, 0xE0, 0xE7, 0x1C, 0x1F, 0xFC, 0xFF]
+# Enhanced keeps 1.1's values so its build stays byte-identical to the approved one; nothing draws them there either.
+ENHANCED_PAL = [(0, 0, 0), (0, 0, 205), (205, 0, 0), (205, 0, 205), (0, 205, 0), (0, 205, 205), (205, 205, 0),
+                (205, 205, 205), (0, 0, 0), (0, 0, 255), (255, 0, 0), (255, 0, 255), (0, 255, 0), (0, 255, 255),
+                (255, 255, 0), (255, 255, 255)]
 SITES = {0xD02A: ('dd7e1a', 's_plot', 0xCD), 0xCE7B: ('010018', 's_clear', 0xCD),
          0xCF4F: ('cd83bf', 's_rect', 0xCD), 0xCE85: ('2100d2', 's_full', 0xCD),
          0xCF82: ('dde1c9', 's_part', 0xC3),
@@ -115,8 +120,10 @@ def compile_assets(game, enhanced=True):
     paint_rgb = sorted({p[:3] for im in accepted_painted.values() for p in im.getdata() if p[3]})
     assert paint_rgb[0] == (0, 0, 0) and len(paint_rgb) <= 15
     rgb = paint_rgb + sorted({p[:3] for p in floor.getdata() if p[3]} - set(paint_rgb))
+    def level3(v): return (v >> 5 & 7, v >> 2 & 7, (v & 3) << 1 | (v & 3 != 0))       # RRRGGGBB as the Next shows it
+    ink = ENHANCED_PAL if enhanced else [tuple(n * 255 // 7 for n in level3(v)) for v in PAL]
     original_ink = []
-    for c in PAL:
+    for c in ink:
         if c not in rgb: rgb.append(c)
         original_ink.append(rgb.index(c))
     assert len(rgb) < 64
@@ -127,7 +134,7 @@ def compile_assets(game, enhanced=True):
         palettes[i * 2] = rr << 5 | gg << 2 | bb >> 1
         palettes[i * 2 + 1] = bb & 1
     palettes[256:508] = palettes[:252]          # static colours use bit 7, with identical physical RGB entries
-    ula333 = (0, 5, 320, 325, 40, 45, 360, 365, 0, 7, 448, 463, 56, 63, 504, 511)
+    ula333 = [r << 6 | g << 3 | b for r, g, b in map(level3, PAL)]      # (0, 5, 320, 325, 40, 45, 360, 365, 0, 7, ...)
     for i, value in enumerate(ula333): palettes[(64 + i) * 2:(65 + i) * 2] = bytes((value >> 1, value & 1))
     for i in (126, 254, 255): palettes[i * 2:i * 2 + 2] = bytes((0xe3, 0))
     pages = {22: bytearray(8192), 23: bytearray(8192), 24: bytearray(8192), 25: bytearray(8192), 27: bytearray([255] * 8192)}
