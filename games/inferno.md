@@ -60,11 +60,10 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
 ## Hardware checklist
 - Plain level-1 Inferno.nex: try CSpect first, then the Next; check title/text to gameplay,
   controls, scrolling, sound, death/restart and the shop. Boot is software-checked only.
-- Inferno_copier_window_*_diagnostic.nex (m2/m3/m3b/m3c; specnext build/; NOT releases): play each
+- Inferno_copier_window_*_diagnostic.nex (m2..m3d; specnext build/; NOT releases): play each
   beside plain Inferno.nex for a minute of level 1: same speed, same beeper sound, no hang at the
   first gameplay frame, no extra border stripes. Report core/video mode.
-- This is a plain conversion, with original colour clash; it does not provide subsequent
-  tape loads. No sprite build or all-level hardware test is ready.
+- Plain conversion: no later tape loads; no sprite build yet.
 - Proposed sprite release: check intro beeper speed; title/start; all six continuous loads with
   score, equipment and health retained; scrolling/depth, bullets, explosions, pickups, death;
   shop/pause/messages with no stale layers; ending scroll/text/medals; no slowdown or tearing.
