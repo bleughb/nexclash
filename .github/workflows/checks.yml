@@ -31,3 +31,5 @@ jobs:
         run: python -m nexclash.rainbow_dma_check
       - name: Workflow regression checks
         run: python tools/workflow_check.py
+      - name: Palette standard report (warns, never fails; docs/COLOURS.md)
+        run: python tools/palette_check.py
