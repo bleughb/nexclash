@@ -24,7 +24,7 @@ WHITE_INKS = (7, 15)
 # (address, original, new, hook symbol or None)
 SITES = [
     (34558, '0ec9', None, 'h_new'),        # LD C,0 / RET (end of the plotter's new-image setup) -> JP
-    (34462, '0ec9', None, 'h_clr'),        # LD C,0 / RET (object left the window: state cleared)
+    (34431, 'afdd7709', None, 'h_clr'),    # XOR A / LD (IX+9),A (object outside the window: its state cleared)
     (34368, 'af32595e', None, 'h_eo'),     # XOR A / LD (24153),A (erase-only entry)
     (34383, 'af32595e', None, 'h_teo'),    # XOR A / LD (24153),A (truck erase-only entry)
     (34958, '0ec9', None, 'h_tnew'),       # LD C,0 / RET (end of the truck plotter's setup)
@@ -32,12 +32,11 @@ SITES = [
     (35749, '21bf57', None, 'h_msg'),      # LD HL,22463 (entry of the play-area clear: missile warning, new screens)
 ]
 SITES[0] = (34558, '0e00c9', None, 'h_new')
-SITES[1] = (34462, '0e00c9', None, 'h_clr')
 SITES[4] = (34958, '0e00c9', None, 'h_tnew')
 SITE_OP = {'h_cls': 0xCD}
 STORE_NOPS = [34245, 34249, 34282, 34286, 34290, 34314, 34318, 34755, 34793]   # LD (HL),A figure XOR
 PAINT_NOPS = [(34663, 0x72), (35127, 0x72), (35104, 0x77)]                    # object colour over cells
-INTERIORS = (34559, 34560, 34463, 34464, 34369, 34370, 34371, 34384, 34385, 34386, 34959, 34960,
+INTERIORS = (34559, 34560, 34432, 34433, 34434, 34369, 34370, 34371, 34384, 34385, 34386, 34959, 34960,
              34012, 34013, 35750, 35751)
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -618,6 +617,12 @@ def auto(a, z80, name, out, say):
                 'Enhanced ' if enh else '', os.path.basename(r), fr, ' (%s)' % err if err else '',
                 sum(v for k, v in c.items() if k.startswith('hook ')), c['objects equal'], c['IM 1 handlers compared'],
                 dt, 'IDENTICAL' if not f else 'FAILED %s %s' % (f, {k: ex[k][:2] for k in f})))
+            rp = ex.get('replay pace')
+            if rp:
+                say('Pace      : %s%s replay pace (the recording on both sides, hooks at the Next clock, per update at '
+                    '0x%04X): all %+.2f%% (%d updates), quiet third %+.2f%%, busy third %+.2f%%' % (
+                        'Enhanced ' if enh else '', os.path.basename(r), PACE_PROBE, rp['all'][1], rp['all'][0],
+                        rp['quiet'][1], rp['busy'][1]))
     u, _ = unit_tests()
     uf = {k: v for k, v in u.items() if k.endswith('!')}
     ok = ok and not uf
@@ -1108,6 +1113,7 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
             s.pat = bytearray(16384)
             s.pp = 0
             s.sel = None                # NextREG selected at 0x243B (h_new / h_tnew read NR 7: the caller's speed)
+            s.w7 = 0                    # NR 7 writes (replay pace: the hook's 28 MHz span)
 
     ns = NS()
     cnt = collections.Counter()
@@ -1128,11 +1134,15 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
         return pm
 
 
-    def run(sim, stop, limit=300000):
+    def run(sim, stop, limit=300000, fast=None):
         R, ops, mem = sim.registers, sim.opcodes, sim.memory
         n = 0
+        w0 = ns.w7
         while not stop(R):
+            t = R[25]
             ops[mem[R[24]]]()
+            if fast is not None and (ns.w7 - w0) & 1:
+                fast[0] += R[25] - t        # between the hook's NEXTREG 7,3 and its exit's NEXTREG 7: 28 MHz
             n += 1
             if n > limit:
                 return False
@@ -1147,6 +1157,8 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
 
         def nextreg(r, v):
             ns.nr[r] = v
+            if r == 0x07:
+                ns.w7 += 1
             if not patched:
                 raise RuntimeError('NEXTREG in original code')
             if 0x35 <= r <= 0x39:
@@ -1256,6 +1268,8 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
 
     frames = [0]
     stores = [0]
+    pace = dict(f=0, t=0, last=None, add=0.0, upd=[])   # replay pace: per game update (PACE_PROBE), the original's
+                                                        # time and the T the build adds (hooks' 28 MHz parts at T / 8)
 
 
     def check_frame(sim):
@@ -1364,6 +1378,16 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
 
     def on(pc, sim):
         m, r = sim.memory, sim.registers
+        if r[25] < pace['t']:
+            pace['f'] += 1                      # the replay's T restarts each frame
+        pace['t'] = r[25]
+        if pc == PACE_PROBE:
+            now = pace['f'] * 69888 + r[25]
+            if pace['last'] is not None:
+                pace['upd'].append((now - pace['last'], pace['add']))
+            pace['last'], pace['add'] = now, 0.0
+            if pc not in HOOKS:
+                return
         if pc == 0x38:
             isr(sim)
             check_frame(sim)
@@ -1375,6 +1399,7 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
             if d:
                 FIG[ix][hl] = FIG[ix].get(hl, 0) ^ d
             stores[0] += 1
+            pace['add'] -= 3                    # NOP (4 T) for LD (HL),A (7 T)
             cnt['figure stores (original)'] += 1
             if pc not in SITE:
                 fail('store site not patched!', pc)
@@ -1383,6 +1408,7 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
             v = r[D] if pc != 35104 else r[A]
             hl = r[L] | r[H] << 8
             PREPAINT.setdefault(hl, m[hl])
+            pace['add'] -= 3                    # NOP for LD (HL),D / LD (HL),A
             cnt['paint %d' % pc] += 1
             if v == 0:
                 fail('paint zero (changes a later branch)!', pc)
@@ -1414,12 +1440,16 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
         k_in = cnt['speed cases'] & 3           # the hook entered at each clock in turn (patch.restore-speed)
         cnt['speed cases'] += 1
         ns.nr[0x07] = k_in
-        okp = run(sp_, stop)
+        fast = [0]
+        okp = run(sp_, stop, fast=fast)
         if ns.nr.get(0x07, 0) & 3 != k_in:
             fail('exit speed is not the incoming clock!', '%s in %d out %d' % (sym, k_in, ns.nr.get(0x07, 0) & 3))
         ns.nr[0x07] = 0
         oko = run(so, stop)
         cnt['T added by hooks (sim T, all at 3.5 MHz)'] += (sp_.registers[25] - so.registers[25])
+        d = sp_.registers[25] - t0 - fast[0] + fast[0] / 8.0 - (so.registers[25] - t0)   # at a 3.5 MHz game
+        pace['add'] += d
+        cnt['T added at the Next clock ' + sym] += int(d)
         cnt['T ' + sym] += (sp_.registers[25] - so.registers[25])
         cnt['hook %s' % sym] += 1
         if not (okp and oko):
@@ -1472,6 +1502,24 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
         cnt["alt ROM image bytes outside the hooks not Sinclair's!"] = len(_off)
         ex["alt ROM image bytes outside the hooks not Sinclair's!"].append([hex(a) for a in _off[:6]])
 
-    pcs = set(HOOKS) | set(LJ.STORE_NOPS) | {34663, 35127, 35104, 0x38}
+    pcs = set(HOOKS) | set(LJ.STORE_NOPS) | {34663, 35127, 35104, 0x38, PACE_PROBE}
     n, err = trace(RZX, pcs, on, stop=STOP)
+    ex['replay pace'] = replay_pace(pace['upd'][1:])    # the first update holds the start
     return cnt, ex, n, err
+
+
+PACE_PROBE = 0x9ED2         # run once per game update (nexclash.pace's automatic probe for this game)
+
+
+def replay_pace(upd):
+    """[(original T, T added)] per update -> {phase: (updates, penalty %)}: all, quiet (the original's fastest third),
+    busy (its slowest third). The same game on both sides (the recording), the build's hooks at the Next's clock; the
+    game has no frame sync, so added T is added time."""
+    if len(upd) < 3:
+        return {}
+    srt = sorted(upd, key=lambda x: x[0])
+    k = len(srt) // 3
+
+    def pen(xs):
+        return len(xs), 100.0 * sum(a for _, a in xs) / sum(o for o, _ in xs)
+    return {'all': pen(upd), 'quiet': pen(srt[:k]), 'busy': pen(srt[-k:])}

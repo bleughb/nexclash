@@ -92,26 +92,26 @@
   },
   "sprites": {
    "file": "lunar_jetman_sprites.nex",
-   "md5": "aca1c90c9f90a719d9a3ee8d0e694c80"
+   "md5": "5c53849edec2e004ccc5ff47e13c6f75"
   },
   "sprites_loading": {
    "file": "lunar_jetman_sprites_loading.nex",
-   "md5": "a0af30ca8016214a145f9165ffae6a53"
+   "md5": "8bd7ab74a20c770687d0e9814c484286"
   },
   "enhanced": {
    "file": "lunar_jetman_enhanced.nex",
-   "md5": "555af3ceaf9073f267b42c3912b2068b"
+   "md5": "c0453b9c6b216af4975b1ca434fa80a1"
   },
   "enhanced_loading": {
    "file": "lunar_jetman_enhanced_loading.nex",
-   "md5": "9df3d4f64ffaec160ef42fc5357f57e9"
+   "md5": "ad21539cbd2a5dc13c497d2e5d71b2e9"
   }
  },
  "repro": [],
  "status": {
   "title": "Lunar Jetman",
   "engine_col": "lunar_jetman (lunar_jetman.md)",
-  "build": "lunar_jetman_sprites_loading.nex 46348868 + lunar_jetman_enhanced_loading.nex 62f7e914 (every object a sprite from build-time images, XOR stores and colour painters NOP; whole alt ROM image from the build; starts at the file's decrypter; tape loading screen) = the published .nxc v1.0",
+  "build": "lunar_jetman_sprites_loading.nex 8bd7ab74 + lunar_jetman_enhanced_loading.nex ad21539c (2026-11-08 pace: h_clr at the state clear with a skip, hides at 28 MHz; objn without a loop; uploads by OUTI; replay pace +13.7% -> about +4%; before that a0af30ca / 9df3d4f6, the published v1.0 46348868 / 62f7e914: every object a sprite from build-time images, XOR stores and colour painters NOP; whole alt ROM image from the build; starts at the file's decrypter; tape loading screen)",
   "software": "replay IDENTICAL on 3 recordings, default and Enhanced; negatives detected (games/lunar_jetman.md Results)",
   "hardware": "none (JNext only)",
   "next": "hardware round; ported from Jon Attree's .nxc work, 2026-11-04"
@@ -142,14 +142,14 @@
  ],
  "checked": {
   "deps": {
-   "asm/lunar_jetman_hooks.asm": "be34ac42ac46671f",
+   "asm/lunar_jetman_hooks.asm": "c13c7254ae2a187b",
    "asm/lunar_jetman_palette.asm": "b8bd4aa764472e51",
-   "docs/profiles/lunar_jetman.json": "a5df7d585f476818",
+   "docs/profiles/lunar_jetman.json": "23c7e71d6d5ff900",
    "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "00d01102bda98ad5",
-   "nexclash/lunar_jetman.py": "424aa1b1c81dbae4",
+   "nexclash/engines.py": "2a90481848696085",
+   "nexclash/lunar_jetman.py": "07d533ba3afa76a2",
    "nexclash/nextboot.py": "fa792a76ad78dbef",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
@@ -157,21 +157,21 @@
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "a040400e34af6a5c",
+   "recipe": "d1ad0bbbc0dd6a63",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-07"
  },
  "verified": {
   "deps": {
-   "asm/lunar_jetman_hooks.asm": "be34ac42ac46671f",
+   "asm/lunar_jetman_hooks.asm": "c13c7254ae2a187b",
    "asm/lunar_jetman_palette.asm": "b8bd4aa764472e51",
-   "docs/profiles/lunar_jetman.json": "a5df7d585f476818",
+   "docs/profiles/lunar_jetman.json": "23c7e71d6d5ff900",
    "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "00d01102bda98ad5",
-   "nexclash/lunar_jetman.py": "424aa1b1c81dbae4",
+   "nexclash/engines.py": "2a90481848696085",
+   "nexclash/lunar_jetman.py": "07d533ba3afa76a2",
    "nexclash/nextboot.py": "fa792a76ad78dbef",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
@@ -179,7 +179,7 @@
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "a040400e34af6a5c",
+   "recipe": "d1ad0bbbc0dd6a63",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-07"
