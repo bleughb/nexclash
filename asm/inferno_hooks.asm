@@ -6125,6 +6125,13 @@ SEL_MASKS EQU 0x5010           ; 3 x 8 bytes
 SEL_T     EQU 0x5028
 SEL_BM    EQU 0x5042           ; word: the building mask
 SEL_LP    EQU 0x5044           ; word: next list entry
+SEL_QN    EQU 0x5046           ; upload queue length
+SEL_QI    EQU 0x5047
+SEL_UPB   EQU 0x5048           ; bursts left of this pattern
+SEL_UPHL  EQU 0x5049           ; word: source
+SEL_UPS   EQU 0x504B           ; its slot
+SEL_DIRTY EQU 0x504C           ; slots with SLOT_FLAG set (the hit path reads flags only when non-zero)
+SEL_Q     EQU 0x5A00           ; 128 slots to upload (256-aligned; a slot may repeat)
 SEL_HL    EQU 0x5029
 SEL_COL   EQU 0x502B
 SEL_ROW   EQU 0x502C
@@ -6155,6 +6162,7 @@ wk_select:
         ld (SEL_N),a
         ld (SEL_NEW),a
         ld (SEL_EVICT),a
+        ld (SEL_QN),a
         ld a,(DX_READY)
         or a
         ret z
@@ -6179,7 +6187,7 @@ sl_rec: SL_POLL sl_yrec
 sl_rec_go:
         ld a,(SEL_LEFT)
         or a
-        jp z,sl_commit
+        jp z,sl_upload
         dec a
         ld (SEL_LEFT),a
         nextreg 0x51,68
@@ -6344,7 +6352,23 @@ sl_have:                        ; A = slot; atomic: no poll until the next chunk
         ld (hl),a
         inc hl
         ld (SEL_LP),hl
-        ld hl,(SEL_HL)
+        ld a,(SEL_DIRTY)        ; nothing awaits upload: skip the flag
+        or a
+        jr z,.clean
+        ld b,0                  ; not uploaded yet: queue it
+        ld hl,SLOT_FLAG
+        add hl,bc
+        ld a,(hl)
+        or a
+        jr z,.clean
+        ld a,(SEL_QN)
+        ld e,a
+        inc a
+        ld (SEL_QN),a
+        ld d,SEL_Q >> 8
+        ld a,c
+        ld (de),a
+.clean: ld hl,(SEL_HL)
         jp sl_chunk
 sl_alloc:
         ld de,SEL_U             ; union of the three masks
@@ -6423,7 +6447,13 @@ sl_take:
         ld b,0
         ld hl,SLOT_FLAG
         add hl,bc
+        ld a,(hl)
+        or a
+        jr nz,.was
         ld (hl),1
+        ld hl,SEL_DIRTY
+        inc (hl)
+.was:
         ld a,(SEL_NEW)
         inc a
         ld (SEL_NEW),a
@@ -6470,6 +6500,110 @@ sl_touch:
         ld a,c
         ld (LRU_TAIL),a
         ret
+; CPU upload of the queue to pattern RAM (4-bit: pattern = slot), bursts of 16 between polls. A pattern's flag
+; clears only after its last burst, so a drop restarts that pattern and keeps the finished ones.
+sl_upload:
+        xor a
+        ld (SEL_QI),a
+sl_up_next:
+        SL_POLL sl_yupn
+sl_up_nextgo:
+        ld a,(SEL_QI)
+        ld hl,SEL_QN
+        cp (hl)
+        jp z,sl_commit
+        ld l,a
+        inc a
+        ld (SEL_QI),a
+        ld h,SEL_Q >> 8
+        ld c,(hl)
+        ld b,0
+        ld hl,SLOT_FLAG
+        add hl,bc
+        ld a,(hl)
+        or a
+        jp z,sl_up_next
+        ld a,c
+        ld (SEL_UPS),a
+        add a,a
+        ld l,a
+        ld h,0
+        ld de,SLOT_ID
+        add hl,de
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ld a,e                  ; page of the pattern
+        rlca
+        rlca
+        and 3
+        ld l,a
+        ld a,d
+        add a,a
+        add a,a
+        or l
+        add a,PAT_BASE
+        ld (SEL_M1),a
+        nextreg 0x51,a
+        ld a,e
+        and 63
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld a,h
+        add a,0x20
+        ld h,a
+        ld (SEL_UPHL),hl
+        ld a,c                  ; pattern select: slot >> 1, bit 7 = its 128-byte half
+        rrca
+        and 0x80
+        ld e,a
+        ld a,c
+        srl a
+        or e
+        ld bc,0x303B
+        out (c),a
+        ld a,8
+        ld (SEL_UPB),a
+sl_up_burst:
+        SL_POLL sl_yup
+sl_up_go:
+        ld hl,(SEL_UPHL)
+        ld bc,0x105B
+        otir
+        ld (SEL_UPHL),hl
+        ld hl,SEL_UPB
+        dec (hl)
+        jp nz,sl_up_burst
+        ld a,(SEL_UPS)
+        ld c,a
+        ld b,0
+        ld hl,SLOT_FLAG
+        add hl,bc
+        ld (hl),0
+        ld hl,SEL_DIRTY
+        dec (hl)
+        jp sl_up_next
+sl_yupn:
+        ld hl,.resume
+        jp wk_yield
+.resume:
+        ld a,(SEL_M1)
+        nextreg 0x51,a
+        jp sl_up_nextgo
+sl_yup:
+        ld hl,.resume
+        jp wk_yield
+.resume:
+        ld a,(SEL_M1)
+        nextreg 0x51,a
+        jp sl_up_go
 sl_commit:                      ; roles rotate in one byte
         ld a,(SEL_ROLE)
         ld b,a
