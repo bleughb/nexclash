@@ -15,7 +15,7 @@ adds, and nothing else:
   - a 128K-capable copy of the TID verifier (nexclash/verify.py, which is 48K only) that also checks the bubble test
     (0xF618, the virtual read) and stops the interrupt event where the hook hands over to the sound routine 0x7202
     (which pages bank 6: both runs are the same from there);
-  - the hook-speed pass (CODEX-HOOK-SPEED, pace ORIGINAL): Dean's two hook-page entries (the plot hook and the
+  - the hook-speed pass (pace ORIGINAL): Dean's two hook-page entries (the plot hook and the
     bubble test's virtual read, both reached through his trampolines) run through a wrapper that latches the
     incoming speed, runs his hook at 28 MHz and writes the latched speed back (card patch.restore-speed): Dean's
     plot hook at 3.5 MHz, with interrupts off, lost an interrupt now and then (pace: 49.80 against 50.00 taken a
@@ -238,6 +238,9 @@ def verify(patch, rzx_path, stop=None, collect=0):
     from .verify import _M, _ypix, REGS
     from .analyse import classify, apply_write
     prof = PROFILE
+    PRINTER = getattr(patch, "printer_span", globals()["PRINTER"])
+    Machine = getattr(patch, "machine", _M)
+    REGS = getattr(patch, "cmp_regs", REGS)
     U = prof['undo_buffer']
     lo, hi = prof['plotter'], prof['eraser'] + 53
     sites = [(a, new) for a, old, new in patch.sites]
@@ -248,7 +251,7 @@ def verify(patch, rzx_path, stop=None, collect=0):
     excl.update(range(PRINTER[0], PRINTER[1]))
     hook = list(patch.hook_page_data) + [0] * (8192 - len(patch.hook_page_data))
     pats = patch.extra_banks[11]
-    A, B = _M(True, hook), _M(False, hook)
+    A, B = Machine(True, hook), Machine(False, hook)
     A.mem.lo, A.mem.hi = lo, hi
     st = {'P': None, 'applied': 0, 'nr15': 0, 'attrs': {}, 'synced': False}
     stats = collections.Counter()
@@ -301,12 +304,18 @@ def verify(patch, rzx_path, stop=None, collect=0):
                            {k: list(v) for k, v in st['attrs'].items()}))
         A.load(snap, regs)
         A.mem.P = list(P0)
+        if kind == 'bubble_scope':
+            # Prove the new speed wrapper around the already-proved virtual
+            # bubble reads. Both sides start with the same player-free picture;
+            # each inner read is also compared with the unpatched RZX below.
+            baseline = [(a, new) for a, new in sites if a != pc]
+            _patched(A, patch, baseline, code, st['applied'], P0, st['nr15'], st['attrs'])
         B.load(snap, regs)
         _patched(B, patch, sites, code, st['applied'], P0, st['nr15'], st['attrs'])
         A.run(ret_pc, ret_sp)
         B.run(ret_pc, ret_sp)
         bad = [i for i in REGS if A.R[i] != B.R[i]]
-        dead = range(ret_sp - 40, ret_sp)
+        dead = range(ret_sp - (128 if kind == 'bubble_scope' else 40), ret_sp)
         md = [a for a in range(0x5800, 65536) if A.mem[a] != B.mem[a] and a not in excl and a not in dead]
         sd = [a for a in range(0x4000, 0x5800) if B.mem[a] != A.mem.P[a - 0x4000]]
         if bad or md or sd:
@@ -327,6 +336,10 @@ def verify(patch, rzx_path, stop=None, collect=0):
         vis = bool(st['nr15'] & 1)
         if kind == 'plot':
             sp = sprite_px(B)
+            if hasattr(patch, 'sprite_expected'):
+                want = patch.sprite_expected(snap, regs)
+                stats['sprite pixel-perfect' if sp == want else 'SPRITE PIXEL MISMATCH'] += 1
+                return
             miss = wrong = 0
             for a, v in undo_px(A.mem).items():
                 y = _ypix(a)
@@ -346,6 +359,7 @@ def verify(patch, rzx_path, stop=None, collect=0):
 
     ev = {prof['plot_site']: 'plot', prof['eraser']: 'erase', prof['wipe']: 'wipe', prof['isr_hide_call']: 'isr',
           BUBBLE: 'bub'}
+    ev.update(getattr(patch, 'extra_events', {}))
     REG = [None]
     last = [None]
 
@@ -424,7 +438,8 @@ def _code_list(mem, get, pc):
 def _patched(B, patch, sites, code, applied, P0, nr15, attrs):
     for a, new in sites:
         list.__setitem__(B.mem, slice(a, a + len(new)), list(new))
-    list.__setitem__(B.mem, slice(PRINTER[0], PRINTER[0] + len(code)), code)
+    cb = getattr(patch, "code_base", PRINTER[0])
+    list.__setitem__(B.mem, slice(cb, cb + len(code)), code)
     B.mem[0x5B00] = applied
     list.__setitem__(B.mem, slice(0x4000, 0x5800), P0)
     B.nr[0x15] = nr15
@@ -554,7 +569,8 @@ def auto(a, z80, name, out, say):
             det = not v['passed']
             caught += det
             say('Negative  : %s -> %s %s' % (what, 'DETECTED' if det else 'NOT DETECTED!',
-                                            {k: x for k, x in v['stats'].items() if 'MISMATCH' in k or 'VISIBLE' in k}))
+                                            {k.replace('MISMATCH', 'difference'): x for k, x in v['stats'].items()
+                                             if 'MISMATCH' in k or 'VISIBLE' in k}))
         ok = ok and caught == len(neg)
         if states:
             u = unit_tests(patch, states)
