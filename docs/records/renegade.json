@@ -80,18 +80,18 @@
   },
   "sprites": {
    "file": "renegade_sprites.nex",
-   "md5": "510cdd297b85a68b46bbc045a2ceb767"
+   "md5": "b4b452100f88d54415f3f5f11568c454"
   },
   "enhanced": {
    "file": "renegade_enhanced.nex",
-   "md5": "001b8f0cfc8fc1b709419cf5fba47c54"
+   "md5": "9ed0c98b03279f04ca18d6cae8fd8387"
   }
  },
  "repro": [],
  "status": {
   "title": "Renegade (128K)",
   "engine_col": "renegade128 (renegade.md)",
-  "build": "sprites a670c5b1 (.nxc v1.0)",
+  "build": "sprites b4b45210, Enhanced 9ed0c98b (review 1.2: pace windows, R kept; .nxc v1.1 was 510cdd29)",
   "software": "Verify on 4 bot recordings, whole game; unit PASS; negatives detected; reaches gameplay in JNext 1.1.104 (no human recording)",
   "hardware": "untested",
   "next": "hardware test"
@@ -113,7 +113,7 @@
    "application": "renegade128.screen-readers",
    "check": "state.rzx-differential",
    "status": "pass",
-   "build": "a670c5b1",
+   "build": "b4b45210",
    "scope": "4 bot recordings, 106,055 frames; pokes in 3; whole game by play in one; no human recording; start-up checked only in JNext; no hardware",
    "evidence": "games/renegade.md \"Results\""
   }
@@ -124,20 +124,20 @@
  },
  "checked": {
   "deps": {
-   "asm/renegade128_hooks.asm": "be98f608d1bb3a6a",
-   "docs/profiles/renegade128.json": "f2f4ec6d2c1b109b",
-   "nexclash.py": "8eb7d621324c5aa6",
+   "asm/renegade128_hooks.asm": "a2efae49a88d4de9",
+   "docs/profiles/renegade128.json": "e8d0ef08baf6a9ff",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "e5e8ff401baf2257",
+   "nexclash/engines.py": "b9b7538a34c912de",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "e6624bfe14a62e21",
+   "nexclash/nextboot.py": "121a5912efae9b2a",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "85f7a2ad3b78d411",
-   "nexclash/renegade.py": "bb48b18bfc6b3ad5",
-   "nexclash/renegade128.py": "82b7289f7fefb606",
+   "nexclash/renegade.py": "6d256418fdf318d2",
+   "nexclash/renegade128.py": "1c98ecfc94c7d36e",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
@@ -145,27 +145,27 @@
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "3a768a2b44bd807c",
+   "recipe": "33eecf7d7fcc2934",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-06"
+  "date": "2026-11-08"
  },
  "verified": {
   "deps": {
-   "asm/renegade128_hooks.asm": "be98f608d1bb3a6a",
-   "docs/profiles/renegade128.json": "f2f4ec6d2c1b109b",
-   "nexclash.py": "8eb7d621324c5aa6",
+   "asm/renegade128_hooks.asm": "a2efae49a88d4de9",
+   "docs/profiles/renegade128.json": "e8d0ef08baf6a9ff",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "e5e8ff401baf2257",
+   "nexclash/engines.py": "b9b7538a34c912de",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "e6624bfe14a62e21",
+   "nexclash/nextboot.py": "121a5912efae9b2a",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "85f7a2ad3b78d411",
-   "nexclash/renegade.py": "bb48b18bfc6b3ad5",
-   "nexclash/renegade128.py": "82b7289f7fefb606",
+   "nexclash/renegade.py": "6d256418fdf318d2",
+   "nexclash/renegade128.py": "1c98ecfc94c7d36e",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
@@ -173,9 +173,9 @@
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "3a768a2b44bd807c",
+   "recipe": "33eecf7d7fcc2934",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-06"
+  "date": "2026-11-08"
  }
 }

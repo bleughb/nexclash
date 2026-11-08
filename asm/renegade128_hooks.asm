@@ -7,7 +7,11 @@
 ; Part record: +0 x column (signed), +1 top line, +5 flags (shown when bits 7, 6, 1 are all set, as 39141 tests; bit 0 mirrored),
 ; +6 graphic. Graphic: W, R, then W columns of R (mask, data) pairs.
 ; Graphics change at level loads, so a graphic is found by address AND checksum in a hash table built from every level's data.
-; Hooks: alt ROM images 0 and 1 at 0x386E. Hooks keep IX, IY, alternates; state page at slot 2, pattern pages at slot 6 only while uploading.
+; Pace (2026-11-08): a commit costs 2 to 9 ms at 28 MHz, on the update's clock. The game's own time-slicer (0x8117) skips fighters once an update is past its
+; 3 frames, so an overrun plays differently, not just slower. The time goes to the debt (lib/hlib_pace.asm, in the state page); the code after the commit runs at
+; 28 MHz until it is repaid, in a K window ended at the game's raster wait or slicer reading. See the K windows below, and games/renegade.md.
+; R is kept (lib/hlib_r.asm): O - E - N counted per hook, compared by the verifier.
+; Hooks: alt ROM images 0 and 1 at 0x386E. Hooks keep IX, IY, alternates; state page at slot 2, pattern pages take its place only while uploading.
 
         DEVICE ZXSPECTRUMNEXT
         INCLUDE "lib/hlib_speed.asm"    ; macros only: HLIB_SPEED_IN
@@ -39,10 +43,39 @@ V_RW    EQU 0x4D16
 V_TP    EQU 0x4D17
 V_DROP  EQU 0x4D18              ; parts that could not be shown (2 bytes): verify and JNext read it
 V_LV    EQU 0x4D1C
-V_IE    EQU 0x4D1D
+V_PG    EQU 0x4D1D
 V_FB    EQU 0x4D1A              ; graphics found by address alone (2 bytes)
 V_SPD   EQU 0x4D1E              ; the caller's CPU speed (lib/hlib_speed.asm latch)
 MAXSPR  EQU 124
+V_SPT   EQU 0x4D1F              ; the speed latch as read (a window left open reads 28 MHz: then V_SPD stands)
+HLIB_V_PACE EQU 0x4D20          ; 26 bytes (0x4D20-0x4D39): the pace library's
+HLIB_PACE_NL EQU 311            ; 128K timing: lines a frame
+V_OPEN  EQU 0x4D3A              ; a K window is running
+HLIB_V_R EQU 0x4D3B             ; 3 bytes: R at entry, to set, A saved
+V_ARM   EQU 0x4D3E              ; the three close sites hold their hooks
+V_OUT   EQU 0x4D3F              ; the speed to leave at: V_SPD, or 28 MHz with a window open
+V_F     EQU 0x4D41              ; w_model: the raster flag 0x70CB as read
+V_L     EQU 0x4D42              ; this line
+V_LO    EQU 0x4D44              ; the line the original was on at this point
+V_NOW   EQU 0x4D40              ; 1: this commit opens no window (the tune at the start of a life)
+K_LG    EQU 106                 ; the K windows: the original's time per unit of 28 MHz time, x 16: JNext's 6.6, measured on this game's logic; hardware not measured
+W_PASS  EQU 150                  ; a window's hook passed through, 1/16 lines: its time x K
+W_FIX   EQU 165                 ; a window's own hook time, 1/16 lines: the part in its reading, which K would scale, x K, and the part after it
+D_LG    EQU 32                  ; least debt worth a window, 1/16 lines
+U_TICK  EQU 22                  ; a commit's unmeasured part, 1/16 lines (3.5 MHz entry and exit)
+SYNC_L  EQU 24                  ; lines after the interrupt's: a tick that starts here spun at the frame sync, so it is in step
+L_INT   EQU 248                 ; the video line of the frame interrupt
+SITE_W  EQU 0x967B              ; CALL 0x98ED: the game's raster wait, once for each part it plots
+GAME_W  EQU 0x98ED
+SITE_C  EQU 0x8117              ; LD A,(0x70CC): the time-slicer's reading of the frame count
+D_COMMIT EQU 84                 ; R: O - E - N of each path (card patch.preserve-r), counted, compared by the verifier
+D_HIDE  EQU 92
+D_WND   EQU 115
+D_CL    EQU 114
+D_END   EQU 114
+SITE_E  EQU 0x812B              ; LD A,(0x70AA): past the slicer, before the frame sync
+MEMO    EQU 0x4E00              ; 256 entries of 4: graphic lo, hi, entry + 3 lo, hi (0 = empty); cleared when V_KEY changes
+PAGECODE EQU 0x5200             ; hook code that lives in the state page: only reached while the page is at slot 2
 
         ORG 0x386E
 ; ---- 32834 game tick ----
@@ -50,6 +83,7 @@ e_tick: push af
         push bc
         push de
         push hl
+        ld d,0
         call commit
         pop hl
         pop de
@@ -64,11 +98,13 @@ e_start:
         push bc
         push de
         push hl
+        ld d,1
         call commit
         pop hl
         pop de
         pop bc
         pop af
+        nop                     ; as many M1s after R_OUT as e_tick's LD HL
         jp 42314
 
 ; ---- 39940 screen clear: no figures ----
@@ -99,23 +135,6 @@ e_redraw:
         ld ix,(42230)
         jp 38837
 
-; The handler touches slots 3 to 7 (work/isrslots.py) and pages bank 1 at slots 6-7: the state page goes at slot 2, which it never touches,
-; and interrupts stay on, except while a pattern page is at slot 6. A's flags: NZ when they were on (LD A,I twice: the NMOS quirk).
-dioff:  ld a,i
-        jp pe,.on
-        ex (sp),hl              ; past the 32 T when LD A,I can read 0 with interrupts on
-        ex (sp),hl
-        ld a,i
-        jp pe,.on
-        di
-        xor a
-        ret
-.on:    di
-        or 1
-        ret
-eion:   ei
-        ret
-
 ; ---- the start: the loading screen is up. A key, or about 5 seconds, then the game's own next instruction. No game memory touched.
 e_front:
         push af
@@ -141,10 +160,13 @@ e_front:
 
 hideall:
         nextreg 0x52,STATE
-        HLIB_SPEED_IN V_SPD     ; the caller's speed latched (game stack, 4 bytes), then 28 MHz
+        HLIB_SPEED_IN V_SPT     ; the caller's speed latched (game stack, 4 bytes), then 28 MHz
+        call rin
+        call pg_hi              ; a window left open ends here
         xor a
         ld (V_N),a
         call hide
+        ld a,D_HIDE
         jr leave
 
 commit: ld a,(28840)
@@ -154,8 +176,10 @@ commit: ld a,(28840)
         ld c,a                  ; level
         ld b,a
         nextreg 0x52,STATE
-        HLIB_SPEED_IN V_SPD     ; the caller's speed latched (game stack, 4 bytes), then 28 MHz
+        HLIB_SPEED_IN V_SPT     ; the caller's speed latched (game stack, 4 bytes), then 28 MHz
         ld (V_LV),a
+        call rin
+        call pg_in              ; the debt window opens; keeps BC, E
         ld a,e
         add a,a
         add a,a
@@ -169,6 +193,7 @@ commit: ld a,(28840)
 .z:     ld (hl),0
         inc hl
         djnz .z
+        call m_clear
         call floor              ; C = level
 .same:  xor a
         ld (V_N),a
@@ -186,10 +211,59 @@ commit: ld a,(28840)
         pop bc
         djnz .loop
 .done:  call hide
-leave:  ld a,(V_SPD)             ; the caller's speed back (never a fixed 3.5 MHz); A is free (the stubs keep AF)
+        call pg_done            ; the debt closes; a window may open: V_OUT
+neg_rc: ld a,D_COMMIT
+leave:  call hlib_r_set
+        ld a,(V_OUT)             ; the caller's speed back (never a fixed 3.5 MHz), or 28 MHz with a K window open; A is free (the stubs keep AF)
         nextreg 0x07,a
+rx:     ld (HLIB_V_R + 2),a      ; HLIB_R_OUT, then the page off. Every path has the same M1s from here
+        ld a,(HLIB_V_R + 1)
+        ld r,a
+        ld a,(HLIB_V_R + 2)
         nextreg 0x52,SLOT2
         ret
+
+; ---- the K window's ends. Reached only while the sites hold these hooks (see w_arm): the game's own code runs them at no cost otherwise.
+; CALL 0x98ED becomes CALL e_wnd: the raster wait must run at the game's clock, and at the time it would have in the original.
+e_wnd:  push af
+        nextreg 0x52,STATE
+        call rin
+        call w_cont
+neg_rw: ld a,D_WND
+        call hlib_r_set
+        ld a,(V_OUT)
+        nextreg 0x07,a
+        call rx
+        pop af
+        jp GAME_W
+
+; LD A,(0x70CC) becomes JP e_cl: the slicer reads the frame count at the time it would have in the original.
+e_cl:   push af
+        nextreg 0x52,STATE
+        call rin
+        call w_cont
+        ld a,D_CL
+        call hlib_r_set
+        ld a,(V_OUT)
+        nextreg 0x07,a
+        call rx
+        pop af
+        ld a,(0x70CC)
+        jp SITE_C + 3
+
+; LD A,(0x70AA) becomes JP e_end: past the slicer, the game goes on to its frame sync at its own clock, whatever is left of the debt.
+e_end:  push af
+        nextreg 0x52,STATE
+        call rin
+        call w_end
+        ld a,D_END
+        call hlib_r_set
+        ld a,(V_OUT)
+        nextreg 0x07,a
+        call rx
+        pop af
+        ld a,(0x70AA)
+        jp SITE_E + 3
 
 ; hide sprites V_N .. V_LAST-1, V_LAST = V_N
 hide:   ld a,(V_LAST)
@@ -493,7 +567,9 @@ show:   ld hl,(V_REC)
         ret
 
 ; find (V_G, checksum) and send its patterns to V_PAT. Carry: not in the table.
-upload: ld hl,0
+upload: call m_look
+        jp z,send               ; seen in this level and wave: no checksum, HL = its table entry + 3
+        ld hl,0
         ld a,(V_R)
         ld e,a
         ld d,0
@@ -582,82 +658,36 @@ upload: ld hl,0
         ld hl,HASH
         jr .probe
 .found: pop de                  ; the entry's start
-send:   call dioff
-        ld (V_IE),a
-        inc hl
+        call m_put
+send:   inc hl
         ld a,(hl)
-        nextreg 0x56,a          ; pattern page at slot 6
+        ld (V_PG),a
         inc hl
         ld a,(hl)
         and 0x3F                ; (the top bits are the level)
         ld l,0
         rra
         rr l
-        or 0xC0
-        ld h,a                  ; HL = 0xC000 + 128 * index
+        or 0x40
+        ld h,a                  ; HL = 0x4000 + 128 * index
         ld a,(V_PAT)
         rrca                    ; pattern select: number / 2, half in bit 7
         ld bc,0x303B
         out (c),a
         ld a,(V_TILES)
+        ld d,a
+        ld a,(V_PG)
+        nextreg 0x52,a          ; pattern page at slot 2, in the state page's place: the interrupt handler never reads slot 2, so interrupts stay on and none is lost
+        ld a,d
         ld c,0x5B
 .t:     ld b,128
         otir
         dec a
         jr nz,.t
-        nextreg 0x56,0
-        ld a,(V_IE)
-        or a
-        call nz,eion
+        nextreg 0x52,STATE
         or a
         ret
 
-; The game can poke a graphic in place (the last level: a stray object at 0xC017 sets bits at 0xC01C-0xC01E), and then the checksum
-; finds nothing. A figure must not vanish for that: take this address's patterns, this level's if there are any. Counted in V_FB.
-byaddr: ld a,(V_LV)
-        ld c,a
-        ld b,0
-.pass:  ld hl,HASH
-.f:     ld de,(V_G)
-        ld a,(hl)
-        cp e
-        jr nz,.n
-        inc hl
-        ld a,(hl)
-        dec hl
-        cp d
-        jr nz,.n
-        ld a,b
-        or a
-        jr nz,.hit              ; second pass: any level
-        push hl
-        ld de,5
-        add hl,de
-        ld a,(hl)
-        pop hl
-        rlca
-        rlca
-        and 3
-        cp c
-        jr z,.hit
-.n:     ld de,6
-        add hl,de
-        ld a,h
-        cp high HASHEND
-        jr c,.f
-        inc b
-        ld a,b
-        cp 2
-        jr c,.pass
-        scf
-        ret
-.hit:   ld de,(V_FB)
-        inc de
-        ld (V_FB),de
-        inc hl
-        inc hl
-        inc hl
-        jp send
 rom_end:
 
         ORG 0xD000
@@ -717,5 +747,378 @@ pal:    DB 0x00,0x00,0xFC,0xFF,0xA0,0xA2,0x14,0x16      ; 0 clear, 1 black, 2 th
         DB 0xB4,0xB6,0x03,0xE0,0xE7,0x1C,0x1F,0x02
 setup_end:
 
+        ORG PAGECODE
+; ---- the memo: a graphic's table entry, by address, so a graphic seen before in this level and wave takes no checksum (1 ms at 28 MHz for a
+; large figure, against 150 T). Direct mapped, a collision only costs the checksum again. A graphic the game poked in place keeps the entry
+; it had before the poke, or goes by byaddr as before if it was first seen after it.
+m_slot: ld de,(V_G)             ; -> HL = this graphic's slot, DE = the graphic. AF lost
+        ld a,e
+        xor d
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        ld a,h
+        add a,high MEMO
+        ld h,a
+        ret
+m_look: call m_slot             ; -> Z: HL = the entry + 3. NZ: not known. A, DE lost
+        ld a,(hl)
+        cp e
+        inc hl
+        jr nz,.no
+        ld a,(hl)
+        cp d
+        jr nz,.no
+        inc hl
+        ld a,(hl)
+        inc hl
+        ld h,(hl)
+        ld l,a
+        ld a,h
+        or a
+        jr z,.no
+        cp a
+        ret
+.no:    or 1
+        ret
+m_put:  push hl                 ; HL = the entry + 3 of the graphic V_G. All kept but AF, DE
+        call m_slot
+        pop de
+        ld a,(V_G)
+        ld (hl),a
+        inc hl
+        ld a,(V_G + 1)
+        ld (hl),a
+        inc hl
+neg_mput:
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        ex de,hl
+        ret
+m_clear:push bc
+        ld hl,MEMO
+        ld de,MEMO + 1
+        ld bc,1023
+        ld (hl),0
+        ldir
+        pop bc
+        ret
+; The game can poke a graphic in place (the last level: a stray object at 0xC017 sets bits at 0xC01C-0xC01E), and then the checksum
+; finds nothing. A figure must not vanish for that: take this address's patterns, this level's if there are any. Counted in V_FB.
+byaddr: ld a,(V_LV)
+        ld c,a
+        ld b,0
+.pass:  ld hl,HASH
+.f:     ld de,(V_G)
+        ld a,(hl)
+        cp e
+        jr nz,.n
+        inc hl
+        ld a,(hl)
+        dec hl
+        cp d
+        jr nz,.n
+        ld a,b
+        or a
+        jr nz,.hit              ; second pass: any level
+        push hl
+        ld de,5
+        add hl,de
+        ld a,(hl)
+        pop hl
+        rlca
+        rlca
+        and 3
+        cp c
+        jr z,.hit
+.n:     ld de,6
+        add hl,de
+        ld a,h
+        cp high HASHEND
+        jr c,.f
+        inc b
+        ld a,b
+        cp 2
+        jr c,.pass
+        scf
+        ret
+.hit:   ld de,(V_FB)
+        inc de
+        ld (V_FB),de
+        inc hl
+        inc hl
+        inc hl
+        jp send
+
+; ---- R: HLIB_R_IN as a call (constant M1s); HLIB_R_OUT is at rx, in the alt ROM, since it comes off the page after it.
+        INCLUDE "lib/hlib_r.asm"
+rin:    HLIB_R_IN
+        ret
+
+; ---- the K windows. A commit takes 2 to 9 ms at 28 MHz, in time the original spends on logic. In a busy update that pushes the game past its
+; frame count: the update takes 4 frames for 3, and the slicer at 0x8117 skips fighters the original runs. So the commit's time goes to the
+; debt and the code after it runs at 28 MHz until the debt is repaid. A window ends at the game's next raster wait or slicer reading, waits
+; out the original's time for what it ran (hlib_pace_waitk), and goes on only if debt is left and the beam is in the paper: outside it the wait
+; would spin, on the real beam, with its tone. With no debt the sites hold the game's own bytes, so an update in step pays nothing.
+w_arm:  ld hl,e_wnd
+        ld (SITE_W + 1),hl
+        ld hl,e_cl
+        ld a,0xC3
+        ld (SITE_C),a
+        ld (SITE_C + 1),hl
+        ld hl,e_end
+        ld (SITE_E),a
+        ld (SITE_E + 1),hl
+        ld a,1
+        ld (V_ARM),a
+        ret
+w_dis:  ld hl,GAME_W            ; the game's own bytes back
+        ld (SITE_W + 1),hl
+        ld a,0x3A
+neg_dis:
+        ld (SITE_C),a
+        ld hl,0x70CC
+        ld (SITE_C + 1),hl
+        ld (SITE_E),a
+        ld hl,0x70AA
+        ld (SITE_E + 1),hl
+        xor a
+        ld (V_ARM),a
+        ld (V_OPEN),a
+        ret
+; hook entry: the speed latch; a window left open (the game jumped out of its tick: a death, a level) ends without a wait
+pg_lat: ld a,(V_ARM)
+        or a
+        jr z,.n
+        call w_dis
+        ld hl,0
+        ld (HLIB_V_PACE + 4),hl
+        ret
+.n:     ld a,(V_SPT)
+        ld (V_SPD),a
+        ret
+pg_hi:  call pg_lat
+        ld a,(V_SPD)
+        ld (V_OUT),a
+        ret
+pg_in:  push bc
+        push de
+        push hl
+        ld a,d
+        ld (V_NOW),a
+        call pg_lat
+        call hlib_debt_open     ; HL = this line, DE = held total
+        ld de,L_INT
+        or a
+        sbc hl,de
+        jr c,.x
+        ld a,h
+        or a
+        jr nz,.x
+        ld a,l
+        cp SYNC_L
+        jr nc,.x
+        ld hl,0                 ; it spun at the sync: in step
+        ld (HLIB_V_PACE + 4),hl
+.x:     pop hl
+        pop de
+        pop bc
+        ret
+pg_done:ld a,U_TICK
+        call hlib_debt_close
+        ld a,(V_SPD)
+        ld (V_OUT),a
+        or a
+        ret nz                  ; a faster game has time in hand
+        ld a,(V_NOW)
+        or a
+        ret nz
+        ld hl,(HLIB_V_PACE + 4)
+        ld de,D_LG
+        or a
+        sbc hl,de
+        ret c
+        call w_arm
+        ; fall through
+w_open: ld a,1
+        ld (V_OPEN),a
+        ld a,3
+        ld (V_OUT),a
+        jp hlib_pace_open
+; w_cont: a window's end. All kept but AF (the stub's). Goes on while there is debt and the wait cannot spin (flag clear, or the beam in the paper).
+w_cont: push bc
+        push de
+        push hl
+        ld a,(V_OPEN)
+        or a
+        jr z,.c
+        ld hl,W_PASS
+        call hlib_debt_add
+        call hlib_pace_tick
+        ld hl,(HLIB_V_PACE + 2)
+        ld a,K_LG
+        call hlib_mul8
+        ld de,(HLIB_V_PACE + 4)
+        or a
+        sbc hl,de
+        jr nc,.end              ; the window has repaid the debt: its wait gives back what is over
+        ld a,(0x70CB)
+        or a
+        jr z,.x                 ; one window goes on: every reading of a window is a line at best, x K, so fewer windows are nearer the mark
+        call hlib_line
+        call isp
+        jr c,.x
+.end:   xor a
+        ld (V_OPEN),a
+        ld hl,W_FIX
+        call hlib_debt_add
+        ld a,K_LG
+        ld c,0
+.neg:
+        call hlib_pace_waitk
+.c:     call w_model
+        ld a,(V_SPD)
+        ld (V_OUT),a
+        ld hl,(HLIB_V_PACE + 4)
+        ld de,D_LG
+        or a
+        sbc hl,de
+        jr c,.done
+        ld a,(V_F)
+        or a
+        jr z,.go
+        ld hl,(V_L)
+        call isp
+        jr nc,.x                ; it will spin on the real beam, with its tone: at the game's own clock
+.go:    call w_open
+        jr .x
+.done:  call w_dis
+.x:     pop hl
+        pop de
+        pop bc
+        ret
+; isp: HL = a video line -> carry: in the paper
+isp:    ld a,h
+        or a
+        ret nz
+        ld a,l
+        cp 192
+        ret
+; w_model: the raster wait 0x98ED, as it goes in each game. The original reached this call (debt) lines ago. The wait spins while the flag is
+; set and the beam is out of the paper: to the interrupt, which clears the flag, or to the paper's first line. So the debt can change here.
+w_model:ld a,(0x70CB)
+        ld (V_F),a
+        call hlib_line
+        ld (V_L),hl
+        ld de,(HLIB_V_PACE + 4)
+        ld b,4
+.q:     srl d
+        rr e
+        djnz .q
+        ld a,d
+        or a
+        ret nz                  ; over 256 lines behind: not worth reading
+        or a
+        sbc hl,de
+        jr nc,.p
+        ld de,HLIB_PACE_NL
+        add hl,de
+.p:     ld (V_LO),hl
+        ld a,(V_F)
+        or a
+        jr z,.fc
+        ld hl,(V_L)
+        call isp
+        jr nc,.bb
+        ld hl,(V_LO)
+        call isp
+        ret c                   ; both in the paper: neither spins
+        ld de,HLIB_PACE_NL      ; we are in the paper and the original spun: it came off at its release
+        ld hl,(V_LO)
+        ld a,h
+        or a
+        jr z,.rl                ; a line under 256: under 248 it was off at the interrupt
+.rp:    ld hl,(V_L)             ; the top border: off at line 0. The debt = this line
+        jr .set
+.rl:    ld a,l
+        cp L_INT
+        jr nc,.rp
+.ri:    ld hl,(V_L)             ; off at the interrupt: the debt = lines since it
+        ld de,HLIB_PACE_NL - L_INT
+        add hl,de
+        ld de,HLIB_PACE_NL
+        or a
+        sbc hl,de
+        jr nc,.set
+        add hl,de
+.set:   call hlib_pace_wait.x16
+        jp hlib_debt_set
+.bb:    ld hl,(V_LO)
+        call isp
+        jr c,.op
+        ld hl,0                 ; both out of the paper: both come off together
+        jp hlib_debt_set
+.op:    ld hl,(V_L)             ; only this game spins: its time from here to the release goes to the debt
+        ld de,L_INT
+        ld a,h
+        or a
+        jr nz,.o2
+        ld a,l
+        cp L_INT
+        jr c,.o3
+.o2:    ld de,HLIB_PACE_NL
+.o3:    ex de,hl
+        or a
+        sbc hl,de
+        call hlib_pace_wait.x16
+        jp hlib_debt_add
+.fc:    ld hl,(V_LO)            ; the flag is clear: no spin here. If the original was at the bottom border with the interrupt still to come,
+        ld a,h                  ; it was set there, and the original came off at the interrupt
+        or a
+        ret nz
+        ld a,l
+        cp 192
+        ret c
+        cp L_INT
+        ret nc
+        ld hl,(V_L)             ; past the interrupt?
+        ld a,h
+        or a
+        jr nz,.ri
+        ld a,l
+        cp L_INT
+        jr nc,.ri
+        ld de,(V_LO)
+        or a
+        sbc hl,de
+        jr c,.ri                ; this line is before the original's: over the frame's end
+        ret
+w_end:  push bc
+        push de
+        push hl
+        ld a,(V_OPEN)
+        or a
+        jr z,.c
+        xor a
+        ld (V_OPEN),a
+        ld hl,W_FIX
+        call hlib_debt_add
+        ld a,K_LG
+        ld c,0
+        call hlib_pace_waitk
+.c:     ld a,(V_SPD)
+        ld (V_OUT),a
+        call w_dis
+        pop hl
+        pop de
+        pop bc
+        ret
+
+        INCLUDE "lib/hlib_pace.asm"
+page_end:
+
+        SAVEBIN "r8_page.bin",PAGECODE,page_end-PAGECODE
         SAVEBIN "r8_rom.bin",0x386E,rom_end-0x386E
         SAVEBIN "r8_setup.bin",0xD000,setup_end-0xD000

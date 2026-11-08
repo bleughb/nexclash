@@ -3,7 +3,7 @@ is engine 'renegade1', Target Renegade engine 'renegade'. Facts, design and resu
 
 The same design as renegade1, at this release's addresses: the composer's two masked stores (38673, 38812) become LD A,(DE), so the screen only
 gets scenery, and sprites follow the part records each game tick. New here: a one-pixel outline in the patterns (the owner's standing preference;
-nibble 3, not part of the figure), the state page at slot 2, which the handler never touches, and interrupts off only while a pattern page is at slot 6 (the handler pages bank 1 at slots 6-7), and a start at
+nibble 3, not part of the figure), the state page at slot 2, which the handler never touches, pattern pages in its place while uploading, interrupts on throughout, and a start at
 31814, just after the game's unpack, with the snapshot's loading screen held by a stub in the alt ROM. Levels are unpacked bank by bank (40536).
 """
 import collections
@@ -23,9 +23,17 @@ V_DROP = V + 0x18
 V_FB = V + 0x1A
 TICK, START, CLEAR, REDRAW = 32834, 32800, 39940, 38833
 STORES = (38673, 38812)
+PAGE_OFF = 0x1200                   # the state page's code (PAGECODE - 0x4000)
+HASHEND_OFF = 0x0C00
+V_OPEN, V_ARM = V + 0x3A, V + 0x3E
+V_PACE_OPEN = V + 0x20 + 10          # HLIB_V_PACE + 10: the library's window open
+MEMO = 0x4E00
+# The K windows' ends (asm): the game's own bytes until a commit leaves debt, then hooks, then the game's own bytes again.
+SITE_W, SITE_C, SITE_E = 0x967B, 0x8117, 0x812B
+DYN = (SITE_W + 1, SITE_W + 2, SITE_C, SITE_C + 1, SITE_C + 2, SITE_E, SITE_E + 1, SITE_E + 2)
 GAME_START = 31814
 SITES_ORIG = {TICK: ('21e6bf', 'e_tick'), CLEAR: ('210040', 'e_clear'), REDRAW: ('dd2af6a4', 'e_redraw')}
-INTERIORS = tuple(a + k for a, (o, _) in SITES_ORIG.items() for k in range(1, len(o) // 2)) + (START + 1, START + 2)
+INTERIORS = tuple(a + k for a, (o, _) in SITES_ORIG.items() for k in range(1, len(o) // 2)) + (START + 1, START + 2) + (SITE_C + 1, SITE_C + 2, SITE_E + 1, SITE_E + 2)
 LIST, OBJ0, STRIDE = 41974, 0xBF00, 31
 LEVEL, WAVE, MAPP = 28872, 28840, 42230
 FRAMES = 0xF900
@@ -411,6 +419,7 @@ class RenegadePatch:
         self.rom_code = rom_code or bytes.fromhex(h['rom'])
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
         self.stub_extra = bytes.fromhex(h['setup'])
+        self.page_code = bytes.fromhex(h['page'])
         self.setup_call = 0xD000
         self.hook_page_data = b''
         self.uses_printer_buffer = False
@@ -442,6 +451,9 @@ class RenegadePatch:
     def tables(self):
         self.states = level_states(self.start)
         self.state, self.pages = build_tables(self.states, self.colours, self.outline)
+        st = bytearray(self.state)
+        st[PAGE_OFF:PAGE_OFF + len(self.page_code)] = self.page_code   # hook code in the state page, past the tables
+        self.state = bytes(st)
 
     def apply(self, snap):
         from . import z80tonex as zt
@@ -488,6 +500,7 @@ class NextState:
         self.ports = 0
         self.floor = None
         self.sel = None                     # NextREG selected at 0x243B (the speed latch reads NR 7)
+        self.line, self.polls = 0, 0        # the video line (the pace library): moves on with every reading
 
     def copy(self):
         q = NextState.__new__(NextState)
@@ -622,7 +635,7 @@ def scenery(M):
 # One hook event
 # ---------------------------------------------------------------------------------------------
 
-CMP = list(range(0, 13)) + [14] + list(range(16, 25)) + [26, 27]   # all but R, T, MEMPTR
+CMP = list(range(0, 13)) + [14, 15] + list(range(16, 25)) + [26, 27]   # all but T, MEMPTR; R included (index 15, card patch.preserve-r)
 _SIM = []
 
 
@@ -701,6 +714,12 @@ def _machine(Sim, mem, regs, ns, slot):
 
     class Tr:
         def read_port(self, regs_, port):
+            if port == 0x253B and getattr(ns, 'sel', None) in (0x1E, 0x1F):
+                if ns.sel == 0x1F:
+                    ns.polls += 1
+                    ns.line = (ns.line + 3) % 311
+                    return ns.line & 255
+                return ns.line >> 8 & 1
             if port == 0x253B and getattr(ns, 'sel', None) is not None:   # a NextREG read: NR 7 as the core
                 if ns.sel == 0x07:                                      # composes it (actual << 4 | programmed)
                     sp = ns.nr.get(0x07, 0) & 3
@@ -726,8 +745,9 @@ def _run(sim, stop, limit=2000000):
     return True
 
 
-EXIT = {TICK: 32837, START: 42314, CLEAR: 39943, REDRAW: 38837}
-KIND = {TICK: 'tick', START: 'start', CLEAR: 'clear', REDRAW: 'redraw'}
+EXIT = {TICK: 32837, START: 42314, CLEAR: 39943, REDRAW: 38837, SITE_W: 0x98ED, SITE_C: SITE_C + 3, SITE_E: SITE_E + 3}
+KIND = {TICK: 'tick', START: 'start', CLEAR: 'clear', REDRAW: 'redraw', SITE_W: 'window at the raster wait', SITE_C: 'window at the slicer', SITE_E: 'window past the slicer'}
+HOOKS = (TICK, START, CLEAR, REDRAW)
 
 
 def event(patch, pc, get, R, ns, alt, psite, Sim, st):
@@ -760,8 +780,11 @@ def event(patch, pc, get, R, ns, alt, psite, Sim, st):
             break
     if ns.nr[0x52] != SLOT2_PAGE or ns.nr[0x56] != 0:
         fails.append('slots not restored')
-    if ns.nr[0x07] != 0:
+    if ns.nr[0x07] != (3 if ns.state[V_OPEN - 0x4000] else 0):      # 28 MHz only with a K window open
         fails.append('speed not restored')
+    for a in DYN:
+        if a in p.ov:
+            psite[a] = p.ov[a]
     if p.romw:
         fails.append('ROM write')
     if p.pagew:
@@ -789,7 +812,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None):
     Sim = _rw()
     states = []
     psite = {}
-    box = {'ns': None, 'n': 0, 'bg': None, 'bgk': None, 'seq': 0}
+    box = {'ns': None, 'n': 0, 'bg': None, 'bgk': None, 'seq': 0, 'dyn0': {}}
     digests = []
     seen = collections.Counter()
     pc_first = None
@@ -808,6 +831,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None):
                     psite[a + k] = v
         for a in STORES:
             psite[a] = 0x1A if any(s[0] == a for s in patch.sites) else 0x12
+        for a in DYN:
+            psite[a] = box['dyn0'][a] = M[a]
         box['ns'] = NextState(patch)
 
     def digest(R, M):
@@ -882,6 +907,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None):
             return
         if pc not in EXIT:
             return
+        armed = ns.state[V_ARM - 0x4000]
+        if pc not in HOOKS and not armed:
+            return                      # the game's own bytes: nothing of ours runs
         kind = KIND[pc]
         c[kind] += 1
         if kind == 'tick':
@@ -895,6 +923,13 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None):
         fl = event(patch, pc, M.__getitem__, list(R), ns, alt, psite, Sim, c)
         for k in fl:
             fail('%s: %s' % (kind, k[0] if isinstance(k, tuple) else k), k[1:] if isinstance(k, tuple) else ())
+        now = ns.state[V_ARM - 0x4000]
+        if not now and any(psite[a] != box['dyn0'][a] for a in DYN):
+            fail('a window closed with a hook left in the game', (kind,))
+        if pc in (SITE_W, SITE_C) and armed and not now:
+            c['windows that repaid their debt'] += 1
+        if pc in (SITE_W, SITE_C, SITE_E) and ns.state[V_PACE_OPEN - 0x4000] != ns.state[V_OPEN - 0x4000]:
+            fail('a window closed without its wait', (kind,))       # hlib_pace_wait clears the library's own flag
         if kind in ('clear', 'redraw') and ns.visible():
             fail('%s leaves sprites on' % kind, (len(ns.visible()),))
         if kind in ('tick', 'start'):
@@ -911,7 +946,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None):
     if err:
         c['replay stopped: %s!' % err] += 1
     c['frames'] = fc
-    c['hooks never run'] = sum(1 for k in KIND.values() if not c[k])
+    c['hooks never run'] = sum(1 for k in HOOKS if not c[KIND[k]])
+    if not c[KIND[SITE_W]] or not c['windows that repaid their debt']:
+        c['no K window ran and repaid its debt!'] += 1
     # second replay: the two stores patched
     idx = {'i': 0, 'first': True}
     pat_stores = {a: (0x1A if any(s[0] == a for s in patch.sites) else 0x12) for a in STORES}
@@ -1085,18 +1122,24 @@ def unit_tests(patch, states, neg=None):
                 m[WAVE] = 0
                 # a new key each time forces the pattern slots to reload: clear held
                 ns.state[HELD - 0x4000:HELD - 0x4000 + 48] = bytes(48)
+                if (x, y, mir) == (5, 40, 0):           # the first position takes the checksum; the others find the memo
+                    ns.state[MEMO - 0x4000:MEMO - 0x4000 + 1024] = bytes(1024)
                 p = _P(m.__getitem__, alt, psite, ns)
                 sim = _machine(Sim, p, list(R0), ns, 'p')
                 sim.registers[24] = TICK
                 if not _run(sim, EXIT[TICK], 500000):
                     fails['hook ran away'] += 1
                     continue
+                ns.state[V_ARM - 0x4000] = ns.state[V_OPEN - 0x4000] = 0
+                if ns.nr[0x07] not in (0, 3):
+                    fails['speed'] += 1
+                ns.nr[0x07] = 0
                 lines = ns.compose([0] * 192, PLAY_LINES)
                 want = plot_lines(raw, x if x < 128 else x - 256, y, bool(mir), [0] * 192)
                 tested += 1
                 if lines != want:
                     fails['pixels (%s %04X x=%d y=%d m=%d)' % (name, g, x, y, mir)] += 1
-                if ns.nr[0x52] != SLOT2_PAGE or ns.nr[0x56] != 0 or ns.nr[0x07] != 0:
+                if ns.nr[0x52] != SLOT2_PAGE or ns.nr[0x56] != 0:
                     fails['slots'] += 1
     # a graphic poked in place: same address, this level's patterns; the figure stays. An address in no table: dropped, counted.
     name, mem = lvs[0]
@@ -1114,10 +1157,13 @@ def unit_tests(patch, states, neg=None):
         m[REC + 0], m[REC + 1], m[REC + 5], m[REC + 6], m[REC + 7] = 5, 40, 0xC2, gg & 255, gg >> 8
         m[LEVEL] = m[WAVE] = 0
         ns.state[HELD - 0x4000:HELD - 0x4000 + 48] = bytes(48)
+        ns.state[MEMO - 0x4000:MEMO - 0x4000 + 1024] = bytes(1024)
         p = _P(m.__getitem__, alt, psite, ns)
         sim = _machine(Sim, p, list(R0), ns, 'p')
         sim.registers[24] = TICK
         ok = _run(sim, EXIT[TICK], 500000)
+        ns.state[V_ARM - 0x4000] = ns.state[V_OPEN - 0x4000] = 0
+        ns.nr[0x07] = 0
         lines = ns.compose([0] * 192, PLAY_LINES)
         same = lines == plot_lines(raw, 5, 40, False, [0] * 192)
         if not ok or same != want_shown or (not want_shown and any(lines)):
@@ -1228,6 +1274,7 @@ def recolour(nex, cmap, outline=True):
     finally:
         os.remove(path)
     state, pages = build_tables(st, cmap, outline)
+    state = state[:PAGE_OFF] + p.page_code + state[PAGE_OFF + len(p.page_code):]
     if have[STATE_BANK][:8192] != state:
         raise ValueError("graphics table differs from this version's (rebuild with nexclash.py auto)")
     new = {}
@@ -1317,18 +1364,39 @@ def negative_patches(patch):
             b[i] = hi << 4 | lo
         q.pages[pg] = bytes(b)
     out.append(('ink and body swapped', q))
-    # 14 hash table empty: nothing found
+    # the pace windows, the memo, R
+    s_ = patch.syms
+    def pg(addr, new):
+        if patch.state is None or not patch.pages:
+            patch.tables()
+        q = copy.copy(patch)
+        st = bytearray(patch.state)
+        st[addr - 0x4000:addr - 0x4000 + len(new)] = new
+        q.state = bytes(st)
+        return q
+    out.append(('a window that never waits', pg(s_['w_cont.neg'], bytes(3))))
+    out.append(('a window closed with its slicer hook left in', pg(s_['neg_dis'], bytes(3))))
+    out.append(('the memo holds the wrong entry', pg(s_['neg_mput'], b'\x72')))
+    k = s_['neg_rc'] - ROM_ORG + 1
+    out.append(('R off by one after a commit', _rom_patch(patch, k, bytes([(code[k] + 1) & 255]))))
+    k = s_['neg_rw'] - ROM_ORG + 1
+    out.append(('R off by one after a window', _rom_patch(patch, k, bytes([(code[k] + 1) & 255]))))
+    # 14 hash table empty: nothing found (the page's code stays)
     q = copy.copy(patch)
-    q.state = bytes(8192)
+    q.state = bytes(HASHEND_OFF) + patch.state[HASHEND_OFF:]
     out.append(('graphics table empty', q))
     return out
 
 
 def negative_real(patch, rzx_path, stop=1500):
     out = []
+    from .z80n import Z80NError
     for name, q in negative_patches(patch):
-        cc, _ = verify(q, rzx_path, stop=stop)
-        out.append((name, sum(v for k, v in cc.items() if k.endswith('!'))))
+        try:
+            cc, _ = verify(q, rzx_path, stop=stop)
+            out.append((name, sum(v for k, v in cc.items() if k.endswith('!'))))
+        except Z80NError:                       # the broken hook ran off into data
+            out.append((name, 1))
     return out
 
 

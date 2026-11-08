@@ -1,7 +1,7 @@
 # Renegade (Imagine, 1987; 128K release) - engine `renegade128` (batch game: unattended, no hardware)
 
 ## Next session
-Stage: 4 (hardware + colour)    State: imported into `refactor` 2026-11-04 (phase 7); stages 0-3 done unattended in
+Stage: 4 (hardware + colour)    State: pace review build 1.2 (2026-11-08, section Pace), owner's play pending; imported into `refactor` 2026-11-04 (phase 7); stages 0-3 done unattended in
 Jon's run folder; simulation and JNext only; never run on a Next.
 Inputs: specnext/reference/renegade/ (start.z80 md5 1a931038 staged as renegade.z80, the archive renegade128.z80,
 4 bot .rzx, renegade_enhanced_colours.json, renegade128.pok)
@@ -52,7 +52,7 @@ The same composer and data as the 48K-128K file (renegade1: games/renegade.md of
 | 32800 | CALL 42314 | the same, before the tune at the start of a life |
 | 39940 | LD HL,16384 | screen clear: all sprites off |
 | 38833 | LD IX,(42230) | play area redraw: all sprites off until the next tick |
-Patterns from every level's data, by running the game's own 0 key in a simulator at build time, then found by address and checksum (or by address alone, this level's first, if the game has poked the graphic). State page 22 at slot 2, which the handler never touches. Pattern page at slot 6 only while uploading, with interrupts off, since the handler remaps slots 6-7.
+Patterns from every level's data, by running the game's own 0 key in a simulator at build time, then found by address and checksum (or by address alone, this level's first, if the game has poked the graphic). State page 22 at slot 2, which the handler never touches. Pattern page in its place while uploading, interrupts on (to 1.1: slot 6, interrupts off, since the handler remaps slots 6-7).
 Why slot 2: the first version kept the state at slot 3 with interrupts off in the whole hook. In JNext its game timer ran 36 % fast: 19 seconds in 14 of emulated time, against 14 in the plain build. Moved to slot 2, with interrupts on, it is 14. The cause of the extra interrupts was not found; I do not know whether a real Next would do the same.
 Outline: one pixel round each figure, nibble 3, in margins of the patterns, never over the figure: white, black on the second level where the body is white. Not on what is too small: W <= 2 and R <= 16. Verify and unit tests see through it. A figure is two parts, each outlined alone, so a join would show as a line: the owner saw one down the middle of the riderless bike, and it was also at the waist of figures. The build takes each frame's two parts from the frame table, as 37682 places them, and drops outline pixels that lie on the other part or in the seam beside it (join_drops: 3,749 pixels in 260 graphics; a graphic used in several frames loses a pixel if any frame needs it). Unit check: join_faults, 0 left.
 Start: PC at a stub in the alt ROM, screen up: a key, or about 5 seconds, then JP 31814. No game memory touched. The screen is the snapshot's own, so nothing is added to the .nex's screen area. The plain .nex has no hold and starts at the menu.
@@ -93,10 +93,47 @@ Scenery, HUD, menu, text. Nothing that moves.
 Every part a sprite. Outline on, per the owner's standing preference. Body = the floor's paper. Solid bodies. Game's own depth.
 
 ## Open
-Never run on hardware. Upload timing, 28 MHz hooks with the AY handler inside them, ROM selection at 7FFD = 0, and the floating bus wait are unmeasured on a real Next. The 36 % above is not understood. Music not listened to: headless. Joysticks not exercised. 0 still skips a level, as in the original.
+Never run on hardware. Upload timing, 28 MHz hooks and K windows with the AY handler inside them, ROM selection at 7FFD = 0, and the floating bus wait are unmeasured on a real Next. The 36 % above is not understood. Music not listened to: headless. Joysticks not exercised. 0 still skips a level, as in the original.
 
 ## Hardware checklist
 Loading screen; a key or 5 seconds; menu; 1. Music plays and keeps time. Timer counts seconds at the plain build's rate. Figures keep their colours across scenery, with outlines. Each trainer. Game over, menu, restart. Enhanced from the menu: all four levels, no half-painted figures.
+
+## Pace (2026-11-08, review 1.2): K windows, R kept, skips back to the original's
+Owner's pace rule: within 2% of the original where it runs steadily; never slower. 1.1 broke it (audit: runs/pace-audit-20261108), and the bigger fault was
+not the figure: the game's time-slicer 0x8117 skips the fighters' logic once an update is past its 3 frames, and 1.1 tripped it in 63, 40, 78, 3 of 600 updates
+against the original's 8, 1, 1, 0, so it played differently. Hook time 4 to 9 ms sat at the top of each update, before the slicer. Game order per update: frame
+sync (bit 7 of 0x70CC, set by the third interrupt), commit (0x8042), logic and composing, slicer readings at 0x8117, sync. No time can be saved in the composer:
+it waits on the real beam (0x98ED, floating bus), with the game's tone in the loop.
+- Memo (m_look / m_put, 256 entries in the state page): a graphic seen in this level and wave takes no checksum; 150 T against up to 1 ms.
+- Interrupts stay on through uploads: the pattern page takes the state page's place at slot 2, which the handler never reads. 1.1's DI at slot 6 lost interrupts,
+  each a 20 ms lag for the game and for the music. Slot 0 instead of slot 2 hangs JNext: an interrupt there goes astray, cause not established.
+- K windows (w_arm, w_cont, w_end; lib/hlib_pace.asm whole, unchanged, in the state page): the commit's time goes to the debt; the code after it runs at 28 MHz until the
+  debt is repaid. A window ends at the raster wait (the CALL's operand 0x967C), the slicer's reading 0x8117 or 0x812B past it. These hold the game's own bytes unless a
+  debt is open, so an update in step pays nothing. K 106 = JNext's 6.6; the window's own hook time goes to the debt by W_PASS and W_FIX, as K would scale it. One window goes on
+  across raster calls whose flag is clear: each reading is a line at best, about 0.4 ms after K, so fewer windows are nearer. w_model follows the wait in both games: both
+  in the border leave together (debt 0), only ours (+ its spin), only the original's (- its spin).
+- A tick that starts within 24 lines of the interrupt spun at the sync, so it is in step: debt 0. The tune at a life's start opens no window (D = 1 at e_start). A window left
+  open by a jump out of the tick ends at the next hook. Another speed set by the player: no window.
+- Pace, JNext, input keyed to updates, 90 state addresses, against the plain build (62a06036). Default and Enhanced read the same in every run.
+  all / quiet third / busy third (fastest, slowest stretch of 20):
+
+| run | 1.1 (510cdd29, Enhanced 001b8f0c) | this (b4b45210, Enhanced 9ed0c98b) |
+|---|---|---|
+| seed 1, R + slicer fixtures | +1.82 / +0.31 / +4.48 (-3.3, +10.7) | -0.32 / +0.06 / -1.00 (-2.9, +0.4) |
+| seed 2, same | +1.26 / +1.48 / +0.76 (-1.9, +9.1) | -0.05 / +0.18 / -0.22 (-1.8, +1.7) |
+| seed 3, same | +0.51 / +1.26 / +0.36 (-0.9, +6.9) | +0.00 / +0.23 / -0.14 (-0.4, +1.6) |
+| seed 4, same | +0.00 / +0.04 / -0.09 (-0.6, +0.6) | +0.00 / +0.02 / -0.06 (-0.3, +0.3) |
+
+  As shipped (R fixture only, the slicer live), skips in 600 updates, original / 1.1 / this: 8/63/8, 1/40/1, 1/78/1, 0/3/0, and new seeds 5, 6: 8/80/5, 1/81/1. Lockstep at every one of
+  the 600 updates on seeds 2, 3, 4, 6; seeds 1 and 5 part at 395 and 156, each at one skip that goes the other way in an update already overrunning, where
+  the line-based reading cannot place it (0.1 to 0.5 ms). 1.1 held on seed 4 only, and parted at 103, 27, 199, 15, 181.
+  AY writes a second equal within 1% (549 / 547 seed 1), port 0xFE writes 41 / 40, interrupts 49.89 / 49.75 (1.1: 49.28), longest gap 40.5 / 40.5 ms (1.1: 60.8).
+- R: compared at every hook now (CMP includes 15; lib/hlib_r.asm unchanged; D_ constants counted). In play R is not equal between arms all the same: the frame sync spins on R-counted
+  instructions for a time set by the beam, in the original as well, so lockstep runs keep the audit's R fixture. e_front (the start stub) is not compared: it holds a key wait no
+  recording runs.
+- Later levels (the game's own 0 key at updates 150, 330, 510, in both arms, 720 updates, seeds 1-4): whole -0.13 to +0.12, busy -0.21 to +0.19, slowest stretch +1.7, fastest -4.7 where the original lags; skips 11/10, 1/2, 23/22, 1/1 (original / this; 1.1: 69, 18, 31, 6); 2 seeds in lockstep throughout, the others part at 379 and 395. Bosses are not reached.
+- Timing is JNext's. K, W_PASS and W_FIX are tuned on it; on hardware the windows' timing may differ, and an error there moves a skip, not the pace.
+- Checks: `selftest.py --game renegade --verify --stamp`: 4 recordings, 106,055 frames IDENTICAL, R compared; unit 3,544 positions; 18 of 18 negatives, 5 new: a window that never waits, a slicer hook left in, the memo's wrong entry, R off by one after a commit and after a window. Stamped. Enhanced is recolour() of this build, as before (guard, MD5), not replayed separately.
 
 ## Speed restored (2026-11-07, shared engine refactor, goal 2)
 - commit and hideall latch the caller's CPU speed after mapping the state page (HLIB_SPEED_IN, lib/hlib_speed.asm: 4
@@ -115,20 +152,27 @@ Loading screen; a key or 5 seconds; menu; 1. Music plays and keeps time. Timer c
 - [local: the same .256 serves another release by matching graphics by bytes, then position]
 - [local: the approved Enhanced came from a run-folder script] observed (import, 2026-11-04): the clone's record held
   only the default; work/paint.py's last step (recolour, palette, floors) moved into auto, the map kept private.
+- [local: K window readings] A K window's reading holds the hook's own time, which K would scale: on a short window that is most of the error (0.5 ms for each). Put it in
+  the debt as hook time x K, and keep one window going across hook sites rather than opening one per site.
+- [local: Renegade's time-slicer: an overrun here plays differently, not just slower] Count the game's own skips against the original's as well as the percentage; they are what parted lockstep.
+- [local: interrupts on through an upload] A pattern page at the slot of the state page, which the handler never reads, needs no DI; at slot 0 an interrupt went astray in JNext (cause not established).
 - [local: a third-party colour map marked local only] observed (import, 2026-11-04): the Enhanced map stays out of
   the public repo as a staged record input; the profile holds only the 44 palette and floors bytes.
 
 ## Technique use
 - detect.gameplay-screen-readers: helped: as renegade1.
+- patch.pace-limiter: helped: lib whole, K windows.
+- patch.preserve-r: helped: hlib_r whole, on the two exits' M1s counted by path.
 
 ## Stage log
 - 2026-11-03: stages 0-3, one unattended session, no user rounds.
 - 2026-11-04: import into `refactor` (phase 7, group 3) as record `renegade`: Enhanced moved into auto, pinned;
   rebuild = .nxc v1.0 byte for byte; full verification stamped. 0 user rounds.
+- 2026-11-08: pace, review 1.2: K windows, memo, interrupts on through uploads, R kept; no user rounds, owner's play pending.
 
 ## Friction
-- reuse: [none: the engine needed no shared helper to rebuild its bytes]
-- retries: [none: the port rebuilt the approved MD5s first time]
+- reuse: [tool asm/lib/hlib_pace.asm] whole and unchanged, in the state page, with lib/hlib_r.asm and lib/hlib_speed.asm
+- retries: [local: K 128 from Ikari read 25% long here: 6.6 is what JNext gives on this game's logic] measure K first
 - environment: [none: the pinned sjasmplus gave the profile's bytes]
-- hand-rolled: [none: no scratch tool kept]
+- hand-rolled: [local: seg.py logs site times in both arms] the run folder's tools/; `python -m nexclash.pace` has no per-site view
 - scratch: [none: import scripts stayed in the session scratchpad]
