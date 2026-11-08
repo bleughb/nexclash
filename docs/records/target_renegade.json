@@ -21,14 +21,23 @@
   ]
  },
  "modules": [
-  "renegade"
+  "renegade",
+  "renegade_enh",
+  "renegade_v12"
  ],
  "own_modules": [
-  "renegade"
+  "renegade",
+  "renegade_enh",
+  "renegade_v12"
  ],
  "data": [
   "docs/profiles/target_renegade.json",
-  "asm/renegade_hooks.asm"
+  "asm/renegade_hooks.asm",
+  "docs/profiles/target_renegade_speed.json",
+  "docs/profiles/target_renegade_enh_speed.json",
+  "asm/renegade_speed_common.asm",
+  "asm/renegade_speed_hooks.asm",
+  "asm/renegade_enh_speed_hooks.asm"
  ],
  "shared_data": [
   "asm/lib/hlib_speed.asm"
@@ -74,58 +83,131 @@
   "next": "hardware test (ROM 0 alt image, speed); recordings of levels 2-5; paint the colour sheet"
  },
  "checks": [
-  "asm2profile:target_renegade"
+  "asm2profile:target_renegade",
+  "asm2profile:target_renegade_speed",
+  "asm2profile:target_renegade_enh_speed"
  ],
  "checked": {
   "deps": {
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/renegade_enh_speed_hooks.asm": "9886951cdd3a380e",
    "asm/renegade_hooks.asm": "bf70261ac1b9e14e",
+   "asm/renegade_speed_common.asm": "3ae61961099d5511",
+   "asm/renegade_speed_hooks.asm": "5e2b9119badce801",
    "docs/profiles/target_renegade.json": "c2279bbf071346cf",
-   "nexclash.py": "3e9043d14edb7db1",
+   "docs/profiles/target_renegade_enh_speed.json": "a8e602b0d8226b62",
+   "docs/profiles/target_renegade_speed.json": "35be934454dbca71",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "17cc64b9bb99e469",
-   "nexclash/nextboot.py": "e6624bfe14a62e21",
+   "nexclash/engines.py": "528fc9c4b8cf84ec",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "273dab19dfcd9e27",
-   "nexclash/renegade.py": "bb48b18bfc6b3ad5",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/renegade.py": "6d256418fdf318d2",
+   "nexclash/renegade_enh.py": "33665277f29d02db",
+   "nexclash/renegade_v12.py": "467f3c114ceaa9fc",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "07e5f28fe4efeb81",
+   "recipe": "f4ac70dfa0b2ff66",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-06"
+  "date": "2026-11-07"
  },
  "verified": {
   "deps": {
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/renegade_enh_speed_hooks.asm": "9886951cdd3a380e",
    "asm/renegade_hooks.asm": "bf70261ac1b9e14e",
+   "asm/renegade_speed_common.asm": "3ae61961099d5511",
+   "asm/renegade_speed_hooks.asm": "5e2b9119badce801",
    "docs/profiles/target_renegade.json": "c2279bbf071346cf",
-   "nexclash.py": "3e9043d14edb7db1",
+   "docs/profiles/target_renegade_enh_speed.json": "a8e602b0d8226b62",
+   "docs/profiles/target_renegade_speed.json": "35be934454dbca71",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "e407745055645fc7",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "17cc64b9bb99e469",
-   "nexclash/nextboot.py": "e6624bfe14a62e21",
+   "nexclash/engines.py": "528fc9c4b8cf84ec",
+   "nexclash/nextboot.py": "fa792a76ad78dbef",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "273dab19dfcd9e27",
-   "nexclash/renegade.py": "bb48b18bfc6b3ad5",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/renegade.py": "6d256418fdf318d2",
+   "nexclash/renegade_enh.py": "33665277f29d02db",
+   "nexclash/renegade_v12.py": "467f3c114ceaa9fc",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "07e5f28fe4efeb81",
+   "recipe": "f4ac70dfa0b2ff66",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-06"
- }
+  "date": "2026-11-07"
+ },
+ "rework": [
+  {
+   "name": "v12",
+   "version": "1.2",
+   "args": [],
+   "env": {
+    "NEXCLASH_REWORK": "target_renegade_v12"
+   },
+   "inputs": [
+    {
+     "name": "target_renegade_enhanced.json",
+     "md5": "95c08b333064b3321f518ad2c111fb54",
+     "path": "target_renegade/target_renegade_enhanced.json",
+     "missing": "not in the references: Jon Attree's paint holds the game's graphic signatures"
+    },
+    {
+     "name": "target_renegade_loading.scr",
+     "md5": "18681406b9972e6adb5abca58dd42f6c",
+     "path": "target_renegade/target_renegade_loading.scr",
+     "missing": "not in the references: the tape's loading screen (game data)"
+    }
+   ],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ],
+    "decisions": {
+     "engine": "renegade_v12",
+     "start": "as target_renegade",
+     "sets": [
+      "speed",
+      "enhanced"
+     ]
+    }
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [
+     "target_renegade.rzx"
+    ]
+   },
+   "outputs": {
+    "speed": {
+     "file": "target_renegade_speed.nex",
+     "md5": "7583c8643c7ae82737665d4f73980fc8"
+    },
+    "enhanced": {
+     "file": "target_renegade_enhanced.nex",
+     "md5": "52ab63f4d9cbb5af83855edba398ba29"
+    }
+   },
+   "proof": "the published v1.2 bare builds (nxc.py --bare, default and Enhanced) byte for byte; target_renegade.rzx IDENTICAL for both sets, the speed set also with every hook entered at 28 MHz (each gives back the speed it found)",
+   "note": "Jon Attree's Target: Renegade .nxc v1.2 (published, github.com/jattree/nxc): engine renegade_v12, picked by engines.py only with NEXCLASH_REWORK=target_renegade_v12. The v1.1 hook-speed pass (RAM content cache, 28 MHz plot hooks, caller's speed kept), the Enhanced paint, v1.0's loading-screen stub (bank 20) and v1.2's v2.10 fix-up layout; inputs beside the snapshot, never in the references."
+  }
+ ]
 }

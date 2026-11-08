@@ -96,7 +96,8 @@ def plot_params(get, R, pc):
     x = ((R[5] + xoff + 1 - W) if mir else (R[5] - xoff)) & 255
     if x >= 128:
         x -= 256
-    return dict(gfx=gfx, W=W, R=Rr, x=x, y=y, mir=int(mir))
+    o = get(0xDCA9)                         # ENH: the object being drawn (display-list entry, set at 59562)
+    return dict(gfx=gfx, W=W, R=Rr, x=x, y=y, mir=int(mir), cls=1 if o == 0x0A else (2 if o == 0x20 else 0))
 
 
 def entry_index(W, r, k, mir):
@@ -384,6 +385,7 @@ GAME_ENTRY = 23340               # after the entry code (relocation + OUT (0x1FF
 TAIL_ADDR = 0x6400               # write-first game RAM 0x6400-0x9EFF (RZX + free run)
 FRONT, FRONT_END = 0x6480, 0x6500
 HPG, QPG, SPG, SPG3, GPG7, ALT_PAGE, STORE, NSTORE = 26, 27, 10, 11, 1, 24, 28, 12
+DPG, RCPG, RCN = 46, 48, 16      # SPEED: the hook-speed build's RC directory and tile pages (run time only)
 ROM_LO = 0x2000                  # NIB0/NIB1 0x2000-0x21FF, code from 0x2200
 ROM_READ = (0x3500, 0x3509)      # ROM 0 bytes the game reads (sound data): never patched
 SITES_ORIG = {55276: 'e5d52b', 55722: 'e5d52b', 59531: '2140ff', 62565: '2af7f4', 62751: 'ed7bf6',
@@ -723,7 +725,8 @@ class _NS:
     H (hook page) and Q (where the patched copy writes)."""
 
     def __init__(self, patch):
-        self.nr = {0x07: 0, 0x52: SPG, 0x53: SPG3, 0x57: GPG7, 0x15: 1}
+        self.nr = {0x07: 0, 0x50: 0xFF, 0x52: SPG, 0x53: SPG3, 0x57: GPG7, 0x15: 1}
+        self.ram = {}                   # SPEED: run-time RAM pages the hooks map at slot 0 (the RC)
         self.attr = [[0, 0, 0, 0, 0] for _ in range(128)]
         self.pat = bytearray(16384)
         self.pat_ptr = 0
@@ -735,6 +738,13 @@ class _NS:
 
     def _pc(self):
         return self.R[24] if self.R is not None else 0
+
+    def page0(self, n):
+        """SPEED: a run-time page at slot 0: the RC directory starts all 0xFF (the set-up's fill), tiles 0."""
+        pg = self.ram.get(n)
+        if pg is None:
+            pg = self.ram[n] = bytearray(b'\xff' * 8192 if n == DPG else 8192)
+        return pg
 
     def read(self, port):
         if port == 0x253B:                  # a NextREG read (the hooks' speed latch reads NR 7): the model answers,
@@ -757,9 +767,20 @@ class _NS:
             self.rsel = val
         elif port == 0x303B:
             self.pat_ptr = (val & 0x3F) * 256 + (128 if val & 0x80 else 0)
+            self.aslot, self.abyte = val & 0x7F, 0      # SPEED: the attribute port's sprite too
         elif port & 0xFF == 0x5B:
             self.pat[self.pat_ptr & 0x3FFF] = val
             self.pat_ptr += 1
+        elif port & 0xFF == 0x57:                     # SPEED: sprite attributes, auto-increment (Next: byte 4
+            sl = getattr(self, 'aslot', 0)            # only when attribute 3 bit 6 is set, then the next sprite)
+            ab = getattr(self, 'abyte', 0)
+            self.attr[sl][ab] = val
+            ab += 1
+            if ab == 4 and not self.attr[sl][3] & 0x40:
+                ab = 5
+            if ab == 5:
+                sl, ab = (sl + 1) & 0x7F, 0
+            self.aslot, self.abyte = sl, ab
         elif self._pc() < 0x4000:
             self.events.append(('port', port, val))
 
@@ -780,7 +801,7 @@ class _NS:
                     c = (b >> 4) if k % 2 == 0 else (b & 15)
                     x, y = x0 + (15 - k if mir else k), y0 + (15 - j if ymir else j)
                     if c and CLIP[0] <= x <= CLIP[1] and CLIP[2] <= y <= CLIP[3]:
-                        out[(x, y)] = c
+                        out[(x, y)] = (a2 >> 4) * 16 + c          # ENH: palette offset (0 in the default build)
         return out
 
 
@@ -824,6 +845,8 @@ class _PatchedView(_OrigView):
 
     def __getitem__(self, a):
         if a < 0x4000:
+            if a < 0x2000 and self.ns.nr.get(0x50, 0xFF) != 0xFF:      # SPEED: an RC page at slot 0
+                return self.ns.page0(self.ns.nr[0x50])[a]
             return self.alt(a)
         nr = self.ns.nr
         if a < 0x6000:
@@ -856,6 +879,13 @@ class _PatchedView(_OrigView):
     def __setitem__(self, a, v):
         nr = self.ns.nr
         if a < 0x4000:
+            if a < 0x2000 and nr.get(0x50, 0xFF) != 0xFF:
+                pg = nr[0x50]
+                if pg == DPG or RCPG <= pg < RCPG + RCN:
+                    self.ns.page0(pg)[a] = v
+                    return
+                self.err.append(('slot 0 write: page', pg))
+                return
             self.err.append(('ROM write', a))
             return
         if a < 0x6000:
@@ -983,6 +1013,8 @@ class _Dummy:
 def colour_of(colours, get, p, x, y, code):
     """Expected colour of screen pixel (x, y) of plot p (plot_params dict) with pixel code (1 ink,
     2 body, 0 clear); None = transparent."""
+    if getattr(colours, 'enh', False):     # ENH: the Enhanced set's own model (renegade_enh.EnhMap)
+        return colours.colour(get, p, x, y, code)
     W = p['W']
     c = x - 8 * p['x']
     if p['mir']:
@@ -1003,6 +1035,12 @@ def colour_of(colours, get, p, x, y, code):
     if code == 2:
         return nib or BODY
     return nib or None
+
+
+SNAP = None                                           # SPEED: callable(game frame, ns, patched screen, get)
+INCLOCK = 0                                           # SPEED: NextReg 7 at every hook's entry (clock test)
+COST = None                                           # SPEED: callable -> the game frame's Next cost (profiler)
+st_cw = []
 
 
 def verify(patch, rzx_path, stop=None, collect=0, progress=None):
@@ -1063,6 +1101,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         alt = patch.alt_view(get)
         p = _PatchedView(get, ns, alt, psite, pscreen, patch.store, err)
         ns.events = []
+        ns.nr[0x07] = INCLOCK                        # SPEED: the every-site clock test (0 = the game's own 3.5 MHz)
         sp_ = _machine(Sim, p, list(regs), ns, 'p')
         t0 = sp_.registers[25]
         if not _run_until(sp_, stop_, each=lambda r, b=[]: _safe(r, regs, ns, err, b, PUSHES.get(pc, 0))):
@@ -1070,6 +1109,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             return None
         dt = (sp_.registers[25] - t0) - (so.registers[25] - regs[25])
         st['hookT'] += dt
+        if pc in (PLOT, PLOT_M):                     # ENH: 3.5 MHz hooks apart (the others run at 28 MHz)
+            st['plotT'] = st.get('plotT', 0) + dt
         c['hook T at %d' % pc] += dt
         bad = [i for i in CMP if so.registers[i] != sp_.registers[i]]
         if bad:
@@ -1081,9 +1122,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             fail('memory differs', (pc, len(dm), sorted(dm)[:4]))
         if pc not in (62565, 59531) and p.scr_w:
             fail('screen written by a hook', (pc, len(p.scr_w)))
-        if (ns.nr[0x52], ns.nr[0x53], ns.nr[0x57], ns.nr[0x07]) != (SPG, SPG3, GPG7, 0):
-            fail('MMU / speed not restored', (pc, ns.nr[0x52], ns.nr[0x53], ns.nr[0x57], ns.nr[0x07]))
-            ns.nr.update({0x52: SPG, 0x53: SPG3, 0x57: GPG7, 0x07: 0})
+        if (ns.nr[0x52], ns.nr[0x53], ns.nr[0x57], ns.nr[0x07], ns.nr.get(0x50, 0xFF)) != (SPG, SPG3, GPG7, INCLOCK, 0xFF):
+            fail('MMU / speed not restored', (pc, ns.nr[0x52], ns.nr[0x53], ns.nr[0x57], ns.nr[0x07], ns.nr.get(0x50)))
+            ns.nr.update({0x52: SPG, 0x53: SPG3, 0x57: GPG7, 0x07: INCLOCK, 0x50: 0xFF})
         if any(e[0] in ('in', 'port') for e in ns.events):
             fail('port access in a hook', (pc, [e for e in ns.events if e[0] != 'nr'][:3]))
         for e in err:
@@ -1124,12 +1165,26 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             return
         if pc == 62565:
             commit_checks(get, res)
+            if SNAP is not None:                     # SPEED: the picture after each commit (proof: same pictures)
+                SNAP(st['gf'], ns, pscreen, get)
         elif pc == 62821:
             if any(a[3] & 0x80 for a in ns.attr):
                 fail('sprites shown after the screen clear')
 
     def commit_checks(get, res):
         so, o, sp_, p = res
+        st.setdefault('per_gf', []).append(st['hookT'] - st.get('lastT', 0))     # ENH: hook T of each game frame
+        st['lastT'] = st['hookT']
+        # ENH: the frame's cost on the Next in 3.5 MHz T (28 MHz hooks / 8 + the plot hooks) beside the original's
+        # own wait at its HALT (0xD7DC, 4 T a fetch) in the same game frame
+        pl = st.get('plotT', 0) - st.get('lastP', 0)
+        st['lastP'] = st.get('plotT', 0)
+        real = (st['per_gf'][-1] - pl) // 8 + pl
+        if COST is not None:                         # SPEED: a per-instruction wall-clock model (a profiler sets it)
+            real = COST()
+        halt = 4 * (st.get('halts', 0) - st.get('lastH', 0))
+        st['lastH'] = st.get('halts', 0)
+        st.setdefault('cost_vs_wait', []).append((real, halt))
         st['gf'] += 1
         c['commits'] += 1
         if st['n'] == 0:
@@ -1205,6 +1260,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             def mk(f):
                 def g():
                     pc = R[24]
+                    if pc == 0xD7DC:                 # ENH: the main loop's HALT (the frame's spare time)
+                        st['halts'] = st.get('halts', 0) + 1
                     prev, st['prev'] = st['prev'], pc
                     if pc in INTERIOR and not (prev is not None and INTERIOR[pc] <= prev < pc):
                         fail('jump into a patched instruction', (pc, prev))
@@ -1239,6 +1296,21 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
     finally:
         rzxplay.RZXTracer.next_frame, rzxplay.Simulator, rzxplay.CSimulator = old
     c['hook T per game frame (3.5 MHz units, x1 not /8)'] = st['hookT'] // max(1, st['gf'])
+    pg = sorted(st.get('per_gf', [0]))
+    c['hook T per game frame: max'] = pg[-1]
+    c['hook T per game frame: 99th percentile'] = pg[int(0.99 * (len(pg) - 1))]
+    c['hook T per game frame: median'] = pg[len(pg) // 2]
+    st['per_gf_list'] = pg
+    ex['hook T per game frame, largest 10'] = pg[-10:]
+    cw = st.get('cost_vs_wait', [])[1:]               # the first frame's wait is not a whole frame's
+    c['Next cost per game frame (3.5 MHz T): max'] = max([r for r, h in cw] or [0])
+    c['Next cost per game frame: median'] = sorted(r for r, h in cw)[len(cw) // 2] if cw else 0
+    c['game frames whose cost exceeds the original HALT wait'] = sum(1 for r, h in cw if r > h)
+    c['HALT wait per game frame (T): min'] = min([h for r, h in cw] or [0])
+    c['HALT wait per game frame: median'] = sorted(h for r, h in cw)[len(cw) // 2] if cw else 0
+    ex['costliest frames (cost, wait)'] = sorted(cw, reverse=True)[:6]
+    st_cw[:] = cw                                     # SPEED: every game frame's (cost, wait), for the profiler
+    ex['tightest frames (cost, wait)'] = sorted(cw, key=lambda t: t[1] - t[0])[:6]
     return c, ex, states
 
 
@@ -1309,11 +1381,12 @@ def expected_parts(patch, st, log, mem_edit=None, colours=None, nmax=None):
         if nmax is not None and conv >= nmax:
             break
         conv += 1
-        pc = PLOT_M if kind else PLOT
+        pc = PLOT_M if kind & 1 else PLOT
         R = list(st['R'])
         R[6], R[7], R[4], R[5] = rec >> 8, rec & 255, d, e
         R[26], R[24] = 0, pc
         pr = plot_params(get, R, pc)
+        pr['cls'] = kind >> 1                 # ENH: as the plot hook logged it
         px = truth(get, R, pc)
         for yy in range(max(8 + pr['y'], CLIP[2]), min(8 + pr['y'] + pr['R'], 136, CLIP[3] + 1)):
             for xx in range(max(8 * pr['x'], CLIP[0]), min(8 * (pr['x'] + pr['W']), CLIP[1] + 1)):

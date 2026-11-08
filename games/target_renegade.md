@@ -109,6 +109,26 @@ Reference (specnext/reference/target_renegade/):
   negatives 5/5; selftest --verify --stamp PASSED. JNext pace (600 updates, probe 0xF465, against the plain
   build): +0.45% before and after (busy +0.81%); interrupts 17.68 a second both (original 17.73); flicker clean.
 
+## v1.2 (rework, opt-in: NEXCLASH_REWORK=target_renegade_v12; 2026-11-07)
+- Jon Attree's published .nxc v1.2 (github.com/jattree/nxc), byte for byte from main: `NEXCLASH_REWORK=
+  target_renegade_v12 python nexclash.py auto target_renegade.z80 --no-record` with target_renegade_enhanced.json
+  (the paint, MD5 95c08b33) and target_renegade_loading.scr (the tape's screen, MD5 18681406) beside the snapshot.
+  Outputs target_renegade_speed.nex 7583c8643c7ae82737665d4f73980fc8 (default) and target_renegade_enhanced.nex
+  52ab63f4d9cbb5af83855edba398ba29 = nxc.py --bare (default, --colours Enhanced). Record rework "v12".
+- What it is: the v1.1 hook-speed pass (asm/renegade_speed_common.asm, profiles target_renegade_speed /
+  target_renegade_enh_speed; nexclash/renegade_enh.py) on the same start state as Dean's build; v1.0's loading
+  stub in bank 20 (asm ldscr in renegade_speed_hooks.asm); v1.2's v2.10 fix-up layout (renegade_v12._v210: the
+  start-up fill's ROM3 copy at 0x816B becomes JP 0x9D3B, where the copy + z80tonex.rom3_fixup_code + JP 0x8176 sit
+  in the stub page's free tail; the setup's own copy at 0x9024 is left as main's builder leaves it). renegade.py
+  carries v1.1's verifier extensions (RC pages at slot 0, port 0x57 attributes, Enhanced palette offsets, INCLOCK).
+- Caller's speed: every hook of the speed pass that switches to 28 MHz already latches NextREG 7 on entry and writes
+  it back on exit (SPEED28; 5 exits `LD A,(V_SPD)` / `NEXTREG 7,A` in v1.2's bank 12, none writes a fixed 0).
+  The verifier with every hook entered at 28 MHz (INCLOCK 3): IDENTICAL, each hook gives back the speed it found;
+  negative control (the 5 exits' LD A,(V_SPD) made XOR A: a forced 3.5 MHz exit) caught at INCLOCK 3 (672 hook
+  calls in 400 frames), passed unseen at INCLOCK 0 - why the test enters at 28 MHz.
+  So #113's latch (hlib_speed) has nothing to add here; the .nfo's known issue "each sprite update still sets the
+  CPU back to 3.5 MHz" describes Dean's hooks before #113, not v1.1+.
+
 ## Hardware checklist (e0b246e3)
 1. Loads and shows the loading screen; a key starts the game menu (plain build too). A crash at the
    start: alt ROM image 0 (BRIEFING C2 #27) - report it.
@@ -127,6 +147,8 @@ Reference (specnext/reference/target_renegade/):
 - Painted colours: none yet (sheet sent; `recolour` takes the painted PNG).
 
 ## Lessons
+- [local: this game's published builds] A published build carried onto an older published one and then patched
+  (v1.0 stub, v2.10 fix-up) is not main's build: the rework makes each step (loading_nex, _v210) in auto.
 - [card patch.restore-speed §Verification] The verifier failed "port access in a hook" on the latch's IN: a
   NextREG read belongs to the NextREG model, as in Knight Tyme and Spellbound.
 - [card patch.whole-altrom-image §Use / do not use] opt-in rework available: whole alt ROM image (see card patch.whole-altrom-image), and image 0 from the 128K ROM 0 (`altrom0`, z80tonex.altrom0): the pinned build reads its 9 sound bytes at 0x3500 from NextZXOS's ROM 0 (JNext dump in play; ROM paths). Output pinned; refactor-unpinned has a trial build (4c68e258, quick verify only).
