@@ -16,6 +16,13 @@
 
         DEVICE ZXSPECTRUMNEXT
         INCLUDE "lib/hlib_speed.asm"    ; macros only: HLIB_SPEED_IN
+HLIB_V_PACE EQU 0x8040          ; 26 bytes of page H (0x8040-0x8059), zero at start (asm/lib/hlib_pace.asm)
+HLIB_PACE_NL EQU 312            ; 48K timing, 50 Hz: lines a frame
+T_BLIT  EQU 6130                ; the blit on the original: 25.9 ms, 1/16 lines (no interrupts in play)
+K_LG    EQU 128                 ; e_lg's window: the original's time per unit of 28 MHz time, x 16
+D_LG    EQU 512                 ; e_lg: least debt to act on, 1/16 lines
+K_DR    EQU 128                 ; the figure phase's window, the same
+A_HOOK  EQU 13                  ; a hook's 3.5 MHz entry and exit, 1/16 lines
 
 HPG     EQU 26                  ; hook page, slot 4 while a hook runs
 CPG     EQU 27                  ; clean scenery, slot 6 during the blit
@@ -67,10 +74,16 @@ V_CELL  EQU 0x802E
 V_HL    EQU 0x8030              ; e_ab
 V_SPD   EQU 0x8036              ; the caller's CPU speed (lib/hlib_speed.asm latch; e_bl's carries to e_post)
 V_A     EQU 0x8037              ; A while LEAVE restores the speed
-V_BSP   EQU 0x8038              ; the blit's speed: 14 MHz, or the caller's if faster
 V_DET   EQU 0x8034              ; K1: palette index of a cleared pixel: the paper, or I_DET in foliage
 I_DET   EQU 8                   ; yellow, the body colour on sand: a foliage figure's detail on its black fill
 V_RET   EQU 0x8032
+V_CP    EQU 0x805A              ; (2) the next byte of the new image's patterns in CAPT
+V_DRW   EQU 0x805E              ; 1 = the figure phase is in a K window
+V_SPW   EQU 0x805D              ; the caller's speed through e_lg's window
+V_L2N   EQU 0x805C              ; images in the store
+CAPT    EQU 0x8C00              ; a new image's 4 tile patterns, 512 bytes, written out in one go
+L2DIR   EQU 0x9600              ; the store's directory: 255 x 10: key 8, tile mask, (spare)
+L2P0    EQU 32                  ; the store: Next pages 32-47, 16 images a page
 LINES   EQU 0x9400              ; the blit's 168 screen line addresses, a private copy (Python fills it)
 LINEOP  EQU 0x62C3              ; operand of the blit's LD SP,0x5B00
 I_XOR   EQU 12                  ; XOR figures: by bank, black; bank 0 yellow over blue ink; bank 1 white in foliage
@@ -130,9 +143,58 @@ I_OUT   EQU 15                  ; outline
 
         ORG 0x2400
 
+; ---- 0xEB3B XOR A / LD (0xE465),A (the top of the loop) -> JP e_lg ---------------------------------
+; A burst of new images ran up a debt larger than a blit can repay: this game frame's logic runs at 28 MHz in a K window,
+; up to e_pre, and repays it.
+e_lg:   nextreg 0x54,HPG
+        ld (V_SP),sp
+        ld sp,HSTK
+        push de
+        push hl
+        ld hl,(HLIB_V_PACE + 4)
+        ld de,D_LG
+        or a
+        sbc hl,de
+        jr c,.x
+        HLIB_SPEED_IN V_SPW     ; its own latch: e_pre's ENTER latches 28 MHz
+        push bc
+        call hlib_pace_open
+        pop bc
+.x:     pop hl
+        pop de
+        ld sp,(V_SP)
+        nextreg 0x54,GP4
+        xor a
+        ld (0xE465),a
+        jp 0xEB3F
+
 ; ---- 0xEBAA CALL 0xF8C8 -> CALL e_pre: the clean copy --------------------------------------------
 e_pre:  ENTER
         PUSHALL
+        ld a,(HLIB_V_PACE + 10) ; e_lg's window open: the caller's speed and the wait for this game frame's logic
+        or a
+        jr z,.nw
+        ld a,(V_SPW)
+        ld (V_SPD),a
+        ld c,a
+        ld a,K_LG
+        call hlib_pace_waitk
+        ld hl,(HLIB_V_PACE + 4) ; still in debt: the figure phase, its plotters at 28 MHz, in a K window up to e_bl
+        ld de,D_LG
+        or a
+        sbc hl,de
+        jr c,.ok
+        call hlib_pace_open
+        ld a,3                  ; e_pre's LEAVE stays at 28 MHz
+        ld (V_SPD),a
+        nextreg 0x07,a
+        ld a,1
+        ld (V_DRW),a
+        jr .nw
+.ok:    xor a
+        ld (V_DRW),a
+.nw:
+        call dbo
         ld hl,V_STAMP
         inc (hl)
         xor a
@@ -168,6 +230,7 @@ neg_copy:
         dec a
         jp nz,.line
         nextreg 0x54,HPG
+        call dbc
         POPALL
         LEAVE
         jp 0xF8C8
@@ -175,6 +238,18 @@ neg_copy:
 ; ---- 0xEBC5 CALL 0x62B2 -> CALL e_bl: the blit shows page C ---------------------------------------
 e_bl:   ENTER
         PUSHALL
+        ld a,(V_DRW)            ; the figure phase's K window: the caller's speed for the game's wait
+        or a
+        jr z,.nw
+        xor a
+        ld (V_DRW),a
+        ld a,(V_SPW)
+        ld (V_SPD),a
+        ld c,a
+        ld a,K_DR
+        call hlib_pace_waitk
+        nextreg 0x07,3
+.nw:    call hlib_pace_open     ; the blit's window: at 28 MHz, the commit, then the wait (card patch.pace-limiter)
         ld hl,(0xE462)          ; the blit's attribute origin, moved to the clean copy: page H stays in
         ld a,h                  ; for the blit, and its LD HL,(0xE462) reads this word instead
         and 3
@@ -187,20 +262,11 @@ neg_att:
         ld hl,LINES             ; the game's table sits on KSTATE, so the ROM's keyboard scan damages it in attract
 neg_lines:
         ld (LINEOP),hl
-        ld a,(V_SPD)            ; the blit at 14 MHz, pays for the hooks' time (the game has no frame sync); at the
-        cp 2                    ; caller's speed when that is faster
-        jr nc,.f
-        ld a,2
-.f:     ld (V_BSP),a
         POPALL
         ld sp,(V_SP)
 neg_blit:
         nextreg 0x56,CPG
-        ld (V_A),a
-        ld a,(V_BSP)
-        nextreg 0x07,a
-        ld a,(V_A)
-        jp BLIT
+        jp BLIT                 ; still 28 MHz, up to e_post: it pays for the hooks' time (the game has no frame sync)
 
 ; ---- 0xEBC8 CALL 0x6711 -> CALL e_post: the commit ------------------------------------------------
 e_post: nextreg 0x56,GP6
@@ -213,6 +279,10 @@ e_post: nextreg 0x56,GP6
         call commit
         xor a
         ld (V_PHASE),a
+        ld hl,T_BLIT
+        ld a,(V_SPD)
+neg_wait:
+        call hlib_pace_wait     ; until the blit's time on the original has passed, less the hooks' since the last one
         POPALL
         LEAVE
         jp 0x6711
@@ -257,6 +327,7 @@ e_k1:   ENTER
         push hl
         exx
         ld sp,HSTK
+        call dbo
         ld (V_KEY+0),a
         ld l,a                  ; colour route: 0xB700 + 36 * frame
         ld h,0
@@ -350,6 +421,7 @@ e_k1:   ENTER
 .fd:
         call uploadn
 .log:   call logit
+        call dbc
 neg_k1regs:
         ld sp,RSTK-18
         exx
@@ -433,6 +505,7 @@ k1back: ld sp,(V_SP2)
 ; ---- K2 bullets: 0x67C5 LD H,(IX+7) -> JP e_k2: SP = stream of (mask, graphics) --------------------
 e_k2:   ENTER
         PUSHALL
+        call dbo
         call clearkey
         ld hl,(V_SP)
         ld (V_KEY+0),hl
@@ -473,6 +546,7 @@ e_k2:   ENTER
 .n:     djnz .l
         call upload
 .log:   call logit
+        call dbc
         POPALL
         LEAVE
         ld h,(ix+7)
@@ -484,6 +558,7 @@ e_k3:   ENTER
         ld a,(V_PHASE)
         or a
         jr z,.x
+        call dbo
         ld (V_DEST),hl
         call clearkey
         ld hl,(V_SP)
@@ -514,6 +589,7 @@ e_k3:   ENTER
         djnz .l
         call upload
 .log:   call logit
+        call dbc
 .x:     POPALL
         LEAVE
         ld bc,3102
@@ -529,6 +605,7 @@ e_k4:   ENTER
         jr z,.x
         bit 5,l
 .neg:   jr nz,.x
+        call dbo
         ld (V_DEST),hl
         call clearkey
         ld a,c
@@ -553,6 +630,7 @@ e_k4:   ENTER
         ld (INK+4),a
         call upload
 .log:   call logit
+        call dbc
 .x:     POPALL
         LEAVE
         ld c,192
@@ -562,6 +640,7 @@ e_k4:   ENTER
 ; ---- K5 pick-ups: 0xF845 JP 0xF7ED -> JP e_k5: opaque 2 x 14, HL = graphics (slot 4), DE = dest ------
 e_k5:   ENTER
         PUSHALL
+        call dbo
         ld (V_DEST),de
         call clearkey
         ld (V_KEY+0),hl
@@ -601,6 +680,7 @@ e_k5:   ENTER
         ld (V_CW),a
         call upload
 .log:   call logit
+        call dbc
         POPALL
         LEAVE
         jp 0xF7ED
@@ -608,6 +688,7 @@ e_k5:   ENTER
 ; ---- K6 heavy objects: 0xF76A LD D,(IX+7) -> JP e_k6: 4 x 24, edges masked, HL = graphics -----------
 e_k6:   ENTER
         PUSHALL
+        call dbo
         call clearkey
         ld (V_KEY+0),hl
         ld (V_CB),hl
@@ -642,6 +723,7 @@ e_k6:   ENTER
         ld (V_CW),a
         call upload
 .log:   call logit
+        call dbc
         POPALL
         LEAVE
         ld d,(ix+7)
@@ -667,6 +749,7 @@ e_k8:   ENTER
         ld a,(V_PHASE)
         or a
         jr z,.x
+        call dbo
         ld (V_DEST),hl
         call clearkey
         ld a,(ix+3)
@@ -699,6 +782,7 @@ e_k8:   ENTER
         djnz .l
         call upload
 .log:   call logit
+        call dbc
 .x:     POPALL
         LEAVE
         ld bc,1055
@@ -1051,11 +1135,153 @@ find:   ld c,0
         inc de
         ld a,(V_STAMP)
         ld (de),a
-        scf
+        ; fall into l2get: a pattern the cache gave up may be in the store
+
+; l2get: the store holds this key: its patterns back into V_E's 4 tiles, NC (found). Else CY = new image.
+l2get:  ld a,(V_L2N)
+        or a
+        jr z,.new
+        ld b,a
+        ld hl,L2DIR
+.e:     push bc
+        push hl
+        ld de,V_KEY
+        ld b,8
+.k:     ld a,(de)
+        cp (hl)
+        jr nz,.no
+        inc de
+        inc hl
+        djnz .k
+        ld a,(hl)               ; the tile mask
+        pop hl
+        pop bc
+        push af
+        ld a,(V_L2N)
+        sub b                   ; the image's index
+.neg_l2:
+        call l2map
+        ld a,(V_E)
+        add a,a
+        ld bc,0x303B
+        out (c),a
+        ld bc,0x005B
+        otir
+        otir
+        nextreg 0x56,GP6
+        ld a,(V_E)
+        call entry
+        ld de,8
+        add hl,de
+        pop af
+        ld (hl),a
+        or a
+        ret
+.no:    pop hl
+        ld de,10
+        add hl,de
+        pop bc
+        djnz .e
+.new:   scf
+        ret
+
+; l2map: A = image -> slot 6 = its page of the store, HL = its 512 bytes there. AF lost.
+l2map:  ld l,a
+        rrca
+        rrca
+        rrca
+        rrca
+        and 15
+        add a,L2P0
+        nextreg 0x56,a
+        ld a,l
+        and 15
+        add a,a
+        add a,0xC0
+        ld h,a
+        ld l,0
+        ret
+
+; uend: the new image's patterns out in one go, and a copy in the store (full: not kept). A = its tile mask, kept.
+uend:   push af
+        ld hl,CAPT
+        ld bc,0x005B
+        otir
+        otir
+        ld a,(V_L2N)
+        cp 255
+        jr z,.full
+        ld l,a
+        ld h,0
+        add hl,hl
+        ld d,h
+        ld e,l
+        add hl,hl
+        add hl,hl
+        add hl,de               ; x 10
+        ld de,L2DIR
+        add hl,de
+        ex de,hl
+        ld hl,V_KEY
+        ld bc,8
+        ldir
+        pop af
+        push af
+        ld (de),a
+        ld a,(V_L2N)
+        call l2map
+        ex de,hl
+        ld hl,CAPT
+        ld bc,512
+        ldir
+        nextreg 0x56,GP6
+        ld hl,V_L2N
+        inc (hl)
+.full:  pop af
+        ret
+
+; cap: A = the next pattern byte of the new image. Every register kept.
+cap:    push hl
+        ld hl,(V_CP)
+        ld (hl),a
+        inc hl
+        ld (V_CP),hl
+        pop hl
+        ret
+
+; capi: the capture starts at the head of CAPT.
+capi:   ld hl,CAPT
+        ld (V_CP),hl
+        ret
+
+; dbo / dbc: this hook's time goes to the debt, the blit's window repays it (asm/lib/hlib_pace.asm). dbo keeps every
+; register; dbc loses them; dtk (every register kept) reads the lines at least once a frame in a long hook.
+dbo:    push af
+        push bc
+        push de
+        push hl
+        call hlib_nest_open
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ret
+dbc:    ld a,A_HOOK
+        jp hlib_nest_close
+dtk:    push af
+        push bc
+        push de
+        push hl
+        call hlib_debt_tick
+        pop hl
+        pop de
+        pop bc
+        pop af
         ret
 
 ; ---- canvas -> 4 tile patterns, 32 x 32 --------------------------------------------------------
-upload: ld a,(V_E)
+upload: call capi
+        ld a,(V_E)
         add a,a
         ld bc,0x303B
         out (c),a
@@ -1074,8 +1300,7 @@ upload: ld a,(V_E)
         jr c,.in
         ld b,8                  ; below the canvas: clear
         xor a
-.z:     ld c,0x5B
-        out (c),a
+.z:     call cap
         djnz .z
         jr .nl
 .in:    push de
@@ -1112,7 +1337,8 @@ upload: ld a,(V_E)
         jr z,.nc
         ld b,15
 .nc:    ld (hl),b
-        ret
+        ld a,b
+        jp uend
 
 ; one canvas byte (V_LN, V_XB) -> 8 pixels, 4 pattern bytes. Tile E is on the stack's DE.
 ubyte:  ld a,(V_LN)
@@ -1159,8 +1385,7 @@ ubyte:  ld a,(V_LN)
         call pix
         ld hl,V_NIB
         or (hl)
-        ld bc,0x005B
-        out (c),a
+        call cap
         pop bc
         djnz .p
         ret
@@ -1202,7 +1427,8 @@ uploadn:
         ldir
         xor a
         ld (V_LN),a
-.y:     xor a
+.y:     call dtk
+        xor a
         ld (V_XB),a
 .xb:    ld a,(V_LN)
         add a,a
@@ -1367,7 +1593,7 @@ uploadn:
         ld a,d
         cp 20
         jr nz,.f1
-        ld hl,N0                ; outline: clear, next to an opaque pixel
+.o0:    ld hl,N0                ; outline: clear, next to an opaque pixel (the builds with no outline jump over it)
         ld b,20
 .o1:    ld c,32
 .o2:    ld a,(hl)
@@ -1404,7 +1630,9 @@ uploadn:
         ret
 .nb0:   xor a
         ret
-.out:   ld a,(V_E)              ; 4 tiles, 32 x 32
+.out:   call dtk
+        call capi
+        ld a,(V_E)              ; 4 tiles, 32 x 32
         add a,a
         ld bc,0x303B
         out (c),a
@@ -1422,8 +1650,7 @@ uploadn:
         jr c,.oi
         ld b,8
         xor a
-.oz:    ld c,0x5B
-        out (c),a
+.oz:    call cap
         djnz .oz
         jr .on
 .oi:    ld l,a
@@ -1467,10 +1694,7 @@ uploadn:
         ld (hl),a
         pop hl
         pop af
-.ow:    push bc
-        ld bc,0x005B
-        out (c),a
-        pop bc
+.ow:    call cap
         djnz .oy
 .on:    inc d
         ld a,d
@@ -1487,7 +1711,9 @@ uploadn:
         add hl,de
         ld a,(V_TM)
         ld (hl),a
-        ret
+        jp uend
+
+        INCLUDE "lib/hlib_pace.asm"
 
 ; the colour store, keyed by the graphics byte a pixel comes from -> A = nibble, 0 = the default. Keeps C.
 colour: ld a,(V_X)
