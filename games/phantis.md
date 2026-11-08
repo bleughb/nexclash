@@ -4,7 +4,7 @@
 Stage: 3 (prove + deliver)   State: private review builds for the owner, nothing upstream yet
 Inputs: Game Over 2 (1988)(Dinamic)(ES)(en)(Part 1 of 2)[aka Phantis][re-release].z80, MD5 c39caed696ba547f693546b707c9cee8; Part 2 of 2, MD5 55c89bb16ffde2f58a43ed3be7b95bcf
 Checks: replay, ABI, negatives, pace, soak, flicker, beam audit, real loader in the run's NOTES.md
-Pending: owner plays; Enhanced mock-up approval; then `auto`, the record and registration for upstream.
+Pending: owner plays, default and part 1's Enhanced; new paint for what the set does not hold (a later mock-up); then `auto`, the record and registration for upstream.
 
 ## Facts
 - Two 48K parts, each its own snapshot and each its own patch. Part 2 asks for the code part 1 gives: 18757 (FCFE). Same author and library as Game Over: figures masked into a back buffer, each figure's box painted in the work attributes, ink only, so anything else in the box takes its ink.
@@ -22,6 +22,12 @@ The owner's standard: the original look with colour clash removed. Layer 2 route
 - No DMA: interrupts stay on and the buffers are small; a DMA burst can lose an /INT. CPU clear.
 - No outlines: every figure has its own black mask.
 
+## Enhanced, part 1
+The owner's rule (2026-11-08): no mock-up or approval to convert a Spec256 set. So part 1 has Enhanced, the set's colours as they are, a menu option, off by default; the default build's bytes are unchanged. Part 2 has no set.
+- The tables come from the owner's set by `nexclash/phantis_art.py` and stay beside the snapshot, never here: each graphic the game plots and the set holds, by its descriptor, one colour page row to a row. Blank pixels around each row keep 4-pixel-shifted drawing simple.
+- `col_find` looks the descriptor up in the plot hook; `col_plot` copies the part the body kept after clipping (read from G_PTR) row by row. Unlisted graphics plot in the original's colours, as default.
+- What the set does not hold stays in the original's colours: white fighters, yellow ships, asteroids, some scenery, the large hero, ZONE letters and digits (different art from the set's, 35-95% of their ink differs), and the panel, logo, frame, stars and GAME OVER text. The set's nebula picture has no layer to sit on in this route.
+
 ## Technique use
 - patch.pace-limiter: used: plot, and part 2's copy, run whole at 28 MHz inside K windows.
 - patch.preserve-r: used: R compared at every hook and in the ABI cases.
@@ -36,6 +42,9 @@ The owner's standard: the original look with colour clash removed. Layer 2 route
 - [local: read after the body] Reading the clipped result from the plot's own variables after the body keeps the overlay short and cannot disagree with the original's clipping.
 - [local: selection keys] The menu polls, and a script's short press of J can be missed. Check an input script really changed the game: two pace seeds with identical numbers meant input was not reaching it.
 - [local: fixture] Pace fixture: the handler does not step the RND seed (BA4B NOP), lives do not fall, part 2 skips the code screen.
+
+- [local: find by pointers] A graphic search over the whole snapshot finds 1,028 matches; only those the code points at, or that a replay really plots, are graphics: 166.
+- [local: a negative that passes] A broken build that changes only the clipped-row path was not caught over 3,000 frames: the case was not reached. Each negative has to hit a path the recording reaches; a pattern that finds the first of two copies of the code changes the rarer one.
 
 ## Friction
 - reuse: [none: the Game Over engine and its run scripts were the base]

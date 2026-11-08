@@ -43,6 +43,20 @@ P_CNT EQU 0x3E55
 V_R1 EQU 0x3E56                ; R at the copy's start
 V_CPH EQU 0x3E57               ; the copy's half
 COPY_N1 EQU 80                 ; part 1: rows before the flip: the beam is below the play area, above the next frame's
+    IFDEF ENHANCED
+V_P EQU 0x3E58                 ; word: the graphic's descriptor at the plot's entry
+V_SH EQU 0x3E5A                ; 1: the plot pre-shifted the graphic by 4 pixels
+V_FW EQU 0x3E5B                ; the figure's width in the colour table's entry
+P_R0 EQU 0x3E5C                ; word: stored row, the next to copy
+V_TN EQU 0x3E5E                ; word: entries in the colour index (the build stores it)
+P_PG EQU 0x3E60                ; the figure's colour page
+P_RS EQU 0x3E62                ; word: colour row stride
+V_LO EQU 0x3E64
+V_HI EQU 0x3E66
+V_MID EQU 0x3E68
+TBL EQU 0x3100                 ; the index: 6 bytes an entry, sorted by descriptor
+R_BUF EQU 0x3900               ; one row of colours, up to 256 bytes
+    ENDIF
 BEAM_LO EQU 128                ; part 2: the copy starts here, below the play area
 BEAM_HI EQU 200
 P_SAVE EQU 0x3400                ; part 2: the work attributes during a copy with no figures
@@ -90,6 +104,16 @@ rom_start:
 h_plot:
         ENTER
         HLIB_SPEED_IN V_SPEED
+    IFDEF ENHANCED
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+        ld (V_P),de
+        ld a,(hl)
+        and 1
+        ld (V_SH),a
+    ENDIF
         ld a,(G_COUNT)
         ld (P_N0),a
         call hlib_pace_open
@@ -378,6 +402,10 @@ l2_plot:
         add a,b
         ld (P_SKIP),a
 .fit:   call rect_add
+    IFDEF ENHANCED
+        call col_find
+        jp nc,col_plot
+    ENDIF
 .row:   ld a,(P_Y)
         cp BOTTOM
         jp nc,.done             ; the original stops at the end of its buffer
@@ -455,6 +483,164 @@ l2_plot:
         jp nz,.row
 .done:  nextreg 0x50,255
         ret
+
+    IFDEF ENHANCED
+; col_find: binary search of the index for V_P. Carry clear: found, HL = the entry. Carry set: not painted.
+col_find:
+        ld hl,0
+        ld (V_LO),hl
+        ld hl,(V_TN)
+        ld (V_HI),hl
+.lp:    ld hl,(V_LO)
+        ld de,(V_HI)
+        or a
+        sbc hl,de
+        jr nz,.go
+        scf
+        ret
+.go:    ld hl,(V_LO)
+        add hl,de
+        srl h
+        rr l
+        ld (V_MID),hl
+        ld d,h
+        ld e,l
+        add hl,hl
+        add hl,de
+        add hl,hl               ; x 6
+        ld de,TBL
+        add hl,de
+        ld a,(V_P+1)
+        inc hl
+        cp (hl)
+        dec hl
+        jr nz,.cmp
+        ld a,(V_P)
+        cp (hl)
+        jr nz,.cmp
+        or a
+        ret
+.cmp:   jr c,.below
+        ld hl,(V_MID)
+        inc hl
+        ld (V_LO),hl
+        jr .lp
+.below: ld hl,(V_MID)
+        ld (V_HI),hl
+        jr .lp
+
+; col_plot: HL = the index entry. The painted figure, row by row: its colours from the table's page, by the
+; part of the graphic the body kept after clipping. 255 leaves Layer 2 alone, 254 takes earlier ink away.
+col_plot:
+        inc hl
+        inc hl
+        ld a,(hl)
+        ld (P_PG),a
+        inc hl
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+        ld a,(hl)
+        ld (V_FW),a
+        ld (P_R0),de            ; the figure's first colour
+        ; row stride: W x 8 + 8
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,8
+        add hl,de
+        ld (P_RS),hl
+        ; what the body skipped: from G_PTR against the graphic's start
+        ld hl,(V_P)
+        ld de,3
+        add hl,de               ; unshifted data
+        ld a,(V_SH)
+        or a
+        jr z,.ns
+        ld hl,G_SHIFTBUF
+.ns:    ex de,hl
+        ld hl,(G_PTR)
+        or a
+        sbc hl,de               ; HL = bytes skipped
+        ld a,(V_FW)
+        ld c,a
+        ld a,(V_SH)
+        add a,c
+        ld c,a
+        ld b,0                  ; BC = stored stride
+.dv:    or a
+        sbc hl,bc
+        jr c,.dd
+        push hl
+        ld hl,(P_R0)
+        ld de,(P_RS)
+        add hl,de
+        ld (P_R0),hl
+        pop hl
+        jr .dv
+.dd:    add hl,bc               ; HL = columns skipped
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ex de,hl
+        ld hl,(P_R0)
+        add hl,de
+        ld a,(V_SH)
+        or a
+        jr nz,.so
+        ld de,4                 ; unshifted: past the row's left pad
+        add hl,de
+.so:    ld (P_R0),hl
+.row:   ld a,(P_Y)
+        cp BOTTOM
+        jr nc,.done
+        ld a,(P_PG)
+        nextreg 0x50,a
+        ld hl,(P_R0)
+        ld de,R_BUF
+        ld a,(P_COLS)
+        add a,a
+        add a,a
+        add a,a
+        ld c,a
+        ld b,0
+        ldir
+        ld hl,(P_R0)
+        ld de,(P_RS)
+        add hl,de
+        ld (P_R0),hl
+        ld a,(P_Y)
+        call l2_row
+        ld a,(P_X)
+        add a,a
+        add a,a
+        add a,a
+        ld l,a
+        ld a,(P_COLS)
+        add a,a
+        add a,a
+        add a,a
+        ld b,a
+        ld de,R_BUF
+.px:    ld a,(de)
+        inc de
+        inc a
+        jr z,.nx
+        dec a
+        ld (hl),a
+.nx:    inc l
+        djnz .px
+        ld hl,P_Y
+        inc (hl)
+        ld hl,P_ROWS
+        dec (hl)
+        jr nz,.row
+.done:  nextreg 0x50,255
+        ret
+    ENDIF
 
 ; ink_of: A = an attribute -> A = the colour index, bright in bit 3.
 ink_of: ld c,a

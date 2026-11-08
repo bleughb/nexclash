@@ -18,8 +18,8 @@ NEG_STOP = 3000
 
 
 class Part:
-    def __init__(self, n, md5, plot, plot_old, copy, copy_old, mid, mid_old, stop, live_table, table, table_rows, work_attr, clean_attr, cls, signature, gvars, bitmap, xoff=3, wide=26, stride=30, stars=0xD07B):
-        self.xoff, self.wide, self.stride, self.stars = xoff, wide, stride, stars
+    def __init__(self, n, md5, plot, plot_old, copy, copy_old, mid, mid_old, stop, live_table, table, table_rows, work_attr, clean_attr, cls, signature, gvars, bitmap, xoff=3, wide=26, stride=30, stars=0xD07B, shiftbuf=0xE9DE):
+        self.xoff, self.wide, self.stride, self.stars, self.shiftbuf = xoff, wide, stride, stars, shiftbuf
         self.n, self.md5, self.plot, self.plot_old = n, md5, plot, plot_old
         self.copy, self.copy_old, self.mid, self.mid_old, self.stop, self.live_table = copy, copy_old, mid, mid_old, stop, live_table
         self.table, self.table_rows, self.work_attr, self.clean_attr = table, table_rows, work_attr, clean_attr
@@ -79,15 +79,16 @@ class Patch:
     setup_call = 0xD000
     tail_addr = 0x5D9F              # BASIC's leftovers below the low stack: the game never reads them
 
-    def __init__(self, source=None, part=None):
+    def __init__(self, source=None, part=None, enhanced=None):
         self.source = str(source) if source else None
+        self.enhanced = enhanced
         if part is None:
             part = part_of(zt.Z80Snapshot(str(source)))
             if part is None:
                 raise ValueError('Not a supported Phantis / Game Over 2 part')
         self.part = part
         self.name = 'Phantis part %d: clash removed by a Layer 2 figure overlay' % part.n
-        h = load_profile(part)['hooks']
+        h = json.loads((ROOT / ('docs/profiles/phantis%de.json' % part.n)).read_text())['hooks'] if enhanced else load_profile(part)['hooks']
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
         self.code = bytes.fromhex(h['rom'])
         self.stub_extra = bytes.fromhex(h['setup'])
@@ -98,6 +99,18 @@ class Patch:
         self.ram[0x800:0x800 + len(self.code)] = self.code
         self.ram[0x1A00:0x1C00] = bytes(512)
         self.ram[0x1E00:0x2000] = bytes(512)
+        self.colours = None
+        if enhanced:
+            from . import phantis_art
+            self.colours = phantis_art.load(enhanced)
+            setup = bytearray(self.stub_extra)
+            at = self.syms['l2_pal256'] - 0xD000
+            setup[at:at + 512] = self.colours['palette']
+            self.stub_extra = bytes(setup)
+            self.ram[self.syms['V_TN'] - 0x2000:self.syms['V_TN'] - 0x2000 + 2] = self.colours['n'].to_bytes(2, 'little')
+            if len(self.colours['index']) > 0x800:
+                raise ValueError('colour index too long')
+            self.ram[0x1100:0x1100 + len(self.colours['index'])] = self.colours['index']
         self.ram[self.syms['V_BACK'] - 0x2000] = 16
         self.ram[self.syms['V_RECT'] - 0x2000:self.syms['V_RECT'] - 0x2000 + 2] = (0x3A00).to_bytes(2, 'little')
         p = part
@@ -127,6 +140,10 @@ class Patch:
                 at = 0x800 + i + 4
                 self.page[at:at + 8] = self.ram[at:at + 8]
         self.extra_banks = {12: bytes(self.ram) + bytes(self.page)}
+        if self.colours:
+            pages = self.colours['pages'] + ([b'\xff' * 8192] if len(self.colours['pages']) & 1 else [])
+            for i in range(0, len(pages), 2):
+                self.extra_banks[22 + i // 2] = pages[i] + pages[i + 1]
 
     def all_sites(self):
         return self.sites + self.table_sites
@@ -144,8 +161,8 @@ class Patch:
         snap.banks = type(snap.banks)(((i, bytes(banks[i])) if i in banks else (i, snap.banks[i])) for i in snap.banks)
 
 
-def build(source, destination):
-    p = Patch(source)
+def build(source, destination, enhanced=None):
+    p = Patch(source, enhanced=enhanced)
     zt.convert(str(source), str(destination), patch=p, quiet=True, keep_printer_buffer=True)
     return p
 
@@ -212,6 +229,9 @@ class State:
     def __init__(self, patch):
         self.page = bytearray(patch.ram)
         self.pages = {p: bytearray(b'\xff' * 8192) for p in list(range(32, 36)) + list(range(38, 42))}
+        if patch.colours:
+            for i, d in enumerate(patch.colours['pages']):
+                self.pages[44 + i] = d
         self.nr = {0x12: 16, 0x69: 0, 0x17: 0}
         self.line = 0
 
@@ -239,21 +259,59 @@ def run_hook(patch, st, mem, regs, stop_pc, stop_sp=None, limit=8000000, speed=0
 
 class Overlay:
     """The expected picture, by an independent reading of what the original body left in its variables."""
-    def __init__(self, part):
+    def __init__(self, part, colours=None):
         self.part = part
+        self.table = None
+        if colours:
+            import struct
+            self.pages = colours['pages']
+            self.table = {}
+            for i in range(colours['n']):
+                p, page, off, w = struct.unpack('<HBHB', colours['index'][i * 6:i * 6 + 6])
+                self.table[p] = (page, off, w)
+        self.free = set()
         self.back = {}          # (x, y) -> colour, or 254: transparent, but earlier ink gone
         self.fresh = False
         self.plots = []
         self.paper = set()
 
-    def plot(self, mem):
+    def plot_painted(self, mem, desc, shift):
+        g = self.part.g
+        page, off, w = self.table[desc]
+        rows, cols, y0 = mem[g['rows']], mem[g['cols']], mem[g['y']]
+        x0 = mem[g['x']] >> 1
+        ptr = mem[g['ptr']] | mem[g['ptr'] + 1] << 8
+        base = self.part.shiftbuf if shift else desc + 3
+        r0, c0 = divmod(ptr - base, w + shift)
+        s = w * 8 + 8
+        data = self.pages[(page - 44)]
+        for r in range(rows):
+            y = y0 + r
+            if y >= 120:
+                break
+            for c in range(cols):
+                if x0 + self.part.xoff + c >= 32:
+                    continue
+                for b in range(8):
+                    v = data[off + (r0 + r) * s + (0 if shift else 4) + (c0 + c) * 8 + b]
+                    if v == 255:
+                        continue
+                    xy = ((x0 + self.part.xoff + c) * 8 + b, y + 8)
+                    self.back[xy] = v
+                    self.paper.discard(xy)
+                    self.free.add(xy)
+
+    def plot(self, mem, desc=0, shift=0):
         g = self.part.g
         if self.fresh:
             self.back = {}
             self.plots = []
             self.paper = set()
+            self.free = set()
             self.fresh = False
         self.plots.append(tuple(mem[g[k]] for k in ('rows', 'cols', 'x', 'y', 'skip', 'ink')))
+        if self.table is not None and desc in self.table:
+            return self.plot_painted(mem, desc, shift)
         rows, cols = mem[g['rows']], mem[g['cols']]
         y0, x0, skip, inkv = mem[g['y']], mem[g['x']] >> 1, mem[g['skip']], mem[g['ink']]
         src = mem[g['ptr']] | mem[g['ptr'] + 1] << 8
@@ -286,9 +344,11 @@ class Overlay:
                     if gb & (128 >> b):
                         self.back[xy] = ink
                         self.paper.discard(xy)
+                        self.free.discard(xy)
                     elif mb & (128 >> b):
                         self.back[xy] = paper
                         self.paper.discard(xy)
+                        self.free.discard(xy)
                         if paper != 254:
                             self.paper.add(xy)
 
@@ -309,7 +369,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, compare_every=1
     examples = defaultdict(list)
     states = []
     st = State(patch)
-    ov = Overlay(p)
+    ov = Overlay(p, patch.colours)
     SP_A = patch.syms.get('V_SP')
 
     def fail(key, detail):
@@ -349,7 +409,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, compare_every=1
             count0 = mem[p.g['count']]
             drawn = ref.memory[p.g['count']] != count0
             if drawn:
-                ov.plot(ref.memory)
+                hl = regs[6] << 8 | regs[7]
+                ov.plot(ref.memory, mem[hl] | mem[hl + 1] << 8, mem[hl + 2] & 1)
         elif kind == 'copy' and p.stop:
             R = ref.registers
             while R[24] != p.stop:
@@ -431,7 +492,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, compare_every=1
                     stars.update((s0 - 1, s0, s0 + 1))
             cut = False
             for (x, y), val in picture.items():
-                if (x, y) in ov.paper:
+                if (x, y) in ov.paper or (x, y) in ov.free:
                     continue
                 at = p.bitmap + (y - 8) * p.stride + (x - p.xoff * 8) // 8
                 if mem[at] & (128 >> (x & 7)):
@@ -543,6 +604,10 @@ def negative_patches(patch):
     mutate('overlay never published', bytes.fromhex('ED916980'), bytes.fromhex('ED916900'))
     mutate('overlay not hidden', bytes.fromhex('ED916900') + bytes((0x3E,)), bytes.fromhex('ED916980') + bytes((0x3E,)))
     mutate('mask punches nothing', bytes.fromhex('CB10300172'), bytes.fromhex('CB10300100'))
+    if patch.colours:
+        mutate('colours: rows do not advance', bytes.fromhex('EDB02A5C3EED5B623E19'), bytes.fromhex('EDB02A5C3EED5B623E00'))
+        mutate('colours: clipped rows not skipped', bytes.fromhex('ED5B623E19225C3E'), bytes.fromhex('ED5B623E00225C3E'))
+        mutate('colours: pad ignored', bytes.fromhex('1104001922'), bytes.fromhex('1100001922'))
     if patch.part.n == 1:
         b = copy.deepcopy(patch)
         b.live_table = [(a, zt.w16(patch.part.work_attr + 30 * r)) for r, (a, new) in enumerate(patch.live_table)]
