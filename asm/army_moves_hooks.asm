@@ -54,6 +54,7 @@ K_COPY EQU 119
 K_REST EQU 119
 ATTR_P EQU 0x5C8F
 V_PART EQU 0x3E4A
+V_CAP EQU 0x3E4B              ; 1: the last copy's painted cells are still on the original's screen
 FIG_END_HI EQU 0xD4
 CLEAN_SKY EQU 0x77C1
         ORG 0x2800
@@ -148,6 +149,8 @@ h_plot1:
         HLIB_SPEED_IN V_SPEED
         ld a,part
         ld (V_PART),a
+        xor a
+        ld (V_CAP),a
         ld a,1                  ; a restore wipes the work buffer: figures plotted before it never show
         ld (V_FRESH),a
         call hlib_pace_open
@@ -204,6 +207,8 @@ h_rest2:
         ld a,188
 .ns:    nextreg 0x17,a
         call l2_publish
+        ld a,1
+        ld (V_CAP),a
         WAIT_K K_COPY
         LEAVE_R
         ret
@@ -218,6 +223,8 @@ h_copy2:
 h_cls:
         ENTER
         nextreg 0x69,0
+        xor a
+        ld (V_CAP),a
         ld a,-13
         call hlib_r_set
         pop hl
@@ -237,6 +244,8 @@ h_fill:                         ; BA84: PUSH HL / POP DE / INC DE, displaced
         cp 0x40
         jr c,.keep
         nextreg 0x69,0
+        xor a
+        ld (V_CAP),a
 .keep:  ld a,-13
         call hlib_r_set
         pop hl
@@ -250,9 +259,30 @@ h_fill:                         ; BA84: PUSH HL / POP DE / INC DE, displaced
         pop de
         inc de
         jp 0xBA87
-h_show:                         ; CALL A460: the clean picture straight to the screen
-        ENTER
-        nextreg 0x69,0
+h_show:                         ; CALL A460: the game captures the screen into the clean buffer. A cell painted
+        ENTER                   ; at the last copy shows the clean colour here, not the painted one the
+        HLIB_SPEED_IN_ABC V_SPEED ; original captures: put the work buffer's colour back in those cells first.
+        ld a,(V_CAP)
+        or a
+        jr z,.done
+        ld hl,0x69F0
+        ld de,0x77C0
+        ld bc,0x5840
+.cell:  ld a,(de)
+        cp (hl)
+        jr z,.same
+        ld a,(hl)
+        ld (bc),a
+.same:  inc hl
+        inc de
+        inc bc
+        ld a,b
+        cp 0x59
+        jr nz,.cell
+        ld a,c
+        cp 0xE0
+        jr nz,.cell
+.done:  HLIB_SPEED_OUT_A V_SPEED
         ld a,-12
         call hlib_r_set
         pop hl

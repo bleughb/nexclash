@@ -354,6 +354,12 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, compare_every=1
         ref = simpool.machine(Simulator, list(mem), regs, 'am-ref')
         ret = (pc + 3) & 0xFFFF
         if kind == 'show':
+            # The build's screen: a cell painted at the last copy shows the clean colour; the hook must put it back.
+            for i in range(416):
+                if st.page[patch.syms['V_CAP'] - 0x2000] and mem[0x69F0 + i] != mem[0x77C0 + i]:
+                    if mem[0x5840 + i] != mem[0x69F0 + i]:
+                        fail('capture: a painted cell was overwritten on the screen', {'pc': hex(pc), 'cell': i})
+                    patched[0x5840 + i] = mem[0x77C0 + i]
             ref.opcodes[mem[pc]]()
             got, v, model = run_hook(patch, st, patched, regs, target)
         else:
@@ -513,6 +519,7 @@ def negative_patches(patch):
     mutate('stale figures never cleared', bytes.fromhex('3A373EB7C8AF'), bytes.fromhex('3A373EB7C9AF'))
     mutate('overlay never published', bytes.fromhex('ED926900') if False else bytes.fromhex('ED916980'), bytes.fromhex('ED916900'))
     mutate('overlay not hidden', bytes.fromhex('ED916900'), bytes.fromhex('ED916980'))
+    mutate('capture not repaired', bytes.fromhex('7E0200'[:2] + '02'), bytes.fromhex('0000'))
     b = copy.deepcopy(patch)
     for w in (W1, W2):
         b.world_sites[w] = [t if not (t[1][:2] in OPERANDS) else (t[0], t[1], t[1]) for t in b.world_sites[w]]

@@ -13,7 +13,7 @@ Pending: owner plays; Enhanced mock-up approval; then `auto`, the record and reg
 
 ## Decision
 As Game Over: original bitmap on the ULA, clean attributes, ordered double-buffered Layer 2 ink. New here: an unpainted part 1 figure (graphics C000..D3FF) draws in the sky's ink, the colour it has in the open; unpainted scenery plots (clouds, mountains, islands) and part 2's unpainted items punch.
-The copy's DE at return differs (attributes last): the hook restores it. Direct screen clears (BA84, with HL on the screen) and the clean picture copy (A460) hide the overlay.
+The copy's DE at return differs (attributes last): the hook restores it. Direct screen clears (BA84, with HL on the screen) hide the overlay. A460 is the copy reversed: the game captures the screen into the clean buffer (title text and logo, each part's start). Attributes on the screen differ from the original's only in cells painted at the last copy, so a hook at the capture puts those back from the work buffer first; V_CAP says whether the last copy's work is still what the original's screen holds.
 
 ## Technique use
 patch.pace-limiter, patch.preserve-r, patch.restore-speed, patch.whole-altrom-image, patch.display-atomic-switch, verify.update-locked-pace.
