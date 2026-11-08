@@ -2179,6 +2179,25 @@
     ],
     "controls_detected": 4
    }
+  },
+  "pipeline_dispatch": {
+   "scope": "window exact dispatch of the capture log (page 69): simulator; diagnostic NEX with an empty store",
+   "sources": {
+    "nexclash/inferno.py": "8764300b35b166eb1a95c723d1b27c4c",
+    "asm/inferno_hooks.asm": "9838ac54ca5067334aad85314823200c",
+    "docs/profiles/inferno.json": "db58cdab9573f97b3a024bb5e71e458b"
+   },
+   "artifacts": "specnext/reference/inferno/build/pipeline.md 2, pipeline/dispatch_gate.json",
+   "checks": {
+    "update_states": 1855,
+    "failures": 0,
+    "done_in_window": 1579,
+    "dropped": 276,
+    "max_consecutive_dropped": 14,
+    "dispatch_records_matched": 10745,
+    "slice_margin_T": 108,
+    "nex_md5": "cd4243eba314e357ffb8e199a6b0d42d"
+   }
   }
  }
 }

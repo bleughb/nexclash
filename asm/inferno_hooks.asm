@@ -2062,6 +2062,7 @@ wk_new:
         ld (WK_M2),a
         ld sp,WK_STACK
         call wk_prepare
+        call wk_dispatch
         ld a,2
         ld (WK_STATE),a
         ld l,a
@@ -2119,6 +2120,7 @@ wk_frame:                       ; from wk_hook: DI, 28MHz, $C8 cleared, all game
         xor a
         ld (F_SCENE_READY),a
         ld (Q_READY),a
+        ld (DX_READY),a
 wk_fdone:                       ; restore the game state; R last
         xor a
         ld (WK_STATE),a
@@ -5405,3 +5407,272 @@ drv68:
         ret
 drv68_end:
         SAVEBIN "inferno_drv68.bin",drv68,drv68_end-drv68
+
+; Window dispatch (pipeline item 2), page 69 at 1800, runs inside the 8F95 coroutine after the scene
+; compile: every CAP_LOG record is checked against the owned store (candidate entry, then exact live
+; comparison with the stored stream). The first reader of CAP_LOG; nothing reads it earlier. A miss
+; (no entry, changed bytes) ends the dispatch with DX_READY 0, as does unfinished work (3c drop).
+; Polls every record, row and tile, inside the slice like the textmap's, so the slice margin holds.
+DX_READY EQU 0x1EE0            ; 1 = every logged draw exactly matched (this capture)
+DX_PTR   EQU 0x1EE1            ; next log record / live bytes during a yield
+DX_LEFT  EQU 0x1EE3
+DX_IMAGE EQU 0x1EE4
+DX_BANK  EQU 0x1EE5
+DX_BASE  EQU 0x1EE6
+DX_SIZE  EQU 0x1EE8
+DX_SP    EQU 0x1EEA
+DX_PAGE  EQU 0x1EEC
+DX_ROWS  EQU 0x1EED
+DX_TL    EQU 0x1EEE
+DX_N     EQU 0x1EEF            ; records matched
+        ORG 0x1800
+        MACRO DX_POLL target
+        ld a,CW_CTC >> 8
+        in a,(CW_CTC & 0xFF)
+        sub iyl
+        dec a
+        jp m,target
+        ENDM
+        MACRO DX_BYTE           ; A against (DE), the serialized end bounded by its page
+        ld c,a
+        ld a,d
+        cp 0x40
+        jp nc,dx_miss
+        ld a,(de)
+        cp c
+        jp nz,dx_miss
+        ld a,c
+        inc de
+        ENDM
+        MACRO DX_ROWB
+        ld c,a
+        ld a,(de)
+        cp c
+        jp nz,dx_miss
+        ld a,c
+        inc de
+        ENDM
+wk_dispatch:
+        xor a
+        ld (DX_READY),a
+        ld (DX_N),a
+        ld a,(F_SCENE_READY)
+        or a
+        ret z
+        ld a,(0x2000+CAP_OVER)
+        or a
+        ret nz
+        ld a,(0x2000+CAP_COUNT)
+        ld (DX_LEFT),a
+        ld hl,0x2000+CAP_LOG
+        ld (DX_PTR),hl
+        ld (DX_SP),sp
+dx_rec: DX_POLL dx_yrec
+dx_rec_go:
+        ld a,(DX_LEFT)
+        or a
+        jr nz,.more
+        inc a
+        ld (DX_READY),a
+        ret
+.more:  dec a
+        ld (DX_LEFT),a
+        nextreg 0x51,68
+        ld hl,(DX_PTR)
+        ld bc,4
+        add hl,bc
+        ld a,(hl)
+        ld (DX_IMAGE),a
+        ld bc,2
+        add hl,bc
+dx_lrow:
+        DX_POLL dx_ylrow
+dx_lrow_go:
+        ld a,(hl)
+        inc hl
+        or a
+        jr z,.end
+        add a,2                 ; dx, dy, then width tile bytes (width <= 128 from the capture)
+        add hl,a
+        jr dx_lrow
+.end:   ld (DX_PTR),hl
+        nextreg 0x51,79         ; the candidate entry, indexed by the drawn image
+        ld a,(DX_IMAGE)
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld bc,0x2800
+        add hl,bc
+        ld a,(hl)
+        cp 1
+        jp nz,dx_miss
+        inc hl
+        ld a,(hl)
+        ld (DX_BANK),a
+        inc hl
+        ld e,(hl)
+        inc hl
+        ld a,(hl)
+        add a,0x20
+        ld d,a
+        ld (DX_BASE),de
+        inc hl
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ld (DX_SIZE),de
+        ld bc,6
+        add hl,bc
+        ld a,(hl)               ; FLASH phase and paint generation: phase 0, generation 0 only
+        inc hl
+        or (hl)
+        inc hl
+        or (hl)
+        jp nz,dx_miss
+        ld a,(DX_BANK)
+        nextreg 0x51,a
+        ld a,(DX_IMAGE)
+        ld l,a
+        ld h,0xC1
+        ld c,(hl)
+        inc l                   ; original C1FF -> C100 wrap
+        ld b,(hl)
+        ld h,b
+        ld l,c
+        ld a,h
+        cp 0x40
+        jp c,dx_miss
+        ld de,(DX_BASE)
+        ld a,(hl)
+        DX_BYTE
+        and 3
+        ld (DX_PAGE),a
+        inc hl
+        xor a
+        ld (DX_ROWS),a
+dx_row: call dx_address
+        ld a,(hl)
+        inc hl
+        DX_BYTE
+        or a
+        jp z,dx_end
+        cp 129
+        jp nc,dx_miss
+        ld (DX_TL),a
+        push hl
+        push de
+        ld e,a
+        ld d,10
+        mul d,e
+        ld hl,1
+        add hl,de
+        pop de
+        add hl,de
+        ld a,h
+        cp 0x40
+        jp nc,dx_miss
+        pop hl
+        push de
+        ld a,(DX_TL)
+        ld e,a
+        ld d,0
+        inc de
+        ex de,hl
+        add hl,de
+        jp c,dx_miss
+        ld a,h
+        cp 0x40
+        jp c,dx_miss
+        ex de,hl
+        pop de
+        ld a,(hl)
+        inc hl
+        DX_ROWB
+        ld a,(hl)
+        inc hl
+        DX_ROWB
+dx_tile:
+        DX_POLL dx_ytile
+dx_tile_go:
+        ld a,(hl)
+        inc hl
+        DX_ROWB
+        push hl
+        ld l,a
+        ld a,(DX_PAGE)
+        ld h,a
+        push hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld bc,0xDC00
+        add hl,bc
+        DUP 8
+        ld a,(de)
+        cp (hl)
+        jp nz,dx_miss
+        inc de
+        inc hl
+        EDUP
+        pop hl
+        ld bc,0xFC00
+        add hl,bc
+        ld a,(hl)
+        DX_ROWB
+        pop hl
+        ld a,(DX_TL)
+        dec a
+        ld (DX_TL),a
+        jp nz,dx_tile
+        ld a,(DX_ROWS)
+        dec a
+        ld (DX_ROWS),a
+        jp nz,dx_row
+        jp dx_miss
+dx_address:
+        ld a,h
+        cp 0x40
+        ret nc
+        jp dx_miss
+dx_end: ex de,hl
+        ld de,(DX_BASE)
+        or a
+        sbc hl,de
+        ld de,(DX_SIZE)
+        or a
+        sbc hl,de
+        jp nz,dx_miss
+        nextreg 0x51,68
+        ld hl,DX_N
+        inc (hl)
+        jp dx_rec
+dx_miss:
+        ld sp,(DX_SP)
+        nextreg 0x51,68
+        ret
+; Yields: HL may be live at a poll, so it rides on the work stack; slot 1 is remapped on resume.
+dx_yrec:
+        ld hl,dx_rec_go
+        jp wk_yield
+dx_ylrow:
+        push hl
+        ld hl,.resume
+        jp wk_yield
+.resume:
+        pop hl
+        jp dx_lrow_go
+dx_ytile:
+        push hl
+        ld hl,.resume
+        jp wk_yield
+.resume:
+        pop hl
+        ld a,(DX_BANK)
+        nextreg 0x51,a
+        jp dx_tile_go
+wk_dispatch_end:
+        ASSERT wk_dispatch_end <= 0x1A00
+        SAVEBIN "inferno_cwdx.bin",wk_dispatch,wk_dispatch_end-wk_dispatch
