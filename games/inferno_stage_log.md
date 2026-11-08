@@ -15,3 +15,4 @@ Newest first; moved from inferno.md to keep it within its size budget.
 - 2026-11-09 (claude/inferno-pattern-select): selection and 64-slot store in the window, 8EF9 chunk index; gate 0 failures; 18.5 % dropped, runs to 32. [none: lesson is in games/inferno.md]
 - 2026-11-09 (claude/inferno-drop-runs): selection hit path cut; gate 0 failures; 17.3 % dropped, runs to 14, margin 108 T. [none: lesson is in games/inferno.md]
 - 2026-11-09 (claude/inferno-uploads): window uploads; gate 0 failures; 18.3 % dropped, runs to 32, margin 66 T; tuning stopped. [none: details in specnext build/pipeline.md]
+- 2026-11-09 (claude/inferno-sprites-visible): first visible NEX, sprites over ULA; gate 0 failures; 19.7 % dropped, runs to 35. [none: details in specnext build/hybrid.md]

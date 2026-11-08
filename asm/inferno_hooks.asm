@@ -5398,6 +5398,7 @@ drv_fill:
 ; image (valid last, count, offset16, left, top) then 5-byte chunks (cx, cy in tiles, cell mask, id16), non-blank
 ; only. Pages 85..95: 16x16 patterns, one copy per distinct content (hash chains in page 84: heads 0000, next 0200).
 drv_sel_reset:
+        nextreg 0x15,0          ; sprites off until a complete frame is published
         nextreg 0x51,82
         ld hl,0x3000
         ld de,0x3001
@@ -6131,6 +6132,10 @@ SEL_UPB   EQU 0x5048           ; bursts left of this pattern
 SEL_UPHL  EQU 0x5049           ; word: source
 SEL_UPS   EQU 0x504B           ; its slot
 SEL_DIRTY EQU 0x504C           ; slots with SLOT_FLAG set (the hit path reads flags only when non-zero)
+SEL_INIT  EQU 0x504D           ; sprite layer set up (cleared by the 8EF9 reset)
+SEL_PREV  EQU 0x504E           ; sprites written by the last publish
+SEL_PUBN  EQU 0x504F
+SEL_PUBP  EQU 0x5050
 SEL_Q     EQU 0x5A00           ; 128 slots to upload (256-aligned; a slot may repeat)
 SEL_HL    EQU 0x5029
 SEL_COL   EQU 0x502B
@@ -6622,7 +6627,126 @@ sl_commit:                      ; roles rotate in one byte
         ld a,1
         ld (SEL_READY),a
         nextreg 0x51,68
+; Publish the frame list as sprite attributes, in draw order (higher index on top). Visible diagnostic: polled, so
+; a drop mid-list leaves a partly updated set until the next publish.
+sl_publish:
+        ld a,(SEL_INIT)
+        or a
+        call z,sl_init
+        ld a,(SEL_N)
+        ld hl,SEL_PREV
+        cp (hl)
+        jr c,.keep
+        ld (hl),a               ; a drop part-way must still clear these later
+.keep:  ld (SEL_PUBN),a
+        ld hl,SEL_LIST
+        ld (SEL_PUBP),hl
+        xor a
+        ld bc,0x303B
+        out (c),a
+sl_pub:
+        SL_POLL sl_ypub
+sl_pub_go:
+        ld a,(SEL_PUBN)
+        or a
+        jr z,sl_clear
+        dec a
+        ld (SEL_PUBN),a
+        ld hl,(SEL_PUBP)
+        ld a,(hl)               ; slot
+        ld (SEL_UPS),a
+        inc hl
+        ld e,(hl)               ; column
+        inc hl
+        ld d,(hl)               ; row
+        inc hl
+        ld (SEL_PUBP),hl
+        ld l,e                  ; X = signed column * 8 + 32
+        ld a,e
+        rla
+        sbc a,a
+        ld h,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld bc,32
+        add hl,bc
+        ld a,l
+        ld bc,0x57
+        out (c),a               ; attr 0: X
+        ld a,d
+        add a,a
+        add a,a
+        add a,a
+        add a,80
+        out (c),a               ; attr 1: Y = 32 + 48 + row * 8
+        ld a,h
+        and 1
+        out (c),a               ; attr 2: X bit 8
+        ld a,(SEL_UPS)
+        srl a
+        or 0xC0
+        out (c),a               ; attr 3: visible, extended, pattern bits 5-0
+        ld a,(SEL_UPS)
+        rrca
+        and 0x80
+        rrca
+        or 0x80
+        out (c),a               ; attr 4: 4-bit, N6
+        jp sl_pub
+sl_clear:                       ; hide the sprites the last publish used and this one does not
+        ld a,(SEL_N)
+        ld b,a
+        ld a,(SEL_PREV)
+        sub b
+        ld (SEL_PUBN),a
+        jr z,sl_done
+sl_clear_lp: SL_POLL sl_yclr
+sl_clear_go:
+        ld a,(SEL_PUBN)
+        or a
+        jr z,sl_done
+        dec a
+        ld (SEL_PUBN),a
+        xor a
+        ld bc,0x57
+        out (c),a
+        out (c),a
+        out (c),a
+        out (c),a               ; attr 3 = 0: hidden, four-byte form
+        jr sl_clear_lp
+sl_done:
+        ld a,(SEL_N)
+        ld (SEL_PREV),a
         ret
+sl_init:
+        nextreg 0x4B,0          ; 4-bit transparency index
+        nextreg 0x1C,2          ; sprite clip index
+        nextreg 0x19,0
+        nextreg 0x19,255
+        nextreg 0x19,48         ; figures never cover the HUD
+        nextreg 0x19,191
+        nextreg 0x43,0x20       ; sprite palette 1
+        nextreg 0x40,0
+        ld hl,sl_palette
+        ld b,16
+.p:     ld a,(hl)
+        inc hl
+        nextreg 0x41,a
+        djnz .p
+        nextreg 0x43,0
+        nextreg 0x15,1          ; sprites on, over the ULA
+        ld a,1
+        ld (SEL_INIT),a
+        ret
+sl_palette:                     ; 0 transparent, 1 black, 2-8 normal, 9-15 bright (solid_image)
+        db 0,0,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6,0x03,0xE0,0xE3,0x1C,0x1F,0xFC,0xFF
+sl_ypub:
+        ld hl,sl_pub_go
+        jp wk_yield
+sl_yclr:
+        ld hl,sl_clear_go
+        jp wk_yield
 sl_fail:
         ld sp,(SEL_SP)
         nextreg 0x51,68
