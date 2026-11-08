@@ -90,6 +90,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Underwurlde (underwurlde): `underwurlde.nex` a6e6b38e9e8be1d2b5c32f08ab3c3833, `underwurlde_sprites.nex` 07dff80327ed247a38780413e01a2325; verified never
 - Knight Lore (knight_lore): `knight_lore.nex` 02a997936f991061b18589266767d36c; verified never
 - Alien 8 (alien_8): `alien_8.nex` e89ed13af3af09b260cc266bc5b456e1, `alien_8_enhanced.nex` 5c08c856c718a7e744282cd44372a6cf; verified never
+- Gunfright (gunfright): `gunfright.nex` f26d0a561e25a1a800b19787cd1fe41b, `gunfright_enhanced.nex` 4ec70c827ae291ce273a09c508f95c87; verified 2026-11-07
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

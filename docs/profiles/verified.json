@@ -151,6 +151,14 @@
     "outline": "c165f41f9cfbbda74a8b6ee85a80694f"
    }
   },
+  "0cd9e86a2c6c7afa22025f8d593af093": {
+   "game": "Gunfright",
+   "doc": "gunfright.md",
+   "nex": {
+    "plain": "f26d0a561e25a1a800b19787cd1fe41b",
+    "enhanced": "4ec70c827ae291ce273a09c508f95c87"
+   }
+  },
   "54ad66af6678df22a9d4443e3d04aadb": {
    "game": "Ikari Warriors (48K form)",
    "doc": "ikari_warriors.md",
