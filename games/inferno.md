@@ -1,13 +1,12 @@
 # Inferno
 
 ## Next session
-Stage: 2 (continued)    Branch: main (m3b from claude/inferno-copier-window-m3b)
-State: copier window m3b PASS in the model (8F95 work in the window's waits). Hardware: m2/m3 run,
-  speed and sound = plain (user); m3b: gameplay ok (user, no detail).
+Stage: 2 (continued)    Branch: main (m3c from claude/inferno-copier-window-m3c)
+State: copier window m3c PASS in the model (8F95 work in the window's waits; unfinished = dropped). Hardware: m2/m3 run,
+  speed and sound = plain (user); m3b: gameplay ok (user); m3c not yet run.
 Inputs: specnext/reference/inferno/    Start: specnext build/CONTINUE_copier_window.md.
 Read: "Copier window"; inferno.py run_cw_window/run_cw_frame/copier_window_update_checks; asm cw_work, wk_*.
-Next: m3b pace/sound vs plain in detail; busy-beeper updates (10 %: no slice, work ~5 ms at 8F95); shrink actor
-  hooks; JNext pace. Then the earlier items: live-table
+Next: m3c pace/sound vs plain (heavy shooting); shrink actor hooks; JNext pace. Then the earlier items: live-table
   scan/driver at the 8EF9 gate, runtime exact dispatch and duplicate indices, complete
   pattern/frame state, protected uploads. Keep sprites disabled.
 Gate: zero frame slips and the original 9907 time per update with sound kept (replaces 10 ms).
@@ -63,7 +62,7 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
 - Plain level-1 Inferno.nex: try CSpect first, then the Next; check title/text to gameplay,
   controls, scrolling, sound, death/restart and the shop. Boot is software-checked only.
 - Inferno_copier_window_diagnostic.nex (m2, window only), Inferno_copier_window_m3_diagnostic.nex
-  (hooks + window) and Inferno_copier_window_m3b_diagnostic.nex (+ 8F95 work; specnext build/; NOT releases): play each beside plain Inferno.nex for a minute
+  (hooks + window), ..._m3b_ and ..._m3c_diagnostic.nex (+ 8F95 work; specnext build/; NOT releases): play each beside plain Inferno.nex for a minute
   of level 1: same speed (enemies, scrolling, stopwatch), same beeper sound (shots, explosions,
   pickups: pitch, length), no hang at the first gameplay frame (m3: ~1 ms one-off calibration), no
   extra border stripes. Report core/video mode.
@@ -152,10 +151,12 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
   actors add), restore R and count a $C8 pulse lost under DI as the original ISR (R+10, X-94; window
   entry too); cw_cal measures speed switches; 8F7C map copy by zxnDMA. Gap ~6 T per hook exit.
   Stub register-block crash fixed (hooks >= rom_end+20). m3 68340edf...: pace/sound = plain (§7).
-- Milestone 3b: prepare_frame + render_textmap = page-69 coroutine run in cw_wait slices (>= 12
-  ticks ahead, ends 9 before; poll per map cell; yield saves SP, no CALL; DI, $C8 as cw_irq), finished
-  at 8F95 (wk_hook, R restored). Gate 1,855 states: 0 failures, page 14/69/68 = run_frame; work in
-  the window 88 %, 8F95 168 T then; no slice in 10 % (busy beeper): ~4.5-7 ms at 8F95. NEX 2ca871c6...
+- Milestone 3b: prepare_frame + render_textmap = page-69 coroutine in cw_wait slices (>= 12 ticks
+  ahead, ends 9 before; poll per map cell; yield saves SP, no CALL; DI, $C8 as cw_irq); 8F95 hook
+  wk_hook restores R. Model: page 14/69/68 = run_frame; 88 % done in the window (§8).
+- Milestone 3c: 8F95 drops work the window did not finish (ready 0; the display would keep its last
+  frame; next window restarts): 8F95 156-160 T always. Gate 0 failures; dropped 229/1,855 (12 %), at
+  most 6 in a row (L6; 3 elsewhere). NEX m3c ac3be35a...
 - Never-read rule: window CALLs/IRQ pushes leave bytes only in the 4 below the copier's SP, which
   9907's PUSH DE / PUSH HL overwrite first (checked by running them; 9907 = D5 E5 in all 88,187).
 
@@ -198,11 +199,11 @@ Approved preview/model/contact-sheet hashes and recipes: specnext design/manifes
 build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 
 ## Lessons
+- [local: Inferno 8F95 budget] Finishing deferred work after the limiter eats the slack the window
+  saved; drop the frame instead (display keeps the last one) and count run lengths of drops.
 - [none: m3b hardware: gameplay ok, no new finding]
-- [local: Inferno coroutine] A loop using SP as its data pointer yields without CALL (save SP + live
-  registers at poll points); per-cell polls cost ~1 kT, so the finishing path JRs over them.
-- [local: Inferno copied routine] A hand copy of an asm loop moved a label past ADD HL,HL: compare
-  every copied routine's results with the original's (run_frame caught it).
+- [local: Inferno coroutine] A loop using SP as data pointer yields without CALL: save SP + live regs.
+- [local: Inferno copied routine] Compare every hand-copied asm routine's results with the original.
 - [doc BRIEFING A1] Hook code under the stub's register block (rom_end) is lost
   at boot; models without the stub cannot see it: compare hook bytes after a simulated boot.
 - [local: Inferno timed hooks] Calibrate tick-quantized constants over all CTC phases (5 phases left
@@ -289,7 +290,7 @@ build/README.md; intake tools/canary/doccheck passed. No sprite stamp.
 - detect.buffer-layout-producer: corrected: visible colour checks distinguish black-masked stale bitmap data.
 
 ## Stage log
-- 2026-11-08 (claude/inferno-copier-window-m3b): m3b: 8F95 work in cw_wait (coroutine); gate PASS.
+- 2026-11-08 (claude/inferno-copier-window-m3b/m3c): 8F95 work in cw_wait; unfinished dropped; PASS.
 - 2026-11-08 (claude/inferno-m3-hw-bisect): m3 hardware crash = hooks under the stub register
   block; moved, guarded, post-boot hook-byte check; gate PASS; fixed m3 for hardware.
 - 2026-11-07 (claude/inferno-copier-window*): m1 pacing/head, m2 OUT replay/pad, m3a timed hooks; PASS.
