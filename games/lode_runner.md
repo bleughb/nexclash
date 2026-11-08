@@ -159,6 +159,9 @@ lode_runner` rebuilds both his and this rework = recorded.
 - Hardware: none.
 
 ## Lessons
+- [local: a game may call inside a routine: the gold's XOR enters 0x984A, not 0x983E; the tile model in v3's verify found it at the first gold]
+- [local: an IM 2 handler that writes 7FFD resets MMU 0, 1, 6 and 7: a hook's window into another bank must use another slot]
+- [local: removing a paint can change logic far away: the editor reads figure attributes on exit; only a recording of the editor showed it]
 - [deferred Open: reconsider when a third engine needs a 128K game's whole alt ROM image in ROM 1: a shared helper
   (copied in loderunner_v2 and tid128)] The 128K release's ROM 1 differs from the 48K ROM in its keypad code; the fade reads every ROM byte, so the
   image is ROM 1 as nextboot.rom_paths models it, not Sinclair's 48K ROM (observed: 29 MISMATCH reads with the 48K ROM).
@@ -174,3 +177,18 @@ lode_runner` rebuilds both his and this rework = recorded.
 - environment: [local: setsid nohup jobs died with the tool call; the harness's own background mode worked]
 - hand-rolled: [local: bot recorder on SkoolKit's C simulator (pilot platoon m128.py), pace trials from Cobra's script]
 - scratch: [none: bot, cheat and trial scripts stay in the pilot run folder runs/dean_lode_runner/work]
+
+## Rework v3: R, the editor, Enhanced colours and Backdrop (engine `loderunner_v3`; Jon Attree, 2026-11-08)
+A copy of v2 (module, asm/loderunner_v3_hooks.asm, profile lode_runner_v3); v2 and its record stay as published. Built by its own entry:
+`python -m nexclash.loderunner_v3 build GAME.z80 OUT --backdrop FILE.B00 --palette FILE.pal`. engines.py still picks v2 for the 128K file.
+- R as the original at every hook (hlib_r, verify compares CMP_R). The figure paints CALL a copy of 0x856E without its write, so R, flags and time are the original's.
+- Editor fix (every mode). The 1.0 build's level editor lost the level's start positions: on exit 0x8EC1 rebuilds them from the attributes (7 runner, 0x43 guards),
+  and the build had removed those paints. Replay of the editor showed `attribute read differs` at 0x8ED8. Now the editor's legend site 0x8C83 (before it draws the level)
+  gives the level-start prints and paints back to the original, and the next clear takes them again.
+- Enhanced: scenery on a hardware tilemap in bank 7 (map 0x0000, definitions 0x0500, 1-byte entries); hooks at 0x8501 and 0x984A (the cell XOR's inner entry: the gold's XOR
+  calls it direct, past the SRLs at 0x983E) set the entry from the table at 0xA900; the clear empties the map. Window: MMU slot 2, because the music handler's 7FFD write resets
+  MMU 0, 1, 6, 7. Prints and cell XORs run at 28 MHz from the entry hook to the exit hook (0x853C, 0x9872): at the game's clock the hook pushed a score print over its
+  frame now and then (+1 frame in 20 updates).
+- Colours are rules in the profile's `enhanced` block over the game's own graphics; no picture stored. The runner's main colour is one value: `sprite_palette.runner`.
+- Backdrop: a toggle needing Enhanced: Layer 2 in banks 13-15 (zero in every other build), its palette in bank 11 + 0x1000, FLAG_BD. No hook differs. The builder supplies the picture.
+- Results: release-20261108/NOTES.md in the pilot run runs/lode_runner_enhanced.
