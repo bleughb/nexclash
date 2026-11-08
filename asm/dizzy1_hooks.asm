@@ -28,21 +28,34 @@
 ;   57983 CB 83 32 6D E1  RES 0,E / LD (57709),A   -> JP e_p2    plotter 2 entry (caller, colour)
 ;   58113 32 6D E1        LD (57709),A               -> JP e_dz    Dizzy plotter entry
 ; Both entries switch to 28 MHz for the whole plot and swap the return address for t_p2 / t_dz,
-; which put it back (the dead stack slot holds what the original leaves) and return at 3.5 MHz:
+; which put it back (the dead stack slot holds what the original leaves) and return at the caller's speed:
 ; the game has no frame sync, so the hooks must not add time (they make a plot slightly faster).
 ;   58076 7E 4F 1A        LD A,(HL)/LD C,A/LD A,(DE) -> JP e_p2w  plotter 2 screen write
 ;   58182 1A AE 77        LD A,(DE)/XOR (HL)/LD (HL),A -> JP e_dw Dizzy's screen write
 ;   58702 F5 CD 3B        PUSH AF / CALL 58683       -> JP e_at   attribute routine (58709 is the game's)
 ;   58712 CD 3B E5        CALL 58683                 -> JP e_ar   attribute read (+ LD A,(HL), RET)
-;   60244 7E E6 F0        LD A,(HL) / AND 240        -> JP e_c1   collision read
-;   60251 7E E6 0F        LD A,(HL) / AND 15         -> JP e_c2   collision read
+;   60228 C5 E5 3A        PUSH BC / PUSH HL / LD A,  -> JP e_col  collision read (whole routine, 29 bytes checked)
 ;   58634 DD 21 D6 5C     LD IX,23766                -> JP e_wipe room wipe (pixels)
 ;   58666 21 A0 58        LD HL,22688                -> JP e_wipea room wipe (attributes)
 ;   55935 DD 7E 0B        LD A,(IX+11)               -> JP e_f3   type-3 effect dispatch
 ;   57095 DD 4E 0B        LD C,(IX+11)               -> JP e_f7   type-7 rotator
 
         DEVICE ZXSPECTRUMNEXT
-        INCLUDE "lib/hlib_speed.asm"    ; macros only: HLIB_SPEED_IN
+
+; DZ_SPEED_IN: the caller's NR 7 into V_RAW, then 28 MHz, as the hook's FIRST instructions (1.0 switched
+; there; lib/hlib_speed's HLIB_SPEED_IN needs the hook stack, so it ran after the stack switch and cost
+; 97 T at 3.5 MHz: the game has no frame sync, so 1.1 played ~1.6% slower). 51 T at the incoming clock,
+; no stack (the game's dead stack stays the original's), every register and flag kept (IN A,(n) keeps
+; the flags). Port 0x243B selects NR 7 already: setup selects it, and spdfix selects it again whenever a
+; read was not NR 7. spd_p / spd_d / spd_h then latch V_RAW on the hook stack, at 28 MHz.
+        MACRO DZ_SPEED_IN
+        ld (V_A),a
+        ld a,0x25
+        in a,(0x3B)             ; port 0x253B: NR 7 (bits 5-4 the actual speed, 1-0 the programmed one)
+        nextreg 0x07,3
+        ld (V_RAW),a
+        ld a,(V_A)
+        ENDM
 
 PG      EQU 26                  ; shadow page (slot 3 during hooks): ink shadow + shadow attributes
 PG2     EQU 27                  ; fill shadow (figures' enclosed paper, display only)
@@ -87,8 +100,9 @@ V_XX    EQU 0x5B64              ; sprite X (+32, 16 bits)
 V_SPDP  EQU 0x5B66              ; the caller's CPU speed (lib/hlib_speed.asm latches): plotter 2 (e_p2 .. t_p2),
 V_SPDD  EQU 0x5B67              ; the Dizzy plotter (e_dz .. t_dz),
 V_SPDH  EQU 0x5B68              ; every other hook (entry to exit inside the hook)
-V_A     EQU 0x5B69              ; A while an exit restores the speed (no flags)
-HSTK    EQU 0x5BC0              ; hook stack top (grows down; the variables end at 0x5B69)
+V_A     EQU 0x5B69              ; A while an entry reads / an exit restores the speed (no flags)
+V_RAW   EQU 0x5B6A              ; the NR 7 byte DZ_SPEED_IN read (spdfix latches it)
+HSTK    EQU 0x5BC0              ; hook stack top (grows down; the variables end at 0x5B6A)
 
 SH      EQU 0x6000              ; shadow screen in PG (offset = screen address - 0x4000)
 SA      EQU 0x7800              ; shadow attributes in PG
@@ -97,11 +111,12 @@ SA      EQU 0x7800              ; shadow attributes in PG
 
 ; ------------------------------------------------------------------------------------------
 ; plotter 2 entry: the caller decides convert / keep; B, C give the default colour
-e_p2:   res 0,e                 ; the whole plot at 28 MHz (the game has no frame sync: hook time
-        ld (57709),a            ; would slow it down); t_p2 gives the caller's speed back at the plotter's RET
+e_p2:   DZ_SPEED_IN             ; the whole plot at 28 MHz (the game has no frame sync: hook time
+        res 0,e                 ; would slow it down); t_p2 gives the caller's speed back at the plotter's RET
+        ld (57709),a
         ld (V_SP),sp
         ld sp,HSTK
-        HLIB_SPEED_IN V_SPDP    ; on the hook stack (the game's dead stack must stay as the original's)
+        call spd_p
         push af
         push hl
         push de
@@ -175,10 +190,11 @@ t_dz:   push hl
         ret
 
 ; Dizzy plotter entry 58113: LD (57709),A -> JP e_dz (same speed-up, return via t_dz)
-e_dz:   ld (57709),a
+e_dz:   DZ_SPEED_IN
+        ld (57709),a
         ld (V_SP),sp
         ld sp,HSTK
-        HLIB_SPEED_IN V_SPDD
+        call spd_d
         push af
         push bc
         push de
@@ -437,7 +453,8 @@ e_at:   ld (V_T),hl
 ; attribute read 58712: CALL 58683 (cell address from L = line, E = x), LD A,(HL), RET.
 ; The routine 58683 is run here as a copy (bytes checked); its dead-stack word is written as
 ; the original's CALL leaves it (58715); A = the original's attribute.
-e_ar:   ld (V_T),hl
+e_ar:   DZ_SPEED_IN             ; the copy below runs at 28 MHz too
+        ld (V_T),hl
         ld hl,58715
         push hl
         pop hl
@@ -456,7 +473,7 @@ e_ar:   ld (V_T),hl
         add hl,de
         ld (V_SP),sp
         ld sp,HSTK
-        HLIB_SPEED_IN V_SPDH
+        call spd_h
         push af                 ; the copy's flags
         push bc
         ld a,h
@@ -481,37 +498,75 @@ e_ar:   ld (V_T),hl
 .o:     ld (V_T),a
         pop bc
         pop af
+        ld sp,(V_SP)
         ld a,(V_SPDH)           ; the caller's speed back
         nextreg 0x07,a
         ld a,(V_T)
-        ld sp,(V_SP)
         ret
 
 ; ------------------------------------------------------------------------------------------
-; collision reads 60244 / 60251: A = the original's screen byte, AND as the game
-e_c1:   ld (V_SP),sp
+; collision read 60228 (CALL from 56647 / 60037 / 60099): the whole routine as a copy (bytes checked),
+; at 28 MHz: PUSH BC / PUSH HL (the dead-stack words, as the original leaves them), C = (59263), HL -= BC,
+; SRL C, HL += BC, A = the original's screen byte (virtual: ULA ^ objects ^ Dizzy) AND 240 (carry clear)
+; or AND 15 (carry set), POP HL / POP BC / RET (was a hook per read, 60244 / 60251: the routine at 3.5 MHz).
+e_col:  DZ_SPEED_IN
+        push bc                 ; the original's PUSH BC / PUSH HL (game stack)
+        push hl
+        ld (V_SP),sp
         ld sp,HSTK
-        HLIB_SPEED_IN V_SPDH
+        call spd_h
+        ld a,(59263)
+        ld c,a
+        ld b,0
+        and a
+        sbc hl,bc
+        srl c
+        jr c,.lo
+        add hl,bc
         call virt
-        ld sp,(V_SP)
         and 240
-        ld (V_A),a
-        ld a,(V_SPDH)
-        nextreg 0x07,a
-        ld a,(V_A)
-        jp 60247
-
-e_c2:   ld (V_SP),sp
-        ld sp,HSTK
-        HLIB_SPEED_IN V_SPDH
+        jr .x
+.lo:    add hl,bc
         call virt
-        ld sp,(V_SP)
         and 15
+.x:     ld sp,(V_SP)
         ld (V_A),a
+        pop hl
+        pop bc
         ld a,(V_SPDH)
-        nextreg 0x07,a
+        nextreg 0x07,a          ; the caller's speed back
         ld a,(V_A)
-        jp 60254
+        ret
+
+; the latch from V_RAW (DZ_SPEED_IN's read), on the hook stack at 28 MHz; every register and flag kept.
+; A read without NR 7's layout (bits 7-6 and 3-2 zero) means the selection was moved (an NMI, say):
+; the latch keeps its last speed and NR 7 is selected again for the next hook.
+spd_p:  push hl
+        ld hl,V_SPDP
+        jr spdfix
+spd_d:  push hl
+        ld hl,V_SPDD
+        jr spdfix
+spd_h:  push hl
+        ld hl,V_SPDH
+spdfix: push af
+        ld a,(V_RAW)
+        and 0xCC
+        jr nz,.sel
+        ld a,(V_RAW)
+        and 3
+        ld (hl),a
+        pop af
+        pop hl
+        ret
+.sel:   push bc
+        ld bc,0x243B
+        ld a,7
+        out (c),a
+        pop bc
+        pop af
+        pop hl
+        ret
 
 virt:   ld a,h                  ; HL -> A = ULA ^ objects ^ Dizzy (the screen) / (HL) (elsewhere)
         sub 0x40
@@ -542,9 +597,10 @@ virt:   ld a,h                  ; HL -> A = ULA ^ objects ^ Dizzy (the screen) /
 
 ; ------------------------------------------------------------------------------------------
 ; room wipe 58634: lines 8-151 of the line table, columns 1-30 (the game zeroes them next)
-e_wipe: ld (V_SP),sp
+e_wipe: DZ_SPEED_IN
+        ld (V_SP),sp
         ld sp,HSTK
-        HLIB_SPEED_IN V_SPDH
+        call spd_h
         push af
         push bc
         push de
@@ -565,9 +621,10 @@ e_wipe: ld (V_SP),sp
         jp 58638
 
 ; room wipe 58666: attribute rows 5-22, columns 1-30 (the game overwrites them next)
-e_wipea: ld (V_SP),sp
+e_wipea: DZ_SPEED_IN
+        ld (V_SP),sp
         ld sp,HSTK
-        HLIB_SPEED_IN V_SPDH
+        call spd_h
         push af
         push bc
         push de
@@ -607,9 +664,10 @@ e_wipea: ld (V_SP),sp
 ; ------------------------------------------------------------------------------------------
 ; type-3 effect (55935): IX+11 = 0 scroll-copy 55955, 2 rotate right 56083, 3 rotate left 56169,
 ; all on line-table lines IX+9..IX+10 and columns IX+7..IX+8: fold that rectangle first.
-e_f3:   ld (V_SP),sp
+e_f3:   DZ_SPEED_IN
+        ld (V_SP),sp
         ld sp,HSTK
-        HLIB_SPEED_IN V_SPDH
+        call spd_h
         push af
         push bc
         push de
@@ -644,9 +702,10 @@ e_f3:   ld (V_SP),sp
         jp 55938
 
 ; type-7 rotator (57095): 8 lines from IX+11, IX+12 bytes from column IX+10
-e_f7:   ld (V_SP),sp
+e_f7:   DZ_SPEED_IN
+        ld (V_SP),sp
         ld sp,HSTK
-        HLIB_SPEED_IN V_SPDH
+        call spd_h
         push af
         push bc
         push de
@@ -1099,6 +1158,9 @@ setup:  nextreg 0x12,L2B        ; Layer 2 at banks 16-18 (zero in the .nex)
         cp 128
         jr nz,.h
         nextreg 0x15,0x01       ; sprites on, order SLU: Dizzy over Layer 2 over the ULA
+        ld bc,0x243B
+        ld a,7
+        out (c),a               ; 0x243B selects NR 7 for the hooks' DZ_SPEED_IN
         ret
 pal:                            ; 16 palette bytes appended by dizzy1.py (index 0 = 0xE3: Layer 2
                                 ; transparent; as a sprite colour index 0 is transparent anyway)

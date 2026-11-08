@@ -194,14 +194,52 @@ converted, hook stack too deep, colour map left out. Results: docs/VERIFICATION.
 - JNext pace: not measured. The game has no frame sync, and the automatic probe found no routine run 2-50 times a
   second in play (Space-to-start profile).
 
+## Pace back to 1.0's (2026-11-08)
+- Problem: with the speed restore (07d09c80) the game ran 1.3-1.7% slower than the original and 1.6-1.8% slower than 1.0
+  (JNext pace, seeds 2 / 3 / 5). The game has no frame sync, so every T at 3.5 MHz in a hook is game time. JNext counts
+  per update (seed 2): collision reads 60244 / 60251 10.7, plotter 2 2.6, Dizzy plotter 1.0, attribute read 0.7, type-3
+  effect 0.1. HLIB_SPEED_IN needs the hook stack, so it ran after the stack switch: 97 T at 3.5 MHz plus the code
+  before it (e_ar: its whole cell-address copy, ~190 T), where 1.0 had a 20 T NEXTREG 7,3 first.
+- Fix 1: DZ_SPEED_IN (engine-local macro), every hook's first instructions: LD (V_A),A / LD A,0x25 / IN A,(0x3B) /
+  NEXTREG 7,3 (51 T at the caller's clock, no stack, flags kept), the raw NR 7 byte kept in V_RAW; spd_p / spd_d /
+  spd_h latch it on the hook stack at 28 MHz. Port 0x243B stays selecting NR 7 (setup selects it at start); a read
+  without NR 7's layout (bits 7-6 and 3-2 set: the selection was moved, by an NMI say) keeps the latch's last speed
+  and selects NR 7 again. e_ar runs its copy at 28 MHz; its exit switches the stack back before the speed.
+- Fix 2: the collision routine 60228 (CALLed from 56647 / 60037 / 60099; 29 bytes checked) is one hook, e_col, run
+  whole at 28 MHz (PUSH BC / PUSH HL written to the game stack as the original, the virtual read, AND 240 / AND 15,
+  POP / POP / RET), instead of two hooks per call at 60244 / 60251 around a routine at 3.5 MHz. That gives back the
+  51 T the latch still costs over 1.0's switch.
+- Verifier: ENTRY (entry speed, 0x243B selection, other NextREGs) for every hook pair; exit speed = entry speed and
+  0x243B left at NR 7 checked on every pair. Unit cases: every hook kind entered at NR 7 = 1 / 2 / 3, the effects at
+  1, every kind with the selection moved (NR 0x53 selected: last speed kept, NR 7 selected again), the collision
+  routine on both nibbles over figure bits and off the screen. New negatives: a moved selection taken as NR 7, and
+  t_p2 exiting at a fixed 3.5 MHz. HSTK_MIN 0x5B6B + 18 (V_RAW at 0x5B6A).
+- JNext pace (nexclash.pace, probe 58113 = the Dizzy plotter, once per update; the plain build as the original; no
+  lockstep check, as before). Penalty, all / quiet third / busy third:
+
+| build | seed 2 (340 upd.) | seed 3 (100) | seed 5 (340) |
+|---|---|---|---|
+| published 1.0 (68c1317a) | -0.28 / -0.42 / -0.33% | - | -0.05 / +0.03 / +0.11% |
+| speed restore 07d09c80 | +1.34 / +1.21 / +1.32% | +1.69 / +1.94 / +1.86% | +1.70 / +1.72 / +1.99% |
+| fix 1 only 6392675b | +0.32 / +0.15 / +0.28% | +0.43 / +0.64 / +0.49% | +0.52 / +0.59 / +0.69% |
+| fixes 1 + 2 953cf4e7 | -0.33 / -0.51 / -0.39% | -0.27 / -0.00 / -0.01% | -0.15 / -0.07 / -0.03% |
+
+- Sprites 07d09c80 -> 953cf4e7; plain unchanged. dizzy1.rzx PASSED (6,346 frames, 7,086 plotter-2 calls converted, 2,364
+  Dizzy draws, 40,881 collision calls, 2,050,456 figure pixels), unit 83 cases, negative controls 13/13; stamped. Replay:
+  hooks add -1,204 T a frame (median of the frames with hook work, 28 MHz parts / 8). JNext loader run (private card copy): menu v1.1, title, play; /tmp/NEXCLASH.NEX = the bare .nex.
+
 ## Lessons
 - [local: this engine's hook RAM] The verifier's lowest-SP bound named the variables' end as 0x5B58 while they ran to
   0x5B65 (observed in the code): corrected with the new latch bytes (0x5B69).
 - [card patch.restore-speed §Failure lookup] A short hook can run inside a plotter's 28 MHz window: a latch per window
   (three here), as the card's "a latch per level" row says.
+- [card patch.restore-speed §Failure lookup] In a game with no frame sync the latch's own time is game time:
+  HLIB_SPEED_IN after the stack switch cost 1.6% here (15 hook calls an update). Read NR 7 first without the stack
+  (51 T), latch at 28 MHz, and hook a whole small routine rather than its reads (measured, JNext pace).
 
 ## Technique use
-- patch.restore-speed: helped: three latches, one per window (2026-11-07).
+- patch.restore-speed: helped: three latches, one per window (2026-11-07); its 97 T latch was too slow for a game
+  without frame sync: an engine-local 51 T first-instruction read (2026-11-08).
 
 ## Friction
 - reuse: [tool asm/lib/hlib_speed.asm] the shared latch macros
