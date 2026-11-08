@@ -22,7 +22,7 @@ updates -18..+14%. The numbers of 2026-11-07 ran different games but had the rig
   - e_bg (0x8941) / e_bk (0x89C3): a commit overran and left a debt over 1 ms: the scenery work runs at 28 MHz in a K window (K 133)
     and repays it before the sync. About 36 ms a game frame when needed. Plots inside it take no credit.
 - Tuned on the meter: T_BLIT 6005 sixteenths of a line, credit rates 72 / 72 / 93 / 110 per 256 of a line a byte, K 133. Whole
-  frames make the meter steep near zero: T_BLIT 5880 gives -2%, 6035 gives +0.7%.
+  frames make the meter steep near zero: T_BLIT 5880 gives about -1%, 6095 gives +0.6%.
 - Pace, JNext, Kempston, input applied after the game's read (0x82CD), probe 0x8730 (0x8950 can run twice in an update: use the
   screen copy), game state in lockstep at every one of the 600 updates, against the plain build, all / quiet third / busy
   third, then the fastest and slowest stretch of 20 updates:
