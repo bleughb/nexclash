@@ -1,10 +1,10 @@
 # Into the Eagle's Nest (Pandora, 1987, 128K)
 
 ## Next session
-Stage: 3 (review build, not yet played by the owner). Hardware: untested. Default only; Enhanced waits on the owner's mock-up.
-Inputs: Into the Eagle's Nest (1987)(Pandora)(128K)[a][a].z80, MD5 0566e3b37d49c6fa6f62e81eb883ad0c; loading screen from the (128K) tape's screen block, MD5 e06b6a4d, staged by the packager, never in this repo.
-Build: `nexclash.into_the_eagles_nest.build(z80, nex)`. Not wired into `auto`, `engines.py` or a record yet: that comes when it goes upstream after the owner has played it.
-Checks: review run private. Pending: the owner's play; Enhanced decision; hardware checklist.
+Stage: 3 (review build with Enhanced, not yet played by the owner). Hardware: untested. Default has no hooks; Enhanced is a menu option, off by default.
+Inputs: Into the Eagle's Nest (1987)(Pandora)(128K)[a][a].z80, MD5 0566e3b37d49c6fa6f62e81eb883ad0c; loading screen from the (128K) tape's screen block, MD5 e06b6a4d, staged by the packager, never in the repo; colour blob `into_the_eagles_nest_colours.bin` from the Spec256 set, beside the snapshot, never in the repo.
+Build: `nexclash.into_the_eagles_nest.build(z80, nex, enhanced=True, colours=blob)`. Not wired into `auto`, `engines.py` or a record yet: that comes when it goes upstream after the owner has played it.
+Checks: review run private. Pending: the owner's play; hardware checklist.
 
 ## Facts
 - True 128K: AY from the ISR when SOUNDS (128K) is chosen, paging locked at bank 0 in this dump, ROM 1.
@@ -19,14 +19,21 @@ The owner's standard: where there is no clash, keep the original look and claim 
 - Tail at 0xB980, 80 bytes in zeros the game never touches. Printer buffer put back after NEXLOAD (zero and unused here) so the start is exact.
 - No outlines: figures have their own cells.
 
-## Known issues
-None of our own. The original's stepped, tile-by-tile movement remains.
+Enhanced, once the owner's rule made a mock-up unnecessary: faithful, the set's colours as they are.
+- One Layer 2 picture, banks 16-18, tiles and text mirrored 8x8 from the game's own plot calls, moved by the hardware offsets (NR 0x16, 0x17) when the game scrolls, clipped to x 0..191.
+- The panel: 48 sprite patterns of the set's picture, 10 digit patterns following the game's numbers.
+- The update runs at 28 MHz from 8BFE to 8BD6 or 91CB, and reaches the game's own wait for 5 interrupts in less time, so no K window is needed on it. Scroll steps alone have K windows. K per tile gave +42%: lines are too coarse and the overhead too much.
+- The interrupt runs at the game's clock through a wrapper (operand at BFBF), so AY and beeper keep their pitch and tempo.
+- Colours match the release by address: the set's graphics are byte for byte at the same places.
 
-## Evidence (review run runs/into_the_eagles_nest/release-20261108, JNext 1.1.104; emulator and simulator only)
-Pace, `nexclash.pace` against the original on a 128K machine, probe 0x8C1F: the main loop waits on 5 interrupts, so the update rate is locked and quiet, busy and slowest-stretch figures say little by themselves. On test copies whose six LD A,R picks of where figures appear are LD A,I in both, the state (with the figure table) stays equal: all nine runs +0.00%; cycles inside the update equal in 325 of 401 updates and within 166 T in the rest; 200 consecutive frames' paper pixel for pixel equal. Without the test change the runs drift, because R differs: at most +0.80% in a 20-update stretch. Soak, 15 emulated minutes, ground floor and sixth-floor fixture: no freeze or crash; one LOOP finding in the plot routine, a crowded room being repainted, the picture still moving. Flicker: one-frame attribute changes reported in the build only; the pixels are equal, so that is the tool's memory snapshot, not the picture. Start-up: all registers with R, 48K RAM against the snapshot, with and without NEXLOAD's printer buffer, bar the tail; six broken builds caught. ROM: one byte used in 9,019 frames, the same on NextZXOS 26.11's ROM 3. Tile check: 173 sampled frames, 99,648 cells of 24x24: every play cell a whole tile with its own attribute but the message windows and frames caught mid-draw. Real .NEXCLASH loader on private NextZXOS 26.11 card copies: see the review notes.
+## Known issues
+The original's stepped, tile-by-tile movement remains. Pause reached from 9478 could draw its striped border at 28 MHz: seen in the code, cosmetic.
+
+## Evidence (review run runs/into_the_eagles_nest/release-20261108b, JNext 1.1.104; emulator and simulator only)
+Default as release-20261108: no hooks, bytes unchanged, +0.00%. Enhanced: pace tables, replay, negatives, soak, flicker and real loader runs are in the run's NOTES.md, on the exact final builds.
 
 ## Hardware checklist
-Nothing has run on a Next. To check: AY sounds; both Kempston and keyboard; 1MB Next (top bank 10).
+Nothing has run on a Next. To check: AY sounds; both Kempston and keyboard; 1MB Next in Enhanced; Layer 2 offsets at the wrap; the panel's sprites on the ULA.
 
 ## Technique use
 - patch.restore-speed: no help: no hooks, the clock is never touched.
@@ -40,6 +47,10 @@ Nothing has run on a Next. To check: AY sounds; both Kempston and keyboard; 1MB 
 - [local: random picks differ] Any LD A,R in the game means build and original differ in play from the first key: make it LD A,I in both test copies before comparing anything.
 - [local: start points] A fixture via the game's own table of start points (BA48) reached other floors; its floor numbers run one off the names the game prints, so label fixtures from the message on screen.
 
+- [local: a slot found, not a slot assumed] A wrapper that mapped slot 1 to ROM during the interrupt crashed when a hook's stack was in slot 1. It now restores what it found.
+- [local: carry into D] Copying a tile at column 31 carried into D. Push and pop DE per row rather than trusting E to wrap.
+- [local: K at the right level] A game that waits on its own interrupts needs no K window on its update; 28 MHz to the wait is enough. Fine K windows on every tile only added cost.
+
 ## Friction
 - reuse: [none: nexclash.scan, pace, soak, flicker and rom_paths were enough]
 - retries: [local: TNT branch not reached] Placing TNT in the map to shoot it did not reach the branch in the time allowed, so that cheat is left out.
@@ -48,4 +59,5 @@ Nothing has run on a Next. To check: AY sounds; both Kempston and keyboard; 1MB 
 - scratch: [local: review run] Its work folder stays in private evidence.
 
 ## Stage log
+- 2026-11-08 Stage 3: Enhanced built from the set, faithful, off by default, tested in every mode.
 - 2026-11-08 Stage 0-3: survey, every floor by fixture, plain build with start-up fixes, proofs, mock-up for Enhanced.
