@@ -530,6 +530,19 @@ def boot(nex, pc_stop, limit=5_000_000, nexload=False, sysrom=None):
     return st
 
 
+def regblock_overlap(patch, regs):
+    """Hook bytes under the stub's register block (z80tonex.build_tail: 20 bytes at patch.slot1[1], written at boot):
+    the boot overwrites them. regs = the block's bytes. -> their addresses. Not hook bytes: the 48K ROM's, 0x00, 0xFF,
+    or the block's own value (an engine that stores it in its page: Ikari Warriors). Inferno m3a's cap_in sat here:
+    every hook crashed on hardware while check() passed, 2026-11-08."""
+    slot1, page = getattr(patch, 'slot1', None), getattr(patch, 'page', None)
+    if slot1 is None or page is None:
+        return []
+    rom = rom48()
+    return [slot1[1] + i for i, v in enumerate(regs) if 0x2000 <= slot1[1] + i < 0x4000 and
+            page[slot1[1] + i - 0x2000] not in (rom[slot1[1] + i], 0, 0xFF, v)]
+
+
 def check(nex, z80, patch=None, tail=None, nexload=False, sysrom=None):
     """Boot the NEX and compare with the snapshot: registers (except R), RAM 0x4000-0xFFFF (patched
     RAM from the NEX's own banks 5/2/0, except the tail bytes), what slots 0/1 show (ROM3 or
@@ -564,6 +577,9 @@ def check(nex, z80, patch=None, tail=None, nexload=False, sysrom=None):
             img = rom_view(patch, sysrom)                    # hidden ROM with optional writable hook page
         else:
             img[0x2000:0x4000] = patch.page
+        hit = regblock_overlap(patch, regs)              # the line below would hide them from the comparison
+        if hit:
+            bad.append(('hook bytes under the stub register block', len(hit), ['%04X' % a for a in hit[:6]]))
         img[rb:rb + len(regs)] = regs                    # register block written by the stub
     if zt.altrom0(patch):                                # alt image 0 = the 128K ROM 0 + the build's bytes
         lo0, hi0 = zt.altrom0(patch)
@@ -633,6 +649,52 @@ def selfcheck():
         bad.append('nextboot selfcheck raised %r' % e)
     finally:
         os.remove(nex)
+    return bad + regblock_selfcheck()
+
+
+def regblock_selfcheck():
+    """A synthetic 48K snapshot + hook page, booted through the real stub: clean hooks pass check(); hook bytes under
+    the register block are reported (the Inferno m3a layout). -> list of failures."""
+    import tempfile
+    from .build import altrom_image
+    hdr = bytearray(30)
+    hdr[6:8] = (0x00, 0x80)                                  # PC 0x8000
+    hdr[8:10] = (0x00, 0x90)                                 # SP 0x9000
+    hdr[29] = 1                                              # IM 1; byte 12 = 0: uncompressed
+    ram = bytearray(49152)
+    ram[0x8000 - 0x4000] = 0x76
+
+    class P:
+        stub_extra, setup_call, hook_page_data, extra_banks, uses_printer_buffer = b'', None, b'', {}, False
+        tail_addr = 0xA000
+
+        def apply(self, snap):
+            pass
+    bad = []
+    with tempfile.TemporaryDirectory() as d:
+        z80, nex = os.path.join(d, 'g.z80'), os.path.join(d, 'g.nex')
+        with open(z80, 'wb') as f:
+            f.write(bytes(hdr) + bytes(ram))
+        for label, under in (('clean', False), ('overlap', True)):
+            p = P()
+            page, rb, span = altrom_image(rom48(), 0x386E, bytes([0xC9] * 16))
+            p.slot1, p.altrom = (24, rb), span
+            if under:                                            # cap_in at rom_end + 3, as Inferno m3a
+                page = bytearray(page)
+                page[rb + 3 - 0x2000:rb + 8 - 0x2000] = bytes.fromhex('F3ED910703')
+            p.page = bytes(page)
+            p.extra_banks = {12: p.page + bytes(8192)}
+            try:
+                _, t, data, _ = zt.convert(z80, nex, quiet=True, patch=p)
+                got = check(nex, z80, p, (t, t + len(data)))
+            except Exception as e:                                # noqa: BLE001
+                bad.append('regblock %s raised %r' % (label, e))
+                continue
+            found = [x for x in got if x[0] == 'hook bytes under the stub register block']
+            if under and (not found or found[0][1] != 5):
+                bad.append('regblock: hook bytes under the register block not reported (%s)' % (got,))
+            if not under and got:
+                bad.append('regblock: clean layout reported %s' % (got,))
     return bad
 
 

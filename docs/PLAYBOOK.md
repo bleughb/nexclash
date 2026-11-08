@@ -4,7 +4,7 @@
 |---|---|---|
 | 0 Intake | tools: `python -m nexclash.survey` | the recording reaches every plotter's callers, or the user records more (before any design work) |
 | 1 Design | design | recorded user answers and approved design in games/<game>.md |
-| 2 Build | build | quick runs PASS, evidence record written, committed |
+| 2 Build | build | early integrated diagnostic; then intended functionality integrated, quick checks PASS, evidence record written, committed |
 | 3 Prove + deliver | proof boundary | the one full verification stamped; sprite build + colour sheets to the user |
 | 4 Hardware + colour | one collected round | the user's checklist and painted sheet handled (recolour: seconds, no rebuild) |
 | 5 Close | the session that finishes | status, lessons as candidates, contribution / PR |
@@ -27,6 +27,7 @@ Why: each restart costs the user the walk back (El Capitan Trueno, 2026-10-13).
 add-a-game session.)
 
 ## Sessions
+One current handover per game: older continuation notes say so and point to it.
 Use a new session at a meaningful boundary when context is large or the environment must change;
 preserve the handoff either way. Stages do not force new chats.
 - A session may cover one or more stages or hardware rounds. A game the tools already convert
@@ -108,15 +109,7 @@ signatures.json); the dedicated engines are recognised by their own checks in `a
 (is_<engine>, profile `signature`; the table is nexclash/engines.py), so `identify` says unknown
 for them (BRIEFING C2 #18). Search the snapshot for their byte signatures. A new engine adds one
 line to nexclash/engines.py.
-If a known engine matches, align its plotter/eraser instruction-by-instruction
-against the known game's (normalise 4-5 digit operands to N; where the opcode
-text matches, the numbers map old->new). Then locate by pattern:
-plot entry (JP/CALL to plotter), eraser (DI / LD (spsave),SP), screen-write
-sites (LD (HL),B after LD (DE),A in plotter; LD (HL),A after XOR C/B in
-eraser), wipe (LD IX,nn / LD A,136 / LD DE,1), box (LD A,(nn) / ADD A,4 /
-SRL A / LD (nn),A), ISR (IM2 vector -> handler; the CALL after the logic-tick
-CALL is the hide slot), pixel test (LD C,A / LD B,0 / SRL C / JR C).
-Verify every site's original bytes before building.
+A known engine matches: align and locate by pattern (games/tid_engine.md "Locating sites"); verify every site's original bytes.
 
 Unknown engine: `scan GAME.z80 --rzx R --range 0x4000-0x5AFF --writers` ranks the screen writers
 (and finds a back buffer: a big LDI/LDIR/stack writer copying from RAM; scan that range --writers
@@ -150,8 +143,7 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   would emulate or jump back into: list every LD (nn),A / LD (nn),HL into the routine's code first
   (Dizzy 1 rewrites 58079 and 58709 next to its write sites; the first site at 58707 covered 58709)
 
-## 3b. Colour sheets, recolour, speed budget (moved)
-Colour sheets and recolour: docs/COLOURS.md (built in stage 2, sent in stage 3). Speed budget: 3c.
+## 3b. Colour sheets and recolour: docs/COLOURS.md
 
 ## 3c. Preview and the design question (design approval BEFORE building)
 - `preview GAME.z80 --rzx R --at F,F,... --plot ENTRY ... [--buffer A:S:L] -o sheet.png` shows
@@ -162,8 +154,6 @@ Colour sheets and recolour: docs/COLOURS.md (built in stage 2, sent in stage 3).
   recording does not reach them, from later levels: figures against every kind of scenery they
   overlap. Use the frames to settle with the user in ONE round: which figures, colours, solid or
   see-through, and the overlap (depth) rule - the game's own rule, always in front, or another.
-  (Commando: depth, solid bodies and solid objects were settled across three hardware rounds
-  from the user's photos; preview frames would have settled them first.)
 - Design defaults (the stage-1 question is these + this game's exceptions; Dean 2026-10-26).
   Ask in ONE message, numbered, each line the default and what this game shows, so the user can
   answer "defaults" or "change 3":
@@ -177,9 +167,7 @@ Colour sheets and recolour: docs/COLOURS.md (built in stage 2, sent in stage 3).
   solid or see-through figures; outlines; anything the hooks cannot convert.
   A new standing answer from the user -> add it here with the date.
   Attach the preview frames and the plain .nex (for its hardware test) to the same message.
-- Every figure is a sprite by default (Dean, 2026-10-13: "make everything possible a sprite"): list
-  every caller of each plotter from the code (not only those the RZX shows) and convert them all;
-  what stays on the ULA (scenery, HUD, text, cases the hooks cannot do) is the question to ask.
+- List every caller of each plotter from the code, not only those the RZX shows, and convert them all.
   The sheet still shows only what the recording drew: ask for a recording that reaches every
   level, weapon and collectable the user can, before the sheet goes out.
 - Speed: pace target ORIGINAL by default (its slowdowns kept; SLOWDOWN REMOVED / TURBO only when the
@@ -192,6 +180,21 @@ Colour sheets and recolour: docs/COLOURS.md (built in stage 2, sent in stage 3).
   $07=3 runs about 6x faster, not 8x (LEARNINGS 2.1f). New engines use the hook library (ENGINE_CONTRACT
   "Hook library"): the caller's speed and R kept, and a hook faster than the code it displaces waits for
   its time (card patch.pace-limiter). Measure: `python -m nexclash.pace` (docs/CHECKS.md).
+
+## 3d. Feasibility (unknown engine or substantial rework; a known engine skips this)
+Before building, in games/<game>.md "## Feasibility"; investigate only what could change the decision:
+- Pacing: interrupt sync, busy wait, drawing time, sound-dependent, other. Unknown -> a focused probe. What sets the
+  pace, where added work can run, when it must finish, what a late finish does, usable gap sizes (not just total spare).
+- Side effects of what hooks replace or speed up: logic reading the screen or maps, sound output or feeds, R.
+- Budgets: measured from the original, or a user requirement. An assumed amount of spare time is no budget and no gate.
+- Constraints: requirement or implementation choice ("preserve collisions" / "run the copier unchanged"). For each: what
+  observes it, what changes if relaxed, evidence for its tolerance. Weigh replacing or accelerating the original work,
+  not only adding to it; a rejected option says measured or untested.
+- Each experiment: constraint -> its evidence -> success criterion (a number or an exact assertion) -> change -> result.
+- Reassess: two attempts (each a hypothesis with a measured outcome; bug fixes do not count) fail the same constraint, or
+  evidence invalidates the approach -> pause it, recheck measurements and assumptions, get a focused independent review
+  from a compact evidence package, record the conclusion in the handover.
+End with a decision: approach, measurements, open risks, next experiment.
 
 ## 4. Decide the design (decision table)
 | Finding | Action |
@@ -231,31 +234,10 @@ Hooks: asm/<engine>_hooks.asm (+ asm/lib, ENGINE_CONTRACT) with `SAVEBIN "<prefi
 `"hooks": {"source": "asm/<engine>_hooks.asm", ...}` in the profile; after every edit
 `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex + symbols).
 What the module must provide: docs/ENGINE_CONTRACT.md (doccheck-checked). The cards' example
-functions first; then copy the nearest engine
-(module + asm + profile + games/ file; STATUS.md lists every engine), one function at a time:
-| Engine | Template for |
-|---|---|
-| build.py TidPatch | Codemasters TID engine (generic builder) |
-| chuckie.py | the simplest: 48K, stateless alt-ROM hooks (no RAM page), interrupts on |
-| jetpac.py | 16K game, run-time graphics buffers, no RZX (free runs with a key schedule) |
-| loderunner.py | XOR plotter, hooks in RAM (the game reads the alt ROM), figures printed as tiles |
-| dizzy1.py | pure XOR to the screen: 1-bit shadow screen + Layer 2, outlines, plots at 28 MHz |
-| wally.py / wally2.py | back-buffer composer, interrupts off / every figure on a double-buffered Layer 2 |
-| midres.py | interrupts on, all RAM used: hook page at slot 5, CALL-target redirect into a scratch buffer, pattern-slot cache, per-pixel colour map |
-| smashtv.py | the game's own plotters into a scratch buffer at slot 7, no frame sync, see-through outline |
-| commando.py | 128K BASIC loader, front end, depth from walk boxes, cached solid sprites |
-| renegade.py | alt ROM images 0 + 1, loading-screen front end |
-| rainbow.py | full redraw / tile composer, 128K (excluded from automatic checks) |
+functions first; then copy the nearest engine (docs/ENGINE_TEMPLATES.md; module + asm + profile + games/ file), one function at a time.
 Change the profile block + site list, rebuild the asm; every site keeps its original-byte check.
 Sessions build with `--nex`: tests, recolour and play checks use the .nex.
-Colour map (every game, docs/COLOURS.md): the sprite builder applies `<record>_colours.json` per pixel -
-key = the graphics byte the pixel comes from, a non-zero nibble replaces the default colour of an
-opaque pixel - and, in an engine with outlines (paint_clear), makes a PAPER pixel opaque in that
-colour (Dizzy 1: fill_mask; its verify model and negative controls must cover it) - and a check of
-the graphics bytes stored with the entry (other graphics at that
-address in a later level -> defaults). Store it where the build can read it at sprite-build time
-(midres: Next pages 28.. at slot 4 during the commit, page tables in the hook page, MidresPatch
-store_pages / asm `ovl`). A build with no colours file = today's defaults.
+Colour map (every game): build it and its verify as docs/ENGINE_TEMPLATES.md "Colour map".
 Also build the colour-sheet capture and `recolour` now (docs/COLOURS.md): stage 3 sends the sheets.
 
 ## 6. Verify (differential test)
@@ -268,10 +250,6 @@ model, and the sprite pixels against the original plot (masked figures: run the 
 and a 0xFF buffer for ink / paper / transparent, midres.truth). With interrupts on at the hooks,
 also check interrupt safety after every hook instruction (IX, IY, I, IFF, stack room; Commando,
 midres) with a negative control. Every mismatch must be explained or fixed.
-Colour map: the expected sprite layer uses the map too (midres.expected_layer / map_colour); unit
-cases with a synthetic map per figure, a wrong check byte (must be ignored) and a negative control
-(the map left out of the build, informative cases only); once the user's colours file exists, the
-full RZX run uses it.
 Also simulate the start-up tail: registers restored, no game memory touched.
 
 Iterate fast (the two levels: BRIEFING C3b): while developing use `--quick N` and the unit tests on 1-2
@@ -284,8 +262,19 @@ writers, not its name (Jetpac rocket, fuel).
 Unit cases: cross only the inputs that interact. Every graphic x every position edge is one
 product; colours, slots and similar independent inputs need each value once, on a few graphics -
 not every combination (Jetpac: 117 graphics x 8 positions, inks and slots once each).
-Stage 2 ends: quick runs PASS (counters in games/<game>.md), the evidence record written (step 7),
-committed; the Next session block (stage 3).
+Failed cases first, then a sample, then the full gate once per change set: `nexclash/caseselect.py` (stable ids; a case's
+phases and injections do not depend on the selection). Empty evidence is not success: `runchecks.measured` (no rows,
+states or cases = not measured: no claim, no stamp; not applicable needs a reason).
+Early integrated diagnostic (unknown engines, stage 2's first substantial milestone, not its exit): a real NEX through the
+intended converter, stub, hooks and memory layout, one visible feature from live data, every step of the path connected
+for a bounded case. Run the full per-update selection/validation for all actors and worst observed upload load, even if one
+figure shows. Report pace and freshness apart: publication rate, longest miss run, maximum displayed-state age, under demanding
+motion. Schedule its hardware test early, after boot and hook checks; waiting for it
+does not block unrelated work. A shipped visible compromise (dropped updates) needs the user's agreement once demonstrated.
+Report status.evidence in the record: functional / integration / timing / display / hardware, each at level host, assembled,
+integrated or hardware, with artifact, inputs and environment; absent reads not assessed (legacy records unchanged).
+Stage 2 ends: intended functionality integrated, quick runs PASS (counters in games/<game>.md), the evidence record written
+(step 7), committed; the Next session block (stage 3). Component tests alone do not end it for an unknown engine.
 
 # Stage 3 - Prove and deliver
 

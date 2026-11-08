@@ -4,19 +4,38 @@ the .nxc's PRF1 never rest on report text alone. nexclash.py writes NAME_checks.
 
 Statuses: pass; fail (a fault: the run FAILED); incomplete (the check raised, a recording it never replayed, an early
 partial replay, a ROM select it does not model: the builds stand, their proof is not full); waived (a record's named
-exception, its pin: the game verifies as it was verified); not run (no recordings, a rebuild: nothing was claimed).
+exception, its pin: the game verifies as it was verified); not run (no recordings, a rebuild: nothing was claimed);
+not measured (the check ran over nothing: no rows, states or cases; a required one blocks the claim and its stamp);
+not applicable (this build has no such thing, with the reason: distinct from missing coverage).
 Accepted and bounded, with their names in the coverage: a replay whose port readings end in the recording's last
 frame ('last frame'), and the record's rom_paths_known (KNOWN, not faults)."""
 import json
 import os
 
-DONE = ('pass', 'waived', 'not run')
+DONE = ('pass', 'waived', 'not run', 'not applicable')
 RUN = []                    # this process's run: nexclash.py's _CHECKS; an engine adds its own (Starquake's negatives)
 
 
 def add(checks, name, status, why='', required=True, coverage=None):
+    if status == 'not applicable' and not why:
+        raise ValueError('%s: not applicable needs the reason' % name)
     checks.append(dict(check=name, status=status, why=why, required=required, coverage=coverage or {}))
     return checks[-1]
+
+
+def measured(checks, name, count, failures=0, expected=None, why='', required=True, coverage=None):
+    """A check over rows / states / cases: empty evidence can never be a pass. count 0 -> not measured; fewer than
+    expected -> incomplete; failures -> fail (it outranks the rest); else pass. An inapplicable check: add(..,
+    'not applicable', reason). -> the entry."""
+    if failures:
+        status = 'fail'
+    elif not count:
+        status, why = 'not measured', why or 'no rows, states or cases'
+    elif expected is not None and count < expected:
+        status, why = 'incomplete', why or '%d of %d' % (count, expected)
+    else:
+        status = 'pass'
+    return add(checks, name, status, why, required, dict(coverage or {}, count=count, failures=failures))
 
 
 def rom_paths(res, rzxs, nexes):
@@ -62,6 +81,43 @@ def line(checks):
     bad = [c for c in checks if c['required'] and c['status'] not in DONE]
     parts = ', '.join('%s %s%s' % (c['check'], c['status'], (' (%s)' % c['why'][:160]) if c['why'] else '') for c in checks)
     return ('COMPLETE: ' if not bad else '%s: ' % ('FAILED' if any(c['status'] == 'fail' for c in bad) else 'INCOMPLETE')) + parts
+
+
+def exit_code(checks):
+    """For a verifier's own command line: 0 only when every required check is done, 1 a failure, 2 incomplete or not
+    measured; no checks at all is 2."""
+    if not checks:
+        return 2
+    if any(c['status'] == 'fail' for c in checks):
+        return 1
+    return 0 if complete(checks) else 2
+
+
+def selfcheck():
+    """Empty evidence never passes (selftest --tools). -> failures"""
+    bad = []
+    for label, kw, status, code in (('empty', dict(count=0), 'not measured', 2), ('short', dict(count=3, expected=4), 'incomplete', 2),
+                                    ('fail', dict(count=3, failures=1), 'fail', 1), ('fail, empty', dict(count=0, failures=1), 'fail', 1),
+                                    ('full', dict(count=4, expected=4), 'pass', 0)):
+        c = []
+        if measured(c, 'x', **kw)['status'] != status or exit_code(c) != code or complete(c) != (code == 0):
+            bad.append('measured %s' % label)
+    c = []
+    add(c, 'x', 'not applicable', 'no sound hook')
+    if not complete(c) or exit_code(c) or 'not applicable' not in line(c):
+        bad.append('not applicable is not done')
+    try:
+        add([], 'x', 'not applicable')
+        bad.append('not applicable without a reason')
+    except ValueError:
+        pass
+    if exit_code([]) != 2:
+        bad.append('no checks at all')
+    c = []
+    measured(c, 'x', 0, required=False)
+    if not complete(c):
+        bad.append('an optional empty check blocks')
+    return bad
 
 
 def path(out, name):

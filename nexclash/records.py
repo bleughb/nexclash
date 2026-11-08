@@ -256,6 +256,30 @@ def plan(recs=None, full=False):
     return [tuple(x) for x in out], now_all
 
 
+EVIDENCE = ('functional', 'integration', 'timing', 'display', 'hardware')
+EVIDENCE_LEVELS = ('not assessed', 'host', 'assembled', 'integrated', 'hardware')
+
+
+def evidence(rec):
+    """status.evidence, every category filled: {category: {level, scope, artifact?}}. Optional: a record without
+    it (every legacy record) reads 'not assessed', never a failure."""
+    given = rec.get('status', {}).get('evidence', {})
+    return {c: dict(given.get(c) or {'level': 'not assessed', 'scope': ''}) for c in EVIDENCE}
+
+
+def evidence_problems(rec):
+    """Unknown categories / levels, or a claim without its scope. -> list"""
+    bad = []
+    for c, e in rec.get('status', {}).get('evidence', {}).items():
+        if c not in EVIDENCE:
+            bad.append('%s: evidence category %s' % (rec['name'], c))
+        elif e.get('level') not in EVIDENCE_LEVELS:
+            bad.append('%s: evidence %s level %s' % (rec['name'], c, e.get('level')))
+        elif e['level'] != 'not assessed' and not e.get('scope'):
+            bad.append('%s: evidence %s has no scope (artifact, inputs, environment)' % (rec['name'], c))
+    return bad
+
+
 def selfcheck():
     """plan() on synthetic stamps (no reference files needed): an unchanged tree skips everything; an
     engine file re-verifies its game only; a shared file rebuilds every dependent and re-verifies
@@ -478,6 +502,10 @@ def main(argv):
         r = load(argv[1])
         for p in deps(r):
             print(('own    ' if p in own(r) else 'shared ') + p)
+        return 0
+    if argv[:1] == ['evidence'] and len(argv) > 1:
+        for c, e in evidence(load(argv[1])).items():
+            print('%-12s %-13s %s' % (c, e['level'], e.get('scope', '')))
         return 0
     if argv[:1] == ['selfcheck']:
         bad = selfcheck()

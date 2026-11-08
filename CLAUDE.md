@@ -9,7 +9,7 @@ on their machine; the maintainers' reference files live in bleughb/specnext (cur
 ## A game, stage by stage (docs/PLAYBOOK.md; meaningful session boundaries)
 0. Intake: `python -m nexclash.survey GAME.z80 --rzx R` -> survey.md. Callers the recording never
    reached, or a recording that desyncs (WARNING with the frame) -> ask for a recording first.
-1. Design: ONE question - the design defaults + this game's exceptions, preview, plain .nex (3c).
+1. Design: ONE question - the design defaults + this game's exceptions, preview, plain .nex (3c); unknown engine: feasibility first (3d).
 2. Build: engine files only; `--quick 2000` runs; the evidence record written.
 3. Prove + deliver: the one full verification, `selftest.py --game <record> --verify --stamp`
    (6a); sprite build + colour sheets (docs/COLOURS.md) + hardware checklist to the user.
@@ -77,7 +77,7 @@ version; tools/sjasmplus/README.md). Maintainers: repos and reference files in d
 - The start-up tail must end below 0xC000, 48K too (the stub's bank 10 sits at 0xC000-0xFFFF;
   Trueno never booted). z80tonex.choose_tail_addr refuses such a tail; nextboot.check catches it.
 - Shell heredocs that write docs: quote the delimiter (`<<'EOF'`), or the shell runs every
-  backticked example in the text (it once cloned sjasmplus into the repo and ran a pkill).
+  backticked example in the text.
 - Analysis: the shared commands first (`survey`, `inspect`, `scan`, `isr`, `cost`, `preview`;
   BRIEFING C4). One falls short -> IMPROVE IT (keep its output lines and arguments, add a golden
   check in selftest.py tools_check, `python selftest.py --tools`), do not copy it into the engine.
