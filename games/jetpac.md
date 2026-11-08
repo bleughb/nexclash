@@ -214,7 +214,27 @@ Ported from Jon Attree's .nxc work, 2026-11-04 (pilot runs/jetpac/nexclash, a327
 - The base engine `jetpac` keeps NEXTREG 7,0: its alt ROM block is full (the 13 bytes would end 12 bytes into the ROM
   font at 0x3D00). Not behind a published patch.
 
+## Pace (review 1.3, 2026-11-08)
+Owner's pace rule: within 2% where the original runs steadily, faster fine where it lags, never slower. 1.2 read +2.11 to +2.34 whole, slowest
+stretch of 20 updates +4.0 (audit, runs/pace-audit-20261108): no frame sync on the main loop, so speed is CPU time, and a draw's hook time (about
+950 T a draw, 1.6 draws a pass) was lost for good, less what the screen stores' NOPs save.
+- Fix: the plot's set-up, a fixed stretch per draw that writes nothing to the screen and plays nothing, runs at 28 MHz and pays for the hook: e_p27 29279,
+  e_p3c 29290 and 29365, e_p3f 29339 go up (HLIB_SPEED_IN, latch V_SPD), e_x1 29294 (after 29377, the erase lookup), e_x2 29287, e_x3 29368 give the caller's
+  speed back. No wait, no K: hlib_pace is not used, because a limiter would have to wait on a line count with a K for the rows, and there is nothing to
+  wait out. The 28 MHz stretch is a count of the game's own instructions, so its credit does not depend on an emulator's figure beyond the 3.5 MHz bus.
+- Hook RAM: 0xB000-0xB203, bank 2. A 16K game never addresses it, and the verifier fails on any game read or write above 0x7FFF. The entries moved there from the
+  alt ROM (1,097 to 1,027 bytes); hlib_r and hlib_speed whole and unchanged; hlib_iff not needed (no DI).
+- R: compared at every hook now (CMP_R): the game reads it at 0x6602 and 0x69D0. In play R still differs between arms: interrupts land at other
+  instructions, and in the original too when the timing changes. So the pace runs keep the audit's fixtures.
+- The random byte: 0x69D0-0x69D8 adds R and a byte of 0x0000-0x00FF to 0x5DCE. 28 of those 256 bytes differ between the plain .nex and the build, because the build's image is
+  Sinclair's ROM, as on a real 48K Spectrum, and the plain .nex runs NextZXOS's ROM3. So the build is the faithful one and nothing is changed. Same keys and fixed R: the games part at
+  update 118, when the walk reaches 0x76, and the low 5 bits stay flat in both (chi-square 13 to 15 on 31 degrees, 4,000 updates, 4 seeds): other aliens, not other odds.
+- Before / after, final builds 498b8db7 / 0aa83bfa against the plain build, audit's fixtures, 5 seeds of 1,000 passes: NOTES.md in the run folder.
+
 ## Lessons
+- [local: a fixed stretch pays for a fixed hook] A game with no frame sync and a hook cost per draw needs no limiter: run a fixed stretch of the same draw's own set-up at 28 MHz. The credit scales with the draws, as the debt does, and no wait is added.
+- [local: the plain build is not the Spectrum] A difference between plain and build at a low-memory read was the plain .nex running NextZXOS's ROM3; the build had Sinclair's bytes. Check which arm is the faithful one before fixing.
+- [local: a 16K game's upper RAM is free] Hook RAM above 0x7FFF needs no page for a 16K game; a read and write watch in the verifier stands behind that.
 - [card patch.restore-speed §Use / do not use] A stateless alt-ROM hook keeps the caller's speed on the stack
   (read NR 7, AND 3, PUSH AF ... POP AF, NEXTREG 7,A): 13 bytes more than a fixed exit.
 - [card patch.whole-altrom-image §Use / do not use] opt-in rework available: whole alt ROM image (see card patch.whole-altrom-image). IM 1 in play reaches hook code at 0x386E once DivMMC no longer traps 0x0038 (runs/altrom_audit, JNext; masked under NextZXOS). Output pinned.
@@ -232,11 +252,14 @@ Ported from Jon Attree's .nxc work, 2026-11-04 (pilot runs/jetpac/nexclash, a327
   engine's MD5s. An import checks against `nxc.py --bare`, and the steps moved into jetpac_v11.auto.
 
 ## Technique use
+- patch.preserve-r: helped: hlib_r whole, in hook RAM (2026-11-08).
+- patch.pace-limiter: no help: a fixed stretch of the plot's set-up pays for the hook, with no wait (2026-11-08).
 - patch.whole-altrom-image: no help: rework not applied, output pinned (record pin)
 - patch.whole-altrom-image: used: the v1.1 rework writes the whole image itself (altrom 0x2000-0x4000 + altrom_low), the card's Cauldron case
 - detect.tracked-unit: corrected: its composite question missed one object drawing several figures; card amended with that case
 
 ## Stage log
+- 2026-11-08 pace fix, review 1.3 (owner's pace rule; audit runs/pace-audit-20261108): plot set-up at 28 MHz, R kept, hook RAM in bank 2. 0 user rounds.
 - 2026-11-03 stage 4 (round 1 hardware report: 3 faults): ~2 h, ~60 tool calls, 0 user rounds; main had nothing new at the start (fetch).
 - 2026-11-04 import of Jon's Jet Pac v1.1 as an opt-in rework (phase 7, group 3): jetpac_v11 files, record "rework"; Dean's build unchanged. 0 user rounds.
 - 2026-11-03 stage 4 check (no hardware report yet): independent re-verify `selftest --game jetpac --verify` PASSED (rebuild MD5s, free run IDENTICAL, unit + rocket 37 PASS, boot OK); specnext files match; two stale Patch-design / results lines corrected. ~25 tool calls.
@@ -245,5 +268,5 @@ Ported from Jon Attree's .nxc work, 2026-11-04 (pilot runs/jetpac/nexclash, a327
 - reuse: [local: the v1.1 loading stub is add_screen.py's template for bank 13] the same stub as Rambo's (bank 23) came in in this import; a shared helper is the maintainers' call.
 - retries: [none: the rework rebuilt the published MD5s first time]
 - environment: [local: the v1.1 verifier needs NextZXOS's ROM3] enNextZX.rom is staged as a record input; without it the rework's verify refuses rather than model Sinclair's ROM.
-- hand-rolled: [none: no scratch tool kept]
+- hand-rolled: [none: no scratch tool kept]; the pace runs' tools stay in the run folder
 - scratch: [none: import scripts stayed in the session scratchpad]

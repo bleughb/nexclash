@@ -1,15 +1,27 @@
 ; Jetpac (Ultimate, 1983, 16K) - hardware sprites for every figure the move-and-redraw plotter
 ; (30522) draws: Jetman, aliens, rocket parts, fuel, items, explosions.
-; All hooks are stateless and live in alt ROM image 1 at 0x386E (read-only). Interrupts may be
-; on at every site (IM 1, ROM handler reads IY): the hooks use only pushes below SP and NEXTREG,
-; never IX/IY/I/IFF or the alternate registers (the plotter keeps state in them).
+; The figure code and tables live in alt ROM image 1 at 0x386E (read-only). The entries, the speed
+; latch and R live in hook RAM at 0xB000 (bank 2: a 16K game never addresses it; the verifier fails on any
+; game read or write above 0x7FFF). Interrupts may be on at every site (IM 1, ROM handler reads IY): the
+; hooks use only pushes below SP and NEXTREG, never IX/IY/I/IFF or the alternate registers (the plotter
+; keeps state in them).
 ;
-; Patch sites (original bytes checked by jetpac.py):
+; Patch sites (original bytes checked by jetpac_v11.py):
 ;   29263  1A 47 32   LD A,(DE) / LD B,A / LD (24004),A (new-frame setup, after 29448: HL = screen
 ;                     address of the bottom line, DE -> W, IX = object)        -> JP e_nw
 ;   29344  CD 27 72   CALL 29223 (erase only, graphic in DE)                    -> CALL e_e1
 ;   29349  CD 24 72   CALL 29220 (erase only)                                   -> CALL e_e2
 ;   24717  CD B8 71   CALL 29112 (screen clear, every new screen)              -> CALL e_cls
+; Pace (2026-11-08): no frame sync on the main loop, so a draw's hook time was lost for good. The plot's
+; set-up, a fixed stretch per draw, runs at 28 MHz and pays for it (no wait, no K, nothing tuned to an
+; emulator's figure); the entries go up to 28 MHz, the ends give the caller's speed back:
+;   29279  CD 27 72   CALL 29223 (a draw that moves in both)                    -> CALL e_p27
+;   29290  CD 3C 72   CALL 29244 (a draw that moves)                            -> CALL e_p3c
+;   29339  CD 3F 72   CALL 29247 (a draw only)                                  -> CALL e_p3f
+;   29365  CD 3C 72   CALL 29244 (a draw only)                                  -> CALL e_p3c
+;   29294  CD 24 72   CALL 29220 (the erase set-up after 29290's draw set-up)   -> CALL e_x1
+;   29287  D9 18 07   EXX / JR 29297                                            -> JP e_x2
+;   29368  D9 AF 32   EXX / XOR A / LD (24005),A                                -> JP e_x3
 ; Screen-write patches (no hook): 30532 77 -> 00 (erase AND), 30561 77 -> 00 (draw OR),
 ;   29171 72 -> 00 (object colour over its cells).
 ; Sprites: object i = (IX - 23808) / 8 (0-16) owns sprites 6i .. 6i+5: 2 rows x (2 columns + a copy
@@ -37,48 +49,6 @@ FLAMES  EQU 114                 ; first sprite of the flame group
 NSPR    EQU NOBJ*6+18
 
         ORG 0x386E
-; ---- new frame of an object ----
-e_nw:   push af
-        push bc
-        push de
-        push hl
-        ld bc,0x243B            ; the caller's CPU speed (NR 7 bits 1:0, card patch.restore-speed), kept on the
-        ld a,7                  ; stack: these hooks have no RAM. A and B are set again after the hook
-        out (c),a
-        inc b
-        in a,(c)
-        and 3
-        push af
-        nextreg 0x07,3          ; the hook at 28 MHz (~4K T per draw: table search + 6 sprites)
-        call draw
-        pop af
-        nextreg 0x07,a          ; the caller's speed back (never a fixed 3.5 MHz)
-        pop hl
-        pop de
-        pop bc
-        pop af
-        ld a,(de)
-        ld b,a
-        ld (24004),a
-        jp 29268
-
-; ---- erase-only entries: hide the object's sprites ----
-e_e1:   call hideobj
-        jp 29223
-e_e2:   call hideobj
-        jp 29220
-
-; ---- screen clear: hide every sprite ----
-e_cls:  push af
-        xor a
-.h:     nextreg 0x34,a
-        nextreg 0x38,0
-        inc a
-        cp NSPR
-        jr nz,.h
-        pop af
-        jp 29112
-
 ; carry clear + A = first sprite of the object IX; carry set if IX is not an object slot
 objbase:
         ld a,ixh
@@ -391,6 +361,103 @@ setpat: ld a,c
         INCLUDE "jetpac_v11_tables.asm"
 rom_end:
 
+; ---- hook RAM, bank 2 (site bytes for the verifier: the block is zero in the snapshot) ----
+HLIB_V_R EQU 0xB200             ; 3 bytes (never code: the verifier leaves it out of the memory compare)
+V_SPD   EQU 0xB203              ; the caller's speed, one level: an entry and its end have no hook between
+
+        ORG 0xB000
+        INCLUDE "lib/hlib_speed.asm"
+        INCLUDE "lib/hlib_r.asm"
+
+; R = entry R + D at the next HLIB_R_OUT; every register and flag kept
+        MACRO R_SET D
+        push af
+        ld a,(D) & 0x7F
+        call hlib_r_set
+        pop af
+        ENDM
+
+; ---- new frame of an object: at 28 MHz already, from its entry ----
+; delta = O - E - N (card patch.preserve-r): O 3; E 1 + 3; N 1 + 3 + 1
+e_nw:   HLIB_R_IN
+        push af
+        push bc
+        push de
+        push hl
+        call draw
+        pop hl
+        pop de
+        pop bc
+        pop af
+        R_SET 3-4-5
+        HLIB_R_OUT
+        ld a,(de)
+        ld b,a
+        ld (24004),a
+        jp 29268
+
+; ---- erase-only entries: hide the object's sprites. O 1, E 1 + 3, N 1 + 1 ----
+e_e1:   HLIB_R_IN
+        call hideobj
+        R_SET 1-4-2
+        HLIB_R_OUT
+        jp 29223
+e_e2:   HLIB_R_IN
+        call hideobj
+        R_SET 1-4-2
+        HLIB_R_OUT
+        jp 29220
+
+; ---- screen clear: hide every sprite. O 1, E 1 + 3, N 1 + 1 ----
+e_cls:  HLIB_R_IN
+        push af
+        xor a
+.h:     nextreg 0x34,a
+        nextreg 0x38,0
+        inc a
+        cp NSPR
+        jr nz,.h
+        pop af
+        R_SET 1-4-2
+        HLIB_R_OUT
+        jp 29112
+
+; ---- the plot's set-up at 28 MHz: entries. O 1, E 1 + 15 + 3, N 1 + 1 ----
+        MACRO E_PRE TARGET
+        HLIB_SPEED_IN V_SPD
+        HLIB_R_IN
+        R_SET 1-19-2
+        HLIB_R_OUT
+        jp TARGET
+        ENDM
+e_p27:  E_PRE 29223
+e_p3c:  E_PRE 29244
+e_p3f:  E_PRE 29247
+
+; ---- ends: R first, so that only the last few T run at the caller's speed. E 1 + 3; N 1 + 5 + replay + jump ----
+e_x1:   call 29377              ; 29220's first call, still in the window. To 29223: O and E both count it; O 1, N 7
+        HLIB_R_IN
+        R_SET 1-4-7
+        HLIB_R_OUT
+        HLIB_SPEED_OUT V_SPD
+        jp 29223
+e_x2:   HLIB_R_IN               ; O 2, N 8
+        R_SET 2-4-8
+        HLIB_R_OUT
+        HLIB_SPEED_OUT V_SPD
+        exx
+        jp 29297
+e_x3:   HLIB_R_IN               ; O 3, N 10
+        R_SET 3-4-10
+        HLIB_R_OUT
+        HLIB_SPEED_OUT V_SPD
+        exx
+        xor a
+        ld (24005),a
+        jp 29373
+ram_end:
+        ASSERT ram_end <= HLIB_V_R
+
 ; --- setup routine (stub bank, 0xD000): patterns from bank 11, palette, hide all, sprites on ---
         ORG 0xD000
 setup:  nextreg 0x57,22             ; bank 11 lower page at 0xE000
@@ -566,6 +633,7 @@ final:  nextreg 0x56,20
 
 
         SAVEBIN "jp_rom.bin",0x386E,rom_end-0x386E
+        SAVEBIN "jp_ram.bin",0xB000,ram_end-0xB000
         SAVEBIN "jp_setup.bin",0xD000,setup_end-0xD000
         SAVEBIN "jp_ldhead.bin",0xC000,ldscr.head_end-0xC000
         SAVEBIN "jp_ldtail.bin",0xFFD0,0x30
