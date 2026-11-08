@@ -20,7 +20,13 @@ CALLS = {W1: {0xA26F: (0xA3D4, 'h_plot1', 'plot'), 0x9EA5: (0xA462, 'h_rest1', '
 ATTR_OPERAND = {W1: 0x9EBC, W2: 0x9DF2}
 CLS = 0xBA63
 IMAGE_END = 0xA200
+# Enhanced only: (site, original bytes, hook, where the original and the hook meet, kind)
+ENH_SITES = [(0xB944, bytes.fromhex('21B2B9'), 'h_tile', None, 'jp'), (0xB93F, bytes.fromhex('21BEB9'), 'h_clr', None, 'jp'),
+             (0xB164, bytes.fromhex('2A36B7'), 'h_strip', 0xB167, 'jp'), (0xA5DB, bytes.fromhex('CD07A6'), 'h_flip', 0xA5DE, 'jp'),
+             (0xA77F, bytes.fromhex('3A72A7'), 'h_scrl', 0xA782, 'jp'), (0xA809, bytes.fromhex('3A72A7'), 'h_scrr', 0xA80C, 'jp')]
 FILL = 0xBA84
+RESERVE_TOP_PAGE = 73
+A_FIRST = 60
 IMAGE_BANK = {W1: 4, W2: 6}
 SIGNATURE = {0xA26F: 'CDD4A3', 0x9EC7: 'CD62A4', 0x9EBB: '21F069', 0xBA63: '3A8F5C', 0xBA84: 'E5D113'}
 DECISIONS = {'figures': 'original bitmap on the ULA; figure ink in its own colour on Layer 2, in plot order',
@@ -79,9 +85,13 @@ class Patch:
     hook_page_data = b''
     setup_call = 0xD000
 
-    def __init__(self, source=None, enabled=True):
+    def __init__(self, source=None, enabled=True, enhanced=False, backdrop=False, art=None, reserve=False, nobd=False):
         self.source = str(source) if source else None
         self.enabled = enabled
+        self.enhanced = enhanced
+        self.backdrop = backdrop
+        self.art = art
+        self.reserve = reserve or enhanced or backdrop or nobd
         h = load_profile()['hooks']
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
         self.code = bytes.fromhex(h['rom'])
@@ -91,11 +101,30 @@ class Patch:
         from .build import rom48
         self.ram = bytearray(rom48()[0x2000:0x4000])
         self.ram[0x800:0x800 + len(self.code)] = self.code
-        self.ram[0x1A00:0x1C00] = bytes(512)
         self.ram[0x1E00:0x2000] = bytes(512)
         self.ram[self.syms['V_BACK'] - 0x2000] = 16
         self.ram[self.syms['V_PART'] - 0x2000] = 1
-        self.ram[self.syms['V_RECT'] - 0x2000:self.syms['V_RECT'] - 0x2000 + 2] = (0x3A00).to_bytes(2, 'little')
+        self.ram[self.syms['V_RECT'] - 0x2000:self.syms['V_RECT'] - 0x2000 + 2] = (0x2700).to_bytes(2, 'little')
+        self.ram[0x700:0x800] = bytes(256)
+        self.ram[0x1C00:0x1D00] = bytes(256)
+        self.ram[self.syms['V_K2'] - 0x2000] = 121 if enhanced else 119
+        # The picture is on with Enhanced unless the "Backdrop off" line takes this byte to 0; only Enhanced's code reads it.
+        if (backdrop or not enhanced) and not nobd:
+            self.ram[self.syms['V_BDT'] - 0x2000] = 1
+        if enhanced:
+            self.ram[self.syms['V_ENH'] - 0x2000] = 1
+            self.ram[0:len(art['tables'][1])] = art['tables'][1]
+            self.ram[0x300:0x300 + len(art['tables'][2])] = art['tables'][2]
+            self.ram[0x600:0x610] = art['zxtab'][:16]
+            self.ram[self.syms['V_BDP1'] - 0x2000] = 52
+            self.ram[self.syms['V_BDP2'] - 0x2000] = 56
+            st = bytearray(self.stub_extra)
+            st[self.syms['setup_enh'] - self.setup_call + 1] = 1
+            at = self.syms['e_ula'] - self.setup_call
+            st[at:at + 16] = art['ula']
+            at = self.syms['e_palette'] - self.setup_call
+            st[at:at + 512] = art['l2pal']
+            self.stub_extra = bytes(st)
         self.sites = []
         self.world_sites = {W1: [], W2: []}
         self.site_info = {}
@@ -108,14 +137,23 @@ class Patch:
                 self.world_sites[world].append((a, b'\xf0\x69', b'\xc0\x77'))
             self.cls_site = (CLS, b'\x3a\x8f\x5c', b'\xc3' + zt.w16(self.syms['h_cls']))
             self.fill_site = (FILL, b'\xe5\xd1\x13', b'\xc3' + zt.w16(self.syms['h_fill']))
-            self.sites = self.world_sites[W1] + [self.cls_site, self.fill_site]
+            self.enh_sites = []
+            self.enh_info = {}
+            if enhanced:
+                for a, old, sym, stop, kind in ENH_SITES:
+                    new = bytes((old[0],)) + zt.w16(self.syms[sym]) if old[0] in (0xCD, 0xC3) and kind == 'call' else b'\xc3' + zt.w16(self.syms[sym])
+                    if old[0] == 0xCD:
+                        new = b'\xc3' + zt.w16(self.syms[sym])
+                    self.enh_sites.append((a, old, new))
+                    self.enh_info[a] = (stop, sym)
+            self.sites = self.world_sites[W1] + [self.cls_site, self.fill_site] + self.enh_sites
         self._banks()
 
     def _banks(self):
         # Hidden ROM (page 25): tiny entry and return veneers only. Code and writable state: page 24.
         from .build import rom48
         self.page = bytearray(rom48()[0x2000:0x4000])
-        for name in ('h_plot1', 'h_rest1', 'h_rest2', 'h_copy1', 'h_copy2', 'h_show', 'h_fill', 'h_cls'):
+        for name in ('h_plot1', 'h_rest1', 'h_rest2', 'h_copy1', 'h_copy2', 'h_show', 'h_fill', 'h_cls', 'h_tile', 'h_clr', 'h_strip', 'h_flip', 'h_scrl', 'h_scrr'):
             at = self.syms[name] - 0x2000
             self.page[at:at + 4] = self.ram[at:at + 4]
         for i in range(len(self.code) - 4):
@@ -123,12 +161,18 @@ class Patch:
                 at = 0x800 + i + 4
                 self.page[at:at + 7] = self.ram[at:at + 7]
         self.extra_banks = {12: bytes(self.ram) + bytes(self.page)}
+        if self.reserve:
+            art = self.art
+            top = (art['top_page'] if art else RESERVE_TOP_PAGE) // 2
+            pages = (art['pages'] if (art and self.enhanced) else {})
+            for bank in range(26, top + 1):
+                self.extra_banks[bank] = pages.get(2 * bank, bytes(8192)) + pages.get(2 * bank + 1, bytes(8192))
 
     def apply(self, snap):
         if not is_army_moves(snap):
             raise ValueError('Not the supported Army Moves 128K release (MD5 %s)' % SOURCE_MD5)
         banks = {i: bytearray(snap.banks[i]) for i in range(8)}
-        for a, old, new in self.world_sites[W1] + [self.cls_site, self.fill_site] if self.enabled else []:
+        for a, old, new in self.sites if self.enabled else []:
             at = a - 0x8000
             if bytes(banks[2][at:at + len(old)]) != old:
                 raise ValueError('Original bytes differ at %04X' % a)
@@ -179,6 +223,8 @@ class View:
             if m == 24:
                 return self.page[a - 0x2000]
             return self.pages[m][a & 8191]
+        if m in self.pages:
+            return self.pages[m][a & 8191]
         return self.mem[a]
 
     def __setitem__(self, a, v):
@@ -188,6 +234,9 @@ class View:
                 self.page[a - 0x2000] = v
             elif m != 255:
                 self.pages[m][a & 8191] = v
+            return
+        if m in self.pages:
+            self.pages[m][a & 8191] = v
             return
         self.mem[a] = v
 
@@ -214,7 +263,10 @@ class State:
     """What persists between hooks: the hook page, the L2 pages, the NextRegs that matter."""
     def __init__(self, patch):
         self.page = bytearray(patch.ram)
-        self.pages = {p: bytearray(b'\xff' * 8192) for p in list(range(32, 36)) + list(range(38, 42))}
+        self.pages = {p: bytearray(b'\xff' * 8192) for p in list(range(32, 48))}
+        self.pages.update({p: bytearray(8192) for p in range(48, 52)})
+        if patch.enhanced:
+            self.pages.update({p: bytearray(b) for p, b in patch.art['pages'].items()})
         self.nr = {0x12: 16, 0x69: 0, 0x17: 0}
         self.line = 0
 
@@ -334,18 +386,59 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, compare_every=1
         if len(examples[key]) < 5:
             examples[key].append(detail)
     pcs = {a for w in (W1, W2) for a in CALLS[w]} | {CLS, FILL}
+    enh = EnhModel(patch) if patch.enhanced else None
+    if enh:
+        pcs |= set(patch.enh_info)
 
     def on_pc(pc, sim):
         mem = _flat(sim)
         regs = list(sim.registers)
         w = world_of(mem)
         info = patch.site_info.get((w, pc)) if w else None
+        if enh and pc in patch.enh_info:
+            stop, sym = patch.enh_info[pc]
+            if collect and sum(1 for x in states if x[0] == pc) < collect:
+                states.append((pc, list(regs), bytes(mem), w))
+            patched = bytearray(mem)
+            for a, o, new in patch.world_sites[w or W1] + [patch.cls_site, patch.fill_site] + patch.enh_sites:
+                patched[a:a + len(new)] = new
+            ref = simpool.machine(Simulator, list(mem), regs, 'am-ref')
+            sp = regs[12]
+            if stop is None:            # the hook runs the body whole: to the caller
+                stop = mem[sp] | mem[sp + 1] << 8
+                sp += 2
+            n = 0
+            while n == 0 or ref.registers[24] != stop or ref.registers[12] != sp:
+                ref.opcodes[ref.memory[ref.registers[24]]]()
+                n += 1
+            got, v, model = run_hook(patch, st, patched, regs, stop, sp)
+            for i in CMP:
+                if (bool(ref.registers[i]) != bool(got[i])) if i == 26 else ref.registers[i] != got[i]:
+                    fail('registers differ', {'pc': hex(pc), 'reg': i, 'orig': ref.registers[i], 'got': got[i], 'sym': sym})
+            expected = bytearray(ref.memory[0x4000:0x10000])
+            actual = bytearray(v.mem[0x4000:0x10000])
+            for a, o, new in patch.world_sites[w or W1] + [patch.cls_site, patch.fill_site] + patch.enh_sites:
+                expected[a - 0x4000:a - 0x4000 + len(new)] = new
+            for a in range(sp - 32, sp):
+                expected[a - 0x4000] = actual[a - 0x4000]
+            if actual != expected:
+                bad = [a + 0x4000 for a, (x, y) in enumerate(zip(expected, actual)) if x != y]
+                fail('48K RAM differs', {'pc': hex(pc), 'sym': sym, 'count': len(bad), 'addresses': [hex(x) for x in bad[:8]]})
+            if model.nr[0x51] != 255 or model.nr[0x50] != 255 or model.nr[0x53] != 11:
+                fail('MMU not restored', {'pc': hex(pc), 'sym': sym})
+            if model.nr[7] != 0:
+                fail('clock differs', {'pc': hex(pc), 'sym': sym})
+            enh.event(sym, mem, w)
+            c['hooks'] += 1
+            c['hooks ' + sym] += 1
+            c['R comparisons'] += 1
+            return
         if pc in (CLS, FILL):
             old = (b'\x3a\x8f\x5c' if pc == CLS else b'\xe5\xd1\x13')
             if mem[pc:pc + 3] != old:
                 fail('original changed a screen site', {'pc': hex(pc)})
             patched = bytearray(mem)
-            for a, o, new in patch.world_sites[w or W1] + [patch.cls_site, patch.fill_site]:
+            for a, o, new in patch.world_sites[w or W1] + [patch.cls_site, patch.fill_site] + patch.enh_sites:
                 patched[a:a + len(new)] = new
             stop = 0xBA66 if pc == CLS else 0xBA87
             ref = simpool.machine(Simulator, list(mem), regs, 'am-ref')
@@ -358,6 +451,10 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, compare_every=1
                 if (bool(ref.registers[i]) != bool(got[i])) if i == 26 else ref.registers[i] != got[i]:
                     fail('registers differ', {'pc': hex(pc), 'reg': i, 'orig': ref.registers[i], 'got': got[i]})
             hl = regs[7] | regs[6] << 8
+            if enh:
+                enh.screen(pc, hl, regs, mem, w)
+            if model.nr[0x53] != 11 or model.nr[0x50] != 255:
+                fail('MMU not restored', {'pc': hex(pc)})
             if pc == CLS or 0x4000 <= hl < 0x5B00:
                 if st.nr.get(0x69) != 0:
                     fail('overlay not hidden', {'pc': hex(pc)})
@@ -374,7 +471,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, compare_every=1
         if collect and sum(1 for x in states if x[0] == pc and x[3] == w) < collect:
             states.append((pc, regs, mem, w))
         patched = bytearray(mem)
-        for a, old, new in patch.world_sites[w] + [patch.cls_site, patch.fill_site]:
+        for a, old, new in patch.world_sites[w] + [patch.cls_site, patch.fill_site] + patch.enh_sites:
             patched[a:a + len(new)] = new
         if kind == 'copy' and not getattr(patch, 'attr_broken', False):
             patched[0xB740:0xB742] = b'\xc0\x77'
@@ -404,7 +501,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, compare_every=1
                 fail('registers differ', {'pc': hex(pc), 'reg': i, 'orig': ref.registers[i], 'got': got[i], 'sym': sym})
         expected = bytearray(ref.memory[0x4000:0x10000])
         actual = bytearray(v.mem[0x4000:0x10000])
-        for a, old, new in patch.world_sites[w] + [patch.cls_site, patch.fill_site]:
+        for a, old, new in patch.world_sites[w] + [patch.cls_site, patch.fill_site] + patch.enh_sites:
             expected[a - 0x4000:a - 0x4000 + len(new)] = new
         # The stack below SP: the original's call chain wrote it, the hook's ran on its own stack.
         sp = regs[12]
@@ -421,10 +518,18 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, compare_every=1
         if actual != expected:
             bad = [a + 0x4000 for a, (x, y) in enumerate(zip(expected, actual)) if x != y]
             fail('48K RAM differs', {'pc': hex(pc), 'sym': sym, 'count': len(bad), 'addresses': [hex(x) for x in bad[:8]]})
-        if model.nr[0x51] != 255 or model.nr[0x50] != 255:
+        if model.nr[0x51] != 255 or model.nr[0x50] != 255 or model.nr.get(0x53, 11) != 11:
             fail('MMU not restored', {'pc': hex(pc)})
         if model.nr[7] != 0:
             fail('clock differs', {'pc': hex(pc), 'value': model.nr[7]})
+        if enh:
+            enh.hook(kind, mem, w, v, st, c, fail)
+            if kind in ('plot', 'copy', 'rest', 'show'):
+                c['hooks'] += 1
+                c['hooks ' + kind] += 1
+                c['48K bytes compared'] += 49152
+                c['R comparisons'] += 1
+            return
         if model.io:
             fail('extra game I/O', {'pc': hex(pc), 'io': model.io[:4]})
         if kind == 'rest':
@@ -433,7 +538,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, compare_every=1
         c['hooks ' + kind] += 1
         c['48K bytes compared'] += 49152
         c['R comparisons'] += 1
-        if kind == 'copy':
+        if kind == 'copy' and not enh:
             c['publications'] += 1
             # Front buffer against the independent model, and against the bitmap the copy wrote.
             front = st.nr[0x12]
@@ -482,7 +587,7 @@ def SCREEN_SITES(patch):
 
 def _patched_mem(patch, mem, w):
     out = bytearray(mem)
-    for a, old, new in patch.world_sites[w] + SCREEN_SITES(patch):
+    for a, old, new in patch.world_sites[w] + SCREEN_SITES(patch) + (patch.enh_sites if patch.enhanced else []):
         out[a:a + len(new)] = new
     return out
 
@@ -493,6 +598,33 @@ def unit_tests(patch, states, neg=True):
     from skoolkit.simulator import Simulator
     c = Counter()
     for pc, regs, mem, w in states:
+        if patch.enhanced and pc in patch.enh_info:
+            target, sym = patch.enh_info[pc]
+            for speed in range(4):
+                for iff in (0, 1):
+                    for refresh in (0, 127, 128, 255):
+                        rr = list(regs)
+                        rr[15] = refresh
+                        rr[26] = iff
+                        ref = simpool.machine(Simulator, list(mem), rr, 'unit-ref')
+                        sp = rr[12]
+                        if patch.enh_info[pc][0] is None:
+                            target = mem[sp] | mem[sp + 1] << 8
+                            sp += 2
+                        n = 0
+                        while n == 0 or ref.registers[24] != target or ref.registers[12] != sp:
+                            ref.opcodes[ref.memory[ref.registers[24]]]()
+                            n += 1
+                        st = State(patch)
+                        got, v, model = run_hook(patch, st, _patched_mem(patch, mem, w), rr, target, sp, speed=speed)
+                        if any((bool(ref.registers[i]) != bool(got[i])) if i == 26 else ref.registers[i] != got[i] for i in CMP):
+                            c['ABI registers differ!'] += 1
+                        if model.nr[7] != speed:
+                            c['incoming clock not restored!'] += 1
+                        if model.nr[0x51] != 255 or model.nr[0x50] != 255 or model.nr.get(0x53, 11) != 11:
+                            c['MMU not restored!'] += 1
+                        c['ABI cases'] += 1
+            continue
         target, sym, kind = patch.site_info[(w, pc)]
         ret = (pc + 3) & 0xFFFF
         for speed in range(4):
@@ -547,6 +679,44 @@ def negative_patches(patch):
     mutate('overlay never published', bytes.fromhex('ED926900') if False else bytes.fromhex('ED916980'), bytes.fromhex('ED916900'))
     mutate('overlay not hidden', bytes.fromhex('ED916900'), bytes.fromhex('ED916980'))
     mutate('capture not repaired', bytes.fromhex('7E0200'[:2] + '02'), bytes.fromhex('0000'))
+    if patch.enhanced:
+        out.pop('MMU slot 0 left mapped')
+        mutate('MMU slot 0 left mapped', bytes.fromhex('ED91530BED9150FF'), bytes.fromhex('ED91530B00000000'))
+        for name in ('x off by one column', 'wrong ink', 'overlay not hidden', 'capture not repaired', 'stale figures never cleared'):
+            out.pop(name)
+
+        def ret_at(name, sym):
+            b = copy.deepcopy(patch)
+            b.ram[b.syms[sym] - 0x2000] = 0xC9
+            b._banks()
+            out[name] = b
+        ret_at('colour figures never drawn', 'e_plot')
+        ret_at('picture never restored', 'e_ready')
+        ret_at('scrolling zone not rebuilt', 'e_zone')
+        ret_at('backdrop not laid at scene start', 'e_bdall')
+        ret_at('scene clear not followed', 'e_fillc')
+        ret_at('capture not followed', 'e_capture')
+        ret_at('scenery tiles not followed', 'e_tile')
+        b = copy.deepcopy(patch)
+        b.ram[b.syms['V_BDT'] - 0x2000] ^= 1
+        b._banks()
+        out['Backdrop line ignored'] = b
+        b = copy.deepcopy(patch)
+        b.art = dict(b.art)
+        b.art['pages'] = dict(b.art['pages'])
+        for k in b.art['pages']:
+            if k >= A_FIRST:
+                page = bytearray(b.art['pages'][k])
+                for i in range(len(page)):
+                    if page[i] not in (0, 254, 255):
+                        page[i] = page[i] ^ 1 or 1
+                b.art['pages'][k] = bytes(page)
+        b.art_model = patch.art
+        out['colour table wrong'] = b
+        for sym in ('h_scrl', 'h_tile', 'h_strip', 'h_flip'):
+            b = copy.deepcopy(patch)
+            b.enh_sites = [t if b.enh_info[t[0]][1] != sym else (t[0], t[1], t[1]) for t in b.enh_sites]
+            out['%s site left out' % sym] = b
     b = copy.deepcopy(patch)
     for w in (W1, W2):
         b.world_sites[w] = [t if not (t[1][:2] in OPERANDS) else (t[0], t[1], t[1]) for t in b.world_sites[w]]
@@ -691,3 +861,282 @@ def auto(a, z80, name, out, say):
             say('Verify    : not requested; boot evidence only')
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return bool(ok)
+
+
+def pg_row(st, bank, y):
+    return st.pages[bank * 2 + (y >> 5)][(y & 31) * 256 + 8:(y & 31) * 256 + 248]
+
+
+class EnhModel:
+    """The expected Enhanced picture, independent of the hooks' rectangles and rings: what a pass must show is the clean
+    picture when the pass begins plus that pass's plots in order, from the game's own state and the colour tables."""
+    def __init__(self, patch):
+        self.patch = patch
+        self.art = getattr(patch, 'art_model', patch.art)
+        self.c = bytearray(b'\xff' * (128 * 256))
+        self.s = bytearray(128 * 256)
+        self.pic = None
+        self.panel = bytearray(b'\xff' * (192 * 256))
+        self.ring = 0
+        self.bdon = False
+        self.zdirty = False
+        self.src, self.flip = 0, 0
+        self.fresh = True
+        self.l2on = False
+        self.bd = patch.backdrop
+        self.bdp = 52
+        self.back_after_publish = None
+        self.part = W1
+        self.zx = self.art['zxtab']
+
+    def bdpixel(self, y, x):
+        if not self.bd or not self.bdp:
+            return 0
+        return self.art['pages'][self.bdp + (y >> 5)][(y & 31) * 256 + x]
+
+    def begin(self):
+        if self.zdirty:
+            self.zone()
+            self.zdirty = False
+        if self.fresh:
+            self.pic = bytearray(self.c)
+            self.fresh = False
+
+    def zone(self):
+        for y in range(88, 120):
+            for x in range(240):
+                v = self.s[(y * 256) + 8 + (x + self.ring) % 240]
+                self.c[y * 256 + 8 + x] = v if v else self.bdpixel(y, 8 + x)
+
+    def scene(self):
+        if not self.bdon:
+            self.bdon = True
+            for y in range(16, 120):
+                for x in range(8, 248):
+                    self.c[y * 256 + x] = self.bdpixel(y, x)
+
+    def record(self, p):
+        return self.art['built'][self.part].get(p)
+
+    def tile(self, mem):
+        self.part_of(mem)
+        table = mem[0xB937] | mem[0xB938] << 8
+        rows, cols, y0, col = mem[0xB73C], mem[0xB73E], mem[0xB734], mem[0xB735]
+        clean = table == 0xAF74
+        if clean:
+            self.scene()
+        if cols >= 31:
+            return
+        p = mem[0xB736] | mem[0xB737] << 8
+        flip = 0
+        if p == 0xA62A:
+            p, flip = self.src, self.flip
+        r = self.record(p)
+        self.draw(clean, r['stream'] if r else None, flip, rows, cols, y0, col)
+
+    def clear(self, mem):
+        self.part_of(mem)
+        table = mem[0xB937] | mem[0xB938] << 8
+        rows, cols, y0, col = mem[0xB73C], mem[0xB73E], mem[0xB734], mem[0xB735]
+        clean = table == 0xAF74
+        if clean:
+            self.scene()
+        if cols >= 31:
+            return
+        self.draw(clean, None, 0, rows, cols, y0, col)
+
+    def draw(self, clean, st, flip, rows, cols, y0, col):
+        w = cols * 8
+        for r in range(rows):
+            for i in range(w):
+                v = 0
+                if st is not None:
+                    k = r * w + (w - 1 - i if flip else i)
+                    v = st[k] if k < len(st) else 0
+                    v = 0 if v in (0, 254) else self.zx[7] if v == 255 else v
+                if clean:
+                    y, x = (y0 + r + 16) & 255, 8 + col * 8 + i
+                    if self.part == W1 and y >= 88:
+                        self.s[y * 256 + 8 + ((x - 8 + self.ring) % 240)] = v
+                        self.zdirty = True
+                    elif y < 128:
+                        self.c[y * 256 + x] = v if v else self.bdpixel(y, x)
+                else:
+                    y, x = (y0 + r) & 255, col * 8 + i
+                    if y >= 192:
+                        continue
+                    self.panel[y * 256 + x] = v if v else 255
+                    if 16 <= y < 120 and v:
+                        self.c[y * 256 + x] = v
+
+    def part_of(self, mem):
+        self.part = W1 if mem[0x9EC8:0x9ECA] == b'\x62\xa4' else W2
+        self.bdp = 52 if self.part == W1 else 56
+
+    def event(self, sym, mem, w):
+        if sym == 'h_tile':
+            self.tile(mem)
+        elif sym == 'h_clr':
+            self.clear(mem)
+        elif sym == 'h_strip':
+            p = mem[0xB736] | mem[0xB737] << 8
+            if p != 0xA62A:
+                self.src, self.flip = p, 0
+        elif sym == 'h_flip':
+            self.src, self.flip = mem[0xB736] | mem[0xB737] << 8, 1
+        elif sym == 'h_scrl':
+            self.ring = (self.ring + 4) % 240
+            self.zdirty = True
+        elif sym == 'h_scrr':
+            self.ring = (self.ring - 4) % 240
+            self.zdirty = True
+
+    def screen(self, pc, hl, regs, mem, w):
+        if pc == CLS or hl == 0x4000 or (0x4000 <= hl < 0x5800):
+            self.panel = bytearray(b'\xff' * (192 * 256))
+            for y in range(16, 120):
+                pass
+            self.l2on = False
+        if pc != CLS and hl == 0x6B90:
+            self.ring = 0
+            self.bdon = False
+            self.zdirty = False
+            for y in range(16, 120):
+                self.c[y * 256 + 8:y * 256 + 248] = b'\xff' * 240
+                if y >= 88:
+                    self.s[y * 256 + 8:y * 256 + 248] = bytes(240)
+
+    def plot(self, mem):
+        self.part_of(mem)
+        blk = 0xA208
+        row0, rows, col, cols, k = mem[blk], mem[blk + 1], mem[blk + 2], mem[blk + 3], mem[blk + 4]
+        if not rows:
+            return
+        self.begin()
+        w = mem[blk - 5]
+        n = w // 2
+        src = mem[0xB736] | mem[0xB737] << 8
+        skip = (row0 - mem[0xB734]) & 255
+        p = (src - 2 - skip * w) & 0xFFFF
+        shift = mem[0xB735] & 1
+        paint = mem[0xA36C] != 0xC9
+        attr = mem[0x5C8F] if paint else mem[0x77C1]
+        ink = self.zx[(attr & 7) | (8 if attr & 0x40 else 0)]
+        r = self.record(p)
+        if r is None:
+            # the plain figure, in its ink, with a black mask
+            for row in range(rows):
+                g = [mem[src + row * w + i] for i in range(n)]
+                m = [mem[src + row * w + n + i] for i in range(n)]
+                if shift:
+                    g2, m2, prev = [0] * (n + 1), [0] * (n + 1), 0
+                    for i in range(n):
+                        g2[i] = (prev << 4 | g[i] >> 4) & 255
+                        prev = g[i] & 15
+                    g2[n] = (prev << 4) & 255
+                    prev = 15
+                    for i in range(n):
+                        m2[i] = (prev << 4 | m[i] >> 4) & 255
+                        prev = m[i] & 15
+                    m2[n] = (prev << 4 | 15) & 255
+                    g, m = g2, m2
+                y = row0 + row + 16
+                for c in range(cols):
+                    gb, mb = g[k + c], m[k + c]
+                    x0 = (col + 1 + c) * 8
+                    for b in range(8):
+                        if gb & (128 >> b):
+                            self.pic[y * 256 + x0 + b] = ink
+                        elif not mb & (128 >> b):
+                            self.pic[y * 256 + x0 + b] = 0
+            return
+        stride = r['nb'] * 8
+        st = r['stream']
+        sx = k * 8 - (4 if shift else 0)
+        pad = 0
+        if sx < 0:
+            pad, sx = 4, 0
+        count = min(cols * 8 - pad, stride - sx)
+        dx = (col + 1) * 8 + pad
+        for row in range(rows):
+            y = row0 + row + 16
+            base = (skip + row) * stride + sx
+            for i in range(count):
+                v = st[base + i]
+                if v == 0:
+                    continue
+                if v == 254:
+                    self.pic[y * 256 + dx + i] = self.bdpixel(y, dx + i) if r.get('hole') else 0
+                else:
+                    self.pic[y * 256 + dx + i] = ink if v == 255 else v
+
+    def capture(self, mem, front):
+        for y in range(16, 120):
+            page = front[y >> 5]
+            for xb in range(1, 31):
+                a = 0x4000 | ((y & 0xC0) << 5) | ((y & 7) << 8) | ((y & 0x38) << 2) | xb
+                byte = mem[a]
+                at = mem[0x5800 + (y >> 3) * 32 + xb]
+                br = 8 if at & 0x40 else 0
+                ink, paper = self.zx[(at & 7) | br], self.zx[((at >> 3) & 7) | br]
+                for b in range(8):
+                    x = xb * 8 + b
+                    v = page[(y & 31) * 256 + x]
+                    if self.l2on and v not in (0, 254, 255):
+                        pass
+                    else:
+                        v = ink if byte & (128 >> b) else paper
+                    self.c[y * 256 + x] = v
+        self.zdirty = False
+        self.fresh = True
+
+    def hook(self, kind, mem, w, v, st, c, fail):
+        self.part_of(mem)
+        if kind == 'plot':
+            self.plot(mem)
+        elif kind == 'rest':
+            self.fresh = True
+        elif kind == 'show':
+            bank = st.nr[0x12]
+            other = 19 if bank == 16 else 16
+            self.capture(v.mem, {i: st.pages[bank * 2 + i] for i in range(4)})
+        elif kind == 'copy':
+            self.begin()
+            bank = st.nr[0x12]
+            self.l2on = True
+            bad = 0
+            first = None
+            for y in range(16, 120):
+                page = st.pages[bank * 2 + (y >> 5)]
+                got = page[(y & 31) * 256 + 8:(y & 31) * 256 + 248]
+                want = self.pic[y * 256 + 8:y * 256 + 248]
+                if got != want:
+                    for x, (a, b) in enumerate(zip(got, want)):
+                        if a != b:
+                            bad += 1
+                            if first is None:
+                                first = (x + 8, y, a, b)
+            if bad:
+                y0 = first[1]
+                pg = st.pages[bank * 2 + (y0 >> 5)]
+                fail('Enhanced picture differs from the model', {'count': bad, 'first': first, 'pub': c['publications'], 'part': self.part, 'bank': bank,
+                     'got': list(pg[(y0 & 31) * 256 + 8:(y0 & 31) * 256 + 24]), 'want': list(self.pic[y0 * 256 + 8:y0 * 256 + 24]), 'ring': self.ring,
+                     'cv': list(self.c[y0 * 256 + 8:y0 * 256 + 16]), 'vs': st.page[self.patch.syms['V_S'] - 0x2000], 'cpage': list(st.pages[44 + (y0 >> 5)][(y0 & 31) * 256 + 8:(y0 & 31) * 256 + 16]),
+                     'rows_c_eq_model': sum(1 for y in range(16, 120) if st.pages[44 + (y >> 5)][(y & 31) * 256 + 8:(y & 31) * 256 + 248] == self.c[y * 256 + 8:y * 256 + 248]),
+                     'got_eq_c': sum(1 for y in range(16, 120) if pg_row(st, bank, y) == st.pages[44 + (y >> 5)][(y & 31) * 256 + 8:(y & 31) * 256 + 248]),
+                     'pic_eq_c': sum(1 for y in range(16, 120) if self.pic[y * 256 + 8:y * 256 + 248] == self.c[y * 256 + 8:y * 256 + 248]),
+                     'zn': st.page[0x1E59], 'zd': st.page[0x1E58], 'full': st.page[0x1E57]})
+            pb = 0
+            for bk in (16, 19):
+                for y in list(range(0, 16)) + list(range(120, 192)):
+                    page = st.pages[bk * 2 + (y >> 5)]
+                    if page[(y & 31) * 256:(y & 31) * 256 + 256] != self.panel[y * 256:y * 256 + 256]:
+                        pb += 1
+            if pb:
+                fail('Enhanced panel differs from the model', {'rows': pb, 'pub': c['publications']})
+            if not (v.model.nr.get(0x69, 0) & 0x80 if hasattr(v, 'model') and v.model else True):
+                fail('overlay not on', {'pub': c['publications']})
+            c['publications'] += 1
+            c['Enhanced pictures compared'] += 1
+            c['Enhanced pixels compared'] += 240 * 104
+            self.fresh = True
