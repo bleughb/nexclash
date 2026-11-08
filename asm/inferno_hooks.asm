@@ -2025,6 +2025,405 @@ prepare_frame_end:
         ASSERT prepare_frame_end < 0x0800
         SAVEBIN "inferno_prepare.bin",prepare_frame,prepare_frame_end-prepare_frame
 
+; Copier-window milestone 3b: the 8F95 work (prepare_frame + render_textmap, same results) as a
+; coroutine in page 69 with its own stack, run in slices from cw_wait (cw_work -> wk_in -> wk_enter,
+; DI, 28MHz, IYl = CTC count at which the slice ends) and finished at 8F95 (wk_hook -> wk_frame).
+; Poll points (clear loop, every map cell) read the CTC and yield when the count reaches IYl. The
+; textmap loop uses SP as its map pointer: a yield saves SP, BC, DE, IX and the resume address
+; (HL is dead at both poll points), never CALLs. The work never touches IY (bar IYl), AF' or the
+; alternate set. In work builds 8F95 jumps to wk_hook (ROM), not frame_hook; nothing else changes.
+WK_STACK  EQU 0x1C40            ; work stack (down to the display code end 1B19)
+WK_HSTACK EQU 0x1C80            ; 8F95: the game's registers (below D_COLOURS)
+WK_STATE  EQU 0x1EC0            ; 0 idle, 1 suspended, 2 done (this capture's work)
+WK_FIN    EQU 0x1EC1            ; 1: finishing at 8F95 (polls never yield)
+WK_M2     EQU 0x1EC2            ; slot-2 page of the suspended work (10 or 14)
+WK_PC     EQU 0x1EC3
+WK_SP     EQU 0x1EC5
+WK_BC     EQU 0x1EC7
+WK_DE     EQU 0x1EC9
+WK_IX     EQU 0x1ECB
+WK_GSP    EQU 0x1ECD            ; 8F95: the game's SP
+WK_HR     EQU 0x1ECF            ; 8F95: R at entry
+WK_RN     EQU 0x1ED0            ; 8F95: R to restore
+WK_KR     EQU -24               ; R: 8F95 -> 8F98 original M1 - the hook's M1 around its LD A,R / LD R,A (calibrated)
+        ORG 0x0C00
+wk_enter:                       ; from wk_in: A = 2 first slice of this window (restart)
+        cp 2
+        jr z,wk_new
+        ld a,(WK_STATE)
+        cp 1
+        jr z,wk_resume
+        cp 2
+        jr nz,wk_new
+        ld l,a                  ; done already (cw_wkback stops the slices)
+        jp wk_leave
+wk_new:
+        xor a
+        ld (WK_FIN),a
+        ld hl,0x1B3E            ; the polls' LD A,CW_CTC>>8 back (8F95 replaced it by JR over the poll)
+        ld (wk_clear),hl
+        ld (wk_cell),hl
+wk_start:                       ; (8F95 enters here with WK_FIN = 1)
+        ld a,10
+        ld (WK_M2),a
+        ld sp,WK_STACK
+        call wk_prepare
+        ld a,2
+        ld (WK_STATE),a
+        ld a,(WK_FIN)
+        or a
+        jp nz,wk_fdone
+        ld l,2
+        jp wk_leave
+wk_resume:
+        nextreg 0x51,68
+        ld a,(WK_M2)
+        nextreg 0x52,a
+        ld bc,(WK_BC)
+        ld de,(WK_DE)
+        ld ix,(WK_IX)
+        ld hl,(WK_PC)
+        ld sp,(WK_SP)
+        jp (hl)
+wk_yield:                       ; HL = resume address; SP BC DE IX live
+        ld (WK_PC),hl
+        ld a,(WK_FIN)
+        or a
+        jr nz,wk_yfin
+        ld (WK_SP),sp
+        ld (WK_BC),bc
+        ld (WK_DE),de
+        ld (WK_IX),ix
+        ld a,1
+        ld (WK_STATE),a
+        ld l,a
+wk_leave:                       ; L = state: original slot 1/2 mapping, then NextReg $C8 last
+        nextreg 0x52,10
+        nextreg 0x51,255
+        ld bc,0x243B
+        ld a,0xC8
+        out (c),a
+        inc b
+        in a,(c)
+        jp wk_out
+wk_yfin:                        ; finishing at 8F95: do not yield; the slice end moves on
+        ld a,CW_CTC >> 8
+        in a,(CW_CTC & 0xFF)
+        sub 120
+        ld iyl,a
+        jp (hl)
+
+wk_frame:                       ; from wk_hook: DI, 28MHz, $C8 cleared, all game registers
+        ld (WK_GSP),sp
+        ld sp,WK_HSTACK
+        push af
+        ld a,r
+        ld (WK_HR),a
+        push bc
+        push de
+        push hl
+        push ix
+        push iy
+        ex af,af'
+        push af
+        ex af,af'
+        exx
+        push bc
+        push de
+        push hl
+        exx
+        ld a,1
+        ld (WK_FIN),a
+        ld hl,0x0818            ; JR +8 over each poll: no CTC reads while finishing (wk_new restores)
+        ld (wk_clear),hl
+        ld (wk_cell),hl
+        ld a,(WK_STATE)
+        cp 1
+        jp z,wk_resume          ; finish the suspended work (it ends in wk_start -> wk_fdone)
+        cp 2
+        jp nz,wk_start          ; nothing ran in the window: the whole work here
+wk_fdone:                       ; work done for this capture: restore the game state; R last
+        xor a
+        ld (WK_STATE),a
+        nextreg 0x52,10
+        nextreg 0x51,255
+        ld a,(WK_HR)
+        ld b,a
+        add a,WK_KR
+        xor b
+        and 0x7F
+        xor b
+        ld (WK_RN),a
+        ld bc,0x243B            ; select NextReg $C8 for the read after the pops
+        ld a,0xC8
+        out (c),a
+        ld sp,WK_HSTACK-20
+        exx
+        pop hl
+        pop de
+        pop bc
+        exx
+        ex af,af'
+        pop af
+        ex af,af'
+        pop iy
+        pop ix
+        pop hl
+        pop de
+        pop bc
+        ld a,0x24+1
+        in a,(0x3B)             ; NextReg $C8: a pulse came while DI (lost)
+        rrca
+        call c,wk_lost
+        pop af
+        ld a,(WK_RN)
+        ld r,a
+        ld sp,(WK_GSP)
+        ld a,(0xAC49)           ; the displaced LD A,(44105)
+        jp wk_hexit
+wk_lost:                        ; the original's no-op ISR: R + 10 (after /INT drops). BC kept
+        push bc
+        ld bc,0x243B
+        ld a,0x22
+        out (c),a
+        inc b
+.int:   in a,(c)
+        rlca
+        jr c,.int
+        ld a,(WK_RN)
+        ld b,a
+        add a,CW_ISR_M1
+        xor b
+        and 0x7F
+        xor b
+        ld (WK_RN),a
+        pop bc
+        ret
+
+wk_prepare:                     ; prepare_frame's body as a subroutine on the work stack
+        nextreg 0x51,68
+        xor a
+        ld (F_SCENE_READY),a
+        ld (Q_READY),a
+        ld a,(0x2000+CAP_PHASE)
+        cp 2
+        ret nz
+        xor a
+        ld (0x2000+CAP_PHASE),a
+        ld a,(Q_BUSY)
+        or a
+        jr z,.available
+        ld bc,0x243B
+        ld a,0x7F
+        out (c),a
+        inc b
+        in a,(c)
+        ld b,a
+        ld a,(Q_TOKEN)
+        cp b
+        ret nz                  ; never rebuild memory still owned by a pending display
+.available:
+        ld bc,0x243B
+        ld a,0x6B
+        out (c),a
+        inc b
+        in a,(c)
+        and 0x80
+        ld a,255
+        jr z,.hidden
+        dec b
+        ld a,0x6E
+        out (c),a
+        inc b
+        in a,(c)
+        cp 0x86
+        ld a,0
+        jr nz,.hidden
+        inc a
+.hidden:
+        ld (T_FRONT),a
+        inc a
+        and 1
+        ld (T_HALF),a
+        call wk_textmap
+        ld a,(T_ERROR)
+        or a
+        ret nz
+        ld a,1
+        ld (F_SCENE_READY),a
+        ret
+
+wk_textmap:                     ; render_textmap with poll points (same results)
+        xor a
+        ld (T_ERROR),a
+        ld (T_COUNT),a
+        ld (T_COUNT+1),a
+        ld a,(T_HALF)
+        cp 2
+        jp nc,wk_tbad
+        ld b,a
+        ld a,(T_FRONT)
+        cp b
+        jp z,wk_tbad
+        ld a,(T_FLASH)
+        cp 2
+        jp nc,wk_tbad
+        ld (T_SP),sp
+        ld sp,T_FLAGS+1024
+        ld bc,0
+        ld ixl,32
+wk_clear:                       ; poll: yield when the count reaches IYl (live: SP, BC, IXl)
+        ld a,CW_CTC >> 8
+        in a,(CW_CTC & 0xFF)
+        sub iyl
+        dec a
+        jp m,wk_yclear
+wk_clear_go:
+        DUP 16
+        push bc
+        EDUP
+        dec ixl
+        jr nz,wk_clear
+        ld sp,(T_SP)
+        ld a,(T_HALF)
+        or a
+        ld de,0x4000
+        ld a,0x4C
+        jr z,.half
+        ld de,0x4600
+        ld a,0x54
+.half:  ld (T_DEFHI),a
+        ld a,14
+        ld (WK_M2),a
+        nextreg 0x52,14         ; original screen page hidden only inside DI domain
+        ld sp,T_MAP             ; POP reads the captured map
+        ld ix,0x2012
+wk_cell:                        ; poll (live: SP = map pointer, DE, IX)
+        ld a,CW_CTC >> 8
+        in a,(CW_CTC & 0xFF)
+        sub iyl
+        dec a
+        jp m,wk_ycell
+wk_cell_go:
+        ASSERT wk_cell_go == wk_cell + 10 && wk_clear_go == wk_clear + 10
+        pop bc
+        ld a,b
+        and 3
+        add a,T_FLAGS/256
+        ld h,a
+        ld l,c
+        ld a,(hl)
+        or a
+        jr z,.source
+        add hl,hl
+.pair:  ldi
+        ldi
+        dec ixh
+        jr nz,wk_cell
+        ld a,16
+        add de,a
+        ld ixh,32
+        dec ixl
+        jr nz,wk_cell
+        ld sp,(T_SP)
+        ld a,10
+        ld (WK_M2),a
+        nextreg 0x52,10
+        ret
+.source:
+        ld (T_MAPSP),sp
+        ld sp,(T_SP)
+        push de
+        push hl
+        ld de,(T_COUNT)
+        ld a,d
+        or a
+        jp nz,.full
+        inc de
+        ld (T_COUNT),de
+        dec e
+        ld (hl),1
+        add hl,hl
+        ld (hl),e
+        ld d,8
+        mul d,e
+        ld a,(T_DEFHI)
+        add a,d
+        ld d,a
+        ld (T_PATTERN),de
+        pop hl
+        push hl
+        ld a,h
+        sub T_FLAGS/256
+        ld h,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,0xDC00
+        DUP 8
+        ldi
+        EDUP
+        pop bc
+        ld a,b
+        add a,0xF4
+        ld h,a
+        ld l,c
+        ld a,(hl)
+        ld l,a
+        and 0x80
+        jr z,.noinvert
+        ld a,(T_FLASH)
+        or a
+        jr z,.noinvert
+        push hl
+        ld hl,(T_PATTERN)
+        DUP 8
+        ld a,(hl)
+        cpl
+        ld (hl),a
+        inc l
+        EDUP
+        pop hl
+.noinvert:
+        ld h,4
+        ld a,(hl)
+        ld e,a
+        ld a,(T_HALF)
+        or e
+        ld e,a
+        ld h,b
+        ld l,c
+        add hl,hl
+        inc hl
+        ld (hl),e
+        dec hl
+        pop de
+        ld sp,(T_MAPSP)
+        jp .pair
+.full:
+        pop bc
+        pop de
+        ld a,2
+        ld (T_ERROR),a
+        ld sp,(T_SP)
+        ld a,10
+        ld (WK_M2),a
+        nextreg 0x52,10
+        ret
+wk_tbad:
+        ld a,1
+        ld (T_ERROR),a
+        ret
+wk_ycell:
+        ld hl,wk_cell_go
+        jp wk_yield
+wk_yclear:
+        ld hl,wk_clear_go
+        jp wk_yield
+wk_end:
+        ASSERT wk_end <= 0x1000
+        SAVEBIN "inferno_cwwork.bin",wk_enter,wk_end-wk_enter
+
 ; Packed actor tile primitive, private worker page 75 at slot 0, DI / 28MHz.
 ; Lookup pages 96..111: 128 attribute pairs * 256 bitmap rows * 4 bytes.
 ; Canvas pages 112..115: up to 65536 pixels, two nibbles per byte.
@@ -3667,6 +4066,18 @@ CW_KSPIN  EQU 4                 ; T per /INT wait loop (INC E / IN A,(C) / JP M)
 CW_KH8    EQU 28                ; 8 x T per cw_edge check (calibrated)
 CW_KT     EQU 0x1847            ; signed T: a speed-switch pair on this machine less the model's (cw_cal)
 CW_KTPAIR EQU 46                ; the model's charge per pair + DJNZ, T (calibrated: CW_KT = 0 in the model)
+CW_WKEN   EQU 0x1848            ; 2: this build runs the 8F95 work in cw_wait (milestone 3b), 0: no
+CW_WKGO   EQU 0x1849            ; 2: work pending, first slice not yet run; 1: pending; 0: none/done
+CW_WKSP   EQU 0x184A            ; window SP / IX / IY / BC while a slice runs
+CW_WKIX   EQU 0x184C
+CW_WKIY   EQU 0x184E
+CW_WKBC   EQU 0x1850
+CW_WKC0   EQU 0x1852            ; CTC count at the slice start
+CW_WKN    EQU 0x1853            ; slices run (statistics; wraps)
+CW_FINE   EQU 12                ; ticks: below this cw_wait spins fine; at or above it may run a slice
+CW_WKM    EQU 9                 ; ticks a slice leaves before the deadline: longest work step between
+                                ; polls + yield + the way back into the fine spin (calibrated)
+        ASSERT CW_FINE >= CW_WKM + 3
 CW_IRQSTK EQU 0x1900
 CW_STACK  EQU 0x1A00            ; 19FE: game AF', 19FC: game AF
 CW_CTC    EQU 0x1B3B            ; CTC channel 3
@@ -3707,6 +4118,23 @@ cw_orig:                        ; no CTC: the original copier, registers = 9790 
         nextreg 0x07,0
         ei
         jp 0x9790
+wk_in:                          ; 3b: page 80 -> page 69 (both slot 0): a work slice (A, IYl from cw_work)
+        nextreg 0x50,69
+        jp wk_enter
+wk_out:                         ; page 69 -> page 80: the slice yields (A = $C8, L = state)
+        nextreg 0x50,CW_PAGE
+        jp cw_wkback
+wk_hook:                        ; 8F95 (the copier's return) in work builds: finish the work there
+        di
+        nextreg 0x07,3
+        nextreg 0xC8,1          ; clear "ULA interrupt seen": read at the exit (wk_fdone)
+        nextreg 0x50,69
+        jp wk_frame
+wk_hexit:                       ; from wk_fdone: game registers, R, A = (AC49) as LD A,(44105)
+        nextreg 0x50,255
+        ei
+        nextreg 0x07,0
+        jp 0x8F98
 cw_rom_end:
         ASSERT cw_rom_end < 0x3D00
         SAVEBIN "inferno_cwrom.bin",cw_go,cw_rom_end-cw_go
@@ -3762,7 +4190,7 @@ cw_wait:                        ; HL = T above DE ticks (+16 rounding, no CW_IRQ
         or a
         jr nz,.coarse
         ld a,l
-        cp 128
+        cp CW_FINE              ; (3b: the coarse loop may run work slices down to CW_FINE ticks)
         jr nc,.coarse
         ld e,a                  ; fine: spin on the count until (LAST - count) & 255 >= E
         ld a,(CW_LAST)
@@ -3805,6 +4233,15 @@ cw_wait:                        ; HL = T above DE ticks (+16 rounding, no CW_IRQ
         sbc hl,de
         jr c,.done
         jr z,.done
+        ld a,(CW_WKGO)          ; 8F95 work pending this window and >= CW_FINE ticks to go: a slice
+        or a
+        jr z,.class
+        ld a,h
+        or a
+        jp nz,cw_work
+        ld a,l
+        cp CW_FINE
+        jp nc,cw_work
         jr .class
 .irq:   ld a,(CW_NIRQ)          ; an IRQ came: did the original make this OUT before it?
         ld (CW_DNIRQ),a
@@ -3825,6 +4262,77 @@ cw_wait:                        ; HL = T above DE ticks (+16 rounding, no CW_IRQ
         ld hl,(CW_DL)
         jp .recalc
 cw_wait_end:
+
+; Milestone 3b: a slice of the 8F95 work (page-69 coroutine, wk_enter) inside cw_wait. HL = ticks
+; to the deadline (>= CW_FINE). The slice ends CW_WKM ticks before it (at most 120 ticks: the 8-bit
+; count), DI (slot 0 is page 69, which does not own the IM2 offset); NextReg $C8 is cleared here and
+; read at the yield: a pulse in the slice is counted as cw_irq does. Window registers and SP are kept
+; here (the work has its own stack; nothing is pushed on the copier's).
+cw_work:
+        ld a,h
+        or a
+        ld a,120
+        jr nz,.len
+        ld a,l
+        sub CW_WKM
+        cp 120
+        jr c,.len
+        ld a,120
+.len:   ld e,a
+        di
+        ld (CW_WKSP),sp
+        ld (CW_WKIX),ix
+        ld (CW_WKIY),iy
+        ld (CW_WKBC),bc
+        ld a,CW_CTC >> 8
+        in a,(CW_CTC & 0xFF)
+        ld (CW_WKC0),a
+        ld a,(CW_LAST)          ; slice end: the count CW_WKM ticks before the deadline
+        sub e
+        ld iyl,a
+        ld hl,CW_WKN
+        inc (hl)
+        ld a,(CW_WKGO)          ; 2: first slice this window (the work restarts on this capture)
+        ld e,a
+        ld a,1
+        ld (CW_WKGO),a
+        ld a,e
+        nextreg 0xC8,1
+        jp wk_in
+cw_wkback:                      ; from wk_out: slot 0 = page 80, DI; A = NextReg $C8, L = 2: work done
+        ld h,a
+        ld a,l
+        cp 2
+        jr nz,.more
+        xor a
+        ld (CW_WKGO),a
+.more:  ld a,h
+        rrca
+        jr nc,.in
+        ld bc,0x243B            ; a pulse came in the slice (lost, DI): wait until /INT drops,
+        ld a,0x22               ; then the original's no-op ISR as cw_irq counts it, at the slice
+        out (c),a               ; start (before the deadline)
+        inc b
+.intw:  in a,(c)
+        rlca
+        jr c,.intw
+        ld a,(CW_WKC0)
+        ld (CW_IRQRAW),a
+        ld hl,(CW_IRQT)
+        add hl,CW_ISR_T
+        ld (CW_IRQT),hl
+        ld a,(CW_RIRQ)
+        add a,CW_ISR_M1
+        ld (CW_RIRQ),a
+        ld hl,CW_NIRQ
+        inc (hl)
+.in:    ld sp,(CW_WKSP)
+        ld ix,(CW_WKIX)
+        ld iy,(CW_WKIY)
+        ld bc,(CW_WKBC)
+        ei
+        jp cw_wait.coarse
+cw_work_end:
 
 cw_head:
         ld (CW_SP),sp
@@ -3890,6 +4398,8 @@ cw_intw:
         ld (CW_RIRQ),a
 cw_nolost:
         ei                      ; IRQs from here on enter cw_irq (no SP below a live saved value)
+        ld a,(CW_WKEN)          ; 3b: the 8F95 work may run in this window's waits
+        ld (CW_WKGO),a
         ld hl,1024
         ld (CW_NOW),hl
         ld a,24

@@ -4411,8 +4411,10 @@ class CopierWindowPatch(CapturePatch):
     """Capture patch whose 8F92 tail enters the copier window instead of JP 9790.
 
     window_only: the milestone-2 vehicle installs only the 8F92 site (cap_done, then the window);
-    no capture hooks run before it, so the earlier-hook time X is 0 at run time."""
-    def __init__(self, head=None, window_only=False, rom_code=None):
+    no capture hooks run before it, so the earlier-hook time X is 0 at run time.
+    work (milestone 3b): the 8F95 work (prepare_frame + render_textmap) runs as a page-69 coroutine
+    in the window's waits (cw_work) and is finished at 8F95 (JP wk_hook; R restored there)."""
+    def __init__(self, head=None, window_only=False, rom_code=None, work=False, work_code=None):
         super().__init__()
         h = load_profile()['hooks']
         rom_code = bytes.fromhex(h['cwrom']) if rom_code is None else bytes(rom_code)
@@ -4433,6 +4435,41 @@ class CopierWindowPatch(CapturePatch):
             self.stops = {}
         self.stops = dict(self.stops)
         self.stops[0x8F92] = 0x9907
+        self.work = bool(work)
+        if self.work:
+            if window_only:
+                raise ValueError('the 8F95 work needs the capture hooks')
+            self.sites[0x8F95] = bytes.fromhex('3A49AC'), b'\xC3' + self.syms['wk_hook'].to_bytes(2, 'little')
+            self.stops[0x8F95] = 0x8F98
+            self.site_bytes = {a + j for a, (old, new) in self.sites.items() for j in range(len(old))}
+            self.renderer = cw_work_renderer(work_code)
+
+
+def cw_work_renderer(work_code=None):
+    """Page 69 of a work build: FramePatch's renderer image (textmap, queue, prepare, display and the
+    palette tables) plus the coroutine (cwwork at wk_enter)."""
+    h = load_profile()['hooks']
+    page = bytearray(8192)
+    for block, symbol in (('textmap', 'render_textmap'), ('queue', 'queue_frame'), ('prepare', 'prepare_frame'), ('display', 'setup_display')):
+        org = int(h['syms'][symbol], 16)
+        code = bytes.fromhex(h[block])
+        page[org:org + len(code)] = code
+    for phase in range(2):
+        page[0x400 + phase * 256:0x500 + phase * 256] = bytes((a & 127) * 2 for a in range(256))
+    code = bytes.fromhex(h['cwwork']) if work_code is None else bytes(work_code)
+    org = int(h['syms']['wk_enter'], 16)
+    if any(page[org:org + len(code)]):
+        raise ValueError('work code overlaps the renderer page')
+    page[org:org + len(code)] = code
+    return page
+
+
+CW_WKEN, CW_WKN = 0x1848, 0x1853        # page 80: work build flag (2), slices run
+WK_STATE = 0x1EC0                       # page 69: 0 idle, 1 suspended, 2 done
+WK_SP = 0x1EC5                          # page 69: the suspended work's SP
+# page-69 bytes that are the 8F95 work's results (prepare_frame/render_textmap state; not its stack/SP saves)
+WK_RESULT = [(0x0800, 0x0C00), (0x1000, 0x1800), (0x1E80, 0x1E86), (0x1E88, 0x1E89), (0x1E8B, 0x1E8D),
+             (0x1EA1, 0x1EA2), (0x1EAC, 0x1EAD)]
 
 
 class CopierWindowMemory(CaptureMemory):
@@ -4449,6 +4486,66 @@ class CopierWindowMemory(CaptureMemory):
             super().write_port(regs, port, value)
 
 
+class CopierWorkMemory(CopierWindowMemory):
+    """+ the 8F95 work (milestone 3b): page 69 (code, state, stacks), page 14 (textmap output),
+    slot 1 = page 68 and slot 2 = page 14 as the work maps them, and the display registers that
+    prepare_frame reads (static here: no display layer). The work may not write game RAM."""
+    def __init__(self, ram, state, patch, *args, pages=None, display=None):
+        super().__init__(ram, state, patch, *args)
+        self.pages[CW_PAGE][CW_WKEN] = 2
+        self.pages[69] = bytearray(pages[69]) if pages else bytearray(patch.renderer)
+        self.pages[14] = bytearray(pages[14]) if pages else bytearray([0xE3] * 8192)
+        self.mmu1, self.mmu2 = 255, 10
+        self.nr = dict(display or {0x6B: 0x0B, 0x6E: 0x80, 0x7F: 0})
+
+    def __getitem__(self, a):
+        if isinstance(a, slice):
+            return [self[i] for i in range(*a.indices(65536))]
+        if self.speed == 3:
+            self.fast_reads += 1
+        if a < 8192 and self.mmu0 != 255:
+            return self.pages[self.mmu0][a]
+        if 8192 <= a < 16384 and self.mmu1 != 255:
+            return self.pages[self.mmu1][a - 8192]
+        if 0x4000 <= a < 0x6000 and self.mmu2 == 14:
+            return self.pages[14][a - 0x4000]
+        return self.rom[a] if a < 16384 else self.ram[a]
+
+    def __setitem__(self, a, v):
+        if 8192 <= a < 16384 and self.mmu1 != 255:
+            self.pages[self.mmu1][a - 8192] = v
+        elif 0x4000 <= a < 0x6000 and self.mmu2 == 14:
+            self.pages[14][a - 0x4000] = v
+        elif self.mmu0 == 69 and a >= 0x4000:
+            raise AssertionError('8F95 work wrote game RAM %04X' % a)
+        else:
+            super().__setitem__(a, v)
+
+    def nextreg(self, reg, value):
+        if reg == 0x50 and value == 69:
+            self.mmu0 = value
+            self.maps.append(value)
+        elif reg == 0x51 and value in (68, 255):
+            self.mmu1 = value
+        elif reg == 0x52 and value in (14, 10):
+            self.mmu2 = value
+        else:
+            if reg == 0x07 and value == 0 and (self.mmu1 != 255 or self.mmu2 != 10):
+                raise AssertionError('speed restored before the original mapping')
+            super().nextreg(reg, value)
+
+    def write_port(self, regs, port, value, *args):
+        if port == 0x243B and value in self.nr:
+            self.nr_sel = value
+        else:
+            super().write_port(regs, port, value)
+
+    def read_port(self, regs, port):
+        if port == 0x253B and self.nr_sel in self.nr:
+            return self.nr[self.nr_sel]
+        return super().read_port(regs, port)
+
+
 def _cost(r, before, speed, reads, mem):
     """Equivalent 3.5MHz T of one step; 28MHz reads carry one wait; transitions charged at 3.5MHz
     (mem.fast_switch: at 28MHz instead - the other bound, for the self-calibration check)."""
@@ -4457,7 +4554,7 @@ def _cost(r, before, speed, reads, mem):
 
 
 def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count0=0, irqs=(), limit=600000,
-                  fast_switch=False, kt=0):
+                  fast_switch=False, kt=0, frame=False, frame_irq=None):
     """8F92 -> 9907 differentially, on one wall clock (3.5MHz T from the 8F92 state).
 
     Original: CALL 9790 path with frame IRQs (if any) at the given wall times. Patched: cap_done +
@@ -4466,7 +4563,10 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
     final SP, which 9907's PUSH DE / PUSH HL overwrite (run in both, then all RAM must match); the
     OUT (254) stream = the original's value changes in order, each at its original T within CW_TOL,
     or late (head not yet there); 9907 at its original time within CW_TOL. Without IRQs also the
-    milestone-1 log against cw_out_t and the head T model."""
+    milestone-1 log against cw_out_t and the head T model.
+    Work patch (milestone 3b): the 8F95 work runs in slices inside the window's waits (DI, page 69;
+    reported: slices, work T, spans). frame: then 8F95 -> 8F98 (run_cw_frame) from the original's
+    8F95 state; its page 14/69/68 results must equal run_frame's (the 8F95 work run at 8F95)."""
     from skoolkit.simulator import Simulator
     from .dizzy6 import _rw_simulator
     from . import z80n, simpool
@@ -4481,7 +4581,9 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
     start = registers[25]
     foot = set()
     game_pc = lambda pc: pc >= 0x4000 and not (0x998B <= pc < 0x99BC or pc >= 0xFFF4)   # not the ISR
-    mem = CopierWindowMemory(patch.apply_memory(source), bytearray(8192), patch, clk, x, ctc, phase, count0, irqs)
+    work = getattr(patch, 'work', False)
+    mem = (CopierWorkMemory if work else CopierWindowMemory)(patch.apply_memory(source), bytearray(8192), patch,
+                                                             clk, x, ctc, phase, count0, irqs)
     mem.log_outs = site == 0x8F92
     mem.fast_switch = fast_switch
     mem.pages[CW_PAGE][CW_KT] = kt & 0xFF
@@ -4500,6 +4602,7 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
     # in the window (and pulses nothing compensated) keep their wall time.
     anchors, gcount, unanchored = {}, 0, []
     lost_at = syms_lost = patch.syms.get('cap_lost')
+    work_t, work_spans, w_start, state68 = 0.0, [], None, None
     while r[24] != 0x9907:
         if steps >= limit:
             raise AssertionError('copier window did not reach 9907')
@@ -4511,7 +4614,8 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
                 di_spans.append((di_start - x, elapsed - di_start))
                 di_start = None
             if not ((mem.mmu0 == 255 and mem.speed == 0) or (mem.mmu0 == CW_PAGE and mem.speed == 3)
-                    or (mem.mmu0 == 255 and mem[prev] == 0xFB)):   # EI: no IRQ before the next instruction
+                    or (mem.mmu0 == 255 and mem[prev] == 0xFB)) or getattr(mem, 'mmu1', 255) != 255 \
+                    or getattr(mem, 'mmu2', 10) != 10:   # EI: no IRQ before the next instruction
                 raise AssertionError('interrupt-enabled scratch mapping or fast game code')
         elif di_start is None:
             di_start = elapsed
@@ -4546,6 +4650,8 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
         if pc == 0x8F92 and not reached_8f92:
             reached_8f92, p8f92, mem.log_outs = True, elapsed, True
             x_window = int.from_bytes(mem.pages[CW_PAGE][CW_X:CW_X + 2], 'little')
+        if work and pc == syms['cw_go'] and state68 is None:
+            state68 = bytes(mem.pages[STATE_PAGE])      # the capture as the 8F95 work will find it
         mem.wall = elapsed
         before, speed, reads, page = r[25], mem.speed, mem.fast_reads, mem.mmu0
         prev = pc
@@ -4554,6 +4660,13 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
         elapsed += cost
         if page == CW_PAGE and any(a <= pc < b for a, b in waits):
             wait_t += cost
+        if page == 69:
+            work_t += cost
+            if w_start is None:
+                w_start = elapsed - cost
+        elif w_start is not None:
+            work_spans.append((w_start - x, elapsed - cost - w_start))
+            w_start = None
         steps += 1
     if di_start is not None:
         di_spans.append((di_start - x, elapsed - di_start))
@@ -4674,7 +4787,97 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
             # it and still did not compensate is a failure, not a gap)
             'irqs_gap': [w for w in p_lost if w not in anchors and (p8f92 is None or w < p8f92)
                          and not any(w <= c <= w + 60 for c in mem.c8_reads)],
-            'irqs_anchored': len(anchors)}
+            'irqs_anchored': len(anchors),
+            'work_T': work_t, 'work_spans': work_spans, 'slices': len(work_spans),
+            'work_done': bool(work) and mem.pages[69][WK_STATE] == 2,
+            'frame': (run_cw_frame(patch, original, mem.pages, state68, phase=phase, count0=count0, irq=frame_irq)
+                      if work and frame else None)}
+
+
+def run_cw_frame(patch, original, pages, state68, phase=0, count0=0, irq=None, release=300):
+    """Milestone 3b: 8F95 -> 8F98 after a window run. original: the original machine just past 9907
+    (state proven equal to the patched one there); it is run to 8F95 with one frame IRQ `release`
+    instructions in (the one that ends the 9907 limiter). From that 8F95 state the work patch's
+    hook (wk_hook) finishes the work with the window run's pages 68/69/14 and returns to 8F98:
+    registers incl. R and all RAM equal to the original's 8F98 (irq: a pulse at that T after 8F95,
+    inside the hook: lost and compensated; the original takes the no-op ISR at 8F98); pages 14,
+    68 (bar the capture stack/SP) and 69's results (WK_RESULT) equal run_frame (FramePatch, the
+    work at 8F95) from the same 8F95 state and the capture as the window found it."""
+    from skoolkit.simulator import Simulator
+    from .dizzy6 import _rw_simulator
+    from . import z80n, simpool
+    o, om = original.registers, original.memory
+    prev, steps = o[24], 0
+    while o[24] != 0x8F95:
+        if steps == release and o[26]:
+            if not original.accept_interrupt(o, om, prev):
+                raise AssertionError('limiter IRQ not accepted')
+        prev = o[24]
+        original.opcodes[om[o[24]]]()
+        steps += 1
+        if steps > 400000:
+            raise AssertionError('original did not reach 8F95')
+    ram, regs = bytes(om[0:65536]), list(o)
+    errors = []
+    # the original 8F95 -> 8F98 (+ the no-op ISR at 8F98 when a pulse is tested)
+    ref = simpool.machine(Simulator, bytearray(ram), regs, 'inferno.cwf.original', copy=True)
+    q, qm = ref.registers, ref.memory
+    while q[24] != 0x8F98:
+        ref.opcodes[qm[q[24]]]()
+    t_orig = q[25] - regs[25]
+    if irq is not None:
+        sp = q[12]
+        if not ref.accept_interrupt(q, qm, 0x8F95):
+            raise AssertionError('original IRQ at 8F98 not accepted')
+        while not (q[24] == 0x8F98 and q[12] == sp):
+            ref.opcodes[qm[q[24]]]()
+    mem = CopierWorkMemory(patch.apply_memory(list(ram)), pages[STATE_PAGE], patch, 1, 0, True, phase, count0,
+                           () if irq is None else (irq,), pages=pages)
+    sim = simpool.machine(_rw_simulator(), mem, regs, 'inferno.cwf.patched')
+    sim.set_tracer(mem)
+    r = sim.registers
+    z80n.install(sim, mem.nextreg)
+    elapsed, n = 0.0, 0
+    resumed = mem.pages[69][WK_STATE]
+    while r[24] != 0x8F98:
+        if n > 300000:
+            raise AssertionError('8F95 hook did not return')
+        if r[24] in patch.site_bytes and r[24] not in patch.sites:
+            raise AssertionError('8F95 hook jumped into a patched instruction interior')
+        if r[26] and r[24] != 0x8F95 and mem[(r[24] - 1) & 0xFFFF] != 0xFB:
+            if mem.mmu0 != 255 or mem.speed != 0 or mem.mmu1 != 255 or mem.mmu2 != 10:
+                raise AssertionError('interrupt-enabled scratch mapping in the 8F95 hook')
+        before, speed, reads = r[25], mem.speed, mem.fast_reads
+        mem.wall = elapsed
+        sim.opcodes[mem[r[24]]]()
+        elapsed += _cost(r, before, speed, reads, mem)
+        n += 1
+    diffs = [i for i in CMP if r[i] != q[i]]
+    if diffs:
+        errors.append('8F98 registers ' + str(diffs))
+    if r[15] != q[15]:
+        errors.append('8F98 R %02X != %02X' % (r[15], q[15]))
+    expected = bytearray(qm[16384:])
+    for a, (old, new) in patch.sites.items():
+        expected[a - 16384:a - 16384 + len(new)] = new
+    below = {(regs[12] - j) & 0xFFFF for j in range(1, 5)} if irq is not None else set()   # the ISR's pushes
+    bad = [i + 16384 for i, (u, v) in enumerate(zip(mem.ram[16384:], expected)) if u != v and i + 16384 not in below]
+    if bad:
+        errors.append('8F98 RAM %s' % [hex(a) for a in bad[:6]])
+    good = run_frame(FramePatch(), list(ram), regs, bytearray(state68))
+    gp = good['pages']
+    if bytes(mem.pages[14]) != gp[14]:
+        errors.append('page 14 differs from the 8F95 work')
+    if any(bytes(mem.pages[69][a:b]) != gp[69][a:b] for a, b in WK_RESULT):
+        errors.append('page 69 results differ from the 8F95 work')
+    keep = lambda p: bytes(p[:CAP_SP_OFF]) + bytes(p[CAP_SP_OFF + 2:0x1F80])
+    if keep(mem.pages[STATE_PAGE]) != keep(gp[STATE_PAGE]):
+        errors.append('page 68 differs from the 8F95 work')
+    return {'errors': errors, 'ready': bool(gp[69][0x1EAC]), 'state_at_8f95': resumed,
+            'hook_T': elapsed, 'added_T': elapsed - t_orig, 'reference_T': good['equivalent_T']}
+
+
+CAP_SP_OFF = 0x03F0                     # page 68: CAP_SP (the legacy frame hook saves the game SP there)
 
 
 def _cw_out_model(memory):
@@ -4737,7 +4940,7 @@ def copier_window_controls(head, syms):
     code = bytearray(head)
     code[rk + 5] = (code[rk + 5] + 1) & 0xFF
     c['R constant off by one'] = (code, False)
-    a, b = syms['cw_irq'], syms['cw_head']
+    a, b = syms['cw_irq'], syms['cw_wait']   # cw_irq only (cw_wkback counts the same way)
     c['IRQ T not added'] = (head[:a] + _cw_variant(head[a:b], bytes.fromhex('ED34') + CW_ISR[0].to_bytes(2, 'little'),
                                                    bytes.fromhex('ED340000')) + head[b:], True)
     c['IRQ M1 not added'] = (head[:a] + _cw_variant(head[a:b], bytes((0xC6, CW_ISR[1])), b'\xC6\x00') + head[b:], True)
@@ -4781,8 +4984,10 @@ def _cw_rom_variant(patch, lo, hi, old, new, count=1):
 def copier_window_update_controls():
     """Broken hooks / window entries the update model must reject: name -> (patch, IRQ kind). IRQ
     kind: None; 'hook' (a pulse inside the 8F7C hook: lost); 'entry' (inside the window's entry DI
-    span: lost); 'before' (a pulse taken by game code before an actor hook)."""
-    p = CopierWindowPatch
+    span: lost); 'before' (a pulse taken by game code before an actor hook); 'slice' (inside the first
+    work slice: lost); 'frame' (inside the 8F95 hook: lost). Milestone 3b: the work patch throughout."""
+    def p(head=None, rom_code=None, work_code=None):
+        return CopierWindowPatch(head, rom_code=rom_code, work=True, work_code=work_code)
     s = p().syms
     hooks = load_profile()['hooks']
     cap, lo = bytes.fromhex(hooks['capture']), bytes.fromhex(hooks['caplo'])
@@ -4804,6 +5009,21 @@ def copier_window_update_controls():
     c['lost IRQ: X not adjusted'] = (_cw_rom_variant(p(), l0, l0 + len(lo), lo[ka:ka + 4], b'\xED\x35' + ((kl + 94) & 0xFFFF).to_bytes(2, 'little')), 'hook')
     c['hook $C8 clear removed'] = (_cw_rom_variant(p(), 0x3900, 0x3C00, b'\xED\x91\xC8\x01', bytes(4), 4), 'before')
     c['window entry lost IRQ not counted'] = (p(_cw_variant(p().head, bytes.fromhex('ED780F30'), b'\x18', 3)), 'entry')
+    # 3b: the work in the window's waits and its 8F95 finish
+    work = bytes.fromhex(load_profile()['hooks']['cwwork'])
+    poll = bytes.fromhex('3E1BDB3BFD953DFA')            # LD A,1B / IN A,(3B) / SUB IYl / DEC A / JP M
+    if work.count(poll) != 2:
+        raise AssertionError('work poll pattern')
+    c['work ignores the slice end (polls never yield)'] = (p(work_code=work.replace(poll, poll[:6] + b'\xAF\xFA')), None)
+    c['slice lost pulse not counted'] = (p(_cw_variant(p().head, bytes.fromhex('7C0F30'), b'\x18', 2)), 'slice')
+    wsp = b'\xED\x73' + WK_SP.to_bytes(2, 'little')          # LD (WK_SP),SP in wk_yield
+    if work.count(wsp) != 1:
+        raise AssertionError('WK_SP save pattern')
+    c['yield loses SP'] = (p(work_code=work.replace(wsp, bytes(4))), None)
+    lost = bytes.fromhex('C60AA8E67FA8')               # wk_lost: ADD A,10 / XOR B / AND 7F / XOR B
+    if work.count(lost) != 1:
+        raise AssertionError('wk_lost pattern')
+    c['8F95 lost pulse not counted'] = (p(work_code=work.replace(lost, b'\xC6\x00' + lost[2:])), 'frame')
     return c
 
 
@@ -4813,10 +5033,11 @@ def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, o
     9907 on time; X measured against the true added time. Every every_irq-th state: frame IRQs before,
     inside and after the hooks and in the window's entry DI span (lost pulses compensated), and the
     negative controls."""
-    patch = CopierWindowPatch()
+    patch = CopierWindowPatch(work=True)
     ctl = copier_window_update_controls() if controls else {}
     counts, failures, detected = Counter(), [], Counter()
     xerr, d9907s, xs, busy, wait, gaps = [], [], [], [], [], []
+    work_ms, f_added, f_full = [], [], []
     first = next(c for c in states.values() if c)[0]   # any state: cw_cal's result does not depend on it
     # the other bound for the speed switches: charged at 28MHz; the first window measures them (cw_cal)
     kt_fast = run_cw_window(patch, first[0], first[1], clk=0, fast_switch=True)['kt']
@@ -4827,7 +5048,7 @@ def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, o
     if at < 0 or head.find(bytes.fromhex('3A4718' '5F879F5719'), at + 1) >= 0:
         raise AssertionError('cw_tout KT pattern')
     head[at + 7] = 0
-    ctl_kt = CopierWindowPatch(bytes(head))
+    ctl_kt = CopierWindowPatch(bytes(head), work=True)
 
     def fail(level, i, what, res):
         if len(failures) < 80:
@@ -4843,12 +5064,23 @@ def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, o
             counts['states'] += 1
             phase, count0 = (n * 13) % CW_TICK, (n * 37) & 255
             try:
-                res = run_cw_window(patch, ram, regs, phase=phase, count0=count0)
+                res = run_cw_window(patch, ram, regs, phase=phase, count0=count0, frame=True)
             except AssertionError as e:
                 fail(level, i, 'no IRQ', e)
                 continue
             if res['errors'] or res['fallback']:
                 fail(level, i, 'no IRQ', res)
+            fr = res['frame']
+            if fr['errors']:
+                fail(level, i, '8F95 finish', fr)
+            counts['work slices'] += res['slices']
+            counts['work done in the window'] += res['work_done']
+            counts['work resumed at 8F95'] += fr['state_at_8f95'] == 1
+            counts['work all at 8F95 (no slice)'] += fr['state_at_8f95'] == 0
+            counts['frames ready'] += fr['ready']
+            work_ms.append(res['work_T'])
+            f_added.append(fr['added_T'])
+            f_full.append(fr['reference_T'])
             xw = res['x_window'] - (65536 if res['x_window'] >= 32768 else 0)
             xerr.append(xw - res['x_true'])
             xs.append(res['x_true'])
@@ -4866,6 +5098,8 @@ def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, o
                 points += [s - 28, s - 8, s + 4, s + l / 2, s + l - 24, s + l - 8, s + l + 4]
             for s, l in entry:
                 points += [s + 2, s + l / 2, s + l - 4]
+            for s, l in res['work_spans'][:2] + res['work_spans'][-1:]:   # inside work slices (DI, page 69)
+                points += [s + 4, s + l / 2, s + l - 8]
             points += [j * res['o9907'] / 9 for j in range(1, 9)]
             for t in sorted(set(round(v, 1) for v in points if 0 < v < res['o9907'] - 300)):
                 try:
@@ -4883,6 +5117,15 @@ def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, o
                 d9907s.append(ri['d9907'])
                 if ri['errors'] or ri['original_irqs'] != 1:
                     fail(level, i, 'IRQ at %.0f' % t, ri)
+            if fr['hook_T'] > 120:      # a pulse inside the 8F95 hook (DI): lost, compensated (R + 10)
+                t = max(40.0, fr['hook_T'] / 2 - 40)
+                try:
+                    rj = run_cw_window(patch, ram, regs, phase=phase, count0=count0, frame=True, frame_irq=t)['frame']
+                except AssertionError as e:
+                    rj = {'errors': [str(e)]}
+                counts['IRQ in the 8F95 hook (lost, compensated)'] += 1
+                if rj['errors']:
+                    fail(level, i, '8F95 IRQ at %.0f' % t, rj)
             rf = run_cw_window(patch, ram, regs, phase=phase, count0=count0, fast_switch=True, kt=kt_fast)
             counts['fast speed-switch runs (cw_cal correction)'] += 1
             d9907s.append(rf['d9907'])
@@ -4898,10 +5141,16 @@ def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, o
                     irq = (entry[0][0] + entry[0][1] / 2,)
                 elif kind == 'before' and len(spans) > 1:
                     irq = ((spans[0][0] + spans[0][1] + spans[1][0]) / 2,)
-                if kind and not irq:
+                elif kind == 'slice' and res['work_spans']:
+                    irq = (res['work_spans'][0][0] + res['work_spans'][0][1] / 2,)
+                if kind and kind != 'frame' and not irq:
                     continue
+                if (kind == 'frame' and fr['hook_T'] <= 120) or (name.startswith(('work', 'yield')) and res['slices'] < 2):
+                    continue            # nothing for the control to break in this state
                 try:
-                    bad = run_cw_window(bp, ram, regs, phase=phase, count0=count0, irqs=irq)['errors']
+                    rc = run_cw_window(bp, ram, regs, phase=phase, count0=count0, irqs=irq, frame=True,
+                                       frame_irq=max(40.0, fr['hook_T'] / 2 - 40) if kind == 'frame' else None)
+                    bad = rc['errors'] + rc['frame']['errors']
                 except AssertionError as e:
                     bad = [str(e)]
                 detected[name + (' detected' if bad else ' MISSED')] += 1
@@ -4914,10 +5163,14 @@ def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, o
             'post_check_gap_d9907_T': {'min': q(gaps, 0), 'max': q(gaps, 1)},
             'window_busy_ms_max': round(max(busy, default=0) / 3500, 3),
             'window_wait_ms_min': round(min(wait, default=0) / 3500, 3),
+            'work_in_window_T': {'min': q(work_ms, 0), 'median': q(work_ms, .5), 'max': q(work_ms, 1)},
+            'frame_8f95_added_T': {'min': q(f_added, 0), 'median': q(f_added, .5), 'p90': q(f_added, .9), 'max': q(f_added, 1)},
+            'frame_work_at_8f95_before_T': {'min': q(f_full, 0), 'median': q(f_full, .5), 'max': q(f_full, 1)},
             'negative_controls': dict(detected),
-            'scope': 'update model 8F7C -> 9907 in the simulator: capture hooks + copier window, CTC, frame '
-                     'IRQ and NextReg $C8/$22 models (a $C8 clear during a pulse does not take); uncontended '
-                     'T with 28MHz read waits, speed transitions charged at 3.5MHz; no hardware'}
+            'scope': 'update model 8F7C -> 9907 -> 8F98 in the simulator: capture hooks + copier window + the 8F95 '
+                     'work in its waits (milestone 3b), finished at 8F95; CTC, frame IRQ and NextReg $C8/$22 models '
+                     '(a $C8 clear during a pulse does not take); uncontended T with 28MHz read waits, speed '
+                     'transitions charged at 3.5MHz; 9907 -> 8F95 by the original with one limiter IRQ; no hardware'}
 
 
 def _cw_n(level, i):
@@ -5148,13 +5401,15 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
     """Software diagnostic from level 1: the copier window at 8F92 (cap_done + page 80), the bank
     loader as in the capture diagnostic; no sprite/Layer 2 display. window_only: no capture hooks
     (milestone 2, X = 0); else the capture hooks too (milestone 3: X measured, R restored, map copy
-    by DMA). Hardware test vehicle for pace and sound against the plain Inferno.nex; not a release."""
+    by DMA). work (milestone 3b): + the 8F95 work in the window's waits, finished at 8F95 (page 69,
+    bank 34's upper half; CW_WKEN set in page 80). Hardware test vehicle for pace and sound against
+    the plain Inferno.nex; not a release."""
     name = 'Inferno copier-window diagnostic (no sprites; not a release)'
     tail_addr, max_tail = 0x9A80, 128
 
-    def __init__(self, blocks, window_only=True):
+    def __init__(self, blocks, window_only=True, work=False):
         super().__init__(blocks)
-        self.window = CopierWindowPatch(window_only=window_only)
+        self.window = CopierWindowPatch(window_only=window_only, work=work)
         self.page = bytes(self.window.rom[8192:])
         self.extra_banks[12] = self.page + bytes(8192)
         rb = self.regblock - 0x2000            # the stub writes 20 register bytes there at boot
@@ -5164,6 +5419,13 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
         head[:len(self.window.head)] = self.window.head      # CW_CLK = 0: CTC tested at first use
         if CW_PAGE // 2 in self.extra_banks:
             raise ValueError('page 80 already allocated')
+        if work:
+            head[CW_WKEN] = 2
+            image = bytearray(self.extra_banks.get(69 // 2, bytes(16384)))
+            if any(image[8192:]):
+                raise ValueError('page 69 already allocated')
+            image[8192:] = self.window.renderer
+            self.extra_banks[69 // 2] = bytes(image)
         self.extra_banks[CW_PAGE // 2] = bytes(head) + bytes(8192)
         self.sites = [(a, old, new) for a, (old, new) in self.window.sites.items()]
 
@@ -5175,17 +5437,20 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
         snap.banks[5], snap.banks[2], snap.banks[0] = bytes(ram[:16384]), bytes(ram[16384:32768]), bytes(ram[32768:])
 
 
-def copier_window_build(reference, folder, hooks=False):
-    """Inferno_copier_window_diagnostic.nex (window only) or, with hooks, Inferno_copier_window_m3_
-    diagnostic.nex (capture hooks + window) + boot checks (NEXLOAD and foreign ROM3) + page-80 bytes."""
+def copier_window_build(reference, folder, hooks=False, work=False):
+    """Inferno_copier_window_diagnostic.nex (window only), with hooks Inferno_copier_window_m3_
+    diagnostic.nex (capture hooks + window), with work Inferno_copier_window_m3b_diagnostic.nex (+ the
+    8F95 work in the window's waits) + boot checks (NEXLOAD and foreign ROM3) + page-80/69 bytes."""
     from . import z80tonex, nextboot
     from .build import rom48
     from hashlib import md5
     reference, folder = Path(reference), Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
     snapshot = reference / 'Inferno.z80'
-    patch = CopierWindowSnapshotPatch(tape_blocks(reference / 'Inferno.tzx'), window_only=not hooks)
-    nex = folder / ('Inferno_copier_window_m3_diagnostic.nex' if hooks else 'Inferno_copier_window_diagnostic.nex')
+    hooks = hooks or work
+    patch = CopierWindowSnapshotPatch(tape_blocks(reference / 'Inferno.tzx'), window_only=not hooks, work=work)
+    nex = folder / ('Inferno_copier_window_m3b_diagnostic.nex' if work else
+                    'Inferno_copier_window_m3_diagnostic.nex' if hooks else 'Inferno_copier_window_diagnostic.nex')
     _, tail, data, _ = z80tonex.convert(str(snapshot), str(nex), quiet=True, patch=patch)
     checks = {}
     for name, foreign in [('Sinclair', None), ('foreign ROM3', bytes(v ^ 0xA5 for v in rom48()))]:
@@ -5203,11 +5468,14 @@ def copier_window_build(reference, folder, hooks=False):
         checks['page 80'] = ['window page not in the NEX']
     if raw.find(patch.page[0x3CB0 - 0x2000:0x3CB0 - 0x2000 + len(bytes.fromhex(load_profile()['hooks']['cwrom']))]) < 0:
         checks['alt ROM'] = ['window trampoline not in the NEX']
+    if work and raw.find(patch.extra_banks[69 // 2][8192:]) < 0:
+        checks['page 69'] = ['work page not in the NEX']
     return {'boot_checks': checks, 'tail': [tail, tail + len(data)], 'sites': ['%04X' % a for a, o, n in patch.sites],
             'nex_md5': md5(raw).hexdigest(), 'cwhead_md5': md5(patch.window.head).hexdigest(),
             'scope': 'level-1 snapshot; %s, bank loader as the capture diagnostic; boot state checked in '
                      'software, the window itself only in the simulator; not a release'
-                     % ('capture hooks (X, R, DMA map copy) + copier window' if hooks else 'copier window only (8F92)')}
+                     % ('capture hooks (X, R, DMA map copy) + copier window + the 8F95 work in its waits (8F95 finishes)'
+                        if work else 'capture hooks (X, R, DMA map copy) + copier window' if hooks else 'copier window only (8F92)')}
 
 
 def main():
@@ -5227,6 +5495,7 @@ def main():
     ap.add_argument('--cw-only', help='copier-window checks: just these states, e.g. 3:182,6:27 (rerun failures)')
     ap.add_argument('--jobs', type=int, default=1, help='copier-window checks: one process per level, this many at once')
     ap.add_argument('--cw-hooks', action='store_true', help='--copier-window-build with the capture hooks (milestone 3)')
+    ap.add_argument('--cw-work', action='store_true', help='--copier-window-build with hooks + the 8F95 work in the window (3b)')
     action.add_argument('--actor-job-checks', action='store_true')
     action.add_argument('--actor-pack-checks', action='store_true')
     action.add_argument('--actor-fill-checks', action='store_true')
@@ -5438,7 +5707,7 @@ def main():
         print(json.dumps(result))
         return int(any(v for k, v in result['counts'].items() if k.endswith('!')))
     if a.copier_window_build:
-        result = copier_window_build(a.copier_window_build, a.out, hooks=a.cw_hooks)
+        result = copier_window_build(a.copier_window_build, a.out, hooks=a.cw_hooks, work=a.cw_work)
         if a.json:
             a.json.write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps(result))
