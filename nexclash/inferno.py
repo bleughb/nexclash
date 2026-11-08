@@ -3471,7 +3471,7 @@ DRIVER_WRITE = {
     78: [(0x1E80, 0x1E96), (0x1F00, 0x1FF0)],
     79: [(0x0800, 0x1800), (0x1E80, 0x1EA0), (0x1F00, 0x1FF0)],
     81: [(0x1800, 0x1BF0), (0x1C00, 0x1C80)],
-    69: [(0x1C80, 0x1CC0), (0x1EB0, 0x1EC0), (0x1F00, 0x1FF0)],   # setup_display: colours, flags, stack
+    69: [(0x1C80, 0x1CC0), (0x1EA0, 0x1EAA), (0x1EB0, 0x1EC0), (0x1F00, 0x1FF0)],   # setup_display: colours, flags, stack
     82: [(0x1000, 0x2000)],                             # selection state, reset at load
     83: [(0, 0x2000)], 84: [(0, 0x2000)],
     **{p: [(0, 0x2000)] for p in range(85, 96)},
@@ -3515,12 +3515,12 @@ class DriverMemory:
         self.pages[p][o] = v
 
     def nextreg(self, reg, value):
-        allowed = {0x50: (68, 69, 75, 76, 78, 79, 81, 255), 0x51: (68, 75, 76, 78, 79, 82, 83, 84, 112, 113, 114, 115, 116, 122, 255),
+        allowed = {0x50: (68, 69, 75, 76, 78, 79, 81, 255), 0x51: (68, 69, 75, 76, 78, 79, 82, 83, 84, 112, 113, 114, 115, 116, 122, 255),
                    0x52: (10, 113, 114, 115, 116, 117, 122, *range(85, 96), *range(96, 112), *range(136, 216)),
                    0x53: (11, *range(128, 136), *range(136, 216))}
         if reg == 7 and value in range(4):
             self.speed = value
-        elif reg in (0x15, 0x6B, 0x64, 0x68, 0x69, 0x1C, 0x1B, 0x2F, 0x30, 0x31, 0x43, 0x40, 0x44, 0x6E, 0x6F):
+        elif reg in (0x62, 0x15, 0x6B, 0x64, 0x68, 0x69, 0x1C, 0x1B, 0x2F, 0x30, 0x31, 0x43, 0x40, 0x44, 0x6E, 0x6F):
             self.nr[reg] = value
         elif reg in allowed and value in allowed[reg]:
             self.slots[reg - 0x50] = value
@@ -3545,6 +3545,7 @@ def driver_pages(driver=None, owned=None):
     pages = {p: bytearray(8192) for p in (68, 75, 76, 78, 79, 81, *range(83, 96), *range(136, 216))}
     pages[82] = select_page()
     pages[69] = cw_work_renderer()
+    pages[74] = bytearray(copper_frame_template(bytes(640))).ljust(8192, b'\0')
     for p in (*range(112, 118), 122):
         pages[p] = bytearray([0xE3]) * 8192             # exposes any byte the driver fails to set
     table = actor_row_lookup()
@@ -4066,6 +4067,11 @@ def sprite_port(pages, state, port, value):
     return False
 
 
+def program_attrs(program, n):
+    """The five attribute values of the first n Copper entries (program + 2, 12 bytes each)."""
+    return b''.join(bytes(program[2 + 12 * i + 3 + 2 * f] for f in range(5)) for i in range(n))
+
+
 def attributes_expected(out, previous=0):
     """Five attribute bytes per list entry, signed tile positions, 4-bit pattern = slot."""
     a = bytearray()
@@ -4111,13 +4117,17 @@ class SelectMemory(DispatchMemory):
             if a < 0x5000:
                 raise AssertionError('selection wrote its code')
             self.pages[82][a - 0x4000] = v
+        elif 0x2000 <= a < 0x4000 and self.mmu1 == 74:
+            self.pages[74][a - 0x2000] = v
+        elif a < 0x2000 and 0x1EA0 <= a < 0x1EAA:
+            self.pages[69][a] = v
         else:
             super().__setitem__(a, v)
 
     def nextreg(self, reg, value):
         if reg in SPRITE_NEXTREGS:
             self.pages.setdefault('nr', {})[reg] = value
-        elif reg == 0x51 and (value == 83 or 85 <= value < 96):
+        elif reg == 0x51 and (value in (74, 83) or 85 <= value < 96):
             self.mmu1 = value
         elif reg == 0x52 and value == 82:
             self.mmu2 = value
@@ -4138,7 +4148,7 @@ def run_select(page82, page83, log, yield_every=0, drop_after=None, code=None, p
     pages = {69: cw_work_renderer(), 82: bytearray(page82), 83: bytearray(page83), 68: bytearray(8192)}
     pages.update({p: bytearray(8192) for p in range(85, 96)} if patterns is None else patterns)
     pages['sprite'] = bytearray(16384) if sprite is None else bytearray(sprite)
-    pages['attr'] = bytearray(640) if attr is None else bytearray(attr)
+    pages[74] = bytearray(copper_frame_template(bytes(640))).ljust(8192, b'\0') if attr is None else bytearray(attr)
     if code is not None:
         pages[82][:len(code)] = code
     at = 0x900
@@ -4172,7 +4182,7 @@ def run_select(page82, page83, log, yield_every=0, drop_after=None, code=None, p
         steps += 1
     if not dropped and mem.mmu1 != 68:
         raise AssertionError('selection left slot 1 at page %d' % mem.mmu1)
-    return {'page': pages[82], 'attr': pages['attr'], 'sprite': pages['sprite'], 'ready': pages[82][SEL_READY], 'n': pages[82][SEL_N], 'yields': yields,
+    return {'page': pages[82], 'attr': pages[74], 'q': bytes(pages[69][0x1EA0:0x1EAA]), 'sprite': pages['sprite'], 'ready': pages[82][SEL_READY], 'n': pages[82][SEL_N], 'yields': yields,
             'steps': steps, 'cycles': r[25], 'dropped': dropped}
 
 
@@ -4207,7 +4217,7 @@ def select_checks():
     counts = Counter()
 
     def scripted(code_used=None, frames=None):
-        page, state, sprite, attr = select_page(), SelectState(), bytearray(16384), bytearray(640)
+        page, state, sprite, attr = select_page(), SelectState(), bytearray(16384), None
         if code_used is not None:
             page[:len(code_used)] = code_used
         for k, f in enumerate(frames):
@@ -4231,10 +4241,10 @@ def select_checks():
                 if not good:
                     raise AssertionError('frame %d: slot %d pattern not uploaded' % (k, slot))
                 counts['frames with all patterns verified'] += 1
-                if bytes(attr[:5 * len(out)]) != attributes_expected(out):
+                if program_attrs(attr, len(out)) != attributes_expected(out):
                     raise AssertionError('frame %d: attributes differ' % k)
-                if any(attr[5 * i + 3] for i in range(len(out), 128)):
-                    raise AssertionError('frame %d: stale sprite left visible' % k)
+                if r['q'][1] != 1 or r['q'][6] != len(out):
+                    raise AssertionError('frame %d: Copper queue not requested' % k)
                 counts['frames with attributes verified'] += 1
             counts['ready frames' if ready else 'not-ready frames'] += 1
             counts['yields'] += r['yields']
@@ -4271,19 +4281,17 @@ def select_checks():
     variants['upload one burst short'] = code[:at + 1] + b('07') + code[at + 2:]
     at = code.index(b('360021'))                          # flag cleared after the pattern
     variants['uploaded flag not cleared'] = code[:at + 1] + b('01') + code[at + 2:]
-    remaps = [i for i in range(len(code)) if code[i:i + 6] == b('3A0A50ED9251')]     # sl_yupn, sl_yup, sl_ychunk, sl_yscan
-    if len(remaps) != 4:
+    remaps = [i for i in range(len(code)) if code[i:i + 6] == b('3A0A50ED9251')]     # sl_yupn, sl_yup, sl_ypub, sl_ychunk, sl_yscan
+    if len(remaps) != 5:
         raise AssertionError('resume remap pattern %d' % len(remaps))
     variants['slot-1 remap on upload resume removed'] = code[:remaps[1]] + bytes(6) + code[remaps[1] + 6:]
     at = code.index(b('C650'))                            # Y = 32 + 48 + row * 8
     variants['sprite Y offset wrong'] = code[:at + 1] + b('58') + code[at + 2:]
-    at = code.index(b('3A4E5090'))                        # sprites to hide
-    variants['stale sprites not hidden'] = code[:at + 3] + b('AF') + code[at + 4:]
     at = code.index(b('E60F57'))
     variants['role rotation wrong'] = code[:at + 1] + b('03') + code[at + 2:]
     at = code.index(b('FE12'))
     variants['row limit 24'] = code[:at + 1] + b('18') + code[at + 2:]
-    variants['slot-1 remap on chunk resume removed'] = code[:remaps[2]] + bytes(6) + code[remaps[2] + 6:]
+    variants['slot-1 remap on chunk resume removed'] = code[:remaps[3]] + bytes(6) + code[remaps[3] + 6:]
     for name, broken in variants.items():
         try:
             scripted(code_used=broken, frames=frame_set(400, 77))
@@ -5466,7 +5474,7 @@ DX_READY, DX_N = 0x1EE0, 0x1EEF         # page 69: dispatch result (item 2), rec
 WK_SP = 0x1EC5                          # page 69: the suspended work's SP
 # page-69 bytes that are the 8F95 work's results (prepare_frame/render_textmap state; not its stack/SP saves)
 WK_RESULT = [(0x0800, 0x0C00), (0x1000, 0x1800), (0x1E80, 0x1E86), (0x1E88, 0x1E89), (0x1E8B, 0x1E8D),
-             (0x1EA1, 0x1EA2), (0x1EAC, 0x1EAD)]
+             (0x1EAC, 0x1EAD)]   # Q_READY (1EA1) is now the selection's output: checked against its oracle
 
 
 class CopierWindowMemory(CaptureMemory):
@@ -5495,7 +5503,7 @@ class CopierWorkMemory(CopierWindowMemory):
         self.pages.setdefault(79, bytearray(8192))
         self.pages.setdefault(82, select_page())
         self.pages.setdefault('sprite', bytearray(16384))
-        self.pages.setdefault('attr', bytearray(640))
+        self.pages.setdefault(74, bytearray(copper_frame_template(bytes(640))).ljust(8192, b'\0'))
         self.spr = [0, 0]
         self.mmu1, self.mmu2 = 255, 10
         self.nr = dict(display or {0x6B: 0x0B, 0x6E: 0x80, 0x7F: 0})
@@ -5536,7 +5544,7 @@ class CopierWorkMemory(CopierWindowMemory):
         elif reg == 0x50 and value == 69:
             self.mmu0 = value
             self.maps.append(value)
-        elif reg == 0x51 and (value in (68, 79, 83, 255) or 85 <= value < 96 or 136 <= value < 216):
+        elif reg == 0x51 and (value in (68, 74, 79, 83, 255) or 85 <= value < 96 or 136 <= value < 216):
             self.mmu1 = value
         elif reg == 0x52 and value in (14, 10, 82):
             self.mmu2 = value
@@ -5809,8 +5817,9 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
                     mem.pages[69][0x1EAC])
                    if work and store else None),
             'sel': bytes(mem.pages[82]) if work and store else None,
+            'qready': mem.pages[69][0x1EA1] if work and store else None,
             'sprite': bytes(mem.pages['sprite']) if work and store else None,
-            'attr': bytes(mem.pages['attr']) if work and store else None,
+            'attr': bytes(mem.pages[74]) if work and store else None,
             'frame': (run_cw_frame(patch, original, mem.pages, state68, phase=phase, count0=count0, irq=frame_irq)
                       if work and frame else None)}
 
@@ -6098,7 +6107,7 @@ def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, o
             phase, count0 = (n * 13) % CW_TICK, (n * 37) & 255
             store = stores.get(level)
             if store and level in sel_pages:
-                store = {**store, 82: sel_pages[level], 'sprite': sprite_pages[level], 'attr': attr_pages[level]}   # store state and pattern RAM carry across consecutive updates
+                store = {**store, 82: sel_pages[level], 'sprite': sprite_pages[level], 74: attr_pages[level]}   # store state and pattern RAM carry across consecutive updates
             try:
                 res = run_cw_window(patch, ram, regs, phase=phase, count0=count0, frame=True, store=store)
             except AssertionError as e:
@@ -6136,10 +6145,12 @@ def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, o
                         if not good:
                             fail(level, i, 'upload', {'errors': ['slot %d pattern differs' % slot]})
                         counts['frames with all patterns verified'] += 1
-                        if res['attr'][:5 * len(out)] != attributes_expected(out):
+                        if program_attrs(res['attr'], len(out)) != attributes_expected(out):
                             fail(level, i, 'attributes', {'errors': ['attribute bytes differ']})
                         counts['frames with attributes verified'] += 1
                         counts['patterns uploaded'] += sum(before[SEL_FLAG + s] != 0 and page[SEL_FLAG + s] == 0 for s in range(64))
+                    if res['qready'] != ready:
+                        fail(level, i, 'queue ready', {'errors': ['Q_READY %d, selection %d' % (res['qready'], ready)]})
                     counts['selection chunks'] += len(out)
                     counts['selection new patterns'] += page[SEL_NEW]
                     counts['selection evictions'] += page[SEL_EVICT]

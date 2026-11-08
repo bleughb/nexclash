@@ -4319,6 +4319,7 @@ cw_wkback:                      ; from wk_out: slot 0 = page 80, DI; A = NextReg
 CW_WKRET:
         dw cw_wait.coarse
 CW_WOT: dw 0                    ; ticks left in the replaced write-out
+CW_WOQ: db 0                    ; 1: the Copper queue has run this update
 ; Copier write-out replaced (980B, DI in the original, no OUTs): the queued screen bytes are hidden by the tilemap,
 ; so the pending work runs here for as long as the write-out would have taken, then pads to that time.
 ; T = 18 rows * 564 + 198 per wide line + 49 + a measured 2,700 (replay error within about 600 T).
@@ -4370,6 +4371,8 @@ wo_go:
         ld (CW_WOT),hl
         ld hl,wo_back
         ld (CW_WKRET),hl
+        xor a
+        ld (CW_WOQ),a
 wo_loop:
         ld a,CW_CTC >> 8
         in a,(CW_CTC & 0xFF)
@@ -4387,7 +4390,18 @@ wo_loop:
         ld (CW_WOT),hl
         ld a,(CW_WKGO)          ; 0: the coroutine is idle or finished
         or a
-        jr z,wo_loop
+        jr nz,.work
+        ld a,(CW_WOQ)
+        or a
+        jr nz,wo_loop
+        inc a
+        ld (CW_WOQ),a
+        ld (CW_WKSP),sp         ; on the work stack address: valid in pages 80 and 69
+        ld sp,0x1C40
+        call wo_queue
+        ld sp,(CW_WKSP)
+        jr wo_loop
+.work:
         ld a,h
         or a
         jp nz,cw_work
@@ -5487,6 +5501,13 @@ drv_fill:
 drv_sel_reset:
         nextreg 0x15,0          ; sprites off until a complete frame is published
         nextreg 0x6B,0x0B       ; scenery layer off
+        nextreg 0x62,0
+        nextreg 0x51,69
+        ld hl,0x2000+Q_TOKEN
+        ld b,10
+.qr:    ld (hl),0
+        inc hl
+        djnz .qr
         ld a,69                 ; palettes and windows (one-time, in the pause)
         ld hl,setup_display
         call drv_call
@@ -6227,6 +6248,7 @@ SEL_INIT  EQU 0x504D           ; sprite layer set up (cleared by the 8EF9 reset)
 SEL_PREV  EQU 0x504E           ; sprites written by the last publish
 SEL_PUBN  EQU 0x504F
 SEL_PUBP  EQU 0x5050
+SEL_PUBQ  EQU 0x5052           ; next attribute byte in the Copper program (page 74 at slot 1)
 SEL_Q     EQU 0x5A00           ; 128 slots to upload (256-aligned; a slot may repeat)
 SEL_HL    EQU 0x5029
 SEL_COL   EQU 0x502B
@@ -6717,45 +6739,35 @@ sl_commit:                      ; roles rotate in one byte
         ld (SEL_ROLE),a
         ld a,1
         ld (SEL_READY),a
-        nextreg 0x51,68
-; Publish the frame list as sprite attributes, in draw order (higher index on top). Visible diagnostic: polled, so
-; a drop mid-list leaves a partly updated set until the next publish.
+; Publish: attributes go into the Copper program, committed at line 224 with the scenery map by queue_frame (980B hook).
 sl_publish:
-        ld a,(T_HALF)           ; the map this update just compiled (scenery without the figures)
-        or a
-        ld a,0x80
-        jr z,.half
-        ld a,0x86
-.half:  nextreg 0x6E,a
         ld a,(SEL_INIT)
         or a
         call z,sl_init
+        nextreg 0x51,74
+        ld a,74
+        ld (SEL_M1),a
         ld a,(SEL_N)
-        ld hl,SEL_PREV
-        cp (hl)
-        jr c,.keep
-        ld (hl),a               ; a drop part-way must still clear these later
-.keep:  ld (SEL_PUBN),a
+        ld (SEL_PUBN),a
         ld hl,SEL_LIST
         ld (SEL_PUBP),hl
-        xor a
-        ld bc,0x303B
-        out (c),a
+        ld hl,0x2005            ; program + 2: first entry's attr 0 value
+        ld (SEL_PUBQ),hl
 sl_pub:
         SL_POLL sl_ypub
 sl_pub_go:
         ld a,(SEL_PUBN)
         or a
-        jr z,sl_clear
+        jp z,sl_ready
         dec a
         ld (SEL_PUBN),a
         ld hl,(SEL_PUBP)
-        ld a,(hl)               ; slot
+        ld a,(hl)
         ld (SEL_UPS),a
         inc hl
         ld e,(hl)               ; column
         inc hl
-        ld d,(hl)               ; row
+        ld c,(hl)               ; row
         inc hl
         ld (SEL_PUBP),hl
         ld l,e                  ; X = signed column * 8 + 32
@@ -6766,58 +6778,63 @@ sl_pub_go:
         add hl,hl
         add hl,hl
         add hl,hl
-        ld bc,32
-        add hl,bc
-        ld a,l
-        ld bc,0x57
-        out (c),a               ; attr 0: X
-        ld a,d
+        ld de,32
+        add hl,de
+        ld a,c                  ; Y = 32 + 48 + row * 8
         add a,a
         add a,a
         add a,a
         add a,80
-        out (c),a               ; attr 1: Y = 32 + 48 + row * 8
+        ld c,a
+        ld de,(SEL_PUBQ)
+        ld a,l
+        ld (de),a
+        inc de
+        inc de
+        ld a,c
+        ld (de),a
+        inc de
+        inc de
         ld a,h
         and 1
-        out (c),a               ; attr 2: X bit 8
+        ld (de),a
+        inc de
+        inc de
         ld a,(SEL_UPS)
         srl a
         or 0xC0
-        out (c),a               ; attr 3: visible, extended, pattern bits 5-0
+        ld (de),a
+        inc de
+        inc de
         ld a,(SEL_UPS)
         rrca
         and 0x80
         rrca
         or 0x80
-        out (c),a               ; attr 4: 4-bit, N6
+        ld (de),a
+        ld hl,(SEL_PUBQ)
+        ld de,12
+        add hl,de
+        ld (SEL_PUBQ),hl
         jp sl_pub
-sl_clear:                       ; hide the sprites the last publish used and this one does not
+sl_ready:
+        ld a,(T_HALF)
+        ld (Q_TARGET),a
         ld a,(SEL_N)
-        ld b,a
-        ld a,(SEL_PREV)
-        sub b
-        ld (SEL_PUBN),a
-        jr z,sl_done
-sl_clear_lp: SL_POLL sl_yclr
-sl_clear_go:
-        ld a,(SEL_PUBN)
-        or a
-        jr z,sl_done
-        dec a
-        ld (SEL_PUBN),a
+        ld (Q_COUNT),a
         xor a
-        ld bc,0x57
-        out (c),a
-        out (c),a
-        out (c),a
-        out (c),a               ; attr 3 = 0: hidden, four-byte form
-        jr sl_clear_lp
-sl_done:
-        ld a,(SEL_N)
-        ld (SEL_PREV),a
-        nextreg 0x6B,0x8B       ; every complete publish: layers on (the 9019 exit hides them)
-        nextreg 0x15,1
+        ld (Q_CONTROL),a
+        inc a
+        ld (Q_READY),a
+        nextreg 0x51,68
         ret
+sl_ypub:
+        ld hl,.resume
+        jp wk_yield
+.resume:
+        ld a,(SEL_M1)
+        nextreg 0x51,a
+        jp sl_pub_go
 sl_init:
         nextreg 0x4B,0          ; 4-bit transparency index
         nextreg 0x1C,2          ; sprite clip index
@@ -6839,12 +6856,6 @@ sl_init:
         ret
 sl_palette:                     ; 0 transparent, 1 black, 2-8 normal, 9-15 bright (solid_image)
         db 0,0,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6,0x03,0xE0,0xE3,0x1C,0x1F,0xFC,0xFF
-sl_ypub:
-        ld hl,sl_pub_go
-        jp wk_yield
-sl_yclr:
-        ld hl,sl_clear_go
-        jp wk_yield
 sl_fail:
         ld sp,(SEL_SP)
         nextreg 0x51,68
@@ -6929,7 +6940,10 @@ modal_exit:
         in a,(c)
         and 0xFE
         nextreg 0x15,a
+        nextreg 0x51,69
         xor a
+        ld (0x2000+Q_BUSY),a
+        nextreg 0x51,255
         ld (CAP_PHASE),a
         pop bc
         pop af
@@ -6949,6 +6963,13 @@ wo_hook:
         nextreg 0x07,3
         nextreg 0x50,CW_PAGE
         jp wo_go
+wo_queue:                       ; page 69 at slot 0 (this stub runs from the alt ROM at slot 1)
+        nextreg 0x50,69
+        ld a,(Q_READY)
+        or a
+        call nz,queue_frame
+        nextreg 0x50,CW_PAGE
+        ret
 wo_out:
         nextreg 0x50,255
         nextreg 0x07,0
