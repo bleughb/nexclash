@@ -6157,7 +6157,7 @@ def _cw_store(reference, level, cache):
     """The owned store the 8EF9 driver builds for a level (cached beside the states)."""
     import pickle
     from hashlib import md5
-    tag = md5(load_profile()['hooks']['driver'].encode()).hexdigest()[:8]
+    tag = md5((load_profile()['hooks']['driver'] + load_profile()['hooks']['cwsel']).encode()).hexdigest()[:8]
     path = Path('%s.store%s.%s' % (cache, level, tag)) if cache else None
     if path and path.exists():
         return pickle.loads(path.read_bytes())

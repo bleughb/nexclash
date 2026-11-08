@@ -13,3 +13,4 @@ Newest first; moved from inferno.md to keep it within its size budget.
 - 2026-11-05: stages 0/1 intake/full raw replays and approved design; six-level model/level-2 census
   and tools/canary/doccheck PASS. Cards/diagnostics revised; evidence in specnext design/.
 - 2026-11-09 (claude/inferno-pattern-select): selection and 64-slot store in the window, 8EF9 chunk index; gate 0 failures; 18.5 % dropped, runs to 32. [none: lesson is in games/inferno.md]
+- 2026-11-09 (claude/inferno-drop-runs): selection hit path cut; gate 0 failures; 17.3 % dropped, runs to 14, margin 108 T. [none: lesson is in games/inferno.md]
