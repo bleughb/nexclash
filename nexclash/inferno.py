@@ -3471,6 +3471,7 @@ DRIVER_WRITE = {
     78: [(0x1E80, 0x1E96), (0x1F00, 0x1FF0)],
     79: [(0x0800, 0x1800), (0x1E80, 0x1EA0), (0x1F00, 0x1FF0)],
     81: [(0x1800, 0x1BF0), (0x1C00, 0x1C80)],
+    69: [(0x1C80, 0x1CC0), (0x1EB0, 0x1EC0), (0x1F00, 0x1FF0)],   # setup_display: colours, flags, stack
     82: [(0x1000, 0x2000)],                             # selection state, reset at load
     83: [(0, 0x2000)], 84: [(0, 0x2000)],
     **{p: [(0, 0x2000)] for p in range(85, 96)},
@@ -3483,6 +3484,7 @@ class DriverMemory:
         self.ram, self.rom, self.pages = list(ram), rom, pages
         self.slots = [255, 255, 10, 11, 4, 5, 0, 1]
         self.reads = self.speed = self.selected = 0
+        self.nr = {}
 
     def __getitem__(self, a):
         if isinstance(a, slice):
@@ -3513,25 +3515,27 @@ class DriverMemory:
         self.pages[p][o] = v
 
     def nextreg(self, reg, value):
-        allowed = {0x50: (68, 75, 76, 78, 79, 81, 255), 0x51: (68, 75, 76, 78, 79, 82, 83, 84, 112, 113, 114, 115, 116, 122, 255),
+        allowed = {0x50: (68, 69, 75, 76, 78, 79, 81, 255), 0x51: (68, 75, 76, 78, 79, 82, 83, 84, 112, 113, 114, 115, 116, 122, 255),
                    0x52: (10, 113, 114, 115, 116, 117, 122, *range(85, 96), *range(96, 112), *range(136, 216)),
                    0x53: (11, *range(128, 136), *range(136, 216))}
         if reg == 7 and value in range(4):
             self.speed = value
-        elif reg == 0x15 and value == 0:
-            pass
+        elif reg in (0x15, 0x6B, 0x64, 0x68, 0x69, 0x1C, 0x1B, 0x2F, 0x30, 0x31, 0x43, 0x40, 0x44, 0x6E, 0x6F):
+            self.nr[reg] = value
         elif reg in allowed and value in allowed[reg]:
             self.slots[reg - 0x50] = value
         else:
             raise AssertionError('driver set NextReg %02X to %d' % (reg, value))
 
     def read_port(self, registers, port):
-        if port != 0x253B or self.selected != 7:
+        if port != 0x253B or self.selected not in (7, 0x14, 0x15, 0x40, 0x41, 0x43, 0x44, 0x69, 0x6B):
             raise AssertionError('driver read unexpected IO')
-        return self.speed | (self.speed << 4)
+        if self.selected == 7:
+            return self.speed | (self.speed << 4)
+        return {0x14: 0xE3, 0x41: self.nr.get(0x40, 0) & 0x7F}.get(self.selected, 0)
 
     def write_port(self, registers, port, value, *args):
-        if port != 0x243B or value != 7:
+        if port != 0x243B or value not in (7, 0x14, 0x15, 0x40, 0x41, 0x43, 0x44, 0x69, 0x6B):
             raise AssertionError('driver wrote IO')
         self.selected = value
 
@@ -3540,6 +3544,7 @@ def driver_pages(driver=None, owned=None):
     h = load_profile()['hooks']
     pages = {p: bytearray(8192) for p in (68, 75, 76, 78, 79, 81, *range(83, 96), *range(136, 216))}
     pages[82] = select_page()
+    pages[69] = cw_work_renderer()
     for p in (*range(112, 118), 122):
         pages[p] = bytearray([0xE3]) * 8192             # exposes any byte the driver fails to set
     table = actor_row_lookup()
@@ -3746,6 +3751,8 @@ def driver_index_compare(result, ram, expected):
     for i, pat in enumerate(patterns):
         if bytes(pages[85 + i // 64][i % 64 * 128:i % 64 * 128 + 128]) != pat:
             raise AssertionError('pattern %d differs' % i)
+    if pages[69][0x1EB4] != 1 or pages[69][0x1EB3]:
+        raise AssertionError('display setup failed')
     if bytes(pages[82][SEL_STATE:]) != bytes(select_page()[SEL_STATE:]):
         raise AssertionError('page 82 state not reset to the runtime initial state')
     counts['distinct patterns'] = len(patterns)
@@ -4079,7 +4086,7 @@ def patterns_uploaded(page, sprite, pattern_pages, out):
     return True, 0
 
 
-SPRITE_NEXTREGS = (0x15, 0x19, 0x1C, 0x40, 0x41, 0x43, 0x4B)
+SPRITE_NEXTREGS = (0x15, 0x19, 0x1C, 0x40, 0x41, 0x43, 0x4B, 0x6B, 0x6E)
 
 
 class SelectMemory(DispatchMemory):
@@ -5447,6 +5454,9 @@ def cw_work_renderer(work_code=None):
     if any(page[org:org + len(code)]):
         raise ValueError('dispatch code overlaps the renderer page')
     page[org:org + len(code)] = code
+    stub = bytes.fromhex(h['drvworker'])
+    page[0x1D00:0x1D00 + len(stub)] = stub             # the 8EF9 driver calls setup_display through it
+    page[0x1FF0:0x1FF2] = b'\x00\x1D'
     return page
 
 

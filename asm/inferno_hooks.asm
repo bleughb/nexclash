@@ -5399,6 +5399,10 @@ drv_fill:
 ; only. Pages 85..95: 16x16 patterns, one copy per distinct content (hash chains in page 84: heads 0000, next 0200).
 drv_sel_reset:
         nextreg 0x15,0          ; sprites off until a complete frame is published
+        nextreg 0x6B,0x0B       ; scenery layer off
+        ld a,69                 ; palettes and windows (one-time, in the pause)
+        ld hl,setup_display
+        call drv_call
         nextreg 0x51,82
         ld hl,0x3000
         ld de,0x3001
@@ -6630,6 +6634,12 @@ sl_commit:                      ; roles rotate in one byte
 ; Publish the frame list as sprite attributes, in draw order (higher index on top). Visible diagnostic: polled, so
 ; a drop mid-list leaves a partly updated set until the next publish.
 sl_publish:
+        ld a,(T_HALF)           ; the map this update just compiled (scenery without the figures)
+        or a
+        ld a,0x80
+        jr z,.half
+        ld a,0x86
+.half:  nextreg 0x6E,a
         ld a,(SEL_INIT)
         or a
         call z,sl_init
@@ -6735,7 +6745,8 @@ sl_init:
         nextreg 0x41,a
         djnz .p
         nextreg 0x43,0
-        nextreg 0x15,1          ; sprites on, over the ULA
+        nextreg 0x6B,0x8B       ; clean scenery on, hiding the original figures
+        nextreg 0x15,1          ; sprites on
         ld a,1
         ld (SEL_INIT),a
         ret
