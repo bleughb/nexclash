@@ -176,7 +176,22 @@ controls (colours shifted; guard column 31) 24/24. Front end N / Y / SYM+Y PASS.
   that address (it is the hook's jump target), so against main's build instead: -0.18% (quiet -0.24%, busy +0.11%);
   interrupts 0.66 a second both (play runs DI).
 
+## Published .nxc build from main (2026-11-07)
+- The published Smash TV .nxc v1.1 (github.com/jattree/nxc) is main's build of its target, the clean release (a
+  128K .z80 locked in 48K mode, MD5 78a6c5b0, its BASIC loader waiting): `python nexclash.py auto CLEAN.z80
+  --no-record --altrom-fill rom3`, with the tape's loading screen as smash_tv_loading.scr (6,912 bytes, MD5 c9b3d77c)
+  beside it. `auto` writes NAME_48.z80 (to48: the same RAM and registers as a 48K snapshot, daae9f04); its loader has
+  no "INVULNERABLE" prompt (has_trainer_prompt), so there is no front end and the start state is the loader's at its
+  USR 59776; then loading_nex puts the screen in bank 5 and the stub (asm ldscr: jetpac_v11's, pages 28 / 29) in bank
+  14. Sprites 2427346c24837471480daa1ec8bba068 = the published bare .nex (nxc.py --bare), byte for byte; without the
+  screen fc5dacbb. Was a local env switch (SMASHTV_NO_FRONT). Dean's snapshot builds as before. From the clean
+  release: walk1 + walk2 IDENTICAL (18,002 frames, 12,712 plots), unit PASS, 46/46 negatives; selftest PASSED.
+- `--altrom-fill rom3` as published: the whole-image default adds bank 47 and its ROM path check fails (the game reads
+  ROM bytes at 0x2133.. where the hooks are; the rom3 build has the same reads, a known issue of the .nxc).
+
 ## Lessons
+- [local: Smash TV's start state] The published build's start state (a 48K view of the clean release, no front end)
+  and its loading screen were steps outside the engine; to48, has_trainer_prompt and loading_nex now run in auto.
 - [local: this engine] The bodies the hooks run "at the original cost" ran at a fixed 3.5 MHz, which is the original
   cost only for a 3.5 MHz caller: they run at the latched speed now.
 
