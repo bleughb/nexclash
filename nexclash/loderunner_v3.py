@@ -1048,6 +1048,8 @@ def verify(patch, z80, rzx=None, frames=6000, keys=None, stop=None, collect=0, p
         if patch.enhanced and not st.get('edit'):
             map_check()
 
+    expect = tile_table(patch.prof)                     # from the rules, not from the build's own table
+
     def map_check():
         # the scenery model: each cell's entry is the one the tile on the ULA asks for; an uncoloured cell, or a cell the table
         # does not hold (no such state is expected), has entry 0 and the ULA shows
@@ -1067,7 +1069,7 @@ def verify(patch, z80, rzx=None, frames=6000, keys=None, stop=None, collect=0, p
             for cx in range(32):
                 b = bytes(P[base + r * 256 + cx] for r in range(8))
                 t = bytile.get(b)
-                want = patch.table[t] if t is not None else 0
+                want = expect[t] if t is not None else 0
                 got = ns.tm[row + cx]
                 if got != want:
                     fail('tile layer out of step with the ULA', (cx, cy, t, want, got, b.hex()))
