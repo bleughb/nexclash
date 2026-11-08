@@ -1,0 +1,198 @@
+{
+ "name": "game_over",
+ "order": 229,
+ "game": "Game Over",
+ "doc": "game_over.md",
+ "engine": "game_over",
+ "representative": true,
+ "reference": "game_over",
+ "inputs": {
+  "snapshot": {
+   "name": "game_over.z80",
+   "md5": "e1c2ff3cfbd4f6f5a84034d57b666acf",
+   "path": "game_over/game_over.z80",
+   "note": "Game Over (1987)(Imagine)(128K)[re-release].z80, the 128K re-release: both worlds in one snapshot, AY music."
+  },
+  "recordings": [
+   {
+    "name": "game_over_loading.scr",
+    "md5": "3cdb0cbbd8b15c7eae4c3d52b7f6b4b5",
+    "path": "game_over/game_over_loading.scr",
+    "role": "The 6,912-byte loading screen from the same re-release's 48K-128K tape (Side A, block 2), staged beside the snapshot; not a recording."
+   },
+   {
+    "name": "w1full.rzx",
+    "md5": "79fa16a66c92698910c0b99130538917",
+    "path": "game_over/w1full.rzx",
+    "role": "World 1, scripted original play."
+   },
+   {
+    "name": "w1b.rzx",
+    "md5": "03f2ef0dad9137d1d90c091742b966de",
+    "path": "game_over/w1b.rzx",
+    "role": "World 1, a second scripted run."
+   },
+   {
+    "name": "w2full.rzx",
+    "md5": "2f664cc96b00ddf3dac224aaa6016d84",
+    "path": "game_over/w2full.rzx",
+    "role": "World 2, scripted original play."
+   },
+   {
+    "name": "play.rzx",
+    "md5": "357694c819a45c29cca70a957d9ffb7a",
+    "path": "game_over/play.rzx",
+    "role": "Scripted original run from the first round, 830 frames."
+   },
+   {
+    "name": "unlock.rzx",
+    "md5": "8cad9cc1ca0e9718679b8df8874f5f2b",
+    "path": "game_over/unlock.rzx",
+    "role": "Scripted original run from the first round, 760 frames."
+   },
+   {
+    "name": "walk.rzx",
+    "md5": "7c319ec6ee3650814f7500ebd44c009a",
+    "path": "game_over/walk.rzx",
+    "role": "Scripted original run from the first round, 1,428 frames."
+   }
+  ]
+ },
+ "modules": [
+  "game_over"
+ ],
+ "own_modules": [
+  "game_over"
+ ],
+ "data": [
+  "asm/game_over_hooks.asm",
+  "docs/profiles/game_over.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "w1full.rzx",
+   "w1b.rzx",
+   "w2full.rzx",
+   "play.rzx",
+   "unlock.rzx",
+   "walk.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 50,
+  "note": "Scripted recordings over both worlds: every register with R and all 48K RAM at each hook (the attributes the copy shows are checked against the clean buffer), Layer 2 against an independent model; ABI cases and 9 broken builds. Pace, soak, flicker, beam audit and the real loader are in games/game_over.md \"Evidence\"."
+ },
+ "outputs": {
+  "sprites": {
+   "file": "game_over_sprites.nex",
+   "md5": "8c3152e36baa285b4a1407e011a95baa"
+  },
+  "loading": {
+   "file": "game_over_sprites_loading.nex",
+   "md5": "66d8145473890323dd279cfec7d28859"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Game Over",
+  "engine_col": "game_over (game_over.md)",
+  "build": "v1.0; game_over_sprites_loading.nex 66d81454 equals the published .nxc 1.0 bare build (without the screen 8c3152e3); original bitmap and scenery attributes on the ULA, figures' ink on a double-buffered Layer 2, both worlds; default only, top bank 47",
+  "software": "6 recordings, 30,115 frames, 62,272 hooks with R and 48K RAM, 6,400 Layer 2 pictures against a model; 1,408 ABI cases, 9 of 9 broken builds; review run: 15-minute soaks, flicker, real loader. Pace in JNext: whole runs -1.06% to -1.75%; world 1 busy thirds within 1%, slowest 20 updates +2.26%; world 2 NOT within the 2% rule everywhere: busy thirds up to +0.60%, slowest 20-update stretches +4.53% with one unexplained +35.02%, quiet thirds up to -3.42%; 1 interrupt lost in 3,753 frames in one run, cause not found",
+  "hardware": "untested",
+  "next": "hardware checklist; Enhanced (mock-up); world 2 pace on long passes; later rooms and natural completion; cheats"
+ },
+ "checks": [
+  "asm2profile:game_over"
+ ],
+ "results": [
+  {
+   "check": "external review run",
+   "status": "pass",
+   "scope": "runs/game_over/release-20261108: pace, soak, flicker, beam audit and real loader, JNext 1.1.104, on this engine's bytes. World 2's pace is outside the 2% rule as the status says. Not a selftest stamp.",
+   "evidence": "games/game_over.md \"Evidence\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/game_over_hooks.asm": "472ee4063cd55b85",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/game_over.json": "701cf1a32129b9da",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "b9b7538a34c912de",
+   "nexclash/game_over.py": "38a97de08521e87d",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/nextboot.py": "121a5912efae9b2a",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "02b596188ae6a4c8",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ },
+ "verified": {
+  "deps": {
+   "asm/game_over_hooks.asm": "472ee4063cd55b85",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/game_over.json": "701cf1a32129b9da",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "e7dccf2134c69717",
+   "nexclash/game_over.py": "38a97de08521e87d",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/nextboot.py": "121a5912efae9b2a",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "02b596188ae6a4c8",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ }
+}

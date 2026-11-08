@@ -92,6 +92,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Alien 8 (alien_8): `alien_8.nex` e89ed13af3af09b260cc266bc5b456e1, `alien_8_enhanced.nex` 5c08c856c718a7e744282cd44372a6cf; verified never
 - Gunfright (gunfright): `gunfright.nex` f26d0a561e25a1a800b19787cd1fe41b, `gunfright_enhanced.nex` 4ec70c827ae291ce273a09c508f95c87; verified 2026-11-07
 - Army Moves (army_moves): `army_moves_sprites.nex` f29ce916ef3ba1e62c83d8fa992c3d39, `army_moves_sprites_loading.nex` 85ba62ef5e47b72bb61220a8daf59809; verified 2026-11-08
+- Game Over (game_over): `game_over_sprites.nex` 8c3152e36baa285b4a1407e011a95baa, `game_over_sprites_loading.nex` 66d8145473890323dd279cfec7d28859; verified 2026-11-08
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
