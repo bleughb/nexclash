@@ -88,6 +88,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Martianoids (martianoids): `martianoids.nex` d7216a9d7cdbed5b819026e7cd71e9d8, `martianoids_sprites.nex` cb9e4e2542c5a36fed139e4c7114f673, `martianoids_enhanced.nex` 09b5741f14d9efc011808b10bb3ce52e; verified 2026-11-07
 - Underwurlde (underwurlde): `underwurlde.nex` a6e6b38e9e8be1d2b5c32f08ab3c3833, `underwurlde_sprites.nex` 07dff80327ed247a38780413e01a2325; verified never
 - Knight Lore (knight_lore): `knight_lore.nex` 02a997936f991061b18589266767d36c; verified never
+- Alien 8 (alien_8): `alien_8.nex` aa9307fef20e25fd7bdce42ad9960f81, `alien_8_enhanced.nex` 5c08c856c718a7e744282cd44372a6cf; verified never
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

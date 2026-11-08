@@ -1,0 +1,267 @@
+{
+  "scope": "Reachable original actor graph including nonreturning newgame/menu/endgame paths; static incoming edges, not coverage proof.",
+  "ranges": [
+    [
+      46241,
+      46365
+    ],
+    [
+      46547,
+      46866
+    ]
+  ],
+  "edges": [
+    {
+      "pc": 42620,
+      "op": "CALL 46266",
+      "target": 46266,
+      "pc_hex": "A67C",
+      "target_hex": "B4BA"
+    },
+    {
+      "pc": 43319,
+      "op": "CALL 46652",
+      "target": 46652,
+      "pc_hex": "A937",
+      "target_hex": "B63C"
+    },
+    {
+      "pc": 43400,
+      "op": "CALL 46655",
+      "target": 46655,
+      "pc_hex": "A988",
+      "target_hex": "B63F"
+    },
+    {
+      "pc": 43435,
+      "op": "CALL 46266",
+      "target": 46266,
+      "pc_hex": "A9AB",
+      "target_hex": "B4BA"
+    },
+    {
+      "pc": 43512,
+      "op": "CALL 46652",
+      "target": 46652,
+      "pc_hex": "A9F8",
+      "target_hex": "B63C"
+    },
+    {
+      "pc": 43581,
+      "op": "CALL 46736",
+      "target": 46736,
+      "pc_hex": "AA3D",
+      "target_hex": "B690"
+    },
+    {
+      "pc": 43675,
+      "op": "CALL 46736",
+      "target": 46736,
+      "pc_hex": "AA9B",
+      "target_hex": "B690"
+    },
+    {
+      "pc": 43713,
+      "op": "CALL 46779",
+      "target": 46779,
+      "pc_hex": "AAC1",
+      "target_hex": "B6BB"
+    },
+    {
+      "pc": 43907,
+      "op": "CALL 46617",
+      "target": 46617,
+      "pc_hex": "AB83",
+      "target_hex": "B619"
+    },
+    {
+      "pc": 43969,
+      "op": "CALL 46710",
+      "target": 46710,
+      "pc_hex": "ABC1",
+      "target_hex": "B676"
+    },
+    {
+      "pc": 44038,
+      "op": "CALL 46769",
+      "target": 46769,
+      "pc_hex": "AC06",
+      "target_hex": "B6B1"
+    },
+    {
+      "pc": 44355,
+      "op": "CALL 46652",
+      "target": 46652,
+      "pc_hex": "AD43",
+      "target_hex": "B63C"
+    },
+    {
+      "pc": 44386,
+      "op": "CALL NZ,46710",
+      "target": 46710,
+      "pc_hex": "AD62",
+      "target_hex": "B676"
+    },
+    {
+      "pc": 45083,
+      "op": "CALL 46574",
+      "target": 46574,
+      "pc_hex": "B01B",
+      "target_hex": "B5EE"
+    },
+    {
+      "pc": 45157,
+      "op": "CALL 46784",
+      "target": 46784,
+      "pc_hex": "B065",
+      "target_hex": "B6C0"
+    },
+    {
+      "pc": 45184,
+      "op": "CALL NZ,46652",
+      "target": 46652,
+      "pc_hex": "B080",
+      "target_hex": "B63C"
+    },
+    {
+      "pc": 45194,
+      "op": "CALL 46617",
+      "target": 46617,
+      "pc_hex": "B08A",
+      "target_hex": "B619"
+    },
+    {
+      "pc": 45360,
+      "op": "CALL 46617",
+      "target": 46617,
+      "pc_hex": "B130",
+      "target_hex": "B619"
+    },
+    {
+      "pc": 45596,
+      "op": "CALL 46671",
+      "target": 46671,
+      "pc_hex": "B21C",
+      "target_hex": "B64F"
+    },
+    {
+      "pc": 45604,
+      "op": "CALL 46666",
+      "target": 46666,
+      "pc_hex": "B224",
+      "target_hex": "B64A"
+    },
+    {
+      "pc": 45682,
+      "op": "CALL NZ,46779",
+      "target": 46779,
+      "pc_hex": "B272",
+      "target_hex": "B6BB"
+    },
+    {
+      "pc": 45779,
+      "op": "CALL 46652",
+      "target": 46652,
+      "pc_hex": "B2D3",
+      "target_hex": "B63C"
+    },
+    {
+      "pc": 45902,
+      "op": "CALL 46652",
+      "target": 46652,
+      "pc_hex": "B34E",
+      "target_hex": "B63C"
+    },
+    {
+      "pc": 45994,
+      "op": "CALL 46574",
+      "target": 46574,
+      "pc_hex": "B3AA",
+      "target_hex": "B5EE"
+    },
+    {
+      "pc": 46015,
+      "op": "CALL 46676",
+      "target": 46676,
+      "pc_hex": "B3BF",
+      "target_hex": "B654"
+    },
+    {
+      "pc": 47031,
+      "op": "CALL 46249",
+      "target": 46249,
+      "pc_hex": "B7B7",
+      "target_hex": "B4A9"
+    },
+    {
+      "pc": 47301,
+      "op": "CALL 46266",
+      "target": 46266,
+      "pc_hex": "B8C5",
+      "target_hex": "B4BA"
+    },
+    {
+      "pc": 47771,
+      "op": "CALL 46241",
+      "target": 46241,
+      "pc_hex": "BA9B",
+      "target_hex": "B4A1"
+    },
+    {
+      "pc": 47842,
+      "op": "CALL NZ,46769",
+      "target": 46769,
+      "pc_hex": "BAE2",
+      "target_hex": "B6B1"
+    },
+    {
+      "pc": 48253,
+      "op": "CALL 46596",
+      "target": 46596,
+      "pc_hex": "BC7D",
+      "target_hex": "B604"
+    },
+    {
+      "pc": 48542,
+      "op": "CALL 46769",
+      "target": 46769,
+      "pc_hex": "BD9E",
+      "target_hex": "B6B1"
+    },
+    {
+      "pc": 48918,
+      "op": "CALL 46769",
+      "target": 46769,
+      "pc_hex": "BF16",
+      "target_hex": "B6B1"
+    },
+    {
+      "pc": 49687,
+      "op": "CALL 46804",
+      "target": 46804,
+      "pc_hex": "C217",
+      "target_hex": "B6D4"
+    },
+    {
+      "pc": 49753,
+      "op": "CALL 46636",
+      "target": 46636,
+      "pc_hex": "C259",
+      "target_hex": "B62C"
+    },
+    {
+      "pc": 49784,
+      "op": "CALL 46798",
+      "target": 46798,
+      "pc_hex": "C278",
+      "target_hex": "B6CE"
+    },
+    {
+      "pc": 49873,
+      "op": "CALL M,46652",
+      "target": 46652,
+      "pc_hex": "C2D1",
+      "target_hex": "B63C"
+    }
+  ]
+}
