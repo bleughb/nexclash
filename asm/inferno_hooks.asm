@@ -5525,27 +5525,27 @@ drv_sel_reset:
         ld (SEL_ROLE+SEL_A),a
         ld hl,SLOT_PREV+SEL_A    ; recency list 0..63, head oldest
         xor a
-.lr:    ld (hl),64
+.lr:    ld (hl),128
         or a
         jr z,.lr1
         ld e,a
         dec e
         ld (hl),e
 .lr1:   push hl
-        ld de,0x40
+        ld de,0x80
         add hl,de
         inc a
         ld (hl),a
         pop hl
         inc hl
-        cp 64
+        cp 128
         jr c,.lr
-        ld a,63
+        ld a,127
         ld (LRU_TAIL+SEL_A),a
         ld hl,SLOT_ID+SEL_A
         ld de,SLOT_ID+SEL_A+1
         ld (hl),0xFF
-        ld bc,127
+        ld bc,255
         ldir
         ld hl,ID_SLOT+SEL_A
         ld de,ID_SLOT+SEL_A+1
@@ -6219,7 +6219,7 @@ wk_dispatch_end:
         ASSERT wk_dispatch_end <= 0x1A00
         SAVEBIN "inferno_cwdx.bin",wk_dispatch,wk_dispatch_end-wk_dispatch
 
-; Pattern selection and protected store (pipeline item 3). Page 82 in slot 2, inside the 8F95 coroutine after
+; Pattern selection and protected store (pipeline item 3; 128 slots, the 4-bit halves of pattern RAM). Page 82 in slot 2, inside the 8F95 coroutine after
 ; dispatch; WK_M2 = 82 so wk_resume maps it. For every draw, the non-blank chunks with an on-screen cell go to
 ; the frame list (slot, column, row) and to a 64-slot store (least recently used; slots in the
 ; current, pending or building mask are never evicted; list walk from the oldest, O(1) per use). No free slot or > 128 chunks = not ready. Commit is
@@ -6238,7 +6238,7 @@ SEL_Y     EQU 0x500C
 SEL_IMAGE EQU 0x500D
 SEL_C     EQU 0x500E
 SEL_L     EQU 0x500F
-SEL_MASKS EQU 0x5010           ; 3 x 8 bytes
+SEL_MASKS EQU 0x5060           ; 3 x 16 bytes
 SEL_T     EQU 0x5028
 SEL_BM    EQU 0x5042           ; word: the building mask
 SEL_LP    EQU 0x5044           ; word: next list entry
@@ -6258,17 +6258,17 @@ SEL_HL    EQU 0x5029
 SEL_COL   EQU 0x502B
 SEL_ROW   EQU 0x502C
 SEL_ID    EQU 0x502D
-SEL_U     EQU 0x5030           ; 8 bytes: union of the masks for one allocation
+SEL_U     EQU 0x5090           ; 16 bytes: union of the masks for one allocation
 SEL_I     EQU 0x5038
 SEL_NEW   EQU 0x503C           ; patterns allocated this build (for reports)
 SEL_EVICT EQU 0x503D           ; evictions this build
-SLOT_ID   EQU 0x5100           ; 64 x word, FFFF empty
-SLOT_FLAG EQU 0x5200           ; 64: 1 = pattern not uploaded
-SLOT_PREV EQU 0x5240           ; recency list, 64 = none
-SLOT_NEXT EQU 0x5280
+SLOT_ID   EQU 0x5100           ; 128 x word, FFFF empty
+SLOT_FLAG EQU 0x5200           ; 128: 1 = pattern not uploaded
+SLOT_PREV EQU 0x5280           ; recency list, 128 = none
+SLOT_NEXT EQU 0x5300
 LRU_HEAD  EQU 0x5040           ; oldest
 LRU_TAIL  EQU 0x5041           ; newest
-ID_SLOT   EQU 0x5300           ; PAT_MAX bytes, FF none
+ID_SLOT   EQU 0x5400           ; PAT_MAX bytes, FF none
 SEL_LIST  EQU 0x5800           ; 128 x (slot, column, row)
         ORG 0x4000
         MACRO SL_POLL target
@@ -6297,7 +6297,7 @@ wk_select:
         ld de,SEL_LIST
         ld (SEL_LP),de
         xor a
-        DUP 8
+        DUP 16
         ld (hl),a
         inc hl
         EDUP
@@ -6447,7 +6447,7 @@ sl_have:                        ; A = slot; atomic: no poll until the next chunk
         rrca
         rrca
         rrca
-        and 7
+        and 15
         ld hl,(SEL_BM)
         add hl,a
         ld a,c
@@ -6495,11 +6495,11 @@ sl_have:                        ; A = slot; atomic: no poll until the next chunk
 sl_alloc:
         ld de,SEL_U             ; union of the three masks
         ld hl,SEL_MASKS
-        ld b,8
+        ld b,16
 .u:     ld a,(hl)
         push hl
         push de
-        ld de,8
+        ld de,16
         add hl,de
         or (hl)
         add hl,de
@@ -6516,13 +6516,13 @@ sl_scan:
         SL_POLL sl_yscan
 sl_scan_go:
         ld a,(SEL_I)
-        cp 64
+        cp 128
         jp nc,sl_fail           ; every slot protected: over capacity
         ld c,a
         rrca
         rrca
         rrca
-        and 7
+        and 15
         ld hl,SEL_U
         add hl,a
         ld a,c
@@ -6530,9 +6530,6 @@ sl_scan_go:
         and (hl)
         jr z,sl_take
         ld l,c                  ; protected: on to the next oldest
-        ld a,l
-        add a,0x80
-        ld l,a
         ld h,SLOT_NEXT >> 8
         ld a,(hl)
         ld (SEL_I),a
@@ -6588,37 +6585,38 @@ sl_touch:
         ret z
         ld h,SLOT_PREV >> 8
         ld a,c
-        add a,0x40
+        add a,0x80
         ld l,a
         ld d,(hl)               ; D = previous
-        add a,0x40
-        ld l,a
-        ld e,(hl)               ; E = next (not 64: the slot is not the tail)
+        ld h,SLOT_NEXT >> 8
+        ld l,c
+        ld e,(hl)               ; E = next (not 128: the slot is not the tail)
         ld a,d
-        cp 64
+        cp 128
         jr nz,.mid
         ld a,e
         ld (LRU_HEAD),a
         jr .link
-.mid:   add a,0x80              ; next[D] = E
-        ld l,a
+.mid:   ld l,d                  ; next[D] = E
         ld (hl),e
-.link:  ld a,e                  ; prev[E] = D
-        add a,0x40
+.link:  ld h,SLOT_PREV >> 8     ; prev[E] = D
+        ld a,e
+        add a,0x80
         ld l,a
         ld (hl),d
         ld a,(LRU_TAIL)
         ld b,a
-        add a,0x80              ; next[old tail] = C
-        ld l,a
+        ld h,SLOT_NEXT >> 8     ; next[old tail] = C
+        ld l,b
         ld (hl),c
-        ld a,c                  ; prev[C] = old tail, next[C] = none
-        add a,0x40
+        ld h,SLOT_PREV >> 8     ; prev[C] = old tail
+        ld a,c
+        add a,0x80
         ld l,a
         ld (hl),b
-        add a,0x40
-        ld l,a
-        ld (hl),64
+        ld h,SLOT_NEXT >> 8     ; next[C] = none
+        ld l,c
+        ld (hl),128
         ld a,c
         ld (LRU_TAIL),a
         ret
@@ -6871,6 +6869,7 @@ sl_build_mask:                  ; HL = the building mask
         rrca
         rrca
         and 3
+        add a,a
         add a,a
         add a,a
         add a,a

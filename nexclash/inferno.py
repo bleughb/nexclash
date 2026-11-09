@@ -3672,10 +3672,11 @@ def driver_compare(result, expected, capacity=False):
 
 
 SEL_STATE = 0x1000                      # page 82: state offsets (asm SEL_* - 0x4000)
-SEL_READY, SEL_ROLE, SEL_N, SEL_MASKS = 0x1000, 0x1001, 0x1004, 0x1010
-SEL_HEAD, SEL_TAIL, SEL_PREV, SEL_NEXT = 0x1040, 0x1041, 0x1240, 0x1280
+SEL_READY, SEL_ROLE, SEL_N, SEL_MASKS = 0x1000, 0x1001, 0x1004, 0x1060
+SEL_HEAD, SEL_TAIL, SEL_PREV, SEL_NEXT = 0x1040, 0x1041, 0x1280, 0x1300
+SLOTS = 128
 SEL_NEW, SEL_EVICT, SEL_QN = 0x103C, 0x103D, 0x1046
-SEL_SLOT_ID, SEL_FLAG, SEL_ID_SLOT, SEL_LIST = 0x1100, 0x1200, 0x1300, 0x1800
+SEL_SLOT_ID, SEL_FLAG, SEL_ID_SLOT, SEL_LIST = 0x1100, 0x1200, 0x1400, 0x1800
 PAT_MAX = 704
 
 
@@ -3684,10 +3685,10 @@ def select_page(code=None):
     page = bytearray(8192)
     code = bytes.fromhex(load_profile()['hooks']['cwsel']) if code is None else code
     page[:len(code)] = code
-    page[SEL_ROLE], page[SEL_HEAD], page[SEL_TAIL] = 0x24, 0, 63
-    page[SEL_PREV:SEL_PREV + 64] = bytes((i - 1) & 255 if i else 64 for i in range(64))
-    page[SEL_NEXT:SEL_NEXT + 64] = bytes(i + 1 for i in range(64))
-    page[SEL_SLOT_ID:SEL_SLOT_ID + 128] = b'\xFF' * 128
+    page[SEL_ROLE], page[SEL_HEAD], page[SEL_TAIL] = 0x24, 0, SLOTS - 1
+    page[SEL_PREV:SEL_PREV + SLOTS] = bytes(i - 1 if i else SLOTS for i in range(SLOTS))
+    page[SEL_NEXT:SEL_NEXT + SLOTS] = bytes(i + 1 for i in range(SLOTS))
+    page[SEL_SLOT_ID:SEL_SLOT_ID + 2 * SLOTS] = b'\xFF' * (2 * SLOTS)
     page[SEL_ID_SLOT:SEL_ID_SLOT + PAT_MAX] = b'\xFF' * PAT_MAX
     return page
 
@@ -3766,16 +3767,16 @@ class SelectState:
         p = page if page is not None else select_page()
         self.role = p[SEL_ROLE]
         self.lru, s = [], p[SEL_HEAD]
-        while s != 64:
+        while s != SLOTS:
             self.lru.append(s)
-            if len(self.lru) > 64 or p[SEL_NEXT + s] != 64 and p[SEL_PREV + p[SEL_NEXT + s]] != s:
+            if len(self.lru) > SLOTS or p[SEL_NEXT + s] != SLOTS and p[SEL_PREV + p[SEL_NEXT + s]] != s:
                 raise AssertionError('recency list broken')
             s = p[SEL_NEXT + s]
-        if len(self.lru) != 64 or self.lru[-1] != p[SEL_TAIL]:
+        if len(self.lru) != SLOTS or self.lru[-1] != p[SEL_TAIL]:
             raise AssertionError('recency list incomplete')
-        self.masks = [int.from_bytes(p[SEL_MASKS + 8 * i:SEL_MASKS + 8 * i + 8], 'little') for i in range(3)]
-        self.ids = [p[SEL_SLOT_ID + 2 * s] | p[SEL_SLOT_ID + 2 * s + 1] << 8 for s in range(64)]
-        self.flags = list(p[SEL_FLAG:SEL_FLAG + 64])
+        self.masks = [int.from_bytes(p[SEL_MASKS + 16 * i:SEL_MASKS + 16 * i + 16], 'little') for i in range(3)]
+        self.ids = [p[SEL_SLOT_ID + 2 * s] | p[SEL_SLOT_ID + 2 * s + 1] << 8 for s in range(SLOTS)]
+        self.flags = list(p[SEL_FLAG:SEL_FLAG + SLOTS])
         if p[0x104C] != sum(1 for f in self.flags if f):
             raise AssertionError('dirty count %d, flags %d' % (p[0x104C], sum(1 for f in self.flags if f)))
         self.id_slot = {i: p[SEL_ID_SLOT + i] for i in range(PAT_MAX) if p[SEL_ID_SLOT + i] != 255}
@@ -4083,7 +4084,7 @@ def attributes_expected(out, previous=0):
 
 def patterns_uploaded(page, sprite, pattern_pages, out):
     """(ok, count): every slot of the list holds its owner's 128 bytes."""
-    ids = [page[SEL_SLOT_ID + 2 * s] | page[SEL_SLOT_ID + 2 * s + 1] << 8 for s in range(64)]
+    ids = [page[SEL_SLOT_ID + 2 * s] | page[SEL_SLOT_ID + 2 * s + 1] << 8 for s in range(SLOTS)]
     for slot in {e[0] for e in out}:
         pid = ids[slot]
         at = pid % 64 * 128
@@ -4255,8 +4256,9 @@ def select_checks():
         pool = rn.sample(range(180), 40)
         out = []
         for k in range(n):
-            if k % 37 == 36:
-                log = [(i, rn.randint(2, 20), rn.randint(2, 12)) for i in range(70)]   # over capacity
+            if k % 37 >= 34:                             # three large disjoint frames: over capacity once two are protected
+                base = (k % 37 - 34) * 60
+                log = [(base + i, rn.randint(2, 20), rn.randint(2, 12)) for i in range(60)]
             elif k % 53 == 52:
                 log = [(7, 5, 5)] * 130                  # list overflow
             elif k % 41 == 40:
@@ -6149,7 +6151,7 @@ def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, o
                         if program_attrs(res['attr'], len(out)) != attributes_expected(out):
                             fail(level, i, 'attributes', {'errors': ['attribute bytes differ']})
                         counts['frames with attributes verified'] += 1
-                        counts['patterns uploaded'] += sum(before[SEL_FLAG + s] != 0 and page[SEL_FLAG + s] == 0 for s in range(64))
+                        counts['patterns uploaded'] += sum(before[SEL_FLAG + s] != 0 and page[SEL_FLAG + s] == 0 for s in range(SLOTS))
                     if res['qready'] != ready:
                         fail(level, i, 'queue ready', {'errors': ['Q_READY %d, selection %d' % (res['qready'], ready)]})
                     counts['selection chunks'] += len(out)
