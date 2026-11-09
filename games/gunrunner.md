@@ -1,9 +1,9 @@
 # Gunrunner (Cybadyne / Hewson, 1987, 48K)
 
 ## Next session
-Stage: 4 (owner's play). Hardware: untested. v1.1 review build (default and Enhanced), not published, not pushed; not wired into `auto`, `engines.py` or a record: that comes when it goes upstream after the owner has played it.
+Stage: 4 (owner's play). Hardware: untested. v1.0 review build (default and Enhanced), not published, not pushed; not wired into `auto`, `engines.py` or a record: that comes when it goes upstream after the owner has played it.
 Inputs: `Gunrunner (1987)(Hewson Consultants).z80`, MD5 c9d8ff6b87d413df486a42c988c7079e. The loading screen is the snapshot's own picture.
-Build: `gunrunner.build(z80, nex)` and `gunrunner.build_enhanced(z80, nex, set)`, then the review run's `release-20261108b/work/pkg2.py`, default `.nex` f409ce60 with the screen, unchanged from v1.0.
+Build: `gunrunner.build(z80, nex)` and `gunrunner.build_enhanced(z80, nex, set)`, then the review run's `release-20261108b/work/pkg2.py`, default `.nex` f409ce60 with the screen, unchanged by Enhanced.
 Pending: the owner's play. A per-level tint of Enhanced is a later mock-up idea; the set has one look for every level.
 
 ## Facts
