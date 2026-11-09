@@ -278,6 +278,16 @@
     "enhanced_loading": "b8062918bb7d3fd88a04cd280a07ef1f"
    }
   },
+  "f5f5262f7a41d3c55408b45878c31d00": {
+   "game": "Mad Mix 2 - en el Castillo de los Fantasmas",
+   "doc": "mad_mix_2.md",
+   "nex": {
+    "sprites": "d41ee5de8df6951d32d526ea7b333719",
+    "loading": "ebbf27c83c27fe05eb0189ff1fdf797f",
+    "enhanced": "4d8b106df29969ba368112a256fe696e",
+    "enhanced_loading": "5b402870cd95dc34e4bc98096c1cce39"
+   }
+  },
   "53078ac60141cd808b609600b85f4094": {
    "game": "Magicland Dizzy",
    "doc": "magicland_dizzy.md",
