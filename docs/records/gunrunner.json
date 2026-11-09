@@ -1,0 +1,187 @@
+{
+ "name": "gunrunner",
+ "order": 235,
+ "game": "Gunrunner",
+ "doc": "gunrunner.md",
+ "engine": "gunrunner",
+ "representative": true,
+ "reference": "gunrunner",
+ "inputs": {
+  "snapshot": {
+   "name": "gunrunner.z80",
+   "md5": "c9d8ff6b87d413df486a42c988c7079e",
+   "path": "gunrunner/gunrunner.z80",
+   "note": "Gunrunner (1987)(Hewson Consultants).z80, the 48K game; the published patch's target."
+  },
+  "recordings": [
+   {
+    "name": "gunrunner_loading.scr",
+    "md5": "0e91e97044f364484428d4db07b3db98",
+    "path": "gunrunner/gunrunner_loading.scr",
+    "role": "The 6,912-byte loading screen (the snapshot's own picture), staged beside the snapshot; not a recording."
+   },
+   {
+    "name": "gunrunner.256",
+    "md5": "63866a2bdf48934940a486c7d5996c9d",
+    "path": "gunrunner/gunrunner.256",
+    "role": "Enhanced: the Spec256 set \"Gun Runner\" (painter Jao Paulo) as a .256, staged beside the snapshot; game data, never in this repo; not a recording."
+   },
+   {
+    "name": "gunrunner_palette.json",
+    "md5": "cc822d044ec89ffcffbfb3a122f4d088",
+    "path": "gunrunner/gunrunner_palette.json",
+    "role": "Enhanced: the Spec256 emulator's 256 colours as RGB (emu256 datos.js PALETTE_RGB), staged beside the set; never in this repo; not a recording."
+   },
+   {
+    "name": "a1.rzx",
+    "md5": "5ad71428de913c81856e291b68f0f96e",
+    "path": "gunrunner/a1.rzx",
+    "role": "A clean run from the snapshot into level 1. Also the broken builds' and ABI states' recording, to frame 700."
+   },
+   {
+    "name": "lv9.rzx",
+    "md5": "911a2d343caedcf3bdbc3313f255f1d1",
+    "path": "gunrunner/lv9.rzx",
+    "role": "Level 9 reached by a test poke (a new segment from its own snapshot); coverage, not clean play."
+   }
+  ]
+ },
+ "modules": [
+  "gunrunner"
+ ],
+ "own_modules": [
+  "gunrunner"
+ ],
+ "data": [
+  "asm/gunrunner_hooks.asm",
+  "docs/profiles/gunrunner.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "a1.rzx",
+   "lv9.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 30,
+  "note": "The default runs no hook (no clash to remove; Sinclair's ROM as the whole alt ROM), so it is proved by the boot check and the ROM paths; the replay proves Enhanced: at every hook every register with R, all 48K RAM but the dead stack, MMU and clock against the original; at every copy in play the canvas and the published window against an independent plane model; ABI cases on two states a site and 10 broken builds on a1 to frame 700. Levels 1, 2, 3, 5, 13, 17, 19 were replayed from test pokes in the review run (games/gunrunner.md \"Evidence\"), not here."
+ },
+ "outputs": {
+  "plain": {
+   "file": "gunrunner.nex",
+   "md5": "dabcb3aca5d4cfcdae3f6c9f5548ff90"
+  },
+  "loading": {
+   "file": "gunrunner_loading.nex",
+   "md5": "f409ce6064820d2080cc131e87273b73"
+  },
+  "enhanced": {
+   "file": "gunrunner_enhanced.nex",
+   "md5": "a73fe67d3c15d5ddbaf24eda7243896a"
+  },
+  "enhanced_loading": {
+   "file": "gunrunner_enhanced_loading.nex",
+   "md5": "1fef5dfc128e942f679ff681b81ac7b0"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Gunrunner",
+  "engine_col": "gunrunner (gunrunner.md)",
+  "build": "v1.0; gunrunner_loading.nex f409ce60 and gunrunner_enhanced_loading.nex 1fef5dfc equal the published .nxc 1.0 bare builds, default and Enhanced (without the screen dabcb3ac, a73fe67d); default: the original game, no game byte changed, no hook, Sinclair's ROM as the whole alt ROM, no clash to remove and none claimed; Enhanced, off by default: the Spec256 set's colours (Jao Paulo) for the play window on a double-buffered Layer 2; top bank 47, fits a 1MB Next",
+  "software": "TBD",
+  "hardware": "untested",
+  "next": "hardware checklist; Enhanced pace in the slowest 20-update stretches (up to +6.59%); natural play past level 1"
+ },
+ "checks": [
+  "asm2profile:gunrunner"
+ ],
+ "results": [
+  {
+   "check": "external review run",
+   "status": "pass",
+   "scope": "runs/gunrunner/release-20261108 and release-20261108b: pace, soak, flicker and the real loader, JNext 1.1.104; replays of 8 levels by test poke; on this engine's bytes. Not a selftest stamp. Enhanced pace is not within 2% in every 20-update stretch (up to +6.59%, games/gunrunner.md \"Evidence\").",
+   "evidence": "games/gunrunner.md \"Evidence\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/gunrunner_hooks.asm": "5f698d5fd599f8c3",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/gunrunner.json": "23c8c94adb80f6ed",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "1c5f7e62eb02e52b",
+   "nexclash/gunrunner.py": "1522d59357cd7eec",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "3e306f0e15dbd222",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ },
+ "verified": {
+  "deps": {
+   "asm/gunrunner_hooks.asm": "5f698d5fd599f8c3",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/gunrunner.json": "23c8c94adb80f6ed",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "10be51ce19f20f77",
+   "nexclash/gunrunner.py": "1522d59357cd7eec",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "3e306f0e15dbd222",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ }
+}

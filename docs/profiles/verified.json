@@ -196,6 +196,16 @@
     "enhanced": "4ec70c827ae291ce273a09c508f95c87"
    }
   },
+  "c9d8ff6b87d413df486a42c988c7079e": {
+   "game": "Gunrunner",
+   "doc": "gunrunner.md",
+   "nex": {
+    "plain": "dabcb3aca5d4cfcdae3f6c9f5548ff90",
+    "loading": "f409ce6064820d2080cc131e87273b73",
+    "enhanced": "a73fe67d3c15d5ddbaf24eda7243896a",
+    "enhanced_loading": "1fef5dfc128e942f679ff681b81ac7b0"
+   }
+  },
   "54ad66af6678df22a9d4443e3d04aadb": {
    "game": "Ikari Warriors (48K form)",
    "doc": "ikari_warriors.md",
