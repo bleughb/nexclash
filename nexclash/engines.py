@@ -15,6 +15,7 @@ import importlib
 
 # (module, detector, extra condition on the auto arguments or None)
 ENGINES = [
+    ('movie', 'is_movie', None),                                       # Movie (48K), optional Enhanced
     ('head_over_heels', 'is_head_over_heels', None),                    # Head Over Heels (128K), optional Enhanced
     ('bubbler', 'is_bubbler', None),                                    # Bubbler (48K), optional Enhanced
     ('underwurlde', 'is_underwurlde', None),                              # Underwurlde (48K)

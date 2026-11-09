@@ -1,0 +1,167 @@
+{
+ "name": "movie",
+ "order": 253,
+ "game": "Movie",
+ "doc": "movie.md",
+ "engine": "movie",
+ "representative": true,
+ "reference": "movie",
+ "inputs": {
+  "snapshot": {
+   "name": "movie.z80",
+   "md5": "facf9b90032759b7012abd91602b4b45",
+   "path": "input/movie.z80"
+  },
+  "recordings": [
+   {
+    "name": "movie_reference.rzx",
+    "md5": "ed296bab637743381deecaf3c900be1f",
+    "path": "recordings/movie_reference.rzx"
+   },
+   {
+    "name": "movie_source_start.rzx",
+    "md5": "a2ad075dc2f5a527e9010433615b7145",
+    "path": "recordings/movie_source_start.rzx"
+   },
+   {
+    "name": "movie_end_reset.rzx",
+    "md5": "c364b51382f395871a8aa403ce11d8a1",
+    "path": "recordings/movie_end_reset.rzx"
+   },
+   {
+    "name": "movie-loading.scr",
+    "md5": "b7677ca3f0e7b857d0f95a30feb3a4f5",
+    "path": "input/movie-loading.scr",
+    "role": "Original loading picture; not a recording."
+   },
+   {
+    "name": "colours.bin",
+    "md5": "b35360f75d258143cfc9607ebb8faf7f",
+    "path": "art/noir-v2/colours.bin",
+    "role": "External painting input; not a recording."
+   },
+   {
+    "name": "palette.bin",
+    "md5": "b5e37e1898c3488ad6c93c08496fa0e3",
+    "path": "art/noir-v2/palette.bin",
+    "role": "External painting input; not a recording."
+   },
+   {
+    "name": "painting.json",
+    "md5": "1194b6a77314f57910434b03f2a5a2fd",
+    "path": "art/noir-v2/painting.json",
+    "role": "External painting input; not a recording."
+   }
+  ]
+ },
+ "modules": [
+  "movie"
+ ],
+ "own_modules": [
+  "movie"
+ ],
+ "data": [
+  "asm/movie_hooks.asm",
+  "docs/profiles/movie.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_dma.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": []
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "movie_reference.rzx",
+   "movie_source_start.rzx",
+   "movie_end_reset.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 20,
+  "note": "Native registers/R, all game RAM, scratch and Layer 2; 472 ABI cases, 20 DMA/fallback; four negatives per recording. Exact boot and normalized ROM audit. Reference ends at 16%, not completion."
+ },
+ "outputs": {
+  "plain": {
+   "file": "movie.nex",
+   "md5": "ad4b36c8ec0c71229377215aad817e23"
+  },
+  "sprites": {
+   "file": "movie_sprites.nex",
+   "md5": "2730d62f8eb0e773e38257249ca0e883"
+  },
+  "enhanced": {
+   "file": "movie_enhanced.nex",
+   "md5": "60e35f942a686ed4e0324801fc85e0eb"
+  },
+  "loading": {
+   "file": "movie_sprites_loading.nex",
+   "md5": "5056c7519eb0e9861a60aab772090eaa"
+  },
+  "enhanced_loading": {
+   "file": "movie_enhanced_loading.nex",
+   "md5": "62acb19c46242bcef9411a8f5f7b5464"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Movie",
+  "engine_col": "movie (movie.md)",
+  "build": "Original monochrome default, optional painted noir Layer 2; loading screen, 1MB, complete hidden ROM.",
+  "software": "143,626 native plots in three recordings pass; final selftest stamp and packaging in progress.",
+  "hardware": "none (JNext only)",
+  "next": "Finish final stamp and private-loader package; review editable artwork."
+ },
+ "checks": [
+  "asm2profile:movie"
+ ],
+ "techniques": [
+  {
+   "application": "movie.pace",
+   "id": "patch.pace-limiter",
+   "revision": 3,
+   "target": "Original full-plot/clear/commit time windows; E5D5 unchanged.",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "movie.speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "Separate outer/nested caller speed latches.",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "movie.r",
+   "id": "patch.preserve-r",
+   "revision": 2,
+   "target": "Native R at every hook rejoin.",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "movie.measure",
+   "id": "verify.update-locked-pace",
+   "revision": 1,
+   "target": "E0A5, HL=8200; four scenes, three 100-update windows each.",
+   "phases": []
+  }
+ ],
+ "results": []
+}
