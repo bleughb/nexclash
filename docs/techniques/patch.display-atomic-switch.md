@@ -4,7 +4,7 @@
 {
   "schema": 4,
   "id": "patch.display-atomic-switch",
-  "revision": 2,
+  "revision": 3,
   "kind": "patch",
   "title": "Switch a figure's replacement image atomically (no hide/show)",
   "question": "When does the new image become visible relative to the original's drawing, and can the viewer see a gap or a half-done state?",
@@ -24,7 +24,7 @@
               "the attributes switch in one burst, right after the ULA change they go with"]
   },
   "owns": {"sprite_ids": "param", "pattern_slots": "param", "hook_state": ["HLIB_V_DB"]},
-  "examples": ["incredible_shrinking_fireman-add-OPUS", "atic_atac", "commando"],
+  "examples": ["incredible_shrinking_fireman-add-OPUS", "atic_atac", "commando", "inferno"],
   "sources": ["pilot runs/nightshade nightshade_hooks.asm burst / vbase (the blink fix, 2026-11-04)",
               "asm/lib/hlib_commit.asm + nexclash/hooklib.py (the shared library)"]
 }
@@ -36,13 +36,13 @@ attributes in one go, whenever a hook changes a figure that is on screen. Not ne
 change only while hidden (a cleared screen, a room change). NEW engines that redraw every figure per
 frame use the library (ENGINE_CONTRACT "Hook library"): the frame's images into the back half
 (`hlib_db_back`, through the content cache), the attributes into a table, then `hlib_commit` right
-after the game's blit - one burst, unused sprites off, the halves flipped (Nightshade's blink fix:
-patterns and ULA had changed in different frames).
+after the game's blit - one burst, unused sprites off, the halves flipped.
 
 **Assumptions.** Half of the pattern memory holds a frame's images; the ULA change the sprites go with is
 one routine the hook can follow (the blit).
 
-**Validation gap.** Fireman's coverage and Nightshade's verifier; the library's commit on the simulator only.
+**Validation gap.** Fireman's coverage, Nightshade's verifier; the library's commit on the simulator only.
+Inferno: one Copper list (attributes, tilemap, layer enables) at line 224; hardware by eye.
 
 ## Recognise
 - A hook hides sprites at plot entry and shows them at exit: hidden for the whole call, often

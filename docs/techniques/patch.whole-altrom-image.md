@@ -4,7 +4,7 @@
 {
   "schema": 4,
   "id": "patch.whole-altrom-image",
-  "revision": 1,
+  "revision": 2,
   "kind": "patch",
   "title": "Write the whole alt ROM image, never only the hook bytes",
   "question": "Does any ROM byte the game can reach come from the Next's own ROM instead of the build?",
@@ -17,7 +17,7 @@
   "phases": ["setup"],
   "order": {"setup": {"after": []}, "cross": ["the fill runs in the stub, before the tail enables the alt ROM ($8C = $80)"]},
   "owns": {"memory": [{"space": "alt_rom", "image": 1, "offset": ["0x0000", "0x3FFF"]}], "next_pages": [94, 95]},
-  "examples": ["cauldron"],
+  "examples": ["cauldron", "inferno"],
   "sources": ["docs/REFACTOR.md"]
 }
 ```
@@ -44,7 +44,9 @@ proven by the simulated boot over NextZXOS's ROM3 and the per-game verifiers, no
 ## Recognise
 A partial fill: a pinned game, or `--altrom-fill rom3`. Symptoms: a crash
 or garbage at the first ROM print of a character >= 0x90, interrupts running hook code once DivMMC
-no longer traps 0x0038 (other loaders, CSpect), a reset to the NextZXOS browser.
+no longer traps 0x0038 (other loaders, CSpect), a reset to the NextZXOS browser. The game's own reads count
+too: Inferno's intro runs IM 2 with I = 3B, so 0x3BFF-0x3C00 is its vector and must stay FF FF; hook bytes
+there stalled the tape-start build (found with JNext headless; per-level builds never reached it).
 
 ## Probe and stop
 1. `nextboot.boot(nex, pc, sysrom=ROM3)`: alt image 1 minus Sinclair's ROM must be the hook bytes only.
@@ -63,6 +65,7 @@ Bank 47 while the stub runs; the alt ROM image.
 |---|---|---|---|---|
 | crash at a UDG print | 0x0B52 into hooks | boot with ROM3 | whole image | moving hooks |
 | bank 47 refused | build uses it | z80tonex error | move the build's bank | dropping the fill |
+| stall before the intro | hooks on an IM 2 vector (I = 3B) | JNext PC trace | skip 3BFF-3C00 | - |
 
 ## Verification
 Negative control: `--altrom-fill rom3` rebuilds the old image; booted over ROM3 it differs from

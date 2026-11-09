@@ -57,8 +57,8 @@ preserve the handoff either way. Stages do not force new chats.
 # Stage 0 - Intake (tools, before any design work)
 
 ## Survey (one command)
-`python -m nexclash.survey GAME.z80 --rzx R [--rzx R2]` (~5 min for 8,600 frames, linear: 18,300
-frames ~15 min, the analysis pass silent for ~12 - not a hang; `--stop N` for a first look) runs
+`python -m nexclash.survey GAME.z80 --rzx R [--rzx R2]` (~5 min per 8,600 frames, linear;
+the analysis pass is silent for minutes - not a hang; `--stop N` for a first look) runs
 the snapshot check (0b), the plain conversion with its boot check (1; 48K only), engine identification (2) and one analysis pass (3: screen writers by routine, callers, T per call,
 ISR, free memory), then a preview pass, and writes `<game>_survey/`: survey.md (one page, ~2K
 tokens), survey.json, preview.png (what each top plot routine draws, per caller), the plain .nex.
@@ -183,17 +183,18 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
 
 ## 3d. Feasibility (unknown engine or substantial rework; a known engine skips this)
 Before building, in games/<game>.md "## Feasibility"; investigate only what could change the decision:
-- Pacing: interrupt sync, busy wait, drawing time, sound-dependent, other. Unknown -> a focused probe. What sets the
-  pace, where added work can run, when it must finish, what a late finish does, usable gap sizes (not just total spare).
-- Side effects of what hooks replace or speed up: logic reading the screen or maps, sound output or feeds, R.
+- Pacing (card detect.pacing-structure): what sets the pace, where added work can run and when it must finish, what a
+  late finish does, usable gap sizes (not just total spare), who makes the sound.
+- Removal experiment (card detect.routine-removal) for each original routine kept, replaced or sped up: what consumes
+  its effects (screen/map readers, sound, R)? No consumer -> no preservation.
 - Budgets: measured from the original, or a user requirement. An assumed amount of spare time is no budget and no gate.
-- Constraints: requirement or implementation choice ("preserve collisions" / "run the copier unchanged"). For each: what
-  observes it, what changes if relaxed, evidence for its tolerance. Weigh replacing or accelerating the original work,
-  not only adding to it; a rejected option says measured or untested.
+- Constraints: requirement or implementation choice ("preserve collisions" / "run the copier unchanged"): what observes
+  it, what changes if relaxed. Weigh replacing or accelerating original work, not only adding; rejections say measured
+  or untested.
 - Each experiment: constraint -> its evidence -> success criterion (a number or an exact assertion) -> change -> result.
-- Reassess: two attempts (each a hypothesis with a measured outcome; bug fixes do not count) fail the same constraint, or
-  evidence invalidates the approach -> pause it, recheck measurements and assumptions, get a focused independent review
-  from a compact evidence package, record the conclusion in the handover.
+- Reassess: two attempts (hypothesis + measured result; not bug fixes) fail one constraint, or evidence invalidates
+  the approach -> pause, recheck assumptions, get an independent review of a compact evidence package; record it in
+  the handover.
 End with a decision: approach, measurements, open risks, next experiment.
 
 ## 4. Decide the design (decision table)
@@ -250,6 +251,9 @@ model, and the sprite pixels against the original plot (masked figures: run the 
 and a 0xFF buffer for ink / paper / transparent, midres.truth). With interrupts on at the hooks,
 also check interrupt safety after every hook instruction (IX, IY, I, IFF, stack room; Commando,
 midres) with a negative control. Every mismatch must be explained or fixed.
+Equivalence (owner, 2026-11-10): gameplay extremely close, not 1:1. Exact where cheap; a difference nothing later reads
+(removal experiment) is accepted, listed in the record with why. R as a random source: a replay may feed recorded values
+instead of costly runtime restoration (card patch.preserve-r).
 Also simulate the start-up tail: registers restored, no game memory touched.
 
 Iterate fast (the two levels: BRIEFING C3b): while developing use `--quick N` and the unit tests on 1-2
@@ -265,12 +269,11 @@ not every combination (Jetpac: 117 graphics x 8 positions, inks and slots once e
 Failed cases first, then a sample, then the full gate once per change set: `nexclash/caseselect.py` (stable ids; a case's
 phases and injections do not depend on the selection). Empty evidence is not success: `runchecks.measured` (no rows,
 states or cases = not measured: no claim, no stamp; not applicable needs a reason).
-Early integrated diagnostic (unknown engines, stage 2's first substantial milestone, not its exit): a real NEX through the
-intended converter, stub, hooks and memory layout, one visible feature from live data, every step of the path connected
-for a bounded case. Run the full per-update selection/validation for all actors and worst observed upload load, even if one
-figure shows. Report pace and freshness apart: publication rate, longest miss run, maximum displayed-state age, under demanding
-motion. Schedule its hardware test early, after boot and hook checks; waiting for it
-does not block unrelated work. A shipped visible compromise (dropped updates) needs the user's agreement once demonstrated.
+Early integrated diagnostic (unknown engines, stage 2's first milestone, not its exit): a real NEX through the intended
+converter, stub, hooks and memory, one visible feature from live data, full per-update work for all actors. Report pace
+and freshness apart (publication rate, longest miss run, maximum display age). Hardware test early, after boot, hook and
+headless JNext checks (nexclash/jnext.py, set up at intake); waiting blocks nothing else. A visible compromise
+(dropped updates) needs the user's agreement once demonstrated.
 Report status.evidence in the record: functional / integration / timing / display / hardware, each at level host, assembled,
 integrated or hardware, with artifact, inputs and environment; absent reads not assessed (legacy records unchanged).
 Stage 2 ends: intended functionality integrated, quick runs PASS (counters in games/<game>.md), the evidence record written

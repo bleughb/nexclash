@@ -1,19 +1,22 @@
 # Inferno
 
 ## Next session
-Stage: 2 (hybrid sprite build, not released)    Branch: claude/inferno-full-game (PR #201)
-State: full game from the tape on the Next: intro, play, ship death, restart (user). Tilemap scenery + hardware sprites by
-  Copper at line 224; copier write-out replaced. JNext: level ends 1-5 reach the next level, L6 the ending.
-Inputs: specnext/reference/inferno/    Start: specnext build/hybrid.md, then CONTINUE_copier_window.md.
+Stage: 2 (hybrid sprite build on main, not released)    Branch: main (PRs #201, #207, #230 merged)
+State: full game from the tape on the Next: tilemap scenery + hardware sprites committed by Copper at line 224,
+  copier write-out replaced, G3 masks, RAM SAVE/LOAD (page 123), English option (--cw-english), sprite store
+  reused on a same-level restart. JNext: level ends 1-5 reach the next level, L6 the ending.
+Inputs: specnext/reference/inferno/ (Inferno_masked.nex, Inferno_english_masked.nex)
+Start: specnext build/hybrid.md (current handover); CONTINUE_copier_window.md is history.
 Read: asm wk_select, wo_go, modal_exit, wi_stub; inferno.py copier_window_build (--cw-driver --cw-full).
-Next: English build; real freshness readout; shop on hardware; records. SAVE/LOAD: RAM, page 120 (user chose no SD).
-Gate: zero frame slips and the original 9907 time per update with sound kept (replaces 10 ms).
+Next: Kempston joystick (user 2026-11-10: not working; not fixed on main); freshness readout on hardware
+  (publication rate, longest miss run, display age); shop and level-to-level carry-over on hardware; records.
+Gate: copier-window gate 0 failures (OUT/9907 within tolerance) + boot checks; replay game RAM with supplied
+  LD A,R values (equivalence: PLAYBOOK 6); pace, sound and freshness on hardware.
 Boundary: 8EF9 follows original DI, before IM2 setup; the pause gate preserves all registers/R/RAM/
   stack and caller clocks (six RZX initialization states). Reject 86C5 (decompressor, overwritten).
-Memory: owned cache 136–215, metadata/code 79, pinned stream 122, DDMA staging 216–223, copier
-  window 80. Store publishes valid last; dispatch still requires exact live validation.
-Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample, ONE gate,
-  --jobs 6); Inferno6.rzx --quick 2000; six quicks at milestones; level-4 shop.
+Memory: copier window 80, driver 81, selection/store 82-95, saves 123. Older component pages (owned
+  cache 136-215, pinned 122, DDMA 216-223): check the build uses them before relying on them.
+Workflow: failed states, 1/10 sample, ONE gate (--jobs 6); JNext headless before hardware rounds.
 
 ## Inputs and facts
 - Inferno.tzx: supplied tape, MD5 `335eec35a526f2044455cb87e8c77206`.
@@ -36,7 +39,7 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
   `python nexclash.py rzx extract`; MD5 `338a35ccf625f820c0cd6a2a4175aab2`.
 - Snapshot: 48K, PC 0x0038, SP 0x86CF, IM 1, interrupts disabled, I=0xFE.
   The stack returns to RAM at 0xECF8; retained BASIC does not prove a running loader.
-- Game data stays in specnext; the visual design is now approved, but no sprite build exists.
+- Game data stays in specnext; design approved; the hybrid sprite build plays on the Next (2026-11-09).
 - GitHub reports specnext as public. The user explicitly authorised publishing these Inferno
   recordings, snapshots, previews and builds there on 2026-11-05; do not re-ask in this session.
 
@@ -60,8 +63,8 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
 - Inferno_copier_window_*_diagnostic.nex (m2..m3d; NOT releases): play each
   beside plain Inferno.nex for a minute of level 1: same speed, same beeper sound, no hang at the
   first gameplay frame, no extra border stripes. Report core/video mode.
-- Plain conversion: no later tape loads; no sprite build yet.
-- Proposed sprite release: check intro beeper speed; title/start; all six continuous loads with
+- Plain conversion: no later tape loads.
+- Sprite build (Inferno_masked.nex; still to confirm): check intro beeper speed; title/start; all six continuous loads with
   score, equipment and health retained; scrolling/depth, bullets, explosions, pickups, death;
   shop/pause/messages with no stale layers; ending scroll/text/medals; no slowdown or tearing.
 
@@ -86,6 +89,8 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
   not the cost of every image. Full level-2 loop census: 11,921 ticks, no desync.
 
 ## Approved design
+- Superseded in part (user brief 2026-11-09, build/hybrid.md): the copier's display work is replaced,
+  scenery is a tilemap (not Layer 2), and the 35,000 T target is void (never measured). Masks and order stand.
 - Figures: capture every C100 actor image in original order, including BOTH projectile lists,
   effects and collectables. Track one complete run-list per draw ordinal and IX;
   do not collapse several draws by owner or count 9790 as a figure. Keep C000 scenery intact.
@@ -133,21 +138,11 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
   2.9-13.2 k T, so +10 ms of hook work slips 56-81 % of updates a frame; "10 ms total" is no gate.
 - The copier head 9790..97FB (416 cells, 25.2-30.8 ms) OUTs the A700 beeper buffer per cell.
   Head T = 79,477 + 101*G; per-OUT T in cw_out_t. Graphics are mutable (F400-FA36, L3 ED00-F0AF).
-- Milestone 2: each OUT change at its original T (lockstep in the head), 9907 at the original time,
-  CTC ch 3 polled (32 T ticks, any video timing; no counting CTC -> original copier). Window EI:
-  page 80 byte 0 = IM2 JR offset to cw_irq (adds the no-op ISR: 94 T, 10 M1). Cell 415's OUT after
-  the epilogue. X accumulates. Model 1,854 states: OUT -24..+56 T (cells 0/1 later), 9907 -25..+43 T.
-  Full recordings: 88,187 updates, free >= 14.6 ms.
-- Milestone 3a: hooks 8F7C/959B/96A1 time themselves on the CTC (cw_tin/cw_tout; 8F7C sets CW_X,
-  actors add), restore R and count a $C8 pulse lost under DI as the original ISR (R+10, X-94; window
-  entry too); cw_cal measures speed switches; 8F7C map copy by zxnDMA. Gap ~6 T per hook exit.
-  Stub register-block crash fixed (hooks >= rom_end+20). m3 68340edf...: pace/sound = plain (§7).
-- Milestone 3b: prepare_frame + render_textmap = page-69 coroutine in cw_wait slices (>= 12 ticks
-  ahead, ends 9 before; poll per map cell; yield saves SP, no CALL; DI, $C8 as cw_irq); 8F95 hook
-  wk_hook restores R. Model: page 14/69/68 = run_frame; 88 % done in the window (§8).
-- Milestone 3c: 8F95 drops work the window did not finish (ready 0; the display would keep its last
-  frame; next window restarts): 8F95 156-160 T always. Gate 0 failures; dropped 229/1,855 (12 %), at
-  most 6 in a row (L6; 3 elsewhere). NEX m3c ac3be35a...
+- Milestones (cards patch.timed-side-effect-replay / patch.work-in-timed-gaps): m2 OUTs at original T
+  (CTC ch 3 polled, 32 T ticks), 9907 at the original time; model OUT -24..+56 T, 9907 -25..+43 T.
+  m3a hooks time themselves (CW_X), cw_cal, lost-IRQ accounting, map copy by zxnDMA; stub
+  register-block crash fixed. m3b 8F95 work as a cw_wait coroutine; m3c unfinished work dropped
+  (12 %, runs to 6). m2/m3 pace and sound = plain on hardware. Exact R/IRQ later shown unneeded (hybrid).
 - Never-read rule: window CALLs/IRQ pushes leave bytes only in the 4 below the copier's SP, which
   9907's PUSH DE / PUSH HL overwrite first (checked by running them; 9907 = D5 E5 in all 88,187).
 
@@ -155,38 +150,38 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
 - Original TZX/BASIC reaches first USR 24200; bootstrap MD5 9814983816aafb2b9efd99344dd8c221.
 - Decoder 386E-3944, registers 3945, alt-ROM 24/26, tape 32-55, descriptors/cursor 68.
   Replaces only checked ROM 0562; retains 7319. Byte/pulse oracles, seven Na/Nb prefixes and
-  negative controls pass; canonical C=7E. Continuous Nb/game/ending and physical timing unproved.
-- Tail 5D30-5D65 only has an initial 2,000-frame lifetime scan. Loader/capture diagnostic NEX boot
-  checks pass with NEXLOAD/foreign ROM3; neither installs the frame/actor pipeline or is a release.
+  negative controls pass; canonical C=7E. Full game from the tape runs on the Next (2026-11-09).
+- Tail 5D30-5D65 only has an initial 2,000-frame lifetime scan. Boot checks pass with NEXLOAD/foreign ROM3.
 
 ## Stage-2 frame pipeline (build/frame_pipeline.md)
 - Textmap compiler replaces the historical 130.069 ms Layer 2 path with live one-bit tiles.
   Private page 69, double-buffered maps/definitions page 14. Worst L6 scenery 6.547 ms.
 - FramePatch at 8F95 runs after the original copier, preserving main/alternate registers, RAM,
-  stack and mappings. Readiness stays zero until the complete actor pipeline exists. Pending
-  Copper owns its buffers until acknowledged; incomplete captures cannot prepare a frame.
+  stack and mappings. Pending Copper owns its buffers until acknowledged; incomplete captures
+  cannot prepare a frame.
 - Six original quick replays: 1,850 hooks / 68,198,400 pixels, 16,903 capture events PASS. Source
   lifetime sampled in 1,850 scenery / 13,159 actor cases; not permission for persistent pointer keys.
 - Setup copies actual nine-bit ULA ink AND paper palettes; clip/scroll and 294,912 RGB pixels pass
   across banks/buffers/FLASH phases. FLASH inverts bitmap bits, not palette indices. Actual ULA
-  FLASH clock remains open. One-time setup 2.030 ms; hardware video/raster/IRQ proof remains open.
-- Copper commits complete attributes/map/ack at line 224 and HALTs. Synthetic attributes only;
-  actor pattern compilation remains open. Late commits, serial wrap, busy/count/ready guards pass.
+  FLASH clock remains open. One-time setup 2.030 ms; hardware by eye only.
+- Copper commits complete attributes/map/ack at line 224 and HALTs; live since 2026-11-09 (hybrid).
+  Late commits, serial wrap, busy/count/ready guards pass.
 - Original L4 gameplay return, frame 51,805: 9019 hook stops Copper, hides all replacement layers,
   invalidates capture and reproduces LD SP,86D5. 256 bit cases/four negative controls PASS. Other
-  pause/message/intro/ending paths remain open. Hide 0.035 ms.
-- Capture + preparation max 8.715 ms; 58-sprite queue ~0.55 ms (~0.64 shrinking). Full capacity/
-  FLASH-heavy cases exceed 10 ms before actor work. No total timing PASS or NEX integration.
+  pause/message/intro/ending paths: hybrid modal_exit at 901C (hardware ok). Hide 0.035 ms.
+- Capture + preparation max 8.715 ms; 58-sprite queue ~0.55 ms (~0.64 shrinking). Judged then against
+  the 10 ms target, which was void (Copier window).
 - ROM code: capture 3948-39F2 + 3A00-3B72, modal 3B90-3BDF, frame 3BE0-3C30; all below 3D00.
 
-## Sprite pipeline (build/pipeline.md)
+## Sprite pipeline (build/pipeline.md, build/hybrid.md)
 - Driver, page 81, from the 8EF9 gate: 256 C100 indices, snapshot, exact-stream duplicates (shared
   payload), colour, B, store; valid last. Model = independent oracle, all six levels; 3.2-6.9 s (L6).
-  Not installed. Rule: nothing reads CAP_LOG before the window work.
+  Installed, with loading bars; skipped on a same-level restart. Nothing reads CAP_LOG before the window.
 - Dispatch, page 69 1800, coroutine after the scene: each log record = entry + exact live compare,
   polled per tile. Gate 0 failures, 0 misses; 14.9 % dropped (12.3 % before), runs to 14. NEX m3d.
-- Selection, pages 82-95: 8EF9 chunk index by content; window list + store (recency list, role-byte commit).
-  Gate 0 failures; 17.3 % dropped, runs to 14, margin 108 T. Phase 0 only. No hardware yet.
+- Selection, pages 82-95: 8EF9 chunk index by content; 128-slot protected store (recency list, both
+  pattern-RAM halves); FLASH phase 1 for the four L1 FLASH images. Gate 0 failures, margin 109 T.
+  On hardware since 2026-11-09. Drop figures predate the write-out reclaim; freshness unmeasured.
 
 ## Historical components (build/actor_jobs.md, actor_b_compiler.md, README.md)
 - Pages 78/122 pin source bytes; 75 tiles; 76 whole-image B; masks 116/117, lookup 128–135; 77 gated
@@ -194,24 +189,26 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
 
 ## Lessons
 - [local: Inferno JNext tape trap] JNext rewrites A at ROM PC 056B while its tape trap is on: new code in old tape ROM must avoid that PC. Hooks at 04C6/0574.
-- [local: Inferno dispatch] Every added coroutine stage raises the drop rate: report drops and runs.
+- [card detect.routine-removal §Use / do not use] Skipping the copier kept game RAM equal (L1-4, L6) once
+  LD A,R values were fed: exact R/IRQ/copier-RAM preservation was unneeded; disassembly found 9804 logic.
+- [card patch.work-in-timed-gaps §Probe and stop] Every added coroutine stage raises the drop rate: report drops and runs.
 - [local: Inferno driver oracle] A loader driver's dedupe is exact streams, not the host's tile tuples:
   row splits differ, so the exact validator (not the tuple) defines duplicates.
-- [local: Inferno 8F95 budget] Finishing deferred work after the limiter eats the slack the window
+- [card patch.work-in-timed-gaps §Use / do not use] Finishing deferred work after the limiter eats the slack the window
   saved; drop the frame instead (display keeps the last one) and count run lengths of drops.
-- [local: Inferno coroutine] A loop using SP as data pointer yields without CALL: save SP + live regs.
+- [card patch.work-in-timed-gaps §Contract] A loop using SP as data pointer yields without CALL: save SP + live regs.
 - [local: Inferno copied routine] Compare every hand-copied asm routine's results with the original.
 - [doc BRIEFING A1] Hook code under the stub's register block (rom_end) is lost
   at boot; models without the stub cannot see it: compare hook bytes after a simulated boot.
-- [local: Inferno timed hooks] Calibrate tick-quantized constants over all CTC phases (5 phases left
+- [card patch.timed-side-effect-replay §Probe and stop] Calibrate tick-quantized constants over all CTC phases (5 phases left
   K 7 T off a hook); constants holding NEXTREG 7,x need the machine's own figure (cw_cal).
 - [local: Inferno IRQ anchoring] Hooks shift the game, so a wall-time IRQ meets other instructions;
   compare against the original IRQ at the same game instruction (RZX semantics) where code reads R.
-- [local: Inferno copier window] A replay cannot follow the code that produces it when the first
+- [card patch.timed-side-effect-replay §Use / do not use] A replay cannot follow the code that produces it when the first
   event is due sooner than that code takes: interleave (lockstep); defer only what the tail can't fit.
 - [local: Inferno IRQ in a timed window] The IM2 JR at FFFF reads its offset from 0000: the slot-0
   page owns the IRQ; count the original's no-op ISR (T, M1) rather than lose it under DI.
-- [local: Inferno pacing] Find where the frame is paced before setting a hook budget; here the
+- [card detect.pacing-structure §Use / do not use] Find where the frame is paced before setting a hook budget; here the
   limiter is inside the copier, which also plays the beeper. Prove immutability on full recordings.
 - [local: Inferno runtime attribution] Keep per-update totals; row span proofs cut bounds checks,
   never byte equality; repeated streams do not authorize reuse across draws.
@@ -220,7 +217,7 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
 - [local: Inferno owned cache] Append whole streams in 136–215, publish valid last, validate live
   bytes; dispatch is a candidate; no reset with current/pending owners.
 - [local: Inferno immutable sources] Loading-time preparation removes sampled cold construction;
-  exact validation still exceeds budget.
+  exact validation exceeded the (void) 10 ms target.
 - [local: Inferno B fill] Bitset connectivity preserves whole-image fill; a bounded call is no
   cold-latency proof.
 - [local: Inferno blitter] Physical SRAM includes 040000 aperture offset; high staging is 216–223.
@@ -258,15 +255,16 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
   profiled 19.238 to 0.724 s. Autosave/buffer parity tested.
 - [doc docs/MAINTAIN.md §Commit, PR and the reference files] specnext is public; user authorized Inferno
   publication. Corrected visibility guidance in place.
-- [local: Inferno store] A 64-slot scan per new pattern cost 2.5k T and doubled drops; a recency list fixed it. Measure cold frames.
-- [local: Inferno alt ROM] The intro uses IM 2 with I = 3B: ROM 3BFF-3C00 is its vector. Hooks must leave them FF; JNext headless found it.
-- [local: Inferno drop runs] Busy L1 windows are nearly full: per-chunk cost, not cold frames, set the run length. Profile before planning. Store cache keys must cover all code they hold.
+- [card patch.work-in-timed-gaps §Failure lookup] A 64-slot scan per new pattern cost 2.5k T and doubled drops; a recency list fixed it. Measure cold frames.
+- [card patch.whole-altrom-image §Recognise] The intro uses IM 2 with I = 3B: ROM 3BFF-3C00 is its vector. Hooks must leave them FF; JNext headless found it.
+- [card patch.work-in-timed-gaps §Failure lookup] Busy L1 windows are nearly full: per-chunk cost, not cold frames, set the run length. Profile before planning. Store cache keys must cover all code they hold.
 - [local: Inferno startup] L1 map is write-first, permitting plain tail 9A80. Later lifetime is separate.
 
 ## Friction
 - retries: [local: Inferno timing reconciliation] Require one timing row per completed hook and
   reconcile component sums; an empty timing list must not look like successful profiling.
-- environment: [local: Inferno Windows checkout] No JNext/SD image here; doccheck counts CRLF bytes.
+- environment: [local: Inferno Windows checkout] JNext 1.2.0 headless runs here (user's copy); doccheck
+  counts CRLF bytes unless core.autocrlf is false.
 - reuse: [local: Inferno shared DMA] Upstream DMA library/model/selfchecks reused; data in specnext.
 - reuse: [tool tools/probes/rzx_census.py] Extended the existing census with bounded point captures;
   no parallel game tracer. Existing flags/output are preserved when capture is not requested.
@@ -278,9 +276,13 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
   window timeline) live in specnext build/copier_window/, edit scripts stay local.
 
 ## Technique use
-- optimise.pattern-cache: helped: full-content census finds early live candidates; runtime snapshots,
-  cache and scheduling remain open. Prepared uploads now reject both current/pending pattern owners.
-- patch.display-atomic-switch: helped: front-bank/visibility guards pass; runtime atomic commit remains open.
+- optimise.pattern-cache: helped: 128-slot protected store, recency list; uploads reject current/pending owners.
+- detect.routine-removal: helped: the copier skip replay settled what gameplay needs (build/hybrid.md).
+- detect.pacing-structure: helped: the pacing census found the limiter inside the copier.
+- patch.hybrid-display-replacement: used: tilemap + sprites, write-out replaced, modal_exit hides layers.
+- patch.timed-side-effect-replay: used: copier window head, beeper OUTs at original T.
+- patch.work-in-timed-gaps: used: cw_wait coroutine, unfinished work dropped.
+- patch.display-atomic-switch: helped: one Copper commit at line 224 ended the ghosting (hardware, by eye).
 - verify.model-reconstruction: used: quick tile/ULA closure, dropped-writer and incorrect-coordinate controls.
 - detect.buffer-layout-producer: helped: followed the 0x9790 copier to its tile map and source tables.
 - detect.tracked-unit: helped: the screen-copy routine is not a figure; producers remain to classify.
