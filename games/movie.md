@@ -2,7 +2,7 @@
 
 ## Next session
 
-Stage 3: integrated candidate; final stamp and packaging in progress. Branch `game/movie-release`.
+Stage 3: verified and stamped; release package and artwork ready for review. Branch `game/movie-release`.
 Inputs and hashes: `docs/records/movie.json`. Supply external colours.bin, palette.bin, painting.json
 and movie-loading.scr beside movie.z80; alternatively set NEXCLASH_MOVIE_ART to the painting folder.
 No game assets enter this repo. Jon approved 1930s noir colours and overnight implementation.
@@ -25,6 +25,8 @@ use flat native pixels, reject changed silhouettes or contradictory shared-part 
 propagate shared pixels across animation references without blending.
 
 ## Engine
+
+Techniques: patch.pace-limiter, patch.restore-speed, patch.preserve-r, verify.update-locked-pace.
 
 F29B is the SP-based plotter, with eight masked/direct/shifted/mirrored chunk hooks. F18A clears
 scratch 9500..95FF; F700 commits dirty rectangles. A 2048-pixel colour scratch feeds Layer 2,
@@ -72,7 +74,7 @@ raster phase changes duration. No AY music exists in this 48K release.
 
 Exact normal/NEXLOAD boot and ROM audit start at the separately proven F526 boundary. Actual
 .NEXCLASH tests use disposable 26.11 cards, ROM MD5 `e50ee485fb4a21d24dbf57b5e0868d8d`, and
-compare rebuilt files byte for byte. No shared-card writes. Exact candidate status is in the handoff.
+compare rebuilt files byte for byte. No shared-card writes. Final package and detailed loader results are in the handoff.
 
 ## Trainers
 
@@ -91,8 +93,8 @@ verify installed bytes after room entry, run play, and separately exercise all t
 - [local: mutable graphics] A shared opacity mask crosses D3FF; a page-boundary cutoff loses D401/D403 pixels.
 - [local: nested state] Inner drawing overwrites its IFF latch, so the outer wrapper requires its own saved IFF.
 - [local: coverage] A recording ending at 16% is not a completion even when every drawing entry type is reached.
-- [tool nexclash.movie.unit_tests] Transparency negatives need nonempty overlap and the broken patch's own code/tables.
-- [tool nexclash.movie.auto] Audit ROM paths from the independently proven normalized PC, not the source's mid-blit PC.
+- [tool nexclash/movie.py] Transparency negatives need nonempty overlap and the broken patch's own code/tables.
+- [tool nexclash/movie.py] Audit ROM paths from the independently proven normalized PC, not the source's mid-blit PC.
 - [local: trainers] Final-item cheats needed startup/condition translation and accurate labels, not blind POK copying.
 
 ## Technique use
@@ -125,4 +127,4 @@ a copy is not proven by return-boundary pixel checks.
 semantic replay, negative controls, JNext pace/sound and private-loader trials. Source refresh
 from e01cdc0 to cc60245 before final stamp changes records only. An early full auto completed
 semantic proof then failed exporting the ROM-audit snapshot; the harness fix is checked separately
-and the final selftest stamping run supersedes that incomplete command.
+and the final selftest stamping run passed, superseding that incomplete command.
