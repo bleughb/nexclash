@@ -33,7 +33,7 @@ PAGE_LO = 0x2000                            # alt ROM image 1 page we own (the g
                                             # and reads only page 0x00 - RZX scan)
 ROM_ORG, ROM2_ORG = 0x3600, 0x3F00          # hooks: part 1 (< 0x3D00), part 2 (+ register block, < 0x4000)
 TRAP_LO, TRAP_HI = 0x3D00, 0x3E00            # no code here (code there crashed 541e34e2; probable DivMMC automap, BRIEFING A1)
-FILL_LO, SVR_LO = 0x3080, 0x3550            # body fill code; scenery save / restore
+FILL_LO, SVR_LO = 0x3066, 0x3550            # body fill code; scenery save / restore
 DT, NTYPES = 0x3400, 41                     # depth table (41 x 8, + variant table pointers)
 RAM_LO, RAM_HI = 0x5C00, 0x6100             # hook state (never read/written by the game once it runs)
 SCRATCH_LO = 0x5E20                          # mask, temps, save buffer, ink / fill rows: written before read
@@ -43,6 +43,9 @@ V_CLK = 0x5C0E                                # last pattern slot allocated
 SLOTK, NSLOT = 0x6080, 32                     # pattern-slot keys (persistent, like the entries)
 ENT, NENT = 0x5C10, 12
 V_ON, V_FREED, V_CNT = 0x5C04, 0x5C05, 0x5C06
+RAM_CODE = 0x6100
+V_FAST = 0x5E9D                             # the update's logic is running at 28 MHz
+FAST_SITES = {0xDEB2: 0xDEB6, 0xDF13: 0xDE91, 0x7357: 0x735A}   # e_fa, e_fb, e_isr: site -> where they go on
 TAIL_ADDR = 0x6D00                          # 0x6CB5-0x70F7: never read or written in the RZX
 CONV = (23514, 23313, 23333, 23353, 23373, 23393, 64975)
 PLAYER, POW = 23514, 64975
@@ -51,14 +54,16 @@ SITES_ORIG = {39120: bytes.fromhex('C32299'), 39366: bytes.fromhex('7A93EBE1'),
               27468: bytes.fromhex('CB21CB21'), 30597: bytes.fromhex('210040'),
               25630: bytes.fromhex('C3D269'),
               39777: bytes.fromhex('D5E5B7'), 40733: bytes.fromhex('E5ED7382FD'),
-              40926: bytes.fromhex('DDCB0BAE'), 40930: bytes.fromhex('DD7E06')}
+              40926: bytes.fromhex('DDCB0BAE'), 40930: bytes.fromhex('DD7E06'),
+              0xDEB2: bytes.fromhex('FDCB0786'), 0xDF13: bytes.fromhex('C391DE'), 0x7357: bytes.fromhex('228FFD')}
 SITE_SYM = {39120: 'e_ent', 39366: 'e_main', 39529: 'e_x', 40955: 'e_x', 27468: 'e_rect',
             30597: 'e_cls', 25630: 'e_init', 39777: 'e_p1', 40733: 'e_p2', 40926: 'e_p3',
-            40930: 'e_p4'}
+            40930: 'e_p4', 0xDEB2: 'e_fa', 0xDF13: 'e_fb', 0x7357: 'e_isr'}
 INIT, INIT_TO = 25630, 27090                 # game entry (JP 27090) -> e_init
 # bytes of patched instructions that must never be a PC (interiors behind each 3-byte JP)
 INTERIORS = (39369, 39532, 39533, 40958, 40959, 27471, 25631, 25632, 39778, 39779,
-             40734, 40735, 40736, 40737, 40927, 40928, 40929, 40931, 40932)
+             40734, 40735, 40736, 40737, 40927, 40928, 40929, 40931, 40932,
+             0xDEB3, 0xDEB4, 0xDEB5, 0xDF14, 0xDF15, 0x7358, 0x7359)
 # Next default ULA colours (RRRGGGBB): ink 0-7 normal, then bright
 SPECCY = [0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x00, 0x03, 0xE0, 0xE7, 0x1C, 0x1F, 0xFC, 0xFF]
 
@@ -171,13 +176,17 @@ def palette():
 class CommandoPatch:
     name = 'Commando figures (player, soldiers, POWs) -> hardware sprites (altrom + bank-5 state)'
 
-    def __init__(self, prof=None, swap_pairs=False, dtab=None, edit=None):
+    def __init__(self, prof=None, swap_pairs=False, dtab=None, edit=None, ram_edit=None):
         """swap_pairs / dtab / edit (ROM address -> bytes): negative controls with their own data."""
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         self.rom_code = bytes.fromhex(h['rom'])
         self.rom2_code = bytes.fromhex(h['rom2'])
         self.fill_code = bytes.fromhex(h['fill'])
+        self.ram_code = bytes.fromhex(h['ram'])     # bank 5 at RAM_CODE (asm: the speed hooks; the alt ROM is full)
+        for a, data in (ram_edit or {}).items():
+            k = a - RAM_CODE
+            self.ram_code = self.ram_code[:k] + data + self.ram_code[k + len(data):]
         self.svr_code = bytes.fromhex(h['svr'])
         self.setup = bytes.fromhex(h['setup'])
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
@@ -241,6 +250,9 @@ class CommandoPatch:
             b = bytearray(snap.banks[k])
             b[(a & 0x3FFF):(a & 0x3FFF) + len(new)] = new
             snap.banks[k] = bytes(b)
+        b = bytearray(snap.banks[5])
+        b[RAM_CODE & 0x3FFF:(RAM_CODE & 0x3FFF) + len(self.ram_code)] = self.ram_code
+        snap.banks[5] = bytes(b)
         # 0x5C00-0x5E1F untouched: BASIC still needs it; e_init sets it up at the game entry
 
     def rom_image(self):
@@ -380,7 +392,7 @@ def front_tests(start_z80, entry):
         bad = []
         if R[PC] != ENTRY + 1:
             bad.append('did not reach 25089')
-        bad += ['register %d' % i for i in CMP if i != 24 and R[i] != regs0[i]]
+        bad += ['register %d' % i for i in CMP if i not in (15, 24) and R[i] != regs0[i]]
         want = {27653: 182} if key == 'Y' else {}
         for b in range(8):
             base = {5: 0x4000, 2: 0x8000}.get(b)
@@ -785,7 +797,7 @@ def boot_check(nex, z80, patch=None):
 # and the patched code from the same state and compare.
 # ---------------------------------------------------------------------------------------------
 
-CMP = list(range(0, 13)) + [14, 16, 17] + list(range(18, 25)) + [26, 27, 28]   # all but R, T, MEMPTR
+CMP = list(range(0, 13)) + [14, 15, 16, 17] + list(range(18, 25)) + [26, 27, 28]   # all but T, MEMPTR; R included (index 15, card patch.preserve-r)
 
 
 class World:
@@ -816,6 +828,7 @@ def _pair(patch, world, get, regs, stop, rom_img, sp_ret=None):
     Returns (so, o, sp, p, err)."""
     Sim = _sim_class()
     psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
+    psite.update({RAM_CODE + k: v for k, v in enumerate(patch.ram_code)})
     err = []
 
     class O:
@@ -874,7 +887,7 @@ def _pair(patch, world, get, regs, stop, rom_img, sp_ret=None):
         if e[0] == 'port' and e[1] & 0xFF != 0x5B and e[1] != 0x303B:
             err.append(('hook writes port', e[1]))
             break
-    if ns.nr.get(0x07, 0) != 0:
+    if ns.nr.get(0x07, 0) != (3 if world.ram[V_FAST - RAM_LO] else 0):     # 28 MHz only from e_fa to e_fb
         err.append(('speed not restored', ns.nr.get(0x07)))
     if any(e[0] == 'in' for e in ns.events):
         err.append('port read in hook')
@@ -882,6 +895,7 @@ def _pair(patch, world, get, regs, stop, rom_img, sp_ret=None):
 
 
 NEG_CACHE_FRAMES = 400
+NEG_SPEED_FRAMES = 2000                     # past the menu: Dean's recording reaches play late
 NR_OK = {0x07, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39}  # speed + sprite attributes: all a hook may write
 ISAFE = {'checked': 0}
 
@@ -897,7 +911,7 @@ def _isafe(sim, regs0, err):
     seen = []
 
     def chk(pc):
-        if 0x2000 <= pc < 0x4000:
+        if 0x2000 <= pc < 0x4000 or RAM_CODE <= pc < 0x61C0:
             ISAFE['checked'] += 1
             bad = None
             if (R[10], R[11]) != iy:
@@ -1046,7 +1060,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, dtab=None, entr
     c = collections.Counter()
     ex = collections.defaultdict(list)
     rom_img = patch.rom_image()
-    site_bytes = {a + k for a, old, new in patch.sites for k in range(len(new))}
+    site_bytes = {a + k for a, old, new in patch.sites for k in range(len(new))} | {RAM_CODE + k for k in range(len(patch.ram_code))}
     st = {'sim': None, 'frame': 0}
     world = World(patch)
     cnt = collections.Counter()
@@ -1080,7 +1094,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, dtab=None, entr
 
     def event(pc, real, R):
         get = lambda a: MG(real, a)
-        if pc == 39120:
+        if pc in FAST_SITES:
+            event_fast(pc, get, R)
+        elif pc == 39120:
             ix = R[8] * 256 + R[9]
             sp0 = R[12]
             ret = get(sp0) | get((sp0 + 1) & 0xFFFF) << 8
@@ -1136,6 +1152,25 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, dtab=None, entr
                 fail('sprite visibility / table', vb[:3])
             c['clear %d' % pc] += 1
 
+    def event_fast(pc, get, R):
+        was = world.ram[V_FAST - RAM_LO]
+        so, o, sp_, p, err = _pair(patch, world, get, R, FAST_SITES[pc], rom_img)
+        for e in err:
+            fail('speed hook %04X: %s' % (pc, e))
+        diff = [i for i in CMP if so.registers[i] != sp_.registers[i]]
+        low = sp_.registers[12]
+        dmem = [a for a in set(o.ov) | set(p.ov) if o[a] != p[a] and not low - 8 <= a < low]
+        if diff or dmem:
+            fail('speed hook %04X: registers/memory differ' % pc, (diff, dmem[:4]))
+        c['logic at 28 MHz: speed hook %04X' % pc] += 1
+        now = world.ram[V_FAST - RAM_LO]
+        if pc == 0xDEB2 and not now or pc == 0xDF13 and now or pc == 0x7357 and now:
+            fail('speed hook %04X: wrong state' % pc, (was, now))
+        if pc == 0x7357 and was:
+            c['logic at 28 MHz: ended by an interrupt'] += 1
+        if pc == 0xDF13 and was:
+            c['logic at 28 MHz: ended at the frame sync'] += 1
+
     def frame_end(real):
         # ghost metric: lit sprite pixels the original screen does not show at frame end
         b5 = real.banks[5]
@@ -1167,7 +1202,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, dtab=None, entr
                         cnt[pc] += 1
                         if pc == INIT and not (entry_once and cnt[pc] == 1):
                             fail('game entry 25630 executed during the recording (re-init)')
-                        if pc in (39120, 27468, 30597):
+                        if pc in (39120, 27468, 30597) or pc in FAST_SITES:
                             event(pc, mem, R)
                     f()
                 return g
@@ -1587,6 +1622,7 @@ def static_checks(patch):
     mem = [0] * 65536
     img = patch.rom_image()
     mem[0:0x4000] = list(img)
+    mem[RAM_CODE:RAM_CODE + len(patch.ram_code)] = list(patch.ram_code)
     cfg = SimpleNamespace(defb_size=8, defm_size=65, defw_size=1, handle_rst=False, wrap=False,
                           opcodes='', asm_hex=False, asm_lower=False,
                           imaker=lambda a, o, b: SimpleNamespace(address=a, operation=o, bytes=b))
@@ -1595,7 +1631,7 @@ def static_checks(patch):
     wr = re.compile(r'^(LD I[XY][HL]?,|POP I[XY]|INC I[XY][HL]?$|DEC I[XY][HL]?$|ADD I[XY],|EX \(SP\),I[XY])')
     for lo, hi in ((ROM_ORG, ROM_ORG + len(patch.rom_code)), (ROM2_ORG, ROM2_ORG + len(patch.rom2_code)),
                    (FILL_LO, FILL_LO + len(patch.fill_code)),
-                   (SVR_LO, SVR_LO + len(patch.svr_code))):
+                   (SVR_LO, SVR_LO + len(patch.svr_code)), (RAM_CODE, RAM_CODE + len(patch.ram_code))):
         if lo < TRAP_HI and hi > TRAP_LO:
             bad.append((lo, 'hook code in 0x3D00-0x3DFF (crashed on hardware; probable DivMMC automap)'))
         a = lo
@@ -1618,6 +1654,18 @@ def negative_iy_patch():
 def negative_patch():
     """Broken copy: pixel-pair tables with ink and fill exchanged (pixel check must fail)."""
     return CommandoPatch(swap_pairs=True)
+
+
+def negative_speed_patches():
+    """Broken copies: the logic's 28 MHz left on at the frame sync, or across an interrupt (the game's sound comes from the handler)."""
+    pt = CommandoPatch()
+    nr = bytes.fromhex('ED9207')                 # NEXTREG 7,A
+    def at(sym):
+        return RAM_CODE + pt.ram_code.index(nr, pt.syms[sym] - RAM_CODE)
+    r_at = ROM_ORG + pt.rom_code.index(bytes([0x3E, 117]), pt.syms['e_ent'] - ROM_ORG)     # LD A,D_ENT
+    return [('the frame sync at 28 MHz', CommandoPatch(ram_edit={at('e_fb'): bytes(3)})),
+            ('the interrupt handler at 28 MHz', CommandoPatch(ram_edit={at('e_isr'): bytes(3)})),
+            ('R off by one after a plot', CommandoPatch(edit={r_at + 1: bytes([118])}))]
 
 
 LOAD_BANK = 13                          # the loading screen's entry bank (pages 26, 27), as the published .nxc
@@ -1768,6 +1816,17 @@ def auto(a, z80, name, out, say):
         nc, nex = verify(negative_cache_patch(), r, stop=NEG_CACHE_FRAMES, dtab=dtab, entry_once=once)
         cneg = any('sprite pixels differ' in k for k in nc if k.endswith('!'))
         ok = ok and cneg and c['converted, image reused from a pattern slot'] > 0
+        nd = 0
+        names = negative_speed_patches()
+        if not c['logic at 28 MHz: ended at the frame sync']:      # a recording whose every update meets an interrupt first cannot show it
+            names = names[1:]
+        for nm, q in names:
+            qc, _ = verify(q, r, stop=NEG_SPEED_FRAMES, dtab=dtab, entry_once=once)
+            nd += any(k.endswith('!') for k in qc)
+        ok = ok and nd == len(names) and c['logic at 28 MHz: speed hook %04X' % 0xDEB2] > 0
+        say('Speed     : logic at 28 MHz, %d updates begun, %d ended at the frame sync, %d by an interrupt; negative controls %d/%d -> %s' % (
+            c['logic at 28 MHz: speed hook %04X' % 0xDEB2], c['logic at 28 MHz: ended at the frame sync'], c['logic at 28 MHz: ended by an interrupt'], nd, len(names),
+            'PASS' if nd == len(names) else 'FAIL'))
         say('Cache     : %d of %d converted plots reused an image already in a pattern slot (no upload); '
             'negative control (lookup ignores the frame) over %d frames %s -> %s' % (
                 c['converted, image reused from a pattern slot'], c['converted'], NEG_CACHE_FRAMES,

@@ -55,7 +55,7 @@
   },
   "sprites": {
    "file": "commando_sprites.nex",
-   "md5": "6a547a86166a553b68e05360f1f83b78"
+   "md5": "ff488056f4dd8e3c3f5f7c88a2b1946d"
   }
  },
  "repro": [],
@@ -66,7 +66,7 @@
  "status": {
   "title": "Commando (128K)",
   "engine_col": "commando (commando.md)",
-  "build": "commando_sprites.nex d601385e (altrom + e_init + front end; solid figures (yellow body), solid objects hide figures by the walk-box depth rule, pattern-slot cache, no flicker, IX/IY-safe hooks)",
+  "build": "commando_sprites.nex d601385e (altrom + e_init + front end; solid figures (yellow body), solid objects hide figures by the walk-box depth rule, pattern-slot cache, no flicker, IX/IY-safe hooks); 1.2 (published .nxc, 2026-11-08): logic at 28 MHz to the frame sync, R kept: this snapshot ff488056, the published clean-release build cded9ba3",
   "software": "RZX IDENTICAL, static + interrupt + cache + front end + init + unit + depth + restore PASS",
   "hardware": "f22a9452 / 5642e4b4 crashed (ROM 0); 5ab928e9 runs; 5c1081b7: flicker, menu logo + dots (hook used IY), figures seen through rocks (Dean) - fixed in 541e34e2, which crashed at the first figure (code at 0x3D00-0x3DFF; probable DivMMC automap); d601385e runs (Dean)",
   "next": "hardware test (checklist); later-areas RZX"
@@ -76,15 +76,15 @@
  ],
  "checked": {
   "deps": {
-   "asm/commando_hooks.asm": "59489cafde38ed11",
-   "docs/profiles/commando.json": "cb97f083c583c7c2",
+   "asm/commando_hooks.asm": "e262ba0b6123b3e3",
+   "docs/profiles/commando.json": "4350dd5be1e17450",
    "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
-   "nexclash/commando.py": "85b24d6fdaeb4c4a",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/commando.py": "fda7b9719257b2d2",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "2a90481848696085",
-   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
@@ -92,22 +92,22 @@
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "6f1a6011f02a4eb5",
+   "recipe": "d672b7f199abdf9f",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-07"
+  "date": "2026-11-08"
  },
  "verified": {
   "deps": {
-   "asm/commando_hooks.asm": "59489cafde38ed11",
-   "docs/profiles/commando.json": "cb97f083c583c7c2",
+   "asm/commando_hooks.asm": "e262ba0b6123b3e3",
+   "docs/profiles/commando.json": "4350dd5be1e17450",
    "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
-   "nexclash/commando.py": "85b24d6fdaeb4c4a",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/commando.py": "fda7b9719257b2d2",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "2a90481848696085",
-   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
@@ -115,9 +115,9 @@
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "6f1a6011f02a4eb5",
+   "recipe": "d672b7f199abdf9f",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-07"
+  "date": "2026-11-08"
  }
 }
