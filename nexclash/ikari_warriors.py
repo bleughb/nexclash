@@ -7,6 +7,7 @@ import collections
 import hashlib
 import json
 import os
+import sys
 
 RECORD = 'ikari_warriors'
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -129,6 +130,8 @@ class IkariPatch:
             y = 16 + i
             a = 0x4005 | ((y & 0xC0) << 5) | ((y & 7) << 8) | ((y & 0x38) << 2)
             self.hpage[LINES + 2 * i], self.hpage[LINES + 2 * i + 1] = a & 255, a >> 8
+        self.scenery = None
+        self.scen_tiles = bytes(6912)
         self.store = store_pages(self.colours)
         self.sites = [(a, bytes.fromhex(v[0]), bytes.fromhex(v[1]) + self.syms[v[2]].to_bytes(2, 'little'))
                       for a, v in SITES_ORIG.items()]
@@ -139,6 +142,8 @@ class IkariPatch:
                             13: bytes(self.hpage) + bytes(8192),           # H, C
                             14: bytes(8192) + self.store[:8192],           # S, store 0
                             15: self.store[8192:]}
+        if self.scenery:
+            self.extra_banks[A_TPG // 2] = arcade_table(self.scenery) + bytes(self.scen_tiles) + bytes(8192 - 6912)
 
     def apply(self, snap):
         from . import z80tonex as zt
@@ -156,6 +161,11 @@ class IkariPatch:
             for k, v in enumerate(new):
                 b, o = where(a + k)
                 ram[b][o] = v
+        if self.scenery:
+            def at(a):
+                b, o = where(a)
+                return snap.banks[b][o]
+            self.scen_tiles = arcade_tiles(self.scenery, at)
         regs = zt.build_tail(snap, 0x8000, self.slot1, True)[3]
         self.page[self.regblock - 0x2000:self.regblock - 0x2000 + len(regs)] = regs
         self._banks()
@@ -210,7 +220,7 @@ N0_ADDR = 0x8820                # N0, K1's image as palette indexes (asm)
 O3_OUTLINE = 'uploadn.o3'       # profile symbol: LD (HL),I_OUT, the only outline store (K1's upload; no other kind outlines)
 
 
-def enhanced_patch(colours, prof=None, outline=False, border='clear'):
+def enhanced_patch(colours, prof=None, outline=False, border='clear', scenery=None):
     """outline=False: the owner's verdict on 9b8d9497 (2026-11-03), no white ring in Enhanced: .o3 stores index 0 (transparent)
     instead of 15, one byte; a palette entry cannot do it, sprite transparency is by index (NR 0x4B = 0), not by colour.
     border='clear' (owner: "none of the yellow edge outside of the original character black outline and no white outline"):
@@ -270,6 +280,12 @@ def enhanced_patch(colours, prof=None, outline=False, border='clear'):
             raise ValueError('hook bytes at 0x%04X' % a)
         base[o:o + len(vals)] = bytes(vals)
     call = lambda l: [0xCD] + w(lab[l])
+    if scenery:
+        ac, asym = arcade_code(org + len(code), y, scenery)
+        put(y['e_bl.nw'] + 1, w(asym['a_bl']), w(y['hlib_pace_open']))
+        at = bytes(base).index(bytes([0x21]) + w_bytes(6130))         # LD HL,T_BLIT: the tile hook's time comes off the target
+        base[at + 1:at + 3] = w_bytes(A_T_BLIT)
+        code = code + ac
     put(y['e_k1.c_b'], call('ext_b'), [0x11, 0x00, 0xB7])
     put(y['e_k1.c_key'], call('ext_key') + [0] * 5, [0xDD, 0x7E, 0x02, 0xE6, 0x89, 0x32, 0x11, 0x80])
     put(y['e_k1.c_ck'], [0x3E, 0x01, 0x00, 0x00], [0xE6, 0x01, 0xEE, 0x01])   # AND-only images take keys too
@@ -288,10 +304,96 @@ def enhanced_patch(colours, prof=None, outline=False, border='clear'):
         raise ValueError('setup palette')
     p.stub_extra = p.stub_extra[:-10] + ENH_FIX
     p.name = IkariPatch.name + ', Enhanced colours'
+    if scenery:
+        p.scenery = scenery
+        p.ext_len = len(code) - len(ac)
+        p.sites = [x for x in p.sites]
+        for i, (a_, old_, new_) in enumerate(p.sites):
+            if a_ in A_EXITS:
+                p.sites[i] = (a_, old_, new_[:1] + asym[A_EXITS[a_]].to_bytes(2, 'little'))
+        p.sites.append((0x97E4, bytes.fromhex('fd6e00'), bytes([0xC3]) + asym['a_tc'].to_bytes(2, 'little')))
+        p.sites.append((0xF019, bytes.fromhex('ed73b0e4'), bytes([0xC3]) + asym['a_st'].to_bytes(2, 'little') + bytes([0])))
+        p._banks()
     return p
 
 
 FIX_BYTES = bytes([0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x03, 0xE0])
+
+# ---------------------------------------------------------------------------------------------
+# Enhanced scenery (games/ikari_warriors_arcade.md): the colours on the tilemap in bank 7, under the ULA's own ink. Data: the
+# profile ikari_warriors_scenery.json: tile rows (colour indexes), water tiles by the game's char (their ink comes from the
+# game at build time), the map-byte table, the char defaults. Asm: asm/ikari_warriors_arcade.asm.
+SCENERY = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'docs', 'profiles', 'ikari_warriors_scenery.json')
+A_EXITS = {0xEB13: 'a_h1', 0xEC0C: 'a_h2', 0xF214: 'a_h3', 0xAB7C: 'a_h4'}
+A_TPG, A_MAP = 48, 14
+A_T_BLIT = 6115
+w_bytes = lambda v: bytes((v & 255, v >> 8))
+_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+
+
+def ENH_EXT_LEN(p):
+    # the Enhanced extension's length: all that follows the hook code, less the arcade code
+    return p.ext_len
+
+
+def arcade_code(org, y, data):
+    sys.path.insert(0, os.path.join(_ROOT, 'tools', 'sjasmplus'))
+    import sjasm
+    import subprocess
+    import tempfile
+    with tempfile.TemporaryDirectory() as wd:
+        src = open(os.path.join(_ROOT, 'asm', 'ikari_warriors_arcade.asm')).read()
+        pal = []
+        for r, g, b in data['pal']:
+            r3, g3, b3 = (round(v * 7 / 255) for v in (r, g, b))
+            pal += [r3 << 5 | g3 << 2 | b3 >> 1, b3 & 1]
+        i = src.index('a_pal:')
+        j = src.index('a_pal_end:')
+        src = src[:i] + 'a_pal:  DB ' + ','.join(str(v) for v in pal) + '\n' + src[j:]
+        g = os.path.join(wd, 'a.asm')
+        open(g, 'w').write(src)
+        defs = dict(A_RK=data['n_rock'], A_ORG=org, A_OPEN=y['hlib_pace_open'], A_H1=y['e_h1'], A_H2=y['e_h2'], A_H3=y['e_h3'], A_H4=y['e_h4'])
+        r = subprocess.run([sjasm.find(), '--nologo', '--zxnext', '--msg=war', '--sym=a.sym', '-I', os.path.join(_ROOT, 'asm')] +
+                           ['-D%s=%d' % kv for kv in defs.items()] + [g], cwd=wd, capture_output=True, text=True)
+        if r.returncode:
+            raise RuntimeError('sjasmplus arcade:\n%s' % (r.stdout + r.stderr))
+        sym = {}
+        for line in open(os.path.join(wd, 'a.sym')):
+            m = line.split()
+            if len(m) >= 3 and m[1] == 'EQU':
+                sym[m[0].rstrip(':')] = int(m[2].replace('0x', ''), 16)
+        return open(os.path.join(wd, 'ik_arcade.bin'), 'rb').read(), sym
+
+
+def arcade_table(data):
+    t = bytearray(b'\xFF' * 8192)
+    for k, v in data['table'].items():
+        a = int(k, 16)
+        if 0x8000 <= a < 0x9F00:
+            t[a - 0x8000] = v
+    t[0x1F00:0x2000] = bytes(data['default'])
+    return bytes(t)
+
+
+def arcade_tiles(data, ram_at):
+    """8K of tile graphics, colour indexes in nibbles; a water tile takes its ink from the game's own char (ram_at: address -> byte)."""
+    if len(data['tiles']) > 216:
+        raise ValueError('tiles: %d, room for 216' % len(data['tiles']))
+    out = bytearray(6912)
+    water = 5
+    for n, t in enumerate(data['tiles']):
+        if t[0] == 'm':
+            v = bytes.fromhex(t[1])
+        else:
+            v = bytearray(64)
+            pap = 4 if t[2] == 0x61 else 0
+            for y in range(8):
+                b = ram_at(t[1] + y)
+                for x in range(8):
+                    v[y * 8 + x] = water if b >> (7 - x) & 1 else pap
+        for k in range(32):
+            out[n * 32 + k] = v[2 * k] << 4 | v[2 * k + 1]
+    return bytes(out)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -387,11 +489,12 @@ def build_enhanced(z80, out, name, say=print):
     from . import z80tonex as zt, nextboot
     md5 = lambda p: hashlib.md5(open(p, 'rb').read()).hexdigest()
     cols = json.load(open(ENHANCED))
-    patch = enhanced_patch(cols)
+    scen = json.load(open(SCENERY))
+    patch = enhanced_patch(cols, scenery=scen)
     sc = static_check(patch.rom_code, 0x2400)
     enh = os.path.join(out, name + '_enhanced.nex')
     zt.convert(z80, enh, quiet=True, patch=patch)
-    bad = nextboot.check(enh, z80, enhanced_patch(cols), tail=(TAIL_ADDR, TAIL_ADDR + 96))
+    bad = nextboot.check(enh, z80, enhanced_patch(cols, scenery=scen), tail=(TAIL_ADDR, TAIL_ADDR + 96))
     say('Enhanced  : %s  %s  static %s, boot %s' % (os.path.basename(enh), md5(enh), 'PASS' if not sc else 'FAIL %s' % sc[:4],
                                                   'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:300]))
     return not bad and not sc, enh, patch
@@ -411,6 +514,10 @@ class NS:
             self.pages[L2P0 + n] = bytearray(8192)      # the pattern store
         for n in range(3):
             self.pages[STORE + n] = bytearray(patch.store[8192 * n:8192 * (n + 1)])
+        if getattr(patch, 'scenery', None):
+            self.pages[A_MAP] = bytearray(8192)
+            self.pages[A_TPG] = bytearray(arcade_table(patch.scenery))
+            self.pages[A_TPG + 1] = bytearray(8192)
         self.attr = [[0, 0, 0, 0, 0] for _ in range(128)]
         self.pat = bytearray(16384)
         self.pat_ptr = 0
@@ -607,6 +714,39 @@ def compose(ns, scr, om=None):
     return bits, nspx, kinds, torn
 
 
+def scenery_compare(patch, ns, om, pm, c, fail, st):
+    """The tilemap against the game: one register follows the buffer's origin; every map cell changed since the last commit holds
+    a tile the char now in the buffer at that row and column can have, by the data file's char list."""
+    a = ((om[0xE460] | om[0xE461] << 8) + 0x700) & 0x1FFF
+    want = ((a >> 5) - 48) & 255
+    if ns.nr.get(0x31) != want:
+        fail('tile scroll', (c['commits'], ns.nr.get(0x31), want))
+    if 'scen_pos' not in st:
+        pos = collections.defaultdict(set)
+        for g, ts in patch.scenery['bychar'].items():
+            g = int(g, 16)
+            pos[bytes(om[g:g + 8])] |= set(ts)
+        st['scen_pos'] = pos
+        st['scen_map'] = bytes(1280)
+    now = bytes(ns.pages[A_MAP][:1280])
+    pos, was = st['scen_pos'], st['scen_map']
+    if now != was:
+        for i in range(1280):
+            if now[i] != was[i]:
+                r, col = i // 40, i % 40 - 4
+                c['tile cells written'] += 1
+                if not 5 <= col < 27:
+                    fail('tile outside the window', (c['commits'], r, col))
+                    continue
+                pat = bytes(pm[0xC000 + (r * 8 + k) * 32 + col] for k in range(8))
+                ts = pos.get(pat)
+                if ts is None:
+                    c['tile cells: a figure or a mark on the char'] += 1
+                elif now[i] not in ts and now[i] != 0:
+                    fail('tile', (c['commits'], r, col, now[i], sorted(ts)[:6]))
+        st['scen_map'] = now
+
+
 def verify(patch, rzx_path, stop=None, collect=0, progress=None, capture=None, picture=True, compose_fn=None, profiler=None):
     import skoolkit.rzxplay as rp
     from .rzx import trace
@@ -651,6 +791,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, capture=None, p
                 fail('register', (c['commits'], i, ore[i], sim.registers[i]))
         if ns.nr[0x54] != GP4 or ns.nr[0x56] != GP6 or ns.nr[7] != 0:
             fail('paging', dict(ns.nr))
+        if getattr(patch, 'scenery', None):
+            scenery_compare(patch, ns, om, pm, c, fail, st)
         if ns.pages[HPG][V_PACE + 10]:
             fail('the blit window left open', c['commits'])
         if ns.ins:
@@ -766,6 +908,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, capture=None, p
     c['frames'] = f
     if err:
         fail('replay', err)
+    if 'sim' in st and getattr(patch, 'scenery', None) and c['commits'] > 100 and not c['tile cells written']:
+        fail('no tile written', c['commits'])
     if 'sim' in st:
         ex['_ns'] = st['ns']
         # the way out of play: no sync after it, so run on with what is left of the recording's inputs
@@ -1100,7 +1244,7 @@ def set_patch(mode, neg=None, cols=None):
         if neg == 'seam-open':
             return edge_patch({})
         raise ValueError('unknown negative')
-    p = enhanced_patch(cols)
+    p = enhanced_patch(cols, scenery=json.load(open(SCENERY)))
     if neg is None:
         return p
     if neg == 'outline-on':               # the white ring kept
@@ -1130,10 +1274,32 @@ def set_patch(mode, neg=None, cols=None):
             rom[y[s_] + 1 - 0x2400] = v
     elif neg == 'store-off':
         pass
+    elif neg in ('tile-writes-off', 'tile-row-off', 'tile-scroll-off'):
+        # hooks at the arcade code's own labels: a tile not written, the wrong row, the scroll a step off
+        ac, asym = arcade_code(0x2400 + ext + ENH_EXT_LEN(p), {k: int(v, 16) for k, v in p.prof['hooks']['syms'].items()}, p.scenery)
+        base = 0x2400
+        if neg == 'tile-writes-off':
+            o = asym['a_tc.neg_tile'] + 4 - base           # past NEXTREG: LD (HL),B -> NOP
+            if rom[o] != 0x70:
+                raise ValueError('negative: tile write')
+            rom[o] = 0
+        elif neg == 'tile-row-off':
+            o = asym['a_tc.got'] + 1 - base                # LD A,D -> LD A,E: a wrong row
+            if rom[o] != 0x7A:
+                raise ValueError('negative: tile row')
+            rom[o] = 0x7B
+        else:
+            o = asym['a_bl.neg_scroll'] + 1 - base         # SUB 48 -> SUB 46
+            if rom[o] != 48:
+                raise ValueError('negative: scroll')
+            rom[o] = 46
     else:
         raise ValueError('unknown negative')
     q = IkariPatch(p.prof, colours=cols, rom_code=bytes(rom))
     q.stub_extra = p.stub_extra
+    q.scenery = p.scenery
+    q.sites = list(p.sites)
+    q._banks()
     if neg == 'store-off':
         q.hpage[V_COL] = 0
     return q
@@ -1375,7 +1541,7 @@ def set_check(P, rzx, D, mode, stop=None, profiler=None):
 
 SET_NEGATIVES = {'default': ['old-default', 'outline-on', 'border-paper', 'seam-open'],
                  'enhanced': ['outline-on', 'border-paper', 'third-pass', 'player-test-off', 'p2-test-off',
-                              'rotation-map-off', 'k5k6-keys-on', 'store-off']}
+                              'rotation-map-off', 'k5k6-keys-on', 'store-off', 'tile-writes-off', 'tile-row-off', 'tile-scroll-off']}
 
 
 def auto(a, z80, name, out, say):
