@@ -95,9 +95,8 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
   original ULA HUD shows. This is the exception to the usual ULA-only scenery display: original
   scenery bytes remain on the ULA underneath, while the displayed clean copy masks the old figures.
   No virtual screen reader or collision rewrite is needed because original memory stays intact.
-- Display: preserve actor draw priority and tile colours; approved option B adds enclosed black
-  interiors to coloured ink (solid silhouette), with no added outline. Deliberate rectangular
-  tile knockouts outside the silhouette disappear. Option A remains in the comparison only.
+- Display: preserve actor draw priority and tile colours. Mask G3 (user, replaced B): black is see-
+  through only via gaps >= 3x3 from outside; explosions B2-B8 keep B (enclosed black only).
   Keep shop, menu, pause, message and intro/ending screens entirely original: disable BOTH new
   layers before their first draw; re-enable only on a complete new gameplay image, not at a text
   print return. Exact transition hooks and every alternate entry remain stage-2 proof obligations.

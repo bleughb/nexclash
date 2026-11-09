@@ -167,7 +167,7 @@ peek_ix:
 rom_end:
         ASSERT rom_end < 0x3D00
         SAVEBIN "inferno_rom.bin",loader,rom_end-loader
-
+
 ; Capture kernel (no display layer is enabled). All scratch and stack writes are in page 68.
 ; Original CALL return bytes are reproduced exactly; JP sites displace complete instructions.
 ; Copier-window milestone 3: each hook measures the time it adds on CTC channel 3 (sync to an
@@ -2588,6 +2588,21 @@ F_ACTIVE EQU 0x1EA3
 F_SAVED_SP EQU 0x1EA4
 F_MASK_SIZE EQU 0x1EA6
 F_MASK_STRIDE EQU 0x1EA8
+F_WIDE EQU 0x1EAA              ; nonzero: G3, exterior enters black only through gaps at least 3x3
+F_G_PAGE EQU 0x1EAB
+F_G_OUT EQU 0x1EAC
+F_G_POS EQU 0x1EAD
+F_G_T EQU 0x1EAF
+F_E_P EQU 0x1EB0
+F_E_Q EQU 0x1EB2
+F_E_STEP EQU 0x1EB4
+F_E_LEFT EQU 0x1EB6
+F_E_N EQU 0x1EB8
+F_E_S EQU 0x1EBA
+F_E_D EQU 0x1EBC
+F_G_PREV EQU 0x1000
+F_G_CUR EQU 0x1080
+F_G_EDGE EQU 0x1100
 fill_actor_image:
         xor a
         ld (F_ERROR),a
@@ -2667,6 +2682,9 @@ fill_actor_image:
         ld (de),a              ; clear retained exterior state on every new image
         call fill_advance
         jr nz,.opacity
+        ld a,(F_WIDE)
+        or a
+        call nz,fill_wide_erode
 .iteration:
         ld hl,(F_PASSES)
         inc hl
@@ -2686,6 +2704,9 @@ fill_actor_image:
         ld a,(F_CHANGED)
         or a
         jr nz,.iteration
+        ld a,(F_WIDE)
+        or a
+        call nz,fill_wide_dilate
         ld hl,0
         ld (F_POS),hl
 .finish:
@@ -2927,7 +2948,272 @@ fill_service_bad:
         ret
 fill_actor_service_end:
         ASSERT fill_actor_service_end < 0x0600
-        SAVEBIN "inferno_fill.bin",fill_actor_image,fill_actor_service_end-fill_actor_image
+; G3 around the unchanged flood: 3x3 erosion of the passable bits (outside the canvas counts as clear), then
+; 3x3 dilation of the exterior, then the canvas edge, where a 3x3 block may stand half outside. 0600-0BFF: tables.
+        ORG 0x0C00
+fill_wide_erode:
+        ld a,116
+        ld b,0xFF
+        ld c,0xA6              ; AND (HL)
+        jr fill_gate
+fill_wide_dilate:
+        ld a,117
+        ld b,0
+        ld c,0xB6              ; OR (HL)
+        call fill_gate
+        jp fill_edges
+fill_gate:
+        ld (F_G_PAGE),a
+        ld a,b
+        ld (F_G_OUT),a
+        ld a,c
+        ld (.v1),a
+        ld (.h2),a
+        ld (.v2+1),a
+        and 0xF0
+        or 1                   ; AND C / OR C
+        ld (.h1),a
+        ld hl,F_G_PREV
+        ld de,F_G_PREV+1
+        ld (hl),b
+        ld bc,0x17F
+        ldir                   ; PREV, CUR and the outside row
+        ld hl,0
+.row:   ld (F_G_POS),hl
+        call fill_checkpoint
+        ld a,(F_G_PAGE)
+        nextreg 0x52,a
+        ld hl,(F_G_POS)
+        set 6,h
+        push hl
+        ld de,F_G_CUR
+        ld bc,(F_MASK_STRIDE)
+        ldir                   ; HL = the next row
+        ex de,hl
+        ld hl,(F_G_POS)
+        ld bc,(F_MASK_STRIDE)
+        add hl,bc
+        ld bc,(F_MASK_SIZE)
+        or a
+        sbc hl,bc
+        ex de,hl
+        jr c,.has
+        ld hl,F_G_EDGE
+.has:   push hl
+        pop iy
+        pop de                 ; DE = this row
+        push de
+        ld ix,F_G_PREV
+        ld hl,F_G_CUR
+        ld a,(F_MASK_STRIDE)
+        ld b,a
+.v:     ld a,(ix+0)
+.v1:    and (hl)
+.v2:    and (iy+0)
+        ld (de),a
+        inc ix
+        inc iy
+        inc hl
+        inc de
+        djnz .v
+        ld hl,F_G_CUR
+        ld de,F_G_PREV
+        ld bc,(F_MASK_STRIDE)
+        ldir
+        pop hl                 ; this row, again, across
+        ld a,(F_MASK_STRIDE)
+        ld b,a
+        ld a,(F_G_OUT)
+        ld d,a
+.h:     ld c,(hl)
+        ld a,b
+        dec a
+        ld a,(F_G_OUT)
+        jr z,.last
+        inc hl
+        ld a,(hl)
+        dec hl
+.last:  ld e,a
+        ld a,c
+        add a,a
+        bit 7,e
+        jr z,.nr
+        inc a
+.nr:    ld (F_G_T),a
+        ld a,c
+        srl a
+        bit 0,d
+        jr z,.nl
+        or 128
+.nl:
+.h1:    and c
+        push hl
+        ld hl,F_G_T
+.h2:    and (hl)
+        pop hl
+        ld (hl),a
+        ld d,c
+        inc hl
+        djnz .h
+        ld hl,(F_G_POS)
+        ld bc,(F_MASK_STRIDE)
+        add hl,bc
+        ld bc,(F_MASK_SIZE)
+        or a
+        sbc hl,bc
+        ret z
+        add hl,bc
+        jp .row
+; A black canvas-edge pixel is exterior when a run of three along that edge holds it; beyond the ends is clear.
+fill_edges:
+        ld hl,(F_MASK_STRIDE)
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld (F_E_STEP),hl       ; pixels per row
+        ld bc,0
+        ld hl,(F_MASK_SIZE)
+        ld de,(F_MASK_STRIDE)
+.rows:  inc bc
+        or a
+        sbc hl,de
+        jr nz,.rows
+        push bc                ; height
+        ld hl,0
+        ld de,(F_E_STEP)
+        call fill_edge         ; left column
+        pop bc
+        push bc
+        ld hl,(F_E_STEP)
+        dec hl
+        ld de,(F_E_STEP)
+        call fill_edge         ; right column
+        ld hl,(F_E_STEP)
+        ld b,h
+        ld c,l
+        ld hl,0
+        ld de,1
+        push bc
+        call fill_edge         ; top row
+        pop bc
+        pop de                 ; height
+        push bc
+        dec de
+        ld hl,0
+.mul:   ld a,d
+        or e
+        jr z,.got
+        ld bc,(F_E_STEP)
+        add hl,bc
+        dec de
+        jr .mul
+.got:   pop bc
+        ld de,1
+        ; bottom row, then return
+fill_edge:                      ; HL first pixel, DE step, BC count
+        ld (F_E_P),hl
+        ld (F_E_Q),hl
+        ld (F_E_D),de
+        ld (F_E_LEFT),bc
+        ld (F_E_N),bc
+        ld a,3
+        ld (F_E_S),a
+        call .feed
+        call .feed
+.y:     call fill_checkpoint
+        call .feed
+        ld a,(F_E_S)
+        bit 2,a
+        jr z,.next
+        ld b,a
+        and 0x1C
+        cp 0x1C
+        jr z,.set
+        ld a,b
+        and 0x0E
+        cp 0x0E
+        jr z,.set
+        ld a,b
+        and 7
+        cp 7
+        jr nz,.next
+.set:   nextreg 0x52,117
+        ld hl,(F_E_P)
+        ld a,l
+        and 7
+        ld b,a
+        inc b
+        ld a,1
+.bit:   rrca
+        djnz .bit
+        ld c,a
+        ld b,3
+.sh:    srl h
+        rr l
+        djnz .sh
+        set 6,h
+        ld a,(hl)
+        or c
+        ld (hl),a
+.next:  ld hl,(F_E_P)
+        ld de,(F_E_D)
+        add hl,de
+        ld (F_E_P),hl
+        ld hl,(F_E_N)
+        dec hl
+        ld (F_E_N),hl
+        ld a,h
+        or l
+        jr nz,.y
+        ret
+.feed:  ld hl,(F_E_LEFT)
+        ld a,h
+        or l
+        ld a,1
+        jr z,.push
+        dec hl
+        ld (F_E_LEFT),hl
+        ld hl,(F_E_Q)
+        push hl
+        ld de,(F_E_D)
+        add hl,de
+        ld (F_E_Q),hl
+        pop hl
+        srl h
+        rr l                   ; carry: right pixel of the byte
+        push af
+        ld a,h
+        rlca
+        rlca
+        rlca
+        and 7
+        add a,112
+        nextreg 0x51,a
+        ld a,h
+        and 31
+        or 0x20
+        ld h,a
+        pop af
+        ld a,(hl)
+        jr c,.low
+        rrca
+        rrca
+        rrca
+        rrca
+.low:   and 15
+        ld a,0
+        jr nz,.push
+        inc a
+.push:  ld b,a
+        ld a,(F_E_S)
+        add a,a
+        or b
+        and 31
+        ld (F_E_S),a
+        ret
+fill_wide_end:
+        ASSERT fill_wide_end < 0x1000
+        SAVEBIN "inferno_fill.bin",fill_actor_image,fill_wide_end-fill_actor_image
 
 ; Inferno bounded prepared-data transfer worker, private writable page 77.
 ; Reuses the gated shared backend and packets; no game/display hook installs it.
@@ -5542,6 +5828,20 @@ drv_fill:
         ld (F_ERROR+W_A),a
         ld (F_ACTIVE+W_A),a
         ld (F_COMMAND+W_A),a
+        ld b,a
+        ld a,(D_IMAGE)
+        cp 0xB2
+        jr z,.narrow            ; explosions keep the plain enclosed rule (user's choice)
+        cp 0xB4
+        jr z,.narrow
+        cp 0xB6
+        jr z,.narrow
+        cp 0xB8
+        jr z,.narrow
+        inc b
+.narrow:
+        ld a,b
+        ld (F_WIDE+W_A),a
         ld a,16
         ld (F_BUDGET+W_A),a
 .again: ld a,76
