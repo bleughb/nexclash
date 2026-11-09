@@ -53,6 +53,15 @@
     "sprites": "43c1ca492d7c1cc68541f02aaed9cb4c"
    }
   },
+  "cedb31d5860815ef7e871ee249744de5": {
+   "game": "Chase H.Q.",
+   "doc": "chase_hq.md",
+   "nex": {
+    "plain": "0a989fa7fec68693b8d353f1e8c46188",
+    "speed": "a6d6fec84dd354ae0fc88dc76448a6bf",
+    "orig_pace": "c02edf3f36b339a0b20cb17e0894a829"
+   }
+  },
   "cddc0cfea8259d0c497b50fae0acd27e": {
    "game": "Chuckie Egg",
    "doc": "chuckie_egg.md",
