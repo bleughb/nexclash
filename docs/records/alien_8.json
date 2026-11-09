@@ -86,5 +86,49 @@
    "scope": "pilot release-20261106/art-update-20261107 (v27): per mode an 18,000-frame recording (registers with R, 48K RAM at every rejoin, independent source-pixel canvas); 5 negatives; 88 ABI, 152 whole-sound, 1,504 IRQ cases; native layers, beam and 20,000-frame soaks; 18 paired pace trials; private-card loader three selections exact. Not a selftest stamp. 1.2's default differs from v27's only in 48 palette bytes (8 colours, 4 copies); its colours are checked natively (games/alien_8.md).",
    "evidence": "games/alien_8.md \"Evidence\""
   }
- ]
+ ],
+ "checked": {
+  "deps": {
+   "asm/alien_8_actor.asm": "d0f5b953aa05b1ec",
+   "asm/alien_8_dirty.asm": "55d24e8f9d21c395",
+   "asm/alien_8_hooks.asm": "0f8cc7cd1e965708",
+   "asm/alien_8_primitive.asm": "e9c5a24b92c83be9",
+   "asm/alien_8_queue.asm": "2bc3f31eb968847a",
+   "asm/alien_8_sound_targets.asm": "d8ee46ece60ff798",
+   "asm/alien_8_sprite_cache.asm": "dc46c0a2dce8d156",
+   "asm/alien_8_sprites.asm": "d8ca43c34bbfca4e",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/alien_8.json": "4b105a25f683b9bb",
+   "docs/profiles/alien_8_colours.json": "2b39715ca7c9365e",
+   "docs/profiles/alien_8_sound_sites.json": "2d3b8fb82f926afa",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/alien_8.py": "1472cdfb1c184415",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "3855467e456e7c04",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-09"
+ }
 }

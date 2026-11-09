@@ -78,43 +78,43 @@
   "deps": {
    "asm/chuckie_hooks.asm": "5fed61c8f674f78b",
    "docs/profiles/chuckie_egg.json": "8cfb95560319426a",
-   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/chuckie.py": "6fd6788ea9e54985",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/nextboot.py": "e57136059969ba67",
-   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "ce3ca0914d86ef34",
+   "recipe": "e59f3d3e8820d48a",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-09"
  },
  "verified": {
   "deps": {
    "asm/chuckie_hooks.asm": "5fed61c8f674f78b",
    "docs/profiles/chuckie_egg.json": "8cfb95560319426a",
-   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/chuckie.py": "6fd6788ea9e54985",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/nextboot.py": "e57136059969ba67",
-   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "ce3ca0914d86ef34",
+   "recipe": "e59f3d3e8820d48a",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-09"
  },
  "canary": 1
 }
