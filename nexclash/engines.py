@@ -35,6 +35,7 @@ ENGINES = [
     ('jetpac', 'is_jetpac', None),                                        # Jetpac (16K)
     ('tid128_v11', 'is_tid128_v11', None),                                # opt-in shared-library rework
     ('tid128', 'is_tid128', None),                                        # Treasure Island Dizzy 128K: opt-in rework of dizzy_patch
+    ('loderunner_v3', 'is_loderunner_v3', None),                          # Lode Runner 128K v1.1: opt-in rework of loderunner_v2 (NEXCLASH_REWORK)
     ('loderunner_v2', 'is_loderunner_v2', None),                          # Lode Runner 128K: opt-in rework of loderunner
     ('fwd128', 'is_fwd128', None),                                        # Fantasy World Dizzy 128K: opt-in rework of the generic TID build
     ('magicland128', 'is_magicland128', None),                            # Magicland Dizzy 128K: opt-in rework of the generic TID build

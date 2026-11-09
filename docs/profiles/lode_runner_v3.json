@@ -1,0 +1,335 @@
+{
+ "game": "Lode Runner (Software Projects, 1984; 128K)",
+ "engine": "loderunner_v3",
+ "plotter": 38674,
+ "figures": "runner record 0xA174 (15 bytes), guards 0xA183 + 17 k (k 0-6); graphics 16-30 at 0x7800 + 8 n",
+ "signature": {
+  "addr": 38674,
+  "bytes": "8787875f167878e607324e973e052801af325d97cb38cb38cb3879e607c640cb712802c608cb7928"
+ },
+ "hooks": {
+  "source": "asm/loderunner_v3_hooks.asm",
+  "hooks": "F5ED5F32F0A3F1C5D5F5CD54A73805F1F5CD92A73E7BCDD2A7F1D1C132F2A33AF1A3ED4F3AF2A3C31297F5ED5F32F0A3F1C5D5F511000018D6F5ED5F32F0A3F1D5F5CD54A738087AED9234ED9138003E7BCDD2A7F1D132F2A33AF1A3ED4F3AF2A3C31297F5ED5F32F0A3F1D5110000C5F5CB20CB20CB20CB21CB21CB21CD92A7F1C1D1F53E20CD01853E4ECDD2A7F132F2A33AF1A3ED4F3AF2A3C9F5ED5F32F0A3F1D5F57CFE9120147DD69D380F280DFE1030090F3806571E01F118B23E7BCDD2A7F1D132F2A33AF1A3ED4F3AF2A3C30185F5ED5F32F0A3F1CD44A7F53E7CCDD2A7F1060411000032F2A33AF1A3ED4F3AF2A3C35485F5ED5F32F0A3F1CD44A7F5E521C4A422608E21FBA422758E211FA722658E227A8EE13E7BCDD2A7F111014032F2A33AF1A3ED4F3AF2A3C34485F5ED5F32F0A3F1CD44A7F5E5C5ED91520E21004011014001FF043600EDB0ED91520AED916BA1C1E1F118A6F5ED5F32F0A3F1ED916B00F5E521018522608E22758E216E8522658E227A8EE13E7BCDD2A7F1219D8D32F2A33AF1A3ED4F3AF2A3C3868CF5C5013B243E07ED7904ED78E60332F8A3ED910703C1F1F5ED5F32F4A3F1F5E5D56F26A97E511E28ED30EB5F78ED317B11A44019ED91520E77ED91520A3AF4A3C66EE67F6F3AF4A3E680B532F5A3D1E1F1F5C5D532F6A33AF5A3ED4F3AF6A3C30485F5ED5F32F4A3F1F53AF8A3ED9207F1F53AF4A3C67DE67F673AF4A3E680B432F5A3F1E1D1C132F6A33AF5A3ED4F3AF6A3C33F85F5C5013B243E07ED7904ED78E60332F8A3ED910703C1F1F5ED5F32F4A3F1F5E5D56F26A97EB72819511E28ED30EB5F78ED317B11A44019ED91520EAE77ED91520A3AF4A3C66EE67F6F3AF4A3E680B532F5A3D1E1F1C5D5E532F6A33AF5A3ED4F3AF6A3C34D98F5ED5F32F4A3F1F53AF8A3ED9207F1F53AF4A3C67DE67F673AF4A3E680B432F5A3F1E1D1C132F6A33AF5A3ED4F3AF6A3C37598C5E5265868CB21CB21CB21CB2130022424CB21300124060009FEFF20047EE1C1C900E1C1C9F5AFED9234ED9138003CFE0820F4F1C9E5C5DDE5E10174A1B7ED42200511000018243826010F00B7ED42381E7CB7201A7D1601B7280ED611381014477AFE0830097818EF1E01C1E1B7C9C1E137C9D610FE0F3031CB432802C60F5F7AED923478C620ED92353E00CE00ED923779C620ED92367BE6010F0FF680ED92397BCB3FF6C0ED9238C97AED9234ED913800C9C54F3AF0A31805C54F3AF1A34781E67F4F78E680B132F1A3C1C9",
+  "setup": "ED915716013B30AFED792100E0160F015B00EDB31520F8ED915715ED914320ED9140012146D0060F7EED92412310F9ED914B00AFED9234ED9138003CFE8020F4ED911501C90002A0A21416B4B60003E0E71C1FFCFF0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003A55D0B7C8ED9143202157D0CD6CD1ED9143302177D0CD6CD1ED914300ED914C00ED916C00ED916E80ED916F85ED912F00ED913000ED913100ED911C08ED911B00ED911B9FED911B00ED911BFFED916BA13A56D0B7C8ED91120DED917000ED911600ED911700ED917100ED911C01ED911800ED9118FFED911800ED9118BFED915716ED914310ED9140002100F016007EED9244237EED9244231520F3ED915715ED914300ED914000ED9141E3ED914008ED9141E3ED914010ED9141E3ED914018ED9141E3ED9114E3ED914A00ED911509ED916980C9ED91400006207EED92442310F9C9",
+  "syms": {
+   "FLAG_BD": "0xD056",
+   "FLAG_ENH": "0xD055",
+   "SPAL": "0xD057",
+   "TPAL": "0xD077",
+   "e_cls": "0xA556",
+   "e_cls2": "0xA58F",
+   "e_draw": "0xA460",
+   "e_drawr": "0xA48A",
+   "e_edit": "0xA5BA",
+   "e_fade": "0xA532",
+   "e_hide": "0xA499",
+   "e_tend": "0xA653",
+   "e_tgrd": "0xA4FB",
+   "e_tile": "0xA5F1",
+   "e_trun": "0xA4C4",
+   "e_xend": "0xA6EC",
+   "e_xor": "0xA686",
+   "hlib_r_set": "0xA7D2",
+   "hooks_end": "0xA7EC",
+   "paint": "0xA71F",
+   "setup": "0xD000",
+   "setup2": "0xD097",
+   "setup_end": "0xD17A",
+   "speccy": "0xD045"
+  },
+  "assembled_with": "sjasmplus 1.24.0"
+ },
+ "colour_inputs": {
+  "md5": "529a0c262a14911072761bfe47dff2c1",
+  "bytes": 120
+ },
+ "enhanced": {
+  "note": "Enhanced colours: start from the Spec256 conversion, a white runner, shaded figures, bricks, ladders and gold. Change a colour here, then rebuild; \"runner\" is the runner's one main colour.",
+  "sprite_index": {
+   "runner_head": 1,
+   "runner_body": 1,
+   "runner_legs": 2,
+   "edge": 3,
+   "guard_head": 4,
+   "guard_body": 5,
+   "guard_legs": 6
+  },
+  "sprite_palette": {
+   "runner": [
+    255,
+    255,
+    255
+   ],
+   "runner_shade": [
+    182,
+    200,
+    255
+   ],
+   "edge": [
+    0,
+    0,
+    36
+   ],
+   "guard_head": [
+    255,
+    146,
+    182
+   ],
+   "guard_body": [
+    223,
+    0,
+    109
+   ],
+   "guard_legs": [
+    146,
+    0,
+    73
+   ]
+  },
+  "tile_index": {
+   "brick_hi": 1,
+   "brick_mid": 2,
+   "brick_lo": 3,
+   "mortar": 4,
+   "ladder_hi": 5,
+   "ladder_mid": 6,
+   "ladder_lo": 7,
+   "bar": 8,
+   "bar_lo": 9,
+   "gold_hi": 10,
+   "gold_mid": 11,
+   "gold_lo": 12,
+   "hud_hi": 13,
+   "hud_mid": 14,
+   "hud_lo": 15
+  },
+  "tile_palette": {
+   "brick_hi": [
+    219,
+    73,
+    36
+   ],
+   "brick_mid": [
+    182,
+    36,
+    18
+   ],
+   "brick_lo": [
+    128,
+    18,
+    0
+   ],
+   "mortar": [
+    36,
+    0,
+    0
+   ],
+   "ladder_hi": [
+    146,
+    255,
+    255
+   ],
+   "ladder_mid": [
+    36,
+    206,
+    206
+   ],
+   "ladder_lo": [
+    18,
+    128,
+    146
+   ],
+   "bar": [
+    255,
+    255,
+    0
+   ],
+   "bar_lo": [
+    109,
+    109,
+    0
+   ],
+   "gold_hi": [
+    255,
+    255,
+    146
+   ],
+   "gold_mid": [
+    255,
+    219,
+    0
+   ],
+   "gold_lo": [
+    219,
+    109,
+    0
+   ],
+   "hud_hi": [
+    219,
+    219,
+    237
+   ],
+   "hud_mid": [
+    182,
+    182,
+    210
+   ],
+   "hud_lo": [
+    109,
+    109,
+    146
+   ]
+  },
+  "tiles": {
+   "5": {
+    "ink": [
+     0,
+     0,
+     "hud_hi",
+     "hud_mid",
+     "hud_mid",
+     "hud_lo",
+     0,
+     0
+    ]
+   },
+   "33": {
+    "ink": [
+     "brick_hi",
+     "brick_mid",
+     "brick_lo",
+     0,
+     "brick_hi",
+     "brick_mid",
+     "brick_lo",
+     0
+    ],
+    "paper": [
+     "mortar",
+     "mortar",
+     "mortar",
+     "mortar",
+     "mortar",
+     "mortar",
+     "mortar",
+     "mortar"
+    ]
+   },
+   "34": {
+    "ink": [
+     "brick_hi",
+     "brick_mid",
+     "brick_mid",
+     "brick_mid",
+     "brick_mid",
+     "brick_mid",
+     "brick_lo",
+     0
+    ],
+    "paper": [
+     "mortar",
+     "mortar",
+     "mortar",
+     "mortar",
+     "mortar",
+     "mortar",
+     "mortar",
+     "mortar"
+    ]
+   },
+   "35": {
+    "ink": [
+     "ladder_mid",
+     "ladder_mid",
+     "ladder_mid",
+     "ladder_mid",
+     "ladder_mid",
+     "ladder_mid",
+     "ladder_mid",
+     "ladder_mid"
+    ],
+    "ink_col": {
+     "1": "ladder_hi",
+     "6": "ladder_lo"
+    }
+   },
+   "36": {
+    "ink": [
+     "bar",
+     "bar",
+     "bar",
+     "bar",
+     "bar",
+     "bar",
+     "bar",
+     "bar"
+    ],
+    "paper": [
+     0,
+     "bar_lo",
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "37": {
+    "ink": [
+     "brick_mid",
+     "brick_mid",
+     "brick_mid",
+     "brick_mid",
+     "brick_mid",
+     "brick_mid",
+     "brick_mid",
+     "brick_mid"
+    ]
+   },
+   "39": {
+    "ink": [
+     0,
+     0,
+     0,
+     "gold_hi",
+     "gold_mid",
+     "gold_mid",
+     "gold_lo",
+     0
+    ],
+    "paper": [
+     0,
+     0,
+     0,
+     0,
+     "gold_hi",
+     "gold_mid",
+     0,
+     0
+    ]
+   },
+   "31": {
+    "ink": [
+     "ladder_mid",
+     "ladder_mid",
+     "ladder_mid",
+     "ladder_mid",
+     "ladder_mid",
+     "ladder_mid",
+     "ladder_mid",
+     "ladder_mid"
+    ]
+   }
+  },
+  "backdrop_dim": 0.4,
+  "sprite_slot": {
+   "runner": 1,
+   "runner_shade": 2,
+   "edge": 3,
+   "guard_head": 4,
+   "guard_body": 5,
+   "guard_legs": 6
+  }
+ }
+}
