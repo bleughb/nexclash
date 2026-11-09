@@ -195,7 +195,27 @@ quiet +0.40..+3.99, busy +1.59..+2.45, slowest stretch of 20 updates +5.7.
   0xFB1A) and the hooks replace whole plotters, so R after a hook is not the original's. This was so in 1.0 and 1.1. Same keys, different random events from the original; the pace
   runs fix R at the audit's four sites in both arms so the two games stay equal. Matching R would need hlib_r on loops of run-time length: for Jon / Dean to ask for.
 
+## Published .nxc build from main (1.2, 2026-11-08)
+- The published .nxc 1.2 (github.com/jattree/nxc) is main's build of its target, the clean 48K release (MD5 6a314fae):
+  `python nexclash.py auto CLEAN.z80 --no-record --altrom-fill rom3`. auto wraps it (to128: NAME_128.z80, the same
+  RAM in banks 5, 2, 0 and the same registers, 7FFD 0x10, as Dean's snapshot is laid out), builds as usual, then:
+- Loading screen: everyones_a_wally_loading.scr (the tape's, 6,912 bytes, MD5 2a20dc59) beside the snapshot;
+  loading_nex puts it in bank 5 and the stub (asm ldscr: smashtv's port, pages 58 / 59) in bank 29. Sprites
+  204962cf04c38e7597a0d747eb0e0618 = the published default (nxc.py --bare), byte for byte; without the screen 9aeabf83.
+- Enhanced: everyones_a_wally_enhanced_colours.json (MD5 2dc7fea2, 6,130 keys) and everyones_a_wally_enhanced_palette.hex
+  (16 bytes, index 0 kept 0xE3) beside the snapshot; the same canvas code with that map and palette, NAME_sprites_enhanced.nex,
+  with the screen e68724a532afc1a8083b5a1bc28cbda1 = nxc.py --bare --colours Enhanced, byte for byte. Hooks, tables and
+  Layer 2 banks are the default's (checked); only canvas banks 22-28 and the 16 palette bytes differ. The map and palette are
+  the older Spec256 conversion's colours (EmuZWin games package), painter not established: private, never in this repo.
+  Without them, no Enhanced build; without the screen, no loading screen. Dean's snapshot builds as before (6f91f9fc).
+- From the clean release (2026-11-08): walk1 + walk2 IDENTICAL (16,002 frames, 12,770 plots converted, 4,800 commits,
+  2,885,156 Layer 2 pixels), the 4 limiter negatives DETECTED, unit 1,854 cases PASS, negative control 3/3, ROM paths
+  complete. selftest --game everyones_a_wally_updated --verify --stamp PASSED on this tree.
+
 ## Lessons
+- [local: this engine] The published start state (a 128K wrap of the clean release), its loading screen and its Enhanced
+  set were steps outside the engine (a hand-made wrapper, add_screen.py, a byte transplant); to128, loading_nex and the
+  Enhanced colour map now run in auto, and main gives both published .nex byte for byte.
 - [local: this engine] A window with the commit inside it ran over a frame: 21 ms lost on each of the first updates (+21 ms, a whole frame, every time). hlib_pace_tick's "at least once a
   frame in a long window" is in the card; the fix was tk in clearbox's and drawall's loops. A fixed-looking +20 ms at one update reads as this wrap, not as a slow hook.
 - [local: this engine] Hooks that replace a plot rather than add to it need the plot's original time back in the wait (V_CR), or the pace still moves with the plot count.

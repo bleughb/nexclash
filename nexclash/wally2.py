@@ -22,6 +22,12 @@ cell under its centre), a black outline on the 4 neighbours of the ink (never di
 colour map per pixel on top. Each graphic has a precomputed CANVAS (18 x rows+2: the graphic with a
 one-pixel ring) in pages the game never reads; a plot is converted when its bytes match the canvas'
 check as stored or mirrored (asm/wally2_hooks.asm). Recolour rewrites only the canvas pages.
+
+Published release (.nxc 1.2, 2026-11-08): auto also takes the clean 48K release (the patch's target, MD5
+6a314fae): to128 wraps its RAM and registers in a 128K snapshot (banks 5, 2, 0; 7FFD = 0x10), as Dean's
+snapshot is laid out. Private inputs beside the snapshot, game data, never in this repo: LOAD_SCREEN adds
+the tape's loading screen (loading_nex, bank 29); ENH_COLOURS + ENH_PALETTE build the Enhanced set (the
+same canvas code with that colour map, and that Layer 2 palette) as <name>_sprites_enhanced.nex.
 """
 import collections
 import json
@@ -278,15 +284,84 @@ def identify(mem):
 
 def is_wally2(snap):
     try:
-        return snap.machine != '48K' and identify(mem64(snap))
+        if snap.machine == '48K':
+            return identify(bytes(snap.memory[0:65536]))      # the clean release: auto wraps it (to128)
+        return identify(mem64(snap))
     except FileNotFoundError:
         return False
+
+
+def to128(z80, out_z80):
+    """A 48K snapshot -> a 128K .z80 with the same RAM (banks 5, 2, 0), registers and border; 7FFD = 0x10
+    (ROM 1, bank 0 at 0xC000), the layout Dean's snapshot has and Wally2Patch.apply wants."""
+    from skoolkit.snapshot import Snapshot, write_snapshot
+    from skoolkit.simutils import from_snapshot, get_state
+    from skoolkit.simulator import Simulator
+    s = Snapshot.get(z80)
+    sim = from_snapshot(Simulator, s)
+
+    class Tr:
+        border = outfe = s.border
+    sim.set_tracer(Tr())
+    ram, regs, state, machine = get_state(sim)
+    m = sim.memory
+    banks = [[0] * 16384 for _ in range(8)]
+    banks[5], banks[2], banks[0] = ([m[a] for a in range(o, o + 16384)] for o in (0x4000, 0x8000, 0xC000))
+    write_snapshot(out_z80, banks, regs,
+                   [x for x in state if not x.startswith(('7ffd', 'fffd', 'ay'))] + ['7ffd=16'], '128K')
+
+
+LOAD_BANK = 29                                   # the loading screen's entry bank (pages 58, 59), as the published .nxc
+LOAD_SCREEN = 'everyones_a_wally_loading.scr'    # the tape's 6,912-byte screen (MD5 2a20dc59), beside the snapshot
+ENH_COLOURS = 'everyones_a_wally_enhanced_colours.json'   # Enhanced colour map (MD5 2dc7fea2), beside the snapshot
+ENH_PALETTE = 'everyones_a_wally_enhanced_palette.hex'    # Enhanced Layer 2 palette, 16 bytes as hex (index 0 kept 0xE3)
+
+
+def loading_nex(nex, scr):
+    """A built .nex -> the same with the loading screen (nexclash-patch build/all2/add_screen.py, bank 29, as the
+    published patch; the stub is smashtv's port for pages 58, 59: asm ldscr): bank 5's screen area in the file =
+    the screen, new bank 29 = the entry bank whose stub shows it for 250 frames or a key, puts bank 5's bytes back
+    and falls into 0xC000 of bank 10. -> (bytes, problems): every byte outside these checked."""
+    import struct
+    hk = load_profile()['hooks']
+    head, tail = bytes.fromhex(hk['ldhead']), bytes.fromhex(hk['ldtail'])
+    orig = nex[512:512 + 6912]
+    bank = head + bytes(0x200 - len(head)) + orig + bytes(0x3FD0 - 0x200 - 6912) + tail
+    bad = []
+    if len(scr) != 6912:
+        bad.append('screen is %d bytes, not 6912' % len(scr))
+    if struct.unpack_from('<HH', nex, 12) != (0xDFFE, 0xC000) or nex[10] or not nex[18 + 5] or nex[139] != 10 or \
+            nex[140] or nex[141] or any(nex[18 + k] for k in range(LOAD_BANK, 112)):
+        bad.append('start state, screen block, entry bank or bank %d+ not as the stub assumes' % LOAD_BANK)
+    h = bytearray(nex[:512])
+    h[9] += 1
+    h[18 + LOAD_BANK] = 1
+    h[139] = LOAD_BANK
+    n = bytes(h) + scr + nex[512 + 6912:] + bank
+    if [i for i in range(512) if nex[i] != n[i]] != [9, 18 + LOAD_BANK, 139]:
+        bad.append('header bytes')
+    if n[512 + 6912:len(nex)] != nex[512 + 6912:] or n[len(nex) + 0x200:len(nex) + 0x200 + 6912] != orig:
+        bad.append("rest of the file or the stub's copy of bank 5")
+    return n, bad
+
+
+def enhanced_inputs(folder):
+    """-> (colour map, 16 Layer 2 palette bytes) from ENH_COLOURS + ENH_PALETTE in folder, or None if either is
+    missing. Index 0 stays 0xE3 (transparent), as L2PAL."""
+    cf, pf = os.path.join(folder, ENH_COLOURS), os.path.join(folder, ENH_PALETTE)
+    if not (os.path.isfile(cf) and os.path.isfile(pf)):
+        return None
+    from . import coloursheet as cs
+    pal = bytes.fromhex(open(pf).read().strip())
+    if len(pal) != 16:
+        raise ValueError('%s: %d palette bytes, not 16' % (ENH_PALETTE, len(pal)))
+    return cs.load(cf), [0xE3] + list(pal[1:])
 
 
 class Wally2Patch:
     name = "Everyone's a Wally (updated): every figure on Layer 2, outlined (altrom + pages 26/27)"
 
-    def __init__(self, mem, cfg=None, prof=None):
+    def __init__(self, mem, cfg=None, prof=None, pal=None):
         self.cfg = cfg or Config()
         self.prof = prof or load_profile()
         h = self.prof['hooks']
@@ -294,7 +369,7 @@ class Wally2Patch:
         self.page_code = bytes.fromhex(h['page'])
         self.setup = bytes.fromhex(h['setup'])
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
-        self.stub_extra = self.setup + bytes(L2PAL)
+        self.stub_extra = self.setup + bytes(pal or L2PAL)        # pal: the Enhanced set's (enhanced_inputs)
         self.setup_call = 0xD000
         self.hook_page_data = b''
         self.uses_printer_buffer = True
@@ -1332,6 +1407,14 @@ def auto(a, z80, name, out, say):
     say('Game      : %s' % name)
     say("Engine    : wally2 (Everyone's a Wally, updated: every figure on Layer 2, outlined)")
     md5 = lambda p: hashlib.md5(open(p, 'rb').read()).hexdigest()
+    from skoolkit.snapshot import Snapshot
+    src = z80
+    if Snapshot.get(z80).machine == '48K':
+        z128 = os.path.join(out, name + '_128.z80')
+        to128(z80, z128)
+        say('Snapshot  : 48K (the clean release) -> %s: the same RAM and registers in banks 5, 2, 0, 7FFD = 0x10' %
+            os.path.basename(z128))
+        z80 = z128
     plain = os.path.join(out, name + '.nex')
     zt.convert(z80, plain, TAIL_ADDR, quiet=True)
     bad = boot_check(plain, z80)
@@ -1346,6 +1429,33 @@ def auto(a, z80, name, out, say):
         os.path.basename(spr), md5(spr), 'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200],
         len(patch.cpages), len(patch.cfg.colours)))
     ok = not bad and not bad2
+    here = os.path.dirname(os.path.abspath(src))
+    sc = os.path.join(here, LOAD_SCREEN)
+    scr = open(sc, 'rb').read() if os.path.isfile(sc) else None
+    enh = enhanced_inputs(here)
+    if enh is None:
+        say('Enhanced  : no %s + %s beside the snapshot: no Enhanced build' % (ENH_COLOURS, ENH_PALETTE))
+    else:
+        cmap, pal = enh
+        pe = Wally2Patch(mem, Config(colours=cmap), pal=pal)
+        spe = os.path.join(out, name + '_sprites_enhanced.nex')
+        zt.convert(z80, spe, quiet=True, patch=pe)
+        bad3 = boot_check(spe, z80, pe)
+        same = [b for b in (12, 13) + tuple(range(16, 22)) if pe.extra_banks[b] != patch.extra_banks[b]]
+        ok = ok and not bad3 and not same and pe.tpage == patch.tpage
+        say('Enhanced  : %s  %s  boot %s  (colours md5 %s, %d keys; palette %s; hooks, tables and Layer 2 banks as '
+            'the default: %s)' % (os.path.basename(spe), md5(spe), 'OK' if not bad3 else 'MISMATCH %s' % str(bad3[:3])[:200],
+                                  md5(os.path.join(here, ENH_COLOURS)), len(cmap), bytes(pal).hex(),
+                                  'yes' if not same and pe.tpage == patch.tpage else 'NO %s' % same))
+    for f in [spr] + ([spe] if enh else []):
+        if scr is None:
+            say('Loading   : no %s beside the snapshot: %s without the loading screen' % (LOAD_SCREEN, os.path.basename(f)))
+            continue
+        n, lb = loading_nex(open(f, 'rb').read(), scr)
+        open(f, 'wb').write(n)
+        ok = ok and not lb
+        say('Loading   : screen md5 %s -> %s  %s  bank %d stub, %s' % (
+            md5(sc), os.path.basename(f), md5(f), LOAD_BANK, 'the rest as built' if not lb else 'PROBLEM %s' % lb))
     states = []
     for r in list(a.rzx or []):
         from skoolkit.rzxplay import parse_rzx
