@@ -18,7 +18,7 @@ SITES = {0x8BB7: (0xCD, 0x8C63, 'h_both', 'both'), 0x8BAA: (0xCD, 0x8C4E, 'h_old
          0x859B: (0xC3, 0x87AB, 'h_item', 'item'), 0x85BD: (0xC3, 0x87AB, 'h_item', 'item'), 0x8304: (0xCD, 0x7F9B, 'h_ula', 'ula'),
          0x8364: (0xCD, 0x881D, 'h_room', 'room'), 0x7F70: (0xCD, 0x881D, 'h_room', 'room'),
          0x8367: (0xCD, 0x8092, 'h_after1', 'after'), 0x7F73: (0xCD, 0x8572, 'h_after2', 'after'),
-         0x7743: (0xCD, 0x0DAF, 'h_cls', 'cls'), 0x7815: (0xCD, 0x0DAF, 'h_cls', 'cls'), 0x78D4: (0xCD, 0x0DAF, 'h_cls', 'cls'), 0x7955: (0xCD, 0x0DAF, 'h_cls', 'cls')}
+         0x7743: (0xCD, 0x0DAF, 'h_cls_menu', 'cls'), 0x7815: (0xCD, 0x0DAF, 'h_cls', 'cls'), 0x78D4: (0xCD, 0x0DAF, 'h_cls', 'cls'), 0x7955: (0xCD, 0x0DAF, 'h_cls', 'cls')}
 SIGNATURE = {0x8BB7: 'CD638C', 0x8BAA: 'CD4E8C', 0x8364: 'CD1D88', 0x7815: 'CDAF0D', 0x859B: 'C3AB87', 0x8304: 'CD9B7F'}
 L2_PAGES = list(range(32, 38))
 TABLES = ((38, 0x9050, 0xA628), (44, 0x7A00, 0x7B00), (45, 0xDB79, 0xE37E))
@@ -122,7 +122,7 @@ class Patch:
     def _banks(self):
         from .build import rom48
         self.page = bytearray(rom48()[0x2000:0x4000])
-        for name in ('h_both', 'h_old', 'h_new', 'h_tile', 'h_item', 'h_ula', 'h_room', 'h_after1', 'h_after2', 'h_cls'):
+        for name in ('h_both', 'h_old', 'h_new', 'h_tile', 'h_item', 'h_ula', 'h_room', 'h_after1', 'h_after2', 'h_cls', 'h_cls_menu'):
             at = self.syms[name] - 0x2000
             self.page[at:at + 4] = self.ram[at:at + 4]
         for i in range(len(self.code) - 4):
@@ -333,8 +333,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                     fail('overlay not on after a room', {})
             else:
                 ov.clear()
-                if st.nr.get(0x69) != 0:
-                    fail('overlay not hidden', {})
+                if st.nr.get(0x69) != (0x80 if pc == 0x7743 else 0):
+                    fail('overlay not hidden' if pc != 0x7743 else 'menu overlay not shown', {})
         else:
             sp = regs[12]
             if op == 0xC3:
@@ -468,6 +468,7 @@ def negative_patches(patch):
     mutate('old place never taken off', bytes.fromhex('CDE08BCD') + zt.w16(patch.syms['l2_fig']), bytes.fromhex('CDE08B000000'))
     mutate('overlay not hidden', bytes.fromhex('ED916900'), bytes.fromhex('00000000'))
     mutate('overlay not cleared', bytes.fromhex('3600D5'), bytes.fromhex('36FFD5'))
+    mutate('menu overlay not shown', bytes.fromhex('ED916980F5'), bytes(4) + b'\xF5')
     mutate('ULA+ left on', bytes.fromhex('013BBF3E40ED79'), bytes.fromhex('013BBF3E400000'))
     # wrong colours: one table page shifted by one value
     b = clone()

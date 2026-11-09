@@ -212,11 +212,24 @@ h_after1:
 h_after2:
         AFTER_HOOK 0x8572
 
-; ---- the ROM clears the screen (0DAF): overlay off and empty --------------------
+; ---- the ROM clears the screen (0DAF): overlay off and empty. The game over and winning screens stay plain ULA, as the
+; set has no colour on them. The menu's text and icons all go through the tile hook, and the set paints its icons, so
+; the menu shows the overlay.
 h_cls:
         ENTER
         HLIB_SPEED_IN V_SPEED
         nextreg 0x69,0
+        call cls_fill
+        HLIB_SPEED_OUT V_SPEED
+        EXIT_TO 0x0DAF
+h_cls_menu:
+        ENTER
+        HLIB_SPEED_IN V_SPEED
+        call cls_fill
+        nextreg 0x69,0x80
+        HLIB_SPEED_OUT V_SPEED
+        EXIT_TO 0x0DAF
+cls_fill:
         ld d,L2_BANK*2
         ld e,6
 .pg:    ld a,d
@@ -232,8 +245,7 @@ h_cls:
         dec e
         jr nz,.pg
         nextreg 0x57,1
-        HLIB_SPEED_OUT V_SPEED
-        EXIT_TO 0x0DAF
+        ret
 
 ; l2_rowpage: A = y -> slot 7 = its Layer 2 page, H = the row in it. AF, C lost.
 l2_rowpage:
