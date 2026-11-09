@@ -20,8 +20,12 @@ loader: di
         ld c,a
         ld a,(0)
         cp c
-        jr nc,.eof
-        ld l,a
+        jr c,.have
+        ld a,c                ; past the last block: the tape rewinds (the game finds its block by name)
+        or a
+        jr z,.eof
+        xor a
+.have:  ld l,a
         inc a
         ld (0),a
         ld h,0

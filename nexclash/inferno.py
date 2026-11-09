@@ -5079,7 +5079,8 @@ def loader_fixture(blocks, index, length, flag=255, verify=False, dest=0xA000, c
 
 
 def _case(blocks, index, length, flag=255, verify=False, code=None, dest=0xA000, corrupt_verify=False):
-    ram, regs, block = loader_fixture(blocks, index, length, flag, verify, dest, corrupt_verify)
+    effective = 0 if index == len(blocks) else index     # past the last block the tape rewinds
+    ram, regs, block = loader_fixture(blocks, effective, length, flag, verify, dest, corrupt_verify)
     pages = packed_tape(blocks, index)
     patched, memory, steps = run_loader(ram, regs, pages, code)
     original = rom_byte_oracle(ram, regs, block)
@@ -5092,7 +5093,7 @@ def _case(blocks, index, length, flag=255, verify=False, code=None, dest=0xA000,
             and memory.ram[a] != original.memory[a]]
     if diff:
         errors.append(('memory', diff[:8]))
-    if memory.pages[STATE_PAGE][0] != min(index + 1, len(blocks)):
+    if memory.pages[STATE_PAGE][0] != effective + 1:
         errors.append(('cursor', memory.pages[STATE_PAGE][0]))
     if any(a < 8192 and not (page == STATE_PAGE and a == 0) for a, v, page in memory.writes):
         errors.append(('write outside cursor',))
@@ -5130,7 +5131,7 @@ def loader_tests(path):
     if carry:
         counts['checksum accepted!'] += 1
     check('verify mismatch', blocks, 5, len(blocks[5]) - 2, verify=True, corrupt_verify=True)
-    check('exhausted', blocks, len(blocks), 17)
+    check('wraps to the first block', blocks, len(blocks), len(blocks[0]) - 2, flag=blocks[0][0], dest=0xA000)
     for dest in (0x1FF8, 0x3FF8, 0xFFF8):
         check('ROM/wrap destination', blocks, 5, 17, dest=dest)
         check('ROM/wrap verify', blocks, 5, 17, dest=dest, verify=True)
