@@ -22,6 +22,12 @@ cell under its centre), a black outline on the 4 neighbours of the ink (never di
 colour map per pixel on top. Each graphic has a precomputed CANVAS (18 x rows+2: the graphic with a
 one-pixel ring) in pages the game never reads; a plot is converted when its bytes match the canvas'
 check as stored or mirrored (asm/wally2_hooks.asm). Recolour rewrites only the canvas pages.
+
+Published release (.nxc 1.2, 2026-11-08): auto also takes the clean 48K release (the patch's target, MD5
+6a314fae): to128 wraps its RAM and registers in a 128K snapshot (banks 5, 2, 0; 7FFD = 0x10), as Dean's
+snapshot is laid out. Private inputs beside the snapshot, game data, never in this repo: LOAD_SCREEN adds
+the tape's loading screen (loading_nex, bank 29); ENH_COLOURS + ENH_PALETTE build the Enhanced set (the
+same canvas code with that colour map, and that Layer 2 palette) as <name>_sprites_enhanced.nex.
 """
 import collections
 import json
@@ -56,15 +62,17 @@ W = 18                                  # canvas width
 TAIL_ADDR = 0x6B00
 SITES_ORIG = {45286: bytes.fromhex('D9FD5E'), 43168: bytes.fromhex('D9F5ED'),
               43069: bytes.fromhex('F3D9F5'), 61329: bytes.fromhex('F5D93A'),
-              47637: bytes.fromhex('010002'), 61090: bytes.fromhex('11006B'),
+              47611: bytes.fromhex('21006B'), 47637: bytes.fromhex('010002'), 61090: bytes.fromhex('11006B'),
               47362: bytes.fromhex('E5C5D5')}
-SITE_SYM = {45286: 'e_a', 43168: 'e_b', 43069: 'e_c', 61329: 'e_p', 47637: 'e_cm', 61090: 'e_rs',
+SITE_SYM = {45286: 'e_a', 43168: 'e_b', 43069: 'e_c', 61329: 'e_p', 47611: 'e_cw', 47637: 'e_cm', 61090: 'e_rs',
             47362: 'e_cl'}
 # the original instructions under each 3-byte JP: starts (reached only through the site) and
 # interiors (never a PC: a jump there would land inside the JP)
 STARTS = {45286: (45287,), 43168: (43169, 43170), 43069: (43070, 43071), 61329: (61330, 61331),
-          47637: (), 61090: (), 47362: (47363, 47364)}
-INTERIORS = (45288, 47638, 47639, 61091, 61092)
+          47611: (), 47637: (), 61090: (), 47362: (47363, 47364)}
+INTERIORS = (45288, 47612, 47613, 47638, 47639, 61091, 61092)
+V_PACE = 0x0040                         # hlib_pace's state in page PAGE_S: +4 debt, +10 window open
+V_CR = 0x0022                           # the converted plots' time on the original since the last wait
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', 'everyones_a_wally_updated_colours.json')
@@ -276,15 +284,84 @@ def identify(mem):
 
 def is_wally2(snap):
     try:
-        return snap.machine != '48K' and identify(mem64(snap))
+        if snap.machine == '48K':
+            return identify(bytes(snap.memory[0:65536]))      # the clean release: auto wraps it (to128)
+        return identify(mem64(snap))
     except FileNotFoundError:
         return False
+
+
+def to128(z80, out_z80):
+    """A 48K snapshot -> a 128K .z80 with the same RAM (banks 5, 2, 0), registers and border; 7FFD = 0x10
+    (ROM 1, bank 0 at 0xC000), the layout Dean's snapshot has and Wally2Patch.apply wants."""
+    from skoolkit.snapshot import Snapshot, write_snapshot
+    from skoolkit.simutils import from_snapshot, get_state
+    from skoolkit.simulator import Simulator
+    s = Snapshot.get(z80)
+    sim = from_snapshot(Simulator, s)
+
+    class Tr:
+        border = outfe = s.border
+    sim.set_tracer(Tr())
+    ram, regs, state, machine = get_state(sim)
+    m = sim.memory
+    banks = [[0] * 16384 for _ in range(8)]
+    banks[5], banks[2], banks[0] = ([m[a] for a in range(o, o + 16384)] for o in (0x4000, 0x8000, 0xC000))
+    write_snapshot(out_z80, banks, regs,
+                   [x for x in state if not x.startswith(('7ffd', 'fffd', 'ay'))] + ['7ffd=16'], '128K')
+
+
+LOAD_BANK = 29                                   # the loading screen's entry bank (pages 58, 59), as the published .nxc
+LOAD_SCREEN = 'everyones_a_wally_loading.scr'    # the tape's 6,912-byte screen (MD5 2a20dc59), beside the snapshot
+ENH_COLOURS = 'everyones_a_wally_enhanced_colours.json'   # Enhanced colour map (MD5 2dc7fea2), beside the snapshot
+ENH_PALETTE = 'everyones_a_wally_enhanced_palette.hex'    # Enhanced Layer 2 palette, 16 bytes as hex (index 0 kept 0xE3)
+
+
+def loading_nex(nex, scr):
+    """A built .nex -> the same with the loading screen (nexclash-patch build/all2/add_screen.py, bank 29, as the
+    published patch; the stub is smashtv's port for pages 58, 59: asm ldscr): bank 5's screen area in the file =
+    the screen, new bank 29 = the entry bank whose stub shows it for 250 frames or a key, puts bank 5's bytes back
+    and falls into 0xC000 of bank 10. -> (bytes, problems): every byte outside these checked."""
+    import struct
+    hk = load_profile()['hooks']
+    head, tail = bytes.fromhex(hk['ldhead']), bytes.fromhex(hk['ldtail'])
+    orig = nex[512:512 + 6912]
+    bank = head + bytes(0x200 - len(head)) + orig + bytes(0x3FD0 - 0x200 - 6912) + tail
+    bad = []
+    if len(scr) != 6912:
+        bad.append('screen is %d bytes, not 6912' % len(scr))
+    if struct.unpack_from('<HH', nex, 12) != (0xDFFE, 0xC000) or nex[10] or not nex[18 + 5] or nex[139] != 10 or \
+            nex[140] or nex[141] or any(nex[18 + k] for k in range(LOAD_BANK, 112)):
+        bad.append('start state, screen block, entry bank or bank %d+ not as the stub assumes' % LOAD_BANK)
+    h = bytearray(nex[:512])
+    h[9] += 1
+    h[18 + LOAD_BANK] = 1
+    h[139] = LOAD_BANK
+    n = bytes(h) + scr + nex[512 + 6912:] + bank
+    if [i for i in range(512) if nex[i] != n[i]] != [9, 18 + LOAD_BANK, 139]:
+        bad.append('header bytes')
+    if n[512 + 6912:len(nex)] != nex[512 + 6912:] or n[len(nex) + 0x200:len(nex) + 0x200 + 6912] != orig:
+        bad.append("rest of the file or the stub's copy of bank 5")
+    return n, bad
+
+
+def enhanced_inputs(folder):
+    """-> (colour map, 16 Layer 2 palette bytes) from ENH_COLOURS + ENH_PALETTE in folder, or None if either is
+    missing. Index 0 stays 0xE3 (transparent), as L2PAL."""
+    cf, pf = os.path.join(folder, ENH_COLOURS), os.path.join(folder, ENH_PALETTE)
+    if not (os.path.isfile(cf) and os.path.isfile(pf)):
+        return None
+    from . import coloursheet as cs
+    pal = bytes.fromhex(open(pf).read().strip())
+    if len(pal) != 16:
+        raise ValueError('%s: %d palette bytes, not 16' % (ENH_PALETTE, len(pal)))
+    return cs.load(cf), [0xE3] + list(pal[1:])
 
 
 class Wally2Patch:
     name = "Everyone's a Wally (updated): every figure on Layer 2, outlined (altrom + pages 26/27)"
 
-    def __init__(self, mem, cfg=None, prof=None):
+    def __init__(self, mem, cfg=None, prof=None, pal=None):
         self.cfg = cfg or Config()
         self.prof = prof or load_profile()
         h = self.prof['hooks']
@@ -292,7 +369,7 @@ class Wally2Patch:
         self.page_code = bytes.fromhex(h['page'])
         self.setup = bytes.fromhex(h['setup'])
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
-        self.stub_extra = self.setup + bytes(L2PAL)
+        self.stub_extra = self.setup + bytes(pal or L2PAL)        # pal: the Enhanced set's (enhanced_inputs)
         self.setup_call = 0xD000
         self.hook_page_data = b''
         self.uses_printer_buffer = True
@@ -544,7 +621,9 @@ def _next_state(patch):
     from .rainbow import NextState
 
     class NS(NextState):
-        pass
+        def video_line(self):           # moves on with every reading, so a pace wait ends after a few polls
+            self.line = (self.line + 6) % 312
+            return self.line
     ns = NS(patch)
     ns.pages[TPAGE] = bytearray(patch.tpage)
     for p, b in patch.cpages.items():
@@ -568,12 +647,14 @@ def _sim_class():
     return _rw_simulator()
 
 
+NEG_FRAMES = 2500                       # the limiter's negatives: far enough into a recording for play
 CMP = list(range(0, 13)) + [14, 16, 17] + list(range(18, 25)) + [26, 27, 28]   # all but R, T, MEMPTR
 
 
-def _pair(patch, get, regs, ns, stops, alt):
+def _pair(patch, get, regs, ns, stops, alt, speed=0):
     """Run original and patched code from one state (memory read through get(a)) until PC in stops.
-    ns = the patched Next state (mutated). Returns (so, o, sp, p, err)."""
+    ns = the patched Next state (mutated); the patched run must end at CPU speed `speed` (the caller's 0, or 3 inside the
+    pixel copy's window). Returns (so, o, sp, p, err)."""
     from .rainbow import _machine, _run
     Sim = _sim_class()
     psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
@@ -634,12 +715,16 @@ def _pair(patch, get, regs, ns, stops, alt):
     sp_ = _machine(Sim, p, list(regs), ns, 'p')
     if not (_run(so, stops, 400000) and _run(sp_, stops, 4000000)):
         err.append('did not return')
-    for reg, want in ((0x50, 0xFF), (0x51, 0xFF), (0x52, 10), (0x07, 0)):
+    for reg, want in ((0x50, 0xFF), (0x51, 0xFF), (0x52, 10), (0x07, speed)):
         if ns.nr.get(reg, want) != want:
             err.append(('NextReg $%02X not restored' % reg, ns.nr.get(reg)))
     if any(e[0] == 'in' for e in ns.events):
         err.append('port read in hook')
     return so, o, sp_, p, err
+
+
+def _w(ns, a):
+    return ns.scratch[a] | ns.scratch[a + 1] << 8
 
 
 def _in(a, r):
@@ -749,7 +834,14 @@ def verify(patch, rzx_path, mem, stop=None, collect=0, progress=None):
             exp = model.plot(kind, R, get)
             if exp is None:
                 model.passthrough(kind)
+            d0, cr0 = _w(ns, V_PACE + 4), _w(ns, V_CR)
             so, o, sp_, p, err = _pair(patch, get, R, ns, _ret(get, R), alt)
+            if _w(ns, V_PACE + 4) <= d0 and d0 < 0xBF00:
+                fail('%s: hook time not in the debt' % kind)
+            if exp is not None and _w(ns, V_CR) <= cr0 and cr0 < 0x7FFF:
+                fail("%s: the plot's time not credited" % kind)
+            if exp is None and _w(ns, V_CR) != cr0:
+                fail('%s: a plot that ran credited' % kind)
             c['T %s original' % kind] += so.registers[25] - R[25]
             c['T %s hook' % kind] += sp_.registers[25] - R[25]
             for e in err:
@@ -781,6 +873,17 @@ def verify(patch, rzx_path, mem, stop=None, collect=0, progress=None):
                 c['61329 unchanged (ULA)'] += 1
                 if o.ov != p.ov:
                     fail('61329: memory differs', ())
+        elif pc == COPY:
+            so, o, sp_, p, err = _pair(patch, get, R, ns, (47614,), alt, speed=3)
+            for e in err:
+                fail('copy entry: %s' % (e,))
+            ro, rp = so.registers, sp_.registers
+            diff = [i for i in CMP if ro[i] != rp[i]]
+            if diff or o.ov != p.ov:
+                fail('copy entry: registers/memory differ', (diff,))
+            if not ns.scratch[V_PACE + 10]:
+                fail('copy entry: the window is not open')
+            c['copy windows'] += 1
         elif pc in (COMMIT, RESTORE, CLEAR):
             what = {COMMIT: 'commit', RESTORE: 'restore', CLEAR: 'clear'}[pc]
             stops = {COMMIT: (47640,), RESTORE: (61093,), CLEAR: (47365,)}[pc]
@@ -806,6 +909,10 @@ def verify(patch, rzx_path, mem, stop=None, collect=0, progress=None):
                     bad = sum(1 for a, b in zip(img or bytes(len(want)), want) if a != b)
                     fail('commit: Layer 2 differs from the model', (bad,))
                 c['Layer 2 pixels drawn'] += sum(1 for b in want if b)
+                if ns.scratch[V_PACE + 10]:
+                    fail('commit: the copy window left open (no wait)')
+                if _w(ns, V_CR):
+                    fail('commit: the credit not spent')
                 if ns.scratch[V_N] or ns.scratch[V_LAST]:
                     fail('commit: plot list not reset')
             elif pc == RESTORE and ns.scratch[V_N]:
@@ -1002,6 +1109,21 @@ def unit_tests(patch, states, mem, neg=None):
         if err or ns.scratch[V_N] or ns.scratch[V_LAST] or o.ov != p.ov:
             c['restore: plot list not dropped!'] += 1
     return c
+
+
+def pace_negatives(mem):
+    """Limiter patches the replay must catch: (name, patch, the fail key it must raise)."""
+    def edit(sym, b):
+        q = Wally2Patch(mem)
+        sp = bytearray(q.scratch)
+        a = q.syms[sym]
+        sp[a:a + len(b)] = b
+        q.scratch = bytes(sp)
+        return q
+    return [('a limiter that never waits', edit('neg_wait', bytes(3)), 'commit: the copy window left open'),
+            ('a window never opened', edit('neg_open', bytes(3)), 'copy entry: the window is not open'),
+            ('hook time left out of the debt', edit('dbc', b'\xC9'), 'A: hook time not in the debt'),
+            ('plot time not credited', edit('cred', b'\xC9'), "A: the plot's time not credited")]
 
 
 def negative_patch(patch):
@@ -1285,6 +1407,14 @@ def auto(a, z80, name, out, say):
     say('Game      : %s' % name)
     say("Engine    : wally2 (Everyone's a Wally, updated: every figure on Layer 2, outlined)")
     md5 = lambda p: hashlib.md5(open(p, 'rb').read()).hexdigest()
+    from skoolkit.snapshot import Snapshot
+    src = z80
+    if Snapshot.get(z80).machine == '48K':
+        z128 = os.path.join(out, name + '_128.z80')
+        to128(z80, z128)
+        say('Snapshot  : 48K (the clean release) -> %s: the same RAM and registers in banks 5, 2, 0, 7FFD = 0x10' %
+            os.path.basename(z128))
+        z80 = z128
     plain = os.path.join(out, name + '.nex')
     zt.convert(z80, plain, TAIL_ADDR, quiet=True)
     bad = boot_check(plain, z80)
@@ -1299,6 +1429,33 @@ def auto(a, z80, name, out, say):
         os.path.basename(spr), md5(spr), 'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200],
         len(patch.cpages), len(patch.cfg.colours)))
     ok = not bad and not bad2
+    here = os.path.dirname(os.path.abspath(src))
+    sc = os.path.join(here, LOAD_SCREEN)
+    scr = open(sc, 'rb').read() if os.path.isfile(sc) else None
+    enh = enhanced_inputs(here)
+    if enh is None:
+        say('Enhanced  : no %s + %s beside the snapshot: no Enhanced build' % (ENH_COLOURS, ENH_PALETTE))
+    else:
+        cmap, pal = enh
+        pe = Wally2Patch(mem, Config(colours=cmap), pal=pal)
+        spe = os.path.join(out, name + '_sprites_enhanced.nex')
+        zt.convert(z80, spe, quiet=True, patch=pe)
+        bad3 = boot_check(spe, z80, pe)
+        same = [b for b in (12, 13) + tuple(range(16, 22)) if pe.extra_banks[b] != patch.extra_banks[b]]
+        ok = ok and not bad3 and not same and pe.tpage == patch.tpage
+        say('Enhanced  : %s  %s  boot %s  (colours md5 %s, %d keys; palette %s; hooks, tables and Layer 2 banks as '
+            'the default: %s)' % (os.path.basename(spe), md5(spe), 'OK' if not bad3 else 'MISMATCH %s' % str(bad3[:3])[:200],
+                                  md5(os.path.join(here, ENH_COLOURS)), len(cmap), bytes(pal).hex(),
+                                  'yes' if not same and pe.tpage == patch.tpage else 'NO %s' % same))
+    for f in [spr] + ([spe] if enh else []):
+        if scr is None:
+            say('Loading   : no %s beside the snapshot: %s without the loading screen' % (LOAD_SCREEN, os.path.basename(f)))
+            continue
+        n, lb = loading_nex(open(f, 'rb').read(), scr)
+        open(f, 'wb').write(n)
+        ok = ok and not lb
+        say('Loading   : screen md5 %s -> %s  %s  bank %d stub, %s' % (
+            md5(sc), os.path.basename(f), md5(f), LOAD_BANK, 'the rest as built' if not lb else 'PROBLEM %s' % lb))
     states = []
     for r in list(a.rzx or []):
         from skoolkit.rzxplay import parse_rzx
@@ -1326,6 +1483,15 @@ def auto(a, z80, name, out, say):
             'plots A/B/C original %d / %d / %d, hook %d / %d / %d; commit hook mean %d, max %d T per render' % (
                 c['T A original'], c['T B original'], c['T C original'], c['T A hook'], c['T B hook'],
                 c['T C hook'], c['T commit hook'] // max(1, c['commits']), c['T commit max']))
+    if a.rzx and not getattr(a, 'quick', None):
+        r0 = a.rzx[0]
+        s0 = os.path.join(out, os.path.splitext(os.path.basename(r0))[0] + '_stripped.rzx')
+        r0 = s0 if os.path.exists(s0) else r0
+        for nm, neg, key in pace_negatives(mem):
+            cn = verify(neg, r0, mem, stop=NEG_FRAMES)[0]
+            hit = any(k.startswith(key) and k.endswith('!') for k in cn)
+            ok = ok and hit
+            say('Pace neg  : %s %s' % (nm, 'DETECTED' if hit else 'NOT DETECTED!'))
     if states:
         u = unit_tests(patch, states, mem, negative_patch(patch))
         uf = {k: v for k, v in u.items() if k.endswith('!')}
