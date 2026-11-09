@@ -811,6 +811,23 @@ def tools_check(src):
         else:
             print('SKIP tools: play checks in JNext (no jnext or no $NEXCLASH_JNEXT_CARD)')
         from nexclash import survey
+        from types import SimpleNamespace
+        tracker = survey.PlotTracker()
+        memory, registers = [0] * 65536, [0] * 29
+        memory[0x8000:0x8003] = [0xCD, 0, 0x81]
+        memory[0x8100:0x8103] = [0xCD, 0, 0x82]
+        tracker.on_sim(SimpleNamespace(memory=memory, registers=registers))
+        for pc, sp in ((0x8000, 0xFF00), (0x8100, 0xFEFE), (0x8200, 0xFEFC)):
+            registers[12] = sp
+            tracker.before(pc)
+        tracker.on_write(0x4000, 1, 0x8200, memory)
+        registers[12] = 0xFEFE
+        tracker.before(0x8103)
+        tracker.on_write(0x4001, 1, 0x8103, memory)
+        ok('survey: entry CALL tracked; nested and outer writes attributed separately',
+           tracker.calls[0x8200][0x8100] == 1 and tracker.parents[0x8200][0x8100] == 1 and
+           tracker.pix[0x8200] == 1 and tracker.pix[0x8100] == 1,
+           (dict(tracker.calls[0x8200]), dict(tracker.pix)))
         _, r = survey.survey(ez, [er], os.path.join(work, 'survey'), stop=600, log=lambda m: None, full=True)
         rt = {x['routine']: x for x in r['routines']}
         ok('survey (600 frames): engine chuckie, plain boot OK, 43899 x1059 calls on top, 40000 x814 from 6 callers at 665 T',
