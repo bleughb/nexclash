@@ -98,7 +98,7 @@
  "status": {
   "title": "The New Zealand Story",
   "engine_col": "new_zealand_story (new_zealand_story.md)",
-  "build": "v1.4 review (2026-11-08): the published v1.3 with the wait before the player following the original's time, capped as before, and the speed read safe against an interrupt: default, Smooth scrolling, Backdrops, both; built from the two tapes + start state",
+  "build": "v1.4 (published .nxc, 2026-11-08): v1.3 with the wait before the player following the original's time, capped as before, and the speed read safe against an interrupt: default, Smooth scrolling, Backdrops, both; built from the two tapes + start state",
   "software": "Rebuild byte-exact from either tape set; v1.3's published builds are 342c8397 / cf5cadc5 / 679d8c14 / f74c3b34. Proof: the run's lockstep replays re-run on these hooks (v1.1 suite 52 runs / 141000 frames, v1.2 suite 34 / 51000, negatives); no RZX verifier in the engine; JNext pace in games/new_zealand_story.md",
   "hardware": "none for 1.1-1.3 (1.0 played by Dean Woodyatt)",
   "next": "Port the replay proof as the engine's verifier"
@@ -118,8 +118,8 @@
    "assets/new_zealand_story/backdrops/w5.json": "f5005792e539d01d",
    "docs/profiles/new_zealand_story.json": "46fccc3bda96fb52",
    "nexclash.py": "350128095535a2d4",
-   "nexclash/engines.py": "b9b7538a34c912de",
-   "nexclash/new_zealand_story.py": "e50a2ca7ad74c49c",
+   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/new_zealand_story.py": "c6a1399518e48725",
    "nexclash/new_zealand_story_backdrops.py": "83201feae444c076",
    "nexclash/new_zealand_story_paint.py": "22926e50511be190",
    "nexclash/tapeset.py": "86542e1752fb3110",

@@ -17,7 +17,7 @@ Three stages, as the published patch (github.com/jattree/nxc, v1.2; v1.3 = + the
 The hooks are assembled at build time with the pinned sjasmplus (their tables come from the tapes; herbert does the
 same), so there is no hook hex in the profile and no asm2profile check.
 
-Outputs (the four builds of the published patch v1.3, byte for byte): NAME_sprites.nex (default), NAME_smooth.nex,
+Outputs (the four builds of the published patch v1.4, byte for byte): NAME_sprites.nex (default), NAME_smooth.nex,
 NAME_backdrops.nex, NAME_smooth_backdrops.nex; NAME_outputs.json names the two toggles.
 
 Two things are kept as published, both local to this engine:

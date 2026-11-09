@@ -1,8 +1,8 @@
-# The New Zealand Story (Ocean, 1989, 128K) - colour v1.3, built from its tapes (engine new_zealand_story)
+# The New Zealand Story (Ocean, 1989, 128K) - colour v1.4, built from its tapes (engine new_zealand_story)
 
 ## Next session
-Stage: 5 (imported; rebuild byte-exact; pace pass 2026-11-08, review 1.4)    State: engine + record on main's tape-set inputs (nexclash/tapeset.py); the
-four published v1.3 builds (v1.2 + the v2.10 start-up fix) rebuild byte for byte from either tape set; no RZX
+Stage: 5 (imported; rebuild byte-exact; v1.4 pace pass 2026-11-08, published)    State: engine + record on main's tape-set inputs (nexclash/tapeset.py); the
+four published v1.4 builds (v1.3 + the pace pass) rebuild byte for byte from either tape set; no RZX
 verifier in the engine (the proof is the run folder's replay suite, below).
 Start with: "Open" - the replay proof as this engine's verify().
 
@@ -52,7 +52,11 @@ Start with: "Open" - the replay proof as this engine's verify().
   the model at 28,780 interrupts, negatives (scroll +1, wrong level, opaque sky) detected; JNext pace, flicker,
   15-minute soak. Hardware: none for 1.1 / 1.2 (1.0 played by Dean Woodyatt).
 
-## Pace (2026-11-08, local branch nexttang/new_zealand_story-pace; review .nxc 1.4, not published)
+## Pace (2026-11-08; v1.4, published in the .nxc, nxc 4e872ad)
+- Rebuild, both tape sets (selftest --game new_zealand_story): sprites 922d2b7fe6b3344e8ffdc1663aeffc6a, smooth
+  1100411a82e75d47b353ba750873cfb0, backdrops 0f0eaa0c43c1944e79dd42462485eac6, smooth_backdrops
+  5b8ac753e6ccb246ed399050ba8cca88 = the published v1.4 bare builds (nxc.py --bare: default, Smooth scrolling,
+  Backdrops, both), from either tape set.
 - Audit (pace-audit-20261108/REPORT-2.md): the engine's cap held nearly every update at 80-82 ms. The original varies, 63 light, 76 median, 114 busy, so
   the build was slow in light scenes (+29.4% on one update) and 15-26% faster in busy ones.
 - The wait before the player now lasts until the original's time for this update has passed, and never past the old cap (1,244 lines, 81.04 ms) since the last
