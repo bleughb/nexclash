@@ -1,0 +1,130 @@
+{
+ "name": "mad_mix_2",
+ "order": 241,
+ "game": "Mad Mix 2 - en el Castillo de los Fantasmas",
+ "doc": "mad_mix_2.md",
+ "engine": "mad_mix_2",
+ "representative": true,
+ "reference": "mad_mix_2",
+ "inputs": {
+  "snapshot": {
+   "name": "mad_mix_2.z80",
+   "md5": "f5f5262f7a41d3c55408b45878c31d00",
+   "path": "mad_mix_2/mad_mix_2.z80",
+   "note": "Mad Mix 2 - en el Castillo de los Fantasmas (1990)(Topo Soft)(128K)(ES).z80, the 128K release, AY music."
+  },
+  "recordings": [
+   {
+    "name": "mad_mix_2_loading.scr",
+    "md5": "c551765e986c0fa8c51b967bee022e58",
+    "path": "mad_mix_2/mad_mix_2_loading.scr",
+    "role": "The tape's loading screen, 6,912 bytes, staged beside the snapshot; not a recording."
+   },
+   {
+    "name": "mad_mix_2_enhanced.bin",
+    "md5": "d37c129e6ec91774f93ce6a7cfc4f804",
+    "path": "mad_mix_2/mad_mix_2_enhanced.bin",
+    "role": "Enhanced's colour table, made by nexclash/mad_mix_2_art.py from the Spec256 set (Jao Paulo); derived from the set, private, never in this repo; staged beside the snapshot; not a recording."
+   },
+   {
+    "name": "a2.rzx",
+    "md5": "ac54b017f88493b810156b31dcdd0a1f",
+    "path": "mad_mix_2/a2.rzx",
+    "role": "Long play: deaths, game over, restart, 20,009 frames; the handler cases and the broken builds run on its start."
+   },
+   {
+    "name": "a1.rzx",
+    "md5": "8b631bfc098fad13291dae5f2bd351df",
+    "path": "mad_mix_2/a1.rzx",
+    "role": "Scripted play, stage 1, 6,030 frames."
+   },
+   {
+    "name": "fx1.rzx",
+    "md5": "900625afa8063d78dbe2899b4a412ea0",
+    "path": "mad_mix_2/fx1.rzx",
+    "role": "A test copy through all 9 stages, banks 3 and 4 paged, 14,028 frames."
+   },
+   {
+    "name": "stg.rzx",
+    "md5": "5313b06c286b8f115e7e871f77d73dcf",
+    "path": "mad_mix_2/stg.rzx",
+    "role": "The test copy that ends each stage at its first pill, 30,007 frames."
+   }
+  ]
+ },
+ "modules": [
+  "mad_mix_2",
+  "mad_mix_2_art"
+ ],
+ "own_modules": [
+  "mad_mix_2",
+  "mad_mix_2_art"
+ ],
+ "data": [
+  "asm/mad_mix_2e_hooks.asm",
+  "docs/profiles/mad_mix_2.json",
+  "docs/profiles/mad_mix_2e.json"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record",
+   "--no-nxc"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record",
+   "--no-nxc"
+  ],
+  "rzx": [
+   "a2.rzx",
+   "a1.rzx",
+   "fx1.rzx",
+   "stg.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 60,
+  "note": "Default: original and build fed each recording, every register with R, all eight banks and the fetch count at every frame end, no port FF write; the sites from every A. Enhanced: every recording, at every changed site the hook against the original from the same state, every register with R, all RAM but the changed bytes and the stack below SP, clock, MMU, write map, and every flip's picture against a model; the handler inside each hook kind; 14 broken builds on a2's first 1,500 frames, one that survives over the other recordings' first 3,000 (the cleared-screen case needs fx1). Pace, soak, flicker, beam and the real loader are in games/mad_mix_2.md \"Evidence\"."
+ },
+ "outputs": {
+  "sprites": {
+   "file": "mad_mix_2_sprites.nex",
+   "md5": "d41ee5de8df6951d32d526ea7b333719"
+  },
+  "loading": {
+   "file": "mad_mix_2_sprites_loading.nex",
+   "md5": "ebbf27c83c27fe05eb0189ff1fdf797f"
+  },
+  "enhanced": {
+   "file": "mad_mix_2_enhanced.nex",
+   "md5": "4d8b106df29969ba368112a256fe696e"
+  },
+  "enhanced_loading": {
+   "file": "mad_mix_2_enhanced_loading.nex",
+   "md5": "5b402870cd95dc34e4bc98096c1cce39"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Mad Mix 2 - en el Castillo de los Fantasmas",
+  "engine_col": "mad_mix_2 (mad_mix_2.md)",
+  "build": "v1.0; mad_mix_2_sprites_loading.nex ebbf27c8 and mad_mix_2_enhanced_loading.nex 5b402870 equal the published .nxc 1.0 bare builds, default and Enhanced (without the screen d41ee5de, 4d8b106d); default: no clash to remove, the copy's two port 0xFF writes become reads (Timex hi-colour on a Next), Sinclair's ROM as the whole alt ROM, no hooks; Enhanced (off by default): stages 1 to 3 in the Spec256 set's colours (Jao Paulo) on a double-buffered Layer 2, stages 4 to 9 original; banks to 28; the colour table and loading screen are local inputs",
+  "software": "default: 3 recordings, 40,067 frames, R and all eight banks at every frame end, 512 site cases, 5 broken builds; Enhanced: 4 recordings, 70,074 frames, 133,046 hooks with R and all RAM, 4,163 pictures against a model, 402 handler cases, 14 of 14 broken builds; soak, flicker, real loader; pace in JNext: Enhanced whole +0.09 to +0.26%, slowest 20 updates up to +2.95% (over the 2% rule); one flip at line 36 of 710",
+  "hardware": "untested",
+  "next": "hardware checklist; owner's play; colours for stages 4 to 9 (new paint, mock-up first)"
+ },
+ "checks": [
+  "asm2profile:mad_mix_2e"
+ ],
+ "results": [
+  {
+   "check": "external review run",
+   "status": "pass",
+   "scope": "runs/mad_mix_2/release-20261108 and release-20261108b: pace, soak, flicker, beam audit, real loader (default, Enhanced, cheats), JNext 1.1.104, on these engine bytes. Not a selftest stamp.",
+   "evidence": "games/mad_mix_2.md \"Evidence\""
+  }
+ ]
+}

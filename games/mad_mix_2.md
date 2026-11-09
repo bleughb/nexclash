@@ -1,10 +1,10 @@
 # Mad Mix 2 - en el Castillo de los Fantasmas (Topo Soft, 1990, 128K)
 
 ## Next session
-Stage: 3 (prove + deliver)   State: private review build for the owner, nothing upstream yet
-Inputs: Mad Mix 2 - en el Castillo de los Fantasmas (1990)(Topo Soft)(128K)(ES).z80, MD5 f5f5262f7a41d3c55408b45878c31d00
-Checks: replay, unit, negatives, pace, soak, flicker, real loader in the run's NOTES.md
-Pending: owner plays, default and Enhanced; colours for stages 4 to 9 need new paint (a later mock-up); then `auto`, the record and registration for upstream.
+Stage: 4 (owner's play)   State: published as 1.0 in .nxc 1.0 (default and Enhanced); on main with `auto`, its `engines.py` line and record `docs/records/mad_mix_2.json`. Hardware: untested.
+Inputs, beside the snapshot (never in this repo): `mad_mix_2.z80` = Mad Mix 2 - en el Castillo de los Fantasmas (1990)(Topo Soft)(128K)(ES).z80, MD5 f5f5262f7a41d3c55408b45878c31d00; `mad_mix_2_loading.scr`, the tape's loading screen (c551765e); for Enhanced `mad_mix_2_enhanced.bin` (d37c129e), the colour table `nexclash/mad_mix_2_art.py` makes from the Spec256 set. Without the table, auto builds the default only.
+Build: `nexclash.py auto mad_mix_2.z80 --no-record --no-nxc`: `mad_mix_2_sprites_loading.nex` ebbf27c8 and `mad_mix_2_enhanced_loading.nex` 5b402870, the published bare builds (without the screen d41ee5de, 4d8b106d). With `--rzx`: the default's replay and site cases, Enhanced's replay, the handler inside each hook kind and 14 broken builds.
+Pending: the owner's play, default and Enhanced; colours for stages 4 to 9 need new paint (a later mock-up).
 
 ## Facts
 - A true 128K release: flag 0x6001 = 1, AY music in bank 1 (7FFD 0x11 in the handler), nine stages, three stage groups swapped in from banks 3 and 4 through the screen (5DDC). The Spanish tape messages (5DAB, 5DC6, DA98) are the 48K path and are never printed here. All other text is English: READY, OK, SCORE, STAGE, GAME OVER, PRESS FIRE TO START.
@@ -43,9 +43,17 @@ The owner's rule (2026-11-08): no mock-up or approval to convert a Spec256 set. 
 - [local: z80n writes] The simulator's LDIX family dropped writes below 0x4000, so the write map showed nothing in the verifier though JNext was right. sim.low_writes lets a model that handles the map see them.
 - [local: a model catches refactors] An MMU line lost in a refactor showed at once as a picture against the model, where the eye would have taken a while.
 
+## Evidence
+Review runs runs/mad_mix_2/release-20261108 (default) and release-20261108b (Enhanced), JNext 1.1.104, emulator and simulator only. Default: replay of a1, a2, fx1 (40,067 frames, R at every frame end, all eight banks, 11,664 site passes, no port FF write), 512 site cases, 5 broken builds, boot exact, soak, flicker, real loader. Enhanced (5b402870): 4 recordings, 70,074 frames, 133,046 hooks with R and all RAM, 4,163 pictures against a model; 14 of 14 broken builds; 402 handler-inside-a-hook cases; boot exact; 15-minute soak; flicker clean; 709 of 710 flips outside the window (one at line 36, cause not found); real loader in every mode. Pace, Enhanced, 5 seeds of 800 updates in lockstep: whole +0.09 to +0.26%, thirds within +0.38%, slowest 20 updates up to +2.95%, over the 2% rule (the owner's call by feel).
+
 ## Friction
 - reuse: [none: the Game Over run's packaging and loader scripts were enough]
 - retries: [local: key gaps] The first scripts held keys through the READY wait, which wants all keys up first; a stage fixture looked stuck until the script left gaps.
 - environment: [none: the pilot venv and references were enough]
 - hand-rolled: [local: review scripts] Pace, soak and loader runs were driven by scripts in the review run, not the toolkit.
 - scratch: [local: review run] Its work folder stays in private evidence.
+
+## Stage log
+- 2026-11-09 Upstream: auto, registration and record on main; main rebuilds the published 1.0 default and Enhanced byte for byte.
+- 2026-11-08 Stage 3: Enhanced for stages 1 to 3 from the Spec256 set; proofs on the exact bytes.
+- 2026-11-08 Stage 3: the port 0xFF fix, review build.
