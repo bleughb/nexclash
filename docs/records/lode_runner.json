@@ -22,15 +22,21 @@
  },
  "modules": [
   "loderunner",
-  "loderunner_v2"
+  "loderunner_v2",
+  "loderunner_v3"
  ],
  "own_modules": [
   "loderunner",
-  "loderunner_v2"
+  "loderunner_v2",
+  "loderunner_v3"
  ],
  "data": [
   "docs/profiles/lode_runner.json",
-  "asm/loderunner_hooks.asm"
+  "asm/loderunner_hooks.asm",
+  "asm/loderunner_v3_hooks.asm",
+  "docs/profiles/lode_runner_v3.json",
+  "asm/loderunner_v3_loading.asm",
+  "docs/profiles/lode_runner_v3_loading.json"
  ],
  "shared_data": [],
  "rebuild": {
@@ -80,55 +86,81 @@
   "next": "hardware test (checklist); Dean paints the PAINTING_SPRITES sheet (optional); longer RZX (level complete, guard trapped)"
  },
  "checks": [
-  "asm2profile:lode_runner"
+  "asm2profile:lode_runner",
+  "asm2profile:lode_runner_v3",
+  "asm2profile:lode_runner_v3_loading"
  ],
  "checked": {
   "deps": {
    "asm/loderunner_hooks.asm": "edaf15d8f19d34e9",
+   "asm/loderunner_v3_hooks.asm": "750eac6268ce874b",
+   "asm/loderunner_v3_loading.asm": "cea5b011d593c1b1",
    "docs/profiles/lode_runner.json": "4a2d1e755d055a01",
-   "nexclash.py": "b7f49876a97b1f48",
+   "docs/profiles/lode_runner_v3.json": "ecd14de2257ef2ab",
+   "docs/profiles/lode_runner_v3_loading.json": "67512afafcd4c512",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "5f91fa907c4793a4",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
    "nexclash/loderunner.py": "1f0071a2f9565a9c",
-   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/loderunner_v2.py": "d33fc0c0990fb551",
+   "nexclash/loderunner_v3.py": "27b6fced95cb9ffe",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "273dab19dfcd9e27",
-   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "060e91b5b6fc2709",
+   "recipe": "003fd6ca1e8ffc49",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-08"
  },
  "verified": {
   "deps": {
    "asm/loderunner_hooks.asm": "edaf15d8f19d34e9",
+   "asm/loderunner_v3_hooks.asm": "750eac6268ce874b",
+   "asm/loderunner_v3_loading.asm": "cea5b011d593c1b1",
    "docs/profiles/lode_runner.json": "4a2d1e755d055a01",
-   "nexclash.py": "b7f49876a97b1f48",
+   "docs/profiles/lode_runner_v3.json": "ecd14de2257ef2ab",
+   "docs/profiles/lode_runner_v3_loading.json": "67512afafcd4c512",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "5f91fa907c4793a4",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
    "nexclash/loderunner.py": "1f0071a2f9565a9c",
-   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/loderunner_v2.py": "d33fc0c0990fb551",
+   "nexclash/loderunner_v3.py": "27b6fced95cb9ffe",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "273dab19dfcd9e27",
-   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "060e91b5b6fc2709",
+   "recipe": "003fd6ca1e8ffc49",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-08"
  },
  "rework": [
   {
@@ -201,6 +233,132 @@
    ],
    "proof": "4 recordings of the 128K release IDENTICAL on Dean's engine (rework v2): 3 bot RZX of 20,042 / 20,021 / 20,049 frames + a 6,000-frame free run (registers, memory, sprite pixels vs the plotter, the patched screen frame by frame, every screen / attribute read); every hook ran (draws 14,859 + 24 runner, erases 14,882, guard death 0x96B6 1 with its respawn draw 0x970C, level-start prints 60 + 240, paints 42,210, fades and clears 96); 6,074 unit cases PASS, 3 negative controls detected; clock matrix 8 hook sites x 4 incoming clocks = 32 cases, exit speed = the incoming one, a forced 3.5 MHz exit detected; ROM paths: every ROM byte as recorded but the 20-byte start-up register block (known, read only by the fade); start-up tail never read before written",
    "note": "Jon Attree's Lode Runner 128K rework (2026-11-05): Dean's engine (hooks, profile, colours read, not copied) on the 128K release so the AY music plays; engine loderunner_v2 (engines.py: the 128K snapshot), whole alt ROM image = ROM 1 as the ROM path check takes a 128K recording's + the register block at 0x386E, the printer buffer put back after NEXLOAD (the fade reads it), the stack floor for the music handler, every recording replayed whole, the every-site clock matrix. Recordings: bot RZX made with the C simulator (work/bot.py: trap heuristic for a guard death). Published as Lode Runner (1984)(Software Projects)(128K).nxc v1.0 (pilot runs/dean_lode_runner). games/lode_runner.md \"Rework (opt-in)\"."
+  },
+  {
+   "name": "v3",
+   "version": "1.1",
+   "snapshot": "Lode Runner (1984)(Software Projects)(128K).z80",
+   "args": [],
+   "env": {
+    "NEXCLASH_REWORK": "loderunner_v3"
+   },
+   "inputs": [
+    {
+     "name": "Lode Runner (1984)(Software Projects)(128K).z80",
+     "md5": "41360f6c33e7a02ca6450881cb385ade",
+     "path": "lode_runner/Lode Runner (1984)(Software Projects)(128K).z80"
+    },
+    {
+     "name": "lr128_trap14.rzx",
+     "md5": "b77522111ee1ca126d23fffa87bc53b0",
+     "path": "lode_runner/lr128_trap14.rzx"
+    },
+    {
+     "name": "lr128_trap12.rzx",
+     "md5": "d2f3b75f743f236a5096ea616b96aea2",
+     "path": "lode_runner/lr128_trap12.rzx"
+    },
+    {
+     "name": "lr128_trap16.rzx",
+     "md5": "50647481fe0ef1ff25a3e80c29dfdc01",
+     "path": "lode_runner/lr128_trap16.rzx"
+    },
+    {
+     "name": "lr128_paths1.rzx",
+     "md5": "68c2e38d16390e073643b9c5e77637cc",
+     "path": "lode_runner/lr128_paths1.rzx",
+     "role": "Bot recording through the level editor and back (the editor handover v3 fixes)."
+    },
+    {
+     "name": "lr128_lc1.rzx",
+     "md5": "79a3a927cc0fc3012e83f53f77d5101d",
+     "path": "lode_runner/lr128_lc1.rzx",
+     "role": "Bot recording to a level complete: hidden ladders through the cell XOR."
+    },
+    {
+     "name": "Lode Runner (1984)(Software Projects)(128K).tzx",
+     "md5": "0a3275c42d414200d1bb12a3c653873a",
+     "path": "lode_runner/Lode Runner (1984)(Software Projects)(128K).tzx",
+     "role": "The 128K release's tape, staged beside the snapshot for the loading screen (its fourth block, MD5 fd93a64c); not a recording."
+    },
+    {
+     "name": "LODERUNN.B00",
+     "md5": "e1d2e9e10741069bdc91dd3e8fdf84b5",
+     "path": "lode_runner/LODERUNN.B00",
+     "role": "The player's own Spec256 backdrop (320 x 200), staged beside the snapshot for the Backdrop build; not a recording."
+    },
+    {
+     "name": "spec256-palette.pal",
+     "md5": "b095dc99a047bab844b87b06657b0a7a",
+     "path": "lode_runner/spec256-palette.pal",
+     "role": "The Spec256 palette the backdrop uses, staged beside the snapshot; not a recording."
+    }
+   ],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ],
+    "decisions": {
+     "engine": "loderunner_v3",
+     "base": "Dean's loderunner (hooks, profile, colours read, not copied)",
+     "input": "the 128K release (AY music from bank 4 in the IM 2 handler)",
+     "strategy": "RAM hooks 0xA460 (Dean); whole alt ROM image: Sinclair's 48K ROM + the register block at 0x386E (the fade reads 0x0000-0x3FFF as masks)",
+     "tail": "0xA400",
+     "colours": "docs/profiles/lode_runner_colours.json (none = defaults)"
+    }
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [
+     "lr128_trap14.rzx",
+     "lr128_trap12.rzx",
+     "lr128_trap16.rzx",
+     "lr128_paths1.rzx",
+     "lr128_lc1.rzx"
+    ]
+   },
+   "outputs": {
+    "plain": {
+     "file": "Lode Runner (1984)(Software Projects)(128K).nex",
+     "md5": "1fa81bc6ff196c42b9ce87b527cd57fa"
+    },
+    "sprites": {
+     "file": "Lode Runner (1984)(Software Projects)(128K)_sprites.nex",
+     "md5": "e5180af704aa5c5c7dc419a5497f0acb"
+    },
+    "sprites_loading": {
+     "file": "Lode Runner (1984)(Software Projects)(128K)_sprites_loading.nex",
+     "md5": "bea5397e2ef5cead5cb68d64b1956996"
+    },
+    "enhanced": {
+     "file": "Lode Runner (1984)(Software Projects)(128K)_enhanced.nex",
+     "md5": "9644995b7a45560412e5ba3d911294e5"
+    },
+    "enhanced_loading": {
+     "file": "Lode Runner (1984)(Software Projects)(128K)_enhanced_loading.nex",
+     "md5": "d8b8c394eef4217dea0aa7c2ede5344f"
+    },
+    "backdrop": {
+     "file": "Lode Runner (1984)(Software Projects)(128K)_backdrop.nex",
+     "md5": "94b2b4e4ee75344d77b4d5b49df8c50a"
+    },
+    "backdrop_loading": {
+     "file": "Lode Runner (1984)(Software Projects)(128K)_backdrop_loading.nex",
+     "md5": "0efcb2c3cd421c7945a98cbe3942ca91"
+    }
+   },
+   "rom_paths_known": [
+    {
+     "image": 1,
+     "from": "0x386E",
+     "to": "0x3881",
+     "why": "the start-up register block (the tail's LD SP / POPs), written by the stub into the keypad code of ROM 1, which the game never runs; only the fade reads these 20 bytes, as AND masks over the screen it then clears (visual, 2 frames, sprites hidden)"
+    }
+   ],
+   "proof": "v1.1 review run (runs/lode_runner_enhanced/release-20261108): 7 runs per mode (3 bot RZX, paths1, lc1, lc2, a free run), 92,098 frames each, IDENTICAL with R compared at every hook in default, Enhanced and Backdrop; 6,055 / 7,112 unit cases; 24 unit faults and 4 / 9 replay faults caught; clock matrix 36 / 44 cases; the tile layer against the ULA on 66,361,344 cells, 0 wrong; real loader byte-exact in five configurations. Enhanced colours: rules over the game's own graphics (profile lode_runner_v3 \"enhanced\"); backdrop: Spec256 team (Spec256).",
+   "note": "Jon Attree's Lode Runner 1.1 (2026-11-08): engine loderunner_v3 (NEXCLASH_REWORK=loderunner_v3; without it the 128K file still builds with loderunner_v2 = 1.0, as published). auto writes _sprites (default), _enhanced and, with the backdrop and palette beside the snapshot, _backdrop; with the tape beside it, each _loading equals nxc.py --bare of the published .nxc 1.1 (default, --colours Enhanced, --colours Enhanced --toggle Backdrop). The tape, backdrop and palette are inputs, never distributed with engine source."
   }
  ]
 }

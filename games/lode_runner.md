@@ -179,8 +179,13 @@ lode_runner` rebuilds both his and this rework = recorded.
 - scratch: [none: bot, cheat and trial scripts stay in the pilot run folder runs/dean_lode_runner/work]
 
 ## Rework v3: R, the editor, Enhanced colours and Backdrop (engine `loderunner_v3`; Jon Attree, 2026-11-08)
-A copy of v2 (module, asm/loderunner_v3_hooks.asm, profile lode_runner_v3); v2 and its record stay as published. Built by its own entry:
-`python -m nexclash.loderunner_v3 build GAME.z80 OUT --backdrop FILE.B00 --palette FILE.pal`. engines.py still picks v2 for the 128K file.
+A copy of v2 (module, asm/loderunner_v3_hooks.asm, profile lode_runner_v3); v2 and its record stay as published. Published as .nxc 1.1 (nxc d622047).
+Build: `NEXCLASH_REWORK=loderunner_v3 nexclash.py auto` on the 128K file (record rework "v3"; engines.py picks v3 before v2 only with that opt-in) writes `_sprites` (default),
+`_enhanced` and, with `LODERUNN.B00` and `spec256-palette.pal` (the player's own Spec256 backdrop and palette) beside the snapshot, `_backdrop`. With the release's tape
+beside it (`Lode Runner (1984)(Software Projects)(128K).tzx`, screen MD5 fd93a64c) each gets a `_loading` build: the screen in bank 5's screen area and
+asm/loderunner_v3_loading.asm in bank 16, as for Dizzy 1. Those equal `nxc.py --bare` of the published patch: default bea5397e, `--colours Enhanced` d8b8c394,
+`--colours Enhanced --toggle Backdrop` 0efcb2c3. The tape, backdrop and palette are never in this repo; without them those builds are skipped.
+`python -m nexclash.loderunner_v3 build GAME.z80 OUT --backdrop FILE.B00 --palette FILE.pal` still builds the three modes without the screen.
 - R as the original at every hook (hlib_r, verify compares CMP_R). The figure paints CALL a copy of 0x856E without its write, so R, flags and time are the original's.
 - Editor fix (every mode). The 1.0 build's level editor lost the level's start positions: on exit 0x8EC1 rebuilds them from the attributes (7 runner, 0x43 guards),
   and the build had removed those paints. Replay of the editor showed `attribute read differs` at 0x8ED8. Now the editor's legend site 0x8C83 (before it draws the level)
@@ -192,3 +197,5 @@ A copy of v2 (module, asm/loderunner_v3_hooks.asm, profile lode_runner_v3); v2 a
 - Colours are rules in the profile's `enhanced` block over the game's own graphics; no picture stored. The runner's main colour is one value: `sprite_palette.runner`.
 - Backdrop: a toggle needing Enhanced: Layer 2 in banks 13-15 (zero in every other build), its palette in bank 11 + 0x1000, FLAG_BD. No hook differs. The builder supplies the picture.
 - Results: release-20261108/NOTES.md in the pilot run runs/lode_runner_enhanced.
+- auto replays each recording (the three bot RZX, paths1 through the editor, lc1) and a free run in the default and Enhanced modes, with the unit cases
+  and the clock matrix in each; Backdrop changes no hook. Its boot check expects NR 0x15 = 0x09 for Backdrop (Layer 2 behind the ULA).

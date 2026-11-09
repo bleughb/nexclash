@@ -443,8 +443,14 @@ def rom128_1():
     return bytes(r48[a] if a < KEYPAD_CODE else r1[a] for a in range(16384))
 
 
+REWORK = 'loderunner_v3'                 # NEXCLASH_REWORK value that opts in (engines.py: before loderunner_v2)
+
+
 def is_loderunner_v3(snap):
-    """The 128K release with Dean's plotter (the 48K file goes to his `loderunner`)."""
+    """The 128K release with Dean's plotter (the 48K file goes to his `loderunner`), and the opt-in asked for:
+    NEXCLASH_REWORK=loderunner_v3. Without it the 128K file still goes to loderunner_v2 (1.0, as published)."""
+    if os.environ.get('NEXCLASH_REWORK') != REWORK:
+        return False
     try:
         sg = load_profile()['signature']
     except (FileNotFoundError, KeyError):
@@ -1563,7 +1569,8 @@ def boot_check(nex, z80, patch=None, tail=None):
         bad.append(('paging', hex(st['p7ffd']), hex(st['p1ffd'])))
     if st['mmu'] != [0xFF, 0xFF, 10, 11, 4, 5, 2 * top, 2 * top + 1]:
         bad.append(('MMU', st['mmu']))
-    if patch is not None and st['nr'].get(0x15) != 1:
+    want15 = 0x09 if getattr(patch, 'mode', None) == 'backdrop' else 0x01   # Backdrop: Layer 2 behind the ULA (S U L)
+    if patch is not None and st['nr'].get(0x15) != want15:
         bad.append(('sprites not enabled by setup', st['nr'].get(0x15)))
     return bad
 
@@ -1662,7 +1669,7 @@ def setup_check(nex_bytes, pats, setup_at=0xD000, printer=None, tiles=None):
 # auto: plain + sprite build, boot checks, verification of each RZX + a free run, unit tests
 # ---------------------------------------------------------------------------------------------
 FREE_FRAMES = 6000
-DECISIONS = {'engine': 'loderunner_v2', 'base': "Dean's loderunner (hooks, profile, colours read, not copied)",
+DECISIONS = {'engine': 'loderunner_v3', 'base': "Dean's loderunner (hooks, profile, colours read, not copied)",
              'input': 'the 128K release (AY music from bank 4 in the IM 2 handler)',
              'strategy': 'RAM hooks 0xA460 (Dean); whole alt ROM image: Sinclair\'s 48K ROM + the register block at '
                          '0x386E (the fade reads 0x0000-0x3FFF as masks)',
@@ -1696,75 +1703,197 @@ def free_keys(frames=FREE_FRAMES, seed=7):
     return ';'.join(k)
 
 
+LOADING_SCREEN_MD5 = 'fd93a64c5e485ed735210ef30e9bafa8'   # the picture on the 128K release's tape (its fourth block)
+LOADING_BANK = 16                                         # free in every mode (highest bank 15: the backdrop)
+LOADING_PROFILE = os.path.join(_HERE, '..', 'docs', 'profiles', 'lode_runner_v3_loading.json')
+BACKDROP_FILES = ('LODERUNN.B00', 'spec256-palette.pal')  # the builder's own Spec256 backdrop and palette, beside the snapshot
+BACKDROP_MD5 = ('e1d2e9e10741069bdc91dd3e8fdf84b5', 'b095dc99a047bab844b87b06657b0a7a')
+
+
+def find_screen(folder):
+    """The original loading screen among the user's files beside the snapshot: a 6,912-byte .scr, or the headerless
+    screen block of a .tzx / .tap. Only the exact picture counts. -> (file name, screen) or (None, None)."""
+    import glob
+    import hashlib
+    for path in sorted(glob.glob(os.path.join(glob.escape(folder), '*'))):
+        kind = os.path.splitext(path)[1].lower()
+        if kind not in ('.scr', '.tzx', '.tap') or not os.path.isfile(path):
+            continue
+        data = open(path, 'rb').read()
+        at = -1
+        while kind != '.scr':
+            at = data.find(b'\x02\x1b\xff', at + 1)     # block length 6,914, flag 255: the picture, then its checksum
+            if at < 0:
+                break
+            scr = data[at + 3:at + 3 + 6912]
+            if hashlib.md5(scr).hexdigest() == LOADING_SCREEN_MD5:
+                return os.path.basename(path), scr
+        if kind == '.scr' and hashlib.md5(data).hexdigest() == LOADING_SCREEN_MD5:
+            return os.path.basename(path), data
+    return None, None
+
+
+def find_backdrop(folder):
+    """The backdrop picture and palette beside the snapshot, as BACKDROP_FILES, or None. A different file there is refused."""
+    import hashlib
+    paths = tuple(os.path.join(folder, f) for f in BACKDROP_FILES)
+    if not all(os.path.isfile(p) for p in paths):
+        return None
+    for p, want in zip(paths, BACKDROP_MD5):
+        if hashlib.md5(open(p, 'rb').read()).hexdigest() != want:
+            raise ValueError('%s is not the expected file (MD5 %s)' % (os.path.basename(p), want))
+    return paths
+
+
+def loading_nex(nex, screen):
+    """A built mode with the original loading screen, as published (.nxc 1.1): the screen in bank 5's screen area, so it
+    shows while bank 5 loads, and asm/loderunner_v3_loading.asm in bank 16, which holds it, puts bank 5's own bytes back
+    and starts the game exactly as .nexload would have. Three header bytes, the screen area and the new bank differ."""
+    if len(screen) != 6912 or nex[10] or nex[139] != 10 or nex[140] or nex[141] or nex[12:16] != b'\xfe\xdf\x00\xc0':
+        raise ValueError('loading screen: expected the plain start (SP DFFE, PC C000, entry bank 10) and a 6912-byte screen')
+    order = [5, 2, 0, 1, 3, 4, 6, 7] + list(range(8, 112))
+    banks, at = {}, 512
+    for b in order:
+        if nex[18 + b]:
+            banks[b], at = nex[at:at + 16384], at + 16384
+    if at != len(nex) or 5 not in banks or LOADING_BANK in banks or max(banks) > 47:
+        raise ValueError('loading screen: bank 16 must be free, bank 5 present and every bank within a 1MB Next')
+    hooks = json.load(open(LOADING_PROFILE))['hooks']
+    head, tail = bytes.fromhex(hooks['head']), bytes.fromhex(hooks['tail'])
+    banks[LOADING_BANK] = head + banks[5][:6912] + bytes(16384 - len(head) - 6912 - len(tail)) + tail
+    banks[5] = screen + banks[5][6912:]
+    header = bytearray(nex[:512])
+    header[9] += 1
+    header[18 + LOADING_BANK] = 1
+    header[139] = LOADING_BANK
+    return bytes(header) + b''.join(banks[b] for b in order if b in banks)
+
+
+def loading_check(nex, loading):
+    """The loading build is the mode's build plus the screen and the stub only: bank 16 removed, its copy of bank 5's
+    screen area put back and the three header bytes undone give the mode's build byte for byte. -> problems."""
+    order = [5, 2, 0, 1, 3, 4, 6, 7] + list(range(8, 112))
+    banks, at = {}, 512
+    for b in order:
+        if loading[18 + b]:
+            banks[b], at = loading[at:at + 16384], at + 16384
+    stub = banks.pop(LOADING_BANK, None)
+    if stub is None or at != len(loading):
+        return ['no stub in bank %d' % LOADING_BANK]
+    hooks = json.load(open(LOADING_PROFILE))['hooks']
+    head, tail = bytes.fromhex(hooks['head']), bytes.fromhex(hooks['tail'])
+    bad = []
+    if stub[:len(head)] != head or stub[-len(tail):] != tail:
+        bad.append('stub differs from asm/loderunner_v3_loading.asm')
+    banks[5] = stub[len(head):len(head) + 6912] + banks[5][6912:]
+    h = bytearray(loading[:512])
+    h[9] -= 1
+    h[18 + LOADING_BANK] = 0
+    h[139] = 10
+    if bytes(h) + b''.join(banks[b] for b in order if b in banks) != nex:
+        bad.append('more than the screen and the stub differ from the mode build')
+    return bad
+
+
 def auto(a, z80, name, out, say):
+    """nexclash.py auto (NEXCLASH_REWORK=loderunner_v3): plain, default (_sprites) and Enhanced (_enhanced); Enhanced with
+    Backdrop (_backdrop) when the builder's backdrop and palette are beside the snapshot; each with the loading screen
+    (_loading) when the tape is beside it. Each boot-checked; with --rzx each recording and a free run replayed in the
+    default and Enhanced modes (Backdrop changes no hook), the unit cases and the clock matrix."""
     import hashlib
     from skoolkit.snapshot import Snapshot
     from . import z80tonex as zt
     from .nextboot import check
     say('Game      : %s' % name)
-    say('Engine    : loderunner_v2 (Lode Runner 128K: Dean\'s loderunner, XOR plotter 0x9712 -> sprites: runner + guards; whole alt ROM image)')
+    say('Engine    : loderunner_v3 (Lode Runner 128K: loderunner_v2 with R preserved, the editor fix and the Enhanced modes; XOR plotter 0x9712 -> sprites; whole alt ROM image)')
     md5 = lambda p: hashlib.md5(open(p, 'rb').read()).hexdigest()
     plain = os.path.join(out, name + '.nex')
     conv = zt.convert(z80, plain, TAIL_ADDR, True, quiet=True)
     bad = boot_check(plain, z80, None, (conv[1], conv[1] + len(conv[2])))
     say('Plain     : %s  %s  boot %s  (tail 0x%04X: zero, never touched)' % (
         os.path.basename(plain), md5(plain), 'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:200], TAIL_ADDR))
-    patch = LodeRunnerPatch()
-    spr = os.path.join(out, name + '_sprites.nex')
-    conv = zt.convert(z80, spr, None, True, quiet=True, patch=patch)
-    bad2 = boot_check(spr, z80, patch, (conv[1], conv[1] + len(conv[2])))
-    say('Sprites   : %s  %s  boot %s  (%d patterns, colour map %d entries)' % (
-        os.path.basename(spr), md5(spr), 'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200],
-        patch.num_patterns, len(patch.colours)))
-    sb = setup_check(open(spr, 'rb').read(), patch.pats, patch.setup_call, patch.printer)
-    say('Set-up    : pattern upload (%d bytes = the built patterns), palette 1-15, transparency 0, 128 '
-        'sprites hidden, sprites on, MMU restored, printer buffer put back -> %s' % (len(patch.pats), 'OK' if not sb else 'FAILED %s' % sb))
-    ok = not bad and not bad2 and not sb
+    folder = os.path.dirname(os.path.abspath(z80))
+    backdrop = find_backdrop(folder)
+    sfile, screen = find_screen(folder)
+    modes = [('default', '_sprites', 'Sprites'), ('enhanced', '_enhanced', 'Enhanced')]
+    if backdrop:
+        modes.append(('backdrop', '_backdrop', 'Backdrop'))
+    else:
+        say('Backdrop  : no %s and %s beside the snapshot: not built' % BACKDROP_FILES)
+    ok = not bad
+    built = {}
+    for mode, suffix, label in modes:
+        patch = built[mode] = LodeRunnerPatch(mode=mode, backdrop=backdrop if mode == 'backdrop' else None)
+        spr = os.path.join(out, name + suffix + '.nex')
+        conv = zt.convert(z80, spr, None, True, quiet=True, patch=patch)
+        bad2 = boot_check(spr, z80, patch, (conv[1], conv[1] + len(conv[2])))
+        say('%-10s: %s  %s  boot %s  (%d patterns, colour map %d entries)' % (
+            label, os.path.basename(spr), md5(spr), 'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200],
+            patch.num_patterns, len(patch.colours)))
+        ok = ok and not bad2
+        if mode == 'default':
+            sb = setup_check(open(spr, 'rb').read(), patch.pats, patch.setup_call, patch.printer)
+            say('Set-up    : pattern upload (%d bytes = the built patterns), palette 1-15, transparency 0, 128 '
+                'sprites hidden, sprites on, MMU restored, printer buffer put back -> %s' % (len(patch.pats), 'OK' if not sb else 'FAILED %s' % sb))
+            ok = ok and not sb
+        if screen is not None:
+            ld = os.path.join(out, name + suffix + '_loading.nex')
+            with open(ld, 'wb') as f:
+                f.write(loading_nex(open(spr, 'rb').read(), screen))
+            bad3 = loading_check(open(spr, 'rb').read(), open(ld, 'rb').read())
+            ok = ok and not bad3
+            say('Loading   : %s  %s  %s  (screen from %s, stub in bank %d)' % (
+                os.path.basename(ld), md5(ld), 'the mode build + screen + stub only: OK' if not bad3 else 'MISMATCH %s' % bad3,
+                sfile, LOADING_BANK))
+    if screen is None:
+        say('Loading   : no original screen beside the snapshot (.tzx, .tap or .scr, MD5 %s): not added' % LOADING_SCREEN_MD5)
     json.dump(DECISIONS, open(os.path.join(out, name + '_decisions.json'), 'w'))
     if getattr(a, 'decisions', None):           # selftest rebuild: build only
         say('Result    : %s (rebuild from stored decisions, no verification)' % ('PASSED' if ok else 'FAILED'))
         return ok
-    runs = [(r, None) for r in (a.rzx or [])] + ([] if getattr(a, 'quick', None) else [(None, free_keys())])
-    states = []
     from .simrun import rzx_frames
-    for r, keys in runs:
-        frames = getattr(a, 'quick', None) or (rzx_frames(r)[0] if r else FREE_FRAMES)   # v2: every recording whole
-        c, ex, st = verify(patch, z80, r, frames=frames, keys=keys, stop=getattr(a, 'quick', None), collect=1)
-        states += st
-        fails = {k: v for k, v in c.items() if k.endswith('!') and v}
-        ok = ok and not fails
-        say('Verify    : %s  %d frames, draws %d + %d, erases %d, deaths %d, prints %d + %d, paints %d, fades %d, '
-            'clears %d, %d sprite pixels, %d frame checks (%d in fades), %d harmless attribute reads, lowest SP '
-            '0x%04X -> %s' % (
-                os.path.basename(r) if r else 'free run (keys, %d frames)' % frames, c['frames'], c['dr'], c['drr'],
-                c['er'], c['hd'], c['tr'], c['tg'], c['pt'], c['fd'], c['cl'], c['sprite pixels compared'],
-                c['frame checks'], c['frame checks skipped (fade)'],
-                sum(v for k, v in c.items() if k.startswith('attribute reads that differ, harmless')),
-                c['lowest SP in the patched code'], 'IDENTICAL' if not fails else 'FAILED %s' % fails))
-        for k, v in ex.items():
-            say('            %s: %s' % (k, str(v)[:200]))
-    if states:
-        u = unit_tests(patch, states, negative_patches(patch))
-        uf = {k: v for k, v in u.items() if k.endswith('!') and v}
-        ok = ok and not uf
-        say('Unit      : %s -> %s' % (', '.join('%s %d' % (k[:-3] if k.endswith(' ok') else k, v)
-                                                for k, v in sorted(u.items())
-                                                if k.endswith(' ok') or k.endswith(' detected')),
-                                       'PASS' if not uf else 'FAIL %s' % uf))
-        for k, v in sorted(u.items()):
-            if k.startswith('  '):
-                say('           %s' % k)
-    if states:
-        cm, rows = clock_matrix(patch, states)
-        cn, _ = clock_matrix(patch, states, neg=True)
-        sites = sorted({r['site'] for r in rows})
-        bad = {k: v for k, v in cm.items() if k.endswith('!')}
-        caught = sum(v for k, v in cn.items() if k.endswith('!'))
-        ok = ok and not bad and caught > 0
-        say('Clocks    : every-site matrix, %d hook sites (%s) x 4 incoming clocks = %d cases: exit speed = the incoming '
-            'one, result the same at every clock -> %s; negative "forced 3.5 MHz exit" (draw hook) caught at %d cases -> %s' % (
-                len(sites), ', '.join('0x%04X' % x for x in sites), cm['cases'], 'PASS' if not bad else 'FAIL %s' % bad,
-                caught, 'DETECTED' if caught else 'NOT DETECTED!'))
+    for vmode in ('default', 'enhanced'):              # Backdrop adds a Layer 2 picture and changes no hook
+        patch = built[vmode]                            # as built: the converter filled in its patterns
+        runs = [(r, None) for r in (a.rzx or [])] + ([] if getattr(a, 'quick', None) else [(None, free_keys())])
+        states = []
+        for r, keys in runs:
+            frames = getattr(a, 'quick', None) or (rzx_frames(r)[0] if r else FREE_FRAMES)   # v2: every recording whole
+            c, ex, st = verify(patch, z80, r, frames=frames, keys=keys, stop=getattr(a, 'quick', None), collect=1)
+            states += st
+            fails = {k: v for k, v in c.items() if k.endswith('!') and v}
+            ok = ok and not fails
+            say('Verify    : %s%s  %d frames, draws %d + %d, erases %d, deaths %d, prints %d + %d, paints %d, fades %d, '
+                'clears %d, %d sprite pixels, %d frame checks (%d in fades), %d harmless attribute reads, lowest SP '
+                '0x%04X -> %s' % (
+                    os.path.basename(r) if r else 'free run (keys, %d frames)' % frames, ' (Enhanced)' if vmode != 'default' else '', c['frames'], c['dr'], c['drr'],
+                    c['er'], c['hd'], c['tr'], c['tg'], c['pt'], c['fd'], c['cl'], c['sprite pixels compared'],
+                    c['frame checks'], c['frame checks skipped (fade)'],
+                    sum(v for k, v in c.items() if k.startswith('attribute reads that differ, harmless')),
+                    c['lowest SP in the patched code'], 'IDENTICAL' if not fails else 'FAILED %s' % fails))
+            for k, v in ex.items():
+                say('            %s: %s' % (k, str(v)[:200]))
+        if states:
+            u = unit_tests(patch, states, negative_patches(patch))
+            uf = {k: v for k, v in u.items() if k.endswith('!') and v}
+            ok = ok and not uf
+            say('Unit      : %s%s -> %s' % ('(Enhanced) ' if vmode != 'default' else '', ', '.join('%s %d' % (k[:-3] if k.endswith(' ok') else k, v)
+                                                    for k, v in sorted(u.items())
+                                                    if k.endswith(' ok') or k.endswith(' detected')),
+                                           'PASS' if not uf else 'FAIL %s' % uf))
+            for k, v in sorted(u.items()):
+                if k.startswith('  '):
+                    say('           %s' % k)
+        if states:
+            cm, rows = clock_matrix(patch, states)
+            cn, _ = clock_matrix(patch, states, neg=True)
+            sites = sorted({r['site'] for r in rows})
+            bad = {k: v for k, v in cm.items() if k.endswith('!')}
+            caught = sum(v for k, v in cn.items() if k.endswith('!'))
+            ok = ok and not bad and caught > 0
+            say('Clocks    : %severy-site matrix, %d hook sites (%s) x 4 incoming clocks = %d cases: exit speed = the incoming '
+                'one, result the same at every clock -> %s; negative "forced 3.5 MHz exit" (draw hook) caught at %d cases -> %s' % (
+                    '(Enhanced) ' if vmode != 'default' else '', len(sites), ', '.join('0x%04X' % x for x in sites), cm['cases'], 'PASS' if not bad else 'FAIL %s' % bad,
+                    caught, 'DETECTED' if caught else 'NOT DETECTED!'))
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return ok
 
