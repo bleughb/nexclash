@@ -6566,7 +6566,8 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
             if driver:
                 pages = driver_pages()
                 image = bytearray(self.extra_banks[69 // 2])
-                image[:8192] = pages[68]               # state page: only the gate's 1D80 stub is non-zero
+                stub = bytes.fromhex(load_profile()['hooks']['drv68'])   # page 68 holds the tape descriptors: add the gate's stub only
+                image[0x1D80:0x1D80 + len(stub)] = stub
                 self.extra_banks[69 // 2] = bytes(image)
                 for even in (74, 76, 78, *range(96, 112, 2), *range(128, 136, 2)):
                     if even // 2 in self.extra_banks and even != 78:
@@ -6628,6 +6629,8 @@ def copier_window_build(reference, folder, hooks=False, work=False, driver=False
             checks['driver banks'] = ['not in the NEX: %s' % missing]
         if raw[8] != 1:
             checks['RAM required'] = ['header does not ask for the expanded machine']
+        if patch.extra_banks[34][1] == 0:
+            checks['tape descriptors'] = ['page 68 has no tape blocks']
     if work and raw.find(patch.extra_banks[69 // 2][8192:]) < 0:
         checks['page 69'] = ['work page not in the NEX']
     return {'boot_checks': checks, 'tail': [tail, tail + len(data)], 'sites': ['%04X' % a for a, o, n in patch.sites],
