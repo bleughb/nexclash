@@ -104,17 +104,17 @@
   },
   "enhanced": {
    "file": "ikari_warriors_enhanced.nex",
-   "md5": "4f3565baaf9b6137d270ffd9659dc1e0"
+   "md5": "82ada11a56d58fadb18be5fc23c0c0eb"
   }
  },
  "repro": [],
  "status": {
   "title": "Ikari Warriors (48K form)",
   "engine_col": "ikari_warriors (ikari_warriors.md)",
-  "build": "ikari_warriors_sprites.nex 8777f2c4, Enhanced 4f3565ba (2026-11-08: pace limiter on the blit, K windows when in debt, pattern store in pages 32-47; was 2b9f431b; .nxc v1.1 2b9f431b)",
-  "software": "lockstep on 8 scripted recordings, default and Enhanced through the colour-set checker: game memory and registers, the picture classed by the first default; 12/12 colour-set and 9/9 engine negatives; JNext pace in lockstep, 6 seeds: quiet -1.84..-0.37%, busy -0.46..+1.81%",
+  "build": "ikari_warriors_sprites.nex 8777f2c4, Enhanced 82ada11a, both = the published .nxc 1.3 bare builds (2026-11-08 v1.3: Enhanced scenery on the tilemap under the ULA's ink, the tile scroll on the copper; 1.2: pace limiter on the blit, K windows when in debt, pattern store in pages 32-47, Enhanced 4f3565ba)",
+  "software": "lockstep on 8 scripted recordings, default and Enhanced through the colour-set checker with the tile scroll and every changed map cell checked at each commit: game memory and registers, the picture classed by the first default; colour-set, scenery and engine negatives; JNext pace in lockstep, 6 seeds: 1.3 Enhanced whole runs -0.27..+0.91%, quiet -1.81..-0.14%, busy +0.05..+2.13% (seed 5 over by 0.13); default as 1.2",
   "hardware": "untested",
-  "next": "hardware test; a human recording"
+  "next": "hardware test (tilemap in bank 7, copper timing); a human recording; the figure redraw (mock-up v3) when approved"
  },
  "checks": [
   "asm2profile:ikari_warriors"
@@ -148,25 +148,25 @@
  "checked": {
   "deps": {
    "asm/ikari_warriors_hooks.asm": "92c612cef2b0b1a2",
-   "docs/profiles/ikari_warriors.json": "cfa9cf56e2c944d5",
+   "docs/profiles/ikari_warriors.json": "93ac519330ec3819",
    "docs/profiles/ikari_warriors_edges.json": "f76b8547bdb8142c",
    "docs/profiles/ikari_warriors_enhanced.json": "623b373594f6a998",
    "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "8e1ee6bd49b54877",
-   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
-   "nexclash/nextboot.py": "121a5912efae9b2a",
+   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/records.py": "29985826115eb292",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "ebb1c0bbdbaa6fa1",
+   "recipe": "e5db45f5eeb56fda",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-08"
@@ -174,25 +174,25 @@
  "verified": {
   "deps": {
    "asm/ikari_warriors_hooks.asm": "92c612cef2b0b1a2",
-   "docs/profiles/ikari_warriors.json": "cfa9cf56e2c944d5",
+   "docs/profiles/ikari_warriors.json": "93ac519330ec3819",
    "docs/profiles/ikari_warriors_edges.json": "f76b8547bdb8142c",
    "docs/profiles/ikari_warriors_enhanced.json": "623b373594f6a998",
    "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "8e1ee6bd49b54877",
-   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
-   "nexclash/nextboot.py": "121a5912efae9b2a",
+   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/records.py": "29985826115eb292",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "ebb1c0bbdbaa6fa1",
+   "recipe": "e5db45f5eeb56fda",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-08"

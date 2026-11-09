@@ -176,6 +176,7 @@ Details and tables: games/ikari_warriors_pace.md.
   replaces compose(). Now in the engine.
 - [local: the approved builds came from run-folder scripts] observed (import, 2026-11-04): the clone's record held the
   first-pass MD5s (d0e7d8b5); the .nxc's default and Enhanced came from work/enh2/mkenh6.py. Moved into auto.
+- [local: a tile scroll register must follow the blit, not the frame] The tile scroll moved on the copper where the blit overtakes the beam (games/ikari_warriors_arcade.md).
 
 ## Technique use
 - patch.restore-speed: helped: a latch per window; the one after the blit takes none (2026-11-07).
@@ -186,13 +187,14 @@ Details and tables: games/ikari_warriors_pace.md.
 - optimise.pattern-cache: helped: 32 images, none taken while on show in any recording.
 
 ## Hardware checklist
-1. Loads to the loading screen; SPACE, 5, SPACE, 4, ENTER, 1 starts. 2. Figures scroll with the scenery, no lag beyond a frame, nothing outside the window. 3. Jungle edge: no half green figure. Water: pick-up boxes solid. 4. Speed against the plain build. 5. GAME OVER: no sprites left on the title.
+1. Loads to the loading screen; SPACE, 5, SPACE, 4, ENTER, 1 starts. 2. Figures scroll with the scenery, no lag beyond a frame, nothing outside the window. 3. Jungle edge: no half green figure. Water: pick-up boxes solid. 4. Speed against the plain build. 5. GAME OVER: no sprites left on the title. 6. Enhanced scenery: games/ikari_warriors_arcade.md.
 
 ## Stage log
 - 2026-11-03 stages 0-3 in one session (pilot, unattended), under 90 minutes, 0 user rounds.
 - 2026-11-08 pace: limiter and pattern store, measured against the plain build in lockstep; stamped; 0 user rounds.
 - 2026-11-04 import into `refactor` (phase 7, group 3): Enhanced build and negatives moved into auto, recolour fixed,
   pinned; rebuild = .nxc v1.0 byte for byte; full verification stamped. 0 user rounds.
+- 2026-11-08 v1.3: Enhanced scenery (ikari_warriors_arcade.md); .nxc 1.3; main = 8777f2c4, 82ada11a.
 
 ## Friction
 - reuse: [none: the engine needed no shared helper to rebuild its bytes]
