@@ -1,4 +1,4 @@
-# Atic Atac v1.4 rework: the pace limiter (opt-in; games/atic_atac.md "Rework (opt-in)" is v1.3)
+# Atic Atac reworks (opt-in): v1.3 at the end, v1.4 the pace limiter, v1.6 the room window and catch-up
 
 ## Rework (opt-in): Atic Atac .nxc v1.4, the pace limiter (engine atic_atac_v14, `NEXCLASH_REWORK=atic_atac_v14`)
 Jon Attree, 2026-11-06: the published v1.3 ran slightly FAST (JNext 1.2.0 sweep, the published method: busy -2.79%); his
@@ -40,3 +40,38 @@ the QAOP + Space toggle and the trainers as v1.3; R still changes with the hooks
 - RAM: the printer buffer is full (variables 0x5B80-0x5BAF, the hook stack down to HSTK_MIN 0x5BC2, atic_atac_v14.py). The library's 26 bytes
   could go only in the shadow page's table area (0x7800-), which is at slot 3 only part of each hook. Every pace call would
   need that mapping, so the room is not clean.
+
+## v1.6: room window, catch-up, faster image build (pace audit of 2026-11-08; published .nxc 1.6, jattree/nxc 238e98a)
+Audit (pilot runs/pace-audit-20261108/REPORT-2.md): 1.5 whole +1.82 to +4.52%, busy up to +4.63%, stretches of 20 passes up to +18.6% (31.2% in longer runs). The rule (Jon, 2026-11-07): within 2% where the original runs steadily, faster fine where it lags, never slower. Causes, traced: (1) a room change's hooks: room-line and scenery hooks slower than what they displace, 2-3 frames in the sequence and 3 in the first pass; UMIN dropped all of it past 192 lines. (2) `build`, the appear / death effect's image: one for every row, about 16 ms each at 28 MHz (257 to 297 lines measured), 12 to 18 in a row. The sound dominates those passes in the original, so there is little game time to win it back from. (3) No way for the account to be repaid but skipping the limiter's own waits, about 2% of the time.
+- Room window: h_clear from the room change (return 0x9150) leaves 28 MHz on; h_room (new site 0x9159, the CALL that queues the room's sound; `CALL 0xA403` -> `CALL h_room`) closes it, waits at the caller's clock to the original's time, and takes the account's sign into that wait. Target = lines x KROOM / 16 - ROFF, a fit over 107 rooms in JNext (original = 3.41 x window - 0.78 frame; largest error 0.35 frame). Setups, debits and interrupt credits are off in the window.
+- Catch-up: at a setup's end, 64 lines or more behind, the caller's clock is kept in V_RS and the game's code runs at 7 MHz to the next setup, which credits the gap x 2 (the account may go ahead, the next setups wait that out). The first pass after a room change always runs so. Sound keeps its clock without paying for it: while catch-up is on the first bytes of 0xA3AA (tone) and 0xA46E (noise) are JPs to h_beep / h_noise, which end catch-up and give the speed back; off, they are the game's own bytes. A tone with C = 1 (a sweep's step: the code between its tones is part of the sound) does not resume catch-up after it. 28 MHz and 14 MHz catch-up were tried first: their credit varies too much by gap (hooks in the gap against contended writes), and it over-ran by up to 33%.
+- `build`: same image, about 3 times faster: unmasked rows left outside from the start, paper before a row's first ink and after its last marked outside as read, the flood found by CPIR / CPDR and stopped when no cell is left, rows with no masked neighbour skipped. Replays and the unit tests compare its pixels.
+- UMIN -192 -> -448 lines. pace_close: a setup of 256 lines or more, or an overflow in the account, is UMIN, no longer a wrap to "ahead". SETK -76 -> -84. hook RAM to 0x5BBA; HSTK_MIN follows.
+- hlib_pace stays out, for the reasons above; hlib_speed too (v1.3's save_speed latches at any clock).
+- Verifier: every hook's exit speed against the state (28 MHz in the window, 7 MHz in catch-up, else the caller's), V_RS kept; h_room's wait against its target from the state; catch-up_units with negatives: window never opened, never waits, h_beep / h_noise keeping the fast clock; beeper writes compared with the original's, at the caller's clock. BEEPB bytes are the hook's, left out of the memory compare.
+- Measurement limits: the audit's fixture in both arms (R per site, FRAMES reads, the player group's decision from a table); as shipped the arms do not hold lockstep. Three recordings, few rooms walked; JNext's timing only, KROOM, KBOOST and SETK tuned on it. Results and the before / after tables: pilot runs/atic_atac/pacefix-20261108/NOTES.md.
+
+## Rework (opt-in): Atic Atac .nxc v1.3 (engine atic_atac_v13, `NEXCLASH_REWORK=atic_atac_v13`)
+Ported from Jon Attree's .nxc work, 2026-11-04 (pilot runs/atic_atac/nexclash: d7abd1c + d12f9d9, 0dff248, 9d44fb7).
+Published .nxc: **Atic Atac v1.3** (github.com/jattree/nxc, patch ed872411). Dean's files and build (59493b75, pin
+rom3) are untouched and stay the default.
+- What and why: v1.1 hook speed (image cache, row-mask table, bounded scans, unrolled OUTI, caller's speed
+  restored; penalty +8-10% -> about -1..-3%, picture unchanged). v1.2 flicker (REFACTOR.md 5): the figure painter's
+  nine `LD (HL),E` vacated-cell writes (0xA091-0xA132) are NOPs like its `LD (HL),D`: with the D writes gone they
+  only turned door / furniture cells by a moving figure to the room colour; and the menu clear 0x80B4 is hooked
+  (h_cls; before, menu icons stayed as sprites for 7 frames). v1.3: the "QAOP + Space" toggle (profile _qaop; hooks
+  0x93CD key read, 0x948A pause: Caps Shift alone pauses).
+- Kept apart: nexclash/atic_atac_v13.py, asm/atic_atac_v13_hooks.asm + _qaop.asm, docs/profiles/atic_atac_v13*.json;
+  engines.py picks it only with that switch; the pinned rom3 fill stays (as published). Moved in:
+  the Enhanced set (atic_atac_enhanced_colours.json, read back from the published store; from the MVV .256) and the
+  loading screen (atic_atac_loading.scr, bank 23 stub `ldscr`); both specnext inputs only.
+- Rebuild = `nxc.py --bare`, every set and option: default b87774a2, Enhanced 47f0e72c, + QAOP 19318e4f / 1f58e936;
+  one .nxc holds all four, QAOP + Space as a toggle.
+- Verify (`selftest.py --game atic_atac --verify`, 2026-11-04, ~15 min wall): all four builds
+  IDENTICAL on walk1, walk2, t (21,003 frames; per build 40,623 setups, 91,084 vacated sites with no attribute
+  written, 45.1M sprite pixels; Enhanced as ink; toggle builds with every QWERT read
+  translated: 16,148 key reads, 6,252 pause checks). Units per set: 1,483 cases, controls 3/3, the rework negatives
+  (7 kinds) detected, 432 incoming-clock cases PASS. Toggle units: on 924 / off 832 PASS; O-P swapped and on-as-off
+  detected. Replay negatives on t detected. Dean's verify skipped: AticAtac.rzx missing (record "missing").
+- Hardware: none. Checklist: below + no red flash by doors, no menu icons left, QAOP+Space.
+
