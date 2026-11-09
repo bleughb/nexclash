@@ -214,7 +214,9 @@ Ported from Jon Attree's .nxc work, 2026-11-04 (pilot runs/jetpac/nexclash, a327
 - The base engine `jetpac` keeps NEXTREG 7,0: its alt ROM block is full (the 13 bytes would end 12 bytes into the ROM
   font at 0x3D00). Not behind a published patch.
 
-## Pace (review 1.3, 2026-11-08)
+## Pace (1.3, published .nxc, 2026-11-08)
+Published in nxc 238e98a: main's rework v1.1 build (`--altrom-fill whole`, with the record's inputs) gives sprites 498b8db7 and
+Enhanced 0aa83bfa, the published .nxc --bare, byte for byte.
 Owner's pace rule: within 2% where the original runs steadily, faster fine where it lags, never slower. 1.2 read +2.11 to +2.34 whole, slowest
 stretch of 20 updates +4.0 (audit, runs/pace-audit-20261108): no frame sync on the main loop, so speed is CPU time, and a draw's hook time (about
 950 T a draw, 1.6 draws a pass) was lost for good, less what the screen stores' NOPs save.
