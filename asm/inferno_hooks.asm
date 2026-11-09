@@ -7025,6 +7025,10 @@ modal_exit:
         nextreg 0x62,0
         ld bc,0x243B
         ld a,0x6B
+        ds 0x3BFD-$,0           ; the intro's IM 2 vector (I = 3B) lives at 3BFF: it must stay FF FF
+        jr 0x3C01
+        db 0xFF,0xFF
+        ASSERT $ == 0x3C01
         out (c),a
         inc b
         in a,(c)
