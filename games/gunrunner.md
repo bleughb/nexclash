@@ -1,9 +1,9 @@
 # Gunrunner (Cybadyne / Hewson, 1987, 48K)
 
 ## Next session
-Stage: 4 (owner's play). Hardware: untested. v1.0 review build (default and Enhanced), not published, not pushed; not wired into `auto`, `engines.py` or a record: that comes when it goes upstream after the owner has played it.
+Stage: 4 (owner's play). Hardware: untested. Published as .nxc 1.0 (nxc 05d3127, 2026-11-08), default and Enhanced, and registered on main: `auto`, engines.py, record docs/records/gunrunner.json.
 Inputs: `Gunrunner (1987)(Hewson Consultants).z80`, MD5 c9d8ff6b87d413df486a42c988c7079e. The loading screen is the snapshot's own picture.
-Build: `gunrunner.build(z80, nex)` and `gunrunner.build_enhanced(z80, nex, set)`, then the review run's `release-20261108b/work/pkg2.py`, default `.nex` f409ce60 with the screen, unchanged by Enhanced.
+Build: `python nexclash.py auto gunrunner.z80` writes gunrunner.nex and, with `gunrunner_loading.scr` beside the snapshot, gunrunner_loading.nex = the published default bare build (f409ce60). With `gunrunner.256` and `gunrunner_palette.json` beside it (the set and emu256's table, never in this repo; MD5s in the record) it also writes gunrunner_enhanced.nex and gunrunner_enhanced_loading.nex = the published Enhanced bare build (1fef5dfc). Every build boot-checked; with `--rzx a1.rzx --rzx lv9.rzx` the Enhanced replay, the ABI cases and 10 broken builds. `Enhanced(z80, set, palette)` reads the palette from that file; without it, from the local emu256 copy as before.
 Pending: the owner's play. A per-level tint of Enhanced is a later mock-up idea; the set has one look for every level.
 
 ## Facts
@@ -49,7 +49,8 @@ Nothing has run on a Next. Enhanced also: the window against the panel, no teari
 - [local: no-hook engine] A monochrome game needs no site; the checks that still mean something are the boot compare with R, rom_paths over the system ROM and the tail reads.
 - [local: rom_paths on test pokes] A recording with test pokes keeps sync when each poke starts a new segment from its own snapshot; rom_paths says so in its lines.
 - [local: R-reading game] Without a fixture a game that reads R leaves lockstep whatever the build does: the two arms start at another raster phase.
-- [local: survey keys] A survey key schedule at the title proved nothing: this game's menu needs a key to pass the picture, then one to pick the controls. Look at the screen first.
+- [local: palette input] The palette came from a hard-coded local emu256 path; `auto` needs every input beside the snapshot, so `Enhanced` now takes the table as a staged JSON file (same 256 values, same bytes).
+- [tool nexclash.survey] A survey key schedule at the title proved nothing: this game's menu needs a key to pass the picture, then one to pick the controls. Look at the screen first.
 
 ## Friction
 - reuse: [none: nextboot, jnext, soak, flicker and pace were enough]
@@ -61,3 +62,4 @@ Nothing has run on a Next. Enhanced also: the window against the panel, no teari
 ## Stage log
 - 2026-11-08 Stage 3 again: Enhanced on the review branch, Spec256 colours, proofs on the exact bytes; waiting for the owner's play.
 - 2026-11-08 Stage 3: no-hook engine, proofs, review build, mock-up for Enhanced; waiting for the owner's play.
+- 2026-11-09 Upstream: `auto`, engines.py line, record 235 (views rebuilt); main rebuilds the published .nxc 1.0 bare builds, default f409ce60 and Enhanced 1fef5dfc.

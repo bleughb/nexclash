@@ -16,7 +16,8 @@ REGS_LEN = 20
 PAGE = 25
 SIGNATURE = {0xBC0C: 'CDA3D5CDB1D5CD3DDD', 0xD3C4: 'ED7398ECED7B9AECF3', 0xCAC6: 'DD7E053281E6', 0xF230: '38F7B65C8C45'}
 DECISIONS = {'figures': 'unchanged: monochrome play area, figures have their own black masks', 'scenery': 'unchanged',
-             'pace': 'original: no hook', 'outline': 'none', 'enhanced': 'waiting for the mock-up'}
+             'pace': 'original: no hook', 'outline': 'none',
+             'enhanced': "the Spec256 set's colours for the play window on a double-buffered Layer 2, off by default"}
 CMP = ()                           # no hook: nothing runs instead of the game's code
 
 
@@ -115,10 +116,15 @@ def mono8(v):
     return bytes(255 if v & (0x80 >> k) else 0 for k in range(8))
 
 
-def palette_rgb():
-    """The emulator's table: the palette every .256 is painted in. Never in this repo: read from Jon's local emu256 copy."""
+def palette_rgb(path=None):
+    """The emulator's table: the palette every .256 is painted in. Never in this repo: from `path` (a JSON list of 256 RGB
+    ints, staged beside the snapshot) or else read from Jon's local emu256 copy."""
     import re
     import os
+    if path is not None:
+        out = json.loads(Path(path).read_text())
+        assert len(out) == 256
+        return out
     t = open(os.environ.get('EMU256', '/home/jon/Downloads/emu256-extract/emu256') + '/datos.js').read()
     m = re.search(r'PALETTE_RGB\s*=\s*\[([^\]]*)\]', t)
     out = [int(x, 0) for x in m.group(1).replace('\n', ' ').split(',') if x.strip()]
@@ -135,8 +141,9 @@ def nine(r, g, b):
 class Enhanced(Patch):
     name = 'Gunrunner: Enhanced, the Spec256 colours on a Layer 2 canvas'
 
-    def __init__(self, source, set_path):
+    def __init__(self, source, set_path, palette_path=None):
         super().__init__(source)
+        self.palette_path = palette_path
         h = load_profile()['hooks']
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
         self.code = bytes.fromhex(h['rom'])
@@ -163,7 +170,7 @@ class Enhanced(Patch):
 
     def palettes(self):
         word, up, down, flags = read_set(self.set_path)
-        rgb = palette_rgb()
+        rgb = palette_rgb(self.palette_path)
         base = [nine(c >> 16, (c >> 8) & 255, c & 255) for c in rgb]
         inks = []
         for t in range(16):
@@ -241,8 +248,8 @@ class Enhanced(Patch):
         self.pages_init = pages
 
 
-def build_enhanced(source, destination, set_path):
-    p = Enhanced(source, set_path)
+def build_enhanced(source, destination, set_path, palette_path=None):
+    p = Enhanced(source, set_path, palette_path)
     zt.convert(str(source), str(destination), patch=p, quiet=True)
     return p
 
@@ -613,3 +620,183 @@ def negative_patches(patch):
     mut('overlay not hidden', bytes.fromhex('ED916900'), bytes.fromhex('ED916980'))
     mut('picture never shown', bytes.fromhex('ED9212FE0E'), bytes.fromhex('000000FE0E'))
     return out
+
+
+# ---- nexclash.py auto: the published builds, boot-checked; with recordings the Enhanced replay proof -------------------
+PUBLISHER = 'Hewson, 1987'
+LOAD_SCREEN = 'gunrunner_loading.scr'        # the tape's screen, beside the snapshot: game data, never in this repo
+LOAD_MD5 = '0e91e97044f364484428d4db07b3db98'
+# Enhanced, beside the snapshot, both or none; never in this repo:
+SET_NAME, SET_MD5 = 'gunrunner.256', '63866a2bdf48934940a486c7d5996c9d'                       # the Spec256 set as a .256
+PALETTE_NAME, PALETTE_MD5 = 'gunrunner_palette.json', 'cc822d044ec89ffcffbfb3a122f4d088'     # emu256's table (datos.js)
+NEG_RECORDING, NEG_STOP = 'a1.rzx', 700      # the broken builds and the ABI states (two a site), as in the review run
+# The archive's POKEs for this release, each tested in the simulator (games/gunrunner.md); bank 8 = no paging.
+TRAINERS = """NInfinite lives
+Z 8 49171 0 0
+NNo enemies
+Z 8 48838 62 0
+NImmunity
+Z 8 49081 0 0
+NInfinite poison
+Z 8 48659 0 0
+NInfinite jet pac
+M 8 48976 0 0
+Z 8 52562 0 0
+NInfinite shield
+Z 8 49053 0 0
+Y
+"""
+
+
+def _beside(z80, file, md5, what):
+    """A private input beside the snapshot -> its path, or None. A different file there is refused."""
+    import hashlib
+    path = Path(z80).resolve().parent / file
+    if not path.is_file():
+        return None
+    if hashlib.md5(path.read_bytes()).hexdigest() != md5:
+        raise ValueError('%s is not %s (MD5 %s)' % (file, what, md5))
+    return path
+
+
+def loading_nex(nex, screen):
+    """A built .nex -> the same with the loading screen in the NEX file (header byte 10 = 2), as the published .nxc."""
+    if len(screen) != 6912 or nex[10] != 0:
+        raise ValueError('Expected a .nex without a screen and a 6,912-byte loading screen')
+    head = bytearray(nex[:512])
+    head[10] = 2
+    return bytes(head) + screen + nex[512:]
+
+
+def boot_check(nex, z80, patch):
+    """Booted with and without NEXLOAD's printer buffer: every register with R and all 48K RAM against the patched
+    snapshot, except the start-up tail's own bytes (and the printer buffer NEXLOAD overwrites). -> problems."""
+    from . import nextboot
+    s = zt.Z80Snapshot(str(z80))
+    patch.apply(s)
+    size = len(zt.build_tail(s, 0x8000, patch.slot1, True)[0])
+    tail = zt.choose_tail_addr(s, size, None, False)[0]
+    want = {0: s.a, 1: s.f, 2: s.bc >> 8, 3: s.bc & 255, 4: s.de >> 8, 5: s.de & 255, 6: s.hl >> 8, 7: s.hl & 255,
+            8: s.ix >> 8, 9: s.ix & 255, 10: s.iy >> 8, 11: s.iy & 255, 12: s.sp, 14: s.i, 15: s.r, 16: s.a_, 17: s.f_,
+            18: s.bc_ >> 8, 19: s.bc_ & 255, 20: s.de_ >> 8, 21: s.de_ & 255, 22: s.hl_ >> 8, 23: s.hl_ & 255, 26: s.iff1, 27: s.im}
+    bad = []
+    for nexload in (False, True):
+        st = nextboot.boot(str(nex), s.pc, nexload=nexload)
+        bad += [('register', nexload, i, v, st['R'][i]) for i, v in want.items()
+                if (bool(st['R'][i]) != bool(v) if i == 26 else st['R'][i] != v)]
+        for a in range(0x4000, 65536):
+            if tail <= a < tail + size or (nexload and 0x5B00 <= a < 0x5C00):
+                continue
+            bank = 5 if a < 0x8000 else 2 if a < 0xC000 else 0
+            if st['mem'][a] != s.banks[bank][a & 16383]:
+                bad.append(('RAM', nexload, hex(a), s.banks[bank][a & 16383], st['mem'][a]))
+    return bad
+
+
+def _enhanced(z80, inputs):
+    p = Enhanced(z80, *inputs)
+    p.apply(zt.Z80Snapshot(str(z80)))
+    return p
+
+
+def _replay(z80, inputs, rzx, stop, collect):
+    """One recording's Enhanced replay (a process of its own) -> (counts, examples, states)."""
+    got = verify(_enhanced(z80, inputs), rzx, stop=stop, collect=collect)
+    return got if collect else (got[0], got[1], [])
+
+
+def _negative(z80, inputs, name, rzx, stop):
+    """One deliberately broken build's replay (a process of its own): -> (name, its failure keys)."""
+    try:
+        c, ex = verify(negative_patches(_enhanced(z80, inputs))[name], rzx, stop=stop)
+    except Exception as e:                  # noqa: BLE001 - a broken hook that runs off into data is caught too
+        return name, ['exception ' + type(e).__name__]
+    return name, sorted(k for k in c if k.endswith('!'))
+
+
+def auto(a, z80, name, out, say):
+    """nexclash.py auto: the default build (no hook, no game byte changed; Sinclair's ROM as the whole alt ROM) and, with
+    the set and the palette beside the snapshot, the Enhanced build; each with the tape's loading screen when it is beside
+    the snapshot, as published; every build boot-checked. With --rzx the Enhanced replay proof of each recording, the ABI
+    cases and the broken builds (the default runs no hook). The pace, soak, flicker and real loader proofs are the review
+    run's (games/gunrunner.md "Evidence")."""
+    import concurrent.futures, hashlib, os
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    if not getattr(a, 'publisher', None):
+        a.publisher = PUBLISHER
+    if not getattr(a, 'pok', None):
+        trainers = out / (name + '_verified.pok')
+        trainers.write_text(TRAINERS)
+        a.pok = str(trainers)
+    say('Game      : Gunrunner (Cybadyne / Hewson, 1987, 48K)')
+    say("Engine    : gunrunner; default: the original game, no hook (no clash to remove), Sinclair's ROM as the whole alt "
+        "ROM; Enhanced: the Spec256 set's colours for the play window on a double-buffered Layer 2")
+    ok = True
+    screen = _beside(z80, LOAD_SCREEN, LOAD_MD5, "the tape's loading screen")
+    cset = _beside(z80, SET_NAME, SET_MD5, 'the set this engine was proved with')
+    pal = _beside(z80, PALETTE_NAME, PALETTE_MD5, 'the palette this engine was proved with')
+    inputs = (cset, pal) if cset and pal else None
+    if screen is None:
+        say('Loading   : no %s beside the snapshot: builds without the loading screen' % LOAD_SCREEN)
+    if inputs is None:
+        say('Enhanced  : not both of %s, %s beside the snapshot: default build only' % (SET_NAME, PALETTE_NAME))
+    builds = [('Default', name, lambda: Patch(z80))]
+    if inputs is not None:
+        builds.append(('Enhanced', name + '_enhanced', lambda: Enhanced(z80, *inputs)))
+    for label, stem, make in builds:
+        nex = out / (stem + '.nex')
+        zt.convert(str(z80), str(nex), patch=make(), quiet=True)
+        nexes = [(label, nex)]
+        if screen is not None:
+            loading = out / (stem + '_loading.nex')
+            loading.write_bytes(loading_nex(nex.read_bytes(), screen.read_bytes()))
+            nexes.append((label[:3] + '+scr', loading))
+        for lab, path in nexes:
+            bad = boot_check(path, z80, make())
+            ok = ok and not bad
+            say('%-10s: %s  %s' % (lab, path.name, hashlib.md5(path.read_bytes()).hexdigest()))
+            say('Boot      : %s' % ('simulated, OK (registers with R, all 48K RAM; converter loader and NEXLOAD)'
+                                    if not bad else 'MISMATCH %s' % str(bad[:3])[:300]))
+    rzxs = list(getattr(a, 'rzx', None) or [])
+    if rzxs and inputs is None:
+        say('Verify    : FAILED: recordings given but no %s and %s beside the snapshot (the default runs no hook; the '
+            'replay proves Enhanced)' % (SET_NAME, PALETTE_NAME))
+        ok = False
+    elif rzxs:
+        quick = getattr(a, 'quick', None)
+        neg = next((r for r in rzxs if Path(r).name == NEG_RECORDING), rzxs[0])
+        stop = min(quick or NEG_STOP, NEG_STOP)
+        jobs = [(r, quick, 0) for r in rzxs] + [(neg, stop, 2)]
+        with concurrent.futures.ProcessPoolExecutor(min(len(jobs), os.cpu_count() or 1)) as pool:
+            done = list(pool.map(_replay, [z80] * len(jobs), [inputs] * len(jobs), *zip(*jobs)))
+        states = []
+        for (path, st, collect), (c, ex, got) in zip(jobs, done):
+            fail = {k: v for k, v in c.items() if k.endswith('!')}
+            ok = ok and not fail
+            if collect:
+                states = got
+                if fail:
+                    say('Verify    : ABI states (%s to %d): %s' % (Path(path).name, st, fail))
+                continue
+            say('Verify    : %s %d frames, %d hooks, %d R comparisons, %d Layer 2 pictures, %d pixels: %s' % (
+                Path(path).name, c['frames'], c['hooks'], c['R comparisons'], c['publications'], c['pixels compared'],
+                'IDENTICAL' if not fail else str(fail)))
+            for k, v in ex.items():
+                say('            %s: %s' % (k, str(v)[:300]))
+        counts = unit_tests(_enhanced(z80, inputs), states)
+        fail = {k: v for k, v in counts.items() if k.endswith('!')}
+        ok = ok and not fail
+        say('Unit      : %s (%d states)' % (dict(counts), len(states)))
+        names = list(negative_patches(_enhanced(z80, inputs)))
+        with concurrent.futures.ProcessPoolExecutor(min(len(names), os.cpu_count() or 1)) as pool:
+            negs = list(pool.map(_negative, [z80] * len(names), [inputs] * len(names), names, [neg] * len(names),
+                                 [stop] * len(names)))
+        missed = [n for n, keys in negs if not keys]
+        ok = ok and not missed
+        say('Negatives : %d of %d broken builds caught (%s, %d frames each)%s' % (
+            len(negs) - len(missed), len(negs), Path(neg).name, stop, '; MISSED %s' % missed if missed else ''))
+    else:
+        say('Verify    : not requested; boot evidence only (the default runs no hook)')
+    say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
+    return bool(ok)

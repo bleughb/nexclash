@@ -85,6 +85,7 @@ ENGINES = [
     ('ruff_and_reddy', 'is_ruff_and_reddy', None),                        # Ruff and Reddy (128K): default and Enhanced
     ('into_the_eagles_nest', 'is_into_the_eagles_nest', None),            # Into the Eagle's Nest (128K): default and Enhanced
     ('phantis', 'is_phantis', None),                                      # Phantis / Game Over 2 (48K, both parts): part 1 Enhanced (local table)
+    ('gunrunner', 'is_gunrunner', None),                                  # Gunrunner (48K): default and Enhanced
 ]
 
 
