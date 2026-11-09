@@ -20,3 +20,5 @@ Rules (learncheck checks all four):
 |---|---|---|---|
 | rzx_census.py | how often and from which frame a recording reaches given addresses (+ HL buckets); optional first-hit register/memory captures per requested PC/frame; C simulator | Chuckie Egg: ISR 40092 x299 in 300 frames, 43909 x141017 (= `scan --writers`); six captures with exact PC/frame and code bytes | Cauldron 2026-10-27; Inferno captures 2026-11-05 |
 | attr_census.py | which attribute sets a screen window shows across a recording (sampled; colour-rule questions at design) | Chuckie Egg: 3000 frames every 50 -> 60 samples, 35 sets | Nemesis the Warlock 2026-11-03 |
+| routine_skip.py | does gameplay need a routine: each update replayed with one CALL skipped (recorded INs, R, interrupts fed), game RAM compared (card detect.routine-removal) | Chuckie Egg: CALL 38200 skipped 133/133 identical; the hens' CALL 37150 differs 44/44 | Inferno 2026-11-09 |
+| pacing_census.py | T and frames per update, slack before the next frame, limiter callers, beeper OUTs (card detect.pacing-structure) | Chuckie Egg: 424 updates, 0/1/2 frames 85/330/9, OUT 0x9CA6 x751 | Inferno 2026-11-07 |

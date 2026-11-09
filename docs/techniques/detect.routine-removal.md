@@ -4,7 +4,7 @@
 {
   "schema": 4,
   "id": "detect.routine-removal",
-  "revision": 1,
+  "revision": 2,
   "kind": "detect",
   "title": "Removal experiment: does gameplay need this original routine at all?",
   "question": "If the original routine is skipped, does anything the game later decides change?",
@@ -44,9 +44,9 @@ disassembly later found gameplay logic in the copier (9804 `CALL Z,9881`).
 - Repeated timing FAILs while preserving a routine's side effects.
 
 ## Probe and stop
-1. At each call site in the recording, snapshot the machine, rerun the update with the CALL skipped,
-   feed the recorded INs (and `LD A,R` values, as a second variant), compare game RAM at the next
-   main-loop point. Outcome per level: equal, differs (first differing address), left gameplay.
+1. `python tools/probes/routine_skip.py GAME.rzx --call ADDR [--exclude LO-HI] [--no-r]`: each update
+   rerun with the CALL skipped, recorded INs, `LD A,R` values and interrupts fed; game RAM compared at the
+   next hit. Per level: identical, differs (pages, first address), runaway. Run with and without R.
 2. Taint the routine's writes: which later reads consume them (Inferno: only its own stack unwind).
 3. List what it outputs: display memory, its own work pages, ports (sound), registers kept live.
 4. Disassemble every branch inside the routine the replay never took; look for gameplay writes/calls.
@@ -75,5 +75,6 @@ R) and the comparison must report a difference (Inferno: levels 3, 4, 6 diverge 
 
 ## Evidence
 - specnext reference/inferno/build/hybrid.md "Dependency map" (observed: replays, disassembly).
-- hybrid/skip_results.json, hybrid/taint_results.json (observed, 2,500 frames per level).
+- hybrid/skip_results.json, hybrid/taint_results.json (observed, 2,500 frames per level); the probe
+  reproduces L1 432/432 and L6 470/471 identical (A1 differs), L6 diverging without R.
 - games/inferno.md "Lessons" (this card's application).
