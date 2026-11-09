@@ -128,6 +128,51 @@ def solid_image(tiles):
     return left, top, width, height, bytes(pixels)
 
 
+EXPLOSION_IMAGES = frozenset((0xB2, 0xB4, 0xB6, 0xB8))
+
+
+def gap_rule(w, h, px, k=3):
+    """G3: black is transparent only where a k x k block, coming from outside the canvas, can cover it."""
+    size = w + 2 * k, h + 2 * k
+    W, H = size
+    clear = bytearray(b'\1' * (W * H))
+    for y in range(h):
+        for x in range(w):
+            if px[y * w + x] > 1:
+                clear[(y + k) * W + x + k] = 0
+    fits = bytearray(W * H)
+    for y in range(H - k + 1):
+        for x in range(W - k + 1):
+            fits[y * W + x] = all(clear[(y + j) * W + x + i] for j in range(k) for i in range(k))
+    seen, todo = bytearray(W * H), [0]
+    while todo:
+        at = todo.pop()
+        if seen[at] or not fits[at]:
+            continue
+        seen[at] = 1
+        x = at % W
+        todo.extend(n for n, ok in ((at - 1, x), (at + 1, x + 1 < W), (at - W, at >= W), (at + W, at + W < W * H)) if ok)
+    out = bytearray(W * H)
+    for y in range(H):
+        for x in range(W):
+            if seen[y * W + x]:
+                for j in range(k):
+                    out[(y + j) * W + x:(y + j) * W + x + k] = b'\1' * k
+    res = bytearray(px)
+    for y in range(h):
+        for x in range(w):
+            if px[y * w + x] <= 1:
+                res[y * w + x] = 0 if out[(y + k) * W + x + k] else 1
+    return bytes(res)
+
+
+@lru_cache(maxsize=4096)
+def masked_image(tiles, image):
+    """The shipped mask: G3, except the explosions, which keep the enclosed-only rule B."""
+    left, top, w, h, px = solid_image(tiles)
+    return left, top, w, h, px if image in EXPLOSION_IMAGES or not px else gap_rule(w, h, px)
+
+
 def visible_patterns(actor, memory):
     """4-bit 16x16 chunks in original object coordinates; only viewport-visible chunks count."""
     key = tuple((dx, dy, raw_tile(memory, t)) for dx, dy, t in actor['tiles'])
@@ -3607,7 +3652,7 @@ def loading_pause_checks(memory=None,registers=None):
 DRIVER_WRITE = {
     68: [(0x1D00, 0x1EF0)],
     75: [(0x1EC0, 0x1EE0), (0x1F00, 0x1FF0)],
-    76: [(0x1E90, 0x1EAA), (0x1F00, 0x1FF0)],
+    76: [(0x0C00, 0x1180), (0x1E90, 0x1EC0), (0x1F00, 0x1FF0)],
     78: [(0x1E80, 0x1E96), (0x1F00, 0x1FF0)],
     79: [(0x0800, 0x1800), (0x1E80, 0x1EA0), (0x1F00, 0x1FF0)],
     81: [(0x1800, 0x1BF0), (0x1C00, 0x1C80)],
@@ -3767,7 +3812,7 @@ def driver_expected(ram):
             stream.append(0)
             if len(stream) > 8192:
                 raise ValueError('stream capacity')
-            left, top, width, height, pixels = solid_image(tuple((x, y, raw_tile(ram, t)) for x, y, t in actor['tiles']))
+            left, top, width, height, pixels = masked_image(tuple((x, y, raw_tile(ram, t)) for x, y, t in actor['tiles']), image)
             if width > 1024:
                 raise ValueError('canvas stride')
         except (ValueError, IndexError):
@@ -3844,8 +3889,8 @@ def pattern_index_expected(ram, expected):
     """Oracle for the 8EF9 index: {image: (left, top, [(cx, cy, mask, id)])}, patterns by id, in scan order."""
     ids, patterns, out, canon, phase1 = {}, [], {}, {}, {}
 
-    def build(key):
-        left, top, w, h, px = solid_image(key)
+    def build(key, image):
+        left, top, w, h, px = masked_image(key, image)
         chunks = []
         for cy in range(0, h, 16):
             for cx in range(0, w, 16):
@@ -3875,9 +3920,9 @@ def pattern_index_expected(ram, expected):
         canon[want[0]] = image
         actor = actor_descriptor(ram, image)
         key = tuple((x, y, raw_tile(ram, t)) for x, y, t in actor['tiles'])
-        out[image] = build(key)
+        out[image] = build(key, image)
         if any(raw[8] & 0x80 for _, _, raw in key):
-            phase1[image] = build(flash_key(key))
+            phase1[image] = build(flash_key(key), image)
     return out, patterns, phase1
 
 
