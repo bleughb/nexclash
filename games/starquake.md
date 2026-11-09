@@ -100,7 +100,9 @@ on a recording (enemy types not met; slots 0-55 are probably not graphics). The 
 assembly and the ending not played. Colour sheet in sheets/ (1:1, layout json); recolour() rewrites the store banks (not run on
 a painting). Evidence record, doccheck, selftest stamp: not done (pilot).
 
-## Pace (review 1.1, 2026-11-08)
+## Pace (1.1, published .nxc, 2026-11-08)
+Published in nxc 238e98a: main's build with the tape's loading screen gives starquake_sprites_loading.nex 4c5ce962, the published
+.nxc --bare, byte for byte.
 Owner's pace rule: within 2% where the original runs steadily, faster fine where it lags, never slower. 1.0 read +0.42 to +3.63 whole, slowest stretch of 20 updates +28.6 (audit,
 runs/pace-audit-20261108). Every plot follows the game's own sync (0xD9C8 starts with 0xA57B: a HALT, or the tone that runs to the next interrupt); e_pl and e_un add a median 9,100 T an update
 (7,370 and 3,240 T less what the removed stores save), so updates near the frame's end went past the sync and took another frame.
