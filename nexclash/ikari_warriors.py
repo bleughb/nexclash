@@ -719,8 +719,8 @@ def scenery_compare(patch, ns, om, pm, c, fail, st):
     a tile the char now in the buffer at that row and column can have, by the data file's char list."""
     a = ((om[0xE460] | om[0xE461] << 8) + 0x700) & 0x1FFF
     want = ((a >> 5) - 48) & 255
-    if ns.nr.get(0x31) != want:
-        fail('tile scroll', (c['commits'], ns.nr.get(0x31), want))
+    if ns.pages[HPG][0x83] != want:
+        fail('tile scroll', (c['commits'], ns.pages[HPG][0x83], want))
     if 'scen_pos' not in st:
         pos = collections.defaultdict(set)
         for g, ts in patch.scenery['bychar'].items():

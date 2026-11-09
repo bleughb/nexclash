@@ -16,10 +16,9 @@ V_SP    EQU 0x8002
 V_SPD   EQU 0x8036
 V_A     EQU 0x8037
 HSTK    EQU 0x9000
-HLIB_V_PACE EQU 0x8040
-D_LG    EQU 192
 V_TC    EQU 0x8070              ; the char; +4 to +9: a_init's registers
 V_TB    EQU 0x8072              ; the strip's graphics base
+V_TS    EQU 0x8083              ; the tile scroll this update
 V_TPAL  EQU 0x8080              ; 1 = graphics, map and palette are in
 
         MACRO ENTER
@@ -189,14 +188,11 @@ a_bl:   nextreg 0x6B,0xA0       ; on, one byte a cell
         or a
         call z,a_init
         call A_OPEN             ; the blit's window opens here: the wait below is inside it, the limiter's own wait gets shorter
-.neg_wait:                      ; ink, tile and sprites change together: the blit (at 28 MHz about 50 lines, three times the beam's
-                                ; speed) starts with the beam below the window or above its top, so it stays ahead of the beam
-        ld hl,(HLIB_V_PACE+4)   ; in a burst the debt comes first: no wait, a step of shimmer on some lines for one frame at worst
-        ld de,D_LG
-        or a
-        sbc hl,de
-        jr nc,.go
-.w:     ld bc,0x243B
+.neg_wait:                      ; the blit runs top down at about 3.4 lines to the beam's one. With the beam in the window it starts
+                                ; behind the beam and overtakes it: lines the beam meets before that still show the old ink, so the
+                                ; tile scroll changes at the line where they meet (the copper), and no line shows ink a step off
+                                ; its tile. No wait: the time goes on the limiter's own budget.
+        ld bc,0x243B
         ld a,0x1E
         out (c),a
         inc b
@@ -209,18 +205,11 @@ a_bl:   nextreg 0x6B,0xA0       ; on, one byte a cell
         inc b
         in a,(c)
         ld e,a
-        ld a,d
-        or a
-        jr nz,.go               ; line 256 and over: below the window
-        ld a,e
-        cp 184
-        jr nc,.go
-        cp 15
-        jr nc,.w
-.go:
         ld hl,(ORIGIN)          ; the window's first line, as the blit's: origin + 56 lines
+        push de
         ld de,0x0700
         add hl,de
+        pop de
         ld a,h
         and 0x1F
         rlca
@@ -235,6 +224,55 @@ a_bl:   nextreg 0x6B,0xA0       ; on, one byte a cell
         or b
 .neg_scroll:
         sub 48                  ; the window's top on the tilemap's 320 x 256
+        ld (V_TS),a
+        ld c,a
+        ld a,d                  ; below the window, or above its top: now
+        or a
+        jr nz,.now
+        ld a,e
+        cp 184
+        jr nc,.now
+        sub 16
+        jr c,.now
+        ld l,a                  ; the meeting line = line + (line - 16) x 27 / 64, the blit's speed, plus its start
+        ld h,0
+        ld d,h
+        push de
+        ld e,l
+        add hl,hl
+        ld b,h
+        ld a,l
+        add hl,de               ; x 3
+        ld d,h
+        ld e,l
+        add hl,hl
+        add hl,de               ; x 9
+        ld d,h
+        ld e,l
+        add hl,hl
+        add hl,de               ; x 27
+        add hl,hl
+        add hl,hl
+        ld a,h                  ; / 64
+        pop de
+        add a,e
+        add a,2
+        jr c,.late
+        cp 184
+        jr c,.w
+.late:  ld a,184
+.w:     nextreg 0x62,0
+        nextreg 0x61,0
+        nextreg 0x60,0x80
+        nextreg 0x60,a
+        nextreg 0x60,0x31
+        ld a,c
+        nextreg 0x60,a
+        nextreg 0x60,0xFF
+        nextreg 0x60,0xFF
+        nextreg 0x62,0x40
+        ret
+.now:   ld a,c
         nextreg 0x31,a
         ret
 ; dirt, rock, wood, foliage, light foliage, water: RRRGGGBB, B0
