@@ -28,6 +28,16 @@
     "sprites": "6aa7e780f4ec7892d862c675e61b7fba"
    }
   },
+  "2ae624d49075367226a59766c860ea21": {
+   "game": "Atom Ant",
+   "doc": "atom_ant.md",
+   "nex": {
+    "plain": "04460a950e24898f8144d2ab2b48ff6f",
+    "loading": "66d682f8cbe184c00ad2271ed8cf2a33",
+    "enhanced": "054ce8f73bb5360353113f8a9a72e50c",
+    "enhanced_loading": "c3d35756f871ed85ff24d27ccc52b0c8"
+   }
+  },
   "1c1af4775bc0114f7b94edb7de2d4070": {
    "game": "Beyond the Ice Palace (128K)",
    "doc": "beyond_the_ice_palace.md",

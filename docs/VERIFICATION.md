@@ -94,6 +94,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Army Moves (army_moves): `army_moves_sprites.nex` f29ce916ef3ba1e62c83d8fa992c3d39, `army_moves_sprites_loading.nex` 85ba62ef5e47b72bb61220a8daf59809; verified 2026-11-08
 - Game Over (game_over): `game_over_sprites.nex` 8c3152e36baa285b4a1407e011a95baa, `game_over_sprites_loading.nex` 66d8145473890323dd279cfec7d28859; verified 2026-11-08
 - Chase H.Q. (chase_hq): `chase_hq.nex` 2f6628a552412d0a227300fe7cf397b2, `chase_hq_speed.nex` 6729617fd9e3adc131a0451593557b39, `chase_hq_orig_pace.nex` 498c2119e140480cd16c8f0fda5c5843; verified never
+- Atom Ant (atom_ant): `atom_ant.nex` 04460a950e24898f8144d2ab2b48ff6f, `atom_ant_loading.nex` 66d682f8cbe184c00ad2271ed8cf2a33, `atom_ant_enhanced.nex` 054ce8f73bb5360353113f8a9a72e50c, `atom_ant_enhanced_loading.nex` c3d35756f871ed85ff24d27ccc52b0c8; verified 2026-11-08
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
