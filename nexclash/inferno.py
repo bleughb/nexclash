@@ -6644,7 +6644,9 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
             at = [i for i in range(len(ram) - 7) if ram[i:i + 7] == text]
             if len(at) != 2:
                 raise ValueError('expected two USR 24200 statements, found %d' % len(at))
-            ram[at[1]:at[1] + 7] = b'"15312"'           # the second USR: installer, then 24200
+            import os
+            if not os.environ.get('INFERNO_NO_REDIRECT'):     # bisection build: everything but the redirect
+                ram[at[1]:at[1] + 7] = b'"15312"'       # the second USR: installer, then 24200
             snap.banks[5], snap.banks[2], snap.banks[0] = bytes(ram[:16384]), bytes(ram[16384:32768]), bytes(ram[32768:])
             return
         if snap.is128:
