@@ -89,6 +89,7 @@ ENGINES = [
     ('gunrunner', 'is_gunrunner', None),                                  # Gunrunner (48K): default and Enhanced
     ('scooby_doo', 'is_scooby_doo', None),                                # Scooby Doo in the Castle Mystery (48K): default, Enhanced (local set)
     ('booty', 'is_booty', None),                                          # Booty (48K): default and Enhanced
+    ('page_pharaoh', 'is_page', None),                                    # Page and the Curse of the Pharaoh (48K): default and Enhanced
 ]
 
 

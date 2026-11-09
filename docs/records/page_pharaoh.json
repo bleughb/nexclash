@@ -1,0 +1,194 @@
+{
+ "name": "page_pharaoh",
+ "order": 250,
+ "game": "Page and the Curse of the Pharaoh",
+ "doc": "page_pharaoh.md",
+ "engine": "page_pharaoh",
+ "representative": true,
+ "reference": "page_pharaoh",
+ "inputs": {
+  "snapshot": {
+   "name": "page_pharaoh.z80",
+   "md5": "5d884aa2608879727e43589dfba44bb7",
+   "path": "page_pharaoh/page_pharaoh.z80",
+   "note": "Derived start state: Page and the Curse of the Pharaoh (2015-01-23)(T.D.F. micro-visions)(48K-128K).tap (MD5 5237d25d) loaded by SkoolKit's tap2sna to the game's USR 32000 (games/page_pharaoh.md \"Next session\"). The .nxc builds the same state from the tape through TAP1."
+  },
+  "recordings": [
+   {
+    "name": "page_pharaoh.tap",
+    "md5": "5237d25deb5ff67f461c7de61e5d2df3",
+    "path": "page_pharaoh/page_pharaoh.tap",
+    "role": "Page and the Curse of the Pharaoh (2015-01-23)(T.D.F. micro-visions)(48K-128K).tap, the published patch's target, staged for provenance; not read by the build; not a recording."
+   },
+   {
+    "name": "page_pharaoh_loading.scr",
+    "md5": "93efbf5304ce3397d0cf0c684c16ea37",
+    "path": "page_pharaoh/page_pharaoh_loading.scr",
+    "role": "The tape's 6,912-byte loading screen, staged beside the start state; not a recording."
+   },
+   {
+    "name": "page_pharaoh.256",
+    "md5": "b1961046825ce0fd1ed45624d58845b7",
+    "path": "page_pharaoh/page_pharaoh.256",
+    "role": "Enhanced: the Spec256 set (Ynicky) as a .256, staged beside the start state; game data, never in this repo; not a recording."
+   },
+   {
+    "name": "page_pharaoh_palette.json",
+    "md5": "cc822d044ec89ffcffbfb3a122f4d088",
+    "path": "page_pharaoh/page_pharaoh_palette.json",
+    "role": "Enhanced: the set's 256 colours as RGB, from the review run; derived from the set, never in this repo; not a recording."
+   },
+   {
+    "name": "a1.rzx",
+    "md5": "d4bb7e7a3d22930aafcfecc3f0035d17",
+    "path": "page_pharaoh/a1.rzx",
+    "role": "Level 1 from the start state, scripted play to the game over, 9,039 frames. Also the ABI states' and broken builds' recording."
+   },
+   {
+    "name": "rooms.rzx",
+    "md5": "3687d0a1a810a7a453a29fe04df4eee0",
+    "path": "page_pharaoh/rooms.rzx",
+    "role": "Scripted play through rooms of several levels, 12,595 frames."
+   }
+  ]
+ },
+ "modules": [
+  "page_pharaoh",
+  "page_pharaoh_enh"
+ ],
+ "own_modules": [
+  "page_pharaoh",
+  "page_pharaoh_enh"
+ ],
+ "data": [
+  "asm/page_pharaoh_hooks.asm",
+  "asm/page_pharaoh_enh_hooks.asm",
+  "docs/profiles/page_pharaoh.json",
+  "docs/profiles/page_pharaoh_enh.json"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "a1.rzx",
+   "rooms.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 30,
+  "note": "Default and Enhanced: every recording, at every hook the hook against the original from the same state, every register with R and all 48K RAM but the changed bytes and the dead stack below SP; after every plot the whole Layer 2 against an independent model (default: the XOR of the figure table's plots; Enhanced: the set's planes through the figure table). ABI cases on a1's states; broken builds on a1's start (default 1,500 frames, Enhanced 1,200), 'overlay not hidden' on the whole of a1, to its game over. Pace, soak, flicker and the real loader are in games/page_pharaoh.md \"Evidence\"."
+ },
+ "outputs": {
+  "sprites": {
+   "file": "page_pharaoh_sprites.nex",
+   "md5": "ad82fe2d63f623af54950d2c56d34a44"
+  },
+  "loading": {
+   "file": "page_pharaoh_sprites_loading.nex",
+   "md5": "430b6184b2397b0759db1b151984f339"
+  },
+  "enhanced": {
+   "file": "page_pharaoh_enhanced.nex",
+   "md5": "139bfcafd68061d939d1d2c51efdacc6"
+  },
+  "enhanced_loading": {
+   "file": "page_pharaoh_enhanced_loading.nex",
+   "md5": "3c710b98afbe12f66d1e6ff03f00285d"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Page and the Curse of the Pharaoh",
+  "engine_col": "page_pharaoh (page_pharaoh.md)",
+  "build": "v1.0; page_pharaoh_sprites_loading.nex 430b6184 and page_pharaoh_enhanced_loading.nex 3c710b98 equal the published .nxc 1.0 bare builds, default and Enhanced (without the screen ad82fe2d, 139bfcaf); default: the ULA as the original, the figures' XOR plots repeated in white on Layer 2; Enhanced, off by default: the Spec256 set's colours (Ynicky) as values on Layer 2, ULA+ off; top bank 47, both fit a 1MB Next; homebrew by David Pagett (T.D.F. micro-visions, 2015)",
+  "software": "default: 2 recordings, 21,634 frames, 36,137 hooks with R and 48K RAM, 36,134 Layer 2 pictures against an XOR model, 320 ABI cases, 9 of 9 broken builds; Enhanced: the same recordings, 70,515 hooks, every Layer 2 picture against the set's planes, 704 ABI cases, 11 of 11 broken builds; ROM paths pass; review run: soaks, flicker, real loader 4 of 4. Pace in JNext: whole runs within 0.32%; where the original misses its frame (level 5 fire, stretches of 16 and 25) up to 13.56% faster over 20 updates (the original late, the build not)",
+  "hardware": "untested",
+  "next": "hardware checklist (ULA+ on the core); owner's play; natural play past level 1"
+ },
+ "checks": [
+  "asm2profile:page_pharaoh",
+  "asm2profile:page_pharaoh_enh"
+ ],
+ "results": [
+  {
+   "check": "external review run",
+   "status": "pass",
+   "scope": "runs/page_pharaoh/release-20261108 (default) and release-20261108b (Enhanced): pace over five levels, 15-minute soaks, flicker and the real loader (default, Enhanced, each with both cheats), JNext 1.1.104, on these engine bytes. Not a selftest stamp.",
+   "evidence": "games/page_pharaoh.md \"Evidence\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/page_pharaoh_enh_hooks.asm": "04d8914c255a146b",
+   "asm/page_pharaoh_hooks.asm": "b0759b3227f92df4",
+   "docs/profiles/page_pharaoh.json": "a162cc0dc34adeeb",
+   "docs/profiles/page_pharaoh_enh.json": "d0c2a1f77eb859e5",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "32b333ccab19cf76",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/page_pharaoh.py": "f017fbcc28fd99f2",
+   "nexclash/page_pharaoh_enh.py": "a9718c60d171982d",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "3376d41ea93aa9e8",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ },
+ "verified": {
+  "deps": {
+   "asm/page_pharaoh_enh_hooks.asm": "04d8914c255a146b",
+   "asm/page_pharaoh_hooks.asm": "b0759b3227f92df4",
+   "docs/profiles/page_pharaoh.json": "a162cc0dc34adeeb",
+   "docs/profiles/page_pharaoh_enh.json": "d0c2a1f77eb859e5",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "1ce2fa79b0431489",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/page_pharaoh.py": "f017fbcc28fd99f2",
+   "nexclash/page_pharaoh_enh.py": "a9718c60d171982d",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "3376d41ea93aa9e8",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ }
+}
