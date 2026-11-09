@@ -42,18 +42,54 @@ ISR_LINES EQU 7
 P_CNT EQU 0x3E47
 V_POLL EQU 0x3E48             ; word
 R_BUF EQU 0x3E80               ; gfx + mask row, up to 64 bytes
-RECTS_A EQU 0x3A00             ; 4 bytes a rectangle, 64 rectangles
-RECTS_B EQU 0x3B00
+RECTS_A EQU 0x2700             ; 4 bytes a rectangle
+RECTS_B EQU 0x3C00
 RECT_MAX EQU 60
 L2_BANK_A EQU 16
 L2_BANK_B EQU 19
 BEAM_LO EQU 124                ; below the play area, shake included
 BEAM_HI EQU 240
-K_PLOT EQU 100
-K_PLOT1 EQU 103
-K_COPY EQU 118
-K_REST EQU 118
+V_K1 EQU 0x3E76                ; world 1's restore and copy K: the mode's own (1/16)
+V_K2 EQU 0x3E75                ; world 2's restore and copy K: the mode's own (1/16)
+RC_W1 EQU 26                   ; a plot's time, quarters of 1/16 line a byte of width: JNext, the original's contention
+RC_W2 EQU 24
+PL_OVER EQU 76                 ; what the hook costs outside the window, less the plot's fixed 20
+V_TGT EQU 0x3E4A               ; word
 ATTR_P EQU 0x5C8F
+V_ENH EQU 0x3E50               ; Enhanced
+V_BDT EQU 0x3E51               ; the Backdrop line
+V_SCENE EQU 0x3E52             ; a scene is being built: plots go to C
+V_PLAY EQU 0x3E53              ; C is the picture: the play area is not printed on Layer 2
+V_FULLN EQU 0x3E57
+V_TAB EQU 0x3E5A               ; word
+V_BDP EQU 0x3E5C
+V_BDP1 EQU 0x3E5D
+V_BDP2 EQU 0x3E5E
+V_FP1 EQU 0x3E5F
+T_PAGE EQU 0x3E60
+T_OFF EQU 0x3E61               ; word
+T_NB EQU 0x3E63
+T_SKIP EQU 0x3E64
+T_STR EQU 0x3E65
+T_CNT EQU 0x3E66
+T_DX EQU 0x3E67
+T_SRC EQU 0x3E68               ; word
+T_Y EQU 0x3E6A
+T_H EQU 0x3E6B
+T_XP EQU 0x3E6C
+T_WP EQU 0x3E6D
+T_CH EQU 0x3E6E
+T_HOLE EQU 0x3E73
+V_PART EQU 0x3E74
+RB EQU 0x3D00                  ; a row, 256 bytes
+TAB1 EQU 0x2000                ; world 1's graphics: record, page, offset, gfx bytes a row
+TAB2 EQU 0x2300
+ZXTAB EQU 0x2600               ; the 16 Spectrum colours as palette indices
+C_PAGE EQU 44
+FONT1 EQU 0xAAEF
+FONT2 EQU 0xA977
+V_FONTP1 EQU 60
+V_FONTP2 EQU 61
         ORG 0x2800
 rom_start:
         INCLUDE "lib/hlib_iff.asm"
@@ -119,33 +155,53 @@ rom_start:
         ENDM
 
 ; ---- plot: the original's body B4EF / B517, whole, K-windowed --------------
-        MACRO PLOT_HOOK flag, body, k
+        MACRO PLOT_HOOK flag, body, rc
         ENTER
         HLIB_SPEED_IN V_SPEED
         call hlib_debt_open
         ld a,(flag)
         call l2_plot
+        ld a,rc
+        call plot_target
         ld a,8
         call hlib_debt_close
         call hlib_pace_open
         ld hl,(0x5C78)
         ld (V_FR),hl
         COPY_BODY body
-        WAIT_K k
+        ld a,(V_SPEED)
+        ld hl,(V_TGT)
+        call hlib_pace_wait
+        call isr_extra
+        ld a,-21
+        call hlib_r_set
+        ld a,(V_R0)
+        call hlib_r_add
         LEAVE_R
         ret
         ENDM
 
 h_plot1:
-        PLOT_HOOK 0xB47E,0xB4EF,K_PLOT1
+        PLOT_HOOK 0xB47E,0xB4EF,RC_W1
         defs 0x2CC0-$,0
 h_plot2:
-        PLOT_HOOK 0xB4A6,0xB517,K_PLOT
+        PLOT_HOOK 0xB4A6,0xB517,RC_W2
         defs 0x2D80-$,0
 
 ; ---- restore: clean buffer to the work buffer at 28 MHz --------------------
 
-        MACRO RESTORE_HOOK body
+        MACRO WAIT_KV vk
+        ld a,(V_SPEED)
+        ld c,a
+        ld a,(vk)
+        call hlib_pace_waitk
+        call isr_extra
+        ld a,-21
+        call hlib_r_set
+        ld a,(V_R0)
+        call hlib_r_add
+        ENDM
+        MACRO RESTORE_HOOK body, kw
         ENTER
         HLIB_SPEED_IN V_SPEED
         ld a,1                  ; a restore wipes the work buffer: figures plotted before it never show
@@ -154,20 +210,20 @@ h_plot2:
         ld hl,(0x5C78)
         ld (V_FR),hl
         COPY_BODY body
-        WAIT_K K_REST
+        kw
         LEAVE_R
         ret
         ENDM
 
 h_rest1:
-        RESTORE_HOOK 0xAF4B
+        RESTORE_HOOK 0xAF4B,WAIT_KV V_K1
         defs 0x2E40-$,0
 h_rest2:
-        RESTORE_HOOK 0xAF73
+        RESTORE_HOOK 0xAF73,WAIT_KV V_K2
         defs 0x2F00-$,0
 
 ; ---- copy: wait for the beam below the play area, copy at 28 MHz, publish ---
-        MACRO COPY_HOOK body, shake
+        MACRO COPY_HOOK body, shake, kw
         ENTER
         HLIB_SPEED_IN V_SPEED
         call hlib_debt_open
@@ -195,22 +251,26 @@ h_rest2:
         ld hl,(0x5C78)
         ld (V_FR),hl
         COPY_BODY body
+        ld a,(V_ENH)            ; Enhanced is the whole screen: its picture stays still
+        or a
+        ld a,0
+        jr nz,.ns
         ld a,(shake)
         or a
         jr z,.ns
         ld a,188
 .ns:    nextreg 0x17,a
         call l2_publish
-        WAIT_K K_COPY
+        kw
         LEAVE_R
         ret
         ENDM
 
 h_copy1:
-        COPY_HOOK 0xAF4B,0xBF20
+        COPY_HOOK 0xAF4B,0xBF20,WAIT_KV V_K1
         defs 0x3000-$,0
 h_copy2:
-        COPY_HOOK 0xAF73,V_ZERO
+        COPY_HOOK 0xAF73,V_ZERO,WAIT_KV V_K2
         defs 0x3100-$,0
 
 ; ---- the barrel's own cell colours: AF06 is entered unchanged after this ----
@@ -218,7 +278,9 @@ h_cell:
         ENTER
         HLIB_SPEED_IN V_SPEED
         call hlib_debt_open
-        call l2_cells
+        ld a,(V_ENH)
+        or a
+        call z,l2_cells
         ld a,8
         call hlib_debt_close
         HLIB_SPEED_OUT V_SPEED
@@ -232,13 +294,15 @@ h_cell:
         HLIB_R_OUT
         nextreg 0x51,255
         jp 0xAF06
-        defs 0x3160-$,0
 
 ; ---- the whole screen is cleared: the overlay goes off until the next copy ---
 h_cls:
         ENTER
+        ld a,(V_ENH)
+        or a
+        jr nz,.e
         nextreg 0x69,0
-        ld a,-13
+.e:     ld a,-13
         call hlib_r_set
         pop hl
         pop de
@@ -249,12 +313,173 @@ h_cls:
         nextreg 0x51,255
         ld a,(ATTR_P)           ; the displaced instruction
         jp 0xBA66
-        defs 0x31C0-$,0
+
+        MACRO LEAVE_D
+        ld a,-13
+        call hlib_r_set
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
+        HLIB_R_OUT
+        ENDM
+h_print:                        ; BDC8: LD L,A / LD H,0 displaced
+        ENTER
+        HLIB_SPEED_IN_ABC V_SPEED
+        call hlib_debt_open
+        call e_char
+        ld a,8
+        call hlib_debt_close
+        HLIB_SPEED_OUT_A V_SPEED
+        LEAVE_D
+        ld l,a
+        ld h,0
+        nextreg 0x51,255
+        jp 0xBDCB
+h_fill:                         ; BA84: PUSH HL / POP DE / INC DE displaced
+        ENTER
+        ld a,h
+        cp 0x40
+        jr nz,.t
+        ld a,l
+        or a
+        jr nz,.t
+        ld a,(V_ENH)
+        or a
+        call nz,e_slowclr
+        jr .k
+.t:     ld a,h
+        cp 0x5D
+        jr nz,.k
+        ld a,l
+        cp 0xC0
+        jr nz,.k
+        ld a,b
+        cp 0x1D
+        jr nz,.k
+        ld a,1
+        ld (V_SCENE),a
+        ld a,(V_ENH)
+        or a
+        call nz,e_slowscene
+.k:     LEAVE_D
+        push hl
+        pop de
+        inc de
+        nextreg 0x51,255
+        jp 0xBA87
+h_cap1:                         ; A33F: LD HL,5DC0 displaced: the scene is whole
+        ENTER
+        call e_captured
+        LEAVE_D
+        nextreg 0x51,255
+        ld hl,0x5DC0
+        jp 0xA342
+h_cap2:                         ; A4AA
+        ENTER
+        call e_captured
+        LEAVE_D
+        nextreg 0x51,255
+        ld hl,0x5DC0
+        jp 0xA4AD
+h_z1:                           ; 9973: LD A,0 / LD (DE),A displaced
+        ENTER
+        HLIB_SPEED_IN_ABC V_SPEED
+        call e_zero
+        HLIB_SPEED_OUT_A V_SPEED
+        LEAVE_D
+        ld a,0
+        ld (de),a
+        nextreg 0x51,255
+        jp 0x9976
+h_z2:                           ; 97AE
+        ENTER
+        HLIB_SPEED_IN_ABC V_SPEED
+        call e_zero
+        HLIB_SPEED_OUT_A V_SPEED
+        LEAVE_D
+        ld a,0
+        ld (de),a
+        nextreg 0x51,255
+        jp 0x97B1
+e_captured:
+        xor a
+        ld (V_SCENE),a
+        ld a,(V_ENH)
+        or a
+        ret z
+        ld (V_PLAY),a
+        ld (V_FRESH),a
+        ld a,3
+        ld (V_FULLN),a
+        ret
+e_slowclr:
+        HLIB_SPEED_IN_ABC V_SPEED
+        call hlib_debt_open
+        call e_clear
+        jr e_slowend
+e_slowscene:
+        HLIB_SPEED_IN_ABC V_SPEED
+        call hlib_debt_open
+        call e_scene
+e_slowend:
+        ld a,8
+        call hlib_debt_close
+        HLIB_SPEED_OUT_A V_SPEED
+        ret
+
+; plot_target: the original plot's time from what it will draw (1/16 line): A = its cost a byte of width.
+plot_target:
+        ld e,a
+        ld d,0
+        ld hl,72
+        ld a,(iy+3)
+        or a
+        jr z,.nc
+        ld b,a
+.c:     add hl,de
+        djnz .c
+.nc:    ld a,(iy-5)
+        ld e,a
+        ld b,6
+.w:     add hl,de
+        djnz .w
+        ld a,(0xB735)
+        and 1
+        jr z,.ns
+        ld bc,36
+        add hl,bc
+        ld b,10
+.sw:    add hl,de
+        djnz .sw
+.ns:    ex de,hl
+        ld hl,0
+        ld a,(iy+1)
+        or a
+        jr z,.z
+        ld b,a
+.r:     add hl,de
+        djnz .r
+        srl h
+        rr l
+        srl h
+        rr l
+.z:     ld de,PL_OVER         ; the hook's own time beyond the window
+        or a
+        sbc hl,de
+        jr nc,.t
+        ld hl,0
+.t:     ld (V_TGT),hl
+        ret
 
 V_ZERO: defb 0
 ; ---- Layer 2: A = the plot's paint flag byte (C9: painting off) --------------
 l2_plot:
         ld b,a
+        ld a,(V_ENH)
+        or a
+        jp nz,e_plot
         ld a,(iy+1)
         or a
         ret z
@@ -620,6 +845,9 @@ rect_hit:
 
 ; l2_ready: clear the back buffer once per pass, by the boxes drawn in it.
 l2_ready:
+        ld a,(V_ENH)
+        or a
+        jp nz,e_ready
         ld a,(V_FRESH)
         or a
         ret z
@@ -682,6 +910,10 @@ l2_publish:
         ld a,(V_BACK)
         nextreg 0x12,a
         nextreg 0x69,0x80
+        ld b,a
+        xor a
+        ld (V_SCENE),a
+        ld a,b
         cp L2_BANK_A
         ld hl,(V_RECT)
         jr z,.a
@@ -702,7 +934,9 @@ V_LIST_B: defw RECTS_B
 
 rom_end:
 regblock EQU 0x3C00
-        ASSERT $ < 0x3A00
+        INCLUDE "game_over_enh.inc"
+rom_end2:
+        ASSERT $ < 0x3C00
         SAVEBIN "gameover_rom.bin",rom_start,$-rom_start
         ORG 0xD000
 setup:
@@ -718,6 +952,10 @@ setup:
         nextreg 0x18,247
         nextreg 0x18,8
         nextreg 0x18,119
+setup_enh:
+        ld a,0                  ; Enhanced?
+        or a
+        jp nz,setup_e
         nextreg 0x43,0x10
         nextreg 0x40,0
         ld hl,l2_pal
@@ -753,5 +991,50 @@ setup:
         ret
 l2_pal: defb 0x00,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6
         defb 0x00,0x03,0xE0,0xE7,0x1C,0x1F,0xFC,0xFF
+setup_e:
+        nextreg 0x1C,1
+        nextreg 0x18,0
+        nextreg 0x18,255
+        nextreg 0x18,0
+        nextreg 0x18,191
+        nextreg 0x43,0x10       ; Layer 2's first palette
+        nextreg 0x40,0
+        ld hl,e_palette
+        ld b,0
+.lp:    ld a,(hl)
+        nextreg 0x44,a
+        inc hl
+        ld a,(hl)
+        nextreg 0x44,a
+        inc hl
+        djnz .lp
+        nextreg 0x43,0
+        ld d,L2_BANK_A*2
+        ld e,6
+        call .fill
+        ld d,L2_BANK_B*2
+        ld e,6
+        call .fill
+        ld d,C_PAGE
+        ld e,4
+        call .fill
+        nextreg 0x50,255
+        nextreg 0x69,0x80
+        ret
+.fill:  ld a,d
+        nextreg 0x50,a
+        ld hl,0
+        ld (hl),0xFF
+        push de
+        ld de,1
+        ld bc,0x1FFF
+        ldir
+        pop de
+        inc d
+        dec e
+        jr nz,.fill
+        ret
+e_palette:
+        defs 512,0
 setup_end:
         SAVEBIN "gameover_setup.bin",setup,setup_end-setup

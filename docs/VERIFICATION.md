@@ -92,7 +92,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Alien 8 (alien_8): `alien_8.nex` e89ed13af3af09b260cc266bc5b456e1, `alien_8_enhanced.nex` 5c08c856c718a7e744282cd44372a6cf; verified never
 - Gunfright (gunfright): `gunfright.nex` f26d0a561e25a1a800b19787cd1fe41b, `gunfright_enhanced.nex` 4ec70c827ae291ce273a09c508f95c87; verified 2026-11-07
 - Army Moves (army_moves): `army_moves_sprites.nex` 9cbd2379d8cae020c3b2145d362a4f75, `army_moves_sprites_loading.nex` 1b60bd04304265986cf5ff4a142e44db; verified 2026-11-08
-- Game Over (game_over): `game_over_sprites.nex` 8c3152e36baa285b4a1407e011a95baa, `game_over_sprites_loading.nex` 66d8145473890323dd279cfec7d28859; verified 2026-11-08
+- Game Over (game_over): `game_over_sprites.nex` ff1d8067f3ad7e5f5625ab2f85e28a57, `game_over_sprites_loading.nex` cb0c403db4058444f38445fb1afbdc19; verified 2026-11-08
 - Chase H.Q. (chase_hq): `chase_hq.nex` 2f6628a552412d0a227300fe7cf397b2, `chase_hq_speed.nex` 6729617fd9e3adc131a0451593557b39, `chase_hq_orig_pace.nex` 498c2119e140480cd16c8f0fda5c5843; verified never
 - Silkworm (silkworm): `silkworm.nex` 36a148b54bce181c39c94899f7809c20, `silkworm_loading.nex` 6ae12fd66946724d9ef6c1e089a6b163, `silkworm_enhanced.nex` d5d3a92cce49d1f4d855f3d98ee7f41b, `silkworm_enhanced_loading.nex` 2058f2e55464eeb68f418320548fb34a; verified 2026-11-08
 - Into the Eagle's Nest (into_the_eagles_nest): `into_the_eagles_nest.nex` b7d029c512c7a7ebee9e67af27f7ccf4, `into_the_eagles_nest_loading.nex` 2a73be327f9ff7db9667c3aede747f87, `into_the_eagles_nest_enhanced.nex` 9b32aa8d2a6a124799b10bc3960da282, `into_the_eagles_nest_enhanced_loading.nex` 6a224cabba87912fdcc5e11a057d9844; verified 2026-11-08
