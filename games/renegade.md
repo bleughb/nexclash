@@ -1,7 +1,7 @@
 # Renegade (Imagine, 1987; 128K release) - engine `renegade128` (batch game: unattended, no hardware)
 
 ## Next session
-Stage: 4 (hardware + colour)    State: pace review build 1.2 (2026-11-08, section Pace), owner's play pending; imported into `refactor` 2026-11-04 (phase 7); stages 0-3 done unattended in
+Stage: 4 (hardware + colour)    State: v1.2 (2026-11-08, section Pace), played by the owner and published in the .nxc (nxc 7a8c6cf); imported into `refactor` 2026-11-04 (phase 7); stages 0-3 done unattended in
 Jon's run folder; simulation and JNext only; never run on a Next.
 Inputs: specnext/reference/renegade/ (start.z80 md5 1a931038 staged as renegade.z80, the archive renegade128.z80,
 4 bot .rzx, renegade_enhanced_colours.json, renegade128.pok)
@@ -98,7 +98,9 @@ Never run on hardware. Upload timing, 28 MHz hooks and K windows with the AY han
 ## Hardware checklist
 Loading screen; a key or 5 seconds; menu; 1. Music plays and keeps time. Timer counts seconds at the plain build's rate. Figures keep their colours across scenery, with outlines. Each trainer. Game over, menu, restart. Enhanced from the menu: all four levels, no half-painted figures.
 
-## Pace (2026-11-08, review 1.2): K windows, R kept, skips back to the original's
+## Pace (2026-11-08; v1.2, published in the .nxc, nxc 7a8c6cf): K windows, R kept, skips back to the original's
+- Rebuild (selftest --game renegade): sprites b4b452100f88d54415f3f5f11568c454, Enhanced 9ed0c98b03279f04ca18d6cae8fd8387 = the
+  published v1.2 bare builds (nxc.py --bare on the archive file: default, Enhanced). Enhanced needs the local colour map (above).
 Owner's pace rule: within 2% of the original where it runs steadily; never slower. 1.1 broke it (audit: runs/pace-audit-20261108), and the bigger fault was
 not the figure: the game's time-slicer 0x8117 skips the fighters' logic once an update is past its 3 frames, and 1.1 tripped it in 63, 40, 78, 3 of 600 updates
 against the original's 8, 1, 1, 0, so it played differently. Hook time 4 to 9 ms sat at the top of each update, before the slicer. Game order per update: frame
@@ -168,7 +170,8 @@ it waits on the real beam (0x98ED, floating bus), with the game's tone in the lo
 - 2026-11-03: stages 0-3, one unattended session, no user rounds.
 - 2026-11-04: import into `refactor` (phase 7, group 3) as record `renegade`: Enhanced moved into auto, pinned;
   rebuild = .nxc v1.0 byte for byte; full verification stamped. 0 user rounds.
-- 2026-11-08: pace, review 1.2: K windows, memo, interrupts on through uploads, R kept; no user rounds, owner's play pending.
+- 2026-11-08: pace, review 1.2: K windows, memo, interrupts on through uploads, R kept; no user rounds.
+- 2026-11-08: v1.2 published in the .nxc after the owner's play; main rebuilds both bare builds byte for byte.
 
 ## Friction
 - reuse: [tool asm/lib/hlib_pace.asm] whole and unchanged, in the state page, with lib/hlib_r.asm and lib/hlib_speed.asm
