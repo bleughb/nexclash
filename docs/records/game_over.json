@@ -59,14 +59,19 @@
   ]
  },
  "modules": [
-  "game_over"
+  "game_over",
+  "game_over_art"
  ],
  "own_modules": [
-  "game_over"
+  "game_over",
+  "game_over_art"
  ],
  "data": [
   "asm/game_over_hooks.asm",
-  "docs/profiles/game_over.json"
+  "asm/game_over_enh.inc",
+  "docs/profiles/game_over.json",
+  "docs/profiles/game_over_palette.json",
+  "docs/profiles/game_over_records.json"
  ],
  "shared_data": [
   "asm/lib/hlib_iff.asm",
@@ -100,21 +105,21 @@
  "outputs": {
   "sprites": {
    "file": "game_over_sprites.nex",
-   "md5": "8c3152e36baa285b4a1407e011a95baa"
+   "md5": "ff1d8067f3ad7e5f5625ab2f85e28a57"
   },
   "loading": {
    "file": "game_over_sprites_loading.nex",
-   "md5": "66d8145473890323dd279cfec7d28859"
+   "md5": "cb0c403db4058444f38445fb1afbdc19"
   }
  },
  "repro": [],
  "status": {
   "title": "Game Over",
   "engine_col": "game_over (game_over.md)",
-  "build": "v1.0; game_over_sprites_loading.nex 66d81454 equals the published .nxc 1.0 bare build (without the screen 8c3152e3); original bitmap and scenery attributes on the ULA, figures' ink on a double-buffered Layer 2, both worlds; default only, top bank 47",
-  "software": "6 recordings, 30,115 frames, 62,272 hooks with R and 48K RAM, 6,400 Layer 2 pictures against a model; 1,408 ABI cases, 9 of 9 broken builds; review run: 15-minute soaks, flicker, real loader. Pace in JNext: whole runs -1.06% to -1.75%; world 1 busy thirds within 1%, slowest 20 updates +2.26%; world 2 NOT within the 2% rule everywhere: busy thirds up to +0.60%, slowest 20-update stretches +4.53% with one unexplained +35.02%, quiet thirds up to -3.42%; 1 interrupt lost in 3,753 frames in one run, cause not found",
+  "build": "v1.1; game_over_sprites_loading.nex cb0c403d equals the published .nxc 1.1 bare build; with the Spec256 sets (rework enhanced) Enhanced 548bf3db and Backdrop off b7c17340 equal --colours Enhanced [--toggle \"Backdrop off\"]; original bitmap and scenery attributes on the ULA, figures' ink on a double-buffered Layer 2, both worlds; Enhanced on a full-screen Layer 2 with a backdrop, off by default",
+  "software": "6 recordings, 30,115 frames with R and 48K RAM, Layer 2 against a model; ABI cases, 9 of 9 broken builds; v1.1 review run: all three modes replayed (81,291 frames, 329,062 hooks with R), negatives 9/9 and 15/15, soaks, flicker, real loader equal to nxc.py. Pace in JNext: whole runs default -0.4 to -1.05%, Enhanced -1.3 to -2.2%; thirds within about 2% (Enhanced world 2 busy up to -2.33%, faster); room changes up to +6.7% default in world 2 (about 2 frames), one unexplained +4.94% 20-update stretch; 1 interrupt lost in 2,232 frames in one Enhanced run",
   "hardware": "untested",
-  "next": "hardware checklist; Enhanced (mock-up); world 2 pace on long passes; later rooms and natural completion; cheats"
+  "next": "hardware checklist; world 2 room changes; later rooms and natural completion; cheats"
  },
  "checks": [
   "asm2profile:game_over"
@@ -125,30 +130,40 @@
    "status": "pass",
    "scope": "runs/game_over/release-20261108: pace, soak, flicker, beam audit and real loader, JNext 1.1.104, on this engine's bytes. World 2's pace is outside the 2% rule as the status says. Not a selftest stamp.",
    "evidence": "games/game_over.md \"Evidence\""
+  },
+  {
+   "check": "external review run",
+   "status": "pass",
+   "scope": "runs/game_over/release-20261108b: v1.1 replay in all three modes, negatives, pace, soak, flicker, beam audit and real loader, JNext 1.1.104, on these engine bytes. Not a selftest stamp.",
+   "evidence": "games/game_over.md \"Evidence\""
   }
  ],
  "checked": {
   "deps": {
-   "asm/game_over_hooks.asm": "472ee4063cd55b85",
+   "asm/game_over_enh.inc": "9a05ecb1ed12f94d",
+   "asm/game_over_hooks.asm": "cf0314865d3f5414",
    "asm/lib/hlib_iff.asm": "b63b400926847660",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/game_over.json": "701cf1a32129b9da",
+   "docs/profiles/game_over.json": "ffc0394e8266bacb",
+   "docs/profiles/game_over_palette.json": "5932d2ccd890f80c",
+   "docs/profiles/game_over_records.json": "a37a33b7e7d3fdc2",
    "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "b9b7538a34c912de",
-   "nexclash/game_over.py": "38a97de08521e87d",
+   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/game_over.py": "f2117f69c1aa87a8",
+   "nexclash/game_over_art.py": "6691d9e887e2481a",
    "nexclash/hooklib.py": "ba4611f453c48aee",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
-   "nexclash/nextboot.py": "121a5912efae9b2a",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/records.py": "29985826115eb292",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
@@ -156,33 +171,37 @@
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "02b596188ae6a4c8",
+   "recipe": "1f31fe9cfa6aaf30",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-08"
  },
  "verified": {
   "deps": {
-   "asm/game_over_hooks.asm": "472ee4063cd55b85",
+   "asm/game_over_enh.inc": "9a05ecb1ed12f94d",
+   "asm/game_over_hooks.asm": "cf0314865d3f5414",
    "asm/lib/hlib_iff.asm": "b63b400926847660",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/game_over.json": "701cf1a32129b9da",
+   "docs/profiles/game_over.json": "ffc0394e8266bacb",
+   "docs/profiles/game_over_palette.json": "5932d2ccd890f80c",
+   "docs/profiles/game_over_records.json": "a37a33b7e7d3fdc2",
    "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "e7dccf2134c69717",
-   "nexclash/game_over.py": "38a97de08521e87d",
+   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/game_over.py": "f2117f69c1aa87a8",
+   "nexclash/game_over_art.py": "6691d9e887e2481a",
    "nexclash/hooklib.py": "ba4611f453c48aee",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
-   "nexclash/nextboot.py": "121a5912efae9b2a",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/records.py": "29985826115eb292",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
@@ -190,9 +209,81 @@
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "02b596188ae6a4c8",
+   "recipe": "1f31fe9cfa6aaf30",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-08"
- }
+ },
+ "rework": [
+  {
+   "name": "enhanced",
+   "version": "1.1",
+   "args": [],
+   "env": {
+    "NEXCLASH_GAME_OVER_ENHANCED": "1"
+   },
+   "inputs": [
+    {
+     "name": "Game Over (Part 1) (English).256",
+     "md5": "a09c38625d29b755c1234700943bf703",
+     "path": "game_over/Game Over (Part 1) (English).256",
+     "role": "The player's own Spec256 set for world 1, staged beside the snapshot; game_over_art makes Enhanced's colour tables from it. Not a recording."
+    },
+    {
+     "name": "Game Over (Part 2) (English).256",
+     "md5": "e15865a5b8ea0fab3c56ddc43effc1af",
+     "path": "game_over/Game Over (Part 2) (English).256",
+     "role": "The player's own Spec256 set for world 2, as world 1's. Not a recording."
+    }
+   ],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [],
+    "decisions": null
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [
+     "w1full.rzx",
+     "w1b.rzx",
+     "w2full.rzx"
+    ],
+    "auto_record": false,
+    "minutes": 60,
+    "note": "Enhanced with the backdrop: every register with R and all 48K RAM at each hook, the Enhanced picture and panel against an independent model at every publication; ABI cases and 15 broken builds."
+   },
+   "outputs": {
+    "sprites": {
+     "file": "game_over_sprites.nex",
+     "md5": "ff1d8067f3ad7e5f5625ab2f85e28a57"
+    },
+    "loading": {
+     "file": "game_over_sprites_loading.nex",
+     "md5": "cb0c403db4058444f38445fb1afbdc19"
+    },
+    "enhanced": {
+     "file": "game_over_enhanced.nex",
+     "md5": "5f67515e786fd3850a08c10c4619e596"
+    },
+    "enhanced_loading": {
+     "file": "game_over_enhanced_loading.nex",
+     "md5": "548bf3dbab3b3d62aaeb23665a5c2712"
+    },
+    "enhanced_nobd": {
+     "file": "game_over_enhanced_nobd.nex",
+     "md5": "c0570c340c410915fcbd1ab60c2a25a9"
+    },
+    "enhanced_nobd_loading": {
+     "file": "game_over_enhanced_nobd_loading.nex",
+     "md5": "b7c173405d4ac6eae0e70624947b388c"
+    }
+   },
+   "proof": "Enhanced colours: Spec256 team (Spec256), matched to this release by content; original executable code unchanged.",
+   "note": "The sets are the player's own and are never distributed with engine source; without them the rework is skipped and the default builds as before."
+  }
+ ]
 }
