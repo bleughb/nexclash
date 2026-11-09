@@ -167,7 +167,7 @@ peek_ix:
 rom_end:
         ASSERT rom_end < 0x3D00
         SAVEBIN "inferno_rom.bin",loader,rom_end-loader
-
+
 ; Capture kernel (no display layer is enabled). All scratch and stack writes are in page 68.
 ; Original CALL return bytes are reproduced exactly; JP sites displace complete instructions.
 ; Copier-window milestone 3: each hook measures the time it adds on CTC channel 3 (sync to an
@@ -7097,3 +7097,112 @@ wi_back:
 wi_stub_end:
         ASSERT wi_stub_end <= 0x3BE0
         SAVEBIN "inferno_wistub.bin",wi_stub,wi_stub_end-wi_stub
+
+; SAVE/LOAD: the pilot record (49 bytes at 5B15, name at 7001) goes to named slots in page 120, not to tape.
+; Both routines replace ROM tape code in the alt ROM's low page and run in slot 0, so they may use slot 1.
+SAVE_PAGE   EQU 120
+SAVE_NAME   EQU 0x7001
+SAVE_SIZE   EQU 49
+SAVE_STEP   EQU 64          ; slot: 8 name bytes (0 = empty), 49 data bytes, pad
+        ORG 0x04C6              ; the game's CALL 04C6 (SA-BYTES past its return-address push)
+save_hook:
+        or a
+        ret z                   ; header block: the name is taken from 7001 with the data
+        di
+        call save_find
+        ex de,hl
+        ld hl,SAVE_NAME
+        ld bc,8
+        ldir
+        push ix
+        pop hl
+        ld bc,SAVE_SIZE
+        ldir
+        nextreg 0x51,255
+        ret                     ; the game's 72B8 follows with EI
+
+save_find:                      ; -> HL = slot; NZ found, Z free (or the last slot when full). Uses A, BC, DE.
+        nextreg 0x51,SAVE_PAGE
+        ld hl,0x2000
+        ld b,128
+.next:  ld a,(hl)
+        or a
+        ret z
+        push hl
+        ld de,SAVE_NAME
+        ld c,8
+.cmp:   ld a,(de)
+        cp (hl)
+        jr nz,.other
+        inc de
+        inc hl
+        dec c
+        jr nz,.cmp
+        pop hl
+        or 1
+        ret
+.other: pop hl
+        ld de,SAVE_STEP
+        add hl,de
+        djnz .next
+        ld de,-SAVE_STEP
+        add hl,de
+        xor a
+        ret
+save_hook_end:
+        ASSERT save_hook_end <= 0x053F
+        SAVEBIN "inferno_savehook.bin",save_hook,save_hook_end-save_hook
+
+        ORG 0x0574              ; past 056B, where JNext's tape trap rewrites A; 0562 jumps here
+load_front:
+        push af
+        push hl
+        ld hl,(0x738A)          ; the game's file name pointer: 7001 for LOAD, 732F for levels
+        ld a,h
+        cp high SAVE_NAME
+        jr nz,.tape
+        ld a,l
+        cp low SAVE_NAME
+.tape:  pop hl
+        jr z,.user
+        pop af
+        jp loader
+.user:  pop af
+        push de                 ; 17 for the header request, 49 for the data
+        call save_find
+        pop bc
+        jr nz,.found
+        nextreg 0x51,255
+        jp 0x7227               ; no such pilot: the game's tape error, which resets the stack
+.found: push ix
+        pop de
+        ld a,c
+        cp 17
+        jr nz,.data
+        ld a,3                  ; synthesise the header the game checks (type, name, length)
+        ld (de),a
+        inc de
+        ld bc,8
+        ldir
+        ld a,' '
+        ld (de),a
+        inc de
+        ld (de),a
+        inc de
+        ld a,SAVE_SIZE
+        ld (de),a
+        inc de
+        xor a
+        ld (de),a
+        jr .done
+.data:  ld a,l
+        add a,8
+        ld l,a
+        ld bc,SAVE_SIZE
+        ldir
+.done:  nextreg 0x51,255
+        scf                     ; loaded
+        ret
+load_front_end:
+        ASSERT load_front_end <= 0x05E3
+        SAVEBIN "inferno_loadfront.bin",load_front,load_front_end-load_front

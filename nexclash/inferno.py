@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 
 ROM_ORG, ALT_PAGE, STATE_PAGE = 0x386E, 24, 68
+SAVE_PAGE, LOAD_FRONT = 120, 0x0574
 TAPE_FIRST, TAPE_LAST = 32, 55
 CMP = tuple(i for i in range(30) if i not in (15, 25, 29))
 ROOT = Path(__file__).resolve().parent.parent
@@ -761,7 +762,16 @@ def loader_rom(code=None):
     code = code if code is not None else bytes.fromhex(prof['hooks']['rom'])
     if ROM_ORG + len(code) > 0x3D00 or any(b != 255 for b in rom[ROM_ORG:ROM_ORG + len(code) + 20]):
         raise ValueError('loader does not fit unused ROM')
-    rom[entry:entry + 3] = b'\xC3' + ROM_ORG.to_bytes(2, 'little')
+    hooks = prof['hooks']
+    front = bytes.fromhex(hooks['loadfront'])
+    if LOAD_FRONT + len(front) > 0x05E3:
+        raise ValueError('load front does not fit the old edge loop')
+    rom[entry:entry + 3] = b'\xC3' + LOAD_FRONT.to_bytes(2, 'little')
+    rom[LOAD_FRONT:LOAD_FRONT + len(front)] = front
+    save = bytes.fromhex(hooks['savehook'])
+    if bytes(rom[0x04C6:0x04C9]) != bytes.fromhex('21801F') or 0x04C6 + len(save) > 0x053F:
+        raise ValueError('unexpected ROM SA-BYTES body')
+    rom[0x04C6:0x04C6 + len(save)] = save
     rom[ROM_ORG:ROM_ORG + len(code)] = code
     return rom
 
@@ -4931,6 +4941,7 @@ class BootstrapPatch:
         self.altrom_low = (26, bytes(rom[:8192]))
         self.page = bytes(rom[8192:])
         self.extra_banks = {12: self.page + bytes(8192), 13: self.altrom_low[1] + bytes(8192)}
+        self.extra_banks[SAVE_PAGE // 2] = bytes(16384)      # empty named saves (SAVE/LOAD)
         for p, data in self.pages.items():
             bank = p // 2
             image = bytearray(self.extra_banks.get(bank, bytes(16384)))
