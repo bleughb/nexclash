@@ -5873,8 +5873,16 @@ drv_fill:
 ; only. Pages 85..95: 16x16 patterns, one copy per distinct content (hash chains in page 84: heads 0000, next 0200).
 drv_sel_reset:
         call drv_sel_soft
-        jr drv_index_reset
+        jp drv_index_reset
 drv_sel_soft:
+        ld bc,0x243B            ; joystick port 1 = Kempston 1 (NR 05 bits 7-6 = 01, bit 3 = 0), other bits kept
+        ld a,5
+        out (c),a
+        inc b
+        in a,(c)
+        and 0x37
+        or 0x40
+        nextreg 5,a
         nextreg 0x15,0          ; sprites off until a complete frame is published
         nextreg 0x6B,0x0B       ; scenery layer off
         nextreg 0x62,0

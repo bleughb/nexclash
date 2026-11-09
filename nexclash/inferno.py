@@ -3663,6 +3663,9 @@ DRIVER_WRITE = {
 }
 
 
+NR05_TEST = 0xBD                        # a Sinclair-2 / MD-2 / 60 Hz setting: only joystick 1 may change
+
+
 class DriverMemory:
     """Whole loading driver from the 8EF9 gate: every page and slot, guarded writes and mappings."""
     def __init__(self, ram, rom, pages):
@@ -3705,6 +3708,8 @@ class DriverMemory:
                    0x53: (11, *range(128, 136), *range(136, 216))}
         if reg == 7 and value in range(4):
             self.speed = value
+        elif reg == 5 and value & 0xC8 == 0x40 and value & 0x37 == self.nr.get(5, NR05_TEST) & 0x37:
+            self.nr[5] = value                          # joystick 1 = Kempston 1, the rest kept
         elif reg in (0x62, 0x15, 0x6B, 0x64, 0x68, 0x69, 0x1C, 0x1B, 0x2F, 0x30, 0x31, 0x43, 0x40, 0x44, 0x6E, 0x6F):
             self.nr[reg] = value
         elif reg in allowed and value in allowed[reg]:
@@ -3713,16 +3718,16 @@ class DriverMemory:
             raise AssertionError('driver set NextReg %02X to %d' % (reg, value))
 
     def read_port(self, registers, port):
-        if port != 0x253B or self.selected not in (7, 0x14, 0x15, 0x40, 0x41, 0x43, 0x44, 0x69, 0x6B):
+        if port != 0x253B or self.selected not in (5, 7, 0x14, 0x15, 0x40, 0x41, 0x43, 0x44, 0x69, 0x6B):
             raise AssertionError('driver read unexpected IO')
         if self.selected == 7:
             return self.speed | (self.speed << 4)
-        return {0x14: 0xE3, 0x41: self.nr.get(0x40, 0) & 0x7F}.get(self.selected, 0)
+        return {5: self.nr.get(5, NR05_TEST), 0x14: 0xE3, 0x41: self.nr.get(0x40, 0) & 0x7F}.get(self.selected, 0)
 
     def write_port(self, registers, port, value, *args):
         if port & 0xFF == 0xFE and value < 8:           # the loading bars: border colour only, beeper bit clear
             return
-        if port != 0x243B or value not in (7, 0x14, 0x15, 0x40, 0x41, 0x43, 0x44, 0x69, 0x6B):
+        if port != 0x243B or value not in (5, 7, 0x14, 0x15, 0x40, 0x41, 0x43, 0x44, 0x69, 0x6B):
             raise AssertionError('driver wrote IO')
         self.selected = value
 
