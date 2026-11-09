@@ -31,12 +31,16 @@ IMAGE_BANK = {W1: 4, W2: 6}
 SIGNATURE = {0xA26F: 'CDD4A3', 0x9EC7: 'CD62A4', 0x9EBB: '21F069', 0xBA63: '3A8F5C', 0xBA84: 'E5D113'}
 DECISIONS = {'figures': 'original bitmap on the ULA; figure ink in its own colour on Layer 2, in plot order',
              'scenery': 'keeps its own attributes', 'pace': 'original; hlib_pace K windows', 'outline': 'none',
-             'enhanced': 'waiting for the mock-up'}
+             'enhanced': 'a colour set from the player\'s own Spec256 sets on a full-screen double-buffered Layer 2, backdrop on with it; menu option, off by default'}
 
 
 LOAD_SCREEN = 'army_moves_loading.scr'    # the tape's 6,912-byte screen, beside the snapshot: game data, never in this repo
 LOAD_MD5 = '288afbcde9dafeb403db600468753e1b'
 PUBLISHER = 'Imagine / Dinamic, 1987'
+# Enhanced (rework "enhanced", NEXCLASH_ARMY_MOVES_ENHANCED=1): the player's own Spec256 sets beside the snapshot,
+# under these names; army_moves_art turns them into the colour tables at build time. Game data, never in this repo.
+ENH_ENV = 'NEXCLASH_ARMY_MOVES_ENHANCED'
+SET_MD5 = {1: 'cff317d26df3749cc3916b3fc22ac671', 2: 'b8f4aa91ed6d84333e56dcc94c43a758'}
 NEG_STOP = 900                            # frames of the first recording each deliberately broken build replays
 NEG_CAPTURE_STOP = 5000                    # 'capture not repaired' needs the game's next screen capture
 # Each tested alone in the simulator (games/army_moves.md): part 1's code in bank 2 and its stored copy in bank 4.
@@ -782,15 +786,39 @@ def boot_check(nex, z80, patch):
     return bad
 
 
-def _negative(z80, name, rzx, stop):
+def find_art(z80):
+    """The colour tables from the two Spec256 sets beside the snapshot (army_moves_art), or None without them. A set
+    that is not the expected file is refused."""
+    from . import army_moves_art as A
+    d = Path(z80).resolve().parent
+    paths = {pt: d / A.SETS[pt] for pt in A.SETS}
+    if not all(p.is_file() for p in paths.values()):
+        return None
+    for pt, p in paths.items():
+        if hashlib.md5(p.read_bytes()).hexdigest() != SET_MD5[pt]:
+            raise ValueError('%s is not the expected Spec256 set (MD5 %s)' % (p.name, SET_MD5[pt]))
+    return A.compile_assets(str(z80), str(d), str(ROOT / 'docs/profiles/army_moves_records.json'))
+
+
+def _patch(z80, mode):
+    """mode 'default' (the published default: banks reserved to Enhanced's top), 'enhanced' (with the backdrop) or
+    'enhanced_nobd' (the "Backdrop off" line)."""
+    if mode == 'default':
+        return Patch(z80, reserve=True)
+    return Patch(z80, art=find_art(z80), enhanced=True, backdrop=mode == 'enhanced')
+
+
+def _negative(z80, name, rzx, stop, mode='default'):
     """One deliberately broken build's replay (a process of its own): -> (name, its failure keys)."""
-    return name, sorted(run_negative(negative_patches(Patch(z80))[name], rzx, stop))
+    return name, sorted(run_negative(negative_patches(_patch(z80, mode))[name], rzx, stop))
 
 
 def auto(a, z80, name, out, say):
     """nexclash.py auto: the sprite build (the overlay), with the loading screen when it is beside the snapshot, each
-    boot-checked; with --rzx the replay proof, the ABI cases and the broken builds. The pace, soak, flicker and real
-    loader proofs are the review run's (games/army_moves.md "Evidence")."""
+    boot-checked; with --rzx the replay proof, the ABI cases and the broken builds. With NEXCLASH_ARMY_MOVES_ENHANCED=1
+    and the Spec256 sets beside the snapshot it also writes Enhanced (backdrop on) and Enhanced with "Backdrop off",
+    and the replay, ABI cases and broken builds run on Enhanced. The pace, soak, flicker and real loader proofs are the
+    review run's (games/army_moves.md "Evidence")."""
     import concurrent.futures, os, tempfile
     from skoolkit.rzxplay import parse_rzx
     from skoolkit.snapshot import Snapshot
@@ -806,19 +834,30 @@ def auto(a, z80, name, out, say):
     say('Game      : Army Moves (Imagine / Dinamic, 1987, 128K, both parts)')
     say('Engine    : army_moves; original bitmap and scenery attributes on the ULA, figures\' ink on a double-buffered Layer 2; original pace')
     ok = True
-    patch = Patch(z80)
-    sprites = out / (name + '_sprites.nex')
-    zt.convert(str(z80), str(sprites), patch=patch, quiet=True)
-    nexes = [('Sprites', sprites)]
+    modes = [('default', ('Sprites', 'Loading'), '_sprites')]
+    vmode = 'default'
+    if os.environ.get(ENH_ENV):
+        if find_art(z80) is None:
+            from . import army_moves_art as A
+            say('Enhanced  : %s=1 but the Spec256 sets (%s) are not beside the snapshot' % (ENH_ENV, ', '.join(A.SETS.values())))
+            say('Result    : FAILED')
+            return False
+        modes += [('enhanced', ('Enhanced', 'Enh load'), '_enhanced'), ('enhanced_nobd', ('No bd', 'No bd load'), '_enhanced_nobd')]
+        vmode = 'enhanced'
     screen = find_screen(z80)
     if screen is None:
-        say('Loading   : no %s beside the snapshot: sprite build without the loading screen' % LOAD_SCREEN)
-    else:
-        loading = out / (name + '_sprites_loading.nex')
-        loading.write_bytes(loading_nex(sprites.read_bytes(), screen))
-        nexes.append(('Loading', loading))
-    for label, nex in nexes:
-        bad = boot_check(nex, z80, Patch(z80))
+        say('Loading   : no %s beside the snapshot: builds without the loading screen' % LOAD_SCREEN)
+    nexes = []
+    for mode, (label, llabel), suffix in modes:
+        nex = out / (name + suffix + '.nex')
+        zt.convert(str(z80), str(nex), patch=_patch(z80, mode), quiet=True)
+        nexes.append((label, nex, mode))
+        if screen is not None:
+            loading = out / (name + suffix + '_loading.nex')
+            loading.write_bytes(loading_nex(nex.read_bytes(), screen))
+            nexes.append((llabel, loading, mode))
+    for label, nex, mode in nexes:
+        bad = boot_check(nex, z80, _patch(z80, mode))
         ok = ok and not bad
         say('%-10s: %s  %s' % (label, nex.name, hashlib.md5(nex.read_bytes()).hexdigest()))
         say('Boot      : %s' % ('simulated, OK (registers with R, all 48K RAM; converter loader and NEXLOAD)' if not bad else 'MISMATCH %s' % str(bad[:3])[:300]))
@@ -831,29 +870,30 @@ def auto(a, z80, name, out, say):
                 first = str(Path(temp) / Path(path).name)
                 RZ.strip(path, first)
             replayed.append(first)
-            c, ex, got = verify(Patch(z80), first, stop=getattr(a, 'quick', None), collect=1)
+            c, ex, got = verify(_patch(z80, vmode), first, stop=getattr(a, 'quick', None), collect=1)
             if many and [k for k in c if k.endswith('!')] == ['recording desynced!']:
                 # Not autosaves but separate starts (p1cheat: test pokes between them): each segment from its own
                 # snapshot, as the ROM path check replays it. A desync there still fails.
                 say('Verify    : %s has separate starts: replaying each from its own snapshot' % Path(path).name)
-                c, ex, got = verify(Patch(z80), path, stop=getattr(a, 'quick', None), collect=1)
+                c, ex, got = verify(_patch(z80, vmode), path, stop=getattr(a, 'quick', None), collect=1)
             states += got
             fail = {k: v for k, v in c.items() if k.endswith('!')}
             ok = ok and not fail
-            say('Verify    : %s %d frames, %d hooks, %d R comparisons, %d Layer 2 pictures, %d pixels: %s' % (
-                Path(path).name, c['frames'], c['hooks'], c['R comparisons'], c['publications'], c['overlay pixels compared'],
+            say('Verify    : %s%s %d frames, %d hooks, %d R comparisons, %d Layer 2 pictures, %d pixels: %s' % (
+                Path(path).name, ' (Enhanced)' if vmode != 'default' else '', c['frames'], c['hooks'], c['R comparisons'],
+                c['publications'], c.get('overlay pixels compared', 0) + c.get('Enhanced pixels compared', 0),
                 'IDENTICAL' if not fail else str(fail)))
             for k, v in ex.items():
                 say('            %s: %s' % (k, v))
         if states:
-            counts = unit_tests(Patch(z80), states)
+            counts = unit_tests(_patch(z80, vmode), states)
             fail = {k: v for k, v in counts.items() if k.endswith('!')}
             ok = ok and not fail
             say('Unit      : %s' % dict(counts))
-            names = list(negative_patches(Patch(z80)))
+            names = list(negative_patches(_patch(z80, vmode)))
             stops = [NEG_CAPTURE_STOP if n == 'capture not repaired' else NEG_STOP for n in names]
             with concurrent.futures.ProcessPoolExecutor(min(len(names), os.cpu_count() or 1)) as pool:
-                done = list(pool.map(_negative, [z80] * len(names), names, [replayed[0]] * len(names), stops))
+                done = list(pool.map(_negative, [z80] * len(names), names, [replayed[0]] * len(names), stops, [vmode] * len(names)))
             missed = [n for n, keys in done if not keys]
             ok = ok and not missed
             say('Negatives : %d of %d broken builds caught%s' % (len(done) - len(missed), len(done), '; MISSED %s' % missed if missed else ''))
