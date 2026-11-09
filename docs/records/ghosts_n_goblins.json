@@ -52,6 +52,12 @@
     "name": "n2.rzx",
     "md5": "37fa00cab6a4c003b0ae65f1794e0d91",
     "path": "ghosts_n_goblins/n2.rzx"
+   },
+   {
+    "name": "ghosts_n_goblins_loading.scr",
+    "md5": "1877b4a11a3d964fc2df2e76bebf8c42",
+    "path": "ghosts_n_goblins/ghosts_n_goblins_loading.scr",
+    "role": "The 6,912-byte loading screen: Ghosts 'n Goblins (1986)(Elite Systems)[m tzxtools][aka Ghost 'n Goblins].tap (MD5 c8336fb2) run through its own encrypted loader to the end of the tape, bank 5's first 6,912 bytes; staged beside the snapshot; not a recording."
    }
   ]
  },
@@ -105,18 +111,26 @@
   },
   "sprites": {
    "file": "ghosts_n_goblins_sprites.nex",
-   "md5": "26742ac4bb3f55b52de0fb4997199447"
+   "md5": "9dc84645e18a79f7d70444c6b5b2a478"
   },
   "enhanced": {
    "file": "ghosts_n_goblins_enhanced.nex",
-   "md5": "c2e6e56f2411a18b287b8e4694e1198a"
+   "md5": "6f9e19063f8585e6acf8f841c8e19c2a"
+  },
+  "loading": {
+   "file": "ghosts_n_goblins_sprites_loading.nex",
+   "md5": "58da1df5b30abc37a90f94984bd7619a"
+  },
+  "enhanced_loading": {
+   "file": "ghosts_n_goblins_enhanced_loading.nex",
+   "md5": "d203e42526ea6f0b03ba32591e3e9a8a"
   }
  },
  "repro": [],
  "status": {
   "title": "Ghosts 'n Goblins",
   "engine_col": "gng (ghosts_n_goblins.md)",
-  "build": "ghosts_n_goblins_sprites.nex 26742ac4 + enhanced c2e6e56f (2026-11-07: image cache keyed by address + shape with the checksum only on a miss, bucketed atlas index, plot hooks wholly at 28 MHz); cf933c18 + 34e5d058 before it (the IFF read in e_cls / e_cls2 / e_init made safe, R kept); 34c14267 + 4a76d9bf before it = the published .nxc 1.6 --bare apart from the NEX loading-screen block (cheats live in the .nxc); graphics read from the player's snapshot and recordings",
+  "build": "ghosts_n_goblins_sprites.nex 9dc84645 + enhanced 6f9e1906 (2026-11-08: uploads send only the patterns a shape shows, the group unused longest is replaced, the byte check runs four bytes a step); with the tape's loading screen beside the snapshot _sprites_loading 58da1df5 + _enhanced_loading d203e425 = the published .nxc 1.7 --bare; 26742ac4 + c2e6e56f before it (2026-11-07: image cache keyed by address + shape with the checksum only on a miss, bucketed atlas index, plot hooks wholly at 28 MHz); cf933c18 + 34e5d058 before it (the IFF read in e_cls / e_cls2 / e_init made safe, R kept); 34c14267 + 4a76d9bf before it = the published .nxc 1.6 --bare apart from the NEX loading-screen block (cheats live in the .nxc); graphics read from the player's snapshot and recordings",
   "software": "Both sets: 53063 replay frames; intermediate positions, carried-pot ground clipping, owner art; 648 clipping cases, 40 negative controls, 3120 clock/R/IFF cases and 15 pace trials per set; actual-loader targets exact.",
   "hardware": "untested",
   "next": "hardware test; late-game coverage"
@@ -143,26 +157,26 @@
    "evidence": "games/ghosts_n_goblins.md \"Proof\""
   }
  ],
- "version": "1.6",
+ "version": "1.7",
  "checked": {
   "deps": {
-   "asm/gng_hooks.asm": "1349ed52e78daca0",
+   "asm/gng_hooks.asm": "735add80ccb8e13f",
    "asm/gng_r_table.inc": "e12d62110a2ca664",
-   "docs/profiles/ghosts_n_goblins.json": "c4c428309d8b98e6",
+   "docs/profiles/ghosts_n_goblins.json": "8b4a4ed92ea38eb2",
    "docs/profiles/ghosts_n_goblins_colours.json": "7f306b99f30da2ab",
    "docs/profiles/ghosts_n_goblins_graphics.json": "694d7dac076560a5",
    "docs/profiles/ghosts_n_goblins_palette.json": "ed2afefbd2346f9b",
    "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "00d01102bda98ad5",
-   "nexclash/gng.py": "40cdef673aa8a232",
+   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/gng.py": "4a915eb22b2f0a4c",
    "nexclash/gng_art.py": "f8aad114c10ac6ac",
    "nexclash/gng_verify.py": "4f02b14cc81ca479",
-   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/records.py": "29985826115eb292",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
@@ -170,30 +184,30 @@
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "12a4d844b0b74e51",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "5ad86145e150036a",
+   "rom": "e50ee485fb4a21d2"
   },
-  "date": "2026-11-07"
+  "date": "2026-11-08"
  },
  "verified": {
   "deps": {
-   "asm/gng_hooks.asm": "1349ed52e78daca0",
+   "asm/gng_hooks.asm": "735add80ccb8e13f",
    "asm/gng_r_table.inc": "e12d62110a2ca664",
-   "docs/profiles/ghosts_n_goblins.json": "c4c428309d8b98e6",
+   "docs/profiles/ghosts_n_goblins.json": "8b4a4ed92ea38eb2",
    "docs/profiles/ghosts_n_goblins_colours.json": "7f306b99f30da2ab",
    "docs/profiles/ghosts_n_goblins_graphics.json": "694d7dac076560a5",
    "docs/profiles/ghosts_n_goblins_palette.json": "ed2afefbd2346f9b",
    "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "00d01102bda98ad5",
-   "nexclash/gng.py": "40cdef673aa8a232",
+   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/gng.py": "4a915eb22b2f0a4c",
    "nexclash/gng_art.py": "f8aad114c10ac6ac",
    "nexclash/gng_verify.py": "4f02b14cc81ca479",
-   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/records.py": "29985826115eb292",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
@@ -201,9 +215,9 @@
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "12a4d844b0b74e51",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "5ad86145e150036a",
+   "rom": "e50ee485fb4a21d2"
   },
-  "date": "2026-11-07"
+  "date": "2026-11-08"
  }
 }

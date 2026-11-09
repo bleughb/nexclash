@@ -525,8 +525,8 @@ plot:   ld a,b
         ld a,(kxv)
         jr nz,.s
 .miss:
-; miss: the next group in rotation not on show: not used this tick or the last, whose sprites stay up until this
-; tick replaces them. After NC tries the group is taken anyway.
+; miss: the group unused for longest, so one on show (used this tick or the last, whose sprites stay up until this
+; tick replaces them) goes only when every group is on show.
         ld hl,(gfx)
         ld a,(rawlen)
         ld b,a                  ; all bytes, including masks and even graphics bytes
@@ -539,28 +539,24 @@ plot:   ld a,b
         ld d,a
         djnz .ck
         ld (sum),de
-        ld a,(rr)
-        ld e,a
-        ld d,0
-        ld b,NC
-.try:   ld hl,used
-        add hl,de
         ld a,(tick)
+        ld d,a
+        ld hl,used
+        ld b,NC
+        ld c,0                  ; the longest since its last use so far
+        ld e,c
+.try:   ld a,d
         sub (hl)
-        cp 2
-        jr nc,.free
-        ld a,e
-        inc a
-        and NC-1
+        cp c
+        jr c,.older
+        ld c,a
+        ld a,NC
+        sub b
         ld e,a
+.older: inc hl
         djnz .try
-.free:  ld a,e
+        ld a,e
         ld (grp),a
-        inc a
-        and NC-1
-        ld (rr),a
-        ld a,(grp)
-        ld e,a
         ld d,0
         ld hl,kx
         add hl,de
@@ -1053,25 +1049,51 @@ atlas_compare:
         or 0x40
         ld h,a
         ld l,0
-        ld de,(gfx)
+        ld (acsp),sp            ; interrupts are off at all three plot sites: SP walks the image, as the game's plot does
+        ld sp,(gfx)
         ld a,(rawlen)
         rrca
+        rrca                    ; four bytes a step; carry: two more first
         ld b,a
-.c:     ld a,(de)
+        res 7,b                 ; rrca's copy of the carry
+        jr nc,.w
+        pop de
+        ld a,e
         cp (hl)
         jr nz,.no
-        inc de
         inc l
-        ld a,(de)
+        ld a,d
         cp (hl)
         jr nz,.no
-        inc de
         inc l
-        djnz .c
+        inc b
+        dec b
+        jr z,.yes
+.w:     pop de
+        ld a,e
+        cp (hl)
+        jr nz,.no
+        inc l
+        ld a,d
+        cp (hl)
+        jr nz,.no
+        inc l
+        pop de
+        ld a,e
+        cp (hl)
+        jr nz,.no
+        inc l
+        ld a,d
+        cp (hl)
+        jr nz,.no
+        inc l
+        djnz .w
+.yes:   ld sp,(acsp)
         nextreg 0x52,SLOT2
         scf
         ret
-.no:    nextreg 0x52,SLOT2
+.no:    ld sp,(acsp)
+        nextreg 0x52,SLOT2
         or a
         ret
 
@@ -1157,10 +1179,13 @@ atlas_upload:
         ld h,a
         ld l,0
         ld bc,0x005B
-        otir
+        otir                    ; the group's top two patterns
+        ld a,(rows)
+        cp 9
+        jr c,.top               ; up to 8 line pairs show only those (attrs: nrows 1); the key holds rows
         ld bc,0x005B
         otir
-        nextreg 0x52,SLOT2
+.top:   nextreg 0x52,SLOT2
         scf
         ret
 ; Parent fallback: full original bytes identify artwork even for a clipped height
@@ -1352,13 +1377,13 @@ cur:    dw 0
 dest:   dw 0
 tp:     dw 0
 ga:     dw 0
+acsp:   dw 0
 hsp:    dw 0
 xbase:  dw 0
 rows:   db 0
 kind:   db 0
 shape:  db 0
 grp:    db 0
-rr:     db 0
 tick:   db 2
 nsp:    db 0
 shown:  db 0

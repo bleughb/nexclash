@@ -38,6 +38,10 @@ _R_SP, _R_PC, _R_T, _R_IFF = 12, 24, 25, 26
 CMP = list(range(0, 13)) + [14, 15] + list(range(16, 25)) + [26, 27]   # all but T, MEMPTR
 _HERE = os.path.dirname(os.path.abspath(__file__))
 COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', 'ghosts_n_goblins_colours.json')
+# the tape's loading screen (bank 5's first 6,912 bytes after its own encrypted loader), beside the snapshot: game data,
+# never in this repo. With it auto also writes the published .nxc's bare builds (1.7: default 58da1df5, Enhanced d203e425).
+LOAD_SCREEN = 'ghosts_n_goblins_loading.scr'
+LOAD_MD5 = '1877b4a11a3d964fc2df2e76bebf8c42'
 KIND_ROW = {'m3': 10, 'o3': 6, 'x2': 4}
 # per kind, line 0 columns 0-2, line 1 columns 0-2: (graphics offset, mask offset or None); as the three loops read them
 LAYOUT = {'m3': [[(5, 4), (3, 2), (1, 0)], [(6, 4), (7, 2), (9, 8)]],
@@ -1125,6 +1129,9 @@ def negative_patches(patch):
         'hook writes game memory': P(page_code=_code_patch(s, 'plot', bytes.fromhex('ED53') + s.syms.get('sum', 0).to_bytes(2, 'little'), bytes.fromhex('ED530060'))),
         'stale cache: a hit skips the byte check': P(page_code=_code_patch(s, 'cached_match', b'\xC3' + s.syms['atlas_compare'].to_bytes(2, 'little'), b'\x37\xC9\x00')),
         'stale cache: a parent hit skips the byte check': P(page_code=_code_patch(s, 'parent_cached_match', b'\xC3' + s.syms['parent_compare'].to_bytes(2, 'little'), b'\x37\xC9\x00')),
+        'upload stops at the top two patterns': P(page_code=_code_patch(s, 'atlas_upload', b'\xFE\x09\x38', b'\xFE\x09\x18')),
+        'byte check stops after one step': P(page_code=_code_patch(s, 'atlas_compare', b'\x10\xE8\xED\x7B' + s.syms['acsp'].to_bytes(2, 'little'), b'\x00\x00\xED\x7B' + s.syms['acsp'].to_bytes(2, 'little'))),
+        'a new image takes the group used last': P(page_code=_code_patch(s, 'plot', b'\xB9\x38', b'\xB9\x30')),
         'plane left mapped': P(page_code=_code_patch(s, 'atlas_compare', bytes.fromhex('ED91520A'), bytes.fromhex('ED91521A'))),
         'speed left high': P(page_code=_code_patch(s, 'e_m3', b'\x3A' + s.syms['speed'].to_bytes(2,'little') + bytes.fromhex('ED9207'), bytes.fromhex('3E0100ED9207'))),
         'R advanced by one less': P(page_code=_code_patch(s, 'm3_r_target', bytes.fromhex('D60C'), bytes.fromhex('D60D'))),
@@ -1302,6 +1309,26 @@ def sheets(z80, rzx_paths, out_dir, prefix='GHOSTS_N_GOBLINS', colours=None, say
 # The whole run
 # ---------------------------------------------------------------------------------------------
 
+def loading_nex(nex, screen):
+    """A built .nex -> the same with the loading screen in the NEX file (header byte 10 = 2), as the published .nxc."""
+    if len(screen) != 6912 or nex[10] != 0:
+        raise ValueError('Expected a .nex without a screen and a 6,912-byte loading screen')
+    head = bytearray(nex[:512])
+    head[10] = 2
+    return bytes(head) + screen + nex[512:]
+
+
+def find_screen(z80):
+    """The tape's loading screen beside the snapshot, or None. A different file there is refused."""
+    path = os.path.join(os.path.dirname(os.path.abspath(z80)), LOAD_SCREEN)
+    if not os.path.isfile(path):
+        return None
+    data = open(path, 'rb').read()
+    if hashlib.md5(data).hexdigest() != LOAD_MD5:
+        raise ValueError('%s is not the original loading screen (MD5 %s)' % (LOAD_SCREEN, LOAD_MD5))
+    return data
+
+
 def auto(a, z80, name, out, say):
     from . import z80tonex as zt
     from .nextboot import check
@@ -1329,6 +1356,17 @@ def auto(a, z80, name, out, say):
     say('Enhanced  : %s  %s  boot %s (optional menu set, off by default)' % (
         os.path.basename(enh), md5(enh), 'OK' if not bade else 'MISMATCH %s' % str(bade[:3])))
     ok = not bad and not bad2 and not bade
+    screen = find_screen(z80)
+    if screen is None:
+        say('Loading   : no %s beside the snapshot: no builds with the loading screen' % LOAD_SCREEN)
+    else:
+        for label, src, pt in (('Loading', spr, patch), ('Enh load', enh, enhanced)):
+            dst = src[:-4] + '_loading.nex'
+            open(dst, 'wb').write(loading_nex(open(src, 'rb').read(), screen))
+            badl = check(dst, z80, pt, (conv[1], conv[1] + len(conv[2])) if pt is patch else (ce[1], ce[1] + len(ce[2])))
+            ok = ok and not badl
+            say('%-10s: %s  %s  boot %s (the published .nxc --bare)' % (label, os.path.basename(dst), md5(dst),
+                                                                        'OK' if not badl else 'MISMATCH %s' % str(badl[:3])[:200]))
     states = []
     for r in list(a.rzx or []):
         c, ex, st = verify(patch, r, stop=getattr(a, 'quick', None), collect=40)

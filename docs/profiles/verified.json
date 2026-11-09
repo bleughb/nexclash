@@ -146,8 +146,10 @@
    "doc": "ghosts_n_goblins.md",
    "nex": {
     "plain": "3d71dd0e63371c4cf06f919d46bc2315",
-    "sprites": "26742ac4bb3f55b52de0fb4997199447",
-    "enhanced": "c2e6e56f2411a18b287b8e4694e1198a"
+    "sprites": "9dc84645e18a79f7d70444c6b5b2a478",
+    "enhanced": "6f9e19063f8585e6acf8f841c8e19c2a",
+    "loading": "58da1df5b30abc37a90f94984bd7619a",
+    "enhanced_loading": "d203e42526ea6f0b03ba32591e3e9a8a"
    }
   },
   "c1a76349d08289810323bae0e62a9102": {
