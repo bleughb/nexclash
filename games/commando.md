@@ -250,10 +250,13 @@ negative controls. Report: auto's commando_report.txt.
   original is not measurable here; against main's build (probe 39120, keys S to start, QAOP M): +0.00% (quiet -0.28%,
   busy +0.12%), interrupts 50.00 a second both.
 
-## Pace (2026-11-08, review 1.2)
+## Pace (2026-11-08, 1.2, published .nxc)
 The logic at 28 MHz down to the frame sync; R kept at every hook; see games/commando_pace.md (split: size budget).
 
-## Published .nxc build from main (2026-11-07)
+## Published .nxc build from main (2026-11-07; 1.2 on 2026-11-08)
+- 1.2 (published .nxc, nxc ff2d30f): main's build of the same target gives sprites
+  cded9ba37cf58bfa3704a2486c3810fe = the published bare .nex (nxc.py --bare), byte for byte; without the screen
+  ee042188, plain c51d7288. Dean's snapshot builds ff488056 (the record's output).
 - The published Commando .nxc v1.1 (github.com/jattree/nxc) is main's build of its target, the clean release
   (48K .z80, MD5 ddd8f28c, saved at the IM 2 handler 0xFCFC): `python nexclash.py auto CLEAN.z80 --no-record
   --altrom-fill rom3`, with the tape's loading screen as commando_loading.scr (6,912 bytes, MD5 65e617ac) beside it.
