@@ -6585,7 +6585,7 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
         snap.banks[5], snap.banks[2], snap.banks[0] = bytes(ram[:16384]), bytes(ram[16384:32768]), bytes(ram[32768:])
 
 
-def copier_window_build(reference, folder, hooks=False, work=False, driver=False):
+def copier_window_build(reference, folder, hooks=False, work=False, driver=False, level=None):
     """Inferno_copier_window_diagnostic.nex (window only), with hooks Inferno_copier_window_m3_
     diagnostic.nex (capture hooks + window), with work Inferno_copier_window_m3b_diagnostic.nex (+ the
     8F95 work in the window's waits) + boot checks (NEXLOAD and foreign ROM3) + page-80/69 bytes."""
@@ -6594,11 +6594,11 @@ def copier_window_build(reference, folder, hooks=False, work=False, driver=False
     from hashlib import md5
     reference, folder = Path(reference), Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
-    snapshot = reference / 'Inferno.z80'
+    snapshot = reference / ('Inferno%d.z80' % level if level else 'Inferno.z80')
     work = work or driver
     hooks = hooks or work
     patch = CopierWindowSnapshotPatch(tape_blocks(reference / 'Inferno.tzx'), window_only=not hooks, work=work, driver=driver)
-    nex = folder / ('Inferno_driver_diagnostic.nex' if driver else 'Inferno_copier_window_m3b_diagnostic.nex' if work else
+    nex = folder / ('Inferno_level%d.nex' % level if level else 'Inferno_driver_diagnostic.nex' if driver else 'Inferno_copier_window_m3b_diagnostic.nex' if work else
                     'Inferno_copier_window_m3_diagnostic.nex' if hooks else 'Inferno_copier_window_diagnostic.nex')
     _, tail, data, _ = z80tonex.convert(str(snapshot), str(nex), quiet=True, patch=patch)
     if driver:                                  # tables sit in banks 48+: the loader must refuse a 1 MB machine
@@ -6660,6 +6660,7 @@ def main():
     ap.add_argument('--jobs', type=int, default=1, help='copier-window checks: one process per level, this many at once')
     ap.add_argument('--cw-hooks', action='store_true', help='--copier-window-build with the capture hooks (milestone 3)')
     ap.add_argument('--cw-work', action='store_true', help='--copier-window-build with hooks + the 8F95 work in the window (3b)')
+    ap.add_argument('--cw-level', type=int, help='--copier-window-build: start from level N (its recording snapshot, for hardware tests)')
     ap.add_argument('--cw-driver', action='store_true', help='--copier-window-build with the 8EF9 driver and its pages too (no display)')
     action.add_argument('--actor-job-checks', action='store_true')
     action.add_argument('--actor-pack-checks', action='store_true')
@@ -6890,7 +6891,7 @@ def main():
         print(json.dumps(result))
         return int(any(v for k, v in result['counts'].items() if k.endswith('!')))
     if a.copier_window_build:
-        result = copier_window_build(a.copier_window_build, a.out, hooks=a.cw_hooks, work=a.cw_work, driver=a.cw_driver)
+        result = copier_window_build(a.copier_window_build, a.out, hooks=a.cw_hooks, work=a.cw_work, driver=a.cw_driver, level=a.cw_level)
         if a.json:
             a.json.write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps(result))
