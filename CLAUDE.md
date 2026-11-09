@@ -1,8 +1,8 @@
 # Agent instructions - nexclash (Spectrum Next colour-clash remover, GPL-3.0-or-later)
 
-`.z80` -> `.nex` with game figures as Next hardware sprites; game logic proven identical by
-differential tests against real recordings. Sessions: **add a game** (a contributor's SESSION.md, or
-a maintainer's prompt) and **maintain** (toolkit, releases, contributions: docs/MAINTAIN.md).
+`.z80` -> `.nex` with game figures as Next hardware sprites; gameplay proven extremely close (not 1:1;
+owner 2026-11-10) by differential tests against real recordings (PLAYBOOK 6 "Equivalence").
+Sessions: **add a game** (a contributor's SESSION.md, or a maintainer's prompt) and **maintain** (toolkit, releases, contributions: docs/MAINTAIN.md).
 Never put game data (.z80/.rzx/.nex/.tap/...) in this repo or a contribution: the user's files stay
 on their machine; the maintainers' reference files live in bleughb/specnext (currently public).
 
@@ -22,9 +22,8 @@ changes, merge). The game may already have notes and files (games/<game>.md, STA
 first. Names: folder and games/<game>.md after the game, lower case, underscores.
 
 ## Setup
-`pip install -r requirements.txt --break-system-packages` (SkoolKit + Pillow; a fresh cloud
-container has neither). sjasmplus (only for .asm edits) is bundled and pinned: `python
-tools/asm2profile.py <engine>` assembles and updates the profile (never build or download another
+`pip install -r requirements.txt --break-system-packages` (SkoolKit + Pillow). sjasmplus (only for .asm
+edits) is bundled and pinned: `python tools/asm2profile.py <engine>` assembles and updates the profile (never build or download another
 version; tools/sjasmplus/README.md). Maintainers: repos and reference files in docs/MAINTAIN.md.
 
 ## Tokens: read, write and print as little as the task needs
@@ -73,7 +72,7 @@ version; tools/sjasmplus/README.md). Maintainers: repos and reference files in d
   report shared changes and missing references, without running other games beyond the canary.
 - Never `pkill -f` / kill by `pgrep -f` pattern (it matches your own shell): `pgrep -fa`, read, kill
   the PID in the next command. No `pgrep -f` anywhere in a loop (`! pgrep -f X`, `kill -0 $(pgrep -f
-  X)`: it matches the loop itself, never ends; stages 1, 3): `kill -0 PID` read first or the log.
+  X)`: it matches the loop itself, never ends): `kill -0 PID` read first or the log.
 - The start-up tail must end below 0xC000, 48K too (the stub's bank 10 sits at 0xC000-0xFFFF;
   Trueno never booted). z80tonex.choose_tail_addr refuses such a tail; nextboot.check catches it.
 - Shell heredocs that write docs: quote the delimiter (`<<'EOF'`), or the shell runs every

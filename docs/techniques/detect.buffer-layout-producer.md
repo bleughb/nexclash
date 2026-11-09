@@ -4,7 +4,7 @@
 {
   "schema": 4,
   "id": "detect.buffer-layout-producer",
-  "revision": 2,
+  "revision": 3,
   "kind": "detect",
   "title": "Trace a screen copy back to its graphics producer",
   "question": "Which buffer and producer create the figure before the final screen copy?",
@@ -34,7 +34,8 @@
 ## Use / do not use
 **Assumptions.** Producer and consumer share the observed mapped memory view.
 
-**Validation gap.** No full-recording patch verification; Inferno covers 25 ticks, six levels.
+**Validation gap.** No full-recording patch verification; Inferno: 25-tick model, then a 1,855-state
+hook gate.
 
 Follow a copier or tile renderer upstream to the figure composer. A decoded buffer remains
 a candidate until its relationship to the screen writes is demonstrated.
