@@ -424,6 +424,16 @@
     "sprites": "332c9526cf6ab6b4adb5c1dc2d170969"
    }
   },
+  "8a82e06f6829a2a1c30781491cfbc42e": {
+   "game": "Scooby Doo in the Castle Mystery",
+   "doc": "scooby_doo.md",
+   "nex": {
+    "plain": "994ad69a87d395fadd862205e4d75d52",
+    "loading": "6c52221ef73d17ebd46d31e35f5da963",
+    "enhanced": "37d3a6c44423317fd434e969c7d35c4b",
+    "enhanced_loading": "a81865abef2f1022ea448b5a022c56c6"
+   }
+  },
   "8fad50cd8c218ade32bf3c2332c8ee03": {
    "game": "Silkworm",
    "doc": "silkworm.md",
