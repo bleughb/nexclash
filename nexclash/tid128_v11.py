@@ -310,6 +310,24 @@ def loading_nex(nex, screen):
     return bytes(header) + b''.join(banks[b] for b in nxc.ORDER if b in banks)
 
 
+ENHANCED_ONLY_BANKS = (14, 16, 17, 18) + tuple(range(20, 44))  # tid128_colour: code, Layer 2, colour source
+
+
+def published_default(nex):
+    """The default build as the single .nxc 1.1 carries it: Enhanced's banks reserved, zero filled, so both colour
+    sets share one header. Default's code does not use them; every other byte stays the loading build's."""
+    from . import nxc
+    banks = nxc.nex_banks(nex)
+    if any(b in banks for b in ENHANCED_ONLY_BANKS):
+        raise ValueError('published default expects the default build, without Enhanced banks')
+    header = bytearray(nex[:512])
+    for b in ENHANCED_ONLY_BANKS:
+        banks[b] = bytes(16384)
+        header[18+b] = 1
+    header[9] = len(banks)
+    return bytes(header) + b''.join(banks[b] for b in nxc.ORDER if b in banks)
+
+
 def auto(a,z80,name,out,say):
     from . import z80tonex as zt
     for key in ('NEXCLASH_TID128_ENHANCED','NEXCLASH_TID128_PALETTE'):
@@ -326,6 +344,10 @@ def auto(a,z80,name,out,say):
             loaded=Path(target).with_name(Path(target).stem+'_loading.nex')
             loaded.write_bytes(loading_nex(Path(target).read_bytes(),screen.read_bytes()))
             say('Loading   : %s  %s (original screen, bank 44)'%(loaded.name,hashlib.md5(loaded.read_bytes()).hexdigest()))
+            if not patch.enhanced:
+                published=Path(target).with_name(Path(target).stem+'_published.nex')
+                published.write_bytes(loading_nex(published_default(Path(target).read_bytes()),screen.read_bytes()))
+                say('Published : %s  %s (.nxc 1.1 default: the loading build with Enhanced\'s banks reserved)'%(published.name,hashlib.md5(published.read_bytes()).hexdigest()))
             break
     if getattr(a,'decisions',None):return not bad
     ok=not bad

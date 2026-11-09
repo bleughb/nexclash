@@ -115,30 +115,30 @@
    "nexclash/dizzy_patch.py": "27472fb03d88fcfb",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "6ea07a419cfb79bc",
+   "nexclash/engines.py": "f744adab50edebd8",
    "nexclash/evidence.json": "a6c823114223e2c3",
    "nexclash/hooklib.py": "ba4611f453c48aee",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "121a5912efae9b2a",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/nxc.py": "f286b3f16e76fbda",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/recorder.py": "8b959db3b8dc838b",
-   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/records.py": "29985826115eb292",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/templates.json": "e93f585833e72628",
    "nexclash/tid128.py": "79aec5d9a4ae36d5",
    "nexclash/tid128_colour.py": "d3a60ad773c7754c",
-   "nexclash/tid128_v11.py": "329b4b3d40ba0eed",
+   "nexclash/tid128_v11.py": "e2f7d4eb73dd2fe7",
    "nexclash/verify.py": "3dcc48bdab8bd67b",
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "00933cce5f4736b6",
+   "recipe": "af5e2dd3fac5e54f",
    "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-08"
@@ -164,30 +164,30 @@
    "nexclash/dizzy_patch.py": "27472fb03d88fcfb",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "6ea07a419cfb79bc",
+   "nexclash/engines.py": "f744adab50edebd8",
    "nexclash/evidence.json": "a6c823114223e2c3",
    "nexclash/hooklib.py": "ba4611f453c48aee",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "121a5912efae9b2a",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/nxc.py": "f286b3f16e76fbda",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/recorder.py": "8b959db3b8dc838b",
-   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/records.py": "29985826115eb292",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/templates.json": "e93f585833e72628",
    "nexclash/tid128.py": "79aec5d9a4ae36d5",
    "nexclash/tid128_colour.py": "d3a60ad773c7754c",
-   "nexclash/tid128_v11.py": "329b4b3d40ba0eed",
+   "nexclash/tid128_v11.py": "e2f7d4eb73dd2fe7",
    "nexclash/verify.py": "3dcc48bdab8bd67b",
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "00933cce5f4736b6",
+   "recipe": "af5e2dd3fac5e54f",
    "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-08"
@@ -336,10 +336,14 @@
     "loading": {
      "file": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K)_sprites_loading.nex",
      "md5": "aa2789e788099e31f9f3c802b6a356cb"
+    },
+    "published": {
+     "file": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K)_sprites_published.nex",
+     "md5": "277cfbff92efd4bf79a97778de4319ee"
     }
    },
    "proof": "Five declared original-game recordings compare registers including R, game memory and absolute player pixels. Routine matrices cover clocks, interrupt states and positions; deliberate faults must be detected. Enhanced additionally compares an independent colour canvas and injected interrupts. Completion is recorded by the verified stamp; measured native pace and coverage limits are in the game document.",
-   "note": "Default modernization with full hidden ROM, shared hlib IFF/R/speed and original-pace plot limiter. Published legacy outputs remain unchanged."
+   "note": "Default modernization with full hidden ROM, shared hlib IFF/R/speed and original-pace plot limiter. Published legacy outputs remain unchanged. The published output is the .nxc 1.1 default (nxc.py PATCH GAME --bare): the loading build with Enhanced's banks reserved, zero filled, so both colour sets share one header. DIZZY2.scr is a local input, never in this repository."
   },
   {
    "name": "v11_enhanced",
@@ -432,7 +436,7 @@
     }
    },
    "proof": "Five declared original-game recordings compare registers including R, game memory and absolute player pixels. Routine matrices cover clocks, interrupt states and positions; deliberate faults must be detected. Enhanced additionally compares an independent colour canvas and injected interrupts. Completion is recorded by the verified stamp; measured native pace and coverage limits are in the game document.",
-   "note": "Approved Enhanced colours: Jao Paulo (Spec256). Exact original 128K executable, AY music and loading screen retained; no hardware claim."
+   "note": "Approved Enhanced colours: Jao Paulo (Spec256). Exact original 128K executable, AY music and loading screen retained; no hardware claim. The loading output is the .nxc 1.1 Enhanced (nxc.py PATCH GAME --bare --colours Enhanced). colour-source.256, source-palette.pal and DIZZY2.scr are local inputs, never in this repository: Enhanced rebuilds only with them, and the rework is skipped without them."
   }
  ],
  "checks": [

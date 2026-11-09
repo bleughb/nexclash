@@ -1,17 +1,13 @@
 # Treasure Island Dizzy (Dizzy 2, Codemasters) - TID engine, dedicated builder
 
 ## Next session
-Stage 3 complete: v1.1 default and approved Enhanced are packaged and fully verified.
-Frozen runtime source 26a291b passed the complete treasure_island_dizzy gate, including
-legacy and both v1.1 reworks, on 2026-11-08. The final local commit adds documentation
-and the verified stamp only. Branch game/treasure-island-dizzy-enhanced, base 364cb7f.
-The private pilot run treasure_island_dizzy_enhanced contains the release package,
-report, source contribution and packaging handoff. Native pace, sound, independent
-trainers, display, soak and disposable-card real-loader checks are complete.
-Next: downstream packaging review. Do not rerun or change the approved artwork without
-new evidence or requested edits. Do not include private game data in a contribution.
-No pushes, shared-card writes or hardware claims. Earlier failed/cancelled gates are
-retained as evidence; only the completed frozen gate is the release verification.
+v1.1 is on main and published (nxc 440fe60, played by Jon in JNext 2026-11-08). Main's
+own recipe rebuilds the published bytes: rework v11_default writes `_sprites_published.nex`
+(277cfbff, Enhanced's banks reserved so one .nxc header serves both) and v11_enhanced
+`_sprites_loading.nex` (31d8c232). Inputs stay local and out of this repository: the 128K
+snapshot, DIZZY2.scr, the five recordings; Enhanced also colour-source.256 and
+source-palette.pal, and rebuilds only with them. Do not repaint the approved set without
+requested edits. Open: hardware test, natural completion.
 
 Historical 48K base below; the v1.1 release targets the exact 128K archive.
 Engine facts shared with Fantasy World / Magicland: games/tid_engine.md.
@@ -324,6 +320,12 @@ wording and still rejects real failures. The complete gate then passed; no share
 
 - [local: reporting] Keep DETECTED and counts in negative-control reports; diagnostic keys
   must not collide with the parser's failure tokens. Real build differences must still fail.
+
+### Into main, 2026-11-08
+The .nxc needs one bank layout for both colour sets, so the published default is the
+loading build plus Enhanced's banks (14, 16-18, 20-43), zero filled: published_default.
+Hooks, game and engine bytes are unchanged: raw fef27384, loading aa2789e7 as before,
+published 277cfbff, the bytes the real loader rebuilt. Stamped again on current main.
 
 ### Release closure, 2026-11-08
 The frozen gate passed in 2,939 seconds: all recorded rebuild hashes, legacy checks,
