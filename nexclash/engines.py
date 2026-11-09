@@ -87,6 +87,7 @@ ENGINES = [
     ('into_the_eagles_nest', 'is_into_the_eagles_nest', None),            # Into the Eagle's Nest (128K): default and Enhanced
     ('phantis', 'is_phantis', None),                                      # Phantis / Game Over 2 (48K, both parts): part 1 Enhanced (local table)
     ('gunrunner', 'is_gunrunner', None),                                  # Gunrunner (48K): default and Enhanced
+    ('scooby_doo', 'is_scooby_doo', None),                                # Scooby Doo in the Castle Mystery (48K): default, Enhanced (local set)
 ]
 
 

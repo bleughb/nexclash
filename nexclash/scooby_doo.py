@@ -119,11 +119,17 @@ def mono8(v):
     return bytes(255 if v & (0x80 >> k) else 0 for k in range(8))
 
 
-def palette_rgb():
-    """The emulator's table: the palette every .256 is painted in. Never in this repo: read from Jon's local emu256 copy."""
+PALETTE_FILE = 'emu256_datos.js'   # emu256's datos.js, staged beside the set; never in this repo
+
+
+def palette_rgb(set_path=None):
+    """The emulator's table: the palette every .256 is painted in. Never in this repo: emu256's datos.js, from
+    $EMU256/datos.js, else staged beside the set as emu256_datos.js."""
     import re
     import os
-    t = open(os.environ.get('EMU256', '/home/jon/Downloads/emu256-extract/emu256') + '/datos.js').read()
+    env = os.environ.get('EMU256')
+    path = Path(env) / 'datos.js' if env else Path(set_path).parent / PALETTE_FILE
+    t = open(path).read()
     m = re.search(r'PALETTE_RGB\s*=\s*\[([^\]]*)\]', t)
     out = [int(x, 0) for x in m.group(1).replace('\n', ' ').split(',') if x.strip()]
     assert len(out) == 256
@@ -171,7 +177,7 @@ class Enhanced(Patch):
         d = open(self.set_path, 'rb').read()
         bg = d[131072 * 9 + 32:131072 * 9 + 32 + 256 * 128]
         assert len(set(bg)) == 1
-        rgb = palette_rgb()
+        rgb = palette_rgb(self.set_path)
         out = []
         for v in range(256):
             c = rgb[bg[0]] if v in (0, 255) else rgb[v]
@@ -694,3 +700,173 @@ def negative_patches(patch):
     b.ram[patch.syms['op_fwd'] - 0x2000] = 0xC9
     out['scroll left not mirrored'] = b
     return out
+
+
+# ---- nexclash.py auto: the published builds, boot checks, and with --rzx Enhanced's replay proof ----
+LOAD_SCREEN = 'scooby_doo_loading.scr'
+LOAD_MD5 = '56499a0d35fc5113fe24445457d59290'   # the tape's ScoobyDoo2 block, first 6,912 bytes
+SET_FILE = 'Scooby-Doo.256'
+SET_MD5 = 'e22c336b026a51d6b2249d993f7c12a7'    # the Spec256 set, painter Armando Quaranta; never in this repo
+NEG_STOP = 900
+PUBLISHER = 'Elite, 1986'
+
+
+def _beside(z80, fname, md5):
+    """A local input beside the snapshot, or None. A different file there is refused."""
+    import hashlib
+    path = Path(z80).resolve().parent / fname
+    if not path.is_file():
+        return None
+    if hashlib.md5(path.read_bytes()).hexdigest() != md5:
+        raise ValueError('%s is not the expected file (MD5 %s)' % (fname, md5))
+    return path
+
+
+def loading_nex(nex, screen):
+    """A built .nex -> the same with the loading screen in the NEX file (header byte 10 = 2), as the published .nxc."""
+    if len(screen) != 6912 or nex[10] != 0:
+        raise ValueError('Expected a .nex without a screen and a 6,912-byte loading screen')
+    head = bytearray(nex[:512])
+    head[10] = 2
+    return bytes(head) + screen + nex[512:]
+
+
+def boot_check(nex, z80, patch):
+    """Booted with and without NEXLOAD: every register with R and all 48K RAM against the patched snapshot, bar the
+    start-up tail's own bytes. -> problems."""
+    from . import nextboot
+    s = zt.Z80Snapshot(str(z80))
+    patch.apply(s)
+    size = len(zt.build_tail(s, 0x8000, patch.slot1, True)[0])
+    tail = zt.choose_tail_addr(s, size, None, False)[0]
+    want = {0: s.a, 1: s.f, 2: s.bc >> 8, 3: s.bc & 255, 4: s.de >> 8, 5: s.de & 255, 6: s.hl >> 8, 7: s.hl & 255,
+            8: s.ix >> 8, 9: s.ix & 255, 10: s.iy >> 8, 11: s.iy & 255, 12: s.sp, 14: s.i, 15: s.r, 16: s.a_, 17: s.f_,
+            18: s.bc_ >> 8, 19: s.bc_ & 255, 20: s.de_ >> 8, 21: s.de_ & 255, 22: s.hl_ >> 8, 23: s.hl_ & 255, 26: s.iff1, 27: s.im}
+    bad = []
+    for nexload in (False, True):
+        st = nextboot.boot(str(nex), s.pc, nexload=nexload)
+        bad += [('register', nexload, i, v, st['R'][i]) for i, v in want.items()
+                if (bool(st['R'][i]) != bool(v) if i == 26 else st['R'][i] != v)]
+        for a in range(0x4000, 65536):
+            if tail <= a < tail + size:
+                continue
+            bank = 5 if a < 0x8000 else 2 if a < 0xC000 else 0
+            if st['mem'][a] != s.banks[bank][a & 16383]:
+                bad.append(('RAM', nexload, hex(a), s.banks[bank][a & 16383], st['mem'][a]))
+    return bad
+
+
+def _enhanced(z80, set_path):
+    p = Enhanced(z80, set_path)
+    p.apply(zt.Z80Snapshot(str(z80)))
+    return p
+
+
+def _replay(z80, set_path, rzx, stop, collect):
+    """One recording against Enhanced's hooks (a process of its own) -> (name, counts, failures, states)."""
+    r = verify(_enhanced(z80, set_path), rzx, stop=stop, collect=collect)
+    c, ex, states = r[0], r[1], (r[2] if len(r) > 2 else [])
+    return Path(rzx).name, dict(c), {k: (v, ex.get(k[:-1], [])[:2]) for k, v in c.items() if k.endswith('!')}, states
+
+
+def _negative(z80, set_path, name, rzx, stop):
+    """One deliberately broken build's replay (a process of its own) -> (name, its failure keys)."""
+    try:
+        c, ex = verify(negative_patches(_enhanced(z80, set_path))[name], rzx, stop=stop)
+        return name, sorted(k for k in c if k.endswith('!'))
+    except Exception as e:          # noqa: BLE001 - a hang or crash of a broken build is a catch
+        return name, ['hung or crashed: %s' % repr(e)[:80]]
+
+
+def auto(a, z80, name, out, say):
+    """nexclash.py auto: the default build (no hook) and, with the Spec256 set and emu256's palette beside the snapshot,
+    Enhanced; each with the tape's loading screen when it is beside the snapshot, each boot-checked. With --rzx: every
+    recording replayed against Enhanced's hooks, the ABI cases and the broken builds (the first recording's first 900
+    frames; one that survives that is run over the other recordings in full). Pace, soak, flicker and the real loader
+    are the review runs' (games/scooby_doo.md "Evidence")."""
+    import concurrent.futures, hashlib, os, tempfile
+    from skoolkit.rzxplay import parse_rzx
+    from skoolkit.snapshot import Snapshot
+    from . import rzx as RZ
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    if not getattr(a, 'publisher', None):
+        a.publisher = PUBLISHER
+    say('Game      : Scooby Doo in the Castle Mystery (Elite, 1986, 48K)')
+    say('Engine    : scooby_doo; default: the original game, no hook; Enhanced: the Spec256 colours on a double-buffered Layer 2')
+    ok = True
+    screen_path = _beside(z80, LOAD_SCREEN, LOAD_MD5)
+    screen = screen_path.read_bytes() if screen_path else None
+    set_path = _beside(z80, SET_FILE, SET_MD5)
+    if set_path is not None and not os.environ.get('EMU256') and not (set_path.parent / PALETTE_FILE).is_file():
+        say('Enhanced  : %s found but no %s beside it (or $EMU256): default only' % (SET_FILE, PALETTE_FILE))
+        set_path = None
+    builds = [('Default', '', lambda: Patch(z80), lambda dst: build(z80, dst))]
+    if set_path is None:
+        say('Enhanced  : no %s beside the snapshot: default only' % SET_FILE)
+    else:
+        builds.append(('Enhanced', '_enhanced', lambda: _enhanced(z80, set_path), lambda dst: build_enhanced(z80, dst, set_path)))
+    if screen is None:
+        say('Loading   : no %s beside the snapshot: builds without the loading screen' % LOAD_SCREEN)
+    for label, suffix, patch, make in builds:
+        nex = out / (name + suffix + '.nex')
+        make(nex)
+        nexes = [nex]
+        if screen is not None:
+            loading = out / (name + suffix + '_loading.nex')
+            loading.write_bytes(loading_nex(nex.read_bytes(), screen))
+            nexes.append(loading)
+        for n in nexes:
+            bad = boot_check(n, z80, patch())
+            ok = ok and not bad
+            say('%-10s: %s  %s' % (label, n.name, hashlib.md5(n.read_bytes()).hexdigest()))
+            say('Boot      : %s' % ('simulated, OK (registers with R, all 48K RAM; converter loader and NEXLOAD)' if not bad
+                                    else 'MISMATCH %s' % str(bad[:3])[:300]))
+    rzxs = list(getattr(a, 'rzx', None) or [])
+    if not rzxs:
+        say('Verify    : not requested; boot evidence only')
+    elif set_path is None:
+        say('Verify    : the default has no hook (the ROM path check below covers it); Enhanced not built, no replay')
+    else:
+        stop = getattr(a, 'quick', None)
+        workers = os.cpu_count() or 1
+        with tempfile.TemporaryDirectory(prefix='scooby_doo_') as temp:
+            replayed = []
+            for path in rzxs:
+                if sum(isinstance(b.obj, Snapshot) for b in parse_rzx(path)) > 1:
+                    stripped = str(Path(temp) / Path(path).name)
+                    RZ.strip(path, stripped)
+                    path = stripped
+                replayed.append(path)
+            with concurrent.futures.ProcessPoolExecutor(min(len(replayed) + 1, workers)) as pool:
+                first = pool.submit(_replay, z80, set_path, replayed[0], NEG_STOP if stop is None else min(stop, NEG_STOP), 2)
+                done = list(pool.map(_replay, [z80] * len(replayed), [set_path] * len(replayed), replayed,
+                                     [stop] * len(replayed), [0] * len(replayed)))
+                states = first.result()[3]
+            for rname, c, fail, _ in done:
+                ok = ok and not fail
+                say('Verify    : Enhanced %s %d frames, %d hooks, %d pixels against the plane model: %s' % (
+                    rname, c.get('frames', 0), c.get('hooks', 0), c.get('pixels compared', 0),
+                    'IDENTICAL' if not fail else str(fail)[:400]))
+            counts = unit_tests(_enhanced(z80, set_path), states)
+            fail = {k: v for k, v in counts.items() if k.endswith('!')}
+            ok = ok and not fail and counts.get('ABI cases', 0) > 0
+            say('Unit      : %s' % dict(counts))
+            if stop is None:
+                names = list(negative_patches(_enhanced(z80, set_path)))
+                with concurrent.futures.ProcessPoolExecutor(min(len(names), workers)) as pool:
+                    res = dict(pool.map(_negative, [z80] * len(names), [set_path] * len(names), names,
+                                        [replayed[0]] * len(names), [NEG_STOP] * len(names)))
+                    left = [n for n, k in res.items() if not k]
+                    jobs = [(n, r) for n in left for r in replayed[1:]]
+                    if jobs:
+                        for n, k in pool.map(_negative, [z80] * len(jobs), [set_path] * len(jobs), [j[0] for j in jobs],
+                                             [j[1] for j in jobs], [None] * len(jobs)):
+                            res[n] = res[n] or k
+                missed = [n for n, k in res.items() if not k]
+                ok = ok and not missed
+                say('Negatives : %d of %d broken builds caught%s' % (len(res) - len(missed), len(res),
+                                                                     '; MISSED %s' % missed if missed else ''))
+    say('Coverage  : Enhanced replay, ABI and broken builds here (--rzx); pace, soak, flicker and real loader in games/scooby_doo.md "Evidence"')
+    say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
+    return bool(ok)

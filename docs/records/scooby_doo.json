@@ -1,0 +1,244 @@
+{
+ "name": "scooby_doo",
+ "order": 240,
+ "game": "Scooby Doo in the Castle Mystery",
+ "doc": "scooby_doo.md",
+ "engine": "scooby_doo",
+ "representative": true,
+ "reference": "scooby_doo",
+ "inputs": {
+  "snapshot": {
+   "name": "scooby_doo.z80",
+   "md5": "8a82e06f6829a2a1c30781491cfbc42e",
+   "path": "scooby_doo/scooby_doo.z80",
+   "note": "Scooby Doo in the Castle Mystery (1986)(Elite Systems).z80, the 48K release, stopped in its BASIC loader."
+  },
+  "recordings": [
+   {
+    "name": "scooby_doo_loading.scr",
+    "md5": "56499a0d35fc5113fe24445457d59290",
+    "path": "scooby_doo/scooby_doo_loading.scr",
+    "role": "The tape's loading screen (block ScoobyDoo2, its first 6,912 bytes), staged beside the snapshot; not a recording."
+   },
+   {
+    "name": "Scooby-Doo.256",
+    "md5": "e22c336b026a51d6b2249d993f7c12a7",
+    "path": "scooby_doo/Scooby-Doo.256",
+    "role": "The Spec256 set 'Scooby-Doo' (painter Armando Quaranta), Enhanced's colours; private, never in this repo; staged beside the snapshot; not a recording."
+   },
+   {
+    "name": "emu256_datos.js",
+    "md5": "30a8edfad2ef060e107ed20f5a0c3079",
+    "path": "scooby_doo/emu256_datos.js",
+    "role": "emu256's datos.js, the palette the Spec256 set is painted in; private, never in this repo; staged beside the set; not a recording."
+   },
+   {
+    "name": "a1.rzx",
+    "md5": "f898a71188aeaa32ee36c712b2dc1deb",
+    "path": "scooby_doo/a1.rzx",
+    "role": "Scripted original play, the first round."
+   },
+   {
+    "name": "clean.rzx",
+    "md5": "c4b172121d01b00b8c43329223070532",
+    "path": "scooby_doo/clean.rzx",
+    "role": "The BASIC loader, title, level 1, deaths, game over and restart, no poke, 9,016 frames."
+   },
+   {
+    "name": "lv1.rzx",
+    "md5": "44c5f4850404cdd6f729827b23fc276c",
+    "path": "scooby_doo/lv1.rzx",
+    "role": "Level 1 by a test poke, scripted play; the ABI states and the broken builds come from its first 900 frames."
+   },
+   {
+    "name": "lv2.rzx",
+    "md5": "c4784e3a788484b08b2865321aec219b",
+    "path": "scooby_doo/lv2.rzx",
+    "role": "Level 2 by a test poke, scripted play."
+   },
+   {
+    "name": "lv3.rzx",
+    "md5": "c97bd5fbee42e1656cbe87f7b2ffda38",
+    "path": "scooby_doo/lv3.rzx",
+    "role": "Level 3 by a test poke, scripted play."
+   },
+   {
+    "name": "lv4.rzx",
+    "md5": "72c10936ee3055a800e5f0c97978be5e",
+    "path": "scooby_doo/lv4.rzx",
+    "role": "Level 4 by a test poke, scripted play."
+   },
+   {
+    "name": "lv5.rzx",
+    "md5": "0b3d557ee58b3c7b53a82818c8b442cb",
+    "path": "scooby_doo/lv5.rzx",
+    "role": "Level 5 by a test poke, scripted play."
+   },
+   {
+    "name": "lv6.rzx",
+    "md5": "4e8a68152c9eed57e5a4903591707670",
+    "path": "scooby_doo/lv6.rzx",
+    "role": "Level 6 by a test poke, scripted play."
+   },
+   {
+    "name": "lv7.rzx",
+    "md5": "3b0289b7b32dba0251cc29844e4da2d4",
+    "path": "scooby_doo/lv7.rzx",
+    "role": "Level 7 by a test poke, scripted play."
+   },
+   {
+    "name": "lv8.rzx",
+    "md5": "5d7faae23ee9ebcba943a0b20769d924",
+    "path": "scooby_doo/lv8.rzx",
+    "role": "Level 8 by a test poke, scripted play."
+   },
+   {
+    "name": "lv9.rzx",
+    "md5": "39f4ea7268709a8c7bfcf8581473dac7",
+    "path": "scooby_doo/lv9.rzx",
+    "role": "Level 9 by a test poke, scripted play."
+   }
+  ]
+ },
+ "modules": [
+  "scooby_doo"
+ ],
+ "own_modules": [
+  "scooby_doo"
+ ],
+ "data": [
+  "asm/scooby_doo_hooks.asm",
+  "docs/profiles/scooby_doo.json"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record",
+   "--no-nxc"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record",
+   "--no-nxc"
+  ],
+  "rzx": [
+   "lv1.rzx",
+   "a1.rzx",
+   "clean.rzx",
+   "lv2.rzx",
+   "lv3.rzx",
+   "lv4.rzx",
+   "lv5.rzx",
+   "lv6.rzx",
+   "lv7.rzx",
+   "lv8.rzx",
+   "lv9.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 30,
+  "note": "The default has no hook: boot checks and the ROM path check over every recording. Enhanced: every recording replayed, at every hook the hook against the original from the same state, every register with R, all 48K RAM but the dead stack, MMU and clock; every published Layer 2 window against an independent plane model, a second model on the mono bytes against the buffer and the ULA; ABI cases on lv1's first 900 frames; 14 broken builds on them (one that survives is run over the other recordings in full). Pace, soak, flicker and the real loader are in games/scooby_doo.md \"Evidence\"."
+ },
+ "outputs": {
+  "plain": {
+   "file": "scooby_doo.nex",
+   "md5": "994ad69a87d395fadd862205e4d75d52"
+  },
+  "loading": {
+   "file": "scooby_doo_loading.nex",
+   "md5": "6c52221ef73d17ebd46d31e35f5da963"
+  },
+  "enhanced": {
+   "file": "scooby_doo_enhanced.nex",
+   "md5": "37d3a6c44423317fd434e969c7d35c4b"
+  },
+  "enhanced_loading": {
+   "file": "scooby_doo_enhanced_loading.nex",
+   "md5": "a81865abef2f1022ea448b5a022c56c6"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Scooby Doo in the Castle Mystery",
+  "engine_col": "scooby_doo (scooby_doo.md)",
+  "build": "v1.0; scooby_doo_loading.nex 6c52221e and scooby_doo_enhanced_loading.nex a81865ab equal the published .nxc 1.0 bare builds, default and Enhanced (without the screen 994ad69a, 37d3a6c4); default: the original game with Sinclair's ROM as the whole alt ROM, no hook, its small clash kept; Enhanced (off by default): the play window in the Spec256 set's colours (Armando Quaranta) on a double-buffered Layer 2; top bank 47 in both; the set, its palette and the loading screen are local inputs",
+  "software": "Enhanced: 11 recordings, 33,297 frames, 32,758 hooks with R and 48K RAM, 175,964,160 published pixels against a plane model, 704 ABI cases, 14 of 14 broken builds (review run); default: no hook, boot exact, ROM paths over 26.11's ROM3; pace in JNext: default +0.00%; Enhanced whole -0.95 to -0.00%, busy thirds faster, slowest 20 updates up to +2.80% (3 of 480 windows over +2%); soak, flicker, real loader",
+  "hardware": "untested",
+  "next": "hardware checklist; owner's play; natural play past level 1; Enhanced panel, title and menus"
+ },
+ "checks": [
+  "asm2profile:scooby_doo"
+ ],
+ "results": [
+  {
+   "check": "external review run",
+   "status": "pass",
+   "scope": "runs/scooby_doo/release-20261108 and release-20261108b: pace, soak, flicker, ROM paths, real loader (default, Enhanced, cheats), JNext 1.1.104, on these engine bytes. Not a selftest stamp.",
+   "evidence": "games/scooby_doo.md \"Evidence\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/scooby_doo_hooks.asm": "edf92e63fbf6f5db",
+   "docs/profiles/scooby_doo.json": "7b4d310cba00d224",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "1df8bb7bbc22398a",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/scooby_doo.py": "2edf40b1abb2b0b9",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "3dd57aa2130009da",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ },
+ "verified": {
+  "deps": {
+   "asm/scooby_doo_hooks.asm": "edf92e63fbf6f5db",
+   "docs/profiles/scooby_doo.json": "7b4d310cba00d224",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "1df8bb7bbc22398a",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/scooby_doo.py": "2edf40b1abb2b0b9",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "3dd57aa2130009da",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ }
+}

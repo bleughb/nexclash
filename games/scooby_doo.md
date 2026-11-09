@@ -1,9 +1,9 @@
 # Scooby Doo in the Castle Mystery (Elite, 1986, 48K)
 
 ## Next session
-Stage: 4 (owner's play). Hardware: untested. v1.0 review build (default and Enhanced), not published, not pushed; not wired into `auto`, `engines.py` or a record: that comes when it goes upstream after the owner has played it.
-Inputs: `Scooby Doo in the Castle Mystery (1986)(Elite Systems).z80`, MD5 8a82e06f6829a2a1c30781491cfbc42e. The loading screen is the tape's (`ScoobyDoo2`, first 6912 bytes), staged by the review run, never in this repo.
-Build: `scooby_doo.build(z80, nex)` and `scooby_doo.build_enhanced(z80, nex, set)`, then the review run's `release-20261108b/work/pkg2.py`, default `.nex` 6c52221e with the screen, unchanged by Enhanced.
+Stage: 4 (owner's play). Hardware: untested. v1.0 published in .nxc 1.0 (default and Enhanced); on main with `auto`, its `engines.py` line and record `docs/records/scooby_doo.json`.
+Inputs, beside the snapshot (never in this repo): `scooby_doo.z80` (MD5 8a82e06f6829a2a1c30781491cfbc42e); `scooby_doo_loading.scr`, the tape's `ScoobyDoo2` block, first 6912 bytes (56499a0d); for Enhanced the Spec256 set `Scooby-Doo.256` (e22c336b) and emu256's palette `emu256_datos.js` (30a8edfa; or `$EMU256/datos.js`). Without the set, auto builds the default only.
+Build: `nexclash.py auto scooby_doo.z80 --no-record --no-nxc`: `scooby_doo_loading.nex` 6c52221e and `scooby_doo_enhanced_loading.nex` a81865ab, the published bare builds (without the screen 994ad69a, 37d3a6c4). With `--rzx` it replays Enhanced on each recording, the ABI cases and 14 broken builds.
 Pending: the owner's play; his call on the default's small clash below.
 
 ## Facts
@@ -76,5 +76,6 @@ Nothing has run on a Next. Enhanced also: the window against the panel, no teari
 - scratch: [local: review run] Its work folder stays in private evidence.
 
 ## Stage log
+- 2026-11-09 Upstream: auto, registration and record on main; main rebuilds the published 1.0 default and Enhanced byte for byte.
 - 2026-11-08 Stage 3 again: real match found, Enhanced on the review branch, proofs on the exact bytes; waiting for the owner's play.
 - 2026-11-08 Stage 3: no-hook engine, clash measured, proofs, review build, mock-up for Enhanced; waiting for the owner's play.
