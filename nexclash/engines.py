@@ -83,6 +83,7 @@ ENGINES = [
     ('atom_ant', 'is_atom_ant', None),                                    # Atom Ant (128K tape form): default and Enhanced
     ('silkworm', 'is_silkworm', None),                                    # Silkworm (128K): default and Enhanced
     ('ruff_and_reddy', 'is_ruff_and_reddy', None),                        # Ruff and Reddy (128K): default and Enhanced
+    ('into_the_eagles_nest', 'is_into_the_eagles_nest', None),            # Into the Eagle's Nest (128K): default and Enhanced
 ]
 
 
