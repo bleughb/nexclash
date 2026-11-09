@@ -50,9 +50,8 @@ version; tools/sjasmplus/README.md). Maintainers: repos and reference files in d
 - Verify the original bytes at every patch site (the engine refuses a snapshot that differs).
 - Z80N instructions may always be used in hooks; a verifier gets them from `z80n.install(sim,
   nextreg)` (all 29) - never write another per-engine copy.
-- Test every change differentially against the RZX (what to compare: PLAYBOOK 6): all registers,
-  all memory outside the never-read draw buffers, sprite pixels against the original plot, no jumps
-  into the middle of a patched instruction.
+- Test changes against the RZX: registers, live memory, sprite pixels, no jumps into patched
+  instructions' interiors. PLAYBOOK 6 defines comparisons and evidence-backed exceptions.
 - Cover paths the RZX does not reach with unit tests: guard edges, table-full cases, and a negative
   control that uses the broken patch's own tables - restore only the run-time byte ranges of captured
   states (a copy of the whole state area puts the good tables back and the control passes: Smash TV).

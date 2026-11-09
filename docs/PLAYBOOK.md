@@ -178,24 +178,23 @@ Then, per engine, track "player drawn" from the plotter's/eraser's own screen wr
   preference is blitter with capability gating; expose no-blitter and record both routes
   (docs/DDMA_IMPLEMENTATION.md). Code at NEXTREG
   $07=3 runs about 6x faster, not 8x (LEARNINGS 2.1f). New engines use the hook library (ENGINE_CONTRACT
-  "Hook library"): the caller's speed and R kept, and a hook faster than the code it displaces waits for
+  "Hook library"): caller speed and R kept by default (exceptions: section 6); a faster hook waits for
   its time (card patch.pace-limiter). Measure: `python -m nexclash.pace` (docs/CHECKS.md).
 
 ## 3d. Feasibility (unknown engine or substantial rework; a known engine skips this)
-Before building, in games/<game>.md "## Feasibility"; investigate only what could change the decision:
+Before building, record decision-changing evidence in games/<game>.md "## Feasibility":
 - Pacing (card detect.pacing-structure): what sets the pace, where added work can run and when it must finish, what a
   late finish does, usable gap sizes (not just total spare), who makes the sound.
-- Removal experiment (card detect.routine-removal) for each original routine kept, replaced or sped up: what consumes
-  its effects (screen/map readers, sound, R)? No consumer -> no preservation.
+- Removal experiment (card detect.routine-removal) for routines the design touches: name consumers of RAM, R, screen
+  and sound effects. Inspect unexercised branches; a replay pass alone does not establish no consumer.
 - Budgets: measured from the original, or a user requirement. An assumed amount of spare time is no budget and no gate.
 - Constraints: requirement or implementation choice ("preserve collisions" / "run the copier unchanged"): what observes
   it, what changes if relaxed. Weigh replacing or accelerating original work, not only adding; rejections say measured
   or untested.
-- Each experiment: constraint -> its evidence -> success criterion (a number or an exact assertion) -> change -> result.
+- Experiment: constraint -> evidence -> success criterion (number or assertion) -> change -> result.
 - Reassess: two attempts (hypothesis + measured result; not bug fixes) fail one constraint, or evidence invalidates
-  the approach -> pause, recheck assumptions, get an independent review of a compact evidence package; record it in
-  the handover.
-End with a decision: approach, measurements, open risks, next experiment.
+  the approach -> pause, recheck assumptions, get independent review of compact evidence; record it in the handover.
+Link measurements, coverage, decision and next experiment from the record (docs/LEARNING.md 6).
 
 ## 4. Decide the design (decision table)
 | Finding | Action |
@@ -244,16 +243,16 @@ Also build the colour-sheet capture and `recolour` now (docs/COLOURS.md): stage 
 ## 6. Verify (differential test)
 At every patched routine in the real recording: copy the machine state, run the
 original and the patched routine to their return, compare all registers
-(except T/MEMPTR; R and AF' included, ENGINE_CONTRACT.md), all memory outside the never-read draw buffers (patch area
+(default: except T/MEMPTR; R and AF' included), all memory outside never-read draw buffers (patch area
 and sites excluded; dead stack only where a documented convergence check applies - a hook that
 returns into the game's own loop must leave it identical), the patched screen against the
 model, and the sprite pixels against the original plot (masked figures: run the plot on a 0x00
 and a 0xFF buffer for ink / paper / transparent, midres.truth). With interrupts on at the hooks,
 also check interrupt safety after every hook instruction (IX, IY, I, IFF, stack room; Commando,
 midres) with a negative control. Every mismatch must be explained or fixed.
-Equivalence (owner, 2026-11-10): gameplay extremely close, not 1:1. Exact where cheap; a difference nothing later reads
-(removal experiment) is accepted, listed in the record with why. R as a random source: a replay may feed recorded values
-instead of costly runtime restoration (card patch.preserve-r).
+Equivalence (owner, 2026-11-10): extremely close gameplay, not 1:1. Exact where cheap; document exceptions with consumer
+evidence, replay treatment and limits. Recorded R may replace costly restoration when only randomness depends on it
+(patch.preserve-r). This proves supplied-R behaviour; validate natural gameplay too.
 Also simulate the start-up tail: registers restored, no game memory touched.
 
 Iterate fast (the two levels: BRIEFING C3b): while developing use `--quick N` and the unit tests on 1-2

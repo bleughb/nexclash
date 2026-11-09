@@ -1,7 +1,9 @@
 # Engine contract
 
-Use tools/templates/verify_contract.py and hooklib.CMP_R; legacy
-nexclash/chuckie.py omits R. doccheck checks REQUIRED names, not behaviour.
+Start with tools/templates/verify_contract.py (CMP_R, measured coverage, stable case reruns).
+Exact where cheap; PLAYBOOK 6 permits evidence-backed exceptions. Record affected state, consumers,
+replay treatment and limits before adapting comparisons. Supplied-R replay also needs natural-play
+validation. doccheck checks REQUIRED names, not behaviour.
 
 ## Files (one game = one engine; CLAUDE.md "Keep changes additive")
 nexclash/<engine>.py, asm/<engine>_hooks.asm, docs/profiles/<record>.json (hook hex + symbols, from
@@ -18,7 +20,7 @@ REQUIRED (doccheck):
 | `auto(a, z80, name, out, say)` | the whole run: plain + sprite build with boot checks, autosaves stripped, verify each `a.rzx` (`a.quick` = frames), unit tests + negative control, `say()` report lines `Plain`, `Sprites`, `Verify`, `Unit`, `Result : PASSED / FAILED`; returns True on PASS |
 | `verify(patch, rzx_path, stop=None, collect=0, progress=None)` | differential test (PLAYBOOK 6) -> `(Counter, examples[, states])`; failure keys end in `!`; `collect=N` keeps N machine states per site kind for the unit tests. Free-run engines (no RZX: jetpac, loderunner) take `(patch, z80, rzx=None, frames, keys, ...)` |
 | `unit_tests(patch, states, neg...)` | cases the RZX does not reach + the negative control (CLAUDE.md rule) -> Counter, failures end in `!` |
-| `CMP` | register indexes compared: new engines: all but T, MEMPTR; include R (`hooklib.CMP_R`) |
+| `CMP` | default: all but T, MEMPTR (`hooklib.CMP_R`); exceptions as above |
 
 OPTIONAL for legacy engines; new engines must provide colour sheets and recolour (PLAYBOOK 5):
 
@@ -32,8 +34,7 @@ OPTIONAL for legacy engines; new engines must provide colour sheets and recolour
 | `DECISIONS` | stored build facts for `auto --decisions` (docs/records `rebuild.decisions`) |
 | `INTERIORS`, `TAIL_ADDR`, `ROM_ORG`, `ALT_PAGE` | patched-instruction interiors (no jumps into them), tail and hook addresses |
 
-In `auto`, default unset `a.publisher`, `a.colours_by`, `a.fix_label` only; packaging
-preserves user overrides. These metadata fields do not change NEX bytes.
+In `auto`, default only unset publisher/colours_by/fix_label; preserve overrides. Metadata leaves NEX bytes unchanged.
 
 Outputs (nxcout.manifest): `NAME_sprites[_loading].nex`, sets `NAME_SET[_loading].nex`,
 `NAME.nex` plain; others, toggles: `NAME_outputs.json`. Tape sets: snapshot = start state, `a.tape` ->
@@ -56,15 +57,14 @@ missing entry is incomplete. Decoded recordings use the full audit. Never waive
 loader addresses through `rom_paths_known`.
 
 ## Hook library (new engines; old ones keep theirs)
-asm/lib/hlib_*.asm (EQUs at each head) + nexclash/hooklib.py (verifier tools). Hooks: HLIB_SPEED_IN /
-_OUT, HLIB_R_IN / _OUT, HLIB_IFF_DI / _EI; pace: hlib_pace_wait (card patch.pace-limiter); sprites:
+asm/lib/hlib_*.asm + nexclash/hooklib.py. Hooks: HLIB_SPEED_IN / _OUT, HLIB_R_IN / _OUT (default;
+exceptions above), HLIB_IFF_DI / _EI; pace: hlib_pace_wait; sprites:
 hlib_pc_upload + hlib_commit. unit_tests: `hooklib.every_site`. Record: `hooklib.FILES` in
 `shared_data`. Unused parts: games/<game>.md.
 
 ## Verify loop (the part every engine repeats; adapt chuckie.verify with tools/templates/verify_contract.py)
-Replay the RZX with the opcode table wrapped: at a hook site copy the state, run original and
-patched code to their return (simulators from `simpool.machine`), compare CMP registers, memory,
-sprite pixels; `fail()` keeps 5 examples per key; also count writes to patch sites and jumps into
+At each RZX hook site, copy state, run original and patched code to return (`simpool.machine`),
+compare CMP, memory and sprite pixels; keep 5 failures per key. Count site writes and jumps into
 INTERIORS (a site whose first instruction is 1 byte: the original itself runs the next bytes - count
 them against the site's own count, SEQUELS; Fireman, Cauldron). Hook asm may use Z80N: the verifier installs it with `z80n.install(sim, nextreg)`.
 A hook wrapping a routine meets the original at its CALLER return (Cauldron 0x6357).
@@ -75,5 +75,5 @@ full patched path for the first N calls, then the trampoline from the original R
 need distinct names or the second resets the first.
 
 ## Record (docs/records/<record>.json)
-Fields: nexclash/records.py docstring; copy the nearest record. `python -m nexclash.records deps
-<record>` lists what its evidence depends on.
+Fields: nexclash/records.py; new-engine feasibility: docs/LEARNING.md 6. `python -m nexclash.records
+deps <record>` lists evidence dependencies.
