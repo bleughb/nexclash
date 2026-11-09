@@ -37,8 +37,9 @@ DECISIONS = {'figures': 'original bitmap on the ULA; figure ink in its own colou
 LOAD_SCREEN = 'army_moves_loading.scr'    # the tape's 6,912-byte screen, beside the snapshot: game data, never in this repo
 LOAD_MD5 = '288afbcde9dafeb403db600468753e1b'
 PUBLISHER = 'Imagine / Dinamic, 1987'
-# Enhanced (rework "enhanced", NEXCLASH_ARMY_MOVES_ENHANCED=1): the player's own Spec256 sets beside the snapshot,
-# under these names; army_moves_art turns them into the colour tables at build time. Game data, never in this repo.
+# Enhanced (rework "enhanced", NEXCLASH_ARMY_MOVES_ENHANCED=1): the player's own Spec256 sets and the Spec256 palette
+# (army_moves_art.PAL_NAME) beside the snapshot, under these names; army_moves_art turns them into the colour tables at
+# build time. Game data and an unlicensed palette, never in this repo.
 ENH_ENV = 'NEXCLASH_ARMY_MOVES_ENHANCED'
 SET_MD5 = {1: 'cff317d26df3749cc3916b3fc22ac671', 2: 'b8f4aa91ed6d84333e56dcc94c43a758'}
 NEG_STOP = 900                            # frames of the first recording each deliberately broken build replays
@@ -787,12 +788,12 @@ def boot_check(nex, z80, patch):
 
 
 def find_art(z80):
-    """The colour tables from the two Spec256 sets beside the snapshot (army_moves_art), or None without them. A set
-    that is not the expected file is refused."""
+    """The colour tables from the two Spec256 sets and the Spec256 palette beside the snapshot (army_moves_art), or None
+    without them. A set or palette that is not the expected file is refused."""
     from . import army_moves_art as A
     d = Path(z80).resolve().parent
     paths = {pt: d / A.SETS[pt] for pt in A.SETS}
-    if not all(p.is_file() for p in paths.values()):
+    if not all(p.is_file() for p in paths.values()) or not (d / A.PAL_NAME).is_file():
         return None
     for pt, p in paths.items():
         if hashlib.md5(p.read_bytes()).hexdigest() != SET_MD5[pt]:
@@ -816,7 +817,7 @@ def _negative(z80, name, rzx, stop, mode='default'):
 def auto(a, z80, name, out, say):
     """nexclash.py auto: the sprite build (the overlay), with the loading screen when it is beside the snapshot, each
     boot-checked; with --rzx the replay proof, the ABI cases and the broken builds. With NEXCLASH_ARMY_MOVES_ENHANCED=1
-    and the Spec256 sets beside the snapshot it also writes Enhanced (backdrop on) and Enhanced with "Backdrop off",
+    and the Spec256 sets and palette beside the snapshot it also writes Enhanced (backdrop on) and Enhanced with "Backdrop off",
     and the replay, ABI cases and broken builds run on Enhanced. The pace, soak, flicker and real loader proofs are the
     review run's (games/army_moves.md "Evidence")."""
     import concurrent.futures, os, tempfile
@@ -839,7 +840,7 @@ def auto(a, z80, name, out, say):
     if os.environ.get(ENH_ENV):
         if find_art(z80) is None:
             from . import army_moves_art as A
-            say('Enhanced  : %s=1 but the Spec256 sets (%s) are not beside the snapshot' % (ENH_ENV, ', '.join(A.SETS.values())))
+            say('Enhanced  : %s=1 but the Spec256 sets and palette (%s) are not beside the snapshot' % (ENH_ENV, ', '.join(list(A.SETS.values()) + [A.PAL_NAME])))
             say('Result    : FAILED')
             return False
         modes += [('enhanced', ('Enhanced', 'Enh load'), '_enhanced'), ('enhanced_nobd', ('No bd', 'No bd load'), '_enhanced_nobd')]

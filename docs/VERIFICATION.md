@@ -91,7 +91,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Knight Lore (knight_lore): `knight_lore.nex` 02a997936f991061b18589266767d36c; verified never
 - Alien 8 (alien_8): `alien_8.nex` e89ed13af3af09b260cc266bc5b456e1, `alien_8_enhanced.nex` 5c08c856c718a7e744282cd44372a6cf; verified never
 - Gunfright (gunfright): `gunfright.nex` f26d0a561e25a1a800b19787cd1fe41b, `gunfright_enhanced.nex` 4ec70c827ae291ce273a09c508f95c87; verified 2026-11-07
-- Army Moves (army_moves): `army_moves_sprites.nex` 9cbd2379d8cae020c3b2145d362a4f75, `army_moves_sprites_loading.nex` 1b60bd04304265986cf5ff4a142e44db; verified 2026-11-08
+- Army Moves (army_moves): `army_moves_sprites.nex` 9cbd2379d8cae020c3b2145d362a4f75, `army_moves_sprites_loading.nex` 1b60bd04304265986cf5ff4a142e44db; verified 2026-11-09
 - Game Over (game_over): `game_over_sprites.nex` ff1d8067f3ad7e5f5625ab2f85e28a57, `game_over_sprites_loading.nex` cb0c403db4058444f38445fb1afbdc19; verified 2026-11-08
 - Chase H.Q. (chase_hq): `chase_hq.nex` 2f6628a552412d0a227300fe7cf397b2, `chase_hq_speed.nex` 6729617fd9e3adc131a0451593557b39, `chase_hq_orig_pace.nex` 498c2119e140480cd16c8f0fda5c5843; verified never
 - Silkworm (silkworm): `silkworm.nex` 36a148b54bce181c39c94899f7809c20, `silkworm_loading.nex` 6ae12fd66946724d9ef6c1e089a6b163, `silkworm_enhanced.nex` d5d3a92cce49d1f4d855f3d98ee7f41b, `silkworm_enhanced_loading.nex` 2058f2e55464eeb68f418320548fb34a; verified 2026-11-08
