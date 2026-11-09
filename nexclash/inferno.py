@@ -6553,8 +6553,11 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
     name = 'Inferno copier-window diagnostic (no sprites; not a release)'
     tail_addr, max_tail = 0x9A80, 128
 
-    def __init__(self, blocks, window_only=True, work=False, driver=False):
+    def __init__(self, blocks, window_only=True, work=False, driver=False, fullgame=False):
         super().__init__(blocks)
+        self.fullgame = fullgame
+        if fullgame:
+            self.tail_addr, self.max_tail = BootstrapPatch.tail_addr, BootstrapPatch.max_tail   # 9A80 holds compressed game data here
         self.window = CopierWindowPatch(window_only=window_only, work=work)
         if driver:                             # the 8EF9 gate joins the alt ROM and the sites
             gate = PausePatch()
@@ -6612,8 +6615,38 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
             head_tail = bytes(8192)
         self.extra_banks[CW_PAGE // 2] = bytes(head) + (head_tail if work and driver else bytes(8192))
         self.sites = [(a, old, new) for a, (old, new) in self.window.sites.items()]
+        if fullgame:                                   # hooks arrive from the page-80 table after decompression
+            h = load_profile()['hooks']
+            stub = bytes.fromhex(h['wistub'])
+            rom = bytearray(self.page)
+            at = 0x3BD0 - 0x2000
+            if any(v != 255 for v in rom[at:at + len(stub)]):
+                raise ValueError('installer stub overlaps')
+            rom[at:at + len(stub)] = stub
+            self.page = bytes(rom)
+            self.extra_banks[12] = self.page + bytes(8192)
+            table = bytearray()
+            for a, old, new in self.sites:
+                table += bytes((len(new),)) + a.to_bytes(2, 'little') + new
+            table.append(0)
+            image = bytearray(self.extra_banks[CW_PAGE // 2])
+            if any(image[0x1C00:0x1C00 + len(table)]):
+                raise ValueError('page 80 table overlaps')
+            image[0x1C00:0x1C00 + len(table)] = table
+            self.extra_banks[CW_PAGE // 2] = bytes(image)
+            self.sites = []
 
     def apply(self, snap):
+        if self.fullgame:
+            super().apply(snap)                         # first USR 24200, compressed entry checked
+            ram = bytearray(snap.banks[5] + snap.banks[2] + snap.banks[0])
+            text = b'"24200"'
+            at = [i for i in range(len(ram) - 7) if ram[i:i + 7] == text]
+            if len(at) != 2:
+                raise ValueError('expected two USR 24200 statements, found %d' % len(at))
+            ram[at[1]:at[1] + 7] = b'"15312"'           # the second USR: installer, then 24200
+            snap.banks[5], snap.banks[2], snap.banks[0] = bytes(ram[:16384]), bytes(ram[16384:32768]), bytes(ram[32768:])
+            return
         if snap.is128:
             raise ValueError('copier-window diagnostic expects original 48K Inferno')
         source = [0] * 16384 + list(snap.banks[5] + snap.banks[2] + snap.banks[0])
@@ -6621,7 +6654,7 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
         snap.banks[5], snap.banks[2], snap.banks[0] = bytes(ram[:16384]), bytes(ram[16384:32768]), bytes(ram[32768:])
 
 
-def copier_window_build(reference, folder, hooks=False, work=False, driver=False, level=None):
+def copier_window_build(reference, folder, hooks=False, work=False, driver=False, level=None, fullgame=False, name=None):
     """Inferno_copier_window_diagnostic.nex (window only), with hooks Inferno_copier_window_m3_
     diagnostic.nex (capture hooks + window), with work Inferno_copier_window_m3b_diagnostic.nex (+ the
     8F95 work in the window's waits) + boot checks (NEXLOAD and foreign ROM3) + page-80/69 bytes."""
@@ -6630,11 +6663,16 @@ def copier_window_build(reference, folder, hooks=False, work=False, driver=False
     from hashlib import md5
     reference, folder = Path(reference), Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
-    snapshot = reference / ('Inferno%d.z80' % level if level else 'Inferno.z80')
+    snapshot = reference / (('Inferno_%s.z80' % name) if name else 'Inferno%d.z80' % level if level else 'Inferno.z80')
+    if fullgame:
+        import subprocess, sys
+        snapshot = folder / 'Inferno_bootstrap.z80'
+        subprocess.run([sys.executable, '-c', 'from skoolkit.tap2sna import main; import sys; main(sys.argv[1:])',
+                        str(reference / 'Inferno.tzx'), '--start', '24200', str(snapshot)], check=True, capture_output=True)
     work = work or driver
     hooks = hooks or work
-    patch = CopierWindowSnapshotPatch(tape_blocks(reference / 'Inferno.tzx'), window_only=not hooks, work=work, driver=driver)
-    nex = folder / ('Inferno_level%d.nex' % level if level else 'Inferno_driver_diagnostic.nex' if driver else 'Inferno_copier_window_m3b_diagnostic.nex' if work else
+    patch = CopierWindowSnapshotPatch(tape_blocks(reference / 'Inferno.tzx'), window_only=not hooks, work=work, driver=driver, fullgame=fullgame)
+    nex = folder / ('Inferno_full_game.nex' if fullgame else 'Inferno_%s.nex' % name if name else 'Inferno_level%d.nex' % level if level else 'Inferno_driver_diagnostic.nex' if driver else 'Inferno_copier_window_m3b_diagnostic.nex' if work else
                     'Inferno_copier_window_m3_diagnostic.nex' if hooks else 'Inferno_copier_window_diagnostic.nex')
     _, tail, data, _ = z80tonex.convert(str(snapshot), str(nex), quiet=True, patch=patch)
     if driver:                                  # tables sit in banks 48+: the loader must refuse a 1 MB machine
@@ -6698,6 +6736,8 @@ def main():
     ap.add_argument('--jobs', type=int, default=1, help='copier-window checks: one process per level, this many at once')
     ap.add_argument('--cw-hooks', action='store_true', help='--copier-window-build with the capture hooks (milestone 3)')
     ap.add_argument('--cw-work', action='store_true', help='--copier-window-build with hooks + the 8F95 work in the window (3b)')
+    ap.add_argument('--cw-full', action='store_true', help='--copier-window-build: from the tape start (intro, all levels, ending)')
+    ap.add_argument('--cw-name', help='--copier-window-build: start from Inferno_NAME.z80 (e.g. outro)')
     ap.add_argument('--cw-level', type=int, help='--copier-window-build: start from level N (its recording snapshot, for hardware tests)')
     ap.add_argument('--cw-driver', action='store_true', help='--copier-window-build with the 8EF9 driver and its pages too (no display)')
     action.add_argument('--actor-job-checks', action='store_true')
@@ -6929,7 +6969,7 @@ def main():
         print(json.dumps(result))
         return int(any(v for k, v in result['counts'].items() if k.endswith('!')))
     if a.copier_window_build:
-        result = copier_window_build(a.copier_window_build, a.out, hooks=a.cw_hooks, work=a.cw_work, driver=a.cw_driver, level=a.cw_level)
+        result = copier_window_build(a.copier_window_build, a.out, hooks=a.cw_hooks, work=a.cw_work, driver=a.cw_driver, level=a.cw_level, fullgame=a.cw_full, name=a.cw_name)
         if a.json:
             a.json.write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps(result))

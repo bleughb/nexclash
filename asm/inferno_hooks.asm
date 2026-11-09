@@ -4420,6 +4420,23 @@ wo_end:
         ld hl,cw_wait.coarse
         ld (CW_WKRET),hl
         jp wo_out
+wi_go:
+        ld hl,0x1C00
+.next:  ld a,(hl)
+        inc hl
+        or a
+        jp z,wi_back
+        ld b,a
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+.byte:  ld a,(hl)
+        ld (de),a
+        inc hl
+        inc de
+        djnz .byte
+        jr .next
 cw_work_end:
 
 cw_head:
@@ -7059,5 +7076,20 @@ wo_orig:
         nextreg 0x07,0
         jp 0x980C
 wo_hook_end:
-        ASSERT wo_hook_end <= 0x3BE0
+        ASSERT wo_hook_end <= 0x3BD0
         SAVEBIN "inferno_wohook.bin",wo_hook,wo_hook_end-wo_hook
+
+; Full game: BASIC's second USR 24200 comes here (15312) once the main code is decompressed; the table in page 80 at 1C00
+; holds the hook bytes (count, address, bytes; 0 ends).
+        ORG 0x3BD0
+wi_stub:
+        di
+        nextreg 0x50,CW_PAGE
+        jp wi_go
+wi_back:
+        nextreg 0x50,255
+        ei
+        jp 24200
+wi_stub_end:
+        ASSERT wi_stub_end <= 0x3BE0
+        SAVEBIN "inferno_wistub.bin",wi_stub,wi_stub_end-wi_stub
