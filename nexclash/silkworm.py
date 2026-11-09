@@ -16,7 +16,7 @@ TAIL_ADDR = 0x90B0                 # zero bytes the game never reads or writes (
 TAIL_MAX = 0x50                    # 0x9000-0x901F takes writes past the back buffer; 0x9100 up is read
 PRINTER = 0x5B00                   # game code; NEXLOAD leaves its own routines here
 DECISIONS = {'figures': 'the original monochrome play area', 'scenery': 'the original attributes',
-             'outline': 'none', 'enhanced': 'waiting for the mock-up'}
+             'outline': 'none', 'enhanced': "the Spec256 set's colours as they are, on Layer 2, off by default"}
 
 
 def is_silkworm(snap):
@@ -290,14 +290,72 @@ def _flat(sim):
     return bytes(16384) + bytes(m.memory[1]) + bytes(m.memory[2]) + bytes(m.memory[3])
 
 
+SET_NAME = 'silkworm.256'                  # the Spec256 set itself, beside the colour blob: verification only, never in this repo
+SET_MD5 = 'a5ab9ff083075971add0d4d16aa80dfa'
+PAL_NAME = 'spec256-palette.pal'           # Spec256-Games' palette (licence not established: never in this repo)
+PAL_MD5 = 'b095dc99a047bab844b87b06657b0a7a'
+
+
+def _pinned(folder, name, md5):
+    import hashlib
+    p = Path(folder) / name
+    if not p.is_file():
+        raise ValueError('no %s beside the colour blob: the replay model reads the set afresh and needs it' % name)
+    data = p.read_bytes()
+    if hashlib.md5(data).hexdigest() != md5:
+        raise ValueError('%s MD5 %s, the proved one is %s' % (name, hashlib.md5(data).hexdigest(), md5))
+    return data
+
+
+class SetReader:
+    """The Spec256 set's plane values and its own colour rule (the review run's colourset.py), read from SET_NAME and
+    PAL_NAME in folder."""
+    def __init__(self, folder):
+        self.d = _pinned(folder, SET_NAME, SET_MD5)
+        v = [int(x) for x in _pinned(folder, PAL_NAME, PAL_MD5).decode('ascii').split()]
+        self.pal = [tuple(v[i:i + 3]) for i in range(0, 768, 3)]
+        mem = 131072 * 9
+        self.up, self.down, self.flags = self.d[mem + 29], self.d[mem + 30], self.d[mem + 31]
+        if not self.flags & 0x80:
+            self.up, self.down, self.flags = 64, 0, 0
+        self.p7 = self.d[mem + 28]
+
+    def phys(self, a):
+        bank = 5 if a < 0x8000 else 2 if a < 0xC000 else (self.p7 & 7)
+        return bank * 16384 + (a & 16383)
+
+    def v8(self, a):
+        """The 8 plane values of the byte at a, left pixel first, and the master byte."""
+        o = self.phys(a) * 9
+        p, m = self.d[o:o + 8], self.d[o + 8]
+        return [sum(((p[i] >> (7 - k)) & 1) << i for i in range(8)) for k in range(8)], m
+
+    def rgb(self, v, master, attr):
+        if v == 0xFF:
+            colour = (attr & 7) if master else (attr >> 3) & 7
+            level = 255 if attr & 0x40 else 215
+            return (level if colour & 2 else 0, level if colour & 4 else 0, level if colour & 1 else 0)
+        r, g, b = self.pal[v]
+        if v >= 256 - self.up or v < self.down:
+            upper = v >= 256 - self.up
+            paper = bool(self.flags & (2 if upper else 4))
+            ac = (attr >> 3) & 7 if paper else attr & 7
+            level = 255 if self.flags & 1 and attr & 0x40 else 191
+            r = (r + (level if ac & 2 else 0)) >> 1
+            g = (g + (level if ac & 4 else 0)) >> 1
+            b = (b + (level if ac & 1 else 0)) >> 1
+        return (r, g, b)
+
+
+def to9(c):
+    return (round(c[0] * 7 / 255), round(c[1] * 7 / 255), round(c[2] * 7 / 255))
+
+
 class Picture:
     """What the Spec256 machine's planes would hold in the back buffer, by the game's own operations, read from the set
-    afresh: independent of the build's colour images."""
+    afresh (SetReader, beside the colour blob): independent of the build's colour images."""
     def __init__(self, patch):
-        import sys
-        sys.path.insert(0, str(Path(patch.colours_path).parent.parent / 'work'))
-        from colourset import Set, to9
-        self.s, self.to9 = Set(), to9
+        self.s, self.to9 = SetReader(Path(patch.colours_path).parent), to9
         self.pal = {tuple(c): i for i, c in reversed(list(enumerate(patch.blob['pal9'])))}
         self.buf = bytearray(256 * 128)         # plane value per pixel; buffer row, screen x
         self.master = bytearray(256 * 128)      # the master bit, for FF
@@ -717,3 +775,166 @@ def negative_patches(patch):
 def run_negative(b, rzx, stop):
     c, ex = verify(b, rzx, stop=stop)
     return {k: v for k, v in c.items() if k.endswith('!')}
+
+
+# ---- nexclash.py auto: the published builds, boot-checked; with recordings the Enhanced replay proof -------------------
+import hashlib
+
+LOAD_SCREEN = 'silkworm_loading.scr'      # the Mastertronic Plus 128K tape's screen, beside the snapshot: game data, never in this repo
+LOAD_MD5 = 'ff8f4e3e7648eca89d4bff22ed3ac9f6'
+COLOURS_MD5 = '8eaea241f660d8b9616aa35a6b19bf5c'   # COLOURS, built from the Spec256 set: beside the snapshot, never in this repo
+PUBLISHER = 'Virgin Games, 1989'
+NEG_STOP = 1000                           # frames of the first recording each deliberately broken build replays
+NEG_LONG = 9004                           # 'characters not on Layer 2' needs the first GAME OVER, late in that recording
+# Each tested alone in the simulator (games/silkworm.md "Cheats"); the published patch's three.
+TRAINERS = '''NInfinite lives
+Z 8 38052 182 0
+NImmune jeep
+Z 8 38505 0 0
+NImmune helicopter
+Z 8 38561 0 0
+Y
+'''
+
+
+def loading_nex(nex, screen):
+    """A built .nex -> the same with the loading screen in the NEX file (header byte 10 = 2), as the published .nxc."""
+    if len(screen) != 6912 or nex[10] != 0:
+        raise ValueError('Expected a .nex without a screen and a 6,912-byte loading screen')
+    head = bytearray(nex[:512])
+    head[10] = 2
+    return bytes(head) + screen + nex[512:]
+
+
+def _beside(z80, file, md5, what):
+    """A private input beside the snapshot -> its path, or None. A different file there is refused."""
+    path = Path(z80).resolve().parent / file
+    if not path.is_file():
+        return None
+    if hashlib.md5(path.read_bytes()).hexdigest() != md5:
+        raise ValueError('%s is not %s (MD5 %s)' % (file, what, md5))
+    return path
+
+
+def boot_check(nex, z80, patch):
+    """Booted with and without NEXLOAD's printer buffer: every register with R and all 48K RAM against the patched
+    snapshot, except the start-up tail's own bytes. The game's code at 5B00 must be back after NEXLOAD. -> problems."""
+    from . import nextboot
+    s = zt.Z80Snapshot(str(z80))
+    patch.apply(s)
+    size = len(zt.build_tail(s, TAIL_ADDR, patch.slot1, True)[0])
+    want = {0: s.a, 1: s.f, 2: s.bc >> 8, 3: s.bc & 255, 4: s.de >> 8, 5: s.de & 255, 6: s.hl >> 8, 7: s.hl & 255,
+            8: s.ix >> 8, 9: s.ix & 255, 10: s.iy >> 8, 11: s.iy & 255, 12: s.sp, 14: s.i, 15: s.r, 16: s.a_, 17: s.f_,
+            18: s.bc_ >> 8, 19: s.bc_ & 255, 20: s.de_ >> 8, 21: s.de_ & 255, 22: s.hl_ >> 8, 23: s.hl_ & 255, 26: s.iff1, 27: s.im}
+    bad = []
+    for nexload in (False, True):
+        st = nextboot.boot(str(nex), s.pc, nexload=nexload)
+        bad += [('register', nexload, i, v, st['R'][i]) for i, v in want.items()
+                if (bool(st['R'][i]) != bool(v) if i == 26 else st['R'][i] != v)]
+        for a in range(0x4000, 65536):
+            if TAIL_ADDR <= a < TAIL_ADDR + size:
+                continue
+            bank = 5 if a < 0x8000 else 2 if a < 0xC000 else s.port7ffd & 7
+            if st['mem'][a] != s.banks[bank][a & 16383]:
+                bad.append(('RAM', nexload, hex(a), s.banks[bank][a & 16383], st['mem'][a]))
+    return bad
+
+
+def _replay(z80, colours, rzx, stop, collect):
+    """One recording's Enhanced replay (a process of its own) -> (counts, examples, states)."""
+    got = verify(Enhanced(z80, colours), rzx, stop=stop, collect=collect)
+    return got if collect else (got[0], got[1], [])
+
+
+def _negative(z80, colours, name, rzx, stop):
+    """One deliberately broken build's replay (a process of its own): -> (name, its failure keys)."""
+    try:
+        return name, sorted(run_negative(negative_patches(Enhanced(z80, colours))[name], rzx, stop))
+    except Exception as e:                  # noqa: BLE001 - a broken hook that runs off into data is caught too
+        return name, ['exception ' + type(e).__name__]
+
+
+def auto(a, z80, name, out, say):
+    """nexclash.py auto: the default build (no hooks, start-up only) and, with the colour blob beside the snapshot, the
+    Enhanced build; each with the loading screen when it is beside the snapshot, as published; every build boot-checked.
+    With --rzx the Enhanced replay proof of each recording, the ABI cases and the broken builds. The pace, soak,
+    flicker and real loader proofs are the review run's (games/silkworm.md "Evidence")."""
+    import concurrent.futures, os
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    if not getattr(a, 'publisher', None):
+        a.publisher = PUBLISHER
+    if not getattr(a, 'pok', None):
+        trainers = out / (name + '_verified.pok')
+        trainers.write_text(TRAINERS)
+        a.pok = str(trainers)
+    say('Game      : Silkworm (Random Access / Virgin Games, 1989, 128K)')
+    say('Engine    : silkworm; default: the original game, start-up fixes only (no clash to remove); '
+        "Enhanced: the Spec256 set's colours on a double-buffered Layer 2; original pace")
+    ok = True
+    screen = _beside(z80, LOAD_SCREEN, LOAD_MD5, 'the original loading screen')
+    colours = _beside(z80, COLOURS, COLOURS_MD5, 'the colour blob this engine was proved with')
+    if screen is None:
+        say('Loading   : no %s beside the snapshot: builds without the loading screen' % LOAD_SCREEN)
+    if colours is None:
+        say('Enhanced  : no %s beside the snapshot: default build only' % COLOURS)
+    builds = [('Default', name, lambda: Patch(z80))]
+    if colours is not None:
+        builds.append(('Enhanced', name + '_enhanced', lambda: Enhanced(z80, colours)))
+    for label, stem, make in builds:
+        nex = out / (stem + '.nex')
+        zt.convert(str(z80), str(nex), patch=make(), quiet=True)
+        nexes = [(label, nex)]
+        if screen is not None:
+            loading = out / (stem + '_loading.nex')
+            loading.write_bytes(loading_nex(nex.read_bytes(), screen.read_bytes()))
+            nexes.append((label[:3] + '+scr', loading))
+        for lab, path in nexes:
+            bad = boot_check(path, z80, make())
+            ok = ok and not bad
+            say('%-10s: %s  %s' % (lab, path.name, hashlib.md5(path.read_bytes()).hexdigest()))
+            say('Boot      : %s' % ('simulated, OK (registers with R, all 48K RAM, 5B00 back; converter loader and NEXLOAD)'
+                                    if not bad else 'MISMATCH %s' % str(bad[:3])[:300]))
+    rzxs = list(getattr(a, 'rzx', None) or [])
+    if rzxs and colours is not None and not all((colours.parent / n).is_file() for n in (SET_NAME, PAL_NAME)):
+        say('Verify    : FAILED: recordings given but no %s and %s beside the snapshot (the replay model reads the set '
+            'afresh)' % (SET_NAME, PAL_NAME))
+        ok = False
+    elif rzxs and colours is None:
+        say('Verify    : FAILED: recordings given but no %s beside the snapshot (the default runs no hook; the replay '
+            'proves Enhanced)' % COLOURS)
+        ok = False
+    elif rzxs:
+        stop = getattr(a, 'quick', None)
+        workers = min(len(rzxs), os.cpu_count() or 1)
+        with concurrent.futures.ProcessPoolExecutor(workers) as pool:
+            done = list(pool.map(_replay, [z80] * len(rzxs), [colours] * len(rzxs), rzxs, [stop] * len(rzxs),
+                                 [1] + [0] * (len(rzxs) - 1)))
+        states = []
+        for path, (c, ex, got) in zip(rzxs, done):
+            states += got
+            fail = {k: v for k, v in c.items() if k.endswith('!')}
+            ok = ok and not fail
+            say('Verify    : %s %d frames, %d hooks, %d R comparisons, %d pictures, %d pixels: %s' % (
+                Path(path).name, c['frames'], c['hooks'], c['R comparisons'], c['pictures compared'], c['pixels compared'],
+                'IDENTICAL' if not fail else str(fail)))
+            for k in ('stale picture bits (a restart)', 'stars under OR pixels', 'overlaps at OR pixels', 'buffer bits not in the picture'):
+                if c.get(k):
+                    say('            %s: %d (known, games/silkworm.md "Known issues")' % (k, c[k]))
+            for k, v in ex.items():
+                say('            %s: %s' % (k, v))
+        counts = unit_tests(Enhanced(z80, colours), states)
+        fail = {k: v for k, v in counts.items() if k.endswith('!')}
+        ok = ok and not fail
+        say('Unit      : %s' % dict(counts))
+        names = list(negative_patches(Enhanced(z80, colours)))
+        stops = [NEG_LONG if n.startswith('characters') else NEG_STOP for n in names]
+        with concurrent.futures.ProcessPoolExecutor(min(len(names), os.cpu_count() or 1)) as pool:
+            neg = list(pool.map(_negative, [z80] * len(names), [colours] * len(names), names, [rzxs[0]] * len(names), stops))
+        missed = [n for n, keys in neg if not keys]
+        ok = ok and not missed
+        say('Negatives : %d of %d broken builds caught%s' % (len(neg) - len(missed), len(neg), '; MISSED %s' % missed if missed else ''))
+    else:
+        say('Verify    : not requested; boot evidence only')
+    say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
+    return bool(ok)

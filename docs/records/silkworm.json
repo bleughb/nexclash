@@ -1,0 +1,231 @@
+{
+ "name": "silkworm",
+ "order": 231,
+ "game": "Silkworm",
+ "doc": "silkworm.md",
+ "engine": "silkworm",
+ "representative": true,
+ "reference": "silkworm",
+ "inputs": {
+  "snapshot": {
+   "name": "silkworm.z80",
+   "md5": "8fad50cd8c218ade32bf3c2332c8ee03",
+   "path": "silkworm/silkworm.z80",
+   "note": "Silkworm (1989)(Virgin Games)(128K).z80, the 128K release at its title: AY music, paging locked at bank 0."
+  },
+  "recordings": [
+   {
+    "name": "silkworm_loading.scr",
+    "md5": "ff8f4e3e7648eca89d4bff22ed3ac9f6",
+    "path": "silkworm/silkworm_loading.scr",
+    "role": "The 6,912-byte loading screen from the same game's Mastertronic Plus 128K tape, block 3, staged beside the snapshot; not a recording."
+   },
+   {
+    "name": "silkworm_colours.bin",
+    "md5": "8eaea241f660d8b9616aa35a6b19bf5c",
+    "path": "silkworm/silkworm_colours.bin",
+    "role": "Enhanced: the colour blob built from the Spec256 set (credited Ynicky), staged beside the snapshot; local only, never in this repo; not a recording."
+   },
+   {
+    "name": "silkworm.256",
+    "md5": "a5ab9ff083075971add0d4d16aa80dfa",
+    "path": "silkworm/silkworm.256",
+    "role": "Verification only: the Spec256 set itself, which the replay's model reads afresh, independent of the colour blob; game data, never in this repo; not a recording."
+   },
+   {
+    "name": "spec256-palette.pal",
+    "md5": "b095dc99a047bab844b87b06657b0a7a",
+    "path": "silkworm/spec256-palette.pal",
+    "role": "Verification only: Spec256-Games' palette for the set's colour rule (licence not established), never in this repo; not a recording."
+   },
+   {
+    "name": "p1.rzx",
+    "md5": "52de5245a73b59063b82e7747c2b0461",
+    "path": "silkworm/p1.rzx",
+    "role": "The release from its title: scripted Kempston play."
+   },
+   {
+    "name": "w0.rzx",
+    "md5": "512d20a22365917bee70a9558943f027",
+    "path": "silkworm/w0.rzx",
+    "role": "Wave 1 from a test fixture of the release, scripted Kempston play; coverage, not clean play."
+   },
+   {
+    "name": "w2.rzx",
+    "md5": "4049c146e0cfb9ecb157f01321359622",
+    "path": "silkworm/w2.rzx",
+    "role": "Wave 3 from a test fixture of the release (a jump to that wave), scripted Kempston play; coverage, not clean play."
+   },
+   {
+    "name": "w5.rzx",
+    "md5": "e099139e6de17dfe1adf98ca5ffcf77d",
+    "path": "silkworm/w5.rzx",
+    "role": "Wave 6 from a test fixture of the release (a jump to that wave), scripted Kempston play; coverage, not clean play."
+   },
+   {
+    "name": "w7.rzx",
+    "md5": "8190503b4d272f1b99b2ab57d07c9959",
+    "path": "silkworm/w7.rzx",
+    "role": "Wave 8 from a test fixture of the release (a jump to that wave), scripted Kempston play; coverage, not clean play."
+   },
+   {
+    "name": "w10.rzx",
+    "md5": "8677072a2b4821504793e870cbe0d9e6",
+    "path": "silkworm/w10.rzx",
+    "role": "Wave 11 from a test fixture of the release (a jump to that wave), scripted Kempston play; coverage, not clean play."
+   },
+   {
+    "name": "wend.rzx",
+    "md5": "bd832e125624f5ab87ed2f2304565452",
+    "path": "silkworm/wend.rzx",
+    "role": "The ending: a test fixture of the release that jumps from the game's start to the ending at 7C27, scripted; coverage, not clean play."
+   }
+  ]
+ },
+ "modules": [
+  "silkworm"
+ ],
+ "own_modules": [
+  "silkworm"
+ ],
+ "data": [
+  "asm/silkworm_hooks.asm",
+  "docs/profiles/silkworm.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "p1.rzx",
+   "w0.rzx",
+   "w2.rzx",
+   "w5.rzx",
+   "w7.rzx",
+   "w10.rzx",
+   "wend.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 30,
+  "note": "The default runs no hook, so the replay proves Enhanced, each recording whole: at every hook every register with R, all 48K RAM bar the sites and the dead stack, the clock and the MMU against the original; the back-buffer picture against a model that reads the set afresh, and the game's own buffer bit by bit; ABI cases on the first recording's states and 12 broken builds. Pace, soak, flicker and the real loader are in games/silkworm.md \"Evidence\"."
+ },
+ "outputs": {
+  "plain": {
+   "file": "silkworm.nex",
+   "md5": "36a148b54bce181c39c94899f7809c20"
+  },
+  "loading": {
+   "file": "silkworm_loading.nex",
+   "md5": "6ae12fd66946724d9ef6c1e089a6b163"
+  },
+  "enhanced": {
+   "file": "silkworm_enhanced.nex",
+   "md5": "d5d3a92cce49d1f4d855f3d98ee7f41b"
+  },
+  "enhanced_loading": {
+   "file": "silkworm_enhanced_loading.nex",
+   "md5": "2058f2e55464eeb68f418320548fb34a"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Silkworm",
+  "engine_col": "silkworm (silkworm.md)",
+  "build": "v1.0; silkworm_loading.nex 6ae12fd6 and silkworm_enhanced_loading.nex 2058f2e5 equal the published .nxc 1.0 bare builds, default and Enhanced (without the screen 36a148b5, d5d3a92c); default: the original game, start-up fixes only, no clash to remove and none claimed; Enhanced, off by default: the Spec256 set's colours on a double-buffered Layer 2; top bank 47, fits a 1MB Next",
+  "software": "Enhanced: 7 recordings, whole, 57,146 frames, 584,134 hooks with R and 48K RAM, 12,922 back-buffer pictures against a model that reads the set afresh, the game's own buffer bit by bit; 1,088 ABI cases, 12 of 12 broken builds; ROM paths complete; default: no hooks, boot exact; review run: pace in JNext on lockstep test copies, whole runs -2.80% to -0.47% (beyond -2% only on wave 6, where the original lags), slowest 20 updates under 2% in 8 runs of 9, +15.65% at the end of GAME OVER, cause not found; 15-minute soaks, flicker, real loader on private cards",
+  "hardware": "untested",
+  "next": "hardware checklist; natural play to the end and the two-player case; the GAME OVER +15% stretch"
+ },
+ "checks": [
+  "asm2profile:silkworm"
+ ],
+ "results": [
+  {
+   "check": "external review run",
+   "status": "pass",
+   "scope": "runs/silkworm/release-20261108 and release-20261108b: pace, soak, flicker and real loader, JNext 1.1.104, on this engine's bytes. Not a selftest stamp.",
+   "evidence": "games/silkworm.md \"Evidence\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/silkworm_hooks.asm": "c5f11bb2322828de",
+   "docs/profiles/silkworm.json": "d2fb4cd1fac8b188",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "fd88f155f98b9220",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/silkworm.py": "8c6642cfe78e19af",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "1950157b12bc79e7",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ },
+ "verified": {
+  "deps": {
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/silkworm_hooks.asm": "c5f11bb2322828de",
+   "docs/profiles/silkworm.json": "d2fb4cd1fac8b188",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "fd88f155f98b9220",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/silkworm.py": "8c6642cfe78e19af",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "1950157b12bc79e7",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ }
+}

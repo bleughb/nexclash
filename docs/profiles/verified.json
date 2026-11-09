@@ -372,6 +372,16 @@
     "sprites": "332c9526cf6ab6b4adb5c1dc2d170969"
    }
   },
+  "8fad50cd8c218ade32bf3c2332c8ee03": {
+   "game": "Silkworm",
+   "doc": "silkworm.md",
+   "nex": {
+    "plain": "36a148b54bce181c39c94899f7809c20",
+    "loading": "6ae12fd66946724d9ef6c1e089a6b163",
+    "enhanced": "d5d3a92cce49d1f4d855f3d98ee7f41b",
+    "enhanced_loading": "2058f2e55464eeb68f418320548fb34a"
+   }
+  },
   "3b89344c6d7e6433bf044bef1880a2f1": {
    "game": "Smash TV",
    "doc": "smash_tv.md",

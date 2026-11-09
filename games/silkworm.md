@@ -1,10 +1,11 @@
 # Silkworm (Random Access / Virgin Games, 1989, 128K)
 
 ## Next session
-Stage: 3 (review build with Enhanced, not yet played by the owner). Hardware: untested. Default has no hooks; Enhanced is a menu option, off by default.
-Inputs: Silkworm (1989)(Virgin Games)(128K).z80, MD5 8fad50cd8c218ade32bf3c2332c8ee03; loading screen from the Mastertronic Plus 128K tape, block 3, MD5 ff8f4e3e, staged by the packager, never in this repo; colour blob `silkworm_colours.bin` from the Spec256 set, beside the snapshot, never in the repo.
-Build: `nexclash.silkworm.build(z80, nex, enhanced=True, colours=blob)`. Not wired into `auto`, `engines.py` or a record yet: that comes when it goes upstream after the owner has played it.
-Checks: review run private. Pending: the owner's play; hardware checklist.
+Stage: 4 (hardware). Hardware: untested. v1.0 published as .nxc 1.0 (2026-11-08, nxc repo 05d3127) at the owner's request, not yet played by him. Default has no hooks; Enhanced is a menu option, off by default.
+Inputs: Silkworm (1989)(Virgin Games)(128K).z80, MD5 8fad50cd8c218ade32bf3c2332c8ee03; beside it, both staged by the record, never in this repo: `silkworm_loading.scr` (the Mastertronic Plus 128K tape's block 3, MD5 ff8f4e3e) and `silkworm_colours.bin` (the colour blob built from the Spec256 set, MD5 8eaea241). The replay also needs `silkworm.256` (the set, MD5 a5ab9ff0) and `spec256-palette.pal` (MD5 b095dc99) beside it: its model reads the set afresh (`SetReader`), independent of the blob.
+Build: `nexclash.py auto` writes `NAME.nex` (36a148b5) and, with the screen, `NAME_loading.nex` (6ae12fd6); with the blob also `NAME_enhanced.nex` (d5d3a92c) and `NAME_enhanced_loading.nex` (2058f2e5). The two with the screen equal `nxc.py PATCH GAME --bare [--colours Enhanced]` of the published patch byte for byte. A missing input is said and its builds skipped.
+Checks: `selftest.py --game silkworm --verify`: Enhanced replay of the seven recordings with R, ABI cases, 12 broken builds, every build boot-checked. Pace, soak, flicker and real loader are in Evidence, not in the repo.
+Pending: hardware checklist; natural play to the end; the two-player case.
 
 ## Facts
 - A true 128K release: AY music from the ISR, 128K snapshot with paging locked at bank 0, ROM 1. Bank 0 holds game code. The other banks are never paged.
@@ -28,7 +29,7 @@ Enhanced, once the owner's rule made a mock-up unnecessary: faithful, the set's 
 - Pace: the update's logic and plots run at 28 MHz in K windows; the blit and clear stay under DI at the game's clock; a figure pays a fixed debt besides its measured time.
 
 ## Known issues
-- After a restart "PRESS FIRE TO PLAY" can stay on Layer 2 for up to two pictures: the game clears its buffer there by a path with no hook. A star under a figure's OR-only pixel shows the figure's colour. Both counted in the replay.
+- After a restart "PRESS FIRE TO PLAY" can stay on Layer 2 for up to two pictures: the game clears its buffer there by a path with no hook. A star under a figure's OR-only pixel shows the figure's colour. Both counted in the replay. It also counts back-buffer bits missing from Layer 2 at a blit (a few hundred in 9,000 frames, at most 16 in a picture; more fails the replay): likely the same unhooked paths, not proved.
 - The end of GAME OVER, 16 updates or so, runs about +35% per update (a +15% 20-update stretch), cause not found.
 - Stars lead the ULA's by one update, one pixel: the hook reads their positions after the game has moved them. Not visible, left.
 - Picking a control on the title can blink the logo for moments: the print turns Layer 2 off until the next time round the loop.
@@ -68,5 +69,7 @@ Nothing has run on a Next. To check: the code at 5B00 after a real NEXLOAD (firs
 - scratch: [local: review run] Its work folder stays in private evidence.
 
 ## Stage log
+- 2026-11-08 Upstream: `auto`, registration and record added; the engine bytes are the published ones, MD5s 6ae12fd6 (default) and 2058f2e5 (Enhanced).
+- 2026-11-08 Published: .nxc 1.0 (nxc 05d3127) at the owner's request, not yet played by him.
 - 2026-11-08 Stage 3: Enhanced built from the set, faithful, off by default, tested in every mode.
 - 2026-11-08 Stage 0-3: survey, every wave by fixture, plain build with start-up fixes, proofs, mock-up for Enhanced.
