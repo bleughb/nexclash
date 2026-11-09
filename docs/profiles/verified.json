@@ -316,7 +316,11 @@
     "sprites": "3f8ce0fc97d32fbcff8bff675b4840b2",
     "enhanced": "db6f976f9ea855945dff53ce045e8c7b",
     "backdrops": "2e5cb62e7a65bf833d0fd2615d8a2102",
-    "enhanced_backdrops": "abe82a3085de8ca8a0b29cf9834ec0a6"
+    "enhanced_backdrops": "abe82a3085de8ca8a0b29cf9834ec0a6",
+    "sprites_loading": "71a5351b7d016d4a6f425c0caf7f0fd1",
+    "enhanced_loading": "59d95f3ac081b12b886084eb76231a2f",
+    "backdrops_loading": "6a2597eff5d405705b2ac9a7e26eb1eb",
+    "enhanced_backdrops_loading": "b9928a6eb4acd223d15611a498d64fae"
    }
   },
   "e9cb908bc86661ff81732665741393cc": {

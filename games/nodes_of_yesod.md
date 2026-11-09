@@ -10,6 +10,9 @@ Imported all 456 edited pixels across 12 mole/enemy-spaceman graphics from the o
 - `auto` builds all four .nxc variants: sprites (default), enhanced (the painted map + palette + HUD), backdrops and
   enhanced_backdrops. Each is byte for byte the published .nxc 1.5 --bare apart from the NEX loading-screen block
   (header flag bit 1 + the tape's 6,912-byte picture) that the packager adds.
+- 1.6: with nodes_of_yesod_loading.scr beside the snapshot (the 128K .tap's screen, MD5 3afc5168, game data, local only)
+  auto also writes the four sets' _loading.nex = the published .nxc 1.6 --bare: default 71a5351b, Enhanced 59d95f3a,
+  Backdrops 6a2597ef, Enhanced + Backdrops b9928a6e. Art banks (patterns, palettes, HUD, backdrops) as 1.5.
 - recolour() now also sets the HUD flag (on with a map), so the selftest recolour guard holds for the Enhanced build.
 - The Enhanced map keeps only the painting: its check values are null (the image bytes come from the player's
   snapshot); a repainted sheet's import writes them back, so null them before committing.
@@ -47,7 +50,7 @@ Current JNext quiet regression against v1.4: **301 player-update records match e
 
 All four host and **actual dot-loader combinations rebuild byte for byte** with the original 6,912-byte loading screen. Seven imported trainers pass 28 combination checks. Native loader runs use private card-image copies, not a physical card. Current loader SHA256: `d7ea19ec1fd65a6a73b16fd896014a922794489a95b515f1eb24074196c8db61`; older loaders can omit the tenth menu option.
 
-## Pace, v1.6 (pace audit of 2026-11-08; review build, not published)
+## Pace, v1.6 (pace audit of 2026-11-08; published .nxc 1.6, jattree/nxc 238e98a)
 Audit (pilot runs/pace-audit-20261108/REPORT-2.md): 1.5 whole -2.54 to -1.65%, busy -3.84 to -2.72%, stretches of 20 updates -13.1 to +13.9%, too fast and too slow, against the rule (Jon, 2026-11-07: within 2% where the original runs steadily, faster fine where it lags, never slower). Cause: one floor on the time of a player update (332 lines), which knew nothing of what the update had displaced.
 - The floor is gone. Each displaced job is a window: the copy (36680 to 36843), whose LDIR no longer runs, and the attribute walk (36851 to 36902), which runs at 28 MHz. win_open at the start; at the end win_wait waits at the caller's clock until the original's time for that size has passed, interrupts left out (ISRLINES 43, the handler's mean), and carries what is over or under in V_PD (1/16 line).
 - Targets, fitted on the plain build in JNext: copy 21 T r c + 140 T r (r rows, c columns; the fits by seed run 19.9 to 23.0 r c, 132 to 139 r: screen contention); walk 155 T D E + 39 T D + 45 T. e_player takes A_PLAYER, 130/16 lines, off V_PD for the hooks' own 3.5 MHz parts (tuned).

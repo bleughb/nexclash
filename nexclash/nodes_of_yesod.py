@@ -48,6 +48,11 @@ FULL = (1 << 256) - 1
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', 'nodes_of_yesod_colours.json')
+# the tape's loading screen (the 6,914-byte block of the 128K .tap, flag and checksum dropped), beside the snapshot: game
+# data, never in this repo. With it auto also writes the published .nxc's bare builds (1.6: default 71a5351b, Enhanced
+# 59d95f3a, Backdrops 6a2597ef, Enhanced + Backdrops b9928a6e).
+LOAD_SCREEN = 'nodes_of_yesod_loading.scr'
+LOAD_MD5 = '3afc516842c5c51bc082ac7eb1847221'
 
 
 def _profile_path():
@@ -1524,6 +1529,26 @@ def negative_real(patch, rzx_path, stop=1500, only=None):
     return out
 
 
+def loading_nex(nex, screen):
+    """A built .nex -> the same with the loading screen in the NEX file (header byte 10 = 2), as the published .nxc."""
+    if len(screen) != 6912 or nex[10] != 0:
+        raise ValueError('Expected a .nex without a screen and a 6,912-byte loading screen')
+    head = bytearray(nex[:512])
+    head[10] = 2
+    return bytes(head) + screen + nex[512:]
+
+
+def find_screen(z80):
+    """The tape's loading screen beside the snapshot, or None. A different file there is refused."""
+    path = os.path.join(os.path.dirname(os.path.abspath(z80)), LOAD_SCREEN)
+    if not os.path.isfile(path):
+        return None
+    data = open(path, 'rb').read()
+    if hashlib.md5(data).hexdigest() != LOAD_MD5:
+        raise ValueError('%s is not the original loading screen (MD5 %s)' % (LOAD_SCREEN, LOAD_MD5))
+    return data
+
+
 def auto(a, z80, name, out, say):
     from . import z80tonex as zt
     say('Game      : %s' % name)
@@ -1545,6 +1570,15 @@ def auto(a, z80, name, out, say):
         bd = os.path.join(out, name + suffix + '.nex')
         zt.convert(z80, bd, TAIL_ADDR, True, quiet=True, patch=NodesPatch(z80, colours=cm, pal=pal if cm else None, backdrop=True))
         say('%-10s: %s  %s' % (label, os.path.basename(bd), md5(bd)))
+    screen = find_screen(z80)
+    if screen is None:
+        say('Loading   : no %s beside the snapshot: no builds with the loading screen' % LOAD_SCREEN)
+    else:
+        for suffix in ('_sprites', '_enhanced', '_backdrops', '_enhanced_backdrops'):
+            src = os.path.join(out, name + suffix + '.nex')
+            dst = src[:-4] + '_loading.nex'
+            open(dst, 'wb').write(loading_nex(open(src, 'rb').read(), screen))
+            say('Loading   : %s  %s  (the published .nxc --bare)' % (os.path.basename(dst), md5(dst)))
     ok = True
     states = []
     for r in list(a.rzx or []):
