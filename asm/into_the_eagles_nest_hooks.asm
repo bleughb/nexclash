@@ -125,9 +125,7 @@ h_isr:
         ld (V_IR0),hl
         ld a,c
         ld (V_I7),a
-        ld a,(HLIB_V_PACE+10)
-        or a
-        call nz,hlib_pace_hold
+        call hlib_pace_hold
         ld a,(V_SPEED)
         nextreg 0x07,a
         ld a,r
@@ -140,9 +138,10 @@ h_isr:
         ld hl,V_IR1
         sub (hl)
         ld (V_IR1),a
-        ld a,(HLIB_V_PACE+10)
-        or a
-        call nz,hlib_pace_resume
+        call hlib_pace_resume   ; held always, so that a line read it broke is read again (hlib_now)
+        ld bc,0x243B            ; and NR 7 selected, so that a clock read it broke reads the clock
+        ld a,7
+        out (c),a
         ld a,(V_I7)
         nextreg 0x07,a
         ld a,(V_IR1)

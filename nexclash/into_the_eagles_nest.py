@@ -399,6 +399,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, full_every=1):
             fail('game reads differ', {'pc': hex(pc), 'sym': sym})
         if sym == 'h_isr' and speed0 == 3 and ('s', st.page[0x3E30 - 0x2000]) not in model.events:
             fail('interrupt not at the game clock', {'pc': hex(pc)})
+        if sym == 'h_isr' and model.sel != 7:
+            fail('interrupt leaves another register selected', {'pc': hex(pc), 'sel': model.sel})
         c['hooks'] += 1
         c['hooks ' + sym] += 1
         c['48K bytes compared'] += 49152
@@ -547,16 +549,17 @@ def negative_patches(patch):
     import copy
     out = {}
 
-    def mutate(name, old, new):
+    def mutate(name, old, new, after=0x2800):
         b = copy.copy(patch)
         b.ram = bytearray(patch.ram)
         code = bytes(b.ram[0x800:0x800 + len(b.code)])
-        i = code.find(bytes.fromhex(old))
+        i = code.find(bytes.fromhex(old), after - 0x2800)
         if i < 0:
             raise ValueError('negative %s: pattern not found' % name)
         b.ram[0x800 + i:0x800 + i + len(new) // 2] = bytes.fromhex(new)
         b._banks()
         out[name] = b
+    mutate('interrupt leaves another register selected', '013B243E07ED79', '00000000000000', patch.syms['h_isr'] + 30)
     mutate('R off by one', '3EE9CD', '3EEACD')
     mutate('clock left at 28 MHz', 'F53A423EED9207F1', 'F53E0300ED9207F1')
     mutate('interrupt runs at 28 MHz', '3A303EED9207', '000000000000')

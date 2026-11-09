@@ -27,6 +27,7 @@ Enhanced, once the owner's rule made a mock-up unnecessary: faithful, the set's 
 - Colours match the release by address: the set's graphics are byte for byte at the same places.
 
 ## Known issues
+Enhanced: the WELCOME screen's box (9F04, called from 94EF) is on the ULA only, so Layer 2 hides it; the set has it in yellow. To do: a hook on that call.
 The original's stepped, tile-by-tile movement remains. Pause reached from 9478 could draw its striped border at 28 MHz: seen in the code, cosmetic.
 
 ## Evidence (review run runs/into_the_eagles_nest/release-20261108b, JNext 1.1.104; emulator and simulator only)
@@ -50,6 +51,7 @@ Nothing has run on a Next. To check: AY sounds; both Kempston and keyboard; 1MB 
 - [local: a slot found, not a slot assumed] A wrapper that mapped slot 1 to ROM during the interrupt crashed when a hook's stack was in slot 1. It now restores what it found.
 - [local: carry into D] Copying a tile at column 31 carried into D. Push and pop DE per row rather than trusting E to wrap.
 - [local: K at the right level] A game that waits on its own interrupts needs no K window on its update; 28 MHz to the wait is enough. Fine K windows on every tile only added cost.
+- [local: a selected register is shared state] An interrupt between a hook's `out (0x243B)` and its `in (0x253B)` leaves another register selected. `HLIB_SPEED_IN` then latched a line number as the clock. Silkworm's pace tables found it; this engine has the same wrapper and could leave a scroll step at a low clock, though none showed in its runs. The wrapper now holds the pace in every interrupt and selects NR 7 again before it returns, and the replay checks that. Worth a look upstream, in any engine whose wrapper reads lines.
 
 ## Friction
 - reuse: [none: nexclash.scan, pace, soak, flicker and rom_paths were enough]
