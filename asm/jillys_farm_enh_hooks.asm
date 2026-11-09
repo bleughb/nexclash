@@ -24,7 +24,7 @@ K_MOVE EQU 110                 ; the update's first stretch: the same
 K_DRAW EQU 85                 ; the game's draw: original time per unit of its 28 MHz time, x 16
 DEBT_KEEP EQU 320               ; 1/16 lines: 20 lines at most carry from one window to the next, the rest wait in V_BANK
 U_WIN EQU 30                   ; 1/16 lines: a window's own entry and exit at the game's clock
-U_PLOT EQU 100                  ; 1/16 lines: a hook's own time in the window, as K scales it: goes to the debt
+U_PLOT EQU 80                  ; 1/16 lines: a hook's own time in the window, as K scales it: goes to the debt
 V_W EQU 0x3E2C                 ; a draw window is open
 V_WSPEED EQU 0x3E2D
 V_SPEED EQU 0x3E30
@@ -41,6 +41,7 @@ P_T EQU 0x3E48                 ; word
 P_PGB EQU 0x3E4A
 P_SRC EQU 0x3E4C                ; word
 P_CELLS EQU 0x3E4E              ; word
+P_C EQU 0x3E50                  ; word
 V_BANK EQU 0x3E2E               ; word
 R_F EQU 0x3EC0                 ; 8 font bytes
 PG_BACK EQU 32                 ; 8 pages: y 0-255 (the screen only uses 0-191)
@@ -117,7 +118,7 @@ rom_start:
         ret
         ENDM
 ; ---- a plot on the values, then the game's own routine ---------------------------
-        MACRO PLOT_HOOK kind, n, k, body
+        MACRO PLOT_HOOK kind, n, k, body, tbl
         ENTER
         HLIB_SPEED_IN V_SPEED
         ld a,n
@@ -125,22 +126,26 @@ rom_start:
         ld a,k
         ld (P_N),a
         call nest_in
-        call kind
+        ld hl,tbl
+        ld de,kind
+        call l2_plot
         call nest_out
         FINISH body
         ENDM
-h_92F6: PLOT_HOOK l2_ldd,2,16,0x92F6
-h_936A: PLOT_HOOK l2_ldd,2,48,0x936A
-h_9B8D: PLOT_HOOK l2_ldd,4,16,0x9B8D
-h_9BF1: PLOT_HOOK l2_mask,4,8,0x9BF1
-h_9C33: PLOT_HOOK l2_mask,4,24,0x9C33
-h_9CE5: PLOT_HOOK l2_mask,2,24,0x9CE5
-h_9D97: PLOT_HOOK l2_mask,4,40,0x9D97
-h_9EB9: PLOT_HOOK l2_mask,4,29,0x9EB9
-h_93D4: PLOT_HOOK l2_mask,2,56,0x93D4
-h_96EB: PLOT_HOOK l2_mask,3,56,0x96EB
-h_9F8E: PLOT_HOOK l2_sheep,3,29,0x9F8E
-h_A02B: PLOT_HOOK l2_sheep,4,29,0xA02B
+; The tables at TBL, made by the engine: source low, high, page, code low, high; high 0 ends.
+TBL EQU 0x3C00
+h_92F6: PLOT_HOOK l2_ldd,2,16,0x92F6,TBL+0x00
+h_936A: PLOT_HOOK l2_ldd,2,48,0x936A,TBL+0x20
+h_9B8D: PLOT_HOOK l2_ldd,4,16,0x9B8D,TBL+0x40
+h_9BF1: PLOT_HOOK l2_mask,4,8,0x9BF1,TBL+0x60
+h_9C33: PLOT_HOOK l2_mask,4,24,0x9C33,TBL+0x80
+h_9CE5: PLOT_HOOK l2_mask,2,24,0x9CE5,TBL+0xA0
+h_9D97: PLOT_HOOK l2_mask,4,40,0x9D97,TBL+0xC0
+h_9EB9: PLOT_HOOK l2_mask,4,29,0x9EB9,TBL+0xE0
+h_93D4: PLOT_HOOK l2_mask,2,56,0x93D4,TBL+0x150
+h_96EB: PLOT_HOOK l2_mask,3,56,0x96EB,TBL+0x150
+h_9F8E: PLOT_HOOK l2_sheep,3,29,0x9F8E,TBL+0x100
+h_A02B: PLOT_HOOK l2_sheep,4,29,0xA02B,TBL+0x140
 
 h_clear:
         ENTER
@@ -278,8 +283,11 @@ cell_credit:
         ld hl,(P_CELLS)
         add hl,hl
         add hl,hl
+        ld d,h
+        ld e,l
         add hl,hl
-        add hl,hl               ; 16 x cells, 1/16 lines: a line a cell
+        add hl,hl
+        add hl,de               ; 20 x cells, 1/16 lines
         jp hlib_debt_add
 nest_in:
         ld a,(V_W)
@@ -497,111 +505,94 @@ l2_ldd: push ix
 .page:  call up_page
         jp .cont
 
-; l2_mask: HL going down: mask, then graphic: v = (v AND mask) OR graphic. D column, E y going up the screen.
+; l2_plot: HL = the routine's table, DE = its plot routine for any other source. A compiled sprite is about 3 times the speed.
+; The sheep's table counts only for the unshifted routine (IXl AND 7 = 0).
+l2_plot:
+        ld a,h
+        cp HIGH (TBL+0x100)
+        jr nz,.any
+        ld a,l
+        cp LOW (TBL+0x150)
+        jr z,.any
+        ld a,ixl
+        and 7
+        jr z,.any
+        ex de,hl
+        jp (hl)
+.any:   ld (P_C),de
+        push hl
+        ld hl,4
+        add hl,sp
+        ld c,(hl)
+        inc hl
+        ld b,(hl)               ; the game's HL
+        pop hl
+.scan:  ld a,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+        cp c
+        jr nz,.no
+        ld a,d
+        cp b
+        jr z,.hit
+.no:    ld a,d
+        or a
+        jr z,.miss
+        inc hl
+        inc hl
+        inc hl
+        jr .scan
+.miss:  ld hl,(P_C)
+        jp (hl)
+.hit:   ld a,(hl)
+        inc hl
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ld (.cc+1),de
+        nextreg 0x56,a
+        ld hl,4
+        add hl,sp
+        ld e,(hl)
+        inc hl
+        ld d,(hl)               ; the game's DE
+        call set_x
+        ld a,e
+        call set_row
+        ld a,(P_ROW)
+        ld h,a
+        ld a,(P_X)
+        ld l,a
+        ld e,a
+        ld c,0
+        ld d,0xFF
+.cc:    call 0
+        jp map_back
+; up_c: a compiled sprite went off the top of a page: H = the page above's last line. A lost.
+up_c:   ld h,31
+        ld a,(P_PGB)
+        dec a
+        sub PG_BACK
+        and 7
+        add a,PG_BACK
+        ld (P_PGB),a
+        nextreg 0x50,a
+        ret
+
+; l2_mask: any other source: HL going down: mask, then graphic: v = (v AND mask) OR graphic. D column, E y going up.
 l2_mask:
         push ix
-        ld a,8
+        xor a
         call plot_set_ix
 .col:   COL_SET
-.byte:  ld a,(hl)
-        or a
-        jp z,.skip
-        cp 0xFF
-        jp z,.all
-        cp 1
-        jp z,.one
-.bits:  inc l                   ; most mask bytes write one run of pixels: +12 its start + 1, +13 its length
-        inc l
-        inc l
-        inc l
-        ld a,(hl)
-        or a
-        jr z,.twice
-        push de
-        dec a
-        ld b,a
-        add a,e
-        ld e,a
-        inc l
-        ld c,(hl)
-        ld a,l
-        sub 29
-        jr nc,.n1
-        dec h
-.n1:    add a,b
-        ld l,a
-        ld b,0
-        ldir
-        pop de
-        ld a,l
-        and 0xF0
-        sub 8
-        jr nc,.n2
-        dec h
-.n2:    ld l,a
-        jp .row
-.twice: dec l
-        dec l
-        dec l
-        dec l
-        ld a,(hl)
-        ld bc,-24
-        add hl,bc
-        REPT 7
-        rlca
-        jr c,$+6
-        inc hl
-        inc e
-        jr $+4
-        ldi
-        ENDR
-        rlca
-        jr nc,$+4
-        ld a,(hl)
-        ld (de),a
-        inc hl
-.step:  ld bc,-16
-        add hl,bc
-.row:   ld e,ixl
-        dec d
-        jp m,.page
-.cont:  dec ixh
-        jp nz,.byte
-        COL_NEXT .col
-.skip:  ld bc,-32
-        add hl,bc
-        jp .row
-.page:  call up_page
-        jp .cont
-.all:   ld bc,-24
-        add hl,bc
-        ldi
-        ldi
-        ldi
-        ldi
-        ldi
-        ldi
-        ldi
-        ld a,(hl)
-        ld (de),a
-        inc hl
-        jp .step
-.one:   inc hl
-        inc hl
-        bit 0,(hl)
-        dec hl
-        dec hl
-        jp z,.bits
-        push de
+.byte:  push de
         push hl
-        ld bc,-24
+        ld bc,-16
         add hl,bc
         ld b,h
         ld c,l                  ; BC = the graphic's
         pop hl
-        ld a,l
-        sub 8
-        ld l,a                  ; HL = the mask's
         ex de,hl                ; DE = the mask's, HL the pixels
         REPT 8
         ld a,(de)
@@ -614,10 +605,19 @@ l2_mask:
         inc bc
         inc l
         ENDR
-        pop de                  ; the pixels' start again
+        pop de
         ld h,b
-        ld l,c                  ; the graphic's +8: the entry - 16
-        jp .step
+        ld l,c
+        ld bc,-24
+        add hl,bc
+        ld e,ixl
+        dec d
+        jp m,.page
+.cont:  dec ixh
+        jp nz,.byte
+        COL_NEXT .col
+.page:  call up_page
+        jp .cont
 
 ; pair_all, pair_bits: the sheep's: A the write bits, HL the graphic's values, DE the pixels.
 pair_all:
@@ -722,18 +722,21 @@ sheep_mono:
         ld l,a
         add a,8
         ld (P_X),a
+        ld a,b
+        or c
+        jr z,.empty             ; nothing in this pair
         REPT 8
-        sla b
-        sbc a,a
-        cpl
-        and (hl)
-        ld d,a
         sla c
         sbc a,a
-        or d
+        sla b
+        jr c,$+6
+        or (hl)
+        ld (hl),a
+        jr $+3
         ld (hl),a
         inc l
         ENDR
+.empty:
         ld hl,P_I
         dec (hl)
         jp nz,.pair

@@ -164,6 +164,96 @@ def tables(s, check=True):
     return {PG_T + i // 8192: data[i:i + 8192].ljust(8192, b'\0') for i in range(0, len(data), 8192)}
 
 
+PG_C = 56                # compiled sprites from here
+# Every source the game plots: routine's table, kind, columns or pairs, rows, sources
+SPRITES = [
+    (0x3C00, 'ldd', 2, 16, [0xBF18, 0xBF38, 0xBF58, 0xBF78, 0xBF98, 0xBFB8]),
+    (0x3C20, 'ldd', 2, 48, [0xB9D8, 0xBA38]),
+    (0x3C40, 'ldd', 4, 16, [0xB680]),
+    (0x3C60, 'mask', 4, 8, [0xB6C0]),
+    (0x3C80, 'mask', 4, 24, [0xB640, 0xBE38, 0xBEF8]),
+    (0x3CA0, 'mask', 2, 24, [0xBD18, 0xBD78]),
+    (0x3CC0, 'mask', 4, 40, [0xBB78, 0xBCB8]),
+    (0x3CE0, 'mask', 4, 29, [0xB7A8, 0xB978]),
+    (0x3D00, 'sheep', 3, 29, [0xAD59 + 0xAE * _i for _i in range(12)]),
+    (0x3D40, 'sheep', 4, 29, [0xB7A9]),
+]
+
+
+def sprite_rows(s, kind, n, rows, h, force_write=False):
+    """rows[r][dx] = None (keep), ('w', v) write, ('o', g) OR, ('g', m, g) (v AND m) OR g, with the pixels as the planes treat them."""
+    out = [[None] * (8 * n) for _ in range(rows)]
+    for r in range(rows):
+        for c in range(n):
+            if kind == 'ldd':
+                v = s.values(h - (c * rows + r))
+                for k in range(8):
+                    out[r][c * 8 + k] = ('w', v[k])
+                continue
+            if kind == 'mask':
+                i = c * rows + r
+                m, g = s.values(h - 2 * i), s.values(h - 2 * i - 1)
+            else:
+                i = r * n + c
+                g, m0 = s.values(h + 2 * i), s.values(h + 2 * i + 1)
+                m = bytes(x ^ 255 for x in m0)
+            for k in range(8):
+                if force_write or m[k] == 0:
+                    out[r][c * 8 + k] = ('w', g[k])
+                elif m[k] == 255:
+                    if g[k]:
+                        out[r][c * 8 + k] = ('o', g[k])
+                else:
+                    out[r][c * 8 + k] = ('g', m[k], g[k])
+    return out
+
+
+def compile_sprite(rows, up_c):
+    """Z80: HL the first pixel, E its x, C 0, D FF; rows going up the screen."""
+    code = bytearray()
+    for r, row in enumerate(rows):
+        skip = 0
+        for a in row:
+            if a is None:
+                skip += 1
+                continue
+            if skip > 3:
+                code += bytes((0x7D, 0xC6, skip, 0x6F))      # ld a,l / add a,n / ld l,a
+            else:
+                code += b'\x2C' * skip                       # inc l
+            skip = 1                                         # the next pixel is one along
+            if a[0] == 'w':
+                code += b'\x71' if a[1] == 0 else b'\x72' if a[1] == 255 else bytes((0x36, a[1]))
+            elif a[0] == 'o':
+                code += bytes((0x3E, a[1], 0xB6, 0x77))
+            else:
+                code += bytes((0x3E, a[1], 0xA6, 0xF6, a[2], 0x77))
+        if r < len(rows) - 1:
+            code += bytes((0x6B, 0x25, 0xFC)) + zt.w16(up_c)  # ld l,e / dec h / call m,up_c
+    code.append(0xC9)
+    return bytes(code)
+
+
+def compiled(s, up_c, force_write=False):
+    """{page: 8192 bytes}, {table address: bytes}: every known source as its own code."""
+    pages, tabs = {}, {}
+    page, at = PG_C, 0
+    buf = bytearray()
+    for tab, kind, n, rows, sources in SPRITES:
+        t = bytearray()
+        for h in sources:
+            code = compile_sprite(sprite_rows(s, kind, n, rows, h, force_write), up_c)
+            if at + len(code) > 8192:
+                pages[page] = bytes(buf).ljust(8192, b'\0')
+                page, at, buf = page + 1, 0, bytearray()
+            t += zt.w16(h) + bytes((page,)) + zt.w16(0xC000 + at)
+            buf += code
+            at += len(code)
+        tabs[tab] = bytes(t) + b'\0\0'
+    pages[page] = bytes(buf).ljust(8192, b'\0')
+    return pages, tabs
+
+
 class Patch:
     name = "Jilly's Farm: the Spec256 colours on Layer 2"
     uses_printer_buffer = True
@@ -193,7 +283,16 @@ class Patch:
         self.sites.append((COPY_SITE, COPY_OLD, b'\xC3' + zt.w16(self.syms['h_copy'])))
         self.sites.append((CLOSE1[0], CLOSE1[1], b'\xC3' + zt.w16(self.syms[CLOSE1[2]])))
         self.tables = tables(self.set)
+        self.compile(self.set)
         self._banks()
+
+    def compile(self, s, force_write=False):
+        pages, tabs = compiled(s, self.syms['up_c'], force_write)
+        self.tables = dict(self.tables)
+        self.tables.update(pages)
+        self.ram[0x1C00:0x1E00] = bytes(512)
+        for a, d in tabs.items():
+            self.ram[a - 0x2000:a - 0x2000 + len(d)] = d
 
     def _banks(self):
         from .build import rom48
@@ -642,7 +741,7 @@ def negative_patches(patch):
     mutate('R off by one', bytes((0x3E, 0x100 - 21, 0xCD)), bytes((0x3E, 0x100 - 20)))
     mutate('clock left at 28 MHz', bytes.fromhex('3A303EED9207'), bytes.fromhex('3E0300ED9207'))
     mutate('draw window left at 28 MHz', bytes.fromhex('3A2D3EED9207'), bytes.fromhex('3E0300ED9207'))
-    mutate('x off by one column', bytes.fromhex('D6DC878787DD6F'), bytes.fromhex('D6DB878787DD6F'))
+    mutate('x off by one column', bytes.fromhex('D6DC87878732'), bytes.fromhex('D6DB87878732'))
     mutate("sheep's shift ignored", bytes.fromhex('DD7DE6074F'), bytes.fromhex('DD7DE6004F'))
     mutate('slot 7 left mapped', bytes.fromhex('ED915701C9'), bytes.fromhex('00000000C9'))
     mutate('slot 0 left mapped', bytes.fromhex('ED9150FFED9156'), bytes.fromhex('00000000ED9156'))
@@ -655,11 +754,12 @@ def negative_patches(patch):
     b.tables = {}
     for p, d in patch.tables.items():
         e = bytearray(d)
-        for i in range(0, 8192, 16):
+        for i in range(0, 8192 if p < PG_C else 0, 16):
             e[i + 8] = 0xFF
             e[i + 9] = 0xFF
             e[i + 11] = 0xFF
         b.tables[p] = bytes(e)
+    b.compile(b.set, force_write=True)
     b._banks()
     out['masks ignored'] = b
     # the colours 12 bytes lower instead of 13: another graphic's
@@ -670,6 +770,7 @@ def negative_patches(patch):
     orig_word = patch.set.word
     s12.word = lambda a: orig_word(a + 1)
     b.tables = tables(s12, check=False)
+    b.compile(s12)
     b._banks()
     out['set read at the wrong offset'] = b
     return out
