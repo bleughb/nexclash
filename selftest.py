@@ -481,7 +481,27 @@ def smoke_attr_census(ez, er, ok):
        (n, len(sets), v, k[0]) == (60, 35, 6, (0, 106)), (n, len(sets), v, k[0]))
 
 
-PROBE_SMOKE = {'rzx_census.py': smoke_rzx_census, 'attr_census.py': smoke_attr_census}
+def smoke_routine_skip(ez, er, ok):
+    import routine_skip                         # probe (tools/probes/README.md): removal experiment
+    r = routine_skip.skip(er, 39244, stop=760)  # CALL 38200, attribute refresh: display only
+    ok('probe routine_skip: skipping CALL 38200 at 39244 (760 frames) leaves 133/133 updates identical',
+       (r['updates'], r['identical'], r['runaway_or_in'], r['pages']) == (133, 133, 0, {}), r)
+    n = routine_skip.skip(er, 39238, stop=760)  # CALL 37150, the hens: gameplay (negative control)
+    ok('probe routine_skip: skipping the hens (CALL 37150 at 39238) differs in page 0x73 on 44/44 updates',
+       (n['updates'], n['identical']) == (44, 0) and '0x73' in n['pages'], n)
+
+
+def smoke_pacing_census(ez, er, ok):
+    import pacing_census                        # probe (tools/probes/README.md): pacing census
+    r = pacing_census.census(er, 39241, stop=1000)
+    ok('probe pacing_census (1000 frames from loop 39241): 424 updates, frames per update 0/1/2 = 85/330/9, '
+       'no idle, ISR OUT 0x9CA6 x751',
+       r['updates'] == 424 and r['frames_per_update'] == {0: 85, 1: 330, 2: 9} and r['idle_T']['max'] == 0
+       and r['outs'].get('0x9CA6', {}).get('count') == 751, r)
+
+
+PROBE_SMOKE = {'rzx_census.py': smoke_rzx_census, 'attr_census.py': smoke_attr_census,
+               'routine_skip.py': smoke_routine_skip, 'pacing_census.py': smoke_pacing_census}
 
 
 def verification_selfcheck():

@@ -4,7 +4,7 @@
 {
   "schema": 4,
   "id": "detect.pacing-structure",
-  "revision": 1,
+  "revision": 2,
   "kind": "detect",
   "title": "Pacing structure: what sets the game's speed, where is the slack, who makes the sound?",
   "question": "Where does the original wait, how much usable time is left per update, and does the code hooks would touch also play sound?",
@@ -33,8 +33,8 @@ frame limiter, not faster hooks. Skip for a known engine whose pace is recorded.
 **Assumptions.** The recordings include busy scenes and every level; T counts are uncontended
 simulator T (ULA contention not modelled).
 
-**Validation gap.** Inferno (six full levels) and Rainbow Islands; the census script is game-specific
-(no shared command yet: BRIEFING C2 candidate).
+**Validation gap.** Inferno (six full levels) and Rainbow Islands. The probe matches the Inferno script
+on L1 (2,500 frames); Chuckie Egg's loop is not frame-locked (43-109k T, 0-2 frames per update).
 
 ## Recognise
 - No HALT in gameplay; a flag set before a `JR $` or busy loop that the ISR clears (Inferno 998E).
@@ -43,8 +43,8 @@ simulator T (ULA contention not modelled).
 - Timing gates fail repeatedly while each component gets faster.
 
 ## Probe and stop
-1. Census over every recording: who writes the wait flag, where the wait loop sits, how often per
-   update; frames per update (Inferno: 4, sometimes 5).
+1. `python tools/probes/pacing_census.py GAME.rzx --update LOOP [--limiter WAIT]` over every
+   recording: frames per update (Inferno: 4, sometimes 5), idle PCs, the limiter's callers.
 2. Per update: time from entry to the wait, slack from the wait to the resuming interrupt
    (p1 / p10 / median per level), and what runs in that slack (Inferno: a beeper filler).
 3. Every OUT 254 in the code hooks would displace or slow (`routine.emits_timed_output`).
