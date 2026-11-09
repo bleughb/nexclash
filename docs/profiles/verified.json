@@ -351,6 +351,16 @@
     "enhanced": "acfbc75c7ce9d78840fec348ae2f2654"
    }
   },
+  "5d884aa2608879727e43589dfba44bb7": {
+   "game": "Page and the Curse of the Pharaoh",
+   "doc": "page_pharaoh.md",
+   "nex": {
+    "sprites": "ad82fe2d63f623af54950d2c56d34a44",
+    "loading": "430b6184b2397b0759db1b151984f339",
+    "enhanced": "139bfcafd68061d939d1d2c51efdacc6",
+    "enhanced_loading": "3c710b98afbe12f66d1e6ff03f00285d"
+   }
+  },
   "c39caed696ba547f693546b707c9cee8": {
    "game": "Phantis / Game Over 2, part 1",
    "doc": "phantis.md",

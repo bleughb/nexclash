@@ -1,12 +1,13 @@
 # Page and the Curse of the Pharaoh (T.D.F. micro-visions, 2015, 48K-128K)
 
 ## Next session
-Stage: 4 (owner's play). Hardware: untested. v1.0 review build (both modes), not published, not pushed; not wired into `auto`, `engines.py` or a record: that comes when it goes upstream after the owner has played it.
-Inputs: `Page and the Curse of the Pharaoh (2015-01-23)(T.D.F. micro-visions)(48K-128K).tap`, MD5 5237d25deb5ff67f461c7de61e5d2df3. The start state is the tape loaded by SkoolKit's tap2sna to the game's USR 32000 (`-s 32000`), kept in the review run; the tape block's screen is the loading screen.
-Build: `page_pharaoh.build(start.z80, nex)` and `page_pharaoh_enh.build(start.z80, nex)` (set path in NEXCLASH_PAGE_SET), then the review run's `work/pkg.py` in `release-20261108b`, a TAP1 target of the plain tape.
-Pending: the owner's play; after it, a mock-up step for the improvement ideas in that run's NOTES.md.
+Stage: 3 done for default and Enhanced; published as .nxc 1.0 (nxc 05d3127, 2026-11-08) and registered on main: `auto`, engines.py, record docs/records/page_pharaoh.json. Hardware: untested. Not yet played by the owner.
+Inputs: `Page and the Curse of the Pharaoh (2015-01-23)(T.D.F. micro-visions)(48K-128K).tap`, MD5 5237d25deb5ff67f461c7de61e5d2df3, the published patch's target (TAP1). Start state `page_pharaoh.z80` (MD5 5d884aa2): that tape loaded by SkoolKit's tap2sna to the game's USR 32000 (`-s 32000`); derived game data, never in this repo. Review runs: runs/page_pharaoh/release-20261108 (default), release-20261108b (Enhanced).
+Build: `python nexclash.py auto page_pharaoh.z80` writes page_pharaoh_sprites.nex and, with `page_pharaoh_loading.scr` (the tape's screen) beside the start state, page_pharaoh_sprites_loading.nex = the published default bare build (430b6184). With `page_pharaoh.256` (the Spec256 set) and `page_pharaoh_palette.json` (its 256 colours) beside it, both never in this repo (MD5s in the record), it also writes page_pharaoh_enhanced.nex and page_pharaoh_enhanced_loading.nex = the published Enhanced bare build (3c710b98). Every build boot-checked; with `--rzx a1.rzx --rzx rooms.rzx` both modes' replays, their ABI cases and broken builds.
+Pending: owner's play; hardware checklist below; after it, a mock-up step for the improvement ideas in release-20261108b's NOTES.md.
 
 ## Facts
+- Authorship: David Pagett, T.D.F. micro-visions, (c) 2015 on the game's loading screen; a homebrew release (tape dated 2015-01-23). No terms are stated in the game, on the tape or beside it in the archive. Nothing of the author's is in this repo; the patch carries only what patches normally carry (the loading screen and the 407 bytes of start state not on the tape).
 - A later homebrew. A BASIC loader, a screen and one code block, unprotected, so TAP1 takes it: 407 bytes of the start state are not on the tape.
 - IM 1 and the ROM's handler, interrupts on. The main loop plots two groups of six figures on alternate frames, each after a wait for FRAMES (7F5F). A frame-locked game: 25 updates a second.
 - Figures are XORed straight onto the ULA (8C63, 8C4E, 8C5D) from a table at 8F1A. No mask and no attribute: a figure takes the ink of the cell it is in. They are white in the open, and turn yellow, green or orange in a cell of scenery, or vanish in the fire.
@@ -62,3 +63,4 @@ Nothing has run on a Next. To check: ULA+ on the core (the palette above), start
 ## Stage log
 - 2026-11-08 Stage 3: engine, proofs, review build, mock-up for Enhanced; waiting for the owner's play.
 - 2026-11-08 Stage 3: Enhanced built on the same review branch, Spec256 colours faithfully; proofs in release-20261108b; waiting for the owner's play.
+- 2026-11-09 Upstream: `auto`, engines.py line, record 250 (views rebuilt); main rebuilds the published .nxc 1.0 bare builds, default 430b6184 and Enhanced 3c710b98.

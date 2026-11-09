@@ -103,6 +103,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Phantis / Game Over 2, part 1 (phantis): `phantis1_sprites.nex` 068e1f366ea5ddf1e3d075b732bd0a7f, `phantis1_sprites_loading.nex` 1190d208ea139653a44f7d2b91f93dff, `phantis1_enhanced.nex` 76b119c060a1075b471ee91dbf4d3cb1, `phantis1_enhanced_loading.nex` ae7246977be6fbc8df934346d5c4f457; verified 2026-11-08
 - Phantis / Game Over 2, part 2 (phantis2): `phantis2_sprites.nex` 9b080e196f34a34ef89077e83c3acf96, `phantis2_sprites_loading.nex` a326db4db051bdb12a61c959891186e1; verified 2026-11-08
 - Booty (booty): `booty.nex` 7a41de52c061b07ef73c951461f07445, `booty_loading.nex` 6393a6f9ee6f20cf760bb70421eb2d1e, `booty_enhanced.nex` ebc40ec715755da8db720a1a1c0f8074, `booty_enhanced_loading.nex` 8113662ce1469689d1effa77280b30d3; verified 2026-11-08
+- Page and the Curse of the Pharaoh (page_pharaoh): `page_pharaoh_sprites.nex` ad82fe2d63f623af54950d2c56d34a44, `page_pharaoh_sprites_loading.nex` 430b6184b2397b0759db1b151984f339, `page_pharaoh_enhanced.nex` 139bfcafd68061d939d1d2c51efdacc6, `page_pharaoh_enhanced_loading.nex` 3c710b98afbe12f66d1e6ff03f00285d; verified 2026-11-08
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
