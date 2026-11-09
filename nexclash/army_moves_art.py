@@ -1,7 +1,8 @@
 """Army Moves Enhanced: per-graphic colour tables and backdrops from the Spec256 sets (the player's own, never in the
 repo), matched to the 128K release's graphics by content. One byte a pixel: 0 skip, 254 opaque black, 255 the plot's
-ink, else a palette index. Layer 2's palette is the Spec256 palette at 9 bits; unused entries hold the 16 Spectrum colours."""
-import json, os, collections
+ink, else a palette index. Layer 2's palette is the Spec256 palette at 9 bits; unused entries hold the 16 Spectrum colours.
+The Spec256 palette is a local input beside the sets (PAL_NAME, MD5-pinned), as Booty's: never in this repo."""
+import hashlib, json, os, collections
 from pathlib import Path
 from . import z80tonex as zt
 
@@ -12,12 +13,28 @@ FIRST_ASSET_PAGE = 60
 LAST_PAGE = 91
 SETS = {1: 'Army Moves (Part 1) (English).256', 2: 'Army Moves (Part 2) (English).256'}
 MEM, BASE, BG = 131072 * 9, 131072 * 9 + 32, 256 * 192
-PALETTE = Path(__file__).resolve().parents[1] / 'docs/profiles/army_moves_palette.json'
+PAL_NAME = 'spec256-palette.pal'     # Spec256-Games' palette, beside the sets (licence not established: never in this repo)
+PAL_MD5 = 'b095dc99a047bab844b87b06657b0a7a'
 ZX_RGB = [(0, 0, 0), (0, 0, 205), (205, 0, 0), (205, 0, 205), (0, 205, 0), (0, 205, 205), (205, 205, 0), (205, 205, 205),
           (0, 0, 0), (0, 0, 255), (255, 0, 0), (255, 0, 255), (0, 255, 0), (0, 255, 255), (255, 255, 0), (255, 255, 255)]
 # The ULA under the panel holes and on the menus: the Spec256 panel's greens, its digits made brighter.
 ULA_RGB = [(0, 0, 0), (14, 96, 72), (205, 40, 30), (150, 40, 150), (30, 170, 60), (140, 205, 170), (170, 225, 110), (190, 255, 190),
            (0, 0, 0), (24, 130, 96), (255, 60, 40), (220, 60, 220), (60, 230, 90), (170, 255, 200), (200, 250, 130), (220, 255, 220)]
+
+
+def spec256_palette(setdir):
+    """The Spec256 palette (PAL_NAME in setdir; a declared, MD5-pinned input, never in the repo) -> 256 colours as
+    0xRRGGBB, the form the tables are built from."""
+    p = Path(setdir) / PAL_NAME
+    if not p.is_file():
+        raise ValueError('no %s beside the Spec256 sets: the Enhanced colours need it' % PAL_NAME)
+    raw = p.read_bytes()
+    if hashlib.md5(raw).hexdigest() != PAL_MD5:
+        raise ValueError('%s MD5 %s, the published build used %s' % (PAL_NAME, hashlib.md5(raw).hexdigest(), PAL_MD5))
+    v = [int(x) for x in raw.decode('ascii').split()]
+    if len(v) != 768:
+        raise ValueError('%s: %d values, expected 768' % (PAL_NAME, len(v)))
+    return [(v[i] << 16) | (v[i + 1] << 8) | v[i + 2] for i in range(0, 768, 3)]
 
 
 def rgb8(c):
@@ -96,7 +113,7 @@ def compile_assets(z80, setdir, records_path, backdrops=tuple(BD_PAGE)):
     p2code[0:0x21FE] = banks[6][0x6A0:0x6A0 + 0x21FE]
     records = json.load(open(records_path))
     views = {1: banks[5] + banks[2] + banks[0], 2: banks[5] + bytes(p2code) + banks[3]}
-    pal = json.load(open(PALETTE))
+    pal = spec256_palette(setdir)
     sets = {pt: Set(os.path.join(setdir, SETS[pt])) for pt in (1, 2)}
     report = {'parts': {}}
     built = {}

@@ -58,7 +58,6 @@
   "asm/army_moves_hooks.asm",
   "asm/army_moves_enh.inc",
   "docs/profiles/army_moves.json",
-  "docs/profiles/army_moves_palette.json",
   "docs/profiles/army_moves_records.json"
  ],
  "shared_data": [
@@ -133,20 +132,19 @@
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
    "docs/profiles/army_moves.json": "2d7ad6353c53db80",
-   "docs/profiles/army_moves_palette.json": "5932d2ccd890f80c",
    "docs/profiles/army_moves_records.json": "b3b83ec2a3de6d19",
    "nexclash.py": "350128095535a2d4",
-   "nexclash/army_moves.py": "31b9550d67148c8e",
-   "nexclash/army_moves_art.py": "1d08832836ed83e0",
+   "nexclash/army_moves.py": "6e8cadd8ae4e10eb",
+   "nexclash/army_moves_art.py": "4e88f8a638ac564b",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
    "nexclash/hooklib.py": "ba4611f453c48aee",
    "nexclash/hookprofile.py": "cac1335153f15daa",
-   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "29985826115eb292",
@@ -154,13 +152,13 @@
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "099857bfa88293d8",
+   "recipe": "4c4a744914f25fee",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-08"
+  "date": "2026-11-09"
  },
  "verified": {
   "deps": {
@@ -171,20 +169,19 @@
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
    "docs/profiles/army_moves.json": "2d7ad6353c53db80",
-   "docs/profiles/army_moves_palette.json": "5932d2ccd890f80c",
    "docs/profiles/army_moves_records.json": "b3b83ec2a3de6d19",
    "nexclash.py": "350128095535a2d4",
-   "nexclash/army_moves.py": "31b9550d67148c8e",
-   "nexclash/army_moves_art.py": "1d08832836ed83e0",
+   "nexclash/army_moves.py": "6e8cadd8ae4e10eb",
+   "nexclash/army_moves_art.py": "4e88f8a638ac564b",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
    "nexclash/hooklib.py": "ba4611f453c48aee",
    "nexclash/hookprofile.py": "cac1335153f15daa",
-   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "29985826115eb292",
@@ -192,13 +189,13 @@
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "099857bfa88293d8",
+   "recipe": "4c4a744914f25fee",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-08"
+  "date": "2026-11-09"
  },
  "rework": [
   {
@@ -220,6 +217,12 @@
      "md5": "b8f4aa91ed6d84333e56dcc94c43a758",
      "path": "army_moves/Army Moves (Part 2) (English).256",
      "role": "The player's own Spec256 set for part 2, as part 1's. Not a recording."
+    },
+    {
+     "name": "spec256-palette.pal",
+     "md5": "b095dc99a047bab844b87b06657b0a7a",
+     "path": "army_moves/spec256-palette.pal",
+     "role": "Enhanced: Spec256-Games' palette (licence not established), beside the sets; never in this repo; not a recording."
     }
    ],
    "rebuild": {
@@ -268,7 +271,7 @@
     }
    },
    "proof": "Enhanced colours: Spec256 team (Spec256), matched to this release by content; original executable code unchanged.",
-   "note": "The sets are the player's own and are never distributed with engine source; without them the rework is skipped and the default builds as before."
+   "note": "The sets are the player's own and the palette is Spec256-Games' (licence not established); both are local inputs, never distributed with engine source; without them the rework is skipped and the default builds as before."
   }
  ]
 }
