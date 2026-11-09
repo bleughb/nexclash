@@ -1,0 +1,225 @@
+{
+ "name": "head_over_heels",
+ "order": 247,
+ "game": "Head Over Heels",
+ "doc": "head_over_heels.md",
+ "engine": "head_over_heels",
+ "representative": true,
+ "reference": "head_over_heels",
+ "verified_json": false,
+ "inputs": {
+  "snapshot": {
+   "name": "head_over_heels.z80",
+   "path": "head_over_heels/head_over_heels.z80",
+   "md5": "757bbabf443a643cbe376ebfb11baa79"
+  },
+  "recordings": [
+   {
+    "name": "head_over_heels_walk.rzx",
+    "path": "head_over_heels/head_over_heels_walk.rzx",
+    "md5": "08552b0445b2658eb16e50a99e4e0bce",
+    "role": "Recorded original input; death/game_over have declared initial collision and lives setup"
+   },
+   {
+    "name": "head_over_heels_death.rzx",
+    "path": "head_over_heels/head_over_heels_death.rzx",
+    "md5": "c7f8d7457c8adbf0a27af9b558b64298",
+    "role": "Recorded original input; death/game_over have declared initial collision and lives setup"
+   },
+   {
+    "name": "head_over_heels_game_over.rzx",
+    "path": "head_over_heels/head_over_heels_game_over.rzx",
+    "md5": "1e4c07e1a6083f9cda747d97aeffd85f",
+    "role": "Recorded original input; death/game_over have declared initial collision and lives setup"
+   },
+   {
+    "name": "colours.bin",
+    "path": "head_over_heels/colours.bin",
+    "md5": "eccfadb46671eee398b617295c304ad1",
+    "role": "Private derived drawing/loading data, not a recording; excluded from source contribution"
+   },
+   {
+    "name": "palette.bin",
+    "path": "head_over_heels/palette.bin",
+    "md5": "d57f9dfbcf2c66931979568b89822155",
+    "role": "Private derived drawing/loading data, not a recording; excluded from source contribution"
+   },
+   {
+    "name": "head_over_heels.scr",
+    "path": "head_over_heels/head_over_heels.scr",
+    "md5": "9ce8b2d53cd49ed8341a39a8de6c2e1c",
+    "role": "Private derived drawing/loading data, not a recording; excluded from source contribution"
+   }
+  ]
+ },
+ "modules": [
+  "head_over_heels",
+  "nextboot",
+  "hooklib",
+  "rzx",
+  "dizzy6",
+  "z80n"
+ ],
+ "own_modules": [
+  "head_over_heels"
+ ],
+ "data": [
+  "asm/head_over_heels_hooks.asm",
+  "docs/profiles/head_over_heels.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "head_over_heels_walk.rzx",
+   "head_over_heels_death.rzx",
+   "head_over_heels_game_over.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 7
+ },
+ "outputs": {
+  "plain": {
+   "file": "head_over_heels.nex",
+   "md5": "733570c090d77d8f8a8bc52cb7a6719b"
+  },
+  "enhanced": {
+   "file": "head_over_heels_enhanced.nex",
+   "md5": "4e8ba81e7131c86a9c785ae45f7e4137"
+  }
+ },
+ "repro": [],
+ "checks": [
+  "asm2profile:head_over_heels"
+ ],
+ "status": {
+  "title": "Head Over Heels",
+  "engine_col": "head_over_heels (head_over_heels.md)",
+  "build": "v1.0; head_over_heels.nex 733570c0 and head_over_heels_enhanced.nex 4e8ba81e equal the published .nxc 1.0 bare builds, default and Enhanced (nxc 4a18183); default the original monochrome look, no clash to remove and none claimed; Enhanced, off by default: Anthony Lycett's Spec256 colours on Layer 2; original loading screen; eight trainers; full hidden ROM; highest bank 47, fits a 1MB Next",
+  "software": "re-verified on main's tree (2026-11-09, Next ROM 8c34d957): walk, death and game-over recordings, 15,400 frames, 68,515 hook comparisons with R and every game bank, 2,669,808 pixels; 32 reverse-copy units; wrong source, position and refresh builds caught; boot with 128K RAM, R, hidden ROM and NEXLOAD; ROM paths complete. Review run: native pace quiet -0.0111% to +0.0056%, busy -0.4144% to +0.0037%, worst 20 updates +0.0158%; soaks; real loader default, Enhanced and all trainers on disposable 26.11 cards; channel C effect phase differs",
+  "hardware": "untested",
+  "next": "hardware review; natural completion; channel C effect phase"
+ },
+ "results": [
+  {
+   "check": "frozen source",
+   "status": "pass",
+   "note": "Runtime/verifier 34fd85a73e74db56666826158c92b6296007d407; selftest --verify --stamp, full boot and all three recordings, deliberately broken source/position/R detected."
+  },
+  {
+   "check": "native pace",
+   "status": "pass",
+   "note": "Two scenes, three seeds,200 player updates each; all201 tracked states match. Quiet -0.0111..+0.0056%; busy -0.4144..+0.0037%; worst20-update window +0.0158%."
+  },
+  {
+   "check": "music",
+   "status": "pass with stated scope",
+   "note": "800 actual handler calls and17600 AY writes per trial at3.5MHz. Maximum handler gap20.373214ms. ChannelsA/B and effect requests agree; channelC phase differs. No full sound-stream identity claim."
+  },
+  {
+   "check": "trainers",
+   "status": "pass",
+   "note": "Eight independent original-function checks, exact packaged byte changes in both modes, eight independent Enhanced startup trials; all options initially off."
+  },
+  {
+   "check": "native soak",
+   "status": "pass",
+   "note": "20000 frames per mode,4752/4743 actual updates; no wrong-clock ISR. Declared synthetic death/game-over starts1200/2200 frames also pass."
+  },
+  {
+   "check": "real loader",
+   "status": "pass",
+   "note": "Disposable NextZXOS v2.10(26.11) card copies; default, Enhanced, Enhanced+all trainers reconstruct exactly and reach play. NXC SHA2566c9c674627b9aaee83ac0977ab6f7f6210b38298ca1d67656fa0d80116f388dd."
+  },
+  {
+   "check": "frame captures",
+   "status": "pass with stated scope",
+   "note": "Shared read-only flicker checker,300 frames at each of two play windows,75 player updates each. See private final-flicker results. Sprite-plane disappearance flags do not cover this Layer2 renderer; picture cadence/ULA transients and manual native inspection are reported."
+  },
+  {
+   "check": "limits",
+   "status": "documented",
+   "note": "No physical hardware test, natural full-game completion or exhaustive room/path coverage. Normal-handler reference uses the same reserved stack; per-event pace uses recorded elapsed time, checked separately by native trials."
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/head_over_heels_hooks.asm": "1abd417f645104f4",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/head_over_heels.json": "ae4f51d5c0d96019",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
+   "nexclash/head_over_heels.py": "2c0e87f4cbf2ad60",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "bc2e329666fe1299",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-09"
+ },
+ "verified": {
+  "deps": {
+   "asm/head_over_heels_hooks.asm": "1abd417f645104f4",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/head_over_heels.json": "ae4f51d5c0d96019",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "70809ceb299c2df3",
+   "nexclash/head_over_heels.py": "2c0e87f4cbf2ad60",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "bc2e329666fe1299",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ }
+}
