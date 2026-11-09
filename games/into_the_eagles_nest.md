@@ -1,10 +1,14 @@
 # Into the Eagle's Nest (Pandora, 1987, 128K)
 
 ## Next session
-Stage: 3 (review build with Enhanced, not yet played by the owner). Hardware: untested. Default has no hooks; Enhanced is a menu option, off by default.
-Inputs: Into the Eagle's Nest (1987)(Pandora)(128K)[a][a].z80, MD5 0566e3b37d49c6fa6f62e81eb883ad0c; loading screen from the (128K) tape's screen block, MD5 e06b6a4d, staged by the packager, never in the repo; colour blob `into_the_eagles_nest_colours.bin` from the Spec256 set, beside the snapshot, never in the repo.
-Build: `nexclash.into_the_eagles_nest.build(z80, nex, enhanced=True, colours=blob)`. Not wired into `auto`, `engines.py` or a record yet: that comes when it goes upstream after the owner has played it.
-Checks: review run private. Pending: the owner's play; hardware checklist.
+Stage: 4 (hardware). Hardware: untested. v1.0 published as .nxc 1.0 (2026-11-08, nxc repo 05d3127) at the owner's request, not yet played by him. Default has no hooks; Enhanced is a menu option, off by default.
+Inputs: Into the Eagle's Nest (1987)(Pandora)(128K)[a][a].z80, MD5 0566e3b37d49c6fa6f62e81eb883ad0c; beside it, both staged by the record, never in this repo: `into_the_eagles_nest_loading.scr` (the (128K) tape's screen block, MD5 e06b6a4d) and `into_the_eagles_nest_colours.bin` (the colour blob built from the Spec256 set, MD5 ebb3a64e).
+Build: `nexclash.py auto` writes `NAME.nex` (b7d029c5) and, with the screen, `NAME_loading.nex` (2a73be32); with the blob also `NAME_enhanced.nex` (9b32aa8d) and `NAME_enhanced_loading.nex` (6a224cab). The two with the screen equal `nxc.py PATCH GAME --bare [--colours Enhanced]` of the published patch byte for byte. A missing input is said and its builds skipped.
+Checks: `selftest.py --game into_the_eagles_nest --verify`: Enhanced replay of the six recordings with R (c1 to frame 6,000), ABI cases, 12 broken builds, every build boot-checked. Pace, soak, flicker and real loader are in Evidence, not in the repo.
+Pending: hardware checklist; Enhanced's WELCOME box; natural completion.
+
+## Interrupt wrapper (upstream note, 2026-11-08)
+The fix to `h_isr` (pace held in every interrupt, NR 7 selected again before it returns) is in this engine's own `asm/into_the_eagles_nest_hooks.asm`; `asm/lib/hlib_pace.asm` is unchanged, and `asm2profile --check --all` shows every other profile IDENTICAL. No other engine shares this wrapper. Others whose interrupt handler calls `hlib_pace_hold` (midres holds only with a window open, as this one did before the fix) could have the same race and are worth checking; none was changed here.
 
 ## Facts
 - True 128K: AY from the ISR when SOUNDS (128K) is chosen, paging locked at bank 0 in this dump, ROM 1.
@@ -61,5 +65,7 @@ Nothing has run on a Next. To check: AY sounds; both Kempston and keyboard; 1MB 
 - scratch: [local: review run] Its work folder stays in private evidence.
 
 ## Stage log
+- 2026-11-08 Upstream: `auto`, registration and record added; the engine bytes are the published ones, MD5s 2a73be32 (default) and 6a224cab (Enhanced).
+- 2026-11-08 Published: .nxc 1.0 (nxc 05d3127) at the owner's request, not yet played by him.
 - 2026-11-08 Stage 3: Enhanced built from the set, faithful, off by default, tested in every mode.
 - 2026-11-08 Stage 0-3: survey, every floor by fixture, plain build with start-up fixes, proofs, mock-up for Enhanced.

@@ -213,6 +213,16 @@
     "sprites": "284d6a11432e21c992c7f02e6d639885"
    }
   },
+  "0566e3b37d49c6fa6f62e81eb883ad0c": {
+   "game": "Into the Eagle's Nest",
+   "doc": "into_the_eagles_nest.md",
+   "nex": {
+    "plain": "b7d029c512c7a7ebee9e67af27f7ccf4",
+    "loading": "2a73be327f9ff7db9667c3aede747f87",
+    "enhanced": "9b32aa8d2a6a124799b10bc3960da282",
+    "enhanced_loading": "6a224cabba87912fdcc5e11a057d9844"
+   }
+  },
   "5875d535442974a0de82737652854f1f": {
    "game": "Jetpac",
    "doc": "jetpac.md",

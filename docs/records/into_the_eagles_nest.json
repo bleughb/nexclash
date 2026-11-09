@@ -1,0 +1,212 @@
+{
+ "name": "into_the_eagles_nest",
+ "order": 232,
+ "game": "Into the Eagle's Nest",
+ "doc": "into_the_eagles_nest.md",
+ "engine": "into_the_eagles_nest",
+ "representative": true,
+ "reference": "into_the_eagles_nest",
+ "inputs": {
+  "snapshot": {
+   "name": "into_the_eagles_nest.z80",
+   "md5": "0566e3b37d49c6fa6f62e81eb883ad0c",
+   "path": "into_the_eagles_nest/into_the_eagles_nest.z80",
+   "note": "Into the Eagle's Nest (1987)(Pandora)(128K)[a][a].z80, the 128K dump already at its menu (the plain (128K) dump stops in 128K BASIC)."
+  },
+  "recordings": [
+   {
+    "name": "into_the_eagles_nest_loading.scr",
+    "md5": "e06b6a4d45527eeddf7d53a10ce825d6",
+    "path": "into_the_eagles_nest/into_the_eagles_nest_loading.scr",
+    "role": "The 6,912-byte loading screen from the game's (128K) tape, staged beside the snapshot; not a recording."
+   },
+   {
+    "name": "into_the_eagles_nest_colours.bin",
+    "md5": "ebb3a64e09f87a700584b7981a8c2f3d",
+    "path": "into_the_eagles_nest/into_the_eagles_nest_colours.bin",
+    "role": "Enhanced: the colour blob built from the Spec256 set (credited Ynicky), staged beside the snapshot; local only, never in this repo; not a recording."
+   },
+   {
+    "name": "p1.rzx",
+    "md5": "d0984e56652467f1a7607a44ba518546",
+    "path": "into_the_eagles_nest/p1.rzx",
+    "role": "The [a][a] dump from its menu: scripted Kempston play."
+   },
+   {
+    "name": "c1.rzx",
+    "md5": "ebe7acb74310153bace228b2ba57f9c9",
+    "path": "into_the_eagles_nest/c1.rzx",
+    "role": "A test fixture of the dump with the archive's cheats, scripted Kempston play over several floors; coverage, not clean play. Replayed to frame 6,000 (STOPS), as in the review run's last verify."
+   },
+   {
+    "name": "f0.rzx",
+    "md5": "85c582fcc5bd2419b2b95bf791fca98d",
+    "path": "into_the_eagles_nest/f0.rzx",
+    "role": "Floor 0 (BF59 = 0) from a test fixture with the archive's cheats, scripted Kempston play; coverage, not clean play."
+   },
+   {
+    "name": "f2.rzx",
+    "md5": "fe60ab0568c516a9ffa3bd2bf0fef982",
+    "path": "into_the_eagles_nest/f2.rzx",
+    "role": "Floor 2 (BF59 = 2) from a test fixture with the archive's cheats, scripted Kempston play; coverage, not clean play."
+   },
+   {
+    "name": "f4.rzx",
+    "md5": "a7dd65fc73cc3317094da6c0c1d5bfbf",
+    "path": "into_the_eagles_nest/f4.rzx",
+    "role": "Floor 4 (BF59 = 4) from a test fixture with the archive's cheats, scripted Kempston play; coverage, not clean play."
+   },
+   {
+    "name": "f6.rzx",
+    "md5": "1cc4bcb8d72d1e64554356419b72577a",
+    "path": "into_the_eagles_nest/f6.rzx",
+    "role": "Floor 6 (BF59 = 6) from a test fixture with the archive's cheats, scripted Kempston play; coverage, not clean play. The broken builds and the ABI cases use its first 1,500 frames."
+   }
+  ]
+ },
+ "modules": [
+  "into_the_eagles_nest"
+ ],
+ "own_modules": [
+  "into_the_eagles_nest"
+ ],
+ "data": [
+  "asm/into_the_eagles_nest_hooks.asm",
+  "docs/profiles/into_the_eagles_nest.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "p1.rzx",
+   "c1.rzx",
+   "f0.rzx",
+   "f2.rzx",
+   "f4.rzx",
+   "f6.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 40,
+  "note": "The default runs no hook, so the replay proves Enhanced: at every hook every register with R, all 48K RAM bar the sites and the dead stack, the clock, the MMU and the game's ports in order against the original; tiles, characters, digits, redraws and scroll columns against the set, and each update's picture against the ULA; ABI cases on f6's states and 12 broken builds, one of them the interrupt wrapper leaving another register selected. Pace, soak, flicker and the real loader are in games/into_the_eagles_nest.md \"Evidence\"."
+ },
+ "outputs": {
+  "plain": {
+   "file": "into_the_eagles_nest.nex",
+   "md5": "b7d029c512c7a7ebee9e67af27f7ccf4"
+  },
+  "loading": {
+   "file": "into_the_eagles_nest_loading.nex",
+   "md5": "2a73be327f9ff7db9667c3aede747f87"
+  },
+  "enhanced": {
+   "file": "into_the_eagles_nest_enhanced.nex",
+   "md5": "9b32aa8d2a6a124799b10bc3960da282"
+  },
+  "enhanced_loading": {
+   "file": "into_the_eagles_nest_enhanced_loading.nex",
+   "md5": "6a224cabba87912fdcc5e11a057d9844"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Into the Eagle's Nest",
+  "engine_col": "into_the_eagles_nest (into_the_eagles_nest.md)",
+  "build": "v1.0; into_the_eagles_nest_loading.nex 2a73be32 and into_the_eagles_nest_enhanced_loading.nex 6a224cab equal the published .nxc 1.0 bare builds, default and Enhanced (without the screen b7d029c5, 9b32aa8d); default: the original game, start-up fixes only, no clash to remove and none claimed; Enhanced, off by default: the Spec256 set's tiles and text on Layer 2 moved by its offsets, the panel as sprites; top bank 47, fits a 1MB Next",
+  "software": "6 recordings, 39,171 frames (c1 to frame 6,000), 629,351 hooks with R and 48K RAM, the game's ports in order; 492,921 tiles, 3,614 characters, 78,285 digits, 576 scroll columns and 3,757,248 cells against the ULA; 896 ABI cases, 12 of 12 broken builds, one the interrupt wrapper leaving another register selected; ROM paths complete; review run: Enhanced pace in JNext in lockstep, whole runs -2.78% to -0.00% (faster only where the original lags), slowest 20 updates at most +0.38%; 15-minute soaks, flicker, real loader on private cards; Enhanced's WELCOME box is missing",
+  "hardware": "untested",
+  "next": "hardware checklist; Enhanced's WELCOME box (a hook on 94EF); natural completion"
+ },
+ "checks": [
+  "asm2profile:into_the_eagles_nest"
+ ],
+ "results": [
+  {
+   "check": "external review run",
+   "status": "pass",
+   "scope": "runs/into_the_eagles_nest/release-20261108 and release-20261108b: pace, soak, flicker and real loader, JNext 1.1.104, on this engine's bytes. Not a selftest stamp.",
+   "evidence": "games/into_the_eagles_nest.md \"Evidence\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/into_the_eagles_nest_hooks.asm": "1055aa573de1cd23",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/into_the_eagles_nest.json": "2d1ead7a301a99ee",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "a6a77c9f63ed4137",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/into_the_eagles_nest.py": "343febd9aefb2f35",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "e812a36ee0064edc",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ },
+ "verified": {
+  "deps": {
+   "asm/into_the_eagles_nest_hooks.asm": "1055aa573de1cd23",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/into_the_eagles_nest.json": "2d1ead7a301a99ee",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "a6a77c9f63ed4137",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/into_the_eagles_nest.py": "343febd9aefb2f35",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "e812a36ee0064edc",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ }
+}
