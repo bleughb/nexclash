@@ -42,8 +42,8 @@ ISR_LINES EQU 9
 P_CNT EQU 0x3E47
 V_POLL EQU 0x3E48             ; word
 R_BUF EQU 0x3E80               ; gfx + mask row, up to 64 bytes
-RECTS_A EQU 0x3A00             ; 4 bytes a rectangle, 64 rectangles
-RECTS_B EQU 0x3B00
+RECTS_A EQU 0x2700             ; 4 bytes a rectangle
+RECTS_B EQU 0x3C00
 RECT_MAX EQU 60
 L2_BANK_A EQU 16
 L2_BANK_B EQU 19
@@ -52,7 +52,55 @@ BEAM_HI EQU 240
 K_PLOT EQU 107
 K_COPY EQU 119
 K_REST EQU 119
+K_TILE EQU 32                  ; a scene's tiles: their own drawing comes out of this window
+V_K2 EQU 0x3E7E                ; part 2's restore and copy K: the mode's own
 ATTR_P EQU 0x5C8F
+V_L2ON EQU 0x3E72
+V_ENH EQU 0x3E50               ; Enhanced
+V_BDT EQU 0x3E51               ; the Backdrop line
+V_BDON EQU 0x3E52              ; this scene has its backdrop
+V_S EQU 0x3E53                 ; the ring's offset, pixels
+V_SRC EQU 0x3E54               ; word
+V_FLIP EQU 0x3E56
+V_FULLN EQU 0x3E57
+V_ZDIRTY EQU 0x3E58
+V_ZN EQU 0x3E59
+V_TAB EQU 0x3E5A               ; word
+V_BDP EQU 0x3E5C
+V_BDP1 EQU 0x3E5D
+V_BDP2 EQU 0x3E5E
+T_PAGE EQU 0x3E60
+T_OFF EQU 0x3E61               ; word
+T_NB EQU 0x3E63
+T_SKIP EQU 0x3E64
+T_STR EQU 0x3E65
+T_CNT EQU 0x3E66
+T_DX EQU 0x3E67
+T_SRC EQU 0x3E68               ; word
+T_Y EQU 0x3E6A
+T_H EQU 0x3E6B
+T_XP EQU 0x3E6C
+T_WP EQU 0x3E6D
+T_W EQU 0x3E6E
+T_FL EQU 0x3E6F
+T_CLR EQU 0x3E70
+T_CLEAN EQU 0x3E71
+T_HOLE EQU 0x3E73
+V_CACHE EQU 0x3E74               ; word: the last record looked up
+V_CPART EQU 0x3E76
+V_CPAGE EQU 0x3E77
+V_COFF EQU 0x3E78               ; word
+V_CNB EQU 0x3E7A
+V_DISP EQU 0x3E7B               ; word
+V_RD EQU 0x3E7D
+RB EQU 0x3D00                  ; a row, 256 bytes
+TAB1 EQU 0x2000                ; part 1's graphics: record, page, offset, gfx bytes a row
+TAB2 EQU 0x2300
+ZXTAB EQU 0x2600               ; the 16 Spectrum colours as palette indices
+C_PAGE EQU 44
+S_PAGE EQU 48
+ZONE_Y EQU 88
+ZONE_H EQU 32
 V_PART EQU 0x3E4A
 V_CAP EQU 0x3E4B              ; 1: the last copy's painted cells are still on the original's screen
 FIG_END_HI EQU 0xD4
@@ -144,7 +192,18 @@ h_plot1:
 
 ; ---- restore: clean buffer to the work buffer at 28 MHz --------------------
 
-        MACRO RESTORE_HOOK body, part
+        MACRO WAIT_KV
+        ld a,(V_SPEED)
+        ld c,a
+        ld a,(V_K2)
+        call hlib_pace_waitk
+        call isr_extra
+        ld a,-21
+        call hlib_r_set
+        ld a,(V_R0)
+        call hlib_r_add
+        ENDM
+        MACRO RESTORE_HOOK body, part, kw
         ENTER
         HLIB_SPEED_IN V_SPEED
         ld a,part
@@ -157,18 +216,18 @@ h_plot1:
         ld hl,(0x5C78)
         ld (V_FR),hl
         COPY_BODY body
-        WAIT_K K_REST
+        kw
         LEAVE_R
         ret
         ENDM
 
 h_rest1:
-        RESTORE_HOOK 0xA462,1
+        RESTORE_HOOK 0xA462,1,WAIT_K K_REST
 h_rest2:
-        RESTORE_HOOK 0xA462,2
+        RESTORE_HOOK 0xA462,2,WAIT_KV
 
 ; ---- copy: wait for the beam below the play area, copy at 28 MHz, publish ---
-        MACRO COPY_HOOK body, shake
+        MACRO COPY_HOOK body, shake, kw
         ENTER
         HLIB_SPEED_IN V_SPEED
         call hlib_debt_open
@@ -209,15 +268,15 @@ h_rest2:
         call l2_publish
         ld a,1
         ld (V_CAP),a
-        WAIT_K K_COPY
+        kw
         LEAVE_R
         ret
         ENDM
 
 h_copy1:
-        COPY_HOOK 0xA462,V_ZERO
+        COPY_HOOK 0xA462,V_ZERO,WAIT_K K_COPY
 h_copy2:
-        COPY_HOOK 0xA462,V_ZERO
+        COPY_HOOK 0xA462,V_ZERO,WAIT_KV
 
 ; ---- the game shows or clears the screen itself: the overlay goes off --------
 h_cls:
@@ -225,6 +284,9 @@ h_cls:
         nextreg 0x69,0
         xor a
         ld (V_CAP),a
+        ld a,(V_ENH)
+        or a
+        call nz,e_slowclr
         ld a,-13
         call hlib_r_set
         pop hl
@@ -246,7 +308,22 @@ h_fill:                         ; BA84: PUSH HL / POP DE / INC DE, displaced
         nextreg 0x69,0
         xor a
         ld (V_CAP),a
-.keep:  ld a,-13
+        ld a,(V_ENH)
+        or a
+        jr z,.keep
+        ld a,h
+        cp 0x58
+        call c,e_slowclr
+.keep:  ld a,(V_ENH)
+        or a
+        jr z,.k2
+        ld a,h
+        cp 0x6B
+        jr nz,.k2
+        ld a,l
+        cp 0x90
+        call z,e_slowfill
+.k2:    ld a,-13
         call hlib_r_set
         pop hl
         pop de
@@ -282,7 +359,10 @@ h_show:                         ; CALL A460: the game captures the screen into t
         ld a,c
         cp 0xE0
         jr nz,.cell
-.done:  HLIB_SPEED_OUT_A V_SPEED
+.done:  ld a,(V_ENH)
+        or a
+        call nz,e_capture
+        HLIB_SPEED_OUT_A V_SPEED
         ld a,-12
         call hlib_r_set
         pop hl
@@ -294,10 +374,148 @@ h_show:                         ; CALL A460: the game captures the screen into t
         nextreg 0x51,255
         jp 0xA460
 
+h_tile:                         ; B944: LD HL,B9B2 / the body, whole
+        ENTER
+        ld hl,0xB9B2
+        ld a,-22
+        ld b,0
+        jr tile_hook
+h_clr:                          ; B93F: LD HL,B9BE / the body, whole
+        ENTER
+        ld hl,0xB9BE
+        ld a,-21
+        ld b,1
+tile_hook:
+        ld (V_DISP),hl
+        ld (V_RD),a
+        ld a,b
+        ld (T_CLR),a
+        HLIB_SPEED_IN V_SPEED
+        call hlib_debt_open
+        call e_tile
+        ld a,8
+        call hlib_debt_close
+        call hlib_pace_open
+        ld hl,(0x5C78)
+        ld (V_FR),hl
+        pop hl
+        pop de
+        pop bc
+        pop af
+        push af
+        ld a,r
+        ld (V_R0),a
+        pop af
+        ld hl,(V_DISP)
+        call 0xB947
+        push af
+        push bc
+        push de
+        push hl
+        ld a,r
+        ld hl,V_R0
+        sub (hl)
+        ld (V_R0),a
+        ld a,(V_SPEED)
+        ld c,a
+        ld a,K_TILE
+        call hlib_pace_waitk
+        call isr_extra
+        ld a,(V_RD)
+        call hlib_r_set
+        ld a,(V_R0)
+        call hlib_r_add
+        LEAVE_R
+        ret
+h_strip:                        ; B164: LD HL,(B736) displaced; the record about to lose its mask
+        ENTER
+        ld hl,(0xB736)
+        ld de,0xA62A
+        or a
+        sbc hl,de
+        jr z,.fl
+        ld hl,(0xB736)
+        ld (V_SRC),hl
+        xor a
+        ld (V_FLIP),a
+.fl:    ld a,-13
+        call hlib_r_set
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
+        HLIB_R_OUT
+        nextreg 0x51,255
+        ld hl,(0xB736)
+        jp 0xB167
+h_flip:                         ; A5DB: CALL A607 displaced; the record about to be mirrored
+        ENTER
+        ld hl,(0xB736)
+        ld (V_SRC),hl
+        ld a,1
+        ld (V_FLIP),a
+        ld a,-13
+        call hlib_r_set
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
+        HLIB_R_OUT
+        nextreg 0x51,255
+        call 0xA607
+        jp 0xA5DE
+h_scrl:                         ; A77F: the scrolling rows go 4 pixels left
+        ENTER
+        ld a,(V_S)
+        add a,4
+        cp 240
+        jr c,.s
+        xor a
+.s:     ld (V_S),a
+        ld a,1
+        ld (V_ZDIRTY),a
+        ld a,-13
+        call hlib_r_set
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
+        HLIB_R_OUT
+        ld a,(0xA772)
+        nextreg 0x51,255
+        jp 0xA782
+h_scrr:                         ; A809: 4 pixels right
+        ENTER
+        ld a,(V_S)
+        or a
+        jr nz,.s
+        ld a,240
+.s:     sub 4
+        ld (V_S),a
+        ld a,1
+        ld (V_ZDIRTY),a
+        ld a,-13
+        call hlib_r_set
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
+        HLIB_R_OUT
+        ld a,(0xA772)
+        nextreg 0x51,255
+        jp 0xA80C
+
 V_ZERO: defb 0
 ; ---- Layer 2: A = the plot's paint flag byte (C9: painting off) --------------
 l2_plot:
         ld b,a
+        ld a,(V_ENH)
+        or a
+        jp nz,e_plot
         ld a,(iy+1)
         or a
         ret z
@@ -597,6 +815,9 @@ rect_hit:
 
 ; l2_ready: clear the back buffer once per pass, by the boxes drawn in it.
 l2_ready:
+        ld a,(V_ENH)
+        or a
+        jp nz,e_ready
         ld a,(V_FRESH)
         or a
         ret z
@@ -659,6 +880,17 @@ l2_publish:
         ld a,(V_BACK)
         nextreg 0x12,a
         nextreg 0x69,0x80
+        ld b,a
+        ld a,(V_ENH)
+        or a
+        jr z,.nc
+        ld (V_L2ON),a
+        nextreg 0x1C,1
+        nextreg 0x18,0
+        nextreg 0x18,255
+        nextreg 0x18,0
+        nextreg 0x18,191
+.nc:    ld a,b
         cp L2_BANK_A
         ld hl,(V_RECT)
         jr z,.a
@@ -677,9 +909,27 @@ l2_publish:
 V_LIST_A: defw RECTS_A
 V_LIST_B: defw RECTS_B
 
+; The hook-side wrappers of the slow Enhanced clears: 28 MHz, the time as debt.
+e_slowclr:
+        xor a
+        ld (V_L2ON),a
+        HLIB_SPEED_IN_ABC V_SPEED
+        call hlib_debt_open
+        call e_panelclr
+        jr e_slowend
+e_slowfill:
+        HLIB_SPEED_IN_ABC V_SPEED
+        call hlib_debt_open
+        call e_fillc
+e_slowend:
+        ld a,8
+        call hlib_debt_close
+        HLIB_SPEED_OUT_A V_SPEED
+        ret
+        INCLUDE "army_moves_enh.inc"
 rom_end:
 regblock EQU 0x3C00
-        ASSERT $ < 0x3A00
+        ASSERT $ < 0x3C00
         SAVEBIN "armymoves_rom.bin",rom_start,$-rom_start
         ORG 0xD000
 setup:
@@ -695,6 +945,10 @@ setup:
         nextreg 0x18,247
         nextreg 0x18,16
         nextreg 0x18,119
+setup_enh:
+        ld a,0                  ; Enhanced?
+        or a
+        jp nz,setup_e
         nextreg 0x43,0x10
         nextreg 0x40,0
         ld hl,l2_pal
@@ -730,5 +984,72 @@ setup:
         ret
 l2_pal: defb 0x00,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6
         defb 0x00,0x03,0xE0,0xE7,0x1C,0x1F,0xFC,0xFF
+setup_e:
+        nextreg 0x1C,1
+        nextreg 0x18,0
+        nextreg 0x18,255
+        nextreg 0x18,0
+        nextreg 0x18,191
+        nextreg 0x43,0x10       ; Layer 2's first palette
+        nextreg 0x40,0
+        ld hl,e_palette
+        ld b,0
+.lp:    ld a,(hl)
+        nextreg 0x44,a
+        inc hl
+        ld a,(hl)
+        nextreg 0x44,a
+        inc hl
+        djnz .lp
+        nextreg 0x43,0          ; the ULA's: the colours under the panel and on the menus
+        ld hl,e_ula
+        nextreg 0x40,0
+        ld b,16
+.lu:    ld a,(hl)
+        nextreg 0x41,a
+        inc hl
+        djnz .lu
+        ld hl,e_ula
+        nextreg 0x40,16
+        ld b,16
+.lv:    ld a,(hl)
+        nextreg 0x41,a
+        inc hl
+        djnz .lv
+        ld d,L2_BANK_A*2
+        ld e,6
+        ld a,0xFF
+        call .fill
+        ld d,L2_BANK_B*2
+        ld e,6
+        ld a,0xFF
+        call .fill
+        ld d,C_PAGE
+        ld e,4
+        ld a,0xFF
+        call .fill
+        ld d,S_PAGE
+        ld e,4
+        xor a
+        call .fill
+        nextreg 0x50,255
+        ret
+.fill:  ld (.v+1),a
+.pg:    ld a,d
+        nextreg 0x50,a
+        ld hl,0
+.v:     ld (hl),0
+        push de
+        ld de,1
+        ld bc,0x1FFF
+        ldir
+        pop de
+        inc d
+        dec e
+        jr nz,.pg
+        ret
+e_ula:  defs 16,0
+e_palette:
+        defs 512,0
 setup_end:
         SAVEBIN "armymoves_setup.bin",setup,setup_end-setup

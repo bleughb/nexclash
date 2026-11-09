@@ -47,14 +47,19 @@
   ]
  },
  "modules": [
-  "army_moves"
+  "army_moves",
+  "army_moves_art"
  ],
  "own_modules": [
-  "army_moves"
+  "army_moves",
+  "army_moves_art"
  ],
  "data": [
   "asm/army_moves_hooks.asm",
-  "docs/profiles/army_moves.json"
+  "asm/army_moves_enh.inc",
+  "docs/profiles/army_moves.json",
+  "docs/profiles/army_moves_palette.json",
+  "docs/profiles/army_moves_records.json"
  ],
  "shared_data": [
   "asm/lib/hlib_iff.asm",
@@ -86,21 +91,21 @@
  "outputs": {
   "sprites": {
    "file": "army_moves_sprites.nex",
-   "md5": "f29ce916ef3ba1e62c83d8fa992c3d39"
+   "md5": "9cbd2379d8cae020c3b2145d362a4f75"
   },
   "loading": {
    "file": "army_moves_sprites_loading.nex",
-   "md5": "85ba62ef5e47b72bb61220a8daf59809"
+   "md5": "1b60bd04304265986cf5ff4a142e44db"
   }
  },
  "repro": [],
  "status": {
   "title": "Army Moves",
   "engine_col": "army_moves (army_moves.md)",
-  "build": "v1.0; army_moves_sprites_loading.nex 85ba62ef equals the published .nxc 1.0 bare build (without the screen f29ce916); original bitmap and scenery attributes on the ULA, figures' ink on a double-buffered Layer 2, both parts; default only, top bank 47",
-  "software": "4 recordings, 40,613 frames, 51,818 hooks with R and 48K RAM, 7,798 Layer 2 pictures against a model; 1,152 ABI cases, 10 of 10 broken builds; review run: pace in JNext within 2% in both parts (whole runs -0.61% to -1.24%, slowest 20 updates +0.31%), 15-minute soaks, flicker, real loader 4 of 4 on private cards; an occasional interrupt lost in part 2 (up to 3 in 2,734 frames) where the original lost none, cause not found",
+  "build": "v1.1; army_moves_sprites_loading.nex 1b60bd04 equals the published .nxc 1.1 bare build; with the Spec256 sets (rework enhanced) Enhanced c8cb9484 and Backdrop off 9825b827 equal --colours Enhanced [--toggle \"Backdrop off\"]; original bitmap and scenery attributes on the ULA, figures' ink on a double-buffered Layer 2, both parts; Enhanced on a full-screen Layer 2 with a backdrop, off by default",
+  "software": "4 recordings, 40,613 frames, 51,818 hooks with R and 48K RAM against a model; 1,152 ABI cases, 10 of 10 broken builds; v1.1 review run: all three modes replayed (121,839 frames, 190,334 hooks with R), negatives 10/10 and 18/18, pace within 2% except Enhanced part 2 room changes (40 to 55% longer, paid back; whole runs -0.03 to -0.14%), soaks, flicker, real loader 5 of 5 equal to nxc.py",
   "hardware": "untested",
-  "next": "hardware checklist; Enhanced (mock-up); the rest of part 2 and natural completion"
+  "next": "hardware checklist; Enhanced part 2 room-change time; the rest of part 2 and natural completion"
  },
  "checks": [
   "asm2profile:army_moves"
@@ -111,30 +116,40 @@
    "status": "pass",
    "scope": "runs/army_moves/release-20261108: pace, soak, flicker, beam audit and real loader, JNext 1.1.104, on this engine's bytes. Not a selftest stamp.",
    "evidence": "games/army_moves.md \"Evidence\""
+  },
+  {
+   "check": "external review run",
+   "status": "pass",
+   "scope": "runs/army_moves/release-20261108b: v1.1 replay in all three modes, negatives, pace, soak, flicker, beam audit and real loader, JNext 1.1.104, on these engine bytes. Not a selftest stamp.",
+   "evidence": "games/army_moves.md \"Evidence\""
   }
  ],
  "checked": {
   "deps": {
-   "asm/army_moves_hooks.asm": "6d641f296b40ec95",
+   "asm/army_moves_enh.inc": "5ab7f6be0fd8116c",
+   "asm/army_moves_hooks.asm": "a9ff880363bd93b7",
    "asm/lib/hlib_iff.asm": "b63b400926847660",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/army_moves.json": "f1a136294e1be081",
+   "docs/profiles/army_moves.json": "2d7ad6353c53db80",
+   "docs/profiles/army_moves_palette.json": "5932d2ccd890f80c",
+   "docs/profiles/army_moves_records.json": "b3b83ec2a3de6d19",
    "nexclash.py": "350128095535a2d4",
-   "nexclash/army_moves.py": "0e08044ac8c33df5",
+   "nexclash/army_moves.py": "31b9550d67148c8e",
+   "nexclash/army_moves_art.py": "1d08832836ed83e0",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "7b77f0ecb71559a5",
+   "nexclash/engines.py": "f744adab50edebd8",
    "nexclash/hooklib.py": "ba4611f453c48aee",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
-   "nexclash/nextboot.py": "121a5912efae9b2a",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/records.py": "29985826115eb292",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
@@ -142,33 +157,37 @@
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "af1a38eb169983a2",
+   "recipe": "099857bfa88293d8",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-08"
  },
  "verified": {
   "deps": {
-   "asm/army_moves_hooks.asm": "6d641f296b40ec95",
+   "asm/army_moves_enh.inc": "5ab7f6be0fd8116c",
+   "asm/army_moves_hooks.asm": "a9ff880363bd93b7",
    "asm/lib/hlib_iff.asm": "b63b400926847660",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/army_moves.json": "f1a136294e1be081",
+   "docs/profiles/army_moves.json": "2d7ad6353c53db80",
+   "docs/profiles/army_moves_palette.json": "5932d2ccd890f80c",
+   "docs/profiles/army_moves_records.json": "b3b83ec2a3de6d19",
    "nexclash.py": "350128095535a2d4",
-   "nexclash/army_moves.py": "0e08044ac8c33df5",
+   "nexclash/army_moves.py": "31b9550d67148c8e",
+   "nexclash/army_moves_art.py": "1d08832836ed83e0",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "7b77f0ecb71559a5",
+   "nexclash/engines.py": "f744adab50edebd8",
    "nexclash/hooklib.py": "ba4611f453c48aee",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
-   "nexclash/nextboot.py": "121a5912efae9b2a",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/records.py": "29985826115eb292",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
@@ -176,9 +195,80 @@
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "af1a38eb169983a2",
+   "recipe": "099857bfa88293d8",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-08"
- }
+ },
+ "rework": [
+  {
+   "name": "enhanced",
+   "version": "1.1",
+   "args": [],
+   "env": {
+    "NEXCLASH_ARMY_MOVES_ENHANCED": "1"
+   },
+   "inputs": [
+    {
+     "name": "Army Moves (Part 1) (English).256",
+     "md5": "cff317d26df3749cc3916b3fc22ac671",
+     "path": "army_moves/Army Moves (Part 1) (English).256",
+     "role": "The player's own Spec256 set for part 1, staged beside the snapshot; army_moves_art makes Enhanced's colour tables from it. Not a recording."
+    },
+    {
+     "name": "Army Moves (Part 2) (English).256",
+     "md5": "b8f4aa91ed6d84333e56dcc94c43a758",
+     "path": "army_moves/Army Moves (Part 2) (English).256",
+     "role": "The player's own Spec256 set for part 2, as part 1's. Not a recording."
+    }
+   ],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [],
+    "decisions": null
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [
+     "p1full.rzx",
+     "p2full.rzx"
+    ],
+    "auto_record": false,
+    "minutes": 60,
+    "note": "Enhanced with the backdrop: every register with R and all 48K RAM at each hook, the Enhanced picture against an independent model at every publication; ABI cases and 18 broken builds."
+   },
+   "outputs": {
+    "sprites": {
+     "file": "army_moves_sprites.nex",
+     "md5": "9cbd2379d8cae020c3b2145d362a4f75"
+    },
+    "loading": {
+     "file": "army_moves_sprites_loading.nex",
+     "md5": "1b60bd04304265986cf5ff4a142e44db"
+    },
+    "enhanced": {
+     "file": "army_moves_enhanced.nex",
+     "md5": "61cf397fa76607d6c0c46639958ed3f3"
+    },
+    "enhanced_loading": {
+     "file": "army_moves_enhanced_loading.nex",
+     "md5": "c8cb948479e3e6910897356a86b36b08"
+    },
+    "enhanced_nobd": {
+     "file": "army_moves_enhanced_nobd.nex",
+     "md5": "33b696b36b7b3ef8a01d129146c2d70b"
+    },
+    "enhanced_nobd_loading": {
+     "file": "army_moves_enhanced_nobd_loading.nex",
+     "md5": "9825b827f28480f94bad669bae2913f1"
+    }
+   },
+   "proof": "Enhanced colours: Spec256 team (Spec256), matched to this release by content; original executable code unchanged.",
+   "note": "The sets are the player's own and are never distributed with engine source; without them the rework is skipped and the default builds as before."
+  }
+ ]
 }
