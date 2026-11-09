@@ -84,18 +84,18 @@
   },
   "sprites": {
    "file": "nightshade_sprites.nex",
-   "md5": "697ee0152f6a2f5d92cdc17bc51c674d"
+   "md5": "8dd3f1931a5d307128b2284c8577898c"
   },
   "enhanced": {
    "file": "nightshade_enhanced.nex",
-   "md5": "ebe5cc7225b41c3d04f073947f7b6a98"
+   "md5": "666e680d91856edc892b21055ea899ab"
   }
  },
  "repro": [],
  "status": {
   "title": "Nightshade",
   "engine_col": "nightshade (nightshade.md)",
-  "build": "nightshade_sprites.nex 697ee015 (figures as 4-bit sprites over the kept plot, switched with the game's blits at 28 MHz; R kept; original pace: pace-matched blit hook with hook-time debt; loading screen) + Enhanced ebe5cc72 (painted by parts from the owner's sheets, code images at the original pace) = the published Nightshade 1.0 .nxc --bare",
+  "build": "nightshade_sprites.nex 8dd3f193 (figures as 4-bit sprites over the kept plot, switched with the game's blits at 28 MHz; R kept; original pace: pace-matched blit hook with hook-time debt, catch-up at 7 MHz between figure hooks; loading screen) + Enhanced 666e680d (painted by parts from the owner's sheets, code images at the original pace) = the published Nightshade 1.1 .nxc --bare (1.0: 697ee015, ebe5cc72)",
   "software": "replay IDENTICAL default + Enhanced on a1 / a2 / rec1 / rec2, negatives 16/16 (imported 2026-11-04 from Jon Attree's .nxc work)",
   "hardware": "none (JNext only)",
   "next": "end-to-end run of the refactored pipeline (docs/REFACTOR.md, NEXCLASH-CHANGES final step)"
@@ -106,48 +106,54 @@
  ],
  "checked": {
   "deps": {
-   "asm/nightshade_hooks.asm": "4753957db02a2c08",
-   "docs/profiles/nightshade.json": "31e32c4809c8b853",
-   "nexclash.py": "b7f49876a97b1f48",
+   "asm/nightshade_hooks.asm": "15b7190d82e1420b",
+   "asm/nightshade_hooks_enh.asm": "6fe802cce70caa41",
+   "docs/profiles/nightshade.json": "6eb9643136e17e60",
+   "docs/profiles/nightshade_enh.json": "3a034d88ddc0024b",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/nextboot.py": "e57136059969ba67",
-   "nexclash/nightshade.py": "50b3da4d5fb80dad",
-   "nexclash/nightshade_paint.py": "545473757f20eac9",
+   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/nightshade.py": "6e12817aaef12c41",
+   "nexclash/nightshade_paint.py": "3dcc1065ee9f0495",
+   "nexclash/nightshade_paint_source.json": "b8cfd025301a71d9",
    "nexclash/nightshade_paint_v2.py": "a42a1660bf68133f",
-   "nexclash/rzx.py": "fda23afec57aec5e",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "7caff87aaee82a33",
+   "recipe": "017294e779c1b6e6",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-08"
  },
  "verified": {
   "deps": {
-   "asm/nightshade_hooks.asm": "4753957db02a2c08",
-   "docs/profiles/nightshade.json": "31e32c4809c8b853",
-   "nexclash.py": "b7f49876a97b1f48",
+   "asm/nightshade_hooks.asm": "15b7190d82e1420b",
+   "asm/nightshade_hooks_enh.asm": "6fe802cce70caa41",
+   "docs/profiles/nightshade.json": "6eb9643136e17e60",
+   "docs/profiles/nightshade_enh.json": "3a034d88ddc0024b",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/nextboot.py": "e57136059969ba67",
-   "nexclash/nightshade.py": "50b3da4d5fb80dad",
-   "nexclash/nightshade_paint.py": "545473757f20eac9",
+   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/nightshade.py": "6e12817aaef12c41",
+   "nexclash/nightshade_paint.py": "3dcc1065ee9f0495",
+   "nexclash/nightshade_paint_source.json": "b8cfd025301a71d9",
    "nexclash/nightshade_paint_v2.py": "a42a1660bf68133f",
-   "nexclash/rzx.py": "fda23afec57aec5e",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "7caff87aaee82a33",
+   "recipe": "017294e779c1b6e6",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-08"
  }
 }

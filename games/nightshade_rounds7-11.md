@@ -86,3 +86,14 @@
 nexclash/nightshade_paint_source.json keeps the owner's painting as one code per figure pixel (ink or mask) of each
 graphic, in the game's data order, plus 17 painted pixels outside a figure's ink and mask by position; the shapes
 come from the player's snapshot at build time (nightshade_paint.paint_all). Builds unchanged (697ee015, ebe5cc72).
+
+## Pace, v1.1 (pace audit of 2026-11-08; published .nxc, nxc 238e98a)
+Published: main's build gives default 8dd3f193 and Enhanced 666e680d, the published 1.1 .nxc --bare, byte for byte.
+Audit (pilot runs/pace-audit-20261108/REPORT-2.md): 1.0 whole +0.02 to +1.90%, quiet up to +2.45%, stretches of 20 updates up to +8.7%, against the rule (Jon, 2026-11-07: within 2% where the original runs steadily, faster fine where it lags, never slower). The debt was right but could only be repaid in the blit's window, 295 lines an update less what the window takes; a busy scene's figure hooks cost up to 560.
+- Catch-up: with the debt over 32 lines at a figure hook's exit, the game's own code runs at 7 MHz to the next hook, which credits the gap x 2 (bc_gap, bc_ctl). The blit hook ends it: the update's logic after the blit has no hook for over a frame, and the line count could not credit it (first build: 5% fast). The debt's floor moved from -128 to -1,024 lines, so an over-win is carried and the blit's wait takes it out.
+- Sound keeps its clock without paying for it: while catch-up is on, the first bytes of 0xC471 (a tone) and 0xC661 (a tune's note) are a CALL to s_sn; h_snd ends catch-up and gives the speed back, R exact. Off, those are the game's own bytes. A clear ends it too. The replay runs this with a debt forced at every figure hook (the model's beam barely moves, so a real debt never builds): that found the tune playing at 7 MHz.
+- Enhanced: its figures in the blit hook can take over a frame, and the line count wrapped unseen, so the debt lost a frame an update in heavy scenes (+12% stretch). The hook now ticks once a figure. That also helps default a little.
+- hlib_pace and hlib_speed stay out: the engine's own debt and speed latch predate them and fit its exact R count; hlib_pace would add no way to repay.
+- Picture: pattern banks as 1.0. R: compared at every hook, as before, and after the blits; the new sound hook keeps it. Verifier: hook exit speed = 7 MHz in catch-up, else the speed the game runs at; every beeper write at that speed; three new negatives: the JP not set, the sound hook keeping the fast clock, R one off after it.
+- Limits: rooms by script, interiors and bosses not reached; JNext's timing only. Before / after: pilot runs/nightshade/pacefix-20261108/NOTES.md.
+
