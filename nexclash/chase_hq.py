@@ -1,4 +1,4 @@
-"""Chase H.Q. (Ocean, 1989; 128K): the speed engine with its optional Enhanced colours, as published in .nxc 1.2.
+"""Chase H.Q. (Ocean, 1989; 128K): the speed engine with its optional Enhanced colours, v1.3 (.nxc 1.2 with two interrupt-safe reads of the CPU speed).
 games/chase_hq.md has the design, results and evidence.
 
 One engine, three builds (asm/chase_hq_hooks.asm, CHQ_SET):

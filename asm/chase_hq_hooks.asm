@@ -958,8 +958,8 @@ sound_tick:
         ld a,(enh_enable)
         or a
         jr z,.base
-        ld a,i
-        jp po,.fast
+        call iff_off            ; 1.3: read twice (iff_off); was LD A,I / JP PO,.fast, same length
+        jr c,.fast
         HLIB_SPEED_OUT V_SPEED
 .fast:
         ld a,(E_PENDING)
@@ -1472,8 +1472,8 @@ pace_wait_e:
         ld a,(enh_enable)
         or a
         jr z,.game_clock
-        ld a,i
-        jp po,.go
+        call iff_off            ; 1.3: read twice (iff_off); was LD A,I / JP PO,.go, same length
+        jr c,.go
 .game_clock:
         HLIB_SPEED_OUT V_SPEED
 .go:
@@ -1560,6 +1560,20 @@ pace_follow:
         ld (V_TGT),hl
         ret
         ENDIF
+; 1.3: Carry set when interrupts are off. LD A,I reads IFF2 into P/V, but an interrupt accepted during the read
+; leaves P/V clear: a single read can say "off" with interrupts on. "On" is always true, so a second read follows
+; only an "off". At the end of the page so that no earlier label moves (the menu .nex keeps a set's differences
+; from the default in its spare banks). A and F only; the callers reload A.
+iff_off:
+        ld a,i
+        jp pe,.on
+        ld a,i
+        jp pe,.on
+        scf
+        ret
+.on:
+        or a
+        ret
 rom_end:
         ASSERT rom_end <= 0x4000
         IFNDEF CHQ_WRAPPED            ; a set's own source saves the blocks (asm/chase_hq_speed.asm)

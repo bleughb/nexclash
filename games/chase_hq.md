@@ -1,9 +1,9 @@
 # Chase H.Q. (Ocean, 1989, 128K)
 
 ## Next session
-Stage: 4 (hardware). Hardware: untested. v1.2 published as .nxc 1.2 (nxc repo 238e98a); the owner played 1.1 in JNext (Speed, Enhanced at both paces), not yet 1.2.
+Stage: 4 (hardware). Hardware: untested. v1.3 is this engine's build: 1.2 (published as .nxc 1.2, nxc repo 238e98a) with two interrupt-safe reads of the CPU speed; the 1.3 review .nxc awaits publication. The owner played 1.1 in JNext (Speed, Enhanced at both paces), not yet 1.2 or 1.3.
 Inputs: Chase H.Q. (1989)(Ocean)(128K).z80, MD5 cedb31d5860815ef7e871ee249744de5. Beside it, staged by the record, never in this repo: `chase_hq_loading.scr` (the 6,912-byte screen block of the archive tape, MD5 aed0ca7e) and `chase_hq_art.bin` (the Enhanced art pages, MD5 83797b5c; "Inputs").
-Build: `nexclash.py auto` writes `chase_hq.nex` (default, 0a989fa7), `chase_hq_speed.nex` (Enhanced [Speed], a6d6fec8) and `chase_hq_orig_pace.nex` (Enhanced [Orig. pace], c02edf3f), each equal to `nxc.py PATCH GAME --bare [--colours NAME]` of the published patch byte for byte, and boot-checks each. Without the two inputs it builds nothing and says so.
+Build: `nexclash.py auto` writes `chase_hq.nex` (default, 2f6628a5), `chase_hq_speed.nex` (Enhanced [Speed], 6729617f) and `chase_hq_orig_pace.nex` (Enhanced [Orig. pace], 498c2119), each equal to `nxc.py PATCH GAME --bare [--colours NAME]` of the 1.3 review patch byte for byte (1.2's were 0a989fa7, a6d6fec8, c02edf3f), and boot-checks each. Without the two inputs it builds nothing and says so.
 Checks: `selftest.py --game chase_hq` rebuilds and compares the three MD5s (stamp: checked). No RZX verifier in the engine yet: `verify` and `unit_tests` say so; the proofs are the pilot run's ("Evidence").
 Pending: hardware checklist; an RZX verifier for the current hook set; compiling the art pages from an in-repo colour map; stage 2-5 pace.
 
@@ -50,6 +50,7 @@ In the .nxc, off by default, from the archive POK: Infinite credits 9C3E = 166, 
 | 6, 3000, POKEs | -0.43 | +0.33 | +4.99 | +1.17 | -4.46 | -0.27 | +13.2 | +12.8 |
 
 - Real .NEXCLASH loader on private card copies: 1.1 on NextZXOS 26.11 and v2.09, Enhanced off and on, with and without the cheats; 1.2 on 26.11, default, Enhanced [Speed] and [Orig. pace]: output equal to nxc.py, menu and driving reached, frames viewed. 15-minute soak of Orig. pace: no freeze, loop or crash.
+- 1.3 (2026-11-08, upstream run pace13 on these bytes): stage 1, seeds 1-4 x 800 updates, the audit's profile and plain control: 90 game addresses equal at every update in all three modes. Orig. pace whole -2.68 / -3.06 / -1.45 / -2.61% (1.2: -2.68 / -3.04 / -1.45 / -2.62), slowest stretch +2.9 / +3.0 / +4.6 / +1.3 (1.2: +3.0 / +3.0 / +4.6 / +1.2); Enhanced [Speed] within 0.02 points of 1.2; default identical to 1.2. Real .NEXCLASH on a private NextZXOS 26.11 card copy with the 1.3 review .nxc: default, Enhanced [Speed] and [Orig. pace] output equal to nxc.py, menu (v1.3), briefing and driving reached (201-241 play updates), frames viewed; card copies deleted. iff_off simulated with interrupts on and off and an interrupt during the first read: right in all 12 cases (three sets); 1.2's single read takes the "off" branch in that case. Boot-check negative (printer buffer not restored) caught in the default and Orig. pace.
 - This repo: `auto` boot-checks each build as the converter's loader and as NEXLOAD leaves the machine: every register with R and all 48K RAM at the game's PC, no tail exemption.
 
 ## Hardware checklist
@@ -66,8 +67,7 @@ Nothing has run on a Next. To check: start-up and the briefing; the 28 MHz windo
 - Verification in this repo: an RZX verifier and unit tests for the current 67 sites (the pilot's 1.0 replay covered the Speed hooks of that version only); until then the record has no verify recipe and is stamped "checked" (rebuild), not "verified".
 - Art pages: an in-repo colour map of the painting and an engine-side compiler, so `chase_hq_art.bin` is no longer an input.
 - DDMA: the review the contribution rules ask for (docs/DDMA.md); Enhanced uses the plain zxnDMA.
-- Pace: stages 2-5, briefing and attract targets not re-measured for 1.2.
-- IFF audit: `selftest.py --tools` (hooklib IFF audit) fails on two single LD A,I reads in the published bytes, asm/chase_hq_hooks.asm sound_tick and pace_wait_e (Enhanced only: they choose 28 MHz or the game's clock for the cadence and pace checks; an interrupt during the read would run that check at 28 MHz with interrupts on; nothing there changes the interrupt state). Keeping the published bytes means a reasoned waiver in the shared audit; fixing it means new bytes and a new .nxc. Owner's decision; until then this branch is not merged.
+- Pace: stages 2-5, briefing and attract targets not re-measured since 1.1.
 
 ## Lessons
 - [deferred Open: reconsider when the Enhanced painting next changes (an in-repo colour map and compiler then)] The Enhanced pages are compiled from the painting over stage graphics captured from the running game, so main cannot make them from the snapshot; they are a local input (`chase_hq_art.bin`). An in-repo colour map and an engine-side compiler (as Gunfright's) would remove it.
@@ -75,7 +75,7 @@ Nothing has run on a Next. To check: start-up and the briefing; the 28 MHz windo
 - [local: separate assemblies in one source] Five units assembled separately in the pilot (steering, row plotter, dashboard, motion, HUD) assemble to the same bytes as one source with a MODULE each, each SAVEBIN before the next unit reuses its addresses.
 - [local: published layout] The published builds put the alt ROM sources at banks 45/44 instead of the converter's default 47/46; the engine sets them for its own convert only and restores them.
 - [deferred Open: reconsider when Chase H.Q. Enhanced next changes or a hardware round reports its hook cost] The contribution rules ask every new game for a DMA and core 3.03.00 DDMA review with a no-blitter fallback; the pilot built Enhanced on the plain zxnDMA before that rule and this upstreaming changes no bytes, so the review is open (docs/DDMA.md).
-- [deferred Open: reconsider when the owner decides between an audit waiver and a 1.3 with a double read] The published Enhanced reads I once in two places (sound_tick, pace_wait_e) to pick the clock for a check; main's IFF audit forbids any single LD A,I. The pilot run had no such audit, so it was never flagged.
+- [local: single LD A,I in 1.2] 1.2's Enhanced read I once in two places (sound_tick, pace_wait_e) to pick the clock for a check; main's IFF audit (the --tools run) forbids that, and the pilot had no such audit. 1.3 calls iff_off at both (CALL + JR C, the same 5 bytes), which reads twice; iff_off sits at the end of the page so no other label moves. Default bytes change too (the code is shared) though it never runs there; pace equal to 1.2 in every mode.
 - [none: pace lessons] The Orig. pace fit and menu-bank lessons are in the pilot run's notes; nothing here changes them.
 
 ## Friction
@@ -88,4 +88,5 @@ Nothing has run on a Next. To check: start-up and the briefing; the 28 MHz windo
 ## Stage log
 - 2026-11-06 Stage 3: 1.0 speed pass; 1.1 Enhanced colours and tunnel fix; owner played 1.1.
 - 2026-11-08 1.2 Orig. pace follows the original per update; .nxc 1.2 published (nxc 238e98a).
-- 2026-11-09 Upstream: engine, `auto`, registration and record; main rebuilds the three published builds byte for byte.
+- 2026-11-08 Upstream: engine, `auto`, registration and record; the 1.2 bytes rebuilt exactly; the --tools IFF audit failed on two single LD A,I reads.
+- 2026-11-08 1.3: both reads made interrupt-safe (iff_off); new MD5s in all three modes, pace unchanged; review .nxc built, not yet published.

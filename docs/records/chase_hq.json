@@ -61,23 +61,23 @@
  "outputs": {
   "plain": {
    "file": "chase_hq.nex",
-   "md5": "0a989fa7fec68693b8d353f1e8c46188"
+   "md5": "2f6628a552412d0a227300fe7cf397b2"
   },
   "speed": {
    "file": "chase_hq_speed.nex",
-   "md5": "a6d6fec84dd354ae0fc88dc76448a6bf"
+   "md5": "6729617fd9e3adc131a0451593557b39"
   },
   "orig_pace": {
    "file": "chase_hq_orig_pace.nex",
-   "md5": "c02edf3f36b339a0b20cb17e0894a829"
+   "md5": "498c2119e140480cd16c8f0fda5c5843"
   }
  },
  "repro": [],
  "status": {
   "title": "Chase H.Q.",
   "engine_col": "chase_hq (chase_hq.md)",
-  "build": "v1.2; default chase_hq.nex 0a989fa7 (Speed: road, scenery and screen copy at 28 MHz, capped at the original's quiet-scene pace; original pictures; banks 0-45, 1MB Next); Enhanced colours (Jon Attree's painting, Layer 2, sprites and Copper; 2MB Next) at the Speed pace chase_hq_speed.nex a6d6fec8 and at the original's pace chase_hq_orig_pace.nex c02edf3f; all three equal the published .nxc 1.2 reconstructions; the art pages and loading screen are local inputs",
-  "software": "pilot run, JNext: 1.0 paired-hook RZX replay (6 recordings, 37,500 frames, the 1.0 Speed hooks); 1.1 native lockstep against the original (57 player-state bytes, every AY and beeper write, briefing and demo registers with R), six tunnel routes, stage 2/4/5, capture and time-out checkpoints identical; 1.2 Orig. pace: 90 game addresses equal in 6 runs, whole runs -3.0 to +0.3%, 20-update stretches up to +13.4%; real loader on private cards; auto: boot check with R, all three builds; no RZX verify in this engine",
+  "build": "v1.3 (1.2 with two interrupt-safe reads of the CPU speed in Enhanced); default chase_hq.nex 2f6628a5 (Speed: road, scenery and screen copy at 28 MHz, capped at the original's quiet-scene pace; original pictures; banks 0-45, 1MB Next); Enhanced colours (Jon Attree's painting, Layer 2, sprites and Copper; 2MB Next) at the Speed pace chase_hq_speed.nex 6729617f and at the original's pace chase_hq_orig_pace.nex 498c2119; all three equal the 1.3 review .nxc reconstructions; the art pages and loading screen are local inputs",
+  "software": "pilot run, JNext: 1.0 paired-hook RZX replay (6 recordings, 37,500 frames, the 1.0 Speed hooks); 1.1 native lockstep against the original (57 player-state bytes, every AY and beeper write, briefing and demo registers with R), six tunnel routes, stage 2/4/5, capture and time-out checkpoints identical; 1.2 Orig. pace: 90 game addresses equal in 6 runs, whole runs -3.0 to +0.3%, 20-update stretches up to +13.4%; 1.3: the same lockstep in all three modes, pace within 0.04 points of 1.2; real loader on private cards; auto: boot check with R, all three builds; no RZX verify in this engine",
   "hardware": "untested",
   "next": "hardware checklist; an RZX verifier for the current hooks; art pages from an in-repo colour map; DDMA review; stage 2-5 pace"
  },
@@ -91,26 +91,26 @@
   {
    "check": "external release suite",
    "status": "pass",
-   "scope": "pilot runs/chase_hq (1.1 release, 1.2 pacefix-20261108), JNext 1.1.104, on these bytes: native lockstep against the original (state, sound, briefing and demo registers with R), six tunnel routes, stage 2/4/5, capture and time-out checkpoints, Orig. pace lockstep in 6 runs with pace negatives, real loader on private cards, 15-minute soak. Not a selftest stamp; no RZX replay of these hooks.",
+   "scope": "pilot runs/chase_hq (1.1 release, 1.2 pacefix-20261108) and the 1.3 re-run (stage 1 lockstep and pace in all three modes, real loader), JNext 1.1.104: native lockstep against the original (state, sound, briefing and demo registers with R), six tunnel routes, stage 2/4/5, capture and time-out checkpoints, Orig. pace lockstep in 6 runs with pace negatives, real loader on private cards, 15-minute soak. Not a selftest stamp; no RZX replay of these hooks.",
    "evidence": "games/chase_hq.md \"Evidence\""
   }
  ],
  "checked": {
   "deps": {
    "asm/chase_hq_banks.asm": "6c973153ae73cd53",
-   "asm/chase_hq_hooks.asm": "83223dfdf356a7d7",
+   "asm/chase_hq_hooks.asm": "90d1684d2c49fea8",
    "asm/chase_hq_orig.asm": "73cefcd2bea955f8",
    "asm/chase_hq_speed.asm": "8ee940e582c18c96",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/chase_hq.json": "6e45e3650ce5816e",
+   "docs/profiles/chase_hq.json": "496c7ab8573d88de",
    "docs/profiles/chase_hq_banks.json": "a94031836b2c7d98",
-   "docs/profiles/chase_hq_orig.json": "873e687ec1c3de36",
-   "docs/profiles/chase_hq_speed.json": "5ebf7dfc4955b5c9",
+   "docs/profiles/chase_hq_orig.json": "a6dd2629181d368a",
+   "docs/profiles/chase_hq_speed.json": "46a0f7892c03a266",
    "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/chase_hq.py": "099df580cfa17257",
+   "nexclash/chase_hq.py": "4d7c7fcf5da379f2",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
@@ -128,7 +128,7 @@
    "nexclash/z80n.py": "7154a8152c825615",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "08dd7539afede30a",
+   "recipe": "d24d9e9fd8e91625",
    "rom": "sinclair"
   },
   "date": "2026-11-08"

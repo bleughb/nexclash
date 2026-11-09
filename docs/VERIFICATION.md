@@ -93,7 +93,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Gunfright (gunfright): `gunfright.nex` f26d0a561e25a1a800b19787cd1fe41b, `gunfright_enhanced.nex` 4ec70c827ae291ce273a09c508f95c87; verified 2026-11-07
 - Army Moves (army_moves): `army_moves_sprites.nex` f29ce916ef3ba1e62c83d8fa992c3d39, `army_moves_sprites_loading.nex` 85ba62ef5e47b72bb61220a8daf59809; verified 2026-11-08
 - Game Over (game_over): `game_over_sprites.nex` 8c3152e36baa285b4a1407e011a95baa, `game_over_sprites_loading.nex` 66d8145473890323dd279cfec7d28859; verified 2026-11-08
-- Chase H.Q. (chase_hq): `chase_hq.nex` 0a989fa7fec68693b8d353f1e8c46188, `chase_hq_speed.nex` a6d6fec84dd354ae0fc88dc76448a6bf, `chase_hq_orig_pace.nex` c02edf3f36b339a0b20cb17e0894a829; verified never
+- Chase H.Q. (chase_hq): `chase_hq.nex` 2f6628a552412d0a227300fe7cf397b2, `chase_hq_speed.nex` 6729617fd9e3adc131a0451593557b39, `chase_hq_orig_pace.nex` 498c2119e140480cd16c8f0fda5c5843; verified never
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
