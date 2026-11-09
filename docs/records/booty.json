@@ -1,0 +1,225 @@
+{
+ "name": "booty",
+ "order": 233,
+ "game": "Booty",
+ "doc": "booty.md",
+ "engine": "booty",
+ "representative": true,
+ "reference": "booty",
+ "inputs": {
+  "snapshot": {
+   "name": "booty.z80",
+   "md5": "0b2cb0c5a033e853d62c3a5e492f8bc0",
+   "path": "booty/booty.z80",
+   "note": "Booty (1984)(Firebird).z80, the main dump at its title (48K, beeper)."
+  },
+  "recordings": [
+   {
+    "name": "booty_loading.scr",
+    "md5": "d09b4390902bd3d61a35554eb4f06e6e",
+    "path": "booty/booty_loading.scr",
+    "role": "The 6,912-byte loading screen from Booty (1984)(Firebird).tap, staged beside the snapshot; not a recording."
+   },
+   {
+    "name": "booty.256",
+    "md5": "62ccf9b7af0e5d58e3186388107fd70b",
+    "path": "booty/booty.256",
+    "role": "Enhanced: the Spec256 set as a .256 (the .256's own CRD1 line reads EmuZWin: Ynicky), staged beside the snapshot; game data, never in this repo; not a recording."
+   },
+   {
+    "name": "spec256-palette.pal",
+    "md5": "b095dc99a047bab844b87b06657b0a7a",
+    "path": "booty/spec256-palette.pal",
+    "role": "Enhanced: Spec256-Games' palette (licence not established), beside booty.256; never in this repo; not a recording."
+   },
+   {
+    "name": "a1.rzx",
+    "md5": "78afb53af394c607ce855ce291227f7f",
+    "path": "booty/a1.rzx",
+    "role": "The release from its title: scripted play. Replayed to frame 6,000 (STOPS), as in the review run."
+   },
+   {
+    "name": "rooms.rzx",
+    "md5": "cef0d72dfb456e41b47aeb95966a601d",
+    "path": "booty/rooms.rzx",
+    "role": "A segment a room (21): at the main loop a test-only CALL EE84 enters the room, then random play; coverage, not clean play. First for the broken builds; its states and die's give the ABI cases."
+   },
+   {
+    "name": "over.rzx",
+    "md5": "9b94c738232d24fcc4c8e956afe2337b",
+    "path": "booty/over.rzx",
+    "role": "From the start: three deaths to game over, the title, define keys, a new game. Replayed to frame 9,000 (STOPS), as in the review run."
+   },
+   {
+    "name": "die.rzx",
+    "md5": "b11f5d670217fc435256a179f5f347bb",
+    "path": "booty/die.rzx",
+    "role": "Down to one life by a test POKE, game over, the title, the menu, a new game; coverage, not clean play."
+   },
+   {
+    "name": "hid.rzx",
+    "md5": "ae23a51543b9478d5ae9f82e970b966c",
+    "path": "booty/hid.rzx",
+    "role": "The hidden game by the cheat's POKEs on the release, its text and play; coverage, not clean play."
+   }
+  ]
+ },
+ "modules": [
+  "booty"
+ ],
+ "own_modules": [
+  "booty"
+ ],
+ "data": [
+  "asm/booty_hooks.asm",
+  "docs/profiles/booty.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "a1.rzx",
+   "rooms.rzx",
+   "over.rzx",
+   "die.rzx",
+   "hid.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 50,
+  "note": "The default runs no hook, so the replay proves Enhanced: at every hook every register with R and all 48K RAM against the original to where they meet again; Layer 2 against an independent picture from the set's planes after every print, and the model's cells against the ULA every 64 hooks; ABI cases (with an interrupt inside a hook) and 21 broken builds. Pace, soak, flicker and the real loader are in games/booty.md \"Evidence\"."
+ },
+ "outputs": {
+  "plain": {
+   "file": "booty.nex",
+   "md5": "7a41de52c061b07ef73c951461f07445"
+  },
+  "loading": {
+   "file": "booty_loading.nex",
+   "md5": "6393a6f9ee6f20cf760bb70421eb2d1e"
+  },
+  "enhanced": {
+   "file": "booty_enhanced.nex",
+   "md5": "ebc40ec715755da8db720a1a1c0f8074"
+  },
+  "enhanced_loading": {
+   "file": "booty_enhanced_loading.nex",
+   "md5": "8113662ce1469689d1effa77280b30d3"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Booty",
+  "engine_col": "booty (booty.md)",
+  "build": "v1.0; booty_loading.nex 6393a6f9 and booty_enhanced_loading.nex 8113662c equal the published .nxc 1.0 bare builds, default and Enhanced (without the screen 7a41de52, ebc40ec7); default: the original game, no game byte changed, no hook, Sinclair's ROM as the whole alt ROM, no clash to remove and none claimed; Enhanced, off by default: the Spec256 set's pixels on a Layer 2 over the unchanged ULA; top bank 47, fits a 1MB Next",
+  "software": "5 recordings, 32,815 frames (a1 to 6,000, over to 9,000), 269,627 hooks with R and 48K RAM, 3,655 Layer 2 pictures against the set's planes, 1,455,922 ULA cells; 768 ABI cases and 4 with an interrupt inside a hook, 21 of 21 broken builds; ROM paths complete (the two alt ROM hook sites known); review run: pace in JNext in lockstep, music off: whole runs and thirds within 2% (Enhanced -1.00% to +0.99%), but the slowest 20-update stretch in hold 8 reads +2.78% to +3.33% in Enhanced, against +1.95% to +2.35% in the default, which runs no hook; the default reads +0.5% whole-run with no hook; 15-minute soaks, flicker, real loader on private cards",
+  "hardware": "untested",
+  "next": "hardware checklist; natural completion"
+ },
+ "checks": [
+  "asm2profile:booty"
+ ],
+ "results": [
+  {
+   "check": "external review run",
+   "status": "pass",
+   "scope": "runs/booty/release-20261108: pace, soak, flicker and real loader, JNext 1.1.104, on this engine's bytes. Not a selftest stamp.",
+   "evidence": "games/booty.md \"Evidence\""
+  }
+ ],
+ "rom_paths_known": [
+  {
+   "image": 1,
+   "from": "0x0B9B",
+   "to": "0x0B9D",
+   "why": "Enhanced: the print hook in the alt ROM"
+  },
+  {
+   "image": 1,
+   "from": "0x0E44",
+   "to": "0x0E46",
+   "why": "Enhanced: the clear hook in the alt ROM"
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/booty_hooks.asm": "8869022c5217e12a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/booty.json": "3237719bee7562ce",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/booty.py": "5fedd55843d3164f",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "596d85d2d5347f09",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "62686cf00710c797",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ },
+ "verified": {
+  "deps": {
+   "asm/booty_hooks.asm": "8869022c5217e12a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/booty.json": "3237719bee7562ce",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/booty.py": "5fedd55843d3164f",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "596d85d2d5347f09",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "62686cf00710c797",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ }
+}

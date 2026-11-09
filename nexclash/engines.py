@@ -88,6 +88,7 @@ ENGINES = [
     ('phantis', 'is_phantis', None),                                      # Phantis / Game Over 2 (48K, both parts): part 1 Enhanced (local table)
     ('gunrunner', 'is_gunrunner', None),                                  # Gunrunner (48K): default and Enhanced
     ('scooby_doo', 'is_scooby_doo', None),                                # Scooby Doo in the Castle Mystery (48K): default, Enhanced (local set)
+    ('booty', 'is_booty', None),                                          # Booty (48K): default and Enhanced
 ]
 
 
