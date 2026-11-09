@@ -170,7 +170,7 @@
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
    "nexclash/gng.py": "4a915eb22b2f0a4c",
    "nexclash/gng_art.py": "f8aad114c10ac6ac",
    "nexclash/gng_verify.py": "4f02b14cc81ca479",
@@ -181,13 +181,13 @@
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
    "recipe": "5ad86145e150036a",
-   "rom": "e50ee485fb4a21d2"
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-08"
+  "date": "2026-11-09"
  },
  "verified": {
   "deps": {
@@ -201,7 +201,7 @@
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
    "nexclash/gng.py": "4a915eb22b2f0a4c",
    "nexclash/gng_art.py": "f8aad114c10ac6ac",
    "nexclash/gng_verify.py": "4f02b14cc81ca479",
@@ -212,12 +212,12 @@
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
    "recipe": "5ad86145e150036a",
-   "rom": "e50ee485fb4a21d2"
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-08"
+  "date": "2026-11-09"
  }
 }
