@@ -115,12 +115,12 @@
    "nexclash/dizzy_patch.py": "27472fb03d88fcfb",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
    "nexclash/evidence.json": "a6c823114223e2c3",
    "nexclash/hooklib.py": "ba4611f453c48aee",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/identify.py": "578e73ef2ca90c6a",
-   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/machine.py": "659903f13de0fcee",
    "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/nxc.py": "f286b3f16e76fbda",
@@ -135,13 +135,13 @@
    "nexclash/tid128_colour.py": "d3a60ad773c7754c",
    "nexclash/tid128_v11.py": "e2f7d4eb73dd2fe7",
    "nexclash/verify.py": "3dcc48bdab8bd67b",
-   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
    "recipe": "af5e2dd3fac5e54f",
-   "rom": "e50ee485fb4a21d2"
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-08"
+  "date": "2026-11-09"
  },
  "verified": {
   "deps": {
@@ -164,12 +164,12 @@
    "nexclash/dizzy_patch.py": "27472fb03d88fcfb",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
    "nexclash/evidence.json": "a6c823114223e2c3",
    "nexclash/hooklib.py": "ba4611f453c48aee",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/identify.py": "578e73ef2ca90c6a",
-   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/machine.py": "659903f13de0fcee",
    "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/nxc.py": "f286b3f16e76fbda",
@@ -184,13 +184,13 @@
    "nexclash/tid128_colour.py": "d3a60ad773c7754c",
    "nexclash/tid128_v11.py": "e2f7d4eb73dd2fe7",
    "nexclash/verify.py": "3dcc48bdab8bd67b",
-   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
    "recipe": "af5e2dd3fac5e54f",
-   "rom": "e50ee485fb4a21d2"
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-08"
+  "date": "2026-11-09"
  },
  "rework": [
   {

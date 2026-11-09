@@ -78,15 +78,15 @@
   "deps": {
    "asm/nemesis_hooks.asm": "4c7a6e859218de36",
    "docs/profiles/nemesis_the_warlock.json": "fdcbddf714b8d3fe",
-   "nexclash.py": "9028c4ca12045d70",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "00d01102bda98ad5",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
    "nexclash/nemesis.py": "48f7849cc65c8f62",
-   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/records.py": "29985826115eb292",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
@@ -96,21 +96,21 @@
    "recipe": "e98a74c1e947b68e",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-07"
+  "date": "2026-11-09"
  },
  "verified": {
   "deps": {
    "asm/nemesis_hooks.asm": "4c7a6e859218de36",
    "docs/profiles/nemesis_the_warlock.json": "fdcbddf714b8d3fe",
-   "nexclash.py": "9028c4ca12045d70",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "00d01102bda98ad5",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
    "nexclash/nemesis.py": "48f7849cc65c8f62",
-   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/records.py": "29985826115eb292",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
@@ -120,6 +120,6 @@
    "recipe": "e98a74c1e947b68e",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-07"
+  "date": "2026-11-09"
  }
 }

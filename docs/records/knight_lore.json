@@ -72,5 +72,45 @@
    "scope": "pilot release-20261106: two 24,000-frame recordings, 16,212 publication checks (registers with R, game RAM, objects, bitmap, ordered colour oracle); 9 negatives; 248 ABI, 128 sound-wrapper, 300 compositor cases; six native soaks; pace three seeds x three scenes; private-card loader three modes exact. Not a selftest stamp.",
    "evidence": "games/knight_lore.md \"Evidence\""
   }
- ]
+ ],
+ "checked": {
+  "deps": {
+   "asm/knight_lore_actor.asm": "ac076c25f00a1634",
+   "asm/knight_lore_grid_commit.asm": "f2b1df69e3ea93a4",
+   "asm/knight_lore_hooks.asm": "4fada28c45c08bf8",
+   "asm/knight_lore_packed.asm": "0483953e917f1af9",
+   "asm/knight_lore_palette.inc": "30804d8c72171ac2",
+   "asm/knight_lore_sprite_cache.asm": "9e4a6481afab9e5c",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/knight_lore.json": "3ff6ac6709e56221",
+   "docs/profiles/knight_lore_sound_sites.json": "e5b7910ab05d2bd5",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/knight_lore.py": "6c0e034a610ce615",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "adc332ad65b88003",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-09"
+ }
 }

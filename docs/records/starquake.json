@@ -159,7 +159,7 @@
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
    "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "29985826115eb292",
@@ -168,13 +168,13 @@
    "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/starquake.py": "0f0d4793288a1c05",
-   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
    "recipe": "ee229e33fd658241",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-08"
+  "date": "2026-11-09"
  },
  "verified": {
   "deps": {
@@ -185,7 +185,7 @@
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
    "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "29985826115eb292",
@@ -194,12 +194,12 @@
    "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/starquake.py": "0f0d4793288a1c05",
-   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
    "recipe": "ee229e33fd658241",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-08"
+  "date": "2026-11-09"
  }
 }

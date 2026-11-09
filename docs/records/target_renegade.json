@@ -99,13 +99,13 @@
    "docs/profiles/target_renegade_speed.json": "35be934454dbca71",
    "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "528fc9c4b8cf84ec",
-   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/records.py": "29985826115eb292",
    "nexclash/renegade.py": "6d256418fdf318d2",
    "nexclash/renegade_enh.py": "33665277f29d02db",
    "nexclash/renegade_v12.py": "467f3c114ceaa9fc",
@@ -118,7 +118,7 @@
    "recipe": "f4ac70dfa0b2ff66",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-07"
+  "date": "2026-11-09"
  },
  "verified": {
   "deps": {
@@ -132,13 +132,13 @@
    "docs/profiles/target_renegade_speed.json": "35be934454dbca71",
    "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "528fc9c4b8cf84ec",
-   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/records.py": "29985826115eb292",
    "nexclash/renegade.py": "6d256418fdf318d2",
    "nexclash/renegade_enh.py": "33665277f29d02db",
    "nexclash/renegade_v12.py": "467f3c114ceaa9fc",
@@ -151,7 +151,7 @@
    "recipe": "f4ac70dfa0b2ff66",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-07"
+  "date": "2026-11-09"
  },
  "rework": [
   {

@@ -200,7 +200,7 @@
  "checked": {
   "deps": {
    "asm/abu_simbel_hooks.asm": "c7321e0ce2f444c7",
-   "asm/lib/hlib_iff.asm": "725067425cd27122",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
@@ -210,28 +210,28 @@
    "nexclash.py": "350128095535a2d4",
    "nexclash/abu_simbel.py": "5f4f62def145356e",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "153b46cedb1a84a7",
-   "nexclash/hooklib.py": "aee2b8793e4227d7",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
    "nexclash/hookprofile.py": "cac1335153f15daa",
-   "nexclash/ikari_warriors.py": "038b2ebf518eca31",
-   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/records.py": "29985826115eb292",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
    "recipe": "99f677e899a1d9be",
-   "rom": "sinclair"
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-07"
+  "date": "2026-11-09"
  },
  "results": [
   {
@@ -262,7 +262,7 @@
  "verified": {
   "deps": {
    "asm/abu_simbel_hooks.asm": "c7321e0ce2f444c7",
-   "asm/lib/hlib_iff.asm": "725067425cd27122",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
@@ -272,27 +272,27 @@
    "nexclash.py": "350128095535a2d4",
    "nexclash/abu_simbel.py": "5f4f62def145356e",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "153b46cedb1a84a7",
-   "nexclash/hooklib.py": "aee2b8793e4227d7",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
    "nexclash/hookprofile.py": "cac1335153f15daa",
-   "nexclash/ikari_warriors.py": "038b2ebf518eca31",
-   "nexclash/nextboot.py": "fa792a76ad78dbef",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "85f7a2ad3b78d411",
+   "nexclash/records.py": "29985826115eb292",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
    "recipe": "99f677e899a1d9be",
-   "rom": "sinclair"
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-07"
+  "date": "2026-11-09"
  }
 }

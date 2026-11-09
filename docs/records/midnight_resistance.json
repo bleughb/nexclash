@@ -90,9 +90,9 @@
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "8e1ee6bd49b54877",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
    "nexclash/midres.py": "6d91451146885cda",
-   "nexclash/nextboot.py": "121a5912efae9b2a",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
@@ -103,7 +103,7 @@
    "recipe": "2a77f54737a7be6d",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-08"
+  "date": "2026-11-09"
  },
  "verified": {
   "deps": {
@@ -114,9 +114,9 @@
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "8e1ee6bd49b54877",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
    "nexclash/midres.py": "6d91451146885cda",
-   "nexclash/nextboot.py": "121a5912efae9b2a",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
    "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
@@ -127,7 +127,7 @@
    "recipe": "2a77f54737a7be6d",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-08"
+  "date": "2026-11-09"
  },
  "canary": 2,
  "canary_quick": 300,

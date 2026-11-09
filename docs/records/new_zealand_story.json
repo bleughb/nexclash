@@ -118,7 +118,7 @@
    "assets/new_zealand_story/backdrops/w5.json": "f5005792e539d01d",
    "docs/profiles/new_zealand_story.json": "46fccc3bda96fb52",
    "nexclash.py": "350128095535a2d4",
-   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/engines.py": "c26b7cad0e31e66a",
    "nexclash/new_zealand_story.py": "c6a1399518e48725",
    "nexclash/new_zealand_story_backdrops.py": "83201feae444c076",
    "nexclash/new_zealand_story_paint.py": "22926e50511be190",
@@ -130,6 +130,6 @@
    "recipe": "84866854e099a24d",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-08"
+  "date": "2026-11-09"
  }
 }
