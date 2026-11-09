@@ -94,6 +94,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Army Moves (army_moves): `army_moves_sprites.nex` 9cbd2379d8cae020c3b2145d362a4f75, `army_moves_sprites_loading.nex` 1b60bd04304265986cf5ff4a142e44db; verified 2026-11-08
 - Game Over (game_over): `game_over_sprites.nex` 8c3152e36baa285b4a1407e011a95baa, `game_over_sprites_loading.nex` 66d8145473890323dd279cfec7d28859; verified 2026-11-08
 - Chase H.Q. (chase_hq): `chase_hq.nex` 2f6628a552412d0a227300fe7cf397b2, `chase_hq_speed.nex` 6729617fd9e3adc131a0451593557b39, `chase_hq_orig_pace.nex` 498c2119e140480cd16c8f0fda5c5843; verified never
+- Silkworm (silkworm): `silkworm.nex` 36a148b54bce181c39c94899f7809c20, `silkworm_loading.nex` 6ae12fd66946724d9ef6c1e089a6b163, `silkworm_enhanced.nex` d5d3a92cce49d1f4d855f3d98ee7f41b, `silkworm_enhanced_loading.nex` 2058f2e55464eeb68f418320548fb34a; verified 2026-11-08
 - Atom Ant (atom_ant): `atom_ant.nex` 04460a950e24898f8144d2ab2b48ff6f, `atom_ant_loading.nex` 66d682f8cbe184c00ad2271ed8cf2a33, `atom_ant_enhanced.nex` 054ce8f73bb5360353113f8a9a72e50c, `atom_ant_enhanced_loading.nex` c3d35756f871ed85ff24d27ccc52b0c8; verified 2026-11-08
 <!-- end generated -->
 
