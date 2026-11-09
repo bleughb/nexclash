@@ -40,6 +40,7 @@ NEG_SMCLIP = 0                  ; the tilemap not clipped to the play area
 NEG_SOUND = 0
 NEG_RESTORE = 0
 NEG_CAP = 0
+NEG_WIN = 0                     ; negative control: the windows' lines left out of the wait
 NEG_COMMIT = 0
 NEG_SMBOUND = 0
 NEG_UPLOAD = 0
@@ -52,6 +53,22 @@ S_TICK EQU 0x6032
 S_LAST_TICK EQU 0x6034
 S_LAST_LINE EQU 0x6036
 S_CAP_VALID EQU 0x6038
+S_WSP   EQU 0x603C              ; the game's SP while a drawing window's library call runs
+S_ISP   EQU 0x603E              ; the interrupted SP while the handler's library call runs
+S_WSUM  EQU 0x6040              ; lines the windows have run since the last wait (interrupts left out)
+HLIB_V_PACE EQU 0x6042          ; 26 bytes, page 15, zero at start
+HLIB_PACE_NL EQU 311
+ISTK    EQU 0x6080              ; the handler's library call (0x605C-0x607F)
+; The wait before the player follows the original's time: what the three windows' drawing took it, from their time at
+; 28 MHz, plus what the rest of the update's drawing took it, less what those cost here.
+; Least squares on JNext over 3 runs of 800 updates (games/new_zealand_story.md, Pace): residual 0.4 ms of 70.
+PACE_K  EQU 90                  ; x 16: window time x K (5.6) is the original's extra time for that drawing
+    IF SMOOTH
+PACE_C  EQU 3400                ; 1/16 lines: Smooth's work in the interrupt lengthens the update by about 3 ms more
+    ELSE
+PACE_C  EQU 3990                ; 1/16 lines: 16.7 ms, the screen copy's and the rest, a constant here
+    ENDIF
+PACE_CAP EQU 1244               ; lines, about 81.04 ms: four 128K frames: no update waits past it
 
 LVBASE  EQU 46                  ; level pages 46..66
 PTBASE  EQU 70                  ; pattern pages
@@ -124,10 +141,13 @@ V_PG    EQU 0x7E08              ; (level page scratch) the page the rows go to
     push hl
     push ix
     ld bc,0x243B
-    ld a,7
+    ld a,7                      ; an interrupt between OUT and IN leaves NR 0x53 selected: its pages have bit 3 set, NR 7 not
     out (c),a
     inc b
     in a,(c)
+    dec b
+    bit 3,a
+    jr nz,$-10
     and 3
     push af
     nextreg 7,3
@@ -1319,13 +1339,15 @@ draw_enter:
     push bc
     push de
     ld bc,0x243B
-    ld a,7
+    ld a,7                      ; as ENTER: read again when an interrupt came between OUT and IN
     out (c),a
     inc b
     in a,(c)
+    dec b
+    bit 3,a
+    jr nz,$-10
     and 3
     ld d,a
-    dec b
     ld a,0x53
     out (c),a
     inc b
@@ -1367,6 +1389,48 @@ draw_leave:
     pop af
     ret
 
+; As draw_enter / draw_leave, and the routine's time goes to S_WSUM. Slot 3 holds the game's page at these three sites.
+; The library's calls run on page 15's stack: the game's may be in slot 3 and, as before, is not used while page 15 is mapped.
+win_enter:
+    call draw_enter
+    push af
+    push bc
+    push de
+    push hl
+    nextreg 0x53,15
+    ld (S_WSP),sp
+    ld sp,STK
+    call hlib_pace_open
+    ld sp,(S_WSP)
+    nextreg 0x53,11
+    pop hl
+    pop de
+    pop bc
+    pop af
+    ret
+
+win_leave:
+    push af
+    push bc
+    push de
+    push hl
+    nextreg 0x53,15
+    ld (S_WSP),sp
+    ld sp,STK
+    call hlib_pace_tick         ; HL = the window's lines
+    IF NEG_WIN == 0
+    ld de,(S_WSUM)
+    add hl,de
+    ld (S_WSUM),hl
+    ENDIF
+    ld sp,(S_WSP)
+    nextreg 0x53,11
+    pop hl
+    pop de
+    pop bc
+    pop af
+    jp draw_leave
+
 h_paced_player:
     ENTER
 speed_wait:
@@ -1377,22 +1441,22 @@ paced_player_call:
     call 0xC22E
     jp 0xA39A
 h_fast_scroll:
-    SPEED_IN
+    call win_enter
 fast_scroll_call:
     call 0xD814
-    SPEED_OUT
+    call win_leave
     jp 0xA38B
 h_fast_scenery:
-    SPEED_IN
+    call win_enter
 fast_scenery_call:
     call 0xD9D1
-    SPEED_OUT
+    call win_leave
     jp 0xA391
 h_fast_figures:
-    SPEED_IN
+    call win_enter
 fast_figures_call:
     call 0xDB26
-    SPEED_OUT
+    call win_leave
     jp 0xA394
 h_fast_copy:
     SPEED_IN
@@ -1427,6 +1491,10 @@ h_irq:
     ld (S_TICK),hl
     ld a,d
     ld (S_IRQ_SPEED),a
+    ld (S_ISP),sp
+    ld sp,ISTK
+    call hlib_pace_hold         ; the handler's time is in no window (DE kept)
+    ld sp,(S_ISP)
     ld a,e
     nextreg 0x53,a
     pop hl
@@ -1446,6 +1514,7 @@ h_irq_return:
     push af
     push bc
     push de
+    push hl
     ld bc,0x243B
     ld a,0x53
     out (c),a
@@ -1455,10 +1524,18 @@ h_irq_return:
     nextreg 0x53,15
     ld a,(S_IRQ_SPEED)
     ld d,a
+    ld (S_ISP),sp
+    ld sp,ISTK
+    call hlib_pace_resume       ; DE kept
+    ld sp,(S_ISP)
+    ld bc,0x243B                ; the library left another register selected; the main line reads NR 0x53 and NR 7 with this one (see ENTER)
+    ld a,0x53
+    out (c),a
     ld a,e
     nextreg 0x53,a
     ld a,d
     nextreg 7,a
+    pop hl
     pop de
     pop bc
     pop af
@@ -1467,8 +1544,10 @@ irq_ei:
 irq_reti:
     reti
 
-; An interrupt-clock + hardware-line deadline, 1244 scanlines (four 128K video frames, about 81.04 ms).
-; Waiting keeps interrupts enabled. No game delays, logic or sound routines are changed.
+; The wait before the player: until the original's time for this update has passed (the windows' lines x K + C, in
+; hlib_pace_wait's sixteenths, interrupts left out as they lengthened the original's code too), or until PACE_CAP lines
+; since the last wait, whichever comes first: the speed-up in busy scenes. A real-time deadline, as before, with an
+; interrupt-clock + line reading. Waiting keeps interrupts enabled. No game delays, logic or sound routines are changed.
 cap_wait:
     IF NEG_CAP
     ret
@@ -1476,9 +1555,59 @@ cap_wait:
     ld a,(S_CAP_VALID)
     or a
     jr z,.first
-.again
-    call cap_now
+    call cap_lines              ; HL = lines since the last wait, 2048 and up when longer
+    ld de,PACE_CAP
+    ex de,hl
+    or a
+    sbc hl,de                   ; HL = lines left to the cap
+    jr c,.over
+    jr z,.over
     push hl
+    ld hl,(S_WSUM)
+    ld a,PACE_K
+    call hlib_mul8
+    ld de,PACE_C
+    add hl,de
+    pop de
+    jr c,.tocap
+    push hl
+    ld b,4
+.q  srl h
+    rr l
+    djnz .q
+    or a
+    sbc hl,de                   ; the original's lines - lines left to the cap
+    pop hl
+    jr nc,.tocap
+    push hl
+    call hlib_pace_open
+    pop hl
+    xor a                       ; the game at 3.5 MHz, or the target would halve: only drawing is ever faster
+    call hlib_pace_wait
+    jr .save
+.tocap
+    call cap_lines
+    ld de,PACE_CAP
+    or a
+    sbc hl,de
+    jr c,.tocap
+.over
+    ld hl,0                     ; past the cap: nothing carried, the speed-up is the point
+    ld (HLIB_V_PACE+4),hl
+    jr .save
+.first
+.save
+    call cap_now
+    ld (S_LAST_TICK),hl
+    ld (S_LAST_LINE),de
+    ld a,1
+    ld (S_CAP_VALID),a
+    ld hl,0
+    ld (S_WSUM),hl
+    ret
+; HL = lines since the last wait, from the interrupt clock and the line, from 2048 not exact
+cap_lines:
+    call cap_now
     push de
     ld bc,(S_LAST_TICK)
     or a
@@ -1490,41 +1619,24 @@ cap_wait:
     ld a,b
     or c
     jr z,.lines
-    push de
     ld de,311
     add hl,de
-    pop de
     dec bc
     ld a,h
     cp 8
-    jr nc,.ready
+    jr nc,.big
     jr .mul
 .lines
+    pop de
     add hl,de
     ld de,(S_LAST_LINE)
     or a
     sbc hl,de
-    bit 7,h
-    jr nz,.early
-    ld de,1244
-    or a
-    sbc hl,de
-    jr nc,.ready
-.early
+    ret nc
+    ld hl,0                     ; before the line it started from: an interrupt not yet counted
+    ret
+.big
     pop de
-    pop hl
-    jr .again
-.ready
-    pop de
-    pop hl
-    jr .save
-.first
-    call cap_now
-.save
-    ld (S_LAST_TICK),hl
-    ld (S_LAST_LINE),de
-    ld a,1
-    ld (S_CAP_VALID),a
     ret
 cap_now:
 .retry
@@ -1569,6 +1681,8 @@ cap_now:
     ex de,hl
     pop hl
     ret
+
+    INCLUDE "lib/hlib_pace.asm"
 
 ; 0xD5C3 (was LD HL,$A404): the game's own IM 2 set-up (0xD5AE, at a new life, a new world) writes
 ; JP $A404 at 0xFDFD again, which would leave the view still. The same writes with the hook's address,

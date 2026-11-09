@@ -7,7 +7,7 @@
 ;   default build: the camera at the copy (0x5CA2/0x5CA4), written at the copy;
 ;   Smooth scrolling build: the view the interrupt commit shows (SM_DX/SM_DY), written in the same
 ;   interrupt as the tilemap offsets ($2F/$30/$31), right after the smooth commit.
-; Code in alt ROM image 1 at 0x3300-0x3FFF (page 82 offsets 0x1300-0x1FFF: free in both v1.1 builds).
+; Code in alt ROM image 1 at 0x34C0-0x3CFF (page 82 offsets 0x14C0-0x1CFF: free in every build).
 ; Data: pages 45, 67, 81, 83 (nexclash/new_zealand_story_backdrops.py). Sites: 0xDAC4 (copy, after the colour copy hook),
 ; 0xA404 (the game's interrupt routine, after the colour/smooth interrupt hook).
 ; GPL-3.0-or-later, as NexClash.
@@ -103,7 +103,7 @@ BD_STK  EQU 0x8000
     in a,(c)
     ENDM
 
-    ORG 0x3300
+    ORG 0x34C0
 bd_start:
     MACRO BD_ENTER              ; save on the game's stack, switch to the zone stack (page 81 at slot 3),
     push af                     ; 28 MHz; out: C = level key, HL = camera X, DE = camera Y
@@ -114,7 +114,7 @@ bd_start:
     ld l,a
     ld a,(0xA402)
     ld h,a
-    RDREG 0x50
+    call bd_rd50
     ld e,a
     RDREG 0x53
     ld d,a
@@ -132,7 +132,7 @@ bd_start:
     ld (ST_M0),de
     push ix
     push iy
-    RDREG 7
+    call bd_rd7
     and 3
     ld (ST_SPEED),a
     nextreg 7,3
@@ -174,6 +174,21 @@ bd_start:
 ; ------------------------------------------------------------------ stage start / new life (site 0xA300)
 ; After the game's level init (0xD933) on the READY screen: the stage's first full draw (or the redraw after
 ; a respawn's camera jump) happens here, at 28 MHz, while the screen shows READY, not in play.
+; The interrupt leaves NR 0x53 selected: its page read between OUT and IN would be taken for this register. NR 7 has bit 6 clear, page
+; 81 (slot 3 here) set; MMU0 is read until two readings agree (an interrupt comes once in a frame).
+bd_rd7:
+    RDREG 7
+    bit 6,a
+    jr nz,bd_rd7
+    ret
+bd_rd50:
+    RDREG 0x50
+    push af
+    RDREG 0x50
+    pop bc
+    cp b
+    jr nz,bd_rd50
+    ret
 bd_ready:
     BD_ENTER
     ld a,(ST_VALID)
