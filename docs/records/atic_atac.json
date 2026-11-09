@@ -245,7 +245,7 @@
     }
    },
    "proof": "walk1, walk2 and t IDENTICAL for every build (the limiter, the room window and catch-up run in the replay, the video line modelled), unit tests + 3 negative controls and 22 rework negatives per colour set, 464 incoming-clock cases, the limiter on 72 setup cases with the limiter removed detected, catch-up units (room window, catch-up on and off, a credit, the two sound routines) with 4 negatives, the toggle's key / pause units with 2 negatives, 3 replay negatives on t; JNext pace (audit fixture, both arms, game state equal at every pass, 4 seeds): whole -0.16 to +0.45%, quiet -0.24 to +0.45%, busy -0.15 to +0.77%, stretches of 20 passes -4.1 to +1.7%",
-   "note": "Jon Attree's Atic Atac .nxc 1.6 (2026-11-08, review build, not published): the 1.5 engine + the room window, catch-up and a faster image build, engine atic_atac_v14 picked by engines.py only with NEXCLASH_REWORK=atic_atac_v14. games/atic_atac_v14.md \"v1.6\"."
+   "note": "Jon Attree's Atic Atac .nxc 1.6 (published 2026-11-08, github.com/jattree/nxc 238e98a, patch md5 fbd7ec80; outputs = nxc.py --bare: default, Enhanced, and each with the toggle): the 1.5 engine + the room window, catch-up and a faster image build, engine atic_atac_v14 picked by engines.py only with NEXCLASH_REWORK=atic_atac_v14. games/atic_atac_v14.md \"v1.6\"."
   }
  ],
  "status": {
