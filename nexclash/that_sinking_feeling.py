@@ -78,8 +78,9 @@ class ColourSet:
 
 
 def art(path, backdrops, mem):
-    """-> the pages: default and Enhanced sprite patterns, font and block tables, backdrops, palette. mem: the game's 64K."""
-    s = ColourSet(path, backdrops)
+    """-> the pages: default and Enhanced sprite patterns, font and block tables, backdrops, palette. mem: the game's 64K.
+    path None (no set): the default's patterns only, which come from the game's own masks; nothing for Enhanced."""
+    s = ColourSet(path, backdrops) if path else None
     pal = json.loads(PALETTE.read_text())
     entries = []
     for c in pal:
@@ -96,7 +97,7 @@ def art(path, backdrops, mem):
         ne = bytearray(256)
         for r, (a0, a1) in enumerate(addrs):
             m = mem[a0] << 8 | mem[a1]
-            v = s.pixels(a0) + s.pixels(a1)
+            v = s.pixels(a0) + s.pixels(a1) if s else bytes(16)
             for k in range(16):
                 if m & (0x8000 >> k):
                     nb[r * 16 + k] = FIGURE_COLOUR
@@ -119,12 +120,14 @@ def art(path, backdrops, mem):
     for f in ALT_FRAMES:
         a = FRAMES_AT + f * 128
         nb, ne = pattern([(a + 2 * r, a + 2 * r + 1) for r in range(16)])
-        for r in range(16):
+        for r in range(16 if s else 0):
             v = s.pixels(a + 32 + 2 * r) + s.pixels(a + 32 + 2 * r + 1)
             for k in range(16):
                 ne[r * 16 + k] = v[(k + 2) % 16]
         base += nb
         enh += ne
+    if s is None:
+        return dict(set=None, base=bytes(base), enh=None, font=None, block=None, bgs=None, l2pal=None, report=report)
     font = bytearray(8192)
     for g in range(128):
         for r in range(8):
@@ -767,3 +770,195 @@ def negative_patches(patch):
 def run_negative(b, rzx, stop):
     c, ex = verify(b, rzx, stop=stop, first_failure=True)
     return {k: v for k, v in c.items() if k.endswith('!')}
+
+
+# ---- nexclash.py auto: the published builds, boot-checked; with recordings the replay proof of both modes ---------------
+LOAD_SCREEN, LOAD_MD5 = 'that_sinking_feeling_loading.scr', '56e2886a9e1c74956b96db96fd9f0bb4'   # the tape's screen: game data
+# Enhanced, beside the start state, all or none; game data from the Spec256 set and its source folder, never in this repo:
+SET_NAME, SET_MD5 = 'that_sinking_feeling.256', 'a10321c6576f04cf8afc4c90618ed4e6'      # the set (That Sinking Feeling.256)
+BACKDROPS = 'that_sinking_feeling.B0%d'                   # the source folder's SinkFeel.B00-B06, 320 x 200 each
+BACKDROP_MD5 = ('9e8a82c1a2e210fa3a4868b1a47d6b49', 'af853fee9da3ce952f3f757987de6dba', 'ac927d60ac44b84a4eda13e9b3180e09',
+                '6629b92e57a6c076dc322c9e41457f16', 'cf55f8deb9cafc35b1256e20f125eac8', '3ec9e8371b22ccf2090413e4085e76c9',
+                'edea278ab1cdf8a8e4a312466eac6934')
+DEFAULT_RZX = ('a1.rzx', 'over.rzx', 'tour.rzx')          # the default's replays, as in the review run; Enhanced replays all
+NEG_RZX, NEG_STOP = ('a1.rzx', 'tour.rzx'), 12000         # each broken build on these in turn, to its first failure
+# The archive's one, tested (games/that_sinking_feeling.md); bank 8 = no paging.
+TRAINERS = """NInfinite lives
+Z 8 31157 0 0
+Y
+"""
+
+
+def loading_nex(nex, screen):
+    """A built .nex -> the same with the loading screen in the NEX file (header byte 10 = 2), as the published .nxc."""
+    if len(screen) != 6912 or nex[10] != 0:
+        raise ValueError('Expected a .nex without a screen and a 6,912-byte loading screen')
+    head = bytearray(nex[:512])
+    head[10] = 2
+    return bytes(head) + screen + nex[512:]
+
+
+def _beside(z80, file, md5, what):
+    """A private input beside the start state -> its path, or None. A different file there is refused."""
+    import hashlib
+    path = Path(z80).resolve().parent / file
+    if not path.is_file():
+        return None
+    if hashlib.md5(path.read_bytes()).hexdigest() != md5:
+        raise ValueError('%s is not %s (MD5 %s)' % (file, what, md5))
+    return path
+
+
+def enhanced_inputs(z80):
+    """-> (set path, backdrop pattern) beside the start state, or None when any is missing."""
+    got = [_beside(z80, SET_NAME, SET_MD5, 'the set this engine was proved with')]
+    got += [_beside(z80, BACKDROPS % n, m, 'the backdrop this engine was proved with') for n, m in enumerate(BACKDROP_MD5)]
+    if not all(got):
+        return None
+    return str(got[0]), str(Path(z80).resolve().parent / BACKDROPS)
+
+
+def _patch(z80, inputs):
+    """The default from the game's own masks (no set needed); Enhanced from the set and backdrops."""
+    return Patch(z80, inputs is not None, art(*(inputs or (None, None)), game_mem(str(z80))))
+
+
+def boot_check(nex, z80, patch):
+    """Booted with and without NEXLOAD's printer buffer (the build's setup puts the game's back): every register with R and
+    all RAM 4000-FFFF (the paged bank at C000) against the patched start state, bar the start-up tail. -> problems."""
+    from . import nextboot
+    s = zt.Z80Snapshot(str(z80))
+    patch.apply(s)
+    size = len(zt.build_tail(s, 0x8000, patch.slot1, True)[0])
+    tail = zt.choose_tail_addr(s, size, patch.tail_addr, False)[0]
+    want = {0: s.a, 1: s.f, 2: s.bc >> 8, 3: s.bc & 255, 4: s.de >> 8, 5: s.de & 255, 6: s.hl >> 8, 7: s.hl & 255,
+            8: s.ix >> 8, 9: s.ix & 255, 10: s.iy >> 8, 11: s.iy & 255, 12: s.sp, 14: s.i, 15: s.r, 16: s.a_, 17: s.f_,
+            18: s.bc_ >> 8, 19: s.bc_ & 255, 20: s.de_ >> 8, 21: s.de_ & 255, 22: s.hl_ >> 8, 23: s.hl_ & 255, 26: s.iff1, 27: s.im}
+    bad = []
+    for nexload in (False, True):
+        st = nextboot.boot(str(nex), s.pc, nexload=nexload)
+        bad += [('register', nexload, i, v, st['R'][i]) for i, v in want.items()
+                if (bool(st['R'][i]) != bool(v) if i == 26 else st['R'][i] != v)]
+        for a in range(0x4000, 65536):
+            if tail <= a < tail + size:
+                continue
+            bank = 5 if a < 0x8000 else 2 if a < 0xC000 else s.port7ffd & 7
+            if st['mem'][a] != s.banks[bank][a & 16383]:
+                bad.append(('RAM', nexload, hex(a), s.banks[bank][a & 16383], st['mem'][a]))
+    return bad
+
+
+def _replay(z80, inputs, rzx, stop, collect):
+    """One recording against one build's hooks (a process of its own) -> (name, counts, failures, states)."""
+    r = verify(_patch(z80, inputs), rzx, stop=stop, collect=collect)
+    c, ex, states = r[0], r[1], (r[2] if len(r) > 2 else [])
+    return Path(rzx).name, dict(c), {k: (v, ex.get(k[:-1], [])[:2]) for k, v in c.items() if k.endswith('!')}, states
+
+
+def _negative(z80, inputs, name, rzxs, stop):
+    """One deliberately broken build on each recording in turn until one fails it (a process of its own) -> (name, keys)."""
+    b = negative_patches(_patch(z80, inputs))[name]
+    got = {}
+    for r in rzxs:
+        try:
+            got = run_negative(b, r, stop)
+        except Exception as e:          # noqa: BLE001 - a hang or crash of a broken build is a catch
+            got = {'exception %s!' % type(e).__name__: 1}
+        if got:
+            break
+    return name, sorted(got)
+
+
+def auto(a, z80, name, out, say):
+    """nexclash.py auto: the sprite build and, with the set and the seven backdrops beside the start state, Enhanced; each
+    with the tape's loading screen when it is beside the start state, as published; every build boot-checked. With --rzx:
+    the default replayed on a1, over and tour, Enhanced on every recording; the ABI cases on a1's states; each broken
+    build on a1 then tour until one fails it, and one no recording reaches must fail a unit case (the upload, an object
+    going off). Pace, soak, flicker and the real loader are the review run's (games/that_sinking_feeling.md "Evidence")."""
+    import concurrent.futures, hashlib, os
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    if not getattr(a, 'publisher', None):
+        a.publisher = PUBLISHER
+    if not getattr(a, 'pok', None):
+        trainers = out / (name + '_verified.pok')
+        trainers.write_text(TRAINERS)
+        a.pok = str(trainers)
+    say('Game      : That Sinking Feeling (Sunteam, 2017, the tape\'s 128K form with its AY music)')
+    say('Engine    : that_sinking_feeling; the ULA as the original, figures and objects as hardware sprites; Enhanced: the '
+        "Spec256 set's colours on the sprites and a Layer 2 backdrop")
+    ok = True
+    screen = _beside(z80, LOAD_SCREEN, LOAD_MD5, "the tape's loading screen")
+    inputs = enhanced_inputs(z80)
+    if screen is None:
+        say('Loading   : no %s beside the start state: builds without the loading screen' % LOAD_SCREEN)
+    builds = [('Sprites', '_sprites', None)]
+    if inputs is None:
+        say('Enhanced  : not all of %s and %s beside the start state: default build only' % (SET_NAME, 'that_sinking_feeling.B00-B06'))
+    else:
+        builds.append(('Enhanced', '_enhanced', inputs))
+    for label, suffix, inp in builds:
+        nex = out / (name + suffix + '.nex')
+        zt.convert(str(z80), str(nex), patch=_patch(z80, inp), quiet=True)
+        nexes = [(label, nex)]
+        if screen is not None:
+            loading = out / (name + suffix + '_loading.nex')
+            loading.write_bytes(loading_nex(nex.read_bytes(), screen.read_bytes()))
+            nexes.append((label[:3] + '+scr', loading))
+        for lab, path in nexes:
+            bad = boot_check(path, z80, _patch(z80, inp))
+            ok = ok and not bad
+            say('%-10s: %s  %s' % (lab, path.name, hashlib.md5(path.read_bytes()).hexdigest()))
+            say('Boot      : %s' % ('simulated, OK (registers with R, all RAM, the paged bank; converter loader and NEXLOAD)'
+                                    if not bad else 'MISMATCH %s' % str(bad[:3])[:300]))
+    rzxs = list(getattr(a, 'rzx', None) or [])
+    stop = getattr(a, 'quick', None)
+    if not rzxs:
+        say('Verify    : not requested; boot evidence only')
+        say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
+        return bool(ok)
+    byname = {Path(r).name: r for r in rzxs}
+    first_rzx = byname.get(NEG_RZX[0], rzxs[0])
+    negs_rzx = [byname[n] for n in NEG_RZX if n in byname] or [rzxs[0]]
+    nstop = NEG_STOP if stop is None else min(stop, NEG_STOP)
+    with concurrent.futures.ProcessPoolExecutor(os.cpu_count() or 1) as pool:
+        jobs = []
+        for label, suffix, inp in builds:
+            mine = [r for r in rzxs if inp is not None or Path(r).name in DEFAULT_RZX] or rzxs[:1]
+            first = pool.submit(_replay, z80, inp, first_rzx, nstop, 1)
+            reps = [pool.submit(_replay, z80, inp, r, stop, 0) for r in mine]
+            negs = []
+            if stop is None:
+                negs = [pool.submit(_negative, z80, inp, k, negs_rzx, NEG_STOP) for k in negative_patches(_patch(z80, inp))]
+            jobs.append((label, inp, first, reps, negs))
+        for label, inp, first, reps, negs in jobs:
+            frames = hooks = 0
+            for f in reps:
+                rname, c, fail, _ = f.result()
+                ok = ok and not fail
+                frames, hooks = frames + c.get('frames', 0), hooks + c.get('hooks', 0)
+                say('Verify    : %s %s %d frames, %d hooks, %d R comparisons, %d Layer 2 pictures: %s' % (
+                    label, rname, c.get('frames', 0), c.get('hooks', 0), c.get('R comparisons', 0),
+                    c.get('Layer 2 pictures compared', 0), 'IDENTICAL' if not fail else str(fail)[:400]))
+            say('Verify    : %s %d recordings, %d frames, %d hooks' % (label, len(reps), frames, hooks))
+            p = _patch(z80, inp)
+            states = first.result()[3]
+            u = unit_tests(p, states)
+            ok = ok and not [k for k in u if k.endswith('!')] and u.get('ABI cases', 0) > 0
+            say('Unit      : %s %s' % (label, dict(u)))
+            if negs:
+                res = dict(f.result() for f in negs)
+                by_unit = []
+                for k, v in list(res.items()):
+                    if not v:               # one no recording reaches: a unit case must catch it
+                        v = sorted(x for x, y in unit_tests(negative_patches(p)[k], states).items() if x.endswith('!'))
+                        res[k] = v
+                        if v:
+                            by_unit.append(k)
+                missed = [k for k, v in res.items() if not v]
+                ok = ok and not missed
+                say('Negatives : %s %d of %d broken builds caught (%s in turn, to the first failure, %d frames at most)%s%s' % (
+                    label, len(res) - len(missed), len(res), ', '.join(NEG_RZX), NEG_STOP,
+                    '; by a unit case: %s' % ', '.join(by_unit) if by_unit else '', '; MISSED %s' % missed if missed else ''))
+    say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
+    return bool(ok)

@@ -93,6 +93,7 @@ ENGINES = [
     ('mad_mix_2', 'is_mad_mix_2', None),                                  # Mad Mix 2 (128K): default, Enhanced stages 1-3 (local table)
     ('flying_shark', 'is_flying_shark', None),                            # Flying Shark (48K): Layer 2 outline
     ('jillys_farm', 'is_jillys', None),                                   # Jilly's Farm Volume 1 - SokoBAArn! (48K): default and Enhanced
+    ('that_sinking_feeling', 'is_tsf', None),                             # That Sinking Feeling (128K tape form): default and Enhanced
 ]
 
 
