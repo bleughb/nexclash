@@ -4,7 +4,7 @@
 {
   "schema": 4,
   "id": "detect.drawing-parameters",
-  "revision": 2,
+  "revision": 3,
   "kind": "detect",
   "title": "Observe drawing parameters at execution time",
   "question": "Which live registers, stack values and memory fields describe a draw?",
@@ -38,8 +38,8 @@ Do not add an external viewer when existing preview and cost output answer the q
 **Assumptions.** Registers, source bytes and writes are observed in the same mapped view;
 coordinate arithmetic follows the original instruction width before clipping.
 
-**Validation gap.** Inferno has quick-run original-image reconstruction, not completed sprite
-hooks or full-game/hardware proof; other games may use different arithmetic and clipping.
+**Validation gap.** Inferno's sprite hooks use these parameters: gate 0 failures on 1,855 states,
+hardware by eye; no full-recording proof. Other games may use different arithmetic and clipping.
 
 ## Recognise
 A graphic changes at one address; effects temporarily replace a height; the same routine serves

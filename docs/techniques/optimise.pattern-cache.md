@@ -4,7 +4,7 @@
 {
   "schema": 4,
   "id": "optimise.pattern-cache",
-  "revision": 3,
+  "revision": 4,
   "kind": "optimise",
   "title": "Pattern cache: reuse sprite patterns instead of re-uploading",
   "question": "Do figures show far fewer distinct images than plots, so uploads can be skipped?",
@@ -21,7 +21,7 @@
               "a mutable image's upload invalidates its slot's key"]
   },
   "owns": {"pattern_slots": "param", "memory": "param", "hook_state": ["HLIB_PCACHE"]},
-  "examples": ["midnight_resistance", "commando", "target_renegade", "cyclone", "ghosts_n_goblins"],
+  "examples": ["midnight_resistance", "commando", "target_renegade", "cyclone", "ghosts_n_goblins", "inferno"],
   "sources": ["pilot runs/atic_atac SPEED.md, work/PERFORMANCE.md (content cache after Rainbow Islands)",
               "asm/lib/hlib_pcache.asm + nexclash/hooklib.py (the shared library)"]
 }
@@ -42,11 +42,10 @@ place with no stable key, or the worst scene's distinct images exceed the cache.
 ## Recognise
 - Distinct images far fewer than plots (Commando: ~110 frames in ~4,300 plots).
 - Keys identify the image: (page, frame offset, lines) Commando; (source page, row) Atic Atac.
-  Masked images (scenery in front) are mutable.
 
 ## Probe and stop
 1. `cost GAME.z80 --rzx R --at PLOTTER --group IX`: draws per frame and per object.
-2. Distinct images per frame in the worst scene; graphics changed in place (values per address)?
+2. Distinct images per frame in the worst scene; graphics changed in place?
 Stop when the worst scene's working set is known.
 
 ## Contract
@@ -79,7 +78,7 @@ reused. Negative control: the invalidation removed (`hooklib.NEGATIVES`
 | Cyclone | RZX + bookmarks | mask cache, 3 entries | 157 distinct in 682 renders | - | 28 MHz hooks |
 | Atic Atac v1.1 | walk1, 1,300 frames | 4-bit pairs by page + row | not recorded; draw 2.98M -> 0.25M T | setup 20 ms | JNext 1.1.104 |
 | Ghosts 'n Goblins | c8 | 32 groups | 3,073 / 747 | hooks -42% T | 28 MHz |
-No help: Cyclone (images rarely repeat).
+| Inferno | gate | 128 slots, recency | 0 evictions | L1 | 28 MHz |
 
 ## Evidence
 - games/commando.md, midnight_resistance.md, cyclone.md; LEARNINGS 2.1e.

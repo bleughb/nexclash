@@ -170,5 +170,21 @@
     "evaluation": "manual",
     "survey_field": null,
     "probe": "python -m nexclash.pace (docs/CHECKS.md); the verifier's pair runs, T of the original against the hook"
+  },
+  "routine.display_only_effects": {
+    "means": "skipping the routine leaves gameplay state as the original's: its writes feed only the display and its own work areas",
+    "true_when": "a removal replay (detect.routine-removal) keeps game RAM equal outside display memory and the routine's own pages on every level reached, with recorded R / inputs supplied, AND disassembly finds no gameplay write or call on paths the replay missed",
+    "false_when": "game RAM differs after the skip, or disassembly finds gameplay logic inside the routine (Inferno 9804: CALL Z,9881)",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "detect.routine-removal: skip the CALL in a replay, compare game RAM at the next loop point, taint-trace readers of its writes, then disassemble the unexercised branches"
+  },
+  "routine.emits_timed_output": {
+    "means": "the routine writes a port whose timing is heard or seen (beeper / border OUT 254) while it runs",
+    "true_when": "an OUT to 254 inside the routine changes the value during play in the recording",
+    "false_when": "no OUT in the routine, or its value never changes in the recordings",
+    "evaluation": "manual",
+    "survey_field": null,
+    "probe": "tools/probes/rzx_census.py at the OUT's PC with an A capture; list value changes per call (Inferno: copier 97C5 replays the A700 buffer)"
   }
 }

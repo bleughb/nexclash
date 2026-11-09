@@ -2,6 +2,19 @@
 
 Newest first; moved from inferno.md to keep it within its size budget.
 
+- 2026-11-10 (claude/lessons-cards-equivalence): cards detect.routine-removal, detect.pacing-structure,
+  patch.hybrid-display-replacement, patch.timed-side-effect-replay, patch.work-in-timed-gaps; equivalence
+  split (CLAUDE.md, PLAYBOOK 6); stale Inferno notes and record updated; doccheck PASS. [none: lessons are the cards]
+- 2026-11-10 (claude/inferno-sprite-mask): G3 masks (explosions keep the enclosed rule), sprite store reused on a
+  same-level restart; Kempston reported not working (user). [none: details in specnext]
+- 2026-11-10 (claude/inferno-save-load): English build option, loading bars, saves on page 123. [none: details in specnext]
+- 2026-11-09 (claude/inferno-save-load): SAVE and LOAD use named slots in a RAM page (JNext). [none: details in specnext]
+- 2026-11-09 (claude/inferno-full-game): full game with sprites from the tape; full gate 0 failures, margin 109 T. [none: lesson is in games/inferno.md]
+- 2026-11-09 (claude/inferno-scenery-layer): clean tilemap scenery under sprites; hardware: sprite NEX played, ghosting seen. [none: details in specnext build/hybrid.md]
+- 2026-11-09 (claude/inferno-sprites-visible): first visible NEX, sprites over ULA; gate 0 failures; 19.7 % dropped, runs to 35. [none: details in specnext build/hybrid.md]
+- 2026-11-09 (claude/inferno-uploads): window uploads; gate 0 failures; 18.3 % dropped, runs to 32, margin 66 T; tuning stopped. [none: details in specnext build/pipeline.md]
+- 2026-11-09 (claude/inferno-drop-runs): selection hit path cut; gate 0 failures; 17.3 % dropped, runs to 14, margin 108 T. [none: lesson is in games/inferno.md]
+- 2026-11-09 (claude/inferno-pattern-select): selection and 64-slot store in the window, 8EF9 chunk index; gate 0 failures; 18.5 % dropped, runs to 32. [none: lesson is in games/inferno.md]
 - 2026-11-08 (claude/inferno-pipeline-dispatch): window exact dispatch; gate PASS; NEX m3d boot PASS.
 - 2026-11-08 (claude/inferno-pipeline-driver): 8EF9 live-table driver page 81; PASS in the model.
 - 2026-11-08 (claude/inferno-copier-window-m3b/m3c): 8F95 work in cw_wait; unfinished dropped; PASS.
@@ -12,9 +25,3 @@ Newest first; moved from inferno.md to keep it within its size budget.
 - 2026-11-05..07 (codex/inferno): loader, capture, textmap, frame/queue, actors, transfers; timing FAIL.
 - 2026-11-05: stages 0/1 intake/full raw replays and approved design; six-level model/level-2 census
   and tools/canary/doccheck PASS. Cards/diagnostics revised; evidence in specnext design/.
-- 2026-11-09 (claude/inferno-pattern-select): selection and 64-slot store in the window, 8EF9 chunk index; gate 0 failures; 18.5 % dropped, runs to 32. [none: lesson is in games/inferno.md]
-- 2026-11-09 (claude/inferno-drop-runs): selection hit path cut; gate 0 failures; 17.3 % dropped, runs to 14, margin 108 T. [none: lesson is in games/inferno.md]
-- 2026-11-09 (claude/inferno-uploads): window uploads; gate 0 failures; 18.3 % dropped, runs to 32, margin 66 T; tuning stopped. [none: details in specnext build/pipeline.md]
-- 2026-11-09 (claude/inferno-sprites-visible): first visible NEX, sprites over ULA; gate 0 failures; 19.7 % dropped, runs to 35. [none: details in specnext build/hybrid.md]
-- 2026-11-09 (claude/inferno-scenery-layer): clean tilemap scenery under sprites; hardware: sprite NEX played, ghosting seen. [none: details in specnext build/hybrid.md]
-- 2026-11-09 (claude/inferno-full-game): full game with sprites from the tape; full gate 0 failures, margin 109 T. [none: lesson is in games/inferno.md]

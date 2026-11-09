@@ -4,7 +4,7 @@
 {
   "schema": 4,
   "id": "patch.preserve-r",
-  "revision": 1,
+  "revision": 2,
   "kind": "patch",
   "title": "Leave R as the original code would, so the game's randomness is unchanged",
   "question": "Does the game take random numbers from R, so that a hook's different instruction count changes the game?",
@@ -18,7 +18,7 @@
   "order": {"entry": {"before": ["patch.restore-speed"]}, "exit": {"after": ["patch.restore-speed"]},
             "cross": ["HLIB_R_IN is the hook's first code after the site", "HLIB_R_OUT is the last before the return"]},
   "owns": {"hook_state": ["HLIB_V_R"]},
-  "examples": [],
+  "examples": ["inferno"],
   "sources": ["pilot runs/nightshade/nexclash/asm/nightshade_hooks.asm (mkT; the verifier compares R, negatives 'R off by one')",
               "pilot NEXCLASH-CHANGES.md: owner decision, preserve R by default for new builds (2026-11-04)",
               "asm/lib/hlib_r.asm + nexclash/hooklib.py (the shared library)"]
@@ -29,7 +29,10 @@
 Default for every NEW engine (owner decision 2026-11-04): with it the same inputs give the original's
 game, enemies and deaths included, so recordings stay in step and the pace meter compares like with like.
 Needed whenever the game reads R (Atic Atac: 9 sites; Nightshade). Existing games: an opt-in rework with a
-version bump. A hook that changes R on purpose does not exist; skip only where no game code reads R.
+version bump. Skip only where no game code reads R. Equivalence is extremely close, not 1:1 (owner,
+2026-11-10): keep this card where it is cheap (the library); where exact R needs costly machinery (timed
+windows, lost-IRQ accounting), a replay feeds the recorded `LD A,R` values instead (detect.routine-removal;
+Inferno: R is only a random source).
 
 **Assumptions.** R counts one per M1 cycle in bits 6:0 (prefixed opcodes two); bit 7 changes only by LD R,A;
 the original's M1 count from the site to the return point is a constant or a simple function of its

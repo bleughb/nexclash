@@ -6,12 +6,16 @@ Unregistered: budgeted frame integration, sprites, recolour and continuous start
 Diagnostic NEX builds enable no replacement display layers and are not release candidates.
 """
 import argparse
+import textwrap
+import re
 from collections import Counter
 from functools import reduce, lru_cache
 import json
 from pathlib import Path
 
 ROM_ORG, ALT_PAGE, STATE_PAGE = 0x386E, 24, 68
+SAVE_PAGE, LOAD_FRONT = 123, 0x0574
+EN_LEVEL, EN_START, EN_MAIN, EN_INTRO, EN_LEVELS = 0x050E, 0x05C5, 118, 119, 124
 TAPE_FIRST, TAPE_LAST = 32, 55
 CMP = tuple(i for i in range(30) if i not in (15, 25, 29))
 ROOT = Path(__file__).resolve().parent.parent
@@ -122,6 +126,51 @@ def solid_image(tiles):
         if not p and not outside[i]:
             pixels[i] = 1
     return left, top, width, height, bytes(pixels)
+
+
+EXPLOSION_IMAGES = frozenset((0xB2, 0xB4, 0xB6, 0xB8))
+
+
+def gap_rule(w, h, px, k=3):
+    """G3: black is transparent only where a k x k block, coming from outside the canvas, can cover it."""
+    size = w + 2 * k, h + 2 * k
+    W, H = size
+    clear = bytearray(b'\1' * (W * H))
+    for y in range(h):
+        for x in range(w):
+            if px[y * w + x] > 1:
+                clear[(y + k) * W + x + k] = 0
+    fits = bytearray(W * H)
+    for y in range(H - k + 1):
+        for x in range(W - k + 1):
+            fits[y * W + x] = all(clear[(y + j) * W + x + i] for j in range(k) for i in range(k))
+    seen, todo = bytearray(W * H), [0]
+    while todo:
+        at = todo.pop()
+        if seen[at] or not fits[at]:
+            continue
+        seen[at] = 1
+        x = at % W
+        todo.extend(n for n, ok in ((at - 1, x), (at + 1, x + 1 < W), (at - W, at >= W), (at + W, at + W < W * H)) if ok)
+    out = bytearray(W * H)
+    for y in range(H):
+        for x in range(W):
+            if seen[y * W + x]:
+                for j in range(k):
+                    out[(y + j) * W + x:(y + j) * W + x + k] = b'\1' * k
+    res = bytearray(px)
+    for y in range(h):
+        for x in range(w):
+            if px[y * w + x] <= 1:
+                res[y * w + x] = 0 if out[(y + k) * W + x + k] else 1
+    return bytes(res)
+
+
+@lru_cache(maxsize=4096)
+def masked_image(tiles, image):
+    """The shipped mask: G3, except the explosions, which keep the enclosed-only rule B."""
+    left, top, w, h, px = solid_image(tiles)
+    return left, top, w, h, px if image in EXPLOSION_IMAGES or not px else gap_rule(w, h, px)
 
 
 def visible_patterns(actor, memory):
@@ -750,6 +799,130 @@ def packed_tape(blocks, start=4):
     return pages
 
 
+EN_CHARS = {'é': 0x80, 'ě': 0x82, 'Ě': 0x83, 'š': 0x84, 'č': 0x86, 'ř': 0x88, 'Ř': 0x89, 'ž': 0x8A, 'Ž': 0x8B, 'ý': 0x8C,
+            'á': 0x8E, 'í': 0x90, 'ó': 0x96, 'ť': 0x98, 'ů': 0x9A, 'ú': 0x9C}
+
+
+PC_USED = [0]
+
+
+def story_tables(reference, folder, table, pages):
+    """Patches for the white-on-blue text cells of each level picture, as drawn by the game's own routine."""
+    from PIL import Image
+    from skoolkit.simulator import Simulator, SP
+    from .build import rom48
+    blocks = tape_blocks(reference / 'Inferno.tzx')
+    pages[121] = bytearray(8192)
+    for index in range(6):
+        memory = list(rom48()) + [0] * 49152
+        code = blocks[9 + 4 * index][1:-1] if False else blocks[5 + 4 * index][1:-1]
+        memory[0xC350:0xC350 + len(code)] = code
+        memory[0xFFF0:0xFFF2] = [0x76, 0x76]
+        sim = Simulator(memory)
+        sim.registers[SP] = 0xFF00
+        memory[0xFF00:0xFF02] = [0xF0, 0xFF]
+        sim.run(0xC350, 0xFFF0)
+        image = Image.open(folder / ('level%da.png' % index)).convert('RGB').load()
+        items = []
+        for row in range(96, 192):                      # the text box only; the title banner stays
+            address = 0x4000 | (row & 0xC0) << 5 | (row & 7) << 8 | (row & 0x38) << 2
+            line = list(memory[address:address + 32])
+            for col in range(32):
+                if memory[0x5800 + (row >> 3) * 32 + col] & 0x3F == 0x0F:
+                    line[col] = sum(128 >> x for x in range(8) if min(image[col * 8 + x, row]) > 100)
+            changed = [col for col in range(32) if line[col] != memory[address + col]]
+            if changed:                                # one span per row: 4 bytes of header each
+                items.append((address + changed[0], bytes(line[changed[0]:changed[-1] + 1])))
+        block = table(items, 2048)
+        page, at = (127 if index < 3 else 121), 0x800 * (index % 3 + 1)
+        pages[page][at:at + len(block)] = block
+
+
+def english_pages(reference, path):
+    """Text tables from the reviewed translation, which stays with the reference files (no game text here)."""
+    import json
+    from skoolkit.snapshot import get_snapshot
+    data = json.loads(Path(path).read_text(encoding='utf8'))
+    code = lambda s: bytes(EN_CHARS.get(c, ord(c)) for c in s)
+    def table(entries, limit):
+        out = bytearray()
+        for dest, raw in entries:
+            out += len(raw).to_bytes(2, 'little') + dest.to_bytes(2, 'little') + raw
+        out += bytes(2)
+        if len(out) > limit:
+            raise ValueError('English table exceeds its page: %d' % len(out))
+        return out
+    ram = bytes(get_snapshot(str(reference / 'Inferno1_end.z80')))
+    entries = []
+    for cz, en in data['main']:
+        old, new = code(cz), code(en)
+        hits = [m.start() for m in re.finditer(re.escape(old), ram[0x6000:0x8700])]
+        if not hits or len(new) > len(old):
+            raise ValueError('English main entry %r: %d places, %d > %d bytes' % (cz, len(hits), len(new), len(old)))
+        entries += [(0x6000 + hit, new.ljust(len(old), b' ')) for hit in hits]
+    table_at = 0x6EAD                                  # command table: handler16 + 3 letters, first match wins
+    if bytes(ram[table_at + 2:table_at + 5]) != b'HES' or bytes(ram[table_at + 37:table_at + 40]) != b'POM':
+        raise ValueError('unexpected command table')
+    hes, pom = bytes(ram[table_at:table_at + 5]), bytes(ram[table_at + 35:table_at + 40])
+    entries.append((table_at, pom[:2] + b'HEL'))       # first, so a lone H is help and not the password prompt
+    entries.append((table_at + 35, hes[:2] + b'PAS'))
+    for index, old, new in ((1, b'RAP', b'REP'), (2, b'RED', b'KEY'), (5, b'ZBR', b'WEA'), (6, b'KON', b'QUI')):
+        if bytes(ram[table_at + 5 * index + 2:table_at + 5 * index + 5]) != old:
+            raise ValueError('unexpected command table entry')
+        entries.append((table_at + 5 * index + 2, new))
+    lines = []
+    for para in data['intro'].strip().split('\n\n'):
+        lines += textwrap.wrap(para, 36) + ['']
+    intro = b''.join((b' ' + code(l) if l else b'') + b'\r\x80' for l in lines) + b'\r\x80\r\x80\r\0'
+    if 0xABE3 + len(intro) > 0xC9B2:
+        raise ValueError('English intro too long')
+    pages = {EN_MAIN: table(entries, 8192), EN_INTRO: table([(0xABE3, intro)], 8192)}
+    for p in range(EN_LEVELS, EN_LEVELS + 4):
+        pages[p] = bytearray(8192)
+    for level in range(1, 7):
+        mem = bytes(get_snapshot(str(reference / ('Inferno%d_end.z80' % level))))
+        word = lambda a: mem[a] | mem[a + 1] << 8
+        places = {'planet': word(0xABE0)}
+        for mission in range(4):
+            for i, what in enumerate(('brief', 'win', 'retry')):
+                places['m%d.%s' % (mission + 1, what)] = word(0xABE2 + 22 * mission + 2 * i)
+        end = bytes((13, 255))
+        pointers = {'planet': 0xABE0}
+        for mission in range(4):
+            for i, what in enumerate(('brief', 'win', 'retry')):
+                pointers['m%d.%s' % (mission + 1, what)] = 0xABE2 + 22 * mission + 2 * i
+        size = {what: mem[dest:dest + 1024].index(255) + 1 for what, dest in places.items()}
+        clusters, items = [], []
+        for what in sorted(places, key=places.get):
+            if clusters and clusters[-1][-1][1] + clusters[-1][-1][2] == places[what]:
+                clusters[-1].append((what, places[what], size[what]))
+            else:
+                clusters.append([(what, places[what], size[what])])
+        better = data.get('levels_pc', {})
+        for cluster in clusters:                       # strings of a cluster may share its space: pointers follow
+            room = sum(c[2] for c in cluster)
+            key = lambda what: '%d.%s' % (level, what)
+            chosen = {c[0]: code(data['levels'][key(c[0])]) + end for c in cluster}
+            if sum(map(len, chosen.values())) > room:
+                raise ValueError('English level %d cluster too long' % level)
+            for what, _, _ in sorted(cluster, key=lambda c: len(better.get(key(c[0]), ''))):
+                if key(what) in better:
+                    new = code(better[key(what)]) + end
+                    if sum(map(len, chosen.values())) - len(chosen[what]) + len(new) <= room:
+                        chosen[what] = new
+                        PC_USED[0] += 1
+            at = cluster[0][1]
+            for what, _, _ in cluster:
+                items.append((at, chosen[what]))
+                items.append((pointers[what], at.to_bytes(2, 'little')))
+                at += len(chosen[what])
+        block = table(items, 4096)
+        index = level - 1
+        pages[EN_LEVELS + index // 2][4096 * (index & 1):4096 * (index & 1) + len(block)] = block
+    story_tables(reference, Path(path).parent / 'screens', table, pages)
+    return pages
+
+
 def loader_rom(code=None):
     from .build import rom48
     rom = bytearray(rom48())
@@ -761,7 +934,19 @@ def loader_rom(code=None):
     code = code if code is not None else bytes.fromhex(prof['hooks']['rom'])
     if ROM_ORG + len(code) > 0x3D00 or any(b != 255 for b in rom[ROM_ORG:ROM_ORG + len(code) + 20]):
         raise ValueError('loader does not fit unused ROM')
-    rom[entry:entry + 3] = b'\xC3' + ROM_ORG.to_bytes(2, 'little')
+    hooks = prof['hooks']
+    front = bytes.fromhex(hooks['loadfront'])
+    if LOAD_FRONT + len(front) > 0x05E3:
+        raise ValueError('load front does not fit the old edge loop')
+    rom[entry:entry + 3] = b'\xC3' + LOAD_FRONT.to_bytes(2, 'little')
+    rom[LOAD_FRONT:LOAD_FRONT + len(front)] = front
+    save = bytes.fromhex(hooks['savehook'])
+    if bytes(rom[0x04C6:0x04C9]) != bytes.fromhex('21801F') or 0x04C6 + len(save) > 0x053F:
+        raise ValueError('unexpected ROM SA-BYTES body')
+    rom[0x04C6:0x04C6 + len(save)] = save
+    for key, at in (('enlevel', EN_LEVEL), ('enstart', EN_START), ('enstory', 0x0558), ('enstory2', 0x05DA)):
+        blob = bytes.fromhex(hooks[key])
+        rom[at:at + len(blob)] = blob
     rom[ROM_ORG:ROM_ORG + len(code)] = code
     return rom
 
@@ -3271,7 +3456,7 @@ def run_capture(patch, memory, registers, state, site, memory_class=CaptureMemor
     match. All temporary stack/register storage is in page 68. At every interrupt-enabled
     boundary, mapping/speed and original register/stack state must be safe for the game ISR.
     """
-    from skoolkit.simulator import Simulator
+    from skoolkit.simulator import Simulator, SP
     from .dizzy6 import _rw_simulator
     from . import z80n, simpool
     source = list(memory)
@@ -3405,7 +3590,7 @@ class PauseMemory(CaptureMemory):
 def run_loading_pause(memory,registers,speed=0,code=None,worker=None,check_r=True):
     from . import simpool,z80n
     from .dizzy6 import _rw_simulator
-    from skoolkit.simulator import Simulator
+    from skoolkit.simulator import Simulator, SP
     if registers[24]!=0x8EF9 or registers[26] or registers[27]!=1:
         raise ValueError('unproved loading pause entry domain')
     patch=PausePatch(code)
@@ -3467,7 +3652,7 @@ def loading_pause_checks(memory=None,registers=None):
 DRIVER_WRITE = {
     68: [(0x1D00, 0x1EF0)],
     75: [(0x1EC0, 0x1EE0), (0x1F00, 0x1FF0)],
-    76: [(0x1E90, 0x1EAA), (0x1F00, 0x1FF0)],
+    76: [(0x0C00, 0x1180), (0x1E90, 0x1EC0), (0x1F00, 0x1FF0)],
     78: [(0x1E80, 0x1E96), (0x1F00, 0x1FF0)],
     79: [(0x0800, 0x1800), (0x1E80, 0x1EA0), (0x1F00, 0x1FF0)],
     81: [(0x1800, 0x1BF0), (0x1C00, 0x1C80)],
@@ -3535,6 +3720,8 @@ class DriverMemory:
         return {0x14: 0xE3, 0x41: self.nr.get(0x40, 0) & 0x7F}.get(self.selected, 0)
 
     def write_port(self, registers, port, value, *args):
+        if port & 0xFF == 0xFE and value < 8:           # the loading bars: border colour only, beeper bit clear
+            return
         if port != 0x243B or value not in (7, 0x14, 0x15, 0x40, 0x41, 0x43, 0x44, 0x69, 0x6B):
             raise AssertionError('driver wrote IO')
         self.selected = value
@@ -3572,7 +3759,7 @@ def run_loading_driver(memory, registers, speed=0, driver=None, owned=None, limi
     """Gate + driver as assembled, from 8EF9 to 8EFC, against the original's single instruction."""
     from . import simpool, z80n
     from .dizzy6 import _rw_simulator
-    from skoolkit.simulator import Simulator
+    from skoolkit.simulator import Simulator, SP
     patch = PausePatch()
     original = simpool.machine(Simulator, list(memory), registers, 'inferno.driver.original', copy=True)
     original.opcodes[original.memory[0x8EF9]]()
@@ -3625,7 +3812,7 @@ def driver_expected(ram):
             stream.append(0)
             if len(stream) > 8192:
                 raise ValueError('stream capacity')
-            left, top, width, height, pixels = solid_image(tuple((x, y, raw_tile(ram, t)) for x, y, t in actor['tiles']))
+            left, top, width, height, pixels = masked_image(tuple((x, y, raw_tile(ram, t)) for x, y, t in actor['tiles']), image)
             if width > 1024:
                 raise ValueError('canvas stride')
         except (ValueError, IndexError):
@@ -3702,8 +3889,8 @@ def pattern_index_expected(ram, expected):
     """Oracle for the 8EF9 index: {image: (left, top, [(cx, cy, mask, id)])}, patterns by id, in scan order."""
     ids, patterns, out, canon, phase1 = {}, [], {}, {}, {}
 
-    def build(key):
-        left, top, w, h, px = solid_image(key)
+    def build(key, image):
+        left, top, w, h, px = masked_image(key, image)
         chunks = []
         for cy in range(0, h, 16):
             for cx in range(0, w, 16):
@@ -3733,9 +3920,9 @@ def pattern_index_expected(ram, expected):
         canon[want[0]] = image
         actor = actor_descriptor(ram, image)
         key = tuple((x, y, raw_tile(ram, t)) for x, y, t in actor['tiles'])
-        out[image] = build(key)
+        out[image] = build(key, image)
         if any(raw[8] & 0x80 for _, _, raw in key):
-            phase1[image] = build(flash_key(key))
+            phase1[image] = build(flash_key(key), image)
     return out, patterns, phase1
 
 
@@ -4769,7 +4956,7 @@ def capture_irq_units(patch, tests):
     RAM byte must agree. The forced-flag case uses the captured stack table, never good tables
     restored over a broken build. DI/clock/mapping invariants cover every hook instruction.
     """
-    from skoolkit.simulator import Simulator
+    from skoolkit.simulator import Simulator, SP
     from . import simpool
     counts = Counter()
     for site, (source, regs, private) in tests.items():
@@ -4931,6 +5118,7 @@ class BootstrapPatch:
         self.altrom_low = (26, bytes(rom[:8192]))
         self.page = bytes(rom[8192:])
         self.extra_banks = {12: self.page + bytes(8192), 13: self.altrom_low[1] + bytes(8192)}
+        self.extra_banks[SAVE_PAGE // 2] = bytes(16384)      # empty named saves (SAVE/LOAD)
         for p, data in self.pages.items():
             bank = p // 2
             image = bytearray(self.extra_banks.get(bank, bytes(16384)))
@@ -5061,7 +5249,7 @@ def rom_byte_oracle(ram, regs, block):
     B=B0, at 05D8. Missing bytes take the edge-timeout return (XOR A canonical failure).
     Memory below the returned SP is dead stack; compare it only when callers have converged.
     """
-    from skoolkit.simulator import Simulator
+    from skoolkit.simulator import Simulator, SP
     from .build import rom48
     mem = list(rom48()) + list(ram[16384:])
     from . import simpool
@@ -5086,7 +5274,7 @@ def rom_byte_oracle(ram, regs, block):
 
 def loader_fixture(blocks, index, length, flag=255, verify=False, dest=0xA000, corrupt_verify=False):
     """Deterministic non-zero registers/RAM make preservation failures visible."""
-    from skoolkit.simulator import Simulator
+    from skoolkit.simulator import Simulator, SP
     ram = [(i * 37 + (i >> 8) * 11) & 255 for i in range(65536)]
     block = blocks[index] if index < len(blocks) else b''
     if verify and block:
@@ -5270,7 +5458,7 @@ def continuation_case(snapshot, blocks, level, limit=2_000_000, pulse_blocks=Non
     """
     from skoolkit.snapshot import Snapshot
     from skoolkit.simutils import from_snapshot
-    from skoolkit.simulator import Simulator
+    from skoolkit.simulator import Simulator, SP
     from .build import rom48
     source = from_snapshot(Simulator, Snapshot.get(str(snapshot)))
     regs = list(source.registers)
@@ -5623,7 +5811,7 @@ def run_cw_window(patch, memory, registers, x=0, clk=1, ctc=True, phase=0, count
     Work patch (milestone 3b): the 8F95 work runs in slices inside the window's waits (DI, page 69;
     reported: slices, work T, spans). frame: then 8F95 -> 8F98 (run_cw_frame) from the original's
     8F95 state; its page 14/69/68 results must equal run_frame's (the 8F95 work run at 8F95)."""
-    from skoolkit.simulator import Simulator
+    from skoolkit.simulator import Simulator, SP
     from .dizzy6 import _rw_simulator
     from . import z80n, simpool
     source = list(memory)
@@ -5868,7 +6056,7 @@ def run_cw_frame(patch, original, pages, state68, phase=0, count0=0, irq=None, r
     inside the hook: lost and compensated; the original takes the no-op ISR at 8F98); pages 14,
     68 (bar the capture stack/SP) and 69's results (WK_RESULT) equal run_frame (FramePatch, the
     work at 8F95) from the same 8F95 state and the capture as the window found it."""
-    from skoolkit.simulator import Simulator
+    from skoolkit.simulator import Simulator, SP
     from .dizzy6 import _rw_simulator
     from . import z80n, simpool
     o, om = original.registers, original.memory
@@ -6553,7 +6741,7 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
     name = 'Inferno copier-window diagnostic (no sprites; not a release)'
     tail_addr, max_tail = 0x9A80, 128
 
-    def __init__(self, blocks, window_only=True, work=False, driver=False, fullgame=False):
+    def __init__(self, blocks, window_only=True, work=False, driver=False, fullgame=False, english=None):
         super().__init__(blocks)
         self.fullgame = fullgame
         if fullgame:
@@ -6615,7 +6803,16 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
             head_tail = bytes(8192)
         self.extra_banks[CW_PAGE // 2] = bytes(head) + (head_tail if work and driver else bytes(8192))
         self.sites = [(a, old, new) for a, (old, new) in self.window.sites.items()]
+        if english and not fullgame:                   # diagnostic: level text only, the main code is not patched
+            self.window.sites[0x718F] = bytes.fromhex('3A3573'), bytes((0xC3,)) + EN_LEVEL.to_bytes(2, 'little')
+            for p, data in english.items():
+                bank = bytearray(self.extra_banks.get(p // 2, bytes(16384)))
+                bank[(p & 1) * 8192:(p & 1) * 8192 + 8192] = bytes(data).ljust(8192, bytes(1))
+                self.extra_banks[p // 2] = bytes(bank)
         if fullgame:                                   # hooks arrive from the page-80 table after decompression
+            if english:
+                self.sites.append((0x718F, bytes.fromhex('3A3573'), bytes((0xC3,)) + EN_LEVEL.to_bytes(2, 'little')))
+                self.sites.append((0x7166, bytes.fromhex('CD50C3'), bytes((0xCD,)) + (0x0558).to_bytes(2, 'little')))
             h = load_profile()['hooks']
             stub = bytes.fromhex(h['wistub'])
             rom = bytearray(self.page)
@@ -6623,6 +6820,13 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
             if any(v != 255 for v in rom[at:at + len(stub)]):
                 raise ValueError('installer stub overlaps')
             rom[at:at + len(stub)] = stub
+            if english:                                # the installer continues into the text tables
+                jump = stub.index(bytes.fromhex('C3885E'))
+                rom[at + jump + 1:at + jump + 3] = EN_START.to_bytes(2, 'little')
+                for p, data in english.items():
+                    bank = bytearray(self.extra_banks.get(p // 2, bytes(16384)))
+                    bank[(p & 1) * 8192:(p & 1) * 8192 + 8192] = bytes(data).ljust(8192, b'\0')
+                    self.extra_banks[p // 2] = bytes(bank)
             self.page = bytes(rom)
             self.extra_banks[12] = self.page + bytes(8192)
             table = bytearray()
@@ -6656,7 +6860,7 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
         snap.banks[5], snap.banks[2], snap.banks[0] = bytes(ram[:16384]), bytes(ram[16384:32768]), bytes(ram[32768:])
 
 
-def copier_window_build(reference, folder, hooks=False, work=False, driver=False, level=None, fullgame=False, name=None):
+def copier_window_build(reference, folder, hooks=False, work=False, driver=False, level=None, fullgame=False, name=None, english=None):
     """Inferno_copier_window_diagnostic.nex (window only), with hooks Inferno_copier_window_m3_
     diagnostic.nex (capture hooks + window), with work Inferno_copier_window_m3b_diagnostic.nex (+ the
     8F95 work in the window's waits) + boot checks (NEXLOAD and foreign ROM3) + page-80/69 bytes."""
@@ -6673,7 +6877,7 @@ def copier_window_build(reference, folder, hooks=False, work=False, driver=False
                         str(reference / 'Inferno.tzx'), '--start', '24200', str(snapshot)], check=True, capture_output=True)
     work = work or driver
     hooks = hooks or work
-    patch = CopierWindowSnapshotPatch(tape_blocks(reference / 'Inferno.tzx'), window_only=not hooks, work=work, driver=driver, fullgame=fullgame)
+    patch = CopierWindowSnapshotPatch(tape_blocks(reference / 'Inferno.tzx'), window_only=not hooks, work=work, driver=driver, fullgame=fullgame, english=english_pages(reference, english) if english else None)
     nex = folder / ('Inferno_full_game.nex' if fullgame else ('%s.nex' % name if name.startswith('Inferno') else 'Inferno_%s.nex' % name) if name else 'Inferno_level%d.nex' % level if level else 'Inferno_driver_diagnostic.nex' if driver else 'Inferno_copier_window_m3b_diagnostic.nex' if work else
                     'Inferno_copier_window_m3_diagnostic.nex' if hooks else 'Inferno_copier_window_diagnostic.nex')
     _, tail, data, _ = z80tonex.convert(str(snapshot), str(nex), quiet=True, patch=patch)
@@ -6738,6 +6942,7 @@ def main():
     ap.add_argument('--jobs', type=int, default=1, help='copier-window checks: one process per level, this many at once')
     ap.add_argument('--cw-hooks', action='store_true', help='--copier-window-build with the capture hooks (milestone 3)')
     ap.add_argument('--cw-work', action='store_true', help='--copier-window-build with hooks + the 8F95 work in the window (3b)')
+    ap.add_argument('--cw-english', type=Path, help='--copier-window-build --cw-full: translation JSON (kept with the reference files)')
     ap.add_argument('--cw-full', action='store_true', help='--copier-window-build: from the tape start (intro, all levels, ending)')
     ap.add_argument('--cw-name', help='--copier-window-build: start from Inferno_NAME.z80 (e.g. outro)')
     ap.add_argument('--cw-level', type=int, help='--copier-window-build: start from level N (its recording snapshot, for hardware tests)')
@@ -6971,7 +7176,7 @@ def main():
         print(json.dumps(result))
         return int(any(v for k, v in result['counts'].items() if k.endswith('!')))
     if a.copier_window_build:
-        result = copier_window_build(a.copier_window_build, a.out, hooks=a.cw_hooks, work=a.cw_work, driver=a.cw_driver, level=a.cw_level, fullgame=a.cw_full, name=a.cw_name)
+        result = copier_window_build(a.copier_window_build, a.out, hooks=a.cw_hooks, work=a.cw_work, driver=a.cw_driver, level=a.cw_level, fullgame=a.cw_full, name=a.cw_name, english=a.cw_english)
         if a.json:
             a.json.write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps(result))

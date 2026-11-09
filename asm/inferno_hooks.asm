@@ -2588,6 +2588,21 @@ F_ACTIVE EQU 0x1EA3
 F_SAVED_SP EQU 0x1EA4
 F_MASK_SIZE EQU 0x1EA6
 F_MASK_STRIDE EQU 0x1EA8
+F_WIDE EQU 0x1EAA              ; nonzero: G3, exterior enters black only through gaps at least 3x3
+F_G_PAGE EQU 0x1EAB
+F_G_OUT EQU 0x1EAC
+F_G_POS EQU 0x1EAD
+F_G_T EQU 0x1EAF
+F_E_P EQU 0x1EB0
+F_E_Q EQU 0x1EB2
+F_E_STEP EQU 0x1EB4
+F_E_LEFT EQU 0x1EB6
+F_E_N EQU 0x1EB8
+F_E_S EQU 0x1EBA
+F_E_D EQU 0x1EBC
+F_G_PREV EQU 0x1000
+F_G_CUR EQU 0x1080
+F_G_EDGE EQU 0x1100
 fill_actor_image:
         xor a
         ld (F_ERROR),a
@@ -2667,6 +2682,9 @@ fill_actor_image:
         ld (de),a              ; clear retained exterior state on every new image
         call fill_advance
         jr nz,.opacity
+        ld a,(F_WIDE)
+        or a
+        call nz,fill_wide_erode
 .iteration:
         ld hl,(F_PASSES)
         inc hl
@@ -2686,6 +2704,9 @@ fill_actor_image:
         ld a,(F_CHANGED)
         or a
         jr nz,.iteration
+        ld a,(F_WIDE)
+        or a
+        call nz,fill_wide_dilate
         ld hl,0
         ld (F_POS),hl
 .finish:
@@ -2927,7 +2948,272 @@ fill_service_bad:
         ret
 fill_actor_service_end:
         ASSERT fill_actor_service_end < 0x0600
-        SAVEBIN "inferno_fill.bin",fill_actor_image,fill_actor_service_end-fill_actor_image
+; G3 around the unchanged flood: 3x3 erosion of the passable bits (outside the canvas counts as clear), then
+; 3x3 dilation of the exterior, then the canvas edge, where a 3x3 block may stand half outside. 0600-0BFF: tables.
+        ORG 0x0C00
+fill_wide_erode:
+        ld a,116
+        ld b,0xFF
+        ld c,0xA6              ; AND (HL)
+        jr fill_gate
+fill_wide_dilate:
+        ld a,117
+        ld b,0
+        ld c,0xB6              ; OR (HL)
+        call fill_gate
+        jp fill_edges
+fill_gate:
+        ld (F_G_PAGE),a
+        ld a,b
+        ld (F_G_OUT),a
+        ld a,c
+        ld (.v1),a
+        ld (.h2),a
+        ld (.v2+1),a
+        and 0xF0
+        or 1                   ; AND C / OR C
+        ld (.h1),a
+        ld hl,F_G_PREV
+        ld de,F_G_PREV+1
+        ld (hl),b
+        ld bc,0x17F
+        ldir                   ; PREV, CUR and the outside row
+        ld hl,0
+.row:   ld (F_G_POS),hl
+        call fill_checkpoint
+        ld a,(F_G_PAGE)
+        nextreg 0x52,a
+        ld hl,(F_G_POS)
+        set 6,h
+        push hl
+        ld de,F_G_CUR
+        ld bc,(F_MASK_STRIDE)
+        ldir                   ; HL = the next row
+        ex de,hl
+        ld hl,(F_G_POS)
+        ld bc,(F_MASK_STRIDE)
+        add hl,bc
+        ld bc,(F_MASK_SIZE)
+        or a
+        sbc hl,bc
+        ex de,hl
+        jr c,.has
+        ld hl,F_G_EDGE
+.has:   push hl
+        pop iy
+        pop de                 ; DE = this row
+        push de
+        ld ix,F_G_PREV
+        ld hl,F_G_CUR
+        ld a,(F_MASK_STRIDE)
+        ld b,a
+.v:     ld a,(ix+0)
+.v1:    and (hl)
+.v2:    and (iy+0)
+        ld (de),a
+        inc ix
+        inc iy
+        inc hl
+        inc de
+        djnz .v
+        ld hl,F_G_CUR
+        ld de,F_G_PREV
+        ld bc,(F_MASK_STRIDE)
+        ldir
+        pop hl                 ; this row, again, across
+        ld a,(F_MASK_STRIDE)
+        ld b,a
+        ld a,(F_G_OUT)
+        ld d,a
+.h:     ld c,(hl)
+        ld a,b
+        dec a
+        ld a,(F_G_OUT)
+        jr z,.last
+        inc hl
+        ld a,(hl)
+        dec hl
+.last:  ld e,a
+        ld a,c
+        add a,a
+        bit 7,e
+        jr z,.nr
+        inc a
+.nr:    ld (F_G_T),a
+        ld a,c
+        srl a
+        bit 0,d
+        jr z,.nl
+        or 128
+.nl:
+.h1:    and c
+        push hl
+        ld hl,F_G_T
+.h2:    and (hl)
+        pop hl
+        ld (hl),a
+        ld d,c
+        inc hl
+        djnz .h
+        ld hl,(F_G_POS)
+        ld bc,(F_MASK_STRIDE)
+        add hl,bc
+        ld bc,(F_MASK_SIZE)
+        or a
+        sbc hl,bc
+        ret z
+        add hl,bc
+        jp .row
+; A black canvas-edge pixel is exterior when a run of three along that edge holds it; beyond the ends is clear.
+fill_edges:
+        ld hl,(F_MASK_STRIDE)
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld (F_E_STEP),hl       ; pixels per row
+        ld bc,0
+        ld hl,(F_MASK_SIZE)
+        ld de,(F_MASK_STRIDE)
+.rows:  inc bc
+        or a
+        sbc hl,de
+        jr nz,.rows
+        push bc                ; height
+        ld hl,0
+        ld de,(F_E_STEP)
+        call fill_edge         ; left column
+        pop bc
+        push bc
+        ld hl,(F_E_STEP)
+        dec hl
+        ld de,(F_E_STEP)
+        call fill_edge         ; right column
+        ld hl,(F_E_STEP)
+        ld b,h
+        ld c,l
+        ld hl,0
+        ld de,1
+        push bc
+        call fill_edge         ; top row
+        pop bc
+        pop de                 ; height
+        push bc
+        dec de
+        ld hl,0
+.mul:   ld a,d
+        or e
+        jr z,.got
+        ld bc,(F_E_STEP)
+        add hl,bc
+        dec de
+        jr .mul
+.got:   pop bc
+        ld de,1
+        ; bottom row, then return
+fill_edge:                      ; HL first pixel, DE step, BC count
+        ld (F_E_P),hl
+        ld (F_E_Q),hl
+        ld (F_E_D),de
+        ld (F_E_LEFT),bc
+        ld (F_E_N),bc
+        ld a,3
+        ld (F_E_S),a
+        call .feed
+        call .feed
+.y:     call fill_checkpoint
+        call .feed
+        ld a,(F_E_S)
+        bit 2,a
+        jr z,.next
+        ld b,a
+        and 0x1C
+        cp 0x1C
+        jr z,.set
+        ld a,b
+        and 0x0E
+        cp 0x0E
+        jr z,.set
+        ld a,b
+        and 7
+        cp 7
+        jr nz,.next
+.set:   nextreg 0x52,117
+        ld hl,(F_E_P)
+        ld a,l
+        and 7
+        ld b,a
+        inc b
+        ld a,1
+.bit:   rrca
+        djnz .bit
+        ld c,a
+        ld b,3
+.sh:    srl h
+        rr l
+        djnz .sh
+        set 6,h
+        ld a,(hl)
+        or c
+        ld (hl),a
+.next:  ld hl,(F_E_P)
+        ld de,(F_E_D)
+        add hl,de
+        ld (F_E_P),hl
+        ld hl,(F_E_N)
+        dec hl
+        ld (F_E_N),hl
+        ld a,h
+        or l
+        jr nz,.y
+        ret
+.feed:  ld hl,(F_E_LEFT)
+        ld a,h
+        or l
+        ld a,1
+        jr z,.push
+        dec hl
+        ld (F_E_LEFT),hl
+        ld hl,(F_E_Q)
+        push hl
+        ld de,(F_E_D)
+        add hl,de
+        ld (F_E_Q),hl
+        pop hl
+        srl h
+        rr l                   ; carry: right pixel of the byte
+        push af
+        ld a,h
+        rlca
+        rlca
+        rlca
+        and 7
+        add a,112
+        nextreg 0x51,a
+        ld a,h
+        and 31
+        or 0x20
+        ld h,a
+        pop af
+        ld a,(hl)
+        jr c,.low
+        rrca
+        rrca
+        rrca
+        rrca
+.low:   and 15
+        ld a,0
+        jr nz,.push
+        inc a
+.push:  ld b,a
+        ld a,(F_E_S)
+        add a,a
+        or b
+        and 31
+        ld (F_E_S),a
+        ret
+fill_wide_end:
+        ASSERT fill_wide_end < 0x1000
+        SAVEBIN "inferno_fill.bin",fill_actor_image,fill_wide_end-fill_actor_image
 
 ; Inferno bounded prepared-data transfer worker, private writable page 77.
 ; Reuses the gated shared backend and packets; no game/display hook installs it.
@@ -5029,6 +5315,7 @@ D_OFF    EQU 0x183E            ; canvas offset of the chunk's next row
 D_HEAD   EQU 0x1840
 D_PHASE  EQU 0x1842            ; FLASH phase of this canvas pass
 D_FANY   EQU 0x1843            ; bit 7: the image has a FLASH tile
+D_BUILT  EQU 0x1844            ; level digit + 1 of the finished store; 0 = none (a retry reuses the store)
 D_STACK  EQU 0x1BF0
 D_BUF    EQU 0x1C00            ; 128-byte chunk
 PAT_BASE EQU 85                ; first pattern page; 11 pages of 64 patterns
@@ -5037,6 +5324,12 @@ PAT_MAX  EQU 704
 driver:
         ld (D_RETSP),sp
         ld sp,D_STACK
+        ld a,(0x7335)           ; the level is loaded once, play starts many times: same level, same images
+        inc a
+        ld hl,D_BUILT
+        cp (hl)
+        jp z,.again
+        ld (hl),a
         nextreg 0x51,79
         xor a
         ld (C_OP+W_A),a
@@ -5055,7 +5348,16 @@ driver:
         ld bc,0x1C
         ldir
         call drv_sel_reset
-.next:  nextreg 0x51,78
+.next:  ld a,(D_IMAGE)           ; one thin border bar per image, as while loading (28 MHz: a line is about 1824 T)
+        and 7
+        jr nz,.bar
+        ld a,2
+.bar:   out (0xFE),a
+        ld b,140
+.line:  djnz .line
+        xor a
+        out (0xFE),a
+        nextreg 0x51,78
         xor a
         ld (J_OP+W_A),a
         ld (J_FLASH+W_A),a
@@ -5149,7 +5451,9 @@ driver:
 .step:  ld hl,D_IMAGE
         inc (hl)
         jp nz,.next
-        nextreg 0x51,255
+        jr .exit
+.again: call drv_sel_soft       ; store and index kept; display and sprite slots reset as for a build
+.exit:  nextreg 0x51,255
         nextreg 0x52,10
         nextreg 0x53,11
         ld sp,(D_RETSP)
@@ -5413,6 +5717,24 @@ drv_clear:
         ret
 
 ; Colour every stream tile into the canvas. NZ = pack refused valid input.
+drv_bar:                        ; a thin border bar for about one tile in 16; all registers kept
+        push af
+        ld a,r
+        and 15
+        jr nz,.skip
+        push bc
+        ld a,r
+        and 7
+        jr nz,.bar
+        ld a,3
+.bar:   out (0xFE),a
+        ld b,140
+.line:  djnz .line
+        xor a
+        out (0xFE),a
+        pop bc
+.skip:  pop af
+        ret
 drv_tiles:
         ld hl,0x4001
 .row:   nextreg 0x52,122
@@ -5432,7 +5754,8 @@ drv_tiles:
         inc hl
         call drv_bounds.sign
         ld (D_RY),de
-.tile:  push hl
+.tile:  call drv_bar
+        push hl
         nextreg 0x51,75
         nextreg 0x52,122
         push hl
@@ -5514,6 +5837,20 @@ drv_fill:
         ld (F_ERROR+W_A),a
         ld (F_ACTIVE+W_A),a
         ld (F_COMMAND+W_A),a
+        ld b,a
+        ld a,(D_IMAGE)
+        cp 0xB2
+        jr z,.narrow            ; explosions keep the plain enclosed rule (user's choice)
+        cp 0xB4
+        jr z,.narrow
+        cp 0xB6
+        jr z,.narrow
+        cp 0xB8
+        jr z,.narrow
+        inc b
+.narrow:
+        ld a,b
+        ld (F_WIDE+W_A),a
         ld a,16
         ld (F_BUDGET+W_A),a
 .again: ld a,76
@@ -5535,6 +5872,9 @@ drv_fill:
 ; image (valid last, count, offset16, left, top) then 5-byte chunks (cx, cy in tiles, cell mask, id16), non-blank
 ; only. Pages 85..95: 16x16 patterns, one copy per distinct content (hash chains in page 84: heads 0000, next 0200).
 drv_sel_reset:
+        call drv_sel_soft
+        jr drv_index_reset
+drv_sel_soft:
         nextreg 0x15,0          ; sprites off until a complete frame is published
         nextreg 0x6B,0x0B       ; scenery layer off
         nextreg 0x62,0
@@ -5584,6 +5924,8 @@ drv_sel_reset:
         ld (hl),0xFF
         ld bc,PAT_MAX-1
         ldir
+        ret
+drv_index_reset:
         nextreg 0x51,83
         ld hl,0x2000
         ld de,0x2001
@@ -7097,3 +7439,209 @@ wi_back:
 wi_stub_end:
         ASSERT wi_stub_end <= 0x3BE0
         SAVEBIN "inferno_wistub.bin",wi_stub,wi_stub_end-wi_stub
+
+; SAVE/LOAD: the pilot record (49 bytes at 5B15, name at 7001) goes to named slots in page 120, not to tape.
+; Both routines replace ROM tape code in the alt ROM's low page and run in slot 0, so they may use slot 1.
+SAVE_PAGE   EQU 123
+SAVE_NAME   EQU 0x7001
+SAVE_SIZE   EQU 49
+SAVE_STEP   EQU 64          ; slot: 8 name bytes (0 = empty), 49 data bytes, pad
+        ORG 0x04C6              ; the game's CALL 04C6 (SA-BYTES past its return-address push)
+save_hook:
+        or a
+        ret z                   ; header block: the name is taken from 7001 with the data
+        di
+        call save_find
+        ex de,hl
+        ld hl,SAVE_NAME
+        ld bc,8
+        ldir
+        push ix
+        pop hl
+        ld bc,SAVE_SIZE
+        ldir
+        nextreg 0x51,255
+        ret                     ; the game's 72B8 follows with EI
+
+save_find:                      ; -> HL = slot; NZ found, Z free (or the last slot when full). Uses A, BC, DE.
+        nextreg 0x51,SAVE_PAGE
+        ld hl,0x2000
+        ld b,128
+.next:  ld a,(hl)
+        or a
+        ret z
+        push hl
+        ld de,SAVE_NAME
+        ld c,8
+.cmp:   ld a,(de)
+        cp (hl)
+        jr nz,.other
+        inc de
+        inc hl
+        dec c
+        jr nz,.cmp
+        pop hl
+        or 1
+        ret
+.other: pop hl
+        ld de,SAVE_STEP
+        add hl,de
+        djnz .next
+        ld de,-SAVE_STEP
+        add hl,de
+        xor a
+        ret
+save_hook_end:
+        ASSERT save_hook_end <= 0x053F
+        SAVEBIN "inferno_savehook.bin",save_hook,save_hook_end-save_hook
+
+        ORG 0x0574              ; past 056B, where JNext's tape trap rewrites A; 0562 jumps here
+load_front:
+        push af
+        push hl
+        ld hl,(0x738A)          ; the game's file name pointer: 7001 for LOAD, 732F for levels
+        ld a,h
+        cp high SAVE_NAME
+        jr nz,.tape
+        ld a,l
+        cp low SAVE_NAME
+.tape:  pop hl
+        jr z,.user
+        pop af
+        jp loader
+.user:  pop af
+        push de                 ; 17 for the header request, 49 for the data
+        call save_find
+        pop bc
+        jr nz,.found
+        nextreg 0x51,255
+        jp 0x7227               ; no such pilot: the game's tape error, which resets the stack
+.found: push ix
+        pop de
+        ld a,c
+        cp 17
+        jr nz,.data
+        ld a,3                  ; synthesise the header the game checks (type, name, length)
+        ld (de),a
+        inc de
+        ld bc,8
+        ldir
+        ld a,' '
+        ld (de),a
+        inc de
+        ld (de),a
+        inc de
+        ld a,SAVE_SIZE
+        ld (de),a
+        inc de
+        xor a
+        ld (de),a
+        jr .done
+.data:  ld a,l
+        add a,8
+        ld l,a
+        ld bc,SAVE_SIZE
+        ldir
+.done:  nextreg 0x51,255
+        scf                     ; loaded
+        ret
+load_front_end:
+        ASSERT load_front_end <= 0x05E3
+        SAVEBIN "inferno_loadfront.bin",load_front,load_front_end-load_front
+
+; English build: text tables (count16, dest16, bytes; count 0 ends) in pages 118 (main), 119 (intro), 124-127 (levels).
+        ORG 0x050E              ; after save_hook, in the old SA-BYTES and LD-BYTES entry code
+en_level:                       ; 718F, after the level block is unpacked
+        ld a,i
+        push af
+        di
+        ld a,(0x7335)
+        sub '0'
+        ld c,a
+        srl a
+        add a,124
+        ld hl,0x2000
+        bit 0,c
+        jr z,.even
+        ld h,0x30
+.even:  call en_apply
+        pop af
+        jp po,.off
+        ei
+.off:   ld a,(0x7335)
+        jp 0x7192
+en_apply:                       ; A = page, HL = table in slot 1; slot 1 is put back as found
+        ld e,a
+        ld bc,0x243B
+        ld a,0x51
+        out (c),a
+        inc b
+        in a,(c)
+        push af
+        ld a,e
+        nextreg 0x51,a
+.next:  ld c,(hl)
+        inc hl
+        ld b,(hl)
+        inc hl
+        ld a,b
+        or c
+        jr z,.done
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+        ldir
+        jr .next
+.done:  pop af
+        nextreg 0x51,a
+        ret
+en_level_end:
+        ASSERT en_level_end <= 0x0562
+        SAVEBIN "inferno_enlevel.bin",en_level,en_level_end-en_level
+
+        ORG 0x05C5              ; after load_front; replaces JP 24200 in wi_back
+en_start:
+        di
+        ld a,118
+        ld hl,0x2000
+        call en_apply
+        ld a,119
+        ld hl,0x2000
+        call en_apply
+        ei
+        jp 24200
+en_start_end:
+        ASSERT en_start_end <= 0x05E3
+        SAVEBIN "inferno_enstart.bin",en_start,en_start_end-en_start
+
+; English story screens: after the level picture is drawn, its text bytes come from pages 127 and 121
+        ORG 0x0558
+en_story:                       ; replaces CALL C350 at 7166
+        call 0xC350
+        ld a,(0x7335)
+        sub '0'
+        jr en_story2
+en_story_end:
+        ASSERT en_story_end <= 0x0562
+        SAVEBIN "inferno_enstory.bin",en_story,en_story_end-en_story
+        ORG 0x05DA
+en_story2:                      ; A = level: pages 127 (0-2) and 121 (3-5), table at (slot+1)*0x800
+        cp 6
+        ret nc
+        ld b,127
+        cp 3
+        jr c,.low
+        sub 3
+        ld b,121
+.low:   inc a
+        rlca
+        rlca
+        rlca
+        add a,0x20
+        ld h,a
+        ld l,0
+        ld a,b
+        jp en_apply
+en_story2_end:
+        SAVEBIN "inferno_enstory2.bin",en_story2,en_story2_end-en_story2

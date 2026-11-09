@@ -4,7 +4,7 @@
 {
   "schema": 4,
   "id": "patch.pace-limiter",
-  "revision": 3,
+  "revision": 4,
   "kind": "patch",
   "title": "Pace limiter: a faster hook waits until the displaced original's time has passed",
   "question": "Under the ORIGINAL pace target, does a hook take less time than the code it displaces, so the game would run faster than the original?",
@@ -20,7 +20,7 @@
                       "never a debt hook inside an open window (counted twice): a hook that can run inside one uses hlib_nest_open / _close",
                       "the ISR wrapper calls hlib_pace_hold / _resume: interrupt time is in no window"]},
   "owns": {"hook_state": ["HLIB_V_PACE"]},
-  "examples": ["three_weeks"],
+  "examples": ["three_weeks", "inferno"],
   "sources": ["pilot runs/three_weeks games/three_weeks.md 'Pace' (x_pad, V_DEBT; d386a699 +11.38% -> 25eab33d +0.05%)",
               "pilot runs/quazatron REPORT.md sessions 2-3 (game-routine windows x K, the debt repaid from DD80, isr_in / isr_out)",
               "pilot runs/dean_match_day REPORT.md v2.1 (per-call targets, ISRACC: interrupt time left out; -0.61 / -0.23 / -0.55 %)",
@@ -38,7 +38,7 @@ next window repays it, overrun carries (HLIB_PACE_CAP). A game routine at 28 MHz
 `hlib_pace_waitk` (K = original / 28 MHz time x 16, JNext). Hooks inside an open window (its routine's
 callees, its own work before the wait): `hlib_nest_open` / `_close`, out of the window (never x K), into
 its debt (IFUSED). `hlib_debt_repay` shortens the game's own delay; the ISR wrapper calls `hlib_pace_hold` /
-`_resume`. Not for untimed code (a menu wait) or sound.
+`_resume`. Not for untimed code (a menu wait) or sound (patch.timed-side-effect-replay).
 
 **Assumptions.** The window's original time is measured and near constant; NR 0x1E / 0x1F give the
 line.
