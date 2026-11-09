@@ -188,6 +188,9 @@ controls (colours shifted; guard column 31) 24/24. Front end N / Y / SYM+Y PASS.
   release: walk1 + walk2 IDENTICAL (18,002 frames, 12,712 plots), unit PASS, 46/46 negatives; selftest PASSED.
 - `--altrom-fill rom3` as published: the whole-image default adds bank 47 and its ROM path check fails (the game reads
   ROM bytes at 0x2133.. where the hooks are; the rom3 build has the same reads, a known issue of the .nxc).
+- v1.2 (2026-11-08, the pace window below): the same command on main gives sprites a61d1d3c, with the screen
+  9d84b0c67626cccee1efd31e1759792f = the published v1.2 bare .nex (nxc.py --bare), byte for byte; plain 6679eea9.
+  The game now reads 2,165 hook bytes in the alt ROM as data (2,010 in 1.1): the known issue above, grown with the hooks.
 
 ## Pace (2026-11-08): the blit's window, hook time in the debt
 Owner's pace rule: within 2% of the original where it runs steadily; never slower. Audit of the published 1.1 (2427346c, JNext, 600 updates,
