@@ -1,13 +1,12 @@
 # Inferno
 
 ## Next session
-Stage: 2 (continued)    Branch: main (m3c from claude/inferno-copier-window-m3c)
-State: copier window m3c PASS in the model (8F95 work in the window's waits; unfinished = dropped). Hardware: m2/m3 run,
-  speed and sound = plain (user); m3b-m3d: plays ok; driver NEX: ok, pause ~4 s (user).
-Inputs: specnext/reference/inferno/    Start: specnext build/CONTINUE_copier_window.md.
-Read: "Copier window"; inferno.py run_cw_window/run_cw_frame/copier_window_update_checks; asm cw_work, wk_*.
-Next: sprite pipeline (handover "Sprite pipeline plan"): (1) 8EF9 driver, (2) window dispatch PASS in the model;
-  selection + 64-slot store PASS in the model (17.3 % dropped, runs to 14); (4) uploads, one sprite. Keep sprites disabled.
+Stage: 2 (hybrid sprite build, not released)    Branch: claude/inferno-full-game (PR #201)
+State: full game from the tape on the Next: intro, play, ship death, restart (user). Tilemap scenery + hardware sprites by
+  Copper at line 224; copier write-out replaced. JNext: level ends 1-5 reach the next level, L6 the ending.
+Inputs: specnext/reference/inferno/    Start: specnext build/hybrid.md, then CONTINUE_copier_window.md.
+Read: asm wk_select, wo_go, modal_exit, wi_stub; inferno.py copier_window_build (--cw-driver --cw-full).
+Next: real freshness readout; shop on hardware; sound comparison; records and user build flow.
 Gate: zero frame slips and the original 9907 time per update with sound kept (replaces 10 ms).
 Boundary: 8EF9 follows original DI, before IM2 setup; the pause gate preserves all registers/R/RAM/
   stack and caller clocks (six RZX initialization states). Reject 86C5 (decompressor, overwritten).
@@ -263,6 +262,7 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
 - [doc docs/MAINTAIN.md §Commit, PR and the reference files] specnext is public; user authorized Inferno
   publication. Corrected visibility guidance in place.
 - [local: Inferno store] A 64-slot scan per new pattern cost 2.5k T and doubled drops; a recency list fixed it. Measure cold frames.
+- [local: Inferno alt ROM] The intro uses IM 2 with I = 3B: ROM 3BFF-3C00 is its vector. Hooks must leave them FF; JNext headless found it.
 - [local: Inferno drop runs] Busy L1 windows are nearly full: per-chunk cost, not cold frames, set the run length. Profile before planning. Store cache keys must cover all code they hold.
 - [local: Inferno startup] L1 map is write-first, permitting plain tail 9A80. Later lifetime is separate.
 

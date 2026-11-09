@@ -17,3 +17,4 @@ Newest first; moved from inferno.md to keep it within its size budget.
 - 2026-11-09 (claude/inferno-uploads): window uploads; gate 0 failures; 18.3 % dropped, runs to 32, margin 66 T; tuning stopped. [none: details in specnext build/pipeline.md]
 - 2026-11-09 (claude/inferno-sprites-visible): first visible NEX, sprites over ULA; gate 0 failures; 19.7 % dropped, runs to 35. [none: details in specnext build/hybrid.md]
 - 2026-11-09 (claude/inferno-scenery-layer): clean tilemap scenery under sprites; hardware: sprite NEX played, ghosting seen. [none: details in specnext build/hybrid.md]
+- 2026-11-09 (claude/inferno-full-game): full game with sprites from the tape; full gate 0 failures, margin 109 T. [none: lesson is in games/inferno.md]
