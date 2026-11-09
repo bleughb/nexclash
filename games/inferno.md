@@ -6,14 +6,12 @@ State: full game from the tape on the Next: intro, play, ship death, restart (us
   Copper at line 224; copier write-out replaced. JNext: level ends 1-5 reach the next level, L6 the ending.
 Inputs: specnext/reference/inferno/    Start: specnext build/hybrid.md, then CONTINUE_copier_window.md.
 Read: asm wk_select, wo_go, modal_exit, wi_stub; inferno.py copier_window_build (--cw-driver --cw-full).
-Next: real freshness readout; shop on hardware; sound comparison; records and user build flow.
+Next: English build; real freshness readout; shop on hardware; records. SAVE/LOAD: RAM, page 120 (user chose no SD).
 Gate: zero frame slips and the original 9907 time per update with sound kept (replaces 10 ms).
 Boundary: 8EF9 follows original DI, before IM2 setup; the pause gate preserves all registers/R/RAM/
   stack and caller clocks (six RZX initialization states). Reject 86C5 (decompressor, overwritten).
 Memory: owned cache 136–215, metadata/code 79, pinned stream 122, DDMA staging 216–223, copier
   window 80. Store publishes valid last; dispatch still requires exact live validation.
-Open: loading driver/UI, unseen/mutated content, current/pending ownership, complete-frame reveal,
-  FLASH/modal/frontend/ROM lifetime, hardware waits, contention. No sprite NEX.
 Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample, ONE gate,
   --jobs 6); Inferno6.rzx --quick 2000; six quicks at milestones; level-4 shop.
 
@@ -196,12 +194,12 @@ Workflow: copier window = handover "Check workflow" (failed states, 1/10 sample,
   DMA/DDMA with current AND pending guards. Hooks keep the CALL stack; page 68 owns state/log/stack.
 
 ## Lessons
+- [local: Inferno JNext tape trap] JNext rewrites A at ROM PC 056B while its tape trap is on: new code in old tape ROM must avoid that PC. Hooks at 04C6/0574.
 - [local: Inferno dispatch] Every added coroutine stage raises the drop rate: report drops and runs.
 - [local: Inferno driver oracle] A loader driver's dedupe is exact streams, not the host's tile tuples:
   row splits differ, so the exact validator (not the tuple) defines duplicates.
 - [local: Inferno 8F95 budget] Finishing deferred work after the limiter eats the slack the window
   saved; drop the frame instead (display keeps the last one) and count run lengths of drops.
-- [none: m3b-m3d and driver NEX hardware: game plays ok, no new finding]
 - [local: Inferno coroutine] A loop using SP as data pointer yields without CALL: save SP + live regs.
 - [local: Inferno copied routine] Compare every hand-copied asm routine's results with the original.
 - [doc BRIEFING A1] Hook code under the stub's register block (rom_end) is lost
