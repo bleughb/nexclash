@@ -162,6 +162,13 @@
     "sprites": "fb77af62c5ce975802c354dd8b1943ee"
    }
   },
+  "71dd57b2ece2787dfff915bf3ba50d3f": {
+   "game": "The Official Father Christmas Game",
+   "doc": "father_christmas.md",
+   "nex": {
+    "sprites": "227268fe74c3e2fff3ed8dfbc5b188bf"
+   }
+  },
   "c545645a8688f24428492937125fbfcd": {
    "game": "Flying Shark",
    "doc": "flying_shark.md",

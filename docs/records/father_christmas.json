@@ -1,0 +1,168 @@
+{
+ "name": "father_christmas",
+ "order": 245,
+ "game": "The Official Father Christmas Game",
+ "doc": "father_christmas.md",
+ "engine": "father_christmas",
+ "representative": true,
+ "reference": "father_christmas",
+ "inputs": {
+  "snapshot": {
+   "name": "father_christmas.z80",
+   "md5": "71dd57b2ece2787dfff915bf3ba50d3f",
+   "path": "father_christmas/father_christmas.z80",
+   "note": "Official Father Christmas Game, The (1989)(Alternative).z80, the 48K game stopped at its options menu with the tune playing; the archive has no 128K release."
+  },
+  "recordings": [
+   {
+    "name": "s1.rzx",
+    "md5": "63b831f2689f719a26e0c1e6ca59fe93",
+    "path": "father_christmas/s1.rzx",
+    "role": "Scripted keyboard play in level 1 from the menu. The broken builds and the ABI cases use its first 2,500 frames."
+   },
+   {
+    "name": "full1.rzx",
+    "md5": "a26887ce8127e88b95dbc35953feda02",
+    "path": "father_christmas/full1.rzx",
+    "role": "Clean scripted keyboard walk in level 1: name wheel, rooms, ladders, the table, elves; 9,200 frames."
+   },
+   {
+    "name": "full2.rzx",
+    "md5": "cca35c29a9ef5a1a33ee70bc6248bcb1",
+    "path": "father_christmas/full2.rzx",
+    "role": "A second clean scripted walk in level 1, another seed; 9,200 frames."
+   },
+   {
+    "name": "deep1.rzx",
+    "md5": "6dc6434bc006cb0a9e1f71393e164500",
+    "path": "father_christmas/deep1.rzx",
+    "role": "A test fixture with pokes (infinite time, level 1 marked done), scripted play through levels 2 and 3 with the overlay off; 19,072 frames; coverage, not clean play."
+   }
+  ]
+ },
+ "modules": [
+  "father_christmas"
+ ],
+ "own_modules": [
+  "father_christmas"
+ ],
+ "data": [
+  "asm/father_christmas_hooks.asm",
+  "docs/profiles/father_christmas.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "s1.rzx",
+   "full1.rzx",
+   "full2.rzx",
+   "deep1.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 20,
+  "note": "At every hook every register with R and all 48K RAM (stack too) and the port writes against the original; the Layer 2 picture against an independent model read from the game's graphics at every flip, and every lit pixel against the ULA bitmap; ABI cases on s1's states and 10 broken builds. Pace, soak, flicker, beam audit and the real loader are in games/father_christmas.md \"Evidence\"."
+ },
+ "outputs": {
+  "sprites": {
+   "file": "father_christmas_sprites.nex",
+   "md5": "227268fe74c3e2fff3ed8dfbc5b188bf"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "The Official Father Christmas Game",
+  "engine_col": "father_christmas (father_christmas.md)",
+  "build": "v1.0; father_christmas_sprites.nex 227268fe equals the published .nxc 1.0 bare build; level 1's clash removed: the original bitmap and attributes on the ULA, Santa and the elves in their own white on a double-buffered Layer 2 in the game's plot order; levels 2 and 3 as the original; top bank 47, fits a 1MB Next",
+  "software": "4 recordings, 47,174 frames, 64,585 hooks with R and 48K RAM, 15,617 Layer 2 pictures and 7,675,258 pixels against the model and the ULA bitmap; 640 ABI cases, 10 of 10 broken builds; ROM paths complete (Next ROM 8c34d957); review run: pace in JNext in lockstep, whole runs -0.15% to -0.09%, slowest 20 updates at most +0.67%; 15-minute soaks, flicker, beam audit, real loader on private cards; the flip falls inside the play rows (a moving figure's top rows can lag a frame at the table and ladders)",
+  "hardware": "untested",
+  "next": "hardware checklist; the owner's play; the flip inside the play rows (a figure's top rows can lag a frame at the table and ladders); Enhanced (mock-up only, figures EASY)"
+ },
+ "checks": [
+  "asm2profile:father_christmas"
+ ],
+ "results": [
+  {
+   "check": "external review run",
+   "status": "pass",
+   "scope": "runs/official_father_christmas/release-20261108: pace, soak, flicker, beam audit and real loader, JNext 1.1.104, on this engine's bytes. Not a selftest stamp.",
+   "evidence": "games/father_christmas.md \"Evidence\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/father_christmas_hooks.asm": "c20b5a353c8c1c7c",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/father_christmas.json": "6f406f5e78122b20",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "45d2a3932329c36a",
+   "nexclash/father_christmas.py": "b030dd4cc727fb0a",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "a8b1bee2f02eafed",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-09"
+ },
+ "verified": {
+  "deps": {
+   "asm/father_christmas_hooks.asm": "c20b5a353c8c1c7c",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/father_christmas.json": "6f406f5e78122b20",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "9b81042a97dca1d9",
+   "nexclash/father_christmas.py": "b030dd4cc727fb0a",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "a8b1bee2f02eafed",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ }
+}
