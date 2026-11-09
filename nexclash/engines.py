@@ -92,6 +92,7 @@ ENGINES = [
     ('page_pharaoh', 'is_page', None),                                    # Page and the Curse of the Pharaoh (48K): default and Enhanced
     ('mad_mix_2', 'is_mad_mix_2', None),                                  # Mad Mix 2 (128K): default, Enhanced stages 1-3 (local table)
     ('flying_shark', 'is_flying_shark', None),                            # Flying Shark (48K): Layer 2 outline
+    ('jillys_farm', 'is_jillys', None),                                   # Jilly's Farm Volume 1 - SokoBAArn! (48K): default and Enhanced
 ]
 
 

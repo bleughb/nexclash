@@ -258,6 +258,16 @@
     "sprites": "72e3cc193325cc8166f8e7d7b6481327"
    }
   },
+  "34e23d4a382e4187de49eb77a33a4758": {
+   "game": "Jilly's Farm Volume 1 - SokoBAArn!",
+   "doc": "jillys_farm.md",
+   "nex": {
+    "plain": "427aab29dd75a73276829f59a02cb23c",
+    "loading": "e50bbd5371c34e3b2a1f58a4c57978bf",
+    "enhanced": "987f52a06c06962e09000d6fe1bf8f48",
+    "enhanced_loading": "9f9cad7c1684667b4b2bd7fcc1cf6334"
+   }
+  },
   "8e720b5cc11fe0d9445fe0af4825c8bf": {
    "game": "Knight Tyme (128K)",
    "doc": "knight_tyme.md",

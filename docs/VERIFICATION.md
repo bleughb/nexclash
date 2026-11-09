@@ -106,6 +106,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Booty (booty): `booty.nex` 7a41de52c061b07ef73c951461f07445, `booty_loading.nex` 6393a6f9ee6f20cf760bb70421eb2d1e, `booty_enhanced.nex` ebc40ec715755da8db720a1a1c0f8074, `booty_enhanced_loading.nex` 8113662ce1469689d1effa77280b30d3; verified 2026-11-08
 - Flying Shark (flying_shark): `flying_shark_sprites.nex` 5e6a49cafce1d97c50d3f8d3e92b8db9; verified 2026-11-08
 - Page and the Curse of the Pharaoh (page_pharaoh): `page_pharaoh_sprites.nex` ad82fe2d63f623af54950d2c56d34a44, `page_pharaoh_sprites_loading.nex` 430b6184b2397b0759db1b151984f339, `page_pharaoh_enhanced.nex` 139bfcafd68061d939d1d2c51efdacc6, `page_pharaoh_enhanced_loading.nex` 3c710b98afbe12f66d1e6ff03f00285d; verified 2026-11-08
+- Jilly's Farm Volume 1 - SokoBAArn! (jillys_farm): `jillys_farm.nex` 427aab29dd75a73276829f59a02cb23c, `jillys_farm_loading.nex` e50bbd5371c34e3b2a1f58a4c57978bf, `jillys_farm_enhanced.nex` 987f52a06c06962e09000d6fe1bf8f48, `jillys_farm_enhanced_loading.nex` 9f9cad7c1684667b4b2bd7fcc1cf6334; verified 2026-11-08
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

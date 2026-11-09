@@ -1,12 +1,13 @@
 # Jilly's Farm Volume 1 - SokoBAArn! (Bob's Stuff, 2017, 48K)
 
 ## Next session
-Stage: 4 (owner's play). Hardware: untested. v1.0 review build (both modes), not published, not pushed; not wired into `auto`, `engines.py` or a record: that comes when it goes upstream after the owner has played it.
-Inputs: `Jilly's Farm Volume 1 - SokoBAArn! (2017)(Bob's Stuff).tap`, MD5 86a5e1dc43e4cfe45582e91eb7cd1cf3. The start state is the tape loaded by SkoolKit's tap2sna to the game's USR 33280 (`-s 33280`), kept in the review run.
-Build: `jillys_farm.build(start.z80, nex)` and `jillys_farm_enh.build(start.z80, nex)` (set path in NEXCLASH_JILLY_SET), then the review run's `work/pkg.py` in `release-20261108b`, a TAP1 target of the plain tape.
-Pending: the owner's play; after it, a mock-up step for the improvement ideas in that run's NOTES.md.
+Stage: 3 done for default and Enhanced; published as .nxc 1.0 (nxc 05d3127, 2026-11-08) and registered on main: `auto`, engines.py, record docs/records/jillys_farm.json. Hardware: untested. Not yet played by the owner.
+Inputs: `Jilly's Farm Volume 1 - SokoBAArn! (2017)(Bob's Stuff).tap`, MD5 86a5e1dc43e4cfe45582e91eb7cd1cf3, the published patch's target (TAP1). Start state `jillys_farm.z80` (MD5 34e23d4a): that tape loaded by SkoolKit's tap2sna to the game's USR 33280 (`-s 33280`); derived game data, never in this repo. Review runs: runs/jillys_farm/release-20261108 (default), release-20261108b (Enhanced).
+Build: `python nexclash.py auto jillys_farm.z80` writes jillys_farm.nex and, with `jillys_farm_loading.scr` (the tape's screen) beside the start state, jillys_farm_loading.nex = the published default bare build (e50bbd53). With `jillys_farm.256` (the Spec256 set) and `jillys_farm_palette.json` (its 256 colours) beside it, both never in this repo (MD5s in the record), it also writes jillys_farm_enhanced.nex and jillys_farm_enhanced_loading.nex = the published Enhanced bare build (9f9cad7c). Every build boot-checked; with `--rzx a1.rzx --rzx levels.rzx --rzx editor.rzx --rzx editor2.rzx` the Enhanced replay, the ABI cases and 13 broken builds.
+Pending: owner's play; hardware checklist below; after it, a mock-up step for the improvement ideas in release-20261108b's NOTES.md.
 
 ## Facts
+- Authorship: Bob's Stuff, 2017; a homebrew release. Nothing of the authors' is in this repo; the patch carries only what patches normally carry (the loading screen and the start state's bytes not on the tape).
 - A later homebrew, shown as V1.01 on its menu. A BASIC loader, a screen and one code block, unprotected.
 - An isometric Sokoban: 30 levels, each play window bright white on black (all 14 rows, level 1 to 30 by the game's own codes). The HUD at the top and bottom is its own cells.
 - Back-buffer composer with attributes at CB00; IM 2, ISR at 8181 latches keys. One LD A,R (8FA8).
@@ -58,3 +59,4 @@ Nothing has run on a Next. To check: start-up through the loader, keyboard, the 
 ## Stage log
 - 2026-11-08 Stage 3: no-hook engine, proofs, review build, mock-up for Enhanced; waiting for the owner's play.
 - 2026-11-08 Stage 3: Enhanced built on the same review branch, Spec256 colours faithfully, proofs in release-20261108b; waiting for the owner's play.
+- 2026-11-09 Upstream: `auto`, engines.py line, record 251 (views rebuilt); main rebuilds the published .nxc 1.0 bare builds, default e50bbd53 and Enhanced 9f9cad7c.
