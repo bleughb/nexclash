@@ -25,16 +25,31 @@
   "machine",
   "rzx",
   "dizzy_patch",
-  "tid128"
+  "tid128",
+  "tid128_v11",
+  "tid128_colour"
  ],
  "own_modules": [
   "dizzy_patch",
-  "tid128"
+  "tid128",
+  "tid128_v11",
+  "tid128_colour"
  ],
- "data": [],
+ "data": [
+  "asm/tid128_v11_hooks.asm",
+  "docs/profiles/tid128_v11.json",
+  "asm/tid128_colour.asm",
+  "docs/profiles/tid128_colour.json",
+  "asm/tid128_loading.asm",
+  "docs/profiles/tid128_loading.json"
+ ],
  "shared_data": [
   "nexclash/templates.json",
-  "nexclash/evidence.json"
+  "nexclash/evidence.json",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_pace.asm"
  ],
  "rebuild": {
   "args": [],
@@ -76,60 +91,106 @@
   "engine_col": "dedicated (treasure_island_dizzy.md)",
   "build": "treasure_island_dizzy_sprites.nex 8b4d0847",
   "software": "verified",
-  "hardware": "plain build runs",
+  "hardware": "v1.1 not hardware tested",
   "next": "recorder start/keys"
  },
  "checked": {
   "deps": {
-   "nexclash.py": "b7f49876a97b1f48",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/tid128_colour.asm": "ec98bfa2fb17a95e",
+   "asm/tid128_loading.asm": "cb3a3f6b795df018",
+   "asm/tid128_v11_hooks.asm": "0c733e7ba45b4b17",
+   "docs/profiles/tid128_colour.json": "74b599906a60264f",
+   "docs/profiles/tid128_loading.json": "12b2a313caae6420",
+   "docs/profiles/tid128_v11.json": "6f85496a175ddfb6",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/analyse.py": "5bdd8b073cc95624",
    "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
    "nexclash/dizzy_patch.py": "27472fb03d88fcfb",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "f744adab50edebd8",
    "nexclash/evidence.json": "a6c823114223e2c3",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/nxc.py": "f286b3f16e76fbda",
+   "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/recorder.py": "8b959db3b8dc838b",
-   "nexclash/rzx.py": "fda23afec57aec5e",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/templates.json": "e93f585833e72628",
+   "nexclash/tid128.py": "79aec5d9a4ae36d5",
+   "nexclash/tid128_colour.py": "d3a60ad773c7754c",
+   "nexclash/tid128_v11.py": "e2f7d4eb73dd2fe7",
    "nexclash/verify.py": "3dcc48bdab8bd67b",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "74f47bdd4ba8473f",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "af5e2dd3fac5e54f",
+   "rom": "e50ee485fb4a21d2"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-08"
  },
  "verified": {
   "deps": {
-   "nexclash.py": "b7f49876a97b1f48",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/tid128_colour.asm": "ec98bfa2fb17a95e",
+   "asm/tid128_loading.asm": "cb3a3f6b795df018",
+   "asm/tid128_v11_hooks.asm": "0c733e7ba45b4b17",
+   "docs/profiles/tid128_colour.json": "74b599906a60264f",
+   "docs/profiles/tid128_loading.json": "12b2a313caae6420",
+   "docs/profiles/tid128_v11.json": "6f85496a175ddfb6",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/analyse.py": "5bdd8b073cc95624",
    "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
    "nexclash/dizzy_patch.py": "27472fb03d88fcfb",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "f744adab50edebd8",
    "nexclash/evidence.json": "a6c823114223e2c3",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "e57136059969ba67",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/nxc.py": "f286b3f16e76fbda",
+   "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/recorder.py": "8b959db3b8dc838b",
-   "nexclash/rzx.py": "fda23afec57aec5e",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/templates.json": "e93f585833e72628",
+   "nexclash/tid128.py": "79aec5d9a4ae36d5",
+   "nexclash/tid128_colour.py": "d3a60ad773c7754c",
+   "nexclash/tid128_v11.py": "e2f7d4eb73dd2fe7",
    "nexclash/verify.py": "3dcc48bdab8bd67b",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "74f47bdd4ba8473f",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "af5e2dd3fac5e54f",
+   "rom": "e50ee485fb4a21d2"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-08"
  },
  "rework": [
   {
@@ -198,6 +259,189 @@
    },
    "proof": "4 recordings of the 128K release IDENTICAL on rework v128 (3 bot walks of 12,035 / 12,000 / 12,011 frames, and 1,103 frames on the sea bed with the .pok's walk-in-water POKE to reach the bubbles): 6,927 plots pixel-perfect, 6,900 erases, 27,567 ISR hide checks, 111 room wipes, 189 bubble tests (the virtual read) equal to the original's; the game never touches the trampolines in the printer buffer; 3 negative controls detected; clock matrix 5 hook sites x 4 incoming clocks = 20 cases PASS, a forced 3.5 MHz exit detected; ROM paths: every ROM byte as recorded; start-up tail never read before written",
    "note": "Jon Attree's Treasure Island Dizzy 128K rework (2026-11-05): engine tid128 (engines.py: the 128K snapshot), Dean's dizzy_patch builder (trampolines, hooks, set-up, patterns read, not copied) on the 128K release so the AY music plays; whole alt ROM image; the printer buffer put back after NEXLOAD; a 128K copy of the TID verifier with the bubble test and a printer-buffer guard; his two hook-page entries through a 28 MHz wrapper that restores the incoming speed; the every-site clock matrix. Recordings: bot walks on SkoolKit's C simulator (one with the walk-in-water POKE to reach the sea bed). Published as Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K).nxc v1.0 (pilot runs/dean_treasure_island_dizzy). games/treasure_island_dizzy.md."
+  },
+  {
+   "name": "v11_default",
+   "version": "1.1",
+   "snapshot": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K).z80",
+   "env": {
+    "NEXCLASH_REWORK": "tid128_v11"
+   },
+   "args": [
+    "--altrom-fill",
+    "whole"
+   ],
+   "inputs": [
+    {
+     "name": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K).z80",
+     "md5": "db6ccbeb2f9c601476efab3cfd28b131",
+     "path": "treasure_island_dizzy/Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K).z80"
+    },
+    {
+     "name": "tid128_walk1.rzx",
+     "md5": "43ccde8a7c7e8dfc83106c3e231b0e8a",
+     "path": "treasure_island_dizzy/tid128_walk1.rzx"
+    },
+    {
+     "name": "tid128_walk2.rzx",
+     "md5": "b4f0d8e56c6c239d956d119fee62204d",
+     "path": "treasure_island_dizzy/tid128_walk2.rzx"
+    },
+    {
+     "name": "tid128_walk3.rzx",
+     "md5": "e599381fdc08d9f997f6d7f2534dc489",
+     "path": "treasure_island_dizzy/tid128_walk3.rzx"
+    },
+    {
+     "name": "tid128_water4.rzx",
+     "md5": "8e8f8765f2cb7a0e6de346252133b598",
+     "path": "treasure_island_dizzy/tid128_water4.rzx"
+    },
+    {
+     "name": "tid128_room_route.rzx",
+     "md5": "faed5ab14cc5190967836607d374768f",
+     "path": "treasure_island_dizzy/tid128_room_route.rzx"
+    },
+    {
+     "name": "DIZZY2.scr",
+     "md5": "91b2df45ff454c507e7563f66fa6a29b",
+     "path": "treasure_island_dizzy/DIZZY2.scr"
+    }
+   ],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ],
+    "decisions": {
+     "engine": "tid128_v11"
+    }
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [
+     "tid128_walk1.rzx",
+     "tid128_walk2.rzx",
+     "tid128_walk3.rzx",
+     "tid128_water4.rzx",
+     "tid128_room_route.rzx"
+    ]
+   },
+   "outputs": {
+    "sprites": {
+     "file": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K)_sprites.nex",
+     "md5": "fef2738464db14f21b8a87ecc7eb0708"
+    },
+    "loading": {
+     "file": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K)_sprites_loading.nex",
+     "md5": "aa2789e788099e31f9f3c802b6a356cb"
+    },
+    "published": {
+     "file": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K)_sprites_published.nex",
+     "md5": "277cfbff92efd4bf79a97778de4319ee"
+    }
+   },
+   "proof": "Five declared original-game recordings compare registers including R, game memory and absolute player pixels. Routine matrices cover clocks, interrupt states and positions; deliberate faults must be detected. Enhanced additionally compares an independent colour canvas and injected interrupts. Completion is recorded by the verified stamp; measured native pace and coverage limits are in the game document.",
+   "note": "Default modernization with full hidden ROM, shared hlib IFF/R/speed and original-pace plot limiter. Published legacy outputs remain unchanged. The published output is the .nxc 1.1 default (nxc.py PATCH GAME --bare): the loading build with Enhanced's banks reserved, zero filled, so both colour sets share one header. DIZZY2.scr is a local input, never in this repository."
+  },
+  {
+   "name": "v11_enhanced",
+   "version": "1.1",
+   "snapshot": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K).z80",
+   "env": {
+    "NEXCLASH_REWORK": "tid128_v11",
+    "NEXCLASH_TID128_ENHANCED": "colour-source.256",
+    "NEXCLASH_TID128_PALETTE": "source-palette.pal"
+   },
+   "args": [
+    "--altrom-fill",
+    "whole"
+   ],
+   "inputs": [
+    {
+     "name": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K).z80",
+     "md5": "db6ccbeb2f9c601476efab3cfd28b131",
+     "path": "treasure_island_dizzy/Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K).z80"
+    },
+    {
+     "name": "tid128_walk1.rzx",
+     "md5": "43ccde8a7c7e8dfc83106c3e231b0e8a",
+     "path": "treasure_island_dizzy/tid128_walk1.rzx"
+    },
+    {
+     "name": "tid128_walk2.rzx",
+     "md5": "b4f0d8e56c6c239d956d119fee62204d",
+     "path": "treasure_island_dizzy/tid128_walk2.rzx"
+    },
+    {
+     "name": "tid128_walk3.rzx",
+     "md5": "e599381fdc08d9f997f6d7f2534dc489",
+     "path": "treasure_island_dizzy/tid128_walk3.rzx"
+    },
+    {
+     "name": "tid128_water4.rzx",
+     "md5": "8e8f8765f2cb7a0e6de346252133b598",
+     "path": "treasure_island_dizzy/tid128_water4.rzx"
+    },
+    {
+     "name": "tid128_room_route.rzx",
+     "md5": "faed5ab14cc5190967836607d374768f",
+     "path": "treasure_island_dizzy/tid128_room_route.rzx"
+    },
+    {
+     "name": "DIZZY2.scr",
+     "md5": "91b2df45ff454c507e7563f66fa6a29b",
+     "path": "treasure_island_dizzy/DIZZY2.scr"
+    },
+    {
+     "name": "colour-source.256",
+     "md5": "c052161bad97f56f6bd952c8012f10e9",
+     "path": "treasure_island_dizzy/colour-source.256"
+    },
+    {
+     "name": "source-palette.pal",
+     "md5": "b095dc99a047bab844b87b06657b0a7a",
+     "path": "treasure_island_dizzy/source-palette.pal"
+    }
+   ],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ],
+    "decisions": {
+     "engine": "tid128_v11"
+    }
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [
+     "tid128_walk1.rzx",
+     "tid128_walk2.rzx",
+     "tid128_walk3.rzx",
+     "tid128_water4.rzx",
+     "tid128_room_route.rzx"
+    ]
+   },
+   "outputs": {
+    "sprites": {
+     "file": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K)_sprites.nex",
+     "md5": "3855907e242ff29e5d659958915dcf7d"
+    },
+    "loading": {
+     "file": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K)_sprites_loading.nex",
+     "md5": "31d8c2327b78c44827fc2f407ca4477e"
+    }
+   },
+   "proof": "Five declared original-game recordings compare registers including R, game memory and absolute player pixels. Routine matrices cover clocks, interrupt states and positions; deliberate faults must be detected. Enhanced additionally compares an independent colour canvas and injected interrupts. Completion is recorded by the verified stamp; measured native pace and coverage limits are in the game document.",
+   "note": "Approved Enhanced colours: Jao Paulo (Spec256). Exact original 128K executable, AY music and loading screen retained; no hardware claim. The loading output is the .nxc 1.1 Enhanced (nxc.py PATCH GAME --bare --colours Enhanced). colour-source.256, source-palette.pal and DIZZY2.scr are local inputs, never in this repository: Enhanced rebuilds only with them, and the rework is skipped without them."
   }
+ ],
+ "checks": [
+  "asm2profile:tid128_v11",
+  "asm2profile:tid128_colour",
+  "asm2profile:tid128_loading"
  ]
 }

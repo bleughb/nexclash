@@ -44,7 +44,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Prince of the Yolkfolk (Dizzy 6) (dizzy6): `Dizzy6.nex` e02faca34df9504cc1f2f162e0ef791e, `Dizzy6_sprites.nex` f491e1f6621559ccc4d36de3535ff5d0; verified 2026-11-05
 - Fantasy World Dizzy (fantasy_world_dizzy): `fantasy_world_dizzy.nex` cd620010e2f61af0002e76718945716f, `fantasy_world_dizzy_sprites.nex` fb77af62c5ce975802c354dd8b1943ee, `fantasy_world_dizzy_sprites.nex --strategy printer` c09213beaec1572c0228985dae89bd77; verified 2026-11-05
 - Magicland Dizzy (magicland_dizzy): `magicland_dizzy.nex` 09eb18496cff334ea17bfc0b0c94585d, `magicland_dizzy_sprites.nex` ab66b5011a3e87a54f561502ded0ac24, `magicland_dizzy_sprites.nex --strategy slot1` d3b37c05d4c47ada07294fa2d7c1ae76; verified 2026-10-13
-- Treasure Island Dizzy (treasure_island_dizzy): `treasure_island_dizzy.nex` 4dae1a3a15b2158642a5d5b82de92ef7, `treasure_island_dizzy_sprites.nex` 8b4d0847d68fce3215bd43a0e116e682; verified 2026-11-05
+- Treasure Island Dizzy (treasure_island_dizzy): `treasure_island_dizzy.nex` 4dae1a3a15b2158642a5d5b82de92ef7, `treasure_island_dizzy_sprites.nex` 8b4d0847d68fce3215bd43a0e116e682; verified 2026-11-08
 - Treasure Island Dizzy (title screen) (treasure_island_title): `treasure_island_title.nex` 70890aba7d821fba8a41e63636eb58be, `treasure_island_title_sprites.nex` 85e054fe4bce8e4b3a8e336aac432f58; verified 2026-10-13
 - Dizzy: The Ultimate Cartoon Adventure (dizzy1): `dizzy1.nex` 7892b2e0f1f3f9f19165516db307cbe0, `dizzy1_sprites.nex` ead92ef747096582da450f162d78e545; verified 2026-11-08
 - Commando (commando): `commando.nex` a206f950c12f58a8e7f26b366f5a2480, `commando_sprites.nex` 6a547a86166a553b68e05360f1f83b78; verified 2026-11-07
