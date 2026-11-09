@@ -252,6 +252,12 @@
     "name": "t_r94.rzx",
     "md5": "0ff22e5df4e4af60ae59c6ed6fdab982",
     "path": "rzx/t/r94.rzx"
+   },
+   {
+    "name": "nodes_of_yesod_loading.scr",
+    "md5": "3afc516842c5c51bc082ac7eb1847221",
+    "path": "nodes_of_yesod/nodes_of_yesod_loading.scr",
+    "role": "The 6,912-byte loading screen: Nodes of Yesod (1985)(Odin Computer Graphics)(128K).tap (MD5 34e1fb66), its 6,914-byte block without the flag and checksum bytes; staged beside the snapshot; not a recording."
    }
   ]
  },
@@ -345,26 +351,42 @@
   },
   "sprites": {
    "file": "nodes_of_yesod_sprites.nex",
-   "md5": "81db9019df732c102e0f98aa8eb84227"
+   "md5": "3f8ce0fc97d32fbcff8bff675b4840b2"
   },
   "enhanced": {
    "file": "nodes_of_yesod_enhanced.nex",
-   "md5": "698e791437ff07dc6c9b8a59d6f44bd6"
+   "md5": "db6f976f9ea855945dff53ce045e8c7b"
   },
   "backdrops": {
    "file": "nodes_of_yesod_backdrops.nex",
-   "md5": "138662b51b2b78cb73393e27ff81654f"
+   "md5": "2e5cb62e7a65bf833d0fd2615d8a2102"
   },
   "enhanced_backdrops": {
    "file": "nodes_of_yesod_enhanced_backdrops.nex",
-   "md5": "1a1987d524fd539bf02a16d6b0bbf3aa"
+   "md5": "abe82a3085de8ca8a0b29cf9834ec0a6"
+  },
+  "sprites_loading": {
+   "file": "nodes_of_yesod_sprites_loading.nex",
+   "md5": "71a5351b7d016d4a6f425c0caf7f0fd1"
+  },
+  "enhanced_loading": {
+   "file": "nodes_of_yesod_enhanced_loading.nex",
+   "md5": "59d95f3ac081b12b886084eb76231a2f"
+  },
+  "backdrops_loading": {
+   "file": "nodes_of_yesod_backdrops_loading.nex",
+   "md5": "6a2597eff5d405705b2ac9a7e26eb1eb"
+  },
+  "enhanced_backdrops_loading": {
+   "file": "nodes_of_yesod_enhanced_backdrops_loading.nex",
+   "md5": "b9928a6eb4acd223d15611a498d64fae"
   }
  },
  "repro": [],
  "status": {
   "title": "Nodes of Yesod",
   "engine_col": "nodes_of_yesod (nodes_of_yesod.md)",
-  "build": "v1.5 local NXC; final owner sprite revision 3; Enhanced HUD and independent Backdrops retained",
+  "build": "v1.6: pace windows on the screen copy and the attribute walk in place of the update floor (sprites 3f8ce0fc, Enhanced db6f976f, Backdrops 2e5cb62e, Enhanced + Backdrops abe82a30); with the tape's loading screen beside the snapshot the four _loading builds = the published .nxc 1.6 --bare (71a5351b, 59d95f3a, 6a2597ef, b9928a6e); owner sprite revision 3, Enhanced HUD and independent Backdrops retained, art banks as 1.5",
   "software": "Current colour-only round: 2 replays/6194 frames, 136 graphic units, exact NEX pixels/edges, native cycles/AY identical to v1.4, four dot-loader rebuilds exact. Five changed poses unit-only. v1.4 full engine proof inherited; original limits remain.",
   "hardware": "untested",
   "next": "Owner art review; generic negative-runner integration; hardware untested"

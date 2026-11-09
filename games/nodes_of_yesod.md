@@ -10,6 +10,9 @@ Imported all 456 edited pixels across 12 mole/enemy-spaceman graphics from the o
 - `auto` builds all four .nxc variants: sprites (default), enhanced (the painted map + palette + HUD), backdrops and
   enhanced_backdrops. Each is byte for byte the published .nxc 1.5 --bare apart from the NEX loading-screen block
   (header flag bit 1 + the tape's 6,912-byte picture) that the packager adds.
+- 1.6: with nodes_of_yesod_loading.scr beside the snapshot (the 128K .tap's screen, MD5 3afc5168, game data, local only)
+  auto also writes the four sets' _loading.nex = the published .nxc 1.6 --bare: default 71a5351b, Enhanced 59d95f3a,
+  Backdrops 6a2597ef, Enhanced + Backdrops b9928a6e. Art banks (patterns, palettes, HUD, backdrops) as 1.5.
 - recolour() now also sets the HUD flag (on with a map), so the selftest recolour guard holds for the Enhanced build.
 - The Enhanced map keeps only the painting: its check values are null (the image bytes come from the player's
   snapshot); a repainted sheet's import writes them back, so null them before committing.
@@ -47,6 +50,19 @@ Current JNext quiet regression against v1.4: **301 player-update records match e
 
 All four host and **actual dot-loader combinations rebuild byte for byte** with the original 6,912-byte loading screen. Seven imported trainers pass 28 combination checks. Native loader runs use private card-image copies, not a physical card. Current loader SHA256: `d7ea19ec1fd65a6a73b16fd896014a922794489a95b515f1eb24074196c8db61`; older loaders can omit the tenth menu option.
 
+## Pace, v1.6 (pace audit of 2026-11-08; published .nxc 1.6, jattree/nxc 238e98a)
+Audit (pilot runs/pace-audit-20261108/REPORT-2.md): 1.5 whole -2.54 to -1.65%, busy -3.84 to -2.72%, stretches of 20 updates -13.1 to +13.9%, too fast and too slow, against the rule (Jon, 2026-11-07: within 2% where the original runs steadily, faster fine where it lags, never slower). Cause: one floor on the time of a player update (332 lines), which knew nothing of what the update had displaced.
+- The floor is gone. Each displaced job is a window: the copy (36680 to 36843), whose LDIR no longer runs, and the attribute walk (36851 to 36902), which runs at 28 MHz. win_open at the start; at the end win_wait waits at the caller's clock until the original's time for that size has passed, interrupts left out (ISRLINES 43, the handler's mean), and carries what is over or under in V_PD (1/16 line).
+- Targets, fitted on the plain build in JNext: copy 21 T r c + 140 T r (r rows, c columns; the fits by seed run 19.9 to 23.0 r c, 132 to 139 r: screen contention); walk 155 T D E + 39 T D + 45 T. e_player takes A_PLAYER, 130/16 lines, off V_PD for the hooks' own 3.5 MHz parts (tuned).
+- hlib_pace does not fit: LEAN needs 420 bytes and the alt ROM's low 8K holes hold about 300 after pace_player goes; the game's ROM reads pin the rest. hlib_speed stays as it was. pace_now's frame count and line wrap are not in step (the IRQ's phase differs by part of a frame), so windows, all under a frame, use the line wrap alone and the serial only to say an interrupt came.
+- Picture: pattern and table banks byte for byte as 1.5, default, Enhanced and Backdrops; only hook bytes differ (bank 12 + the JP targets in bank 2, bank 10's call of them). Jon's painting is untouched.
+- R: compared at every hook, as before (the windows sit inside the ny_r span).
+- Verifier: the state grows to 0xB422; a copy or the walk's last row must have taken its target less the carry; two new negatives, on the real recording: the copy's wait gone, its target too short.
+- Lockstep trap for the next audit: the state list without object records missed that the spawner at 0x5FBD reads the interrupt's seconds byte 0x5B17 before R, so an object started at different updates and R's fixture sequence moved with it (object 14 parted at updates 130 to 634, in 1.5 too). A fixture now holds that read to the update count, and the 16 object records are in the state list: 208 addresses (pilot runs/nodes_of_yesod/pacefix-20261108/nodes3).
+- Verifier, second pass: the replay's line clock counts T at whatever speed ran, so a wait at 28 MHz looked 8 times longer and the "never waits" negative passed unseen. The clock can now count T at the CPU's speed (NextState.scaled, _run_scaled): the pace negatives replay on it, and auto replays the first recording on it once more (Pace line). On b1, 2,000 frames: IDENTICAL; both pace negatives detected.
+- selftest --verify reports FAILED on Negative 22 of 26 detected (item paint, game over, teleport, clip window). Those four are missed the same way by the 1.5 engine (c086e2b) on the same recording and frames: the record says it, "the generic auto negative runner assumes every control reaches its target in the first recording", and no stamp was claimed for 1.5. Not a change by this work.
+- Limits: surface rooms only by script, no cavern; JNext's timing; contention figures are JNext's. Results, before / after: NOTES.md there.
+
 ## Unchanged engine evidence and limits
 
 The v1.4 engine proof is inherited, not claimed as newly rerun: 48 valid RZX files / 243,719 frames, 59 paired surface/cavern fixtures, exact HUD/bank-7 checks, 240 speed/R cases, 60 IRQ injections and 28 negative-control types. No executable, palette, HUD or backdrop change was made in this colour round.
@@ -61,6 +77,10 @@ All writes stay in this Nodes run and its private clone. Other games, shared eng
 
 Techniques: detect.gameplay-screen-readers
 
+## Open
+- The two window lessons below, for card patch.pace-limiter when it has room under its 600-word budget.
+- Seed 3 of the pace runs parts at update 1197 on object 10; not traced. Stretch +3.7 at u601 of seed 4; not traced.
+
 ## Lessons
 
 - [local: frame-edge snapshots can catch a correct hook halfway through an upload] Diagnose persistence and inspect rendered frames before calling a temporary pattern/grid mismatch visible corruption; death-specific owner reproduction remains open.
@@ -69,6 +89,12 @@ Techniques: detect.gameplay-screen-readers
 - [local: some edited animation poses are absent from available recordings] Report the five unit-only poses explicitly instead of presenting all twelve as recorded coverage.
 
 - [local: an Enhanced set that also switches a HUD needs recolour to switch it too] the guard found the one byte (hud_enabled) recolour left as built.
+
+- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget] (v1.6, 2026-11-08) A single floor per update cannot hold a game whose displaced work varies by figure: it reads slow where the original is light and fast where it is busy, and its whole-run figure hides both. Windows on what was displaced, sized from the plain build, held nearly every stretch within 2%.
+- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget] A window that reads line + frame serial needs the two in step at the wrap; a window under a frame needs only the wrap. The mismatch here read as 164 lines of false time per interrupt and drove the account to its floor.
+- [local: pace audit state lists] Before trusting lockstep on a figure-heavy game, put the objects' own bytes in the state list and read every source of chance: a time-dependent read in front of a fixed random sequence moves the sequence. The audit's list, picked from addresses that agreed, could not see it.
+- [local: R span entry count] Code added to e_blit before ny_r_begin moves the count original_m1 subtracts (59 -> 84): the replay's R compare caught it at every copy, and JNext's lockstep with R fixed per site could not.
+- [local: fit by size] Screen contention moves a copy's cost 5% by scene; a fit by rows and columns is unbiased over a stretch, and the carry takes up the rest.
 
 ## Friction
 

@@ -14,7 +14,8 @@ ROM_ORG = 0x386E
 ALT_PAGE, ALT_BANK = 24, 12
 PAT_PAGE0 = 26
 TAIL_ADDR = 0xB440                  # 0xB3BB-0xB500 zero, never touched in the recordings
-STATE_LO, STATE_HI = 0xB3BB, 0xB419  # backdrop and Enhanced HUD flags
+STATE_LO, STATE_HI = 0xB3BB, 0xB422  # backdrop and Enhanced HUD flags; v1.6 pace windows
+V_WT0, V_PD, V_IRQ_SERIAL = 0xB419, 0xB41D, 0xB410
 BACKDROP_FLAG = 0xB417 - STATE_LO
 HUD_FLAG = 0xB418 - STATE_LO
 HELD, SHOWN, V_DROP, V_CLIP = 0xB3C0 - STATE_LO, 0xB3E0 - STATE_LO, 0xB3F0 - STATE_LO, 0xB3F2 - STATE_LO
@@ -47,6 +48,11 @@ FULL = (1 << 256) - 1
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', 'nodes_of_yesod_colours.json')
+# the tape's loading screen (the 6,914-byte block of the 128K .tap, flag and checksum dropped), beside the snapshot: game
+# data, never in this repo. With it auto also writes the published .nxc's bare builds (1.6: default 71a5351b, Enhanced
+# 59d95f3a, Backdrops 6a2597ef, Enhanced + Backdrops b9928a6e).
+LOAD_SCREEN = 'nodes_of_yesod_loading.scr'
+LOAD_MD5 = '3afc516842c5c51bc082ac7eb1847221'
 
 
 def _profile_path():
@@ -438,6 +444,8 @@ class NextState:
         self.ports = 0
         self.clip = [0, 255, 0, 167]
         self.clipi = 0
+        self.scaled = False     # v1.6: the line clock counts T at the CPU's speed (slower: only the pace checks use it)
+        self.wall = 0.0
 
     def copy(self):
         q = NextState.__new__(NextState)
@@ -645,7 +653,7 @@ def _machine(Sim, mem, regs, ns, slot):
         def read_port(self, regs_, port):
             if port == 0x253B:
                 if ns.sel in (0x1E, 0x1F):
-                    line = (sim.registers[25] // 224) % 312
+                    line = (int(ns.wall) // 224 if ns.scaled else sim.registers[25] // 224) % 312
                     return (line >> 8) if ns.sel == 0x1E else (line & 255)
                 return ns.nr.get(ns.sel, 0)
             return 0xFF
@@ -662,6 +670,20 @@ def _run(sim, stop, limit=2000000):
     n = 0
     while R[24] != stop:
         ops[mem[R[24]]]()
+        n += 1
+        if n > limit:
+            return False
+    return True
+
+
+def _run_scaled(sim, stop, ns, limit=2000000):
+    """As _run, the line clock counting each instruction's T at the speed it ran at."""
+    R, ops, mem = sim.registers, sim.opcodes, sim.memory
+    n = 0
+    while R[24] != stop:
+        t, sh = R[25], ns.nr[0x07] & 3
+        ops[mem[R[24]]]()
+        ns.wall += (R[25] - t) / (1 << sh)
         n += 1
         if n > limit:
             return False
@@ -703,18 +725,41 @@ def event(patch, pc, get, R, ns, alt, psite, Sim, st):
     fails = []
     stop = 36859 if pc == 36898 and R[4] != 1 else EXIT[pc]
     incoming_speed = ns.nr[0x07] & 3
+    serial0 = ns.state[V_IRQ_SERIAL - STATE_LO]
     o = _O(get)
     so = _machine(Sim, o, list(R), _NULL, 'o')
     so.registers[24] = pc
     if not _run(so, stop, 400000):
         fails.append('original did not reach its exit')
-    if pc == 40048:
-        ns.state[0xB40F - STATE_LO] = 0
+    # v1.6 pace windows: what the original's displaced work must still cost, from this state's sizes and the carry
+    hs = lambda a: ns.state[a - STATE_LO] | ns.state[a + 1 - STATE_LO] << 8
+    t0 = R[25]
+    want16 = None
+    if pc == BLIT:
+        rows, cols = R[0], R[3]
+        want16 = rows * cols * 3 // 2 + rows * 10
+    elif pc == 36851:
+        ns.attr_t0 = t0
+    elif pc == 36898 and R[4] == 1 and getattr(ns, 'attr_t0', None) is not None:
+        want16 = hs(V_WT0)
+        t0 = ns.attr_t0
+        ns.attr_t0 = None
+    pd0 = hs(V_PD)
+    pd0 = pd0 - 65536 if pd0 >= 32768 else pd0
     p = _P(get, alt, psite, ns)
     sp = _machine(Sim, p, list(R), ns, 'p')
     sp.registers[24] = pc
-    if not _run_safe(sp, stop, ns, fails, 400000):
+    ns.wall = float(R[25])
+    if ns.scaled:
+        if not _run_scaled(sp, stop, ns, 400000):
+            fails.append('hook did not reach its exit')
+    elif not _run_safe(sp, stop, ns, fails, 400000):
         fails.append('hook did not reach its exit')
+    if pc in (BLIT, 36898) and want16 is not None and incoming_speed == 0 and ns.state[V_IRQ_SERIAL - STATE_LO] == serial0:
+        need = (want16 + pd0) * 14                      # T at 3.5 MHz, the model's line clock; the wait polls at whole lines
+        took = (ns.wall if ns.scaled else sp.registers[25]) - t0
+        if need > 672 and took < need - 672:
+            fails.append(('pace window did not wait', pc, need, took))
     dt = sp.registers[25] - R[25]
     st['hook T'] += dt
     if dt > st['most hook T in one event']:
@@ -773,7 +818,7 @@ def digest(R, M, undo=None):
     return h.digest()
 
 
-def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None):
+def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scaled=False):
     """Differential test. Replay 1, the original code: each hook against the original from one state; registers, memory but the screen, sprites against the screen.
     Replay 2, the sites patched in memory (the copy undone, the paints skipped): the game's whole state against replay 1, event by event, and the screen bare."""
     from . import rzx as RZ
@@ -804,6 +849,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None):
                 for k, v in enumerate(new):
                     psite[a + k] = v
         box['ns'] = NextState(patch)
+        box['ns'].scaled = scaled
 
     def rows_of(M):
         return [bytes(M[scr_addr(y):scr_addr(y) + 32]) for y in range(PLAY_LINES)]
@@ -1446,6 +1492,16 @@ def negative_patches(patch):
     out['speed not restored'] = q
     out['R not restored'] = _rom_patch(patch, s['ny_r_out_set'] - ROM_ORG, bytes(2))
     out['interrupts disabled'] = _rom_patch(patch, s['ny_r_run'] - ROM_ORG, b'\xF3')
+    # v1.6 pace windows: the blit's call of win_wait gone, its target computed as zero (win_wait lives in the low 8K)
+    k = at('e_blit', bytes([0x2A, 0x19, 0xB4]))                  # LD HL,(V_WT0)
+    wait = code.index(bytes([0xCD, s['win_wait'] & 255, s['win_wait'] >> 8]), k)
+    out['pace window never waits'] = _rom_patch(patch, wait, bytes(3))
+    q = copy.copy(patch)
+    low = bytearray(patch.low)
+    k = s['blit_tgt'] + 3
+    low[k:k + 2] = bytes.fromhex('1600')        # LD D,A -> LD D,0: rows x columns gone, the target too short
+    q.low = bytes(low)
+    out['pace target too short'] = q
     k = at('update', bytes([0xED, 0x92, 0x19]))
     out['clip window not updated'] = _rom_patch(patch, k, bytes(3))
     k = at('show', bytes([0xED, 0x92, 0x37]), 0)
@@ -1468,9 +1524,29 @@ def negative_real(patch, rzx_path, stop=1500, only=None):
     for name, q in negative_patches(patch).items():
         if only and name not in only:
             continue
-        cc, _ = verify(q, rzx_path, stop=stop)
+        cc, _ = verify(q, rzx_path, stop=stop, scaled=name.startswith('pace'))   # v1.6: a wait shows only on the speed-true clock
         out.append((name, {k: v for k, v in cc.items() if k.endswith('!')}))
     return out
+
+
+def loading_nex(nex, screen):
+    """A built .nex -> the same with the loading screen in the NEX file (header byte 10 = 2), as the published .nxc."""
+    if len(screen) != 6912 or nex[10] != 0:
+        raise ValueError('Expected a .nex without a screen and a 6,912-byte loading screen')
+    head = bytearray(nex[:512])
+    head[10] = 2
+    return bytes(head) + screen + nex[512:]
+
+
+def find_screen(z80):
+    """The tape's loading screen beside the snapshot, or None. A different file there is refused."""
+    path = os.path.join(os.path.dirname(os.path.abspath(z80)), LOAD_SCREEN)
+    if not os.path.isfile(path):
+        return None
+    data = open(path, 'rb').read()
+    if hashlib.md5(data).hexdigest() != LOAD_MD5:
+        raise ValueError('%s is not the original loading screen (MD5 %s)' % (LOAD_SCREEN, LOAD_MD5))
+    return data
 
 
 def auto(a, z80, name, out, say):
@@ -1494,6 +1570,15 @@ def auto(a, z80, name, out, say):
         bd = os.path.join(out, name + suffix + '.nex')
         zt.convert(z80, bd, TAIL_ADDR, True, quiet=True, patch=NodesPatch(z80, colours=cm, pal=pal if cm else None, backdrop=True))
         say('%-10s: %s  %s' % (label, os.path.basename(bd), md5(bd)))
+    screen = find_screen(z80)
+    if screen is None:
+        say('Loading   : no %s beside the snapshot: no builds with the loading screen' % LOAD_SCREEN)
+    else:
+        for suffix in ('_sprites', '_enhanced', '_backdrops', '_enhanced_backdrops'):
+            src = os.path.join(out, name + suffix + '.nex')
+            dst = src[:-4] + '_loading.nex'
+            open(dst, 'wb').write(loading_nex(open(src, 'rb').read(), screen))
+            say('Loading   : %s  %s  (the published .nxc --bare)' % (os.path.basename(dst), md5(dst)))
     ok = True
     states = []
     for r in list(a.rzx or []):
@@ -1514,5 +1599,9 @@ def auto(a, z80, name, out, say):
         miss = [n for n, k in nr if not k]
         ok = ok and not miss
         say('Negative  : %d of %d detected %s' % (len(nr) - len(miss), len(nr), miss))
+        pc_, _ = verify(patch, list(a.rzx)[0], stop=getattr(a, 'quick', None) or 2000, scaled=True)   # v1.6: the windows on a speed-true line clock
+        pf = {k: v for k, v in pc_.items() if k.endswith('!')}
+        ok = ok and not pf
+        say('Pace      : %d frames with a speed-true line clock, %d copies -> %s' % (pc_['frames'], pc_['blit'], 'IDENTICAL' if not pf else 'FAILED %s' % pf))
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return ok
