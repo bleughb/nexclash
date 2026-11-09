@@ -155,6 +155,7 @@ def painting_sheet(source, assets, destination):
         raise ValueError('Painting belongs to a different Movie release')
     s = Z.Z80Snapshot(str(source)); m = list(Z.rom48() + s.banks[5] + s.banks[2] + s.banks[0])
     colours = (assets / 'colours.bin').read_bytes(); palette = (assets / 'palette.bin').read_bytes()
+    cleared = set(layout.get('cleared_pixels', []))
     def rgb(i):
         v = int.from_bytes(palette[2*i:2*i+2], 'little')
         return tuple(round(((v >> shift) & 7) * 255 / 7) for shift in (6, 3, 0))
@@ -164,7 +165,9 @@ def painting_sheet(source, assets, destination):
         px, owners = decode_graphic(m, entry['source'])
         w,h,k = entry['width'],entry['height'],entry['scale']
         tile = Image.new('RGB',(w,h))
-        tile.putdata([rgb(colours[(a-0x7000)*8+b]) if p == 2 else (0,0,0) if p == 1 else (48,52,58)
+        tile.putdata([((0,0,0) if p==1 and (not layout.get('painted_paper') or
+                       colours[(a-0x7000)*8+b]==255 and (a-0x7000)*8+b not in cleared) else
+                       rgb(colours[(a-0x7000)*8+b]) if colours[(a-0x7000)*8+b]!=255 else (48,52,58)) if p else (48,52,58)
                       for row,own in zip(px,owners) for p,(a,b) in zip(row,own)])
         im.paste(tile.resize((w*k,h*k),Image.Resampling.NEAREST),(entry['x'],entry['y']))
         draw.text((entry['x'],entry['y']-18),f"{entry['source']:04X}  {w} x {h}",fill=(230,230,230))
@@ -172,10 +175,10 @@ def painting_sheet(source, assets, destination):
 
 
 def import_painting(source, assets, sheet, out):
-    """Only edited ink pixels propagate to shared animation parts; no blending.
+    """Import flat painted pixels, including paper recolours and grey erasures.
 
-    Reject contradictory edits to a shared pixel, changed silhouettes/black line
-    art, or a cell painted between native pixels. Preserve the input PNG.
+    Preserve the input PNG. Edits propagate across shared animation parts;
+    contradictory edits, expansion into native holes and subpixel paint fail.
     """
     from PIL import Image
     assets, out = Path(assets), Path(out)
@@ -187,34 +190,45 @@ def import_painting(source, assets, sheet, out):
     palette=[int.from_bytes(raw[i:i+2],'little') for i in range(0,512,2)]
     def rgb(v): return tuple(round(((v >> sh)&7)*255/7) for sh in (6,3,0))
     pic=Image.open(sheet).convert('RGB'); edits={}
+    cleared=set(layout.get('cleared_pixels',[]))
     for e in layout['entries']:
         px,owners=decode_graphic(m,e['source']); k=e['scale']
         for y,(row,own) in enumerate(zip(px,owners)):
             for x,(p,(a,b)) in enumerate(zip(row,own)):
                 idx=(a-0x7000)*8+b
-                old=rgb(palette[cache[idx]]) if p==2 else (0,0,0) if p==1 else (48,52,58)
+                old=((0,0,0) if p==1 and (not layout.get('painted_paper') or cache[idx]==255 and idx not in cleared) else
+                     rgb(palette[cache[idx]]) if cache[idx]!=255 else (48,52,58)) if p else (48,52,58)
                 tile=pic.crop((e['x']+x*k,e['y']+y*k,e['x']+(x+1)*k,e['y']+(y+1)*k))
                 values=set(tile.getdata())
                 if values=={old}: continue
-                if p != 2 or len(values)!=1:
+                if not p or len(values)!=1:
                     raise ValueError(f"Edit crosses protected drawing or native pixel at {e['source']:04X}/{x},{y}")
-                c=values.pop(); value=sum(round(v*7/255)<<sh for v,sh in zip(c,(6,3,0)))
-                if value==0 or value>>1==0xE3: raise ValueError('Black line art and transparency are reserved')
+                c=values.pop(); value=None if c==(48,52,58) else sum(round(v*7/255)<<sh for v,sh in zip(c,(6,3,0)))
+                if value is not None and value>>1==0xE3: raise ValueError('Use canvas grey for transparency')
+                mutable=0x9F77<=a<0xA000 or 0xA400<=a<0xA483 or 0xD202<=a<0xD2E2
+                if (mutable and (p==1 or value in (None,0))) or (0xD3F4<=a<0xD404 and p==2 and value in (None,0)):
+                    raise ValueError(f'Cannot erase/repaint native mutable ink/paper at {a:04X}/{b}')
                 if idx in edits and edits[idx]!=value: raise ValueError(f'Conflicting edits to shared pixel {a:04X}/{b}')
                 edits[idx]=value
     used=set(cache)-{255}; lookup={palette[i]:i for i in used}
     free=[i for i in range(1,255) if i not in used]
     for idx,value in sorted(edits.items()):
+        if value is None:
+            cache[idx]=255; cleared.add(idx); continue
+        cleared.discard(idx)
         if value not in lookup:
             if not free: raise ValueError('Movie painting exceeds 254 ink colours')
             i=free.pop(0);palette[i]=value;lookup[value]=i
         cache[idx]=lookup[value]
+    layout['cleared_pixels']=sorted(cleared)
+    layout['painted_paper']=True
     out.mkdir(parents=True,exist_ok=True)
     (out/'colours.bin').write_bytes(cache)
     (out/'palette.bin').write_bytes(b''.join(v.to_bytes(2,'little') for v in palette))
     (out/'painting.json').write_text(json.dumps(layout,indent=2)+'\n')
     painting_sheet(source,out,out/'MOVIE_PAINTING_SPRITES.png')
-    return {'edited_shared_pixels':len(edits),'ink_colours':len(set(cache)-{0,255})}
+    return {'edited_shared_pixels':len(edits),'cleared_shared_pixels':len(cleared),
+            'ink_colours':len(set(cache)-{0,255})}
 
 
 def kernel_trial(memory, descriptor, live=False, shift=0):
@@ -549,7 +563,14 @@ class EnhancedPatch(OriginalPatch):
         private[self.syms['bulk_policy']] = int(dma)
         self.extra_banks[13] = bytes(private)
         self.assets = Path(assets)
-        self.colours = (self.assets / 'colours.bin').read_bytes()
+        colours = bytearray((self.assets / 'colours.bin').read_bytes())
+        layout = json.loads((self.assets / 'painting.json').read_text())
+        cleared = set(layout.get('cleared_pixels', []))
+        # These fixed bitmap bytes have several runtime masks. A cached FF from
+        # another mask is native paper, unless the painter explicitly erased it.
+        for i in range((0xD3F4-0x7000)*8, (0xD404-0x7000)*8):
+            if colours[i]==255 and i not in cleared: colours[i]=0
+        self.colours = bytes(colours)
         private[0x1E00:0x1F00] = speech_cache_bits(self.colours)
         self.extra_banks[13] = bytes(private)
         palette = (self.assets / 'palette.bin').read_bytes()
@@ -843,6 +864,35 @@ def check(recording, out, stop):
     print(json.dumps(result))
 
 
+def chunk_descriptor(pc, r, m):
+    """Decode the original blitter registers independently of the patched helper."""
+    main_hl, alt_hl = r[6] * 256 + r[7], r[22] * 256 + r[23]
+    main_bc = r[2] * 256 + r[3]
+    if pc in (0xF567, 0xF582):
+        mirror = pc == 0xF582
+        d = dict(bitmap=main_hl if mirror else alt_hl, mask=alt_hl if mirror else main_hl,
+                 width=r[19], height=r[2], destination=r[21], phase=0, mirror=mirror,
+                 source_stride=((r[12] + (-r[19] if mirror else r[19])) & 65535),
+                 destination_stride=r[19] + r[3])
+    elif pc in (0xF5A0, 0xF5E6):
+        mirror = pc == 0xF5E6
+        width = r[3] if mirror else r[19]
+        skip = word(m, 0xF618 if mirror else 0xF5D2)
+        d = dict(bitmap=main_hl if mirror else main_bc, mask=alt_hl,
+                 width=width, height=r[0], destination=r[12] & 255,
+                 phase=m[0xF409], mirror=mirror,
+                 source_stride=(skip + (-width if mirror else width)) & 65535,
+                 destination_stride=width + word(m, 0xF61C if mirror else 0xF5D8))
+    else:
+        mirror = pc in (0xF3C0, 0xF3D9)
+        width = 1 if pc in (0xF3AF, 0xF3D9) else 2
+        d = dict(bitmap=r[12] + (1 if width == 1 or mirror else 0), mask=None,
+                 width=width, height=r[18] if pc == 0xF3C0 else r[2],
+                 destination=main_hl & 255, phase=0, mirror=mirror, source_stride=2,
+                 destination_stride=width + (r[19] if pc == 0xF3C0 else r[3]))
+    return d
+
+
 def backend_check(recording, out, stop):
     from nexclash.movie import REVERSE
     starts = {0xF567, 0xF582, 0xF5A0, 0xF5E6, 0xF39D, 0xF3AF, 0xF3C0, 0xF3D9}
@@ -866,32 +916,8 @@ def backend_check(recording, out, stop):
                         examples.append({'pc': f'{start:04x}', 'descriptor': d,
                           'diff': [(i, prediction[i], actual[i]) for i in range(256) if prediction[i] != actual[i]][:10]})
             return
-        main_hl, alt_hl = r[6] * 256 + r[7], r[22] * 256 + r[23]
-        if pending:
-            return
-        main_bc = r[2] * 256 + r[3]
-        if pc in (0xF567, 0xF582):
-            mirror = pc == 0xF582
-            d = dict(bitmap=main_hl if mirror else alt_hl, mask=alt_hl if mirror else main_hl,
-                     width=r[19], height=r[2], destination=r[21], phase=0, mirror=mirror,
-                     source_stride=((r[12] + (-r[19] if mirror else r[19])) & 65535),
-                     destination_stride=r[19] + r[3])
-        elif pc in (0xF5A0, 0xF5E6):
-            mirror = pc == 0xF5E6
-            width = r[3] if mirror else r[19]
-            skip = word(m, 0xF618 if mirror else 0xF5D2)
-            d = dict(bitmap=main_hl if mirror else main_bc, mask=alt_hl,
-                     width=width, height=r[0], destination=r[12] & 255,
-                     phase=m[0xF409], mirror=mirror,
-                     source_stride=(skip + (-width if mirror else width)) & 65535,
-                     destination_stride=width + word(m, 0xF61C if mirror else 0xF5D8))
-        else:
-            mirror = pc in (0xF3C0, 0xF3D9)
-            width = 1 if pc in (0xF3AF, 0xF3D9) else 2
-            d = dict(bitmap=r[12] + (1 if width == 1 or mirror else 0), mask=None,
-                     width=width, height=r[18] if pc == 0xF3C0 else r[2],
-                     destination=main_hl & 255, phase=0, mirror=mirror, source_stride=2,
-                     destination_stride=width + (r[19] if pc == 0xF3C0 else r[3]))
+        if pending: return
+        d = chunk_descriptor(pc, r, m)
         descriptors.setdefault(f'{pc:04x}', dict(descriptor=d, registers=list(r)))
         prediction = list(m[0x9500:0x9600])
         for y in range(d['height']):
@@ -995,6 +1021,32 @@ def verify_renderer(recording, assets, out=None, stop=None, patch=None, collect=
     state, pending, counts, failures, last_plot = [], [], Counter(), [], []
     states, collecting, seen, collected_keys = [], [], Counter(), set()
     hook_pcs = {pc for pc, _, _ in patch.entries}
+    chunk_pcs = {pc for _, _, _, pc in CHUNKS}
+    oracle_scratch, oracle_screen = [], [255] * 49152
+    oracle_colours = bytearray(patch.colours)
+    cleared = set(json.loads((Path(assets)/'painting.json').read_text()).get('cleared_pixels', []))
+    def painted_chunk(pc, r, m):
+        d = chunk_descriptor(pc, r, m)
+        for y in range(d['height']):
+            for col in range(d['width']):
+                delta = (y*d['source_stride'] + (-col if d['mirror'] else col)) & 65535
+                address = (d['bitmap']+delta) & 65535
+                bits = m[address]
+                mask = m[(d['mask']+delta)&65535] if d['mask'] is not None else 0
+                mask = REVERSE[mask]
+                mutable = 0x9F77 <= address < 0xA000 or 0xA400 <= address < 0xA483
+                for bit in range(8):
+                    source_bit = 7-bit if d['mirror'] else bit
+                    one = 128 >> source_bit
+                    ink = bool(bits & one)
+                    if not ink and mask & one: continue
+                    i = (address-0x7000)*8+source_bit
+                    if i in cleared: continue
+                    value = oracle_colours[i]
+                    if ink and value in (0,255) and (mutable or 0xD3F4<=address<0xD404): value = 1
+                    elif not ink and (mutable or value==255): value = 0
+                    target = ((d['destination']+y*d['destination_stride']+col)*8+d['phase']+bit)&2047
+                    oracle_scratch[target] = value
     replaced = set()
     def refresh(mem, m):
         mem.data[0x4000:] = m[0x4000:]
@@ -1016,6 +1068,22 @@ def verify_renderer(recording, assets, out=None, stop=None, patch=None, collect=
     def hit(pc, original):
         r, m = original.registers, original.memory
         if failures: return
+        if pc in chunk_pcs:
+            if oracle_scratch: painted_chunk(pc, r, m)
+            return
+        if pc == 0xF718:
+            # Observe the original LDDR's actual source/destination, rather than
+            # repeating the enhanced copier's rectangle arithmetic.
+            src, dst, size = r[6]*256+r[7], r[4]*256+r[5], r[2]*256+r[3]
+            if oracle_scratch:
+                for n in range(size):
+                    a = dst-n
+                    if not 0x4000 <= a < 0x5800: raise AssertionError(('ULA copy',a))
+                    y = ((a&0x1800)>>5)|((a&0x700)>>8)|((a&0xE0)>>2)
+                    at = y*256+(a&31)*8
+                    b = ((src-n)&255)*8
+                    oracle_screen[at:at+8] = oracle_scratch[b:b+8]
+            return
         if pc in (0xF526, 0xF737, 0xF1B4, 0x727D, 0xFFAD):
             if not pending: return
             mem, sim = state[0]
@@ -1029,8 +1097,13 @@ def verify_renderer(recording, assets, out=None, stop=None, patch=None, collect=
             for i in replaced: actual[i-0x4000]=m[i]
             diff = [] if wanted == actual else [i for i in range(0x4000,65536) if i not in replaced and m[i] != mem[i]]
             if diff: bad.append(('RAM', len(diff), diff[:8]))
-            diff = [i for i in range((m[0xF70D] + 1) * 8) if ((m[0x9500 + i // 8] >> (7 - i % 8)) & 1) != int(mem.private[i] not in (0, 255))] if pc == 0xF526 else []
-            if diff: bad.append(('scratch pixels', len(diff), diff[:8]))
+            if pc==0xF1B4:
+                size=((m[0xF70D]>>1)+1)*16
+                oracle_scratch[:size]=[255]*size
+            elif pc==0xFFAD:
+                oracle_screen[:]=[255]*49152
+            diff = [i for i in range((m[0xF70D]+1)*8) if oracle_scratch[i]!=mem.private[i]] if pc==0xF526 else []
+            if diff: bad.append(('scratch pixels', len(diff), [(i,oracle_scratch[i],mem.private[i]) for i in diff[:8]]))
             if bad:
                 failures.append((counts['plots'], bad))
                 if last_plot and out is not None:
@@ -1046,7 +1119,7 @@ def verify_renderer(recording, assets, out=None, stop=None, patch=None, collect=
                 page = mem.pages[28 + y // 32]; offset = (y & 31) * 256
                 for x in range(256):
                     value = page[offset + x]
-                    if value != 255 and int(value != 0) != ((m[base + x // 8] >> (7 - x % 8)) & 1):
+                    if value != oracle_screen[y*256+x]:
                         diff.append((x, y, value))
             if diff:
                 failures.append(('screen', counts['commit'], len(diff), diff[:8]))
@@ -1058,11 +1131,19 @@ def verify_renderer(recording, assets, out=None, stop=None, patch=None, collect=
         if not state:
             mem = DrawingMemory(list(m), patch.colours, hooks=patch.hooks)
             mem.private[:2048] = [(m[0x9500+i//8] >> (7-i%8)) & 1 for i in range(2048)]
+            oracle_scratch[:] = mem.private[:2048]
+            oracle_colours[:] = initial_speech(patch.colours, list(m))
             mem.private[patch.syms['bulk_policy']] = int(patch.dma_enabled)
             sim = simpool.machine(_rw_simulator(), mem, slot='movie-renderer')
             sim.low_writes = True; sim.set_tracer(mem); z80n.install(sim, mem.nextreg)
             state.append((mem, sim))
         mem, sim = state[0]
+        if pc == 0x7279:
+            hl=r[6]*256+r[7]
+            for a in (hl-1,hl):
+                for b in range(8):
+                    bit=128>>b
+                    oracle_colours[(a-0x7000)*8+b] = 1 if m[a]&bit else 255 if REVERSE[m[a+224]]&bit else 0
         if pc == 0xF29B: last_plot[:] = [(bytes(m),list(r))]
         refresh(mem, list(m)); sim.registers[:] = list(r)
         unit_key = (pc, word(m, r[2]*256+r[3])) if pc == 0xF29B else (pc,)
@@ -1085,7 +1166,7 @@ def verify_renderer(recording, assets, out=None, stop=None, patch=None, collect=
             if steps > 1000000: raise RuntimeError(('Plot hook did not return', hex(here), counts))
         pending.append(1)
         if mem.nr != {7: 0, 0x50: 255, 0x52: 10}: failures.append(('NextREG', mem.nr))
-    frames, error = rzx.trace(str(recording), {0xF18A, 0xF1B4, 0xF700, 0xF737, 0xF29B, 0xF526, 0x7279, 0x727D,0xFFA6,0xFFAD}, hit, stop=stop)
+    frames, error = rzx.trace(str(recording), {0xF18A, 0xF1B4, 0xF700, 0xF737, 0xF29B, 0xF526, 0x7279, 0x727D,0xFFA6,0xFFAD,0xF718} | chunk_pcs, hit, stop=stop)
     result = dict(frames=frames, error=error, counts=dict(counts), failures=failures)
     if out is not None:
         (out / 'renderer-check.json').write_text(json.dumps(result, indent=2) + '\n')

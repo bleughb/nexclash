@@ -1267,7 +1267,16 @@ fast_destination_delta: dw 0
 .paper:
         rlc c
         jr c,.advance
+        ld a,(live)
+        cp 2
+        jr nz,.black
+        ld a,(hl)
+        cp 255
+        jr z,.advance
+        jr .paper_colour
+.black:
         xor a
+.paper_colour:
         ld (de),a
 .advance:
         IF backwards

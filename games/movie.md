@@ -2,7 +2,10 @@
 
 ## Next session
 
-Stage 3: verified and stamped; release package and artwork ready for review. Branch `game/movie-release`.
+Stage 2 colour round: Jon's native sprite edits imported on `game/movie-painting-edits`.
+The earlier stamped package remains on `game/movie-release`; its proof does not cover this round.
+Review build and checks: private runs/movie/out/review-sprite-edit-20261109. Before packaging,
+run full verification/stamping and all disposable-loader cases with art/noir-v3-jon.
 Inputs and hashes: `docs/records/movie.json`. Supply external colours.bin, palette.bin, painting.json
 and movie-loading.scr beside movie.z80; alternatively set NEXCLASH_MOVIE_ART to the painting folder.
 No game assets enter this repo. Jon approved 1930s noir colours and overnight implementation.
@@ -19,10 +22,12 @@ Full hidden ROM: bank 47; mapped Sinclair lower/upper pages 27/24 preserve the n
 
 Default retains original monochrome, not advertised as a clash fix. Optional Enhanced is off
 by default: charcoal/navy/brown clothes, cream shirts, warm skin, muted walls, wood, burgundy/brass.
-Original masks, silhouette, black line art, clipping and depth order remain; no added white outlines.
+Original clipping and depth order remain; no added white outlines. Jon's November 9 edits trim
+black edge pixels and repaint some paper pixels; these intentional Enhanced changes are recorded.
 The approved concept was not used as pixel data. Editable sheet: 193 native graphics. Imports
-use flat native pixels, reject changed silhouettes or contradictory shared-part edits, and
-propagate shared pixels across animation references without blending.
+use flat native pixels, reject expansion into native holes or contradictory shared-part edits,
+and propagate shared pixels across animation references without blending. Canvas grey erases an
+existing painted pixel. Mutable door/text data retains native opacity; unsupported edits fail.
 
 ## Engine
 
@@ -49,6 +54,19 @@ for these transparent segmented copies; old/new core and hardware-IM2 fallback c
 Model DMA time is not a hardware measurement.
 
 ## Evidence
+
+Current review: 2,229 distinct edited pixels (126 erased), represented across 92 graphics.
+4,754 overlapping replay frames / 11,193 plots pass exact native registers/R/RAM and painted
+scratch/screen comparisons. The independent oracle reads original blitter registers and native
+LDDR destinations; intentional repainting is not tested with a one-bit ink comparison.
+688 speed/IFF and 16 DMA/fallback cases pass. Position, transparency, R, speed and forcing the
+trimmed shared edges back to black are caught. Five build modes pass normal/NEXLOAD boot checks.
+Previous-art shared-body regression: 1,000 frames / 2,586 plots, no mismatch.
+Current JNext pace: 12 windows, -1.582% to +1.728%; all 1,208 player x/y/R samples match.
+Busy scene is +0.338% to +0.534%. Speaker values match, all at 3.5 MHz; spans vary with raster phase.
+In-game before/after pictures were inspected. Full replay stamp and real-loader rerun remain due.
+
+Earlier release evidence (before this colour round):
 
 Native proof: reference 55,354 frames / 131,198 plots; archive-source start 5,564 / 11,498;
 reset cut 554 / 930. All registers including R, game RAM outside checked patch sites, scratch
@@ -88,6 +106,8 @@ verify installed bytes after room entry, run play, and separately exercise all t
 
 ## Lessons
 
+- [tool nexclash/movie.py] Painted paper/erasures need exact colour composition from native chunk and copy parameters; binary ink equivalence would reject valid artwork.
+- [local: shared walking masks] D3F4..D403 have fixed bitmap bytes but variable masks. Record intentional erasures separately from cached transparency belonging to another mask.
 - [local: snapshot boundary] A mid-blit snapshot with SP as a graphics pointer requires a bounded native prelude.
 - [local: reset coverage] Dirty rectangles miss the full-screen erase; the late replay reset exposed stale Layer 2 pixels.
 - [local: mutable graphics] A shared opacity mask crosses D3FF; a page-boundary cutoff loses D401/D403 pixels.
@@ -110,7 +130,7 @@ verify installed bytes after room entry, run play, and separately exercise all t
 ## Friction
 
 - reuse: [none: existing intake tools suffice] Composition needs a game-specific native oracle.
-- retries: [local: coverage] Long replay exposed mutable mask and reset paths absent in short opening checks.
+- retries: [local: painting oracle] Speech-cache changes must feed the independent colour oracle; stale source colours gave false mismatches. Native-sheet tests reconstruct a private baseline after the user edits.
 - environment: [local: firmware fixture] Verify copied ROM hash; an older private card was not the intended 26.11 system.
 - hand-rolled: [local: colour renderer] Companion pixels preserve this game's native depth masks.
 - scratch: [local: evidence scope] Movie-only loader/sound/trainer/pace scripts stay in private evidence; no game data enters the contribution.
@@ -122,6 +142,11 @@ reset, sound and DMA fallback on a 1MB Next. CSpect also remains untested. Raste
 a copy is not proven by return-boundary pixel checks.
 
 ## Stage log
+
+2026-11-09 colour round: refreshed main from cc60245 to 8265011, resolved the generated status
+view, preserved the prior release branch/package. Imported native sprite edits, taught shared
+paper pixels to respect erasures, checked exact painted composition, ABI, negatives and pace.
+Review build only; prior full stamp remains historical until the new release gate runs.
 
 2026-11-09: source intake, independent oracle, colour renderer, mutable-text/reset fixes, full
 semantic replay, negative controls, JNext pace/sound and private-loader trials. Source refresh

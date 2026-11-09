@@ -36,20 +36,20 @@
    },
    {
     "name": "colours.bin",
-    "md5": "b35360f75d258143cfc9607ebb8faf7f",
-    "path": "art/noir-v2/colours.bin",
+    "md5": "068df36dab144c31de02729d6d3f972a",
+    "path": "art/noir-v3-jon/colours.bin",
     "role": "External painting input; not a recording."
    },
    {
     "name": "palette.bin",
     "md5": "b5e37e1898c3488ad6c93c08496fa0e3",
-    "path": "art/noir-v2/palette.bin",
+    "path": "art/noir-v3-jon/palette.bin",
     "role": "External painting input; not a recording."
    },
    {
     "name": "painting.json",
-    "md5": "1194b6a77314f57910434b03f2a5a2fd",
-    "path": "art/noir-v2/painting.json",
+    "md5": "b91acd21fe759c4c20d3a141560b2fc1",
+    "path": "art/noir-v3-jon/painting.json",
     "role": "External painting input; not a recording."
    }
   ]
@@ -88,7 +88,7 @@
   ],
   "auto_record": false,
   "minutes": 20,
-  "note": "Native registers/R, all game RAM, scratch and Layer 2; 472 ABI cases, 20 DMA/fallback; four negatives per recording. Exact boot and normalized ROM audit. Reference ends at 16%, not completion."
+  "note": "Compare native registers/R/RAM exactly; painted scratch and screen against independent original chunk/commit oracle. Full verify/stamp and loader rerun required for edited art; prior proof is historical."
  },
  "outputs": {
   "plain": {
@@ -97,19 +97,19 @@
   },
   "sprites": {
    "file": "movie_sprites.nex",
-   "md5": "2730d62f8eb0e773e38257249ca0e883"
+   "md5": "3358bd9b64cbac42ec536773d7731457"
   },
   "enhanced": {
    "file": "movie_enhanced.nex",
-   "md5": "60e35f942a686ed4e0324801fc85e0eb"
+   "md5": "0ac783f2ea6c21a264d96c09cf50b7dd"
   },
   "loading": {
    "file": "movie_sprites_loading.nex",
-   "md5": "5056c7519eb0e9861a60aab772090eaa"
+   "md5": "3750b232d244fcb72b601228539f3beb"
   },
   "enhanced_loading": {
    "file": "movie_enhanced_loading.nex",
-   "md5": "62acb19c46242bcef9411a8f5f7b5464"
+   "md5": "8442e236da9ef7e1ec471f65e21c200f"
   }
  },
  "repro": [],
@@ -117,9 +117,9 @@
   "title": "Movie",
   "engine_col": "movie (movie.md)",
   "build": "Original monochrome default, optional painted noir Layer 2; loading screen, 1MB, complete hidden ROM.",
-  "software": "Verified selftest stamp: 143,626 native plots; full ROM audit, ABI and negatives pass. JNext pace within 2%; private-loader reconstruction exact.",
+  "software": "Painted-edit review: 4,754 replay frames, 11,193 plots; 688 ABI, 16 DMA/fallback, five negatives; exact boot, 12 JNext pace windows within 2%. Full release stamp and real-loader rerun due.",
   "hardware": "none (JNext only)",
-  "next": "Review final artwork and package; physical hardware remains untested."
+  "next": "Review Jon\u2019s imported native sprites; rerun full proof and disposable loader before replacing the prior package."
  },
  "checks": [
   "asm2profile:movie"
