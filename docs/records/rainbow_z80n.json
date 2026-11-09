@@ -71,11 +71,11 @@
   },
   "sprites": {
    "file": "rainbow_z80n_sprites.nex",
-   "md5": "76d5da1acc29c86bf1cd3676577538dc"
+   "md5": "e8ea8b0b1372671c6d40a5e865c15f3e"
   },
   "diagnostic": {
    "file": "rainbow_z80n_sprites_diag.nex",
-   "md5": "4482096ee56a4c686dd07b2cf997ab95"
+   "md5": "997ffc529c33f8f7fe872df22c04b22d"
   }
  },
  "repro": [],
@@ -202,11 +202,11 @@
     },
     "sprites": {
      "file": "rainbow_z80n_sprites.nex",
-     "md5": "33639cabd1e265a5db75c35097c09170"
+     "md5": "e66297fcaf5f22c919ddc52e69510051"
     },
     "diagnostic": {
      "file": "rainbow_z80n_sprites_diag.nex",
-     "md5": "efa6e588e7d72a58355c3c48784731df"
+     "md5": "5acf25256c7f75672e01cb9ea348213a"
     }
    },
    "proof": "the 13 LeeBee round cuts (islands 1-7 and the ending) and Dean's two recordings IDENTICAL with palette entry 17 = the model at every game frame start, unit tests and the diagnostic build on rainbownew, 7 sky palette negatives",
@@ -216,8 +216,8 @@
  "status": {
   "title": "Rainbow Islands (128K, Z80N)",
   "engine_col": "rainbow_z80n (rainbow_z80n.md)",
-  "build": "rainbow_z80n_sprites.nex 69369c89 (bda21ab6 + overrun recovery: interrupts a long game frame misses are credited to the limiter) + rainbow_z80n_sprites_diag.nex 24e547de + opt-in rework sky (`NEXCLASH_REWORK=rainbow_z80n_sky`; sky fix, published .nxc v1.0): sprites d7b2345c",
-  "software": "RZX IDENTICAL x2 (rainbow 7178 frames, rainbownew 11799) + diagnostic IDENTICAL, unit PASS (recovery 9 cases + control; Z80N as-NOP controls); every simulated overrun frame credited as the beam model",
+  "build": "rainbow_z80n_sprites.nex e8ea8b0b (2026-11-08: the cell hooks at 28 MHz and the game's cell code at 7 MHz outside a game frame, the redraw after a life is lost at the original's time; was 76d5da1a) + rainbow_z80n_sprites_diag.nex 997ffc52 + opt-in rework sky (`NEXCLASH_REWORK=rainbow_z80n_sky`; sky fix, published .nxc): sprites e66297fc",
+  "software": "RZX IDENTICAL x2 (rainbow 7178 frames, rainbownew 11799) + diagnostic IDENTICAL, unit PASS (recovery 9 cases + control; Z80N as-NOP controls); every simulated overrun frame credited as the beam model; JNext pace of the sky build in lockstep, 4 seeds: quiet +0.00, slowest stretch +0.0, redraw after a lost life 1,155 ms -> 1,155 or 1,135 ms (was 2,471)",
   "hardware": "bda21ab6 works but slows down in busy scenes (user, 2026-10-31); 69369c89 untested",
   "next": "hardware test of 69369c89 (rainbow_z80n.md checklist); everything open in rainbow_islands.md; speed ideas in rainbow_z80n.md"
  },
@@ -228,59 +228,59 @@
  "excluded": "as rainbow (Dean 2026-10-13): too slow for the automatic checks (~50 min verify); run it explicitly with selftest.py --game rainbow_z80n [--verify]",
  "checked": {
   "deps": {
-   "asm/rainbow_z80n_hooks.asm": "be382fcc4d6b1243",
+   "asm/rainbow_z80n_hooks.asm": "6e87b3b27e7d62f1",
    "asm/rainbow_z80n_sky_ldscr.asm": "64297fd37bb19d62",
-   "docs/profiles/rainbow_z80n.json": "d972a279f4966e23",
+   "docs/profiles/rainbow_z80n.json": "b22ab6b00f987071",
    "docs/profiles/rainbow_z80n_sky.json": "0877b0dada51c97f",
-   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/nextboot.py": "e57136059969ba67",
-   "nexclash/rainbow_z80n.py": "2ec50c9485a72c80",
-   "nexclash/rainbow_z80n_sky.py": "b58cf03589f36650",
+   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/rainbow_z80n.py": "9ac48a717ebb0154",
+   "nexclash/rainbow_z80n_sky.py": "54bcba773d5f0532",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "273dab19dfcd9e27",
-   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "788df8dcf60b016e",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "50a5d62a37eacf7c",
+   "rom": "e50ee485fb4a21d2"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-08"
  },
  "verified": {
   "deps": {
-   "asm/rainbow_z80n_hooks.asm": "be382fcc4d6b1243",
+   "asm/rainbow_z80n_hooks.asm": "6e87b3b27e7d62f1",
    "asm/rainbow_z80n_sky_ldscr.asm": "64297fd37bb19d62",
-   "docs/profiles/rainbow_z80n.json": "d972a279f4966e23",
+   "docs/profiles/rainbow_z80n.json": "b22ab6b00f987071",
    "docs/profiles/rainbow_z80n_sky.json": "0877b0dada51c97f",
-   "nexclash.py": "b7f49876a97b1f48",
+   "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "28f3c5d8b1333ba6",
-   "nexclash/nextboot.py": "e57136059969ba67",
-   "nexclash/rainbow_z80n.py": "2ec50c9485a72c80",
-   "nexclash/rainbow_z80n_sky.py": "b58cf03589f36650",
+   "nexclash/engines.py": "f744adab50edebd8",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/rainbow_z80n.py": "9ac48a717ebb0154",
+   "nexclash/rainbow_z80n_sky.py": "54bcba773d5f0532",
    "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "273dab19dfcd9e27",
-   "nexclash/rzx.py": "fda23afec57aec5e",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "9c4802548f78f40b",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "621a37b897680c01",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "788df8dcf60b016e",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "50a5d62a37eacf7c",
+   "rom": "e50ee485fb4a21d2"
   },
-  "date": "2026-11-05"
+  "date": "2026-11-08"
  },
  "experimental_reworks": [
   {

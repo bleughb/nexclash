@@ -210,7 +210,12 @@ pin rom3) are untouched and stay the default.
 - The simulated timing statistics (long frames, tsmax) with NEXTREG counted: compare with the
   deprecated engine's on the same recording.
 
+## Pace (2026-11-08)
+The redraw after a lost life took 124 frames against the original's 58; now 57 to 58. Cell hooks at 28 MHz, the game's cell code at 7 MHz, outside a game frame. Details: games/rainbow_z80n_pace.md.
+
 ## Lessons
+- [local: this engine] The audit's "run the cell hooks at 28 MHz" cut 124 frames to 94, not to the original's 58: a hook called 5,500 times spends most of its time getting there. The PC sample by NR 7 said so straight away.
+- [local: this engine] Mixing speeds by count is chaotic when the speed also carries past the loop: tune with something uniform per call (RD_DLY).
 - [tool nexclash/rainbow_dma.py] Experimental DMA uses the sky variant and checks the baseline MD5;
   original pinned outputs and prior verification stamps are retained. New replay scope is separate.
 - [doc LEARNINGS 2.1f] A turbo limiter running the game frame with interrupts off loses the
@@ -255,6 +260,8 @@ pin rom3) are untouched and stay the default.
 - scratch: [none: import scripts stayed in the session scratchpad]
 
 ## Technique use
+- patch.restore-speed: helped: HLIB_SPEED_IN_ABC in cin, with the caller's faster speed kept in cout (2026-11-08).
+- verify.update-locked-pace: helped: the audit's method and plain arms used as they stood; lab.py sample found the rest.
 - patch.runtime-colour-map: helped (override nibble rule, controls list); adapted: tables at the miss
   path instead of the upload, keys follow an in-place shift.
 - patch.isr-deferral: no help: about re-entrancy of a game ISR under hook time, not about pacing
