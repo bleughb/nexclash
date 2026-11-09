@@ -1,10 +1,11 @@
 # Comando Quatro (Zigurat / GameSoft, 1989, 48K, Spanish)
 
 ## Next session
-Stage: 4 (owner's play). Hardware: untested. v1.0 review build, not published, not pushed; not wired into `auto`, `engines.py` or a record: that comes when it goes upstream after the owner has played it.
-Inputs: `Comando Quatro (1989)(Zigurat)(ES).z80`, MD5 47ff99afedc9f0af0030b63d1fa4d098. The loading screen is the 6,912-byte block of the plain `.tap` from the same folder.
-Build: `comando_quatro.build(z80, nex)`, then the review run's `work/pkg.py`.
-Pending: the owner's play. No Enhanced source exists: the potential is rated, nothing more.
+Stage: 4 (hardware). Hardware: untested. v1.0 published as .nxc 1.0 (2026-11-08, nxc repo 05d3127) at the owner's request, not yet played by him. The clash fix is on by default.
+Inputs: `Comando Quatro (1989)(Zigurat)(ES).z80`, MD5 47ff99afedc9f0af0030b63d1fa4d098; beside it, staged by the record, never in this repo: `comando_quatro_loading.scr` (the plain `.tap`'s 6,912-byte screen block, MD5 d5f1b3bd).
+Build: `nexclash.py auto` writes `NAME_sprites.nex` (ffcd877f) and, with the screen, `NAME_sprites_loading.nex` (66563d3e), equal to `nxc.py PATCH GAME --bare` of the published patch byte for byte; each boot-checked with and without NEXLOAD. Without the screen it says so and builds the first only.
+Checks: `selftest.py --game comando_quatro --verify`: replay of a1, a2 (to frame 22,000) and a3 with R, Layer 2 against the model and the bitmap, attributes against the clean copy, ABI cases and 12 broken builds on a1's first 5,000 frames. Pace, soak, flicker, beam audit and real loader are in Evidence, not in the repo.
+Pending: the owner's play; hardware checklist (Kempston at 0x1F on a real Next); Enhanced (no source, rated MODERATE).
 
 ## Facts
 - A 48K beeper game; interrupts off throughout play, title and its tune only under IM 2. The game reads R three times (A34A, A44C, A46F) for chance.
@@ -26,7 +27,7 @@ The start-up tail goes at B950, in variables written before they are read. Not t
 - The original's update rate (about 10 a second) stays.
 
 ## Evidence (review run runs/comando_quatro/release-20261108, JNext 1.1.104; emulator and simulator only)
-Replay of three scripted recordings with R compared at every hook, the ABI cases, deliberate negatives, pace, soak, flicker, beam audit and the real loader: in that run's NOTES.md.
+Upstream (2026-11-09): `selftest.py --game comando_quatro --verify --stamp` on main's tree, results in the record's status. Replay of three scripted recordings with R compared at every hook, the ABI cases, deliberate negatives, pace, soak, flicker, beam audit and the real loader: in that run's NOTES.md.
 
 ## Hardware checklist
 Nothing has run on a Next. To check: title and tune, keyboard and Kempston (the operand now 0x1F), beeper in play, a wipe between rooms, a death, game over back to the menu, both cheats, the C key, a 1MB Next (top bank 47).
@@ -42,9 +43,10 @@ Nothing has run on a Next. To check: title and tune, keyboard and Kempston (the 
 ## Lessons
 - [local: input in a game with many key reads] This game reads the keys at a dozen places through each update, not one. Input applied just after one read still raced the frame boundary in the next read; applying it just before the render gives every arm over a frame before the next read, and lockstep held for 800 updates.
 - [local: the tail's memory] An untouched span in a 2,500-frame scan is not free memory: game data at 5B10 is first read later. Write-first variables, confirmed over longer recordings, are the place. The sign was a lockstep difference in a build that passed every hook comparison.
-- [local: reads the survey did not see] The survey's LD A,R list came from code that ran; a scan of the snapshot found a third read. A pace fixture has to cover all of them.
+- [local: reads the first pass did not see] The first LD A,R list came from code that ran; a scan of the whole snapshot found a third read. A pace fixture has to cover all of them.
 - [local: flicker] Writing clean attributes after the game's copy looked safe with the beam wait, but memory at a frame boundary and the unsynchronised wipe copies showed painted cells. Never putting them on the screen is simpler than timing round them.
 - [local: hook temporaries] `hlib_debt_open` loses HL: a hook that needs the game's HL takes it from its saved copy.
+- [local: upstream naming] The default is a hook build, so auto names it NAME_sprites.nex and the loading variant NAME_sprites_loading.nex, which nxcout packages as the default.
 
 ## Friction
 - reuse: [none: Game Over's hook structure and the shared libraries were enough]
@@ -54,4 +56,6 @@ Nothing has run on a Next. To check: title and tune, keyboard and Kempston (the 
 - scratch: [local: review run] Its work folder stays in private evidence.
 
 ## Stage log
+- 2026-11-09 Upstream: `auto`, registration and record added; the engine bytes are the published ones, MD5 66563d3e (with the screen). The Kempston operand change (0xDF to 0x1F at B253) goes with it.
+- 2026-11-08 Published: .nxc 1.0 (nxc 05d3127) at the owner's request, not yet played by him.
 - 2026-11-08 Stage 3: engine, proofs, review build; waiting for the owner's play.

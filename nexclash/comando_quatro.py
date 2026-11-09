@@ -29,7 +29,7 @@ DECISIONS = {'figures': 'original bitmap on the ULA; figure ink in the colour th
              'scenery': 'keeps its own attributes', 'pace': 'original; hlib_pace K windows', 'outline': 'none',
              'enhanced': 'no source exists: potential rated only'}
 PUBLISHER = 'Zigurat / GameSoft, 1989'
-NEG_STOP = 1500
+NEG_RECORDING, NEG_STOP = 'a1.rzx', 5000   # the broken builds and the ABI cases: this recording (else the first), these frames
 
 
 def _profile_path():
@@ -475,3 +475,149 @@ def negative_patches(patch):
 def run_negative(b, rzx, stop):
     c, ex = verify(b, rzx, stop=stop)
     return {k: v for k, v in c.items() if k.endswith('!')}
+
+
+# ---- nexclash.py auto: the published builds, boot-checked; with recordings the replay proof ---------------------------
+import hashlib
+
+LOAD_SCREEN = 'comando_quatro_loading.scr'   # the plain .tap's 6,912-byte screen block, beside the snapshot: game data, never in this repo
+LOAD_MD5 = 'd5f1b3bd3e27d3920f8d253883fc6b26'
+STOPS = {'a2.rzx': 22000}                 # frames replayed where the review run stopped short of a recording's end
+# Each tested in the simulator, 3 seeds x 12,000 frames (games/comando_quatro.md "Cheats"); the archive's two, as they are.
+TRAINERS = '''NInfinite Energy
+Z 8 51483 201 0
+NInfinite Time
+Z 8 50693 0 0
+Y
+'''
+
+
+def loading_nex(nex, screen):
+    """A built .nex -> the same with the loading screen in the NEX file (header byte 10 = 2), as the published .nxc."""
+    if len(screen) != 6912 or nex[10] != 0:
+        raise ValueError('Expected a .nex without a screen and a 6,912-byte loading screen')
+    head = bytearray(nex[:512])
+    head[10] = 2
+    return bytes(head) + screen + nex[512:]
+
+
+def _beside(z80, file, md5, what):
+    """A private input beside the snapshot -> its path, or None. A different file there is refused."""
+    path = Path(z80).resolve().parent / file
+    if not path.is_file():
+        return None
+    if hashlib.md5(path.read_bytes()).hexdigest() != md5:
+        raise ValueError('%s is not %s (MD5 %s)' % (file, what, md5))
+    return path
+
+
+def boot_check(nex, z80, patch):
+    """Booted with and without NEXLOAD's printer buffer: every register with R and all 48K RAM against the patched
+    snapshot, except the start-up tail's own bytes (and the printer buffer NEXLOAD overwrites). -> problems."""
+    from . import nextboot
+    s = zt.Z80Snapshot(str(z80))
+    patch.apply(s)
+    size = len(zt.build_tail(s, 0x8000, patch.slot1, True)[0])
+    tail = patch.tail_addr
+    want = {0: s.a, 1: s.f, 2: s.bc >> 8, 3: s.bc & 255, 4: s.de >> 8, 5: s.de & 255, 6: s.hl >> 8, 7: s.hl & 255,
+            8: s.ix >> 8, 9: s.ix & 255, 10: s.iy >> 8, 11: s.iy & 255, 12: s.sp, 14: s.i, 15: s.r, 16: s.a_, 17: s.f_,
+            18: s.bc_ >> 8, 19: s.bc_ & 255, 20: s.de_ >> 8, 21: s.de_ & 255, 22: s.hl_ >> 8, 23: s.hl_ & 255, 26: s.iff1, 27: s.im}
+    bad = []
+    for nexload in (False, True):
+        st = nextboot.boot(str(nex), s.pc, nexload=nexload)
+        bad += [('register', nexload, i, v, st['R'][i]) for i, v in want.items()
+                if (bool(st['R'][i]) != bool(v) if i == 26 else st['R'][i] != v)]
+        for a in range(0x4000, 65536):
+            if tail <= a < tail + size or (nexload and 0x5B00 <= a < 0x5C00):
+                continue
+            bank = 5 if a < 0x8000 else 2 if a < 0xC000 else 0
+            if st['mem'][a] != s.banks[bank][a & 16383]:
+                bad.append(('RAM', nexload, hex(a), s.banks[bank][a & 16383], st['mem'][a]))
+    return bad
+
+
+def _replay(z80, rzx, stop, collect):
+    """One recording's replay (a process of its own) -> (counts, examples, states)."""
+    got = verify(Patch(z80), rzx, stop=stop, collect=collect)
+    return got if collect else (got[0], got[1], [])
+
+
+def _negative(z80, name, rzx, stop):
+    """One deliberately broken build's replay (a process of its own): -> (name, its failure keys)."""
+    try:
+        return name, sorted(run_negative(negative_patches(Patch(z80))[name], rzx, stop))
+    except Exception as e:                  # noqa: BLE001 - a broken hook that runs off into data is caught too
+        return name, ['exception ' + type(e).__name__]
+
+
+def auto(a, z80, name, out, say):
+    """nexclash.py auto: the clash-fix build and, with the loading screen beside the snapshot, the published build
+    (the screen in the .nex); each boot-checked with and without NEXLOAD. With --rzx the replay proof of each recording,
+    the ABI cases and the broken builds. The pace, soak, flicker, beam and real loader proofs are the review run's
+    (games/comando_quatro.md "Evidence")."""
+    import concurrent.futures, os
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    if not getattr(a, 'publisher', None):
+        a.publisher = PUBLISHER
+    if not getattr(a, 'pok', None):
+        trainers = out / (name + '_verified.pok')
+        trainers.write_text(TRAINERS)
+        a.pok = str(trainers)
+    say('Game      : Comando Quatro (Zigurat / GameSoft, 1989, 48K)')
+    say('Engine    : comando_quatro; clash removed: figures\' ink on a double-buffered Layer 2 over the original bitmap, '
+        'scenery in its own attributes; Kempston at 0x1F; original pace')
+    ok = True
+    screen = _beside(z80, LOAD_SCREEN, LOAD_MD5, 'the original loading screen')
+    if screen is None:
+        say('Loading   : no %s beside the snapshot: builds without the loading screen' % LOAD_SCREEN)
+    nex = out / (name + '_sprites.nex')
+    zt.convert(str(z80), str(nex), patch=Patch(z80), quiet=True)
+    nexes = [('Sprites', nex)]
+    if screen is not None:
+        loading = out / (name + '_sprites_loading.nex')
+        loading.write_bytes(loading_nex(nex.read_bytes(), screen.read_bytes()))
+        nexes.append(('Spr+scr', loading))
+    for lab, path in nexes:
+        bad = boot_check(path, z80, Patch(z80))
+        ok = ok and not bad
+        say('%-10s: %s  %s' % (lab, path.name, hashlib.md5(path.read_bytes()).hexdigest()))
+        say('Boot      : %s' % ('simulated, OK (registers with R, all 48K RAM; converter loader and NEXLOAD)'
+                                if not bad else 'MISMATCH %s' % str(bad[:3])[:300]))
+    rzxs = list(getattr(a, 'rzx', None) or [])
+    if rzxs:
+        quick = getattr(a, 'quick', None)
+        stops = [min(x for x in (quick, STOPS.get(Path(r).name)) if x) if (quick or STOPS.get(Path(r).name)) else None
+                 for r in rzxs]
+        neg_rzx = next((r for r in rzxs if Path(r).name == NEG_RECORDING), rzxs[0])
+        collect = [1 if r == neg_rzx else 0 for r in rzxs]
+        with concurrent.futures.ProcessPoolExecutor(min(len(rzxs), os.cpu_count() or 1)) as pool:
+            done = list(pool.map(_replay, [z80] * len(rzxs), rzxs, stops, collect))
+        states = []
+        for path, stop, (c, ex, got) in zip(rzxs, stops, done):
+            states += got
+            fail = {k: v for k, v in c.items() if k.endswith('!')}
+            ok = ok and not fail
+            say('Verify    : %s %d frames%s, %d hooks, %d R comparisons, %d Layer 2 pictures, %d pixels, %d restores '
+                'against the clean copy: %s' % (Path(path).name, c['frames'], ' (stop %d)' % stop if stop else '',
+                                                c['hooks'], c['R comparisons'], c['publications'],
+                                                c['overlay pixels compared'], c['restores against the clean copy'],
+                                                'IDENTICAL' if not fail else str(fail)))
+            for k, v in ex.items():
+                say('            %s: %s' % (k, v))
+        counts = unit_tests(Patch(z80), states)
+        fail = {k: v for k, v in counts.items() if k.endswith('!')}
+        ok = ok and not fail and bool(counts.get('ABI cases'))
+        say('Unit      : %s (states of %s)' % (dict(counts), Path(neg_rzx).name))
+        names = list(negative_patches(Patch(z80)))
+        stop = min(x for x in (quick, NEG_STOP) if x)
+        with concurrent.futures.ProcessPoolExecutor(min(len(names), os.cpu_count() or 1)) as pool:
+            neg = list(pool.map(_negative, [z80] * len(names), names, [neg_rzx] * len(names), [stop] * len(names)))
+        missed = [n for n, keys in neg if not keys]
+        ok = ok and not missed
+        say('Negatives : %d of %d broken builds caught (%s, %d frames)%s' % (
+            len(neg) - len(missed), len(neg), Path(neg_rzx).name, stop, '; MISSED %s' % missed if missed else ''))
+    else:
+        say('Verify    : not requested; boot evidence only')
+    say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
+    return bool(ok)
