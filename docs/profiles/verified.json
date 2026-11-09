@@ -46,6 +46,16 @@
     "sprites_loading": "d53ac5f52471b674354caf96cd94221e"
    }
   },
+  "0b2cb0c5a033e853d62c3a5e492f8bc0": {
+   "game": "Booty",
+   "doc": "booty.md",
+   "nex": {
+    "plain": "7a41de52c061b07ef73c951461f07445",
+    "loading": "6393a6f9ee6f20cf760bb70421eb2d1e",
+    "enhanced": "ebc40ec715755da8db720a1a1c0f8074",
+    "enhanced_loading": "8113662ce1469689d1effa77280b30d3"
+   }
+  },
   "85d7841306333321838d372ea8797ff2": {
    "game": "Bubbler",
    "doc": "bubbler.md",
