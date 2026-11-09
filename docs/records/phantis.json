@@ -1,0 +1,207 @@
+{
+ "name": "phantis",
+ "order": 242,
+ "game": "Phantis / Game Over 2, part 1",
+ "doc": "phantis.md",
+ "engine": "phantis",
+ "representative": true,
+ "reference": "phantis",
+ "inputs": {
+  "snapshot": {
+   "name": "phantis1.z80",
+   "md5": "c39caed696ba547f693546b707c9cee8",
+   "path": "phantis/phantis1.z80",
+   "note": "Game Over 2 (1988)(Dinamic)(ES)(en)(Part 1 of 2)[aka Phantis][re-release].z80, the 48K re-release, part 1."
+  },
+  "recordings": [
+   {
+    "name": "phantis_loading.scr",
+    "md5": "a5ce3ee058956e3cfcdd885cb3f485af",
+    "path": "phantis/phantis_loading.scr",
+    "role": "The tape's loading screen, 6,912 bytes (the same on both parts' tapes), staged beside the snapshot; not a recording."
+   },
+   {
+    "name": "phantis1_enhanced.bin",
+    "md5": "c52e55b765ce0187bd38523f3863b633",
+    "path": "phantis/phantis1_enhanced.bin",
+    "role": "Part 1 Enhanced's colour table, made by nexclash/phantis_art.py from the Spec256 set (David Goti); derived from the set, private, never in this repo; staged beside the snapshot; not a recording."
+   },
+   {
+    "name": "p1a.rzx",
+    "md5": "5327d93143e67bb2fe8cd63ac52058d4",
+    "path": "phantis/p1a.rzx",
+    "role": "Part 1, scripted original play, 12,016 frames; the ABI states and the broken builds come from its start."
+   },
+   {
+    "name": "p1b.rzx",
+    "md5": "f066cc469e9062037d09a9694b39aa0f",
+    "path": "phantis/p1b.rzx",
+    "role": "Part 1, a second scripted run, 12,014 frames."
+   },
+   {
+    "name": "p1li.rzx",
+    "md5": "3feb542683c37a5b49559ae4b4e93330",
+    "path": "phantis/p1li.rzx",
+    "role": "Part 1 with infinite lives into the later scenes, 24,004 frames."
+   }
+  ]
+ },
+ "modules": [
+  "phantis",
+  "phantis_art"
+ ],
+ "own_modules": [
+  "phantis",
+  "phantis_art"
+ ],
+ "data": [
+  "asm/phantis1_hooks.asm",
+  "asm/phantis1e_hooks.asm",
+  "asm/phantis_core.inc",
+  "docs/profiles/phantis1.json",
+  "docs/profiles/phantis1e.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record",
+   "--no-nxc"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record",
+   "--no-nxc"
+  ],
+  "rzx": [
+   "p1a.rzx",
+   "p1b.rzx",
+   "p1li.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 30,
+  "note": "Default and Enhanced: every recording, at every hook the hook against the original from the same state, every register with R and all 48K RAM but the changed bytes and the stack below SP, every Layer 2 picture against an independent model; ABI cases on p1a's states; broken builds on p1a's first 3,000 frames (Enhanced: 'colours: clipped rows not skipped' is never reached in the recordings and is listed, not counted). Pace, soak, flicker, beam and the real loader are in games/phantis.md \"Evidence\"."
+ },
+ "outputs": {
+  "sprites": {
+   "file": "phantis1_sprites.nex",
+   "md5": "068e1f366ea5ddf1e3d075b732bd0a7f"
+  },
+  "loading": {
+   "file": "phantis1_sprites_loading.nex",
+   "md5": "1190d208ea139653a44f7d2b91f93dff"
+  },
+  "enhanced": {
+   "file": "phantis1_enhanced.nex",
+   "md5": "76b119c060a1075b471ee91dbf4d3cb1"
+  },
+  "enhanced_loading": {
+   "file": "phantis1_enhanced_loading.nex",
+   "md5": "ae7246977be6fbc8df934346d5c4f457"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Phantis / Game Over 2, part 1",
+  "engine_col": "phantis (phantis.md)",
+  "build": "v1.0; phantis1_sprites_loading.nex 1190d208 and phantis1_enhanced_loading.nex ae724697 equal the published .nxc 1.0 bare builds, default and Enhanced (without the screen 068e1f36, 76b119c0); original bitmap and clean attributes on the ULA, figures' ink on a double-buffered Layer 2 (the Game Over route); Enhanced (off by default): the graphics the Spec256 set holds in its colours (David Goti), the rest original; fits a 1MB Next; the colour table and loading screen are local inputs",
+  "software": "default: 3 recordings, 48,034 frames, 60,657 hooks with R and 48K RAM, 11,203 Layer 2 pictures against a model, 320 ABI cases, 10 of 10 broken builds; Enhanced: the same recordings, 12 of 13 broken builds (clipped-row colour path never reached); soak, flicker, beam, real loader. Pace in JNext: default whole -0.64 to -0.08%, slowest 20 updates up to +6.75%; Enhanced whole -1.83 to -1.45%, busy thirds up to -2.83%, slowest 20 updates up to +4.33% (over the 2% rule)",
+  "hardware": "untested",
+  "next": "hardware checklist; owner's play; paint for the graphics the set lacks (mock-up first); the clipped-row colour path"
+ },
+ "checks": [
+  "asm2profile:phantis1",
+  "asm2profile:phantis1e"
+ ],
+ "results": [
+  {
+   "check": "external review run",
+   "status": "pass",
+   "scope": "runs/phantis/release-20261108 and release-20261108b: pace, soak, flicker, beam audit, real loader (default, Enhanced, cheat), JNext 1.1.104, on these engine bytes. Not a selftest stamp.",
+   "evidence": "games/phantis.md \"Evidence\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/phantis1_hooks.asm": "243fdc346d7b0ceb",
+   "asm/phantis1e_hooks.asm": "ca6323ed705789fe",
+   "asm/phantis_core.inc": "0f0336b3c8451258",
+   "docs/profiles/phantis1.json": "b070067fed673316",
+   "docs/profiles/phantis1e.json": "d55654f7ed545fba",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "5f460a7905f553ae",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/phantis.py": "5a2bde9e45c3350a",
+   "nexclash/phantis_art.py": "c903ffba20ccf4d0",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "089ba928206b7c48",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ },
+ "verified": {
+  "deps": {
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/phantis1_hooks.asm": "243fdc346d7b0ceb",
+   "asm/phantis1e_hooks.asm": "ca6323ed705789fe",
+   "asm/phantis_core.inc": "0f0336b3c8451258",
+   "docs/profiles/phantis1.json": "b070067fed673316",
+   "docs/profiles/phantis1e.json": "d55654f7ed545fba",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "62e059a0ddc21851",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/phantis.py": "5a2bde9e45c3350a",
+   "nexclash/phantis_art.py": "c903ffba20ccf4d0",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "089ba928206b7c48",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ }
+}

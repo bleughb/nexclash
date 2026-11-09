@@ -327,6 +327,24 @@
     "enhanced": "acfbc75c7ce9d78840fec348ae2f2654"
    }
   },
+  "c39caed696ba547f693546b707c9cee8": {
+   "game": "Phantis / Game Over 2, part 1",
+   "doc": "phantis.md",
+   "nex": {
+    "sprites": "068e1f366ea5ddf1e3d075b732bd0a7f",
+    "loading": "1190d208ea139653a44f7d2b91f93dff",
+    "enhanced": "76b119c060a1075b471ee91dbf4d3cb1",
+    "enhanced_loading": "ae7246977be6fbc8df934346d5c4f457"
+   }
+  },
+  "55c89bb16ffde2f58a43ed3be7b95bcf": {
+   "game": "Phantis / Game Over 2, part 2",
+   "doc": "phantis.md",
+   "nex": {
+    "sprites": "9b080e196f34a34ef89077e83c3acf96",
+    "loading": "a326db4db051bdb12a61c959891186e1"
+   }
+  },
   "1ff279754d0730e503816199ac6976f3": {
    "game": "Pyjamarama",
    "doc": "pyjamarama.md",
