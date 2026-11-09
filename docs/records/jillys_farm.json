@@ -1,0 +1,206 @@
+{
+ "name": "jillys_farm",
+ "order": 251,
+ "game": "Jilly's Farm Volume 1 - SokoBAArn!",
+ "doc": "jillys_farm.md",
+ "engine": "jillys_farm",
+ "representative": true,
+ "reference": "jillys_farm",
+ "inputs": {
+  "snapshot": {
+   "name": "jillys_farm.z80",
+   "md5": "34e23d4a382e4187de49eb77a33a4758",
+   "path": "jillys_farm/jillys_farm.z80",
+   "note": "Derived start state: Jilly's Farm Volume 1 - SokoBAArn! (2017)(Bob's Stuff).tap (MD5 86a5e1dc) loaded by SkoolKit's tap2sna to the game's USR 33280 (games/jillys_farm.md \"Next session\"). The .nxc builds the same state from the tape through TAP1."
+  },
+  "recordings": [
+   {
+    "name": "jillys_farm.tap",
+    "md5": "86a5e1dc43e4cfe45582e91eb7cd1cf3",
+    "path": "jillys_farm/jillys_farm.tap",
+    "role": "Jilly's Farm Volume 1 - SokoBAArn! (2017)(Bob's Stuff).tap, the published patch's target, staged for provenance; not read by the build; not a recording."
+   },
+   {
+    "name": "jillys_farm_loading.scr",
+    "md5": "8a2b35914b9d038f27443578bb999475",
+    "path": "jillys_farm/jillys_farm_loading.scr",
+    "role": "The tape's 6,912-byte loading screen, staged beside the start state; not a recording."
+   },
+   {
+    "name": "jillys_farm.256",
+    "md5": "34a22ecc05c805464303e7e0f49db611",
+    "path": "jillys_farm/jillys_farm.256",
+    "role": "Enhanced: the Spec256 set (Ynicky, V1.00 of the game) as a .256, staged beside the start state; game data, never in this repo; not a recording."
+   },
+   {
+    "name": "jillys_farm_palette.json",
+    "md5": "cc822d044ec89ffcffbfb3a122f4d088",
+    "path": "jillys_farm/jillys_farm_palette.json",
+    "role": "Enhanced: the set's 256 colours as RGB, from the review run; derived from the set, never in this repo; not a recording."
+   },
+   {
+    "name": "a1.rzx",
+    "md5": "1726ce9df506ad1b589ac574951ecfac",
+    "path": "jillys_farm/a1.rzx",
+    "role": "Levels 1 and 2 from the start state, scripted play, 9,050 frames. Also the ABI states' and broken builds' recording, to frame 400."
+   },
+   {
+    "name": "levels.rzx",
+    "md5": "dd7c9e3e8cce92d03396bb1008f4b6b4",
+    "path": "jillys_farm/levels.rzx",
+    "role": "Levels 3 to 30 reached by the game's own level codes, 18,150 frames. Also the 'wipe not done' broken build's recording, to frame 2,500 (it needs a level change)."
+   },
+   {
+    "name": "editor.rzx",
+    "md5": "542a7b86b88cf0304d4bcc2cff39462a",
+    "path": "jillys_farm/editor.rzx",
+    "role": "The level editor from the menu, random keys, 2,514 frames."
+   },
+   {
+    "name": "editor2.rzx",
+    "md5": "694c4de9313371bc46b99a85aa266a13",
+    "path": "jillys_farm/editor2.rzx",
+    "role": "The level editor, a second run, 7,027 frames."
+   }
+  ]
+ },
+ "modules": [
+  "jillys_farm",
+  "jillys_farm_enh"
+ ],
+ "own_modules": [
+  "jillys_farm",
+  "jillys_farm_enh"
+ ],
+ "data": [
+  "asm/jillys_farm_enh_hooks.asm",
+  "docs/profiles/jillys_farm.json",
+  "docs/profiles/jillys_farm_enh.json"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "a1.rzx",
+   "levels.rzx",
+   "editor.rzx",
+   "editor2.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 40,
+  "note": "The default runs no hook (no clash to remove), so it is proved by the boot check; the replay proves Enhanced: at every hook every register with R and all 48K RAM against the original; both Layer 2 buffers against an independent model of the set's planes through the game's own byte operations, whose master plane must equal the game's real buffer, and at every copy the real screen against the model's copied master; ABI cases (four clocks, both IFF values, eight R phases) on a1's states to frame 400; 13 broken builds on a1 to frame 400, 'wipe not done' on levels.rzx to frame 2,500. Pace, soak, flicker and the real loader are in games/jillys_farm.md \"Evidence\"."
+ },
+ "outputs": {
+  "plain": {
+   "file": "jillys_farm.nex",
+   "md5": "427aab29dd75a73276829f59a02cb23c"
+  },
+  "loading": {
+   "file": "jillys_farm_loading.nex",
+   "md5": "e50bbd5371c34e3b2a1f58a4c57978bf"
+  },
+  "enhanced": {
+   "file": "jillys_farm_enhanced.nex",
+   "md5": "987f52a06c06962e09000d6fe1bf8f48"
+  },
+  "enhanced_loading": {
+   "file": "jillys_farm_enhanced_loading.nex",
+   "md5": "9f9cad7c1684667b4b2bd7fcc1cf6334"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Jilly's Farm Volume 1 - SokoBAArn!",
+  "engine_col": "jillys_farm (jillys_farm.md)",
+  "build": "v1.0; jillys_farm_loading.nex e50bbd53 and jillys_farm_enhanced_loading.nex 9f9cad7c equal the published .nxc 1.0 bare builds, default and Enhanced (without the screen 427aab29, 987f52a0); default: the original game with Sinclair's 48K ROM as the whole alt ROM, no hook, no game byte changed, no clash to remove and none claimed; Enhanced, off by default: the Spec256 set's colours (Ynicky) as values on two Layer 2 buffers over the unchanged ULA, known sprites compiled to code; top bank 47, both fit a 1MB Next; homebrew by Bob's Stuff (2017)",
+  "software": "default: no hook, boot check with R and 48K RAM, ROM paths pass; Enhanced: 4 recordings, 36,741 frames, 263,813 hooks with R and 48K RAM, 109,114 value buffers and 39,301 Layer 2 pictures against a plane model, the real screen against the model at every copy, 1,792 ABI cases, 13 of 13 broken builds; review run: every plot against the set in emuspec256, soak, flicker, real loader 2 of 2. Pace in JNext, Enhanced: whole runs -0.35% to +0.85% and thirds within 2% (the seven full-length rows); slowest 20 updates up to +6.99%, over the 2% rule in short stretches; default 0.00%",
+  "hardware": "untested",
+  "next": "hardware checklist (Layer 2 and the K windows' constants on a core); owner's play; natural play to the end"
+ },
+ "checks": [
+  "asm2profile:jillys_farm_enh"
+ ],
+ "results": [
+  {
+   "check": "external review run",
+   "status": "pass",
+   "scope": "runs/jillys_farm/release-20261108 (default) and release-20261108b (Enhanced): pace on levels 6, 14 and 23, 15-minute soaks, flicker, every plot against the set in emuspec256, and the real loader (default and Enhanced), JNext 1.1.104, on these engine bytes. Not a selftest stamp.",
+   "evidence": "games/jillys_farm.md \"Evidence\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/jillys_farm_enh_hooks.asm": "172b09cdc5ebd251",
+   "docs/profiles/jillys_farm.json": "cf4d139d31ea2cd3",
+   "docs/profiles/jillys_farm_enh.json": "be20814d29034365",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "5770e5f16f281357",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/jillys_farm.py": "2af62ef78baf78b0",
+   "nexclash/jillys_farm_enh.py": "77cd3e80addd4f27",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "28c10a59efbb80e3",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ },
+ "verified": {
+  "deps": {
+   "asm/jillys_farm_enh_hooks.asm": "172b09cdc5ebd251",
+   "docs/profiles/jillys_farm.json": "cf4d139d31ea2cd3",
+   "docs/profiles/jillys_farm_enh.json": "be20814d29034365",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "d86ea99c1f215d0b",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/jillys_farm.py": "2af62ef78baf78b0",
+   "nexclash/jillys_farm_enh.py": "77cd3e80addd4f27",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "28c10a59efbb80e3",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ }
+}
