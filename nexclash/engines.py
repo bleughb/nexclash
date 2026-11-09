@@ -82,6 +82,7 @@ ENGINES = [
     ('chase_hq', 'is_chase_hq', None),                                    # Chase H.Q. (128K): Speed, Enhanced in two sets (local art)
     ('atom_ant', 'is_atom_ant', None),                                    # Atom Ant (128K tape form): default and Enhanced
     ('silkworm', 'is_silkworm', None),                                    # Silkworm (128K): default and Enhanced
+    ('ruff_and_reddy', 'is_ruff_and_reddy', None),                        # Ruff and Reddy (128K): default and Enhanced
 ]
 
 

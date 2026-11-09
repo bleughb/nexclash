@@ -1,0 +1,208 @@
+{
+ "name": "ruff_and_reddy",
+ "order": 234,
+ "game": "Ruff and Reddy in the Space Adventure",
+ "doc": "ruff_and_reddy.md",
+ "engine": "ruff_and_reddy",
+ "representative": true,
+ "reference": "ruff_and_reddy",
+ "inputs": {
+  "snapshot": {
+   "name": "ruff_and_reddy.z80",
+   "md5": "4b6c490438881cb23d0993d4b32788a2",
+   "path": "ruff_and_reddy/ruff_and_reddy.z80",
+   "note": "Ruff and Reddy in the Space Adventure (1990)(Hi-Tec)(128K).z80, the 128K release (bank 3 holds the AY music); the published patch's target."
+  },
+  "recordings": [
+   {
+    "name": "ruff_and_reddy_loading.scr",
+    "md5": "312507e5921cd11e4ec4faefe0743dbc",
+    "path": "ruff_and_reddy/ruff_and_reddy_loading.scr",
+    "role": "The tape's 6,912-byte loading screen, staged beside the snapshot; not a recording."
+   },
+   {
+    "name": "ruff_and_reddy.256",
+    "md5": "44155d7090a44a6a142181fa37cad834",
+    "path": "ruff_and_reddy/ruff_and_reddy.256",
+    "role": "Enhanced: the Spec256 set as a .256, staged beside the snapshot; game data, never in this repo; not a recording."
+   },
+   {
+    "name": "ruff_and_reddy_panel.bin",
+    "md5": "1b64b3c29f8525023d0ef52e9495ce20",
+    "path": "ruff_and_reddy/ruff_and_reddy_panel.bin",
+    "role": "Enhanced: the set's panel at moments of play, dumped from the Spec256 set in the review run; derived from the set, never in this repo; not a recording."
+   },
+   {
+    "name": "ruff_and_reddy_palette.json",
+    "md5": "cc822d044ec89ffcffbfb3a122f4d088",
+    "path": "ruff_and_reddy/ruff_and_reddy_palette.json",
+    "role": "Enhanced: the Spec256 emulator's 256 colours as RGB, from the review run; never in this repo; not a recording."
+   },
+   {
+    "name": "s1.rzx",
+    "md5": "17b0fd3c12d6258871a9dd1dc0b47676",
+    "path": "ruff_and_reddy/s1.rzx",
+    "role": "The start of the game, scripted play, 6,008 frames."
+   },
+   {
+    "name": "s2.rzx",
+    "md5": "10c098e87803069e3db7c76f8504c84d",
+    "path": "ruff_and_reddy/s2.rzx",
+    "role": "The start of the game, scripted play, 9,035 frames. Also the broken builds' recording (default to frame 1,500, Enhanced to 1,000)."
+   },
+   {
+    "name": "s3.rzx",
+    "md5": "aae44b620368d5d6d92dd68904ea1375",
+    "path": "ruff_and_reddy/s3.rzx",
+    "role": "The start of the game, scripted play, 9,005 frames."
+   },
+   {
+    "name": "q1.rzx",
+    "md5": "19fd8f5f4e8afa8fd0c052d92abea935",
+    "path": "ruff_and_reddy/q1.rzx",
+    "role": "Keyboard, pause, giving up in the pause, game over, 12,062 frames."
+   }
+  ]
+ },
+ "modules": [
+  "ruff_and_reddy",
+  "ruff_and_reddy_enh"
+ ],
+ "own_modules": [
+  "ruff_and_reddy",
+  "ruff_and_reddy_enh"
+ ],
+ "data": [
+  "asm/ruff_and_reddy_hooks.asm",
+  "docs/profiles/ruff_and_reddy.json",
+  "asm/ruff_and_reddy_enh_hooks.asm",
+  "docs/profiles/ruff_and_reddy_enh.json"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "s1.rzx",
+   "s2.rzx",
+   "s3.rzx",
+   "q1.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 40,
+  "note": "Both modes replayed on every recording: at every hook every register with R and all 48K RAM against the original; at every publication Layer 2 against a picture built independently (default: the figures' ink in plot order; Enhanced: the map and plots, with the game's back buffer against the same model in mono); ABI cases (four clocks, both IFF values, eight R phases) on the sites reached; 9 broken builds a mode on s2. Rooms 13, 16, 22, 34 and level complete were replayed from test copies in the review run (games/ruff_and_reddy.md \"Evidence\"), not here."
+ },
+ "outputs": {
+  "plain": {
+   "file": "ruff_and_reddy.nex",
+   "md5": "59f7de5f3be84ee57184720cf17a1f6d"
+  },
+  "loading": {
+   "file": "ruff_and_reddy_loading.nex",
+   "md5": "6ea7afb9e48b092fda8cff756f92e50d"
+  },
+  "enhanced": {
+   "file": "ruff_and_reddy_enhanced.nex",
+   "md5": "7215bb05314c2c192a61a163579412b7"
+  },
+  "enhanced_loading": {
+   "file": "ruff_and_reddy_enhanced_loading.nex",
+   "md5": "7d7fc29eefb3ef79fa829d78f0532d68"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Ruff and Reddy in the Space Adventure",
+  "engine_col": "ruff_and_reddy (ruff_and_reddy.md)",
+  "build": "v1.0; ruff_and_reddy_loading.nex 6ea7afb9 and ruff_and_reddy_enhanced_loading.nex 7d7fc29e equal the published .nxc 1.0 bare builds, default and Enhanced (without the screen 59f7de5f, 7215bb05); default: the original bitmap and attributes on the ULA, each figure's ink in white on a double-buffered Layer 2 in plot order, hidden for messages such as LEVEL COMPLETE; Enhanced, off by default: the Spec256 set's colours on a full Layer 2 over the unchanged ULA; AY music; top bank 47, fits a 1MB Next",
+  "software": "TBD",
+  "hardware": "untested",
+  "next": "hardware checklist; natural play to the end"
+ },
+ "checks": [
+  "asm2profile:ruff_and_reddy",
+  "asm2profile:ruff_and_reddy_enh"
+ ],
+ "results": [
+  {
+   "check": "external review run",
+   "status": "pass",
+   "scope": "runs/ruff_and_reddy/release-20261108b: pace, soak, flicker, the flip audit and the real loader, JNext 1.1.104; replays of rooms 13, 16, 22, 34 and level complete from test copies; on this engine's bytes. Not a selftest stamp.",
+   "evidence": "games/ruff_and_reddy.md \"Evidence\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/ruff_and_reddy_enh_hooks.asm": "d2a3372463b75b55",
+   "asm/ruff_and_reddy_hooks.asm": "d0a3cb548871a695",
+   "docs/profiles/ruff_and_reddy.json": "28efb1a18518707d",
+   "docs/profiles/ruff_and_reddy_enh.json": "720dee4f3888b87b",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "a41f639d1e07850b",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/ruff_and_reddy.py": "d4f19a6f7d4b2e8f",
+   "nexclash/ruff_and_reddy_enh.py": "47e45561cad97611",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "59c0d35eb5a2ea6b",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ },
+ "verified": {
+  "deps": {
+   "asm/ruff_and_reddy_enh_hooks.asm": "d2a3372463b75b55",
+   "asm/ruff_and_reddy_hooks.asm": "d0a3cb548871a695",
+   "docs/profiles/ruff_and_reddy.json": "28efb1a18518707d",
+   "docs/profiles/ruff_and_reddy_enh.json": "720dee4f3888b87b",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "10bd005ad385fc60",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/ruff_and_reddy.py": "d4f19a6f7d4b2e8f",
+   "nexclash/ruff_and_reddy_enh.py": "47e45561cad97611",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "59c0d35eb5a2ea6b",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ }
+}
