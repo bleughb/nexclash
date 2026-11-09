@@ -5315,6 +5315,7 @@ D_OFF    EQU 0x183E            ; canvas offset of the chunk's next row
 D_HEAD   EQU 0x1840
 D_PHASE  EQU 0x1842            ; FLASH phase of this canvas pass
 D_FANY   EQU 0x1843            ; bit 7: the image has a FLASH tile
+D_BUILT  EQU 0x1844            ; level digit + 1 of the finished store; 0 = none (a retry reuses the store)
 D_STACK  EQU 0x1BF0
 D_BUF    EQU 0x1C00            ; 128-byte chunk
 PAT_BASE EQU 85                ; first pattern page; 11 pages of 64 patterns
@@ -5323,6 +5324,12 @@ PAT_MAX  EQU 704
 driver:
         ld (D_RETSP),sp
         ld sp,D_STACK
+        ld a,(0x7335)           ; the level is loaded once, play starts many times: same level, same images
+        inc a
+        ld hl,D_BUILT
+        cp (hl)
+        jp z,.again
+        ld (hl),a
         nextreg 0x51,79
         xor a
         ld (C_OP+W_A),a
@@ -5444,7 +5451,9 @@ driver:
 .step:  ld hl,D_IMAGE
         inc (hl)
         jp nz,.next
-        nextreg 0x51,255
+        jr .exit
+.again: call drv_sel_soft       ; store and index kept; display and sprite slots reset as for a build
+.exit:  nextreg 0x51,255
         nextreg 0x52,10
         nextreg 0x53,11
         ld sp,(D_RETSP)
@@ -5863,6 +5872,9 @@ drv_fill:
 ; image (valid last, count, offset16, left, top) then 5-byte chunks (cx, cy in tiles, cell mask, id16), non-blank
 ; only. Pages 85..95: 16x16 patterns, one copy per distinct content (hash chains in page 84: heads 0000, next 0200).
 drv_sel_reset:
+        call drv_sel_soft
+        jr drv_index_reset
+drv_sel_soft:
         nextreg 0x15,0          ; sprites off until a complete frame is published
         nextreg 0x6B,0x0B       ; scenery layer off
         nextreg 0x62,0
@@ -5912,6 +5924,8 @@ drv_sel_reset:
         ld (hl),0xFF
         ld bc,PAT_MAX-1
         ldir
+        ret
+drv_index_reset:
         nextreg 0x51,83
         ld hl,0x2000
         ld de,0x2001
