@@ -3693,18 +3693,17 @@ def select_page(code=None):
     return page
 
 
+def flash_key(key):
+    """Tile key with FLASH-attribute tiles in their second phase (bitmap inverted)."""
+    return tuple((x, y, bytes(b ^ 255 for b in raw[:8]) + raw[8:] if raw[8] & 0x80 else raw) for x, y, raw in key)
+
+
 def pattern_index_expected(ram, expected):
     """Oracle for the 8EF9 index: {image: (left, top, [(cx, cy, mask, id)])}, patterns by id, in scan order."""
-    ids, patterns, out, canon = {}, [], {}, {}
-    for image, want in enumerate(expected):
-        if want is None or want == 'reject':
-            continue
-        if want[0] in canon:
-            out[image] = out[canon[want[0]]]
-            continue
-        canon[want[0]] = image
-        actor = actor_descriptor(ram, image)
-        left, top, w, h, px = solid_image(tuple((x, y, raw_tile(ram, t)) for x, y, t in actor['tiles']))
+    ids, patterns, out, canon, phase1 = {}, [], {}, {}, {}
+
+    def build(key):
+        left, top, w, h, px = solid_image(key)
         chunks = []
         for cy in range(0, h, 16):
             for cx in range(0, w, 16):
@@ -3716,20 +3715,37 @@ def pattern_index_expected(ram, expected):
                             pattern[y * 8 + x // 2] |= c << (4 if not x & 1 else 0)
                             mask |= 1 << (y // 8 * 2 + x // 8)
                 if mask:
-                    key = bytes(pattern)
-                    if key not in ids:
-                        ids[key] = len(patterns)
-                        patterns.append(key)
-                    chunks.append((cx // 8, cy // 8, mask, ids[key]))
-        out[image] = ((left // 8) & 255, (top // 8) & 255, chunks)
-    return out, patterns
+                    k = bytes(pattern)
+                    if k not in ids:
+                        ids[k] = len(patterns)
+                        patterns.append(k)
+                    chunks.append((cx // 8, cy // 8, mask, ids[k]))
+        return (left // 8) & 255, (top // 8) & 255, chunks
+
+    for image, want in enumerate(expected):
+        if want is None or want == 'reject':
+            continue
+        if want[0] in canon:
+            out[image] = out[canon[want[0]]]
+            if canon[want[0]] in phase1:
+                phase1[image] = phase1[canon[want[0]]]
+            continue
+        canon[want[0]] = image
+        actor = actor_descriptor(ram, image)
+        key = tuple((x, y, raw_tile(ram, t)) for x, y, t in actor['tiles'])
+        out[image] = build(key)
+        if any(raw[8] & 0x80 for _, _, raw in key):
+            phase1[image] = build(flash_key(key))
+    return out, patterns, phase1
 
 
-def index_tables(pages):
-    """Decode page 83 as the runtime reads it."""
+def index_tables(pages, phase=0):
+    """Decode the index as the runtime reads it; phase 1 headers are in page 84 at 1000."""
     p, out = pages[83], {}
     for image in range(256):
-        h = p[image * 6:image * 6 + 6]
+        hdr = pages[84] if phase else p
+        at0 = 0x1000 + image * 6 if phase else image * 6
+        h = hdr[at0:at0 + 6]
         if h[0] == 1:
             at = h[2] | h[3] << 8
             out[image] = (h[4], h[5], [(p[at + 5 * i], p[at + 5 * i + 1], p[at + 5 * i + 2],
@@ -3740,8 +3756,11 @@ def index_tables(pages):
 def driver_index_compare(result, ram, expected):
     """The index and pattern pages against the oracle; published images only."""
     pages, counts = result['pages'], Counter()
-    want, patterns = pattern_index_expected(ram, expected)
+    want, patterns, want1 = pattern_index_expected(ram, expected)
     have = index_tables(pages)
+    if index_tables(pages, 1) != {i: v for i, v in want1.items() if pages[79][0x800 + 16 * i] == 1}:
+        raise AssertionError('phase-1 index differs')
+    counts['flash images'] = len(want1)
     for image in range(256):
         if pages[79][0x800 + 16 * image] == 1:
             if image not in want or have.get(image) != want[image]:
@@ -3766,6 +3785,7 @@ class SelectState:
     def __init__(self, page=None):
         p = page if page is not None else select_page()
         self.role = p[SEL_ROLE]
+        self.tick = p[0x1054]
         self.lru, s = [], p[SEL_HEAD]
         while s != SLOTS:
             self.lru.append(s)
@@ -3782,19 +3802,20 @@ class SelectState:
         self.id_slot = {i: p[SEL_ID_SLOT + i] for i in range(PAT_MAX) if p[SEL_ID_SLOT + i] != 255}
 
     def tuple(self):
-        return (self.role, tuple(self.lru), tuple(self.masks), tuple(self.ids), tuple(self.flags),
+        return (self.role, self.tick, tuple(self.lru), tuple(self.masks), tuple(self.ids), tuple(self.flags),
                 tuple(sorted(self.id_slot.items())))
 
 
-def select_expected(state, index, log):
+def select_expected(state, index, log, index1=None):
     """Oracle: (ready, [(slot, col, row)]) for one selection attempt; mutates state exactly as the assembly."""
     b = (state.role >> 4) & 3
     state.masks[b] = 0
     out = []
     for rec in log:
-        if rec['image'] not in index:
+        use = index1[rec['image']] if index1 and state.tick & 4 and rec['image'] in index1 else index.get(rec['image'])
+        if use is None:
             return 0, out
-        left, top, chunks = index[rec['image']]
+        left, top, chunks = use
         for cx, cy, mask, pid in chunks:
             col, row = (left + cx + rec['x']) & 255, (top + cy + rec['y']) & 255
             if not any(mask & 1 << c and ((col + (c & 1)) & 255) < 32 and ((row + (c >> 1)) & 255) < 18 for c in range(4)):
@@ -3817,6 +3838,7 @@ def select_expected(state, index, log):
             out.append((slot, col, row))
     c, p = state.role & 3, (state.role >> 2) & 3
     state.role = c << 4 | b << 2 | p
+    state.tick = (state.tick + 1) & 255
     for slot, _, _ in out:                               # everything the frame uses is uploaded before the commit
         state.flags[slot] = 0
     return 1, out
@@ -3958,7 +3980,7 @@ def dispatch_expected(store, live, page68):
 def driver_store(result):
     """Owned-store pages of a driver run: metadata page and the used pages only."""
     pages = result['pages']
-    return {p: bytes(pages[p]) for p in (79, 82, 83, *range(85, 96), *range(136, 216)) if p in (79, 82, 83) or 85 <= p < 96 or any(pages[p])}
+    return {p: bytes(pages[p]) for p in (79, 82, 83, 84, *range(85, 96), *range(136, 216)) if p in (79, 82, 83, 84) or 85 <= p < 96 or any(pages[p])}
 
 
 class DispatchMemory:
@@ -4128,7 +4150,7 @@ class SelectMemory(DispatchMemory):
     def nextreg(self, reg, value):
         if reg in SPRITE_NEXTREGS:
             self.pages.setdefault('nr', {})[reg] = value
-        elif reg == 0x51 and (value in (74, 83) or 85 <= value < 96):
+        elif reg == 0x51 and (value in (74, 83, 84) or 85 <= value < 96):
             self.mmu1 = value
         elif reg == 0x52 and value == 82:
             self.mmu2 = value
@@ -4141,12 +4163,12 @@ def select_log(records):
     return [bytes((0, 0, x & 255, y & 255, image, 0, 0)) for image, x, y in records]
 
 
-def run_select(page82, page83, log, yield_every=0, drop_after=None, code=None, patterns=None, sprite=None, attr=None):
+def run_select(page82, page83, log, yield_every=0, drop_after=None, code=None, patterns=None, sprite=None, attr=None, page84=None):
     """Assembled selection from wk_select to its RET (or abandoned after drop_after yields, as a 3c drop)."""
     from . import simpool, z80n
     from .dizzy6 import _rw_simulator
     syms = {k: int(v, 16) for k, v in load_profile()['hooks']['syms'].items()}
-    pages = {69: cw_work_renderer(), 82: bytearray(page82), 83: bytearray(page83), 68: bytearray(8192)}
+    pages = {69: cw_work_renderer(), 82: bytearray(page82), 83: bytearray(page83), 68: bytearray(8192), 84: bytearray(page84 if page84 is not None else bytes(8192))}
     pages.update({p: bytearray(8192) for p in range(85, 96)} if patterns is None else patterns)
     pages['sprite'] = bytearray(16384) if sprite is None else bytearray(sprite)
     pages[74] = bytearray(copper_frame_template(bytes(640))).ljust(8192, b'\0') if attr is None else bytearray(attr)
@@ -4212,6 +4234,14 @@ def select_checks():
             page83[at + 5 * i:at + 5 * i + 5] = bytes((c[0], c[1], c[2], c[3] & 255, c[3] >> 8))
         at += 5 * n
         index[image] = (left, top, chunks)
+    page84, index1 = bytearray(8192), {}                 # FLASH phase 1: a different chunk list for some images
+    for image in range(0, 180, 7):
+        left, top, chunks = index[image]
+        alt = [(c[0], c[1], c[2], (c[3] + 3) % max(pid, 1)) for c in chunks]
+        page83[at:at + 5 * len(alt)] = bytes(b for c in alt for b in (c[0], c[1], c[2], c[3] & 255, c[3] >> 8))
+        page84[0x1000 + image * 6:0x1000 + image * 6 + 6] = bytes((1, len(alt), at & 255, at >> 8, left, top))
+        index1[image] = (left, top, alt)
+        at += 5 * len(alt)
     missing = 200                                        # header invalid: not ready
     pattern_pages = {p: bytearray(rng.randrange(256) for _ in range(8192)) for p in range(85, 96)}
     code = bytes.fromhex(load_profile()['hooks']['cwsel'])
@@ -4226,13 +4256,13 @@ def select_checks():
             before = SelectState(page).tuple()
             if before != state.tuple():
                 raise AssertionError('state diverged before frame %d' % k)
-            r = run_select(page, page83, select_log(log), yield_every=every, drop_after=drop, code=code_used, patterns=pattern_pages, sprite=sprite, attr=attr)
+            r = run_select(page, page83, select_log(log), yield_every=every, drop_after=drop, code=code_used, patterns=pattern_pages, sprite=sprite, attr=attr, page84=page84)
             page, sprite, attr = r['page'], r['sprite'], r['attr']
             if r['dropped']:
                 counts['dropped attempts'] += 1
                 state = SelectState(page)                 # whatever partial state it left is the new truth
                 continue
-            ready, out = select_expected(state, index, [dict(image=i, x=x, y=y) for i, x, y in log])
+            ready, out = select_expected(state, index, [dict(image=i, x=x, y=y) for i, x, y in log], index1)
             if r['ready'] != ready or select_list(page) != out:
                 raise AssertionError('frame %d: ready %d/%d or list differs' % (k, r['ready'], ready))
             if SelectState(page).tuple() != state.tuple():
@@ -4289,6 +4319,8 @@ def select_checks():
     variants['slot-1 remap on upload resume removed'] = code[:remaps[1]] + bytes(6) + code[remaps[1] + 6:]
     at = code.index(b('C650'))                            # Y = 32 + 48 + row * 8
     variants['sprite Y offset wrong'] = code[:at + 1] + b('58') + code[at + 2:]
+    at = code.index(b('E604'))                            # FLASH phase bit
+    variants['FLASH phase ignored'] = code[:at + 1] + b('00') + code[at + 2:]
     at = code.index(b('E60F57'))
     variants['role rotation wrong'] = code[:at + 1] + b('03') + code[at + 2:]
     at = code.index(b('FE12'))
@@ -5526,7 +5558,7 @@ class CopierWorkMemory(CopierWindowMemory):
 
     def __setitem__(self, a, v):
         if 8192 <= a < 16384 and self.mmu1 != 255:
-            if self.mmu1 in (79, 83) or 85 <= self.mmu1 < 96 or self.mmu1 >= 136:
+            if self.mmu1 in (79, 83, 84) or 85 <= self.mmu1 < 96 or self.mmu1 >= 136:
                 raise AssertionError('dispatch wrote the owned store')
             self.pages[self.mmu1][a - 8192] = v
         elif 0x4000 <= a < 0x6000 and self.mmu2 == 14:
@@ -5547,7 +5579,7 @@ class CopierWorkMemory(CopierWindowMemory):
         elif reg == 0x50 and value == 69:
             self.mmu0 = value
             self.maps.append(value)
-        elif reg == 0x51 and (value in (68, 74, 79, 83, 255) or 85 <= value < 96 or 136 <= value < 216):
+        elif reg == 0x51 and (value in (68, 74, 79, 83, 84, 255) or 85 <= value < 96 or 136 <= value < 216):
             self.mmu1 = value
         elif reg == 0x52 and value in (14, 10, 82):
             self.mmu2 = value
@@ -6133,8 +6165,8 @@ def copier_window_update_checks(states, every_irq=50, controls=True, sample=1, o
                     before = sel_pages.get(level, store[82])
                     state, log = SelectState(before), capture_log(page68) if not page68[0x3F5] else []
                     if want:
-                        index = sel_index.setdefault(level, index_tables({83: stores[level][83]}))
-                        ready, out = select_expected(state, index, log)
+                        index, index1 = sel_index.setdefault(level, (index_tables({83: stores[level][83], 84: stores[level][84]}), index_tables({83: stores[level][83], 84: stores[level][84]}, 1)))
+                        ready, out = select_expected(state, index, log, index1)
                     else:
                         ready, out = 0, []
                     page = res['sel']

@@ -5010,6 +5010,8 @@ D_CSTART EQU 0x183A
 D_ID     EQU 0x183C            ; chunk cell mask while hashing
 D_OFF    EQU 0x183E            ; canvas offset of the chunk's next row
 D_HEAD   EQU 0x1840
+D_PHASE  EQU 0x1842            ; FLASH phase of this canvas pass
+D_FANY   EQU 0x1843            ; bit 7: the image has a FLASH tile
 D_STACK  EQU 0x1BF0
 D_BUF    EQU 0x1C00            ; 128-byte chunk
 PAT_BASE EQU 85                ; first pattern page; 11 pages of 64 patterns
@@ -5064,6 +5066,9 @@ driver:
         jp z,.duplicate
         call drv_bounds
         jp nz,.reject_release
+        xor a
+        ld (D_PHASE),a
+        ld (D_FANY),a
         call drv_clear
         call drv_tiles
         jp nz,.bad_worker
@@ -5094,6 +5099,7 @@ driver:
         ld a,(C_FOUND+W_A)
         or a
         jp z,.reject_release
+        call drv_phase1
         ld hl,(D_STORED)
         inc hl
         ld (D_STORED),hl
@@ -5412,9 +5418,18 @@ drv_tiles:
 .tile:  push hl
         nextreg 0x51,75
         nextreg 0x52,122
+        push hl
+        ld de,9                 ; this tile's attribute: remember FLASH
+        add hl,de
+        ld a,(hl)
+        and 0x80
+        ld hl,D_FANY
+        or (hl)
+        ld (hl),a
+        pop hl
         ld a,1
         ld (P_SOURCE+W_A),a
-        xor a
+        ld a,(D_PHASE)
         ld (P_FLASH+W_A),a
         ld a,(hl)
         ld (P_TILE+W_A),a
@@ -5564,6 +5579,11 @@ drv_sel_reset:
         ld (hl),0
         ld bc,0x1FF
         ldir
+        ld hl,0x3000            ; phase-1 headers
+        ld de,0x3001
+        ld (hl),0
+        ld bc,0x5FF
+        ldir
         ld hl,0
         ld (D_PATS),hl
         ld hl,0x0600
@@ -5603,7 +5623,13 @@ drv_index:
         jr c,.y
 .ok:    nextreg 0x51,83
         call drv_header
-        ex de,hl                ; DE = entry
+        ld a,(D_PHASE)
+        or a
+        jr z,.hd
+        nextreg 0x51,84         ; phase-1 headers: page 84 at 1000
+        ld de,0x1000
+        add hl,de
+.hd:    ex de,hl                ; DE = entry
         inc de
         ld a,(D_CHN)
         ld (de),a
@@ -5676,6 +5702,50 @@ drv_dup_index:
         pop de
         ld a,1
         ld (de),a
+        call drv_header         ; the phase-1 header too, if the canonical has one
+        ld bc,0x1000
+        add hl,bc
+        push hl
+        ld hl,(D_CANON)
+        ld bc,-0x2800
+        add hl,bc
+        ld a,l
+        rrca
+        rrca
+        rrca
+        rrca
+        and 0x0F
+        ld l,a
+        ld a,h
+        add a,a
+        add a,a
+        add a,a
+        add a,a
+        or l
+        call drv_header_a
+        ld bc,0x1000
+        add hl,bc               ; HL = the canonical's
+        pop de                  ; DE = this image's, both in page 84
+        nextreg 0x51,84
+        ld bc,6
+        ldir
+        ret
+
+; Second canvas of an image with a FLASH tile: colours swapped in those tiles. Failure leaves phase 0 only.
+drv_phase1:
+        ld a,(D_FANY)
+        or a
+        ret z
+        ld a,1
+        ld (D_PHASE),a
+        call drv_clear
+        call drv_tiles
+        jr nz,.out
+        call drv_fill
+        jr nz,.out
+        call drv_index
+.out:   xor a
+        ld (D_PHASE),a
         ret
 
 ; One chunk at (D_CX, D_CY) tiles. Z = ok (blank chunks emit nothing), NZ = capacity.
@@ -6252,6 +6322,7 @@ SEL_INIT  EQU 0x504D           ; sprite layer set up (cleared by the 8EF9 reset)
 SEL_PREV  EQU 0x504E           ; sprites written by the last publish
 SEL_PUBN  EQU 0x504F
 SEL_PUBP  EQU 0x5050
+SEL_TICK  EQU 0x5054           ; committed updates; bit 2 = FLASH phase (the ULA swaps every 16 frames, an update is about 4)
 SEL_PUBQ  EQU 0x5052           ; next attribute byte in the Copper program (page 74 at slot 1)
 SEL_Q     EQU 0x5A00           ; 128 slots to upload (256-aligned; a slot may repeat)
 SEL_HL    EQU 0x5029
@@ -6346,12 +6417,22 @@ sl_lrow_go:
         ld e,a
         ld d,6
         mul d,e
+        ld a,(SEL_TICK)
+        and 4
+        jr z,.p0
+        nextreg 0x51,84         ; FLASH phase 1: its own header, if the image flashes
+        ld hl,0x3000
+        add hl,de
+        ld a,(hl)
+        cp 1
+        jr z,.hdr
+.p0:    nextreg 0x51,83
         ld hl,0x2000
         add hl,de
         ld a,(hl)
         cp 1
         jp nz,sl_fail
-        inc hl
+.hdr:   inc hl
         ld a,(hl)
         ld (SEL_C),a
         inc hl
@@ -6366,6 +6447,7 @@ sl_lrow_go:
         ld a,(SEL_Y)
         add a,(hl)
         ld (SEL_T),a
+        nextreg 0x51,83
         ld a,d
         add a,0x20
         ld h,a
@@ -6718,6 +6800,8 @@ sl_yup:
         nextreg 0x51,a
         jp sl_up_go
 sl_commit:                      ; roles rotate in one byte
+        ld hl,SEL_TICK
+        inc (hl)
         ld a,(SEL_ROLE)
         ld b,a
         rrca
