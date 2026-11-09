@@ -1,0 +1,136 @@
+{
+ "name": "chase_hq",
+ "order": 230,
+ "game": "Chase H.Q.",
+ "doc": "chase_hq.md",
+ "engine": "chase_hq",
+ "representative": true,
+ "reference": "chase_hq",
+ "inputs": {
+  "snapshot": {
+   "name": "chase_hq.z80",
+   "md5": "cedb31d5860815ef7e871ee249744de5",
+   "path": "chase_hq/chase_hq.z80",
+   "note": "Chase H.Q. (1989)(Ocean)(128K).z80, the archive's 128K snapshot at the menu."
+  },
+  "recordings": [
+   {
+    "name": "chase_hq_loading.scr",
+    "md5": "aed0ca7e0dc3b00f1a0a55c12f5359f6",
+    "path": "chase_hq/chase_hq_loading.scr",
+    "role": "The 6,912-byte screen block of the archive tape (MD5 051b42a3), staged beside the snapshot; not a recording."
+   },
+   {
+    "name": "chase_hq_art.bin",
+    "md5": "83797b5c34542c17b23d610722d54283",
+    "path": "chase_hq/chase_hq_art.bin",
+    "role": "The Enhanced art pages of the published builds (banks 9, 11, 15, 29-43, 46-109): Jon Attree's painting compiled over the game's own graphics in the pilot run; game-derived, local only, staged beside the snapshot; not a recording (games/chase_hq.md \"Inputs\")."
+   }
+  ]
+ },
+ "modules": [
+  "chase_hq"
+ ],
+ "own_modules": [
+  "chase_hq"
+ ],
+ "data": [
+  "asm/chase_hq_hooks.asm",
+  "asm/chase_hq_speed.asm",
+  "asm/chase_hq_orig.asm",
+  "asm/chase_hq_banks.asm",
+  "docs/profiles/chase_hq.json",
+  "docs/profiles/chase_hq_speed.json",
+  "docs/profiles/chase_hq_orig.json",
+  "docs/profiles/chase_hq_banks.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record",
+   "--no-nxc"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": null,
+ "outputs": {
+  "plain": {
+   "file": "chase_hq.nex",
+   "md5": "2f6628a552412d0a227300fe7cf397b2"
+  },
+  "speed": {
+   "file": "chase_hq_speed.nex",
+   "md5": "6729617fd9e3adc131a0451593557b39"
+  },
+  "orig_pace": {
+   "file": "chase_hq_orig_pace.nex",
+   "md5": "498c2119e140480cd16c8f0fda5c5843"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Chase H.Q.",
+  "engine_col": "chase_hq (chase_hq.md)",
+  "build": "v1.3 (1.2 with two interrupt-safe reads of the CPU speed in Enhanced); default chase_hq.nex 2f6628a5 (Speed: road, scenery and screen copy at 28 MHz, capped at the original's quiet-scene pace; original pictures; banks 0-45, 1MB Next); Enhanced colours (Jon Attree's painting, Layer 2, sprites and Copper; 2MB Next) at the Speed pace chase_hq_speed.nex 6729617f and at the original's pace chase_hq_orig_pace.nex 498c2119; all three equal the 1.3 review .nxc reconstructions; the art pages and loading screen are local inputs",
+  "software": "pilot run, JNext: 1.0 paired-hook RZX replay (6 recordings, 37,500 frames, the 1.0 Speed hooks); 1.1 native lockstep against the original (57 player-state bytes, every AY and beeper write, briefing and demo registers with R), six tunnel routes, stage 2/4/5, capture and time-out checkpoints identical; 1.2 Orig. pace: 90 game addresses equal in 6 runs, whole runs -3.0 to +0.3%, 20-update stretches up to +13.4%; 1.3: the same lockstep in all three modes, pace within 0.04 points of 1.2; real loader on private cards; auto: boot check with R, all three builds; no RZX verify in this engine",
+  "hardware": "untested",
+  "next": "hardware checklist; an RZX verifier for the current hooks; art pages from an in-repo colour map; DDMA review; stage 2-5 pace"
+ },
+ "checks": [
+  "asm2profile:chase_hq",
+  "asm2profile:chase_hq_speed",
+  "asm2profile:chase_hq_orig",
+  "asm2profile:chase_hq_banks"
+ ],
+ "results": [
+  {
+   "check": "external release suite",
+   "status": "pass",
+   "scope": "pilot runs/chase_hq (1.1 release, 1.2 pacefix-20261108) and the 1.3 re-run (stage 1 lockstep and pace in all three modes, real loader), JNext 1.1.104: native lockstep against the original (state, sound, briefing and demo registers with R), six tunnel routes, stage 2/4/5, capture and time-out checkpoints, Orig. pace lockstep in 6 runs with pace negatives, real loader on private cards, 15-minute soak. Not a selftest stamp; no RZX replay of these hooks.",
+   "evidence": "games/chase_hq.md \"Evidence\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/chase_hq_banks.asm": "6c973153ae73cd53",
+   "asm/chase_hq_hooks.asm": "90d1684d2c49fea8",
+   "asm/chase_hq_orig.asm": "73cefcd2bea955f8",
+   "asm/chase_hq_speed.asm": "8ee940e582c18c96",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/chase_hq.json": "496c7ab8573d88de",
+   "docs/profiles/chase_hq_banks.json": "a94031836b2c7d98",
+   "docs/profiles/chase_hq_orig.json": "a6dd2629181d368a",
+   "docs/profiles/chase_hq_speed.json": "46a0f7892c03a266",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/chase_hq.py": "4d7c7fcf5da379f2",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "8834faff77c177f0",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "d24d9e9fd8e91625",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-08"
+ }
+}
