@@ -56,6 +56,8 @@ Audit (pilot runs/pace-audit-20261108/REPORT-2.md): 1.5 whole -2.54 to -1.65%, b
 - R: compared at every hook, as before (the windows sit inside the ny_r span).
 - Verifier: the state grows to 0xB422; a copy or the walk's last row must have taken its target less the carry; two new negatives, on the real recording: the copy's wait gone, its target too short.
 - Lockstep trap for the next audit: the state list without object records missed that the spawner at 0x5FBD reads the interrupt's seconds byte 0x5B17 before R, so an object started at different updates and R's fixture sequence moved with it (object 14 parted at updates 130 to 634, in 1.5 too). A fixture now holds that read to the update count, and the 16 object records are in the state list: 208 addresses (pilot runs/nodes_of_yesod/pacefix-20261108/nodes3).
+- Verifier, second pass: the replay's line clock counts T at whatever speed ran, so a wait at 28 MHz looked 8 times longer and the "never waits" negative passed unseen. The clock can now count T at the CPU's speed (NextState.scaled, _run_scaled): the pace negatives replay on it, and auto replays the first recording on it once more (Pace line). On b1, 2,000 frames: IDENTICAL; both pace negatives detected.
+- selftest --verify reports FAILED on Negative 22 of 26 detected (item paint, game over, teleport, clip window). Those four are missed the same way by the 1.5 engine (c086e2b) on the same recording and frames: the record says it, "the generic auto negative runner assumes every control reaches its target in the first recording", and no stamp was claimed for 1.5. Not a change by this work.
 - Limits: surface rooms only by script, no cavern; JNext's timing; contention figures are JNext's. Results, before / after: NOTES.md there.
 
 ## Unchanged engine evidence and limits
@@ -72,6 +74,10 @@ All writes stay in this Nodes run and its private clone. Other games, shared eng
 
 Techniques: detect.gameplay-screen-readers
 
+## Open
+- The two window lessons below, for card patch.pace-limiter when it has room under its 600-word budget.
+- Seed 3 of the pace runs parts at update 1197 on object 10; not traced. Stretch +3.7 at u601 of seed 4; not traced.
+
 ## Lessons
 
 - [local: frame-edge snapshots can catch a correct hook halfway through an upload] Diagnose persistence and inspect rendered frames before calling a temporary pattern/grid mismatch visible corruption; death-specific owner reproduction remains open.
@@ -81,8 +87,8 @@ Techniques: detect.gameplay-screen-readers
 
 - [local: an Enhanced set that also switches a HUD needs recolour to switch it too] the guard found the one byte (hud_enabled) recolour left as built.
 
-- [card patch.pace-limiter §Failure lookup] (v1.6, 2026-11-08) A single floor per update cannot hold a game whose displaced work varies by figure: it reads slow where the original is light and fast where it is busy, and its whole-run figure hides both. Windows on what was displaced, sized from the plain build, held nearly every stretch within 2%.
-- [card patch.pace-limiter §Failure lookup] A window that reads line + frame serial needs the two in step at the wrap; a window under a frame needs only the wrap. The mismatch here read as 164 lines of false time per interrupt and drove the account to its floor.
+- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget] (v1.6, 2026-11-08) A single floor per update cannot hold a game whose displaced work varies by figure: it reads slow where the original is light and fast where it is busy, and its whole-run figure hides both. Windows on what was displaced, sized from the plain build, held nearly every stretch within 2%.
+- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget] A window that reads line + frame serial needs the two in step at the wrap; a window under a frame needs only the wrap. The mismatch here read as 164 lines of false time per interrupt and drove the account to its floor.
 - [local: pace audit state lists] Before trusting lockstep on a figure-heavy game, put the objects' own bytes in the state list and read every source of chance: a time-dependent read in front of a fixed random sequence moves the sequence. The audit's list, picked from addresses that agreed, could not see it.
 - [local: R span entry count] Code added to e_blit before ny_r_begin moves the count original_m1 subtracts (59 -> 84): the replay's R compare caught it at every copy, and JNext's lockstep with R fixed per site could not.
 - [local: fit by size] Screen contention moves a copy's cost 5% by scene; a fit by rows and columns is unbiased over a stretch, and the carry takes up the rest.

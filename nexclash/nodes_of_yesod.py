@@ -439,6 +439,8 @@ class NextState:
         self.ports = 0
         self.clip = [0, 255, 0, 167]
         self.clipi = 0
+        self.scaled = False     # v1.6: the line clock counts T at the CPU's speed (slower: only the pace checks use it)
+        self.wall = 0.0
 
     def copy(self):
         q = NextState.__new__(NextState)
@@ -646,7 +648,7 @@ def _machine(Sim, mem, regs, ns, slot):
         def read_port(self, regs_, port):
             if port == 0x253B:
                 if ns.sel in (0x1E, 0x1F):
-                    line = (sim.registers[25] // 224) % 312
+                    line = (int(ns.wall) // 224 if ns.scaled else sim.registers[25] // 224) % 312
                     return (line >> 8) if ns.sel == 0x1E else (line & 255)
                 return ns.nr.get(ns.sel, 0)
             return 0xFF
@@ -663,6 +665,20 @@ def _run(sim, stop, limit=2000000):
     n = 0
     while R[24] != stop:
         ops[mem[R[24]]]()
+        n += 1
+        if n > limit:
+            return False
+    return True
+
+
+def _run_scaled(sim, stop, ns, limit=2000000):
+    """As _run, the line clock counting each instruction's T at the speed it ran at."""
+    R, ops, mem = sim.registers, sim.opcodes, sim.memory
+    n = 0
+    while R[24] != stop:
+        t, sh = R[25], ns.nr[0x07] & 3
+        ops[mem[R[24]]]()
+        ns.wall += (R[25] - t) / (1 << sh)
         n += 1
         if n > limit:
             return False
@@ -728,12 +744,17 @@ def event(patch, pc, get, R, ns, alt, psite, Sim, st):
     p = _P(get, alt, psite, ns)
     sp = _machine(Sim, p, list(R), ns, 'p')
     sp.registers[24] = pc
-    if not _run_safe(sp, stop, ns, fails, 400000):
+    ns.wall = float(R[25])
+    if ns.scaled:
+        if not _run_scaled(sp, stop, ns, 400000):
+            fails.append('hook did not reach its exit')
+    elif not _run_safe(sp, stop, ns, fails, 400000):
         fails.append('hook did not reach its exit')
     if pc in (BLIT, 36898) and want16 is not None and incoming_speed == 0 and ns.state[V_IRQ_SERIAL - STATE_LO] == serial0:
         need = (want16 + pd0) * 14                      # T at 3.5 MHz, the model's line clock; the wait polls at whole lines
-        if need > 672 and sp.registers[25] - t0 < need - 672:
-            fails.append(('pace window did not wait', pc, need, sp.registers[25] - t0))
+        took = (ns.wall if ns.scaled else sp.registers[25]) - t0
+        if need > 672 and took < need - 672:
+            fails.append(('pace window did not wait', pc, need, took))
     dt = sp.registers[25] - R[25]
     st['hook T'] += dt
     if dt > st['most hook T in one event']:
@@ -792,7 +813,7 @@ def digest(R, M, undo=None):
     return h.digest()
 
 
-def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None):
+def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scaled=False):
     """Differential test. Replay 1, the original code: each hook against the original from one state; registers, memory but the screen, sprites against the screen.
     Replay 2, the sites patched in memory (the copy undone, the paints skipped): the game's whole state against replay 1, event by event, and the screen bare."""
     from . import rzx as RZ
@@ -823,6 +844,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None):
                 for k, v in enumerate(new):
                     psite[a + k] = v
         box['ns'] = NextState(patch)
+        box['ns'].scaled = scaled
 
     def rows_of(M):
         return [bytes(M[scr_addr(y):scr_addr(y) + 32]) for y in range(PLAY_LINES)]
@@ -1497,7 +1519,7 @@ def negative_real(patch, rzx_path, stop=1500, only=None):
     for name, q in negative_patches(patch).items():
         if only and name not in only:
             continue
-        cc, _ = verify(q, rzx_path, stop=stop)
+        cc, _ = verify(q, rzx_path, stop=stop, scaled=name.startswith('pace'))   # v1.6: a wait shows only on the speed-true clock
         out.append((name, {k: v for k, v in cc.items() if k.endswith('!')}))
     return out
 
@@ -1543,5 +1565,9 @@ def auto(a, z80, name, out, say):
         miss = [n for n, k in nr if not k]
         ok = ok and not miss
         say('Negative  : %d of %d detected %s' % (len(nr) - len(miss), len(nr), miss))
+        pc_, _ = verify(patch, list(a.rzx)[0], stop=getattr(a, 'quick', None) or 2000, scaled=True)   # v1.6: the windows on a speed-true line clock
+        pf = {k: v for k, v in pc_.items() if k.endswith('!')}
+        ok = ok and not pf
+        say('Pace      : %d frames with a speed-true line clock, %d copies -> %s' % (pc_['frames'], pc_['blit'], 'IDENTICAL' if not pf else 'FAILED %s' % pf))
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return ok
