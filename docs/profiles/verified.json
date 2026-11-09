@@ -364,6 +364,16 @@
     "enhanced": "d2d4d23b5aded923839ce281bd2271f1"
    }
   },
+  "4b6c490438881cb23d0993d4b32788a2": {
+   "game": "Ruff and Reddy in the Space Adventure",
+   "doc": "ruff_and_reddy.md",
+   "nex": {
+    "plain": "59f7de5f3be84ee57184720cf17a1f6d",
+    "loading": "6ea7afb9e48b092fda8cff756f92e50d",
+    "enhanced": "7215bb05314c2c192a61a163579412b7",
+    "enhanced_loading": "7d7fc29eefb3ef79fa829d78f0532d68"
+   }
+  },
   "d8fb649ba5d8fa086cac43d0cd1c497e": {
    "game": "Sabre Wulf",
    "doc": "sabre_wulf.md",

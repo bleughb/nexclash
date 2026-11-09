@@ -96,6 +96,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Chase H.Q. (chase_hq): `chase_hq.nex` 2f6628a552412d0a227300fe7cf397b2, `chase_hq_speed.nex` 6729617fd9e3adc131a0451593557b39, `chase_hq_orig_pace.nex` 498c2119e140480cd16c8f0fda5c5843; verified never
 - Silkworm (silkworm): `silkworm.nex` 36a148b54bce181c39c94899f7809c20, `silkworm_loading.nex` 6ae12fd66946724d9ef6c1e089a6b163, `silkworm_enhanced.nex` d5d3a92cce49d1f4d855f3d98ee7f41b, `silkworm_enhanced_loading.nex` 2058f2e55464eeb68f418320548fb34a; verified 2026-11-08
 - Atom Ant (atom_ant): `atom_ant.nex` 04460a950e24898f8144d2ab2b48ff6f, `atom_ant_loading.nex` 66d682f8cbe184c00ad2271ed8cf2a33, `atom_ant_enhanced.nex` 054ce8f73bb5360353113f8a9a72e50c, `atom_ant_enhanced_loading.nex` c3d35756f871ed85ff24d27ccc52b0c8; verified 2026-11-08
+- Ruff and Reddy in the Space Adventure (ruff_and_reddy): `ruff_and_reddy.nex` 59f7de5f3be84ee57184720cf17a1f6d, `ruff_and_reddy_loading.nex` 6ea7afb9e48b092fda8cff756f92e50d, `ruff_and_reddy_enhanced.nex` 7215bb05314c2c192a61a163579412b7, `ruff_and_reddy_enhanced_loading.nex` 7d7fc29eefb3ef79fa829d78f0532d68; verified 2026-11-08
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

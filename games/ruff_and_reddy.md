@@ -1,9 +1,9 @@
 # Ruff and Reddy in the Space Adventure (Hi-Tec, 1990, 128K)
 
 ## Next session
-Stage: 3 done for default and Enhanced (v1.0, not yet published). Hardware: untested. Not yet played by the owner.
-Inputs: Ruff and Reddy in the Space Adventure (1990)(Hi-Tec)(128K).z80, MD5 4b6c490438881cb23d0993d4b32788a2; the loading screen from the same game's 48K-128K tape, block 4. Review run: runs/ruff_and_reddy/release-20261108.
-Build: `nexclash.ruff_and_reddy.build(Z, OUT)`, then `loading_nex` with the screen. Not yet wired into `auto`, `engines.py` or a record: that comes when it goes upstream after the owner has played it.
+Stage: 3 done for default and Enhanced; published as .nxc 1.0 (nxc 05d3127, 2026-11-08) and registered on main: `auto`, engines.py, record docs/records/ruff_and_reddy.json. Hardware: untested. Not yet played by the owner.
+Inputs: Ruff and Reddy in the Space Adventure (1990)(Hi-Tec)(128K).z80, MD5 4b6c490438881cb23d0993d4b32788a2; the loading screen from the same game's 48K-128K tape, block 4. Review runs: runs/ruff_and_reddy/release-20261108, release-20261108b (final).
+Build: `python nexclash.py auto ruff_and_reddy.z80` writes ruff_and_reddy.nex and, with `ruff_and_reddy_loading.scr` beside the snapshot, ruff_and_reddy_loading.nex = the published default bare build (6ea7afb9). With `ruff_and_reddy.256`, `ruff_and_reddy_panel.bin` and `ruff_and_reddy_palette.json` beside it (from the Spec256 set and its emulator, never in this repo; MD5s in the record) it also writes ruff_and_reddy_enhanced.nex and ruff_and_reddy_enhanced_loading.nex = the published Enhanced bare build (7d7fc29e). Every build boot-checked; with `--rzx` s1, s2, s3, q1 both modes replayed, the ABI cases and 9 broken builds a mode.
 Pending: owner's play; hardware checklist below.
 
 ## Facts
@@ -32,7 +32,7 @@ The owner's standard: the original look with colour clash removed. Layer 2, not 
 Replay of 8 recordings with R at every hook, an independent Layer 2 model, every lit pixel against the bitmap the copy wrote; ABI cases; broken builds; boot; flip audit; pace in four scenes x 3 seeds, soak, flicker, the real loader. All in the run's NOTES.md.
 
 ## Enhanced
-Built 2026-11-08: a menu option, off by default, in the first version, 1.0. The default's .nex is 6ea7afb9. Own hooks and profile: asm/ruff_and_reddy_enh_hooks.asm, docs/profiles/ruff_and_reddy_enh.json, nexclash/ruff_and_reddy_enh.py.
+Built 2026-11-08: a menu option, off by default, in the first version, 1.0 (published, credited "Enhanced colours: Ynicky (Spec256)"). The default's .nex is 6ea7afb9. Own hooks and profile: asm/ruff_and_reddy_enh_hooks.asm, docs/profiles/ruff_and_reddy_enh.json, nexclash/ruff_and_reddy_enh.py.
 - The set's code and art are this release's: 255 tiles at DDA7 (tile 255 runs into code, one byte differs, not a tile), 21 big and 45 small figure entries, master identical, so each takes its colours from its own address. Nothing repainted; the sea is black as the set paints it.
 - Value 255 stays transparent: the ULA shows, as Spec256 does. The lives heads recolour that way.
 - A room is painted on a clean canvas (pages 44-48) just before the game's own draw; the canvas goes to both buffers by DMA. Each pass restores last time's boxes from it and draws the figures in order.
@@ -49,6 +49,7 @@ Boot and loading screen; music; figures white on red, cyan, yellow and blue rock
 - [local: window noise] A nested debt reading at each of up to six plots adds about a line of error each, scaled by K: 37 lines of target, enough to miss a frame at a room change. One reading at the end of the pass fixed it.
 - [local: map below 0x6000] Art mapped in slot 2 hid a room map that lies below 0x6000: read the game's data before mapping over it. Only the level-complete test copy's room showed it.
 - [local: message hide] An earlier default had no hide at D42B, so figures stayed over LEVEL COMPLETE; only a test that reached the screen showed it.
+- [local: start-up flag] The stamp's ROM path check warns that the game reads 5B5C (the 128K paging flag) before writing it, a printer buffer byte the .nex leaves as NEXLOAD wrote it; the review run's soak counted the same AY writes as the original (648/s) and the real loader reached play in every mode, so no keep_printer_buffer. As Atom Ant.
 - [local: list on a page] The box list's empty test is a zero low byte, so each list must start on a page; a list at 0x3B40 ran a 64K LDIR over the hook code.
 
 ## Technique use
@@ -69,3 +70,4 @@ Boot and loading screen; music; figures white on red, cyan, yellow and blue rock
 ## Stage log
 - 2026-11-08 Stages 0-3 for the default; mock-up for Enhanced; review build for the owner.
 - 2026-11-08 Enhanced from the Spec256 set, and the message hide in the default; version 1.0 review build for the owner.
+- 2026-11-09 Upstream: `auto`, engines.py line, record 234 (views rebuilt); main rebuilds the published .nxc 1.0 bare builds, default 6ea7afb9 and Enhanced 7d7fc29e.

@@ -28,7 +28,8 @@ ROW_FIRST, X_LEFT = 32, 24
 WHITE = 15
 DECISIONS = {'figures': 'original bitmap on the ULA; figure ink in white on Layer 2, in plot order',
              'scenery': 'keeps its own attributes', 'pace': 'original; hlib_pace K windows',
-             'outline': 'none: figures have their own black masks', 'enhanced': 'waiting for the mock-up'}
+             'outline': 'none: figures have their own black masks',
+             'enhanced': "the Spec256 set's colours on a full Layer 2, off by default (ruff_and_reddy_enh)"}
 PUBLISHER = 'Hi-Tec, 1990'
 
 
@@ -499,3 +500,155 @@ def boot_check(nex, z80, patch):
             if st['mem'][a] != s.banks[bank][a & 16383]:
                 bad.append(('RAM', nexload, hex(a), s.banks[bank][a & 16383], st['mem'][a]))
     return bad
+
+
+# ---- nexclash.py auto: the published builds, boot-checked; with recordings the replay proof of both -------------------
+LOAD_SCREEN = 'ruff_and_reddy_loading.scr'   # the tape's screen, beside the snapshot: game data, never in this repo
+LOAD_MD5 = '312507e5921cd11e4ec4faefe0743dbc'
+# Enhanced, beside the snapshot, all three or none; game data derived from the Spec256 set, never in this repo:
+SET_NAME, SET_MD5 = 'ruff_and_reddy.256', '44155d7090a44a6a142181fa37cad834'                      # the set as a .256
+PANEL_NAME, PANEL_MD5 = 'ruff_and_reddy_panel.bin', '1b64b3c29f8525023d0ef52e9495ce20'          # the set's panel in play
+PALETTE_NAME, PALETTE_MD5 = 'ruff_and_reddy_palette.json', 'cc822d044ec89ffcffbfb3a122f4d088'   # the set's 256 colours
+NEG_RECORDING = 's2.rzx'                     # the broken builds' recording, as in the review run
+NEG_STOP = {'Default': 1500, 'Enhanced': 1000}
+# Each tested alone in the simulator (games/ruff_and_reddy.md); bank 8 = no paging.
+TRAINERS = """NInfinite lives
+Z 8 35789 0 0
+NInfinite time
+Z 8 54435 201 0
+NImmunity
+Z 8 44820 58 0
+NCard, fuel pump and TNT
+M 8 33104 1 0
+Z 8 33105 1 0
+Y
+"""
+
+
+def _beside(z80, file, md5, what):
+    """A private input beside the snapshot -> its path, or None. A different file there is refused."""
+    path = Path(z80).resolve().parent / file
+    if not path.is_file():
+        return None
+    if hashlib.md5(path.read_bytes()).hexdigest() != md5:
+        raise ValueError('%s is not %s (MD5 %s)' % (file, what, md5))
+    return path
+
+
+def enhanced_inputs(z80):
+    """-> (set, panel, palette) paths beside the snapshot, or None when any is missing."""
+    got = [_beside(z80, SET_NAME, SET_MD5, 'the set this engine was proved with'),
+           _beside(z80, PANEL_NAME, PANEL_MD5, "the set's panel this engine was proved with"),
+           _beside(z80, PALETTE_NAME, PALETTE_MD5, "the set's palette this engine was proved with")]
+    return tuple(got) if all(got) else None
+
+
+def _mode(label):
+    from . import ruff_and_reddy_enh as E
+    import sys
+    return E if label == 'Enhanced' else sys.modules[__name__]
+
+
+def _patch(label, z80, inputs):
+    return _mode(label).Patch(z80, *inputs) if label == 'Enhanced' else Patch(z80)
+
+
+def _replay(label, z80, inputs, rzx, stop):
+    """One recording's replay of one mode (a process of its own) -> (counts, examples, states)."""
+    return _mode(label).verify(_patch(label, z80, inputs), rzx, stop=stop, collect=1)
+
+
+def _negative(label, z80, inputs, name, rzx, stop):
+    """One deliberately broken build's replay (a process of its own): -> (label, name, its failure keys)."""
+    m = _mode(label)
+    try:
+        c, ex = m.verify(m.negative_patches(_patch(label, z80, inputs))[name], rzx, stop=stop)
+    except Exception as e:                  # noqa: BLE001 - a broken hook that runs off into data is caught too
+        return label, name, ['exception ' + type(e).__name__]
+    return label, name, sorted(k for k in c if k.endswith('!'))
+
+
+def auto(a, z80, name, out, say):
+    """nexclash.py auto: the default build (the figure overlay) and, with the set, panel and palette beside the snapshot,
+    the Enhanced build; each with the tape's loading screen when it is beside the snapshot, as published; every build
+    boot-checked. With --rzx the replay proof of each recording in both modes, the ABI cases and the broken builds. The
+    pace, soak, flicker and real loader proofs are the review run's (games/ruff_and_reddy.md "Evidence")."""
+    import concurrent.futures, os
+    from . import ruff_and_reddy_enh as E
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    if not getattr(a, 'publisher', None):
+        a.publisher = PUBLISHER
+    if not getattr(a, 'pok', None):
+        trainers = out / (name + '_verified.pok')
+        trainers.write_text(TRAINERS)
+        a.pok = str(trainers)
+    say('Game      : Ruff and Reddy in the Space Adventure (Hi-Tec, 1990, 128K)')
+    say("Engine    : ruff_and_reddy; default: original bitmap and attributes on the ULA, figures' ink in white on a "
+        "double-buffered Layer 2; Enhanced: the Spec256 set's colours on a full Layer 2 over the unchanged ULA")
+    ok = True
+    screen = _beside(z80, LOAD_SCREEN, LOAD_MD5, "the tape's loading screen")
+    inputs = enhanced_inputs(z80)
+    if screen is None:
+        say('Loading   : no %s beside the snapshot: builds without the loading screen' % LOAD_SCREEN)
+    if inputs is None:
+        say('Enhanced  : not all of %s, %s, %s beside the snapshot: default build only' % (SET_NAME, PANEL_NAME, PALETTE_NAME))
+    builds = [('Default', name, lambda: Patch(z80), boot_check)]
+    if inputs is not None:
+        art = E.Patch(z80, *inputs).art
+        builds.append(('Enhanced', name + '_enhanced', lambda: E.Patch(z80, *inputs, keep_art=art), E.boot_check))
+    for label, stem, make, check in builds:
+        nex = out / (stem + '.nex')
+        zt.convert(str(z80), str(nex), patch=make(), quiet=True)
+        nexes = [(label, nex)]
+        if screen is not None:
+            loading = out / (stem + '_loading.nex')
+            loading.write_bytes(loading_nex(nex.read_bytes(), screen.read_bytes()))
+            nexes.append((label[:3] + '+scr', loading))
+        for lab, path in nexes:
+            bad = check(path, z80, make())
+            ok = ok and not bad
+            say('%-10s: %s  %s' % (lab, path.name, hashlib.md5(path.read_bytes()).hexdigest()))
+            say('Boot      : %s' % ('simulated, OK (registers with R, all RAM; converter loader and NEXLOAD)'
+                                    if not bad else 'MISMATCH %s' % str(bad[:3])[:300]))
+    rzxs = list(getattr(a, 'rzx', None) or [])
+    if not rzxs:
+        say('Verify    : not requested; boot evidence only')
+        say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
+        return bool(ok)
+    quick = getattr(a, 'quick', None)
+    labels = [b[0] for b in builds]
+    jobs = [(lab, r) for lab in labels for r in rzxs]
+    with concurrent.futures.ProcessPoolExecutor(min(len(jobs), os.cpu_count() or 1)) as pool:
+        done = list(pool.map(_replay, *zip(*[(lab, z80, inputs or (), r, quick) for lab, r in jobs])))
+    states = {lab: [] for lab in labels}
+    for (lab, path), (c, ex, got) in zip(jobs, done):
+        seen = {x[0] for x in states[lab]}
+        states[lab] += [x for x in got if x[0] not in seen]
+        fail = {k: v for k, v in c.items() if k.endswith('!')}
+        ok = ok and not fail
+        say('Verify    : %-8s %s %d frames, %d hooks, %d R comparisons, %d Layer 2 pictures: %s' % (
+            lab, Path(path).name, c['frames'], c['hooks'], c['R comparisons'], c['publications'],
+            'IDENTICAL' if not fail else str(fail)))
+        for k, v in ex.items():
+            say('            %s: %s' % (k, str(v)[:300]))
+    for lab in labels:
+        counts = _mode(lab).unit_tests(_patch(lab, z80, inputs or ()), states[lab])
+        fail = {k: v for k, v in counts.items() if k.endswith('!')}
+        ok = ok and not fail
+        say('Unit      : %-8s %s (%d sites)' % (lab, dict(counts), len(states[lab])))
+    neg = next((r for r in rzxs if Path(r).name == NEG_RECORDING), rzxs[0])
+    negjobs = [(lab, n) for lab in labels for n in _mode(lab).negative_patches(_patch(lab, z80, inputs or ()))]
+    stops = [min(quick or NEG_STOP[lab], NEG_STOP[lab]) for lab, n in negjobs]
+    with concurrent.futures.ProcessPoolExecutor(min(len(negjobs), os.cpu_count() or 1)) as pool:
+        negs = list(pool.map(_negative, [lab for lab, n in negjobs], [z80] * len(negjobs), [inputs or ()] * len(negjobs),
+                             [n for lab, n in negjobs], [neg] * len(negjobs), stops))
+    for lab in labels:
+        mine = [x for x in negs if x[0] == lab]
+        missed = [n for _, n, keys in mine if not keys]
+        ok = ok and not missed
+        say('Negatives : %-8s %d of %d broken builds caught (%s, %d frames each)%s' % (
+            lab, len(mine) - len(missed), len(mine), Path(neg).name, min(quick or NEG_STOP[lab], NEG_STOP[lab]),
+            '; MISSED %s' % missed if missed else ''))
+    say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
+    return bool(ok)
