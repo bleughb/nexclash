@@ -21,11 +21,17 @@
 ;   29858 ED 73 13  LD (29971),SP  -> JP e_b24    24x24 masked plotter
 ;   29974 ED 73 99  LD (30105),SP  -> JP e_b24m   24x24 mirrored
 ;   59506 ED 73 F9  LD (59641),SP  -> JP e_rs     background restore (runs twice)
-;   53861 EA 3E D0  JP PE,53310    -> JP e_bl     blit loop end: commit at the fall-through
+;   53293 ED 73 69  LD (53865),SP  -> JP e_bw     blit entry: its window opens, the blit at 28 MHz
+;   53861 EA 3E D0  JP PE,53310    -> JP e_bl     blit loop end: commit and the wait at the fall-through
 ;   53868 AF 32 DC  XOR A / LD (24284),A -> JP e_end   game start / after game over: hide all
 
         DEVICE ZXSPECTRUMNEXT
         INCLUDE "lib/hlib_speed.asm"    ; macros only: HLIB_SPEED_IN
+        DEFINE HLIB_PACE_LEAN           ; windows and debt only: no interrupts in play, no K windows
+HLIB_V_PACE  EQU 0xE4C0         ; 26 bytes of page PG (0xE4C0-0xE4D9), zero at start (asm/lib/hlib_pace.asm)
+HLIB_PACE_NL EQU 312            ; 48K timing, 50 Hz: lines a frame
+T_BLIT  EQU 6900                ; the blit on the original: 27.9 ms in JNext, 1/16 lines, less the window hook's own 3.5 MHz parts
+A_HOOK  EQU 32                  ; a plot or restore hook's 3.5 MHz entry and exit, outside its readings: about 280 T, 1/16 lines
 
 PG      EQU 26                  ; hook page, MMU slot 7 while a hook runs
 GPG     EQU 1                   ; the game's page at slot 7 (48K: bank 0 upper half)
@@ -61,6 +67,7 @@ CACHE   EQU 0xE040              ; 32 x 16: +0 flags (bit 0 used since the commit
 SPRTAB  EQU 0xE240              ; 128 x 5 sprite attribute bytes
 ATTR4   EQU 0xE500              ; attribute byte -> colour index * 4 (attr 0 = white)
 PT      EQU 0xE600              ; colour*4 + pixel pair -> 4-bit pattern byte
+PCODE   EQU 0xE640              ; the limiter's code, in page PG's hole 0xE640-0xE871: the alt ROM the game reads as noise stays as it was
 HSTK    EQU 0xE980              ; hook stack top (grows down; must stay above 0xE8FC)
 RSCODE  EQU 0xE872              ; copy of the restore routine 59506-59643 (filled by Python)
 
@@ -88,6 +95,7 @@ t_rs:   ld (59641),sp
         push bc
         push de
         push hl
+        call dbo                    ; the hook's time goes to the debt; the game's own body at its own cost does not
         ld a,kind
         call decide                 ; L, C, B = the plotter's inputs
         ld (V_CNV),a
@@ -104,6 +112,7 @@ t_rs:   ld (59641),sp
         or a
         jr z,.pass
         pop af
+        call dbc
         ld sp,(V_SP)
         ld (V_A),a
         ld a,(V_SPD)
@@ -125,6 +134,7 @@ t_rs:   ld (59641),sp
         ex af,af'
         push af
         ex af,af'
+        call dbc
         ld sp,(V_SP)
         ld (V_A),a
         ld a,(V_SPD)
@@ -135,6 +145,7 @@ t_rs:   ld (59641),sp
         nextreg 0x07,3
         nextreg 0x57,PG
         ld sp,HSTK-16
+        call dbo                    ; the second run, on the scratch at 28 MHz, is extra: debt
         pop af
         ex af,af'
         exx
@@ -148,6 +159,9 @@ t_rs:   ld (59641),sp
         pop af
         ld sp,(V_SP)
         call tramp
+        ld sp,HSTK
+        call dbc
+        ld sp,(V_SP)
 .done:  ld (oper),sp                ; the operand as the original left it
         ld (V_T),hl
         ld hl,(V_SV)                ; give the game stack its two bytes back
@@ -172,6 +186,7 @@ e_rs:   nextreg 0x57,PG
         ld (V_SP),sp
         ld sp,HSTK
         HLIB_SPEED_IN V_SPD
+        call dbo
         push af
         push hl
         push de
@@ -196,6 +211,7 @@ e_rs:   nextreg 0x57,PG
         ex af,af'
         push af
         ex af,af'
+        call dbc
         ld sp,(V_SP)
         ld (V_A),a
         ld a,(V_SPD)
@@ -206,6 +222,7 @@ e_rs:   nextreg 0x57,PG
         nextreg 0x07,3
         nextreg 0x57,PG
         ld sp,HSTK-16
+        call dbo                    ; the scratch run is extra: debt
         pop af
         ex af,af'
         exx
@@ -219,6 +236,9 @@ e_rs:   nextreg 0x57,PG
         pop af
         ld sp,(V_SP)
         call t_rs                   ; the scratch copy (28 MHz)
+        ld sp,HSTK
+        call dbc
+        ld sp,(V_SP)
         ld (V_T),hl
         ld hl,(V_SV)
         push hl
@@ -232,17 +252,40 @@ e_rs:   nextreg 0x57,PG
         ld (59641),sp               ; the game's own copy of the operand (slot 7 = game page)
         ret
 
-; ---- blit loop end: JP PE as the original; at the fall-through show the recorded sprites ----
-e_bl:   jp pe,53310
-        nextreg 0x57,PG
-        ld (V_SP),sp                ; SP = the blit's row-table pointer: never push on it
+; ---- blit entry: the pace window opens; the blit runs at 28 MHz and that repays the hooks' time (no frame sync in play) ----
+e_bw:   nextreg 0x57,PG
+        ld (V_SP),sp
         ld sp,HSTK
-        HLIB_SPEED_IN V_SPD
+        HLIB_SPEED_IN V_SPD         ; e_bl's wait and exit use this latch
         push af
         push bc
         push de
         push hl
+neg_open:
+        call hlib_pace_open
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(V_SP)
+        nextreg 0x57,GPG
+        ld (53865),sp               ; the displaced instruction
+        jp 53297
+
+; ---- blit loop end: JP PE as the original; at the fall-through show the recorded sprites, then wait out the blit's time ----
+e_bl:   jp pe,53310
+        nextreg 0x57,PG
+        ld (V_SP),sp                ; SP = the blit's row-table pointer: never push on it
+        ld sp,HSTK
+        push af                     ; still 28 MHz from e_bw; V_SPD is the caller's speed
+        push bc
+        push de
+        push hl
         call commit
+        ld hl,T_BLIT
+        ld a,(V_SPD)
+neg_wait:
+        call hlib_pace_wait         ; until the blit's time on the original has passed, less the hooks' since the last one
         pop hl
         pop de
         pop bc
@@ -800,6 +843,29 @@ hideall:xor a
         ret
 rom_end:
 
+; ---- in page PG, mapped whenever a hook runs: the limiter and the debt calls. dbo / dbc keep every register ----
+        ORG PCODE
+dbo:    push af
+        push bc
+        push de
+        push hl
+        call hlib_debt_open
+dbx:    pop hl
+        pop de
+        pop bc
+        pop af
+        ret
+dbc:    push af
+        push bc
+        push de
+        push hl
+        ld a,A_HOOK
+        call hlib_debt_close
+        jr dbx
+        INCLUDE "lib/hlib_pace.asm"
+pcode_end:
+        ASSERT pcode_end <= RSCODE
+
 ; --- setup routine (stub bank, 0xD000): palette, transparency, hide all, clip, sprites on ----
         ORG 0xD000
 setup:  nextreg 0x43,0x20           ; sprite palette 0, auto-increment
@@ -1008,6 +1074,7 @@ final:  nextreg 0x56,20
         ENDMODULE
 
         SAVEBIN "st_rom.bin",0x2100,rom_end-0x2100
+        SAVEBIN "st_pcode.bin",PCODE,pcode_end-PCODE
         SAVEBIN "st_setup.bin",0xD000,pal-0xD000
         SAVEBIN "st_front.bin",0x5D00,front_end-0x5D00
         SAVEBIN "st_ldhead.bin",0xC000,ldscr.head_end-0xC000

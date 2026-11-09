@@ -2,6 +2,7 @@
 Updated 2026-10-13. Engine `smashtv` (nexclash/smashtv.py, asm/smashtv_hooks.asm,
 docs/profiles/smash_tv.json; after any .asm edit `python tools/asm2profile.py smash_tv`).
 Status: RZX IDENTICAL, front end + static + unit PASS; hardware untested.
+Techniques: `patch.pace-limiter`
 
 Reference (private repo, specnext/reference/smash_tv/): Smash_TV.z80
 (3b89344c6d7e6433bf044bef1880a2f1), Smash_TV.rzx (ed4ee1a08ce14101cb7b1246dcdaf040; Dean
@@ -137,7 +138,7 @@ controls (colours shifted; guard column 31) 24/24. Front end N / Y / SYM+Y PASS.
   sprites show only the current frame's figures.
 - The original's attr-painter glitch (B 192-207: attribute bytes in the top 16 buffer lines) is gone.
 - Converted figures appear at the end of the blit (the original's appear as the blit passes).
-- ~6% slower in play (hook cost; no frame sync in the game).
+- ~6% slower in play (hook cost; no frame sync in the game): until 2026-11-08, see "Pace" below.
 - Beeper noise (47068 reads buffer and ROM bytes as noise) may sound slightly different.
 - Unmasked plotters 30108 / 30191 (never called in the RZX) stay on the ULA.
 
@@ -148,8 +149,7 @@ controls (colours shifted; guard column 31) 24/24. Front end N / Y / SYM+Y PASS.
   multi-part figures; check the 128-sprite budget and the cache (32 groups) there).
 - Interrupts: the hooks assume IFF = 0 (true at every call in the RZX); slot 7 holds the IM 2
   handler (0xECEC), so a plot with interrupts on would crash. Not seen; hardware/longer RZX to confirm.
-- Speed: if the ~6% shows, compensate at the commit with a calibrated delay against the restore
-  run at 28 MHz (not done).
+- Speed: done 2026-11-08, the blit's pace window ("Pace" below).
 
 ## Hardware checklist
 1. Boots to the prompt "DO YOU WANT TO BE INVULNERABLE ?" (bottom row); N starts normally, Y
@@ -159,7 +159,7 @@ controls (colours shifted; guard column 31) 24/24. Front end N / Y / SYM+Y PASS.
    figures (see-through outline); player's gun white.
 3. Mirrored figures (facing left) correct; figures at the arena edges / doors clipped to the play area.
 4. Busy scenes (snake + many enemies): no missing or flickering figures, no stale sprites.
-5. Speed close to the plain build (expect ~6% slower in busy scenes).
+5. Speed as the plain build in quiet and busy scenes (JNext: within 1%; the wait is tuned on JNext).
 6. "GO FOR IT" / "GAME OVER" text: figures in front (expected).
 7. Game over -> title: all sprites gone; a second game works.
 8. Faults: Fuse "Record from snapshot" on Smash_TV.z80, autosave OFF, send the RZX.
@@ -188,15 +188,39 @@ controls (colours shifted; guard column 31) 24/24. Front end N / Y / SYM+Y PASS.
   release: walk1 + walk2 IDENTICAL (18,002 frames, 12,712 plots), unit PASS, 46/46 negatives; selftest PASSED.
 - `--altrom-fill rom3` as published: the whole-image default adds bank 47 and its ROM path check fails (the game reads
   ROM bytes at 0x2133.. where the hooks are; the rom3 build has the same reads, a known issue of the .nxc).
+- v1.2 (2026-11-08, the pace window below): the same command on main gives sprites a61d1d3c, with the screen
+  9d84b0c67626cccee1efd31e1759792f = the published v1.2 bare .nex (nxc.py --bare), byte for byte; plain 6679eea9.
+  The game now reads 2,165 hook bytes in the alt ROM as data (2,010 in 1.1): the known issue above, grown with the hooks.
+
+## Pace (2026-11-08): the blit's window, hook time in the debt
+Owner's pace rule: within 2% of the original where it runs steadily; never slower. Audit of the published 1.1 (2427346c, JNext, 600 updates,
+state in lockstep): whole +7.09..+7.77%, quiet +7.03..+7.70, busy +5.99..+8.10, slowest stretch of 20 updates +9.4.
+- Why: no frame sync and DI in play, so speed is CPU time; the hooks add 4.9 ms to a 77 ms update and nothing gave it back.
+- New site 53293 (0xD02D, the blit's `LD (53865),SP`, 3 of its 4 bytes): e_bw opens hlib_pace's window and leaves at 28 MHz; the blit runs
+  in about 3 ms; e_bl at the fall-through commits, then waits T_BLIT less the debt. V_SPD stays e_bw's latch, so the exit gives the caller's speed back.
+- Debt: every plot and restore hook (dbo / dbc): its 28 MHz work and the second, scratch run are counted; the game's own body at the caller's speed
+  (the original's cost) is not. A_HOOK 32 = the 3.5 MHz entry and exit per hook, and the readings' own cost.
+- T_BLIT: the plain build's blit is 757,000-800,000 master cycles (27.0-28.6 ms, JNext; contention), mean 27.9 ms. 6900 sixteenths of a line read
+  -0.3% whole, on JNext.
+- lib/hlib_pace.asm unchanged, LEAN (no interrupts in play, no K windows), assembled at 0xE640 in page 26's hole, not in the alt ROM: the noise routine
+  47068 reads the alt ROM as sound data, so the library there would change 420 more bytes of it. The hooks' own code grew 153 bytes. State at 0xE4C0.
+- R: not compared at any hook (CMP as before). The game has no LD A,R or LD R,A: scan of banks 5, 2, 0 of the plain build (the only hit, bank 10 0x0089 LD R,A, is the
+  .nex start stub). So no hook can change a value the game reads.
 
 ## Lessons
 - [local: Smash TV's start state] The published build's start state (a 48K view of the clean release, no front end)
   and its loading screen were steps outside the engine; to48, has_trainer_prompt and loading_nex now run in auto.
 - [local: this engine] The bodies the hooks run "at the original cost" ran at a fixed 3.5 MHz, which is the original
   cost only for a 3.5 MHz caller: they run at the latched speed now.
+- [local: this engine] The audit's control fix decided it: the "not measurable" note was the plain control resetting to the menu, not the game. With a control from
+  the patch's own start state, the state is in lockstep at all 600 updates on every seed, so the window was tuned on real numbers in two builds.
+- [local: this engine] A game that reads the alt ROM as data pays for every byte of library there; page 26 had a hole. The library assembles anywhere
+  a hook has mapped, so the hole costs nothing. The verifier's "game code wrote the hook state" check must then treat that span as hook code.
 
 ## Technique use
 - patch.restore-speed: helped: the macros in PLOTHOOK and the four other hooks (2026-11-07).
+- patch.pace-limiter: helped: LEAN, fixed window and debt; first build +0.8%, second -0.3% (2026-11-08).
+- verify.update-locked-pace: helped: the audit's method and plain arms used as they stood.
 
 ## Friction
 - reuse: [tool asm/lib/hlib_speed.asm] the shared latch macros

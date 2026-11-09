@@ -32,20 +32,23 @@ FRONT, FRONT_END = 0x5D00, 0x5D6D   # write-first game RAM 0x5C6C-0x5D6C after t
 BUF = (0xE980, 0x10000)     # attr + pixel back buffer (never read by game logic)
 PROMPT_ROW = 23
 SITES_ORIG = {29704: 'ed734e', 29777: 'ed739f', 29858: 'ed7313', 29974: 'ed7399',
-              59506: 'ed73f9', 53861: 'ea3ed0', 53868: 'af32dc'}
+              59506: 'ed73f9', 53293: 'ed7369', 53861: 'ea3ed0', 53868: 'af32dc'}
 SITE_SYM = {29704: 'e_s8', 29777: 'e_s8m', 29858: 'e_b24', 29974: 'e_b24m', 59506: 'e_rs',
-            53861: 'e_bl', 53868: 'e_end'}
+            53293: 'e_bw', 53861: 'e_bl', 53868: 'e_end'}
 KIND = {29858: 0, 29974: 1, 29704: 2, 29777: 3}          # bit 1 = 8x8, bit 0 = mirrored
 OPER = {29704: 29774, 29777: 29855, 29858: 29971, 29974: 30105, 59506: 59641}
 # instruction interiors that must never be a PC (bytes of patched instructions after the first)
 INTERIORS = (29705, 29706, 29707, 29778, 29779, 29780, 29859, 29860, 29861, 29975, 29976, 29977,
-             59507, 59508, 59509, 53862, 53863, 53870, 53871)
+             59507, 59508, 59509, 53294, 53295, 53296, 53862, 53863, 53870, 53871)
 FOLLOW = {53869: 53868}     # an instruction start inside a site: reached only after the site's start
 RS_CODE = (59506, 59644)    # the restore routine (slot 7): copied into PG at the same address
 RS_OPER = (59641, 59642)    # its self-modified operand
 # page PG layout (offsets from 0xE000; asm/smashtv_hooks.asm)
 V_N, V_PREV = 0x000, 0x001
 CACHE, SPRTAB, ATTR4, PT = 0x040, 0x240, 0x500, 0x600
+V_PACE = 0x4C0              # hlib_pace's 26 bytes: +4 debt, +10 window open
+PCODE = 0x640               # the limiter's code (0xE640-, below the restore copy): page PG is mapped whenever a hook runs
+BLIT_BODY = 53297           # the instruction after the blit entry's displaced LD (53865),SP
 HSTK_LOW = 0x940            # lowest hook stack byte allowed (above the restore copy 0x872-0x8FB)
 STATE_END = 0x980           # 0xE980-0xFFFF of PG = scratch copy of the back buffer
 NGRP, MAXSPR = 32, 128
@@ -158,9 +161,10 @@ def colour(attr):
     return 1 + ink
 
 
-def hook_page():
-    """Initial contents of page PG (8K at 0xE000)."""
+def hook_page(pcode=b''):
+    """Initial contents of page PG (8K at 0xE000): tables and the limiter's code."""
     p = bytearray(8192)
+    p[PCODE:PCODE + len(pcode)] = pcode
     for g in range(NGRP):
         p[CACHE + 16 * g + 3] = 0xFF                 # no key (size byte 0xFF never matches)
     for a in range(256):
@@ -180,6 +184,7 @@ class SmashPatch:
         h = self.prof['hooks']
         self.rom_code = rom_code or bytes.fromhex(h['rom'])
         self.front = bytes.fromhex(h['front'])
+        self.pcode = bytes.fromhex(h['pcode'])
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
         self.stub_extra = bytes.fromhex(h['setup']) + bytes(PALETTE)
         self.setup_call = 0xD000
@@ -197,7 +202,7 @@ class SmashPatch:
         pg = bytearray(rom[0x2000:0x4000])
         pg[ROM_ORG - 0x2000:ROM_ORG - 0x2000 + len(self.rom_code)] = self.rom_code
         self.page = bytes(pg)
-        self.hpage = bytearray(page if page is not None else hook_page())
+        self.hpage = bytearray(page if page is not None else hook_page(self.pcode))
         self.sites = [(a, bytes.fromhex(old), b'\xC3' + self.syms[SITE_SYM[a]].to_bytes(2, 'little'))
                       for a, old in SITES_ORIG.items()]
         self.extra_banks = {12: self.page + bytes(8192), 13: bytes(self.hpage) + bytes(8192)}
@@ -279,6 +284,7 @@ def make_start(loader_z80, entry_z80, start_z80, front):
     write_snapshot(start_z80, ram, regs, state, machine)
 
 
+NEG_FRAMES = 2500           # the limiter's negatives: far enough into a recording for play
 CMP = list(range(0, 13)) + [14] + list(range(16, 25)) + [27]   # all but R, T, IFF, MEMPTR
 
 
@@ -350,6 +356,7 @@ class NextState:
         self.events = []
         self.t3 = 0                 # T-states run at 28 MHz (counted by the runner)
         self.sel = None             # NextREG selected at port 0x243B
+        self.line, self.polls = 0, 0    # the video line (pace limiter): moves on with every reading
 
     def nextreg(self, reg, val):
         self.nr[reg] = val
@@ -408,6 +415,10 @@ def _machine(Sim, mem, regs, ns, slot='o'):
 
     class Tr:
         def read_port(s, regs_, port):
+            if port == 0x253B and ns.sel in (0x1E, 0x1F):   # the video line: a pace wait ends after a few polls
+                ns.polls += 1
+                ns.line = (ns.line + 6) % 312
+                return ns.line >> 8 & 1 if ns.sel == 0x1E else ns.line & 255
             if port == 0x253B and ns.sel is not None:   # NextREG read: the hooks' speed latch (NR 7)
                 v = ns.nr.get(ns.sel, 0)
                 return (v & 3) << 4 | (v & 3) if ns.sel == 0x07 else v
@@ -469,9 +480,11 @@ def _overlays(get, alt, psite, ns, err):
 
         def __setitem__(s, a, v):
             if a >= 0xE000 and ns.nr.get(0x57) == PG:
-                if a < 0xE000 + STATE_END and s.R[0][24] >= 0x4000 and a not in RS_OPER:
+                pc = s.R[0][24]
+                hook = pc < 0x4000 or 0xE000 + PCODE <= pc < RS_CODE[0]
+                if a < 0xE000 + STATE_END and not hook and a not in RS_OPER:
                     err.append(('game code wrote the hook state', a, s.R[0][24]))
-                if RS_CODE[0] <= a < 0xE000 + HSTK_LOW and s.R[0][24] < 0x4000 and a not in RS_OPER:
+                if RS_CODE[0] <= a < 0xE000 + HSTK_LOW and hook and a not in RS_OPER:
                     err.append(('hook wrote below its stack area (restore copy)', a))
                 ns.page[a - 0xE000] = v
                 s.page_w.add(a)
@@ -482,8 +495,9 @@ def _overlays(get, alt, psite, ns, err):
     return O, P
 
 
-def _pair(patch, get, regs, ns, stops, alt):
-    """Run original and patched code from one state until PC in stops. Returns
+def _pair(patch, get, regs, ns, stops, alt, speed=0):
+    """Run original and patched code from one state until PC in stops; the patched run must end at CPU speed `speed`
+    (the caller's 0, or 3 inside the blit's window). Returns
     (orig_sim, orig_mem, patched_sim, patched_mem, errors, original T, patched T, T at 28 MHz)."""
     from skoolkit.simulator import Simulator
     psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
@@ -512,7 +526,7 @@ def _pair(patch, get, regs, ns, stops, alt):
     ok2, t3 = _run(sp_, stops, ns)
     if not (ok1 and ok2):
         err.append('did not return')
-    if ns.nr.get(0x57) != GPG or ns.nr.get(0x07, 0) != 0:
+    if ns.nr.get(0x57) != GPG or ns.nr.get(0x07, 0) != speed:
         err.append(('MMU 7 / speed not restored', ns.nr.get(0x57), ns.nr.get(0x07)))
     if any(e[0] == 'in' for e in ns.events):
         err.append('port read in a hook')
@@ -641,6 +655,10 @@ def check_plot(pc, R, get, o, p, ns, page0, so, sp_):
     return f, dec, len(got)
 
 
+def _debt(page):
+    return page[V_PACE + 4] | page[V_PACE + 5] << 8
+
+
 def _commit_layer(ns):
     out = {}
     for i in range(128):
@@ -697,6 +715,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             so, o, sp_, p, err, to, tp, t3 = _pair(patch, get, R, ns, stops, alt)
             for e in err:
                 fail('plot %d: %s' % (pc, e[0] if isinstance(e, tuple) else e), e[1:] if isinstance(e, tuple) else ())
+            if _debt(ns.page) <= _debt(page0) and _debt(page0) < 0xBF00:
+                fail('plot: hook time not in the debt')
             fl, dec, npx = check_plot(pc, R, get, o, p, ns, page0, so, sp_)
             for k in fl:
                 fail('plot %d: %s' % (pc, k[0]), k[1:])
@@ -712,6 +732,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                 states.append(('restore', pc, list(R), bytes(G(mem, a) for a in range(65536)), bytes(ns.page),
                                bytes(ns.pat)))
             stops = (get(R[12]) | get(R[12] + 1) << 8,)
+            page0 = bytes(ns.page)
             so, o, sp_, p, err, to, tp, t3 = _pair(patch, get, R, ns, stops, alt)
             for e in err:
                 fail('restore: %s' % (e[0] if isinstance(e, tuple) else e,))
@@ -720,15 +741,29 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             md = [a for a in set(o.ov) | set(p.ov) if o[a] != p[a]]
             if diff or md:
                 fail('restore: registers/memory differ', (diff, sorted(md)[:4]))
+            if _debt(ns.page) <= _debt(page0) and _debt(page0) < 0xBF00:
+                fail('restore: hook time not in the debt')
             sc = [a for a in o.ov if a >= 0xE980 and ns.page[a - 0xE000] != o.ov[a]]
             if sc:
                 fail('restore: scratch copy differs from the restored buffer', (len(sc),))
             c['restores (real + scratch)'] += 1
             tm['restore orig'] += to
             tm['restore patched'] += tp - t3 + t3 // 8
+        elif pc == 53293:
+            so, o, sp_, p, err, to, tp, t3 = _pair(patch, get, R, ns, (BLIT_BODY,), alt, speed=3)
+            for e in err:
+                fail('blit entry: %s' % (e[0] if isinstance(e, tuple) else e,))
+            ro, rp = so.registers, sp_.registers
+            diff = [i for i in CMP if ro[i] != rp[i]]
+            md = [a for a in set(o.ov) | set(p.ov) if o[a] != p[a]]
+            if diff or md:
+                fail('blit entry: registers/memory differ', (diff, sorted(md)[:4]))
+            if not ns.page[V_PACE + 10]:
+                fail('blit entry: the window is not open')
+            c['blit windows'] += 1
         elif pc == 53861:
             pv = R[1] & 4
-            so, o, sp_, p, err, to, tp, t3 = _pair(patch, get, R, ns, (53310, 53864), alt)
+            so, o, sp_, p, err, to, tp, t3 = _pair(patch, get, R, ns, (53310, 53864), alt, speed=3 if pv else 0)
             for e in err:
                 fail('blit end: %s' % (e[0] if isinstance(e, tuple) else e,))
             ro, rp = so.registers, sp_.registers
@@ -739,6 +774,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             if pv:
                 return
             c['commits'] += 1
+            if ns.page[V_PACE + 10]:
+                fail('commit: the blit window left open (no wait)')
             want = {}
             for img in pending:
                 want.update(img)
@@ -899,6 +936,23 @@ def unit_tests(patch, states, negs=()):
     return c
 
 
+def pace_negatives(prof=None):
+    """Limiter patches the replay must catch: (name, patch, the fail key it must raise). A wait that never runs leaves the
+    window open; a window never opened; a plot or restore whose time is left out of the debt."""
+    base = SmashPatch(prof)
+    out = []
+    w, o = base.syms['neg_wait'] - ROM_ORG, base.syms['neg_open'] - ROM_ORG
+    for name, off, key in (('a limiter that never waits', w, 'commit: the blit window left open'),
+                           ('a window never opened', o, 'blit entry: the window is not open')):
+        rom = bytearray(base.rom_code)
+        rom[off:off + 3] = bytes(3)
+        out.append((name, SmashPatch(prof, rom_code=bytes(rom)), key))
+    pg = bytearray(base.hpage)
+    pg[base.syms['dbc'] - 0xE000] = 0xC9
+    out.append(('hook time left out of the debt', SmashPatch(prof, page=bytes(pg)), 'plot: hook time not in the debt'))
+    return out
+
+
 def negative_patches(patch):
     """Broken copies that the checks must catch: colours shifted (ATTR4), guard column 31 instead of
     30 (decide's CP 30), the restore copy missing (scratch run executes zeros)."""
@@ -933,22 +987,22 @@ def static_checks(patch):
         bad.append('alt ROM 0x3800-0x3FFF (0x386E check byte, font) differs from the ROM')
     if patch.regblock + 20 > 0x386E:
         bad.append('register block reaches 0x386E')
-    code = patch.rom_code
     n = 0
-    i = 0
-    while i < len(code):                            # linear sweep (the block is code only)
-        op = code[i]
-        a = ROM_ORG + i
-        if 0x3D00 <= a < 0x3E00:
-            bad.append(('code in 0x3D00-0x3DFF', a))
-        if op in (0xDD, 0xFD):
-            bad.append(('IX/IY instruction', hex(a)))
-        if op in (0xF3, 0xFB):
-            bad.append(('DI/EI', hex(a)))
-        if op == 0xED and i + 1 < len(code) and code[i + 1] in (0x46, 0x56, 0x5E, 0x47, 0x4D, 0x45):
-            bad.append(('IM / LD I,A / RETI / RETN', hex(a)))
-        i += _oplen(code, i)
-        n += 1
+    for code, org in ((patch.rom_code, ROM_ORG), (patch.pcode, 0xE000 + PCODE)):
+        i = 0
+        while i < len(code):                        # linear sweep (the blocks are code only)
+            op = code[i]
+            a = org + i
+            if 0x3D00 <= a < 0x3E00:
+                bad.append(('code in 0x3D00-0x3DFF', a))
+            if op in (0xDD, 0xFD):
+                bad.append(('IX/IY instruction', hex(a)))
+            if op in (0xF3, 0xFB):
+                bad.append(('DI/EI', hex(a)))
+            if op == 0xED and i + 1 < len(code) and code[i + 1] in (0x46, 0x56, 0x5E, 0x47, 0x4D, 0x45):
+                bad.append(('IM / LD I,A / RETI / RETN', hex(a)))
+            i += _oplen(code, i)
+            n += 1
     return bad, n
 
 
@@ -1069,8 +1123,8 @@ def auto(a, z80, name, out, say):
                 c['sprite pixels compared'], 'IDENTICAL' if not fails else 'FAILED %s' % fails))
         tm = collections.Counter(c['_time'])     # quick runs may end before the first plot
         gf = max(1, tm.get('game frames', 1))
-        say('Speed     : per game frame (T at 3.5 MHz, 28 MHz parts / 8): plots %d -> %d, restore %d -> %d, '
-            'commit +%d: hooks add %d T (the game has no frame sync: ~%.1f%% slower at ~250K T per game frame)' % (
+        say('Speed     : per game frame (T at 3.5 MHz, 28 MHz parts / 8; the commit\'s includes the wait\'s polls): plots %d '
+            '-> %d, restore %d -> %d, commit +%d: hooks add %d T (%.1f%% of ~250K T), repaid by the blit\'s window' % (
                 tm['plot orig'] // gf, tm['plot patched'] // gf, tm['restore orig'] // gf,
                 tm['restore patched'] // gf, tm['commit patched'] // gf,
                 (tm['plot patched'] - tm['plot orig'] + tm['restore patched'] - tm['restore orig']
@@ -1079,6 +1133,14 @@ def auto(a, z80, name, out, say):
                          + tm['commit patched']) / gf / 250000))
         for k, v in ex.items():
             say('            %s: %s' % (k, str(v)[:200]))
+    if a.rzx and not getattr(a, 'quick', None):
+        r0 = os.path.join(out, os.path.splitext(os.path.basename(a.rzx[0]))[0] + '_stripped.rzx')
+        r0 = r0 if os.path.exists(r0) else a.rzx[0]
+        for nm, neg, key in pace_negatives():
+            cn = verify(neg, r0, stop=NEG_FRAMES)[0]
+            hit = any(isinstance(k, str) and k.startswith(key) and k.endswith('!') for k in cn)
+            ok = ok and hit
+            say('Pace neg  : %s %s' % (nm, 'DETECTED' if hit else 'NOT DETECTED!'))
     if states:
         u = unit_tests(_applied(start, front), states, negative_patches(_applied(start, front)))
         uf = {k: v for k, v in u.items() if k.endswith('!')}
