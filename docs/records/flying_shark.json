@@ -1,0 +1,163 @@
+{
+ "name": "flying_shark",
+ "order": 244,
+ "game": "Flying Shark",
+ "doc": "flying_shark.md",
+ "engine": "flying_shark",
+ "representative": true,
+ "reference": "flying_shark",
+ "inputs": {
+  "snapshot": {
+   "name": "flying_shark.z80",
+   "md5": "c545645a8688f24428492937125fbfcd",
+   "path": "flying_shark/flying_shark.z80",
+   "note": "Flying Shark (1987)(Firebird).z80, the 48K loader snapshot at its PAUSE 0 with the game packed and the real loading screen shown; the archive has no 128K release."
+  },
+  "recordings": [
+   {
+    "name": "s1.rzx",
+    "md5": "4a09a43c5417063f204a9fd74c2a7f25",
+    "path": "flying_shark/s1.rzx",
+    "role": "Clean scripted Kempston play from the loading screen, 3,000 frames. The broken builds and the ABI cases use its first 1,300 frames."
+   },
+   {
+    "name": "full1.rzx",
+    "md5": "14d881f9e88e7ffc730b0267008fb71c",
+    "path": "flying_shark/full1.rzx",
+    "role": "Clean scripted Kempston play: title, play, deaths, game over, name entry and a new game, 9,019 frames."
+   },
+   {
+    "name": "deep1.rzx",
+    "md5": "de807e87a8ebac5b2fb29163894b4b98",
+    "path": "flying_shark/deep1.rzx",
+    "role": "A test fixture with an infinite lives poke, scripted Kempston play into later scenery, 24,026 frames; coverage, not clean play. Not in the verify list: it starts mid-game (PC FDFD, after the unpack), not from the snapshot, so the ROM path check's tail and printer buffer model, which assumes the build's own start, does not fit it (the game's own data sits at the tail's address there). Replayed whole with auto --rzx on this tree: IDENTICAL, every ROM byte as recorded."
+   }
+  ]
+ },
+ "modules": [
+  "flying_shark"
+ ],
+ "own_modules": [
+  "flying_shark"
+ ],
+ "data": [
+  "asm/flying_shark_hooks.asm",
+  "docs/profiles/flying_shark.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "s1.rzx",
+   "full1.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 12,
+  "note": "At every hook every register with R, all 48K RAM (stack too) and every port write in order against the original; the Layer 2 picture against an independent model read from the game's graphics at every flip, and the last figure's ink against the bitmap the blit wrote; ABI cases on s1's states and 14 broken builds. deep1 is replayed by hand (its role says why). Pace, soak, flicker, beam audit and the real loader are in games/flying_shark.md \"Evidence\"."
+ },
+ "outputs": {
+  "sprites": {
+   "file": "flying_shark_sprites.nex",
+   "md5": "5e6a49cafce1d97c50d3f8d3e92b8db9"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Flying Shark",
+  "engine_col": "flying_shark (flying_shark.md)",
+  "build": "v1.0; flying_shark_sprites.nex 5e6a49ca equals the published .nxc 1.0 bare build; the original look, no clash to remove and none claimed; a white one-pixel outline on figures on a double-buffered Layer 2, none on bullets; the blit at 28 MHz in its original time; top bank 47, fits a 1MB Next",
+  "software": "stamp: s1 and full1, 12,045 frames, 10,925 hooks with R, 48K RAM and 18,726 port writes, 2,463 Layer 2 pictures and 317,512 pixels against the model; 384 ABI cases, 14 of 14 broken builds; ROM paths complete (Next ROM 8c34d957); deep1 (fixture, 24,026 frames, 21,704 hooks) replayed IDENTICAL by hand, outside the stamp; review run: pace in JNext in lockstep, whole runs -0.09% to -0.02%, slowest 20 updates up to +3.28%; 15-minute soak, flicker, beam audit, real loader on private cards",
+  "hardware": "untested",
+  "next": "hardware checklist; the owner's play; Enhanced (mock-up only, rated MODERATE); later stages and 2 players"
+ },
+ "checks": [
+  "asm2profile:flying_shark"
+ ],
+ "results": [
+  {
+   "check": "external review run",
+   "status": "pass",
+   "scope": "runs/flying_shark/release-20261108: pace, soak, flicker, beam audit and real loader, JNext 1.1.104, on this engine's bytes. Not a selftest stamp.",
+   "evidence": "games/flying_shark.md \"Evidence\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/flying_shark_hooks.asm": "b854ff455cd7c1ba",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/flying_shark.json": "fb7369225f4ac651",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "ada8767eafd1b16d",
+   "nexclash/flying_shark.py": "0cbdd7ee1b7cf62c",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "eed911cd2f674bb0",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ },
+ "verified": {
+  "deps": {
+   "asm/flying_shark_hooks.asm": "b854ff455cd7c1ba",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/flying_shark.json": "fb7369225f4ac651",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "ada8767eafd1b16d",
+   "nexclash/flying_shark.py": "0cbdd7ee1b7cf62c",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "eed911cd2f674bb0",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ }
+}

@@ -599,3 +599,94 @@ def boot_check(nex, z80, patch):
             if st['mem'][a] != s.banks[bank][a & 16383]:
                 bad.append(('RAM', nexload, hex(a), s.banks[bank][a & 16383], st['mem'][a]))
     return bad
+
+
+# ---- nexclash.py auto: the published build, boot-checked; with recordings the replay proof ---------------------------
+import hashlib
+
+PUBLISHER = 'Firebird, 1987'
+NEG_RECORDING, NEG_STOP = 's1.rzx', 1300   # the broken builds and the ABI cases: this recording (else the first), these frames
+# Each tested alone in JNext (the review run's NOTES.md "Cheats"); the published patch's three, as snapshot addresses:
+# 54462 is in the packed stream, 60126 and 60430 are the archive's live addresses translated through stream_map.
+TRAINERS = '''NInfinite lives
+Z 8 54462 201 0
+NImmunity
+Z 8 60126 24 0
+NInfinite bombs
+Z 8 60430 126 0
+Y
+'''
+
+
+def _replay(z80, rzx, stop, collect):
+    """One recording's replay (a process of its own) -> (counts, examples, states)."""
+    got = verify(Patch(z80), rzx, stop=stop, collect=collect)
+    return got if collect else (got[0], got[1], [])
+
+
+def _negative(z80, name, rzx, stop):
+    """One deliberately broken build's replay (a process of its own): -> (name, its failure keys)."""
+    try:
+        return name, sorted(run_negative(negative_patches(Patch(z80))[name], rzx, stop))
+    except Exception as e:                  # noqa: BLE001 - a broken hook that runs off into data is caught too
+        return name, ['exception ' + type(e).__name__]
+
+
+def auto(a, z80, name, out, say):
+    """nexclash.py auto: the outline build, as published (the snapshot holds the game's own loading screen), boot-checked
+    with and without NEXLOAD. With --rzx the replay proof of each recording, the ABI cases and the broken builds. The
+    pace, soak, flicker, beam and real loader proofs are the review run's (games/flying_shark.md "Evidence")."""
+    import concurrent.futures, os
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    if not getattr(a, 'publisher', None):
+        a.publisher = PUBLISHER
+    if not getattr(a, 'pok', None):
+        trainers = out / (name + '_verified.pok')
+        trainers.write_text(TRAINERS)
+        a.pok = str(trainers)
+    say('Game      : Flying Shark (Graftgold / Firebird, 1987, 48K)')
+    say('Engine    : flying_shark; the original look (no clash to remove), a white one-pixel outline on figures on '
+        'a double-buffered Layer 2; original pace')
+    nex = out / (name + '_sprites.nex')
+    zt.convert(str(z80), str(nex), patch=Patch(z80), quiet=True)
+    bad = boot_check(nex, z80, Patch(z80))
+    ok = not bad
+    say('%-10s: %s  %s' % ('Sprites', nex.name, hashlib.md5(nex.read_bytes()).hexdigest()))
+    say('Boot      : %s' % ('simulated, OK (registers with R, all 48K RAM; converter loader and NEXLOAD)'
+                            if not bad else 'MISMATCH %s' % str(bad[:3])[:300]))
+    rzxs = list(getattr(a, 'rzx', None) or [])
+    if rzxs:
+        quick = getattr(a, 'quick', None)
+        neg_rzx = next((r for r in rzxs if Path(r).name == NEG_RECORDING), rzxs[0])
+        collect = [1 if r == neg_rzx else 0 for r in rzxs]
+        with concurrent.futures.ProcessPoolExecutor(min(len(rzxs), os.cpu_count() or 1)) as pool:
+            done = list(pool.map(_replay, [z80] * len(rzxs), rzxs, [quick] * len(rzxs), collect))
+        states = []
+        for path, (c, ex, got) in zip(rzxs, done):
+            states += got
+            fail = {k: v for k, v in c.items() if k.endswith('!')}
+            ok = ok and not fail
+            say('Verify    : %s %d frames, %d hooks, %d R comparisons, %d port writes, %d plots, %d Layer 2 pictures, '
+                '%d pixels, %d bitmap checks: %s' % (Path(path).name, c['frames'], c['hooks'], c['R comparisons'],
+                                                     c['port writes compared'], c['plots'], c['publications'],
+                                                     c['overlay pixels compared'], c['bitmap checks'],
+                                                     'IDENTICAL' if not fail else str(fail)))
+            for k, v in ex.items():
+                say('            %s: %s' % (k, v))
+        counts = unit_tests(Patch(z80), states)
+        fail = {k: v for k, v in counts.items() if k.endswith('!')}
+        ok = ok and not fail and bool(counts.get('ABI cases'))
+        say('Unit      : %s (states of %s)' % (dict(counts), Path(neg_rzx).name))
+        names = list(negative_patches(Patch(z80)))
+        stop = min(x for x in (quick, NEG_STOP) if x)
+        with concurrent.futures.ProcessPoolExecutor(min(len(names), os.cpu_count() or 1)) as pool:
+            neg = list(pool.map(_negative, [z80] * len(names), names, [neg_rzx] * len(names), [stop] * len(names)))
+        missed = [n for n, keys in neg if not keys]
+        ok = ok and not missed
+        say('Negatives : %d of %d broken builds caught (%s, %d frames)%s' % (
+            len(neg) - len(missed), len(neg), Path(neg_rzx).name, stop, '; MISSED %s' % missed if missed else ''))
+    else:
+        say('Verify    : not requested; boot evidence only')
+    say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
+    return bool(ok)

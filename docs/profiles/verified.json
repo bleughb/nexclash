@@ -162,6 +162,13 @@
     "sprites": "fb77af62c5ce975802c354dd8b1943ee"
    }
   },
+  "c545645a8688f24428492937125fbfcd": {
+   "game": "Flying Shark",
+   "doc": "flying_shark.md",
+   "nex": {
+    "sprites": "5e6a49cafce1d97c50d3f8d3e92b8db9"
+   }
+  },
   "e1c2ff3cfbd4f6f5a84034d57b666acf": {
    "game": "Game Over",
    "doc": "game_over.md",

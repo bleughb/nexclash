@@ -1,10 +1,11 @@
 # Flying Shark (Graftgold / Firebird, 1987, 48K)
 
 ## Next session
-Stage: 3 (review build, not played). Hardware: untested. Review build v1.0 for the owner, not published; not yet wired into `auto`, `engines.py` or a record: that comes when it goes upstream after he has played it.
-Inputs: Flying Shark (1987)(Firebird).z80, MD5 c545645a8688f24428492937125fbfcd, a 48K loader snapshot at PAUSE 0.
-Build: `flying_shark.build(z80, nex)`. Checks: run from the private review folder (runs/flying_shark/release-20261108/work: v1.py, neg.py, beam.py, final.sh); nothing here needs them to build.
-Pending: the owner's play; hardware checklist; whether he wants the outline at all, and Enhanced (mock-up only).
+Stage: 4 (hardware). Hardware: untested. v1.0 published as .nxc 1.0 (2026-11-08, nxc repo 05d3127, wording fix d5cc1df) at the owner's request, not yet played by him. The outline is on by default.
+Inputs: Flying Shark (1987)(Firebird).z80, MD5 c545645a8688f24428492937125fbfcd, a 48K loader snapshot at PAUSE 0 with the real loading screen shown. No other private input: the screen is in the snapshot.
+Build: `nexclash.py auto` writes `NAME_sprites.nex` (5e6a49ca), equal to `nxc.py PATCH GAME --bare` of the published patch byte for byte, and boot-checks it with and without NEXLOAD.
+Checks: `selftest.py --game flying_shark --verify`: replay of s1 and full1 with R and every port write, Layer 2 against the model, ABI cases and 14 broken builds on s1's first 1,300 frames, ROM paths. deep1 starts mid-game, after the unpack, so it stays out of the verify list (the ROM path check's tail model assumes the build's own start); replayed by hand with `auto --rzx` it is IDENTICAL. Pace, soak, flicker, beam audit and real loader are in Evidence, not in the repo.
+Pending: the owner's play; hardware checklist; Enhanced (mock-up only, rated MODERATE); later stages and 2 players.
 
 ## Facts
 - No 128K release in the archive: every Flying Shark dump is 48K with beeper sound. The target's header says 48K + Interface 1; no Interface 1 use.
@@ -28,7 +29,7 @@ Owner's standard: where the play area is monochrome, keep the look, claim no cla
 - With list pages full (46 pages, not reached in any run) new shapes would go without a ring.
 
 ## Evidence
-See the review run's NOTES.md (runs/flying_shark/release-20261108): pace, replay with R, negatives, soak, flicker, beam audit, loader. JNext 1.1.104 and simulator only; nothing has run on a Next.
+Upstream (2026-11-09): `selftest.py --game flying_shark --verify --stamp` on main's tree, results in the record's status. See the review run's NOTES.md (runs/flying_shark/release-20261108): pace, replay with R, negatives, soak, flicker, beam audit, loader. JNext 1.1.104 and simulator only; nothing has run on a Next.
 
 ## Hardware checklist
 Nothing has run on a Next. To check: the flip below the play area and the blit at 28 MHz (JNext's so far); that updates keep their 2 and 3 frame beat; the beeper; the real loader; 1MB Next.
@@ -47,6 +48,8 @@ Nothing has run on a Next. To check: the flip below the play area and the blit a
 - [local: pace step] When the handler overruns two frames the update takes three: a small time difference near the line moves whole updates, so the blit's window has to be right to within a few hundred T.
 - [local: no sim timing] The simulator's T is not JNext's (140,000 against 131,000 T a handler here): the toolkit's frame length needed 72,000 T to give the 2-frame beat, and death paths starved; POKE tests moved to JNext.
 - [local: pixel lists] Cached per-graphic pixel lists beat recomputing rings by a factor of 7 at 28 MHz, and clearing by replaying the list beats a rectangle.
+- [local: upstream naming] The default is a hook build, so auto names it NAME_sprites.nex, which nxcout packages as the default; the plain conversion would take NAME.nex.
+- [local: fixture start states] A fixture recording that starts after the unpack holds game data where the build's start-up tail sits, so the ROM path check reports tail reads that the real start never makes. Recordings in the verify list start from the snapshot; such a fixture is replayed by hand.
 
 ## Friction
 - reuse: [none: the shared pace and hook libraries were enough]
@@ -56,4 +59,6 @@ Nothing has run on a Next. To check: the flip below the play area and the blit a
 - scratch: [local: review run] Its work folder stays in private evidence.
 
 ## Stage log
+- 2026-11-09 Upstream: `auto`, registration and record added; the engine bytes are the published ones, MD5 5e6a49ca.
+- 2026-11-08 Published: .nxc 1.0 (nxc 05d3127, d5cc1df) at the owner's request, not yet played by him.
 - 2026-11-08 Stage 3: review build, outline on Layer 2, proofs; not yet played by the owner.
