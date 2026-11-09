@@ -6665,7 +6665,7 @@ def copier_window_build(reference, folder, hooks=False, work=False, driver=False
     from hashlib import md5
     reference, folder = Path(reference), Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
-    snapshot = reference / (('Inferno_%s.z80' % name) if name else 'Inferno%d.z80' % level if level else 'Inferno.z80')
+    snapshot = reference / ((name + '.z80' if name.startswith('Inferno') else 'Inferno_%s.z80' % name) if name else 'Inferno%d.z80' % level if level else 'Inferno.z80')
     if fullgame:
         import subprocess, sys
         snapshot = folder / 'Inferno_bootstrap.z80'
@@ -6674,7 +6674,7 @@ def copier_window_build(reference, folder, hooks=False, work=False, driver=False
     work = work or driver
     hooks = hooks or work
     patch = CopierWindowSnapshotPatch(tape_blocks(reference / 'Inferno.tzx'), window_only=not hooks, work=work, driver=driver, fullgame=fullgame)
-    nex = folder / ('Inferno_full_game.nex' if fullgame else 'Inferno_%s.nex' % name if name else 'Inferno_level%d.nex' % level if level else 'Inferno_driver_diagnostic.nex' if driver else 'Inferno_copier_window_m3b_diagnostic.nex' if work else
+    nex = folder / ('Inferno_full_game.nex' if fullgame else ('%s.nex' % name if name.startswith('Inferno') else 'Inferno_%s.nex' % name) if name else 'Inferno_level%d.nex' % level if level else 'Inferno_driver_diagnostic.nex' if driver else 'Inferno_copier_window_m3b_diagnostic.nex' if work else
                     'Inferno_copier_window_m3_diagnostic.nex' if hooks else 'Inferno_copier_window_diagnostic.nex')
     _, tail, data, _ = z80tonex.convert(str(snapshot), str(nex), quiet=True, patch=patch)
     if driver:                                  # tables sit in banks 48+: the loader must refuse a 1 MB machine
