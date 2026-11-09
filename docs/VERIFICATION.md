@@ -111,6 +111,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Page and the Curse of the Pharaoh (page_pharaoh): `page_pharaoh_sprites.nex` ad82fe2d63f623af54950d2c56d34a44, `page_pharaoh_sprites_loading.nex` 430b6184b2397b0759db1b151984f339, `page_pharaoh_enhanced.nex` 139bfcafd68061d939d1d2c51efdacc6, `page_pharaoh_enhanced_loading.nex` 3c710b98afbe12f66d1e6ff03f00285d; verified 2026-11-09
 - Jilly's Farm Volume 1 - SokoBAArn! (jillys_farm): `jillys_farm.nex` 427aab29dd75a73276829f59a02cb23c, `jillys_farm_loading.nex` e50bbd5371c34e3b2a1f58a4c57978bf, `jillys_farm_enhanced.nex` 987f52a06c06962e09000d6fe1bf8f48, `jillys_farm_enhanced_loading.nex` 9f9cad7c1684667b4b2bd7fcc1cf6334; verified 2026-11-09
 - That Sinking Feeling (that_sinking_feeling): `that_sinking_feeling_sprites.nex` 07fea8b4205b854febc67d44a3d013fe, `that_sinking_feeling_sprites_loading.nex` 7a34cae8445952cc8c56b0fc52e9908b, `that_sinking_feeling_enhanced.nex` f6838dd33f91b87930d22fa3a584bc9e, `that_sinking_feeling_enhanced_loading.nex` 8c9469e34a9fb936e8c1f7709e383ea7; verified 2026-11-09
+- Movie (movie): `movie.nex` ad4b36c8ec0c71229377215aad817e23, `movie_sprites.nex` 2730d62f8eb0e773e38257249ca0e883, `movie_enhanced.nex` 60e35f942a686ed4e0324801fc85e0eb, `movie_sprites_loading.nex` 5056c7519eb0e9861a60aab772090eaa, `movie_enhanced_loading.nex` 62acb19c46242bcef9411a8f5f7b5464; verified never
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

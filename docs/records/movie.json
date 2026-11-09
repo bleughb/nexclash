@@ -148,7 +148,7 @@
   {
    "application": "movie.r",
    "id": "patch.preserve-r",
-   "revision": 2,
+   "revision": 1,
    "target": "Native R at every hook rejoin.",
    "phases": [
     "entry",
