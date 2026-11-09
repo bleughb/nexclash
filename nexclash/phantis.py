@@ -646,32 +646,122 @@ def boot_check(nex, z80, patch):
     return bad
 
 
+LOAD_SCREEN = 'phantis_loading.scr'
+LOAD_MD5 = 'a5ce3ee058956e3cfcdd885cb3f485af'      # the tape's loading screen, 6,912 bytes; the same for both parts
+COLOURS_FILE = 'phantis1_enhanced.bin'
+COLOURS_MD5 = 'c52e55b765ce0187bd38523f3863b633'   # phantis_art.py's table from the Spec256 set (David Goti), part 1; never in this repo
+UNREACHED = {'colours: clipped rows not skipped':
+             'the clipped-row path of a painted figure is never reached in the recordings (games/phantis.md "Lessons")'}
+
+
+def _beside(z80, fname, md5):
+    """A local input beside the snapshot, or None. A different file there is refused."""
+    import hashlib
+    path = Path(z80).resolve().parent / fname
+    if not path.is_file():
+        return None
+    if hashlib.md5(path.read_bytes()).hexdigest() != md5:
+        raise ValueError('%s is not the expected file (MD5 %s)' % (fname, md5))
+    return path
+
+
+def loading_nex(nex, screen):
+    """A built .nex -> the same with the loading screen in the NEX file (header byte 10 = 2), as the published .nxc."""
+    if len(screen) != 6912 or nex[10] != 0:
+        raise ValueError('Expected a .nex without a screen and a 6,912-byte loading screen')
+    head = bytearray(nex[:512])
+    head[10] = 2
+    return bytes(head) + screen + nex[512:]
+
+
+def _replay(z80, enh, rzx, stop, collect):
+    """One recording against one build's hooks (a process of its own) -> (name, counts, failures, states)."""
+    r = verify(Patch(z80, enhanced=enh), rzx, stop=stop, collect=collect)
+    c, ex, states = r[0], r[1], (r[2] if len(r) > 2 else [])
+    return Path(rzx).name, dict(c), {k: (v, ex.get(k[:-1], [])[:2]) for k, v in c.items() if k.endswith('!')}, states
+
+
+def _negative(z80, enh, name, rzx, stop):
+    """One deliberately broken build's replay (a process of its own) -> (name, its failure keys)."""
+    try:
+        return name, sorted(run_negative(negative_patches(Patch(z80, enhanced=enh))[name], rzx, stop))
+    except Exception as e:          # noqa: BLE001 - a hang or crash of a broken build is a catch
+        return name, ['hung or crashed: %s' % repr(e)[:80]]
+
+
 def auto(a, z80, name, out, say):
-    """nexclash.py auto: the overlay build, its boot check, and with --rzx the replay proof and the ABI cases."""
+    """nexclash.py auto: the overlay build and, for part 1 with the colour table beside the snapshot, Enhanced; each with
+    the tape's loading screen when it is beside the snapshot, each boot-checked. With --rzx: every recording replayed
+    against each build's hooks, the ABI cases on states from the first recording, and the broken builds on its first
+    NEG_STOP frames. Pace, soak, flicker, beam and the real loader are the review runs' (games/phantis.md)."""
+    import concurrent.futures, hashlib, os
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     if not getattr(a, 'publisher', None):
         a.publisher = PUBLISHER
-    patch = Patch(z80)
-    say('Game      : Phantis / Game Over 2 part %d (Dinamic, 48K)' % patch.part.n)
+    part = Patch(z80).part
+    say('Game      : Phantis / Game Over 2 part %d (Dinamic, 48K)' % part.n)
     say('Engine    : phantis; original bitmap and clean attributes on the ULA, figures on a double-buffered Layer 2; original pace')
-    nex = out / (name + '_sprites.nex')
-    zt.convert(str(z80), str(nex), patch=patch, quiet=True, keep_printer_buffer=True)
-    bad = boot_check(nex, z80, Patch(z80))
-    ok = not bad
-    say('Plain     : not built')
-    say('Sprites   : %s' % nex.name)
-    say('Boot      : %s' % ('simulated, OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:300]))
-    states = []
-    for path in list(getattr(a, 'rzx', None) or []):
-        c, ex, got = verify(Patch(z80), path, stop=getattr(a, 'quick', None), collect=1)
-        states += got
-        fail = {k: v for k, v in c.items() if k.endswith('!')}
-        ok = ok and not fail
-        say('Verify    : %s %d frames, %d hooks: %s' % (Path(path).name, c['frames'], c['hooks'], 'IDENTICAL' if not fail else str(fail)))
-    if states:
-        u = unit_tests(Patch(z80), states)
-        ok = ok and not [k for k in u if k.endswith('!')]
-        say('Unit      : %s' % dict(u))
+    ok = True
+    screen_path = _beside(z80, LOAD_SCREEN, LOAD_MD5)
+    screen = screen_path.read_bytes() if screen_path else None
+    colours = _beside(z80, COLOURS_FILE, COLOURS_MD5) if part.n == 1 else None
+    colours = str(colours) if colours else None
+    builds = [('Sprites', '_sprites', None)]
+    if part.n == 1 and colours is None:
+        say('Enhanced  : no %s beside the snapshot: default only' % COLOURS_FILE)
+    elif colours:
+        builds.append(('Enhanced', '_enhanced', colours))
+    if screen is None:
+        say('Loading   : no %s beside the snapshot: builds without the loading screen' % LOAD_SCREEN)
+    for label, suffix, enh in builds:
+        nex = out / (name + suffix + '.nex')
+        build(z80, nex, enhanced=enh)
+        nexes = [nex]
+        if screen is not None:
+            loading = out / (name + suffix + '_loading.nex')
+            loading.write_bytes(loading_nex(nex.read_bytes(), screen))
+            nexes.append(loading)
+        for n in nexes:
+            bad = boot_check(n, z80, Patch(z80, enhanced=enh))
+            ok = ok and not bad
+            say('%-10s: %s  %s' % (label, n.name, hashlib.md5(n.read_bytes()).hexdigest()))
+            say('Boot      : %s' % ('simulated, OK (registers with R, all 48K RAM; converter loader and NEXLOAD)' if not bad
+                                    else 'MISMATCH %s' % str(bad[:3])[:300]))
+    rzxs = list(getattr(a, 'rzx', None) or [])
+    stop = getattr(a, 'quick', None)
+    if not rzxs:
+        say('Verify    : not requested; boot evidence only')
+        say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
+        return bool(ok)
+    n = len(rzxs)
+    nstop = NEG_STOP if stop is None else min(stop, NEG_STOP)
+    with concurrent.futures.ProcessPoolExecutor(min(len(builds) * (n + 1) + 13, os.cpu_count() or 1)) as pool:
+        jobs = []
+        for label, suffix, enh in builds:
+            first = pool.submit(_replay, z80, enh, rzxs[0], nstop, 1)
+            reps = [pool.submit(_replay, z80, enh, r, stop, 0) for r in rzxs]
+            negs = []
+            if stop is None:
+                names = list(negative_patches(Patch(z80, enhanced=enh)))
+                negs = [pool.submit(_negative, z80, enh, k, rzxs[0], NEG_STOP) for k in names]
+            jobs.append((label, enh, first, reps, negs))
+        for label, enh, first, reps, negs in jobs:
+            for f in reps:
+                rname, c, fail, _ = f.result()
+                ok = ok and not fail
+                say('Verify    : %s %s %d frames, %d hooks: %s' % (label, rname, c.get('frames', 0), c.get('hooks', 0),
+                                                              'IDENTICAL' if not fail else str(fail)[:400]))
+            u = unit_tests(Patch(z80, enhanced=enh), first.result()[3])
+            ok = ok and not [k for k in u if k.endswith('!')] and u.get('ABI cases', 0) > 0
+            say('Unit      : %s %s' % (label, dict(u)))
+            if negs:
+                res = dict(f.result() for f in negs)
+                missed = [k for k, v in res.items() if not v and k not in UNREACHED]
+                known = [k for k, v in res.items() if not v and k in UNREACHED]
+                ok = ok and not missed
+                say('Negatives : %s %d of %d broken builds caught%s%s' % (
+                    label, len(res) - len(missed) - len(known), len(res), '; MISSED %s' % missed if missed else '',
+                    ''.join('; not reached, as known: %s (%s)' % (k, UNREACHED[k]) for k in known)))
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return bool(ok)

@@ -1,0 +1,193 @@
+{
+ "name": "phantis2",
+ "order": 243,
+ "game": "Phantis / Game Over 2, part 2",
+ "doc": "phantis.md",
+ "engine": "phantis",
+ "representative": false,
+ "reference": "phantis",
+ "inputs": {
+  "snapshot": {
+   "name": "phantis2.z80",
+   "md5": "55c89bb16ffde2f58a43ed3be7b95bcf",
+   "path": "phantis/phantis2.z80",
+   "note": "Game Over 2 (1988)(Dinamic)(ES)(en)(Part 2 of 2)[aka Phantis][re-release].z80, the 48K re-release, part 2."
+  },
+  "recordings": [
+   {
+    "name": "phantis_loading.scr",
+    "md5": "a5ce3ee058956e3cfcdd885cb3f485af",
+    "path": "phantis/phantis_loading.scr",
+    "role": "The tape's loading screen, 6,912 bytes (the same on both parts' tapes), staged beside the snapshot; not a recording."
+   },
+   {
+    "name": "p2a.rzx",
+    "md5": "fee72c85065f45ccb0f7ef61fdd5eda4",
+    "path": "phantis/p2a.rzx",
+    "role": "Part 2, scripted original play, 6,021 frames; the ABI states and the broken builds come from its start."
+   },
+   {
+    "name": "p2b.rzx",
+    "md5": "f3d6e34089aa03c5626a7c81be00f6f0",
+    "path": "phantis/p2b.rzx",
+    "role": "Part 2, a second scripted run, 8,020 frames."
+   },
+   {
+    "name": "p2c.rzx",
+    "md5": "3914786daf87b4da45b17d2df1a64a71",
+    "path": "phantis/p2c.rzx",
+    "role": "Part 2, a third scripted run, 8,000 frames."
+   },
+   {
+    "name": "p2li.rzx",
+    "md5": "4f2bddb7c99cd0c70a3456710a78fa16",
+    "path": "phantis/p2li.rzx",
+    "role": "Part 2 with infinite lives, 24,022 frames."
+   }
+  ]
+ },
+ "modules": [
+  "phantis",
+  "phantis_art"
+ ],
+ "own_modules": [
+  "phantis",
+  "phantis_art"
+ ],
+ "data": [
+  "asm/phantis2_hooks.asm",
+  "asm/phantis_core.inc",
+  "docs/profiles/phantis2.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record",
+   "--no-nxc"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record",
+   "--no-nxc"
+  ],
+  "rzx": [
+   "p2a.rzx",
+   "p2b.rzx",
+   "p2c.rzx",
+   "p2li.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 25,
+  "note": "Every recording, at every hook the hook against the original from the same state, every register with R and all 48K RAM but the changed bytes and the stack below SP, every Layer 2 picture against an independent model; ABI cases on p2a's states; 10 broken builds on p2a's first 3,000 frames. Pace, soak, flicker, beam and the real loader are in games/phantis.md \"Evidence\"."
+ },
+ "outputs": {
+  "sprites": {
+   "file": "phantis2_sprites.nex",
+   "md5": "9b080e196f34a34ef89077e83c3acf96"
+  },
+  "loading": {
+   "file": "phantis2_sprites_loading.nex",
+   "md5": "a326db4db051bdb12a61c959891186e1"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Phantis / Game Over 2, part 2",
+  "engine_col": "phantis (phantis.md)",
+  "build": "v1.0; phantis2_sprites_loading.nex a326db4d equals the published .nxc 1.0 bare build (without the screen 9b080e19); original bitmap and clean attributes on the ULA, figures' ink on a double-buffered Layer 2; the copy waits for the beam and flips off the play area, so part 2 no longer tears; no Enhanced (no Spec256 set); the loading screen is a local input",
+  "software": "4 recordings, 46,063 frames, 44,436 hooks with R and 48K RAM, 11,192 Layer 2 pictures against a model, 320 ABI cases, 10 of 10 broken builds; soak, flicker, beam, real loader. Pace in JNext: whole -1.73 to +0.33%, busy thirds up to +2.09%, slowest 20 updates up to +6.08% (over the 2% rule); two seeds leave lockstep at updates 167 and 361",
+  "hardware": "untested",
+  "next": "hardware checklist; owner's play; the access code screen and natural completion"
+ },
+ "checks": [
+  "asm2profile:phantis2"
+ ],
+ "results": [
+  {
+   "check": "external review run",
+   "status": "pass",
+   "scope": "runs/phantis/release-20261108: pace, soak, flicker, beam audit, real loader (default, cheat), JNext 1.1.104, on these engine bytes. Not a selftest stamp.",
+   "evidence": "games/phantis.md \"Evidence\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/phantis2_hooks.asm": "455f4da350c7fdfc",
+   "asm/phantis_core.inc": "0f0336b3c8451258",
+   "docs/profiles/phantis2.json": "63af825c179faf9f",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "62e059a0ddc21851",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/phantis.py": "5a2bde9e45c3350a",
+   "nexclash/phantis_art.py": "c903ffba20ccf4d0",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "889026b86798bf6a",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ },
+ "verified": {
+  "deps": {
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/phantis2_hooks.asm": "455f4da350c7fdfc",
+   "asm/phantis_core.inc": "0f0336b3c8451258",
+   "docs/profiles/phantis2.json": "63af825c179faf9f",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "62e059a0ddc21851",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/phantis.py": "5a2bde9e45c3350a",
+   "nexclash/phantis_art.py": "c903ffba20ccf4d0",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "889026b86798bf6a",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ }
+}
