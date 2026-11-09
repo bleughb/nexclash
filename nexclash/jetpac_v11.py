@@ -44,11 +44,21 @@ GROUP_BASE = {1: 102, 2: 108, 3: 114}   # object 6's other sprite groups (sectio
 NSPR = 120
 HALF_OFFSET = 7                         # palette offset of a half-filled section (no object has this ink)
 LEVEL, PART = 24048, 23860
-SITES_ORIG = {29263: '1a4732', 29344: 'cd2772', 29349: 'cd2472', 24717: 'cdb871'}
-SITE_SYM = {29263: 'e_nw', 29344: 'e_e1', 29349: 'e_e2', 24717: 'e_cls'}
-SITE_OP = {29263: 0xC3, 29344: 0xCD, 29349: 0xCD, 24717: 0xCD}
+SITES_ORIG = {29263: '1a4732', 29344: 'cd2772', 29349: 'cd2472', 24717: 'cdb871',
+              29279: 'cd2772', 29290: 'cd3c72', 29339: 'cd3f72', 29365: 'cd3c72', 29294: 'cd2472', 29287: 'd91807', 29368: 'd9af32'}
+SITE_SYM = {29263: 'e_nw', 29344: 'e_e1', 29349: 'e_e2', 24717: 'e_cls',
+            29279: 'e_p27', 29290: 'e_p3c', 29339: 'e_p3f', 29365: 'e_p3c', 29294: 'e_x1', 29287: 'e_x2', 29368: 'e_x3'}
+SITE_OP = {29263: 0xC3, 29344: 0xCD, 29349: 0xCD, 24717: 0xCD,
+           29279: 0xCD, 29290: 0xCD, 29339: 0xCD, 29365: 0xCD, 29294: 0xCD, 29287: 0xC3, 29368: 0xC3}
+# The pace window (asm "Pace"): site -> (the original's next PC, SP change, 'pre' = opens the window / 'end' = closes it)
+PACE_SITES = {29279: (29223, -2, 'pre'), 29290: (29244, -2, 'pre'), 29339: (29247, -2, 'pre'), 29365: (29244, -2, 'pre'),
+              29294: (29223, -2, 'end'), 29287: (29297, 0, 'end'), 29368: (29373, 0, 'end')}
+# Where a window's entry returns to: the plot's caller is at this stack offset from the site's SP
+PLOT_STACK = {29279: 2, 29290: 0, 29339: 0, 29365: 0}
+RAM_ORG = 0xB000                # hook RAM (bank 2): code, fixed bytes; the snapshot's block is zero
 SCREEN_PATCHES = [(30532, '77', '00'), (30561, '77', '00'), (29171, '72', '00')]
-INTERIORS = (29264, 29265, 29345, 29346, 29350, 29351, 24718, 24719)
+INTERIORS = (29264, 29265, 29345, 29346, 29350, 29351, 24718, 24719,
+             29280, 29281, 29291, 29292, 29340, 29341, 29366, 29367, 29295, 29296, 29288, 29289, 29369, 29370)
 SITE_KIND = {29263: 'nw', 29344: 'er', 29349: 'er', 24717: 'cls', 29135: 'at'}
 SPECCY = [0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6,
           0x00, 0x03, 0xE0, 0xE7, 0x1C, 0x1F, 0xFC, 0xFF]
@@ -356,6 +366,9 @@ class JetpacPatch:
                                bytes([SITE_OP[a]]) + self.syms[SITE_SYM[a]].to_bytes(2, 'little')))
         for a, old, new in SCREEN_PATCHES:
             self.sites.append((a, bytes.fromhex(old), bytes.fromhex(new)))
+        self.ram_code = bytes.fromhex(h['ram'])
+        self.sites.append((RAM_ORG, bytes(len(self.ram_code)), self.ram_code))
+        self.ram_vars = range(self.syms['HLIB_V_R'], self.syms['V_SPD'] + 1)
         self.extra_banks = {}
         self.pats = None
         self.num_patterns = 0
@@ -477,7 +490,7 @@ def _run(sim, stop, limit=400000):
     return True
 
 
-CMP = list(range(0, 13)) + [14] + list(range(16, 25)) + [26, 27]   # all but R, T, MEMPTR
+from .hooklib import CMP_R as CMP      # every register, R included (v0.1.7; card patch.preserve-r), not T / MEMPTR
 
 
 def _overlays(get, alt, psite, canvas=None):
@@ -533,7 +546,78 @@ def obj_index(ix):
     return d >> 3 if 0 <= d < 8 * NOBJ and not d & 7 else None
 
 
-def event(patch, kind, get, R, ns, alt, Sim):
+def pace_event(patch, pc, get, R, ns, alt, Sim):
+    """A pace window site, original and patched from the same state to the original's next instruction: every register
+    with R, memory, the speed: an entry latches the speed and goes to 28 MHz, an end gives the latch back."""
+    psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
+    ret, dsp, role = PACE_SITES[pc]
+    sp0 = R[12]
+
+    def stop(r):
+        return r[24] == ret and r[12] == (sp0 + dsp) & 0xFFFF
+    O, P = _overlays(get, alt, psite)
+    o, p = O(), P()
+    so = _machine(Sim, o, list(R), NextState(b''))
+    before = ns.nr.get(0x07, 0) & 3
+    ns.events = []
+    sp_ = _machine(Sim, p, list(R), ns, 'p')
+    if not (_run(so, stop) and _run(sp_, stop)):
+        return ['did not return']
+    ro, rp = so.registers, sp_.registers
+    f = []
+    diff = [i for i in CMP if ro[i] != rp[i]]
+    if diff:
+        f.append(('registers differ', diff, [ro[i] for i in diff], [rp[i] for i in diff]))
+    if getattr(p, 'romw', 0):
+        f.append(('patched code wrote ROM',))
+    if any(e[0] in ('in', 'out') for e in ns.events) or any(e[1] != 0x07 for e in ns.events if e[0] == 'nr'):
+        f.append(('hook touched more than the CPU speed',))
+    dead = range(ro[12] - 64, ro[12])
+    md = [a for a in set(o.ov) | set(p.ov) if a not in dead and a not in patch.ram_vars and o[a] != p[a]]
+    if md:
+        f.append(('memory differs', len(md), sorted(md)[:4]))
+    if role == 'pre':
+        if ns.nr.get(0x07, 0) & 3 != 3:
+            f.append(('window not at 28 MHz',))
+        if p[patch.syms['V_SPD']] != before:
+            f.append(("the caller's speed not latched",))
+    elif ns.nr.get(0x07, 0) & 3 != get(patch.syms['V_SPD']):
+        f.append(("the caller's speed not given back",))
+    return f
+
+
+def plot_event(patch, pc, get, R, alt, Sim, speed=0):
+    """A draw from its entry to the plot's return, original and patched: registers with R, memory, the caller's speed back."""
+    psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
+    sp0 = R[12]
+    k = PLOT_STACK[pc]
+    ret, end = get(sp0 + k) | get(sp0 + k + 1) << 8, sp0 + k + 2
+
+    def stop(r):
+        return r[24] == ret and r[12] == end
+    O, P = _overlays(get, alt, psite)
+    o, p = O(), P()
+    so = _machine(Sim, o, list(R), NextState(b''))
+    ns = NextState(patch.pats)
+    ns.nr[0x07] = speed
+    sp_ = _machine(Sim, p, list(R), ns, 'p')
+    if not (_run(so, stop) and _run(sp_, stop)):
+        return ['did not return']
+    ro, rp = so.registers, sp_.registers
+    f = []
+    diff = [i for i in CMP if ro[i] != rp[i]]
+    if diff:
+        f.append(('registers differ', diff, [ro[i] for i in diff], [rp[i] for i in diff]))
+    if ns.nr.get(0x07, 0) & 3 != speed:
+        f.append(("the caller's speed not back at the plot's end",))
+    dead = range(ro[12] - 64, ro[12])
+    md = [a for a in set(o.ov) | set(p.ov) if not 0x4000 <= a < 0x5B00 and a not in dead and a not in patch.ram_vars and o[a] != p[a]]
+    if md:
+        f.append(('memory differs', len(md), sorted(md)[:4]))
+    return f
+
+
+def event(patch, kind, get, R, ns, alt, Sim, speed=0):
     """One hook event, original and patched from the same state. -> (failures, pixels compared)."""
     psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
     sp0 = R[12]
@@ -569,12 +653,12 @@ def event(patch, kind, get, R, ns, alt, Sim):
         f.append(('port access in hook',))
     if any(e[1] not in (0x07, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39) for e in ns.events if e[0] == 'nr'):
         f.append(('NEXTREG other than sprite attributes / CPU speed',))
-    if ns.nr.get(0x07, 0) != 0:
-        f.append(('hook left the CPU at 28 MHz',))
+    if ns.nr.get(0x07, 0) & 3 != speed:
+        f.append(('hook left the CPU at the wrong speed',))
     dead = range(ro[12] - 64, ro[12])
     keys = set(o.ov) | set(p.ov)
     scr = (0x4000, 0x5B00) if kind != 'cls' else (0, 0)
-    md = [a for a in keys if not scr[0] <= a < scr[1] and a not in dead and o[a] != p[a]]
+    md = [a for a in keys if not scr[0] <= a < scr[1] and a not in dead and a not in patch.ram_vars and o[a] != p[a]]
     if md:
         f.append(('memory differs', len(md), sorted(md)[:4]))
     npx = 0
@@ -754,7 +838,7 @@ def verify(patch, z80, rzx=None, frames=6000, keys=None, stop=None, collect=0, p
     st = {'frame': 0}
     states = []
     cnt = collections.Counter()
-    WATCH = set(SITE_KIND) | set(INTERIORS) | {0x0038}
+    WATCH = set(SITE_KIND) | set(INTERIORS) | {0x0038} | set(PACE_SITES)
 
     def fail(k, info=()):
         c[k + '!'] += 1
@@ -766,11 +850,40 @@ def verify(patch, z80, rzx=None, frames=6000, keys=None, stop=None, collect=0, p
             st['sim'] = sim
 
         def on_write(self, addr, value, pc, mem):
-            if addr in site_bytes:
-                fail('game wrote a patch site', (addr, pc))
+            if addr in site_bytes or addr >= 0x8000:
+                fail('game wrote a patch site or above 0x7FFF', (addr, pc))
+
+        def on_read(self, addr, pc, mem):
+            if addr >= 0x8000 and not st.get('busy'):     # the game's own reads, not this verifier's
+                fail('game read above 0x7FFF (the hook RAM is there)', (addr, pc))
 
         def before(self, pc):
             if pc not in WATCH:
+                return
+            st['busy'] = True
+            try:
+                self.check(pc)
+            finally:
+                st['busy'] = False
+
+        def check(self, pc):
+            if pc in (29287, 29368):
+                cnt[pc] += 1
+            if pc in PACE_SITES:
+                sim = st['sim']
+                R, get = sim.registers, sim.memory.__getitem__
+                if collect and pc in PLOT_STACK and c['collected %d' % pc] < collect:
+                    c['collected %d' % pc] += 1
+                    states.append((pc, list(R), bytes(get(a) for a in range(65536)), None))
+                c['pace sites'] += 1
+                ns_s = NextState(patch.pats)
+                ns_s.nr[0x07] = 3 if PACE_SITES[pc][2] == 'end' else 0
+                for k in pace_event(patch, pc, get, R, ns_s, alt, _rw()):
+                    fail('pace site %d: %s' % (pc, k[0] if isinstance(k, tuple) else k), k[1:] if isinstance(k, tuple) else ())
+                if pc in PLOT_STACK:
+                    c['draws from their entry'] += 1
+                    for k in plot_event(patch, pc, get, R, alt, _rw()):
+                        fail('draw from its entry %d: %s' % (pc, k[0] if isinstance(k, tuple) else k), k[1:] if isinstance(k, tuple) else ())
                 return
             if pc == 0x0038:
                 sim = st['sim']
@@ -807,8 +920,11 @@ def verify(patch, z80, rzx=None, frames=6000, keys=None, stop=None, collect=0, p
     # reached only straight after 29263; the CALL sites' interiors never
     if not cnt[29263] == cnt[29264] == cnt[29265]:
         c['29264/29265 reached other than from 29263!'] += 1
+    # the same for the pace sites' replayed instructions: 29288 (JR) after 29287 (EXX), 29369 / 29370 after 29368
+    if cnt[29287] != cnt[29288] or not cnt[29368] == cnt[29369] == cnt[29370]:
+        c['a pace site interior reached other than from its site!'] += 1
     for a in INTERIORS:
-        if a not in (29264, 29265) and cnt[a]:
+        if a not in (29264, 29265, 29288, 29369, 29370) and cnt[a]:
             c['jump into a patched instruction (%d)!' % a] += 1
     return c, dict(ex), states
 
@@ -868,6 +984,11 @@ def unit_tests(patch, states, neg=None, m0=None):
 
     done = set()
     rocket_g = groups(m0)
+    for pc, R, mem0 in [(s[0], s[1], s[2]) for s in states if isinstance(s[0], int)]:
+        for speed in (0, 1, 2, 3):                  # the caller's speed comes back whatever it was (card patch.restore-speed)
+            fl = plot_event(patch, pc, mem0.__getitem__, R, alt, Sim, speed)
+            c['speed cases %s' % ('ok' if not fl else 'FAIL!')] += 1
+    states = [s for s in states if not isinstance(s[0], int)]
     for kind, R, mem0, attrs in states:
         if kind in done:
             continue
@@ -1008,6 +1129,42 @@ def rocket_cases(patch, R, mem0, m0, alt, Sim):
             case('take-off with flames', 3, 6, level, tick, 120, 26311, 10, False, True)
             case('landing with flames', 3, 0, level + 1, tick, 100, 26347, 11, False)
     return c
+
+
+def pace_negatives(patch):
+    """Broken copies of the pace hooks, each of which the replay must catch: {name: patch}. The bytes are the assembler's,
+    found by the instruction: nextreg 7,3 (ED 91 07 03) in the entries, nextreg 7,a (ED 92 07) in the ends."""
+    import copy
+    out = {}
+    syms = patch.syms
+
+    def variant(name, fn):
+        q = copy.copy(patch)
+        b = bytearray(patch.ram_code)
+        fn(b)
+        q.sites = [(a, o, bytes(b) if a == RAM_ORG else n) for a, o, n in patch.sites]
+        out[name] = q
+
+    def nop(pat, start, count=1):
+        def f(b):
+            i = start - RAM_ORG
+            for _ in range(count):
+                i = b.index(pat, i)
+                b[i:i + len(pat)] = bytes(len(pat))
+        return f
+    variant('window never opened', nop(bytes.fromhex('ed910703'), syms['e_p3c']))
+    variant('window never closed', nop(bytes.fromhex('ed9207'), syms['e_x1']))
+
+    def r_off(b):       # the delta in e_nw's R_SET, one off: push af / ld a,n / call hlib_r_set
+        i = b.index(bytes.fromhex('f53e'), syms['e_nw'] - RAM_ORG)
+        b[i + 2] = (b[i + 2] + 1) & 0x7F
+    variant('R off by one after a draw', r_off)
+
+    def r_off2(b):      # the same in an entry
+        i = b.index(bytes.fromhex('f53e'), syms['e_p3c'] - RAM_ORG)
+        b[i + 2] = (b[i + 2] + 1) & 0x7F
+    variant('R off by one after an entry', r_off2)
+    return out
 
 
 def negative_patch(patch):
@@ -1155,8 +1312,8 @@ def auto(a, z80, name, out, say):
         uf = {k: v for k, v in u.items() if k.endswith('!') and v}
         ok = ok and not uf
         say('Unit      : graphics %d (every graphic, all levels, carried parts x positions x colours), '
-            'erase %d, clears %d, guard %d, negative control %d/%d -> %s' % (
-                u['graphic cases ok'], u['erase cases ok'], u['screen clear cases ok'],
+            'speed cases %d, erase %d, clears %d, guard %d, negative control %d/%d -> %s' % (
+                u['graphic cases ok'], u['speed cases ok'], u['erase cases ok'], u['screen clear cases ok'],
                 u['IX outside the object table (guard: no sprite) ok'], u['negative control detected'],
                 u['negative control detected'] + u['negative control NOT DETECTED!'],
                 'PASS' if not uf else 'FAIL %s' % uf))
@@ -1167,6 +1324,11 @@ def auto(a, z80, name, out, say):
         ok = ok and bool(fl)
         say('Negative  : rom3_left (hooks only over the system ROM3) %s' % ('DETECTED %s' % str(fl)[:160] if fl else
                                                                            'NOT DETECTED!'))
+        for nm, q in pace_negatives(patch).items():    # each caught on the first 1,000 frames
+            c, ex, _ = verify(q, z80, None, frames=1000, keys=free_keys(), stop=1000)
+            fl = {k: v for k, v in c.items() if k.endswith('!') and v}
+            ok = ok and bool(fl)
+            say('Negative  : %s %s' % (nm, 'DETECTED %s' % str(fl)[:160] if fl else 'NOT DETECTED!'))
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return ok
 
