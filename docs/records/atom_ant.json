@@ -1,0 +1,197 @@
+{
+ "name": "atom_ant",
+ "order": 233,
+ "game": "Atom Ant",
+ "doc": "atom_ant.md",
+ "engine": "atom_ant",
+ "representative": true,
+ "reference": "atom_ant",
+ "inputs": {
+  "snapshot": {
+   "name": "atom_ant.z80",
+   "md5": "2ae624d49075367226a59766c860ea21",
+   "path": "atom_ant/atom_ant.z80",
+   "note": "Derived start state: Atom Ant (1990)(Hi-Tec)(48K-128K).tap (MD5 404e992b) loaded on a 128K machine and stopped at 9FF4, the game's own start once the AY music block is in bank 3 (games/atom_ant.md \"Next session\"). The .nxc builds the same state from the tape through TAP1."
+  },
+  "recordings": [
+   {
+    "name": "atom_ant.tap",
+    "md5": "404e992b4edceb10ef8fae9dfaac364b",
+    "path": "atom_ant/atom_ant.tap",
+    "role": "Atom Ant (1990)(Hi-Tec)(48K-128K).tap, the published patch's target, staged for provenance; not read by the build; not a recording."
+   },
+   {
+    "name": "atom_ant_loading.scr",
+    "md5": "9f8b3417ce05f83346309e643bb58536",
+    "path": "atom_ant/atom_ant_loading.scr",
+    "role": "The tape's 6,912-byte loading screen, staged beside the start state; not a recording."
+   },
+   {
+    "name": "atom_ant.256",
+    "md5": "057fea528187ea2d518e77fd7b146aaa",
+    "path": "atom_ant/atom_ant.256",
+    "role": "Enhanced: the Spec256 set as a .256, staged beside the start state; game data, never in this repo; not a recording."
+   },
+   {
+    "name": "atom_ant_panel.bin",
+    "md5": "b8fc47099bb732034ec47e346ad29371",
+    "path": "atom_ant/atom_ant_panel.bin",
+    "role": "Enhanced: the set's panel at moments of play (256 x 32 values then 768 attributes each), dumped from the Spec256 set in the review run; derived from the set, never in this repo; not a recording."
+   },
+   {
+    "name": "atom_ant_palette.json",
+    "md5": "cc822d044ec89ffcffbfb3a122f4d088",
+    "path": "atom_ant/atom_ant_palette.json",
+    "role": "Enhanced: the set's 256 colours as RGB, from the review run; derived from the set, never in this repo; not a recording."
+   },
+   {
+    "name": "k1.rzx",
+    "md5": "df71849a88441ad93352ef77b126df8a",
+    "path": "atom_ant/k1.rzx",
+    "role": "Level 1 from the start state, scripted play, 4,041 frames. Also the broken builds' and ABI states' recording, to frame 500."
+   },
+   {
+    "name": "k2.rzx",
+    "md5": "191fb968108fb2d690ee83341aac85a0",
+    "path": "atom_ant/k2.rzx",
+    "role": "Level 1 from the start state with deaths, 3,002 frames."
+   }
+  ]
+ },
+ "modules": [
+  "atom_ant",
+  "atom_ant_enh",
+  "atom_ant_art"
+ ],
+ "own_modules": [
+  "atom_ant",
+  "atom_ant_enh",
+  "atom_ant_art"
+ ],
+ "data": [
+  "asm/atom_ant_hooks.asm",
+  "docs/profiles/atom_ant.json"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "k1.rzx",
+   "k2.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 20,
+  "note": "The default runs no hook (no clash to remove), so it is proved by the boot check; the replay proves Enhanced: at every hook every register with R and all 48K RAM against the original; at every copy Layer 2 against a picture built independently from the map and plots, and the game's back buffer against the same model in mono; ABI cases (four clocks, both IFF values, eight R phases) and 11 broken builds on k1 to frame 500. Levels 3, 5, 7 and the level-end cycle were replayed from test copies in the review run (games/atom_ant.md \"Evidence\"), not here."
+ },
+ "outputs": {
+  "plain": {
+   "file": "atom_ant.nex",
+   "md5": "04460a950e24898f8144d2ab2b48ff6f"
+  },
+  "loading": {
+   "file": "atom_ant_loading.nex",
+   "md5": "66d682f8cbe184c00ad2271ed8cf2a33"
+  },
+  "enhanced": {
+   "file": "atom_ant_enhanced.nex",
+   "md5": "054ce8f73bb5360353113f8a9a72e50c"
+  },
+  "enhanced_loading": {
+   "file": "atom_ant_enhanced_loading.nex",
+   "md5": "c3d35756f871ed85ff24d27ccc52b0c8"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Atom Ant",
+  "engine_col": "atom_ant (atom_ant.md)",
+  "build": "v1.0; atom_ant_loading.nex 66d682f8 and atom_ant_enhanced_loading.nex c3d35756 equal the published .nxc 1.0 bare builds, default and Enhanced (without the screen 04460a95, 054ce8f7); default: the tape's 128K form with its AY music, no game byte changed, no hook, no clash to remove and none claimed; Enhanced, off by default: the Spec256 set's colours on a full double-buffered Layer 2 over the unchanged ULA; top banks 10 and 47, both fit a 1MB Next",
+  "software": "TBD",
+  "hardware": "untested",
+  "next": "hardware checklist; natural play to the end"
+ },
+ "checks": [
+  "asm2profile:atom_ant"
+ ],
+ "results": [
+  {
+   "check": "external review run",
+   "status": "pass",
+   "scope": "runs/atom_ant/release-20261108 and release-20261108b: pace, soak, flicker and the real loader, JNext 1.1.104; replays of levels 3, 5, 7 and the level-end cycle from test copies; on this engine's bytes. Not a selftest stamp.",
+   "evidence": "games/atom_ant.md \"Evidence\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/atom_ant_hooks.asm": "2e639de8bd260884",
+   "docs/profiles/atom_ant.json": "7c9ee041e6024d9d",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/atom_ant.py": "9aa401918a812653",
+   "nexclash/atom_ant_art.py": "a471e6b49305dc92",
+   "nexclash/atom_ant_enh.py": "e286c8ca824ef379",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "ae8d7e83ddc83b8b",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "e86f926e44d28fd5",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ },
+ "verified": {
+  "deps": {
+   "asm/atom_ant_hooks.asm": "2e639de8bd260884",
+   "docs/profiles/atom_ant.json": "7c9ee041e6024d9d",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/atom_ant.py": "9aa401918a812653",
+   "nexclash/atom_ant_art.py": "a471e6b49305dc92",
+   "nexclash/atom_ant_enh.py": "e286c8ca824ef379",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "84cda875046201a0",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "e2c897dbdf9bbd6d",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "e86f926e44d28fd5",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ }
+}
