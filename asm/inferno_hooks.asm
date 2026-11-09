@@ -6493,23 +6493,6 @@ sl_have:                        ; A = slot; atomic: no poll until the next chunk
 .clean: ld hl,(SEL_HL)
         jp sl_chunk
 sl_alloc:
-        ld de,SEL_U             ; union of the three masks
-        ld hl,SEL_MASKS
-        ld b,16
-.u:     ld a,(hl)
-        push hl
-        push de
-        ld de,16
-        add hl,de
-        or (hl)
-        add hl,de
-        or (hl)
-        pop de
-        pop hl
-        ld (de),a
-        inc hl
-        inc de
-        djnz .u
         ld a,(LRU_HEAD)
         ld (SEL_I),a
 sl_scan:
@@ -6523,10 +6506,20 @@ sl_scan_go:
         rrca
         rrca
         and 15
-        ld hl,SEL_U
-        add hl,a
+        ld e,a
+        ld d,0
+        ld hl,SEL_MASKS         ; this slot's byte of current | pending | building
+        add hl,de
+        ld a,(hl)
+        ld de,16
+        add hl,de
+        or (hl)
+        add hl,de
+        or (hl)
+        ld (SEL_U),a
         ld a,c
         call sl_bit_a
+        ld hl,SEL_U
         and (hl)
         jr z,sl_take
         ld l,c                  ; protected: on to the next oldest
