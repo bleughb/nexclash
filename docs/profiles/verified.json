@@ -533,6 +533,16 @@
     "sprites": "8e5f8f0be205aade316106a6db7d4aac"
    }
   },
+  "ff400566fee18b14e2b52647ae64eaae": {
+   "game": "That Sinking Feeling",
+   "doc": "that_sinking_feeling.md",
+   "nex": {
+    "sprites": "07fea8b4205b854febc67d44a3d013fe",
+    "loading": "7a34cae8445952cc8c56b0fc52e9908b",
+    "enhanced": "f6838dd33f91b87930d22fa3a584bc9e",
+    "enhanced_loading": "8c9469e34a9fb936e8c1f7709e383ea7"
+   }
+  },
   "72bcb108d7baec2ee10ede47594010dd": {
    "game": "Three Weeks in Paradise (128K)",
    "doc": "three_weeks.md",

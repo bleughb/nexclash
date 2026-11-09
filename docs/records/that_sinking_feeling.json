@@ -1,0 +1,419 @@
+{
+ "name": "that_sinking_feeling",
+ "order": 252,
+ "game": "That Sinking Feeling",
+ "doc": "that_sinking_feeling.md",
+ "engine": "that_sinking_feeling",
+ "representative": true,
+ "reference": "that_sinking_feeling",
+ "inputs": {
+  "snapshot": {
+   "name": "that_sinking_feeling.z80",
+   "md5": "ff400566fee18b14e2b52647ae64eaae",
+   "path": "that_sinking_feeling/that_sinking_feeling.z80",
+   "note": "Derived start state: That Sinking Feeling (2017-08-02)(Sunteam)(48K-128K).tap (MD5 5123adf2) loaded by SkoolKit's tap2sna on a 128K machine to USR 25511, so the AY tune is in bank 4 (games/that_sinking_feeling.md \"Next session\"). The .nxc builds the same state from the tape through TAP1."
+  },
+  "recordings": [
+   {
+    "name": "that_sinking_feeling.tap",
+    "md5": "5123adf2c0e828a380b9e260942def4a",
+    "path": "that_sinking_feeling/that_sinking_feeling.tap",
+    "role": "That Sinking Feeling (2017-08-02)(Sunteam)(48K-128K).tap, the published patch's target, staged for provenance; not read by the build; not a recording."
+   },
+   {
+    "name": "that_sinking_feeling_loading.scr",
+    "md5": "56e2886a9e1c74956b96db96fd9f0bb4",
+    "path": "that_sinking_feeling/that_sinking_feeling_loading.scr",
+    "role": "The tape's 6,912-byte loading screen, staged beside the start state; not a recording."
+   },
+   {
+    "name": "that_sinking_feeling.256",
+    "md5": "a10321c6576f04cf8afc4c90618ed4e6",
+    "path": "that_sinking_feeling/that_sinking_feeling.256",
+    "role": "Enhanced: the Spec256 set (That Sinking Feeling.256, Ynicky), staged beside the start state; game data, never in this repo; not a recording."
+   },
+   {
+    "name": "that_sinking_feeling.B00",
+    "md5": "9e8a82c1a2e210fa3a4868b1a47d6b49",
+    "path": "that_sinking_feeling/that_sinking_feeling.B00",
+    "role": "Enhanced: backdrop B00 of the set's source folder (\"That Sink Filling\", SinkFeel.B00, 320 x 200), chosen by its CFG's rules; game data, never in this repo; not a recording."
+   },
+   {
+    "name": "that_sinking_feeling.B01",
+    "md5": "af853fee9da3ce952f3f757987de6dba",
+    "path": "that_sinking_feeling/that_sinking_feeling.B01",
+    "role": "Enhanced: backdrop B01 of the set's source folder (\"That Sink Filling\", SinkFeel.B01, 320 x 200), chosen by its CFG's rules; game data, never in this repo; not a recording."
+   },
+   {
+    "name": "that_sinking_feeling.B02",
+    "md5": "ac927d60ac44b84a4eda13e9b3180e09",
+    "path": "that_sinking_feeling/that_sinking_feeling.B02",
+    "role": "Enhanced: backdrop B02 of the set's source folder (\"That Sink Filling\", SinkFeel.B02, 320 x 200), chosen by its CFG's rules; game data, never in this repo; not a recording."
+   },
+   {
+    "name": "that_sinking_feeling.B03",
+    "md5": "6629b92e57a6c076dc322c9e41457f16",
+    "path": "that_sinking_feeling/that_sinking_feeling.B03",
+    "role": "Enhanced: backdrop B03 of the set's source folder (\"That Sink Filling\", SinkFeel.B03, 320 x 200), chosen by its CFG's rules; game data, never in this repo; not a recording."
+   },
+   {
+    "name": "that_sinking_feeling.B04",
+    "md5": "cf55f8deb9cafc35b1256e20f125eac8",
+    "path": "that_sinking_feeling/that_sinking_feeling.B04",
+    "role": "Enhanced: backdrop B04 of the set's source folder (\"That Sink Filling\", SinkFeel.B04, 320 x 200), chosen by its CFG's rules; game data, never in this repo; not a recording."
+   },
+   {
+    "name": "that_sinking_feeling.B05",
+    "md5": "3ec9e8371b22ccf2090413e4085e76c9",
+    "path": "that_sinking_feeling/that_sinking_feeling.B05",
+    "role": "Enhanced: backdrop B05 of the set's source folder (\"That Sink Filling\", SinkFeel.B05, 320 x 200), chosen by its CFG's rules; game data, never in this repo; not a recording."
+   },
+   {
+    "name": "that_sinking_feeling.B06",
+    "md5": "edea278ab1cdf8a8e4a312466eac6934",
+    "path": "that_sinking_feeling/that_sinking_feeling.B06",
+    "role": "Enhanced: backdrop B06 of the set's source folder (\"That Sink Filling\", SinkFeel.B06, 320 x 200), chosen by its CFG's rules; game data, never in this repo; not a recording."
+   },
+   {
+    "name": "a1.rzx",
+    "md5": "5cea5f035eeea5450522bc6f236047fd",
+    "path": "that_sinking_feeling/a1.rzx",
+    "role": "Room 1 from the start state, scripted play, 3,027 frames; both modes. Also the ABI states' recording and the first for the broken builds."
+   },
+   {
+    "name": "over.rzx",
+    "md5": "adc104184ef88cd2d9d81bac9c4e8c19",
+    "path": "that_sinking_feeling/over.rzx",
+    "role": "Scripted play to the game over, 2,054 frames; both modes."
+   },
+   {
+    "name": "tour.rzx",
+    "md5": "3095adc1a4de48bc33593befb1e79121",
+    "path": "that_sinking_feeling/tour.rzx",
+    "role": "Rooms in turn by the next-room path with a test poke, 9,636 frames; both modes. The second recording for the broken builds."
+   },
+   {
+    "name": "room0.rzx",
+    "md5": "f4e6768990a1b13f7acd768d1d33e4df",
+    "path": "that_sinking_feeling/room0.rzx",
+    "role": "Enhanced: room 0 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room1.rzx",
+    "md5": "fd18a61fca81fdce9bc17b2dd5c78c7b",
+    "path": "that_sinking_feeling/room1.rzx",
+    "role": "Enhanced: room 1 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room2.rzx",
+    "md5": "82b14abc8ba6b5068424761721c3cb1d",
+    "path": "that_sinking_feeling/room2.rzx",
+    "role": "Enhanced: room 2 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room3.rzx",
+    "md5": "eb0e9d3ffcaa52be66a6110c72f12080",
+    "path": "that_sinking_feeling/room3.rzx",
+    "role": "Enhanced: room 3 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room4.rzx",
+    "md5": "d806c008e83d669b41f7c84e68ddead6",
+    "path": "that_sinking_feeling/room4.rzx",
+    "role": "Enhanced: room 4 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room5.rzx",
+    "md5": "3a0f66f026757ddc6486ff0a8535e8ed",
+    "path": "that_sinking_feeling/room5.rzx",
+    "role": "Enhanced: room 5 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room6.rzx",
+    "md5": "d4fcb36ec15867cc5a82d2fa9beb9e60",
+    "path": "that_sinking_feeling/room6.rzx",
+    "role": "Enhanced: room 6 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room7.rzx",
+    "md5": "b6c7c1f8792ff429f11bfb16e6d43ba8",
+    "path": "that_sinking_feeling/room7.rzx",
+    "role": "Enhanced: room 7 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room8.rzx",
+    "md5": "7a25d11ead86cb47a72a542f98763b52",
+    "path": "that_sinking_feeling/room8.rzx",
+    "role": "Enhanced: room 8 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room9.rzx",
+    "md5": "09d60b79103edb75e4fc1eaeea5928b2",
+    "path": "that_sinking_feeling/room9.rzx",
+    "role": "Enhanced: room 9 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room10.rzx",
+    "md5": "945e2e8365b094662e3920e0b46cfe58",
+    "path": "that_sinking_feeling/room10.rzx",
+    "role": "Enhanced: room 10 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room11.rzx",
+    "md5": "e06240266ad457f224d2f099f9dcc780",
+    "path": "that_sinking_feeling/room11.rzx",
+    "role": "Enhanced: room 11 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room12.rzx",
+    "md5": "b3e32bc2e0d776246921cdc8db768981",
+    "path": "that_sinking_feeling/room12.rzx",
+    "role": "Enhanced: room 12 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room13.rzx",
+    "md5": "c7ff2a5e118c8156149a88314f70ff91",
+    "path": "that_sinking_feeling/room13.rzx",
+    "role": "Enhanced: room 13 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room14.rzx",
+    "md5": "f5b7c1e79b1338bc9c0cef55fc7bfb81",
+    "path": "that_sinking_feeling/room14.rzx",
+    "role": "Enhanced: room 14 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room15.rzx",
+    "md5": "89d4656f27d7b80b78be4048e3cfd1df",
+    "path": "that_sinking_feeling/room15.rzx",
+    "role": "Enhanced: room 15 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room16.rzx",
+    "md5": "cb5d09a982787395a42c60ef287983a1",
+    "path": "that_sinking_feeling/room16.rzx",
+    "role": "Enhanced: room 16 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room17.rzx",
+    "md5": "fed09cba6943135650bee9853890ded4",
+    "path": "that_sinking_feeling/room17.rzx",
+    "role": "Enhanced: room 17 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room18.rzx",
+    "md5": "c938a17f09fdb76a5b9e6244550bd03f",
+    "path": "that_sinking_feeling/room18.rzx",
+    "role": "Enhanced: room 18 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room19.rzx",
+    "md5": "f2445baace9f007f02d1abf731d53a6e",
+    "path": "that_sinking_feeling/room19.rzx",
+    "role": "Enhanced: room 19 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room20.rzx",
+    "md5": "b7f96e778f6ce093adbae100e1e5576a",
+    "path": "that_sinking_feeling/room20.rzx",
+    "role": "Enhanced: room 20 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room21.rzx",
+    "md5": "bf3162a3fe456531832b2715047c22c9",
+    "path": "that_sinking_feeling/room21.rzx",
+    "role": "Enhanced: room 21 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room22.rzx",
+    "md5": "400395a15acba26dcbc332a590e89530",
+    "path": "that_sinking_feeling/room22.rzx",
+    "role": "Enhanced: room 22 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room23.rzx",
+    "md5": "4b1d65ecbbff7403c8c1b460142338df",
+    "path": "that_sinking_feeling/room23.rzx",
+    "role": "Enhanced: room 23 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room24.rzx",
+    "md5": "9169b867a185731f3a9dded4ecfc383b",
+    "path": "that_sinking_feeling/room24.rzx",
+    "role": "Enhanced: room 24 from a test poke, 1,113 frames."
+   },
+   {
+    "name": "room25.rzx",
+    "md5": "6b2d7066ce40a741ec0547f53ff4f067",
+    "path": "that_sinking_feeling/room25.rzx",
+    "role": "Enhanced: room 25 from a test poke, 1,113 frames."
+   }
+  ]
+ },
+ "modules": [
+  "that_sinking_feeling"
+ ],
+ "own_modules": [
+  "that_sinking_feeling"
+ ],
+ "data": [
+  "asm/that_sinking_feeling_hooks.asm",
+  "docs/profiles/that_sinking_feeling.json",
+  "docs/profiles/that_sinking_feeling_palette.json"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "a1.rzx",
+   "over.rzx",
+   "tour.rzx",
+   "room0.rzx",
+   "room1.rzx",
+   "room2.rzx",
+   "room3.rzx",
+   "room4.rzx",
+   "room5.rzx",
+   "room6.rzx",
+   "room7.rzx",
+   "room8.rzx",
+   "room9.rzx",
+   "room10.rzx",
+   "room11.rzx",
+   "room12.rzx",
+   "room13.rzx",
+   "room14.rzx",
+   "room15.rzx",
+   "room16.rzx",
+   "room17.rzx",
+   "room18.rzx",
+   "room19.rzx",
+   "room20.rzx",
+   "room21.rzx",
+   "room22.rzx",
+   "room23.rzx",
+   "room24.rzx",
+   "room25.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 60,
+  "note": "Default on a1, over and tour; Enhanced on all 29 recordings: at every hook every register with R and all 48K RAM but the dead stack below SP against the original; the sprites against the game's own figure and object records after every plot; Enhanced's Layer 2 against an independent picture from the set's planes and backdrops every 64 hooks and at every room and CLS. ABI cases on a1's states; the start-up's sprite upload against the art; each broken build on a1 then tour to its first failure, and one no recording reaches (the upload, an object going off) must fail a unit case. Pace, soak, flicker and the real loader are in games/that_sinking_feeling.md \"Evidence\"."
+ },
+ "outputs": {
+  "sprites": {
+   "file": "that_sinking_feeling_sprites.nex",
+   "md5": "07fea8b4205b854febc67d44a3d013fe"
+  },
+  "loading": {
+   "file": "that_sinking_feeling_sprites_loading.nex",
+   "md5": "7a34cae8445952cc8c56b0fc52e9908b"
+  },
+  "enhanced": {
+   "file": "that_sinking_feeling_enhanced.nex",
+   "md5": "f6838dd33f91b87930d22fa3a584bc9e"
+  },
+  "enhanced_loading": {
+   "file": "that_sinking_feeling_enhanced_loading.nex",
+   "md5": "8c9469e34a9fb936e8c1f7709e383ea7"
+  }
+ },
+ "rom_paths_known": [
+  {
+   "image": 1,
+   "from": "0x3882",
+   "to": "0x3882",
+   "why": "the hooks' entries (the rom2 block at 0x3880, in both copies of the page) sit where SkoolKit's 128K ROM 1 has its keypad code; the recording's IM 1 runs that code on the 128K, 0x3882 an FF it shares with the 48K ROM, so it is compared and differs; the Next's ROM and the build's alt ROM (Sinclair's 48K) never call it from IM 1. Found and explained in the review run (runs/that_sinking_feeling/release-20261108 NOTES.md \"ROM paths\"); moving the entries would change the published bytes"
+  }
+ ],
+ "repro": [],
+ "status": {
+  "title": "That Sinking Feeling",
+  "engine_col": "that_sinking_feeling (that_sinking_feeling.md)",
+  "build": "v1.0; that_sinking_feeling_sprites_loading.nex 7a34cae8 and that_sinking_feeling_enhanced_loading.nex 8c9469e3 equal the published .nxc 1.0 bare builds, default and Enhanced (without the screen 07fea8b4, f6838dd3); the tape's 128K form with its AY music; default: the ULA as the original, figures and objects as hardware sprites in their open-water colour; Enhanced, off by default: the Spec256 set's colours (Ynicky) on the sprites and a Layer 2 backdrop chosen by the set's own rules, ULA+ off; top bank 47, both fit a 1MB Next; homebrew by Sunteam (2017); the default needs no set, Enhanced needs the set and its seven backdrops",
+  "software": "default: 3 recordings, 14,717 frames, 67,555 hooks with R and 48K RAM, sprites against the game's records after every plot, 704 ABI cases, 17 of 17 broken builds; Enhanced: 29 recordings, 43,655 frames, 296,629 hooks, Layer 2 against an independent picture from the set, 832 ABI cases, 24 of 24 broken builds; the sprite upload against the art; ROM paths pass bar 0x3882 (rom_paths_known); review run: soaks, flicker, real loader 4 of 4. Pace in JNext: whole runs -0.90% to +0.69%, slowest 20 updates up to +1.99%",
+  "hardware": "untested",
+  "next": "hardware checklist (slot 1 after the ISR's 7FFD, ULA+); owner's play; natural play past the first room"
+ },
+ "checks": [
+  "asm2profile:that_sinking_feeling"
+ ],
+ "results": [
+  {
+   "check": "external review run",
+   "status": "pass",
+   "scope": "runs/that_sinking_feeling/release-20261108: pace in four rooms, 15-minute soaks, flicker and the real loader (default, Enhanced, each with the cheat), JNext 1.1.104, on these engine bytes. Not a selftest stamp.",
+   "evidence": "games/that_sinking_feeling.md \"Evidence\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/that_sinking_feeling_hooks.asm": "1fee439de3c7a86a",
+   "docs/profiles/that_sinking_feeling.json": "1e8ac3885f8f0272",
+   "docs/profiles/that_sinking_feeling_palette.json": "06e4ffeca9e79d3c",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "35c255042721985d",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/that_sinking_feeling.py": "b49b623e9d9ef31b",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "284f7af958ee27ef",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ },
+ "verified": {
+  "deps": {
+   "asm/that_sinking_feeling_hooks.asm": "1fee439de3c7a86a",
+   "docs/profiles/that_sinking_feeling.json": "1e8ac3885f8f0272",
+   "docs/profiles/that_sinking_feeling_palette.json": "06e4ffeca9e79d3c",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "fc8043901955714b",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/that_sinking_feeling.py": "b49b623e9d9ef31b",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "284f7af958ee27ef",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ }
+}
