@@ -1,13 +1,16 @@
-# Ghosts 'n Goblins (Elite, 1986, 48K) - engine gng, .nxc 1.6 (Jon Attree's .nxc work)
+# Ghosts 'n Goblins (Elite, 1986, 48K) - engine gng, .nxc 1.7 (Jon Attree's .nxc work)
 
 ## Next session
-Stage: 5 (published as .nxc 1.6 on jattree/nxc; review 1.7 from this branch, not published)    State: engine imported 2026-11-06; graphics read from the player's game; pace pass 2026-11-08.
+Stage: 5 (published as .nxc 1.7 on jattree/nxc 56bb7c3, played by Jon in JNext 2026-11-08)    State: engine imported 2026-11-06; graphics read from the player's game; pace pass 2026-11-08.
 Techniques: detect.gameplay-screen-readers
 
 ## In this repo (2026-11-06)
 - Engine gng (nexclash/gng.py, gng_art.py, asm/gng_hooks.asm + gng_r_table.inc, profile ghosts_n_goblins; slot-1 RAM
   hook page over the alt ROM: patch.ram_slot1_after_alt). Builds: sprites 34c14267, enhanced 4a76d9bf; each = the
   published .nxc 1.6 --bare (default / Enhanced) apart from the NEX loading-screen block the packager adds.
+- 1.7: with ghosts_n_goblins_loading.scr beside the snapshot (the tape's screen, MD5 1877b4a1, game data, local only)
+  auto also writes _sprites_loading.nex 58da1df5 and _enhanced_loading.nex d203e425 = the published .nxc 1.7 --bare.
+  Both sets need only the snapshot, recordings c0 / c2 / c10 and that screen; the Enhanced map is in this repo.
 - No game graphics are stored. docs/profiles/ghosts_n_goblins_graphics.json lists the 315 figure images by id
   (SHA-256 of kind + rows + bytes, 20 hex digits) and source: the snapshot at an address (230), a reference
   recording at a frame and address (c0, c2, c10: 66), or a slice of a parent image (19). gng_art.catalog() reads
@@ -64,7 +67,7 @@ Techniques: detect.gameplay-screen-readers
   `_parent_stale`, a clipped fragment rewritten in place). Unit: the atlas index, every entry in its bucket.
 - Sprites cf933c18 -> 26742ac4, Enhanced 34e5d058 -> c2e6e56f; plain unchanged.
 
-## Pace (2026-11-08, local branch nexttang/ghosts_n_goblins-pace; review .nxc 1.7, not published)
+## Pace (2026-11-08, .nxc 1.7)
 - Audit (pace-audit-20261108/REPORT-2.md): published 1.6 read +14.9 to +29.1% on level 3 and stretches to +22.5% on level 1. The game's HALT at
   0x8CF3 locks an update to frames: its work takes 24 to 38 ms of the 40, and work past the frame edge costs a whole frame. Every late update
   was under 2 ms late, so a small cut in the heaviest updates is worth a lot.

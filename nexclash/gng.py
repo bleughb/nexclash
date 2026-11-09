@@ -38,6 +38,10 @@ _R_SP, _R_PC, _R_T, _R_IFF = 12, 24, 25, 26
 CMP = list(range(0, 13)) + [14, 15] + list(range(16, 25)) + [26, 27]   # all but T, MEMPTR
 _HERE = os.path.dirname(os.path.abspath(__file__))
 COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', 'ghosts_n_goblins_colours.json')
+# the tape's loading screen (bank 5's first 6,912 bytes after its own encrypted loader), beside the snapshot: game data,
+# never in this repo. With it auto also writes the published .nxc's bare builds (1.7: default 58da1df5, Enhanced d203e425).
+LOAD_SCREEN = 'ghosts_n_goblins_loading.scr'
+LOAD_MD5 = '1877b4a11a3d964fc2df2e76bebf8c42'
 KIND_ROW = {'m3': 10, 'o3': 6, 'x2': 4}
 # per kind, line 0 columns 0-2, line 1 columns 0-2: (graphics offset, mask offset or None); as the three loops read them
 LAYOUT = {'m3': [[(5, 4), (3, 2), (1, 0)], [(6, 4), (7, 2), (9, 8)]],
@@ -1305,6 +1309,26 @@ def sheets(z80, rzx_paths, out_dir, prefix='GHOSTS_N_GOBLINS', colours=None, say
 # The whole run
 # ---------------------------------------------------------------------------------------------
 
+def loading_nex(nex, screen):
+    """A built .nex -> the same with the loading screen in the NEX file (header byte 10 = 2), as the published .nxc."""
+    if len(screen) != 6912 or nex[10] != 0:
+        raise ValueError('Expected a .nex without a screen and a 6,912-byte loading screen')
+    head = bytearray(nex[:512])
+    head[10] = 2
+    return bytes(head) + screen + nex[512:]
+
+
+def find_screen(z80):
+    """The tape's loading screen beside the snapshot, or None. A different file there is refused."""
+    path = os.path.join(os.path.dirname(os.path.abspath(z80)), LOAD_SCREEN)
+    if not os.path.isfile(path):
+        return None
+    data = open(path, 'rb').read()
+    if hashlib.md5(data).hexdigest() != LOAD_MD5:
+        raise ValueError('%s is not the original loading screen (MD5 %s)' % (LOAD_SCREEN, LOAD_MD5))
+    return data
+
+
 def auto(a, z80, name, out, say):
     from . import z80tonex as zt
     from .nextboot import check
@@ -1332,6 +1356,17 @@ def auto(a, z80, name, out, say):
     say('Enhanced  : %s  %s  boot %s (optional menu set, off by default)' % (
         os.path.basename(enh), md5(enh), 'OK' if not bade else 'MISMATCH %s' % str(bade[:3])))
     ok = not bad and not bad2 and not bade
+    screen = find_screen(z80)
+    if screen is None:
+        say('Loading   : no %s beside the snapshot: no builds with the loading screen' % LOAD_SCREEN)
+    else:
+        for label, src, pt in (('Loading', spr, patch), ('Enh load', enh, enhanced)):
+            dst = src[:-4] + '_loading.nex'
+            open(dst, 'wb').write(loading_nex(open(src, 'rb').read(), screen))
+            badl = check(dst, z80, pt, (conv[1], conv[1] + len(conv[2])) if pt is patch else (ce[1], ce[1] + len(ce[2])))
+            ok = ok and not badl
+            say('%-10s: %s  %s  boot %s (the published .nxc --bare)' % (label, os.path.basename(dst), md5(dst),
+                                                                        'OK' if not badl else 'MISMATCH %s' % str(badl[:3])[:200]))
     states = []
     for r in list(a.rzx or []):
         c, ex, st = verify(patch, r, stop=getattr(a, 'quick', None), collect=40)
