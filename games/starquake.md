@@ -100,7 +100,24 @@ on a recording (enemy types not met; slots 0-55 are probably not graphics). The 
 assembly and the ending not played. Colour sheet in sheets/ (1:1, layout json); recolour() rewrites the store banks (not run on
 a painting). Evidence record, doccheck, selftest stamp: not done (pilot).
 
+## Pace (1.1, published .nxc, 2026-11-08)
+Published in nxc 238e98a: main's build with the tape's loading screen gives starquake_sprites_loading.nex 4c5ce962, the published
+.nxc --bare, byte for byte.
+Owner's pace rule: within 2% where the original runs steadily, faster fine where it lags, never slower. 1.0 read +0.42 to +3.63 whole, slowest stretch of 20 updates +28.6 (audit,
+runs/pace-audit-20261108). Every plot follows the game's own sync (0xD9C8 starts with 0xA57B: a HALT, or the tone that runs to the next interrupt); e_pl and e_un add a median 9,100 T an update
+(7,370 and 3,240 T less what the removed stores save), so updates near the frame's end went past the sync and took another frame.
+- Lost life: the sequence 0xA757-0xA76E runs 44 iterations of just under 2 frames (134,500 T of 139,776 in the original: 5,300 T to spare), then 80 of 1 frame. The hooks add 5,700 T an iteration
+  when the figures on the screen change their images often (seed 3: every iteration over, 44 x 1 frame = +44) and 4,100 T otherwise (seed 6: only 6 over, +6). So the seed decides through which figures are up, not through the sequence.
+- Fix: the plot takes a fixed time, 25,500 T whatever the figures, and every plot follows a sync. e_ob (JP NZ,0xDF72 at 0xE06D) goes up to 28 MHz at the 4th of the six objects, e_pl gives the
+  caller's speed back at its exit: credit about 10,000 T. No wait and no K, because the sync gives back whatever is over. All of the plot would be 20,000 T, but the tone runs in what is left of the frame, so a stretch
+  keeps the tone's share near the original's. HLIB_SPEED_IN unchanged, latch in the page e_pl already maps (0xF30C, page 38, mapped for it; the game owns all of RAM). hlib_pace not used: nothing to wait out.
+  hlib_iff not needed: no DI.
+- R: not compared at any hook. CMP stays. The game has no LD A,R or LD R,A in banks 5, 2, 0 (`lab.py rscan`; the one hit, bank 10 0x0089, is the .nex start stub's LD R,A), so no hook can change a value it reads.
+- Before / after: run folder NOTES.md. Same frames per update as the original on all 6 seeds but the odd update where the original lags 2 and this takes 1.
+
 ## Lessons
+- [local: the plot's fixed time is the credit] When every plot follows the game's own sync and takes a fixed time, a part of it at 28 MHz pays for hooks that vary, with no wait; size the part by what the tone or other sync-side work must keep.
+- [local: a pattern in the lost frames has a cause] The audit's 44 frames against 6 was the same sequence with a little slack per iteration: count frames per iteration before calling it seed-dependent.
 - [doc BRIEFING C2 #5] NextZXOS ROM3 is not free at 0x386E: Its IM 1 handler CALLs 0x386E and its UDG print JPs 0x387E. Hooks written
   there over a ROM3-filled alt image run on every interrupt; write the whole image (altrom_low) and verify against ROM3.
 - [local: a build step outside the engine] The approved .nex came from a script after the engine (mkload.py); importing it
@@ -120,13 +137,16 @@ Techniques: `patch.whole-altrom-image` (docs/records/starquake.json)
 - reuse: [local: the loading hold is the same stub as Lunar Jetman's and Robin's, one copy per engine by the import rule]
 - retries: [local: RECOLOUR registered with a map format the shared tool cannot read; unregistered]
 - environment: [local: needs NEXCLASH_NEXT_ROM=enNextZX.rom (pilot runs/starquake/work/rom) for the ROM3 negative]
-- hand-rolled: [local: loading_nex() repeats the pilot's mkload.py byte layout]
+- hand-rolled: [local: loading_nex() repeats the pilot's mkload.py byte layout]; the pace runs' tools stay in the run folder
 - scratch: [none: scratch build scripts dropped]
 
 ## Technique use
+- patch.pace-limiter: no help: the game's own sync does it (2026-11-08).
+- patch.restore-speed: helped: HLIB_SPEED_IN with the latch's page mapped first (2026-11-08).
 - patch.whole-altrom-image: helped: the crash was NextZXOS ROM3 code round the hooks; the card's rule (every byte from the build) fixed it.
 
 ## Stage log
+- 2026-11-08 pace fix, review 1.1 (owner's pace rule; audit runs/pace-audit-20261108): the plot's last three objects at 28 MHz. 0 user rounds.
 - 2026-11-04: imported into the repo (refactor phase 7): rebuild = the published v1.0, full verify stamped. 0 user rounds.
 - 2026-11-04 stages 0-3 in one session (pilot, unattended, after a usage-limit stop); 0 user rounds.
 

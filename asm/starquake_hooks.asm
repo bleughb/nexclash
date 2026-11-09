@@ -13,6 +13,12 @@
 ;   0xA45F  CD 47 A6  CALL 0xA647 (play area clear, new room)           -> CALL e_rc
 ;   0xA412  C3 47 A6  JP 0xA647 (jump table entry, same routine)        -> JP e_rc
 ;   0xD964  21 20 5B  LD HL,0x5B20 (after the paint loop)               -> JP e_un
+;   0xE06D  C2 72 DF  JP NZ,0xDF72 (the plot's next object)              -> JP e_ob
+; Pace (2026-11-08): every plot follows the game's own sync (0xD9C8: the HALT or the tone that runs to the
+; next interrupt), and e_pl and e_un's time pushed some updates past it. The plot takes a fixed time, 25,500 T
+; whatever the figures. Its last three objects run at 28 MHz, from e_ob down to e_pl's exit: about half the
+; plot, more than the hooks' median time, so no wait, no K, and the sync gives back whatever is over. A stretch
+; of the plot, not all of it, because the tone runs in what is left of the frame: the original's share stays.
 ; Every hook ends with a JP to the original target, so the code the game runs is unchanged and a
 ; verifier that does not count fetches in 0x386E-rom_end stays in step with the recording.
 ; Object i (0-5): record 0xDD18+32i as the plot left it: +0/1 line table pointer (top line 16 + k),
@@ -33,7 +39,11 @@ LTAB    EQU 0xDDDE
 SAVEPG  EQU 38                  ; last store page: images 192-195 below 0xE800, attributes at 0xF000
 SAVEAT  EQU 0xF000
 CACHE   EQU 0xF300                  ; 6 x 2 bytes, page SAVEPG, zero in the build
+SPD     EQU 0xF30C                  ; the caller's speed (hlib_speed latch), page SAVEPG: e_ob to e_pl
+WIN_OBJ EQU 3                       ; first object of the plot's 28 MHz stretch
 STP     EQU 26
+
+        INCLUDE "lib/hlib_speed.asm"
 
         ORG 0x386E
 ; ---- after the plot, before the (store-less) attribute paint ----
@@ -41,15 +51,7 @@ e_pl:   push af
         push bc
         push de
         push hl
-        ld bc,0x243B
-        ld a,7
-        out (c),a
-        inc b
-        in a,(c)
-        and 3
-        push af                 ; speed as found
-        nextreg 0x07,3
-        dec b
+        ld bc,0x243B            ; at 28 MHz already, since e_ob
         ld a,0x57
         out (c),a
         inc b
@@ -72,9 +74,11 @@ e_pl:   push af
         ld de,SAVEAT
         ld bc,768
         ldir
+        ld a,(SPD)
+        ld h,a                  ; the caller's speed, from e_ob; HL comes back below
         pop af
         nextreg 0x57,a
-        pop af
+        ld a,h
         nextreg 0x07,a
         pop hl
         pop de
@@ -365,6 +369,28 @@ e_un:   push af
         pop af
         ld hl,0x5B20
         jp 0xD967
+
+; ---- the plot's next object (JP NZ,0xDF72 replayed: Z = all six drawn; A = the next object) ----
+e_ob:   jp z,0xE070
+        push af
+        cp WIN_OBJ
+        jr z,.win
+        pop af
+        jp 0xDF72
+.win:   push bc
+        ld bc,0x243B            ; MMU7 as found, the latch's page in, the speed latched, 28 MHz, MMU7 back
+        ld a,0x57
+        out (c),a
+        inc b
+        in a,(c)
+        push af
+        nextreg 0x57,SAVEPG
+        HLIB_SPEED_IN SPD
+        pop af
+        nextreg 0x57,a
+        pop bc
+        pop af
+        jp 0xDF72
 
 ; ---- screen clears: every figure sprite hidden, then the original routine ----
 e_cls:  call hideall
