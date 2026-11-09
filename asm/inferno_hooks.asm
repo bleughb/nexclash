@@ -5055,7 +5055,16 @@ driver:
         ld bc,0x1C
         ldir
         call drv_sel_reset
-.next:  nextreg 0x51,78
+.next:  ld a,(D_IMAGE)           ; one thin border bar per image, as while loading (28 MHz: a line is about 1824 T)
+        and 7
+        jr nz,.bar
+        ld a,2
+.bar:   out (0xFE),a
+        ld b,140
+.line:  djnz .line
+        xor a
+        out (0xFE),a
+        nextreg 0x51,78
         xor a
         ld (J_OP+W_A),a
         ld (J_FLASH+W_A),a
@@ -5413,6 +5422,24 @@ drv_clear:
         ret
 
 ; Colour every stream tile into the canvas. NZ = pack refused valid input.
+drv_bar:                        ; a thin border bar for about one tile in 16; all registers kept
+        push af
+        ld a,r
+        and 15
+        jr nz,.skip
+        push bc
+        ld a,r
+        and 7
+        jr nz,.bar
+        ld a,3
+.bar:   out (0xFE),a
+        ld b,140
+.line:  djnz .line
+        xor a
+        out (0xFE),a
+        pop bc
+.skip:  pop af
+        ret
 drv_tiles:
         ld hl,0x4001
 .row:   nextreg 0x52,122
@@ -5432,7 +5459,8 @@ drv_tiles:
         inc hl
         call drv_bounds.sign
         ld (D_RY),de
-.tile:  push hl
+.tile:  call drv_bar
+        push hl
         nextreg 0x51,75
         nextreg 0x52,122
         push hl
@@ -7100,7 +7128,7 @@ wi_stub_end:
 
 ; SAVE/LOAD: the pilot record (49 bytes at 5B15, name at 7001) goes to named slots in page 120, not to tape.
 ; Both routines replace ROM tape code in the alt ROM's low page and run in slot 0, so they may use slot 1.
-SAVE_PAGE   EQU 120
+SAVE_PAGE   EQU 123
 SAVE_NAME   EQU 0x7001
 SAVE_SIZE   EQU 49
 SAVE_STEP   EQU 64          ; slot: 8 name bytes (0 = empty), 49 data bytes, pad
@@ -7206,3 +7234,100 @@ load_front:
 load_front_end:
         ASSERT load_front_end <= 0x05E3
         SAVEBIN "inferno_loadfront.bin",load_front,load_front_end-load_front
+
+; English build: text tables (count16, dest16, bytes; count 0 ends) in pages 118 (main), 119 (intro), 124-127 (levels).
+        ORG 0x050E              ; after save_hook, in the old SA-BYTES and LD-BYTES entry code
+en_level:                       ; 718F, after the level block is unpacked
+        ld a,i
+        push af
+        di
+        ld a,(0x7335)
+        sub '0'
+        ld c,a
+        srl a
+        add a,124
+        ld hl,0x2000
+        bit 0,c
+        jr z,.even
+        ld h,0x30
+.even:  call en_apply
+        pop af
+        jp po,.off
+        ei
+.off:   ld a,(0x7335)
+        jp 0x7192
+en_apply:                       ; A = page, HL = table in slot 1; slot 1 is put back as found
+        ld e,a
+        ld bc,0x243B
+        ld a,0x51
+        out (c),a
+        inc b
+        in a,(c)
+        push af
+        ld a,e
+        nextreg 0x51,a
+.next:  ld c,(hl)
+        inc hl
+        ld b,(hl)
+        inc hl
+        ld a,b
+        or c
+        jr z,.done
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+        ldir
+        jr .next
+.done:  pop af
+        nextreg 0x51,a
+        ret
+en_level_end:
+        ASSERT en_level_end <= 0x0562
+        SAVEBIN "inferno_enlevel.bin",en_level,en_level_end-en_level
+
+        ORG 0x05C5              ; after load_front; replaces JP 24200 in wi_back
+en_start:
+        di
+        ld a,118
+        ld hl,0x2000
+        call en_apply
+        ld a,119
+        ld hl,0x2000
+        call en_apply
+        ei
+        jp 24200
+en_start_end:
+        ASSERT en_start_end <= 0x05E3
+        SAVEBIN "inferno_enstart.bin",en_start,en_start_end-en_start
+
+; English story screens: after the level picture is drawn, its text bytes come from pages 127 and 121
+        ORG 0x0558
+en_story:                       ; replaces CALL C350 at 7166
+        call 0xC350
+        ld a,(0x7335)
+        sub '0'
+        jr en_story2
+en_story_end:
+        ASSERT en_story_end <= 0x0562
+        SAVEBIN "inferno_enstory.bin",en_story,en_story_end-en_story
+        ORG 0x05DA
+en_story2:                      ; A = level: pages 127 (0-2) and 121 (3-5), table at (slot+1)*0x800
+        cp 6
+        ret nc
+        ld b,127
+        cp 3
+        jr c,.low
+        sub 3
+        ld b,121
+.low:   inc a
+        rlca
+        rlca
+        rlca
+        add a,0x20
+        ld h,a
+        ld l,0
+        ld a,b
+        jp en_apply
+en_story2_end:
+        SAVEBIN "inferno_enstory2.bin",en_story2,en_story2_end-en_story2
