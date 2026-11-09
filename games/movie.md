@@ -6,7 +6,7 @@ Stage 3: verified and stamped; release package and artwork ready for review. Bra
 Inputs and hashes: `docs/records/movie.json`. Supply external colours.bin, palette.bin, painting.json
 and movie-loading.scr beside movie.z80; alternatively set NEXCLASH_MOVIE_ART to the painting folder.
 No game assets enter this repo. Jon approved 1930s noir colours and overnight implementation.
-Private evidence is in pilot runs/movie; use its HANDOFF-CLAUDE.md when completed.
+Private evidence is in pilot runs/movie; use its private handoff when completed.
 
 ## Source and presentation
 
