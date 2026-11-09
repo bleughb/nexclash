@@ -274,6 +274,8 @@ def check(ctx=None):
     if reg and not runs:
         bad.append('selftest.py tools_check never runs PROBE_SMOKE (the probes\' smoke tests)')
     base = merge_base()
+    import feasibility
+    bad += feasibility.check(ROOT, base)
     changed = changed_games(base)
     if changed is None and os.environ.get('CI'):
         bad.append('no merge base with origin/main (CI checkout needs fetch-depth: 0): changed game files not checked')

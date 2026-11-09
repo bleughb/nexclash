@@ -5,10 +5,9 @@
 Capture lessons and reusable scripts before the container disappears.
 
 ## 1. Source refresh and verification freeze
-Git only: refresh when starting development or before final verification, with `git status` clean
-and no verification running. Read the Next session block first. Do not merge at every stage.
-Then `git fetch origin main`, `git log --oneline HEAD..origin/main`, `git diff --stat HEAD...origin/main`;
-read what changed in docs/techniques and in the docs your stage uses; `git merge origin/main`.
+Git: refresh before development or final verification, with a clean tree and no verification running.
+Read Next session first; do not merge at every stage.
+`git fetch origin main`; review incoming log/diff, changed cards and stage docs; `git merge origin/main`.
 `python -m nexclash.records deps <game>` says what the game's stamp depends on: a merge that touches
 none of those files (docs, cards) invalidates nothing. If the merge must wait (a verification is
 running, a conflict with work in flight), say in the Stage log line why and which main commit the
@@ -52,25 +51,27 @@ first, tested in `selftest --tools`; promotion to a shared command when a second
 A game-specific fix is never assumed to generalise: `[local: ...]` is a valid outcome.
 
 ## 4. Cards (docs/techniques/STANDARD.md)
-A new or revised card is schema 4. A candidate has a source (`examples` or `sources`, external
-allowed), a `**Assumptions.**` line and a `**Validation gap.**` line. `active` needs scoped local
-evidence: a record whose `results` has `pass` for an application of the card. Schema-3 cards are
-migrated when next revised. Card changes are reviewed in the PR (a wrong card steers future work):
-the PR says what changed and why. Then `python tools/techindex.py` regenerates the index.
+New/revised cards: schema 4; candidates need a source (`examples` or `sources`), `**Assumptions.**`
+and `**Validation gap.**`. `active` needs a record's scoped `pass` result for its application.
+Migrate schema 3 when revised. Explain changes in the PR; regenerate with `python tools/techindex.py`.
 
 ## 5. Technique use (does the catalogue help?)
 games/<game>.md "## Technique use": one line per card or probe consulted,
 `- <card id | tools/probes/<x>.py>: used | helped | no help: <why> | corrected: <what>`.
-`python tools/learncheck.py --usage` totals them per card: DISTINCT games and individual uses apart
-(two lines from one game are one game - cross-game validation needs distinct games). A card that
-never helps, or keeps being corrected, is the next one to revise or deprecate.
+`python tools/learncheck.py --usage` counts distinct games separately from uses. Repeated use in one
+game is not cross-game validation. Revise/deprecate cards that never help or need repeated correction.
 
 ## 6. Scope
-Enforced on game files with "## Lessons", and on every record's game file changed against
-origin/main: it needs "## Lessons" + "## Technique use" and a lesson added or changed since the merge
-base (or a `[none: <why>]` line). One that still has the old "## Lesson candidates" fails: migrate it
-when revisited. Untouched old files stay as they are (MAINTAIN "Lesson consolidation" handles them).
+Enforced on files with "## Lessons" and records' game notes changed against origin/main: require
+Lessons + Technique use and a new/changed lesson (or `[none: <why>]`). Changed "## Lesson candidates"
+must migrate; untouched old files stay as they are (MAINTAIN "Lesson consolidation").
 Under CI a missing merge base fails (the workflow fetches the full history).
+New engine records need `feasibility`: copy tools/templates/feasibility.json as that field, replace
+its examples. Pacing and dependency entries link repo-relative files or HTTP(S) evidence, with
+coverage and results; either may instead be `{"not_applicable": "reason"}`. Include the decision
+and next experiment's success criterion. learncheck validates structure/local files, not conclusions
+or remote availability. Old records are exempt unless opted in; new records reusing a baseline
+engine without new own_modules keep the fast path. In packages without Git, provide this manually.
 
 ## 7. Record reconciliation
 The record's `techniques` lists every card the build applies (application, target, `owns`) and its
