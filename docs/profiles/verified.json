@@ -98,6 +98,14 @@
     "sprites": "82b05dafa0ec1049141db188840d775a"
    }
   },
+  "47ff99afedc9f0af0030b63d1fa4d098": {
+   "game": "Comando Quatro",
+   "doc": "comando_quatro.md",
+   "nex": {
+    "sprites": "ffcd877f26f9092b6c2cc950bf06211b",
+    "loading": "66563d3ebc2c985f85cf4d4ee152f8fd"
+   }
+  },
   "c9af5668191462d77c5859900268c24b": {
    "game": "Commando",
    "doc": "commando.md",

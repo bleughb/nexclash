@@ -1,0 +1,177 @@
+{
+ "name": "comando_quatro",
+ "order": 246,
+ "game": "Comando Quatro",
+ "doc": "comando_quatro.md",
+ "engine": "comando_quatro",
+ "representative": true,
+ "reference": "comando_quatro",
+ "inputs": {
+  "snapshot": {
+   "name": "comando_quatro.z80",
+   "md5": "47ff99afedc9f0af0030b63d1fa4d098",
+   "path": "comando_quatro/comando_quatro.z80",
+   "note": "Comando Quatro (1989)(Zigurat)(ES).z80, the 48K beeper game; Spanish menu, no English release in the archive."
+  },
+  "recordings": [
+   {
+    "name": "comando_quatro_loading.scr",
+    "md5": "d5f1b3bd3e27d3920f8d253883fc6b26",
+    "path": "comando_quatro/comando_quatro_loading.scr",
+    "role": "The 6,912-byte loading screen from the plain .tap of the same release, staged beside the snapshot; game data, never in this repo; not a recording."
+   },
+   {
+    "name": "a1.rzx",
+    "md5": "14fb1848abad9e9b03e3742350ec9397",
+    "path": "comando_quatro/a1.rzx",
+    "role": "Scripted keyboard play from the title: menu, the first rooms, a wipe between zones; 9,024 frames. The broken builds and the ABI cases use its first 5,000 frames."
+   },
+   {
+    "name": "a2.rzx",
+    "md5": "b6c3b91d7f6a27c87baa8a3347a6bb15",
+    "path": "comando_quatro/a2.rzx",
+    "role": "Scripted keyboard play through all four commandos' zones, deaths, game over and a new game; 45,046 frames, replayed to frame 22,000 (STOPS), as in the review run."
+   },
+   {
+    "name": "a3.rzx",
+    "md5": "74f732e1946ae22de18da86dad157ad1",
+    "path": "comando_quatro/a3.rzx",
+    "role": "Scripted keyboard play over the four zones, another seed; 20,054 frames."
+   }
+  ]
+ },
+ "modules": [
+  "comando_quatro"
+ ],
+ "own_modules": [
+  "comando_quatro"
+ ],
+ "data": [
+  "asm/comando_quatro_hooks.asm",
+  "docs/profiles/comando_quatro.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "a1.rzx",
+   "a2.rzx",
+   "a3.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 30,
+  "note": "At every hook every register with R and all 48K RAM except the attribute cells the copy shows (checked against the clean copy, and that copy against the game's own restore) and 32 bytes of dead stack; the Layer 2 picture against an independent model at every publication and wipe copy, and every lit pixel against the bitmap the copy wrote; ABI cases on a1's states and 12 broken builds. Pace, soak, flicker, beam audit and the real loader are in games/comando_quatro.md \"Evidence\"."
+ },
+ "outputs": {
+  "sprites": {
+   "file": "comando_quatro_sprites.nex",
+   "md5": "ffcd877f26f9092b6c2cc950bf06211b"
+  },
+  "loading": {
+   "file": "comando_quatro_sprites_loading.nex",
+   "md5": "66563d3ebc2c985f85cf4d4ee152f8fd"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Comando Quatro",
+  "engine_col": "comando_quatro (comando_quatro.md)",
+  "build": "v1.0; comando_quatro_sprites_loading.nex 66563d3e equals the published .nxc 1.0 bare build (without the screen ffcd877f); clash removed: the original bitmap on the ULA, scenery in its own attributes from a clean copy, figures' ink on a double-buffered Layer 2 in plot order; the Kempston port operand at B253 changed from 0xDF to 0x1F, the Next's port; top bank 47, fits a 1MB Next",
+  "software": "3 recordings, 51,078 frames (a2 to frame 22,000), 82,842 hooks with R and 48K RAM, 9,638 restores against the clean copy, 9,688 Layer 2 pictures and 4,524,667 pixels against the model and the bitmap; 640 ABI cases, 12 of 12 broken builds; ROM paths complete over all of a1, a2 and a3 (Next ROM 8c34d957); review run: pace in JNext in lockstep over the four zones, whole runs -0.47% to -0.27%, slowest 20 updates up to +1.09%; 15-minute soak, flicker, beam audit, real loader on private cards with each cheat",
+  "hardware": "untested",
+  "next": "hardware checklist; the owner's play; Kempston on a real Next (0x1F); Enhanced (no source, rated MODERATE); later rooms and zones"
+ },
+ "checks": [
+  "asm2profile:comando_quatro"
+ ],
+ "results": [
+  {
+   "check": "external review run",
+   "status": "pass",
+   "scope": "runs/comando_quatro/release-20261108: pace, soak, flicker, beam audit and real loader, JNext 1.1.104, on this engine's bytes. Not a selftest stamp.",
+   "evidence": "games/comando_quatro.md \"Evidence\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/comando_quatro_hooks.asm": "d9377317607e0be7",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/comando_quatro.json": "0d697c95efc7528b",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/comando_quatro.py": "73da292d22f9089e",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "8c0c422dc31e4fe6",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "2defba4acee8eada",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-09"
+ },
+ "verified": {
+  "deps": {
+   "asm/comando_quatro_hooks.asm": "d9377317607e0be7",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/comando_quatro.json": "0d697c95efc7528b",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/comando_quatro.py": "73da292d22f9089e",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "4772e88230aa30f8",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7154a8152c825615",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "2defba4acee8eada",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-08"
+ }
+}
