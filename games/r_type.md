@@ -1,54 +1,54 @@
 # R-Type (128K) - intake
 
 ## Next session
-Stage: 1 (design/feasibility). State: visual design approved; capacity measured, staged publication prototype passes; whole-hook pace gate open.
-Inputs: ../specnext/reference/r_type/Rtype.z80, Rtype.rzx, Rtype.tap (hashes below).
-Branch: add-r-type. Base: 931458b9d65a76cf1f8bfebacbe57e7f33807397.
-Checks: bounded survey, full-recording caller census, canary and doccheck PASS;
-tools check has one pre-existing Inferno audit failure (Checks below).
-User answer 2026-11-10: defaults 1-5; every effect a sprite; see-through bodies; no outlines.
-Handoff requested by owner: fresh agent; no pending design answers. Do not repeat intake/censuses.
-Evidence commits: nexclash0e22d25; specnextf6918f3, both pushed on add-r-type.
-Draft PRs: https://github.com/bleughb/nexclash/pull/235 and https://github.com/bleughb/specnext/pull/93.
-Check out branch tips before reading; refresh main as CLAUDE/LEARNING require.
-Read next: CLAUDE.md, PLAYBOOK stage1/3d, this file's Feasibility, then
-../specnext/reference/r_type/intake/README.md and intake/review/README.md.
-Open: dynamic pattern preparation, full hook register/R/stack proof and integrated pace.
-No sprite engine, profile, registry entry or evidence record has been built. The supplied
-plain build alone has owner-reported JNext/real-hardware success; do not present a prototype as delivery.
+Stage: 1 (feasibility), design approved; dynamic preparation and early whole-copier
+integration measured. This is NOT the R-Type engine or a hardware-ready sprite build.
+Branch: add-r-type in both repos. Started from nexclash0fba3b9; refreshed/merged main
+at dace0cc (Movie-only incoming changes), specnext main already included.
+Inputs: ../specnext/reference/r_type/Rtype.{z80,rzx,tap}; hashes below.
+No pending design answers. Do not repeat intake, caller/capacity or full ISR/access scans.
+Read: CLAUDE.md, PLAYBOOK3d/6, Feasibility below, then
+../specnext/reference/r_type/intake/README.md (Dynamic preparation and early integration).
+Reference evidence commit: specnexte6d7a1f.
+Draft PRs: https://github.com/bleughb/nexclash/pull/235 and
+https://github.com/bleughb/specnext/pull/93. Latest evidence lives on these branches.
 
-Local setup: repos at /workspace/work/{nexclash,specnext}; use /workspace/work/venv101/bin/python
-(SkoolKit10.1;10.2's C trace callback differs). Only the bundled pinned assembler may be used.
-JNext1.2.0: /workspace/work/jnext-bin/root/usr/bin/jnext. Isolated home:
-/workspace/work/r_type_jnext_home. Shared nexclash.jnext helpers launch it successfully.
-Private read-only card: /workspace/scratch/cspect-next-2gb.img; never commit or publish it.
-If the workspace is replaced, recover the owner's cspect-next-2gb.zip upload (Sediment ID
-file_0000000073c0820ba21cc0b36230394a) and extract its2GB image outside both repos.
-The default www.specnext.com download was policy-blocked; the uploaded card resolves that blocker.
+Completed this continuation: actual ZX-to4bpp preparation (23 and105 sprites), both DMA
+publication modes, four runtime corruption controls; early integrated converter/copier;
+100-return ABI/tail/source checks in each mode;24 isolated register/R bridge cases;
+100-update natural-play pace penalty0.82% (worst20-update window1.72%). Details below.
+No full recording sprite verify, state lockstep, new hardware result or release stamp.
+No engine/profile/registry entry/record/colour sheets have been created.
 
-First concrete step: inspect intake/publication_shadow.asm/.py, then implement/measure dynamic
-ZX-to4bpp pattern preparation in that protocol before claiming whole-hook feasibility.
-The current prototype uses105 synthetic prepared images and one captured game/IRQ state.
-Re-run only when extending the experiment: ../venv101/bin/python
-../specnext/reference/r_type/intake/publication_shadow.py (from nexclash).
-The driver reconstructs its bounded IRQ capture if absent; writes generated game memory only to work.
-It checks ordinary-DMA/default publication, source pixels/gaps, HUD, tail and a tail-omission control.
-CPU-only missed deadlines; the supported no-blitter fallback is ordinary DMA. 3.03 DDMA is not
-hardware-tested. Initial atomic clone must not mask IRQ247; retain shadow through prep-time IRQs,
-copy5B00..5FFF back at NR150, publish at160 and restore IFF before247. NR64 must be0; NL311.
-Restore MMU6 on hook return. IRQ reads R during prep: return-time R repair alone is insufficient.
-After feasibility: implement the additive engine per ENGINE_CONTRACT, colour-sheet capture and
-per-pixel recolour; quick2000 and meaningful negative controls, then the one stamped full verify.
-Do not rerun the expensive full recording scans without a new question they resolve.
+First next gate: supplied-R equivalence for BEDB/BF36 IRQ consumers during prep, complete
+banked RAM and stack convergence/instruction-level IRQ proof, and observed105-sprite
+scene INTEGRATED pace (only component timing was measured there). Then wire the measured
+per-plot text classifier (the current prototype table stays empty), source paper handling,
+and entry-IFF0 support before promoting the experiment into the additive engine.
+Do not treat the passing isolated R bridge as an in-IRQ R proof. Diagnostic sources:
+publication_dynamic.asm/.py, publication_integrated.asm/.py, integrated_check.py,
+register_bridge.py in specnext/reference/r_type/intake. Worst-state capture helper:
+refresh_capture.py; replays only to the already-known peak, and only if its fixture is absent.
 
-Local measured gameplay baseline (not the frontend-start snapshot): /workspace/work/r_type_play.z80
-and r_type_play.nex, extracted at RZX frame2000; log /workspace/work/r_type_game_pace.log.
-Baseline command (set NEXCLASH_JNEXT to the executable above):
-`../venv101/bin/python -m nexclash.pace /workspace/work/r_type_play.nex --original
-/workspace/work/r_type_play.z80 --probe 0x8649 --updates 100 --max-frames 1000 --card
-/workspace/scratch/cspect-next-2gb.img --jnext-home /workspace/work/r_type_jnext_home
--o /workspace/work/r_type_game_baseline`.
-Plain frontend requires keys before updates occur.
+Setup: /workspace/work/{nexclash,specnext}; /workspace/work/venv101/bin/python
+(SkoolKit10.1, Pillow13); only bundled pinned sjasmplus. JNext1.2.0 executable:
+/workspace/work/jnext-bin/root/usr/bin/jnext; isolated home /workspace/work/r_type_jnext_home.
+Private read-only card /workspace/scratch/cspect-next-2gb.img, outside BOTH repos.
+On workspace replacement recover owner ZIP Sediment ID file_0000000073c0820ba21cc0b36230394a
+and extract privately. Never commit/publish it or JNS captures containing its metadata.
+Generated game snapshots/NEX/JNS/raw logs stay under /workspace/work; compact results
+and reproducible per-game experiments are in specnext. Diagnostic MD5 a300a51515aa39534e3047ef18e16db9.
+
+Reproduce checks from nexclash using ../venv101/bin/python followed by
+../specnext/reference/r_type/intake/{refresh_capture,publication_dynamic,register_bridge,integrated_check}.py;
+README gives the peak-state argument and exact scope. Integrated fixture:
+/workspace/work/r_type_integrated/play.z80; diagnostic.nex in that same folder.
+Set NEXCLASH_JNEXT to the executable above; shared pace command uses --original play.z80
+--probe 0x8649 --updates 100 --max-frames 1500 --card <private-card> --jnext-home <isolated-home>.
+Prior synthetic CPU route remains rejected; no-blitter means ordinary DMA. Core3.03 DDMA
+is untested. NR64=0, NL311; retain shadow through prep IRQs, tail copy at150, publish160,
+restore MMU6/speed/IFF before247. Guarded clone entry is below210 or from249; component
+probe still uses fixed170. No accepted IRQ occurred in measured clone/publication intervals.
 
 ## Inputs
 The attached TAP is a tape, not a snapshot. The build start state was extracted from the
@@ -171,7 +171,37 @@ graphics and update collision maps; DDMA cannot generate those maps or unpack ZX
 Evaluate cached sprite uploads with ordinary DMA and eligible rectangle work with gated DDMA,
 using the shared policies (including no-blitter and CPU fallback), during integration; ordinary DMA is the measured no-blitter fallback.
 
+Dynamic continuation (component + early integrated diagnostic, 2026-11-10):
+- Real source pixels generate23 sprites at captured native IRQ state3620 and105 at the
+  previously measured peak29405. Per-bit host oracle matches every active packed pattern
+  and attribute; default/no-blitter publish in5.084/5.100ms with no row deadline failures.
+  Preparation includes IRQs:47.687/71.758ms. No105-scene integrated pace claim.
+- Two ordinary-DMA zero fills replace blank-cell CPU writes;23-state prep improved from
+  66.915 to47.687ms. The guarded whole-hook clone entry removes the fixed170 wait:
+  100-update penalty9.80% ->0.82%, worst20-update window1.72%. Both original/diagnostic
+  15.83updates/s,49.83IRQ/s, longest IRQ gap40.5ms; no gameplay state lockstep.
+- Runtime negatives: corrupt LUT813/5392 packed bytes; omit foreground clear328/1887
+  ULA bytes; omit tail or restore source holes wholesale each loses one forced sentinel.
+  Expected source-hole state includes IRQs through the publication wait.
+- Integrated100 returns per mode:12 copier-output register fields exact; SP/MMU6/IFF
+  restored;34048 RAM bytes identical from tail to return;0 accepted IRQ in measured
+  clone/publication intervals. Broken IY restore caught100 times. Max observed hook64.42ms,
+  publication interval101.31ms; no dropped copier return in this sample. Private SP minimum
+  3CE4 on positive runs, not an instruction-level interrupt-headroom proof.
+- The real copier's M1 span repairs return R.24 isolated bridge cases (both captured
+  states, six R seeds with bit7, positive and wrong-R controls) compare all caller registers
+  exactly, IRQ excluded. BEDB/BF36 supplied-R/consumer proof remains open. The integration RAM check
+  excludes C000..DFFF and does not establish original-vs-hook IRQ effects before the tail.
+- Shared converter/compact tail boots the diagnostic; MD5 a300a51515aa39534e3047ef18e16db9.
+  Text hooks, source paper handling, entry-IFF0 support, full banked RAM/stack/IRQ proof,
+  worst-scene integrated pace, colour/recolour and final engine remain open. No delivery claim.
+Evidence: specnext/reference/r_type/intake/{publication_dynamic-timing,publication_peak-timing,
+integrated-check,register-bridge,integrated-pace,integrated-summary}.json and README recipes.
+
 ## Checks
+- Continuation: dynamic component/negative controls, integrated100-return checks and isolated
+  register/R bridge PASS;100-update pace0.82%. No shared runtime code changed; prior
+  canary/tools results below are retained, not rerun. Doccheck PASS (148 docs).
 - `selftest.py --canary`: PASS, both Chuckie Egg rebuild checksums unchanged.
 - `selftest.py --tools`: new entry-CALL regression PASS; existing Chuckie survey golden PASS;
   overall FAIL on the unchanged Inferno IFF audit (asm/inferno_hooks.asm lines 5722, 5726, 7563).
@@ -186,11 +216,18 @@ level transitions, death/restart and display
 checks belong to the eventual sprite build; no hardware result is claimed.
 
 ## Technique use
+- optimise.pattern-cache: no help: temporal protected union exceeds128; dynamic preparation uses the staged single-bank protocol; no cache claim.
+- patch.display-atomic-switch: helped: checks require complete old/new pictures; single-bank publication remains a measured alternative outside the play area.
+- patch.preserve-r: used: actual copier M1 span repairs return R; isolated assembled bridge passes, IRQ consumers remain a separate proof.
 - detect.pacing-structure: used: preliminary census locates the three-interrupt wait and beeper writers.
 - detect.routine-removal: helped: identifies the required dependency experiment; existing probe is 48K only.
 - detect.buffer-layout-producer: helped: separated final copier, nonlinear source cells and non-pixel holes.
 
 ## Lessons
+- [local: clone entry phase] Observed: fixed170 entry waiting adds9.80% integrated pace cost; guarding clone below210/from249 yields0.82% over100 updates. Worst-scene integrated pace remains open.
+- [local: empty pattern quadrants] Demonstrated: ordinary-DMA zero fill avoids per-cell blank writes; live23-sprite preparation47.687ms including native IRQs, down from66.915ms.105-sprite component also passes.
+- [local: source-hole oracle] Demonstrated: post-IRQ sentinel expectations must count IRQs through the wait to the tail transition; broad restoration loses the sentinel and the negative fails.
+- [doc docs/CHECKS.md §Setup] Observed in JNext1.2.0: execute-triggered JNS requests save at a frame boundary. Exact hook ABI/RAM tests use execute-time logs/dump_mem instead.
 - [tool nexclash.isrinfo] Expose data-read/write address sets in the API, retaining text output;
   this distinguishes safe pixel scratch from ISR-mutated attributes and shadow-slot variables.
 - [local: publication timing] A native beeper IRQ breaks an otherwise passing CPU row schedule.
@@ -205,14 +242,17 @@ checks belong to the eventual sprite build; no hardware result is claimed.
 
 ## Friction
 - reuse: [none: existing survey, scan, preview and census tools provided the investigation paths]
-- retries: [tool nexclash.survey] Fixed missing entry CALL tracking before trusting caller coverage.
-- environment: [local: session dependency selection] SkoolKit 10.2 changed the C trace callback
-  to five arguments; this session uses 10.1 in ../venv101, within the project's declared range.
+- retries: [local: boundary oracle] Fixed the post-IRQ source-hole oracle to include the publication wait; return-R counts include both M1 fetches of LD SP,(nn). Earlier survey entry-CALL regression remains fixed.
+- environment: [local: resumed workspace] Recovered both branch tips, pinned SkoolKit10.1 and JNext1.2.0; owner SD upload extracted read-only outside Git. SkoolKit10.2 callback incompatibility remains avoided.
 - hand-rolled: [none: disassembly used sna2skool; screen images used the existing preview renderer]
 - scratch: [local: per-game feasibility evidence] Game-specific experiments kept beside the inputs
   in specnext/reference/r_type/intake; none added as an untested shared toolkit probe.
 
 ## Stage log
+- 2026-11-10 Stage1 continued (~30min, ~100 tool calls,0 user rounds): refreshed main dace0cc;
+  live23/105-pattern DMA probes and controls pass; early integrated100-return checks and
+  isolated R bridge pass;100-update pace0.82%. In-IRQ R, complete RAM/stack proof and
+  worst-scene integrated pace remain open; no full scans repeated or hardware build delivered.
 - 2026-11-10 Stage1 handoff: owner requested a fresh agent for cost efficiency. Branches and
   prototypes pushed; this Next session block is the single current handoff. No pending design
   question; remaining gates are dynamic preparation, integrated equivalence and pace.
