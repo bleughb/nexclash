@@ -1,0 +1,208 @@
+{
+ "name": "bruce_lee",
+ "order": 254,
+ "game": "Bruce Lee",
+ "doc": "bruce_lee.md",
+ "engine": "bruce_lee",
+ "representative": true,
+ "reference": "bruce_lee",
+ "inputs": {
+  "snapshot": {
+   "name": "bruce_lee.z80",
+   "path": "bruce_lee/bruce_lee.z80",
+   "md5": "6e088cc665d1cdbcd32effa061ad6e8e"
+  },
+  "recordings": [
+   {
+    "name": "bruce_continuous.rzx",
+    "path": "bruce_lee/bruce_continuous.rzx",
+    "md5": "e6e9311f0b88531ab725d47020bc89b7"
+   },
+   {
+    "name": "bruce_death_gameover.rzx",
+    "path": "bruce_lee/bruce_death_gameover.rzx",
+    "md5": "dc4516eb4947a4de95d0ffd8016100ba"
+   },
+   {
+    "name": "BRUCE.scr",
+    "path": "bruce_lee/BRUCE.scr",
+    "md5": "fd3cce1f2481373716de0fed62335674",
+    "role": "External build input, not a recording; never included in source contribution."
+   },
+   {
+    "name": "colour-source.256",
+    "path": "bruce_lee/colour-source.256",
+    "md5": "eba01279d6c7bf307a28b25782aa2083",
+    "role": "External build input, not a recording; never included in source contribution."
+   },
+   {
+    "name": "source-palette.pal",
+    "path": "bruce_lee/source-palette.pal",
+    "md5": "b095dc99a047bab844b87b06657b0a7a",
+    "role": "External build input, not a recording; never included in source contribution."
+   }
+  ]
+ },
+ "modules": [
+  "bruce_lee"
+ ],
+ "own_modules": [
+  "bruce_lee"
+ ],
+ "data": [
+  "asm/bruce_lee_hooks.asm",
+  "docs/profiles/bruce_lee.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record",
+   "--no-nxc"
+  ],
+  "rzx": []
+ },
+ "verify": {
+  "args": [
+   "--no-record",
+   "--no-nxc"
+  ],
+  "rzx": [
+   "bruce_continuous.rzx",
+   "bruce_death_gameover.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 25,
+  "note": "Frozen verification passed: 66000 frames and 110399 hook/R comparisons per mode, 15825 exact default compositions and 13947 Enhanced background screens. Complete ROM audit and five broken builds. Native timing and exact-package loader evidence retained in private run."
+ },
+ "outputs": {
+  "plain": {
+   "file": "bruce_lee.nex",
+   "md5": "d393199dfe1cd7ba0372fa6ab0ce0dfa"
+  },
+  "sprites": {
+   "file": "bruce_lee_sprites.nex",
+   "md5": "572bd4499005b81fd8eafac597b5ab0b"
+  },
+  "enhanced": {
+   "file": "bruce_lee_enhanced.nex",
+   "md5": "7f762987659ae1c0da54190dd0335b69"
+  },
+  "loading": {
+   "file": "bruce_lee_sprites_loading.nex",
+   "md5": "0a343912c1748f5fcd45230f0c1e1831"
+  },
+  "enhanced_loading": {
+   "file": "bruce_lee_enhanced_loading.nex",
+   "md5": "004b76609c33d2414b380c5ab5a8bf47"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Bruce Lee",
+  "engine_col": "bruce_lee (bruce_lee.md)",
+  "build": "48K exact archive, hardware figures, optional Enhanced figures and all 20 room tiles; 1MB and full hidden ROM.",
+  "software": "Frozen full verification passed: 66000 frames per mode, exact hook R/RAM, composed pictures, source pixels and complete hidden ROM. Native pace within 0.1% in measured player-update windows; game-over reset fixed. Final NXC12-variant reconstruction and seven actual-loader modes pass.",
+  "hardware": "none (JNext only)",
+  "next": "Ready for packaging review; final 1.0 NXC passed seven real-loader modes on disposable 26.11 cards. Preserve documented global-R/input limits."
+ },
+ "checks": [
+  "asm2profile:bruce_lee"
+ ],
+ "results": [],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/bruce_lee.md#checks-so-far"
+   ],
+   "coverage": "Two native scenes, three held-input trials each, default and Enhanced; 300 player updates per trial.",
+   "result": "Quiet -0.05520..+0.00627%; busy -0.01441..+0.02307%; worst 20-update +0.09427%. All 301 tracked states equal in 12 trials. Room entry within 0.21%."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/bruce_lee.md#engine-facts",
+    "games/bruce_lee.md#checks-so-far"
+   ],
+   "coverage": "Original continuous recordings, isolated all 20 room layouts, every figure frame, new natural death/game-over recording.",
+   "result": "Four original display writes omitted; native logic/sound unchanged. Per-hook exact R; global idle/IRQ R may diverge."
+  },
+  "decision": "Keep all native calculations and sound at original speed; run only original display copies inside paced windows.",
+  "next_experiment": "Natural later-room, two-player and completion coverage; global idle/IRQ refresh and asynchronous-input trajectory differences remain documented."
+ },
+ "checked": {
+  "deps": {
+   "asm/bruce_lee_hooks.asm": "a3f7bc37316a4735",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/bruce_lee.json": "722eb720899df876",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/bruce_lee.py": "c26c79518036e12a",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "b6c420ba4873f58d",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "e14d0b873ea7ca4d",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-10"
+ },
+ "verified": {
+  "deps": {
+   "asm/bruce_lee_hooks.asm": "a3f7bc37316a4735",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/bruce_lee.json": "722eb720899df876",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/bruce_lee.py": "c26c79518036e12a",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "b6c420ba4873f58d",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "e14d0b873ea7ca4d",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-10"
+ }
+}

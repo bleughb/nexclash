@@ -1,13 +1,8 @@
 # Verification record
 
-One section per game/build, newest first within a game. The checksum list below is generated
-from the evidence records (docs/records/<game>.json); `python selftest.py` reproduces those MD5s
-from the private reference files.
-
-All tests: exact RZX playback in SkoolKit; at every patched routine the
-original and patched code were run from the same real state and compared
-(registers except R/T, all non-screen memory, patched-screen model, sprite
-pixels). Start-up tails simulated: all registers restored, no game memory touched.
+Historical SkoolKit RZX checks compared same-state registers except R/T, non-screen RAM and
+pixels; startup restored registers/RAM. Current scopes and reproducible checksums live in
+docs/records (`python selftest.py`).
 
 | Game | Recording | Plots | Erases | Other | Result |
 |---|---|---|---|---|---|
@@ -112,6 +107,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Jilly's Farm Volume 1 - SokoBAArn! (jillys_farm): `jillys_farm.nex` 427aab29dd75a73276829f59a02cb23c, `jillys_farm_loading.nex` e50bbd5371c34e3b2a1f58a4c57978bf, `jillys_farm_enhanced.nex` 987f52a06c06962e09000d6fe1bf8f48, `jillys_farm_enhanced_loading.nex` 9f9cad7c1684667b4b2bd7fcc1cf6334; verified 2026-11-09
 - That Sinking Feeling (that_sinking_feeling): `that_sinking_feeling_sprites.nex` 07fea8b4205b854febc67d44a3d013fe, `that_sinking_feeling_sprites_loading.nex` 7a34cae8445952cc8c56b0fc52e9908b, `that_sinking_feeling_enhanced.nex` f6838dd33f91b87930d22fa3a584bc9e, `that_sinking_feeling_enhanced_loading.nex` 8c9469e34a9fb936e8c1f7709e383ea7; verified 2026-11-09
 - Movie (movie): `movie.nex` ad4b36c8ec0c71229377215aad817e23, `movie_sprites.nex` 0ee50a9cc7dbeb0ec7c6bf1097e2a2f9, `movie_enhanced.nex` 393cfa98ccce45834f046835bb968ee3, `movie_sprites_loading.nex` 86c3518beb5d98091dec067e86ec1187, `movie_enhanced_loading.nex` 4cff090a7fdaafe490b94d273baff0df; verified 2026-11-09
+- Bruce Lee (bruce_lee): `bruce_lee.nex` d393199dfe1cd7ba0372fa6ab0ce0dfa, `bruce_lee_sprites.nex` 572bd4499005b81fd8eafac597b5ab0b, `bruce_lee_enhanced.nex` 7f762987659ae1c0da54190dd0335b69, `bruce_lee_sprites_loading.nex` 0a343912c1748f5fcd45230f0c1e1831, `bruce_lee_enhanced_loading.nex` 004b76609c33d2414b380c5ab5a8bf47; verified 2026-11-10
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

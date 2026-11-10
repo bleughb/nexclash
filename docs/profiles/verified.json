@@ -56,6 +56,17 @@
     "enhanced_loading": "8113662ce1469689d1effa77280b30d3"
    }
   },
+  "6e088cc665d1cdbcd32effa061ad6e8e": {
+   "game": "Bruce Lee",
+   "doc": "bruce_lee.md",
+   "nex": {
+    "plain": "d393199dfe1cd7ba0372fa6ab0ce0dfa",
+    "sprites": "572bd4499005b81fd8eafac597b5ab0b",
+    "enhanced": "7f762987659ae1c0da54190dd0335b69",
+    "loading": "0a343912c1748f5fcd45230f0c1e1831",
+    "enhanced_loading": "004b76609c33d2414b380c5ab5a8bf47"
+   }
+  },
   "85d7841306333321838d372ea8797ff2": {
    "game": "Bubbler",
    "doc": "bubbler.md",
