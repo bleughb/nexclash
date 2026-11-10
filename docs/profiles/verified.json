@@ -260,6 +260,17 @@
     "enhanced_loading": "1fef5dfc128e942f679ff681b81ac7b0"
    }
   },
+  "ecfe7da10ba9aa395ae54c44301be1af": {
+   "game": "Highway Encounter",
+   "doc": "highway_encounter.md",
+   "nex": {
+    "plain": "1feaa5fc5343f12583bcd6b44cec72d2",
+    "sprites": "8f518edd0cfbf151c67d533d05204176",
+    "enhanced": "fb75964a819f5fc7cf4366e7aef146ef",
+    "loading": "90079ef9c24acc86a3060a90b972031c",
+    "enhanced_loading": "695d7e73d3375a8ac3b8ed7d6adecbb0"
+   }
+  },
   "54ad66af6678df22a9d4443e3d04aadb": {
    "game": "Ikari Warriors (48K form)",
    "doc": "ikari_warriors.md",
