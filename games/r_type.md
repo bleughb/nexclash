@@ -1,15 +1,18 @@
 # R-Type (128K) - intake
 
 ## Next session
-Stage: 1 (design/feasibility). State: visual design approved; architecture under independent review.
+Stage: 1 (design/feasibility). State: visual design approved; capacity measured, timing gate open.
 Inputs: ../specnext/reference/r_type/Rtype.z80, Rtype.rzx, Rtype.tap (hashes below).
 Branch: add-r-type. Base: 931458b9d65a76cf1f8bfebacbe57e7f33807397.
 Checks: bounded survey, full-recording caller census, canary and doccheck PASS;
 tools check has one pre-existing Inferno audit failure (Checks below).
 User answer 2026-11-10: defaults 1-5; every effect a sprite; see-through bodies; no outlines.
 Start with: PLAYBOOK stage 1 and the feasibility findings below.
-Open: credits classification, protected-pattern capacity, whole-hook timing and full ISR memory proof.
-JNext 1.2.0 runs; SD card absent. Owner agreed to allow www.specnext.com; policy application pending.
+Open: complete-publication timing gate and full ISR memory proof. No sprite engine built.
+JNext 1.2.0 runs in cloud; SD card absent. Owner agreed to allow www.specnext.com, but a fresh
+2026-11-10 request still gets policy403; environment revision1 has no custom allowed hosts.
+When card is available: `python -m nexclash.pace ../specnext/reference/r_type/Rtype.nex
+--original ../specnext/reference/r_type/Rtype.z80 --probe 0x8649 --card CARD.img -o work/r_type_pace`.
 
 ## Inputs
 The attached TAP is a tape, not a snapshot. The build start state was extracted from the
@@ -42,7 +45,8 @@ game files stay in specnext, never this repository.
 - Plain: Rtype.nex, MD5 657362a108b54e5080cb88ccf2dcfdc6, 147,968 bytes; tail 5B00..5B4E.
   `intake/plain.py` restores printer data in the stub before copying the tail. Rainbow's 128K
   checker and nextboot pass with/without NEXLOAD, including a separate R check. Removing restoration
-  from the built stub catches 176 RAM differences (5B4F onward). Hardware untested; no sprites yet.
+  from the built stub catches 176 RAM differences (5B4F onward). Owner reports this supplied plain
+  build working in JNext and on real hardware, 2026-11-10. No sprite build yet.
 - Full access scan: 90,102 frames; ROM 1F00..3FFF never accessed; printer spans 5B00..5B63 and
   5C4C..5CAF never accessed. Tail 5B00..5B4E fits. No full ISR-specific access proof yet.
 
@@ -90,8 +94,14 @@ old+new patterns peak at 221 (canonical review: 219), above 128. PLAYBOOK 3d rev
 owner explicitly authorized one reviewer. The worst frame is THANK-YOU text plus flying figures.
 Text belongs on ULA: owner 1..DB alone misclassifies it. Owner88 is text here but normal enemies
 elsewhere: never exclude that owner globally. Text plot: 8CFD from917A, HL=CAFF, D=21,E=24,
-frame32 resolved by8E85, C4BA=D99C. Reviewer is checking this graphic identity before remeasuring.
-Owner-aligned packing without classification can require144 sprites and is not an approved substitute.
+frame32 resolved by8E85, C4BA=D99C. Corrected full census:105 sprites,103 simultaneous patterns,
+183 old+new patterns (screen grid);400 text draws identified. Owner-min111/104/176 and
+owner-best108/101/174 do not fix protected capacity. The review recommends single-bank publication
+outside the160-line play area. Old+new coexistence is an implementation choice, not a user requirement.
+Next exact gate: complete publication (DMA/setup, ULA copy, attributes, mapping, IRQ/audio, fallback)
+must fit the measured off-play interval,151 raster lines at128K311-line timing, without late
+publication, loss or pace change. A preparatory shadow-ULA copy is an untested optimization hypothesis.
+Detailed evidence: specnext/reference/r_type/intake/review/REVIEW.md and packing-text-classified.json.
 
 DMA/DDMA remains an evaluation, not a selected route: the four plotters copy 8-pixel cell
 graphics and update collision maps; DDMA cannot generate those maps or unpack ZX bits.
@@ -107,8 +117,8 @@ using the shared policies (including no-blitter and CPU fallback), after the dep
 - Full recordings replayed by both caller censuses: 90,102 frames each, no desync.
 
 ## Hardware checklist
-Plain above: try CSpect first, then controls, sound, level loading and restart on the Next.
-Boot and tail checks pass; real NEXLOAD/hardware untested. Sprite pace, music, controls,
+Plain above: owner reports JNext and real hardware PASS (2026-11-10); issue/core versions and
+individual checklist items were not supplied. Sprite pace, music, controls,
 level transitions, death/restart and display
 checks belong to the eventual sprite build; no hardware result is claimed.
 
@@ -123,7 +133,7 @@ checks belong to the eventual sprite build; no hardware result is claimed.
 - [local: tile plotters] Observed: screen-writer ranking identifies the refresh, not the figure
   plotters; scanning its source buffer locates the four tile drawers. No removal-safety claim yet.
 - [local: credits share an enemy slot] Independent review: peak owner-grid scene includes THANK-YOU
-  text. Match graphic identity, not a globally excluded owner; revised budget pending.
+  text. Graphic identity, not global owner exclusion, gives105 sprites in the full corrected census.
 
 ## Friction
 - reuse: [none: existing survey, scan, preview and census tools provided the investigation paths]
@@ -140,3 +150,6 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   caller censuses, bounded surveys, tracker fixed and regression checked. No sprite build yet.
 - 2026-11-10 Stage 1 in progress: owner approved all effects, see-through, no outlines; authorized
   one capacity reviewer. Full access scan and plain NEXLOAD boot/negative proof pass.
+- 2026-11-10 Stage 1 checkpoint: owner confirms plain in JNext and on hardware; corrected full
+  capacity census retained. Cloud publication timing blocked on unavailable NextZXOS card (policy403).
+  Full ISR scan interrupted during session pause; no completed result claimed. No sprite build delivered.
