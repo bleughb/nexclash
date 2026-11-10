@@ -1,0 +1,266 @@
+{
+ "name": "movie",
+ "order": 253,
+ "game": "Movie",
+ "doc": "movie.md",
+ "engine": "movie",
+ "representative": true,
+ "reference": "movie",
+ "inputs": {
+  "snapshot": {
+   "name": "movie.z80",
+   "md5": "facf9b90032759b7012abd91602b4b45",
+   "path": "input/movie.z80"
+  },
+  "recordings": [
+   {
+    "name": "movie_reference.rzx",
+    "md5": "ed296bab637743381deecaf3c900be1f",
+    "path": "recordings/movie_reference.rzx"
+   },
+   {
+    "name": "movie_source_start.rzx",
+    "md5": "a2ad075dc2f5a527e9010433615b7145",
+    "path": "recordings/movie_source_start.rzx"
+   },
+   {
+    "name": "movie_end_reset.rzx",
+    "md5": "c364b51382f395871a8aa403ce11d8a1",
+    "path": "recordings/movie_end_reset.rzx"
+   },
+   {
+    "name": "movie-loading.scr",
+    "md5": "b7677ca3f0e7b857d0f95a30feb3a4f5",
+    "path": "input/movie-loading.scr",
+    "role": "Original loading picture; not a recording."
+   },
+   {
+    "name": "colours.bin",
+    "md5": "bff12e787feef2cef0480341cbe5f686",
+    "path": "art/noir-hud-v1/colours.bin",
+    "role": "External painting input; not a recording."
+   },
+   {
+    "name": "palette.bin",
+    "md5": "b7309f13dfa4ea6070f8ebc1834091b0",
+    "path": "art/noir-hud-v1/palette.bin",
+    "role": "External painting input; not a recording."
+   },
+   {
+    "name": "painting.json",
+    "md5": "07cf9fb2a3bb8f37301106dfb68136d6",
+    "path": "art/noir-hud-v1/painting.json",
+    "role": "External painting input; not a recording."
+   },
+   {
+    "name": "hud.bin",
+    "md5": "938916cb9df0867d32a070379bda02ec",
+    "path": "art/noir-hud-v1/hud.bin",
+    "role": "External optional HUD painting; not a recording."
+   }
+  ]
+ },
+ "modules": [
+  "movie"
+ ],
+ "own_modules": [
+  "movie"
+ ],
+ "data": [
+  "asm/movie_hooks.asm",
+  "docs/profiles/movie.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_dma.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": []
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "movie_reference.rzx",
+   "movie_source_start.rzx",
+   "movie_end_reset.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 20,
+  "note": "Compare native registers/R/RAM exactly; painted scratch and screen against independent original chunk/commit oracle. Full verify/stamp and loader rerun required for edited art; prior proof is historical."
+ },
+ "outputs": {
+  "plain": {
+   "file": "movie.nex",
+   "md5": "ad4b36c8ec0c71229377215aad817e23"
+  },
+  "sprites": {
+   "file": "movie_sprites.nex",
+   "md5": "0ee50a9cc7dbeb0ec7c6bf1097e2a2f9"
+  },
+  "enhanced": {
+   "file": "movie_enhanced.nex",
+   "md5": "393cfa98ccce45834f046835bb968ee3"
+  },
+  "loading": {
+   "file": "movie_sprites_loading.nex",
+   "md5": "86c3518beb5d98091dec067e86ec1187"
+  },
+  "enhanced_loading": {
+   "file": "movie_enhanced_loading.nex",
+   "md5": "4cff090a7fdaafe490b94d273baff0df"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Movie",
+  "engine_col": "movie (movie.md)",
+  "build": "Original monochrome default, optional painted noir Layer 2; loading screen, 1MB, complete hidden ROM.",
+  "software": "Movie 1.0 release: selftest verified and stamped 2026-11-09 with the noir-hud-v1 art; 61,472 frames / 143,626 plots, registers, R, RAM and pixels identical to the painted model; four negatives per recording; five boot modes and full hidden ROM pass. Pace -1.568% to +1.753%. Real loader on disposable 26.11 cards: default, Enhanced, all five cheats, each cheat and Disable DMA pass, byte exact.",
+  "hardware": "none (JNext only)",
+  "next": "Female character Enhanced sprite needs more painting (noted in the .nfo). Hardware, CSpect and natural completion untested."
+ },
+ "checks": [
+  "asm2profile:movie"
+ ],
+ "techniques": [
+  {
+   "application": "movie.pace",
+   "id": "patch.pace-limiter",
+   "revision": 3,
+   "target": "Original full-plot/clear/commit time windows; E5D5 unchanged.",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "movie.speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "Separate outer/nested caller speed latches.",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "movie.r",
+   "id": "patch.preserve-r",
+   "revision": 1,
+   "target": "Native R at every hook rejoin.",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "movie.measure",
+   "id": "verify.update-locked-pace",
+   "revision": 1,
+   "target": "E0A5, HL=8200; four scenes, three 100-update windows each.",
+   "phases": []
+  }
+ ],
+ "results": [],
+ "checked": {
+  "deps": {
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/movie_hooks.asm": "dc7f86ea17f388e3",
+   "docs/profiles/movie.json": "ffbc22fe71d9b363",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "7489d49f9eee706a",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/movie.py": "7da18bf3474e4697",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "dda2b9a8ff036e77",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-09"
+ },
+ "verified": {
+  "deps": {
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/movie_hooks.asm": "dc7f86ea17f388e3",
+   "docs/profiles/movie.json": "ffbc22fe71d9b363",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "7489d49f9eee706a",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/movie.py": "7da18bf3474e4697",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "dda2b9a8ff036e77",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-09"
+ },
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/movie.md#evidence"
+   ],
+   "coverage": "Four JNext scenes, three 100-update windows each, from the previous sprite review. Current change affects artwork data and host import/verification only; no new timing claim.",
+   "result": "Prior measurements -1.582% to +1.728% against the original; native E5D5 delay and 3.5 MHz sound retained."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/movie.md#engine",
+    "games/movie.md#evidence"
+   ],
+   "coverage": "All eight original draw backends, dirty commit/clear, text and reset exercised in the recorded review. Recordings do not complete the game.",
+   "result": "The companion renderer keeps original drawing code and all native RAM effects, including the scratch bitmap and speech writes. Exact registers/R/RAM compared at returns; no routine-removal claim."
+  },
+  "decision": "Retain native logic and depth ordering; keep optional colour composition in Layer 2. Explicit painted additions/erasures are checked by a separate original-parameter colour oracle.",
+  "next_experiment": "After artwork approval, full replay verification and all three disposable-loader modes must pass with byte-identical NXC reconstruction; pace must remain within 2% in the measured steady scenes."
+ }
+}
