@@ -123,9 +123,9 @@
   "title": "Movie",
   "engine_col": "movie (movie.md)",
   "build": "Original monochrome default, optional painted noir Layer 2; loading screen, 1MB, complete hidden ROM.",
-  "software": "HUD artwork review: 2,555 frames / 7,255 plots, 368 ABI and 20 DMA cases; four existing negatives plus HUD position caught. Five boot modes pass; pace -1.568% to +1.753%. Full final proof and loader rerun due.",
+  "software": "Movie 1.0 release: selftest verified and stamped 2026-11-09 with the noir-hud-v1 art; 61,472 frames / 143,626 plots, registers, R, RAM and pixels identical to the painted model; four negatives per recording; five boot modes and full hidden ROM pass. Pace -1.568% to +1.753%. Real loader on disposable 26.11 cards: default, Enhanced, all five cheats, each cheat and Disable DMA pass, byte exact.",
   "hardware": "none (JNext only)",
-  "next": "Review native figure/scenery/HUD paintings; rerun full proof and disposable loader before replacing the prior package."
+  "next": "Female character Enhanced sprite needs more painting (noted in the .nfo). Hardware, CSpect and natural completion untested."
  },
  "checks": [
   "asm2profile:movie"
@@ -177,8 +177,8 @@
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "asm/movie_hooks.asm": "11fe9474899f3110",
-   "docs/profiles/movie.json": "57094e29a5e18ada",
+   "asm/movie_hooks.asm": "dc7f86ea17f388e3",
+   "docs/profiles/movie.json": "ffbc22fe71d9b363",
    "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
@@ -190,7 +190,7 @@
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/movie.py": "4d71dfbb8e250c35",
+   "nexclash/movie.py": "7da18bf3474e4697",
    "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "29985826115eb292",
@@ -202,7 +202,7 @@
    "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "84dda697ace3ecb4",
+   "recipe": "dda2b9a8ff036e77",
    "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-09"
@@ -214,8 +214,8 @@
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "asm/movie_hooks.asm": "11fe9474899f3110",
-   "docs/profiles/movie.json": "57094e29a5e18ada",
+   "asm/movie_hooks.asm": "dc7f86ea17f388e3",
+   "docs/profiles/movie.json": "ffbc22fe71d9b363",
    "nexclash.py": "350128095535a2d4",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
@@ -227,7 +227,7 @@
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/movie.py": "4d71dfbb8e250c35",
+   "nexclash/movie.py": "7da18bf3474e4697",
    "nexclash/nextboot.py": "dcc01638556a1b32",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "29985826115eb292",
@@ -239,7 +239,7 @@
    "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "5ce08ccdaff17097",
    "skoolkit": "10.1",
-   "recipe": "84dda697ace3ecb4",
+   "recipe": "dda2b9a8ff036e77",
    "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-09"

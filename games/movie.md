@@ -2,15 +2,14 @@
 
 ## Next session
 
-Stage 2 colour round: Jon's native sprite edits imported on `game/movie-painting-edits`.
-The earlier stamped package remains on `game/movie-release`; its proof does not cover this round.
-Latest review paths: private runs/movie/work/current-art-review.json. November 9's second pass
-adds 42 scenery edits to the prior figures and a painted HUD. Before packaging, run full verification/stamping
-and all disposable-loader cases using the current review's asset folder.
-Inputs and hashes: `docs/records/movie.json`. Supply external colours.bin, palette.bin, painting.json
-and movie-loading.scr beside movie.z80; optional hud.bin paints the icon strip. Alternatively set NEXCLASH_MOVIE_ART to the painting folder.
-No game assets enter this repo. Jon approved 1930s noir colours and overnight implementation.
-Private evidence is in pilot runs/movie; use its private handoff when completed.
+Movie 1.0 is packaged from the noir-hud-v1 art (Jon's native figure, scenery and HUD edits), as
+published in .nxc. Selftest --verify --stamp passed on 2026-11-09 with the art files staged beside
+movie.z80; setting NEXCLASH_MOVIE_ART to a folder outside the staged inputs makes selftest's input
+audit refuse the stamp. Next round: the female character's Enhanced sprite needs more painting
+(listed in the .nfo's known issues). Edit the native sheets in the private run, import into a new
+art folder, then restamp and rerun the disposable-loader cases.
+Inputs and hashes: `docs/records/movie.json`. Supply external colours.bin, palette.bin, painting.json,
+hud.bin and movie-loading.scr beside movie.z80. No game assets enter this repo.
 
 ## Source and presentation
 
