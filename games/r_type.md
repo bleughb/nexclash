@@ -1,17 +1,17 @@
 # R-Type (128K) - intake
 
 ## Next session
-Stage: 1 (design/feasibility). State: visual design approved; capacity measured, timing gate open.
+Stage: 1 (design/feasibility). State: visual design approved; capacity measured, staged publication prototype passes; whole-hook pace gate open.
 Inputs: ../specnext/reference/r_type/Rtype.z80, Rtype.rzx, Rtype.tap (hashes below).
 Branch: add-r-type. Base: 931458b9d65a76cf1f8bfebacbe57e7f33807397.
 Checks: bounded survey, full-recording caller census, canary and doccheck PASS;
 tools check has one pre-existing Inferno audit failure (Checks below).
 User answer 2026-11-10: defaults 1-5; every effect a sprite; see-through bodies; no outlines.
 Start with: PLAYBOOK stage 1 and the feasibility findings below.
-Open: complete-publication timing gate and full ISR memory proof. No sprite engine built.
-JNext 1.2.0 runs in cloud; SD card absent. Owner agreed to allow www.specnext.com, but a fresh
-2026-11-10 request still gets policy403; environment revision1 has no custom allowed hosts.
-When card is available: `python -m nexclash.pace ../specnext/reference/r_type/Rtype.nex
+Open: dynamic pattern preparation, full hook register/R proof and integrated pace. No sprite engine built.
+JNext1.2.0 boots the owner-supplied compressed SD image, extracted privately to
+`/workspace/scratch/cspect-next-2gb.img`, read-only; never commit the image.
+Baseline command: `python -m nexclash.pace ../specnext/reference/r_type/Rtype.nex
 --original ../specnext/reference/r_type/Rtype.z80 --probe 0x8649 --card CARD.img -o work/r_type_pace`.
 
 ## Inputs
@@ -48,7 +48,7 @@ game files stay in specnext, never this repository.
   from the built stub catches 176 RAM differences (5B4F onward). Owner reports this supplied plain
   build working in JNext and on real hardware, 2026-11-10. No sprite build yet.
 - Full access scan: 90,102 frames; ROM 1F00..3FFF never accessed; printer spans 5B00..5B63 and
-  5C4C..5CAF never accessed. Tail 5B00..5B4E fits. No full ISR-specific access proof yet.
+  5C4C..5CAF never accessed. Tail 5B00..5B4E fits. Full ISR proof below.
 
 ## Coverage
 Full C-simulator census: 90,102 frames, no desync, all 17 static CALL candidates to the
@@ -98,22 +98,49 @@ frame32 resolved by8E85, C4BA=D99C. Corrected full census:105 sprites,103 simult
 183 old+new patterns (screen grid);400 text draws identified. Owner-min111/104/176 and
 owner-best108/101/174 do not fix protected capacity. The review recommends single-bank publication
 outside the160-line play area. Old+new coexistence is an implementation choice, not a user requirement.
-Next exact gate: complete publication (DMA/setup, ULA copy, attributes, mapping, IRQ/audio, fallback)
-must fit the measured off-play interval,151 raster lines at128K311-line timing, without late
-publication, loss or pace change. A preparatory shadow-ULA copy is an untested optimization hypothesis.
+Staged publication experiment now runs the original copier into a shadow slot2 before publication.
+The full ISR scan completed:90,102 frames,86,553 interrupts,0 unreturned;478 instructions,
+26-byte interrupted-stack depth; slots1/6 untouched. R reads at BEDB/BF36 require care.
+No ISR reads/writes the actual5120 source pixels. It writes588 source attributes at7820..7A7D:
+never blanket-save/restore those. Crucially slot2 also contains live non-display variables:
+ISR reads314/writes157 addresses in5B64..5D01, so shadowing slot2 requires their copy-back.
+
+Baseline gameplay fixture at RZX frame2000:100 updates,15.83updates/s in original and plain,
+penalty-0.04%; IRQ49.83/s; longest original IRQ gap40.5ms. No state lockstep assertion.
+A bounded4000-frame ISR capture finds70,819 native T at frame3620. JNext native IRQ samples
+include21.19ms; this is not a full-game maximum. Raw evidence stays with the reference inputs.
+
+`intake/publication_irq.py`:105 prepared4bpp patterns +5120 ULA pixels +640 attrs +525 sprite
+attribute bytes. Ordinary DMA5.556ms passes; CPU-only35.150ms with a native20.267ms IRQ misses
+rows2..9 (without IRQ CPU14.771ms passed row deadlines). Reject CPU-only for this architecture.
+No-blitter means ordinary DMA, so it is not rejected. Unsupported DMA configurations must be
+refused explicitly; never silently drop figures. Core3.03 DDMA is not exercised by JNext's older core.
+
+`intake/publication_shadow.py`: actual copier, temporary foreground pixel clearing, exact pixel
+restoration, shadow slot2 retained during a native~20.27ms IRQ. At NR150 DI, map live slot2 and
+copy its1280 non-display bytes from shadow; at NR160 publish patterns/clean ULA/attributes.
+Ordinary DMA attribute batching reduces the visible publication to5.100ms (default preference
+falls back to ordinary DMA:5.084ms); tail-copy lead0.640ms; preparation31.057ms includes the IRQ.
+The next native IRQ starts about0.63ms after publication ends. All actual5120 source pixels,
+non-pixel source holes, ULA5120+640,1280 tail bytes, unchanged HUD and105 pattern images match.
+A forced sentinel at the proven ISR-written5B64 exercises tail propagation; removing only the
+runtime tail copy catches that lost byte. This is one synthetic-pattern/captured-game state,
+not an integrated engine, full-hook pace proof or full RZX sprite verification.
+Next gate: dynamic ZX-to4bpp preparation + register/R/stack proof + full-hook timing and pace.
+The prepared-shadow protocol avoids retaining old+new patterns concurrently.
 Detailed evidence: specnext/reference/r_type/intake/review/REVIEW.md and packing-text-classified.json.
 
 DMA/DDMA remains an evaluation, not a selected route: the four plotters copy 8-pixel cell
 graphics and update collision maps; DDMA cannot generate those maps or unpack ZX bits.
 Evaluate cached sprite uploads with ordinary DMA and eligible rectangle work with gated DDMA,
-using the shared policies (including no-blitter and CPU fallback), after the dependency probe.
+using the shared policies (including no-blitter and CPU fallback), during integration; ordinary DMA is the measured no-blitter fallback.
 
 ## Checks
 - `selftest.py --canary`: PASS, both Chuckie Egg rebuild checksums unchanged.
 - `selftest.py --tools`: new entry-CALL regression PASS; existing Chuckie survey golden PASS;
   overall FAIL on the unchanged Inferno IFF audit (asm/inferno_hooks.asm lines 5722, 5726, 7563).
   Neither that source nor hooklib.py differs from the session base. No other game was modified.
-- `tools/doccheck.py`: PASS (146 docs; existing warning about a split module name in another game's notes).
+- `tools/doccheck.py`: PASS (147 docs; existing warning about a split module name in another game's notes).
 - Full recordings replayed by both caller censuses: 90,102 frames each, no desync.
 
 ## Hardware checklist
@@ -128,6 +155,11 @@ checks belong to the eventual sprite build; no hardware result is claimed.
 - detect.buffer-layout-producer: helped: separated final copier, nonlinear source cells and non-pixel holes.
 
 ## Lessons
+- [tool nexclash.isrinfo] Expose data-read/write address sets in the API, retaining text output;
+  this distinguishes safe pixel scratch from ISR-mutated attributes and shadow-slot variables.
+- [local: publication timing] A native beeper IRQ breaks an otherwise passing CPU row schedule.
+  Move the actual copier before publication; batch sprite attrs via ordinary DMA and copy all
+  shadowed non-display state before the IRQ-free visible upload. Whole-hook pace remains unproven.
 - [tool nexclash.survey] Observed: a CALL as a routine's first instruction was never tracked;
   R-Type 8979 -> 8842 exposed the false coverage gap. Removed the early return and added a golden check.
 - [local: tile plotters] Observed: screen-writer ranking identifies the refresh, not the figure
@@ -145,6 +177,10 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   in specnext/reference/r_type/intake; none added as an untested shared toolkit probe.
 
 ## Stage log
+- 2026-11-10 Stage1 continued: owner SD ZIP extracted privately/read-only; JNext original/plain
+  pace measured. Full ISR scan completed. Synthetic CPU route rejected with native audio;
+  staged shadow-copier/default+no-blitter publication passes byte/deadline and omission controls.
+  Dynamic preparation, R/stack equivalence and integrated pace still gate stage2. No sprite build.
 - 2026-11-10 Stage 0: ~13 min wall, ~65 tool calls, one design round pending. Source refreshed
   at 931458b; original attachments preserved, snapshot extracted, full screen replay and
   caller censuses, bounded surveys, tracker fixed and regression checked. No sprite build yet.

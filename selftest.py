@@ -766,6 +766,15 @@ def tools_check(src):
         ok('isr: handler 40092, no IX/IY reads', 40092 in r['entries'] and not any(r['reads_entry'].values()), r)
         ok('isr: slots touched 0 r, 3 r, 4 x, 5 r, 7 rw (slot 2 free for a hook page)',
            r['slots'] == {0: 'r', 3: 'r', 4: 'x', 5: 'r', 7: 'rw'}, r['slots'])
+        tracker = isrinfo.IsrTracker()
+        tracker.on_read(0x6000, 0x9000, None)  # outside an interrupt
+        tracker.cur = (0x8000, 0xFF00)
+        tracker.on_read(0x9001, 0x9000, None)  # instruction operand
+        tracker.on_read(0x6100, 0x9000, None)
+        tracker.on_write(0x6200, 1, 0x9000, None)
+        ok('isr: exact data footprint excludes non-ISR accesses and instruction bytes',
+           tracker.reads == {0x6100} and tracker.writes == {0x6200} and
+           bool(r['reads']) and bool(r['writes']), (tracker.reads, tracker.writes))
         _, r = memscan.scan(ez, [er], ranges=['0x5B00-0x5BFF', '0x4000-0x57FF'], stop=300)
         ok('scan RZX (300 frames): printer buffer 0x5B00-0x5BFF untouched, screen written',
            memscan.touched_count(r, '0x5B00-0x5BFF') == 0 and memscan.touched_count(r, '0x4000-0x57FF') > 0, r['ranges'])
