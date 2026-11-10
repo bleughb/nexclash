@@ -1,0 +1,220 @@
+{
+ "name": "exolon",
+ "order": 256,
+ "game": "Exolon",
+ "doc": "exolon.md",
+ "engine": "exolon",
+ "representative": true,
+ "reference": "exolon",
+ "inputs": {
+  "snapshot": {
+   "name": "exolon.z80",
+   "path": "exolon/exolon.z80",
+   "md5": "87515df87645c4179a9ef90663774c7f"
+  },
+  "recordings": [
+   {
+    "name": "exolon_moving.rzx",
+    "path": "exolon/exolon_moving.rzx",
+    "md5": "1d0d19f70a770ecf7da7cdb76631f97d"
+   },
+   {
+    "name": "exolon_lifecycle.rzx",
+    "path": "exolon/exolon_lifecycle.rzx",
+    "md5": "d1781eec03758e9eb889492761594545"
+   },
+   {
+    "name": "colour-source.256",
+    "path": "exolon/colour-source.256",
+    "md5": "7c7348250d324c2a4211236414e1dbd4",
+    "role": "External owner build input; never included in source contribution."
+   },
+   {
+    "name": "source-palette.pal",
+    "path": "exolon/source-palette.pal",
+    "md5": "b095dc99a047bab844b87b06657b0a7a",
+    "role": "External owner build input; never included in source contribution."
+   },
+   {
+    "name": "EXOLON.scr",
+    "path": "exolon/EXOLON.scr",
+    "md5": "e57f1a46fed24dfb566ff09f95e64a38",
+    "role": "External owner build input; never included in source contribution."
+   }
+  ]
+ },
+ "modules": [
+  "exolon"
+ ],
+ "own_modules": [
+  "exolon"
+ ],
+ "data": [
+  "asm/exolon_hooks.asm",
+  "docs/profiles/exolon.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record",
+   "--no-nxc"
+  ],
+  "rzx": []
+ },
+ "verify": {
+  "args": [
+   "--no-record",
+   "--no-nxc"
+  ],
+  "rzx": [
+   "exolon_moving.rzx",
+   "exolon_lifecycle.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 45,
+  "note": "Frozen full proof passed: 8494 frames/mode, 79030 hook/R comparisons, independent pixels, ABI/clock/pool/broken-build checks; all five outputs exact."
+ },
+ "outputs": {
+  "plain": {
+   "file": "exolon.nex",
+   "md5": "53bccd7881712937941eb106c712af13"
+  },
+  "sprites": {
+   "file": "exolon_sprites.nex",
+   "md5": "d2852fd29607e124576dc0c08401c479"
+  },
+  "enhanced": {
+   "file": "exolon_enhanced.nex",
+   "md5": "992c5123f072aad8296c7c6a31a1e61a"
+  },
+  "loading": {
+   "file": "exolon_sprites_loading.nex",
+   "md5": "f0eaf0f14d26f11e7649953d89624c5f"
+  },
+  "enhanced_loading": {
+   "file": "exolon_enhanced_loading.nex",
+   "md5": "07b771fcd487d6d85a587c8be562ac68"
+  }
+ },
+ "repro": [],
+ "checks": [
+  "asm2profile:exolon"
+ ],
+ "status": {
+  "title": "Exolon",
+  "engine_col": "exolon (exolon.md)",
+  "build": "Exact 128K archive, original colours/clash fix default, optional approved Enhanced, loading screen, five trainers, full hidden ROM, 1MB.",
+  "software": "Frozen 8494 frames/mode, 79030 R/hook checks, 704 ABI/420 pixel cases; 12 paired native pace/sound trials, 24000-frame lifecycle soak, eight actual-loader modes pass.",
+  "hardware": "none (JNext only)",
+  "next": "Packaging/hardware review; natural completion, later zones, other emulators and CTC-less timing remain untested."
+ },
+ "results": [
+  {
+   "check": "release suite",
+   "status": "pass",
+   "scope": "8494 frames and 79030 hook/R comparisons per mode; ABI/pixel/clock/pool controls, 12 native pace/sound pairs, 24000-frame soaks, eight actual-loader modes. Measured limits retained.",
+   "evidence": "games/exolon.md"
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/exolon.md#release-evidence"
+   ],
+   "coverage": "Two scenes, three seeds, both modes, 180 actual player updates; MMU/caller-gated probe 81A4.",
+   "result": "All 181 tracked states match. Quiet -1.631..+0.585%, busy -0.969..+0.403%, worst 20+1.332%."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/exolon.md#development-design-and-evidence"
+   ],
+   "coverage": "Original 128K source and mapped 48K colour graphics; unchanged original sound/logic/delays.",
+   "result": "AY/FE values/order and original clock agree. AY short intervals exact; explosion-pulse median differs at most 8us, individual video-phase jitter separately controlled."
+  },
+  "decision": "Original memory-only plot windows and foreground-masked hardware figures; shared speed/interrupt/pace code, local CTC3 deadline for noise-loop plots.",
+  "next_experiment": "Hardware and later-zone playthrough; preserve explicit noise-pulse and CTC fallback limits."
+ },
+ "rom_paths_known": [
+  [
+   1,
+   8192,
+   16383,
+   "Only the original B0C0 LDIR self-copy delay; per-read DI/HL=DE/final-byte-in-RAM guard and whole-loop ABI/time proof are mandatory."
+  ]
+ ],
+ "checked": {
+  "deps": {
+   "asm/exolon_hooks.asm": "98da959540157aed",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/exolon.json": "357af46bffa33baa",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "f296a7e67d3d792b",
+   "nexclash/exolon.py": "3fd22b917670086e",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "37bbc80f892c46f2",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-10"
+ },
+ "verified": {
+  "deps": {
+   "asm/exolon_hooks.asm": "98da959540157aed",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/exolon.json": "357af46bffa33baa",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "f296a7e67d3d792b",
+   "nexclash/exolon.py": "3fd22b917670086e",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "37bbc80f892c46f2",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-10"
+ }
+}

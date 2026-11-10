@@ -173,6 +173,17 @@
     "sprites": "8c05c0be92150c29153ed28c41b44842"
    }
   },
+  "87515df87645c4179a9ef90663774c7f": {
+   "game": "Exolon",
+   "doc": "exolon.md",
+   "nex": {
+    "plain": "53bccd7881712937941eb106c712af13",
+    "sprites": "d2852fd29607e124576dc0c08401c479",
+    "enhanced": "992c5123f072aad8296c7c6a31a1e61a",
+    "loading": "f0eaf0f14d26f11e7649953d89624c5f",
+    "enhanced_loading": "07b771fcd487d6d85a587c8be562ac68"
+   }
+  },
   "876f474b3441c08ed8ff25bd43d616a3": {
    "game": "Fantasy World Dizzy",
    "doc": "fantasy_world_dizzy.md",
