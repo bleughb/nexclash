@@ -7,12 +7,48 @@ Branch: add-r-type. Base: 931458b9d65a76cf1f8bfebacbe57e7f33807397.
 Checks: bounded survey, full-recording caller census, canary and doccheck PASS;
 tools check has one pre-existing Inferno audit failure (Checks below).
 User answer 2026-11-10: defaults 1-5; every effect a sprite; see-through bodies; no outlines.
-Start with: PLAYBOOK stage 1 and the feasibility findings below.
-Open: dynamic pattern preparation, full hook register/R proof and integrated pace. No sprite engine built.
-JNext1.2.0 boots the owner-supplied compressed SD image, extracted privately to
-`/workspace/scratch/cspect-next-2gb.img`, read-only; never commit the image.
-Baseline command: `python -m nexclash.pace ../specnext/reference/r_type/Rtype.nex
---original ../specnext/reference/r_type/Rtype.z80 --probe 0x8649 --card CARD.img -o work/r_type_pace`.
+Handoff requested by owner: fresh agent; no pending design answers. Do not repeat intake/censuses.
+Evidence commits: nexclash0e22d25; specnextf6918f3, both pushed on add-r-type.
+Draft PRs: https://github.com/bleughb/nexclash/pull/235 and https://github.com/bleughb/specnext/pull/93.
+Check out branch tips before reading; refresh main as CLAUDE/LEARNING require.
+Read next: CLAUDE.md, PLAYBOOK stage1/3d, this file's Feasibility, then
+../specnext/reference/r_type/intake/README.md and intake/review/README.md.
+Open: dynamic pattern preparation, full hook register/R/stack proof and integrated pace.
+No sprite engine, profile, registry entry or evidence record has been built. The supplied
+plain build alone has owner-reported JNext/real-hardware success; do not present a prototype as delivery.
+
+Local setup: repos at /workspace/work/{nexclash,specnext}; use /workspace/work/venv101/bin/python
+(SkoolKit10.1;10.2's C trace callback differs). Only the bundled pinned assembler may be used.
+JNext1.2.0: /workspace/work/jnext-bin/root/usr/bin/jnext. Isolated home:
+/workspace/work/r_type_jnext_home. Shared nexclash.jnext helpers launch it successfully.
+Private read-only card: /workspace/scratch/cspect-next-2gb.img; never commit or publish it.
+If the workspace is replaced, recover the owner's cspect-next-2gb.zip upload (Sediment ID
+file_0000000073c0820ba21cc0b36230394a) and extract its2GB image outside both repos.
+The default www.specnext.com download was policy-blocked; the uploaded card resolves that blocker.
+
+First concrete step: inspect intake/publication_shadow.asm/.py, then implement/measure dynamic
+ZX-to4bpp pattern preparation in that protocol before claiming whole-hook feasibility.
+The current prototype uses105 synthetic prepared images and one captured game/IRQ state.
+Re-run only when extending the experiment: ../venv101/bin/python
+../specnext/reference/r_type/intake/publication_shadow.py (from nexclash).
+The driver reconstructs its bounded IRQ capture if absent; writes generated game memory only to work.
+It checks ordinary-DMA/default publication, source pixels/gaps, HUD, tail and a tail-omission control.
+CPU-only missed deadlines; the supported no-blitter fallback is ordinary DMA. 3.03 DDMA is not
+hardware-tested. Initial atomic clone must not mask IRQ247; retain shadow through prep-time IRQs,
+copy5B00..5FFF back at NR150, publish at160 and restore IFF before247. NR64 must be0; NL311.
+Restore MMU6 on hook return. IRQ reads R during prep: return-time R repair alone is insufficient.
+After feasibility: implement the additive engine per ENGINE_CONTRACT, colour-sheet capture and
+per-pixel recolour; quick2000 and meaningful negative controls, then the one stamped full verify.
+Do not rerun the expensive full recording scans without a new question they resolve.
+
+Local measured gameplay baseline (not the frontend-start snapshot): /workspace/work/r_type_play.z80
+and r_type_play.nex, extracted at RZX frame2000; log /workspace/work/r_type_game_pace.log.
+Baseline command (set NEXCLASH_JNEXT to the executable above):
+`../venv101/bin/python -m nexclash.pace /workspace/work/r_type_play.nex --original
+/workspace/work/r_type_play.z80 --probe 0x8649 --updates 100 --max-frames 1000 --card
+/workspace/scratch/cspect-next-2gb.img --jnext-home /workspace/work/r_type_jnext_home
+-o /workspace/work/r_type_game_baseline`.
+Plain frontend requires keys before updates occur.
 
 ## Inputs
 The attached TAP is a tape, not a snapshot. The build start state was extracted from the
@@ -177,6 +213,9 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   in specnext/reference/r_type/intake; none added as an untested shared toolkit probe.
 
 ## Stage log
+- 2026-11-10 Stage1 handoff: owner requested a fresh agent for cost efficiency. Branches and
+  prototypes pushed; this Next session block is the single current handoff. No pending design
+  question; remaining gates are dynamic preparation, integrated equivalence and pace.
 - 2026-11-10 Stage1 continued: owner SD ZIP extracted privately/read-only; JNext original/plain
   pace measured. Full ISR scan completed. Synthetic CPU route rejected with native audio;
   staged shadow-copier/default+no-blitter publication passes byte/deadline and omission controls.
