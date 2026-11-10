@@ -5,10 +5,10 @@
 Stage 2 colour round: Jon's native sprite edits imported on `game/movie-painting-edits`.
 The earlier stamped package remains on `game/movie-release`; its proof does not cover this round.
 Latest review paths: private runs/movie/work/current-art-review.json. November 9's second pass
-adds 42 scenery edits to the prior figures. Before packaging, run full verification/stamping
+adds 42 scenery edits to the prior figures and a painted HUD. Before packaging, run full verification/stamping
 and all disposable-loader cases using the current review's asset folder.
 Inputs and hashes: `docs/records/movie.json`. Supply external colours.bin, palette.bin, painting.json
-and movie-loading.scr beside movie.z80; alternatively set NEXCLASH_MOVIE_ART to the painting folder.
+and movie-loading.scr beside movie.z80; optional hud.bin paints the icon strip. Alternatively set NEXCLASH_MOVIE_ART to the painting folder.
 No game assets enter this repo. Jon approved 1930s noir colours and overnight implementation.
 Private evidence is in pilot runs/movie; use its private handoff when completed.
 
@@ -37,12 +37,15 @@ Techniques: patch.pace-limiter, patch.restore-speed, patch.preserve-r, verify.up
 
 F29B is the SP-based plotter, with eight masked/direct/shifted/mirrored chunk hooks. F18A clears
 scratch 9500..95FF; F700 commits dirty rectangles. A 2048-pixel colour scratch feeds Layer 2,
-clipped to rows 0..167; the direct icon-selector HUD stays on ULA. Original masks determine depth.
+on rows 0..167. Optional HUD paint extends it to 191; the native animated selector stays on ULA.
+EFCF copies the 256x24 painted strip once at native initialization, using bank 45/page 90.
+Only original set bits may be painted: holes stay transparent for the OR-composited selector.
+MMU3 is saved/restored along with shared entry state. Full-screen reset clears the strip too.
 7279 updates speech-cache bytes as written. Mutable shared masks D3F4..D403, door bytes A401..A482
 and inventory data from 9F77 use live decoding. FFA6 mirrors full-screen erases, including reset.
 
 Private code/state: page 26; resident upper-ROM code stays below 3D00 (DivMMC trap avoidance).
-Layer 2: banks 14..16; masked/opaque colour caches: 17..30 and 31..44. Highest game bank 44,
+Layer 2: banks 14..16; masked/opaque colour caches: 17..30 and 31..44. HUD bank 45 is optional,
 complete hidden ROM 47: fits 1MB. Shared hlib_iff/speed/r/pace preserve caller IFF, speed and R.
 Nested full plots have separate outer IFF/speed latches. The game is DI; tests cover both IFF
 states and all four clocks. Original logic, E5D5 delay and sound routines are unchanged.
@@ -56,6 +59,15 @@ for these transparent segmented copies; old/new core and hardware-IM2 fallback c
 Model DMA time is not a hardware measurement.
 
 ## Evidence
+
+HUD review: 2,554 replay frames / 7,255 plots plus a one-frame native initialization fixture.
+368 speed/IFF and 20 DMA/fallback cases pass, including the new hook; four existing mutations
+and a misplaced HUD copy are caught. 196 native selector half-blits retain every base icon bit.
+All five modes pass exact normal/NEXLOAD boot. Native figure/scenery/HUD sheets rebuild the
+four art files byte-identically. Twelve pace windows: -1.568% to +1.753%; all 1,208 player x/y/R
+samples match. The 48 speaker values/PCs match at 3.5 MHz. JNext screenshots inspected.
+HUD startup cost in the injected model: 0.594 ms DMA / 4.741 ms CPU fallback; no per-frame copy.
+Editable HUD: 256x96 PNG, art at (0,72), one PNG pixel per game pixel; top swatches are samples.
 
 Second painting pass: 2,280 changed PNG pixels across 42 scenery cells, including one explicit
 addition to the bar/stool graphic C4A3. The assembled game code is unchanged by this import
@@ -114,6 +126,7 @@ verify installed bytes after room entry, run play, and separately exercise all t
 
 ## Lessons
 
+- [local: live HUD overlay] Native selector ORs immutable icon bits; paint only those bits and leave holes transparent. Prove this on selector replays and retain reset/init hooks.
 - [tool nexclash/movie.py] A painted static hole is an explicit pixel addition, not native mask corruption; keep its ownership in metadata so export and the independent oracle agree.
 - [tool nexclash/movie.py] Painted paper/erasures need exact colour composition from native chunk and copy parameters; binary ink equivalence would reject valid artwork.
 - [local: shared walking masks] D3F4..D403 have fixed bitmap bytes but variable masks. Record intentional erasures separately from cached transparency belonging to another mask.
@@ -151,6 +164,10 @@ reset, sound and DMA fallback on a 1MB Next. CSpect also remains untested. Raste
 a copy is not proven by return-boundary pixel checks.
 
 ## Stage log
+
+2026-11-09 HUD round: painted noir icons, preserving native selector animation; added a native
+editable strip, guarded initialization hook, independent HUD oracle, boot/ABI/pace checks.
+This is an artwork review; the prior stamped package remains unchanged.
 
 2026-11-09 second colour pass: merged current main 931458b, imported the 42 scenery changes
 and preserved previous figure edits. One newly painted transparent pixel required host-side

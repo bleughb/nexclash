@@ -19,6 +19,7 @@ V_PLOT_SP       EQU 0x3E20
 V_PLOT_CLOCK    EQU 0x3E22
 V_PLOT_MMU0     EQU 0x3E23
 V_PLOT_IFF      EQU 0x3E24
+V_HUD_MMU3      EQU 0x3E25
 HLIB_V_PACE     EQU 0x1D40
 HLIB_PACE_NL    EQU 312
 R_HL_ALT        EQU 0x3FAC
@@ -92,6 +93,7 @@ h_plot:         ENTRY 10
 h_plot_exit:    ENTRY 11
 h_speech_write: ENTRY 12
 h_clear_screen: ENTRY 13
+h_hud_init:     ENTRY 14
 hook_enter:
         ld (V_KIND),a
         HLIB_R_IN
@@ -350,6 +352,8 @@ chunk_begin:
         jp z,clear_companion
         cp 9
         jp z,commit_companion
+        cp 14
+        jp z,hud_init
         ld a,(V_CLOCK)
         cp 3
         call nz,hlib_pace_open
@@ -1366,6 +1370,48 @@ clear_packet:
         db 0x82,0xCF,0x87
 clear_packet_end:
 clear_white: db 255
+; The native HUD blitter ORs its selector onto the immutable icon strip. Paint
+; only the strip's set bits: transparent holes leave that live ULA animation
+; visible. One startup/reset copy, never a per-frame upload.
+hud_init:
+        ld bc,0x243B
+        ld a,0x53
+        out (c),a
+        inc b
+        in a,(c)
+        ld (V_HUD_MMU3),a
+        nextreg 0x52,90
+        nextreg 0x53,33
+        ld a,(bulk_policy)
+        call hlib_dma_init
+        call hlib_dma_backend
+        or a
+        jr z,.cpu
+        ld hl,0x4000
+        ld (bulk_source),hl
+        ld hl,0x6800
+        ld (bulk_destination),hl
+        ld hl,6144
+        ld (bulk_length),hl
+        ld hl,bulk_packet
+        ld bc,(bulk_packet_end-bulk_packet)*256+0x6B
+        otir
+        jr .done
+.cpu:
+        ld hl,0x4000
+        ld de,0x6800
+        ld bc,6144
+        ldir
+.done:
+        ld a,(V_HUD_MMU3)
+        nextreg 0x53,a
+        ld hl,0x5AA0
+        ld (R_HL),hl
+        ld hl,0xEFD2
+        ld (finish_jump+1),hl
+        ld a,241
+        call hlib_r_set
+        jp finish_resident
 bulk_policy: db 1
 bulk_end:
         ASSERT bulk_end <= 0x1800

@@ -37,20 +37,26 @@
    {
     "name": "colours.bin",
     "md5": "bff12e787feef2cef0480341cbe5f686",
-    "path": "art/noir-jon-20261109-174828/colours.bin",
+    "path": "art/noir-hud-v1/colours.bin",
     "role": "External painting input; not a recording."
    },
    {
     "name": "palette.bin",
-    "md5": "9109683536244ad73d2ca4c13ced830d",
-    "path": "art/noir-jon-20261109-174828/palette.bin",
+    "md5": "b7309f13dfa4ea6070f8ebc1834091b0",
+    "path": "art/noir-hud-v1/palette.bin",
     "role": "External painting input; not a recording."
    },
    {
     "name": "painting.json",
     "md5": "07cf9fb2a3bb8f37301106dfb68136d6",
-    "path": "art/noir-jon-20261109-174828/painting.json",
+    "path": "art/noir-hud-v1/painting.json",
     "role": "External painting input; not a recording."
+   },
+   {
+    "name": "hud.bin",
+    "md5": "938916cb9df0867d32a070379bda02ec",
+    "path": "art/noir-hud-v1/hud.bin",
+    "role": "External optional HUD painting; not a recording."
    }
   ]
  },
@@ -97,19 +103,19 @@
   },
   "sprites": {
    "file": "movie_sprites.nex",
-   "md5": "76fd8b7a3ff44c518afde74272a647c2"
+   "md5": "0ee50a9cc7dbeb0ec7c6bf1097e2a2f9"
   },
   "enhanced": {
    "file": "movie_enhanced.nex",
-   "md5": "2cd5e82345ec37cbf60e5f1861c18e5d"
+   "md5": "393cfa98ccce45834f046835bb968ee3"
   },
   "loading": {
    "file": "movie_sprites_loading.nex",
-   "md5": "c3e1b0b02795575bb558881b79fe762f"
+   "md5": "86c3518beb5d98091dec067e86ec1187"
   },
   "enhanced_loading": {
    "file": "movie_enhanced_loading.nex",
-   "md5": "d5ccccc11db92d180b602ca21236be6c"
+   "md5": "4cff090a7fdaafe490b94d273baff0df"
   }
  },
  "repro": [],
@@ -117,9 +123,9 @@
   "title": "Movie",
   "engine_col": "movie (movie.md)",
   "build": "Original monochrome default, optional painted noir Layer 2; loading screen, 1MB, complete hidden ROM.",
-  "software": "Scenery review: 2,554 replay frames / 7,255 plots plus two direct/mirrored bar fixtures; 352 ABI, 12 DMA cases and four negatives pass. Exact boot passes. Full final proof and loader rerun due.",
+  "software": "HUD artwork review: 2,555 frames / 7,255 plots, 368 ABI and 20 DMA cases; four existing negatives plus HUD position caught. Five boot modes pass; pace -1.568% to +1.753%. Full final proof and loader rerun due.",
   "hardware": "none (JNext only)",
-  "next": "Review Jon\u2019s imported native sprites; rerun full proof and disposable loader before replacing the prior package."
+  "next": "Review native figure/scenery/HUD paintings; rerun full proof and disposable loader before replacing the prior package."
  },
  "checks": [
   "asm2profile:movie"

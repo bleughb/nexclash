@@ -16,7 +16,7 @@ from . import hooklib, z80tonex as Z
 
 SOURCE_MD5 = 'facf9b90032759b7012abd91602b4b45'
 LOADING_SHA256 = '7fffacad76b83ba6bb939ee850c0ede6688993e00cb084712f9b955359732acd'
-PLAY_HEIGHT = 168  # Original direct-drawn icon selection occupies the final 24 rows.
+PLAY_HEIGHT = 168  # The original direct-drawn HUD occupies the final 24 rows.
 CMP = hooklib.CMP_R
 ROOT = Path(__file__).resolve().parents[1]
 REVERSE = tuple(int(f'{v:08b}'[::-1], 2) for v in range(256))
@@ -218,7 +218,8 @@ def import_painting(source, assets, sheet, out):
                 if not p:
                     if value is None: added.discard(idx)
                     else: added.add(idx)
-    used=set(cache)-{255}; lookup={palette[i]:i for i in used}
+    hud=(Path(assets)/'hud.bin').read_bytes() if (Path(assets)/'hud.bin').exists() else b''
+    used=(set(cache)|set(hud))-{255}; lookup={palette[i]:i for i in used}
     free=[i for i in range(1,255) if i not in used]
     for idx,value in sorted(edits.items()):
         if value is None:
@@ -235,6 +236,7 @@ def import_painting(source, assets, sheet, out):
     (out/'colours.bin').write_bytes(cache)
     (out/'palette.bin').write_bytes(b''.join(v.to_bytes(2,'little') for v in palette))
     (out/'painting.json').write_text(json.dumps(layout,indent=2)+'\n')
+    if hud: (out/'hud.bin').write_bytes(hud)
     painting_sheet(source,out,out/'MOVIE_PAINTING_SPRITES.png')
     return {'edited_shared_pixels':len(edits),'cleared_shared_pixels':len(cleared),'added_shared_pixels':len(added),
             'ink_colours':len(set(cache)-{0,255})}
@@ -324,15 +326,66 @@ CHUNKS = ((0xF421, 'C367F5', 'h_masked', 0xF567),
           (0xF3D5, 'F9EB1680', 'h_plain_mirror_one', 0xF3D9))
 
 
+def hud_sheet(assets, destination):
+    """Native 256x24 artwork at (0,72), with 256 eyedropper samples above."""
+    from PIL import Image, ImageDraw
+    assets = Path(assets)
+    raw = (assets/'palette.bin').read_bytes()
+    colours = [tuple(round(((int.from_bytes(raw[i:i+2],'little')>>s)&7)*255/7)
+                     for s in (6,3,0)) for i in range(0,512,2)]
+    im = Image.new('RGB',(256,96),(48,52,58)); draw = ImageDraw.Draw(im)
+    for i,c in enumerate(colours):
+        x,y=i%32*8,i//32*8; draw.rectangle((x,y,x+7,y+7),fill=c)
+    for i,v in enumerate((assets/'hud.bin').read_bytes()):
+        if v!=255: im.putpixel((i%256,72+i//256),colours[v])
+    im.save(destination)
+
+
+def import_hud(source, assets, sheet):
+    """Import a native HUD into an already staged art directory, never over ULA holes."""
+    from PIL import Image
+    assets = Path(assets); im=Image.open(sheet).convert('RGB')
+    if im.size!=(256,96): raise ValueError('Keep Movie HUD sheet dimensions 256x96')
+    snap=Z.Z80Snapshot(str(source)); memory=Z.rom48()+snap.banks[5]+snap.banks[2]+snap.banks[0]
+    raw=(assets/'palette.bin').read_bytes()
+    palette=[int.from_bytes(raw[i:i+2],'little') for i in range(0,512,2)]
+    used=set((assets/'colours.bin').read_bytes())-{255}; used.add(0)
+    lookup={palette[i]:i for i in sorted(used)}
+    free=[i for i in range(1,255) if i not in used]
+    pixels=bytearray([255])*6144
+    for i in range(6144):
+        c=im.getpixel((i%256,72+i//256))
+        if c==(48,52,58): continue
+        if not memory[0x8460+i//8] & (128>>(i&7)):
+            raise ValueError(f'Keep HUD selector holes transparent at {i%256},{i//256}')
+        value=sum(round(v*7/255)<<s for v,s in zip(c,(6,3,0)))
+        if value>>1==0xE3: raise ValueError('Use canvas grey for HUD transparency')
+        if value not in lookup:
+            if not free: raise ValueError('Movie palette full')
+            n=free.pop(0); palette[n]=value; lookup[value]=n
+        pixels[i]=lookup[value]
+    (assets/'hud.bin').write_bytes(pixels)
+    (assets/'palette.bin').write_bytes(b''.join(v.to_bytes(2,'little') for v in palette))
+    return dict(hud_pixels=sum(v!=255 for v in pixels),hud_colours=len(set(pixels)-{255}))
+
+
+def hud_present(memory):
+    """Native initialization copied 8460's strip; selector bits may be ORed in."""
+    return all(memory[0x4000 + ((y & 192) << 5) + ((y & 7) << 8) +
+                      ((y & 56) << 2) + x] & memory[0x8460 + (y-168)*32+x] ==
+               memory[0x8460 + (y-168)*32+x]
+               for y in range(168, 192) for x in range(32))
+
+
 class DrawingMemory:
     """Only the mappings used by the Movie hooks; raster time excludes contention."""
     def __init__(self, memory, colours=None, clock=0, hooks=None):
         from .dma import DMA
         self.data = list(memory)
         self.private = [0] * 8192
-        self.nr = {7: clock, 0x50: 255, 0x52: 10}
+        self.nr = {7: clock, 0x50: 255, 0x52: 10, 0x53: 11}
         self.selected, self.elapsed = 0, 0
-        self.pages = {p: [255] * 8192 for p in range(28, 90)}
+        self.pages = {p: [255] * 8192 for p in range(28, 91)}
         if colours is not None:
             colours = initial_speech(colours, memory)
             for p in range(34, 62):
@@ -361,12 +414,16 @@ class DrawingMemory:
         if a < 8192 and self.nr[0x50] == 26: return self.private[a]
         if 0x4000 <= a < 0x6000 and self.nr[0x52] in self.pages:
             return self.pages[self.nr[0x52]][a & 8191]
+        if 0x6000 <= a < 0x8000 and self.nr[0x53] in self.pages:
+            return self.pages[self.nr[0x53]][a & 8191]
         return self.data[a]
 
     def __setitem__(self, a, value):
         if a < 8192 and self.nr[0x50] == 26: self.private[a] = value
         elif 0x4000 <= a < 0x6000 and self.nr[0x52] in self.pages:
             self.pages[self.nr[0x52]][a & 8191] = value
+        elif 0x6000 <= a < 0x8000 and self.nr[0x53] in self.pages:
+            self.pages[self.nr[0x53]][a & 8191] = value
         else: self.data[a] = value
 
     def nextreg(self, n, value): self.nr[n] = value
@@ -443,7 +500,7 @@ def chunk_trial(memory, case, clock=0, iff=None):
     pixels = [(native.memory[0x9500 + i // 8] >> (7 - i % 8)) & 1 for i in range(2048)]
     diffs = [i for i in range(2048) if pixels[i] != mem.private[i]]
     if diffs: bad.append(('pixels', len(diffs), diffs[:8]))
-    if mem.nr != {7: clock, 0x50: 255, 0x52: 10}: bad.append(('NextREG', mem.nr))
+    if mem.nr != {7: clock, 0x50: 255, 0x52: 10, 0x53: 11}: bad.append(('NextREG', mem.nr))
     return bad, {'original_t': native.registers[25] / (1 << clock), 'hook_t': mem.elapsed,
                  'debt': word(mem.private, 0x1D44), 'target': word(mem.data, 0x3E10)}
 
@@ -572,6 +629,11 @@ class EnhancedPatch(OriginalPatch):
         private[self.syms['bulk_policy']] = int(dma)
         self.extra_banks[13] = bytes(private)
         self.assets = Path(assets)
+        self.hud = (self.assets / 'hud.bin').read_bytes() if (self.assets / 'hud.bin').exists() else None
+        if self.hud is not None:
+            if len(self.hud) != 6144: raise ValueError('Movie HUD must be 256 by 24 pixels')
+            self.entries = self.entries + ((0xEFCF, '21A05A', 'h_hud_init'),)
+            self.extra_banks[45] = self.hud + bytes([255]) * (16384-len(self.hud))
         colours = bytearray((self.assets / 'colours.bin').read_bytes())
         layout = json.loads((self.assets / 'painting.json').read_text())
         cleared = set(layout.get('cleared_pixels', []))
@@ -595,7 +657,7 @@ class EnhancedPatch(OriginalPatch):
         setup = bytearray()
         def nr(n, v): setup.extend((0xED, 0x91, n, v))
         for n, v in ((0x69, 0), (0x12, 14), (0x70, 0), (0x16, 0), (0x17, 0),
-                     (0x15, 0), (0x1C, 1), (0x18, 0), (0x18, 255), (0x18, 0), (0x18, PLAY_HEIGHT - 1),
+                     (0x15, 0), (0x1C, 1), (0x18, 0), (0x18, 255), (0x18, 0), (0x18, 191 if self.hud is not None else PLAY_HEIGHT - 1),
                      (0x43, 0x10), (0x40, 0)):
             nr(n, v)
         for value in values: nr(0x44, value >> 1); nr(0x44, value & 1)
@@ -604,6 +666,13 @@ class EnhancedPatch(OriginalPatch):
 
     def apply(self, snap):
         normalize_source(snap)
+        if self.hud is not None:
+            memory = list(Z.rom48()+snap.banks[5]+snap.banks[2]+snap.banks[0])
+            # Native selector updates only OR bits onto the strip. Never cover
+            # its holes, which must remain live ULA pixels at every position.
+            if any(v != 255 and not memory[0x8460+i//8] & (128>>(i&7)) for i,v in enumerate(self.hud)):
+                raise ValueError('HUD paint extends outside the original icon strip')
+            self.extra_banks[16] = bytes([255])*10240 + (self.hud if hud_present(memory) else bytes([255])*6144)
         self.colours=initial_speech(self.colours,list(Z.rom48()+snap.banks[5]+snap.banks[2]+snap.banks[0]))
         for n in range(14):
             data=self.colours[n*16384:(n+1)*16384]
@@ -1011,7 +1080,7 @@ def screen_check(recording, out, stop):
             actual = sum((mem.pages[p] for p in range(28, 34)), [])
             diffs = [i for i in range(49152) if wanted[i] != actual[i]]
             if diffs: bad.append(('screen pixels', len(diffs), diffs[:12]))
-        if mem.nr != {7: 0, 0x50: 255, 0x52: 10}: bad.append(('NextREG', mem.nr))
+        if mem.nr != {7: 0, 0x50: 255, 0x52: 10, 0x53: 11}: bad.append(('NextREG', mem.nr))
         if bad and len(failures) < 12: failures.append((key, bad))
     frames, error = rzx.trace(str(recording), {0xF18A, 0xF700}, hit, stop=stop)
     result = dict(frames=frames, error=error, counts=dict(counts), cases=len(cases), failures=failures)
@@ -1094,7 +1163,7 @@ def verify_renderer(recording, assets, out=None, stop=None, patch=None, collect=
                     b = ((src-n)&255)*8
                     oracle_screen[at:at+8] = oracle_scratch[b:b+8]
             return
-        if pc in (0xF526, 0xF737, 0xF1B4, 0x727D, 0xFFAD):
+        if pc in (0xF526, 0xF737, 0xF1B4, 0x727D, 0xFFAD, 0xEFD2):
             if not pending: return
             mem, sim = state[0]
             pending.pop()
@@ -1112,6 +1181,8 @@ def verify_renderer(recording, assets, out=None, stop=None, patch=None, collect=
                 oracle_scratch[:size]=[255]*size
             elif pc==0xFFAD:
                 oracle_screen[:]=[255]*49152
+            elif pc==0xEFD2:
+                oracle_screen[168*256:]=patch.hud
             diff = [i for i in range((m[0xF70D]+1)*8) if oracle_scratch[i]!=mem.private[i]] if pc==0xF526 else []
             if diff: bad.append(('scratch pixels', len(diff), [(i,oracle_scratch[i],mem.private[i]) for i in diff[:8]]))
             if bad:
@@ -1119,12 +1190,12 @@ def verify_renderer(recording, assets, out=None, stop=None, patch=None, collect=
                 if last_plot and out is not None:
                     (out/'failure-entry.ram').write_bytes(last_plot[0][0])
                     (out/'failure-entry.json').write_text(json.dumps({'registers':last_plot[0][1],'frame':original.tracer.frame_index,'bad':bad},indent=2)+'\n')
-            if pc != 0xF737: return
-        if pc == 0xF737:
+            if pc not in (0xF737,0xEFD2,0xFFAD): return
+        if pc in (0xF737,0xEFD2,0xFFAD):
             if not state: return
             mem, _ = state[0]
             diff = []
-            for y in range(PLAY_HEIGHT):
+            for y in range(192 if patch.hud is not None else PLAY_HEIGHT):
                 base = 0x4000 + ((y & 192) << 5) + ((y & 7) << 8) + ((y & 56) << 2)
                 page = mem.pages[28 + y // 32]; offset = (y & 31) * 256
                 for x in range(256):
@@ -1144,6 +1215,11 @@ def verify_renderer(recording, assets, out=None, stop=None, patch=None, collect=
             oracle_scratch[:] = mem.private[:2048]
             oracle_colours[:] = initial_speech(patch.colours, list(m))
             mem.private[patch.syms['bulk_policy']] = int(patch.dma_enabled)
+            if patch.hud is not None:
+                mem.pages[90][:6144] = patch.hud
+                if hud_present(m):
+                    mem.pages[33][2048:] = patch.hud
+                    oracle_screen[168*256:] = patch.hud
             sim = simpool.machine(_rw_simulator(), mem, slot='movie-renderer')
             sim.low_writes = True; sim.set_tracer(mem); z80n.install(sim, mem.nextreg)
             state.append((mem, sim))
@@ -1160,8 +1236,8 @@ def verify_renderer(recording, assets, out=None, stop=None, patch=None, collect=
         if collect and unit_key not in collected_keys and seen[pc] < (collect if pc == 0xF29B else 1):
             collecting.append((pc, copy.deepcopy(mem), list(r))); seen[pc] += 1
             collected_keys.add(unit_key)
-        end = {0xF18A: 0xF1B4, 0xF700: 0xF737, 0xF29B: 0xF526, 0x7279: 0x727D, 0xFFA6:0xFFAD}[pc]
-        counts[{0xF18A: 'clear', 0xF700: 'commit', 0xF29B: 'plots', 0x7279: 'text_write',0xFFA6:'screen_erase'}[pc]] += 1
+        end = {0xF18A: 0xF1B4, 0xF700: 0xF737, 0xF29B: 0xF526, 0x7279: 0x727D, 0xFFA6:0xFFAD,0xEFCF:0xEFD2}[pc]
+        counts[{0xF18A: 'clear', 0xF700: 'commit', 0xF29B: 'plots', 0x7279: 'text_write',0xFFA6:'screen_erase',0xEFCF:'hud_init'}[pc]] += 1
         if pc == 0xF29B and counts['plots'] % 10000 == 0:
             if progress: progress(dict(frame=original.tracer.frame_index, plots_checked=counts['plots']))
             elif out is not None: print(json.dumps({'frame':original.tracer.frame_index,'plots_checked':counts['plots']}),flush=True)
@@ -1175,8 +1251,9 @@ def verify_renderer(recording, assets, out=None, stop=None, patch=None, collect=
             steps += 1
             if steps > 1000000: raise RuntimeError(('Plot hook did not return', hex(here), counts))
         pending.append(1)
-        if mem.nr != {7: 0, 0x50: 255, 0x52: 10}: failures.append(('NextREG', mem.nr))
-    frames, error = rzx.trace(str(recording), {0xF18A, 0xF1B4, 0xF700, 0xF737, 0xF29B, 0xF526, 0x7279, 0x727D,0xFFA6,0xFFAD,0xF718} | chunk_pcs, hit, stop=stop)
+        if mem.nr != {7: 0, 0x50: 255, 0x52: 10, 0x53: 11}: failures.append(('NextREG', mem.nr))
+    hud_pcs = {0xEFCF,0xEFD2} if patch.hud is not None else set()
+    frames, error = rzx.trace(str(recording), {0xF18A, 0xF1B4, 0xF700, 0xF737, 0xF29B, 0xF526, 0x7279, 0x727D,0xFFA6,0xFFAD,0xF718} | chunk_pcs | hud_pcs, hit, stop=stop)
     result = dict(frames=frames, error=error, counts=dict(counts), failures=failures)
     if out is not None:
         (out / 'renderer-check.json').write_text(json.dumps(result, indent=2) + '\n')
@@ -1207,7 +1284,7 @@ def state_trial(patch, state, clock=0, iff=0, core=0x33, hardware_im2=0, dma=Tru
     mem.private[patch.syms['bulk_ready']] = 0
     mem.private[patch.syms['bulk_policy']] = int(dma)
     mem.core, mem.hardware_im2 = core, hardware_im2
-    mem.nr.update({7:clock,0x50:255,0x52:10})
+    mem.nr.update({7:clock,0x50:255,0x52:10,0x53:11})
     sim = simpool.machine(_rw_simulator(), mem, slot='movie-state-test')
     sim.low_writes=True; sim.set_tracer(mem); z80n.install(sim,mem.nextreg)
     sim.registers[:] = state['registers']; sim.registers[26] = iff
@@ -1226,7 +1303,7 @@ def state_trial(patch, state, clock=0, iff=0, core=0x33, hardware_im2=0, dma=Tru
     if mem.data[0x4000:] != expected.data[0x4000:]: bad.append('game RAM')
     if mem.private[:2048] != expected.private[:2048]: bad.append('scratch colour pixels')
     if any(mem.pages[p]!=expected.pages[p] for p in range(28,34)): bad.append('screen colour pixels')
-    if mem.nr!={7:clock,0x50:255,0x52:10}: bad.append(('NextREG',mem.nr))
+    if mem.nr!={7:clock,0x50:255,0x52:10,0x53:11}: bad.append(('NextREG',mem.nr))
     return bad
 
 
@@ -1238,7 +1315,7 @@ def unit_tests(patch, states):
                 bad=state_trial(patch,state,speed,iff)
                 counts['speed/IFF cases']+=1
                 if bad: counts['speed/IFF!']+=1
-        if state['pc'] in (0xF700,0xFFA6):
+        if state['pc'] in (0xF700,0xFFA6,0xEFCF):
             for core,im2,dma in ((0x32,0,True),(0x33,1,True),(0x33,0,False),(0x33,0,True)):
                 bad=state_trial(patch,state,core=core,hardware_im2=im2,dma=dma)
                 counts['DMA/fallback cases']+=1
@@ -1247,6 +1324,8 @@ def unit_tests(patch, states):
              ('transparency','kernel','3eff','3efe'),
              ('R','helper','3ef2cd','3ef3cd'),
              ('speed','resident','ed9207','ed9206'))
+    if any(s['pc']==0xEFCF for s in states):
+        changes += (('HUD position','bulk','210068','210067'),)
     for label,block,old,new in changes:
         broken=copy.copy(patch);broken.hooks=copy.deepcopy(patch.hooks)
         raw=bytes.fromhex(broken.hooks[block]);before=bytes.fromhex(old)
@@ -1336,6 +1415,8 @@ def auto(a, z80, name, out, say):
         ok &= status=='pass'
     sheet=out/(name+'_PAINTING_SPRITES.png')
     if not sheet.exists():painting_sheet(z80,assets,sheet)
+    sheet=out/(name+'_NATIVE_HUD.png')
+    if (assets/'hud.bin').exists() and not sheet.exists():hud_sheet(assets,sheet)
     say('Result    : '+('PASSED' if ok else 'FAILED'))
     return bool(ok)
 
