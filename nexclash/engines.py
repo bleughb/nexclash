@@ -15,6 +15,7 @@ import importlib
 
 # (module, detector, extra condition on the auto arguments or None)
 ENGINES = [
+    ('exolon', 'is_exolon', None),                                   # Exolon (128K), optional Enhanced
     ('bruce_lee', 'is_bruce_lee', None),                                # Bruce Lee (48K), optional Enhanced
     ('movie', 'is_movie', None),                                       # Movie (48K), optional Enhanced
     ('head_over_heels', 'is_head_over_heels', None),                    # Head Over Heels (128K), optional Enhanced
