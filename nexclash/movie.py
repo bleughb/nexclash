@@ -156,6 +156,7 @@ def painting_sheet(source, assets, destination):
     s = Z.Z80Snapshot(str(source)); m = list(Z.rom48() + s.banks[5] + s.banks[2] + s.banks[0])
     colours = (assets / 'colours.bin').read_bytes(); palette = (assets / 'palette.bin').read_bytes()
     cleared = set(layout.get('cleared_pixels', []))
+    added = set(layout.get('added_pixels', []))
     def rgb(i):
         v = int.from_bytes(palette[2*i:2*i+2], 'little')
         return tuple(round(((v >> shift) & 7) * 255 / 7) for shift in (6, 3, 0))
@@ -167,7 +168,7 @@ def painting_sheet(source, assets, destination):
         tile = Image.new('RGB',(w,h))
         tile.putdata([((0,0,0) if p==1 and (not layout.get('painted_paper') or
                        colours[(a-0x7000)*8+b]==255 and (a-0x7000)*8+b not in cleared) else
-                       rgb(colours[(a-0x7000)*8+b]) if colours[(a-0x7000)*8+b]!=255 else (48,52,58)) if p else (48,52,58)
+                       rgb(colours[(a-0x7000)*8+b]) if colours[(a-0x7000)*8+b]!=255 else (48,52,58)) if p or (a-0x7000)*8+b in added else (48,52,58)
                       for row,own in zip(px,owners) for p,(a,b) in zip(row,own)])
         im.paste(tile.resize((w*k,h*k),Image.Resampling.NEAREST),(entry['x'],entry['y']))
         draw.text((entry['x'],entry['y']-18),f"{entry['source']:04X}  {w} x {h}",fill=(230,230,230))
@@ -178,7 +179,8 @@ def import_painting(source, assets, sheet, out):
     """Import flat painted pixels, including paper recolours and grey erasures.
 
     Preserve the input PNG. Edits propagate across shared animation parts;
-    contradictory edits, expansion into native holes and subpixel paint fail.
+    contradictory edits and subpixel paint fail. Static pixels may be added
+    within the original cell; mutable native masks keep their drawing rules.
     """
     from PIL import Image
     assets, out = Path(assets), Path(out)
@@ -191,25 +193,31 @@ def import_painting(source, assets, sheet, out):
     def rgb(v): return tuple(round(((v >> sh)&7)*255/7) for sh in (6,3,0))
     pic=Image.open(sheet).convert('RGB'); edits={}
     cleared=set(layout.get('cleared_pixels',[]))
+    added=set(layout.get('added_pixels',[]))
     for e in layout['entries']:
         px,owners=decode_graphic(m,e['source']); k=e['scale']
         for y,(row,own) in enumerate(zip(px,owners)):
             for x,(p,(a,b)) in enumerate(zip(row,own)):
                 idx=(a-0x7000)*8+b
                 old=((0,0,0) if p==1 and (not layout.get('painted_paper') or cache[idx]==255 and idx not in cleared) else
-                     rgb(palette[cache[idx]]) if cache[idx]!=255 else (48,52,58)) if p else (48,52,58)
+                     rgb(palette[cache[idx]]) if cache[idx]!=255 else (48,52,58)) if p or idx in added else (48,52,58)
                 tile=pic.crop((e['x']+x*k,e['y']+y*k,e['x']+(x+1)*k,e['y']+(y+1)*k))
                 values=set(tile.getdata())
                 if values=={old}: continue
-                if not p or len(values)!=1:
+                if len(values)!=1:
                     raise ValueError(f"Edit crosses protected drawing or native pixel at {e['source']:04X}/{x},{y}")
                 c=values.pop(); value=None if c==(48,52,58) else sum(round(v*7/255)<<sh for v,sh in zip(c,(6,3,0)))
                 if value is not None and value>>1==0xE3: raise ValueError('Use canvas grey for transparency')
                 mutable=0x9F77<=a<0xA000 or 0xA400<=a<0xA483 or 0xD202<=a<0xD2E2
+                if not p and (mutable or 0xD3F4<=a<0xD404):
+                    raise ValueError(f'Cannot add pixels to native mutable masks at {a:04X}/{b}')
                 if (mutable and (p==1 or value in (None,0))) or (0xD3F4<=a<0xD404 and p==2 and value in (None,0)):
                     raise ValueError(f'Cannot erase/repaint native mutable ink/paper at {a:04X}/{b}')
                 if idx in edits and edits[idx]!=value: raise ValueError(f'Conflicting edits to shared pixel {a:04X}/{b}')
                 edits[idx]=value
+                if not p:
+                    if value is None: added.discard(idx)
+                    else: added.add(idx)
     used=set(cache)-{255}; lookup={palette[i]:i for i in used}
     free=[i for i in range(1,255) if i not in used]
     for idx,value in sorted(edits.items()):
@@ -221,13 +229,14 @@ def import_painting(source, assets, sheet, out):
             i=free.pop(0);palette[i]=value;lookup[value]=i
         cache[idx]=lookup[value]
     layout['cleared_pixels']=sorted(cleared)
+    layout['added_pixels']=sorted(added)
     layout['painted_paper']=True
     out.mkdir(parents=True,exist_ok=True)
     (out/'colours.bin').write_bytes(cache)
     (out/'palette.bin').write_bytes(b''.join(v.to_bytes(2,'little') for v in palette))
     (out/'painting.json').write_text(json.dumps(layout,indent=2)+'\n')
     painting_sheet(source,out,out/'MOVIE_PAINTING_SPRITES.png')
-    return {'edited_shared_pixels':len(edits),'cleared_shared_pixels':len(cleared),
+    return {'edited_shared_pixels':len(edits),'cleared_shared_pixels':len(cleared),'added_shared_pixels':len(added),
             'ink_colours':len(set(cache)-{0,255})}
 
 
@@ -1025,6 +1034,7 @@ def verify_renderer(recording, assets, out=None, stop=None, patch=None, collect=
     oracle_scratch, oracle_screen = [], [255] * 49152
     oracle_colours = bytearray(patch.colours)
     cleared = set(json.loads((Path(assets)/'painting.json').read_text()).get('cleared_pixels', []))
+    added = set(json.loads((Path(assets)/'painting.json').read_text()).get('added_pixels', []))
     def painted_chunk(pc, r, m):
         d = chunk_descriptor(pc, r, m)
         for y in range(d['height']):
@@ -1039,8 +1049,8 @@ def verify_renderer(recording, assets, out=None, stop=None, patch=None, collect=
                     source_bit = 7-bit if d['mirror'] else bit
                     one = 128 >> source_bit
                     ink = bool(bits & one)
-                    if not ink and mask & one: continue
                     i = (address-0x7000)*8+source_bit
+                    if not ink and mask & one and i not in added: continue
                     if i in cleared: continue
                     value = oracle_colours[i]
                     if ink and value in (0,255) and (mutable or 0xD3F4<=address<0xD404): value = 1
