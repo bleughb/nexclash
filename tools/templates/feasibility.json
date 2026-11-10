@@ -1,0 +1,14 @@
+{
+ "pacing": {
+  "evidence": ["games/REPLACE_WITH_GAME.md#pacing-measurement"],
+  "coverage": "Recordings, levels, frame ranges, busy scenes and gaps not measured",
+  "result": "Measured update cadence, deadlines, usable gaps and sound owner; source of each budget"
+ },
+ "dependencies": {
+  "evidence": ["games/REPLACE_WITH_GAME.md#dependency-investigation"],
+  "coverage": "Routines and paths exercised; unexercised branches inspected; remaining gaps",
+  "result": "Consumers of display/RAM/R/sound effects; what can be replaced and what must remain"
+ },
+ "decision": "Chosen approach, evidence-backed constraints and open risks",
+ "next_experiment": "Next experiment and its numeric or exact success criterion"
+}

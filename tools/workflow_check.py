@@ -82,6 +82,83 @@ class WorkflowChecks(unittest.TestCase):
         self.assertNotIn(T, module.CMP)
         self.assertNotIn(MEMPTR, module.CMP)
 
+    def test_template_coverage_and_reproducible_reruns(self):
+        module = load(ROOT/'tools/templates/verify_contract.py')
+        cases = [('level1', i, i) for i in range(12)]
+        full, sample, rerun = {}, {}, {}
+        def exercise(output):
+            def run(state, phase):
+                output[state] = phase
+                return state != 5
+            return run
+        checks = []
+        self.assertEqual(module.check_cases(cases, exercise(full), checks), {'level1:5'})
+        self.assertEqual(checks[-1]['status'], 'fail')
+        checks = []
+        module.check_cases(cases, exercise(sample), checks, sample=3)
+        self.assertEqual(checks[-1]['status'], 'incomplete')
+        self.assertEqual(sample, {i: full[i] for i in (0, 3, 6, 9)})
+        checks = []
+        self.assertEqual(module.check_cases(cases, exercise(rerun), checks, only='level1:5', sample=3), {'level1:5'})
+        self.assertEqual(rerun, {5: full[5]})
+        for corpus, only, status in (([], None, 'not measured'), (cases, 'typo:99', 'not measured'),
+                                     (cases, 'level1:0,typo:99', 'incomplete'), (cases, None, 'pass')):
+            checks = []
+            module.check_cases(corpus, lambda state, phase: True, checks, only=only)
+            self.assertEqual(checks[-1]['status'], status)
+        with self.assertRaisesRegex(ValueError, 'sample'):
+            module.check_cases(cases, lambda *args: True, [], sample=0)
+        with self.assertRaisesRegex(ValueError, 'duplicate'):
+            module.check_cases(cases + cases, lambda *args: True, [])
+
+    def test_feasibility_evidence_and_exemptions(self):
+        module = load(ROOT/'tools/feasibility.py')
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d)/'measurement.md').write_text('Measured busy scenes; reviewed unexercised branches.')
+            measured = {'evidence': ['measurement.md'], 'coverage': 'L1-6, frames 1-2500; menu excluded',
+                        'result': '400 T minimum usable gap; logic call retained'}
+            valid = {'pacing': measured, 'dependencies': measured, 'decision': 'Replace display only',
+                     'next_experiment': 'One visible live sprite; max displayed state age <= 2 updates'}
+            self.assertEqual(module.validate(valid, d), [])
+            for key in ('pacing', 'dependencies', 'decision', 'next_experiment'):
+                broken = dict(valid); del broken[key]
+                self.assertTrue(module.validate(broken, d), key)
+            for broken in ({}, {'evidence': [], 'coverage': 'all', 'result': 'ok'},
+                           dict(measured, evidence=['missing.md']), dict(measured, coverage=''),
+                           dict(measured, evidence=['https://']), dict(measured, evidence=['file:///tmp/a']),
+                           dict(measured, evidence=['../outside.md']), {'not_applicable': ''},
+                           dict(measured, not_applicable='reason')):
+                self.assertTrue(module.validate(dict(valid, pacing=broken), d), broken)
+            self.assertEqual(module.validate(dict(valid, dependencies={'not_applicable': 'No routine replaced'}), d), [])
+            self.assertEqual(module.validate(dict(valid, pacing=dict(measured, evidence=[
+                'https://github.com/owner/reference/blob/main/measurement.md'])), d), [])
+            old = {'docs/records/old.json': {'engine': 'old', 'own_modules': ['old']}}
+            # Editing legacy records, including a substantial rework, is not retroactive enforcement.
+            self.assertEqual(module.check_records({'docs/records/old.json': {'engine': 'changed'}}, old, d), [])
+            self.assertEqual(module.check_records({'new.json': old['docs/records/old.json']}, old, d), [])
+            for rec in ({'engine': 'new'}, {'engine': 'old', 'own_modules': ['new']}):
+                self.assertTrue(module.check_records({'new.json': rec}, old, d))
+                self.assertEqual(module.check_records({'new.json': dict(rec, feasibility=valid)}, old, d), [])
+            opted = {'old.json': {'engine': 'old', 'feasibility': valid}}
+            self.assertTrue(module.check_records({'old.json': {'engine': 'old'}}, opted, d))
+            self.assertTrue(module.check_records({'old.json': {'feasibility': {}}}, None, d))
+
+    def test_feasibility_discovers_record_without_changed_notes(self):
+        module = load(ROOT/'tools/feasibility.py')
+        with tempfile.TemporaryDirectory() as d:
+            def git(*args):
+                return subprocess.run(['git', '-C', d, *args], capture_output=True, text=True, check=True).stdout.strip()
+            git('init'); git('config', 'user.name', 'Workflow Test'); git('config', 'user.email', 'workflow@example.invalid')
+            records = Path(d)/'docs/records'; records.mkdir(parents=True)
+            (records/'old.json').write_text(json.dumps({'engine': 'old', 'doc': 'old.md'}))
+            git('add', '.'); git('commit', '-m', 'baseline')
+            base = git('rev-parse', 'HEAD')
+            # Untracked record, old note filename: neither can bypass the new-engine gate.
+            (records/'new.json').write_text(json.dumps({'engine': 'new', 'doc': 'old.md'}))
+            self.assertEqual(len(module.check(d, base)), 1)
+            git('add', '.'); git('commit', '-m', 'new engine')
+            self.assertEqual(len(module.check(d, base)), 1)
+
     def test_committed_git_contribution(self):
         from nexclash import userflow
         with tempfile.TemporaryDirectory() as d:
