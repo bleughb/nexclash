@@ -1,0 +1,216 @@
+{
+ "name": "highway_encounter",
+ "order": 255,
+ "game": "Highway Encounter",
+ "doc": "highway_encounter.md",
+ "engine": "highway_encounter",
+ "representative": true,
+ "reference": "highway_encounter",
+ "inputs": {
+  "snapshot": {
+   "name": "highway_encounter.z80",
+   "path": "highway_encounter/highway_encounter.z80",
+   "md5": "ecfe7da10ba9aa395ae54c44301be1af"
+  },
+  "recordings": [
+   {
+    "name": "highway_continuous1.rzx",
+    "path": "highway_encounter/highway_continuous1.rzx",
+    "md5": "e80c9b1f6a3492e62290342e445cebb1"
+   },
+   {
+    "name": "highway_demo.rzx",
+    "path": "highway_encounter/highway_demo.rzx",
+    "md5": "af345bc576fdd54d4c740a190cdc2c98"
+   },
+   {
+    "name": "highway_collision_route.rzx",
+    "path": "highway_encounter/highway_collision_route.rzx",
+    "md5": "ed4388a5a36721310f21a2b78a8b15b4"
+   },
+   {
+    "name": "HIGHWAY.scr",
+    "path": "highway_encounter/HIGHWAY.scr",
+    "md5": "be406c30814d5149a1b9053be25a8d58",
+    "role": "External build input; never included in source contribution."
+   },
+   {
+    "name": "colour-source.256",
+    "path": "highway_encounter/colour-source.256",
+    "md5": "f2fb116ed79269c2412f210edc45675f",
+    "role": "External build input; never included in source contribution."
+   },
+   {
+    "name": "source-palette.pal",
+    "path": "highway_encounter/source-palette.pal",
+    "md5": "b095dc99a047bab844b87b06657b0a7a",
+    "role": "External build input; never included in source contribution."
+   }
+  ]
+ },
+ "modules": [
+  "highway_encounter"
+ ],
+ "own_modules": [
+  "highway_encounter"
+ ],
+ "data": [
+  "asm/highway_encounter_hooks.asm",
+  "docs/profiles/highway_encounter.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_dma.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record",
+   "--no-nxc"
+  ],
+  "rzx": []
+ },
+ "verify": {
+  "args": [
+   "--no-record",
+   "--no-nxc"
+  ],
+  "rzx": [
+   "highway_continuous1.rzx",
+   "highway_demo.rzx",
+   "highway_collision_route.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 60,
+  "note": "Full 22306-frame proof per mode passed: original hook registers/R/RAM, independent colours, fallback copy behaviour, trainers and deliberate faults."
+ },
+ "outputs": {
+  "plain": {
+   "file": "highway_encounter.nex",
+   "md5": "1feaa5fc5343f12583bcd6b44cec72d2"
+  },
+  "sprites": {
+   "file": "highway_encounter_sprites.nex",
+   "md5": "8f518edd0cfbf151c67d533d05204176"
+  },
+  "enhanced": {
+   "file": "highway_encounter_enhanced.nex",
+   "md5": "fb75964a819f5fc7cf4366e7aef146ef"
+  },
+  "loading": {
+   "file": "highway_encounter_sprites_loading.nex",
+   "md5": "90079ef9c24acc86a3060a90b972031c"
+  },
+  "enhanced_loading": {
+   "file": "highway_encounter_enhanced_loading.nex",
+   "md5": "695d7e73d3375a8ac3b8ed7d6adecbb0"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Highway Encounter",
+  "engine_col": "highway_encounter (highway_encounter.md)",
+  "build": "Exact 48K archive; original monochrome default, optional approved Enhanced; original loading screen, full hidden ROM, 1MB.",
+  "software": "Frozen full proof, five exact rebuilds and six real-loader modes pass. Normal DMA pace within 0.7%; CPU fallback has slower transitions.",
+  "hardware": "none (JNext only)",
+  "next": "Packaging review; preserve CPU-only transition limitation. Owner playtest and hardware remain."
+ },
+ "checks": [
+  "asm2profile:highway_encounter"
+ ],
+ "results": [],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/highway_encounter.md#next-session"
+   ],
+   "coverage": "Three native seeds, 300 actual player updates per mode, quiet/busy plus transition timing.",
+   "result": "All 301 tracked states agree. Enhanced quiet -0.410..+0.144%, busy -0.463..-0.081%, worst 20+0.589%; default quiet -0.698..+0.294%, busy -0.683..+0.142%, worst 20+0.441%."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/highway_encounter.md#observed-engine"
+   ],
+   "coverage": "All 57 moving graphics, supplied source graphics match. Original ordered mask/OR composition retained.",
+   "result": "Original beeper values/order and incoming 3.5MHz clock agree in six trials; pulse spacing within 1.715us."
+  },
+  "decision": "Memory-only scene/erase/draw windows at 28MHz with shared original-pace limiter. Source sound and delay code unchanged.",
+  "next_experiment": "CPU-only fallback transitions remain up to 46ms slower; normal DMA accepted. Natural completion and hardware untested."
+ },
+ "checked": {
+  "deps": {
+   "asm/highway_encounter_hooks.asm": "95e72509f89c8271",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/highway_encounter.json": "a4eaf4f9e6ce8835",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "a459e680392d6da1",
+   "nexclash/highway_encounter.py": "acbb43082e52b337",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "78ddd95adc1cb34a",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-10"
+ },
+ "verified": {
+  "deps": {
+   "asm/highway_encounter_hooks.asm": "95e72509f89c8271",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/highway_encounter.json": "a4eaf4f9e6ce8835",
+   "nexclash.py": "350128095535a2d4",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "e606eb11f42382f6",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "a459e680392d6da1",
+   "nexclash/highway_encounter.py": "acbb43082e52b337",
+   "nexclash/hooklib.py": "ba4611f453c48aee",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "dcc01638556a1b32",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "29985826115eb292",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "skoolkit": "10.1",
+   "recipe": "78ddd95adc1cb34a",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-10"
+ }
+}
