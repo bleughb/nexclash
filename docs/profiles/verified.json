@@ -56,6 +56,17 @@
     "enhanced_loading": "8113662ce1469689d1effa77280b30d3"
    }
   },
+  "6e088cc665d1cdbcd32effa061ad6e8e": {
+   "game": "Bruce Lee",
+   "doc": "bruce_lee.md",
+   "nex": {
+    "plain": "d393199dfe1cd7ba0372fa6ab0ce0dfa",
+    "sprites": "572bd4499005b81fd8eafac597b5ab0b",
+    "enhanced": "7f762987659ae1c0da54190dd0335b69",
+    "loading": "0a343912c1748f5fcd45230f0c1e1831",
+    "enhanced_loading": "004b76609c33d2414b380c5ab5a8bf47"
+   }
+  },
   "85d7841306333321838d372ea8797ff2": {
    "game": "Bubbler",
    "doc": "bubbler.md",
@@ -162,6 +173,17 @@
     "sprites": "8c05c0be92150c29153ed28c41b44842"
    }
   },
+  "87515df87645c4179a9ef90663774c7f": {
+   "game": "Exolon",
+   "doc": "exolon.md",
+   "nex": {
+    "plain": "53bccd7881712937941eb106c712af13",
+    "sprites": "d2852fd29607e124576dc0c08401c479",
+    "enhanced": "992c5123f072aad8296c7c6a31a1e61a",
+    "loading": "f0eaf0f14d26f11e7649953d89624c5f",
+    "enhanced_loading": "07b771fcd487d6d85a587c8be562ac68"
+   }
+  },
   "876f474b3441c08ed8ff25bd43d616a3": {
    "game": "Fantasy World Dizzy",
    "doc": "fantasy_world_dizzy.md",
@@ -236,6 +258,17 @@
     "loading": "f409ce6064820d2080cc131e87273b73",
     "enhanced": "a73fe67d3c15d5ddbaf24eda7243896a",
     "enhanced_loading": "1fef5dfc128e942f679ff681b81ac7b0"
+   }
+  },
+  "ecfe7da10ba9aa395ae54c44301be1af": {
+   "game": "Highway Encounter",
+   "doc": "highway_encounter.md",
+   "nex": {
+    "plain": "1feaa5fc5343f12583bcd6b44cec72d2",
+    "sprites": "8f518edd0cfbf151c67d533d05204176",
+    "enhanced": "fb75964a819f5fc7cf4366e7aef146ef",
+    "loading": "90079ef9c24acc86a3060a90b972031c",
+    "enhanced_loading": "695d7e73d3375a8ac3b8ed7d6adecbb0"
    }
   },
   "54ad66af6678df22a9d4443e3d04aadb": {

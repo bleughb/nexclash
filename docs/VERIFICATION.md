@@ -1,13 +1,8 @@
 # Verification record
 
-One section per game/build, newest first within a game. The checksum list below is generated
-from the evidence records (docs/records/<game>.json); `python selftest.py` reproduces those MD5s
-from the private reference files.
-
-All tests: exact RZX playback in SkoolKit; at every patched routine the
-original and patched code were run from the same real state and compared
-(registers except R/T, all non-screen memory, patched-screen model, sprite
-pixels). Start-up tails simulated: all registers restored, no game memory touched.
+Historical SkoolKit RZX checks compared same-state registers except R/T, non-screen RAM and
+pixels; startup restored registers/RAM. Current scopes and reproducible checksums live in
+docs/records (`python selftest.py`).
 
 | Game | Recording | Plots | Erases | Other | Result |
 |---|---|---|---|---|---|
@@ -21,17 +16,15 @@ pixels). Start-up tails simulated: all registers restored, no game memory touche
 
 | Spellbound Dizzy (Dizzy V), altrom | auto RZX, 6,227 frames, 16 segments (from the loader snapshot) | 1,479 | 1,463 | ROM view = ROM at all 136 ROM bytes read in 0x2000-0x3FFF; per-segment resync | all identical (6 erases: A/F differ at return, overwritten before use); `--strategy slot1` identical results |
 
-Simulated boot (nextboot.py, every sprite build since 2026-09-28): stub + alt ROM fill + tail on a
-model Next (launch state ROM 0 selected) -> all registers, RAM 0x4000-0xFFFF (except the tail),
-slots 0/1 view (ROM3, + hook bytes and register block for altrom), paging lock, MMU, $8C = $80.
-Negative controls caught: no 1FFD write (ROM1 copied), 7FFD locked without the $08 unlock, hook
-bytes not copied. Structural altrom build of the TID-engine TidPatch (TID title snapshot, generic
-profile): boot OK; printer/slot1/plain outputs of that build byte-identical to the pre-altrom toolkit.
+Simulated boot (nextboot.py, every sprite build since 2026-09-28): stub, alt-ROM fill and tail on a
+model Next from ROM 0; checks all registers, RAM 0x4000-0xFFFF except the tail, the slot 0/1 view,
+paging lock, MMU and $8C = $80. Caught controls: no 1FFD write, 7FFD locked without the $08 unlock,
+hook bytes not copied. TID's generic altrom build booted; its printer/slot1/plain outputs matched
+the pre-altrom toolkit byte for byte.
 
 ## Output checksums (MD5) - the toolkit must reproduce these
-Default builds (strategy `altrom` where proven; dedicated builders are printer-only); file names
-are the records' canonical ones (`nexclash.py auto` names its outputs after the input file).
-`--strategy` lines reproduce the pre-altrom builds from the same recordings.
+Canonical record names (`auto` names outputs after its input); `altrom` where proven, dedicated
+builders printer-only; `--strategy` lines rebuild the pre-altrom outputs.
 <!-- generated from docs/records by `python -m nexclash.records views`: do not edit by hand -->
 Every game's verified outputs (`selftest.py` rebuilds them; the record says how):
 
@@ -112,26 +105,22 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Jilly's Farm Volume 1 - SokoBAArn! (jillys_farm): `jillys_farm.nex` 427aab29dd75a73276829f59a02cb23c, `jillys_farm_loading.nex` e50bbd5371c34e3b2a1f58a4c57978bf, `jillys_farm_enhanced.nex` 987f52a06c06962e09000d6fe1bf8f48, `jillys_farm_enhanced_loading.nex` 9f9cad7c1684667b4b2bd7fcc1cf6334; verified 2026-11-09
 - That Sinking Feeling (that_sinking_feeling): `that_sinking_feeling_sprites.nex` 07fea8b4205b854febc67d44a3d013fe, `that_sinking_feeling_sprites_loading.nex` 7a34cae8445952cc8c56b0fc52e9908b, `that_sinking_feeling_enhanced.nex` f6838dd33f91b87930d22fa3a584bc9e, `that_sinking_feeling_enhanced_loading.nex` 8c9469e34a9fb936e8c1f7709e383ea7; verified 2026-11-09
 - Movie (movie): `movie.nex` ad4b36c8ec0c71229377215aad817e23, `movie_sprites.nex` 0ee50a9cc7dbeb0ec7c6bf1097e2a2f9, `movie_enhanced.nex` 393cfa98ccce45834f046835bb968ee3, `movie_sprites_loading.nex` 86c3518beb5d98091dec067e86ec1187, `movie_enhanced_loading.nex` 4cff090a7fdaafe490b94d273baff0df; verified 2026-11-09
+- Bruce Lee (bruce_lee): `bruce_lee.nex` d393199dfe1cd7ba0372fa6ab0ce0dfa, `bruce_lee_sprites.nex` 572bd4499005b81fd8eafac597b5ab0b, `bruce_lee_enhanced.nex` 7f762987659ae1c0da54190dd0335b69, `bruce_lee_sprites_loading.nex` 0a343912c1748f5fcd45230f0c1e1831, `bruce_lee_enhanced_loading.nex` 004b76609c33d2414b380c5ab5a8bf47; verified 2026-11-10
+- Highway Encounter (highway_encounter): `highway_encounter.nex` 1feaa5fc5343f12583bcd6b44cec72d2, `highway_encounter_sprites.nex` 8f518edd0cfbf151c67d533d05204176, `highway_encounter_enhanced.nex` fb75964a819f5fc7cf4366e7aef146ef, `highway_encounter_sprites_loading.nex` 90079ef9c24acc86a3060a90b972031c, `highway_encounter_enhanced_loading.nex` 695d7e73d3375a8ac3b8ed7d6adecbb0; verified 2026-11-10
+- Exolon (exolon): `exolon.nex` 53bccd7881712937941eb106c712af13, `exolon_sprites.nex` d2852fd29607e124576dc0c08401c479, `exolon_enhanced.nex` 992c5123f072aad8296c7c6a31a1e61a, `exolon_sprites_loading.nex` f0eaf0f14d26f11e7649953d89624c5f, `exolon_enhanced_loading.nex` 07b771fcd487d6d85a587c8be562ac68; verified 2026-11-10
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
-Toolkit change: docs/records (one per game), nexclash/records.py, `auto --decisions`, selftest
-driven by the records. No game output changed.
-- Baseline before the change (main 32ad905, old full selftest): Fantasy World, Magicland, Dizzy 1,
-  Treasure Island (+ title), Dizzy V, Chuckie Egg all OK (run stopped after Chuckie Egg; the
-  remaining games were re-verified on the branch below). Those results seeded the records'
-  `verified` stamps (tree main 32ad905).
-- Rebuild from snapshot + stored decisions, every game (`selftest.py --affected`, before stamps):
-  all 27 outputs incl. the three `--strategy` builds byte-identical, 19.5 s total.
-- Branch run `selftest.py --affected --verify --stamp --jobs 2` (about 1.5 h, Rainbow the longest): re-verified Chuckie Egg,
-  Commando, Wally, Rainbow (both RZX), Fantasy World (+ printer), Dizzy V (+ slot1), Dizzy 6
-  (try1.rzx; first time in selftest), Dizzy 1 and Treasure Island (analysis + boot: dedicated
-  builders, not differential); rebuilt Magicland, Treasure Island title, Crystal Kingdom. All MD5s
-  as listed above; every verification PASSED, boots OK; the build decisions each verification
-  derives equal the stored ones; auto recordings deterministic (MD5s in the records).
-- Plan checks: `python -m nexclash.records selfcheck` (in `--tools`) passes and catches three broken
-  plan() variants; real tree: an engine file change -> that game only; z80tonex.py -> every game
-  rebuilt, representatives re-verified.
+Toolkit change: docs/records (one per game), nexclash/records.py, `auto --decisions` and a
+records-driven selftest. No game output changed.
+- Baseline (main 32ad905, old full selftest) seeded the `verified` stamps: Fantasy World, Magicland,
+  Dizzy 1, Treasure Island (+ title), Dizzy V and Chuckie Egg OK.
+- Every game rebuilt from snapshot + stored decisions: all 27 outputs, including the three
+  `--strategy` builds, byte-identical (19.5 s).
+- `selftest.py --affected --verify --stamp --jobs 2` (about 1.5 h): every re-verification passed
+  with the MD5s above; boots OK; derived decisions equal the stored ones; auto recordings deterministic.
+- `python -m nexclash.records selfcheck` catches three broken plan() variants; an engine file change
+  -> that game only; z80tonex.py -> every game rebuilt, representatives re-verified.
 
 ## Rainbow Islands, Z80N version (128K, engine `rainbow_z80n`) - 2026-10-22
 Fork of engine `rainbow` (cf017271, now deprecated) onto nexclash/z80n.py, Z80N hooks (13 SWAPNIB,
