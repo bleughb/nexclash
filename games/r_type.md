@@ -1,54 +1,44 @@
 # R-Type (128K) - intake
 
 ## Next session
-Stage: 1 (feasibility), design approved; dynamic preparation and early whole-copier
-integration measured. This is NOT the R-Type engine or a hardware-ready sprite build.
-Branch: add-r-type in both repos. Started from nexclash0fba3b9; refreshed/merged main
-at dace0cc (Movie-only incoming changes), specnext main already included.
-Inputs: ../specnext/reference/r_type/Rtype.{z80,rzx,tap}; hashes below.
-No pending design answers. Do not repeat intake, caller/capacity or full ISR/access scans.
-Read: CLAUDE.md, PLAYBOOK3d/6, Feasibility below, then
-../specnext/reference/r_type/intake/README.md (Dynamic preparation and early integration).
-Reference evidence commit: specnexte6d7a1f.
+Stage: 1 (feasibility), design approved; continue implementation without a new design round.
+Branch: add-r-type in both repos. Started at nexclash0fba3b9; main refreshed through dace0cc.
+Inputs: ../specnext/reference/r_type/Rtype.{z80,rzx,tap}. Do not repeat completed intake,
+caller/capacity or full ISR/access scans. No engine/profile/registry/record/sheets yet.
 Draft PRs: https://github.com/bleughb/nexclash/pull/235 and
-https://github.com/bleughb/specnext/pull/93. Latest evidence lives on these branches.
+https://github.com/bleughb/specnext/pull/93. Current sources/results are on these branches.
+Read CLAUDE.md, PLAYBOOK3d/6, the continuation below and the reference intake README.
 
-Completed this continuation: actual ZX-to4bpp preparation (23 and105 sprites), both DMA
-publication modes, four runtime corruption controls; early integrated converter/copier;
-100-return ABI/tail/source checks in each mode;24 isolated register/R bridge cases;
-100-update natural-play pace penalty0.82% (worst20-update window1.72%). Details below.
-No full recording sprite verify, state lockstep, new hardware result or release stamp.
-No engine/profile/registry entry/record/colour sheets have been created.
+Native text-tile baseline passes peak pace1.32% (worst20 window2.27%), state equality
+and50Hz IRQs. It preserves native RGB with ULA scenery/HUD/text; bank7 assets relocate
+to bank24. Per-pixel colour remains unresolved. Component proofs cover IRQ/R, copier
+RAM/stack,113543 IRQ boundaries, text/relocation/geometry,49152-pixel RGB, integrated
+publication and repeated pause/resume. See the continuation for scoped evidence.
+This is a diagnostic, not a hardware-ready build or full-recording verification.
 
-First next gate: supplied-R equivalence for BEDB/BF36 IRQ consumers during prep, complete
-banked RAM and stack convergence/instruction-level IRQ proof, and observed105-sprite
-scene INTEGRATED pace (only component timing was measured there). Then wire the measured
-per-plot text classifier (the current prototype table stays empty), source paper handling,
-and entry-IFF0 support before promoting the experiment into the additive engine.
-Do not treat the passing isolated R bridge as an in-IRQ R proof. Diagnostic sources:
-publication_dynamic.asm/.py, publication_integrated.asm/.py, integrated_check.py,
-register_bridge.py in specnext/reference/r_type/intake. Worst-state capture helper:
-refresh_capture.py; replays only to the already-known peak, and only if its fixture is absent.
+Checkpoint review (2026-11-11): see reference intake/continuation/completion-review.md.
+Cached producer-resolved texture IDs pass320 ABI/R/RAM/CPU-credit cases but fail the
+bounded100-update peak test:10.75% slower, worst20 window18.87%, state equal and50Hz
+IRQs. FE-write rates differ; no sound equivalence claim. Signed-budget edges pass15
+cases including negative fractions and the shared debt cap. Inline optimization is
+unfinished, with placeholder costs; do not use publication_inlined.asm for delivery.
+
+Next: stop per-cell lookup tuning and renderer proliferation. Evaluate once-per-plot
+or level-installed identity from the existing source-only decoder/corpus; establish
+source lifetime/invalidation and a cost budget before coding. Second choice is a
+combined faster original/hardware writer, justified by retained consumer evidence.
+Keep native tile and static4bpp results as baselines. Require a complete LIVE painted
+peak at <=2%, ABI/R/IRQ/RGB and pause/menu checks before engine promotion, whole-figure
+sheets/recolour, quick checks and one final full verification. No new intake scans.
 
 Setup: /workspace/work/{nexclash,specnext}; /workspace/work/venv101/bin/python
-(SkoolKit10.1, Pillow13); only bundled pinned sjasmplus. JNext1.2.0 executable:
+(SkoolKit10.1, Pillow13); bundled pinned sjasmplus only. JNext1.2.0 executable:
 /workspace/work/jnext-bin/root/usr/bin/jnext; isolated home /workspace/work/r_type_jnext_home.
-Private read-only card /workspace/scratch/cspect-next-2gb.img, outside BOTH repos.
+Private card /workspace/scratch/cspect-next-2gb.img mode444, outside BOTH Git repos;
+every emulator run uses --sdcard-readonly. Never commit it or JNS card metadata.
 On workspace replacement recover owner ZIP Sediment ID file_0000000073c0820ba21cc0b36230394a
-and extract privately. Never commit/publish it or JNS captures containing its metadata.
-Generated game snapshots/NEX/JNS/raw logs stay under /workspace/work; compact results
-and reproducible per-game experiments are in specnext. Diagnostic MD5 a300a51515aa39534e3047ef18e16db9.
-
-Reproduce checks from nexclash using ../venv101/bin/python followed by
-../specnext/reference/r_type/intake/{refresh_capture,publication_dynamic,register_bridge,integrated_check}.py;
-README gives the peak-state argument and exact scope. Integrated fixture:
-/workspace/work/r_type_integrated/play.z80; diagnostic.nex in that same folder.
-Set NEXCLASH_JNEXT to the executable above; shared pace command uses --original play.z80
---probe 0x8649 --updates 100 --max-frames 1500 --card <private-card> --jnext-home <isolated-home>.
-Prior synthetic CPU route remains rejected; no-blitter means ordinary DMA. Core3.03 DDMA
-is untested. NR64=0, NL311; retain shadow through prep IRQs, tail copy at150, publish160,
-restore MMU6/speed/IFF before247. Guarded clone entry is below210 or from249; component
-probe still uses fixed170. No accepted IRQ occurred in measured clone/publication intervals.
+and extract privately. Generated NEX/JNS/captured RAM/raw logs remain in /workspace/work.
+Reference scripts reconstruct cached fixtures only when absent; README gives commands.
 
 ## Inputs
 The attached TAP is a tape, not a snapshot. The build start state was extracted from the
@@ -171,32 +161,73 @@ graphics and update collision maps; DDMA cannot generate those maps or unpack ZX
 Evaluate cached sprite uploads with ordinary DMA and eligible rectangle work with gated DDMA,
 using the shared policies (including no-blitter and CPU fallback), during integration; ordinary DMA is the measured no-blitter fallback.
 
-Dynamic continuation (component + early integrated diagnostic, 2026-11-10):
-- Real source pixels generate23 sprites at captured native IRQ state3620 and105 at the
-  previously measured peak29405. Per-bit host oracle matches every active packed pattern
-  and attribute; default/no-blitter publish in5.084/5.100ms with no row deadline failures.
-  Preparation includes IRQs:47.687/71.758ms. No105-scene integrated pace claim.
-- Two ordinary-DMA zero fills replace blank-cell CPU writes;23-state prep improved from
-  66.915 to47.687ms. The guarded whole-hook clone entry removes the fixed170 wait:
-  100-update penalty9.80% ->0.82%, worst20-update window1.72%. Both original/diagnostic
-  15.83updates/s,49.83IRQ/s, longest IRQ gap40.5ms; no gameplay state lockstep.
-- Runtime negatives: corrupt LUT813/5392 packed bytes; omit foreground clear328/1887
-  ULA bytes; omit tail or restore source holes wholesale each loses one forced sentinel.
-  Expected source-hole state includes IRQs through the publication wait.
-- Integrated100 returns per mode:12 copier-output register fields exact; SP/MMU6/IFF
-  restored;34048 RAM bytes identical from tail to return;0 accepted IRQ in measured
-  clone/publication intervals. Broken IY restore caught100 times. Max observed hook64.42ms,
-  publication interval101.31ms; no dropped copier return in this sample. Private SP minimum
-  3CE4 on positive runs, not an instruction-level interrupt-headroom proof.
-- The real copier's M1 span repairs return R.24 isolated bridge cases (both captured
-  states, six R seeds with bit7, positive and wrong-R controls) compare all caller registers
-  exactly, IRQ excluded. BEDB/BF36 supplied-R/consumer proof remains open. The integration RAM check
-  excludes C000..DFFF and does not establish original-vs-hook IRQ effects before the tail.
-- Shared converter/compact tail boots the diagnostic; MD5 a300a51515aa39534e3047ef18e16db9.
-  Text hooks, source paper handling, entry-IFF0 support, full banked RAM/stack/IRQ proof,
-  worst-scene integrated pace, colour/recolour and final engine remain open. No delivery claim.
-Evidence: specnext/reference/r_type/intake/{publication_dynamic-timing,publication_peak-timing,
-integrated-check,register-bridge,integrated-pace,integrated-summary}.json and README recipes.
+Earlier dynamic-sprite and bridge experiments remain in reference intake README/results:
+23/105 sprites,47.687/71.758ms preparation including IRQs,5.084/5.100ms publication;
+four actual runtime corruption controls caught. Early100-return/34048-byte and24
+isolated-R results are superseded by the complete bank/IRQ checks below. The historical
+0.82% pace result used the quiet fixture; peak-scene results determine acceptance.
+
+### Integrated native-tile continuation (2026-11-10)
+- `publication_tilemap.asm`: 40x32 hardware text map,511 foreground8-byte glyphs,
+  map/definitions7168 bytes via ordinary DMA. Observed105 occupied16x16 blocks imply
+  at most420 occupied8x8 cells. Standard4bpp tile definitions were too small at the
+  measured274 binary patterns (263 after flip normalisation). No hardware claim.
+- `tilemap_bank_check.py`:80 bank/edge/R cases; full paging-port census confirms all
+  bank7 reads use8F21. Original assets move to physical bank24, MMU0 aliases48/49.
+- `irq_equivalence.py`:218 supplied-R reads across14 native IRQ states,14 wrong-R
+  controls caught. Wrapper retains selected NextReg, MMU0/clock; body runs native.
+- `copier_equivalence.py`: all caller registers/R, eight logical game banks and
+  clean ULA/pixels exact in23/105-sprite states.18 dead stack bytes converge before
+  any read through the real caller and first normal IRQ. `interrupt_boundaries.py`:
+  113543 injections,841 PCs; wrong-MMU negative caught, private SP minimum3CD6.
+- `text_check.py`:80 identity/ABI/R cases; `tilemap_geometry.py`: empty/edge/all-ink,
+  511-glyph capacity and512 overflow, broken actual bound caught. `tilemap_preview.py`:
+  all49152 paper RGB pixels match independently; one runtime glyph-bit error caught.
+- `integrated_check.py --asm publication_tilemap.asm`:100returns in each mode, all
+  checked registers and42240 RAM bytes exact;100 wrong-IY negatives. Peak pace1.32%
+  over100updates,2.27% worst20 window, state equality each update,50Hz IRQs both.
+- `pause_check.py` checks actual converter CALL bytes,12 ABI/R/ULA cases; holding
+  pause must save/fold only once. `pause_jnext.py`:261 pause calls, one resume,
+  added layer off/on and DI native continuation correct. Future source may already
+  describe the next frame, so pause folds the last published glyphs/attributes.
+- Owner approved one independent reviewer after two pace failures. Review found the
+  builder's pause JP/CALL mismatch (fixed) and rejected broad producer credit:
+  new overhead was multiplied as original work. Retained trial7.83% slow,13.37%
+  worst20. Compact review and results are in reference intake/continuation/.
+- `cell_check.py`:160 cell cases, all four legal continuations, force ink, R rollover;
+  exact descriptor/source/flip/ink/owner/level, all caller registers/R/live banks.
+  Credit equals measured original minus complete hook CPU, including its own cost;
+  fractional scanline credit is retained across updates.64 whole-plot comparisons
+  pass including DI fallback. Current prototype latches clock once per plot.
+- Hardware alternatives: ordinary DMA already moves bulk state. DDMA stays gated
+  to3.03 and untested on JNext's older core. Layer2 can replace whole painted cells;
+  scrolling cannot replace the game's ownership/collision producers, and Copper
+  scheduling does not remove colour-expansion work. Painted-route cost is still open.
+
+### Live colour-path continuation (2026-11-11)
+- The one approved reviewer also checked the colour bottleneck. Static all-painted
+  Layer2 first-frame oracle:7369 painted pixels, all49152 RGB pixels exact, one
+  corrupted runtime pixel caught. Whole-hook pace21.46%, unrolled17.17%, bounded
+  debt polling11.81%: rejected as the current full-colour implementation.
+- Static preexpanded4bpp comparison includes111-pattern publication. Per-block debt
+  polling fixes missed timing-accounting wraps:15.56% ->1.52% over100 peak updates,
+  all state samples/FE writes equal,50Hz IRQs. It is a cost trial, not live painting.
+- Bulk ULA publication is being evaluated: the retained full ISR footprint writes
+  no HUD pixels/attributes, so unchanged HUD bytes can accompany the whole8192-byte
+  shadow in one DMA. Both publication modes100returns/42240 RAM bytes pass; measured
+  IRQ-free intervals remain bounded. Hardware proof remains open.
+- The source-only colour corpus captured385512 plots over90102 frames, no desync.
+  Filtering yields8711 cell variants,1288 plots and1825 whole-figure views. Join
+  parts only with an actual9-byte object and owner; shared low owner flags alone
+  merge independent shots incorrectly. Individual other plots remain whole figures.
+- Original bank1 unpacker reconstruction, with its persistent state across levels,
+  reproduces all9789 captured raw cell variants at their actual source addresses
+  from the supplied snapshot. No captured art needs embedding in engine code.
+- Live guarded hash lookup finds17573/19017 foreground lookups in the peak sample
+  but15.26% pace fails. A timer-IRQ checkpoint trial did not help (15.42%) and is
+  disabled. Direct dispatch also failed15.26%; cached producer IDs failed10.75%;
+  every current level/source/ink key has one bitmap in the recording. Native fallback
+  for unknown/changed art remains necessary. Engine/final verify pending.
 
 ## Checks
 - Continuation: dynamic component/negative controls, integrated100-return checks and isolated
@@ -224,15 +255,17 @@ checks belong to the eventual sprite build; no hardware result is claimed.
 - detect.buffer-layout-producer: helped: separated final copier, nonlinear source cells and non-pixel holes.
 
 ## Lessons
-- [local: clone entry phase] Observed: fixed170 entry waiting adds9.80% integrated pace cost; guarding clone below210/from249 yields0.82% over100 updates. Worst-scene integrated pace remains open.
+- [local: completion review] Static4bpp publication meets pace, live identity does not. Resolve at plot/level granularity only after proving source lifetime; stop backend proliferation. Detailed alternatives and stop rule are in the reference completion review.
+- [local: review of encoded pause sites] A test must inspect converter output: separately emitting the right CALL masked the builder's wrong JP. Actual-key testing also found repeated pause calls; save/fold once per pause.
+- [local: timing credit includes its cost] Broad timer windows counted wrapper work as original producer time and regressed pace. Cell credit is checked against complete original/hook CPU costs; retain fractional units and remeasure natural play.
+- [local: hardware text tile route] Native1bpp tiles remove ZX-to4bpp expansion while preserving exact visible colours; per-pixel painting still needs a separately measured override path.
+- [local: clone entry phase] Fixed170 waiting added9.80%; guard below210/from249. Current peak pace is recorded above.
 - [local: empty pattern quadrants] Demonstrated: ordinary-DMA zero fill avoids per-cell blank writes; live23-sprite preparation47.687ms including native IRQs, down from66.915ms.105-sprite component also passes.
 - [local: source-hole oracle] Demonstrated: post-IRQ sentinel expectations must count IRQs through the wait to the tail transition; broad restoration loses the sentinel and the negative fails.
 - [doc docs/CHECKS.md §Setup] Observed in JNext1.2.0: execute-triggered JNS requests save at a frame boundary. Exact hook ABI/RAM tests use execute-time logs/dump_mem instead.
 - [tool nexclash.isrinfo] Expose data-read/write address sets in the API, retaining text output;
   this distinguishes safe pixel scratch from ISR-mutated attributes and shadow-slot variables.
-- [local: publication timing] A native beeper IRQ breaks an otherwise passing CPU row schedule.
-  Move the actual copier before publication; batch sprite attrs via ordinary DMA and copy all
-  shadowed non-display state before the IRQ-free visible upload. Whole-hook pace remains unproven.
+- [local: publication timing] Native beeper IRQs break CPU row schedules; stage copier/ULA and non-display state before IRQ-free DMA publication.
 - [tool nexclash.survey] Observed: a CALL as a routine's first instruction was never tracked;
   R-Type 8979 -> 8842 exposed the false coverage gap. Removed the early return and added a golden check.
 - [local: tile plotters] Observed: screen-writer ranking identifies the refresh, not the figure
@@ -249,6 +282,8 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   in specnext/reference/r_type/intake; none added as an untested shared toolkit probe.
 
 ## Stage log
+- 2026-11-11 Checkpoint/reassessment: cached-ID bounded test fails10.75%;320 producer and15 signed-budget cases pass. Existing knowledge remains main dace0cc; refresh deferred while checkpointing dirty experimental work. No new intake scans or renderer variants.
+- 2026-11-10 Stage1 continued: one owner-approved independent reviewer; pause CALL/held-key bugs fixed, native text-tile relocation/IRQ/RGB/geometry/integrated proofs and peak pace measured. Small successful-cell producer trial adds exact per-pixel provenance/CPU credit. Painted Layer2 route and final engine remain active work; no completed intake scans repeated.
 - 2026-11-10 Stage1 continued (~30min, ~100 tool calls,0 user rounds): refreshed main dace0cc;
   live23/105-pattern DMA probes and controls pass; early integrated100-return checks and
   isolated R bridge pass;100-update pace0.82%. In-IRQ R, complete RAM/stack proof and
