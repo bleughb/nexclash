@@ -2,7 +2,7 @@
 
 ## Next session
 Stage: 1 (feasibility), design approved; continue implementation without a new design round.
-Branch: add-r-type in both repos. Started at nexclash0fba3b9; main refreshed through dace0cc.
+Branch: add-r-type in both repos; main f92662e, no incoming changes.
 Inputs: ../specnext/reference/r_type/Rtype.{z80,rzx,tap}. Do not repeat completed intake,
 caller/capacity or full ISR/access scans. No engine/profile/registry/record/sheets yet.
 Draft PRs: https://github.com/bleughb/nexclash/pull/235 and
@@ -13,12 +13,9 @@ Native1bpp text-tile baseline: peak1.32% (worst20 2.27%); scoped RGB/RAM/R/IRQ/p
 proofs below. ULA scenery/HUD/text; bank7 art relocates to24. No live painted route,
 hardware-ready build or full-recording verification.
 
-Checkpoint review (2026-11-11): see reference intake/continuation/completion-review.md.
-Cached producer-resolved texture IDs pass320 ABI/R/RAM/CPU-credit cases but fail the
-bounded100-update peak test:10.75% slower, worst20 window18.87%, state equal and50Hz
-IRQs. FE-write rates differ; no sound equivalence claim. Signed-budget edges pass15
-cases including negative fractions and the shared debt cap. Inline optimization is
-unfinished, with placeholder costs; do not use publication_inlined.asm for delivery.
+Completion directions: reference intake/continuation/completion-review.md.
+Cached IDs pass320 ABI/R/RAM/credit and15 signed cases; old peak fails10.75%.
+publication_inlined.asm is unfinished WIP with placeholder costs; never deliver it.
 
 Latest: reference intake/continuation/live-budget-review.md and live-budget.json.
 Fresh peak9cfed755/no-input sample: original10.516s, static10.652s (+1.29%),
@@ -28,11 +25,13 @@ IRQ wait/star counters differ. Known SMC writes match; no watched hook/art write
 Legacy clone/clear/copier/paper costs14.176ms; identity checks/bridge9.961ms.
 Actual pixel scroll0.984ms supersedes nominal0.61ms estimate. No new renderer.
 
-Next: consumer and ORIGINAL-TIME-CREDIT review of the whole legacy display pipeline.
-Separate visual output from ownership/collision/SMC effects; price retained logic,
-new background work, fallback and changed IRQ/waits together before implementation.
-Gross14.176ms is not spare time. Keep R/cadence and live8EDA/8EB1/8F0B-C modes;
-never freeze a modified helper. No more per-cell tuning/new backends by default.
+Latest consumer proof: reference intake/continuation/background-consumer-review.md.
+7E00 owner/8100 dirty maps are IRQ-read; independent BG stream atC4BC identified.
+24 native initializations match across eight levels. Actual flip table01->00
+exposes painted compiler mismatch; RGB still unproven. Initial BG uses live plotters
+with SMC destination/clip modes. Next price retained semantics/native-time/R credit,
+BG progression and fallback before one bounded combined experiment. Gross14.176ms
+is not spare time; no further per-cell tuning/new backends by default.
 Require LIVE painted peak<=2%, ABI/R/IRQ/RGB, stale-source/ownership and pause/menu/DI
 before engine, sheets/recolour, quick checks and final full verify. No new intake scans.
 
@@ -248,9 +247,9 @@ checks belong to the eventual sprite build; no hardware result is claimed.
 
 ## Lessons
 - [local: total budget first] Live costs14.176ms legacy display and9.961ms identity/bridge. Consumer/native-credit budget precedes replacement; gross CPU/waits are not free. See live-budget-review.md.
-- [local: native code modes]8EDA collision reporting,8EB1 Force attribute and8F0B-C clipping self-modify. Native sequences match in fresh100-update watch; no hook/art writes. A frozen relocated helper would miss native writes; preserve live modes and mode-specific timing/R.
+- [local: native code modes] Initial BG changes plot destination8EBF, RET condition8F10 and four clip operands; native flip table01->00 exposes compiler mismatch. Preserve live modes/table and original-time/R credit; see background-consumer-review.md.
 - [local: packed source lifetime] Uniqueness is not immutability. Validate packed bytes/attributes/skip markers per invocation; unknown art/generation needs native fallback. Dispatch/invalidation remain open.
-- [local: book comparison] Ingest separates background tiles/sprite occupancy;96-byte SCROLL6 matches8914. Consumer-mapping lead, no new intake or lifetime proof. See book-ingest-review.md.
+- [local: book comparison]96-byte SCROLL6 matches8914. Binary follow-up identifies owner/dirty maps with IRQ readers and independent BG stream;24 native initializations pass. Ingest labels alone were insufficient.
 - [local: review of encoded pause sites] A test must inspect converter output: separately emitting the right CALL masked the builder's wrong JP. Actual-key testing also found repeated pause calls; save/fold once per pause.
 - [local: timing credit includes its cost] Broad timer windows counted wrapper work as original producer time and regressed pace. Cell credit is checked against complete original/hook CPU costs; retain fractional units and remeasure natural play.
 - [local: hardware text tile route] Native1bpp tiles remove ZX-to4bpp expansion while preserving exact visible colours; per-pixel painting still needs a separately measured override path.
@@ -277,6 +276,7 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   in specnext/reference/r_type/intake; none added as an untested shared toolkit probe.
 
 ## Stage log
+- 2026-11-11 Consumers: BG interface/SMC/native credit traced;24 initialization and8 flip cases expose compiler mismatch. No renderer or intake scans; price retained semantics next.
 - 2026-11-11 Book (~5min/~8 calls/0 rounds): SCROLL6 matches8914; no PDF/scans/build.
 - 2026-11-11 Stage1 live ledger (~3h/~50 calls/1 steering round): restored private SD/JNext; no new renderer. Exclusive100-update ledger, unchanged-clock controls and targeted native-SMC/art/hook watch pass. Fresh live pace fails10.925%; source/consumer and native-credit cut remains next. No intake scans or engine promotion.
 - 2026-11-11 Stage1 (~45min/~100 calls/2 steering rounds): refreshed f92662e; read full decode/normalization/catalogue for provenance. Guard passes; whole-update ledger/Inferno correction saved in reference review. No intake scans/emulator/engine.
