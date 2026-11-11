@@ -239,7 +239,7 @@ level transitions, death/restart and display
 checks belong to the eventual sprite build; no hardware result is claimed.
 
 ## Technique use
-- optimise.pattern-cache: no help: temporal protected union exceeds128; source follow-up uses its immutability/invalidation warning, not an unchecked address cache; staged single-bank protocol retained.
+- optimise.pattern-cache: no help: protected union exceeds128; immutability/invalidation warning reused, staged single-bank protocol retained.
 - patch.display-atomic-switch: helped: checks require complete old/new pictures; single-bank publication remains a measured alternative outside the play area.
 - patch.preserve-r: used: actual copier M1 span repairs return R; isolated assembled bridge passes, IRQ consumers remain a separate proof.
 - detect.pacing-structure: used: preliminary census locates the three-interrupt wait and beeper writers.
@@ -247,9 +247,10 @@ checks belong to the eventual sprite build; no hardware result is claimed.
 - detect.buffer-layout-producer: helped: separated final copier, nonlinear source cells and non-pixel holes.
 
 ## Lessons
-- [local: total budget first] Same-trajectory ledger now measures14.176ms legacy display pipeline and9.961ms identity/bridge. Price consumers and native-time credit before replacing anything; neither gross CPU nor raster wait is free budget. See reference live-budget-review.md.
+- [local: total budget first] Live costs14.176ms legacy display and9.961ms identity/bridge. Consumer/native-credit budget precedes replacement; gross CPU/waits are not free. See live-budget-review.md.
 - [local: native code modes]8EDA collision reporting,8EB1 Force attribute and8F0B-C clipping self-modify. Native sequences match in fresh100-update watch; no hook/art writes. A frozen relocated helper would miss native writes; preserve live modes and mode-specific timing/R.
-- [local: packed source lifetime] Recorded uniqueness does not authorize level-long IDs. Compare complete packed artwork per invocation, including attributes/skip markers; unknown art and invalid generation fall back to native pixels. Guard component passes; runtime dispatch/invalidation is unfinished.
+- [local: packed source lifetime] Uniqueness is not immutability. Validate packed bytes/attributes/skip markers per invocation; unknown art/generation needs native fallback. Dispatch/invalidation remain open.
+- [local: book comparison] Ingest separates background tiles/sprite occupancy;96-byte SCROLL6 matches8914. Consumer-mapping lead, no new intake or lifetime proof. See book-ingest-review.md.
 - [local: review of encoded pause sites] A test must inspect converter output: separately emitting the right CALL masked the builder's wrong JP. Actual-key testing also found repeated pause calls; save/fold once per pause.
 - [local: timing credit includes its cost] Broad timer windows counted wrapper work as original producer time and regressed pace. Cell credit is checked against complete original/hook CPU costs; retain fractional units and remeasure natural play.
 - [local: hardware text tile route] Native1bpp tiles remove ZX-to4bpp expansion while preserving exact visible colours; per-pixel painting still needs a separately measured override path.
@@ -276,6 +277,7 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   in specnext/reference/r_type/intake; none added as an untested shared toolkit probe.
 
 ## Stage log
+- 2026-11-11 Book (~5min/~8 calls/0 rounds): SCROLL6 matches8914; no PDF/scans/build.
 - 2026-11-11 Stage1 live ledger (~3h/~50 calls/1 steering round): restored private SD/JNext; no new renderer. Exclusive100-update ledger, unchanged-clock controls and targeted native-SMC/art/hook watch pass. Fresh live pace fails10.925%; source/consumer and native-credit cut remains next. No intake scans or engine promotion.
 - 2026-11-11 Stage1 (~45min/~100 calls/2 steering rounds): refreshed f92662e; read full decode/normalization/catalogue for provenance. Guard passes; whole-update ledger/Inferno correction saved in reference review. No intake scans/emulator/engine.
 - 2026-11-11 Checkpoint/reassessment: cached-ID bounded test fails10.75%;320 producer and15 signed-budget cases pass. Existing knowledge remains main dace0cc; refresh deferred while checkpointing dirty experimental work. No new intake scans or renderer variants.
