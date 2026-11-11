@@ -9,12 +9,9 @@ Draft PRs: https://github.com/bleughb/nexclash/pull/235 and
 https://github.com/bleughb/specnext/pull/93. Current sources/results are on these branches.
 Read CLAUDE.md, PLAYBOOK3d/6, the continuation below and the reference intake README.
 
-Native text-tile baseline passes peak pace1.32% (worst20 window2.27%), state equality
-and50Hz IRQs. It preserves native RGB with ULA scenery/HUD/text; bank7 assets relocate
-to bank24. Per-pixel colour remains unresolved. Component proofs cover IRQ/R, copier
-RAM/stack,113543 IRQ boundaries, text/relocation/geometry,49152-pixel RGB, integrated
-publication and repeated pause/resume. See the continuation for scoped evidence.
-This is a diagnostic, not a hardware-ready build or full-recording verification.
+Native1bpp text-tile baseline: peak1.32% (worst20 2.27%); scoped RGB/RAM/R/IRQ/pause
+proofs below. ULA scenery/HUD/text; bank7 art relocates to24. No live painted route,
+hardware-ready build or full-recording verification.
 
 Checkpoint review (2026-11-11): see reference intake/continuation/completion-review.md.
 Cached producer-resolved texture IDs pass320 ABI/R/RAM/CPU-credit cases but fail the
@@ -23,18 +20,19 @@ IRQs. FE-write rates differ; no sound equivalence claim. Signed-budget edges pas
 cases including negative fractions and the shared debt cap. Inline optimization is
 unfinished, with placeholder costs; do not use publication_inlined.asm for delivery.
 
-Read reference intake/continuation/source-identity-review.md and total-budget.json.
-All1288 packed plots reconstruct; unchecked level IDs remain unsafe. Plot-only identity
-estimates2.57ms/update saving versus9.22ms required. Combined remaining-native-work
-acceleration estimates13.51ms after guard costs. Its4.29ms residual is provisional:
-different trajectories and missing whole-hook costs prevent an implementation gate.
-Guard component passes352 images/1056 mutations; AF/R, dispatch and renderer remain open.
-Pixel scroll is nominally0.61ms CPU in the current copier; background savings need a total budget.
+Latest: reference intake/continuation/live-budget-review.md and live-budget.json.
+Fresh peak9cfed755/no-input sample: original10.516s, static10.652s (+1.29%),
+cached IDs11.665s (+10.925%, FAIL); needs9.386ms/update savings. Different fixture
+from old10.75% test. Markers preserve101 clocks/380 bytes;378 match across routes,
+IRQ wait/star counters differ. Known SMC writes match; no watched hook/art writes.
+Legacy clone/clear/copier/paper costs14.176ms; identity checks/bridge9.961ms.
+Actual pixel scroll0.984ms supersedes nominal0.61ms estimate. No new renderer.
 
-Next: complete the TOTAL cost/consumer ledger before more implementation (Inferno).
-Price retained/replaced original work, background shifts, identity/fallback, assembly,
-upload, IRQ/credit and publication/waits together. Pixel writes/copier are not sacred;
-collision/ownership RAM, R and observable behaviour are. No tuning/new backends yet.
+Next: consumer and ORIGINAL-TIME-CREDIT review of the whole legacy display pipeline.
+Separate visual output from ownership/collision/SMC effects; price retained logic,
+new background work, fallback and changed IRQ/waits together before implementation.
+Gross14.176ms is not spare time. Keep R/cadence and live8EDA/8EB1/8F0B-C modes;
+never freeze a modified helper. No more per-cell tuning/new backends by default.
 Require LIVE painted peak<=2%, ABI/R/IRQ/RGB, stale-source/ownership and pause/menu/DI
 before engine, sheets/recolour, quick checks and final full verify. No new intake scans.
 
@@ -43,8 +41,7 @@ Setup: /workspace/work/{nexclash,specnext}; /workspace/work/venv101/bin/python
 /workspace/work/jnext-bin/root/usr/bin/jnext; isolated home /workspace/work/r_type_jnext_home.
 Private card /workspace/scratch/cspect-next-2gb.img mode444, outside BOTH Git repos;
 every emulator run uses --sdcard-readonly. Never commit it or JNS card metadata.
-Replacement workspace: repos/Python restored; card/JNext install NOT transferred.
-Emulator tests need them; source review does not. Generated files stay in work.
+SD and JNext1.2.0 restored here. Generated files and isolated home stay in work.
 Reference scripts reconstruct cached fixtures only when absent; README gives commands.
 
 ## Inputs
@@ -230,15 +227,9 @@ checks below supersede early scopes. Quiet0.82% pace does not replace peak accep
   for unknown/changed art remains necessary. Engine/final verify pending.
 
 ## Checks
-- Source follow-up:1288 packed plots,65030 host mutations,16 native CPU/M1 cases and352-image assembled guard PASS; no emulator/live-painted pace claim. Reference source-identity-review.md retains details.
-- Continuation: dynamic component/negative controls, integrated100-return checks and isolated
-  register/R bridge PASS;100-update pace0.82%. No shared runtime code changed; prior
-  canary/tools results below are retained, not rerun. Doccheck PASS (148 docs).
-- `selftest.py --canary`: PASS, both Chuckie Egg rebuild checksums unchanged.
-- `selftest.py --tools`: new entry-CALL regression PASS; existing Chuckie survey golden PASS;
-  overall FAIL on the unchanged Inferno IFF audit (asm/inferno_hooks.asm lines 5722, 5726, 7563).
-  Neither that source nor hooklib.py differs from the session base. No other game was modified.
-- `tools/doccheck.py`: PASS (147 docs; existing warning about a split module name in another game's notes).
+- Live ledger/SMC:100 intervals each route; instrumentation/watch controls preserve101 clocks/380 bytes.378 match; two IRQ/star counters differ. Native SMC sequence matches, zero watched hook/art writes. No full RAM/RGB/sound proof; reference live-budget-review.md.
+- Source follow-up:1288 plots/65030 mutations/16 CPU-M1 cases/352-image guard PASS; source-identity-review.md retains scopes. Earlier dynamic/bridge0.82% was quiet-only and is superseded by later peak gates.
+- Earlier canary PASS; tools survey/golden PASS but unchanged Inferno IFF audit FAIL (asm/inferno_hooks.asm5722/5726/7563). No other game's code modified. Historical logs/results remain in reference intake.
 - Full recordings replayed by both caller censuses: 90,102 frames each, no desync.
 
 ## Hardware checklist
@@ -256,7 +247,8 @@ checks belong to the eventual sprite build; no hardware result is claimed.
 - detect.buffer-layout-producer: helped: separated final copier, nonlinear source cells and non-pixel holes.
 
 ## Lessons
-- [local: total budget first] Inferno lesson: question retained original work and price the whole route before optimizing. Plot-only identity cannot close9.22ms; combined4.29ms residual is provisional, not a gate. Complete same-trajectory cost/consumer ledger before more implementation; see reference source-identity-review.md.
+- [local: total budget first] Same-trajectory ledger now measures14.176ms legacy display pipeline and9.961ms identity/bridge. Price consumers and native-time credit before replacing anything; neither gross CPU nor raster wait is free budget. See reference live-budget-review.md.
+- [local: native code modes]8EDA collision reporting,8EB1 Force attribute and8F0B-C clipping self-modify. Native sequences match in fresh100-update watch; no hook/art writes. A frozen relocated helper would miss native writes; preserve live modes and mode-specific timing/R.
 - [local: packed source lifetime] Recorded uniqueness does not authorize level-long IDs. Compare complete packed artwork per invocation, including attributes/skip markers; unknown art and invalid generation fall back to native pixels. Guard component passes; runtime dispatch/invalidation is unfinished.
 - [local: review of encoded pause sites] A test must inspect converter output: separately emitting the right CALL masked the builder's wrong JP. Actual-key testing also found repeated pause calls; save/fold once per pause.
 - [local: timing credit includes its cost] Broad timer windows counted wrapper work as original producer time and regressed pace. Cell credit is checked against complete original/hook CPU costs; retain fractional units and remeasure natural play.
@@ -277,13 +269,14 @@ checks belong to the eventual sprite build; no hardware result is claimed.
 
 ## Friction
 - reuse: [none: existing survey, scan, preview and census tools provided the investigation paths]
-- retries: [local: boundary and guard oracles] Source-hole oracle includes the publication wait; return-R includes both M1 fetches of LD SP,(nn). New guard test uses writable RAM for its stack, not the ROM view; assembler DEVICE is explicit. Earlier survey entry-CALL regression remains fixed.
-- environment: [local: remote continuation] Cloned both published checkpoints; restored SkoolKit10.1/Pillow13.0.0. Private SD/JNext install absent; source review and bounded native replay proceed without emulator claims. Main refreshed through f92662e.
+- retries: [local: measurement boundaries] JNext can report an execute address again after IRQ; one-shot phase flags and nested-ledger negatives prevent double accounting. All101 clocks/380 bytes agree with uninstrumented controls. Earlier guard/stack and source-hole fixes retained in reference.
+- environment: [local: remote continuation] SkoolKit10.1/Pillow13.0.0, official JNext1.2.0 and new owner SD restored read-only outside Git. Old peak/profile absent; new9cfed755 recipe is explicit, not an old-result reproduction. Main f92662e.
 - hand-rolled: [none: disassembly used sna2skool; screen images used the existing preview renderer]
 - scratch: [local: per-game feasibility evidence] Game-specific experiments kept beside the inputs
   in specnext/reference/r_type/intake; none added as an untested shared toolkit probe.
 
 ## Stage log
+- 2026-11-11 Stage1 live ledger (~3h/~50 calls/1 steering round): restored private SD/JNext; no new renderer. Exclusive100-update ledger, unchanged-clock controls and targeted native-SMC/art/hook watch pass. Fresh live pace fails10.925%; source/consumer and native-credit cut remains next. No intake scans or engine promotion.
 - 2026-11-11 Stage1 (~45min/~100 calls/2 steering rounds): refreshed f92662e; read full decode/normalization/catalogue for provenance. Guard passes; whole-update ledger/Inferno correction saved in reference review. No intake scans/emulator/engine.
 - 2026-11-11 Checkpoint/reassessment: cached-ID bounded test fails10.75%;320 producer and15 signed-budget cases pass. Existing knowledge remains main dace0cc; refresh deferred while checkpointing dirty experimental work. No new intake scans or renderer variants.
 - 2026-11-10 Stage1 continued: approved reviewer; pause CALL/held-key fixed, native tile proofs/peak pace measured; successful-cell provenance/credit trial. Colour route/engine pending; no intake rerun.
