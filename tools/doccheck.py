@@ -97,9 +97,10 @@ def engine_contract():
     t = ast.parse(open(os.path.join(ROOT, 'nexclash', 'engines.py')).read())
     table = next(n.value for n in t.body if isinstance(n, ast.Assign) and getattr(n.targets[0], 'id', '') == 'ENGINES')
     out = collections.defaultdict(list)
+    defs = module_names()                                # once: it parses every module (was once per engine, 90 s)
     for e in table.elts:
         mod, det = e.elts[0].value, e.elts[1].value
-        names = module_names().get(mod, set())
+        names = defs.get(mod, set())
         miss = [x for x in (det,) + CONTRACT if x not in names]
         if miss:
             out['engine contract: REQUIRED name missing (docs/ENGINE_CONTRACT.md)'].append('nexclash/%s.py  %s' % (mod, ', '.join(miss)))
