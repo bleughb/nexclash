@@ -89,9 +89,27 @@ def all_records():
 
 # ------------------------------------------------------------------------------- dependencies
 
+_IMPORTS = {}               # path -> (nexclash modules, uses Pillow): each module parsed once per run, not once per record
+
+
 def _module_imports(path):
     """nexclash modules a module imports (relative, `from nexclash`, `import nexclash.x`, or the bare
     name when nexclash/ is on sys.path), including imports inside functions and __import__('x')."""
+    return _parsed(path)[0]
+
+
+def uses_pillow(modules):
+    """True when a module of this closure imports PIL: its outputs can depend on the Pillow installed."""
+    return any(_parsed(os.path.join(PKG, m + '.py'))[1] for m in modules)
+
+
+def _parsed(path):
+    if path not in _IMPORTS:
+        _IMPORTS[path] = _parse_imports(path)
+    return _IMPORTS[path]
+
+
+def _parse_imports(path):
     tree = ast.parse(open(path).read())
     names = set()
     for n in ast.walk(tree):
@@ -112,7 +130,7 @@ def _module_imports(path):
             for c in ast.walk(n.args[0]):
                 if isinstance(c, ast.Constant) and isinstance(c.value, str):
                     names.add(c.value)
-    return {x for x in names if os.path.exists(os.path.join(PKG, x + '.py'))}
+    return {x for x in names if os.path.exists(os.path.join(PKG, x + '.py'))}, 'PIL' in names
 
 
 def closure(modules):
@@ -129,10 +147,11 @@ def closure(modules):
 
 def deps(rec):
     """Repository-relative paths the game's build and verification read (sorted), plus the
-    pseudo-entry 'skoolkit' (its version)."""
-    files = set(ALWAYS) | {'nexclash/%s.py' % m for m in closure(rec['modules'])} | set(rec.get('data', [])) \
+    pseudo-entries 'skoolkit' (its version) and, for a build whose modules import PIL, 'pillow'."""
+    mods = closure(rec['modules'])
+    files = set(ALWAYS) | {'nexclash/%s.py' % m for m in mods} | set(rec.get('data', [])) \
         | set(rec.get('shared_data', []))
-    return sorted(files) + ['skoolkit']
+    return sorted(files) + ['skoolkit'] + (['pillow'] if uses_pillow(mods) else [])
 
 
 def own(rec):
@@ -141,19 +160,23 @@ def own(rec):
     return {'nexclash/%s.py' % m for m in rec.get('own_modules', [])} | set(rec.get('data', [])) | set(PSEUDO)
 
 
-def _skoolkit_version():
+def _version(package):
     try:
         from importlib.metadata import version
-        return version('skoolkit')
+        return version(package)
     except Exception:                       # noqa: BLE001
         return 'unknown'
+
+
+def _skoolkit_version():
+    return _version('skoolkit')
 
 
 def hashes(paths, root=ROOT):
     out = {}
     for p in paths:
-        if p == 'skoolkit':
-            out[p] = _skoolkit_version()
+        if p in VERSIONS:
+            out[p] = _version(p)
         else:
             f = os.path.join(root, p)
             out[p] = hashlib.sha256(open(f, 'rb').read()).hexdigest()[:16] if os.path.exists(f) else 'missing'
@@ -166,6 +189,10 @@ def hashes(paths, root=ROOT):
 # now (NEXCLASH_NEXT_ROM): a plan without one cannot judge a stamp made with one; a stamp made without one
 # ('sinclair') is due when one is supplied.
 PSEUDO = ('recipe', 'rom')
+# Installed packages a stamp names by version, shared like any shared file (rebuild; the representative re-verifies).
+# 'pillow' (2026-11-12) is absent from the stamps before it: taken as it is until the next stamp, like PSEUDO.
+VERSIONS = ('skoolkit', 'pillow')
+MIGRATING = PSEUDO + ('pillow',)
 # Fields that decide what a build makes and what its verification proves; prose (note, why, minutes) is left out.
 RECIPE_FIELDS = ('inputs', 'modules', 'own_modules', 'data', 'shared_data', 'rebuild', 'verify', 'outputs', 'repro',
                  'pin', 'rom_paths_known', 'rework', 'checks')
@@ -210,7 +237,7 @@ def changed(stamp, now, build=False):
     keys = set(stamp) | set(now)
 
     def skip(k):
-        return k in PSEUDO and (k not in stamp or (k == 'rom' and (build or now.get(k) in (None, SINCLAIR))))
+        return k in MIGRATING and (k not in stamp or (k == 'rom' and (build or now.get(k) in (None, SINCLAIR))))
     return sorted(k for k in keys if not skip(k) and stamp.get(k) != now.get(k))
 
 
@@ -403,6 +430,18 @@ def selfcheck():
     one('chuckie_egg', lambda r: os.environ.__setitem__('NEXCLASH_NEXT_ROM', os.path.join(ROOT, 'README.md')),
         'reverify', env_rom=rom)                                # another ROM supplied
     one('chuckie_egg', lambda r: os.environ.pop('NEXCLASH_NEXT_ROM'), 'skip', env_rom=rom)   # none supplied now
+    # Pillow's version: named by the stamps of the builds that import PIL, and by no other
+    pil = next((r for r in recs if 'pillow' in deps(r)), None)
+    if pil is None or all('pillow' in deps(r) for r in recs):
+        bad.append('pillow: want some records with the entry and some without (got %s)' % ('none' if pil is None else 'all'))
+    else:
+        now = state(pil)
+        if changed(dict(now, pillow='0'), now) != ['pillow']:
+            bad.append('pillow: another version in the stamp is not reported')
+        if changed({k: v for k, v in now.items() if k != 'pillow'}, now):
+            bad.append('pillow: a stamp from before the entry is reported as changed')
+        if 'pillow' in own(pil):
+            bad.append('pillow: counted as the game\'s own file (it is shared: rebuild, representative re-verifies)')
     return bad
 
 

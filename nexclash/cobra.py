@@ -873,8 +873,6 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None, clo
             c['bullet'] += 1
             st['bul'] = (R[6] << 8 | R[7], R[4], R[5], Rp, ov)
             del writes[:]
-        elif pc == 40717 - 0 and False:
-            pass
         elif pc == 40736:
             if st['bul'] is None:
                 return

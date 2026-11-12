@@ -258,10 +258,6 @@ def main(argv=None):
         print('->', a.out)
 
 
-import collections
-import json
-import os
-
 ROM_ORG = 0x386E
 ALT_PAGE = 24
 TAIL_ADDR = 0x5E40

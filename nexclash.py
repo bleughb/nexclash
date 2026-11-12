@@ -457,10 +457,14 @@ def _learn(fp, name, low, source):
     except (OSError, ValueError):
         db = {}
     e = db.setdefault(fp, {'game': name})
-    if low < e.get('stack_low_water', 65536):
-        e['stack_low_water'] = low
-        e['source'] = source
-    json.dump(db, open(EVIDENCE, 'w'), indent=1)
+    if low >= e.get('stack_low_water', 65536):
+        return                                  # nothing learned: the tracked file stays as it is
+    e['stack_low_water'] = low
+    e['source'] = source
+    tmp = EVIDENCE + '.tmp'
+    with open(tmp, 'w') as f:
+        json.dump(db, f, indent=1)
+    os.replace(tmp, EVIDENCE)                   # whole file or none: an interrupted run leaves the old one
 
 
 def _combine(ans):

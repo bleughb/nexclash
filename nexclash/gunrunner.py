@@ -65,21 +65,6 @@ def build(source, destination):
     return p
 
 
-def verify(patch, rzx_path, stop=None, collect=0, progress=None):
-    """No hook: what can differ is the ROM and the tail. nextboot.rom_paths replays the original and compares every ROM
-    byte it runs or reads, and the tail bytes it reads, against the .nex (work/replay.py); here the game's bytes."""
-    from collections import Counter
-    c = Counter(hooks=0)
-    if patch.sites:
-        c['a site in a no-hook build!'] += 1
-    return (c, {}, []) if collect else (c, {})
-
-
-def unit_tests(patch, states, neg=True):
-    from collections import Counter
-    return Counter()
-
-
 # ---- Enhanced: the set's colours on a double-buffered Layer 2 (asm/gunrunner_hooks.asm) ----
 COLOUR_PAINTER = 'Jao Paulo'
 CANVAS_LO = 0x6800              # the canvas: RAM address A's colours at page CBASE + A // 1024, offset (A % 1024) * 8
@@ -118,14 +103,16 @@ def mono8(v):
 
 def palette_rgb(path=None):
     """The emulator's table: the palette every .256 is painted in. Never in this repo: from `path` (a JSON list of 256 RGB
-    ints, staged beside the snapshot) or else read from Jon's local emu256 copy."""
+    ints, staged beside the snapshot) or else read from an emu256 copy named by $EMU256."""
     import re
     import os
     if path is not None:
         out = json.loads(Path(path).read_text())
         assert len(out) == 256
         return out
-    t = open(os.environ.get('EMU256', '/home/jon/Downloads/emu256-extract/emu256') + '/datos.js').read()
+    if not os.environ.get('EMU256'):
+        raise ValueError('no palette: pass its JSON (%s beside the snapshot) or set $EMU256 to an emu256 folder' % PALETTE_NAME)
+    t = open(os.path.join(os.environ['EMU256'], 'datos.js')).read()
     m = re.search(r'PALETTE_RGB\s*=\s*\[([^\]]*)\]', t)
     out = [int(x, 0) for x in m.group(1).replace('\n', ' ').split(',') if x.strip()]
     assert len(out) == 256

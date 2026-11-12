@@ -248,5 +248,72 @@ runpy.run_path(entry, run_name='__main__')
             self.assertEqual((worktree/'nexclash/shared.py').read_bytes(), b'contributor')
 
 
+    # ---- review fixes (2026-11-12): data a build would lose, files a run should not touch ----
+
+    @staticmethod
+    def _snapshot(folder):
+        """A 48K .z80 (version 1, uncompressed): PC 0x8000, SP 0xFF00, empty RAM. No game data."""
+        head = bytearray(30)
+        head[6:8] = (0x8000).to_bytes(2, 'little'); head[8:10] = (0xFF00).to_bytes(2, 'little')
+        path = Path(folder)/'empty.z80'
+        path.write_bytes(bytes(head) + bytes(49152))
+        return path
+
+    @staticmethod
+    def _patch(**changes):
+        base = dict(stub_extra=b'', hook_page_data=b'', extra_banks={}, setup_call=None, uses_printer_buffer=False,
+                    apply=lambda snap: None)
+        return types.SimpleNamespace(**dict(base, **changes))
+
+    def test_convert_refuses_patch_data_it_would_lose(self):
+        from nexclash import z80tonex as zt
+        with tempfile.TemporaryDirectory() as d:
+            z80, out = self._snapshot(d), Path(d)/'out.nex'
+            zt.convert(str(z80), str(out), quiet=True, patch=self._patch(
+                stub_extra=bytes(0x1000), hook_page_data=bytes(0x2000), extra_banks={11: bytes(16384), 1: b'x'}))
+            self.assertTrue(out.is_file())
+            zt.convert(str(z80), str(out), quiet=True, patch=self._patch(stub_extra=bytes(0x3000)))   # no hook page: fits
+            for lost in (dict(stub_extra=bytes(0x1001), hook_page_data=b'x'),      # the hook page would overwrite it
+                         dict(stub_extra=bytes(0x3001)),                           # past the end of the stub bank
+                         dict(hook_page_data=bytes(0x2001)),
+                         dict(extra_banks={zt.STUB_BANK: b'x'}),                   # the stub is written over it
+                         dict(extra_banks={5: b'x'}),                              # the game's own bank
+                         dict(extra_banks={11: bytes(16385)})):
+                with self.subTest(lost=sorted(lost)), self.assertRaises(ValueError):
+                    zt.convert(str(z80), str(out), quiet=True, patch=self._patch(**lost))
+
+    def test_evidence_file_is_rewritten_only_when_something_is_learned(self):
+        entry = load('nexclash.py')
+        with tempfile.TemporaryDirectory() as d:
+            evidence = Path(d)/'evidence.json'
+            text = '{"fp": {"game": "G", "stack_low_water": 40000, "source": "first"}}'   # not json.dump's layout
+            evidence.write_text(text)
+            with patch.object(entry, 'EVIDENCE', str(evidence)):
+                entry._learn('fp', 'G', 40000, 'same')
+                entry._learn('fp', 'G', 41000, 'higher')
+                self.assertEqual(evidence.read_text(), text)                    # nothing learned: not a byte changed
+                entry._learn('fp', 'G', 39000, 'lower')
+                self.assertEqual(json.loads(evidence.read_text())['fp'], {'game': 'G', 'stack_low_water': 39000, 'source': 'lower'})
+                entry._learn('new', 'H', 50000, 'first')
+                self.assertEqual(json.loads(evidence.read_text())['new']['stack_low_water'], 50000)
+            self.assertEqual(sorted(x.name for x in Path(d).iterdir()), ['evidence.json'])   # no temporary file left
+
+    def test_rw_simulator_refuses_a_skoolkit_it_cannot_patch(self):
+        from nexclash import dizzy6
+        import skoolkit.simulator as sm
+        self.assertTrue(dizzy6._rw_simulator_())                                # this SkoolKit: patched
+        with tempfile.TemporaryDirectory() as d:
+            other = Path(d)/'simulator.py'
+            other.write_text(Path(sm.__file__).read_text().replace('> 0x3FFF', '> 16383'))
+            with patch.object(sm, '__file__', str(other)), self.assertRaises(RuntimeError):
+                dizzy6._rw_simulator_()
+
+    def test_gunrunner_palette_has_no_machine_default(self):
+        from nexclash import gunrunner
+        with patch.dict(os.environ), self.assertRaises(ValueError):
+            os.environ.pop('EMU256', None)
+            gunrunner.palette_rgb()
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

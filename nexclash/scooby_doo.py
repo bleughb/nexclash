@@ -65,21 +65,6 @@ def build(source, destination):
     return p
 
 
-def verify(patch, rzx_path, stop=None, collect=0, progress=None):
-    """No hook: what can differ is the ROM and the tail. nextboot.rom_paths replays the original and compares every ROM
-    byte it runs or reads, and the tail bytes it reads, against the .nex (work/replay.py); here the game's bytes."""
-    from collections import Counter
-    c = Counter(hooks=0)
-    if patch.sites:
-        c['a site in a no-hook build!'] += 1
-    return (c, {}, []) if collect else (c, {})
-
-
-def unit_tests(patch, states, neg=True):
-    from collections import Counter
-    return Counter()
-
-
 # ---- Enhanced: the set's colours on a double-buffered Layer 2 (asm/scooby_doo_hooks.asm) ----
 COLOUR_PAINTER = 'Armando Quaranta'
 CANVAS_LO = 0x9400              # the canvas: RAM address A's colours at page CBASE + A // 1024, offset (A % 1024) * 8
