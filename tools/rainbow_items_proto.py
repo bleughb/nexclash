@@ -1,5 +1,5 @@
 # prototype: shadow map of item cells from draw hooks -> predicted screen positions -> check pixels
-import sys, collections; sys.path.insert(0,'/home/claude/opt-toolkit')
+import sys, collections
 import skoolkit.rzxplay as rzxplay
 from skoolkit.simulator import Simulator
 shadow={}; st=collections.Counter(); sample=[]

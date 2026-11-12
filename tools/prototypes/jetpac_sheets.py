@@ -1,7 +1,7 @@
 """Phase A: Jetpac colour sheets from the game's own graphic tables (no recording reaches them all).
 Graphic format (29223/29247): [y offset, W bytes, H lines, W*H bytes row-major, bit 7 = left]."""
 import sys, json, os
-sys.path.insert(0, '/home/claude/nexclash')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from nexclash import simrun, coloursheet as cs
 from skoolkit.snapshot import get_snapshot
 

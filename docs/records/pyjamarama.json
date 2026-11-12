@@ -466,7 +466,7 @@
    "check": "v1.1 external proof suite",
    "status": "pass",
    "scope": "v1.1 engine baseline: both sets, recorded-path equivalence. Owner revision 1: 56 colour pixels, identical code and geometry, two targeted replays and all-graphic tests. No ending or hardware claim.",
-   "evidence": "/home/jon/Dev_Projects/NextTang-evidence/2026-11-02-nexclash/pilot/runs/pyjamarama/enhanced-20261105/HANDOFF-V1.1.md",
+   "evidence": "NextTang-evidence/2026-11-02-nexclash/pilot/runs/pyjamarama/enhanced-20261105/HANDOFF-V1.1.md",
    "application": "pyjamarama.screen-readers"
   }
  ],
@@ -526,6 +526,6 @@
   "targeted_replay_frames": 4579,
   "package_sha256": "cb17ba32fa801a334fbb6ea0f4ca74e91a003ccc5cf570f0fbda5d6f4905a9b5",
   "enhanced_nex_md5": "17f853050ea6f38a99d9937291ccd254",
-  "evidence": "/home/jon/Dev_Projects/NextTang-evidence/2026-11-02-nexclash/pilot/runs/pyjamarama/enhanced-20261105/work/owner-import01/verification.json"
+  "evidence": "NextTang-evidence/2026-11-02-nexclash/pilot/runs/pyjamarama/enhanced-20261105/work/owner-import01/verification.json"
  }
 }
