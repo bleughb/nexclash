@@ -350,5 +350,59 @@ runpy.run_path(entry, run_name='__main__')
             self.assertEqual([verdict for *_, verdict in hooklib.iff_audit(d)], ['once', 'once', 'value'])
 
 
+    # ---- second review (2026-11-12) ----
+
+    def _recording(self, folder, frames=3):
+        """An RZX of the empty snapshot (NOPs from 0x8000), `frames` frames of 100 fetches, no port reads."""
+        from nexclash import rzx
+        path = Path(folder)/'empty.rzx'
+        rzx.write_rzx(str(path), [(self._snapshot(folder).read_bytes(), [(100, [])] * frames)])
+        return path
+
+    def test_replays_put_skoolkit_rzxplay_back(self):
+        import skoolkit.rzxplay as rzxplay
+        from nexclash import analyse
+        before = rzxplay.Simulator, rzxplay.CSimulator
+        with tempfile.TemporaryDirectory() as d, redirect_stdout(io.StringIO()):
+            result = analyse.analyse(None, str(self._recording(d)), 0xFF00)
+        self.assertTrue(result['rd'][0x8000])                                   # the replay ran
+        self.assertEqual((rzxplay.Simulator, rzxplay.CSimulator), before)       # and left no class of its own behind
+
+    def test_read_filter_keeps_the_wanted_reads_and_drops_the_rest(self):
+        from nexclash import simrun
+        def reads(read_filter):
+            seen = set()
+            hooks = types.SimpleNamespace(on_read=lambda a, pc, mem: seen.add(a))
+            if read_filter:
+                hooks.read_filter = read_filter
+            with tempfile.TemporaryDirectory() as d, redirect_stdout(io.StringIO()):
+                simrun.play_rzx(str(self._recording(d)), hooks)
+            return seen
+        everything = reads(None)
+        self.assertGreater(len(everything), 50)
+        self.assertEqual(reads((0x8003, {0x8010, 0x4000})), {a for a in everything if a < 0x8003 or a == 0x8010})
+
+    def test_rzx_walk_refuses_a_damaged_block(self):
+        from nexclash import rzx
+        with tempfile.TemporaryDirectory() as d:
+            good = self._recording(d)
+            self.assertEqual(rzx.strip(str(good), str(Path(d)/'s.rzx')), 0)
+            bad = Path(d)/'bad.rzx'
+            bad.write_bytes(good.read_bytes() + b'\x80\x00\x00\x00\x00')          # a block of length 0: the walk stood still
+            for walk in (lambda: rzx.strip(str(bad), str(Path(d)/'o.rzx')), lambda: rzx.merge([str(good), str(bad)], str(Path(d)/'m.rzx'))):
+                with self.assertRaises(ValueError):
+                    walk()
+            none = Path(d)/'none.rzx'
+            none.write_bytes(good.read_bytes()[:10])                             # no snapshot at all
+            self.assertEqual(rzx.strip(str(none), str(Path(d)/'n.rzx')), 0)
+
+    def test_a_caught_negative_control_does_not_fail_the_report(self):
+        for module in ('fwd128', 'magicland128', 'yolk128', 'tid128'):
+            source = (ROOT/'nexclash'/(module + '.py')).read_text()
+            line = source[source.index("say('Negative  :"):].split('\n\n')[0]
+            with self.subTest(module=module):
+                self.assertIn("replace('MISMATCH', 'difference')", line)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

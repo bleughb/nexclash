@@ -112,7 +112,8 @@ def analyse(prof, rzx_path, z80_sp, stop=None, progress=None):
             st.synced = False
             st.drawn = False
 
-    rzxplay.Simulator = S
+    old = rzxplay.Simulator, rzxplay.CSimulator        # put back after the replay: a later replay in this process
+    rzxplay.Simulator = S                                # (rzx.trace, simrun's frame-only path) wants SkoolKit's own
     rzxplay.CSimulator = None
     args = ['--python', '--quiet', '--no-screen', '--fps', '0']
     if stop:
@@ -121,6 +122,8 @@ def analyse(prof, rzx_path, z80_sp, stop=None, progress=None):
         rzxplay.main(args + [rzx_path])
     except SystemExit:
         pass
+    finally:
+        rzxplay.Simulator, rzxplay.CSimulator = old
     REG[0] = None
     # stack low-water mark below the snapshot's SP (contiguous stack writes)
     low, a, gap = z80_sp, z80_sp - 1, 0

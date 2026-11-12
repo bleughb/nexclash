@@ -239,6 +239,9 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=(), start_pc=
         later = [False]         # a later segment: the tail / printer buffer reads concern only the first
 
         class H:
+            # on_read acts on the ROM and on the watched RAM bytes only; with a start_pc it also has to see the entry
+            read_filter = (0x4000, watch) if start_pc is None else None
+
             def on_sim(h, sim):
                 h.is128 = is128[0] = hasattr(sim.memory, 'o7ffd')
                 if h.is128 and rom1 is not None:            # the recording's ROM 1 (Knight Tyme: Sinclair's 48K ROM)

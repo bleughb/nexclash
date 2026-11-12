@@ -512,7 +512,10 @@ def auto(a, z80, name, out, say):
                     break
             caught += det
             say('Negative  : %s -> %s %s' % (what, 'DETECTED on %s' % os.path.basename(r) if det else 'NOT DETECTED!',
-                                            {k: x for k, x in v['stats'].items() if 'MISMATCH' in k or 'VISIBLE' in k}))
+                                            {k.replace('MISMATCH', 'difference'): x for k, x in v['stats'].items()
+                                             if 'MISMATCH' in k or 'VISIBLE' in k}))
+            # 'difference' (as tid128.py): a report holding MISMATCH fails the run (nexclash.py _finish, userflow, nxcout,
+            # selftest), and these are the broken build's counters, wanted: auto exited 1 with Result PASSED
         ok = ok and caught == len(neg)
         if states:
             u = unit_tests(patch, states)
