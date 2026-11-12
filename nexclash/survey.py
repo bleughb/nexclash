@@ -87,7 +87,8 @@ class PlotTracker:
                 self.calls[p[1]][p[0]] += 1
                 self.parents[p[1]][parent] += 1
                 self.stack.append([p[1], (p[0] + 3) & 0xFFFF, p[2], p[0], self.T])
-                return
+                # The entry instruction can itself CALL (R-Type: 8979 -> 8842).
+                # Track it too, or its writes get charged to the outer routine.
         if self.stack:
             self._pop(pc, sp, R)
         m = self.sim.memory

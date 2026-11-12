@@ -8,12 +8,10 @@ forward (owner, 2026-11-04): run them on new builds; published games are not re-
 picks one. Game facts come in as arguments and a profile; nothing in them knows a game.
 
 ## Setup
-- JNext 1.1.104 on PATH (or `$NEXCLASH_JNEXT`), Pillow, an SD card image with NextZXOS (`--card` or
-  `$NEXCLASH_JNEXT_CARD`; opened read-only). HOME is set to `<out>/.jnext_home` (or `--jnext-home`,
-  `$NEXCLASH_JNEXT_HOME`): never the user's own, so their JNext settings and windows are not touched. The
-  first run there records JNext's warm start (about 2 s).
-- Frame 0 = the program's start: a .nex starts on the warm start (frame 500, checked on every run: a
-  WARNING names a different start), a .z80 at 0.
+- JNext 1.1.104+ on PATH (or `$NEXCLASH_JNEXT`), Pillow and a NextZXOS SD image
+  (`--card` / `$NEXCLASH_JNEXT_CARD`, read-only). HOME uses the output's isolated folder
+  (`--jnext-home` / `$NEXCLASH_JNEXT_HOME`); first warm-start capture takes about 2 s.
+- Snapshots start at frame 0; NEX warm-starts at 500 (the START log warns otherwise).
 - Control: the original .z80 (the game on a 128K / 48K machine) or the plain .nex (the same Next machine
   as the build: the closer control for pace).
 - Profile (JSON; the format is in nexclash/jnext.py): start keys to reach play, the keys to play with,
@@ -22,6 +20,9 @@ picks one. Game facts come in as arguments and a profile; nothing in them knows 
   Kempston: little real play. Keep the game's profile beside its notes (local, not game data).
 - `python selftest.py --tools` checks every detector on synthetic data and, with JNext and a card, runs
   Chuckie Egg against itself (pace exactly 0.00%, the same pictures).
+
+JNext 1.2.0 defers execute-triggered `save_snapshot` to a frame boundary. For exact hook
+comparisons use execute-time register logs and `dump_mem`, not JNS CPU state.
 
 ## soak: freezes (plan 9)
 `python -m nexclash.soak BUILD.nex --original GAME.z80 --profile P.json --minutes 15`
