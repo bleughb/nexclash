@@ -49,15 +49,15 @@
  },
  "checked": {
   "deps": {
-   "nexclash.py": "350128095535a2d4",
+   "nexclash.py": "cc1297e9104ece5f",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/engines.py": "c26b7cad0e31e66a",
+   "nexclash/engines.py": "112c3b17a78ace9a",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "recipe": "4522e2abfed15ad3",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-09"
+  "date": "2026-11-12"
  }
 }

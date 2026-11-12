@@ -117,19 +117,19 @@
    "assets/new_zealand_story/backdrops/w4.json": "b875547db419ac79",
    "assets/new_zealand_story/backdrops/w5.json": "f5005792e539d01d",
    "docs/profiles/new_zealand_story.json": "46fccc3bda96fb52",
-   "nexclash.py": "350128095535a2d4",
-   "nexclash/engines.py": "c26b7cad0e31e66a",
+   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/engines.py": "112c3b17a78ace9a",
    "nexclash/new_zealand_story.py": "c6a1399518e48725",
    "nexclash/new_zealand_story_backdrops.py": "83201feae444c076",
    "nexclash/new_zealand_story_paint.py": "22926e50511be190",
    "nexclash/tapeset.py": "86542e1752fb3110",
-   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "tools/sjasmplus/pin.json": "f713de264030dc17",
    "tools/sjasmplus/sjasm.py": "5fc4741a8e953aa0",
    "skoolkit": "10.1",
    "recipe": "84866854e099a24d",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-09"
+  "date": "2026-11-12"
  }
 }
