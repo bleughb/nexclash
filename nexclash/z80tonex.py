@@ -601,9 +601,10 @@ def write_nex(path, snap, banks):
 ALLOW_60HZ = False          # set by `nexclash.py ... --allow-60hz`: no build forces 50 Hz then
 
 
-def _check_patch_data(patch, game_banks):
+def _check_patch_data(patch):
     """Refuse patch data convert() would lose without a word: the stub bank holds the stub at 0x0000, stub_extra at
-    0x1000 and hook_page_data at 0x2000, and the stub itself is written last into bank STUB_BANK."""
+    0x1000 and hook_page_data at 0x2000, and the stub itself is written last into bank STUB_BANK. A game bank in
+    extra_banks is allowed: it replaces the snapshot's (Nodes of Yesod's bank 7)."""
     extra, hook = len(patch.stub_extra), len(patch.hook_page_data)
     if extra > (0x1000 if hook else 0x3000):
         raise ValueError('stub_extra is %d bytes: %s' % (extra, 'hook_page_data at 0x2000 would overwrite it' if hook
@@ -613,8 +614,6 @@ def _check_patch_data(patch, game_banks):
     for b, data in patch.extra_banks.items():
         if b == STUB_BANK:
             raise ValueError('extra_banks names bank %d, the stub\'s own (z80tonex.STUB_BANK)' % b)
-        if b in game_banks:
-            raise ValueError('extra_banks names bank %d, which holds the game: change it in apply(snap)' % b)
         if len(data) > 16384:
             raise ValueError('extra_banks[%d] is %d bytes: a bank holds 16384' % (b, len(data)))
 
@@ -661,7 +660,7 @@ def convert(src, dst, tail_req=None, force50=True, quiet=False, patch=None, keep
     bank10 = bytearray(16384)
     bank10[0:len(stub)] = stub
     if patch is not None:
-        _check_patch_data(patch, banks)
+        _check_patch_data(patch)
         bank10[0x1000:0x1000 + len(patch.stub_extra)] = patch.stub_extra
         bank10[0x2000:0x2000 + len(patch.hook_page_data)] = patch.hook_page_data
         banks.update(patch.extra_banks)

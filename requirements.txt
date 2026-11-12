@@ -1,6 +1,8 @@
 # nexclash dependencies: pip install -r requirements.txt (add --break-system-packages on a managed Python)
 # SkoolKit: Z80 snapshots, ROM, emulation (every command). Pillow: colour sheets, recolour, previews.
+# numpy: Jilly's Farm Enhanced builds; Sabre Wulf and Quazatron floor checks.
 # SkoolKit is pinned: every record stamp (docs/records) names its version, so another one makes `records plan`
 # report every game as due. Bump it on purpose, with a restamp (docs/MAINTAIN.md).
 skoolkit==10.1
 Pillow>=9
+numpy>=1.26

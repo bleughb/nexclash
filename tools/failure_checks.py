@@ -270,14 +270,13 @@ runpy.run_path(entry, run_name='__main__')
         with tempfile.TemporaryDirectory() as d:
             z80, out = self._snapshot(d), Path(d)/'out.nex'
             zt.convert(str(z80), str(out), quiet=True, patch=self._patch(
-                stub_extra=bytes(0x1000), hook_page_data=bytes(0x2000), extra_banks={11: bytes(16384), 1: b'x'}))
+                stub_extra=bytes(0x1000), hook_page_data=bytes(0x2000), extra_banks={11: bytes(16384), 1: b'x', 0: bytes(16384)}))   # 0: a game bank, replaced
             self.assertTrue(out.is_file())
             zt.convert(str(z80), str(out), quiet=True, patch=self._patch(stub_extra=bytes(0x3000)))   # no hook page: fits
             for lost in (dict(stub_extra=bytes(0x1001), hook_page_data=b'x'),      # the hook page would overwrite it
                          dict(stub_extra=bytes(0x3001)),                           # past the end of the stub bank
                          dict(hook_page_data=bytes(0x2001)),
                          dict(extra_banks={zt.STUB_BANK: b'x'}),                   # the stub is written over it
-                         dict(extra_banks={5: b'x'}),                              # the game's own bank
                          dict(extra_banks={11: bytes(16385)})):
                 with self.subTest(lost=sorted(lost)), self.assertRaises(ValueError):
                     zt.convert(str(z80), str(out), quiet=True, patch=self._patch(**lost))

@@ -22,7 +22,7 @@ changes, merge). The game may already have notes and files (games/<game>.md, STA
 first. Names: folder and games/<game>.md after the game, lower case, underscores.
 
 ## Setup
-`pip install -r requirements.txt --break-system-packages` (SkoolKit + Pillow). sjasmplus (only for .asm
+`pip install -r requirements.txt --break-system-packages` (SkoolKit, Pillow, numpy). sjasmplus (only for .asm
 edits) is bundled and pinned: `python tools/asm2profile.py <engine>` assembles and updates the profile (never build or download another
 version; tools/sjasmplus/README.md). Maintainers: repos and reference files in docs/MAINTAIN.md.
 
