@@ -85,11 +85,15 @@ def load_profile():
     return json.loads((ROOT/'docs/profiles/highway_encounter.json').read_text())
 
 def is_highway_encounter(snap):
-    banks = getattr(getattr(snap, 'memory', None), 'banks', None) or getattr(snap, 'banks', None)
-    if not banks or getattr(snap, 'is128', False) or getattr(snap, 'machine', '48K') != '48K':
+    if getattr(snap, 'is128', False) or getattr(snap, 'machine', '48K') != '48K':
         return False
-    return bytes(banks[0][0x3260:0x3276]) == bytes.fromhex(
-        'f33100002160f111005b010001edb03ef9ed4fc3e0b0')
+    memory = getattr(snap, 'memory', None)
+    if memory is not None:              # SkoolKit: by address. Its bank for 0xC000 is 0 for a version 1 .z80 and 1 for
+        entry = memory[0xF260:0xF276]   # versions 2 and 3, so banks[0] is None there (Atic Atac, Starquake)
+    else:                               # z80tonex.Z80Snapshot: the 48K's top 16K is its bank 0
+        bank = (getattr(snap, 'banks', None) or {}).get(0)
+        entry = bank[0x3260:0x3276] if bank else b''
+    return bytes(entry) == bytes.fromhex('f33100002160f111005b010001edb03ef9ed4fc3e0b0')
 
 @lru_cache(maxsize=2)
 def entry_snapshot(source):

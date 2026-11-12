@@ -315,5 +315,40 @@ runpy.run_path(entry, run_name='__main__')
             gunrunner.palette_rgb()
 
 
+    def test_every_detector_answers_for_48k_and_128k_snapshots(self):
+        """engines.find asks each detector in turn, so one that raises on a machine it does not build stops every
+        game listed after it (Highway Encounter's, first in the table, read SkoolKit's bank 0, which a version 2 or 3
+        48K .z80 does not have: Atic Atac and Starquake no longer built)."""
+        from skoolkit.snapshot import Snapshot
+        from nexclash import engines
+        def z80(folder, name, hardware, modify, pages):
+            ext = bytearray(54); ext[0:2] = (0x8000).to_bytes(2, 'little'); ext[2] = hardware; ext[5] = 0x80 if modify else 0
+            head = bytearray(30); head[8:10] = (0x7F00).to_bytes(2, 'little')
+            body = b''.join(b'\xff\xff' + bytes((page,)) + bytes(16384) for page in pages)
+            path = Path(folder)/name
+            path.write_bytes(bytes(head) + (54).to_bytes(2, 'little') + bytes(ext) + body)
+            return path
+        with tempfile.TemporaryDirectory() as d:
+            for name, hardware, modify, pages in (('48k.z80', 0, False, (4, 5, 8)), ('128k.z80', 4, False, range(3, 11))):
+                snap = Snapshot.get(str(z80(d, name, hardware, modify, pages)))
+                args = types.SimpleNamespace(z80=str(Path(d)/name), engine=None, altrom_fill=None)
+                with self.subTest(snapshot=name):
+                    self.assertIsNone(engines.find(snap, args))             # empty RAM: no engine, and no exception
+            version1 = Snapshot.get(str(self._snapshot(d)))                 # SkoolKit keeps its top 16K in bank 0
+            self.assertIsNone(engines.find(version1, types.SimpleNamespace(z80='empty.z80', engine=None, altrom_fill=None)))
+
+
+    def test_iff_audit_takes_a_marked_and_stored_read_of_i_as_a_value(self):
+        from nexclash import hooklib
+        nops = '        nop\n' * 5                                             # keeps the reads out of each other's window
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d)/'asm').mkdir()
+            (Path(d)/'asm/t.asm').write_text(
+                '        ld a,i   ; I as a value\n        push af\n' + nops +     # marked, but pushed: an IFF read
+                '        ld a,i\n        ld (V),a\n' + nops +                    # stored, but not marked
+                '        ld a,i   ; I as a value\n        ld (V),a\n')           # marked and stored
+            self.assertEqual([verdict for *_, verdict in hooklib.iff_audit(d)], ['once', 'once', 'value'])
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
