@@ -78,43 +78,43 @@
   "deps": {
    "asm/chuckie_hooks.asm": "5fed61c8f674f78b",
    "docs/profiles/chuckie_egg.json": "8cfb95560319426a",
-   "nexclash.py": "350128095535a2d4",
+   "nexclash.py": "cc1297e9104ece5f",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/chuckie.py": "6fd6788ea9e54985",
-   "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "c26b7cad0e31e66a",
-   "nexclash/nextboot.py": "dcc01638556a1b32",
-   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "112c3b17a78ace9a",
+   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "recipe": "e59f3d3e8820d48a",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-09"
+  "date": "2026-11-12"
  },
  "verified": {
   "deps": {
    "asm/chuckie_hooks.asm": "5fed61c8f674f78b",
    "docs/profiles/chuckie_egg.json": "8cfb95560319426a",
-   "nexclash.py": "350128095535a2d4",
+   "nexclash.py": "cc1297e9104ece5f",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/chuckie.py": "6fd6788ea9e54985",
-   "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "c26b7cad0e31e66a",
-   "nexclash/nextboot.py": "dcc01638556a1b32",
-   "nexclash/rzx.py": "5a55ee76b0f14989",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "112c3b17a78ace9a",
+   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "7bb8d4fe793eec09",
+   "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "5ce08ccdaff17097",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "recipe": "e59f3d3e8820d48a",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-09"
+  "date": "2026-11-12"
  },
  "canary": 1
 }

@@ -5161,7 +5161,7 @@ class CaptureSnapshotPatch(BootstrapPatch):
             raise ValueError('hook code in the stub register block %04X-%04X' % (self.regblock, self.regblock + 19))
         head = bytearray(8192)                  # page 80: the hooks' timing helpers (CW_CLK = 0:
         head[:len(self.capture.head)] = self.capture.head   # no window runs, so no X is measured)
-        self.extra_banks[CW_PAGE // 2] = bytes(head) + (head_tail if work and driver else bytes(8192))
+        self.extra_banks[CW_PAGE // 2] = bytes(head) + bytes(8192)     # and no window driver in the upper page
         self.sites = [(a, old, new) for a, (old, new) in self.capture.sites.items()]
 
     def apply(self, snap):

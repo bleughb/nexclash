@@ -63,6 +63,9 @@ def _watch(memory, hooks, regs_ref):
     wr = getattr(hooks, 'on_write', None)
     if not rd and not wr:
         return memory
+    # hooks.read_filter = (limit, addresses): on_read is wanted only for addresses below limit or in the set. Most
+    # reads are RAM a ROM check never looks at, and the call costs more than the read (rom_paths: 23 M per 1,500 frames).
+    limit, wanted = getattr(hooks, 'read_filter', None) or (0x10000, ())
     from skoolkit.pagingtracer import Memory
     if isinstance(memory, Memory):
         base = type(memory)
@@ -70,7 +73,7 @@ def _watch(memory, hooks, regs_ref):
 
         class W(base):
             def __getitem__(s, a):
-                if rd and type(a) is int and regs_ref:
+                if rd and type(a) is int and (a < limit or a in wanted) and regs_ref:
                     rd(a, regs_ref[0][24], s)
                 return MG(s, a)
 
@@ -89,7 +92,7 @@ def _watch(memory, hooks, regs_ref):
             return len(s.m)
 
         def __getitem__(s, a):
-            if rd and type(a) is int and regs_ref:
+            if rd and type(a) is int and (a < limit or a in wanted) and regs_ref:
                 rd(a, regs_ref[0][24], s)
             return s.m[a]
 

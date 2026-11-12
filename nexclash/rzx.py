@@ -31,6 +31,15 @@ def read_segments(path):
     return segs
 
 
+def _block_length(d, i, path):
+    """Length of the RZX block at i (its 1-byte id and 4-byte length included). A length below that head, or a head
+    cut short, is a damaged file: without this check the walk never moves on (merge and strip hung on one)."""
+    n = struct.unpack('<I', d[i + 1:i + 5])[0] if i + 5 <= len(d) else 0
+    if n < 5:
+        raise ValueError('%s: damaged RZX block at offset %d' % (path, i))
+    return n
+
+
 def merge(paths, out):
     """Concatenate the blocks of several RZX files (first file's header)."""
     body = bytearray()
@@ -38,7 +47,7 @@ def merge(paths, out):
         d = open(p, 'rb').read()
         i = 10
         while i < len(d):
-            n = struct.unpack('<I', d[i + 1:i + 5])[0]
+            n = _block_length(d, i, p)
             if d[i] != 0x10 or not body:
                 body += d[i:i + n]
             i += n
@@ -52,7 +61,7 @@ def strip(path, out):
     d = open(path, 'rb').read()
     body, i, snaps = bytearray(), 10, 0
     while i < len(d):
-        n = struct.unpack('<I', d[i + 1:i + 5])[0]
+        n = _block_length(d, i, path)
         if d[i] == 0x30:
             snaps += 1
             if snaps > 1:
@@ -61,7 +70,7 @@ def strip(path, out):
         body += d[i:i + n]
         i += n
     open(out, 'wb').write(d[:10] + bytes(body))
-    return snaps - 1
+    return max(snaps - 1, 0)                    # a file with no snapshot dropped none (was -1)
 
 
 def extract(path, out=None, index=0):

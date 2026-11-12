@@ -132,7 +132,10 @@ def _rw_simulator():
 def _rw_simulator_():
     import skoolkit.simulator as sm
     import types
-    src = open(sm.__file__).read().replace('> 0x3FFF', '>= 0')
+    src = open(sm.__file__).read()
+    if '> 0x3FFF' not in src:           # another SkoolKit wording: unpatched, writes below 0x4000 would be dropped
+        raise RuntimeError('SkoolKit simulator.py has no "> 0x3FFF" write guard to lift: check requirements.txt')
+    src = src.replace('> 0x3FFF', '>= 0')
     mod = types.ModuleType('sim_rw')
     mod.__dict__['__name__'] = 'sim_rw'
     exec(compile(src, 'sim_rw', 'exec'), mod.__dict__)

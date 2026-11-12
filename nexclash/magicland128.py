@@ -568,7 +568,9 @@ def auto(a, z80, name, out, say):
                     break
             caught += det
             say('Negative  : %s -> %s %s' % (what, ('DETECTED by %s' % os.path.basename(r)) if det else 'NOT DETECTED!',
-                                            {k: x for k, x in v['stats'].items() if _bad(k)}))
+                                            {k.replace('MISMATCH', 'difference'): x for k, x in v['stats'].items() if _bad(k)}))
+            # 'difference' (as tid128.py): a report holding MISMATCH fails the run, and these counters are the broken
+            # build's, wanted
         ok = ok and caught == len(neg)
         if states:
             u = unit_tests(patch, states)

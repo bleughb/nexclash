@@ -20,7 +20,13 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt ruff==0.16.8
+      - name: Lint (syntax errors, undefined names, definitions shadowed before use; no style rules)
+        # The three Rainbow Islands modules are frozen / excluded from the automatic checks (docs/MAINTAIN.md):
+        # their second ink_index stays as verified.
+        run: >
+          ruff check --isolated --select E9,F63,F7,F82,F811
+          --per-file-ignores "nexclash/rainbow.py:F811,nexclash/rainbow_z80n.py:F811,nexclash/rainbow_z80n_sky.py:F811" .
       - name: learncheck self-check (parser, tags, distinct-game counts)
         run: python tools/learncheck.py --selfcheck
       - name: doccheck (references, budgets, technique cards, learncheck)

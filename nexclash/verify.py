@@ -228,6 +228,7 @@ def verify(prof, patch, rzx_path, stop=None):
             REG[0] = self.registers
             st['synced'] = False
 
+    old = rzxplay.Simulator, rzxplay.CSimulator        # put back after the replay (as analyse.py)
     rzxplay.Simulator = S
     rzxplay.CSimulator = None
     args = ['--python', '--quiet', '--no-screen', '--fps', '0'] + (['--stop', str(stop)] if stop else [])
@@ -235,6 +236,8 @@ def verify(prof, patch, rzx_path, stop=None):
         rzxplay.main(args + [rzx_path])
     except SystemExit:
         pass
+    finally:
+        rzxplay.Simulator, rzxplay.CSimulator = old
     REG[0] = None
     failed = any('MISMATCH' in k or 'VISIBLE' in k for k in stats)
     return {'passed': not failed and sum(stats.values()) > 0, 'stats': dict(stats), 'examples': log}

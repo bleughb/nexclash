@@ -871,7 +871,7 @@ enter_common:
         and 3
         ld (V_SPEED),a
         pop bc
-        ld a,i
+        ld a,i                  ; I as a value (saved, the ISR's vector page goes in I below): not an IFF read
         ld (V_I),a
         ld a,1
         ld (V_PHASE),a

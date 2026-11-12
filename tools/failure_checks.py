@@ -248,5 +248,160 @@ runpy.run_path(entry, run_name='__main__')
             self.assertEqual((worktree/'nexclash/shared.py').read_bytes(), b'contributor')
 
 
+    # ---- review fixes (2026-11-12): data a build would lose, files a run should not touch ----
+
+    @staticmethod
+    def _snapshot(folder):
+        """A 48K .z80 (version 1, uncompressed): PC 0x8000, SP 0xFF00, empty RAM. No game data."""
+        head = bytearray(30)
+        head[6:8] = (0x8000).to_bytes(2, 'little'); head[8:10] = (0xFF00).to_bytes(2, 'little')
+        path = Path(folder)/'empty.z80'
+        path.write_bytes(bytes(head) + bytes(49152))
+        return path
+
+    @staticmethod
+    def _patch(**changes):
+        base = dict(stub_extra=b'', hook_page_data=b'', extra_banks={}, setup_call=None, uses_printer_buffer=False,
+                    apply=lambda snap: None)
+        return types.SimpleNamespace(**dict(base, **changes))
+
+    def test_convert_refuses_patch_data_it_would_lose(self):
+        from nexclash import z80tonex as zt
+        with tempfile.TemporaryDirectory() as d:
+            z80, out = self._snapshot(d), Path(d)/'out.nex'
+            zt.convert(str(z80), str(out), quiet=True, patch=self._patch(
+                stub_extra=bytes(0x1000), hook_page_data=bytes(0x2000), extra_banks={11: bytes(16384), 1: b'x', 0: bytes(16384)}))   # 0: a game bank, replaced
+            self.assertTrue(out.is_file())
+            zt.convert(str(z80), str(out), quiet=True, patch=self._patch(stub_extra=bytes(0x3000)))   # no hook page: fits
+            for lost in (dict(stub_extra=bytes(0x1001), hook_page_data=b'x'),      # the hook page would overwrite it
+                         dict(stub_extra=bytes(0x3001)),                           # past the end of the stub bank
+                         dict(hook_page_data=bytes(0x2001)),
+                         dict(extra_banks={zt.STUB_BANK: b'x'}),                   # the stub is written over it
+                         dict(extra_banks={11: bytes(16385)})):
+                with self.subTest(lost=sorted(lost)), self.assertRaises(ValueError):
+                    zt.convert(str(z80), str(out), quiet=True, patch=self._patch(**lost))
+
+    def test_evidence_file_is_rewritten_only_when_something_is_learned(self):
+        entry = load('nexclash.py')
+        with tempfile.TemporaryDirectory() as d:
+            evidence = Path(d)/'evidence.json'
+            text = '{"fp": {"game": "G", "stack_low_water": 40000, "source": "first"}}'   # not json.dump's layout
+            evidence.write_text(text)
+            with patch.object(entry, 'EVIDENCE', str(evidence)):
+                entry._learn('fp', 'G', 40000, 'same')
+                entry._learn('fp', 'G', 41000, 'higher')
+                self.assertEqual(evidence.read_text(), text)                    # nothing learned: not a byte changed
+                entry._learn('fp', 'G', 39000, 'lower')
+                self.assertEqual(json.loads(evidence.read_text())['fp'], {'game': 'G', 'stack_low_water': 39000, 'source': 'lower'})
+                entry._learn('new', 'H', 50000, 'first')
+                self.assertEqual(json.loads(evidence.read_text())['new']['stack_low_water'], 50000)
+            self.assertEqual(sorted(x.name for x in Path(d).iterdir()), ['evidence.json'])   # no temporary file left
+
+    def test_rw_simulator_refuses_a_skoolkit_it_cannot_patch(self):
+        from nexclash import dizzy6
+        import skoolkit.simulator as sm
+        self.assertTrue(dizzy6._rw_simulator_())                                # this SkoolKit: patched
+        with tempfile.TemporaryDirectory() as d:
+            other = Path(d)/'simulator.py'
+            other.write_text(Path(sm.__file__).read_text().replace('> 0x3FFF', '> 16383'))
+            with patch.object(sm, '__file__', str(other)), self.assertRaises(RuntimeError):
+                dizzy6._rw_simulator_()
+
+    def test_gunrunner_palette_has_no_machine_default(self):
+        from nexclash import gunrunner
+        with patch.dict(os.environ), self.assertRaises(ValueError):
+            os.environ.pop('EMU256', None)
+            gunrunner.palette_rgb()
+
+
+    def test_every_detector_answers_for_48k_and_128k_snapshots(self):
+        """engines.find asks each detector in turn, so one that raises on a machine it does not build stops every
+        game listed after it (Highway Encounter's, first in the table, read SkoolKit's bank 0, which a version 2 or 3
+        48K .z80 does not have: Atic Atac and Starquake no longer built)."""
+        from skoolkit.snapshot import Snapshot
+        from nexclash import engines
+        def z80(folder, name, hardware, modify, pages):
+            ext = bytearray(54); ext[0:2] = (0x8000).to_bytes(2, 'little'); ext[2] = hardware; ext[5] = 0x80 if modify else 0
+            head = bytearray(30); head[8:10] = (0x7F00).to_bytes(2, 'little')
+            body = b''.join(b'\xff\xff' + bytes((page,)) + bytes(16384) for page in pages)
+            path = Path(folder)/name
+            path.write_bytes(bytes(head) + (54).to_bytes(2, 'little') + bytes(ext) + body)
+            return path
+        with tempfile.TemporaryDirectory() as d:
+            for name, hardware, modify, pages in (('48k.z80', 0, False, (4, 5, 8)), ('128k.z80', 4, False, range(3, 11))):
+                snap = Snapshot.get(str(z80(d, name, hardware, modify, pages)))
+                args = types.SimpleNamespace(z80=str(Path(d)/name), engine=None, altrom_fill=None)
+                with self.subTest(snapshot=name):
+                    self.assertIsNone(engines.find(snap, args))             # empty RAM: no engine, and no exception
+            version1 = Snapshot.get(str(self._snapshot(d)))                 # SkoolKit keeps its top 16K in bank 0
+            self.assertIsNone(engines.find(version1, types.SimpleNamespace(z80='empty.z80', engine=None, altrom_fill=None)))
+
+
+    def test_iff_audit_takes_a_marked_and_stored_read_of_i_as_a_value(self):
+        from nexclash import hooklib
+        nops = '        nop\n' * 5                                             # keeps the reads out of each other's window
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d)/'asm').mkdir()
+            (Path(d)/'asm/t.asm').write_text(
+                '        ld a,i   ; I as a value\n        push af\n' + nops +     # marked, but pushed: an IFF read
+                '        ld a,i\n        ld (V),a\n' + nops +                    # stored, but not marked
+                '        ld a,i   ; I as a value\n        ld (V),a\n')           # marked and stored
+            self.assertEqual([verdict for *_, verdict in hooklib.iff_audit(d)], ['once', 'once', 'value'])
+
+
+    # ---- second review (2026-11-12) ----
+
+    def _recording(self, folder, frames=3):
+        """An RZX of the empty snapshot (NOPs from 0x8000), `frames` frames of 100 fetches, no port reads."""
+        from nexclash import rzx
+        path = Path(folder)/'empty.rzx'
+        rzx.write_rzx(str(path), [(self._snapshot(folder).read_bytes(), [(100, [])] * frames)])
+        return path
+
+    def test_replays_put_skoolkit_rzxplay_back(self):
+        import skoolkit.rzxplay as rzxplay
+        from nexclash import analyse
+        before = rzxplay.Simulator, rzxplay.CSimulator
+        with tempfile.TemporaryDirectory() as d, redirect_stdout(io.StringIO()):
+            result = analyse.analyse(None, str(self._recording(d)), 0xFF00)
+        self.assertTrue(result['rd'][0x8000])                                   # the replay ran
+        self.assertEqual((rzxplay.Simulator, rzxplay.CSimulator), before)       # and left no class of its own behind
+
+    def test_read_filter_keeps_the_wanted_reads_and_drops_the_rest(self):
+        from nexclash import simrun
+        def reads(read_filter):
+            seen = set()
+            hooks = types.SimpleNamespace(on_read=lambda a, pc, mem: seen.add(a))
+            if read_filter:
+                hooks.read_filter = read_filter
+            with tempfile.TemporaryDirectory() as d, redirect_stdout(io.StringIO()):
+                simrun.play_rzx(str(self._recording(d)), hooks)
+            return seen
+        everything = reads(None)
+        self.assertGreater(len(everything), 50)
+        self.assertEqual(reads((0x8003, {0x8010, 0x4000})), {a for a in everything if a < 0x8003 or a == 0x8010})
+
+    def test_rzx_walk_refuses_a_damaged_block(self):
+        from nexclash import rzx
+        with tempfile.TemporaryDirectory() as d:
+            good = self._recording(d)
+            self.assertEqual(rzx.strip(str(good), str(Path(d)/'s.rzx')), 0)
+            bad = Path(d)/'bad.rzx'
+            bad.write_bytes(good.read_bytes() + b'\x80\x00\x00\x00\x00')          # a block of length 0: the walk stood still
+            for walk in (lambda: rzx.strip(str(bad), str(Path(d)/'o.rzx')), lambda: rzx.merge([str(good), str(bad)], str(Path(d)/'m.rzx'))):
+                with self.assertRaises(ValueError):
+                    walk()
+            none = Path(d)/'none.rzx'
+            none.write_bytes(good.read_bytes()[:10])                             # no snapshot at all
+            self.assertEqual(rzx.strip(str(none), str(Path(d)/'n.rzx')), 0)
+
+    def test_a_caught_negative_control_does_not_fail_the_report(self):
+        for module in ('fwd128', 'magicland128', 'yolk128', 'tid128'):
+            source = (ROOT/'nexclash'/(module + '.py')).read_text()
+            line = source[source.index("say('Negative  :"):].split('\n\n')[0]
+            with self.subTest(module=module):
+                self.assertIn("replace('MISMATCH', 'difference')", line)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

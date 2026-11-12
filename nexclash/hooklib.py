@@ -588,6 +588,8 @@ def _t_matrix(code, syms):
 IFF1 = 26                                       # SkoolKit's IFF register index (IFF1 = IFF2 here)
 _IFF_RE = re.compile(r'^\s*(?:[A-Za-z_.][\w.]*:?)?\s*ld\s+a\s*,\s*([ir])\s*(?:;.*)?$', re.I)
 _PV_RE = re.compile(r'\b(?:jp|ret|call)\s+p[oe]\b', re.I)
+_I_VALUE_RE = re.compile(r';.*\bI as a value\b')                 # the source's own mark on a LD A,I that saves I
+_STORE_A_RE = re.compile(r'ld\s+\([^)]+\)\s*,\s*a$', re.I)        # ... and the store that must follow it at once
 _CODE_RE = re.compile(r'^(?:[A-Za-z_.][\w.]*:?)?\s+([a-z].*?)\s*(?:;.*)?$', re.I)   # a label only in column 0
 
 
@@ -650,7 +652,8 @@ def iff_audit(root=ROOT):
     """Every LD A,I / LD A,R in asm/*.asm and asm/lib/*.asm: 'twice' (the second read only after a JP PE past
     it: safe), 'pair' (two reads back to back, the second trusted: an interrupt at the end of the second
     still reads as off),
-    'value' (LD A,R with no P/V condition before the next flag-setting code: R as a value), 'once' (a single
+    'value' (LD A,R with no P/V condition before the next flag-setting code: R as a value; or a LD A,I marked
+    "; I as a value" and stored to memory by the next instruction: I saved, not IFF), 'once' (a single
     LD A,I - hooks read I for IFF - or LD A,R tested on P/V: an interrupt during the read leaves interrupts off).
     The harness's NEG_IFF1 control is the one expected 'once'. -> [(file, line, register, verdict)]."""
     out = []
@@ -675,6 +678,8 @@ def iff_audit(root=ROOT):
                 # safe only when the second read runs ONLY after the first read said off (JP PE past it): two
                 # reads back to back, the second trusted, can still meet an interrupt at the end of the second
                 verdict = 'twice' if any(_PV_RE.search(x[1]) for x in code[lo + 1:hi]) else 'pair'
+            elif reg == 'I' and _I_VALUE_RE.search(ln) and k + 1 < len(code) and _STORE_A_RE.match(code[k + 1][1]):
+                verdict = 'value'           # I itself, saved to memory at once and marked so in the source (Bruce Lee)
             elif reg == 'I':
                 verdict = 'once'            # LD A,I is read for IFF (pushed, tested later): one read is the fault
             else:
