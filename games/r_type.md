@@ -1,6 +1,25 @@
 # R-Type (128K) - intake
 
 ## Next session
+2026-11-15 owner decision: equivalence gates relaxed to "extremely close" gameplay.
+Exact R/whole-RAM/ABI equality is no longer a runtime gate; keep exactness only where a
+consumer is shown (collision/owner maps, SMC modes, sound). Consumer finding: every beeper
+writer (FAA2 noise, FB52 timed tone) runs inside the ISR (footprint entry 8383 reaches the
+F8xx-FBxx SFX code and its SP switches). Main-loop game logic, plotters and copier have no
+sound-timing consumer; the IRQ wrapper already forces 3.5MHz for the native ISR body.
+Owner decision 2026-11-15: drop the original slowdown (no pace governor).
+Turbo result (reference intake/turbo_pace.py, publication_turbo.asm = cached-producer route
++ RT_TURBO, which latches 28MHz at the copier hook): same fresh peak9cfed755/100 updates,
+original10.516s, cached IDs11.665s (+10.93%, reproduced locally exactly), turbo9.679s
+(-7.96%, PASS: faster than original). 50Hz IRQs, max gap20.26ms unchanged. Hook share now
+~93% of elapsed time, so the remaining cost is hook work (identity/preparation), not game
+logic. Level-1 play fixture: 150 updates run, original11.18s/turbo10.81s. FE-write rates
+differ (play fixture 1507/s original vs1067/s turbo) because no-input trajectories diverge
+(R/IRQ arrival); not a sound verdict. Next: owner ear/visual playtest of the turbo NEX,
+then freshness/RGB/pause/menu/DI checks on the turbo route before engine work.
+Local setup: C:\1NEXT\{nexclash,specnext}; C:\workspace\{work,scratch} are junctions into
+C:\1NEXT\rtype_{work,scratch} so the /workspace paths resolve unchanged.
+
 Stage: 1 (feasibility), design approved; continue implementation without a new design round.
 Branch: add-r-type in both repos; main f92662e, no incoming changes.
 Inputs: ../specnext/reference/r_type/Rtype.{z80,rzx,tap}. Do not repeat completed intake,
