@@ -1,6 +1,29 @@
 # R-Type (128K) - intake
 
 ## Next session
+2026-11-15 owner goal: play hard to tell from the original, with hardware scrolling and
+hardware sprites; "smooth" means hardware scroll. Owner judged the cell-recognition turbo
+build inadequate (screen clipping, sprite flicker); that route is parked, not deleted.
+New route, step 1 DONE (reference intake/l2scroll.asm + l2scroll.py, prototype only):
+scenery on Layer 2 with NR 0x16 hardware scroll; original game unchanged and visible on
+the ULA for figures/stars/HUD; main loop 28MHz, native ISR 3.5MHz with ROM in slot 0; no
+pace machinery (native three-interrupt wait). Mechanism: 8842 shifts ULA background spans
+1px per call when 7A8E=0, fed by the staged column 5E00 that 89C3 copies to hidden column
+31 every eighth call. Hooks: 8842 counts the scroll, 89C3 draws the staged column on
+Layer 2 at x=scroll+248 and zeroes its staging pixels, 8734 (CALL FEEB) converts the
+initial ULA scenery (owner FF cells) and clears it from the ULA; Layer 2 off at 863D,
+8BE8 (continue) and FE03 (title/between levels). Owner/attribute/dirty maps untouched.
+Evidence: against a same-speed ULA-only control build, pictures at updates 30/60/100 are
+pixel-identical; later differences are 42-62 star pixels. Scroll phase 7A89 and copier
+row counts equal the original per update for 40 updates. Death, MISSION OVER, continue,
+title and high-score screens clean in a no-input run to frame 6700. Against the original
+at 3.5MHz the picture is 1px ahead: the original's copier finishes after the raster has
+passed, so its own picture lags (measurement, not a defect).
+NOT tested: starting from the title, levels 2-8, bosses/NOSCROLL scenes, non-black scenery
+paper, owner DC..FE cells (left on the ULA, still scrolled natively), hardware, sound by ear.
+Next: step 2 figures as hardware sprites keyed by the plotter call (8E85 table record,
+level, flip), native plotters kept for owner/collision maps; then frame-synchronised
+publication of scroll + sprites, stars, per-pixel scenery colour.
 2026-11-15 owner decision: equivalence gates relaxed to "extremely close" gameplay.
 Exact R/whole-RAM/ABI equality is no longer a runtime gate; keep exactness only where a
 consumer is shown (collision/owner maps, SMC modes, sound). Consumer finding: every beeper
