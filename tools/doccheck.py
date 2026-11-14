@@ -117,10 +117,15 @@ def has_section(heads, doc, sec):
     return any(pat.match(x) for x in heads[doc])
 
 
+def lf_size(f):
+    """Bytes as committed (LF): an autocrlf checkout on Windows adds one per line and failed 18 budgets."""
+    return len(open(f, 'rb').read().replace(bytes([13, 10]), bytes([10])))
+
+
 def main():
     os.chdir(ROOT)
     files = subprocess.run(['git', 'ls-files'], capture_output=True, text=True).stdout.split()
-    files = sorted(set(files) | set(glob.glob('docs/*.md')) | {'CLAUDE.md'})
+    files = sorted(set(files) | {f.replace(os.sep, '/') for f in glob.glob('docs/*.md')} | {'CLAUDE.md'})   # glob: '\' on Windows listed every doc twice
     docs = [f for f in files if f.endswith('.md') and os.path.exists(f)]
     fl, st, mods = cli_flags(), selftest_flags(), module_names()
     heads, c2 = headings()
@@ -174,12 +179,12 @@ def main():
     if lb:
         fail['learning loop (python tools/learncheck.py)'].extend(lb)
     for f, cap in BUDGET.items():
-        if os.path.exists(f) and os.path.getsize(f) > cap:
-            fail['over size budget (consolidate, docs/MAINTAIN.md)'].append('%s  %d > %d bytes' % (f, os.path.getsize(f), cap))
+        if os.path.exists(f) and lf_size(f) > cap:
+            fail['over size budget (consolidate, docs/MAINTAIN.md)'].append('%s  %d > %d bytes' % (f, lf_size(f), cap))
     for f in glob.glob('games/*.md'):
         cap = GAME_GRANDFATHERED.get(f.replace(os.sep, '/'), GAME_BUDGET)    # glob gives '\' on Windows
-        if os.path.getsize(f) > cap:
-            fail['over size budget (consolidate, docs/MAINTAIN.md)'].append('%s  %d > %d bytes' % (f, os.path.getsize(f), cap))
+        if lf_size(f) > cap:
+            fail['over size budget (consolidate, docs/MAINTAIN.md)'].append('%s  %d > %d bytes' % (f.replace(os.sep, '/'), lf_size(f), cap))
     for title, d in (('WARN', warn), ('FAIL', fail)):
         for k, v in d.items():
             print('%s %s (%d)' % (title, k, len(v)))

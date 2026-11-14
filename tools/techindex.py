@@ -60,7 +60,8 @@ def build():
         if not meta:
             continue
         use = re.search(r'^## Use / do not use\n(.*?)(?=\n## |\Z)', body, re.S | re.M)
-        first = re.split(r'(?<=[.!?])\s', ' '.join(use.group(1).split()), maxsplit=1)[0] if use else ''
+        words = re.sub(r'^\*\*[^*]+\*\*\s*', '', ' '.join(use.group(1).split())) if use else ''   # not a bold label
+        first = re.split(r'(?<=[.!?])\s', words, maxsplit=1)[0]
         out.append({k: meta.get(k) for k in ('id', 'kind', 'lifecycle', 'superseded_by', 'question')}
                    | {'summary': first}
                    | {k: meta.get(k, []) for k in ('requires', 'rejects', 'conflicts', 'tags', 'examples')}

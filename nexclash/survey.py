@@ -30,6 +30,8 @@ import os
 import statistics
 import sys
 
+LONG, FIRST_LOOK = 20000, 15000        # frames: warn above LONG, suggest --stop FIRST_LOOK
+
 CALLS = {0xCD} | {0xC4, 0xCC, 0xD4, 0xDC, 0xE4, 0xEC, 0xF4, 0xFC}
 JPS = {0xC3} | {0xC2, 0xCA, 0xD2, 0xDA, 0xE2, 0xEA, 0xF2, 0xFA}
 BLOCK = {(0xED, 0xB0): 'LDIR', (0xED, 0xB8): 'LDDR', (0xED, 0xA0): 'LDI', (0xED, 0xA8): 'LDD'}
@@ -50,6 +52,7 @@ class PlotTracker:
         self.parents = collections.defaultdict(collections.Counter)  # target -> enclosing routine -> calls
         self.tcost = collections.defaultdict(list)                   # target -> T per call (sampled)
         self.frames_active = collections.defaultdict(set)
+        self.src = collections.defaultdict(collections.Counter)      # screen-writing routine -> 64-byte granule -> data reads
         self.frame = 0
         self.T = 0                            # own T-state count (the replay resets its counter per frame)
 
@@ -98,6 +101,13 @@ class PlotTracker:
     def after(self, pc, dt):
         self.T += dt
 
+    def on_read(self, a, pc, mem):
+        if a < 0x5B00 or pc <= a <= pc + 3 or not self.stack:      # ROM, the screen, the instruction's own bytes
+            return
+        r = self.stack[-1][0]
+        if r in self.frames_active and not -64 < a - self.sim.registers[12] < 64:   # screen writers; not the stack
+            self.src[r][a >> 6] += 1
+
     def on_write(self, a, v, pc, mem):
         if 0x4000 <= a < 0x5B00:
             pass
@@ -135,11 +145,78 @@ def static_sites(mem, target, ran):
     return out
 
 
+def _spans(counter, top=3):
+    """64-byte granules -> the largest contiguous spans [(lo, hi, reads)]."""
+    out, cur = [], None
+    floor = max(counter.values(), default=0) / 20          # a routine left on the shadow stack reads everything a little
+    for g in sorted(g for g in counter if counter[g] >= floor):
+        if cur and g == cur[1] + 1:
+            cur[1], cur[2] = g, cur[2] + counter[g]
+        else:
+            cur = [g, g, counter[g]]
+            out.append(cur)
+    return [(lo << 6, (hi << 6) + 63, n) for lo, hi, n in sorted(out, key=lambda c: -c[2])[:top]]
+
+
+def findings(pt, it, n, routines):
+    """Derived from the counts (no disassembly): rendering model, pacing, roles. -> (lines, dict).
+    Heuristics: each line says what it rests on; check before relying on it (PLAYBOOK 2)."""
+    out, js = [], {}
+    ints = [r for r in routines if isinstance(r['routine'], int)]
+    tot = sum(pt.pix.values()) or 1
+    lead = max(ints, key=lambda r: r['pixel_bytes'], default=None)
+    if lead and lead['pixel_bytes']:
+        share, per = lead['pixel_bytes'] / tot, lead['pixel_bytes'] / max(1, lead['calls'])
+        if share >= 0.6 and lead['block_copy_bytes'] >= 0.6 * lead['pixel_bytes']:
+            js['model'] = 'back buffer, block copy to the screen'
+        elif share >= 0.6 and 7.5 <= per <= 8.5:
+            js['model'] = 'cell copier (8 pixel bytes per call): figures are composed off screen, as cells or in a buffer'
+        elif share >= 0.6:
+            js['model'] = 'one routine draws most pixels (%d bytes per call): a copier, or the only plotter' % per
+        else:
+            js['model'] = 'several routines draw to the screen directly'
+        out.append('- Rendering model: %s. Basis: %s writes %d%% of the pixel bytes, %d%% of them by block copy.'
+                   % (js['model'], _h(lead['routine']), 100 * share, 100 * lead['block_copy_bytes'] / lead['pixel_bytes']))
+        if share >= 0.6:
+            lead['role'] = 'screen copier'
+            js['sources'] = {}
+            for r in [lead['routine']] + [int(k) for k in lead['called_from_routines'] if k.isdigit()]:
+                sp = _spans(pt.src.get(r, {}))
+                if sp:
+                    js['sources'][str(r)] = [[lo, hi, c] for lo, hi, c in sp]
+                    out.append('  - %s reads its data from %s: the buffer / cell map / graphics it copies. Next: '
+                               '`scan --range LO-HI --writers` on the largest (who composes it), not the preview below.'
+                               % (_h(r), ', '.join('0x%04X-0x%04X (x%d)' % x for x in sp)))
+    for r in ints:
+        if 'role' not in r:
+            r['role'] = 'attribute writer' if not r['pixel_bytes'] and r['attr_bytes'] else 'plotter'
+        if r['T_max'] and r['T_max'] > 20 * 69888:
+            r['role'] = 'main loop (attribution blurred)'
+            out.append('- %s: T max %d is over 20 frames - the main loop or a wait inside it; its row is the '
+                       'shadow call stack blurring (check with `cost --at`), not a plotter.' % (_h(r['routine']), r['T_max']))
+    js['interrupts_accepted'] = it.count
+    if it.count == 0:
+        js['pacing'] = 'no interrupts'
+        out.append('- Pacing: no interrupt was accepted in %d frames: the game runs with interrupts off, so nothing '
+                   'syncs it to the frame and hook time changes game speed (PLAYBOOK 4 "no frame sync"; card '
+                   'detect.pacing-structure).' % n)
+    else:
+        js['pacing'] = 'interrupts on'
+        out.append('- Pacing: %d interrupts accepted in %d frames (handler below). Whether the game waits for '
+                   'them (HALT / flag) is card detect.pacing-structure.' % (it.count, n))
+    return out, js
+
+
+def _md5(path):
+    import hashlib
+    return hashlib.md5(open(path, 'rb').read()).hexdigest() if os.path.exists(path) else None
+
+
 def _h(a):
     return '%d (0x%04X)' % (a, a) if isinstance(a, int) else str(a)
 
 
-def survey(z80, rzx=None, out=None, stop=None, frames=None, keys=None, top=6, log=print, full=False):
+def survey(z80, rzx=None, out=None, stop=None, frames=None, keys=None, top=6, log=print, full=False, fresh=False):
     from skoolkit.snapshot import Snapshot
     from . import snapinfo, memscan, isrinfo, preview as P, build as B, z80tonex as zt, nextboot
     from .simrun import run
@@ -148,10 +225,22 @@ def survey(z80, rzx=None, out=None, stop=None, frames=None, keys=None, top=6, lo
     name = os.path.splitext(os.path.basename(z80))[0]
     out = out or os.path.join(os.path.dirname(os.path.abspath(z80)), name + '_survey')
     os.makedirs(out, exist_ok=True)
-    md, js = [], {'game': name}
+    inputs = {'z80': _md5(z80), 'rzx': [_md5(r) for r in rzx or []],
+              'args': [stop, frames, keys, top, bool(full)]}
+    old_js, old_md = os.path.join(out, 'survey.json'), os.path.join(out, 'survey.md')
+    if not fresh and os.path.exists(old_js) and os.path.exists(old_md):
+        try:
+            js = json.load(open(old_js))
+        except ValueError:
+            js = {}
+        if js.get('inputs') == inputs:                      # same files, same arguments: minutes saved
+            log('survey: reusing %s (same snapshot, recordings and arguments; --fresh runs it again)' % old_md)
+            return open(old_md).read(), js
+    md, js = [], {'game': name, 'inputs': inputs}
     say = md.append
     s = Snapshot.get(z80)
     is128 = len(s.ram(-1)) == 0x20000
+    js['machine'] = '128K' if is128 else '48K'
     say('# Survey: %s (%s)' % (name, '128K' if is128 else '48K'))
     say('Read this first (PLAYBOOK stage 0). Raw numbers: survey.json. Commands to dig further: PLAYBOOK 2-3.')
     say('')
@@ -189,7 +278,14 @@ def survey(z80, rzx=None, out=None, stop=None, frames=None, keys=None, top=6, lo
         from . import rzx as RZ
         say('## Recordings')
         for r in rzx:
-            nsnap = sum(1 for b in parse_rzx(r) if isinstance(b.obj, Snapshot))
+            blocks = parse_rzx(r)
+            nsnap = sum(1 for b in blocks if isinstance(b.obj, Snapshot))
+            nfr = sum(int.from_bytes(b.data[5:9], 'little') for b in blocks if b.data[0] == 0x80)
+            if nfr > LONG and not stop:
+                msg = ('%s: %d frames (%d min of play; the checklist asks for 3-5): the survey replays it twice, '
+                       'about %d min. First look: --stop %d.' % (os.path.basename(r), nfr, nfr // 3000, nfr // 3000, FIRST_LOOK))
+                log('survey: WARNING ' + msg)
+                say('- WARNING ' + msg)
             if nsnap > 1:          # analyse() (the plain build's tail proof) desyncs on autosave snapshots
                 r2 = os.path.join(out, os.path.splitext(os.path.basename(r))[0] + '_stripped.rzx')
                 RZ.strip(r, r2)
@@ -291,6 +387,16 @@ def survey(z80, rzx=None, out=None, stop=None, frames=None, keys=None, top=6, lo
             cov or '-'))
     js['routines'] = routines
     js['coverage_gaps'] = gaps
+    from . import kb
+    try:
+        dis = kb._disassembler(mem)
+        for info in routines:
+            if isinstance(info['routine'], int) and info['routine'] >= 0x4000:
+                info['fingerprint'] = kb.fingerprint(mem, info['routine'], dis)
+    except Exception as e:                                  # noqa: BLE001 - the survey stands without them
+        log('survey: no fingerprints (%s)' % e)
+    f_lines, js['findings'] = findings(pt, it, n, routines)
+    known = kb.match(routines, z80=inputs['z80'])
     say('## Recording and coverage')
     say('- %d frames analysed%s.' % (n, ' (free run, keys: %s)' % (keys or 'none') if not rz else ''))
     say('- GATE: %s' % ('OK - every CALL site to the top plot routines in code that ran was reached'
@@ -298,6 +404,16 @@ def survey(z80, rzx=None, out=None, stop=None, frames=None, keys=None, top=6, lo
                          '(table below). For a FIGURE plotter that is a path the recording missed: ask the user for a '
                          'recording that reaches it (docs/RECORDING_CHECKLIST.md) before stage 1. For a text / score '
                          'printer it usually is a message that did not come up: say so in games/<game>.md.' % gaps))
+    say('')
+    say('## Findings (derived from the counts - heuristics, each with its basis)')
+    md.extend(f_lines)
+    for sc_, mine, game, theirs, role in known[:6]:
+        say('- Known code: %s resembles %s %s in docs/kb/games/%s.json (%.2f)%s - read games/%s.md before designing.'
+            % (_h(mine), _h(theirs), ('(%s)' % role) if role else '', game, sc_, '' if sc_ < 1 else ' = same code', game))
+    if not known:
+        say('- Known code: no routine resembles a game in docs/kb (`python -m nexclash.kb list`).')
+    say('- At stage end: `python -m nexclash.kb add %s --game <game>` (docs/kb: the next game starts from this one).'
+        % os.path.basename(out))
     say('')
     say('## Screen writers by routine (innermost CALL running at the write)')
     say('| Routine | pixel / attr bytes | calls | callers seen | T per call median / max | called from | coverage |')
@@ -340,11 +456,13 @@ def main(argv=None):
     ap.add_argument('--stop', type=int, help='RZX: stop after N frames')
     ap.add_argument('--frames', type=int, help='free run: frames (default 500)')
     ap.add_argument('--keys', help='free run: key schedule, e.g. "5-14:SPACE; 30-:N"')
+    ap.add_argument('--fresh', action='store_true', help='run again even when survey.json has the same inputs')
     ap.add_argument('--full', action='store_true', help='analyse even a recognised game (default: recognition only)')
     ap.add_argument('--top', type=int, default=6, help='plot routines to report (default 6)')
     ap.add_argument('-o', '--out', help='output folder (default <game>_survey next to the snapshot)')
     a = ap.parse_args(argv)
-    text, js = survey(a.z80, a.rzx, a.out, a.stop, a.frames, a.keys, a.top, log=lambda m: print(m, file=sys.stderr), full=a.full)
+    text, js = survey(a.z80, a.rzx, a.out, a.stop, a.frames, a.keys, a.top, log=lambda m: print(m, file=sys.stderr), full=a.full,
+                      fresh=a.fresh)
     print(text)
     return 0
 

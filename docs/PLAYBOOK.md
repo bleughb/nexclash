@@ -57,8 +57,8 @@ preserve the handoff either way. Stages do not force new chats.
 # Stage 0 - Intake (tools, before any design work)
 
 ## Survey (one command)
-`python -m nexclash.survey GAME.z80 --rzx R [--rzx R2]` (~5 min per 8,600 frames, linear;
-the analysis pass is silent for minutes - not a hang; `--stop N` for a first look) runs
+`python -m nexclash.survey GAME.z80 --rzx R [--rzx R2]` (~1 min per 3,000 frames, silent; long
+recording: `--stop 15000` first; same inputs: reused) runs
 the snapshot check (0b), the plain conversion with its boot check (1; 48K only), engine identification (2) and one analysis pass (3: screen writers by routine, callers, T per call,
 ISR, free memory), then a preview pass, and writes `<game>_survey/`: survey.md (one page, ~2K
 tokens), survey.json, preview.png (what each top plot routine draws, per caller), the plain .nex.
@@ -111,12 +111,13 @@ for them (BRIEFING C2 #18). Search the snapshot for their byte signatures. A new
 line to nexclash/engines.py.
 A known engine matches: align and locate by pattern (games/tid_engine.md "Locating sites"); verify every site's original bytes.
 
-Unknown engine: `scan GAME.z80 --rzx R --range 0x4000-0x5AFF --writers` ranks the screen writers
-(and finds a back buffer: a big LDI/LDIR/stack writer copying from RAM; scan that range --writers
-too), `preview --plot ENTRY` shows what each plot routine draws per caller; classify the inner
-loop (masked AND/XOR/OR, pure XOR, LDIR/stack blit, attribute-cell), then continue from step 3.
-Classify the RENDERING MODEL first - it picks the hook pattern (BRIEFING A3, decision table 4):
-XOR to screen, masked + undo buffer, back-buffer composer, full redraw / tilemap, differential OR.
+Unknown engine: survey.md Findings name the model, the copier's source, the pacing and
+known code (docs/kb: `python -m nexclash.kb find WORD`; `kb hw WORD` = ports, ROM, system
+variables), then `scan --range BUF --writers`, `preview --plot ENTRY`; classify the
+inner loop (masked AND/XOR/OR, pure XOR, LDIR/stack blit, attribute-cell), continue from step 3.
+The RENDERING MODEL picks the hook pattern (BRIEFING A3, decision table 4): XOR to screen, masked +
+undo buffer, back-buffer composer, full redraw / tilemap, differential OR, cell map + diff copier
+(games/trap_door.md: no pixel clash - ask first).
 Patch plan (docs/techniques/STANDARD.md 4-5): per routine / figure class, write the observations
 (each with basis observed / inferred / unknown, and scope) in games/<game>.md, then pick cards from
 docs/techniques/index.json: eligible = every `requires` true and every `rejects` false; unknown ->

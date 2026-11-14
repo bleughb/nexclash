@@ -1,0 +1,34 @@
+{
+ "game": "knight_tyme",
+ "schema": 1,
+ "machine": "128K",
+ "engine": "knight_tyme",
+ "inputs": {
+  "z80": "8e720b5cc11fe0d9445fe0af4825c8bf",
+  "rzx": [
+   "71bd4d94e1f66b6c05901e5757e77713"
+  ],
+  "args": [
+   3000,
+   null,
+   null,
+   6,
+   true
+  ]
+ },
+ "frames": 2,
+ "model": null,
+ "pacing": "interrupts on",
+ "interrupts_accepted": 1,
+ "source_buffers": {},
+ "coverage_gaps": 0,
+ "plain": {
+  "file": "knight_tyme.nex",
+  "tail": "default tail (no recording to check it against)",
+  "boot": "not run: nextboot.check models 48K start-up only (128K engines bring their own boot check, e.g. midres.boot_check)"
+ },
+ "outcome": "converted (docs/records/knight_tyme.json)",
+ "routines": [],
+ "title": "Knight Tyme (128K)",
+ "doc": "knight_tyme.md"
+}

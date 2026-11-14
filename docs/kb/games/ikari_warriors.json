@@ -1,0 +1,235 @@
+{
+ "game": "ikari_warriors",
+ "schema": 1,
+ "machine": "48K",
+ "engine": "ikari_warriors",
+ "inputs": {
+  "z80": "54ad66af6678df22a9d4443e3d04aadb",
+  "rzx": [
+   "aa9446c86c779acce7069ce72f60ede7"
+  ],
+  "args": [
+   3000,
+   null,
+   null,
+   6,
+   true
+  ]
+ },
+ "frames": 3001,
+ "model": "back buffer, block copy to the screen",
+ "pacing": "interrupts on",
+ "interrupts_accepted": 120,
+ "source_buffers": {
+  "25266": [
+   [
+    49152,
+    58367,
+    3647122
+   ],
+   [
+    58432,
+    58559,
+    7792
+   ]
+  ]
+ },
+ "coverage_gaps": 1,
+ "plain": {
+  "file": "ikari_warriors.nex",
+  "tail": "FAILED: snapshot with SP=0xFFEA in the paged top 16K: no automatic place for the start-up tail; use --tail ADDR in 0x5B00-0xBFFF on memory the game never reads before writing (access scan: e.g. a zeroed printer buffer, dead stack, or a back buffer the game redraws; Rainbow Islands: 0x9F00)",
+  "boot": "not run"
+ },
+ "outcome": "converted (docs/records/ikari_warriors.json)",
+ "routines": [
+  {
+   "routine": 25266,
+   "role": "screen copier",
+   "pixel_bytes": 3184297,
+   "attr_bytes": 398244,
+   "block_copy_bytes": 3582541,
+   "calls": 862,
+   "T_median": 74548,
+   "fingerprint": {
+    "n": 12,
+    "full": "8e220a6dfd",
+    "win": [
+     "04f2328397",
+     "0979097217",
+     "2fcd490430",
+     "77e25ce2e6",
+     "862d2bd1f9",
+     "9b6f71b4e6",
+     "fc4d497b70"
+    ]
+   },
+   "callers": 2
+  },
+  {
+   "routine": 24717,
+   "role": "plotter",
+   "pixel_bytes": 138296,
+   "attr_bytes": 17287,
+   "block_copy_bytes": 0,
+   "calls": 17287,
+   "T_median": 556,
+   "fingerprint": {
+    "n": 34,
+    "full": "edc3105e84",
+    "win": [
+     "01ab16049e",
+     "033b505be4",
+     "0e6d6eaf93",
+     "268a1862ce",
+     "334b475153",
+     "430d455782",
+     "4ea2140363",
+     "5174b2b1cc",
+     "5b2efe8d8b",
+     "6253bfb933",
+     "73abc4ff94",
+     "7836e42077",
+     "839ee0fe97",
+     "851c2c2085",
+     "871b559add",
+     "8f549f4559",
+     "96520bed1f",
+     "96d6f3bf79",
+     "a411be5177",
+     "b2b4dfe584",
+     "b4f16a7b1d",
+     "b9157febe3",
+     "bec56a20ce",
+     "d0f6388817",
+     "d7ae389be8",
+     "dab7bbf879",
+     "dc5e3adbcd",
+     "dcd0f3b769",
+     "ffbb26fad4"
+    ]
+   },
+   "callers": 3
+  },
+  {
+   "routine": 60109,
+   "role": "attribute writer",
+   "pixel_bytes": 0,
+   "attr_bytes": 122880,
+   "block_copy_bytes": 119040,
+   "calls": 5,
+   "T_median": 1046732,
+   "fingerprint": {
+    "n": 23,
+    "full": "9a2aa93966",
+    "win": [
+     "2323700f4c",
+     "318e0f8f77",
+     "3ea8823efc",
+     "42aa0cbe35",
+     "487fd4792b",
+     "51326b16bd",
+     "533e7d4160",
+     "5d83e6ec03",
+     "68ea9dfcfb",
+     "87f4acb565",
+     "aae065043c",
+     "adb6467fac",
+     "b0a27dc5e6",
+     "be1faabf95",
+     "c5bcede8dd",
+     "d7e565b423",
+     "ee4551f791",
+     "f4f8d25db9"
+    ]
+   },
+   "callers": 3
+  },
+  {
+   "routine": 29034,
+   "role": "plotter",
+   "pixel_bytes": 27600,
+   "attr_bytes": 3450,
+   "block_copy_bytes": 0,
+   "calls": 3450,
+   "T_median": 1222,
+   "fingerprint": {
+    "n": 27,
+    "full": "aa8067913e",
+    "win": [
+     "0e06b79fe5",
+     "18e22305bd",
+     "29f5d35c4b",
+     "3a8acf4a2a",
+     "4d74dca1b3",
+     "59a6b81e30",
+     "5a64d0c0e4",
+     "5e64174ad7",
+     "6de543f534",
+     "7e3735ff2f",
+     "8134cc8908",
+     "915373eed8",
+     "978531bc8a",
+     "a322093d03",
+     "aab8b901d3",
+     "b736f0ad2a",
+     "b742d03ef1",
+     "bb53cd3cc0",
+     "e16984f2a3",
+     "f3c057c90e",
+     "faffdf44a2",
+     "fc88ef0ea6"
+    ]
+   },
+   "callers": 2
+  },
+  {
+   "routine": 24845,
+   "role": "plotter",
+   "pixel_bytes": 24576,
+   "attr_bytes": 3072,
+   "block_copy_bytes": 27644,
+   "calls": 4,
+   "T_median": 145189,
+   "fingerprint": {
+    "n": 9,
+    "full": "f45402ea67",
+    "win": [
+     "03c2eafa2a",
+     "35f279da22",
+     "fda2e47ebd",
+     "ff6c012f47"
+    ]
+   },
+   "callers": 3
+  },
+  {
+   "routine": 24876,
+   "role": "plotter",
+   "pixel_bytes": 6592,
+   "attr_bytes": 824,
+   "block_copy_bytes": 0,
+   "calls": 764,
+   "T_median": 566,
+   "fingerprint": {
+    "n": 16,
+    "full": "0a6b7e3adc",
+    "win": [
+     "261b6e3e3d",
+     "2a35fe4621",
+     "3400dffc2e",
+     "407c65e54a",
+     "7a594fc418",
+     "884bcd972b",
+     "a2b1562466",
+     "beb1b5aeb4",
+     "c0ade89599",
+     "ddb63ddffc",
+     "dddf108d6c"
+    ]
+   },
+   "callers": 3
+  }
+ ],
+ "title": "Ikari Warriors (48K form)",
+ "doc": "ikari_warriors.md"
+}

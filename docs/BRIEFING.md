@@ -33,7 +33,7 @@ Layers - never mix their facts:
   drops the autosave snapshots.
 - The auto-recorder is deterministic (same seed -> same RZX MD5); .nex bytes do not depend on
   the input file name.
-- Reference inputs (game snapshots + recordings) live in the maintainers' PRIVATE repo
+- Reference inputs (game snapshots + recordings) live in the maintainers' repo
   bleughb/specnext (reference/), never in this public one; selftest finds them via
   $NEXCLASH_REFERENCE or ../specnext/reference; each game's evidence record (docs/records/<game>.json)
   names its files (path under reference/ + MD5) and selftest refuses a file whose MD5 differs.

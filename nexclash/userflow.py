@@ -90,7 +90,7 @@ def cmd_patch(a, cmd_auto):
     if current is None:
         print('No sprite build: this game is not supported yet (plain .nex only: %s).' % (
             'built' if os.path.exists(plain) else 'not built'))
-        print('Add it with Claude:  python nexclash.py new %s' % z80)
+        print('Add it with a Claude session: `python nexclash.py new %s` writes its SESSION.md (the prompt to start with).' % z80)
         return 2
     if 'FAILED' in rep or 'MISMATCH' in rep:
         print('Sprite build FAILED its checks - do not use it. Start a session: python nexclash.py new %s' % z80)
@@ -177,7 +177,7 @@ def cmd_new(a, cmd_auto):
     upload = c.get('upload_url') or 'see CONTRIBUTING.md in the package'
     open(os.path.join(folder, 'SESSION.md'), 'w').write(SESSION.format(
         game=game, z80=os.path.basename(z80), z80path=os.path.abspath(z80),
-        report=os.path.join(os.path.dirname(os.path.abspath(z80)), game + '_nexclash', game + '_report.txt'),
+        report=os.path.join(a.out, game + '_report.txt'),
         md5=md5(z80), why=why, upload=upload,
         date=time.strftime('%Y-%m-%d')))
     rc = os.path.join(ROOT, 'docs', 'RECORDING_CHECKLIST.md')
