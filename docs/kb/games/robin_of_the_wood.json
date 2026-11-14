@@ -1,0 +1,269 @@
+{
+ "game": "robin_of_the_wood",
+ "schema": 1,
+ "machine": "128K",
+ "engine": "robin_of_the_wood",
+ "inputs": {
+  "z80": "d2fa7f2eeb8ccb75c30edbacb432a8b5",
+  "rzx": [
+   "93d58083a376957125e91e79bccc4f34"
+  ],
+  "args": [
+   3000,
+   null,
+   null,
+   6,
+   true
+  ]
+ },
+ "frames": 3001,
+ "model": "one routine draws most pixels (123 bytes per call): a copier, or the only plotter",
+ "pacing": "interrupts on",
+ "interrupts_accepted": 2728,
+ "source_buffers": {
+  "51541": [
+   [
+    58624,
+    59199,
+    1673491
+   ],
+   [
+    62208,
+    63231,
+    246576
+   ],
+   [
+    63488,
+    63743,
+    45456
+   ]
+  ]
+ },
+ "coverage_gaps": 0,
+ "plain": {
+  "file": "robin_of_the_wood.nex",
+  "tail": "default tail (no recording to check it against)",
+  "boot": "not run: nextboot.check models 48K start-up only (128K engines bring their own boot check, e.g. midres.boot_check)"
+ },
+ "outcome": "converted (docs/records/robin_of_the_wood.json)",
+ "routines": [
+  {
+   "routine": 51541,
+   "role": "screen copier",
+   "pixel_bytes": 409960,
+   "attr_bytes": 51245,
+   "block_copy_bytes": 0,
+   "calls": 3321,
+   "T_median": 26016,
+   "fingerprint": {
+    "n": 16,
+    "full": "821d439945",
+    "win": [
+     "1ae3d9957d",
+     "30e4dca693",
+     "4c36723da8",
+     "69651fb118",
+     "717a2c6fed",
+     "8025a9ddd4",
+     "9c4ae3e656",
+     "a25fc7e74d",
+     "e4835f0208",
+     "eacf44af41",
+     "eefe06f101"
+    ]
+   },
+   "callers": 1
+  },
+  {
+   "routine": 53108,
+   "role": "plotter",
+   "pixel_bytes": 60480,
+   "attr_bytes": 7560,
+   "block_copy_bytes": 58968,
+   "calls": 2,
+   "T_median": 1257256,
+   "fingerprint": {
+    "n": 96,
+    "full": "db1ea881ca",
+    "win": [
+     "0443501fea",
+     "05f6847597",
+     "0b5eb64957",
+     "0b74a12f63",
+     "0da7d146ff",
+     "12d7c0afe3",
+     "1511ccca16",
+     "1590977573",
+     "16067266ec",
+     "16fb91a59b",
+     "1742924ad6",
+     "17be4897ba",
+     "1ef457903d",
+     "225bb0a4fc",
+     "275f085f35",
+     "27bc98df7b",
+     "295d9ed7d6",
+     "2afc78a50a",
+     "2e954135d9",
+     "342fa45c50",
+     "36b61faaa0",
+     "3793c65748",
+     "3cde09652b",
+     "4403a1d61a",
+     "464580a01c",
+     "48aa196450",
+     "4bc32f5b51",
+     "4dbb764f18",
+     "4e2ed174c2",
+     "598ceeb972",
+     "5b23cf7f62",
+     "5d0a342f86",
+     "5ef47920b4",
+     "60b1aef2ba",
+     "6b94be57e3",
+     "6c7339ad21",
+     "6e3c96e87a",
+     "6e3fdfa3c4",
+     "6e4d88c194",
+     "7621a77793",
+     "77df8b2e28",
+     "7a3f0dc233",
+     "7e11ce358c",
+     "7fb918bace",
+     "806f362323",
+     "8428199539",
+     "8589a09f8d",
+     "86072332dd",
+     "88281b57a0",
+     "8a3c796d0b",
+     "8e61f81c86",
+     "92669d169c",
+     "93dd3806bc",
+     "97c0902007",
+     "9a1c29d319",
+     "9c447caa6c",
+     "a2ee26bdb4",
+     "a3b4716547",
+     "a3f2caada0",
+     "acbda13a09",
+     "b0ca22bb1c",
+     "bb784c4c25",
+     "bfbbb4fa6b",
+     "c15f3a8c5e",
+     "c20627ac0b",
+     "c2d92d7343",
+     "c48ba2e2b0",
+     "c58ca0e905",
+     "c64ce6a73f",
+     "c6be8109fd",
+     "d433cb3a43",
+     "d514d89707",
+     "d76877b533",
+     "d905156847",
+     "e0a02510c1",
+     "e357dacbc8",
+     "e3df695c5b",
+     "e7ef336bd9",
+     "e86ce5f45f",
+     "ea07a021ad",
+     "ec41551de2",
+     "f04d7c7adb",
+     "f4c6c1f0f6",
+     "f7affa5972",
+     "fb2fd0d1ed",
+     "fdd1403823"
+    ]
+   },
+   "callers": 2
+  },
+  {
+   "routine": 51455,
+   "role": "plotter",
+   "pixel_bytes": 12096,
+   "attr_bytes": 0,
+   "block_copy_bytes": 12096,
+   "calls": 3,
+   "T_median": 83186,
+   "fingerprint": {
+    "n": 43,
+    "full": "709bf1f3a1",
+    "win": [
+     "06dff11843",
+     "34a6666f53",
+     "4008f97295",
+     "49430d467c",
+     "4e6f8b860b",
+     "7bf4ab15e6",
+     "8ede79ac12",
+     "9c702fd9dd",
+     "9c7d3a588a",
+     "a32bec10e8",
+     "b09894c793",
+     "bc34cad224",
+     "c255bfe341",
+     "c89c009bb7",
+     "dd6eaf2496",
+     "ec2c17b862"
+    ]
+   },
+   "callers": 1
+  },
+  {
+   "routine": 49799,
+   "role": "attribute writer",
+   "pixel_bytes": 0,
+   "attr_bytes": 1512,
+   "block_copy_bytes": 0,
+   "calls": 3,
+   "T_median": 22147,
+   "fingerprint": {
+    "n": 18,
+    "full": "afed880aa8",
+    "win": [
+     "08209c63ab",
+     "0fd0778524",
+     "909475a15c",
+     "9201d7a23b",
+     "a00dbe5f09",
+     "a421996622",
+     "abf2ac4b83",
+     "c256236d6c",
+     "c4624dd24f",
+     "db4d14cfac",
+     "dcc0580072",
+     "f1b4993813",
+     "f60f5dfc16"
+    ]
+   },
+   "callers": 1
+  },
+  {
+   "routine": 53570,
+   "role": "plotter",
+   "pixel_bytes": 1024,
+   "attr_bytes": 0,
+   "block_copy_bytes": 992,
+   "calls": 1,
+   "T_median": 24090,
+   "fingerprint": {
+    "n": 15,
+    "full": "f09f701397",
+    "win": [
+     "1c1fe27cc1",
+     "3778babefd",
+     "48d837faf0",
+     "539083e60c",
+     "5d56f5bbb6",
+     "bba3a00547",
+     "c297337ba7",
+     "c2ae0d93ff",
+     "cca2837f4a",
+     "f32a03ed2a"
+    ]
+   },
+   "callers": 1
+  }
+ ],
+ "title": "Robin of the Wood (128K)",
+ "doc": "robin_of_the_wood.md"
+}

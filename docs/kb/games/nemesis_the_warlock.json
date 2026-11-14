@@ -1,0 +1,221 @@
+{
+ "game": "nemesis_the_warlock",
+ "schema": 1,
+ "machine": "48K",
+ "engine": "nemesis",
+ "inputs": {
+  "z80": "f7d376977b93b515feaff1672c212b12",
+  "rzx": [
+   "c46e94525128df6f98993f0ebde5c49c"
+  ],
+  "args": [
+   3000,
+   null,
+   null,
+   6,
+   true
+  ]
+ },
+ "frames": 3001,
+ "model": "back buffer, block copy to the screen",
+ "pacing": "no interrupts",
+ "interrupts_accepted": 0,
+ "source_buffers": {
+  "32154": [
+   [
+    24064,
+    27903,
+    2517352
+   ],
+   [
+    51776,
+    51839,
+    225300
+   ]
+  ]
+ },
+ "coverage_gaps": 0,
+ "plain": {
+  "file": "nemesis_the_warlock.nex",
+  "tail": "WARNING: no proven-safe tail location; converter default used",
+  "boot": "OK (registers, RAM, ROM view, paging)"
+ },
+ "outcome": "converted (docs/records/nemesis_the_warlock.json)",
+ "routines": [
+  {
+   "routine": 32154,
+   "role": "screen copier",
+   "pixel_bytes": 2523360,
+   "attr_bytes": 0,
+   "block_copy_bytes": 2523360,
+   "calls": 751,
+   "T_median": 68314,
+   "fingerprint": {
+    "n": 96,
+    "full": "3f3d2e3a49",
+    "win": [
+     "112346e489",
+     "20d092c6e3",
+     "233e93ee0d",
+     "2986fc9a9a",
+     "3f22887f74",
+     "3f97f80431",
+     "408a916f9c",
+     "4a3ba63fa2",
+     "4c51996209",
+     "4e325cca9e",
+     "4e6f8b860b",
+     "542022c4f3",
+     "55c9f0718d",
+     "58017f75df",
+     "5953a6d0b2",
+     "6378ff90cd",
+     "661accfea3",
+     "69a51ec8ef",
+     "7e406e15d0",
+     "7f2092e0f2",
+     "85acf8f115",
+     "8a943e173d",
+     "92eeaf66dc",
+     "a712892014",
+     "a79f2f9c40",
+     "b6595fb0ec",
+     "c76a558d56",
+     "c77d3056a1",
+     "c94a6a3305",
+     "d118ce7a59",
+     "da462b458a",
+     "e4a3f71226",
+     "f23221c992"
+    ]
+   },
+   "callers": 3
+  },
+  {
+   "routine": 32040,
+   "role": "plotter",
+   "pixel_bytes": 49280,
+   "attr_bytes": 0,
+   "block_copy_bytes": 0,
+   "calls": 6160,
+   "T_median": 308,
+   "fingerprint": {
+    "n": 7,
+    "full": "694475dc2b",
+    "win": [
+     "300a3aafb8",
+     "e42d17c985"
+    ]
+   },
+   "callers": 11
+  },
+  {
+   "routine": 37865,
+   "role": "plotter",
+   "pixel_bytes": 6144,
+   "attr_bytes": 769,
+   "block_copy_bytes": 6911,
+   "calls": 1,
+   "T_median": 145232,
+   "fingerprint": {
+    "n": 11,
+    "full": "c251a24226",
+    "win": [
+     "0961452746",
+     "0ac3cb844d",
+     "2355e98766",
+     "a977a13721",
+     "c41369fee6",
+     "e2417643cb"
+    ]
+   },
+   "callers": 1
+  },
+  {
+   "routine": 38147,
+   "role": "plotter",
+   "pixel_bytes": 2816,
+   "attr_bytes": 768,
+   "block_copy_bytes": 3072,
+   "calls": 1,
+   "T_median": 84712,
+   "fingerprint": {
+    "n": 43,
+    "full": "7db7ec25c0",
+    "win": [
+     "042dfe5d1b",
+     "135cbb00b4",
+     "168e610be3",
+     "1d5a30db06",
+     "22a3ece732",
+     "257774ec93",
+     "2d9c09a4ea",
+     "308d9eb949",
+     "3abccde611",
+     "3e3b67072a",
+     "3eb73523e7",
+     "44b4fb30c5",
+     "480297833a",
+     "4e06ea143b",
+     "5692d72ed5",
+     "592a0598b4",
+     "794a9ef204",
+     "7a76ad6362",
+     "7b9a7d7257",
+     "819baae765",
+     "8b8e6d23e0",
+     "9126034b3a",
+     "91d321a976",
+     "98213adfd7",
+     "a28c5892c9",
+     "a58c2ebdd6",
+     "a906302bd3",
+     "aafd74ca35",
+     "af5a109321",
+     "b43ca1f76c",
+     "bcc1269b0d",
+     "c171188de8",
+     "de437a5e7a",
+     "efac80991d",
+     "f865b2b0a9",
+     "fffe51355b"
+    ]
+   },
+   "callers": 1
+  },
+  {
+   "routine": 32982,
+   "role": "attribute writer",
+   "pixel_bytes": 0,
+   "attr_bytes": 1260,
+   "block_copy_bytes": 0,
+   "calls": 3,
+   "T_median": 17672,
+   "fingerprint": {
+    "n": 21,
+    "full": "985f6e2fec",
+    "win": [
+     "0789eafbcd",
+     "1663e7592a",
+     "2d8f43cc21",
+     "3093d7de94",
+     "3e9af2dcbd",
+     "51f6a556d7",
+     "5aa01c62be",
+     "5aa8bc2245",
+     "67789d4d1b",
+     "7ff4b2f870",
+     "9624ff0138",
+     "ae0778f0b0",
+     "ba341f2d67",
+     "ba9446cea8",
+     "eae3a064b8",
+     "f3bc0c6976"
+    ]
+   },
+   "callers": 2
+  }
+ ],
+ "title": "Nemesis the Warlock",
+ "doc": "nemesis_the_warlock.md"
+}

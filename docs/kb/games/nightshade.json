@@ -1,0 +1,249 @@
+{
+ "game": "nightshade",
+ "schema": 1,
+ "machine": "48K",
+ "engine": "nightshade",
+ "inputs": {
+  "z80": "7b4e8280896d7ff34b93e83ddba9d01c",
+  "rzx": [
+   "bff8d8a4c819f9714a68c6213d7df88b"
+  ],
+  "args": [
+   3000,
+   null,
+   null,
+   6,
+   true
+  ]
+ },
+ "frames": 3001,
+ "model": "back buffer, block copy to the screen",
+ "pacing": "no interrupts",
+ "interrupts_accepted": 0,
+ "source_buffers": {
+  "57856": [
+   [
+    58816,
+    61567,
+    1402014
+   ]
+  ]
+ },
+ "coverage_gaps": 1,
+ "plain": {
+  "file": "nightshade.nex",
+  "tail": "tail at 0x5B00 (converter default, checked safe)",
+  "boot": "OK (registers, RAM, ROM view, paging)"
+ },
+ "outcome": "converted (docs/records/nightshade.json)",
+ "routines": [
+  {
+   "routine": 57856,
+   "role": "screen copier",
+   "pixel_bytes": 1402016,
+   "attr_bytes": 0,
+   "block_copy_bytes": 1402016,
+   "calls": 569,
+   "fingerprint": {
+    "n": 31,
+    "full": "1be131cd74",
+    "win": [
+     "081748249a",
+     "39c7525840",
+     "4b003011a3",
+     "50d4e3986c",
+     "5af6900a9a",
+     "5e6fde5ac6",
+     "68096ca521",
+     "6c7c510863",
+     "7c5235a9b6",
+     "7eb174f171",
+     "827a2338db",
+     "8c1610e6b8",
+     "919c89588c",
+     "9f0002e775",
+     "a6db8e615d",
+     "a715a94a82",
+     "d8d8d1dfd4",
+     "df9a541c62",
+     "f835e6459c",
+     "fd17681001"
+    ]
+   },
+   "callers": 1
+  },
+  {
+   "routine": 57773,
+   "role": "attribute writer",
+   "pixel_bytes": 0,
+   "attr_bytes": 175252,
+   "block_copy_bytes": 175252,
+   "calls": 569,
+   "T_median": 6596,
+   "fingerprint": {
+    "n": 67,
+    "full": "5045ac8fa3",
+    "win": [
+     "2fd9470882",
+     "3328ab5b09",
+     "3d0096d79a",
+     "491dcab389",
+     "53ccffe240",
+     "57edc7f6f8",
+     "5f10bc4f00",
+     "61228759de",
+     "664621abdb",
+     "69868cff61",
+     "a027e95c7f",
+     "ad84e01cb4",
+     "b527a0156d",
+     "e08ad1ee70",
+     "e69266240f",
+     "e81ef1f29e",
+     "eff4596dc3",
+     "f99aa29004",
+     "fa481e27cc"
+    ]
+   },
+   "callers": 1
+  },
+  {
+   "routine": 58781,
+   "role": "plotter",
+   "pixel_bytes": 6144,
+   "attr_bytes": 0,
+   "block_copy_bytes": 0,
+   "calls": 1,
+   "T_median": 269718,
+   "fingerprint": {
+    "n": 5,
+    "full": "fb0ac0093b",
+    "win": [
+     "fb0ac0093b"
+    ]
+   },
+   "callers": 1
+  },
+  {
+   "routine": 52059,
+   "role": "plotter",
+   "pixel_bytes": 2784,
+   "attr_bytes": 348,
+   "block_copy_bytes": 0,
+   "calls": 348,
+   "T_median": 616,
+   "fingerprint": {
+    "n": 17,
+    "full": "acb7150ab3",
+    "win": [
+     "0cbf8c4671",
+     "1870abac22",
+     "195aefc5db",
+     "5cf17b6c74",
+     "8bfcfa5958",
+     "ad4ace048d",
+     "bc08152830",
+     "c1d949b3ac",
+     "d3aae604d1",
+     "ece3d00b55",
+     "f6038bee5c",
+     "f7ab3f18e6"
+    ]
+   },
+   "callers": 15
+  },
+  {
+   "routine": 58800,
+   "role": "attribute writer",
+   "pixel_bytes": 0,
+   "attr_bytes": 768,
+   "block_copy_bytes": 0,
+   "calls": 1,
+   "T_median": 29996,
+   "fingerprint": {
+    "n": 12,
+    "full": "0889716578",
+    "win": [
+     "566d2cda8e",
+     "5a48284e28",
+     "5d917cc0fc",
+     "8d6adb812c",
+     "b5f2ad6c10",
+     "c0174f1390",
+     "f90bc5a1c8"
+    ]
+   },
+   "callers": 1
+  },
+  {
+   "routine": 49661,
+   "role": "plotter",
+   "pixel_bytes": 435,
+   "attr_bytes": 0,
+   "block_copy_bytes": 0,
+   "calls": 1,
+   "T_median": 41917,
+   "fingerprint": {
+    "n": 57,
+    "full": "b862c29221",
+    "win": [
+     "09f07176c4",
+     "0d690a755d",
+     "0ee5844f2e",
+     "0f852d12d2",
+     "253dbf92c5",
+     "296cbb84cf",
+     "2b1e7afa5e",
+     "2d1d3533a2",
+     "2ea4108f10",
+     "373667eb91",
+     "410280e50b",
+     "486a8832e8",
+     "4c7358052d",
+     "4cb99d0929",
+     "4fa7208696",
+     "515d95b111",
+     "5a16673cd6",
+     "5fc442539a",
+     "6292bd497b",
+     "6430dec951",
+     "67224c2174",
+     "69df428264",
+     "7c5630d27b",
+     "7e635e2c73",
+     "7ef90f93c7",
+     "925d9041b1",
+     "96e6fa74d6",
+     "9a61337663",
+     "9a945ca4b2",
+     "9bb15d1c1a",
+     "ac2c0398f1",
+     "b3ba1740c6",
+     "b40b8a5e83",
+     "b8f854c257",
+     "b9c91a4f6f",
+     "bae7c49f22",
+     "bbc4497950",
+     "bd2f9c3d3c",
+     "c11b745a7b",
+     "c6173c9ab6",
+     "c81f304411",
+     "cd58fd6516",
+     "cefac39207",
+     "df3a5d6d96",
+     "e09bc77acd",
+     "eba6626519",
+     "ec7ba811c1",
+     "f1a92d5b0b",
+     "f4b47e4469",
+     "f4d9ffea84",
+     "f596e1d84c",
+     "fad2691bf4"
+    ]
+   },
+   "callers": 1
+  }
+ ],
+ "title": "Nightshade",
+ "doc": "nightshade.md"
+}

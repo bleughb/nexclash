@@ -1,0 +1,183 @@
+{
+ "game": "commando",
+ "schema": 1,
+ "machine": "128K",
+ "engine": "commando",
+ "inputs": {
+  "z80": "c9af5668191462d77c5859900268c24b",
+  "rzx": [
+   "b3350a66a14db07add43c878eb872169"
+  ],
+  "args": [
+   3000,
+   null,
+   null,
+   6,
+   true
+  ]
+ },
+ "frames": 3012,
+ "model": "several routines draw to the screen directly",
+ "pacing": "interrupts on",
+ "interrupts_accepted": 3000,
+ "source_buffers": {},
+ "coverage_gaps": 2,
+ "plain": {
+  "file": "Commando_1985_Elite_Systems_t_128K.nex",
+  "tail": "default tail (no recording to check it against)",
+  "boot": "not run: nextboot.check models 48K start-up only (128K engines bring their own boot check, e.g. midres.boot_check)"
+ },
+ "outcome": "converted (docs/records/commando.json)",
+ "routines": [
+  {
+   "routine": 35315,
+   "role": "attribute writer",
+   "pixel_bytes": 0,
+   "attr_bytes": 88421,
+   "block_copy_bytes": 0,
+   "calls": 50972,
+   "T_median": 84,
+   "fingerprint": {
+    "n": 13,
+    "full": "097550854b",
+    "win": [
+     "1762093f27",
+     "1d276408c3",
+     "1d59b392a8",
+     "42a050c14c",
+     "776d05c7b1",
+     "b2bab2aeca",
+     "dd0a583738",
+     "fc06a915e7"
+    ]
+   },
+   "callers": 2
+  },
+  {
+   "routine": 26475,
+   "role": "plotter",
+   "pixel_bytes": 67648,
+   "attr_bytes": 0,
+   "block_copy_bytes": 0,
+   "calls": 151,
+   "T_median": 15948,
+   "fingerprint": {
+    "n": 30,
+    "full": "513fa7358b",
+    "win": [
+     "13482f8d01",
+     "240571f903",
+     "27e126f093",
+     "331d04edc0",
+     "365e026051",
+     "423e40bc7c",
+     "4caa7aea08",
+     "5077b9d5b0",
+     "60656753cd",
+     "60e785c9b2",
+     "6a7e7b77a1",
+     "6c006a74f8",
+     "b6f548bdfe",
+     "b9691ce7a4",
+     "cd581f2541",
+     "d0079e8ec4",
+     "d0dac75e0e",
+     "dcd07e659a",
+     "de1b5743dd",
+     "e1170b62b6",
+     "eaa1815fb9",
+     "f6cbcf4809",
+     "fed3f2758f",
+     "fed522d316",
+     "ff32e8e362"
+    ]
+   },
+   "callers": 1
+  },
+  {
+   "routine": 30142,
+   "role": "attribute writer",
+   "pixel_bytes": 0,
+   "attr_bytes": 7696,
+   "block_copy_bytes": 0,
+   "calls": 12,
+   "T_median": 18912,
+   "fingerprint": {
+    "n": 16,
+    "full": "fb1ce18237",
+    "win": [
+     "118990f648",
+     "133d172171",
+     "15e6a804b2",
+     "1c86daab54",
+     "5a477d0d44",
+     "90742c44fa",
+     "90a27f7f25",
+     "a060d218dc",
+     "a38d083605",
+     "bdba4bd92e",
+     "d0df1d200f"
+    ]
+   },
+   "callers": 4
+  },
+  {
+   "routine": 27060,
+   "role": "plotter",
+   "pixel_bytes": 5260,
+   "attr_bytes": 0,
+   "block_copy_bytes": 5260,
+   "calls": 526,
+   "T_median": 749,
+   "fingerprint": {
+    "n": 21,
+    "full": "2d0177d8d4",
+    "win": [
+     "03ba8de912",
+     "07e50df148",
+     "204950987e",
+     "29d06f905f",
+     "325b4aed9a",
+     "3280483a9d",
+     "557b4bc9fc",
+     "57ef5791ff",
+     "630444c671",
+     "79a31c941a",
+     "96147405e1",
+     "a84c3446e2",
+     "b8340dcfb2",
+     "cfbbf08bf2",
+     "e30cbe6ab9",
+     "fbda19c8fa"
+    ]
+   },
+   "callers": 1
+  },
+  {
+   "routine": 35331,
+   "role": "attribute writer",
+   "pixel_bytes": 0,
+   "attr_bytes": 4166,
+   "block_copy_bytes": 0,
+   "calls": 2180,
+   "T_median": 87,
+   "fingerprint": {
+    "n": 13,
+    "full": "35fddcc1c5",
+    "win": [
+     "1cfb2c10f0",
+     "1d59b392a8",
+     "1f55e63745",
+     "5bee4934f2",
+     "5e101469de",
+     "5e75c12056",
+     "79874881da",
+     "fc06a915e7"
+    ]
+   },
+   "callers": 1
+  }
+ ],
+ "title": "Commando",
+ "doc": "commando.md"
+}

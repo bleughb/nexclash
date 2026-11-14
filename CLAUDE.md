@@ -7,8 +7,8 @@ Never put game data (.z80/.rzx/.nex/.tap/...) in this repo or a contribution: th
 on their machine; the maintainers' reference files live in bleughb/specnext (currently public).
 
 ## A game, stage by stage (docs/PLAYBOOK.md; meaningful session boundaries)
-0. Intake: `python -m nexclash.survey GAME.z80 --rzx R` -> survey.md. Callers the recording never
-   reached, or a recording that desyncs (WARNING with the frame) -> ask for a recording first.
+0. Intake: `python -m nexclash.survey GAME.z80 --rzx R` -> survey.md (Findings: model, pacing, known
+   code). Unreached callers or a desync (WARNING with the frame) -> ask for a recording first.
 1. Design: ONE question - the design defaults + this game's exceptions, preview, plain .nex (3c); unknown engine: feasibility first (3d).
 2. Build: engine files only; `--quick 2000` runs; the evidence record written.
 3. Prove + deliver: the one full verification, `selftest.py --game <record> --verify --stamp`
@@ -22,7 +22,7 @@ changes, merge). The game may already have notes and files (games/<game>.md, STA
 first. Names: folder and games/<game>.md after the game, lower case, underscores.
 
 ## Setup
-`pip install -r requirements.txt --break-system-packages` (SkoolKit, Pillow, numpy). sjasmplus (only for .asm
+`pip install -r requirements.txt --break-system-packages`. sjasmplus (only for .asm
 edits) is bundled and pinned: `python tools/asm2profile.py <engine>` assembles and updates the profile (never build or download another
 version; tools/sjasmplus/README.md). Maintainers: repos and reference files in docs/MAINTAIN.md.
 
@@ -83,7 +83,8 @@ version; tools/sjasmplus/README.md). Maintainers: repos and reference files in d
 
 ## End of every stage
 - games/<game>.md: facts, decisions, status, results (counters, MD5s), hardware checklist, Stage
-  log line, Next session block. docs/VERIFICATION.md is no longer appended to (2026-10-26): the
+  log line, Next session block. `python -m nexclash.kb add <survey dir> --game <game>` (docs/kb;
+  skipped games too). docs/VERIFICATION.md is no longer appended to (2026-10-26): the
   results live in games/<game>.md and the record.
 - At stage 2-3: the evidence record docs/records/<game>.json (PLAYBOOK 7), then `python -m
   nexclash.records views` (writes STATUS.md's table, VERIFICATION.md's checksum list, verified.json;

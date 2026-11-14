@@ -1,0 +1,217 @@
+{
+ "game": "cauldron",
+ "schema": 1,
+ "machine": "48K",
+ "engine": "cauldron",
+ "inputs": {
+  "z80": "00ee637a4f63ffe61fc3503de42d7822",
+  "rzx": [
+   "6974898953de6e279369a77d796407ea"
+  ],
+  "args": [
+   3000,
+   null,
+   null,
+   6,
+   true
+  ]
+ },
+ "frames": 3001,
+ "model": "one routine draws most pixels (229 bytes per call): a copier, or the only plotter",
+ "pacing": "interrupts on",
+ "interrupts_accepted": 2989,
+ "source_buffers": {
+  "25205": [
+   [
+    51648,
+    51903,
+    56831
+   ],
+   [
+    52800,
+    52863,
+    24480
+   ],
+   [
+    23296,
+    23359,
+    1270
+   ]
+  ]
+ },
+ "coverage_gaps": 7,
+ "plain": {
+  "file": "Cauldron_1985_Palace_Software_a.nex",
+  "tail": "WARNING: no proven-safe tail location; converter default used",
+  "boot": "OK (registers, RAM, ROM view, paging)"
+ },
+ "outcome": "converted (docs/records/cauldron.json)",
+ "routines": [
+  {
+   "routine": 25205,
+   "role": "screen copier",
+   "pixel_bytes": 492032,
+   "attr_bytes": 142816,
+   "block_copy_bytes": 56832,
+   "calls": 2146,
+   "T_median": 1541,
+   "fingerprint": {
+    "n": 4,
+    "full": "505fd11fd7",
+    "win": [
+     "505fd11fd7"
+    ]
+   },
+   "callers": 11
+  },
+  {
+   "routine": 25431,
+   "role": "plotter",
+   "pixel_bytes": 128192,
+   "attr_bytes": 15,
+   "block_copy_bytes": 0,
+   "calls": 1872,
+   "T_median": 23090,
+   "fingerprint": {
+    "n": 96,
+    "full": "7eec656516",
+    "win": [
+     "0455ae7c10",
+     "059d32651a",
+     "0799ffa75d",
+     "092166a958",
+     "1870abac22",
+     "1b40fbb348",
+     "206bcfbe55",
+     "22384a75e3",
+     "2356c4af0b",
+     "240a4e1910",
+     "265b553194",
+     "2728b11d2a",
+     "32a72d02b6",
+     "3415ac8637",
+     "37b2837f44",
+     "382f718ec8",
+     "3866b9fb45",
+     "393f5ba976",
+     "3a0bc83b6c",
+     "3df910eb35",
+     "3e51243e57",
+     "3eb356e6d1",
+     "40d1c93650",
+     "418ded5d13",
+     "41d9b3f531",
+     "44d2c0b9fe",
+     "469d0107c3",
+     "4ebeaae03f",
+     "5290aeca07",
+     "5546d55f1c",
+     "5693d7d16b",
+     "56bf16ea7f",
+     "5829ec67e2",
+     "5de0b4a668",
+     "5e9cbbf7ee",
+     "68c1a01dd2",
+     "6ac9c7e1ed",
+     "6d23de83cb",
+     "6d3f544be1",
+     "6d7b17ae1f",
+     "7355fe1a66",
+     "737121813d",
+     "75698a3d17",
+     "7cb8e8029a",
+     "7fc9996ff5",
+     "86234f010d",
+     "88bca55587",
+     "8ebf357e25",
+     "92a200357f",
+     "98f304a2ad",
+     "996ae8fc00",
+     "9aaec8d2c3",
+     "9b9203ec85",
+     "a3b16fb44b",
+     "a55654bd85",
+     "a75342b905",
+     "a9cfddd19f",
+     "abc0cb9e52",
+     "abf731e49a",
+     "acff7b5631",
+     "ae5d59209c",
+     "aee0a07190",
+     "b078e4eb61",
+     "b0e173abc3",
+     "b18017d595",
+     "b44e6ef47e",
+     "b5a86684e7",
+     "b765a09c5b",
+     "babc66d620",
+     "bc37666c85",
+     "be05c89140",
+     "c0779c2b62",
+     "c3fd0c3057",
+     "c7001b2570",
+     "c7093c187b",
+     "c75b2b70da",
+     "cd8c1d28b1",
+     "cf424611b6",
+     "cf750cbd23",
+     "d243373f24",
+     "daafb85f2b",
+     "e71cfe0d81",
+     "e7e3678a99",
+     "e7ef62cf73",
+     "ebebac7d98",
+     "ed3a810a1d",
+     "ee7c123397",
+     "f501ec080c",
+     "f600cfbc9f",
+     "f61fc76201",
+     "f852db73f3"
+    ]
+   },
+   "callers": 9
+  },
+  {
+   "routine": 3044,
+   "role": "attribute writer",
+   "pixel_bytes": 0,
+   "attr_bytes": 97169,
+   "block_copy_bytes": 0,
+   "calls": 97169,
+   "T_median": 120,
+   "callers": 1
+  },
+  {
+   "routine": 2852,
+   "role": "plotter",
+   "pixel_bytes": 42424,
+   "attr_bytes": 2,
+   "block_copy_bytes": 0,
+   "calls": 5303,
+   "T_median": 1154,
+   "callers": 1
+  },
+  {
+   "routine": 3652,
+   "role": "plotter",
+   "pixel_bytes": 13312,
+   "attr_bytes": 1664,
+   "block_copy_bytes": 14908,
+   "calls": 4,
+   "T_median": 82244,
+   "callers": 2
+  },
+  {
+   "routine": 3035,
+   "role": "attribute writer",
+   "pixel_bytes": 0,
+   "attr_bytes": 5303,
+   "block_copy_bytes": 0,
+   "calls": 5303,
+   "T_median": 154,
+   "callers": 1
+  }
+ ],
+ "title": "Cauldron",
+ "doc": "cauldron.md"
+}

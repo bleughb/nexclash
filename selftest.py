@@ -818,6 +818,37 @@ def tools_check(src):
            rt[43899]['calls'] == 1059 and rt.get(40000, {}).get('calls') == 814 and
            len(rt[40000]['callers_seen']) == 6 and rt[40000]['T_median'] == 665, r['routines'][:2])
 
+        # survey findings, routine fingerprints, the research database (nexclash/kb.py) and result reuse
+        from nexclash import kb
+        fd, said = r.get('findings', {}), []
+        ok('survey findings: 43899 draws most pixels and its data source is found, interrupts on; every RAM routine fingerprinted',
+           fd.get('model', '').startswith('one routine draws most pixels') and '43899' in fd.get('sources', {}) and fd.get('pacing') == 'interrupts on' and
+           fd.get('interrupts_accepted', 0) > 500 and
+           all(x.get('fingerprint', {}).get('n') for x in r['routines'] if isinstance(x['routine'], int) and x['routine'] >= 0x4000),
+           fd)
+        _, r2 = survey.survey(ez, [er], os.path.join(work, 'survey'), stop=600, log=said.append, full=True)
+        ok('survey: same snapshot, recording and arguments -> the stored result is reused, --fresh / other arguments run again',
+           r2 == json.load(open(os.path.join(work, 'survey', 'survey.json'))) and any('reusing' in m for m in said) and
+           r2['inputs']['args'][0] == 600, said[:1])
+        code = [0x21, 0x00, 0x60, 0x06, 0x08, 0x7E, 0xAE, 0x77, 0x23, 0x10, 0xFA, 0x3A, 0x34, 0x12, 0xB7, 0xC8, 0x3C, 0xC9]
+        m1, m2 = [0] * 65536, [0] * 65536
+        m1[0x8000:0x8000 + len(code)] = code
+        moved = list(code)
+        moved[1:3], moved[12:14] = [0x40, 0x7A], [0x99, 0x88]            # other table, other variable
+        m2[0x9123:0x9123 + len(code)] = moved
+        f1, f2 = kb.fingerprint(m1, 0x8000), kb.fingerprint(m2, 0x9123)
+        other = kb.fingerprint(r2 and __import__('skoolkit.snapshot', fromlist=['Snapshot']).Snapshot.get(ez).memory[0:65536], 43899)
+        ok('kb fingerprint: the same routine at another address with other operands matches (1.0), another routine does not; '
+           'no game bytes stored',
+           f1['full'] == f2['full'] and kb.similarity(f1, f2) == 1.0 and kb.similarity(f1, other) < 0.5 and f1['n'] == 12 and
+           set(f1) == {'n', 'full', 'win'}, (f1, other['n']))
+        e = kb.from_survey(r2, {'title': 'kept', 'routines': [{'routine': 43899, 'role': 'hand-written'}]})
+        ok('kb entry from a survey: facts copied, hand-written title and role kept, hardware lookup answers (FRAMES, Kempston)',
+           e['title'] == 'kept' and e['pacing'] == 'interrupts on' and e['inputs'] == r2['inputs'] and
+           next(x for x in e['routines'] if x['routine'] == 43899)['role'] == 'hand-written' and
+           any('FRAMES' in x for x in kb.hw(['5C78'])) and any('Kempston' in x for x in kb.hw(['1f', 'joystick'])) and
+           not kb.hw(['no-such-thing']), e.get('routines', [])[:1])
+
         with patch('nexclash.engines.find', return_value=None), patch('nexclash.identify.identify', return_value={'engine': 'unknown'}):
             text, _ = survey.survey(ez, out=os.path.join(work, 'unknown_survey'), frames=1, log=lambda m: None)
         engine_text = text.split('## Engine\n', 1)[1].split('\n## ', 1)[0]
