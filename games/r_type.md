@@ -88,6 +88,21 @@ snapshot: the game's own level-load check then resets the machine. hook_setup mu
 AF and BC (the converter stub uses them; clobbering reset the machine at the load check).
 JNext: keys 1, 1 past the two prompts, K:FIRE at the title selects device 3 (74FB) and
 starts; K:DOWN/RIGHT/UP/FIRE move and fire, 146 updates by frame 1290.
+Colour sheets (2026-11-16, owner step 5): figures keep the game's own colours; the owner paints
+later and imports as normal. Sheets: specnext reference r_type/colours/, one PAINTING +
+REFERENCE pair per level (TEXT, LEVEL1..9; README there), from the whole-recording figure
+corpus (game objects joined by the 9-byte object / owner). Keys: level byte (719C) : graphics
+byte address, check = value, paint_clear and clear=True (grey = transparent). Import: the shared
+nexclash.recolour.run with the R-Type engine (intake/r_type_colour.py recolour BUILD PNG) until
+R-Type has a record; then `nexclash.py recolour` unchanged. Runtime: colour data only in banks
+32..47 (directory page 64, 40-byte records per painted cell from page 65; up to 4064 cells),
+looked up once per converted graphic (binary search per cell), applied per pattern byte as
+(default AND keep) OR paint, transparent mask last; forced-ink flash draws keep their colour.
+Checks: recolour with {} gives the build back byte for byte (level 1 test and full builds); a
+synthetic paint (every white pixel of the LEVEL1 sheet red, 7967 pixels, 351 cells) imports
+through the normal bundle (identity validated, banks 32-33 changed) and JNext shows the
+painted sprites red with scenery unchanged; unpainted builds keep pacing and pictures.
+Identity inputs = MD5 of banks 3, 4, 6, 7 (identical in every recording snapshot).
 Partly hidden figures (2026-11-16, owner step 3): a figure the game did not fully draw
 (an earlier owner keeps some of its cells) no longer falls back to native ULA cells with
 colour clash. It keeps its sprites and is published after all whole figures, so whatever
