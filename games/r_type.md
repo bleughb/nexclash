@@ -88,6 +88,18 @@ snapshot: the game's own level-load check then resets the machine. hook_setup mu
 AF and BC (the converter stub uses them; clobbering reset the machine at the load check).
 JNext: keys 1, 1 past the two prompts, K:FIRE at the title selects device 3 (74FB) and
 starts; K:DOWN/RIGHT/UP/FIRE move and fire, 146 updates by frame 1290.
+Partly hidden figures (2026-11-16, owner step 3): a figure the game did not fully draw
+(an earlier owner keeps some of its cells) no longer falls back to native ULA cells with
+colour clash. It keeps its sprites and is published after all whole figures, so whatever
+owns its missing cells is in front; scenery cells on Layer 2 now draw black paper opaque,
+so scenery hides figures behind it exactly as the native owner test does. Remaining
+difference: the hidden figure shows through the transparent pixels of the figure in
+front (approved see-through design). Exact per-cell masking (masked pattern copies per
+update) was built and measured: correct, but 15 ms/update in the level 2 scene at RZX
+20000 (19 partial plots, ~96 sprites) gave 15 slow updates in 300; removed. Eight-snapshot
+rerun: pacing equal to the control (level 2 scene 297 of 301 at 3 frames), differences
+mostly stars and see-through overlaps. Pattern emitter now builds a 4-entry colour table
+per cell instead of decoding the attribute on every line.
 Pause (2026-11-16): the game's own pause is CAPS SHIFT+1, resume CAPS SHIFT+2 (8B77,
 checked once per update; DI while paused, "GAME PAUSED" in the HUD row). JNext test on
 the level 1 sprite build: pause holds the picture with scenery and sprites intact, the
