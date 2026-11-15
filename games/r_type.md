@@ -40,11 +40,28 @@ first plot owns a cell). In one life (updates 92-116) the sprite build is one sc
 step behind the control at the same update number: the respawn sequence is paced by
 interrupts, so the builds leave it one update apart. Not a drawing fault, not proven
 beyond that reading. Owner reports the playtest build plays (2026-11-15).
-NOT tested: controls in a script, title start, levels 2-8, bosses, pattern overflow
-(policy: figure skipped for one update, cache restarted), text drawn through the
-plotters, hardware, sound by ear. One doubled figure for the first update after a
-mid-level snapshot start.
-Next: scripted play with input; later levels and bosses; stars and per-pixel colour;
+Later levels (2026-11-15): sprite build versus same-speed control from snapshots cut at
+RZX frames 2000/10000/20000/30000/40000/50000/60000/75000, 300 updates each, no input.
+Faults found and fixed: (1) buffer cells persist without a new plot (owner 9C, the level 3
+battleship is replotted only every eighth update), so the copier gate now skips only cells
+whose plot is shown by sprites (cell hook 8EA2 writes the plot serial to a 640-byte map,
+one use); (2) a figure whose cells were not all drawn (8EC2 candidates != 8EA2 writes:
+another figure or scenery owns part) takes its sprites back and is copied natively, which
+keeps the original first-plot-wins layering; (3) the ULA cell under a sprite is blanked,
+otherwise older pixels show in the figure's attribute colours; (4) figures that do not fit
+128 sprites/128 patterns are copied natively for that update, cache restarts at most every
+50 updates; (5) coloured paper is drawn, black ink on it is opaque. A graphic checksum
+re-converts graphics rewritten in place; none was seen (0 in all eight runs).
+Result: settled pictures differ from the control by 17-310 pixels (stars, a few figure
+pixels) except where the builds are one update apart (best match at 1px scroll offset:
+10000 u300, 40000 u120/u300, 50000 u200, 75000 u20/u300). 293-300 of 301 updates take
+3 frames everywhere; level 3 battleship scene has six 6-7 frame updates and 96 figures
+kept on the ULA. OPEN: why builds end one update apart without a death (75000 by update
+20); whether the ISR changes 7A8E during the copier, which would put Layer 2 one pixel
+from the owner map.
+NOT tested: input in a script, title start, bosses beyond these snapshots, hardware,
+sound by ear.
+Next: scripted play with input; the one-update question; stars and per-pixel colour;
 then engine/profile work only after those pass.
 Owner decision 2026-11-15: drop the original slowdown (no pace governor).
 Turbo result (reference intake/turbo_pace.py, publication_turbo.asm = cached-producer route
