@@ -71,6 +71,13 @@ sprite run is the continue screen waiting for fire (the control had fire held).
 Full build from Rtype.z80 (start screen "REWIND SIDE 2 THEN PRESS ANY KEY"): key press
 starts level 1 with Layer 2 scenery and sprites, 780 updates to frame 3000, clean from
 the first frame (no doubled figure: the level is drawn through FEEB).
+Pacing fix 2026-11-15: the slow updates were bursts of pattern conversion. Conversion is
+now refused before any work when the figure cannot fit, limited to 24 tiles an update (or
+one figure of any size; the rest is copied natively until converted), and cache restarts
+back off (50, 100, 200, 255 updates) when a restart did not make room. Rerun of the eight
+snapshots, 300 updates, no input: frames per update now equal the control in level 3
+(299 of 301 at 3 frames) and within one update elsewhere; with equal pacing most
+one-update offsets disappear (10000 and 40000 now 22-76 differing pixels throughout).
 NOT tested: level-to-level transitions in the sprite build, bosses beyond these
 snapshots, key redefinition/joystick menus, hardware, sound by ear.
 Next: level transitions (snapshot before a level end); level 3 slow updates; stars and
