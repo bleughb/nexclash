@@ -88,6 +88,15 @@ snapshot: the game's own level-load check then resets the machine. hook_setup mu
 AF and BC (the converter stub uses them; clobbering reset the machine at the load check).
 JNext: keys 1, 1 past the two prompts, K:FIRE at the title selects device 3 (74FB) and
 starts; K:DOWN/RIGHT/UP/FIRE move and fire, 146 updates by frame 1290.
+Figure IDs (2026-11-16, owner request toward sprite ordering): every figure on the colour sheets
+has a stable ID L<level>-<n> and a family L<level>-F<n> (figures sharing graphics). Reference
+r_type/colours: r_type_<LEVEL>_IDENTIFY.png (2x, IDs beside figures, not read back) and
+r_type_figures.json (schema 1: levels, families, figures with signature, parts, count, box on the
+identify sheet, colour keys, user name / layer; layer choices "original" or 1-5). IDs keyed by a
+hash of the figure's plots and level, never renumbered (checked: a half recording then the full
+one keeps every old ID and appends 95 new; names survive; unseen figures stay flagged). User data
+in by editing the JSON or `r_type_colour.py figures PATCH.json` (unknown IDs / layers refused).
+Layers are recorded only; the build does not use them yet. 1269 figures, 837 families.
 Owner playtest fixes (2026-11-16): (1) game over left Layer 2 and sprites over the high-score
 table: 92E8 (high-score check) now turns them off. (2) Outside play the game runs at its own
 3.5MHz again (run_fast: 28MHz only from the level draw to the next L2_OFF): the title, attract
