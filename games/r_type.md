@@ -78,6 +78,19 @@ back off (50, 100, 200, 255 updates) when a restart did not make room. Rerun of 
 snapshots, 300 updates, no input: frames per update now equal the control in level 3
 (299 of 301 at 3 frames) and within one update elsewhere; with equal pacing most
 one-update offsets disappear (10000 and 40000 now 22-76 differing pixels throughout).
+Kempston (owner report 2026-11-15, fixed): the game tests port 1F once at cold start
+(73EC) and stores "absent" in 7A8B; C027 then never polls Kempston. Rtype.z80 has 7A8B=0F,
+so no build from it could use Kempston. Fix in the prototype: FE03 hook clears 7A8B, and
+hook_setup sets NR 05 to mode 001 (Kempston 1, port 1F) on both connectors, keeping bits 2
+and 0. NR 05 modes are 000 Sinclair 2, 001 Kempston 1, 010 cursor, 011 Sinclair 1,
+100 Kempston 2, 101 MD 1, 110 MD 2. Do NOT patch C027 or other bank-0 bytes in the start
+snapshot: the game's own level-load check then resets the machine. hook_setup must keep
+AF and BC (the converter stub uses them; clobbering reset the machine at the load check).
+JNext: keys 1, 1 past the two prompts, K:FIRE at the title selects device 3 (74FB) and
+starts; K:DOWN/RIGHT/UP/FIRE move and fire, 146 updates by frame 1290.
+Also fixed: the full build drew the title logo as sprites over the high-score table,
+because the mid-level start-up ran at the title's first copier call. Full builds use
+l2sprites_full.asm (L2_NOLAZY); snapshot test builds keep the mid-level start-up.
 NOT tested: level-to-level transitions in the sprite build, bosses beyond these
 snapshots, key redefinition/joystick menus, hardware, sound by ear.
 Next: level transitions (snapshot before a level end); level 3 slow updates; stars and
