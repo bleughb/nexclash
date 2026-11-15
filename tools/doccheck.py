@@ -174,6 +174,10 @@ def main():
     fail['technique cards / recipes (python tools/techindex.py)'].extend(techindex.check())
     if not fail['technique cards / recipes (python tools/techindex.py)']:
         del fail['technique cards / recipes (python tools/techindex.py)']
+    import knowledge                      # records' predicate values, docs/risks.json, the export (tools/knowledge.py)
+    kb = knowledge.check()
+    if kb:
+        fail['knowledge data (python tools/knowledge.py check)'].extend(kb)
     import learncheck                     # lessons dispositioned, technique use, probes, new cards (docs/LEARNING.md)
     lb = learncheck.check({'heads': heads, 'c2': c2, 'mods': mods, 'cli': fl, 'has_section': has_section})
     if lb:
