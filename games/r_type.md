@@ -88,6 +88,11 @@ snapshot: the game's own level-load check then resets the machine. hook_setup mu
 AF and BC (the converter stub uses them; clobbering reset the machine at the load check).
 JNext: keys 1, 1 past the two prompts, K:FIRE at the title selects device 3 (74FB) and
 starts; K:DOWN/RIGHT/UP/FIRE move and fire, 146 updates by frame 1290.
+Pause (2026-11-16): the game's own pause is CAPS SHIFT+1, resume CAPS SHIFT+2 (8B77,
+checked once per update; DI while paused, "GAME PAUSED" in the HUD row). JNext test on
+the level 1 sprite build: pause holds the picture with scenery and sprites intact, the
+message shows below the play area, resume continues play. Same as the original.
+Owner reports play testing on hardware works (2026-11-16); level changes deferred.
 Also fixed: the full build drew the title logo as sprites over the high-score table,
 because the mid-level start-up ran at the title's first copier call. Full builds use
 l2sprites_full.asm (L2_NOLAZY); snapshot test builds keep the mid-level start-up.
