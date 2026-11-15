@@ -88,6 +88,21 @@ snapshot: the game's own level-load check then resets the machine. hook_setup mu
 AF and BC (the converter stub uses them; clobbering reset the machine at the load check).
 JNext: keys 1, 1 past the two prompts, K:FIRE at the title selects device 3 (74FB) and
 starts; K:DOWN/RIGHT/UP/FIRE move and fire, 146 updates by frame 1290.
+Owner playtest fixes (2026-11-16): (1) game over left Layer 2 and sprites over the high-score
+table: 92E8 (high-score check) now turns them off. (2) Outside play the game runs at its own
+3.5MHz again (run_fast: 28MHz only from the level draw to the next L2_OFF): the title, attract
+and name-entry screens time themselves with busy loops, so at 28MHz the logo screen left after a
+moment and name entry cycled letters too fast. Attract cycle now title->scores 621 frames
+(original 597). Name entry uses the control keys (up/down letter, fire confirm), not typed
+letters, as in the original: the same key script gives the same names in both. (3) Full build
+starts on the R-TYPE technical specification (the snapshot's screen) for 5 s or until a key or
+fire (spec_hold), then the logo and title: the tape prompts in FE03 (REWIND SIDE 2, LOADING,
+LOADED OK, STOP TAPE and their key waits) are patched out (NOTAPE); the level unpack stays.
+(4) Found while testing: the level unpack (8F40) writes 7FFD, which on the Next maps ROM over
+slots 0-1 and hides the hook page; the next interrupt entered ROM and reset to NextZXOS. Its
+return (8F4E) now jumps to a 14-byte copy at 5C4C (printer bytes never touched in the
+recording) that maps bank 24 back before EI (RAMFIX, every build). Earlier builds would have
+reset at the first level change; level changes are still untested in play.
 Colour sheets (2026-11-16, owner step 5): figures keep the game's own colours; the owner paints
 later and imports as normal. Sheets: specnext reference r_type/colours/, one PAINTING +
 REFERENCE pair per level (TEXT, LEVEL1..9; README there), from the whole-recording figure
