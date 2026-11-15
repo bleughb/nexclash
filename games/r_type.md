@@ -21,15 +21,31 @@ at 3.5MHz the picture is 1px ahead: the original's copier finishes after the ras
 passed, so its own picture lags (measurement, not a defect).
 NOT tested: starting from the title, levels 2-8, bosses/NOSCROLL scenes, non-black scenery
 paper, owner DC..FE cells (left on the ULA, still scrolled natively), hardware, sound by ear.
-Next: step 2 figures as hardware sprites keyed by the plotter call (8E85 table record,
-level, flip), native plotters kept for owner/collision maps; then frame-synchronised
-publication of scroll + sprites, stars, per-pixel scenery colour.
-2026-11-15 owner decision: equivalence gates relaxed to "extremely close" gameplay.
-Exact R/whole-RAM/ABI equality is no longer a runtime gate; keep exactness only where a
-consumer is shown (collision/owner maps, SMC modes, sound). Consumer finding: every beeper
-writer (FAA2 noise, FB52 timed tone) runs inside the ISR (footprint entry 8383 reaches the
-F8xx-FBxx SFX code and its SP switches). Main-loop game logic, plotters and copier have no
-sound-timing consumer; the IRQ wrapper already forces 3.5MHz for the native ISR body.
+Step 2 DONE as a prototype (reference intake/l2sprites.asm + l2sprites_body.asm, built by
+l2scroll.py --sprites): figures are hardware sprites. The four plotter entries
+(8CFD/8D65/8DD3/8E29; HL graphic, B/C row/column, D/E height/width in cells) record
+each plot unless 8EBF=40 (scenery drawn straight to the ULA). A graphic is a row-major
+cell stream: attribute + 8 pixel bytes, or the single byte 36 for an empty cell. Each
+graphic is converted once to 4bpp 16x16 patterns (2x2 cells, index ink+8*bright, paper
+transparent), cached by address + ink override 8EB1; flips are sprite mirror flags. The
+native plotter still runs for owner/collision maps; 8886 skips the copier's figure copy
+to the ULA while sprites are on. Publication and NR 0x16 change together at 8842 once
+the raster is at video line 160 or later. Layer order Layer 2 / sprites / ULA; sprite 0
+on top (first plot wins, as natively). Cache emptied at every level/life draw.
+Evidence, level 1 from RZX frame 2000, no input: 296 of 301 updates take 3 frames (as the
+same-speed control); at most 28 sprites; no cache flush, no dropped figure, 85 of 128
+patterns used; continue/high-score/title screens clean. Against the control the settled
+pictures differ by stars and overlapping figures (sprites show through; natively the
+first plot owns a cell). In one life (updates 92-116) the sprite build is one scroll
+step behind the control at the same update number: the respawn sequence is paced by
+interrupts, so the builds leave it one update apart. Not a drawing fault, not proven
+beyond that reading. Owner reports the playtest build plays (2026-11-15).
+NOT tested: controls in a script, title start, levels 2-8, bosses, pattern overflow
+(policy: figure skipped for one update, cache restarted), text drawn through the
+plotters, hardware, sound by ear. One doubled figure for the first update after a
+mid-level snapshot start.
+Next: scripted play with input; later levels and bosses; stars and per-pixel colour;
+then engine/profile work only after those pass.
 Owner decision 2026-11-15: drop the original slowdown (no pace governor).
 Turbo result (reference intake/turbo_pace.py, publication_turbo.asm = cached-producer route
 + RT_TURBO, which latches 28MHz at the copier hook): same fresh peak9cfed755/100 updates,
