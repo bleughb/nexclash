@@ -59,10 +59,22 @@ pixels) except where the builds are one update apart (best match at 1px scroll o
 kept on the ULA. OPEN: why builds end one update apart without a death (75000 by update
 20); whether the ISR changes 7A8E during the copier, which would put Layer 2 one pixel
 from the owner map.
-NOT tested: input in a script, title start, bosses beyond these snapshots, hardware,
-sound by ear.
-Next: scripted play with input; the one-update question; stars and per-pixel colour;
-then engine/profile work only after those pass.
+Follow-up 2026-11-15: the full-recording ISR footprint has no write to 7A8E, 7A89 or 7A82,
+so Layer 2 scroll and the native owner-map shift cannot separate; builds one update apart
+differ through interrupt-counted game timing (7A8A is ISR-written), not through drawing.
+Controls in the recording: table 7780 = keys 1/2/3/4 directions, 5 fire, SPACE detach
+(input vector 74FC -> 8B14). Scripted random play keyed to update numbers (same keys at
+the same update in both builds), eight snapshots, up to 600 updates: every run completes,
+update counts equal the control in all eight, no cache rewrite seen, pictures differ only
+by stars/figure overlap or the one-update offset. One 537-frame update in the 75000
+sprite run is the continue screen waiting for fire (the control had fire held).
+Full build from Rtype.z80 (start screen "REWIND SIDE 2 THEN PRESS ANY KEY"): key press
+starts level 1 with Layer 2 scenery and sprites, 780 updates to frame 3000, clean from
+the first frame (no doubled figure: the level is drawn through FEEB).
+NOT tested: level-to-level transitions in the sprite build, bosses beyond these
+snapshots, key redefinition/joystick menus, hardware, sound by ear.
+Next: level transitions (snapshot before a level end); level 3 slow updates; stars and
+per-pixel colour; then engine/profile work only after those pass.
 Owner decision 2026-11-15: drop the original slowdown (no pace governor).
 Turbo result (reference intake/turbo_pace.py, publication_turbo.asm = cached-producer route
 + RT_TURBO, which latches 28MHz at the copier hook): same fresh peak9cfed755/100 updates,
