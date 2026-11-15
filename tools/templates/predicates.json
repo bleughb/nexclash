@@ -1,0 +1,17 @@
+[
+ {
+  "predicate": "render.composition.xor",
+  "value": true,
+  "scope": "REPLACE: the routine or figure class, e.g. figure plotter 0x9A00 (every caller the recording reached)",
+  "basis": "REPLACE: what was seen, e.g. its three screen writes are LD A,(DE) / XOR (HL) / LD (HL),A",
+  "source": "disassembly",
+  "evidence": "games/REPLACE_WITH_GAME.md#rendering-model"
+ },
+ {
+  "predicate": "screen.gameplay_reads_figure_pixels",
+  "value": "unknown",
+  "scope": "REPLACE: recordings and frames covered; not seen is not absent",
+  "basis": "REPLACE: no reader of figure cells in the recording; unreached branches not inspected",
+  "source": "scan"
+ }
+]

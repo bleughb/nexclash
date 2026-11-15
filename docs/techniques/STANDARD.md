@@ -161,6 +161,11 @@ Rules:
 - A rejected card is saved with its reason so the next agent does not retry it.
 - Changing the snapshot, code, tool semantics or a card's preconditions invalidates the conclusions
   that relied on them. Old results stay, tied to their original inputs.
+- **Settled values go in the record** (optional `predicates` list; tools/templates/predicates.json):
+  predicate, value, scope (routine or figure class), basis, source (survey / scan / disassembly /
+  verify / hardware / design). It is no recipe field: stamps stay valid. `python tools/knowledge.py
+  eligible | precedent | risks GAME` apply the rules above to them; a value only implied by an
+  applied card is labelled so and is never evidence.
 
 ## 6. Card template
 
