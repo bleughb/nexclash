@@ -17,6 +17,10 @@ Mechanics, details in reference continuation/history-2026-11.md:
   patterns, cached by address + ink with checksum; flips = mirror bits; 24 tiles converted per
   update; partly drawn figures published behind whole ones; 8886 skips the copier's copy of cells
   a sprite shows (8EA2/8EC2 hooks) and blanks them; overflow falls back to native cells.
+- Sheets (owner 2026-11-16, deviates from docs/COLOURS.md for R-Type only): two per level,
+  IDENTIFY (2x, IDs) and PAINTING (1:1, same arrangement, every figure; a graphic is bright and
+  paintable the first time, faded and ignored after); no REFERENCE sheet. Related figures grouped
+  (shared art, art stored back to back at similar size and colours, or alike shapes).
 - Colours: per-level sheets in the game's colours; import via r_type_colour.py recolour (shared
   nexclash.recolour.run); colour pages banks 32..47 applied at conversion.
 - Figure registry r_type_figures.json: stable IDs L<n>-<nnn>, families, name / layer / outline;
