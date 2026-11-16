@@ -29,8 +29,10 @@ Mechanics, details in reference continuation/history-2026-11.md:
 Next: play through a level change (untested in play); outline companion weapons / pickups (IDs from
 the identification sheets); use registry layers in publication; then stage 6 promotion (record,
 engine, profile, retire the parked cell-recognition route, full-recording verification, release).
-Local setup: C:\1NEXT\{nexclash,specnext}; C:\workspace\{work,scratch} are junctions into
-C:\1NEXT\rtype_{work,scratch}; tests in C:\1NEXT\rtype_work\tools (levels.py, ushots.py, cmp.py).
+Setup and tests: specnext reference r_type/intake/tools/README.md (duplicate the owner's Windows
+setup or use the /workspace layout; emulator order CSpect then JNext; CSpect's control server needs
+its paid Builder tier). Before pushing prototype changes run smoke.py and compare.py, plus
+gameover.py when titles, game over or speed change; each prints PASS / FAIL, exit 1 on failure.
 
 ## Inputs
 The attached TAP is a tape, not a snapshot. The build start state was extracted from the
@@ -142,6 +144,9 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   plotters; scanning its source buffer locates the four tile drawers. No removal-safety claim yet.
 - [local: credits share an enemy slot] Independent review: peak owner-grid scene includes THANK-YOU
   text. Graphic identity, not global owner exclusion, gives105 sprites in the full corrected census.
+- [local: wrong root cause recorded] A reset after patching C027 was first put down to a "game load
+  check" and noted as "never patch bank 0"; the real cause was the 7FFD remap below. Confirm a cause
+  with a trace (PC and MMU at the reset) before writing it down.
 - [local: 7FFD remaps slots 0-1] On the Next a 7FFD write maps ROM over slots 0-1, hiding a hook page
   in slot 1; the level unpack (8F40) did it and the next interrupt reset the machine. Return through
   game RAM that maps the hook page back before EI.
