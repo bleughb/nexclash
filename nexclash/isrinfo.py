@@ -47,6 +47,7 @@ class IsrTracker:
         self.switch = collections.Counter()   # pc of instructions that moved SP far away
         self.ports = collections.Counter()
         self.writes = set()
+        self.reads = set()             # data accesses, excluding instruction fetch/operands
         self.mem = None
         self.dep = {'IX': {}, 'IY': {}}          # reads of the INTERRUPTED code's value: pc -> text
         self.modes = collections.Counter()      # (IM, I) at each accepted interrupt
@@ -120,6 +121,7 @@ class IsrTracker:
     def on_read(self, a, pc, mem):
         if self.cur is not None and not pc <= a <= pc + 3:      # data reads, not instruction bytes
             self.slots[a >> 13].add('r')
+            self.reads.add(a)
 
 
 def isr(z80, rzx=None, frames=None, keys=None, stop=None):
@@ -188,4 +190,5 @@ def report(t, n, z80, rzx, keys):
         keep.append('the alternate set is used by the handler (it saves/restores it? check the listing)')
     lines.append('A hook running with interrupts ON must keep: ' + '; '.join(keep))
     return '\n'.join(lines), {'uses': dict(uses), 'reads_entry': {k: dict(v) for k, v in t.dep.items()}, 'depth': t.depth, 'switch': sw, 'count': t.count,
-                              'entries': dict(t.entries), 'slots': {k: ''.join(sorted(v)) for k, v in t.slots.items()}}
+                              'entries': dict(t.entries), 'slots': {k: ''.join(sorted(v)) for k, v in t.slots.items()},
+                              'reads': sorted(t.reads), 'writes': sorted(t.writes)}
