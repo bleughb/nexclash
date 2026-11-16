@@ -88,6 +88,19 @@ snapshot: the game's own level-load check then resets the machine. hook_setup mu
 AF and BC (the converter stub uses them; clobbering reset the machine at the load check).
 JNext: keys 1, 1 past the two prompts, K:FIRE at the title selects device 3 (74FB) and
 starts; K:DOWN/RIGHT/UP/FIRE move and fire, 146 updates by frame 1290.
+Outlines (2026-11-16, owner spec: 4-neighbour border, optional per sprite): registry `outline`
+per family / figure (true = black, or palette 1-15). Outlined graphics are pre-rendered at build
+time one pixel bigger on every side (border on clear pixels outside the figure, 4-connected to the
+canvas edge; holes and dither gaps kept), tiled into 16x16 patterns in colour pages 88-95
+(directory page 88: 12-byte entries level/address/w/h/tiles x,y/used/first pattern/tile map).
+At conversion pre_find matches level + graphic + size (plain ink only), conv_pre copies the
+patterns, emit_pre places tiles at pixel -1,-1 and mirrors around the padded canvas. Cache entry
+now 20 bytes. A first inside-cells version was rejected: the ship fills its 8-pixel cells, so it
+had no top/bottom border. Checks: ship (3 frames x 9 levels = 27 families, example patch in
+reference colours/) shows a full ring in JNext, aligned with the ship; pacing identical with it
+on (297 of 301 updates at 3 frames); unoutlined builds unchanged; recolour {} identical.
+Identification sheets draw the border (per figure, approximate where plots join). Hit flashes
+draw outlined graphics without the border.
 Figure IDs (2026-11-16, owner request toward sprite ordering): every figure on the colour sheets
 has a stable ID L<level>-<n> and a family L<level>-F<n> (figures sharing graphics). Reference
 r_type/colours: r_type_<LEVEL>_IDENTIFY.png (2x, IDs beside figures, not read back) and
