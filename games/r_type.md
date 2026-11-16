@@ -1,223 +1,36 @@
 # R-Type (128K) - intake
 
 ## Next session
-2026-11-15 owner goal: play hard to tell from the original, with hardware scrolling and
-hardware sprites; "smooth" means hardware scroll. Owner judged the cell-recognition turbo
-build inadequate (screen clipping, sprite flicker); that route is parked, not deleted.
-New route, step 1 DONE (reference intake/l2scroll.asm + l2scroll.py, prototype only):
-scenery on Layer 2 with NR 0x16 hardware scroll; original game unchanged and visible on
-the ULA for figures/stars/HUD; main loop 28MHz, native ISR 3.5MHz with ROM in slot 0; no
-pace machinery (native three-interrupt wait). Mechanism: 8842 shifts ULA background spans
-1px per call when 7A8E=0, fed by the staged column 5E00 that 89C3 copies to hidden column
-31 every eighth call. Hooks: 8842 counts the scroll, 89C3 draws the staged column on
-Layer 2 at x=scroll+248 and zeroes its staging pixels, 8734 (CALL FEEB) converts the
-initial ULA scenery (owner FF cells) and clears it from the ULA; Layer 2 off at 863D,
-8BE8 (continue) and FE03 (title/between levels). Owner/attribute/dirty maps untouched.
-Evidence: against a same-speed ULA-only control build, pictures at updates 30/60/100 are
-pixel-identical; later differences are 42-62 star pixels. Scroll phase 7A89 and copier
-row counts equal the original per update for 40 updates. Death, MISSION OVER, continue,
-title and high-score screens clean in a no-input run to frame 6700. Against the original
-at 3.5MHz the picture is 1px ahead: the original's copier finishes after the raster has
-passed, so its own picture lags (measurement, not a defect).
-NOT tested: starting from the title, levels 2-8, bosses/NOSCROLL scenes, non-black scenery
-paper, owner DC..FE cells (left on the ULA, still scrolled natively), hardware, sound by ear.
-Step 2 DONE as a prototype (reference intake/l2sprites.asm + l2sprites_body.asm, built by
-l2scroll.py --sprites): figures are hardware sprites. The four plotter entries
-(8CFD/8D65/8DD3/8E29; HL graphic, B/C row/column, D/E height/width in cells) record
-each plot unless 8EBF=40 (scenery drawn straight to the ULA). A graphic is a row-major
-cell stream: attribute + 8 pixel bytes, or the single byte 36 for an empty cell. Each
-graphic is converted once to 4bpp 16x16 patterns (2x2 cells, index ink+8*bright, paper
-transparent), cached by address + ink override 8EB1; flips are sprite mirror flags. The
-native plotter still runs for owner/collision maps; 8886 skips the copier's figure copy
-to the ULA while sprites are on. Publication and NR 0x16 change together at 8842 once
-the raster is at video line 160 or later. Layer order Layer 2 / sprites / ULA; sprite 0
-on top (first plot wins, as natively). Cache emptied at every level/life draw.
-Evidence, level 1 from RZX frame 2000, no input: 296 of 301 updates take 3 frames (as the
-same-speed control); at most 28 sprites; no cache flush, no dropped figure, 85 of 128
-patterns used; continue/high-score/title screens clean. Against the control the settled
-pictures differ by stars and overlapping figures (sprites show through; natively the
-first plot owns a cell). In one life (updates 92-116) the sprite build is one scroll
-step behind the control at the same update number: the respawn sequence is paced by
-interrupts, so the builds leave it one update apart. Not a drawing fault, not proven
-beyond that reading. Owner reports the playtest build plays (2026-11-15).
-Later levels (2026-11-15): sprite build versus same-speed control from snapshots cut at
-RZX frames 2000/10000/20000/30000/40000/50000/60000/75000, 300 updates each, no input.
-Faults found and fixed: (1) buffer cells persist without a new plot (owner 9C, the level 3
-battleship is replotted only every eighth update), so the copier gate now skips only cells
-whose plot is shown by sprites (cell hook 8EA2 writes the plot serial to a 640-byte map,
-one use); (2) a figure whose cells were not all drawn (8EC2 candidates != 8EA2 writes:
-another figure or scenery owns part) takes its sprites back and is copied natively, which
-keeps the original first-plot-wins layering; (3) the ULA cell under a sprite is blanked,
-otherwise older pixels show in the figure's attribute colours; (4) figures that do not fit
-128 sprites/128 patterns are copied natively for that update, cache restarts at most every
-50 updates; (5) coloured paper is drawn, black ink on it is opaque. A graphic checksum
-re-converts graphics rewritten in place; none was seen (0 in all eight runs).
-Result: settled pictures differ from the control by 17-310 pixels (stars, a few figure
-pixels) except where the builds are one update apart (best match at 1px scroll offset:
-10000 u300, 40000 u120/u300, 50000 u200, 75000 u20/u300). 293-300 of 301 updates take
-3 frames everywhere; level 3 battleship scene has six 6-7 frame updates and 96 figures
-kept on the ULA. OPEN: why builds end one update apart without a death (75000 by update
-20); whether the ISR changes 7A8E during the copier, which would put Layer 2 one pixel
-from the owner map.
-Follow-up 2026-11-15: the full-recording ISR footprint has no write to 7A8E, 7A89 or 7A82,
-so Layer 2 scroll and the native owner-map shift cannot separate; builds one update apart
-differ through interrupt-counted game timing (7A8A is ISR-written), not through drawing.
-Controls in the recording: table 7780 = keys 1/2/3/4 directions, 5 fire, SPACE detach
-(input vector 74FC -> 8B14). Scripted random play keyed to update numbers (same keys at
-the same update in both builds), eight snapshots, up to 600 updates: every run completes,
-update counts equal the control in all eight, no cache rewrite seen, pictures differ only
-by stars/figure overlap or the one-update offset. One 537-frame update in the 75000
-sprite run is the continue screen waiting for fire (the control had fire held).
-Full build from Rtype.z80 (start screen "REWIND SIDE 2 THEN PRESS ANY KEY"): key press
-starts level 1 with Layer 2 scenery and sprites, 780 updates to frame 3000, clean from
-the first frame (no doubled figure: the level is drawn through FEEB).
-Pacing fix 2026-11-15: the slow updates were bursts of pattern conversion. Conversion is
-now refused before any work when the figure cannot fit, limited to 24 tiles an update (or
-one figure of any size; the rest is copied natively until converted), and cache restarts
-back off (50, 100, 200, 255 updates) when a restart did not make room. Rerun of the eight
-snapshots, 300 updates, no input: frames per update now equal the control in level 3
-(299 of 301 at 3 frames) and within one update elsewhere; with equal pacing most
-one-update offsets disappear (10000 and 40000 now 22-76 differing pixels throughout).
-Kempston (owner report 2026-11-15, fixed): the game tests port 1F once at cold start
-(73EC) and stores "absent" in 7A8B; C027 then never polls Kempston. Rtype.z80 has 7A8B=0F,
-so no build from it could use Kempston. Fix in the prototype: FE03 hook clears 7A8B, and
-hook_setup sets NR 05 to mode 001 (Kempston 1, port 1F) on both connectors, keeping bits 2
-and 0. NR 05 modes are 000 Sinclair 2, 001 Kempston 1, 010 cursor, 011 Sinclair 1,
-100 Kempston 2, 101 MD 1, 110 MD 2. Do NOT patch C027 or other bank-0 bytes in the start
-snapshot: the game's own level-load check then resets the machine. hook_setup must keep
-AF and BC (the converter stub uses them; clobbering reset the machine at the load check).
-JNext: keys 1, 1 past the two prompts, K:FIRE at the title selects device 3 (74FB) and
-starts; K:DOWN/RIGHT/UP/FIRE move and fire, 146 updates by frame 1290.
-Outlines (2026-11-16, owner spec: 4-neighbour border, optional per sprite): registry `outline`
-per family / figure (true = black, or palette 1-15). Outlined graphics are pre-rendered at build
-time one pixel bigger on every side (border on clear pixels outside the figure, 4-connected to the
-canvas edge; holes and dither gaps kept), tiled into 16x16 patterns in colour pages 88-95
-(directory page 88: 12-byte entries level/address/w/h/tiles x,y/used/first pattern/tile map).
-At conversion pre_find matches level + graphic + size (plain ink only), conv_pre copies the
-patterns, emit_pre places tiles at pixel -1,-1 and mirrors around the padded canvas. Cache entry
-now 20 bytes. A first inside-cells version was rejected: the ship fills its 8-pixel cells, so it
-had no top/bottom border. Checks: ship (3 frames x 9 levels = 27 families, example patch in
-reference colours/) shows a full ring in JNext, aligned with the ship; pacing identical with it
-on (297 of 301 updates at 3 frames); unoutlined builds unchanged; recolour {} identical.
-Identification sheets draw the border (per figure, approximate where plots join). Hit flashes
-draw outlined graphics without the border.
-Figure IDs (2026-11-16, owner request toward sprite ordering): every figure on the colour sheets
-has a stable ID L<level>-<n> and a family L<level>-F<n> (figures sharing graphics). Reference
-r_type/colours: r_type_<LEVEL>_IDENTIFY.png (2x, IDs beside figures, not read back) and
-r_type_figures.json (schema 1: levels, families, figures with signature, parts, count, box on the
-identify sheet, colour keys, user name / layer; layer choices "original" or 1-5). IDs keyed by a
-hash of the figure's plots and level, never renumbered (checked: a half recording then the full
-one keeps every old ID and appends 95 new; names survive; unseen figures stay flagged). User data
-in by editing the JSON or `r_type_colour.py figures PATCH.json` (unknown IDs / layers refused).
-Layers are recorded only; the build does not use them yet. 1269 figures, 837 families.
-Owner playtest fixes (2026-11-16): (1) game over left Layer 2 and sprites over the high-score
-table: 92E8 (high-score check) now turns them off. (2) Outside play the game runs at its own
-3.5MHz again (run_fast: 28MHz only from the level draw to the next L2_OFF): the title, attract
-and name-entry screens time themselves with busy loops, so at 28MHz the logo screen left after a
-moment and name entry cycled letters too fast. Attract cycle now title->scores 621 frames
-(original 597). Name entry uses the control keys (up/down letter, fire confirm), not typed
-letters, as in the original: the same key script gives the same names in both. (3) Full build
-starts on the R-TYPE technical specification (the snapshot's screen) for 5 s or until a key or
-fire (spec_hold), then the logo and title: the tape prompts in FE03 (REWIND SIDE 2, LOADING,
-LOADED OK, STOP TAPE and their key waits) are patched out (NOTAPE); the level unpack stays.
-(4) Found while testing: the level unpack (8F40) writes 7FFD, which on the Next maps ROM over
-slots 0-1 and hides the hook page; the next interrupt entered ROM and reset to NextZXOS. Its
-return (8F4E) now jumps to a 14-byte copy at 5C4C (printer bytes never touched in the
-recording) that maps bank 24 back before EI (RAMFIX, every build). Earlier builds would have
-reset at the first level change; level changes are still untested in play.
-Colour sheets (2026-11-16, owner step 5): figures keep the game's own colours; the owner paints
-later and imports as normal. Sheets: specnext reference r_type/colours/, one PAINTING +
-REFERENCE pair per level (TEXT, LEVEL1..9; README there), from the whole-recording figure
-corpus (game objects joined by the 9-byte object / owner). Keys: level byte (719C) : graphics
-byte address, check = value, paint_clear and clear=True (grey = transparent). Import: the shared
-nexclash.recolour.run with the R-Type engine (intake/r_type_colour.py recolour BUILD PNG) until
-R-Type has a record; then `nexclash.py recolour` unchanged. Runtime: colour data only in banks
-32..47 (directory page 64, 40-byte records per painted cell from page 65; up to 4064 cells),
-looked up once per converted graphic (binary search per cell), applied per pattern byte as
-(default AND keep) OR paint, transparent mask last; forced-ink flash draws keep their colour.
-Checks: recolour with {} gives the build back byte for byte (level 1 test and full builds); a
-synthetic paint (every white pixel of the LEVEL1 sheet red, 7967 pixels, 351 cells) imports
-through the normal bundle (identity validated, banks 32-33 changed) and JNext shows the
-painted sprites red with scenery unchanged; unpainted builds keep pacing and pictures.
-Identity inputs = MD5 of banks 3, 4, 6, 7 (identical in every recording snapshot).
-Partly hidden figures (2026-11-16, owner step 3): a figure the game did not fully draw
-(an earlier owner keeps some of its cells) no longer falls back to native ULA cells with
-colour clash. It keeps its sprites and is published after all whole figures, so whatever
-owns its missing cells is in front; scenery cells on Layer 2 now draw black paper opaque,
-so scenery hides figures behind it exactly as the native owner test does. Remaining
-difference: the hidden figure shows through the transparent pixels of the figure in
-front (approved see-through design). Exact per-cell masking (masked pattern copies per
-update) was built and measured: correct, but 15 ms/update in the level 2 scene at RZX
-20000 (19 partial plots, ~96 sprites) gave 15 slow updates in 300; removed. Eight-snapshot
-rerun: pacing equal to the control (level 2 scene 297 of 301 at 3 frames), differences
-mostly stars and see-through overlaps. Pattern emitter now builds a 4-entry colour table
-per cell instead of decoding the attribute on every line.
-Pause (2026-11-16): the game's own pause is CAPS SHIFT+1, resume CAPS SHIFT+2 (8B77,
-checked once per update; DI while paused, "GAME PAUSED" in the HUD row). JNext test on
-the level 1 sprite build: pause holds the picture with scenery and sprites intact, the
-message shows below the play area, resume continues play. Same as the original.
-Owner reports play testing on hardware works (2026-11-16); level changes deferred.
-Also fixed: the full build drew the title logo as sprites over the high-score table,
-because the mid-level start-up ran at the title's first copier call. Full builds use
-l2sprites_full.asm (L2_NOLAZY); snapshot test builds keep the mid-level start-up.
-NOT tested: level-to-level transitions in the sprite build, bosses beyond these
-snapshots, key redefinition/joystick menus, hardware, sound by ear.
-Next: level transitions (snapshot before a level end); level 3 slow updates; stars and
-per-pixel colour; then engine/profile work only after those pass.
-Owner decision 2026-11-15: drop the original slowdown (no pace governor).
-Turbo result (reference intake/turbo_pace.py, publication_turbo.asm = cached-producer route
-+ RT_TURBO, which latches 28MHz at the copier hook): same fresh peak9cfed755/100 updates,
-original10.516s, cached IDs11.665s (+10.93%, reproduced locally exactly), turbo9.679s
-(-7.96%, PASS: faster than original). 50Hz IRQs, max gap20.26ms unchanged. Hook share now
-~93% of elapsed time, so the remaining cost is hook work (identity/preparation), not game
-logic. Level-1 play fixture: 150 updates run, original11.18s/turbo10.81s. FE-write rates
-differ (play fixture 1507/s original vs1067/s turbo) because no-input trajectories diverge
-(R/IRQ arrival); not a sound verdict. Next: owner ear/visual playtest of the turbo NEX,
-then freshness/RGB/pause/menu/DI checks on the turbo route before engine work.
+Stage: 1 complete as a playable prototype; owner playtests in JNext and on hardware report level 1
+plays, Kempston and pause work (2026-11-16). Branch add-r-type in both repos.
+Route (owner goal 2026-11-15: hardware scroll + sprites, hard to tell from the original; slowdown
+dropped; equivalence "extremely close"): the original game runs unchanged as the logic; scenery is
+drawn on Layer 2 and hardware-scrolled; figures are hardware sprites; HUD/stars stay on the ULA.
+Sources: specnext reference r_type/intake l2scroll.asm/.py (scroll, hooks, builds), l2sprites.asm,
+l2sprites_body.asm (sprites), l2sprites_full.asm (whole game), r_type_colour.py (colour sheets,
+recolour, outlines), r_type_figures.py (figure IDs). Sheets, registry, README: r_type/colours.
+Builds: `py -3 l2scroll.py --full` (whole game from Rtype.z80) / `--sprites` (RZX frame 2000 test).
+Mechanics, details in reference continuation/history-2026-11.md:
+- Scroll: 8842 copier hook moves NR 0x16 one pixel per call (7A8E clear); 89C3 draws the staged
+  column on Layer 2; 8734 (FEEB) converts the drawn level. Scenery black is opaque on Layer 2.
+- Sprites: plotter entries 8CFD/8D65/8DD3/8E29 record plots; graphics converted once into 4bpp
+  patterns, cached by address + ink with checksum; flips = mirror bits; 24 tiles converted per
+  update; partly drawn figures published behind whole ones; 8886 skips the copier's copy of cells
+  a sprite shows (8EA2/8EC2 hooks) and blanks them; overflow falls back to native cells.
+- Colours: per-level sheets in the game's colours; import via r_type_colour.py recolour (shared
+  nexclash.recolour.run); colour pages banks 32..47 applied at conversion.
+- Figure registry r_type_figures.json: stable IDs L<n>-<nnn>, families, name / layer / outline;
+  outlines pre-rendered one pixel bigger (pages 88-95). Layers are stored, not yet used.
+- Speed: 28MHz only from the level draw to the next Layer 2 off (title, scores, name entry and
+  continue run at 3.5MHz: busy-loop timing); the native ISR (all beeper sound) always 3.5MHz.
+- Full build: technical-spec screen held 5 s or a key; FE03 tape prompts patched out; level unpack
+  return (8F4E) maps the hook page back (7FFD maps ROM over slot 1); Kempston enabled (7A8B cleared,
+  NR 05 mode 001); high-score check (92E8) turns Layer 2 / sprites off.
+Next: play through a level change (untested in play); outline companion weapons / pickups (IDs from
+the identification sheets); use registry layers in publication; then stage 6 promotion (record,
+engine, profile, retire the parked cell-recognition route, full-recording verification, release).
 Local setup: C:\1NEXT\{nexclash,specnext}; C:\workspace\{work,scratch} are junctions into
-C:\1NEXT\rtype_{work,scratch} so the /workspace paths resolve unchanged.
-
-Stage: 1 (feasibility), design approved; continue implementation without a new design round.
-Branch: add-r-type in both repos; main f92662e, no incoming changes.
-Inputs: ../specnext/reference/r_type/Rtype.{z80,rzx,tap}. Do not repeat completed intake,
-caller/capacity or full ISR/access scans. No engine/profile/registry/record/sheets yet.
-Draft PRs: https://github.com/bleughb/nexclash/pull/235 and
-https://github.com/bleughb/specnext/pull/93. Current sources/results are on these branches.
-Read CLAUDE.md, PLAYBOOK3d/6, the continuation below and the reference intake README.
-
-Native1bpp text-tile baseline: peak1.32% (worst20 2.27%); scoped RGB/RAM/R/IRQ/pause
-proofs below. ULA scenery/HUD/text; bank7 art relocates to24. No live painted route,
-hardware-ready build or full-recording verification.
-
-Completion directions: reference intake/continuation/completion-review.md.
-Cached IDs pass320 ABI/R/RAM/credit and15 signed cases; old peak fails10.75%.
-publication_inlined.asm is unfinished WIP with placeholder costs; never deliver it.
-
-Latest: reference intake/continuation/live-budget-review.md and live-budget.json.
-Fresh peak9cfed755/no-input sample: original10.516s, static10.652s (+1.29%),
-cached IDs11.665s (+10.925%, FAIL); needs9.386ms/update savings. Different fixture
-from old10.75% test. Markers preserve101 clocks/380 bytes;378 match across routes,
-IRQ wait/star counters differ. Known SMC writes match; no watched hook/art writes.
-Legacy clone/clear/copier/paper costs14.176ms; identity checks/bridge9.961ms.
-Actual pixel scroll0.984ms supersedes nominal0.61ms estimate. No new renderer.
-
-Latest consumer proof: reference intake/continuation/background-consumer-review.md.
-7E00 owner/8100 dirty maps are IRQ-read; independent BG stream atC4BC identified.
-24 native initializations match across eight levels. Actual flip table01->00
-exposes painted compiler mismatch; RGB still unproven. Initial BG uses live plotters
-with SMC destination/clip modes. Next price retained semantics/native-time/R credit,
-BG progression and fallback before one bounded combined experiment. Gross14.176ms
-is not spare time; no further per-cell tuning/new backends by default.
-Require LIVE painted peak<=2%, ABI/R/IRQ/RGB, stale-source/ownership and pause/menu/DI
-before engine, sheets/recolour, quick checks and final full verify. No new intake scans.
-
-Setup: /workspace/work/{nexclash,specnext}; /workspace/work/venv101/bin/python
-(SkoolKit10.1, Pillow13); bundled pinned sjasmplus only. JNext1.2.0 executable:
-/workspace/work/jnext-bin/root/usr/bin/jnext; isolated home /workspace/work/r_type_jnext_home.
-Private card /workspace/scratch/cspect-next-2gb.img mode444, outside BOTH Git repos;
-every emulator run uses --sdcard-readonly. Never commit it or JNS card metadata.
-SD and JNext1.2.0 restored here. Generated files and isolated home stay in work.
-Reference scripts reconstruct cached fixtures only when absent; README gives commands.
+C:\1NEXT\rtype_{work,scratch}; tests in C:\1NEXT\rtype_work\tools (levels.py, ushots.py, cmp.py).
 
 ## Inputs
 The attached TAP is a tape, not a snapshot. The build start state was extracted from the
@@ -281,131 +94,18 @@ Explicit answer: all effects as sprites, see-through figures, no outlines.
 The original-recording contact sheet is the intake preview, not a simulation of a sprite build.
 
 ## Feasibility
-Historical feasibility below; current directions are in Next session. The shared
-routine_skip probe is48K-only and cannot establish removal safety here.
-Preliminary pacing census on frames 2000-2500: 150 updates; 113 take 3 frames, 26 take 4,
-11 take 5; median 205,413 T, maximum 360,652 T (uncontended). Wait at 868C polls 7A8A
-until >=3; main loop 8649 resets it. Measured slack on 47 waits: min 333 T, median 26,797 T.
-The probe reports beeper writes at FAA2 and FB52. These are NOT a whole-game hook budget.
-Removal (`intake/removal.py`): 35 live copier states sampled every 2,500 frames through 87,444.
-Clear selected source pixels/paper, run original 8842, restore temporary sources: all registers
-including R, non-ULA RAM and the predicted clean ULA agree exactly. This proves the sampled algorithm
-without interrupts, not an assembled hook. Nonlinear pixels occupy 6000..6FFF plus the low 128 bytes
-of each page 7000..7700; never restore 6000..77FF wholesale (gaps hold variables such as 71D0).
-
-Initial protected old+new proposal exceeds128 patterns; corrected census after400
-THANK-YOU text draws:105 sprites/103 simultaneous patterns/183 protected patterns.
-See intake/review/REVIEW.md for earlier counts/packing alternatives. Never exclude
-owner88 globally: it also draws enemies. Text identity:8CFD from917A, HL=CAFF,
-D=21,E=24, frame32 via8E85/C4BA=D99C. The approved reviewer recommends single-bank
-publication outside160 play lines; old+new coexistence is not a user requirement.
-Staged publication runs the original copier into shadow slot2 first.
-The full ISR scan completed:90,102 frames,86,553 interrupts,0 unreturned;478 instructions,
-26-byte interrupted-stack depth; slots1/6 untouched. R reads at BEDB/BF36 require care.
-No ISR reads/writes the actual5120 source pixels. It writes588 source attributes at7820..7A7D:
-never blanket-save/restore those. Crucially slot2 also contains live non-display variables:
-ISR reads314/writes157 addresses in5B64..5D01, so shadowing slot2 requires their copy-back.
-
-Baseline gameplay fixture at RZX frame2000:100 updates,15.83updates/s in original and plain,
-penalty-0.04%; IRQ49.83/s; longest original IRQ gap40.5ms. No state lockstep assertion.
-A bounded4000-frame ISR capture finds70,819 native T at frame3620. JNext native IRQ samples
-include21.19ms; this is not a full-game maximum. Raw evidence stays with the reference inputs.
-
-`intake/publication_irq.py`:105 prepared4bpp patterns +5120 ULA pixels +640 attrs +525 sprite
-attribute bytes. Ordinary DMA5.556ms passes; CPU-only35.150ms with a native20.267ms IRQ misses
-rows2..9 (without IRQ CPU14.771ms passed row deadlines). Reject CPU-only for this architecture.
-No-blitter means ordinary DMA, so it is not rejected. Unsupported DMA configurations must be
-refused explicitly; never silently drop figures. Core3.03 DDMA is not exercised by JNext's older core.
-
-`intake/publication_shadow.py`: actual copier, temporary foreground pixel clearing, exact pixel
-restoration, shadow slot2 retained during a native~20.27ms IRQ. At NR150 DI, map live slot2 and
-copy its1280 non-display bytes from shadow; at NR160 publish patterns/clean ULA/attributes.
-Ordinary DMA attribute batching reduces the visible publication to5.100ms (default preference
-falls back to ordinary DMA:5.084ms); tail-copy lead0.640ms; preparation31.057ms includes the IRQ.
-The next native IRQ starts about0.63ms after publication ends. All actual5120 source pixels,
-non-pixel source holes, ULA5120+640,1280 tail bytes, unchanged HUD and105 pattern images match.
-A forced sentinel at the proven ISR-written5B64 exercises tail propagation; removing only the
-runtime tail copy catches that lost byte. This is one synthetic-pattern/captured-game state,
-not an integrated engine, full-hook pace proof or full RZX sprite verification.
-Next gate: dynamic ZX-to4bpp preparation + register/R/stack proof + full-hook timing and pace.
-The prepared-shadow protocol avoids retaining old+new patterns concurrently.
-Detailed evidence: specnext/reference/r_type/intake/review/REVIEW.md and packing-text-classified.json.
-
-DMA/DDMA remains an evaluation, not a selected route: the four plotters copy 8-pixel cell
-graphics and update collision maps; DDMA cannot generate those maps or unpack ZX bits.
-Evaluate cached sprite uploads with ordinary DMA and eligible rectangle work with gated DDMA,
-using the shared policies (including no-blitter and CPU fallback), during integration; ordinary DMA is the measured no-blitter fallback.
-
-Earlier dynamic/bridge results remain in reference intake README; the complete bank/IRQ
-checks below supersede early scopes. Quiet0.82% pace does not replace peak acceptance.
-
-### Integrated native-tile continuation (2026-11-10)
-- `publication_tilemap.asm`: 40x32 hardware text map,511 foreground8-byte glyphs,
-  map/definitions7168 bytes via ordinary DMA. Observed105 occupied16x16 blocks imply
-  at most420 occupied8x8 cells. Standard4bpp tile definitions were too small at the
-  measured274 binary patterns (263 after flip normalisation). No hardware claim.
-- `tilemap_bank_check.py`:80 bank/edge/R cases; full paging-port census confirms all
-  bank7 reads use8F21. Original assets move to physical bank24, MMU0 aliases48/49.
-- `irq_equivalence.py`:218 supplied-R reads across14 native IRQ states,14 wrong-R
-  controls caught. Wrapper retains selected NextReg, MMU0/clock; body runs native.
-- `copier_equivalence.py`: all caller registers/R, eight logical game banks and
-  clean ULA/pixels exact in23/105-sprite states.18 dead stack bytes converge before
-  any read through the real caller and first normal IRQ. `interrupt_boundaries.py`:
-  113543 injections,841 PCs; wrong-MMU negative caught, private SP minimum3CD6.
-- `text_check.py`:80 identity/ABI/R cases; `tilemap_geometry.py`: empty/edge/all-ink,
-  511-glyph capacity and512 overflow, broken actual bound caught. `tilemap_preview.py`:
-  all49152 paper RGB pixels match independently; one runtime glyph-bit error caught.
-- `integrated_check.py --asm publication_tilemap.asm`:100returns in each mode, all
-  checked registers and42240 RAM bytes exact;100 wrong-IY negatives. Peak pace1.32%
-  over100updates,2.27% worst20 window, state equality each update,50Hz IRQs both.
-- `pause_check.py` checks actual converter CALL bytes,12 ABI/R/ULA cases; holding
-  pause must save/fold only once. `pause_jnext.py`:261 pause calls, one resume,
-  added layer off/on and DI native continuation correct. Future source may already
-  describe the next frame, so pause folds the last published glyphs/attributes.
-- Owner approved one independent reviewer after two pace failures. Review found the
-  builder's pause JP/CALL mismatch (fixed) and rejected broad producer credit:
-  new overhead was multiplied as original work. Retained trial7.83% slow,13.37%
-  worst20. Compact review and results are in reference intake/continuation/.
-- `cell_check.py`:160 cell cases, all four legal continuations, force ink, R rollover;
-  exact descriptor/source/flip/ink/owner/level, all caller registers/R/live banks.
-  Credit equals measured original minus complete hook CPU, including its own cost;
-  fractional scanline credit is retained across updates.64 whole-plot comparisons
-  pass including DI fallback. Current prototype latches clock once per plot.
-- Hardware alternatives: ordinary DMA already moves bulk state. DDMA stays gated
-  to3.03 and untested on JNext's older core. Layer2 can replace whole painted cells;
-  scrolling cannot replace the game's ownership/collision producers, and Copper
-  scheduling does not remove colour-expansion work. Painted-route cost is still open.
-
-### Live colour-path continuation (2026-11-11)
-- The one approved reviewer also checked the colour bottleneck. Static all-painted
-  Layer2 first-frame oracle:7369 painted pixels, all49152 RGB pixels exact, one
-  corrupted runtime pixel caught. Whole-hook pace21.46%, unrolled17.17%, bounded
-  debt polling11.81%: rejected as the current full-colour implementation.
-- Static preexpanded4bpp comparison includes111-pattern publication. Per-block debt
-  polling fixes missed timing-accounting wraps:15.56% ->1.52% over100 peak updates,
-  all state samples/FE writes equal,50Hz IRQs. It is a cost trial, not live painting.
-- Bulk ULA publication is being evaluated: the retained full ISR footprint writes
-  no HUD pixels/attributes, so unchanged HUD bytes can accompany the whole8192-byte
-  shadow in one DMA. Both publication modes100returns/42240 RAM bytes pass; measured
-  IRQ-free intervals remain bounded. Hardware proof remains open.
-- The source-only colour corpus captured385512 plots over90102 frames, no desync.
-  Filtering yields8711 cell variants,1288 plots and1825 whole-figure views. Join
-  parts only with an actual9-byte object and owner; shared low owner flags alone
-  merge independent shots incorrectly. Individual other plots remain whole figures.
-- Original bank1 unpacker reconstruction, with its persistent state across levels,
-  reproduces all9789 captured raw cell variants at their actual source addresses
-  from the supplied snapshot. No captured art needs embedding in engine code.
-- Live guarded hash lookup finds17573/19017 foreground lookups in the peak sample
-  but15.26% pace fails. A timer-IRQ checkpoint trial did not help (15.42%) and is
-  disabled. Direct dispatch also failed15.26%; cached producer IDs failed10.75%;
-  every current level/source/ink key has one bitmap in the recording. Native fallback
-  for unknown/changed art remains necessary. Engine/final verify pending.
+Earlier feasibility work (pace ledgers, ISR footprint, DMA publication, native tilemap, cell
+recognition with identity caches) is in reference continuation/history-2026-11.md and the intake
+reviews. It established the facts above; its cell-recognition route is parked: it could not give
+hardware scrolling and its per-update identity work cost about 93% of the CPU.
 
 ## Checks
-- Live ledger/SMC:100 intervals each route; instrumentation/watch controls preserve101 clocks/380 bytes.378 match; two IRQ/star counters differ. Native SMC sequence matches, zero watched hook/art writes. No full RAM/RGB/sound proof; reference live-budget-review.md.
-- Source follow-up:1288 plots/65030 mutations/16 CPU-M1 cases/352-image guard PASS; source-identity-review.md retains scopes. Earlier dynamic/bridge0.82% was quiet-only and is superseded by later peak gates.
-- Earlier canary PASS; tools survey/golden PASS but unchanged Inferno IFF audit FAIL (asm/inferno_hooks.asm5722/5726/7563). No other game's code modified. Historical logs/results remain in reference intake.
 - Full recordings replayed by both caller censuses: 90,102 frames each, no desync.
+- Prototype vs same-speed ULA control, eight RZX snapshots (2000..75000), 300-600 updates, no input
+  and scripted input: pacing equal (297-299 of 301 updates at 3 frames), pictures differ by stars
+  and see-through overlaps only. Full build: start, title, attract timing (title->scores 621 vs
+  original 597 frames), game over, name entry same as the original. Colour import: recolour with
+  {} gives the build back byte for byte; painted and outlined sprites shown in JNext.
 
 ## Hardware checklist
 Plain above: owner reports JNext and real hardware PASS (2026-11-10); issue/core versions and
@@ -442,6 +142,13 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   plotters; scanning its source buffer locates the four tile drawers. No removal-safety claim yet.
 - [local: credits share an enemy slot] Independent review: peak owner-grid scene includes THANK-YOU
   text. Graphic identity, not global owner exclusion, gives105 sprites in the full corrected census.
+- [local: 7FFD remaps slots 0-1] On the Next a 7FFD write maps ROM over slots 0-1, hiding a hook page
+  in slot 1; the level unpack (8F40) did it and the next interrupt reset the machine. Return through
+  game RAM that maps the hook page back before EI.
+- [local: busy-loop screens need original speed] Title, attract and name entry time themselves with
+  CPU loops; run 28MHz only during play.
+- [local: draw order beats identity] Replacing the picture (scroll on Layer 2, sprites keyed by the
+  plotter call) cost less than recognising the original's cells every update, and gave hardware scroll.
 
 ## Friction
 - reuse: [none: existing survey, scan, preview and census tools provided the investigation paths]
@@ -452,18 +159,9 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   in specnext/reference/r_type/intake; none added as an untested shared toolkit probe.
 
 ## Stage log
-- 2026-11-11 Consumers: BG interface/SMC/native credit traced;24 initialization and8 flip cases expose compiler mismatch. No renderer or intake scans; price retained semantics next.
-- 2026-11-11 Book (~5min/~8 calls/0 rounds): SCROLL6 matches8914; no PDF/scans/build.
-- 2026-11-11 Stage1 live ledger (~3h/~50 calls/1 steering round): restored private SD/JNext; no new renderer. Exclusive100-update ledger, unchanged-clock controls and targeted native-SMC/art/hook watch pass. Fresh live pace fails10.925%; source/consumer and native-credit cut remains next. No intake scans or engine promotion.
-- 2026-11-11 Stage1 (~45min/~100 calls/2 steering rounds): refreshed f92662e; read full decode/normalization/catalogue for provenance. Guard passes; whole-update ledger/Inferno correction saved in reference review. No intake scans/emulator/engine.
-- 2026-11-11 Checkpoint/reassessment: cached-ID bounded test fails10.75%;320 producer and15 signed-budget cases pass. Existing knowledge remains main dace0cc; refresh deferred while checkpointing dirty experimental work. No new intake scans or renderer variants.
-- 2026-11-10 Stage1 continued: approved reviewer; pause CALL/held-key fixed, native tile proofs/peak pace measured; successful-cell provenance/credit trial. Colour route/engine pending; no intake rerun.
-- 2026-11-10 Stage1 (~30min/~100 calls/0 rounds): refreshed dace0cc;23/105 DMA, early100-return/R bridge pass; quiet pace0.82%. IRQ/RAM/stack/peak proofs pending then; no hardware build.
-- 2026-11-10 Stage1 handoff: owner requested fresh agent; branches/prototypes pushed. Dynamic preparation/equivalence/pace pending then; design approved.
-- 2026-11-10 Stage1 continued: SD extracted read-only; original/plain pace and full ISR scan complete. CPU route rejected; staged DMA publication/controls pass. Dynamic/R/stack/pace pending then; no sprite build.
-- 2026-11-10 Stage 0: ~13 min wall, ~65 tool calls, one design round pending. Source refreshed
-  at 931458b; original attachments preserved, snapshot extracted, full screen replay and
-  caller censuses, bounded surveys, tracker fixed and regression checked. No sprite build yet.
-- 2026-11-10 Stage 1 in progress: owner approved all effects, see-through, no outlines; authorized
-  one capacity reviewer. Full access scan and plain NEXLOAD boot/negative proof pass.
-- 2026-11-10 Stage1 checkpoint: owner confirms plain JNext/hardware; corrected capacity retained. Card policy403 blocked timing; ISR scan interrupted then. No sprite build.
+- 2026-11-16 Prototype: colour sheets + recolour, figure IDs, outlines, partly hidden figures,
+  start-up / title / high-score fixes, level-unpack hook-page fix. Owner hardware playtest OK.
+- 2026-11-15 New route: Layer 2 hardware scroll, then hardware sprites; later levels and scripted
+  input checked; Kempston fixed. Cell-recognition route parked (28MHz main loop measured).
+- 2026-11-10..11 Stage 0-1: intake, censuses, ISR footprint, DMA publication, live budgets.
+  Full entries in reference continuation/history-2026-11.md.
