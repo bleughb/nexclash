@@ -1,5 +1,10 @@
 # Next hardware reference card: ports, NextRegs and Z80N instructions used by nexclash
 
+Printed manual (3rd ed., CC BY-NC-SA 4.0): specnext/docs/reference/ZX Spectrum Next Manual 3rd Ed (repaired
+transcription).md, format notes manual-rev3-llms.md. 1.2 MB, never read whole: `grep -n 'PDF page' FILE`
+marks pages, grep the subject, Read +-40 lines. PDF pages: ch.19 NextZXOS 157-205, ch.22 IN/OUT + NextRegs
+229-246, ch.23 memory 247-270, ch.25 machine code 275-281, App.A Z80N 282-287. It can lag the core.
+
 Index of every port and register: SpecNext Wiki "Board feature control"
 https://wiki.specnext.dev/Board_feature_control (one page per port/register, linked from there).
 The wiki says it is copied by hand from the core's spec. When wiki and spec differ, the spec
