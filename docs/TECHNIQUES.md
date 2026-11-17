@@ -9,11 +9,14 @@ whether it is hardware-tested; an untested technique is proven by the first engi
 Researched 2026-10-19 (guide r3 chapters Sprites / DMA / Copper / Interrupts, core 3.01.09
 nextreg.txt + ports.txt + changelog, KevB's copper timing notes in github.com/varmfskii/zxnext_code
 zx_next_notes/copper; github.com/stevemonks/ZXSpectrumNextMachineCodeGuides;
-github.com/breakintoprogram/lib-spectrum-next lib/dma.z80; full guide r3 review: GUIDE_R3_REVIEW.md). Nothing here is simulated or hardware-tested: the first engine that uses one
-implements it in the simulator (NEXT_REGISTERS "SIMULATOR TRAP") and records the hardware result.
+github.com/breakintoprogram/lib-spectrum-next lib/dma.z80; full guide r3 review: GUIDE_R3_REVIEW.md).
+Only the nextbench results (1.0, 1.0b) are hardware-measured; nothing else here is simulated or
+hardware-tested: the first engine that uses one implements it in the simulator (NEXT_REGISTERS "SIMULATOR TRAP") and records the hardware result.
 Register / port detail: NEXT_REGISTERS.md "Not used yet". Cost estimates are 3.5 MHz T-states.
 
 ### 1.0 Measured costs on a board (tools/hwtests/nextbench, core 3.02.00, 2026-10-22)
+PRE-3.03 figures: classic zxnDMA on core 3.02.00. Do not read the 3.5 MHz "WRONG" results or the exact
+microseconds as current for core 3.03.00+ (zxnDDMA, below and docs/DDMA.md); measure on the target core.
 Microseconds per call on a real Next (raster-line timing, call overhead subtracted). These are
 HARDWARE-MEASURED; the estimates in the rest of this section are not. 28 MHz = the hooks' speed.
 
@@ -46,6 +49,11 @@ What it says:
 - DMA at 3.5 MHz gives WRONG copies on core 3.02.00 (every check failed; the core changelog fixes
   it in 3.02.02); at 28 MHz every DMA copy / fill was right. Use DMA only at 28 MHz, or require
   core 3.02.02+.
+- **zxnDDMA (core 3.03.00+, port $6B):** physical 22-bit addressing (not BRAM banks 5 / 7), 2D
+  rectangles with strides, transparent skip, fill, Layer 2 X,Y; commands in NEXT_REGISTERS port 0x6B,
+  rules and traps in docs/DDMA.md. Classic DMA and the re-arm costs above still fit contiguous copies
+  and port uploads; prefer zxnDDMA for a rectangle, fill, transparent blit or Layer 2 write. Gate on
+  core version first: older cores read the extended parameter bytes as DMA writes.
 - 28 MHz is ~6.3-7x 3.5 MHz, not 8x: each memory read adds a wait state, so (T + reads) / 8
   (LEARNINGS 2.1f): LDIR 21 T + 3 reads -> 3.0 T a byte at 3.5 MHz terms = 0.857 us (measured 0.861).
 - Sprite pattern upload: DMA is ~3x OUTI for a 256-byte pattern and ~1.8x for a 64-byte one
@@ -468,6 +476,8 @@ Ped7g's test suite) where a technique there is mostly about one Next feature.
     the edge, at the wrapped position (mod 192 / mod 320 by Ped7g's look-up tables) - into a
     circular Layer 2. A scroll costs one line of drawing, not a screen copy (the same idea as
     em00k's ring-buffer scroller in section 1).
+  * On core 3.03.00+ the same incremental column / row updates can use zxnDDMA 2D + Layer 2 X,Y mode
+    (section 1.0, docs/DDMA.md); not yet hardware-tested here.
 - A SOFTWARE tilemap drawn into Layer 2 (zxnext_layer2_tilemap): full-colour 8x8 tiles, 512 of them
   in two 8K pages, map + per-tile attributes rotate / X / Y mirror like the hardware tilemap,
   256x192 or 320x256.
@@ -649,7 +659,7 @@ Ped7g's test suite) where a technique there is mostly about one Next feature.
 NextMasterSystem runs Master System games' own Z80 code on the Next by patching every I/O site into
 a call to a runtime that drives tilemap, sprites, copper and AY - our method on another machine,
 with per-game "overlays" (patch lists + switches + native code pages) matched by cart CRC32. Its
-interrupt handling is in 2.6 (held interrupts). Design notes (docs/design.md there):
+interrupt handling is in 2.6 (held interrupts). Design notes (NextMasterSystem/docs/design.md):
 - Runtime owns ONE slot (7) for the whole game; parts 2-4 BORROW a game slot only while they run,
   with written rules (which part may call which, who restores slot N from `cur_mmu`) and a
   build-time page-end check (tools/check-layout). Our hook-page rules (midres slot 5) are the same
@@ -673,7 +683,7 @@ interrupt handling is in 2.6 (held interrupts). Design notes (docs/design.md the
 - A display-off / display-on pair the original did inside the vertical blank can land in the
   picture on the slower machine: they HOLD the off-write until the matching on-write or a timeout,
   so the screen does not flash. Same class of fault as our hide/show flicker rule (LEARNINGS 1.4).
-Source (src/runtime/fw*.asm, tools/sitescan.py, docs/*.md, read 2026-10-20):
+Source (NextMasterSystem/src/runtime/fw*.asm, NextMasterSystem/tools/sitescan.py, read 2026-10-20):
 - Trap frame: entry = `EX (SP),HL; PUSH AF; LD A,I; DI`, then the game's IFF2 decides whether an
   `EI` or a `NOP` is written into the exit just before its `RET` (EI's one-instruction delay means
   no interrupt lands before the RET). Then it switches to its own stack and keeps the game's BC / DE
@@ -758,8 +768,8 @@ ours.
   DynaTile (ideas only) and Tilemap (GPL-3.0).
 - ped7g/ZXSpectrumNextMisc (MIT / Unlicense): snippets.
 - zxnext-copper-samples (github.com/shadowphiar/zxnext-copper-samples; CC0; z88dk C).
-- NextMasterSystem (github.com/StalePixels/NextMasterSystem; ideas only; src/runtime/fw*.asm,
-  tools/sitescan.py and docs/*.md read 2026-10-20).
+- NextMasterSystem (github.com/StalePixels/NextMasterSystem; ideas only; its runtime source,
+  sitescan tool and docs read 2026-10-20).
 - benbaker76 Next demos (github.com/benbaker76; MIT; z88dk C + asm; all source read 2026-10-22):
   zxnext_chess_demo (relative sprites), zxnext_dma_sample (DMA / CTC sample playback, after em00k),
   zxnext_tilemap (hardware tilemap scroll) and zxnext_layer2_tilemap (the original of the
