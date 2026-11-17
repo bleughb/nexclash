@@ -3,8 +3,8 @@
 ## Next session
 Stage: 4 (hardware + colour)    State: v1.2 published (jattree/nxc ea2a22f, the pilot clone's 9248a85), upstreamed
 2026-11-07 (engine refactor session 3). The engine now runs the shared pace library (hlib_pace, nested hooks) in place
-of its own limiter: v1.3, a review build only, not published, not yet played by the owner (below, "Shared pace
-library"). Emulator only; no board run. Open: Centred view's edge cells (821 of 14,765 frames show a few pixels no
+of its own limiter: v1.3, a review build only, not published (below, "Shared pace library"). Hardware: the owner
+played v1.3 on a real Next, 2026-11-17: played fine. Open: Centred view's edge cells (821 of 14,765 frames show a few pixels no
 view drew).
 Inputs (pilot run folder runs/quazatron, private): the archive's "Quazatron (1986)(Hewson Consultants)[aka
 Ziggurat].z80", md5 ac51eb58af87fdac9c0c7077db98c90a; recordings work/b1, b2, c1, s3/d1, u2, u3, s8/t5, r6, r7, r8.
