@@ -49,7 +49,7 @@ The Copper list (R-Type: 2 KB in the glide page; never map a page into slot 6 at
 | Symptom | Cause | Probe | Fix | Rejected |
 |---|---|---|---|---|
 | only the top rows correct, rest one palette | WAITs for border lines 280-311 never pass: the Copper restarts at vertical blank after them | trial line numbering | one palette for the border rows, set at the end of the previous frame | - |
-| one wrong line per band | WAIT offset (CSpect: WAIT line n, h 40 shows from row n + 32 of 320x256 Layer 2) | full-width wrong rows | adjust by the measured lead; or set NR 0x64 (BRIEFING 28) | guessing the direction |
+| one wrong line per band | WAIT offset (CSpect: WAIT line n, h 40 shows from row n + 32 of 320x256 Layer 2) | full-width wrong rows | adjust by the measured lead; or set NR 0x64 (BRIEFING item 28) | guessing the direction |
 | colours wrong after band 0 | 9-bit NR 0x44 pairs written by the Copper | compare with 8-bit | NR 0x41, one write a colour | - |
 | crash after the reveal | a page mapped into slot 6 at start-up (stack) | PC and SP at the crash | keep the list in an already mapped page | - |
 
