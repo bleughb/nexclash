@@ -175,7 +175,7 @@ e_blit: push af
         pop af
         call ny_r_end
         call ny_speed_out
-        jp 0xD4D8
+        jp 0xD552               ; where the copy loop's own JP goes (the paint)
 
 ; ---- 0xAAF1 room redraw, 0xA985 and 0xAA3F new game, 0xDA50 game over, 0xC112 the window refresh: no figures until they are plotted again ----
 e_room: call hideall
