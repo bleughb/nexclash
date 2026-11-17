@@ -72,6 +72,10 @@ nexclash/nodes_of_yesod.py and its .asm with Arc's addresses, seven sites to loc
   colours, scenery as the game draws it. Enhanced is built in the same pass: the astronaut's painted colours are
   carried over from Nodes by bitmap ("yes do that, i'll paint the enemies later that dont match"); Arc's own enemies
   stay in the game's colours in Enhanced until the owner paints them. Backdrops: not asked for, not in this pass.
+- 2026-11-17 (owner): "anything we can reuse and save me repaint the same sprites the better". So the carry-over is
+  not only exact bitmaps: once Arc's graphics are catalogued, compare each with every painted Nodes graphic (same
+  size, shifted, mirrored, a few pixels changed), carry the paint for near matches too, and give the owner one sheet
+  showing what was carried exactly, what was carried with differing pixels (marked), and what is left to paint.
 
 ## Lessons
 - [deferred Open: reconsider when a second 128K game needs a scripted recording] `nexclash.py record` drives a 48K
