@@ -2,14 +2,15 @@
 Techniques: detect.gameplay-screen-readers
 
 ## Next session
-Stage: 3 (prove + deliver)  State: engine verified on ten recordings; record written; full selftest with stamp running at
-the time of writing (2026-11-17): check `python -m nexclash.records plan` first
+Stage: 3 (prove + deliver)  State: `selftest.py --game arc_of_yesod --verify --stamp` PASSED 2026-11-17 (stamped); no
+.nxc, loading screen or hardware run yet; the owner has not seen a cavern in the build
 Inputs (private, pilot runs/arc_of_yesod/reference_files/arc_of_yesod, the selftest's reference folder): the archive's
 "Arc of Yesod, The (1985)(Thor Computer)(128K).z80" as arc_of_yesod.z80, md5 f58236395e737aaa0fac1f8476711ad8; arc_s1,
 arc_a1..a6, arc_over (from that snapshot), arc_tele and arc_end (from poked states, below). Scripts: runs/.../2026-11-17.
 Branch: add-arc-of-yesod    Commit: this one    Checks: selftest --game arc_of_yesod --verify (see State), doccheck
 Pending user answers: none
-Start with: `python selftest.py --game arc_of_yesod --verify --stamp` if the plan still wants it, then the .nxc
+Start with: the 128K tape's loading screen and the .nxc (`nexclash.py patch`), then the colour sheets and the hardware
+checklist to the owner
 Read: PLAYBOOK stage 3 (6a, 6b, 7), docs/COLOURS.md, "What the port changed" and the open items below
 Open: the list in the open-items section.
 
@@ -141,6 +142,16 @@ nexclash/nodes_of_yesod.py and its .asm with Arc's addresses, seven sites to loc
   not only exact bitmaps: once Arc's graphics are catalogued, compare each with every painted Nodes graphic (same
   size, shifted, mirrored, a few pixels changed), carry the paint for near matches too, and give the owner one sheet
   showing what was carried exactly, what was carried with differing pixels (marked), and what is left to paint.
+
+## Hardware checklist (for the owner; nothing here has run on a board)
+1. The menu: 1 for keyboard, then hold 1 until the game starts (the original is slow to see the key).
+2. Surface: the astronaut walks, jumps and fires with no colour change on the skyline or the ground; stars twinkle.
+3. The hatch: stop wholly inside the opening and press the up row; the cavern below is drawn, the astronaut appears.
+4. Caverns: each enemy kind in its own colour over the scenery, no coloured squares around figures; the beam; a lost
+   life; the appear and vanish effect (plain ink, no fill: expected).
+5. A teleporter pad (its colour bars), the out-of-time screen, a new game.
+6. Enhanced: the astronaut painted (orange pack, pink visor) in every pose; enemies in the game's colours.
+7. Speed and music against the original 128K game.
 
 ## Lessons
 - [deferred Open: reconsider when a second 128K game needs a scripted recording] `nexclash.py record` drives a 48K
