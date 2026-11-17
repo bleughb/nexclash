@@ -1,18 +1,19 @@
 # The Arc of Yesod (Thor / Odin, 1985; 128K release)
 
 ## Next session
-Stage: 2 (build)            State: design approved 2026-11-17 (Decisions below); feasibility done: a port of the Nodes engine
+Stage: 2 (build)            State: engine ported from Nodes; five recordings verify IDENTICAL (2026-11-17); unit tests,
+negative controls, the record, Enhanced and the .nxc are not done
 Inputs (private, pilot runs/arc_of_yesod/2026-11-17): the archive's "Arc of Yesod, The (1985)(Thor Computer)(128K).z80",
 md5 f58236395e737aaa0fac1f8476711ad8 (control menu); under.z80, md5 f3c07b0b (a cavern, from the owner's play, below);
-arc_u1..4.rzx (4,231 frames, start at under.z80); survey in arc_of_yesod_survey/; the scripts (m128.py, sites.py, ...).
-Branch: add-arc-of-yesod    Commit: this one    Checks: survey, doccheck    Pending user answers: none
-Start with: the seven sites the byte search did not settle (Feasibility table), then copy nexclash/nodes_of_yesod.py and
-asm/nodes_of_yesod_hooks.asm to arc_of_yesod with Arc's addresses, in stages (sites, hooks, verify, unit tests)
-Read: PLAYBOOK stage 2, docs/ENGINE_CONTRACT.md, nexclash/nodes_of_yesod.py (constants, NodesPatch, event, verify),
-asm/nodes_of_yesod_hooks.asm header
-Open: Arc's object table and graphic tables (Nodes: 0xFC00 x 16, tables 0xB700 / 0xC700); free RAM for the hook state;
-the scrolling surface strip (0xBC19); the descent by script and a recording from the archive snapshot; the three
-unreached CALL sites; carrying the astronaut's painted colours over by bitmap (Decisions).
+arc_s1.rzx (2,605 frames, from the archive snapshot, the surface) and arc_u1..4.rzx (4,231 frames, from under.z80).
+Branch: add-arc-of-yesod    Commit: this one    Checks: auto with the five recordings (IDENTICAL, rom_paths pass), doccheck
+Pending user answers: none
+Start with: `python nexclash.py auto arc_of_yesod.z80 --no-nxc --rzx arc_s1.rzx --rzx arc_u1.rzx ...` (must still say
+IDENTICAL), then port unit_tests / negative_patches / negative_real from nexclash/nodes_of_yesod.py (lines 1158-1530)
+Read: PLAYBOOK stage 2-3, docs/ENGINE_CONTRACT.md, "Build design" and "What the port changed" below
+Open: unit tests and negative controls; hooks never run in a recording (e_over, e_tele: no game over, no window refresh
+yet); pace (the Nodes windows are in, not measured for Arc); the evidence record; Enhanced (the astronaut's colours from
+Nodes by bitmap, near matches, the owner's sheet); loading screen; the .nxc; the descent by script; hardware.
 
 ## Facts (snapshot check, survey)
 - 128K, 7FFD 0x10 at the menu, in play it switches 0x10 / 0x16 (bank 6 at C000 holds most of the code). IM 2, I = 0xE2,
@@ -72,6 +73,30 @@ nexclash/nodes_of_yesod.py and its .asm with Arc's addresses, seven sites to loc
   Banks 1 and 3 are all zero and never paged; bank 7 and bank 4 do not change after the menu.
 - Recording from the archive snapshot: arc_s1.rzx (2,605 frames: start, the surface both ways, jumps, fire, the
   ENTER window), md5 in the run folder.
+
+## What the port changed from Nodes (2026-11-17)
+- Sites as in "Build design", with these corrections found by the verifier: the copy hook leaves to 0xD552 (where the
+  loop's own JP 0xD552 goes; R was one short with 0xD4D8); the room-drawn points are 0xAB6E (colours) and 0xAB9F
+  (picture); the surface's star cells are the 16 at 45391, rooms 64-79; the room number is at 23479.
+- Not in Nodes: a second random read at 0xC1CC (LD L,A / LD H,A / LD A,(HL), address R * 257): hook e_random2, flags kept.
+- Not in Nodes: the beam (0xCEAF-0xCF18) writes its pixels straight to the screen and colours a cell whose ink is
+  black, reading the screen's colour at 0xCF07. With the paint no longer written the build would take the other branch
+  and R would drift. So the hooks keep the ink the original would have painted in a shadow page (Next page 23, at slot 4
+  for one access; cleared when a room is drawn), and e_beam, e_random and e_random2 read through it. The verifier's
+  second replay does the same. The beam's own pixels are left out of the screen comparison while it is there (the
+  original's next copy over them restores the buffer's bytes, the build's does not): a small visible difference.
+- Not in Nodes: the appear / vanish effect rewrites two graphics in place (0x8C92, 0x8CF5; code 0xC185, 0xC1A0), so their
+  tiles are made from the live bytes at each update (dynload: ink only, no fill), and checked against the live bytes.
+- Memory: object state in bank 0 at 0xFBA0-0xFBE2, the rest at 0x5B00-0x5B22; the sprite build's tail at 0x5B24-0x5B58,
+  the plain build's at 0x5B00-0x5B4E, both in bytes the game never touches. Both builds' set-up puts the printer
+  buffer back (NEXLOAD uses it; the game's stack is there). Deepest stack at a hook 0x5B9B, the handler 46 bytes:
+  the hooks (36) and the handler inside one reach 0x5B41, above the state.
+- Left out: backdrops, the Enhanced HUD, the clip window change by room (Arc's play area is always 168 lines), Nodes'
+  wrong-clip and bare-RET plotter cases (no such plotter seen in Arc: to recheck with wider recordings).
+- Results: arc_s1 2,605 frames 2,059 copies; arc_u1 1,447 / 1,489; arc_u2 583 / 541; arc_u3 1,258 / 1,314; arc_u4
+  943 / 1,157: all IDENTICAL (registers with R, memory, sprites over the bare picture, the patched replay's state).
+  1,038 copies in the cavern recordings come before a room is drawn and have no bare picture to check against.
+  Builds: plain 9858d3f2, sprites 7aa17d81 (not final). Both start and play in OverSpec (surface only).
 
 ## How the recordings were made (and what that leaves open)
 - The archive snapshot is at the control menu and the game starts on the surface. No scripted input took the player

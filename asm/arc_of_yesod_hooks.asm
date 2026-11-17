@@ -1241,14 +1241,30 @@ setup:  nextreg 0x43,0x20       ; sprite palette 0, auto-increment
         nextreg 0x19,0
         nextreg 0x19,167
         nextreg 0x15,0x01       ; sprites on, S L U
-        ld hl,printer_saved
-        ld de,0x5B00
-        ld bc,0xBC
-        ldir                    ; NEXLOAD overwrites live game state in this buffer; 0x5BBC on is the start-up tail's
+        ld hl,printer_saved     ; NEXLOAD overwrites live game state in the printer buffer (the game's stack is there):
+        ld de,0x5B00            ; all of it back, but the start-up tail's bytes (0x5B24-0x5B5A, which the game never touches)
+        ld bc,0x24
+        ldir
+        ld hl,printer_saved+0x5B
+        ld de,0x5B5B
+        ld bc,0xA5
+        ldir
         ret
 pal:    BLOCK 256,0             ; written by the build: 16 lines of 16 entries
-printer_saved: BLOCK 0xBC,0
+printer_saved: BLOCK 256,0
 setup_end:
 
         SAVEBIN "arc_rom.bin",0x386E,rom_end-0x386E
         SAVEBIN "arc_setup.bin",0xD000,setup_end-0xD000
+
+; The plain build's set-up: the same buffer, its tail at 0x5B00-0x5B4F.
+        ORG 0xD000
+plain_setup:
+        ld hl,plain_saved+0x50
+        ld de,0x5B50
+        ld bc,0xB0
+        ldir
+        ret
+plain_saved: BLOCK 256,0
+plain_end:
+        SAVEBIN "arc_plain.bin",0xD000,plain_end-0xD000

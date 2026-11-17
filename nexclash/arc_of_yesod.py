@@ -13,9 +13,8 @@ import os
 ROM_ORG = 0x386E
 ALT_PAGE, ALT_BANK = 24, 12
 PAT_PAGE0 = 26
-TAIL_ADDR = 0x5BBC                  # 0x5BBC-0x5C18: variables the game writes before it reads, from the control menu on (scan, games/arc_of_yesod.md)
-MAX_TAIL = 90
-PRINTER_KEEP = TAIL_ADDR - 0x5B00   # the setup stub puts back the printer buffer NEXLOAD used, up to the tail
+TAIL_ADDR, MAX_TAIL = 0x5B24, 0x37  # 0x5B00-0x5B5A: never touched in any recording (scan, games/arc_of_yesod.md); the hooks' second state range is below it
+PLAIN_TAIL, PLAIN_MAX = 0x5B00, 0x50 # the plain build has no state there
 STATE_LO, STATE_HI = 0xFBA0, 0xFBE3  # bank 0, the cell map's rows 21-23 (never used): the object state
 STATE2_LO, STATE2_HI = 0x5B00, 0x5B23        # the printer buffer's first bytes (never touched): R, speed and pace state
 V_WT0, V_PD, V_IRQ_SERIAL = 0x5B19, 0x5B1D, 0x5B10
@@ -276,15 +275,23 @@ def build_tables(mem, cmap=None, outline=False):
 class PlainPatch:
     """The plain .nex: no hooks."""
     name = 'The Arc of Yesod plain conversion'
-    stub_extra = b''
-    setup_call = None
+    setup_call = 0xD000         # NEXLOAD uses the printer buffer, where this game keeps its stack: the stub puts it back
     hook_page_data = b''
     extra_banks = {}
     uses_printer_buffer = False
-    tail_addr = TAIL_ADDR
+    tail_addr = PLAIN_TAIL
+    max_tail = PLAIN_MAX
     sites = []
 
+    def __init__(self):
+        h = load_profile()['hooks']
+        self.stub_extra = bytes.fromhex(h['plain'])
+        self.saved = int(h['syms']['plain_saved'], 16) - 0xD000
+
     def apply(self, snap):
+        setup = bytearray(self.stub_extra)
+        setup[self.saved:self.saved + 256] = snap.banks[5][0x1B00:0x1C00]
+        self.stub_extra = bytes(setup)
         snap.port1ffd = 4       # with 7FFD bit 4 set, as in the file, the ROM is the 48K ROM
 
 
@@ -399,7 +406,7 @@ class ArcPatch:
             ram[lo - 0x4000:hi - 0x4000] = bytes(hi - lo)
         setup = bytearray(self.stub_extra)
         off = self.syms['printer_saved'] - 0xD000
-        setup[off:off + PRINTER_KEEP] = ram[0x1B00:0x1B00 + PRINTER_KEEP]
+        setup[off:off + 256] = ram[0x1B00:0x1C00]
         self.stub_extra = bytes(setup)
         self.tables()
         for a, old, new in self.sites:
@@ -1189,8 +1196,8 @@ def auto(a, z80, name, out, say):
     say('Engine    : arc_of_yesod (the screen copy and paints no longer write; object records -> sprites at the copy; scenery/text stay on the ULA)')
     md5 = lambda p: hashlib.md5(open(p, 'rb').read()).hexdigest()
     plain = os.path.join(out, name + '.nex')
-    zt.convert(z80, plain, TAIL_ADDR, True, quiet=True, patch=PlainPatch())
-    say('Plain     : %s  %s  (tail 0x%04X)' % (os.path.basename(plain), md5(plain), TAIL_ADDR))
+    zt.convert(z80, plain, PLAIN_TAIL, True, quiet=True, patch=PlainPatch())
+    say('Plain     : %s  %s  (tail 0x%04X)' % (os.path.basename(plain), md5(plain), PLAIN_TAIL))
     patch = ArcPatch(z80)
     spr = os.path.join(out, name + '_sprites.nex')
     zt.convert(z80, spr, TAIL_ADDR, True, quiet=True, patch=patch)
