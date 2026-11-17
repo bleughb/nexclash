@@ -108,6 +108,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Bruce Lee (bruce_lee): `bruce_lee.nex` d393199dfe1cd7ba0372fa6ab0ce0dfa, `bruce_lee_sprites.nex` 572bd4499005b81fd8eafac597b5ab0b, `bruce_lee_enhanced.nex` 7f762987659ae1c0da54190dd0335b69, `bruce_lee_sprites_loading.nex` 0a343912c1748f5fcd45230f0c1e1831, `bruce_lee_enhanced_loading.nex` 004b76609c33d2414b380c5ab5a8bf47; verified 2026-11-12
 - Highway Encounter (highway_encounter): `highway_encounter.nex` 1feaa5fc5343f12583bcd6b44cec72d2, `highway_encounter_sprites.nex` 8f518edd0cfbf151c67d533d05204176, `highway_encounter_enhanced.nex` fb75964a819f5fc7cf4366e7aef146ef, `highway_encounter_sprites_loading.nex` 90079ef9c24acc86a3060a90b972031c, `highway_encounter_enhanced_loading.nex` 695d7e73d3375a8ac3b8ed7d6adecbb0; verified 2026-11-12
 - Exolon (exolon): `exolon.nex` 53bccd7881712937941eb106c712af13, `exolon_sprites.nex` d2852fd29607e124576dc0c08401c479, `exolon_enhanced.nex` 992c5123f072aad8296c7c6a31a1e61a, `exolon_sprites_loading.nex` f0eaf0f14d26f11e7649953d89624c5f, `exolon_enhanced_loading.nex` 07b771fcd487d6d85a587c8be562ac68; verified 2026-11-12
+- 3D Stock Car Championship (3d_stock_car_championship): `3d_stock_car_championship.nex` 7ffdcd3ec8660074a1fcc697d521cfe7, `3d_stock_car_championship_sprites.nex` 6edc58d59de04c69261df37391ec7fcb; verified 2026-11-17
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
