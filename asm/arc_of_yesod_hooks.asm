@@ -27,7 +27,7 @@ V_RW    EQU 0xFBDC
 V_Y     EQU 0xFBDD              ; 2 bytes
 V_SX    EQU 0xFBE0              ; 2 bytes
 T_INDEX EQU 0x0200              ; (graphic - 0x7E00) / 2 -> frame number, 0 = none (5120 bytes), in the alt ROM's low 8K, clear of the ROM's 0x1F54, which the game calls
-T_FRAME EQU 0x1800              ; frame number * 8: page, tile, cols, rows, line, bytes wide
+T_FRAME EQU 0x1600              ; frame number * 8: page, tile, cols, rows, line, bytes wide (up to 159 frames, below 0x1B00)
 
 G_LOW   EQU 0x7E00
 G_SPAN  EQU 0x2800
@@ -689,63 +689,7 @@ e_irq_out:
         pop de
         pop bc
         jp 0xDDF1
-; ---- 0xC1CC (LD L,A / LD H,A / LD A,(HL)): the game's second random read, address R*257, as e_random sees it ----
-e_random2:
-        ld l,a
-        ld h,a
-        call ny_speed_in
-        call ny_r_begin
-        push bc
-        push hl
-        ld a,-41
-        call ny_r_set
-        ld a,h
-        cp 0x40
-        jr c,.rom
-        cp 0x58
-        jr c,.buffer
-        cp 0x5B
-        jr c,.attr
-        ld a,(hl)
-        jr .value
-.rom:   ld l,a
-        ld h,0x1E
-        ld a,(hl)
-        jr .value
-.buffer:
-        sub 0x40
-        add a,a
-        add a,0x40
-        ld l,a
-        ld h,0x1E
-        ld a,(hl)
-        inc hl
-        ld h,(hl)
-        ld l,a
-        ld a,(hl)
-        jr .value
-.attr:  sub 0x58
-        add a,a
-        add a,0x03
-        ld l,a
-        ld h,0x5B
-        inc hl
-        ld a,(hl)
-        or a
-        jr z,.bare
-        dec hl
-        ld a,(hl)
-        jr .value
-.bare:  pop hl
-        push hl
-        ld a,(hl)
-.value: call ny_r_end
-        call ny_speed_out
-        pop hl
-        pop bc
-        jp 0xC1CF
 rom_end:
-        ASSERT rom_end <= 0x3D00
 
 ; Original random reads use address R*257. Preserve their view of ROM and
 ; screen bytes even though those areas now hold tables or bare scenery.
@@ -1083,6 +1027,66 @@ aux_end:
         ASSERT aux_end <= 0x1E00
         SAVEBIN "arc_aux.bin",0x1C50,aux_end-0x1C50
 
+        ORG 0x1B00              ; the low 8K between the frame table and the pace helpers
+; ---- 0xC1CC (LD L,A / LD H,A / LD A,(HL)): the game's second random read, address R*257, as e_random sees it ----
+e_random2:
+        ld l,a
+        ld h,a
+        call ny_speed_in
+        call ny_r_begin
+        push bc
+        push hl
+        ld a,-41
+        call ny_r_set
+        ld a,h
+        cp 0x40
+        jr c,.rom
+        cp 0x58
+        jr c,.buffer
+        cp 0x5B
+        jr c,.attr
+        ld a,(hl)
+        jr .value
+.rom:   ld l,a
+        ld h,0x1E
+        ld a,(hl)
+        jr .value
+.buffer:
+        sub 0x40
+        add a,a
+        add a,0x40
+        ld l,a
+        ld h,0x1E
+        ld a,(hl)
+        inc hl
+        ld h,(hl)
+        ld l,a
+        ld a,(hl)
+        jr .value
+.attr:  sub 0x58
+        add a,a
+        add a,0x03
+        ld l,a
+        ld h,0x5B
+        inc hl
+        ld a,(hl)
+        or a
+        jr z,.bare
+        dec hl
+        ld a,(hl)
+        jr .value
+.bare:  pop hl
+        push hl
+        ld a,(hl)
+.value: call ny_r_end
+        call ny_speed_out
+        pop hl
+        pop bc
+        jp 0xC1CF
+aux2_end:
+        ASSERT aux2_end <= 0x1C50
+        SAVEBIN "arc_aux2.bin",0x1B00,aux2_end-0x1B00
+
         ORG 0xD000
 setup:  nextreg 0x43,0x20       ; sprite palette 0, auto-increment
         nextreg 0x40,0
@@ -1107,11 +1111,11 @@ setup:  nextreg 0x43,0x20       ; sprite palette 0, auto-increment
         nextreg 0x15,0x01       ; sprites on, S L U
         ld hl,printer_saved
         ld de,0x5B00
-        ld bc,256
-        ldir                    ; NEXLOAD overwrites live game state in this buffer
+        ld bc,0xBC
+        ldir                    ; NEXLOAD overwrites live game state in this buffer; 0x5BBC on is the start-up tail's
         ret
 pal:    BLOCK 256,0             ; written by the build: 16 lines of 16 entries
-printer_saved: BLOCK 256,0
+printer_saved: BLOCK 0xBC,0
 setup_end:
 
         SAVEBIN "arc_rom.bin",0x386E,rom_end-0x386E
