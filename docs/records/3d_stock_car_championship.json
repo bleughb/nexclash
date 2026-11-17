@@ -119,8 +119,8 @@
   "engine_col": "stock_car_3d (3d_stock_car_championship.md)",
   "build": "3d_stock_car_championship_sprites.nex 6edc58d5",
   "software": "RZX IDENTICAL, unit PASS",
-  "hardware": "untested",
-  "next": "hardware test; human recording"
+  "hardware": "plays fine on a real Next (owner, 2026-11-17)",
+  "next": "human recording; checklist with each option on"
  },
  "checks": [
   "asm2profile:3d_stock_car_championship"
@@ -224,14 +224,14 @@
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/stock_car_3d.py": "53e155730fafdf30",
+   "nexclash/stock_car_3d.py": "dfc15221ec72dbd8",
    "nexclash/verify.py": "2d4c0e3b68e6354a",
    "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
    "recipe": "5f92675b7c7fc7f8",
-   "rom": "sinclair"
+   "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-17"
  },
@@ -316,14 +316,14 @@
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/stock_car_3d.py": "53e155730fafdf30",
+   "nexclash/stock_car_3d.py": "dfc15221ec72dbd8",
    "nexclash/verify.py": "2d4c0e3b68e6354a",
    "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
    "recipe": "5f92675b7c7fc7f8",
-   "rom": "sinclair"
+   "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-17"
  }

@@ -130,7 +130,7 @@
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "112c3b17a78ace9a",
+   "nexclash/engines.py": "bf75ad27e5bfabce",
    "nexclash/machine.py": "659903f13de0fcee",
    "nexclash/nextboot.py": "05f0fe47c3c3eac6",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
@@ -149,7 +149,7 @@
    "recipe": "33eecf7d7fcc2934",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-12"
+  "date": "2026-11-17"
  },
  "verified": {
   "deps": {

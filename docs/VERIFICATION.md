@@ -37,7 +37,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Prince of the Yolkfolk (Dizzy 6) (dizzy6): `Dizzy6.nex` e02faca34df9504cc1f2f162e0ef791e, `Dizzy6_sprites.nex` f491e1f6621559ccc4d36de3535ff5d0; verified 2026-11-05
 - Fantasy World Dizzy (fantasy_world_dizzy): `fantasy_world_dizzy.nex` cd620010e2f61af0002e76718945716f, `fantasy_world_dizzy_sprites.nex` fb77af62c5ce975802c354dd8b1943ee, `fantasy_world_dizzy_sprites.nex --strategy printer` c09213beaec1572c0228985dae89bd77; verified 2026-11-12
 - Magicland Dizzy (magicland_dizzy): `magicland_dizzy.nex` 09eb18496cff334ea17bfc0b0c94585d, `magicland_dizzy_sprites.nex` ab66b5011a3e87a54f561502ded0ac24, `magicland_dizzy_sprites.nex --strategy slot1` d3b37c05d4c47ada07294fa2d7c1ae76; verified 2026-10-13
-- Treasure Island Dizzy (treasure_island_dizzy): `treasure_island_dizzy.nex` 4dae1a3a15b2158642a5d5b82de92ef7, `treasure_island_dizzy_sprites.nex` 8b4d0847d68fce3215bd43a0e116e682; verified 2026-11-12
+- Treasure Island Dizzy (treasure_island_dizzy): `treasure_island_dizzy.nex` 4dae1a3a15b2158642a5d5b82de92ef7, `treasure_island_dizzy_sprites.nex` 8b4d0847d68fce3215bd43a0e116e682; verified 2026-11-17
 - Treasure Island Dizzy (title screen) (treasure_island_title): `treasure_island_title.nex` 70890aba7d821fba8a41e63636eb58be, `treasure_island_title_sprites.nex` 85e054fe4bce8e4b3a8e336aac432f58; verified 2026-10-13
 - Dizzy: The Ultimate Cartoon Adventure (dizzy1): `dizzy1.nex` 7892b2e0f1f3f9f19165516db307cbe0, `dizzy1_sprites.nex` ead92ef747096582da450f162d78e545; verified 2026-11-12
 - Commando (commando): `commando.nex` a206f950c12f58a8e7f26b366f5a2480, `commando_sprites.nex` ff488056f4dd8e3c3f5f7c88a2b1946d; verified 2026-11-12
@@ -78,12 +78,12 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Beyond the Ice Palace (128K) (beyond_the_ice_palace): `beyond_the_ice_palace_sprites.nex` da668eb8e6bd5e6ab2b90cf9a103459d, `beyond_the_ice_palace_sprites_loading.nex` d53ac5f52471b674354caf96cd94221e; verified 2026-11-12
 - Pac-Mania (128K) (pac_mania): `pac_mania_sprites.nex` 431698a4d2e8a0a67ff50c44c4475b14, `pac_mania_enhanced.nex` acfbc75c7ce9d78840fec348ae2f2654; verified 2026-11-12
 - Abu Simbel Profanation (abu_simbel): `abu_simbel.nex` 82c1349ae5d34e68a67a7aabc68e039f, `abu_simbel_sprites.nex` c2dd86f174c55a4ae9155abb90689d8b, `abu_simbel_enhanced.nex` b45603707d1f71bb7704436dbe0c3169, `abu_simbel_english.nex` 2e3aa22510d9a925a5b0800aad3f26c9, `abu_simbel_english_enhanced.nex` 053806e52684ce68b89a020a848e7196; verified 2026-11-12
-- Bubbler (bubbler): `bubbler.nex` deb79b213eb0d9c11a4e05607a87a3ef, `bubbler_sprites.nex` 82d178a4d92771e42a9d558a5e2b4940, `bubbler_enhanced.nex` 7236f0945f5944dea62f6ddb2280cb9e; verified 2026-11-12
+- Bubbler (bubbler): `bubbler.nex` deb79b213eb0d9c11a4e05607a87a3ef, `bubbler_sprites.nex` 82d178a4d92771e42a9d558a5e2b4940, `bubbler_enhanced.nex` 7236f0945f5944dea62f6ddb2280cb9e; verified 2026-11-17
 - Martianoids (martianoids): `martianoids.nex` d7216a9d7cdbed5b819026e7cd71e9d8, `martianoids_sprites.nex` cb9e4e2542c5a36fed139e4c7114f673, `martianoids_enhanced.nex` 09b5741f14d9efc011808b10bb3ce52e; verified 2026-11-12
 - Underwurlde (underwurlde): `underwurlde.nex` a6e6b38e9e8be1d2b5c32f08ab3c3833, `underwurlde_sprites.nex` 07dff80327ed247a38780413e01a2325; verified never
 - Knight Lore (knight_lore): `knight_lore.nex` 02a997936f991061b18589266767d36c; verified never
 - Alien 8 (alien_8): `alien_8.nex` e89ed13af3af09b260cc266bc5b456e1, `alien_8_enhanced.nex` 5c08c856c718a7e744282cd44372a6cf; verified never
-- Gunfright (gunfright): `gunfright.nex` f26d0a561e25a1a800b19787cd1fe41b, `gunfright_enhanced.nex` 4ec70c827ae291ce273a09c508f95c87; verified 2026-11-12
+- Gunfright (gunfright): `gunfright.nex` f26d0a561e25a1a800b19787cd1fe41b, `gunfright_enhanced.nex` 4ec70c827ae291ce273a09c508f95c87; verified 2026-11-17
 - Army Moves (army_moves): `army_moves_sprites.nex` 9cbd2379d8cae020c3b2145d362a4f75, `army_moves_sprites_loading.nex` 1b60bd04304265986cf5ff4a142e44db; verified 2026-11-12
 - Game Over (game_over): `game_over_sprites.nex` ff1d8067f3ad7e5f5625ab2f85e28a57, `game_over_sprites_loading.nex` cb0c403db4058444f38445fb1afbdc19; verified 2026-11-12
 - Chase H.Q. (chase_hq): `chase_hq.nex` 2f6628a552412d0a227300fe7cf397b2, `chase_hq_speed.nex` 6729617fd9e3adc131a0451593557b39, `chase_hq_orig_pace.nex` 498c2119e140480cd16c8f0fda5c5843; verified never
