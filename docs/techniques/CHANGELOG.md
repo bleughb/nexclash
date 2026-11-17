@@ -79,3 +79,4 @@ User-requested catalogue additions; the v3.4 schema and pilot workflow stay froz
 | No record of whether a card helped | games/<game>.md "## Technique use"; `learncheck --usage` totals | The catalogue should improve through use, not only grow |
 | Investigation scripts in scratch folders | tools/probes/ with invocation, limits, a smoke test in `selftest --tools` | Reproducible, promotable to a shared command |
 | New: patch.attribute-shadow (candidate); revised: patch.xor-overlay-keep-ula r2, detect.gameplay-screen-readers r2 | | Cauldron Q8; the overlay's other-writers failure; compiled-BASIC readers, `scan --writers` lists readers |
+| New: patch.layer2-half-pixel-scroll, patch.scenery-edge-masks, patch.figure-glide, patch.copper-palette-bands, optimise.flash-palette-offset (candidates) | | R-Type hybrid display (specnext PRs #97-#99, 2026-11-17); glide generalises Quazatron's |

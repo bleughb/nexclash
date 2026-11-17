@@ -58,6 +58,10 @@ def assemble(src, exe):
         if r.returncode or 'error' in msg.lower() or 'warning' in msg.lower():
             raise RuntimeError('sjasmplus %s:\n%s' % (src, msg.strip()))
         blocks = {}
+        stray = sorted(set(f for f in os.listdir(tmp) if f.lower().endswith('.bin')) - set(names))
+        if stray:   # a SAVEBIN in an INCLUDEd file: assembled but not collected (R-Type, 2026-11-17)
+            sys.stderr.write('asm2profile: WARNING %s wrote %s, not collected: only SAVEBIN lines in the '
+                             'top file become blocks\n' % (os.path.basename(src), ', '.join(stray)))
         for n in names:
             base = os.path.splitext(os.path.basename(n))[0]
             key = base.split('_', 1)[1] if '_' in base else base
