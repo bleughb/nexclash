@@ -56,6 +56,7 @@ FULL = (1 << 256) - 1
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', 'arc_of_yesod_colours.json')
+PALETTE = os.path.join(_HERE, '..', 'docs', 'profiles', 'arc_of_yesod_palette.json')     # the Enhanced set's sprite palette: Nodes of Yesod's, as its painted colours are carried over
 
 def _profile_path():
     for p in (os.path.join(_HERE, '..', 'docs', 'profiles', 'arc_of_yesod.json'), os.path.join(_HERE, 'arc_of_yesod.json')):
@@ -1399,6 +1400,93 @@ def unit_tests(patch, states, neg=None):
     return c, sorted(fails)[:8]
 
 
+
+
+# ---------------------------------------------------------------------------------------------
+# Colour route (docs/COLOURS.md)
+# ---------------------------------------------------------------------------------------------
+
+def default_entry(c):
+    """The palette entry (4-15) that shows a graphic's own ink on the sheet, where one line of entries serves every figure."""
+    v = (BRIGHT if c & 0x40 else NORMAL)[c & 7]
+    return 4 if v == 0xFF else 5 + SPARE.index(v) if v in SPARE else 4
+
+
+def graphics_part(mem, g, info):
+    w, h, c, bw = info
+    px, ent = [], {}
+    d = default_entry(c)
+    for y in range(h):
+        for bx in range(bw):
+            a = g + y * bw + bx
+            key = '%04X' % a
+            data = mem[a]
+            ent[key] = [data, 'g']
+            for k in range(8):
+                on = data >> (7 - k) & 1
+                px.append((bx * 8 + k, y, key, k, 1 if on else 0, d if on else 0))
+    return {'id': '%04X' % g, 'size': 1, 'w': bw * 8, 'h': h, 'x': 0, 'y': 0, 'mir': 0, 'pixels': px, 'entries': ent,
+            'dx': 0, 'dy': 0, 'dmir': 0, 'vmir': 0, 'group': 0}
+
+
+def colour_identity(peek):
+    return {'schema': 1, 'game': 'arc_of_yesod', 'engine': 'arc_of_yesod', 'keys': 'arc_of_yesod-gfx-1: %04X address of the graphics byte; bit = pixel',
+            'inputs': hashlib.md5(bytes(peek(a) for a in range(G_LOW, G_LOW + G_SPAN))).hexdigest(), 'geometry': None}
+
+
+def sheets(z80, out_dir, prefix='arc_of_yesod', colours=None, say=print):
+    """<prefix>_PAINTING_SPRITES.png + _REFERENCE_ALL_SPRITES.png, one figure per graphic, all of them whether or not a recording drew them. Painted nibbles are palette entries of the sprite's line."""
+    from . import coloursheet as cs
+    mem = view_from_snapshot(z80)
+    cat = catalog(mem)
+    comps = [{'count': 1, 'group': 0, 'parts': [graphics_part(mem, g, cat[g])]} for g in sorted(cat) if g not in DYNAMIC and any(mem[g:g + cat[g][1] * cat[g][3]])]
+    cmap = load_colours() if colours is None else colours
+    pal = json.load(open(PALETTE)) if cmap else palette()       # the sheet in the colours the Enhanced build shows
+    rgb = cs.palette_rgb(list(pal[15 * 16:16 * 16]))
+    pre = os.path.join(out_dir, prefix)
+    ident = colour_identity(lambda a: mem[a])
+    n1 = cs.write(cs.choose(comps, {}), pre + '_PAINTING_SPRITES.png', pre + '_PAINTING_SPRITES_layout.json', rgb, colours=cmap, paint_clear=True, identity=ident)
+    n2 = cs.write(comps, pre + '_REFERENCE_ALL_SPRITES.png', pre + '_REFERENCE_ALL_SPRITES_layout.json', rgb, colours=cmap, paint_clear=True, identity=ident)
+    say('Sheets    : %d graphics; painting sheet %d figures, reference %d' % (len(comps), n1, n2))
+    return n1, n2
+
+
+NOTE = 'The Arc of Yesod: pattern pages hold every graphic in the game\'s two tables; the sheet shows one figure per graphic. Painted entries 4-15 are fixed colours; 1 is the figure\'s own ink.'
+RECOLOUR = {'game': 'arc_of_yesod', 'output': 'enhanced', 'colours': 'docs/profiles/arc_of_yesod_colours.json', 'clear': True, 'note': NOTE}
+
+
+def recolour(nex, cmap, outline=False, pal=None):
+    """Built sprite .nex bytes + colour map -> (new .nex bytes, info). Refuses a .nex that is not this engine's build. Only pattern pages and the setup palette change."""
+    from .recolour import banks, splice
+    have = banks(nex)
+    if not {5, 2, 0, ALT_BANK} <= set(have):
+        raise ValueError('not an Arc of Yesod sprite build')
+    mem = bytes(16384) + bytes(have[5]) + bytes(have[2]) + bytes(have[0])
+    for a, (old, sym) in SITES_ORIG.items():
+        if mem[a] != (0xF7 if a == ATTR else 0xC3):
+            raise ValueError('patch site 0x%04X does not hold this build\'s hook' % a)
+    state, pages, _ = build_tables(mem, cmap, outline)
+    if have[ALT_BANK][8192:] != state:
+        raise ValueError("graphics table differs from this version's (rebuild with nexclash.py auto)")
+    new = {}
+    for pg, data in pages.items():
+        bank = pg // 2
+        cur = new.get(bank, have[bank])
+        o = (pg & 1) * 8192
+        new[bank] = cur[:o] + data + cur[o + 8192:]
+    if pal is None:
+        pf = PALETTE
+        pal = json.load(open(pf)) if cmap else palette()
+    if len(pal) != 256:
+        raise ValueError('sprite palette must contain 256 entries')
+    setup = bytearray(have[10])
+    off = 0x1000 + int(load_profile()['hooks']['syms']['pal'], 16) - 0xD000
+    setup[off:off + 256] = bytes(pal)
+    new[10] = bytes(setup)
+    out, changed = splice(nex, new)
+    return out, {'banks changed': changed, 'map entries': len(cmap)}
+
+
 def _rom_patch(patch, off, new):
     import copy
     q = copy.copy(patch)
@@ -1542,6 +1630,10 @@ def auto(a, z80, name, out, say):
     spr = os.path.join(out, name + '_sprites.nex')
     zt.convert(z80, spr, TAIL_ADDR, True, quiet=True, patch=patch)
     say('Sprites   : %s  %s' % (os.path.basename(spr), md5(spr)))
+    cmap = load_colours()           # Enhanced (the .nxc's colour set): the painted map and its palette
+    enh = os.path.join(out, name + '_enhanced.nex')
+    zt.convert(z80, enh, TAIL_ADDR, True, quiet=True, patch=ArcPatch(z80, colours=cmap, pal=json.load(open(PALETTE)) if cmap else None))
+    say('Enhanced  : %s  %s  (%d painted bytes)' % (os.path.basename(enh), md5(enh), len(cmap)))
     ok = True
     states = []
     for r in list(a.rzx or []):
