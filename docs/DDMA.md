@@ -78,7 +78,7 @@ to DDMA, and do not infer that 3.03.00 reproduces an earlier core defect.
 
 Every figure in this table is for zxnDDMA features (port $6B extended commands). They do not exist
 on cores before 3.03.00: never budget a pre-3.03.00 build, or a no-blitter fallback, from them.
-Source: the 3.03.00 guide (specnext docs/reference/zxnDDMA_guide.txt), section or example named.
+Source: the 3.03.00 guide (specnext/docs/reference/zxnDDMA_guide.txt), section or example named.
 All are the guide's own figures on an issue 5 at CPU 28 MHz, not reproduced on a nexclash board;
 where the guide names the measuring core it is 3.02.21, otherwise it names none. A nexclash
 measurement on a released 3.03.00 core is still to do.
