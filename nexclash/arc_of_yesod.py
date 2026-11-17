@@ -438,7 +438,7 @@ PEND = {0xAB6E, 0xAB9F}             # the room's colours and picture go to the s
 RND2NEXT = 0xC1CF
 # the broken builds run on a recording with the beam, a lost life (the appear effect) and several enemy kinds; two need the recording that reaches their hook
 NEGATIVE_RZX = 'arc_over.rzx'
-NEGATIVE_ON = {'game over leaves sprites on': 'arc_end.rzx', 'teleport leaves sprites on': 'arc_tele.rzx'}
+NEGATIVE_ON = {'game over leaves sprites on': 'arc_end.rzx', 'teleport leaves sprites on': 'arc_tele.rzx', 'live tiles read the wrong page': 'arc_a1.rzx'}    # (a1: the appear effect, past frame 3,000)
 STARS = 45391
 
 
@@ -1664,7 +1664,7 @@ def auto(a, z80, name, out, say):
         nr = negative_real(patch, main, stop=stop, only=[n for n in names if by.get(NEGATIVE_ON.get(n)) is None])
         for n in names:
             if by.get(NEGATIVE_ON.get(n)) is not None:
-                nr += negative_real(patch, by[NEGATIVE_ON[n]], stop=stop, only=[n])
+                nr += negative_real(patch, by[NEGATIVE_ON[n]], stop=getattr(a, 'quick', None), only=[n])
         miss = [n for n, k in nr if not k]
         ok = ok and not miss
         say('Negative  : %d broken builds (%s%s), %d detected%s' % (len(nr), os.path.basename(main), ''.join(', ' + v for v in sorted(set(NEGATIVE_ON.values())) if v in by),

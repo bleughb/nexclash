@@ -524,5 +524,24 @@
    "to": "0x3F3F",
    "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
   }
- ]
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/arc_of_yesod.md#open"
+   ],
+   "coverage": "Ten scripted recordings, 22,957 frames; the pace windows (the copy and the paint) checked on a speed-true line clock over arc_over.rzx. No JNext or hardware timing of Arc itself.",
+   "result": "Nodes of Yesod's windows carried over unchanged (targets from the copy's rows and columns and the paint's cells); the beam, second random read and live-tile hooks are outside the account. Pace against the original not measured."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/arc_of_yesod.md#what-the-port-changed-from-nodes-2026-11-17",
+    "games/arc_of_yesod.md#build-design-stage-2-facts-measured-2026-11-17-on-arc_s1--arc_u14-6836-frames"
+   ],
+   "coverage": "Every reader of the screen in the ten recordings listed (scan); the copy, the paint, both random reads, the beam, the star cells, the teleporter pad; 3 of 6 CALL sites of the copy routine reached.",
+   "result": "The buffer is untouched; the screen copy and the paint stop writing. Readers of painted colours (two random reads, the beam) go through a shadow page of the ink the original would have painted; R kept at every hook."
+  },
+  "decision": "A port of the Nodes of Yesod engine at Arc's addresses, with the shadow page and live tiles for the two things Arc adds; base look as Nodes, Enhanced from Nodes' painted map for identical graphics (owner 2026-11-17).",
+  "next_experiment": "Pace of the sprite build against the original over 300 player updates in two cavern rooms and on the surface (JNext, update-keyed): within 2%."
+ }
 }
