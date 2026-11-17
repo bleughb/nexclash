@@ -1,0 +1,528 @@
+{
+ "name": "arc_of_yesod",
+ "order": 258,
+ "game": "The Arc of Yesod",
+ "doc": "arc_of_yesod.md",
+ "engine": "arc_of_yesod",
+ "representative": true,
+ "reference": "arc_of_yesod",
+ "inputs": {
+  "snapshot": {
+   "name": "arc_of_yesod.z80",
+   "md5": "f58236395e737aaa0fac1f8476711ad8",
+   "path": "arc_of_yesod/arc_of_yesod.z80"
+  },
+  "recordings": [
+   {
+    "name": "arc_a1.rzx",
+    "md5": "f4b47a0ca10c75e89b5b731b9f6db84f",
+    "path": "arc_of_yesod/arc_a1.rzx"
+   },
+   {
+    "name": "arc_a2.rzx",
+    "md5": "bd662a3bb1848e35a59bb1ef9a8b4f33",
+    "path": "arc_of_yesod/arc_a2.rzx"
+   },
+   {
+    "name": "arc_a3.rzx",
+    "md5": "195dbf965ee2bf62ec46327fcbcd169d",
+    "path": "arc_of_yesod/arc_a3.rzx"
+   },
+   {
+    "name": "arc_a4.rzx",
+    "md5": "b371df0b56e022feef713e0062f37ec1",
+    "path": "arc_of_yesod/arc_a4.rzx"
+   },
+   {
+    "name": "arc_a5.rzx",
+    "md5": "bd634955b38e4e1321bc779ffd6eb391",
+    "path": "arc_of_yesod/arc_a5.rzx"
+   },
+   {
+    "name": "arc_a6.rzx",
+    "md5": "437974ffc7af9b4b8ce37fe9b0e0159d",
+    "path": "arc_of_yesod/arc_a6.rzx"
+   },
+   {
+    "name": "arc_end.rzx",
+    "md5": "a3b31139f22237be72982b0e39b91956",
+    "path": "arc_of_yesod/arc_end.rzx"
+   },
+   {
+    "name": "arc_over.rzx",
+    "md5": "0cbcb9da51f767a3d547dc86a6fac9d3",
+    "path": "arc_of_yesod/arc_over.rzx"
+   },
+   {
+    "name": "arc_s1.rzx",
+    "md5": "4b0c817392bf743abaaadd51ba7fd5cd",
+    "path": "arc_of_yesod/arc_s1.rzx"
+   },
+   {
+    "name": "arc_tele.rzx",
+    "md5": "13caed59a7255a053ea180163401f847",
+    "path": "arc_of_yesod/arc_tele.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "arc_of_yesod"
+ ],
+ "own_modules": [
+  "arc_of_yesod"
+ ],
+ "data": [
+  "asm/arc_of_yesod_hooks.asm",
+  "docs/profiles/arc_of_yesod.json",
+  "docs/profiles/arc_of_yesod_colours.json",
+  "docs/profiles/arc_of_yesod_palette.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm"
+ ],
+ "rebuild": {
+  "args": [],
+  "rzx": []
+ },
+ "verify": {
+  "args": [],
+  "rzx": [
+   "arc_a1.rzx",
+   "arc_a2.rzx",
+   "arc_a3.rzx",
+   "arc_a4.rzx",
+   "arc_a5.rzx",
+   "arc_a6.rzx",
+   "arc_end.rzx",
+   "arc_over.rzx",
+   "arc_s1.rzx",
+   "arc_tele.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 40,
+  "note": "Scripted recordings (no human player), all from the archive snapshot at the control menu: the surface, the hatch, caverns. Each hook against the original from one state (registers with R, memory, sprites over the bare picture), then the game replayed with the screen as the build leaves it."
+ },
+ "outputs": {
+  "plain": {
+   "file": "arc_of_yesod.nex",
+   "md5": "9858d3f2cd71450c2efb01c116b1426b"
+  },
+  "sprites": {
+   "file": "arc_of_yesod_sprites.nex",
+   "md5": "7aa17d8133b86c3ad78b1b6bcee7dff6"
+  },
+  "enhanced": {
+   "file": "arc_of_yesod_enhanced.nex",
+   "md5": "7da91d6dd35aa46be3007215d6bd2a75"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "The Arc of Yesod (128K)",
+  "engine_col": "arc_of_yesod (arc_of_yesod.md)",
+  "build": "arc_of_yesod_sprites.nex 7aa17d81 (every figure a sprite in its own colour, scenery on the ULA; a port of the Nodes of Yesod engine) + Enhanced 7da91d6d (the painted colours of 36 graphics carried over from Nodes of Yesod; Arc's own figures not painted yet)",
+  "software": "SOFTWARE",
+  "hardware": "untested (starts and plays in OverSpec)",
+  "next": "pace measurement; loading screen and .nxc; hardware test; the owner paints Arc's own figures"
+ },
+ "checks": [
+  "asm2profile:arc_of_yesod"
+ ],
+ "techniques": [
+  {
+   "application": "arc.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "Original R-based ROM and screen reads and the beam's read of a cell's colour retain their original values (shadow page of painted ink)",
+   "phases": []
+  }
+ ],
+ "results": [],
+ "rom_paths_known": [
+  {
+   "image": 1,
+   "from": "0x0000",
+   "to": "0x0000",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x0101",
+   "to": "0x0101",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x0202",
+   "to": "0x0202",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x0303",
+   "to": "0x0303",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x0404",
+   "to": "0x0404",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x0505",
+   "to": "0x0505",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x0606",
+   "to": "0x0606",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x0707",
+   "to": "0x0707",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x0808",
+   "to": "0x0808",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x0909",
+   "to": "0x0909",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x0A0A",
+   "to": "0x0A0A",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x0B0B",
+   "to": "0x0B0B",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x0C0C",
+   "to": "0x0C0C",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x0D0D",
+   "to": "0x0D0D",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x0E0E",
+   "to": "0x0E0E",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x0F0F",
+   "to": "0x0F0F",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x1010",
+   "to": "0x1010",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x1111",
+   "to": "0x1111",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x1212",
+   "to": "0x1212",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x1313",
+   "to": "0x1313",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x1414",
+   "to": "0x1414",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x1515",
+   "to": "0x1515",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x1616",
+   "to": "0x1616",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x1717",
+   "to": "0x1717",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x1818",
+   "to": "0x1818",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x1919",
+   "to": "0x1919",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x1A1A",
+   "to": "0x1A1A",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x1B1B",
+   "to": "0x1B1B",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x1C1C",
+   "to": "0x1C1C",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x1D1D",
+   "to": "0x1D1D",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x1E1E",
+   "to": "0x1E1E",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x1F1F",
+   "to": "0x1F1F",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x2020",
+   "to": "0x2020",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x2121",
+   "to": "0x2121",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x2222",
+   "to": "0x2222",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x2323",
+   "to": "0x2323",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x2424",
+   "to": "0x2424",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x2525",
+   "to": "0x2525",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x2626",
+   "to": "0x2626",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x2727",
+   "to": "0x2727",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x2828",
+   "to": "0x2828",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x2929",
+   "to": "0x2929",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x2A2A",
+   "to": "0x2A2A",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x2B2B",
+   "to": "0x2B2B",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x2C2C",
+   "to": "0x2C2C",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x2D2D",
+   "to": "0x2D2D",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x2E2E",
+   "to": "0x2E2E",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x2F2F",
+   "to": "0x2F2F",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x3030",
+   "to": "0x3030",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x3131",
+   "to": "0x3131",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x3232",
+   "to": "0x3232",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x3333",
+   "to": "0x3333",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x3434",
+   "to": "0x3434",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x3535",
+   "to": "0x3535",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x3636",
+   "to": "0x3636",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x3737",
+   "to": "0x3737",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x3838",
+   "to": "0x3838",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x3939",
+   "to": "0x3939",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x3A3A",
+   "to": "0x3A3A",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x3B3B",
+   "to": "0x3B3B",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x3C3C",
+   "to": "0x3C3C",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x3D3D",
+   "to": "0x3D3D",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x3E3E",
+   "to": "0x3E3E",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  },
+  {
+   "image": 1,
+   "from": "0x3F3F",
+   "to": "0x3F3F",
+   "why": "the game reads a random byte at address R * 257 in two places (0xC355, 0xC1CE); both are hooked (e_random, e_random2) and answered with the original ROM's byte from the table at 0x1E00 of the alt ROM image, so the image's own byte there is never seen"
+  }
+ ]
+}

@@ -28,6 +28,7 @@ DYNAMIC = (0x8C92, 0x8CF5)          # the appear / vanish effect rewrites these 
 BLIT, ROOM, NEW1, NEW2, OVER, TELE = 0xD4AF, 0xAAF1, 0xA985, 0xAA3F, 0xDA50, 0xC112
 ATTR_ENTER, ATTR_ROW, ATTR, PLAYER, IRQ_IN, IRQ_OUT, RANDOM, RANDOM2, BEAM = 0xD55A, 0xD589, 0xD580, 0xBAF8, 0xDDB3, 0xDDEE, 0xC355, 0xC1CC, 0xCF07
 BEAM_STORE = 0xCF12                 # the beam colours a cell whose ink is black: a screen write the build keeps
+PAD_STORES = (0xDE75, 0xDE77)        # a teleporter pad's colour bars: LD (HL),A to the screen's colours, in the original and the build
 BEAM_DRAW, BEAM_WIPE = 0xCF00, 0xCEC3   # LD (HL),A / LD (HL),0: the beam's own pixels, written to the screen (not the buffer) in the original and the build
 SHADOW_PAGE = 23                    # the ink the original would have painted, per play-area cell: read by the random reads and the beam
 OBJ0, NOBJ = 0xFC00, 16
@@ -435,7 +436,9 @@ STACK_LO, STACK_HI = STATE2_HI, 0x5BB4       # the game's stack sits in the prin
 ROOMV = 23479
 PEND = {0xAB6E, 0xAB9F}             # the room's colours and picture go to the screen: the next copy sees bare scenery
 RND2NEXT = 0xC1CF
-NEGATIVE_RZX = 'arc_u1.rzx'          # the broken builds run on the recording with the beam, the appear effect and three enemy kinds
+# the broken builds run on a recording with the beam, a lost life (the appear effect) and several enemy kinds; two need the recording that reaches their hook
+NEGATIVE_RZX = 'arc_over.rzx'
+NEGATIVE_ON = {'game over leaves sprites on': 'arc_end.rzx', 'teleport leaves sprites on': 'arc_tele.rzx'}
 STARS = 45391
 
 
@@ -1100,8 +1103,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
             a = R[6] * 256 + R[7]
             R[0] = idx['shadow'].get(a, M[a])           # as e_beam reads it
             return
-        if pc == BEAM_STORE:
-            idx['beam'].add(R[6] * 256 + R[7] - 0x5800)
+        if pc == BEAM_STORE or pc in PAD_STORES:
+            idx['beam'].add(R[6] * 256 + R[7] - 0x5800)        # a colour the game itself puts on the screen: not the room's, and not a paint
             return
         if pc == LDIR:
             if idx['pend'] is None:
@@ -1150,7 +1153,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
                 c['play area attributes are not the room\'s!'] += 1
                 if len(ex['attrs']) < 5:
                     ex['attrs'].append((i, room, badc, [(k, cur[k], cln[k]) for k in range(672) if cur[k] != cln[k] & 0x7F and k not in stars and k not in idx['beam']][:6]))
-    fc2, err2 = RZ.trace(rzx_path, {BLIT, LDIR, LDIR_END, RNDNEXT, RND2NEXT, BEAM + 1, BEAM_STORE, ATTR, ROOM, NEW1, NEW2, OVER, TELE} | _starts(rzx_path), on2, stop=stop)
+    fc2, err2 = RZ.trace(rzx_path, {BLIT, LDIR, LDIR_END, RNDNEXT, RND2NEXT, BEAM + 1, BEAM_STORE, ATTR, ROOM, NEW1, NEW2, OVER, TELE} | set(PAD_STORES) | _starts(rzx_path), on2, stop=stop)
     if err2:
         c['patched replay stopped: %s!' % err2] += 1
     if fc2 != fc:
@@ -1654,9 +1657,21 @@ def auto(a, z80, name, out, say):
         ok = ok and not uf
         say('Unit      : %s -> %s' % (', '.join('%s %d' % (k, v) for k, v in sorted(u.items()) if not k.endswith('!')), 'PASS' if not uf else 'FAIL %s' % str(uf)[:400]))
     if a.rzx:
-        rec = next((r for r in a.rzx if os.path.basename(r) == NEGATIVE_RZX), list(a.rzx)[0])
-        nr = negative_real(patch, rec, stop=getattr(a, 'quick', None) or 2000)
+        by = {os.path.basename(r): r for r in a.rzx}
+        main = by.get(NEGATIVE_RZX, list(a.rzx)[0])
+        stop = getattr(a, 'quick', None) or 3000
+        names = list(negative_patches(patch))
+        nr = negative_real(patch, main, stop=stop, only=[n for n in names if by.get(NEGATIVE_ON.get(n)) is None])
+        for n in names:
+            if by.get(NEGATIVE_ON.get(n)) is not None:
+                nr += negative_real(patch, by[NEGATIVE_ON[n]], stop=stop, only=[n])
         miss = [n for n, k in nr if not k]
         ok = ok and not miss
-        say('Negative  : %d broken builds on %s, %d detected%s' % (len(nr), os.path.basename(rec), len(nr) - len(miss), '' if not miss else '; NOT detected: %s' % ', '.join(miss)))
+        say('Negative  : %d broken builds (%s%s), %d detected%s' % (len(nr), os.path.basename(main), ''.join(', ' + v for v in sorted(set(NEGATIVE_ON.values())) if v in by),
+                                                                    len(nr) - len(miss), '' if not miss else '; NOT detected: %s' % ', '.join(miss)))
+        pc_, _ = verify(patch, main, stop=stop, scaled=True)        # the pace windows on a speed-true line clock
+        pf = {k: v for k, v in pc_.items() if k.endswith('!')}
+        ok = ok and not pf
+        say('Pace      : %d frames with a speed-true line clock, %d copies -> %s' % (pc_['frames'], pc_['blit'], 'IDENTICAL' if not pf else 'FAILED %s' % pf))
+    say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return ok

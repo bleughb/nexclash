@@ -12,6 +12,15 @@
     "english_enhanced": "053806e52684ce68b89a020a848e7196"
    }
   },
+  "f58236395e737aaa0fac1f8476711ad8": {
+   "game": "The Arc of Yesod",
+   "doc": "arc_of_yesod.md",
+   "nex": {
+    "plain": "9858d3f2cd71450c2efb01c116b1426b",
+    "sprites": "7aa17d8133b86c3ad78b1b6bcee7dff6",
+    "enhanced": "7da91d6dd35aa46be3007215d6bd2a75"
+   }
+  },
   "9c14e2564e3f9956ff6ff973dac77537": {
    "game": "Army Moves",
    "doc": "army_moves.md",
