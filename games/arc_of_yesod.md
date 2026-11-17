@@ -27,6 +27,10 @@ snapshot that goes down by itself; the three unreached CALL sites.
   one block at 0x7E73-0x86E7: Nodes 0xB757-0xBF65, the astronaut's walking (22 x 32) and somersault (30 x 29)
   frames. The other six (0xBFDC, 0xC0AE, 0xC3EA, 0xC40F, 0xC59B, 0xC900) are not in Arc. So Nodes' patterns and its
   painted Enhanced colours for the astronaut can be carried over by bitmap; Arc's enemies need their own.
+  Against the painted map itself (docs/profiles/nodes_of_yesod_colours.json, 6,726 painted bytes; match2.py): 2,413
+  have their 32 surrounding bytes in Arc unchanged: the astronaut block (Nodes 0xB762-0xBFF0, 1,675 of them) and
+  smaller runs at Nodes 0xC300-0xC35A, 0xCB10-0xCBF0, 0xD31A-0xD4F4, 0xD5F8-0xD63F and a few short ones (not yet
+  identified as figures). The other 4,313 painted bytes belong to Nodes graphics Arc does not have.
 - Main loop 0xBAE8; 0xBC19 copies the scrolling surface strip (x 0-223, y 88-183) as a block.
 - Survey (4 recordings, 4,231 frames, no desync): screen writers 0xBC19, 0xD2EF (3 of 6 CALL sites reached; not
   reached 0xAC0D, 0xBBF8), 0xDC7F (HUD), 0xAAF1 (room draw), 0xC9F4 (1 of 2; not reached 0xBC6D), 0xBE79.
