@@ -6,10 +6,12 @@
  "inputs": {
   "z80": "07bfa8f74d60a53ab64e5b092ffd6cca",
   "rzx": [
-   "02bb53783d736cdaf5200ea9cd753f01",
-   "9054e9e9c7308db33b4d82564176dbdc",
-   "53f256b91cfb5d61639f9d231eba1d9e",
-   "484b19a9831965d7899a59572f45911b"
+   "9ed29f0cccd2dd137e5c22f6a0cdcb33",
+   "841ae9ba10437f2ba24838d80f01d422",
+   "6772e251d73d2a2a38f915adf7f07dab",
+   "a315cb3f4f140f1b4a4954a0275b1605",
+   "edec13dbf45bf4075e3629c3c8afa056",
+   "43916e9acc1857033ca5b0418ac7871c"
   ],
   "args": [
    null,
@@ -19,16 +21,16 @@
    false
   ]
  },
- "frames": 11201,
+ "frames": 13467,
  "model": "back buffer, block copy to the screen",
  "pacing": "interrupts on",
- "interrupts_accepted": 9523,
+ "interrupts_accepted": 11051,
  "source_buffers": {
   "42351": [
    [
     49152,
     52735,
-    7859711
+    9132031
    ]
   ]
  },
@@ -43,11 +45,11 @@
   {
    "routine": 42351,
    "role": "screen copier",
-   "pixel_bytes": 7897600,
+   "pixel_bytes": 9177088,
    "attr_bytes": 0,
-   "block_copy_bytes": 7897600,
-   "calls": 2193,
-   "T_median": 65863,
+   "block_copy_bytes": 9177088,
+   "calls": 2548,
+   "T_median": 65873,
    "fingerprint": {
     "n": 57,
     "full": "5ec8644940",
@@ -86,9 +88,9 @@
    "routine": 42517,
    "role": "attribute writer",
    "pixel_bytes": 0,
-   "attr_bytes": 1263022,
-   "block_copy_bytes": 1263022,
-   "calls": 2193,
+   "attr_bytes": 1467648,
+   "block_copy_bytes": 1467648,
+   "calls": 2548,
    "T_median": 18103,
    "fingerprint": {
     "n": 72,
@@ -109,12 +111,47 @@
    "callers": 1
   },
   {
+   "routine": 48611,
+   "role": "attribute writer",
+   "pixel_bytes": 0,
+   "attr_bytes": 86016,
+   "block_copy_bytes": 0,
+   "calls": 112,
+   "T_median": 96798,
+   "fingerprint": {
+    "n": 24,
+    "full": "95075e113e",
+    "win": [
+     "06758a95f3",
+     "06ce734ff6",
+     "284c7a645a",
+     "2b6639d930",
+     "2fdf8e25a1",
+     "33b166d3ae",
+     "4b922a2819",
+     "5767540182",
+     "59cbf82bc9",
+     "6149bdbff1",
+     "681752f005",
+     "8dd3aa4747",
+     "96bd1e5267",
+     "9e7d6e4707",
+     "ca045d2fc9",
+     "d380bf5686",
+     "e36455ab6a",
+     "e520cf4412",
+     "fde7a54b34"
+    ]
+   },
+   "callers": 1
+  },
+  {
    "routine": 41337,
    "role": "plotter",
-   "pixel_bytes": 72960,
+   "pixel_bytes": 83840,
    "attr_bytes": 0,
    "block_copy_bytes": 0,
-   "calls": 1140,
+   "calls": 1310,
    "T_median": 4339,
    "fingerprint": {
     "n": 28,
@@ -148,47 +185,12 @@
    "callers": 2
   },
   {
-   "routine": 48611,
-   "role": "attribute writer",
-   "pixel_bytes": 0,
-   "attr_bytes": 61440,
-   "block_copy_bytes": 0,
-   "calls": 80,
-   "T_median": 96798,
-   "fingerprint": {
-    "n": 24,
-    "full": "95075e113e",
-    "win": [
-     "06758a95f3",
-     "06ce734ff6",
-     "284c7a645a",
-     "2b6639d930",
-     "2fdf8e25a1",
-     "33b166d3ae",
-     "4b922a2819",
-     "5767540182",
-     "59cbf82bc9",
-     "6149bdbff1",
-     "681752f005",
-     "8dd3aa4747",
-     "96bd1e5267",
-     "9e7d6e4707",
-     "ca045d2fc9",
-     "d380bf5686",
-     "e36455ab6a",
-     "e520cf4412",
-     "fde7a54b34"
-    ]
-   },
-   "callers": 1
-  },
-  {
    "routine": 24158,
    "role": "plotter",
-   "pixel_bytes": 55296,
+   "pixel_bytes": 79872,
    "attr_bytes": 0,
-   "block_copy_bytes": 55287,
-   "calls": 9,
+   "block_copy_bytes": 79859,
+   "calls": 13,
    "T_median": 129045,
    "fingerprint": {
     "n": 6,
@@ -202,10 +204,10 @@
   {
    "routine": 24310,
    "role": "plotter",
-   "pixel_bytes": 24216,
-   "attr_bytes": 6392,
+   "pixel_bytes": 31144,
+   "attr_bytes": 8312,
    "block_copy_bytes": 0,
-   "calls": 447,
+   "calls": 609,
    "T_median": 10624,
    "fingerprint": {
     "n": 74,

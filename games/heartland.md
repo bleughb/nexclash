@@ -1,14 +1,14 @@
 # Heartland (Odin, 1986; 48K)
 
 ## Next session
-Stage: 0 (intake)           State: first survey done 2026-11-17; the recordings reach two rooms only
+Stage: 1 (design)           State: intake done 2026-11-17 (second survey, six or seven rooms); feasibility not started
 Inputs (private, pilot runs/heartland/2026-11-17): TOSEC "Heartland (1986)(Odin Computer Graphics).z80", md5
-07bfa8f74d60a53ab64e5b092ffd6cca; heart_1..4.rzx (11,197 frames, scripted, from that snapshot); heartland_survey/.
+07bfa8f74d60a53ab64e5b092ffd6cca; heartR_1..6.rzx (13,461 frames, scripted, from that snapshot); heartland_survey2/ (heart_1..4 and heartland_survey/: the first pass).
 Branch: add-heartland    Commit: this one    Checks: survey, doccheck    Pending user answers: none
-Start with: a recording that goes through more rooms and meets every enemy kind (the owner's play, or the search
-with a room test), then `python -m nexclash.survey` again; only then the stage 1 question
+Start with: PLAYBOOK 3d feasibility: which of the buffer's writers below plot figures, what the attribute buffer holds
+(0xA615 copies it), then the stage 1 question with a preview
 Read: PLAYBOOK stage 0-1, the survey's survey.md
-Open: the snapshot is a BASIC program stopped at PAUSE 0 (below); room coverage; which routines compose the buffer.
+Open: the snapshot is a BASIC program stopped at PAUSE 0 (below); a human recording; the design (a new engine, not a port).
 
 ## Facts (snapshot check, survey)
 - 48K. The snapshot is the tape's BASIC loader stopped at line 9998 `PAUSE 1: PAUSE 0` with the loading screen up:
@@ -24,14 +24,21 @@ Open: the snapshot is a BASIC program stopped at PAUSE 0 (below); room coverage;
 - Survey gate OK (every CALL site to the top plot routines reached), but the gate only knows the routines that write
   the screen; with the figures composed in the buffer it says little here.
 - Plain conversion: boots in the simulated start; no proven-safe tail place yet.
+- Second survey (heartR_1..6, 13,467 frames, gate OK). Writers of the buffer 0xC000-0xCDFF (`scan --writers` on two
+  recordings): 0xA949 (255,864 writes) with 0xA8C7 / 0xA8E5 / 0xA903 / 0xA921 and readers 0xA8AB-0xA905 (read, then
+  write: a masked plot); 0xA7FD / 0xA80A / 0xA817 / 0xA824 (readers 0xA7F2-0xA819) and 0xA860 / 0xA86D / 0xA87A
+  (0xA855-0xA86F): two more plotters of the same kind; 0xA0A9 (187,744, reads 0xA0A5 first); 0x5E75 (35,830, a fill
+  or copy); 0xB240, 0xE43F, 0xFCF8, 0xFD42 (small). Which are figures and which scenery is the feasibility's first job.
 
 ## How the recordings were made
-- Scripted (no human player): a coverage-guided search with random keys from the snapshot, the four routes that
-  together run the most code. They show the first room and one more, the player, a few objects and the wizard.
+- Scripted (no human player): coverage-guided searches with random keys from the snapshot. The second pass also
+  rewards a new room (a play-window colour picture unlike any seen, explore2.py): six or seven rooms in each of three
+  runs, the six routes that together run the most code. A human recording through the game is still owed.
 
 ## Open
-- Room coverage: a recording through more of the game.
-- A scripted player that tells rooms apart (the search here counted new code only).
+- A human recording through more of the game (the scripted ones stay near the start).
+- The design: figures are composed into the buffer with masks, the whole window and its attributes are copied each
+  update; which technique fits (cover with sprites, or plot to a scratch page) is for the feasibility pass.
 
 ## Decisions
 - none yet.
@@ -52,3 +59,4 @@ Open: the snapshot is a BASIC program stopped at PAUSE 0 (below); room coverage;
 
 ## Stage log
 - 2026-11-17: stage 0 (first pass), about 30 min, about 10 tool calls, 1 user round.
+- 2026-11-17: stage 0 (second pass: room-guided recordings, survey, buffer writers), about 30 min, 6 tool calls.
