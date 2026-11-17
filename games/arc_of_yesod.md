@@ -54,6 +54,25 @@ The code around each Nodes patch site, searched for in Arc (same bytes):
 About 15% of Nodes' code (0x7000-0xB200, 16-byte windows) is in Arc unchanged. So: the same design, a port of
 nexclash/nodes_of_yesod.py and its .asm with Arc's addresses, seven sites to locate by reading; not a new engine design.
 
+## Build design (stage 2; facts measured 2026-11-17 on arc_s1 + arc_u1..4, 6,836 frames)
+- Sites (original bytes -> hook, exit), all in bank 0, which is at 0xC000 whenever game code runs (bank 6 is only
+  the AY music, called from the handler through the stub at 0x5C2E): 0xD4AF 06 00 08 e_blit -> 0xD4D8; 0xD55A DD 7E 05
+  e_attr_enter -> 0xD55D; 0xD580 77 e_attr -> 0xD581; 0xD589 15 C2 62 D5 e_attr_row -> 0xD58D; 0xBAF8 DD 21 E0 FD
+  e_player -> 0xBAFC (once a main-loop pass, 2,694 times); 0xDDB3 F5 C5 D5 e_irq_in -> 0xDDB6; 0xDDEE E1 D1 C1
+  e_irq_out -> 0xDDF1; 0xC355 7E E6 0F e_random -> 0xC358; 0xAAF1 21 BD 5B e_room -> 0xAAF4 (room draw, 11 calls);
+  0xA985 and 0xAA3F 21 00 40 e_new1 / e_new2; 0xDA50 21 00 40 e_over; 0xC112 21 00 58 e_tele. Another attribute
+  wipe at 0xBCF8 (LD HL,22528 / LD BC,672 / LD (HL),E with LD A,R) writes the screen itself: to look at.
+- Objects: 32-byte records from 0xFC00 (seen: 0xFC00, 0xFD00, 0xFD20, 0xFD40, 0xFDC0 the sphere, 0xFDE0 the
+  astronaut), the Nodes layout; header before each graphic = width, height, colour, the same as record +3, +4, +5.
+- Graphics: two pointer tables, 0x7E1C (41 words, the astronaut, graphics 0x7E70-0x8D54) and 0x8D55 (98 words,
+  the rest, up to about 0xA400). 62 graphics seen in the recordings, colours 66-71 (bright red .. white).
+- Memory for the hooks: the game leaves no zero run of 120 bytes below 0xC000. Free: 0x5B00-0x5B5A (91 bytes, never
+  touched; the stack's low-water mark is 0x5B61) and bank 0 0xFBA0-0xFBFF (96 bytes: the cell map's rows 21-23,
+  never touched). Written before read from the archive snapshot on: 0x5BBC-0x5C18, with 0x5C19-0x5C2D untouched.
+  Banks 1 and 3 are all zero and never paged; bank 7 and bank 4 do not change after the menu.
+- Recording from the archive snapshot: arc_s1.rzx (2,605 frames: start, the surface both ways, jumps, fire, the
+  ENTER window), md5 in the run folder.
+
 ## How the recordings were made (and what that leaves open)
 - The archive snapshot is at the control menu and the game starts on the surface. No scripted input took the player
   down: every key at every position, the hatch stood on and jumped on, 400,000 frames of random keys.
