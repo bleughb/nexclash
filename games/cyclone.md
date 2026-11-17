@@ -244,6 +244,7 @@ and shadow at the map edges and with a cell hidden; negative control (ink / mask
   lines remain before the interrupt, else wait for it.
 - [card patch.restore-speed §Verification] As in Knight Tyme, Spellbound and Target Renegade: the verifier logged the
   latch's IN as a port access; a NextREG read belongs to the NextREG model.
+- [none: 2026-11-17 path reference to another repo reworded, nothing new]
 
 ## Technique use
 - patch.restore-speed: helped: five entries, three exits, one routine pair in the hook page.
