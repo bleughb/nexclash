@@ -25,21 +25,25 @@ AUX2 = 0x1B00                       # e_random2, between the frame table and the
 ROM_KEEP = 0x1F50
 G_LOW, G_SPAN = 0x7E00, 0x2800
 TABLES = ((0x7E1C, 41), (0x8D55, 98))    # the astronaut's graphics, then the rest
+DYNAMIC = (0x8C92, 0x8CF5)          # the appear / vanish effect rewrites these two as it shows them (0xC185, 0xC1A0): their tiles are made from the bytes as they are
 BLIT, ROOM, NEW1, NEW2, OVER, TELE = 0xD4AF, 0xAAF1, 0xA985, 0xAA3F, 0xDA50, 0xC112
-ATTR_ENTER, ATTR_ROW, ATTR, PLAYER, IRQ_IN, IRQ_OUT, RANDOM, RANDOM2 = 0xD55A, 0xD589, 0xD580, 0xBAF8, 0xDDB3, 0xDDEE, 0xC355, 0xC1CC
+ATTR_ENTER, ATTR_ROW, ATTR, PLAYER, IRQ_IN, IRQ_OUT, RANDOM, RANDOM2, BEAM = 0xD55A, 0xD589, 0xD580, 0xBAF8, 0xDDB3, 0xDDEE, 0xC355, 0xC1CC, 0xCF07
+BEAM_STORE = 0xCF12                 # the beam colours a cell whose ink is black: a screen write the build keeps
+BEAM_DRAW, BEAM_WIPE = 0xCF00, 0xCEC3   # LD (HL),A / LD (HL),0: the beam's own pixels, written to the screen (not the buffer) in the original and the build
+SHADOW_PAGE = 23                    # the ink the original would have painted, per play-area cell: read by the random reads and the beam
 OBJ0, NOBJ = 0xFC00, 16
 SITES_ORIG = {ATTR_ENTER: ('dd7e05', 'e_attr_enter'), ATTR_ROW: ('15c262d5', 'e_attr_row'), PLAYER: ('dd21e0fd', 'e_player'), IRQ_IN: ('f5c5d5', 'e_irq_in'), IRQ_OUT: ('e1d1c1', 'e_irq_out'),
-              RANDOM: ('7ee60f', 'e_random'), RANDOM2: ('6f677e', 'e_random2'), ATTR: ('77', 'e_attr'), BLIT: ('060008', 'e_blit'), ROOM: ('21bd5b', 'e_room'), NEW1: ('210040', 'e_new1'),
+              RANDOM: ('7ee60f', 'e_random'), RANDOM2: ('6f677e', 'e_random2'), BEAM: ('7ee607', 'e_beam'), ATTR: ('77', 'e_attr'), BLIT: ('060008', 'e_blit'), ROOM: ('21bd5b', 'e_room'), NEW1: ('210040', 'e_new1'),
               NEW2: ('210040', 'e_new2'), OVER: ('210040', 'e_over'), TELE: ('210058', 'e_tele')}
 STORES = {ATTR: (b'\x77', b'\x00')}
-EXIT = {ATTR_ENTER: 0xD55D, ATTR_ROW: 0xD58D, PLAYER: 0xBAFC, IRQ_IN: 0xDDB6, IRQ_OUT: 0xDDF1, RANDOM: 0xC358, RANDOM2: 0xC1CF, ATTR: 0xD581, BLIT: 0xD552, ROOM: 0xAAF4, NEW1: 0xA988, NEW2: 0xAA42,
+EXIT = {ATTR_ENTER: 0xD55D, ATTR_ROW: 0xD58D, PLAYER: 0xBAFC, IRQ_IN: 0xDDB6, IRQ_OUT: 0xDDF1, RANDOM: 0xC358, RANDOM2: 0xC1CF, BEAM: 0xCF0A, ATTR: 0xD581, BLIT: 0xD552, ROOM: 0xAAF4, NEW1: 0xA988, NEW2: 0xAA42,
         OVER: 0xDA53, TELE: 0xC115}
-KIND = {ATTR_ENTER: 'attribute_enter', ATTR_ROW: 'attribute_row', PLAYER: 'player', IRQ_IN: 'irq_in', IRQ_OUT: 'irq_out', RANDOM: 'random', RANDOM2: 'random2', ATTR: 'attribute', BLIT: 'blit',
+KIND = {ATTR_ENTER: 'attribute_enter', ATTR_ROW: 'attribute_row', PLAYER: 'player', IRQ_IN: 'irq_in', IRQ_OUT: 'irq_out', RANDOM: 'random', RANDOM2: 'random2', BEAM: 'beam', ATTR: 'attribute', BLIT: 'blit',
         ROOM: 'room', NEW1: 'new1', NEW2: 'new2', OVER: 'over', TELE: 'tele'}
 ATTR_AGAIN = 0xD562                  # the paint's row loop: e_attr_row's other exit
 # bytes inside a patched site that are not the start of one of its original instructions (those run in the original replay)
 INTERIORS = tuple(a + k for a, (old, _) in SITES_ORIG.items() for k in range(1, len(bytes.fromhex(old)))
-                  if a + k not in (BLIT + 2, RANDOM + 1, RANDOM2 + 1, RANDOM2 + 2, IRQ_IN + 1, IRQ_IN + 2, IRQ_OUT + 1, IRQ_OUT + 2, ATTR_ROW + 1))
+                  if a + k not in (BLIT + 2, BEAM + 1, RANDOM + 1, RANDOM2 + 1, RANDOM2 + 2, IRQ_IN + 1, IRQ_IN + 2, IRQ_OUT + 1, IRQ_OUT + 2, ATTR_ROW + 1))
 LDIR, LDIR_END = 0xD4B3, 0xD4B5
 RNDREAD, RNDNEXT = 0xC355, 0xC356    # LD A,(HL) at a random address (H = L = R): can land on the screen; 0xC1CE is the other one
 PLAY_LINES = 168
@@ -195,6 +199,25 @@ def patterns(mem, g, info, cmap=None, outline=False):
     return bytes(out)
 
 
+def live_patterns(mem, g, info):
+    """A DYNAMIC graphic's tiles as the hook makes them from its bytes: ink only, the graphic one pixel in."""
+    w, h, c, bw = info
+    cols, rows = shape(bw, h)
+    can = [[0] * (cols * 16) for _ in range(rows * 16)]
+    for y, v in enumerate(bits_of(mem, g, bw, h)):
+        for x in range(bw * 8):
+            if v >> (bw * 8 - 1 - x) & 1:
+                can[y + 1][x + 1] = INK
+    out = bytearray()
+    for ry in range(rows):
+        for cx in range(cols):
+            for y in range(16):
+                row = can[ry * 16 + y][cx * 16:cx * 16 + 16]
+                for k in range(0, 16, 2):
+                    out.append(row[k] << 4 | row[k + 1])
+    return bytes(out)
+
+
 def build_tables(mem, cmap=None, outline=False):
     """-> (the alt ROM's low 8K: the ROM with the tables at 0x0200-0x1FFF, {page: 8K}, {graphic: frame number}). The layout does not depend on the map. Every page has 0xF3 at offset 0 (the handler's JR offset) and tiles from 128."""
     from .build import rom48
@@ -213,14 +236,16 @@ def build_tables(mem, cmap=None, outline=False):
             raise ValueError('graphic %04X needs %d tiles' % (g, n))
         if idx + n > 63:
             page, idx = page + 1, 0
-        d = patterns(mem, g, info, cmap, outline)
+        if g in DYNAMIC and (bw, cols, rows) != (3, 2, 3):
+            raise ValueError('the hook makes live tiles for a graphic 3 bytes wide, 2 x 3 tiles only')
+        d = live_patterns(mem, g, info) if g in DYNAMIC else patterns(mem, g, info, cmap, outline)
         pg = pages.setdefault(page, bytearray(8192))
         pg[0] = 0xF3
         pg[128 + idx * 128:128 + (idx + n) * 128] = d
         state[T_INDEX + ((g - G_LOW) >> 1)] = num
         if T_FRAME + num * 8 + 8 > AUX2:
             raise ValueError('too many graphics for the frame table: %d' % num)
-        state[T_FRAME + num * 8:T_FRAME + num * 8 + 6] = bytes([page, idx, cols, rows, line_of_colour(c), bw])
+        state[T_FRAME + num * 8:T_FRAME + num * 8 + 7] = bytes([page, idx, cols, rows, line_of_colour(c), bw, int(g in DYNAMIC)])
         nums[g] = num
         idx += n
     # RST 0x30 replaces the one-byte attribute store. The original branch to
@@ -339,6 +364,8 @@ class ArcPatch:
         for g, info in catalog(self.mem).items():
             w, h, colour, bw = info
             cols, rows = shape(bw, h)
+            if g in DYNAMIC:
+                continue                # checked against the live bytes at each update
             art = patterns(self.mem, g, info, self.colours, self.outline)
             self.approved_patterns[g] = art
             for tile in range(cols * rows):
@@ -386,7 +413,7 @@ class ArcPatch:
         pg[self.regblock - 0x2000:self.regblock - 0x2000 + len(regs)] = regs
         self.page = bytes(pg)
         self.altrom_low = (ALT_PAGE + 1, self.low)
-        self.extra_banks = {ALT_BANK: self.page + self.low}
+        self.extra_banks = {ALT_BANK: self.page + self.low, SHADOW_PAGE // 2: bytes(16384)}
         for p, data in self.pages.items():
             bank = p // 2
             cur = self.extra_banks.get(bank, bytes(16384))
@@ -419,7 +446,8 @@ def _si(a):
 class NextState:
     def __init__(self, patch):
         self.patch = patch
-        self.nr = {0x50: 0xFF, 0x07: 0, 0x34: 0, 0x19: 0, 0x1C: 0}
+        self.nr = {0x50: 0xFF, 0x54: 4, 0x07: 0, 0x34: 0, 0x19: 0, 0x1C: 0}
+        self.shadow = bytearray(8192)   # SHADOW_PAGE, as the hooks see it at slot 4
         self.sel = 0
         self.attr = [[0, 0, 0, 0, 0] for _ in range(128)]
         self.pat = bytearray(16384)
@@ -439,6 +467,7 @@ class NextState:
         q.nr = dict(self.nr)
         q.attr = [list(a) for a in self.attr]
         q.pat = bytearray(self.pat)
+        q.shadow = bytearray(self.shadow)
         q.state = bytearray(self.state).ljust(STATE_LEN, b'\0')
         q.cache = {}
         q.clip = list(self.clip)
@@ -606,6 +635,8 @@ class _P(_O):
         i = _si(a)
         if i is not None:
             return s.ns.state[i]
+        if 0x8000 <= a < 0xA000 and s.ns.nr[0x54] == SHADOW_PAGE:
+            return s.ns.shadow[a - 0x8000]
         v = s.psite.get(a)
         if v is not None:
             return v
@@ -625,6 +656,9 @@ class _P(_O):
         i = _si(a)
         if i is not None:
             s.ns.state[i] = v
+            return
+        if 0x8000 <= a < 0xA000 and s.ns.nr[0x54] == SHADOW_PAGE:
+            s.ns.shadow[a - 0x8000] = v
             return
         if a < 0x5B00:
             s.scrw += 1
@@ -768,6 +802,8 @@ def event(patch, pc, get, R, ns, alt, psite, Sim, st):
         fails.append('hook wrote the screen')
     if ns.nr[0x50] != 0xFF:
         fails.append('slot 0 not restored')
+    if ns.nr[0x54] != 4:
+        fails.append('slot 4 not restored')
     expected_speed = 3 if pc == ATTR_ENTER else ns.state[_si(V_ATTR_SPEED)] if pc == ATTR_ROW and R[4] == 1 else incoming_speed
     if ns.nr[0x07] & 3 != expected_speed:
         fails.append('speed not restored')
@@ -820,7 +856,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
     Sim = _rw()
     states = []
     psite = {}
-    box = {'ns': None, 'clean': None, 'pend': True}
+    box = {'ns': None, 'clean': None, 'pend': None, 'beam': set()}       # pend None: no room drawn yet in this replay (a recording can start inside one)
     digests = []
     rnds = []
     frames_seen = collections.Counter()
@@ -849,7 +885,14 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
         if cl is None:
             return
         figs = ns.compose()
+        # the beam's pixels are on the screen in the original and in the build; the original's next copy over them puts the
+        # buffer's bytes back, the build's does not (it no longer copies): those bytes are not compared while the beam is there
         masks = {}
+        for a in box['beam']:
+            y = ((a >> 8) & 7) | ((a >> 2) & 0x38) | ((a >> 5) & 0xC0)
+            masks[y] = masks.get(y, 0) | 0xFF << (248 - 8 * (a & 31))
+        if box['beam']:
+            c['screen checks with beam bytes left out'] += 1
         ys = set()
         for a in o.ov:
             if 0x4000 <= a < 0x5800:
@@ -920,7 +963,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
                 a = ns.attr[s]
                 base = (a[3] & 0x3F) * 256 + (128 if a[4] & 0x40 else 0)
                 off = (s - k * 6) * 128
-                if bytes(ns.pat[base:base + 128]) != patch.approved_patterns[g][off:off + 128]:
+                art = live_patterns(M, g, (w, h, col, bw)) if g in DYNAMIC else patch.approved_patterns[g]
+                if bytes(ns.pat[base:base + 128]) != art[off:off + 128]:
                     fail('sprite pattern differs from approved art', (hex(g), s))
                     break
             if M[ix + 5] & 0x47 != col & 0x47:
@@ -950,6 +994,16 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
             return
         if pc in PEND:
             box['pend'] = True
+            box['beam'].clear()
+            return
+        if pc == BEAM_DRAW or pc == BEAM_WIPE:
+            a = R[6] * 256 + R[7]
+            if not 0x4000 <= a < 0x5800:
+                fail('the beam writes outside the screen', (hex(a),))
+            elif pc == BEAM_DRAW:
+                box['beam'].add(a)
+            else:
+                box['beam'].discard(a)
             return
         if pc not in EXIT:
             return
@@ -960,6 +1014,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
             free = M[STATE_LO:STATE_HI] + M[STATE2_LO:STATE2_HI]
             if box.setdefault('free0', free) != free:
                 box['freecheck'] = True
+            if box['pend'] is None:
+                c['copies before the first room is drawn (no bare picture to check against)'] += 1
             if box['pend']:
                 box['clean'] = rows_of(M)
                 box['pend'] = False
@@ -970,7 +1026,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
         fl, o = event(patch, pc, M.__getitem__, list(R), ns, alt, psite, Sim, c)
         for k in fl:
             fail('%s: %s' % (kind, k[0] if isinstance(k, tuple) else k), k[1:] if isinstance(k, tuple) else ())
-        if kind in ('attribute', 'attribute_enter', 'attribute_row', 'random', 'random2', 'player', 'irq_in', 'irq_out'):
+        if kind in ('attribute', 'attribute_enter', 'attribute_row', 'random', 'random2', 'beam', 'player', 'irq_in', 'irq_out'):
             pass
         elif kind != 'blit':
             if ns.visible():
@@ -987,7 +1043,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
             if callable(shot):
                 shot(c['blit'], M, ns, R)
 
-    pcs = set(EXIT) | set(INTERIORS) | PEND | {RNDNEXT, RND2NEXT, 0x30}
+    pcs = set(EXIT) | set(INTERIORS) | PEND | {RNDNEXT, RND2NEXT, BEAM_DRAW, BEAM_WIPE, 0x30}
     fc, err = RZ.trace(rzx_path, pcs, on_pc, stop=stop)
     if err:
         c['replay stopped: %s!' % err] += 1
@@ -1000,7 +1056,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
     ex['graphics seen counts'] = dict(frames_seen)
 
     # second replay: the game with the screen as the build leaves it
-    idx = {'i': 0, 'first': True, 'pend': None, 'r': 0, 'shadow': {}}
+    idx = {'i': 0, 'first': True, 'pend': None, 'r': 0, 'shadow': {}, 'beam': set()}
     stores = dict(patch.stores)
     undo = {}
     for a, (old, new) in stores.items():
@@ -1018,11 +1074,18 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
                     M[a + k] = v
         if pc in (ROOM, NEW1, NEW2, OVER, TELE):
             idx['shadow'].clear()
+            idx['beam'].clear()
+            idx['room'] = True
             return
         if pc == ATTR:
+            idx['shadow'][R[6] * 256 + R[7]] = R[0]     # the ink the original paints here: the build's shadow page
+            return
+        if pc == BEAM + 1:
             a = R[6] * 256 + R[7]
-            if a in (0x5858, 0x5959, 0x5A5A):
-                idx['shadow'][a] = R[0]
+            R[0] = idx['shadow'].get(a, M[a])           # as e_beam reads it
+            return
+        if pc == BEAM_STORE:
+            idx['beam'].add(R[6] * 256 + R[7] - 0x5800)
             return
         if pc == LDIR:
             if idx['pend'] is None:
@@ -1057,21 +1120,21 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
             if len(ex['patched state']) < 5:
                 ex['patched state'].append((i, R[24], M[ROOMV]))
         # the attributes of the play area: the room's clean copy, stars aside
-        if i % 64 == 0:
+        if i % 64 == 0 and idx.get('room'):     # (a recording that starts inside a room: its screen holds paints from before)
             room = M[ROOMV]
             cur = M[0x5800:0x5800 + 672]
             cln = M[0xF900:0xF900 + 672]
             stars = {M[STARS + k] for k in range(16)} if 64 <= room < 80 else set()     # the surface's twinkling cells (0xAC50)
             badc = 0
             for k in range(672):
-                if cur[k] != cln[k] & 0x7F and k not in stars:
+                if cur[k] != cln[k] & 0x7F and k not in stars and k not in idx['beam']:
                     badc += 1
             c['bare attribute checks'] += 1
             if badc:
                 c['play area attributes are not the room\'s!'] += 1
                 if len(ex['attrs']) < 5:
-                    ex['attrs'].append((i, room, badc))
-    fc2, err2 = RZ.trace(rzx_path, {BLIT, LDIR, LDIR_END, RNDNEXT, RND2NEXT, ATTR, ROOM, NEW1, NEW2, OVER, TELE} | _starts(rzx_path), on2, stop=stop)
+                    ex['attrs'].append((i, room, badc, [(k, cur[k], cln[k]) for k in range(672) if cur[k] != cln[k] & 0x7F and k not in stars and k not in idx['beam']][:6]))
+    fc2, err2 = RZ.trace(rzx_path, {BLIT, LDIR, LDIR_END, RNDNEXT, RND2NEXT, BEAM + 1, BEAM_STORE, ATTR, ROOM, NEW1, NEW2, OVER, TELE} | _starts(rzx_path), on2, stop=stop)
     if err2:
         c['patched replay stopped: %s!' % err2] += 1
     if fc2 != fc:
@@ -1142,6 +1205,6 @@ def auto(a, z80, name, out, say):
             'IDENTICAL' if not fails else 'FAILED %s' % fails))
         if fails:
             for k, v in ex.items():
-                if k + '!' in cc:
+                if k + '!' in cc or k == 'attrs':
                     say('            %s: %s' % (k, str(v)[:300]))
     return ok

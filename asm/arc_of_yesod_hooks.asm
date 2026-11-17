@@ -29,6 +29,8 @@ V_SX    EQU 0xFBE0              ; 2 bytes
 T_INDEX EQU 0x0200              ; (graphic - 0x7E00) / 2 -> frame number, 0 = none (5120 bytes), in the alt ROM's low 8K, clear of the ROM's 0x1F54, which the game calls
 T_FRAME EQU 0x1600              ; frame number * 8: page, tile, cols, rows, line, bytes wide (up to 159 frames, below 0x1B00)
 
+SHADOW_PAGE EQU 23              ; Next page: the ink the original would have painted in each play-area cell (0 = none), at slot 4 for one access;
+                                ; the handler never touches slot 4 (0x8000-0x9FFF: graphics, read by the game's plotters only)
 G_LOW   EQU 0x7E00
 G_SPAN  EQU 0x2800
 
@@ -202,10 +204,18 @@ hideall:
         ld a,-44
         call ny_r_set
         xor a
-        ld (0x5B04),a
-        ld (0x5B06),a
-        ld (0x5B08),a
         ld (V_HAVE_TIME),a
+        nextreg 0x54,SHADOW_PAGE ; the room is drawn again: no cell holds a figure's ink
+        push de
+        push hl
+        ld hl,0x8000
+        ld de,0x8001
+        ld bc,0x2FF
+        ld (hl),a
+        ldir
+        pop hl
+        pop de
+        nextreg 0x54,4
         call ny_r_run
         ld bc,SHOWN
 .o:     ld a,(bc)
@@ -286,9 +296,14 @@ update: ld a,ixh
         add hl,hl
         add hl,hl
         ld bc,T_FRAME
-        add hl,bc               ; HL -> page, tile, cols, rows, line, bytes
-        push hl                 ; held?
-        ld a,(V_K)
+        add hl,bc               ; HL -> page, tile, cols, rows, line, bytes, 1 = the game rewrites this graphic
+        push hl
+        ld bc,6
+        add hl,bc
+        ld a,(hl)
+        or a
+        jr nz,.dyn
+        ld a,(V_K)              ; held?
         add a,a
         add a,low HELD
         ld l,a
@@ -315,6 +330,16 @@ update: ld a,ixh
         ld (V_DROP),hl
         call hidek
         jr .out
+.dyn:   ld a,(V_K)              ; the appear / vanish effect's graphic: its tiles come from its bytes as they are now, and nothing is held
+        add a,a
+        add a,low HELD
+        ld l,a
+        ld h,high HELD
+        ld (hl),0xFF
+        inc hl
+        ld (hl),0xFF
+        call dynload
+        jr .same
 
 hidek:  ld a,(V_K)
         add a,low SHOWN
@@ -703,25 +728,16 @@ e_attr:
         ld a,-42
         call ny_r_set
         pop af
-        ld b,a
-        ld a,h
-        cp l
-        jr nz,.done
-        cp 0x58
-        jr c,.done
-        cp 0x5B
-        jr nc,.done
+        ld b,a                  ; the ink the original stores: kept in the shadow page, for the game's reads of screen colours
+        nextreg 0x54,SHADOW_PAGE
         push hl
-        sub 0x58
-        add a,a
-        add a,0x03
-        ld l,a
-        ld h,0x5B
+        ld a,h
+        add a,0x28              ; 0x58xx -> 0x80xx
+        ld h,a
         ld (hl),b
-        inc hl
-        ld (hl),1
         pop hl
-.done:  call ny_r_end
+        nextreg 0x54,4
+        call ny_r_end
         call ny_speed_out
         pop bc
         pop af
@@ -759,18 +775,13 @@ e_random:
         ld l,a
         ld a,(hl)
         jr .value
-.attr:  sub 0x58
-        add a,a
-        add a,0x03
-        ld l,a
-        ld h,0x5B
-        inc hl
+.attr:  nextreg 0x54,SHADOW_PAGE
+        add a,0x28              ; 0x58xx -> 0x80xx
+        ld h,a
         ld a,(hl)
+        nextreg 0x54,4
         or a
-        jr z,.bare
-        dec hl
-        ld a,(hl)
-        jr .value
+        jr nz,.value            ; painted since the room was drawn: the original's screen holds that ink
 .bare:  pop hl
         push hl
         ld a,(hl)
@@ -1032,11 +1043,12 @@ aux_end:
 e_random2:
         ld l,a
         ld h,a
+        push af                 ; the original's three loads change no flag
         call ny_speed_in
         call ny_r_begin
         push bc
         push hl
-        ld a,-41
+        ld a,-46
         call ny_r_set
         ld a,h
         cp 0x40
@@ -1063,18 +1075,13 @@ e_random2:
         ld l,a
         ld a,(hl)
         jr .value
-.attr:  sub 0x58
-        add a,a
-        add a,0x03
-        ld l,a
-        ld h,0x5B
-        inc hl
+.attr:  nextreg 0x54,SHADOW_PAGE
+        add a,0x28              ; 0x58xx -> 0x80xx
+        ld h,a
         ld a,(hl)
+        nextreg 0x54,4
         or a
-        jr z,.bare
-        dec hl
-        ld a,(hl)
-        jr .value
+        jr nz,.value            ; painted since the room was drawn: the original's screen holds that ink
 .bare:  pop hl
         push hl
         ld a,(hl)
@@ -1082,7 +1089,132 @@ e_random2:
         call ny_speed_out
         pop hl
         pop bc
+        ex (sp),hl              ; the value into the saved AF's A
+        ld h,a
+        ex (sp),hl
+        pop af
         jp 0xC1CF
+
+; ---- 0xCF07 (LD A,(HL) / AND 7): the beam reads a play-area colour and leaves a cell alone unless its ink is black ----
+e_beam: call ny_speed_in
+        call ny_r_begin
+        push hl
+        ld a,-39
+        call ny_r_set
+        nextreg 0x54,SHADOW_PAGE
+        ld a,h
+        add a,0x28              ; 0x58xx -> 0x80xx
+        ld h,a
+        ld a,(hl)
+        nextreg 0x54,4
+        pop hl
+        or a
+        jr nz,.value            ; painted since the room was drawn: the original's screen holds that ink
+        ld a,(hl)
+.value: call ny_r_end
+        call ny_speed_out
+        and 7
+        jp 0xCF0A
+
+; DE -> the rows of a graphic 3 bytes wide (its height at DE - 2). Its 6 tiles (2 x 3; ink only, the graphic one pixel in from the left and the top, as
+; the build's patterns) are made in the shadow page above the colours and sent to the object's half patterns. A, BC, DE, HL lost.
+DYN_BUF EQU 0x8400
+dynload:
+        dec de
+        dec de
+        ld a,(de)
+        inc de
+        inc de
+        push af                 ; rows
+        nextreg 0x54,SHADOW_PAGE
+        push de
+        ld hl,DYN_BUF
+        ld de,DYN_BUF+1
+        ld bc,767
+        ld (hl),0
+        ldir
+        pop de
+        pop bc                  ; B = rows
+        ld c,1                  ; canvas line
+        ld hl,DYN_BUF+8
+.line:  push bc
+        nextreg 0x54,4          ; the graphic itself is in slot 4's own page
+        ld a,(de)
+        inc de
+        ld b,a
+        ld a,(de)
+        inc de
+        ld c,a
+        ld a,(de)
+        inc de
+        nextreg 0x54,SHADOW_PAGE
+        push de
+        srl b                   ; B, C, E, D = the canvas line's 32 pixels
+        rr c
+        rra
+        ld e,a
+        ld a,0
+        rra
+        ld d,a
+        ld a,b
+        call dynexp
+        ld a,c
+        call dynexp
+        push hl
+        ld bc,120
+        add hl,bc               ; the same line of the tile to the right
+        ld a,e
+        call dynexp
+        ld a,d
+        call dynexp
+        pop hl
+        pop de
+        pop bc
+        inc c
+        ld a,c
+        and 15
+        jr nz,.next
+        ld a,l                  ; the next row of tiles: past this row's right tile
+        add a,128
+        ld l,a
+        jr nc,.next
+        inc h
+.next:  djnz .line
+        ld a,(V_K)
+        ld e,a
+        add a,a
+        add a,e
+        add a,a
+        ld e,a                  ; first half pattern
+        ld hl,DYN_BUF
+        ld d,6
+.t:     ld a,e
+        rrca
+        ld bc,0x303B
+        out (c),a
+        ld bc,0x805B
+        otir
+        inc e
+        dec d
+        jr nz,.t
+        nextreg 0x54,4
+        ret
+; A = 8 pixels -> 4 pattern bytes at HL (nibble 1 = ink). HL advances; BC, DE kept.
+dynexp: push bc
+        ld c,a
+        ld b,4
+.l:     xor a
+        rl c
+        jr nc,.a
+        or 0x10
+.a:     rl c
+        jr nc,.b
+        or 0x01
+.b:     ld (hl),a
+        inc hl
+        djnz .l
+        pop bc
+        ret
 aux2_end:
         ASSERT aux2_end <= 0x1C50
         SAVEBIN "arc_aux2.bin",0x1B00,aux2_end-0x1B00
