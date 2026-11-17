@@ -1,13 +1,12 @@
 # R-Type (128K) - intake
 
 ## Next session
-Stage: 1 complete as a playable prototype (main: 2026-11-16). Since then specnext PRs #97 <- #98
-<- #99 (stacked, open; owner-tested in CSpect only, 2026-11-17) own the display: Layer 2 640x256
-half-pixel scroll, scenery in front with see-through edges, filled whole-figure sprites that glide,
-4 frames per update, start-up showpiece (owner's 320x256 neon picture, pixelate transition). The
-lines below describe main; the PRs and specnext reference/r_type/intake (and the owner's local
-handover R_TYPE_HANDOVER.md) describe the rest. First: hardware test of #99 and banks 48-62 on a
-1 MB Next. Techniques: `patch.hybrid-display-replacement`, `patch.layer2-half-pixel-scroll`,
+Stage: 1 complete as a playable prototype. specnext PRs #97-#99 (merged 2026-11-16) own the
+display: Layer 2 640x256 half-pixel scroll, scenery in front with see-through edges, filled
+whole-figure sprites that glide, 4 frames per update, start-up showpiece (owner's 320x256 neon
+picture, pixelate transition). Branch `r-type-cache` (2026-11-17, not merged): least-recently-used
+pattern cache, conversion budget fix, level start at 28MHz with a DMA clear. Target hardware: 2 MB
+Next (banks 48-62 in use). First: hardware playtest. Techniques: `patch.hybrid-display-replacement`, `patch.layer2-half-pixel-scroll`,
 `patch.scenery-edge-masks`, `patch.figure-glide`, `optimise.flash-palette-offset`,
 `patch.copper-palette-bands` (no record yet: stage 6).
 Route (owner goal 2026-11-15: hardware scroll + sprites, hard to tell from the original; slowdown
@@ -22,8 +21,11 @@ Mechanics, details in reference continuation/history-2026-11.md:
   column on Layer 2; 8734 (FEEB) converts the drawn level. Scenery black is opaque on Layer 2.
 - Sprites: plotter entries 8CFD/8D65/8DD3/8E29 record plots; graphics converted once into 4bpp
   patterns, cached by address + ink with checksum; flips = mirror bits; 24 tiles converted per
-  update; partly drawn figures published behind whole ones; 8886 skips the copier's copy of cells
-  a sprite shows (8EA2/8EC2 hooks) and blanks them; overflow falls back to native cells.
+  update; every figure whole; 8886 skips the copier's copy of cells a sprite shows (8EA2/8EC2
+  hooks) and blanks them. When the 128 pattern slots or the cache entries run out, the least
+  recently shown entries are forgotten (glide.asm c_alloc / c_evict), never one shown this update.
+  Only more than 128 hardware sprites in one update still falls back to native cells (8x8
+  attribute blocks); seen once, in a level 1 explosion.
 - Sheets (owner 2026-11-16, deviates from docs/COLOURS.md for R-Type only): two per level,
   IDENTIFY (2x, IDs) and PAINTING (1:1, same arrangement, every figure; a graphic is bright and
   paintable the first time, faded and ignored after); no REFERENCE sheet. Related figures grouped
@@ -189,6 +191,13 @@ checks belong to the eventual sprite build; no hardware result is claimed.
 - [local: draw order beats identity] Replacing the picture (scroll on Layer 2, sprites keyed by the
   plotter call) cost less than recognising the original's cells every update, and gave hardware scroll.
 
+- [local: count fallbacks before guessing] A counter of plots left to the ULA, read each sweep
+  step, found the 8x8 blocks' cause in one run: a budget check that let one conversion per update
+  through, then a cache that restarted when full. Snapshot builds start with sprites off until the
+  next life; measure level 2+ only after spr_on = 1.
+- [local: the interrupt restores the speed] irq_out sets NR 07 from run_fast; code that wants 28MHz
+  across interrupts must set run_fast, not only NR 07.
+
 ## Friction
 - reuse: [none: existing survey, scan, preview and census tools provided the investigation paths]
 - retries: [local: measurement boundaries] JNext can report an execute address again after IRQ; one-shot phase flags and nested-ledger negatives prevent double accounting. All101 clocks/380 bytes agree with uninstrumented controls. Earlier guard/stack and source-hole fixes retained in reference.
@@ -198,6 +207,8 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   in specnext/reference/r_type/intake; none added as an untested shared toolkit probe.
 
 ## Stage log
+- 2026-11-17 specnext `r-type-cache`: LRU pattern cache, budget fix (ULA fallbacks: level 1 sweep
+  294 -> 0, level 2 0), level start 28MHz + DMA clear (start key to play 348 -> 112 frames). CSpect.
 - 2026-11-17 Own the display (specnext PRs #97-#99): half-pixel scroll, scenery masks in front,
   filled figures, glide, pace 4, title fixes, power-up fixes, start-up showpiece. CSpect only.
 - 2026-11-16 Prototype: colour sheets + recolour, figure IDs, outlines, partly hidden figures,
