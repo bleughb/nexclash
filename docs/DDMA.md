@@ -74,6 +74,30 @@ ports and claims two-cycle was about 12% faster for that workload. Existing core
 measurements and their 3.5 MHz failure remain in TECHNIQUES 1.0/1.0b; do not extrapolate them
 to DDMA, and do not infer that 3.03.00 reproduces an earlier core defect.
 
+### NEW in core 3.03.00: zxnDDMA timings (not usable before 3.03.00)
+
+Every figure in this table is for zxnDDMA features (port $6B extended commands). They do not exist
+on cores before 3.03.00: never budget a pre-3.03.00 build, or a no-blitter fallback, from them.
+Source: the 3.03.00 guide (specnext docs/reference/zxnDDMA_guide.txt), section or example named.
+All are the guide's own figures on an issue 5 at CPU 28 MHz, not reproduced on a nexclash board;
+where the guide names the measuring core it is 3.02.21, otherwise it names none. A nexclash
+measurement on a released 3.03.00 core is still to do.
+
+| Figure (guide) | Value | Where |
+|---|---|---|
+| Port cycle length after reset `$C3` | 3 + 3 cycles = 6 a byte | 2.7 |
+| Fastest port cycle setting | 2 + 2 cycles = 4 a byte; "about 12% faster" in the examples | 2.7, 3.4 |
+| Fill (`$DF` bit 3, `$F7`) | no read phase: twice as fast as a fixed-source fill | 2.5 mode flags |
+| Prescaler | 875 kHz / prescaler bytes a second at every CPU speed | 2.7 |
+| 32 x 16x16 rectangles, Layer 2 320x256, 3-cycle | 2D opaque 2.1 ms, 2D transparent 2.1 ms (LDIR 7.2, CPU transparent 15.6, zxnDMA per column 8.2) | 3.4 compare (core 3.02.21) |
+| One ball: rub out + draw | about 0.13 ms (2 video lines) | 3.5 sprites |
+| One 12x12 lemming | about 1.6 video lines | 3.7 lemmings |
+| Two 166 x 118 window copies (39,176 bytes) | 7.0 ms (109 lines); = about 5.6 MB/s by division, set-up included | 3.10 windows |
+| Worst frame, about 250 X,Y transfers + background strip | 8.4 ms (FLIP), 10.0 ms (PULSE) | 3.11 scroller |
+
+Classic zxnDMA timings for cores before 3.03.00 are the board measurements in TECHNIQUES 1.0 / 1.0b
+(core 3.02.00); those remain the only figures valid for a pre-3.03.00 build.
+
 ## Existing conversions: prioritised hypotheses, not proven gains
 
 Review based on STATUS.md and the corresponding games/ notes on main. Assess the exact active
