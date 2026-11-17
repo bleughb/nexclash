@@ -1,8 +1,15 @@
 # R-Type (128K) - intake
 
 ## Next session
-Stage: 1 complete as a playable prototype; owner playtests in JNext and on hardware report level 1
-plays, Kempston and pause work (2026-11-16). Branch add-r-type in both repos.
+Stage: 1 complete as a playable prototype (main: 2026-11-16). Since then specnext PRs #97 <- #98
+<- #99 (stacked, open; owner-tested in CSpect only, 2026-11-17) own the display: Layer 2 640x256
+half-pixel scroll, scenery in front with see-through edges, filled whole-figure sprites that glide,
+4 frames per update, start-up showpiece (owner's 320x256 neon picture, pixelate transition). The
+lines below describe main; the PRs and specnext reference/r_type/intake (and the owner's local
+handover R_TYPE_HANDOVER.md) describe the rest. First: hardware test of #99 and banks 48-62 on a
+1 MB Next. Techniques: `patch.hybrid-display-replacement`, `patch.layer2-half-pixel-scroll`,
+`patch.scenery-edge-masks`, `patch.figure-glide`, `optimise.flash-palette-offset`,
+`patch.copper-palette-bands` (no record yet: stage 6).
 Route (owner goal 2026-11-15: hardware scroll + sprites, hard to tell from the original; slowdown
 dropped; equivalence "extremely close"): the original game runs unchanged as the logic; scenery is
 drawn on Layer 2 and hardware-scrolled; figures are hardware sprites; HUD/stars stay on the ULA.
@@ -120,6 +127,9 @@ level transitions, death/restart and display
 checks belong to the eventual sprite build; no hardware result is claimed.
 
 ## Technique use
+- patch.hybrid-display-replacement: helped: the original runs the logic; Layer 2 + sprites own the display.
+- optimise.pattern-cache: corrected: keyed by ink, flash colours filled it; see optimise.flash-palette-offset.
+- patch.pace-limiter: no help: the owner dropped slowdown; a fixed frames-per-update count (PACE 4) instead.
 - optimise.pattern-cache: no help: protected union exceeds128; immutability/invalidation warning reused, staged single-bank protocol retained.
 - patch.display-atomic-switch: helped: checks require complete old/new pictures; single-bank publication remains a measured alternative outside the play area.
 - patch.preserve-r: used: actual copier M1 span repairs return R; isolated assembled bridge passes, IRQ consumers remain a separate proof.
@@ -128,6 +138,26 @@ checks belong to the eventual sprite build; no hardware result is claimed.
 - detect.buffer-layout-producer: helped: separated final copier, nonlinear source cells and non-pixel holes.
 
 ## Lessons
+- [card patch.layer2-half-pixel-scroll §Use / do not use] Scenery stepping 1 px per 4 frames judders on smooth
+  sprites; Layer 2 640x256 scrolls only whole pixels, so two screens (one half a pixel on) halve it.
+- [card patch.scenery-edge-masks §Failure lookup] Per-cell runtime floods were too slow; masks from a whole-level
+  sky flood, keyed by cell content, with 1-2 px gaps as walls, cost one lookup per staged cell.
+- [card patch.figure-glide §Contract] Port 303B selects both sprite and pattern-upload index: an ISR moving
+  sprites garbled uploads; count skipped steps and make them up. Even update lengths are needed.
+- [card optimise.flash-palette-offset §Measurements] Four flash colours x three graphics filled the cache; its
+  restarts drew figures natively in 8x8. One conversion + palette offset per graphic fixed it.
+- [card patch.copper-palette-bands §Failure lookup] CSpect: WAIT line n shows from row n + 32 of 320x256 Layer 2;
+  the restart comes after the top border; 9-bit NR 0x44 pairs from the Copper failed.
+- [local: start-up stack in slot 6] At the NEX setup call SP is near DFEE: mapping a page into
+  slot 6 there (to copy data) crashed; keep data in an already mapped page or use slots 3/7.
+- [tool tools/asm2profile.py] A SAVEBIN in an INCLUDEd file is not collected (names come from the
+  top file): the build used an empty page. asm2profile now warns about uncollected .bin outputs.
+- [local: tests break at 0000] The R-Type tests set a breakpoint at 0000 to catch a reset; a glide
+  page entry at 0000 looked like a reset. Entry points start at 0100.
+- [local: never edit build inputs mid-test] compare rebuilds each level from the current files; a
+  half-edited layout gave a false slowdown on levels 2-8, cleared by a worktree bisect.
+- [local: the original's pace] The recording averages 4.35 frames per update (28% 3, 34% 4, 22% 5);
+  the title alternates 2 and 3. At 28MHz every update took 3 (45% fast): PACE 4, title 4.
 - [local: total budget first] Live costs14.176ms legacy display and9.961ms identity/bridge. Consumer/native-credit budget precedes replacement; gross CPU/waits are not free. See live-budget-review.md.
 - [local: native code modes] Initial BG changes plot destination8EBF, RET condition8F10 and four clip operands; native flip table01->00 exposes compiler mismatch. Preserve live modes/table and original-time/R credit; see background-consumer-review.md.
 - [local: packed source lifetime] Uniqueness is not immutability. Validate packed bytes/attributes/skip markers per invocation; unknown art/generation needs native fallback. Dispatch/invalidation remain open.
@@ -168,6 +198,8 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   in specnext/reference/r_type/intake; none added as an untested shared toolkit probe.
 
 ## Stage log
+- 2026-11-17 Own the display (specnext PRs #97-#99): half-pixel scroll, scenery masks in front,
+  filled figures, glide, pace 4, title fixes, power-up fixes, start-up showpiece. CSpect only.
 - 2026-11-16 Prototype: colour sheets + recolour, figure IDs, outlines, partly hidden figures,
   start-up / title / high-score fixes, level-unpack hook-page fix. Owner hardware playtest OK.
 - 2026-11-15 New route: Layer 2 hardware scroll, then hardware sprites; later levels and scripted

@@ -364,6 +364,14 @@ What v2 adds:
   ULA interrupt can also be disabled there ($22 bit 2) - never under a game. For hook timing use
   the copper or a $1E/$1F poll.
 
+### 1.9 Owning the display over an unchanged engine (R-Type, 2026-11-17; cards in docs/techniques)
+Smooth scroll: `patch.layer2-half-pixel-scroll` (640x256 x two screens, half a pixel each 2 frames).
+Scenery in front, cut by its own pixels: `patch.scenery-edge-masks` (whole-level sky flood, masks per
+cell content). Coarse figure steps: `patch.figure-glide` (also Quazatron; port 303B is shared with
+pattern uploads). Flash colours: `optimise.flash-palette-offset`. Stills above 16 colours at 640:
+`patch.copper-palette-bands`; a 320x256 picture of up to 256 colours needs no Copper. Pace: hold a
+fixed number of frames per update (measure the original's histogram from its recording first).
+
 ## 2. Techniques from other projects (by topic)
 
 Read from the source of the projects listed in 2.9 (licence, what was read, reviews of their code
