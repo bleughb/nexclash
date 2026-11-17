@@ -1,12 +1,12 @@
 # The Arc of Yesod (Thor / Odin, 1985; 128K release)
 
 ## Next session
-Stage: 1 (design)           State: intake done 2026-11-17, design question asked, no answer yet
+Stage: 1 (design)           State: intake done, design approved 2026-11-17 (Decisions below); feasibility next
 Inputs (private, pilot runs/arc_of_yesod/2026-11-17): the archive's "Arc of Yesod, The (1985)(Thor Computer)(128K).z80",
 md5 f58236395e737aaa0fac1f8476711ad8 (control menu); under.z80, md5 f3c07b0b (a cavern, from the owner's play, below);
 arc_u1..4.rzx (4,231 frames, start at under.z80); survey in arc_of_yesod_survey/.
-Branch: add-arc-of-yesod    Commit: this one    Checks: survey, doccheck    Pending user answers: the design question
-Start with: the owner's answer, then PLAYBOOK 3d feasibility against nexclash/nodes_of_yesod.py (same family, below)
+Branch: add-arc-of-yesod    Commit: this one    Checks: survey, doccheck    Pending user answers: none
+Start with: PLAYBOOK 3d feasibility against nexclash/nodes_of_yesod.py (same family, below)
 Read: PLAYBOOK stage 1-2, games/nodes_of_yesod.md, nexclash/nodes_of_yesod.py SITES_ORIG / event / verify
 Open: how the surface hatch takes the player down (not reproduced by script, below); a recording from the archive
 snapshot that goes down by itself; the three unreached CALL sites.
@@ -50,7 +50,10 @@ snapshot that goes down by itself; the three unreached CALL sites.
 - The three unreached CALL sites (0xAC0D, 0xBBF8 to the figure copy; 0xBC6D).
 
 ## Decisions
-- none yet (the design question is with the owner).
+- 2026-11-17 (owner): base look as Nodes of Yesod: the astronaut, the sphere and the enemies as sprites in their own
+  colours, scenery as the game draws it. Enhanced is built in the same pass: the astronaut's painted colours are
+  carried over from Nodes by bitmap ("yes do that, i'll paint the enemies later that dont match"); Arc's own enemies
+  stay in the game's colours in Enhanced until the owner paints them. Backdrops: not asked for, not in this pass.
 
 ## Lessons
 - [deferred Open: reconsider when a second 128K game needs a scripted recording] `nexclash.py record` drives a 48K
