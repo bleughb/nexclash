@@ -113,9 +113,10 @@ def figures_from_sheet(png, layout):
     """A colour sheet's composites (docs/COLOURS.md) as figure images: the box's pixels that are neither the
     sheet background nor the transparent grey."""
     from PIL import Image
+    from . import coloursheet as _cs
     from .coloursheet import BG_RGB, TRANSP_RGB
     im = Image.open(png).convert('RGB')
-    lay = json.load(open(layout))
+    lay = _cs.load_layout(layout)
     out = []
     for i, c in enumerate(lay['composites']):
         px = {}
@@ -247,7 +248,7 @@ def main(argv=None):
     if a.sheet:
         base = os.path.splitext(a.sheet)[0]
         lay = a.layout or next((p for p in (base + '_layout.json', base.replace('_painted', '') + '_layout.json')
-                                if os.path.exists(p)), base + '_layout.json')
+                                if os.path.exists(p) or os.path.exists(p + '.gz')), base + '_layout.json')
         figs = figures_from_sheet(a.sheet, lay)
         src = os.path.basename(a.sheet)
     else:
