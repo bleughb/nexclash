@@ -1,15 +1,18 @@
 # The Arc of Yesod (Thor / Odin, 1985; 128K release)
 
 ## Next session
-Stage: 1 (design)           State: intake done, design approved 2026-11-17 (Decisions below); feasibility next
+Stage: 2 (build)            State: design approved 2026-11-17 (Decisions below); feasibility done: a port of the Nodes engine
 Inputs (private, pilot runs/arc_of_yesod/2026-11-17): the archive's "Arc of Yesod, The (1985)(Thor Computer)(128K).z80",
 md5 f58236395e737aaa0fac1f8476711ad8 (control menu); under.z80, md5 f3c07b0b (a cavern, from the owner's play, below);
-arc_u1..4.rzx (4,231 frames, start at under.z80); survey in arc_of_yesod_survey/.
+arc_u1..4.rzx (4,231 frames, start at under.z80); survey in arc_of_yesod_survey/; the scripts (m128.py, sites.py, ...).
 Branch: add-arc-of-yesod    Commit: this one    Checks: survey, doccheck    Pending user answers: none
-Start with: PLAYBOOK 3d feasibility against nexclash/nodes_of_yesod.py (same family, below)
-Read: PLAYBOOK stage 1-2, games/nodes_of_yesod.md, nexclash/nodes_of_yesod.py SITES_ORIG / event / verify
-Open: how the surface hatch takes the player down (not reproduced by script, below); a recording from the archive
-snapshot that goes down by itself; the three unreached CALL sites.
+Start with: the seven sites the byte search did not settle (Feasibility table), then copy nexclash/nodes_of_yesod.py and
+asm/nodes_of_yesod_hooks.asm to arc_of_yesod with Arc's addresses, in stages (sites, hooks, verify, unit tests)
+Read: PLAYBOOK stage 2, docs/ENGINE_CONTRACT.md, nexclash/nodes_of_yesod.py (constants, NodesPatch, event, verify),
+asm/nodes_of_yesod_hooks.asm header
+Open: Arc's object table and graphic tables (Nodes: 0xFC00 x 16, tables 0xB700 / 0xC700); free RAM for the hook state;
+the scrolling surface strip (0xBC19); the descent by script and a recording from the archive snapshot; the three
+unreached CALL sites; carrying the astronaut's painted colours over by bitmap (Decisions).
 
 ## Facts (snapshot check, survey)
 - 128K, 7FFD 0x10 at the menu, in play it switches 0x10 / 0x16 (bank 6 at C000 holds most of the code). IM 2, I = 0xE2,
