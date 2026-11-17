@@ -36,6 +36,21 @@ snapshot that goes down by itself; the three unreached CALL sites.
   reached 0xAC0D, 0xBBF8), 0xDC7F (HUD), 0xAAF1 (room draw), 0xC9F4 (1 of 2; not reached 0xBC6D), 0xBE79.
   The recordings cover caverns, three enemy kinds, a lost life, game over and a new game on the surface.
 
+## Feasibility against the Nodes engine (2026-11-17, sites.py in the run folder)
+The code around each Nodes patch site, searched for in Arc (same bytes):
+| Nodes site | hook | Arc |
+|---|---|---|
+| 36680 (0x8F48) | e_blit (the copy, IX = object) | 0xD4AF, 24 bytes identical |
+| 36851 (0x8FF3) | e_attr_enter | 0xD55A |
+| 36889 (0x9019) | e_attr (the store) | 0xD580 |
+| 31996 (0x7CFC) | e_random | 0xC355 |
+| 33946 (0x849A) | e_new2 | 0xAA3F |
+| 39125 (0x98D5) | e_irq_out | 0xDDEE |
+| 33766, 38127, 41596 | e_new1, e_over, e_tele | short patterns, several places (0xA985, 0xC112): to settle by reading |
+| 34268, 36898, 39083, 40048 | e_room, e_attr_row, e_irq_in, e_player | no byte match: the code changed, find by role |
+About 15% of Nodes' code (0x7000-0xB200, 16-byte windows) is in Arc unchanged. So: the same design, a port of
+nexclash/nodes_of_yesod.py and its .asm with Arc's addresses, seven sites to locate by reading; not a new engine design.
+
 ## How the recordings were made (and what that leaves open)
 - The archive snapshot is at the control menu and the game starts on the surface. No scripted input took the player
   down: every key at every position, the hatch stood on and jumped on, 400,000 frames of random keys.
