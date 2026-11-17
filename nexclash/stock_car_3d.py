@@ -1,4 +1,4 @@
-"""3D Stock Car Championship (Firebird Software, 1988, 48K) engine 'stock_car_3d'. Additive module:
+"""3D Stock Car Championship (Ace Software / Firebird, 1988, 48K) engine 'stock_car_3d'. Additive module:
 reachable only through is_stock_car_3d().
 
 Game facts (survey of the reference snapshot and a scripted race; details in
@@ -15,7 +15,8 @@ games/3d_stock_car_championship.md):
   fences and with other cars' pixels), and a probe along a line at 0xD1A2. So every pixel write stays.
 Hooks (asm/stock_car_3d_hooks.asm, alt ROM image 1, stateless): the overlay of docs/techniques
 patch.xor-overlay-keep-ula - the game draws its cars as before; the six colour writes are removed
-(no clash) and one sprite per car, set at the frame wait, covers the car's ink in the car's colour.
+(no clash) and one sprite per car, set when the draw routine has settled each car's move, covers the car's ink
+in the car's colour. Options, each its own build (auto): painted cars, engine sound, painted circuits (2MB).
 """
 import collections
 import json
@@ -288,19 +289,18 @@ def backdrops_():
 class StockCar3dPatch:
     name = '3D Stock Car Championship cars -> hardware sprites over the game\'s own (altrom, stateless hooks)'
 
-    def __init__(self, prof=None, rom_code=None, sound=None, backdrops=None, painted=None):
+    def __init__(self, prof=None, rom_code=None, sound=False, backdrops=False, painted=False):
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
         code = bytearray(rom_code or bytes.fromhex(h['rom']))
-        self.engine_sound = os.environ.get('NEXCLASH_STOCK_CAR_SOUND', '1') != '0' if sound is None else bool(sound)
+        self.engine_sound = bool(sound)
         code[self.syms['engines'] - ROM_ORG] = int(self.engine_sound)      # the "engine sound for every car" option
         self.rom_code = bytes(code)
         # The painted circuits need a 2MB Next. Without them the build is the game on a 1MB one: cars as sprites only.
-        self.with_backdrops = (os.environ.get('NEXCLASH_STOCK_CAR_BACKDROPS', '1') != '0' if backdrops is None
-                               else bool(backdrops))
+        self.with_backdrops = bool(backdrops)
         # The cars: painted ("Enhanced colours"), or the game's own shapes in the game's own four colours
-        self.painted = os.environ.get('NEXCLASH_STOCK_CAR_PAINTED', '1') != '0' if painted is None else bool(painted)
+        self.painted = bool(painted)
         self.stub_extra = bytes.fromhex(h['setup'])
         self.setup_call = 0xD000
         self.hook_page_data = b''
@@ -680,7 +680,7 @@ def event(patch, kind, get, R, ns, alt, Sim, shadow, start=None):
             f.append(('NEXTREG the picture hooks have no business with', ['%02X' % r for r in odd]))
         if any(ns.sprite(i) for i in range(4)) and kind == 'cls':
             f.append(('sprite visible after the screen clear',))
-        if kind == 'cls' and patch.engine_sound is not None:
+        if kind == 'cls':
             loud = [(c, r) for c in (0xFF, 0xFE) for r in (8, 9, 10) if ns.ay[c].get(r, 0)]
             if loud:
                 f.append(('sound left on after the screen clear', loud))
@@ -1074,7 +1074,7 @@ def auto(a, z80, name, out, say):
     import hashlib
     from . import z80tonex as zt, rzx as RZ
     from .nextboot import check
-    for option, value in (('publisher', 'Ace Software, 1988'), ('fix_label', 'Colour'), ('colours_label', 'Backgrounds')):
+    for option, value in (('publisher', 'Firebird, 1988'), ('fix_label', 'Colour'), ('colours_label', 'Backgrounds')):
         if not getattr(a, option, None):               # only what is unset: an override on the command line stays
             setattr(a, option, value)
     say('Game      : %s' % name)

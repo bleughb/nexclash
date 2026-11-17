@@ -1,4 +1,4 @@
-# 3D Stock Car Championship (Ace Software, 1988) - engine `stock_car_3d`
+# 3D Stock Car Championship (Ace Software / Firebird, 1988) - engine `stock_car_3d`
 
 48K. Code: nexclash/stock_car_3d.py, asm/stock_car_3d_hooks.asm, docs/profiles/3d_stock_car_championship.json
 (after any .asm edit: `python tools/asm2profile.py 3d_stock_car_championship`), art in
@@ -11,10 +11,12 @@ by signature at 0xC55A. Reference: 3d_stock_car_championship/3d_stock_car_champi
 | Output | MD5 | Status |
 |---|---|---|
 | 3d_stock_car_championship.nex (plain, tail 0x5B00) | 7ffdcd3ec8660074a1fcc697d521cfe7 | boot sim OK |
-| 3d_stock_car_championship_sprites.nex (cars as sprites; fits 1MB) | 4d16981a0587119774d62e4dc62cfafa | RZX IDENTICAL, unit tests PASS; hardware untested |
-| 3d_stock_car_championship_engines.nex (toggle "Engines") | 2e2cb48e32abe5e55e19e77214a25408 | unit tests PASS; hardware untested |
-| 3d_stock_car_championship_painted.nex (25 painted circuits + menu; needs 2MB) | depends on the art | unit tests PASS; hardware untested |
-| 3d_stock_car_championship_everything.nex (both: the build the RZX is verified on) | depends on the art | RZX IDENTICAL |
+| 3d_stock_car_championship_sprites.nex (base: the game's own car shapes and colours as sprites; 1MB) | 6edc58d59de04c69261df37391ec7fcb | RZX IDENTICAL, unit tests PASS; hardware: plays fine (owner, 2026-11-17) |
+| ..._engines.nex (toggle "Engines") | 3de0a63ac436f98d8a6304ddc8893f2b | unit tests PASS; hardware untested |
+| ..._painted.nex (toggle "Enhanced colours": the painted cars) | depends on the art | unit tests PASS; hardware untested |
+| ..._backgrounds.nex (option "Backgrounds": 25 painted circuits + menu; needs 2MB) | depends on the art | unit tests PASS; hardware untested |
+| ..._painted_backgrounds.nex, ..._engines_backgrounds.nex (a toggle with Backgrounds) | depend on the art | boot sim OK |
+| ..._everything.nex (all three: the other build the RZX is verified on) | depends on the art | RZX IDENTICAL |
 
 ## Jon's decisions (2026-11-16)
 - The four cars become painted 4-bit sprites (one livery per car, by the game's ink), drawn OVER the game's own
@@ -24,6 +26,8 @@ by signature at 0xC55A. Reference: 3d_stock_car_championship/3d_stock_car_champi
 - Engine sound for every car on the Next's sound chips is a toggle, off by default. The game's own beeper
   sound (car 1 only) is untouched.
 - Cars only is the base build (1MB Next). The pictures are an option that needs a 2MB Next.
+- 2026-11-17: the base keeps the game's own car shapes and colours; the painted cars became a toggle
+  ("Enhanced colours"), so any Next is offered them. Menu names: main line "Colour", pictures "Backgrounds".
 - "Smoother movement" was dropped: the game already moves and draws every frame.
 
 ## Patch design
@@ -116,12 +120,12 @@ pixels on a display).
 - The recording is one scripted race on circuit 1 (no human player, four cars). Circuits 2-25 and the text
   screens are covered by unit tests and by emulator runs (OverSpec: all 25 circuits to FINAL POSITIONS), not
   by a recording. A human recording across several circuits, and one with fewer than four cars, are owed.
-- The 2MB option cannot be packaged by this repo's nexclash/nxc.py (no SET3): `nexclash.py patch` gives the
-  cars-only patch with the Engines toggle; the full .nxc is made with jattree/nxc's tools/nxc.py
-  (`--colours Enhanced=..._painted.nex`). The firmware loader refuses a SET3 together with a toggle.
+- Packaging: `nexclash.py patch` makes the whole .nxc since nexclash/nxc.py was re-vendored (SET3): Backgrounds
+  as the option offered only on a 2MB Next, Enhanced colours and Engines as toggles on any.
 - Engine sound has only been measured (60 Hz ticking over, rising with speed), not judged by ear; no stereo;
   it does not follow the game's own SOUND OFF setting.
-- Hardware untested. Hook timing not measured.
+- Hardware: the owner played it on a real Next, 2026-11-17: played fine (which options were on was not
+  noted, so the checklist below is not ticked item by item). Hook timing not measured.
 - Colour sheets / recolour (PLAYBOOK 5) are not provided: the art is edited as assets/.../cars.png (layout in
   cars_layout.json) and the circuit pictures.
 
@@ -143,8 +147,8 @@ pixels on a display).
   address distinguishes them without any state.
 - [local: this engine sets it in auto(); raised in the pull request] a build that adds banks above 47 must say so in
   .nex header byte 8, which the converter leaves at 0.
-- [local: packaging gap, raised with the maintainer in the contribution note] this repo's packager cannot make an
-  option that needs more memory; the full .nxc is made with jattree/nxc's tool.
+- [local: closed in this pull request, nexclash/nxc.py re-vendored] this repo's packager could not make an
+  option that needs more memory (SET3); the re-vendored one does, with toggles beside it.
 - [card patch.iff-safe-read §Use] `show` first trusted one LD A,I; review caught it, hooklib.iff_audit now says twice.
 - [local: turbosound after setup] the loader clears NR 0x08 bit 1 after the setup stub; a hook that needs the
   second chip must set it itself.
@@ -160,5 +164,5 @@ pixels on a display).
 - scratch: [local: they build against a private emulator] measuring harnesses kept outside the repo.
 
 ## Next session
-Stage 3 done in software. Next: hardware run with the checklist above; a human recording over several
-circuits; tell the owner whether Engines sounds right; decide on SET3 in nexclash/nxc.py.
+Stage 3 done in software; played fine on a real Next (owner, 2026-11-17). Next: a human recording over
+several circuits; the checklist item by item with each option on; whether Engines sounds right.
