@@ -42,7 +42,7 @@ Boot and loading screen; the music on the menu and between levels; keys, Kempsto
 - [local: start-up flag] The stamp's ROM path check warns that the game reads 5B5C (the 128K paging flag that turns the music on) before writing it, a printer buffer byte the .nex leaves as NEXLOAD wrote it; the review run's real loader showed 0x10 there in play in every mode, so no keep_printer_buffer. The default runs the Next's own ROM3 (no alt ROM): 5 to 10 ROM bytes it uses differ from the recording's 128K ROM (0x0002-0x0013, 0x004B, 0x3882); lockstep in JNext showed no game difference.
 - [local: debt tick] The picture takes over a frame in one nest: without hlib_debt_tick a whole frame of debt was lost (one wrap allowed), and the run was 36% slow. Found by timing the hook's parts, not by reasoning.
 - [local: no clash] A monochrome play area needs no hooks; the build is the conversion, and its proof is the boot check plus lockstep runs against the original. R has no hook to be compared at, and the notes say so.
-- [local: the nxc repo's make_nfo is outside this repo] tools/make_nfo.py there always writes the clash-fix paragraph; a game with no clash needs it reworded by hand. Noted in the run's NOTES.md, not changed here.
+- [local: the nxc repo's make_nfo is outside this repo] jattree/nxc/tools/make_nfo.py always writes the clash-fix paragraph; a game with no clash needs it reworded by hand. Noted in the run's NOTES.md, not changed here.
 
 ## Technique use
 - verify.update-locked-pace: used: three seeds at the player's update with input after the read.

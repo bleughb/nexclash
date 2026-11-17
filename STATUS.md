@@ -3,7 +3,7 @@
 One row per game, generated from the game's evidence record (docs/records/<game>.json, field
 "status"): edit the record, then `python -m nexclash.records views`. Details, decisions and
 checklists: games/<game>.md (named like the game's folder in the private repo; shared TID engine
-facts: games/tid_engine.md). MD5s: docs/VERIFICATION.md.
+facts: games/tid_engine.md). MD5s: the records; docs/VERIFICATION.md lists them (generated).
 
 <!-- generated from docs/records by `python -m nexclash.records views`: do not edit by hand -->
 | Game | Engine (file) | Sprite build | Software | Hardware | Next |

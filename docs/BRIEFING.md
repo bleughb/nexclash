@@ -60,7 +60,7 @@ Layers - never mix their facts:
    (`git clone --depth 1 -b 30205` worked from a cloud session 2026-10-21; it was blocked before):
    one branch per core version (30205 = 3.02.05), CPU in cores/zxnext/src/cpu/t80n/ (t80n_mcode.vhd
    decode + T-states, t80n.vhd Z80N execution + flags). Dean's core may be newer - note the version.
-   Register reference: tbblue docs/extra-hw/io-port-system/registers.txt (nextreg list); in the
+   Register reference: tbblue/docs/extra-hw/io-port-system/registers.txt (nextreg list); in the
    official repo cores/zxnext/nextreg.txt (fetch it alone: `git clone --depth 1 -b 30205
    --filter=blob:none --sparse <repo>` then `git sparse-checkout set --no-cone
    /cores/zxnext/nextreg.txt`, 2026-10-22). Registers changed after core 3.01.05 (guide r3's last)

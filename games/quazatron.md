@@ -224,7 +224,7 @@ ends. Neither asks for a value.
   v1.1 byte for byte, and v1.2's iffq (session 8) already reads LD A,I again only after an off, so #112's qline /
   mvtick change is superseded, not merged. Pinned sjasmplus output IDENTICAL to the profile.
 - Builds: the 17 outputs equal the clone's session 10 builds, and the published .nxc (jattree/nxc ea2a22f) applied
-  with nexclash-patch's tools/nxc.py --bare gives the same .nex for all 16 option combinations (Colour, Smooth
+  with nexclash-patch/tools/nxc.py --bare gives the same .nex for all 16 option combinations (Colour, Smooth
   scrolling, Centred view, Space also fires).
 - Proof, session 10's matrix (negs10.py) on this checkout: 43 replays, game state IDENTICAL in all; 88,174,592 canvas
   pixels, 114,583 groups, 99,689 frames locked, 8,664 clock cases, 34,281 filter frames, 632,321 depth pixels;
