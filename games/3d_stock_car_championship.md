@@ -141,7 +141,8 @@ pixels on a display).
   a refused move; set it after the commit, from what the game drew from.
 - [local: a caller tells the screens apart] one clear routine serves text screens and the track; its return
   address distinguishes them without any state.
-- [local: SET3 header] a build that adds banks above 47 must set .nex header byte 8; z80tonex writes 0.
+- [local: this engine sets it in auto(); raised in the pull request] a build that adds banks above 47 must say so in
+  .nex header byte 8, which the converter leaves at 0.
 - [local: packaging gap, raised with the maintainer in the contribution note] this repo's packager cannot make an
   option that needs more memory; the full .nxc is made with jattree/nxc's tool.
 - [card patch.iff-safe-read §Use] `show` first trusted one LD A,I; review caught it, hooklib.iff_audit now says twice.
