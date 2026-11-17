@@ -434,6 +434,7 @@ STACK_LO, STACK_HI = STATE2_HI, 0x5BB4       # the game's stack sits in the prin
 ROOMV = 23479
 PEND = {0xAB6E, 0xAB9F}             # the room's colours and picture go to the screen: the next copy sees bare scenery
 RND2NEXT = 0xC1CF
+NEGATIVE_RZX = 'arc_u1.rzx'          # the broken builds run on the recording with the beam, the appear effect and three enemy kinds
 STARS = 45391
 
 
@@ -644,6 +645,8 @@ class _P(_O):
             return s.ns.state[i]
         if 0x8000 <= a < 0xA000 and s.ns.nr[0x54] == SHADOW_PAGE:
             return s.ns.shadow[a - 0x8000]
+        if 0x5800 <= a < 0x5AA0 and s.ns.shadow[a - 0x5800]:
+            return s.get(0xF900 + a - 0x5800) & 0x7F    # the build never painted this cell: its screen holds the room's own colour
         v = s.psite.get(a)
         if v is not None:
             return v
@@ -1033,11 +1036,16 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
         fl, o = event(patch, pc, M.__getitem__, list(R), ns, alt, psite, Sim, c)
         for k in fl:
             fail('%s: %s' % (kind, k[0] if isinstance(k, tuple) else k), k[1:] if isinstance(k, tuple) else ())
-        if kind in ('attribute', 'attribute_enter', 'attribute_row', 'random', 'random2', 'beam', 'player', 'irq_in', 'irq_out'):
+        if kind == 'attribute':
+            if ns.shadow[R[6] * 256 + R[7] - 0x5800] != R[0]:
+                fail('the painted ink is not in the shadow page', (hex(R[6] * 256 + R[7]), R[0]))
+        elif kind in ('attribute_enter', 'attribute_row', 'random', 'random2', 'beam', 'player', 'irq_in', 'irq_out'):
             pass
         elif kind != 'blit':
             if ns.visible():
                 fail('%s leaves sprites on' % kind, (len(ns.visible()),))
+            if any(ns.shadow[:768]):
+                fail('%s leaves painted ink in the shadow page' % kind)
             box['clean'] = None
             box['pend'] = True
         else:
@@ -1190,6 +1198,338 @@ def _cat(patch):
 # ---------------------------------------------------------------------------------------------
 
 
+def plot_model(mem, g, info, x, y, neg_x, mirror, bottom):
+    """The figure's pixels as the game shows them -> lines. x, y as in the record; neg_x = bit 7 of +0."""
+    w, h, c, bw = info
+    X = x - 256 if neg_x else x
+    Y = y - 256 if y + h > 255 else y
+    lines = [0] * 192
+    for j, v in enumerate(bits_of(mem, g, bw, h)):
+        yy = Y + j
+        if not 0 <= yy <= bottom:
+            continue
+        if mirror:
+            v = int('{:0{}b}'.format(v, bw * 8)[::-1], 2)
+        sh = 256 - bw * 8 - X
+        o = (v << sh) if sh >= 0 else (v >> -sh)
+        lines[yy] = o & FULL
+    return lines
+
+
+def unit_tests(patch, states, neg=None):
+    c = collections.Counter()
+    alt = _alt(patch)
+    Sim = _rw()
+    blits = [s for s in states if s[0] == 'blit']
+    if not blits:
+        c['no captured blit state!'] += 1
+        return c, []
+    _, R0, mem0, _ns = blits[0]
+    cat = _cat(patch)
+    psite = {}
+    for a, old, new in patch.sites:
+        if a not in STORES or a in SITES_ORIG:
+            for k, v in enumerate(new):
+                psite[a + k] = v
+    fails = collections.Counter()
+    ns = NextState(patch)
+    ix = 0xFC20
+    R = list(R0)
+    R[8], R[9] = ix >> 8, ix & 255
+    for g, info in sorted(cat.items()):
+        w, h, col, bw = info
+        cases = [(40, 40, 0, 0), (40, 40, 0, 1), (0, 0, 0, 0), (250, 100, 0, 0), (250, 100, 0, 1), (250, 100, 1, 0), (250, 100, 1, 1),
+                 (100, 256 - max(1, h // 2), 0, 0), (100, 256 - max(1, h // 2), 0, 1), (100, 160, 0, 0), (225, 150, 0, 1)]
+        for x, y, nx, mir in cases:
+            for bot in (PLAY_LINES - 1,):
+                m = bytearray(mem0)
+                for o in range(NOBJ):
+                    m[OBJ0 + o * 32] = 0
+                m[ix] = 1 | (0x80 if nx else 0)
+                m[ix + 1] = x
+                m[ix + 2] = y
+                m[ix + 3] = w
+                m[ix + 4] = h
+                m[ix + 5] = col
+                m[ix + 7] = g & 255
+                m[ix + 8] = g >> 8
+                m[ix + 30] = 0x80 if mir else 0
+                m[ix + 14] = m[ix + 15] = 0
+                ns.state[HELD:HELD + 32] = bytes(32)
+                ns.state[SHOWN:SHOWN + 16] = bytes(16)
+                for s in range(128):
+                    ns.attr[s][3] = 0
+                p = _P(m.__getitem__, alt, psite, ns)
+                sim = _machine(Sim, p, list(R), ns, 'p')
+                sim.registers[24] = BLIT
+                if not _run(sim, EXIT[BLIT], 200000):
+                    fails['hook ran away!'] += 1
+                    continue
+                got = ns.compose()
+                want = plot_model(m, g, info, x, y, nx, mir, bot)
+                c['positions'] += 1
+                if got != want:
+                    fails['pixels (%04X x=%d y=%d nx=%d m=%d b=%d)!' % (g, x, y, nx, mir, bot)] += 1
+                if ns.nr[0x50] != 0xFF or ns.nr[0x54] != 4 or ns.nr[0x07] != 0:
+                    fails['slot or speed!'] += 1
+                line = line_of_colour(col)
+                for s in ns.visible():
+                    if ns.attr[s][2] >> 4 != line:
+                        fails['colour (%04X)!' % g] += 1
+                        break
+        c['graphics'] += 1
+    # a pattern upload the handler interrupts: its 7FFD writes put the ROM back at slot 0 in the middle of a tile; the tile goes again
+    g = sorted(cat)[20]
+    info = cat[g]
+    for hit in (1, 70, 127, 128, 200, 300, 500):
+        m = bytearray(mem0)
+        for o in range(NOBJ):
+            m[OBJ0 + o * 32] = 0
+        m[ix] = 1
+        m[ix + 1], m[ix + 2] = 40, 40
+        m[ix + 14] = m[ix + 15] = 0
+        m[ix + 7], m[ix + 8] = g & 255, g >> 8
+        m[ix + 30] = 0
+        ns.state[HELD:HELD + 32] = bytes(32)
+        ns.state[SHOWN:SHOWN + 16] = bytes(16)
+        for s_ in range(128):
+            ns.attr[s_][3] = 0
+        ns.pat[:] = bytes(16384)
+        out0 = ns.out
+        count = {'n': 0}
+
+        def out_hit(port, val, out0=out0, count=count, hit=hit):
+            if port & 0xFF == 0x5B:
+                count['n'] += 1
+                if count['n'] == hit:
+                    ns.nr[0x50] = 0xFF
+            out0(port, val)
+        ns.out = out_hit
+        p = _P(m.__getitem__, alt, psite, ns)
+        sim = _machine(Sim, p, list(R), ns, 'p')
+        sim.registers[24] = BLIT
+        ok = _run(sim, EXIT[BLIT], 200000)
+        ns.out = out0
+        c['interrupted uploads'] += 1
+        if not ok or ns.compose() != plot_model(m, g, info, 40, 40, 0, 0, 167):
+            fails['an interrupted upload left a wrong pattern (after byte %d)!' % hit] += 1
+    # a graphic not in the table: hidden, counted, never a wrong picture
+    m = bytearray(mem0)
+    m[ix] = 1
+    m[ix + 14] = m[ix + 15] = 0
+    m[ix + 7] = 0x34
+    m[ix + 8] = 0x12
+    ns.state[V_DROP] = ns.state[V_DROP + 1] = 0
+    p = _P(m.__getitem__, alt, psite, ns)
+    sim = _machine(Sim, p, list(R), ns, 'p')
+    sim.registers[24] = BLIT
+    _run(sim, EXIT[BLIT], 200000)
+    if ns.state[V_DROP] != 1 or ns.visible():
+        fails['unknown graphic not dropped!'] += 1
+    c['unknown graphic case'] += 1
+    # the object index for all 16 objects: sprites k*6
+    for k in range(NOBJ):
+        i = OBJ0 + k * 32
+        g = sorted(cat)[10]
+        info = cat[g]
+        m = bytearray(mem0)
+        for o in range(NOBJ):
+            m[OBJ0 + o * 32] = 0
+        m[i] = 1
+        m[i + 1] = 40
+        m[i + 2] = 40
+        m[i + 7] = g & 255
+        m[i + 8] = g >> 8
+        m[i + 30] = 0
+        m[i + 14] = m[i + 15] = 0
+        ns.state[SHOWN:SHOWN + 16] = bytes(16)
+        ns.state[HELD:HELD + 32] = bytes(32)
+        for s in range(128):
+            ns.attr[s][3] = 0
+        R2 = list(R0)
+        R2[8], R2[9] = i >> 8, i & 255
+        p = _P(m.__getitem__, alt, psite, ns)
+        sim = _machine(Sim, p, list(R2), ns, 'p')
+        sim.registers[24] = BLIT
+        _run(sim, EXIT[BLIT], 200000)
+        if not ns.visible() or min(ns.visible()) != k * 6:
+            fails['object %d sprites!' % k] += 1
+        c['objects'] += 1
+    # the shadow page: the paint's ink kept per cell, read by the beam and the random reads where the build's screen is bare, cleared when a room is drawn
+    cell = 0x5990
+    for ink, scr in ((0x46, 0x00), (0x00, 0x05), (0x00, 0x00), (0x43, 0x47)):
+        m = bytearray(mem0)
+        m[cell] = scr
+        ns.shadow[:768] = bytes(768)
+        ns.shadow[cell - 0x5800] = ink
+        want = (ink or scr) & 7
+        for site, regs in ((BEAM, {6: cell >> 8, 7: cell & 255}),):
+            R2 = list(R0)
+            for k, v in regs.items():
+                R2[k] = v
+            p = _P(m.__getitem__, alt, psite, ns)
+            sim = _machine(Sim, p, R2, ns, 'p')
+            sim.registers[24] = site
+            _run(sim, EXIT[site], 200000)
+            c['shadow reads'] += 1
+            if sim.registers[0] != want or bool(sim.registers[1] & 0x40) != (want == 0) or ns.nr[0x54] != 4:
+                fails['the beam does not read the painted ink (%02X over %02X)!' % (ink, scr)] += 1
+    m = bytearray(mem0)
+    ns.shadow[:768] = bytes(768)
+    R2 = list(R0)
+    R2[0], R2[6], R2[7] = 0x45, cell >> 8, cell & 255
+    p = _P(m.__getitem__, alt, psite, ns)
+    sim = _machine(Sim, p, R2, ns, 'p')
+    sim.registers[24] = ATTR
+    _run(sim, EXIT[ATTR], 200000)
+    c['shadow writes'] += 1
+    if ns.shadow[cell - 0x5800] != 0x45 or sum(1 for v in ns.shadow[:768] if v) != 1 or p.scrw:
+        fails['the paint hook does not keep the ink!'] += 1
+    for site in (ROOM, NEW1, NEW2, OVER, TELE):
+        ns.shadow[:768] = bytes([0x47]) * 768
+        p = _P(m.__getitem__, alt, psite, ns)
+        sim = _machine(Sim, p, list(R0), ns, 'p')
+        sim.registers[24] = site
+        _run(sim, EXIT[site], 200000)
+        c['shadow clears'] += 1
+        if any(ns.shadow[:768]) or ns.nr[0x54] != 4:
+            fails['%s does not clear the painted ink!' % KIND[site]] += 1
+    for k, v in fails.items():
+        c[k] = v
+    return c, sorted(fails)[:8]
+
+
+def _rom_patch(patch, off, new):
+    import copy
+    q = copy.copy(patch)
+    code = bytearray(patch.rom_code)
+    code[off:off + len(new)] = new
+    q.rom_code = bytes(code)
+    page = bytearray(patch.page)
+    page[ROM_ORG - 0x2000:ROM_ORG - 0x2000 + len(code)] = code
+    q.page = bytes(page)
+    return q
+
+
+def negative_patches(patch):
+    """Broken builds. Each must be detected on a real recording."""
+    import copy
+    out = {}
+    if patch.low is None:
+        patch.tables()
+    code = patch.rom_code
+    s = patch.syms
+
+    def at(sym, needle, extra=0):
+        return code.index(needle, s[sym] - ROM_ORG) + extra
+
+    def pages(fn):
+        q = copy.copy(patch)
+        q.pages = {pg: fn(d) for pg, d in patch.pages.items()}
+        return q
+
+    def shifted(d):
+        b = bytearray(d)
+        for r in range(128 // 8, len(d) // 8):
+            row = int.from_bytes(d[8 * r:8 * r + 8], 'big')
+            b[8 * r:8 * r + 8] = (row >> 4).to_bytes(8, 'big')
+        return bytes(b)
+    out['patterns shifted one pixel'] = pages(shifted)
+
+    def nib(d, m):
+        b = bytearray(d)
+        for i in range(128, len(b)):
+            b[i] = m.get(b[i] >> 4, b[i] >> 4) << 4 | m.get(b[i] & 15, b[i] & 15)
+        return bytes(b)
+    out['ink pixels shown as fill'] = pages(lambda d: nib(d, {i: FILL for i in (INK, *range(4, 16))}))
+    out['fill pixels shown as ink'] = pages(lambda d: nib(d, {FILL: INK}))
+    out['outline covers the figure'] = pages(lambda d: nib(d, {i: OUTLINE for i in (INK, *range(4, 16))}))
+    q = copy.copy(patch)
+    q.stores = {}
+    q.sites = [x for x in patch.sites if x[0] != ATTR]
+    out['the figure paint still writes'] = q
+    q = copy.copy(patch)
+    q.sites = [x for x in patch.sites if x[0] != BLIT]
+    out['the copy still writes, no sprites'] = q
+    k = code.index(bytes([0xE1]), s['e_blit'] - ROM_ORG)
+    out['e_blit loses HL'] = _rom_patch(patch, k, b'\x00')
+    k = code.index(bytes([0xCD, s['update'] & 255, s['update'] >> 8]), s['e_blit'] - ROM_ORG)
+    out['sprites never updated'] = _rom_patch(patch, k, bytes(3))
+    k = at('e_room', bytes([0xCD, s['hideall'] & 255, s['hideall'] >> 8]))
+    out['room redraw leaves sprites on'] = _rom_patch(patch, k, bytes(3))
+    k = at('e_over', bytes([0xCD, s['hideall'] & 255, s['hideall'] >> 8]))
+    out['game over leaves sprites on'] = _rom_patch(patch, k, bytes(3))
+    k = at('e_tele', bytes([0xCD, s['hideall'] & 255, s['hideall'] >> 8]))
+    out['teleport leaves sprites on'] = _rom_patch(patch, k, bytes(3))
+    k = at('show', bytes([0x11, 31, 0, 0x19, 0x22]))            # LD DE,31 / ADD HL,DE / LD (V_X),HL
+    out['x one column off'] = _rom_patch(patch, k, bytes([0x11, 33, 0]))
+    k = at('show', bytes([0x11, 31, 0, 0x19, 0x22]), 0)
+    k = code.index(bytes([0x11, 31, 0, 0x19, 0x22]), k + 1)
+    out['y one line off'] = _rom_patch(patch, k, bytes([0x11, 33, 0]))
+    k = at('show', bytes([0x3E, 8]))                             # mirror bit
+    out['mirror flag not set'] = _rom_patch(patch, k, bytes([0x3E, 0]))
+    k = code.index(bytes([0xED, 0xB3]))
+    out['patterns never sent'] = _rom_patch(patch, k, bytes(2))
+    k = at('upload', bytes([0xED, 0x91, 0x50, 0xFF]))
+    out['slot 0 not restored'] = _rom_patch(patch, k, bytes(4))
+    q = copy.copy(patch)
+    low = bytearray(patch.low)
+    k = s['ny_speed_out'] + 4
+    assert low[k:k + 3] == bytes.fromhex('ed9207')
+    low[k:k + 3] = bytes(3)
+    q.low = bytes(low)
+    out['speed not restored'] = q
+    out['R not restored'] = _rom_patch(patch, s['ny_r_out_set'] - ROM_ORG, bytes(2))
+    out['interrupts disabled'] = _rom_patch(patch, s['ny_r_run'] - ROM_ORG, b'\xF3')
+    # v1.6 pace windows: the blit's call of win_wait gone, its target computed as zero (win_wait lives in the low 8K)
+    k = at('e_blit', bytes([0x2A, V_WT0 & 255, V_WT0 >> 8]))     # LD HL,(V_WT0)
+    wait = code.index(bytes([0xCD, s['win_wait'] & 255, s['win_wait'] >> 8]), k)
+    out['pace window never waits'] = _rom_patch(patch, wait, bytes(3))
+    q = copy.copy(patch)
+    low = bytearray(patch.low)
+    k = s['blit_tgt'] + 3
+    low[k:k + 2] = bytes.fromhex('1600')        # LD D,A -> LD D,0: rows x columns gone, the target too short
+    q.low = bytes(low)
+    out['pace target too short'] = q
+    k = at('show', bytes([0xED, 0x92, 0x37]), 0)
+    k2 = code.rindex(bytes([0xB2]), 0, k)                        # OR D: palette line + mirror + x high
+    out['palette line dropped'] = _rom_patch(patch, k2 - 3, bytes([0x3E, 0, 0]))
+    q = copy.copy(patch)
+    q.low = patch.low[:T_INDEX] + bytes(T_FRAME - T_INDEX) + patch.low[T_FRAME:]
+    out['graphics table empty'] = q
+
+    # the shadow page of painted ink (the beam and the random reads see the original's screen colours through it)
+    def low_patch(sym, needle, new):
+        q = copy.copy(patch)
+        low = bytearray(patch.low)
+        k = low.index(needle, s[sym])
+        low[k:k + len(new)] = new
+        q.low = bytes(low)
+        return q
+    out['the paint\'s ink is not kept'] = low_patch('e_attr', bytes([0x70, 0xE1]), bytes([0x00]))        # LD (HL),B / POP HL
+    out['the beam reads the screen, not the painted ink'] = low_patch('e_beam', bytes([0xB7, 0x20]), bytes([0xAF]))   # OR A -> XOR A
+    k = code.index(bytes([0xED, 0xB0]), s['hideall'] - ROM_ORG)
+    out['a drawn room keeps the old paint'] = _rom_patch(patch, k, bytes(2))
+    out['live tiles read the wrong page'] = low_patch('dynload', bytes([0xED, 0x91, 0x54, 0x04, 0x1A]), bytes(4))     # NEXTREG 0x54,4 before the graphic's bytes
+
+    def noh(d):
+        b = bytearray(d)
+        b[0] = 0
+        return bytes(b)
+    out['pattern page without the handler byte'] = pages(noh)
+    return out
+
+
+def negative_real(patch, rzx_path, stop=1500, only=None):
+    out = []
+    for name, q in negative_patches(patch).items():
+        if only and name not in only:
+            continue
+        cc, _ = verify(q, rzx_path, stop=stop, scaled=name.startswith('pace'))   # v1.6: a wait shows only on the speed-true clock
+        out.append((name, {k: v for k, v in cc.items() if k.endswith('!')}))
+    return out
+
+
 def auto(a, z80, name, out, say):
     from . import z80tonex as zt
     say('Game      : %s' % name)
@@ -1203,15 +1543,28 @@ def auto(a, z80, name, out, say):
     zt.convert(z80, spr, TAIL_ADDR, True, quiet=True, patch=patch)
     say('Sprites   : %s  %s' % (os.path.basename(spr), md5(spr)))
     ok = True
+    states = []
     for r in list(a.rzx or []):
-        cc, ex = verify(patch, r, stop=getattr(a, 'quick', None))
+        cc, ex, st = verify(patch, r, stop=getattr(a, 'quick', None), collect=3)
+        states += st
         fails = {k: v for k, v in cc.items() if k.endswith('!')}
         ok = ok and not fails
-        say('Verify    : %s  %d frames, blit %d, room %d, new %d/%d, over %d, tele %d, %d screen checks, most sprites %d, %d graphics -> %s' % (
-            os.path.basename(r), cc['frames'], cc['blit'], cc['room'], cc['new1'], cc['new2'], cc['over'], cc['tele'], cc['screen checks'], cc['most sprites'], cc['graphics seen'],
-            'IDENTICAL' if not fails else 'FAILED %s' % fails))
+        say('Verify    : %s  %d frames, blit %d, room %d, new %d/%d, over %d, tele %d, beam %d, %d screen checks, most sprites %d, %d graphics -> %s' % (
+            os.path.basename(r), cc['frames'], cc['blit'], cc['room'], cc['new1'], cc['new2'], cc['over'], cc['tele'], cc['beam'], cc['screen checks'], cc['most sprites'],
+            cc['graphics seen'], 'IDENTICAL' if not fails else 'FAILED %s' % fails))
         if fails:
             for k, v in ex.items():
                 if k + '!' in cc or k == 'attrs':
                     say('            %s: %s' % (k, str(v)[:300]))
+    if states:
+        u, f = unit_tests(patch, states)
+        uf = {k: v for k, v in u.items() if k.endswith('!')}
+        ok = ok and not uf
+        say('Unit      : %s -> %s' % (', '.join('%s %d' % (k, v) for k, v in sorted(u.items()) if not k.endswith('!')), 'PASS' if not uf else 'FAIL %s' % str(uf)[:400]))
+    if a.rzx:
+        rec = next((r for r in a.rzx if os.path.basename(r) == NEGATIVE_RZX), list(a.rzx)[0])
+        nr = negative_real(patch, rec, stop=getattr(a, 'quick', None) or 2000)
+        miss = [n for n, k in nr if not k]
+        ok = ok and not miss
+        say('Negative  : %d broken builds on %s, %d detected%s' % (len(nr), os.path.basename(rec), len(nr) - len(miss), '' if not miss else '; NOT detected: %s' % ', '.join(miss)))
     return ok
