@@ -22,6 +22,11 @@ snapshot that goes down by itself; the three unreached CALL sites.
   map at attribute address + 0xA100 (0xF900..): bit 7 set or a value other than 0 / 0x47 leaves the cell alone.
 - Object record (IX): +0 flags (bit 0 active, 1 changed, 2 drawn, 7 mirrored), +1 x, +2 y, +3 / +4 size, +5 colour,
   +7 / +8 graphic, +14..+21 the last rectangle, +22.. its copy. Player at 0xFDE0, others at 0xFD60, 0xFD80, 0xFDC0.
+- Graphics shared with Nodes of Yesod (measured 2026-11-17, match.py in the run folder): of the 27 graphics the Nodes
+  engine lists from its reference snapshot, 21 are in Arc byte for byte, header (width, height, colour) included, as
+  one block at 0x7E73-0x86E7: Nodes 0xB757-0xBF65, the astronaut's walking (22 x 32) and somersault (30 x 29)
+  frames. The other six (0xBFDC, 0xC0AE, 0xC3EA, 0xC40F, 0xC59B, 0xC900) are not in Arc. So Nodes' patterns and its
+  painted Enhanced colours for the astronaut can be carried over by bitmap; Arc's enemies need their own.
 - Main loop 0xBAE8; 0xBC19 copies the scrolling surface strip (x 0-223, y 88-183) as a block.
 - Survey (4 recordings, 4,231 frames, no desync): screen writers 0xBC19, 0xD2EF (3 of 6 CALL sites reached; not
   reached 0xAC0D, 0xBBF8), 0xDC7F (HUD), 0xAAF1 (room draw), 0xC9F4 (1 of 2; not reached 0xBC6D), 0xBE79.
