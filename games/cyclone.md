@@ -230,7 +230,7 @@ and shadow at the map edges and with a cell hidden; negative control (ink / mask
   49.59 / 49.38 a second (main 49.72 / 49.67 / 49.47, original 49.81 / 49.65 / 49.46). Flicker 1000-1299: 0 out-of-step
   frames (main 11); one HUD attribute (row 10, column 30) blinks once (47 -> 00 -> 47): the game's own HUD redraw at 3.5
   MHz meeting a frame boundary at a different phase, not a figure.
-- The published Cyclone 1.1 (jattree/nxc, built with nexclash-patch tools/nxc.py --bare) measures as main: +16.67%
+- The published Cyclone 1.1 (jattree/nxc, built with nexclash-patch/tools/nxc.py --bare) measures as main: +16.67%
   over the same 220 lockstep updates (+17.5% over 600 unchecked).
 
 ## Lessons

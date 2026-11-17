@@ -183,7 +183,7 @@ back and the tail vanishes (choose_tail_addr refuses >0xC000 only for 128K; next
    (IY+0x13) bit 0 for a 5th menu item). make_nex.py --immortal = the test cheat as a player option.
 6. (to do) differential
    verification of the hooks (registers + memory), hardware checklist, move the prototype into
-   nexclash/trueno.py (graphics generated from the user's files, never stored in the repo).
+   a new nexclash module, trueno.py (graphics generated from the user's files, never stored in the repo).
 
 ## Heroes (contributor, 2026-10-13)
 - Three heroes, the player switches: the Captain, Crispin (small, blond; the only one who climbs

@@ -9,10 +9,15 @@ Index of every port and register: SpecNext Wiki "Board feature control"
 https://wiki.specnext.dev/Board_feature_control (one page per port/register, linked from there).
 The wiki says it is copied by hand from the core's spec. When wiki and spec differ, the spec
 wins: `nextreg.txt`, `ports.txt` and `changelog.md` in the core repo
-(GitLab SpectrumNext/ZX_Spectrum_Next_FPGA, cores/zxnext/). The sandbox cannot reach GitLab, so use
-the GitHub mirror of core 3.01.09 instead:
+(GitLab SpectrumNext/ZX_Spectrum_Next_FPGA, cores/zxnext/). GitLab has one branch per core (a
+sparse clone of `-b 30205` worked 2026-10-21, BRIEFING sources); if it is blocked, the fallback is
+the older GitHub mirror of core 3.01.09:
 `git clone --depth 1 https://github.com/avlixa/zx_spectrum_next_03.01.09` (files nextreg.txt,
 ports.txt, src/zxnext.vhd). Dean's core may be newer; record the core version with any new fact.
+Core behind each source: guide r3 = 3.01.05; nextreg.txt / ports.txt here = 3.01.09; Z80N model =
+3.02.05 VHDL; board measurements (TECHNIQUES 1.0) = 3.02.00; zxnDDMA = 3.03.00+ (DDMA.md; its
+guide's timings are from 3.02.21). nexclash declares NO minimum core: a build that needs a
+feature newer than 3.01.05 must gate on the core version and keep a fallback.
 There is also a searchable view of the spec at https://explorer.specnext.dev/ (under development).
 Wiki pages are read with WebFetch (search first: the fetch tool only opens URLs seen in results).
 
@@ -72,7 +77,7 @@ timing (github.com/varmfskii/zxnext_code, zx_next_notes/copper). Researched 2026
 | $09 bit 4 | lockstep $34 with 0x303B | off by default: $34 and 0x303B are separate sprite indices |
 | $75-$79 | $35-$39 with sprite number post-increment | each write increments (nextreg.txt); `NEXTREG $78,0` per sprite = hide a run |
 | $37 bit 0 / $39 bits 7:6 (relative sprites) | anchor + composite / unified relatives | relatives: 8-bit X/Y offsets, visibility ANDed with the anchor, optional pattern / palette offset from the anchor; unified = mirror/rotate/scale as one image |
-| port 0x6B | zxnDMA (core 3.01.02+; 0x0B = Zilog DMA) | WR0-WR6 program by OTIR; WR1/WR2 timing byte = cycle length 2..4; WR4 bits 6:5 = 01 continuous, 10 burst; WR6 $CF load, $87 enable, $83 disable, $D3 continue (repeat from current pointers), $C3 reset, $BB + mask / $BF / $A7 read status; WR1 %00100100 = port A fixed memory (fill). Holds the bus: pulse interrupts are lost |
+| port 0x6B | zxnDMA (core 3.01.02+; zxnDDMA features 3.03.00+; 0x0B = Zilog DMA) | WR0-WR6 program by OTIR; WR1/WR2 timing byte = cycle length 2..4; WR4 bits 6:5 = 01 continuous, 10 burst; WR6 $CF load, $87 enable, $83 disable, $D3 continue (repeat from current pointers), $C3 reset, $BB + mask / $BF / $A7 read status; WR1 %00100100 = port A fixed memory (fill). Holds the bus: pulse interrupts are lost. **zxnDDMA extensions (core 3.03.00+, port $6B only, ignored on $0B / older cores):** $D7 / $DB physical address bits 23:16 (port A / B), $DF mode flags (bit 0 physical 22-bit, 1 2D, 2 transparent, 3 fill, 4 Layer 2 X,Y, 5 hidden screen), $E3 / $E7 / $EB / $EF row length / rows / source stride / dest stride, $F3 transparent colour, $F7 fill value. Physical mode does not reach BRAM banks 5 and 7. Full notes: DDMA.md |
 | $60 / $63 | copper data upload (byte / whole instruction) | $63 commits only after both bytes: no half instruction runs |
 | $61 / $62 | copper upload index (11 bits) + mode $62 bits 7:6 | 00 stop, 01 reset+run, 10 resume, 11 reset+run + restart each frame; same mode again = index change only |
 | copper WAIT / MOVE | `1HHHHHHV VVVVVVVV` / `0RRRRRRR DDDDDDDD`, HALT = $FFFF, NOOP = 0 | MOVE reaches NextRegs 0x01-0x7F only; WAIT H 0-55 in 8-pixel steps (max usable 52-55 by timing); stored big-endian |

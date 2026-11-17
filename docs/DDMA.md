@@ -65,7 +65,7 @@ observation, not a guaranteed rate or a per-hook cost. Do not substitute it into
 
 ## Timing evidence and limits
 
-The guide's compare example reports an issue 5, core 3.02.21, CPU 28 MHz: 32 rectangles of
+The guide's compare example reports an issue 5, core 3.02.21 (not the 3.03.00 release), CPU 28 MHz: 32 rectangles of
 16x16, 320x256 Layer 2. Its stated elapsed times: LDIR 7.2 ms, CPU transparent 15.6 ms,
 ordinary DMA per column 8.2 ms, 2D opaque 2.1 ms, 2D transparent 2.1 ms. These are the guide's
 measurements of that particular workload, not independent reproduction or 3.03.00 measurements;

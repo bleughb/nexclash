@@ -147,7 +147,7 @@ def main():
                 for f in re.findall(r'--[a-z][a-z-]*', m.group(1)):
                     if f not in st:
                         sink['unknown selftest.py flag'].append('%s  %s' % (loc, f))
-            for m in re.finditer(r'python3? -m nexclash\.([a-z_0-9]+)', line):
+            for m in re.finditer(r'python3? -m nexclash\.([A-Za-z_0-9]+)', line):
                 if m.group(1) not in mods:
                     sink['python -m: no such module'].append('%s  %s' % (loc, m.group(1)))
             for m in re.finditer(r'\b([a-z_0-9]+)\.([a-z_][A-Za-z_0-9]*)\(', line):
@@ -165,6 +165,8 @@ def main():
                     sink['BRIEFING C2 item not found'].append('%s  #%s' % (loc, m.group(1)))
             for m in re.finditer(r'(?<![\w/.])((?:nexclash|docs|asm|games|tools|\.claude|\.github)/[\w./-]+\.(?:py|md|asm|json|yml|txt|bat))', line):
                 p = m.group(1).rstrip('.')
+                if p.startswith('docs/profiles/') and p.endswith('_colours.json'):
+                    continue                    # a game's optional painted-colour file: absent until painted
                 if '<' not in p and '*' not in p and p not in SIBLING and not os.path.exists(p):
                     warn['path does not exist'].append('%s  %s' % (loc, p))
     for k, v in engine_contract().items():

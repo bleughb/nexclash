@@ -2,7 +2,7 @@
 
 Historical SkoolKit RZX checks compared same-state registers except R/T, non-screen RAM and
 pixels; startup restored registers/RAM. Current scopes and reproducible checksums live in
-docs/records (`python selftest.py`).
+docs/records (`python selftest.py`); the checksum list below is generated from them.
 
 | Game | Recording | Plots | Erases | Other | Result |
 |---|---|---|---|---|---|

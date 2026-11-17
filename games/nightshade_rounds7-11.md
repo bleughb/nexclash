@@ -4,7 +4,7 @@
 - runs/nightshade/paint_v1/: painting sheets of b8c3754c's design. They are 1:1 PNGs, every graphic once in its
   stored orientation (the game's flip makes the mirrored facings), on (150,150,175), with swatch rows and layout JSONs:
   hero.png (22 graphics), items_bosses.png (16), monsters_effects.png (50). The hero's tunic is a magenta health
-  marker. README.md gives the rules and the palette per group. tools/export.py makes the sheets; tools/import.py
+  marker. README.md gives the rules and the palette per group. The package's own export.py makes the sheets; its import.py
   reads them back. The import snaps to swatches within 40 RGB, keeps silhouettes, keeps the health marker, gives one
   colour a code per group and reports overflow. --install puts the source in the clone and keeps the current nxc
   as prev.
