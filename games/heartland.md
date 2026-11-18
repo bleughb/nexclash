@@ -23,6 +23,22 @@ Open: the snapshot is a BASIC program stopped at PAUSE 0 (below); a human record
 | Verdict | feasible: 8 figures at most (4 x 32x34 = 6 sprites each, 4 x 24x16 = 2 each, 32 sprites), plot and restore calls replaced, the attribute OR dropped, the copy left alone |
 | Unknown | whether anything reads the buffer under a figure (collision); the foreground on a layer above the sprites (Layer 2, priority L S U) or clipped out of the patterns; pace |
 
+Stage 2 facts (2026-11-17, same state):
+- Position: +9 = x pixel, +10 = line; 0xA703 gives the buffer address 0xC000 + (line * 256 + x) / 8, so a figure sits on
+  a byte boundary and its frame carries the fine offset (0xAA96: the frame comes from the record's sequence at +1 and
+  x / 2). The buffer (32 bytes a line, 112 or 144 lines) goes to the screen from line 48 (0x40C0); attributes
+  0xD200 -> 0xD440 (0xA5E8, the clean copy each step) -> 0x58C0 (0xA615).
+- Large frames: table 0xE10C, 49 words (0-7 empty): 8-31 are 4 bytes x 33 lines (the player and the walkers, 0xE1BA up),
+  32-35 other sizes, 36-48 3 bytes x 33. The plotters' width and row skip are self-modified operands (0xA7D4-0xA7DF).
+- Masks are not data: 0xA714 builds one from the frame (the frame ORed with itself moved one pixel each way, inverted)
+  into the record's own mask buffer (+5), every time the frame changes (0xAAC4, also 0xA097, 0xADB0, 0xB735).
+- Small frames: table 0xE16E, 2 bytes x 16 lines, 32 bytes apart (0xF590 up; 20-23 and 38-39 empty); 0xA989 shifts one
+  by x AND 7 into 0xD680 and 0xA714 builds its mask at 0xD708.
+- The fourth large record can show the shift buffer itself (graphic 0xD680, mask 0xD708): a live graphic, not a table
+  frame, so the hook needs a live upload path as Arc of Yesod's dynload.
+- Callers: plot 0xA558 / 0xA55D (large), 0xB74E (small); restore 0xA512 / 0xA517, 0xB76F; attribute OR 0xA790 from
+  0xA561 only.
+
 Preview check: with the six entry points returned at once (0xA523, 0xA527, 0xA4F2, 0xA4F6, 0xB702, 0xB75A) the room draws
 complete without figures, and the figures are exactly the difference to the original screen.
 
