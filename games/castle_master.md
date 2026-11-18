@@ -5,9 +5,9 @@ Stage: 1 (design)            State: intake 2026-11-19; the design question is wi
 Inputs: C:\1NEXT\castle_master_work\castle_master.z80 (extracted from the RZX), C:\dev\castlemaster\castle.rzx,
 C:\dev\castlemaster\Castlemaster1.tap    Branch: add-castle-master    Commit: (this file's commit)
 Checks: survey --stop 15000 (castle_master_survey/), survey full run (survey_full/), scan of the view buffer (3,000 frames)
-Pending user answers: approval of "Proposed design" + its revision (a') / (c'), tween route A or B, and the
-colour palette for indices 1-16
-Start with: the user's answers; then experiments E1-E4 (Feasibility, Proposed design)
+Pending user answers: final design approval (route A first, agreed 2026-11-19, if E5 passes); buffer-reader
+option (i) / (ii); the colour palette for indices 1-16
+Start with: E5 (ISR redirect, Feasibility); then E1-E4
 Read: PLAYBOOK stage 1 + 3d; cards detect.pacing-structure, detect.routine-removal, patch.hybrid-display-replacement
 Open: who maps a face's colour to its dither pattern (the colour source for a colour route); unreached CALL sites (Coverage)
 
@@ -151,9 +151,18 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   (a') the span hook goes in the filler (0x9696 path), so all four 0x9EA3 callers (0x8599, 0xA0A0, 0xB635,
   0xC539) are covered; its bounds follow the filler's real extent (to 0x6752), not the buffer's. 0x9F19 stays
   (it changes game variables: skip_859C 25 / 462 differ); only the 0xA38D copy's screen writes are replaced.
-  Buffer readers that are display code (printer 0xCAA2 / 0xCAFC, masked overlay 0xD134-0xD142, XOR marker
-  0xCF53-0xCF67, copies 0xB6C2 / 0xD1B1) need the 1-bit buffer: keep the original fill writing it as well
-  (dual write, simplest, costs the original span T) or move each to Layer 2 (faster, more hooks) - decide in E4.
+  Scope (user, 2026-11-19): "display-only" holds for the paths the recording takes; branches it never takes and
+  what the raster writes into the copier's code page 0xA3 are unchecked (taint notes above) - not "measured" in
+  general.
+  Buffer readers (printer 0xCAA2 / 0xCAFC, masked overlay 0xD134-0xD142, XOR marker 0xCF53-0xCF67, copies 0xB6C2 /
+  0xD1B1): the text, marker and overlay are drawn INTO the buffer, so keeping the buffer alone does not show them
+  once its copy to the screen is replaced (correction by the user; the earlier "dual write" option was wrong).
+  Options: (i) move each to Layer 2 (more hooks); (ii) user's idea, untested: leave the faces out of the buffer,
+  keep the buffer's copy to the ULA, ULA over Layer 2 with the view's paper see-through - overlays stay visible
+  through every view, no extra hooks. To work out for (ii): the per-area paper colours (one transparent colour,
+  NR 0x14, vs a ULA palette entry shared with the panel), the ISR's view-attribute flash writes (0x5884, 24 x 14),
+  ink pixels the faces used to supply (none left in the buffer: the view is paper + overlays). E4 checks which
+  readers are active in play.
   (c') tween source, two routes (the user asked about B; not decided): A = the sandboxed original renderer
   (exact look, original speed per view x 28 MHz); B = a Next-native renderer (own camera, pages, reads the world
   data; the raster is display-only, so the game's own update + projection still runs for the pick and the
@@ -161,6 +170,35 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   must match the original's look (faces, clipping, sort order) closely enough that the switch from tween to the
   game's own view does not jump. E2 becomes: A - sandbox at an unchanged camera = the game's frame byte for byte;
   B - native view at an update's camera vs the game's own frame, polygon colour per pixel, with a mismatch bound.
+  Corrections (user, 2026-11-19): route A's untested risk: while the original renderer runs in the sandbox for
+  100 ms or more, the game's ISR must still run on the REAL memory every interrupt, or the real-time clocks
+  (29559, 27407 / 27408 / 27411) slow and gameplay changes; holding it off is not an option, redirecting needs its
+  own experiment (E5). Route B's jump risk is avoidable: since the raster is display-only (recorded paths), the
+  native renderer can draw every view including each update's final one - no switch, no jump; what remains is a
+  pixel-level difference between what is shown and what the crosshair pick (the game's own projection) hits.
+  Decision (user, 2026-11-19): route A first is reasonable on effort and risk, provided E5 is tested early -> E5
+  runs first.
+  E5 (new, first): ISR redirect during a sandbox render. Every interrupt taken while the sandbox is mapped must
+  run the game's handler 0xC01F on the real pages (slots 2, 3, 6, 7: its reads / writes, the ULA attributes it
+  flashes, OUT 254) and return to the sandbox unchanged. Questions: a stub that is mapped in both worlds (the ISR
+  never touches slots 1, 4, 5; the renderer's own use of slots 0 / 1 to check); a stack for the handler outside
+  the remapped pages; R (the handler reads it at 49291 / 49342: patch.preserve-r); interrupt timing at 28 MHz.
+  Success: in a simulator with two memories (sandbox / real), injecting sandbox renders between updates leaves the
+  real RAM at every update entry identical to the unmodified replay, and the handler runs once per frame.
+  E5 groundwork (probe cm_slots, 3,000 frames; observed): render window (ISR excluded) reads slots 2-7, writes
+  2-7 (most: 2 = view buffer + vars, 7 = stack + vars), never slots 0 / 1. ISR: reads slot 0 (2,820, ROM), 2, 3,
+  6, 7; writes 2, 3, 6, 7; runs code in pages 0xC0-0xC1, 0xCA-0xCC (the printer 0xCA4E: it prints from the ISR)
+  and 0xFD (vector JP). So a redirect stub and the handler's private stack fit in slots 0 / 1 (alt ROM / a RAM
+  page in slot 1), mapped in both worlds; the ISR's slot-0 reads must still see the ROM bytes there (check which
+  addresses). Sketch: sandbox copy's 0xFDFD JP -> stub: save SP, own stack, MMU slots 2, 3, 6, 7 -> real pages,
+  CALL the real handler (its RETI returns to the stub), MMU back, SP back, EI, RET.
+  R (observed, static): ISR LD A,R at 49291 / 49342 = random blink delays 49173 / 49175 (512 + 2R frames) for
+  screen bytes 0x4CA2 / 0x47BD, used only in the ISR: cosmetic. Game: 0x9F6E (in 0x9F49, called from 0x6A99):
+  27391 = (R AND 63) + 10, a countdown read by the redraw trigger 0x8583, 0xA45C and the ISR 0xC123 = gameplay
+  event timing; 0xA569 (from 0xA4D3, clear code): R mod 20 -> 41970 (display, inferred). So every sandbox render
+  and hook restores R (patch.preserve-r); the ISR's cosmetic R reads during a sandbox render differ (accepted?).
+  Interrupts land at other points of the update at 28 MHz + pacing than in the original: equivalence is
+  "extremely close", not 1:1 (owner 2026-11-10); E5's real-RAM check compares at update entries with that rule.
   E4 (new): which display readers of the buffer are active in play (overlay, marker, printer in the view), from
   the taint result's reader PCs per frame, to choose dual write or Layer 2 per reader.
 - Not the filler: 0x9DC9-0x9DF8 writes variables 24369-24382 that lie inside the view buffer's address range
