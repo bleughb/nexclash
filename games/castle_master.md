@@ -99,14 +99,11 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   core >= 3.03.00 for DDMA, ordinary zxnDMA otherwise, CPU-only build option (HLIB_NO_BLITTER / HLIB_CPU_ONLY).
   Rough budget (inferred): 2.4M T at 3.5 MHz ~ 690 ms -> ~115 ms at 28 MHz (x6, LEARNINGS 2.1f) before MUL /
   DMA / no copy; with them perhaps 40-60 ms -> 6-12 in-between views per outdoor step (12-25 fps) instead of ~1.5.
-- Tween isolation idea (inferred, to prove): after each game update, DMA-copy the 48K RAM to a sandbox bank set;
-  tween views run the original renderer there (MMU-mapped, the game's ISR held off or redirected) with an
-  interpolated camera: game RAM cannot be written by construction. Position: linear between the old and new
-  27309-27313; turning: the matrix builder 0x9776 in the sandbox fed a finer angle (own sine table) since 72
-  steps give only one in-between angle per 10-deg turn. Pace: the game update + final view must land when the
-  original's would: the original's duration is its render T, so measure it by running the original path and
-  scaling (or a T model per polygon / span); card patch.pace-limiter. Open: renderer side effects (OUT 254 at
-  0xC821 in 39 updates, ISR attribute writes, the panel 0xB3xx), the removal / isolation experiment.
+- Tween sandbox (route A; ISR redirect proven by E5 below): RAM DMA-copied to a sandbox after each update, the
+  original renderer run there on an interpolated camera (position lerp of 27309-27313; finer yaw / pitch via the
+  matrix builder 0x9776 and an own sine table: 72 steps give one in-between angle per 10-deg turn). Pace: each
+  update lands when the original's would (its render T, E3; patch.pace-limiter). Open: OUT 254 at 0xC821 (39
+  updates), the panel 0xB3xx.
 - Render consumers (probe cm_consumers, 3,000 frames, 65 redraws; window 0x9776 .. 0x859F, ISR excluded): game
   code outside the window reads render-written bytes: the projected polygons / display list 0x6754-0x68xx by
   0xB708-0xB7BE and 0xBA42-0xBA60 (inferred: the crosshair pick, i.e. gameplay) and by 0x9495-0x952B / 0x9EDA-0x9EEC
