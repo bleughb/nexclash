@@ -5,8 +5,9 @@ Stage: 1 (design)            State: intake 2026-11-19; the design question is wi
 Inputs: C:\1NEXT\castle_master_work\castle_master.z80 (extracted from the RZX), C:\dev\castlemaster\castle.rzx,
 C:\dev\castlemaster\Castlemaster1.tap    Branch: add-castle-master    Commit: (this file's commit)
 Checks: survey --stop 15000 (castle_master_survey/), survey full run (survey_full/), scan of the view buffer (3,000 frames)
-Pending user answers: approval of "Proposed design" (Feasibility) and the colour palette for indices 1-16
-Start with: the user's answers; then experiments E1-E3 (Feasibility, Proposed design)
+Pending user answers: approval of "Proposed design" + its revision (a') / (c'), tween route A or B, and the
+colour palette for indices 1-16
+Start with: the user's answers; then experiments E1-E4 (Feasibility, Proposed design)
 Read: PLAYBOOK stage 1 + 3d; cards detect.pacing-structure, detect.routine-removal, patch.hybrid-display-replacement
 Open: who maps a face's colour to its dither pattern (the colour source for a colour route); unreached CALL sites (Coverage)
 
@@ -146,6 +147,22 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   hardware. Experiments before build: E1 MUL routines bit-exact vs 0xA1FD / 0xA253 / 0xA2C1 over all recorded
   operands; E2 sandbox render of an unchanged camera = the game's own frame, byte for byte; E3 a T model of the
   original per update (needed for pacing) within 2 % of the recording's frames per update.
+  Revised after the raster removal + taint results above (2026-11-19, still for approval):
+  (a') the span hook goes in the filler (0x9696 path), so all four 0x9EA3 callers (0x8599, 0xA0A0, 0xB635,
+  0xC539) are covered; its bounds follow the filler's real extent (to 0x6752), not the buffer's. 0x9F19 stays
+  (it changes game variables: skip_859C 25 / 462 differ); only the 0xA38D copy's screen writes are replaced.
+  Buffer readers that are display code (printer 0xCAA2 / 0xCAFC, masked overlay 0xD134-0xD142, XOR marker
+  0xCF53-0xCF67, copies 0xB6C2 / 0xD1B1) need the 1-bit buffer: keep the original fill writing it as well
+  (dual write, simplest, costs the original span T) or move each to Layer 2 (faster, more hooks) - decide in E4.
+  (c') tween source, two routes (the user asked about B; not decided): A = the sandboxed original renderer
+  (exact look, original speed per view x 28 MHz); B = a Next-native renderer (own camera, pages, reads the world
+  data; the raster is display-only, so the game's own update + projection still runs for the pick and the
+  pace). B can use finer angles, MUL, DDMA spans freely and leaves the original untouched, but a second renderer
+  must match the original's look (faces, clipping, sort order) closely enough that the switch from tween to the
+  game's own view does not jump. E2 becomes: A - sandbox at an unchanged camera = the game's frame byte for byte;
+  B - native view at an update's camera vs the game's own frame, polygon colour per pixel, with a mismatch bound.
+  E4 (new): which display readers of the buffer are active in play (overlay, marker, printer in the view), from
+  the taint result's reader PCs per frame, to choose dual write or Layer 2 per reader.
 - Not the filler: 0x9DC9-0x9DF8 writes variables 24369-24382 that lie inside the view buffer's address range
   (geometry / clipping scratch, run when (29502) > 1); the scan range 0x5C80-0x673F mixed both.
 - View buffer (observed): 0x5CBC-0x673B, 112 lines x 24 bytes, row table 28975; copied by 0xA38D (LDI x24 per
