@@ -7,7 +7,7 @@ C:\dev\castlemaster\Castlemaster1.tap    Branch: add-castle-master    Commit: (t
 Checks: survey --stop 15000 (castle_master_survey/), survey full run (survey_full/), scan of the view buffer (3,000 frames)
 Pending user answers: final design approval (route A first, agreed 2026-11-19, if E5 passes); buffer-reader
 option (i) / (ii); the colour palette for indices 1-16
-Start with: E2-E4 (E5, E1 passed 2026-11-19, Feasibility); E2 adds: no DMA in flight when the stub runs
+Start with: E3, E4 (E5, E1, E2 passed 2026-11-19, Feasibility); DMA-idle rule for the E5 stub is a design rule (E2)
 Read: PLAYBOOK stage 1 + 3d; cards detect.pacing-structure, detect.routine-removal, patch.hybrid-display-replacement
 Open: who maps a face's colour to its dither pattern (the colour source for a colour route); unreached CALL sites (Coverage)
 
@@ -133,85 +133,53 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   sandboxed original, while the game's own update incl. projection runs unchanged for the pick and the pace.
   Format reference: ScummVM's Freescape engine loads the ZX Castle Master data as one 36,096-byte file = the
   tape's 36,098-byte block less flag and checksum (its ZX support is marked unstable; GPL, check before copying).
-- Proposed design (for approval, not built): (a) colour: span hook writes (29501) indices to Layer 2 (hidden bank,
-  flip), palette per index (the user's choice); clear by DDMA 2D fill; the buffer copy and the ULA view removed;
-  panel stays ULA (Layer 2 window over the view only, the ISR's view-attribute flashes mapped to a Layer 2 palette
-  effect). (b) speed: game updates run the original code at 28 MHz with MUL-based multiply / divide where they
-  match bit-exactly; each update's final view is the game's own render. (c) smooth view: between updates, the
-  sandbox (DMA copy of RAM after each update) renders in-between cameras (position lerp, finer yaw / pitch) into
-  Layer 2 while the update waits out the original's duration (pace ORIGINAL per update). (d) DMA policy:
-  DDMA on core >= 3.03.00, zxnDMA fill / copy otherwise, CPU-only option; crossover for span fills measured on
-  hardware. Experiments before build: E1 MUL routines bit-exact vs 0xA1FD / 0xA253 / 0xA2C1 over all recorded
-  operands; E2 sandbox render of an unchanged camera = the game's own frame, byte for byte; E3 a T model of the
-  original per update (needed for pacing) within 2 % of the recording's frames per update.
-  Revised after the raster removal + taint results above (2026-11-19, still for approval):
-  (a') the span hook goes in the filler (0x9696 path), so all four 0x9EA3 callers (0x8599, 0xA0A0, 0xB635,
-  0xC539) are covered; its bounds follow the filler's real extent (to 0x6752), not the buffer's. 0x9F19 stays
-  (it changes game variables: skip_859C 25 / 462 differ); only the 0xA38D copy's screen writes are replaced.
-  Scope (user, 2026-11-19): "display-only" holds for the paths the recording takes; branches it never takes and
-  what the raster writes into the copier's code page 0xA3 are unchecked (taint notes above) - not "measured" in
-  general.
-  Buffer readers (printer 0xCAA2 / 0xCAFC, masked overlay 0xD134-0xD142, XOR marker 0xCF53-0xCF67, copies 0xB6C2 /
-  0xD1B1): the text, marker and overlay are drawn INTO the buffer, so keeping the buffer alone does not show them
-  once its copy to the screen is replaced (correction by the user; the earlier "dual write" option was wrong).
-  Options: (i) move each to Layer 2 (more hooks); (ii) user's idea, untested: leave the faces out of the buffer,
-  keep the buffer's copy to the ULA, ULA over Layer 2 with the view's paper see-through - overlays stay visible
-  through every view, no extra hooks. To work out for (ii): the per-area paper colours (one transparent colour,
-  NR 0x14, vs a ULA palette entry shared with the panel), the ISR's view-attribute flash writes (0x5884, 24 x 14),
-  ink pixels the faces used to supply (none left in the buffer: the view is paper + overlays). E4 checks which
-  readers are active in play.
-  (c') tween source, two routes (the user asked about B; not decided): A = the sandboxed original renderer
-  (exact look, original speed per view x 28 MHz); B = a Next-native renderer (own camera, pages, reads the world
-  data; the raster is display-only, so the game's own update + projection still runs for the pick and the
-  pace). B can use finer angles, MUL, DDMA spans freely and leaves the original untouched, but a second renderer
-  must match the original's look (faces, clipping, sort order) closely enough that the switch from tween to the
-  game's own view does not jump. E2 becomes: A - sandbox at an unchanged camera = the game's frame byte for byte;
-  B - native view at an update's camera vs the game's own frame, polygon colour per pixel, with a mismatch bound.
-  Corrections (user, 2026-11-19): route A's untested risk: while the original renderer runs in the sandbox for
-  100 ms or more, the game's ISR must still run on the REAL memory every interrupt, or the real-time clocks
-  (29559, 27407 / 27408 / 27411) slow and gameplay changes; holding it off is not an option, redirecting needs its
-  own experiment (E5). Route B's jump risk is avoidable: since the raster is display-only (recorded paths), the
-  native renderer can draw every view including each update's final one - no switch, no jump; what remains is a
-  pixel-level difference between what is shown and what the crosshair pick (the game's own projection) hits.
-  Decision (user, 2026-11-19): route A first is reasonable on effort and risk, provided E5 is tested early -> E5
-  runs first.
-  E5 (first): ISR redirect during a sandbox render - the handler 0xC01F must run on the real pages and return to
-  the sandbox unchanged. Groundwork (cm_slots, 3,000 frames): the renderer never touches slots 0 / 1; the ISR
-  reads slot 0 (ROM) and 2, 3, 6, 7, writes 2, 3, 6, 7, code in pages 0xC0-0xC1, 0xCA-0xCC (it prints), 0xFD.
-  R (static): ISR LD A,R at 49291 / 49342 = blink delays 49173 / 49175 (cosmetic); game 0x9F6E: 27391 = (R AND
-  63) + 10, an event countdown (gameplay) -> every sandbox render and hook restores R (patch.preserve-r);
-  0xA569: R mod 20 -> 41970 (display, inferred). Interrupts land elsewhere at 28 MHz: "extremely close", not 1:1.
-  E5 RESULT (2026-11-19, harness castle_master_work/e5_isr_redirect.py, logs e5_full.log / e5_full_noslot7.log):
-  PASS. Per interrupt the RZX takes inside a redraw window (where hardware would be running the sandbox), a Next
-  MMU model with real pages 10, 11, 4, 5, 0, 1 and sandbox pages 32-37 (= RAM at that redraw's start, camera
-  moved, all 18 ISR variables altered, 0xFDFD JP -> stub): IM 2 acceptance in the sandbox, stub at 0x2000 (slot
-  1): LD (0x82C0),SP / LD SP,0x8400 / NEXTREG 0x52,0x53,0x56,0x57 -> real / CALL 0xC01F / DI / NEXTREG back /
-  LD SP,(0x82C0) / EI / RET. All 167,135 frames: 79,705 of 79,705 cases pass C1 (real RAM = the recording's own
-  handler result, dead stack below the interrupted SP excluded), C2 (sandbox unchanged but the return address
-  and the stub stack 0x82C0-0x8400, never touched by the game), C3 (all registers but R / T, IFF, MMU back). Stub
-  cost 245 T (3.5 MHz T; ~9 us at 28 MHz) per interrupt. R: 229 blink-delay bytes (49173-49176) differ across
-  the run - cosmetic (the stub's own R increments), accepted pending the user. Negative controls (900 frames,
-  20 cases each): no remap -> 20 FAIL (C1 + C2); slot 6 not remapped -> 20 FAIL; slot 3 -> 20 FAIL; slot 2 ->
-  2 FAIL (only interrupts that flash the view attributes); SP not restored -> 20 FAIL (runaway). Slot 7 not
-  remapped passes all 79,705 (full run): on the recorded paths the handler uses slot 7 only for its stack (now
-  the stub's) and the IM 2 vector (read in the sandbox, same bytes) - kept in the stub anyway for unrecorded
-  paths (40 T). Not covered: real hardware MMU / interrupt timing, an interrupt during the stub's own DI window
-  (none can arrive: the handler runs far past the /INT pulse), DMA in flight during the redirect (the design
-  must finish or pause sandbox DMA before the stub - check in E2), the sandbox renderer's own DI periods
-  (interrupt latency), branches the recording never takes.
-  E1 RESULT (2026-11-19, castle_master_work/e1_maths.asm + e1_capture.py / e1_check.py, log e1_check_full.log):
-  PASS. Z80N versions of 0xA1FD (A*HL -> AHL), 0xA253 (HL*DE -> DEHL), 0xA348 (H*L -> HL) with MUL D,E, and
-  0xA2C1 (AHL/DE -> AHL, DE = remainder; no Z80N divide: same restoring division unrolled, leading quotient
-  zeros skipped, DE = 0 jumps into the original's own code). Every unique register input of all 1,827,355
-  recorded calls (682,956 inputs, 167,135 frames), each run through original and new: all 16 main + alternate
-  registers, SP / IX / IY and memory outside the stack equal, flags too (no call site reads them anyway); the
-  original reproduces the recording's outputs. Beyond the recording: 100,000 random inputs each, edge values,
-  0xA348 exhaustive (65,536): all equal. T per call (3.5 MHz T, call-weighted): 554 -> 273, 489 -> 228, 2,078 ->
-  904, 238 -> 110; the four together 1,131M -> 522M T = 9.7 % -> 4.5 % of the recording's T (x2.17 on maths;
-  on top of 28 MHz). Negative controls (3,000 frames): 4 mutants all FAIL (Lessons). The 16x16
-  mid-sum carry is dead (|x|, |y| <= 0x8000 -> <= 64,770): removed.
-  E4 (new): which display readers of the buffer are active in play (overlay, marker, printer in the view), from
-  the taint result's reader PCs per frame, to choose dual write or Layer 2 per reader.
+- Design (for approval, not built; consolidated 2026-11-19): (a) colour: span hook in the filler (0x9696 path:
+  covers all four 0x9EA3 callers 0x8599 / 0xA0A0 / 0xB635 / 0xC539; bounds = the filler's real extent to
+  0x6752) writes (29501) indices to Layer 2 (hidden bank, flip), palette per index (user's choice), clear by
+  DDMA 2D fill; 0x9F19 stays (changes game variables), only the 0xA38D copy's screen writes go; panel stays ULA.
+  (b) speed: updates run the original at 28 MHz with the E1 maths. (c) smooth view, route A (user 2026-11-19:
+  first, provided E5 early): after each update a DMA copy of RAM = sandbox renders in-between cameras into
+  Layer 2 while the update waits out the original's duration (pace ORIGINAL). Route B (Next-native renderer,
+  not decided): no jump if it draws every view incl. each update's final one; what remains is a pixel-level
+  gap between what is shown and what the crosshair pick hits. (d) DMA: DDMA on core >= 3.03.00, zxnDMA
+  otherwise, CPU-only option; span-fill crossover measured on hardware.
+  Scope (user): "display-only" holds on recorded paths; unrecorded branches and the raster's writes into the
+  copier's code page 0xA3 are unchecked. Buffer readers (printer 0xCAA2 / 0xCAFC, overlay 0xD134-0xD142, XOR
+  marker 0xCF53-0xCF67, copies 0xB6C2 / 0xD1B1) draw INTO the buffer, so the buffer alone does not show them
+  once its copy goes (user's correction). Options: (i) each to Layer 2 (more hooks); (ii) user's idea,
+  untested: faces out of the buffer, keep its copy to the ULA, ULA over Layer 2 with the view paper see-through
+  - to work out: per-area paper colours (NR 0x14 vs a ULA palette entry shared with the panel), the ISR's
+  view-attribute flashes (0x5884, 24 x 14). E4 checks which readers are active in play.
+  R (static): ISR LD A,R 49291 / 49342 = blink delays 49173 / 49175 (cosmetic); 0x9F6E: 27391 = (R AND 63) +
+  10, an event countdown (gameplay) -> sandbox renders and hooks restore R (patch.preserve-r); 0xA569: R mod
+  20 -> 41970 (display). Interrupts land elsewhere at 28 MHz: "extremely close", not 1:1.
+- E5 PASS (castle_master_work/e5_isr_redirect.py, e5_full.log): ISR redirect while the sandbox is mapped. MMU
+  model, real pages 10, 11, 4, 5, 0, 1 / sandbox 32-37 (camera and all 18 ISR variables altered, 0xFDFD JP ->
+  stub). Stub at 0x2000 (slot 1, never touched by the renderer): LD (0x82C0),SP / LD SP,0x8400 / NEXTREG
+  0x52, 0x53, 0x56, 0x57 -> real / CALL 0xC01F / DI / NEXTREG back / LD SP,(0x82C0) / EI / RET; 0x82C0-0x8400
+  never used by the game. 79,705 / 79,705 interrupts in redraw windows (all frames): real RAM = the
+  recording's handler result, sandbox unchanged, registers and MMU back; 245 T (3.5 MHz T) each. 229 cosmetic
+  blink-delay bytes differ (R; accepted pending the user). Controls: no remap, slot 3, 6 unmapped, SP not
+  restored FAIL 20 / 20; slot 2 2 / 20; slot 7 passes all (stack + vector only; remap kept, 40 T). Not covered:
+  hardware MMU / timing, the renderer's DI periods, unrecorded branches.
+- E1 PASS (e1_maths.asm, e1_capture.py / e1_check.py, e1_check_full.log): Z80N 0xA1FD (A*HL), 0xA253 (HL*DE),
+  0xA348 (H*L) with MUL D,E; 0xA2C1 (AHL/DE, DE = remainder) = restoring division unrolled, leading quotient
+  zeros skipped, DE = 0 -> the original's code. All 682,956 unique inputs of 1,827,355 recorded calls, original
+  vs new: all 16 registers, SP / IX / IY, memory, flags equal; + 100,000 random each, edges, 0xA348 exhaustive.
+  T per call 554 -> 273, 489 -> 228, 2,078 -> 904, 238 -> 110: maths 9.7 % -> 4.5 % of the recording's T.
+  4 mutants FAIL (Lessons); a dead 16x16 carry removed.
+- E2 PASS, route A (e2_sandbox.py --timer --prevbuf, e2_full_final.log): every full redraw (block 34142 ->
+  0x859F in 0x8542, (29503) bit 2; 18 more never reach the copier: non-view screens via (29513)), sandbox = RAM
+  at 0x859F, registers as at 34142, no interrupts: buffer at the copier 0xA38D = the game's, 5,214 / 5,214.
+  Two inputs must be live (first runs 5,202 / 5,214): 27391 (ISR-decremented countdown, read by the clear at
+  42076: sky / ground split 41966; 3 frames, 1-43 bytes) -> tweens read the real 27391; the buffer is not fully
+  rebuilt (filler 0x96F2 / 0x9716 read-modify-writes, the clear misses bytes; 9 frames, 1-126 bytes) -> tweens
+  draw over the last shown frame. Not causes: R at 0xA569, ISR -> render data flow (none). Controls: yaw +10
+  deg 61 / 62 FAIL, raster skipped 62 / 62 FAIL, display list junked still PASS (rebuilt). Block T median 883k,
+  max 4.59M. The re-run writes the ULA panel and 0xBE / 0xCA / 0xCC variables: keep 0xBE03's and 0x9F19's
+  screen writes off the real screen. Design rule (hardware, untested): the RAM -> sandbox DMA copy finishes
+  before a tween starts (no DMA in flight when the E5 stub runs).
+  E4: which buffer readers are active in play (taint reader PCs per frame) -> option (i) or (ii).
 - Not the filler: 0x9DC9-0x9DF8 writes variables 24369-24382 that lie inside the view buffer's address range
   (geometry / clipping scratch, run when (29502) > 1); the scan range 0x5C80-0x673F mixed both.
 - View buffer (observed): 0x5CBC-0x673B, 112 lines x 24 bytes, row table 28975; copied by 0xA38D (LDI x24 per
@@ -232,6 +200,8 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
   recorded, slot / R groundwork, harness + 5 negative controls, full-recording PASS.
 - 2026-11-19, E1 (Z80N maths), ~50 min incl. two ~10-min full runs, ~35 tool calls, 1 user round: capture,
   four routines, checker, 4 mutants, full-recording PASS.
+- 2026-11-19, E2 (sandbox frame = game frame), ~90 min incl. five ~10-min full runs, ~40 tool calls, 2 user
+  rounds: harness, 12 differences traced to the live timer and buffer carry-over, full-recording PASS.
 - 2026-11-19, separate session (removal + taint of the raster stage), ~60 min, ~25 tool calls, 3 user rounds: six
   routine_skip runs, a taint probe over the full recording (castle_master_work/taint_call.py).
 
@@ -244,6 +214,10 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
 - [local: one game's maths; a candidate for a shared bit-exact checker if a second game replaces maths] A
   bit-exact replacement checked only on recorded inputs can hide wrong rare paths: two of four mutants passed
   every recorded call and failed only random / edge inputs, so add sweeps and mutants.
+- [local: one harness; tools/probes candidate if a second game sandboxes a renderer] Junk-filling a buffer
+  before a re-render is a strong test only if the renderer fully rebuilds it; when it reads-modify-writes, use
+  the buffer as it was before the game's own render, and bisect differing inputs from the block's START state
+  (a bisect that already fails on the start state names a random byte).
 
 ## Technique use
 - detect.pacing-structure: helped: pacing_census on the main loop 0x8542 showed event-driven renders of 2-52
@@ -259,5 +233,5 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
 - environment: [none: local Windows checkout, no workarounds needed]
 - hand-rolled: [local: byte searches for CALL / LD (nn) sites with skoolkit's snapshot reader]
 - scratch: [local: cmdis / callers helpers stay in the session scratchpad; cm_profile and cm_consumers are
-  Castle Master probes, to move to tools/probes/ if E1-E3 reuse them; e5_isr_redirect.py, e1_*.py / e1_maths.asm (local, castle_master_work)
+  Castle Master probes, to move to tools/probes/ if E1-E3 reuse them; e5_isr_redirect.py, e1_*.py / e1_maths.asm, e2_*.py (local, castle_master_work)
   becomes part of the engine's own verifier at stage 2 (verification harnesses stay per engine)]
