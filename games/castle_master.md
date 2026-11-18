@@ -114,6 +114,27 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   0xCB53, 0x7FD6-0x7FE1 by 0xCF39. Decision consequence: the game's own redraw at each update's camera must stay,
   in game RAM, unchanged in what it writes (it may draw to Layer 2 instead of the buffer); in-between views may run
   only in an isolated copy (sandbox) and must never be what the pick reads.
+- Raster stage alone (separate session 2026-11-19; castle_master_work/skip_*.log, taint_8599_full.json; narrower
+  than cm_consumers: only the dynamic extent of CALL 0x9EA3 at 0x8599, ISR excluded):
+  taint over all 167,135 frames (5,281 calls): the only raster-written bytes read by code outside it are the view
+  buffer, by display code: copier 0xA3A6-0xA3D4, copies 0xB6C2 / 0xD1B1, printer 0xCAA2 / 0xCAFC, masked overlay
+  0xD134-0xD142, XOR marker 0xCF53-0xCF67 (fixed buffer addresses 0x61BF-0x624F), and the filler itself
+  (0x96EA / 0x9710, reached from the other 0x9EA3 call sites 0xA0A0 / 0xB635 / 0xC539). Its 8.7M writes to page
+  0x73 and 15.7M stack-page writes are never read outside it. So 0x9EA3 is display-only in the recording (observed);
+  the pick's inputs (display list 0x6754-0x68xx, above) come from the stages before it, which must stay.
+  routine_skip, 15,000 frames: 0x8599 skipped, buffer excluded: 62 / 462 updates identical (differences = the
+  unread page-0x73 scratch); 0x859C (0x9F19) skipped: 437 / 462, 25 differ in game variables (first 0x6AD9, 0x7339,
+  0xC677): 0x9F19 is not a pure copy, keep it and remove only the 0xA38D copy inside; 0x855E / 0x8561 / 0x857E
+  skipped: heavy differences incl. code pages (0x8561 worst): not removable singly; 0x8596 (0xBE03): 456 / 462 (no
+  use as a negative control). Not checked: branches the recording never takes; what the raster's writes to page
+  0xA3 (the copier's code) patch (instruction-fetch reads are not counted by the probe). Filler overrun
+  (observed): spans write up to 0x6752, 23 bytes past the buffer end 0x673B and 2 bytes short of the display list
+  at 0x6754; a hook must not assume the buffer bounds.
+  Engine-replacement option (asked by the user, not decided): because the raster is display-only, in-between
+  views could come from a new Next-native renderer (own camera, own pages, reads the world data) instead of the
+  sandboxed original, while the game's own update incl. projection runs unchanged for the pick and the pace.
+  Format reference: ScummVM's Freescape engine loads the ZX Castle Master data as one 36,096-byte file = the
+  tape's 36,098-byte block less flag and checksum (its ZX support is marked unstable; GPL, check before copying).
 - Proposed design (for approval, not built): (a) colour: span hook writes (29501) indices to Layer 2 (hidden bank,
   flip), palette per index (the user's choice); clear by DDMA 2D fill; the buffer copy and the ULA view removed;
   panel stays ULA (Layer 2 window over the view only, the ISR's view-attribute flashes mapped to a Layer 2 palette
@@ -141,6 +162,8 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
   goal + speed answered, pacing census, colour source found.
 - 2026-11-19, stage 1 feasibility (DMA / DDMA), ~60 min, ~30 tool calls, 1 user round: stage costs, walking
   profile, camera, consumer probe, proposed design.
+- 2026-11-19, separate session (removal + taint of the raster stage), ~60 min, ~25 tool calls, 3 user rounds: six
+  routine_skip runs, a taint probe over the full recording (castle_master_work/taint_call.py).
 
 ## Lessons
 - [doc docs/RECORDING_CHECKLIST.md §Making a recording (Fuse)] An RZX alone (no separate .z80) is a complete intake: `nexclash.py rzx extract R -o
