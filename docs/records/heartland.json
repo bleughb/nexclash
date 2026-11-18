@@ -1,0 +1,281 @@
+{
+ "name": "heartland",
+ "order": 259,
+ "game": "Heartland",
+ "doc": "heartland.md",
+ "engine": "heartland",
+ "representative": true,
+ "reference": "heartland",
+ "inputs": {
+  "snapshot": {
+   "name": "heartland.z80",
+   "md5": "07bfa8f74d60a53ab64e5b092ffd6cca",
+   "path": "heartland/heartland.z80"
+  },
+  "recordings": [
+   {
+    "name": "heart_h1.rzx",
+    "md5": "0a9d5e28d8f7981521fdbf5952eab281",
+    "path": "heartland/heart_h1.rzx"
+   },
+   {
+    "name": "heartR_1.rzx",
+    "md5": "9ed29f0cccd2dd137e5c22f6a0cdcb33",
+    "path": "heartland/heartR_1.rzx"
+   },
+   {
+    "name": "heartR_2.rzx",
+    "md5": "841ae9ba10437f2ba24838d80f01d422",
+    "path": "heartland/heartR_2.rzx"
+   },
+   {
+    "name": "heartR_3.rzx",
+    "md5": "6772e251d73d2a2a38f915adf7f07dab",
+    "path": "heartland/heartR_3.rzx"
+   },
+   {
+    "name": "heartR_4.rzx",
+    "md5": "a315cb3f4f140f1b4a4954a0275b1605",
+    "path": "heartland/heartR_4.rzx"
+   },
+   {
+    "name": "heartR_5.rzx",
+    "md5": "edec13dbf45bf4075e3629c3c8afa056",
+    "path": "heartland/heartR_5.rzx"
+   },
+   {
+    "name": "heartR_6.rzx",
+    "md5": "43916e9acc1857033ca5b0418ac7871c",
+    "path": "heartland/heartR_6.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "heartland"
+ ],
+ "own_modules": [
+  "heartland"
+ ],
+ "data": [
+  "asm/heartland_hooks.asm",
+  "docs/profiles/heartland.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [],
+  "rzx": []
+ },
+ "verify": {
+  "args": [],
+  "rzx": [
+   "heart_h1.rzx",
+   "heartR_1.rzx",
+   "heartR_2.rzx",
+   "heartR_3.rzx",
+   "heartR_4.rzx",
+   "heartR_5.rzx",
+   "heartR_6.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 15,
+  "note": "The owner's play recorded in Fuse (heart_h1.rzx, `rzx strip` of its autosaves) and six scripted recordings, all from the archive snapshot at the tape's BASIC start. Each hook against the original from one state: every register with R, all game memory, the sprites against a model of the noted figures and against the game's own picture."
+ },
+ "outputs": {
+  "plain": {
+   "file": "heartland.nex",
+   "md5": "33283547fc7036cdefdf982190c75b73"
+  },
+  "sprites": {
+   "file": "heartland_sprites.nex",
+   "md5": "7a14d2f1b1eaa195ce12fdd2e88934ae"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Heartland",
+  "engine_col": "heartland (heartland.md)",
+  "build": "heartland_sprites.nex 7a14d2f1 (every figure a sprite in bright white laid on its own pixels; the game's memory and the screen bitmap stay the original's; only the white paint under large figures is kept off the screen; whole alt ROM image, the snapshot's own BASIC start; pace limiter)",
+  "software": "Verify IDENTICAL on 7 recordings, 25,639 frames (R compared): the owner's play in Fuse (heart_h1, 12,178 frames) and 6 scripted; unit PASS (119 cases, the game's interrupt inside every hook among them); 11 broken builds, 11 detected; ROM path check pass; hooks' time +0.32% of the recordings' time over the copies they stand for",
+  "hardware": "untested (starts and plays in OverSpec)",
+  "next": "hardware test; Enhanced colours and colour sheets (patterns made ahead)"
+ },
+ "checks": [
+  "asm2profile:heartland"
+ ],
+ "techniques": [
+  {
+   "application": "heartland.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "the random routine (0xBBF3) reads a byte at address A * 257 anywhere in memory: buffer and bitmap stay the original's; the two attribute cells it can read with the paint lifted (0x5959, 0x5A5A) are answered with the original's colour",
+   "phases": []
+  },
+  {
+   "application": "heartland.keep-ula",
+   "id": "patch.xor-overlay-keep-ula",
+   "revision": 2,
+   "target": "the game's plotters and screen copy unchanged; each sprite lies on its figure's own pixels in the bitmap, switched in one attribute run after the copy",
+   "phases": [
+    "entry",
+    "exit",
+    "clear"
+   ]
+  },
+  {
+   "application": "heartland.preserve-r",
+   "id": "patch.preserve-r",
+   "revision": 2,
+   "target": "HLIB_R_IN / hlib_r_set / hlib_r_add at every hook; the two wrapped copies get the original's R at their call, the attribute copy a correction of 2 per cell under the ink limit",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "heartland.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "HLIB_SPEED_IN / OUT in every hook but the random byte's (it stays at the game's speed); the attribute copy runs the game's routine at the latched speed",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "heartland.pace-limiter",
+   "id": "patch.pace-limiter",
+   "revision": 4,
+   "target": "one window around the screen copy (targets 4667 / 5998 sixteenths of a line for 112 / 144 lines); notes, paints and the attribute copy pay into the debt",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "heartland.whole-altrom",
+   "id": "patch.whole-altrom-image",
+   "revision": 2,
+   "target": "both builds: Sinclair's ROM as alt image 1, so the snapshot's BASIC (PAUSE 0, RANDOMIZE USR 25000) runs as on a 48K; the stubs end below 0x3939",
+   "phases": [
+    "setup"
+   ]
+  }
+ ],
+ "results": [
+  {
+   "application": "heartland.screen-readers",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "7a14d2f1",
+   "scope": "7 recordings, 25,639 frames, 267 random bytes (38 read from the screen, 0 where the paint is lifted); the random byte at all 256 addresses and from a cell with its paint lifted in unit cases; no hardware",
+   "evidence": "games/heartland.md#result-2026-11-18"
+  },
+  {
+   "application": "heartland.keep-ula",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "7a14d2f1",
+   "scope": "5,026 screen copies: 3,158,110 sprite pixels equal to a model of the noted figures and on the same pixels of the game's buffer, but 275 bolt pixels the original XORs into a figure; software model only, no frame capture, no hardware",
+   "evidence": "games/heartland.md#result-2026-11-18"
+  },
+  {
+   "application": "heartland.pace-limiter",
+   "check": "time.interrupt-injection",
+   "status": "pass",
+   "build": "7a14d2f1",
+   "scope": "the game's interrupt taken at 13 points inside each of the 7 hooks from one captured state each: the same memory, registers and sprites as the interrupt after the hook; pace on the simulator's line clock only",
+   "evidence": "games/heartland.md#result-2026-11-18"
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/heartland.md#build-stage-2-2026-11-18-asmheartland_hooksasm-nexclashheartlandpy"
+   ],
+   "coverage": "Seven recordings (one human), 25,639 frames; the screen copy's own time read off the verifier's run of the routine (65,335 T for 112 lines, 83,978 T for 144); hook time on the simulator's line clock. No JNext or hardware timing.",
+   "result": "The copy hook runs the game's copy at 28 MHz and waits out the rest of its time; the other hooks pay into the debt. Hooks' time +0.32% of the recordings' time over the copies they stand for."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/heartland.md#build-stage-2-2026-11-18-asmheartland_hooksasm-nexclashheartlandpy",
+    "games/heartland.md#feasibility-playbook-3d-2026-11-17-disassembly-of-the-in-game-state"
+   ],
+   "coverage": "Every reader and writer of the back buffer in the owner's first 5,000 frames (scan --writers); the interrupt handler's memory use over all recordings (isr); the three plotters, the paint, both copies, the random routine.",
+   "result": "The random routine reads any byte of memory, so the buffer, the saved bytes and the bitmap stay the original's; the attribute file differs in the painted cells, of which the routine can read two, answered with the original's colour."
+  },
+  "decision": "Sprites laid over the figures the game still draws (owner's defaults of 2026-11-17: bright white figures, rooms on the ULA, figures behind the foreground pieces); the first design, figures out of the buffer, failed the whole-state comparison and was dropped.",
+  "next_experiment": "Hardware: the checklist in games/heartland.md; pace against the original over a minute of walking (update-keyed): within 2%."
+ },
+ "checked": {
+  "deps": {
+   "asm/heartland_hooks.asm": "aff6df4bcf45ea24",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/heartland.json": "efea4fca2d334623",
+   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "2314d2c0d07541da",
+   "nexclash/heartland.py": "7268117b8c877eef",
+   "nexclash/hooklib.py": "24241497925658d6",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "6fac57d0dd017f59",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-18"
+ },
+ "verified": {
+  "deps": {
+   "asm/heartland_hooks.asm": "aff6df4bcf45ea24",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/heartland.json": "efea4fca2d334623",
+   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "2314d2c0d07541da",
+   "nexclash/heartland.py": "7268117b8c877eef",
+   "nexclash/hooklib.py": "24241497925658d6",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "6fac57d0dd017f59",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-18"
+ }
+}
