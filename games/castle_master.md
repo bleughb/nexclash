@@ -132,7 +132,9 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
 
 ## Coverage (survey GATE, 15,000 frames)
 Unreached CALL sites: 0xD028 (2/3), 0xCA4E (17/18), 0xB66E (2/6; 48357 not reached). All text / panel / area
-pictures, no figure plotter. The full run (survey_full/) may reach them.
+pictures, no figure plotter.
+Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0xB66E 4/6, 0xD028 2/3, 0xB347
+4/6 reached; 5,356 view copies. No further recording needed for stage 1.
 
 ## Stage log
 - 2026-11-19, stage 0 + 1 (feasibility started), ~70 min, ~45 tool calls, 2 user rounds: intake, survey 15k,
