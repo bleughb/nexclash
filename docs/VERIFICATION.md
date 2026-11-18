@@ -2,7 +2,7 @@
 
 Historical RZX checks compared registers except R/T, non-screen RAM and pixels; startup
 restored registers/RAM. Current scopes and checksums live in docs/records
-(`python selftest.py`); the checksum list below is generated from them.
+(`python selftest.py`); the checksum list below is generated.
 
 | Game | Recording | Plots | Erases | Other | Result |
 |---|---|---|---|---|---|
