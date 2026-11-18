@@ -16,10 +16,10 @@ Techniques: `detect.gameplay-screen-readers`, `patch.xor-overlay-keep-ula`, `pat
 
 | | |
 |---|---|
-| Builds | heartland.nex 33283547 (plain), heartland_sprites.nex 7a14d2f1 |
-| Verify | IDENTICAL on 7 recordings, 25,639 frames: 5,049 game steps, 5,026 screen copies, 11,723 figures noted, 9,158 paints, 267 random bytes; every register with R and all game memory after every hook; 3,158,110 sprite pixels against the model and the game's own picture |
+| Builds | heartland.nex 33283547 (plain), heartland_sprites.nex 79adc431 |
+| Verify | IDENTICAL on 7 recordings, 25,639 frames: 5,049 game steps, 5,026 screen copies, 19 screen clears, 11,723 figures noted, 9,158 paints, 267 random bytes; every register with R and all game memory after every hook; 3,158,110 sprite pixels against the model and the game's own picture |
 | Unit | PASS: 119 cases in 24 groups (the two copies with nothing to do, 144 lines, a 16-piece foreground list, the attribute copy's three ways, the random byte at all 256 addresses and from a cell with its paint lifted, full tables, the game's interrupt at 13 points inside each hook) |
-| Negative | 11 broken builds, 11 detected |
+| Negative | 12 broken builds, 12 detected |
 | Pace | the hooks take +0.32% of the recordings' time more than the two copies they stand for (a wait on the video line holds the game's copy to its own time) |
 | Known differences | the bolt (0xFC4A) is XORed through a figure in the original; the build's figure stays whole over it (275 pixels in the recordings). The mask's cleared border is black; in the original it is the cell's paper. Small figures are bright white; in the original they take the cell's ink |
 
@@ -77,11 +77,13 @@ complete without figures, and the figures are exactly the difference to the orig
   game's copy runs at its own speed, the paint goes back. R is set to the original's before the call: one way through
   the copy reads R (0xA6B0). Where a cell's own ink is under the ink limit of 0xA6C6 the game's copy takes a shorter
   path than with the paint: R is corrected by 2 per such cell.
+  0x5E61 (the whole-screen clear 0x5E5E, at its second instruction): every sprite off, so none stays on the menu. Not
+  at 0x5E5E itself: the random byte can read that address, and a unit case caught the changed byte there.
   0xBBF4 (the random byte): the same byte as the original at every address. The build's memory differs only in the
   attribute file's painted cells, and the routine can read two of them (0x5959, 0x5A5A): the attribute copy keeps what
   the build and the original hold there, and the hook answers with the original's while the build's is still there.
   The stubs end below 0x3939, the first hook-area ROM byte it can read, so those stay the ROM's 0xFF.
-- Memory: stubs in the ROM's 0xFF area (alt ROM, 140 bytes); bodies in a RAM copy of 0x2000-0x3FFF (page 24) mapped at
+- Memory: stubs in the ROM's 0xFF area (alt ROM, 152 bytes); bodies in a RAM copy of 0x2000-0x3FFF (page 24) mapped at
   slot 1 inside a hook; state in page 26 at slot 4. The game's interrupt (IM 2, 0xF3F3 -> 0x60F3: sound, the hourglass)
   saves every register and touches neither slot in any recording (`isr`); it runs inside the hooks.
 - Start: the snapshot's own BASIC (PAUSE 0, RANDOMIZE USR 25000) runs on Sinclair's ROM as alt ROM image 1; tail at
@@ -91,8 +93,16 @@ complete without figures, and the figures are exactly the difference to the orig
 - Not built: colour sheets, recolour, an Enhanced set. Patterns are made at run time from the game's 1-bit graphics, so a
   painted graphic needs patterns made ahead and a lookup by graphic address (as Nodes of Yesod has).
 
+## Owner's first look (2026-11-18, OverSpec, from the .nxc menu)
+- Moving figures left echoes: the attribute run chose its first sprite with NextReg 0x34, which does not move the
+  attribute port's index (lockstep is off), so each copy's sprites went to the block the pattern upload had named and
+  the last copy's stayed on. Fixed: sprite 0 is chosen through port 0x303B. Owner: "echo gone".
+- Bits of figures stayed on the menu after a game: nothing turned the sprites off. Fixed with the 0x5E61 hook; the owner
+  has not looked at the menu again yet.
+
 ## Hardware checklist
 - Loading screen, any key, 1 (keyboard): the game starts as the original.
+- After the last life the menu is clean: no part of a figure on it.
 - Figures are bright white over every room colour; nothing of a figure in the room's colours, no white wash on scenery.
 - A figure behind a foreground piece (the bed's posts, arches) is cut by it as in the original.
 - No trace of a figure left behind when it moves or a room changes; no flicker as the room is redrawn.
@@ -129,6 +139,7 @@ figures behind the foreground pieces as in the original, sparks on the ULA. Enha
   runs, the six routes that together run the most code. A human recording through the game is still owed.
 
 ## Open
+- The menu after a game: fixed in the build, not yet seen by the owner.
 - Hardware: nothing run on a board; the checklist above. Sound: an interrupt inside the copy hook's 28 MHz part runs the
   game's handler at 28 MHz for that frame.
 - Enhanced colours, colour sheets, recolour: not built (Build, last line). The owner paints later.
@@ -157,6 +168,12 @@ figures behind the foreground pieces as in the original, sparks on the ULA. Enha
   ink limit takes a shorter path for a cell without its paint, so R needs a correction per cell.
 - [local: this game's verifier] The game keeps its random routine's XOR operand in the routine's own code (0xBBF7): a
   hook that copies the listing's constant is wrong from the second call.
+- [deferred Open: reconsider when the shared sprite model is next touched] hooklib.NextModel lets NextReg 0x34 set the
+  attribute port's sprite, which the machine does only with lockstep on: a build that relied on it passed every check and
+  showed echoes in the owner's first minute. Reason: shared verifier code needs the canary; this engine's own model
+  now refuses it and a broken build proves the check.
+- [local: this game's hooks] A site's own bytes are data to a game that reads random bytes from all of memory: no
+  changed byte may sit at an address of the form A * 257 (the patch class refuses one).
 - [local: this game's intake] The snapshot is the tape's BASIC start and the game moves itself down by 0x6AC before it
   runs: every site is patched at its snapshot address and verified at its address in play.
 - [local: this game's intake] The owner's four minutes of play gave 2,485 game steps and the bolt; six scripted
@@ -182,6 +199,8 @@ figures behind the foreground pieces as in the original, sparks on the ULA. Enha
 - detect.pacing-structure: no help: the copy's time was read off the verifier's own run of the routine.
 
 ## Stage log
+- 2026-11-18: stage 4 (the owner's first look: echoes, menu leftovers; two fixes, restamp), about 1 h, about 20 tool
+  calls, 4 user rounds.
 - 2026-11-18: stages 2-3 (the owner's recording; first design, dropped; second design, verifier, unit cases, broken
   builds, pace, record), about 6 h, about 150 tool calls, 3 user rounds. Whole-module reads: none; Cobra's and Father
   Christmas's patch classes and the Nodes header were read in part as models.

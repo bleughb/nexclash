@@ -15,6 +15,7 @@
 ;                            its figure's own pixels in the bitmap;
 ;   e_acopy                  at the attribute copy: the painted cells get their own colours back for the
 ;                            game's copy, then the paint again: the screen keeps the room's colours;
+;   e_cls                    the whole-screen clear (0x5E5E): every sprite off;
 ;   e_random                 the random byte: the original's painted colour from the two attribute cells it
 ;                            can read (0x5959, 0x5A5A); the stubs end below 0x3939, the first ROM byte it can.
 ; The entries and exits sit in the 48K ROM's unused area (alt ROM); the bodies in a RAM copy of 0x2000-0x3FFF
@@ -100,6 +101,7 @@ e_paint: STUB paint
 e_commit: STUB commit
 e_acopy: STUB acopy
 e_random: STUB random
+e_cls:  STUB cls
 ; R as the original leaves it, the pages back, then the address on the stack.
 x_ret:  ld (HLIB_V_R + 2),a
         ld a,(HLIB_V_R + 1)
@@ -640,6 +642,29 @@ R_A0    EQU 114
 R_ACALL EQU 118                 ; -10
 R_A1    EQU 119
 
+; The whole screen cleared (0x5E5E: the game leaves the play picture): every sprite off. Hooked at its second
+; instruction: the random byte can read address 0x5E5E itself.
+cls:    ld a,r
+        ld (HLIB_V_R),a
+        push bc
+        ld bc,0x303B
+        xor a
+        out (c),a
+        ld bc,NSPR * 4 * 256 + 0x57
+.l:     out (c),a
+        djnz .l
+        ld (V_PREV),a
+        pop bc
+        ld a,R_CLS
+        call hlib_r_set
+        pop af
+        push hl
+        ld hl,0x5E64
+        ex (sp),hl
+        ld de,0x4001
+        jp x_ret
+R_CLS   EQU 114
+
 ; The random byte: A = R XOR the last one, then the byte at address A * 257.
 random: ld a,r
         ld l,a
@@ -829,7 +854,9 @@ show:   nextreg 0x1C,2
         jr nc,.w
         ld a,48 + 143
 .w:     nextreg 0x19,a
-        nextreg 0x34,0
+        ld bc,0x303B            ; sprite 0 for the attribute port (NextReg 0x34 does not move the port's index)
+        xor a
+.n_sel: out (c),a
         ld hl,ATTRS
         ld bc,(NSPR * 5) * 256 + 0x57
         otir

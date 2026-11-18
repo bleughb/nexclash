@@ -18,10 +18,10 @@ ROM_ORG = 0x386E
 ALT_PAGE, WORK = 24, 26               # ALT_PAGE: also the RAM copy the hooks map at slot 1 (the bodies from 0x2000)
 OFF = 0x6AC                         # snapshot address = address in play + OFF (the LDIR at 0xE436)
 TAIL_ADDR = 0x5E00                  # BASIC's spare memory in the snapshot; the game's own move overwrites it before any read
-BIG, MIR, SMALL, PAINT, COPY, ACOPY, RANDOM, STEP = 0xA7D4, 0xA88D, 0xA837, 0xA790, 0xA56F, 0xA615, 0xBBF4, 0xA4CA
+BIG, MIR, SMALL, PAINT, COPY, ACOPY, RANDOM, CLS, STEP = 0xA7D4, 0xA88D, 0xA837, 0xA790, 0xA56F, 0xA615, 0xBBF4, 0x5E61, 0xA4CA
 SITES_ORIG = {BIG: ('010000', 'e_big'), MIR: ('010000', 'e_mir'), SMALL: ('010000', 'e_small'), PAINT: ('0603dd', 'e_paint'),
-              COPY: ('2119ac', 'e_commit'), ACOPY: ('3aa5bc', 'e_acopy'), RANDOM: ('ed5fee', 'e_random')}
-EXIT = {BIG: 0xA7D7, MIR: 0xA890, SMALL: 0xA83A, PAINT: 0xA795, COPY: 0xA572, ACOPY: 0xA618, RANDOM: 0xBBFB}
+              COPY: ('2119ac', 'e_commit'), ACOPY: ('3aa5bc', 'e_acopy'), RANDOM: ('ed5fee', 'e_random'), CLS: ('110140', 'e_cls')}
+EXIT = {BIG: 0xA7D7, MIR: 0xA890, SMALL: 0xA83A, PAINT: 0xA795, COPY: 0xA572, ACOPY: 0xA618, RANDOM: 0xBBFB, CLS: 0x5E64}
 KIND = {BIG: 0, MIR: 1, SMALL: 2}
 INTERIORS = tuple(a + k for a in SITES_ORIG for k in (1, 2)) + (PAINT + 3, PAINT + 4, RANDOM + 3)
 STORES = {}                         # no store is changed: the game's memory and the screen bitmap stay the original's
@@ -140,6 +140,9 @@ class HeartlandPatch:
             self.sites.append((a, bytes.fromhex(old), b'\xC3' + self.syms[sym].to_bytes(2, 'little')))
         for a, (old, new) in self.stores.items():
             self.sites.append((a, bytes.fromhex(old), bytes.fromhex(new)))
+        for a, old, new in self.sites:  # the random byte reads address A * 257: no changed byte may sit at one
+            if any((a + k) >> 8 == (a + k) & 255 for k in range(len(new))):
+                raise ValueError('site 0x%04X changes a byte the random routine can read' % a)
         self.work = bytes(work_page() if work is None else work)
         self.extra_banks = {12: self.page + bytes(8192), 13: self.work + bytes(8192)}
 
@@ -217,6 +220,9 @@ class Model(hooklib.NextModel):
         self.clipi = 0
 
     def nextreg(self, reg, v):
+        if reg == 0x34:                 # without lockstep (NR 0x09 bit 4, off) this is not the attribute port's index
+            self.nr[reg] = v
+            return
         if reg == 0x1C and v & 2:
             self.clipi = 0
         elif reg == 0x19:
@@ -438,6 +444,15 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         if collect and kept[pc] < collect:
             kept[pc] += 1
             states.append((pc, bytes(mem), tuple(regs), bytes(st.work)))
+        if pc == CLS:                   # the whole screen cleared: the game leaves the play picture
+            c['screen clear'] += 1
+            Rp, mp, model = run_hook(patch, st, rom, mem, regs, pc)
+            Ro, mo = run_orig(rom, mem, regs, EXIT[pc])
+            same('the hook at %04X' % pc, pc, Ro, mo, Rp, mp, sp)
+            if any(a[3] & 0x80 for a in st.attrs):
+                fail('sprites left on a cleared screen', c['screen clear'])
+            box['figs'], box['paint'] = [], []
+            return
         if pc in KIND or pc == PAINT:
             Rp, mp, model = run_hook(patch, st, rom, mem, regs, pc)
             Ro, mo = run_orig(rom, mem, regs, EXIT[pc])
@@ -540,7 +555,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                 fail('the original\'s colour kept for the random byte is wrong', (hex(a), st.work[SA_O - 0x8000 + j], mo[a]))
         box['oa'], box['ba'] = bytes(mo[0x5800:0x5B00]), bytes(mp[0x5800:0x5B00])
 
-    pcs = {STEP, COPY, ACOPY, PAINT, RANDOM, BIG, MIR, SMALL} | set(SPARKS)
+    pcs = {STEP, COPY, ACOPY, PAINT, RANDOM, CLS, BIG, MIR, SMALL} | set(SPARKS)
     fc, err = RZ.trace(rzx_path, pcs, on, stop=stop)
     c['frames'] = fc
     if err:
@@ -554,7 +569,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
     c['T original'], c['T hooks'] = to, int(th)
     if to and abs(th - to) > 0.03 * to:
         fail('the hooks\' time is not the time of the copies they stand for', (to, int(th)))
-    for k in (BIG, MIR, SMALL, PAINT, RANDOM):
+    for k in (BIG, MIR, SMALL, PAINT, RANDOM, CLS):
         c['T hook at %04X' % k] = int(st.t[k])
     return c, dict(ex), states
 
@@ -729,7 +744,7 @@ def unit_tests(patch, states, neg=None):
         ok('seven paints noted', good)
     # the game's interrupt inside a hook, at points spread over it: the same game memory, registers and sprites as the
     # interrupt taken right after the hook (its handler saves every register and touches neither of the hooks' slots)
-    for site in (BIG, MIR, SMALL, PAINT, COPY, ACOPY, RANDOM):
+    for site in (BIG, MIR, SMALL, PAINT, COPY, ACOPY, RANDOM, CLS):
         for mem, regs, work in by[site][:1]:
             if not regs[IFF_] or bytes(mem[ISR:ISR + 3]) != b'\xc3\xf3\x60':
                 continue
@@ -793,7 +808,8 @@ def negative_patches(patch):
            ('R one more after a note', _code_patch(patch, 'note.n_r', bytes((0x3E, patch.rom_code and (patch.code[patch.syms['note.n_r'] - 0x2000 + 1] + 1) & 255)))),
            ('sprites name the wrong pattern', _code_patch(patch, 'attr.n_q', b'\xF6\xC1')),
            ('the sprite window ends a line early', _code_patch(patch, 'show.n_win', bytes((0x3E, 48 + 110)))),
-           ('the copy\'s time is not waited out', _code_patch(patch, 'commit.n_wait', b'\x00\x00\x00'))]
+           ('the copy\'s time is not waited out', _code_patch(patch, 'commit.n_wait', b'\x00\x00\x00')),
+           ('the attribute port\'s sprite is not selected', _code_patch(patch, 'show.n_sel', b'\x00\x00'))]
     wk = bytearray(patch.work)
     for k in range(256):                # no border: the mask's cleared pixels left clear
         for t in (TLO, THI):
@@ -837,9 +853,9 @@ def auto(a, z80, name, out, say):
         states += st
         fails = {k: v for k, v in cc.items() if k.endswith('!')}
         ok = ok and not fails
-        say('Verify    : %s  %d frames, %d steps, %d copies (%d with no figures), %d plots, %d paints, %d random bytes, most figures %d, most sprites %d, '
+        say('Verify    : %s  %d frames, %d steps, %d copies, %d screen clears, %d plots, %d paints, %d random bytes, most figures %d, most sprites %d, '
             '%d sprite pixels, %d cells with the paint lifted -> %s' % (
-                os.path.basename(r), cc['frames'], cc['step'], cc['copy'], cc['copy without figures'], cc['plot'], cc['paint'], cc['random'], cc['most figures'],
+                os.path.basename(r), cc['frames'], cc['step'], cc['copy'], cc['screen clear'], cc['plot'], cc['paint'], cc['random'], cc['most figures'],
                 cc['most sprites'], cc['sprite pixels compared'], cc['cells with the paint lifted'], 'IDENTICAL' if not fails else 'FAILED %s' % fails))
         say('Pace      : %s  the two copies %d T in the original, the hooks %d T (%+.2f%% of the recording\'s time); bolt pixels the original XORs into a figure %d; '
             'random bytes read from the screen %d, where the paint is lifted %d; lowest stack byte a hook writes 0x%04X' % (

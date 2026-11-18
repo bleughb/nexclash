@@ -91,15 +91,15 @@
   },
   "sprites": {
    "file": "heartland_sprites.nex",
-   "md5": "7a14d2f1b1eaa195ce12fdd2e88934ae"
+   "md5": "79adc431f184d71dfc1d7663b004d9d7"
   }
  },
  "repro": [],
  "status": {
   "title": "Heartland",
   "engine_col": "heartland (heartland.md)",
-  "build": "heartland_sprites.nex 7a14d2f1 (every figure a sprite in bright white laid on its own pixels; the game's memory and the screen bitmap stay the original's; only the white paint under large figures is kept off the screen; whole alt ROM image, the snapshot's own BASIC start; pace limiter)",
-  "software": "Verify IDENTICAL on 7 recordings, 25,639 frames (R compared): the owner's play in Fuse (heart_h1, 12,178 frames) and 6 scripted; unit PASS (119 cases, the game's interrupt inside every hook among them); 11 broken builds, 11 detected; ROM path check pass; hooks' time +0.32% of the recordings' time over the copies they stand for",
+  "build": "heartland_sprites.nex 79adc431 (every figure a sprite in bright white laid on its own pixels; the game's memory and the screen bitmap stay the original's; only the white paint under large figures is kept off the screen; whole alt ROM image, the snapshot's own BASIC start; pace limiter)",
+  "software": "Verify IDENTICAL on 7 recordings, 25,639 frames (R compared): the owner's play in Fuse (heart_h1, 12,178 frames) and 6 scripted; unit PASS (119 cases, the game's interrupt inside every hook among them); 12 broken builds, 12 detected; ROM path check pass; hooks' time +0.32% of the recordings' time over the copies they stand for",
   "hardware": "untested (starts and plays in OverSpec)",
   "next": "hardware test; Enhanced colours and colour sheets (patterns made ahead)"
  },
@@ -170,7 +170,7 @@
    "application": "heartland.screen-readers",
    "check": "state.rzx-differential",
    "status": "pass",
-   "build": "7a14d2f1",
+   "build": "79adc431",
    "scope": "7 recordings, 25,639 frames, 267 random bytes (38 read from the screen, 0 where the paint is lifted); the random byte at all 256 addresses and from a cell with its paint lifted in unit cases; no hardware",
    "evidence": "games/heartland.md#result-2026-11-18"
   },
@@ -178,7 +178,7 @@
    "application": "heartland.keep-ula",
    "check": "state.rzx-differential",
    "status": "pass",
-   "build": "7a14d2f1",
+   "build": "79adc431",
    "scope": "5,026 screen copies: 3,158,110 sprite pixels equal to a model of the noted figures and on the same pixels of the game's buffer, but 275 bolt pixels the original XORs into a figure; software model only, no frame capture, no hardware",
    "evidence": "games/heartland.md#result-2026-11-18"
   },
@@ -186,7 +186,7 @@
    "application": "heartland.pace-limiter",
    "check": "time.interrupt-injection",
    "status": "pass",
-   "build": "7a14d2f1",
+   "build": "79adc431",
    "scope": "the game's interrupt taken at 13 points inside each of the 7 hooks from one captured state each: the same memory, registers and sprites as the interrupt after the hook; pace on the simulator's line clock only",
    "evidence": "games/heartland.md#result-2026-11-18"
   }
@@ -212,11 +212,11 @@
  },
  "checked": {
   "deps": {
-   "asm/heartland_hooks.asm": "aff6df4bcf45ea24",
+   "asm/heartland_hooks.asm": "3a2bb59bd51a16b7",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/heartland.json": "efea4fca2d334623",
+   "docs/profiles/heartland.json": "3a2b5d6ee45d5007",
    "nexclash.py": "cc1297e9104ece5f",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
@@ -224,7 +224,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "2314d2c0d07541da",
-   "nexclash/heartland.py": "7268117b8c877eef",
+   "nexclash/heartland.py": "95921c7090748940",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
@@ -239,18 +239,18 @@
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "6fac57d0dd017f59",
+   "recipe": "9532843a48419e7d",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-18"
  },
  "verified": {
   "deps": {
-   "asm/heartland_hooks.asm": "aff6df4bcf45ea24",
+   "asm/heartland_hooks.asm": "3a2bb59bd51a16b7",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/heartland.json": "efea4fca2d334623",
+   "docs/profiles/heartland.json": "3a2b5d6ee45d5007",
    "nexclash.py": "cc1297e9104ece5f",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
@@ -258,7 +258,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "2314d2c0d07541da",
-   "nexclash/heartland.py": "7268117b8c877eef",
+   "nexclash/heartland.py": "95921c7090748940",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
@@ -273,7 +273,7 @@
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "6fac57d0dd017f59",
+   "recipe": "9532843a48419e7d",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-18"
