@@ -7,7 +7,7 @@ C:\dev\castlemaster\Castlemaster1.tap    Branch: add-castle-master    Commit: (t
 Checks: survey --stop 15000 (castle_master_survey/), survey full run (survey_full/), scan of the view buffer (3,000 frames)
 Pending user answers: final design approval (route A first, agreed 2026-11-19, if E5 passes); buffer-reader
 option (i) / (ii); the colour palette for indices 1-16
-Start with: E1-E4 (E5 passed 2026-11-19, Feasibility); E2 adds: no DMA in flight when the stub runs
+Start with: E2-E4 (E5, E1 passed 2026-11-19, Feasibility); E2 adds: no DMA in flight when the stub runs
 Read: PLAYBOOK stage 1 + 3d; cards detect.pacing-structure, detect.routine-removal, patch.hybrid-display-replacement
 Open: who maps a face's colour to its dither pattern (the colour source for a colour route); unreached CALL sites (Coverage)
 
@@ -175,27 +175,12 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   pixel-level difference between what is shown and what the crosshair pick (the game's own projection) hits.
   Decision (user, 2026-11-19): route A first is reasonable on effort and risk, provided E5 is tested early -> E5
   runs first.
-  E5 (new, first): ISR redirect during a sandbox render. Every interrupt taken while the sandbox is mapped must
-  run the game's handler 0xC01F on the real pages (slots 2, 3, 6, 7: its reads / writes, the ULA attributes it
-  flashes, OUT 254) and return to the sandbox unchanged. Questions: a stub that is mapped in both worlds (the ISR
-  never touches slots 1, 4, 5; the renderer's own use of slots 0 / 1 to check); a stack for the handler outside
-  the remapped pages; R (the handler reads it at 49291 / 49342: patch.preserve-r); interrupt timing at 28 MHz.
-  Success: in a simulator with two memories (sandbox / real), injecting sandbox renders between updates leaves the
-  real RAM at every update entry identical to the unmodified replay, and the handler runs once per frame.
-  E5 groundwork (probe cm_slots, 3,000 frames; observed): render window (ISR excluded) reads slots 2-7, writes
-  2-7 (most: 2 = view buffer + vars, 7 = stack + vars), never slots 0 / 1. ISR: reads slot 0 (2,820, ROM), 2, 3,
-  6, 7; writes 2, 3, 6, 7; runs code in pages 0xC0-0xC1, 0xCA-0xCC (the printer 0xCA4E: it prints from the ISR)
-  and 0xFD (vector JP). So a redirect stub and the handler's private stack fit in slots 0 / 1 (alt ROM / a RAM
-  page in slot 1), mapped in both worlds; the ISR's slot-0 reads must still see the ROM bytes there (check which
-  addresses). Sketch: sandbox copy's 0xFDFD JP -> stub: save SP, own stack, MMU slots 2, 3, 6, 7 -> real pages,
-  CALL the real handler (its RETI returns to the stub), MMU back, SP back, EI, RET.
-  R (observed, static): ISR LD A,R at 49291 / 49342 = random blink delays 49173 / 49175 (512 + 2R frames) for
-  screen bytes 0x4CA2 / 0x47BD, used only in the ISR: cosmetic. Game: 0x9F6E (in 0x9F49, called from 0x6A99):
-  27391 = (R AND 63) + 10, a countdown read by the redraw trigger 0x8583, 0xA45C and the ISR 0xC123 = gameplay
-  event timing; 0xA569 (from 0xA4D3, clear code): R mod 20 -> 41970 (display, inferred). So every sandbox render
-  and hook restores R (patch.preserve-r); the ISR's cosmetic R reads during a sandbox render differ (accepted?).
-  Interrupts land at other points of the update at 28 MHz + pacing than in the original: equivalence is
-  "extremely close", not 1:1 (owner 2026-11-10); E5's real-RAM check compares at update entries with that rule.
+  E5 (first): ISR redirect during a sandbox render - the handler 0xC01F must run on the real pages and return to
+  the sandbox unchanged. Groundwork (cm_slots, 3,000 frames): the renderer never touches slots 0 / 1; the ISR
+  reads slot 0 (ROM) and 2, 3, 6, 7, writes 2, 3, 6, 7, code in pages 0xC0-0xC1, 0xCA-0xCC (it prints), 0xFD.
+  R (static): ISR LD A,R at 49291 / 49342 = blink delays 49173 / 49175 (cosmetic); game 0x9F6E: 27391 = (R AND
+  63) + 10, an event countdown (gameplay) -> every sandbox render and hook restores R (patch.preserve-r);
+  0xA569: R mod 20 -> 41970 (display, inferred). Interrupts land elsewhere at 28 MHz: "extremely close", not 1:1.
   E5 RESULT (2026-11-19, harness castle_master_work/e5_isr_redirect.py, logs e5_full.log / e5_full_noslot7.log):
   PASS. Per interrupt the RZX takes inside a redraw window (where hardware would be running the sandbox), a Next
   MMU model with real pages 10, 11, 4, 5, 0, 1 and sandbox pages 32-37 (= RAM at that redraw's start, camera
@@ -214,6 +199,17 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   (none can arrive: the handler runs far past the /INT pulse), DMA in flight during the redirect (the design
   must finish or pause sandbox DMA before the stub - check in E2), the sandbox renderer's own DI periods
   (interrupt latency), branches the recording never takes.
+  E1 RESULT (2026-11-19, castle_master_work/e1_maths.asm + e1_capture.py / e1_check.py, log e1_check_full.log):
+  PASS. Z80N versions of 0xA1FD (A*HL -> AHL), 0xA253 (HL*DE -> DEHL), 0xA348 (H*L -> HL) with MUL D,E, and
+  0xA2C1 (AHL/DE -> AHL, DE = remainder; no Z80N divide: same restoring division unrolled, leading quotient
+  zeros skipped, DE = 0 jumps into the original's own code). Every unique register input of all 1,827,355
+  recorded calls (682,956 inputs, 167,135 frames), each run through original and new: all 16 main + alternate
+  registers, SP / IX / IY and memory outside the stack equal, flags too (no call site reads them anyway); the
+  original reproduces the recording's outputs. Beyond the recording: 100,000 random inputs each, edge values,
+  0xA348 exhaustive (65,536): all equal. T per call (3.5 MHz T, call-weighted): 554 -> 273, 489 -> 228, 2,078 ->
+  904, 238 -> 110; the four together 1,131M -> 522M T = 9.7 % -> 4.5 % of the recording's T (x2.17 on maths;
+  on top of 28 MHz). Negative controls (3,000 frames): 4 mutants all FAIL (Lessons). The 16x16
+  mid-sum carry is dead (|x|, |y| <= 0x8000 -> <= 64,770): removed.
   E4 (new): which display readers of the buffer are active in play (overlay, marker, printer in the view), from
   the taint result's reader PCs per frame, to choose dual write or Layer 2 per reader.
 - Not the filler: 0x9DC9-0x9DF8 writes variables 24369-24382 that lie inside the view buffer's address range
@@ -234,6 +230,8 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
   profile, camera, consumer probe, proposed design.
 - 2026-11-19, E5 (ISR redirect), ~90 min incl. a 75-min full run, ~25 tool calls, 2 user rounds: corrections
   recorded, slot / R groundwork, harness + 5 negative controls, full-recording PASS.
+- 2026-11-19, E1 (Z80N maths), ~50 min incl. two ~10-min full runs, ~35 tool calls, 1 user round: capture,
+  four routines, checker, 4 mutants, full-recording PASS.
 - 2026-11-19, separate session (removal + taint of the raster stage), ~60 min, ~25 tool calls, 3 user rounds: six
   routine_skip runs, a taint probe over the full recording (castle_master_work/taint_call.py).
 
@@ -243,6 +241,9 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
 - [local: one game's misread; the survey reports what the copier reads] The survey's buffer range (0x5C80-0x673F, rounded) mixed the view buffer with renderer variables, so
   `scan --writers` on it listed geometry code first; the copier's own pointer (LD HL,23740 at 0xA39A) gave the
   exact buffer.
+- [local: one game's maths; a candidate for a shared bit-exact checker if a second game replaces maths] A
+  bit-exact replacement checked only on recorded inputs can hide wrong rare paths: two of four mutants passed
+  every recorded call and failed only random / edge inputs, so add sweeps and mutants.
 
 ## Technique use
 - detect.pacing-structure: helped: pacing_census on the main loop 0x8542 showed event-driven renders of 2-52
@@ -258,5 +259,5 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
 - environment: [none: local Windows checkout, no workarounds needed]
 - hand-rolled: [local: byte searches for CALL / LD (nn) sites with skoolkit's snapshot reader]
 - scratch: [local: cmdis / callers helpers stay in the session scratchpad; cm_profile and cm_consumers are
-  Castle Master probes, to move to tools/probes/ if E1-E3 reuse them; e5_isr_redirect.py (local, castle_master_work)
+  Castle Master probes, to move to tools/probes/ if E1-E3 reuse them; e5_isr_redirect.py, e1_*.py / e1_maths.asm (local, castle_master_work)
   becomes part of the engine's own verifier at stage 2 (verification harnesses stay per engine)]
