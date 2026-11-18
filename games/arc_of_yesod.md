@@ -2,15 +2,15 @@
 Techniques: detect.gameplay-screen-readers
 
 ## Next session
-Stage: 3 (prove + deliver)  State: `selftest.py --game arc_of_yesod --verify --stamp` PASSED 2026-11-17 (stamped); no
-.nxc, loading screen or hardware run yet; the owner has not seen a cavern in the build
+Stage: 3 (prove + deliver)  State: `selftest.py --game arc_of_yesod --verify --stamp` PASSED 2026-11-17 (stamped); loading
+screen and .nxc 1.0 built (below), the owner saw the Enhanced build in OverSpec (surface) and called it a first-pass
+1.0; no hardware run yet
 Inputs (private, pilot runs/arc_of_yesod/reference_files/arc_of_yesod, the selftest's reference folder): the archive's
 "Arc of Yesod, The (1985)(Thor Computer)(128K).z80" as arc_of_yesod.z80, md5 f58236395e737aaa0fac1f8476711ad8; arc_s1,
 arc_a1..a6, arc_over (from that snapshot), arc_tele and arc_end (from poked states, below). Scripts: runs/.../2026-11-17.
 Branch: add-arc-of-yesod    Commit: this one    Checks: selftest --game arc_of_yesod --verify (see State), doccheck
 Pending user answers: none
-Start with: the 128K tape's loading screen and the .nxc (`nexclash.py patch`), then the colour sheets and the hardware
-checklist to the owner
+Start with: the colour sheets and the hardware checklist to the owner, then the pace measurement
 Read: PLAYBOOK stage 3 (6a, 6b, 7), docs/COLOURS.md, "What the port changed" and the open items below
 Open: the list in the open-items section.
 
@@ -126,7 +126,18 @@ nexclash/nodes_of_yesod.py and its .asm with Arc's addresses, seven sites to loc
   replay would report it (hook against original); it has not happened in a recording.
 - The beam's pixels stay on the ULA under a sprite until the game wipes them (the original's next copy removes them).
 - Live tiles have ink only: no black fill, no painted colours while the astronaut appears or vanishes.
-- The loading screen (the 128K tape's), the .nxc, colour sheets to the owner, hardware.
+- Colour sheets to the owner, hardware.
+- Loading screen: arc_of_yesod_loading.scr beside the snapshot (the 128K tape's 6,914-byte block, flag and checksum
+  dropped, MD5 6bd06bf8; game data, local only) gives arc_of_yesod_sprites_loading.nex 16deee35 and
+  arc_of_yesod_enhanced_loading.nex 1736ef8c; `auto` packs them as arc_of_yesod.nxc (38,316 bytes, version 1.0,
+  colour set Enhanced). Not published.
+- Cheats: arc_of_yesod.pok beside the snapshot (local only), seven for the 128K release: infinite lives 48264,0
+  (Gerard Sweeney); from The Tipshop (Martin 'Pugsy' Pugh): infinite time 56364,58; infinite energy 50556,0 50328,0
+  50329,0; drop from any height 48966,0; no reversed controls 50529,24; no bouncing 48433,195; no crystal stealing
+  50821,24. Each checked against the snapshot's instruction; addresses from 0xC000 named bank 0 (import-pok refuses
+  bank 8 there on a 128K game). None is at a patch site. Not played with the cheats on.
+- The Tipshop lists a complete solution recording in the RZX Archive (Xmikex and Jamie Angus): the human recording
+  this game lacks, if it is of the 128K release. Not fetched.
 - A scripted 128K recorder in the toolkit (machine.py has no paging); the search that crashed the game.
 - Nodes' bare-RET plotter case and wrong-clip case: no such plotter seen in Arc's ten recordings.
 

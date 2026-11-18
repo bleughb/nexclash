@@ -62,6 +62,12 @@
     "name": "arc_tele.rzx",
     "md5": "13caed59a7255a053ea180163401f847",
     "path": "arc_of_yesod/arc_tele.rzx"
+   },
+   {
+    "name": "arc_of_yesod_loading.scr",
+    "md5": "6bd06bf856a433460084f151fc75ebad",
+    "path": "arc_of_yesod/arc_of_yesod_loading.scr",
+    "role": "The 6,912-byte loading screen: Arc of Yesod, The (1985)(Thor Computer Software)[128K].tzx (MD5 09b2ed0c), its 6,914-byte block without the flag and checksum bytes; staged beside the snapshot; not a recording."
    }
   ]
  },
@@ -115,16 +121,24 @@
   "enhanced": {
    "file": "arc_of_yesod_enhanced.nex",
    "md5": "7da91d6dd35aa46be3007215d6bd2a75"
+  },
+  "sprites_loading": {
+   "file": "arc_of_yesod_sprites_loading.nex",
+   "md5": "16deee356d8c21ee7641a3ce02b81896"
+  },
+  "enhanced_loading": {
+   "file": "arc_of_yesod_enhanced_loading.nex",
+   "md5": "1736ef8ceb3a1428ea8c803a5f345d6f"
   }
  },
  "repro": [],
  "status": {
   "title": "The Arc of Yesod (128K)",
   "engine_col": "arc_of_yesod (arc_of_yesod.md)",
-  "build": "arc_of_yesod_sprites.nex 7aa17d81 (every figure a sprite in its own colour, scenery on the ULA; a port of the Nodes of Yesod engine) + Enhanced 7da91d6d (the painted colours of 36 graphics carried over from Nodes of Yesod; Arc's own figures not painted yet)",
+  "build": "arc_of_yesod_sprites.nex 7aa17d81 (every figure a sprite in its own colour, scenery on the ULA; a port of the Nodes of Yesod engine) + Enhanced 7da91d6d (the painted colours of 36 graphics carried over from Nodes of Yesod; Arc's own figures not painted yet); with the 128K tape's loading screen beside the snapshot the two _loading builds (16deee35, 1736ef8c) are what the .nxc holds",
   "software": "Verify IDENTICAL on 10 scripted recordings, 22,957 frames (R compared; 8 from the archive snapshot through the hatch, 33 rooms; a teleporter and the out-of-time screen from poked states); unit PASS (1,254 positions, 114 graphics); 28 of 28 broken builds detected; no human recording",
   "hardware": "untested (starts and plays in OverSpec)",
-  "next": "pace measurement; loading screen and .nxc; hardware test; the owner paints Arc's own figures"
+  "next": "pace measurement; hardware test; the owner paints Arc's own figures"
  },
  "checks": [
   "asm2profile:arc_of_yesod"
@@ -553,7 +567,7 @@
    "docs/profiles/arc_of_yesod_colours.json": "494b8cf0008aaffa",
    "docs/profiles/arc_of_yesod_palette.json": "8f5ea9221fdfab94",
    "nexclash.py": "cc1297e9104ece5f",
-   "nexclash/arc_of_yesod.py": "37bc029e82cef054",
+   "nexclash/arc_of_yesod.py": "87b6eee8f8cf7621",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
@@ -567,7 +581,7 @@
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "a24964d71f461efd",
+   "recipe": "e922eb09f08a869f",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-17"
@@ -581,7 +595,7 @@
    "docs/profiles/arc_of_yesod_colours.json": "494b8cf0008aaffa",
    "docs/profiles/arc_of_yesod_palette.json": "8f5ea9221fdfab94",
    "nexclash.py": "cc1297e9104ece5f",
-   "nexclash/arc_of_yesod.py": "37bc029e82cef054",
+   "nexclash/arc_of_yesod.py": "87b6eee8f8cf7621",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
@@ -595,7 +609,7 @@
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "a24964d71f461efd",
+   "recipe": "e922eb09f08a869f",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-17"

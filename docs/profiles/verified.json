@@ -18,7 +18,9 @@
    "nex": {
     "plain": "9858d3f2cd71450c2efb01c116b1426b",
     "sprites": "7aa17d8133b86c3ad78b1b6bcee7dff6",
-    "enhanced": "7da91d6dd35aa46be3007215d6bd2a75"
+    "enhanced": "7da91d6dd35aa46be3007215d6bd2a75",
+    "sprites_loading": "16deee356d8c21ee7641a3ce02b81896",
+    "enhanced_loading": "1736ef8ceb3a1428ea8c803a5f345d6f"
    }
   },
   "9c14e2564e3f9956ff6ff973dac77537": {
