@@ -7,7 +7,7 @@ C:\dev\castlemaster\Castlemaster1.tap    Branch: add-castle-master    Commit: (t
 Checks: survey --stop 15000 (castle_master_survey/), survey full run (survey_full/), scan of the view buffer (3,000 frames)
 Pending user answers: final design approval (route A first, agreed 2026-11-19, if E5 passes); buffer-reader
 option (i) / (ii); the colour palette for indices 1-16
-Start with: E5 (ISR redirect, Feasibility); then E1-E4
+Start with: E1-E4 (E5 passed 2026-11-19, Feasibility); E2 adds: no DMA in flight when the stub runs
 Read: PLAYBOOK stage 1 + 3d; cards detect.pacing-structure, detect.routine-removal, patch.hybrid-display-replacement
 Open: who maps a face's colour to its dither pattern (the colour source for a colour route); unreached CALL sites (Coverage)
 
@@ -199,6 +199,24 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   and hook restores R (patch.preserve-r); the ISR's cosmetic R reads during a sandbox render differ (accepted?).
   Interrupts land at other points of the update at 28 MHz + pacing than in the original: equivalence is
   "extremely close", not 1:1 (owner 2026-11-10); E5's real-RAM check compares at update entries with that rule.
+  E5 RESULT (2026-11-19, harness castle_master_work/e5_isr_redirect.py, logs e5_full.log / e5_full_noslot7.log):
+  PASS. Per interrupt the RZX takes inside a redraw window (where hardware would be running the sandbox), a Next
+  MMU model with real pages 10, 11, 4, 5, 0, 1 and sandbox pages 32-37 (= RAM at that redraw's start, camera
+  moved, all 18 ISR variables altered, 0xFDFD JP -> stub): IM 2 acceptance in the sandbox, stub at 0x2000 (slot
+  1): LD (0x82C0),SP / LD SP,0x8400 / NEXTREG 0x52,0x53,0x56,0x57 -> real / CALL 0xC01F / DI / NEXTREG back /
+  LD SP,(0x82C0) / EI / RET. All 167,135 frames: 79,705 of 79,705 cases pass C1 (real RAM = the recording's own
+  handler result, dead stack below the interrupted SP excluded), C2 (sandbox unchanged but the return address
+  and the stub stack 0x82C0-0x8400, never touched by the game), C3 (all registers but R / T, IFF, MMU back). Stub
+  cost 245 T (3.5 MHz T; ~9 us at 28 MHz) per interrupt. R: 229 blink-delay bytes (49173-49176) differ across
+  the run - cosmetic (the stub's own R increments), accepted pending the user. Negative controls (900 frames,
+  20 cases each): no remap -> 20 FAIL (C1 + C2); slot 6 not remapped -> 20 FAIL; slot 3 -> 20 FAIL; slot 2 ->
+  2 FAIL (only interrupts that flash the view attributes); SP not restored -> 20 FAIL (runaway). Slot 7 not
+  remapped passes all 79,705 (full run): on the recorded paths the handler uses slot 7 only for its stack (now
+  the stub's) and the IM 2 vector (read in the sandbox, same bytes) - kept in the stub anyway for unrecorded
+  paths (40 T). Not covered: real hardware MMU / interrupt timing, an interrupt during the stub's own DI window
+  (none can arrive: the handler runs far past the /INT pulse), DMA in flight during the redirect (the design
+  must finish or pause sandbox DMA before the stub - check in E2), the sandbox renderer's own DI periods
+  (interrupt latency), branches the recording never takes.
   E4 (new): which display readers of the buffer are active in play (overlay, marker, printer in the view), from
   the taint result's reader PCs per frame, to choose dual write or Layer 2 per reader.
 - Not the filler: 0x9DC9-0x9DF8 writes variables 24369-24382 that lie inside the view buffer's address range
@@ -217,6 +235,8 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
   goal + speed answered, pacing census, colour source found.
 - 2026-11-19, stage 1 feasibility (DMA / DDMA), ~60 min, ~30 tool calls, 1 user round: stage costs, walking
   profile, camera, consumer probe, proposed design.
+- 2026-11-19, E5 (ISR redirect), ~90 min incl. a 75-min full run, ~25 tool calls, 2 user rounds: corrections
+  recorded, slot / R groundwork, harness + 5 negative controls, full-recording PASS.
 - 2026-11-19, separate session (removal + taint of the raster stage), ~60 min, ~25 tool calls, 3 user rounds: six
   routine_skip runs, a taint probe over the full recording (castle_master_work/taint_call.py).
 
@@ -230,6 +250,8 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
 ## Technique use
 - detect.pacing-structure: helped: pacing_census on the main loop 0x8542 showed event-driven renders of 2-52
   frames and no frame wait, which set the speed question.
+- patch.preserve-r: used: found the gameplay R read (0x9F6E -> 27391) that every sandbox render must restore;
+  the ISR's R reads are cosmetic (E5: 229 blink-delay bytes).
 - detect.routine-removal: helped: the consumer probe (cm_consumers) found gameplay reads of the projected
   polygons, which ruled out replacing the game's own redraw with a tween.
 
@@ -239,4 +261,5 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
 - environment: [none: local Windows checkout, no workarounds needed]
 - hand-rolled: [local: byte searches for CALL / LD (nn) sites with skoolkit's snapshot reader]
 - scratch: [local: cmdis / callers helpers stay in the session scratchpad; cm_profile and cm_consumers are
-  Castle Master probes, to move to tools/probes/ if E1-E3 reuse them]
+  Castle Master probes, to move to tools/probes/ if E1-E3 reuse them; e5_isr_redirect.py (local, castle_master_work)
+  becomes part of the engine's own verifier at stage 2 (verification harnesses stay per engine)]
