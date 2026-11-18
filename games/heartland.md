@@ -93,6 +93,12 @@ complete without figures, and the figures are exactly the difference to the orig
 - Not built: colour sheets, recolour, an Enhanced set. Patterns are made at run time from the game's 1-bit graphics, so a
   painted graphic needs patterns made ahead and a lookup by graphic address (as Nodes of Yesod has).
 
+## Published (2026-11-18)
+- `.nxc` 1.0 in jattree/nxc (commit d4c46e0, f78e868f, 21,586 bytes): the sprites build 79adc431 from the archive snapshot,
+  proof from the full seven-recording run. Cheats from the archive's .pok for this release, moved 0x6AC up to the
+  snapshot's addresses: infinite energy (25224: 201), infinite time (43031: 24). They land on 0x5BDC and 0xA16B in
+  play; their effect in play was not watched.
+
 ## Owner's first look (2026-11-18, OverSpec, from the .nxc menu)
 - Moving figures left echoes: the attribute run chose its first sprite with NextReg 0x34, which does not move the
   attribute port's index (lockstep is off), so each copy's sprites went to the block the pattern upload had named and
