@@ -2,9 +2,9 @@
 Techniques: detect.gameplay-screen-readers
 
 ## Next session
-Stage: 3 (prove + deliver)  State: `selftest.py --game arc_of_yesod --verify --stamp` PASSED 2026-11-17 (stamped); loading
-screen and .nxc 1.0 built (below), the owner saw the Enhanced build in OverSpec (surface) and called it a first-pass
-1.0; no hardware run yet
+Stage: 3 (prove + deliver)  State: `selftest.py --game arc_of_yesod --verify --stamp` PASSED 2026-11-17 (stamped) with the owner's
+recording and the sphere hook; loading screen in, .nxc 1.0 to rebuild from this build (cheats below), the owner saw
+the Enhanced build in OverSpec and called it a first-pass 1.0; no hardware run yet
 Inputs (private, pilot runs/arc_of_yesod/reference_files/arc_of_yesod, the selftest's reference folder): the archive's
 "Arc of Yesod, The (1985)(Thor Computer)(128K).z80" as arc_of_yesod.z80, md5 f58236395e737aaa0fac1f8476711ad8; arc_s1,
 arc_a1..a6, arc_over (from that snapshot), arc_tele and arc_end (from poked states, below). Scripts: runs/.../2026-11-17.
@@ -94,13 +94,27 @@ nexclash/nodes_of_yesod.py and its .asm with Arc's addresses, seven sites to loc
   wrong-clip and bare-RET plotter cases (no such plotter seen in Arc: to recheck with wider recordings).
 - e_over is the OUT OF TIME / percentage screen (0xDA50), not a lost last life; a teleporter pad's colour bars (0xDE75,
   0xDE77) are the game's own screen writes and are allowed for in the bare-colour check.
-- Results (2026-11-17): ten recordings, 22,957 frames, all IDENTICAL (registers with R, memory, sprites over the bare
+- Results (2026-11-17): eleven recordings (the owner's arc_h1 and ten scripted), 30,837 frames, all IDENTICAL (registers with R, memory, sprites over the bare
   picture, the patched replay's state). Unit tests: 1,254 positions over 114 graphics, 7 interrupted uploads, 16
-  objects, shadow page cases: PASS. Broken builds: 28, each on a recording that reaches its hook. Builds: plain
-  9858d3f2, sprites 7aa17d81, Enhanced 7da91d6d. The sprite and plain builds start and play in OverSpec (surface).
+  objects, shadow page cases: PASS. Broken builds: 30, each on a recording that reaches its hook. Builds: plain
+  9858d3f2, sprites 97828809, Enhanced d183181a. The sprite and plain builds start and play in OverSpec (surface).
+
+## The sphere's colour (2026-11-17, found by arc_h1)
+- 0xBC1A (the player's routine) colours the sphere's four cells on the screen itself: 0xBC41 LD (HL),A / INC L /
+  LD (HL),n / LD DE,31 / ADD HL,DE / LD (HL),A / INC L / LD (HL),A, with A and n self-modified at 0xBC40 and 0xBC44:
+  68 and 70 (green, one yellow cell) when 0xADED = 2 (parked), 71 otherwise. The graphic's own colour is white, so
+  the build showed a white sphere and left green and yellow on the screen cells. No scripted recording released it.
+- e_sphere (JP at 0xBC41, exit 0xBC4C): nothing written to the screen, the four inks to the shadow page as a paint's,
+  V_SPH (0xFBDF) = 0x10 + the first colour's palette line; line_fix (called from show) gives object 12 (0xFD80)
+  that line. Verify: the hook against the original, the shadow's four cells, the sprite's colour against the
+  verifier's own record of A, the patched replay with the four stores gone (CP n for LD (HL),n); two broken builds.
 
 ## How the recordings were made
-- Scripted, no human player (the checklist's human recording is still owed). All but two start at the archive snapshot.
+- arc_h1.rzx: the owner's play in Fuse 1.9.1 from the archive snapshot (`fuse --snapshot ... --record`), 7,880 frames,
+  37 rooms, the sphere released and parked; `nexclash.py rzx strip` dropped Fuse's nine autosave snapshots (with them
+  the patched replay takes each snapshot's painted screen and the bare-colour check fails, and the replay stops at
+  frame 3,250). It found the sphere's colour (below).
+- The other ten are scripted. All but two start at the archive snapshot.
 - The descent (found 2026-11-17 after the owner showed it could be done): a surface room with a hatch has a gap in
   its floor row (cell map row 17, columns 13-15); with the astronaut wholly inside the gap (x = 105 in room 74) the
   up row (Q) takes him down to the room below (74 -> 90). Script: `wait 20, 1 5, wait 60, 1 260, wait 60, M 250,
@@ -117,7 +131,11 @@ nexclash/nodes_of_yesod.py and its .asm with Arc's addresses, seven sites to loc
   the appear effect; they are no longer in the record (their snapshot was not the archive's).
 
 ## Open
-- A human recording (RECORDING_CHECKLIST); later rooms, the twelve teleporters in play, the ending by play.
+- This engine's verify does not strip a recording's autosave snapshots itself (docs/LEARNINGS.md: every replay path
+  should); arc_h1 was stripped by hand.
+- Later rooms, the twelve teleporters in play, the ending by play (the owner's recording covers 37 rooms).
+- The sphere's yellow cell: the original colours one of its four cells yellow when parked; the build's sphere is one
+  colour (green parked, white otherwise). The owner can paint it in Enhanced.
 - Pace: Nodes' windows are in and pass the speed-true line-clock check; not measured against the original in JNext.
   The new hooks (beam, second random read, live tiles: about 1.8 ms at 28 MHz an update while the effect runs) are
   not in the pace account.
@@ -128,16 +146,16 @@ nexclash/nodes_of_yesod.py and its .asm with Arc's addresses, seven sites to loc
 - Live tiles have ink only: no black fill, no painted colours while the astronaut appears or vanishes.
 - Colour sheets to the owner, hardware.
 - Loading screen: arc_of_yesod_loading.scr beside the snapshot (the 128K tape's 6,914-byte block, flag and checksum
-  dropped, MD5 6bd06bf8; game data, local only) gives arc_of_yesod_sprites_loading.nex 16deee35 and
-  arc_of_yesod_enhanced_loading.nex 1736ef8c; `auto` packs them as arc_of_yesod.nxc (38,316 bytes, version 1.0,
+  dropped, MD5 6bd06bf8; game data, local only) gives arc_of_yesod_sprites_loading.nex fda37475 and
+  arc_of_yesod_enhanced_loading.nex 49b7ac9d; `auto` packs them as arc_of_yesod.nxc (38,316 bytes, version 1.0,
   colour set Enhanced). Not published.
 - Cheats: arc_of_yesod.pok beside the snapshot (local only), seven for the 128K release: infinite lives 48264,0
   (Gerard Sweeney); from The Tipshop (Martin 'Pugsy' Pugh): infinite time 56364,58; infinite energy 50556,0 50328,0
   50329,0; drop from any height 48966,0; no reversed controls 50529,24; no bouncing 48433,195; no crystal stealing
   50821,24. Each checked against the snapshot's instruction; addresses from 0xC000 named bank 0 (import-pok refuses
   bank 8 there on a 128K game). None is at a patch site. Not played with the cheats on.
-- The Tipshop lists a complete solution recording in the RZX Archive (Xmikex and Jamie Angus): the human recording
-  this game lacks, if it is of the 128K release. Not fetched.
+- The Tipshop lists a complete solution recording in the RZX Archive (Xmikex and Jamie Angus): distribution denied
+  there and at Spectrum Computing; not obtained.
 - A scripted 128K recorder in the toolkit (machine.py has no paging); the search that crashed the game.
 - Nodes' bare-RET plotter case and wrong-clip case: no such plotter seen in Arc's ten recordings.
 
@@ -165,6 +183,9 @@ nexclash/nodes_of_yesod.py and its .asm with Arc's addresses, seven sites to loc
 7. Speed and music against the original 128K game.
 
 ## Lessons
+- [local: this game's hooks] A second colour path beside the paint: a human recording released the sphere within
+  three minutes and showed a figure in the wrong colour; ten scripted recordings never did. Reason: the searches
+  rewarded rooms and code, not the game's keys beyond movement.
 - [deferred Open: reconsider when a second 128K game needs a scripted recording] `nexclash.py record` drives a 48K
   machine only; the 128K recordings here were made with the pilot's m128.py. Reason: paging is not in machine.py.
 - [local: this game's intake] A new-code count misses a move into a place that runs the same code: the descent search
@@ -193,5 +214,7 @@ nexclash/nodes_of_yesod.py and its .asm with Arc's addresses, seven sites to loc
 - detect.pacing-structure: no help: the pace windows came with the Nodes port; Arc's own pacing was not measured.
 
 ## Stage log
+- 2026-11-17: stage 3 again (loading screen, .nxc, cheats; the owner's recording, the sphere hook, restamp), about 3 h,
+  about 60 tool calls, 8 user rounds.
 - 2026-11-17: stage 0, about 3 h, about 90 tool calls, 3 user rounds (most of it on the descent).
 - 2026-11-17: stages 1-3 (design, port, verify, record), about 5 h, about 150 tool calls, 3 user rounds.

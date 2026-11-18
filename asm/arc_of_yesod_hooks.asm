@@ -16,6 +16,7 @@ HELD    EQU 0xFBA0              ; per object: the graphic its pattern slots hold
 SHOWN   EQU 0xFBC0              ; per object: sprites on
 V_DROP  EQU 0xFBD0              ; updates with a graphic not in the table (2 bytes): verify and JNext read it
 V_K     EQU 0xFBD3
+V_SPH   EQU 0xFBDF              ; the sphere's colour as the game last set it on the screen (0x10 + palette line; 0 = never): e_sphere
 V_T     EQU 0xFBD4
 V_COLS  EQU 0xFBD5
 V_HP    EQU 0xFBD6
@@ -422,7 +423,7 @@ show:   inc hl
         add a,a
         add a,a
         add a,a
-        ld (V_LINE),a
+        call line_fix
         inc hl
         ld e,(hl)               ; bytes wide
         ld a,(ix+30)
@@ -834,6 +835,21 @@ blit_tgt:
         pop de
         pop af
         ret
+; A = the graphic's palette line << 4 -> V_LINE; object 12 (the sphere, 0xFD80) takes the colour the game last gave it. A lost.
+line_fix:
+        ld (V_LINE),a
+        ld a,(V_K)
+        cp 12
+        ret nz
+        ld a,(V_SPH)
+        or a
+        ret z
+        add a,a
+        add a,a
+        add a,a
+        add a,a
+        ld (V_LINE),a
+        ret
 helpers_end:
         ASSERT helpers_end <= 0x1F50
         SAVEBIN "arc_helpers.bin",0x1E80,helpers_end-0x1E80
@@ -1034,6 +1050,44 @@ e_attr_row:
         pop af
         call ny_r_end
         jp 0xD562
+; ---- 0xBC41 (LD (HL),A / INC L / LD (HL),n ... to 0xBC4B): the game colours the sphere's four cells on the screen itself, green and
+; yellow when it is parked, white otherwise, over the graphic's own white. A = the colour, HL -> the first cell, (0xBC44) = the second
+; cell's colour (the game writes that operand). Nothing is written to the screen: the ink goes to the shadow page as a paint's, and
+; the sphere's sprites take the first colour's line (line_fix). Registers and flags leave as the original's.
+e_sphere:
+        call ny_speed_in
+        call ny_r_begin
+        push af
+        push bc
+        push af
+        ld a,-38
+        call ny_r_set
+        pop af
+        ld b,a
+        and 7
+        bit 6,b
+        jr z,.n
+        or 8
+.n:     or 0x10
+        ld (V_SPH),a
+        nextreg 0x54,SHADOW_PAGE
+        push hl
+        ld a,h
+        add a,0x28              ; 0x58xx -> 0x80xx
+        ld h,a
+        ld (hl),b
+        inc l
+        ld a,(0xBC44)
+        ld (hl),a
+        ld de,31
+        add hl,de
+        ld (hl),b
+        inc l
+        ld (hl),b
+        pop hl
+        nextreg 0x54,4
+        jp sphere_out
+
 aux_end:
         ASSERT aux_end <= 0x1E00
         SAVEBIN "arc_aux.bin",0x1C50,aux_end-0x1C50
@@ -1215,6 +1269,17 @@ dynexp: push bc
         djnz .l
         pop bc
         ret
+; e_sphere's way out (the aux block is full)
+sphere_out:
+        call ny_r_end
+        call ny_speed_out
+        pop bc
+        pop af
+        inc l
+        ld de,31
+        add hl,de
+        inc l
+        jp 0xBC4C
 aux2_end:
         ASSERT aux2_end <= 0x1C50
         SAVEBIN "arc_aux2.bin",0x1B00,aux2_end-0x1B00

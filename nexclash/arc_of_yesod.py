@@ -27,6 +27,11 @@ TABLES = ((0x7E1C, 41), (0x8D55, 98))    # the astronaut's graphics, then the re
 DYNAMIC = (0x8C92, 0x8CF5)          # the appear / vanish effect rewrites these two as it shows them (0xC185, 0xC1A0): their tiles are made from the bytes as they are
 BLIT, ROOM, NEW1, NEW2, OVER, TELE = 0xD4AF, 0xAAF1, 0xA985, 0xAA3F, 0xDA50, 0xC112
 ATTR_ENTER, ATTR_ROW, ATTR, PLAYER, IRQ_IN, IRQ_OUT, RANDOM, RANDOM2, BEAM = 0xD55A, 0xD589, 0xD580, 0xBAF8, 0xDDB3, 0xDDEE, 0xC355, 0xC1CC, 0xCF07
+SPHERE = 0xBC41                     # LD (HL),A / INC L / LD (HL),n / LD DE,31 / ADD HL,DE / LD (HL),A / INC L / LD (HL),A: the sphere's four cells coloured on the screen
+SPHERE_K = 12                       # the sphere's object (0xFD80)
+V_SPH = 0xFBDF
+# the second replay's screen as the build leaves it: the four stores gone, registers and flags as they were (CP n for LD (HL),n: its flags are overwritten)
+SPHERE_STORES = {0xBC41: (b'\x77', b'\x00'), 0xBC43: (b'\x36', b'\xFE'), 0xBC49: (b'\x77', b'\x00'), 0xBC4B: (b'\x77', b'\x00')}
 BEAM_STORE = 0xCF12                 # the beam colours a cell whose ink is black: a screen write the build keeps
 PAD_STORES = (0xDE75, 0xDE77)        # a teleporter pad's colour bars: LD (HL),A to the screen's colours, in the original and the build
 BEAM_DRAW, BEAM_WIPE = 0xCF00, 0xCEC3   # LD (HL),A / LD (HL),0: the beam's own pixels, written to the screen (not the buffer) in the original and the build
@@ -34,16 +39,16 @@ SHADOW_PAGE = 23                    # the ink the original would have painted, p
 OBJ0, NOBJ = 0xFC00, 16
 SITES_ORIG = {ATTR_ENTER: ('dd7e05', 'e_attr_enter'), ATTR_ROW: ('15c262d5', 'e_attr_row'), PLAYER: ('dd21e0fd', 'e_player'), IRQ_IN: ('f5c5d5', 'e_irq_in'), IRQ_OUT: ('e1d1c1', 'e_irq_out'),
               RANDOM: ('7ee60f', 'e_random'), RANDOM2: ('6f677e', 'e_random2'), BEAM: ('7ee607', 'e_beam'), ATTR: ('77', 'e_attr'), BLIT: ('060008', 'e_blit'), ROOM: ('21bd5b', 'e_room'), NEW1: ('210040', 'e_new1'),
-              NEW2: ('210040', 'e_new2'), OVER: ('210040', 'e_over'), TELE: ('210058', 'e_tele')}
+              NEW2: ('210040', 'e_new2'), OVER: ('210040', 'e_over'), TELE: ('210058', 'e_tele'), SPHERE: ('772c36', 'e_sphere')}
 STORES = {ATTR: (b'\x77', b'\x00')}
 EXIT = {ATTR_ENTER: 0xD55D, ATTR_ROW: 0xD58D, PLAYER: 0xBAFC, IRQ_IN: 0xDDB6, IRQ_OUT: 0xDDF1, RANDOM: 0xC358, RANDOM2: 0xC1CF, BEAM: 0xCF0A, ATTR: 0xD581, BLIT: 0xD552, ROOM: 0xAAF4, NEW1: 0xA988, NEW2: 0xAA42,
-        OVER: 0xDA53, TELE: 0xC115}
+        OVER: 0xDA53, TELE: 0xC115, SPHERE: 0xBC4C}
 KIND = {ATTR_ENTER: 'attribute_enter', ATTR_ROW: 'attribute_row', PLAYER: 'player', IRQ_IN: 'irq_in', IRQ_OUT: 'irq_out', RANDOM: 'random', RANDOM2: 'random2', BEAM: 'beam', ATTR: 'attribute', BLIT: 'blit',
-        ROOM: 'room', NEW1: 'new1', NEW2: 'new2', OVER: 'over', TELE: 'tele'}
+        ROOM: 'room', NEW1: 'new1', NEW2: 'new2', OVER: 'over', TELE: 'tele', SPHERE: 'sphere'}
 ATTR_AGAIN = 0xD562                  # the paint's row loop: e_attr_row's other exit
 # bytes inside a patched site that are not the start of one of its original instructions (those run in the original replay)
 INTERIORS = tuple(a + k for a, (old, _) in SITES_ORIG.items() for k in range(1, len(bytes.fromhex(old)))
-                  if a + k not in (BLIT + 2, BEAM + 1, RANDOM + 1, RANDOM2 + 1, RANDOM2 + 2, IRQ_IN + 1, IRQ_IN + 2, IRQ_OUT + 1, IRQ_OUT + 2, ATTR_ROW + 1))
+                  if a + k not in (BLIT + 2, BEAM + 1, RANDOM + 1, RANDOM2 + 1, RANDOM2 + 2, IRQ_IN + 1, IRQ_IN + 2, IRQ_OUT + 1, IRQ_OUT + 2, ATTR_ROW + 1, SPHERE + 1, SPHERE + 2))
 LDIR, LDIR_END = 0xD4B3, 0xD4B5
 RNDREAD, RNDNEXT = 0xC355, 0xC356    # LD A,(HL) at a random address (H = L = R): can land on the screen; 0xC1CE is the other one
 PLAY_LINES = 168
@@ -438,7 +443,8 @@ PEND = {0xAB6E, 0xAB9F}             # the room's colours and picture go to the s
 RND2NEXT = 0xC1CF
 # the broken builds run on a recording with the beam, a lost life (the appear effect) and several enemy kinds; two need the recording that reaches their hook
 NEGATIVE_RZX = 'arc_over.rzx'
-NEGATIVE_ON = {'game over leaves sprites on': 'arc_end.rzx', 'teleport leaves sprites on': 'arc_tele.rzx', 'live tiles read the wrong page': 'arc_a1.rzx'}    # (a1: the appear effect, past frame 3,000)
+NEGATIVE_ON = {'game over leaves sprites on': 'arc_end.rzx', 'teleport leaves sprites on': 'arc_tele.rzx', 'live tiles read the wrong page': 'arc_a1.rzx',
+               'the sphere keeps the graphic\'s white': 'arc_h1.rzx', 'the sphere\'s ink is not kept': 'arc_h1.rzx'}    # (a1: the appear effect, past frame 3,000)
 STARS = 45391
 
 
@@ -970,6 +976,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
             if shown != cols * rows:
                 fail('wrong number of sprites', (hex(g), shown))
             line = line_of_colour(col)
+            if k == SPHERE_K and box.get('sph') is not None:
+                line = box['sph']                   # the colour the game last put on the sphere's cells (0xBC41)
             for s in range(k * 6, k * 6 + shown):
                 if ns.attr[s][2] >> 4 != line:
                     fail('sprite colour is not the graphic\'s', (hex(g), s))
@@ -1023,6 +1031,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
             return
         kind = KIND[pc]
         c[kind] += 1
+        if pc == SPHERE:
+            box['sph'] = line_of_colour(R[0])
         if kind == 'blit':
             digests.append(digest(R, M))
             free = M[STATE_LO:STATE_HI] + M[STATE2_LO:STATE2_HI]
@@ -1043,6 +1053,11 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
         if kind == 'attribute':
             if ns.shadow[R[6] * 256 + R[7] - 0x5800] != R[0]:
                 fail('the painted ink is not in the shadow page', (hex(R[6] * 256 + R[7]), R[0]))
+        elif kind == 'sphere':
+            a0 = R[6] * 256 + R[7] - 0x5800
+            want = [(a0, R[0]), (a0 + 1, M[0xBC44]), (a0 + 32, R[0]), (a0 + 33, R[0])]
+            if any(ns.shadow[k] != v for k, v in want):
+                fail('the sphere\'s ink is not in the shadow page', (hex(a0),))
         elif kind in ('attribute_enter', 'attribute_row', 'random', 'random2', 'beam', 'player', 'irq_in', 'irq_out'):
             pass
         elif kind != 'blit':
@@ -1077,6 +1092,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
     # second replay: the game with the screen as the build leaves it
     idx = {'i': 0, 'first': True, 'pend': None, 'r': 0, 'shadow': {}, 'beam': set()}
     stores = dict(patch.stores)
+    if SPHERE in {x[0] for x in patch.sites}:
+        stores.update(SPHERE_STORES)
     undo = {}
     for a, (old, new) in stores.items():
         for k, v in enumerate(old):
@@ -1098,6 +1115,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
             return
         if pc == ATTR:
             idx['shadow'][R[6] * 256 + R[7]] = R[0]     # the ink the original paints here: the build's shadow page
+            return
+        if pc in SPHERE_STORES:
+            idx['shadow'][R[6] * 256 + R[7]] = M[0xBC44] if pc == 0xBC43 else R[0]      # as e_sphere keeps them
             return
         if pc == BEAM + 1:
             a = R[6] * 256 + R[7]
@@ -1153,7 +1173,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
                 c['play area attributes are not the room\'s!'] += 1
                 if len(ex['attrs']) < 5:
                     ex['attrs'].append((i, room, badc, [(k, cur[k], cln[k]) for k in range(672) if cur[k] != cln[k] & 0x7F and k not in stars and k not in idx['beam']][:6]))
-    fc2, err2 = RZ.trace(rzx_path, {BLIT, LDIR, LDIR_END, RNDNEXT, RND2NEXT, BEAM + 1, BEAM_STORE, ATTR, ROOM, NEW1, NEW2, OVER, TELE} | set(PAD_STORES) | _starts(rzx_path), on2, stop=stop)
+    fc2, err2 = RZ.trace(rzx_path, {BLIT, LDIR, LDIR_END, RNDNEXT, RND2NEXT, BEAM + 1, BEAM_STORE, ATTR, ROOM, NEW1, NEW2, OVER, TELE} | set(PAD_STORES) | set(SPHERE_STORES) | _starts(rzx_path), on2, stop=stop)
     if err2:
         c['patched replay stopped: %s!' % err2] += 1
     if fc2 != fc:
@@ -1602,6 +1622,8 @@ def negative_patches(patch):
     k = code.index(bytes([0xED, 0xB0]), s['hideall'] - ROM_ORG)
     out['a drawn room keeps the old paint'] = _rom_patch(patch, k, bytes(2))
     out['live tiles read the wrong page'] = low_patch('dynload', bytes([0xED, 0x91, 0x54, 0x04, 0x1A]), bytes(4))     # NEXTREG 0x54,4 before the graphic's bytes
+    out['the sphere keeps the graphic\'s white'] = low_patch('e_sphere', bytes([0x32, V_SPH & 255, V_SPH >> 8]), bytes(3))        # LD (V_SPH),A
+    out['the sphere\'s ink is not kept'] = low_patch('e_sphere', bytes([0x70, 0x2C, 0x3A]), bytes([0x00]))     # LD (HL),B / INC L / LD A,(0xBC44)
 
     def noh(d):
         b = bytearray(d)

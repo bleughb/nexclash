@@ -64,6 +64,11 @@
     "path": "arc_of_yesod/arc_tele.rzx"
    },
    {
+    "name": "arc_h1.rzx",
+    "md5": "fefdd9c8fe7731db11aa8904cb1f13b3",
+    "path": "arc_of_yesod/arc_h1.rzx"
+   },
+   {
     "name": "arc_of_yesod_loading.scr",
     "md5": "6bd06bf856a433460084f151fc75ebad",
     "path": "arc_of_yesod/arc_of_yesod_loading.scr",
@@ -101,13 +106,14 @@
    "arc_a5.rzx",
    "arc_a6.rzx",
    "arc_end.rzx",
+   "arc_h1.rzx",
    "arc_over.rzx",
    "arc_s1.rzx",
    "arc_tele.rzx"
   ],
   "auto_record": false,
   "minutes": 40,
-  "note": "Scripted recordings (no human player), all from the archive snapshot at the control menu: the surface, the hatch, caverns. Each hook against the original from one state (registers with R, memory, sprites over the bare picture), then the game replayed with the screen as the build leaves it."
+  "note": "The owner's play recorded in Fuse (arc_h1.rzx, `rzx strip` of its autosaves) and scripted recordings, all from the archive snapshot at the control menu: the surface, the hatch, caverns. Each hook against the original from one state (registers with R, memory, sprites over the bare picture), then the game replayed with the screen as the build leaves it."
  },
  "outputs": {
   "plain": {
@@ -116,27 +122,27 @@
   },
   "sprites": {
    "file": "arc_of_yesod_sprites.nex",
-   "md5": "7aa17d8133b86c3ad78b1b6bcee7dff6"
+   "md5": "97828809e85654dddb0b9e4e117ea718"
   },
   "enhanced": {
    "file": "arc_of_yesod_enhanced.nex",
-   "md5": "7da91d6dd35aa46be3007215d6bd2a75"
+   "md5": "d183181a0b7fbd17df9cc638da942785"
   },
   "sprites_loading": {
    "file": "arc_of_yesod_sprites_loading.nex",
-   "md5": "16deee356d8c21ee7641a3ce02b81896"
+   "md5": "fda37475786a20fff92a72a5ba78496f"
   },
   "enhanced_loading": {
    "file": "arc_of_yesod_enhanced_loading.nex",
-   "md5": "1736ef8ceb3a1428ea8c803a5f345d6f"
+   "md5": "49b7ac9d62940e8ff5868b91b5f78046"
   }
  },
  "repro": [],
  "status": {
   "title": "The Arc of Yesod (128K)",
   "engine_col": "arc_of_yesod (arc_of_yesod.md)",
-  "build": "arc_of_yesod_sprites.nex 7aa17d81 (every figure a sprite in its own colour, scenery on the ULA; a port of the Nodes of Yesod engine) + Enhanced 7da91d6d (the painted colours of 36 graphics carried over from Nodes of Yesod; Arc's own figures not painted yet); with the 128K tape's loading screen beside the snapshot the two _loading builds (16deee35, 1736ef8c) are what the .nxc holds",
-  "software": "Verify IDENTICAL on 10 scripted recordings, 22,957 frames (R compared; 8 from the archive snapshot through the hatch, 33 rooms; a teleporter and the out-of-time screen from poked states); unit PASS (1,254 positions, 114 graphics); 28 of 28 broken builds detected; no human recording",
+  "build": "arc_of_yesod_sprites.nex 97828809 (every figure a sprite in its own colour, scenery on the ULA; a port of the Nodes of Yesod engine) + Enhanced d183181a (the painted colours of 36 graphics carried over from Nodes of Yesod; Arc's own figures not painted yet); with the 128K tape's loading screen beside the snapshot the two _loading builds (fda37475, 49b7ac9d) are what the .nxc holds",
+  "software": "Verify IDENTICAL on 11 recordings, 30,837 frames (R compared): the owner's play in Fuse (arc_h1, 7,880 frames, 37 rooms, autosaves stripped) and 10 scripted (8 from the archive snapshot through the hatch; a teleporter and the out-of-time screen from poked states); unit PASS (1,254 positions, 114 graphics); 30 of 30 broken builds detected",
   "hardware": "untested (starts and plays in OverSpec)",
   "next": "pace measurement; hardware test; the owner paints Arc's own figures"
  },
@@ -544,7 +550,7 @@
    "evidence": [
     "games/arc_of_yesod.md#open"
    ],
-   "coverage": "Ten scripted recordings, 22,957 frames; the pace windows (the copy and the paint) checked on a speed-true line clock over arc_over.rzx. No JNext or hardware timing of Arc itself.",
+   "coverage": "Eleven recordings (one human), 30,837 frames; the pace windows (the copy and the paint) checked on a speed-true line clock over arc_over.rzx. No JNext or hardware timing of Arc itself.",
    "result": "Nodes of Yesod's windows carried over unchanged (targets from the copy's rows and columns and the paint's cells); the beam, second random read and live-tile hooks are outside the account. Pace against the original not measured."
   },
   "dependencies": {
@@ -560,14 +566,14 @@
  },
  "checked": {
   "deps": {
-   "asm/arc_of_yesod_hooks.asm": "c4a525bd8133ab7b",
+   "asm/arc_of_yesod_hooks.asm": "9e3d19b59ba4f32e",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/arc_of_yesod.json": "c54a8418a6b93683",
+   "docs/profiles/arc_of_yesod.json": "9f0ee3574e652915",
    "docs/profiles/arc_of_yesod_colours.json": "494b8cf0008aaffa",
    "docs/profiles/arc_of_yesod_palette.json": "8f5ea9221fdfab94",
    "nexclash.py": "cc1297e9104ece5f",
-   "nexclash/arc_of_yesod.py": "87b6eee8f8cf7621",
+   "nexclash/arc_of_yesod.py": "d4cb08645b69c50c",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
@@ -581,21 +587,21 @@
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "e922eb09f08a869f",
+   "recipe": "ddd347a7318bdc04",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-17"
  },
  "verified": {
   "deps": {
-   "asm/arc_of_yesod_hooks.asm": "c4a525bd8133ab7b",
+   "asm/arc_of_yesod_hooks.asm": "9e3d19b59ba4f32e",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/arc_of_yesod.json": "c54a8418a6b93683",
+   "docs/profiles/arc_of_yesod.json": "9f0ee3574e652915",
    "docs/profiles/arc_of_yesod_colours.json": "494b8cf0008aaffa",
    "docs/profiles/arc_of_yesod_palette.json": "8f5ea9221fdfab94",
    "nexclash.py": "cc1297e9104ece5f",
-   "nexclash/arc_of_yesod.py": "87b6eee8f8cf7621",
+   "nexclash/arc_of_yesod.py": "d4cb08645b69c50c",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
@@ -609,7 +615,7 @@
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "e922eb09f08a869f",
+   "recipe": "ddd347a7318bdc04",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-17"
