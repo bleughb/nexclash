@@ -1,12 +1,12 @@
 # Heartland (Odin, 1986; 48K)
 
 ## Next session
-Stage: 3 (prove + deliver)   State: built and verified 2026-11-18; starts and plays in OverSpec; not on hardware; no Enhanced set, no colour sheets yet
+Stage: 4 (colour rounds)   State: sprites and Enhanced builds verified 2026-11-18; plays in OverSpec; not on hardware; Enhanced is a first pass the owner will edit
 Inputs (private, pilot runs/heartland/reference_files/heartland): heartland.z80 = TOSEC "Heartland (1986)(Odin Computer
 Graphics).z80", md5 07bfa8f74d60a53ab64e5b092ffd6cca; heart_h1.rzx (the owner's play in Fuse, 12,178 frames, autosaves
 stripped); heartR_1..6.rzx (13,461 frames, scripted).
 Branch: add-heartland    Commit: this one    Checks: selftest --game heartland --verify --stamp, doccheck    Pending user answers: none
-Start with: the hardware checklist below with the owner; then the Enhanced set (needs patterns made ahead: see Open)
+Start with: the owner's edits to the painted sheets ("Enhanced" below), then the scenery question, then hardware
 Read: "Build" and "Open" below
 Open: hardware; pace on hardware; Enhanced colours and sheets; the border's colour on a room with coloured paper.
 
@@ -16,10 +16,10 @@ Techniques: `detect.gameplay-screen-readers`, `patch.xor-overlay-keep-ula`, `pat
 
 | | |
 |---|---|
-| Builds | heartland.nex 33283547 (plain), heartland_sprites.nex 79adc431 |
+| Builds | heartland.nex 33283547 (plain), heartland_sprites.nex df3bed3c, heartland_enhanced.nex 6497de71 |
 | Verify | IDENTICAL on 7 recordings, 25,639 frames: 5,049 game steps, 5,026 screen copies, 19 screen clears, 11,723 figures noted, 9,158 paints, 267 random bytes; every register with R and all game memory after every hook; 3,158,110 sprite pixels against the model and the game's own picture |
 | Unit | PASS: 119 cases in 24 groups (the two copies with nothing to do, 144 lines, a 16-piece foreground list, the attribute copy's three ways, the random byte at all 256 addresses and from a cell with its paint lifted, full tables, the game's interrupt at 13 points inside each hook) |
-| Negative | 12 broken builds, 12 detected |
+| Negative | 14 broken builds, 14 detected |
 | Pace | the hooks take +0.32% of the recordings' time more than the two copies they stand for (a wait on the video line holds the game's copy to its own time) |
 | Known differences | the bolt (0xFC4A) is XORed through a figure in the original; the build's figure stays whole over it (275 pixels in the recordings). The mask's cleared border is black; in the original it is the cell's paper. Small figures are bright white; in the original they take the cell's ink |
 
@@ -90,8 +90,32 @@ complete without figures, and the figures are exactly the difference to the orig
   0x5E00 in BASIC's spare memory, overwritten by the game's own move before any read.
 - DMA / DDMA (docs/DDMA.md): the uploads are 256 or 768 bytes from a RAM buffer by OTIR; the hook is already faster
   than the copy it wraps and waits out the rest, so a blitter would only lengthen the wait. Not used.
-- Not built: colour sheets, recolour, an Enhanced set. Patterns are made at run time from the game's 1-bit graphics, so a
-  painted graphic needs patterns made ahead and a lookup by graphic address (as Nodes of Yesod has).
+- Colour sheets (docs/COLOURS.md form) and `recolour` are not built: the Enhanced set is rebuilt from the colour map.
+
+## Enhanced (2026-11-18, first pass; owner: "they'll do for first pass in the game", he will edit)
+- Sheets and tools are private (the owner's folder nexclash-heartland): two 1:1 sheets made from the game's graphics,
+  painted by a script, checked (only ink pixels change, Next colours, 13 a figure), turned into
+  docs/profiles/heartland_colours.json by work/sheet2colours.py: per graphic address the colour of each ink pixel in
+  row order, and the palette lines figures share (5 lines of 13 colours).
+- Who is who (found the hard way): the player's figure is the man in the top hat, drawn by the large plotters from the
+  shift buffer (13 frames of 3 bytes x 33 at the table 0xE154, moved right by x AND 7, or 7 minus that when mirrored,
+  by 0xA95C). The hooded figure and the wizard are enemies (table 0xE10C, 4 bytes x 33). The table's first eight
+  frames are an astronaut no recording draws: left out. Nine small frames no recording draws: left out.
+- Engine: the patterns are still made at run time from graphic and mask; then each ink nibble takes its colour from a
+  block laid out as the patterns are (two 256-byte tables in the code page pick the ink nibbles), read from a page
+  at slot 6 for that loop. Blocks: a large table graphic has one plain and one mirrored (768 bytes each); a small frame
+  one for each of its 8 shifts (256 bytes); a hero frame one for each shift, plain and mirrored. 38 pages.
+  A figure's sprites use its palette line (attribute byte 3); the palette is 9-bit, 16 lines, set at start-up.
+  The plain build carries the same pages empty, so the .nxc's Enhanced set changes only bank contents.
+- The hero's frame is found from the shift buffer's own bytes (three 8-bit keys over its 136 bytes, 104 entries): his
+  record's frame number and x can move on before the plot (a first version used them and failed 5 of 6 scripted
+  recordings; two keys collided once with an unpainted shape, three do not in any recording).
+- The attribute copy now also runs at 28 MHz in its hook and waits out its own time (18,103 / about 46,900 / 12,219 T
+  by its way), and the copy window's time is read after the coverage and after each figure: the colour loop made the
+  copy hook longer than its window, and a new room's coverage made it longer than a frame.
+- Open in this pass: the hero is white while he dissolves in or out (the game cuts a stripe pattern through his frames at
+  run time: 80 shapes in the recordings, none a table frame). The panel's hat, book and faces are scenery, not figures.
+- Owner, 2026-11-18: "also we should colour the scenery and props": not started; options owed.
 
 ## Published (2026-11-18)
 - `.nxc` 1.0 in jattree/nxc (commit d4c46e0, f78e868f, 21,586 bytes): the sprites build 79adc431 from the archive snapshot,
@@ -148,7 +172,7 @@ figures behind the foreground pieces as in the original, sparks on the ULA. Enha
 - The menu after a game: fixed in the build, not yet seen by the owner.
 - Hardware: nothing run on a board; the checklist above. Sound: an interrupt inside the copy hook's 28 MHz part runs the
   game's handler at 28 MHz for that frame.
-- Enhanced colours, colour sheets, recolour: not built (Build, last line). The owner paints later.
+- The toolkit's colour sheets and recolour for this engine; the hero's dissolve; scenery and props (Enhanced above).
 - The mask's border is black in the build and the cell's paper in the original: the same on black paper; on a room with
   coloured paper it is a black edge. Not seen by the owner yet.
 - The random byte's two cells: if something other than the attribute copy writes 0x5959 or 0x5A5A the very byte the
@@ -180,6 +204,10 @@ figures behind the foreground pieces as in the original, sparks on the ULA. Enha
   now refuses it and a broken build proves the check.
 - [local: this game's hooks] A site's own bytes are data to a game that reads random bytes from all of memory: no
   changed byte may sit at an address of the form A * 257 (the patch class refuses one).
+- [local: this game's colours] A record's frame number is not what is in a shared shift buffer at the plot: key colours
+  to the bytes drawn. The owner's recording passed with the record's fields; five scripted ones did not.
+- [local: this game's colours] A sheet filled from a graphics table shows figures the game never draws (an astronaut):
+  mark each figure by whether a recording plots it, and name characters from which record plots them, not from looks.
 - [local: this game's intake] The snapshot is the tape's BASIC start and the game moves itself down by 0x6AC before it
   runs: every site is patched at its snapshot address and verified at its address in play.
 - [local: this game's intake] The owner's four minutes of play gave 2,485 game steps and the bolt; six scripted
@@ -205,6 +233,8 @@ figures behind the foreground pieces as in the original, sparks on the ULA. Enha
 - detect.pacing-structure: no help: the copy's time was read off the verifier's own run of the routine.
 
 ## Stage log
+- 2026-11-18: stage 4 (Enhanced first pass: sheets, a painting pass, the colour path, the hero's frames by content,
+  three failed full runs on the way), about 4 h, about 90 tool calls, 12 user rounds.
 - 2026-11-18: stage 4 (the owner's first look: echoes, menu leftovers; two fixes, restamp), about 1 h, about 20 tool
   calls, 4 user rounds.
 - 2026-11-18: stages 2-3 (the owner's recording; first design, dropped; second design, verifier, unit cases, broken

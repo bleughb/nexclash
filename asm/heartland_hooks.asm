@@ -56,6 +56,10 @@ SA_B    EQU 0x9269              ; 2 bytes: what the build's screen holds at 0x59
 SA_O    EQU 0x926B              ; 2 bytes: what the original's holds
 V_LIM   EQU 0x926D              ; the ink limit of the game's copy this step, 0 = none
 V_RADD  EQU 0x926E              ; M1s the original's copy ran more than the build's
+V_SH    EQU 0x926F              ; a small figure's shift, 0-7
+V_FN    EQU 0x9270              ; a small figure's frame number
+V_G     EQU 0x9271              ; word: the figure's graphic
+V_LINE  EQU 0x9273              ; the figure's palette line
 STASH   EQU 0x9280
 STASH_END EQU 0x9840
 ENTS    EQU 0x9840              ; 8 figures of 8 bytes: buffer address, graphic, mask, kind
@@ -71,13 +75,26 @@ T_112   EQU 4667                ; the game's copy of 112 lines: 65,335 T, in 1/1
 T_144   EQU 5998                ; 144 lines: 83,978 T
 D_NOTE  EQU 54                  ; a note's own time, added to what the copy's wait gives back
 D_PAINT EQU 54
-D_ACOPY EQU 154
+TA_1    EQU 1293                ; the game's attribute copy: 18,103 T plain,
+TA_2    EQU 3350                ; about 46,900 T with the ink limit,
+TA_3    EQU 873                 ; 12,219 T as one colour
 PBUF    EQU 0x9B00              ; 3 blocks of 256: a block = two patterns side by side, 16 lines
 TLO     EQU 0x9E00              ; (graphic nibble << 4 | mask nibble) -> the first two pixels
 THI     EQU 0x9F00              ;                                       the last two
 REV     EQU 0xFE                ; the game's bit-reverse table, high byte
 FGLIST  EQU 0xA10B
 LINES   EQU 0xAC19              ; bit 0: 144 lines this copy, else 112
+KT      EQU 0x2C00              ; code page: a pattern byte with its ink nibbles (1) cleared
+MT      EQU 0x2D00              ;            0xF for each ink nibble
+LPL     EQU 0x2E00              ;            painted large graphics: count, then 7 bytes each: graphic, line, page and
+                                ;            address high byte of its colours, the same for the mirrored figure
+SPL     EQU 0x2F00              ;            painted small frames, 3 bytes a frame number: page (0 none), address high
+                                ;            byte of shift 0 (one 256-byte block a shift), line
+SPLN    EQU 44
+EPL     EQU 0x2F90              ;            painted shifted frames (0xE154), 3 bytes a frame: page, page of the
+                                ;            mirrored figure (0 none), line; a 768-byte block a shift in each
+EPLN    EQU 13
+HPL     EQU 0x3000              ;            the shifted frames by their keys: count, then the three keys, shift, frame
 ACOPY   EQU 0xD440              ; the attribute copy
 CELL0   EQU ACOPY + 0x99        ; -> 0x5959
 CELL1   EQU ACOPY + 0x19A       ; -> 0x5A5A
@@ -254,7 +271,15 @@ noted:  push bc
         ld a,h
         ld (bc),a
         inc c
+        ld a,(ix+9)             ; (a small figure's record: x for the shift, +13 the frame number)
+        and 7
+        swapnib
+        ld l,a
         ld a,(V_KIND)
+        or l
+        ld (bc),a
+        inc c
+        ld a,(ix+13)
         ld (bc),a
 .out:   pop hl
         pop de
@@ -369,6 +394,7 @@ commit: ld a,r
         ld (V_LNS),a
         call hlib_pace_open
 .n_cov: call cover
+        call hlib_pace_tick     ; (the window's time is read at least once a frame: a new room's coverage is long)
         call build
         pop hl
         pop de
@@ -419,23 +445,9 @@ acopy:  ld a,r
         push hl
         ld hl,0
         ld (V_CF),hl
-        ld a,(V_PN)
-        or a
-        jr nz,.work
-        ld (SA_B),hl            ; no paint: the two cells are the original's
-        ld (SA_O),hl
-        pop hl
-        ld a,R_A0
-        call hlib_r_set
-        pop af
-        HLIB_SPEED_OUT V_SPEED
-        push hl
-        ld hl,0xA618
-        ex (sp),hl
-        ld a,(AMODE)
-        jp x_ret
-.work:  push bc
+        push bc
         push de
+        call hlib_pace_open     ; the game's copy runs at 28 MHz here too; its own time is waited out below
         ; which way the game's copy goes this time
         ld c,1
         ld a,(AMODE)
@@ -450,6 +462,8 @@ acopy:  ld a,r
         ld (V_VAR),a
         ; lift the paint, last noted first
         ld a,(V_PN)
+        or a
+        jr z,.lifted
         ld b,a
         ld c,a
         add a,a
@@ -495,19 +509,17 @@ acopy:  ld a,r
         ld (de),a
 .no:    pop hl
         djnz .lift
-        pop de
+.lifted: pop de
         pop bc
         pop hl
         pop af
-        HLIB_SPEED_OUT_A V_SPEED
         ld a,R_ACALL            ; R as the original has it there: the game's copy can read it (0xA6B0)
         call hlib_r_set
         ld a,(HLIB_V_R + 1)
         ld r,a
         ld a,(AMODE)
-        call 0xA618             ; the game's copy, at the game's speed
+        call 0xA618             ; the game's copy
         HLIB_R_IN
-        HLIB_SPEED_IN V_SPEED
         push af
         push bc
         push de
@@ -531,6 +543,8 @@ acopy:  ld a,r
         ld (V_LIM),a
         ; the paint again
         ld a,(V_PN)
+        or a
+        jr z,.painted
         ld b,a
         ld hl,PREC
         ld de,PFL
@@ -588,6 +602,7 @@ acopy:  ld a,r
         inc hl
         inc e
         djnz .again
+.painted:
         xor a
         ld (V_PN),a
         ld hl,PREC
@@ -626,8 +641,17 @@ acopy:  ld a,r
 .of:    and 0x78                ; the cell's paper, flash off, with the paint's ink and bright
         or e
         ret
-.sh:    ld hl,D_ACOPY
-        call hlib_debt_add
+.sh:    HLIB_SPEED_OUT V_SPEED
+        ld hl,TA_1              ; wait out the rest of the time the game's copy takes at its own speed, by its way
+        ld a,(V_VAR)
+        dec a
+        jr z,.t
+        ld hl,TA_2
+        dec a
+        jr z,.t
+        ld hl,TA_3
+.t:     ld a,(V_SPEED)
+        call hlib_pace_wait
         ld a,R_A1
         call hlib_r_set
         ld a,(V_RADD)
@@ -636,9 +660,7 @@ acopy:  ld a,r
         pop de
         pop bc
         pop af
-        HLIB_SPEED_OUT V_SPEED
         jp x_ret
-R_A0    EQU 114
 R_ACALL EQU 118                 ; -10
 R_A1    EQU 119
 
@@ -835,6 +857,7 @@ build:
 .fig:   push bc
         push hl
         call figure
+        call hlib_pace_tick
         pop hl
         ld a,l
         add a,8
@@ -881,6 +904,7 @@ figure: ld e,(hl)
         inc l
         ld b,(hl)
         inc l
+        ld (V_G),bc
         push bc
         pop ix                  ; IX = graphic
         ld c,(hl)
@@ -888,7 +912,16 @@ figure: ld e,(hl)
         ld b,(hl)
         inc l
         ld a,(hl)
+        push af
+        and 3
         ld (V_KIND),a
+        pop af
+        swapnib
+        and 7
+        ld (V_SH),a
+        inc l
+        ld a,(hl)
+        ld (V_FN),a
         push bc                 ; the mask
         ; position: x = 32 + column * 8, y = 32 + 48 + line
         ld a,e
@@ -1004,6 +1037,7 @@ figure: ld e,(hl)
         ld hl,V_ROWS
         dec (hl)
         jr nz,.row
+        call colour
         ; upload and attributes
         ld a,(V_KIND)
         cp 2
@@ -1040,6 +1074,10 @@ attr:   ex de,hl
         inc hl
         ld a,d
         and 1
+        ld d,a
+        ld a,(V_LINE)
+        swapnib
+        or d
         ld (hl),a
         inc hl
         ld a,(V_Q)
@@ -1059,6 +1097,174 @@ attr:   ex de,hl
         ld a,e
         inc a
         ld (V_Q),a
+        ret
+
+; A painted figure: each ink pixel of the patterns just built takes its colour from the figure's colour block, laid out
+; as the patterns are (a page at slot 6 for the loop; the interrupt never touches that slot). No block: white, line 0.
+colour: xor a
+        ld (V_LINE),a
+        ld a,(V_KIND)
+        cp 2
+        jr nz,.large
+        ld a,(V_FN)
+        cp SPLN
+        ret nc
+        ld l,a
+        add a,a
+        add a,l
+        ld l,a
+        ld h,SPL >> 8
+        ld a,(hl)
+        or a
+        ret z
+        ld c,a                  ; page
+        inc l
+        ld a,(V_SH)
+        add a,(hl)
+        ld b,a                  ; address high byte
+        inc l
+        ld a,(hl)
+        ld (V_LINE),a
+        ld ixl,1
+        jp .go
+.large: ld de,(V_G)
+        ld a,d
+        cp 0xE0
+        jr nc,.table
+        ; a copy of the shift buffer: which frame of 0xE154 and which shift it holds is found from its bytes (two
+        ; running sums over the 136), since the record's frame and x can have moved on since the buffer was made
+        ex de,hl
+        ld bc,136 * 256
+        ld e,c
+        ld d,c
+.sum:   ld a,d                  ; three keys: a sum, a sum of the running sums, a rotate-and-XOR
+        rlca
+        xor (hl)
+        ld d,a
+        ld a,(hl)
+        add a,c
+        ld c,a
+        add a,e
+        ld e,a
+        inc hl
+        djnz .sum
+        ld hl,HPL
+        ld a,(hl)
+        or a
+        ret z
+        ld b,a
+        inc hl
+.hf:    ld a,(hl)
+        cp c
+        jr nz,.hn
+        inc hl
+        ld a,(hl)
+        dec hl
+        cp e
+        jr nz,.hn
+        inc hl
+        inc hl
+        ld a,(hl)
+        dec hl
+        dec hl
+        cp d
+        jr z,.hh
+.hn:    inc hl
+        inc hl
+        inc hl
+        inc hl
+        inc hl
+        djnz .hf
+        ret                     ; not a painted frame: white
+.hh:    inc hl
+        inc hl
+        inc hl
+        ld a,(hl)               ; the shift
+        ld (V_SH),a
+        inc hl
+        ld a,(hl)               ; the frame
+        ld l,a
+        add a,a
+        add a,l
+        add a,EPL & 255
+        ld l,a
+        ld h,EPL >> 8
+        ld a,(V_KIND)
+        or a
+        jr z,.en
+        inc l                   ; mirrored: its own page
+.en:    ld a,(hl)
+        or a
+        ret z
+        ld c,a
+        ld a,(V_KIND)
+        or a
+        jr nz,.el
+        inc l
+.el:    inc l
+        ld a,(hl)
+        ld (V_LINE),a
+        ld a,(V_SH)
+        ld b,a
+        add a,a
+        add a,b
+        add a,0xC0
+        ld b,a                  ; one block of 768 a shift
+        ld ixl,3
+        jr .go
+.table:
+        ld hl,LPL
+        ld a,(hl)
+        or a
+        ret z
+        ld b,a
+        inc hl
+.find:  ld a,(hl)
+        cp e
+        jr nz,.nx
+        inc hl
+        ld a,(hl)
+        dec hl
+        cp d
+        jr z,.hit
+.nx:    ld a,l
+        add a,7
+        ld l,a
+        djnz .find
+        ret
+.hit:   inc hl
+        inc hl
+        ld a,(hl)
+        ld (V_LINE),a
+        inc hl
+        ld a,(V_KIND)
+        or a
+        jr z,.pg
+        inc hl
+        inc hl
+.pg:    ld c,(hl)
+        inc hl
+        ld b,(hl)
+        ld ixl,3
+.go:    ld a,c
+        nextreg 0x56,a
+        ld c,0                  ; BC = the colours
+        ld de,PBUF
+.m:     ld a,(de)
+        ld l,a
+        ld h,MT >> 8
+        ld a,(bc)
+        and (hl)
+        dec h
+        or (hl)
+        ld (de),a
+        inc bc
+        inc e
+        jr nz,.m
+        inc d
+        dec ixl
+        jr nz,.m
+        nextreg 0x56,0
         ret
 
 ; One byte of the figure: graphic at IX, mask at HL', coverage at DE'; 4 pattern bytes at DE.
@@ -1134,16 +1340,19 @@ emit:   ld a,c
         inc e
         ret
 CODE_END:
-        ASSERT CODE_END <= 0x3800
+        ASSERT CODE_END <= KT
         SAVEBIN "heartland_code.bin",0x2000,CODE_END-0x2000
 
         ORG 0xD000
 setup:  nextreg 0x43,0x20       ; sprite palette 0, auto-increment
-        nextreg 0x40,1
-        ld hl,.pal
-        ld b,15
+        nextreg 0x40,0
+        ld hl,pal9
+        ld b,0
 .pl:    ld a,(hl)
-        nextreg 0x41,a
+        nextreg 0x44,a          ; 9 bits a colour: RRRGGGBB, then the last blue bit
+        inc hl
+        ld a,(hl)
+        nextreg 0x44,a
         inc hl
         djnz .pl
         nextreg 0x4B,0          ; index 0 clear
@@ -1160,7 +1369,7 @@ setup:  nextreg 0x43,0x20       ; sprite palette 0, auto-increment
         nextreg 0x19,191
         nextreg 0x15,0x01       ; sprites on, S L U
         ret
-; 1 ink (bright white), 2 the mask's border (black); 3-15 for a painted sheet, the Spectrum's other colours.
-.pal:   DB 0xFF,0x00,0x03,0xE0,0xE7,0x1C,0x1F,0xFC,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6
+; 16 lines of 16: 1 ink (bright white), 2 the mask's border (black); 3-15 a painted line's colours (the build fills them in).
+pal9:   DS 512
 SETUP_END:
         SAVEBIN "heartland_setup.bin",0xD000,SETUP_END-0xD000

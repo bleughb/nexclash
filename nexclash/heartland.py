@@ -41,6 +41,150 @@ A_, F_, SP_, R_, PC_, T_, IFF_ = 0, 1, 12, 15, 24, 25, 26
 ISR = 0xF3F3                        # the game's interrupt in play (IM 2, I = 0xFF, a table of 0xF3): JP 0x60F3
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
+COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', 'heartland_colours.json')
+KT, MT, LPL, SPL, SPLN, EPL, EPLN, HPL = 0x2C00, 0x2D00, 0x2E00, 0x2F00, 44, 0x2F90, 13, 0x3000      # tables in the code page (asm)
+ETAB = 0xE154                       # the 13 frames the game shifts into its buffer for the hero (3 bytes x 33)
+PLANE_PAGE0 = 28                    # colour blocks: pages 28 up (banks 14 up), one at slot 6 for one loop
+LTAB, STAB = 0xE10C, 0xE16E         # the game's frame tables in play
+DEFAULT_LINE = [0x000, 0x1FF, 0x000, 0x007, 0x1C0, 0x1CF, 0x038, 0x03F, 0x1F8, 0x005, 0x140, 0x145, 0x028, 0x02D, 0x168, 0x16D]   # 9-bit: as the first build's .pal
+
+
+def load_colours(path=None):
+    """The painted map (docs/profiles/heartland_colours.json): palette lines and, per graphic address, its ink pixels' colours."""
+    p = path or COLOURS
+    return json.load(open(p)) if os.path.exists(p) else None
+
+
+def play_view(snap_ram):
+    """Memory as the game has it in play, from the snapshot's 48K (offset 0x4000): the game moves 0x61AC up down to 0x5B00,
+    then 0xBFE0-0xDD88 of that up to 0xE10C (graphics and tables)."""
+    lo = bytearray(0x10000)
+    for a in range(0x5B00, 0x5B00 + 33432):
+        lo[a] = snap_ram[a + OFF - 0x4000]
+    for k in range(7593):
+        lo[57612 + k] = lo[49120 + k]
+    return bytes(lo)
+
+
+def shifted(mem, p, b):
+    """A 3-byte frame's 34 lines moved right by b into 4 bytes, as 0xA95C leaves them in the shift buffer."""
+    out = bytearray()
+    for r in range(34):
+        v = (mem[p + 3 * r] << 24 | mem[p + 3 * r + 1] << 16 | mem[p + 3 * r + 2] << 8) >> b
+        out += bytes((v >> 24 & 255, v >> 16 & 255, v >> 8 & 255, v & 255))
+    return bytes(out)
+
+
+def sums(g):
+    """The hook's keys for a shift buffer's content: (sum, sum of running sums, rotate-and-XOR), 8 bits each."""
+    a = b = x = 0
+    for v in g:
+        x = ((x << 1 | x >> 7) & 255) ^ v
+        a = (a + v) & 255
+        b = (b + a) & 255
+    return a, b, x
+
+
+def which_frame(mem, g):
+    """-> the address of the frame of 0xE154 whose shifted copy g is, by its bytes; None when it is none of them."""
+    for f in range(EPLN):
+        p = mem[ETAB + 2 * f] | mem[ETAB + 2 * f + 1] << 8
+        if any(shifted(mem, p, b) == g for b in range(8)):
+            return p
+    return None
+
+
+def ink_bits(g, w, h):
+    """[(x, y)] of a graphic's ink pixels, row by row."""
+    return [(x, y) for y in range(h) for x in range(w * 8) if g[y * w + x // 8] >> (7 - x % 8) & 1]
+
+
+def figure_colours(cmap, addr, g, w, h):
+    """{(x, y): colour index} of a graphic's ink pixels and its palette line; ({}, 0) when it is not painted."""
+    f = (cmap or {}).get('figures', {}).get('0x%04X' % addr)
+    if not f:
+        return {}, 0
+    ink = f['ink']
+    return {xy: int(ink[j], 16) if j < len(ink) else 1 for j, xy in enumerate(ink_bits(g, w, h))}, f['line']
+
+
+def _block(cols, blocks):
+    """Colours {(x, y): index} laid out as the patterns are: a 256-byte block = two 16 x 16 patterns side by side."""
+    out = bytearray(256 * blocks)
+    for (x, y), c in cols.items():
+        if x >= 32 or y >= 16 * blocks:
+            continue
+        i = (y >> 4) * 256 + (x >> 4) * 128 + (y & 15) * 8 + ((x & 15) >> 1)
+        out[i] |= c << 4 if not x & 1 else c
+    return bytes(out)
+
+
+def colour_tables(mem, cmap):
+    """-> (LPL bytes, SPL bytes, {page: 8K}, palette of 256 9-bit words) for a painted map over the game's memory in play."""
+    pal = [list(DEFAULT_LINE) for _ in range(16)]
+    lpl, spl, epl, hpl, pages = bytearray(1), bytearray(3 * SPLN), bytearray(3 * EPLN), bytearray(1), {}
+    if not cmap:
+        return bytes(lpl), bytes(spl), bytes(epl), bytes(hpl), pages, [c for ln in pal for c in ln]
+    for li, ln in enumerate(cmap['lines']):
+        for k, (r, g, b) in enumerate(ln):
+            pal[li + 1][3 + k] = (r * 7 + 127) // 255 << 6 | (g * 7 + 127) // 255 << 3 | (b * 7 + 127) // 255
+    blob_l, blob_s, shifted_, keys = bytearray(), bytearray(), [], {}
+    small_of = {}
+    for n in range(SPLN):
+        small_of.setdefault(mem[STAB + 2 * n] | mem[STAB + 2 * n + 1] << 8, []).append(n)
+    for key, f in sorted(cmap['figures'].items()):
+        addr = int(key, 16)
+        if f['kind'] == 'shifted':      # the game shifts 34 lines of 3 bytes right by x AND 7 (7 - that, mirrored)
+            cols, line = figure_colours(cmap, addr, mem[addr:addr + 102], 3, 34)
+            for mir in (0, 1):
+                blob = bytearray()
+                for b in range(8):      # a block for each shift the buffer can hold
+                    blob += _block({((31 - (x + b)) if mir else x + b, y): c for (x, y), c in cols.items()}, 3)
+                shifted_.append((f['frame'], mir, line, bytes(blob)))
+            for b in range(8):
+                keys.setdefault(sums(shifted(mem, addr, b)), set()).add((b, f['frame'], shifted(mem, addr, b)))
+        elif f['kind'] == 'large':
+            g = mem[addr:addr + 136]
+            cols, line = figure_colours(cmap, addr, g, 4, 34)
+            k = len(blob_l) // 768
+            blob_l += _block(cols, 3) + _block({(31 - x, y): c for (x, y), c in cols.items()}, 3)
+            ent = [addr & 255, addr >> 8, line]
+            for j in (k, k + 1):                # 10 blocks of 768 a page
+                ent += [PLANE_PAGE0 + j // 10, 0xC0 + (j % 10) * 3]
+            lpl += bytes(ent)
+            lpl[0] += 1
+        else:
+            g = mem[addr:addr + 32]
+            cols, line = figure_colours(cmap, addr, g, 2, 16)
+            k = len(blob_s) // 2048             # 8 shifts of 256: 4 frames a page
+            for sh in range(8):
+                blob_s += _block({(x + sh, y): c for (x, y), c in cols.items()}, 1)
+            for n in small_of.get(addr, []):
+                spl[3 * n:3 * n + 3] = bytes((0x80 | k // 4, 0xC0 + (k % 4) * 8, line))
+    if lpl[0] > 28:
+        raise ValueError('more than 28 painted large graphics')
+    nl = (len(blob_l) // 768 + 9) // 10
+    for i in range(nl):
+        pages[PLANE_PAGE0 + i] = bytes(blob_l[i * 7680:(i + 1) * 7680]).ljust(8192, b'\0')
+    for n in range(SPLN):
+        if spl[3 * n] & 0x80:
+            spl[3 * n] = PLANE_PAGE0 + nl + (spl[3 * n] & 0x7F)
+    for i in range((len(blob_s) + 8191) // 8192):
+        pages[PLANE_PAGE0 + nl + i] = bytes(blob_s[i * 8192:(i + 1) * 8192]).ljust(8192, b'\0')
+    pg = PLANE_PAGE0 + len(pages)
+    for fn, mir, line, blob in shifted_:
+        pages[pg] = blob.ljust(8192, b'\0')
+        epl[3 * fn + mir], epl[3 * fn + 2] = pg, line
+        pg += 1
+    for key, who in sorted(keys.items()):
+        if len({w[2] for w in who}) > 1:
+            raise ValueError('two shifted frames share the keys %s' % (key,))
+        sh, fn, _ = sorted(who)[0]
+        hpl += bytes(key + (sh, fn))
+        hpl[0] += 1
+    return bytes(lpl), bytes(spl), bytes(epl), bytes(hpl), pages, [c for ln in pal for c in ln]
+
+
 
 
 def _profile_path():
@@ -116,7 +260,7 @@ class PlainPatch:
 class HeartlandPatch:
     name = 'Heartland figures -> hardware sprites (altrom stubs, bodies in a page at slot 1, state in a page at slot 4)'
 
-    def __init__(self, prof=None, rom_code=None, stores=None, work=None, code=None):
+    def __init__(self, prof=None, rom_code=None, stores=None, work=None, code=None, colours=None, z80=None, blank=0):
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         self.rom_code = rom_code or bytes.fromhex(h['rom'])
@@ -133,7 +277,15 @@ class HeartlandPatch:
         self.slot1 = (ALT_PAGE, self.regblock)
         self.altrom = (ROM_ORG, self.regblock + 20)
         self.code = bytes.fromhex(h['code']) if code is None else code
-        self.page = _whole_rom_page(self.rom_code, self.code)
+        self.z80 = z80
+        self.blank = blank              # empty colour pages, so the plain build has the banks the painted one has (.nxc sets)
+        self.colours = colours          # a painted map: the Enhanced build (it needs the game's graphics: z80, or apply)
+        self.planes = {}
+        self.tables(None)
+        if z80 is not None:
+            from .z80tonex import Z80Snapshot
+            sn = Z80Snapshot(z80)
+            self.tables(play_view(bytes(sn.banks[5]) + bytes(sn.banks[2]) + bytes(sn.banks[0])))
         self.stores = STORES if stores is None else stores
         self.sites = []                 # addresses in play; the snapshot holds them OFF higher
         for a, (old, sym) in SITES_ORIG.items():
@@ -144,7 +296,40 @@ class HeartlandPatch:
             if any((a + k) >> 8 == (a + k) & 255 for k in range(len(new))):
                 raise ValueError('site 0x%04X changes a byte the random routine can read' % a)
         self.work = bytes(work_page() if work is None else work)
+        self._banks()
+
+    def tables(self, mem):
+        """The code page's tables, the colour blocks' pages and the palette; mem = the game's memory in play, None = unpainted."""
+        lpl, spl, epl, hpl, self.planes, pal = colour_tables(mem, self.colours) if mem is not None else colour_tables(None, None)
+        page = bytearray(_whole_rom_page(self.rom_code, self.code))
+        if len(self.code) > KT - 0x2000:
+            raise ValueError('hook bodies run into their tables')
+        for b in range(256):
+            hi, lo = b >> 4, b & 15
+            page[KT - 0x2000 + b] = (0 if hi == 1 else hi) << 4 | (0 if lo == 1 else lo)
+            page[MT - 0x2000 + b] = (15 if hi == 1 else 0) << 4 | (15 if lo == 1 else 0)
+        page[LPL - 0x2000:LPL - 0x2000 + len(lpl)] = lpl
+        page[SPL - 0x2000:SPL - 0x2000 + len(spl)] = spl
+        page[EPL - 0x2000:EPL - 0x2000 + len(epl)] = epl
+        page[HPL - 0x2000:HPL - 0x2000 + len(hpl)] = hpl
+        self.page = bytes(page)
+        st = bytearray(bytes.fromhex(self.prof['hooks']['setup']))
+        o = self.syms['pal9'] - 0xD000
+        for i, c in enumerate(pal):
+            st[o + 2 * i], st[o + 2 * i + 1] = c >> 1, c & 1
+        self.stub_extra = bytes(st)
+        self.palette = pal
+        if not self.planes and self.blank:
+            self.planes = {PLANE_PAGE0 + i: bytes(8192) for i in range(self.blank)}
+        if hasattr(self, 'work'):
+            self._banks()
+
+    def _banks(self):
         self.extra_banks = {12: self.page + bytes(8192), 13: self.work + bytes(8192)}
+        for pg, data in self.planes.items():
+            cur = self.extra_banks.get(pg // 2, bytes(16384))
+            o = (pg & 1) * 8192
+            self.extra_banks[pg // 2] = cur[:o] + data + cur[o + 8192:]
 
     def apply(self, snap):
         if snap.is128:
@@ -161,6 +346,8 @@ class HeartlandPatch:
         for a, old, new in self.sites:
             o = a + OFF - 0x4000
             ram[o:o + len(new)] = new
+        if self.colours and not self.planes:
+            self.tables(play_view(bytes(snap.banks[5]) + bytes(snap.banks[2]) + bytes(snap.banks[0])))
         snap.banks[5] = bytes(ram[0:16384])
         snap.banks[2] = bytes(ram[16384:32768])
         snap.banks[0] = bytes(ram[32768:49152])
@@ -183,8 +370,8 @@ class State:
 class View:
     """64K as the hooks see it: the alt ROM image (or its RAM copy with the bodies, at slot 1), the game's RAM, the state
     page at slot 4 when NextReg 0x54 names it."""
-    def __init__(self, mem, rom, page, work):
-        self.mem, self.rom, self.page, self.work = mem, rom, page, work
+    def __init__(self, mem, rom, page, work, planes=None):
+        self.mem, self.rom, self.page, self.work, self.planes = mem, rom, page, work, planes or {}
         self.model = None
 
     def __len__(self):
@@ -199,6 +386,8 @@ class View:
             return self.page[a - 0x2000] if self.model.nr.get(0x51, 255) == ALT_PAGE else self.rom[a]
         if 0x8000 <= a < 0xA000 and self.model.nr.get(0x54, 4) == WORK:
             return self.work[a - 0x8000]
+        if 0xC000 <= a < 0xE000 and self.model.nr.get(0x56, 0):
+            return self.planes[self.model.nr[0x56]][a - 0xC000]
         return self.mem[a]
 
     def __setitem__(self, a, v):
@@ -208,6 +397,9 @@ class View:
             return
         if 0x8000 <= a < 0xA000 and self.model.nr.get(0x54, 4) == WORK:
             self.work[a - 0x8000] = v
+            return
+        if 0xC000 <= a < 0xE000 and self.model.nr.get(0x56, 0):
+            self.model.c['write to a colour page!'] += 1
             return
         self.mem[a] = v
 
@@ -244,7 +436,7 @@ def run_hook(patch, st, rom, mem, regs, site, ret=None, limit=4000000, irq=None)
     m2 = bytearray(mem)
     for a, old, new in patch.sites:
         m2[a:a + len(new)] = new
-    v = View(m2, rom, patch.page, st.work)
+    v = View(m2, rom, patch.page, st.work, patch.planes)
     s = simpool.machine(_rw(), v, list(regs), 'heartland-hook')
     model = Model(s, st)
     v.model = model
@@ -262,7 +454,7 @@ def run_hook(patch, st, rom, mem, regs, site, ret=None, limit=4000000, irq=None)
             v[sp], v[sp + 1] = pc & 255, pc >> 8
             R[SP_], R[PC_], R[IFF_] = sp, ISR, 0
             continue
-        if pc == stop and R[SP_] == sp0 and model.nr.get(0x51, 255) == 255:
+        if pc == stop and R[SP_] == sp0 and model.nr.get(0x51, 255) == 255 and not model.nr.get(0x56, 0):
             break
         if ret and pc == ret[0] and R[SP_] == ret[1] and model.nr.get(0x51, 255) == 255:
             break
@@ -293,7 +485,8 @@ def run_orig(rom, mem, regs, stop, sp=None, limit=4000000):
 
 
 def sprite_bits(st):
-    """{(x, y) in the buffer: 1 ink / 0 border} from the shown sprites, in order, inside the sprite window."""
+    """{(x, y) in the buffer: 0 the border, else colour index | palette line << 4} from the shown sprites, in order, inside
+    the sprite window."""
     out = {}
     x1, x2, y1, y2 = st.clip
     for n, a in enumerate(st.attrs):
@@ -313,7 +506,7 @@ def sprite_bits(st):
                 b = pat[py * 8 + px // 2]
                 c = b >> 4 if not px & 1 else b & 15
                 if c and x1 <= x + px - 32 <= x2:
-                    out[(x + px - 32, sy - 48)] = 1 if c == 1 else 0
+                    out[(x + px - 32, sy - 48)] = 0 if c == 2 else c | (a[2] >> 4) << 4
     return out
 
 
@@ -340,11 +533,24 @@ def coverage(mem):
 _REV = bytes(int('{:08b}'.format(i)[::-1], 2) for i in range(256))
 
 
-def expected_layer(figs, cov, lines):
-    """What the sprites must show: the noted figures in plot order by the plotters' rule, minus the pieces' pixels."""
+def expected_layer(figs, cov, lines, cmap=None, mem=None):
+    """What the sprites must show: the noted figures in plot order by the plotters' rule, minus the pieces' pixels. A pixel
+    is 0 (the mask's border) or its colour index | palette line << 4: the painted map's colour for that ink pixel of the
+    graphic, counted in the graphic's own row order (so a shifted or mirrored figure is checked against the unshifted map)."""
     pic = {}
-    for kind, buf, g, m in figs:
+    for kind, buf, g, m, ident in figs:
         w, h = (3, 16) if kind == 2 else (4, 34)
+        ink, line = None, 0
+        if cmap and ident is not None and mem is not None:
+            f = cmap['figures'].get('0x%04X' % ident)
+            if f:
+                ink, line = f['ink'], f['line']
+        rank, j = {}, 0
+        for row in range(h):
+            for sx in range(w * 8):
+                if g[row * w + sx // 8] >> (7 - sx % 8) & 1:
+                    rank[(row, sx)] = j
+                    j += 1
         a = buf
         for row in range(h):
             for k in range(w):
@@ -362,7 +568,9 @@ def expected_layer(figs, cov, lines):
                     if own & bit:
                         continue
                     if gb & bit:
-                        pic[(x0 + b, y)] = 1
+                        r = rank[(row, k * 8 + (7 - b if kind == 1 else b))]
+                        c = int(ink[r], 16) if ink and r < len(ink) else 1
+                        pic[(x0 + b, y)] = c | line << 4
                     elif not mb & bit:
                         pic[(x0 + b, y)] = 0
             a += 32
@@ -465,7 +673,13 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             kind = KIND[pc]             # the plotter's arguments: HL = mask, DE = graphic, HL' = buffer
             g, mk, buf = regs[4] << 8 | regs[5], regs[6] << 8 | regs[7], regs[22] << 8 | regs[23]
             n = 48 if kind == 2 else 136
-            box['figs'].append((kind, buf, bytes(mem[g:g + n]), bytes(mem[mk:mk + n])))
+            ix = regs[8] << 8 | regs[9]
+            if kind == 2:               # the frame the shift buffer was made from: the record's +13 through the game's table
+                fn = mem[ix + 13]
+                ident = (mem[STAB + 2 * fn] | mem[STAB + 2 * fn + 1] << 8) if fn < SPLN else None
+            else:
+                ident = g if g >= 0xE000 else which_frame(mem, bytes(mem[g:g + 136]))
+            box['figs'].append((kind, buf, bytes(mem[g:g + n]), bytes(mem[mk:mk + n]), ident))
             return
         if pc == RANDOM:
             c['random'] += 1
@@ -507,12 +721,13 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                 fail('the screen copy leaves its page or its speed', (model.nr.get(0x54), model.nr[7]))
             if not model.burst_ok():
                 fail('attributes split by pattern uploads', c['copy'])
-            if model.c['write to the code page!'] or model.c['upload into a shown pattern!']:
+            if model.c['write to the code page!'] or model.c['upload into a shown pattern!'] or model.c['write to a colour page!']:
                 fail('a write to the code page or to a shown pattern', dict(model.c))
             c['figures'] += len(figs)
             c['most figures'] = max(c['most figures'], len(figs))
             c['most sprites'] = max(c['most sprites'], sum(1 for a in st.attrs if a[3] & 0x80))
-            want = expected_layer(figs, coverage(mem), lines)
+            want = expected_layer(figs, coverage(mem), lines, patch.colours, mem)
+            c['painted pixels'] += sum(1 for v in want.values() if v > 1)
             got = sprite_bits(st)
             c['sprite pixels compared'] += len(want)
             if want != got:
@@ -520,7 +735,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                 fail('the sprites are not the noted figures', (c['copy'], len(d), sorted(d)[:4], [(f[0], hex(f[1])) for f in figs]))
             for (x, y), v in want.items():      # each sprite pixel lies on the same pixel of the game's own picture
                 a = y * 32 + (x >> 3)
-                if mem[BUF + a] >> (7 - (x & 7)) & 1 != v:
+                if mem[BUF + a] >> (7 - (x & 7)) & 1 != (1 if v else 0):
                     if a in sparks:
                         c['bolt pixels the original XORs into a figure'] += 1
                     else:
@@ -567,7 +782,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
     c['T hook notes'] = int(sum(st.t[k] for k in (BIG, MIR, SMALL, PAINT, RANDOM)))
     to, th = box['orig_t'][COPY] + box['orig_t'][ACOPY], sum(st.t.values())
     c['T original'], c['T hooks'] = to, int(th)
-    if to and abs(th - to) > 0.03 * to:
+    if to and abs(th - to) > 0.01 * fc * 69888:     # within 1% of the recording's whole time
         fail('the hooks\' time is not the time of the copies they stand for', (to, int(th)))
     for k in (BIG, MIR, SMALL, PAINT, RANDOM, CLS):
         c['T hook at %04X' % k] = int(st.t[k])
@@ -643,11 +858,13 @@ def unit_tests(patch, states, neg=None):
             ok('foreground list of 16 pieces', bytes(st.work[0:BUF_END - BUF]) == bytes(coverage(m2)) and w(st, FGC) == 0xFF)
     # the attribute copy with no paint noted
     for mem, regs, work in by[ACOPY][:2]:
+        sp = regs[SP_]
+        ret = (mem[sp] | mem[sp + 1] << 8, (sp + 2) & 0xFFFF)
         st = fresh(work)
         w(st, V_PN, 0)
-        Rp, mp, model = run_hook(patch, st, rom, mem, regs, ACOPY)
-        Ro, mo = run_orig(rom, mem, regs, EXIT[ACOPY])
-        ok('attribute copy with no paint', Rp[PC_] == EXIT[ACOPY] and _differs(Ro, mo, Rp, mp, regs[SP_]) == ([], []))
+        Rp, mp, model = run_hook(patch, st, rom, mem, regs, ACOPY, ret)
+        Ro, mo = run_orig(rom, mem, regs, ret[0], ret[1])
+        ok('attribute copy with no paint', Rp[PC_] == ret[0] and _differs(Ro, mo, Rp, mp, sp) == ([], []))
         # the three ways the game's copy goes, with the two readable cells painted
         sp = regs[SP_]
         ret = (mem[sp] | mem[sp + 1] << 8, (sp + 2) & 0xFFFF)
@@ -792,10 +1009,10 @@ def _code_patch(patch, sym, new, stub=False):
     if a >= ROM_ORG:
         rc = bytearray(patch.rom_code)
         rc[a - ROM_ORG:a - ROM_ORG + len(new)] = new
-        return HeartlandPatch(patch.prof, bytes(rc), code=patch.code)
+        return HeartlandPatch(patch.prof, bytes(rc), code=patch.code, colours=patch.colours, z80=patch.z80, blank=patch.blank)
     cd = bytearray(patch.code)
     cd[a - 0x2000:a - 0x2000 + len(new)] = new
-    return HeartlandPatch(patch.prof, patch.rom_code, code=bytes(cd))
+    return HeartlandPatch(patch.prof, patch.rom_code, code=bytes(cd), colours=patch.colours, z80=patch.z80, blank=patch.blank)
 
 
 def negative_patches(patch):
@@ -815,7 +1032,24 @@ def negative_patches(patch):
         for t in (TLO, THI):
             b = wk[t - 0x8000 + k]
             wk[t - 0x8000 + k] = (0 if b >> 4 == 2 else b & 0xF0) | (0 if b & 15 == 2 else b & 15)
-    out.append(('patterns without the mask\'s border', HeartlandPatch(patch.prof, patch.rom_code, work=bytes(wk), code=patch.code)))
+    out.append(('patterns without the mask\'s border', HeartlandPatch(patch.prof, patch.rom_code, work=bytes(wk), code=patch.code, colours=patch.colours, z80=patch.z80)))
+    if patch.colours and patch.planes:      # the painted build's own faults
+        q = HeartlandPatch(patch.prof, patch.rom_code, code=patch.code, colours=patch.colours, z80=patch.z80)
+        pg = bytearray(q.page)
+        for i in range(pg[LPL - 0x2000]):   # a mirrored figure given the plain figure's colours
+            e = LPL - 0x2000 + 1 + 7 * i
+            pg[e + 5:e + 7] = pg[e + 3:e + 5]
+        q.page = bytes(pg)
+        q._banks()
+        out.append(('a mirrored figure painted as a plain one', q))
+        q = HeartlandPatch(patch.prof, patch.rom_code, code=patch.code, colours=patch.colours, z80=patch.z80)
+        pg = bytearray(q.page)
+        for n in range(SPLN):               # a small figure's colours not moved with its shift
+            if pg[SPL - 0x2000 + 3 * n]:
+                pg[SPL - 0x2000 + 3 * n + 1] ^= 1
+        q.page = bytes(pg)
+        q._banks()
+        out.append(('a small figure\'s colours one shift out', q))
     return out
 
 
@@ -840,31 +1074,43 @@ def auto(a, z80, name, out, say):
     conv = zt.convert(z80, plain, TAIL_ADDR, True, quiet=True, patch=pp)
     bad = check(plain, z80, pp, (conv[1], conv[1] + len(conv[2])))
     say('Plain     : %s  %s  boot %s  (tail 0x%04X)' % (os.path.basename(plain), md5(plain), 'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:200], TAIL_ADDR))
-    patch = HeartlandPatch()
+    cmap = load_colours()
+    ep = HeartlandPatch(colours=cmap, z80=z80) if cmap else None
+    patch = HeartlandPatch(blank=len(ep.planes) if ep else 0)
     spr = os.path.join(out, name + '_sprites.nex')
     conv = zt.convert(z80, spr, TAIL_ADDR, True, quiet=True, patch=patch)
     bad2 = check(spr, z80, patch, (conv[1], conv[1] + len(conv[2])))
     say('Sprites   : %s  %s  boot %s' % (os.path.basename(spr), md5(spr), 'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200]))
     ok = not bad and not bad2
+    builds = [('Verify', patch)]
+    if cmap:                            # Enhanced (the .nxc's colour set): the painted map
+        enh = os.path.join(out, name + '_enhanced.nex')
+        conv = zt.convert(z80, enh, TAIL_ADDR, True, quiet=True, patch=ep)
+        bad3 = check(enh, z80, ep, (conv[1], conv[1] + len(conv[2])))
+        ok = ok and not bad3
+        say('Enhanced  : %s  %s  boot %s  (%d painted graphics, %d palette lines, %d colour pages)' % (
+            os.path.basename(enh), md5(enh), 'OK' if not bad3 else 'MISMATCH %s' % str(bad3[:3])[:200], len(cmap['figures']), len(cmap['lines']), len(ep.planes)))
+        builds.append(('Painted', ep))
     states = []
     quick = getattr(a, 'quick', None)
-    for r in list(a.rzx or []):
-        cc, ex, st = verify(patch, r, stop=quick, collect=3)
-        states += st
-        fails = {k: v for k, v in cc.items() if k.endswith('!')}
-        ok = ok and not fails
-        say('Verify    : %s  %d frames, %d steps, %d copies, %d screen clears, %d plots, %d paints, %d random bytes, most figures %d, most sprites %d, '
-            '%d sprite pixels, %d cells with the paint lifted -> %s' % (
-                os.path.basename(r), cc['frames'], cc['step'], cc['copy'], cc['screen clear'], cc['plot'], cc['paint'], cc['random'], cc['most figures'],
-                cc['most sprites'], cc['sprite pixels compared'], cc['cells with the paint lifted'], 'IDENTICAL' if not fails else 'FAILED %s' % fails))
-        say('Pace      : %s  the two copies %d T in the original, the hooks %d T (%+.2f%% of the recording\'s time); bolt pixels the original XORs into a figure %d; '
-            'random bytes read from the screen %d, where the paint is lifted %d; lowest stack byte a hook writes 0x%04X' % (
-                os.path.basename(r), cc['T original'], cc['T hooks'], 100.0 * (cc['T hooks'] - cc['T original']) / max(1, cc['frames'] * 69888),
-                cc['bolt pixels the original XORs into a figure'], cc['random bytes read from the screen'], cc['random bytes read where the paint is lifted'],
-                cc['lowest stack byte a hook writes']))
-        for k, v in ex.items():
-            if k != 'copy T by lines and figures':
-                say('            %s: %s' % (k, str(v)[:300]))
+    for label, pt in builds:
+        for r in list(a.rzx or []):
+            cc, ex, st = verify(pt, r, stop=quick, collect=3 if pt is patch else 0)
+            states += st
+            fails = {k: v for k, v in cc.items() if k.endswith('!')}
+            ok = ok and not fails
+            say('%-10s: %s  %d frames, %d steps, %d copies, %d screen clears, %d plots, %d paints, %d random bytes, most figures %d, most sprites %d, '
+                '%d sprite pixels (%d painted), %d cells with the paint lifted -> %s' % (
+                    label, os.path.basename(r), cc['frames'], cc['step'], cc['copy'], cc['screen clear'], cc['plot'], cc['paint'], cc['random'], cc['most figures'],
+                    cc['most sprites'], cc['sprite pixels compared'], cc['painted pixels'], cc['cells with the paint lifted'], 'IDENTICAL' if not fails else 'FAILED %s' % fails))
+            say('Pace      : %s  the two copies %d T in the original, the hooks %d T (%+.2f%% of the recording\'s time); bolt pixels the original XORs into a figure %d; '
+                'random bytes read from the screen %d, where the paint is lifted %d; lowest stack byte a hook writes 0x%04X' % (
+                    os.path.basename(r), cc['T original'], cc['T hooks'], 100.0 * (cc['T hooks'] - cc['T original']) / max(1, cc['frames'] * 69888),
+                    cc['bolt pixels the original XORs into a figure'], cc['random bytes read from the screen'], cc['random bytes read where the paint is lifted'],
+                    cc['lowest stack byte a hook writes']))
+            for k, v in ex.items():
+                if k != 'copy T by lines and figures':
+                    say('            %s: %s' % (k, str(v)[:300]))
     if states:
         u = unit_tests(patch, states)
         uf = {k: v for k, v in u.items() if k.endswith('!')}
@@ -873,7 +1119,7 @@ def auto(a, z80, name, out, say):
     if a.rzx:
         r0 = list(a.rzx)[0]
         missed = []
-        negs = negative_patches(patch)
+        negs = negative_patches(builds[-1][1])
         for nm, q in negs:
             cc, _, _ = verify(q, r0, stop=quick or 1500)
             if not any(k.endswith('!') for k in cc):
