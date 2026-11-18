@@ -1,12 +1,12 @@
 # Heartland (Odin, 1986; 48K)
 
 ## Next session
-Stage: 1 (design)           State: feasibility done 2026-11-17 (feasible, table below); the stage 1 question is with the owner
+Stage: 1 (design)           State: stage 1 answered 2026-11-17 (defaults accepted); stage 2 (build) starting
 Inputs (private, pilot runs/heartland/2026-11-17): TOSEC "Heartland (1986)(Odin Computer Graphics).z80", md5
 07bfa8f74d60a53ab64e5b092ffd6cca; heartR_1..6.rzx (13,461 frames, scripted, from that snapshot); heartland_survey2/;
 prev.png (original beside figures-lifted-out, three frames of the first room).
-Branch: add-heartland    Commit: this one    Checks: doccheck    Pending user answers: the stage 1 question (below)
-Start with: the owner's answer, then stage 2: hooks at the two plot loops (0xA527, 0xB702) and their restores
+Branch: add-heartland    Commit: this one    Checks: doccheck    Pending user answers: none
+Start with: stage 2: hooks at the two plot loops (0xA527, 0xB702) and their restores
 Read: PLAYBOOK stage 1-2, "Feasibility" below
 Open: the snapshot is a BASIC program stopped at PAUSE 0 (below); a human recording; hook cost with R kept (0xFCEF reads R).
 
@@ -26,7 +26,7 @@ Open: the snapshot is a BASIC program stopped at PAUSE 0 (below); a human record
 Preview check: with the six entry points returned at once (0xA523, 0xA527, 0xA4F2, 0xA4F6, 0xB702, 0xB75A) the room draws
 complete without figures, and the figures are exactly the difference to the original screen.
 
-## Stage 1 question (asked 2026-11-17, not answered)
+## Stage 1 question (asked 2026-11-17; owner: "yes go ahead with heartland as you proposed")
 Defaults: every figure a sprite in bright white (its colour today), rooms and panel on the ULA in their own colours,
 figures behind the foreground pieces as in the original, sparks on the ULA. Enhanced colours painted later.
 
@@ -61,7 +61,8 @@ figures behind the foreground pieces as in the original, sparks on the ULA. Enha
   update; which technique fits (cover with sprites, or plot to a scratch page) is for the feasibility pass.
 
 ## Decisions
-- none yet.
+- 2026-11-17 (owner): the defaults as proposed: every figure a sprite in bright white, rooms and panel on the ULA in
+  their own colours, figures behind the foreground pieces as in the original, sparks on the ULA; Enhanced colours later.
 
 ## Lessons
 - [deferred Open: reconsider when the engine is designed] The coverage gate passes on a game that composes its
