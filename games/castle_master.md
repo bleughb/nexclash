@@ -1,15 +1,16 @@
 # Castle Master (Incentive Software, 1990; 48K, Freescape) - stage 0 intake done, stage 1 design approved
 
 ## Next session
-Stage: 2 (build)             State: M2 PASS in simulator + JNext; the user's hardware test of M2 open; M3 next
+Stage: 2 (build)             State: M3a (pace + in-between views) PASS in simulator + JNext; rest of M3 open
 Inputs: C:\1NEXT\castle_master_work\castle_master.z80 (extracted from the RZX), C:\dev\castlemaster\castle.rzx,
 C:\dev\castlemaster\Castlemaster1.tap    Branch: add-castle-master    Commit: (this file's commit)
 Checks: survey --stop 15000 (castle_master_survey/), survey full run (survey_full/), scan of the view buffer (3,000 frames)
 Decision (user 2026-11-19): route B (Next-native renderer) + option (i) (Layer 2 on top, dither kept, cursor =
 sprite, cycle = palette); colour switchable off by the player (original look). Later: palette 1-16, flat mode.
-Start with: the user's hardware result for castle_master_m2.nex; then M3 (Build design "Milestones", M2 block)
+Start with: the user's impression of castle_master_m3.nex on hardware (M2 ran there: fine, original pace); then
+M3b overlays (Build design, M3a block "Open")
 Read: PLAYBOOK stage 1 + 3d; cards detect.pacing-structure, detect.routine-removal, patch.hybrid-display-replacement
-Open: unreached CALL sites (Coverage); 28 MHz wait states (worst outdoor view ~10 fps in JNext): DMA, M3 design
+Open: unreached CALL sites (Coverage); K on hardware (6.75 = JNext); heaviest outdoor view ~10 views a second: DMA
 
 ## Inputs
 - Snapshot: the RZX's embedded .z80 (`nexclash.py rzx extract`), in game: 48K, PC 0xFDFD (RAM), IM 2 I=0xFE, vector
@@ -49,10 +50,8 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   29518 bit 7 = "inside the ISR" (the printer 0xCC17 checks it before EI). Timers are real time, independent of
   render speed. The ISR also rewrites the view attributes 0x5884 (24 x 14 cells) from 27353 / table 49168
   (view flashes) - a colour design must follow those writes.
-- Consequence for "faster without affecting gameplay" (inferred, to confirm by a removal experiment): one move or
-  turn step per update. A faster render = more updates per second = faster walking and turning in real time,
-  while the real-time clocks stay the same. Per-update game logic stays identical either way (same inputs per
-  update -> same game); only the real-time feel changes. Options for the user (below, Pending).
+- Consequence (confirmed by M3a): one move or turn step per update; a faster render alone = faster walking
+  in real time, so the update's original time is kept and the freed time draws in-between views.
 - Sound: OUT 254 at 0xC821 (20,932, in 39 updates), 0xC117 (195), 0xB374 (16) - check which run inside render
   code before any speed-up (patch.timed-side-effect-replay).
 - Colour source: (29501) = the face's colour index 1-16 per span; table 53825 = 16 four-line dither patterns (1
@@ -62,74 +61,49 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
 - Camera (observed, cm_profile at each 0x9776): x, y, z = 16-bit at 27309, 27311, 27313 (start 928, 96, 8032;
   y = eye height); pitch 27318, yaw 27319, both mod 72 (5 deg); a turn = 2 units (10 deg); a walk step ~238 units
   ((+206, -120) at yaw 24). 27315 / 27317 = 0xF0 (unknown, constant so far).
-- DMA / DDMA evaluation (docs/DDMA.md; estimates, not measured): clear 82k T -> DDMA 2D fill (fallback
-  zxnDMA fixed-source fill; CPU); spans ~731 T x ~300 -> DDMA only above a crossover width (setup ~15 port
-  writes; M1: PUSH fill); copy 52k -> hidden Layer 2 bank + flip; maths ~20 % -> Z80N MUL at 28 MHz. Gating
-  per DDMA.md 3: core >= 3.03.00 for DDMA, zxnDMA otherwise, CPU-only option (HLIB_NO_BLITTER / HLIB_CPU_ONLY).
+- DMA / DDMA evaluation (docs/DDMA.md; estimates): clear -> DDMA 2D fill (fallback zxnDMA fill; CPU); spans
+  -> DDMA above a crossover width (M1: PUSH fill); copy 452k T -> DMA / DDMA; gating per DDMA.md 3 (core >=
+  3.03.00 for DDMA, zxnDMA otherwise, CPU-only option HLIB_NO_BLITTER / HLIB_CPU_ONLY). Not built yet.
 - Render consumers (probe cm_consumers, 3,000 frames; window 0x9776 .. 0x859F, ISR excluded): game code
   outside reads the projected polygons / display list 0x6754-0x68xx (0xB708-0xB7BE, 0xBA42-0xBA60: inferred the
   crosshair pick = gameplay; 0x9495-0x952B / 0x9EDA-0x9EEC: the second draw path 0xB62C from 0xB40B / 0xB41B /
   0xB447), flags 0x733E, 0x7353, 0x7377, the screen (printer, 0xCF39). So the game's own update incl.
   projection stays, in game RAM; in-between views never feed the pick.
-- Raster stage alone (skip_*.log, taint_8599_full.json; CALL 0x9EA3 at 0x8599, ISR excluded; all 167,135 frames,
-  5,281 calls): the only raster-written bytes read outside it are the view buffer, by display code (copier
-  0xA3A6-0xA3D4, copies 0xB6C2 / 0xD1B1, printer 0xCAA2 / 0xCAFC, masked overlay 0xD134-0xD142, XOR marker
-  0xCF53-0xCF67) and the filler itself (other 0x9EA3 sites 0xA0A0 / 0xB635 / 0xC539): display-only (observed).
-  routine_skip (15k): 0x9F19 is not a pure copy (25 / 462 differ in game variables): keep it, drop only 0xA38D;
-  0x855E / 0x8561 / 0x857E not removable. Filler overruns to 0x6752. Format reference: ScummVM's Freescape
-  engine (ZX data = the tape's 36,098-byte block less flag and checksum; GPL: reference only).
-- Design history (2026-11-19): (a) colour by a span hook in the filler, (b) speed = the original at 28 MHz +
-  E1, (c) route A = sandbox renders in-between cameras; route B (Next-native renderer) CHOSEN: no jump if it draws
-  every view incl. each update's final one; what remains is a pixel-level gap between what is shown and what
-  the crosshair pick hits. (d) DDMA on core >= 3.03.00, zxnDMA otherwise, CPU-only option. Scope (user):
-  "display-only" holds on recorded paths only. Buffer readers (printer, overlay 0xD134, XOR marker 0xCF53,
-  copies 0xB6C2 / 0xD1B1) draw INTO the buffer (user's correction) -> option (i) each to Layer 2 (chosen);
-  (ii) ULA over Layer 2 (unsolved for white-paper areas).
-  R (static): ISR LD A,R 49291 / 49342 = blink delays 49173 / 49175 (cosmetic); 0x9F6E: 27391 = (R AND 63) +
-  10, an event countdown (gameplay) -> sandbox renders and hooks restore R (patch.preserve-r); 0xA569: R mod
-  20 -> 41970 (display). Interrupts land elsewhere at 28 MHz: "extremely close", not 1:1.
-- E5 PASS (e5_isr_redirect.py, e5_full.log): ISR redirect with other pages mapped, 79,705 / 79,705 interrupts:
-  real RAM = recording, 245 T each; controls FAIL. Superseded by M2's isr_full (game stack, no fixed SP).
+- Raster stage alone (skip_*.log, taint_8599_full.json; all frames, 5,281 calls): the only raster-written
+  bytes read outside it are the view buffer, by display code (copier 0xA3A6, copies 0xB6C2 / 0xD1B1, printer,
+  masked overlay 0xD134, XOR marker 0xCF53) and the filler itself: display-only (observed). routine_skip:
+  0x9F19 is not a pure copy (game variables differ): keep it. Filler overruns to 0x6752. Format reference:
+  ScummVM's Freescape engine (GPL: reference only).
+- Design history (2026-11-19): span hook in the filler; the original at 28 MHz + E1; route A (sandbox renders
+  in-between cameras); route B (Next-native renderer) CHOSEN: draws every view incl. each update's final one;
+  what remains is a pixel-level gap between what is shown and what the crosshair pick hits. Buffer readers
+  (printer, overlay 0xD134, XOR marker 0xCF53, copies 0xB6C2 / 0xD1B1) draw INTO the buffer (user's
+  correction) -> option (i) each to Layer 2 (chosen); (ii) ULA over Layer 2 (unsolved for white paper).
+  R (static): ISR LD A,R 49291 / 49342 = blink delays (cosmetic); 0x9F6E: 27391 = (R AND 63) + 10, an event
+  countdown (gameplay; patch.preserve-r); 0xA569: R mod 20 -> 41970 (display).
+- E5 PASS (e5_isr_redirect.py): ISR redirect, other pages mapped, 79,705 interrupts; superseded by M2's isr_full.
 - E1 PASS (e1_maths.asm, e1_check_full.log): Z80N 0xA1FD (A*HL), 0xA253 (HL*DE), 0xA348 (H*L) with MUL D,E;
   0xA2C1 (AHL/DE) = restoring division unrolled. All 682,956 unique inputs of 1,827,355 recorded calls +
   100,000 random each, edges: registers, flags, memory equal. T per call 554 -> 273, 489 -> 228, 2,078 -> 904,
   238 -> 110: maths 9.7 % -> 4.5 % of the recording's T. 4 mutants FAIL (Lessons).
-- E2 PASS, route A (e2_sandbox.py, e2_full_final.log; not the chosen route): the original re-run in a sandbox
-  from each full redraw's RAM (block 34142 -> 0x859F; 18 more are non-view screens via (29513)) gives the
-  game's buffer, 5,214 / 5,214. Live inputs: 27391 (ISR countdown read by the clear) and the last shown buffer
-  (the filler read-modify-writes; the clear misses bytes). Block T median 883k, max 4.59M.
-- E3 (e3_probe.py / e3_frames.py / e3_fit.py --realtime, e3_*.log): wall time per update (5,379; fit on
-  frames <= 15,000, tested on 4,908 later). Physics: frames = (T main + T ISR + 1.23 T x accesses to
-  0x4000-0x7FFF) / 69,888: 99.9 % within 2 %, total +0.10 % (RZX frames of ~20 T count by their T). Pacer
-  model: a cycle timer for main + ISR (add back E1's saving; wait-state factor from hardware) + contention
-  from hook counters: 96.0 % within 2 %, max 8.1 % (text-only updates), every 10-update run within 2 %,
-  total +0.37 %; the remainder is carried. Counters alone: median 7 % - not enough. Not covered: real Next
-  timing, the CTC per core.
+- E2 PASS, route A (e2_sandbox.py, not chosen): the original re-run in a sandbox = the game's buffer, 5,214 /
+  5,214; block 0x855E -> 0x859F T median 883k, max 4.59M. E3 (e3_*.py): wall time per update = (T main + T ISR
+  + 1.23 T x contended accesses) / 69,888, 99.9 % within 2 %; superseded by M3a's measured window.
 - E4 (e4_overlays.py, e4_full.log; all frames, writers by PC): view on screen = pixel lines 32-143, columns
   4-27, attribute rows 4-17. Straight onto the screen view: cursor / crosshair 0xCEAF / 0xCF39 (1,829 frames),
-  menu pointer 0xCB00 / 0xCB3B / 0xCB63 (lines 60-87, cols 4-6), a second buffer -> screen copier 0xB6C3 (244
-  frames), masked sprite 0xD0F9-0xD146 + restore 0xD1B1 (frames 559-673: the opening portcullis). Into the
-  buffer: XOR centre marker 0xCF54-0xCF68 (175), printer 0xCA97-0xCC16 (151), full-view transition 0xCA42 (12),
-  boxes 0xBC9F-0xBD34 (6). Attributes: area colours 0xB368 (values 6, 68, 124, 62, 5 - some WHITE paper), ISR
-  0xC069 colour cycle (4,977 frames: one value to all 336 cells from table 49168; paper black, ink cycles).
-  Option (i) trial (opt1_trial.py --shaded --fix, placeholder palette; user 2026-11-19: KEEP the dither):
-  Layer 2 pixel = buffer bit set ? the face's colour : the area's paper; cursor = sprite, ISR cycle =
-  palette; overlays / unknown writers keep the original ink.
-- Not the filler: 0x9DC9-0x9DF8 writes scratch 24369-24382 inside the buffer's address range ((29502) > 1).
-- View buffer (observed): 0x5CBC-0x673B, 112 lines x 24 bytes, row table 28975; copied by 0xA38D (LDI x24 per
-  line); 0xA502 clears it.
+  menu pointer 0xCB00 / 0xCB3B / 0xCB63, a second buffer -> screen copier 0xB6C3 (244), masked sprite
+  0xD0F9-0xD146 + restore 0xD1B1 (the opening portcullis). Into the buffer: XOR centre marker 0xCF54-0xCF68
+  (175), printer 0xCA97-0xCC16 (151), transition 0xCA42 (12), boxes 0xBC9F-0xBD34 (6). Attributes: area colours
+  0xB368 (some WHITE paper), ISR 0xC069 colour cycle (4,977 frames: one value to all 336 cells, table 49168).
+  Option (i) trial (opt1_trial.py; user: KEEP the dither): Layer 2 pixel = buffer bit set ? the face's colour :
+  the area's paper; cursor = sprite, ISR cycle = palette; overlays / unknown writers keep the original ink.
+- View buffer: 0x5CBC-0x673B, 112 x 24 bytes, row table 28975 (0x9DC9-0x9DF8 also puts scratch 24369-24382 in it).
 
 ## Build design (stage 2, route B + option (i); written before the first quick run)
 - Game side: original code runs (update, projection = the pick's list, ISR, panel on the ULA) + E1 maths.
   Sites: CALL 0x9EA3 at 0x8599 -> clear the buffer only (it becomes the overlay buffer); 0xA38D in 0x9F19 ->
   publish (camera 27309-27319, world snapshot by DMA, overlay bytes), no ULA write. 0x9F19 itself stays.
-- Pacer: each update lands at its original real time (E3 hybrid: CTC timer of game T, renderer time excluded,
-  + contention counters; remainder carried).
-- Renderer (new, Z80N): a second thread entered from the frame interrupt after the game's ISR (E5 stub keeps the
-  ISR on real pages); draws the newest snapshot's area with the camera interpolated by wall time; each update's
-  own camera drawn too. Painter's order, spans in the 16 dither patterns (set bit = index colour, clear = area
-  paper), sky / ground split by 27391, DDMA fills; hidden Layer 2 bank, flip. World format: own reader from live
-  RAM (ScummVM as reference only, GPL: no code copied).
+- Pacer + in-between views: planned as a CTC pacer + renderer thread; built synchronous (M3a), no snapshot.
 - Palette: index 1-16 + area paper; colour off (player option) = all indices -> the area's ink / paper (original
   look); ISR cycle = same switch with the ISR's attribute. Placeholder until the user's palette.
 - Overlays: cursor 0xCEAF / 0xCF39 and XOR marker -> hardware sprites; printer, menu arrow, boxes, transition,
@@ -143,43 +117,53 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
 - M0 PASS 2026-11-19 (castle_master_work, local): Python port m0_pipeline.py (m0_geom / m0_cube / m0_objects /
   m0_sort, each with failing mutants) gives the raster's input from the block-start RAM alone = the game's at
   all 5,233 redraws (44,594 polygons). Data: m0_states.bin (RAM per redraw).
-- M1 PASS 2026-11-19: cmr.asm (Z80N, 8.5 KB; code 0x0000-0x3FFF, work 0x4000-0x69FF, world = the game's
+- M1 PASS 2026-11-19: cmr.asm (Z80N, 8.5 KB; code 0x0000-0x3FFF, work from 0x4000, world = the game's
   0xC000-0xFFFF in place; templates 27486, sin-cos 29337, panorama 30660, bolt 31085 copied at init). Geometry =
-  the game's sorted list + full count at all redraws (m1_gate.py), sweeps in camera reach (m1_unit / m1_unit2),
-  6 / 6 mutants. Raster spec m1_raster.py (0x9EA3 = clear 0xA3F4 + filler 0x9484 + span 0x9696) = the game's
-  view buffer at all redraws (3,766 without a clear, 30 of them with stale pixels; lightning forced: 1,047 /
-  1,047). cmr.asm -> Layer 2 (rows 0-112 = lines 32-144, x 32-223, MMU slot 4; byte = 2 x code + the original
-  bit; code 0-15 face colour, 16 + c sky / ground, 32 band, 33 bolt: the palette decides colour / original /
-  flat) = the model per pixel at all 5,233 (m1_raster_gate.py), lightning forced, 4,000 sweeps
-  (m1_raster_unit.py), 17 / 17 mutants (geometry 8 / 8). Deliberate difference: the bolt is clipped to the view (at pitch 4 the
-  original's 255-row bolt overwrites its RAM 20343-30056).
-  T per view (simulator: no 28 MHz wait states): median 810k; cleared views median 855k, 90 % 1.52M, max
-  2.05M (12.5 fps = 2.24M); any view max 2.82M. Speed: PUSH fill (spans >= 16 pixels, clear rows; 5.5 T a
-  pixel, SP in Layer 2, interrupts on: an interrupt entry may write only its return address at SP; --irq sweep
-  66,832 injected); filler in registers; sort results cached per pair (s_mat zeroed at init). Left (m1_prof /
-  m1_worst): span setup ~530 T x 357, projection, sort loop; DMA.
-- M2 PASS in the simulator + JNext 2026-11-19 (castle_master_work: cm2_glue.asm in cmr.asm, m2_lib / m2_sim /
-  m2_build / m2_jnext / m2_mutants; castle_master_m2.nex, boot check OK). The game's raster and copy STAY (ULA =
-  the original, pace the game's); Layer 2 over the view (clip window). Sites: 0x855E CALL h_geom (list from the
-  block-start RAM), 0x8599 / 0xB635 h_rast (hidden bank, then the game's raster), 0x859C h_show ((0x7349) = 0:
-  palette from (27353), flip NR 0x12; else Layer 2 off: of 19 such screens 5 are not the view), 0xB638 h_flip,
-  0xFDFD JP isr_e. Hooks = alt ROM 0x386E (201 bytes), the same bytes in the renderer's page; pages 32-33
-  code (slots 0-1, never written: stock simulator), 34-35 work, Layer 2 banks 18-20 / 21-23. State switch under
-  DI (~140 T at 28 MHz). Interrupt in the renderer: isr_e = JP isr_full there (alt ROM: JP 0xC01F): game stack
-  and speed, pages 10 / 11 / 4 / 5 back, CALL 0xC01F (cur54 / cur55 written before each NEXTREG). No clear and
-  no full-screen record -> the shown view copied first (LDIR, 452k T; full-screen records leave nothing stale).
-  m2_sim (the build's memory, 0x855E -> 0x859F): all 5,233 redraws with frame interrupts: shown bank = the
-  model per pixel, nothing outside, 11,739 interrupts inside the renderer all with the game's pages / stack,
-  no more lost than the original; without interrupts (every 10th): registers but R and ALL game RAM = the
-  original's; 4x interrupt rate OK; 9 / 9 mutants FAIL. JNext 1.3.0, 8,000 frames random play: no fault,
-  interrupts as the original (1,071 / 1,070 in the same span), renderer per redraw median 728k / 90 % 2.12M /
-  max 2.37M master cycles (1.3 / 3.8 / 4.2 frames) = 1.34-1.42 x simulator T (first view: 1.05M vs 743k
-  geometry): the worst outdoor view ~5 frames (10 fps), below the 12.5 target. Not in M2: cursor, messages and
-  marker over the view, ISR colour cycle (under Layer 2); a new area's first view stays mono; ~10-20 % slower
-  (89 vs 112 redraws); R, DMA. M3 candidate: keep the game's raster at 28 MHz (buffer stays whole for overlays).
-- M0 side checks (m0_misc.py, all frames): raster callers 0x8599 (5,281) and 0xB62C (108: re-raster of the same
-  list + copy, from 0xB40B / 0xB41B / 0xB447); 0xA0A0 / 0xC539 unreached. ROM: never executed, no real reads (only
-  simulator artefact reads of 0x0000): slots 0-1 are free for the renderer, the ISR stub needs no ROM.
+  the game's sorted list at all redraws (m1_gate.py), sweeps (m1_unit / m1_unit2). Raster spec m1_raster.py
+  (0x9EA3 = clear 0xA3F4 + filler 0x9484 + span 0x9696) = the game's view buffer at all redraws; cmr.asm ->
+  Layer 2 (lines 32-144, x 32-223, MMU slot 4; byte = 2 x code + the original bit; code 0-15 face colour, 16 +
+  c sky / ground, 32 band, 33 bolt: the palette decides colour / original / flat) = the model per pixel at all
+  5,233 (m1_raster_gate.py), lightning forced, 4,000 sweeps, 17 / 17 mutants. Deliberate difference: the bolt
+  is clipped to the view (the original's 255-row bolt overwrites its RAM at pitch 4). T per view (simulator):
+  median 810k, cleared views 90 % 1.52M, max 2.82M. PUSH fill (spans >= 16 pixels, clear rows; SP in Layer 2,
+  interrupts on: an entry may write only its return address at SP), filler in registers, sort cache.
+- M2 PASS in the simulator + JNext 2026-11-19, on hardware (user): runs well, about the original's pace
+  (castle_master_work: cm2_glue.asm in cmr.asm, m2_lib / m2_sim / m2_build / m2_jnext / m2_mutants). The game's
+  raster and copy STAY (ULA = the original); Layer 2 over the view (clip window). Sites: 0x855E h_geom, 0x8599 /
+  0xB635 h_rast, 0x859C h_show ((0x7349) = 0: palette from (27353), flip NR 0x12; else Layer 2 off), 0xB638
+  h_flip, 0xFDFD JP isr_e. Hooks = alt ROM 0x386E, the same bytes in the renderer's page; pages 32-33 code
+  (slots 0-1, never written: stock simulator), 34-35 work, Layer 2 banks from 18. State switch under DI (~140 T
+  at 28 MHz). Interrupt in the renderer: isr_e = JP isr_full there (alt ROM: JP to the handler): game stack,
+  pages 10 / 11 / 4 / 5 back, CALL 0xC01F (cur54 / cur55 written before each NEXTREG). No clear and no
+  full-screen record -> the last view copied first (LDIR, 452k T). m2_sim: all 5,233 redraws with interrupts =
+  the model per pixel; without (every 10th) registers but R and ALL game RAM = the original's; 9 / 9 mutants
+  FAIL. JNext: renderer per redraw median 728k / max 2.37M master cycles (1.3 / 4.2 frames) = 1.34-1.42 x
+  simulator T.
+- M3a PASS in the simulator + JNext 2026-11-19 (cm3_glue.asm, m3_sim / m3_jnext / m2_build --prefix cm3;
+  castle_master_m3.nex): original pace + in-between views, synchronous. The game's block 0x855E .. 0x859C (its
+  geometry, raster, copy: buffer and ULA stay whole) runs at 28 MHz in a pace window (hlib_pace's clock; state
+  = 40 bytes of the IM 2 table at 0xFE40, never read by the CPU, zeroed in the image); original time = K x its
+  28 MHz time (K 6.75 in JNext) + the handler's lines a call (measured in the block) over the original's frames;
+  views and waits count real lines (handler incl.). Main-line speed in a variable written before each NR 7: the
+  plain wrapper restores it (an interrupt in r_enter came before the window). h_show then draws in-between views (camera linear from the last view; yaw /
+  pitch in 1/8 units: sin / cos between table entries, horizon 11 rows a unit, panorama by bytes) while they
+  fit before the final view, draws that from the inputs saved at 0x855E / 0x8599, waits for the target, flips
+  outside lines 30-143. Three Layer 2 banks (shown, drawn, last final = the copy's source). Handler and sound
+  0xC683 (sites 0xC68B, 0xC7F2) at 3.5 MHz, their time out of the window, as the 14 waits on the handler
+  (LD A,(0x7377 / 0x734A) / OR A / JR cc: 6-byte sites); printer ticks at entry and exit (sites 0xCA4E,
+  0xCBFF: its DI spans a whole string); main-line readings commit with interrupts off and read again if an
+  interrupt came during them; the window opens with interrupts off; non-view screen:
+  wait, 3.5 MHz, Layer 2 off, 0x9F19. No in-between view: area change, a step >= 1024, a turn > 8 units, a
+  redraw without 0x855E.
+  m3_sim (interrupts, line counter, planted previous camera): all 5,233 redraws = the model per pixel; pace on
+  the same game path (5,218) median +0.24 frames, -0.49 .. +2.08; 15 on another path (-2.2 .. -0.9); without
+  interrupts (every 5th): registers but R + game RAM = the original's. JNext: 7 updates end within 0.2 frame of
+  the plain conversion; 8,000 frames clean; views a second in a moving update: median 11.5-29 (two runs), 10 %
+  10, 90 % 31-36; an indoor turn = a view every frame. 14 / 14 mutants FAIL (m3_mutants.py; K-N at given
+  states / phases). Open: overlays (crosshair, text, marker), colour cycle, switch, DMA, R, K on hardware, the
+  first ~4 frames of an update stay still (game logic + its block), the IM 2 bus value on hardware (0xFF
+  assumed: the clock sits in the table).
+- M0 side checks (m0_misc.py): raster callers 0x8599 (5,281), 0xB62C (108, the same list again); ROM unused.
 ## Coverage (survey GATE, 15,000 frames)
 Unreached CALL sites: 0xD028 (2/3), 0xCA4E (17/18), 0xB66E (2/6; 48357 not reached). All text / panel / area
 pictures, no figure plotter.
@@ -187,27 +171,17 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
 4/6 reached; 5,356 view copies. No further recording needed for stage 1.
 
 ## Stage log
-- 2026-11-19, stage 0 + 1 (feasibility started), ~70 min, ~45 tool calls, 2 user rounds: intake, survey 15k,
-  goal + speed answered, pacing census, colour source found.
-- 2026-11-19, stage 1 feasibility (DMA / DDMA), ~60 min, ~30 tool calls, 1 user round: stage costs, walking
-  profile, camera, consumer probe, proposed design.
-- 2026-11-19, E5 / E1 / E2 / E3 / E4 + option (i) trial, ~6 h incl. many ~10-min full runs, ~150 tool calls,
-  ~10 user rounds: all experiments PASS / recorded (Feasibility); results above.
-- 2026-11-19, separate session (removal + taint of the raster stage), ~60 min, ~25 tool calls, 3 user rounds: six
-  routine_skip runs, a taint probe over the full recording (castle_master_work/taint_call.py).
-- 2026-11-19, stage 1 close + stage 2 start, ~90 min, ~40 tool calls, 6 user rounds: option (i) trial fixed
-  (cursor, cycle, text), design approved (route B), build design written.
-- 2026-11-19, stage 2 M0 (host port of the renderer), ~3 h, ~90 tool calls, 4 user rounds: matrix, all object
-  builders, clipper, sector cull, sort ported; end-to-end gate PASS at all 5,233 redraws.
-- 2026-11-19, stage 2 M1 geometry (Z80N), ~2 h, ~45 tool calls, 1 user round: cmr.asm = the game at all
-  redraws first run; sweeps + 6 mutants; raster read.
-- 2026-11-19, stage 2 M1 raster, ~2.5 h, ~50 tool calls, 0 user rounds: model = the game's buffer, Z80N = the
-  model per pixel, at all redraws; sweeps, 11 mutants, T per view. Then speed (user: "Speed up M1 first"),
-  ~1 h, ~20 tool calls: profile, PUSH fill, filler in registers, sort cache: -19 % median, worst outdoor view in budget.
-
+- 2026-11-19, stages 0-1 (intake, survey, pacing census, DMA / DDMA, experiments E1-E5, option (i) trial, a
+  separate removal + taint session), ~11 h, ~300 tool calls, ~22 user rounds: design approved (route B).
+- 2026-11-19, stage 2 M0 (host port), ~3 h, ~90 tool calls, 4 user rounds: gate PASS at all 5,233 redraws.
+- 2026-11-19, stage 2 M1 (Z80N geometry + raster, then "Speed up M1 first"), ~5.5 h, ~115 tool calls, 2 user
+  rounds: = the game at all redraws; sweeps, 17 mutants; PUSH fill, sort cache: -19 % median.
 - 2026-11-19, stage 2 M2 (early integrated NEX), ~3 h, ~60 tool calls, 0 user rounds: hooks + interrupt stub,
   host integration test at all redraws, 9 mutants, NEX, JNext 8,000 frames. Whole-module read: z80tonex.py
   (stub, tail, alt ROM fill: the build's memory plan depends on all three).
+- 2026-11-19, stage 2 M3a (pace + in-between views), ~7 h, ~200 tool calls, 6 user rounds (hardware: M2 runs,
+  original pace; "Start M3"): block probe (sound, printer, waits), cm3_glue.asm, host test, NEX, JNext.
+  Whole-module read: asm/lib/hlib_pace.asm (the clock's rules decide where ticks must come from).
 
 ## Lessons
 - [doc docs/RECORDING_CHECKLIST.md §Making a recording (Fuse)] An RZX alone (no separate .z80) is a complete intake: `nexclash.py rzx extract R -o
@@ -242,6 +216,26 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
   stack, speed, CALL handler); every NEXTREG that changes a page is preceded by its variable's write.
 - [local: one harness] A control that saves, clobbers, then restores is no control (HL'), and one on a rare
   path (stale-pixel copy: 30 of 5,233 views) needs its own direct check, or it passes.
+- [local: one build's start-up; a z80tonex note candidate] setup_call runs with the stub in slots 6-7: a write
+  to the game's 0xC000-0xFFFF there lands in the stub's bank. The host harness poked the same bytes, so only
+  JNext showed it (the clock ran on table bytes). Put start-up state in the image (patch.apply): the boot check
+  then covers it.
+- [local: one engine's clock; an hlib_pace candidate if a second engine paces windows over 13 frames] Two
+  line readings one frame apart (handler to handler) differ by 0 or 311 by jitter: a tick taken only in the
+  interrupt wrapper lost half the frames. Rule: after a reading at an interrupt, a difference under half a
+  frame is a frame more. hlib_pace_wait's target is 16-bit sixteenths (13 frames): longer windows need their
+  own wait in lines. A long interrupts-off span (sound, 0.5 s) must be ticked before and re-read after, not
+  held (hold / resume are modulo a frame). The game's waits on its handler inside the window are real time:
+  14 loops found by their byte pattern after redraws showed +28 frames late. An interrupt that skips its
+  reading (a main-line one under way, the window half open) loses a frame: let it read; commit main-line
+  readings with interrupts off, reading again if one came (-6 frames in 3 of 5,233).
+- [local: one engine's pace gate; a hooklib / probes candidate] A pace check against the original from the same
+  state can fail for the right build: the game reads real-time state (message printer: 15,000 instructions in
+  the original's block, under 200 in M3's). Count the game's own main-line instructions (sites, handler, the
+  vector's JP and the renderer's work-RAM code apart) and gate pace only where both runs took the same path.
+- [local: a harness trap; a probes candidate] SkoolKit's Simulator applies the LD A,I / R quirk (P/V 0) on its
+  own 48K frame, not the harness's interrupts: HLIB_IFF_DI then left interrupts off at random (a hang once a
+  clock call ran ~100 times a frame). Set int_active 0; clear P/V where the harness accepts an interrupt.
 
 ## Technique use
 - detect.pacing-structure: helped: pacing_census on the main loop 0x8542 showed event-driven renders of 2-52
@@ -254,11 +248,15 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
 - patch.iff-safe-read: used: HLIB_IFF_DI / _EI around both state switches. patch.restore-speed: adapted: the
   latch is in paged work RAM, so the speed is read before the switch and stored after it (own code, same rule).
 - patch.isr-deferral: no help: the handler runs at once, on the game's stack with the game's pages.
+- patch.pace-limiter: used: hlib_pace's clock (open, tick, hold / resume) in a K window around the game's
+  own redraw; own wait in lines and an interrupt-side tick (Lessons). patch.timed-side-effect-replay: used:
+  the probe of the block found sound 0xC683 and interrupt waits inside it before the speed-up.
 
 ## Friction
 - reuse: [tool tools/probes/pacing_census.py] used as it is; `nexclash.py cost` too
 - retries: [local: a helper named dis.py shadows the stdlib `dis` (twice); heredoc-written Python loses its
-  backslash escapes (use a file); a C-simulator run without interrupts never returns from a wait loop]
+  backslash escapes (use a file); a C-simulator run without interrupts never returns from a wait loop;
+  JNext screenshot names count from the start line, log F from power-on (500 apart here)]
 - environment: [none: local Windows checkout, no workarounds needed]
 - hand-rolled: [local: byte searches for CALL / LD (nn) sites with skoolkit's snapshot reader]
 - scratch: [local: cmdis / callers helpers stay in the session scratchpad; cm_profile / cm_consumers,
