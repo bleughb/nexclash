@@ -1,13 +1,13 @@
 # Castle Master (Incentive Software, 1990; 48K, Freescape) - stage 0 intake done, stage 1 design approved
 
 ## Next session
-Stage: 2 (build)             State: design approved 2026-11-19; build design written, M0 next
+Stage: 2 (build)             State: M0 PASS 2026-11-19; M1 next
 Inputs: C:\1NEXT\castle_master_work\castle_master.z80 (extracted from the RZX), C:\dev\castlemaster\castle.rzx,
 C:\dev\castlemaster\Castlemaster1.tap    Branch: add-castle-master    Commit: (this file's commit)
 Checks: survey --stop 15000 (castle_master_survey/), survey full run (survey_full/), scan of the view buffer (3,000 frames)
 Decision (user 2026-11-19): route B (Next-native renderer) + option (i) (Layer 2 on top, dither kept, cursor =
 sprite, cycle = palette); colour switchable off by the player (original look). Later: palette 1-16, flat mode.
-Start with: M0 next step (Build design, "M0 so far" Next)
+Start with: M1 (Build design Milestones): the Z80N renderer from the M0 port
 Read: PLAYBOOK stage 1 + 3d; cards detect.pacing-structure, detect.routine-removal, patch.hybrid-display-replacement
 Open: who maps a face's colour to its dither pattern (the colour source for a colour route); unreached CALL sites (Coverage)
 
@@ -189,25 +189,22 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   M1 Z80N renderer = M0 output bit-exact, T per view (target >= 12.5 fps outdoors). M2 early integrated NEX:
   update-camera views in colour, no tweens; JNext + user's hardware. M3 tweens, overlays, sprites, switch,
   sound; differential test at every site (PLAYBOOK 6), pacer vs E3, 20,000-frame quick run.
-- M0 so far (m0_inputs.py: 3k frames, 65 redraws; m0_polys.jsonl = the game's polygon lists): world = Freescape
-  object records (byte 0 type & 15: 1 cube, 2 sensor, 3 rect, 4-9 pyramids, 10-14 line / polygons, bit 6
-  hidden; 1-3 x, y, z (x64 = camera units 27309-27313); 4-6 size; 7 id; 8 length; then colours, script),
-  areas at 54037- / 58676- (read by 0x85C9-0x863E); per-object state 27486-27797 (clip / sort). Stages: matrix
-  0x9776 = yaw / pitch from sin-cos bytes 29337 (2 per step), 3x3 product 41342, axis matrix 38765; 0x85C9 cull
-  + bbox list 24482 -> builders cube 0x97F9, rect 0x9CB8, pyramid 0x9953, polygon 0x9C22; polygons 26612, sorted
-  list 26452 (ptr, 2 bytes). Raster input: header (colour << 4 | n), n (x, y) bytes, y up (row 112 - y); the
-  raster's own code (8.8 edge slopes, divide 45740) is ported as is in M1 (span -> Layer 2 run).
-  Checks run offline: m0_capture.py = RAM at each block start (m0_states*.bin), m0_lib.Sandbox reruns the original
-  to any PC. PASS: matrix (m0_matrix.py: 65 / 65 redraws, all 5,184 angle pairs; 2 mutants fail); cubes, no-clip
-  path (m0_cube.py, 3k: 124 / 124 records equal, 431 culls agree; floor-rounding mutant fails). Facts: A*HL
-  signed 24-bit, AHL/DE truncates; origin = (M x box min) >> 6; vertex code 31 = inside |x|,|y| <= z, z >= 0; faces
-  = edge refs (bit 7 reversed). Area list (29494) x (29496), globals (27345) x (27344); 0x9D8A = sort.
-  PASS, whole recording every 10th redraw (m0_cube.py m0_states.bin 10; m0_geom.py): cubes incl. clip path
-  (edge clipper 0x8746, corners 0x91C2, full-screen face 0x9300 / facing 0x8A69) and sector cull 0x8D4F:
-  2,511 / 2,511 records equal (55 full-screen), 4,317 culls agree, 29488 limits equal; truncating-divide
-  mutant fails (11 on 3k). 16x16 signed -> 32, DEHL / BC rounds half up. Next: rect / pyramid / polygon
-  builders (two-sided colours via 35433), then the sort 0x9D8A.
-
+- M0 PASS 2026-11-19 (castle_master_work, local): m0_pipeline.py: from the RAM at the block start alone (camera,
+  world records, tables) the port gives the raster's input (sorted record list + full-screen count 29523) equal to
+  the game's at all 5,233 redraws (44,594 polygons); the raster is reused as is, so the pixels are equal. Per stage
+  (+ failing mutants each): m0_matrix (all 5,184 angles), m0_cube / m0_objects (cube incl. clip and full-screen,
+  rect, pyramids 4 / 6-9, lines, polygons 3-5 two-sided; type 5 / 14 absent), m0_sort (0x9D8A). Code m0_geom.py
+  (projection, outcodes, edge clipper 0x8746, corners 0x91C2, facing 0x8A69, winding 0x9300, sector cull 0x8D4F),
+  m0_objects.py (dispatch 0x85C9, builders 0x97F9 / 0x9CB8 / 0x9953 / 0x9C22). Data: m0_states.bin (RAM per redraw).
+- Format (for M1): record = type & 15 (1 cube, 2 sensor, 3 rect, 4-9 pyramids, 10-14 line / polygons; bit 6
+  hidden), 1-3 position, 4-6 size (x64 = camera units 27309-27313), 7 id, 8 length, 9-11 colour nibbles, 12-15
+  apex insets / 10+ points; lists (29494) x (29496), globals (27345) x (27344); edge templates 27486-27820. Maths:
+  A*HL signed 24-bit, HL*DE signed 32, AHL/DE truncates, DEHL/BC rounds half up; matrix 64 = 1.0 (sin / cos
+  29337, 5-deg steps, diag 40 / 64 / 32); projection 96 + 96x/z, 56 + 56y/z. Output: id, count (bit 7 =
+  full-screen face), faces (colour << 4 | n, n (x, y), y up). Sort: bubble, per-axis sign codes, non-transitive.
+- M0 side checks (m0_misc.py, all frames): raster callers 0x8599 (5,281) and 0xB62C (108: re-raster of the same
+  list + copy, from 0xB40B / 0xB41B / 0xB447); 0xA0A0 / 0xC539 unreached. ROM: never executed, no real reads (only
+  simulator artefact reads of 0x0000): slots 0-1 are free for the renderer, the ISR stub needs no ROM.
 ## Coverage (survey GATE, 15,000 frames)
 Unreached CALL sites: 0xD028 (2/3), 0xCA4E (17/18), 0xB66E (2/6; 48357 not reached). All text / panel / area
 pictures, no figure plotter.
@@ -225,6 +222,8 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
   routine_skip runs, a taint probe over the full recording (castle_master_work/taint_call.py).
 - 2026-11-19, stage 1 close + stage 2 start, ~90 min, ~40 tool calls, 6 user rounds: option (i) trial fixed
   (cursor, cycle, text), design approved (route B), build design written.
+- 2026-11-19, stage 2 M0 (host port of the renderer), ~3 h, ~90 tool calls, 4 user rounds: matrix, all object
+  builders, clipper, sector cull, sort ported; end-to-end gate PASS at all 5,233 redraws.
 
 ## Lessons
 - [doc docs/RECORDING_CHECKLIST.md §Making a recording (Fuse)] An RZX alone (no separate .z80) is a complete intake: `nexclash.py rzx extract R -o
@@ -241,6 +240,9 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
   (a bisect that already fails on the start state names a random byte).
 - [local: one game's pacing check; tools/probes candidate] RZX frames are not real time: Fuse writes a ~20 T
   frame when an interrupt delayed by DI lands, so a frame count runs ahead; weigh short frames by their T.
+- [local: one engine port; PLAYBOOK 3d candidate if a second renderer is ported] Port stage by stage against
+  the game's own data at fixed PCs, each with a failing mutant, then gate end to end on every redraw: a missed
+  stage (sector cull 0x8D4F) showed as one cube in one frame of 5,233, which a sample run would have missed.
 
 ## Technique use
 - detect.pacing-structure: helped: pacing_census on the main loop 0x8542 showed event-driven renders of 2-52
