@@ -7,7 +7,7 @@ C:\dev\castlemaster\Castlemaster1.tap    Branch: add-castle-master    Commit: (t
 Checks: survey --stop 15000 (castle_master_survey/), survey full run (survey_full/), scan of the view buffer (3,000 frames)
 Pending user answers: final design approval (route A first, agreed 2026-11-19, if E5 passes); buffer-reader
 option (i) / (ii); the colour palette for indices 1-16
-Start with: E3, E4 (E5, E1, E2 passed 2026-11-19, Feasibility); DMA-idle rule for the E5 stub is a design rule (E2)
+Start with: E4 (E5, E1, E2, E3 done 2026-11-19, Feasibility); then the design approval with the user
 Read: PLAYBOOK stage 1 + 3d; cards detect.pacing-structure, detect.routine-removal, patch.hybrid-display-replacement
 Open: who maps a face's colour to its dither pattern (the colour source for a colour route); unreached CALL sites (Coverage)
 
@@ -179,6 +179,17 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   max 4.59M. The re-run writes the ULA panel and 0xBE / 0xCA / 0xCC variables: keep 0xBE03's and 0x9F19's
   screen writes off the real screen. Design rule (hardware, untested): the RAM -> sandbox DMA copy finishes
   before a tween starts (no DMA in flight when the E5 stub runs).
+- E3 (e3_probe.py / e3_frames.py / e3_fit.py --realtime, logs e3_*.log): wall time per update (main-loop
+  iteration 0x8542 -> 0x8542 that ran the raster; 5,379, fit on frames <= 15,000, tested on 4,908 later ones).
+  Physics: frames = (T main + T ISR + 1.23 T x accesses to 0x4000-0x7FFF) / 69,888: test 99.9 % within 2 %,
+  median 0.14 %, max 2.5 %, total +0.10 %. Reference fix: 168 RZX frames of ~20 T (Fuse closes one when an
+  interrupt held off by DI lands) count by their T; before that 146 updates were one frame "short". Runtime
+  model for the pacer: a cycle timer on the Next measures main + ISR (same instructions; add back the E1 saving
+  per maths call; 28 MHz wait-state factor to calibrate on hardware), contention from hook counters (span
+  bytes, spans, polygons, objects, prints, copy, clear, display list): test 96.0 % within 2 %, median 0.36 %,
+  max 8.1 % (text-only updates: no spans, contention from printing), every 10-update run within 2 % (max
+  1.81 %), total +0.37 %; the pacer carries the remainder so it does not accumulate. Counters alone (no timer):
+  median 7 % - not enough. Not covered: real Next timing (wait states, DMA), the CTC's availability per core.
   E4: which buffer readers are active in play (taint reader PCs per frame) -> option (i) or (ii).
 - Not the filler: 0x9DC9-0x9DF8 writes variables 24369-24382 that lie inside the view buffer's address range
   (geometry / clipping scratch, run when (29502) > 1); the scan range 0x5C80-0x673F mixed both.
@@ -202,6 +213,7 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
   four routines, checker, 4 mutants, full-recording PASS.
 - 2026-11-19, E2 (sandbox frame = game frame), ~90 min incl. five ~10-min full runs, ~40 tool calls, 2 user
   rounds: harness, 12 differences traced to the live timer and buffer carry-over, full-recording PASS.
+- 2026-11-19, E3 (pacing model), ~60 min incl. a ~35-min probe, ~25 tool calls, 1 user round.
 - 2026-11-19, separate session (removal + taint of the raster stage), ~60 min, ~25 tool calls, 3 user rounds: six
   routine_skip runs, a taint probe over the full recording (castle_master_work/taint_call.py).
 
@@ -218,6 +230,8 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
   before a re-render is a strong test only if the renderer fully rebuilds it; when it reads-modify-writes, use
   the buffer as it was before the game's own render, and bisect differing inputs from the block's START state
   (a bisect that already fails on the start state names a random byte).
+- [local: one game's pacing check; tools/probes candidate] RZX frames are not real time: Fuse writes a ~20 T
+  frame when an interrupt delayed by DI lands, so a frame count runs ahead; weigh short frames by their T.
 
 ## Technique use
 - detect.pacing-structure: helped: pacing_census on the main loop 0x8542 showed event-driven renders of 2-52
@@ -233,5 +247,5 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
 - environment: [none: local Windows checkout, no workarounds needed]
 - hand-rolled: [local: byte searches for CALL / LD (nn) sites with skoolkit's snapshot reader]
 - scratch: [local: cmdis / callers helpers stay in the session scratchpad; cm_profile and cm_consumers are
-  Castle Master probes, to move to tools/probes/ if E1-E3 reuse them; e5_isr_redirect.py, e1_*.py / e1_maths.asm, e2_*.py (local, castle_master_work)
+  Castle Master probes, to move to tools/probes/ if E1-E3 reuse them; e5_isr_redirect.py, e1_*.py / e1_maths.asm, e2_*.py, e3_*.py (local, castle_master_work)
   becomes part of the engine's own verifier at stage 2 (verification harnesses stay per engine)]
