@@ -1,15 +1,15 @@
 # Castle Master (Incentive Software, 1990; 48K, Freescape) - stage 0 intake done, stage 1 design approved
 
 ## Next session
-Stage: 2 (build)             State: M1 geometry PASS; raster next
+Stage: 2 (build)             State: M1 PASS (Z80N geometry + raster to Layer 2); M2 next
 Inputs: C:\1NEXT\castle_master_work\castle_master.z80 (extracted from the RZX), C:\dev\castlemaster\castle.rzx,
 C:\dev\castlemaster\Castlemaster1.tap    Branch: add-castle-master    Commit: (this file's commit)
 Checks: survey --stop 15000 (castle_master_survey/), survey full run (survey_full/), scan of the view buffer (3,000 frames)
 Decision (user 2026-11-19): route B (Next-native renderer) + option (i) (Layer 2 on top, dither kept, cursor =
 sprite, cycle = palette); colour switchable off by the player (original look). Later: palette 1-16, flat mode.
-Start with: M1 raster (Build design "Raster"): Python model vs the game's buffer, then Z80N to Layer 2
+Start with: M2 (Build design "Milestones"): integrated NEX, update-camera views in colour; M1's "For M2" notes
 Read: PLAYBOOK stage 1 + 3d; cards detect.pacing-structure, detect.routine-removal, patch.hybrid-display-replacement
-Open: who maps a face's colour to its dither pattern (the colour source for a colour route); unreached CALL sites (Coverage)
+Open: unreached CALL sites (Coverage); renderer speed on hardware (wait states, DMA fills)
 
 ## Inputs
 - Snapshot: the RZX's embedded .z80 (`nexclash.py rzx extract`), in game: 48K, PC 0xFDFD (RAM), IM 2 I=0xFE, vector
@@ -73,8 +73,6 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   | sandbox refresh (below) | - | 40K RAM copy per game update | zxnDMA memory-to-memory, ~6-8 ms |
   DMA helps the raster part (~25 %); the bulk (maths + clip ~36 %) needs 28 MHz + MUL. Gating per DDMA.md 3:
   core >= 3.03.00 for DDMA, ordinary zxnDMA otherwise, CPU-only build option (HLIB_NO_BLITTER / HLIB_CPU_ONLY).
-  Rough budget (inferred): 2.4M T at 3.5 MHz ~ 690 ms -> ~115 ms at 28 MHz (x6, LEARNINGS 2.1f) before MUL /
-  DMA / no copy; with them perhaps 40-60 ms -> 6-12 in-between views per outdoor step (12-25 fps) instead of ~1.5.
 - Render consumers (probe cm_consumers, 3,000 frames, 65 redraws; window 0x9776 .. 0x859F, ISR excluded): game
   code outside the window reads render-written bytes: the projected polygons / display list 0x6754-0x68xx by
   0xB708-0xB7BE and 0xBA42-0xBA60 (inferred: the crosshair pick, i.e. gameplay) and by 0x9495-0x952B / 0x9EDA-0x9EEC
@@ -174,30 +172,28 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   and sprites off. Anything unknown keeps the original ink.
 - Memory: game RAM only at sites; renderer, snapshots, tables in own Next pages at slots 0-1 while it runs; hooks
   altrom. R restored on each thread switch (patch.preserve-r); OUT 254 at 0xC821 / 0xC117 / 0xB374 at 3.5 MHz.
-- Milestones: M0 host renderer (Python) from live RAM vs the game's buffer at all 5,214 renders: same index per
-  pixel, >= 99 %, misses only on edges; also finds 0xA0A0 / 0xB635 / 0xC539 / 0xB6C3's roles and ROM use.
-  M1 Z80N renderer = M0 output bit-exact, T per view (target >= 12.5 fps outdoors). M2 early integrated NEX:
+- Milestones: M0 host port, M1 Z80N renderer bit-exact + T per view (target >= 12.5 fps outdoors): both PASS
+  (below). M2 early integrated NEX:
   update-camera views in colour, no tweens; JNext + user's hardware. M3 tweens, overlays, sprites, switch,
   sound; differential test at every site (PLAYBOOK 6), pacer vs E3, 20,000-frame quick run.
-- M0 PASS 2026-11-19 (castle_master_work, local): m0_pipeline.py: from the RAM at the block start alone the
-  Python port gives the raster's input (sorted record list + full-screen count 29523) equal to the game's at all
-  5,233 redraws (44,594 polygons); per stage + failing mutants: m0_matrix (all 5,184 angles), m0_cube /
-  m0_objects (all types; 5 / 14 absent), m0_sort (0x9D8A); m0_geom.py = projection, outcodes, clipper 0x8746,
-  corners 0x91C2, facing 0x8A69, winding 0x9300, sector cull 0x8D4F. Data: m0_states.bin (RAM per redraw).
-- M1 geometry PASS 2026-11-19: cmr.asm (Z80N, ~6 KB; code 0x0000-0x3FFF, work 0x4000-0x7FFF, world = the
-  game's 0xC000-0xFFFF at its own addresses, templates / sin-cos copied from 27486 / 29337 at init). m1_gate.py:
-  sorted list + full count = the game's at all 5,233 redraws (m1_gate_all.log); T per view (Z80 timing, no
-  wait states) median 361k, mean 443k, max 2.16M. m1_unit.py (matrix all angles, maths, projection);
-  m1_unit2.py: 20,000 random scenes each for faces / clipper / facing in camera reach (|x| 14,500, |y| 16,000,
-  |z| 11,500; beyond it 16-bit sums wrap). Mutants m1_mutants.py 6 / 6 FAIL; 2 only on the sweeps (the
-  recording never lets the first-point corner check decide; |dot| < 2^38).
-- Raster (read for M1, 0x9EA3): a full-screen record -> drawing starts at the last one, no clear. Else clear
-  0xA3F4: (27402) = 0 -> none (stale buffer; most indoor redraws), else sky rows (low nibble), mountain band
-  (panorama 30660 by yaw & 7 when (27343) = 1), ground rows (high nibble), lightning OR'ed at column R mod 20
-  when (27391) = 0. Fill rows use pattern row (rows left & 3), faces (y & 3). Filler 0x9484: lowest vertex
-  (last of ties), left chain backwards / right forwards, 8.8 slopes by 45740, a chain's first edge starts
-  +slope, later ones +slope / 2; lines own path. Span 0x9696: pixels max(lo, 1) - 1 .. hi - 1; an end >= 193
-  drops the span AND its row advance; y = 0 writes row 112 (overrun to 0x6753). Then 53061 (XOR marker).
+- M0 PASS 2026-11-19 (castle_master_work, local): Python port m0_pipeline.py (m0_geom / m0_cube / m0_objects /
+  m0_sort, each with failing mutants) gives the raster's input from the block-start RAM alone = the game's at
+  all 5,233 redraws (44,594 polygons). Data: m0_states.bin (RAM per redraw).
+- M1 PASS 2026-11-19: cmr.asm (Z80N, 8.5 KB; code 0x0000-0x3FFF, work 0x4000-0x69FF, world = the game's
+  0xC000-0xFFFF in place; templates 27486, sin-cos 29337, panorama 30660, bolt 31085 copied at init). Geometry =
+  the game's sorted list + full count at all redraws (m1_gate.py), sweeps in camera reach (m1_unit / m1_unit2),
+  6 / 6 mutants. Raster spec m1_raster.py (0x9EA3 = clear 0xA3F4 + filler 0x9484 + span 0x9696) = the game's
+  view buffer at all redraws (3,766 without a clear, 30 of them with stale pixels; lightning forced: 1,047 /
+  1,047). cmr.asm -> Layer 2 (rows 0-112 = lines 32-144, x 32-223, MMU slot 4; byte = 2 x code + the original
+  bit; code 0-15 face colour, 16 + c sky / ground, 32 band, 33 bolt: the palette decides colour / original /
+  flat) = the model per pixel at all 5,233 (m1_raster_gate.py), lightning forced, 4,000 sweeps
+  (m1_raster_unit.py), 11 / 11 mutants. Deliberate difference: the bolt is clipped to the view (at pitch 4 the
+  original's 255-row bolt overwrites its RAM 20343-30056).
+  T per view (Z80 timing; no 28 MHz wait states; CPU fills, 11 T a pixel): median 994k; cleared views median
+  1.09M (1.95 frames at 28 MHz), 90 % 1.84M, max 2.53M (12.5 fps = 2.24M). Raster ~640k: ~25,600 pixels a view
+  (overdraw) + ~800 T a span (336). Levers: span overhead, DMA / PUSH fills, measured on hardware.
+  For M2: views without a clear keep the last picture -> copy the shown bank's view into the hidden one first;
+  bolt column = the game's R mod 20 (cosmetic input).
 - M0 side checks (m0_misc.py, all frames): raster callers 0x8599 (5,281) and 0xB62C (108: re-raster of the same
   list + copy, from 0xB40B / 0xB41B / 0xB447); 0xA0A0 / 0xC539 unreached. ROM: never executed, no real reads (only
   simulator artefact reads of 0x0000): slots 0-1 are free for the renderer, the ISR stub needs no ROM.
@@ -222,6 +218,8 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
   builders, clipper, sector cull, sort ported; end-to-end gate PASS at all 5,233 redraws.
 - 2026-11-19, stage 2 M1 geometry (Z80N), ~2 h, ~45 tool calls, 1 user round: cmr.asm = the game at all
   redraws first run; sweeps + 6 mutants; raster read.
+- 2026-11-19, stage 2 M1 raster, ~2.5 h, ~50 tool calls, 0 user rounds: model = the game's buffer, Z80N = the
+  model per pixel, at all redraws; sweeps, 11 mutants, T per view.
 
 ## Lessons
 - [doc docs/RECORDING_CHECKLIST.md §Making a recording (Fuse)] An RZX alone (no separate .z80) is a complete intake: `nexclash.py rzx extract R -o
@@ -241,9 +239,13 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
 - [local: one engine port; PLAYBOOK 3d candidate if a second renderer is ported] Port stage by stage against
   the game's own data at fixed PCs, each with a failing mutant, then gate end to end on every redraw: a missed
   stage (sector cull 0x8D4F) showed as one cube in one frame of 5,233, which a sample run would have missed.
-- [local: one engine port] Random sweeps must stay in the inputs' reachable range: beyond it (camera-space
-  words > ~16,000) 16-bit sums wrap and the port's z > 0 shortcuts differ (22 false failures of 5,000); and a
-  mutant can be equivalent there (sign bit 46 vs 47 of a dot < 2^45): replace it, don't count it.
+- [local: one engine port] Random sweeps must stay in the inputs' domain (camera words <= ~16,000; pitch an
+  angle 0-71): beyond it 16-bit sums wrap or the original reads 2.5 KB past a table, and failures are false (22
+  of 5,000; 1 of 4,000). Size copied tables by the domain, not the recording (bolt: 688 bytes at pitch 4, 172
+  recorded). A mutant can be equivalent (sign bit 46 vs 47 of a dot < 2^45): replace it, don't count it.
+- [local: one engine port; PLAYBOOK 3d candidate] Forcing an input the recording never has ((27391) = 0,
+  lightning) found an original bug: at pitch 4 a 255-row bolt overwrites RAM incl. the face list. A renderer
+  drawing into its own pages must not copy that: make it a model option (bolt clipped) and record it.
 
 ## Technique use
 - detect.pacing-structure: helped: pacing_census on the main loop 0x8542 showed event-driven renders of 2-52
