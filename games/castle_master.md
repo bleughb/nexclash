@@ -200,6 +200,7 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   whose span covered it (0x969E: H / D ends, (29662) row, (29501) index) : the area's paper. Shading kept, and
   buffer overlays (marker, scroll, transition) come back with it. --fix (opt1_fixed.png) restores the
   last two: cursor = sprite (non-copier screen writes since the copy), ISR cycle = palette (attrs != 0xB368's value).
+  Text / marker / boxes and unknown writers (horizon mountains) keep the original ink: message frame = original.
   Into the buffer: XOR centre marker 0xCF54-0xCF68 (175 frames), printer 0xCA97 / 0xCAA4 / 0xCAF5 / 0xCB00-0xCC16
   (151), full-view transition effect 0xCA42 (12), boxes 0xBC9F-0xBD34 (6). Attributes: area colours 0xB368 (218: values
   6, 68, 124, 62, 5 - some WHITE paper), ISR 0xC069 colour cycle (4,977 frames: one value to all 336 cells from
