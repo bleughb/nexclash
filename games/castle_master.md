@@ -16,8 +16,7 @@ Open: unreached CALL sites (Coverage); renderer speed on hardware (wait states, 
   0xFEFF -> 0xFDFD -> 0xC01F; handler DI / PUSH HL,BC,AF / SET 7,(29518). SP 0xFFEC. RAMTOP 32767. Border 0.
 - Recording: castle.rzx, 1 segment, 167,134 frames (3,342.7 s), no autosave snapshots.
 - Tape: Castlemaster1.tap = BASIC "CASTLE" (LINE 10), "CMT" CODE 32768,260 (loader), then three headerless blocks
-  (6,914 / 36,098 / 6,914 bytes with flag 0, i.e. the turbo/custom loader's data); one 6,914-byte block may be the
-  loading screen (not yet checked). Single load: no multiload files.
+  (6,914 / 36,098 / 6,914 bytes, flag 0: the custom loader's data). Single load: no multiload files.
 
 ## Rendering model (survey, scan of the view buffer, first 3,000 / 15,000 frames)
 | Stage | Code | Buffer |
@@ -186,13 +185,14 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   1,047). cmr.asm -> Layer 2 (rows 0-112 = lines 32-144, x 32-223, MMU slot 4; byte = 2 x code + the original
   bit; code 0-15 face colour, 16 + c sky / ground, 32 band, 33 bolt: the palette decides colour / original /
   flat) = the model per pixel at all 5,233 (m1_raster_gate.py), lightning forced, 4,000 sweeps
-  (m1_raster_unit.py), 16 / 16 mutants. Deliberate difference: the bolt is clipped to the view (at pitch 4 the
+  (m1_raster_unit.py), 17 / 17 mutants (geometry 8 / 8). Deliberate difference: the bolt is clipped to the view (at pitch 4 the
   original's 255-row bolt overwrites its RAM 20343-30056).
-  T per view (Z80 timing; no 28 MHz wait states): median 819k; cleared views median 891k (1.59 frames at 28
-  MHz), 90 % 1.60M, max 2.31M (12.5 fps = 2.24M); before the speed pass 994k / 1.09M / 1.84M / 2.53M. Spans >= 16
-  pixels: PUSH fill, 5.5 T a pixel, SP in Layer 2, interrupts on - safe only if an interrupt entry writes just
-  its return address at SP (M2 stub: switch stacks first); --irq sweep: 75,666 injected, pictures equal. Left
-  (m1_prof.py): span setup ~530 T x 357, PUSHes 155k, geometry ~440k (no routine above 6 %); DMA on hardware.
+  T per view (Z80 timing; no 28 MHz wait states): median 810k; cleared views median 855k (1.53 frames at 28
+  MHz), 90 % 1.52M, max 2.05M (12.5 fps = 2.24M); any view max 2.82M; first version 994k / 1.09M / 1.84M /
+  2.53M. Speed: PUSH fill (spans >= 16 pixels, clear rows; 5.5 T a pixel, SP in Layer 2, interrupts on: safe
+  only if an interrupt entry writes just its return address at SP - M2 stub switches stacks first; --irq sweep
+  66,832 injected); filler in registers; sort results cached per pair (the order cycles; s_mat needs zeroed
+  RAM at init). Left (m1_prof / m1_worst): span setup ~530 T x 357, projection, sort loop; DMA on hardware.
   For M2: views without a clear keep the last picture -> copy the shown bank's view into the hidden one first;
   bolt column = the game's R mod 20 (cosmetic input).
 - M0 side checks (m0_misc.py, all frames): raster callers 0x8599 (5,281) and 0xB62C (108: re-raster of the same
@@ -221,7 +221,7 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
   redraws first run; sweeps + 6 mutants; raster read.
 - 2026-11-19, stage 2 M1 raster, ~2.5 h, ~50 tool calls, 0 user rounds: model = the game's buffer, Z80N = the
   model per pixel, at all redraws; sweeps, 11 mutants, T per view. Then speed (user: "Speed up M1 first"),
-  ~1 h, ~20 tool calls: profile, PUSH fill, filler in registers: -18 %, all gates re-run, 16 mutants.
+  ~1 h, ~20 tool calls: profile, PUSH fill, filler in registers, sort cache: -19 % median, worst outdoor view in budget.
 
 ## Lessons
 - [doc docs/RECORDING_CHECKLIST.md §Making a recording (Fuse)] An RZX alone (no separate .z80) is a complete intake: `nexclash.py rzx extract R -o
