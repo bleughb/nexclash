@@ -7,7 +7,7 @@ C:\dev\castlemaster\Castlemaster1.tap    Branch: add-castle-master    Commit: (t
 Checks: survey --stop 15000 (castle_master_survey/), survey full run (survey_full/), scan of the view buffer (3,000 frames)
 Pending user answers: final design approval (route A first, agreed 2026-11-19, if E5 passes); buffer-reader
 option (i) / (ii); the colour palette for indices 1-16
-Start with: E4 (E5, E1, E2, E3 done 2026-11-19, Feasibility); then the design approval with the user
+Start with: the design approval with the user (E1-E5 done 2026-11-19, Feasibility): option (i) / (ii) after E4
 Read: PLAYBOOK stage 1 + 3d; cards detect.pacing-structure, detect.routine-removal, patch.hybrid-display-replacement
 Open: who maps a face's colour to its dither pattern (the colour source for a colour route); unreached CALL sites (Coverage)
 
@@ -190,7 +190,18 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   max 8.1 % (text-only updates: no spans, contention from printing), every 10-update run within 2 % (max
   1.81 %), total +0.37 %; the pacer carries the remainder so it does not accumulate. Counters alone (no timer):
   median 7 % - not enough. Not covered: real Next timing (wait states, DMA), the CTC's availability per core.
-  E4: which buffer readers are active in play (taint reader PCs per frame) -> option (i) or (ii).
+- E4 (e4_overlays.py, e4_full.log; all frames, writers by PC; renderer paths via 0xA0A0 / 0xB635 / 0xC539
+  left out): view on screen = pixel lines 32-143, columns 4-27, attributes rows 4-17. Straight onto the screen
+  view: cursor / crosshair 0xCEAF / 0xCF39 (anywhere in the view, 1,829 frames), text at the view's left edge
+  0xCB00 / 0xCB3B / 0xCB63 (lines 60-87, cols 4-6, 1,364 frames), a second buffer -> screen copier 0xB6C3 (244
+  frames; must be hooked like 0xA38D), masked sprite 0xD0F9-0xD146 + restore 0xD1B1 (frames 559-673 only).
+  Into the buffer: XOR centre marker 0xCF54-0xCF68 (175 frames), printer 0xCA97 / 0xCAA4 / 0xCAF5 / 0xCB00-0xCC16
+  (151), full-buffer pictures 0xCA42 (12), boxes 0xBC9F-0xBD34 (6). Attributes: area colours 0xB368 (218: values
+  6, 68, 124, 62, 5 - some WHITE paper), ISR 0xC069 colour cycle (4,977 frames: one value to all 336 cells from
+  table 49168, 70 / 67 / 66 / 6, paper black, ink cycles). Consequence: option (i) needs every one of these
+  re-routed to Layer 2 (cursor could be a hardware sprite); option (ii) keeps all of them as they are, but the
+  view's paper must be see-through while the panel, sharing the same paper palette entries, stays opaque
+  (white-paper areas) - unsolved; for the user's design decision.
 - Not the filler: 0x9DC9-0x9DF8 writes variables 24369-24382 that lie inside the view buffer's address range
   (geometry / clipping scratch, run when (29502) > 1); the scan range 0x5C80-0x673F mixed both.
 - View buffer (observed): 0x5CBC-0x673B, 112 lines x 24 bytes, row table 28975; copied by 0xA38D (LDI x24 per
@@ -214,6 +225,7 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
 - 2026-11-19, E2 (sandbox frame = game frame), ~90 min incl. five ~10-min full runs, ~40 tool calls, 2 user
   rounds: harness, 12 differences traced to the live timer and buffer carry-over, full-recording PASS.
 - 2026-11-19, E3 (pacing model), ~60 min incl. a ~35-min probe, ~25 tool calls, 1 user round.
+- 2026-11-19, E4 (overlay census), ~30 min, ~12 tool calls, 1 user round.
 - 2026-11-19, separate session (removal + taint of the raster stage), ~60 min, ~25 tool calls, 3 user rounds: six
   routine_skip runs, a taint probe over the full recording (castle_master_work/taint_call.py).
 
@@ -247,5 +259,5 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
 - environment: [none: local Windows checkout, no workarounds needed]
 - hand-rolled: [local: byte searches for CALL / LD (nn) sites with skoolkit's snapshot reader]
 - scratch: [local: cmdis / callers helpers stay in the session scratchpad; cm_profile and cm_consumers are
-  Castle Master probes, to move to tools/probes/ if E1-E3 reuse them; e5_isr_redirect.py, e1_*.py / e1_maths.asm, e2_*.py, e3_*.py (local, castle_master_work)
+  Castle Master probes, to move to tools/probes/ if E1-E3 reuse them; e5_isr_redirect.py, e1_*.py / e1_maths.asm, e2_*.py, e3_*.py, e4_overlays.py (local, castle_master_work)
   becomes part of the engine's own verifier at stage 2 (verification harnesses stay per engine)]
