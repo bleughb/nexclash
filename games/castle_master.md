@@ -67,7 +67,7 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   | Stage | Original | Next route | DMA fit |
   |---|---|---|---|
   | clear view | 82k T (0xA3F4) | Layer 2 sky / ground fill | DDMA 2D fill (no read phase); fallback zxnDMA fixed-source fill; CPU |
-  | spans | ~731 T each, ~300 a redraw | 8bpp Layer 2: a span = a run of one byte | DDMA fill per span pays only above a crossover width (setup ~15 port writes); short spans CPU (LD (HL),A / INC L unrolled); measure the crossover on hardware |
+  | spans | ~731 T each, ~300 a redraw | 8bpp Layer 2 (M1: PUSH fill) | DDMA per span only above a crossover width (setup ~15 port writes); measure on hardware |
   | copy | 52k T | none: render into the hidden Layer 2 bank, flip NR 0x12 | removed |
   | maths | ~20 % | Z80N MUL D,E for 16x16 / 24-bit products, 28 MHz | n/a (CPU) |
   | sandbox refresh (below) | - | 40K RAM copy per game update | zxnDMA memory-to-memory, ~6-8 ms |
@@ -149,8 +149,7 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   6, 68, 124, 62, 5 - some WHITE paper), ISR 0xC069 colour cycle (4,977 frames: one value to all 336 cells from
   table 49168, 70 / 67 / 66 / 6, paper black, ink cycles). Option (i) re-routes each to Layer 2 (chosen);
   option (ii) (ULA over Layer 2) was unsolved for white-paper areas.
-- Not the filler: 0x9DC9-0x9DF8 writes variables 24369-24382 that lie inside the view buffer's address range
-  (geometry / clipping scratch, run when (29502) > 1); the scan range 0x5C80-0x673F mixed both.
+- Not the filler: 0x9DC9-0x9DF8 writes scratch 24369-24382 inside the buffer's address range ((29502) > 1).
 - View buffer (observed): 0x5CBC-0x673B, 112 lines x 24 bytes, row table 28975; copied by 0xA38D (LDI x24 per
   line); 0xA502 clears it.
 
@@ -187,11 +186,13 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   1,047). cmr.asm -> Layer 2 (rows 0-112 = lines 32-144, x 32-223, MMU slot 4; byte = 2 x code + the original
   bit; code 0-15 face colour, 16 + c sky / ground, 32 band, 33 bolt: the palette decides colour / original /
   flat) = the model per pixel at all 5,233 (m1_raster_gate.py), lightning forced, 4,000 sweeps
-  (m1_raster_unit.py), 11 / 11 mutants. Deliberate difference: the bolt is clipped to the view (at pitch 4 the
+  (m1_raster_unit.py), 16 / 16 mutants. Deliberate difference: the bolt is clipped to the view (at pitch 4 the
   original's 255-row bolt overwrites its RAM 20343-30056).
-  T per view (Z80 timing; no 28 MHz wait states; CPU fills, 11 T a pixel): median 994k; cleared views median
-  1.09M (1.95 frames at 28 MHz), 90 % 1.84M, max 2.53M (12.5 fps = 2.24M). Raster ~640k: ~25,600 pixels a view
-  (overdraw) + ~800 T a span (336). Levers: span overhead, DMA / PUSH fills, measured on hardware.
+  T per view (Z80 timing; no 28 MHz wait states): median 819k; cleared views median 891k (1.59 frames at 28
+  MHz), 90 % 1.60M, max 2.31M (12.5 fps = 2.24M); before the speed pass 994k / 1.09M / 1.84M / 2.53M. Spans >= 16
+  pixels: PUSH fill, 5.5 T a pixel, SP in Layer 2, interrupts on - safe only if an interrupt entry writes just
+  its return address at SP (M2 stub: switch stacks first); --irq sweep: 75,666 injected, pictures equal. Left
+  (m1_prof.py): span setup ~530 T x 357, PUSHes 155k, geometry ~440k (no routine above 6 %); DMA on hardware.
   For M2: views without a clear keep the last picture -> copy the shown bank's view into the hidden one first;
   bolt column = the game's R mod 20 (cosmetic input).
 - M0 side checks (m0_misc.py, all frames): raster callers 0x8599 (5,281) and 0xB62C (108: re-raster of the same
@@ -219,7 +220,8 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
 - 2026-11-19, stage 2 M1 geometry (Z80N), ~2 h, ~45 tool calls, 1 user round: cmr.asm = the game at all
   redraws first run; sweeps + 6 mutants; raster read.
 - 2026-11-19, stage 2 M1 raster, ~2.5 h, ~50 tool calls, 0 user rounds: model = the game's buffer, Z80N = the
-  model per pixel, at all redraws; sweeps, 11 mutants, T per view.
+  model per pixel, at all redraws; sweeps, 11 mutants, T per view. Then speed (user: "Speed up M1 first"),
+  ~1 h, ~20 tool calls: profile, PUSH fill, filler in registers: -18 %, all gates re-run, 16 mutants.
 
 ## Lessons
 - [doc docs/RECORDING_CHECKLIST.md §Making a recording (Fuse)] An RZX alone (no separate .z80) is a complete intake: `nexclash.py rzx extract R -o
@@ -260,6 +262,5 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
 - retries: [local: the skoolkit helper first named dis.py shadowed the stdlib module `dis`; renamed]
 - environment: [none: local Windows checkout, no workarounds needed]
 - hand-rolled: [local: byte searches for CALL / LD (nn) sites with skoolkit's snapshot reader]
-- scratch: [local: cmdis / callers helpers stay in the session scratchpad; cm_profile and cm_consumers are
-  Castle Master probes, to move to tools/probes/ if E1-E3 reuse them; e5_isr_redirect.py, e1_*.py / e1_maths.asm, e2_*.py, e3_*.py, e4_overlays.py (local, castle_master_work)
-  becomes part of the engine's own verifier at stage 2 (verification harnesses stay per engine)]
+- scratch: [local: cmdis / callers helpers stay in the session scratchpad; cm_profile / cm_consumers,
+  e1-e5 and m0 / m1 scripts are local (castle_master_work): the engine's own verifier at stage 3]
