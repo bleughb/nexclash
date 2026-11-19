@@ -221,14 +221,8 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
   goal + speed answered, pacing census, colour source found.
 - 2026-11-19, stage 1 feasibility (DMA / DDMA), ~60 min, ~30 tool calls, 1 user round: stage costs, walking
   profile, camera, consumer probe, proposed design.
-- 2026-11-19, E5 (ISR redirect), ~90 min incl. a 75-min full run, ~25 tool calls, 2 user rounds: corrections
-  recorded, slot / R groundwork, harness + 5 negative controls, full-recording PASS.
-- 2026-11-19, E1 (Z80N maths), ~50 min incl. two ~10-min full runs, ~35 tool calls, 1 user round: capture,
-  four routines, checker, 4 mutants, full-recording PASS.
-- 2026-11-19, E2 (sandbox frame = game frame), ~90 min incl. five ~10-min full runs, ~40 tool calls, 2 user
-  rounds: harness, 12 differences traced to the live timer and buffer carry-over, full-recording PASS.
-- 2026-11-19, E3 (pacing model), ~60 min incl. a ~35-min probe, ~25 tool calls, 1 user round.
-- 2026-11-19, E4 (overlay census), ~30 min, ~12 tool calls, 1 user round.
+- 2026-11-19, E5 / E1 / E2 / E3 / E4 + option (i) trial, ~6 h incl. many ~10-min full runs, ~150 tool calls,
+  ~10 user rounds: all experiments PASS / recorded (Feasibility); results above.
 - 2026-11-19, separate session (removal + taint of the raster stage), ~60 min, ~25 tool calls, 3 user rounds: six
   routine_skip runs, a taint probe over the full recording (castle_master_work/taint_call.py).
 
