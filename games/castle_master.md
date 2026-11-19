@@ -195,7 +195,9 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   view: cursor / crosshair 0xCEAF / 0xCF39 (anywhere in the view, 1,829 frames), the menu's pointer arrow
   0xCB00 / 0xCB3B / 0xCB63 (lines 60-87, cols 4-6; its 1,364 frames are mostly the panel's room name), a second buffer -> screen copier 0xB6C3 (244
   frames; must be hooked like 0xA38D), masked sprite 0xD0F9-0xD146 + restore 0xD1B1 (frames 559-673 only: the opening portcullis).
-  Examples: e4_shots.py -> e4_examples.png (local).
+  Examples: e4_shots.py -> e4_examples.png. Option (i) trial (opt1_trial.py, placeholder palette): spans from
+  0x969E (H / D ends, (29662) row, (29501) colour) give clean colour views; cursor, centre marker, scroll and
+  the ISR cycle vanish under Layer 2 as predicted; sky / ground recovered by pattern match stripes (trial only).
   Into the buffer: XOR centre marker 0xCF54-0xCF68 (175 frames), printer 0xCA97 / 0xCAA4 / 0xCAF5 / 0xCB00-0xCC16
   (151), full-view transition effect 0xCA42 (12), boxes 0xBC9F-0xBD34 (6). Attributes: area colours 0xB368 (218: values
   6, 68, 124, 62, 5 - some WHITE paper), ISR 0xC069 colour cycle (4,977 frames: one value to all 336 cells from
