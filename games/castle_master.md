@@ -7,7 +7,7 @@ C:\dev\castlemaster\Castlemaster1.tap    Branch: add-castle-master    Commit: (t
 Checks: survey --stop 15000 (castle_master_survey/), survey full run (survey_full/), scan of the view buffer (3,000 frames)
 Decision (user 2026-11-19): route B (Next-native renderer) + option (i) (Layer 2 on top, dither kept, cursor =
 sprite, cycle = palette); colour switchable off by the player (original look). Later: palette 1-16, flat mode.
-Start with: M0 next step (Build design, "M0 so far"): port the matrix 0x9776, check vs the game
+Start with: M0 next step (Build design, "M0 so far" Next)
 Read: PLAYBOOK stage 1 + 3d; cards detect.pacing-structure, detect.routine-removal, patch.hybrid-display-replacement
 Open: who maps a face's colour to its dither pattern (the colour source for a colour route); unreached CALL sites (Coverage)
 
@@ -56,22 +56,10 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   update -> same game); only the real-time feel changes. Options for the user (below, Pending).
 - Sound: OUT 254 at 0xC821 (20,932, in 39 updates), 0xC117 (195), 0xB374 (16) - check which run inside render
   code before any speed-up (patch.timed-side-effect-replay).
-- Colour source (observed, static code): span setup 0x9660-0x9686 sets (29662) = view line address
-  (23740 + 24*line) and (29664) = 53825 + 4*((29501)-1): (29501) = the face's colour index 1-16, table 53825 = 16
-  four-line dither patterns (1 empty, 2 and 11 solid, 3-10 / 12-16 dithers). Span filler ~0x969E-0x9731 reads
-  (29664)+(line&3) (29658 = y), masked fill: CPL / AND (HL) / AND pattern / OR / LD (HL),A at 38633-38642, then
-  whole bytes. 0x9682 is the only writer of 29664. A colour hook can take the index from (29501) per span and
-  write it into a byte-per-pixel Layer 2 view: no reverse mapping from patterns needed. Which colour each index
-  shows: the 16-bit versions' palettes or the user's choice (stage-1 colour question, later).
-- Pipeline (observed, static + cost, 15,000 frames): 0x8542 -> [(29503) bit 2] 0x8D4F (2k T, angle sectors) ->
-  0x9776 (matrix, 12k T) -> objects 0x85C9 -> 0x9D8A (clip/project, median 42k, max 662k) -> 0xBE03 (panel) ->
-  0x9EA3 (raster: 0xA3F4 clear 82k, then the sorted list 26452, 4-byte entries, (29502) of them; per polygon
-  header byte: hi nibble -> 29501 colour, lo nibble -> 29544; 0x9484 -> 0x9448 fill, median 41k, ~6 a redraw)
-  -> 0x9F19 copy 52k. Maths: 0xA1FD / 0xA253 multiplies (18 / 20+ callers in 0x86xx-0x8Bxx transform), 0xA2C1
-  24-bit divide (perspective). Shares of all T: 0x8542 62.1 %, raster 17.5 %, fill 12.6 %, spans 10.1 %, copy 5.9 %.
-- Walking profile (probe cm_profile, frames 780-920, 4 steps): the CPU is busy all the time, ~2.4M T a step
-  (~34 frames): maths A1C0-A3BF ~20 %, clip/project 9D80-9EBF ~16 %, spans 9540-977F ~17 %, panel/attrs B2C0-B3BF
-  ~7 %, clear 2.6 %, copy ~2 %, keyboard 0xC18D 2.3 %. No wait: the original's pace IS its render time.
+- Colour source: (29501) = the face's colour index 1-16 per span; table 53825 = 16 four-line dither patterns (1
+  empty, 2 and 11 solid); the filler ANDs / ORs the pattern into the buffer. Layer 2 takes the index per span.
+- Pipeline costs (15k frames): 0x8D4F sectors 2k T, 0x9776 12k, 0x9D8A sort median 42k (max 662k), raster
+  (clear 82k + fill ~41k) 17.5 % of all T, copy 52k; walking ~2.4M T a step, maths ~20 %, no wait anywhere.
 - Camera (observed, cm_profile at each 0x9776): x, y, z = 16-bit at 27309, 27311, 27313 (start 928, 96, 8032;
   y = eye height); pitch 27318, yaw 27319, both mod 72 (5 deg); a turn = 2 units (10 deg); a walk step ~238 units
   ((+206, -120) at yaw 24). 27315 / 27317 = 0xF0 (unknown, constant so far).
@@ -208,8 +196,13 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   0x9776 = yaw / pitch from sin-cos bytes 29337 (2 per step), 3x3 product 41342, axis matrix 38765; 0x85C9 cull
   + bbox list 24482 -> builders cube 0x97F9, rect 0x9CB8, pyramid 0x9953, polygon 0x9C22; polygons 26612, sorted
   list 26452 (ptr, 2 bytes). Raster input: header (colour << 4 | n), n (x, y) bytes, y up (row 112 - y); the
-  raster's own code (8.8 edge slopes, divide 45740) is ported as is in M1 (span -> Layer 2 run). Next: port
-  matrix, builders, clip 0x9D8A, sort, each checked against the game's output per redraw.
+  raster's own code (8.8 edge slopes, divide 45740) is ported as is in M1 (span -> Layer 2 run).
+  Checks run offline: m0_capture.py = RAM at each block start (m0_states*.bin), m0_lib.Sandbox reruns the original
+  to any PC. PASS: matrix (m0_matrix.py: 65 / 65 redraws, all 5,184 angle pairs; 2 mutants fail); cubes, no-clip
+  path (m0_cube.py, 3k: 124 / 124 records equal, 431 culls agree; floor-rounding mutant fails). Facts: A*HL
+  signed 24-bit, AHL/DE truncates; origin = (M x box min) >> 6; vertex code 31 = inside |x|,|y| <= z, z >= 0; faces
+  = edge refs (bit 7 reversed). Area list (29494) x (29496), globals (27345) x (27344); 0x9D8A = sort. Next: clip
+  path 0x8E88, rect / pyramid / polygon builders (two-sided test 35433), sector cull 0x8D4F, sort.
 
 ## Coverage (survey GATE, 15,000 frames)
 Unreached CALL sites: 0xD028 (2/3), 0xCA4E (17/18), 0xB66E (2/6; 48357 not reached). All text / panel / area
