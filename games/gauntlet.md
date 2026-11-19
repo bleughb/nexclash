@@ -109,7 +109,7 @@ Not built for hardware yet (the level blocks first).
 - [local: this game's verifier] A broken build must be one the data can show: "attribute not compared" cannot fail
   here, because the attribute already picks the chain.
 - [local: this game's intake] The archive's block snapshots are taken at the "rewind tape" prompt; a build that starts
-  in play needs the recording cut at a frame where the game waits at its HALT (`rzx.cut`).
+  in play needs the recording cut at a frame where the game waits at its HALT.
 
 ## Friction
 - reuse: [local: this game's module] the Simpsons engine's hook runner and report shape (that branch is not merged).
