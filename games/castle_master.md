@@ -1,13 +1,13 @@
-# Castle Master (Incentive Software, 1990; 48K, Freescape) - stage 0 intake done, stage 1 question open
+# Castle Master (Incentive Software, 1990; 48K, Freescape) - stage 0 intake done, stage 1 design approved
 
 ## Next session
-Stage: 1 (design)            State: intake 2026-11-19; the design question is with the user (Pending below)
+Stage: 1 (design)            State: design approved 2026-11-19 (Decision below); route B build plan next
 Inputs: C:\1NEXT\castle_master_work\castle_master.z80 (extracted from the RZX), C:\dev\castlemaster\castle.rzx,
 C:\dev\castlemaster\Castlemaster1.tap    Branch: add-castle-master    Commit: (this file's commit)
 Checks: survey --stop 15000 (castle_master_survey/), survey full run (survey_full/), scan of the view buffer (3,000 frames)
-Pending user answers: final design approval (route A first, agreed 2026-11-19, if E5 passes); buffer-reader
-option (i) / (ii); the colour palette for indices 1-16
-Start with: the design approval with the user (E1-E5 done 2026-11-19, Feasibility): option (i) / (ii) after E4
+Decision (user 2026-11-19): route B (Next-native renderer) + option (i) (Layer 2 on top, dither kept, cursor =
+sprite, cycle = palette); colour switchable off by the player (original look). Later: palette 1-16, flat mode.
+Start with: the route B build plan (stage 2) from Design + E4; replaces route A's sandbox
 Read: PLAYBOOK stage 1 + 3d; cards detect.pacing-structure, detect.routine-removal, patch.hybrid-display-replacement
 Open: who maps a face's colour to its dither pattern (the colour source for a colour route); unreached CALL sites (Coverage)
 
@@ -140,7 +140,7 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   (b) speed: updates run the original at 28 MHz with the E1 maths. (c) smooth view, route A (user 2026-11-19:
   first, provided E5 early): after each update a DMA copy of RAM = sandbox renders in-between cameras into
   Layer 2 while the update waits out the original's duration (pace ORIGINAL). Route B (Next-native renderer,
-  not decided): no jump if it draws every view incl. each update's final one; what remains is a pixel-level
+  CHOSEN): no jump if it draws every view incl. each update's final one; what remains is a pixel-level
   gap between what is shown and what the crosshair pick hits. (d) DMA: DDMA on core >= 3.03.00, zxnDMA
   otherwise, CPU-only option; span-fill crossover measured on hardware.
   Scope (user): "display-only" holds on recorded paths; unrecorded branches and the raster's writes into the
