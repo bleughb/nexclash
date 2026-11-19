@@ -201,8 +201,12 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   to any PC. PASS: matrix (m0_matrix.py: 65 / 65 redraws, all 5,184 angle pairs; 2 mutants fail); cubes, no-clip
   path (m0_cube.py, 3k: 124 / 124 records equal, 431 culls agree; floor-rounding mutant fails). Facts: A*HL
   signed 24-bit, AHL/DE truncates; origin = (M x box min) >> 6; vertex code 31 = inside |x|,|y| <= z, z >= 0; faces
-  = edge refs (bit 7 reversed). Area list (29494) x (29496), globals (27345) x (27344); 0x9D8A = sort. Next: clip
-  path 0x8E88, rect / pyramid / polygon builders (two-sided test 35433), sector cull 0x8D4F, sort.
+  = edge refs (bit 7 reversed). Area list (29494) x (29496), globals (27345) x (27344); 0x9D8A = sort.
+  PASS, whole recording every 10th redraw (m0_cube.py m0_states.bin 10; m0_geom.py): cubes incl. clip path
+  (edge clipper 0x8746, corners 0x91C2, full-screen face 0x9300 / facing 0x8A69) and sector cull 0x8D4F:
+  2,511 / 2,511 records equal (55 full-screen), 4,317 culls agree, 29488 limits equal; truncating-divide
+  mutant fails (11 on 3k). 16x16 signed -> 32, DEHL / BC rounds half up. Next: rect / pyramid / polygon
+  builders (two-sided colours via 35433), then the sort 0x9D8A.
 
 ## Coverage (survey GATE, 15,000 frames)
 Unreached CALL sites: 0xD028 (2/3), 0xCA4E (17/18), 0xB66E (2/6; 48357 not reached). All text / panel / area
