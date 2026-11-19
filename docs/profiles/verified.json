@@ -214,6 +214,15 @@
     "loading": "cb0c403db4058444f38445fb1afbdc19"
    }
   },
+  "b665f16dee469ee766a4ebccdccc03f6": {
+   "game": "Gauntlet",
+   "doc": "gauntlet.md",
+   "nex": {
+    "plain": "ad2ec631091d589260bd6c20fe80e64f",
+    "sprites": "546393f1ee3aea5b5ad314644ab44646",
+    "steady": "e93290d10af97e00d23294a6fe451410"
+   }
+  },
   "23d69f517506104c36ba429cb2148fa5": {
    "game": "Ghosts 'n Goblins",
    "doc": "ghosts_n_goblins.md",

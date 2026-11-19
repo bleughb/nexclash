@@ -1,0 +1,214 @@
+{
+ "name": "gauntlet",
+ "order": 257,
+ "game": "Gauntlet",
+ "doc": "gauntlet.md",
+ "engine": "gauntlet",
+ "representative": true,
+ "reference": "gauntlet",
+ "inputs": {
+  "snapshot": {
+   "name": "gauntlet_p1.z80",
+   "md5": "b665f16dee469ee766a4ebccdccc03f6",
+   "path": "gauntlet/gauntlet_p1.z80",
+   "note": "The rzxarchive's recording of the tape's first level block (Gauntlet RZX/Loading Blocks/1.rzx, SPIN 0.5, a 128K snapshot inside), cut at frame 1501: level 1 in play, the game waiting at its HALT. No archive snapshot of this game holds the game in play."
+  },
+  "recordings": [
+   {
+    "name": "gauntlet_colours.json",
+    "md5": "abf3d634ff009523d8707b6c908e8131",
+    "path": "gauntlet/gauntlet_colours.json",
+    "role": "The painted map (1,553 tile cells, 69 panel cells), staged beside the snapshot; not a recording. It holds the game's pictures, so it is not in the repository."
+   },
+   {
+    "name": "gauntlet_p1.rzx",
+    "md5": "d233f99220810698919fea1125b3c21f",
+    "path": "gauntlet/gauntlet_p1.rzx",
+    "role": "The rest of that recording from the cut: 15,698 frames, the block's levels."
+   }
+  ]
+ },
+ "modules": [
+  "gauntlet"
+ ],
+ "own_modules": [
+  "gauntlet"
+ ],
+ "data": [
+  "asm/gauntlet_hooks.asm",
+  "docs/profiles/gauntlet.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [],
+  "rzx": []
+ },
+ "verify": {
+  "args": [],
+  "rzx": [
+   "gauntlet_p1.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 15,
+  "note": "One archive recording of the first level block, from a cut in play. Each of the five hooks against the original from one state: every register with R, all game memory; after each tile pass the tile layer against the painted map for the hidden screen's 640 cells and Layer 2 against the painted panel; every fourth frame's tiles against the visible screen. The steady-speed build's hooks on the first 3,000 frames; unit cases; 6 broken builds. Blocks 1, 2 and 10 from their own snapshots: games/gauntlet.md."
+ },
+ "outputs": {
+  "plain": {
+   "file": "gauntlet_p1.nex",
+   "md5": "ad2ec631091d589260bd6c20fe80e64f"
+  },
+  "sprites": {
+   "file": "gauntlet_p1_sprites.nex",
+   "md5": "546393f1ee3aea5b5ad314644ab44646"
+  },
+  "steady": {
+   "file": "gauntlet_p1_steady.nex",
+   "md5": "e93290d10af97e00d23294a6fe451410"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Gauntlet",
+  "engine_col": "gauntlet (gauntlet.md)",
+  "build": "gauntlet_p1_sprites.nex 546393f1 (nothing of the game changes: each 8 x 8 cell of the play window shown as a painted tile of the tile layer, the status panel painted on Layer 2; the original's pace) + steady e93290d1 (the game at 28 MHz, an update every 3 frames: the original takes 3 to 8)",
+  "software": "Verify IDENTICAL on the first block's recording, 15,698 frames, 3,202 updates (R compared): 2,459,136 cells against the painted map, Layer 2 against the painted panel after every pass; the steady build's hooks IDENTICAL on 3,000 frames; unit PASS (28 cases); 6 of 6 broken builds detected; ROM path check pass; the hooks take 0.016% of the recording's time less than the copies and the clear they stand for. Blocks 1, 2 and 10 from the tape prompt PASSED the same way",
+  "hardware": "untested (both builds start and run in OverSpec)",
+  "next": "the tape's 31 level blocks from memory (a build asks for the tape after its block); the owner's review of the painting and of the steady speed; hardware test"
+ },
+ "checks": [
+  "asm2profile:gauntlet"
+ ],
+ "techniques": [
+  {
+   "application": "gauntlet.tile-layer",
+   "id": "patch.hybrid-display-replacement",
+   "revision": 1,
+   "target": "the game's hidden screen, its copies and the screen itself unchanged; a painted tile of the tile layer over each cell the map knows, the panel's cells on Layer 2",
+   "phases": [
+    "entry"
+   ]
+  },
+  {
+   "application": "gauntlet.pace",
+   "id": "patch.pace-limiter",
+   "revision": 4,
+   "target": "one window a copy (three an update), the tile pass inside the first; the clear's saved time added to the first copy's target; the window's clock read every row of the pass",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "gauntlet.preserve-r",
+   "id": "patch.preserve-r",
+   "revision": 2,
+   "target": "HLIB_R_IN / hlib_r_set in the three copy wrappers; an inline form in the clear's hook and the wait's, where nothing may be mapped or no register is free",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "gauntlet.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "HLIB_SPEED_IN / OUT in the copy wrappers; the clear's hook writes the speed directly (the original's pace build only)",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/gauntlet.md#feasibility-2026-11-18-block-1s-snapshot",
+    "games/gauntlet.md#build-stage-2-2026-11-19-asmgauntlet_hooksasm-nexclashgauntletpy"
+   ],
+   "coverage": "Four whole recordings of blocks 1, 2 and 10 (61,548 frames), the frames an update takes in four more; the copies' and the clear's own times read off the verifier's run of the routines (35,796 + 10,587 + 53,684 T, 34,357 T: the same every time); hook time on the simulator's line clock. No JNext or hardware timing.",
+   "result": "An update takes 3 to 8 frames in the original. The copies and the clear run at 28 MHz and their own time is waited out; the tile pass spends part of it. The hooks take 0.016% of a recording's time less than the code they stand for."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/gauntlet.md#feasibility-2026-11-18-block-1s-snapshot",
+    "games/gauntlet.md#build-stage-2-2026-11-19-asmgauntlet_hooksasm-nexclashgauntletpy"
+   ],
+   "coverage": "Every writer of the screen and of the hidden copy in the first 4,000 frames of block 1 (scan --writers); the interrupt handler over the whole recording (isr); the four plotters, the three copies, the clear; the distinct cells of all 31 block recordings.",
+   "result": "No game code is changed beyond five CALL targets; nothing reads the Next's layers. The handler reads the ROM, so the one hook that runs with interrupts on maps nothing. Bank 7 is never paged by the game (paging locked): the tile layer lives there."
+  },
+  "decision": "Everything painted on the tile layer, looked up from the finished hidden screen at the game's own copy (owner 2026-11-19: 'Go ahead with you recommendation'); the panel on Layer 2 (owner: 'Can you fix up the hud?'); a steady-speed build beside the original's pace (owner: the slowdown 'might be an opportunity to fix that').",
+  "next_experiment": "The tape's level blocks from memory: the loader call answered from pages, proven by a recording that loads a second block; success = the same level data bytes as the tape's block, compared in the verifier."
+ },
+ "checked": {
+  "deps": {
+   "asm/gauntlet_hooks.asm": "5ff54cf769966636",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/gauntlet.json": "2ae9fa8f6a5ec495",
+   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "4a2e74deb97c37de",
+   "nexclash/gauntlet.py": "5f9c5e1b9a07d6ee",
+   "nexclash/hooklib.py": "24241497925658d6",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/recolour.py": "e0c2de6bfad5c6fb",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "266b8a0bfa317050",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-19"
+ },
+ "verified": {
+  "deps": {
+   "asm/gauntlet_hooks.asm": "5ff54cf769966636",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "docs/profiles/gauntlet.json": "2ae9fa8f6a5ec495",
+   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "4a2e74deb97c37de",
+   "nexclash/gauntlet.py": "5f9c5e1b9a07d6ee",
+   "nexclash/hooklib.py": "24241497925658d6",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/recolour.py": "e0c2de6bfad5c6fb",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "266b8a0bfa317050",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-19"
+ }
+}
