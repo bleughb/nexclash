@@ -7,7 +7,7 @@ C:\dev\castlemaster\Castlemaster1.tap    Branch: add-castle-master    Commit: (t
 Checks: survey --stop 15000 (castle_master_survey/), survey full run (survey_full/), scan of the view buffer (3,000 frames)
 Decision (user 2026-11-19): route B (Next-native renderer) + option (i) (Layer 2 on top, dither kept, cursor =
 sprite, cycle = palette); colour switchable off by the player (original look). Later: palette 1-16, flat mode.
-Start with: Build design M0 (host renderer from live RAM vs the game's buffer)
+Start with: M0 next step (Build design, "M0 so far"): port the matrix 0x9776, check vs the game
 Read: PLAYBOOK stage 1 + 3d; cards detect.pacing-structure, detect.routine-removal, patch.hybrid-display-replacement
 Open: who maps a face's colour to its dither pattern (the colour source for a colour route); unreached CALL sites (Coverage)
 
@@ -103,14 +103,8 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   (0x96EA / 0x9710, reached from the other 0x9EA3 call sites 0xA0A0 / 0xB635 / 0xC539). Its 8.7M writes to page
   0x73 and 15.7M stack-page writes are never read outside it. So 0x9EA3 is display-only in the recording (observed);
   the pick's inputs (display list 0x6754-0x68xx, above) come from the stages before it, which must stay.
-  routine_skip, 15,000 frames: 0x8599 skipped, buffer excluded: 62 / 462 updates identical (differences = the
-  unread page-0x73 scratch); 0x859C (0x9F19) skipped: 437 / 462, 25 differ in game variables (first 0x6AD9, 0x7339,
-  0xC677): 0x9F19 is not a pure copy, keep it and remove only the 0xA38D copy inside; 0x855E / 0x8561 / 0x857E
-  skipped: heavy differences incl. code pages (0x8561 worst): not removable singly; 0x8596 (0xBE03): 456 / 462 (no
-  use as a negative control). Not checked: branches the recording never takes; what the raster's writes to page
-  0xA3 (the copier's code) patch (instruction-fetch reads are not counted by the probe). Filler overrun
-  (observed): spans write up to 0x6752, 23 bytes past the buffer end 0x673B and 2 bytes short of the display list
-  at 0x6754; a hook must not assume the buffer bounds.
+  routine_skip (15k): 0x8599 skip changes only page-0x73 scratch; 0x9F19 is not a pure copy (25 / 462 differ in
+  game variables): keep it, drop only 0xA38D; 0x855E / 0x8561 / 0x857E not removable. Filler overruns to 0x6752.
   Engine-replacement option (asked by the user, not decided): because the raster is display-only, in-between
   views could come from a new Next-native renderer (own camera, own pages, reads the world data) instead of the
   sandboxed original, while the game's own update incl. projection runs unchanged for the pick and the pace.
@@ -207,6 +201,15 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   M1 Z80N renderer = M0 output bit-exact, T per view (target >= 12.5 fps outdoors). M2 early integrated NEX:
   update-camera views in colour, no tweens; JNext + user's hardware. M3 tweens, overlays, sprites, switch,
   sound; differential test at every site (PLAYBOOK 6), pacer vs E3, 20,000-frame quick run.
+- M0 so far (m0_inputs.py: 3k frames, 65 redraws; m0_polys.jsonl = the game's polygon lists): world = Freescape
+  object records (byte 0 type & 15: 1 cube, 2 sensor, 3 rect, 4-9 pyramids, 10-14 line / polygons, bit 6
+  hidden; 1-3 x, y, z (x64 = camera units 27309-27313); 4-6 size; 7 id; 8 length; then colours, script),
+  areas at 54037- / 58676- (read by 0x85C9-0x863E); per-object state 27486-27797 (clip / sort). Stages: matrix
+  0x9776 = yaw / pitch from sin-cos bytes 29337 (2 per step), 3x3 product 41342, axis matrix 38765; 0x85C9 cull
+  + bbox list 24482 -> builders cube 0x97F9, rect 0x9CB8, pyramid 0x9953, polygon 0x9C22; polygons 26612, sorted
+  list 26452 (ptr, 2 bytes). Raster input: header (colour << 4 | n), n (x, y) bytes, y up (row 112 - y); the
+  raster's own code (8.8 edge slopes, divide 45740) is ported as is in M1 (span -> Layer 2 run). Next: port
+  matrix, builders, clip 0x9D8A, sort, each checked against the game's output per redraw.
 
 ## Coverage (survey GATE, 15,000 frames)
 Unreached CALL sites: 0xD028 (2/3), 0xCA4E (17/18), 0xB66E (2/6; 48357 not reached). All text / panel / area
