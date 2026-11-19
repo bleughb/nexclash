@@ -1,13 +1,13 @@
 # Castle Master (Incentive Software, 1990; 48K, Freescape) - stage 0 intake done, stage 1 design approved
 
 ## Next session
-Stage: 1 (design)            State: design approved 2026-11-19 (Decision below); route B build plan next
+Stage: 2 (build)             State: design approved 2026-11-19; build design written, M0 next
 Inputs: C:\1NEXT\castle_master_work\castle_master.z80 (extracted from the RZX), C:\dev\castlemaster\castle.rzx,
 C:\dev\castlemaster\Castlemaster1.tap    Branch: add-castle-master    Commit: (this file's commit)
 Checks: survey --stop 15000 (castle_master_survey/), survey full run (survey_full/), scan of the view buffer (3,000 frames)
 Decision (user 2026-11-19): route B (Next-native renderer) + option (i) (Layer 2 on top, dither kept, cursor =
 sprite, cycle = palette); colour switchable off by the player (original look). Later: palette 1-16, flat mode.
-Start with: the route B build plan (stage 2) from Design + E4; replaces route A's sandbox
+Start with: Build design M0 (host renderer from live RAM vs the game's buffer)
 Read: PLAYBOOK stage 1 + 3d; cards detect.pacing-structure, detect.routine-removal, patch.hybrid-display-replacement
 Open: who maps a face's colour to its dither pattern (the colour source for a colour route); unreached CALL sites (Coverage)
 
@@ -37,20 +37,8 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
 
 ## Decisions (user, 2026-11-19)
 - Goal: colour the 3D view (faces in their own colours; Layer 2 presumably, panel on the ULA - design detail open).
-- Speed: "utilise the Next's new hardware to dramatically speed up the rendering, without affecting the gameplay"
-  = an owner-named faster pace for the renderer (patch.pace-limiter: not ORIGINAL). Constraint to settle in
-  feasibility: what the game's movement / timers count (rendered frames or interrupts, 29518 bit 7 set by the ISR);
-  if movement is per rendered frame, a faster renderer changes gameplay unless steps are scaled or the frame rate
-  is capped - that answer goes back to the user before the design is approved.
-- Speed, answered 2026-11-19: "Original pace, smooth view". Game updates keep the original's real-time rate
-  (pace target ORIGINAL for game state); the time the faster renderer frees renders in-between camera positions
-  (display only, never writes game state) so the view moves smoothly. Rejected by the user: faster updates
-  (walk/turn faster in real time) and smaller steps (changes game logic).
-  Feasibility must establish: (1) the camera state (position, yaw, pitch) and the step per update, so a tween can
-  interpolate between the previous and the new camera; (2) that the renderer can run on a copy of that state
-  without writing game memory (removal / isolation experiment); (3) the original's per-update real time to pace
-  to (renders 2-52 frames: pace each update to its own original duration, card patch.pace-limiter); (4) the
-  render cost at 28 MHz + Layer 2 + DMA, i.e. how many tween frames fit per update.
+- Speed: "Original pace, smooth view": updates keep the original's real-time rate (pace ORIGINAL, per update);
+  the freed time renders in-between cameras (display only). Rejected: faster updates, smaller steps.
 
 ## Feasibility (PLAYBOOK 3d; first 15,000 frames)
 - Pacing (card detect.pacing-structure, observed): no frame wait. Main loop body 0x8542 (callers 0x6A8C, 0x6A96,
@@ -99,11 +87,6 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   core >= 3.03.00 for DDMA, ordinary zxnDMA otherwise, CPU-only build option (HLIB_NO_BLITTER / HLIB_CPU_ONLY).
   Rough budget (inferred): 2.4M T at 3.5 MHz ~ 690 ms -> ~115 ms at 28 MHz (x6, LEARNINGS 2.1f) before MUL /
   DMA / no copy; with them perhaps 40-60 ms -> 6-12 in-between views per outdoor step (12-25 fps) instead of ~1.5.
-- Tween sandbox (route A; ISR redirect proven by E5 below): RAM DMA-copied to a sandbox after each update, the
-  original renderer run there on an interpolated camera (position lerp of 27309-27313; finer yaw / pitch via the
-  matrix builder 0x9776 and an own sine table: 72 steps give one in-between angle per 10-deg turn). Pace: each
-  update lands when the original's would (its render T, E3; patch.pace-limiter). Open: OUT 254 at 0xC821 (39
-  updates), the panel 0xB3xx.
 - Render consumers (probe cm_consumers, 3,000 frames, 65 redraws; window 0x9776 .. 0x859F, ISR excluded): game
   code outside the window reads render-written bytes: the projected polygons / display list 0x6754-0x68xx by
   0xB708-0xB7BE and 0xBA42-0xBA60 (inferred: the crosshair pick, i.e. gameplay) and by 0x9495-0x952B / 0x9EDA-0x9EEC
@@ -154,14 +137,9 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   10, an event countdown (gameplay) -> sandbox renders and hooks restore R (patch.preserve-r); 0xA569: R mod
   20 -> 41970 (display). Interrupts land elsewhere at 28 MHz: "extremely close", not 1:1.
 - E5 PASS (castle_master_work/e5_isr_redirect.py, e5_full.log): ISR redirect while the sandbox is mapped. MMU
-  model, real pages 10, 11, 4, 5, 0, 1 / sandbox 32-37 (camera and all 18 ISR variables altered, 0xFDFD JP ->
-  stub). Stub at 0x2000 (slot 1, never touched by the renderer): LD (0x82C0),SP / LD SP,0x8400 / NEXTREG
-  0x52, 0x53, 0x56, 0x57 -> real / CALL 0xC01F / DI / NEXTREG back / LD SP,(0x82C0) / EI / RET; 0x82C0-0x8400
-  never used by the game. 79,705 / 79,705 interrupts in redraw windows (all frames): real RAM = the
-  recording's handler result, sandbox unchanged, registers and MMU back; 245 T (3.5 MHz T) each. 229 cosmetic
-  blink-delay bytes differ (R; accepted pending the user). Controls: no remap, slot 3, 6 unmapped, SP not
-  restored FAIL 20 / 20; slot 2 2 / 20; slot 7 passes all (stack + vector only; remap kept, 40 T). Not covered:
-  hardware MMU / timing, the renderer's DI periods, unrecorded branches.
+  model; stub at 0x2000 (slot 1): own SP 0x8400 (0x82C0-0x8400 unused by the game), NEXTREG slots 2-3 / 6-7
+  real, CALL 0xC01F, back. 79,705 / 79,705 interrupts: real RAM = recording, other pages unchanged, 245 T each;
+  229 cosmetic blink bytes differ (R). Controls FAIL (no remap, slot 3, 6, SP). Not covered: hardware, DI periods.
 - E1 PASS (e1_maths.asm, e1_capture.py / e1_check.py, e1_check_full.log): Z80N 0xA1FD (A*HL), 0xA253 (HL*DE),
   0xA348 (H*L) with MUL D,E; 0xA2C1 (AHL/DE, DE = remainder) = restoring division unrolled, leading quotient
   zeros skipped, DE = 0 -> the original's code. All 682,956 unique inputs of 1,827,355 recorded calls, original
@@ -173,12 +151,8 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   at 0x859F, registers as at 34142, no interrupts: buffer at the copier 0xA38D = the game's, 5,214 / 5,214.
   Two inputs must be live (first runs 5,202 / 5,214): 27391 (ISR-decremented countdown, read by the clear at
   42076: sky / ground split 41966; 3 frames, 1-43 bytes) -> tweens read the real 27391; the buffer is not fully
-  rebuilt (filler 0x96F2 / 0x9716 read-modify-writes, the clear misses bytes; 9 frames, 1-126 bytes) -> tweens
-  draw over the last shown frame. Not causes: R at 0xA569, ISR -> render data flow (none). Controls: yaw +10
-  deg 61 / 62 FAIL, raster skipped 62 / 62 FAIL, display list junked still PASS (rebuilt). Block T median 883k,
-  max 4.59M. The re-run writes the ULA panel and 0xBE / 0xCA / 0xCC variables: keep 0xBE03's and 0x9F19's
-  screen writes off the real screen. Design rule (hardware, untested): the RAM -> sandbox DMA copy finishes
-  before a tween starts (no DMA in flight when the E5 stub runs).
+  rebuilt (filler read-modify-writes, the clear misses bytes; 9 frames) -> the game's own render reads the last
+  shown frame. Controls FAIL (yaw +10 deg, raster skipped). Block T median 883k, max 4.59M.
 - E3 (e3_probe.py / e3_frames.py / e3_fit.py --realtime, logs e3_*.log): wall time per update (main-loop
   iteration 0x8542 -> 0x8542 that ran the raster; 5,379, fit on frames <= 15,000, tested on 4,908 later ones).
   Physics: frames = (T main + T ISR + 1.23 T x accesses to 0x4000-0x7FFF) / 69,888: test 99.9 % within 2 %,
@@ -203,14 +177,36 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   Into the buffer: XOR centre marker 0xCF54-0xCF68 (175 frames), printer 0xCA97 / 0xCAA4 / 0xCAF5 / 0xCB00-0xCC16
   (151), full-view transition effect 0xCA42 (12), boxes 0xBC9F-0xBD34 (6). Attributes: area colours 0xB368 (218: values
   6, 68, 124, 62, 5 - some WHITE paper), ISR 0xC069 colour cycle (4,977 frames: one value to all 336 cells from
-  table 49168, 70 / 67 / 66 / 6, paper black, ink cycles). Consequence: option (i) needs every one of these
-  re-routed to Layer 2 (cursor could be a hardware sprite); option (ii) keeps all of them as they are, but the
-  view's paper must be see-through while the panel, sharing the same paper palette entries, stays opaque
-  (white-paper areas) - unsolved; for the user's design decision.
+  table 49168, 70 / 67 / 66 / 6, paper black, ink cycles). Option (i) re-routes each to Layer 2 (chosen);
+  option (ii) (ULA over Layer 2) was unsolved for white-paper areas.
 - Not the filler: 0x9DC9-0x9DF8 writes variables 24369-24382 that lie inside the view buffer's address range
   (geometry / clipping scratch, run when (29502) > 1); the scan range 0x5C80-0x673F mixed both.
 - View buffer (observed): 0x5CBC-0x673B, 112 lines x 24 bytes, row table 28975; copied by 0xA38D (LDI x24 per
   line); 0xA502 clears it.
+
+## Build design (stage 2, route B + option (i); written before the first quick run)
+- Game side: original code runs (update, projection = the pick's list, ISR, panel on the ULA) + E1 maths.
+  Sites: CALL 0x9EA3 at 0x8599 -> clear the buffer only (it becomes the overlay buffer); 0xA38D in 0x9F19 ->
+  publish (camera 27309-27319, world snapshot by DMA, overlay bytes), no ULA write. 0x9F19 itself stays.
+- Pacer: each update lands at its original real time (E3 hybrid: CTC timer of game T, renderer time excluded,
+  + contention counters; remainder carried).
+- Renderer (new, Z80N): a second thread entered from the frame interrupt after the game's ISR (E5 stub keeps the
+  ISR on real pages); draws the newest snapshot's area with the camera interpolated by wall time; each update's
+  own camera drawn too. Painter's order, spans in the 16 dither patterns (set bit = index colour, clear = area
+  paper), sky / ground split by 27391, DDMA fills; hidden Layer 2 bank, flip. World format: own reader from live
+  RAM (ScummVM as reference only, GPL: no code copied).
+- Palette: index 1-16 + area paper; colour off (player option) = all indices -> the area's ink / paper (original
+  look); ISR cycle = same switch with the ISR's attribute. Placeholder until the user's palette.
+- Overlays: cursor 0xCEAF / 0xCF39 and XOR marker -> hardware sprites; printer, menu arrow, boxes, transition,
+  portcullis -> written bytes opaque in Layer 2 (buffer bits, original ink / paper); non-view screens -> Layer 2
+  and sprites off. Anything unknown keeps the original ink.
+- Memory: game RAM only at sites; renderer, snapshots, tables in own Next pages at slots 0-1 while it runs; hooks
+  altrom. R restored on each thread switch (patch.preserve-r); OUT 254 at 0xC821 / 0xC117 / 0xB374 at 3.5 MHz.
+- Milestones: M0 host renderer (Python) from live RAM vs the game's buffer at all 5,214 renders: same index per
+  pixel, >= 99 %, misses only on edges; also finds 0xA0A0 / 0xB635 / 0xC539 / 0xB6C3's roles and ROM use.
+  M1 Z80N renderer = M0 output bit-exact, T per view (target >= 12.5 fps outdoors). M2 early integrated NEX:
+  update-camera views in colour, no tweens; JNext + user's hardware. M3 tweens, overlays, sprites, switch,
+  sound; differential test at every site (PLAYBOOK 6), pacer vs E3, 20,000-frame quick run.
 
 ## Coverage (survey GATE, 15,000 frames)
 Unreached CALL sites: 0xD028 (2/3), 0xCA4E (17/18), 0xB66E (2/6; 48357 not reached). All text / panel / area
@@ -227,6 +223,8 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
   ~10 user rounds: all experiments PASS / recorded (Feasibility); results above.
 - 2026-11-19, separate session (removal + taint of the raster stage), ~60 min, ~25 tool calls, 3 user rounds: six
   routine_skip runs, a taint probe over the full recording (castle_master_work/taint_call.py).
+- 2026-11-19, stage 1 close + stage 2 start, ~90 min, ~40 tool calls, 6 user rounds: option (i) trial fixed
+  (cursor, cycle, text), design approved (route B), build design written.
 
 ## Lessons
 - [doc docs/RECORDING_CHECKLIST.md §Making a recording (Fuse)] An RZX alone (no separate .z80) is a complete intake: `nexclash.py rzx extract R -o
