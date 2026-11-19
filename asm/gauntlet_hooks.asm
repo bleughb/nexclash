@@ -37,6 +37,9 @@ COPYB   EQU 0x9D3B              ; the game's bitmap copy
 COPYA   EQU 0x9DA3              ; its attribute copy
 SPSAVE  EQU 0x8489              ; where both keep the stack pointer
 CLEAR   EQU 0xB4FF              ; the game's clear of the hidden copy
+LDLOOP  EQU 0x9221              ; the level loader's DI, before its load loop
+NBLK    EQU 31                  ; level blocks on the tape
+V_BLKN  EQU 0x0114              ; the block the last load gave
 FRAMES  EQU 0x8497              ; its frame counter (the interrupt handler's INC (IY+24))
 TBUF    EQU 0x0120              ; 32 bytes: a definition on its way between pages
 PBUF    EQU 0x0800              ; 8 x 256: the panel's rows as the screen has them (bytes 0x80-0xFF of each line)
@@ -162,6 +165,62 @@ e_cl:   nextreg 0x07,3
         ret
 R_CL    EQU 114                 ; -14
 
+; ---------------------------------------------------------------- the level blocks from memory (a build with the tape)
+; The tape's second side is 31 headerless blocks of levels. The game asks for flag 0x80 at the start of a game (the
+; first block) and for flag 0xC0 after that: whichever such block comes next on the tape, round and round.
+; e_ld0 (CALL 0xB4FF at the loader's start, 0x9203): the clear, then straight to the load: the "start the tape"
+;       messages and the wait for a key are left out.
+; e_load (CALL 0x056B, the ROM's loader, 0x9247; interrupts off): the block's bytes, as the loader stores them (its
+;       data and its checksum byte), copied to 0xC000 from the pages they sit in. The game checks the block's end
+;       mark itself and runs the block's own code.
+e_ld0:  call CLEAR
+        jp LDLOOP
+e_load: nextreg 0x50,WORK
+        ld (V_SP),sp
+        ld sp,HSTK
+        ex af,af'               ; the flag asked for
+        cp 0x80
+        ld a,0
+        jr z,.first
+        ld a,(V_BLKN)
+        inc a
+.n_wrap: cp NBLK
+        jr c,.first
+        ld a,1                  ; after the last block the tape is rewound: the first 0xC0 block again
+.first: ld (V_BLKN),a
+        ld l,a
+        ld h,0
+        ld d,h
+        ld e,l
+        add hl,hl
+        add hl,hl
+        add hl,de
+        ld de,BLKT
+        add hl,de
+        ld a,(hl)
+        nextreg 0x52,a
+        inc a
+        nextreg 0x53,a
+        inc hl
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+        ld c,(hl)
+        inc hl
+        ld b,(hl)
+        ex de,hl
+        ld de,0xC000
+.n_cp:  ldir
+        nextreg 0x52,10
+        nextreg 0x53,11
+        push de
+        pop ix                  ; where the loader stops
+        ex af,af'
+        ld sp,(V_SP)
+        nextreg 0x50,255
+        ret
+
 ; ---------------------------------------------------------------- CALL 0xB8FB, after the game's HALT / DI
 ; The original's pace: nothing. Steady speed (V_STEADY frames an update, the game at 28 MHz): wait, with the
 ; game's own interrupt handler running, until its frame counter (0x8497) is that far past the last update's.
@@ -262,6 +321,12 @@ tilepass:
         jr nz,.cl2
         nextreg 0x52,TPAGE      ; the tile layer's page: bank 7 holds what the 128K left there
         call .wipe
+        nextreg 0x6B,0x81       ; both layers shown from here: tiles on, 40 x 32, 2-byte entries, over the ULA
+        push bc
+        ld bc,0x123B
+        ld a,2
+        out (c),a               ; Layer 2 shown
+        pop bc
 .ready: call panel
         nextreg 0x52,TPAGE
         xor a
@@ -583,6 +648,8 @@ alloc:  push hl
         ret
 
 anyat:  DB 0xFF
+        ALIGN 16
+BLKT:   DS NBLK * 5             ; a block: its page, its address there (0x4000 up), its bytes (the build fills it)
 ; ---------------------------------------------------------------- the copies' own times, 1/16 lines (the build fills them)
         ALIGN 16
 T_C1:   DW 0
@@ -619,7 +686,7 @@ setup:
         nextreg 0x1B,143
         nextreg 0x1B,32
         nextreg 0x1B,191
-        nextreg 0x6B,0x81       ; on, 40 x 32, 2-byte entries, over the ULA
+        nextreg 0x6B,0x00       ; off until the first tile pass has cleared its page
         nextreg 0x43,0x10       ; Layer 2's palette: the painted colours, 0 the transparent one
         nextreg 0x40,0
         ld hl,pal2
@@ -634,10 +701,7 @@ setup:
         nextreg 0x43,0x00
         nextreg 0x12,9          ; Layer 2 in bank 9
         nextreg 0x14,0xE3       ; the transparent colour
-        nextreg 0x15,0x00       ; S L U: Layer 2 over the ULA and the tile layer
-        ld bc,0x123B
-        ld a,2
-        out (c),a               ; Layer 2 shown
+        nextreg 0x15,0x00       ; S L U: Layer 2 over the ULA and the tile layer (shown by the first tile pass)
 speed:  nextreg 0x07,0          ; (the steady-speed build: 3 = 28 MHz)
         ret
 pal9:   DS 512

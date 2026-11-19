@@ -21,6 +21,11 @@ CMP = list(hooklib.CMP_R)
 STACK = 6                               # bytes below SP a hook writes on the game's stack
 T_LINE, LINES = 228, 311                # the 128K's frame
 PRE, C1, C2, C3, CL = 0x9CD9, 0x9CE1, 0x9CE9, 0x9CF1, 0x9CFE
+LD0, LOAD, LOADED = 0x9203, 0x9247, 0x924A     # the level loader: its first CALL, its CALL of the ROM's loader, after it
+TAPE_SITES = {LD0: ('cdffb4', 'e_ld0', 0xC3), LOAD: ('cd6b05', 'e_load', 0xCD)}
+REWIND = (0xB494, 'dd21b7b4', 'c921b7b4')    # the "rewind tape to start of side 2, then press space" prompt: a RET in its place
+LPAGE = 40                              # from here: the tape's level blocks, one after another
+NBLK = 31
 SITES_ORIG = {PRE: ('cdfbb8', 'e_pre'), C1: ('cd3b9d', 'e_c1'), C2: ('cda39d', 'e_c2'), C3: ('cd3b9d', 'e_c3'), CL: ('cdffb4', 'e_cl')}
 SIGNATURE = (0x9CD7, bytes.fromhex('76f3cdfbb83e402100c0cd3b9d3e282100d8cda39d3e602100c8cd3b9d'))
 ISR = 0xDADA
@@ -68,6 +73,20 @@ def is_gauntlet(snap):
         return m[SIGNATURE[0]:SIGNATURE[0] + len(SIGNATURE[1])] == SIGNATURE[1]
     except Exception:
         return False
+
+
+def tape_sets():
+    """The tapes the build accepts (profile tape_sets): [[md5 of the levels' side], ...]."""
+    return [s['md5'] for s in load_profile()['tape_sets']]
+
+
+def level_blocks(ts):
+    """The 31 level blocks of a tape set, in tape order: the first with flag 0x80, the rest 0xC0, each ending in its
+    0xFF mark and its checksum byte. ValueError when the set is not that."""
+    bl = [b for _, _, b in ts.all_blocks() if b[0] in (0x80, 0xC0)]
+    if len(bl) != NBLK or bl[0][0] != 0x80 or any(b[0] != 0xC0 for b in bl[1:]) or any(len(b) > 0x1101 or b[-2] != 0xFF for b in bl):
+        raise ValueError('the tape does not hold the %d level blocks expected' % NBLK)
+    return [bytes(b[1:]) for b in bl]          # as the ROM's loader stores them: the data and the checksum byte
 
 
 def load_colours(z80=None, path=None):
@@ -184,11 +203,11 @@ class Patch:
     setup_call = 0xD000
     tail_addr = TAIL_ADDR
 
-    def __init__(self, z80=None, mem=None, colours=None, rom=None, steady=0, times=None):
+    def __init__(self, z80=None, mem=None, colours=None, rom=None, steady=0, times=None, blocks=None):
         self.prof = load_profile()
         h = self.prof['hooks']
         self.syms = sy = {k: int(v, 16) for k, v in h['syms'].items()}
-        self.z80, self.colours, self.steady = z80, colours, steady
+        self.z80, self.colours, self.steady, self.blocks = z80, colours, steady, blocks
         if mem is None and z80 is not None:
             from skoolkit.snapshot import Snapshot
             mem = play_view(Snapshot.get(str(z80)))
@@ -202,6 +221,17 @@ class Patch:
             for site, sym in ((C1, 'T_C1'), (C2, 'T_C2'), (C3, 'T_C3')):
                 o = sy[sym] - ROM_ORG
                 rc[o:o + 2] = hooklib.lines16(tm[site], T_LINE).to_bytes(2, 'little')
+        lpages = {}
+        if blocks:                      # the level blocks, one after another from LPAGE; a block may run into the next page
+            blob = b''.join(blocks)
+            at = 0
+            for i, b in enumerate(blocks):
+                o = sy['BLKT'] - ROM_ORG + 5 * i
+                if rom is None:
+                    rc[o:o + 5] = bytes((LPAGE + at // 8192,)) + (0x4000 + at % 8192).to_bytes(2, 'little') + len(b).to_bytes(2, 'little')
+                at += len(b)
+            for i in range((len(blob) + 8191) // 8192):
+                lpages[LPAGE + i] = blob[i * 8192:(i + 1) * 8192].ljust(8192, b'\0')
         self.rom_code = bytes(rc)
         self.regblock = ROM_ORG + len(rc)
         self.slot1 = (ALT_PAGE, self.regblock)
@@ -219,6 +249,7 @@ class Patch:
         if colours:
             heads, self.planes, pal, self.want, pal2 = colour_tables(colours, sy)
             work[sy['BKT']:sy['BKT'] + len(heads)] = heads
+        self.planes.update(lpages)
         self.work = bytes(work)
         self.palette = pal
         st = bytearray(bytes.fromhex(h['setup']))
@@ -234,6 +265,9 @@ class Patch:
         self.stub_extra = bytes(st)
         self.sites = [(a, bytes.fromhex(old), b'\xCD' + sy[sym].to_bytes(2, 'little')) for a, (old, sym) in SITES_ORIG.items()
                       if not (steady and a == CL)]
+        if blocks:
+            self.sites += [(a, bytes.fromhex(old), bytes((op,)) + sy[sym].to_bytes(2, 'little')) for a, (old, sym, op) in TAPE_SITES.items()]
+            self.sites.append((REWIND[0], bytes.fromhex(REWIND[1]), bytes.fromhex(REWIND[2])))
         self.extra_banks = {12: self.page + bytes(8192), 13: self.work + bytes(8192)}
         for pg, data in self.planes.items():
             cur = self.extra_banks.get(pg // 2, bytes(16384))
@@ -291,7 +325,7 @@ class View:
         if a < 0xC000:
             reg = 0x53 + (a - 0x6000) // 0x2000
             p = nr.get(reg, (11, 4, 5)[reg - 0x53])
-            return ('table', p) if EPAGE <= p < EPAGE + 3 else ('mem', None)
+            return ('table', p) if EPAGE <= p < EPAGE + 3 else ('def', p) if p in self.planes else ('mem', None)
         return 'mem', None
 
     def __getitem__(self, a):
@@ -307,7 +341,7 @@ class View:
         if kind == 'tile':
             return self.st.tpage[a - 0x4000]
         if kind == 'def':
-            return self.planes[p][a - 0x4000]
+            return self.planes[p][a & 0x1FFF]
         if kind == 'l2':
             return (self.st.l2 if p == L2PAGE + 5 else self.st.l2x)[a - 0x4000]
         return self.st.table[p][a & 0x1FFF]
@@ -513,6 +547,27 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, timing=False, o
         if collect and kept[pc] < collect:
             kept[pc] += 1
             states.append((pc, bytes(mem), tuple(regs), bytes(st.work)))
+        if pc == LOAD:                  # the game asks the tape for a block: the hook's bytes, checked when the tape's arrive
+            c['blocks asked for'] += 1
+            Rp, mp, model = run_hook(patch, st, rom, mem, regs, pc, LOADED, sp)
+            box['load'] = bytes(mp[0xC000:0xD011])
+            box['blkn'] = st.work[sy['V_BLKN']]
+            other = [a for a in range(0x4000, 0xC000) if mp[a] != mem[a]][:4] + [a for a in range(0xD011, sp - STACK) if mp[a] != mem[a]][:4]
+            if other:
+                fail('the load writes outside the block\'s place', [hex(a) for a in other])
+            end = max((i for i in range(0x1001) if box['load'][i]), default=0)      # the game's own test (0x924A): the last byte
+            if box['load'][end] != 0xFF and box['load'][end - 1] != 0xFF:           # that is not 0 is the 0xFF mark, or the one before it is
+                fail('a block the game would not accept', box['blkn'])
+            if any(model.nr.get(r, d) != d for r, d in ((0x52, 10), (0x53, 11))) or regs[IFF_]:
+                fail('the load leaves a page mapped, or runs with interrupts on', box['blkn'])
+            return
+        if pc == LOADED:                # the recording's own tape load has finished: the same bytes
+            if box.get('load') is not None:
+                c['blocks compared with the tape\'s load'] += 1
+                if bytes(mem[0xC000:0xD011]) != box['load']:
+                    fail('the block is not what the tape loaded', box['blkn'])
+                box['load'] = None
+            return
         if pc == CL:
             if patch.steady:
                 return
@@ -551,6 +606,10 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, timing=False, o
         box['orig_t'] += t
         if model.nr[7] & 3 != (3 if patch.steady else 0):
             fail('a copy leaves its speed', model.nr[7])
+        if pc == C1:
+            box['on'] = box.get('on') or (model.nr.get(0x6B) == 0x81)
+            if not box['on']:
+                fail('the tile layer is not switched on by the first pass', model.nr.get(0x6B))
         if any(model.nr.get(r, d) != d for r, d in ((0x52, 10), (0x53, 11), (0x54, 4), (0x55, 5))):
             fail('a copy leaves a page mapped', {hex(r): model.nr.get(r) for r in (0x52, 0x53, 0x54, 0x55)})
         bad = {k: v for k, v in model.c.items() if k.endswith('!')}
@@ -592,7 +651,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, timing=False, o
         if on_show:
             on_show(c['tile passes'], mem, got, st)
 
-    fc, err = RZ.trace(rzx_path, {PRE, C1, C2, C3, CL, ISR}, on, stop=stop)
+    fc, err = RZ.trace(rzx_path, {PRE, C1, C2, C3, CL, ISR} | ({LOAD, LOADED} if patch.blocks else set()), on, stop=stop)
     c['frames'] = fc
     if err:
         c['replay stopped!'] += 1
@@ -711,6 +770,18 @@ def unit_tests(patch, states, neg=None):
                     if st.table[EPAGE + (i * ENTRY + E_SLOT) // 8192][(i * ENTRY + E_SLOT) % 8192] == slot
                     and st.work[sy['STAMPS'] + slot] == st.work[sy['V_STAMP']])
         ok('slots taken from cells off the screen', same and layer(st) == want and not stale)
+    for mem, regs in by[LOAD][:1]:
+        # the blocks in tape order: the first for flag 0x80, then each next 0xC0 block, the second again after the last
+        st = State(patch)
+        order = []
+        for flag, want_n in [(0x80, 0)] + [(0xC0, n) for n in range(1, NBLK)] + [(0xC0, 1), (0xC0, 2), (0x80, 0), (0xC0, 1)]:
+            r2 = list(regs)
+            r2[16] = flag
+            Rp, mp, model = run_hook(patch, st, rom, mem, r2, LOAD, LOADED, regs[SP_])
+            b = patch.blocks[want_n]
+            order.append(bytes(mp[0xC000:0xC000 + len(b)]) == b and st.work[sy['V_BLKN']] == want_n
+                         and (Rp[8] << 8 | Rp[9]) == 0xC000 + len(b) and bytes(mp[0x4000:0xC000]) == bytes(mem[0x4000:0xC000]))
+        ok('blocks in tape order, round again after the last', all(order))
     for mem, regs in by[PRE][-2:]:
         # steady speed: the hook waits, the game's handler counting, until the update is 3 frames after the last
         q = Patch(z80=patch.z80, colours=patch.colours, steady=STEADY)
@@ -737,7 +808,7 @@ def _code_patch(patch, sym, new):
     rc = bytearray(patch.rom_code)
     a = patch.syms[sym] - ROM_ORG
     rc[a:a + len(new)] = new
-    return Patch(z80=patch.z80, colours=patch.colours, rom=bytes(rc), steady=patch.steady)
+    return Patch(z80=patch.z80, colours=patch.colours, rom=bytes(rc), steady=patch.steady, blocks=patch.blocks)
 
 
 NEG_STOP = {}
@@ -751,7 +822,8 @@ def negative_patches(patch):
             ('a hidden panel cell is shown', _code_patch(patch, 'tilepass.n_vis', b'\xF6\x01')),
             ('the window\'s time is not read during the pass', _code_patch(patch, 'tilepass.n_tick', b'\x00\x00\x00')),
             ('the first copy\'s time is not waited out', _code_patch(patch, 'c1_end.w', b'\x00' * 8)),
-            ('R one more after the wait before the copies', _code_patch(patch, 'e_pre.n_r', bytes((0xC6, (r + 1) & 255))))]
+            ('R one more after the wait before the copies', _code_patch(patch, 'e_pre.n_r', bytes((0xC6, (r + 1) & 255))))] + (
+        [('a level block is not copied', _code_patch(patch, 'e_load.n_cp', b'\x00\x00'))] if patch.blocks else [])
 
 
 def auto(a, z80, name, out, say):
@@ -764,8 +836,22 @@ def auto(a, z80, name, out, say):
         say('Engine    : gauntlet: no %s beside the snapshot (the build is the painted tiles: there is nothing to build without it)' % COLOURS_NAME)
         say('Result    : FAILED')
         return False
-    patch = Patch(z80=z80, colours=cmap)
-    steady = Patch(z80=z80, colours=cmap, steady=STEADY)
+    blocks = None
+    if getattr(a, 'tape', None):        # the levels' side of the tape: its 31 blocks go into the build
+        from . import tapeset
+        try:
+            ts, si = tapeset.load(list(a.tape), tape_sets())
+            blocks = level_blocks(ts)
+        except ValueError as e:
+            say('Tape      : %s' % e)
+            say('Result    : FAILED')
+            return False
+        say('Tape      : %s: %d level blocks, %d bytes, answered from memory (no "start the tape" wait)' % (
+            load_profile()['tape_sets'][si]['name'], len(blocks), sum(len(b) for b in blocks)))
+    else:
+        say('Tape      : none given: the build asks for the tape when its levels run out (--tape SIDE_B.tzx puts them in)')
+    patch = Patch(z80=z80, colours=cmap, blocks=blocks)
+    steady = Patch(z80=z80, colours=cmap, steady=STEADY, blocks=blocks)
     lines, _ = palette_lines(cmap)
     say('Engine    : gauntlet (nothing of the game changes; each cell of the play window the game is about to show -> a painted tile of the '
         'tile layer: %d painted cells, %d palette lines, %d pages)' % (len(patch.want), len(lines), len(patch.planes)))
@@ -775,8 +861,8 @@ def auto(a, z80, name, out, say):
     bad = boot_check(plain, z80, None)
     ok = ok and not bad
     say('Plain     : %s  %s  boot %s' % (os.path.basename(plain), md5(plain), 'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:200]))
-    for label, suffix, pt, mk in (('Sprites', '_sprites', patch, lambda: Patch(z80=z80, colours=cmap)),
-                                  ('Steady', '_steady', steady, lambda: Patch(z80=z80, colours=cmap, steady=STEADY))):
+    for label, suffix, pt, mk in (('Sprites', '_sprites', patch, lambda: Patch(z80=z80, colours=cmap, blocks=blocks)),
+                                  ('Steady', '_steady', steady, lambda: Patch(z80=z80, colours=cmap, steady=STEADY, blocks=blocks))):
         nex = os.path.join(out, name + suffix + '.nex')
         zt.convert(str(z80), nex, patch=pt, quiet=True)
         bad = boot_check(nex, z80, mk())
@@ -800,6 +886,9 @@ def auto(a, z80, name, out, say):
                 os.path.basename(r), cc['T original copies'], cc['T hooks'], 100.0 * (cc['T hooks'] - cc['T original copies']) / max(1, cc['frames'] * LINES * T_LINE),
                 cc['most T an update\'s copies take over the original'], cc['most T an update\'s copies take under the original'],
                 cc['updates more than 5000 T off the original'], cc['updates']))
+        if blocks:
+            say('Levels    : %s  %d blocks asked for, %d of them loaded from the tape in the recording and equal to the build\'s' % (
+                os.path.basename(r), cc['blocks asked for'], cc['blocks compared with the tape\'s load']))
         cs, exs, _ = verify(steady, r, stop=min(quick or 3000, 3000))
         fs = {k: v for k, v in cs.items() if k.endswith('!')}
         ok = ok and not fs

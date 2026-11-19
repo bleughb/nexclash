@@ -3,7 +3,7 @@
 ## Next session
 Stage: 3 (verified and stamped from one snapshot; not delivered as a game)   State: 2026-11-19: plain, painted
 ("sprites", with the panel) and steady-speed builds from a cut of the first level block in play; record stamped; both
-builds run in OverSpec; not on hardware; no .nxc published (a build asks for the tape after its block)
+builds run in OverSpec; not on hardware; no .nxc published; with --tape the levels come from memory (not yet in the record)
 Inputs (private, pilot runs/gauntlet/reference_files/gauntlet): gauntlet_p1.z80 + gauntlet_p1.rzx (the record's:
 the rzxarchive's block 1 recording cut at frame 1501); gauntlet_b1, b2, b10 (the same archive's recordings from the
 "rewind tape" prompt); gauntlet_colours.json (the painted map); 28 more block recordings in the run folder
@@ -73,6 +73,25 @@ Nothing of the game changes; the Next's tile layer shows a painted tile over eac
 - After the panel: builds gauntlet_p1_sprites.nex 546393f1, _steady e93290d1 (blocks 1, 2, 10: ed5bd3bd, c7984e3a,
   66c98358); all four recordings PASSED again; 6 broken builds each; pace -0.016% to +0.072%; block 10 has 21 of 2,041
   updates more than 5,000 T over (a pass that redraws many panel cells).
+
+## Levels from memory (2026-11-19; owner: "Yes" to starting it)
+- The tape's second side is 31 headerless blocks: the first with flag 0x80, the rest 0xC0. The game's loader (0x9203)
+  asks the ROM (CALL 0x056B at 0x9247, up to 0x1100 bytes at 0xC000) for flag 0x80 at the start of a game and for 0xC0
+  after that, so it takes whichever 0xC0 block comes next on the tape; it accepts a block by its 0xFF end mark and
+  runs the block's own code at 0xC000.
+- With `--tape SIDE_B.tzx` (profile `tape_sets`: US Gold, Erbe and Kixx hold the same blocks) the build carries the
+  blocks in pages from 40 and answers the CALL from them (`e_load`: block 1 for 0x80, then 2 to 31 in order and round
+  again from 2); the "start the tape" messages and their key wait are passed (`e_ld0`), the "rewind tape to start of
+  side 2, then press space" prompt is a RET (0xB494).
+- Proof: recording 1 holds the real tape load of block 1; the hook's bytes at 0xC000-0xD010 equal it. A unit case asks
+  35 times and gets the blocks in tape order. Each later archive recording's snapshot holds its own block's bytes
+  (blocks 2-31 matched to recordings 2-31 by content, runner-up far behind). From the end of recordings 1, 2 and 9 the
+  next block from memory installs and the game reaches its next update.
+- Runs in OverSpec from the block-1 snapshot: the attract loop, fire, "LEVEL : 1", the level.
+- Not done: the record and the .nxc for the tape build; the title, the controls menu and the choice of character live
+  in a front end that loads the main game from side A (the block-1 snapshot is the main game with player 1 = warrior,
+  player 2 = valkyrie, Sinclair joystick keys); the valkyrie, wizard and elf, the thrown weapons and player 1's logo
+  are not painted (no archive recording shows them).
 
 ## Painting (2026-11-19, first pass)
 - Sheet of 716 pictures (607 tiles with their colour schemes, 109 generator pieces) painted by a Codex pass after the

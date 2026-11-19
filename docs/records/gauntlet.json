@@ -63,18 +63,18 @@
   },
   "sprites": {
    "file": "gauntlet_p1_sprites.nex",
-   "md5": "546393f1ee3aea5b5ad314644ab44646"
+   "md5": "7961dd662f477d25b92acf2809fe365e"
   },
   "steady": {
    "file": "gauntlet_p1_steady.nex",
-   "md5": "e93290d10af97e00d23294a6fe451410"
+   "md5": "06283e418cc7293d115a708f97edd6a0"
   }
  },
  "repro": [],
  "status": {
   "title": "Gauntlet",
   "engine_col": "gauntlet (gauntlet.md)",
-  "build": "gauntlet_p1_sprites.nex 546393f1 (nothing of the game changes: each 8 x 8 cell of the play window shown as a painted tile of the tile layer, the status panel painted on Layer 2; the original's pace) + steady e93290d1 (the game at 28 MHz, an update every 3 frames: the original takes 3 to 8)",
+  "build": "gauntlet_p1_sprites.nex 7961dd66 (nothing of the game changes: each 8 x 8 cell of the play window shown as a painted tile of the tile layer, the status panel painted on Layer 2; the original's pace) + steady 06283e41 (the game at 28 MHz, an update every 3 frames: the original takes 3 to 8); with --tape SIDE_B the 31 level blocks are answered from memory",
   "software": "Verify IDENTICAL on the first block's recording, 15,698 frames, 3,202 updates (R compared): 2,459,136 cells against the painted map, Layer 2 against the painted panel after every pass; the steady build's hooks IDENTICAL on 3,000 frames; unit PASS (28 cases); 6 of 6 broken builds detected; ROM path check pass; the hooks take 0.016% of the recording's time less than the copies and the clear they stand for. Blocks 1, 2 and 10 from the tape prompt PASSED the same way",
   "hardware": "untested (both builds start and run in OverSpec)",
   "next": "the tape's 31 level blocks from memory (a build asks for the tape after its block); the owner's review of the painting and of the steady speed; hardware test"
@@ -145,11 +145,11 @@
  },
  "checked": {
   "deps": {
-   "asm/gauntlet_hooks.asm": "5ff54cf769966636",
+   "asm/gauntlet_hooks.asm": "5c3cfe9f26aa9b16",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/gauntlet.json": "2ae9fa8f6a5ec495",
+   "docs/profiles/gauntlet.json": "69524f09a991eac3",
    "nexclash.py": "cc1297e9104ece5f",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "b22123bdf2572c9b",
@@ -157,7 +157,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "4a2e74deb97c37de",
-   "nexclash/gauntlet.py": "5f9c5e1b9a07d6ee",
+   "nexclash/gauntlet.py": "b2abbc33f86cbc8c",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
@@ -168,22 +168,23 @@
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/tapeset.py": "86542e1752fb3110",
    "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "266b8a0bfa317050",
+   "recipe": "1af2b46e6dc695a6",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-19"
  },
  "verified": {
   "deps": {
-   "asm/gauntlet_hooks.asm": "5ff54cf769966636",
+   "asm/gauntlet_hooks.asm": "5c3cfe9f26aa9b16",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/gauntlet.json": "2ae9fa8f6a5ec495",
+   "docs/profiles/gauntlet.json": "69524f09a991eac3",
    "nexclash.py": "cc1297e9104ece5f",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "b22123bdf2572c9b",
@@ -191,7 +192,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "4a2e74deb97c37de",
-   "nexclash/gauntlet.py": "5f9c5e1b9a07d6ee",
+   "nexclash/gauntlet.py": "b2abbc33f86cbc8c",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
@@ -202,11 +203,12 @@
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/tapeset.py": "86542e1752fb3110",
    "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "266b8a0bfa317050",
+   "recipe": "1af2b46e6dc695a6",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-19"
