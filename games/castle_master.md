@@ -1,13 +1,13 @@
 # Castle Master (Incentive Software, 1990; 48K, Freescape) - stage 0 intake done, stage 1 design approved
 
 ## Next session
-Stage: 2 (build)             State: M0 PASS 2026-11-19; M1 next
+Stage: 2 (build)             State: M1 geometry PASS; raster next
 Inputs: C:\1NEXT\castle_master_work\castle_master.z80 (extracted from the RZX), C:\dev\castlemaster\castle.rzx,
 C:\dev\castlemaster\Castlemaster1.tap    Branch: add-castle-master    Commit: (this file's commit)
 Checks: survey --stop 15000 (castle_master_survey/), survey full run (survey_full/), scan of the view buffer (3,000 frames)
 Decision (user 2026-11-19): route B (Next-native renderer) + option (i) (Layer 2 on top, dither kept, cursor =
 sprite, cycle = palette); colour switchable off by the player (original look). Later: palette 1-16, flat mode.
-Start with: M1 (Build design Milestones): the Z80N renderer from the M0 port
+Start with: M1 raster (Build design "Raster"): Python model vs the game's buffer, then Z80N to Layer 2
 Read: PLAYBOOK stage 1 + 3d; cards detect.pacing-structure, detect.routine-removal, patch.hybrid-display-replacement
 Open: who maps a face's colour to its dither pattern (the colour source for a colour route); unreached CALL sites (Coverage)
 
@@ -98,23 +98,13 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   sandboxed original, while the game's own update incl. projection runs unchanged for the pick and the pace.
   Format reference: ScummVM's Freescape engine loads the ZX Castle Master data as one 36,096-byte file = the
   tape's 36,098-byte block less flag and checksum (its ZX support is marked unstable; GPL, check before copying).
-- Design (for approval, not built; consolidated 2026-11-19): (a) colour: span hook in the filler (0x9696 path:
-  covers all four 0x9EA3 callers 0x8599 / 0xA0A0 / 0xB635 / 0xC539; bounds = the filler's real extent to
-  0x6752) writes (29501) indices to Layer 2 (hidden bank, flip), palette per index (user's choice), clear by
-  DDMA 2D fill; 0x9F19 stays (changes game variables), only the 0xA38D copy's screen writes go; panel stays ULA.
-  (b) speed: updates run the original at 28 MHz with the E1 maths. (c) smooth view, route A (user 2026-11-19:
-  first, provided E5 early): after each update a DMA copy of RAM = sandbox renders in-between cameras into
-  Layer 2 while the update waits out the original's duration (pace ORIGINAL). Route B (Next-native renderer,
-  CHOSEN): no jump if it draws every view incl. each update's final one; what remains is a pixel-level
-  gap between what is shown and what the crosshair pick hits. (d) DMA: DDMA on core >= 3.03.00, zxnDMA
-  otherwise, CPU-only option; span-fill crossover measured on hardware.
-  Scope (user): "display-only" holds on recorded paths; unrecorded branches and the raster's writes into the
-  copier's code page 0xA3 are unchecked. Buffer readers (printer 0xCAA2 / 0xCAFC, overlay 0xD134-0xD142, XOR
-  marker 0xCF53-0xCF67, copies 0xB6C2 / 0xD1B1) draw INTO the buffer, so the buffer alone does not show them
-  once its copy goes (user's correction). Options: (i) each to Layer 2 (more hooks); (ii) user's idea,
-  untested: faces out of the buffer, keep its copy to the ULA, ULA over Layer 2 with the view paper see-through
-  - to work out: per-area paper colours (NR 0x14 vs a ULA palette entry shared with the panel), the ISR's
-  view-attribute flashes (0x5884, 24 x 14). E4 checks which readers are active in play.
+- Design history (2026-11-19): (a) colour by a span hook in the filler, (b) speed = the original at 28 MHz +
+  E1, (c) route A = sandbox renders in-between cameras; route B (Next-native renderer) CHOSEN: no jump if it draws
+  every view incl. each update's final one; what remains is a pixel-level gap between what is shown and what
+  the crosshair pick hits. (d) DDMA on core >= 3.03.00, zxnDMA otherwise, CPU-only option. Scope (user):
+  "display-only" holds on recorded paths only. Buffer readers (printer, overlay 0xD134, XOR marker 0xCF53,
+  copies 0xB6C2 / 0xD1B1) draw INTO the buffer (user's correction) -> option (i) each to Layer 2 (chosen);
+  (ii) ULA over Layer 2 (unsolved for white-paper areas).
   R (static): ISR LD A,R 49291 / 49342 = blink delays 49173 / 49175 (cosmetic); 0x9F6E: 27391 = (R AND 63) +
   10, an event countdown (gameplay) -> sandbox renders and hooks restore R (patch.preserve-r); 0xA569: R mod
   20 -> 41970 (display). Interrupts land elsewhere at 28 MHz: "extremely close", not 1:1.
@@ -189,19 +179,25 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   M1 Z80N renderer = M0 output bit-exact, T per view (target >= 12.5 fps outdoors). M2 early integrated NEX:
   update-camera views in colour, no tweens; JNext + user's hardware. M3 tweens, overlays, sprites, switch,
   sound; differential test at every site (PLAYBOOK 6), pacer vs E3, 20,000-frame quick run.
-- M0 PASS 2026-11-19 (castle_master_work, local): m0_pipeline.py: from the RAM at the block start alone (camera,
-  world records, tables) the port gives the raster's input (sorted record list + full-screen count 29523) equal to
-  the game's at all 5,233 redraws (44,594 polygons); the raster is reused as is, so the pixels are equal. Per stage
-  (+ failing mutants each): m0_matrix (all 5,184 angles), m0_cube / m0_objects (cube incl. clip and full-screen,
-  rect, pyramids 4 / 6-9, lines, polygons 3-5 two-sided; type 5 / 14 absent), m0_sort (0x9D8A). Code m0_geom.py
-  (projection, outcodes, edge clipper 0x8746, corners 0x91C2, facing 0x8A69, winding 0x9300, sector cull 0x8D4F),
-  m0_objects.py (dispatch 0x85C9, builders 0x97F9 / 0x9CB8 / 0x9953 / 0x9C22). Data: m0_states.bin (RAM per redraw).
-- Format (for M1): record = type & 15 (1 cube, 2 sensor, 3 rect, 4-9 pyramids, 10-14 line / polygons; bit 6
-  hidden), 1-3 position, 4-6 size (x64 = camera units 27309-27313), 7 id, 8 length, 9-11 colour nibbles, 12-15
-  apex insets / 10+ points; lists (29494) x (29496), globals (27345) x (27344); edge templates 27486-27820. Maths:
-  A*HL signed 24-bit, HL*DE signed 32, AHL/DE truncates, DEHL/BC rounds half up; matrix 64 = 1.0 (sin / cos
-  29337, 5-deg steps, diag 40 / 64 / 32); projection 96 + 96x/z, 56 + 56y/z. Output: id, count (bit 7 =
-  full-screen face), faces (colour << 4 | n, n (x, y), y up). Sort: bubble, per-axis sign codes, non-transitive.
+- M0 PASS 2026-11-19 (castle_master_work, local): m0_pipeline.py: from the RAM at the block start alone the
+  Python port gives the raster's input (sorted record list + full-screen count 29523) equal to the game's at all
+  5,233 redraws (44,594 polygons); per stage + failing mutants: m0_matrix (all 5,184 angles), m0_cube /
+  m0_objects (all types; 5 / 14 absent), m0_sort (0x9D8A); m0_geom.py = projection, outcodes, clipper 0x8746,
+  corners 0x91C2, facing 0x8A69, winding 0x9300, sector cull 0x8D4F. Data: m0_states.bin (RAM per redraw).
+- M1 geometry PASS 2026-11-19: cmr.asm (Z80N, ~6 KB; code 0x0000-0x3FFF, work 0x4000-0x7FFF, world = the
+  game's 0xC000-0xFFFF at its own addresses, templates / sin-cos copied from 27486 / 29337 at init). m1_gate.py:
+  sorted list + full count = the game's at all 5,233 redraws (m1_gate_all.log); T per view (Z80 timing, no
+  wait states) median 361k, mean 443k, max 2.16M. m1_unit.py (matrix all angles, maths, projection);
+  m1_unit2.py: 20,000 random scenes each for faces / clipper / facing in camera reach (|x| 14,500, |y| 16,000,
+  |z| 11,500; beyond it 16-bit sums wrap). Mutants m1_mutants.py 6 / 6 FAIL; 2 only on the sweeps (the
+  recording never lets the first-point corner check decide; |dot| < 2^38).
+- Raster (read for M1, 0x9EA3): a full-screen record -> drawing starts at the last one, no clear. Else clear
+  0xA3F4: (27402) = 0 -> none (stale buffer; most indoor redraws), else sky rows (low nibble), mountain band
+  (panorama 30660 by yaw & 7 when (27343) = 1), ground rows (high nibble), lightning OR'ed at column R mod 20
+  when (27391) = 0. Fill rows use pattern row (rows left & 3), faces (y & 3). Filler 0x9484: lowest vertex
+  (last of ties), left chain backwards / right forwards, 8.8 slopes by 45740, a chain's first edge starts
+  +slope, later ones +slope / 2; lines own path. Span 0x9696: pixels max(lo, 1) - 1 .. hi - 1; an end >= 193
+  drops the span AND its row advance; y = 0 writes row 112 (overrun to 0x6753). Then 53061 (XOR marker).
 - M0 side checks (m0_misc.py, all frames): raster callers 0x8599 (5,281) and 0xB62C (108: re-raster of the same
   list + copy, from 0xB40B / 0xB41B / 0xB447); 0xA0A0 / 0xC539 unreached. ROM: never executed, no real reads (only
   simulator artefact reads of 0x0000): slots 0-1 are free for the renderer, the ISR stub needs no ROM.
@@ -224,6 +220,8 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
   (cursor, cycle, text), design approved (route B), build design written.
 - 2026-11-19, stage 2 M0 (host port of the renderer), ~3 h, ~90 tool calls, 4 user rounds: matrix, all object
   builders, clipper, sector cull, sort ported; end-to-end gate PASS at all 5,233 redraws.
+- 2026-11-19, stage 2 M1 geometry (Z80N), ~2 h, ~45 tool calls, 1 user round: cmr.asm = the game at all
+  redraws first run; sweeps + 6 mutants; raster read.
 
 ## Lessons
 - [doc docs/RECORDING_CHECKLIST.md §Making a recording (Fuse)] An RZX alone (no separate .z80) is a complete intake: `nexclash.py rzx extract R -o
@@ -243,6 +241,9 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
 - [local: one engine port; PLAYBOOK 3d candidate if a second renderer is ported] Port stage by stage against
   the game's own data at fixed PCs, each with a failing mutant, then gate end to end on every redraw: a missed
   stage (sector cull 0x8D4F) showed as one cube in one frame of 5,233, which a sample run would have missed.
+- [local: one engine port] Random sweeps must stay in the inputs' reachable range: beyond it (camera-space
+  words > ~16,000) 16-bit sums wrap and the port's z > 0 shortcuts differ (22 false failures of 5,000); and a
+  mutant can be equivalent there (sign bit 46 vs 47 of a dot < 2^45): replace it, don't count it.
 
 ## Technique use
 - detect.pacing-structure: helped: pacing_census on the main loop 0x8542 showed event-driven renders of 2-52
