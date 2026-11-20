@@ -15,6 +15,7 @@ import importlib
 
 # (module, detector, extra condition on the auto arguments or None)
 ENGINES = [
+    ('stock_car_3d', 'is_stock_car_3d', None),                           # 3D Stock Car Championship (48K)
     ('highway_encounter', 'is_highway_encounter', None),             # Highway Encounter (48K), optional Enhanced
     ('exolon', 'is_exolon', None),                                   # Exolon (128K), optional Enhanced
     ('bruce_lee', 'is_bruce_lee', None),                                # Bruce Lee (48K), optional Enhanced
@@ -27,6 +28,7 @@ ENGINES = [
     ('quazatron', 'is_quazatron', None),                                  # Quazatron colour (48K): opt-in, unproven (NEXCLASH_REWORK=quazatron)
     ('rainbow_z80n_sky', 'is_rainbow_sky', None),                          # Rainbow Islands sky fix: opt-in rework of rainbow_z80n (NEXCLASH_REWORK)
     ('nodes_of_yesod', 'is_nodes_of_yesod', None),
+    ('arc_of_yesod', 'is_arc_of_yesod', None),
     ('pyjamarama', 'is_pyjamarama', None),
     ('rainbow_z80n', 'is_rainbow', lambda a: getattr(a, 'engine', None) != 'rainbow'),  # Rainbow Islands (128K), Z80N
     ('rainbow', 'is_rainbow', None),                                      # Rainbow Islands: deprecated (--engine rainbow)
@@ -74,6 +76,7 @@ ENGINES = [
     ('solomons_key', 'is_solomons_key', None),                            # Solomon's Key (48K)
     ('robin_of_the_wood', 'is_robin_of_the_wood', None),                  # Robin of the Wood (128K)
     ('cobra', 'is_cobra', None),                                          # Cobra (48K)
+    ('heartland', 'is_heartland', None),                                  # Heartland (48K)
     ('gryzor', 'is_gryzor', None),                                        # Gryzor (48K)
     ('green_beret', 'is_green_beret', None),                              # Green Beret (48K)
     ('new_zealand_story', 'is_new_zealand_story', None),                  # The New Zealand Story (128K, tape set: --tape)
@@ -86,6 +89,7 @@ ENGINES = [
     ('army_moves', 'is_army_moves', None),                                # Army Moves (128K, both parts)
     ('game_over', 'is_game_over', None),                                  # Game Over (128K, both worlds)
     ('simpsons', 'is_simpsons', None),                                    # The Simpsons: Bart vs. the Space Mutants (128K, a level a snapshot)
+    ('gauntlet', 'is_gauntlet', None),                                    # Gauntlet (128K snapshot of the 48K game): painted tile layer
     ('chase_hq', 'is_chase_hq', None),                                    # Chase H.Q. (128K): Speed, Enhanced in two sets (local art)
     ('atom_ant', 'is_atom_ant', None),                                    # Atom Ant (128K tape form): default and Enhanced
     ('silkworm', 'is_silkworm', None),                                    # Silkworm (128K): default and Enhanced

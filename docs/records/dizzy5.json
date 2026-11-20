@@ -106,7 +106,7 @@
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "112c3b17a78ace9a",
+   "nexclash/engines.py": "bf75ad27e5bfabce",
    "nexclash/evidence.json": "a6c823114223e2c3",
    "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/loader.py": "69bd417e450ab5f8",
@@ -123,7 +123,7 @@
    "recipe": "c1d1e7fa39998dbc",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-12"
+  "date": "2026-11-17"
  },
  "verified": {
   "deps": {

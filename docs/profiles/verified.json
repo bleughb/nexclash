@@ -1,6 +1,14 @@
 {
  "_note": "GENERATED from docs/records by `python -m nexclash.records views` - do not edit. Snapshots whose sprite build was differentially verified against a recording. nex = MD5s `nexclash.py patch` reproduces.",
  "snapshots": {
+  "56f151581bbcada775bb9e180bf4df9d": {
+   "game": "3D Stock Car Championship",
+   "doc": "3d_stock_car_championship.md",
+   "nex": {
+    "plain": "7ffdcd3ec8660074a1fcc697d521cfe7",
+    "sprites": "6edc58d59de04c69261df37391ec7fcb"
+   }
+  },
   "2909c2f0f18eca08479a74ad6dc8d193": {
    "game": "Abu Simbel Profanation",
    "doc": "abu_simbel.md",
@@ -10,6 +18,17 @@
     "enhanced": "b45603707d1f71bb7704436dbe0c3169",
     "english": "2e3aa22510d9a925a5b0800aad3f26c9",
     "english_enhanced": "053806e52684ce68b89a020a848e7196"
+   }
+  },
+  "f58236395e737aaa0fac1f8476711ad8": {
+   "game": "The Arc of Yesod",
+   "doc": "arc_of_yesod.md",
+   "nex": {
+    "plain": "9858d3f2cd71450c2efb01c116b1426b",
+    "sprites": "97828809e85654dddb0b9e4e117ea718",
+    "enhanced": "d183181a0b7fbd17df9cc638da942785",
+    "sprites_loading": "fda37475786a20fff92a72a5ba78496f",
+    "enhanced_loading": "49b7ac9d62940e8ff5868b91b5f78046"
    }
   },
   "9c14e2564e3f9956ff6ff973dac77537": {
@@ -214,6 +233,23 @@
     "loading": "cb0c403db4058444f38445fb1afbdc19"
    }
   },
+  "b665f16dee469ee766a4ebccdccc03f6": {
+   "game": "Gauntlet",
+   "doc": "gauntlet.md",
+   "nex": {
+    "plain": "ad2ec631091d589260bd6c20fe80e64f",
+    "sprites": "f33ade47e1f82694f2ed9b68885a04b0",
+    "steady": "545fdeed1ffeabdc91d9363ae04dea32"
+   }
+  },
+  "596acf039452f18c2b052671886279bf": {
+   "game": "Gauntlet",
+   "doc": "gauntlet.md",
+   "nex": {
+    "sprites": "377f6e5fc161c1e6618abb48a4046945",
+    "steady": "c690be8aefacf8cc9d76127daa9b14f3"
+   }
+  },
   "23d69f517506104c36ba429cb2148fa5": {
    "game": "Ghosts 'n Goblins",
    "doc": "ghosts_n_goblins.md",
@@ -258,6 +294,15 @@
     "loading": "f409ce6064820d2080cc131e87273b73",
     "enhanced": "a73fe67d3c15d5ddbaf24eda7243896a",
     "enhanced_loading": "1fef5dfc128e942f679ff681b81ac7b0"
+   }
+  },
+  "07bfa8f74d60a53ab64e5b092ffd6cca": {
+   "game": "Heartland",
+   "doc": "heartland.md",
+   "nex": {
+    "plain": "33283547fc7036cdefdf982190c75b73",
+    "sprites": "df3bed3c7278092941de2abfdeadfd21",
+    "enhanced": "6497de71a5bb55eed58957cc65426518"
    }
   },
   "ecfe7da10ba9aa395ae54c44301be1af": {
