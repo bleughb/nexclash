@@ -656,6 +656,14 @@
     "enhanced": "b38d048f254302fe942eb2ac58bbf463"
    }
   },
+  "8dc717670aa7fc8817e83e8f63a22f72": {
+   "game": "Tranz Am",
+   "doc": "tranz_am.md",
+   "nex": {
+    "plain": "8308134dff22d877c6f70ba236e2e012",
+    "sprites": "91a669559e001742ece9df0f8bf5b191"
+   }
+  },
   "7578947fcc8dbc4ba822e2c565499d54": {
    "game": "Treasure Island Dizzy (in game)",
    "doc": "treasure_island_dizzy.md",

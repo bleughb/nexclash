@@ -113,6 +113,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - The Arc of Yesod (arc_of_yesod): `arc_of_yesod.nex` 9858d3f2cd71450c2efb01c116b1426b, `arc_of_yesod_sprites.nex` 97828809e85654dddb0b9e4e117ea718, `arc_of_yesod_enhanced.nex` d183181a0b7fbd17df9cc638da942785, `arc_of_yesod_sprites_loading.nex` fda37475786a20fff92a72a5ba78496f, `arc_of_yesod_enhanced_loading.nex` 49b7ac9d62940e8ff5868b91b5f78046; verified 2026-11-17
 - Gauntlet (gauntlet_tape): `gauntlet_start_sprites.nex` 377f6e5fc161c1e6618abb48a4046945, `gauntlet_start_steady.nex` c690be8aefacf8cc9d76127daa9b14f3; verified 2026-11-19
 - Heartland (heartland): `heartland.nex` 33283547fc7036cdefdf982190c75b73, `heartland_sprites.nex` df3bed3c7278092941de2abfdeadfd21, `heartland_enhanced.nex` 6497de71a5bb55eed58957cc65426518; verified 2026-11-18
+- Tranz Am (tranz_am): `tranz_am.nex` 8308134dff22d877c6f70ba236e2e012, `tranz_am_sprites.nex` 91a669559e001742ece9df0f8bf5b191; verified 2026-11-20
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
