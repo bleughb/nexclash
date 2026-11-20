@@ -268,6 +268,15 @@
     "enhanced_loading": "1fef5dfc128e942f679ff681b81ac7b0"
    }
   },
+  "07bfa8f74d60a53ab64e5b092ffd6cca": {
+   "game": "Heartland",
+   "doc": "heartland.md",
+   "nex": {
+    "plain": "33283547fc7036cdefdf982190c75b73",
+    "sprites": "df3bed3c7278092941de2abfdeadfd21",
+    "enhanced": "6497de71a5bb55eed58957cc65426518"
+   }
+  },
   "ecfe7da10ba9aa395ae54c44301be1af": {
    "game": "Highway Encounter",
    "doc": "highway_encounter.md",
