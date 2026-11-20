@@ -20,6 +20,7 @@
 WORK    EQU 26                  ; the state page
 TPAGE   EQU 14                  ; bank 7's first 8K: the tile map (40 x 32 x 2 bytes) and the definitions, both from 0
 EPAGE   EQU 28                  ; 3 pages at 0x6000: the cell table (15 bytes a cell)
+EPAGE4  EQU 57                  ; its fourth page, at 0xE000
 DPAGE   EQU 31                  ; from here: the painted definitions, 256 a page
 V_SPEED EQU 0x0100
 HLIB_V_R EQU 0x0101             ; 3 bytes
@@ -38,6 +39,7 @@ COPYA   EQU 0x9DA3              ; its attribute copy
 SPSAVE  EQU 0x8489              ; where both keep the stack pointer
 CLEAR   EQU 0xB4FF              ; the game's clear of the hidden copy
 LDLOOP  EQU 0x9221              ; the level loader's DI, before its load loop
+MAIN    EQU 0x8400              ; the main game's entry
 NBLK    EQU 31                  ; level blocks on the tape
 V_BLKN  EQU 0x0114              ; the block the last load gave
 FRAMES  EQU 0x8497              ; its frame counter (the interrupt handler's INC (IY+24))
@@ -221,6 +223,31 @@ e_load: nextreg 0x50,WORK
         nextreg 0x50,255
         ret
 
+; ---------------------------------------------------------------- the main game from memory (a build from the title)
+; The tape's loader (0xFF00) runs the front end (title, characters, controls), then loads two more blocks of side
+; A: flag 0x81 to 0x73DA and flag 0x82, the main game, to 0x8400, and jumps to 0x8400. e_main (the loader's
+; LD HL,0 after the front end returns, 0xFF12): both blocks copied from their pages, piece by piece through
+; slot 2, and the jump. The main game's bytes in the pages already carry this build's own CALLs.
+; The loader's stack is in slot 2 (0x5Bxx), so nothing here uses the stack; interrupts off while slot 2 is away.
+e_main: di
+        ld ix,MAINT
+.l:     ld a,(ix+0)
+        or a
+        jr z,.done
+        nextreg 0x52,a
+        ld l,(ix+1)
+        ld h,(ix+2)
+        ld e,(ix+3)
+        ld d,(ix+4)
+        ld c,(ix+5)
+        ld b,(ix+6)
+.n_cp:  ldir
+        ld de,7
+        add ix,de
+        jr .l
+.done:  nextreg 0x52,10
+        jp MAIN
+
 ; ---------------------------------------------------------------- CALL 0xB8FB, after the game's HALT / DI
 ; The original's pace: nothing. Steady speed (V_STEADY frames an update, the game at 28 MHz): wait, with the
 ; game's own interrupt handler running, until its frame counter (0x8497) is that far past the last update's.
@@ -307,6 +334,7 @@ tilepass:
         nextreg 0x53,EPAGE
         nextreg 0x54,EPAGE + 1
         nextreg 0x55,EPAGE + 2
+        nextreg 0x57,EPAGE4     ; (the game's stack is up there: a hook has its own, interrupts are off)
         push iy
         ld a,(V_INIT)
         or a
@@ -373,6 +401,7 @@ tilepass:
         nextreg 0x53,11
         nextreg 0x54,4
         nextreg 0x55,5
+        nextreg 0x57,1
         ret
 .wipe:  push af
         ld hl,0x4000
@@ -650,6 +679,7 @@ alloc:  push hl
 anyat:  DB 0xFF
         ALIGN 16
 BLKT:   DS NBLK * 5             ; a block: its page, its address there (0x4000 up), its bytes (the build fills it)
+MAINT:  DS 8 * 7 + 1            ; the main game's pieces: page (0 ends), from, to, bytes
 ; ---------------------------------------------------------------- the copies' own times, 1/16 lines (the build fills them)
         ALIGN 16
 T_C1:   DW 0
@@ -661,7 +691,10 @@ ROM_END:
 
         ORG 0xD000
 ; The stub's setup: the tile layer's palette and window (its page is cleared by the first tile pass).
-setup:
+setup:  ld hl,pbuf              ; the printer buffer as the snapshot has it (the title's stack is there): NEXLOAD wrote over it
+        ld de,0x5B00
+        ld bc,256
+        ldir
         nextreg 0x43,0x30       ; tile layer palette 0, auto-increment
         nextreg 0x40,0
         ld hl,pal9
@@ -706,5 +739,6 @@ speed:  nextreg 0x07,0          ; (the steady-speed build: 3 = 28 MHz)
         ret
 pal9:   DS 512
 pal2:   DS 512
+pbuf:   DS 256                  ; the snapshot's 0x5B00-0x5BFF (the build fills it in)
 SETUP_END:
         SAVEBIN "gauntlet_setup.bin",0xD000,SETUP_END-0xD000

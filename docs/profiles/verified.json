@@ -219,8 +219,16 @@
    "doc": "gauntlet.md",
    "nex": {
     "plain": "ad2ec631091d589260bd6c20fe80e64f",
-    "sprites": "7961dd662f477d25b92acf2809fe365e",
-    "steady": "06283e418cc7293d115a708f97edd6a0"
+    "sprites": "f33ade47e1f82694f2ed9b68885a04b0",
+    "steady": "545fdeed1ffeabdc91d9363ae04dea32"
+   }
+  },
+  "596acf039452f18c2b052671886279bf": {
+   "game": "Gauntlet",
+   "doc": "gauntlet.md",
+   "nex": {
+    "sprites": "377f6e5fc161c1e6618abb48a4046945",
+    "steady": "c690be8aefacf8cc9d76127daa9b14f3"
    }
   },
   "23d69f517506104c36ba429cb2148fa5": {

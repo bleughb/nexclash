@@ -24,6 +24,10 @@ PRE, C1, C2, C3, CL = 0x9CD9, 0x9CE1, 0x9CE9, 0x9CF1, 0x9CFE
 LD0, LOAD, LOADED = 0x9203, 0x9247, 0x924A     # the level loader: its first CALL, its CALL of the ROM's loader, after it
 TAPE_SITES = {LD0: ('cdffb4', 'e_ld0', 0xC3), LOAD: ('cd6b05', 'e_load', 0xCD)}
 REWIND = (0xB494, 'dd21b7b4', 'c921b7b4')    # the "rewind tape to start of side 2, then press space" prompt: a RET in its place
+TITLE_SIG = (0xFF00, bytes.fromhex('31005cdd2100861110523e80cd3bffcdf2c1'))     # the tape's loader, the front end loaded
+TITLE_SITE = (0xFF12, '210000', 'e_main')       # its LD HL,0 after the front end returns: the two blocks from memory instead
+MAIN_AT, B81_AT = 0x8400, 0x73DA        # where the loader puts side A's blocks 0x82 (the main game) and 0x81
+MPAGE = 52                              # from here: those two blocks
 LPAGE = 40                              # from here: the tape's level blocks, one after another
 NBLK = 31
 SITES_ORIG = {PRE: ('cdfbb8', 'e_pre'), C1: ('cd3b9d', 'e_c1'), C2: ('cda39d', 'e_c2'), C3: ('cd3b9d', 'e_c3'), CL: ('cdffb4', 'e_cl')}
@@ -35,9 +39,23 @@ SLOTS = [s for s in range(1, 256) if not 10 <= s < 60]     # usable definition s
 L2PAGE = 18                             # Layer 2: bank 9; its last page (lines 160-191) is the panel
 PANEL = range(20, 24)                   # the status panel's rows: read from the screen, known by their bytes alone
 ANY = 255                               # the attribute a panel cell is stored under
+EPAGE4 = 57                             # the cell table's fourth page, at 0xE000 during a tile pass (the hooks have their own stack)
+NLOW = 3 * 8192 // 15                   # cell entries in the three pages at 0x6000; the rest from 0xE000
+
+
+def ent_addr(n):
+    """Where cell entry n sits during a tile pass."""
+    return 0x6000 + n * ENTRY if n < NLOW else 0xE000 + (n - NLOW) * ENTRY
+
+
+def ent_at(a):
+    """(page, offset) of a table address."""
+    return (EPAGE4, a - 0xE000) if a >= 0xE000 else (EPAGE + (a - 0x6000) // 8192, (a - 0x6000) % 8192)
+
+
 ENTRY = 15                              # bytes a cell entry: next, 8 bytes, attribute, slot, palette << 4, page, number
 E_SLOT = 11
-CH = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+CH = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_{|}~'
 COLOURS_NAME = 'gauntlet_colours.json'  # the painted map, beside the snapshot (it holds the game's pictures: not in the repo)
 T_COPY = {C1: 35796, C2: 10587, C3: 53684}
 T_CLEAR = 34357                          # the clear of the hidden copy: its own time, T
@@ -70,7 +88,7 @@ def is_gauntlet(snap):
         return False
     try:
         m = play_view(snap)
-        return m[SIGNATURE[0]:SIGNATURE[0] + len(SIGNATURE[1])] == SIGNATURE[1]
+        return m[SIGNATURE[0]:SIGNATURE[0] + len(SIGNATURE[1])] == SIGNATURE[1] or m[TITLE_SIG[0]:TITLE_SIG[0] + len(TITLE_SIG[1])] == TITLE_SIG[1]
     except Exception:
         return False
 
@@ -81,12 +99,24 @@ def tape_sets():
 
 
 def level_blocks(ts):
-    """The 31 level blocks of a tape set, in tape order: the first with flag 0x80, the rest 0xC0, each ending in its
-    0xFF mark and its checksum byte. ValueError when the set is not that."""
-    bl = [b for _, _, b in ts.all_blocks() if b[0] in (0x80, 0xC0)]
-    if len(bl) != NBLK or bl[0][0] != 0x80 or any(b[0] != 0xC0 for b in bl[1:]) or any(len(b) > 0x1101 or b[-2] != 0xFF for b in bl):
+    """The 31 level blocks of a tape set's last file, in tape order: the first with flag 0x80, the rest 0xC0, each ending
+    in its 0xFF mark and its checksum byte. ValueError when it does not hold them."""
+    bl = [b for b in ts.blocks[-1] if b[0] in (0x80, 0xC0) and len(b) <= 0x1101]
+    if len(bl) != NBLK or bl[0][0] != 0x80 or any(b[0] != 0xC0 for b in bl[1:]) or any(b[-2] != 0xFF for b in bl):
         raise ValueError('the tape does not hold the %d level blocks expected' % NBLK)
     return [bytes(b[1:]) for b in bl]          # as the ROM's loader stores them: the data and the checksum byte
+
+
+def main_blocks(ts):
+    """Side A's two blocks the loader takes after the front end: (flag 0x81's 2,881 bytes, flag 0x82's 30,583: the main
+    game), or None when the set is the levels' side alone."""
+    if len(ts.blocks) < 2:
+        return None
+    b81 = [b for b in ts.blocks[0] if b[0] == 0x81]
+    b82 = [b for b in ts.blocks[0] if b[0] == 0x82]
+    if len(b81) != 1 or len(b82) != 1 or len(b81[0]) != 2883 or len(b82[0]) != 30585:
+        raise ValueError('side A does not hold the two blocks expected after the front end')
+    return bytes(b81[0][1:-1]), bytes(b82[0][1:-1])
 
 
 def load_colours(z80=None, path=None):
@@ -141,7 +171,7 @@ def colour_tables(cmap, syms):
         for k, ch in enumerate(ln):
             pal[li * 16 + 1 + k] = rgb9(cmap['colours'][CH.index(ch)])
     heads = bytearray(2048)
-    table = bytearray(3 * 8192)
+    table = bytearray(4 * 8192)                 # entry n at n * ENTRY here; split over the pages below
     defs = bytearray()
     panel, panel_at = bytearray(), []
     nd = 0
@@ -152,7 +182,7 @@ def colour_tables(cmap, syms):
         k = cell_keys(cell, attr)
         if k is None:
             continue
-        if (n + 1) * ENTRY > len(table):
+        if n >= NLOW + 8192 // ENTRY:
             raise ValueError('too many painted cells for the cell table')
         if attr == ANY:                 # a panel cell: 64 pixels of Layer 2 (colour number + 1; 0 is the transparent one)
             at = n * ENTRY
@@ -160,7 +190,7 @@ def colour_tables(cmap, syms):
             table[at + 2:at + 10] = cell
             table[at + 10], table[at + 11], table[at + 12] = attr, 0, 0
             table[at + 13], table[at + 14] = 0xFF, len(panel) // 64       # (the page is filled in below)
-            heads[2 * k:2 * k + 2] = (0x6000 + at).to_bytes(2, 'little')
+            heads[2 * k:2 * k + 2] = ent_addr(n).to_bytes(2, 'little')
             blk = bytes(1 + CH.index(ch) for ch in px)
             panel_at.append(at + 13)
             want[(cell, attr)] = blk
@@ -177,7 +207,7 @@ def colour_tables(cmap, syms):
         table[at + 2:at + 10] = cell
         table[at + 10], table[at + 11], table[at + 12] = attr, 0, li << 4
         table[at + 13], table[at + 14] = DPAGE + nd // 256, nd % 256
-        heads[2 * k:2 * k + 2] = (0x6000 + at).to_bytes(2, 'little')
+        heads[2 * k:2 * k + 2] = ent_addr(n).to_bytes(2, 'little')
         defs += d
         want[(cell, attr)] = (li << 4, bytes(d))
         n += 1
@@ -187,7 +217,9 @@ def colour_tables(cmap, syms):
         raise ValueError('too many painted panel cells for one page')
     for at in panel_at:
         table[at] = DPAGE + ndp
-    pages = {EPAGE + i: bytes(table[i * 8192:(i + 1) * 8192]) for i in range(3)}
+    low = bytes(table[:NLOW * ENTRY]).ljust(3 * 8192, b'\0')
+    pages = {EPAGE + i: low[i * 8192:(i + 1) * 8192] for i in range(3)}
+    pages[EPAGE4] = bytes(table[NLOW * ENTRY:NLOW * ENTRY + 8192]).ljust(8192, b'\0')
     for i in range(ndp):
         pages[DPAGE + i] = bytes(defs[i * 8192:(i + 1) * 8192]).ljust(8192, b'\0')
     if panel:
@@ -203,7 +235,7 @@ class Patch:
     setup_call = 0xD000
     tail_addr = TAIL_ADDR
 
-    def __init__(self, z80=None, mem=None, colours=None, rom=None, steady=0, times=None, blocks=None):
+    def __init__(self, z80=None, mem=None, colours=None, rom=None, steady=0, times=None, blocks=None, main=None):
         self.prof = load_profile()
         h = self.prof['hooks']
         self.syms = sy = {k: int(v, 16) for k, v in h['syms'].items()}
@@ -211,7 +243,12 @@ class Patch:
         if mem is None and z80 is not None:
             from skoolkit.snapshot import Snapshot
             mem = play_view(Snapshot.get(str(z80)))
-        if mem is None or mem[SIGNATURE[0]:SIGNATURE[0] + len(SIGNATURE[1])] != SIGNATURE[1]:
+        self.title = mem is not None and mem[TITLE_SIG[0]:TITLE_SIG[0] + len(TITLE_SIG[1])] == TITLE_SIG[1]
+        self.main = main
+        if self.title:
+            if not (blocks and main):
+                raise ValueError('this snapshot is the tape\'s front end: the build needs both sides of the tape (--tape SIDE_A --tape SIDE_B)')
+        elif mem is None or mem[SIGNATURE[0]:SIGNATURE[0] + len(SIGNATURE[1])] != SIGNATURE[1]:
             raise ValueError('not the supported Gauntlet: the screen copies are not where they are expected')
         rc = bytearray(bytes.fromhex(h['rom']) if rom is None else rom)
         if rom is None:
@@ -260,6 +297,8 @@ class Patch:
         for i, c in enumerate(pal2):
             st[o + 2 * i], st[o + 2 * i + 1] = c >> 1, c & 1
         self.palette2 = pal2
+        o = sy['pbuf'] - 0xD000
+        st[o:o + 256] = mem[0x5B00:0x5C00]
         if steady:
             st[sy['speed'] - 0xD000 + 3] = 3
         self.stub_extra = bytes(st)
@@ -268,6 +307,28 @@ class Patch:
         if blocks:
             self.sites += [(a, bytes.fromhex(old), bytes((op,)) + sy[sym].to_bytes(2, 'little')) for a, (old, sym, op) in TAPE_SITES.items()]
             self.sites.append((REWIND[0], bytes.fromhex(REWIND[1]), bytes.fromhex(REWIND[2])))
+        self.game_sites = list(self.sites)
+        if self.title:                  # the main game is not in memory yet: its CALLs go into the block the hand-over copies
+            img = bytearray(main[1])
+            for a, old, new in self.game_sites:
+                o = a - MAIN_AT
+                if bytes(img[o:o + len(old)]) != old:
+                    raise ValueError('unexpected code in the tape\'s main game at 0x%04X' % a)
+                img[o:o + len(new)] = new
+            self.image = bytes(img)
+            pieces = [(MPAGE, 0x4000, B81_AT, main[0])]
+            for k in range(0, len(img), 8192):
+                pieces.append((MPAGE + 1 + k // 8192, 0x4000, MAIN_AT + k, bytes(img[k:k + 8192])))
+            rc2 = bytearray(self.rom_code)
+            for i, (pg, src, dst, data) in enumerate(pieces):
+                o = sy['MAINT'] - ROM_ORG + 7 * i
+                if rom is None:
+                    rc2[o:o + 7] = bytes((pg,)) + src.to_bytes(2, 'little') + dst.to_bytes(2, 'little') + len(data).to_bytes(2, 'little')
+                self.planes[pg] = data.ljust(8192, b'\0')
+            self.rom_code = bytes(rc2)
+            page[ROM_ORG - 0x2000:ROM_ORG - 0x2000 + len(rc2)] = rc2
+            self.page = bytes(page)
+            self.sites = [(TITLE_SITE[0], bytes.fromhex(TITLE_SITE[1]), b'\xC3' + sy[TITLE_SITE[2]].to_bytes(2, 'little'))]
         self.extra_banks = {12: self.page + bytes(8192), 13: self.work + bytes(8192)}
         for pg, data in self.planes.items():
             cur = self.extra_banks.get(pg // 2, bytes(16384))
@@ -278,12 +339,13 @@ class Patch:
         if not snap.is128:
             raise ValueError('the Gauntlet patch expects the 128K snapshot')
         for a, old, new in self.sites:
-            b = bytearray(snap.banks[2])
-            o = a - 0x8000
+            bank = 5 if a < 0x8000 else 2 if a < 0xC000 else snap.port7ffd & 7
+            b = bytearray(snap.banks[bank])
+            o = a & 0x3FFF
             if bytes(b[o:o + len(old)]) != old:
                 raise ValueError('unexpected code at 0x%04X (%s, expected %s)' % (a, bytes(b[o:o + len(old)]).hex(), old.hex()))
             b[o:o + len(new)] = new
-            snap.banks[2] = bytes(b)
+            snap.banks[bank] = bytes(b)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -295,7 +357,7 @@ class State:
     def __init__(self, patch):
         self.work = bytearray(patch.work)
         self.tpage = bytearray(b'\xAA' * 8192)      # (bank 7 as the 128K left it: anything)
-        self.table = {EPAGE + i: bytearray(patch.planes.get(EPAGE + i, bytes(8192))) for i in range(3)}
+        self.table = {pg: bytearray(patch.planes.get(pg, bytes(8192))) for pg in (EPAGE, EPAGE + 1, EPAGE + 2, EPAGE4)}
         self.l2 = bytearray(b'\x55' * 8192)        # Layer 2's last page (lines 160-191), as anything left it
         self.l2x = bytearray(8192)                  # (its other pages: only cleared)
         self.t = collections.Counter()
@@ -326,6 +388,8 @@ class View:
             reg = 0x53 + (a - 0x6000) // 0x2000
             p = nr.get(reg, (11, 4, 5)[reg - 0x53])
             return ('table', p) if EPAGE <= p < EPAGE + 3 else ('def', p) if p in self.planes else ('mem', None)
+        if a >= 0xE000 and nr.get(0x57, 1) == EPAGE4:
+            return 'table', EPAGE4
         return 'mem', None
 
     def __getitem__(self, a):
@@ -691,8 +755,8 @@ def boot_check(nex, z80, patch):
         bad += [('register', nexload, i, v, st['R'][i]) for i, v in want.items()
                 if (bool(st['R'][i]) != bool(v) if i == 26 else st['R'][i] != v)]
         for a in range(0x4000, 65536):
-            if tail <= a < tail + size or (nexload and 0x5B00 <= a < 0x5C00):
-                continue
+            if tail <= a < tail + size or (nexload and patch is None and 0x5B00 <= a < 0x5C00):
+                continue                # (a patched build's setup puts the printer buffer back: compared)
             bank = 5 if a < 0x8000 else 2 if a < 0xC000 else s.port7ffd & 7
             if st['mem'][a] != s.banks[bank][a & 16383]:
                 bad.append(('RAM', nexload, hex(a), s.banks[bank][a & 16383], st['mem'][a]))
@@ -762,14 +826,27 @@ def unit_tests(patch, states, neg=None):
         cells = [e for e in patch.colours['cells'] if cell_keys(bytes.fromhex(e[0]), e[1]) is not None]
         off = [i for i in ents if (bytes.fromhex(cells[i][0]), cells[i][1]) not in onscreen][:len(SLOTS)]
         for slot, i in zip(SLOTS, off):
-            at = 0x6000 + i * ENTRY + E_SLOT
-            st.table[EPAGE + (at - 0x6000) // 8192][(at - 0x6000) % 8192] = slot
+            at = ent_addr(i) + E_SLOT
+            st.table[ent_at(at)[0]][ent_at(at)[1]] = slot
             st.work[sy['OWNER'] + 2 * slot:sy['OWNER'] + 2 * slot + 2] = at.to_bytes(2, 'little')
         same = run_c1(st, mem, regs)
         stale = sum(1 for slot, i in zip(SLOTS, off)
-                    if st.table[EPAGE + (i * ENTRY + E_SLOT) // 8192][(i * ENTRY + E_SLOT) % 8192] == slot
+                    if st.table[ent_at(ent_addr(i) + E_SLOT)[0]][ent_at(ent_addr(i) + E_SLOT)[1]] == slot
                     and st.work[sy['STAMPS'] + slot] == st.work[sy['V_STAMP']])
         ok('slots taken from cells off the screen', same and layer(st) == want and not stale)
+    for mem, regs in by[TITLE_SITE[0]][:1]:
+        # the front end has returned to the loader: both blocks where the loader puts them, the main game with this
+        # build's CALLs, nothing else touched, the stack not used, then the jump to the main game
+        st = State(patch)
+        Rp, mp, model = run_hook(patch, st, rom, mem, regs, TITLE_SITE[0], MAIN_AT, regs[SP_])
+        other = [a for a in range(0x4000, 0x10000) if mp[a] != mem[a] and not B81_AT <= a < B81_AT + len(patch.main[0])
+                 and not MAIN_AT <= a < MAIN_AT + len(patch.image)]
+        ok('main game handed over after the front end', bytes(mp[B81_AT:B81_AT + len(patch.main[0])]) == patch.main[0]
+           and bytes(mp[MAIN_AT:MAIN_AT + len(patch.image)]) == patch.image and not other and model.nr.get(0x52, 10) == 10 and not Rp[IFF_])
+        # and that image is the tape's main game but for this build's sites
+        diff = [a for a in range(len(patch.image)) if patch.image[a] != patch.main[1][a]]
+        inside = all(any(s_ <= MAIN_AT + a < s_ + len(new) for s_, old, new in patch.game_sites) for a in diff)
+        ok('the main game is the tape\'s but for the build\'s sites', bool(diff) and inside)
     for mem, regs in by[LOAD][:1]:
         # the blocks in tape order: the first for flag 0x80, then each next 0xC0 block, the second again after the last
         st = State(patch)
@@ -804,11 +881,24 @@ def unit_tests(patch, states, neg=None):
     return c
 
 
+def title_state(z80):
+    """(site, memory, registers, state page) for the hand-over's unit case: the title snapshot's own memory with the
+    registers the snapshot has, at the loader's instruction after the front end."""
+    from skoolkit.snapshot import Snapshot
+    sn = Snapshot.get(str(z80))
+    mem = bytearray(play_view(sn))
+    regs = [0] * 30
+    regs[SP_] = 0x5BFE
+    regs[PC_] = TITLE_SITE[0]
+    regs[IFF_] = 1
+    return TITLE_SITE[0], bytes(mem), tuple(regs), b''
+
+
 def _code_patch(patch, sym, new):
     rc = bytearray(patch.rom_code)
     a = patch.syms[sym] - ROM_ORG
     rc[a:a + len(new)] = new
-    return Patch(z80=patch.z80, colours=patch.colours, rom=bytes(rc), steady=patch.steady, blocks=patch.blocks)
+    return Patch(z80=patch.z80, colours=patch.colours, rom=bytes(rc), steady=patch.steady, blocks=patch.blocks, main=patch.main)
 
 
 NEG_STOP = {}
@@ -836,22 +926,29 @@ def auto(a, z80, name, out, say):
         say('Engine    : gauntlet: no %s beside the snapshot (the build is the painted tiles: there is nothing to build without it)' % COLOURS_NAME)
         say('Result    : FAILED')
         return False
-    blocks = None
-    if getattr(a, 'tape', None):        # the levels' side of the tape: its 31 blocks go into the build
+    blocks = main = None
+    if getattr(a, 'tape', None):        # the tape: the levels' 31 blocks, and for a start at the title side A's two blocks
         from . import tapeset
         try:
             ts, si = tapeset.load(list(a.tape), tape_sets())
             blocks = level_blocks(ts)
+            main = main_blocks(ts)
         except ValueError as e:
             say('Tape      : %s' % e)
             say('Result    : FAILED')
             return False
-        say('Tape      : %s: %d level blocks, %d bytes, answered from memory (no "start the tape" wait)' % (
-            load_profile()['tape_sets'][si]['name'], len(blocks), sum(len(b) for b in blocks)))
+        say('Tape      : %s: %d level blocks, %d bytes, answered from memory (no "start the tape" wait)%s' % (
+            load_profile()['tape_sets'][si]['name'], len(blocks), sum(len(b) for b in blocks),
+            '; the main game (%d + %d bytes) handed over from memory after the front end' % (len(main[0]), len(main[1])) if main else ''))
     else:
         say('Tape      : none given: the build asks for the tape when its levels run out (--tape SIDE_B.tzx puts them in)')
-    patch = Patch(z80=z80, colours=cmap, blocks=blocks)
-    steady = Patch(z80=z80, colours=cmap, steady=STEADY, blocks=blocks)
+    try:
+        patch = Patch(z80=z80, colours=cmap, blocks=blocks, main=main)
+        steady = Patch(z80=z80, colours=cmap, steady=STEADY, blocks=blocks, main=main)
+    except ValueError as e:
+        say('Engine    : gauntlet: %s' % e)
+        say('Result    : FAILED')
+        return False
     lines, _ = palette_lines(cmap)
     say('Engine    : gauntlet (nothing of the game changes; each cell of the play window the game is about to show -> a painted tile of the '
         'tile layer: %d painted cells, %d palette lines, %d pages)' % (len(patch.want), len(lines), len(patch.planes)))
@@ -861,8 +958,8 @@ def auto(a, z80, name, out, say):
     bad = boot_check(plain, z80, None)
     ok = ok and not bad
     say('Plain     : %s  %s  boot %s' % (os.path.basename(plain), md5(plain), 'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:200]))
-    for label, suffix, pt, mk in (('Sprites', '_sprites', patch, lambda: Patch(z80=z80, colours=cmap, blocks=blocks)),
-                                  ('Steady', '_steady', steady, lambda: Patch(z80=z80, colours=cmap, steady=STEADY, blocks=blocks))):
+    for label, suffix, pt, mk in (('Sprites', '_sprites', patch, lambda: Patch(z80=z80, colours=cmap, blocks=blocks, main=main)),
+                                  ('Steady', '_steady', steady, lambda: Patch(z80=z80, colours=cmap, steady=STEADY, blocks=blocks, main=main))):
         nex = os.path.join(out, name + suffix + '.nex')
         zt.convert(str(z80), nex, patch=pt, quiet=True)
         bad = boot_check(nex, z80, mk())
@@ -897,6 +994,8 @@ def auto(a, z80, name, out, say):
         for k, v in list(ex.items()) + list(exs.items()):
             if not k.startswith('copy T') and not k.startswith('clear T') and not k.startswith('update T'):
                 say('            %s: %s' % (k, str(v)[:300]))
+    if patch.title:                     # the hand-over has no recording: its unit case runs from the snapshot itself
+        states = states + [title_state(z80)]
     if states:
         u = unit_tests(patch, states)
         uf = {k: v for k, v in u.items() if k.endswith('!')}
@@ -904,12 +1003,18 @@ def auto(a, z80, name, out, say):
         say('Unit      : %s -> %s' % (', '.join('%s %d' % (k, v) for k, v in sorted(u.items()) if not k.endswith('!')), 'PASS' if not uf else 'FAIL %s' % uf))
     if getattr(a, 'rzx', None):
         r0 = list(a.rzx)[0]
-        negs = negative_patches(patch)
         missed = []
-        for nm, q in negs:
-            cc, _, _ = verify(q, r0, stop=NEG_STOP.get(nm, quick or 2500))
-            if not any(k.endswith('!') for k in cc):
-                missed.append(nm)
+        if patch.title:                 # the game's own hooks never run in the front end's recording (they are proven on the
+            negs = [('the main game is not copied', _code_patch(patch, 'e_main.n_cp', b'\x00\x00'))]      # main game's): the hand-over's
+            for nm, q in negs:
+                if not any(k.endswith('!') for k in unit_tests(q, [title_state(z80)])):
+                    missed.append(nm)
+        else:
+            negs = negative_patches(patch)
+            for nm, q in negs:
+                cc, _, _ = verify(q, r0, stop=NEG_STOP.get(nm, quick or 2500))
+                if not any(k.endswith('!') for k in cc):
+                    missed.append(nm)
         ok = ok and not missed
         say('Negative  : %d broken builds (%s), %d detected%s' % (len(negs), os.path.basename(r0), len(negs) - len(missed),
                                                                  '' if not missed else '; NOT detected: ' + ', '.join(missed)))
