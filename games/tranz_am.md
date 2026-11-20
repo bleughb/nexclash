@@ -2,30 +2,31 @@
 
 ## Next session
 Stage: 3 (verified, stamped)   State: 2026-11-20: the cars and the roadside items as sprites on their own pixels in
-their own colours, over the game's unchanged drawing; verified on two machine-played recordings and unit cases
+their own colours, over the game's unchanged drawing, and an Enhanced set painted in a first pass; verified on two machine-played recordings and unit cases
 over every type; runs in OverSpec; not on hardware
 Inputs (private, pilot runs/tranz_am/reference_files/tranz_am): tranz_am.z80 (TOSEC "[a2][16K]", at the game's
 menu), tranz_am_m2.rzx + tranz_am_m3.rzx (machine-played, see "Recordings"), tranz_am_loading.scr (the tape's
-screen), enNextZX.rom (the Next's ROM, for the verifier's ROM model)
+screen), enNextZX.rom (the Next's ROM, for the verifier's ROM model), tranz_am_colours.json (the painted map)
 Branch: add-tranz-am    Commit: this one    Checks: selftest --game tranz_am --verify --stamp, doccheck
 Pending user answers: "Open" 1-2
 Start with: a recording played by hand (night, the cups, a long drive), then hardware
 Read: "Build", "Open"
 
 ## Result (2026-11-20)
-Techniques: `patch.xor-overlay-keep-ula`, `patch.preserve-r`, `patch.restore-speed`, `patch.whole-altrom-image`
+Techniques: `patch.xor-overlay-keep-ula`, `patch.runtime-colour-map`, `patch.preserve-r`, `patch.restore-speed`, `patch.whole-altrom-image`
 
 Two whole machine-played recordings (20,133 and 20,031 frames, 7 games each).
 
 | | |
 |---|---|
-| Builds | tranz_am_sprites.nex 91a66955 (cars and roadside items as sprites in their own colours, loading screen), plain 8308134d |
-| Verify | IDENTICAL on both: 26,818 figures as sprites (2,796,472 sprite pixels against the model of the figure, and the model against the original's own plot at every draw-only entry), 162 draws past the set-up's start left to the game, 393 erases, 78 clears, 26,818 draws from their entry, every pace site; every register with R and all memory, the bitmap too; 16,885 paints not painted and 17,536 (the fixed block) left to the game; the alt ROM's IM 1 handler against Sinclair's at 39,986 interrupts |
-| Unit | PASS: 3,264 graphic cases (all 34 types x 8 places x 3 colours x four objects, through the draw-only entry: sprites, model and the original's plot agree), 16 speed cases, erases, clear, 12 paint cases, 6 guard cases, a type not in the table, negative control 40 of 40 |
+| Builds | tranz_am_sprites.nex 637c510d (cars and roadside items as sprites in their own colours, loading screen), tranz_am_enhanced.nex c89e6c5a (painted: 28 pictures, 13 fixed colours), plain 8308134d |
+| Verify | IDENTICAL on both recordings, both builds: 26,818 figures as sprites (2,796,472 sprite pixels against the model of the figure, and the model against the original's own plot at every draw-only entry), 162 draws past the set-up's start left to the game, 393 erases, 78 clears, 26,818 draws from their entry, every pace site; every register with R and all memory, the bitmap too; 16,885 paints not painted and 17,536 (the fixed block) left to the game; the alt ROM's IM 1 handler against Sinclair's at 39,986 interrupts |
+| Painted | on the Enhanced build every sprite pixel is the map's fixed colour where the map paints it and the object's ink elsewhere, in the replay and in every unit case |
+| Unit | PASS, both builds: 3,264 graphic cases (all 34 types x 8 places x 3 colours x four objects, through the draw-only entry: sprites, model and the original's plot agree), 16 speed cases, erases, clear, 12 paint cases, 6 guard cases, a type not in the table, negative control 40 of 40 |
 | Negative | 6 broken builds, all detected |
 | Boot | simulated: registers and RAM as the snapshot |
 | ROM paths | pass: every ROM byte the game runs as recorded |
-| OverSpec | the plain and the sprite build run to play |
+| OverSpec | the patch from its menu with a trainer and Enhanced on: loading screen, the game's menu, play |
 
 ## Recordings
 - No recording of this game could be had. The two here are machine-played from the snapshot: the toolkit's
@@ -76,6 +77,18 @@ The game's bitmap stays the original's; sprites lie on the figures' own pixels.
   in hook RAM at 0xB000 (a 16K game never addresses it). Interrupts stay on in the hooks.
 - DMA / DDMA (docs/DDMA.md): not used. The patterns are sent once at set-up; a hook writes only sprite attributes.
 
+## Enhanced (2026-11-20, first pass; owner: "have codex do the enhanced colours")
+- Sheet: one picture a distinct shape (28), painted by a Codex pass from a brief; files in the owner's painting
+  folder (`nexclash-tranz_am`); `sheet2colours.py` (pilot tools) makes `tranz_am_colours.json`, kept beside the snapshot: it holds
+  the figures, so it is not in this repository.
+- These sprites have one palette for every figure: 13 fixed colours (nibbles 2-14 of every palette offset, 9 bits
+  each, written by the set-up) and nibble 1 = the object's own colour at run time. A pixel left unpainted keeps
+  the game's colour, so a figure the game shows in several colours still does. 28 pictures have painted pixels.
+- The hooks and tables are the same as the default's: only the patterns' nibbles and the 13 colours differ. The
+  default build's set-up writes zeros there and no pattern of it uses them.
+- Verify: the replay and the unit cases run for both builds; a sprite pixel must be the object's ink where the map
+  leaves it and the map's fixed colour elsewhere.
+
 ## Hardware checklist
 Starts from the menu after the loading screen (a key or 5 s); menu and keys as the original; the car, the other
 cars and the roadside items in their own colours, the car keeping its colour as it crosses an item and the item
@@ -85,7 +98,8 @@ untouched; sound unchanged; the game's speed as the original's over a minute of 
 ## Open
 1. The recordings are machine-played and short drives: night, the cups and the other cars at length are proven by
    the unit cases, not in play.
-2. No Enhanced (painted) set: the default is the game's own colours, a colour an object.
+2. The Enhanced painting is a first pass the owner has not seen in play; where the painted map lives for a public
+   patch (it holds the figures; the .nxc carries the painted patterns).
 3. Pace is by construction (the plot's set-up at 28 MHz pays for the hook, as Jetpac 1.3); not measured in JNext.
 4. The clash this removes is small in this game: a car and a roadside item sharing cells.
 

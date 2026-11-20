@@ -15,6 +15,12 @@
   },
   "recordings": [
    {
+    "name": "tranz_am_colours.json",
+    "md5": "196aa7851e2ad83911e79dd02f83e41c",
+    "path": "tranz_am/tranz_am_colours.json",
+    "role": "The painted map (28 pictures, 13 fixed colours), staged beside the snapshot; not a recording. It holds the figures, so it is not in the repository."
+   },
+   {
     "name": "tranz_am_loading.scr",
     "md5": "dc7bc0fdb5722ba7e2015cf65d08bcf7",
     "path": "tranz_am/tranz_am_loading.scr",
@@ -76,16 +82,20 @@
   },
   "sprites": {
    "file": "tranz_am_sprites.nex",
-   "md5": "91a669559e001742ece9df0f8bf5b191"
+   "md5": "637c510df69e95cb621db6f63d02a5fd"
+  },
+  "enhanced": {
+   "file": "tranz_am_enhanced.nex",
+   "md5": "c89e6c5a4707b97a92922cd352b555ef"
   }
  },
  "repro": [],
  "status": {
   "title": "Tranz Am",
   "engine_col": "tranz_am (tranz_am.md)",
-  "build": "tranz_am_sprites.nex 91a66955 (the game draws as it does; the cars and the roadside items as sprites on the same pixels in their own colours; their colour paint stores nothing; loading screen)",
-  "software": "Verify IDENTICAL on two whole machine-played recordings (40,164 frames, 14 games): 26,818 figures as sprites, 2,796,472 sprite pixels against the figure's model (itself checked against the original's plot at every draw-only entry), every register with R and all memory (the bitmap too) at every hook, the IM 1 handler compared at 39,986 interrupts; unit PASS (3,264 graphic cases over all 34 types, negative control 40 of 40); 6 of 6 broken builds detected; ROM path check pass",
-  "hardware": "untested (both builds run in OverSpec)",
+  "build": "tranz_am_sprites.nex 637c510d (the game draws as it does; the cars and the roadside items as sprites on the same pixels in their own colours; their colour paint stores nothing; loading screen) + enhanced c89e6c5a (28 pictures painted with 13 fixed colours, a first pass; a pixel left unpainted keeps the game's colour)",
+  "software": "Verify IDENTICAL on two whole machine-played recordings (40,164 frames, 14 games), both builds: 26,818 figures as sprites, 2,796,472 sprite pixels against the figure's model (itself checked against the original's plot at every draw-only entry) and, on Enhanced, every pixel's colour against the painted map; every register with R and all memory (the bitmap too) at every hook; the IM 1 handler compared at 39,986 interrupts; unit PASS on both builds (3,264 graphic cases over all 34 types, negative control 40 of 40); 6 of 6 broken builds detected; ROM path check pass",
+  "hardware": "untested (the patch runs from its menu in OverSpec, a trainer and Enhanced on)",
   "next": "a recording played by hand; hardware test"
  },
  "checks": [
@@ -130,6 +140,15 @@
    "phases": [
     "setup"
    ]
+  },
+  {
+   "application": "tranz.colour-map",
+   "id": "patch.runtime-colour-map",
+   "revision": 1,
+   "target": "a painted set changes only the patterns' nibbles and 13 fixed palette colours (nibbles 2-14 of every offset): nibble 1 stays the object's ink at run time; the hooks are the same",
+   "phases": [
+    "setup"
+   ]
   }
  ],
  "feasibility": {
@@ -155,9 +174,9 @@
   "deps": {
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "asm/tranz_am_hooks.asm": "5390815ab54cf15a",
+   "asm/tranz_am_hooks.asm": "71545143ad79421a",
    "asm/tranz_am_tables.asm": "45b8a87163e37735",
-   "docs/profiles/tranz_am.json": "98d75c41ee476887",
+   "docs/profiles/tranz_am.json": "23ff037730984367",
    "nexclash.py": "cc1297e9104ece5f",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "b22123bdf2572c9b",
@@ -175,12 +194,12 @@
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/tranz_am.py": "da5d6cec1688a635",
+   "nexclash/tranz_am.py": "886ae65aeeac484e",
    "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "2f3fcef61168d703",
+   "recipe": "fb9c1c6d197fc57a",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-20"
@@ -189,9 +208,9 @@
   "deps": {
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "asm/tranz_am_hooks.asm": "5390815ab54cf15a",
+   "asm/tranz_am_hooks.asm": "71545143ad79421a",
    "asm/tranz_am_tables.asm": "45b8a87163e37735",
-   "docs/profiles/tranz_am.json": "98d75c41ee476887",
+   "docs/profiles/tranz_am.json": "23ff037730984367",
    "nexclash.py": "cc1297e9104ece5f",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "b22123bdf2572c9b",
@@ -209,12 +228,12 @@
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/tranz_am.py": "da5d6cec1688a635",
+   "nexclash/tranz_am.py": "886ae65aeeac484e",
    "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "2f3fcef61168d703",
+   "recipe": "fb9c1c6d197fc57a",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-20"
