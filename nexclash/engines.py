@@ -15,6 +15,7 @@ import importlib
 
 # (module, detector, extra condition on the auto arguments or None)
 ENGINES = [
+    ('stock_car_3d', 'is_stock_car_3d', None),                           # 3D Stock Car Championship (48K)
     ('highway_encounter', 'is_highway_encounter', None),             # Highway Encounter (48K), optional Enhanced
     ('exolon', 'is_exolon', None),                                   # Exolon (128K), optional Enhanced
     ('bruce_lee', 'is_bruce_lee', None),                                # Bruce Lee (48K), optional Enhanced

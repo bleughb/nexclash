@@ -137,8 +137,9 @@ def find_layout(png):
     import re
     stem = os.path.splitext(png)[0]
     for s in (stem, re.sub(r'(_painted| ?\(\d+\))+$', '', stem, flags=re.I)):
-        if os.path.exists(s + '_layout.json'):
-            return s + '_layout.json'
+        for ext in ('_layout.json', '_layout.json.gz'):      # committed layouts are gzipped
+            if os.path.exists(s + ext):
+                return s + ext
     raise ValueError('no painting layout next to %s (pass --layout <game>_PAINTING_SPRITES_layout.json)' % png)
 
 

@@ -128,14 +128,14 @@
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "112c3b17a78ace9a",
+   "nexclash/engines.py": "bf75ad27e5bfabce",
    "nexclash/gunfright.py": "151b2e2e32238c42",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/machine.py": "659903f13de0fcee",
    "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/nxc.py": "f286b3f16e76fbda",
+   "nexclash/nxc.py": "d4c135babd8cd53e",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
@@ -149,7 +149,7 @@
    "recipe": "71062e656f10832b",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-12"
+  "date": "2026-11-17"
  },
  "verified": {
   "deps": {
@@ -172,14 +172,14 @@
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "112c3b17a78ace9a",
+   "nexclash/engines.py": "bf75ad27e5bfabce",
    "nexclash/gunfright.py": "151b2e2e32238c42",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/machine.py": "659903f13de0fcee",
    "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/nxc.py": "f286b3f16e76fbda",
+   "nexclash/nxc.py": "d4c135babd8cd53e",
    "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
@@ -193,6 +193,6 @@
    "recipe": "71062e656f10832b",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-12"
+  "date": "2026-11-17"
  }
 }

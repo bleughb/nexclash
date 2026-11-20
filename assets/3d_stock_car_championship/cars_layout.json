@@ -1,0 +1,2973 @@
+{
+  "version": 1,
+  "cell": [
+    16,
+    16
+  ],
+  "columns": 28,
+  "rows": 4,
+  "grid_line": [
+    36,
+    36,
+    109
+  ],
+  "transparent": [
+    128,
+    128,
+    128
+  ],
+  "original_offset": [
+    0,
+    4
+  ],
+  "sprite_origin_relative_to_game_image": [
+    0,
+    -4
+  ],
+  "angle_convention": "0 away/up; increasing counterclockwise on screen; 90 left; 180 toward/down; 270 right",
+  "angles_degrees": [
+    0,
+    7.5,
+    15,
+    30,
+    45,
+    60,
+    75,
+    90,
+    105,
+    120,
+    135,
+    150,
+    165,
+    172.5,
+    180,
+    187.5,
+    195,
+    210,
+    225,
+    240,
+    255,
+    270,
+    285,
+    300,
+    315,
+    330,
+    345,
+    352.5
+  ],
+  "palette_format": "RGB333; colours[0] maps to opaque hardware slot 1",
+  "transparent_palette_index": 0,
+  "colour_palette_start_index": 1,
+  "selected_pass": 4,
+  "supersampling": 32,
+  "camera_elevation_degrees": 30,
+  "light_world_direction": [
+    -0.34151450937027694,
+    0.42032554999418703,
+    0.8406510999883741
+  ],
+  "cars": [
+    {
+      "car": 1,
+      "name": "CYAN / 1",
+      "colours": [
+        [
+          0,
+          0,
+          36
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          0,
+          36,
+          73
+        ],
+        [
+          36,
+          73,
+          109
+        ],
+        [
+          109,
+          146,
+          182
+        ],
+        [
+          146,
+          146,
+          182
+        ],
+        [
+          0,
+          73,
+          109
+        ],
+        [
+          0,
+          109,
+          146
+        ],
+        [
+          0,
+          182,
+          219
+        ],
+        [
+          36,
+          219,
+          255
+        ],
+        [
+          146,
+          255,
+          255
+        ],
+        [
+          146,
+          36,
+          0
+        ],
+        [
+          255,
+          182,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          219,
+          36,
+          36
+        ]
+      ]
+    },
+    {
+      "car": 2,
+      "name": "GREEN / 2",
+      "colours": [
+        [
+          0,
+          0,
+          36
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          0,
+          36,
+          73
+        ],
+        [
+          36,
+          73,
+          109
+        ],
+        [
+          109,
+          146,
+          182
+        ],
+        [
+          146,
+          146,
+          182
+        ],
+        [
+          0,
+          73,
+          36
+        ],
+        [
+          0,
+          109,
+          36
+        ],
+        [
+          36,
+          182,
+          36
+        ],
+        [
+          109,
+          219,
+          73
+        ],
+        [
+          182,
+          255,
+          146
+        ],
+        [
+          109,
+          0,
+          36
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          219,
+          36,
+          36
+        ]
+      ]
+    },
+    {
+      "car": 3,
+      "name": "YELLOW / 3",
+      "colours": [
+        [
+          0,
+          0,
+          36
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          0,
+          36,
+          73
+        ],
+        [
+          36,
+          73,
+          109
+        ],
+        [
+          109,
+          146,
+          182
+        ],
+        [
+          146,
+          146,
+          182
+        ],
+        [
+          109,
+          73,
+          0
+        ],
+        [
+          182,
+          109,
+          0
+        ],
+        [
+          219,
+          182,
+          0
+        ],
+        [
+          255,
+          219,
+          36
+        ],
+        [
+          255,
+          255,
+          146
+        ],
+        [
+          0,
+          36,
+          109
+        ],
+        [
+          36,
+          73,
+          146
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          219,
+          36,
+          36
+        ]
+      ]
+    },
+    {
+      "car": 4,
+      "name": "WHITE / 4",
+      "colours": [
+        [
+          0,
+          0,
+          36
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          0,
+          36,
+          73
+        ],
+        [
+          36,
+          73,
+          109
+        ],
+        [
+          109,
+          146,
+          182
+        ],
+        [
+          146,
+          146,
+          182
+        ],
+        [
+          73,
+          73,
+          109
+        ],
+        [
+          109,
+          146,
+          146
+        ],
+        [
+          182,
+          182,
+          182
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          109,
+          0,
+          36
+        ],
+        [
+          219,
+          36,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          219,
+          36,
+          36
+        ]
+      ]
+    }
+  ],
+  "cells": [
+    {
+      "car": 1,
+      "image": 0,
+      "x": 1,
+      "y": 1,
+      "angle_degrees": 0,
+      "model_screen_offset": [
+        4.5,
+        9.962916512459884
+      ],
+      "opaque_bbox": [
+        0,
+        6,
+        9,
+        13
+      ],
+      "original_bbox": [
+        0,
+        6,
+        9,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 1,
+      "x": 18,
+      "y": 1,
+      "angle_degrees": 7.5,
+      "model_screen_offset": [
+        4.5,
+        9.801139932985977
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        9,
+        13
+      ],
+      "original_bbox": [
+        0,
+        6,
+        9,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 2,
+      "x": 35,
+      "y": 1,
+      "angle_degrees": 15,
+      "model_screen_offset": [
+        5.0,
+        9.684051574908139
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        6,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 3,
+      "x": 52,
+      "y": 1,
+      "angle_degrees": 30,
+      "model_screen_offset": [
+        5.0,
+        9.41633031206706
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        6,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 4,
+      "x": 69,
+      "y": 1,
+      "angle_degrees": 45,
+      "model_screen_offset": [
+        5.5,
+        9.279019635275558
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 5,
+      "x": 86,
+      "y": 1,
+      "angle_degrees": 60,
+      "model_screen_offset": [
+        5.5,
+        9.32482396112095
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 6,
+      "x": 103,
+      "y": 1,
+      "angle_degrees": 75,
+      "model_screen_offset": [
+        5.5,
+        8.499301157983293
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        11
+      ]
+    },
+    {
+      "car": 1,
+      "image": 7,
+      "x": 120,
+      "y": 1,
+      "angle_degrees": 90,
+      "model_screen_offset": [
+        5.0,
+        8.825
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        11
+      ]
+    },
+    {
+      "car": 1,
+      "image": 8,
+      "x": 137,
+      "y": 1,
+      "angle_degrees": 105,
+      "model_screen_offset": [
+        5.5,
+        8.499301157983293
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        11
+      ]
+    },
+    {
+      "car": 1,
+      "image": 9,
+      "x": 154,
+      "y": 1,
+      "angle_degrees": 120,
+      "model_screen_offset": [
+        5.5,
+        9.32482396112095
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        4,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 10,
+      "x": 171,
+      "y": 1,
+      "angle_degrees": 135,
+      "model_screen_offset": [
+        6.0,
+        9.279019635275558
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        12,
+        12
+      ],
+      "original_bbox": [
+        0,
+        4,
+        12,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 11,
+      "x": 188,
+      "y": 1,
+      "angle_degrees": 150,
+      "model_screen_offset": [
+        5.0,
+        9.41633031206706
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 12,
+      "x": 205,
+      "y": 1,
+      "angle_degrees": 165,
+      "model_screen_offset": [
+        5.0,
+        9.684051574908139
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 13,
+      "x": 222,
+      "y": 1,
+      "angle_degrees": 172.5,
+      "model_screen_offset": [
+        5.0,
+        9.801139932985977
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        13
+      ],
+      "original_bbox": [
+        0,
+        4,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 14,
+      "x": 239,
+      "y": 1,
+      "angle_degrees": 180,
+      "model_screen_offset": [
+        4.5,
+        9.962916512459884
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        9,
+        13
+      ],
+      "original_bbox": [
+        0,
+        4,
+        9,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 15,
+      "x": 256,
+      "y": 1,
+      "angle_degrees": 187.5,
+      "model_screen_offset": [
+        5.0,
+        9.801139932985977
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        13
+      ],
+      "original_bbox": [
+        0,
+        4,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 16,
+      "x": 273,
+      "y": 1,
+      "angle_degrees": 195,
+      "model_screen_offset": [
+        5.0,
+        9.684051574908139
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 17,
+      "x": 290,
+      "y": 1,
+      "angle_degrees": 210,
+      "model_screen_offset": [
+        5.0,
+        9.41633031206706
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 18,
+      "x": 307,
+      "y": 1,
+      "angle_degrees": 225,
+      "model_screen_offset": [
+        6.0,
+        9.279019635275558
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        12,
+        12
+      ],
+      "original_bbox": [
+        0,
+        4,
+        12,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 19,
+      "x": 324,
+      "y": 1,
+      "angle_degrees": 240,
+      "model_screen_offset": [
+        5.5,
+        9.32482396112095
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        4,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 20,
+      "x": 341,
+      "y": 1,
+      "angle_degrees": 255,
+      "model_screen_offset": [
+        5.5,
+        8.499301157983293
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        11
+      ]
+    },
+    {
+      "car": 1,
+      "image": 21,
+      "x": 358,
+      "y": 1,
+      "angle_degrees": 270,
+      "model_screen_offset": [
+        5.0,
+        8.825
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        11
+      ]
+    },
+    {
+      "car": 1,
+      "image": 22,
+      "x": 375,
+      "y": 1,
+      "angle_degrees": 285,
+      "model_screen_offset": [
+        5.5,
+        8.499301157983293
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        11
+      ]
+    },
+    {
+      "car": 1,
+      "image": 23,
+      "x": 392,
+      "y": 1,
+      "angle_degrees": 300,
+      "model_screen_offset": [
+        5.5,
+        9.32482396112095
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 24,
+      "x": 409,
+      "y": 1,
+      "angle_degrees": 315,
+      "model_screen_offset": [
+        5.5,
+        9.279019635275558
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 25,
+      "x": 426,
+      "y": 1,
+      "angle_degrees": 330,
+      "model_screen_offset": [
+        5.0,
+        9.416330312067059
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        6,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 26,
+      "x": 443,
+      "y": 1,
+      "angle_degrees": 345,
+      "model_screen_offset": [
+        5.0,
+        9.684051574908139
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        6,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 1,
+      "image": 27,
+      "x": 460,
+      "y": 1,
+      "angle_degrees": 352.5,
+      "model_screen_offset": [
+        4.5,
+        9.801139932985977
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        9,
+        13
+      ],
+      "original_bbox": [
+        0,
+        6,
+        9,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 0,
+      "x": 1,
+      "y": 18,
+      "angle_degrees": 0,
+      "model_screen_offset": [
+        4.5,
+        9.962916512459884
+      ],
+      "opaque_bbox": [
+        0,
+        6,
+        9,
+        13
+      ],
+      "original_bbox": [
+        0,
+        6,
+        9,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 1,
+      "x": 18,
+      "y": 18,
+      "angle_degrees": 7.5,
+      "model_screen_offset": [
+        4.5,
+        9.801139932985977
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        9,
+        13
+      ],
+      "original_bbox": [
+        0,
+        6,
+        9,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 2,
+      "x": 35,
+      "y": 18,
+      "angle_degrees": 15,
+      "model_screen_offset": [
+        5.0,
+        9.684051574908139
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        6,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 3,
+      "x": 52,
+      "y": 18,
+      "angle_degrees": 30,
+      "model_screen_offset": [
+        5.0,
+        9.41633031206706
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        6,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 4,
+      "x": 69,
+      "y": 18,
+      "angle_degrees": 45,
+      "model_screen_offset": [
+        5.5,
+        9.279019635275558
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 5,
+      "x": 86,
+      "y": 18,
+      "angle_degrees": 60,
+      "model_screen_offset": [
+        5.5,
+        9.32482396112095
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 6,
+      "x": 103,
+      "y": 18,
+      "angle_degrees": 75,
+      "model_screen_offset": [
+        5.5,
+        8.499301157983293
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        11
+      ]
+    },
+    {
+      "car": 2,
+      "image": 7,
+      "x": 120,
+      "y": 18,
+      "angle_degrees": 90,
+      "model_screen_offset": [
+        5.0,
+        8.825
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        11
+      ]
+    },
+    {
+      "car": 2,
+      "image": 8,
+      "x": 137,
+      "y": 18,
+      "angle_degrees": 105,
+      "model_screen_offset": [
+        5.5,
+        8.499301157983293
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        11
+      ]
+    },
+    {
+      "car": 2,
+      "image": 9,
+      "x": 154,
+      "y": 18,
+      "angle_degrees": 120,
+      "model_screen_offset": [
+        5.5,
+        9.32482396112095
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        4,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 10,
+      "x": 171,
+      "y": 18,
+      "angle_degrees": 135,
+      "model_screen_offset": [
+        6.0,
+        9.279019635275558
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        12,
+        12
+      ],
+      "original_bbox": [
+        0,
+        4,
+        12,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 11,
+      "x": 188,
+      "y": 18,
+      "angle_degrees": 150,
+      "model_screen_offset": [
+        5.0,
+        9.41633031206706
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 12,
+      "x": 205,
+      "y": 18,
+      "angle_degrees": 165,
+      "model_screen_offset": [
+        5.0,
+        9.684051574908139
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 13,
+      "x": 222,
+      "y": 18,
+      "angle_degrees": 172.5,
+      "model_screen_offset": [
+        5.0,
+        9.801139932985977
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        13
+      ],
+      "original_bbox": [
+        0,
+        4,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 14,
+      "x": 239,
+      "y": 18,
+      "angle_degrees": 180,
+      "model_screen_offset": [
+        4.5,
+        9.962916512459884
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        9,
+        13
+      ],
+      "original_bbox": [
+        0,
+        4,
+        9,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 15,
+      "x": 256,
+      "y": 18,
+      "angle_degrees": 187.5,
+      "model_screen_offset": [
+        5.0,
+        9.801139932985977
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        13
+      ],
+      "original_bbox": [
+        0,
+        4,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 16,
+      "x": 273,
+      "y": 18,
+      "angle_degrees": 195,
+      "model_screen_offset": [
+        5.0,
+        9.684051574908139
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 17,
+      "x": 290,
+      "y": 18,
+      "angle_degrees": 210,
+      "model_screen_offset": [
+        5.0,
+        9.41633031206706
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 18,
+      "x": 307,
+      "y": 18,
+      "angle_degrees": 225,
+      "model_screen_offset": [
+        6.0,
+        9.279019635275558
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        12,
+        12
+      ],
+      "original_bbox": [
+        0,
+        4,
+        12,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 19,
+      "x": 324,
+      "y": 18,
+      "angle_degrees": 240,
+      "model_screen_offset": [
+        5.5,
+        9.32482396112095
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        4,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 20,
+      "x": 341,
+      "y": 18,
+      "angle_degrees": 255,
+      "model_screen_offset": [
+        5.5,
+        8.499301157983293
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        11
+      ]
+    },
+    {
+      "car": 2,
+      "image": 21,
+      "x": 358,
+      "y": 18,
+      "angle_degrees": 270,
+      "model_screen_offset": [
+        5.0,
+        8.825
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        11
+      ]
+    },
+    {
+      "car": 2,
+      "image": 22,
+      "x": 375,
+      "y": 18,
+      "angle_degrees": 285,
+      "model_screen_offset": [
+        5.5,
+        8.499301157983293
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        11
+      ]
+    },
+    {
+      "car": 2,
+      "image": 23,
+      "x": 392,
+      "y": 18,
+      "angle_degrees": 300,
+      "model_screen_offset": [
+        5.5,
+        9.32482396112095
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 24,
+      "x": 409,
+      "y": 18,
+      "angle_degrees": 315,
+      "model_screen_offset": [
+        5.5,
+        9.279019635275558
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 25,
+      "x": 426,
+      "y": 18,
+      "angle_degrees": 330,
+      "model_screen_offset": [
+        5.0,
+        9.416330312067059
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        6,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 26,
+      "x": 443,
+      "y": 18,
+      "angle_degrees": 345,
+      "model_screen_offset": [
+        5.0,
+        9.684051574908139
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        6,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 2,
+      "image": 27,
+      "x": 460,
+      "y": 18,
+      "angle_degrees": 352.5,
+      "model_screen_offset": [
+        4.5,
+        9.801139932985977
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        9,
+        13
+      ],
+      "original_bbox": [
+        0,
+        6,
+        9,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 0,
+      "x": 1,
+      "y": 35,
+      "angle_degrees": 0,
+      "model_screen_offset": [
+        4.5,
+        9.962916512459884
+      ],
+      "opaque_bbox": [
+        0,
+        6,
+        9,
+        13
+      ],
+      "original_bbox": [
+        0,
+        6,
+        9,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 1,
+      "x": 18,
+      "y": 35,
+      "angle_degrees": 7.5,
+      "model_screen_offset": [
+        4.5,
+        9.801139932985977
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        9,
+        13
+      ],
+      "original_bbox": [
+        0,
+        6,
+        9,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 2,
+      "x": 35,
+      "y": 35,
+      "angle_degrees": 15,
+      "model_screen_offset": [
+        5.0,
+        9.684051574908139
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        6,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 3,
+      "x": 52,
+      "y": 35,
+      "angle_degrees": 30,
+      "model_screen_offset": [
+        5.0,
+        9.41633031206706
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        6,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 4,
+      "x": 69,
+      "y": 35,
+      "angle_degrees": 45,
+      "model_screen_offset": [
+        5.5,
+        9.279019635275558
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 5,
+      "x": 86,
+      "y": 35,
+      "angle_degrees": 60,
+      "model_screen_offset": [
+        5.5,
+        9.32482396112095
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 6,
+      "x": 103,
+      "y": 35,
+      "angle_degrees": 75,
+      "model_screen_offset": [
+        5.5,
+        8.499301157983293
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        11
+      ]
+    },
+    {
+      "car": 3,
+      "image": 7,
+      "x": 120,
+      "y": 35,
+      "angle_degrees": 90,
+      "model_screen_offset": [
+        5.0,
+        8.825
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        11
+      ]
+    },
+    {
+      "car": 3,
+      "image": 8,
+      "x": 137,
+      "y": 35,
+      "angle_degrees": 105,
+      "model_screen_offset": [
+        5.5,
+        8.499301157983293
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        11
+      ]
+    },
+    {
+      "car": 3,
+      "image": 9,
+      "x": 154,
+      "y": 35,
+      "angle_degrees": 120,
+      "model_screen_offset": [
+        5.5,
+        9.32482396112095
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        4,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 10,
+      "x": 171,
+      "y": 35,
+      "angle_degrees": 135,
+      "model_screen_offset": [
+        6.0,
+        9.279019635275558
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        12,
+        12
+      ],
+      "original_bbox": [
+        0,
+        4,
+        12,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 11,
+      "x": 188,
+      "y": 35,
+      "angle_degrees": 150,
+      "model_screen_offset": [
+        5.0,
+        9.41633031206706
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 12,
+      "x": 205,
+      "y": 35,
+      "angle_degrees": 165,
+      "model_screen_offset": [
+        5.0,
+        9.684051574908139
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 13,
+      "x": 222,
+      "y": 35,
+      "angle_degrees": 172.5,
+      "model_screen_offset": [
+        5.0,
+        9.801139932985977
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        13
+      ],
+      "original_bbox": [
+        0,
+        4,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 14,
+      "x": 239,
+      "y": 35,
+      "angle_degrees": 180,
+      "model_screen_offset": [
+        4.5,
+        9.962916512459884
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        9,
+        13
+      ],
+      "original_bbox": [
+        0,
+        4,
+        9,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 15,
+      "x": 256,
+      "y": 35,
+      "angle_degrees": 187.5,
+      "model_screen_offset": [
+        5.0,
+        9.801139932985977
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        13
+      ],
+      "original_bbox": [
+        0,
+        4,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 16,
+      "x": 273,
+      "y": 35,
+      "angle_degrees": 195,
+      "model_screen_offset": [
+        5.0,
+        9.684051574908139
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 17,
+      "x": 290,
+      "y": 35,
+      "angle_degrees": 210,
+      "model_screen_offset": [
+        5.0,
+        9.41633031206706
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 18,
+      "x": 307,
+      "y": 35,
+      "angle_degrees": 225,
+      "model_screen_offset": [
+        6.0,
+        9.279019635275558
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        12,
+        12
+      ],
+      "original_bbox": [
+        0,
+        4,
+        12,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 19,
+      "x": 324,
+      "y": 35,
+      "angle_degrees": 240,
+      "model_screen_offset": [
+        5.5,
+        9.32482396112095
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        4,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 20,
+      "x": 341,
+      "y": 35,
+      "angle_degrees": 255,
+      "model_screen_offset": [
+        5.5,
+        8.499301157983293
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        11
+      ]
+    },
+    {
+      "car": 3,
+      "image": 21,
+      "x": 358,
+      "y": 35,
+      "angle_degrees": 270,
+      "model_screen_offset": [
+        5.0,
+        8.825
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        11
+      ]
+    },
+    {
+      "car": 3,
+      "image": 22,
+      "x": 375,
+      "y": 35,
+      "angle_degrees": 285,
+      "model_screen_offset": [
+        5.5,
+        8.499301157983293
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        11
+      ]
+    },
+    {
+      "car": 3,
+      "image": 23,
+      "x": 392,
+      "y": 35,
+      "angle_degrees": 300,
+      "model_screen_offset": [
+        5.5,
+        9.32482396112095
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 24,
+      "x": 409,
+      "y": 35,
+      "angle_degrees": 315,
+      "model_screen_offset": [
+        5.5,
+        9.279019635275558
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 25,
+      "x": 426,
+      "y": 35,
+      "angle_degrees": 330,
+      "model_screen_offset": [
+        5.0,
+        9.416330312067059
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        6,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 26,
+      "x": 443,
+      "y": 35,
+      "angle_degrees": 345,
+      "model_screen_offset": [
+        5.0,
+        9.684051574908139
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        6,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 3,
+      "image": 27,
+      "x": 460,
+      "y": 35,
+      "angle_degrees": 352.5,
+      "model_screen_offset": [
+        4.5,
+        9.801139932985977
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        9,
+        13
+      ],
+      "original_bbox": [
+        0,
+        6,
+        9,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 0,
+      "x": 1,
+      "y": 52,
+      "angle_degrees": 0,
+      "model_screen_offset": [
+        4.5,
+        9.962916512459884
+      ],
+      "opaque_bbox": [
+        0,
+        6,
+        9,
+        13
+      ],
+      "original_bbox": [
+        0,
+        6,
+        9,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 1,
+      "x": 18,
+      "y": 52,
+      "angle_degrees": 7.5,
+      "model_screen_offset": [
+        4.5,
+        9.801139932985977
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        9,
+        13
+      ],
+      "original_bbox": [
+        0,
+        6,
+        9,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 2,
+      "x": 35,
+      "y": 52,
+      "angle_degrees": 15,
+      "model_screen_offset": [
+        5.0,
+        9.684051574908139
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        6,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 3,
+      "x": 52,
+      "y": 52,
+      "angle_degrees": 30,
+      "model_screen_offset": [
+        5.0,
+        9.41633031206706
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        6,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 4,
+      "x": 69,
+      "y": 52,
+      "angle_degrees": 45,
+      "model_screen_offset": [
+        5.5,
+        9.279019635275558
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 5,
+      "x": 86,
+      "y": 52,
+      "angle_degrees": 60,
+      "model_screen_offset": [
+        5.5,
+        9.32482396112095
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 6,
+      "x": 103,
+      "y": 52,
+      "angle_degrees": 75,
+      "model_screen_offset": [
+        5.5,
+        8.499301157983293
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        11
+      ]
+    },
+    {
+      "car": 4,
+      "image": 7,
+      "x": 120,
+      "y": 52,
+      "angle_degrees": 90,
+      "model_screen_offset": [
+        5.0,
+        8.825
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        11
+      ]
+    },
+    {
+      "car": 4,
+      "image": 8,
+      "x": 137,
+      "y": 52,
+      "angle_degrees": 105,
+      "model_screen_offset": [
+        5.5,
+        8.499301157983293
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        11
+      ]
+    },
+    {
+      "car": 4,
+      "image": 9,
+      "x": 154,
+      "y": 52,
+      "angle_degrees": 120,
+      "model_screen_offset": [
+        5.5,
+        9.32482396112095
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        4,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 10,
+      "x": 171,
+      "y": 52,
+      "angle_degrees": 135,
+      "model_screen_offset": [
+        6.0,
+        9.279019635275558
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        12,
+        12
+      ],
+      "original_bbox": [
+        0,
+        4,
+        12,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 11,
+      "x": 188,
+      "y": 52,
+      "angle_degrees": 150,
+      "model_screen_offset": [
+        5.0,
+        9.41633031206706
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 12,
+      "x": 205,
+      "y": 52,
+      "angle_degrees": 165,
+      "model_screen_offset": [
+        5.0,
+        9.684051574908139
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 13,
+      "x": 222,
+      "y": 52,
+      "angle_degrees": 172.5,
+      "model_screen_offset": [
+        5.0,
+        9.801139932985977
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        13
+      ],
+      "original_bbox": [
+        0,
+        4,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 14,
+      "x": 239,
+      "y": 52,
+      "angle_degrees": 180,
+      "model_screen_offset": [
+        4.5,
+        9.962916512459884
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        9,
+        13
+      ],
+      "original_bbox": [
+        0,
+        4,
+        9,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 15,
+      "x": 256,
+      "y": 52,
+      "angle_degrees": 187.5,
+      "model_screen_offset": [
+        5.0,
+        9.801139932985977
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        13
+      ],
+      "original_bbox": [
+        0,
+        4,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 16,
+      "x": 273,
+      "y": 52,
+      "angle_degrees": 195,
+      "model_screen_offset": [
+        5.0,
+        9.684051574908139
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 17,
+      "x": 290,
+      "y": 52,
+      "angle_degrees": 210,
+      "model_screen_offset": [
+        5.0,
+        9.41633031206706
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 18,
+      "x": 307,
+      "y": 52,
+      "angle_degrees": 225,
+      "model_screen_offset": [
+        6.0,
+        9.279019635275558
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        12,
+        12
+      ],
+      "original_bbox": [
+        0,
+        4,
+        12,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 19,
+      "x": 324,
+      "y": 52,
+      "angle_degrees": 240,
+      "model_screen_offset": [
+        5.5,
+        9.32482396112095
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        4,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 20,
+      "x": 341,
+      "y": 52,
+      "angle_degrees": 255,
+      "model_screen_offset": [
+        5.5,
+        8.499301157983293
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        11
+      ]
+    },
+    {
+      "car": 4,
+      "image": 21,
+      "x": 358,
+      "y": 52,
+      "angle_degrees": 270,
+      "model_screen_offset": [
+        5.0,
+        8.825
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        10,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        10,
+        11
+      ]
+    },
+    {
+      "car": 4,
+      "image": 22,
+      "x": 375,
+      "y": 52,
+      "angle_degrees": 285,
+      "model_screen_offset": [
+        5.5,
+        8.499301157983293
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        11
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        11
+      ]
+    },
+    {
+      "car": 4,
+      "image": 23,
+      "x": 392,
+      "y": 52,
+      "angle_degrees": 300,
+      "model_screen_offset": [
+        5.5,
+        9.32482396112095
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 24,
+      "x": 409,
+      "y": 52,
+      "angle_degrees": 315,
+      "model_screen_offset": [
+        5.5,
+        9.279019635275558
+      ],
+      "opaque_bbox": [
+        0,
+        4,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        5,
+        11,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 25,
+      "x": 426,
+      "y": 52,
+      "angle_degrees": 330,
+      "model_screen_offset": [
+        5.0,
+        9.416330312067059
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        11,
+        12
+      ],
+      "original_bbox": [
+        0,
+        6,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 26,
+      "x": 443,
+      "y": 52,
+      "angle_degrees": 345,
+      "model_screen_offset": [
+        5.0,
+        9.684051574908139
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        10,
+        12
+      ],
+      "original_bbox": [
+        0,
+        6,
+        10,
+        12
+      ]
+    },
+    {
+      "car": 4,
+      "image": 27,
+      "x": 460,
+      "y": 52,
+      "angle_degrees": 352.5,
+      "model_screen_offset": [
+        4.5,
+        9.801139932985977
+      ],
+      "opaque_bbox": [
+        0,
+        5,
+        9,
+        13
+      ],
+      "original_bbox": [
+        0,
+        6,
+        9,
+        12
+      ]
+    }
+  ]
+}

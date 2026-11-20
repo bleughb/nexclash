@@ -1,6 +1,14 @@
 {
  "_note": "GENERATED from docs/records by `python -m nexclash.records views` - do not edit. Snapshots whose sprite build was differentially verified against a recording. nex = MD5s `nexclash.py patch` reproduces.",
  "snapshots": {
+  "56f151581bbcada775bb9e180bf4df9d": {
+   "game": "3D Stock Car Championship",
+   "doc": "3d_stock_car_championship.md",
+   "nex": {
+    "plain": "7ffdcd3ec8660074a1fcc697d521cfe7",
+    "sprites": "6edc58d59de04c69261df37391ec7fcb"
+   }
+  },
   "2909c2f0f18eca08479a74ad6dc8d193": {
    "game": "Abu Simbel Profanation",
    "doc": "abu_simbel.md",

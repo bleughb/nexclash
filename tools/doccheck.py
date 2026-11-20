@@ -29,10 +29,10 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# bytes; set 2026-10-26 a little above that day's size: hold the line, lower them as files are condensed
+# bytes, hand-written ones (lf_size); set 2026-10-26 a little above that day's size: hold the line, lower them as files are condensed
 BUDGET = {'docs/ENGINE_CONTRACT.md': 6000, 'CLAUDE.md': 10500, 'docs/PLAYBOOK.md': 27000, 'docs/COLOURS.md': 9000, 'docs/MAINTAIN.md': 6000,
           'docs/BRIEFING.md': 56000, 'docs/LEARNINGS.md': 90000, 'docs/TECHNIQUES.md': 68000,
-          'docs/VERIFICATION.md': 90000, 'README.md': 12000, 'docs/techniques/STANDARD.md': 32000,
+          'docs/VERIFICATION.md': 72000, 'README.md': 12000, 'docs/techniques/STANDARD.md': 32000,
           'docs/LEARNING.md': 6000, 'tools/probes/README.md': 3000, 'docs/CHECKS.md': 8500}
 GAME_BUDGET = 25000          # games/<game>.md; older notes over it are listed and must not grow
 GAME_GRANDFATHERED = {'games/rainbow_islands.md': 72000}
@@ -117,9 +117,13 @@ def has_section(heads, doc, sec):
     return any(pat.match(x) for x in heads[doc])
 
 
+GENERATED = re.compile(rb'<!-- generated from docs/records .*?<!-- end generated -->', re.S)   # records.GEN_BEGIN .. GEN_END
+
+
 def lf_size(f):
-    """Bytes as committed (LF): an autocrlf checkout on Windows adds one per line and failed 18 budgets."""
-    return len(open(f, 'rb').read().replace(bytes([13, 10]), bytes([10])))
+    """Bytes as committed (LF): an autocrlf checkout on Windows adds one per line and failed 18 budgets.
+    Hand-written bytes only: a list `records views` writes grows a line with every game, and no one can condense it."""
+    return len(GENERATED.sub(b'', open(f, 'rb').read().replace(bytes([13, 10]), bytes([10]))))
 
 
 def main():

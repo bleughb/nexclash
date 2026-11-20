@@ -790,7 +790,7 @@ def sheet_figures(layout_path):
     """-> (layout, [(composite index, Figure, {pixel: (key, bit, code, default)})]). Whole figures: every
     pixel of each composite (not only the ones a unique painting sheet shows)."""
     from . import coloursheet as cs
-    lay = json.load(open(layout_path))
+    lay = cs.load_layout(layout_path)
     rgb16 = [tuple(c) for c in lay['palette']]
     base = lay.get('colours', {})
     pclear = bool(lay.get('paint_clear'))
@@ -1153,7 +1153,7 @@ def silhouette_changes(png, layout_path):
     """[(image n, group, pixels that left the figure, pixels added outside it)] for an edited sheet"""
     from PIL import Image
     from . import coloursheet as cs
-    lay = json.load(open(layout_path))
+    lay = cs.load_layout(layout_path)
     im = Image.open(png).convert('RGB')
     if list(im.size) != lay['size']:
         raise ValueError('sheet is %dx%d, expected %dx%d (keep the size)' % (tuple(im.size) + tuple(lay['size'])))
