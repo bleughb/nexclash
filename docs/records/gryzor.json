@@ -81,15 +81,15 @@
  "outputs": {
   "plain": {
    "file": "gryzor.nex",
-   "md5": "180adc9071309e8c9a5a10789040d3a1"
+   "md5": "23dcc64340b83477b1a289d1d01fd547"
   },
   "sprites": {
    "file": "gryzor_sprites.nex",
-   "md5": "444e3f9f018e01c056923ca6b622a811"
+   "md5": "f956832d10fa5592423bfaf563beaaf2"
   },
   "outline": {
    "file": "gryzor_sprites_outline.nex",
-   "md5": "c165f41f9cfbbda74a8b6ee85a80694f"
+   "md5": "33c0296d5b725560557e3ae52551df31"
   }
  },
  "repro": [],

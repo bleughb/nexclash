@@ -89,19 +89,19 @@
  "outputs": {
   "sprites": {
    "file": "page_pharaoh_sprites.nex",
-   "md5": "ad82fe2d63f623af54950d2c56d34a44"
+   "md5": "6763c47a878852bba0020412d170bcc7"
   },
   "loading": {
    "file": "page_pharaoh_sprites_loading.nex",
-   "md5": "430b6184b2397b0759db1b151984f339"
+   "md5": "75b7ae1bdb9038f610c39765283399d0"
   },
   "enhanced": {
    "file": "page_pharaoh_enhanced.nex",
-   "md5": "139bfcafd68061d939d1d2c51efdacc6"
+   "md5": "f9f705e610465dcc2f42c99f4de73763"
   },
   "enhanced_loading": {
    "file": "page_pharaoh_enhanced_loading.nex",
-   "md5": "3c710b98afbe12f66d1e6ff03f00285d"
+   "md5": "fb742cd5b18e72c6dda1a5a46e870642"
   }
  },
  "repro": [],

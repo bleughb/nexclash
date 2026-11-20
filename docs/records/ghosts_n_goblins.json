@@ -107,23 +107,23 @@
  "outputs": {
   "plain": {
    "file": "ghosts_n_goblins.nex",
-   "md5": "3d71dd0e63371c4cf06f919d46bc2315"
+   "md5": "61b31a77638e7c6393695f61473a518b"
   },
   "sprites": {
    "file": "ghosts_n_goblins_sprites.nex",
-   "md5": "9dc84645e18a79f7d70444c6b5b2a478"
+   "md5": "49b9383466196c36335b50943e6101b4"
   },
   "enhanced": {
    "file": "ghosts_n_goblins_enhanced.nex",
-   "md5": "6f9e19063f8585e6acf8f841c8e19c2a"
+   "md5": "fff9a32e8e4ab38f395550639c8af3b7"
   },
   "loading": {
    "file": "ghosts_n_goblins_sprites_loading.nex",
-   "md5": "58da1df5b30abc37a90f94984bd7619a"
+   "md5": "5f2bd47639ddecd8960998536be05f79"
   },
   "enhanced_loading": {
    "file": "ghosts_n_goblins_enhanced_loading.nex",
-   "md5": "d203e42526ea6f0b03ba32591e3e9a8a"
+   "md5": "d1627c16e3edf7f691f24d73614bf64f"
   }
  },
  "repro": [],

@@ -598,6 +598,64 @@ def write_nex(path, snap, banks):
     return len(out)
 
 
+AUTOMAP_OFF_AT = 0x1E00     # entry-bank offset of automap_off()'s code: 0xDE00, below the stub's stack (0xDFFE)
+
+
+def _automap_place(d):
+    """File offset of AUTOMAP_OFF_AT in a .nex's entry bank, or ValueError for a file too short for its header."""
+    from .nextboot import nex_screen_size
+    if len(d) < 512 or d[:4] != b'Next':
+        raise ValueError('not a .nex')
+    entry = d[139]
+    if entry >= 112 or not d[18 + entry]:
+        raise ValueError('entry bank %d is not in the file' % entry)
+    off = 512 + nex_screen_size(d[10]) + 16384 * sum(1 for b in BANK_FILE_ORDER[:BANK_FILE_ORDER.index(entry)] if d[18 + b])
+    if len(d) < off + 16384:
+        raise ValueError('the file ends before its entry bank %d' % entry)
+    return off + AUTOMAP_OFF_AT
+
+
+def automap_off_code(target):
+    """DI, NextReg $0A bit 4 off (DivMMC automap from core 3.01.10), JP target: 19 bytes."""
+    return b'\xF3' + read_nextreg(0x0A) + b'\xE6\xEF' + nextreg_a(0x0A) + b'\xC3' + w16(target)
+
+
+def automap_off(nex):
+    """A finished .nex -> the same .nex starting with DivMMC automap turned off.
+
+    NextZXOS and NEXLOAD leave automap on (NextReg $0A bit 4; they clear only $06 bit 4, its place up to core
+    3.01.05), so every IM 1 interrupt maps DivMMC over 0000-3FFF under the game (Bubbler on a Tang board,
+    2026-11-20). automap_off_code() goes at AUTOMAP_OFF_AT in the entry bank and the header's PC points at it,
+    so nothing of the build moves. Applied last, to every output (nexclash.py finish_outputs); idempotent.
+    Refuses a window that is not zero."""
+    d = bytearray(nex)
+    at, pc, here = _automap_place(d), d[14] | d[15] << 8, 0xC000 + AUTOMAP_OFF_AT
+    if pc == here:
+        if d[at:at + 17] != automap_off_code(0)[:17]:
+            raise ValueError('PC is 0x%04X but the automap code is not there' % here)
+        return bytes(d)
+    code = automap_off_code(pc)
+    if any(d[at:at + len(code)]):
+        raise ValueError('entry bank %d is not zero at 0x%04X: no room for the automap code' % (d[139], AUTOMAP_OFF_AT))
+    d[at:at + len(code)] = code
+    d[14:16] = w16(here)
+    return bytes(d)
+
+
+def automap_off_undo(nex):
+    """automap_off() taken back: the build as it was before (for proving a rebuild = automap_off(the old build))."""
+    d = bytearray(nex)
+    at, here = _automap_place(d), 0xC000 + AUTOMAP_OFF_AT
+    if (d[14] | d[15] << 8) != here:
+        return bytes(d)
+    code = d[at:at + 19]
+    if code[:17] != automap_off_code(0)[:17]:
+        raise ValueError('PC is 0x%04X but the automap code is not there' % here)
+    d[14:16] = code[17:19]
+    d[at:at + 19] = bytes(19)
+    return bytes(d)
+
+
 ALLOW_60HZ = False          # set by `nexclash.py ... --allow-60hz`: no build forces 50 Hz then
 
 
@@ -708,6 +766,10 @@ def main():
     dst = args.output or os.path.splitext(args.z80)[0] + '.nex'
     try:
         convert(args.z80, dst, args.tail, not args.allow_60hz)
+        with open(dst, 'rb') as f:
+            done = automap_off(f.read())
+        with open(dst, 'wb') as f:
+            f.write(done)
     except (ValueError, OSError) as e:
         sys.exit('Error: %s' % e)
 

@@ -51,11 +51,11 @@
  "outputs": {
   "plain": {
    "file": "commando.nex",
-   "md5": "a206f950c12f58a8e7f26b366f5a2480"
+   "md5": "509b4ad6c9ef57ea95dedc91f0830a48"
   },
   "sprites": {
    "file": "commando_sprites.nex",
-   "md5": "ff488056f4dd8e3c3f5f7c88a2b1946d"
+   "md5": "04b29c6403638def8f74c3971f70bd81"
   }
  },
  "repro": [],

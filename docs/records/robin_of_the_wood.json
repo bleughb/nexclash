@@ -70,23 +70,23 @@
  "outputs": {
   "plain": {
    "file": "robin_of_the_wood.nex",
-   "md5": "d6e8b01ea8b94970ef102afca79e611b"
+   "md5": "b87691eaca24f220ef10332e1b01f324"
   },
   "sprites_raw": {
    "file": "robin_of_the_wood_sprites_raw.nex",
-   "md5": "27f9ce7f210c00dae3a01b532a6a5669"
+   "md5": "ce479cac96bcb4274217d91b8e75a720"
   },
   "sprites": {
    "file": "robin_of_the_wood_sprites.nex",
-   "md5": "fcd321af900797294353a155bfaebfe0"
+   "md5": "ed53262082084a53d8119e1efac52265"
   },
   "enhanced_raw": {
    "file": "robin_of_the_wood_enhanced_raw.nex",
-   "md5": "0d0d7ee180ae921023738cae8e5967be"
+   "md5": "69e671e6d0d2b6f475beee82ce521b56"
   },
   "enhanced": {
    "file": "robin_of_the_wood_enhanced.nex",
-   "md5": "d2d4d23b5aded923839ce281bd2271f1"
+   "md5": "716dc4fc8136c3ad6eadad5441eafea6"
   }
  },
  "repro": [],

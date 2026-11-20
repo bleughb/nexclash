@@ -104,15 +104,15 @@
  "outputs": {
   "plain": {
    "file": "spellbound_magic_knight.nex",
-   "md5": "656c71c4b2ebb8318f3ad442d70b0ab9"
+   "md5": "a3a71c4bc642afb58842e368ebf64682"
   },
   "sprites": {
    "file": "spellbound_magic_knight_sprites.nex",
-   "md5": "b679ae970a270e89c80979b2eb618026"
+   "md5": "9e1cf675b59a4c1f555b0870d414818b"
   },
   "enhanced": {
    "file": "spellbound_magic_knight_enhanced.nex",
-   "md5": "33f251edab40d1ce2f223981409f2bbe"
+   "md5": "1fa636cdb0c2c2a1f36a2a29eb880b42"
   }
  },
  "repro": [],

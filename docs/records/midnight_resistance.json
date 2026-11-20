@@ -58,11 +58,11 @@
  "outputs": {
   "plain": {
    "file": "midnight_resistance.nex",
-   "md5": "17239acaaf67b0f8011478053e17829d"
+   "md5": "6d489652889fcfbadb7980c4fe92806e"
   },
   "sprites": {
    "file": "midnight_resistance_sprites.nex",
-   "md5": "081de91a8427dc4b141574c40ab171d7"
+   "md5": "f28fbbc0e861c5aebcfd47b9de583837"
   }
  },
  "repro": [],

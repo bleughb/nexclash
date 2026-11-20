@@ -118,23 +118,23 @@
  "outputs": {
   "plain": {
    "file": "arc_of_yesod.nex",
-   "md5": "9858d3f2cd71450c2efb01c116b1426b"
+   "md5": "cf3ad5b7ab250bd9e0400febd046990c"
   },
   "sprites": {
    "file": "arc_of_yesod_sprites.nex",
-   "md5": "97828809e85654dddb0b9e4e117ea718"
+   "md5": "93c1ac4a53c5d0db83b451ed53d727bb"
   },
   "enhanced": {
    "file": "arc_of_yesod_enhanced.nex",
-   "md5": "d183181a0b7fbd17df9cc638da942785"
+   "md5": "dcbc7fa189c093aa4d728f358546a9ba"
   },
   "sprites_loading": {
    "file": "arc_of_yesod_sprites_loading.nex",
-   "md5": "fda37475786a20fff92a72a5ba78496f"
+   "md5": "858ec5cda7dc2782664ed2247310589c"
   },
   "enhanced_loading": {
    "file": "arc_of_yesod_enhanced_loading.nex",
-   "md5": "49b7ac9d62940e8ff5868b91b5f78046"
+   "md5": "62b922d83ab47c6abf8f895c7a7af110"
   }
  },
  "repro": [],

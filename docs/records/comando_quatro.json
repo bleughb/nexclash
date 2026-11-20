@@ -79,11 +79,11 @@
  "outputs": {
   "sprites": {
    "file": "comando_quatro_sprites.nex",
-   "md5": "ffcd877f26f9092b6c2cc950bf06211b"
+   "md5": "4c043b47801164617477c423da9b9ff8"
   },
   "loading": {
    "file": "comando_quatro_sprites_loading.nex",
-   "md5": "66563d3ebc2c985f85cf4d4ee152f8fd"
+   "md5": "4d5b233a4e42580fd2993ea5089ab1ca"
   }
  },
  "repro": [],

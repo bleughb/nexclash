@@ -119,23 +119,23 @@
  "outputs": {
   "plain": {
    "file": "abu_simbel.nex",
-   "md5": "82c1349ae5d34e68a67a7aabc68e039f"
+   "md5": "1cb4729ad763c147625bec0a8ce6b14f"
   },
   "sprites": {
    "file": "abu_simbel_sprites.nex",
-   "md5": "c2dd86f174c55a4ae9155abb90689d8b"
+   "md5": "75ed5dbfa892de1188d51bfc9d53e3d6"
   },
   "enhanced": {
    "file": "abu_simbel_enhanced.nex",
-   "md5": "b45603707d1f71bb7704436dbe0c3169"
+   "md5": "8f8aec94d62cbcf37c7c2e10c803d79a"
   },
   "english": {
    "file": "abu_simbel_english.nex",
-   "md5": "2e3aa22510d9a925a5b0800aad3f26c9"
+   "md5": "0678b953370ede18d99a326a10b4ee5b"
   },
   "english_enhanced": {
    "file": "abu_simbel_english_enhanced.nex",
-   "md5": "053806e52684ce68b89a020a848e7196"
+   "md5": "1661e9c766c7284b6961623caf145ec5"
   }
  },
  "repro": [],

@@ -82,23 +82,23 @@
  "outputs": {
   "plain": {
    "file": "exolon.nex",
-   "md5": "53bccd7881712937941eb106c712af13"
+   "md5": "5f4cf8992995ef622cdd2d4422b32a89"
   },
   "sprites": {
    "file": "exolon_sprites.nex",
-   "md5": "d2852fd29607e124576dc0c08401c479"
+   "md5": "12d5e1d27aad98ce961d2f9703145471"
   },
   "enhanced": {
    "file": "exolon_enhanced.nex",
-   "md5": "992c5123f072aad8296c7c6a31a1e61a"
+   "md5": "2d15ad71bd55dd916f9a7b8afd6e5e09"
   },
   "loading": {
    "file": "exolon_sprites_loading.nex",
-   "md5": "f0eaf0f14d26f11e7649953d89624c5f"
+   "md5": "34e7926e29f814e4f23b469f4fef99e4"
   },
   "enhanced_loading": {
    "file": "exolon_enhanced_loading.nex",
-   "md5": "07b771fcd487d6d85a587c8be562ac68"
+   "md5": "728acef4bee079a65145ff37d8fccc27"
   }
  },
  "repro": [],

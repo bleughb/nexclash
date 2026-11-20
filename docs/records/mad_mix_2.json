@@ -92,19 +92,19 @@
  "outputs": {
   "sprites": {
    "file": "mad_mix_2_sprites.nex",
-   "md5": "d41ee5de8df6951d32d526ea7b333719"
+   "md5": "259a464a36cf4c68d385d6705d5b9ad0"
   },
   "loading": {
    "file": "mad_mix_2_sprites_loading.nex",
-   "md5": "ebbf27c83c27fe05eb0189ff1fdf797f"
+   "md5": "1c1d116585a067ecdaa89c3fc1a38762"
   },
   "enhanced": {
    "file": "mad_mix_2_enhanced.nex",
-   "md5": "4d8b106df29969ba368112a256fe696e"
+   "md5": "532c47182be034001b0e6398efb98352"
   },
   "enhanced_loading": {
    "file": "mad_mix_2_enhanced_loading.nex",
-   "md5": "5b402870cd95dc34e4bc98096c1cce39"
+   "md5": "edc192338a25df497455260c684ac46e"
   }
  },
  "repro": [],

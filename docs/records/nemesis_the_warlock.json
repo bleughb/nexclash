@@ -51,11 +51,11 @@
  "outputs": {
   "plain": {
    "file": "nemesis_the_warlock.nex",
-   "md5": "f1497589ddf479e34d42f6ab0618954d"
+   "md5": "d1f685c80642ca96b8f454b7171f34b8"
   },
   "sprites": {
    "file": "nemesis_the_warlock_sprites.nex",
-   "md5": "642fdf0707db7f6f78727e2335d2fd0e"
+   "md5": "9e20d8e7cf40ae4d654bdc59ba7111dd"
   }
  },
  "repro": [],

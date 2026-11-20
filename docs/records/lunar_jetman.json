@@ -88,23 +88,23 @@
  "outputs": {
   "plain": {
    "file": "lunar_jetman.nex",
-   "md5": "3e5ca3908616f76a33f864be57baef95"
+   "md5": "033e72dcbe37bb59d7e8041006b0e1bb"
   },
   "sprites": {
    "file": "lunar_jetman_sprites.nex",
-   "md5": "e5876b5442b0c50fb2b95bbf60a02229"
+   "md5": "9fade3f20c63e8ef3e3f47207df55877"
   },
   "sprites_loading": {
    "file": "lunar_jetman_sprites_loading.nex",
-   "md5": "2fdd4986d2aaf0675f3c0eb36fd0fa87"
+   "md5": "28f580cbdd2dcd33e0eb9c9846ffd116"
   },
   "enhanced": {
    "file": "lunar_jetman_enhanced.nex",
-   "md5": "999da186beccfa0179c602a179730ec9"
+   "md5": "6074adc6bd4790af80726a465e7410bb"
   },
   "enhanced_loading": {
    "file": "lunar_jetman_enhanced_loading.nex",
-   "md5": "b8062918bb7d3fd88a04cd280a07ef1f"
+   "md5": "15e141194a6788449ab1d9018bebd779"
   }
  },
  "repro": [],

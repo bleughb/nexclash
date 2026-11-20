@@ -76,11 +76,11 @@
  "outputs": {
   "plain": {
    "file": "sabre_wulf.nex",
-   "md5": "06fbcf5016f77b868b3d754f621974ab"
+   "md5": "774de1f0205a19b3cdd107203cdc73fe"
   },
   "sprites": {
    "file": "sabre_wulf_sprites.nex",
-   "md5": "332c9526cf6ab6b4adb5c1dc2d170969"
+   "md5": "70e9ea08a649c3b562b3ed9674d43016"
   }
  },
  "repro": [],

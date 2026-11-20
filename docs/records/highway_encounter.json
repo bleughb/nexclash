@@ -89,23 +89,23 @@
  "outputs": {
   "plain": {
    "file": "highway_encounter.nex",
-   "md5": "1feaa5fc5343f12583bcd6b44cec72d2"
+   "md5": "4f605db1f8aa398cdb857af572a06687"
   },
   "sprites": {
    "file": "highway_encounter_sprites.nex",
-   "md5": "8f518edd0cfbf151c67d533d05204176"
+   "md5": "0f217be33787446e8ec645802cb25b75"
   },
   "enhanced": {
    "file": "highway_encounter_enhanced.nex",
-   "md5": "fb75964a819f5fc7cf4366e7aef146ef"
+   "md5": "4438b924191a4385228a3bc7a15628ab"
   },
   "loading": {
    "file": "highway_encounter_sprites_loading.nex",
-   "md5": "90079ef9c24acc86a3060a90b972031c"
+   "md5": "b8dc556e720a634df900dd84f80efbea"
   },
   "enhanced_loading": {
    "file": "highway_encounter_enhanced_loading.nex",
-   "md5": "695d7e73d3375a8ac3b8ed7d6adecbb0"
+   "md5": "616304386346568401e80d206508d97f"
   }
  },
  "repro": [],

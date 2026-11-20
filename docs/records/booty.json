@@ -105,19 +105,19 @@
  "outputs": {
   "plain": {
    "file": "booty.nex",
-   "md5": "7a41de52c061b07ef73c951461f07445"
+   "md5": "91f8b0c6a627bb3f93aa3a06b6f6848a"
   },
   "loading": {
    "file": "booty_loading.nex",
-   "md5": "6393a6f9ee6f20cf760bb70421eb2d1e"
+   "md5": "5fa9ab15cd91d6041cc67521cd5cf6c5"
   },
   "enhanced": {
    "file": "booty_enhanced.nex",
-   "md5": "ebc40ec715755da8db720a1a1c0f8074"
+   "md5": "42f9a3e98e2aa5c2968e92a652c5227d"
   },
   "enhanced_loading": {
    "file": "booty_enhanced_loading.nex",
-   "md5": "8113662ce1469689d1effa77280b30d3"
+   "md5": "f0a38e93ba4b8abf1efb1be61cf43d68"
   }
  },
  "repro": [],

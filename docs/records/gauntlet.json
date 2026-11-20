@@ -59,15 +59,15 @@
  "outputs": {
   "plain": {
    "file": "gauntlet_p1.nex",
-   "md5": "ad2ec631091d589260bd6c20fe80e64f"
+   "md5": "822b70bcaa155f3d7736313951879298"
   },
   "sprites": {
    "file": "gauntlet_p1_sprites.nex",
-   "md5": "f33ade47e1f82694f2ed9b68885a04b0"
+   "md5": "9bb20e5d046a6e984d1de5d69eba13a1"
   },
   "steady": {
    "file": "gauntlet_p1_steady.nex",
-   "md5": "545fdeed1ffeabdc91d9363ae04dea32"
+   "md5": "2b717b26769f2b5cba09c74ffd9b514c"
   }
  },
  "repro": [],

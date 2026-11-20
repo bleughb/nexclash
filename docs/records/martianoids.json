@@ -68,15 +68,15 @@
  "outputs": {
   "plain": {
    "file": "martianoids.nex",
-   "md5": "d7216a9d7cdbed5b819026e7cd71e9d8"
+   "md5": "1c1204e84911a63e37d3b80d2b1d6832"
   },
   "sprites": {
    "file": "martianoids_sprites.nex",
-   "md5": "cb9e4e2542c5a36fed139e4c7114f673"
+   "md5": "a222a3dd8b632184998cdee9ed9b041c"
   },
   "enhanced": {
    "file": "martianoids_enhanced.nex",
-   "md5": "09b5741f14d9efc011808b10bb3ce52e"
+   "md5": "73e08730f0216e0a43133157c77abf57"
   }
  },
  "repro": [],
