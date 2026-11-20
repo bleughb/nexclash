@@ -1,16 +1,16 @@
 # Gauntlet (US Gold, 1986; 48K code, the 128K's AY)
 
 ## Next session
-Stage: 3 (verified and stamped from one snapshot; not delivered as a game)   State: 2026-11-19: plain, painted
-("sprites", with the panel) and steady-speed builds from a cut of the first level block in play; record stamped; both
-builds run in OverSpec; not on hardware; no .nxc published; with --tape the levels come from memory (not yet in the record)
-Inputs (private, pilot runs/gauntlet/reference_files/gauntlet): gauntlet_p1.z80 + gauntlet_p1.rzx (the record's:
-the rzxarchive's block 1 recording cut at frame 1501); gauntlet_b1, b2, b10 (the same archive's recordings from the
-"rewind tape" prompt); gauntlet_colours.json (the painted map); 28 more block recordings in the run folder
-Branch: add-gauntlet    Commit: this one    Checks: selftest --game gauntlet --verify --stamp, doccheck
-Pending user answers: "Open" 1-3
-Start with: "Open" 1 (the tape's level blocks from memory)
-Read: "Build", "Panel", "Open"
+Stage: 3 (verified, stamped, published as an .nxc for the tape)   State: 2026-11-19: the whole game from both sides of
+the tape, starting at the title picture (record `gauntlet_tape`); the main game's hooks proven from a cut of level block 1
+in play (record `gauntlet`); all four heroes and the panel painted; a steady-speed toggle; runs in OverSpec; not on hardware
+Inputs (private, pilot runs/gauntlet/reference_files/gauntlet): gauntlet_start.z80 + .rzx (the archive's Main Title
+recording cut at frame 72) and the US Gold tape's two sides; gauntlet_p1.z80 + .rzx; gauntlet_b1, b2, b10;
+gauntlet_colours.json (the painted map); 28 more block recordings in the run folder
+Branch: add-gauntlet    Commit: this one    Checks: selftest --game gauntlet / gauntlet_tape --verify --stamp, doccheck
+Pending user answers: "Open" 2-4
+Start with: "Open" 1 (the shots), or the owner's review
+Read: "Build", "The whole game from the tape", "Open"
 
 ## Result (2026-11-19)
 Techniques: `patch.hybrid-display-replacement`, `patch.pace-limiter`, `patch.preserve-r`, `patch.restore-speed`
@@ -93,6 +93,28 @@ Nothing of the game changes; the Next's tile layer shows a painted tile over eac
   player 2 = valkyrie, Sinclair joystick keys); the valkyrie, wizard and elf, the thrown weapons and player 1's logo
   are not painted (no archive recording shows them).
 
+## The whole game from the tape (2026-11-19; owner: "Yes go ahead")
+- Side A: a BASIC loader, the front end (flag 0x80, 21,008 bytes at 0x8600: title, credits, the heroes' screen, the
+  controls menu), then flag 0x81 (2,881 bytes at 0x73DA) and flag 0x82, the main game (30,583 bytes at 0x8400). The
+  tape's loader (0xFF00) calls the front end, then loads the two blocks and jumps to 0x8400. The front end leaves the
+  choices at 0xFFFB-0xFFFF (controls, player 2's hero at 0xFFFE, player 1's at 0xFFFF); the main game's start builds
+  each player's 32 pictures (33 bytes each: attribute, 16 x 16) at 0x5F00 and 0x6320 from them.
+- A build from the front end's snapshot with both sides (`--tape SIDE_A --tape SIDE_B`): the two blocks sit in pages
+  from 52, the main game's with this build's CALLs already in it; `e_main` (the loader's instruction after the front
+  end returns, 0xFF12) copies both and jumps. The loader's stack is in slot 2, so the hook uses none.
+- The start: the archive's Main Title recording, cut at frame 72: its "stop tape and press space" is answered and the
+  title picture is on the screen. The setup puts the printer buffer back (the loader's stack is there).
+- Proof: the front end's recording runs the tape's own code (IDENTICAL, 2,153 frames). The hand-over is a unit case
+  from the snapshot (both blocks where the loader puts them, the main game the tape's but for the build's sites,
+  nothing else written) with one broken build. No recording crosses the hand-over or a level change.
+- The cell table has a fourth page at 0xE000 during a tile pass (1,999 cells; a hook has its own stack and interrupts
+  are off, so the game's stack page can be away).
+- The other heroes: the valkyrie, the wizard and the elf (32 pictures each, taken from the game's own tables after its
+  start with each choice) and the panel's cells for them are painted (377 cells added; 15 palette lines).
+- .nxc: made by the nxc repository's tool against the tape set (`make ... --also SIDE_B --start gauntlet_start.z80
+  --tape-bank 20..28`): the main game and the level blocks are copies from the player's tape, none of them carried;
+  it rebuilds both builds byte for byte. "Steady speed" is a toggle, off by default.
+
 ## Painting (2026-11-19, first pass)
 - Sheet of 716 pictures (607 tiles with their colour schemes, 109 generator pieces) painted by a Codex pass after the
   arcade game (58 colours, 9 palette lines); the owner's painting folder `nexclash-gauntlet`; `sheet2colours.py` makes
@@ -103,16 +125,15 @@ Nothing of the game changes; the Next's tile layer shows a painted tile over eac
 Not built for hardware yet (the level blocks first).
 
 ## Open
-1. The tape: a build starts in its block's levels and then asks for the tape. One program needs the 31 blocks in
-   memory and the loader call answered from them. Owner's decision how to ship meanwhile.
-2. Steady speed: 3 frames an update is the original's fastest; the owner has not tried it. The option's place in the
-   .nxc menu is not made (`auto` writes NAME_steady.nex beside the others).
-3. The painted map holds the game's pictures: where it lives for a public patch.
-4. The floor (blank cells) is left black; the panel and all text stay as they are.
-5. The tile layer is written before the copies: for part of a frame the tiles are one update ahead of the screen
-   under them (cells that are not painted). A definition slot can be reused while its old tile is still on the map
-   for part of a pass. Neither seen in OverSpec in a short run; not looked for on hardware.
-6. 28 block recordings not yet run; the reference files are not in the maintainers' reference set.
+1. Shots: the heroes' and monsters' shots are drawn at pixel positions (not by the block plotters), so their cells are
+   endless in number and stay unpainted: Spectrum colours, a block of the wall's colours where one crosses a wall.
+   Sprites for the shots would fix it; the owner decides.
+2. Steady speed: 3 frames an update is the original's fastest; the owner has not tried it.
+3. The painted map holds the game's pictures: where it lives for a public patch (the .nxc carries the painted pages).
+4. The owner has not reviewed the painting (tiles, panel, the three later heroes) in play.
+5. The high score tables and name entry keep their Spectrum colours (text cells are not painted).
+6. Kixx and Erbe tapes hold the same blocks (profile `tape_sets`); the .nxc accepts the US Gold set only so far.
+7. Nothing has run on a board; no recording crosses the hand-over or a level change.
 
 ## Decisions
 - 2026-11-19 (owner): "Go ahead with you recommendation": everything painted, on the tile layer.
@@ -129,6 +150,14 @@ Not built for hardware yet (the level blocks first).
   here, because the attribute already picks the chain.
 - [local: this game's intake] The archive's block snapshots are taken at the "rewind tape" prompt; a build that starts
   in play needs the recording cut at a frame where the game waits at its HALT.
+
+- [local: this game's tape] A multiload's blocks and a front end's hand-over need no recording across them to prove the
+  bytes: one recording that holds a real tape load fixes the layout, and the rest compare with the tape file itself.
+- [local: this game's colours] Pictures no recording shows can be taken from the game's own tables once its start is
+  understood (the heroes), but anything drawn at pixel positions (shots) has no finite set of cells: decide that at
+  the design stage, not after the painting.
+- [local: this game's start] A front end's snapshot can open on a tape prompt: cut the recording past it and the build
+  opens on the title, with the cut's recording still proving the rest.
 
 ## Friction
 - reuse: [local: this game's module] the Simpsons engine's hook runner and report shape (that branch is not merged).
