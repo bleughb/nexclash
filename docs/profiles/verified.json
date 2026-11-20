@@ -510,6 +510,14 @@
     "loading": "a326db4db051bdb12a61c959891186e1"
    }
   },
+  "6515eb52c5216370de6f1ef2bbcaad4c": {
+   "game": "Pssst",
+   "doc": "pssst.md",
+   "nex": {
+    "plain": "db271c07425ad2866b9e9e13d15f1beb",
+    "sprites": "76ef88e9ca9c2776fb2ce0da83fdaebb"
+   }
+  },
   "1ff279754d0730e503816199ac6976f3": {
    "game": "Pyjamarama",
    "doc": "pyjamarama.md",
