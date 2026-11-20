@@ -115,7 +115,7 @@ as the original's over a minute of play. Enhanced: the same with the painted col
   the routine draws a figure a line lower from y = 169 (it starts at the screen's first line), a wipe runs with
   interrupts on at the title, one pose of Olli is drawn through its own CALL and never again, and a later room's data
   sits where the first 15,000 frames touched nothing (the start-up tail was put there). Whole recordings before the
-  record, and a tail address from every recording, not from the survey's first minutes.
+  record, and a tail address from every recording, not from the first minutes looked at.
 - [local: this game's hooks] A hook at a site where interrupts can be on must not map the state page over the ROM's
   handler before DI: the wipe's hook takes the caller's interrupt state first (hlib_iff) and writes four bytes under
   the game's stack pointer to do it; the verifier allows exactly those.
