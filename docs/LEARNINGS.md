@@ -201,7 +201,8 @@ BRIEFING - with its reason.
   0x3Dxx. The stub clears NextReg $06 bit 4, which switched automap off only up to core 3.01.05;
   from 3.01.10 that bit is the DRIVE-button NMI alone, the automap enable is $0A bit 4, and $BB bit
   7 (on at reset) automaps on any fetch at $3Dxx while ROM3 is selected (official core nextreg.txt,
-  core 3.02.05; NEXT_REGISTERS $06 / $0A / $B8-$BB). Not confirmed on a board (BRIEFING A1, C2 #24).
+  core 3.02.05; NEXT_REGISTERS $06 / $0A / $B8-$BB). Automap on: confirmed (Bubbler, board,
+  2026-11-20); the 0x3Dxx trap: not; z80tonex.automap_off.
   Invisible to the simulator; `auto` checks it statically and per instruction (Commando).
 - Flicker: never hide a figure's sprites at plot entry and show them at exit (hidden for the
   whole call, often across the beam). Keep them visible, build the new image in OTHER pattern

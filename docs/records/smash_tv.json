@@ -51,11 +51,11 @@
  "outputs": {
   "plain": {
    "file": "smash_tv.nex",
-   "md5": "c72ea298486b14036ac1a87ac89c3f0e"
+   "md5": "68b2f357221f36338d7ec704b15560b4"
   },
   "sprites": {
    "file": "smash_tv_sprites.nex",
-   "md5": "5987c29243f026022415bbfe965f7f56"
+   "md5": "af7a59f22315e03299bda91758fbe20e"
   }
  },
  "repro": [],

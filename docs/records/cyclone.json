@@ -83,11 +83,11 @@
  "outputs": {
   "plain": {
    "file": "cyclone.nex",
-   "md5": "390516396ca4d385c94b7f7bd2315d31"
+   "md5": "0497202d81162430984beb99d2903794"
   },
   "sprites": {
    "file": "cyclone_sprites.nex",
-   "md5": "49fb6d39732f4e77c69e5dabfe88ad58"
+   "md5": "75110dbddf06df41baad6f8d3ca81905"
   }
  },
  "repro": [],

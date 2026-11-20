@@ -1552,14 +1552,16 @@ RECOLOUR = {'game': RECORD, 'output': 'sprites', 'colours': COLOURS,
 def recolour(nex, cmap):
     import hashlib
     from .recolour import banks, splice
-    parts = banks(nex)
+    from .z80tonex import automap_off_undo
+    verified = automap_off_undo(nex)              # the invariants are of the build before z80tonex.automap_off
+    parts = banks(verified)
     prof = load_profile()
     expected = prof.get('recolour_invariants')
     if not expected:
         raise ValueError('recolour invariants have not been recorded for this build')
     if sorted(parts) != expected['banks']:
         raise ValueError('unexpected bank set')
-    if hashlib.sha256(nex[:512]).hexdigest() != expected['header']:
+    if hashlib.sha256(verified[:512]).hexdigest() != expected['header']:
         raise ValueError('unexpected NEX header')
     for b, digest in expected['code'].items():
         if hashlib.sha256(parts[int(b)]).hexdigest() != digest:

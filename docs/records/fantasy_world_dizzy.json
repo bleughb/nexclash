@@ -63,18 +63,18 @@
  "outputs": {
   "plain": {
    "file": "fantasy_world_dizzy.nex",
-   "md5": "cd620010e2f61af0002e76718945716f"
+   "md5": "1f0c272a669c8d557f8ee21d8d7a93b9"
   },
   "sprites": {
    "file": "fantasy_world_dizzy_sprites.nex",
-   "md5": "fb77af62c5ce975802c354dd8b1943ee"
+   "md5": "b2a71f068efd6bde61438dcc97d7eef3"
   }
  },
  "repro": [
   {
    "strategy": "printer",
    "file": "fantasy_world_dizzy_sprites.nex",
-   "md5": "c09213beaec1572c0228985dae89bd77"
+   "md5": "87c36b1095ae69b9f8a414234c66a404"
   }
  ],
  "pin": {
@@ -213,11 +213,11 @@
    "outputs": {
     "plain": {
      "file": "Dizzy 3 - Fantasy World Dizzy (1989)(Code Masters)(128K)[a2][a2].nex",
-     "md5": "9efc6a2062c141acda244b44909137b7"
+     "md5": "5c664b76785e20e2d52851aa17da064e"
     },
     "sprites": {
      "file": "Dizzy 3 - Fantasy World Dizzy (1989)(Code Masters)(128K)[a2][a2]_sprites.nex",
-     "md5": "4dc1f8c667e5a0baaae63ed24c2b175a"
+     "md5": "79a0be10cdf3335ed0c550bd9eeeb58e"
     }
    },
    "proof": "3 recordings of the 128K release IDENTICAL on rework v128 (bot walks of 12,010 / 12,007 / 12,004 frames: the dungeon, the troll's dialogue, deaths in the fire, a game over and restart, the inventory, the Smuggler's Hideout): 5,983 plots pixel-perfect, 5,935 erases, 12,122 ISR hide checks (104 on the hide path), 100 room wipes and 96 boxes hiding Dizzy, equal to the original's; the game never touches the tail and latch in the printer buffer nor the alt ROM hook bytes; 4 negative controls detected; clock matrix 5 hook sites x 4 incoming clocks = 20 cases PASS, a forced 3.5 MHz exit detected; ROM paths: every ROM byte as recorded; start-up tail never read before written",

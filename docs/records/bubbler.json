@@ -73,15 +73,15 @@
  "outputs": {
   "plain": {
    "file": "bubbler.nex",
-   "md5": "deb79b213eb0d9c11a4e05607a87a3ef"
+   "md5": "bbd7dda43b96377795776c8e6cdf52fd"
   },
   "sprites": {
    "file": "bubbler_sprites.nex",
-   "md5": "82d178a4d92771e42a9d558a5e2b4940"
+   "md5": "1a4bcd4eaeabd335559e2db20d060452"
   },
   "enhanced": {
    "file": "bubbler_enhanced.nex",
-   "md5": "7236f0945f5944dea62f6ddb2280cb9e"
+   "md5": "e6446eefaf257e403e8ab7f47e9d88f8"
   }
  },
  "repro": [],

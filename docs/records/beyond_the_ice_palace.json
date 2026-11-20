@@ -81,11 +81,11 @@
  "outputs": {
   "sprites": {
    "file": "beyond_the_ice_palace_sprites.nex",
-   "md5": "da668eb8e6bd5e6ab2b90cf9a103459d"
+   "md5": "54f755bd59ee680e5ed4c7f6060ba177"
   },
   "sprites_loading": {
    "file": "beyond_the_ice_palace_sprites_loading.nex",
-   "md5": "d53ac5f52471b674354caf96cd94221e"
+   "md5": "5b05d5236cac7e451d9a6f59bbc2f609"
   }
  },
  "repro": [],

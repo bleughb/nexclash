@@ -106,15 +106,15 @@
  "outputs": {
   "plain": {
    "file": "starquake.nex",
-   "md5": "f447d9b3d937837d2427e021002a9648"
+   "md5": "85ae15cc51b64c370489185dde3ab48a"
   },
   "sprites": {
    "file": "starquake_sprites.nex",
-   "md5": "64b15a7b8477ae97c5807a660e00b1a6"
+   "md5": "a6033f392f2164eaa8219dc5b4208909"
   },
   "loading": {
    "file": "starquake_sprites_loading.nex",
-   "md5": "4c5ce962f813849d9ff360077266367f"
+   "md5": "ab0ed1b4fa860c10747d950d0ade1756"
   }
  },
  "repro": [],

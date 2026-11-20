@@ -55,11 +55,11 @@
  "outputs": {
   "plain": {
    "file": "treasure_island_title.nex",
-   "md5": "70890aba7d821fba8a41e63636eb58be"
+   "md5": "cc8fcb90942d294d66d33c0b836f24c1"
   },
   "sprites": {
    "file": "treasure_island_title_sprites.nex",
-   "md5": "85e054fe4bce8e4b3a8e336aac432f58"
+   "md5": "1401e0c45cc0e8f3c45a1077a05ce9ce"
   }
  },
  "repro": [],

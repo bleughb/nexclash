@@ -99,23 +99,23 @@
  "outputs": {
   "plain": {
    "file": "movie.nex",
-   "md5": "ad4b36c8ec0c71229377215aad817e23"
+   "md5": "c5c6775ae89e87942fc6e916647af212"
   },
   "sprites": {
    "file": "movie_sprites.nex",
-   "md5": "0ee50a9cc7dbeb0ec7c6bf1097e2a2f9"
+   "md5": "ca40e11410641189f5dcbd190bb5a2a4"
   },
   "enhanced": {
    "file": "movie_enhanced.nex",
-   "md5": "393cfa98ccce45834f046835bb968ee3"
+   "md5": "85639bf0956d54bde4e764fadc1063a3"
   },
   "loading": {
    "file": "movie_sprites_loading.nex",
-   "md5": "86c3518beb5d98091dec067e86ec1187"
+   "md5": "efb645298dd12a25a6ba6f320e7ff902"
   },
   "enhanced_loading": {
    "file": "movie_enhanced_loading.nex",
-   "md5": "4cff090a7fdaafe490b94d273baff0df"
+   "md5": "58ba78940b60c9e23cda63dbbda136fb"
   }
  },
  "repro": [],

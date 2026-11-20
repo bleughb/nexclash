@@ -82,11 +82,11 @@
  "outputs": {
   "plain": {
    "file": "solomons_key.nex",
-   "md5": "3ad529e40439ad0ee5fbbb67f66d9170"
+   "md5": "c537a1c7dc6223a42b9e9d015971db36"
   },
   "sprites": {
    "file": "solomons_key_sprites.nex",
-   "md5": "80e83ae3cab8adf6e58085261517a80f"
+   "md5": "e01332fe4eda912929e7535a132e9968"
   }
  },
  "repro": [],

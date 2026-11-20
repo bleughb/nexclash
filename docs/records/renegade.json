@@ -76,15 +76,15 @@
  "outputs": {
   "plain": {
    "file": "renegade.nex",
-   "md5": "62a06036dec229a7d19821df2cca6a04"
+   "md5": "59c50d991f292728f95a59170196959c"
   },
   "sprites": {
    "file": "renegade_sprites.nex",
-   "md5": "b4b452100f88d54415f3f5f11568c454"
+   "md5": "10070d06abbc98f25160b119e2f9cc80"
   },
   "enhanced": {
    "file": "renegade_enhanced.nex",
-   "md5": "9ed0c98b03279f04ca18d6cae8fd8387"
+   "md5": "f3e21c37794b7774879ffa191b5f3cc7"
   }
  },
  "repro": [],

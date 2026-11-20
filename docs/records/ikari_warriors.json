@@ -96,15 +96,15 @@
  "outputs": {
   "plain": {
    "file": "ikari_warriors.nex",
-   "md5": "2d56c304bcb21619d8402d64804fef75"
+   "md5": "ac6de2c937b824f92167616d3aad6960"
   },
   "sprites": {
    "file": "ikari_warriors_sprites.nex",
-   "md5": "8777f2c4c54afb99640dfe638d735ec2"
+   "md5": "3a063dfb187e60010525ea2528dd0985"
   },
   "enhanced": {
    "file": "ikari_warriors_enhanced.nex",
-   "md5": "82ada11a56d58fadb18be5fc23c0c0eb"
+   "md5": "def27c350118aaee48b4216a3418d6da"
   }
  },
  "repro": [],

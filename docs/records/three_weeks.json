@@ -147,15 +147,15 @@
  "outputs": {
   "plain": {
    "file": "three_weeks_128.nex",
-   "md5": "1a6f1bbe0abfbcfbb5712ad4f4700e95"
+   "md5": "40e4041f450f383f993cb1b230d403f2"
   },
   "sprites": {
    "file": "three_weeks_128_sprites.nex",
-   "md5": "468b17528c4c1659a2087bbe2d8cc8d1"
+   "md5": "5b88f445504109556daa668a084ae07e"
   },
   "enhanced": {
    "file": "three_weeks_128_enhanced.nex",
-   "md5": "b38d048f254302fe942eb2ac58bbf463"
+   "md5": "be261a89bf4680280bafd5dfe0d45f54"
   }
  },
  "repro": [],

@@ -51,11 +51,11 @@
  "outputs": {
   "plain": {
    "file": "chuckie_egg.nex",
-   "md5": "ec0df71e70fae35836eaed521f300777"
+   "md5": "daa588edf9cd3a913689da0439f32081"
   },
   "sprites": {
    "file": "chuckie_egg_sprites.nex",
-   "md5": "1c31643371ea36f10175af308d6d01a3"
+   "md5": "dcd7f744a73eb59e7ce3236b57c8cef9"
   }
  },
  "repro": [],

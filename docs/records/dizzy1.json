@@ -84,11 +84,11 @@
  "outputs": {
   "plain": {
    "file": "dizzy1.nex",
-   "md5": "7892b2e0f1f3f9f19165516db307cbe0"
+   "md5": "7714c95e4d1c43d37f7b7e292770274a"
   },
   "sprites": {
    "file": "dizzy1_sprites.nex",
-   "md5": "ead92ef747096582da450f162d78e545"
+   "md5": "47212772fe612ea0c9c5b14e51c73c60"
   }
  },
  "repro": [],
@@ -154,23 +154,23 @@
    "outputs": {
     "plain": {
      "file": "dizzy1.nex",
-     "md5": "7892b2e0f1f3f9f19165516db307cbe0"
+     "md5": "7714c95e4d1c43d37f7b7e292770274a"
     },
     "sprites": {
      "file": "dizzy1_sprites.nex",
-     "md5": "ead92ef747096582da450f162d78e545"
+     "md5": "47212772fe612ea0c9c5b14e51c73c60"
     },
     "enhanced": {
      "file": "dizzy1_enhanced.nex",
-     "md5": "1e2853767d0f90cc243352641b1b2df9"
+     "md5": "f03d22a20253422a8ac4d6bb5d6a5716"
     },
     "sprites_loading": {
      "file": "dizzy1_sprites_loading.nex",
-     "md5": "9b793fa3e0e709b154f75e687d1ae4c4"
+     "md5": "2e2c79aa005f513ea36b26f030def0cc"
     },
     "enhanced_loading": {
      "file": "dizzy1_enhanced_loading.nex",
-     "md5": "b8a8e84e13636c42d732256d34f7afaf"
+     "md5": "c75460c6259a91704898043ee6f02c07"
     }
    },
    "proof": "Enhanced colours: Jao Paulo (Spec256). Approved colour map; original executable code unchanged.",

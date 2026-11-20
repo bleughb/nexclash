@@ -125,19 +125,19 @@
  "outputs": {
   "plain": {
    "file": "silkworm.nex",
-   "md5": "36a148b54bce181c39c94899f7809c20"
+   "md5": "ebfedb75fe5d04df236e3e28bb0d58c2"
   },
   "loading": {
    "file": "silkworm_loading.nex",
-   "md5": "6ae12fd66946724d9ef6c1e089a6b163"
+   "md5": "696d4c1811af50f822fdcbd0080602cb"
   },
   "enhanced": {
    "file": "silkworm_enhanced.nex",
-   "md5": "d5d3a92cce49d1f4d855f3d98ee7f41b"
+   "md5": "39489b1b91cc147325a08682e1727e6d"
   },
   "enhanced_loading": {
    "file": "silkworm_enhanced_loading.nex",
-   "md5": "2058f2e55464eeb68f418320548fb34a"
+   "md5": "10956537b3e843f11dc911a6f09d6676"
   }
  },
  "repro": [],

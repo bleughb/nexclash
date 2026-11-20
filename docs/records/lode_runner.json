@@ -65,11 +65,11 @@
  "outputs": {
   "plain": {
    "file": "lode_runner.nex",
-   "md5": "cd0c1659c8569b2fa80da74962af90d2"
+   "md5": "96b073771a9f712f37f3ff97f2dafb44"
   },
   "sprites": {
    "file": "lode_runner_sprites.nex",
-   "md5": "85fe6afd593679bf59c787230ba0eaca"
+   "md5": "49a1719bdf70d5db3da4eaf4c0d66b34"
   }
  },
  "repro": [],
@@ -218,11 +218,11 @@
    "outputs": {
     "plain": {
      "file": "Lode Runner (1984)(Software Projects)(128K).nex",
-     "md5": "1fa81bc6ff196c42b9ce87b527cd57fa"
+     "md5": "f975420c13193b7072c956727e2ef095"
     },
     "sprites": {
      "file": "Lode Runner (1984)(Software Projects)(128K)_sprites.nex",
-     "md5": "1af2241781abac9709cd6c896d05fb91"
+     "md5": "af35631d927bd57a4c56b0481a8b403b"
     }
    },
    "rom_paths_known": [
@@ -324,31 +324,31 @@
    "outputs": {
     "plain": {
      "file": "Lode Runner (1984)(Software Projects)(128K).nex",
-     "md5": "1fa81bc6ff196c42b9ce87b527cd57fa"
+     "md5": "f975420c13193b7072c956727e2ef095"
     },
     "sprites": {
      "file": "Lode Runner (1984)(Software Projects)(128K)_sprites.nex",
-     "md5": "e5180af704aa5c5c7dc419a5497f0acb"
+     "md5": "3cfe2f6b551ccbf12f65ca94bf713324"
     },
     "sprites_loading": {
      "file": "Lode Runner (1984)(Software Projects)(128K)_sprites_loading.nex",
-     "md5": "bea5397e2ef5cead5cb68d64b1956996"
+     "md5": "6026c4a4d48ec1712daad9007ae115f9"
     },
     "enhanced": {
      "file": "Lode Runner (1984)(Software Projects)(128K)_enhanced.nex",
-     "md5": "9644995b7a45560412e5ba3d911294e5"
+     "md5": "a974be3ab2bf0450e5963595c945f15b"
     },
     "enhanced_loading": {
      "file": "Lode Runner (1984)(Software Projects)(128K)_enhanced_loading.nex",
-     "md5": "d8b8c394eef4217dea0aa7c2ede5344f"
+     "md5": "c09322b3f187c4b07ed62387a589c60d"
     },
     "backdrop": {
      "file": "Lode Runner (1984)(Software Projects)(128K)_backdrop.nex",
-     "md5": "94b2b4e4ee75344d77b4d5b49df8c50a"
+     "md5": "761b5427ce99abcc00057cf40588051a"
     },
     "backdrop_loading": {
      "file": "Lode Runner (1984)(Software Projects)(128K)_backdrop_loading.nex",
-     "md5": "0efcb2c3cd421c7945a98cbe3942ca91"
+     "md5": "11fc2fc4b05eb3e39b2ea5ebb8cec1d5"
     }
    },
    "rom_paths_known": [

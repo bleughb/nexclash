@@ -92,19 +92,19 @@
  "outputs": {
   "sprites": {
    "file": "phantis1_sprites.nex",
-   "md5": "068e1f366ea5ddf1e3d075b732bd0a7f"
+   "md5": "9bc7be780ee378c9d42bbd18f5e8829a"
   },
   "loading": {
    "file": "phantis1_sprites_loading.nex",
-   "md5": "1190d208ea139653a44f7d2b91f93dff"
+   "md5": "f54f7969be2f6aa68930dc165cbfb27a"
   },
   "enhanced": {
    "file": "phantis1_enhanced.nex",
-   "md5": "76b119c060a1075b471ee91dbf4d3cb1"
+   "md5": "7b754be4bb97a99bff3429839c526853"
   },
   "enhanced_loading": {
    "file": "phantis1_enhanced_loading.nex",
-   "md5": "ae7246977be6fbc8df934346d5c4f457"
+   "md5": "873aa581572cd978c3ac7a6fb4947952"
   }
  },
  "repro": [],

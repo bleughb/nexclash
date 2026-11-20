@@ -73,11 +73,11 @@
  "outputs": {
   "plain": {
    "file": "cobra.nex",
-   "md5": "2ec883ba2f88ef4fcda0623c2b985777"
+   "md5": "bcc8a3e0a4829dba251d0aabbbb96ecb"
   },
   "sprites": {
    "file": "cobra_sprites.nex",
-   "md5": "82b05dafa0ec1049141db188840d775a"
+   "md5": "d5096a93c4052f2737bcc535af48209d"
   }
  },
  "repro": [],

@@ -70,11 +70,11 @@
  "outputs": {
   "plain": {
    "file": "Cauldron_1985_Palace_Software_a.nex",
-   "md5": "b5b211f1fc6103ec0d42711dcc29cd0d"
+   "md5": "b2de3ca3afe037e39e95d3050cb2d197"
   },
   "sprites": {
    "file": "Cauldron_1985_Palace_Software_a_sprites.nex",
-   "md5": "43c1ca492d7c1cc68541f02aaed9cb4c"
+   "md5": "5e9065eff473ed7c7868b9ce6d12c389"
   }
  },
  "repro": [],
@@ -535,11 +535,11 @@
    "outputs": {
     "plain": {
      "file": "Cauldron (1985)(Palace).nex",
-     "md5": "b5b211f1fc6103ec0d42711dcc29cd0d"
+     "md5": "b2de3ca3afe037e39e95d3050cb2d197"
     },
     "sprites": {
      "file": "Cauldron (1985)(Palace)_sprites.nex",
-     "md5": "08ddd6393354a3c5ee46344a272c4d86"
+     "md5": "763b71242632d9234c1347d11876e5d9"
     }
    },
    "rom_paths_known": [

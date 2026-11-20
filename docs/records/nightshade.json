@@ -80,15 +80,15 @@
  "outputs": {
   "plain": {
    "file": "nightshade.nex",
-   "md5": "e4d954de899563af241cb8db84114654"
+   "md5": "c2555ad8f43e1ebda5f07094a48bd041"
   },
   "sprites": {
    "file": "nightshade_sprites.nex",
-   "md5": "8dd3f1931a5d307128b2284c8577898c"
+   "md5": "37a5c792172120f2c5f5406e476e83bf"
   },
   "enhanced": {
    "file": "nightshade_enhanced.nex",
-   "md5": "666e680d91856edc892b21055ea899ab"
+   "md5": "a09286f6c193f4f911a87a2a2317ebb8"
   }
  },
  "repro": [],

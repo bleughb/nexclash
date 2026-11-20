@@ -62,11 +62,11 @@
  "outputs": {
   "plain": {
    "file": "target_renegade.nex",
-   "md5": "a0be8dc03a1be8c6d67dc3e0229abc35"
+   "md5": "452e75d8ba20171f9a4a3dc6f7b451d6"
   },
   "sprites": {
    "file": "target_renegade_sprites.nex",
-   "md5": "8e5f8f0be205aade316106a6db7d4aac"
+   "md5": "d8e3e19f2d92cad896b4931fa0c9162a"
   }
  },
  "repro": [],
@@ -201,11 +201,11 @@
    "outputs": {
     "speed": {
      "file": "target_renegade_speed.nex",
-     "md5": "7583c8643c7ae82737665d4f73980fc8"
+     "md5": "12ab14c77d80c110ecd113abbd4ac572"
     },
     "enhanced": {
      "file": "target_renegade_enhanced.nex",
-     "md5": "52ab63f4d9cbb5af83855edba398ba29"
+     "md5": "1da0bff51cc138f07f1037c13f3d1b74"
     }
    },
    "proof": "the published v1.2 bare builds (nxc.py --bare, default and Enhanced) byte for byte; target_renegade.rzx IDENTICAL for both sets, the speed set also with every hook entered at 28 MHz (each gives back the speed it found)",

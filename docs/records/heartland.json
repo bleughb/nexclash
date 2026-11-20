@@ -88,15 +88,15 @@
  "outputs": {
   "plain": {
    "file": "heartland.nex",
-   "md5": "33283547fc7036cdefdf982190c75b73"
+   "md5": "62ee38aed9832c67c07dd3b4e088db2e"
   },
   "sprites": {
    "file": "heartland_sprites.nex",
-   "md5": "df3bed3c7278092941de2abfdeadfd21"
+   "md5": "8ffaeb05bd51a15ec871a5c99c4df7d7"
   },
   "enhanced": {
    "file": "heartland_enhanced.nex",
-   "md5": "6497de71a5bb55eed58957cc65426518"
+   "md5": "c51b0e80e16ece6b7902f7e36c4bea9e"
   }
  },
  "repro": [],

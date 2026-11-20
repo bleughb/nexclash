@@ -91,11 +91,11 @@
  "outputs": {
   "sprites": {
    "file": "phantis2_sprites.nex",
-   "md5": "9b080e196f34a34ef89077e83c3acf96"
+   "md5": "684bdadd06394e0409a3ae347335f7e2"
   },
   "loading": {
    "file": "phantis2_sprites_loading.nex",
-   "md5": "a326db4db051bdb12a61c959891186e1"
+   "md5": "fc07a3048883981f6f620730285ee4b6"
   }
  },
  "repro": [],

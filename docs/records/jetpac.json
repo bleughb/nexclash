@@ -54,11 +54,11 @@
  "outputs": {
   "plain": {
    "file": "jetpac.nex",
-   "md5": "feff51b7038606d21c03c260055481e4"
+   "md5": "abbbaae6b77a27b8b89d272d33d32327"
   },
   "sprites": {
    "file": "jetpac_sprites.nex",
-   "md5": "72e3cc193325cc8166f8e7d7b6481327"
+   "md5": "e45b0d5549ead9dd610f3fffa326636e"
   }
  },
  "repro": [],
@@ -108,15 +108,15 @@
    "outputs": {
     "plain": {
      "file": "jetpac.nex",
-     "md5": "feff51b7038606d21c03c260055481e4"
+     "md5": "abbbaae6b77a27b8b89d272d33d32327"
     },
     "sprites": {
      "file": "jetpac_sprites.nex",
-     "md5": "498b8db7dc598d9f29e2731954409740"
+     "md5": "64a7d15f57a6150e0652bee2cae51c3e"
     },
     "enhanced": {
      "file": "jetpac_enhanced.nex",
-     "md5": "0aa83bfa1d2b0bc26e18bf9c3bb521a3"
+     "md5": "7087a09f94e0ca5175f2d5bf75b9a7a0"
     }
    },
    "proof": "free run 6000 frames IDENTICAL with R compared at every hook, the IM 1 handler compared at every 0x0038 against NextZXOS's ROM3, no game access above 0x7FFF, unit tests + pattern negative, rom3_left negative, 4 pace negatives",

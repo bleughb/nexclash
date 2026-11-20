@@ -144,19 +144,19 @@
  "outputs": {
   "plain": {
    "file": "scooby_doo.nex",
-   "md5": "994ad69a87d395fadd862205e4d75d52"
+   "md5": "4554d6885e020aad0524671b299a8546"
   },
   "loading": {
    "file": "scooby_doo_loading.nex",
-   "md5": "6c52221ef73d17ebd46d31e35f5da963"
+   "md5": "d0cc766ed1cf99af5b4764d4b35008c1"
   },
   "enhanced": {
    "file": "scooby_doo_enhanced.nex",
-   "md5": "37d3a6c44423317fd434e969c7d35c4b"
+   "md5": "03425207a4562dc6de85cbee19a2434e"
   },
   "enhanced_loading": {
    "file": "scooby_doo_enhanced_loading.nex",
-   "md5": "a81865abef2f1022ea448b5a022c56c6"
+   "md5": "66f664b0198e7beef5ec783513ffdbdd"
   }
  },
  "repro": [],

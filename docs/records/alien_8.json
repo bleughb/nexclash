@@ -60,11 +60,11 @@
  "outputs": {
   "plain": {
    "file": "alien_8.nex",
-   "md5": "e89ed13af3af09b260cc266bc5b456e1"
+   "md5": "2c31bebbe1f00919adfedc0efe61fec3"
   },
   "enhanced": {
    "file": "alien_8_enhanced.nex",
-   "md5": "5c08c856c718a7e744282cd44372a6cf"
+   "md5": "10ba4d4da539653d86bce00083247bff"
   }
  },
  "repro": [],

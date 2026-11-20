@@ -105,11 +105,11 @@
  "outputs": {
   "sprites": {
    "file": "game_over_sprites.nex",
-   "md5": "ff1d8067f3ad7e5f5625ab2f85e28a57"
+   "md5": "c2879a731b23ff57e6f47064fb4769e1"
   },
   "loading": {
    "file": "game_over_sprites_loading.nex",
-   "md5": "cb0c403db4058444f38445fb1afbdc19"
+   "md5": "df968f3774d4c577fd74ac1ae4f60d14"
   }
  },
  "repro": [],
@@ -261,27 +261,27 @@
    "outputs": {
     "sprites": {
      "file": "game_over_sprites.nex",
-     "md5": "ff1d8067f3ad7e5f5625ab2f85e28a57"
+     "md5": "c2879a731b23ff57e6f47064fb4769e1"
     },
     "loading": {
      "file": "game_over_sprites_loading.nex",
-     "md5": "cb0c403db4058444f38445fb1afbdc19"
+     "md5": "df968f3774d4c577fd74ac1ae4f60d14"
     },
     "enhanced": {
      "file": "game_over_enhanced.nex",
-     "md5": "5f67515e786fd3850a08c10c4619e596"
+     "md5": "48a0cf28221e56b0e64233e5a1abfbe6"
     },
     "enhanced_loading": {
      "file": "game_over_enhanced_loading.nex",
-     "md5": "548bf3dbab3b3d62aaeb23665a5c2712"
+     "md5": "c8d9d6056825c85b278b0a678261ea98"
     },
     "enhanced_nobd": {
      "file": "game_over_enhanced_nobd.nex",
-     "md5": "c0570c340c410915fcbd1ab60c2a25a9"
+     "md5": "07646f4a72cb9cd317fa3ddbdf9e2510"
     },
     "enhanced_nobd_loading": {
      "file": "game_over_enhanced_nobd_loading.nex",
-     "md5": "b7c173405d4ac6eae0e70624947b388c"
+     "md5": "a4701a450326649f9f2dfce97b40018a"
     }
    },
    "proof": "Enhanced colours: Spec256 team (Spec256), matched to this release by content; original executable code unchanged.",

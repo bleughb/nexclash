@@ -70,11 +70,11 @@
  "outputs": {
   "plain": {
    "file": "green_beret.nex",
-   "md5": "f4d4e3d43e47102af66fb3a7e6e022ab"
+   "md5": "c55d3d8303928a1dbddca65059674575"
   },
   "sprites": {
    "file": "green_beret_sprites.nex",
-   "md5": "d982d5ae83e2d54e3fc750006322c25e"
+   "md5": "8e0d11e37eb93495a1b8d85a75292224"
   }
  },
  "repro": [],
