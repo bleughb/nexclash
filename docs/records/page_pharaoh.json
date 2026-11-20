@@ -137,7 +137,7 @@
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "112c3b17a78ace9a",
+   "nexclash/engines.py": "bf75ad27e5bfabce",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
@@ -157,7 +157,7 @@
    "recipe": "3376d41ea93aa9e8",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-12"
+  "date": "2026-11-17"
  },
  "verified": {
   "deps": {

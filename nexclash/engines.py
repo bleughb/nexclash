@@ -15,6 +15,7 @@ import importlib
 
 # (module, detector, extra condition on the auto arguments or None)
 ENGINES = [
+    ('stock_car_3d', 'is_stock_car_3d', None),                           # 3D Stock Car Championship (48K)
     ('highway_encounter', 'is_highway_encounter', None),             # Highway Encounter (48K), optional Enhanced
     ('exolon', 'is_exolon', None),                                   # Exolon (128K), optional Enhanced
     ('bruce_lee', 'is_bruce_lee', None),                                # Bruce Lee (48K), optional Enhanced
@@ -74,6 +75,7 @@ ENGINES = [
     ('solomons_key', 'is_solomons_key', None),                            # Solomon's Key (48K)
     ('robin_of_the_wood', 'is_robin_of_the_wood', None),                  # Robin of the Wood (128K)
     ('cobra', 'is_cobra', None),                                          # Cobra (48K)
+    ('heartland', 'is_heartland', None),                                  # Heartland (48K)
     ('gryzor', 'is_gryzor', None),                                        # Gryzor (48K)
     ('green_beret', 'is_green_beret', None),                              # Green Beret (48K)
     ('new_zealand_story', 'is_new_zealand_story', None),                  # The New Zealand Story (128K, tape set: --tape)

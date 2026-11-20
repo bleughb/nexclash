@@ -1,6 +1,14 @@
 {
  "_note": "GENERATED from docs/records by `python -m nexclash.records views` - do not edit. Snapshots whose sprite build was differentially verified against a recording. nex = MD5s `nexclash.py patch` reproduces.",
  "snapshots": {
+  "56f151581bbcada775bb9e180bf4df9d": {
+   "game": "3D Stock Car Championship",
+   "doc": "3d_stock_car_championship.md",
+   "nex": {
+    "plain": "7ffdcd3ec8660074a1fcc697d521cfe7",
+    "sprites": "6edc58d59de04c69261df37391ec7fcb"
+   }
+  },
   "2909c2f0f18eca08479a74ad6dc8d193": {
    "game": "Abu Simbel Profanation",
    "doc": "abu_simbel.md",
@@ -267,6 +275,15 @@
     "loading": "f409ce6064820d2080cc131e87273b73",
     "enhanced": "a73fe67d3c15d5ddbaf24eda7243896a",
     "enhanced_loading": "1fef5dfc128e942f679ff681b81ac7b0"
+   }
+  },
+  "07bfa8f74d60a53ab64e5b092ffd6cca": {
+   "game": "Heartland",
+   "doc": "heartland.md",
+   "nex": {
+    "plain": "33283547fc7036cdefdf982190c75b73",
+    "sprites": "df3bed3c7278092941de2abfdeadfd21",
+    "enhanced": "6497de71a5bb55eed58957cc65426518"
    }
   },
   "ecfe7da10ba9aa395ae54c44301be1af": {
