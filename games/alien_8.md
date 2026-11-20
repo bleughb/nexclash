@@ -101,8 +101,8 @@ tearing at publication; beeper effects. Record board and core.
   saying a shade is seen.
 - [local: graphic table end] The graphic table at 7827 holds ids up to 0x84 and ends where the first graphic (7931)
   begins. Read 256 words and a snapshot taken in play gives strays (A0, BA, BD, FB pointed at the stack and work RAM
-  that parsed as graphics: 134 records, `auto` refused the dump). `original_graphics` stops at the first graphic.
-- [local: Alien 8 output names; open, not fixed] `patch` on Alien 8 ends "not supported yet" and makes no .nxc: userflow looks for
+  that parsed as graphics: 134 entries, `auto` refused the dump). `original_graphics` stops at the first graphic.
+- [backlog C2 #47] `patch` on Alien 8 ends "not supported yet" and makes no .nxc: userflow looks for
   NAME_sprites.nex, this engine writes NAME.nex and NAME_enhanced.nex.
 
 ## Friction
