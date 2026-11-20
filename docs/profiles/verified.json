@@ -474,6 +474,15 @@
     "enhanced_backdrops_loading": "b9928a6eb4acd223d15611a498d64fae"
    }
   },
+  "5967a2ea00bd0ff5cea81778fb72eb0e": {
+   "game": "Olli and Lissa: The Ghost of Shilmoore Castle",
+   "doc": "olli_and_lissa.md",
+   "nex": {
+    "plain": "12be0e0aa24eb85e39da957cc530edbe",
+    "sprites": "61e0b6d025f05c108a4d7196d4482868",
+    "enhanced": "b9c71476d1925e291a08a0673f455116"
+   }
+  },
   "e9cb908bc86661ff81732665741393cc": {
    "game": "Pac-Mania (128K)",
    "doc": "pac_mania.md",
