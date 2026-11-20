@@ -474,6 +474,15 @@
     "enhanced_backdrops_loading": "b9928a6eb4acd223d15611a498d64fae"
    }
   },
+  "27523b55f786a871ba4bf7fae1be255a": {
+   "game": "Olli and Lissa II: Halloween",
+   "doc": "olli_and_lissa_2.md",
+   "nex": {
+    "plain": "53516907092eddb3e6e642e4f498be6b",
+    "sprites": "dedec792ec315041fde3569de48befbd",
+    "enhanced": "2744a1af82d0d26f827712be26e101d5"
+   }
+  },
   "e9cb908bc86661ff81732665741393cc": {
    "game": "Pac-Mania (128K)",
    "doc": "pac_mania.md",

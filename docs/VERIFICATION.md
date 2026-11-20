@@ -113,6 +113,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - The Arc of Yesod (arc_of_yesod): `arc_of_yesod.nex` 9858d3f2cd71450c2efb01c116b1426b, `arc_of_yesod_sprites.nex` 97828809e85654dddb0b9e4e117ea718, `arc_of_yesod_enhanced.nex` d183181a0b7fbd17df9cc638da942785, `arc_of_yesod_sprites_loading.nex` fda37475786a20fff92a72a5ba78496f, `arc_of_yesod_enhanced_loading.nex` 49b7ac9d62940e8ff5868b91b5f78046; verified 2026-11-17
 - Gauntlet (gauntlet_tape): `gauntlet_start_sprites.nex` 377f6e5fc161c1e6618abb48a4046945, `gauntlet_start_steady.nex` c690be8aefacf8cc9d76127daa9b14f3; verified 2026-11-19
 - Heartland (heartland): `heartland.nex` 33283547fc7036cdefdf982190c75b73, `heartland_sprites.nex` df3bed3c7278092941de2abfdeadfd21, `heartland_enhanced.nex` 6497de71a5bb55eed58957cc65426518; verified 2026-11-18
+- Olli and Lissa II: Halloween (olli_and_lissa_2): `olli_and_lissa_2.nex` 53516907092eddb3e6e642e4f498be6b, `olli_and_lissa_2_sprites.nex` dedec792ec315041fde3569de48befbd, `olli_and_lissa_2_enhanced.nex` 2744a1af82d0d26f827712be26e101d5; verified 2026-11-20
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
