@@ -35,12 +35,27 @@ a wider graphic in the engine); the read-back reports paint outside them. The la
 """
 import collections
 import json
+import os
 
 TRANSP_RGB = (100, 100, 100)        # transparent pixels on the sheet (not a palette colour)
 BG_RGB = (150, 150, 175)            # between figures
 SW = 8                              # swatch size
 WIDTH = 160
 
+
+
+def load_layout(path):
+    """Read a layout JSON. Committed layouts are gzipped (PATH.gz): use PATH.gz if PATH is missing,
+    or if PATH itself ends in .gz."""
+    import gzip
+    path = str(path)
+    if not os.path.exists(path) and os.path.exists(path + '.gz'):
+        path += '.gz'
+    if path.endswith('.gz'):
+        with gzip.open(path, 'rt', encoding='utf-8') as f:
+            return json.load(f)
+    with open(path) as f:
+        return json.load(f)
 
 def palette_rgb(next8):
     """16 Next palette bytes (RRRGGGBB; blue's third bit = B1 OR B0) -> 16 RGB tuples."""
@@ -265,7 +280,7 @@ def read(png, layout_path, clear=False):
     differs from what the sheet showed. A key shown twice: a changed colour beats an unchanged one
     (reported, with the figures that take it); two different changes -> the first, reported."""
     from PIL import Image
-    lay = json.load(open(layout_path))
+    lay = load_layout(layout_path)
     rgb16 = [tuple(c) for c in lay['palette']]
     img = Image.open(png).convert('RGB')
     if list(img.size) != lay['size']:
@@ -425,7 +440,7 @@ def changes(png, layout_path, clear=False):
     [((key, bit), [(figure, state), ...])]: one pixel shown in several figures and painted to two
     different states (recolour refuses those). Geometry and rules as read()."""
     from PIL import Image
-    lay = json.load(open(layout_path))
+    lay = load_layout(layout_path)
     rgb16 = [tuple(c) for c in lay['palette']]
     img = Image.open(png).convert('RGB')
     if list(img.size) != lay['size']:
@@ -519,7 +534,7 @@ def redraw(layout_path, cmap, png_out, layout_out):
     same places, same paintable pixels; the new layout records cmap as the map it shows (the next
     painting is read against it). No capture, no emulation."""
     from PIL import Image
-    lay = json.load(open(layout_path))
+    lay = load_layout(layout_path)
     rgb16 = [tuple(c) for c in lay['palette']]
     img = Image.new('RGB', tuple(lay['size']), BG_RGB)
     for x, y, i in lay['swatches']:

@@ -102,7 +102,7 @@ def sheets(z80, art, prefix):
     results = []
     for suffix, unique in (('_PAINTING_SPRITES', True), ('_REFERENCE_ALL_SPRITES', False)):
         path = str(prefix) + suffix
-        if Path(path + '.png').exists() or Path(path + '_layout.json').exists():
+        if Path(path + '.png').exists() or (Path(path + '_layout.json').exists() or Path(path + '_layout.json.gz').exists()):
             raise ValueError('artwork already exists; choose a new prefix to preserve owner edits')
         count = C.write(comps, path + '.png', path + '_layout.json', [J.rgb333(v) for v in values], colours,
                         width=512, unique=unique, paint_clear=True, identity=G.colour_identity(mem.__getitem__))
@@ -112,7 +112,7 @@ def sheets(z80, art, prefix):
 
 def painted(art, png, layout):
     """Read edits; keep existing palette indices where possible (unchanged sheet is byte-identical)."""
-    data = json.loads(Path(layout).read_text())
+    data = C.load_layout(layout)
     cmap, report = C.read(png, layout, clear=True)
     palette = [sum(((v * 7 + 127) // 255) << shift for v, shift in zip(rgb, (6, 3, 0)))
                for rgb in data['palette']]
