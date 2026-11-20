@@ -74,11 +74,9 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   masked overlay 0xD134, XOR marker 0xCF53) and the filler itself: display-only (observed). routine_skip:
   0x9F19 is not a pure copy (game variables differ): keep it. Filler overruns to 0x6752. Format reference:
   ScummVM's Freescape engine (GPL: reference only).
-- Design history (2026-11-19): span hook in the filler; the original at 28 MHz + E1; route A (sandbox renders
-  in-between cameras); route B (Next-native renderer) CHOSEN: draws every view incl. each update's final one;
-  what remains is a pixel-level gap between what is shown and what the crosshair pick hits. Buffer readers
-  (printer, overlay 0xD134, XOR marker 0xCF53, copies 0xB6C2 / 0xD1B1) draw INTO the buffer (user's
-  correction) -> option (i) each to Layer 2 (chosen); (ii) ULA over Layer 2 (unsolved for white paper).
+- Design history (2026-11-19): span hook; original at 28 MHz + E1; route A (sandbox in-between cameras); route
+  B (Next-native renderer) CHOSEN. Buffer readers draw INTO it (user's correction) -> option (i) each to Layer
+  2 (chosen); (ii) ULA over Layer 2 (unsolved for white paper).
   R (static): ISR LD A,R 49291 / 49342 = blink delays (cosmetic); 0x9F6E: 27391 = (R AND 63) + 10, an event
   countdown (gameplay; patch.preserve-r); 0xA569: R mod 20 -> 41970 (display).
 - E1 PASS (e1_maths.asm, e1_check_full.log): Z80N 0xA1FD (A*HL), 0xA253 (HL*DE), 0xA348 (H*L) with MUL D,E;
@@ -149,17 +147,18 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   the plain conversion; 8,000 frames clean; views a second in a moving update: median 11.5-29 (two runs), 10 %
   10, 90 % 31-36; an indoor turn = a view every frame. 14 / 14 mutants FAIL (m3_mutants.py; K-N at given
   states / phases).
-- M3b PASS in the simulator + JNext 2026-11-20 (castle_master_m3b.nex): overlays as the option (i) trial: 84
-  sprites (a 12 x 7 grid of 16 x 16, 4-bit; palette 1 = the area's paper, 2 = ink). Opaque where the screen
-  differs from the buffer (cursor) or in a byte where the buffer differs from the raster's (printer, boxes,
-  marker); ink where the screen's bit is set. Built around the copy at the show sites and after the cursor's
-  draw / restore (0xCDD2 / 0xCECD; its rows in 8 bits as the game's). Sprites go with Layer 2; the dissolve
+- M3b PASS in the simulator + JNext 2026-11-20 (castle_master_m3b.nex): 84 sprites over Layer 2 (12 x 7 of
+  16 x 16, 4-bit; palette 1 = the area's paper, 2 = ink), opaque where the screen differs from the raster's
+  output (ov_s: the buffer at the copy, marker out), ink where its bit is set. Hardware run 1 (photos): whole
+  bytes made the marker a dither block; the printer (0xC0F9, handler) writes the buffer between views, never
+  copied: cursor blocks. Built around the copy at the show sites and after the cursor's draw / restore
+  (0xCDD2 / 0xCECD; rows in 8 bits). Sprites go with Layer 2; the dissolve
   0xB66E (9 calls under Layer 2: 0xBCE5, 0xCA44) now turns both off. Hooks from 0x3600 (m3b_rom.py). m3_sim:
   all 5,233 redraws incl. the overlay per pixel, stale sprites planted, the cursor at 40 positions (recorded
-  domain) after every 10th view; m3b_diss.py; m3b_race.py (MMU reads under DI: the handler's
-  clock shares 0x243B); 10 / 10 mutants (O-X). Pace (same path) median +0.66 frames, max +2.47 (M3a +0.24:
-  the overlay work). Open: overlay time, colour cycle, switch, DMA, R, K on hardware, the first ~4 frames of an
-  update stay still, the IM 2 bus value on hardware (0xFF assumed).
+  domain) after every 10th view; m3b_seq.py (the build's overlay code along the recording: 5,357 views, 3,670
+  cursor moves); m3b_diss.py; m3b_race.py (MMU reads under DI); 10 / 10 mutants (O-X). Pace (same path)
+  median +0.59 frames, max +2.41 (M3a +0.24: the overlay work). Open: overlay time, colour cycle, switch, DMA,
+  R, K on hardware, the first ~4 frames of an update stay still, the IM 2 bus value on hardware (0xFF assumed).
 - M0 side checks (m0_misc.py): raster callers 0x8599 (5,281), 0xB62C (108, the same list again); ROM unused.
 ## Coverage (survey GATE, 15,000 frames)
 Unreached CALL sites: 0xD028 (2/3), 0xCA4E (17/18), 0xB66E (2/6; 48357 not reached). All text / panel / area
@@ -179,8 +178,8 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
 - 2026-11-19, stage 2 M3a (pace + in-between views), ~7 h, ~200 tool calls, 6 user rounds (hardware: M2 runs,
   original pace; "Start M3"): block probe (sound, printer, waits), cm3_glue.asm, host test, NEX, JNext.
   Whole-module read: asm/lib/hlib_pace.asm (the clock's rules decide where ticks must come from).
-- 2026-11-20, stage 2 M3b (overlays), ~4 h, ~110 tool calls, 1 user round: sprite grid, cursor /
-  dissolve sites, host test + cursor sweep, 10 mutants, NEX, JNext.
+- 2026-11-20, stage 2 M3b (overlays), ~6 h, ~170 tool calls, 2 user rounds (photos): sprite grid, cursor /
+  dissolve sites, host test, cursor sweep, sequence test, 10 mutants, NEX, JNext.
 
 ## Lessons
 - [doc docs/RECORDING_CHECKLIST.md §Making a recording (Fuse)] An RZX alone (no separate .z80) is a complete intake: `nexclash.py rzx extract R -o
@@ -237,7 +236,8 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
   clock call ran ~100 times a frame). Set int_active 0; clear P/V where the harness accepts an interrupt.
 - [local: one harness; a probes candidate] Per-state runs start from clean hardware: "rebuild stale sprites" /
   "sprites off" mutants passed until a previous view's sprites were planted. For edge cases the states rarely
-  reach, drive the game's own routine at swept inputs (found an 8-bit wrap at the cursor's bottom edge).
+  reach, drive the game's own routine at swept inputs (found an 8-bit wrap at the cursor's bottom edge). A
+  per-redraw gate missed what hardware showed at once: also run the build's code along the recording.
 
 ## Technique use
 - detect.pacing-structure: helped: pacing_census on the main loop 0x8542 showed event-driven renders of 2-52
