@@ -109,6 +109,8 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Highway Encounter (highway_encounter): `highway_encounter.nex` 1feaa5fc5343f12583bcd6b44cec72d2, `highway_encounter_sprites.nex` 8f518edd0cfbf151c67d533d05204176, `highway_encounter_enhanced.nex` fb75964a819f5fc7cf4366e7aef146ef, `highway_encounter_sprites_loading.nex` 90079ef9c24acc86a3060a90b972031c, `highway_encounter_enhanced_loading.nex` 695d7e73d3375a8ac3b8ed7d6adecbb0; verified 2026-11-12
 - Exolon (exolon): `exolon.nex` 53bccd7881712937941eb106c712af13, `exolon_sprites.nex` d2852fd29607e124576dc0c08401c479, `exolon_enhanced.nex` 992c5123f072aad8296c7c6a31a1e61a, `exolon_sprites_loading.nex` f0eaf0f14d26f11e7649953d89624c5f, `exolon_enhanced_loading.nex` 07b771fcd487d6d85a587c8be562ac68; verified 2026-11-12
 - 3D Stock Car Championship (3d_stock_car_championship): `3d_stock_car_championship.nex` 7ffdcd3ec8660074a1fcc697d521cfe7, `3d_stock_car_championship_sprites.nex` 6edc58d59de04c69261df37391ec7fcb; verified 2026-11-17
+- Gauntlet (gauntlet): `gauntlet_p1.nex` ad2ec631091d589260bd6c20fe80e64f, `gauntlet_p1_sprites.nex` f33ade47e1f82694f2ed9b68885a04b0, `gauntlet_p1_steady.nex` 545fdeed1ffeabdc91d9363ae04dea32; verified 2026-11-19
+- Gauntlet (gauntlet_tape): `gauntlet_start_sprites.nex` 377f6e5fc161c1e6618abb48a4046945, `gauntlet_start_steady.nex` c690be8aefacf8cc9d76127daa9b14f3; verified 2026-11-19
 - Heartland (heartland): `heartland.nex` 33283547fc7036cdefdf982190c75b73, `heartland_sprites.nex` df3bed3c7278092941de2abfdeadfd21, `heartland_enhanced.nex` 6497de71a5bb55eed58957cc65426518; verified 2026-11-18
 <!-- end generated -->
 
