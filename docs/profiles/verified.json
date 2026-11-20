@@ -595,6 +595,51 @@
     "enhanced_loading": "2058f2e55464eeb68f418320548fb34a"
    }
   },
+  "14ee8b0b105fbf8b58bfeaed03e97a13": {
+   "game": "The Simpsons: Bart vs. the Space Mutants",
+   "doc": "simpsons.md",
+   "nex": {
+    "plain": "706e208453a6f5db9832731663451d9f",
+    "sprites": "fa3a5f416569ab1684526f9cee231a10",
+    "enhanced": "a7ab6c7690e1f4252ac6c695a66c5b81"
+   }
+  },
+  "158c2124965358c39522f131d680ca55": {
+   "game": "The Simpsons: Bart vs. the Space Mutants",
+   "doc": "simpsons.md",
+   "nex": {
+    "plain": "3ec33dfe52463ba0cac39953b9f3aad5",
+    "sprites": "a634bef137ac4553056faf030bc85fb1",
+    "enhanced": "647240a62fd0e314742ec677095828d1"
+   }
+  },
+  "86666cbdb6b702b83454dd1fb7d041b4": {
+   "game": "The Simpsons: Bart vs. the Space Mutants",
+   "doc": "simpsons.md",
+   "nex": {
+    "plain": "3e348c601c00629b76d89d551976170c",
+    "sprites": "0530f110bc338e985a6c0c5a91a3e535",
+    "enhanced": "f47b2a8f8282fdef8f8b291b307c9afa"
+   }
+  },
+  "e5e2f2ef480f31f602f6574015a27bd8": {
+   "game": "The Simpsons: Bart vs. the Space Mutants",
+   "doc": "simpsons.md",
+   "nex": {
+    "plain": "5421d05c7b4b7b46d3c32bf35dde9c28",
+    "sprites": "866dd924e963f8bdd29426b637c9ff19",
+    "enhanced": "09610b6744867df21a110dc286fbdd0d"
+   }
+  },
+  "7702fa208c2096445f0372c3ad37e833": {
+   "game": "The Simpsons: Bart vs. the Space Mutants",
+   "doc": "simpsons.md",
+   "nex": {
+    "plain": "8d894a9cca70cf52def364cb6953d1d6",
+    "sprites": "bbe3b9b883c57a665f8bb66de8dfaf8a",
+    "enhanced": "a9e3b97ed28bc36d682651e79f3629e4"
+   }
+  },
   "3b89344c6d7e6433bf044bef1880a2f1": {
    "game": "Smash TV",
    "doc": "smash_tv.md",
