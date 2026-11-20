@@ -233,6 +233,23 @@
     "loading": "cb0c403db4058444f38445fb1afbdc19"
    }
   },
+  "b665f16dee469ee766a4ebccdccc03f6": {
+   "game": "Gauntlet",
+   "doc": "gauntlet.md",
+   "nex": {
+    "plain": "ad2ec631091d589260bd6c20fe80e64f",
+    "sprites": "f33ade47e1f82694f2ed9b68885a04b0",
+    "steady": "545fdeed1ffeabdc91d9363ae04dea32"
+   }
+  },
+  "596acf039452f18c2b052671886279bf": {
+   "game": "Gauntlet",
+   "doc": "gauntlet.md",
+   "nex": {
+    "sprites": "377f6e5fc161c1e6618abb48a4046945",
+    "steady": "c690be8aefacf8cc9d76127daa9b14f3"
+   }
+  },
   "23d69f517506104c36ba429cb2148fa5": {
    "game": "Ghosts 'n Goblins",
    "doc": "ghosts_n_goblins.md",
