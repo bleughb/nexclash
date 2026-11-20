@@ -353,11 +353,11 @@ Toolkit structure
    done: a `nexclash.py sheet` command (today `python -m nexclash.<engine> sheet`).
 21. [MAME] A scripted MAME run (put the .nex in the SD image, load, snapshot) next to run_cspect.bat
    (LEARNINGS 2.7).
-22. nexpatch (contributor's proposal: an HTML page that rebuilds the .nex from the user's own .z80;
-   checked 2026-10-14): the .nxc output (C4, 2026-11-04) now does that job; decision pending.
-23. `selftest.py --affected` is not run automatically on each PR (needs a GitHub Action with the
-   private references via a secret); a maintainer runs it before merging.
+22. nexpatch (contributor: an HTML page rebuilding the .nex from the user's .z80): the .nxc (C4) does it; decision pending.
+23. `selftest.py --affected` is not run automatically on each PR (CI would need the private
+   references as a secret); a maintainer runs it before merging.
 46. Tape sets: no .nxc from `auto` (nxcout skips it); wanted: nxc.py make --also --start.
+47. `patch` finds only NAME_sprites.nex: no .nxc for Alien 8 (NAME.nex, NAME_enhanced.nex).
 
 Hardware to confirm
 24. The 0x3D00 cause (A1): a test build with one harmless routine at 0x3D00 (emulator with DivMMC, or
