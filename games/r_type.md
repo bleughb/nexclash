@@ -17,7 +17,9 @@ r_type_showpiece.png beside the snapshot (MD5-checked side inputs: game data, ne
 - Intro: r_type_intro.py + r_type_r9.py (owner's model r_type_r9_model.json.gz, rendered at build
   time, ~2.5 min) + asm/r_type_intro.asm; title / logo / text from the snapshot's own screen (= the
   original specification screen, checked pixel-exact), which is also the showpiece's start picture.
-Open: cheats - the .nxc trainers poke the banks in the NEX header, but in the intro build the game's
+Open: .nxc - nxc.py refuses r_type_sprites.nex ("950272 bytes past its banks": the game's banks
+follow the intro as data its loader reads), so auto keeps the .nex files and makes no .nxc yet.
+Cheats - the .nxc trainers poke the banks in the NEX header, but in the intro build the game's
 banks are data the intro's loader reads, so TipShop pokes (infinite lives 37374,0; immunity;
 invincibility 37362,201; attachments; all checked on RC1) need loader support or a game-only
 variant first. Hardware test of RC1. Proof stage: Layer 2 / sprite model, verify, unit tests.
