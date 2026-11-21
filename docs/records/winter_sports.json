@@ -79,8 +79,8 @@
   "engine_col": "winter_sports (winter_sports.md)",
   "build": "plain: all six events in one .nex (tape blocks in banks, RAM loader hook), 5.2 s loading screen; sprites: Downhill / Slalom / Giant Slalom's view painted on Layer 2 (hardware scroll), poles stay ULA",
   "software": "Rebuild byte-exact from either tape set; simulator differential per event, Downhill hybrid vs original (scroll model 581/581 updates, poles 401/412 state-matched), hook unit tests + negative controls; JNext: all six events play, Downhill/Slalom/Giant Slalom painted",
-  "hardware": "plain: loads, Downhill played (user, 2026-11-22); sprites build: not yet on hardware",
-  "next": "hardware round for the sprites build; other five events one at a time"
+  "hardware": "plain: loads, Downhill played; sprites build (Downhill/Slalom/Giant Slalom on Layer 2): tested and plays OK (user, 2026-11-22)",
+  "next": "other five events one at a time (Ice Hockey, Ski Jumping, Speed Skating, Bobsled, Biathlon)"
  },
  "feasibility": {
   "pacing": {

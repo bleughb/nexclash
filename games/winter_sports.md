@@ -3,10 +3,9 @@
 ## Next session
 Stage: 3-4 (plain .nex played on hardware; sprites build: Downhill / Slalom / Giant Slalom on Layer 2, simulator + JNext only)  State: 2026-11-22
 Inputs: specnext/reference/winter_sports/ (menu .z80, .tap, [h].tzx, the delivered .nex); the user's files, no RZX
-Start with: the user's hardware report for `winter_sports_sprites.nex` (the pane colours, whether any ULA white shows in the pane, the scroll), then
-the same treatment for the other five events one at a time (each has its own renderer: survey first)
+Start with: the same treatment for the other five events one at a time (each has its own renderer: survey first); the sprites build is hardware-confirmed
 Read: ## Downhill stage 1, ## Downhill stage 2, ## Evidence
-Open: hardware for the sprites build; events 1-5 (Ice Hockey, Ski Jumping, Speed Skating, Bobsled, Biathlon); hand-painting of the panorama (the automatic paint is a first pass);
+Open: events 1-5 (Ice Hockey, Ski Jumping, Speed Skating, Bobsled, Biathlon); hand-painting of the panorama (the automatic paint is a first pass);
 the Bleepload re-release is not an accepted tape set (its SCREEN$ is inside the turbo loader)
 
     python nexclash.py auto winter_sports.z80 --tape "Winter Sports (1985)(Electric Dreams Software).tap" --no-record
@@ -120,4 +119,4 @@ The user chose "auto-paint first". Code: nexclash/winter_sports_dh.py (hooks, pa
   differently); the heading by update is not compared (a one-update shift drifts). `unit_downhill`: the 16 steps take the original's T within 150, the counter and view move as the original's, NextReg 0x16 = 120 - view,
   an unchanged heading takes < 400 T. Negative controls: a wrong-sign scroll register fails every update, a rotated pad table fails 15 of 17 cases.
   JNext 1.2.0: Downhill, Slalom, Giant Slalom play with the painted panorama at the same game state as the plain build at the same frames; GAME OVER, then the options, Exit, Ice Hockey: no panorama, no magenta,
-  the rink as in the plain build. Not covered: hardware (the ULA transparency rule and the clip window are the risk), the other five events.
+  the rink as in the plain build. Hardware (user, 2026-11-22): the sprites build tests and plays OK on a real Next (the transparency and clip-window risk did not bite). Not covered: the other five events.
