@@ -32,5 +32,5 @@ SETUP F=500, game start F=761 = 5.2 s on top of the load.
 - Menu -> each event's option screen -> K + four control keys -> S: Downhill, Ice Hockey, Ski Jumping, Bobsled, Biathlon
   reach play; Speed Skating needs 1 player + keys + event 3 + S (it plays). Event A -> EXIT -> event B works (hook state is
   per request). Screenshots only, no register comparison.
-- Real hardware (user, 2026-11-22): the .nex loads and the game runs. Details of events/loading screen not reported yet.
+- Real hardware (user, 2026-11-22): the .nex loads and the game runs; Downhill event run OK. Other events and the loading screen not reported yet.
 - Not tested: 60 Hz, High Scores entry, two-player modes, joystick.
