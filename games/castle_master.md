@@ -1,14 +1,13 @@
-# Castle Master (Incentive Software, 1990; 48K, Freescape) - stage 0 intake done, stage 1 design approved
+# Castle Master (Incentive Software, 1990; 48K, Freescape) - stage 2 (build): M3b on hardware
 
 ## Next session
-Stage: 2 (build)             State: M3b (overlays) PASS in simulator + JNext; rest of M3 open
-Inputs: C:\1NEXT\castle_master_work\castle_master.z80 (extracted from the RZX), C:\dev\castlemaster\castle.rzx,
-C:\dev\castlemaster\Castlemaster1.tap    Branch: add-castle-master    Commit: (this file's commit)
-Checks: survey --stop 15000 (castle_master_survey/), survey full run (survey_full/), scan of the view buffer (3,000 frames)
+Stage: 2 (build)             State: M3b (overlays) PASS in simulator + JNext, on hardware (user); rest of M3 open
+Inputs: C:\1NEXT\castle_master_work\castle_master.z80 (extracted from the RZX), C:\dev\castlemaster\castle.rzx
+Branch: add-castle-master    Commit: (this file's commit)
+Checks (castle_master_work, local): m3_sim (all redraws), m3b_seq, m3b_diss, m3b_race, m3_mutants; survey_full/
 Decision (user 2026-11-19): route B (Next-native renderer) + option (i) (Layer 2 on top, dither kept, cursor =
 sprite, cycle = palette); colour switchable off by the player (original look). Later: palette 1-16, flat mode.
-Start with: M3b on hardware (castle_master_m3b.nex, local); then the colour cycle as palette + the
-switch, the M3b block's "Open" list
+Start with: the colour cycle as palette + the switch, the M3b block's "Open" list
 Read: PLAYBOOK stage 1 + 3d; cards detect.pacing-structure, detect.routine-removal, patch.hybrid-display-replacement
 Open: unreached CALL sites (Coverage); K on hardware (6.75 = JNext); heaviest outdoor view ~10 views a second: DMA
 
@@ -16,27 +15,24 @@ Open: unreached CALL sites (Coverage); K on hardware (6.75 = JNext); heaviest ou
 - Snapshot: the RZX's embedded .z80 (`nexclash.py rzx extract`), in game: 48K, PC 0xFDFD (RAM), IM 2 I=0xFE, vector
   0xFEFF -> 0xFDFD -> 0xC01F; handler DI / PUSH HL,BC,AF / SET 7,(29518). SP 0xFFEC. RAMTOP 32767. Border 0.
 - Recording: castle.rzx, 1 segment, 167,134 frames (3,342.7 s), no autosave snapshots.
-- Tape: Castlemaster1.tap = BASIC "CASTLE" (LINE 10), "CMT" CODE 32768,260 (loader), then three headerless blocks
-  (6,914 / 36,098 / 6,914 bytes, flag 0: the custom loader's data). Single load: no multiload files.
+- Tape: Castlemaster1.tap (BASIC, 260-byte loader "CMT", three headerless blocks): single load, not needed.
 
 ## Rendering model (survey, scan of the view buffer, first 3,000 / 15,000 frames)
 | Stage | Code | Buffer |
 |---|---|---|
-| clear the view | 0xA502 (x158,996 writes in 3,000 frames) | 0x5CBC-0x673F (24 bytes x 112 lines, linear) |
+| clear the view | 0xA502 | 0x5CBC-0x673F (24 bytes x 112 lines, linear) |
 | fill polygon spans (dither patterns, read-modify-write) | 0x9DC9-0x9DF8, 0x96F2-0x9731, ~105 routine spans 0x8637-0x8F0F | same |
 | buffer to screen (LDI/unrolled block copy) | 0xA38D, called from 0x9F19 and 0xB62C | view x 32-223, y 32-143 |
 | panel text / messages | 0xCA4E (17 call sites), 0xD028 | panel and message strip |
 | area pictures / panel blocks | 0xB66E, attributes 0xB347 | |
-The view's attributes are one ink/paper for the whole window per area (cyan, yellow, ... in the preview);
-faces differ only by dither pattern. ISR at 0xC01F writes 65,856 attribute bytes (the flashing border towers /
-panel) and uses LD A,R (49291, 49342); slots 1, 4, 5 never touched by it.
+The view has one ink / paper per area; faces differ only by dither pattern. The ISR (0xC01F) writes
+attributes (E4) and never touches slots 1, 4, 5.
 
 ## Clash: kind D (one colour per area), none
-No figures: everything in the view is the Freescape renderer's polygons. There is no colour clash to remove; a
-Next version's gain would be colour (faces in their own colours), as with Quazatron.
+No figures: the whole view is Freescape polygons, no clash to remove; the gain is colour (as Quazatron).
 
 ## Decisions (user, 2026-11-19)
-- Goal: colour the 3D view (faces in their own colours; Layer 2 presumably, panel on the ULA - design detail open).
+- Goal: colour the 3D view (faces in their own colours).
 - Speed: "Original pace, smooth view": updates keep the original's real-time rate (pace ORIGINAL, per update);
   the freed time renders in-between cameras (display only). Rejected: faster updates, smaller steps.
 
@@ -48,19 +44,17 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   frame time is inside 0x8542 (cost). Updates are event-driven, not frame-locked.
 - Clocks (observed, ISR 0xC01F): 29559 counts down per interrupt; 49182 /120 -> 27408++; 27407 /10 -> 27411++;
   29518 bit 7 = "inside the ISR" (the printer 0xCC17 checks it before EI). Timers are real time, independent of
-  render speed. The ISR also rewrites the view attributes 0x5884 (24 x 14 cells) from 27353 / table 49168
-  (view flashes) - a colour design must follow those writes.
+  render speed. The ISR's colour cycle (view attributes from 27353 / table 49168): E4.
 - Consequence (confirmed by M3a): one move or turn step per update; a faster render alone = faster walking
   in real time, so the update's original time is kept and the freed time draws in-between views.
-- Sound: OUT 254 at 0xC821 (20,932, in 39 updates), 0xC117 (195), 0xB374 (16) - check which run inside render
-  code before any speed-up (patch.timed-side-effect-replay).
+- Sound: OUT 254 at 0xC821 (20,932, in 39 updates), 0xC117 (195), 0xB374 (16): M3a keeps 0xC683 at 3.5 MHz.
 - Colour source: (29501) = the face's colour index 1-16 per span; table 53825 = 16 four-line dither patterns (1
   empty, 2 and 11 solid); the filler ANDs / ORs the pattern into the buffer. Layer 2 takes the index per span.
 - Pipeline costs (15k frames): 0x8D4F sectors 2k T, 0x9776 12k, 0x9D8A sort median 42k (max 662k), raster
   (clear 82k + fill ~41k) 17.5 % of all T, copy 52k; walking ~2.4M T a step, maths ~20 %, no wait anywhere.
 - Camera (observed, cm_profile at each 0x9776): x, y, z = 16-bit at 27309, 27311, 27313 (start 928, 96, 8032;
   y = eye height); pitch 27318, yaw 27319, both mod 72 (5 deg); a turn = 2 units (10 deg); a walk step ~238 units
-  ((+206, -120) at yaw 24). 27315 / 27317 = 0xF0 (unknown, constant so far).
+  ((+206, -120) at yaw 24).
 - DMA / DDMA evaluation (docs/DDMA.md; estimates): clear -> DDMA 2D fill (fallback zxnDMA fill; CPU); spans
   -> DDMA above a crossover width (M1: PUSH fill); copy 452k T -> DMA / DDMA; gating per DDMA.md 3 (core >=
   3.03.00 for DDMA, zxnDMA otherwise, CPU-only option HLIB_NO_BLITTER / HLIB_CPU_ONLY). Not built yet.
@@ -74,9 +68,9 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   masked overlay 0xD134, XOR marker 0xCF53) and the filler itself: display-only (observed). routine_skip:
   0x9F19 is not a pure copy (game variables differ): keep it. Filler overruns to 0x6752. Format reference:
   ScummVM's Freescape engine (GPL: reference only).
-- Design history (2026-11-19): span hook; original at 28 MHz + E1; route A (sandbox in-between cameras); route
-  B (Next-native renderer) CHOSEN. Buffer readers draw INTO it (user's correction) -> option (i) each to Layer
-  2 (chosen); (ii) ULA over Layer 2 (unsolved for white paper).
+- Design history (2026-11-19): span hook; original at 28 MHz + E1; route A (sandbox); route
+  B CHOSEN. Buffer readers draw INTO it (user's correction) -> option (i); (ii) ULA over Layer 2: unsolved
+  for white paper.
   R (static): ISR LD A,R 49291 / 49342 = blink delays (cosmetic); 0x9F6E: 27391 = (R AND 63) + 10, an event
   countdown (gameplay; patch.preserve-r); 0xA569: R mod 20 -> 41970 (display).
 - E1 PASS (e1_maths.asm, e1_check_full.log): Z80N 0xA1FD (A*HL), 0xA253 (HL*DE), 0xA348 (H*L) with MUL D,E;
@@ -91,17 +85,16 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   (175), printer 0xCA97-0xCC16 (151), transition 0xCA42 (12), boxes 0xBC9F-0xBD34 (6). Attributes: area colours
   0xB368 (some WHITE paper), ISR 0xC069 colour cycle (4,977 frames: one value to all 336 cells, table 49168).
   Option (i) trial (opt1_trial.py; user: KEEP the dither): Layer 2 pixel = buffer bit set ? the face's colour :
-  the area's paper; cursor = sprite, ISR cycle = palette; overlays / unknown writers keep the original ink.
+  the area's paper.
 - View buffer: 0x5CBC-0x673B, 112 x 24 bytes, row table 28975 (0x9DC9-0x9DF8 also puts scratch 24369-24382 in it).
 
 ## Build design (stage 2, route B + option (i); written before the first quick run)
-- Game side: original code runs (update, projection = the pick's list, ISR, panel on the ULA) + E1 maths.
-  Planned: a CTC pacer + renderer thread, world snapshot by DMA; built synchronous (M3a), the game's raster kept.
+- Game side: original code runs (update, projection = the pick's list, ISR, panel on the ULA), its raster
+  kept; built synchronous (M3a; planned: CTC pacer + renderer thread). E1 maths, DMA: not in the build yet.
 - Palette: index 1-16 + area paper; colour off (player option) = all indices -> the area's ink / paper (original
   look); ISR cycle = same switch with the ISR's attribute. Placeholder until the user's palette.
 - Overlays: hardware sprites over Layer 2 (M3b); non-view screens -> Layer 2 and sprites off.
-- Milestones: M0 host port, M1 Z80N renderer bit-exact (>= 12.5 fps outdoors), M2 integrated NEX (no
-  tweens), M3 tweens, overlays, switch, sound; differential test at every site (PLAYBOOK 6).
+- Milestones M0-M3 (below; M3 = tweens, overlays, switch, sound); differential test at every site (PLAYBOOK 6).
 - M0 PASS 2026-11-19 (castle_master_work, local): Python port m0_pipeline.py (m0_geom / m0_cube / m0_objects /
   m0_sort, each with failing mutants) gives the raster's input from the block-start RAM alone = the game's at
   all 5,233 redraws (44,594 polygons). Data: m0_states.bin (RAM per redraw).
@@ -147,24 +140,33 @@ Next version's gain would be colour (faces in their own colours), as with Quazat
   the plain conversion; 8,000 frames clean; views a second in a moving update: median 11.5-29 (two runs), 10 %
   10, 90 % 31-36; an indoor turn = a view every frame. 14 / 14 mutants FAIL (m3_mutants.py; K-N at given
   states / phases).
-- M3b PASS in the simulator + JNext 2026-11-20 (castle_master_m3b.nex): 84 sprites over Layer 2 (12 x 7 of
-  16 x 16, 4-bit; palette 1 = the area's paper, 2 = ink), opaque where the screen differs from the raster's
-  output (ov_s: the buffer at the copy, marker out), ink where its bit is set. Hardware run 1 (photos): whole
-  bytes made the marker a dither block; the printer (0xC0F9, handler) writes the buffer between views, never
-  copied: cursor blocks. Built around the copy at the show sites and after the cursor's draw / restore
-  (0xCDD2 / 0xCECD; rows in 8 bits). Sprites go with Layer 2; the dissolve
-  0xB66E (9 calls under Layer 2: 0xBCE5, 0xCA44) now turns both off. Hooks from 0x3600 (m3b_rom.py). m3_sim:
-  all 5,233 redraws incl. the overlay per pixel, stale sprites planted, the cursor at 40 positions (recorded
-  domain) after every 10th view; m3b_seq.py (the build's overlay code along the recording: 5,357 views, 3,670
-  cursor moves); m3b_diss.py; m3b_race.py (MMU reads under DI); 10 / 10 mutants (O-X). Pace (same path)
-  median +0.59 frames, max +2.41 (M3a +0.24: the overlay work). Open: overlay time, colour cycle, switch, DMA,
-  R, K on hardware, the first ~4 frames of an update stay still, the IM 2 bus value on hardware (0xFF assumed).
+- M3b PASS in the simulator + JNext 2026-11-20, on hardware 2026-11-21 (user, run 3; castle_master_m3b.nex):
+  84 sprites over Layer 2 (12 x 7 of 16 x 16, 4-bit; palette 1 = the area's paper, 2 = ink, 3 white, 4
+  black), opaque per pixel where the screen differs from the raster's output (ov_s: the buffer at the copy,
+  marker out; the printer 0xC0F9 in the handler writes the buffer between views, never copied), ink where
+  its bit is set. Built around the copy at the show sites and after the cursor's draw / restore (0xCDD2 /
+  0xCECD; rows in 8 bits). Sprites go with Layer 2; the dissolve 0xB66E (9 calls under Layer 2: 0xBCE5,
+  0xCA44) turns both off. Hooks from 0x3600 (m3b_rom.py). After hardware runs 1-2 (user's choices):
+  sight and pointer = fixed records (ov_fr0 / 1): white, black where the view under them is light (mean 3R
+  + 5G + 2B >= 34 of 62 in a 16-pixel box; the sight's from the bank drawn, at the flip), mask-only bits
+  clear. Pointer = descriptor 0x7F20 only: the thrown rock (0x8078 ..) uses 0xCDD2 too, keeps ink / paper.
+  Portcullis 0xCFC2: BEGIN's rise ((0x7349) >= 2 at 0x859C) runs over the colour view: view drawn, then at
+  each step's wait (0xCFE9 / 0xD00F) the palettes from (27353) (0xB347 sets it inside 0x9F19), all 84
+  sprites, Layer 2 on: +31 frames on 174; flag m_pc = VP+40 (an IM 2 table byte, 0xFD in the image: 1 =
+  set). A death's drop (0xA0A4; not recorded, CSpect) = original look.
+  A Next set to 60 Hz: a black flash at load (the stub's switch to 50 Hz); none at 50 Hz.
+  m3_sim (every 10th redraw after runs 2-3, all 5,233 at run 1): overlay per pixel, cursor + rock at 40
+  positions; m3b_seq.py (the build's overlay code, pointer filter, portcullis hook
+  along the recording: 5,357 views, 3,670 cursor moves, 87 portcullis steps); m3b_diss.py (dissolve, drop);
+  m3b_race.py (MMU reads under DI); 18 / 18 mutants (O-X, Y-f). Pace (same path) median +0.59 frames, max
+  +2.41 (run 1). Open: overlay time (portcullis steps too), colour cycle, switch, DMA, R, K on hardware,
+  the first ~4 frames of an update stay still, the IM 2 bus value on hardware (0xFF assumed), the drop in
+  colour.
 - M0 side checks (m0_misc.py): raster callers 0x8599 (5,281), 0xB62C (108, the same list again); ROM unused.
 ## Coverage (survey GATE, 15,000 frames)
-Unreached CALL sites: 0xD028 (2/3), 0xCA4E (17/18), 0xB66E (2/6; 48357 not reached). All text / panel / area
-pictures, no figure plotter.
-Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0xB66E 4/6, 0xD028 2/3, 0xB347
-4/6 reached; 5,356 view copies. No further recording needed for stage 1.
+Unreached CALL sites, 15,000 frames -> full run (survey_full/, 167,135 frames, no desync, GATE OK): 0xCA4E
+17/18 -> 18/18, 0xB66E 2/6 -> 4/6 (48357 not reached), 0xD028 2/3, 0xB347 4/6. All text / panel / area
+pictures, no figure plotter; 5,356 view copies.
 
 ## Stage log
 - 2026-11-19, stages 0-1 (intake, survey, pacing census, DMA / DDMA, experiments E1-E5, option (i) trial, a
@@ -178,12 +180,13 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
 - 2026-11-19, stage 2 M3a (pace + in-between views), ~7 h, ~200 tool calls, 6 user rounds (hardware: M2 runs,
   original pace; "Start M3"): block probe (sound, printer, waits), cm3_glue.asm, host test, NEX, JNext.
   Whole-module read: asm/lib/hlib_pace.asm (the clock's rules decide where ticks must come from).
-- 2026-11-20, stage 2 M3b (overlays), ~6 h, ~170 tool calls, 2 user rounds (photos): sprite grid, cursor /
-  dissolve sites, host test, cursor sweep, sequence test, 10 mutants, NEX, JNext.
+- 2026-11-20 / 21, stage 2 M3b (overlays; hardware runs 1-3), ~10 h, ~800 tool calls, ~12 user rounds
+  (photos; CSpect): sprite grid, cursor / dissolve / portcullis sites, fixed sight + pointer, host tests,
+  18 mutants, NEX, JNext.
 
 ## Lessons
 - [doc docs/RECORDING_CHECKLIST.md §Making a recording (Fuse)] An RZX alone (no separate .z80) is a complete intake: `nexclash.py rzx extract R -o
-  GAME.z80` gives the snapshot it was recorded from (here a .tap came with it, not needed for a single load).
+  GAME.z80` gives the snapshot it was recorded from.
 - [local: one game's misread; the survey reports what the copier reads] The survey's buffer range (0x5C80-0x673F, rounded) mixed the view buffer with renderer variables, so
   `scan --writers` on it listed geometry code first; the copier's own pointer (LD HL,23740 at 0xA39A) gave the
   exact buffer.
@@ -238,6 +241,8 @@ Full run (survey_full/, all 167,135 frames, no desync): GATE OK; 0xCA4E 18/18, 0
   "sprites off" mutants passed until a previous view's sprites were planted. For edge cases the states rarely
   reach, drive the game's own routine at swept inputs (found an 8-bit wrap at the cursor's bottom edge). A
   per-redraw gate missed what hardware showed at once: also run the build's code along the recording.
+  That test must enter the hooks themselves: with the pointer filter and the NEXTREGs modelled in the test,
+  two mutants in them passed.
 
 ## Technique use
 - detect.pacing-structure: helped: pacing_census on the main loop 0x8542 showed event-driven renders of 2-52
