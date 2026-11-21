@@ -349,12 +349,24 @@ class _Layer(dict):
         self.under_ink = set()
 
 
-def expected_vs_original(so_mem, sp_mem, o7ffd, lay, skip_chain=None, allowed=None):
+SPARK_FLIPS = 4                 # screen flips after a spark until both screens have been drawn again
+
+
+def cell_of(addr):
+    """screen address -> (x, y) of its 8 x 8 cell's top left"""
+    a = addr & 0x1FFF
+    return (a & 31) * 8, ((a >> 8) & 7) | ((a >> 2) & 0x38) | ((a >> 5) & 0xC0)
+
+
+def expected_vs_original(so_mem, sp_mem, o7ffd, lay, skip_chain=None, allowed=None, hole=None):
     """The shown screen of the original against sprites over the patched screen, for the figure zone.
     A sprite ink pixel must be set in the original; a body pixel clear; outline and empty pixels as the clean copy shows.
     Exceptions, by design, both about the outline (the owner's white ring, which the game does not draw): it may lie on
     another figure's ink, where the original shows that ink, or on a scenery pixel the game's mask clears next to the
-    figure (both hide the scenery there). Such pixels go to `allowed` as (x, y, kind). -> list of (x, y, sprite code,
+    figure (both hide the scenery there). And the spark: the game copies it over its whole cell, so a figure there
+    loses those pixels until the game draws that screen again; sprites keep the figure whole. `hole` = the last
+    spark's cell (x, y) while that lasts: in it, a figure pixel where the original shows the clean copy is allowed.
+    Such pixels go to `allowed` as (x, y, kind). -> list of (x, y, sprite code,
     original bit, clean bit)."""
     bad = []
     under = getattr(lay, 'under_ink', ())
@@ -368,6 +380,11 @@ def expected_vs_original(so_mem, sp_mem, o7ffd, lay, skip_chain=None, allowed=No
             for i in range(8):
                 x = col * 8 + i
                 v = lay.get((x, y))
+                if hole and v and v[0] in (1, 2) and hole[0] <= x < hole[0] + 8 and hole[1] <= y < hole[1] + 8:
+                    if bool(o & (0x80 >> i)) == bool(c & (0x80 >> i)):
+                        if allowed is not None:
+                            allowed.append((x, y, 'spark hole'))
+                        continue
                 bit = 0x80 >> i
                 ob, cb = bool(o & bit), bool(c & bit)
                 if v is None or v[0] == 3:
@@ -466,7 +483,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4):
                     chn = lambda x, y: y0 <= y <= y0 + 6
                 c['chain up at a layer check'] += 1
             ok_out = []
-            bad = expected_vs_original(mo, mp, po.o7ffd, lay, chn, ok_out)
+            hole = st['hole'][:2] if st.get('hole') else None
+            bad = expected_vs_original(mo, mp, po.o7ffd, lay, chn, ok_out, hole)
+            c['figure pixels in a spark\'s cell the original has wiped (by design)'] += sum(1 for q in ok_out if q[2] == 'spark hole')
             c['outline pixels on another figure\'s ink (by design)'] += sum(1 for q in ok_out if q[2] == 'on ink')
             c['outline pixels where the game masks the scenery (by design)'] += sum(1 for q in ok_out if q[2] == 'masked')
             if bad:
@@ -586,8 +605,11 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4):
                     if pcp == 0xB3F9:
                         st['spark'] = False
                         st['halted'] = False
+                        if st.get('hole'):
+                            st['hole'] = st['hole'][:2] + (st['hole'][2] - 1,) if st['hole'][2] > 1 else None
                     if pcp == 0xB908:
                         st['spark'] = True
+                        st['hole'] = cell_of(mo[47566] + 256 * mo[47567]) + (SPARK_FLIPS,)
                     if pcp == 0xEFAB:
                         c['chain wipes'] += 1
                     if pcp == 0xB91C:
