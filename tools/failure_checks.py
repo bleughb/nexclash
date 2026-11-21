@@ -36,7 +36,7 @@ def repository():
         def git(*args):
             return subprocess.run(['git', '-C', str(root), *map(str, args)], check=True,
                                   capture_output=True, text=True).stdout.strip()
-        git('init'); git('config', 'user.name', 'Workflow Test'); git('config', 'user.email', 'workflow@example.invalid')
+        git('init'); git('config', 'core.autocrlf', 'false'); git('config', 'user.name', 'Workflow Test'); git('config', 'user.email', 'workflow@example.invalid')
         (root/'nexclash').mkdir(); (root/'nexclash/shared.py').write_bytes(b'original')
         (root/'.gitignore').write_text('contrib_reports/\n')
         git('add', '.'); git('commit', '-m', 'base')
