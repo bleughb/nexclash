@@ -109,6 +109,9 @@ untouched; sound unchanged; the game's speed as the original's over a minute of 
 - 2026-11-20: the bitmap is kept (the figures stay drawn under their sprites); only the objects' colour paint goes.
 
 ## Lessons
+- [local: this engine's build step] An Enhanced build's fixed colours were compared as symbols only, never with
+  the RGB the set-up uploads (Codex review 2026-11-20): palette_wrong replays the boot's NEXTREG writes against the
+  painted map, the default build as its negative.
 - [local: this game's hooks] A set-up that other routines enter past its start cannot tell the hook whose figure
   it is from IX alone: the game's own entry marks the draw, and an unmarked one changes nothing.
 - [local: this game's verifier] An event that starts in the middle of a draw has to be given what the hooks before

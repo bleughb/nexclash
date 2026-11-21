@@ -679,6 +679,33 @@ def event(patch, kind, get, R, ns, alt, Sim, speed=0):
     return f, npx, 'edge' if edge else None
 
 
+def palette_wrong(nex, z80, fixed):
+    """(offset, nibble) of every sprite palette entry 2..1+len(fixed) the build's set-up leaves different from the
+    painted map's fixed colours (9 bits): its NEXTREG writes in the simulated boot replayed (0x43 select, 0x40 index,
+    0x41 8-bit and 0x44 9-bit values; first sprite palette). The default build, whose set-up writes zeros there, is
+    the negative."""
+    from . import nextboot, z80tonex as zt
+    st = nextboot.boot(nex, zt.Z80Snapshot(z80).pc)
+    pal = [[None] * 256 for _ in range(8)]
+    sel = idx = 0
+    first, auto = None, True
+    for r, v in st['nrlog']:
+        if r == 0x43:
+            sel, auto, first = (v >> 4) & 7, not v & 0x80, None
+        elif r == 0x40:
+            idx, first = v, None
+        elif r == 0x41:                     # an 8-bit write also ends a 0x44 pair, as on the Next
+            pal[sel][idx], first = v << 1 | (1 if v & 3 else 0), None
+            idx = (idx + 1) & 255 if auto else idx
+        elif r == 0x44:
+            if first is None:
+                first = v
+            else:
+                pal[sel][idx], first = first << 1 | (v & 1), None
+                idx = (idx + 1) & 255 if auto else idx
+    return [(o, n) for o in range(16) for n in range(2, 2 + len(fixed)) if pal[2][o * 16 + n] != fixed[n - 2]]
+
+
 def colours_wrong(patch, get, g, x, y, a3, got):
     """Sprite pixels {(px, py): colour} of graphic g at (x, y) against this build: the game's ink (attribute a3) where
     the pixel is nibble 1, the painted map's fixed colour elsewhere. -> the pixels that differ."""
@@ -1229,7 +1256,10 @@ def auto(a, z80, name, out, say):
         enf = os.path.join(out, name + '_enhanced.nex')
         conv = zt.convert(z80, enf, None, True, quiet=True, patch=enh)
         bad3 = check(enf, z80, enh, (conv[1], conv[1] + len(conv[2])))
-        ok = ok and not bad3
+        pw, pneg = palette_wrong(enf, z80, cmap['fixed']), palette_wrong(spr, z80, cmap['fixed'])
+        say('Palette   : %s: %d fixed entries, %d not as the painted map; default build: %d differ (negative %s)' % (
+            os.path.basename(enf), 16 * len(cmap['fixed']), len(pw), len(pneg), 'DETECTED' if pneg else 'MISSED'))
+        ok = ok and not bad3 and not pw and bool(pneg)
         painted = sum(1 for k in cmap['figures'].values() if any(c not in '01' for r in k for c in r))
         say('Enhanced  : %s  %s  boot %s  (%d figures painted, %d fixed colours)' % (os.path.basename(enf), md5(enf),
             'OK' if not bad3 else 'MISMATCH %s' % str(bad3[:3])[:200], painted, len(cmap['fixed'])))
