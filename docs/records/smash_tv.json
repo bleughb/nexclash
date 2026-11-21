@@ -90,42 +90,42 @@
   "deps": {
    "asm/smashtv_hooks.asm": "0241dd2f3a6d2e84",
    "docs/profiles/smash_tv.json": "943a848aeabb6e5e",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "bf75ad27e5bfabce",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/smashtv.py": "e1a13abfd886482f",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
-   "recipe": "c1a69aafbbecdcbb",
+   "recipe": "1b4ecd3b00ec84ff",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-17"
+  "date": "2026-11-20"
  },
  "verified": {
   "deps": {
    "asm/smashtv_hooks.asm": "0241dd2f3a6d2e84",
    "docs/profiles/smash_tv.json": "943a848aeabb6e5e",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "112c3b17a78ace9a",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/smashtv.py": "e1a13abfd886482f",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
-   "recipe": "c1a69aafbbecdcbb",
+   "recipe": "1b4ecd3b00ec84ff",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-12"
+  "date": "2026-11-20"
  }
 }
