@@ -284,8 +284,9 @@ def palette(enhanced=False):
 
 def _palette_default():
     """256 sprite palette bytes. Block 0: the trucks. Block p (1-15, the object's ink + 8 * bright):
-    1 = colour p, 2 = its darker shade (enclosed paper: a solid body), 3 = outline (white; black for
-    a white figure); Enhanced adds 4 = dark shade, 5 = light shade, 6-15 FIXED."""
+    1 = colour p, 2 = its darker shade (enclosed paper: a solid body), 3 = outline (black: on the black play area
+    it only masks the scenery behind; owner 2026-11-21, was white, black for a white figure); Enhanced adds 4 = dark
+    shade, 5 = light shade, 6-15 FIXED."""
     pal = [0xE3] * 256
     for i in range(16):
         pal[i] = SPECCY[i]
@@ -293,7 +294,7 @@ def _palette_default():
         c = RGB[p] if p != 8 else (40, 40, 40)
         pal[16 * p + 1] = rgb8(c) if p != 8 else 0x00
         pal[16 * p + 2] = rgb8(dark(c, 0.45))
-        pal[16 * p + 3] = 0x00 if p in WHITE_INKS else 0xFF
+        pal[16 * p + 3] = 0x00
     pal[0] = 0xE3
     for b in range(16):
         pal[16 * b] = 0xE3
