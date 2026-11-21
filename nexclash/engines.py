@@ -42,6 +42,7 @@ ENGINES = [
     ('jetpac', 'is_jetpac', None),                                        # Jetpac (16K)
     ('pssst', 'is_pssst', None),                                          # Pssst (16K): the game's own colours
     ('cookie', 'is_cookie', None),                                        # Cookie (16K): the game's own colours
+    ('tranz_am', 'is_tranz_am', None),                                    # Tranz Am (16K): the game's own colours
     ('tid128_v11', 'is_tid128_v11', None),                                # opt-in shared-library rework
     ('tid128', 'is_tid128', None),                                        # Treasure Island Dizzy 128K: opt-in rework of dizzy_patch
     ('loderunner_v3', 'is_loderunner_v3', None),                          # Lode Runner 128K v1.1: opt-in rework of loderunner_v2 (NEXCLASH_REWORK)
