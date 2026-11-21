@@ -564,6 +564,13 @@
     "enhanced": "3ca79dd93d0fdc46968a22382deac6fe"
    }
   },
+  "5a2179b4006d7888a1f7f821a4316bf5": {
+   "game": "R-Type",
+   "doc": "r_type.md",
+   "nex": {
+    "sprites": "9a426f5487bb63e9e0a46d520ecac5ac"
+   }
+  },
   "4c98b980b1726af545fccc99665ef29b": {
    "game": "Rainbow Islands (128K, Z80N)",
    "doc": "rainbow_z80n.md",

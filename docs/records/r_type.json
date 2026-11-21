@@ -1,0 +1,119 @@
+{
+ "name": "r_type",
+ "order": 271,
+ "game": "R-Type",
+ "doc": "r_type.md",
+ "engine": "r_type",
+ "representative": true,
+ "reference": "r_type",
+ "inputs": {
+  "snapshot": {
+   "name": "r_type.z80",
+   "md5": "5a2179b4006d7888a1f7f821a4316bf5",
+   "path": "r_type/Rtype.z80",
+   "note": "R-Type (1988)(Electric Dreams)(128K): the game at its specification screen; its own screen is that screen (the intro's title, logo and text)."
+  },
+  "recordings": [
+   {
+    "name": "r_type_loading.scr",
+    "md5": "acab5a1b9643d14c02284e057bc16854",
+    "path": "r_type/r_type_loading.scr",
+    "role": "The 6,912-byte loading screen from Rtype.tap (MD5 2d1e17ef), block scr, staged beside the snapshot; shown while the .nex loads. Not a recording."
+   },
+   {
+    "name": "r_type_showpiece.png",
+    "md5": "3023611302798e3bb5998fa42a77b2e3",
+    "path": "r_type/intake/showpiece/spec_screen_user_320x256_neon.png",
+    "role": "The owner's neon-glow 320x256 picture of the specification screen (game art), staged beside the snapshot; the start-up showpiece. Not a recording."
+   }
+  ]
+ },
+ "modules": [
+  "r_type",
+  "r_type_colour",
+  "r_type_figures",
+  "r_type_intro",
+  "r_type_masks",
+  "r_type_r9",
+  "r_type_scenery",
+  "r_type_showpiece"
+ ],
+ "own_modules": [
+  "r_type",
+  "r_type_colour",
+  "r_type_figures",
+  "r_type_intro",
+  "r_type_masks",
+  "r_type_r9",
+  "r_type_scenery",
+  "r_type_showpiece"
+ ],
+ "data": [
+  "asm/r_type_hooks.asm",
+  "asm/r_type_l2scroll.asm",
+  "asm/r_type_sprites.asm",
+  "asm/r_type_glide.asm",
+  "asm/r_type_ship.asm",
+  "asm/r_type_intro.asm",
+  "docs/profiles/r_type.json",
+  "docs/profiles/r_type_catalogue.json.gz",
+  "docs/profiles/r_type_figures.json.gz",
+  "docs/profiles/r_type_sheets.json",
+  "docs/profiles/r_type_behind.json",
+  "docs/profiles/r_type_r9_model.json.gz"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "auto_record": false,
+  "minutes": 4,
+  "differential": false,
+  "note": "Not verified: no recording is replayed and no simulator model exists yet (games/r_type.md). Evidence is emulator-only: CSpect smoke test, level 1 sweep, intro flow screenshots, page checks of the RC1 build."
+ },
+ "outputs": {
+  "sprites": {
+   "file": "r_type_sprites.nex",
+   "md5": "9a426f5487bb63e9e0a46d520ecac5ac"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "R-Type (128K)",
+  "engine_col": "r_type (r_type.md)",
+  "build": "RC1; r_type_sprites.nex 9a426f54 (animated R-9 intro over the tape's loading screen, then the game: play area on Layer 2 with scenery colours, figures as hardware sprites, ship glide, level 3 battleship tilemap, start-up showpiece); game alone r_type_game.nex a52841b4",
+  "software": "NOT VERIFIED: emulator evidence only (CSpect smoke, level 1 sweep, intro flow)",
+  "hardware": "untested",
+  "next": "simulator proof (Layer 2 / sprite model), hardware checklist, cheats for the intro build"
+ },
+ "checks": [
+  "asm2profile:r_type"
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/r_type.md#facts-and-evidence"
+   ],
+   "coverage": "Scripted recordings over levels 1-8 (intake); title, scores, name entry and continue at 3.5 MHz; hardware only for the 2026-11-16 prototype and the 2026-11-20 intro.",
+   "result": "The game updates every 3 frames (pace 4 on the Next, 8690); hooks run in the copier, plotters and level draw at 28 MHz; the native ISR (beeper sound) stays at 3.5 MHz."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/r_type.md#feasibility"
+   ],
+   "coverage": "Copier, plotters, level draw and unpack, title / scores / continue paths exercised in CSpect; no differential replay.",
+   "result": "The game's logic and collisions run unchanged; the ULA play area is replaced by Layer 2 scenery and hardware sprites; HUD and stars stay on the ULA."
+  },
+  "decision": "Layer 2 hardware scroll with scenery masks, figures as hardware sprites with glide, level 3 battleship tilemap, intro in front; first version unverified (owner 2026-11-22).",
+  "next_experiment": "Layer 2 / sprite simulator model: a recording over level 1 must replay with every hook's registers and RAM IDENTICAL."
+ }
+}

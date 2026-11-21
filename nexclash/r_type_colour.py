@@ -5,10 +5,10 @@ process (nexclash docs/COLOURS.md: coloursheet sheets, read-back, three-way merg
 Until R-Type has an evidence record, run the import with this module instead of `nexclash.py
 recolour` (same code path: nexclash.recolour.run with this engine):
 
-    python r_type_colour.py sheets [-o DIR]                          the sheets, one pair per level
-    python r_type_colour.py recolour BUILD.nex PAINTED.png [-o OUT_painted.nex] [--onto MAP | --replace]
-    python r_type_colour.py figures PATCH.json                       names / layers / outlines into the registry
-    python r_type_colour.py restyle BUILD.nex                        BUILD_styled.nex with the registry's outlines
+    py -3 -m nexclash.r_type_colour sheets [-o DIR]                          the sheets, one pair per level
+    py -3 -m nexclash.r_type_colour recolour BUILD.nex PAINTED.png [-o OUT_painted.nex] [--onto MAP | --replace]
+    py -3 -m nexclash.r_type_colour figures PATCH.json                       names / layers / outlines into the registry
+    py -3 -m nexclash.r_type_colour restyle BUILD.nex                        BUILD_styled.nex with the registry's outlines
 
 Keys: one per graphics byte, 'LL:AAAA' = level byte (7 19C, '0'..'9') : address of the byte in the
 unpacked graphic stream; check = the byte's value; bit 0 = leftmost pixel. Defaults: ink = the

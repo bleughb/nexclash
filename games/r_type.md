@@ -1,25 +1,26 @@
 # R-Type (128K) - intake
 
 ## Next session
-Stage 6 started 2026-11-22 (owner: "get R-Type set up as a nexclash game"), branch add-r-type.
-Release candidate RC1 = specnext r-type-cache 00d6801 game + spec-screen intro (owner flow
-2026-11-22: tape loading screen >= 4 s, ships turn at once, stick -> hand-turned ship once, fades).
-Owner decisions: intro rendered at build time from the owner's R-9 model (nothing copied from the
-game stored); first version ships UNVERIFIED (.nxc says so), the simulator proof is its own stage.
-Plan, in order (each step committed; RC1 is the byte-exact target until the proof stage):
-1. nexclash/r_type.py + asm/r_type_hooks.asm (l2scroll, l2sprites_body, glide, ship folded in):
-   `is_r_type`, profile, `auto` building plain + sprite NEX from Rtype.z80; side inputs found by
-   MD5 beside the snapshot, like cisco_heat LOAD_SCREEN: tape loading screen (scr block), the
-   owner's showpiece picture, decoded levels and figure corpus made from the snapshot / RZX at
-   build time (not stored). Target: rtype_rc1_game.nex MD5.
-2. Colours: registry, arrangement and colour map as docs/profiles/r_type_*.json (owner decisions +
-   graphic addresses only); sheets drawn into the session folder, never committed here.
-3. Intro: model json + renderer + specanim.asm as a build step; title / text / logo pixels taken
-   from the snapshot's own spec screen; output = RC1 intro NEX MD5.
-4. .nxc: variants (with / without intro), cheats from the TipShop .pok (all addresses checked
-   2026-11-22: infinite lives, immunity, invincibility, attachments work; no-scenery has no effect).
-5. Record (unverified, emulator evidence: smoke, compare, sweeps, intro verify_load), STATUS,
-   engines.py line, doccheck. Push / PR only when the owner asks.
+Stage 6 (owner 2026-11-22: "get R-Type set up as a nexclash game"), branch add-r-type: the engine is in,
+UNVERIFIED (owner decision: ship unverified first; the simulator proof is its own stage).
+`nexclash.py auto r_type.z80` (no recording) writes r_type_game.nex a52841b4 (= RC1 game) and
+r_type_sprites.nex 9a426f54 (= RC1 intro + game, the .nxc's build), with r_type_loading.scr and
+r_type_showpiece.png beside the snapshot (MD5-checked side inputs: game data, never here).
+- nexclash/r_type.py: hooks from docs/profiles/r_type.json (asm/r_type_hooks.asm), 18 sites, PACE,
+  RAMFIX, NOTAPE, banks (colour, scenery masks, behind flags r_type_behind.json, glide, ship,
+  showpiece). Level graphics: the game's own unpacker (8F31..8F4E) run in the simulator on the
+  player's snapshot, checked by SHA-256 of all ten images; the catalogue (profiles: r_type_catalogue.json.gz) =
+  level / address / ink + geometry only (the figure corpus rebuilt exactly from it + the snapshot).
+- r_type_colour / _figures / _scenery / _masks / _showpiece: the specnext intake modules, paths only
+  changed (snapshot via r_type.set_source or $NEXCLASH_R_TYPE_Z80); registry r_type_figures.json.gz
+  and arrangement r_type_sheets.json in docs/profiles. Sheets and recolour use r_type_game.nex.
+- Intro: r_type_intro.py + r_type_r9.py (owner's model r_type_r9_model.json.gz, rendered at build
+  time, ~2.5 min) + asm/r_type_intro.asm; title / logo / text from the snapshot's own screen (= the
+  original specification screen, checked pixel-exact), which is also the showpiece's start picture.
+Open: cheats - the .nxc trainers poke the banks in the NEX header, but in the intro build the game's
+banks are data the intro's loader reads, so TipShop pokes (infinite lives 37374,0; immunity;
+invincibility 37362,201; attachments; all checked on RC1) need loader support or a game-only
+variant first. Hardware test of RC1. Proof stage: Layer 2 / sprite model, verify, unit tests.
 Stage: 1 complete as a playable prototype (main: 2026-11-16). Since then specnext PRs #97 <- #98
 <- #99 (stacked, open; owner-tested in CSpect only, 2026-11-17) own the display: Layer 2 640x256
 half-pixel scroll, scenery in front with see-through edges, filled whole-figure sprites that glide,
@@ -248,6 +249,13 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   border). `savenex cfg <border>,<address>` keeps the file open and writes its handle there.
 - [local: draw order beats identity] Replacing the picture (scroll on Layer 2, sprites keyed by the
   plotter call) cost less than recognising the original's cells every update, and gave hardware scroll.
+- [local: art without storing it] The figure corpus held graphics bits; the engine stores level /
+  address / ink only and rereads attribute + bits from the game's own unpacker run on the player's
+  snapshot (exact: SHA-256 of the ten images, corpus equal). Check unpacker output before relying on it.
+- [local: the snapshot is the picture] Rtype.z80's own screen is the specification screen, pixel for
+  pixel: the intro's title / logo / text and the showpiece's start picture need no side input.
+- [local: trainers behind an intro] .nxc trainers poke banks the NEX header lists; a NEX whose own
+  loader reads the game's banks from the file (R-Type intro) cannot take them: needs a hook or variant.
 
 ## Friction
 - reuse: [none: existing survey, scan, preview and census tools provided the investigation paths]
@@ -258,6 +266,8 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   in specnext/reference/r_type/intake; none added as an untested shared toolkit probe.
 
 ## Stage log
+- 2026-11-22 Stage 6 engine (branch add-r-type): r_type.py + intro build reproduce RC1 byte for byte
+  from the snapshot and two side inputs; record unverified; cheats open (intro loader).
 - 2026-11-20 Spec-screen intro in front of the game (R-Type_SpecNext_V1.2.NEX): 3D R-9 views,
   scrolling list, turning ships, joystick view, game loaded from the same file. Owner hardware PASS.
 - 2026-11-17 Own the display (specnext PRs #97-#99): half-pixel scroll, scenery masks in front,

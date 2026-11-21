@@ -18,9 +18,9 @@ import sys
 from pathlib import Path
 from PIL import Image
 
-# Side inputs (game pictures, never in this repo), beside the snapshot; r_type.find_showpiece checks them by MD5 and
-# sets these: SOURCE = the owner's neon-glow 320x256 conversion of the specification screen, ORIGINAL = the original
-# 256x192 specification screen (the transition starts from it).
+# Set by r_type.Patch: SOURCE = the owner's neon-glow 320x256 picture of the specification screen (a side input beside
+# the snapshot, checked by MD5: game art, never in this repo); ORIGINAL = the original 256x192 specification screen,
+# the transition's start (the snapshot's own screen, r_type_intro.spec_image).
 SOURCE = None
 ORIGINAL = None
 W, H, BAND = 640, 256, 8
@@ -199,7 +199,7 @@ def original_banks(source, pal):
     pic = Image.open(source)
     used = {c for _, c in pic.getcolors(1024)}
     free = [i for i in range(255, -1, -1) if i not in used]
-    orig = Image.open(ORIGINAL).convert('RGB')
+    orig = (ORIGINAL if isinstance(ORIGINAL, Image.Image) else Image.open(ORIGINAL)).convert('RGB')
     cols = {}
     pal = bytearray(pal)
     for c in sorted(set(orig.getdata())) + [(0, 0, 0)]:

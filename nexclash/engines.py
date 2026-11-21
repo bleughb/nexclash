@@ -112,6 +112,7 @@ ENGINES = [
     ('flying_shark', 'is_flying_shark', None),                            # Flying Shark (48K): Layer 2 outline
     ('jillys_farm', 'is_jillys', None),                                   # Jilly's Farm Volume 1 - SokoBAArn! (48K): default and Enhanced
     ('that_sinking_feeling', 'is_tsf', None),                             # That Sinking Feeling (128K tape form): default and Enhanced
+    ('r_type', 'is_r_type', None),                                        # R-Type (128K): Layer 2 scroll, sprites, glide, intro (not verified)
 ]
 
 

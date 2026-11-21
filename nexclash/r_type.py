@@ -217,8 +217,6 @@ LOAD_SCREEN = 'r_type_loading.scr'            # the tape's 6,912-byte loading sc
 LOAD_MD5 = 'acab5a1b9643d14c02284e057bc16854'
 SHOWPIECE = 'r_type_showpiece.png'             # the owner's neon-glow 320x256 picture of the specification screen
 SHOWPIECE_MD5 = '3023611302798e3bb5998fa42a77b2e3'
-SPEC_SCREEN = 'r_type_spec_screen.png'         # the original 256x192 specification screen (the transition's start)
-SPEC_SCREEN_MD5 = '5a59184281729722ac3c348ad0aa20e8'
 
 
 def side_input(z80, name, md5):
@@ -317,7 +315,7 @@ class Patch(Plain):
 
     def __init__(self, z80, colours=None, showpiece=True):
         from . import r_type_colour as RC
-        set_source(z80)
+        snap = set_source(z80)
         h = hooks()
         self.syms = h['syms']
         self.hook_page_data = h['code']
@@ -332,10 +330,9 @@ class Patch(Plain):
         self.showpiece = False
         if showpiece:
             src = side_input(z80, SHOWPIECE, SHOWPIECE_MD5)
-            orig = side_input(z80, SPEC_SCREEN, SPEC_SCREEN_MD5)
-            if src and orig:
-                from . import r_type_showpiece as SP
-                SP.SOURCE, SP.ORIGINAL = src, orig
+            if src:
+                from . import r_type_intro as I, r_type_showpiece as SP
+                SP.SOURCE, SP.ORIGINAL = src, I.spec_image(snap)
                 sp = SP.build()[0]
                 cop = sp.pop(SP.COPPER_BANK)[:2049]     # mode byte, then the palette (glide page at 1800, COPPER_AT)
                 banks.update(sp)
@@ -374,3 +371,59 @@ def build(z80, nex, colours=None, showpiece=True):
     p = Patch(z80, colours, showpiece)
     Z.convert(str(z80), str(nex), tail_req=0x5B00, force50=True, quiet=True, patch=p)
     return p
+
+
+# ---------------------------------------------------------------- engine contract
+
+def _profile_path():
+    return PROFILE
+
+
+def verify(patch, rzx_path, stop=None, collect=0, progress=None):
+    """No simulator proof yet (games/r_type.md "Next session"): the hooks own the display and the Layer 2 / sprite
+    model for them is the next stage."""
+    raise NotImplementedError('R-Type: no differential verifier yet; the build is emulator-tested only (games/r_type.md)')
+
+
+def unit_tests(patch, states, neg=True):
+    raise NotImplementedError('R-Type: no unit tests yet (games/r_type.md)')
+
+
+# colour sheets and recolour work on the game build (NAME_game.nex): the intro build carries the game's banks as data
+from .r_type_colour import (RECOLOUR, COLOURS, load_colours, colour_identity, nex_peek,  # noqa: E402
+                            recolour, sheets)
+
+
+def auto(a, z80, name, out, say):
+    """nexclash.py auto: NAME_game.nex (the game: Layer 2 scroll, sprites, glide, battleship tilemap, the showpiece when
+    its picture is beside the snapshot) and NAME_sprites.nex (the intro in front of it: the animated R-9 specification
+    screen, the tape's loading screen when it is beside the snapshot). Not verified: no recording is replayed."""
+    from . import r_type_intro as I
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    if not getattr(a, 'publisher', None):
+        a.publisher = PUBLISHER
+    if hashlib.md5(Path(z80).read_bytes()).hexdigest() != SOURCE_MD5:
+        say('Snapshot  : not the snapshot this build was made from (MD5 %s); building anyway' % SOURCE_MD5)
+    say('Game      : R-Type (Electric Dreams, 1988, 128K)')
+    say('Engine    : r_type; play area on Layer 2 (scroll, scenery colours), figures as hardware sprites, ship glide, '
+        'level 3 battleship tilemap; the original logic unchanged')
+    game = out / (name + '_game.nex')
+    p = build(z80, game)
+    say('Game      : %s  %s' % (game.name, hashlib.md5(game.read_bytes()).hexdigest()))
+    say('Colours   : %s' % ', '.join('%s %s' % kv for kv in p.colour_info.items()))
+    say('Showpiece : %s' % ('the owner\'s picture (%s)' % SHOWPIECE if p.showpiece else
+                            'no %s beside the snapshot: the original specification screen only' % SHOWPIECE))
+    screen = side_input(z80, LOAD_SCREEN, LOAD_MD5)
+    say('Loading   : %s' % ('the tape\'s loading screen (%s)' % LOAD_SCREEN if screen else
+                            'no %s beside the snapshot: the intro starts on a black screen' % LOAD_SCREEN))
+    say('Intro     : rendering the R-9 (about 2 minutes)')
+    files = I.data(source(), say)
+    full = out / (name + '_sprites.nex')
+    full.write_bytes(I.combine(game.read_bytes(), files, screen.read_bytes() if screen else None))
+    say('Sprites   : %s  %s  (intro + game)' % (full.name, hashlib.md5(full.read_bytes()).hexdigest()))
+    (out / (name + '_outputs.json')).write_text(json.dumps({'default': full.name}, indent=1) + '\n')
+    say('Boot      : not simulated (128K intro + game; emulator smoke test, games/r_type.md)')
+    say('Verify    : none: not verified (emulator evidence only; games/r_type.md "Evidence")')
+    say('Result    : BUILT, NOT VERIFIED')
+    return True
