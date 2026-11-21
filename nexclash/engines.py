@@ -88,6 +88,7 @@ ENGINES = [
     ('gunfright', 'is_gunfright', None),                                  # Gunfright (48K): default and Enhanced
     ('army_moves', 'is_army_moves', None),                                # Army Moves (128K, both parts)
     ('game_over', 'is_game_over', None),                                  # Game Over (128K, both worlds)
+    ('simpsons', 'is_simpsons', None),                                    # The Simpsons: Bart vs. the Space Mutants (128K, a level a snapshot)
     ('gauntlet', 'is_gauntlet', None),                                    # Gauntlet (128K snapshot of the 48K game): painted tile layer
     ('chase_hq', 'is_chase_hq', None),                                    # Chase H.Q. (128K): Speed, Enhanced in two sets (local art)
     ('atom_ant', 'is_atom_ant', None),                                    # Atom Ant (128K tape form): default and Enhanced
