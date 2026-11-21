@@ -40,7 +40,7 @@ state (checks below). Hardware: Downhill ran (user, 2026-11-22).
 ## Dependency investigation
 The hook's consumers: the menu's loader only (callers at 0x6182 header, 0x621A event; both read carry and IX/DE after). It uses the stack (RET),
 the border system variable 0x5C48, NextReg 0x50 (restored to 0xFF) and its own 8 bytes of variables at 0x6D00. The events never touched 0x6503-0x74FF in the
-free runs (diff of option screens and gameplay snapshots). Not covered: High Scores entry, two-player modes, joystick, 60 Hz.
+free runs (diff of option screens and gameplay snapshots). High Scores display works from the main menu (H) and an event menu (JNext). Not covered: High Scores name entry, two-player modes, joystick, 60 Hz.
 
 ## Evidence
 - `python selftest.py REF --game winter_sports --verify` (no recording): for each event the patched menu (hook + NextReg 0x50 model) and the
