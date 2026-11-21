@@ -4,7 +4,7 @@
 Stage: 3 (plain .nex done; no sprite build)  State: all six events load and play in JNext 1.2.0 (2026-11-22)
 Inputs: the user's files (not in the repo): menu .z80 (48K v1, PC=0x0038, sp 0x5FEA), the .tap; no RZX
 Branch: add-winter-sports (local, unpushed)
-Start with: hardware test of the plain .nex (loading screen, one event each), then decide on a sprite build
+Start with: the user's hardware report per event (loads on hardware, 2026-11-22), then decide on a sprite build
 Open: no RZX, so nothing is proven by differential replay; no record in docs/records, no engine line, no STATUS row
 
 ## Sources (five files compared, 2026-11-22)
@@ -32,4 +32,5 @@ SETUP F=500, game start F=761 = 5.2 s on top of the load.
 - Menu -> each event's option screen -> K + four control keys -> S: Downhill, Ice Hockey, Ski Jumping, Bobsled, Biathlon
   reach play; Speed Skating needs 1 player + keys + event 3 + S (it plays). Event A -> EXIT -> event B works (hook state is
   per request). Screenshots only, no register comparison.
-- Not tested: real hardware, 60 Hz, High Scores entry, two-player modes, joystick.
+- Real hardware (user, 2026-11-22): the .nex loads and the game runs. Details of events/loading screen not reported yet.
+- Not tested: 60 Hz, High Scores entry, two-player modes, joystick.
