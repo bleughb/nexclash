@@ -113,6 +113,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - The Arc of Yesod (arc_of_yesod): `arc_of_yesod.nex` cf3ad5b7ab250bd9e0400febd046990c, `arc_of_yesod_sprites.nex` 93c1ac4a53c5d0db83b451ed53d727bb, `arc_of_yesod_enhanced.nex` dcbc7fa189c093aa4d728f358546a9ba, `arc_of_yesod_sprites_loading.nex` 858ec5cda7dc2782664ed2247310589c, `arc_of_yesod_enhanced_loading.nex` 62b922d83ab47c6abf8f895c7a7af110; verified 2026-11-17
 - Gauntlet (gauntlet_tape): `gauntlet_start_sprites.nex` 5d9cdb805fcdc839cf33424d47b2a1bd, `gauntlet_start_steady.nex` 3f374e019a63d0bdeca8d1cee31459a2; verified 2026-11-19
 - Heartland (heartland): `heartland.nex` 62ee38aed9832c67c07dd3b4e088db2e, `heartland_sprites.nex` 8ffaeb05bd51a15ec871a5c99c4df7d7, `heartland_enhanced.nex` c51b0e80e16ece6b7902f7e36c4bea9e; verified 2026-11-18
+- Stormbringer (128K) (stormbringer): `stormbringer.nex` 74f64c674eda981e940da907018aa9b2, `stormbringer_sprites.nex` 218f92e530c6c658f37e51d6c24ce641; verified 2026-11-21
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

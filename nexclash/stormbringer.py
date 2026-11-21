@@ -411,7 +411,10 @@ def crew_from_hpage(b13, prof=None):
 
 
 def use_game(path):
-    """Derive the crew tiles once in this process (a worker's negatives are built before their recording runs)."""
+    """Derive the crew tiles once in this process (a worker's negatives are built before their recording runs).
+    Knight Tyme's Bridge only: no overlay in the profile, no crew."""
+    if not load_profile().get('overlay'):
+        return None
     if not _CREW.get('tiles'):
         if path.lower().endswith('.rzx'):
             crew_tiles(_frames(path)[0][0])
@@ -1194,18 +1197,18 @@ def negative_patches():
     rep_rom('room build leaves the figures', bytes.fromhex('CD') + syms['c_all'].to_bytes(2, 'little'), bytes(3), 'e_rm')
     # 11 window hides nothing
     rep_rom('window hides nothing', bytes.fromhex('CD') + syms['c_win'].to_bytes(2, 'little'), bytes(3), 'e_wn')
-    # the crew: not loaded; wrong tile place
-    rep_rom('crew tiles not loaded', bytes.fromhex('CD') + syms['c_ov'].to_bytes(2, 'little'), bytes(3), 'e_ov')
-    # crew tiles one pixel right, and one crew tile's skin in the wrong colour: hook data only, the model keeps the profile
-    p = StormbringerPatch(colours={})
-    p.hpage[0x2010] += 1
-    p._banks()
-    out.append(('crew tiles one pixel right', p))
-    p = StormbringerPatch(colours={})
-    o = 0x2100
-    p.hpage[o:o + 128] = bytes(((v >> 4) == CSKIN and (CWHITE << 4) or (v & 0xF0)) | ((v & 15) == CSKIN and CWHITE or (v & 15)) for v in p.hpage[o:o + 128])
-    p._banks()
-    out.append(('crew skin in the wrong colour', p))
+    # the crew (Knight Tyme's Bridge only; Stormbringer's profile has no overlay, so these do not apply)
+    if base.prof.get('overlay'):
+        rep_rom('crew tiles not loaded', bytes.fromhex('CD') + syms['c_ov'].to_bytes(2, 'little'), bytes(3), 'e_ov')
+        p = StormbringerPatch(colours={})
+        p.hpage[0x2010] += 1
+        p._banks()
+        out.append(('crew tiles one pixel right', p))
+        p = StormbringerPatch(colours={})
+        o = 0x2100
+        p.hpage[o:o + 128] = bytes(((v >> 4) == CSKIN and (CWHITE << 4) or (v & 0xF0)) | ((v & 15) == CSKIN and CWHITE or (v & 15)) for v in p.hpage[o:o + 128])
+        p._banks()
+        out.append(('crew skin in the wrong colour', p))
     # 12 object site missing
     rep_page('objects not built', bytes.fromhex('CD') + syms['build'].to_bytes(2, 'little'), bytes(3), 'c_plot')
     # 13 Knight's attributes: wrong pattern
@@ -1287,7 +1290,7 @@ def unit_tests(patch, states, negatives=()):
         fail('no captured state')
         return c, fails
     for colours, label in (({}, 'plain'), (None, 'colours')):
-        for gi, (idx, kind) in enumerate([(3, 1), (11, 1), (39, 1), (69, 0), (70, 0), (72, 0), (81, 0)]):
+        for gi, (idx, kind) in enumerate([(3, 1), (11, 1), (39, 1), (69, 0), (70, 0), (72, 0), (76, 0)]):   # Stormbringer's figures (81 is another record here)
             for row, col, a in [(7, 0, 0x47), (20, 30, 0x42), (10, 15, 0x06)]:
                 if kind == 0 and row > 20:
                     continue
