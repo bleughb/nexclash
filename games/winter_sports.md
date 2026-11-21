@@ -72,7 +72,7 @@ then scrolls the map pane with a 127-row LDIR loop (0x84FA) from the row-address
   0xB207 is the 128 x 14-byte working buffer; 0xB000 the attribute buffer (stride 32; rows 0x3D / 0x3C: whole-row colours, so the colour boundaries are cell-stepped).
 - 0x8C16 scrolls the buffer horizontally one pixel per change of the heading variable (33500 = 0x82DC), 14 x RR (HL) per row; 0x8BFB reloads it from 0xA009 on a direction change.
 - 0x8B49 erases last update's poles (undo list at 0x8B95, LD (HL),0 stepping 28); 0x8A16-0x8B1A draw the gate poles: vertical lines made with
-  self-modified SET n,(HL) (0x8A9A, 0x8AFA, 0x8B1A) from the gate list at (34757) (gate record: 3 bytes: x, kind, colour code); then 0x8999 copies the 128 rows
+  self-modified SET n,(HL) (0x8A9A, 0x8AFA, 0x8B1A) from the gate list at (34757) (3 bytes per gate: two position values and a kind that the code compares with 2, 3 and 4: meaning not yet decoded); then 0x8999 copies the 128 rows
   to the ULA through 0xF5E0 and 0x89AF the 16 x 14 attribute cells to 0x58A1.
 - Writers of the buffers (scan --writers, 600 frames): 0x8B69 (poles erased), 0x8A9A / 0x8AFA (poles), 0x8C4E-0x8C60.. (the scroll); no other routine reads or writes 0xB000-0xBFFF.
 - Read-back: tracing every read of 0x4000-0x5AFF over 700 frames, only 0x84FA / 0x8508 (map-pane scroll, cols 17-30) and 0x83F1 (cols 24-27, rows 5-14, 81 reads) read screen memory.
@@ -95,7 +95,7 @@ bank-0 top 16K is otherwise unused by the event. The loader hook (0x6C00, 0x6D00
 3. The update is padded back to the original interval (median 1.91 frames) with the pace limiter.
 Rejected: poles as hardware sprites (1 px wide, up to about 100 px tall, several per update: 8 sprites each); Timex 8 x 1 hi-colour (fixes the vertical steps only, and needs the
 0x6000 attribute screen where the menu code sits); a Layer 2 re-implementation of the whole renderer (the game's own routines already give the poles and the heading for free).
-Risks: transparent-paper priority between the ULA and Layer 2 (hardware to check); the gate colour codes in the gate list (not yet decoded: are any poles coloured?); Slalom and Giant Slalom
+Risks: transparent-paper priority between the ULA and Layer 2 (hardware to check); the gate kinds 2-4 in the gate list (not yet decoded: do they change how a pole is drawn or coloured?); Slalom and Giant Slalom
 (same event code, other courses: not yet surveyed); the other five events have their own renderers (each needs its own stage 0-1).
 
 **The one question for the user:** paint the panorama automatically (clean colours, sky / mountains / snow / forest / slope; a first build in one round) and refine by hand later, or hold the
