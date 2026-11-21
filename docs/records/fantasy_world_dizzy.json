@@ -114,16 +114,16 @@
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/templates.json": "e93f585833e72628",
+   "nexclash/templates.json": "f7fbc6a2fc623f9e",
    "nexclash/verify.py": "2d4c0e3b68e6354a",
    "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "d01bdcaa385b220b",
+   "recipe": "0ddf10d36561a922",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-20"
+  "date": "2026-11-21"
  },
  "verified": {
   "deps": {
@@ -150,16 +150,16 @@
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/templates.json": "e93f585833e72628",
+   "nexclash/templates.json": "f7fbc6a2fc623f9e",
    "nexclash/verify.py": "2d4c0e3b68e6354a",
    "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "d01bdcaa385b220b",
+   "recipe": "0ddf10d36561a922",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-20"
+  "date": "2026-11-21"
  },
  "rework": [
   {
