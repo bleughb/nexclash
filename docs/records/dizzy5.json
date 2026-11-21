@@ -71,14 +71,14 @@
   },
   "sprites": {
    "file": "dizzy5_sprites.nex",
-   "md5": "52a4fee89d6da2b22bd3050b8598a2d7"
+   "md5": "3c676bbdae0b762d244240c14da11110"
   }
  },
  "repro": [
   {
    "strategy": "slot1",
    "file": "dizzy5_sprites.nex",
-   "md5": "a39555dc07aa07fcdd7c364f7816ea15",
+   "md5": "e9f945be3984028b8f1ab8eeac664731",
    "note": "re-checked 2026-09-28; 00a7c496... had an EMPTY font page: dialogue text blank on hardware"
   }
  ],

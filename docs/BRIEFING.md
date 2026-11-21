@@ -366,7 +366,7 @@ Hardware to confirm
    A1 "7FFD lock"), Magicland, Dizzy 6 (its mirror path is proven only by the unit selftest: wants an
    RZX through the mirror room; Dizzy 6 stays slot1). Later: the tail inside the alt ROM (same
    address in both images, no game RAM).
-26. State a previous program may leave behind (documented, not seen on hardware): the stub resets
+26. State a previous program may leave behind (sprites: hit; set-up hides 128 now): the stub resets
    speed, video, DivMMC, sprites, $C0, 0x123B, and NEXLOAD is asked to reset NextRegs (header byte
    134 = 0; which registers is not confirmed). Not written, and each would break games if left
    non-default: a running copper ($62); line offset $64 (shifts $1E/$1F, which the Rainbow raster
