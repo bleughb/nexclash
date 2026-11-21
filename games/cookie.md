@@ -13,14 +13,14 @@ Start with: a recording played by hand into later levels, then hardware
 Read: "Build", "Open"
 
 ## Result (2026-11-20)
-Techniques: `patch.xor-overlay-keep-ula`, `patch.preserve-r`, `patch.restore-speed`, `patch.whole-altrom-image`
+Techniques: `patch.xor-overlay-keep-ula`, `patch.runtime-colour-map`, `patch.preserve-r`, `patch.restore-speed`, `patch.whole-altrom-image`
 
 Two whole machine-played recordings (20,273 and 20,153 frames, 6 games each).
 
 | | |
 |---|---|
-| Builds | cookie_sprites.nex c4885c32 (figures as sprites in their own colours, loading screen), plain df406298 |
-| Verify | IDENTICAL on both: 106,799 figures as sprites (12,817,707 sprite pixels against the model of the figure, and the model against the original's own plot at every draw-only entry), none left to the game, 24 erases, 56 clears, 106,799 draws from their entry, every pace site; every register with R and all memory, the bitmap too; 104,519 paints not painted, none of another colour than at the plot; the alt ROM's IM 1 handler against Sinclair's at 32,491 interrupts |
+| Builds | cookie_sprites.nex faaacc0b (figures as sprites in their own colours, loading screen), enhanced 7df95fe3 (34 pictures painted, 12 fixed colours), plain df406298 |
+| Verify | IDENTICAL on both, both builds (Enhanced: every pixel's colour against the painted map too): 106,799 figures as sprites (12,817,707 sprite pixels against the model of the figure, and the model against the original's own plot at every draw-only entry), none left to the game, 24 erases, 56 clears, 106,799 draws from their entry, every pace site; every register with R and all memory, the bitmap too; 104,519 paints not painted, none of another colour than at the plot; the alt ROM's IM 1 handler against Sinclair's at 32,491 interrupts |
 | Unit | PASS: 1,632 graphic cases (all 34 graphics x 8 places x 3 colours x first and last object, through the draw-only entry: sprites, model and the original's plot agree), 16 speed cases, erases, clear, 84 paint cases, 3 guard cases, a graphic not in the table, negative control 40 of 40 |
 | Negative | 6 broken builds, all detected |
 | Boot | simulated: registers and RAM as the snapshot |
@@ -76,6 +76,18 @@ The game's bitmap stays the original's; sprites lie on the figures' own pixels.
   game never addresses it). Interrupts stay on in the hooks.
 - DMA / DDMA (docs/DDMA.md): not used. The patterns are sent once at set-up; a hook writes only sprite attributes.
 
+## Enhanced (2026-11-20, first pass; owner: "have codex do the enhanced colours")
+- Sheet: one picture a distinct shape (34), painted by a Codex pass from a brief; files in the owner's painting
+  folder (`nexclash-cookie`); `sheet2colours.py` (pilot tools) makes `cookie_colours.json`, kept beside the snapshot: it holds
+  the figures, so it is not in this repository.
+- These sprites have one palette for every figure: 13 fixed colours (nibbles 2-14 of every palette offset, 9 bits
+  each, written by the set-up) and nibble 1 = the object's own colour at run time. A pixel left unpainted keeps
+  the game's colour, so a figure the game shows in several colours still does. 34 pictures have painted pixels.
+- The hooks and tables are the same as the default's: only the patterns' nibbles and the 13 colours differ. The
+  default build's set-up writes zeros there and no pattern of it uses them.
+- Verify: the replay and the unit cases run for both builds; a sprite pixel must be the object's ink where the map
+  leaves it and the map's fixed colour elsewhere.
+
 ## Hardware checklist
 Starts from the menu after the loading screen (a key or 5 s); menu and keys as the original; Charlie, his flour
 bombs, the ingredients and the nasties in their own colours with no colour spilling onto each other; a figure cut
@@ -84,7 +96,8 @@ game's speed as the original's over a minute of play.
 
 ## Open
 1. The recordings are machine-played: later levels are proven by the unit cases, not in play.
-2. No Enhanced (painted) set: the default is the game's own colours, a colour an object.
+2. The Enhanced painting is a first pass the owner has not seen in play; where the painted map lives for a public
+   patch (it holds the figures; the .nxc carries the painted patterns).
 3. Pace is by construction (the plot's set-up at 28 MHz pays for the hook, as Jetpac 1.3); not measured in JNext.
 4. Under the sprites the game's XOR still leaves holes where two figures cross; the sprites cover them.
 
@@ -94,6 +107,9 @@ game's speed as the original's over a minute of play.
 - 2026-11-20: the bitmap is kept (the figures stay drawn under their sprites); only the colour paint goes.
 
 ## Lessons
+- [local: this engine's build step] An Enhanced build's fixed colours were compared as symbols only, never with
+  the RGB the set-up uploads (Codex review 2026-11-20): palette_wrong replays the boot's NEXTREG writes against the
+  painted map, the default build as its negative.
 - [local: this game's verifier] An XOR plotter on an empty screen draws the frame it means to erase: the empty
   screen is a reference only for an entry that draws and erases nothing. A model of the figure is the reference
   elsewhere, and the draw-only entries check the model.

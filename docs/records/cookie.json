@@ -15,6 +15,12 @@
   },
   "recordings": [
    {
+    "name": "cookie_colours.json",
+    "md5": "cbf33af1f5040ba17617c7272f604a19",
+    "path": "cookie/cookie_colours.json",
+    "role": "The painted map (34 pictures, 12 fixed colours), staged beside the snapshot; not a recording. It holds the figures, so it is not in the repository."
+   },
+   {
     "name": "cookie_loading.scr",
     "md5": "c155a924e406c59e90cf9f75ba87ccb1",
     "path": "cookie/cookie_loading.scr",
@@ -76,15 +82,19 @@
   },
   "sprites": {
    "file": "cookie_sprites.nex",
-   "md5": "c4885c3243a404f2a85003a7b570ef31"
+   "md5": "faaacc0beb0c6bc6d5742b0f40ec9cd2"
+  },
+  "enhanced": {
+   "file": "cookie_enhanced.nex",
+   "md5": "7df95fe3204d63471c342b8cd6fd9d59"
   }
  },
  "repro": [],
  "status": {
   "title": "Cookie",
   "engine_col": "cookie (cookie.md)",
-  "build": "cookie_sprites.nex c4885c32 (the game draws as it does; every figure a sprite on the same pixels in its own colour; the colour paint stores nothing; loading screen)",
-  "software": "Verify IDENTICAL on two whole machine-played recordings (40,426 frames, 12 games): 106,799 figures as sprites, 12,817,707 sprite pixels against the figure's model (itself checked against the original's plot at every draw-only entry), every register with R and all memory (the bitmap too) at every hook, the IM 1 handler compared at 32,491 interrupts; unit PASS (1,632 graphic cases over all 34 graphics, negative control 40 of 40); 6 of 6 broken builds detected; ROM path check pass",
+  "build": "cookie_sprites.nex faaacc0b (the game draws as it does; every figure a sprite on the same pixels in its own colour; the colour paint stores nothing; loading screen) + enhanced 7df95fe3 (34 pictures painted with 12 fixed colours, a first pass; a pixel left unpainted keeps the game's colour)",
+  "software": "Verify IDENTICAL on two whole machine-played recordings (40,426 frames), both builds: 106,799 figures as sprites, 12,817,707 sprite pixels against the figure's model (itself checked against the original's plot at every draw-only entry) and, on Enhanced, every pixel's colour against the painted map; every register with R and all memory at every hook; the IM 1 handler compared at 32,491 interrupts; unit PASS on both builds (1,632 graphic cases over all 34 graphics, negative control 40 of 40); 6 of 6 broken builds detected; ROM path check pass",
   "hardware": "untested (both builds run in OverSpec)",
   "next": "a recording played by hand into later levels; hardware test"
  },
@@ -130,6 +140,15 @@
    "phases": [
     "setup"
    ]
+  },
+  {
+   "application": "cookie.colour-map",
+   "id": "patch.runtime-colour-map",
+   "revision": 1,
+   "target": "a painted set changes only the patterns' nibbles and 13 fixed palette colours (nibbles 2-14 of every offset): nibble 1 stays the object's ink at run time; the hooks are the same",
+   "phases": [
+    "setup"
+   ]
   }
  ],
  "feasibility": {
@@ -153,15 +172,15 @@
  },
  "checked": {
   "deps": {
-   "asm/cookie_hooks.asm": "63612900e55c8e71",
+   "asm/cookie_hooks.asm": "7d2284a558736778",
    "asm/cookie_tables.asm": "747f295879360399",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/cookie.json": "c374219890f12c77",
+   "docs/profiles/cookie.json": "44131567a41546a3",
    "nexclash.py": "cc1297e9104ece5f",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "b22123bdf2572c9b",
-   "nexclash/cookie.py": "3a4694958af14dcb",
+   "nexclash/cookie.py": "08e4cde00c3d58c8",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
@@ -180,22 +199,22 @@
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "f8abc163780d2afb",
+   "recipe": "73f7c32e496c0fc4",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-20"
  },
  "verified": {
   "deps": {
-   "asm/cookie_hooks.asm": "63612900e55c8e71",
+   "asm/cookie_hooks.asm": "7d2284a558736778",
    "asm/cookie_tables.asm": "747f295879360399",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/cookie.json": "c374219890f12c77",
+   "docs/profiles/cookie.json": "44131567a41546a3",
    "nexclash.py": "cc1297e9104ece5f",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "b22123bdf2572c9b",
-   "nexclash/cookie.py": "3a4694958af14dcb",
+   "nexclash/cookie.py": "08e4cde00c3d58c8",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
@@ -214,7 +233,7 @@
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "f8abc163780d2afb",
+   "recipe": "73f7c32e496c0fc4",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-20"

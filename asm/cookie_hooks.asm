@@ -295,7 +295,7 @@ setup:  nextreg 0x57,22             ; bank 11 lower page at 0xE000
 .u2:    dec d
         jr nz,.u
         nextreg 0x57,21
-        nextreg 0x43,0x20           ; sprite palette 0, auto-increment off for 0x41 writes below
+        nextreg 0x43,0x20           ; sprite palette 0
         ld hl,speccy
         ld b,16
         ld c,1
@@ -313,6 +313,24 @@ setup:  nextreg 0x57,22             ; bank 11 lower page at 0xE000
         add a,16
         ld c,a
         djnz .p
+        ld c,2                      ; the fixed colours of a painted set: nibbles 2 to 14 of every offset (9 bits each;
+        ld d,16                     ; the plain build's are zero and no pattern uses them)
+.fo:    ld a,c
+        nextreg 0x40,a
+        ld hl,fixpal
+        ld b,13
+.fk:    ld a,(hl)
+        nextreg 0x44,a
+        inc hl
+        ld a,(hl)
+        nextreg 0x44,a
+        inc hl
+        djnz .fk
+        ld a,c
+        add a,16
+        ld c,a
+        dec d
+        jr nz,.fo
         nextreg 0x4B,0
         xor a
 .h:     nextreg 0x34,a
@@ -328,6 +346,7 @@ setup:  nextreg 0x57,22             ; bank 11 lower page at 0xE000
         nextreg 0x15,0x01
         ret
 speccy: db 0x00,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6,0x00,0x03,0xE0,0xE7,0x1C,0x1F,0xFC,0xFF
+fixpal: ds 26                   ; 13 fixed colours, 2 bytes each (the build fills them in)
 setup_end:
 
 ; ---- Loading screen stub (nexclash-patch build/all2/add_screen.py STUB, bank 13; ported 2026-11-04) ----
