@@ -537,6 +537,15 @@
     "loading": "a326db4db051bdb12a61c959891186e1"
    }
   },
+  "6515eb52c5216370de6f1ef2bbcaad4c": {
+   "game": "Pssst",
+   "doc": "pssst.md",
+   "nex": {
+    "plain": "db271c07425ad2866b9e9e13d15f1beb",
+    "sprites": "40ae6ece0286d15f71c38c80dbacda92",
+    "enhanced": "6d14ba48110804e62a83ebd3bffbe248"
+   }
+  },
   "1ff279754d0730e503816199ac6976f3": {
    "game": "Pyjamarama",
    "doc": "pyjamarama.md",
