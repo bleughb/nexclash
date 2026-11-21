@@ -148,7 +148,7 @@ class WorkflowChecks(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             def git(*args):
                 return subprocess.run(['git', '-C', d, *args], capture_output=True, text=True, check=True).stdout.strip()
-            git('init'); git('config', 'user.name', 'Workflow Test'); git('config', 'user.email', 'workflow@example.invalid')
+            git('init'); git('config', 'core.autocrlf', 'false'); git('config', 'user.name', 'Workflow Test'); git('config', 'user.email', 'workflow@example.invalid')
             records = Path(d)/'docs/records'; records.mkdir(parents=True)
             (records/'old.json').write_text(json.dumps({'engine': 'old', 'doc': 'old.md'}))
             git('add', '.'); git('commit', '-m', 'baseline')
@@ -164,7 +164,7 @@ class WorkflowChecks(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             def git(*args):
                 return subprocess.run(['git', '-C', d, *args], capture_output=True, text=True, check=True).stdout.strip()
-            git('init'); git('config', 'user.name', 'Workflow Test'); git('config', 'user.email', 'workflow@example.invalid')
+            git('init'); git('config', 'core.autocrlf', 'false'); git('config', 'user.name', 'Workflow Test'); git('config', 'user.email', 'workflow@example.invalid')
             p = Path(d)/'README.md'; p.write_text('base'); git('add', '.'); git('commit', '-m', 'base')
             base = git('rev-parse', 'HEAD'); git('update-ref', 'refs/remotes/origin/main', base)
             p.write_text('contributor work'); git('add', '.'); git('commit', '-m', 'work')

@@ -62,9 +62,12 @@ def original_graphics(mem):
     Rows run as the source stores them, bottom row first; the header's flip bits are applied at run time."""
     table = int(load_profile()['graphics_table'], 16)
     records, images = [], {}
-    for i in range(256):
+    end = 65536                           # the table ends where the first graphic begins: words past it are not
+    for i in range(256):                  # pointers, and in a snapshot taken in play some of them parse as graphics
+        if table + i * 2 >= end: break
         a = mem[table + i * 2] | mem[table + i * 2 + 1] << 8
         if not 16384 <= a < 65535: continue
+        if a > table: end = min(end, a)
         w, h = mem[a] & 15, mem[a + 1]
         if not 0 < w <= 8 or not 0 < h <= 100 or a + 2 + w * h * 2 > 65536: continue
         im = Image.new('RGBA', (w * 8, h)); px = im.load()

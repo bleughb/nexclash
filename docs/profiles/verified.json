@@ -1,6 +1,14 @@
 {
  "_note": "GENERATED from docs/records by `python -m nexclash.records views` - do not edit. Snapshots whose sprite build was differentially verified against a recording. nex = MD5s `nexclash.py patch` reproduces.",
  "snapshots": {
+  "56f151581bbcada775bb9e180bf4df9d": {
+   "game": "3D Stock Car Championship",
+   "doc": "3d_stock_car_championship.md",
+   "nex": {
+    "plain": "7ffdcd3ec8660074a1fcc697d521cfe7",
+    "sprites": "6edc58d59de04c69261df37391ec7fcb"
+   }
+  },
   "2909c2f0f18eca08479a74ad6dc8d193": {
    "game": "Abu Simbel Profanation",
    "doc": "abu_simbel.md",
@@ -10,6 +18,17 @@
     "enhanced": "b45603707d1f71bb7704436dbe0c3169",
     "english": "2e3aa22510d9a925a5b0800aad3f26c9",
     "english_enhanced": "053806e52684ce68b89a020a848e7196"
+   }
+  },
+  "f58236395e737aaa0fac1f8476711ad8": {
+   "game": "The Arc of Yesod",
+   "doc": "arc_of_yesod.md",
+   "nex": {
+    "plain": "9858d3f2cd71450c2efb01c116b1426b",
+    "sprites": "97828809e85654dddb0b9e4e117ea718",
+    "enhanced": "d183181a0b7fbd17df9cc638da942785",
+    "sprites_loading": "fda37475786a20fff92a72a5ba78496f",
+    "enhanced_loading": "49b7ac9d62940e8ff5868b91b5f78046"
    }
   },
   "9c14e2564e3f9956ff6ff973dac77537": {
@@ -125,6 +144,15 @@
     "sprites": "ff488056f4dd8e3c3f5f7c88a2b1946d"
    }
   },
+  "be8173da315689ba0aa6e9e1643a0f23": {
+   "game": "Cookie",
+   "doc": "cookie.md",
+   "nex": {
+    "plain": "df40629882f8b5be3619e90f87690c91",
+    "sprites": "faaacc0beb0c6bc6d5742b0f40ec9cd2",
+    "enhanced": "7df95fe3204d63471c342b8cd6fd9d59"
+   }
+  },
   "745cb8f59f865db5118e6dc98d09e385": {
    "game": "Cyclone",
    "doc": "cyclone.md",
@@ -214,6 +242,23 @@
     "loading": "cb0c403db4058444f38445fb1afbdc19"
    }
   },
+  "b665f16dee469ee766a4ebccdccc03f6": {
+   "game": "Gauntlet",
+   "doc": "gauntlet.md",
+   "nex": {
+    "plain": "ad2ec631091d589260bd6c20fe80e64f",
+    "sprites": "f33ade47e1f82694f2ed9b68885a04b0",
+    "steady": "545fdeed1ffeabdc91d9363ae04dea32"
+   }
+  },
+  "596acf039452f18c2b052671886279bf": {
+   "game": "Gauntlet",
+   "doc": "gauntlet.md",
+   "nex": {
+    "sprites": "377f6e5fc161c1e6618abb48a4046945",
+    "steady": "c690be8aefacf8cc9d76127daa9b14f3"
+   }
+  },
   "23d69f517506104c36ba429cb2148fa5": {
    "game": "Ghosts 'n Goblins",
    "doc": "ghosts_n_goblins.md",
@@ -258,6 +303,15 @@
     "loading": "f409ce6064820d2080cc131e87273b73",
     "enhanced": "a73fe67d3c15d5ddbaf24eda7243896a",
     "enhanced_loading": "1fef5dfc128e942f679ff681b81ac7b0"
+   }
+  },
+  "07bfa8f74d60a53ab64e5b092ffd6cca": {
+   "game": "Heartland",
+   "doc": "heartland.md",
+   "nex": {
+    "plain": "33283547fc7036cdefdf982190c75b73",
+    "sprites": "df3bed3c7278092941de2abfdeadfd21",
+    "enhanced": "6497de71a5bb55eed58957cc65426518"
    }
   },
   "ecfe7da10ba9aa395ae54c44301be1af": {
@@ -429,6 +483,33 @@
     "enhanced_backdrops_loading": "b9928a6eb4acd223d15611a498d64fae"
    }
   },
+  "5967a2ea00bd0ff5cea81778fb72eb0e": {
+   "game": "Olli and Lissa: The Ghost of Shilmoore Castle",
+   "doc": "olli_and_lissa.md",
+   "nex": {
+    "plain": "12be0e0aa24eb85e39da957cc530edbe",
+    "sprites": "61e0b6d025f05c108a4d7196d4482868",
+    "enhanced": "b9c71476d1925e291a08a0673f455116"
+   }
+  },
+  "27523b55f786a871ba4bf7fae1be255a": {
+   "game": "Olli and Lissa II: Halloween",
+   "doc": "olli_and_lissa_2.md",
+   "nex": {
+    "plain": "53516907092eddb3e6e642e4f498be6b",
+    "sprites": "dedec792ec315041fde3569de48befbd",
+    "enhanced": "2744a1af82d0d26f827712be26e101d5"
+   }
+  },
+  "ae77b4f151932e0228b99f6a257ea4de": {
+   "game": "Olli and Lissa III: The Candlelight Adventure",
+   "doc": "olli_and_lissa_3.md",
+   "nex": {
+    "plain": "db9e12154c82e582c9bd23d72818c0d7",
+    "sprites": "4eeda9b6d9f83ca885b2df78e86bbf74",
+    "enhanced": "c7056f6de0d91b024d4f72d3d8fb987a"
+   }
+  },
   "e9cb908bc86661ff81732665741393cc": {
    "game": "Pac-Mania (128K)",
    "doc": "pac_mania.md",
@@ -463,6 +544,15 @@
    "nex": {
     "sprites": "9b080e196f34a34ef89077e83c3acf96",
     "loading": "a326db4db051bdb12a61c959891186e1"
+   }
+  },
+  "6515eb52c5216370de6f1ef2bbcaad4c": {
+   "game": "Pssst",
+   "doc": "pssst.md",
+   "nex": {
+    "plain": "db271c07425ad2866b9e9e13d15f1beb",
+    "sprites": "40ae6ece0286d15f71c38c80dbacda92",
+    "enhanced": "6d14ba48110804e62a83ebd3bffbe248"
    }
   },
   "1ff279754d0730e503816199ac6976f3": {
@@ -550,6 +640,51 @@
     "enhanced_loading": "2058f2e55464eeb68f418320548fb34a"
    }
   },
+  "14ee8b0b105fbf8b58bfeaed03e97a13": {
+   "game": "The Simpsons: Bart vs. the Space Mutants",
+   "doc": "simpsons.md",
+   "nex": {
+    "plain": "706e208453a6f5db9832731663451d9f",
+    "sprites": "fa3a5f416569ab1684526f9cee231a10",
+    "enhanced": "a7ab6c7690e1f4252ac6c695a66c5b81"
+   }
+  },
+  "158c2124965358c39522f131d680ca55": {
+   "game": "The Simpsons: Bart vs. the Space Mutants",
+   "doc": "simpsons.md",
+   "nex": {
+    "plain": "3ec33dfe52463ba0cac39953b9f3aad5",
+    "sprites": "a634bef137ac4553056faf030bc85fb1",
+    "enhanced": "647240a62fd0e314742ec677095828d1"
+   }
+  },
+  "86666cbdb6b702b83454dd1fb7d041b4": {
+   "game": "The Simpsons: Bart vs. the Space Mutants",
+   "doc": "simpsons.md",
+   "nex": {
+    "plain": "3e348c601c00629b76d89d551976170c",
+    "sprites": "0530f110bc338e985a6c0c5a91a3e535",
+    "enhanced": "f47b2a8f8282fdef8f8b291b307c9afa"
+   }
+  },
+  "e5e2f2ef480f31f602f6574015a27bd8": {
+   "game": "The Simpsons: Bart vs. the Space Mutants",
+   "doc": "simpsons.md",
+   "nex": {
+    "plain": "5421d05c7b4b7b46d3c32bf35dde9c28",
+    "sprites": "866dd924e963f8bdd29426b637c9ff19",
+    "enhanced": "09610b6744867df21a110dc286fbdd0d"
+   }
+  },
+  "7702fa208c2096445f0372c3ad37e833": {
+   "game": "The Simpsons: Bart vs. the Space Mutants",
+   "doc": "simpsons.md",
+   "nex": {
+    "plain": "8d894a9cca70cf52def364cb6953d1d6",
+    "sprites": "bbe3b9b883c57a665f8bb66de8dfaf8a",
+    "enhanced": "a9e3b97ed28bc36d682651e79f3629e4"
+   }
+  },
   "3b89344c6d7e6433bf044bef1880a2f1": {
    "game": "Smash TV",
    "doc": "smash_tv.md",
@@ -611,6 +746,15 @@
     "enhanced": "b38d048f254302fe942eb2ac58bbf463"
    }
   },
+  "8dc717670aa7fc8817e83e8f63a22f72": {
+   "game": "Tranz Am",
+   "doc": "tranz_am.md",
+   "nex": {
+    "plain": "8308134dff22d877c6f70ba236e2e012",
+    "sprites": "637c510df69e95cb621db6f63d02a5fd",
+    "enhanced": "c89e6c5a4707b97a92922cd352b555ef"
+   }
+  },
   "7578947fcc8dbc4ba822e2c565499d54": {
    "game": "Treasure Island Dizzy (in game)",
    "doc": "treasure_island_dizzy.md",
@@ -633,6 +777,14 @@
    "nex": {
     "plain": "a6e6b38e9e8be1d2b5c32f08ab3c3833",
     "sprites": "07dff80327ed247a38780413e01a2325"
+   }
+  },
+  "1a961b20f59e1bac9d88973f4e600ea9": {
+   "game": "Winter Sports",
+   "doc": "winter_sports.md",
+   "nex": {
+    "plain": "8dc688fa980454c63f98bc0e802d5f88",
+    "sprites": "e26abf0ba45ba34013608063cd8d6823"
    }
   }
  }

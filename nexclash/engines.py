@@ -15,6 +15,8 @@ import importlib
 
 # (module, detector, extra condition on the auto arguments or None)
 ENGINES = [
+    ('winter_sports', 'is_winter_sports', None),                        # Winter Sports (48K), six tape events embedded; plain build
+    ('stock_car_3d', 'is_stock_car_3d', None),                           # 3D Stock Car Championship (48K)
     ('highway_encounter', 'is_highway_encounter', None),             # Highway Encounter (48K), optional Enhanced
     ('exolon', 'is_exolon', None),                                   # Exolon (128K), optional Enhanced
     ('bruce_lee', 'is_bruce_lee', None),                                # Bruce Lee (48K), optional Enhanced
@@ -27,6 +29,7 @@ ENGINES = [
     ('quazatron', 'is_quazatron', None),                                  # Quazatron colour (48K): opt-in, unproven (NEXCLASH_REWORK=quazatron)
     ('rainbow_z80n_sky', 'is_rainbow_sky', None),                          # Rainbow Islands sky fix: opt-in rework of rainbow_z80n (NEXCLASH_REWORK)
     ('nodes_of_yesod', 'is_nodes_of_yesod', None),
+    ('arc_of_yesod', 'is_arc_of_yesod', None),
     ('pyjamarama', 'is_pyjamarama', None),
     ('rainbow_z80n', 'is_rainbow', lambda a: getattr(a, 'engine', None) != 'rainbow'),  # Rainbow Islands (128K), Z80N
     ('rainbow', 'is_rainbow', None),                                      # Rainbow Islands: deprecated (--engine rainbow)
@@ -38,6 +41,9 @@ ENGINES = [
     ('nemesis', 'is_nemesis', None),                                      # Nemesis the Warlock (48K)
     ('jetpac_v11', 'is_jetpac', lambda a: getattr(a, 'altrom_fill', None) == 'whole'),  # Jet Pac v1.1: opt-in rework of jetpac
     ('jetpac', 'is_jetpac', None),                                        # Jetpac (16K)
+    ('pssst', 'is_pssst', None),                                          # Pssst (16K): the game's own colours
+    ('cookie', 'is_cookie', None),                                        # Cookie (16K): the game's own colours
+    ('tranz_am', 'is_tranz_am', None),                                    # Tranz Am (16K): the game's own colours
     ('tid128_v11', 'is_tid128_v11', None),                                # opt-in shared-library rework
     ('tid128', 'is_tid128', None),                                        # Treasure Island Dizzy 128K: opt-in rework of dizzy_patch
     ('loderunner_v3', 'is_loderunner_v3', None),                          # Lode Runner 128K v1.1: opt-in rework of loderunner_v2 (NEXCLASH_REWORK)
@@ -74,6 +80,7 @@ ENGINES = [
     ('solomons_key', 'is_solomons_key', None),                            # Solomon's Key (48K)
     ('robin_of_the_wood', 'is_robin_of_the_wood', None),                  # Robin of the Wood (128K)
     ('cobra', 'is_cobra', None),                                          # Cobra (48K)
+    ('heartland', 'is_heartland', None),                                  # Heartland (48K)
     ('gryzor', 'is_gryzor', None),                                        # Gryzor (48K)
     ('green_beret', 'is_green_beret', None),                              # Green Beret (48K)
     ('new_zealand_story', 'is_new_zealand_story', None),                  # The New Zealand Story (128K, tape set: --tape)
@@ -85,6 +92,11 @@ ENGINES = [
     ('gunfright', 'is_gunfright', None),                                  # Gunfright (48K): default and Enhanced
     ('army_moves', 'is_army_moves', None),                                # Army Moves (128K, both parts)
     ('game_over', 'is_game_over', None),                                  # Game Over (128K, both worlds)
+    ('simpsons', 'is_simpsons', None),                                    # The Simpsons: Bart vs. the Space Mutants (128K, a level a snapshot)
+    ('gauntlet', 'is_gauntlet', None),                                    # Gauntlet (128K snapshot of the 48K game): painted tile layer
+    ('olli_and_lissa', 'is_olli_and_lissa', None),                        # Olli and Lissa (128K snapshot of the 48K game): figures as sprites
+    ('olli_and_lissa_3', 'is_olli_and_lissa_3', None),                    # Olli and Lissa III (48K): figures staged from the draw list
+    ('olli_and_lissa_2', 'is_olli_and_lissa_2', None),                    # Olli and Lissa II: Halloween (48K): default and Enhanced
     ('chase_hq', 'is_chase_hq', None),                                    # Chase H.Q. (128K): Speed, Enhanced in two sets (local art)
     ('atom_ant', 'is_atom_ant', None),                                    # Atom Ant (128K tape form): default and Enhanced
     ('silkworm', 'is_silkworm', None),                                    # Silkworm (128K): default and Enhanced

@@ -38,8 +38,8 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ZX0_SRC = os.path.join(ROOT, 'tools', 'zx0')
 NXC_PIN = {'repo': 'https://github.com/jattree/nxc', 'path': 'tools/nxc.py',
-           'commit': '391e72a086fa6017e31123f84cc31467ba7bf2ef',
-           'sha256': 'f286b3f16e76fbda3d225f75eb00c086bbd3993ce6b5cdd1d81f93c1f3f84f92'}
+           'commit': 'fa58ed1a97c84c3dbee833c27c1bbcebb0d84cb7',
+           'sha256': 'd4c135babd8cd53ec7e4efa5d1fda18488acb126251c79c169f24d22c3deecca'}
 VERSION = '1.0'
 SHARE = 'github.com/jattree/nxc'
 NAME_MAX = 32                   # what a loader keeps of a credit name (nxc.CREDIT_NAME)
@@ -435,7 +435,7 @@ def make(a, z80, out, name, spr, rep, say, colours=None, toggles=None, checks=No
     argv += ['--title', t] if t else []
     argv += ['--publisher', a.publisher] if getattr(a, 'publisher', None) else []
     argv += ['--patch-by', who] if who else []
-    for option in ('colours_by','fix_label'):
+    for option in ('colours_by','fix_label','colours_label'):
         if getattr(a,option,None):argv += ['--'+option.replace('_','-'),getattr(a,option)]
     for k, v in prf.items():
         argv += ['--proof', '%s=%s' % (k, v)]
@@ -456,9 +456,11 @@ def make(a, z80, out, name, spr, rep, say, colours=None, toggles=None, checks=No
     if nxc.apply(f, game=game) != open(spr, 'rb').read():
         os.remove(dst)
         raise ValueError('applied to %s it does not give %s' % (os.path.basename(z80), os.path.basename(spr)))
-    if sorted(nxc.colour_sets(f)) != sorted(colours):
+    # a set that adds banks is offered as an option needing more memory (SET3): nxc.colour_sets leaves those out
+    offered = [e['name'].decode('ascii', 'replace') for e in nxc.offered(f, nxc.KIND_COLOURS, big=True)]
+    if sorted(offered) != sorted(colours):
         os.remove(dst)
-        raise ValueError('it offers colour sets %s, the build made %s' % (nxc.colour_sets(f), sorted(colours)))
+        raise ValueError('it offers colour sets %s, the build made %s' % (offered, sorted(colours)))
     for k, cf in colours.items():
         if nxc.apply(f, game=game, colours=k) != open(cf, 'rb').read():
             os.remove(dst)

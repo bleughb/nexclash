@@ -99,6 +99,11 @@ tearing at publication; beeper effects. Record board and core.
 - [local: palette_check reads tables, not draws] palette_check flagged 4 off-standard default entries (205/255 shades); the
   native snapshot showed the build never draws them (figures use entries 64 + ink). Check the indices drawn before
   saying a shade is seen.
+- [local: graphic table end] The graphic table at 7827 holds ids up to 0x84 and ends where the first graphic (7931)
+  begins. Read 256 words and a snapshot taken in play gives strays (A0, BA, BD, FB pointed at the stack and work RAM
+  that parsed as graphics: 134 entries, `auto` refused the dump). `original_graphics` stops at the first graphic.
+- [backlog C2 #47] `patch` on Alien 8 ends "not supported yet" and makes no .nxc: userflow looks for
+  NAME_sprites.nex, this engine writes NAME.nex and NAME_enhanced.nex.
 
 ## Friction
 - reuse: [local: the Filmation renderer is per game; Knight Lore has its own copy]
@@ -122,3 +127,6 @@ proof in the pilot; published as .nxc 1.1.
 boot checks, record); both builds equal the published .nxc 1.1's.
 2026-11-07: v1.2: default palette = the Next's ULA colours (palette bytes only; Enhanced byte-identical); native check
 in room 0x13; review .nxc 1.2 in the pilot (runs/alien_8/package-v1.2).
+2026-11-18: a second dump (the snapshot inside the owner's 342,604-frame RZX, in play): graphic table read fixed (see
+Lessons); both builds boot-checked, rom_paths pass on the whole recording, 118 painted figures match its graphics. Not a
+replay proof (no in-repository verify); reference rebuild not run here (reference snapshot absent from specnext).
