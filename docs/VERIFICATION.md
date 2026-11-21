@@ -119,6 +119,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - The Simpsons: Bart vs. the Space Mutants (simpsons_l4): `simpsons_l4.nex` 5421d05c7b4b7b46d3c32bf35dde9c28, `simpsons_l4_sprites.nex` 866dd924e963f8bdd29426b637c9ff19, `simpsons_l4_enhanced.nex` 09610b6744867df21a110dc286fbdd0d; verified 2026-11-19
 - The Simpsons: Bart vs. the Space Mutants (simpsons_l5): `simpsons_l5.nex` 8d894a9cca70cf52def364cb6953d1d6, `simpsons_l5_sprites.nex` bbe3b9b883c57a665f8bb66de8dfaf8a, `simpsons_l5_enhanced.nex` a9e3b97ed28bc36d682651e79f3629e4; verified 2026-11-19
 - Olli and Lissa: The Ghost of Shilmoore Castle (olli_and_lissa): `olli_and_lissa.nex` 12be0e0aa24eb85e39da957cc530edbe, `olli_and_lissa_sprites.nex` 61e0b6d025f05c108a4d7196d4482868, `olli_and_lissa_enhanced.nex` b9c71476d1925e291a08a0673f455116; verified 2026-11-20
+- Olli and Lissa III: The Candlelight Adventure (olli_and_lissa_3): `olli_and_lissa_3.nex` db9e12154c82e582c9bd23d72818c0d7, `olli_and_lissa_3_sprites.nex` 4eeda9b6d9f83ca885b2df78e86bbf74, `olli_and_lissa_3_enhanced.nex` c7056f6de0d91b024d4f72d3d8fb987a; verified 2026-11-20
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

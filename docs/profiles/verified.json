@@ -483,6 +483,15 @@
     "enhanced": "b9c71476d1925e291a08a0673f455116"
    }
   },
+  "ae77b4f151932e0228b99f6a257ea4de": {
+   "game": "Olli and Lissa III: The Candlelight Adventure",
+   "doc": "olli_and_lissa_3.md",
+   "nex": {
+    "plain": "db9e12154c82e582c9bd23d72818c0d7",
+    "sprites": "4eeda9b6d9f83ca885b2df78e86bbf74",
+    "enhanced": "c7056f6de0d91b024d4f72d3d8fb987a"
+   }
+  },
   "e9cb908bc86661ff81732665741393cc": {
    "game": "Pac-Mania (128K)",
    "doc": "pac_mania.md",
