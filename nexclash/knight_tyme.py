@@ -29,6 +29,12 @@ CBLACK, CWHITE = 8, 15
 # index 2 is skin for the Bridge's crew: no figure's attribute has ink 2 without bright (checked by verify and at build)
 CSKIN = 2
 PALETTE = [0x00, 0x02, 0xF5, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x00, 0x03, 0xE0, 0xE7, 0x1C, 0x1F, 0xFC, 0xFF]
+# A colour map may carry its own sprite palette under the key 'palette' (16 bytes, RRRGGGBB, as NextReg 0x41 takes
+# them), as Spellbound's does; the setup routine loads it in place of PALETTE. Only dim magenta, green and cyan may
+# differ: no figure in Knight Tyme's or Stormbringer's recordings has those inks (Knight Tyme's room recording places
+# every object; an object there is dim blue, so not 1), and 2 is the crew's skin. The verifier fails a plot or commit
+# whose unpainted ink would show a changed entry. The Enhanced Knight's dark grey armour (Spellbound's paint) is 3.
+PAL_FREE = (3, 4, 5)
 SITES = [  # (addr, original, kind, symbol)
     (0xAD54, 'cdbbac', 'cd', 'e_kn'),
     (0x706C, 'cd0fb3', 'cd', 'e_ch'),
@@ -91,10 +97,42 @@ def load_colours_build():
     return load_colours(build_colours_path(COLOURS))
 
 
+def set_palette(colours):
+    """The sprite palette a colour map asks for: its 'palette' entry, else PALETTE. ValueError if it is not 16 bytes, or
+    if it changes an entry outside PAL_FREE."""
+    p = (colours or {}).get('palette')
+    if p is None:
+        return list(PALETTE)
+    p = list(p)
+    if len(p) != 16 or any(not isinstance(v, int) or not 0 <= v <= 255 for v in p):
+        raise ValueError('a colour map palette is 16 bytes')
+    bad = [i for i in range(16) if p[i] != PALETTE[i] and i not in PAL_FREE]
+    if bad:
+        raise ValueError('a colour map palette may change only entries %s, not %s' % (list(PAL_FREE), bad))
+    return p
+
+
+def unpainted_ink(get, g, m, wb, h, colours):
+    """Ink bits of a figure that show the figure's own ink: no map entry for the byte, a wrong check byte, or nibble 0."""
+    n = 0
+    for y in range(h):
+        for bx in range(wb):
+            ga = g + y * wb + bx
+            gb = get(ga)
+            if not gb:
+                continue
+            e = colours.get('%04X' % ga) if colours else None
+            nib, clr = ([0] * 8, 0) if not (e and e[0] & 255 == gb) else (e[2], e[3] if len(e) > 3 else 0)
+            n += sum(1 for b in range(8) if gb & (0x80 >> b) and not clr & (0x80 >> b) and not nib[b])
+    return n
+
+
 def store_pages(colours):
     """Colour map -> NSTORE pages: 8 bytes per address 0xC000-0xFFFF: [1, check, 4 nibble bytes, clear mask, 0]."""
     st = bytearray(NSTORE * 8192)
     for k, e in (colours or {}).items():
+        if k == 'palette':
+            continue
         a = int(k, 16)
         if not 0xC000 <= a <= 0xFFFF:
             continue
@@ -115,11 +153,12 @@ class KnightTymePatch:
         self.rom_code = rom_code if rom_code is not None else bytes.fromhex(h['rom'])
         self.page_code = page_code if page_code is not None else bytes.fromhex(h['page'])
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
-        self.stub_extra = bytes.fromhex(h['setup']) + bytes(PALETTE)
         self.setup_call = 0xD000
         self.hook_page_data = b''
         self.uses_printer_buffer = False
         self.colours = dict(colours) if colours is not None else load_colours_build()
+        self.palette = set_palette(self.colours)
+        self.stub_extra = bytes.fromhex(h['setup']) + bytes(self.palette)
         self.outline = outline
         self.regblock = ROM_ORG + len(self.rom_code)
         if self.regblock != self.syms['rom_end']:
@@ -766,6 +805,16 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4, colour
         def in_hook(pc):
             return lo <= pc < hi or (0x8000 <= pc < 0xA000 and nr[0x54] == HPG)
 
+        changed = {i for i in range(16) if patch.palette[i] != PALETTE[i]}
+
+        def palette_check(g, m, wb, h, attr, what):
+            """A figure that shows its own ink must not show it in an entry the set's palette changed."""
+            if not changed:
+                return
+            c['palette ink checks'] += 1
+            if ink_index(attr) in changed and unpainted_ink(lambda a: mp[a], g, m, wb, h, patch.colours):
+                fail('a figure shows a palette entry the set changed', what, hex(attr))
+
         def before_game(pc):
             """A patch site or a checkpoint is about to run in the patched machine."""
             if pc == 0x706C or pc == 0x941E:
@@ -782,6 +831,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4, colour
                 plots.append(dict(kind=kind, idx=Rp[0], row=Rp[2], col=Rp[3], attr=attr))
                 if ink_index(attr) == CSKIN:
                     fail('a figure has the ink the crew\'s skin replaced', attr)
+                palette_check(*gfx_of(lambda a: mp[a], Rp[0]), 2, 32 if kind == 0 else 16, attr, (kind, Rp[0]))
                 c['plots %s' % ('character' if kind == 0 else 'object')] += 1
                 st.setdefault('idx', collections.Counter())[(kind, Rp[0], attr)] += 1
             elif pc in (0x706F, 0x9421):
@@ -797,6 +847,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4, colour
                 c['commits'] += 1
                 rec['commits'] += 1
                 rec['kn'] = knight_state(lambda a: mp[a])
+                palette_check(*knight_addrs(rec['kn']), 3, 32, rec['kn']['attr'], 'Knight')
                 st['ktypes'] = st.get('ktypes', set()) | {rec['kn']['i']}
             elif pc == 0x6F0A:
                 if not Rp[26]:
@@ -1069,7 +1120,22 @@ def boot_check(nex, z80, patch=None):
             bad.append(('$8C', st['nr'].get(0x8C)))
         if (0x15, 0x01) not in st['nrlog']:
             bad.append(('sprites not enabled',))
+        if loaded_palette(st['nrlog']) != list(patch.palette):
+            bad.append(('sprite palette differs from the colour map\'s', loaded_palette(st['nrlog']), list(patch.palette)))
     return bad
+
+
+def loaded_palette(nrlog):
+    """The 16 sprite palette entries the setup loads: NextReg 0x41 writes after 0x43 = 0x20 and 0x40 = 0."""
+    out, on = [], False
+    for i, (reg, val) in enumerate(nrlog):
+        if reg == 0x40 and val == 0 and i and nrlog[i - 1] == (0x43, 0x20):
+            out, on = [], True
+        elif on and reg == 0x41:
+            out.append(val)
+        elif on and reg in (0x40, 0x43):
+            on = False
+    return out[:16]
 
 
 def build(z80, out, name, say=print, outline=True):
@@ -1478,8 +1544,16 @@ def recolour(nex, cmap):
     if b13[PAGE_ORG - 0x8000:] != bytes(p0.hpage[PAGE_ORG - 0x8000:]):
         raise ValueError("hook page differs from this version's (rebuild with nexclash.py auto)")
     p = KnightTymePatch(prof, colours=cmap, crew=crew)
-    out, changed = splice(nex, {b: p.extra_banks[b] for b in COLOUR_BANKS})
-    return out, {'banks changed': changed, 'colour-map entries': len(cmap)}
+    setup = bytes.fromhex(prof['hooks']['setup'])
+    b10 = bytearray(bank(10))
+    if bytes(b10[0x1000:0x1000 + len(setup)]) != setup:
+        raise ValueError("setup routine differs from this version's (rebuild with nexclash.py auto)")
+    b10[0x1000 + len(setup):0x1000 + len(setup) + 16] = bytes(p.palette)
+    nb = {b: p.extra_banks[b] for b in COLOUR_BANKS}
+    nb[10] = bytes(b10)
+    out, changed = splice(nex, nb)
+    return out, {'banks changed': changed, 'colour-map entries': len([k for k in cmap if k != 'palette']),
+                 'palette': 'the map\'s' if 'palette' in cmap else 'the game\'s'}
 
 
 def sheet_part(get, g, m, wb, h, attr, pid, group, frame):
@@ -1518,7 +1592,7 @@ def capture(figures, peek):
 def sheets(col, prefix, peek, colours=None):
     """<prefix>_PAINTING_SPRITES.png and <prefix>_REFERENCE_ALL_SPRITES.png with their layouts."""
     from . import coloursheet as cs
-    rgb16 = cs.palette_rgb(PALETTE)
+    rgb16 = cs.palette_rgb(set_palette(colours))
     comps = list(col.comps.values())
     ident = colour_identity(peek)
     res = []
