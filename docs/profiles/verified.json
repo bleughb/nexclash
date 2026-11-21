@@ -778,6 +778,13 @@
     "plain": "a6e6b38e9e8be1d2b5c32f08ab3c3833",
     "sprites": "07dff80327ed247a38780413e01a2325"
    }
+  },
+  "1a961b20f59e1bac9d88973f4e600ea9": {
+   "game": "Winter Sports",
+   "doc": "winter_sports.md",
+   "nex": {
+    "plain": "8dc688fa980454c63f98bc0e802d5f88"
+   }
   }
  }
 }
