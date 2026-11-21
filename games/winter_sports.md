@@ -1,15 +1,17 @@
-# Winter Sports (Electric Dreams Software, 1985) - engine `winter_sports` (plain build, six events in one .nex)
+# Winter Sports (Electric Dreams Software, 1985) - engine `winter_sports` (six events in one .nex; Downhill on Layer 2)
 
 ## Next session
-Stage: 3 (plain .nex delivered and played; no sprite build)  State: engine, record and notes on branch winter-sports-engine (2026-11-22)
+Stage: 3-4 (plain .nex played on hardware; sprites build: Downhill / Slalom / Giant Slalom on Layer 2, simulator + JNext only)  State: 2026-11-22
 Inputs: specnext/reference/winter_sports/ (menu .z80, .tap, [h].tzx, the delivered .nex); the user's files, no RZX
-Start with: the user's answer to the Downhill stage-1 question (end of ## Downhill stage 1), then the removal experiment and the build
-Read: PLAYBOOK stage 1-2, ## Events, ## Downhill stage 1, ## Evidence
-Open: hardware report for events 2-6 and the loading screen duration; sprite builds (each event has its own drawing code);
-RZX per event if proof by differential replay is wanted; the Bleepload re-release (.tzx / [a].tzx) is not an accepted tape set
-(its SCREEN$ is inside the turbo loader; the event blocks are identical)
+Start with: the user's hardware report for `winter_sports_sprites.nex` (the pane colours, whether any ULA white shows in the pane, the scroll), then
+the same treatment for the other five events one at a time (each has its own renderer: survey first)
+Read: ## Downhill stage 1, ## Downhill stage 2, ## Evidence
+Open: hardware for the sprites build; events 1-5 (Ice Hockey, Ski Jumping, Speed Skating, Bobsled, Biathlon); hand-painting of the panorama (the automatic paint is a first pass);
+the Bleepload re-release is not an accepted tape set (its SCREEN$ is inside the turbo loader)
 
     python nexclash.py auto winter_sports.z80 --tape "Winter Sports (1985)(Electric Dreams Software).tap" --no-record
+
+Outputs: `winter_sports.nex` (plain, byte-identical to the hardware-tested file) and `winter_sports_sprites.nex`.
 
 ## Sources (five files compared, 2026-11-22)
 - `.tap` = `[h].tzx`: the original release, standard 19-byte headers `wisp-1..6` (CODE, 32,824 bytes at 0x7500).
@@ -100,3 +102,22 @@ Risks: transparent-paper priority between the ULA and Layer 2 (hardware to check
 
 **The one question for the user:** paint the panorama automatically (clean colours, sky / mountains / snow / forest / slope; a first build in one round) and refine by hand later, or hold the
 build until you have painted it? Recommended: automatic first.
+
+## Downhill stage 2 (the build, 2026-11-22: auto-painted panorama on Layer 2)
+The user chose "auto-paint first". Code: nexclash/winter_sports_dh.py (hooks, patch of the event-0 block), nexclash/winter_sports_paint.py (the painter).
+- **What changes** (event 0 only; the block is patched in the embedded copy, every site checked against its original bytes): 0x8C16 (the scroll) becomes `JP 0x9400`;
+  0x8BF6 (`LD A,56 / LD (35818),A`, the heading's start value, once per run) becomes `CALL 0x9491` + 2 NOPs; the panorama at 0xA000-0xAFFF is zeroed (the game's buffer then holds only poles);
+  the 16 x 32 attribute map at 0xB000 becomes 0x78 (ink black, paper white, bright); the hook, its variables and the 16-entry pad table sit in 0x9400-0x95xx (zero in the tape block, untouched in the runs).
+- **Hook** (154 bytes including INIT): the first call enables the view (NextReg 0x12 = 28: Layer 2 in banks 28-30; 0x15 = 0x08 "SUL": ULA over Layer 2; 0x18 clip window x 8-119, y 40-167;
+  0x14 = 0xE3, 0x43 = 0; ULA palette entry 31 (bright paper 7) = 0xE3 so the pane's paper is transparent; 0x69 = 0x80). Every call it does what the original did with the heading
+  (`(35818)` = heading), keeps the original's counter (35815) and its own view count (one pixel step per call whose heading differs, as the original: it lags a fast turn), pads the step to the
+  original's measured time (50,232-53,881 T by the counter, table at 0x9508) and writes NextReg 0x16 = 120 - view. The menu's loader hook (hybrid build only) switches Layer 2 off and puts palette entry 31 back to white before every event load.
+- **Panorama:** the 256 x 128 bitmap (1 = the game's ink) is classified (sky above row 24, clouds, mountain, ridge lines, forest, dithered haze, slope) and painted with gradients, ordered-dithered to RGB332 (0xE3 never used);
+  rows 40-167 of the 256 x 192 Layer 2 picture. Where the painting is wrong or dull, say so and it is changed in the painter (or painted by hand later).
+- **Evidence.** Simulator (`verify_downhill`): the same key script (start, a run, two turns, 3,600 frames) through the original and the hybrid: the original's own panes sit at the
+  one-pixel-step model's position at 581 / 581 updates, the hybrid's Layer 2 scroll register at 580 / 580; update counts 581 / 580; at the 412 updates where heading, last-seen heading and scroll
+  agree the hybrid's ULA pane OR the panorama window equals the original's pane at 401 (11 have a pole one pixel off while the heading changes: the heading is read at two different instants and the interrupt lands
+  differently); the heading by update is not compared (a one-update shift drifts). `unit_downhill`: the 16 steps take the original's T within 150, the counter and view move as the original's, NextReg 0x16 = 120 - view,
+  an unchanged heading takes < 400 T. Negative controls: a wrong-sign scroll register fails every update, a rotated pad table fails 15 of 17 cases.
+  JNext 1.2.0: Downhill, Slalom, Giant Slalom play with the painted panorama at the same game state as the plain build at the same frames; GAME OVER, then the options, Exit, Ice Hockey: no panorama, no magenta,
+  the rink as in the plain build. Not covered: hardware (the ULA transparency rule and the clip window are the risk), the other five events.

@@ -24,6 +24,7 @@ import sys
 from collections import Counter
 
 from . import tapeset
+from . import winter_sports_dh as dh
 from . import z80tonex
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -78,7 +79,7 @@ def blocks(tape_files):
 
 
 # ---------------------------------------------------------------- the hook (hand-assembled, labels below)
-def asm_hook():
+def asm_hook(hybrid=False):
     code = bytearray()
     lab = {}
     fix = []
@@ -128,6 +129,8 @@ def asm_hook():
     L('fin')
     e(0x3E, 0xFF, 0xED, 0x92, 0x50, 0xD5, 0xDD, 0xE1, 0x11, 0, 0)   # ROM back, ix = end, de = 0
     L('ok')
+    if hybrid:                                      # Downhill's Layer 2 view off before any event loads (winter_sports_dh)
+        e(*dh.disable_code())
     e(0x3A, 0x48, 0x5C, 0xE6, 0x38, 0x0F, 0x0F, 0x0F, 0xD3, 0xFE, 0xFB, 0x37, 0xC9)   # border, ei, scf, ret
     for pos, n in fix:
         d = lab[n] - (HOOK + pos + 1)
@@ -159,9 +162,9 @@ def asm_setup(wait=WAIT_FRAMES):
     return bytes(c)
 
 
-def memory_patches():
+def memory_patches(hybrid=False):
     """[(address, bytes)] the menu's memory gets: the hook and the jump to it (the site checked by apply)."""
-    return [(HOOK, asm_hook()), (SITE, bytes([0xC3, HOOK & 255, HOOK >> 8]))]
+    return [(HOOK, asm_hook(hybrid)), (SITE, bytes([0xC3, HOOK & 255, HOOK >> 8]))]
 
 
 class Patch:
@@ -171,13 +174,21 @@ class Patch:
     setup_call = 0xD000
     hook_page_data = b''
 
-    def __init__(self, scr, events, first_page_fix=0):
+    def __init__(self, scr, events, hybrid=False):
         assert len(scr) == 6912 and len(events) == 6 and all(len(x) == EVENT_LEN for x in events)
-        self.scr, self.events = scr, events
+        self.scr, self.hybrid = scr, hybrid
+        self.tape_events = list(events)             # as on the tape
+        events = list(events)
+        self.l2 = {}
+        if hybrid:                                  # event 0: the panorama on Layer 2 (winter_sports_dh)
+            events[0], self.l2, self.pix = dh.patch_event(events[0])
+            self.name = 'winter sports: six events in banks, RAM loader hook, loading screen, Downhill on Layer 2'
+        self.events = events
         blob = b''.join(x + bytes(40960 - len(x)) for x in events)
         self.extra_banks = {EVENT_BANK0 + i: blob[i * 16384:(i + 1) * 16384] for i in range(15)}
+        self.extra_banks.update(self.l2)
         self.stub_extra = asm_setup()
-        self.hook = asm_hook()
+        self.hook = asm_hook(hybrid)
 
     def apply(self, snap):
         b5 = bytearray(snap.banks[5])
@@ -185,23 +196,23 @@ class Patch:
         if bytes(b5[site:site + 4]) != bytes([0x14, 0x08, 0x15, 0xF3]):
             raise ValueError('not the Winter Sports menu snapshot: bytes at 0x%04X are %s' % (SITE, bytes(b5[site:site + 4]).hex()))
         menu_scr = bytes(b5[:6912])
-        for a, d in memory_patches():
+        for a, d in memory_patches(self.hybrid):
             b5[a - 0x4000:a - 0x4000 + len(d)] = d
         b5[0:6912] = self.scr                 # the loading screen is what the game memory shows first
         snap.banks[5] = bytes(b5)
         self.extra_banks[SCR_BANK] = menu_scr + bytes(16384 - 6912)
 
 
-def build(z80, tape_files, out, say=print):
-    """The plain .nex -> (path, patch). The NEX header gets the ULA loading screen (flags 0x82: no palette)."""
+def build(z80, tape_files, out, say=print, hybrid=False):
+    """The .nex -> (path, patch); `hybrid` = Downhill's view on Layer 2. The NEX header gets the ULA loading screen (flags 0x82: no palette)."""
     scr, ev = blocks(tape_files)
-    p = Patch(scr, ev)
+    p = Patch(scr, ev, hybrid)
     z80tonex.convert(z80, out, patch=p, quiet=True)
     d = bytearray(open(out, 'rb').read())
     d[10] = 0x82
     open(out, 'wb').write(bytes(d[:512]) + scr + bytes(d[512:]))
-    say('Plain      : %s (%d bytes, hook %d bytes at 0x%04X, loading screen %d frames)'
-        % (os.path.basename(out), os.path.getsize(out), len(p.hook), HOOK, WAIT_FRAMES))
+    say('%-10s: %s (%d bytes, hook %d bytes at 0x%04X, loading screen %d frames)'
+        % ('Sprites' if hybrid else 'Plain', os.path.basename(out), os.path.getsize(out), len(p.hook), HOOK, WAIT_FRAMES))
     return out, p
 
 
@@ -232,7 +243,7 @@ class _Keys:
         return v
 
 
-def _sim(z80, patched, pages=None, keys=None):
+def _sim(z80, patched, pages=None, keys=None, hybrid=False):
     """A simulator on the menu snapshot; `patched` puts the hook in (memory_patches) with the NextReg 0x50 model:
     a RAM page from `pages` {page: 8192 bytes} appears at 0x0000, 0xFF puts the ROM back."""
     from skoolkit.snapshot import Snapshot
@@ -260,7 +271,7 @@ def _sim(z80, patched, pages=None, keys=None):
             mem[0:0x2000] = rom if val == 0xFF else list(pages[val])
     z80n.install(sim, nextreg)
     if patched:
-        for a, d in memory_patches():
+        for a, d in memory_patches(hybrid):
             mem[a:a + len(d)] = list(d)
     return sim, kb, log
 
@@ -324,7 +335,7 @@ def verify(patch, z80, tape_files=None, frames=900, progress=None, collect=0, **
     for k, key in enumerate(MENU_KEYS):
         sched = [(20, 28, key)]
         a, ka, _l = _sim(z80, False, keys=sched)
-        b, kb_, _l2 = _sim(z80, True, pages=pages, keys=sched)
+        b, kb_, _l2 = _sim(z80, True, pages=pages, keys=sched, hybrid=patch.hybrid)
         st = {}
         _run(a, ka, frames, lambda s: _original_trap(s, patch.events, st))
         _run(b, kb_, frames)
@@ -367,7 +378,7 @@ def unit_tests(patch, z80, states=None, neg=None, **_):
 
     def case(pages, bad_expected=False):
         for k in range(6):
-            sim, kb, log = _sim(z80, True, pages=pages)
+            sim, kb, log = _sim(z80, True, pages=pages, hybrid=patch.hybrid)
             mem = sim.memory
             ptr = TABLE + 22 * k
             mem[PTR], mem[PTR + 1] = ptr & 255, ptr >> 8
@@ -396,9 +407,10 @@ def unit_tests(patch, z80, states=None, neg=None, **_):
 
 
 def auto(a, z80, name, out, say):
-    """The plain .nex from the menu snapshot and the tape (--tape GAME.tap), then the differential test and the unit tests."""
+    """Two builds from the menu snapshot and the tape (--tape GAME.tap): NAME.nex (plain: the six events in one file) and NAME_sprites.nex (the same, with
+    Downhill / Slalom / Giant Slalom's view painted on Layer 2); the differential tests and unit tests of both."""
     say('Game      : %s' % name)
-    say('Engine    : winter_sports (Winter Sports, 48K, six tape events embedded; plain build)')
+    say('Engine    : winter_sports (Winter Sports, 48K, six tape events embedded; plain build + Downhill on Layer 2)')
     tapes = list(getattr(a, 'tape', None) or [])
     if not tapes:
         say('Refused   : the events come from the tape: add --tape GAME.tap (the original release, or its .tzx of standard blocks)')
@@ -406,17 +418,213 @@ def auto(a, z80, name, out, say):
         return False
     try:
         nex, patch = build(z80, tapes, os.path.join(out, name + '.nex'), say)
+        snex, spatch = build(z80, tapes, os.path.join(out, name + '_sprites.nex'), say, hybrid=True)
     except ValueError as e:
         say('Refused   : %s' % e)
         say('Result    : FAILED')
         return False
-    ok = True
     C, ex = verify(patch, z80)
-    bad = [k for k in C if k.endswith('!')]
     say('Verify    : %s' % ', '.join('%s x%d' % kv for kv in sorted(C.items())))
     U, fails = unit_tests(patch, z80)
-    badu = [k for k in U if k.endswith('!')]
-    say('Unit      : %d cases, %d failed' % (sum(U.values()), len(badu)))
-    ok = not bad and not badu
+    say('Unit      : %d cases, %d failed' % (sum(U.values()), len([k for k in U if k.endswith('!')])))
+    D, dex = verify_downhill(spatch, z80)
+    say('Downhill  : %s' % ', '.join('%s x%d' % kv for kv in sorted(D.items())))
+    DU, dfails = unit_downhill(spatch, z80)
+    say('Hook unit : %d cases, %d failed' % (sum(DU.values()), len([k for k in DU if k.endswith('!')])))
+    # negative controls: the scroll register with the wrong sign, the pad table rotated: both must be caught
+    ND, _ = verify_downhill(spatch, z80, flip=True)
+    NU, _ = unit_downhill(spatch, z80, rotate=1)
+    neg_ok = any(k.endswith('!') for k in ND) and sum(1 for k in NU if k.endswith('!')) >= 8
+    say('Negative  : wrong-sign scroll %s, rotated pad table %d of %d cases failed (both must fail)'
+        % ('caught' if any(k.endswith('!') for k in ND) else 'MISSED', sum(1 for k in NU if k.endswith('!')), len(NU)))
+    ok = not any(k.endswith('!') for k in list(C) + list(U) + list(D) + list(DU)) and neg_ok
     say('Result    : %s' % ('PASSED (differential on the simulator; no RZX, no hardware proof in this run)' if ok else 'FAILED'))
     return ok
+
+
+# ---------------------------------------------------------------- Downhill on Layer 2 (hybrid build): differential run
+DH_KEYS = [(20, 28, '1'), (1600, 1630, 'K'), (1700, 1730, 'Q'), (1770, 1800, 'A'), (1840, 1870, 'O'), (1910, 1940, 'P'),
+           (2000, 2060, 'S'), (2300, 4000, 'Q'), (2700, 2760, 'O'), (3000, 3100, 'P'), (3400, 3460, 'O')]
+RENDER_DONE = 0x84B3                              # after CALL 0x8954 in the update: the view has been copied to the screen
+PANE_ROWS = (40, 168)
+
+
+def _pane(mem):
+    """The left pane's 128 rows x 14 bytes from the screen memory."""
+    out = bytearray()
+    for y in range(*PANE_ROWS):
+        base = 0x4000 + ((y & 7) << 8) + (((y >> 3) & 7) << 5) + ((y >> 6) << 11)
+        out += bytes(mem[base + 1:base + 15])
+    return bytes(out)
+
+
+def _pano_window(pano, x0):
+    """128 rows x 14 bytes: panorama bits x0 .. x0+111 (wrapping at 256)."""
+    out = bytearray()
+    for y in range(128):
+        bits = [(pano[y * 32 + (((x0 + i) % 256) >> 3)] >> (7 - (((x0 + i) % 256) & 7))) & 1 for i in range(112)]
+        for b in range(14):
+            v = 0
+            for k in range(8):
+                v = v << 1 | bits[b * 8 + k]
+            out.append(v)
+    return bytes(out)
+
+
+def _dh_run(z80, events, hybrid, pages, frames, flip=False):
+    """One run of the Downhill flow from the menu snapshot (the tape served at ROM 0x0562, or the hook): per update the pane, the
+    heading, the Layer 2 scroll (hybrid) and the frame. flip = negative control (the scroll register with the wrong sign)."""
+    from skoolkit.simutils import PC, T, IFF
+    sim, kb, log = _sim(z80, hybrid, pages=pages, keys=DH_KEYS, hybrid=hybrid)
+    R, mem, ops = sim.registers, sim.memory, sim.opcodes
+    st, rows, scroll = {}, [], [None]
+    for f in range(frames):
+        kb.frame = f
+        while R[T] < 69888:
+            pc = R[PC]
+            if pc == 0x0562 and not hybrid:
+                _original_trap(sim, events, st)
+                continue
+            if pc == RENDER_DONE and mem[0x82DC]:
+                sc = None
+                if hybrid:
+                    regs = [v for r, v in log if r == 0x16]
+                    sc = regs[-1] if regs else None
+                    if flip and sc is not None:
+                        sc = (240 - sc) & 255
+                rows.append((f, mem[0x82DC], mem[0x8BEA], sc, _pane(mem)))
+            ops[mem[pc]]()
+        R[T] -= 69888
+        if R[IFF]:
+            if mem[R[PC]] == 0x76:
+                R[PC] = (R[PC] + 1) & 0xFFFF
+            sim.accept_interrupt(R, mem, 0)
+    return rows, log
+
+
+def _view_model(rows):
+    """The original's scroll position per update from its own record: one pixel step per call whose last-seen heading (0x8BEA) differs from the
+    previous call's, from the game's start value 56; the panorama's left edge is then x0 = 128 - view."""
+    v, prev, out = 56, 56, []
+    for _f, _h, seen, _sc, _pane in rows:
+        v += (seen > prev) - (seen < prev)
+        prev = seen
+        out.append(128 - v)
+    return out
+
+
+def _measured_x0(pano, pane, near):
+    """Where in the panorama the original's pane shows: the offset (searched around `near`) at which the panorama's ink is all in the pane."""
+    best = None
+    for x0 in sorted(range(near - 3, near + 4), key=lambda x: abs(x - near)):
+        win = _pano_window(pano, x0 % 256)
+        miss = sum(bin(w & ~o & 0xFF).count('1') for w, o in zip(win, pane))
+        if best is None or miss < best[0]:
+            best = (miss, x0 % 256)
+    return best[1] if best[0] == 0 else None
+
+
+def verify_downhill(patch, z80, frames=3600, flip=False, progress=None):
+    """Original vs Downhill-on-Layer-2 over the same key script (start, a run, two turns), three checks:
+      scroll   - the original's own panes sit where its one-pixel-step model says (every update), and the Layer 2 scroll register of the hybrid
+                 follows the same model from the hybrid's own record (every update): the hook reproduces the original's scroll, lag included;
+      poles    - at updates where both runs have the same heading, last-seen heading and scroll position, the hybrid's ULA pane OR the panorama window
+                 equals the original's pane (the poles are the game's own code on both sides), >= 95 % of them (the rest: a pole one pixel off while the heading is changing: an interrupt lands on another instruction);
+      pace     - the update counts agree within 2 %.
+    Heading by update is NOT compared: an interrupt landing on another instruction moves a heading change by one update, and the runs drift apart.
+    -> (Counter, examples)"""
+    C, ex = Counter(), []
+    pano = patch.tape_events[0][dh.PANO - EVENT_ADDR:dh.PANO - EVENT_ADDR + 0x1000]
+    orig, _ = _dh_run(z80, patch.tape_events, False, None, frames)
+    if progress:
+        progress(1, 2)
+    hyb, log = _dh_run(z80, patch.events, True, _pages(patch.events), frames, flip)
+    if progress:
+        progress(2, 2)
+    C['updates original %d hybrid %d' % (len(orig), len(hyb))] += 1
+    near = abs(len(orig) - len(hyb)) <= max(2, len(orig) // 50)
+    C['pace: update counts within 2%' + ('' if near else '!')] += 1
+    en = [v for r, v in log if r == 0x69]
+    C['Layer 2 enabled once, after the loader switched it off' + ('' if en.count(0x80) == 1 and en[-1] == 0x80 and en[0] == 0 else '!')] += 1
+    mo, mh = _view_model(orig), _view_model(hyb)
+    steps = sum(1 for a, b in zip(hyb, hyb[1:]) if a[2] != b[2])
+    C['scroll steps exercised (>= 20)' + ('' if steps >= 20 else '!')] += 1
+    bad_o = sum(1 for i, r in enumerate(orig) if _measured_x0(pano, r[4], mo[i]) != mo[i] % 256)
+    C['original panes at the model position' + ('' if not bad_o else '!')] += len(orig) - bad_o
+    bad_h = sum(1 for i, r in enumerate(hyb) if r[3] is None or (r[3] + 8) % 256 != mh[i] % 256)
+    C['hybrid scroll register at the model position' + ('' if not bad_h else '!')] += len(hyb) - bad_h
+    matched = bad_p = 0
+    for u in range(min(len(orig), len(hyb))):
+        fo, ho, so, _s, po = orig[u]
+        fh, hh, sh, sc, ph = hyb[u]
+        if ho == hh and so == sh and sc is not None and (sc + 8) % 256 == mo[u] % 256:
+            matched += 1
+            comp = bytes(a | b for a, b in zip(ph, _pano_window(pano, (sc + 8) % 256)))
+            if comp != po:
+                bad_p += 1
+                if len(ex) < 5:
+                    ex.append((u, ho, sc, sum(bin(a ^ b).count('1') for a, b in zip(comp, po))))
+    ok_p = matched >= 100 and bad_p <= max(2, matched // 20)
+    C['poles: state-matched updates >= 100' + ('' if matched >= 100 else '!')] += matched
+    C['poles: panes equal among them, >= 95%' + ('' if ok_p else '!')] += matched - bad_p
+    if bad_p:
+        C['poles: panes different (a pole a pixel off)' + ('' if ok_p else '!')] += bad_p
+    return C, ex
+
+
+def unit_downhill(patch, z80, rotate=0):
+    """The Layer 2 hook called directly in a running Downhill (hybrid sim at the ready screen's end): 16 steps (up / down x the counter 0-7) must take
+    the original's measured T (STEP_RIGHT / STEP_LEFT, within 150 T), keep the counter and the view like the original (one step, mod 8) and write
+    NextReg 0x16 = 120 - view; an unchanged heading must take < 400 T and write the same register. `rotate` shifts the pad table: the negative control.
+    -> (Counter, failures)"""
+    from skoolkit.simutils import PC, T, IFF
+    C, fails = Counter(), []
+    sim, kb, log = _sim(z80, True, pages=_pages(patch.events), keys=DH_KEYS, hybrid=True)
+    R, mem, ops = sim.registers, sim.memory, sim.opcodes
+    for f in range(2200):
+        kb.frame = f
+        while R[T] < 69888:
+            ops[mem[R[PC]]]()
+        R[T] -= 69888
+        if R[IFF]:
+            if mem[R[PC]] == 0x76:
+                R[PC] = (R[PC] + 1) & 0xFFFF
+            sim.accept_interrupt(R, mem, 0)
+    tab = bytes(mem[dh.TABLE:dh.TABLE + 32])
+    if rotate:
+        mem[dh.TABLE:dh.TABLE + 32] = tab[2 * rotate:] + tab[:2 * rotate]
+    R[IFF] = 0
+    mem[dh.VAR] = 1                                  # already enabled: the steps only
+    for direction, costs in ((1, dh.STEP_RIGHT), (-1, dh.STEP_LEFT)):
+        for c in range(8):
+            mem[dh.STEP_COUNTER] = c
+            view = mem[dh.VAR + 1]
+            mem[dh.HEADING] = (mem[dh.SEEN] + direction) & 255
+            sp = R[12]
+            R[12] = (sp - 2) & 0xFFFF
+            mem[R[12]], mem[R[12] + 1] = 0x00, 0x90
+            save, t0, n0 = R[PC], R[T], len(log)
+            R[PC] = dh.HOOK
+            while R[PC] != 0x9000:
+                ops[mem[R[PC]]]()
+            t = R[T] - t0
+            R[12], R[PC] = sp, save
+            nr = [v for r, v in log[n0:] if r == 0x16]
+            ok = (abs(t - costs[c]) <= 150 and mem[dh.STEP_COUNTER] == (c + direction) & 7 and mem[dh.VAR + 1] == (view + direction) & 255
+                  and nr == [(120 - mem[dh.VAR + 1]) & 255])
+            C['step %s counter %d' % ('up' if direction > 0 else 'down', c) + ('' if ok else '!')] += 1
+            if not ok:
+                fails.append((direction, c, t, costs[c], mem[dh.STEP_COUNTER], nr))
+    mem[dh.HEADING] = mem[dh.SEEN]
+    sp = R[12]
+    R[12] = (sp - 2) & 0xFFFF
+    mem[R[12]], mem[R[12] + 1] = 0x00, 0x90
+    save, t0, n0 = R[PC], R[T], len(log)
+    R[PC] = dh.HOOK
+    while R[PC] != 0x9000:
+        ops[mem[R[PC]]]()
+    t = R[T] - t0
+    R[12], R[PC] = sp, save
+    ok = t < 400 and [v for r, v in log[n0:] if r == 0x16] == [(120 - mem[dh.VAR + 1]) & 255]
+    C['unchanged heading' + ('' if ok else '!')] += 1
+    return C, fails

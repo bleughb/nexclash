@@ -38,10 +38,14 @@
   ]
  },
  "modules": [
-  "winter_sports"
+  "winter_sports",
+  "winter_sports_dh",
+  "winter_sports_paint"
  ],
  "own_modules": [
-  "winter_sports"
+  "winter_sports",
+  "winter_sports_dh",
+  "winter_sports_paint"
  ],
  "data": [
   "docs/profiles/winter_sports.json"
@@ -55,24 +59,28 @@
   "args": [],
   "rzx": [],
   "auto_record": false,
-  "minutes": 1,
+  "minutes": 3,
   "differential": false,
-  "note": "no recording: the patched menu vs the original menu fed from the tape at ROM 0x0562, each of the six events, 900 frames, memory + I/IM/IFF; unit tests on the hook (6 headers x 2 destinations, 6 data blocks, negative control)"
+  "note": "no recording: (1) per event the patched menu vs the original menu fed from the tape at ROM 0x0562; hook unit tests with a negative control; (2) Downhill on Layer 2: the same key script through the original and the hybrid, scroll position per update against the original's one-pixel-step model, poles at state-matched updates, update counts; hook step timing (16 steps) with negative controls (wrong-sign scroll, rotated pad table)"
  },
  "outputs": {
   "plain": {
    "file": "winter_sports.nex",
    "md5": "8dc688fa980454c63f98bc0e802d5f88"
+  },
+  "sprites": {
+   "file": "winter_sports_sprites.nex",
+   "md5": "e26abf0ba45ba34013608063cd8d6823"
   }
  },
  "repro": [],
  "status": {
   "title": "Winter Sports",
   "engine_col": "winter_sports (winter_sports.md)",
-  "build": "plain only: all six events in one .nex (tape blocks in banks, RAM loader hook), 5.2 s loading screen",
-  "software": "Rebuild byte-exact from either tape set; simulator differential per event + hook unit tests; JNext: all six events play",
-  "hardware": "loads; Downhill played (user, 2026-11-22); other events not reported",
-  "next": "sprite build, one event at a time (Downhill first)"
+  "build": "plain: all six events in one .nex (tape blocks in banks, RAM loader hook), 5.2 s loading screen; sprites: Downhill / Slalom / Giant Slalom's view painted on Layer 2 (hardware scroll), poles stay ULA",
+  "software": "Rebuild byte-exact from either tape set; simulator differential per event, Downhill hybrid vs original (scroll model 581/581 updates, poles 401/412 state-matched), hook unit tests + negative controls; JNext: all six events play, Downhill/Slalom/Giant Slalom painted",
+  "hardware": "plain: loads, Downhill played (user, 2026-11-22); sprites build: not yet on hardware",
+  "next": "hardware round for the sprites build; other five events one at a time"
  },
  "feasibility": {
   "pacing": {
@@ -90,7 +98,7 @@
    "result": "Hook uses 0x6C00-0x6C7F and 0x6D00-0x6D03, restores NextReg 0x50; events never touch that memory"
   },
   "decision": "Plain build with the events embedded and the menu's own loader answered from RAM; sprites later, one event at a time",
-  "next_experiment": "Survey Downhill's plot routines from the gameplay snapshot; success = every figure draw found with its caller and a free-run key script that reaches it in 2000 frames"
+  "next_experiment": "Hardware: the sprites build's Downhill view (transparent-paper layering, scroll, colours); success = no ULA white showing in the pane and the panorama scrolling with the heading"
  },
  "checked": {
   "deps": {
@@ -100,11 +108,14 @@
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/tapeset.py": "86542e1752fb3110",
-   "nexclash/winter_sports.py": "81cbd5e5299a4ac0",
+   "nexclash/winter_sports.py": "0c118783dc0d2c75",
+   "nexclash/winter_sports_dh.py": "28a18fe851d40f3b",
+   "nexclash/winter_sports_paint.py": "1dcf667c010270fe",
    "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
-   "recipe": "753c8c0f78bb9316",
+   "pillow": "13.0.0",
+   "recipe": "3a7bd1faf953be35",
    "rom": "sinclair"
   },
   "date": "2026-11-22"
@@ -117,11 +128,14 @@
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/tapeset.py": "86542e1752fb3110",
-   "nexclash/winter_sports.py": "81cbd5e5299a4ac0",
+   "nexclash/winter_sports.py": "0c118783dc0d2c75",
+   "nexclash/winter_sports_dh.py": "28a18fe851d40f3b",
+   "nexclash/winter_sports_paint.py": "1dcf667c010270fe",
    "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
-   "recipe": "753c8c0f78bb9316",
+   "pillow": "13.0.0",
+   "recipe": "3a7bd1faf953be35",
    "rom": "sinclair"
   },
   "date": "2026-11-22"
