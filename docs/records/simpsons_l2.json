@@ -1,0 +1,242 @@
+{
+ "name": "simpsons_l2",
+ "order": 261,
+ "game": "The Simpsons: Bart vs. the Space Mutants",
+ "doc": "simpsons.md",
+ "engine": "simpsons",
+ "representative": false,
+ "reference": "simpsons",
+ "inputs": {
+  "snapshot": {
+   "name": "simpsons_l2.z80",
+   "md5": "158c2124965358c39522f131d680ca55",
+   "path": "simpsons/simpsons_l2.z80",
+   "note": "The 128K snapshot inside the rzxarchive's recording of level 2 (SPIN 0.5): the tape's load of that level, the level about to start. The tape: Simpsons - Bart vs the Space Mutants (1991)(Ocean)[128K].tap, MD5 8e08c32c."
+  },
+  "recordings": [
+   {
+    "name": "simpsons_colours.json",
+    "md5": "7e02d6bd31e57ed5a853eda1341f7738",
+    "path": "simpsons/simpsons_colours.json",
+    "role": "The painted map (237 pictures of the five levels), staged beside the snapshot; not a recording. It holds the figures' outlines, so it is not in the repository."
+   },
+   {
+    "name": "simpsons_l2.rzx",
+    "md5": "9d1846297f43207dbad891068f0bdbbb",
+    "path": "simpsons/simpsons_l2.rzx",
+    "role": "The rzxarchive's recording of level 2, whole: 19,887 frames."
+   }
+  ]
+ },
+ "modules": [
+  "simpsons"
+ ],
+ "own_modules": [
+  "simpsons"
+ ],
+ "data": [
+  "asm/simpsons_hooks.asm",
+  "docs/profiles/simpsons.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [],
+  "rzx": []
+ },
+ "verify": {
+  "args": [],
+  "rzx": [
+   "simpsons_l2.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 25,
+  "note": "Each hook against the original from one state: every register with R and all game memory after every draw pass and flip; the sprites against a model of the game's width loops and against the visible screen each frame; on Enhanced the painted pixels against the painted map."
+ },
+ "outputs": {
+  "plain": {
+   "file": "simpsons_l2.nex",
+   "md5": "3ec33dfe52463ba0cac39953b9f3aad5"
+  },
+  "sprites": {
+   "file": "simpsons_l2_sprites.nex",
+   "md5": "a634bef137ac4553056faf030bc85fb1"
+  },
+  "enhanced": {
+   "file": "simpsons_l2_enhanced.nex",
+   "md5": "647240a62fd0e314742ec677095828d1"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "The Simpsons: Bart vs. the Space Mutants (level 2)",
+  "engine_col": "simpsons (simpsons.md)",
+  "build": "v1.0 (published .nxc, 2026-11-19): simpsons_l2_sprites.nex a634bef1 (every figure a sprite laid on its own pixels; the game's memory and both screens stay the original's) + Enhanced 647240a6 (196 painted shapes, the cartoon's colours; a first pass); the level starts from the tape's load of it",
+  "software": "Verify IDENTICAL on the level's whole recording, both builds: 19,887 frames, 18,349 draw passes, 75,158 figures, 18,599 flips, R compared; unit PASS; 10 of 10 broken builds detected; ROM path check pass",
+  "hardware": "untested",
+  "next": "one program from the tape's five loads (a recording across a level change); the owner's review of the painting; hardware test"
+ },
+ "checks": [
+  "asm2profile:simpsons"
+ ],
+ "techniques": [
+  {
+   "application": "simpsons.keep-ula",
+   "id": "patch.xor-overlay-keep-ula",
+   "revision": 2,
+   "target": "the game's draw routine and both screens unchanged; each figure's sprites lie on its own pixels, switched in one attribute run at the game's flip",
+   "phases": [
+    "entry",
+    "exit",
+    "clear"
+   ]
+  },
+  {
+   "application": "simpsons.colour-map",
+   "id": "patch.runtime-colour-map",
+   "revision": 1,
+   "target": "a shape's bytes give its keys (sum, 16-bit hash, size); the index page maps them to the picture's strips, sent whole to the pattern port",
+   "phases": [
+    "entry"
+   ]
+  },
+  {
+   "application": "simpsons.atomic-switch",
+   "id": "patch.display-atomic-switch",
+   "revision": 1,
+   "target": "two pattern sets of 64; the listed attributes in one run at the flip, the last list's sprites beyond them off",
+   "phases": [
+    "exit"
+   ]
+  },
+  {
+   "application": "simpsons.preserve-r",
+   "id": "patch.preserve-r",
+   "revision": 2,
+   "target": "the draw pass gets the original's R and gives it back; an inline form at the shape and the width loop, where the stack pointer is the data pointer",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "simpsons.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "28 MHz for the draw pass, the game's speed back before its return",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "simpsons.pace-limiter",
+   "id": "patch.pace-limiter",
+   "revision": 4,
+   "target": "one window a draw pass; each draw adds its time by width, rows, pre-shift kind and clip (fitted per level)",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "simpsons.whole-altrom",
+   "id": "patch.whole-altrom-image",
+   "revision": 2,
+   "target": "alt ROM image 0 = the 128K ROM 0 whose bytes the game reads as data; the hooks from 0x2000 in both images",
+   "phases": [
+    "setup"
+   ]
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/simpsons.md#build-stage-2-2026-11-18-asmsimpsons_hooksasm-nexclashsimpsonspy"
+   ],
+   "coverage": "Five whole recordings, one a level (102,687 frames); each draw's time fitted from them by width code, rows, pre-shift kind and clip; hook time on the simulator's line clock. No JNext or hardware timing.",
+   "result": "The draw pass runs at 28 MHz and its own time is waited out in one window. The hooks take 0.12% to 0.24% of a recording's time less than the passes they stand for; 2% to 4% of passes land more than 3 video lines from the original's time."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/simpsons.md#feasibility-playbook-3d-2026-11-18-disassembly-of-level-1-in-play-addresses-are-level-1s",
+    "games/simpsons.md#build-stage-2-2026-11-18-asmsimpsons_hooksasm-nexclashsimpsonspy"
+   ],
+   "coverage": "The draw routine, its eight width loops, the flip and the erase read in level 1 and found by their bytes in the other four loads; the interrupt handler (the whole game runs in it) over every recording; the ROM bytes read as data.",
+   "result": "Nothing of the game's memory or screens changes, so nothing that reads them can differ. The handler reads R (music), so every hook leaves R as the original. The game reads 128K ROM 0 bytes as data: that ROM is alt image 0."
+  },
+  "decision": "Sprites laid over the figures the game still draws, as Heartland (the figures take the scenery's colours in the original); Enhanced from the cartoon's colours (owner 2026-11-18: 'Colourize the sprites, using the carton show as a reference'); a level a build until a recording crosses a level change (owner 2026-11-19: 'Publish it').",
+  "next_experiment": "One program from the five loads: the tape loader's call answered from pages; success = a scripted recording that crosses a level change verifies IDENTICAL."
+ },
+ "checked": {
+  "deps": {
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/simpsons_hooks.asm": "0cd41586d8c8b853",
+   "docs/profiles/simpsons.json": "48b2e5610124183b",
+   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "4d104bc4fbb2590f",
+   "nexclash/hooklib.py": "24241497925658d6",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/recolour.py": "e0c2de6bfad5c6fb",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simpsons.py": "18828ba41f7129ab",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "651aaa4ff814bafc",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-19"
+ },
+ "verified": {
+  "deps": {
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/simpsons_hooks.asm": "0cd41586d8c8b853",
+   "docs/profiles/simpsons.json": "48b2e5610124183b",
+   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "4d104bc4fbb2590f",
+   "nexclash/hooklib.py": "24241497925658d6",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/recolour.py": "e0c2de6bfad5c6fb",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simpsons.py": "18828ba41f7129ab",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "651aaa4ff814bafc",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-19"
+ }
+}
