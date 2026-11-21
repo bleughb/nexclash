@@ -174,7 +174,7 @@ No figures: the whole view is Freescape polygons, no clash to remove; the gain i
   puts the game's back (a NEX header screen: CSpect closes, JNext skips it). .nxc (jattree/nxc, tape target):
   toggle Original colours, 2 trainers (unplayed); build_screen=513: the loader shows the tape's screen from
   ENTER (nxc branch build-screen).
-- M0 side checks (m0_misc.py): raster callers 0x8599 (5,281), 0xB62C (108, the same list again); ROM unused.
+- M0 side checks (m0_misc.py): raster callers 0x8599 (5,281), 0xB62C (108, same list); ROM unused.
 ## Coverage (survey GATE, 15,000 frames)
 Unreached CALL sites, 15,000 frames -> full run (survey_full/, 167,135 frames, no desync, GATE OK): 0xCA4E
 17/18 -> 18/18, 0xB66E 2/6 -> 4/6 (48357 not reached), 0xD028 2/3, 0xB347 4/6. All text / panel / area
@@ -188,10 +188,10 @@ pictures, no figure plotter; 5,356 view copies.
   rounds: = the game at all redraws; sweeps, 17 mutants; PUSH fill, sort cache: -19 % median.
 - 2026-11-19, stage 2 M2 (early integrated NEX), ~3 h, ~60 tool calls, 0 user rounds: hooks + interrupt stub,
   host integration test at all redraws, 9 mutants. Whole-module read: z80tonex.py
-  (stub, tail, alt ROM fill: the build's memory plan depends on all three).
+  (stub, tail, alt ROM fill).
 - 2026-11-19, stage 2 M3a (pace + in-between views), ~7 h, ~200 tool calls, 6 user rounds:
   block probe (sound, printer, waits), cm3_glue.asm.
-  Whole-module read: asm/lib/hlib_pace.asm (the clock's rules decide where ticks must come from).
+  Whole-module read: asm/lib/hlib_pace.asm.
 - 2026-11-20 / 21, stage 2 M3b (overlays; hardware runs 1-3), ~10 h, ~800 tool calls, ~12 user rounds:
   sprite grid, cursor / dissolve / portcullis sites, fixed sight + pointer, 18 mutants.
 - 2026-11-21 / 22, stage 2 M3c-e (profile, DDMA benchmark, speed pass, dissolve, screen, .nxc), ~9 h, ~600 tool
