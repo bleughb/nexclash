@@ -15,3 +15,19 @@ screen writers 0xFC74 / 0xFAE0 / 0xFB56 (isr / scan --writers, 850 frames).
 dizzy7128k.z80, `nexclash.py convert` (128K; the start-up tail must end below 0xC000, `--tail ADDR`
 if needed). Runs on hardware (2026-09-28). Sprite build deferred (needs 128K engine work: analyse
 and recorder are 48K-only).
+
+
+## Sprite build (2026-11-21, engine `crystal_kingdom_dizzy_sprites`)
+- Draw model: every frame (DI at 0xDDC3) 0xF433 puts back the saved backgrounds, then the object list at 33639
+  (record IX, 32 bytes, 0x7E00-0x7FFF) is drawn through the routine patched into the CALL at 0xF50C: masked
+  save-under 0xF52D (1 byte), 0xF5EE (3, odd lines stored right to left), 0xF63E (4), 0xF6A4 / 0xF718 (3 / 4
+  mirrored via the bit-reverse table at 0x8000); plain copies 0xF55D / 0xF5BE (record flag bit 5; 0xF55D paints
+  its cells ink 7). Objects are monochrome and take the cells' ink: the clash.
+- Hooks: 0xF508 shows the record's 4 sprites (white, 16 x 16 tiles) from the bytes the game ORs in, with a pattern
+  cache (page 26 at 0x0000 inside the hook: pointer, routine, rows, signature; expansion table at 0x1000);
+  0xF433 hides the records shown; 0xF8DD (room drawn) and 0xFBE1 (window) hide all. Plain copies stay on the ULA.
+- Recordings: the pilot's 128K recorder (m128.py), walks ck_w1-4 (seeds 1-4, 9,000 frames each). Keys Z, X,
+  SPACE, ENTER (found from the key test at 0xFA1F). Cheats: hearts DEC (HL) 0xED88, lives 0xDFB3.
+- Results: IDENTICAL on ck_w1-4 (36,183 frames, 38,886 draws checked against the game's own writes, 4.7M sprite
+  pixels); 840 unit cases; negatives 8/8. Hook cost about 28K T at 28 MHz a frame (estimated up to 5% slower).
+  OverSpec from the .nxc menu: plays. Tang board: not reached (board offline 2026-11-21).
