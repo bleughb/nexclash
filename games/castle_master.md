@@ -1,7 +1,7 @@
-# Castle Master (Incentive Software, 1990; 48K, Freescape) - stage 2 (build): M3b on hardware
+# Castle Master (Incentive Software, 1990; 48K, Freescape) - stage 2 (build): M3d on hardware
 
 ## Next session
-Stage: 2 (build)             State: M3b on hardware (user); M3c speed pass PASS in simulator, not on hardware
+Stage: 2 (build)             State: M3d on hardware (user 2026-11-22: castle_master_m3d_05.nex)
 Inputs: C:\1NEXT\castle_master_work\castle_master.z80 (extracted from the RZX), C:\dev\castlemaster\castle.rzx
 Branch: add-castle-master    Commit: (this file's commit)
 Checks (castle_master_work, local): m3_sim (all redraws), m3b_seq, m3b_diss, m3b_race, m3_mutants; survey_full/
@@ -9,7 +9,7 @@ Decision (user 2026-11-19): route B (Next-native renderer) + option (i) (Layer 2
 sprite, cycle = palette); colour switchable off by the player (original look). Later: palette 1-16, flat mode.
 Start with: the colour cycle as palette + the switch, the M3b block's "Open" list
 Read: PLAYBOOK stage 1 + 3d; cards detect.pacing-structure, detect.routine-removal, patch.hybrid-display-replacement
-Open: unreached CALL sites (Coverage); K on hardware (6.75 = JNext); m3d_03 + blitbench_02 on hardware
+Open: unreached CALL sites (Coverage); K on hardware (6.75 = JNext)
 
 ## Inputs
 - Snapshot: the RZX's embedded .z80 (`nexclash.py rzx extract`), in game: 48K, PC 0xFDFD (RAM), IM 2 I=0xFE, vector
@@ -58,7 +58,7 @@ No figures: the whole view is Freescape polygons, no clash to remove; the gain i
 - DMA / DDMA (measured, CSpect 4.5.9, blitbench_02.nex: 192 x 64 block, us a byte): LDIR 0.76, zxnDMA
   0.18-0.21, DDMA 2D copy 0.18, PUSH fill 0.20, DDMA constant fill 0.07. Dither rules the constant fill out, a
   pattern-row copy = PUSH's speed, per-row jobs lose: only the view copy gains (zxnDMA: M3c). JNext 1.3.0 has
-  no DDMA.
+  no DDMA. Hardware = CSpect.
 - Render consumers (probe cm_consumers, 3,000 frames; window 0x9776 .. 0x859F, ISR excluded): game code
   outside reads the projected polygons / display list 0x6754-0x68xx (0xB708-0xB7BE, 0xBA42-0xBA60: inferred the
   crosshair pick = gameplay; 0x9495-0x952B / 0x9EDA-0x9EEC: the second draw path 0xB62C from 0xB40B / 0xB41B /
@@ -144,8 +144,8 @@ No figures: the whole view is Freescape polygons, no clash to remove; the gain i
   black), opaque per pixel where the screen differs from the raster's output (ov_s: the buffer at the copy,
   marker out; the printer 0xC0F9 in the handler writes the buffer between views, never copied), ink where
   its bit is set. Built around the copy at the show sites and after the cursor's draw / restore (0xCDD2 /
-  0xCECD; rows in 8 bits). Sprites go with Layer 2; the dissolve 0xB66E (9 calls under Layer 2: 0xBCE5,
-  0xCA44) turns both off. Hooks from 0x3600 (m3b_rom.py). After hardware runs 1-2 (user's choices):
+  0xCECD; rows in 8 bits). Sprites go with Layer 2; the dissolve 0xB66E turns both off (views: M3d). Hooks
+  from 0x3600 (m3b_rom.py). After hardware runs 1-2 (user's choices):
   sight and pointer = fixed records (ov_fr0 / 1): white, black where the view under them is light (mean 3R
   + 5G + 2B >= 34 of 62 in a 16-pixel box; the sight's from the bank drawn, at the flip), mask-only bits
   clear. Pointer = descriptor 0x7F20 only: the thrown rock (0x8078 ..) uses 0xCDD2 too, keeps ink / paper.
@@ -153,21 +153,24 @@ No figures: the whole view is Freescape polygons, no clash to remove; the gain i
   each step's wait (0xCFE9 / 0xD00F) the palettes from (27353) (0xB347 sets it inside 0x9F19), all 84
   sprites, Layer 2 on: +31 frames on 174; flag m_pc = VP+40 (an IM 2 table byte, 0xFD in the image: 1 =
   set). A death's drop (0xA0A4; not recorded, CSpect) = original look.
-  A Next set to 60 Hz: a black flash at load (the stub's switch to 50 Hz); none at 50 Hz.
+  A 60 Hz Next: a black flash at load (the stub's switch to 50 Hz).
   m3_sim (every 10th redraw after runs 2-3, all 5,233 at run 1): overlay per pixel, cursor + rock at 40
   positions; m3b_seq.py (the build's overlay code, pointer filter, portcullis hook
   along the recording: 5,357 views, 3,670 cursor moves, 87 portcullis steps); m3b_diss.py (dissolve, drop);
   m3b_race.py (MMU reads under DI); 18 / 18 mutants (O-X, Y-f). Pace (same path) median +0.59 frames, max
-  +2.41 (run 1). Open: overlay time (portcullis steps too), colour cycle, switch, R, K on hardware,
+  +2.41 (run 1). Open: overlay time (portcullis steps too), colour cycle, switch, R,
   the first ~4 frames of an update stay still, the IM 2 bus value on hardware (0xFF assumed), the drop in
   colour.
-- M3c (speed pass 2026-11-21; castle_master_m3d_01-03.nex from cm7_*.asm, NOT on hardware (m3b is)). Profile
-  (m3_sim --prof; 524 redraws): geometry 27 %, game 18, span set-up 13, PUSH fill 12, waits 7, maths 7, overlay
+- M3c (speed pass 2026-11-21; castle_master_m3d_01-03.nex from cm7_*.asm). Profile
+  (m3_sim --prof): geometry 27 %, game 18, span 13, PUSH fill 12, waits 7, maths 7, overlay
   5, copy 3. Changes: div32 and proj1 by 8-bit steps with the divisor negated (1,967 -> 970 T); span's PUSH run
   from an end of either parity; copy by zxnDMA in 8-row chunks (LDIR when the line & 255 is 238-255 / 0-3: the
-  DMA hides the frame interrupt); in-between flips deferred into the next view's object loop (flipdef / flipchk
-  / flipfl). Views a redraw 6.67 -> 7.46; pace median +0.69. m3_sim also checks the flip's line, raster into
+  DMA hides the frame interrupt); in-between flips deferred into the next view's object loop (flipchk).
+  Views a redraw 6.67 -> 7.46; pace median +0.69. m3_sim also checks the flip's line, raster into
   the shown bank, views drawn = shown; mutants g-n. Pointer colour set at the flip (ov_ptrc).
+- M3d (2026-11-22; castle_master_m3d_05.nex, cm9_*.asm). Views shown by the dissolve
+  ((0x7349) = 1 at 0x859C: the drawbridge) stayed in the original look. Now drawn hidden (m3_dshow), 0xB66E's
+  passes repeated on Layer 2 (site 0xB6E4 h_dpass), then flipped: +3 frames. m3_sim: 18 / 18 such views.
 - M0 side checks (m0_misc.py): raster callers 0x8599 (5,281), 0xB62C (108, the same list again); ROM unused.
 ## Coverage (survey GATE, 15,000 frames)
 Unreached CALL sites, 15,000 frames -> full run (survey_full/, 167,135 frames, no desync, GATE OK): 0xCA4E
@@ -181,15 +184,15 @@ pictures, no figure plotter; 5,356 view copies.
 - 2026-11-19, stage 2 M1 (Z80N geometry + raster, then "Speed up M1 first"), ~5.5 h, ~115 tool calls, 2 user
   rounds: = the game at all redraws; sweeps, 17 mutants; PUSH fill, sort cache: -19 % median.
 - 2026-11-19, stage 2 M2 (early integrated NEX), ~3 h, ~60 tool calls, 0 user rounds: hooks + interrupt stub,
-  host integration test at all redraws, 9 mutants, NEX, JNext 8,000 frames. Whole-module read: z80tonex.py
+  host integration test at all redraws, 9 mutants. Whole-module read: z80tonex.py
   (stub, tail, alt ROM fill: the build's memory plan depends on all three).
-- 2026-11-19, stage 2 M3a (pace + in-between views), ~7 h, ~200 tool calls, 6 user rounds (hardware: M2 runs,
-  original pace; "Start M3"): block probe (sound, printer, waits), cm3_glue.asm, host test, NEX, JNext.
+- 2026-11-19, stage 2 M3a (pace + in-between views), ~7 h, ~200 tool calls, 6 user rounds:
+  block probe (sound, printer, waits), cm3_glue.asm.
   Whole-module read: asm/lib/hlib_pace.asm (the clock's rules decide where ticks must come from).
-- 2026-11-20 / 21, stage 2 M3b (overlays; hardware runs 1-3), ~10 h, ~800 tool calls, ~12 user rounds
-  (photos; CSpect): sprite grid, cursor / dissolve / portcullis sites, fixed sight + pointer, host tests,
-  18 mutants, NEX, JNext.
-- 2026-11-21, stage 2 M3c (profile, DDMA benchmark, speed pass), ~4 h, ~150 tool calls, autonomous: +12 % views.
+- 2026-11-20 / 21, stage 2 M3b (overlays; hardware runs 1-3), ~10 h, ~800 tool calls, ~12 user rounds:
+  sprite grid, cursor / dissolve / portcullis sites, fixed sight + pointer, 18 mutants.
+- 2026-11-21 / 22, stage 2 M3c / M3d (profile, DDMA benchmark, speed pass, dissolve), ~6 h, ~350 tool calls:
+  +12 % views.
 
 ## Lessons
 - [doc docs/RECORDING_CHECKLIST.md §Making a recording (Fuse)] An RZX alone (no separate .z80) is a complete intake: `nexclash.py rzx extract R -o
