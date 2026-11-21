@@ -483,6 +483,15 @@
     "enhanced": "b9c71476d1925e291a08a0673f455116"
    }
   },
+  "27523b55f786a871ba4bf7fae1be255a": {
+   "game": "Olli and Lissa II: Halloween",
+   "doc": "olli_and_lissa_2.md",
+   "nex": {
+    "plain": "53516907092eddb3e6e642e4f498be6b",
+    "sprites": "dedec792ec315041fde3569de48befbd",
+    "enhanced": "2744a1af82d0d26f827712be26e101d5"
+   }
+  },
   "ae77b4f151932e0228b99f6a257ea4de": {
    "game": "Olli and Lissa III: The Candlelight Adventure",
    "doc": "olli_and_lissa_3.md",

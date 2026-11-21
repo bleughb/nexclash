@@ -92,6 +92,7 @@ ENGINES = [
     ('gauntlet', 'is_gauntlet', None),                                    # Gauntlet (128K snapshot of the 48K game): painted tile layer
     ('olli_and_lissa', 'is_olli_and_lissa', None),                        # Olli and Lissa (128K snapshot of the 48K game): figures as sprites
     ('olli_and_lissa_3', 'is_olli_and_lissa_3', None),                    # Olli and Lissa III (48K): figures staged from the draw list
+    ('olli_and_lissa_2', 'is_olli_and_lissa_2', None),                    # Olli and Lissa II: Halloween (48K): default and Enhanced
     ('chase_hq', 'is_chase_hq', None),                                    # Chase H.Q. (128K): Speed, Enhanced in two sets (local art)
     ('atom_ant', 'is_atom_ant', None),                                    # Atom Ant (128K tape form): default and Enhanced
     ('silkworm', 'is_silkworm', None),                                    # Silkworm (128K): default and Enhanced
