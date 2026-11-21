@@ -1,0 +1,143 @@
+{
+ "name": "winter_sports",
+ "order": 271,
+ "game": "Winter Sports",
+ "doc": "winter_sports.md",
+ "engine": "winter_sports",
+ "representative": true,
+ "reference": "winter_sports",
+ "inputs": {
+  "snapshot": {
+   "name": "winter_sports.z80",
+   "md5": "1a961b20f59e1bac9d88973f4e600ea9",
+   "path": "winter_sports/Winter Sports (1985)(Electric Dreams Software).z80",
+   "note": "the 48K main-menu snapshot (PC 0x0038, menu code loaded, no event yet); user's file, 2026-11-22"
+  },
+  "recordings": [],
+  "tapes": [
+   {
+    "set": "original_tap",
+    "files": [
+     {
+      "name": "winter_sports.tap",
+      "md5": "a53ffe203db7109427c84fb438aa9ebe",
+      "path": "winter_sports/Winter Sports (1985)(Electric Dreams Software).tap"
+     }
+    ]
+   },
+   {
+    "set": "original_tzx",
+    "files": [
+     {
+      "name": "winter_sports_h.tzx",
+      "md5": "e03cbff29d0954ce0e9ee95f033cdb09",
+      "path": "winter_sports/Winter Sports (1985)(Electric Dreams Software)[h].tzx"
+     }
+    ]
+   }
+  ]
+ },
+ "modules": [
+  "winter_sports",
+  "winter_sports_dh",
+  "winter_sports_paint"
+ ],
+ "own_modules": [
+  "winter_sports",
+  "winter_sports_dh",
+  "winter_sports_paint"
+ ],
+ "data": [
+  "docs/profiles/winter_sports.json"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [],
+  "rzx": []
+ },
+ "verify": {
+  "args": [],
+  "rzx": [],
+  "auto_record": false,
+  "minutes": 3,
+  "differential": false,
+  "note": "no recording: (1) per event the patched menu vs the original menu fed from the tape at ROM 0x0562; hook unit tests with a negative control; (2) Downhill on Layer 2: the same key script through the original and the hybrid, scroll position per update against the original's one-pixel-step model, poles at state-matched updates, update counts; hook step timing (16 steps) with negative controls (wrong-sign scroll, rotated pad table)"
+ },
+ "outputs": {
+  "plain": {
+   "file": "winter_sports.nex",
+   "md5": "8dc688fa980454c63f98bc0e802d5f88"
+  },
+  "sprites": {
+   "file": "winter_sports_sprites.nex",
+   "md5": "e26abf0ba45ba34013608063cd8d6823"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Winter Sports",
+  "engine_col": "winter_sports (winter_sports.md)",
+  "build": "plain: all six events in one .nex (tape blocks in banks, RAM loader hook), 5.2 s loading screen; sprites: Downhill / Slalom / Giant Slalom's view painted on Layer 2 (hardware scroll), poles stay ULA",
+  "software": "Rebuild byte-exact from either tape set; simulator differential per event, Downhill hybrid vs original (scroll model 581/581 updates, poles 401/412 state-matched), hook unit tests + negative controls; JNext: all six events play, Downhill/Slalom/Giant Slalom painted",
+  "hardware": "plain: loads, Downhill played; sprites build (Downhill/Slalom/Giant Slalom on Layer 2): tested and plays OK (user, 2026-11-22)",
+  "next": "other five events one at a time (Ice Hockey, Ski Jumping, Speed Skating, Bobsled, Biathlon)"
+ },
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/winter_sports.md#pacing-measurement"
+   ],
+   "coverage": "Six events, option screens, 900 frames each in the simulator; JNext play of all six; Downhill on hardware",
+   "result": "No per-frame hook: only the menu's tape load is replaced (about 12 frames of copy); patched and original menus agree after 900 frames"
+  },
+  "dependencies": {
+   "evidence": [
+    "games/winter_sports.md#dependency-investigation"
+   ],
+   "coverage": "The menu's two loader callers; free runs and gameplay snapshots diffed over 0x6400-0x7500",
+   "result": "Hook uses 0x6C00-0x6C7F and 0x6D00-0x6D03, restores NextReg 0x50; events never touch that memory"
+  },
+  "decision": "Plain build with the events embedded and the menu's own loader answered from RAM; sprites later, one event at a time",
+  "next_experiment": "Hardware: the sprites build's Downhill view (transparent-paper layering, scroll, colours); success = no ULA white showing in the pane and the panorama scrolling with the heading"
+ },
+ "checked": {
+  "deps": {
+   "docs/profiles/winter_sports.json": "a48576bcc8832f07",
+   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/engines.py": "e7bf4d8d4de708a6",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/tapeset.py": "86542e1752fb3110",
+   "nexclash/winter_sports.py": "0c118783dc0d2c75",
+   "nexclash/winter_sports_dh.py": "28a18fe851d40f3b",
+   "nexclash/winter_sports_paint.py": "1dcf667c010270fe",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "3a7bd1faf953be35",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "verified": {
+  "deps": {
+   "docs/profiles/winter_sports.json": "a48576bcc8832f07",
+   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/engines.py": "e7bf4d8d4de708a6",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/tapeset.py": "86542e1752fb3110",
+   "nexclash/winter_sports.py": "0c118783dc0d2c75",
+   "nexclash/winter_sports_dh.py": "28a18fe851d40f3b",
+   "nexclash/winter_sports_paint.py": "1dcf667c010270fe",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "3a7bd1faf953be35",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ }
+}
