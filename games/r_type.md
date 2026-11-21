@@ -1,6 +1,25 @@
 # R-Type (128K) - intake
 
 ## Next session
+Stage 6 started 2026-11-22 (owner: "get R-Type set up as a nexclash game"), branch add-r-type.
+Release candidate RC1 = specnext r-type-cache 00d6801 game + spec-screen intro (owner flow
+2026-11-22: tape loading screen >= 4 s, ships turn at once, stick -> hand-turned ship once, fades).
+Owner decisions: intro rendered at build time from the owner's R-9 model (nothing copied from the
+game stored); first version ships UNVERIFIED (.nxc says so), the simulator proof is its own stage.
+Plan, in order (each step committed; RC1 is the byte-exact target until the proof stage):
+1. nexclash/r_type.py + asm/r_type_hooks.asm (l2scroll, l2sprites_body, glide, ship folded in):
+   `is_r_type`, profile, `auto` building plain + sprite NEX from Rtype.z80; side inputs found by
+   MD5 beside the snapshot, like cisco_heat LOAD_SCREEN: tape loading screen (scr block), the
+   owner's showpiece picture, decoded levels and figure corpus made from the snapshot / RZX at
+   build time (not stored). Target: rtype_rc1_game.nex MD5.
+2. Colours: registry, arrangement and colour map as docs/profiles/r_type_*.json (owner decisions +
+   graphic addresses only); sheets drawn into the session folder, never committed here.
+3. Intro: model json + renderer + specanim.asm as a build step; title / text / logo pixels taken
+   from the snapshot's own spec screen; output = RC1 intro NEX MD5.
+4. .nxc: variants (with / without intro), cheats from the TipShop .pok (all addresses checked
+   2026-11-22: infinite lives, immunity, invincibility, attachments work; no-scenery has no effect).
+5. Record (unverified, emulator evidence: smoke, compare, sweeps, intro verify_load), STATUS,
+   engines.py line, doccheck. Push / PR only when the owner asks.
 Stage: 1 complete as a playable prototype (main: 2026-11-16). Since then specnext PRs #97 <- #98
 <- #99 (stacked, open; owner-tested in CSpect only, 2026-11-17) own the display: Layer 2 640x256
 half-pixel scroll, scenery in front with see-through edges, filled whole-figure sprites that glide,
@@ -40,10 +59,44 @@ Mechanics, details in reference continuation/history-2026-11.md:
 Next: play through a level change (untested in play); outline companion weapons / pickups (IDs from
 the identification sheets); use registry layers in publication; then stage 6 promotion (record,
 engine, profile, retire the parked cell-recognition route, full-recording verification, release).
+Animated spec-screen intro (2026-11-20, owner hardware PASS on a 2 MB Next): see "Spec-screen intro" below;
+after rebuilding the game, rerun its make step with the new game NEX.
 Setup and tests: specnext reference r_type/intake/tools/README.md (duplicate the owner's Windows
 setup or use the /workspace layout; emulator order CSpect then JNext; CSpect's control server needs
 its paid Builder tier). Before pushing prototype changes run smoke.py and compare.py, plus
 gameover.py when titles, game over or speed change; each prints PASS / FAIL, exit 1 on failure.
+
+## Spec-screen intro (2026-11-20)
+A separate front end, not part of the l2scroll build: the technical-specification screen redrawn with a
+new 3D R-9 model (top, front, side views), then the game. Owner-tested on a real 2 MB Next as
+R-Type_SpecNext_V1.2.NEX: screen, animations, joystick view and the load into the game all work.
+- Sources (outside specnext, owner's r9-wireframe folder): `r9-wireframe/r4/next_spec/specanim.asm`
+  (program; `-DALLDIR -DGAME` for this build), `make_spec_next.py` (ship pictures, text list, Layer 2
+  title/logo; run from r4 with PYTHONPATH=.), `make_rtype_spec.py [GAME.nex]` (assembles and appends the
+  game; default C:\1NEXT\rtype_builds\rtype_ship.nex, only read). Output `next_spec/RTYPESPC.NEX`
+  (2.5 MB); any file name works. Details and history: r4/HANDOVER.md.
+- Flow (2026-11-22): the tape loading screen (NEX SCR screen, "no palette" flag set) from the start
+  of loading, at least 4 s (page checksums; blue border = a page failed), fade; the ships turn at once
+  (top pitch, side yaw, front roll), text scrolling. Stick moved (not fire), once only: fade to the
+  side ship alone, turned every way (33x33 views + flips); fire or key fades back. Any key, fire or
+  (after that) the stick: load the game.
+- Ships are stored pictures (the model needs a per-pixel depth test; live drawing is not feasible),
+  packed 1-bit, built in page 220 and copied to the ULA screen in the bottom border. Title, logo and
+  text on Layer 2 in front. Pages used: 18-23 Layer 2, 24-219 pictures, 220 work, 222 loader.
+- Game load: the NEX keeps its file open (`savenex cfg 0,nexhandle,...`); the game's banks follow
+  the intro in the same file. The loader runs from A000 (bank 2) in the standard 128K layout (see
+  Lessons), reads 8K at a time into 8000 and copies each piece to its page; the game's banks 0-7 wait
+  in pages 180-195 until the file is closed. Code planted at 4000 in the game's (blanked) screen puts
+  bank 2 in place, pages the entry bank and jumps to the game's PC/SP. Next register 8E is restored.
+  Border while loading: yellow open, cyan/green read, white place; red = open failed; red/yellow
+  flashing = read failed.
+- Changes to the copy of the game: the `call spec_hold` in the hook page (bank 12, found by the bytes
+  ED 92 05 C1 F1 CD) is NOPped, so the game starts at its logo animation (no original spec screen or
+  showpiece); the original spec picture in bank 5 is blanked. make_rtype_spec.py asserts these are
+  found once and that the game uses no page from 180 up; a changed hook page needs the pattern updated.
+- Checks (CSpect): ship pictures pixel-exact against the model's renderer at stops in every state;
+  all 100 game pages byte-exact at the jump to the game (r4/scratch_v19/verify_load.py); title and
+  level 1 play.
 
 ## Inputs
 The attached TAP is a tape, not a snapshot. The build start state was extracted from the
@@ -186,6 +239,13 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   game RAM that maps the hook page back before EI.
 - [local: busy-loop screens need original speed] Title, attract and name entry time themselves with
   CPU loops; run 28MHz only during play.
+- [local: CSpect fakes RST 08] The intro loader worked in CSpect and crashed on hardware three times.
+  NextZXOS esxDOS calls need (NextZXOS_and_esxDOS_APIs.pdf): 48K BASIC ROM (1FFD=04, 7FFD=10, copied
+  to BANK678 5B67 / BANKM 5B5C), MMU2-7 = 10,11,4,5,0,1, no DFFD paging, stack and buffers below
+  BFE0, IY=5C3A, banks 5 and 7 untouched while the disk is in use (bank 7 is the disk system's).
+  CSpect accepts calls that break all of these; a disk change is only proven on hardware.
+- [local: read the rest of a NEX] Opening the NEX by name broke when the owner renamed it (red
+  border). `savenex cfg <border>,<address>` keeps the file open and writes its handle there.
 - [local: draw order beats identity] Replacing the picture (scroll on Layer 2, sprites keyed by the
   plotter call) cost less than recognising the original's cells every update, and gave hardware scroll.
 
@@ -198,6 +258,8 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   in specnext/reference/r_type/intake; none added as an untested shared toolkit probe.
 
 ## Stage log
+- 2026-11-20 Spec-screen intro in front of the game (R-Type_SpecNext_V1.2.NEX): 3D R-9 views,
+  scrolling list, turning ships, joystick view, game loaded from the same file. Owner hardware PASS.
 - 2026-11-17 Own the display (specnext PRs #97-#99): half-pixel scroll, scenery masks in front,
   filled figures, glide, pace 4, title fixes, power-up fixes, start-up showpiece. CSpect only.
 - 2026-11-16 Prototype: colour sheets + recolour, figure IDs, outlines, partly hidden figures,
