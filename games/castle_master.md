@@ -1,13 +1,13 @@
-# Castle Master (Incentive Software, 1990; 48K, Freescape) - stage 2 (build): M3d on hardware
+# Castle Master (Incentive Software, 1990; 48K, Freescape) - stage 2 (build): M3e on hardware
 
 ## Next session
-Stage: 2 (build)             State: M3d on hardware (user 2026-11-22: castle_master_m3d_05.nex)
-Inputs: C:\1NEXT\castle_master_work\castle_master.z80 (extracted from the RZX), C:\dev\castlemaster\castle.rzx
+Stage: 2 (build)             State: M3d on hardware (user 2026-11-22); M3e: its .nxc loads there
+Inputs: C:\1NEXT\castle_master_work\castle_master.z80 (from the RZX); RZX + tape: nxc_out\
 Branch: add-castle-master    Commit: (this file's commit)
 Checks (castle_master_work, local): m3_sim (all redraws), m3b_seq, m3b_diss, m3b_race, m3_mutants; survey_full/
 Decision (user 2026-11-19): route B (Next-native renderer) + option (i) (Layer 2 on top, dither kept, cursor =
 sprite, cycle = palette); colour switchable off by the player (original look). Later: palette 1-16, flat mode.
-Start with: the colour cycle as palette + the switch, the M3b block's "Open" list
+Start with: the colour cycle as palette, the M3b block's "Open" list
 Read: PLAYBOOK stage 1 + 3d; cards detect.pacing-structure, detect.routine-removal, patch.hybrid-display-replacement
 Open: unreached CALL sites (Coverage); K on hardware (6.75 = JNext)
 
@@ -15,7 +15,7 @@ Open: unreached CALL sites (Coverage); K on hardware (6.75 = JNext)
 - Snapshot: the RZX's embedded .z80 (`nexclash.py rzx extract`), in game: 48K, PC 0xFDFD (RAM), IM 2 I=0xFE, vector
   0xFEFF -> 0xFDFD -> 0xC01F; handler DI / PUSH HL,BC,AF / SET 7,(29518). SP 0xFFEC. RAMTOP 32767. Border 0.
 - Recording: castle.rzx, 1 segment, 167,134 frames (3,342.7 s), no autosave snapshots.
-- Tape: Castlemaster1.tap (BASIC, 260-byte loader "CMT", three headerless blocks): single load, not needed.
+- Tape: Castlemaster1.tap (BASIC, 260-byte loader "CMT", three headerless blocks): single load; the .nxc's target.
 
 ## Rendering model (survey, scan of the view buffer, first 3,000 / 15,000 frames)
 | Stage | Code | Buffer |
@@ -29,7 +29,7 @@ The view has one ink / paper per area; faces differ only by dither pattern. The 
 attributes (E4) and never touches slots 1, 4, 5.
 
 ## Clash: kind D (one colour per area), none
-No figures: the whole view is Freescape polygons, no clash to remove; the gain is colour (as Quazatron).
+No figures: the whole view is Freescape polygons, no clash to remove; the gain is colour.
 
 ## Decisions (user, 2026-11-19)
 - Goal: colour the 3D view (faces in their own colours).
@@ -50,8 +50,6 @@ No figures: the whole view is Freescape polygons, no clash to remove; the gain i
 - Sound: OUT 254 at 0xC821 (20,932, in 39 updates), 0xC117 (195), 0xB374 (16): M3a keeps 0xC683 at 3.5 MHz.
 - Colour source: (29501) = the face's colour index 1-16 per span; table 53825 = 16 four-line dither patterns (1
   empty, 2 and 11 solid); the filler ANDs / ORs the pattern into the buffer. Layer 2 takes the index per span.
-- Pipeline costs (15k frames): sort 0x9D8A median 42k T (max 662k), raster 17.5 % of all T, copy 52k; walking
-  ~2.4M T a step, maths ~20 %, no wait anywhere.
 - Camera (observed, cm_profile at each 0x9776): x, y, z = 16-bit at 27309, 27311, 27313 (start 928, 96, 8032;
   y = eye height); pitch 27318, yaw 27319, both mod 72 (5 deg); a turn = 2 units (10 deg); a walk step ~238 units
   ((+206, -120) at yaw 24).
@@ -91,8 +89,8 @@ No figures: the whole view is Freescape polygons, no clash to remove; the gain i
 ## Build design (stage 2, route B + option (i); written before the first quick run)
 - Game side: original code runs (update, projection = the pick's list, ISR, panel on the ULA), its raster kept;
   built synchronous (M3a; planned: CTC pacer + renderer thread). E1 maths: not in the build.
-- Palette: index 1-16 + area paper; colour off (player option) = all indices -> the area's ink / paper (original
-  look); ISR cycle = same switch with the ISR's attribute. Placeholder until the user's palette.
+- Palette: index 1-16 + area paper; colour off: M3e; ISR cycle = same switch with the ISR's attribute.
+  Placeholder until the user's palette.
 - Overlays: hardware sprites over Layer 2 (M3b); non-view screens -> Layer 2 and sprites off.
 - Milestones M0-M3 (below; M3 = tweens, overlays, switch, sound); differential test at every site (PLAYBOOK 6).
 - M0 PASS 2026-11-19 (castle_master_work, local): Python port m0_pipeline.py (m0_geom / m0_cube / m0_objects /
@@ -158,7 +156,7 @@ No figures: the whole view is Freescape polygons, no clash to remove; the gain i
   positions; m3b_seq.py (the build's overlay code, pointer filter, portcullis hook
   along the recording: 5,357 views, 3,670 cursor moves, 87 portcullis steps); m3b_diss.py (dissolve, drop);
   m3b_race.py (MMU reads under DI); 18 / 18 mutants (O-X, Y-f). Pace (same path) median +0.59 frames, max
-  +2.41 (run 1). Open: overlay time (portcullis steps too), colour cycle, switch, R,
+  +2.41 (run 1). Open: overlay time (portcullis steps too), colour cycle, R,
   the first ~4 frames of an update stay still, the IM 2 bus value on hardware (0xFF assumed), the drop in
   colour.
 - M3c (speed pass 2026-11-21; castle_master_m3d_01-03.nex from cm7_*.asm). Profile
@@ -171,6 +169,10 @@ No figures: the whole view is Freescape polygons, no clash to remove; the gain i
 - M3d (2026-11-22; castle_master_m3d_05.nex, cm9_*.asm). Views shown by the dissolve
   ((0x7349) = 1 at 0x859C: the drawbridge) stayed in the original look. Now drawn hidden (m3_dshow), 0xB66E's
   passes repeated on Layer 2 (site 0xB6E4 h_dpass), then flipped: +3 frames. m3_sim: 18 / 18 such views.
+- M3e (2026-11-22; castle_master_m3d_07.nex, cm11_*.asm; CSpect; its .nxc loads on hardware (user)). col_on = 0
+  (m2_build --mono): every face in the area's ink. Loading screen (tape offset 513) = the image's screen, the
+  game's put back from the stub bank by setup after 4.4 s (a NEX header screen: CSpect closes, JNext skips it).
+  .nxc (jattree/nxc; tape target): toggle Original colours, 2 trainers. Refused on the Next: update dot/NEXCLASH.
 - M0 side checks (m0_misc.py): raster callers 0x8599 (5,281), 0xB62C (108, the same list again); ROM unused.
 ## Coverage (survey GATE, 15,000 frames)
 Unreached CALL sites, 15,000 frames -> full run (survey_full/, 167,135 frames, no desync, GATE OK): 0xCA4E
@@ -191,8 +193,8 @@ pictures, no figure plotter; 5,356 view copies.
   Whole-module read: asm/lib/hlib_pace.asm (the clock's rules decide where ticks must come from).
 - 2026-11-20 / 21, stage 2 M3b (overlays; hardware runs 1-3), ~10 h, ~800 tool calls, ~12 user rounds:
   sprite grid, cursor / dissolve / portcullis sites, fixed sight + pointer, 18 mutants.
-- 2026-11-21 / 22, stage 2 M3c / M3d (profile, DDMA benchmark, speed pass, dissolve), ~6 h, ~350 tool calls:
-  +12 % views.
+- 2026-11-21 / 22, stage 2 M3c-e (profile, DDMA benchmark, speed pass, dissolve, screen, .nxc), ~9 h, ~600 tool
+  calls: +12 % views.
 
 ## Lessons
 - [doc docs/RECORDING_CHECKLIST.md §Making a recording (Fuse)] An RZX alone (no separate .z80) is a complete intake: `nexclash.py rzx extract R -o
@@ -251,12 +253,10 @@ pictures, no figure plotter; 5,356 view copies.
   recording (with the hooks modelled in the test, two mutants passed).
 
 ## Technique use
-- detect.pacing-structure: helped: pacing_census on the main loop 0x8542 showed event-driven renders of 2-52
-  frames and no frame wait, which set the speed question.
-- patch.preserve-r: used: found the gameplay R read (0x9F6E -> 27391) that every sandbox render must restore;
-  the ISR's R reads are cosmetic (E5: 229 blink-delay bytes).
-- detect.routine-removal: helped: the consumer probe (cm_consumers) found gameplay reads of the projected
-  polygons, which ruled out replacing the game's own redraw with a tween.
+- detect.pacing-structure: helped: pacing_census on 0x8542 showed event-driven renders, no frame wait.
+- patch.preserve-r: used: found the gameplay R read (0x9F6E -> 27391) that every sandbox render must restore.
+- detect.routine-removal: helped: cm_consumers found gameplay reads of the projected polygons: the
+  game's own redraw stays.
 - patch.hybrid-display-replacement: used (M2): original logic and producers run, the view goes to Layer 2.
 - patch.iff-safe-read: used: HLIB_IFF_DI / _EI around both state switches. patch.restore-speed: adapted: the
   latch is in paged work RAM, so the speed is read before the switch and stored after it (own code, same rule).
