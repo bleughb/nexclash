@@ -1,7 +1,7 @@
 # Castle Master (Incentive Software, 1990; 48K, Freescape) - stage 2 (build): M3e on hardware
 
 ## Next session
-Stage: 2 (build)             State: M3d on hardware (user 2026-11-22); M3e: its .nxc loads there
+Stage: 2 (build)             State: M3e on hardware from its .nxc (user 2026-11-22)
 Inputs: C:\1NEXT\castle_master_work\castle_master.z80 (from the RZX); RZX + tape: nxc_out\
 Branch: add-castle-master    Commit: (this file's commit)
 Checks (castle_master_work, local): m3_sim (all redraws), m3b_seq, m3b_diss, m3b_race, m3_mutants; survey_full/
@@ -169,10 +169,11 @@ No figures: the whole view is Freescape polygons, no clash to remove; the gain i
 - M3d (2026-11-22; castle_master_m3d_05.nex, cm9_*.asm). Views shown by the dissolve
   ((0x7349) = 1 at 0x859C: the drawbridge) stayed in the original look. Now drawn hidden (m3_dshow), 0xB66E's
   passes repeated on Layer 2 (site 0xB6E4 h_dpass), then flipped: +3 frames. m3_sim: 18 / 18 such views.
-- M3e (2026-11-22; castle_master_m3d_07.nex, cm11_*.asm; CSpect; its .nxc loads on hardware (user)). col_on = 0
-  (m2_build --mono): every face in the area's ink. Loading screen (tape offset 513) = the image's screen, the
-  game's put back from the stub bank by setup after 4.4 s (a NEX header screen: CSpect closes, JNext skips it).
-  .nxc (jattree/nxc; tape target): toggle Original colours, 2 trainers. Refused on the Next: update dot/NEXCLASH.
+- M3e (2026-11-22; castle_master_m3d_08.nex, cm12_*.asm; hardware, from .nxc 1.1 (user)). col_on = 0
+  (m2_build --mono): faces in the area's ink. Loading screen (tape offset 513) = the image's screen; setup
+  puts the game's back (a NEX header screen: CSpect closes, JNext skips it). .nxc (jattree/nxc, tape target):
+  toggle Original colours, 2 trainers (unplayed); build_screen=513: the loader shows the tape's screen from
+  ENTER (nxc branch build-screen).
 - M0 side checks (m0_misc.py): raster callers 0x8599 (5,281), 0xB62C (108, the same list again); ROM unused.
 ## Coverage (survey GATE, 15,000 frames)
 Unreached CALL sites, 15,000 frames -> full run (survey_full/, 167,135 frames, no desync, GATE OK): 0xCA4E
