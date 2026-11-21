@@ -7,9 +7,13 @@
 ;
 ; This engine:
 ;  - h_upd (site 0x8BDE, CALL 0x8AFE): the real update, unchanged, at 28 MHz; then the update's
-;    original time is estimated from its 28 MHz time (P = 8.02 * (D - COPY_LN) + PACE_B: the six
-;    recordings' fit scaled to the original as it runs on the Next) and the rest of that time is
-;    filled with in-between frames; the next real update starts when P has passed (no debt carried).
+;    original time is estimated from its 28 MHz time (P = 8.02 * D + PACE_B, D without the present's
+;    copy (measured, h_copy) and with the time the fast paths saved (v_sc): the six recordings' fit
+;    scaled to the original as it runs on the Next) and the rest of that time is filled with
+;    in-between frames; the next real update starts when P has passed (no debt carried).
+;  - fast paths (v_fast; Patch.plain() turns them off for V1): h_copy (site 0x8847) copies the back
+;    buffer to the screen by zxnDMA, a job a row; h_spr (site 0x91E3) runs the sprite blit's rows in
+;    tight loops (LDIR, a mirror table). Each leaves RAM and registers as the game's code (unit tests).
 ;  - in-between ("spec") frame: the next update run ahead with a fraction f of its forward step, its
 ;    picture presented, then every byte the update writes put back (W ranges, saved in bank 6 via
 ;    MMU slot 0). The road stripes (advanced after the present) are set back by (1-f) of a step.
@@ -27,7 +31,7 @@
 
 ; ------------------------------------------------------------------ game addresses
 G_UPD   EQU 0x8AFE
-G_COPY  EQU 0x8854
+G_COPY  EQU 0x8854              ; the present's copy (LDI)
 G_ISR   EQU 0x9D6E
 G_STEP  EQU 0x5BB3
 G_STRIPE EQU 0x5BA6
@@ -40,6 +44,26 @@ G_CRASH EQU 0x5BAE              ; non-zero: the crash path 0xA26D
 G_MODE2 EQU 0x5BC9              ; non-zero: the path 0xA3AD
 G_STAGE EQU 0x8E4C              ; '1'..'5', 'X': the tape block's name digit
 G_HDR   EQU 0x851C              ; the loader's header copy (16 bytes)
+G_LEVEL EQU 0x5BA5              ; curve level -4..4 (track commands 1 / 2: 0x8204 / 0x81DB)
+G_CTAB  EQU 0x5B27              ; the level's curve table: base + |level| * 208 (104 lines, 16 bits)
+G_ROADN EQU 0x5B2D              ; road lines
+G_OFFS  EQU 0x5BE7              ; per-line curve offsets (0x8220: +-table + the lateral shift)
+G_LINES EQU 0xA83D              ; the line table from the offsets and the profile (0x8220's tail)
+G_HILL  EQU 0xA053              ; the hill / horizon animation, by the step (after the road is drawn)
+G_REDO  EQU 0x5BC3
+G_LAT   EQU 0x5BB0              ; the player's offset across the road (0xAB9D: curve drift and steering by the step)
+G_DRIFT EQU 0xAB9D
+G_HZ    EQU 0x8191              ; the skyline band: (0x5B2B) rows of 26 bytes from bank 1 to (0x5B7F), stride 32
+G_HZL   EQU 0x826F              ; the skyline bitmap a byte left (every second call: 0x8203 toggles)
+G_HZR   EQU 0x82D7              ; ... a byte right
+G_HZT   EQU 0x8203
+G_HZROW EQU 0x5B7F
+G_HZN   EQU 0x5B2B
+HZ_TOP  EQU 0x6603              ; the band is clipped here (above: the panel)              ; non-zero: 0x8220 rebuilds the line table this update
+G_DIST  EQU 0x8DF4              ; distance to the next track command (16 bits)
+G_TRK   EQU 0x8DF6              ; track command pointer (bank 1)
+P_LO    EQU 0x5B29              ; the profile 0xA053 animates: 0x5B29-0x5B80
+P_LEN   EQU 0x58
 
 NL      EQU 311                 ; lines a frame, 128K timing (50 Hz)
 CAD     EQU 2                   ; frames between spec presents (25 a second)
@@ -85,19 +109,38 @@ v_wf0   EQU V+238
 v_nwf   EQU V+240                ; wait_flip gave up (diagnostics)
 v_pw    EQU V+241                ; lines the real present waited for the previous flip (not in D)
 v_pw0   EQU V+243
-VEND    EQU V+245
+v_cl    EQU V+245                ; curve level at the spec frame's start
+v_cl2   EQU V+246                ; the level the next real update draws (track commands before it)
+v_cbl   EQU V+247                ; 1: blend the curve offsets from v_cl to v_cl2 by f
+v_tb    EQU V+248                ; h_curve: the v_cl2 table pointer
+v_n     EQU V+250
+v_rstep EQU V+251                ; the real step (h_step, spec frames)
+v_dlat  EQU V+252                ; f of the offset across the road's change, in curve offset units (h_drift)
+v_hsc   EQU V+254                ; this spec frame's skyline scroll: 1 left (0x826F), 0xFF right (0x82D7), 0 none
+v_k     EQU V+255                ; h_hz: the pixel shift
+VEND    EQU V+256
+v_cp    EQU V+0x140              ; lines the real present's copy took (h_copy; not in D)
+v_cp0   EQU V+0x142
+v_fast  EQU V+0x144              ; 1: the fast paths (h_copy by zxnDMA, h_spr); setup: Patch fast
+v_sc    EQU V+0x145              ; 3 bytes: the fast paths' credit this real update, 1/4096 lines (h_spr)
+VEND2   EQU V+0x148
+        ASSERT VEND2 <= TAIL_V
+TAIL_V  EQU 0x7C80
+v_prof  EQU 0x7C80               ; P_LEN: the profile the real update draws (the start-up tail's bytes, free
+                                 ; once it has run)
 ISR_STACK EQU V+0x140            ; h_isr's stack: V+0x100..V+0x13F
 
 S_PAGE  EQU 12                  ; bank 6 lower 8K (never paged by the game, all zero): the W copy
-STAGE_PAGE0 EQU 16              ; stage blocks: Next pages 16-19, 22, 23 (index 0-5: '1'..'5', 'X')
+SCR_PAGE EQU 27                 ; the snapshot's display bytes in a loading screen build (bank 13 upper)
+STAGE_PAGE0 EQU 16             ; stage blocks: Next pages 16-19, 22, 23 (index 0-5: '1'..'5', 'X')
 
 ; ------------------------------------------------------------------ pace (fitted: games/cisco_heat.md)
 ; P (lines) = PACE_KI * D + (PACE_KF * D) / 256 + PACE_B
 PACE_KI EQU 8                   ; 8.02 = 7.24 (the recordings' fit) * 1.108: the original as it runs on the
 PACE_KF EQU 5                   ;   Next (JNext 1.2.0, plain .nex, 200 updates in lockstep: 9.39 frames an
 PACE_B  EQU 645                 ;   update against 8.45 with the fit; games/cisco_heat.md "Pace")
-COPY_LN EQU 87                  ; the present's copy at 28 MHz ((T + reads) / 8: 158,675 / 8 T), not in the fit's D
 RST_LN  EQU 96                  ; spec_back from its interrupt to the return (restore, the handler)
+SPEC_X  EQU 40                  ; a spec frame's work beyond the real update's D (hill_f, 0x8220 forced, h_curve)
 SAFE_LN EQU 180                ; a DI copy starts only this many lines after an interrupt or earlier
 
         ORG 0x2000
@@ -349,11 +392,18 @@ h_upd:  HLIB_SPEED_IN v_speed
         push hl
         push de
         push bc
+        ld hl,P_LO                      ; the profile this update draws (0xA053 changes it after the road)
+        ld de,v_prof
+        ld bc,P_LEN
+        ldir
         call now
         ld (v_t0),hl
         ld hl,0
         ld (v_wt),hl
         ld (v_pw),hl
+        ld (v_cp),hl
+        ld (v_sc),hl
+        ld (v_sc+1),hl
         pop bc
         pop de
         pop hl
@@ -388,9 +438,22 @@ h_upd:  HLIB_SPEED_IN v_speed
         ld de,(v_pw)
         or a
         sbc hl,de
+        jr c,.d0
+        ld de,(v_cp)                    ; the present's copy, as measured (the fit left the copy out)
+        or a
+        sbc hl,de
         jr nc,.d
 .d0:    ld hl,0
 .d:     ld (v_D),hl
+        ex de,hl                        ; pace on D + the time the fast paths saved (v_sc, rounded)
+        ld hl,(v_sc+1)
+        ld bc,8
+        add hl,bc
+        ld b,4
+.cs:    srl h
+        rr l
+        djnz .cs
+        add hl,de
         call pace                       ; HL = P
         ld de,(v_wt)
         add hl,de
@@ -438,7 +501,9 @@ h_upd:  HLIB_SPEED_IN v_speed
         ld (v_tgt),hl
         or a
         sbc hl,de                       ; its present waits for target - NL, then copies and restores:
-        ld bc,COPY_LN+48
+        ld bc,(v_cp)
+        add hl,bc
+        ld bc,48
         add hl,bc
         ex de,hl
         ld hl,(v_dl)
@@ -448,7 +513,7 @@ h_upd:  HLIB_SPEED_IN v_speed
         call now                        ; and the frame's work must fit: E = now + D + 64 <= deadline,
         ld de,(v_D)                     ; or, when E falls SAFE_LN or more into a frame (spec_back's
         add hl,de                       ; wait_safe holds the restore to the next interrupt):
-        ld de,64                        ; next interrupt + RST_LN <= deadline
+        ld de,64+SPEC_X                 ; next interrupt + RST_LN <= deadline
         add hl,de
         push hl
         ld de,(v_tint)
@@ -548,15 +613,9 @@ wait_flip:
         scf
         ret
 
-; pace: HL = PACE_KI * D' + PACE_KF * D' / 256 + PACE_B, D' = D - COPY_LN (the fit left the copy out).
+; pace: HL = PACE_KI * D + PACE_KF * D / 256 + PACE_B (D without the copy: h_copy measures it).
 ; AF, BC, DE lost.
-pace:   ld hl,(v_D)
-        ld de,COPY_LN
-        or a
-        sbc hl,de
-        jr nc,.pos
-        ld hl,0
-.pos:   ld a,h
+pace:   ld a,h                          ; HL = D
         cp 8
         jr c,.ok
         ld hl,0x07FF                    ; > 6 frames of 28 MHz time: cap
@@ -619,6 +678,7 @@ spec_frame:
         di
         call w_save
         call xsave
+        call c_next
         call repage0
         ld hl,spec_abort
         ld (v_ljret),hl
@@ -639,6 +699,7 @@ spec_frame:
         ld (v_spec),a
         ld (v_sp),sp
         ei
+        call hill_f
         call G_UPD
 spec_back:
         call wait_safe
@@ -657,6 +718,459 @@ spec_abort:
         ld hl,v_nab
         inc (hl)
         jr spec_back
+
+; hill_f: hills and horizon as 0xA053 leaves them after f of a step: the profile the real update drew,
+; animated again with step * f. The road and the line table are then built from it (G_REDO).
+hill_f: ld hl,v_prof
+        ld de,P_LO
+        ld bc,P_LEN
+        ldir
+        ld a,(G_STEP)
+        push af
+        call scale_a
+        ld (G_STEP),a
+        call G_HILL
+        pop af
+        ld (G_STEP),a
+        ld a,1
+        ld (G_REDO),a
+        ret
+
+; scale_a: A = round(A * f / 256), A unsigned. DE lost.
+scale_a:
+        ld d,a
+        ld a,(v_f)
+        ld e,a
+        mul d,e
+        ld a,e
+        add a,a                         ; carry: the dropped half
+        ld a,d
+        adc a,0
+        ret
+
+; c_next: v_cl = the level now; v_cl2 and v_cbl = 1 when the race loop's track commands before the next
+; real update change it (the loop reads commands when the distance runs out: 0x8BE1). Reads the
+; script the way 0x8C24 would (bank 1 paged here; interrupts off): distances, the curve commands with
+; their limits, the other commands skipped by length; a command it does not know ends the look (no blend).
+c_next: xor a
+        ld (v_cbl),a
+        ld h,a
+        ld l,a
+        ld (v_dlat),hl
+        ld (v_hsc),a
+        ld a,(G_LEVEL)
+        ld (v_cl),a
+        ld hl,(G_DIST)
+        ld a,(G_STEP)
+        ld c,a
+        ld b,0
+        or a
+        sbc hl,bc
+        jr z,.go
+        ret nc
+.go:    ld a,(G_SHOWN)
+        or 0x11
+        ld bc,0x7FFD
+        out (c),a
+        ld hl,(G_TRK)
+        ld a,(v_cl)
+        ld e,a
+        ld d,16
+.cmd:   dec d
+        ret z
+        ld a,(hl)
+        inc hl
+        bit 7,a
+        jr z,.nd
+        and 0x7F                        ; a distance (0x8CFC): the look ends unless it is zero
+        or (hl)
+        inc hl
+        ret nz
+        jr .cmd
+.nd:    cp 1
+        jr z,.c1
+        cp 2
+        jr z,.c2
+        ld b,3
+        cp 3
+        jr z,.sk
+        cp 6
+        jr z,.sk
+        cp 7
+        jr z,.sk
+        cp 12
+        jr z,.sk
+        dec b
+        cp 13
+        jr z,.sk
+        cp 8
+        jr z,.sk
+        cp 9
+        jr z,.sk
+        cp 15
+        jr z,.sk
+        cp 10
+        jr z,.cmd
+        cp 18
+        jr z,.cmd
+        cp 61
+        jr z,.cmd
+        cp 59
+        jr z,.cmd
+        cp 58
+        ret nz                          ; 17, 63, unknown: no blend
+        ld a,(hl)                       ; 58: jump (0x8D08)
+        inc hl
+        ld h,(hl)
+        ld l,a
+        jr .cmd
+.sk:    inc hl
+        djnz .sk
+        jr .cmd
+.c1:    ld a,e                          ; 0x8204: down one, not below -4 (then the loop reads on)
+        or a
+        jp m,.c1n
+        jr z,.c1n
+        dec a
+        jr .done
+.c1n:   cp 0xFC
+        jr z,.cmd
+        dec a
+        jr .done
+.c2:    ld a,e                          ; 0x81DB: up one, not above 4
+        or a
+        jp m,.c2u
+        cp 4
+        jr nc,.cmd
+.c2u:   inc a
+.done:  ld (v_cl2),a
+        ld a,1
+        ld (v_cbl),a
+        ret
+
+; h_curve (site 0x826B, CALL 0xA83D: 0x8220 has written the offsets from the current level's table):
+; in a spec frame whose next real update draws another level, each line's offset moves f of the way
+; to that level's (+-table: the sign is the level's); every line gets v_dlat (h_drift); then the line table
+; as the game builds it.
+h_curve:
+        ld a,(v_spec)
+        or a
+        jp z,G_LINES
+        ld a,(G_ROADN)
+        or a
+        jp z,G_LINES
+        cp 105
+        jp nc,G_LINES
+        ld (v_n),a
+        ld a,(v_cbl)
+        or a
+        jr z,.lat
+        ld a,(G_LEVEL)
+        ld hl,v_cl
+        cp (hl)
+        jr nz,.lat                      ; the level moved in this frame (0x9A39): no blend
+        ld a,(v_cl)                     ; T' = T + (|L'| - |L|) * 208
+        call abs_a
+        ld c,a
+        ld a,(v_cl2)
+        call abs_a
+        sub c
+        ld hl,(G_CTAB)
+        ld de,208
+        jr z,.t
+        jp p,.up
+        ld de,-208
+        neg
+.up:    ld b,a
+.ad:    add hl,de
+        djnz .ad
+.t:     ld (v_tb),hl
+        ld ix,(G_CTAB)
+        ld iy,G_OFFS
+.lp:    ld e,(ix+0)
+        ld d,(ix+1)
+        ld a,(v_cl)
+        or a
+        call m,neg_de
+        push de
+        ld hl,(v_tb)
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+        ld (v_tb),hl
+        ld a,(v_cl2)
+        or a
+        call m,neg_de
+        pop hl
+        ex de,hl
+        or a
+        sbc hl,de                       ; the level's offset change on this line
+        call smul_f
+        ld e,(iy+0)
+        ld d,(iy+1)
+        add hl,de
+        ld (iy+0),l
+        ld (iy+1),h
+        inc ix
+        inc ix
+        inc iy
+        inc iy
+        ld hl,v_n
+        dec (hl)
+        jr nz,.lp
+.lat:   ld hl,(v_dlat)                  ; f of the offset across the road's change (h_drift), every line
+        ld a,h
+        or l
+        jp z,G_LINES
+        ex de,hl
+        ld hl,G_OFFS
+        ld a,(G_ROADN)
+        ld b,a
+.ll:    ld a,(hl)
+        add a,e
+        ld (hl),a
+        inc hl
+        ld a,(hl)
+        adc a,d
+        ld (hl),a
+        inc hl
+        djnz .ll
+        jp G_LINES
+
+abs_a:  or a
+        ret p
+        neg
+        ret
+
+neg_de: xor a
+        sub e
+        ld e,a
+        sbc a,a
+        sub d
+        ld d,a
+        ret
+
+; smul_f: HL = round(HL * f / 256), HL signed. AF, BC, DE lost.
+smul_f: ld a,h
+        or a
+        push af
+        jp p,.p
+        ex de,hl
+        call neg_de
+        ex de,hl
+.p:     ld a,(v_f)
+        ld e,a
+        ld d,l
+        mul d,e
+        ld c,d
+        ld b,e
+        ld a,(v_f)
+        ld e,a
+        ld d,h
+        mul d,e
+        ld l,c
+        ld h,0
+        add hl,de
+        bit 7,b
+        jr z,.r
+        inc hl
+.r:     pop af
+        ret p
+        ex de,hl
+        call neg_de
+        ex de,hl
+        ret
+
+; h_drift (site 0x8ADE, CALL 0xAB9D): the drift and steering amounts are table steps of the whole step, not
+; proportional to it: a spec frame runs 0xAB9D with the real step (the steering as it is now) and shows f of
+; the offset's change, as a fraction of a unit (v_dlat, added to every line's offset by h_curve).
+h_drift:
+        ld a,(v_spec)
+        or a
+        jp z,G_DRIFT
+        ld a,(G_STEP)
+        push af
+        ld a,(v_rstep)
+        ld (G_STEP),a
+        ld a,(G_LAT)
+        push af
+        call G_DRIFT
+        pop bc                          ; B = the offset before
+        ld a,(G_LAT)
+        sub b
+        ld c,a
+        ld a,b
+        ld (G_LAT),a                    ; it stays (whole units); h_curve moves the road by f of the change
+        ld hl,0
+        ld a,c
+        or a
+        jr z,.z
+        ld de,-832                      ; a unit across the road in the offsets: -832 (0xAC86)
+        jp p,.m0
+        ld de,832
+        neg
+.m0:    ld b,a
+.m:     add hl,de
+        djnz .m
+        call smul_f
+.z:     ld (v_dlat),hl
+        pop af
+        ld (G_STEP),a
+        ret
+
+; h_hzl / h_hzr (sites 0x8ADB, 0x8AD2: the skyline scroll by a byte on a curve): note a spec frame's scroll.
+h_hzl:  ld a,1
+        jr h_hzs
+h_hzr:  ld a,0xFF
+h_hzs:  push hl
+        ld hl,v_spec
+        bit 0,(hl)
+        jr z,.go
+        ld hl,G_HZT
+        bit 0,(hl)                      ; 1: this call scrolls
+        jr z,.go
+        ld (v_hsc),a
+.go:    dec a
+        pop hl
+        jp z,G_HZL
+        jp G_HZR
+
+; h_hz (site 0xA677, CALL 0x8191): after the band is drawn, a spec frame whose scroll moved the bitmap a
+; byte shows f of it: the drawn rows shifted back by round(8 * (1 - f)) pixels (circular: the row is the
+; whole bitmap row), with the barrel shifter.
+h_hz:   call G_HZ
+        ld a,(v_spec)
+        or a
+        ret z
+        ld a,(v_hsc)
+        or a
+        ret z
+        ld a,(v_f)
+        neg
+        add a,16
+        jr c,.k8
+        srl a
+        srl a
+        srl a
+        srl a
+        srl a
+        jr .k
+.k8:    ld a,8
+.k:     or a
+        ret z
+        cp 8
+        ret nc
+        ld (v_k),a
+        ld a,(G_HZN)
+        or a
+        ret z
+        ld hl,(G_HZROW)
+.row:   push af
+        push hl
+        ld de,HZ_TOP
+        or a
+        sbc hl,de
+        pop hl
+        jr c,.nx
+        push hl
+        ld a,(v_hsc)
+        dec a
+        call z,shr_row
+        call nz,shl_row
+        pop hl
+.nx:    ld de,32
+        add hl,de
+        pop af
+        dec a
+        jr nz,.row
+        ret
+
+; shr_row: the 26 bytes at HL shifted right by v_k bits, circular. AF, BC, DE, HL lost; Z set on return.
+shr_row:
+        push hl
+        ld de,25
+        add hl,de
+        ld c,(hl)                       ; the last byte comes in at the left
+        pop hl
+        ld a,26
+.b:     ex af,af'
+        ld d,c
+        ld e,(hl)
+        ld c,e
+        ld a,(v_k)
+        ld b,a
+        bsrl de,b
+        ld (hl),e
+        inc hl
+        ex af,af'
+        dec a
+        jr nz,.b
+        ret
+
+; shl_row: the 26 bytes at HL shifted left by v_k bits, circular. AF, BC, DE, HL lost.
+shl_row:
+        ld c,(hl)                       ; the first byte comes in at the right
+        ld de,25
+        add hl,de
+        ld a,26
+.b:     ex af,af'
+        ld d,(hl)
+        ld e,c
+        ld c,d
+        ld a,(v_k)
+        ld b,a
+        bsla de,b
+        ld (hl),d
+        dec hl
+        ex af,af'
+        dec a
+        jr nz,.b
+        ret
+
+; sscale_a: A = round(A * f / 256), A signed. DE lost.
+sscale_a:
+        bit 7,a
+        jp z,scale_a
+        neg
+        call scale_a
+        neg
+        ret
+
+; h_cspd (sites 0x9835, 0x9933: LD C,(IX+12), a car's own speed in the relative motion step - speed):
+; spec frames move the car by f of it, as the step.
+h_cspd: ld c,(ix+12)
+        push af
+        ld a,(v_spec)
+        or a
+        jr z,.o
+        push de
+        ld a,c
+        call scale_a
+        ld c,a
+        pop de
+.o:     pop af
+        ret
+
+; h_lat (site 0x981A: ADD A,(IX+3), A = the car's lane change this update, signed): f of it.
+h_lat:  push bc
+        ld b,a
+        ld a,(v_spec)
+        or a
+        ld a,b
+        jr z,.add
+        push de
+        bit 7,b
+        jr z,.pos
+        neg
+.pos:   call scale_a
+        bit 7,b
+        jr z,.p2
+        neg
+.p2:    pop de
+.add:   pop bc
+        add a,(ix+3)
+        ret
 
 ; w_save / w_load: the W ranges <-> bank 6 (MMU slot 0 = S_PAGE, from 0x0000). Interrupts off.
 w_save: ld a,1
@@ -742,6 +1256,7 @@ h_step: push af
         ld (G_STEP),a
         ret
 .s:     pop af
+        ld (v_rstep),a
         push de
         push af
         ld d,a
@@ -800,6 +1315,312 @@ h_pres: push af
         push de
         push bc
         jp 0x882A
+
+; ================================================================== the copy
+; h_copy (site 0x8847, CALL 0x8854: HL = 0x6000 the linear back buffer, DE = the hidden screen; A kept): the
+; real update's copy is timed (v_cp, left out of D as the fit leaves the copy out). v_fast: the copy by
+; zxnDMA, one 32-byte row a job (the rows in the screen's order), the attributes in 24 more, when it ends
+; CP_SAFE lines or more before the next interrupt; else the game's LDI copy. A job holds the CPU and an
+; interrupt pulse during one is lost (JNext: 49.94 interrupts a second, a 40.5 ms gap, before this check).
+CP_SAFE EQU 90                          ; the DMA copy's lines (52 in the simulator) and a margin
+h_copy: push af
+        ld a,(v_inupd)
+        or a
+        jr z,.go
+        ld a,(v_spec)
+        or a
+        jr nz,.go
+        push hl
+        push de
+        call now
+        ld (v_cp0),hl
+        pop de
+        pop hl
+        call .cp
+        call now
+        ld de,(v_cp0)
+        or a
+        sbc hl,de
+        ld (v_cp),hl
+        pop af
+        ret
+.go:    call .cp
+        pop af
+        ret
+.cp:    ld a,(v_fast)
+        or a
+        jp z,G_COPY
+        push hl
+        push de
+        call now
+        ld de,(v_tint)
+        or a
+        sbc hl,de
+        ld de,NL
+.md:    or a
+        sbc hl,de
+        jr nc,.md
+        add hl,de                       ; lines into this frame
+        ld de,NL-CP_SAFE
+        or a
+        sbc hl,de
+        pop de
+        pop hl
+        jp nc,G_COPY                    ; too near the next interrupt
+        ld c,0x6B
+        ld a,0x83                       ; disable, then the fixed part: length 32, both memory, increment
+        out (c),a
+        ld a,0x7D
+        out (c),a
+        out (c),l
+        out (c),h
+        ld a,32
+        out (c),a
+        xor a
+        out (c),a
+        ld a,0x14
+        out (c),a
+        ld a,0x10
+        out (c),a
+        ld a,0xAD
+        out (c),a
+        out (c),e
+        out (c),d
+        ld a,0x82
+        out (c),a
+        ld b,24                         ; character rows
+.cr:    push hl
+        push bc
+        ld b,8                          ; their pixel rows: 256 apart in the back buffer
+.pr:    call dma_row
+        inc h
+        djnz .pr
+        pop bc
+        pop hl
+        ld a,32
+        add hl,a
+        ld a,b
+        dec a
+        and 7
+        jr nz,.n
+        add hl,0x0700                   ; the next third
+.n:     djnz .cr
+        ld hl,0x7800                    ; attributes
+        ld b,24
+.ar:    call dma_row
+        ld a,32
+        add hl,a
+        djnz .ar
+        ret
+
+; ================================================================== sprite rows (site 0x91E3, PUSH BC / LD A,(0x923F))
+; The row loop of the sprite blit 0x9144, entered at its first row: B rows, C kept, DE the sprite bytes,
+; HL the back buffer row; (0x923F) bytes a row drawn, (0x9240) bytes a row skipped; (0x5B94) mirrored
+; (drawn right to left, bits reversed), (0x5BAB) stored, else ORed in. The game's loop costs 73..180 T a
+; byte; these 21..64. Exit as the game's at 0x9233: B 0, C, DE, HL as it leaves them; AF' (the mode) is
+; never touched, AF is set by 0x9233. Without v_fast: the displaced instructions, back to the loop.
+h_spr:  ld a,(v_fast)
+        or a
+        jr nz,.f
+        push bc
+        ld a,(0x923F)
+        jp 0x91E7
+.f:     push bc
+        push ix
+        ld ixh,b
+        push hl
+        push de
+        call spr_credit
+        pop de
+        pop hl
+        ld a,(0x5B94)
+        or a
+        jr nz,.m
+        ld a,(0x5BAB)
+        or a
+        jr z,.no
+.ns:    push hl                         ; stored: LDIR
+        ex de,hl
+        ld bc,(0x923F)                  ; C width, B skip
+        ld a,b
+        ld b,0
+        ldir
+        add hl,a
+        ex de,hl
+        pop hl
+        add hl,32
+        dec ixh
+        jr nz,.ns
+        jr .x
+.no:    push hl                         ; ORed
+        ld a,(0x923F)
+        ld b,a
+.no1:   ld a,(de)
+        or (hl)
+        ld (hl),a
+        inc de
+        inc hl
+        djnz .no1
+        ld a,(0x9240)
+        add de,a
+        pop hl
+        add hl,32
+        dec ixh
+        jr nz,.no
+        jr .x
+.m:     ld b,high mirt
+        ld a,(0x5BAB)
+        or a
+        jr z,.mo
+.ms:    push hl                         ; mirrored, stored
+        ld a,(0x923F)
+        ld ixl,a
+.ms1:   ld a,(de)
+        ld c,a
+        ld a,(bc)
+        ld (hl),a
+        dec hl
+        inc de
+        dec ixl
+        jr nz,.ms1
+        ld a,(0x9240)
+        add de,a
+        pop hl
+        add hl,32
+        dec ixh
+        jr nz,.ms
+        jr .x
+.mo:    push hl                         ; mirrored, ORed
+        ld a,(0x923F)
+        ld ixl,a
+.mo1:   ld a,(de)
+        ld c,a
+        ld a,(bc)
+        or (hl)
+        ld (hl),a
+        dec hl
+        inc de
+        dec ixl
+        jr nz,.mo1
+        ld a,(0x9240)
+        add de,a
+        pop hl
+        add hl,32
+        dec ixh
+        jr nz,.mo
+.x:     pop ix
+        pop bc
+        ld b,0
+        jp 0x9233
+
+; spr_credit: v_sc += the time the game's loop would take over h_spr's, in 1/4096 lines (pace runs on the
+; original's time): rows * (width * CB + CR + skip * CS) - CC, CB/CR by mode (fitted in the simulator from
+; the game's loop against this one: games/cisco_heat.md). IXH rows. AF BC DE HL lost.
+CS      EQU 48
+CC      EQU 1970
+spr_credit:
+        ld c,0
+        ld a,(0x5B94)
+        or a
+        jr z,.c1
+        ld c,8
+.c1:    ld a,(0x5BAB)
+        or a
+        jr z,.c2
+        set 2,c
+.c2:    ld hl,ctab
+        ld a,c
+        add hl,a
+        ld c,(hl)
+        inc hl
+        ld b,(hl)                       ; BC = CB
+        inc hl
+        ld e,(hl)
+        inc hl
+        ld d,(hl)                       ; DE = CR
+        push de
+        ld a,(0x923F)
+        ld d,c
+        ld e,a
+        mul d,e
+        ex de,hl                        ; HL = CB lo * width
+        ld d,b
+        ld e,a
+        mul d,e
+        ld a,e
+        add a,h
+        ld h,a                          ; + (CB hi * width) << 8
+        pop de
+        add hl,de
+        ld a,(0x9240)
+        ld d,a
+        ld e,CS
+        mul d,e
+        add hl,de                       ; HL = a row's credit
+        ld a,ixh
+        ld e,a
+        ld d,l
+        mul d,e                         ; DE = lo * rows
+        ld b,h
+        ld hl,v_sc
+        ld a,(hl)
+        add a,e
+        ld (hl),a
+        inc hl
+        ld a,(hl)
+        adc a,d
+        ld (hl),a
+        inc hl
+        ld a,(hl)
+        adc a,0
+        ld (hl),a
+        ld a,ixh
+        ld e,a
+        ld d,b
+        mul d,e                         ; DE = hi * rows, << 8
+        ld hl,v_sc+1
+        ld a,(hl)
+        add a,e
+        ld (hl),a
+        inc hl
+        ld a,(hl)
+        adc a,d
+        ld (hl),a
+        ld hl,(v_sc)                    ; - CC (never below 0)
+        ld de,CC
+        or a
+        sbc hl,de
+        ld (v_sc),hl
+        ld a,(v_sc+2)
+        sbc a,0
+        ld (v_sc+2),a
+        ret nc
+        ld hl,0
+        ld (v_sc),hl
+        ld (v_sc+1),hl
+        ret
+ctab:   dw 165,67                       ; (CB, CR): ORed
+        dw 161,37                       ; stored
+        dw 373,57                       ; mirrored, ORed
+        dw 323,57                       ; mirrored, stored
+
+; dma_row: 32 bytes HL -> DE by the zxnDMA (C = 0x6B, the fixed part programmed); DE += 32. A lost.
+dma_row:
+        ld a,0x1D
+        out (c),a
+        out (c),l
+        out (c),h
+        ld a,0xAD
+        out (c),a
+        out (c),e
+        out (c),d
+        ld a,0xCF
+        out (c),a
+        ld a,0x87
+        out (c),a
+        ld a,32
+        add de,a
+        ret
 
 ; ================================================================== frame waits (0x9EE6) inside h_upd
 ; Their time is real time in the original too: it is left out of D and added to the deadline.
@@ -902,7 +1723,16 @@ boot_resume:
         ld de,0x5B00
         ld bc,256
         ldir
-        nextreg 7,0
+        ld a,(boot_scr)                 ; the file's bank 5 held the loading screen: the snapshot's display
+        or a                            ; bytes come back from page SCR_PAGE (no stack while it is mapped)
+        jr z,.ns
+        nextreg 0x50,SCR_PAGE
+        ld hl,0
+        ld de,0x4000
+        ld bc,6912
+        ldir
+        nextreg 0x50,26
+.ns:    nextreg 7,0
         ld a,-23
         call hlib_r_set
         HLIB_R_OUT
@@ -916,6 +1746,8 @@ boot_iff:
         ei
 boot_jump:
         jp 0
+boot_scr:
+        db 0                            ; 1: a loading screen build (Patch.set_boot)
 printer_saved:
         ds 256
 
@@ -990,6 +1822,13 @@ dma_tpl:
 DMA_LEN EQU $-dma_tpl
         ASSERT DMA_LEN == 15
 
+        ALIGN 256
+mirt:                                   ; a byte's bits reversed (h_spr)
+.x = 0
+        DUP 256
+        db ((.x&1)<<7)|((.x&2)<<5)|((.x&4)<<3)|((.x&8)<<1)|((.x&16)>>1)|((.x&32)>>3)|((.x&64)>>5)|((.x&128)>>7)
+.x = .x + 1
+        EDUP
 regblock:
         ds 32
 rom_end:

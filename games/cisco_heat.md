@@ -1,11 +1,11 @@
 # Cisco Heat (Image Works 1991, ZX Spectrum 128K) - OutRun-style racer
 
 ## Next session
-Stage: 3 (smooth build verified in software). Hardware: untested.
+Stage: 3 (smooth build v1.1 verified in software). Hardware: untested.
 Inputs: cisco_heat.z80 = the snapshot embedded in CiscoHeat1.rzx (MD5 ff69b283), with the six recordings beside it (ciscoheat1-5.rzx, ciscoheat_end.rzx: the stage blocks come from their snapshots; "Inputs").
-Build: `nexclash.py auto cisco_heat.z80` writes `cisco_heat.nex` (Smooth, default, 5c56ff52) and `cisco_heat_orig_pace.nex` (in-between frames off, 93726055), boot-checks both.
+Build: `nexclash.py auto cisco_heat.z80` writes `cisco_heat.nex` (Smooth, default, 93e0a17b) and `cisco_heat_orig_pace.nex` (in-between frames off, 2383e7a4), boot-checks both. With cisco_heat_loading.scr beside the snapshot (the tape's SCREEN$), both show it from the start of the load (the "Screen" line).
 Checks: `auto` with the six recordings: V1/V2 on every 25th race update, unit tests with two negatives, ROM paths; JNext pace and flicker ("Evidence").
-Pending: hardware checklist; running curvature and traffic ahead too (Open).
+Pending: hardware checklist; a 1-frame cadence if wanted (Open).
 Start with: the hardware checklist on a Next.
 
 ## Facts
@@ -19,7 +19,7 @@ Start with: the hardware checklist on a Next.
 
 ## Design
 - Decided by the owner's brief (2026-11-21: "complete implementation, autonomously; emphasize smoothness, the original frame rate is poor"), which stands in for the stage-1 question: the pictures are the game's own ULA drawing, more of them; no colour or figure change.
-- h_upd (0x8BDE): the real update runs unchanged at 28 MHz, measured as D lines (frame waits and the present's wait for the previous flip left out). Its original time is P = 8.02 x (D - 87) + 645 lines ("Pace"); the next real update starts at t0 + P + frame waits, no debt carried.
+- h_upd (0x8BDE): the real update runs unchanged at 28 MHz, measured as D lines (frame waits, the present's wait for the previous flip and the present's copy, as h_copy measures it, left out). Its original time is P = 8.02 x (D + credit) + 645 lines ("Pace"); the next real update starts at t0 + P + frame waits, no debt carried.
 - In-between ("spec") frames fill that time on a 2-frame cadence (25 pictures a second at most): the next update run ahead with f = C / frames of its step (h_step at 0x8AB6 stores step x f / 256; stripes set back by (1 - f) of a step), its picture presented, then every byte the update writes (W table: 21 ranges, 0xC400-0xCD1F of them in bank 1) put back from bank 6 (MMU slot 0 = page 12, zxnDMA from 16 bytes). Bytes the handler shares with the update (X table: 139 bytes) are swapped around each interrupt in a spec frame, so the handler sees the real values. A fake longjmp target (0x5B95 -> spec_abort) catches a run-ahead that would leave the race.
 - A spec frame starts only when its present, copy and restore end by the deadline: target - 1 frame + copy + 48 lines, and its work now + D + 64, or the next interrupt + 96 when that end falls 180+ lines into a frame (wait_safe holds the restore there). No spec frames in the crash and 0x5BC9 paths or when the real present did not flip by the deadline.
 - h_pres (0x8827): inside h_upd it waits for the previous flip (the copy never targets the screen about to be shown); spec presents wait for the interrupt before their target.
@@ -27,17 +27,31 @@ Start with: the hardware checklist on a Next.
 - h_fwait (0x9EE6): the game's frame waits inside the update are timed and added to the deadline.
 - h_load (0x8E33): stage blocks from Next pages 16-19, 22, 23 (data from 0x0000, header at 0x1FE0, length at 0x1FFE), carry and registers as the tape loader leaves them; no tape.
 - Start-up: the tail (0x7C80, in hook RAM) transfers to boot_resume in the hidden ROM page, which restores 0x5B00-0x5BFF from printer_saved, R (delta -23) and the registers on a scratch stack in page 26.
+- What else a spec frame moves by f (everything the real update would move, so the picture between two real updates is in between them):
+  - curves (h_curve, site 0x826B before 0xA83D): when a track command changes the curve level before the next real update (c_next reads the commands ahead in bank 1), the per-line offsets 0x5BE7 are blended from the old level's table to the new one by f;
+  - the car's place across the road (h_drift, site 0x8ADE around 0xAB9D): the drift runs with the real step, the lateral 0x5BB0 is kept, and f of its change is added to every line's offset (v_dlat, in offset units: lateral x -832);
+  - hills (hill_f at the spec frame's start: 0xA053 run on the profile the real update drew, with step x f, then 0x5BC3 = 1 so the road is redrawn);
+  - other cars (h_cspd, sites 0x9835/0x9933: their speed x f; h_lat, site 0x981A: their sideways step x f);
+  - the skyline (h_hzl/h_hzr, sites 0x8ADB/0x8AD2: the scroll the next real update does; h_hz, site 0xA677 around 0x8191: rows shifted back by round(8 x (1 - f)) pixels, BSRL/BSLA).
+- Fast paths (v_fast = 1; Patch.plain() turns them off, which V1 uses because its interrupt replay counts game instructions):
+  - h_copy (site 0x8847, the present's copy 0x8854): zxnDMA, one 32-byte job a pixel row (source and destination re-armed per row; 24 attribute rows); 52 lines against the LDI copy's 79 (simulator). Only when it ends CP_SAFE (90) lines or more before the next interrupt, else the game's LDI copy: a DMA job holds the CPU and an interrupt pulse during it is lost. Real-update copies average 60 lines with the fallback. Its time is measured (v_cp) and left out of D.
+  - h_spr (site 0x91E3, the sprite blit 0x9144's row loop): LDIR when stored, LD/OR/LD when ORed, a 256-byte bit-reverse table when mirrored; 21-64 T a byte against the game's 85-213. The time saved goes back into the pace as a credit (spr_credit: rows x (width x CB + CR + skip x CS) - CC by mode, in 1/4096 lines; constants fitted in the simulator, mean error under 80 T a call).
+  - The real update with both: 281 lines, copy included, against 356 (simulator, 16 states: median 276 against 362, max 327 against 421).
+- Loading screen: the tape's own SCREEN$ (block cisco$, staged as cisco_heat_loading.scr) is in the NEX header (screen flag 2, start delay 200 frames) and in the file's bank 5, so NEXLOAD shows it at once and keeps it while the banks load; boot_resume copies it back from page 27 after NEXLOAD's 0x5B00 overwrite (boot_scr = 1).
 - Two builds from one page: Smooth (v_en = 1, default) and orig_pace (v_en = 0: same hooks, the original's picture rate at the original's pace).
 
 ## Pace
 - The recordings' fit (real update time against 28 MHz time, six recordings) is P = 7.24 x D' + B. The original as it runs in JNext 1.2.0 (plain .nex, 200 updates in lockstep) is 1.108 times slower than that fit (9.39 frames an update against 8.45): the constant is 8.02 (PACE_KI 8, PACE_KF 5), B 645.
-- D' = D - 87: the present's copy (158,675 T at 28 MHz / 8), which the fit's D left out.
+- The fit's D left the present's copy out: first as a constant (87 lines, 158,675 T at 28 MHz / 8), now as measured (h_copy), so the DMA copy's saving does not change the pace.
+- The sprite fast path's saving is added back to D (spr_credit) so the pace stays the original's: without it the simulator's pace ran 14% fast (7.41 frames an update against 8.59). With it: 8.47 (fast) against 8.59 (plain, whose hook detour per sprite row costs 44 T).
 
 ## Inputs
 - The snapshot and the six recordings, staged together; `find_stages` picks the stage blocks by content from every .z80/.rzx beside the snapshot (MD5 per block in STAGE_MD5). Without all six `auto` builds nothing and says so.
 
 ## Known issues
-- Curvature, hills and other cars are not run ahead (they move per real update): the horizon and traffic still step about 5.6 times a second while the road surface, stripes and scenery move at up to 25.
+- The skyline scrolls a byte every second real update, so between scrolls it stands still: it slides about 2 pixels a picture while scrolling and stops between (the real frames must stay the game's own).
+- A steering change after a spec frame's prediction shows as a small snap at the real frame (the drift runs with the real step and the keys of that moment).
+- The cadence is 2 frames (25 pictures a second at most; 3-4 per real update). The faster update does not raise it: the slots before the real update's deadline are the limit, not CPU ("Open").
 - Random numbers (LD A,R) differ from the original's: hook instructions count into R. Gameplay is equivalent; V1 supplies R (verification exception).
 - Worst 20-update window of the pace run +4.7% (the busy third +0.5%).
 - The hooks busy-wait at 28 MHz all the time (hook time 100%).
@@ -47,7 +61,12 @@ Start with: the hardware checklist on a Next.
 - V1 (real update, patched with spec frames off, against the original 0x8AFE; interrupts at matching game-instruction counts, R supplied) and V2 (spec frames on against off, clock interrupts, same start line): registers, all RAM (masks: hook RAM, site bytes, handler scratch 0x9E47-0x9E68, SP scratch 0xA62D, dead stack, display), sound ports, return time within 4 lines, interrupts lost. Captured states (every 10th update, stages 1-5): V1 400/400 exact, V2 400/400 exact, 1,279 spec frames, none aborted or late.
 - `auto` with the record's recipe (cisco_heat.z80 and the six recordings, every 25th race update, 6 m 52 s): 159 cases, V1 159/159 and V2 159/159 exact, 511 spec frames, none aborted or late (stages 1-5: 33/37/37/23/29; the end recording has no race updates); unit tests passed; ROM paths pass. Each stage's own snapshot with its recording: the same counts, PASSED.
 - Unit tests: six stage loads exact (block, header, carry); negative W (wtab keeps 1 byte of 0x5B90-0x5F7F) caught; negative R (no supplied R) caught.
-- JNext 1.2.0, smooth (5c56ff52) against the unpatched control (ef355505), same input keyed to updates, 300 updates: game state equal at every update; pace -0.36% (quiet -1.11%, busy +0.53%, worst window +4.71%); AY writes 550/s both, 50 interrupts/s both, longest interrupt gap 20.3 ms both. Flicker, frames 1400-1499: 50 picture changes against 11, no out-of-step, vanished or transient frames; pictures viewed: clean.
+- JNext 1.2.0, v1.0 smooth (5c56ff52) against the unpatched control (ef355505), same input keyed to updates, 300 updates: game state equal at every update; pace -0.36% (quiet -1.11%, busy +0.53%, worst window +4.71%); AY writes 550/s both, 50 interrupts/s both, longest interrupt gap 20.3 ms both. Flicker, frames 1400-1499: 50 picture changes against 11, no out-of-step, vanished or transient frames; pictures viewed: clean.
+- v1.1 (2026-11-22, run-ahead of curves, hills, cars, lateral and skyline; fast paths; loading screen):
+  - captured states, every 10th update of stages 1-5: V1 400/400, V2 400/400 exact, 1,355 spec frames, none aborted or late;
+  - `auto` with the record's recipe: 159 cases, V1 and V2 159/159 exact, 535 spec frames, none late; unit tests: six stage loads, the DMA copy against LDI (both screens), 54 captured sprite blits fast against the game's loop (all four modes; 182 more in a separate run), negative W and R caught; ROM paths pass; boot check both builds;
+  - JNext 1.2.0, the same page without the loading screen (a724aa93; the screen's 4 s delay moves the keyed start presses) against the control, 300 updates: pace +0.13% (5.60 against 5.62 updates a second), AY 550/s both, 50 interrupts/s both, longest gap 20.3 ms both. The DMA copy without the interrupt check lost interrupts there (49.94/s, a 40.5 ms gap); fast paths off: none lost, pace +2.03% (the hook detour per sprite row).
+  - Flicker, frames 1400-1499 (306a7747, the build before the interrupt check, same pictures): 48 picture changes against 11, no out-of-step, vanished or transient frames.
 
 ## Hardware checklist
 Nothing has run on a Next. To check: start-up; each stage load (1-5 and the end) with no tape; smooth road motion at speed and in curves; music tempo; the checkpoint and "LOADING STAGE" messages intact (w_go's MMU0 after 7FFD); crash and time-out; the pace against a real 128K if one is to hand.
@@ -61,7 +80,9 @@ Nothing has run on a Next. To check: start-up; each stage load (1-5 and the end)
 - verify.update-locked-pace: helped: the pace tool's lockstep and penalty found the +3 frames an update.
 
 ## Open
-- Run curvature, hills and traffic ahead too (their state is in W already; only the step is scaled).
+- 50 pictures a second would need a 1-frame cadence when a spec frame's work fits a frame (D + 40 + copy + restore <= 311 lines; 44% of real updates are at or under 270 lines now) and a variable cadence otherwise (1- and 2-frame steps mixed). Not done: the scheduler changes, and uneven steps are the owner's call.
+- Speed-ups tried (simulator, 88 updates, stages 1/3/5): DMA copy 79 -> 52 lines, pictures 19.5 -> 20.0 a second; sprite rows 356 -> 281 lines an update, pictures unchanged (cadence-bound). The road-mark plot 0xA7F1 (199 calls an update, 11% of it) rewritten with Z80N: exact (780/780) but no faster once each call is counted for the pace credit (the game's is already about 350 T): dropped.
+- Next candidates if a 1-frame cadence is wanted: the road line fills (0xA5DF/0xA606 under 0xA68D), 0x8220/0xA83D (7%), 0x8F48 (7%).
 - DDMA review (docs/DDMA.md): the W save uses the plain zxnDMA.
 
 ## Lessons
@@ -72,6 +93,10 @@ Nothing has run on a Next. To check: start-up; each stage load (1-5 and the end)
 - [local: spec fit] The fit checked the present but not spec_back's wait_safe: one of 400 cases restored after the next interrupt, 84 lines past the deadline (V2's return-time check).
 - [local: negative W] The control must use a state with spec frames: the first pick had none and passed.
 - [none: NEXLOAD over 0x5B00 is known; handled as Chase H.Q. does (boot_resume, printer_saved)] Boot continuation reused.
+- [doc docs/DDMA.md §New-game decision (stage 1 and again before delivery)] The DMA copy lost an interrupt every few seconds in JNext (49.94 a second, a 40.5 ms gap) although each job is 32 bytes; the simulator does not model it. Fixed by using DMA only when the copy ends 90 lines before the next interrupt. Run the pace tool after any DMA change.
+- [local: pace credit] A fast path inside the paced update changes the pace unless its saving is credited back: the first sprite fast path made the game 14% faster in the simulator. Bench frames an update, not only lines.
+- [local: interrupt replay] V1 replays interrupts by game-instruction count; a fast path skips game instructions, so V1 runs with fast paths off and each fast path has its own differential test (captured calls, fast against the game's code, RAM and registers).
+- [local: read the flags, not the names] The blit ORs when 0x5BAB is 0 and stores when it is set (JR NC on the carry made from it): the first fast path had it inverted; the differential test caught it on its first run.
 - [deferred Open: reconsider when a second game uses run-ahead frames or a hardware run confirms it] Run-ahead in-between frames (save the write set, run the next update with a fraction of its step, present, restore) as a technique card.
 
 ## Friction
@@ -84,3 +109,4 @@ Nothing has run on a Next. To check: start-up; each stage load (1-5 and the end)
 ## Stage log
 - Stage 0: six recordings surveyed; same engine in every stage, multiload.
 - 2026-11-21 Stages 1-3: smooth engine, pace calibrated in JNext, V1/V2 400/400, auto with unit tests and negatives.
+- 2026-11-22: curves, hills, other cars, lateral and skyline run ahead; the tape's loading screen shown at once for 4 s; fast paths (DMA copy, sprite rows) with pace credit; speed-up benchmark.

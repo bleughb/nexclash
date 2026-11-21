@@ -49,6 +49,12 @@
     "md5": "89d0e14c890da441c8541fb0685e8dc5",
     "path": "cisco_heat/ciscoheat_end.rzx",
     "role": "The end sequence to LOADING STAGE 1; its snapshot holds block X. No race updates."
+   },
+   {
+    "name": "cisco_heat_loading.scr",
+    "md5": "dcada32d9b00f736b583beae1cc4760d",
+    "path": "cisco_heat/cisco_heat_loading.scr",
+    "role": "The 6,912-byte loading screen from Ciscoheat.tap (MD5 7cf4c478), the block named cisco$, staged beside the snapshot; shown from the first moment of the load and for at least 4 seconds (NEX header). Not a recording."
    }
   ]
  },
@@ -58,7 +64,7 @@
     "games/cisco_heat.md#pace"
    ],
    "coverage": "Six recordings (the update's original time against its 28 MHz time); JNext 1.2.0 stage 1, 300 updates keyed to updates against the unpatched build. Stages 2-5 not measured in JNext.",
-   "result": "About 5.6 updates a second; per-update deadline P = 8.02 x (D - 87) + 645 lines plus frame waits; the gap before it holds up to 4-5 in-between frames; music owned by the interrupt handler (550 AY writes a second, unchanged)."
+   "result": "About 5.6 updates a second; per-update deadline P = 8.02 x (D + credit) + 645 lines plus frame waits (D without the present's copy, as measured; credit = the time the sprite fast path saved); the gap before it holds up to 4-5 in-between frames; music owned by the interrupt handler (550 AY writes a second, unchanged)."
   },
   "dependencies": {
    "evidence": [
@@ -112,21 +118,21 @@
  "outputs": {
   "plain": {
    "file": "cisco_heat.nex",
-   "md5": "5c56ff52c677f065e137a2ac5be92b6c"
+   "md5": "93e0a17b82f20a01111211fac56c71f1"
   },
   "orig_pace": {
    "file": "cisco_heat_orig_pace.nex",
-   "md5": "93726055d819c2e783ac20e675dd8114"
+   "md5": "2383e7a4a00b3fc556d69cc55457d4c4"
   }
  },
  "repro": [],
  "status": {
   "title": "Cisco Heat",
   "engine_col": "cisco_heat (cisco_heat.md)",
-  "build": "v1.0 Smooth; cisco_heat.nex 5c56ff52: the race update at 28 MHz paced to the original, the time between filled with run-ahead in-between frames (road, stripes and scenery at up to 25 pictures a second against about 5.6); cisco_heat_orig_pace.nex 93726055 the same hooks without them; stages load from Next pages, no tape",
-  "software": "auto, 6 recordings: 159 race updates, real update (V1, R supplied) and in-between frames (V2) exact in all, 511 in-between frames; 400 more captured states 400/400 both; six stage loads exact; negative W and R controls caught; boot check with R, both builds; JNext 300 updates: state equal at every update, pace -0.36%, music and interrupts equal, 25 pictures a second against 5.6, no flicker flags",
+  "build": "v1.1 Smooth; cisco_heat.nex 93e0a17b: the race update at 28 MHz paced to the original, the time between filled with run-ahead in-between frames (road, stripes, scenery, curves, hills, other cars, lateral and skyline at up to 25 pictures a second against about 5.6); fast paths (zxnDMA copy away from interrupts, sprite rows) with pace credit; the tape's loading screen at once for 4 s; cisco_heat_orig_pace.nex 2383e7a4 the same hooks without in-between frames; stages load from Next pages, no tape",
+  "software": "auto, 6 recordings: 159 race updates, real update (V1, R supplied) and in-between frames (V2) exact in all, 535 in-between frames; 400 captured states 400/400 both, 1,355 in-between frames, none late; six stage loads, DMA copy and 54 sprite blits exact against the game's code; negative W and R controls caught; boot check with R, both builds; JNext 300 updates: pace +0.13%, music and interrupts equal (50/s, longest gap 20.3 ms), flicker no flags",
   "hardware": "untested",
-  "next": "hardware checklist; run curvature and traffic ahead too; DDMA review"
+  "next": "hardware checklist; a 1-frame cadence (50 pictures a second) if wanted; DDMA review"
  },
  "checks": [
   "asm2profile:cisco_heat"
@@ -135,7 +141,7 @@
   {
    "check": "JNext pace and flicker",
    "status": "pass",
-   "scope": "JNext 1.2.0, smooth 5c56ff52 against the unpatched control, 300 updates keyed to updates: state equal at every update, pace -0.36%, AY and interrupts equal; flicker 100 frames, no flags. Not a selftest stamp.",
+   "scope": "JNext 1.2.0, v1.1 page without the loading screen (a724aa93) against the unpatched control, 300 updates keyed to updates: pace +0.13%, AY and interrupts equal (longest gap 20.3 ms both); flicker 100 frames, no flags. Not a selftest stamp.",
    "evidence": "games/cisco_heat.md \"Evidence\""
   }
  ]

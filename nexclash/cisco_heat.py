@@ -33,6 +33,10 @@ ROOT = Path(__file__).resolve().parents[1]
 PROFILES = ROOT / 'docs' / 'profiles'
 PUBLISHER = 'Image Works, 1991'
 STAGE_KEYS = '12345X'
+LOAD_SCREEN = 'cisco_heat_loading.scr'        # the tape's cisco$ block (6,912 bytes), beside the snapshot
+LOAD_MD5 = 'dcada32d9b00f736b583beae1cc4760d'
+START_DELAY = 200                              # NEX header byte 133: frames on the loading screen after loading (4 s)
+SCR_PAGE = 27                                  # asm SCR_PAGE: the snapshot's display bytes in a loading screen build
 STAGE_PAGES = (16, 17, 18, 19, 22, 23)       # asm STAGE_PAGE0.. (bank 10 = pages 20/21 is the stub's)
 STAGE_MD5 = {'1': 'dbe4ab364061deaf540cfd7e37ad3a63', '2': '4d9eda09cd622f457b83fa7a532bee16',     # header + block
              '3': '61f5d23e7c806680914df41d37c43b8f', '4': 'e131dc4ddd4fcec0ca64b96751a65667',
@@ -41,6 +45,8 @@ TAIL_ADDR = 0x7C80                             # hook RAM area (0x7B00-0x7D7C, n
 HOOK_RAM = (0x7B00, 0x7D7D)
 V = 0x7B00
 V_EN, V_DMA, DMA_LEN = V + 2, V + 208, 15
+V_FAST = V + 0x144                             # asm v_fast: the fast paths (copy by zxnDMA, sprite rows)
+DMA_CYCLES = 6                                 # model: 28 MHz cycles a DMA byte (3 + 3 after reset; docs/DDMA.md)
 G_STAGE, G_HDR = 0x8E4C, 0x851C
 R_SITES = (0x98AC, 0xA468)                     # the only LD A,R in the game
 CMP = tuple(i for i in hooklib.CMP_R if i != 15)
@@ -153,11 +159,11 @@ class Patch:
     setup_call = None
     hook_page_data = b''
 
-    def __init__(self, stages, smooth=True):
+    def __init__(self, stages, smooth=True, screen=None, fast=True):
         missing = [k for k in STAGE_KEYS if k not in stages]
         if missing:
             raise ValueError('Cisco Heat: stage blocks missing: %s (games/cisco_heat.md "Inputs")' % ','.join(missing))
-        self.stages, self.smooth = stages, smooth
+        self.stages, self.smooth, self.screen, self.fast = stages, smooth, screen, fast
         self.name = 'Cisco Heat smooth engine' + ('' if smooth else ' (in-between frames off)')
         prof = load_profile()
         h = prof['hooks']
@@ -187,10 +193,18 @@ class Patch:
         q.smooth = smooth
         return q
 
+    def plain(self):
+        """This patch with the fast paths off (the game's own copy and sprite loop run). V1 uses it: its
+        interrupt replay counts game instructions, which a fast path does not run; V3 shows the two equal."""
+        q = copy.copy(self)
+        q.fast = False
+        return q
+
     def hook_ram(self):
         """The initial hook RAM (0x7B00..): zeros, v_en, the DMA program."""
         v = bytearray(HOOK_RAM[1] - HOOK_RAM[0])
         v[V_EN - V] = 1 if self.smooth else 0
+        v[V_FAST - V] = 1 if self.fast else 0
         t = self.syms['dma_tpl'] - 0x2000
         v[V_DMA - V:V_DMA - V + DMA_LEN] = self.page[t:t + DMA_LEN]
         return bytes(v)
@@ -218,6 +232,8 @@ class Patch:
         for n in range(8):
             snap.banks[n] = bytes(banks[n])
         self.set_boot(snap)
+        if self.screen is not None:
+            self.extra_banks[SCR_PAGE >> 1] = bytes(8192) + bytes(snap.banks[5][:6912]) + bytes(8192 - 6912)
         self.original_pc = snap.pc
         snap.pc = self.syms['boot_resume']
 
@@ -227,16 +243,43 @@ class Patch:
         a = self.syms['printer_saved'] - 0x2000
         page[a:a + 256] = snap.banks[5][0x1B00:0x1C00]
         page[self.syms['boot_iff'] - 0x2000] = 0xFB if snap.iff1 else 0x00
+        page[self.syms['boot_scr'] - 0x2000] = 1 if self.screen is not None else 0
         a = self.syms['boot_jump'] - 0x2000
         page[a + 1:a + 3] = zt.w16(snap.pc)
         self.page = bytes(page)
         self.extra_banks[12] = self.page + bytes(8192)
 
 
-def build(z80, out, stages=None, smooth=True):
+def find_screen(directory):
+    """The loading screen beside the snapshot, or None. A different file is refused."""
+    p = Path(directory) / LOAD_SCREEN
+    if not p.is_file():
+        return None
+    data = p.read_bytes()
+    if hashlib.md5(data).hexdigest() != LOAD_MD5:
+        raise ValueError("%s is not the tape's loading screen (MD5 %s)" % (p.name, LOAD_MD5))
+    return data
+
+
+def with_screen(raw, screen):
+    """The .nex with the loading screen: in the header (byte 10 = 2: NEXLOAD shows it before the banks), in the
+    file's bank 5 too (loaded first, it would replace the picture; boot_resume puts the snapshot's bytes back from
+    SCR_PAGE), and START_DELAY frames on it after loading."""
+    raw = bytearray(raw)
+    if raw[10] != 0 or len(screen) != 6912 or not raw[18 + 5] or zt.BANK_FILE_ORDER[0] != 5:
+        raise ValueError('Cisco Heat: expected a .nex without a screen, bank 5 first, and a 6,912-byte screen')
+    raw[10] = 2
+    raw[133] = START_DELAY
+    raw[512:512 + 6912] = screen
+    return bytes(raw[:512]) + screen + bytes(raw[512:])
+
+
+def build(z80, out, stages=None, smooth=True, screen=None):
     stages = stages if stages is not None else find_stages(Path(z80).resolve().parent)
-    patch = Patch(stages, smooth)
+    patch = Patch(stages, smooth, screen)
     zt.convert(str(z80), str(out), quiet=True, patch=patch)
+    if screen is not None:
+        Path(out).write_bytes(with_screen(Path(out).read_bytes(), screen))
     return patch
 
 
@@ -338,6 +381,11 @@ class Model(hooklib.NextModel):
         self.mem = mem
         self.log = []
         super().__init__(sim, speed=0, t_line=228, lines=311, fast=FAST, line=line)
+        self.dma.stall = self._stall
+
+    def _stall(self, n):
+        """A DMA job holds the CPU: DMA_CYCLES 28 MHz cycles a byte (counted as CPU T at the current clock)."""
+        self.R[hooklib.T] += DMA_CYCLES * n
 
     def nextreg(self, reg, v):
         if reg == 0x50:
@@ -526,7 +574,7 @@ def _display(n, i):
 def case_v1(patch, state, line=0, rseq=None):
     """The real update: patched (smooth off) vs the original. -> list of problems."""
     rseq = rseq or [(37 * k + 11) & 0xFF for k in range(97)]
-    p = Machine(state, patch, smooth=False, line=line, rseq=rseq)
+    p = Machine(state, patch.plain(), smooth=False, line=line, rseq=rseq)
     p.run(0x8BE1)
     o = Machine(state, None, ints=p.taken, rseq=rseq)
     o.run(0x8BE1)
@@ -646,6 +694,19 @@ def unit_tests(patch, states, neg=True):
         c['stage load ' + ('exact' if ok is True else 'differs!')] += 1
         if ok is not True:
             patch.unit_failures.append(('load', key, ok))
+    if states:
+        for shown in (0, 8):
+            ok = _t_copy(patch, states[0], shown)
+            c['copy DMA = LDI ' + ('exact' if ok is True else 'differs!')] += 1
+            if ok is not True:
+                patch.unit_failures.append(('copy', shown, ok))
+    if states:
+        for st in states[::max(1, len(states) // 6)]:
+            for call in sprite_calls(patch, st):
+                bad = t_sprite(patch, call)
+                c['sprite fast = game ' + ('exact' if not bad else 'differs!')] += 1
+                if bad:
+                    patch.unit_failures.append(('sprite', bad[:4]))
     if neg and states:
         st = states[len(states) // 2]
         nb = negative_patch(patch)
@@ -663,6 +724,73 @@ def unit_tests(patch, states, neg=True):
         diff = _mem_diff(o, p, lambda n, i: _hookram(n, i) or n == 6 or _dead_stack(p.R[12])(n, i), 1)
         c['negative R' + (' caught' if (diff or p.rk == 0) else ' missed!')] += 1
     return c
+
+
+def _t_copy(patch, st, shown):
+    """h_copy (site 0x8847) on a random back buffer, zxnDMA vs the game's LDI copy: the screen written (bank 5
+    or 7 as 0x5B8B selects), A and the flags, the bytes around it. -> True or the difference."""
+    import random
+    rnd = random.Random(shown + 1)
+    buf = bytes(rnd.randrange(256) for _ in range(0x1B00))
+    out = []
+    for cpm in (1, 0):
+        m = Machine(st, patch, smooth=False, ints=[])
+        R, mem = m.R, m.mem
+        mem.banks[5][0x2000:0x3B00] = buf
+        mem.banks[5][0x5B8B - 0x4000] = shown
+        mem[V_FAST] = cpm
+        if shown:                                   # registers: A 0, F 1, D 4, E 5, H 6, L 7, SP 12, PC 24
+            R[0], R[6], R[7], R[4], R[5] = 0, 0x60, 0, 0x40, 0
+        else:
+            mem.out7ffd((mem.o7ffd & 0xF8) | 0x17)
+            R[0], R[6], R[7], R[4], R[5] = 8, 0x60, 0, 0xC0, 0
+        R[1] = 0x55
+        mem[0x5CFE], mem[0x5CFF] = 0x4A, 0x88
+        R[12] = 0x5CFE
+        R[24] = patch.syms['h_copy']
+        t0 = R[25]
+        m.run(0x884A)
+        out.append((bytes(mem.banks[5][:0x1B00]), bytes(mem.banks[7][:0x1B00]), R[0], R[1], R[12], R[25] - t0))
+    d, l = out
+    if d[5] * 5 > l[5] * 4:
+        return 'the DMA path did not run (%d T against %d)' % (d[5], l[5])
+    if d[:5] == l[:5]:
+        return True
+    return [(k, d[k] == l[k]) for k in range(5)]
+
+
+def sprite_calls(patch, st, n=8, pc=0x9144):
+    """Machine states at a fast path's routine entry (the sprite blit 0x9144, the plot 0xA7F1; outside the
+    interrupt handler) in a plain update."""
+    m = Machine(st, patch.plain(), smooth=False, line=50)
+    out = []
+
+    class L(list):
+        def append(s, x):
+            if len(out) < n and not m.isr:
+                banks = [bytearray(b) for b in m.mem.banks]
+                for a, old, new in patch.sites:              # the game as it was (Machine patches it again)
+                    banks[5 if a < 0x8000 else 2][a & 0x3FFF:(a & 0x3FFF) + len(old)] = old
+                banks[6][:] = bytes(16384)
+                out.append({'regs': list(m.R), 'o7ffd': m.mem.o7ffd, 'banks': [bytes(b) for b in banks]})
+    m.watch, m.events = {pc}, L()
+    m.run(0x8BE1)
+    return out
+
+
+def t_sprite(patch, call):
+    """One routine call (a sprite_calls state) to its return, fast path vs the game's code, no interrupts.
+    -> list of differences (registers but T, RAM but hook RAM and the stack below SP)."""
+    ms = []
+    for q in (patch, patch.plain()):
+        m = Machine(call, q, smooth=False, ints=[])
+        ret = m.mem[m.R[12]] | m.mem[m.R[12] + 1] << 8
+        m.run(ret)
+        ms.append(m)
+    f, o = ms
+    bad = [('register', i, o.R[i], f.R[i]) for i in CMP if i not in (25, 29) and o.R[i] != f.R[i]]
+    bad += [('RAM',) + d for d in _mem_diff(o, f, lambda n, i: _hookram(n, i) or _dead_stack(f.R[12])(n, i))]
+    return bad
 
 
 def _t_load(patch, key, st):
@@ -732,11 +860,14 @@ def auto(a, z80, name, out, say):
         say('Inputs    : stage blocks %s not found beside the snapshot (games/cisco_heat.md "Inputs")' % ','.join(missing))
         say('Result    : FAILED')
         return False
+    screen = find_screen(Path(z80).resolve().parent)
+    say('Screen    : %s' % ('%s (%d frames after loading)' % (LOAD_SCREEN, START_DELAY) if screen else
+                            'none (%s not beside the snapshot)' % LOAD_SCREEN))
     ok = True
     patches = []
     for label, suffix, smooth in (('Smooth', '', True), ('Plain', '_orig_pace', False)):
         nex = out / (name + suffix + '.nex')
-        p = build(z80, nex, stages, smooth)
+        p = build(z80, nex, stages, smooth, screen)
         bad = boot_check(nex, z80, p)
         ok &= not bad
         patches.append(p)
