@@ -13,14 +13,14 @@ Start with: a recording played by hand into later levels, then hardware
 Read: "Build", "Open"
 
 ## Result (2026-11-20)
-Techniques: `patch.xor-overlay-keep-ula`, `patch.preserve-r`, `patch.restore-speed`, `patch.whole-altrom-image`
+Techniques: `patch.xor-overlay-keep-ula`, `patch.runtime-colour-map`, `patch.preserve-r`, `patch.restore-speed`, `patch.whole-altrom-image`
 
 Two whole machine-played recordings (20,098 and 20,083 frames, 7 games each, first level).
 
 | | |
 |---|---|
-| Builds | pssst_sprites.nex 76ef88e9 (figures as sprites in their own colours, loading screen), plain db271c07 |
-| Verify | IDENTICAL on both: 111,080 figures as sprites (13,019,621 sprite pixels against the original's plot on an empty screen, none across the right edge), 30,218 figures left to the game (flower, leaves, lives), 1,007 erases, 106 clears, 140,349 draws from their entry, every pace site; every register with R and all memory, the bitmap too; 111,080 paints not painted and 30,218 left to the game; the alt ROM's IM 1 handler against Sinclair's at 36,814 interrupts |
+| Builds | pssst_sprites.nex 40ae6ece (figures as sprites in their own colours, loading screen), enhanced 6d14ba48 (44 pictures painted, 13 fixed colours), plain db271c07 |
+| Verify | IDENTICAL on both, both builds (Enhanced: every pixel's colour against the painted map too): 111,080 figures as sprites (13,019,621 sprite pixels against the original's plot on an empty screen, none across the right edge), 30,218 figures left to the game (flower, leaves, lives), 1,007 erases, 106 clears, 140,349 draws from their entry, every pace site; every register with R and all memory, the bitmap too; 111,080 paints not painted and 30,218 left to the game; the alt ROM's IM 1 handler against Sinclair's at 36,814 interrupts |
 | Colour | 447 paints (explosions) of another colour than the sprites took at the plot: one update early |
 | Unit | PASS: 2,352 graphic cases (all 49 graphics x 8 places x 3 colours x first and last object), 24 speed cases, erases, clear, 36 paint cases, 5 guard cases, a graphic not in the table, negative control 40 of 40 |
 | Negative | 6 broken builds, all detected (the system ROM left under the hooks, the window never opened, never closed, R one off after a draw and after an entry, the colour painted after all) |
@@ -84,6 +84,18 @@ The game's bitmap stays the original's; sprites lie on the figures' own pixels.
 - DMA / DDMA (docs/DDMA.md): not used. The patterns are sent once at set-up (81 patterns); a hook writes only
   sprite attributes.
 
+## Enhanced (2026-11-20, first pass; owner: "have codex do the enhanced colours")
+- Sheet: one picture a distinct shape (44), painted by a Codex pass from a brief; files in the owner's painting
+  folder (`nexclash-pssst`); `sheet2colours.py` (pilot tools) makes `pssst_colours.json`, kept beside the snapshot: it holds
+  the figures, so it is not in this repository.
+- These sprites have one palette for every figure: 13 fixed colours (nibbles 2-14 of every palette offset, 9 bits
+  each, written by the set-up) and nibble 1 = the object's own colour at run time. A pixel left unpainted keeps
+  the game's colour, so a figure the game shows in several colours still does. 44 pictures have painted pixels.
+- The hooks and tables are the same as the default's: only the patterns' nibbles and the 13 colours differ. The
+  default build's set-up writes zeros there and no pattern of it uses them.
+- Verify: the replay and the unit cases run for both builds; a sprite pixel must be the object's ink where the map
+  leaves it and the map's fixed colour elsewhere.
+
 ## Hardware checklist
 Starts from the menu after the loading screen (a key or 5 s); menu and keys as the original; Robbie, the cans, the
 spray and the pests in their own colours with no colour spilling onto the leaves, the stalk or each other; the
@@ -93,7 +105,8 @@ unchanged; the game's speed as the original's over a minute of play.
 ## Open
 1. The recordings are machine-played and stay on the first level: later pests and the bonus items are proven by
    the unit cases, not in play.
-2. No Enhanced (painted) set: the default is the game's own colours, a colour an object.
+2. The Enhanced painting is a first pass the owner has not seen in play; where the painted map lives for a public
+   patch (it holds the figures; the .nxc carries the painted patterns).
 3. Pace is by construction (the plot's set-up at 28 MHz pays for the hook, as Jetpac 1.3); not measured in JNext.
 4. The flower, the leaves and the lives stay on the ULA: a pest crossing a leaf is in front of it and no longer
    colours it, but the flower's own cells keep one colour as in the original.
@@ -105,6 +118,9 @@ unchanged; the game's speed as the original's over a minute of play.
 - 2026-11-20: the flower stays the game's (one picture too tall for two sprites, and it only moves as it grows).
 
 ## Lessons
+- [local: this engine's build step] An Enhanced build's fixed colours were compared as symbols only, never with
+  the RGB the set-up uploads (Codex review 2026-11-20): palette_wrong replays the boot's NEXTREG writes against the
+  painted map, the default build as its negative. Clipped figures now check their fixed colours too.
 - [local: this game's analysis] The same plotter as a published game's is found by its bytes with the addresses
   left out; the hooks then move over address by address. What does not move is the game round it: which objects
   are drawn once and left (here three), and which handlers call the plot's parts themselves.

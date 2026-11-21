@@ -149,8 +149,31 @@ def layout(img):
     return t, x0, cols, rows
 
 
-def build(m0):
-    """-> (patterns bytes, entries {gkey: (pat, cols, rows, xadj, 0)})."""
+def shape_key(t, rows):
+    """A shape's name in a painted map (the painting sheet has one picture a shape)."""
+    import hashlib
+    return hashlib.md5(repr((sorted(t), rows)).encode()).hexdigest()[:16]
+
+
+def shape_nibbles(t, rows, cmap):
+    """{(x, r): nibble} of a shape: 1 = the game's own colour, 2-14 = a fixed colour of the painted map."""
+    f = cmap['figures'].get(shape_key(t, rows)) if cmap else None
+    if not f:
+        return {q: 1 for q in t}
+    H = max(r for _, r in t) + 1
+    return {(x, r): int(f[H - 1 - r][x], 16) or 1 for x, r in t}
+
+
+def build(m0, cmap=None):
+    """-> (patterns bytes, entries {gkey: (pat, cols, rows, xadj, 0)}). cmap: a painted map (COLOURS_NAME)."""
+    cache = {}
+
+    def nib(t, rows, x, r):
+        if (x, r) not in t:
+            return 0
+        if (t, rows) not in cache:
+            cache[(t, rows)] = shape_nibbles(t, rows, cmap)
+        return cache[(t, rows)][(x, r)]
     pats = bytearray()
     first = {}
     ent = {}
@@ -168,7 +191,7 @@ def build(m0):
                     for j in range(16):             # pattern line j (top down) of row rr
                         r = 16 * rows - 1 - (16 * rr + j)      # data row (0 = bottom)
                         for x in range(16 * cc, 16 * cc + 16, 2):
-                            pats.append((1 if (x, r) in t else 0) << 4 | (1 if (x + 1, r) in t else 0))
+                            pats.append(nib(t, rows, x, r) << 4 | nib(t, rows, x + 1, r))
         ent[k] = (first[(t, rows)], cols, rows, x0, 0)
     if len(pats) > 128 * 128:
         raise ValueError('%d patterns > 128' % (len(pats) // 128))
@@ -209,8 +232,14 @@ def sprite_pixels(attr, pat):
 
 
 def palette_colour(offset, nibble):
-    """The default build's palette: offset n, nibbles 1 and 15 = Spectrum colour n."""
-    return offset
+    """Offset n, nibbles 1 and 15 = Spectrum colour n (the game's own); nibbles 2-14 = a fixed colour: 0x100 + nibble."""
+    return offset if nibble in (1, 15) else 0x100 + nibble
+
+
+def load_colours(z80=None, path=None):
+    """The painted map beside the snapshot (it holds the figures: not in the repository), or None."""
+    p = path or (os.path.join(os.path.dirname(os.path.abspath(str(z80))), COLOURS_NAME) if z80 else None)
+    return json.load(open(p)) if p and os.path.exists(p) else None
 
 
 def sprite_colours(attr, pat):
@@ -256,12 +285,19 @@ if __name__ == '__main__':
 class PssstPatch:
     name = 'Pssst figures -> hardware sprites over the game\'s own drawing (altrom, stateless hooks)'
 
-    def __init__(self, prof=None, rom_code=None):
+    def __init__(self, prof=None, rom_code=None, colours=None):
         self.prof = prof or load_profile()
+        self.colours = colours
         h = self.prof['hooks']
         self.rom_code = rom_code or bytes.fromhex(h['rom'])
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
-        self.stub_extra = bytes.fromhex(h['setup'])
+        st = bytearray(bytes.fromhex(h['setup']))
+        if colours:
+            o = self.syms['fixpal'] - 0xD000
+            for i, c in enumerate(colours['fixed']):
+                st[o + 2 * i], st[o + 2 * i + 1] = c >> 1, c & 1
+        self.stub_extra = bytes(st)
+        self._nibs = {}
         self.setup_call = 0xD000
         self.hook_page_data = b''
         self.uses_printer_buffer = False
@@ -322,6 +358,8 @@ class PssstPatch:
             raise ValueError('asm/pssst_tables.asm was not made from this snapshot '
                              '(python -m nexclash.pssst tables GAME.z80, then tools/asm2profile.py pssst)')
         self.num_patterns = len(self.pats) // 128
+        if self.colours:
+            self.pats = build(m0, self.colours)[0]     # the same patterns, painted
         for a, old, new in self.sites:
             ram[a - 0x4000:a - 0x4000 + len(new)] = new
         snap.banks[5] = bytes(ram[0:16384])
@@ -641,11 +679,67 @@ def event(patch, kind, get, R, ns, alt, Sim, speed=0):
     npx = len(drawn)
     if set(got) != drawn:
         f.append(('sprite pixels differ from the original plot', len(set(got) ^ drawn)))
-    a3 = get(ix + 3)
-    want = {q: (a3 & 7) | ((a3 >> 3) & 8) for q in drawn}
-    if any(want.get(q) != v for q, v in got.items()):
-        f.append(('sprite colour is not the game\'s',))
+    if colours_wrong(patch, get, (R[4] << 8 | R[5]) - 1, drawn, get(ix + 3), got):
+        f.append(('sprite colour is not the game\'s or the painted map\'s',))
     return f, npx, 'edge' if edge else None
+
+
+def palette_wrong(nex, z80, fixed):
+    """(offset, nibble) of every sprite palette entry 2..1+len(fixed) the build's set-up leaves different from the
+    painted map's fixed colours (9 bits): its NEXTREG writes in the simulated boot replayed (0x43 select, 0x40 index,
+    0x41 8-bit and 0x44 9-bit values; first sprite palette). The default build, whose set-up writes zeros there, is
+    the negative."""
+    from . import nextboot, z80tonex as zt
+    st = nextboot.boot(nex, zt.Z80Snapshot(z80).pc)
+    pal = [[None] * 256 for _ in range(8)]
+    sel = idx = 0
+    first, auto = None, True
+    for r, v in st['nrlog']:
+        if r == 0x43:
+            sel, auto, first = (v >> 4) & 7, not v & 0x80, None
+        elif r == 0x40:
+            idx, first = v, None
+        elif r == 0x41:                     # an 8-bit write also ends a 0x44 pair, as on the Next
+            pal[sel][idx], first = v << 1 | (1 if v & 3 else 0), None
+            idx = (idx + 1) & 255 if auto else idx
+        elif r == 0x44:
+            if first is None:
+                first = v
+            else:
+                pal[sel][idx], first = first << 1 | (v & 1), None
+                idx = (idx + 1) & 255 if auto else idx
+    return [(o, n) for o in range(16) for n in range(2, 2 + len(fixed)) if pal[2][o * 16 + n] != fixed[n - 2]]
+
+
+def colours_wrong(patch, get, g, drawn, a3, got):
+    """Sprite pixels {(px, py): colour} of graphic g, whose plot is `drawn`, against this build: the game's ink
+    (attribute a3) where the pixel is nibble 1, the painted map's fixed colour elsewhere. -> the pixels that differ.
+    The shape is laid on the plot by its left edge and its bottom row; a figure cut at the top of the screen or run
+    on past the right edge cannot be laid: its ink pixels must be the ink, and a fixed colour one its shape has."""
+    ink = (a3 & 7) | ((a3 >> 3) & 8)
+    if g not in patch._nibs:
+        class M:
+            def __getitem__(s, a):
+                return get(a)
+        img = image(M(), g)
+        lo = layout(img) if img is not None else None
+        if lo is None:                      # (not a graphic: nothing of it is painted)
+            patch._nibs[g] = ({}, 0, -1)
+        else:
+            t, x0, cols, rows = lo
+            patch._nibs[g] = (shape_nibbles(t, rows, patch.colours), min(r for _, r in t), len(t))
+    nibs, r0, n = patch._nibs[g]
+    whole = len(drawn) == n and drawn and max(q[0] for q in drawn) - min(q[0] for q in drawn) < 40
+    if not whole:
+        allowed = {0x100 + k for k in nibs.values() if k != 1}
+        return [q for q, v in got.items() if (v != ink if v < 0x100 else v not in allowed)]
+    left, base = min(q[0] for q in drawn), max(q[1] for q in drawn) + r0
+    out = []
+    for (px, py), v in got.items():
+        k = nibs.get((px - left, base - py), 1)
+        if v != (ink if k == 1 else 0x100 + k):
+            out.append((px, py))
+    return out
 
 
 def _rom3_path():
@@ -1048,6 +1142,7 @@ NEG_FRAMES = 1500
 ALL_FRAMES = 10 ** 8             # a recording is replayed to its end
 
 
+COLOURS_NAME = 'pssst_colours.json'   # the painted map, beside the snapshot (it holds the figures: not in the repo)
 LOAD_BANK = 13                          # the loading screen's entry bank (pages 26, 27)
 LOAD_SCREEN = 'pssst_loading.scr'       # the tape's 6,912-byte screen, beside the snapshot
 
@@ -1101,23 +1196,41 @@ def auto(a, z80, name, out, say):
     say('Plain     : %s  %s  boot %s  (tail 0x%04X = printer buffer, never touched)' % (
         os.path.basename(plain), md5(plain), 'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:200], TAIL_ADDR))
     patch = PssstPatch()
+    cmap = load_colours(z80)
     spr = os.path.join(out, name + '_sprites.nex')
     conv = zt.convert(z80, spr, None, True, quiet=True, patch=patch)
     bad2 = check(spr, z80, patch, (conv[1], conv[1] + len(conv[2])))
     say('Sprites   : %s  %s  boot %s  (%d patterns)' % (os.path.basename(spr), md5(spr),
         'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200], patch.num_patterns))
     ok = not bad and not bad2
+    builds = [('Verify', patch, spr)]
+    if cmap:
+        enh = PssstPatch(colours=cmap)
+        enf = os.path.join(out, name + '_enhanced.nex')
+        conv = zt.convert(z80, enf, None, True, quiet=True, patch=enh)
+        bad3 = check(enf, z80, enh, (conv[1], conv[1] + len(conv[2])))
+        pw, pneg = palette_wrong(enf, z80, cmap['fixed']), palette_wrong(spr, z80, cmap['fixed'])
+        say('Palette   : %s: %d fixed entries, %d not as the painted map; default build: %d differ (negative %s)' % (
+            os.path.basename(enf), 16 * len(cmap['fixed']), len(pw), len(pneg), 'DETECTED' if pneg else 'MISSED'))
+        ok = ok and not bad3 and not pw and bool(pneg)
+        painted = sum(1 for k in cmap['figures'].values() if any(c not in '01' for r in k for c in r))
+        say('Enhanced  : %s  %s  boot %s  (%d figures painted, %d fixed colours)' % (os.path.basename(enf), md5(enf),
+            'OK' if not bad3 else 'MISMATCH %s' % str(bad3[:3])[:200], painted, len(cmap['fixed'])))
+        builds.append(('Painted', enh, enf))
+    else:
+        say('Enhanced  : no %s beside the snapshot: no Enhanced build' % COLOURS_NAME)
     sc = _beside(z80, LOAD_SCREEN)
     if sc is None:
         say('Loading   : no %s beside the snapshot: builds without the loading screen' % LOAD_SCREEN)
     else:
         scr = open(sc, 'rb').read()
         say('Loading   : screen md5 %s' % md5(sc))
-        n, lb = loading_nex(open(spr, 'rb').read(), scr)
-        open(spr, 'wb').write(n)
-        ok = ok and not lb and len(scr) == 6912
-        say('            %s  %s  bank %d stub, %s' % (os.path.basename(spr), md5(spr), LOAD_BANK,
-                                                     'the rest as built' if not lb else 'PROBLEM %s' % lb))
+        for _, _, f in builds:
+            n, lb = loading_nex(open(f, 'rb').read(), scr)
+            open(f, 'wb').write(n)
+            ok = ok and not lb and len(scr) == 6912
+            say('            %s  %s  bank %d stub, %s' % (os.path.basename(f), md5(f), LOAD_BANK,
+                                                         'the rest as built' if not lb else 'PROBLEM %s' % lb))
     json.dump(DECISIONS, open(os.path.join(out, name + '_decisions.json'), 'w'))
     if getattr(a, 'decisions', None):           # selftest rebuild: build only
         say('Result    : %s (rebuild from stored decisions, no verification)' % ('PASSED' if ok else 'FAILED'))
@@ -1125,30 +1238,31 @@ def auto(a, z80, name, out, say):
     quick = getattr(a, 'quick', None)
     states = []
     rz = list(getattr(a, 'rzx', None) or [])
-    for r in rz:
-        c, ex, st = verify(patch, z80, r, frames=ALL_FRAMES, stop=quick, collect=1)
+    for r, (label, pt, _) in [(r, b) for r in rz for b in builds]:
+        c, ex, st = verify(pt, z80, r, frames=ALL_FRAMES, stop=quick, collect=1 if pt is patch else 0)
         states += st
         fails = {k: v for k, v in c.items() if k.endswith('!') and v}
         ok = ok and not fails
-        say('Verify    : %s  %d frames, %d figures as sprites (%d sprite pixels, %d across the right edge), %d left to the game, erases %d, paints not '
+        say('%-10s: %s  %d frames, %d figures as sprites (%d sprite pixels, %d across the right edge), %d left to the game, erases %d, paints not '
             'painted %d (%d of another colour than at the plot), paints left to the game %d, clears %d, draws from their '
             'entry %d, IM 1 handler compared at %d interrupts -> %s' % (
-                os.path.basename(r), c['frames'], c['figures as sprites'], c['sprite pixels compared'], c['figures across the right edge'],
+                label, os.path.basename(r), c['frames'], c['figures as sprites'], c['sprite pixels compared'], c['figures across the right edge'],
                 c['figures left to the game (no object slot)'], c['er'], c['paints not painted'],
                 c['paints of another colour than the sprites took at the plot'], c['paints left to the game'], c['cls'],
                 c['draws from their entry'], c['IM 1 interrupts (ROM 0x0038)'], 'IDENTICAL' if not fails else 'FAILED %s' % fails))
         for k, v in ex.items():
             say('            %s: %s' % (k, str(v)[:300]))
-    if states:
-        u = unit_tests(patch, states, negative_patch(patch), list(get_snapshot(z80)))
+    for label, pt, _ in builds if states else []:
+        u = unit_tests(pt, states, negative_patch(pt), list(get_snapshot(z80)))
         uf = {k: v for k, v in u.items() if k.endswith('!') and v}
         ok = ok and not uf
-        say('Unit      : graphics %d (every graphic x positions x colours x first and last object), speed cases %d, erase %d, '
+        say('Unit      : %s: graphics %d (every graphic x positions x colours x first and last object), speed cases %d, erase %d, '
             'clears %d, paint %d, guard %d, a graphic not in the table %d, negative control %d/%d -> %s' % (
-                u['graphic cases ok'], u['speed cases ok'], u['erase cases ok'], u['screen clear cases ok'], u['paint cases ok'],
+                label, u['graphic cases ok'], u['speed cases ok'], u['erase cases ok'], u['screen clear cases ok'], u['paint cases ok'],
                 u['IX outside the object table (guard: no sprite) ok'], u['a graphic not in the table: the object\'s sprites off ok'],
                 u['negative control detected'], u['negative control detected'] + u['negative control NOT DETECTED!'],
                 'PASS' if not uf else 'FAIL %s' % uf))
+    if states:
         r0 = rz[0]
         nf = min(quick or NEG_FRAMES, NEG_FRAMES)
         q = rom3_left_patch(patch)              # hooks only over NextZXOS's ROM3: must fail
