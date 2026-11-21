@@ -67,6 +67,7 @@ ENGINES = [
     ('cauldron', 'is_cauldron', None),                                    # Cauldron (48K)
     ('nightshade', 'is_nightshade', None),                                # Nightshade (48K)
     ('knight_tyme', 'is_knight_tyme', None),                              # Knight Tyme (128K)
+    ('stormbringer', 'is_stormbringer', None),                            # Stormbringer (128K): Knight Tyme engine relocated
     ('spellbound_magic_knight', 'is_spellbound_magic_knight', None),      # Spellbound (128K, Magic Knight 2)
     ('three_weeks', 'is_three_weeks', None),                              # Three Weeks in Paradise (128K)
     ('starquake', 'is_starquake', None),                                  # Starquake (48K)
