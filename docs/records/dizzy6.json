@@ -86,7 +86,7 @@
   },
   "sprites": {
    "file": "Dizzy6_sprites.nex",
-   "md5": "25fe318cea23611ca5250b61fdcf5c17"
+   "md5": "6f22200d2cbd27d07ae0273f34dba6fc"
   }
  },
  "repro": [],
@@ -220,7 +220,7 @@
     },
     "sprites": {
      "file": "Dizzy 6 - Dizzy, Prince of the YolkFolk (1991)(Code Masters)(128K)[a][a][aka Dizzy VI - Prince of the Yolkfolk]_sprites.nex",
-     "md5": "f5c849db370ccc56dd7947569af69e02"
+     "md5": "1f1827194c1612ec9a8c60b9d45d908a"
     }
    },
    "proof": "5 recordings of the 128K release on rework v128 (bot walks: mirror1 6,013 / mirror2 6,330 frames in room 40 'DOUBLE TROUBLE!' through the game's own room skip, walk1-3 12,008 / 12,015 / 12,163 frames from the start): every hook event identical: 8,182 player plots (8,779 sprite pictures pixel-perfect), 8,686 erases, 18,603 ISR, 130 wipes and 90 boxes hiding Dizzy, 1,022 mirror plots and 989 mirror erases (the original routine on the patched-screen model against the copy); mirror1, mirror2, walk2 IDENTICAL; walk1 and walk3 FAILED on 5 of 171,382 pixel tests (cells 0x48C5 / 0x4DC6 in the start room, PC 0x9B78 / 0x9B7D), where the original's eraser XOR leaves a hole or a ghost pixel in an object drawn over Dizzy (Dean's 48K build has the same design); 2 player plots in mirror1 differ only in register B (the original plots over the mirrored Dizzy's pixels), dead by a 20,000-instruction run with either value; 8 negative controls detected; clock matrix 7 hook sites x 4 incoming clocks = 28 cases PASS, a forced 3.5 MHz exit detected; ROM paths pass; start-up tail never read before written; R never read; hook stack low water 0x9C5F (code ends 0x9C32)",

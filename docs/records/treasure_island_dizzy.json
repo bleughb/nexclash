@@ -78,7 +78,7 @@
   },
   "sprites": {
    "file": "treasure_island_dizzy_sprites.nex",
-   "md5": "670ec3a91ecab8df4031de276d8f4da1"
+   "md5": "7251663345f34cef7f3b1626a57a8c9c"
   }
  },
  "repro": [],
@@ -256,7 +256,7 @@
     },
     "sprites": {
      "file": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K)_sprites.nex",
-     "md5": "4ff3587abbb93c04e9067f23aa167aea"
+     "md5": "1e1395d240fc45bd8dae3d8ed80c9551"
     }
    },
    "proof": "4 recordings of the 128K release IDENTICAL on rework v128 (3 bot walks of 12,035 / 12,000 / 12,011 frames, and 1,103 frames on the sea bed with the .pok's walk-in-water POKE to reach the bubbles): 6,927 plots pixel-perfect, 6,900 erases, 27,567 ISR hide checks, 111 room wipes, 189 bubble tests (the virtual read) equal to the original's; the game never touches the trampolines in the printer buffer; 3 negative controls detected; clock matrix 5 hook sites x 4 incoming clocks = 20 cases PASS, a forced 3.5 MHz exit detected; ROM paths: every ROM byte as recorded; start-up tail never read before written",
@@ -333,15 +333,15 @@
    "outputs": {
     "sprites": {
      "file": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K)_sprites.nex",
-     "md5": "486bd0f9165d98e741088e78812983de"
+     "md5": "900bd3c28e6ae408099c6ee1f1ead9d5"
     },
     "loading": {
      "file": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K)_sprites_loading.nex",
-     "md5": "f429cdc4641b09ef7f07e9306cf4c751"
+     "md5": "6e63ca0ba8414d188ac4f81f9ca95d7f"
     },
     "published": {
      "file": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K)_sprites_published.nex",
-     "md5": "8f4a15d28497c084d968922b921922e2"
+     "md5": "8e8a3a77f0a87bd4bd59c69d70388f26"
     }
    },
    "proof": "Five declared original-game recordings compare registers including R, game memory and absolute player pixels. Routine matrices cover clocks, interrupt states and positions; deliberate faults must be detected. Enhanced additionally compares an independent colour canvas and injected interrupts. Completion is recorded by the verified stamp; measured native pace and coverage limits are in the game document.",
@@ -430,11 +430,11 @@
    "outputs": {
     "sprites": {
      "file": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K)_sprites.nex",
-     "md5": "6cd70ebca83d33793f176dfae6d15c65"
+     "md5": "74aedb6600f7a8d65597667a9ab94ff7"
     },
     "loading": {
      "file": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K)_sprites_loading.nex",
-     "md5": "d5a8aed5af2bf24f5410f36008d1128c"
+     "md5": "1e4ca30d59ade5fc2016f229d7ac803b"
     }
    },
    "proof": "Five declared original-game recordings compare registers including R, game memory and absolute player pixels. Routine matrices cover clocks, interrupt states and positions; deliberate faults must be detected. Enhanced additionally compares an independent colour canvas and injected interrupts. Completion is recorded by the verified stamp; measured native pace and coverage limits are in the game document.",

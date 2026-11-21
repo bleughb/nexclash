@@ -67,14 +67,14 @@
   },
   "sprites": {
    "file": "fantasy_world_dizzy_sprites.nex",
-   "md5": "b2a71f068efd6bde61438dcc97d7eef3"
+   "md5": "7e972f511ceb19c707b1e0358b7d4231"
   }
  },
  "repro": [
   {
    "strategy": "printer",
    "file": "fantasy_world_dizzy_sprites.nex",
-   "md5": "87c36b1095ae69b9f8a414234c66a404"
+   "md5": "51129bd72539e57939d4d4fa00584cd4"
   }
  ],
  "pin": {
@@ -217,7 +217,7 @@
     },
     "sprites": {
      "file": "Dizzy 3 - Fantasy World Dizzy (1989)(Code Masters)(128K)[a2][a2]_sprites.nex",
-     "md5": "79a0be10cdf3335ed0c550bd9eeeb58e"
+     "md5": "d16b16a0a0eab1a648971be836810257"
     }
    },
    "proof": "3 recordings of the 128K release IDENTICAL on rework v128 (bot walks of 12,010 / 12,007 / 12,004 frames: the dungeon, the troll's dialogue, deaths in the fire, a game over and restart, the inventory, the Smuggler's Hideout): 5,983 plots pixel-perfect, 5,935 erases, 12,122 ISR hide checks (104 on the hide path), 100 room wipes and 96 boxes hiding Dizzy, equal to the original's; the game never touches the tail and latch in the printer buffer nor the alt ROM hook bytes; 4 negative controls detected; clock matrix 5 hook sites x 4 incoming clocks = 20 cases PASS, a forced 3.5 MHz exit detected; ROM paths: every ROM byte as recorded; start-up tail never read before written",
