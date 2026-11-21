@@ -1,0 +1,142 @@
+{
+ "name": "cisco_heat",
+ "order": 260,
+ "game": "Cisco Heat",
+ "doc": "cisco_heat.md",
+ "engine": "cisco_heat",
+ "representative": true,
+ "reference": "cisco_heat",
+ "inputs": {
+  "snapshot": {
+   "name": "cisco_heat.z80",
+   "md5": "ff69b2836af7163b521d2ee2469c5a8c",
+   "path": "cisco_heat/cisco_heat.z80",
+   "note": "The snapshot embedded in the owner's CiscoHeat1.rzx (`nexclash.py rzx extract`): stage 1 loaded, 128K."
+  },
+  "recordings": [
+   {
+    "name": "ciscoheat1.rzx",
+    "md5": "a17c44e0564db5129c1188ece12e3c12",
+    "path": "cisco_heat/ciscoheat1.rzx",
+    "role": "Stage 1, the owner's play to LOADING STAGE 2; its snapshot holds stage block 1."
+   },
+   {
+    "name": "ciscoheat2.rzx",
+    "md5": "412f13d2cbcc5b44139c3499b2f61b0f",
+    "path": "cisco_heat/ciscoheat2.rzx",
+    "role": "Stage 2 completed; its snapshot holds stage block 2."
+   },
+   {
+    "name": "ciscoheat3.rzx",
+    "md5": "b1385f5d1f8d19171072e4524259d4d1",
+    "path": "cisco_heat/ciscoheat3.rzx",
+    "role": "Stage 3 completed; its snapshot holds stage block 3."
+   },
+   {
+    "name": "ciscoheat4.rzx",
+    "md5": "df8b2f38c4d762a8a54828576230c9bf",
+    "path": "cisco_heat/ciscoheat4.rzx",
+    "role": "Stage 4 completed; its snapshot holds stage block 4."
+   },
+   {
+    "name": "ciscoheat5.rzx",
+    "md5": "2a083d71a982fe613e66241403101ca0",
+    "path": "cisco_heat/ciscoheat5.rzx",
+    "role": "Stage 5 completed; its snapshot holds stage block 5."
+   },
+   {
+    "name": "ciscoheat_end.rzx",
+    "md5": "89d0e14c890da441c8541fb0685e8dc5",
+    "path": "cisco_heat/ciscoheat_end.rzx",
+    "role": "The end sequence to LOADING STAGE 1; its snapshot holds block X. No race updates."
+   }
+  ]
+ },
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/cisco_heat.md#pace"
+   ],
+   "coverage": "Six recordings (the update's original time against its 28 MHz time); JNext 1.2.0 stage 1, 300 updates keyed to updates against the unpatched build. Stages 2-5 not measured in JNext.",
+   "result": "About 5.6 updates a second; per-update deadline P = 8.02 x (D - 87) + 645 lines plus frame waits; the gap before it holds up to 4-5 in-between frames; music owned by the interrupt handler (550 AY writes a second, unchanged)."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/cisco_heat.md#facts",
+    "games/cisco_heat.md#design"
+   ],
+   "coverage": "Write set of the update (W, 21 ranges) and the bytes shared with the handler (X, 139 bytes) from the recordings; V2 over 400 captured states and every 25th update of five stages checks nothing else changes.",
+   "result": "The update's writes are restored after each in-between frame; the handler keeps the real values; R differs only through hook instructions (random numbers, verification exception)."
+  },
+  "decision": "Owner's brief 2026-11-21 (smoothness, autonomous): the real update at 28 MHz paced to the original, the gap filled with run-ahead in-between frames of the game's own drawing.",
+  "next_experiment": "Hardware: smooth road at speed in stage 1 and the five stage loads with no tape; pace within 2% of the original over 300 updates."
+ },
+ "modules": [
+  "cisco_heat"
+ ],
+ "own_modules": [
+  "cisco_heat"
+ ],
+ "data": [
+  "asm/cisco_heat_hooks.asm",
+  "docs/profiles/cisco_heat.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "ciscoheat1.rzx",
+   "ciscoheat2.rzx",
+   "ciscoheat3.rzx",
+   "ciscoheat4.rzx",
+   "ciscoheat5.rzx",
+   "ciscoheat_end.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 7,
+  "note": "Every 25th race update of each recording: V1 the real update (in-between frames off) against the original with R supplied, V2 in-between frames on against off (registers, all RAM outside the masks, sound ports, return time); unit tests: six stage loads, negative W and R controls. Pace and flicker are in games/cisco_heat.md \"Evidence\"."
+ },
+ "outputs": {
+  "plain": {
+   "file": "cisco_heat.nex",
+   "md5": "5c56ff52c677f065e137a2ac5be92b6c"
+  },
+  "orig_pace": {
+   "file": "cisco_heat_orig_pace.nex",
+   "md5": "93726055d819c2e783ac20e675dd8114"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Cisco Heat",
+  "engine_col": "cisco_heat (cisco_heat.md)",
+  "build": "v1.0 Smooth; cisco_heat.nex 5c56ff52: the race update at 28 MHz paced to the original, the time between filled with run-ahead in-between frames (road, stripes and scenery at up to 25 pictures a second against about 5.6); cisco_heat_orig_pace.nex 93726055 the same hooks without them; stages load from Next pages, no tape",
+  "software": "auto, 6 recordings: 159 race updates, real update (V1, R supplied) and in-between frames (V2) exact in all, 511 in-between frames; 400 more captured states 400/400 both; six stage loads exact; negative W and R controls caught; boot check with R, both builds; JNext 300 updates: state equal at every update, pace -0.36%, music and interrupts equal, 25 pictures a second against 5.6, no flicker flags",
+  "hardware": "untested",
+  "next": "hardware checklist; run curvature and traffic ahead too; DDMA review"
+ },
+ "checks": [
+  "asm2profile:cisco_heat"
+ ],
+ "results": [
+  {
+   "check": "JNext pace and flicker",
+   "status": "pass",
+   "scope": "JNext 1.2.0, smooth 5c56ff52 against the unpatched control, 300 updates keyed to updates: state equal at every update, pace -0.36%, AY and interrupts equal; flicker 100 frames, no flags. Not a selftest stamp.",
+   "evidence": "games/cisco_heat.md \"Evidence\""
+  }
+ ]
+}
