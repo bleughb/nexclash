@@ -1,0 +1,504 @@
+{
+ "schema": 1,
+ "game": "r_type",
+ "note": "Figures drawn BEHIND the scenery, as in the original (games/r_type.md): a figure whose graphic is listed \"on\" is not made a sprite; the game draws it in the ULA under Layer 2, so the scenery hides it. Set \"on\" false to bring it in front. level = the level byte at 719C (\"1\" = 0x31 ... \"8\" = 0x38). First made from a scan of the original (hidden updates per family).",
+ "flags": [
+  {
+   "family": "L1-F91",
+   "level": "0x31",
+   "graphic": "CBE7",
+   "on": true,
+   "scan": "hidden 210 updates  figures L1-121, L1-122, L1-123, L1-124"
+  },
+  {
+   "family": "L1-F82",
+   "level": "0x31",
+   "graphic": "D574",
+   "on": true,
+   "scan": "hidden 162 updates  figures L1-102, L1-108"
+  },
+  {
+   "family": "L1-F83",
+   "level": "0x31",
+   "graphic": "D5C5",
+   "on": true,
+   "scan": "hidden 84 updates  figures L1-103, L1-105, L1-110, L1-114"
+  },
+  {
+   "family": "L1-F16",
+   "level": "0x31",
+   "graphic": "B32E",
+   "on": false,
+   "scan": "hidden 80 updates  figures L1-016   [off: explosion/shot]"
+  },
+  {
+   "family": "L1-F60",
+   "level": "0x31",
+   "graphic": "B6DB",
+   "on": false,
+   "scan": "hidden 51 updates  figures L1-070   [off: explosion/shot]"
+  },
+  {
+   "family": "L2-F25",
+   "level": "0x32",
+   "graphic": "CBC7",
+   "on": true,
+   "scan": "hidden 495 updates  figures L2-025, L2-046, L2-051, L2-058"
+  },
+  {
+   "family": "L2-F26",
+   "level": "0x32",
+   "graphic": "CC80",
+   "on": true,
+   "scan": "hidden 457 updates  figures L2-026, L2-047, L2-052, L2-059"
+  },
+  {
+   "family": "L2-F69",
+   "level": "0x32",
+   "graphic": "CB76",
+   "on": true,
+   "scan": "hidden 327 updates  figures L2-093, L2-095, L2-107, L2-120"
+  },
+  {
+   "family": "L2-F61",
+   "level": "0x32",
+   "graphic": "B0EB",
+   "on": false,
+   "scan": "hidden 124 updates  figures L2-076   [off: explosion/shot]"
+  },
+  {
+   "family": "L2-F43",
+   "level": "0x32",
+   "graphic": "B6DB",
+   "on": false,
+   "scan": "hidden 68 updates  figures L2-048   [off: explosion/shot]"
+  },
+  {
+   "family": "L2-F65",
+   "level": "0x32",
+   "graphic": "CB25",
+   "on": true,
+   "scan": "hidden 63 updates  figures L2-085, L2-101, L2-115, L2-126"
+  },
+  {
+   "family": "L2-F44",
+   "level": "0x32",
+   "graphic": "B7AC",
+   "on": false,
+   "scan": "hidden 61 updates  figures L2-049   [off: explosion/shot]"
+  },
+  {
+   "family": "L2-F29",
+   "level": "0x32",
+   "graphic": "B32E",
+   "on": false,
+   "scan": "hidden 60 updates  figures L2-029   [off: explosion/shot]"
+  },
+  {
+   "family": "L2-F66",
+   "level": "0x32",
+   "graphic": "CAD4",
+   "on": true,
+   "scan": "hidden 57 updates  figures L2-086, L2-090, L2-102, L2-106"
+  },
+  {
+   "family": "L2-F67",
+   "level": "0x32",
+   "graphic": "C93F",
+   "on": true,
+   "scan": "hidden 50 updates  figures L2-087, L2-091, L2-113, L2-124"
+  },
+  {
+   "family": "L3-F26",
+   "level": "0x33",
+   "graphic": "C85F",
+   "on": true,
+   "scan": "hidden 239 updates  figures L3-026, L3-028, L3-124"
+  },
+  {
+   "family": "L3-F30",
+   "level": "0x33",
+   "graphic": "C7FB",
+   "on": true,
+   "scan": "hidden 116 updates  figures L3-032, L3-159"
+  },
+  {
+   "family": "L3-F38",
+   "level": "0x33",
+   "graphic": "DBFF",
+   "on": true,
+   "scan": "hidden 59 updates  figures L3-048, L3-049, L3-050, L3-051"
+  },
+  {
+   "family": "L3-F54",
+   "level": "0x33",
+   "graphic": "B6DB",
+   "on": false,
+   "scan": "hidden 55 updates  figures L3-095   [off: explosion/shot]"
+  },
+  {
+   "family": "L3-F41",
+   "level": "0x33",
+   "graphic": "B32E",
+   "on": false,
+   "scan": "hidden 54 updates  figures L3-054   [off: explosion/shot]"
+  },
+  {
+   "family": "L4-F31",
+   "level": "0x34",
+   "graphic": "D6E7",
+   "on": true,
+   "scan": "hidden 63 updates  figures L4-032, L4-071"
+  },
+  {
+   "family": "L5-F48",
+   "level": "0x35",
+   "graphic": "CB23",
+   "on": true,
+   "scan": "hidden 195 updates  figures L5-062, L5-077"
+  },
+  {
+   "family": "L5-F35",
+   "level": "0x35",
+   "graphic": "CBBD",
+   "on": true,
+   "scan": "hidden 95 updates  figures L5-043, L5-074"
+  },
+  {
+   "family": "L5-F26",
+   "level": "0x35",
+   "graphic": "CB74",
+   "on": true,
+   "scan": "hidden 76 updates  figures L5-034, L5-044, L5-064, L5-065"
+  },
+  {
+   "family": "L5-F55",
+   "level": "0x35",
+   "graphic": "C9DF",
+   "on": true,
+   "scan": "hidden 74 updates  figures L5-080, L5-091"
+  },
+  {
+   "family": "L5-F57",
+   "level": "0x35",
+   "graphic": "C98E",
+   "on": true,
+   "scan": "hidden 70 updates  figures L5-082, L5-092, L5-106"
+  },
+  {
+   "family": "L5-F12",
+   "level": "0x35",
+   "graphic": "AC13",
+   "on": true,
+   "scan": "hidden 59 updates  figures L5-016, L5-021"
+  },
+  {
+   "family": "L5-F47",
+   "level": "0x35",
+   "graphic": "CA30",
+   "on": true,
+   "scan": "hidden 58 updates  figures L5-061, L5-076"
+  },
+  {
+   "family": "L5-F58",
+   "level": "0x35",
+   "graphic": "C93D",
+   "on": true,
+   "scan": "hidden 58 updates  figures L5-084, L5-093"
+  },
+  {
+   "family": "L5-F15",
+   "level": "0x35",
+   "graphic": "AC37",
+   "on": true,
+   "scan": "hidden 57 updates  figures L5-020, L5-025"
+  },
+  {
+   "family": "L5-F40",
+   "level": "0x35",
+   "graphic": "CCB0",
+   "on": true,
+   "scan": "hidden 53 updates  figures L5-051, L5-078"
+  },
+  {
+   "family": "L5-F11",
+   "level": "0x35",
+   "graphic": "ABEF",
+   "on": true,
+   "scan": "hidden 52 updates  figures L5-014, L5-017"
+  },
+  {
+   "family": "L5-F04",
+   "level": "0x35",
+   "graphic": "AC5B",
+   "on": true,
+   "scan": "hidden 50 updates  figures L5-004, L5-024"
+  },
+  {
+   "family": "L6-F17",
+   "level": "0x36",
+   "graphic": "B0EB",
+   "on": false,
+   "scan": "hidden 288 updates  figures L6-025   [off: explosion/shot]"
+  },
+  {
+   "family": "L6-F13",
+   "level": "0x36",
+   "graphic": "AC13",
+   "on": true,
+   "scan": "hidden 269 updates  figures L6-017, L6-020"
+  },
+  {
+   "family": "L6-F12",
+   "level": "0x36",
+   "graphic": "ABEF",
+   "on": true,
+   "scan": "hidden 263 updates  figures L6-015, L6-018"
+  },
+  {
+   "family": "L6-F11",
+   "level": "0x36",
+   "graphic": "ABCB",
+   "on": true,
+   "scan": "hidden 261 updates  figures L6-013, L6-016"
+  },
+  {
+   "family": "L6-F14",
+   "level": "0x36",
+   "graphic": "AC37",
+   "on": true,
+   "scan": "hidden 256 updates  figures L6-019, L6-023"
+  },
+  {
+   "family": "L6-F09",
+   "level": "0x36",
+   "graphic": "ACC7",
+   "on": true,
+   "scan": "hidden 248 updates  figures L6-010, L6-014"
+  },
+  {
+   "family": "L6-F04",
+   "level": "0x36",
+   "graphic": "AC5B",
+   "on": true,
+   "scan": "hidden 246 updates  figures L6-004, L6-022"
+  },
+  {
+   "family": "L6-F03",
+   "level": "0x36",
+   "graphic": "AC7F",
+   "on": true,
+   "scan": "hidden 240 updates  figures L6-003, L6-008"
+  },
+  {
+   "family": "L6-F07",
+   "level": "0x36",
+   "graphic": "ACA3",
+   "on": true,
+   "scan": "hidden 239 updates  figures L6-007, L6-011"
+  },
+  {
+   "family": "L6-F19",
+   "level": "0x36",
+   "graphic": "B05B",
+   "on": false,
+   "scan": "hidden 169 updates  figures L6-027   [off: explosion/shot]"
+  },
+  {
+   "family": "L6-F42",
+   "level": "0x36",
+   "graphic": "B7AC",
+   "on": false,
+   "scan": "hidden 81 updates  figures L6-050   [off: explosion/shot]"
+  },
+  {
+   "family": "L6-F41",
+   "level": "0x36",
+   "graphic": "B6DB",
+   "on": false,
+   "scan": "hidden 80 updates  figures L6-049   [off: explosion/shot]"
+  },
+  {
+   "family": "L6-F44",
+   "level": "0x36",
+   "graphic": "B87D",
+   "on": false,
+   "scan": "hidden 56 updates  figures L6-052   [off: explosion/shot]"
+  },
+  {
+   "family": "L7-F10",
+   "level": "0x37",
+   "graphic": "ABCB",
+   "on": true,
+   "scan": "hidden 199 updates  figures L7-012, L7-016"
+  },
+  {
+   "family": "L7-F12",
+   "level": "0x37",
+   "graphic": "ABEF",
+   "on": true,
+   "scan": "hidden 199 updates  figures L7-015, L7-021"
+  },
+  {
+   "family": "L7-F06",
+   "level": "0x37",
+   "graphic": "ACA3",
+   "on": true,
+   "scan": "hidden 195 updates  figures L7-006, L7-010"
+  },
+  {
+   "family": "L7-F08",
+   "level": "0x37",
+   "graphic": "ACC7",
+   "on": true,
+   "scan": "hidden 194 updates  figures L7-009, L7-013"
+  },
+  {
+   "family": "L7-F04",
+   "level": "0x37",
+   "graphic": "AC5B",
+   "on": true,
+   "scan": "hidden 191 updates  figures L7-004, L7-028"
+  },
+  {
+   "family": "L7-F03",
+   "level": "0x37",
+   "graphic": "AC7F",
+   "on": true,
+   "scan": "hidden 188 updates  figures L7-003, L7-007"
+  },
+  {
+   "family": "L7-F16",
+   "level": "0x37",
+   "graphic": "AC13",
+   "on": true,
+   "scan": "hidden 188 updates  figures L7-020, L7-027"
+  },
+  {
+   "family": "L7-F21",
+   "level": "0x37",
+   "graphic": "AC37",
+   "on": true,
+   "scan": "hidden 186 updates  figures L7-026, L7-029"
+  },
+  {
+   "family": "L7-F64",
+   "level": "0x37",
+   "graphic": "CB97",
+   "on": true,
+   "scan": "hidden 149 updates  figures L7-080, L7-094"
+  },
+  {
+   "family": "L7-F97",
+   "level": "0x37",
+   "graphic": "CF89",
+   "on": true,
+   "scan": "hidden 86 updates  figures L7-132"
+  },
+  {
+   "family": "L7-F96",
+   "level": "0x37",
+   "graphic": "CC9E",
+   "on": true,
+   "scan": "hidden 81 updates  figures L7-131"
+  },
+  {
+   "family": "L7-F65",
+   "level": "0x37",
+   "graphic": "CBE8",
+   "on": true,
+   "scan": "hidden 76 updates  figures L7-081, L7-093"
+  },
+  {
+   "family": "L7-F63",
+   "level": "0x37",
+   "graphic": "CB4E",
+   "on": true,
+   "scan": "hidden 75 updates  figures L7-079, L7-095"
+  },
+  {
+   "family": "L7-F11",
+   "level": "0x37",
+   "graphic": "B9A9",
+   "on": false,
+   "scan": "hidden 69 updates  figures L7-014   [off: explosion/shot]"
+  },
+  {
+   "family": "L7-F95",
+   "level": "0x37",
+   "graphic": "CC55",
+   "on": true,
+   "scan": "hidden 65 updates  figures L7-130"
+  },
+  {
+   "family": "L7-F25",
+   "level": "0x37",
+   "graphic": "B32E",
+   "on": false,
+   "scan": "hidden 56 updates  figures L7-033   [off: explosion/shot]"
+  },
+  {
+   "family": "L7-F20",
+   "level": "0x37",
+   "graphic": "B05B",
+   "on": false,
+   "scan": "hidden 51 updates  figures L7-025   [off: explosion/shot]"
+  },
+  {
+   "family": "L8-F47",
+   "level": "0x38",
+   "graphic": "C64D",
+   "on": true,
+   "scan": "hidden 190 updates  figures L8-070, L8-072"
+  },
+  {
+   "family": "L8-F31",
+   "level": "0x38",
+   "graphic": "C844",
+   "on": true,
+   "scan": "hidden 80 updates  figures L8-040, L8-051, L8-060, L8-073"
+  },
+  {
+   "family": "L8-F45",
+   "level": "0x38",
+   "graphic": "C779",
+   "on": true,
+   "scan": "hidden 78 updates  figures L8-064, L8-068"
+  },
+  {
+   "family": "L8-F71",
+   "level": "0x38",
+   "graphic": "B7AC",
+   "on": false,
+   "scan": "hidden 64 updates  figures L8-113   [off: explosion/shot]"
+  },
+  {
+   "family": "L8-F70",
+   "level": "0x38",
+   "graphic": "B6DB",
+   "on": false,
+   "scan": "hidden 62 updates  figures L8-112   [off: explosion/shot]"
+  },
+  {
+   "family": "L8-F42",
+   "level": "0x38",
+   "graphic": "BBF2",
+   "on": true,
+   "scan": "hidden 60 updates  figures L8-056, L8-058"
+  },
+  {
+   "family": "L8-F39",
+   "level": "0x38",
+   "graphic": "BB86",
+   "on": true,
+   "scan": "hidden 60 updates  figures L8-050, L8-053"
+  },
+  {
+   "family": "L8-F41",
+   "level": "0x38",
+   "graphic": "BBBC",
+   "on": true,
+   "scan": "hidden 59 updates  figures L8-055, L8-059"
+  }
+ ]
+}
