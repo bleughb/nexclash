@@ -90,10 +90,14 @@ Negatives 11 of 11 detected. Hook time 3.6-7.6 % of a frame at 28 MHz (sim T / 6
 The shipped build starts at the file's decrypter; the simulator shows it reaches the verified s0 + sites at 0x8000
 apart from 16 bytes (KSTATE, FRAMES, dead stack). Cheats: the .pok's proven entries, written for the rotated code.
 
+## Border overflow (jattree/nxc#7, 2026-11-22)
+Objects showed in the border on hardware. Setup now sets the sprite clip window to the display (0x1C bit 1, 0x19: 0, 255, 0, 191).
+Plays in JNext 1.3.0; the edge needs hardware.
+
 ## Defaults taken (a human would have decided)
 1. Every object the two plotters draw is a sprite; lasers, ground, craters, HUD and text stay on the ULA.
 2. Depth: figures over the rover, by object number among figures (the original XORs, no depth).
-3. Outline is a toggle, OFF by default (2026-11-22, jattree/nxc#7: the white rims): build()'s `_outline.nex` is the base with it on (`--toggle "Outline=NEX"`); black like the play area, none under 12 ink pixels. Not yet packaged or verified (no zx0, no recordings on this PC).
+3. Outline is a toggle, OFF by default (2026-11-22, jattree/nxc#7: the white rims): build()'s `_outline.nex` is the base with it on (`--toggle "Outline=NEX"`); black like the play area, none under 12 ink pixels.
 4. Enclosed paper filled with a darker shade of the figure's own colour (items solid in their own colours).
 5. The rover's outline and fill black (it is half white); its colours by cell rows, as the game paints it.
 6. Enhanced painted by rule, not by hand, except Jetman's colours, which come from the Spec256 Jetpac.
