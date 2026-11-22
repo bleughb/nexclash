@@ -138,3 +138,46 @@ def pace_wrapper(a, call_target, mode_addr, idx_addr, cadence=CADENCE):
     a.L('_call')
     a.e(0xC3, a.w(call_target))                   # jp call_target (reached by the call above: returns to it)
     return start
+
+
+def draw_wrapper(a, call_target, mode_addr, di_site=False, halts=1):
+    """Emit, at a.pc, the wrapper that replaces a drawing call whose event does NOT pace itself by frames (its own delay loops set its speed; Bobsled):
+    unless the mode byte is non-zero (the 'original pace' toggle) it halts to the frame interrupt (the drawing then starts at the top of a frame, inside
+    the vertical blank: no tearing), runs the call at 28 MHz (NextReg 0x07 = 3) and puts 3.5 MHz back. The halt costs on average half a frame, the 28 MHz
+    drawing saves about as much, so the game's pace stays within a few percent of the original's (no padding).
+    di_site: the site is `DI / CALL target / EI` (5 bytes, replaced by `CALL wrapper / NOP / NOP`): the wrapper switches interrupts on for the halt,
+    off for the call and on after it, as the original sequence ends. Otherwise the halt is skipped when interrupts are off (LD A,I; P/V = IFF2)."""
+    start = a.pc
+    a.e(0xF5, 0xC5)                               # push af / push bc  (the call's inputs)
+    a.e(0x3A, a.w(mode_addr), 0xB7)               # ld a,(mode) / or a
+    a.jr(0x20, '_op')
+    if di_site:
+        a.e(0xFB)                                 # ei
+    else:
+        a.e(0xED, 0x57)                           # ld a,i  (P/V = IFF2)
+        a.jp(0xE2, '_nohalt')                     # jp po,nohalt
+    a.e(0x06, halts)                              # ld b,halts
+    a.L('_h')
+    a.e(0x76)                                     # halt
+    a.jr(0x10, '_h')                              # djnz
+    a.L('_nohalt')
+    if di_site:
+        a.e(0xF3)                                 # di
+    a.e(0xC1, 0xF1)                               # pop bc / pop af
+    a.nr(0x07, 0x03)                              # 28 MHz
+    a.jp(0xCD, '_call')
+    a.nr(0x07, 0x00)                              # 3.5 MHz
+    if di_site:
+        a.e(0xFB)                                 # ei
+    a.e(0xC9)
+    a.L('_op')
+    a.e(0xC1, 0xF1)                               # pop bc / pop af
+    if di_site:
+        a.e(0xF3)                                 # di
+        a.jp(0xCD, '_call')
+        a.e(0xFB, 0xC9)                           # ei / ret
+    else:
+        a.e(0xC3, a.w(call_target))               # jp target (returns to the caller)
+    a.L('_call')
+    a.e(0xC3, a.w(call_target))                   # jp target (reached by the call above: returns to it)
+    return start
