@@ -143,6 +143,7 @@
    "asm/jetpac_tables.asm": "984f098f1493af23",
    "asm/jetpac_v11_hooks.asm": "d1a2b74952fef153",
    "asm/jetpac_v11_tables.asm": "c5f7194c16f40145",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
    "docs/profiles/jetpac.json": "e7efa51e17767063",
    "docs/profiles/jetpac_v11.json": "b6fe020ca5c42467",
    "nexclash.py": "d9b430cef7478a38",
@@ -168,7 +169,7 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "0bc232c79cb4cee7",
+   "recipe": "0c34417aadd65243",
    "rom": "sinclair"
   },
   "date": "2026-11-22"
@@ -179,6 +180,7 @@
    "asm/jetpac_tables.asm": "984f098f1493af23",
    "asm/jetpac_v11_hooks.asm": "d1a2b74952fef153",
    "asm/jetpac_v11_tables.asm": "c5f7194c16f40145",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
    "docs/profiles/jetpac.json": "e7efa51e17767063",
    "docs/profiles/jetpac_v11.json": "b6fe020ca5c42467",
    "nexclash.py": "d9b430cef7478a38",
@@ -204,7 +206,7 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "0bc232c79cb4cee7",
+   "recipe": "0c34417aadd65243",
    "rom": "sinclair"
   },
   "date": "2026-11-22"

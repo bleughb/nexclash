@@ -104,6 +104,7 @@
  "checked": {
   "deps": {
    "asm/altered_beast_hooks.asm": "778307384046155e",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
    "docs/profiles/altered_beast.json": "07700520bd00d587",
    "nexclash.py": "d9b430cef7478a38",
    "nexclash/altered_beast.py": "d538de3ef8c642bf",
@@ -122,7 +123,7 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "e2c832f8e5ab0fa3",
+   "recipe": "eb9e972282b34678",
    "rom": "sinclair"
   },
   "date": "2026-11-22"
@@ -130,6 +131,7 @@
  "verified": {
   "deps": {
    "asm/altered_beast_hooks.asm": "778307384046155e",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
    "docs/profiles/altered_beast.json": "07700520bd00d587",
    "nexclash.py": "d9b430cef7478a38",
    "nexclash/altered_beast.py": "d538de3ef8c642bf",
@@ -148,7 +150,7 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "e2c832f8e5ab0fa3",
+   "recipe": "eb9e972282b34678",
    "rom": "sinclair"
   },
   "date": "2026-11-22"

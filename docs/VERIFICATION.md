@@ -53,7 +53,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Atic Atac (atic_atac): `Atic_Atac_1983_Ultimate_Play_The_Game_a.nex` 3a10ced8b127d09de3c68b411f8283da, `Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites.nex` 5ec3d88fb2a28ab604aa9f0bdf42d667; verified never
 - The Incredible Shrinking Fireman (GPT6_ASTRA) (incredible_shrinking_fireman-add-GPT6_ASTRA): `incredible_shrinking_fireman_plain-add-GPT6_ASTRA.nex` 3b5fb60c50e7b2cc1391a02e0c2f4adb, `incredible_shrinking_fireman_sprites-add-GPT6_ASTRA.nex` a96d5d9b45de8e28eb59ac81d89fc4f2; verified 2026-11-20
 - Cauldron (cauldron): `Cauldron_1985_Palace_Software_a.nex` b2de3ca3afe037e39e95d3050cb2d197, `Cauldron_1985_Palace_Software_a_sprites.nex` 5e9065eff473ed7c7868b9ce6d12c389; verified 2026-11-20
-- Jet Set Willy (jet_set_willy): `jet_set_willy.nex` e6da94d233366f87aec67f9da2358859, `jet_set_willy_sprites.nex` 17cf70bcb9f11a6477b0c86cbd1cffd8; verified 2026-11-22
+- Jet Set Willy (jet_set_willy): `jet_set_willy.nex` e6da94d233366f87aec67f9da2358859, `jet_set_willy_sprites.nex` e7e16baae5df2b97ec66d615a0579f78; verified 2026-11-22
 - Nemesis the Warlock (nemesis_the_warlock): `nemesis_the_warlock.nex` d1f685c80642ca96b8f454b7171f34b8, `nemesis_the_warlock_sprites.nex` 9e20d8e7cf40ae4d654bdc59ba7111dd; verified 2026-11-21
 - Inferno (inferno): `inferno.nex` 0a3bde4734c5b3f15ad0f2a55cc81e19; verified never
 - Altered Beast (128K) (altered_beast): `altered_beast.nex` 3a40cd83e14bad535b3f147708b2284e, `altered_beast_sprites.nex` 87afba14d9243c82397ab0c201bfac8c; verified 2026-11-22
