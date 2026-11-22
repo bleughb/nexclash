@@ -240,6 +240,10 @@ class CybernoidPatch:
             raise ValueError('Cybernoid 128K entry must have bank 0 paged at C000')
         ram = bytearray(snap.banks[5] + snap.banks[2] + snap.banks[0])
         peek = lambda a: ram[a - 0x4000]
+        for c in T_FIG:             # the tile sites rewrite a CALL's operand: CALL / CALL cc 42203, never a JP (no return)
+            op = ram[c - 0x4000]
+            if not (op == 0xCD or op & 0xC7 == 0xC4):
+                raise ValueError('unexpected code at %d (%02x, expected a CALL 42203)' % (c, op))
         for a, old, new in self.sites:
             cur = bytes(ram[a - 0x4000:a - 0x4000 + len(old)])
             if cur != old:

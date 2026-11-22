@@ -59,6 +59,9 @@ Generic auto is registered for 128K and its no-recording default rebuild is byte
 uses the external suite; no generic selftest verification stamp is asserted.
 
 ## Lessons
+- [local: a tile site must be a CALL] The tile sites rewrite a CALL's operand; apply() now refuses any opcode that is
+  not CALL / CALL cc (one site is CALL Z), so a JP variant cannot reach e_t without a return address. The approved
+  Enhanced map (Spec256-derived, 'local only') is a local reference input, not in the repo (Codex, 2026-11-22).
 
 - [local: these engines retain the Sinclair 128K sound ROM] Preserve all eight banks and the original ROM1; a 48K conversion is not an AY validation.
 - [local: measured hook cost is game-specific] Count player updates and repeat trials. Calibrate total entry/exit and ISR cost, not only the sprite uploader.

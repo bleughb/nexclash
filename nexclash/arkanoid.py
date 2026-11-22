@@ -44,6 +44,10 @@ SITES = {
     0x96A0: ('fd213a', 0xC3, 'e_wi', 0x96A4, 'wipe', 4),
 }
 INTERIORS = tuple(a + k for a, s in SITES.items() for k in range(1, s[5]))
+# every byte a site displaces (the jump writes 3; the rest go dead): apply() checks them all, not only the 3
+DISPLACED = {0x8025: 'f3afd3fe', 0x878C: 'ed73c894', 0x8879: 'ed73c894', 0x88D5: 'ed73c894', 0x8C0E: 'ed5beb94',
+             0x8D28: 'ed73c894', 0x8D9B: '626bed7bdf94', 0x93E7: 'ed73c894', 0x9420: '0603111100', 0x96A0: 'fd213a5c',
+             0x9B7D: 'ed5bbc94', 0x9BC6: 'ed53bc94'}
 SEQUELS = {0x8026: (0x8025,), 0x8027: (0x8025,), 0x9422: (0x9420,), 0x8D9C: (0x8D9B,), 0x8D9D: (0x8D9B, 0x8A19)}
 SP_SAVED = {0x8D9B, 0x8A19}         # the hook takes its stack from 0x94C8 here (SP may be in the graphics)
 
@@ -141,6 +145,7 @@ class ArkanoidPatch:
             raise ValueError('Arkanoid patch expects the 48K snapshot')
         ram = bytearray(snap.banks[5] + snap.banks[2] + snap.banks[0])
         for a, old, new in self.sites:
+            old = bytes.fromhex(DISPLACED.get(a, old.hex()))
             cur = bytes(ram[a - 0x4000:a - 0x4000 + len(old)])
             if cur != old:
                 raise ValueError('unexpected code at %d (%s, expected %s)' % (a, cur.hex(), old.hex()))

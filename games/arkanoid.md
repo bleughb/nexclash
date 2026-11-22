@@ -120,6 +120,8 @@ tearing unmeasured. Emulator differences: floating bus above.
 - Next's floating bus on port 0xFF; real speed; a human recording; rounds and endings listed under Inputs.
 
 ## Lessons
+- [local: guard every displaced byte] apply() checked 3 bytes at sites that displace 4-6 (LD (nn),SP at 0x93E7, the
+  5-byte run at 0x9420): DISPLACED now holds each site's full span (Codex, 2026-11-22). Outputs unchanged.
 - [deferred Open: reconsider when a maintainer reviews the pilot] demonstrated: a game that polls the floating bus hangs `record`, `survey` and every free run (machine.py returns 0xFF on odd ports). Add a floating bus to Machine; nothing in docs/ mentions it. Workaround: work/arkm.py.
 - [deferred Open: reconsider when a maintainer reviews the pilot] inferred: 0x848F makes the Next's floating bus load-bearing for this game; unverified, first item of the checklist.
 - [deferred Open: reconsider when a maintainer reviews the pilot] observed: routine attribution called the main XOR plotters "top": they are inline after SP moves; `scan --writers` and the disassembly found them. `inspect` warned "loader snapshot" for a snapshot running its title.
@@ -137,7 +139,8 @@ tearing unmeasured. Emulator differences: floating bus above.
 - retries: [local: the record named the pre-automap build] The branch predated the automap-off start, so its record's sprite MD5 was 1.0's; the rebuild is 1.0 plus that start, which nxc 1.1 now ships.
 - environment: [none: no workaround]
 - hand-rolled: [none: selftest --verify --stamp]
-- scratch: [local: two probes dropped] arkanoid_arcade_paint.py and arkanoid_figs.py had no docstring contract or smoke test; the arcade colours live in the profile.
+- scratch: [local: two probes dropped] arkanoid_arcade_paint.py and arkanoid_figs.py had no docstring contract or smoke test. The arcade map (arkanoid_arcade_colours.json) stays out of the repo: its
+  ink bits rebuild the game's graphics bytes (Codex, 2026-11-22), so it is a local reference input like Spec256 maps.
 
 ## Stage log
 - 2026-11-02 stages 0-3 in one session (pilot, unattended): about 1 h 10, ~55 tool calls, 0 user rounds, 1 coordinator question.
