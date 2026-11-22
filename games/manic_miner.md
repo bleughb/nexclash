@@ -139,5 +139,13 @@ there. MAME: known MAME sprite quirks (BRIEFING A1) not tried; no emulator run a
 - detect.buffer-layout-producer: helped: named the question; the disassembly answered it.
 - detect.gameplay-screen-readers: helped: `scan --writers` gave the proof in one run.
 
+## Friction
+
+- reuse: [none: a landing, no new code] The engine, record and notes came from the add-manic-miner worktree unchanged.
+- retries: [none: one rebuild] The landed build equals the published nex_md5 (57e9b6df) first time.
+- environment: [local: published from uncommitted work] Built from uncommitted files in its worktree; landing compared the rebuild with the patch's nex_md5 first.
+- hand-rolled: [none: selftest --verify --stamp]
+- scratch: [none: no scratch scripts]
+
 ## Stage log
 - 2026-11-02 stages 0-3 in one session (pilot, unattended, one stamped verify restarted for TMPDIR): 1 h 20, ~70 tool calls, 0 user rounds.

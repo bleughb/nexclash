@@ -132,5 +132,13 @@ Hardware risk review (PLAYBOOK 6b): BASIC and ROM ISR now run from the alt ROM w
 - detect.gameplay-screen-readers: helped: named the question; the lockstep answered it.
 - detect.tracked-unit: helped: one call, one figure, confirmed by the per-event check.
 
+## Friction
+
+- reuse: [none: a landing, no new code] The engine, record and notes came from the add-bomb-jack worktree unchanged.
+- retries: [none: one rebuild] The landed build equals the published nex_md5 (3494df60) first time.
+- environment: [local: published from uncommitted work] 1.1 was built from uncommitted files in its worktree; landing copied them and compared the rebuild with the patch's nex_md5 before trusting them.
+- hand-rolled: [none: selftest --verify --stamp]
+- scratch: [none: no scratch scripts]
+
 ## Stage log
 - 2026-11-02 stages 0-3 in one session (pilot, unattended): stage 0 6 min, stage 1 7, stage 2 41, stage 3 42 (two stamped runs, 18-19 min each), 0 user rounds, one coordinator message relaying the owner's report on colours.

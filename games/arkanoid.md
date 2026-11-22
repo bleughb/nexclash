@@ -131,5 +131,13 @@ tearing unmeasured. Emulator differences: floating bus above.
 ## Technique use
 - detect.gameplay-screen-readers: helped: named the question; `scan --writers` + disassembly found the alien erase test.
 
+## Friction
+
+- reuse: [none: a landing, no new code] Files from the add-arkanoid branch (460a719).
+- retries: [local: the record named the pre-automap build] The branch predated the automap-off start, so its record's sprite MD5 was 1.0's; the rebuild is 1.0 plus that start, which nxc 1.1 now ships.
+- environment: [none: no workaround]
+- hand-rolled: [none: selftest --verify --stamp]
+- scratch: [local: two probes dropped] arkanoid_arcade_paint.py and arkanoid_figs.py had no docstring contract or smoke test; the arcade colours live in the profile.
+
 ## Stage log
 - 2026-11-02 stages 0-3 in one session (pilot, unattended): about 1 h 10, ~55 tool calls, 0 user rounds, 1 coordinator question.

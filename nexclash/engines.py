@@ -121,6 +121,11 @@ ENGINES = [
     ('that_sinking_feeling', 'is_tsf', None),                             # That Sinking Feeling (128K tape form): default and Enhanced
     ('jsw', 'is_jsw', None),                                              # Jet Set Willy (48K)
     ('altered_beast', 'is_altered_beast', None),                          # Altered Beast (128K)
+    ('bomb_jack', 'is_bomb_jack', None),                                  # Bomb Jack (48K)
+    ('manic_miner', 'is_manic_miner', None),                              # Manic Miner (48K)
+    ('arkanoid', 'is_arkanoid', None),                                    # Arkanoid (48K)
+    ('cybernoid', 'is_cybernoid', None),                                  # Cybernoid (48K)
+    ('pentagram', 'is_pentagram', None),                                 # Pentagram (48K), original presentation + optional Enhanced
 ]
 
 
