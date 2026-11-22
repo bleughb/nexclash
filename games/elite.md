@@ -4,8 +4,8 @@
 Stage: 0 done (all five recordings surveyed in full), 1 next (design)   State: stage 1 probe done 2026-11-22 (## Probe); design question open, user allowed a full rewrite
 Inputs: specnext/reference/elite/ (tape, 5 RZX, 5 extracted .z80)    Branch: add-elite    Commit: see git log
 Checks: full surveys of all five RZX (7.5k-68.6k frames); tape not run in an emulator
-Pending user answers: smoothness method (## Pacing i / ii / iii)
-Start with: the user's choice in ## Pacing (i / ii / iii), then stage 2 (build)
+Pending user answers: none (design closed 2026-11-23: C coloured ships, details 1-5, pacing (i) interpolate)
+Start with: stage 2 (build), ## Build plan
 Read: PLAYBOOK stage 1, 3d (unknown engine: feasibility first); ## Findings below
 Open: see Findings
 
@@ -67,31 +67,12 @@ Which parts overlap each other is not compared.
 - Colour clash [observed]: practically none to remove (mono viewport; HUD bars and icons only). The toolkit's default
   "every figure a sprite" has no figures here: ships are line drawings into a 128 x 256 buffer, hundreds of line segments.
 - Tail / memory [observed]: 5.5 KB of 0x4000-0xBFFF untouched, largest span 456 bytes; bank 0 at 0xC000 is the game's buffer
-  (128K paging locked). NOT a constraint (user decision 2026-11-22, ## Probe: erase method and ship identity (stage 1, 2026-11-22)
-Scripts (local, not kept): C:NEXT\elite_work\probe\line_callers.py (buffer writers + CALL return addresses on the stack),
-ship_regs.py (IX / IY at each ship-line write). Replays: Docking 0-2500, Havoc 9000-11000, Witch 15500-17000 and 20000-26000,
-PoliceAnarchy 42000-47000.
-- Erase [observed]: no XOR erase. 0x8080-0x80B3 clears the whole buffer every frame (LDDR, ~4000 bytes + the frame edge
-  bytes 255 / 1 / 128), one clear per buffer copy (2,904,000 LDDR writes = 726 clears = 726 copies, Docking). Lines are then
-  ORed in (0x9117 / 0x911C, 0xB1B7, 0xB233 / 0xB253). Consequence: a coloured renderer needs no pixel-owner model; each
-  frame starts clean, the last colour drawn on a pixel wins.
-- Who draws what [observed: return addresses at the buffer writes; main loop 0x74E4-0x74FD]:
-  0x7584 (CALL Z at 0x74EE) planet / sun: lines via 0x86DE -> 0x86EE -> 0x9117 / 0x917D / 0x9215;
-  0x7898 (0x74F1) stars / dust: 0xA84B;  0xD03C (0x74F4) messages: XOR text 0xD549 (via 0x5DF8);
-  0x9C80 (0x74F7, a JP table) lasers and crosshair: 0xB7B4-0xB7F1 -> line 0xB044 -> 0xB1B8 / 0xB233;
-  ships: 0xF8C0 switches SP to 0x4020 (a private stack in screen memory) and CALLs 0xA6DF -> 0xA878 -> 0x61DD -> 0x6FD5 -> 0xB1B8.
-- Ship identity [observed]: while a ship's lines are written, IY = that model's blueprint (pointer table at ~0x61BD-0x61D1;
-  0x6211, 0x6325, 0x636A, 0x6381 in Witch; 0x61E3, 0x6228, 0x626D, 0x62C9, 0x633C, 0x6353, 0x63AF in PoliceAnarchy; 11 models).
-  Several models in one frame (e.g. 0x62C9 + 0x6353 + 0x633C). IX is the object slot (0x6132 - 39 n: 0x606F-0x6132 seen) or the
-  model's edge list (0x6Dxx, 0x6Axx). So colour per model, and per slot, is available at line time with no extra bookkeeping.
-- Not checked: the scanner / HUD writers (outside the viewport buffer), sound, whether lines from the HUD routines run in the ISR.
-
-## Decisions): the engine may use the Next's whole
+  (128K paging locked). NOT a constraint (user decision 2026-11-22, ## Decisions): the engine may use the Next's whole
   memory (MMU-paged Next banks), so hook code, state and new renderers live in Next pages, not in the game's 48K.
 - Not measured: T per frame in the line plotters (cost --at 32739 / 41450), the scanner and HUD writers, a safe tail place.
 
 ## Probe: erase method and ship identity (stage 1, 2026-11-22)
-Scripts (local, not kept): C:NEXT\elite_work\probe\line_callers.py (buffer writers + CALL return addresses on the stack),
+Scripts (local, not kept): C:\1NEXT\elite_work\probe\line_callers.py (buffer writers + CALL return addresses on the stack),
 ship_regs.py (IX / IY at each ship-line write). Replays: Docking 0-2500, Havoc 9000-11000, Witch 15500-17000 and 20000-26000,
 PoliceAnarchy 42000-47000.
 - Erase [observed]: no XOR erase. 0x8080-0x80B3 clears the whole buffer every frame (LDDR, ~4000 bytes + the frame edge
@@ -115,8 +96,8 @@ PoliceAnarchy 42000-47000.
   design constraint. The equivalence rule still holds (gameplay extremely close, docs: owner 2026-11-10).
 
 ## Design question (stage 1)
-ANSWERED 2026-11-22 (user): "C: coloured ships" -> option C (includes B). Details still open: the numbered list in
-## Design details (asked 2026-11-22).
+ANSWERED 2026-11-22 (user): "C: coloured ships" -> option C (includes B). Details: see
+"Design details (answered 2026-11-22)" below.
 Options put to the user: (A) plain, ULA unchanged, + Next speed (28 MHz) if pacing allows; (B) A + fix the few clash
 cells (HUD bars, condition light, planet / sun icon); (C) B + redraw the viewport on Layer 2 so ships / lines get colour
 (a new line-renderer engine; changes what the user sees). After the rewrite decision, C is no longer limited by memory;
@@ -138,6 +119,8 @@ model is in IY while its lines are drawn. Colouring per model / per draw categor
   (ii) extrapolate instead of interpolate: no lag, small overshoots when a ship turns suddenly.
   (iii) smaller logic steps (movement, rotation, timers, AI divided by k, k times as many passes): no lag, but every
   constant in the game changes and the RZX can no longer verify the logic.
+- ANSWERED 2026-11-23: (i) interpolate. Logic unchanged at a fixed tick; renderer interpolates other ships between the
+  last two logic states, own roll / pitch applied every frame.
 
 ## Design details (answered 2026-11-22: 1, 2, 3, 5 defaults; 4 changed)
 1. Ships: one colour per ship model (IY blueprint, 11 seen), chosen by us now, repaintable later (colour sheet + recolour).
@@ -147,6 +130,72 @@ model is in IY while its lines are drawn. Colouring per model / per draw categor
 4. Pace: CHANGED by the user: "4 speed - should be as smooth as possible". So: the highest frame rate the Next can give,
    game speed (how fast ships move, timers) kept as the original's (equivalence rule). How depends on ## Pacing.
 5. Status / chart / equipment pages (full-screen ULA): Layer 2 off while they are up.
+
+## Build plan (stage 2, written 2026-11-23 before any build)
+Engine: new, `elite` (module nexclash/elite.py, asm/elite_hooks.asm, profile); Layer 2 double buffer as wally2.
+Measured inputs [observed: probe pass_frames.py / pass_ints.py, Docking whole recording; the others in ## Pacing when done]:
+frames per pass mean 10.13 (p10 7, p50 11, p90 12, p99 16); interrupts accepted per pass mean 5.85 (mostly 5-7; they land
+in the buffer copy LDIR at 0x7FD5, the line plotters and 0x7232 - the game runs DI for ~40% of frames).
+1. Machine: the game's 128K banks unchanged; 28 MHz; new code and state in Next pages mapped only while it runs
+   (the game uses 0x4000-0xFFFF; ROM 1 locked). Layer 2 256x192, two buffers; rows outside the viewport transparent so the
+   ULA HUD shows through. ULA viewport left blank (the 0x7FBE copy skipped).
+2. Logic tick: one original main-loop pass (move, AI, collisions, HUD) at 28 MHz, then wait for the tick boundary:
+   T frames per pass (the original's typical pass, from the probes). The game's ISR body (keyboard 0xFD69, controls 0xFE01,
+   0x7125) runs K times per tick, in the original's pattern (~6 per 10 frames), not every frame - so turn rate, timers
+   and sound per pass match the original. Consequence (told to the user 2026-11-22): the game no longer slows down when
+   busy; its speed is the original's typical speed.
+3. The logic pass no longer draws into the buffer (clear 0x8080, plotters, copy 0x7FBE) unless a consumer is found
+   (removal experiment: who reads bank 0 0xC000-0xCFDF other than the copy). At the end of a pass, the render state
+   (all object slots 0x606F-0x6158, planet / sun, star table, laser / crosshair / message state, view) is copied into a
+   ring (previous, current) in a Next page.
+4. Renderer, every frame (50 Hz) in the tick's wait: alpha = k / T; interpolated copies of the slots (x, y, z linear;
+   orientation vectors linear), then the game's own projection and line code (ships 0xA6DF, planet 0x7584, stars 0x7898,
+   lasers 0x9C80) runs on the copies with the OR writers (0x9117 / 0x911C, 0xB1B7, 0xB233 / 0xB253, 0xA84B) redirected to a
+   Layer 2 plotter: colour from IY (model) or the category. Game RAM the draw path writes is saved / restored around it, so
+   the logic sees exactly what the original would. If the draw path is too slow or has consumers, own projection + line
+   code in the hook page (allowed by the rewrite decision).
+5. Own turning: phase 2 of the renderer - the roll / pitch integrated since the tick began applied as an extra rotation
+   of the interpolated scene, so your own turns show the frame you make them.
+6. ULA: HUD and scanner writers unchanged; clash cells fixed from a cells sheet (B); full-screen pages (status, charts,
+   equipment) switch Layer 2 off (design 5); their routines are found from the survey's screen writers.
+7. Start-up: NEX with the game's banks + engine pages; the 128K tail (## Open) is solved inside this engine.
+Verify (step 6):
+- Logic: per pass, original vs engine from the same state and the same ISR pattern: all registers and memory except
+  the viewport buffer, the ULA viewport rows and the engine pages - must match.
+- Render at alpha = 1: Layer 2 lit pixels == the original buffer's set bits for that pass (exact reference), colours from
+  the map. Interpolated frames: no reference; checks - no game RAM changed, each drawn line lies between its two endpoint
+  states, negative control (render state of the wrong pass fails).
+- Pace and freshness (PLAYBOOK 6): display updates per second, logic ticks per second, longest miss, maximum display age.
+Milestones: M1 early integrated diagnostic - NEX boots (JNext headless + CSpect), logic on the fixed tick + ISR pattern,
+Layer 2 shows the ships in colour once per tick (alpha = 1 only). M2 interpolation at 50 fps. M3 own turning. M4 HUD cells,
+pages, colour sheet + recolour. M5 quick runs PASS, evidence record docs/records/elite.json.
+All recordings [observed: pass_frames.py / pass_ints.py, whole recordings; PoliceAnarchy ints still running]:
+frames per pass mean Docking 10.13, Havoc 9.77, PoliceAnarchy 10.47, Witch 9.73, Reidquat 10.14 (p50 9-11, p90 12-16);
+interrupts per pass mean 5.85 / 6.53 / - / 6.24 / 6.57 -> 0.58-0.67 interrupts per frame (outlier passes of 65-344
+interrupts are full-screen pages / hyperspace, not flight). Choice: T = 10 frames per tick (5 game updates a second,
+the original's mean), the game ISR body on ~0.64 of frames (16 of every 25, spread evenly) - turn rate and timers per
+second as the original's flight average. Tunable constants in the engine, revisited at the first hardware test.
+Main loop map [observed: probe pass_calls.py, Havoc 9000-9100, 11 passes; credit = outermost main-loop CALL on the stack]:
+one pass = 0x7505 0x84D9, 0x7509 0x7222, 0x750C 0x9A40, 0x750F 0x81A9, 0x7477 0x713C, 0x747A 0x80D3, 0x747D 0x72A3,
+0x748C 0xD042, 0x74B0 0x717B, 0x74B3 0x5DC8, 0x74B6 0x7EDE, 0x74B9 0x7853, 0x74E4 0x8042, 0x74E7 0x8080 (buffer clear),
+0x74EE 0x7584 (planet / sun), 0x74F1 0x7898 (stars), 0x74F4 0xD03C (messages), 0x74F7 0x9C80, 0x74FA 0x9296,
+0x7502 0xED60 (-> 0x7FBE buffer copy).
+- ALL object-slot writes come from 0x9C80 (3453 of 3480; the rest from the ship-draw path 0xF8C0, its stack in screen memory):
+  0x9C80 is the per-ship loop - move each ship and draw it, interleaved (as the BBC original's main flight loop), plus
+  lasers, crosshair and the scanner (screen writes 0xA0FD, 0xAB0B, 0xAB34). Stars move and draw together too (0x7898
+  writes its table via 0x7A71); the planet routine writes its state (0x7591 / 0x75B6).
+- Consequence for the build: there is no separate "draw" pass to rerun. The logic pass runs whole (drawing included,
+  into the unused bank-0 buffer at 28 MHz - also the exact reference at alpha = 1); the renderer reruns only the
+  per-object draw calls inside 0x9C80 / 0x7898 / 0x7584 on interpolated copies, with everything they write saved and
+  restored (draw-time state such as an explosion cloud's counter must not advance per render).
+- Per-ship draw site [observed: disassembly, Docking.z80]: in 0x9C80's per-ship body (IX = slot) 0x9E29 CALL 0x9F82,
+  0x9E2C CALL 0xAE69, 3x CALL 0x9F41 on IX+9.., 0x9E41 CALL 0xB4D8, then 0x9E44 JP 0xF8B4 - the hack's draw wrapper: DI,
+  ISR entry 0xFEFE set to RET (0xC9), SP saved and set to 0x4020, CALL 0xA6DF (draw this ship), SP = 0x411A, 0xFEFE back
+  to JR (0x18), EI, JP 0x9E47. After the draw 0x9E47 RES 3,(IX+32) and tests bits 4 / 5 of (IX+32) (set by the draw?),
+  then 0x9E5D CALL 0xA8EC and 0x9E63 JP 0xF8E4 (next slot). So the renderer's ship call is 0xA6DF with IX = an
+  interpolated slot copy; slot byte 32 is draw-time state the logic reads (save / restore it around renders).
+First tasks: removal experiment for the buffer;
+find the planet / star / laser state the renderer needs; cost of one full draw at 28 MHz (drawcost / cost --at).
 
 ## Hardware checklist
 None yet (no build).
