@@ -132,6 +132,14 @@ def entries(m):
     return {k: v for k, v in m.items() if k != 'palette'}
 
 
+def shown_palette(m, mod):
+    """The 16 RGB colours a build with map m shows, for an engine whose maps carry a palette; else None."""
+    if not mod.RECOLOUR.get('palette'):
+        return None
+    from . import coloursheet as cs
+    return [tuple(c) for c in cs.palette_rgb(mod.set_palette(m))]
+
+
 def save_map(m, path, note):
     """coloursheet.save of the entries, the palette (if any) kept at the top level."""
     import json
@@ -295,6 +303,11 @@ def run(nex_path, colours, layout=None, game=None, output=None, say=print, onto=
         merged, mconf = cs.merge(base, chg, meta, entries(cur))
         if 'palette' in cur:
             merged['palette'] = cur['palette']        # the build's palette stays; the sheet changes entries only
+        want = shown_palette(merged, mod)
+        if want is not None and [tuple(c) for c in cs.load_layout(lay)['palette']] != want:
+            raise ValueError('this sheet was drawn with another sprite palette than the build would show (%s): its '
+                             'paint would land on other colours. Paint the sheet that came with this build, or give '
+                             'the map as a colours .json' % where)
         if mconf:
             lines = ['%s bit %d: sheet showed %s, painted %s, the build now has %s' % (k, b, _st(bs), _st(u), _st(c))
                      for (k, b), bs, u, c in mconf[:20]]
@@ -332,7 +345,7 @@ def run(nex_path, colours, layout=None, game=None, output=None, say=print, onto=
                 sn = os.path.basename(lp)[:-len('_layout.json')] if lp.endswith('_layout.json') else os.path.splitext(os.path.basename(lp))[0]
                 dst = '%s_%s' % (ostem, sn)
                 tp, tl = os.path.join(work, kind + '.png'), os.path.join(work, kind + '.json')
-                cs.redraw(lp, entries(merged), tp, tl)
+                cs.redraw(lp, entries(merged), tp, tl, shown_palette(merged, mod))
                 files[dst + '.png'], files[dst + '_layout.json'] = tp, tl
         else:
             missing.append('sheets: no layout (a colours .json without --layout) - none in this bundle')
