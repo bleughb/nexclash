@@ -1756,8 +1756,15 @@ def unit_tests(patch, states, z80=None):
     def at(speed, sel=0x07, nrs=None):
         def f(name, st, prep=None, stop_at=None, p=None, want_fail=False):
             ENTRY.update(speed=speed, sel=sel, nr=nrs or {})
+
+            def ready(mem, regs, model):        # a hook after boot (V_SELOK = 1): the boot cases below set 0 themselves
+                h = bytearray(model.hram)
+                h[0x5B4F - HOOK_RAM[0]] = 1
+                model.hram = bytes(h)
+                if prep:
+                    prep(mem, regs, model)
             try:
-                run(name, st, prep, stop_at, p, want_fail)
+                run(name, st, ready, stop_at, p, want_fail)
             finally:
                 ENTRY.update(speed=0, sel=0x07, nr={})
         return f
@@ -1780,6 +1787,23 @@ def unit_tests(patch, states, z80=None):
     sf = patch.rom_code.index(b'\xe6\xcc\x20', S['spdfix'] - ROM_ORG)          # AND 0xCC / JR NZ,.sel
     nsel = variant(colours=patch.colours, edit={ROM_ORG + sf + 2: b'\x00\x00'})      # moved selection read as NR 7
     moved('moved selection taken as NR 7', _pick(states, COLL), latch(1), p=nsel, want_fail=True)
+    # the first hook after boot: the stub's last NextReg read (NR 8, after setup) leaves 0x243B on NR 8, whose values
+    # ((NR 8 & 0x30) | issue 2) pass the layout test; spdfix's first call (V_SELOK = 0) keeps the boot latch (3.5 MHz,
+    # the stub's start-up speed) and selects NR 7 (Codex review C1)
+    def boot(mem, regs, model):
+        h = bytearray(model.hram)
+        h[0x5B4F - HOOK_RAM[0]] = 0                      # V_SELOK: no hook has run since boot
+        for a in (0x5B66, 0x5B67, 0x5B68):
+            h[a - HOOK_RAM[0]] = 0
+        model.hram = bytes(h)
+    for nr8 in (0x10, 0x11, 0x80):
+        for name, st in kinds:
+            at(0, sel=0x08, nrs={0x08: nr8})('%s, first after boot, NR 8 = 0x%02X selected' % (name, nr8), st, boot)
+    fz = patch.rom_code.index(b'\x3a' + (0x5B4F).to_bytes(2, 'little') + b'\xb7\x28', S['spdfix'] - ROM_ORG)
+    nfirst = variant(colours=patch.colours, edit={ROM_ORG + fz + 4: b'\x00\x00'})     # no boot select: NR 8 read as NR 7
+    for nr8 in (0x10, 0x11):
+        at(0, sel=0x08, nrs={0x08: nr8})('boot select missing, NR 8 = 0x%02X' % nr8, _pick(states, COLL), boot,
+                                          p=nfirst, want_fail=True)
     t2 = patch.rom_code.index(b'\x3a' + (0x5B66).to_bytes(2, 'little'), S['t_p2'] - ROM_ORG)
     n35 = variant(colours=patch.colours, edit={ROM_ORG + t2: b'\x3e\x00\x00'})       # t_p2 exits at a fixed 3.5 MHz
     at(1)('plotter 2 exit at a fixed 3.5 MHz', p2c, p=n35, want_fail=True)
