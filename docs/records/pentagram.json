@@ -1,0 +1,232 @@
+{
+ "name": "pentagram",
+ "order": 204,
+ "game": "Pentagram",
+ "doc": "pentagram.md",
+ "engine": "pentagram",
+ "representative": true,
+ "reference": "pentagram",
+ "inputs": {
+  "snapshot": {
+   "name": "pentagram.z80",
+   "md5": "75b969b9da612b72c7780e11a862dbdd",
+   "path": "pentagram/pentagram.z80"
+  },
+  "recordings": [
+   {
+    "name": "play-26.rzx",
+    "md5": "de93ba0cff3012c1f09dc279ace8589b",
+    "path": "pentagram/play-26.rzx"
+   },
+   {
+    "name": "pentagram.tap",
+    "md5": "25a607235780039bd2133f2801a1501a",
+    "path": "pentagram/pentagram.tap",
+    "role": "Original loading-screen tape, staged beside snapshot; not a recording."
+   }
+  ]
+ },
+ "modules": [
+  "pentagram"
+ ],
+ "own_modules": [
+  "pentagram",
+  "pentagram_verify",
+  "pentagram_colour",
+  "pentagram_enhanced_verify"
+ ],
+ "data": [
+  "asm/pentagram_hooks.asm",
+  "docs/profiles/pentagram.json",
+  "docs/profiles/pentagram_art.json",
+  "docs/profiles/pentagram_colours.json",
+  "asm/pentagram_enhanced.asm",
+  "asm/pentagram_colour.asm",
+  "asm/pentagram_capture.asm",
+  "asm/pentagram_grid.asm",
+  "asm/pentagram_cache.asm",
+  "asm/pentagram_palette.inc",
+  "docs/profiles/pentagram_enhanced.json",
+  "asm/pentagram_actor.asm",
+  "asm/pentagram_aux.asm"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_dma.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": []
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "play-26.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 8,
+  "note": "Both modes: full original18k input replay, all registers including R,48K RAM except exact patch/checked return/dead stack bytes. Enhanced: persistent ordered colour canvas and opaque hardware pixels at every publication. Original input-only recording is private, not in this repository. Separate native pace/cold/beam/soak/loader evidence; no hardware claim."
+ },
+ "outputs": {
+  "plain": {
+   "file": "pentagram.nex",
+   "md5": "718d6a4fd3ece6df3db60c53434b3415"
+  },
+  "sprites": {
+   "file": "pentagram_sprites.nex",
+   "md5": "8fa89e9acb35245bd0695ab067a059b7"
+  },
+  "enhanced": {
+   "file": "pentagram_enhanced.nex",
+   "md5": "e2b342b349b1cdbfc3bcc28a75683ea5"
+  },
+  "plain_loading": {
+   "file": "pentagram_loading.nex",
+   "md5": "eccd4ef26576435ed8a29c7da29e86cb"
+  },
+  "sprites_loading": {
+   "file": "pentagram_sprites_loading.nex",
+   "md5": "795ff97eba947bd9ad3e2a9c976f03cb"
+  },
+  "enhanced_loading": {
+   "file": "pentagram_enhanced_loading.nex",
+   "md5": "c69d345bc266693dd0d83eb0fcd9c061"
+  }
+ },
+ "status": {
+  "title": "Pentagram",
+  "engine_col": "pentagram (pentagram.md)",
+  "build": "Original monochrome default; optional approved owner-painted figures and scenery, off by default; original loading screen and full hidden ROM,1MB.",
+  "software": "Both18k replays and generic stamped selftest pass;512 ABI,144 whole-sound cases,26,448 ordered plots,1,970 exact publications. Native2,652 matched states, quiet pace within2%, faster busy scenes;18k lifecycle soak and all3 actual loader modes pass.",
+  "hardware": "none (JNext only)",
+  "next": "Physical1MB Next review and complete natural playthrough remain; individual-update publication jitter is documented. Packaging source recipe is reproducible; no push performed."
+ },
+ "checks": [
+  "asm2profile:pentagram",
+  "asm2profile:pentagram_enhanced"
+ ],
+ "version": "1.0",
+ "checked": {
+  "deps": {
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "asm/pentagram_actor.asm": "9465d21d62cad7bc",
+   "asm/pentagram_aux.asm": "d9079bf030db9d92",
+   "asm/pentagram_cache.asm": "9e4a6481afab9e5c",
+   "asm/pentagram_capture.asm": "d5abc418d9297c20",
+   "asm/pentagram_colour.asm": "1d64f7bb128ef56c",
+   "asm/pentagram_enhanced.asm": "8fb610f242cbc7e1",
+   "asm/pentagram_grid.asm": "e096eaf437e73e25",
+   "asm/pentagram_hooks.asm": "ffdb9a049556e5bb",
+   "asm/pentagram_palette.inc": "7b66a370337adb75",
+   "docs/profiles/pentagram.json": "eda0c80ff798eb14",
+   "docs/profiles/pentagram_art.json": "9f2e2c3ebe43a61d",
+   "docs/profiles/pentagram_colours.json": "3e39647eade5ebdd",
+   "docs/profiles/pentagram_enhanced.json": "7201c8680ffcd2a1",
+   "nexclash.py": "d9b430cef7478a38",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "a2a47a48c20fb25c",
+   "nexclash/hooklib.py": "2a6423aaf4a803b5",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "d4d8a6b6c9055025",
+   "nexclash/pentagram.py": "f484c6cd550c2711",
+   "nexclash/pentagram_colour.py": "e380374509fe6119",
+   "nexclash/pentagram_enhanced_verify.py": "ebda1b20c91b02c6",
+   "nexclash/pentagram_verify.py": "32dbaff2794552f2",
+   "nexclash/recolour.py": "ed8eaa22008da1a7",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "8e5ffa6de63cea3e",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "verified": {
+  "deps": {
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "asm/pentagram_actor.asm": "9465d21d62cad7bc",
+   "asm/pentagram_aux.asm": "d9079bf030db9d92",
+   "asm/pentagram_cache.asm": "9e4a6481afab9e5c",
+   "asm/pentagram_capture.asm": "d5abc418d9297c20",
+   "asm/pentagram_colour.asm": "1d64f7bb128ef56c",
+   "asm/pentagram_enhanced.asm": "8fb610f242cbc7e1",
+   "asm/pentagram_grid.asm": "e096eaf437e73e25",
+   "asm/pentagram_hooks.asm": "ffdb9a049556e5bb",
+   "asm/pentagram_palette.inc": "7b66a370337adb75",
+   "docs/profiles/pentagram.json": "eda0c80ff798eb14",
+   "docs/profiles/pentagram_art.json": "9f2e2c3ebe43a61d",
+   "docs/profiles/pentagram_colours.json": "3e39647eade5ebdd",
+   "docs/profiles/pentagram_enhanced.json": "7201c8680ffcd2a1",
+   "nexclash.py": "d9b430cef7478a38",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "a2a47a48c20fb25c",
+   "nexclash/hooklib.py": "2a6423aaf4a803b5",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "d4d8a6b6c9055025",
+   "nexclash/pentagram.py": "f484c6cd550c2711",
+   "nexclash/pentagram_colour.py": "e380374509fe6119",
+   "nexclash/pentagram_enhanced_verify.py": "ebda1b20c91b02c6",
+   "nexclash/pentagram_verify.py": "32dbaff2794552f2",
+   "nexclash/recolour.py": "ed8eaa22008da1a7",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "8e5ffa6de63cea3e",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/pentagram.md#verification"
+   ],
+   "coverage": "The recordings in the record, in the simulator.",
+   "result": "Renderer pace K100 against the original (Verification); individual update jitter noted there; no real-machine timing."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/pentagram.md#engine-and-memory"
+   ],
+   "coverage": "Five guarded sites and the actor renderer's memory (Engine and memory).",
+   "result": "Actors rendered as sprites at a paced rate; scenery as approved; Enhanced optional."
+  },
+  "decision": "Original presentation with clash removed; approved Enhanced set optional; loading screen kept.",
+  "next_experiment": "A board run of 1.1: a full room sequence, no stray sprites."
+ }
+}
