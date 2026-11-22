@@ -62,11 +62,11 @@
  "outputs": {
   "plain": {
    "file": "target_renegade.nex",
-   "md5": "a0be8dc03a1be8c6d67dc3e0229abc35"
+   "md5": "452e75d8ba20171f9a4a3dc6f7b451d6"
   },
   "sprites": {
    "file": "target_renegade_sprites.nex",
-   "md5": "8e5f8f0be205aade316106a6db7d4aac"
+   "md5": "d8e3e19f2d92cad896b4931fa0c9162a"
   }
  },
  "repro": [],
@@ -97,14 +97,14 @@
    "docs/profiles/target_renegade.json": "c2279bbf071346cf",
    "docs/profiles/target_renegade_enh_speed.json": "a8e602b0d8226b62",
    "docs/profiles/target_renegade_speed.json": "35be934454dbca71",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "bf75ad27e5bfabce",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/renegade.py": "6d256418fdf318d2",
    "nexclash/renegade_enh.py": "33665277f29d02db",
@@ -113,13 +113,13 @@
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "f4ac70dfa0b2ff66",
+   "recipe": "45d22525d5c6170b",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-17"
+  "date": "2026-11-20"
  },
  "verified": {
   "deps": {
@@ -131,14 +131,14 @@
    "docs/profiles/target_renegade.json": "c2279bbf071346cf",
    "docs/profiles/target_renegade_enh_speed.json": "a8e602b0d8226b62",
    "docs/profiles/target_renegade_speed.json": "35be934454dbca71",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "112c3b17a78ace9a",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/renegade.py": "6d256418fdf318d2",
    "nexclash/renegade_enh.py": "33665277f29d02db",
@@ -147,13 +147,13 @@
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "f4ac70dfa0b2ff66",
+   "recipe": "45d22525d5c6170b",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-12"
+  "date": "2026-11-20"
  },
  "rework": [
   {
@@ -201,11 +201,11 @@
    "outputs": {
     "speed": {
      "file": "target_renegade_speed.nex",
-     "md5": "7583c8643c7ae82737665d4f73980fc8"
+     "md5": "12ab14c77d80c110ecd113abbd4ac572"
     },
     "enhanced": {
      "file": "target_renegade_enhanced.nex",
-     "md5": "52ab63f4d9cbb5af83855edba398ba29"
+     "md5": "1da0bff51cc138f07f1037c13f3d1b74"
     }
    },
    "proof": "the published v1.2 bare builds (nxc.py --bare, default and Enhanced) byte for byte; target_renegade.rzx IDENTICAL for both sets, the speed set also with every hook entered at 28 MHz (each gives back the speed it found)",

@@ -77,11 +77,11 @@
  "outputs": {
   "plain": {
    "file": "knight_tyme.nex",
-   "md5": "0f91cab91a9261bb8645a0ec9cc871f2"
+   "md5": "ec43a9c6bd1ac6631ab7c8dde3ee36dd"
   },
   "sprites": {
    "file": "knight_tyme_sprites.nex",
-   "md5": "47fe12fb4b9e91106b57903f3376699b"
+   "md5": "8baef8197af76204c12356931837daf5"
   }
  },
  "repro": [],

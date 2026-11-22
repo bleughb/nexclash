@@ -82,23 +82,23 @@
  "outputs": {
   "plain": {
    "file": "bruce_lee.nex",
-   "md5": "d393199dfe1cd7ba0372fa6ab0ce0dfa"
+   "md5": "e75b93dc50c37545ec53cbfdb2d1a93c"
   },
   "sprites": {
    "file": "bruce_lee_sprites.nex",
-   "md5": "572bd4499005b81fd8eafac597b5ab0b"
+   "md5": "984686a4dd7b650304d0f7a4839740ff"
   },
   "enhanced": {
    "file": "bruce_lee_enhanced.nex",
-   "md5": "7f762987659ae1c0da54190dd0335b69"
+   "md5": "00e3d7aa5adc0bd36531a864f5f4255c"
   },
   "loading": {
    "file": "bruce_lee_sprites_loading.nex",
-   "md5": "0a343912c1748f5fcd45230f0c1e1831"
+   "md5": "0f5426a949aabc09b5d4e56799f63f15"
   },
   "enhanced_loading": {
    "file": "bruce_lee_enhanced_loading.nex",
-   "md5": "004b76609c33d2414b380c5ab5a8bf47"
+   "md5": "9fc19fa2b86056e20538781e9df60c32"
   }
  },
  "repro": [],
@@ -141,20 +141,20 @@
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
    "docs/profiles/bruce_lee.json": "722eb720899df876",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/bruce_lee.py": "c26c79518036e12a",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "bf75ad27e5bfabce",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
    "nexclash/rzx.py": "e018e000440e0274",
@@ -162,13 +162,13 @@
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "e14d0b873ea7ca4d",
+   "recipe": "56acdb7218a39bad",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-17"
+  "date": "2026-11-20"
  },
  "verified": {
   "deps": {
@@ -178,20 +178,20 @@
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
    "docs/profiles/bruce_lee.json": "722eb720899df876",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/bruce_lee.py": "c26c79518036e12a",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "112c3b17a78ace9a",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
    "nexclash/rzx.py": "e018e000440e0274",
@@ -199,12 +199,12 @@
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "e14d0b873ea7ca4d",
+   "recipe": "56acdb7218a39bad",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-12"
+  "date": "2026-11-20"
  }
 }

@@ -136,6 +136,14 @@ def prepared(source):
     finally:
         os.unlink(name)
 
+
+def _opaque(r, g, b):
+    """RRRGGGBB for an opaque Layer 2 colour. 0xE3 is the transparent colour (NextReg 0x14) and a real Next compares the
+    RGB, not the index, so a colour that maps to it would show the ULA through (Tom's #5, the remnants under objects):
+    bright magenta becomes 0xE7."""
+    v = (r << 5) | (g << 2) | (b >> 1)
+    return 0xE7 if v == 0xE3 else v
+
 class Patch:
     name = 'Highway Encounter: original entry'
     uses_printer_buffer = False
@@ -170,7 +178,7 @@ class Patch:
             palette = bytearray()
             for i in range(256):
                 r,g,b = (round(v*7/255) for v in values[i*3:i*3+3])
-                palette += bytes([(r<<5)|(g<<2)|(b>>1),b&1]) if i!=227 else bytes([0xE3,0])
+                palette += bytes([_opaque(r,g,b),b&1]) if i!=227 else bytes([0xE3,0])
             self.stub_extra += bytes(256-len(self.stub_extra))+bytes.fromhex(h['colour_setup'])+palette
             self.setup_call = 0xD100
         self.slot1 = (24, self.syms['regblock'])
@@ -205,7 +213,7 @@ class Patch:
         if self.colour_source:
             self.colours = colour_assets(self.colour_source,bytes(16384)+ram,self)
             # Palette edits are part of the same immutable setup tail.
-            palette = b''.join(bytes([(r<<5)|(g<<2)|(b>>1), b&1]) if i!=227
+            palette = b''.join(bytes([_opaque(r,g,b), b&1]) if i!=227
                                else b'\xe3\0' for i,(r,g,b) in enumerate(self.palette))
             self.stub_extra = self.stub_extra[:-512] + palette
             for page,data in self.colours.items():

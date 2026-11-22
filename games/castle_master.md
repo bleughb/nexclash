@@ -8,7 +8,7 @@ Checks (castle_master_work, local): m3_sim (all redraws), m3b_seq, m3b_diss, m3b
 Decision (user 2026-11-19): route B (Next-native renderer) + option (i) (Layer 2 on top, dither kept, cursor =
 sprite, cycle = palette); colour switchable off by the player (original look). Later: palette 1-16, flat mode.
 Start with: the colour cycle as palette, the M3b block's "Open" list
-Read: PLAYBOOK stage 1 + 3d; cards detect.pacing-structure, detect.routine-removal, patch.hybrid-display-replacement
+Read: PLAYBOOK stage 1 + 3d; cards patch.native-renderer-own-pages, patch.inbetween-views, verify.staged-port-gates
 Open: unreached CALL sites (Coverage); K on hardware (6.75 = JNext)
 
 ## Inputs
@@ -200,58 +200,57 @@ pictures, no figure plotter; 5,356 view copies.
 ## Lessons
 - [doc docs/RECORDING_CHECKLIST.md §Making a recording (Fuse)] An RZX alone (no separate .z80) is a complete intake: `nexclash.py rzx extract R -o
   GAME.z80` gives the snapshot it was recorded from.
-- [local: one game's misread; the survey reports what the copier reads] The survey's buffer range (0x5C80-0x673F, rounded) mixed the view buffer with renderer variables, so
+- [card patch.native-renderer-own-pages §Probe and stop] The survey's buffer range (0x5C80-0x673F, rounded) mixed the view buffer with renderer variables, so
   `scan --writers` on it listed geometry code first; the copier's own pointer (LD HL,23740 at 0xA39A) gave the
   exact buffer.
-- [local: one game's maths; a candidate for a shared bit-exact checker if a second game replaces maths] A
+- [card verify.staged-port-gates §Recognise] A
   bit-exact replacement checked only on recorded inputs can hide wrong rare paths: two of four mutants passed
   every recorded call and failed only random / edge inputs, so add sweeps and mutants.
-- [local: one harness; tools/probes candidate if a second game sandboxes a renderer] Junk-filling a buffer
+- [card verify.staged-port-gates §Failure lookup] Junk-filling a buffer
   before a re-render is a strong test only if the renderer fully rebuilds it; when it reads-modify-writes, use
   the buffer as it was before the game's own render, and bisect differing inputs from the block's START state
   (a bisect that already fails on the start state names a random byte).
-- [local: one game's pacing check; tools/probes candidate] RZX frames are not real time: Fuse writes a ~20 T
+- [card verify.staged-port-gates §Failure lookup] RZX frames are not real time: Fuse writes a ~20 T
   frame when an interrupt delayed by DI lands, so a frame count runs ahead; weigh short frames by their T.
-- [local: one engine port; PLAYBOOK 3d candidate if a second renderer is ported] Port stage by stage against
+- [card verify.staged-port-gates §Probe and stop] Port stage by stage against
   the game's own data at fixed PCs, each with a failing mutant, then gate end to end on every redraw: a missed
   stage (sector cull 0x8D4F) showed as one cube in one frame of 5,233, which a sample run would have missed.
-- [local: one engine port] Random sweeps must stay in the inputs' domain (camera words <= ~16,000; pitch an
-  angle 0-71): beyond it 16-bit sums wrap or the original reads 2.5 KB past a table, and failures are false.
-  Size copied tables by the domain, not the recording. A mutant can be equivalent (sign bit 46 vs 47 of a dot
-  < 2^45): replace it, don't count it.
-- [local: one engine port; PLAYBOOK 3d candidate] Forcing an input the recording never has ((27391) = 0,
+- [card verify.staged-port-gates §Probe and stop] Random sweeps must stay in the inputs' domain (camera words
+  <= ~16,000; pitch 0-71): beyond it failures are false. A mutant can be equivalent: replace it.
+- [card patch.native-renderer-own-pages §Failure lookup] Forcing an input the recording never has ((27391) = 0,
   lightning) found an original bug: at pitch 4 a 255-row bolt overwrites RAM incl. the face list. A renderer
   drawing into its own pages must not copy that: make it a model option (bolt clipped) and record it.
 - [doc docs/TECHNIQUES.md §1.0 Measured costs on a board (tools/hwtests/nextbench, core 3.02.00, 2026-10-22)] Simulator T is not 28 MHz time: JNext ran the renderer at 1.34-1.42x
   (wait states), which moved the worst outdoor view from "in budget" to ~10 fps. Budget from T x 1.4.
-- [local: one engine's thread switch; a card candidate if a second engine runs code in its own pages] An
-  interrupt-safe state switch the stock simulator can check: write nothing in slots 0-1; the vector jumps to
-  one address whose code differs between the alt ROM (JP handler) and the renderer's page (restore pages,
-  stack, speed, CALL handler); every NEXTREG that changes a page is preceded by its variable's write.
-- [local: one harness] A control that saves, clobbers, then restores is no control (HL'), and one on a rare
+- [card patch.native-renderer-own-pages §Contract] An interrupt-safe state switch the stock simulator can
+  check: nothing written in slots 0-1; the vector jumps to one address whose code differs by page; every
+  NEXTREG that changes a page is preceded by its variable's write.
+- [card verify.staged-port-gates §Failure lookup] A control that saves, clobbers, then restores is no control (HL'), and one on a rare
   path (stale-pixel copy: 30 of 5,233 views) needs its own direct check, or it passes.
-- [local: one build's start-up; a z80tonex note candidate] setup_call runs with the stub in slots 6-7: a write
+- [card patch.native-renderer-own-pages §Failure lookup] setup_call runs with the stub in slots 6-7: a write
   to the game's 0xC000-0xFFFF there lands in the stub's bank. Only JNext showed it (the harness poked the same
   bytes). Put start-up state in the image (patch.apply): the boot check then covers it.
-- [local: one engine's clock; an hlib_pace candidate if a second engine paces windows over 13 frames] Two line
-  readings a frame apart differ by 0 or 311 by jitter: after a reading at an interrupt, a difference under half
-  a frame is a frame more. hlib_pace_wait's target is 16-bit sixteenths (13 frames): longer windows need their
-  own wait in lines. A long interrupts-off span (sound, 0.5 s) is ticked before and re-read after, not held.
-  The game's 14 waits on its handler inside the window are real time (+28 frames until found). An interrupt
-  must not skip its reading; commit main-line readings with interrupts off, reading again if one came (-6
-  frames in 3 of 5,233).
-- [local: one engine's pace gate; a hooklib / probes candidate] A pace check against the original from the same
-  state can fail for the right build: the game reads real-time state (message printer: 15,000 instructions in
-  the original's block, under 200 in M3's). Count the game's own main-line instructions (sites, handler, the
-  vector's JP and the renderer's work-RAM code apart) and gate pace only where both runs took the same path.
-- [local: a harness trap; a probes candidate] SkoolKit's Simulator applies the LD A,I / R quirk (P/V 0) on its
+- [card patch.inbetween-views §Contract] Clock: two line readings a frame apart differ by 0 or 311 (jitter);
+  hlib_pace_wait's target covers 13 frames only; the game's 14 handler waits in the window are real time (+28
+  frames until found); main-line readings commit with interrupts off (-6 frames in 3 of 5,233).
+- [card verify.staged-port-gates §Contract] A pace check from the same state can fail for the right build: the
+  game reads real time (message printer: 15,000 instructions against under 200). Gate pace only where both
+  runs took the same path (main-line instruction counts).
+- [card verify.staged-port-gates §Failure lookup] SkoolKit's Simulator applies the LD A,I / R quirk (P/V 0) on its
   own 48K frame, not the harness's interrupts: HLIB_IFF_DI then left interrupts off at random (a hang once a
   clock call ran ~100 times a frame). Set int_active 0; clear P/V where the harness accepts an interrupt.
-- [local: one harness; a probes candidate] Per-state runs start from clean hardware: "rebuild stale sprites" /
-  "sprites off" mutants passed until a previous view's sprites were planted. For edge cases the states rarely
-  reach, drive the game's own routine at swept inputs (found an 8-bit wrap at the cursor's bottom edge). A
-  per-redraw gate missed what hardware showed at once: also run the build's code, hooks included, along the
-  recording (with the hooks modelled in the test, two mutants passed).
+- [card verify.staged-port-gates §Failure lookup] Per-state runs start from clean hardware: "sprites off"
+  mutants passed until a previous view's sprites were planted; with the hooks modelled, two mutants passed.
+  Run the build's own code along the recording; sweep the game's routine for edges (cursor's bottom row).
+- [card optimise.layer2-renderer-speed §Contract] Profile before tuning: no hot spot (largest routine 13 %).
+  +12 % views came from the divide, row set-up, a DMA view copy and not idling before in-between flips. A
+  classic DMA job hides the frame interrupt: chunks, LDIR near it.
+- [doc docs/DDMA_IMPLEMENTATION.md §Blitter against a dithered fill (Castle Master, 2026-11-21)]
+  The blitter's constant fill is 2.7x the CPU's, but a dithered face is a copy: no gain; a job a row costs more.
+- [card patch.native-renderer-own-pages §Failure lookup] A second show path (dissolve) kept the original look
+  until its passes were repeated on Layer 2. A NEX header screen: CSpect closes, JNext skips it.
+- [card patch.loader-screen-from-game-file §Failure lookup] The loader shows the loading screen, read from the
+  player's file at ENTER (build_screen); a hold in the build only added a wait.
 
 ## Technique use
 - detect.pacing-structure: helped: pacing_census on 0x8542 showed event-driven renders, no frame wait.
@@ -265,6 +264,11 @@ pictures, no figure plotter; 5,356 view copies.
 - patch.pace-limiter: used: hlib_pace's clock (open, tick, hold / resume) in a K window around the game's
   own redraw; own wait in lines and an interrupt-side tick (Lessons). patch.timed-side-effect-replay: used:
   the probe of the block found sound 0xC683 and interrupt waits inside it before the speed-up.
+- patch.native-renderer-own-pages: used: written from M1-M3e.
+- verify.staged-port-gates: used: written from the gates.
+- patch.inbetween-views: used: written from M3a, c.
+- optimise.layer2-renderer-speed: used: written from M3c.
+- patch.loader-screen-from-game-file: used: written from M3e.
 
 ## Friction
 - reuse: [tool tools/probes/pacing_census.py] used as it is; `nexclash.py cost` too
@@ -273,5 +277,5 @@ pictures, no figure plotter; 5,356 view copies.
   JNext screenshot names count from the start line, log F from power-on (500 apart here)]
 - environment: [none: local Windows checkout, no workarounds needed]
 - hand-rolled: [local: byte searches for CALL / LD (nn) sites with skoolkit's snapshot reader]
-- scratch: [local: cmdis / callers helpers stay in the session scratchpad; cm_profile / cm_consumers,
-  e1-e5 and m0 / m1 scripts are local (castle_master_work): the engine's own verifier at stage 3]
+- scratch: [local: every script is kept in specnext reference/castle_master/build (the cards' sources): the
+  engine's own verifier at stage 3]
