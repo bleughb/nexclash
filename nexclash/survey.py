@@ -435,7 +435,7 @@ def survey(z80, rzx=None, out=None, stop=None, frames=None, keys=None, top=6, lo
                              frames or (n if not rz else None), keys, n)[0]
         except Exception as e:                              # noqa: BLE001
             ptxt = 'preview failed: %s' % e
-        say('## Preview (preview.png: screen at frames %s, what each plot routine draws per caller)' % ','.join(map(str, at)))
+        say('## Preview (preview.png: screen at frames %s, what each plot routine draws per caller, tinted per routine: not game colours)' % ','.join(map(str, at)))
         say('```\n' + '\n'.join(ptxt.split('\n')[:14]) + '\n```')
         say('')
     say('## Screen writers (scan --writers)')

@@ -1,11 +1,11 @@
 # Elite (Braben / Bell, Firebird 1985; Russian 128K hack) - engine: none yet
 
 ## Next session
-Stage: 0 done (all five recordings surveyed in full), 1 next (design)   State: stage 1 feasibility 2026-11-22; design question asked, answer pending
+Stage: 0 done (all five recordings surveyed in full), 1 next (design)   State: stage 1 probe done 2026-11-22 (## Probe); design question open, user allowed a full rewrite
 Inputs: specnext/reference/elite/ (tape, 5 RZX, 5 extracted .z80)    Branch: add-elite    Commit: see git log
 Checks: full surveys of all five RZX (7.5k-68.6k frames); tape not run in an emulator
 Pending user answers: stage-1 design question (A / B / C in ## Design question)
-Start with: feasibility (PLAYBOOK 3d): cost of 32702/32717 (back-buffer copy) and 32739 (line plot), tail place, then the design question
+Start with: the user's answer to ## Design question (C now cheap: IY = ship model at line time, buffer cleared per frame)
 Read: PLAYBOOK stage 1, 3d (unknown engine: feasibility first); ## Findings below
 Open: see Findings
 
@@ -67,9 +67,47 @@ Which parts overlap each other is not compared.
 - Colour clash [observed]: practically none to remove (mono viewport; HUD bars and icons only). The toolkit's default
   "every figure a sprite" has no figures here: ships are line drawings into a 128 x 256 buffer, hundreds of line segments.
 - Tail / memory [observed]: 5.5 KB of 0x4000-0xBFFF untouched, largest span 456 bytes; bank 0 at 0xC000 is the game's buffer
-  (128K paging locked). NOT a constraint (user decision 2026-11-22, ## Decisions): the engine may use the Next's whole
+  (128K paging locked). NOT a constraint (user decision 2026-11-22, ## Probe: erase method and ship identity (stage 1, 2026-11-22)
+Scripts (local, not kept): C:NEXT\elite_work\probe\line_callers.py (buffer writers + CALL return addresses on the stack),
+ship_regs.py (IX / IY at each ship-line write). Replays: Docking 0-2500, Havoc 9000-11000, Witch 15500-17000 and 20000-26000,
+PoliceAnarchy 42000-47000.
+- Erase [observed]: no XOR erase. 0x8080-0x80B3 clears the whole buffer every frame (LDDR, ~4000 bytes + the frame edge
+  bytes 255 / 1 / 128), one clear per buffer copy (2,904,000 LDDR writes = 726 clears = 726 copies, Docking). Lines are then
+  ORed in (0x9117 / 0x911C, 0xB1B7, 0xB233 / 0xB253). Consequence: a coloured renderer needs no pixel-owner model; each
+  frame starts clean, the last colour drawn on a pixel wins.
+- Who draws what [observed: return addresses at the buffer writes; main loop 0x74E4-0x74FD]:
+  0x7584 (CALL Z at 0x74EE) planet / sun: lines via 0x86DE -> 0x86EE -> 0x9117 / 0x917D / 0x9215;
+  0x7898 (0x74F1) stars / dust: 0xA84B;  0xD03C (0x74F4) messages: XOR text 0xD549 (via 0x5DF8);
+  0x9C80 (0x74F7, a JP table) lasers and crosshair: 0xB7B4-0xB7F1 -> line 0xB044 -> 0xB1B8 / 0xB233;
+  ships: 0xF8C0 switches SP to 0x4020 (a private stack in screen memory) and CALLs 0xA6DF -> 0xA878 -> 0x61DD -> 0x6FD5 -> 0xB1B8.
+- Ship identity [observed]: while a ship's lines are written, IY = that model's blueprint (pointer table at ~0x61BD-0x61D1;
+  0x6211, 0x6325, 0x636A, 0x6381 in Witch; 0x61E3, 0x6228, 0x626D, 0x62C9, 0x633C, 0x6353, 0x63AF in PoliceAnarchy; 11 models).
+  Several models in one frame (e.g. 0x62C9 + 0x6353 + 0x633C). IX is the object slot (0x6132 - 39 n: 0x606F-0x6132 seen) or the
+  model's edge list (0x6Dxx, 0x6Axx). So colour per model, and per slot, is available at line time with no extra bookkeeping.
+- Not checked: the scanner / HUD writers (outside the viewport buffer), sound, whether lines from the HUD routines run in the ISR.
+
+## Decisions): the engine may use the Next's whole
   memory (MMU-paged Next banks), so hook code, state and new renderers live in Next pages, not in the game's 48K.
 - Not measured: T per frame in the line plotters (cost --at 32739 / 41450), the scanner and HUD writers, a safe tail place.
+
+## Probe: erase method and ship identity (stage 1, 2026-11-22)
+Scripts (local, not kept): C:NEXT\elite_work\probe\line_callers.py (buffer writers + CALL return addresses on the stack),
+ship_regs.py (IX / IY at each ship-line write). Replays: Docking 0-2500, Havoc 9000-11000, Witch 15500-17000 and 20000-26000,
+PoliceAnarchy 42000-47000.
+- Erase [observed]: no XOR erase. 0x8080-0x80B3 clears the whole buffer every frame (LDDR, ~4000 bytes + the frame edge
+  bytes 255 / 1 / 128), one clear per buffer copy (2,904,000 LDDR writes = 726 clears = 726 copies, Docking). Lines are then
+  ORed in (0x9117 / 0x911C, 0xB1B7, 0xB233 / 0xB253). Consequence: a coloured renderer needs no pixel-owner model; each
+  frame starts clean, the last colour drawn on a pixel wins.
+- Who draws what [observed: return addresses at the buffer writes; main loop 0x74E4-0x74FD]:
+  0x7584 (CALL Z at 0x74EE) planet / sun: lines via 0x86DE -> 0x86EE -> 0x9117 / 0x917D / 0x9215;
+  0x7898 (0x74F1) stars / dust: 0xA84B;  0xD03C (0x74F4) messages: XOR text 0xD549 (via 0x5DF8);
+  0x9C80 (0x74F7, a JP table) lasers and crosshair: 0xB7B4-0xB7F1 -> line 0xB044 -> 0xB1B8 / 0xB233;
+  ships: 0xF8C0 switches SP to 0x4020 (a private stack in screen memory) and CALLs 0xA6DF -> 0xA878 -> 0x61DD -> 0x6FD5 -> 0xB1B8.
+- Ship identity [observed]: while a ship's lines are written, IY = that model's blueprint (pointer table at ~0x61BD-0x61D1;
+  0x6211, 0x6325, 0x636A, 0x6381 in Witch; 0x61E3, 0x6228, 0x626D, 0x62C9, 0x633C, 0x6353, 0x63AF in PoliceAnarchy; 11 models).
+  Several models in one frame (e.g. 0x62C9 + 0x6353 + 0x633C). IX is the object slot (0x6132 - 39 n: 0x606F-0x6132 seen) or the
+  model's edge list (0x6Dxx, 0x6Axx). So colour per model, and per slot, is available at line time with no extra bookkeeping.
+- Not checked: the scanner / HUD writers (outside the viewport buffer), sound, whether lines from the HUD routines run in the ISR.
 
 ## Decisions
 - 2026-11-22 (user): "for elite, you can totally re-write the engine to utilise all the memory of the spectrum next, free
@@ -80,8 +118,8 @@ Which parts overlap each other is not compared.
 Options put to the user: (A) plain, ULA unchanged, + Next speed (28 MHz) if pacing allows; (B) A + fix the few clash
 cells (HUD bars, condition light, planet / sun icon); (C) B + redraw the viewport on Layer 2 so ships / lines get colour
 (a new line-renderer engine; changes what the user sees). After the rewrite decision, C is no longer limited by memory;
-the open unknowns for C are: is the object (ship type) known where lines are drawn, and does the game erase by XOR redraw
-or by clearing the buffer (decides whether crossing lines need a per-pixel owner model). Next step for C: probe both.
+both unknowns for C are answered (## Probe): the buffer is cleared every frame (no owner model needed) and the ship
+model is in IY while its lines are drawn. Colouring per model / per draw category (planet, sun, stars, lasers, text) is cheap.
 
 ## Hardware checklist
 None yet (no build).
@@ -90,7 +128,9 @@ None yet (no build).
 2026-11-22  stage 0 (intake, all five recordings)  ~2 h  ~60 calls  0 user rounds
 
 ## Lessons
+- [tool nexclash.survey] survey preview.png tints each plot routine's output in its own colour; read the game's colours from a plain `preview` (no --plot), not from the survey sheet (Elite: a mono viewport was reported as coloured). survey.md's Preview heading now says so.
 - [deferred Open: reconsider when stage 1 feasibility shows whether a tail can be placed (--tail + scan --range)] A 128K snapshot with the 48K ROM locked in: `convert` found no place for the start-up tail and nextboot.check models 48K start-up only.
 
 ## Technique use
+- detect.routine-removal: no help: not run; the probe read call paths from the stack instead (2026-11-22)
 - detect.pacing-structure: used: survey flagged pacing (1726 interrupts in 3001 frames); not analysed further yet (2026-11-22)
