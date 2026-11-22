@@ -250,6 +250,11 @@ def rebuild(rec, d, lines):
         o = next(iter(rec['outputs'].values()))['file']
         bad += _run([sys.executable, NEXCLASH, 'convert', z80, '-o', os.path.join(out, o)] + rb.get('args', []), env, lines)
         return bad + _check_outputs(rec, out, lines) + _audit_check(rec, alog, lines, 'rebuild')
+    if rec['inputs'].get('tapes') and not _tapes(rec, d):         # the primary tape set unavailable: no rebuild from the
+        ts0 = rec['inputs']['tapes'][0]['set']                      # snapshot alone passed off as the recipe (Codex T5)
+        lines.append('SKIP %s rebuild: tape set %s (a file the record marks missing)' % (rec['name'], ts0))
+        rec.setdefault('_incomplete', []).append('primary tape set %s missing' % ts0)
+        return bad
     cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80, '--no-record'] + rb.get('args', []) + _tapes(rec, d)
     cmd = [c for i, c in enumerate(cmd) if c != '--no-record' or i == cmd.index('--no-record')]
     for r in rb.get('rzx', []):
@@ -266,6 +271,7 @@ def rebuild(rec, d, lines):
         targs = _tapes(rec, d, k)
         if not targs:
             lines.append('SKIP %s tape set %s (a file the record marks missing)' % (rec['name'], ts['set']))
+            rec.setdefault('_incomplete', []).append('tape set %s not rebuilt (missing)' % ts['set'])    # no stamp (Codex T5)
             continue
         base = [c for i, c in enumerate(cmd) if c != '--tape' and (i == 0 or cmd[i - 1] != '--tape')]
         to = os.path.join(d, 'rebuild_tapes_' + ts['set'])
