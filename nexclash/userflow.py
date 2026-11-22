@@ -290,6 +290,31 @@ def contribution_base(files, base_ref=None):
     return {'kind': 'git', 'commit': base}, originals
 
 
+def new_lessons(files, source):
+    """What a contribution teaches -> [(file, text)]: "## Lessons" bullets of its game notes that the base does not
+    hold (every bullet when there is no Git base to compare), and its shared-lesson files."""
+    import re
+    def bullets(text):
+        m = re.search(r'^## Lessons\s*$(.*?)(?=^## |\Z)', text, re.M | re.S)
+        return [' '.join(x.split()) for x in re.split(r'^- ', m.group(1), flags=re.M)[1:]] if m else []
+    out = []
+    for f in files:
+        if fnmatch.fnmatch(f, 'games/*.md'):
+            old = ''
+            if source.get('kind') == 'git':
+                r = subprocess.run(['git', '-C', ROOT, 'show', '%s:%s' % (source['commit'], f)], capture_output=True)
+                old = r.stdout.decode('utf-8', 'replace') if not r.returncode else ''
+            have = set(bullets(old))
+            out += [(f, x) for x in bullets(open(os.path.join(ROOT, f), encoding='utf-8').read()) if x not in have]
+        elif fnmatch.fnmatch(f, 'docs/kb/lessons/*.json'):
+            try:
+                x = json.load(open(os.path.join(ROOT, f), encoding='utf-8'))
+                out.append((f, '%s: %s' % (x.get('id'), x.get('claim'))))
+            except ValueError:
+                out.append((f, 'not JSON'))
+    return out
+
+
 def cmd_contribute(a):
     files = changed_files(getattr(a, 'base', None))
     excluded = sorted(set(getattr(a, 'exclude', None) or []))
@@ -321,6 +346,8 @@ def cmd_contribute(a):
             'package_version': open(os.path.join(ROOT, 'VERSION')).read().strip()
             if os.path.exists(os.path.join(ROOT, 'VERSION')) else 'git',
             'files': {f: md5(os.path.join(ROOT, f)) for f in keep}, 'reports': [], 'patches': {}}
+    learned = new_lessons(keep, source)
+    meta['lessons'] = [dict(file=f, text=x[:300]) for f, x in learned]
     with zipfile.ZipFile(zname, 'w', zipfile.ZIP_DEFLATED) as z:
         for f in keep:
             z.write(os.path.join(ROOT, f), 'files/' + f)
@@ -340,6 +367,12 @@ def cmd_contribute(a):
                                                if meta['patches'] else ''))
     for f in keep:
         print('  ' + f)
+    print('Lessons added or changed: %d%s' % (len(learned), '' if learned else
+                                              ' (none: say what this game taught in games/<game>.md "## Lessons")'))
+    for f, x in learned[:8]:
+        print('  %s  %s' % (os.path.basename(f), x[:110]))
+    if len(learned) > 8:
+        print('  ... %d more' % (len(learned) - 8))
     print('Upload it: %s' % (c.get('upload_url') or 'see CONTRIBUTING.md'))
     if c.get('pull_requests'):
         print('(GitHub users can open a pull request instead: %s)' % c['pull_requests'])

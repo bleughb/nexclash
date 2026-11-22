@@ -5,10 +5,10 @@
  "limit": "OPTIONAL: where it does not hold, or what is unproven",
  "evidence": [
   {
-   "game": "games/REPLACE_WITH_GAME.md",
+   "game": "games/REPLACE_WITH_GAME.md (or reference, with \"source\": the documentation's URL or title, and level inferred)",
    "text": "REPLACE: what this game saw, with its numbers as its notes give them (at most 300 characters)",
    "quote": "OPTIONAL but needed for review source-checked: 20+ characters copied exactly from that file",
-   "shown_on": "REPLACE: simulator | jnext | cspect | mame | hardware | analysis | unknown"
+   "shown_on": "REPLACE: simulator | jnext | cspect | mame | hardware | analysis | documentation | unknown"
   }
  ],
  "level": "REPLACE: observed | inferred | demonstrated",

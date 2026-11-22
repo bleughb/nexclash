@@ -14,6 +14,11 @@
                                                  and best supported first; -n N (25)
   python tools/knowledge.py lessons --game GAME  shared lessons whose `when` predicates do not rule GAME out
   python tools/knowledge.py near WORD ...        before adding a lesson: the shared lessons most like the text
+  python tools/knowledge.py evidence ID --game GAME --quote "WORDS FROM ITS NOTES" [--text T] [--shown WHERE]
+                                                 add GAME to a shared lesson's evidence (the quote is checked);
+                                                 a lesson with 6 items takes no more: the [kb ID] tag counts the game
+  python tools/knowledge.py duplicates [-n PCT]  maintainers: pairs of shared lessons that share PCT% (60) of
+                                                 the smaller one's words - merge, or retire one
   python tools/knowledge.py recurring [-n N]     maintainers: terms the [local] lessons of N+ games share
                                                  (default 3) and no shared lesson names - sweep candidates
   python tools/knowledge.py gate                 maintainers: lessons whose numbers are not in their sources
@@ -47,6 +52,10 @@ extracted (written from the notes, unchecked) < source-checked (each evidence ga
 every address / number in it is in those notes: `gate` checks that part; an evidence `quote`, the
 notes' own words, is checked to be in the file) < reviewed (a maintainer agrees).
 A lesson that stops being true is not deleted: status "retired" with superseded_by or retired_why.
+Evidence `game` is a games/<game>.md file, or notes / sessions (no file to check), or reference: published
+documentation, with `source` (its URL or title); a lesson with only reference evidence is level inferred
+until a game shows it on a machine. A lesson holds at most 6 evidence items; the games that met it are those
+plus every games/<game>.md that tags it [kb lesson.<name>] (counted, never stored: `promote`, `--facts`).
 `enforced_by` names the shared code that now checks the lesson (nexclash.<module>.<function>, or a file):
 such a lesson is kept for its evidence, and `promote` lists the well-met lessons that have none yet.
 `facts` are measurable properties of a game (machine, interrupts, draw: see FACTS) that a lesson needs;
@@ -74,7 +83,7 @@ RISKS = 'docs/risks.json'
 LESSONS = 'docs/kb/lessons'          # one file per shared lesson: <name>.json holds id lesson.<name>
 TYPES = ('fact', 'pitfall', 'failed-approach', 'method', 'owner-rule', 'open')
 AREAS = ('platform', 'emulator', 'toolkit', 'method', 'design', 'process')
-SHOWN = ('simulator', 'jnext', 'cspect', 'mame', 'hardware', 'analysis', 'unknown')
+SHOWN = ('simulator', 'jnext', 'cspect', 'mame', 'hardware', 'analysis', 'documentation', 'unknown')
 REVIEW = ('extracted', 'source-checked', 'reviewed')
 FACTS = {'machine': ('48K', '128K'), 'interrupts': ('on', 'off'),
          'draw': ('back-buffer', 'cell-copier', 'one-routine', 'direct')}
@@ -83,7 +92,9 @@ NUMBER = re.compile(r'(?:0x|\$|#)?\b(?=[0-9A-Fa-f]*[0-9])[0-9A-Fa-f]{4}\b|\b\d{1
 STOP = set('the a an of to in is and or for it on at by be as that this with not from are was its can must before '
            'after when which one two only than then into does do no any each all so if but has have had will would '
            'where what how why game games'.split())
-ORIGINS = ('notes', 'sessions')        # a shared lesson no games/<game>.md holds: maintainers' notes / working sessions
+ORIGINS = ('notes', 'sessions', 'reference')   # no games/<game>.md holds it: maintainers' notes / working sessions /
+#                                                published documentation (the evidence item names its `source`)
+KBTAG = re.compile(r'\[kb (lesson\.[a-z0-9-]+)')
 TERM = re.compile(r'\b(?:0x[0-9A-Fa-f]{4}|(?=[0-9]*[A-F])[0-9A-F]{4}|[A-Za-z]+_[A-Za-z_]+|[A-Z][A-Z0-9]{3,}|[A-Z][a-z]+[A-Z]\w*)\b')
 
 
@@ -163,6 +174,62 @@ def _games(x):
     return [e['game'] for e in x.get('evidence', []) if e.get('game', '').startswith('games/')]
 
 
+def tagged(read=None):
+    """{lesson id: the games/<game>.md files that tag it [kb lesson.<name>]}."""
+    out = collections.defaultdict(set)
+    for rel in _rels('games/*.md'):
+        for i in KBTAG.findall((read or _read)(rel)):
+            out[i].add(rel)
+    return out
+
+
+def met(x, tags):
+    """The games that met a lesson: its evidence games and the notes that tag it."""
+    return set(_games(x)) | set(tags.get(x.get('id'), ()))
+
+
+def add_evidence(x, game, quote, text=None, shown='unknown', read=None):
+    """Add games/<game>.md to a lesson's evidence -> (changed, message). The quote must be in that file."""
+    rel = game if game.startswith('games/') else 'games/%s.md' % game
+    q = ' '.join((quote or '').split())
+    try:
+        notes = ' '.join((read or _read)(rel).split())
+    except (IOError, OSError):
+        return False, 'no %s' % rel
+    if len(q) < 20 or q not in notes:
+        return False, 'the quote must be 20+ characters copied exactly from %s' % rel
+    tag = 'tag the lesson in %s: [kb %s: what this game adds]' % (rel, x['id'])
+    if rel in _games(x):
+        return False, '%s is already in the evidence of %s' % (rel, x['id'])
+    if len(x.get('evidence', [])) >= EVIDENCE_ITEMS:
+        return False, '%s holds %d evidence items and takes no more; %s - the tag counts the game' % (x['id'], EVIDENCE_ITEMS, tag)
+    if shown not in SHOWN:
+        return False, '--shown: one of %s' % ', '.join(SHOWN)
+    x.setdefault('evidence', []).append(dict(game=rel, text=(text or q)[:EVIDENCE_MAX], quote=q, shown_on=shown))
+    return True, 'added; ' + tag
+
+
+def duplicates(shared_rows, floor=0.6):
+    """Pairs of lessons that hold `floor` of the smaller one's words (claim and search words) -> [(share, a, b)]."""
+    toks = [(x, _tokens(x.get('claim', '') + ' ' + ' '.join(x.get('words', [])))) for x in shared_rows]
+    where = collections.defaultdict(list)
+    for i, (_, tk) in enumerate(toks):
+        for w in tk:
+            where[w].append(i)
+    both = collections.Counter()
+    for ids in where.values():
+        if len(ids) <= 200:                                 # a word 200 lessons share tells no two of them apart
+            for a in range(len(ids)):
+                for b in range(a + 1, len(ids)):
+                    both[ids[a], ids[b]] += 1
+    out = []
+    for (a, b), n in both.items():
+        small = min(len(toks[a][1]), len(toks[b][1]))
+        if small >= 4 and len(toks[a][1] & toks[b][1]) / float(small) >= floor:
+            out.append((len(toks[a][1] & toks[b][1]) / float(small), toks[a][0], toks[b][0]))
+    return sorted(out, key=lambda s: (-s[0], s[1]['id'], s[2]['id']))
+
+
 def _hay(x):
     return ' '.join([x.get('id', ''), x.get('claim', ''), x.get('limit', ''), x.get('card') or ''] + x.get('words', [])
                     + [e.get('text', '') for e in x.get('evidence', [])]).lower()
@@ -232,13 +299,14 @@ def fits(lesson, facts):
     return not any(k in facts and facts[k] != v for k, v in (lesson.get('facts') or {}).items())
 
 
-def briefing(facts, shared_rows, top=25):
+def briefing(facts, shared_rows, top=25, tags=None):
     """The lessons to read first for a game with these facts: most of its facts named, then best shown, then
-    most games. -> (the first `top`, how many fit)."""
+    most games (evidence, and notes that tag it). -> (the first `top`, how many fit)."""
     ok = [x for x in shared_rows if fits(x, facts)]
+    tags = tagged() if tags is None else tags
     ok.sort(key=lambda x: (-sum(facts.get(k) == v for k, v in (x.get('facts') or {}).items()),
                            -LEVELS.index(x.get('level')) if x.get('level') in LEVELS else 0,
-                           -len(set(_games(x))), x['id']))
+                           -len(met(x, tags)), x['id']))
     return ok[:top], len(ok)
 
 
@@ -546,14 +614,21 @@ def check_lessons(cs, preds):
             g = e.get('game') or ''
             if g not in ORIGINS and not (re.fullmatch(r'games/[\w.-]+\.md', g) and os.path.exists(os.path.join(ROOT, g))):
                 bad('evidence game %r: a games/<game>.md file, or %s' % (g, ' | '.join(ORIGINS)))
+            if (g == 'reference') != bool(e.get('source')) or (g == 'reference' and len(e['source']) < 10):
+                bad('evidence %r: reference evidence names its `source` (URL or title); other evidence has none' % g)
             if not e.get('text') or len(e['text']) > EVIDENCE_MAX:
                 bad('evidence for %s needs text of at most %d characters' % (g, EVIDENCE_MAX))
             if e.get('quote') is not None:
                 q = ' '.join(e['quote'].split())
-                if len(q) < 20 or not os.path.exists(os.path.join(ROOT, g)) or q not in ' '.join(_read(g).split()):
+                if g == 'reference':
+                    if len(q) < 20:
+                        bad('evidence for reference: quote must be 20+ characters of the source')
+                elif len(q) < 20 or not os.path.exists(os.path.join(ROOT, g)) or q not in ' '.join(_read(g).split()):
                     bad('evidence for %s: quote must be 20+ characters copied exactly from that file: %r' % (g, q[:60]))
             if e.get('shown_on') not in SHOWN:
                 bad('evidence for %s: shown_on %r (one of %s)' % (g, e.get('shown_on'), ', '.join(SHOWN)))
+        if ev and all(e.get('game') == 'reference' for e in ev) and (x.get('level') != 'inferred' or x.get('review') == 'source-checked'):
+            bad('only reference evidence: level inferred, review extracted or reviewed, until a game shows it')
         for k, v in (x.get('facts') or {}).items():
             if v not in FACTS.get(k, ()):
                 bad('facts %s=%r (%s)' % (k, v, '; '.join('%s: %s' % (a, ' | '.join(b)) for a, b in sorted(FACTS.items()))))
@@ -622,6 +697,20 @@ def selfcheck():
     if covered('NEXLOAD overwrites the boot at 5B00, they say', sh[0]) != 1.0 or covered('nothing alike', sh[0]) != 0 \
             or not resolves('tools.knowledge.resolves') or resolves('tools.knowledge.no_such') or resolves('nexclash.nope.x'):
         bad.append('selfcheck covered / resolves')
+    tg = tagged(lambda rel: '- [kb lesson.b: here too] x') if _rels('games/*.md') else {'lesson.b': {'games/g3.md'}}
+    notes = lambda rel: 'the tail  is at $5B00 and the loader moved it'
+    if not met(sh[1], {'lesson.b': {'games/g3.md', 'games/g1.md'}}) == {'games/g1.md', 'games/g2.md', 'games/g3.md'} \
+            or 'lesson.b' not in tg or 'lesson.a' in tg:
+        bad.append('selfcheck tagged / met')
+    one = json.loads(json.dumps(sh[0]))
+    if add_evidence(one, 'g7', 'tail is at $5B00 and the loader', read=notes)[0] is not True or one['evidence'][-1]['game'] != 'games/g7.md' \
+            or add_evidence(one, 'g7', 'tail is at $5B00 and the loader', read=notes)[0] \
+            or add_evidence(one, 'g8', 'not in the notes at all, no', read=notes)[0] \
+            or add_evidence(dict(one, evidence=[{}] * EVIDENCE_ITEMS), 'g8', 'tail is at $5B00 and the loader', read=notes)[0]:
+        bad.append('selfcheck add_evidence')
+    dup = duplicates(sh + [dict(id='lesson.c', claim='NEXLOAD overwrites 5B00 at boot', words=['printer'])])
+    if [(a['id'], b['id']) for _, a, b in dup] != [('lesson.a', 'lesson.c')]:
+        bad.append('selfcheck duplicates: %s' % [(a['id'], b['id']) for _, a, b in dup])
     if trigger_recall(sh, {'games/g1.md': {'machine': '128K'}}) != (1, 1) or trigger_recall(sh, {'games/g1.md': kf}) != (1, 0):
         bad.append('selfcheck trigger_recall')
     if [t for t, _ in recurring(gl, sh)] != ['0xBD40', 'frame_serial'] or recurring(gl, sh, 4):
@@ -673,6 +762,12 @@ def main(argv):
         print('predicates %d: %s' % (len(preds), ', '.join('%s %d' % kv for kv in sorted(
             collections.Counter(p['evaluation'] for p in preds.values()).items()))))
         print('rows: ' + ', '.join('%s %d' % kv for kv in sorted(kinds.items())))
+        sh, tags = shared(), tagged()
+        print('shared lessons %d: %s; review: %s; met by 1 game %d, 2-4 %d, 5+ %d' % (
+            len(sh), ', '.join('%s %d' % kv for kv in sorted(collections.Counter(x.get('area') for x in sh).items())),
+            ', '.join('%s %d' % kv for kv in sorted(collections.Counter(x.get('review') for x in sh).items())),
+            sum(len(met(x, tags)) <= 1 for x in sh), sum(2 <= len(met(x, tags)) <= 4 for x in sh),
+            sum(len(met(x, tags)) >= 5 for x in sh)))
         twice = sorted(r['number'] for r in rows() if r['type'] == 'backlog' and '~' in r['id'])
         if twice:
             print('WARN BRIEFING C2 numbers given twice (a [backlog C2 #N] tag cannot tell them apart): %s' % twice)
@@ -692,7 +787,7 @@ def main(argv):
         print('lessons: %d shared; %d lesson/game pairs with `facts` and a survey, %d found again by --facts; '
               'lessons that fit a surveyed game: %s to %s' % (len(shared()), n, hit, sizes[0] if sizes else 0, sizes[-1] if sizes else 0))
         return 0
-    if cmd in ('lessons', 'near', 'gate', 'promote', 'stale'):
+    if cmd in ('lessons', 'near', 'gate', 'promote', 'stale', 'evidence', 'duplicates'):
         sys.stdout.reconfigure(encoding='utf-8')
     top = int(rest[rest.index('-n') + 1]) if '-n' in rest else None
     words = [w for i, w in enumerate(rest) if w != '-n' and (i == 0 or rest[i - 1] != '-n')]
@@ -709,7 +804,30 @@ def main(argv):
             if x.get(k):
                 print('  %s: %s' % (k, json.dumps(x[k]) if k != 'card' else x[k]))
         for e in x['evidence']:
-            print('  - %s (%s): %s' % (os.path.basename(e['game']).replace('.md', ''), e['shown_on'], e['text']))
+            print('  - %s (%s): %s%s' % (os.path.basename(e['game']).replace('.md', ''), e['shown_on'], e['text'],
+                                         ' [%s]' % e['source'] if e.get('source') else ''))
+        also = sorted(tagged().get(x['id'], set()) - set(_games(x)))
+        if also:
+            print('  also tagged in %d notes: %s' % (len(also), ' '.join(os.path.basename(g)[:-3] for g in also[:12])
+                                                  + (' ...' if len(also) > 12 else '')))
+        return 0
+    if cmd == 'evidence':
+        opt = {rest[i]: rest[i + 1] for i in range(1, len(rest) - 1) if rest[i] in ('--game', '--quote', '--text', '--shown')}
+        x = dict((x['id'], x) for x in shared(True)).get(rest[0] if rest else '')
+        if x is None or '--game' not in opt or '--quote' not in opt:
+            sys.exit('evidence ID --game GAME --quote "WORDS FROM ITS NOTES" [--text T] [--shown %s]' % ' | '.join(SHOWN))
+        ok, msg = add_evidence(x, opt['--game'], opt['--quote'], opt.get('--text'), opt.get('--shown', 'unknown'))
+        if ok:
+            with open(os.path.join(ROOT, LESSONS, x['id'][7:] + '.json'), 'w', encoding='utf-8', newline='\n') as f:
+                f.write(json.dumps(x, indent=1, ensure_ascii=False) + '\n')
+        print(msg)
+        return 0 if ok or 'takes no more' in msg else 1
+    if cmd == 'duplicates':
+        sh = shared()
+        got = duplicates(sh, (top or 60) / 100.0)
+        for score, a, b in got:
+            print('%3.0f%%  %s\n      %s' % (100 * score, _line(a), _line(b)))
+        print('%d pairs among %d lessons' % (len(got), len(sh)))
         return 0
     if cmd == 'lessons' and words[:1] == ['--facts']:
         name = words[1] if len(words) > 1 else ''
@@ -739,9 +857,10 @@ def main(argv):
         print('%d of %d lessons hold a number their sources do not' % (n, len(shared())))
         return 0
     if cmd == 'promote':
-        for x in sorted(shared(), key=lambda x: (-len(set(_games(x))), x['id'])):
-            if len(set(_games(x))) >= (top or 5) and not x.get('card') and not x.get('enforced_by'):
-                print('%2d games  %s' % (len(set(_games(x))), _line(x)))
+        tags = tagged()
+        for x in sorted(shared(), key=lambda x: (-len(met(x, tags)), x['id'])):
+            if len(met(x, tags)) >= (top or 5) and not x.get('card') and not x.get('enforced_by'):
+                print('%2d games  %s' % (len(met(x, tags)), _line(x)))
         return 0
     if cmd == 'stale':
         now = _read('VERSION').strip()
