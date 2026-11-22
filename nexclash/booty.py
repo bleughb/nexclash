@@ -27,6 +27,7 @@ ALL_SITES = {**SITES, **ROM_SITES}
 ALT_PAGE, LOW_PAGE = 24, 26
 PLAY_PAGE, TITLE_PAGE, FONT_PAGE, TABLE_PAGE = 32, 38, 44, 46
 V_IN = 0x3BF0
+ROOM_CLK = 0x6000                # h_room's copy of the room clock for isr_w (untouched by the game: scan, 5 recordings)
 V_ILEAVE = 0x3E3D
 VECTOR = 0x3BFF                     # I = 3B in a hook or a room
 I_GAME = 0xF4
@@ -492,6 +493,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=64, first
         actual = bytearray(v.mem[0x4000:0x10000])
         for a, _, new in patch.sites:
             expected[a - 0x4000:a - 0x4000 + len(new)] = new
+        expected[ROOM_CLK - 0x4000] = actual[ROOM_CLK - 0x4000]   # the hooks' copy of the room clock (the game never uses it)
         for a in range(max(0x4000, min(sp, got[12]) - 32), min(sp, got[12])):
             expected[a - 0x4000] = actual[a - 0x4000]
         if actual != expected:
@@ -649,15 +651,18 @@ def unit_tests(patch, states, neg=True):
         p = patched(mem)
         isr_w, isr_r = patch.syms['isr_w'], patch.syms['isr_r']
         for in_hook in (1, 0):
-            for game in range(3 if in_hook else 1):
+            for game in range(3):               # a room too: its clock comes from ROOM_CLK, not a fixed 3.5 MHz (C5)
                 st = State(patch)
                 if in_hook:
                     st.nr[0x51] = 24
                     st.page[V_IN - 0x2000] = 1
                     st.page[0x3E30 - 0x2000] = game
+                pm = bytearray(p)
+                if not in_hook:
+                    pm[ROOM_CLK] = game
                 rr = list(regs)
                 rr[24] = isr_w
-                got, v, model = run_hook(patch, st, p, rr, 0xFE69, None, speed=3)
+                got, v, model = run_hook(patch, st, pm, rr, 0xFE69, None, speed=3)
                 if model.nr[7] != game or model.nr.get(0x7F) != 3:
                     c['ISR clock wrong in a hook!'] += 1
                 if any(got[i] != rr[i] for i in (0, 1, 2, 3)):

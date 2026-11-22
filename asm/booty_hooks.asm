@@ -23,6 +23,8 @@ V_IN EQU 0x3BF0                 ; 1 in this page while a hook runs; always 0 in 
 V_ILEAVE EQU 0x3E3D             ; I when a hook leaves: 3B in a room
 I_GAME EQU 0xF4
 V_ROOMSP EQU 0x3E35             ; the game's clock while a room is drawn at 28 MHz
+ROOM_CLK EQU 0x6000             ; its copy in game RAM, where isr_w finds it from either page copy (untouched by the game
+                                ; in every recording: scan of a1, rooms, die, hid, over)
 V_R0 EQU 0x3E36
 PLAY_BANK EQU 16
 TITLE_BANK EQU 19
@@ -212,6 +214,7 @@ h_room:
         ld (V_ILEAVE),a
         ld a,(V_SPEED)
         ld (V_ROOMSP),a
+        ld (ROOM_CLK),a         ; the ISR's room path reads it (the hidden copy cannot hold it)
         ld hl,W_ROOM
         ld a,(0x5BD3)
         or a
@@ -676,13 +679,13 @@ isr_w:  push af
         nextreg 0x7F,a
         ld a,(V_IN)
         or a
-        jr z,.z                 ; a room: V_SPEED and this variable are the hidden copy's; the game's clock is 3.5 MHz, near enough
+        jr z,.z                 ; a room: V_SPEED and this variable are the hidden copy's; the room's clock is in game RAM
         ld a,(V_SPEED)
         cp 3                    ; a hook inside a room latched 28 MHz: the game's clock is V_ROOMSP
         jr nz,.s
         ld a,(V_ROOMSP)
         jr .s
-.z:     xor a
+.z:     ld a,(ROOM_CLK)         ; the game's clock in a room (h_room), not a fixed 3.5 MHz (Codex review C5)
 .s:     nextreg 0x07,a
         pop bc
         pop af
