@@ -58,9 +58,10 @@ pl_next: inc hl
         inc hl
         jr pl_find
 pl_hit: inc hl
-        ld a,(hl)               ; the figure: 0 Sam, 1 Monty, 0xFF a guard (from IX)
-        cp 0xFF
-        jr nz,pl_fix
+        ld a,(hl)               ; the figure: 0 Sam, 1 Monty, 0xFF a guard drawn, 0xFE a guard erased (both from IX)
+        cp 0xFE
+        jr c,pl_fix
+        ld c,a                  ; C = 0xFE / 0xFF (the caller's BC is read back from the stack below)
         push ix
         pop hl
         ld de,-GUARDS
@@ -82,8 +83,15 @@ pl_hit: inc hl
         ld a,(ix+6)
         and 7
         ld d,a                  ; D = the guard's ink
+        ld a,c
+        cp 0xFE
         ld a,e
-        jr pl_go
+        jr nz,pl_go
+        add a,a                 ; the gun caught it: the game XORs it off the screen, so its sprites go too
+        add a,a
+neg_kill:
+        call hide4
+        jr pl_none
 pl_fix: ld d,7                  ; Sam and Monty: white
 pl_go:  add a,a
         add a,a                 ; A = first sprite 4f
@@ -141,8 +149,8 @@ mov_tab:                        ; return address (call site + 3), figure
         db 0xFF
         dw 54900
         db 0xFF
-        dw 52381
-        db 0xFF
+        dw 52381                ; the gun: the guard's image XORed off (old y 195), then marked dead
+        db 0xFE
         dw 0
 
 ; ---- 55506 LD HL,16384 -> JP e_cls: the screen clear ------------------------------------------------------------

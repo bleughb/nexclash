@@ -21,7 +21,8 @@ GUARDS = 24962
 NSPR, NFIG = 20, 5
 PLOT, PLOT_RET, PLOT_END = 54574, 54577, 54629      # the plotter; its XOR writes lie in 54574..54628
 PAINT, PAINT_END = 54744, 54781
-MOVERS = {56133: 0, 55676: 0, 55142: 1, 55749: 1, 54958: None, 54900: None, 52381: None}   # return address: 0 Sam, 1 Monty, None a guard
+MOVERS = {56133: 0, 55676: 0, 55142: 1, 55749: 1, 54958: None, 54900: None, 52381: 'erase'}  # return address: 0 Sam, 1 Monty,
+# None a guard drawn, 'erase' a guard the gun caught (its image XORed off with old y 195, then marked dead)
 RECORD = 'monty_is_innocent'
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -50,9 +51,13 @@ def is_monty_is_innocent(snap):
         return False
     sig, a = bytes.fromhex(sg['bytes']), sg['addr']
     banks = getattr(snap, 'banks', None)
-    if banks is not None:
+    if banks is not None:                       # the 48K game only: build() keeps the printer buffer (48K in the converter)
+        if getattr(snap, 'is128', False):
+            return False
         mem = bytes(banks[5]) + bytes(banks[2]) + bytes(banks[0])
         return mem[a - 0x4000:a - 0x4000 + len(sig)] == sig
+    if getattr(snap, 'machine', '48K') != '48K':
+        return False
     return bytes(snap.memory[a:a + len(sig)]) == sig
 
 
@@ -300,19 +305,20 @@ def event(patch, pc, get, R, ns, alt, psite, stop=None):
 
 
 def figure_of(get, R):
-    """At the plotter's entry: (figure, ink) of the figure being drawn, or None (an icon, an item, the ending)."""
+    """At the plotter's entry: (figure, ink, erased) of the figure being drawn, or None (an icon, an item, the
+    ending). erased: the gun caught a guard and the game XORs its image off the screen."""
     from skoolkit.simulator import IXh, IXl
     sp = R[12]
     ret = get(sp) | get((sp + 1) & 0xFFFF) << 8
     if ret not in MOVERS:
         return None
     f = MOVERS[ret]
-    if f is not None:
-        return f, 7
+    if f not in (None, 'erase'):
+        return f, 7, False
     k = (R[IXh] << 8 | R[IXl]) - GUARDS
     if not (0 <= k < 24 and k % 8 == 0):
         return None
-    return 2 + k // 8, get(GUARDS + k + 6) & 7
+    return 2 + k // 8, get(GUARDS + k + 6) & 7, f == 'erase'
 
 
 def expected(get, R):
@@ -322,9 +328,9 @@ def expected(get, R):
     fi = figure_of(get, R)
     if fi is None:
         return None
-    f, ink = fi
+    f, ink, erased = fi
     x, y = R[C], R[B]
-    if y > 191:
+    if y > 191 or erased:
         return f, []
     img = ((R[H] << 8 | R[L]) + 144 * ((x >> 1) & 3)) & 0xFFFF
 
@@ -387,6 +393,9 @@ def verify(patch, rzx_path, stop=None, progress=None, collect=0):
             h.resume.add(h.R[24])
             h.resume.add(prev_pc)
 
+        def on_desync(h, *a):
+            h.fail('replay desynchronised', a[:2])
+
         def on_frame(h, n):
             h.frame = n
             if progress and n % 2000 == 0:
@@ -444,7 +453,8 @@ def verify(patch, rzx_path, stop=None, progress=None, collect=0):
                         states.append((pc, list(h.R), bytes(h.get(a) for a in range(65536))))
                     if want is not None:
                         f = want[0]
-                        if h.get(24959) == 195:                 # first draw: nothing of this figure on the screen
+                        erased = figure_of(h.get, h.R)[2]
+                        if h.get(24959) == 195 and not erased:  # first draw: nothing of this figure on the screen
                             h.lay[f] = {}
                             h.lost.discard(f)
                     sp = h.R[12]
@@ -537,6 +547,26 @@ def unit_tests(patch, states):
                 if bad and c['  example'] < 3:
                     c['  example'] += 1
                     c['  ink=%d x=%d y=%d: %s' % (ink, x, y, bad[:2])] += 1
+    for _, R, mem in states[:8]:                       # the gun's call (52381): that guard's four sprites hidden
+        for k in range(3):
+            m = bytearray(mem)
+            R2 = list(R)
+            sp = R2[12]
+            m[sp], m[sp + 1] = 52381 & 255, 52381 >> 8
+            ix = GUARDS + 8 * k
+            R2[IXh], R2[IXl] = ix >> 8, ix & 255
+            ns = NextState()
+            for s in range(NSPR):
+                ns.attr[s] = [9, 9, 0, 0xC0 | s, 0x80]
+            fl, _, _ = event(patch, PLOT, m.__getitem__, R2, ns, alt, psite)
+            want = expected(m.__getitem__, R2)
+            f = 2 + k
+            bad = list(fl) + (['expected() did not hide guard %d' % k] if want != (f, []) else []) + \
+                ['guard %d sprite %d left shown' % (k, 4 * f + j) for j in range(4) if ns.visible(4 * f + j)]
+            c['gun hook' + (' FAIL!' if bad else ' ok')] += 1
+            if bad and c['  example'] < 3:
+                c['  example'] += 1
+                c['  gun k=%d: %s' % (k, bad[:2])] += 1
     for _, R, mem in states[:8]:
         ns = NextState()
         for s in range(NSPR):
@@ -563,7 +593,8 @@ def negative_patches(patch):
     import copy
     no_paint = copy.copy(patch)
     no_paint.sites = [s for s in patch.sites if s[0] != 54766]
-    return [('sprites at the wrong row', _broken(patch, 'neg_y', b'\x3C')),     # LD B,A made INC A: B keeps y
+    return [('the gun leaves the guard shown', _broken(patch, 'neg_kill', b'\0\0\0')),
+            ('sprites at the wrong row', _broken(patch, 'neg_y', b'\x3C')),     # LD B,A made INC A: B keeps y
             ('ink lost in the pattern upload', _broken(patch, 'neg_pix', b'\xE6\x00')),
             ('plot hook never shows the sprites', _broken(patch, 'neg_fig', b'\0\0\0')),
             ('clear screen leaves the sprites', _broken(patch, 'neg_cls', b'\0\0\0')),
@@ -593,8 +624,19 @@ def auto(a, z80, name, out, say):
     say('Engine    : monty_is_innocent (one XOR plotter, sprites as an overlay by caller, painter store off)')
     ok, patch = build(z80, out, name, say)
     for r in list(a.rzx or []):
-        c, ex = verify(patch, r, stop=getattr(a, 'quick', None))
+        c, ex, states = verify(patch, r, stop=getattr(a, 'quick', None), collect=8)
         fails = {k: v for k, v in c.items() if k.endswith('!')}
+        if not c['figure checks']:
+            fails['no figure plot reached: nothing verified'] = 1
+        u = unit_tests(patch, states)
+        fails.update({k: v for k, v in u.items() if k.endswith('FAIL!')})
+        missed = [name for name, q in negative_patches(patch)
+                  if not ({k for k, v in verify(q, r, stop=min(getattr(a, 'quick', None) or 1500, 1500))[0].items() if k.endswith('!')}
+                          or any(k.endswith('FAIL!') for k in unit_tests(q, states[:2])))]
+        if missed:
+            fails['negative controls not caught: %s' % ', '.join(missed)] = len(missed)
+        say('Units     : %s; negative controls: %d of %d caught' % (
+            ', '.join('%s %d' % (k, v) for k, v in sorted(u.items()) if not k.startswith('  ')), len(negative_patches(patch)) - len(missed), len(negative_patches(patch))))
         ok = ok and not fails
         say('Verify    : %s  %d frames, %d segments, %d plots, %d figure plots, %d screen clears, %d painter calls, '
             '%d figure checks, %d sprite pixels; %d attribute bytes not painted -> %s' % (
