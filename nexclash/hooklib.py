@@ -681,7 +681,8 @@ SPEED_LEGACY = {
     'inferno_hooks.asm', 'jetpac_hooks.asm', 'matchday_hooks.asm', 'matchday_v21_hooks.asm', 'new_zealand_story_hooks.asm',
     'olli_and_lissa_2_hooks.asm', 'olli_and_lissa_3_hooks.asm', 'olli_and_lissa_hooks.asm', 'quazatron_hooks.asm',
     'rainbow_hooks.asm', 'rainbow_z80n_hooks.asm', 'robin_of_the_wood_hooks.asm', 'trueno_hooks.asm', 'wally_hooks.asm',
-    'altered_beast_hooks.asm', 'jsw_hooks.asm'}       # the last two: published 2026-11-21, landed in main after the audit
+    'altered_beast_hooks.asm', 'jsw_hooks.asm',
+    'arkanoid_hooks.asm', 'bomb_jack_hooks.asm', 'manic_miner_hooks.asm'}   # published 2026-11-21, landed with the published-games batch       # the last two: published 2026-11-21, landed in main after the audit
 _SPEED_RE = re.compile(r'^\s*(?:[A-Za-z_.][\w.]*:?)?\s*nextreg\s+(?:0x0?7|\$0?7|7|07h)\s*,\s*([^\s;]+)', re.I)
 
 
