@@ -36,7 +36,8 @@ lines below describe main; the PRs and specnext reference/r_type/intake (and the
 handover R_TYPE_HANDOVER.md) describe the rest. First: hardware test of #99 and banks 48-62 on a
 1 MB Next. Techniques: `patch.hybrid-display-replacement`, `patch.layer2-half-pixel-scroll`,
 `patch.scenery-edge-masks`, `patch.figure-glide`, `optimise.flash-palette-offset`,
-`patch.copper-palette-bands` (no record yet: stage 6).
+`patch.copper-palette-bands`, `patch.art-from-own-unpacker`, `patch.optional-front-end-in-free-banks`,
+`patch.loading-screen-from-tape` (record without techniques yet).
 Route (owner goal 2026-11-15: hardware scroll + sprites, hard to tell from the original; slowdown
 dropped; equivalence "extremely close"): the original game runs unchanged as the logic; scenery is
 drawn on Layer 2 and hardware-scrolled; figures are hardware sprites; HUD/stars stay on the ULA.
@@ -67,43 +68,16 @@ Mechanics, details in reference continuation/history-2026-11.md:
 Next: play through a level change (untested in play); outline companion weapons / pickups (IDs from
 the identification sheets); use registry layers in publication; then stage 6 promotion (record,
 engine, profile, retire the parked cell-recognition route, full-recording verification, release).
-Animated spec-screen intro (2026-11-20, owner hardware PASS on a 2 MB Next): see "Spec-screen intro" below;
-after rebuilding the game, rerun its make step with the new game NEX.
+Animated spec-screen intro: built here since 2026-11-22 (r_type_intro.py); RC1's: "Spec-screen intro".
 Setup and tests: specnext reference r_type/intake/tools/README.md (duplicate the owner's Windows
 setup or use the /workspace layout; emulator order CSpect then JNext; CSpect's control server needs
 its paid Builder tier). Before pushing prototype changes run smoke.py and compare.py, plus
 gameover.py when titles, game over or speed change; each prints PASS / FAIL, exit 1 on failure.
 
 ## Spec-screen intro (2026-11-20)
-A separate front end, not part of the l2scroll build: the technical-specification screen redrawn with a
-new 3D R-9 model (top, front, side views), then the game. Owner-tested on a real 2 MB Next as
-R-Type_SpecNext_V1.2.NEX: screen, animations, joystick view and the load into the game all work.
-- Sources (outside specnext, owner's r9-wireframe folder): `r9-wireframe/r4/next_spec/specanim.asm`
-  (program; `-DALLDIR -DGAME` for this build), `make_spec_next.py` (ship pictures, text list, Layer 2
-  title/logo; run from r4 with PYTHONPATH=.), `make_rtype_spec.py [GAME.nex]` (assembles and appends the
-  game; default C:\1NEXT\rtype_builds\rtype_ship.nex, only read). Output `next_spec/RTYPESPC.NEX`
-  (2.5 MB); any file name works. Details and history: r4/HANDOVER.md.
-- Flow (RC1): the tape loading screen (NEX SCR, "no palette" flag) for at least 4 s (page checksums;
-  blue border = a page failed), fade, then the ships turn; the stick view (33x33 views + flips) once.
-  Today's flow: Next session.
-- Ships are stored pictures (the model needs a per-pixel depth test; live drawing is not feasible),
-  packed 1-bit, built in page 220 and copied to the ULA screen in the bottom border. Title, logo and
-  text on Layer 2 in front. Pages used: 18-23 Layer 2, 24-219 pictures, 220 work, 222 loader.
-- Game load: the NEX keeps its file open (`savenex cfg 0,nexhandle,...`); the game's banks follow
-  the intro in the same file. The loader runs from A000 (bank 2) in the standard 128K layout (see
-  Lessons), reads 8K at a time into 8000 and copies each piece to its page; the game's banks 0-7 wait
-  in pages 180-195 until the file is closed. Code planted at 4000 in the game's (blanked) screen puts
-  bank 2 in place, pages the entry bank and jumps to the game's PC/SP. Next register 8E is restored.
-  Border while loading: yellow open, cyan/green read, white place; red = open failed; red/yellow
-  flashing = read failed.
-- Changes to the copy of the game: the `call spec_hold` in the hook page (bank 12, found by the bytes
-  ED 92 05 C1 F1 CD) is NOPped, so the game starts at its logo animation (no original spec screen or
-  showpiece); the original spec picture in bank 5 is blanked. make_rtype_spec.py asserts these are
-  found once and that the game uses no page from 180 up; a changed hook page needs the pattern updated.
-- Checks (CSpect): ship pictures pixel-exact against the model's renderer at stops in every state;
-  all 100 game pages byte-exact at the jump to the game (r4/scratch_v19/verify_load.py); title and
-  level 1 play.
-
+RC1's standalone front end (R-Type_SpecNext_V1.2.NEX, owner hardware PASS; owner's r9-wireframe
+sources, its own loader reading the game from its file): reference continuation/history-2026-11.md.
+Since 2026-11-22 the intro is built here (Next session; card patch.optional-front-end-in-free-banks).
 ## Inputs
 The attached TAP is a tape, not a snapshot. The build start state was extracted from the
 attached RZX with `nexclash.py rzx extract`, as MAINTAIN specifies. Originals and derived
@@ -196,6 +170,10 @@ checks belong to the eventual sprite build; no hardware result is claimed.
 - detect.routine-removal: helped: identifies the required dependency experiment; existing probe is 48K only.
 - detect.buffer-layout-producer: helped: separated final copier, nonlinear source cells and non-pixel holes.
 
+## Open
+- .nxc loading screen: nexclash auto / nxcout to set INF1 build_screen=nex on a build with a loading
+  screen, once jattree/nxc PR 9 is merged and nxc.py is re-vendored (card patch.loading-screen-from-tape).
+
 ## Lessons
 - [card patch.layer2-half-pixel-scroll §Use / do not use] Scenery stepping 1 px per 4 frames judders on smooth
   sprites; Layer 2 640x256 scrolls only whole pixels, so two screens (one half a pixel on) halve it.
@@ -217,26 +195,11 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   half-edited layout gave a false slowdown on levels 2-8, cleared by a worktree bisect.
 - [local: the original's pace] The recording averages 4.35 frames per update (28% 3, 34% 4, 22% 5);
   the title alternates 2 and 3. At 28MHz every update took 3 (45% fast): PACE 4, title 4.
-- [local: total budget first] Live costs14.176ms legacy display and9.961ms identity/bridge. Consumer/native-credit budget precedes replacement; gross CPU/waits are not free. See live-budget-review.md.
-- [local: native code modes] Initial BG changes plot destination8EBF, RET condition8F10 and four clip operands; native flip table01->00 exposes compiler mismatch. Preserve live modes/table and original-time/R credit; see background-consumer-review.md.
-- [local: packed source lifetime] Uniqueness is not immutability. Validate packed bytes/attributes/skip markers per invocation; unknown art/generation needs native fallback. Dispatch/invalidation remain open.
-- [local: book comparison]96-byte SCROLL6 matches8914. Binary follow-up identifies owner/dirty maps with IRQ readers and independent BG stream;24 native initializations pass. Ingest labels alone were insufficient.
-- [local: review of encoded pause sites] A test must inspect converter output: separately emitting the right CALL masked the builder's wrong JP. Actual-key testing also found repeated pause calls; save/fold once per pause.
-- [local: timing credit includes its cost] Broad timer windows counted wrapper work as original producer time and regressed pace. Cell credit is checked against complete original/hook CPU costs; retain fractional units and remeasure natural play.
-- [local: hardware text tile route] Native1bpp tiles remove ZX-to4bpp expansion while preserving exact visible colours; per-pixel painting still needs a separately measured override path.
-- [local: clone entry phase] Fixed170 waiting added9.80%; guard below210/from249. Current peak pace is recorded above.
-- [local: empty pattern quadrants] Demonstrated: ordinary-DMA zero fill avoids per-cell blank writes; live23-sprite preparation47.687ms including native IRQs, down from66.915ms.105-sprite component also passes.
-- [local: source-hole oracle] Demonstrated: post-IRQ sentinel expectations must count IRQs through the wait to the tail transition; broad restoration loses the sentinel and the negative fails.
 - [doc docs/CHECKS.md §Setup] Observed in JNext1.2.0: execute-triggered JNS requests save at a frame boundary. Exact hook ABI/RAM tests use execute-time logs/dump_mem instead.
 - [tool nexclash.isrinfo] Expose data-read/write address sets in the API, retaining text output;
   this distinguishes safe pixel scratch from ISR-mutated attributes and shadow-slot variables.
-- [local: publication timing] Native beeper IRQs break CPU row schedules; stage copier/ULA and non-display state before IRQ-free DMA publication.
 - [tool nexclash.survey] Observed: a CALL as a routine's first instruction was never tracked;
   R-Type 8979 -> 8842 exposed the false coverage gap. Removed the early return and added a golden check.
-- [local: tile plotters] Observed: screen-writer ranking identifies the refresh, not the figure
-  plotters; scanning its source buffer locates the four tile drawers. No removal-safety claim yet.
-- [local: credits share an enemy slot] Independent review: peak owner-grid scene includes THANK-YOU
-  text. Graphic identity, not global owner exclusion, gives105 sprites in the full corrected census.
 - [local: wrong root cause recorded] A reset after patching C027 was first put down to a "game load
   check" and noted as "never patch bank 0"; the real cause was the 7FFD remap below. Confirm a cause
   with a trace (PC and MMU at the reset) before writing it down.
@@ -254,13 +217,27 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   border). `savenex cfg <border>,<address>` keeps the file open and writes its handle there.
 - [local: draw order beats identity] Replacing the picture (scroll on Layer 2, sprites keyed by the
   plotter call) cost less than recognising the original's cells every update, and gave hardware scroll.
-- [local: art without storing it] The figure corpus held graphics bits; the engine stores level /
-  address / ink only and rereads attribute + bits from the game's own unpacker run on the player's
-  snapshot (exact: SHA-256 of the ten images, corpus equal). Check unpacker output before relying on it.
-- [local: the snapshot is the picture] Rtype.z80's own screen is the specification screen, pixel for
-  pixel: the intro's title / logo / text and the showpiece's start picture need no side input.
-- [local: trainers behind an intro] .nxc trainers poke banks the NEX header lists; a NEX whose own
-  loader reads the game's banks from the file (R-Type intro) cannot take them: needs a hook or variant.
+- [card patch.art-from-own-unpacker §Use / do not use] The figure corpus held graphics bits; the engine
+  stores level / address / ink only and rereads attribute + bits from the game's own unpacker run on the
+  player's snapshot (exact: SHA-256 of the ten images, corpus equal). Check unpacker output first.
+- [card patch.art-from-own-unpacker §Use / do not use] Rtype.z80's own screen is the specification
+  screen, pixel for pixel: the intro's title / logo / text need no side input.
+- [card patch.art-from-own-unpacker §Verification] Demonstrated: the prototype's asm moved unchanged
+  (asm2profile output byte-identical) and r_type.py's build = RC1's (a52841b4): port first, then change.
+- [card patch.optional-front-end-in-free-banks §Use / do not use] .nxc trainers poke banks the NEX
+  header lists; RC1's intro read the game's banks from its own file, so no .nxc and no trainers. In
+  free banks of the same build (code bank 8, 90 pages) it is a toggle and the 4 trainers apply.
+- [card patch.optional-front-end-in-free-banks §Failure lookup] nxc toggles need builds of the same
+  length: the intro's banks are in both builds, the option only changes the stub's start.
+- [card patch.loading-screen-from-tape §Use / do not use] Observed: Rtype.z80 holds no loading screen
+  (0 of 107 64-byte pieces); the tape's SCREEN$ (offset 247) is an MD5-checked side input. add-dump
+  of Rtype.tap refused (79,829 bytes not on it): level blocks load at C4AE, stored converted.
+- [card patch.loading-screen-from-tape §Failure lookup] Owner's Next 2026-11-22: the new .nxc with the
+  old /dot/NEXCLASH showed noise (`nex` read as offset 0); with both copied the screen and dots work.
+- [deferred Open: reconsider when jattree/nxc PR 9 is merged] auto does not set build_screen=nex;
+  the vendored nxc.py lacks the key until then (set by hand: nxc.py set ... build_screen nex).
+- [local: owner removals by a jump] "No high-resolution picture": spec_hold's reveal call is jumped
+  over (jr nz -> jr, found by its bytes), so the code stays and the change is one byte.
 
 ## Friction
 - reuse: [none: existing survey, scan, preview and census tools provided the investigation paths]
@@ -271,6 +248,9 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   in specnext/reference/r_type/intake; none added as an untested shared toolkit probe.
 
 ## Stage log
+- 2026-11-22 Catalogue: 3 candidate cards (unpacker art, front end in free banks, tape loading
+  screen); RC1 intro section + 13 parked-route lessons to reference continuation/history-2026-11.md.
+  Owner's Next: .nxc loading screen at ENTER (jattree/nxc PR 9) works.
 - 2026-11-22 Stage 6 engine (branch add-r-type): r_type.py + intro build reproduce RC1 byte for byte
   from the snapshot and two side inputs; record unverified; cheats open (intro loader).
 - 2026-11-20 Spec-screen intro in front of the game (R-Type_SpecNext_V1.2.NEX): 3D R-9 views,
