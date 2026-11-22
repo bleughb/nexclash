@@ -356,7 +356,7 @@ Toolkit structure
 22. nexpatch (contributor: an HTML page rebuilding the .nex from the user's .z80): the .nxc (C4) does it; decision pending.
 23. `selftest.py --affected` is not run automatically on each PR (CI would need the private
    references as a secret); a maintainer runs it before merging.
-46. Tape sets: no .nxc from `auto` (nxcout skips it); wanted: nxc.py make --also --start.
+46. Tapes/multiloads: no .nxc from `auto`; by hand: docs/NXC_PATCHES.md (Cisco Heat).
 47. `patch` finds only NAME_sprites.nex: no .nxc for Alien 8 (NAME.nex, NAME_enhanced.nex).
 
 Hardware to confirm

@@ -80,3 +80,10 @@ User-requested catalogue additions; the v3.4 schema and pilot workflow stay froz
 | Investigation scripts in scratch folders | tools/probes/ with invocation, limits, a smoke test in `selftest --tools` | Reproducible, promotable to a shared command |
 | New: patch.attribute-shadow (candidate); revised: patch.xor-overlay-keep-ula r2, detect.gameplay-screen-readers r2 | | Cauldron Q8; the overlay's other-writers failure; compiled-BASIC readers, `scan --writers` lists readers |
 | New: patch.layer2-half-pixel-scroll, patch.scenery-edge-masks, patch.figure-glide, patch.copper-palette-bands, optimise.flash-palette-offset (candidates) | | R-Type hybrid display (specnext PRs #97-#99, 2026-11-17); glide generalises Quazatron's |
+
+## Cisco Heat v1.2 (2026-11-22)
+
+| Before | After | Why |
+|---|---|---|
+| - | New: patch.ink-rectangle-sprites (candidate) | The car coloured by an ink rectangle, as sprites clipped to it (Cisco Heat v1.2, on a Next) |
+| verify.update-locked-pace r1 | r2: builds under a percent apart compared each with the original per update, two seeds | One seed's spread hid a 1.2% loss from line-clock reads in JNext |

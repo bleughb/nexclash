@@ -81,13 +81,9 @@ Start with: the hardware checklist on a Next.
   - Flicker, frames 1400-1499 (306a7747, the build before the interrupt check, same pictures): 48 picture changes against 11, no out-of-step, vanished or transient frames.
 
 ## NXC patch
-- Owner's request (2026-11-22): add the game to the NXC repo (jattree/nxc), the loading screen at ENTER, cheats, the fidelity options as menu choices, and no hold of the loading screen after loading.
-- Target: the player's tape (Ciscoheat.tap, MD5 7cf4c478, ZXDB 968), start state cisco_heat.z80, `--tape-bank 8,9,11`: the stage blocks come from the tape; 3,096 bytes of the start state in sites are not on it. The patch carries the stub, the hook page, the alt ROM, 101 bytes of bank 13 and the header's loading screen (SCR1).
-- Base: Patch(hold=False): boot_frames 0, no hold (the loader shows the screen from ENTER: INF1 build_screen 670, the SCREEN$ data in the tape). Toggles (kind 3, any together, --no-cap): 25 pictures a second (fps50=False, 2 bytes), Original picture rate (smooth=False, v_en), Original car colours (car=False: c_on 0, the fast paths kept). Each the same length, distinct bytes.
-- Trainers: the archive .pok's Infinite Time (0xA008 SUB 1 -> SUB 0: the whole seconds hold). No Time Bonus left out (skips the stage-end bonus loop; no help).
-- Checks: nxc.py rebuilds each build's MD5 from the tape; the real loader on the Z80 harness: menu, the tape's screen before the game check, each toggle, all three, trainer + toggle, fix off; V2 with car=False (stage 1, 33/33) and fps50=False (stage 3, 37/37).
-- Build: the pipeline in C:\1NEXT\cisco_heat\work\nxc, outside the repo (nxcb.py builds ch_*.nex, mkpatch.py packages).
-xc (nxcb.py builds ch_*.nex, mkpatch.py packages).
+- Owner's request (2026-11-22): the game in jattree/nxc (1.0, 7d9800a), the screen at ENTER, cheats, the options on the menu, no hold after loading. Method: docs/NXC_PATCHES.md.
+- Target Ciscoheat.tap (7cf4c478, ZXDB 968), start cisco_heat.z80, `--tape-bank 8,9,11`; build_screen 670. Base Patch(hold=False); toggles 25 pictures a second (fps50=False), Original picture rate (smooth=False), Original car colours (car=False: c_on 0, fast paths kept); trainer Infinite time (0xA008 SUB 1 -> SUB 0).
+- Checks: each variant's MD5 from the tape; the loader on the Z80 harness (menu, screen, toggles, trainer, fix off); V2 car=False (stage 1, 33/33), fps50=False (stage 3, 37/37).
 
 ## Hardware checklist
 v1.1 runs on a real Next (owner, 2026-11-22). v1.2 to check: the car red with no clash, also in curves, on hills, in a crash and after a stage load; the picture rate; the loading screen skipped by a key. And, as before: start-up; each stage load (1-5 and the end) with no tape; smooth road motion at speed and in curves; music tempo; the checkpoint and "LOADING STAGE" messages intact (w_go's MMU0 after 7FFD); crash and time-out; the pace against a real 128K if one is to hand.
@@ -98,7 +94,9 @@ v1.1 runs on a real Next (owner, 2026-11-22). v1.2 to check: the car red with no
 - patch.restore-speed: used: HLIB_SPEED_IN / OUT at h_upd.
 - patch.iff-safe-read: used: h_load (HLIB_IFF_DI / EI).
 - patch.preserve-r: used: boot only (delta -23); in play R is a verification exception.
-- verify.update-locked-pace: helped: the pace tool's lockstep and penalty found the +3 frames an update.
+- verify.update-locked-pace: helped: the pace tool's lockstep and penalty found the +3 frames an update; per update on two seeds it found car_note's 1.2% (v1.2).
+- optimise.pattern-cache: used: 6 fixed steering images preloaded, 7 replaceable 12-pattern slots for the rest.
+- patch.ink-rectangle-sprites: used: written from this game (v1.2).
 
 ## Open
 - A whole 50 needs a spec frame's work under about 250 lines (now about 323 plus the copy).
@@ -119,16 +117,21 @@ v1.1 runs on a real Next (owner, 2026-11-22). v1.2 to check: the car red with no
 - [local: interrupt replay] V1 replays interrupts by game-instruction count; a fast path skips game instructions, so V1 runs with fast paths off and each fast path has its own differential test (captured calls, fast against the game's code, RAM and registers).
 - [local: read the flags, not the names] The blit ORs when 0x5BAB is 0 and stores when it is set (JR NC on the carry made from it): the first fast path had it inverted; the differential test caught it on its first run.
 - [local: wait_safe at the start] A spec frame's start waits for an early line of the frame (wait_safe); the fit check counted only the restore's wait, so a 50-cadence frame started late and ended 59 lines past the deadline (auto, ciscoheat4 case 14). spec_start counts it.
-- [local: clock reads in JNext] Reading the line clock (NR 0x1E/0x1F) in the paced update cost far more in JNext than the simulator models: four reads an update made the game 1.2% slower there although the simulator showed 0.2%. The common path credits a counted cost instead; JNext calibrates it (13 -> 32/16 line a call), as the pace constant was.
-- [local: pace comparisons] Small pace differences between builds are within one run's spread; compare each build with the original per update over the updates in lockstep ("core", outliers listed), on two input seeds.
+- [doc docs/NEXT_REGISTERS.md §NextRegs] Reading the line clock (NR 0x1E/0x1F) in the paced update cost far more in JNext than the simulator models: four reads an update made the game 1.2% slower there although the simulator showed 0.2%. The common path credits a counted cost instead; JNext calibrates it (13 -> 32/16 line a call), as the pace constant was.
+- [card verify.update-locked-pace §Probe and stop] Small pace differences between builds are within one run's spread; compare each build with the original per update over the updates in lockstep ("core", outliers listed), on two input seeds.
+- [card patch.ink-rectangle-sprites §Use / do not use] A figure the game colours by OR-ing ink into a cell rectangle (the car) became sprites of the game's own pixels, coloured from the ULA palette, mirrored by the X flag, clipped to that rectangle: no clash, the shadow black as in the original (43 states, 111 frames exact; hardware: owner).
+- [doc docs/NXC_PATCHES.md §1. Build options as menu toggles] One byte per build option makes each variant a valid NXC toggle (same length, distinct bytes: 25 fps 2 bytes, smooth 1, car 1); verified per variant.
+- [doc docs/NXC_PATCHES.md §2. A tape target] A multiload's stage blocks come from the player's tape with `--tape-bank`: 61,044 bytes from the tape, 3,096 carried; build_screen is the SCREEN$ offset + 3.
+- [doc docs/NXC_PATCHES.md §4. Cheats] The archive .pok is at the zxdb path on Spectrum Computing; read and simulate each POKE: No Time Bonus only skips the stage-end bonus (90 passes, 17.07 s converted without it; 1, none with it), so it is left out.
+- [local: Machine.run] run(0x8BE1) returns at once when already at the stop: step one instruction between updates.
 - [deferred Open: reconsider when a second game uses run-ahead frames or a hardware run confirms it] Run-ahead in-between frames (save the write set, run the next update with a fraction of its step, present, restore) as a technique card.
 
 ## Friction
-- reuse: [none: survey, z80tonex, nextboot, asm2profile, pace and flicker did their parts unchanged]
+- reuse: [doc docs/NXC_PATCHES.md §5. Text and order] The NXC chain (make, set, help, import-pok, nfo) was scripted from scratch; the steps and their order are in the doc (v1.2: survey, z80tonex, asm2profile, pace, flicker unchanged).
 - retries: [local: each round found a distinct engine bug, logged in Lessons] Pace took four rounds (copy in D, flip wait in D, the 7FFD/MMU0 bug, JNext calibration).
-- environment: [local: quoting in this session's shell, CLAUDE.md already warns] Shell heredocs with backslashes and quotes failed several times; scripts went through the Write tool.
+- environment: [doc docs/NXC_PATCHES.md §6. Checks before committing] The nxc harness needs the z80 package: on the owner's PC only Python 3.13 has it. Before: [local: quoting in this session's shell, CLAUDE.md already warns] Shell heredocs with backslashes and quotes failed several times; scripts went through the Write tool.
 - hand-rolled: [local: JNext phase probes] pace.script plus `on execute` logs per phase; dropped after use.
-- scratch: [local: dropped] t1-t12, jn1-jn3d, vall.py in the session scratchpad.
+- scratch: [local: dropped] t1-t12, jn1-jn3d, vall.py, trn/trn2 (POKE checks), test_ch_loader.py (loader harness; its method is in docs/NXC_PATCHES.md 6) in the session scratchpad; nxcb.py and mkpatch.py kept in the owner's work folder.
 
 ## Stage log
 - Stage 0: six recordings surveyed; same engine in every stage, multiload.
