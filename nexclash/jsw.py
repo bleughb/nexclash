@@ -277,7 +277,7 @@ def recolour(nex, cmap):
 class NextState:
     def __init__(self):
         self.nr = {}
-        self.sel = 7            # NextReg select (port 0x243B): the setup leaves NR 7 selected for the hooks' speed reads
+        self.sel = 8            # NextReg select (port 0x243B): the stub's last read (NR 8) leaves it there; spdin selects 7
         self.attr = [[0, 0, 0, 0, 0] for _ in range(128)]
         self.pat = bytearray(16384)
         self.pos = 0
@@ -977,6 +977,7 @@ def negative_patches(patch):
            ('blit hook never hides', JswPatch(patch.prof, rom(s['e_blit'] + 5, 0, 0, 0))),
            ('hooks leave 28 MHz on', JswPatch(patch.prof, rom(s['spdout'], 0x3E, 3, 0))),
            ('hooks give back 3.5 MHz, not the caller\'s speed', JswPatch(patch.prof, rom(s['spdout'], 0xAF, 0, 0))),
+           ('speed read without selecting NR 7 (the stub leaves NR 8)', JswPatch(patch.prof, rom(s['spdin'] + 6, 0, 0))),
            ('slot 7 left on a colour page', JswPatch(patch.prof, rom(s['ovfind'] + 0, 0xC3, *(s['ovbad'] + 0).to_bytes(2, 'little')))),
            ('bypass with a wrong code cell', JswPatch(patch.prof, start_sites=[x if x[0] != 0x5956 else (0x5956, '07', '18') for x in START_SITES]))]
     return out

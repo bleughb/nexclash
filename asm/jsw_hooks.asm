@@ -155,10 +155,13 @@ rest:   pop hl
         ex (sp),hl
         ret
 
-; spdin: the caller's speed latched, then 28 MHz. Keeps B, C, D, E, H, L; A, F lost. Port 0x243B selects NR 7 from
-; the setup on (a Spectrum game never uses it, NEXTREG never changes it), so one IN reads it. spdout: back to it; A lost.
+; spdin: the caller's speed latched, then 28 MHz. Keeps B, C, D, E, H, L; A, F lost. It selects NR 7 itself: the
+; stub's last read (NR 8) leaves 0x243B on another register. spdout: back to it; A lost.
 spdin:  push bc
-        ld bc,0x253B
+        ld bc,0x243B
+        ld a,7
+        out (c),a
+        inc b
         in a,(c)
         and 3
         ld (S_SPD),a
@@ -220,20 +223,14 @@ e_gua:  call enter
         and 7
         or b
         call colour
-        call xy
-        ld (S_X),a
-        ld a,c
-        ld (S_Y),a
+        call xyst
         call plot32
         call rest
         jp 0x9456
 
 ; ---- Maria: HL = 0x6000 address on a cell edge; top half 45, bottom half 07 (956C, 9572) ---------
 e_mar:  call enter
-        call xy
-        ld (S_X),a
-        ld a,c
-        ld (S_Y),a
+        call xyst
         ld a,0x45
         call colour
         push de
@@ -270,10 +267,7 @@ e_arr:  call enter
         ld a,(de)
         call colour
         call paper              ; overwrites in the original, so solid: paper opaque
-        call xy
-        ld (S_X),a
-        ld a,c
-        ld (S_Y),a
+        call xyst
         call begin
         jr nc,.x
         ld a,(S_B)
@@ -311,10 +305,7 @@ e_itm:  call enter
         call colour
         call paper
         ex de,hl
-        call xy
-        ld (S_X),a
-        ld a,c
-        ld (S_Y),a
+        call xyst
         call begin
         jr nc,.x
         ld a,(0x8420)           ; the room's item graphic comes from C0E1 + room * 256: its colours
@@ -513,6 +504,12 @@ index:  and 7
         ret
 
 ; HL = 0x6000 layout address -> A = x (0..248), C = y. Keeps DE, HL, IX.
+; xyst: xy, then S_X = x, S_Y = y (A = y on return)
+xyst:   call xy
+        ld (S_X),a
+        ld a,c
+        ld (S_Y),a
+        ret
 xy:     ld a,h
         and 0x18
         add a,a
@@ -753,9 +750,6 @@ setup:  nextreg 0x43,0x20               ; sprite palette 0, auto-increment
         cp 128
         jr nz,.h
         nextreg 0x15,0x01
-        ld bc,0x243B                    ; select NR 7 for the hooks' speed reads (spdin)
-        ld a,7
-        out (c),a
         ret
 cols:   DB 0x00,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6
         DB 0x00,0x03,0xE0,0xE3,0x1C,0x1F,0xFC,0xFF
