@@ -1,0 +1,429 @@
+; Elite engine M2 (included by elite_hooks.asm): end of pass, the tick wait and the 50 fps ship renderer.
+; Design: games/elite.md "## M2 design".
+
+; h_flip (0x7FBE, replaces LD HL,0xC000): end of a game pass. The ship list just recorded (h_ship) becomes cur, the
+; one before prev. While waiting for the tick (TICK frames since the last one, counted by h_isr), render once per
+; frame with weight d / TICK (d = frames since the tick); with interrupts off (a screen the game draws with DI)
+; render cur once. Then the mono buffer is cleared and the original copy shows it (zeros) on the ULA viewport, which
+; Layer 2 now covers. The original clobbers A, F, BC, DE, HL here too (LD HL / LD DE / the copy loops).
+h_flip: ld a,i                          ; P/V = IFF2
+        di
+        nextreg 0x50,STATE_PG
+        ld a,0
+        jp po,.f0
+        inc a
+.f0:    ld (S_IFF),a
+        ld hl,S_FLIGHT
+        ld a,(hl)
+        ld (hl),0
+        or a
+        jp z,.plain                     ; not after a flight pass (status, charts, equipment: the game draws the
+                                        ; page into the buffer and this copy shows it): the original copy only
+        ld a,(S_W)
+        ld (S_CUR),a
+        xor 1
+        ld (S_W),a                      ; the next pass records into prev's list (emptied after the wait)
+        ld a,0xFF
+        ld (S_RD),a
+        ld a,(S_IFF)
+        or a
+        jr nz,.w
+        ld a,TICK
+        call render
+        jr .done
+.w:     call fcount
+        ld hl,(S_FRAME)
+        ld de,(S_LAST)
+        or a
+        sbc hl,de                       ; frames since the last tick
+        ld a,h
+        or a
+        jr nz,.tick
+        ld a,l
+        cp TICK
+        jr nc,.tick
+        ld hl,S_RD
+        cp (hl)
+        jr z,.halt
+        ld (hl),a
+        call render
+.halt:  nextreg 0x50,0xFF               ; not HALT: polls only at the interrupt's own line never see the raster
+        ei                              ; go round, so the wait never ended (2026-11-23); poll at every line
+        nop                             ; instead, letting the interrupt in between
+        nop
+        di
+        nextreg 0x50,STATE_PG
+        jr .w
+.tick:  ld a,(S_RD)
+        inc a
+        jr nz,.t2
+        ld a,TICK                       ; the pass took the whole tick: show cur once
+        call render
+.t2:    ld hl,(S_FRAME)
+        ld (S_LAST),hl
+.done:  ld a,(S_W)
+        ld hl,S_N
+        add hl,a
+        ld (hl),0                       ; prev is no longer needed: the next pass records there
+        call mono_clear                 ; the copy then shows only the frame on the ULA viewport
+        ld a,(S_IFF)
+        nextreg 0x50,0xFF
+        or a
+        jr z,.nei
+        ei
+.nei:   ld hl,0xC000
+        jp 0x7FC1
+.plain: ld a,(S_IFF)
+        nextreg 0x50,0xFF
+        or a
+        jr z,.nei
+        ei
+        jr .nei
+
+; render (DI, state page at slot 0; A = frames since the tick, TICK or more = cur as it is): Layer 2 back buffer =
+; base (planet, stars, text, lasers, crosshair: the logic pass's h_plot) + every ship of the cur list at its
+; position and orientation interpolated from prev (same slot and blueprint) with weight A / TICK, drawn by the
+; game's own ship draw 0xA6DF on the live slot through h_plot. All game RAM the draw writes (outtab, the slots
+; included) is saved first and restored after, so the logic sees exactly what the original would (probe
+; draw_deps.py). Then show it. Clobbers everything; keeps the state page mapping.
+render: cp TICK
+        ld b,0
+        jr c,.part
+        inc b
+        xor a
+.part:  ld hl,wtab
+        add hl,a
+        ld a,(hl)
+        ld (S_WGT),a
+        ld a,b
+        ld (S_FULL),a
+        ld a,(S_BACK)
+        nextreg 0x13,a                  ; h_plot draws into the back buffer
+        add a,a
+        ld e,a                          ; E = back buffer's first 8K page
+        ld d,BASE_BK * 2
+        ld b,4
+.cp:    push bc
+        ld a,d
+        nextreg 0x54,a
+        ld a,e
+        nextreg 0x56,a
+        ld hl,dma_copy
+        ld bc,(dma_copy_len << 8) | 0x6B
+        otir                            ; base page -> back page, 8K
+        call fcount
+        pop bc
+        inc d
+        inc e
+        djnz .cp
+        nextreg 0x54,4
+        nextreg 0x56,0
+        call mono_clear                 ; every ship pixel is then a change h_plot mirrors
+        ld hl,outtab
+        ld de,SAVE
+        call tab_save
+        nextreg 0x7F,0                  ; ship colours (IY)
+        ld a,(S_CUR)                    ; cur list -> S_RP / S_RI, prev list -> S_PL / S_PN
+        ld hl,S_N
+        add hl,a
+        ld b,(hl)
+        xor 1
+        ld hl,S_N
+        add hl,a
+        ld c,(hl)
+        ld hl,LIST0
+        ld de,LIST1
+        or a
+        jr z,.pl
+        ex de,hl
+.pl:    ld (S_PL),hl                    ; A = prev list index: HL = prev base, DE = cur base
+        ld a,c
+        ld (S_PN),a
+        ld (S_RP),de
+        ld a,b
+        ld (S_RI),a
+.rec:   ld a,(S_RI)
+        or a
+        jp z,.rdone
+        dec a
+        ld (S_RI),a
+        ld hl,(S_RP)
+        ld e,(hl)
+        inc hl
+        ld d,(hl)                       ; DE = slot
+        push de
+        ld bc,R_SLOT - 1
+        add hl,bc
+        ld bc,SLOTLEN
+        ldir                            ; live slot = the slot as at the original draw
+        ld hl,(S_RP)
+        ld bc,R_A
+        add hl,bc
+        ld a,(hl)
+        ld (0xA79D),a                   ; as the wrapper
+        inc hl
+        ex de,hl
+        ld hl,intab
+        call tab_load
+        pop ix                          ; IX = slot
+        ld a,(S_FULL)
+        or a
+        call z,interp
+        ld hl,(S_RP)
+        inc hl
+        inc hl
+        ld a,(hl)
+        ld iyl,a
+        inc hl
+        ld a,(hl)
+        ld iyh,a
+        ld a,0xC9
+        ld (0xFEFE),a                   ; as the wrapper: an interrupt during the draw returns without EI
+        ld (S_SP),sp
+        ld sp,0x4020                    ; the wrapper's stack
+        nextreg 0x50,0xFF               ; the draw reads ROM (0x0127-0x0B26) and runs 0x22B0
+        call 0xA6DF
+        nextreg 0x50,STATE_PG
+        ld sp,(S_SP)
+        call fcount
+        ld a,0x18
+        ld (0xFEFE),a
+        ld hl,(S_RP)
+        ld bc,REC
+        add hl,bc
+        ld (S_RP),hl
+        jp .rec
+.rdone: ld hl,outtab
+        ld de,SAVE
+        call tab_load
+        nextreg 0x7F,C_WHITE
+        ld bc,0x243B
+        ld a,0x12
+        out (c),a
+        inc b
+        in a,(c)                        ; A = shown
+        ld e,a
+        ld a,(S_BACK)
+        nextreg 0x12,a                  ; show the render
+        ld a,e
+        ld (S_BACK),a
+        nextreg 0x13,BASE_BK            ; the logic pass draws into base
+        ret
+
+; interp (IX = live slot holding cur, S_RP = its record): find prev's record of the same slot and blueprint; if
+; found, each of x, y, z (lo, hi, sign | bits 16-22) and the 9 orientation components (fraction, sign | magnitude)
+; = prev + (cur - prev) * S_WGT / 256, written into the live slot. A value that moved 0x8000 or more (a new ship in
+; the slot, a jump) keeps cur.
+interp: ld hl,(S_RP)
+        ld de,S_KEY
+        ld bc,4
+        ldir                            ; S_KEY = slot, blueprint
+        ld hl,(S_PL)
+        ld a,(S_PN)
+        ld b,a
+.f:     ld a,b
+        or a
+        ret z
+        push bc
+        push hl
+        ld de,S_KEY
+        ld b,4
+.c:     ld a,(de)
+        cp (hl)
+        jr nz,.n
+        inc hl
+        inc de
+        djnz .c
+        pop hl
+        pop bc
+        ld bc,R_SLOT
+        add hl,bc                       ; HL = prev's slot copy
+        push ix
+        pop de                          ; DE = live slot (= cur)
+        ld b,3
+.p3:    push bc
+        ld a,1
+        call lerp1
+        inc hl
+        inc hl
+        inc hl
+        inc de
+        inc de
+        inc de
+        pop bc
+        djnz .p3
+        ld b,9
+.o9:    push bc
+        xor a
+        call lerp1
+        inc hl
+        inc hl
+        inc de
+        inc de
+        pop bc
+        djnz .o9
+        ret
+.n:     pop hl
+        ld bc,REC
+        add hl,bc
+        pop bc
+        dec b
+        jr .f
+
+; lerp1: one value. HL = prev field, DE = live (cur) field, A = kind (1: 3-byte position lo, hi, sign | bits 16-22;
+; 0: 2-byte component fraction, sign | magnitude). Keeps HL, DE.
+lerp1:  push hl
+        push de
+        push af
+        call dec_v                      ; C:D:E = prev
+        ld (S_TP),de
+        ld a,c
+        ld (S_TP + 2),a
+        pop af
+        pop hl                          ; HL = live field
+        push hl
+        push af
+        call dec_v                      ; C:D:E = cur
+        ld hl,(S_TP)
+        ex de,hl
+        or a
+        sbc hl,de                       ; low 16 of cur - prev
+        ex de,hl                        ; DE = delta low
+        ld a,(S_TP + 2)
+        ld b,a
+        ld a,c
+        sbc a,b
+        ld c,a                          ; C:D:E = delta
+        ld a,d
+        rla                             ; carry = bit 15
+        ld a,0
+        sbc a,0                         ; A = 0x00 / 0xFF: what C must be for a 16-bit delta
+        cp c
+        jr nz,.keep                     ; jumped: keep cur
+        ld a,c
+        or a
+        push af                         ; sign of delta
+        jp p,.pos
+        xor a
+        sub e
+        ld e,a
+        ld a,0
+        sbc a,d
+        ld d,a                          ; DE = |delta| (0x8000 at most)
+.pos:   ld a,(S_WGT)
+        ld b,d                          ; |delta| * w / 256 = hi * w + (lo * w) >> 8
+        ld d,a
+        mul d,e                         ; DE = lo * w
+        ld c,d
+        ld d,b
+        ld e,a
+        mul d,e                         ; DE = hi * w
+        ld a,e
+        add a,c
+        ld e,a
+        jr nc,.nc
+        inc d
+.nc:    pop af
+        jp p,.add
+        xor a                           ; negative: DE = -DE, C = 0xFF
+        sub e
+        ld e,a
+        ld a,0
+        sbc a,d
+        ld d,a
+        ld c,0xFF
+        jr .sum
+.add:   ld c,0
+.sum:   ld hl,(S_TP)
+        add hl,de
+        ex de,hl
+        ld a,(S_TP + 2)
+        adc a,c
+        ld c,a                          ; C:D:E = prev + delta * w / 256
+        pop af
+        pop hl                          ; HL = live field
+        push hl
+        call enc_v
+        pop de
+        pop hl
+        ret
+.keep:  pop af
+        pop de
+        pop hl
+        ret
+
+; dec_v: HL = field, A = kind (as lerp1) -> C:D:E two's complement. Clobbers A, HL.
+dec_v:  ld e,(hl)
+        inc hl
+        or a
+        jr z,.c2
+        ld d,(hl)
+        inc hl
+        ld a,(hl)
+        ld c,a
+        res 7,c
+        jr .sg
+.c2:    ld a,(hl)
+        ld d,a
+        res 7,d
+        ld c,0
+.sg:    rla
+        ret nc
+        xor a
+        sub e
+        ld e,a
+        ld a,0
+        sbc a,d
+        ld d,a
+        ld a,0
+        sbc a,c
+        ld c,a
+        ret
+
+; enc_v: C:D:E -> field at HL, A = kind (as lerp1). Clobbers A, B, C, D, E, HL.
+enc_v:  ld b,a
+        ld a,c
+        rla
+        ld a,0
+        jr nc,.p
+        xor a
+        sub e
+        ld e,a
+        ld a,0
+        sbc a,d
+        ld d,a
+        ld a,0
+        sbc a,c
+        ld c,a
+        ld a,0x80
+.p:     ld (hl),e
+        inc hl
+        dec b
+        jr nz,.k2
+        or c                            ; position: sign | bits 16-22
+        ld (hl),d
+        inc hl
+        ld (hl),a
+        ret
+.k2:    or d                            ; component: sign | magnitude
+        ld (hl),a
+        ret
+
+; mono_clear (DI, state page at slot 0): the game's own buffer clear body 0x8084 (BC = 30): empty viewport plus
+; its frame (left / right / bottom lines, written there by plain LDs, not the hooked writers). It ends EI / RET:
+; an interrupt may come before the DI here (h_isr then counts it and unmaps slot 0), so the state page is mapped
+; again. Clobbers everything.
+mono_clear:
+        ld bc,30
+        call 0x8084
+        di
+        nextreg 0x50,STATE_PG
+        jp fcount
+
+; weight of cur per frames since the tick (d * 256 / TICK, d = 0 .. TICK - 1)
+wtab:
+WK = 0
+        DUP TICK
+        db (WK * 256) / TICK
+WK = WK + 1
+        EDUP

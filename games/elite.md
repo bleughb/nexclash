@@ -1,11 +1,11 @@
 # Elite (Braben / Bell, Firebird 1985; Russian 128K hack) - engine: elite (in progress, stage 2)
 
 ## Next session
-Stage: 2 (build)   State: M1 (colour mirror on Layer 2, 28 MHz, fixed 10-frame tick, ISR pattern) runs in CSpect 2026-11-23 (## M1 progress); M2 (interpolation) next
+Stage: 2 (build)   State: M2 (ships re-drawn at up to 50 fps, interpolated between ticks) runs in CSpect 2026-11-23 (## M2 progress); M3 (own turning every frame) next
 Inputs: specnext/reference/elite/ (tape, 5 RZX, 5 extracted .z80)    Branch: add-elite    Commit: see git log
 Checks: full surveys of all five RZX (7.5k-68.6k frames); tape not run in an emulator
 Pending user answers: none (design closed 2026-11-23: C coloured ships, details 1-5, pacing (i) interpolate)
-Start with: `python -m nexclash.elite C:\1NEXT\elite_work\Docking.z80 m1.nex` in CSpect, then M2 (## Build plan)
+Start with: `python -m nexclash.elite C:\1NEXT\elite_work\Witch.z80 m2.nex` in CSpect, then M3 (## Build plan 5)
 Read: PLAYBOOK stage 1, 3d (unknown engine: feasibility first); ## Findings below
 Open: see Findings
 
@@ -37,22 +37,10 @@ Which parts overlap each other is not compared.
   stretches (back-buffer copy ~125k T, up to 930k T per call).
 - Free memory is scarce: PoliceAnarchy leaves 5546 of 32768 bytes untouched in 0x4000-0xBFFF (largest span 456 bytes).
 
-## Findings (stage 0, DockingElite.rzx, `--stop 3000` first look)
-- Snapshot: 128K machine, 7FFD = 0x30 (ROM 1 = 48K BASIC, bank 0 at C000, paging LOCKED): runs like a
-  48K game. IM 2, I = 0xFD, vector 0xFDFF -> 0xFEFE, DI at the snapshot. Border 0. WitchElite starts at
-  PC 0xAB64, the other four at 0xFEFE (ISR). All five snapshots show the same IM 2 setup.
-- Engine: unknown (no detector, no TID / Dizzy signature) -> stage 1, feasibility first (PLAYBOOK 3d).
-- Rendering: vector (wireframe) game with a BACK BUFFER: 32702 (0x7FBE) / 32717 (0x7FCD) block-copy the
-  frame to the screen (~125k T per call, 286 calls in 3000 frames, i.e. a full-frame copy every ~10
-  frames). Line plotter 32739 (0x7FE3) does most calls (68642). Text/scanner-like plotters at
-  44033 (0xAC01) and 39117 (0x98CD), 30872 (0x7898).
-- Plain conversion FAILED: no place for the start-up tail (128K snapshot; `--tail ADDR` needed, prove
-  with `scan --range`; nextboot.check models 48K start-up only).
-- GATE: CHECK - 2 CALL sites to 39117 (29993, 39074) never reached in this short run; repeat with
-  the longer recordings before design.
-- Pacing: 1726 interrupts accepted in 3001 frames (the game runs with DI for stretches).
-- Mostly lines on black with few colour attributes: expected colour clash is limited (HUD / scanner
-  colours); what a "sprite" conversion means here is a stage-1 question, not decided.
+## Findings (stage 0, DockingElite.rzx, `--stop 3000` first look; superseded by the full surveys above)
+128K snapshot, 7FFD = 0x30 (ROM 1, bank 0 at C000, paging locked), IM 2 I = 0xFD; WitchElite starts at 0xAB64, the
+others at 0xFEFE. Vector game with a back buffer copied by 0x7FBE every ~10 frames; 1726 interrupts in 3001 frames.
+Plain conversion needed `--tail` (solved: 0x4800).
 
 ## Open
 - Tail placement for a 128K snapshot with ROM 1 locked (see Lessons).
@@ -96,13 +84,8 @@ PoliceAnarchy 42000-47000.
   design constraint. The equivalence rule still holds (gameplay extremely close, docs: owner 2026-11-10).
 
 ## Design question (stage 1)
-ANSWERED 2026-11-22 (user): "C: coloured ships" -> option C (includes B). Details: see
-"Design details (answered 2026-11-22)" below.
-Options put to the user: (A) plain, ULA unchanged, + Next speed (28 MHz) if pacing allows; (B) A + fix the few clash
-cells (HUD bars, condition light, planet / sun icon); (C) B + redraw the viewport on Layer 2 so ships / lines get colour
-(a new line-renderer engine; changes what the user sees). After the rewrite decision, C is no longer limited by memory;
-both unknowns for C are answered (## Probe): the buffer is cleared every frame (no owner model needed) and the ship
-model is in IY while its lines are drawn. Colouring per model / per draw category (planet, sun, stars, lasers, text) is cheap.
+ANSWERED 2026-11-22: "C: coloured ships" (of A plain + 28 MHz, B A + HUD clash cells, C B + viewport on Layer 2 in
+colour). Details: ## Design details.
 
 ## Pacing (stage 2 gate, 2026-11-22)
 - ISR (0xFF25, own stack at 0x4020): keyboard scan 0xFD69, control integration 0xFE01 (pitch / roll from the keys,
@@ -215,18 +198,43 @@ Code: asm/elite_hooks.asm, nexclash/elite.py, docs/profiles/elite.json (not yet 
 - Layer 2: banks 16 / 19, cleared by DMA with the game's clear (0x8080), flipped with its copy (0x7FBE). ULA copy kept.
 - Start-up: tail at 0x4800 (viewport rows: the copy writes them first; scan_low.log). IM 2 vector table moved to the
   alt ROM (I = 0x39, 257 x 0xFE) - see the bugs below.
-Bugs found on the way (each cost a CSpect round):
-1. Plain conversion crashed in pass 2: the game's IM 2 table (I = 0xFD) is valid only for bus byte 0xFF (FE FE at
-   0xFDFF); CSpect's bus byte differs, the vector came from 0xFD00 (= 0xC903, the buffer). Fix: I = 0x39 -> alt ROM
-   table, plus the game's own "IM 2 on" at 0xFF4C (LD A,0xFD -> 0x39). Real hardware probably gives 0xFF; untested.
-2. The ship draw wrapper's stack is 32 bytes at 0x4000-0x401F; the writers run with SP down to 0x400E (site_ctx.py):
-   the handler may use at most 14 bytes (now 10: RST + 4 pushes, no CALL).
-3. 0x8080 (clear) keeps A in the original and callers rely on it; h_clear clobbered it (bogus planet spans ran HL
-   through all of memory). Fix: push / pop AF around the remap.
-4. RST 08h is trapped by CSpect (-mmc) as an esxDOS call and skips the next byte: the star writer 0xA84B (LD (HL),A /
-   RET) lost its RET. Fix: RST 18h. Found by hook-subset bisect (rst -> half -> quarter -> 0xA84B).
+Bugs found on the way (each a CSpect round): CSpect's IM 2 bus byte is not 0xFF (vector table moved to the alt ROM,
+I = 0x39); the ship wrapper's stack floor 0x400E (h_plot at most 10 bytes, no CALL); 0x8080 keeps A (h_clear
+pushes it); CSpect -mmc traps RST 08h as esxDOS and skips a byte (RST 18h used; found by hook-subset bisect).
 Not yet checked: stars drawn outside the viewport frame (white, from the ULA copy - compare with the original);
 the differential verify (step 6); hardware.
+
+## M2 progress (2026-11-23)
+M2 RUNS in CSpect (Docking and Witch, 700 frames each of rolling / pitching / speed-up; chart page entered and left).
+Code: asm/elite_render.inc (h_flip, render, interp), asm/elite_hooks.asm (h_ship, frame counting), probes
+draw_deps.py / draw_io.py in C:NEXT\elite_work\probe.
+- Ship draw facts [observed: draw_deps.py, all five recordings whole, 1.1k-11.5k calls each]: 0xA6DF reads the slot's
+  bytes 0-8 (x, y, z: lo, hi, sign), 10-20 even (orientation high bytes), 32, 33, 38; slots are 39 bytes at
+  0x6048 + 39 n, n = 0-7 (8 slots; IY = slot bytes 35-36). Varying inputs outside the slot: 0x6F42, 0x70E3,
+  0xA8FA-0xA905, 0xA9C8, 0xAA0F, 0xB452-0xB4A3, 0xB7AA/B (scratch the previous draw left, vertex tables); every
+  other byte it reads (2.5k addresses) never changes. It writes ~400 bytes of scratch / self-modified operands and
+  0x9C97, a flag the flight loop reads (so every render must restore what it wrote).
+- Slot formats [observed: snapshots]: position 3 x (lo, hi, sign | bits 16-22); orientation 9 x (fraction,
+  sign | magnitude), unit ~0x7F00 (rows norm 127).
+- Design as built: h_ship (0x9E44) records each ship as the original draws it (slot, blueprint, 0xA79D, the inputs)
+  into list S_W and lets the original draw go to the mono buffer only (NR $7F = 1: no mirror). Everything else the
+  pass draws goes to a base Layer 2 (banks 14-15). h_flip: last list = cur, the one before = prev; until the tick,
+  render once per frame: base copied (DMA) to the back buffer, game's clear (0x8084, keeps the frame), outputs
+  saved, per cur record: slot + inputs written back, x / y / z and the 9 components interpolated from prev's record
+  of the same slot and blueprint (weight frames-since-tick / 10; a jump of 0x8000+ keeps cur), 0xA6DF called as the
+  wrapper does (0xFEFE = RET, SP 0x4020), outputs restored, flip. Only after a flight pass (h_combat sets
+  S_FLIGHT): status / chart pages keep the original copy.
+- Interpolation checked in CSpect (station, Docking): z 0x4D1F -> 0x4D1D shows 0x4D1E; components move in steps
+  (0xE438, 0xE568, 0xE6A0 towards 0xE800 at weights 0.6-0.8).
+- Frame counting (3 rounds): interrupts are lost while ship draws run with DI (16 %); raster polls alone lose
+  frames when two polls are one frame apart at the same line (5 %); a HALT wait polled only at the interrupt's
+  line and never ended. Now: h_isr counts each interrupt, polls (render, h_ship, logic-pass hooks, the wait loop
+  without HALT) count frames whose interrupt was lost, phase from the interrupt's own line: 506 counted over ~505.
+  The game ISR body runs from an owed count (16 per 25 counted frames), so lost interrupts are made up.
+Not yet checked / open: one render sample (Docking, after ~600 frames) showed a station z of 0xB2E1 negative (not
+reproduced in 8 later samples; to watch with a render assert); Havoc.z80 crashes ~150 frames in even in the
+--control build (no hooks; status page snapshot - the start-up tail at 0x4800 sits in its text rows); Layer 2 not yet
+hidden on pages (M4); planet and stars still move at the tick rate; own turning (M3); hardware.
 
 ## Hardware checklist
 None yet (no build).
@@ -235,6 +243,7 @@ None yet (no build).
 2026-11-22  stage 0 (intake, all five recordings)  ~2 h  ~60 calls  0 user rounds
 
 ## Lessons
+- [deferred Open: reconsider when a second engine counts frames on the Next with long DI stretches] Counting frames with DI code: interrupts alone lose frames, raster polls alone lose them when polls fall a frame apart at the same line, and a HALT wait polls only at the interrupt line (never sees the raster go round). Count each interrupt and let polls inside DI stretches add only the frames whose interrupt was lost (phase from the interrupt's own line, a flag so neither counts the same frame twice).
 - [tool nexclash.survey] survey preview.png tints each plot routine's output in its own colour; read the game's colours from a plain `preview` (no --plot), not from the survey sheet (Elite: a mono viewport was reported as coloured). survey.md's Preview heading now says so.
 - [deferred Open: reconsider when stage 1 feasibility shows whether a tail can be placed (--tail + scan --range)] A 128K snapshot with the 48K ROM locked in: `convert` found no place for the start-up tail and nextboot.check models 48K start-up only. (2026-11-23: --tail 0x4800, viewport rows the copy writes first, works in CSpect.)
 - [deferred Open: reconsider when the first hardware test shows which is CSpect's alone] CSpect differs from the toolkit's assumptions twice: its IM 2 bus byte is not 0xFF (a table valid only at I*256+0xFF fails), and with -mmc it traps RST 08h as esxDOS (skips the next byte). Candidates for BRIEFING A1 / the kb once hardware confirms which is the emulator's alone.
