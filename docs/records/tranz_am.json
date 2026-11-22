@@ -78,15 +78,15 @@
  "outputs": {
   "plain": {
    "file": "tranz_am.nex",
-   "md5": "8308134dff22d877c6f70ba236e2e012"
+   "md5": "5b7ed517c752b2899bddd6539aaedfc9"
   },
   "sprites": {
    "file": "tranz_am_sprites.nex",
-   "md5": "637c510df69e95cb621db6f63d02a5fd"
+   "md5": "62b76f0325fec6055b068f57434bf602"
   },
   "enhanced": {
    "file": "tranz_am_enhanced.nex",
-   "md5": "c89e6c5a4707b97a92922cd352b555ef"
+   "md5": "2d9e69880cf7a8c9a8a8fc27303bc0b3"
   }
  },
  "repro": [],

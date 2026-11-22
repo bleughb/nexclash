@@ -285,6 +285,8 @@ def run(nex_path, colours, layout=None, game=None, output=None, say=print, onto=
         cs.save(merged, tj, mod.RECOLOUR.get('note', ''))
         merged = cs.load(tj)
         out, info = mod.recolour(nex, merged)
+        from .z80tonex import automap_off
+        out = automap_off(out)                        # an older build given: its start gets automap off too
         files[cj] = tj
         tn = os.path.join(work, 'build.nex')
         open(tn, 'wb').write(out)

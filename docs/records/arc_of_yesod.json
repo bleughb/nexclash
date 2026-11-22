@@ -118,23 +118,23 @@
  "outputs": {
   "plain": {
    "file": "arc_of_yesod.nex",
-   "md5": "9858d3f2cd71450c2efb01c116b1426b"
+   "md5": "cf3ad5b7ab250bd9e0400febd046990c"
   },
   "sprites": {
    "file": "arc_of_yesod_sprites.nex",
-   "md5": "97828809e85654dddb0b9e4e117ea718"
+   "md5": "93c1ac4a53c5d0db83b451ed53d727bb"
   },
   "enhanced": {
    "file": "arc_of_yesod_enhanced.nex",
-   "md5": "d183181a0b7fbd17df9cc638da942785"
+   "md5": "dcbc7fa189c093aa4d728f358546a9ba"
   },
   "sprites_loading": {
    "file": "arc_of_yesod_sprites_loading.nex",
-   "md5": "fda37475786a20fff92a72a5ba78496f"
+   "md5": "858ec5cda7dc2782664ed2247310589c"
   },
   "enhanced_loading": {
    "file": "arc_of_yesod_enhanced_loading.nex",
-   "md5": "49b7ac9d62940e8ff5868b91b5f78046"
+   "md5": "62b922d83ab47c6abf8f895c7a7af110"
   }
  },
  "repro": [],
@@ -572,25 +572,27 @@
    "docs/profiles/arc_of_yesod.json": "9f0ee3574e652915",
    "docs/profiles/arc_of_yesod_colours.json": "494b8cf0008aaffa",
    "docs/profiles/arc_of_yesod_palette.json": "8f5ea9221fdfab94",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/arc_of_yesod.py": "d4cb08645b69c50c",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "bc34b7d52c82d71c",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "ddd347a7318bdc04",
+   "recipe": "73a12a626c137158",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-17"
+  "date": "2026-11-20"
  },
  "verified": {
   "deps": {
@@ -600,24 +602,26 @@
    "docs/profiles/arc_of_yesod.json": "9f0ee3574e652915",
    "docs/profiles/arc_of_yesod_colours.json": "494b8cf0008aaffa",
    "docs/profiles/arc_of_yesod_palette.json": "8f5ea9221fdfab94",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/arc_of_yesod.py": "d4cb08645b69c50c",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "bc34b7d52c82d71c",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "ddd347a7318bdc04",
+   "recipe": "73a12a626c137158",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-17"
+  "date": "2026-11-20"
  }
 }
