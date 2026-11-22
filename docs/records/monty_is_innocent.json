@@ -1,0 +1,191 @@
+{
+ "name": "monty_is_innocent",
+ "order": 272,
+ "game": "Monty is Innocent",
+ "doc": "monty_is_innocent.md",
+ "engine": "monty_is_innocent",
+ "representative": true,
+ "reference": "monty_is_innocent",
+ "inputs": {
+  "snapshot": {
+   "name": "monty_is_innocent.z80",
+   "md5": "cc90fbe7e7b6568e5f9d00c3226f215b",
+   "path": "monty_is_innocent/monty_is_innocent.z80",
+   "note": "TOSEC Monty is Innocent (1985)(Gremlin Graphics Software).z80: the 48K game running (PC in ROM BEEPER, its tune)"
+  },
+  "recordings": [
+   {
+    "name": "montyinnocent.rzx",
+    "md5": "6aa90ef3bfe1c294c816ca83aa62d1ec",
+    "path": "monty_is_innocent/montyinnocent.rzx",
+    "role": "rzxarchive recording, 6,241 frames on a 128K machine (the same code as the 48K snapshot from 0x8000 up)"
+   },
+   {
+    "name": "monty_is_innocent.pok",
+    "md5": "3a1026226b409b15ddcc2f53bf5e454a",
+    "path": "monty_is_innocent/monty_is_innocent.pok",
+    "note": "not a recording: the archive's two cheats (Infinite lives 56473, Immunity 56440), each checked against the code, for the .nxc"
+   }
+  ]
+ },
+ "modules": [
+  "monty_is_innocent"
+ ],
+ "own_modules": [
+  "monty_is_innocent"
+ ],
+ "data": [
+  "docs/profiles/monty_is_innocent.json",
+  "asm/monty_is_innocent_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "montyinnocent.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 3,
+  "note": "rzxarchive recording; auto also runs the unit cases (plot, gun, clear screen) and the negative controls"
+ },
+ "outputs": {
+  "plain": {
+   "file": "monty_is_innocent.nex",
+   "md5": "673011349213f7feceff3f528bf9b4ea"
+  },
+  "sprites": {
+   "file": "monty_is_innocent_sprites.nex",
+   "md5": "a776f3429f34364eb7263a1cde03b1c8"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Monty is Innocent",
+  "engine_col": "monty_is_innocent (monty_is_innocent.md)",
+  "build": "monty_is_innocent_sprites.nex (as published in nxc 1.2 with automap off: Sam Stoat, Monty and the guards as sprites over the XOR plotter, the guard painter off; two cheats)",
+  "software": "replay IDENTICAL on 6,241 frames (7,531 figure plots, 1.0M pixels); unit cases incl. the gun's call and four CPU speeds; 8 negatives detected",
+  "hardware": "Tang board: plays from the menu into the prison (1.1)",
+  "next": "a longer recording (later rooms, the gun); owner play"
+ },
+ "checks": [
+  "asm2profile:monty_is_innocent"
+ ],
+ "techniques": [
+  {
+   "application": "monty_is_innocent.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "scan --writers over the ULA: only the plotter's own XOR reads figure pixels; only the guard painter changes attributes in play",
+   "phases": []
+  },
+  {
+   "application": "monty_is_innocent.guard-records",
+   "id": "detect.graphics-record-layout",
+   "revision": 1,
+   "target": "guard records at 24962 + 8k (y, x, image, ink) from the plot callers",
+   "phases": []
+  },
+  {
+   "application": "monty_is_innocent.xor-overlay",
+   "id": "patch.xor-overlay-keep-ula",
+   "revision": 2,
+   "target": "the XOR plotter 0xD52E kept; four 16 x 16 sprites per figure over the drawn image, chosen by return address (guards by IX)",
+   "phases": []
+  },
+  {
+   "application": "monty_is_innocent.alt-rom",
+   "id": "patch.whole-altrom-image",
+   "revision": 2,
+   "target": "Sinclair 48K ROM as alt ROM image 1, hooks at 0x386E",
+   "phases": []
+  },
+  {
+   "application": "monty_is_innocent.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "28 MHz inside each hook, the caller's NR 7 kept on the stack and put back",
+   "phases": []
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/monty_is_innocent_hooks.asm": "e7e8b79546cd31bc",
+   "docs/profiles/monty_is_innocent.json": "eea9217409d62425",
+   "nexclash.py": "04157df11540c17d",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "9d44c5f5686e37ff",
+   "nexclash/monty_is_innocent.py": "3f3be318fb9143c6",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "50684436558662bd",
+   "skoolkit": "10.1",
+   "recipe": "1f09b20096bef064",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "verified": {
+  "deps": {
+   "asm/monty_is_innocent_hooks.asm": "e7e8b79546cd31bc",
+   "docs/profiles/monty_is_innocent.json": "eea9217409d62425",
+   "nexclash.py": "04157df11540c17d",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "9d44c5f5686e37ff",
+   "nexclash/monty_is_innocent.py": "3f3be318fb9143c6",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "50684436558662bd",
+   "skoolkit": "10.1",
+   "recipe": "1f09b20096bef064",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "results": [
+  {
+   "application": "monty_is_innocent.xor-overlay",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "a776f342",
+   "scope": "1 rzxarchive recording (6,241 frames, the first rooms); unit cases for the plot, the gun and the clear at four CPU speeds; 8 negatives; no hardware timing",
+   "evidence": "games/monty_is_innocent.md \"Verification\""
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/monty_is_innocent.md#design-standing-default-figures-as-sprites-in-the-games-own-colours-colour-paint-off"
+   ],
+   "coverage": "Hook cost measured per plot in the simulator at 28 MHz over the recording; no JNext or hardware timing.",
+   "result": "The hook adds about 14,800 T at 28 MHz a plot (about 3% of a 3.5 MHz frame) after the fast path; the game's own timing is unchanged otherwise."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/monty_is_innocent.md#observed-engine-static-reading--probes"
+   ],
+   "coverage": "Every screen reader and attribute writer in the recording (scan, probes); 20 plotter call sites read statically, the guard, Sam and Monty callers reached.",
+   "result": "Only the plotter reads figure pixels (its own XOR) and only the guard painter writes attributes in play: the XOR stays, the painter is turned off."
+  },
+  "decision": "Figures as sprites in the game's own colours over the kept XOR plotter, the guard painter off (the standing default).",
+  "next_experiment": "A longer recording reaching Monty, the gun and a caught guard: replay IDENTICAL with every negative control caught."
+ }
+}
