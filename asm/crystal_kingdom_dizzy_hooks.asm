@@ -37,12 +37,27 @@ SHOWN   EQU 0x0800          ; in the cache page: 16-bit mask of the records whos
 STPAGE  EQU 26              ; 8K page of the pattern cache (bank 13), at 0x0000 inside the hook only
 EXPT    EQU 0x1000          ; in that page: 256 x 4 pattern bytes, one byte's 8 pixels as 4-bit values 1
 
+        MACRO SPD_IN                    ; the caller's speed (NR 7 bits 1:0) kept on the stack, then 28 MHz (card
+        ld bc,0x243B                    ; patch.restore-speed); A and BC are saved by the hook first
+        ld a,7
+        out (c),a
+        inc b
+        in a,(c)
+        and 3
+        push af
+        nextreg 0x07,3
+        ENDM
+        MACRO SPD_OUT
+        pop af
+        nextreg 0x07,a                  ; the caller's speed back
+        ENDM
+
         ORG 0x386E
 ; ---- 0xF433 LD A,(33770) -> JP e_rs --------------------------------------------------------------------
 e_rs:   push af
         push bc
         push hl
-        nextreg 0x07,3
+        SPD_IN
         nextreg 0x50,STPAGE     ; hide the records the mask says are shown, then clear it
         ld hl,(SHOWN)
         ld a,l
@@ -60,7 +75,7 @@ neg_rs:
         ld (SHOWN),hl
 rs_done:
         nextreg 0x50,0xFF
-        nextreg 0x07,0
+        SPD_OUT
         pop hl
         pop bc
         pop af
@@ -70,10 +85,10 @@ rs_done:
 ; ---- 0xF8DD LD A,(65336) -> JP e_rd: the room is drawn again, every object sprite hidden -----------------
 e_rd:   push af
         push bc
-        nextreg 0x07,3
+        SPD_IN
 neg_rd:
         call hidall
-        nextreg 0x07,0
+        SPD_OUT
         pop bc
         pop af
         ld a,(65336)
@@ -82,10 +97,10 @@ neg_rd:
 ; ---- 0xFBE1 LD A,(HL) / LD IXl,A -> JP e_wn: a window (dialogue, inventory) over the play area --------------
 e_wn:   push af
         push bc
-        nextreg 0x07,3
+        SPD_IN
 neg_wn:
         call hidall
-        nextreg 0x07,0
+        SPD_OUT
         pop bc
         pop af
         ld a,(hl)
@@ -98,7 +113,7 @@ e_ob:   push af
         push de
         push hl
         push iy
-        nextreg 0x07,3
+        SPD_IN
         ld a,ixh                ; a record of the table at 0x7E00-0x7FFF, else nothing to show
         and 0xFE
         cp 0x7E
@@ -268,7 +283,9 @@ ob_tile:
         ld sp,hl
         pop ix
 ob_ret: nextreg 0x50,0xFF
-        nextreg 0x07,0
+        pop af
+neg_spd:
+        nextreg 0x07,a                  ; the caller's speed back
         pop iy
         pop hl
         pop de
@@ -473,7 +490,7 @@ fe_g:   ld a,(hl)
 fe_out: pop hl
         ret
 
-; the data's signature: (ix+F_SUM) = sum, (ix+F_SUM+1) = xor of its 2 x rows x width bytes. Keeps BC, DE, HL
+; the data's signature: (ix+F_SUM) = rotating sum, (ix+F_SUM+1) = rotating xor of its 2 x rows x width bytes. Keeps BC, DE, HL
 dsum:   push hl
         push bc
         push de
@@ -487,11 +504,13 @@ ds_m:   add a,(ix+F_ROWS)
         add a,a
         ld b,a
         ld de,0
-ds_l:   ld a,(hl)
-        add a,d
+ds_l:   ld a,d                  ; rotate, then add / xor: the order of the bytes counts (a sum and an xor alone
+        rlca                    ; miss graphics rebuilt under one pointer with their bytes swapped)
+        add a,(hl)
         ld d,a
-        ld a,(hl)
-        xor e
+        ld a,e
+        rrca
+        xor (hl)
         ld e,a
         inc hl
         djnz ds_l

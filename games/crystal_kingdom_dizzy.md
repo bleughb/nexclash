@@ -1,4 +1,4 @@
-# Crystal Kingdom Dizzy (Dizzy 7, Codemasters) - plain 128K conversion only
+# Crystal Kingdom Dizzy (Dizzy 7, Codemasters) - 128K sprite engine `crystal_kingdom_dizzy_sprites`
 
 Reference files (private repo, specnext/reference/crystal_kingdom_dizzy/): dizzy7128k.z80 (128K,
 md5 0cb1cb26), the 48K version (md5 9297ffd6), dizzy7_auto.rzx, and the built plain
@@ -12,9 +12,9 @@ Known so far: IM 2 with a NON-uniform vector table (I=0xFD, the bus byte matters
 screen writers 0xFC74 / 0xFAE0 / 0xFB56 (isr / scan --writers, 850 frames).
 
 ## Build
-dizzy7128k.z80, `nexclash.py convert` (128K; the start-up tail must end below 0xC000, `--tail ADDR`
-if needed). Runs on hardware (2026-09-28). Sprite build deferred (needs 128K engine work: analyse
-and recorder are 48K-only).
+Plain: dizzy7128k.z80, `nexclash.py convert` (128K; the start-up tail must end below 0xC000, `--tail ADDR` if
+needed); runs on hardware (2026-09-28). Sprite build: below; the record (since 2026-11-22) covers the sprite
+build only (`auto` writes no plain .nex).
 
 
 ## Sprite build (2026-11-21, engine `crystal_kingdom_dizzy_sprites`)
@@ -31,3 +31,31 @@ and recorder are 48K-only).
 - Results: IDENTICAL on ck_w1-4 (36,183 frames, 38,886 draws checked against the game's own writes, 4.7M sprite
   pixels); 840 unit cases; negatives 8/8. Hook cost about 28K T at 28 MHz a frame (estimated up to 5% slower).
   OverSpec from the .nxc menu: plays. Tang board: not reached (board offline 2026-11-21).
+- Review fixes (2026-11-22): the cache signature is order-sensitive (a sum with RLCA and an XOR with RRCA: two rows
+  swapped no longer hit the cache); site 0xF508's original bytes pinned; the detector reads 128K banks and SkoolKit
+  snapshots; auto checks that draws were compared against the game; the window and room-drawn hooks get unit cases
+  from captured states (every sprite shown, all hidden after), so their negative controls are caught on every walk.
+  Re-verified: IDENTICAL on ck_w1-4, negatives 8/8. Record docs/records/crystal_kingdom_dizzy.json upgraded from
+  plain-only to the sprite build (ad1e85b0), verified and stamped.
+
+## Lessons
+- [local: the walks reach hide hooks rarely] the window control was caught on one walk of four; hide hooks need
+  unit cases from captured states, not luck in the recording (queued as a shared helper for all engines).
+- [local: a sum is not a signature] an additive pattern signature matched rows in another order; signatures mix
+  the position (rotate before add / xor).
+
+## Friction
+- reuse: [local: Finders Keepers' hide-hook unit case shape reused]
+- retries: [local: the first four-walk rerun passed several RZX files to one --rzx; auto takes one --rzx per recording]
+- environment: [local: the walks live in the scratchpad; reference folder staged by MD5 for the record]
+- hand-rolled: [none: the record was upgraded with the records module's own checks and selftest]
+- scratch: [none: the staging stays in the session's scratchpad]
+
+## Technique use
+- detect.gameplay-screen-readers: helped: scan --writers found the save-under routines and the plain copies.
+- patch.xor-overlay-keep-ula: used in spirit: every pixel write kept, white sprites from the bytes the game ORs in.
+- patch.restore-speed: corrected: the hooks forced 3.5 MHz on exit; the caller's NR 7 is now kept on the stack and put back.
+
+## Next session
+Stage 4: owner play; Tang board run of the sprite build; walks and the .pok to specnext; republish the nxc patch
+(hook bytes changed) after the owner's quick test.

@@ -41,7 +41,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Treasure Island Dizzy (title screen) (treasure_island_title): `treasure_island_title.nex` cc8fcb90942d294d66d33c0b836f24c1, `treasure_island_title_sprites.nex` 3f887a8475fc214d7174cd59259f8fb4; verified 2026-11-21
 - Dizzy: The Ultimate Cartoon Adventure (dizzy1): `dizzy1.nex` 7714c95e4d1c43d37f7b7e292770274a, `dizzy1_sprites.nex` 47212772fe612ea0c9c5b14e51c73c60; verified 2026-11-21
 - Commando (commando): `commando.nex` 509b4ad6c9ef57ea95dedc91f0830a48, `commando_sprites.nex` 04b29c6403638def8f74c3971f70bd81; verified 2026-11-20
-- Crystal Kingdom Dizzy (128K) (crystal_kingdom_dizzy): `crystal_kingdom_dizzy.nex` 41d5c4b4dd9381714bbd736de4a294a3; verified never
+- Crystal Kingdom Dizzy (128K) (crystal_kingdom_dizzy): `crystal_kingdom_dizzy_sprites.nex` d4dfcce8e0d1c6b88909ea6391213971; verified 2026-11-22
 - Midnight Resistance (128K) (midnight_resistance): `midnight_resistance.nex` 6d489652889fcfbadb7980c4fe92806e, `midnight_resistance_sprites.nex` f28fbbc0e861c5aebcfd47b9de583837; verified 2026-11-21
 - Smash TV (smash_tv): `smash_tv.nex` 68b2f357221f36338d7ec704b15560b4, `smash_tv_sprites.nex` af7a59f22315e03299bda91758fbe20e; verified 2026-11-20
 - Target Renegade (128K) (target_renegade): `target_renegade.nex` 452e75d8ba20171f9a4a3dc6f7b451d6, `target_renegade_sprites.nex` d8e3e19f2d92cad896b4931fa0c9162a; verified 2026-11-20

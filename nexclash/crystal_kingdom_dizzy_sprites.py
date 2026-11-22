@@ -26,7 +26,7 @@ PLOT_SPAN = (0xF52D, 0xF790)    # the draw routines (screen writes from here are
 
 SITES = {   # addr: (original, opcode, hook symbol, resume, kind, length)
     0xF433: ('3aea83', 0xC3, 'e_rs', 0xF436, 'restore pass', 3),
-    0xF508: ('ed4beb', 0xC3, 'e_ob', 0xF50C, 'object', 3),
+    0xF508: ('ed4beb83', 0xC3, 'e_ob', 0xF50C, 'object', 3),     # LD BC,(33771): all four bytes checked, JP over three
     0xF8DD: ('3a38ff', 0xC3, 'e_rd', 0xF8E0, 'room drawn', 3),
     0xFBE1: ('7edd6f', 0xC3, 'e_wn', 0xFBE4, 'window', 3),
 }
@@ -48,10 +48,16 @@ def is_crystal_kingdom_dizzy_sprites(snap):
         sg = load_profile()['signature']
     except FileNotFoundError:
         return False
-    if not snap.is128 or snap.port7ffd & 7:
+    sig, a = bytes.fromhex(sg['bytes']), sg['addr']
+    banks = getattr(snap, 'banks', None)
+    if banks is not None:                       # z80tonex.Z80Snapshot: banks, is128, port7ffd
+        if not getattr(snap, 'is128', False) or snap.port7ffd & 7:
+            return False
+        mem = bytes(banks[5]) + bytes(banks[2]) + bytes(banks[0])
+        return mem[a - 0x4000:a - 0x4000 + len(sig)] == sig
+    if getattr(snap, 'machine', '48K') == '48K' or getattr(snap, 'out7ffd', 0) & 7:   # SkoolKit's Snapshot (engines.find)
         return False
-    sig = bytes.fromhex(sg['bytes'])
-    return bytes(snap.memory[sg['addr']:sg['addr'] + len(sig)]) == sig
+    return bytes(snap.memory[a:a + len(sig)]) == sig
 
 
 class CrystalKingdomDizzyPatch:
@@ -117,6 +123,7 @@ class NextState:
         self.pat = bytearray(16384)
         self.patp = 0
         self.ports = []
+        self.sel = 0                    # NextReg select (port 0x243B)
 
     def nextreg(self, reg, val):
         self.nr[reg] = val
@@ -129,6 +136,8 @@ class NextState:
             self.patp += 1
         elif port == 0x303B:
             self.patp = (val & 0x3F) * 256 + (128 if val & 0x80 else 0)
+        elif port == 0x243B:
+            self.sel = val
         else:
             self.ports.append((port & 0xFF, val))
 
@@ -261,6 +270,8 @@ class _Ports:
         self.ns, self.ports = ns, ports
 
     def read_port(self, regs, port):
+        if self.ns is not None and port == 0x253B:    # NextReg read: NR 7 reads back the programmed speed in bits 1:0
+            return self.ns.nr.get(self.ns.sel, 0)
         return 0xFF
 
     def write_port(self, regs, port, value, *x):
@@ -309,9 +320,17 @@ def event(patch, pc, get, R, ns, alt, psite, state=None):
     install(sp, ns.nextreg)
     sp.set_tracer(_Ports(ns=ns))
     n0 = len(ns.ports)
-    if not _run(sp, stop):
+    speed = ns.nr.get(7, 0)
+    try:
+        reached = _run(sp, stop)
+    except Exception as x:                     # a broken hook running away (a negative control)
+        fl.append('hook crashed: %s' % str(x)[:80])
+        return fl, 0
+    if not reached:
         fl.append('hook did not reach the resume point')
         return fl, 0
+    if ns.nr.get(7, 0) != speed:
+        fl.append('speed not restored: entered at %d, left at %d' % (speed, ns.nr.get(7, 0)))
     for i in CMP:
         if so.registers[i] != sp.registers[i]:
             fl.append('register %d: original %02X, patched %02X' % (i, so.registers[i], sp.registers[i]))
@@ -363,6 +382,9 @@ def verify(patch, rzx_path, stop=None, progress=None, collect=0):
             h.frame = n
             if progress and n % 1000 == 0:
                 progress(n, c)
+
+        def on_desync(h, *a):
+            h.fail('replay desynchronised', a[:2])
 
         def fail(h, k, info=()):
             c[k + '!'] += 1
@@ -486,6 +508,36 @@ def build(z80, out, name, say=print):
     return not bad, patch
 
 
+def auto(a, z80, name, out, say):
+    """nexclash.py auto / patch: the sprite build, then for each recording the replay, the unit cases and the negative
+    controls (a run that reaches no object draw, or misses a control, fails)."""
+    say('Game      : %s' % name)
+    say('Engine    : crystal_kingdom_dizzy_sprites (objects as white sprites over the masked figures, a pattern cache)')
+    ok, patch = build(z80, out, name, say)
+    for r in list(a.rzx or []):
+        c, ex, states = verify(patch, r, stop=getattr(a, 'quick', None), collect=8)
+        fails = {k: v for k, v in c.items() if k.endswith('!')}
+        if not c['draws checked against the game']:
+            fails['no object draw reached: nothing verified'] = 1
+        u = unit_tests(patch, states)
+        fails.update({k: v for k, v in u.items() if k.endswith('FAIL!')})
+        missed = [nm for nm, q in negative_patches(patch)
+                  if not ({k for k, v in verify(q, r, stop=min(getattr(a, 'quick', None) or 1500, 1500))[0].items() if k.endswith('!')}
+                          or any(k.endswith('FAIL!') for k in unit_tests(q, states[:2])))]
+        if missed:
+            fails['negative controls not caught: %s' % ', '.join(missed)] = len(missed)
+        ok = ok and not fails
+        say('Verify    : %s  %d frames; %s -> %s' % (os.path.basename(r), c['frames'],
+            ', '.join('%s %d' % (k, v) for k, v in sorted(c.items()) if not k.endswith('!') and not k.startswith('  ') and k != 'frames')[:300],
+            'IDENTICAL' if not fails else 'FAILED %s' % fails))
+        say('Units     : %s; negative controls: %d of %d caught' % (
+            ', '.join('%s %d' % (k, v) for k, v in sorted(u.items()) if not k.startswith('  ')), len(negative_patches(patch)) - len(missed), len(negative_patches(patch))))
+        for k, v in ex.items():
+            say('            %s: %s' % (k, str(v)[:220]))
+    say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
+    return ok
+
+
 def _broken(patch, sym, new, at=0):
     import copy
     q = copy.copy(patch)
@@ -500,7 +552,8 @@ def negative_patches(patch):
     import copy
     no_site = copy.copy(patch)
     no_site.sites = [s for s in patch.sites if s[0] != 0xF508]
-    return [('sprites one row low', _broken(patch, 'neg_y', b'\xC6\x21')),
+    return [('object hook leaves the CPU at 28 MHz', _broken(patch, 'neg_spd', b'\0\0\0')),
+            ('sprites one row low', _broken(patch, 'neg_y', b'\xC6\x21')),
             ('ink lost in the pattern upload', _broken(patch, 'neg_pix', b'\xAF')),
             ('restore pass leaves the sprites', _broken(patch, 'neg_rs', b'\0\0\0')),
             ('room drawn again leaves the sprites', _broken(patch, 'neg_rd', b'\0\0\0')),
@@ -529,6 +582,7 @@ def unit_tests(patch, states):
                     R[4], R[5] = a >> 8, a & 255
                     R[11] = iyl
                     ns = NextState()                  # fresh sprites, so a fresh cache: every case sends its patterns
+                    ns.nr[7] = (iyl + x + y) % 4      # entered at each CPU speed in turn
                     state = bytearray(cache_page())
                     get = m.__getitem__
                     fl, _ = event(patch, 0xF508, get, R, ns, alt, psite, state)
@@ -549,4 +603,19 @@ def unit_tests(patch, states):
                     if bad and c['  example'] < 3:
                         c['  example'] += 1
                         c['  %s iyl=%d x=%d y=%d: %s' % (k, iyl, x, y, bad[:2])] += 1
+    for pc in (0xFBE1, 0xF8DD):                         # window and room drawn again: every sprite shown first, all hidden
+        for n, (R0, mem) in enumerate(states[:4]):
+            ns = NextState()
+            ns.nr[7] = n % 4
+            for s in range(NSPR):
+                ns.attr[s] = [9, 9, 0, 0xC0 | s, 0x80]
+            R = list(R0)
+            R[24] = pc
+            fl, _ = event(patch, pc, mem.__getitem__, R, ns, alt, psite, bytearray(cache_page()))
+            bad = list(fl) + ['sprite %d left shown' % s for s in range(NSPR) if ns.visible(s)]
+            k = '%s hook' % SITES[pc][4]
+            c[k + (' FAIL!' if bad else ' ok')] += 1
+            if bad and c['  example'] < 3:
+                c['  example'] += 1
+                c['  %s: %s' % (k, bad[:2])] += 1
     return c
