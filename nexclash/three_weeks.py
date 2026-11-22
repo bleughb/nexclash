@@ -47,6 +47,8 @@ ROOM, ROOMAT, WX, WY, WFR, BX, BY, SX, SY, SY2, BASE = 27864, 42298, 27830, 2783
 SINK, NATDX, NAT0 = 27887, 35669, 254
 WCOL, WCOL2, UCNT, UPTR, ITEMRET, ITEMT, WALLY, ORIENT = 27866, 27876, 27858, 35663, 0xBB53, 32832, 0xC006, 35634
 V_MIR, V_ORI0, V_FX_ = 0x140, 0x141, 4
+OUTLINE_BLACK = 0x00
+V_OCFG = 0x152                  # outline: 0 as the game's (white), 1 black, 2 none (the hook page byte the NXC toggles differ in)
 MINOUT = 24
 PAL_AT, INKT_AT = 0x1C00, 0x1D00
 # figure colours by graphics range: lo, hi, ink nibble (0 = the room's), palette line << 4. Defaults, a human would choose
@@ -176,7 +178,7 @@ def store_pages(colours):
     return bytes(st)
 
 
-def hook_page(code, colours=None, figs=None, pal=None, ori0=1, gb=None):
+def hook_page(code, colours=None, figs=None, pal=None, ori0=1, gb=None, outline=0):
     p = bytearray(8192)
     p[0x200:0x200 + len(code)] = code
     if 0x200 + len(code) > CACHE:
@@ -187,6 +189,7 @@ def hook_page(code, colours=None, figs=None, pal=None, ori0=1, gb=None):
     p[INK:INK + 16] = bytes(PALETTE)
     p[V_ORI0] = ori0
     p[0x145] = NAT0
+    p[V_OCFG] = outline
     for i in range(NSM + NLG):
         e = CACHE + i * ESZ
         p[e] = 0xFF
@@ -223,7 +226,15 @@ def hook_page(code, colours=None, figs=None, pal=None, ori0=1, gb=None):
 class ThreeWeeksPatch:
     name = 'Three Weeks in Paradise figures -> hardware sprites (alt ROM stubs, page 26 at slot 0, blit without figures)'
 
-    def __init__(self, prof=None, colours=None, code=None, rom_code=None, extra_sites=(), figs=None, pal=None, ori0=1, gb=None):
+    def __init__(self, prof=None, colours=None, code=None, rom_code=None, extra_sites=(), figs=None, pal=None, ori0=1, gb=None, outline=0, outline_colour=None):
+        # outline_colour (RGB332, as Lunar Jetman's): None the game's outline (outline= 0 / 2); 0x00 black (the "Black outline"
+        # toggle). Another colour needs a free palette entry, and the 4-bit sprites have none (16 of 16 in use: an entry
+        # written for it would recolour the white inks or the black fill), so it is refused, not faked.
+        if outline_colour is not None:
+            if outline_colour != OUTLINE_BLACK:
+                raise ValueError('outline colour 0x%02X: the sprite palette has no free entry, only black (0x00) is available' % outline_colour)
+            outline = 1
+        self.outline = outline
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         self.rom_code = rom_code if rom_code is not None else bytes.fromhex(h['rom'])
@@ -250,7 +261,7 @@ class ThreeWeeksPatch:
         pg = bytearray(rom[0x2000:0x4000])
         pg[ROM_ORG - 0x2000:ROM_ORG - 0x2000 + len(self.rom_code)] = self.rom_code
         self.page = bytes(pg)
-        self.hpage = bytearray(hook_page(self.code, self.colours, self.figs, pal, ori0, self.gb))
+        self.hpage = bytearray(hook_page(self.code, self.colours, self.figs, pal, ori0, self.gb, outline))
         self.pal = pal
         self.store = store_pages(self.colours)
         self.sites = [(a, bytes.fromhex(old), b'\xC3' + self.syms[SITE_SYM[a]].to_bytes(2, 'little'))
@@ -519,10 +530,11 @@ def expected_layer(get, plots, colours=None, banks=None, ori0=None):
 ENHANCED = os.path.join(_HERE, '..', 'docs', 'profiles', 'three_weeks_enhanced.json')
 
 
-def enhanced_patch():
-    """The Enhanced colour set (menu set, off by default): docs/profiles/three_weeks_enhanced.json (work/paint128.py)."""
+def enhanced_patch(outline=2):
+    """The Enhanced colour set (menu set, off by default): docs/profiles/three_weeks_enhanced.json (work/paint128.py).
+    Painted sprites: the outline is off by default (outline 2); the toggles' builds pass 0 or 1."""
     e = json.load(open(ENHANCED))
-    return ThreeWeeksPatch(colours=e['map'], figs=[tuple(x) for x in e['figs']], pal=bytes(e['pal']), ori0=e['ori0'])
+    return ThreeWeeksPatch(colours=e['map'], figs=[tuple(x) for x in e['figs']], pal=bytes(e['pal']), ori0=e['ori0'], outline=outline)
 
 
 def boot_check(nex, z80, patch=None, tail=None):
@@ -587,7 +599,17 @@ def build(z80, out, name, say=print):
     conv = zt.convert(z80, enh, None, True, quiet=True, patch=epatch)
     bad3 = boot_check(enh, z80, epatch, (conv[1], conv[1] + len(conv[2])))
     say('Enhanced  : %s  %s  boot %s  (%d colour-map entries)' % (os.path.basename(enh), md5(enh), 'OK' if not bad3 else 'MISMATCH %s' % str(bad3[:3])[:300], len(epatch.colours)))
-    return (not bad and not bad2 and not bad3), (plain, spr), patch, epatch
+    # the outline toggles (NXC "Outline off", "Black outline" on the sprites set): the same build, only the hook page's
+    # outline byte differs. The Enhanced set has the outline off as its own default (enhanced_patch), apart from both toggles.
+    ok4 = True
+    for mode, label in ((2, 'nooutline'), (1, 'blackoutline')):
+        po = ThreeWeeksPatch(outline=mode)    # the black one is outline_colour=OUTLINE_BLACK
+        fo = os.path.join(out, '%s_sprites_%s.nex' % (name, label))
+        conv = zt.convert(z80, fo, None, True, quiet=True, patch=po)
+        bo = boot_check(fo, z80, po, (conv[1], conv[1] + len(conv[2])))
+        ok4 = ok4 and not bo
+        say('Sprites %-12s: %s  %s  boot %s' % (label, os.path.basename(fo), md5(fo), 'OK' if not bo else 'MISMATCH %s' % str(bo[:3])[:300]))
+    return (not bad and not bad2 and not bad3 and ok4), (plain, spr), patch, epatch
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1398,7 +1420,7 @@ def unit_tests(patch, states, negatives=()):
                 ga = p0['g'] + r * S + (cols if p0['K'] & 1 else 0) + q_
                 cmap['%04X' % (ga - (0x6000 if bk else 0))] = [get(ga), 1, [5, 0, 3, 0, 9, 0, 0, 0], 0x10]
         pc = p0['pc']
-        pt2 = ThreeWeeksPatch(patch.prof, colours=cmap, code=patch.code, rom_code=patch.rom_code, ori0=st['mem'][ORIENT])
+        pt2 = ThreeWeeksPatch(patch.prof, colours=cmap, code=patch.code, rom_code=patch.rom_code, ori0=st['mem'][ORIENT], outline=patch.outline)
         regs = list(st['R'])
         over = {}
         frm = (p0['g'] - (WALLY if pc == P_WAL else (get(BASE) | get(BASE + 1) << 8))) // FLEN[p0['K']]
@@ -1457,7 +1479,7 @@ def negative_patches(patch):
     sy = {k: int(v, 16) for k, v in prof['hooks']['syms'].items()}
 
     def mk(name, code2=None, rom2=None, extra=()):
-        p = ThreeWeeksPatch(prof, colours=patch.colours, code=code2 or code, rom_code=rom2 or rom, figs=patch.figs, pal=patch.pal, ori0=patch.ori0, gb=patch.gb)
+        p = ThreeWeeksPatch(prof, colours=patch.colours, code=code2 or code, rom_code=rom2 or rom, figs=patch.figs, pal=patch.pal, ori0=patch.ori0, gb=patch.gb, outline=patch.outline)
         if extra:
             p.sites = [s for s in p.sites if s[0] not in extra]
         out[name] = p
@@ -1502,7 +1524,7 @@ def negative_patches(patch):
     r[pos], r[pos + 1] = 0x00, 0x00
     mk('plots survive 0xB7D7', None, bytes(r))
     # 10. no go-behind scenery: the room's chosen cells are left off Layer 2
-    p = ThreeWeeksPatch(prof, colours=patch.colours, code=code, rom_code=rom, figs=patch.figs, pal=patch.pal, ori0=patch.ori0, gb={})
+    p = ThreeWeeksPatch(prof, colours=patch.colours, code=code, rom_code=rom, figs=patch.figs, pal=patch.pal, ori0=patch.ori0, gb={}, outline=patch.outline)
     out['no go-behind scenery'] = p
     # 11. go-behind cells whole: their paper drawn black over the figures (not pixel-accurate)
     c11 = bytearray(code)
@@ -1845,7 +1867,7 @@ def recolour(nex, cmap):
         raise ValueError('hook code differs from this version\'s (rebuild with nexclash.py auto)')
     if bank(10)[0x1000:0x1000 + len(p0.stub_extra)] != p0.stub_extra:
         raise ValueError('set-up code differs from this version\'s (rebuild with nexclash.py auto)')
-    p = ThreeWeeksPatch(prof, colours=cmap, ori0=peek(ORIENT))
+    p = ThreeWeeksPatch(prof, colours=cmap, ori0=peek(ORIENT), outline=bank(13)[V_OCFG])   # the build's outline mode stays
     out, changed = splice(nex, {b: p.extra_banks[b] for b in COLOUR_BANKS})
     return out, {'banks changed': changed, 'colour-map entries': len(cmap)}
 

@@ -137,6 +137,7 @@ V_BRO   EQU 0x003B
 V_LN    EQU 0x003C              ; palette line of the figure, shifted to bits 4-7
 V_BO    EQU 0x003E              ; outline byte
 V_OC    EQU 0x003F              ; outline colour, 0 = none
+V_OCFG  EQU 0x0152              ; written by Python: 0 the outline as the game's (white, black on a white figure), 1 always black, 2 none
 INK     EQU 0x0130              ; 16 RGB332 Spectrum colours, written by Python
 BPG     EQU 27                  ; the build's page, the other half of bank 13, at slot 2 during a build only: the ULA reads page 10 whatever slot 2 holds
 VIS     EQU 0x4000              ; 34 x 4 bytes, box coordinates: the figure's opaque pixels
@@ -1631,6 +1632,15 @@ h_outl: ld hl,VIS
         jr nz,.oc
         ld a,CBLACK
 .oc:    ld (V_OC),a
+        ld a,(V_OCFG)
+        or a
+        jr z,.od
+        dec a
+        ld a,CBLACK
+        jr z,.o2
+        xor a
+.o2:    ld (V_OC),a
+.od:
 ; the ring: a clear pixel 4-next to an opaque one
         ld hl,VIS
         ld de,OUTL
