@@ -4,8 +4,8 @@
 Stage: 0 done (all five recordings surveyed in full), 1 next (design)   State: stage 1 probe done 2026-11-22 (## Probe); design question open, user allowed a full rewrite
 Inputs: specnext/reference/elite/ (tape, 5 RZX, 5 extracted .z80)    Branch: add-elite    Commit: see git log
 Checks: full surveys of all five RZX (7.5k-68.6k frames); tape not run in an emulator
-Pending user answers: stage-1 design question (A / B / C in ## Design question)
-Start with: the user's answer to ## Design question (C now cheap: IY = ship model at line time, buffer cleared per frame)
+Pending user answers: ## Design details 1-5 (option C chosen)
+Start with: the user's answers to ## Design details, then stage 2 (build)
 Read: PLAYBOOK stage 1, 3d (unknown engine: feasibility first); ## Findings below
 Open: see Findings
 
@@ -114,12 +114,22 @@ PoliceAnarchy 42000-47000.
   RAM should not be scarce". So: a full engine rewrite is allowed (not only hooks on the original), and memory is not a
   design constraint. The equivalence rule still holds (gameplay extremely close, docs: owner 2026-11-10).
 
-## Design question (stage 1, open: answer pending)
+## Design question (stage 1)
+ANSWERED 2026-11-22 (user): "C: coloured ships" -> option C (includes B). Details still open: the numbered list in
+## Design details (asked 2026-11-22).
 Options put to the user: (A) plain, ULA unchanged, + Next speed (28 MHz) if pacing allows; (B) A + fix the few clash
 cells (HUD bars, condition light, planet / sun icon); (C) B + redraw the viewport on Layer 2 so ships / lines get colour
 (a new line-renderer engine; changes what the user sees). After the rewrite decision, C is no longer limited by memory;
 both unknowns for C are answered (## Probe): the buffer is cleared every frame (no owner model needed) and the ship
 model is in IY while its lines are drawn. Colouring per model / per draw category (planet, sun, stars, lasers, text) is cheap.
+
+## Design details (asked 2026-11-22, answers pending; defaults proposed)
+1. Ships: one colour per ship model (IY blueprint, 11 seen), chosen by us now, repaintable later (colour sheet + recolour).
+2. Planet / sun / stars / lasers / crosshair / messages: each its own colour (planet blue, sun yellow, stars white,
+   lasers red, crosshair and messages white), same rule.
+3. Viewport on Layer 2 over a blank ULA viewport; HUD, scanner and text stay on the ULA, with the clash cells fixed (B).
+4. Pace: the original's (~5 updates a second, its slowdowns kept); a faster mode only if asked.
+5. Status / chart / equipment pages (full-screen ULA): Layer 2 off while they are up.
 
 ## Hardware checklist
 None yet (no build).
