@@ -97,7 +97,7 @@
   },
   "enhanced": {
    "file": "highway_encounter_enhanced.nex",
-   "md5": "4438b924191a4385228a3bc7a15628ab"
+   "md5": "9f6bb5d11bfab37a8f6fdde76b88c9f3"
   },
   "loading": {
    "file": "highway_encounter_sprites_loading.nex",
@@ -105,7 +105,7 @@
   },
   "enhanced_loading": {
    "file": "highway_encounter_enhanced_loading.nex",
-   "md5": "616304386346568401e80d206508d97f"
+   "md5": "7d8cbc58efffb6a8b2c5cfaab12e7dff"
   }
  },
  "repro": [],
@@ -155,7 +155,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "2abd23b537c0b5d4",
-   "nexclash/highway_encounter.py": "1f99196b2f678878",
+   "nexclash/highway_encounter.py": "125a569f99519324",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
@@ -172,7 +172,7 @@
    "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "bd9ff0e0f0549b1d",
+   "recipe": "26e0cb219caec16e",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-21"
@@ -193,7 +193,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "2abd23b537c0b5d4",
-   "nexclash/highway_encounter.py": "1f99196b2f678878",
+   "nexclash/highway_encounter.py": "125a569f99519324",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
@@ -210,7 +210,7 @@
    "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "bd9ff0e0f0549b1d",
+   "recipe": "26e0cb219caec16e",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-21"

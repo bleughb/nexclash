@@ -81,7 +81,7 @@
   },
   "enhanced": {
    "file": "bubbler_enhanced.nex",
-   "md5": "e6446eefaf257e403e8ab7f47e9d88f8"
+   "md5": "31be2226ce2867037c792680dbe7a889"
   }
  },
  "repro": [],
@@ -172,7 +172,7 @@
  ],
  "checked": {
   "deps": {
-   "asm/bubbler_buffer.inc": "a65214cc7ec1228a",
+   "asm/bubbler_buffer.inc": "cf51719bbefce792",
    "asm/bubbler_copy.inc": "fdefae41c0127ea0",
    "asm/bubbler_enhanced_hooks.asm": "d2d91abf06f28550",
    "asm/bubbler_hooks.asm": "d3f7d8be79eb0689",
@@ -184,11 +184,11 @@
    "docs/profiles/bubbler.json": "c10dded81cb62007",
    "docs/profiles/bubbler_art.json": "e717381a105043f9",
    "docs/profiles/bubbler_colours.json": "cee6aeeff8b51a60",
-   "docs/profiles/bubbler_enhanced.json": "2f71af9f618e2a48",
+   "docs/profiles/bubbler_enhanced.json": "dd18b8c5167d8746",
    "nexclash.py": "04157df11540c17d",
-   "nexclash/bubbler.py": "d364fadbb2ea6627",
+   "nexclash/bubbler.py": "2c2689cfd90b4ee0",
    "nexclash/bubbler_art.py": "b18a74b2e5fb6673",
-   "nexclash/bubbler_verify.py": "23afd3da36ef472d",
+   "nexclash/bubbler_verify.py": "73248e73eb81c25e",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
@@ -212,14 +212,14 @@
    "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "a9dca14006c0c78d",
+   "recipe": "2d263587f0595648",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-20"
+  "date": "2026-11-21"
  },
  "verified": {
   "deps": {
-   "asm/bubbler_buffer.inc": "a65214cc7ec1228a",
+   "asm/bubbler_buffer.inc": "cf51719bbefce792",
    "asm/bubbler_copy.inc": "fdefae41c0127ea0",
    "asm/bubbler_enhanced_hooks.asm": "d2d91abf06f28550",
    "asm/bubbler_hooks.asm": "d3f7d8be79eb0689",
@@ -231,11 +231,11 @@
    "docs/profiles/bubbler.json": "c10dded81cb62007",
    "docs/profiles/bubbler_art.json": "e717381a105043f9",
    "docs/profiles/bubbler_colours.json": "cee6aeeff8b51a60",
-   "docs/profiles/bubbler_enhanced.json": "2f71af9f618e2a48",
+   "docs/profiles/bubbler_enhanced.json": "dd18b8c5167d8746",
    "nexclash.py": "04157df11540c17d",
-   "nexclash/bubbler.py": "d364fadbb2ea6627",
+   "nexclash/bubbler.py": "2c2689cfd90b4ee0",
    "nexclash/bubbler_art.py": "b18a74b2e5fb6673",
-   "nexclash/bubbler_verify.py": "23afd3da36ef472d",
+   "nexclash/bubbler_verify.py": "73248e73eb81c25e",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
@@ -259,9 +259,9 @@
    "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "a9dca14006c0c78d",
+   "recipe": "2d263587f0595648",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-20"
+  "date": "2026-11-21"
  }
 }
