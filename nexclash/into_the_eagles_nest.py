@@ -6,6 +6,7 @@ So the default is the game itself, with no hooks. Enhanced mirrors the tiles on 
 (128K) dump stops in 128K BASIC, whose statements page ROM 0.
 """
 from pathlib import Path
+from . import l2pal
 import json
 from . import z80tonex as zt
 ROOT = Path(__file__).resolve().parents[1]
@@ -121,7 +122,7 @@ class Enhanced(Patch):
         snap.banks = type(snap.banks)((i, bytes(banks[i])) for i in range(8))
         setup = bytearray(self.setup)
         at = S['l2_pal'] - 0xD000
-        setup[at:at + 128] = self.blob[:128]
+        setup[at:at + 128] = l2pal.fix(bytes(self.blob[:128]), 'pairs', keep=(0,))     # opaque 0xE3 -> 0xE7 (nxc 1.2)
         printer = bytes(snap.read(0x5B00 + i) for i in range(256))
         assert S['printer'] - 0xD000 == len(setup)
         self.stub_extra = bytes(setup) + printer

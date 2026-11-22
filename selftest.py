@@ -645,7 +645,8 @@ def tools_check(src):
     from nexclash import snapinfo, memscan, isrinfo, drawcost
     workflow = subprocess.run([sys.executable, os.path.join(HERE, 'tools', 'workflow_check.py')])
     from nexclash import nextboot as _nb
-    bad = R.selfcheck() + R.verified_selfcheck() + _nb.ports_selfcheck() + ([] if workflow.returncode == 0 else ['workflow checks'])
+    from nexclash import l2pal as _l2
+    bad = R.selfcheck() + R.verified_selfcheck() + _nb.ports_selfcheck() + _l2.selfcheck() + ([] if workflow.returncode == 0 else ['workflow checks'])
     bad += [b for r in R.all_records() for b in R.evidence_problems(r)]
     bad += [b for r in R.all_records() for b in R.include_problems(r)]
     print('%-4s tools: records plan() on synthetic stamps, recipe digest and ROM identity mutations%s' % (

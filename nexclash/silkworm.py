@@ -6,6 +6,7 @@ So the default is the game itself. The only things a plain conversion gets wrong
 SP is in the top 16K (no automatic tail) and the game keeps code at 5B00, where NEXLOAD writes.
 """
 from pathlib import Path
+from . import l2pal
 import json, pickle
 from . import z80tonex as zt
 ROOT = Path(__file__).resolve().parents[1]
@@ -141,7 +142,7 @@ class Enhanced(Patch):
         snap.banks = type(snap.banks)((i, bytes(banks[i])) for i in range(8))
         setup = bytearray(self.setup)
         at = S['l2_pal'] - 0xD000
-        setup[at:at + 256] = self.blob['pal']
+        setup[at:at + 256] = l2pal.fix(bytes(self.blob['pal']), 'pairs', keep=(0,))     # opaque 0xE3 -> 0xE7 (nxc 1.2)
         at = S['spr_pat'] - 0xD000
         setup[at:at + 256] = self.blob['icon']
         printer = bytes(snap.read(0x5B00 + i) for i in range(256))

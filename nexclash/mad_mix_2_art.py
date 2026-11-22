@@ -6,6 +6,7 @@ the master bit: 253 and 254, palette entries the flip keeps to the stage's attri
 palette with the cell's ink, black in stage group 1. The tile store is stage group 1 only, the group the set holds. The panel is one picture,
 the set's own screen; the game's text and lives are painted on it as it prints them, from the font and one life in the last page. 
 """
+from . import l2pal
 import json, struct, sys
 from pathlib import Path
 from skoolkit.snapshot import Snapshot
@@ -136,6 +137,7 @@ def build(z80, set256, pal_path, panel_ppm):
         palette += bytes((r << 5 | g << 2 | b >> 1, b & 1))
     palette[SKIP * 2:SKIP * 2 + 2] = bytes((0xE3, 0))
     palette[INK * 2:INK * 2 + 2] = bytes((0, 0))
+    palette = l2pal.fix(palette, 'pairs', keep=(SKIP,))      # opaque 0xE3 -> 0xE7 (a Next shows it see-through)
     palette[PAPER * 2:PAPER * 2 + 2] = bytes((0xFF, 1))
     tp = (len(tiles) + PAGE - 1) // PAGE
     rep.update(colours=len(used), panel_colours=len(pan_of), free_left=len(free), tile_pages=tp, figure_pages=len(store))
