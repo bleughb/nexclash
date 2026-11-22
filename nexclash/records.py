@@ -281,6 +281,21 @@ def plan(recs=None, full=False):
             if sh:
                 item[1], item[2] = 'reverify', 'representative of engine %s; shared files changed: %s' % (
                     r['engine'], ', '.join(sh[:4]))
+    # every shared file changed since a member's verification is replayed by a member that READS it: a library only
+    # one member uses would otherwise ride on a representative that does not depend on it (Codex review T3)
+    def shared_changed(r):
+        return {p for p in changed(r.get('verified', {}).get('deps'), now_all[r['name']])
+                if p not in own(r) and p not in REBUILD_ONLY}
+    for eng, files in shared_hit.items():
+        items = [i for i in out if i[0]['engine'] == eng]
+        covered = set().union(set(), *(shared_changed(i[0]) for i in items if i[1] == 'reverify'))
+        for f in sorted(files - covered):
+            cand = sorted((i for i in items if i[1] in ('rebuild', 'skip') and i[0].get('verify')
+                           and f in shared_changed(i[0])), key=lambda i: not i[0].get('representative'))
+            if cand:
+                i = cand[0]
+                i[1], i[2] = 'reverify', 'engine %s: replays shared %s (no member re-verifying reads it)' % (eng, f)
+                covered |= shared_changed(i[0])
     return [tuple(x) for x in out], now_all
 
 
@@ -388,6 +403,16 @@ def selfcheck():
         want = 'reverify' if r.get('representative') and r.get('verify') else 'skip'
         if p[r['name']] != want:
             bad.append('due re-verification after a rebuild stamp: %s %s, want %s' % (r['name'], p[r['name']], want))
+    # coverage: an engine whose only verified member is not marked representative still replays a shared change
+    lone = copy.deepcopy([r for r in recs if r['name'] == 'stormbringer'])
+    for r in lone:
+        r['representative'] = False
+        c = dict(base[r['name']])
+        c['nexclash/z80tonex.py'] = 'old'
+        r['checked'], r['verified'] = {'deps': c}, {'deps': dict(c)}
+    acts = [a for r, a, _ in plan(lone)[0]]
+    if acts != ['reverify']:
+        bad.append('shared change with no representative member reading it: %s, want reverify' % acts)
     # exclusion: a record marked "excluded" stays 'none' even when its own and shared files changed
     ex = copy.deepcopy(recs[0])
     ex['excluded'] = 'selfcheck'
