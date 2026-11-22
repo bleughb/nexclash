@@ -167,6 +167,8 @@ class NextModel(object):
             if self.sel == 0x1F:
                 return self.line() & 255
             return self.nr.get(self.sel, 0)
+        if port == 0x243B:
+            return self.sel                     # the selection reads back (a wrapper that saves it must get it)
         return 0xFF
 
     def write_port(self, regs, port, value, *x):

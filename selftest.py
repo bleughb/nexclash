@@ -644,7 +644,8 @@ def tools_check(src):
     and adds a check for what it added (one easy game is enough: the commands are game-independent)."""
     from nexclash import snapinfo, memscan, isrinfo, drawcost
     workflow = subprocess.run([sys.executable, os.path.join(HERE, 'tools', 'workflow_check.py')])
-    bad = R.selfcheck() + R.verified_selfcheck() + ([] if workflow.returncode == 0 else ['workflow checks'])
+    from nexclash import nextboot as _nb
+    bad = R.selfcheck() + R.verified_selfcheck() + _nb.ports_selfcheck() + ([] if workflow.returncode == 0 else ['workflow checks'])
     bad += [b for r in R.all_records() for b in R.evidence_problems(r)]
     bad += [b for r in R.all_records() for b in R.include_problems(r)]
     print('%-4s tools: records plan() on synthetic stamps, recipe digest and ROM identity mutations%s' % (
