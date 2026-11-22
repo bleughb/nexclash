@@ -227,6 +227,14 @@
     "sprites": "0a9357198747b9db78648c36b8bb25a4"
    }
   },
+  "0244e9b61aa18d6a9f1e77d102da1ea9": {
+   "game": "Finders Keepers",
+   "doc": "finders_keepers.md",
+   "nex": {
+    "plain": "b434bc905a813514567d3cbd38dbe670",
+    "sprites": "ba99b0cb1058987d0ab4549eac9ce46e"
+   }
+  },
   "c545645a8688f24428492937125fbfcd": {
    "game": "Flying Shark",
    "doc": "flying_shark.md",
@@ -438,6 +446,22 @@
    "nex": {
     "plain": "6d489652889fcfbadb7980c4fe92806e",
     "sprites": "f28fbbc0e861c5aebcfd47b9de583837"
+   }
+  },
+  "cc90fbe7e7b6568e5f9d00c3226f215b": {
+   "game": "Monty is Innocent",
+   "doc": "monty_is_innocent.md",
+   "nex": {
+    "plain": "673011349213f7feceff3f528bf9b4ea",
+    "sprites": "a776f3429f34364eb7263a1cde03b1c8"
+   }
+  },
+  "0acdc707ef4cf3b4aaf94316bd0f285c": {
+   "game": "Monty on the Run",
+   "doc": "monty_on_the_run.md",
+   "nex": {
+    "plain": "86c30493dbd683b5076dfa43098180bb",
+    "sprites": "7fdb25d99b58c4413042f4b7a7f919c8"
    }
   },
   "facf9b90032759b7012abd91602b4b45": {
