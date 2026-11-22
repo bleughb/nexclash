@@ -20,7 +20,7 @@ ROM_ORG = 0x386E
 ALT_PAGE = 24
 TAIL_ADDR = 0x5B00
 HS = 0x5B60                 # hook state (27 bytes)
-HS_END = HS + 27
+HS_END = HS + 30            # with S_R (+27) and S_SPD (+29), the caller's speed
 NSPR = 64
 SPECCY = [0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x00, 0x03, 0xE0, 0xE3, 0x1C, 0x1F, 0xFC, 0xFF]
 
@@ -277,6 +277,7 @@ def recolour(nex, cmap):
 class NextState:
     def __init__(self):
         self.nr = {}
+        self.sel = 7            # NextReg select (port 0x243B): the setup leaves NR 7 selected for the hooks' speed reads
         self.attr = [[0, 0, 0, 0, 0] for _ in range(128)]
         self.pat = bytearray(16384)
         self.pos = 0
@@ -309,7 +310,9 @@ class NextState:
             self.palidx = (self.palidx + 1) & 0xFF
 
     def out(self, port, val):
-        if port == 0x303B:
+        if port == 0x243B:
+            self.sel = val
+        elif port == 0x303B:
             self.pos = (val & 0x3F) * 256 + (128 if val & 0x80 else 0)
         elif port & 0xFF == 0x5B:
             self.pat[self.pos & 0x3FFF] = val
@@ -378,6 +381,8 @@ class _Ins:
         self.ins, self.i, self.ns = ins, 0, ns
 
     def read_port(self, regs, port):
+        if port == 0x253B and self.ns is not None:     # NextReg read (a hook's speed read): not a recorded IN
+            return self.ns.nr.get(self.ns.sel, 0)
         if self.i >= len(self.ins):
             raise _End()
         v = self.ins[self.i]
@@ -438,6 +443,7 @@ class Lock:
         pm[ROM_ORG:ROM_ORG + len(patch.rom_code)] = list(patch.rom_code)
         self.p = _sim(pm, pstate[1] if pstate else regs, self.tp, self.ns)
         self.ns.mem = self.p.memory
+        self.spd = self.ns.nr.setdefault(0x07, 0)      # the caller's speed; lockstep turns it 0-3 at every stop
         self.ns.tables = {k: bytes(v) for k, v in colour_tables(lambda a: mem[a], patch.cmap)[0].items()} if patch.cmap else \
             {k: bytes(8192) for k in range(28, 34)}
         self.hooks = {a for a, _, _ in patch.sites if a in KIND}
@@ -550,6 +556,10 @@ def lockstep(patch, mem, regs, ins, ends=None, on_blit=None, stop_passes=None, f
                         fail('a patch site changed', hex(a))
                 if L.ns.nr.get(0x57, 1) != 1:
                     fail('slot 7 left on a colour page', L.ns.nr[0x57])
+                if L.ns.nr.get(0x07, 0) != L.spd:
+                    fail('CPU speed not the caller\'s', L.ns.nr.get(0x07, 0), L.spd)
+                c['entry speed %d' % L.spd] += 1
+                L.spd = L.ns.nr[0x07] = (L.spd + 1) % 4       # every hook entered at all four speeds in turn
                 if po == PASS:
                     c['passes'] += 1
                     tt = (L.o.registers[25], L.p.registers[25])
@@ -964,7 +974,9 @@ def negative_patches(patch):
            ('arrow hook never runs', JswPatch(patch.prof, drop=(0x928E,))),
            ('rope hook never runs', JswPatch(patch.prof, drop=(0x930E,))),
            ('item hook never runs', JswPatch(patch.prof, drop=(0x9449,))),
-           ('blit hook never hides', JswPatch(patch.prof, rom(s['e_blit'] + 9, 0, 0, 0))),
+           ('blit hook never hides', JswPatch(patch.prof, rom(s['e_blit'] + 5, 0, 0, 0))),
+           ('hooks leave 28 MHz on', JswPatch(patch.prof, rom(s['spdout'], 0x3E, 3, 0))),
+           ('hooks give back 3.5 MHz, not the caller\'s speed', JswPatch(patch.prof, rom(s['spdout'], 0xAF, 0, 0))),
            ('slot 7 left on a colour page', JswPatch(patch.prof, rom(s['ovfind'] + 0, 0xC3, *(s['ovbad'] + 0).to_bytes(2, 'little')))),
            ('bypass with a wrong code cell', JswPatch(patch.prof, start_sites=[x if x[0] != 0x5956 else (0x5956, '07', '18') for x in START_SITES]))]
     return out

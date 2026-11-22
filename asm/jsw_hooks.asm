@@ -48,39 +48,37 @@ R_Y0    EQU HS+9
 R_ROWS  EQU HS+10               ; 16 bytes: 0 = no pixel, else x - R_X0 + 1
 S_B     EQU HS+26
 S_R     EQU HS+27
+S_SPD   EQU HS+29               ; the caller's CPU speed (NR 7 bits 1:0), given back on the way out
 MAXSPR  EQU 64
 
         ORG 0x386E
 
 ; ---- every pass -------------------------------------------------------------------------------
-e_pass: push af
-        nextreg 7,3
+e_pass: push af                 ; four instructions: at the caller's speed (a switch costs more than they do)
         xor a
         ld (COUNT),a
         ld a,(BANK)
         xor 64
         ld (BANK),a
-        nextreg 7,0
         pop af
         jp 0x898B
 
 e_blit: push af
         push bc
-        nextreg 7,3
         ld a,(COUNT)
         call hidefrom
         ld a,(COUNT)
         ld (HIWAT),a
-        nextreg 7,0
         pop bc
         pop af
 neg_blit:
         ld hl,0x7000
         ret
 
-; A = first sprite to hide, up to the larger of HIWAT and COUNT. Clobbers A, B, C.
+; A = first sprite to hide, up to the larger of HIWAT and COUNT, at 28 MHz. Clobbers A, B, C.
 hidefrom:
         ld c,a
+        call spdin
         ld a,(HIWAT)
         ld b,a
         ld a,(COUNT)
@@ -89,7 +87,7 @@ hidefrom:
         ld b,a
 .k:     ld a,c
 .l:     cp b
-        ret nc
+        jr nc,spdout
         nextreg 0x34,a
         nextreg 0x38,0
         inc a
@@ -98,13 +96,11 @@ hidefrom:
 hideall:
         push af
         push bc
-        nextreg 7,3
         xor a
         call hidefrom
         xor a
         ld (COUNT),a
         ld (HIWAT),a
-        nextreg 7,0
         pop bc
         pop af
         ret
@@ -135,7 +131,7 @@ enter:  ex (sp),hl
         push af
         push ix
         push iy
-        nextreg 7,3
+        call spdin
         push hl                 ; back to the hook, with HL as the site had it (A is not kept)
         ld hl,12
         add hl,sp
@@ -149,14 +145,28 @@ rest:   pop hl
         ld (S_R),hl
         pop iy
         pop ix
+        call spdout
         pop af
         pop bc
         pop de
         pop hl
-        nextreg 7,0
         push hl
         ld hl,(S_R)
         ex (sp),hl
+        ret
+
+; spdin: the caller's speed latched, then 28 MHz. Keeps B, C, D, E, H, L; A, F lost. Port 0x243B selects NR 7 from
+; the setup on (a Spectrum game never uses it, NEXTREG never changes it), so one IN reads it. spdout: back to it; A lost.
+spdin:  push bc
+        ld bc,0x253B
+        in a,(c)
+        and 3
+        ld (S_SPD),a
+        nextreg 7,3
+        pop bc
+        ret
+spdout: ld a,(S_SPD)
+neg_spd:nextreg 7,a
         ret
 
 ; ---- Willy: DE = graphic, IX = row table entry -------------------------------------------------
@@ -743,6 +753,9 @@ setup:  nextreg 0x43,0x20               ; sprite palette 0, auto-increment
         cp 128
         jr nz,.h
         nextreg 0x15,0x01
+        ld bc,0x243B                    ; select NR 7 for the hooks' speed reads (spdin)
+        ld a,7
+        out (c),a
         ret
 cols:   DB 0x00,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6
         DB 0x00,0x03,0xE0,0xE3,0x1C,0x1F,0xFC,0xFF
