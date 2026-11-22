@@ -21,7 +21,7 @@ modified package and manifest; do not run Git refresh or commit commands.
 games/<game>.md "## Lessons": one bullet per finding - a new fact, a failed approach, a probe that
 worked, a coverage limit - in one or two lines (observation, evidence, limit), starting with its
 disposition tag. Mark observed / inferred / demonstrated. Only "- " bullets (continuation lines
-indented) count; any other line in the section fails, so nothing is silently skipped. A stage with
+indented) count; any other line in the section fails. A stage with
 no reusable finding says so: `- [none: <why>]`. A script that answered a question another
 game may ask goes to tools/probes/ (its README) the same day, not to a scratch folder.
 
@@ -40,7 +40,7 @@ A `[local]` lesson naming shared code (simpool, rzx, z80tonex, ...) fails: it is
 | `[doc BRIEFING A1]` / `[doc docs/<X>.md §Heading]` / `[doc CLAUDE.md §Heading]` | a platform / toolkit fact in a shared doc | section resolves |
 | `[tool <ref>]` | implemented in shared code now | `nexclash.py <cmd>`, `nexclash.<module>`, `<module>.<function>` or a path resolves |
 | `[backlog C2 #N]` | a shared capability requested, not built | BRIEFING C2 item exists |
-| `[kb lesson.<id>: note]` | cross-game, no card / doc has room: docs/kb/lessons/ (tools/templates/lesson.json) | id exists |
+| `[kb lesson.<id>: note]` | cross-game, no card / doc has room: docs/kb/lessons/ (tools/templates/lesson.json; a game more: `knowledge.py evidence`) | id exists |
 | `[probe tools/probes/<x>.py]` | kept as a reproducible probe | file, README row, docstring fields |
 | `[local: <reason>]` | true for this game only | a reason |
 | `[deferred C2 #N\|Open: reconsider when <condition>]` | unresolved; evidence kept there | target exists, a condition |
