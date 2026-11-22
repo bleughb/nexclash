@@ -745,6 +745,14 @@
     "loading": "ab0ed1b4fa860c10747d950d0ade1756"
    }
   },
+  "d462589b7b7e63cb7e958323d00d165a": {
+   "game": "Stormbringer (128K)",
+   "doc": "stormbringer.md",
+   "nex": {
+    "plain": "74f64c674eda981e940da907018aa9b2",
+    "sprites": "218f92e530c6c658f37e51d6c24ce641"
+   }
+  },
   "1895877d638a4a5f37a9402bed18f59a": {
    "game": "Target Renegade (128K)",
    "doc": "target_renegade.md",
