@@ -15,6 +15,7 @@ from pathlib import Path
 
 ROM_ORG, ALT_PAGE, STATE_PAGE = 0x386E, 24, 68
 SAVE_PAGE, LOAD_FRONT = 123, 0x0574
+SD_AUTO = 0xFC06                        # the autosave entry in page 123 (asm sd_code), called from the driver
 EN_LEVEL, EN_START, EN_MAIN, EN_INTRO, EN_LEVELS = 0x050E, 0x05C5, 118, 119, 124
 TAPE_FIRST, TAPE_LAST = 32, 55
 CMP = tuple(i for i in range(30) if i not in (15, 25, 29))
@@ -806,8 +807,147 @@ EN_CHARS = {'é': 0x80, 'ě': 0x82, 'Ě': 0x83, 'š': 0x84, 'č': 0x86, 'ř': 0x
 PC_USED = [0]
 
 
+def _story_spans(old, new, base):
+    """Changed bytes as (address, bytes) runs; a gap of up to 4 unchanged bytes costs no more than a new header."""
+    runs, run = [], None
+    for i in (i for i in range(len(new)) if new[i] != old[i]):
+        if run and i - run[1] <= 4:
+            run[1] = i
+        else:
+            if run:
+                runs.append(run)
+            run = [i, i]
+    if run:
+        runs.append(run)
+    return [(base + a, bytes(new[a:b + 1])) for a, b in runs]
+
+
+def _story_title(memory, image, screen):
+    """The picture's top half (its title) from the English screen: cell by cell, bitmap and attribute.
+
+    The screens' normal colours are 205, the game's 215; any non-zero level below 255 is normal. A cell
+    that already shows the same colours (both blacks are one) is left alone."""
+    def colour(rgb):
+        r, g, b = rgb
+        return (b > 0) | (r > 0) << 1 | (g > 0) << 2, int(255 in rgb)
+    items = []
+    for cell_row in range(12):
+        base = 0x5800 + 32 * cell_row
+        attrs = list(memory[base:base + 32])
+        rows = [list(memory[screen(cell_row * 8 + y):screen(cell_row * 8 + y) + 32]) for y in range(8)]
+        for col in range(32):
+            a = attrs[col]
+            ink, paper, bright = a & 7, a >> 3 & 7, a >> 6 & 1
+            want = [[colour(image[col * 8 + x, cell_row * 8 + y]) for x in range(8)] for y in range(8)]
+            shown = lambda y, x: (ink if rows[y][col] & 128 >> x else paper, bright)
+            if all(want[y][x] == shown(y, x) or want[y][x][0] == shown(y, x)[0] == 0 for y in range(8) for x in range(8)):
+                continue
+            used = {c for line in want for c in line}
+            indices = sorted({i for i, _ in used})
+            clash = len(indices) > 2 or len({b for i, b in used if i}) > 1
+            if clash:                                   # 14 cells where a title letter meets a star or moon:
+                changed = Counter(want[y][x] for y in range(8) for x in range(8)   # black paper, the letters' ink,
+                                  if want[y][x][0] and want[y][x] != shown(y, x))   # every other pixel in that ink
+                paper = 0 if 0 in indices else paper
+                ink, bright = changed.most_common(1)[0][0] if changed else (ink, bright)
+            else:
+                if not set(indices) <= {ink, paper}:
+                    paper = paper if paper in indices else indices[0]
+                    rest = [i for i in indices if i != paper]
+                    ink = rest[0] if rest else ink
+                bright = max((b for i, b in used if i), default=bright)     # the flag stripes: same colours, BRIGHT
+            for y in range(8):
+                rows[y][col] = sum(128 >> x for x in range(8) if ink != paper and
+                                   (want[y][x][0] != paper if clash else want[y][x][0] == ink))
+            attrs[col] = a & 0x80 | bright << 6 | paper << 3 | ink
+        for y in range(8):
+            address = screen(cell_row * 8 + y)
+            items += _story_spans(memory[address:address + 32], rows[y], address)
+        items += _story_spans(memory[base:base + 32], attrs, base)
+    return items
+
+
+HEADER_UNPACK = 0x86D9          # the attract header's unpacker: 48 pixel rows then 6 attribute rows at 4000
+HEADER_DATA = 0x8758            # its data starts at the byte after this (HL = 86DF + 79, then INC HL)
+
+
+def _header_runs(data, at, count):
+    """The unpacker's runs: control C, length C/2+1; bit 0 set repeats one byte, clear copies that many."""
+    out = []
+    while len(out) < count:
+        at += 1
+        length, repeat = (data[at] >> 1) + 1, data[at] & 1
+        at += 1
+        out.append(data[at])
+        for _ in range(length - 1):
+            if not repeat:
+                at += 1
+            out.append(data[at])
+    if len(out) != count:
+        raise ValueError('attract header run crosses a section end')
+    return out, at
+
+
+def _header_pack(values):
+    """Fewest bytes in the unpacker's run format (a run never crosses a section end)."""
+    n = len(values)
+    cost, step = [0] + [None] * n, [None] * (n + 1)
+    for end in range(1, n + 1):
+        for length in range(1, min(128, end) + 1):
+            start = end - length
+            options = [(1 + length, False)]
+            if length > 1 and len(set(values[start:end])) == 1:
+                options.append((2, True))
+            for size, repeat in options:
+                if cost[end] is None or cost[start] + size < cost[end]:
+                    cost[end], step[end] = cost[start] + size, (length, repeat)
+    runs, end = [], n
+    while end:
+        length, repeat = step[end]
+        start = end - length
+        runs.append(bytes(((length - 1) << 1 | repeat,)) + (bytes(values[start:start + 1]) if repeat else bytes(values[start:end])))
+        end = start
+    return b''.join(reversed(runs))
+
+
+def attract_header(ram):
+    """English credits header for the attract mode: HUDEBNI CAST -> MUSIC, GRAFICKA CAST -> GRAPHICS.
+
+    The header is packed after its unpacker (86D9) in the main block. The two words are redrawn from the
+    header's own 3x4 font (letter positions below), centred where the Czech stood, and packed again in the
+    same format. Returns (address, bytes) for the English main table."""
+    if bytes(ram[HEADER_UNPACK:HEADER_UNPACK + 13]) != bytes.fromhex('01 79 00 CD 52 00 3B 3B E1 09 11 00 40'):
+        raise ValueError('unexpected attract header unpacker')
+    bitmap, at = _header_runs(ram, HEADER_DATA, 1536)
+    attrs, end = _header_runs(ram, at, 192)
+    pixel = [[bool(bitmap[y * 32 + x // 8] & 128 >> x % 8) for x in range(256)] for y in range(48)]
+    source = [row[:] for row in pixel]
+    glyphs = {'P': (8, 11, 3), 'M': (32, 11, 5), 'G': (200, 11, 3), 'R': (204, 11, 3), 'A': (208, 11, 3),
+              'I': (216, 11, 1), 'C': (218, 11, 3), 'H': (10, 27, 3), 'U': (14, 27, 3), 'S': (47, 27, 3)}
+    for text, top, (x0, y0, x1, y1) in (('MUSIC', 27, (10, 24, 54, 31)), ('GRAPHICS', 11, (200, 8, 247, 15))):
+        xs = [x for x in range(x0, x1 + 1) for y in range(top, top + 4) if source[y][x]]
+        for y in range(y0, y1 + 1):                    # the Czech words and their accents
+            pixel[y][x0:x1 + 1] = [False] * (x1 + 1 - x0)
+        x = round((min(xs) + max(xs)) / 2 - (sum(glyphs[c][2] + 1 for c in text) - 1) / 2)
+        for c in text:
+            gx, gy, width = glyphs[c]
+            for row in range(4):
+                pixel[top + row][x:x + width] = source[gy + row][gx:gx + width]
+            x += width + 1
+    new_bitmap = [sum(128 >> b for b in range(8) if pixel[y][c * 8 + b]) for y in range(48) for c in range(32)]
+    packed = _header_pack(new_bitmap) + _header_pack(attrs)
+    if len(packed) > end - HEADER_DATA:
+        raise ValueError('English attract header packs to %d bytes, %d available' % (len(packed), end - HEADER_DATA))
+    check = bytearray(ram)
+    check[HEADER_DATA + 1:HEADER_DATA + 1 + len(packed)] = packed
+    got, at = _header_runs(check, HEADER_DATA, 1536)
+    if got != new_bitmap or _header_runs(check, at, 192)[0] != attrs:
+        raise ValueError('English attract header does not unpack to its picture')
+    return HEADER_DATA + 1, packed
+
+
 def story_tables(reference, folder, table, pages):
-    """Patches for the white-on-blue text cells of each level picture, as drawn by the game's own routine."""
+    """Patches for each level picture, as drawn by the game's own routine: its white-on-blue text cells and its title."""
     from PIL import Image
     from skoolkit.simulator import Simulator, SP
     from .build import rom48
@@ -823,16 +963,16 @@ def story_tables(reference, folder, table, pages):
         memory[0xFF00:0xFF02] = [0xF0, 0xFF]
         sim.run(0xC350, 0xFFF0)
         image = Image.open(folder / ('level%da.png' % index)).convert('RGB').load()
+        screen = lambda row: 0x4000 | (row & 0xC0) << 5 | (row & 7) << 8 | (row & 0x38) << 2
         items = []
-        for row in range(96, 192):                      # the text box only; the title banner stays
-            address = 0x4000 | (row & 0xC0) << 5 | (row & 7) << 8 | (row & 0x38) << 2
+        for row in range(96, 192):                      # the text box: white-on-blue cells
+            address = screen(row)
             line = list(memory[address:address + 32])
             for col in range(32):
                 if memory[0x5800 + (row >> 3) * 32 + col] & 0x3F == 0x0F:
                     line[col] = sum(128 >> x for x in range(8) if min(image[col * 8 + x, row]) > 100)
-            changed = [col for col in range(32) if line[col] != memory[address + col]]
-            if changed:                                # one span per row: 4 bytes of header each
-                items.append((address + changed[0], bytes(line[changed[0]:changed[-1] + 1])))
+            items += _story_spans(memory[address:address + 32], line, address)
+        items += _story_title(memory, image, screen)
         block = table(items, 2048)
         page, at = (127 if index < 3 else 121), 0x800 * (index % 3 + 1)
         pages[page][at:at + len(block)] = block
@@ -876,6 +1016,7 @@ def english_pages(reference, path):
     intro = b''.join((b' ' + code(l) if l else b'') + b'\r\x80' for l in lines) + b'\r\x80\r\x80\r\0'
     if 0xABE3 + len(intro) > 0xC9B2:
         raise ValueError('English intro too long')
+    entries.append(attract_header(ram))
     pages = {EN_MAIN: table(entries, 8192), EN_INTRO: table([(0xABE3, intro)], 8192)}
     for p in range(EN_LEVELS, EN_LEVELS + 4):
         pages[p] = bytearray(8192)
@@ -944,8 +1085,11 @@ def loader_rom(code=None):
     if bytes(rom[0x04C6:0x04C9]) != bytes.fromhex('21801F') or 0x04C6 + len(save) > 0x053F:
         raise ValueError('unexpected ROM SA-BYTES body')
     rom[0x04C6:0x04C6 + len(save)] = save
-    for key, at in (('enlevel', EN_LEVEL), ('enstart', EN_START), ('enstory', 0x0558), ('enstory2', 0x05DA)):
+    for key, at, end in (('enlevel', EN_LEVEL, 0x0558), ('enstart', EN_START, 0x05DA), ('enstory', 0x0558, 0x0562),
+                         ('enstory2', 0x05DA, 0x0605)):
         blob = bytes.fromhex(hooks[key])
+        if at + len(blob) > end:
+            raise ValueError('%s does not fit %04X-%04X' % (key, at, end))
         rom[at:at + len(blob)] = blob
     rom[ROM_ORG:ROM_ORG + len(code)] = code
     return rom
@@ -3705,7 +3849,7 @@ class DriverMemory:
     def nextreg(self, reg, value):
         allowed = {0x50: (68, 69, 75, 76, 78, 79, 81, 255), 0x51: (68, 69, 75, 76, 78, 79, 82, 83, 84, 112, 113, 114, 115, 116, 122, 255),
                    0x52: (10, 113, 114, 115, 116, 117, 122, *range(85, 96), *range(96, 112), *range(136, 216)),
-                   0x53: (11, *range(128, 136), *range(136, 216))}
+                   0x53: (11, *range(128, 136), *range(136, 216)), 0x57: (1, SAVE_PAGE)}
         if reg == 7 and value in range(4):
             self.speed = value
         elif reg == 5 and value & 0xC8 == 0x40 and value & 0x37 == self.nr.get(5, NR05_TEST) & 0x37:
@@ -3718,8 +3862,10 @@ class DriverMemory:
             raise AssertionError('driver set NextReg %02X to %d' % (reg, value))
 
     def read_port(self, registers, port):
-        if port != 0x253B or self.selected not in (5, 7, 0x14, 0x15, 0x40, 0x41, 0x43, 0x44, 0x69, 0x6B):
+        if port != 0x253B or self.selected not in (5, 7, 0x14, 0x15, 0x40, 0x41, 0x43, 0x44, 0x57, 0x69, 0x6B):
             raise AssertionError('driver read unexpected IO')
+        if self.selected == 0x57:
+            return self.slots[7]
         if self.selected == 7:
             return self.speed | (self.speed << 4)
         return {5: self.nr.get(5, NR05_TEST), 0x14: 0xE3, 0x41: self.nr.get(0x40, 0) & 0x7F}.get(self.selected, 0)
@@ -3727,7 +3873,7 @@ class DriverMemory:
     def write_port(self, registers, port, value, *args):
         if port & 0xFF == 0xFE and value < 8:           # the loading bars: border colour only, beeper bit clear
             return
-        if port != 0x243B or value not in (5, 7, 0x14, 0x15, 0x40, 0x41, 0x43, 0x44, 0x69, 0x6B):
+        if port != 0x243B or value not in (5, 7, 0x14, 0x15, 0x40, 0x41, 0x43, 0x44, 0x57, 0x69, 0x6B):
             raise AssertionError('driver wrote IO')
         self.selected = value
 
@@ -3778,6 +3924,13 @@ def run_loading_driver(memory, registers, speed=0, driver=None, owned=None, limi
     while r[24] != 0x8EFC:
         if steps > limit:
             raise AssertionError('driver failed to return')
+        if r[24] == SD_AUTO and mem.slots[7] == SAVE_PAGE:
+            # The autosave (page 123): SD card I/O, outside this model; it keeps every register and
+            # touches only page 123 and its private stack. JNext runs it (games/inferno.md).
+            sp = r[SP]
+            r[24], r[SP] = mem[sp] | mem[(sp + 1) & 65535] << 8, (sp + 2) & 65535
+            mem.autosaves = getattr(mem, 'autosaves', 0) + 1
+            continue
         sim.opcodes[mem[r[24]]]()
         if r[26] or r[27] != 1 or r[14] != registers[14]:
             raise AssertionError('driver changed IFF/IM/I')
@@ -5123,7 +5276,12 @@ class BootstrapPatch:
         self.altrom_low = (26, bytes(rom[:8192]))
         self.page = bytes(rom[8192:])
         self.extra_banks = {12: self.page + bytes(8192), 13: self.altrom_low[1] + bytes(8192)}
-        self.extra_banks[SAVE_PAGE // 2] = bytes(16384)      # empty named saves (SAVE/LOAD)
+        saves = bytearray(16384)                              # empty named saves (SAVE/LOAD), page 123 0000-1BFF;
+        sd = bytes.fromhex(load_profile()['hooks']['sdsave'])  # their SD-card code at 1C00 (runs at FC00, slot 7)
+        if len(sd) > 0x400:
+            raise ValueError('SD save code does not fit page 123 1C00-1FFF')
+        saves[(SAVE_PAGE & 1) * 8192 + 0x1C00:(SAVE_PAGE & 1) * 8192 + 0x1C00 + len(sd)] = sd
+        self.extra_banks[SAVE_PAGE // 2] = bytes(saves)
         for p, data in self.pages.items():
             bank = p // 2
             image = bytearray(self.extra_banks.get(bank, bytes(16384)))
@@ -6832,6 +6990,9 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
                     bank = bytearray(self.extra_banks.get(p // 2, bytes(16384)))
                     bank[(p & 1) * 8192:(p & 1) * 8192 + 8192] = bytes(data).ljust(8192, b'\0')
                     self.extra_banks[p // 2] = bytes(bank)
+                if 7 in self.extra_banks:
+                    raise ValueError('bank 7 is taken: the story screens need it black')
+                self.extra_banks[7] = bytes(16384)     # shadow screen, shown while a story picture is drawn
             self.page = bytes(rom)
             self.extra_banks[12] = self.page + bytes(8192)
             table = bytearray()
