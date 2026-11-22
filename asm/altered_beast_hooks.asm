@@ -108,6 +108,7 @@ V_FOUND EQU 0x803E              ; (2) idle: the entry found
 V_KEY   EQU 0x8040              ; 11-byte key: stream (2), km, W, H, r0, nr, 4 stream bytes
 V_NIB   EQU 0x8050              ; 8 colour nibbles
 V_FX    EQU 0x8060              ; (2) non-zero = an effect wrote attributes into the buffer this game frame
+V_SPD   EQU 0x8062              ; the caller's CPU speed (NR 7 bits 1:0), given back on the way out
 LOG     EQU 0x8100              ; MAXLOG x 10: km, DE (2), W, H, x, y (from the pointer), yc, limit, 0
 CE      EQU 0x8300              ; NCE x 64: +0 flags (7 valid, 0 used, 1 shown), +1 key (11), +12 n,
                                 ; +13 patterns (48 at most; 0xFF = empty tile)
@@ -123,13 +124,14 @@ TP1     EQU 0x2300              ; second pair, paper mask
 
 ; 0x2000-0x23FF: written by altered_beast.py
         ORG 0x2400
+        INCLUDE lib/hlib_speed.asm
 
 ; ---- the two masked plot loops: log the figure, the displaced LD A,(23939), back ----
         MACRO PLOTLOG kind, back
-        nextreg 0x07,3
         nextreg 0x54,HPG
         ld (V_SP),sp
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPD
         push af
         push bc
         push hl
@@ -142,9 +144,9 @@ TP1     EQU 0x2300              ; second pair, paper mask
         pop hl
         pop bc
         pop af
+        HLIB_SPEED_OUT V_SPD
         ld sp,(V_SP)
         nextreg 0x54,GP4
-        nextreg 0x07,0
         ld a,(H_)
         jp back
         ENDM
@@ -153,10 +155,10 @@ e_pn:   PLOTLOG 0, 0xD039
 e_pm:   PLOTLOG 1, 0xCEEE
 
 ; ---- opaque plot: HL = buffer address, B = lines, DE = data ----
-e_op:   nextreg 0x07,3
-        nextreg 0x54,HPG
+e_op:   nextreg 0x54,HPG
         ld (V_SP),sp
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPD
         push af
         push bc
         push hl
@@ -168,9 +170,9 @@ e_op:   nextreg 0x07,3
         pop hl
         pop bc
         pop af
+        HLIB_SPEED_OUT V_SPD
         ld sp,(V_SP)
         nextreg 0x54,GP4
-        nextreg 0x07,0
         jp 0xD210
 
 ; logp: A = kind; keeps DE, IX, IY. Mode as the plot's attribute code decides it (0xD06B / 0xCF28):
@@ -289,10 +291,10 @@ neg_att:ld (ATT),hl
         ex (sp),hl
         ld (PIX),hl
         pop hl
-        nextreg 0x07,3
         nextreg 0x54,HPG
         ld (V_SP),sp
         ld sp,HSTK
+        HLIB_SPEED_IN V_SPD
         push af
         push bc
         push de
@@ -303,9 +305,9 @@ neg_att:ld (ATT),hl
         pop de
         pop bc
         pop af
+        HLIB_SPEED_OUT V_SPD
         ld sp,(V_SP)
         nextreg 0x54,GP4
-        nextreg 0x07,0
         ret
 
 ; ---- the two attribute effects: only the flag; every register as it was ----
@@ -324,14 +326,14 @@ e_fxb:  nextreg 0x54,HPG
 ;   exchanged between the buffer's and the clean attributes for the time of the blit, so the blit shows it
 ;   with no gap, and the clean copy is whole again when the game continues
 fxswap: push bc
-        nextreg 0x07,3
         nextreg 0x54,HPG
+        HLIB_SPEED_IN_ABC V_SPD          ; B, C saved above; A, F are set below
         ld hl,(V_FX)
         ld a,h
         or l
         call nz,swaprect
+        HLIB_SPEED_OUT V_SPD
         nextreg 0x54,GP4
-        nextreg 0x07,0
         pop bc
         ret
 

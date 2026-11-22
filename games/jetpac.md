@@ -29,6 +29,10 @@ Verification (2026-10-19): free run 6000 frames: 20433 draws, 100 erases, 23192 
 incl. all 8 levels' aliens and the 12 carried rocket parts x 8 positions incl. both edges x 3 inks x
 first/last object), erase 2, clear 1, guard 1, negative control 40/40.
 
+## Speed kept (2026-11-22)
+e_nw keeps the caller's NR 7 (HLIB_SPEED_IN_SP); 13 bytes found in the hooks to fit; verifier: z80n.install, NR 7 read,
+speed check, four speeds, speed_negative. Free run IDENTICAL; sprites cd416e63.
+
 ## Rocket (round 2, 2026-11-03: the user's hardware report)
 Faults (user, round 1 build): (1) a rocket of 2-3 sections shows only the top one, the lower
 ones flash; (2) the fuel pod is invisible (collectable); (3) no take-off flames. All three are in
@@ -140,11 +144,7 @@ paths the free run never reaches (it never builds the rocket), so every check pa
   per-slot and cycling colours stay the game's. Sheets show the first/default colour.
 - Sheet builder: tools/prototypes/jetpac_sheets.py (moves into nexclash/jetpac.py in phase B).
 
-## Phase A question (sent 2026-10-19)
-Proposed: Jetman, aliens, rocket parts, fuel pod, bonus items, explosions -> sprites; lasers,
-platforms, HUD, text -> ULA. Depth: sprites over the ULA. Colours: Dean paints
-jetpac_PAINTING_SPRITES.png (sheets in specnext reference/jetpac/; built by the phase-A script,
-defaults all white until painted).
+## Phase A question (sent 2026-10-19): answered by "Dean's decisions" above.
 
 ## Open
 - Real recording (Fuse RZX) for the differential test: the free run never builds the rocket, so
@@ -237,7 +237,7 @@ stretch of 20 updates +4.0 (audit, runs/pace-audit-20261108): no frame sync on t
 - [local: a fixed stretch pays for a fixed hook] A game with no frame sync and a hook cost per draw needs no limiter: run a fixed stretch of the same draw's own set-up at 28 MHz. The credit scales with the draws, as the debt does, and no wait is added.
 - [local: the plain build is not the Spectrum] A difference between plain and build at a low-memory read was the plain .nex running NextZXOS's ROM3; the build had Sinclair's bytes. Check which arm is the faithful one before fixing.
 - [local: a 16K game's upper RAM is free] Hook RAM above 0x7FFF needs no page for a 16K game; a read and write watch in the verifier stands behind that.
-- [card patch.restore-speed §Use / do not use] A stateless alt-ROM hook keeps the caller's speed on the stack
+- [card patch.restore-speed §Use / do not use] A stateless alt-ROM hook keeps the caller's speed on the stack Not applied until 2026-11-22 (e_nw kept a fixed NEXTREG 7,0); hooklib.speed_audit now refuses one.
   (read NR 7, AND 3, PUSH AF ... POP AF, NEXTREG 7,A): 13 bytes more than a fixed exit.
 - [card patch.whole-altrom-image §Use / do not use] opt-in rework available: whole alt ROM image (see card patch.whole-altrom-image). IM 1 in play reaches hook code at 0x386E once DivMMC no longer traps 0x0038 (runs/altrom_audit, JNext; masked under NextZXOS). Output pinned.
 - [card detect.tracked-unit §Recognise] One object drew 4 figures a frame (the rocket: 3 sections in a loop + flames, same IX); a sprite set per object showed only the last, and the per-draw check passed because it compares each draw alone. Observed on hardware (user), demonstrated by the neg_rk build failing 36/37 whole-routine cases. Card: Recognise bullet + failure row.

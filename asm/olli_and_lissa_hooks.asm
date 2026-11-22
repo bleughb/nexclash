@@ -879,7 +879,7 @@ setup:  ld hl,pbuf
         nextreg 0x19,0
         nextreg 0x19,175
         nextreg 0x15,0x01       ; sprites on, over the ULA, inside the display
-        nextreg 0x07,0
+        nextreg 0x07,0        ; speed: start-up (once, before the game)
         ret
 pal9:   DS 512
 pbuf:   DS 256                  ; the snapshot's 0x5B00-0x5BFF (the build fills it in)

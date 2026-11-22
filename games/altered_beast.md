@@ -79,6 +79,9 @@ Builds differ from the unfixed ones in those 9 bytes only. Board: unpatched cras
 attract mode (hi-scores, credits, menu) and the smoke pass (dirty start, intro, play, scroll, enemies) clean.
 
 ## Lessons
+- [local: speed fix] Every hook latches the caller's speed on its own stack page (V_SPD 0x8062) and gives it back
+  before leaving it; fxswap too. The verifier turns the entry speed 0-3 at every hook (each about 51 times in 600
+  frames); two negatives: 28 MHz left on, 3.5 MHz given back.
 - [doc BRIEFING A1] A handler that enables interrupts within ~40 T of the acknowledge runs twice per
   frame on the Next core; a 128K's 36 T /INT hides it, and emulators that take one interrupt per frame never show it.
 - [local: coloursheet.choose picks figures by key, so pixels under a second part are on no painting sheet] The painting sheet left pixels of bodies under their head parts unpainted: JNext showed a half-painted standing pose. Painting the whole-figure sheet with `recolour --layout` covers them.

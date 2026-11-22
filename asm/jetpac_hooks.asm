@@ -23,6 +23,7 @@
 ; and their lookup: asm/jetpac_tables.asm (generated).
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_speed.asm"   ; macros only: the caller's speed kept on the stack
 
 OBJ0    EQU 23808
 NOBJ    EQU 17
@@ -38,9 +39,11 @@ e_nw:   push af
         push bc
         push de
         push hl
-        nextreg 0x07,3          ; the hook at 28 MHz (~4K T per draw: table search + 6 sprites)
+        HLIB_SPEED_IN_SP        ; the hook at 28 MHz (~4K T per draw: table search + 6 sprites)
         call draw
-        nextreg 0x07,0          ; the game runs at 3.5 MHz (stub: NEXTREG $07,0)
+        pop af                  ; HLIB_SPEED_OUT_SP, written out for the negative control's label
+neg_spd:
+        nextreg 0x07,a          ; the caller's speed back (it was a fixed 3.5 MHz: F8 lost)
         pop hl
         pop de
         pop bc
@@ -75,9 +78,8 @@ objbase:
         ld a,ixl
         cp NOBJ*8
         jr nc,.no
-        and 7
+        test 7                  ; Z80N: A kept
         jr nz,.no
-        ld a,ixl
         rrca
         rrca                    ; 2i
         push bc
@@ -281,11 +283,10 @@ draw:   call objbase
         and 0xC0
         or b                    ; A = bottom line y
         pop bc                  ; C = pattern, B = layout
+        inc a                   ; Y = y - 31 + 32
         bit 1,b
-        jr nz,.r2
-        add a,17                ; Y = y - 15 + 32
-        jr .ry
-.r2:    inc a                   ; Y = y - 31 + 32
+        jr nz,.ry
+        add a,16                ; Y = y - 15 + 32
 .ry:    push bc                 ; [pattern/layout, kind]
         push de                 ; [x, pattern/layout, kind]
         ld e,a                  ; E = Y
@@ -335,9 +336,7 @@ draw:   call objbase
         ld a,h                  ; A = layout
         ex (sp),hl              ; HL = x, stack [pattern/layout, end]
         push af
-        push hl
-        call place              ; row 0, column 0
-        pop hl
+        call place              ; row 0, column 0 (place keeps HL)
         pop af
         push af
         push hl
@@ -357,9 +356,7 @@ draw:   call objbase
         pop af
         inc c                   ; first pattern of row 1 (pattern + columns)
         push af
-        push hl
-        call place              ; row 1, column 0
-        pop hl
+        call place              ; row 1, column 0 (place keeps HL)
         pop af
         bit 0,a
         jr z,.done
@@ -368,24 +365,21 @@ draw:   call objbase
         call place              ; row 1, column 1
 .done:  pop hl
         pop bc                  ; B = end of the figure's sprite range
-.hd:    ld a,d
-        cp b
-        ret nc
-        nextreg 0x34,a
-        nextreg 0x38,0
-        inc d
-        jr .hd
+        ld a,b                  ; sprites D .. B-1 hidden (none if D >= B)
+        sub d
+        ret c
+        ret z
+        ld b,a
+        ld a,d
+        jp hiden
 .none:  pop af
 .none0: pop hl
         jp hideobj
 
 neg_pt  EQU draw.np
 
-add16:  ld a,l
-        add a,16
-        ld l,a
-        ret nc
-        inc h
+add16:  ld a,16
+        add hl,a                ; Z80N
         ret
 
 ; one 16x16 column at x_c = HL (0-295): sprite D (D += 1 per sprite set), Y = E, palette B,
