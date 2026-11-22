@@ -21,6 +21,7 @@ and anything in games/*.md (game notes are history; a stale command there mislea
 """
 import ast
 import collections
+import functools
 import glob
 import os
 import re
@@ -60,11 +61,19 @@ def selftest_flags():
     return set(re.findall(r"'(--[a-z-]+)'", m.group(1))) | {'--help'}
 
 
+@functools.lru_cache(maxsize=None)
+def _tree(path):
+    """The module's syntax tree, parsed once per run (module_names, engine_contract, auto_contract and copied_pins all
+    walk the same files; Codex review P3). Read only: callers never change it."""
+    return ast.parse(open(path, encoding='utf-8').read())
+
+
+@functools.lru_cache(maxsize=None)
 def module_names():
     defs = {}
     for p in glob.glob(os.path.join(ROOT, 'nexclash', '*.py')) + glob.glob(os.path.join(ROOT, 'tools', '*.py')):
         try:
-            t = ast.parse(open(p).read())
+            t = _tree(p)
         except SyntaxError:
             continue
         names = set()
@@ -94,7 +103,7 @@ CONTRACT = ('auto', 'verify', 'unit_tests', 'load_profile', 'CMP')     # docs/EN
 
 def engine_contract():
     """docs/ENGINE_CONTRACT.md REQUIRED names in every module of nexclash/engines.py (read, not imported)."""
-    t = ast.parse(open(os.path.join(ROOT, 'nexclash', 'engines.py')).read())
+    t = _tree(os.path.join(ROOT, 'nexclash', 'engines.py'))
     table = next(n.value for n in t.body if isinstance(n, ast.Assign) and getattr(n.targets[0], 'id', '') == 'ENGINES')
     out = collections.defaultdict(list)
     defs = module_names()                                # once: it parses every module (was once per engine, 90 s)
@@ -122,7 +131,7 @@ def auto_contract():
     """docs/ENGINE_CONTRACT.md auto(): it runs the unit tests and the negative controls (a call whose name has
     'unit' / 'neg', in auto or one call deep), and an engine replaying through simrun.play_rzx defines on_desync
     (without it a lost sync is a warning and the run passes on the frames before it)."""
-    t = ast.parse(open(os.path.join(ROOT, 'nexclash', 'engines.py')).read())
+    t = _tree(os.path.join(ROOT, 'nexclash', 'engines.py'))
     table = next(n.value for n in t.body if isinstance(n, ast.Assign) and getattr(n.targets[0], 'id', '') == 'ENGINES')
     out = collections.defaultdict(list)
 
@@ -131,7 +140,7 @@ def auto_contract():
                 if isinstance(n, ast.Call)}
     for mod in sorted({e.elts[0].value for e in table.elts}):
         src = open(os.path.join(ROOT, 'nexclash', mod + '.py'), encoding='utf-8').read()
-        tree = ast.parse(src)
+        tree = _tree(os.path.join(ROOT, 'nexclash', mod + '.py'))
         defs = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}
         c = calls(defs['auto']) if 'auto' in defs else set()
         for name in list(c):
@@ -157,11 +166,11 @@ SHARED_MD5 = {'cc822d044ec89ffcffbfb3a122f4d088': 'the emu256 256-colour palette
 
 def copied_pins():
     """Every 32-hex string literal in the engine modules: one owned by two engines (not SHARED_MD5) fails."""
-    t = ast.parse(open(os.path.join(ROOT, 'nexclash', 'engines.py')).read())
+    t = _tree(os.path.join(ROOT, 'nexclash', 'engines.py'))
     table = next(n.value for n in t.body if isinstance(n, ast.Assign) and getattr(n.targets[0], 'id', '') == 'ENGINES')
     where = collections.defaultdict(set)
     for mod in sorted({e.elts[0].value for e in table.elts}):
-        tree = ast.parse(open(os.path.join(ROOT, 'nexclash', mod + '.py'), encoding='utf-8').read())
+        tree = _tree(os.path.join(ROOT, 'nexclash', mod + '.py'))
         for n in ast.walk(tree):
             if isinstance(n, ast.Constant) and isinstance(n.value, str) and re.fullmatch(r'[0-9a-f]{32}', n.value):
                 where[n.value].add(mod)
