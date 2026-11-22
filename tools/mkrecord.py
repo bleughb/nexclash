@@ -86,17 +86,20 @@ def main(argv):
     spec = json.load(open(argv[0]))
     ref = os.path.abspath(argv[1])
     py = sys.executable
-    env = dict(os.environ, NEXCLASH_MAINTAINER='1')
     snap, recs = stage(spec, ref)
     rec = record(spec, snap, recs)
     p = os.path.join(ROOT, 'docs', 'records', spec['name'] + '.json')
     json.dump(rec, open(p, 'w'), indent=1)
-    out = subprocess.run([py, 'selftest.py', ref, '--game', spec['name']], cwd=ROOT, capture_output=True, text=True,
-                         env=env).stdout
-    got = dict(re.findall(r'FAIL %s rebuild (\S+) \(got ([0-9a-f]{32})\)' % re.escape(spec['name']), out))
+    subprocess.run([py, '-m', 'nexclash.records', 'views'], cwd=ROOT, capture_output=True, text=True)
+    out = subprocess.run([py, 'selftest.py', ref, '--game', spec['name']], cwd=ROOT, capture_output=True,
+                         text=True).stdout       # the caller's environment: selftest's own access rules apply
+    seeded = re.compile(r'FAIL %s rebuild (\S+) \(got ([0-9a-f]{32})\)' % re.escape(spec['name']))
+    got = dict(seeded.findall(out))
+    other = [l for l in out.splitlines() if l.startswith('FAIL') and not seeded.match(l)]
     missing = [f for f in spec['outputs'].values() if f not in got]
-    if missing:
-        sys.exit('rebuild gave no %s:\n%s' % (missing, '\n'.join(l for l in out.splitlines() if 'FAIL' in l)[:2000]))
+    if other or missing:                         # only the seeded checksum mismatches are expected: a build,
+        sys.exit('the rebuild failed (no record written past the inputs):\n%s%s' % (   # boot or NEXLOAD failure stops here
+            '\n'.join(other)[:3000], '\nno output for %s' % missing if missing else ''))
     for k, f in spec['outputs'].items():
         rec['outputs'][k]['md5'] = got[f]
     if spec.get('result'):
@@ -108,9 +111,12 @@ def main(argv):
     print('wrote %s; outputs %s' % (os.path.relpath(p, ROOT), {k: v['md5'][:8] for k, v in rec['outputs'].items()}))
     if '--stamp' in argv:
         r = subprocess.run([py, 'selftest.py', ref, '--game', spec['name'], '--verify', '--stamp'], cwd=ROOT,
-                           capture_output=True, text=True, env=env)
-        print('\n'.join(l for l in r.stdout.splitlines() if l.startswith(('FAIL', 'stamped', 'SELFTEST'))))
-        return 0 if 'SELFTEST PASSED' in r.stdout else 1
+                           capture_output=True, text=True)
+        keep = ('FAIL', 'stamped', 'SELFTEST', 'INCOMPLETE', 'SKIPPED', 'WARNING')
+        print('\n'.join(l for l in r.stdout.splitlines() if l.startswith(keep)))
+        if r.returncode:                         # 2 = incomplete (a game skipped, nothing stamped): not a verification
+            print('selftest exited %d: the record is NOT verified' % r.returncode)
+        return r.returncode
     return 0
 
 
