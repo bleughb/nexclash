@@ -169,6 +169,9 @@ render: cp TICK
         ld a,(S_FULL)
         or a
         call z,interp
+        ld a,(S_FULL)
+        or a
+        call z,ownrot
         ld hl,(S_RP)
         inc hl
         inc hl
@@ -269,6 +272,31 @@ interp: ld hl,(S_RP)
         pop bc
         dec b
         jr .f
+
+; ownrot (IX = live slot, interpolated; state page at slot 0): M3, own turning without lag. The interpolated
+; scene is one tick behind the logic; turn it by one pass of the player's roll / pitch as the controls stand now
+; (0xFF09 / 0xFF0B, the bytes 0x713C copies each pass), with the game's own code: 0xA173 rotates the position
+; (and moves z by speed: speed byte 0xFF there = no move, so a render never reaches its overflow exit 0x5FD5),
+; 0xA0AB x 3 the orientation (as 0x9FA8-0x9FB5). Outputs 0x70E4-0x70E6, 0x9F80-0x9F81 are in outtab.
+ownrot: nextreg 0x50,0xFF
+        ld a,(0xFF09)
+        ld (0x70E4),a
+        ld a,(0xFF0B)
+        ld (0x70E5),a
+        ld a,0xFF
+        ld (0x70E6),a
+        call 0xA173
+        ld hl,(0x70E4)
+        ld (0x9F80),hl
+        push ix
+        ld de,9
+        add ix,de
+        call 0xA0AB
+        call 0xA0AB
+        call 0xA0AB
+        pop ix
+        nextreg 0x50,STATE_PG
+        ret
 
 ; lerp1: one value. HL = prev field, DE = live (cur) field, A = kind (1: 3-byte position lo, hi, sign | bits 16-22;
 ; 0: 2-byte component fraction, sign | magnitude). Keeps HL, DE.

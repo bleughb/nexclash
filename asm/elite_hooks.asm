@@ -373,8 +373,10 @@ intab:  dw 1, 0x6F42
 outtab: dw 0x6180 - 0x6048, 0x6048
         dw 1, 0x6F42
         dw 2, 0x6FEB
+        dw 3, 0x70E4                    ; ownrot: per-pass roll / pitch / speed
         dw 0x862A - 0x861A, 0x861A
         dw 1, 0x9C97
+        dw 2, 0x9F80                    ; ownrot: rotation bytes for 0xA0AB
         dw 1, 0xA6DE
         dw 1, 0xA79D
         dw 0xA951 - 0xA8FA, 0xA8FA

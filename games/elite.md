@@ -1,11 +1,11 @@
 # Elite (Braben / Bell, Firebird 1985; Russian 128K hack) - engine: elite (in progress, stage 2)
 
 ## Next session
-Stage: 2 (build)   State: M2 (ships re-drawn at up to 50 fps, interpolated between ticks) runs in CSpect 2026-11-23 (## M2 progress); M3 (own turning every frame) next
+Stage: 2 (build)   State: M3 for ships (own roll / pitch every frame) runs in CSpect 2026-11-23 (## M2 progress, M3 note); stars and planet per frame (M3b) next
 Inputs: specnext/reference/elite/ (tape, 5 RZX, 5 extracted .z80)    Branch: add-elite    Commit: see git log
 Checks: full surveys of all five RZX (7.5k-68.6k frames); tape not run in an emulator
 Pending user answers: none (design closed 2026-11-23: C coloured ships, details 1-5, pacing (i) interpolate)
-Start with: `python -m nexclash.elite C:\1NEXT\elite_work\Witch.z80 m2.nex` in CSpect, then M3 (## Build plan 5)
+Start with: `python -m nexclash.elite C:\1NEXT\elite_work\Witch.z80 m2.nex` in CSpect, then M3b: stars / planet per frame
 Read: PLAYBOOK stage 1, 3d (unknown engine: feasibility first); ## Findings below
 Open: see Findings
 
@@ -116,9 +116,7 @@ colour). Details: ## Design details.
 
 ## Build plan (stage 2, written 2026-11-23 before any build)
 Engine: new, `elite` (module nexclash/elite.py, asm/elite_hooks.asm, profile); Layer 2 double buffer as wally2.
-Measured inputs [observed: probe pass_frames.py / pass_ints.py, Docking whole recording; the others in ## Pacing when done]:
-frames per pass mean 10.13 (p10 7, p50 11, p90 12, p99 16); interrupts accepted per pass mean 5.85 (mostly 5-7; they land
-in the buffer copy LDIR at 0x7FD5, the line plotters and 0x7232 - the game runs DI for ~40% of frames).
+Measured inputs: "All recordings" below.
 1. Machine: the game's 128K banks unchanged; 28 MHz; new code and state in Next pages mapped only while it runs
    (the game uses 0x4000-0xFFFF; ROM 1 locked). Layer 2 256x192, two buffers; rows outside the viewport transparent so the
    ULA HUD shows through. ULA viewport left blank (the 0x7FBE copy skipped).
@@ -226,15 +224,18 @@ draw_deps.py / draw_io.py in C:NEXT\elite_work\probe.
   S_FLIGHT): status / chart pages keep the original copy.
 - Interpolation checked in CSpect (station, Docking): z 0x4D1F -> 0x4D1D shows 0x4D1E; components move in steps
   (0xE438, 0xE568, 0xE6A0 towards 0xE800 at weights 0.6-0.8).
-- Frame counting (3 rounds): interrupts are lost while ship draws run with DI (16 %); raster polls alone lose
-  frames when two polls are one frame apart at the same line (5 %); a HALT wait polled only at the interrupt's
-  line and never ended. Now: h_isr counts each interrupt, polls (render, h_ship, logic-pass hooks, the wait loop
-  without HALT) count frames whose interrupt was lost, phase from the interrupt's own line: 506 counted over ~505.
-  The game ISR body runs from an owed count (16 per 25 counted frames), so lost interrupts are made up.
+- Frame counting (3 rounds; lesson in ## Lessons): h_isr counts each interrupt, raster polls in DI stretches add
+  lost ones; 506 counted over ~505 frames. The game ISR body runs from an owed count (16 per 25 frames).
+- M3 (ships): ownrot, after interp, turns each ship by one pass of the current roll / pitch (0xFF09 / 0xFF0B) with
+  the game's own code - 0xA173 position (speed byte 0xFF: no z move, never its overflow exit 0x5FD5), 0xA0AB x 3
+  orientation (as 0x9FA8). Cancels the tick of lag for own turning. Checked: pitch forced to 0x0FFF moved the
+  station's y 0x0418 -> 0x088A in the next render (one pass of y += pitch * z). Docking / Witch 600-700 frames.
+  Player rates: 0xFF08 roll, 0xFF0A pitch (16-bit sign | magnitude, controls 0xFE01 in the ISR, steps 255 / 102,
+  max 0x0FFF), 0xFF0C speed; 0x713C copies the high bytes to 0x70E4-0x70E6 once per pass.
 Not yet checked / open: one render sample (Docking, after ~600 frames) showed a station z of 0xB2E1 negative (not
 reproduced in 8 later samples; to watch with a render assert); Havoc.z80 crashes ~150 frames in even in the
 --control build (no hooks; status page snapshot - the start-up tail at 0x4800 sits in its text rows); Layer 2 not yet
-hidden on pages (M4); planet and stars still move at the tick rate; own turning (M3); hardware.
+hidden on pages (M4); planet and stars still move at the tick rate (M3b: they show own turning most); hardware.
 
 ## Hardware checklist
 None yet (no build).
