@@ -29,6 +29,7 @@ FTID = 0x1000            # state page: figure graphic k's four tile ids at +8k
 TTID = 0x1800            # state page: truck graphic k's ten tile ids at +20k
 SPECCY = [0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x00, 0x03, 0xE0, 0xE7, 0x1C, 0x1F, 0xFC, 0xFF]
 WHITE_INKS = (7, 15)
+OUTLINE_BLACK, OUTLINE_WHITE = 0x00, 0xFF
 
 # (address, original, new, hook symbol or None)
 SITES = [
@@ -144,7 +145,7 @@ def _shape(ink, Wd, Hd, outline=True):
     return out
 
 
-def fig_image(m, p):
+def fig_image(m, p, outline=True):
     """32 x 32 image (outline margin 1): graphic rows bottom first, 2 bytes per row."""
     H = m[p]
     ink = set()
@@ -155,10 +156,10 @@ def fig_image(m, p):
             for i in range(8):
                 if b & (0x80 >> i):
                     ink.add((1 + 8 * j + i, r))
-    return _shape(ink, 32, 32), H
+    return _shape(ink, 32, 32, outline), H
 
 
-def truck_image(m, p):
+def truck_image(m, p, outline=True):
     """80 x 32 image: W bytes x H rows, bottom row first; bottom 16 rows bright white, rest bright cyan."""
     W, H = m[p], m[p + 1]
     ink = {}
@@ -169,7 +170,7 @@ def truck_image(m, p):
             for i in range(8):
                 if b & (0x80 >> i):
                     ink[(1 + 8 * j + i, r)] = 15 if k < 16 else 13
-    sh = _shape(set(ink), 80, 32)
+    sh = _shape(set(ink), 80, 32, outline)
     out = {}
     for q, c in sh.items():
         out[q] = ink[q] if c == 1 else (8 if c == 2 else 8)     # fill black; outline black (white figure)
@@ -189,7 +190,7 @@ def patterns(img, cols, rows):
     return bytes(out)
 
 
-def build_data(m):
+def build_data(m, outline=True):
     """-> (state page, {page: bytes}, info)"""
     figs, trucks = graphic_lists(m)
     pages = {}
@@ -210,13 +211,13 @@ def build_data(m):
         idx[p & 0x1FFF] = k + 1
     pages[IDX_PAGE] = idx
     for k, p in enumerate(figs):
-        img, H = fig_image(m, p)
+        img, H = fig_image(m, p, outline)
         img = {q: c for q, c in img.items()}
         pat = patterns(img, 2, 2)
         pg = FP0 + k // 16
         pages.setdefault(pg, bytearray(8192))[(k % 16) * 512:(k % 16) * 512 + 512] = pat
     for k, p in enumerate(trucks):
-        img, W, H = truck_image(m, p)
+        img, W, H = truck_image(m, p, outline)
         pat = patterns(img, 5, 2)
         pg = TP0 + k // 6
         pages.setdefault(pg, bytearray(8192))[(k % 6) * 1280:(k % 6) * 1280 + 1280] = pat
@@ -276,16 +277,18 @@ def light(c, k=0.45):
     return tuple(int(v + (255 - v) * k) for v in c)
 
 
-def palette(enhanced=False):
+def palette(enhanced=False, outline_colour=OUTLINE_BLACK):
+    """outline_colour: the standard colours' outline as an RGB332 byte (black unless a game needs another: the palette
+    is the only thing that changes, so an .nxc toggle can carry it in a few bytes). The painted set has no outline."""
     if enhanced:
         return palette_enh()
-    return _palette_default()
+    return _palette_default(outline_colour)
 
 
-def _palette_default():
+def _palette_default(outline_colour=OUTLINE_BLACK):
     """256 sprite palette bytes. Block 0: the trucks. Block p (1-15, the object's ink + 8 * bright):
-    1 = colour p, 2 = its darker shade (enclosed paper: a solid body), 3 = outline (white; black for
-    a white figure); Enhanced adds 4 = dark shade, 5 = light shade, 6-15 FIXED."""
+    1 = colour p, 2 = its darker shade (enclosed paper: a solid body), 3 = outline (black, as the play area is);
+    Enhanced adds 4 = dark shade, 5 = light shade, 6-15 FIXED."""
     pal = [0xE3] * 256
     for i in range(16):
         pal[i] = SPECCY[i]
@@ -293,7 +296,7 @@ def _palette_default():
         c = RGB[p] if p != 8 else (40, 40, 40)
         pal[16 * p + 1] = rgb8(c) if p != 8 else 0x00
         pal[16 * p + 2] = rgb8(dark(c, 0.45))
-        pal[16 * p + 3] = 0x00 if p in WHITE_INKS else 0xFF
+        pal[16 * p + 3] = outline_colour     # black by default: the play area is black (jattree/nxc#7: white rims)
     pal[0] = 0xE3
     for b in range(16):
         pal[16 * b] = 0xE3
@@ -308,8 +311,10 @@ def colour_offset(attr):
 class LunarJetmanPatch:
     name = 'Lunar Jetman figures -> hardware sprites (altrom hooks, stores NOP)'
 
-    def __init__(self, prof=None, enhanced=False, encrypted=False, j256=None):
+    def __init__(self, prof=None, enhanced=False, encrypted=False, j256=None, outline=None, outline_colour=OUTLINE_BLACK):
         self.enhanced = enhanced
+        # standard colours: the black outline on (the build's normal); painted (Enhanced): none (owner, 2026-11-22)
+        self.outline = (not enhanced) if outline is None else outline
         self.j256 = j256 or J256
         self.encrypted = encrypted
         self.prof = prof or load_profile()
@@ -324,6 +329,8 @@ class LunarJetmanPatch:
             raise ValueError('setup does not hold the default palette (asm/lunar_jetman_palette.asm stale)')
         if enhanced:
             self.stub_extra = self.stub_extra[:i] + palette(True) + self.stub_extra[i + 256:]
+        elif outline_colour != OUTLINE_BLACK:
+            self.stub_extra = self.stub_extra[:i] + palette(False, outline_colour) + self.stub_extra[i + 256:]
         self.setup_call = 0xD000
         self.hook_page_data = b''
         self.uses_printer_buffer = False
@@ -373,7 +380,7 @@ class LunarJetmanPatch:
         if any(ram[TAIL_ADDR - 0x4000:TAIL_ADDR - 0x4000 + self.max_tail]):
             raise ValueError('printer buffer 0x5B00-0x5B7F is not empty')
         m0 = bytes(0x4000) + bytes(ram)
-        self.state, self.pages, self.info = build_data_enh(m0, self.j256) if self.enhanced else build_data(m0)
+        self.state, self.pages, self.info = build_data_enh(m0, self.j256, self.outline) if self.enhanced else build_data(m0, self.outline)
         st = bytearray(self.state)
         if any(st[STCODE:STCODE + len(self.stcode)]) or STCODE + len(self.stcode) > WHERE:
             raise ValueError('state page code does not fit at 0x%04X' % STCODE)
@@ -591,6 +598,20 @@ def build(z80, out, name, say=print):
             ld = f[:-4] + '_loading.nex'
             open(ld, 'wb').write(loading_nex(open(f, 'rb').read(), open(scr, 'rb').read()))
             say('Loading   : %s  %s  (the tape\'s screen held by bank 34 until a key or 5 s)' % (os.path.basename(ld), md5(ld)))
+        # the "Outline off" toggle (standard colours only: the painted set has no outline): the same build with every
+        # outline pixel left out of the images (the .nxc's --toggle "Outline off=NEX", Enhanced excludes it)
+        if enh:
+            continue
+        po = LunarJetmanPatch(enhanced=False, encrypted=True, j256=j256, outline=False)
+        fo = os.path.join(out, '%s_%s_nooutline.nex' % (name, tag))
+        convert(z80, fo, patch=po, quiet=True)
+        bad = check(fo, z80, patch=po, tail=(0x5B00, 0x5B80))
+        ok = ok and not bad
+        say('%-10s: %s  %s  boot %s' % ((tag + ' no outline').capitalize(), os.path.basename(fo), md5(fo), 'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:300]))
+        if os.path.exists(scr):
+            ld = fo[:-4] + '_loading.nex'
+            open(ld, 'wb').write(loading_nex(open(fo, 'rb').read(), open(scr, 'rb').read()))
+            say('Loading   : %s  %s' % (os.path.basename(ld), md5(ld)))
     return ok, s0, j256
 
 
@@ -944,9 +965,9 @@ def _no_white_edge(out, sh, repl):
     return out
 
 
-def fig_image_enh(m, p, temps, fam):
+def fig_image_enh(m, p, temps, fam, outline=True):
     ink = _fig_ink(m, p)
-    sh = _shape(ink, 32, 32)
+    sh = _shape(ink, 32, 32, outline)
     f = fam.get(p, (LGREY, LGREY, DGREY, CYAN, YELLOW))
     if p in JETMAN or f == 'jetman':
         col, repl = _paint_jetman(ink, sh, temps), LGREY
@@ -979,7 +1000,7 @@ def _wheels(ink, H):
     return [((c[0] + c[-1]) / 2, H - 4.5, (c[-1] - c[0]) / 2 + 2.5, 6.0) for c in cl if c[-1] - c[0] >= 8]
 
 
-def truck_image_enh(m, p):
+def truck_image_enh(m, p, outline=True):
     W, H = m[p], m[p + 1]
     ink = set()
     for k in range(H):
@@ -989,7 +1010,7 @@ def truck_image_enh(m, p):
             for i in range(8):
                 if b & (0x80 >> i):
                     ink.add((1 + 8 * j + i, r))
-    sh = _shape(ink, 80, 32)
+    sh = _shape(ink, 80, 32, outline)
     wh = _wheels(ink, H) if H == 27 else []          # the 22 rover frames (not its debris)
     out = {}
     for (x, y), c in sh.items():
@@ -1026,19 +1047,19 @@ def palette_enh():
     return bytes(pal)
 
 
-def build_data_enh(m, path=None):
-    st, pages, info = build_data(m)
+def build_data_enh(m, path=None, outline=True):
+    st, pages, info = build_data(m, outline)
     temps = jet_templates(m, path)
     fam = families(m)
     figs, trucks = info['figs'], info['trucks']
     dpages = pages
     pages = {k: bytearray(v) for k, v in pages.items()}
     for k, p in enumerate(figs):
-        pat = patterns(fig_image_enh(m, p, temps, fam), 2, 2)
+        pat = patterns(fig_image_enh(m, p, temps, fam, outline), 2, 2)
         pg = FP0 + k // 16
         pages[pg][(k % 16) * 512:(k % 16) * 512 + 512] = pat
     for k, p in enumerate(trucks):
-        pat = patterns(truck_image_enh(m, p), 5, 2)
+        pat = patterns(truck_image_enh(m, p, outline), 5, 2)
         pg = TP0 + k // 6
         pages[pg][(k % 6) * 1280:(k % 6) * 1280 + 1280] = pat
     for pg in pages:            # the same opaque pixels as the default images, nibble for nibble
@@ -1151,8 +1172,8 @@ def verify(rzx, s0, stop=None, neg=None, enh=False, j256=None):
     if ENH:     # each Enhanced tile -> its default tile (same silhouette), whose classes say ink / fill / outline
         _ram = bytes(16384) + bytes(snap.banks[5] + snap.banks[2] + snap.banks[0])
         _dec = LJ.decrypt(_ram)[0] if False else _ram
-        _sd, _pd, _ = LJ.build_data(bytes(16384) + _Snap.banks[5] + _Snap.banks[2] + _Snap.banks[0])
-        _se, _pe, _ = LJ.build_data_enh(bytes(16384) + _Snap.banks[5] + _Snap.banks[2] + _Snap.banks[0], j256)
+        _sd, _pd, _ = LJ.build_data(bytes(16384) + _Snap.banks[5] + _Snap.banks[2] + _Snap.banks[0], not ENH)
+        _se, _pe, _ = LJ.build_data_enh(bytes(16384) + _Snap.banks[5] + _Snap.banks[2] + _Snap.banks[0], j256, not ENH)
         for pg, data in _pe.items():      # built here, independently of the patch under test
             if pg in (LJ.IDX_PAGE,):
                 continue

@@ -1,0 +1,249 @@
+{
+ "name": "olli_and_lissa",
+ "order": 265,
+ "game": "Olli and Lissa: The Ghost of Shilmoore Castle",
+ "doc": "olli_and_lissa.md",
+ "engine": "olli_and_lissa",
+ "representative": true,
+ "reference": "olli_and_lissa",
+ "inputs": {
+  "snapshot": {
+   "name": "olli_and_lissa.z80",
+   "md5": "5967a2ea00bd0ff5cea81778fb72eb0e",
+   "path": "olli_and_lissa/olli_and_lissa.z80",
+   "note": "The 128K snapshot inside the rzxarchive's \"Olli and Lissa no rollback\" recording: the 48K game at its title. The tape: Olli & Lissa - The Ghost of Shilmoore Castle (1986)(Firebird Software).tzx, MD5 741249bc."
+  },
+  "recordings": [
+   {
+    "name": "olli_and_lissa_colours.json",
+    "md5": "f1109b8b68531fe0a147dd82056711cd",
+    "path": "olli_and_lissa/olli_and_lissa_colours.json",
+    "role": "The painted map (68 figures, 4 palette lines), staged beside the snapshot; not a recording. It holds the figures, so it is not in the repository."
+   },
+   {
+    "name": "olli_nr.rzx",
+    "md5": "0818d6537491133ee3dd59fa2f7961a3",
+    "path": "olli_and_lissa/olli_nr.rzx",
+    "role": "The rzxarchive's \"no rollback\" recording, whole: 83,418 frames from the snapshot."
+   },
+   {
+    "name": "olli_b.rzx",
+    "md5": "857d39bc31e399802f621899de3fe4d4",
+    "path": "olli_and_lissa/olli_b.rzx",
+    "role": "The rzxarchive's other recording, whole: 63,734 frames from its own snapshot of the same code (inside it)."
+   }
+  ]
+ },
+ "modules": [
+  "olli_and_lissa"
+ ],
+ "own_modules": [
+  "olli_and_lissa"
+ ],
+ "data": [
+  "asm/olli_and_lissa_hooks.asm",
+  "docs/profiles/olli_and_lissa.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm"
+ ],
+ "rebuild": {
+  "args": [],
+  "rzx": []
+ },
+ "verify": {
+  "args": [],
+  "rzx": [
+   "olli_nr.rzx",
+   "olli_b.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 120,
+  "note": "Each hook against the original from one state: every register with R and all game memory after every CALL of the figure routine and of the wipe; the figure's sprites against a model of the routine's drawing and against the pixels the original has just drawn; on Enhanced against the painted map."
+ },
+ "outputs": {
+  "plain": {
+   "file": "olli_and_lissa.nex",
+   "md5": "cc6e717b9aa35e6d08d5a772bd5c7310"
+  },
+  "sprites": {
+   "file": "olli_and_lissa_sprites.nex",
+   "md5": "76d0bbf64039237d7270eb181f7c4919"
+  },
+  "enhanced": {
+   "file": "olli_and_lissa_enhanced.nex",
+   "md5": "75c66a0ddedf6c218b5d55cde3bc51a0"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Olli and Lissa: The Ghost of Shilmoore Castle",
+  "engine_col": "olli_and_lissa (olli_and_lissa.md)",
+  "build": "olli_and_lissa_sprites.nex 61e0b6d0 (nothing of the game changes: every moving figure a sprite on its own pixels, white with a black edge; the original's pace) + enhanced b9c71476 (the 68 figures painted, a first pass)",
+  "software": "Verify IDENTICAL on two whole recordings, both builds: 147,152 frames, 154,081 figures, 180 wipes (every register with R and all game memory after each; the sprites against a model of the routine and against the pixels the original has just drawn; on Enhanced against the painted map); unit PASS (14 cases); 9 of 9 broken builds detected; ROM path check pass; the hooks take at most 0.016% of a recording's time more than the routine they stand for",
+  "hardware": "untested (starts and plays in OverSpec)",
+  "next": "the owner's review of the painting; the unmasked plotter's figures; hardware test"
+ },
+ "checks": [
+  "asm2profile:olli_and_lissa"
+ ],
+ "techniques": [
+  {
+   "application": "olli.keep-ula",
+   "id": "patch.xor-overlay-keep-ula",
+   "revision": 2,
+   "target": "the game's figure routine and the screen unchanged; each figure's sprites lie on the pixels the routine then draws",
+   "phases": [
+    "entry",
+    "exit",
+    "clear"
+   ]
+  },
+  {
+   "application": "olli.colour-map",
+   "id": "patch.runtime-colour-map",
+   "revision": 1,
+   "target": "a figure's graphic address and size give its painted tiles (an index in the state page, the tiles in pages at slot 2), sent whole to the pattern port",
+   "phases": [
+    "entry"
+   ]
+  },
+  {
+   "application": "olli.atomic-switch",
+   "id": "patch.display-atomic-switch",
+   "revision": 1,
+   "target": "a new picture goes into patterns no sprite shows; the figure's attributes change after it; the old patterns are freed last",
+   "phases": [
+    "entry"
+   ]
+  },
+  {
+   "application": "olli.preserve-r",
+   "id": "patch.preserve-r",
+   "revision": 2,
+   "target": "HLIB_R_IN / hlib_r_set / HLIB_R_OUT in the figure hook's exit and in the wipe's",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "olli.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "HLIB_SPEED_IN / OUT around the figure hook",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "olli.pace-limiter",
+   "id": "patch.pace-limiter",
+   "revision": 4,
+   "target": "one window a figure: the hook's work and the game's routine at 28 MHz, the routine's own time by size and shift waited out",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "olli.whole-altrom",
+   "id": "patch.whole-altrom-image",
+   "revision": 2,
+   "target": "Sinclair's ROM as the alt image with the hooks from 0x2800; the one ROM byte the game reads (0x0BEA) is the original's",
+   "phases": [
+    "setup"
+   ]
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/olli_and_lissa.md#build-stage-2-2026-11-19-asmolli_and_lissa_hooksasm-nexclasholli_and_lissapy"
+   ],
+   "coverage": "Two whole recordings (147,152 frames); the routine's own time for every size and shift from a run of the routine itself at build time; hook time on the simulator's line clock. No JNext or hardware timing.",
+   "result": "Nothing syncs the game to the frame in play: a figure's hook and the routine run at 28 MHz and the routine's own time is waited out. Over two whole recordings the hooks take 0.010% to 0.016% of the recording's time more than the original's routine; 429 of 308,162 figure calls are more than 3 lines off, none more than 1,501 T."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/olli_and_lissa.md#feasibility-playbook-3d-2026-11-19-the-recordings-snapshot-and-its-first-15000-frames",
+    "games/olli_and_lissa.md#build-stage-2-2026-11-19-asmolli_and_lissa_hooksasm-nexclasholli_and_lissapy"
+   ],
+   "coverage": "Every screen writer of the first 15,000 frames (survey); the figure routine, its five CALLs and the wipe's five read and modelled; the ROM code and data the game uses; every CALL or JP of the two routines found by the build.",
+   "result": "Nothing of the game's memory or screen changes. The game runs no ROM code and reads one ROM byte, kept. Interrupts are off in play and on at the title's wipe, where the hook is safe. R is never read."
+  },
+  "decision": "Sprites laid over the figures the game still draws (owner 2026-11-19: 'White plus painted (Recommended)'): white with a black edge, and an Enhanced set painted in a first pass.",
+  "next_experiment": "Hardware: the checklist in games/olli_and_lissa.md; the game's speed against the original over a minute of play: within 2%."
+ },
+ "checked": {
+  "deps": {
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/olli_and_lissa_hooks.asm": "70d699b1dade0072",
+   "docs/profiles/olli_and_lissa.json": "29460f7ab578b2ed",
+   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "36040d253e135b08",
+   "nexclash/hooklib.py": "24241497925658d6",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/olli_and_lissa.py": "aef5ea821d4db93a",
+   "nexclash/recolour.py": "e0c2de6bfad5c6fb",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "422ad8b69fb41f04",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-20"
+ },
+ "verified": {
+  "deps": {
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/olli_and_lissa_hooks.asm": "70d699b1dade0072",
+   "docs/profiles/olli_and_lissa.json": "29460f7ab578b2ed",
+   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "36040d253e135b08",
+   "nexclash/hooklib.py": "24241497925658d6",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/olli_and_lissa.py": "aef5ea821d4db93a",
+   "nexclash/recolour.py": "e0c2de6bfad5c6fb",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "422ad8b69fb41f04",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-20"
+ }
+}

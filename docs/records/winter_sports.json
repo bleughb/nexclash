@@ -1,0 +1,191 @@
+{
+ "name": "winter_sports",
+ "order": 271,
+ "game": "Winter Sports",
+ "doc": "winter_sports.md",
+ "engine": "winter_sports",
+ "representative": true,
+ "reference": "winter_sports",
+ "inputs": {
+  "snapshot": {
+   "name": "winter_sports.z80",
+   "md5": "1a961b20f59e1bac9d88973f4e600ea9",
+   "path": "winter_sports/Winter Sports (1985)(Electric Dreams Software).z80",
+   "note": "the 48K main-menu snapshot (PC 0x0038, menu code loaded, no event yet); user's file, 2026-11-22"
+  },
+  "recordings": [],
+  "tapes": [
+   {
+    "set": "original_tap",
+    "files": [
+     {
+      "name": "winter_sports.tap",
+      "md5": "a53ffe203db7109427c84fb438aa9ebe",
+      "path": "winter_sports/Winter Sports (1985)(Electric Dreams Software).tap"
+     }
+    ]
+   },
+   {
+    "set": "original_tzx",
+    "files": [
+     {
+      "name": "winter_sports_h.tzx",
+      "md5": "e03cbff29d0954ce0e9ee95f033cdb09",
+      "path": "winter_sports/Winter Sports (1985)(Electric Dreams Software)[h].tzx"
+     }
+    ]
+   }
+  ]
+ },
+ "modules": [
+  "winter_sports",
+  "winter_sports_common",
+  "winter_sports_dh",
+  "winter_sports_dh_test",
+  "winter_sports_paint",
+  "winter_sports_pace",
+  "winter_sports_bobsled",
+  "winter_sports_ice_hockey",
+  "winter_sports_speed_skating",
+  "winter_sports_biathlon"
+ ],
+ "own_modules": [
+  "winter_sports",
+  "winter_sports_common",
+  "winter_sports_dh",
+  "winter_sports_dh_test",
+  "winter_sports_paint",
+  "winter_sports_pace",
+  "winter_sports_bobsled",
+  "winter_sports_ice_hockey",
+  "winter_sports_speed_skating",
+  "winter_sports_biathlon"
+ ],
+ "data": [
+  "docs/profiles/winter_sports.json"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [],
+  "rzx": []
+ },
+ "verify": {
+  "args": [],
+  "rzx": [],
+  "auto_record": false,
+  "minutes": 3,
+  "differential": false,
+  "note": "no recording: (1) per event the patched menu vs the original menu fed from the tape at ROM 0x0562; hook unit tests with a negative control; (2) Downhill on Layer 2: the same key script through the original and the hybrid, scroll position per update against the original's one-pixel-step model, poles at state-matched updates, update counts; hook step timing (16 steps) with negative controls (wrong-sign scroll, rotated pad table)"
+ },
+ "outputs": {
+  "plain": {
+   "file": "winter_sports.nex",
+   "md5": "8dc688fa980454c63f98bc0e802d5f88"
+  },
+  "sprites": {
+   "file": "winter_sports_sprites.nex",
+   "md5": "eab9ae6fc1ba2e5184b57a7796140cd7"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Winter Sports",
+  "engine_col": "winter_sports (winter_sports.md)",
+  "build": "plain: all six events in one .nex. Default: Downhill/Slalom/Giant Slalom per pixel in the ORIGINAL 16 colours, even pace; Ice Hockey, Speed Skating, Bobsled, Biathlon tear-free 28 MHz draw at the original's speed; Ski Jumping plain. .nxc: colour set Enhanced (Downhill painted scenery), toggle Original pace, build_screen=253 (the tape's loading screen from ENTER; jattree/nxc PR 9)",
+  "software": "Rebuild byte-exact from either tape set; simulator differential per event (Downhill scroll model 581/581; pace within 6% for the others), wrapper transparency, negative controls, hook unit tests; JNext: Downhill/Slalom/Giant Slalom and Bobsled checked",
+  "hardware": "plain and the first (painted) Downhill build played OK (user); the new default / Enhanced / Original pace builds and events 1,3,4,5: not yet on hardware",
+  "next": "hardware round; Ski Jumping (jump control not found: the jump ends GAME OVER without the right key); per-pixel / Enhanced work for events 1-5"
+ },
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/winter_sports.md#pacing-measurement"
+   ],
+   "coverage": "Six events, option screens, 900 frames each in the simulator; JNext play of all six; Downhill on hardware",
+   "result": "No per-frame hook: only the menu's tape load is replaced (about 12 frames of copy); patched and original menus agree after 900 frames"
+  },
+  "dependencies": {
+   "evidence": [
+    "games/winter_sports.md#dependency-investigation"
+   ],
+   "coverage": "The menu's two loader callers; free runs and gameplay snapshots diffed over 0x6400-0x7500",
+   "result": "Hook uses 0x6C00-0x6C7F and 0x6D00-0x6D03, restores NextReg 0x50; events never touch that memory"
+  },
+  "decision": "Plain build with the events embedded and the menu's own loader answered from RAM; sprites later, one event at a time",
+  "next_experiment": "Hardware: the sprites build's Downhill view (transparent-paper layering, scroll, colours); success = no ULA white showing in the pane and the panorama scrolling with the heading"
+ },
+ "checked": {
+  "deps": {
+   "docs/profiles/winter_sports.json": "a48576bcc8832f07",
+   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/analyse.py": "4c7e2c2391fb64a1",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/engines.py": "e7bf4d8d4de708a6",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/nxc.py": "d4c135babd8cd53e",
+   "nexclash/nxcout.py": "f1bf468312cb5367",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/tapeset.py": "86542e1752fb3110",
+   "nexclash/verify.py": "2d4c0e3b68e6354a",
+   "nexclash/winter_sports.py": "854618274f509c61",
+   "nexclash/winter_sports_biathlon.py": "7f620b62075b4c1d",
+   "nexclash/winter_sports_bobsled.py": "6afc64a0626a075e",
+   "nexclash/winter_sports_common.py": "856477cc3e887d52",
+   "nexclash/winter_sports_dh.py": "b8f533223ecf7c5b",
+   "nexclash/winter_sports_dh_test.py": "f881e06c77446efb",
+   "nexclash/winter_sports_ice_hockey.py": "c7558d4532b44d46",
+   "nexclash/winter_sports_pace.py": "172b1c7c0d902220",
+   "nexclash/winter_sports_paint.py": "1dcf667c010270fe",
+   "nexclash/winter_sports_speed_skating.py": "173297c3dc852e59",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "59b1c7d327189a7f",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "verified": {
+  "deps": {
+   "docs/profiles/winter_sports.json": "a48576bcc8832f07",
+   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/analyse.py": "4c7e2c2391fb64a1",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/engines.py": "e7bf4d8d4de708a6",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/nxc.py": "d4c135babd8cd53e",
+   "nexclash/nxcout.py": "f1bf468312cb5367",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/tapeset.py": "86542e1752fb3110",
+   "nexclash/verify.py": "2d4c0e3b68e6354a",
+   "nexclash/winter_sports.py": "854618274f509c61",
+   "nexclash/winter_sports_biathlon.py": "7f620b62075b4c1d",
+   "nexclash/winter_sports_bobsled.py": "6afc64a0626a075e",
+   "nexclash/winter_sports_common.py": "856477cc3e887d52",
+   "nexclash/winter_sports_dh.py": "b8f533223ecf7c5b",
+   "nexclash/winter_sports_dh_test.py": "f881e06c77446efb",
+   "nexclash/winter_sports_ice_hockey.py": "c7558d4532b44d46",
+   "nexclash/winter_sports_pace.py": "172b1c7c0d902220",
+   "nexclash/winter_sports_paint.py": "1dcf667c010270fe",
+   "nexclash/winter_sports_speed_skating.py": "173297c3dc852e59",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "59b1c7d327189a7f",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ }
+}
