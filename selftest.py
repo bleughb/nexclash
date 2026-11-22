@@ -43,6 +43,7 @@ Push access = `git push --dry-run` to origin succeeds (checked once, ~1-2 s; no 
 the release zip = no push access). Offline maintainers: NEXCLASH_MAINTAINER=1 skips the check.
 """
 import concurrent.futures
+import threading
 import datetime
 import hashlib
 import io
@@ -197,17 +198,32 @@ def _boot_ok(rep, lines, label):
     return bad
 
 
+_ASM = {}                       # profile -> (ok, tail): one asm2profile --check per profile per run (Codex review P4)
+_ASM_LOCKS = {}
+_ASM_LOCK = threading.Lock()
+
+
+def _asm_check(prof):
+    """asm2profile --check PROF once per selftest run, its result given to every record that asks (threads)."""
+    with _ASM_LOCK:
+        lock = _ASM_LOCKS.setdefault(prof, threading.Lock())
+    with lock:
+        if prof not in _ASM:
+            r = subprocess.run([sys.executable, os.path.join(HERE, 'tools', 'asm2profile.py'), '--check', prof],
+                               capture_output=True, text=True)
+            _ASM[prof] = (r.returncode == 0, (r.stdout + r.stderr).strip()[-200:])
+        return _ASM[prof]
+
+
 def checks(rec, lines):
     """Per-game quick checks of the game's own source files (run with every rebuild)."""
     bad = 0
     for c in rec.get('checks', []):
         if c.startswith('asm2profile:'):
             prof = c.split(':', 1)[1]
-            r = subprocess.run([sys.executable, os.path.join(HERE, 'tools', 'asm2profile.py'), '--check', prof],
-                               capture_output=True, text=True)
-            ok = r.returncode == 0
+            ok, tail = _asm_check(prof)
             lines.append('%-4s %s hook profile %s = pinned sjasmplus output of its .asm%s' % (
-                'OK' if ok else 'FAIL', rec['name'], prof, '' if ok else ' (%s)' % (r.stdout + r.stderr).strip()[-200:]))
+                'OK' if ok else 'FAIL', rec['name'], prof, '' if ok else ' (%s)' % tail))
         elif c == 'dizzy5_asm':
             ok, info = dizzy5_asm()
             lines.append('%-4s %s asm/dizzy5_hooks.asm (pinned sjasmplus) = dizzy5.hook_code()%s' % (
