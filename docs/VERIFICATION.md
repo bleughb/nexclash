@@ -114,6 +114,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Gauntlet (gauntlet_tape): `gauntlet_start_sprites.nex` 5d9cdb805fcdc839cf33424d47b2a1bd, `gauntlet_start_steady.nex` 3f374e019a63d0bdeca8d1cee31459a2; verified 2026-11-20
 - Heartland (heartland): `heartland.nex` 62ee38aed9832c67c07dd3b4e088db2e, `heartland_sprites.nex` 8ffaeb05bd51a15ec871a5c99c4df7d7, `heartland_enhanced.nex` c51b0e80e16ece6b7902f7e36c4bea9e; verified 2026-11-21
 - The Simpsons: Bart vs. the Space Mutants (simpsons_l1): `simpsons_l1.nex` 550b5e66e48fea5b86e244400680e146, `simpsons_l1_sprites.nex` 2ca0c918cccacc4de78ced515164f6ff, `simpsons_l1_enhanced.nex` fee0540c463a383b7af513cc6ab5c15d; verified 2026-11-19
+- Stormbringer (128K) (stormbringer): `stormbringer.nex` 74f64c674eda981e940da907018aa9b2, `stormbringer_sprites.nex` 218f92e530c6c658f37e51d6c24ce641; verified 2026-11-21
 - The Simpsons: Bart vs. the Space Mutants (simpsons_l2): `simpsons_l2.nex` b3a0365e78f6ac5d9b03240b0245646f, `simpsons_l2_sprites.nex` 3479fe6f18c92c31ec8586c8493787f9, `simpsons_l2_enhanced.nex` 27db6520e93230788b7ff1d5bc3f430d; verified 2026-11-19
 - The Simpsons: Bart vs. the Space Mutants (simpsons_l3): `simpsons_l3.nex` b126213428643bd14d968451e33c01df, `simpsons_l3_sprites.nex` 0fd724c79f63ebfdeaff2bba6624de9e, `simpsons_l3_enhanced.nex` 0bb06480bdda67a094328ea483b39db7; verified 2026-11-19
 - The Simpsons: Bart vs. the Space Mutants (simpsons_l4): `simpsons_l4.nex` 0ead1c229f029f4a3233b557665f4787, `simpsons_l4_sprites.nex` 6e0a23e9ea0a3a722f19f9c28da38256, `simpsons_l4_enhanced.nex` dff5e185e031e6b0742de631e1f77dbf; verified 2026-11-19
@@ -125,6 +126,9 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Cookie (cookie): `cookie.nex` f79626650e54545a5818fd0067e33ee5, `cookie_sprites.nex` 350767afe81d88de4126c88db1e5d7df, `cookie_enhanced.nex` cd1ec11109c2fd8833178d33527310a7; verified 2026-11-20
 - Tranz Am (tranz_am): `tranz_am.nex` 5b7ed517c752b2899bddd6539aaedfc9, `tranz_am_sprites.nex` 62b76f0325fec6055b068f57434bf602, `tranz_am_enhanced.nex` 2d9e69880cf7a8c9a8a8fc27303bc0b3; verified 2026-11-20
 - Winter Sports (winter_sports): `winter_sports.nex` 8dc688fa980454c63f98bc0e802d5f88, `winter_sports_sprites.nex` eab9ae6fc1ba2e5184b57a7796140cd7; verified 2026-11-22
+- Monty is Innocent (monty_is_innocent): `monty_is_innocent.nex` 673011349213f7feceff3f528bf9b4ea, `monty_is_innocent_sprites.nex` a776f3429f34364eb7263a1cde03b1c8; verified 2026-11-22
+- Finders Keepers (finders_keepers): `finders_keepers.nex` b434bc905a813514567d3cbd38dbe670, `finders_keepers_sprites.nex` ba99b0cb1058987d0ab4549eac9ce46e; verified 2026-11-22
+- Monty on the Run (monty_on_the_run): `monty_on_the_run.nex` 86c30493dbd683b5076dfa43098180bb, `monty_on_the_run_sprites.nex` 7fdb25d99b58c4413042f4b7a7f919c8; verified 2026-11-22
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
