@@ -102,9 +102,14 @@ def extract(path, out=None, index=0):
     raise ValueError('%s: no snapshot %d (%d in the file)' % (path, index, k))
 
 
+def frame_count(path):
+    """The recorded frames of every input recording in `path` (what a whole replay covers)."""
+    return sum(len(r.frames) for _, r, _ in read_segments(path))
+
+
 def info(path):
     segs = read_segments(path)
-    frames = sum(len(r.frames) for _, r, _ in segs)
+    frames = frame_count(path)
     return '%s: %d segment(s), %d frames (%.1f s at 50Hz)' % (path, len(segs), frames, frames / 50)
 
 

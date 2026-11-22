@@ -667,7 +667,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         rise, fall = drift_extremes([(a, b) for a, b in dr], WINDOW_T) if dr else (0, 0)
         c['most T the game is ever behind the original'] = max(c['most T the game is ever behind the original'], int(rise))
         c['most T the game is ever ahead of the original'] = max(c['most T the game is ever ahead of the original'], int(fall))
-        full = stop is None or c['frames'] < stop           # the 0.2% endpoint is the whole recording's claim: a prefix
+        full = c['frames'] >= RZ.frame_count(rzx_path)           # the 0.2% endpoint is the whole recording's claim: a prefix
         if not full:                                        # can end with cold drawing still owed (diagnostic only)
             c['prefix: hooks less the original, T'] = int(c['T hooks'] - box['orig_t'])
         if max(c['most T the game is ever behind the original'], c['most T the game is ever ahead of the original']) > 3 * LINES * T_LINE \

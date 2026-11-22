@@ -572,7 +572,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
     if c['calls a sprite shows a figure the screen has lost']:
         fail('a sprite shows a figure the screen has lost', c['calls a sprite shows a figure the screen has lost'])
     if c['figures']:
-        full = stop is None or c['frames'] < stop           # the 0.5% endpoint is the whole recording's claim (Codex T4)
+        full = c['frames'] >= RZ.frame_count(rzx_path)           # the 0.5% endpoint is the whole recording's claim (Codex T4)
         if not full:
             c['prefix: hooks less the original, T'] = int(c['T hooks'] - box['orig_t'])
         if c['figures more than 700 T off the original'] > 0.03 * c['figures'] + 5 or (full and abs(c['T hooks'] - box['orig_t']) > 0.005 * fc * LINES * T_LINE):
