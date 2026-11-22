@@ -21,9 +21,15 @@ So the names match SARD's notes. Frames: Docking 7501, Havoc 54517, PoliceAnarch
 Which parts overlap each other is not compared.
 
 ## Findings (stage 0; Docking first look, then all five surveyed in full)
-- The game is COLOURED, not mono: the viewport attributes are one colour per system (orange at Lave-area/Tionisla/Riedquat,
-  cyan in witchspace), the scanner is purple / green, the status pages are cyan text. Whole-viewport fills, so wireframe
-  lines do not clash inside it; the multi-colour scanner / HUD bars are where clash can show.
+- Colour (CORRECTED 2026-11-22: an earlier note called the viewport coloured; the orange / cyan / purple in the survey
+  preview.png are its per-plot-routine overlay tints, not the game's colours). Plain renders of Havoc, Witch and PoliceAnarchy
+  show: viewport white on black, HUD bars red / white, a condition light (green / yellow / red) and a planet / sun marker
+  (red / yellow), status pages cyan text. So the original has almost no colour clash: lines on one attribute colour; the
+  only multi-colour areas are the HUD bars and the small icons.
+- Render path (disassembly 7FBE-7FE2, PoliceAnarchy snapshot): the game draws into a back buffer at 0xC000 (bank 0, mapped
+  and locked at C000 by the 128K hack) and 0xC100; 32717 copies it to the screen at 0x4020 (viewport = 128 lines x 32
+  bytes) with LDIR per line (~62k T), 32702 wraps it. About 6.5k copies in 68.6k frames = one screen update per ~10 frames
+  (~5 fps), the game's real frame rate.
 - Gate over all five recordings: 29993 (0x7529) -> 39117 never reached; 32702 callers 37720, 38122 (and one more of 11) never
   reached; 38113 -> 30872 never reached in Docking (other four 3/4 reached). Mostly code that ran nearby; which are FIGURE
   paths is not checked.
