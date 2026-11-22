@@ -391,9 +391,9 @@ Hardware to confirm
 38. NEXLOAD overwrites the 48K printer buffer (0x5B00-0x5BFF: NextZXOS paging routines + system
    variables) after loading bank 5 (Match Day, hardware 2026-10-20: icons and team names lost, plain
    build too). Fixed per game by z80tonex `keep_printer_buffer` (opt-in, so no other output changed).
-   Other 48K references with non-zero bytes there, untested for this: dizzy1 (90 bytes; runs "perfect"
-   on hardware - check what it keeps there), wally / wally2 (26), jetpac (12), lode_runner (4). Turning
-   it on changes their MD5s: maintainers decide per game (rebuild + re-verify).
+   Untested, non-zero bytes there: dizzy1 (90; plays on hardware), wally/wally2 (26), jetpac (12), lode_runner
+   (4); turning it on changes MD5s (maintainers decide). NextZXOS 2.10 (2026-11-22) wrote only 0x5B00-0x5B65
+   for JSW and Robin: the model stays whole-page (nextboot.NEXLOAD_PRINTER).
 
 Designs not built yet (use when a game needs them)
 29. Live A/B switch: a key that swaps every hook site between JP hook and the saved original bytes

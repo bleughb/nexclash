@@ -414,6 +414,9 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=(), start_pc=
 # What NEXLOAD leaves in the 48K printer buffer before the stub runs (NextZXOS paging routines and
 # system variables live at 0x5B00-0x5BFF; hardware 2026-10-20, Match Day): modelled as a pattern no
 # game data matches, so a check with nexload=True shows every byte the stub does not put back.
+# A worst case, kept on purpose: on a Tang board with NextZXOS 2.10 (2026-11-22) NEXLOAD wrote only its 53-byte start
+# routine, at 0x5B00 (Jet Set Willy) or 0x5B31 (Robin of the Wood), and both games' stacks above 0x5B66 survived;
+# but Match Day's plain build lost its team names at 0x5B90-0x5BFF on hardware (2026-10-20).
 NEXLOAD_PRINTER = bytes((0xA5 ^ k) for k in range(256))
 
 
@@ -554,7 +557,8 @@ NEXTZXOS_NR0A = 0x11        # NextReg $0A as NextZXOS v2.10 leaves it for a .nex
 def nexload_check(nex, z80):
     """The build booted to the snapshot's PC twice, with the printer buffer as NEXLOAD leaves it and without:
     -> (failures, warnings). A failure: the snapshot's stack is in 0x5B00-0x5BFF and its top 16 bytes (or up to
-    0x5C00) do not survive NEXLOAD (Jet Set Willy, Robin of the Wood: the first RET leaves the game). A warning:
+    0x5C00) do not survive the worst-case NEXLOAD (the first RET would leave the game; Jet Set Willy and Robin of
+    the Wood started anyway on NextZXOS 2.10, see NEXLOAD_PRINTER). A warning:
     other snapshot bytes there lost to NEXLOAD (harmless only if the game writes them before reading them), or a
     stack there with a start the boot model does not follow. keep_printer_buffer (z80tonex) puts them back."""
     s = zt.Z80Snapshot(z80)
