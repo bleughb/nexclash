@@ -136,6 +136,14 @@
     "sprites": "dcd7f744a73eb59e7ce3236b57c8cef9"
    }
   },
+  "ff69b2836af7163b521d2ee2469c5a8c": {
+   "game": "Cisco Heat",
+   "doc": "cisco_heat.md",
+   "nex": {
+    "plain": "5a30200632338bbbf64c4e60f2174440",
+    "orig_pace": "6ebeabd1a687b6e6ad3f061f87b70037"
+   }
+  },
   "0268fb4d76200708849269c9747b65ff": {
    "game": "Cobra",
    "doc": "cobra.md",

@@ -1,0 +1,83 @@
+{
+ "game": "cisco_heat",
+ "schema": 1,
+ "machine": "128K",
+ "engine": null,
+ "inputs": {
+  "z80": "ff69b2836af7163b521d2ee2469c5a8c",
+  "rzx": [
+   "a17c44e0564db5129c1188ece12e3c12"
+  ],
+  "args": [
+   null,
+   null,
+   null,
+   6,
+   false
+  ]
+ },
+ "frames": 7314,
+ "model": "double-buffered: linear back buffer 0x6000, copy to the hidden screen, flip at the interrupt; ~5.6 updates a second",
+ "pacing": "interrupts on",
+ "interrupts_accepted": 7313,
+ "source_buffers": {},
+ "coverage_gaps": 0,
+ "plain": {
+  "file": "CiscoHeat1.nex",
+  "tail": "default tail (no recording to check it against)",
+  "boot": "not run: nextboot.check models 48K start-up only (128K engines bring their own boot check, e.g. midres.boot_check)"
+ },
+ "outcome": "converted (docs/records/cisco_heat.json)",
+ "routines": [
+  {
+   "routine": 34900,
+   "role": "plotter",
+   "pixel_bytes": 1867389,
+   "attr_bytes": 0,
+   "block_copy_bytes": 1867389,
+   "calls": 1017,
+   "fingerprint": {
+    "n": 96,
+    "full": "1fc4c25d0d",
+    "win": [
+     "1436e64abc",
+     "247c88a5f5",
+     "273a2ad708",
+     "29e2c4be5e",
+     "3116cb84e4",
+     "321512e460",
+     "3ecae5ac2c",
+     "46bd376ea5",
+     "4b41014533",
+     "4e6f8b860b",
+     "6c6998e599",
+     "75e43b31ff",
+     "78911ce2a0",
+     "83efa26095",
+     "8701246499",
+     "89a3e8555c",
+     "96bb328fbb",
+     "97e80e4f32",
+     "998a1c6ef4",
+     "a0a79376ef",
+     "a4ef75f800",
+     "a5f200ced2",
+     "a8e68cc1f8",
+     "c64003b7df",
+     "c696c63778",
+     "cd70a9a7f3",
+     "ef05419c2c",
+     "f1b23b273c",
+     "f89a493dda",
+     "fe02866451",
+     "ff2e443edb"
+    ]
+   },
+   "callers": 1
+  }
+ ],
+ "title": "Cisco Heat",
+ "notes": [
+  "smooth engine: 28 MHz update paced to the original + run-ahead in-between frames (games/cisco_heat.md)"
+ ]
+}
