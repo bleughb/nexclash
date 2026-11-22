@@ -140,6 +140,10 @@ Not built for hardware yet (the level blocks first).
 - 2026-11-19 (owner): the slowdown "might be an opportunity to fix that in the nxc patch option": the steady build.
 
 ## Lessons
+- [local: a clear's speed-up pays the pace] e_cl must run the clear at 28 MHz (its saved time pays for the tile
+  pass) and give back the caller's speed within STACK (6 bytes): A kept for the clear, the speed below it, EX (SP),HL
+  to restore it without touching the clear's outputs (F = 66, B = 0). The replay alone passed a fix that lost A:
+  it always enters with A = 0 at 3.5 MHz; the unit case at speeds 1-3 caught it.
 - [local: this game's design] A game that draws only grid-aligned blocks needs no plot hooks: the picture is looked up
   from the finished hidden screen, so nothing of the game is touched and scrolling needs no tracking.
 - [local: this game's hooks] A pace window longer than a frame loses a frame unless its clock is read inside it: the

@@ -84,6 +84,10 @@ kept as features); no belt line; guards in grey mail with the drawn shield red a
 Evidence: `../work/enh/`, sheet `../png/robin_enhanced_sheet.png`.
 
 ## Lessons
+- [local: speed fix] The eight ROM stubs call spdin / spdout in page 26 (latch v_spd there) instead of fixed NR 7
+  writes: 16 bytes smaller. spdin selects NR 7 itself: the Enhanced build checks the setup's layout at fixed
+  offsets, so a select added to the setup broke it ('setup layout'). The verifier turns each hook's entry speed
+  0-3 (about 1059 each in 1500 frames of journey); mode 'speed' (3.5 MHz given back) is a negative.
 - [local: the converter now covers 128K; the NEXLOAD boot check comes with the hardening PR] a 128K snapshot
   can keep its stack in the printer buffer too (here 0x5B76, returning into the ROM paging code at 0x5BB0), and
   keep_printer_buffer refused 128K: boot every build with nexload=True before calling its start safe.

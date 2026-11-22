@@ -3941,7 +3941,7 @@ setup:  nextreg 0x07,3
         nextreg 0x38,0
         inc a
         jp p,.hide              ; to 127 (A = 128 sets S)
-        nextreg 0x07,0
+        nextreg 0x07,0        ; speed: start-up (once, before the game)
         ret
 SETUP_END:
         ASSERT SETUP_END <= PALINIT

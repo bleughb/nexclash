@@ -373,6 +373,7 @@ class NextState:
         self.attr = [[0, 0, 0, 0, 0] for _ in range(128)]
         self.pat = bytes(pats)
         self.events = []
+        self.sel = 0                    # NextReg select (port 0x243B)
 
     def nextreg(self, reg, val):
         self.nr[reg] = val
@@ -395,6 +396,8 @@ def _machine(Sim, mem, regs, ns, slot='o'):
     from skoolkit.simulator import R2
     from .simpool import machine
     sim = machine(Sim, mem, regs, slot)
+    from .z80n import install
+    install(sim, ns.nextreg)                    # every Z80N instruction (the hooks use TEST and ADD HL,A)
     R, ed = sim.registers, sim.after_ED
 
     def nn():
@@ -410,10 +413,15 @@ def _machine(Sim, mem, regs, ns, slot='o'):
 
     class Tr:
         def read_port(s, regs_, port):
+            if port == 0x253B:                  # NextReg read: NR 7 reads back the programmed speed in bits 1:0
+                return ns.nr.get(ns.sel, 0)
             ns.events.append(('in', port))
             return 0xFF
 
         def write_port(s, regs_, port, value, *x):
+            if port == 0x243B:                  # NextReg select (the hook reads the caller's speed)
+                ns.sel = value
+                return
             ns.events.append(('out', port, value))
     sim.set_tracer(Tr())
     return sim
@@ -528,6 +536,7 @@ def event(patch, kind, get, R, ns, alt, Sim):
     so = _machine(Sim, o, list(R), NextState(b''))
     before = [list(a) for a in ns.attr]
     ns.events = []
+    speed = ns.nr.get(0x07, 0)                  # the caller's speed: the hook must give it back
     sp_ = _machine(Sim, p, list(R), ns, 'p')
     if not (_run(so, stop) and _run(sp_, stop)):
         return ['did not return'], 0
@@ -541,8 +550,8 @@ def event(patch, kind, get, R, ns, alt, Sim):
         f.append(('port access in hook',))
     if any(e[1] not in (0x07, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39) for e in ns.events if e[0] == 'nr'):
         f.append(('NEXTREG other than sprite attributes / CPU speed',))
-    if ns.nr.get(0x07, 0) != 0:
-        f.append(('hook left the CPU at 28 MHz',))
+    if ns.nr.get(0x07, 0) != speed:
+        f.append(('speed not restored: entered at %d, left at %d' % (speed, ns.nr.get(0x07, 0)),))
     dead = range(ro[12] - 64, ro[12])
     keys = set(o.ov) | set(p.ov)
     scr = (0x4000, 0x5B00) if kind != 'cls' else (0, 0)
@@ -848,9 +857,10 @@ def unit_tests(patch, states, neg=None, m0=None, negs=None):
 
     alts = {id(patch): alt}
 
-    def one(pt, kind, R, mem, attrs):
+    def one(pt, kind, R, mem, attrs, speed=0):
         ns = NextState(pt.pats)
         ns.attr = [list(a) for a in attrs]
+        ns.nr[0x07] = speed                     # the caller's CPU speed (F8, a speed option)
         if id(pt) not in alts:
             alts[id(pt)] = _alt(pt)
         return event(pt, kind, mem.__getitem__, R, ns, alts[id(pt)], Sim)
@@ -872,7 +882,7 @@ def unit_tests(patch, states, neg=None, m0=None, negs=None):
                             if r is None:
                                 c['graphic cases: setup did not reach 29263 FAIL!'] += 1
                                 continue
-                            fl, npx = one(patch, kind, r, mem, attrs)
+                            fl, npx = one(patch, kind, r, mem, attrs, (x + y + ink) % 4)   # each speed in turn
                             c['graphic cases %s' % ('ok' if not fl else 'FAIL!')] += 1
                             if fl and c['  fail example'] < 5:
                                 c['  fail example'] += 1
@@ -905,6 +915,14 @@ def unit_tests(patch, states, neg=None, m0=None, negs=None):
                 c['negative control (fuel) detected'] += nd
                 if nd < c['negative control (fuel) cases']:
                     c['negative control (fuel) NOT DETECTED!'] += 1
+            if negs and negs.get('spd') is not None:  # the build that leaves 28 MHz: caught at each slower speed
+                key = gk[0]
+                mem = bytearray(mem0)
+                r = _to_site(R, mem, _setup_graphic(mem, m0, key), 100, 100, 0x47, OBJ0)
+                hit = [bool(one(negs['spd'], kind, r, mem, attrs, s)[0]) for s in (0, 1, 2)]
+                c['negative control (speed) detected'] += sum(hit)
+                if not all(hit):
+                    c['negative control (speed) NOT DETECTED!'] += 1
             # guard: IX not an object slot -> no sprite (the game never plots one)
             mem = bytearray(mem0)
             r = _to_site(R, mem, gk[0][1] if gk[0][0] == 's' else 30614, 100, 100, 0x47, OBJ0 + 4)
@@ -935,6 +953,17 @@ def variant(patch, sym, value):
     (carried part 3 = fuel drawn as nothing, the reported fault)."""
     rc = bytearray(patch.rom_code)
     rc[patch.syms[sym] + 1 - ROM_ORG] = value
+    q = JetpacPatch(patch.prof, bytes(rc))
+    q.pats, q.roles, q.num_patterns = patch.pats, patch.roles, patch.num_patterns
+    return q
+
+
+def speed_negative(patch):
+    """Broken copy: the hook's speed restore (NEXTREG 7,A at neg_spd) made NOPs, so it leaves 28 MHz."""
+    rc = bytearray(patch.rom_code)
+    a = patch.syms['neg_spd'] - ROM_ORG
+    assert bytes(rc[a:a + 3]) == b'\xED\x92\x07', 'neg_spd is not NEXTREG 7,A'
+    rc[a:a + 3] = b'\0\0\0'
     q = JetpacPatch(patch.prof, bytes(rc))
     q.pats, q.roles, q.num_patterns = patch.pats, patch.roles, patch.num_patterns
     return q
@@ -1010,12 +1039,12 @@ def auto(a, z80, name, out, say):
             say('            %s: %s' % (k, str(v)[:200]))
     if states:
         u = unit_tests(patch, states, negative_patch(patch), list(get_snapshot(z80)),
-                       {'rk': variant(patch, 'neg_rk', 1), 'pt': variant(patch, 'neg_pt', 3)})
+                       {'rk': variant(patch, 'neg_rk', 1), 'pt': variant(patch, 'neg_pt', 3), 'spd': speed_negative(patch)})
         uf = {k: v for k, v in u.items() if k.endswith('!') and v}
         ok = ok and not uf
         say('Unit      : graphics %d (every graphic, all levels, carried parts x positions x colours), '
             'erase %d, clears %d, guard %d, rocket %d (%d pixels), negative control %d/%d, rocket %d/%d, '
-            'fuel %d/%d -> %s' % (
+            'fuel %d/%d, speed %d/3 -> %s' % (
                 u['graphic cases ok'], u['erase cases ok'], u['screen clear cases ok'],
                 u['IX outside the object table (guard: no sprite) ok'], u['patch rocket cases ok'],
                 u['patch rocket pixels compared'], u['negative control detected'],
@@ -1023,6 +1052,6 @@ def auto(a, z80, name, out, say):
                 u['negative control (rocket on one sprite set) detected'],
                 u['neg rocket cases ok'] + u['neg rocket cases FAIL'],
                 u['negative control (fuel) detected'], u['negative control (fuel) cases'],
-                'PASS' if not uf else 'FAIL %s' % uf))
+                u['negative control (speed) detected'], 'PASS' if not uf else 'FAIL %s' % uf))
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return ok

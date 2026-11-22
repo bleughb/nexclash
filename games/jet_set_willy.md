@@ -153,6 +153,16 @@ Hardware risk review (PLAYBOOK 6b): DivMMC: hooks at 0x386E-0x3C4x, not in 0x3D0
 - Knowledge refresh from main (LEARNING 1): skipped, no network by the pilot's rules; knowledge is from commit 1d2faa4.
 
 ## Lessons
+- [local: the speed fix in the ROM area's last bytes] The hooks keep the caller's CPU speed (F8): one spdin (latch
+  HS+29, then 28 MHz) and one spdout for every hook. The 48K ROM's
+  free area holds 1150 bytes: inline HLIB_SPEED macros were 78 over; e_pass now runs at the caller's speed (four
+  instructions cost less than a switch); xyst shares four hooks' x/y stores (1137 bytes). Lockstep answers 0x253B
+  from the NextReg state (a recorded IN otherwise) and turns the caller's speed 0-3 at every pass and blit; hook
+  cost 2.79 % (main 2.76 %).
+- [local: never select NR 7 once at set-up] A first version selected NR 7 in the setup and read with one IN: the
+  stub reads NR 8 after the setup, so on a Next every hook would have given back 3.5 MHz. The lockstep model then
+  started with NR 7 selected and hid it (Codex found it). spdin selects 7 itself; the model starts on NR 8, and a
+  negative (no select) is detected.
 - [local: only this game's and Manic Miner's plotters allow it] demonstrated: the two-LDIR source change removes every figure from the ULA with all logic untouched; the first full lockstep run failed only on arrows (they overwrite, I had assumed OR), which the bit-exact picture check found at once.
 - [deferred Open: reconsider when a maintainer reviews the pilot] observed: `survey` says "Generic engine unknown ... auto builds it" for a game no engine knows; its GATE CHECK here is two text-printer calls and code-sheet figure calls that ran before the snapshot.
 - [deferred Open: reconsider when a maintainer reviews the pilot] observed: an InputRecording's `data` includes frame headers; slice it by each frame's start and end. Reading it whole silently desynchronised the run into what looked like a hang.

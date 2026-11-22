@@ -117,7 +117,6 @@ def build_map(mod):
 def load_map(path, mod):
     """coloursheet.load, plus the file's top-level sprite 'palette' for an engine whose maps carry one
     (RECOLOUR 'palette': the Magic Knight engines); other engines get the entries only, as before."""
-    import json
     from . import coloursheet as cs
     m = cs.load(path)
     if mod.RECOLOUR.get('palette') and os.path.exists(path):
