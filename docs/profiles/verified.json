@@ -148,9 +148,9 @@
    "game": "Cookie",
    "doc": "cookie.md",
    "nex": {
-    "plain": "df40629882f8b5be3619e90f87690c91",
-    "sprites": "faaacc0beb0c6bc6d5742b0f40ec9cd2",
-    "enhanced": "7df95fe3204d63471c342b8cd6fd9d59"
+    "plain": "f79626650e54545a5818fd0067e33ee5",
+    "sprites": "350767afe81d88de4126c88db1e5d7df",
+    "enhanced": "cd1ec11109c2fd8833178d33527310a7"
    }
   },
   "745cb8f59f865db5118e6dc98d09e385": {
@@ -487,27 +487,27 @@
    "game": "Olli and Lissa: The Ghost of Shilmoore Castle",
    "doc": "olli_and_lissa.md",
    "nex": {
-    "plain": "12be0e0aa24eb85e39da957cc530edbe",
-    "sprites": "61e0b6d025f05c108a4d7196d4482868",
-    "enhanced": "b9c71476d1925e291a08a0673f455116"
+    "plain": "cc6e717b9aa35e6d08d5a772bd5c7310",
+    "sprites": "76d0bbf64039237d7270eb181f7c4919",
+    "enhanced": "75c66a0ddedf6c218b5d55cde3bc51a0"
    }
   },
   "27523b55f786a871ba4bf7fae1be255a": {
    "game": "Olli and Lissa II: Halloween",
    "doc": "olli_and_lissa_2.md",
    "nex": {
-    "plain": "53516907092eddb3e6e642e4f498be6b",
-    "sprites": "dedec792ec315041fde3569de48befbd",
-    "enhanced": "2744a1af82d0d26f827712be26e101d5"
+    "plain": "2713f076427d909706660b204c27e1a1",
+    "sprites": "5b710e071b0623cab32e48c8966863f2",
+    "enhanced": "ae8c4eaa53adf3286c768cc78e4c3347"
    }
   },
   "ae77b4f151932e0228b99f6a257ea4de": {
    "game": "Olli and Lissa III: The Candlelight Adventure",
    "doc": "olli_and_lissa_3.md",
    "nex": {
-    "plain": "db9e12154c82e582c9bd23d72818c0d7",
-    "sprites": "4eeda9b6d9f83ca885b2df78e86bbf74",
-    "enhanced": "c7056f6de0d91b024d4f72d3d8fb987a"
+    "plain": "bed57f9136b944c575ab52f9f6f8c525",
+    "sprites": "a536ceb5a6e77b0fcb1b52ec3deddfaf",
+    "enhanced": "d529d4139e9adbb4a105369533575e9f"
    }
   },
   "e9cb908bc86661ff81732665741393cc": {
@@ -550,9 +550,9 @@
    "game": "Pssst",
    "doc": "pssst.md",
    "nex": {
-    "plain": "db271c07425ad2866b9e9e13d15f1beb",
-    "sprites": "40ae6ece0286d15f71c38c80dbacda92",
-    "enhanced": "6d14ba48110804e62a83ebd3bffbe248"
+    "plain": "acb40bf686174fcfc9ae2b68375faf2d",
+    "sprites": "275dcd59c5d7fc9563913619f2f117f2",
+    "enhanced": "1a45b565ee8eb3e56b98be2e171fd0f0"
    }
   },
   "1ff279754d0730e503816199ac6976f3": {
@@ -586,11 +586,11 @@
    "game": "Renegade (128K)",
    "doc": "renegade.md",
    "nex": {
-    "plain": "62a06036dec229a7d19821df2cca6a04",
-    "sprites": "b4b452100f88d54415f3f5f11568c454",
-    "sprites_nooutline": "c8baf422e7a76776f10a48ac270dd1ae",
-    "sprites_blackoutline": "28e56c4fc2789efeecf054f5cb49c80c",
-    "enhanced": "f60ec79d6dd0a62d1b3d262ecf394203"
+    "plain": "59c50d991f292728f95a59170196959c",
+    "sprites": "10070d06abbc98f25160b119e2f9cc80",
+    "sprites_nooutline": "99f6d3abbb8f34ff8d6c1d28e6497b53",
+    "sprites_blackoutline": "4e9b74e76a5467ce4556bc04cb7366c2",
+    "enhanced": "d032ec5d0286ad68d32fef2f96b4018f"
    }
   },
   "d2fa7f2eeb8ccb75c30edbacb432a8b5": {
@@ -646,45 +646,45 @@
    "game": "The Simpsons: Bart vs. the Space Mutants",
    "doc": "simpsons.md",
    "nex": {
-    "plain": "706e208453a6f5db9832731663451d9f",
-    "sprites": "fa3a5f416569ab1684526f9cee231a10",
-    "enhanced": "a7ab6c7690e1f4252ac6c695a66c5b81"
+    "plain": "550b5e66e48fea5b86e244400680e146",
+    "sprites": "2ca0c918cccacc4de78ced515164f6ff",
+    "enhanced": "fee0540c463a383b7af513cc6ab5c15d"
    }
   },
   "158c2124965358c39522f131d680ca55": {
    "game": "The Simpsons: Bart vs. the Space Mutants",
    "doc": "simpsons.md",
    "nex": {
-    "plain": "3ec33dfe52463ba0cac39953b9f3aad5",
-    "sprites": "a634bef137ac4553056faf030bc85fb1",
-    "enhanced": "647240a62fd0e314742ec677095828d1"
+    "plain": "b3a0365e78f6ac5d9b03240b0245646f",
+    "sprites": "3479fe6f18c92c31ec8586c8493787f9",
+    "enhanced": "27db6520e93230788b7ff1d5bc3f430d"
    }
   },
   "86666cbdb6b702b83454dd1fb7d041b4": {
    "game": "The Simpsons: Bart vs. the Space Mutants",
    "doc": "simpsons.md",
    "nex": {
-    "plain": "3e348c601c00629b76d89d551976170c",
-    "sprites": "0530f110bc338e985a6c0c5a91a3e535",
-    "enhanced": "f47b2a8f8282fdef8f8b291b307c9afa"
+    "plain": "b126213428643bd14d968451e33c01df",
+    "sprites": "0fd724c79f63ebfdeaff2bba6624de9e",
+    "enhanced": "0bb06480bdda67a094328ea483b39db7"
    }
   },
   "e5e2f2ef480f31f602f6574015a27bd8": {
    "game": "The Simpsons: Bart vs. the Space Mutants",
    "doc": "simpsons.md",
    "nex": {
-    "plain": "5421d05c7b4b7b46d3c32bf35dde9c28",
-    "sprites": "866dd924e963f8bdd29426b637c9ff19",
-    "enhanced": "09610b6744867df21a110dc286fbdd0d"
+    "plain": "0ead1c229f029f4a3233b557665f4787",
+    "sprites": "6e0a23e9ea0a3a722f19f9c28da38256",
+    "enhanced": "dff5e185e031e6b0742de631e1f77dbf"
    }
   },
   "7702fa208c2096445f0372c3ad37e833": {
    "game": "The Simpsons: Bart vs. the Space Mutants",
    "doc": "simpsons.md",
    "nex": {
-    "plain": "8d894a9cca70cf52def364cb6953d1d6",
-    "sprites": "bbe3b9b883c57a665f8bb66de8dfaf8a",
-    "enhanced": "a9e3b97ed28bc36d682651e79f3629e4"
+    "plain": "10d969b7422baa73a56d6ca966d5ab1a",
+    "sprites": "bd94f22adc91666f0f246aa59d6dd14e",
+    "enhanced": "05a6527d7607b730667358be7fd2fea5"
    }
   },
   "3b89344c6d7e6433bf044bef1880a2f1": {
@@ -752,9 +752,9 @@
    "game": "Tranz Am",
    "doc": "tranz_am.md",
    "nex": {
-    "plain": "8308134dff22d877c6f70ba236e2e012",
-    "sprites": "637c510df69e95cb621db6f63d02a5fd",
-    "enhanced": "c89e6c5a4707b97a92922cd352b555ef"
+    "plain": "5b7ed517c752b2899bddd6539aaedfc9",
+    "sprites": "62b76f0325fec6055b068f57434bf602",
+    "enhanced": "2d9e69880cf7a8c9a8a8fc27303bc0b3"
    }
   },
   "7578947fcc8dbc4ba822e2c565499d54": {

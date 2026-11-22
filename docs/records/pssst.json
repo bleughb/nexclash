@@ -78,15 +78,15 @@
  "outputs": {
   "plain": {
    "file": "pssst.nex",
-   "md5": "db271c07425ad2866b9e9e13d15f1beb"
+   "md5": "acb40bf686174fcfc9ae2b68375faf2d"
   },
   "sprites": {
    "file": "pssst_sprites.nex",
-   "md5": "40ae6ece0286d15f71c38c80dbacda92"
+   "md5": "275dcd59c5d7fc9563913619f2f117f2"
   },
   "enhanced": {
    "file": "pssst_enhanced.nex",
-   "md5": "6d14ba48110804e62a83ebd3bffbe248"
+   "md5": "1a45b565ee8eb3e56b98be2e171fd0f0"
   }
  },
  "repro": [],
