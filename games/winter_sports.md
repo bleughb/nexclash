@@ -154,7 +154,7 @@ code goes in free bytes of the event's own block (find a zero run in the tape bl
 ## Events 1-5 (2026-11-22): pace-only plugins
 Ice Hockey (nexclash/winter_sports_ice_hockey.py), Speed Skating (_speed_skating), Bobsled (_bobsled) and Biathlon (_biathlon) are plugins built on winter_sports_pace.PaceEvent: each of the event's screen-copy call
 sites becomes a wrapper (winter_sports_common.draw_wrapper): halt to the frame interrupt (N frames where the loop is free-running), the copy at 28 MHz (NextReg 0x07 = 3), 3.5 MHz back; the
-beeper (blocking, interrupts off) is never sped up (tests: no port 0xFE write while fast). Per event, found with C:NEXT\wintersports_workindloop.py / freecheck.py (work folder, not in the repo):
+beeper (blocking, interrupts off) is never sped up (tests: no port 0xFE write while fast). Per event, found with C:\1NEXT\wintersports_work\findloop.py / freecheck.py (work folder, not in the repo):
 - Ice Hockey: 0x7809 (the rink, 423,000 T) from 0x7FC1 and 0x8063; halts 5; interval 6.80 -> 6.41 frames (-5.7 %); wrappers 0xF42A, mode byte 0xF482.
 - Speed Skating: 0x8BFE (78,600 T) from 0x84C3 (loop 0x841E..0x84F1, interrupts on after 0x848F); halts 1; 9.10 -> 8.56 (-5.9 %); wrapper 0xC390, mode byte 0xC3C0; the race starts with SPACE on the ready screen (port 0x7FFE bit 0 at 0x8415).
 - Bobsled: 0x87E6 (a row-blit, 28,400 T) from 0x7A43 (`DI / CALL / EI`, the run), 0x8446, 0x8554; self-paced (its delay loops set the speed: 8 frames per update at a standstill to 2 at speed), halts 1; 2.29 -> 2.23 (-2.8 %); wrappers 0xC390, mode byte 0xC414.
@@ -182,5 +182,5 @@ hardware test of events 1,3,4,5 and of the new Downhill default. Events keep the
 - reuse: [tool nexclash.winter_sports_pace] the tear-free fast-draw plugin (wrapper, transparency test, negative controls) is generic for events that copy their screen with one routine
 - retries: [local: this game's key flows] several runs to find what starts each event's race (SPACE on the ready screen) and which zero runs are really free
 - environment: [none: no workaround needed]
-- hand-rolled: [local: this game's work folder] callprof / findloop / freecheck / varwatch / tapeload / jrun scripts in C:NEXT\wintersports_work were hand-rolled for the surveys and JNext pictures
+- hand-rolled: [local: this game's work folder] callprof / findloop / freecheck / varwatch / tapeload / jrun scripts in C:\1NEXT\wintersports_work were hand-rolled for the surveys and JNext pictures
 - scratch: [none: the scratch scripts answer game-specific questions; the reusable parts are in winter_sports_pace and winter_sports_dh_test]
