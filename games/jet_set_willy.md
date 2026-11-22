@@ -5,6 +5,11 @@ Stage: 4 (hardware + colour)    State: stages 0-3 done unattended; never run on 
 Inputs: the pilot's run folder (jet_set_willy.z80 md5 a4963e74; recordings work/*.rzx from `record --script`)
 Start with: hardware checklist below on a real Next; then a human's answers to "Defaults taken".
 Read: this file. Open: everything under "Open".
+NEXLOAD fix (2026-11-22, Codex): the snapshot's stack is at 0x5BFC, in the printer buffer NEXLOAD overwrites; 1.0 / 1.1
+kept no copy, so on a Next the first RET went to 0x5859 (modelled: nextboot.boot nexload=True). Both builds now set
+keep_printer_buffer (the stub puts 0x5B00-0x5BFF back); published as 1.2. A board run of 1.2 is still owed.
+Before any Enhanced build (Codex, same day): the picture verifier clears ink pixels painted the same index as their
+paper (painted Bathroom item black: "picture differs" at 0x68B7); track the source ink mask, not the final index.
 
 Techniques: `detect.buffer-layout-producer`, `detect.gameplay-screen-readers`, `patch.display-atomic-switch`, `patch.runtime-colour-map` (docs/records/jet_set_willy.json)
 

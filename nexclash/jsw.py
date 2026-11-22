@@ -97,6 +97,7 @@ class JswPatch:
         self.setup_call = 0xD000
         self.hook_page_data = b''
         self.uses_printer_buffer = False
+        self.keep_printer_buffer = True      # the snapshot's stack is at 0x5BFC: NEXLOAD overwrites the buffer, put it back
         self.tail_addr = TAIL_ADDR
         self.max_tail = HS - TAIL_ADDR
         self.regblock = ROM_ORG + len(self.rom_code)
@@ -152,6 +153,7 @@ class JswPlainPatch:
     setup_call = None
     hook_page_data = b''
     uses_printer_buffer = False
+    keep_printer_buffer = True           # the snapshot's stack is at 0x5BFC: NEXLOAD overwrites the buffer, put it back
     tail_addr = TAIL_ADDR
     extra_banks = {}
     rom_code = b''

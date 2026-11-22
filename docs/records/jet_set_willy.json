@@ -64,11 +64,11 @@
  "outputs": {
   "plain": {
    "file": "jet_set_willy.nex",
-   "md5": "563349b54c18c4f57d2962b63b934205"
+   "md5": "e6da94d233366f87aec67f9da2358859"
   },
   "sprites": {
    "file": "jet_set_willy_sprites.nex",
-   "md5": "8cc011fda1e2bf2e3b34a33916b9b64f"
+   "md5": "d148c9e8011b9e5f83944fb6b1cc9c07"
   }
  },
  "repro": [],
@@ -154,7 +154,7 @@
    "nexclash/coloursheet.py": "dfc6f6d6e095185c",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/engines.py": "1d31dad99e52a27b",
-   "nexclash/jsw.py": "45e24346f967fcc2",
+   "nexclash/jsw.py": "e0d8bc9610837221",
    "nexclash/machine.py": "659903f13de0fcee",
    "nexclash/nextboot.py": "9272cb3a8c980c98",
    "nexclash/recolour.py": "ed8eaa22008da1a7",
@@ -167,7 +167,7 @@
    "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "5f1ae3e744fbfd45",
+   "recipe": "4cd8c6e54bdafdbd",
    "rom": "sinclair"
   },
   "date": "2026-11-22"
@@ -181,7 +181,7 @@
    "nexclash/coloursheet.py": "dfc6f6d6e095185c",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/engines.py": "1d31dad99e52a27b",
-   "nexclash/jsw.py": "45e24346f967fcc2",
+   "nexclash/jsw.py": "e0d8bc9610837221",
    "nexclash/machine.py": "659903f13de0fcee",
    "nexclash/nextboot.py": "9272cb3a8c980c98",
    "nexclash/recolour.py": "ed8eaa22008da1a7",
@@ -194,7 +194,7 @@
    "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "5f1ae3e744fbfd45",
+   "recipe": "4cd8c6e54bdafdbd",
    "rom": "sinclair"
   },
   "date": "2026-11-22"
