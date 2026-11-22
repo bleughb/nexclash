@@ -779,8 +779,10 @@ def tools_check(src):
            any('loader snapshot' in w for w in iwarn), iwarn)
         _, r = isrinfo.isr(ez, [er], stop=150)
         ok('isr: handler 40092, no IX/IY reads', 40092 in r['entries'] and not any(r['reads_entry'].values()), r)
-        ok('isr: slots touched 0 r, 3 r, 4 x, 5 r, 7 rw (slot 2 free for a hook page)',
-           r['slots'] == {0: 'r', 3: 'r', 4: 'x', 5: 'r', 7: 'rw'}, r['slots'])
+        # slot 0 'r' was SkoolKit's EI-test read of memory[prev_pc] at each acknowledge (rzxplay passes prev_pc 0:
+        # every slot-0 read was of 0x0000 with the game in RAM); simrun drops that read since 2026-11-22 (#288)
+        ok('isr: slots touched 3 r, 4 x, 5 r, 7 rw (slot 2 free for a hook page)',
+           r['slots'] == {3: 'r', 4: 'x', 5: 'r', 7: 'rw'}, r['slots'])
         tracker = isrinfo.IsrTracker()
         tracker.on_read(0x6000, 0x9000, None)  # outside an interrupt
         tracker.cur = (0x8000, 0xFF00)

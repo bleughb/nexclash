@@ -57,10 +57,10 @@ missing entry is incomplete. Decoded recordings use the full audit. Never waive
 loader addresses through `rom_paths_known`.
 
 ## Hook library (new engines; old ones keep theirs)
-asm/lib/hlib_*.asm + nexclash/hooklib.py. Hooks: HLIB_SPEED_IN / _OUT, HLIB_R_IN / _OUT (default;
-exceptions above), HLIB_IFF_DI / _EI; pace: hlib_pace_wait; sprites:
-hlib_pc_upload + hlib_commit. unit_tests: `hooklib.every_site`. Record: `hooklib.FILES` in
-`shared_data`. Unused parts: games/<game>.md.
+asm/lib/hlib_*.asm + nexclash/hooklib.py. Hooks: HLIB_SPEED_IN/_OUT (alt ROM: _SP), HLIB_R_IN/_OUT
+(default), HLIB_IFF_DI/_EI; pace: hlib_pace_wait; sprites: hlib_pc_upload +
+hlib_commit. unit_tests: `hooklib.every_site`, `hide_cases`. Record: `hooklib.FILES` in `shared_data`.
+Unused parts: games/<game>.md. See ENGINE_TEMPLATES.
 
 ## Verify loop (the part every engine repeats; adapt chuckie.verify with tools/templates/verify_contract.py)
 At each RZX hook site, copy state, run original and patched code to return (`simpool.machine`),
