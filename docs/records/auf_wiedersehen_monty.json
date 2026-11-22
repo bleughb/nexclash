@@ -60,11 +60,11 @@
  "outputs": {
   "plain": {
    "file": "auf_wiedersehen_monty.nex",
-   "md5": "340835b779d39cf8d958c6d0171da438"
+   "md5": "a29cf9b873dec7c71238c90004b8df9c"
   },
   "sprites": {
    "file": "auf_wiedersehen_monty_sprites.nex",
-   "md5": "6fcbd85af07305b3fe802b6759ba0162"
+   "md5": "ad20fe1d69ccc920798b6c1dc5ba89d9"
   }
  },
  "repro": [],
