@@ -175,8 +175,10 @@ def memory_patches(hybrid=False):
     out = [(HOOK, asm_hook(hybrid)), (SITE, bytes([0xC3, HOOK & 255, HOOK >> 8]))]
     if hybrid:
         code = bytes([b for pl in PLUGINS for b in pl.disable_code()]) + bytes([0xC9])
-        assert DISABLE + len(code) <= 0x6F00, len(code)
+        assert DISABLE + len(code) <= common.SPD_IN, len(code)
         out.append((DISABLE, code))
+        out.append((common.SPD_IN, common.speed_code()))   # the wrappers' speed latch routines (winter_sports_common)
+        out.append((common.SPD, b'\0'))                   # the latch starts at 3.5 MHz, the stub's speed
     return out
 
 
@@ -281,14 +283,22 @@ def _sim(z80, patched, pages=None, keys=None, hybrid=False):
     class Tr:
         border = 0
 
+        sel = 0
+
         def read_port(self, regs, port):
+            if port == 0x253B:                      # NextReg read: NR 7 = programmed speed in bits 1:0, actual in 5:4
+                return sim.nr7 << 4 | sim.nr7 if self.sel == 0x07 else 0
             return 0x1F and (0 if port & 0xFF == 0x1F else kb.read(port))
 
         def write_port(self, regs, port, value, offset=0):
-            if port & 1 == 0 and sim.spd[0] > 1:
+            if port == 0x243B:
+                self.sel = value
+            elif port & 1 == 0 and sim.spd[0] > sim.base[0]:     # beeper / border write above the player's speed
                 sim.fast_out += 1                   # a beeper / border write while the CPU runs fast
     sim.fast_out = 0
     sim.spd = [1, 0]
+    sim.nr7 = 0                                     # NextReg 7 as programmed
+    sim.base = [1]                                  # the player's speed factor (F8): what "fast" is measured against
     sim.set_tracer(Tr())
     log = []
     spd = sim.spd                                   # CPU speed factor (NextReg 0x07: 3.5 / 7 / 14 / 28 MHz) and a T remainder
@@ -299,6 +309,12 @@ def _sim(z80, patched, pages=None, keys=None, hybrid=False):
             mem[0:0x2000] = rom if val == 0xFF else list(pages[val])
         elif reg == 0x07:
             spd[0] = (1, 2, 4, 8)[val & 3]
+            sim.nr7 = val & 3
+
+    def player_speed(v):                            # the speed the player chose (F8): NR 7 and the baseline for "fast"
+        nextreg(0x07, v)
+        sim.base[0] = (1, 2, 4, 8)[v & 3]
+    sim.player_speed = player_speed
     z80n.install(sim, nextreg)
     if patched:
         for a, d in memory_patches(hybrid):
@@ -360,6 +376,7 @@ def verify(patch, z80, tape_files=None, frames=900, progress=None, collect=0, **
     C, ex = Counter(), []
     pages = _pages(patch.events)
     own = set(range(HOOK, HOOK + len(patch.hook))) | set(range(PG, EVT + 1)) | set(range(SITE, SITE + 3))
+    own |= {common.SPD} | set(range(common.SPD_IN, common.SPD_IN + len(common.speed_code())))   # the speed latch
     timing = set(range(0x5C00, 0x5C80)) | set(range(0x5F80, 0x6000))   # FRAMES etc. and the stack: the hook's copy takes ~12
     #                                                         frames the tape trap does not, so the two runs stop at different instants
     for k, key in enumerate(MENU_KEYS):

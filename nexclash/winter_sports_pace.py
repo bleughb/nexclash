@@ -51,9 +51,10 @@ class PaceEvent:
             a = C.Asm(self.wrap_at + SPACING * i)
             C.draw_wrapper(a, (self.var_at + 1 if bad == 'target' else s.target), self.var_at, s.di, s.halts)
             code = bytearray(a.done())
-            if bad == 'fast':                                   # drop the "back to 3.5 MHz" write
-                k = bytes([0xED, 0x91, 0x07, 0x00])
-                j = code.index(k)
+            if bad == 'fast':                                   # no speed back: the exit NEXTREG and its latch dropped
+                j = code.index(bytes([0xCD, C.SPD_IN & 255, C.SPD_IN >> 8]))
+                code[j:j + 4] = bytes(4)
+                j = code.index(bytes([0xED, 0x91, 0x07, 0x00]), j)
                 code[j:j + 4] = bytes(4)
             assert len(code) <= SPACING, len(code)
             out.append((a.org, bytes(code)))
@@ -74,7 +75,7 @@ class PaceEvent:
 
     def disable_code(self):
         a = C.Asm(0)
-        a.nr(0x07, 0x00)
+        a.e(0xCD, C.SPD_OUT & 255, C.SPD_OUT >> 8)     # the player's speed back, not a fixed 3.5 MHz
         return list(a.done())
 
     # ------------------------------------------------------------------ the tests
@@ -101,7 +102,7 @@ class PaceEvent:
                     continue
                 if pc in marks and f > self.pre_frames:
                     rows.append(f * FRAME_T + R[T])
-                    if sim.spd[0] != 1:
+                    if sim.spd[0] != sim.base[0]:              # not the player's speed (3.5 MHz here)
                         left_fast += 1
                 _exec(sim)
             R[T] -= FRAME_T
@@ -165,40 +166,49 @@ class PaceEvent:
         return False
 
     def _compare(self, sim, site):
+        """The wrapper (halts NOPed) against the plain call from the same state, at each speed the player can have (F8):
+        the same registers and memory (the latch byte aside), and NextReg 7 back at that speed (Codex review C6)."""
         from skoolkit.simutils import PC
         from .winter_sports_dh_test import _exec
         R, mem = sim.registers, sim.memory
         mem0, reg0 = list(mem), list(R)
         wrap = next(a for (a, _c), s in zip(self.wrappers(), self.sites) if s is site)
-        for k in range(wrap, wrap + SPACING):                       # no halts in the test copy
-            if mem[k] == 0x76:
-                mem[k] = 0x00
-        mem[self.var_at] = 0
 
-        def call(entry):
+        def fresh():
+            R[:] = reg0
+            mem[:] = mem0
+            for k in range(wrap, wrap + SPACING):                   # no halts in the test copy
+                if mem[k] == 0x76:
+                    mem[k] = 0x00
+            mem[self.var_at] = 0
+
+        def call(entry, speed):
             R[12] = (R[12] - 2) & 0xFFFF
             mem[R[12]], mem[R[12] + 1] = 0x00, 0x90
             R[PC] = entry
-            sim.spd[0], sim.spd[1] = 1, 0
+            sim.player_speed(speed)
+            sim.spd[1] = 0
             n = 0
             while R[PC] != 0x9000 and n < 3_000_000:
                 _exec(sim)
                 n += 1
             return list(R), list(mem)
-        a_regs, a_mem = call(wrap)
-        R[:] = reg0
-        mem[:] = mem0
-        for k in range(wrap, wrap + SPACING):
-            if mem[k] == 0x76:
-                mem[k] = 0x00
-        b_regs, b_mem = call(site.target)
-        keep = [i for i in range(len(a_regs)) if i not in (15, 24, 25, 26, 27, 28, 29)]        # R, PC, T, IFF, IM, HALT, MEMPTR
-        regs_ok = all(a_regs[i] == b_regs[i] for i in keep)
-        sp = b_regs[12]                                          # the wrapper's pushes leave stale bytes below the stack pointer: not state
-        mem_ok = all(a_mem[i] == b_mem[i] for i in range(0x4000, 0x10000)
-                     if not (self.wrap_at <= i < self.wrap_at + SPACING * len(self.sites) + 0x10) and not (sp - 48 <= i < sp))
-        if not (regs_ok and mem_ok):
-            self.last_diff = ([(i, a_regs[i], b_regs[i]) for i in keep if a_regs[i] != b_regs[i]][:6],
-                              [(hex(i), a_mem[i], b_mem[i]) for i in range(0x4000, 0x10000) if a_mem[i] != b_mem[i]][:6])
-        return regs_ok and mem_ok
+        ok = True
+        for speed in range(4):
+            fresh()
+            a_regs, a_mem = call(wrap, speed)
+            back = sim.nr7
+            fresh()
+            b_regs, b_mem = call(site.target, speed)
+            keep = [i for i in range(len(a_regs)) if i not in (15, 24, 25, 26, 27, 28, 29)]    # R, PC, T, IFF, IM, HALT, MEMPTR
+            regs_ok = all(a_regs[i] == b_regs[i] for i in keep)
+            sp = b_regs[12]                                      # the wrapper's pushes leave stale bytes below the stack pointer
+            mem_ok = all(a_mem[i] == b_mem[i] for i in range(0x4000, 0x10000)
+                         if not (self.wrap_at <= i < self.wrap_at + SPACING * len(self.sites) + 0x10) and not (sp - 48 <= i < sp)
+                         and i != C.SPD)
+            if not (regs_ok and mem_ok and back == speed):
+                self.last_diff = (speed, back, [(i, a_regs[i], b_regs[i]) for i in keep if a_regs[i] != b_regs[i]][:6],
+                                  [(hex(i), a_mem[i], b_mem[i]) for i in range(0x4000, 0x10000) if a_mem[i] != b_mem[i]][:6])
+                ok = False
+        return ok
 

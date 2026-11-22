@@ -271,6 +271,17 @@ def unit_downhill(patch, z80, rotate=0):
         C['pace wrapper: 14 calls = %d frames, drawing at 28 MHz' % want + ('' if ok else '!')] += 1
         if not ok:
             fails.append(('wrapper', total / FRAME_T, speeds[:3]))
+        # the player's speed (F8) comes back after the 28 MHz drawing at every speed, not a fixed 3.5 MHz (Codex review C6)
+        for s in (1, 2, 3):
+            sim.player_speed(s)
+            n0 = len(log)
+            t, _n, ok_ret = _call(sim, dh.WRAP)
+            got = [v for r, v in log[n0:] if r == 0x07]
+            ok = got == [3, s] and sim.nr7 == s
+            C['pace wrapper at NR 7 = %d: 28 MHz, then %d back' % (s, s) + ('' if ok else '!')] += 1
+            if not ok:
+                fails.append(('wrapper speed', s, got, sim.nr7))
+        sim.player_speed(0)
     return C, fails
 
 

@@ -72,7 +72,7 @@ def disable_code():
     a.nr(0x43, 0x00)
     a.nr(0x40, 31)
     a.nr(0x41, 0xFF)
-    a.nr(0x07, 0x00)                        # 3.5 MHz, whatever the drawing was doing
+    a.e(0xCD, C.SPD_OUT & 255, C.SPD_OUT >> 8)   # the player's speed (latched at the last drawing), whatever the drawing was doing
     return list(a.done())
 
 
