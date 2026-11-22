@@ -506,8 +506,11 @@ class _NS:
         self.H = bytearray(patch.hpage)
         self.R = None
         self.ports = 0
+        self.sel = 0                    # NextReg select (port 0x243B)
 
     def read(self, port):
+        if port == 0x253B:              # NextReg read: NR 7 gives back the programmed speed in bits 1:0
+            return self.nr.get(self.sel, 0)
         self.ports += 1
         return 0xFF
 
@@ -517,7 +520,9 @@ class _NS:
             self.attr[self.nr.get(0x34, 0) & 0x7F][reg - 0x35] = val
 
     def out(self, port, val):
-        if port == 0x303B:
+        if port == 0x243B:              # NextReg select (a hook reads the caller's speed)
+            self.sel = val
+        elif port == 0x303B:
             self.pat_ptr = (val & 0x3F) * 256 + (128 if val & 0x80 else 0)
         elif port & 0xFF == 0x5B:
             self.pat[self.pat_ptr & 0x3FFF] = val
@@ -697,6 +702,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             return None
         p = _PatchedView(get, ns, patch.alt_view(get), psite, patch.store, err)
         sp_ = _machine(Sim, p, list(regs), ns, 'p')
+        spd = st['spd'] = (st.get('spd', 0) + 1) % 4     # every hook entered at all four speeds in turn
+        ns.nr[0x07] = spd
+        c['entry speed %d' % spd] += 1
         t0 = sp_.registers[25]
         ns.game_ix_ok = pc == P_BLIT                 # the blit itself loads IX (game code, same in both)
         base = []
@@ -725,7 +733,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             fail('memory differs', (hex(pc), len(dm), [hex(a) for a in sorted(dm)[:4]]))
         if pc != P_BLIT and any(SCREEN[0] <= a < SCREEN[1] for a in p.ov):
             fail('screen written by a hook', (hex(pc),))
-        if (ns.nr[0x54], ns.nr[0x55], ns.nr[0x07]) != (GP4, GP5, 0):
+        if (ns.nr[0x54], ns.nr[0x55], ns.nr[0x07]) != (GP4, GP5, spd):
             fail('MMU / speed not restored', (hex(pc), ns.nr[0x54], ns.nr[0x55], ns.nr[0x07]))
             ns.nr.update({0x54: GP4, 0x55: GP5, 0x07: 0})
         if ns.ports:
@@ -1115,7 +1123,8 @@ def negative_patches(patch=None):
         mod('log holds one figure', rep('FE20', 'FE01', at('logp'), at('e_bl'))),
         mod('sprites one line low', rep('C620', 'C621', at('emit'))),
         mod('hook writes IY (interrupt safety)', rep('ED910703', 'FD210000', at('e_pn'), at('e_pm'))),
-        mod('hook leaves 28 MHz on', rep('ED910700', '00000000', at('e_op'), at('logp'))),
+        mod('hook leaves 28 MHz on', rep('3A6280ED9207', '3E0300ED9207', at('e_op'), at('logp'))),
+        mod('hook gives back 3.5 MHz, not the caller\'s speed', rep('3A6280ED9207', 'AF0000ED9207', at('e_op'), at('logp'))),
         ('ink and paper swapped', AlteredBeastPatch(prof, colours={}, rom_code=good, tables=swapped)),
     ]
     return out
