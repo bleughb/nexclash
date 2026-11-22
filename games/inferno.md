@@ -10,7 +10,7 @@ Inputs: specnext/reference/inferno/ (Inferno_masked.nex, Inferno_english_masked.
 Start: specnext build/hybrid.md (current handover); CONTINUE_copier_window.md is history.
 Read: asm wk_select, wo_go, modal_exit, wi_stub; inferno.py copier_window_build (--cw-driver --cw-full).
 Next: hardware round for v1.1 (Kempston; SAVE, power-off, LOAD; INFERNO.SAV beside the game; the shop on L4);
-  freshness readout on hardware. Never apply automap_off / automap_fix to Inferno: its SD saves need automap.
+  freshness readout on hardware. No automap-off step for Inferno (Lessons).
 Gate: copier-window gate 0 failures (OUT/9907 within tolerance) + boot checks; replay game RAM with supplied
   LD A,R values (equivalence: PLAYBOOK 6); pace, sound and freshness on hardware.
 Boundary: 8EF9 follows original DI, before IM2 setup; the pause gate preserves all registers/R/RAM/
@@ -257,6 +257,8 @@ Workflow: failed states, 1/10 sample, ONE gate (--jobs 6); JNext headless before
 - [card patch.whole-altrom-image §Recognise] The intro uses IM 2 with I = 3B: ROM 3BFF-3C00 is its vector. Hooks must leave them FF; JNext headless found it.
 - [card patch.work-in-timed-gaps §Failure lookup] Busy L1 windows are nearly full: per-chunk cost, not cold frames, set the run length. Profile before planning. Store cache keys must cover all code they hold.
 - [local: Inferno startup] L1 map is write-first, permitting plain tail 9A80. Later lifetime is separate.
+- [local: Inferno SD saves] INFERNO.SAV saves call esxDOS (RST 8), so the build must keep DivMMC automap
+  on (no automap-off step); JNext only, hardware to confirm.
 
 ## Friction
 - retries: [local: Inferno timing reconciliation] Require one timing row per completed hook and
