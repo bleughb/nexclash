@@ -157,6 +157,13 @@ Hardware risk review (PLAYBOOK 6b): DivMMC: hooks at 0x386E-0x3C4x, not in 0x3D0
 - [local: needs a human] inferred: JSW's clash is mild: guardians paint ink only and paper stays; the visible gain is Willy keeping his colour next to figures and scenery. Many of the overlaps in the evidence frames are from teleporting into scenery.
 - [deferred Open: reconsider when a maintainer reviews the pilot] observed: a search bot must restore its start state when it fails, or the script it writes no longer replays (the bot's log and the recording disagreed; caught by per-room counts).
 
+## Friction
+- reuse: [local: the pilot's JSW engine ported as it was; the Attic fix is one START_SITES byte]
+- retries: [local: the engine sat uncommitted in a worktree 155 commits behind main; carried onto main and re-stamped there]
+- environment: [local: reference files in the e9ab1e50 scratchpad ref folder; not yet in specnext]
+- hand-rolled: [none: the record came from the port as published; only the feasibility block was added]
+- scratch: [none: nothing added to tools/]
+
 ## Technique use
 - patch.runtime-colour-map: helped: design and verify list; tables direct-indexed here, no image index.
 - detect.buffer-layout-producer: helped: named the question; the disassembly answered it.
