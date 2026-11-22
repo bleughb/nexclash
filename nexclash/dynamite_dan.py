@@ -367,7 +367,7 @@ class NextState:
         self.events = []
         self.speed = 0              # NR 7 bits 1:0: the clock now (set to the incoming clock at each event)
         self.speed_in = 0           # the clock a hook is entered at (verify clock=, the every-site matrix)
-        self.sel = 7                # port 0x243B's register
+        self.sel = 8                # port 0x243B's register: the stub's last read leaves NR 8 (Codex review C8)
 
     def nextreg(self, reg, val):
         self.nr[reg] = val
@@ -511,9 +511,10 @@ def event(patch, kind, site, get, R, ns, alt, Sim, check_ula=False):
         f.append(('NEXTREG other than sprite attributes and the speed',))
     if ns.speed != ns.speed_in:
         f.append(('exit speed is not the incoming one', ns.speed, ns.speed_in))
-    if ns.sel != 7:
+    if ns.sel not in (7, getattr(ns, 'sel_in', 8)):  # a hook leaves NR 7 selected, or the selection as it found it
         f.append(('port 0x243B left on another register', ns.sel))
-        ns.sel = 7
+    ns.n_sel = getattr(ns, 'n_sel', 0) + 1          # the next hook finds 0x243B on NR 8, 0x53 or 7 in turn: a read selects 7
+    ns.sel = ns.sel_in = (0x08, 0x53, 0x07)[ns.n_sel % 3]
     dead = range(sp0 - 64, sp0)                     # below SP: the hook's own pushes
     keys = set(o.ov) | set(p.ov)
     md = [a for a in keys if a not in dead and o[a] != p[a]]
