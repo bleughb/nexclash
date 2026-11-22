@@ -975,8 +975,12 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4, colour
             for e in err:
                 fail(str(e[0]), hex(e[1]) if isinstance(e[1], int) else e[1], *[hex(x) for x in e[2:]])
             err.clear()
-            if (nr[0x54], nr[0x55], nr[0x07]) != (GP4, GP5, 0) and not in_hook(pcp):
-                fail('MMU / speed not restored', nr[0x54], nr[0x55], nr[0x07])
+            if not in_hook(pcp):
+                spd = st.get('spd', 0)
+                if (nr[0x54], nr[0x55], nr[0x07]) != (GP4, GP5, spd):
+                    fail('MMU / speed not restored', nr[0x54], nr[0x55], nr[0x07], spd)
+                c['entry speed %d' % spd] += 1
+                st['spd'] = nr[0x07] = (spd + 1) % 4     # the caller's speed (F8) turns 0-3 frame by frame
             if ns.ports:
                 fail('port access in a hook', ns.ports)
                 ns.ports = 0
@@ -1176,6 +1180,16 @@ def build(z80, out, name, say=print, outline=True):
     return (not bad and not bad2), (plain, spr), patch
 
 
+
+# Negatives that must fail for their own reason: a control that breaks something else proves nothing about it.
+NEG_EXPECT = {'speed not restored': 'MMU / speed not restored!', 'speed given back as 3.5 MHz': 'MMU / speed not restored!'}
+
+
+def _neg_fails(name, c):
+    """The failures that count for negative `name`: all of them, or only its expected one."""
+    f = [k for k in c if k.endswith('!')]
+    return [k for k in f if k == NEG_EXPECT[name]] if name in NEG_EXPECT else f
+
 def negative_patches():
     """-> [(name, patch)]: broken builds the lockstep must catch."""
     out = []
@@ -1256,9 +1270,13 @@ def negative_patches():
     rep_page('Knight pattern off by one', bytes.fromhex('8147'), bytes.fromhex('3C47'), 'c_kn')
     # 14 speed left at 28 MHz
     rc = bytearray(base.rom_code)
-    i = rc.find(bytes.fromhex('ED910700'), rom_at('e_kn2'))
-    rc[i + 3] = 3
+    i = rc.find(bytes.fromhex('ED9207'), rom_at('e_kn2'))     # LEAVE: LD A,(V_SPD) / NEXTREG 7,A
+    if i < 3 or rc[i - 3] != 0x3A:
+        raise ValueError('negative control: the speed restore in e_kn2 not found')
+    rc[i - 3:i] = bytes([0x3E, 3, 0])                         # LD A,3 / NOP: 28 MHz left on
     out.append(('speed not restored', SpellboundPatch(colours={}, rom_code=bytes(rc))))
+    rc[i - 3:i] = bytes([0x3E, 0, 0])                         # LD A,0 / NOP: 3.5 MHz, not the caller's speed
+    out.append(('speed given back as 3.5 MHz', SpellboundPatch(colours={}, rom_code=bytes(rc))))
     # 15 slot 4 left mapped
     rc = bytearray(base.rom_code)
     i = rc.find(bytes.fromhex('ED915404'), rom_at('e_kn2'))
@@ -1286,7 +1304,7 @@ def run_negatives(rzx, stop, say=print):
     res = []
     for name, p in negative_patches():
         c, ex, _ = verify(p, rzx, stop=stop, every=1)
-        fails = [k for k in c if k.endswith('!')]
+        fails = _neg_fails(name, c)
         say('Negative  : %-44s %s %s' % (name, 'DETECTED' if fails else 'NOT DETECTED',
                                          (fails[0] if fails else '')))
         res.append((name, bool(fails)))
@@ -1667,7 +1685,7 @@ def _njob(k, runs):
     name, p = negative_patches()[k]
     for rz, stop in runs:
         c, ex, _ = verify(p, rz, stop=stop, every=1)
-        f = [x for x in c if x.endswith('!')]
+        f = _neg_fails(name, c)
         if f:
             return name, (os.path.basename(rz), f[0])
     return name, None
