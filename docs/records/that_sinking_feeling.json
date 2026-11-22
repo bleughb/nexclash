@@ -311,19 +311,19 @@
  "outputs": {
   "sprites": {
    "file": "that_sinking_feeling_sprites.nex",
-   "md5": "19dbbbbf87a12dca3979e9d6186e6840"
+   "md5": "95585c91e3603dc68deaffde7fee7664"
   },
   "loading": {
    "file": "that_sinking_feeling_sprites_loading.nex",
-   "md5": "833ae0f92d8975ff1ba58d7a9ccb17b3"
+   "md5": "8c5de872254801323acd7c1fd2916cce"
   },
   "enhanced": {
    "file": "that_sinking_feeling_enhanced.nex",
-   "md5": "2f55c148c59518ec1af5dde302c688e8"
+   "md5": "eb9baa5c0a847826b5d47daa72eff769"
   },
   "enhanced_loading": {
    "file": "that_sinking_feeling_enhanced_loading.nex",
-   "md5": "b79d44e336f1045fbaf98c500d59096a"
+   "md5": "c7d2a28d655190b7c7aae295641aa236"
   }
  },
  "rom_paths_known": [

@@ -61,15 +61,15 @@
  "outputs": {
   "plain": {
    "file": "chase_hq.nex",
-   "md5": "d31763647a05726a8abb70d96bc4f14d"
+   "md5": "26d072e215166d94b4a1050b9b1afb50"
   },
   "speed": {
    "file": "chase_hq_speed.nex",
-   "md5": "bfb2bc9d396cb753c5d486544b635d29"
+   "md5": "440824a836c77a29abbf5690f66265f8"
   },
   "orig_pace": {
    "file": "chase_hq_orig_pace.nex",
-   "md5": "832995ad342bb23b535050cebfd7e25a"
+   "md5": "a6a78043039c4b98bebaaf13e2f1942f"
   }
  },
  "repro": [],
