@@ -35,7 +35,7 @@ PUBLISHER = 'Image Works, 1991'
 STAGE_KEYS = '12345X'
 LOAD_SCREEN = 'cisco_heat_loading.scr'        # the tape's cisco$ block (6,912 bytes), beside the snapshot
 LOAD_MD5 = 'dcada32d9b00f736b583beae1cc4760d'
-START_DELAY = 200                              # NEX header byte 133: frames on the loading screen after loading (4 s)
+START_DELAY = 0                                # NEX header byte 133 (boot_wait holds the screen: 4 s or a key)
 SCR_PAGE = 27                                  # asm SCR_PAGE: the snapshot's display bytes in a loading screen build
 STAGE_PAGES = (16, 17, 18, 19, 22, 23)       # asm STAGE_PAGE0.. (bank 10 = pages 20/21 is the stub's)
 STAGE_MD5 = {'1': 'dbe4ab364061deaf540cfd7e37ad3a63', '2': '4d9eda09cd622f457b83fa7a532bee16',     # header + block
@@ -45,7 +45,9 @@ TAIL_ADDR = 0x7C80                             # hook RAM area (0x7B00-0x7D7C, n
 HOOK_RAM = (0x7B00, 0x7D7D)
 V = 0x7B00
 V_EN, V_DMA, DMA_LEN = V + 2, V + 208, 15
+V_CAD = V + 0x148                              # asm v_cad: spec frame cadence, 1 (up to 50 a second) or 2 (25)
 V_FAST = V + 0x144                             # asm v_fast: the fast paths (copy by zxnDMA, sprite rows)
+V_CAR = 0x7CD8                                 # asm CAR: c_on (the player's car as sprites, Patch.fast), then its state
 DMA_CYCLES = 6                                 # model: 28 MHz cycles a DMA byte (3 + 3 after reset; docs/DDMA.md)
 G_STAGE, G_HDR = 0x8E4C, 0x851C
 R_SITES = (0x98AC, 0xA468)                     # the only LD A,R in the game
@@ -159,11 +161,14 @@ class Patch:
     setup_call = None
     hook_page_data = b''
 
-    def __init__(self, stages, smooth=True, screen=None, fast=True):
+    def __init__(self, stages, smooth=True, screen=None, fast=True, fps50=True, car=True, hold=True):
         missing = [k for k in STAGE_KEYS if k not in stages]
         if missing:
             raise ValueError('Cisco Heat: stage blocks missing: %s (games/cisco_heat.md "Inputs")' % ','.join(missing))
         self.stages, self.smooth, self.screen, self.fast = stages, smooth, screen, fast
+        self.fps50 = fps50                      # in-between frames up to 50 a second (v_cad 1), else 25 (2)
+        self.car = car                          # the player's car as sprites (with fast); False: its cells red as the game's
+        self.hold = hold                        # the loading screen held 4 s or a key after loading; False: none (NXC)
         self.name = 'Cisco Heat smooth engine' + ('' if smooth else ' (in-between frames off)')
         prof = load_profile()
         h = prof['hooks']
@@ -194,7 +199,8 @@ class Patch:
         return q
 
     def plain(self):
-        """This patch with the fast paths off (the game's own copy and sprite loop run). V1 uses it: its
+        """This patch with the fast paths off (the game's own copy and sprite loop run, the car's cells red
+        as the game's, no sprites). V1 uses it: its
         interrupt replay counts game instructions, which a fast path does not run; V3 shows the two equal."""
         q = copy.copy(self)
         q.fast = False
@@ -205,6 +211,10 @@ class Patch:
         v = bytearray(HOOK_RAM[1] - HOOK_RAM[0])
         v[V_EN - V] = 1 if self.smooth else 0
         v[V_FAST - V] = 1 if self.fast else 0
+        v[V_CAD - V] = 1 if self.fps50 else 2
+        mg = self.syms['MG_50' if self.fps50 else 'MG_25']
+        v[V_CAD - V + 1:V_CAD - V + 3] = bytes((mg & 255, mg >> 8))
+        v[V_CAR - V] = 1 if self.fast and self.car else 0
         t = self.syms['dma_tpl'] - 0x2000
         v[V_DMA - V:V_DMA - V + DMA_LEN] = self.page[t:t + DMA_LEN]
         return bytes(v)
@@ -244,6 +254,9 @@ class Patch:
         page[a:a + 256] = snap.banks[5][0x1B00:0x1C00]
         page[self.syms['boot_iff'] - 0x2000] = 0xFB if snap.iff1 else 0x00
         page[self.syms['boot_scr'] - 0x2000] = 1 if self.screen is not None else 0
+        page[self.syms['boot_shadow'] - 0x2000] = 0x40 if snap.port7ffd & 8 else 0
+        if not self.hold:
+            page[self.syms['boot_frames'] - 0x2000] = 0
         a = self.syms['boot_jump'] - 0x2000
         page[a + 1:a + 3] = zt.w16(snap.pc)
         self.page = bytes(page)
@@ -264,7 +277,7 @@ def find_screen(directory):
 def with_screen(raw, screen):
     """The .nex with the loading screen: in the header (byte 10 = 2: NEXLOAD shows it before the banks), in the
     file's bank 5 too (loaded first, it would replace the picture; boot_resume puts the snapshot's bytes back from
-    SCR_PAGE), and START_DELAY frames on it after loading."""
+    SCR_PAGE). After loading, boot_resume keeps it 4 s or until a key (START_DELAY 0: no NEXLOAD wait)."""
     raw = bytearray(raw)
     if raw[10] != 0 or len(screen) != 6912 or not raw[18 + 5] or zt.BANK_FILE_ORDER[0] != 5:
         raise ValueError('Cisco Heat: expected a .nex without a screen, bank 5 first, and a 6,912-byte screen')
@@ -274,9 +287,10 @@ def with_screen(raw, screen):
     return bytes(raw[:512]) + screen + bytes(raw[512:])
 
 
-def build(z80, out, stages=None, smooth=True, screen=None):
+def build(z80, out, stages=None, smooth=True, screen=None, **kw):
+    """kw: Patch's fps50, car, hold (the NXC menu's toggles and its build: games/cisco_heat.md "NXC patch")."""
     stages = stages if stages is not None else find_stages(Path(z80).resolve().parent)
-    patch = Patch(stages, smooth, screen)
+    patch = Patch(stages, smooth, screen, **kw)
     zt.convert(str(z80), str(out), quiet=True, patch=patch)
     if screen is not None:
         Path(out).write_bytes(with_screen(Path(out).read_bytes(), screen))
@@ -707,6 +721,11 @@ def unit_tests(patch, states, neg=True):
                 c['sprite fast = game ' + ('exact' if not bad else 'differs!')] += 1
                 if bad:
                     patch.unit_failures.append(('sprite', bad[:4]))
+            for call in car_calls(patch, st):
+                bad = t_car(patch, call)
+                c['car sprites = blit ' + ('exact' if not bad else 'differs!')] += 1
+                if bad:
+                    patch.unit_failures.append(('car', bad[:4]))
     if neg and states:
         st = states[len(states) // 2]
         nb = negative_patch(patch)
@@ -793,6 +812,83 @@ def t_sprite(patch, call):
     return bad
 
 
+CAR_DRAW = 0x8F48                               # the player's car: two blits (0x9042, 0x90C0), red ink (0x9078)
+CAR_VIEW = (24, 231, 48, 151)                   # asm car_present: the clip window stays inside the road view
+
+
+def car_calls(patch, st, n=1):
+    """Machine states at the car routine 0x8F48 in a plain update."""
+    return sprite_calls(patch, st, n, CAR_DRAW)
+
+
+def car_pixels(model, clip):
+    """The visible 4-bit sprites' non-transparent pixels inside clip (x1, x2, y1, y2) as screen (x, y); X mirror
+    honoured (the car's only transform)."""
+    px = set()
+    x1, x2, y1, y2 = clip
+    for a in model.attrs:
+        if not a[3] & 0x80:
+            continue
+        x, y = a[0] | (a[2] & 1) << 8, a[1]
+        base = (a[3] & 63) * 256 + (128 if a[4] & 0x40 else 0)
+        for r in range(16):
+            for c in range(16):
+                b = model.pattern[base + r * 8 + c // 2]
+                if (b >> 4 if c % 2 == 0 else b) & 15:
+                    q = (x + (15 - c if a[2] & 8 else c) - 32, y + r - 32)      # attribute 2 bit 3: X mirror
+                    if x1 <= q[0] <= x2 and y1 <= q[1] <= y2:
+                        px.add(q)
+    return px
+
+
+def t_car(patch, call):
+    """The car routine on a clear back buffer (pixels 0, attributes paper 5 ink 0), the game's code (red ink
+    into the car's cells) against the car as sprites (car_note, car_present, car_flip in the model): the
+    sprites show exactly the car pixels the game makes red (inside the road view), the attributes stay.
+    -> list of differences (t_car.red: the red pixels compared)."""
+    out = []
+    for q, on in ((patch.plain(), 0), (patch, 1)):
+        m = Machine(call, q, smooth=False, ints=[])
+        mem, R = m.mem, m.R
+        for a in range(0x6000, 0x7800):
+            mem[a] = 0
+        for a in range(0x7800, 0x7B00):
+            mem[a] = 0x28
+        mem[V_CAR], mem[V_CAR + 2] = on, on
+        m.run(mem[R[12]] | mem[R[12] + 1] << 8)
+        ula = bytes(mem[a] for a in range(0x6000, 0x7B00))
+        if on:
+            for sym in ('car_present', 'car_flip'):
+                R[12] = (R[12] - 2) & 0xFFFF
+                mem[R[12]], mem[R[12] + 1] = 0x00, 0xFF
+                R[24] = patch.syms[sym]
+                while R[24] != 0xFF00:
+                    m.sim.opcodes[mem[R[24]]]()
+            clip = tuple(mem[patch.syms['c_cpd'] + k] for k in range(4))
+            sh = patch.syms['c_sh']                      # the shown frame's two parts (CP_LEN 7)
+            red = car_pixels(m.model, clip) if mem[sh] or mem[sh + 7] else set()
+        else:
+            x1, x2, y1, y2 = CAR_VIEW
+            red = set()
+            for i in range(0x1800):
+                y, cx = i >> 5, i & 31
+                if not ula[0x1800 + (y >> 3) * 32 + cx] & 2:
+                    continue
+                for k in range(8):
+                    if ula[i] & 0x80 >> k and x1 <= cx * 8 + k <= x2 and y1 <= y <= y2:
+                        red.add((cx * 8 + k, y))
+        out.append((ula, red))
+    (uo, ro), (uf, rf) = out
+    bad = []
+    if uf[:0x1800] != uo[:0x1800]:
+        bad.append(('pixels differ',))
+    if any(v != 0x28 for v in uf[0x1800:]):
+        bad.append(('attributes changed',))
+    bad += sorted((p, p in ro, p in rf) for p in ro ^ rf)
+    t_car.red = len(ro)
+    return bad
+
+
 def _t_load(patch, key, st):
     """h_load from a state with the stage digit set: bank 1 and the header copy as the stage snapshot has them."""
     if st is None:
@@ -861,7 +957,7 @@ def auto(a, z80, name, out, say):
         say('Result    : FAILED')
         return False
     screen = find_screen(Path(z80).resolve().parent)
-    say('Screen    : %s' % ('%s (%d frames after loading)' % (LOAD_SCREEN, START_DELAY) if screen else
+    say('Screen    : %s' % ('%s (4 s after loading, or a key)' % LOAD_SCREEN if screen else
                             'none (%s not beside the snapshot)' % LOAD_SCREEN))
     ok = True
     patches = []

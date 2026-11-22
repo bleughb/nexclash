@@ -66,7 +66,7 @@ P_LO    EQU 0x5B29              ; the profile 0xA053 animates: 0x5B29-0x5B80
 P_LEN   EQU 0x58
 
 NL      EQU 311                 ; lines a frame, 128K timing (50 Hz)
-CAD     EQU 2                   ; frames between spec presents (25 a second)
+CAD     EQU 2                   ; v_cad's 25 a second setting: frames between spec presents
 
 ; ------------------------------------------------------------------ hook RAM: 0x7B00-0x7D7C (bank 5),
 ; never read or written by the game in the six recordings (survey memory scan); the patch writes its
@@ -123,7 +123,15 @@ v_cp    EQU V+0x140              ; lines the real present's copy took (h_copy; n
 v_cp0   EQU V+0x142
 v_fast  EQU V+0x144              ; 1: the fast paths (h_copy by zxnDMA, h_spr); setup: Patch fast
 v_sc    EQU V+0x145              ; 3 bytes: the fast paths' credit this real update, 1/4096 lines (h_spr)
-VEND2   EQU V+0x148
+v_cad   EQU V+0x148              ; spec frame cadence: CAD (2): every other frame; 1: the next frame the work fits
+                                 ; (up to 50 a second); setup: Patch.fps50
+v_mg    EQU V+0x149              ; 2 bytes: lines a spec frame's work is given beyond D before the deadline:
+                                 ; MG_25 with v_cad 2; MG_50 with 1 (more frames close to the deadline; setup)
+MG_25   EQU 64+SPEC_X
+MG_50   EQU MG_25+64            ; 2026-11-22: 22 and 30 lines over with MG_25 (auto, ciscoheat2)
+v_cn    EQU V+0x14B              ; 1/16 lines car_note took in the real update (not the game's: left out of D)
+v_cn0   EQU V+0x14D
+VEND2   EQU V+0x14F
         ASSERT VEND2 <= TAIL_V
 TAIL_V  EQU 0x7C80
 v_prof  EQU 0x7C80               ; P_LEN: the profile the real update draws (the start-up tail's bytes, free
@@ -236,6 +244,9 @@ isr_clock:
         xor a
         ld (v_prs),a
         ld (v_ffl),hl
+        push hl
+        call car_flip                   ; the car's sprites with the picture
+        pop hl
         ld a,(v_real)
         or a
         ret z
@@ -402,6 +413,7 @@ h_upd:  HLIB_SPEED_IN v_speed
         ld (v_wt),hl
         ld (v_pw),hl
         ld (v_cp),hl
+        ld (v_cn),hl
         ld (v_sc),hl
         ld (v_sc+1),hl
         pop bc
@@ -440,6 +452,19 @@ h_upd:  HLIB_SPEED_IN v_speed
         sbc hl,de
         jr c,.d0
         ld de,(v_cp)                    ; the present's copy, as measured (the fit left the copy out)
+        or a
+        sbc hl,de
+        jr c,.d0
+        push hl
+        ld hl,(v_cn)                    ; the car's sprite work, rounded
+        ld de,8
+        add hl,de
+        ld b,4
+.cn:    srl h
+        rr l
+        djnz .cn
+        ex de,hl
+        pop hl
         or a
         sbc hl,de
         jr nc,.d
@@ -487,7 +512,8 @@ h_upd:  HLIB_SPEED_IN v_speed
         jr nc,.fn
 .fn0:   ld a,b
         ld (v_nfr),a
-        ld c,CAD                        ; C = frames from v_fr to this spec frame's flip
+        ld c,0                          ; C = frames from v_fr to this spec frame's flip
+        call cad_next
 .next:  ld a,(v_nfr)
         cp c
         jp z,.wait
@@ -510,10 +536,10 @@ h_upd:  HLIB_SPEED_IN v_speed
         or a
         sbc hl,de                       ; ... which must end by the deadline
         jp c,.stop
-        call now                        ; and the frame's work must fit: E = now + D + 64 <= deadline,
+        call spec_start                 ; and the frame's work must fit: E = start + D + 64 <= deadline,
         ld de,(v_D)                     ; or, when E falls SAFE_LN or more into a frame (spec_back's
         add hl,de                       ; wait_safe holds the restore to the next interrupt):
-        ld de,64+SPEC_X                 ; next interrupt + RST_LN <= deadline
+        ld de,(v_mg)                    ; next interrupt + RST_LN <= deadline
         add hl,de
         push hl
         ld de,(v_tint)
@@ -550,9 +576,7 @@ h_upd:  HLIB_SPEED_IN v_speed
         ld (v_f),a
         call spec_frame
         pop bc
-        ld a,c
-        add a,CAD
-        ld c,a
+        call cad_next
         jr .next
 .stop:  pop bc
 .wait:  call now                        ; wait for the deadline
@@ -581,6 +605,76 @@ h_upd:  HLIB_SPEED_IN v_speed
         pop af
         ld hl,(v_regs+6)
         HLIB_SPEED_OUT v_speed
+        ret
+
+; cad_next: C = the next spec frame's flip, frames from v_fr: C + v_cad. v_cad 1: then later while the
+; flip comes before the frame's work could end (now + D + the copy + 64 + SPEC_X), so a frame that would
+; be late is skipped instead (the in-between position f is per frame: motion stays even). AF, HL, DE lost.
+cad_next:
+        ld a,(v_cad)
+        add a,c
+        ld c,a
+        ld a,(v_cad)
+        dec a
+        ret nz
+        push bc
+        call spec_start
+        ld de,(v_D)
+        add hl,de
+        ld de,(v_cp)
+        add hl,de
+        ld de,64+SPEC_X
+        add hl,de
+        ld de,(v_fr)
+        or a
+        sbc hl,de
+        ex de,hl                        ; DE = the work's end from v_fr
+        pop bc
+        ld hl,0
+        ld b,c
+.m:     push de
+        ld de,NL
+        add hl,de
+        pop de
+        djnz .m                         ; HL = C frames
+.l:     or a
+        sbc hl,de
+        add hl,de
+        ret nc
+        inc c
+        push de
+        ld de,NL
+        add hl,de
+        pop de
+        jr .l
+
+; spec_start: HL = when a spec frame started now would begin its work: now, or the next interrupt when
+; now is SAFE_LN or more into the frame (spec_frame's wait_safe; 2026-11-22: unaccounted, it put a 50 fps
+; frame 59 lines past the deadline). AF, BC, DE lost.
+spec_start:
+        call now
+        push hl
+        ld de,(v_tint)
+        or a
+        sbc hl,de
+        ld de,NL
+.md:    or a
+        sbc hl,de
+        jr nc,.md
+        add hl,de                       ; lines into the frame
+        ld de,SAFE_LN
+        or a
+        sbc hl,de
+        jr c,.ok
+        add hl,de
+        ex de,hl
+        ld hl,NL
+        or a
+        sbc hl,de                       ; to the next interrupt
+        pop de
+        add hl,de
+        ret
+.ok:    pop hl
         ret
 
 ; wait_flip: until the real present's flip has happened (v_real = 0), so v_fr holds it.
@@ -1347,7 +1441,8 @@ h_copy: push af
 .go:    call .cp
         pop af
         ret
-.cp:    ld a,(v_fast)
+.cp:    call car_present
+        ld a,(v_fast)
         or a
         jp z,G_COPY
         push hl
@@ -1425,7 +1520,10 @@ h_spr:  ld a,(v_fast)
         push bc
         ld a,(0x923F)
         jp 0x91E7
-.f:     push bc
+.f:     ld a,(c_pcar)
+        or a
+        call nz,car_note                ; the player's car: its sprites
+        push bc
         push ix
         ld ixh,b
         push hl
@@ -1672,6 +1770,8 @@ h_fwait:
 ; 0x0000, its length at 0x1FFE, the loader's 16 header bytes at 0x1FE0. Exit: carry set (loaded).
 h_load: HLIB_IFF_DI
         push af
+        xor a
+        ld (c_pre),a                    ; a stage's data: the car's images again (car_pre)
         ld a,(G_STAGE)
         sub '1'
         cp 5
@@ -1726,6 +1826,12 @@ boot_resume:
         ld a,(boot_scr)                 ; the file's bank 5 held the loading screen: the snapshot's display
         or a                            ; bytes come back from page SCR_PAGE (no stack while it is mapped)
         jr z,.ns
+        nextreg 0x69,0                  ; bank 5 shown (the snapshot may show bank 7) while
+        ld a,(boot_frames)              ; the loading screen stays: boot_frames frames or a key
+        or a                            ; (0: no hold, the NXC build: its loader shows the screen from ENTER)
+        call nz,boot_wait
+        ld a,(boot_shadow)
+        nextreg 0x69,a
         nextreg 0x50,SCR_PAGE
         ld hl,0
         ld de,0x4000
@@ -1748,6 +1854,45 @@ boot_jump:
         jp 0
 boot_scr:
         db 0                            ; 1: a loading screen build (Patch.set_boot)
+boot_shadow:
+        db 0                            ; 0x40: the snapshot shows bank 7 (7FFD bit 3; Patch.set_boot)
+boot_frames:
+        db SCR_WAIT                     ; the hold in frames, 1-255; 0 none (Patch.hold; Patch.set_boot)
+
+; boot_wait: SCR_WAIT frames (NR 0x1E bit 8 falling: a new frame), or until a key is pressed and let go.
+; Interrupts off; each poll reads NR 0x1F then 0x1E (the boot model's beam moves on 0x1F reads).
+SCR_WAIT EQU 200                        ; 4 s
+boot_wait:
+        ld e,a
+        ld d,0
+.w:     xor a
+        in a,(0xFE)
+        cpl
+        and 0x1F
+        jr nz,.k
+        ld bc,0x243B
+        ld a,0x1F
+        out (c),a
+        inc b
+        in a,(c)
+        dec b
+        ld a,0x1E
+        out (c),a
+        inc b
+        in a,(c)
+        and 1
+        cp d                            ; bit 8 from 1 to 0: carry
+        ld d,a
+        jr nc,.w
+        dec e
+        jr nz,.w
+        ret
+.k:     xor a
+        in a,(0xFE)
+        cpl
+        and 0x1F
+        jr nz,.k
+        ret
 printer_saved:
         ds 256
 
@@ -1821,6 +1966,853 @@ dma_tpl:
         db 0x82,0xCF,0x87
 DMA_LEN EQU $-dma_tpl
         ASSERT DMA_LEN == 15
+
+; ================================================================== the player's car as sprites (colour clash)
+; The game draws the car with two blits (0x9144 from 0x9042: the body; from 0x90C0: the lower part) and
+; then ORs red ink into its cells (0x9072-0x9083), so whatever else is in those cells turns red: road
+; lines, and other cars beside it. With c_on the cells keep the game's black ink (h_attr) and the car's
+; own pixels are shown red by hardware sprites over the same ULA pixels:
+;  - h_spr notes each car part's image (source, width, rows, mirror) and place (car_note); an image
+;    not in the cache (CE entries, 12 4-bit patterns each) is converted from the game's bytes and
+;    uploaded once (the car has 16 images in the six recordings);
+;  - the present (h_copy) hands the frame's parts to the flip (c_pd); the interrupt that flips the
+;    ULA screen writes the sprite attributes (car_flip, NEXTREG: no clash with the 0x303B pattern index);
+;  - h_race (site 0x8027, CALL 0x8BBF: the race) sets sprites up and turns them off when the race ends.
+; Sprites 0-11 the body, 12-23 the lower part; sprite palette index 1 = the ULA's red ink (read from
+; the ULA palette), index 0 transparent. The clip window is the rectangle of cells the game would make
+; red (h_attr notes it; inside the road view, columns 3-28, rows 48-151): car pixels outside it (the
+; shadow below) stay the game's black, as in the original; no red cells, no car sprites.
+CAR     EQU 0x7CD8                      ; after v_prof (hook RAM to 0x7D7C)
+c_on    EQU CAR+0                       ; 1: the car as sprites (Patch.fast)
+c_pcar  EQU CAR+1                       ; the part h_spr draws: 1 body, 2 lower, 0 other
+c_race  EQU CAR+2                       ; 1: in the race, sprites set up
+c_rr    EQU CAR+3                       ; the cache entry replaced last
+c_np    EQU CAR+4                       ; 1: c_pd waits for its flip
+CP_LEN  EQU 7                           ; a part: entry (0 none, 1..CE), columns, rows, x lo, x hi, y (sprite coords),
+                                        ; mirror (0x08: attribute 2's X mirror; x is then the rightmost sprite's)
+c_fr    EQU CAR+5                       ; this frame's two parts
+c_pd    EQU c_fr+2*CP_LEN               ; the presented frame's
+c_sh    EQU c_pd+2*CP_LEN               ; the shown frame's
+CE_FIX  EQU 6                           ; cache entries 1..6: the steering images, loaded once (car_pre)
+CE      EQU CE_FIX+7                    ; 7..13: any other image (hills, crash), 12 patterns each from DYN_P0:
+                                        ; 6 parts can be in use (c_fr, c_pd, c_sh), so one is always free
+DYN_P0  EQU 128-7*12                    ; 44
+c_key   EQU c_sh+2*CP_LEN               ; CE keys: source lo, hi, rows, width (source 0: empty), first pattern
+c_tmp   EQU c_key+CE*5                  ; car_note / car_upload scratch (16 bytes)
+c_aon   EQU c_tmp+16                    ; 1: h_attr saw a cell this frame
+c_af    EQU c_aon+1                     ; its first cell (attribute buffer address) ...
+c_al    EQU c_af+2                      ; ... and last: the cells the game makes red
+c_cl    EQU c_al+2                      ; this frame's clip window: x1, x2, y1, y2 (screen pixels)
+c_cpd   EQU c_cl+4                      ; the presented frame's
+c_pre   EQU c_cpd+4                     ; 1: the car's images are in the cache (car_pre)
+c_tf    EQU c_pre+1                     ; 1: car_t0 read the clock
+CAR_END EQU c_tf+1
+        ASSERT CAR >= v_prof+P_LEN
+        ASSERT CAR_END <= 0x7D7D
+
+h_race: push af
+        ld a,(c_on)
+        or a
+        call nz,car_setup
+        pop af
+        call 0x8BBF                     ; the race (returns when it ends: LD SP,(0x5B95) / RET)
+        push af
+        xor a
+        ld (c_race),a
+        ld (c_np),a
+        nextreg 0x15,a                  ; sprites off
+        pop af
+        ret
+
+car_setup:
+        push bc
+        ld b,0
+.h:     ld a,b                          ; every sprite hidden
+        nextreg 0x34,a
+        xor a
+        nextreg 0x38,a
+        inc b
+        bit 7,b
+        jr z,.h
+        nextreg 0x4B,0                  ; index 0 transparent
+        HLIB_IFF_DI
+        push af
+        nextreg 0x43,0x00               ; the ULA palette's red ink (index 2) ...
+        nextreg 0x40,2
+        ld bc,0x243B
+        ld a,0x41
+        out (c),a
+        inc b
+        in a,(c)
+        nextreg 0x43,0x20               ; ... is sprite index 1
+        nextreg 0x40,1
+        nextreg 0x41,a
+        nextreg 0x43,0x00
+        pop af
+        HLIB_IFF_EI
+        nextreg 0x1C,2                  ; sprite clip window: the road view
+        nextreg 0x19,24
+        nextreg 0x19,231
+        nextreg 0x19,48
+        nextreg 0x19,151
+        xor a
+        ld (c_fr),a
+        ld (c_fr+CP_LEN),a
+        ld (c_pd),a
+        ld (c_pd+CP_LEN),a
+        ld (c_sh),a
+        ld (c_sh+CP_LEN),a
+        ld (c_np),a
+        ld (c_pre),a
+        nextreg 0x15,0x01               ; sprites on, SLU
+        inc a
+        ld (c_race),a
+        pop bc
+        ret
+
+; h_pc1 / h_pc2 (sites 0x9042 / 0x90C0, CALL 0x9144): the car's blits, noted by h_spr.
+h_pc1:  push af
+        xor a
+        ld (c_fr+CP_LEN),a              ; a new frame's car: the lower part not drawn yet,
+        ld (c_aon),a                    ; no red cells yet
+        ld a,1
+        jr h_pc
+h_pc2:  push af
+        ld a,2
+h_pc:   ld (c_pcar),a
+        pop af
+        call 0x9144
+        push af
+        xor a
+        ld (c_pcar),a
+        pop af
+        ret
+
+; h_attr (site 0x9078, LD A,(HL) / OR 2: the car's cells get red ink): with c_on the ink stays.
+h_attr: ld a,(c_on)
+        or a
+        jr nz,.n
+        ld a,(hl)
+        or 2
+        ret
+.n:     ld (c_al),hl                    ; the cells, in order: the last so far
+        ld a,(c_aon)
+        or a
+        jr nz,.k
+        ld (c_af),hl
+        inc a
+        ld (c_aon),a
+.k:     ld a,(hl)
+        ret
+
+; car_note: car_note0, its time in the real update left out of D (v_cn): CN_HIT a call (the lookup and
+; the part's record; 1/16 lines, simulator T at 7.17 T a 3.5 MHz T), conversions (car_pre, a miss) timed
+; by the clock. Reading the clock costs far more in JNext than the simulator models (2026-11-22: four
+; reads an update made the game 1.2% slower there), so the common path does not read it.
+CN_HIT  EQU 32                          ; simulator 13 (1,305 T mean, 106 calls); JNext 1.2.0 needs 32 (pace, 2026-11-22)
+car_note:
+        ld a,(c_race)                   ; sprites set up (h_race)
+        or a
+        ret z
+        ld a,(v_spec)
+        or a
+        jr nz,car_note0
+        ld a,(v_inupd)
+        or a
+        jr z,car_note0
+        call car_note0
+        push hl
+        ld hl,(v_cn)
+        ld a,CN_HIT
+        add hl,a
+        ld (v_cn),hl
+        pop hl
+        ret
+
+; car_t0 / car_t1: around a conversion in the real update: its clock time (x 16) into v_cn. Registers kept
+; (car_t0: but AF).
+car_t0: xor a
+        ld (c_tf),a
+        ld a,(v_spec)
+        or a
+        ret nz
+        ld a,(v_inupd)
+        or a
+        ret z
+        push bc
+        push de
+        push hl
+        call now
+        ld (v_cn0),hl
+        pop hl
+        pop de
+        pop bc
+        ld a,1
+        ld (c_tf),a
+        ret
+car_t1: push af
+        ld a,(c_tf)
+        or a
+        jr z,.x
+        push bc
+        push de
+        push hl
+        call now
+        ld de,(v_cn0)
+        or a
+        sbc hl,de
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,(v_cn)
+        add hl,de
+        ld (v_cn),hl
+        pop hl
+        pop de
+        pop bc
+.x:     pop af
+        ret
+
+; car_note0: from h_spr at a car blit's first row (B rows, DE source, HL first byte in the back buffer;
+; (0x923F) width, (0x9240) skip, (0x5B94) mirrored). The part's entry and place into c_fr. Registers kept
+; but AF.
+car_note0:
+        push bc
+        push de
+        push hl
+        push ix
+        ld a,(c_pre)                    ; the first car of a race (or after a stage load), not run ahead:
+        or a                            ; all its images (the paging is the race's now)
+        jr nz,.pd
+        ld a,(v_spec)
+        or a
+        jr nz,.pd
+        call car_t0
+        call car_pre
+        call car_t1
+.pd:    ld a,(0x923F)
+        cp 13                           ; at most 6 sprites across ...
+        jp nc,.x
+        ld a,b
+        cp 33                           ; ... and 2 down
+        jp nc,.x
+        ld (c_tmp+0),de                 ; the key: source, rows, width, mirrored
+        ld (c_tmp+2),a
+        ld a,(0x923F)
+        ld (c_tmp+3),a
+        ld a,(0x5B94)
+        or a
+        jr z,.m0
+        ld a,1
+.m0:    ld (c_tmp+4),a
+        ld a,(0x9240)
+        ld (c_tmp+7),a
+        ld a,l                          ; column (the back buffer is 32 bytes a row from 0x6000)
+        and 31
+        ld c,a
+        ld a,(c_tmp+4)
+        or a
+        jr z,.nm
+        ld a,(c_tmp+3)                  ; mirrored: drawn leftwards from HL
+        dec a
+        ld b,a
+        ld a,c
+        sub b
+        ld c,a
+.nm:    ld a,c
+        ld (c_tmp+6),a
+        ld de,0x6000
+        or a
+        sbc hl,de
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld a,h                          ; row = (HL - 0x6000) / 32
+        ld (c_tmp+5),a
+        ld hl,c_key                     ; look up (source, rows, width: a mirrored image is the same patterns)
+        ld b,1
+.lk:    push hl
+        ld de,c_tmp
+        ld c,4
+.cmp:   ld a,(de)
+        cp (hl)
+        jr nz,.ne
+        inc de
+        inc hl
+        dec c
+        jr nz,.cmp
+        pop hl
+        ld a,b
+        jr .fd
+.ne:    pop hl
+        ld a,5
+        add hl,a
+        inc b
+        ld a,b
+        cp CE+1
+        jr nz,.lk
+        call car_t0                     ; a miss (an image not in car_pre's table)
+        call car_add
+        call car_t1
+.fd:    ld e,a                          ; A = entry: the part's record
+        ld a,(c_pcar)
+        ld hl,c_fr
+        dec a
+        jr z,.p1
+        ld hl,c_fr+CP_LEN
+.p1:    ld (hl),e
+        inc hl
+        ld a,(c_tmp+3)                  ; columns = (width + 1) / 2
+        inc a
+        srl a
+        ld (hl),a
+        inc hl
+        ld a,(c_tmp+2)                  ; rows = (rows + 15) / 16
+        add a,15
+        rrca
+        rrca
+        rrca
+        rrca
+        and 15
+        ld (hl),a
+        inc hl
+        ld a,(c_tmp+6)                  ; x = column * 8 + 32
+        ld e,a
+        ld d,8
+        mul d,e
+        ex de,hl
+        add hl,32
+        ld a,(c_tmp+4)
+        or a
+        jr z,.xn
+        ld a,(c_tmp+3)                  ; mirrored: the rightmost sprite's, + width * 8 - 16
+        add a,a
+        add a,a
+        add a,a
+        sub 16
+        add hl,a
+.xn:    ex de,hl
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        inc hl
+        ld a,(c_tmp+5)                  ; y = row + 32
+        add a,32
+        ld (hl),a
+        inc hl
+        ld a,(c_tmp+4)
+        or a
+        jr z,.mn
+        ld a,0x08
+.mn:    ld (hl),a
+.x:     pop ix
+        pop hl
+        pop de
+        pop bc
+        ret
+
+; car_add: the image in c_tmp (source, rows, width; skip c_tmp+7) into a replaceable entry no frame
+; uses (car_alloc): its key, its patterns unmirrored. A = the entry. BC DE HL lost.
+car_add:
+        call car_alloc
+        ld (c_tmp+15),a                 ; (car_upload's scratch ends at c_tmp+14)
+        sub CE_FIX+1                    ; first pattern = DYN_P0 + 12 (entry - CE_FIX - 1)
+        ld e,a
+        ld d,12
+        mul d,e
+        ld a,e
+        add a,DYN_P0
+        ld b,a
+        ld a,(c_tmp+15)
+        call car_key
+        ld a,(c_tmp+4)                  ; the patterns unmirrored
+        push af
+        xor a
+        ld (c_tmp+4),a
+        ld a,b
+        call car_upload
+        pop af
+        ld (c_tmp+4),a
+        ld a,(c_tmp+15)
+        ret
+
+; car_key: entry A's key = c_tmp's source, rows, width, then B (its first pattern). DE HL lost, B kept.
+car_key:
+        dec a
+        ld e,a
+        ld d,5
+        mul d,e
+        ld hl,c_key
+        add hl,de
+        ex de,hl
+        ld hl,c_tmp
+        push bc
+        ld bc,4
+        ldir
+        pop bc
+        ld a,b
+        ld (de),a
+        ret
+
+; car_pre: the steering images (the game's image 1-3, body and lower part: most frames of a race) into
+; entries 1..CE_FIX, CAR_NP patterns from 0; the replaceable entries emptied. c_pre = 1. AF, c_tmp lost.
+car_pre:
+        push bc
+        push de
+        push hl
+        ld hl,c_key+CE_FIX*5
+        ld b,(CE-CE_FIX)*5
+.z:     ld (hl),0
+        inc hl
+        djnz .z
+        ld hl,car_imgs
+        ld bc,0x0100                    ; B = the entry, C = its first pattern
+.i:     push bc
+        ld de,c_tmp
+        ld bc,4
+        ldir
+        pop bc
+        push hl
+        push bc
+        xor a
+        ld (c_tmp+4),a
+        ld (c_tmp+7),a
+        ld a,b
+        ld b,c
+        call car_key
+        ld a,b
+        call car_upload
+        pop bc
+        ld a,(c_tmp+3)                  ; + columns x rows of sprites
+        inc a
+        srl a
+        ld e,a
+        ld a,(c_tmp+2)
+        add a,15
+        rrca
+        rrca
+        rrca
+        rrca
+        and 15
+        ld d,a
+        mul d,e
+        ld a,c
+        add a,e
+        ld c,a
+        pop hl
+        inc b
+        ld a,b
+        cp CE_FIX+1
+        jr nz,.i
+        ld a,1
+        ld (c_pre),a
+        pop hl
+        pop de
+        pop bc
+        ret
+CAR_NP = 0
+CIMG    MACRO src, rows, w
+        dw src
+        db rows, w
+CAR_NP = CAR_NP + ((w + 1) / 2) * ((rows + 15) / 16)
+        ENDM
+car_imgs:                               ; source, rows, width: the tables at 0xB5A1 / 0xC37B, images 1-3
+        CIMG 0xB5F4, 24, 6
+        CIMG 0xB684, 24, 6
+        CIMG 0xB714, 24, 11
+        CIMG 0xC3CE, 4, 6
+        CIMG 0xC3E6, 5, 6
+        CIMG 0xC404, 9, 11
+        ASSERT ($-car_imgs)/4 == CE_FIX
+        ASSERT CAR_NP <= DYN_P0
+
+; car_alloc: A = the next replaceable entry (CE_FIX+1..CE) that no frame's part (c_fr, c_pd, c_sh) uses.
+; BC, HL lost.
+car_alloc:
+        ld a,(c_rr)
+.n:     inc a
+        cp CE+1
+        jr nc,.w
+        cp CE_FIX+1
+        jr nc,.r
+.w:     ld a,CE_FIX+1
+.r:     ld hl,c_fr
+        ld b,6
+.u:     cp (hl)
+        jr z,.n
+        ld c,a
+        ld a,CP_LEN
+        add hl,a
+        ld a,c
+        djnz .u
+        ld (c_rr),a
+        ret
+
+; car_upload: A = the first pattern: up to 12 4-bit patterns from the image in c_tmp (source, rows, width, mirrored,
+; skip): columns x rows of 16 x 16, the car's pixels colour 1. AF BC DE HL lost.
+car_upload:
+        ld (c_tmp+8),a                  ; P0
+        ld a,(c_tmp+3)
+        inc a
+        srl a
+        ld (c_tmp+9),a                  ; columns
+        ld a,(c_tmp+2)
+        add a,15
+        rrca
+        rrca
+        rrca
+        rrca
+        and 15
+        ld (c_tmp+10),a                 ; rows of sprites
+        ld a,(c_tmp+7)
+        ld b,a
+        ld a,(c_tmp+3)
+        add a,b
+        ld (c_tmp+13),a                 ; source stride
+        xor a
+        ld (c_tmp+11),a                 ; cy
+.cy:    xor a
+        ld (c_tmp+12),a                 ; cx
+.cx:    ld a,(c_tmp+11)                 ; P = P0 + cy * columns + cx
+        ld e,a
+        ld a,(c_tmp+9)
+        ld d,a
+        mul d,e
+        ld a,(c_tmp+12)
+        add a,e
+        ld e,a
+        ld a,(c_tmp+8)
+        add a,e
+        srl a                           ; 0x303B: slot, bit 7 = the second 128 bytes
+        jr nc,.ev
+        or 0x80
+.ev:    ld bc,0x303B
+        out (c),a
+        xor a
+        ld (c_tmp+14),a                 ; pixel row in the pattern
+.rw:    ld a,(c_tmp+11)
+        add a,a
+        add a,a
+        add a,a
+        add a,a
+        ld b,a
+        ld a,(c_tmp+14)
+        add a,b                         ; image row
+        ld b,a
+        ld a,(c_tmp+2)
+        dec a
+        cp b
+        jr c,.zr                        ; below the image
+        ld e,b
+        ld a,(c_tmp+13)
+        ld d,a
+        mul d,e
+        ld hl,(c_tmp+0)
+        add hl,de                       ; the row's source bytes
+        ld a,(c_tmp+12)
+        add a,a
+        ld b,a
+        call car_byte
+        call car_out4
+        inc b
+        call car_byte
+        call car_out4
+        jr .rn
+.zr:    ld bc,0x085B
+        xor a
+.z:     out (c),a
+        djnz .z
+.rn:    ld a,(c_tmp+14)
+        inc a
+        ld (c_tmp+14),a
+        cp 16
+        jr nz,.rw
+        ld a,(c_tmp+9)
+        ld b,a
+        ld a,(c_tmp+12)
+        inc a
+        ld (c_tmp+12),a
+        cp b
+        jr nz,.cx
+        ld a,(c_tmp+10)
+        ld b,a
+        ld a,(c_tmp+11)
+        inc a
+        ld (c_tmp+11),a
+        cp b
+        jp nz,.cy
+        ret
+
+; car_byte: A = the shown byte B (0 = left) of the image row at HL (mirrored: the source's byte
+; width-1-B, bits reversed); 0 beyond the width. HL, BC kept; DE lost.
+car_byte:
+        ld a,(c_tmp+3)
+        dec a
+        cp b
+        jr c,.z
+        push hl
+        ld a,(c_tmp+4)
+        or a
+        jr nz,.m
+        ld a,b
+        add hl,a
+        ld a,(hl)
+        pop hl
+        ret
+.m:     ld a,(c_tmp+3)
+        dec a
+        sub b
+        add hl,a
+        ld e,(hl)
+        ld d,high mirt
+        ld a,(de)
+        pop hl
+        ret
+.z:     xor a
+        ret
+
+; car_out4: the 8 pixels of A as 4 bytes of a 4-bit pattern (port 0x5B). BC, HL kept.
+car_out4:
+        push bc
+        push hl
+        ld l,a
+        ld h,high exp4
+        ld c,0x5B
+        ld a,(hl)
+        out (c),a
+        inc h
+        ld a,(hl)
+        out (c),a
+        inc h
+        ld a,(hl)
+        out (c),a
+        inc h
+        ld a,(hl)
+        out (c),a
+        pop hl
+        pop bc
+        ret
+
+; car_present: from h_copy, before the copy: the frame's parts go to the flip. Registers kept but AF.
+car_present:
+        ld a,(c_race)
+        or a
+        ret z
+        push bc
+        push de
+        push hl
+        xor a
+        ld (c_np),a
+        ld a,(c_aon)
+        or a
+        jr nz,.cl
+        ld (c_fr),a                     ; no red cells: no car
+        ld (c_fr+CP_LEN),a
+        jr .cp
+.cl:    ld hl,(c_af)                    ; clip = the cells, inside the road view
+        call .rc
+        ld a,e
+        add a,a
+        add a,a
+        add a,a
+        cp 24
+        jr nc,.x1
+        ld a,24
+.x1:    ld (c_cl+0),a
+        ld a,d
+        add a,a
+        add a,a
+        add a,a
+        cp 48
+        jr nc,.y1
+        ld a,48
+.y1:    ld (c_cl+2),a
+        ld hl,(c_al)
+        call .rc
+        ld a,e
+        add a,a
+        add a,a
+        add a,a
+        add a,7
+        cp 232
+        jr c,.x2
+        ld a,231
+.x2:    ld (c_cl+1),a
+        ld a,d
+        add a,a
+        add a,a
+        add a,a
+        add a,7
+        cp 152
+        jr c,.y2
+        ld a,151
+.y2:    ld (c_cl+3),a
+.cp:    ld hl,c_fr
+        ld de,c_pd
+        ld bc,2*CP_LEN
+        ldir
+        ld hl,c_cl
+        ld de,c_cpd
+        ld bc,4
+        ldir
+        xor a
+        ld (c_fr),a
+        ld (c_fr+CP_LEN),a
+        ld (c_aon),a
+        inc a
+        ld (c_np),a
+        pop hl
+        pop de
+        pop bc
+        ret
+.rc:    ld de,0x7800                    ; HL = an attribute buffer cell: D = row, E = column
+        or a
+        sbc hl,de
+        ld a,l
+        and 31
+        ld e,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld d,h
+        ret
+
+; car_flip: in the interrupt that flips the ULA screen (isr_clock): the presented parts' sprites.
+; AF BC DE lost (HL, IX kept).
+car_flip:
+        ld a,(c_np)
+        or a
+        ret z
+        xor a
+        ld (c_np),a
+        ld a,(c_race)
+        or a
+        ret z
+        push hl
+        push ix
+        ld hl,c_pd
+        ld de,c_sh
+        ld bc,2*CP_LEN
+        ldir
+        ld ix,c_sh
+        ld c,0
+        call car_part
+        ld ix,c_sh+CP_LEN
+        ld c,12
+        call car_part
+        nextreg 0x1C,2                  ; the clip window
+        ld hl,c_cpd
+        ld b,4
+.cw:    ld a,(hl)
+        nextreg 0x19,a
+        inc hl
+        djnz .cw
+        pop ix
+        pop hl
+        ret
+
+; car_part: IX = a part, C = its first sprite: 12 sprites (2 rows of 6) written or hidden. AF B DE HL lost.
+car_part:
+        ld b,0                          ; cell
+        ld de,0                         ; D = cy, E = cx
+.cl:    ld a,c
+        add a,b
+        nextreg 0x34,a
+        ld a,(ix+0)
+        or a
+        jr z,.hd
+        ld a,e
+        cp (ix+1)
+        jr nc,.hd
+        ld a,d
+        cp (ix+2)
+        jr nc,.hd
+        ld a,e                          ; x = X + 16 cx (mirrored: X - 16 cx)
+        add a,a
+        add a,a
+        add a,a
+        add a,a
+        ld l,(ix+3)
+        ld h,(ix+4)
+        bit 3,(ix+6)
+        jr nz,.mx
+        add hl,a
+        jr .xd
+.mx:    push de
+        ld e,a
+        ld d,0
+        or a
+        sbc hl,de
+        pop de
+.xd:    ld a,l
+        nextreg 0x35,a
+        ld a,d                          ; y = Y + 16 cy
+        add a,a
+        add a,a
+        add a,a
+        add a,a
+        add a,(ix+5)
+        nextreg 0x36,a
+        ld a,h
+        and 1
+        or (ix+6)
+        nextreg 0x37,a                  ; X8, X mirror, palette offset 0
+        push de
+        ld a,(ix+0)                     ; P = the entry's first pattern + cy * columns + cx
+        dec a
+        ld e,a
+        ld d,5
+        mul d,e
+        ld hl,c_key+4
+        add hl,de
+        ld l,(hl)
+        pop de
+        push de
+        ld e,d
+        ld d,(ix+1)
+        mul d,e
+        ld a,e
+        pop de
+        add a,e
+        add a,l
+        ld l,a
+        srl a
+        or 0xC0                         ; visible, the 5-byte form
+        nextreg 0x38,a
+        ld a,l
+        and 1
+        rrca
+        rrca
+        or 0x80                         ; 4-bit, N6
+        nextreg 0x39,a
+        jr .nx
+.hd:    xor a
+        nextreg 0x38,a
+.nx:    inc e
+        ld a,e
+        cp 6
+        jr nz,.n2
+        ld e,0
+        inc d
+.n2:    inc b
+        ld a,b
+        cp 12
+        jp nz,.cl
+        ret
+
+
+        ALIGN 256
+exp4:                                   ; page k: pixels 2k, 2k+1 of a byte as a 4-bit pair (colour 1)
+.k = 0
+        DUP 4
+.x = 0
+        DUP 256
+        db (((.x>>(7-2*.k))&1)<<4)|((.x>>(6-2*.k))&1)
+.x = .x + 1
+        EDUP
+.k = .k + 1
+        EDUP
 
         ALIGN 256
 mirt:                                   ; a byte's bits reversed (h_spr)
