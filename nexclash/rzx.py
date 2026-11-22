@@ -109,7 +109,7 @@ def frame_count(path):
 
 def info(path):
     segs = read_segments(path)
-    frames = frame_count(path)
+    frames = sum(len(r.frames) for _, r, _ in segs)
     return '%s: %d segment(s), %d frames (%.1f s at 50Hz)' % (path, len(segs), frames, frames / 50)
 
 

@@ -659,19 +659,26 @@ def verified_selfcheck():
                 bad.append('match_release: %s outputs matched %s' % (name, hit and hit['record']))
         if userflow.match_release(e, {'plain': rel[default]['nex'].get('plain'), 'sprites': 'f' * 32}):
             bad.append('match_release: a sprite build no release made was accepted (%s)' % default)
-    jet = next((r for r in all_records() if r['name'] == 'jetpac'), None)     # a rework of the same snapshot (Codex review)
-    if jet:
-        x = next(x for x in jet['rework'] if x['name'] == 'v11')
-        got = {k: x['outputs'][k]['md5'] for k in ('plain', 'sprites')}
-        hit = userflow.match_release(snaps[jet['inputs']['snapshot']['md5']], got)
-        if not hit or hit['record'] != 'jetpac rework v11':
-            bad.append('match_release: Jetpac v1.1 (--altrom-fill whole) outputs matched %s' % (hit and hit['record']))
+    by_name = {r['name']: r for r in all_records()}
+    for name, rw in (('jetpac', 'v11'), ('atic_atac', 'v13'), ('atic_atac', 'v14')):    # reworks of the same snapshot
+        r = by_name.get(name)
+        if not r:
+            continue
+        x = next(x for x in r['rework'] if x['name'] == rw)
+        got = {'plain': (x['outputs'].get('plain') or r['outputs'].get('plain') or {}).get('md5'),   # v1.3 / v1.4 pin no
+               'sprites': x['outputs']['sprites']['md5']}                                           # plain build
+        hit = userflow.match_release(snaps[r['inputs']['snapshot']['md5']], got)
+        if not hit or hit['record'] != '%s rework %s' % (name, rw):
+            bad.append('match_release: %s %s outputs matched %s' % (name, rw, hit and hit['record']))
     with tempfile.TemporaryDirectory() as d:                                # userflow.output_paths: declared names
         if userflow.output_paths(d, 'g') != (os.path.join(d, 'g.nex'), os.path.join(d, 'g_sprites.nex')):
             bad.append('output_paths: NAME.nex / NAME_sprites.nex not the default')
         json.dump({'plain': 'g_plain-x.nex', 'default': 'g_sprites-x.nex'}, open(os.path.join(d, 'g_outputs.json'), 'w'))
         if userflow.output_paths(d, 'g') != (os.path.join(d, 'g_plain-x.nex'), os.path.join(d, 'g_sprites-x.nex')):
             bad.append('output_paths: NAME_outputs.json names not used (Fireman ASTRA)')
+        os.utime(os.path.join(d, 'g_outputs.json'), (1, 1))                  # an earlier build's declaration
+        if userflow.output_paths(d, 'g', since=2) != (os.path.join(d, 'g.nex'), os.path.join(d, 'g_sprites.nex')):
+            bad.append('output_paths: an earlier build\'s NAME_outputs.json was trusted')
     return bad
 
 

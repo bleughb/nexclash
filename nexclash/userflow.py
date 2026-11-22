@@ -61,12 +61,13 @@ def artifact_state(path):
         return None
 
 
-def output_paths(out, name):
+def output_paths(out, name, since=None):
     """(plain, sprite build) of a build in `out`: NAME.nex and NAME_sprites.nex, or the names its engine declared in
-    NAME_outputs.json (docs/ENGINE_CONTRACT.md "Outputs"; Fireman ASTRA)."""
+    NAME_outputs.json (docs/ENGINE_CONTRACT.md "Outputs"; Fireman ASTRA). since: a declaration written before it is
+    an earlier build's, not this one's (nxcout.manifest's rule), and is ignored."""
     plain, spr = name + '.nex', name + '_sprites.nex'
     decl = os.path.join(out, name + '_outputs.json')
-    if os.path.exists(decl):
+    if os.path.exists(decl) and (since is None or os.path.getmtime(decl) >= since):
         d = json.load(open(decl))
         plain, spr = d.get('plain') or plain, d.get('default') or spr
     return os.path.join(out, plain), os.path.join(out, spr)
@@ -76,7 +77,12 @@ def match_release(known, got):
     """The release of this snapshot whose outputs `got` ({kind: md5}) reproduces, or None. Every release counts: a
     frozen or alternate release shares the snapshot (Everyone's a Wally, Fireman OPUS / ASTRA, Rainbow)."""
     variants = known.get('variants') or [dict(known, record=known.get('doc'), args=[])]
-    return next((v for v in variants if all(v['nex'].get(k) is not None and v['nex'][k] == got[k] for k in got)), None)
+
+    def same(v):                                # its sprite build, and every other build it pins (a rework may pin no
+        n = v['nex']                            # plain one: Atic Atac v1.3 / v1.4)
+        return n.get('sprites') is not None and n['sprites'] == got.get('sprites') and \
+            all(n[k] == got[k] for k in got if k != 'sprites' and k in n)
+    return next((v for v in variants if same(v)), None)
 
 
 def cmd_patch(a, cmd_auto):
@@ -86,7 +92,9 @@ def cmd_patch(a, cmd_auto):
     out = a.out or os.path.join(os.path.dirname(os.path.abspath(z80)), name + '_nexclash')
     h = md5(z80)
     known = verified().get('snapshots', {}).get(h)
-    previous = artifact_state(output_paths(out, name)[1])
+    started = time.time() - 1                   # mtime granularity: a file this run writes is newer
+    before = {f: artifact_state(os.path.join(out, f)) for f in (os.listdir(out) if os.path.isdir(out) else ())
+              if f.endswith('.nex')}            # every output's state: the one this run selects is compared with its own
     try:
         if cmd_auto(a) is False:
             print('Sprite build FAILED its checks; previous output files are not a new build.')
@@ -100,8 +108,8 @@ def cmd_patch(a, cmd_auto):
     rep = open(os.path.join(out, name + '_report.txt')).read() if os.path.exists(
         os.path.join(out, name + '_report.txt')) else ''
     print()
-    plain, spr = output_paths(out, name)        # after the build: an engine declares its own names (NAME_outputs.json)
-    current = artifact_state(spr)
+    plain, spr = output_paths(out, name, started)   # an engine declares its own names (NAME_outputs.json), this run
+    current, previous = artifact_state(spr), before.get(os.path.basename(spr))
     if current is not None and current == previous:
         print('No sprite build from this run: %s is an earlier output, kept unchanged. Do not use it as this run\'s result.' % spr)
         return 2

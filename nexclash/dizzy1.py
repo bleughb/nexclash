@@ -439,6 +439,12 @@ SPB = 15                           # sprite patterns: bank 15 (pages 30-31), upl
 QUADS = ((0, 0), (16, 0), (0, 16), (16, 16))   # TL, TR, BL, BR = sprites 0-3
 P2LEN, DZLEN = 9663, 4760          # plane: plotter 2 graphics 43485-53147, Dizzy 24290-29049
 HOOK_RAM = (0x5B40, 0x5BC0)        # variables + hook stack (printer buffer, never touched by the game)
+
+
+def built_hook_ram():
+    """The hook RAM as the built image holds it at boot: zeros over whatever the snapshot had (apply() writes it, the
+    replay starts from it: V_SELOK = 0, so the first hook takes spdfix's .first path; the latches at 3.5 MHz)."""
+    return bytes(HOOK_RAM[1] - HOOK_RAM[0])
 HSTK_MIN = 0x5B7A + 18             # Enhanced scratch ends 0x5B79; reserve an interrupt's stack
 TAIL_ADDR = 0x5B00                 # never touched by the game (RZX scan); the plain build uses it too
 PROFILE = os.path.join(_HERE, '..', 'docs', 'profiles', 'dizzy1_ultimate_cartoon_adventure.json')
@@ -711,9 +717,7 @@ class Dizzy1Patch:
         self.prepare(mem.__getitem__)
         for a, old, new in self.sites:
             ram[a - 0x4000:a - 0x4000 + len(new)] = new
-        # the hooks' variables start at zero whatever the snapshot holds there (V_SELOK = 0 sends the first hook
-        # through spdfix's .first; the speed latches start at 3.5 MHz); zero in the reference snapshot
-        ram[HOOK_RAM[0] - 0x4000:HOOK_RAM[1] - 0x4000] = bytes(HOOK_RAM[1] - HOOK_RAM[0])
+        ram[HOOK_RAM[0] - 0x4000:HOOK_RAM[1] - 0x4000] = built_hook_ram()     # zero in the reference snapshot too
         snap.banks[5], snap.banks[2], snap.banks[0] = bytes(ram[0:16384]), bytes(ram[16384:32768]), bytes(ram[32768:])
 
     def alt_image(self):
@@ -1282,7 +1286,7 @@ def verify(patch, rzx, z80, stop=None, collect=0, progress=None):
             if not patch.plane:
                 patch.prepare(lambda a: mem0[a])
             model = st['model'] = Model(patch, lambda a: mem0[a])
-            model.hram = mem0[HOOK_RAM[0]:HOOK_RAM[1]]
+            model.hram = built_hook_ram()         # the built image's, not the recording's printer buffer (Codex review)
             try:
                 patch.check(lambda a: mem0[a])
             except ValueError as e:
