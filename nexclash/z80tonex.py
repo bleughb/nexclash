@@ -503,7 +503,7 @@ def build_stub(snap, tail, tail_addr, p3_off, force50, setup_call=None, slot1=No
         extra |= 0x80
     code += read_nextreg(0x08) + b'\xE6\x30' + bytes([0xF6, extra])   # AND $30 / OR extra
 
-    # printer (opt-in, 48K): put the snapshot's printer buffer 0x5B00-0x5BFF back. NextZXOS keeps
+    # printer (opt-in, 48K or 128K): put the snapshot's printer buffer 0x5B00-0x5BFF back. NextZXOS keeps
     # its paging routines and system variables there (SWAP 0x5B00.., BANKM 0x5B5C, BANK678 0x5B67,
     # OLDSP / TSTACK) and the .nex loader writes them AFTER loading bank 5, so a 48K game that keeps
     # data there (Match Day: icons, team names) starts with it overwritten (hardware 2026-10-20).
@@ -685,7 +685,8 @@ def convert(src, dst, tail_req=None, force50=True, quiet=False, patch=None, keep
          extra_banks         {bank: bytes}
          uses_printer_buffer True if the tail must not go at 0x5B00
          keep_printer_buffer (optional) True: the stub restores the snapshot's 0x5B00-0x5BFF after
-                             NEXLOAD (48K games that keep data there; build_stub `printer`)
+                             NEXLOAD (games that keep data or their stack there; 48K and 128K;
+                             build_stub `printer`)
     """
     force50 = force50 and not ALLOW_60HZ
     snap = Z80Snapshot(src)
@@ -704,9 +705,7 @@ def convert(src, dst, tail_req=None, force50=True, quiet=False, patch=None, keep
     tail, p3_off, restore_off, regs = build_tail(snap, tail_addr, slot1, altrom is not None, getattr(patch, 'ram_slot1_after_alt', False))
     printer = None
     if keep_printer_buffer or getattr(patch, 'keep_printer_buffer', False):
-        if snap.is128:
-            raise ValueError('keep_printer_buffer is for 48K snapshots')
-        printer = bytes(snap.banks[5][0x1B00:0x1C00])
+        printer = bytes(snap.banks[5][0x1B00:0x1C00])   # bank 5 is at 0x4000 on 128K too: the same bytes back
     stub = build_stub(snap, tail, tail_addr, p3_off, force50,
                       patch.setup_call if patch is not None else None, slot1, regs, altrom, printer,
                       getattr(patch, 'altrom_low', (None,))[0] if patch is not None and getattr(patch, 'altrom_low', None) else None,
