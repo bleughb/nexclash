@@ -124,7 +124,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Pssst (pssst): `pssst.nex` db271c07425ad2866b9e9e13d15f1beb, `pssst_sprites.nex` 40ae6ece0286d15f71c38c80dbacda92, `pssst_enhanced.nex` 6d14ba48110804e62a83ebd3bffbe248; verified 2026-11-20
 - Cookie (cookie): `cookie.nex` df40629882f8b5be3619e90f87690c91, `cookie_sprites.nex` faaacc0beb0c6bc6d5742b0f40ec9cd2, `cookie_enhanced.nex` 7df95fe3204d63471c342b8cd6fd9d59; verified 2026-11-20
 - Tranz Am (tranz_am): `tranz_am.nex` 8308134dff22d877c6f70ba236e2e012, `tranz_am_sprites.nex` 637c510df69e95cb621db6f63d02a5fd, `tranz_am_enhanced.nex` c89e6c5a4707b97a92922cd352b555ef; verified 2026-11-20
-- R-Type (r_type): `r_type_sprites.nex` 9a426f5487bb63e9e0a46d520ecac5ac; verified never
+- R-Type (r_type): `r_type_sprites.nex` 1fdf9b83ea553038bc0d3cbf1194175b, `r_type_sprites_loading.nex` 727b938f71f74602579cc923b00c94f4; verified never
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

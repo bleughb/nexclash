@@ -8,6 +8,7 @@ snapshot (r_type.LOAD_SCREEN), is shown by the Next's loader while the file load
 Flow (owner, 2026-11-22): loading screen at least 4 s, fade to the turning ships; a joystick move fades to the R-9
 alone, turned by the stick (once per load); fire or a key fades back; then any key or stick move starts the game.
 """
+import hashlib
 import os
 import shutil
 import struct
@@ -107,7 +108,7 @@ def unpack(d):
     return {(x * 8 + b, yy) for yy in range(192) for x in range(32) for b in range(8) if scr[yy][x] & (0x80 >> b)}
 
 
-def data(snap, say=print):
+def data(snap, say=print, gstep=GSTEP, pages=None):
     """{file name: bytes} for the assembly: spec_l2.bin, spec_frames.bin, spec_grid.bin, spec_data.inc."""
     from . import r_type_r9 as R
     scr = screen_rgb(snap.banks[5])
@@ -156,7 +157,9 @@ def data(snap, say=print):
     for x, y in logo:
         l2[y * 256 + x] = 0x1F
     # the ships' pictures
-    blob, index, order = bytearray(), [], ('side', 'top', 'front')
+    pages = list(pages) if pages is not None else list(range(FIRST_PAGE, 224))
+    gn = 64 // gstep
+    pics, order = [], ('side', 'top', 'front')
     for name in order:
         v, ax = VIEWS[name]
         for i in range(STEPS):
@@ -166,27 +169,21 @@ def data(snap, say=print):
             d = pack(pts)
             assert unpack(d) == {(x, y) for x, y in pts if 0 <= x < 256 and 0 <= y < 192}
             assert len(d) < 8192
-            index.append((FIRST_PAGE + len(blob) // 8192, 0xC000 + len(blob) % 8192))
-            blob += d
+            pics.append(d)
         say('Intro     : %s ship, %d pictures rendered' % (name, STEPS))
-    pages = -(-len(blob) // 8192)
-    blob += bytes(pages * 8192 - len(blob))
+    index, fpages, at = place(pics, pages, 0)
     # the side ship from every direction (the rest are these flipped: the ship is the same left and right)
-    first_grid = FIRST_PAGE + pages
-    gblob, gindex = bytearray(), []
-    for p in range(2 * GN + 1):
-        for ys in range(-GN, GN + 1):
-            d = pack({(x, y + GDY) for x, y in R.render((ys * GSTEP) & 255, p * GSTEP, 0)})
-            gindex.append((first_grid + len(gblob) // 8192, 0xC000 + len(gblob) % 8192))
-            gblob += d
-    gpages = -(-len(gblob) // 8192)
-    gblob += bytes(gpages * 8192 - len(gblob))
-    assert first_grid + gpages <= 224
-    say('Intro     : all-direction ship, %d pictures rendered' % ((2 * GN + 1) ** 2))
+    gpics = [pack({(x, y + GDY) for x, y in R.render((ys * gstep) & 255, p * gstep, 0)})
+             for p in range(2 * gn + 1) for ys in range(-gn, gn + 1)]
+    gindex, gpages, _ = place(gpics, pages, at)
+    say('Intro     : all-direction ship, %d pictures rendered (every %d of 256)' % (len(gpics), gstep))
+    first_grid = gpages[0][0]
+    blob = b''.join(d for _, d in fpages)
+    gblob = b''.join(d for _, d in gpages)
     row = lambda y: 0x4000 + ((y & 0xC0) << 5) + ((y & 7) << 8) + ((y & 0x38) << 2)
     f = ['; made by make_spec_next.py - do not edit\n',
          'STEPS equ %d\nFIRST_PAGE equ %d\nFRAME_PAGES equ %d\nLIST_ROWS equ %d\nTEXTW equ %d\nWIN_TOP equ %d\nWIN_ROWS equ %d\n' % (
-             STEPS, FIRST_PAGE, pages, nlist, textw, WIN[0], WIN[1] - WIN[0] + 1),
+             STEPS, fpages[0][0], len(fpages), nlist, textw, WIN[0], WIN[1] - WIN[0] + 1),
          '    macro DATA_TABLES\nrowtab:\n']
     for y in range(0, 192, 8):
         f.append('    dw ' + ','.join('$%04X' % row(y + k) for k in range(8)) + '\n')
@@ -196,14 +193,42 @@ def data(snap, say=print):
     f += ['    db ' + ','.join('$%02X' % b for b in text[r * textw:(r + 1) * textw]) + '\n' for r in range(nlist)]
     f.append('    endm\n')
     f.append('GN equ %d\nGDY equ %d\nFIRST_GRID equ %d\nGRID_PAGES equ %d\n    macro GRID_TABLE\n; pitch 0..%d, and in each yaw -%d..%d\ngridtab:\n' % (
-        GN, GDY, first_grid, gpages, 2 * GN, GN, GN))
+        gn, GDY, first_grid, len(gpages), 2 * gn, gn, gn))
     f += ['    db %d : dw $%04X\n' % pa for pa in gindex]
     f.append('    endm\n    macro REV_TABLE\nrevtab:\n')
     for i in range(0, 256, 16):
         f.append('    db ' + ','.join('$%02X' % int('{:08b}'.format(k)[::-1], 2) for k in range(i, i + 16)) + '\n')
     f.append('    endm\n')
     return {'spec_l2.bin': bytes(l2), 'spec_frames.bin': bytes(blob), 'spec_grid.bin': bytes(gblob),
-            'spec_data.inc': ''.join(f).encode()}
+            'spec_data.inc': ''.join(f).encode(), 'pages': fpages + gpages}
+
+
+def place(pics, pages, at):
+    """Pictures back to back from pages[at] on. A picture may run into the next page only when that is the next
+    listed page (open_picture maps a page and the one after it). -> ([(page, address)], [(page, 8192 bytes)], next
+    index into pages)."""
+    index, out, i, off, cur = [], [], at, 0, None
+
+    def fits(i, off, n):
+        last = (off + n - 1) // 8192
+        return i + last < len(pages) and all(pages[i + k] == pages[i] + k for k in range(last + 1))
+    for d in pics:
+        while not fits(i, off, len(d)):
+            if off == 0:
+                raise ValueError('intro pictures do not fit the pages given')
+            i, off = i + 1, 0
+        index.append((pages[i], 0xC000 + off))
+        while d:
+            while len(out) <= i - at:
+                out.append(bytearray(8192))
+            n = min(len(d), 8192 - off)
+            out[i - at][off:off + n] = d[:n]
+            d, off = d[n:], off + n
+            if off == 8192:
+                i, off = i + 1, 0
+    if off:
+        i += 1
+    return index, [(pages[at + k], bytes(b)) for k, b in enumerate(out)], i
 
 
 # The original screen's text, for the letters (spaces are not drawn). Words of the game's screen, read from it.
@@ -254,7 +279,8 @@ def combine(game, files, load_screen=None):
     try:
         shutil.copy(ASM, work / 'specanim.asm')
         for n, d in files.items():
-            (work / n).write_bytes(d)
+            if n != 'pages':
+                (work / n).write_bytes(d)
         if load_screen is not None:
             (work / 'r_type_loading.scr').write_bytes(load_screen)
 
@@ -283,3 +309,110 @@ def combine(game, files, load_screen=None):
     if intro[10] & 0x7F:
         intro[10] |= 0x80
     return bytes(intro) + payload
+
+
+# ---------------------------------------------------------------- the intro inside the game's own .nex (the .nxc option)
+# The game's .nex is left as it is and the intro goes into banks it does not list: its code in INTRO_BANK (run at
+# 8000-BFFF), Layer 2's picture in L2_BANK..+2, the pictures in PICTURE_PAGES, the work page BUF_PAGE. The option
+# ("Show advanced intro screen") changes only bytes: the converter stub's first instructions jump to the intro,
+# and the start-up specification screen hold is taken out (the intro replaces it). The intro returns to the stub.
+INGAME_GSTEP = 8                  # stored angles of the stick-turned ship: every 8 of 256 (owner trial, 2026-11-22)
+INTRO_BANK = 8
+BUF_PAGE_INGAME = 18              # bank 9, low page
+L2_BANK = 28                      # 28-30
+PICTURE_PAGES = list(range(144, 224)) + list(range(106, 116)) + [28, 29, 30, 31, 22, 23, 62, 63, 19]
+ORDER = [5, 2, 0, 1, 3, 4, 6, 7] + list(range(8, 112))
+_DATA = {}
+OPTION = 'Advanced intro screen'   # the .nxc menu line (25 characters at most)
+
+
+def _nex_banks(nex):
+    """-> (header 512 bytes, screen bytes, {bank: 16K})"""
+    h = nex[:512]
+    scr = 6912 if h[10] == 2 else 0
+    if h[10] not in (0, 2):
+        raise ValueError('unexpected .nex screen flags %02X' % h[10])
+    off, out = 512 + scr, {}
+    for b in ORDER:
+        if h[18 + b]:
+            out[b] = nex[off:off + 16384]
+            off += 16384
+    assert off == len(nex), 'data past the banks'
+    return bytearray(h), nex[512:512 + scr], out
+
+
+def _nex(h, scr, banks):
+    h = bytearray(h)
+    for b in range(112):
+        h[18 + b] = 1 if b in banks else 0
+    h[9] = len(banks)
+    return bytes(h) + scr + b''.join(banks[b] for b in ORDER if b in banks)
+
+
+def ingame(game, snap, say=print, load_screen=None):
+    """The game .nex (bytes, with or without its loading screen) -> (with the intro's banks, the option on). The
+    first is the build without the intro; the second differs from it only in bytes of the stub and the hook page, and,
+    with load_screen (the tape's 6,912 bytes, also in the file's header for the Next's loader), the Spectrum screen in
+    bank 5: so the loading screen stays up while the intro checks its pages and holds it 4 s."""
+    h, scr, banks = _nex_banks(game)
+    entry = h[139]
+    pages = [p for p in PICTURE_PAGES if p // 2 not in banks]
+    assert len(pages) == len(PICTURE_PAGES), 'the game uses a bank the intro needs'
+    for b in [INTRO_BANK, BUF_PAGE_INGAME // 2, L2_BANK, L2_BANK + 1, L2_BANK + 2]:
+        assert b not in banks, 'the game uses bank %d' % b
+    key = (hashlib.md5(bytes(snap.banks[5])).hexdigest(), tuple(pages))
+    if key not in _DATA:
+        _DATA[key] = data(snap, say, gstep=INGAME_GSTEP, pages=pages)
+    files = _DATA[key]
+    used = [p for p, _ in files['pages']]
+    sums = [sum(d) & 255 for _, d in files['pages']]
+    stub = bytes(banks[entry][0:12])
+    work = Path(tempfile.mkdtemp(prefix='r_type_ingame_'))
+    try:
+        shutil.copy(ASM, work / 'specanim.asm')
+        (work / 'spec_data.inc').write_bytes(files['spec_data.inc'])
+        nl = '\n    db '
+        (work / 'game.inc').write_text(
+            '; made by r_type_intro.ingame - do not edit\nRT_ENTRY_BANK equ %d\nBUF_PAGE equ %d\nL2_PAGE equ %d\n'
+            '    macro RT_SUMS\n    db %s\n    endm\n    macro RT_PAGE_LIST\n    db %s\n    endm\n'
+            '    macro RT_STUB_ORIG\n    db %s\n    endm\n' % (
+                entry, BUF_PAGE_INGAME, L2_BANK * 2,
+                nl.join(','.join(map(str, sums[i:i + 32])) for i in range(0, len(sums), 32)),
+                nl.join(','.join(map(str, used[i:i + 32])) for i in range(0, len(used), 32)),
+                ','.join('$%02X' % v for v in stub)), newline='\n')
+        r = subprocess.run([_sjasm(), '--sym=intro.sym', '-DALLDIR', '-DGAME', '-DINGAME', 'specanim.asm'],
+                           cwd=work, capture_output=True, text=True)
+        tail = [l for l in (r.stdout + r.stderr).splitlines() if 'include data' not in l]
+        if not tail or 'Errors: 0' not in tail[-1]:
+            raise RuntimeError('sjasmplus r_type_intro.asm (INGAME):\n' + '\n'.join(tail[-12:]))
+        code = (work / 'intro_code.bin').read_bytes()
+        syms = {}
+        for line in (work / 'intro.sym').read_text().splitlines():
+            parts = line.replace(':', ' ').split()
+            if len(parts) >= 3 and parts[1].upper() == 'EQU':
+                syms[parts[0]] = int(parts[2].lstrip('$').rstrip('hH'), 16) if parts[2].startswith('$') or parts[2][-1:] in 'hH' else int(parts[2], 0)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    out = dict(banks)
+    out[INTRO_BANK] = code
+    out[L2_BANK], out[L2_BANK + 1], out[L2_BANK + 2] = (files['spec_l2.bin'][i:i + 16384] for i in (0, 16384, 32768))
+    pg = {}
+    for p, d in files['pages']:
+        pg[p] = d
+    for b in sorted({p // 2 for p in pg}):
+        out[b] = pg.get(2 * b, bytes(8192)) + pg.get(2 * b + 1, bytes(8192))
+    off = _nex(h, scr, out)
+    # the option: the stub's first bytes jump to the intro; no start-up specification screen hold in the game
+    on = {b: bytearray(d) for b, d in out.items() if b in (entry, 12, 5)}
+    if load_screen is not None:
+        on[5][0:6912] = load_screen
+    jump = bytes([0xF3, 0xED, 0x91, 0x54, INTRO_BANK * 2, 0xED, 0x91, 0x55, INTRO_BANK * 2 + 1, 0xC3,
+                  syms['start'] & 255, syms['start'] >> 8])
+    assert len(jump) == len(stub)
+    on[entry][0:12] = jump
+    pat = bytes.fromhex('ED9205C1F1CD')
+    at = on[12].find(pat)
+    assert at >= 0 and on[12].find(pat, at + 1) < 0, 'spec_hold call not found once'
+    on[12][at + 5:at + 8] = bytes(3)
+    out_on = {**out, **{b: bytes(d) for b, d in on.items()}}
+    return off, _nex(h, scr, out_on), dict(pages=len(used), code=len(code.rstrip(bytes(1))), start=syms['start'], syms={k: syms[k] for k in ('fakestick', 'state', 'handdone', 'badpage') if k in syms})

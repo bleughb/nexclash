@@ -40,14 +40,17 @@
     endif
 
 HOLD        equ 250             ; video frames still (5 s at 50Hz)
+LEAVE_HOLD  equ 50              ; R-Type build: frames the still screen stays before the game (1 s)
 PER_STEP    equ 2               ; video frames per picture
 TEXT_EVERY  equ 7               ; video frames per pixel of text scroll
+    ifndef INGAME
 LOADER_PAGE equ 222             ; R-Type build: the loader's own 8K page
 BUF_PAGE    equ 220             ; where a picture is built before it is copied to the screen
+L2_PAGE     equ 18              ; Layer 2 = bank 9
+    endif                       ; INGAME: game.inc gives BUF_PAGE, L2_PAGE (in banks the game's .nex leaves free)
 HAND_EVERY  equ 3               ; video frames per step of the hand-turned ship
 LOAD_HOLD   equ 150             ; R-Type build: frames the loading screen stays after the page check (4 s with it)
 FADE_EVERY  equ 3               ; video frames per step of a fade (7 steps)
-L2_PAGE     equ 18              ; Layer 2 = bank 9
 YELLOW      equ $FC
 CLEAR       equ $E3
 ATTR        equ $44             ; bright green on black
@@ -77,7 +80,7 @@ start:
     nextreg 5,a
     endif
     nextreg $69,0               ; Layer 2 off while we set up
-    nextreg $12,9               ; Layer 2 is bank 9
+    nextreg $12,L2_PAGE/2       ; Layer 2 bank
     nextreg $70,0               ; 256x192, 8 bit
     nextreg $15,0               ; sprites, Layer 2, ULA: Layer 2 in front of the ships
     nextreg $14,CLEAR           ; see-through colour
@@ -112,18 +115,16 @@ start:
     call flip
     nextreg $69,%10000000       ; Layer 2 on
     ifdef GAME
-    call fade_in
-    ld hl,HOLD-1                ; the ships start turning at once
-    ld (cycle),hl
+    call fade_in                ; still for HOLD frames, then turning
     endif
 
 ; ---------------------------------------------------------------- main loop
     ifdef GAME
 ; ---------------------------------------------------------------- main loop, R-Type build
-; (owner, 2026-11-22) state 1: the ships turning, from the start.   any key -> game
-;                                                                  stick -> 2 (fade), the first time only
-;                                                                  stick, after that -> game
-;                       state 2: the side ship alone, turned by the stick.   any key -> 1 (fade)
+; (owner, 2026-11-22) state 1: still, then the ships turning.   any key -> fade out, game
+;                                                              stick -> 2 (fade)
+;                       state 2: the side ship alone, turned by the stick.   any key -> 3 (fade)
+;                       state 3: the still screen faded in, held LEAVE_HOLD frames, faded out -> game
 ; "Any key" is any keyboard key or the fire button. A stick still held when state 1 starts is ignored
 ; until it is let go.
 main:
@@ -138,6 +139,17 @@ main:
     xor a
     ld (fadein),a
     call fade_in
+    ld a,(state)                ; state 3: the still screen is up: hold it, fade it out, load the game
+    cp 3
+    jr nz,.noflip
+    ld b,LEAVE_HOLD
+.leave:
+    push bc
+    call wait_frame
+    pop bc
+    djnz .leave
+    call fade_out
+    jp go_game
 .noflip:
     call read_input             ; A: bit 0 right, 1 left, 2 down, 3 up (stick), 4 any key or fire
     ld b,a
@@ -150,11 +162,16 @@ main:
     ld a,c
     ld (keyheld),a
     ld a,(state)
+    cp 3
+    jp z,.run
     cp 2
     jr z,.hand
     ld a,d
     or a
-    jp nz,go_game               ; state 1: a key or fire loads the game
+    jr z,.nokey
+    call fade_out               ; state 1: a key or fire loads the game
+    jp go_game
+.nokey:
     ld a,b
     and 15
     ld c,a
@@ -171,9 +188,6 @@ main:
     ld a,c
     or a
     jp z,.run
-    ld a,(handdone)             ; the hand-turned ship has been seen: the stick loads the game too
-    or a
-    jp nz,go_game
     push bc
     call fade_out
     pop bc
@@ -181,12 +195,12 @@ main:
     ld (fadein),a
     ld a,(auto)                 ; stick moved: the side ship alone, facing the way it is now
     ld d,a
-    ld e,94                     ; picture number * 64 / STEPS
+    ld e,(1024*GN+STEPS/2)/STEPS  ; picture number * 4*GN / STEPS
     mul d,e
     ld a,d
-    and 63
+    and 4*GN-1
     ld (gy),a
-    ld a,16                     ; side on
+    ld a,GN                     ; side on
     ld (gp),a
     ld a,1
     ld (manual),a
@@ -199,16 +213,13 @@ main:
     ld a,d
     or a
     jr z,.move
-    call fade_out               ; back to the ships turning, once only
-    ld a,1
+    call fade_out               ; back to the still screen, then the game
+    ld a,3
     ld (state),a
-    ld (handdone),a
-    ld (stickwait),a
+    ld a,1
     ld (fadein),a
     xor a
     ld (manual),a
-    ld hl,HOLD-1                ; turning again at once
-    ld (cycle),hl
     nextreg $69,%10000000
     jr .run
 .move:
@@ -228,7 +239,7 @@ main:
     jr z,.nl
     dec a
 .nl:
-    and 63
+    and 4*GN-1
     ld (gy),a
     ld a,(gp)
     bit 3,b
@@ -239,13 +250,13 @@ main:
     jr z,.nd
     dec a
 .nd:
-    and 63
+    and 4*GN-1
     ld (gp),a
 .run:
     ld hl,0
     ld a,(state)
     dec a
-    jr nz,.still                ; only state 1 runs the hold-and-turn cycle
+    jr nz,.still                ; only state 1 runs the hold-and-turn cycle; 2 hand, 3 still (picture 0)
     ld hl,(cycle)
     inc hl
     ld de,HOLD+STEPS*PER_STEP
@@ -331,12 +342,12 @@ main:
     jr nz,.have
     ld a,(auto)                 ; take over facing the way the ship is now
     ld d,a
-    ld e,94                     ; picture number * 64 / STEPS
+    ld e,(1024*GN+STEPS/2)/STEPS  ; picture number * 4*GN / STEPS
     mul d,e
     ld a,d
-    and 63
+    and 4*GN-1
     ld (gy),a
-    ld a,16                     ; side on
+    ld a,GN                     ; side on
     ld (gp),a
     ld a,1
     ld (manual),a
@@ -356,7 +367,7 @@ main:
     jr z,.nl
     dec a
 .nl:
-    and 63
+    and 4*GN-1
     ld (gy),a
     ld a,(gp)
     bit 3,b
@@ -367,7 +378,7 @@ main:
     jr z,.nd
     dec a
 .nd:
-    and 63
+    and 4*GN-1
     ld (gp),a
 .nomove:
     ld hl,(auto)
@@ -546,12 +557,36 @@ go_game:
     nextreg $69,0
     nextreg $52,10
     call wipe                   ; black screen while the game loads
+    ifdef INGAME
+; The game is already in memory (the same .nex). Put back the converter stub's first bytes (the option's
+; jump here replaced them), and from the blank screen map the game's bank 2 back over this code and start it.
+    nextreg $53,11
+    nextreg $56,RT_ENTRY_BANK*2
+    nextreg $57,RT_ENTRY_BANK*2+1
+    ld hl,stub_orig
+    ld de,$C000
+    ld bc,stub_end-stub_orig
+    ldir
+    ld hl,exit_tail
+    ld de,$4000
+    ld bc,exit_end-exit_tail
+    ldir
+    jp $4000
+stub_orig:  RT_STUB_ORIG
+stub_end:
+exit_tail:
+    nextreg $54,4
+    nextreg $55,5
+    jp $C000
+exit_end:
+    else
     nextreg $56,LOADER_PAGE     ; the loader is kept in its own page; it runs from $A000 (bank 2), which the
     ld hl,$C000                 ; disk system leaves alone
     ld de,loader
     ld bc,loader_end-loader
     ldir
     jp loader
+    endif
     endif
 
     ifdef GAME
@@ -561,9 +596,20 @@ go_game:
 check_pages:
     ld hl,page_sums
     ld b,FRAME_PAGES+GRID_PAGES
+    ifdef INGAME
+    ld de,page_list
+    else
     ld c,FIRST_PAGE
+    endif
 .page:
+    ifdef INGAME
+    ld a,(de)
+    ld c,a
+    inc de
+    push de
+    else
     ld a,c
+    endif
     nextreg $56,a
     push hl
     push bc
@@ -592,10 +638,17 @@ check_pages:
     out ($FE),a
 .ok:
     inc hl
+    ifdef INGAME
+    pop de
+    else
     inc c
+    endif
     djnz .page
     ret
 page_sums: RT_SUMS
+    ifdef INGAME
+page_list: RT_PAGE_LIST
+    endif
 
 ; Fades. Both palettes (Layer 2 first, ULA first) are rewritten from fade_tab: 8 levels, 0 black .. 7 the
 ; normal colours. Layer 2's see-through colour $E3 keeps its value at every level, so it stays see-through.
@@ -742,7 +795,7 @@ ships_done:
     ret
 
     ifdef ALLDIR
-; The side ship from direction yaw (drawn), pitch (drawn+1), each 0-63.
+; The side ship from direction yaw (drawn), pitch (drawn+1), each 0..4*GN-1.
 hand_ship:
     ld a,(drawn)
     ld c,a                      ; C = yaw
@@ -754,7 +807,7 @@ hand_ship:
     ld b,a                      ; (-yaw, -pitch), flipped top-bottom
     ld a,c
     neg
-    and 63
+    and 4*GN-1
     ld c,a
     ld a,1
     ld (vflip),a
@@ -768,14 +821,14 @@ hand_ship:
     jr nc,.front
     neg
     add a,2*GN                  ; facing away: the picture for (128 - yaw), flipped left-right
-    and 63
+    and 4*GN-1
     ld c,a
     ld a,1
     ld (hflip),a
 .front:
     ld a,c
     add a,GN
-    and 63                      ; column in the table: yaw -GN..GN -> 0..2*GN
+    and 4*GN-1                     ; column in the table: yaw -GN..GN -> 0..2*GN
     ld d,b
     ld e,2*GN+1
     mul d,e
@@ -1011,12 +1064,11 @@ drawn:      dw 0,0,0
 scroll:     dw 0
 textrow:    dw 0
 textclock:  db TEXT_EVERY
-gy:         db 0                ; hand-turned ship: yaw 0-63
-gp:         db 16               ;                   pitch 0-63 (must follow gy)
+gy:         db 0                ; hand-turned ship: yaw 0..4*GN-1
+gp:         db GN               ;                   pitch 0..4*GN-1 (must follow gy)
 handclock:  db 1
 vflip:      db 0
 state:      db 1                ; R-Type build: see the main loop
-handdone:   db 0                ; R-Type build: the hand-turned ship has been shown (once only)
 stickwait:  db 1                ; R-Type build: ignore the stick until it is let go
 fadein:     db 0                ; R-Type build: fade in after the next picture reaches the screen
 keyheld:    db $10              ; a key was down last frame (starts set: a key held at launch is ignored)
@@ -1055,6 +1107,11 @@ stack_top:
 
     assert $ <= $C000
 
+    ifdef INGAME
+; The intro inside the game's .nex: the code (8000-BFFF, mapped there by the option's jump at the stub) is
+; saved alone; r_type_intro.py puts it, the Layer 2 picture and the pictures in the game's free banks.
+    savebin "intro_code.bin",$8000,$4000
+    else
 ; ---------------------------------------------------------------- Layer 2 picture (title and logo), bank 9-11
 PG = L2_PAGE
 OFS = 0
@@ -1270,3 +1327,4 @@ loader_end:
     endif
     savenex auto
     savenex close
+    endif

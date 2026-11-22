@@ -3,30 +3,35 @@
 ## Next session
 Stage 6 (owner 2026-11-22: "get R-Type set up as a nexclash game"), branch add-r-type: the engine is in,
 UNVERIFIED (owner decision: ship unverified first; the simulator proof is its own stage).
-`nexclash.py auto r_type.z80` (no recording) writes r_type_game.nex a52841b4 (= RC1 game) and
-r_type_sprites.nex 9a426f54 (= RC1 intro + game, the .nxc's build), with r_type_loading.scr and
-r_type_showpiece.png beside the snapshot (MD5-checked side inputs: game data, never here).
+`nexclash.py auto r_type.z80` (no recording) writes r_type_sprites.nex 1fdf9b83 and _loading 727b938f
+(the .nxc's builds; r_type_loading.scr beside the snapshot, MD5-checked side input: game data, never
+here) and r_type_game.nex 9d5bab81. The .nxc toggle "Advanced intro screen" = r_type_intro.nex /
+_loading (the intro in free banks of the same build; nxc toggles need the same length).
+- Owner 2026-11-22: no high-resolution picture (RC1's showpiece): Patch(showpiece=False), the
+  default, jumps over spec_hold's reveal call.
+- Intro flow (owner 2026-11-22): the low-resolution spec screen still for 5 s, then the ships turn;
+  any key or fire: fade out, game. Stick: fade to the 3D side ship, turned by the stick; key or
+  fire: fade back to the still screen, 1 s, fade out, game. Keys are not read during the page check.
+- Stick ship every 8 of 256 angles (INGAME_GSTEP; 289 pictures, 90 pages); code bank 8, pages
+  PICTURE_PAGES. The option jumps from the stub to the intro, NOPs `call spec_hold`; the intro
+  restores the stub bytes and starts the game.
 - nexclash/r_type.py: hooks from docs/profiles/r_type.json (asm/r_type_hooks.asm), 18 sites, PACE,
-  RAMFIX, NOTAPE, banks (colour, scenery masks, behind flags r_type_behind.json, glide, ship,
-  showpiece). Level graphics: the game's own unpacker (8F31..8F4E) run in the simulator on the
+  RAMFIX, NOTAPE, banks (colour, scenery masks, behind flags r_type_behind.json, glide, ship).
+  Level graphics: the game's own unpacker (8F31..8F4E) run in the simulator on the
   player's snapshot, checked by SHA-256 of all ten images; the catalogue (profiles: r_type_catalogue.json.gz) =
   level / address / ink + geometry only (the figure corpus rebuilt exactly from it + the snapshot).
 - r_type_colour / _figures / _scenery / _masks / _showpiece: the specnext intake modules, paths only
   changed (snapshot via r_type.set_source or $NEXCLASH_R_TYPE_Z80); registry r_type_figures.json.gz
   and arrangement r_type_sheets.json in docs/profiles. Sheets and recolour use r_type_game.nex.
 - Intro: r_type_intro.py + r_type_r9.py (owner's model r_type_r9_model.json.gz, rendered at build
-  time, ~2.5 min) + asm/r_type_intro.asm; title / logo / text from the snapshot's own screen (= the
-  original specification screen, checked pixel-exact), which is also the showpiece's start picture.
-Open: .nxc - nxc.py refuses r_type_sprites.nex ("950272 bytes past its banks": the game's banks
-follow the intro as data its loader reads), so auto keeps the .nex files and makes no .nxc yet.
-Cheats - the .nxc trainers poke the banks in the NEX header, but in the intro build the game's
-banks are data the intro's loader reads, so TipShop pokes (infinite lives 37374,0; immunity;
-invincibility 37362,201; attachments; all checked on RC1) need loader support or a game-only
-variant first. Hardware test of RC1. Proof stage: Layer 2 / sprite model, verify, unit tests.
+  time) + asm/r_type_intro.asm; title / logo / text from the snapshot's own screen (= the
+  original specification screen, checked pixel-exact).
+Cheats: 4 TipShop trainers in the .nxc (auto writes r_type.pok). Open: hardware test of the .nxc
+builds; proof stage: Layer 2 / sprite model, verify, unit tests.
 Stage: 1 complete as a playable prototype (main: 2026-11-16). Since then specnext PRs #97 <- #98
 <- #99 (stacked, open; owner-tested in CSpect only, 2026-11-17) own the display: Layer 2 640x256
 half-pixel scroll, scenery in front with see-through edges, filled whole-figure sprites that glide,
-4 frames per update, start-up showpiece (owner's 320x256 neon picture, pixelate transition). The
+4 frames per update, start-up showpiece (removed 2026-11-22). The
 lines below describe main; the PRs and specnext reference/r_type/intake (and the owner's local
 handover R_TYPE_HANDOVER.md) describe the rest. First: hardware test of #99 and banks 48-62 on a
 1 MB Next. Techniques: `patch.hybrid-display-replacement`, `patch.layer2-half-pixel-scroll`,
@@ -78,11 +83,9 @@ R-Type_SpecNext_V1.2.NEX: screen, animations, joystick view and the load into th
   title/logo; run from r4 with PYTHONPATH=.), `make_rtype_spec.py [GAME.nex]` (assembles and appends the
   game; default C:\1NEXT\rtype_builds\rtype_ship.nex, only read). Output `next_spec/RTYPESPC.NEX`
   (2.5 MB); any file name works. Details and history: r4/HANDOVER.md.
-- Flow (2026-11-22): the tape loading screen (NEX SCR screen, "no palette" flag set) from the start
-  of loading, at least 4 s (page checksums; blue border = a page failed), fade; the ships turn at once
-  (top pitch, side yaw, front roll), text scrolling. Stick moved (not fire), once only: fade to the
-  side ship alone, turned every way (33x33 views + flips); fire or key fades back. Any key, fire or
-  (after that) the stick: load the game.
+- Flow (RC1): the tape loading screen (NEX SCR, "no palette" flag) for at least 4 s (page checksums;
+  blue border = a page failed), fade, then the ships turn; the stick view (33x33 views + flips) once.
+  Today's flow: Next session.
 - Ships are stored pictures (the model needs a per-pixel depth test; live drawing is not feasible),
   packed 1-bit, built in page 220 and copied to the ULA screen in the bottom border. Title, logo and
   text on Layer 2 in front. Pages used: 18-23 Layer 2, 24-219 pictures, 220 work, 222 loader.

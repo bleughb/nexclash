@@ -19,12 +19,6 @@
     "md5": "acab5a1b9643d14c02284e057bc16854",
     "path": "r_type/r_type_loading.scr",
     "role": "The 6,912-byte loading screen from Rtype.tap (MD5 2d1e17ef), block scr, staged beside the snapshot; shown while the .nex loads. Not a recording."
-   },
-   {
-    "name": "r_type_showpiece.png",
-    "md5": "3023611302798e3bb5998fa42a77b2e3",
-    "path": "r_type/intake/showpiece/spec_screen_user_320x256_neon.png",
-    "role": "The owner's neon-glow 320x256 picture of the specification screen (game art), staged beside the snapshot; the start-up showpiece. Not a recording."
    }
   ]
  },
@@ -83,17 +77,21 @@
  "outputs": {
   "sprites": {
    "file": "r_type_sprites.nex",
-   "md5": "9a426f5487bb63e9e0a46d520ecac5ac"
+   "md5": "1fdf9b83ea553038bc0d3cbf1194175b"
+  },
+  "loading": {
+   "file": "r_type_sprites_loading.nex",
+   "md5": "727b938f71f74602579cc923b00c94f4"
   }
  },
  "repro": [],
  "status": {
   "title": "R-Type (128K)",
   "engine_col": "r_type (r_type.md)",
-  "build": "RC1; r_type_sprites.nex 9a426f54 (animated R-9 intro over the tape's loading screen, then the game: play area on Layer 2 with scenery colours, figures as hardware sprites, ship glide, level 3 battleship tilemap, start-up showpiece); game alone r_type_game.nex a52841b4",
+  "build": "r_type_sprites.nex 1fdf9b83 / _loading 727b938f (the game: play area on Layer 2 with scenery colours, figures as hardware sprites, ship glide, level 3 battleship tilemap; the original specification screen, no high-resolution picture); .nxc option \"Advanced intro screen\" = r_type_intro[_loading].nex (animated R-9 specification screen, stick-turned ship every 8 of 256); game alone r_type_game.nex 9d5bab81",
   "software": "NOT VERIFIED: emulator evidence only (CSpect smoke, level 1 sweep, intro flow)",
   "hardware": "untested",
-  "next": "simulator proof (Layer 2 / sprite model), hardware checklist, cheats for the intro build"
+  "next": "hardware test of the .nxc builds, simulator proof (Layer 2 / sprite model)"
  },
  "checks": [
   "asm2profile:r_type"

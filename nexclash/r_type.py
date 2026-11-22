@@ -6,8 +6,8 @@ game's 4-pixel steps, and level 3's battleship is a tilemap. See games/r_type.md
 
 Nothing copied from the game is stored here. The level graphics are unpacked at build time from the player's snapshot
 by the game's own unpacker (run in the simulator); docs/profiles/r_type_catalogue.json.gz holds only where each
-graphic is (level, address, ink, geometry), never its bytes. The owner's start-up picture and the tape's loading
-screen are side inputs beside the snapshot, checked by MD5.
+graphic is (level, address, ink, geometry), never its bytes. The tape's loading screen is a side input beside the
+snapshot, checked by MD5.
 """
 import gzip
 import hashlib
@@ -217,6 +217,7 @@ LOAD_SCREEN = 'r_type_loading.scr'            # the tape's 6,912-byte loading sc
 LOAD_MD5 = 'acab5a1b9643d14c02284e057bc16854'
 SHOWPIECE = 'r_type_showpiece.png'             # the owner's neon-glow 320x256 picture of the specification screen
 SHOWPIECE_MD5 = '3023611302798e3bb5998fa42a77b2e3'
+REVEAL_CALL = bytes.fromhex('7BFE9620053E09CD')   # spec_hold: ld a,e; cp 150; jr nz,+5; ld a,9; call g_call
 
 
 def side_input(z80, name, md5):
@@ -309,11 +310,12 @@ class Plain:
 
 
 class Patch(Plain):
-    """The full build: hooks, colour tables, scenery masks, behind flags, glide, ship, showpiece."""
+    """The full build: hooks, colour tables, scenery masks, behind flags, glide, ship. showpiece=True adds RC1's
+    start-up picture (r_type_showpiece.png beside the snapshot); the owner removed it on 2026-11-22."""
     name = 'R-Type Layer 2 scroll and sprites (not verified)'
     slot1 = (SLOT1_BANK, 0x3E00)
 
-    def __init__(self, z80, colours=None, showpiece=True):
+    def __init__(self, z80, colours=None, showpiece=False):
         from . import r_type_colour as RC
         snap = set_source(z80)
         h = hooks()
@@ -340,6 +342,12 @@ class Patch(Plain):
                 b13[8192 + 0x17FF:8192 + 0x2000] = cop
                 banks[13] = bytes(b13)
                 self.showpiece = True
+        if not self.showpiece:              # spec_hold: skip the reveal at 2 seconds (jr nz -> jr), the original screen only
+            code = bytearray(banks[12])
+            at = code.find(REVEAL_CALL)
+            assert at >= 0 and code.find(REVEAL_CALL, at + 1) < 0, 'R-Type spec_hold reveal call'
+            code[at + 3] = 0x18
+            banks[12] = bytes(code)
         self.extra_banks = banks
 
     def apply(self, snap):
@@ -366,7 +374,7 @@ class Patch(Plain):
             patch(addr, bytes.fromhex(old), bytes.fromhex(new))
 
 
-def build(z80, nex, colours=None, showpiece=True):
+def build(z80, nex, colours=None, showpiece=False):
     """The game .nex (no intro, no loading screen). -> the Patch used."""
     p = Patch(z80, colours, showpiece)
     Z.convert(str(z80), str(nex), tail_req=0x5B00, force50=True, quiet=True, patch=p)
@@ -394,35 +402,73 @@ from .r_type_colour import (RECOLOUR, COLOURS, load_colours, colour_identity, ne
                             recolour, sheets)
 
 
+# The TipShop R-Type pokes (ladyeklipse/all-tipshop-pokes) that worked on RC1 in CSpect (2026-11-22). 50049 is in
+# bank 0, the bank at C000 in play. Not here: "remove background scenery" (Layer 2 draws it: no effect), the three
+# flying-direction pokes (no effect seen), "all attachments" (its routine lives in the printer buffer at 5B00).
+TRAINERS = '''NInfinite lives
+Z 8 37374 0 53
+NImmunity
+M 8 38253 58 210
+M 8 38260 58 194
+Z 0 50049 0 75
+NAbsolute invincibility
+Z 8 37362 201 205
+NImmortality
+M 8 37362 201 205
+M 8 38240 0 205
+Z 8 38241 0 254
+Y
+'''
+
+
 def auto(a, z80, name, out, say):
-    """nexclash.py auto: NAME_game.nex (the game: Layer 2 scroll, sprites, glide, battleship tilemap, the showpiece when
-    its picture is beside the snapshot) and NAME_sprites.nex (the intro in front of it: the animated R-9 specification
-    screen, the tape's loading screen when it is beside the snapshot). Not verified: no recording is replayed."""
+    """nexclash.py auto: NAME_game.nex (the game: Layer 2 scroll, sprites, glide, battleship tilemap; the original
+    specification screen, no high-resolution picture) and NAME_sprites.nex (the intro in front of it: the animated
+    R-9 specification screen, the tape's loading screen when it is beside the snapshot). Not verified: no recording is replayed."""
     from . import r_type_intro as I
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     if not getattr(a, 'publisher', None):
         a.publisher = PUBLISHER
+    if not getattr(a, 'pok', None):
+        trainers = out / (name + '.pok')
+        trainers.write_text(TRAINERS)
+        a.pok = str(trainers)
     if hashlib.md5(Path(z80).read_bytes()).hexdigest() != SOURCE_MD5:
         say('Snapshot  : not the snapshot this build was made from (MD5 %s); building anyway' % SOURCE_MD5)
     say('Game      : R-Type (Electric Dreams, 1988, 128K)')
     say('Engine    : r_type; play area on Layer 2 (scroll, scenery colours), figures as hardware sprites, ship glide, '
         'level 3 battleship tilemap; the original logic unchanged')
     game = out / (name + '_game.nex')
-    p = build(z80, game)
+    p = build(z80, game)                       # owner 2026-11-22: no high-resolution picture, the original screen only
     say('Game      : %s  %s' % (game.name, hashlib.md5(game.read_bytes()).hexdigest()))
     say('Colours   : %s' % ', '.join('%s %s' % kv for kv in p.colour_info.items()))
-    say('Showpiece : %s' % ('the owner\'s picture (%s)' % SHOWPIECE if p.showpiece else
-                            'no %s beside the snapshot: the original specification screen only' % SHOWPIECE))
     screen = side_input(z80, LOAD_SCREEN, LOAD_MD5)
     say('Loading   : %s' % ('the tape\'s loading screen (%s)' % LOAD_SCREEN if screen else
-                            'no %s beside the snapshot: the intro starts on a black screen' % LOAD_SCREEN))
-    say('Intro     : rendering the R-9 (about 2 minutes)')
-    files = I.data(source(), say)
-    full = out / (name + '_sprites.nex')
-    full.write_bytes(I.combine(game.read_bytes(), files, screen.read_bytes() if screen else None))
-    say('Sprites   : %s  %s  (intro + game)' % (full.name, hashlib.md5(full.read_bytes()).hexdigest()))
-    (out / (name + '_outputs.json')).write_text(json.dumps({'default': full.name}, indent=1) + '\n')
+                            'no %s beside the snapshot: builds without the loading screen' % LOAD_SCREEN))
+    say('Intro     : rendering the R-9 (about a minute)')
+    g = game.read_bytes()
+    outputs = {'toggles': {I.OPTION: {'logic': False, 'what': 'the animated R-9 specification screen before the game '
+                                      '(stick: turn the R-9 yourself, once)'}}}
+    variants = [('default', g)]
+    if screen:
+        variants.append(('loading', g[:10] + bytes([2]) + g[11:512] + screen.read_bytes() + g[512:]))
+    for kind, nex in variants:
+        suffix = '_loading' if kind == 'loading' else ''
+        off, on, info = I.ingame(nex, source(), say, screen.read_bytes() if kind == 'loading' else None)
+        f_off, f_on = out / (name + '_sprites' + suffix + '.nex'), out / (name + '_intro' + suffix + '.nex')
+        f_off.write_bytes(off)
+        f_on.write_bytes(on)
+        outputs[kind] = f_off.name
+        outputs['toggles'][I.OPTION][kind] = f_on.name
+        say('Sprites   : %s  %s  (game; the intro\'s banks unused)' % (f_off.name, hashlib.md5(off).hexdigest()))
+        say('Intro     : %s  %s  (option "%s": %d picture pages, stick ship every %d of 256)' % (
+            f_on.name, hashlib.md5(on).hexdigest(), I.OPTION, info['pages'], I.INGAME_GSTEP))
+    (out / (name + '_outputs.json')).write_text(json.dumps(outputs, indent=1) + '\n')
+    if os.environ.get('NEXCLASH_R_TYPE_FULL_INTRO'):           # RC1's own layout: full intro, game read from the file
+        full = out / (name + '_fullintro.nex')
+        full.write_bytes(I.combine(g, I.data(source(), say), screen.read_bytes() if screen else None))
+        say('Full intro: %s  %s  (not in the .nxc)' % (full.name, hashlib.md5(full.read_bytes()).hexdigest()))
     say('Boot      : not simulated (128K intro + game; emulator smoke test, games/r_type.md)')
     say('Verify    : none: not verified (emulator evidence only; games/r_type.md "Evidence")')
     say('Result    : BUILT, NOT VERIFIED')
