@@ -1,0 +1,191 @@
+{
+ "name": "auf_wiedersehen_monty",
+ "order": 275,
+ "game": "Auf Wiedersehen Monty",
+ "doc": "auf_wiedersehen_monty.md",
+ "engine": "auf_wiedersehen_monty",
+ "representative": true,
+ "reference": "auf_wiedersehen_monty",
+ "inputs": {
+  "snapshot": {
+   "name": "auf_wiedersehen_monty.z80",
+   "md5": "f9a864d1fec2a17e88d8e3259861182d",
+   "path": "auf_wiedersehen_monty/auf_wiedersehen_monty.z80",
+   "note": "the snapshot in aufmonty.rzx, extracted: the verification start (the release targets TOSEC Auf Wiedersehen Monty (1987)(Gremlin Graphics Software)[128K].z80, same code)"
+  },
+  "recordings": [
+   {
+    "name": "aufmonty.rzx",
+    "md5": "52de68f47777eaaab706b7b547aa79a6",
+    "path": "auf_wiedersehen_monty/aufmonty.rzx",
+    "role": "rzxarchive recording, 321,820 frames, a whole playthrough"
+   },
+   {
+    "name": "auf_wiedersehen_monty.pok",
+    "md5": "2ac624d13fb1790dbba8b90ad03dccca",
+    "path": "auf_wiedersehen_monty/auf_wiedersehen_monty.pok",
+    "note": "not a recording: the archive's five cheats, each checked against the 128K release's code, for the .nxc"
+   }
+  ]
+ },
+ "modules": [
+  "auf_wiedersehen_monty"
+ ],
+ "own_modules": [
+  "auf_wiedersehen_monty"
+ ],
+ "data": [
+  "docs/profiles/auf_wiedersehen_monty.json",
+  "asm/auf_wiedersehen_monty_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "aufmonty.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 300,
+  "note": "rzxarchive whole playthrough; auto also runs the unit cases (figures, room draw, clear screen, four CPU speeds) and the negative controls"
+ },
+ "outputs": {
+  "plain": {
+   "file": "auf_wiedersehen_monty.nex",
+   "md5": "340835b779d39cf8d958c6d0171da438"
+  },
+  "sprites": {
+   "file": "auf_wiedersehen_monty_sprites.nex",
+   "md5": "6fcbd85af07305b3fe802b6759ba0162"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Auf Wiedersehen Monty",
+  "engine_col": "auf_wiedersehen_monty (auf_wiedersehen_monty.md)",
+  "build": "auf_wiedersehen_monty_sprites.nex (as published in nxc: Monty and the aliens as sprites in the game's own colours over the composite cells, the attribute paint off; five cheats)",
+  "software": "replay IDENTICAL on the whole playthrough (321,820 frames); unit cases incl. four CPU speeds; 8 negatives detected",
+  "hardware": "untested on the board",
+  "next": "board run; owner play"
+ },
+ "checks": [
+  "asm2profile:auf_wiedersehen_monty"
+ ],
+ "techniques": [
+  {
+   "application": "auf_wiedersehen_monty.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "scan --writers on the composite cells: only the renderer, the drawers and the background copy read them",
+   "phases": []
+  },
+  {
+   "application": "auf_wiedersehen_monty.figure-records",
+   "id": "detect.graphics-record-layout",
+   "revision": 1,
+   "target": "the five 13-byte figure records at 42030 (position, colour, frame, mirror bit)",
+   "phases": []
+  },
+  {
+   "application": "auf_wiedersehen_monty.overlay",
+   "id": "patch.xor-overlay-keep-ula",
+   "revision": 2,
+   "target": "every pixel write kept; one 16 x 16 sprite per figure over its OR-drawn pixels, the attribute paint off",
+   "phases": []
+  },
+  {
+   "application": "auf_wiedersehen_monty.alt-rom",
+   "id": "patch.whole-altrom-image",
+   "revision": 2,
+   "target": "Sinclair 48K ROM as alt ROM image 1, hooks at 0x386E (the game pages ROM 1 only)",
+   "phases": []
+  },
+  {
+   "application": "auf_wiedersehen_monty.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "28 MHz inside each hook, the caller's NR 7 kept on the stack and put back",
+   "phases": []
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/auf_wiedersehen_monty_hooks.asm": "5838bab638b1bbbd",
+   "docs/profiles/auf_wiedersehen_monty.json": "1123aa89c02042cb",
+   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/auf_wiedersehen_monty.py": "f2121b537432a359",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "8b0764576993f248",
+   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "skoolkit": "10.1",
+   "recipe": "322c30037398bf24",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "verified": {
+  "deps": {
+   "asm/auf_wiedersehen_monty_hooks.asm": "5838bab638b1bbbd",
+   "docs/profiles/auf_wiedersehen_monty.json": "1123aa89c02042cb",
+   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/auf_wiedersehen_monty.py": "f2121b537432a359",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "8b0764576993f248",
+   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "skoolkit": "10.1",
+   "recipe": "322c30037398bf24",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "results": [
+  {
+   "application": "auf_wiedersehen_monty.overlay",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "6fcbd85a",
+   "scope": "1 rzxarchive recording, a whole playthrough (321,820 frames); unit cases (figures, room draw, clear screen) at four CPU speeds; 8 negatives; no human-timed hardware pace",
+   "evidence": "games/auf_wiedersehen_monty.md \"Verification\""
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/auf_wiedersehen_monty.md#verification-nexclashauf_wiedersehen_montypy"
+   ],
+   "coverage": "Hook T counted in the simulator over the whole playthrough; no JNext or hardware timing.",
+   "result": "Figure hook about 27,300 T at 28 MHz per update, about 2.4% of a two-frame update at most."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/auf_wiedersehen_monty.md#observed-engine-static-reading--scan"
+   ],
+   "coverage": "Every reader of the composite cells (scan --writers) over the recording; the figure loop, the renderer, room draw and clear screen.",
+   "result": "The figures are OR-drawn into composite cells the renderer copies; nothing reads figure pixels back for logic, so the overlay keeps every write and turns the attribute paint off."
+  },
+  "decision": "Figures as sprites in the game's own colours over the kept composite drawing, the attribute paint off (the standing default).",
+  "next_experiment": "A board run of the 1.1 build with turbo chosen: speed kept in play, no stray sprites."
+ }
+}

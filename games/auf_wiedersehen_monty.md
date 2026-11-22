@@ -1,12 +1,15 @@
 # Auf Wiedersehen Monty (Gremlin Graphics, 1987, 128K) - new engine
 
+Techniques: `detect.gameplay-screen-readers`, `detect.graphics-record-layout`, `patch.xor-overlay-keep-ula`, `patch.whole-altrom-image`, `patch.restore-speed`
+
 ## Next session
 Stage 3 (prove + deliver) done 2026-11-22; Stage 4 (hardware + colour rounds) next. First release = clash fix (figures as sprites in the game's own
 colours, the attribute paint off) + checked cheats. Inputs (local, not in the repo): rzxarchive aufmonty.rzx
 (321,820 frames, a whole playthrough), its snapshot extracted as the verification start; the release targets TOSEC
 "Auf Wiedersehen Monty (1987)(Gremlin Graphics Software)[128K].z80" (same code; differences are game state).
-Survey: 803dad54 scratchpad aufmonty/survey/. Release: jattree/nxc patch 1.0 (sprite build MD5 6b2c8cd6f621d4f8126fb2e159424607),
-  pushed when the owner's quick test passes. Open: an evidence record once the reference files are staged.
+Survey: 803dad54 scratchpad aufmonty/survey/. Release: jattree/nxc patch 1.0 (sprite build MD5 6b2c8cd6f621d4f8126fb2e159424607); 1.1 (the
+  caller's CPU speed kept) after the owner's quick test. Evidence record docs/records/auf_wiedersehen_monty.json,
+  verified and stamped 2026-11-22 (whole playthrough); reference files still to go to specnext.
 
 ## Observed engine (static reading + scan)
 - Update routine 41407 (0xA1BF): saves sysvars, EI / HALT / DI, AY music (bank 6), then at 41523 CALL 41645, then
@@ -47,6 +50,10 @@ Survey: 803dad54 scratchpad aufmonty/survey/. Release: jattree/nxc patch 1.0 (sp
   lost, mirror never set, figure hook silent, clear screen and room draw leave sprites, painter on).
 - Pace: figure hook 27,300 T at 28 MHz per update (~3,400 T at 3.5 MHz, about 2.4% of a two-frame update at most).
 - Board (Tang, dirty sprites + automap on): the release build loads, menu, plays into the first room, no stray sprites.
+- Review fixes (2026-11-22): the hooks keep the caller's CPU speed (verifier models the NR 7 read, unit cases at all
+  four speeds, a negative control leaves 28 MHz); auto runs the unit cases and negatives and fails on a desync or no
+  coverage; the tail is chosen per snapshot (tail_for). Re-verified on the whole playthrough with selftest --verify
+  --stamp: IDENTICAL.
 
 ## Cheats (archive .pok, each checked against the 128K release's code)
 Infinite lives 41139 LD (HL),A -> NOP (the lives store); Harmless aliens 42160 -> RET (the alien test's first
@@ -61,10 +68,17 @@ byte); No crushers 47715 -> RET; Harmless water 37002 LD A,7 -> LD A,0; Tickets 
 - [local: 128K printer buffer] keep_printer_buffer is 48K only; a 128K game that reads 0x5B00 gets it back in its
   set-up (Silkworm / Eagle's Nest pattern).
 
+## Friction
+- reuse: [local: the Monty is Innocent hook shape and the patch.restore-speed card as written]
+- retries: [local: the review's tail finding needed a per-snapshot tail proof; re-verified on the whole playthrough]
+- environment: [local: the whole-playthrough verify takes about an hour; reference files staged from the scratchpad]
+- hand-rolled: [none: the record was written with the records module's own checks and selftest]
+- scratch: [none: the staging script stays in the session's scratchpad]
+
 ## Technique use
 - detect.gameplay-screen-readers: helped: `scan --writers` on the composite cells showed only the renderer, the
   drawers and the background copy read them, so the overlay keeps every pixel write.
 - detect.graphics-record-layout: used: the five 13-byte figure records (position, colour, frame, mirror bit).
 - patch.xor-overlay-keep-ula: used: an OR-drawn figure works the same way; the sprite is a superset of its pixels.
 - patch.whole-altrom-image: used: Sinclair's 48K ROM as the alt ROM image, hooks at 0x386E (the game pages ROM 1 only).
-- patch.restore-speed: used: 28 MHz inside each hook, back to 3.5 MHz on the way out.
+- patch.restore-speed: corrected: the hooks forced 3.5 MHz on exit; the caller's NR 7 is now kept on the stack and put back.
