@@ -35,7 +35,7 @@ HOOK_SITES = (
     (0x8080, 'f3011e00', 'h_clear', 0xC3),     # DI / LD BC,30 (JP h_clear + one dead byte)
     (0x7FBE, '2100c0', 'h_flip', 0xC3),        # LD HL,0xC000
 )
-IM2_I = 0x39                # alt ROM 0x3900-0x3A00 all 0xFE: vector 0xFEFE for any bus byte (asm im2tab)
+IM2_I = 0x39                # alt ROM 0x3900-0x3A00 all 0x3A: vector 0x3A3A = h_isr for any bus byte (asm im2tab)
 DATA_SITES = ((0xFF4C, '3efd', '3e39'),)      # the game's "IM 2 on": LD A,0xFD / LD I,A -> I = IM2_I
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -112,7 +112,7 @@ class ElitePatch:
         lo[0x0010:0x0010 + len(self.low_code)] = self.low_code
         self.altrom_low = (LOW_PAGE, bytes(lo))
         self.page = bytes(hi)
-        self.extra_banks = {12: self.page + bytes(lo)}
+        self.extra_banks = {12: self.page + bytes(lo), 13: bytes(16384)}   # 13: state page 26 (asm STATE_PG), zero
         self.sites = sites(self.syms)
         if control:
             keep = {a for a, _, _ in DATA_SITES}

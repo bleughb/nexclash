@@ -27,6 +27,11 @@ C_PLANET  EQU 0x4B
 C_SHIPDEF EQU 0xFF
 P_L2      EQU 0x0B          ; port 0x123B: write-over on (bit 0), visible (bit 1), shadow bank NR $13 (bit 3)
 P_SHOW    EQU 0x02          ; visible only
+TICK      EQU 10            ; frames per game pass (the original's mean, 9.7-10.5 over the five recordings)
+STATE_PG  EQU 26            ; 8K page: engine state, mapped at slot 0 (0x0000) only under DI inside a hook
+S_FRAME   EQU 0x0000        ; word: frames counted by h_isr
+S_LAST    EQU 0x0002        ; word: S_FRAME at the last tick
+S_PAT     EQU 0x0004        ; byte: position in pattab (0-24)
 
 ; ---------------------------------------------------------------------------------------------------------------
 ; RST vectors (alt ROM low image, 0x0010-0x0027; Sinclair's bytes there are never read by the game: access scan).
@@ -191,8 +196,32 @@ h_clear:
         ld bc,30
         jp 0x8084
 
-; h_flip (0x7FBE, replaces LD HL,0xC000): show the buffer just drawn (swap NR $12 / NR $13).
-h_flip: ld bc,0x243B
+; h_flip (0x7FBE, replaces LD HL,0xC000): end of a game pass. Wait for the tick (TICK frames since the last one,
+; counted by h_isr) when interrupts are on, then show the buffer just drawn (swap NR $12 / NR $13). The original
+; clobbers A, F, BC, DE, HL here too (LD HL / LD DE / the copy loops).
+h_flip: ld a,i                          ; P/V = IFF2: interrupts on?
+        jp po,.flip                     ; off (a screen the game draws with DI): no wait, there is no frame count
+.w:     di
+        nextreg 0x50,STATE_PG
+        ld hl,(S_FRAME)
+        ld de,(S_LAST)
+        or a
+        sbc hl,de                       ; frames since the last tick
+        ld a,h
+        or a
+        jr nz,.go
+        ld a,l
+        cp TICK
+        jr nc,.go
+        nextreg 0x50,0xFF
+        ei
+        halt
+        jr .w
+.go:    ld hl,(S_FRAME)
+        ld (S_LAST),hl
+        nextreg 0x50,0xFF
+        ei
+.flip:  ld bc,0x243B
         ld a,0x12
         out (c),a
         inc b
@@ -231,7 +260,50 @@ trans_byte:
 ; vector is 0xFEFE (the game's ISR entry) whatever byte the bus holds. The original table (I = 0xFD) has FE FE only
 ; at 0xFDFF / 0xFE00 and game code elsewhere: CSpect's IM 2 bus byte is not 0xFF, and the first interrupt jumped
 ; through 0xFD00 = 0xC903 into the buffer (plain conversion crashed in pass 2, 2026-11-23).
-im2tab: ds 257, 0xFE
+im2tab: ds 257, high h_isr             ; vector 0x3A3A = h_isr for any bus byte
+        ds 0x3A3A - $, 0xFF
+
+; h_isr (IM 2, every frame the game accepts an interrupt): count the frame (state page), then run the game's ISR
+; body (0xFF25: keyboard, controls, sound) on 16 of every 25 frames - the original accepted ~0.64 interrupts per
+; frame (probe pass_ints.py, all five recordings), so turn rate, timers and sound per second stay the original's
+; at 28 MHz with interrupts on while the pass waits for its tick. The hack's own switch (0xFEFE = RET while a ship
+; is drawn, JR 0xFF25 otherwise) is honoured first. Stack: 2 bytes below the interrupt's own 2 (fits the ship
+; wrapper's 0x4000 floor, see h_plot).
+        ASSERT $ == 0x3A3A
+h_isr:  push af
+        ld a,(0xFEFE)
+        cp 0xC9
+        jr z,.off
+        nextreg 0x50,STATE_PG
+        push hl
+        ld hl,(S_FRAME)
+        inc hl
+        ld (S_FRAME),hl
+        ld a,(S_PAT)
+        inc a
+        cp 25
+        jr c,.p
+        xor a
+.p:     ld (S_PAT),a
+        ld l,a
+        ld h,high pattab
+        ld a,(hl)
+        pop hl
+        nextreg 0x50,0xFF
+        or a
+        jr z,.skip
+        pop af
+        jp 0xFF25                       ; the game's ISR (ends EI / RET)
+.skip:  pop af
+        ei
+        ret
+.off:   pop af                          ; as the original RET at 0xFEFE: interrupts stay off
+        ret
+
+        ds 0x3A80 - $, 0xFF
+pattab:                                 ; 16 ones in 25, spread evenly
+        db 1,0,1,1,0,1,0,1,1,0,1,1,0,1,0,1,1,0,1,1,0,1,0,1,0
+        ASSERT $ - pattab == 25
         ds 0x3B00 - $, 0xFF
 ; ship colour per blueprint (index = low byte of IY); other values white. RRRGGGBB, never TRANS. Blueprints are
 ; 23-byte records from 0x61E3 (0x61E3 + 23 n, n = 0-22; low bytes all distinct); IY = the record while a ship's lines
@@ -275,7 +347,8 @@ rom_end:
 ; both cleared to transparent through slot 7 (the stub's upper page, mapped back afterwards), Layer 2 shown.
 ; ---------------------------------------------------------------------------------------------------------------
         ORG 0xD000
-setup:  nextreg 0x12,L2_A
+setup:  nextreg 0x07,3                  ; 28 MHz (the tail leaves NR $07 alone)
+        nextreg 0x12,L2_A
         nextreg 0x13,L2_B
         nextreg 0x14,TRANS
         nextreg 0x7F,C_WHITE

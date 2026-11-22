@@ -1,11 +1,11 @@
 # Elite (Braben / Bell, Firebird 1985; Russian 128K hack) - engine: elite (in progress, stage 2)
 
 ## Next session
-Stage: 2 (build)   State: M1 part 1 (colour mirror on Layer 2) runs in CSpect 2026-11-23 (## M1 progress); part 2 (28 MHz, fixed tick, ISR pattern) next
+Stage: 2 (build)   State: M1 (colour mirror on Layer 2, 28 MHz, fixed 10-frame tick, ISR pattern) runs in CSpect 2026-11-23 (## M1 progress); M2 (interpolation) next
 Inputs: specnext/reference/elite/ (tape, 5 RZX, 5 extracted .z80)    Branch: add-elite    Commit: see git log
 Checks: full surveys of all five RZX (7.5k-68.6k frames); tape not run in an emulator
 Pending user answers: none (design closed 2026-11-23: C coloured ships, details 1-5, pacing (i) interpolate)
-Start with: `python -m nexclash.elite C:\1NEXT\elite_work\Docking.z80 m1.nex` in CSpect, then M1 part 2 (## Build plan 2)
+Start with: `python -m nexclash.elite C:\1NEXT\elite_work\Docking.z80 m1.nex` in CSpect, then M2 (## Build plan)
 Read: PLAYBOOK stage 1, 3d (unknown engine: feasibility first); ## Findings below
 Open: see Findings
 
@@ -199,8 +199,12 @@ find the planet / star / laser state the renderer needs; cost of one full draw a
 
 ## M1 progress (2026-11-23)
 M1 part 1 (colour mirror) RUNS in CSpect from the Docking and Witch snapshots: planet blue, crosshair / lasers red,
-text and stars white, ships per model (station light grey-blue), stable over ~600 frames of flying; 3.5 MHz, original
-pacing (part 2 - 28 MHz + fixed tick + ISR pattern - not started). Build: `python -m nexclash.elite IN.z80 OUT.nex`
+text and stars white, ships per model (station light grey-blue), stable over ~600 frames of flying.
+M1 part 2 (pacing) RUNS too (Docking ~900 frames, Witch ~260 frames with pitch / climb keys): 28 MHz (setup NR $07 = 3);
+h_flip waits until TICK = 10 frames have passed since the last tick (HALT loop, frame count from h_isr), so a pass at
+28 MHz (~1 frame) idles ~9; measured tick-to-tick 10 frames exactly. h_isr (IM 2 vector 0x3A3A, I = 0x39 table of
+0x3A) counts frames in state page 26 (mapped at slot 0 under DI) and runs the game's ISR body 0xFF25 on 16 of every
+25 frames (pattab), honouring the hack's own 0xFEFE = RET switch. Keys answer at the original rate. Build: `python -m nexclash.elite IN.z80 OUT.nex`
 (`--control` = IM 2 fix only; `--control=rst+cat+...` / `wXXXX` = hook subsets, the bisect used below).
 Code: asm/elite_hooks.asm, nexclash/elite.py, docs/profiles/elite.json (not yet in nexclash/engines.py or the CLI).
 - Writers: every buffer write is LD (HL),A / LD (HL),B / LD (HL),0xFF (probe buf_writers.py, Docking whole: 22 sites
@@ -234,7 +238,7 @@ None yet (no build).
 - [tool nexclash.survey] survey preview.png tints each plot routine's output in its own colour; read the game's colours from a plain `preview` (no --plot), not from the survey sheet (Elite: a mono viewport was reported as coloured). survey.md's Preview heading now says so.
 - [deferred Open: reconsider when stage 1 feasibility shows whether a tail can be placed (--tail + scan --range)] A 128K snapshot with the 48K ROM locked in: `convert` found no place for the start-up tail and nextboot.check models 48K start-up only. (2026-11-23: --tail 0x4800, viewport rows the copy writes first, works in CSpect.)
 - [deferred Open: reconsider when the first hardware test shows which is CSpect's alone] CSpect differs from the toolkit's assumptions twice: its IM 2 bus byte is not 0xFF (a table valid only at I*256+0xFF fails), and with -mmc it traps RST 08h as esxDOS (skips the next byte). Candidates for BRIEFING A1 / the kb once hardware confirms which is the emulator's alone.
-- [deferred Open: reconsider when M1 part 2 is built] An RST handler that runs on a game's private stack must fit its depth: measure SP at every patched site (site_ctx.py) before choosing pushes; and a hook that replaces a routine's first instruction must keep every register the original keeps (callers rely on it: 0x8080 kept A).
+- [deferred Open: reconsider when a second engine patches writers that run on a private stack] An RST handler that runs on a game's private stack must fit its depth: measure SP at every patched site (site_ctx.py) before choosing pushes; and a hook that replaces a routine's first instruction must keep every register the original keeps (callers rely on it: 0x8080 kept A).
 
 ## Technique use
 - detect.routine-removal: no help: not run; the probe read call paths from the stack instead (2026-11-22)
