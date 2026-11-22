@@ -70,23 +70,23 @@
  "outputs": {
   "plain": {
    "file": "robin_of_the_wood.nex",
-   "md5": "b87691eaca24f220ef10332e1b01f324"
+   "md5": "39a5b46fee82a921384a412d6508c4ce"
   },
   "sprites_raw": {
    "file": "robin_of_the_wood_sprites_raw.nex",
-   "md5": "ce479cac96bcb4274217d91b8e75a720"
+   "md5": "78a8abc703eb1a589a93b29fd6017b7d"
   },
   "sprites": {
    "file": "robin_of_the_wood_sprites.nex",
-   "md5": "ed53262082084a53d8119e1efac52265"
+   "md5": "7eb677139a91e5e21f618a1b101262c7"
   },
   "enhanced_raw": {
    "file": "robin_of_the_wood_enhanced_raw.nex",
-   "md5": "69e671e6d0d2b6f475beee82ce521b56"
+   "md5": "a83f21b306b81e9bd5f2c89ed680d24b"
   },
   "enhanced": {
    "file": "robin_of_the_wood_enhanced.nex",
-   "md5": "716dc4fc8136c3ad6eadad5441eafea6"
+   "md5": "33ed1a9871919c8cb5f244497da35ac3"
   }
  },
  "repro": [],
@@ -112,20 +112,20 @@
    "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "2abd23b537c0b5d4",
+   "nexclash/engines.py": "8163679cd401837e",
    "nexclash/nextboot.py": "9272cb3a8c980c98",
    "nexclash/robin_enhanced.py": "6851a8763bffc824",
-   "nexclash/robin_of_the_wood.py": "c0a486b6e13eff13",
+   "nexclash/robin_of_the_wood.py": "405ee8311a2ed69a",
    "nexclash/rzx.py": "e018e000440e0274",
-   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "50684436558662bd",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
-   "recipe": "f9aaeba638a546d9",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "f8ea4ef123941235",
+   "rom": "sinclair"
   },
-  "date": "2026-11-20"
+  "date": "2026-11-22"
  },
  "verified": {
   "deps": {
@@ -134,19 +134,19 @@
    "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "2abd23b537c0b5d4",
+   "nexclash/engines.py": "8163679cd401837e",
    "nexclash/nextboot.py": "9272cb3a8c980c98",
    "nexclash/robin_enhanced.py": "6851a8763bffc824",
-   "nexclash/robin_of_the_wood.py": "c0a486b6e13eff13",
+   "nexclash/robin_of_the_wood.py": "405ee8311a2ed69a",
    "nexclash/rzx.py": "e018e000440e0274",
-   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "50684436558662bd",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
-   "recipe": "f9aaeba638a546d9",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "f8ea4ef123941235",
+   "rom": "sinclair"
   },
-  "date": "2026-11-20"
+  "date": "2026-11-22"
  }
 }

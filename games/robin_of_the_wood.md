@@ -5,6 +5,11 @@ Stage: 4 (owner's look)    State: imported into the repo 2026-11-04 (record robi
 never on a Next. Owner: Enhanced deferred, so the .nxc is not published.
 Inputs: specnext/reference/robin_of_the_wood/ (robin_of_the_wood.z80 md5 d2fa7f2e, journey, lifecycle, bishop_coverage,
 robin_of_the_wood.scr). Start with: the owner's review of the default and Enhanced sets.
+NEXLOAD fix (2026-11-22): the snapshot's stack is at 0x5B76, in the printer buffer NEXLOAD overwrites, and its top
+return address is 0x5BB0 (the 128K ROM's paging code there); 1.0 kept no copy, so on a Next the game returned into
+loader bytes. Found by a scan of every published patch (nextboot.boot nexload=True). z80tonex keep_printer_buffer now
+works for 128K too (bank 5 is at 0x4000 on both); Robin's plain and sprite builds set it. The published .nxc
+(default + one cheat) needs a 1.1; a real .nexload run on the board is set up.
 
 ## Import (2026-11-04)
 Ported from Jon Attree's .nxc work, 2026-11-04 (pilot clone runs/robin_of_the_wood, base d7abd1c, head 9e104bf). The
@@ -79,6 +84,9 @@ kept as features); no belt line; guards in grey mail with the drawn shield red a
 Evidence: `../work/enh/`, sheet `../png/robin_enhanced_sheet.png`.
 
 ## Lessons
+- [local: the converter now covers 128K; the NEXLOAD boot check comes with the hardening PR] a 128K snapshot
+  can keep its stack in the printer buffer too (here 0x5B76, returning into the ROM paging code at 0x5BB0), and
+  keep_printer_buffer refused 128K: boot every build with nexload=True before calling its start safe.
 - [local: unregistered engine] The pilot built Robin from a module entry that refused other dumps, never through
   `auto`; importing it meant a detector and auto() so the record's rebuild and verify run as for every engine.
 - [local: verifier spread over scripts] The replay, its reference and the inventory were three scripts with
