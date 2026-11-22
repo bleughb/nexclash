@@ -1,0 +1,241 @@
+{
+ "name": "pssst",
+ "order": 268,
+ "game": "Pssst",
+ "doc": "pssst.md",
+ "engine": "pssst",
+ "representative": true,
+ "reference": "pssst",
+ "inputs": {
+  "snapshot": {
+   "name": "pssst.z80",
+   "md5": "6515eb52c5216370de6f1ef2bbcaad4c",
+   "path": "pssst/pssst.z80",
+   "note": "TOSEC \"Pssst (1983)(Ultimate Play The Game)[a][16K].z80\": the 16K game at its menu. The tape: \"Pssst (1983)(Ultimate Play The Game)[16K].tzx\"."
+  },
+  "recordings": [
+   {
+    "name": "pssst_colours.json",
+    "md5": "1c06a618d582446ad15cadb05471f652",
+    "path": "pssst/pssst_colours.json",
+    "role": "The painted map (44 pictures, 13 fixed colours), staged beside the snapshot; not a recording. It holds the figures, so it is not in the repository."
+   },
+   {
+    "name": "pssst_loading.scr",
+    "md5": "6a50e4972029d63cea0ebbaf0b287ea0",
+    "path": "pssst/pssst_loading.scr",
+    "role": "The tape's loading screen (6,912 bytes), staged beside the snapshot; not a recording."
+   },
+   {
+    "name": "enNextZX.rom",
+    "md5": "8c34d957fb2cbbd0be423cea3b370fd5",
+    "path": "pssst/enNextZX.rom",
+    "role": "The Next's ROM file, for the verifier's ROM model; not a recording."
+   },
+   {
+    "name": "pssst_m2.rzx",
+    "md5": "082ca95560d51b9bf46aa393aae3054c",
+    "path": "pssst/pssst_m2.rzx",
+    "role": "Machine-played from the snapshot (Kempston), one unbroken recording of 20,097 frames, 7 games of the first level: the rzxarchive has a recording but denies its distribution."
+   },
+   {
+    "name": "pssst_m3.rzx",
+    "md5": "29b61290f011aaa6069378d056f8955f",
+    "path": "pssst/pssst_m3.rzx",
+    "role": "The same from another seed: 20,082 frames, 7 games."
+   }
+  ]
+ },
+ "modules": [
+  "pssst"
+ ],
+ "own_modules": [
+  "pssst"
+ ],
+ "data": [
+  "asm/pssst_hooks.asm",
+  "asm/pssst_tables.asm",
+  "docs/profiles/pssst.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm"
+ ],
+ "rebuild": {
+  "args": [],
+  "rzx": []
+ },
+ "verify": {
+  "args": [],
+  "rzx": [
+   "pssst_m2.rzx",
+   "pssst_m3.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 60,
+  "note": "Each hook against the original from one state: every register with R and all memory (the bitmap too) at the draw hook, the erase-only entries, the clear, the pace window's entries and ends and every draw from its entry; the object's sprites against the figure the original plots on an empty screen, in the object's colour; the colour paint's copy stores nothing and leaves everything else the game's; the IM 1 handler of the alt ROM image against Sinclair's at every interrupt; unit cases over every graphic."
+ },
+ "outputs": {
+  "plain": {
+   "file": "pssst.nex",
+   "md5": "acb40bf686174fcfc9ae2b68375faf2d"
+  },
+  "sprites": {
+   "file": "pssst_sprites.nex",
+   "md5": "275dcd59c5d7fc9563913619f2f117f2"
+  },
+  "enhanced": {
+   "file": "pssst_enhanced.nex",
+   "md5": "1a45b565ee8eb3e56b98be2e171fd0f0"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Pssst",
+  "engine_col": "pssst (pssst.md)",
+  "build": "pssst_sprites.nex 40ae6ece (the game draws as it does; every figure of the main object table a sprite on the same pixels in its own colour; the colour paint of those objects stores nothing; loading screen) + enhanced 6d14ba48 (44 pictures painted with 13 fixed colours, a first pass; a pixel left unpainted keeps the game's colour)",
+  "software": "Verify IDENTICAL on two whole machine-played recordings (40,181 frames, first level), both builds: 111,080 figures as sprites, 13,019,621 sprite pixels against the figure's model and, on Enhanced, every pixel's colour against the painted map; every register with R and all memory at every hook; the IM 1 handler compared at 36,814 interrupts; unit PASS on both builds (2,352 graphic cases over all 49 graphics, negative control 40 of 40); 6 of 6 broken builds detected; ROM path check pass",
+  "hardware": "untested (the patch runs from its menu in OverSpec)",
+  "next": "a recording played by hand into later levels; hardware test"
+ },
+ "checks": [
+  "asm2profile:pssst"
+ ],
+ "techniques": [
+  {
+   "application": "pssst.keep-ula",
+   "id": "patch.xor-overlay-keep-ula",
+   "revision": 2,
+   "target": "the game's plotter and bitmap unchanged; each object's sprites lie on the pixels it plots, in the object's colour; the colour paint's CALLs for those objects go to a copy that stores nothing",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "pssst.preserve-r",
+   "id": "patch.preserve-r",
+   "revision": 2,
+   "target": "HLIB_R_IN / hlib_r_set / HLIB_R_OUT in every hook (the game reads R)",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "pssst.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "HLIB_SPEED_IN at the plot's entries, HLIB_SPEED_OUT at their ends: the set-up runs at 28 MHz and pays for the draw hook",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "pssst.whole-altrom",
+   "id": "patch.whole-altrom-image",
+   "revision": 2,
+   "target": "Sinclair's ROM as the alt image with the hooks at 0x386E (0xFF there); the game runs the ROM's IM 1 handler, compared at every interrupt",
+   "phases": [
+    "setup"
+   ]
+  },
+  {
+   "application": "pssst.colour-map",
+   "id": "patch.runtime-colour-map",
+   "revision": 1,
+   "target": "a painted set changes only the patterns' nibbles and 13 fixed palette colours (nibbles 2-14 of every offset): nibble 1 stays the object's ink at run time; the hooks are the same",
+   "phases": [
+    "setup"
+   ]
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/pssst.md#build-stage-2-2026-11-20-asmpssst_hooksasm-nexclashpssstpy-after-jetpac_v11"
+   ],
+   "coverage": "Two machine-played recordings (40,179 frames, first level); every pace site compared in the replay. No JNext or hardware timing.",
+   "result": "The main loop is not frame-synced. The plot's set-up, a fixed stretch a draw, runs at 28 MHz and pays for the draw hook (as Jetpac 1.3); the colour paint's copy takes the original's time to the T state. Not measured as a whole."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/pssst.md#feasibility-playbook-3d-2026-11-20",
+    "games/pssst.md#build-stage-2-2026-11-20-asmpssst_hooksasm-nexclashpssstpy-after-jetpac_v11"
+   ],
+   "coverage": "Every screen writer of the first recording (survey); every CALL and JP from the handlers into the plot code listed; the colour paint's nine CALLs and JPs and every pointer at a graphic checked by the build; all 49 graphics through the plotter in the unit cases. First level only in play.",
+   "result": "The bitmap and all game memory but the colour cells of the objects with sprites stay the original's. The game runs the ROM's IM 1 handler: the alt ROM image is Sinclair's. It reads R: every hook leaves R as the original. A 16K game: nothing reads or writes above 0x7FFF, where the hook RAM is."
+  },
+  "decision": "As Jetpac's published patch (owner 2026-11-20: 'Let's finish off the ultimate games'): the game's own colours, moving figures as sprites; the flower, the leaves and the lives stay the game's.",
+  "next_experiment": "A recording played by hand into later levels; hardware: the checklist in games/pssst.md; the game's speed against the original over a minute of play: within 2%."
+ },
+ "checked": {
+  "deps": {
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/pssst_hooks.asm": "16605d1f1f5b6fa9",
+   "asm/pssst_tables.asm": "9001a848bb1f9a84",
+   "docs/profiles/pssst.json": "103dbbea428b9b93",
+   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "9958b776ee3b7443",
+   "nexclash/hooklib.py": "24241497925658d6",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/pssst.py": "b39d259162146fa8",
+   "nexclash/recolour.py": "e0c2de6bfad5c6fb",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "e26e1078eea4bfc2",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-20"
+ },
+ "verified": {
+  "deps": {
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/pssst_hooks.asm": "16605d1f1f5b6fa9",
+   "asm/pssst_tables.asm": "9001a848bb1f9a84",
+   "docs/profiles/pssst.json": "103dbbea428b9b93",
+   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "9958b776ee3b7443",
+   "nexclash/hooklib.py": "24241497925658d6",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/pssst.py": "b39d259162146fa8",
+   "nexclash/recolour.py": "e0c2de6bfad5c6fb",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "e26e1078eea4bfc2",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-20"
+ }
+}

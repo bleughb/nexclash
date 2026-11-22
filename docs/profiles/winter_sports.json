@@ -1,0 +1,29 @@
+{
+ "game": "Winter Sports (Electric Dreams Software, 1985, 48K)",
+ "engine": "winter_sports",
+ "signature": [
+  {
+   "addr": 25214,
+   "bytes": "140815f33e0fd3fecd6205"
+  },
+  {
+   "addr": 25536,
+   "bytes": "ff444f574e2f534c414c4f4d2020"
+  }
+ ],
+ "tape_sets": [
+  {
+   "set": "original_tap",
+   "md5": [
+    "a53ffe203db7109427c84fb438aa9ebe"
+   ]
+  },
+  {
+   "set": "original_tzx",
+   "md5": [
+    "e03cbff29d0954ce0e9ee95f033cdb09"
+   ]
+  }
+ ],
+ "hook": "nexclash/winter_sports.py asm_hook(): hand-assembled, 127 bytes at 0x6C00 (not an .asm file)"
+}
