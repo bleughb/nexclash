@@ -81,6 +81,14 @@ User-requested catalogue additions; the v3.4 schema and pilot workflow stay froz
 | New: patch.attribute-shadow (candidate); revised: patch.xor-overlay-keep-ula r2, detect.gameplay-screen-readers r2 | | Cauldron Q8; the overlay's other-writers failure; compiled-BASIC readers, `scan --writers` lists readers |
 | New: patch.layer2-half-pixel-scroll, patch.scenery-edge-masks, patch.figure-glide, patch.copper-palette-bands, optimise.flash-palette-offset (candidates) | | R-Type hybrid display (specnext PRs #97-#99, 2026-11-17); glide generalises Quazatron's |
 
+## 2026-11-22 - Castle Master renderer cards (candidates)
+
+Five candidates from the Castle Master conversion (a Next-native renderer beside the game's own redraw):
+patch.native-renderer-own-pages, patch.inbetween-views, verify.staged-port-gates,
+optimise.layer2-renderer-speed, patch.loader-screen-from-game-file. One game each; the lessons were
+`[local]` bullets in games/castle_master.md, now tagged to the cards. The implementation and harness
+scripts are in specnext reference/castle_master/build (not shared code). No runtime code changed.
+
 ## Cisco Heat v1.2 (2026-11-22)
 
 | Before | After | Why |

@@ -16,6 +16,7 @@ import importlib
 # (module, detector, extra condition on the auto arguments or None)
 ENGINES = [
     ('cisco_heat', 'is_cisco_heat', None),                               # Cisco Heat (128K), smooth engine
+    ('winter_sports', 'is_winter_sports', None),                        # Winter Sports (48K), six tape events embedded; plain build
     ('stock_car_3d', 'is_stock_car_3d', None),                           # 3D Stock Car Championship (48K)
     ('highway_encounter', 'is_highway_encounter', None),             # Highway Encounter (48K), optional Enhanced
     ('exolon', 'is_exolon', None),                                   # Exolon (128K), optional Enhanced
@@ -41,6 +42,9 @@ ENGINES = [
     ('nemesis', 'is_nemesis', None),                                      # Nemesis the Warlock (48K)
     ('jetpac_v11', 'is_jetpac', lambda a: getattr(a, 'altrom_fill', None) == 'whole'),  # Jet Pac v1.1: opt-in rework of jetpac
     ('jetpac', 'is_jetpac', None),                                        # Jetpac (16K)
+    ('pssst', 'is_pssst', None),                                          # Pssst (16K): the game's own colours
+    ('cookie', 'is_cookie', None),                                        # Cookie (16K): the game's own colours
+    ('tranz_am', 'is_tranz_am', None),                                    # Tranz Am (16K): the game's own colours
     ('tid128_v11', 'is_tid128_v11', None),                                # opt-in shared-library rework
     ('tid128', 'is_tid128', None),                                        # Treasure Island Dizzy 128K: opt-in rework of dizzy_patch
     ('loderunner_v3', 'is_loderunner_v3', None),                          # Lode Runner 128K v1.1: opt-in rework of loderunner_v2 (NEXCLASH_REWORK)
@@ -89,7 +93,11 @@ ENGINES = [
     ('gunfright', 'is_gunfright', None),                                  # Gunfright (48K): default and Enhanced
     ('army_moves', 'is_army_moves', None),                                # Army Moves (128K, both parts)
     ('game_over', 'is_game_over', None),                                  # Game Over (128K, both worlds)
+    ('simpsons', 'is_simpsons', None),                                    # The Simpsons: Bart vs. the Space Mutants (128K, a level a snapshot)
     ('gauntlet', 'is_gauntlet', None),                                    # Gauntlet (128K snapshot of the 48K game): painted tile layer
+    ('olli_and_lissa', 'is_olli_and_lissa', None),                        # Olli and Lissa (128K snapshot of the 48K game): figures as sprites
+    ('olli_and_lissa_3', 'is_olli_and_lissa_3', None),                    # Olli and Lissa III (48K): figures staged from the draw list
+    ('olli_and_lissa_2', 'is_olli_and_lissa_2', None),                    # Olli and Lissa II: Halloween (48K): default and Enhanced
     ('chase_hq', 'is_chase_hq', None),                                    # Chase H.Q. (128K): Speed, Enhanced in two sets (local art)
     ('atom_ant', 'is_atom_ant', None),                                    # Atom Ant (128K tape form): default and Enhanced
     ('silkworm', 'is_silkworm', None),                                    # Silkworm (128K): default and Enhanced

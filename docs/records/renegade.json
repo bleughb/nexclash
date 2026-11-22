@@ -82,16 +82,24 @@
    "file": "renegade_sprites.nex",
    "md5": "b4b452100f88d54415f3f5f11568c454"
   },
+  "sprites_nooutline": {
+   "file": "renegade_sprites_nooutline.nex",
+   "md5": "c8baf422e7a76776f10a48ac270dd1ae"
+  },
+  "sprites_blackoutline": {
+   "file": "renegade_sprites_blackoutline.nex",
+   "md5": "28e56c4fc2789efeecf054f5cb49c80c"
+  },
   "enhanced": {
    "file": "renegade_enhanced.nex",
-   "md5": "9ed0c98b03279f04ca18d6cae8fd8387"
+   "md5": "f60ec79d6dd0a62d1b3d262ecf394203"
   }
  },
  "repro": [],
  "status": {
   "title": "Renegade (128K)",
   "engine_col": "renegade128 (renegade.md)",
-  "build": "sprites b4b45210, Enhanced 9ed0c98b (.nxc v1.2: pace windows, R kept; v1.1 was 510cdd29)",
+  "build": "sprites b4b45210, Enhanced f60ec79d (no outline; v1.2 Enhanced with outline was 9ed0c98b); toggles Outline off c8baf422, Black outline 28e56c4f (jattree/nxc#8; not published)",
   "software": "Verify on 4 bot recordings, whole game; unit PASS; negatives detected; reaches gameplay in JNext 1.1.104 (no human recording)",
   "hardware": "untested",
   "next": "hardware test"
