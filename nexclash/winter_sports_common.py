@@ -151,15 +151,16 @@ def draw_wrapper(a, call_target, mode_addr, di_site=False, halts=1):
     a.e(0xF5, 0xC5)                               # push af / push bc  (the call's inputs)
     a.e(0x3A, a.w(mode_addr), 0xB7)               # ld a,(mode) / or a
     a.jr(0x20, '_op')
-    if di_site:
-        a.e(0xFB)                                 # ei
-    else:
-        a.e(0xED, 0x57)                           # ld a,i  (P/V = IFF2)
-        a.jp(0xE2, '_nohalt')                     # jp po,nohalt
-    a.e(0x06, halts)                              # ld b,halts
-    a.L('_h')
-    a.e(0x76)                                     # halt
-    a.jr(0x10, '_h')                              # djnz
+    if halts:
+        if di_site:
+            a.e(0xFB)                             # ei
+        else:
+            a.e(0xED, 0x57)                       # ld a,i  (P/V = IFF2)
+            a.jp(0xE2, '_nohalt')                 # jp po,nohalt
+        a.e(0x06, halts)                          # ld b,halts
+        a.L('_h')
+        a.e(0x76)                                 # halt
+        a.jr(0x10, '_h')                          # djnz
     a.L('_nohalt')
     if di_site:
         a.e(0xF3)                                 # di

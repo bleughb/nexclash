@@ -23,8 +23,8 @@ SPACING = 0x2C                                 # bytes reserved per wrapper (a w
 class Site:
     """One drawing call: `orig` = its bytes (CD lo hi, or F3 CD lo hi FB when di), `target` = the routine, `halts` = frames waited before it."""
 
-    def __init__(self, addr, target, di=False, halts=1):
-        self.addr, self.target, self.di, self.halts = addr, target, di, halts
+    def __init__(self, addr, target, di=False, halts=1, mark=True):
+        self.addr, self.target, self.di, self.halts, self.mark = addr, target, di, halts, mark      # halts 0: fast draw only; mark False: not an update marker
         self.orig = (bytes([0xF3]) if di else b'') + bytes([0xCD, target & 255, target >> 8]) + (bytes([0xFB]) if di else b'')
 
     @property
@@ -88,7 +88,7 @@ class PaceEvent:
         from .winter_sports_dh_test import _exec
         sim, kb, log = W._sim(z80, build, pages=pages, keys=self.flow(), hybrid=build)
         R, mem = sim.registers, sim.memory
-        marks = {s.marker for s in self.sites}
+        marks = {s.marker for s in self.sites if s.mark}
         st, rows, fast_out, left_fast = {}, [], 0, 0
         for f in range(frames):
             kb.frame = f
