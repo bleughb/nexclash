@@ -1,0 +1,24 @@
+{
+ "id": "lesson.layer2-priority-bit-foreground",
+ "kind": "fact",
+ "claim": "A Layer 2 palette priority bit can put chosen Layer 2 pixels above sprites, giving pixel-exact foreground such as bushes.",
+ "evidence": [
+  {
+   "game": "games/el_capitan_trueno.md",
+   "text": "A goblin passes behind a bush (Layer 2 priority) in the sprites build.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "words": [
+  "Layer 2",
+  "priority",
+  "foreground",
+  "bushes",
+  "sprites",
+  "palette"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

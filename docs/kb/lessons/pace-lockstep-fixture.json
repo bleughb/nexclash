@@ -1,0 +1,53 @@
+{
+ "id": "lesson.pace-lockstep-fixture",
+ "kind": "method",
+ "claim": "When the RNG or LD A,R depends on timing, neutralise it in both test copies (make it constant, LD A,I, or NOP the seed step) and cover every R read, or build and original play different games.",
+ "evidence": [
+  {
+   "game": "games/cobra.md",
+   "text": "First pace runs left the RNG in and diverged at update 3; the fixture fixed it.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/army_moves.md",
+   "text": "BA58 INC HL made NOP in both copies keeps pace runs in lockstep (test copies only).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/father_christmas.md",
+   "text": "LD A,R decides the elves' moves and R runs during HALT; a fixture making those reads constant keeps lockstep.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/that_sinking_feeling.md",
+   "text": "ROM-read RNG parts a 128K-ROM game from a Sinclair-ROM build, so random spawns differ.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/lunar_jetman.md",
+   "text": "LD A,R at 0x9466: pace by seed varied -25% to +18% over 8 JNext seeds; replay pace is the like-for-like figure.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/comando_quatro.md",
+   "text": "A full-snapshot scan found a third LD A,R that the first list missed.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "when": [
+  "exec.game_reads_r"
+ ],
+ "words": [
+  "LD A,R",
+  "RNG",
+  "fixture",
+  "lockstep",
+  "pace",
+  "seed",
+  "LD A,I"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

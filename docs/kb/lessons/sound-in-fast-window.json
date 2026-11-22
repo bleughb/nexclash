@@ -1,0 +1,27 @@
+{
+ "id": "lesson.sound-in-fast-window",
+ "kind": "pitfall",
+ "claim": "Check a 28 MHz window for sound first: a routine that only queues a sound may end the window, and a first pass that beeps needs catch-up at 7 MHz with the sound routines' first bytes swapped.",
+ "evidence": [
+  {
+   "game": "games/atic_atac.md",
+   "text": "A403 only queues the room's sound, so the window can end there; the first pass may beep, so it uses catch-up at 7 MHz.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "when": [
+  "routine.emits_timed_output"
+ ],
+ "words": [
+  "sound",
+  "28 MHz",
+  "beep",
+  "window",
+  "catch-up",
+  "7 MHz"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

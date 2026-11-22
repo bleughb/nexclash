@@ -1,0 +1,37 @@
+{
+ "id": "lesson.jnext-ram-dump-offset",
+ "kind": "fact",
+ "claim": "A JNext mem/ram.bin dump is physical SRAM with a 0x40000 offset before ordinary Next RAM and dedicated bank 5 video RAM; rebuild CPU memory through the MMU, never from raw file offsets.",
+ "limit": "Notes do not say whether the CSpect physical-read mismatch also holds.",
+ "evidence": [
+  {
+   "game": "games/exolon.md",
+   "text": "ram.bin includes a 0x40000 offset before ordinary Next RAM; asserting the hook-code signature first showed an all-zero free-pool count was the wrong offset.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/bruce_lee.md",
+   "text": "Ordinary RAM pages have a physical SRAM offset; reconstruct CPU RAM through the MMU and dedicated bank 5 VRAM, not raw offsets.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/inferno.md",
+   "text": "Physical SRAM includes a 040000 aperture offset.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "emulator",
+ "words": [
+  "JNext",
+  "ram.bin",
+  "SRAM",
+  "dump",
+  "offset",
+  "MMU",
+  "native snapshot",
+  "bank 5"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

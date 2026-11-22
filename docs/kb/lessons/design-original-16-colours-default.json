@@ -1,0 +1,26 @@
+{
+ "id": "lesson.design-original-16-colours-default",
+ "kind": "owner-rule",
+ "claim": "Default builds keep the original 16 colours with smoother, similar gameplay; anything beyond (extended colours, painted scenery, effects) is an option the player switches on in the patch menu.",
+ "evidence": [
+  {
+   "game": "games/winter_sports.md",
+   "text": "Owner priorities: default build in the original 16 colours, picture may be redrawn per pixel to remove attribute clash but only those colours; extra colour sets and toggles are byte differences in the .nxc (at most 4 toggles).",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "16 colours",
+  "attribute clash",
+  "per pixel",
+  "enhanced",
+  "colour set",
+  "default build",
+  "toggle",
+  "design rule"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

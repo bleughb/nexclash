@@ -1,0 +1,36 @@
+{
+ "id": "lesson.alt-rom-patch-location",
+ "kind": "pitfall",
+ "claim": "The alt ROM spare block 0x386E-0x3CFF is a patch location, but it copies NextZXOS ROM3, not Sinclair's all-0xFF area, so ROM data and vectors there must stay intact.",
+ "evidence": [
+  {
+   "game": "games/starquake.md",
+   "text": "NextZXOS ROM3 is not free at 0x386E: its IM 1 handler CALLs 0x386E and its UDG print JPs 0x387E.",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/inferno.md",
+   "text": "Intro uses IM 2 with I = 3B: ROM 3BFF-3C00 is its vector; hooks must leave them FF; JNext headless found it.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/nightshade.md",
+   "text": "192-231 ROM bytes the game runs or reads differ from Sinclair's; the ROM path check reports them.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "alt ROM",
+  "ROM3",
+  "0x386E",
+  "NextZXOS",
+  "0x3B00",
+  "0xFF",
+  "IM 2",
+  "spare block"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,24 @@
+{
+ "id": "lesson.reserved-transparent-palette-index",
+ "kind": "pitfall",
+ "claim": "An index that looks free for transparency may be a painted colour: reserve an exact duplicate, remap only at the final copy, keep source masks untouched, and reset the ULA bright-black entry when transparency changes.",
+ "evidence": [
+  {
+   "game": "games/head_over_heels.md",
+   "text": "Index 255 is painted white, not free transparency: duplicate index 71 reserved for transparency, painted 71 mapped to 63 only at the final display copy, ULA bright-black entry 24 reset to black.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "palette",
+  "transparency",
+  "index 255",
+  "remap",
+  "bright black",
+  "mask"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

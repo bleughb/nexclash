@@ -1,0 +1,41 @@
+{
+ "id": "lesson.pace-fixture-and-control",
+ "kind": "method",
+ "claim": "Use controlled fixtures with identical player states and the same time and random sources in both runs; natural encounter divergence is not pace evidence and identical seeds mean input is not arriving.",
+ "evidence": [
+  {
+   "game": "games/sabre_wulf.md",
+   "text": "Trials drifted apart until every time source of the logic was read from the round counter in both runs; then lockstep for 160-600 rounds.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/nodes_of_yesod.md",
+   "text": "Put the objects' own bytes in the audit state list: a time-dependent read before a fixed random sequence moves the sequence.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/underwurlde.md",
+   "text": "Natural-play traces diverge through R-dependent encounters and are not pace evidence; controlled pace trials over several starting video phases meet 2%.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/phantis.md",
+   "text": "Two pace seeds with identical numbers meant input was not reaching the game.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "card": "verify.update-locked-pace",
+ "words": [
+  "pace",
+  "fixture",
+  "control",
+  "lockstep",
+  "divergence",
+  "seed",
+  "input"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

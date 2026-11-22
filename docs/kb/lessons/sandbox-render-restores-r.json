@@ -1,0 +1,23 @@
+{
+ "id": "lesson.sandbox-render-restores-r",
+ "kind": "pitfall",
+ "claim": "A sandboxed re-render must restore the game's R register where the game reads R for gameplay.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "patch.preserve-r found the gameplay R read (0x9F6E -> 27391) that every sandbox render must restore.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "R register",
+  "sandbox",
+  "preserve R",
+  "render",
+  "gameplay"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

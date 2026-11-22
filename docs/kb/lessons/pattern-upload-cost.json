@@ -1,0 +1,35 @@
+{
+ "id": "lesson.pattern-upload-cost",
+ "kind": "fact",
+ "claim": "Building 4-bit patterns from game bytes at run time costs too much per pass; make them once, keep them in spare pages and send with OTIR, and treat the cache miss cost rather than the hit rate as what sets pace.",
+ "evidence": [
+  {
+   "game": "games/olli_and_lissa_3.md",
+   "text": "Run-time building cost 113 T a byte at 28 MHz; made once and kept in spare pages then OTIR, pace came out within 0.07%.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/quazatron.md",
+   "text": "Per-update pattern uploads of about 20k T overran the 33-66k T delay; an image-keyed cache came before limiter tuning.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/spellbound_magic_knight.md",
+   "text": "Knight conversion cache misses were the cost (+2.67% from image conversions).",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "card": "optimise.pattern-cache",
+ "words": [
+  "pattern upload",
+  "OTIR",
+  "cache miss",
+  "113 T",
+  "pace",
+  "spare pages"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

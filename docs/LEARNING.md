@@ -22,7 +22,7 @@ games/<game>.md "## Lessons": one bullet per finding - a new fact, a failed appr
 worked, a coverage limit - in one or two lines (observation, evidence, limit), starting with its
 disposition tag. Mark observed / inferred / demonstrated. Only "- " bullets (continuation lines
 indented) count; any other line in the section fails, so nothing is silently skipped. A stage with
-no reusable finding says so: `- [none: <why>]` (e.g. "hardware report only, nothing new"). A script that answered a question another
+no reusable finding says so: `- [none: <why>]`. A script that answered a question another
 game may ask goes to tools/probes/ (its README) the same day, not to a scratch folder.
 
 ## 2b. Friction sweep (stage end; learncheck)
@@ -31,7 +31,7 @@ games/<game>.md "## Friction": five bullets, each `- <key>: [tag] <answer>` (tag
 toolkit / verifier mistake that cost more than one attempt), `environment` (a git / harness /
 network workaround), `hand-rolled` (a missing command done by hand), `scratch` (scratchpad
 scripts: each kept in tools/probes/ or dropped, why). Toolkit lessons count, not only game facts.
-A `[local]` lesson naming shared code (simpool, rzx, z80tonex, ...) fails: it is a tool / doc / backlog.
+A `[local]` lesson naming shared code (simpool, rzx, z80tonex, ...) fails: it is a tool / doc / backlog / kb.
 
 ## 3. Dispositions (one or more per lesson, each must resolve)
 | Tag | Meaning | learncheck checks |
@@ -40,6 +40,7 @@ A `[local]` lesson naming shared code (simpool, rzx, z80tonex, ...) fails: it is
 | `[doc BRIEFING A1]` / `[doc docs/<X>.md §Heading]` / `[doc CLAUDE.md §Heading]` | a platform / toolkit fact in a shared doc | section resolves |
 | `[tool <ref>]` | implemented in shared code now | `nexclash.py <cmd>`, `nexclash.<module>`, `<module>.<function>` or a path resolves |
 | `[backlog C2 #N]` | a shared capability requested, not built | BRIEFING C2 item exists |
+| `[kb lesson.<id>]` | cross-game, no card / doc has room: a docs/kb/lessons/ file (tools/templates/lesson.json) | id exists |
 | `[probe tools/probes/<x>.py]` | kept as a reproducible probe | file, README row, docstring fields |
 | `[local: <reason>]` | true for this game only | a reason |
 | `[deferred C2 #N\|Open: reconsider when <condition>]` | unresolved; evidence kept there | target exists, a condition |
@@ -48,14 +49,14 @@ A `[local]` lesson naming shared code (simpool, rzx, z80tonex, ...) fails: it is
 Docs and cards change at once (they rebuild nothing). Executable changes keep their gates: a probe
 first, tested in `selftest --tools`; promotion to a shared command when a second game uses it
 (tools/probes/README.md); shared runtime code: `selftest --canary`, the maintainers' `--affected`.
-A game-specific fix is never assumed to generalise: `[local: ...]` is a valid outcome.
+`[local: ...]` is for what no other game can meet.
 
 ## 4. Cards (docs/techniques/STANDARD.md)
 New/revised cards: schema 4; candidates need a source (`examples` or `sources`), `**Assumptions.**`
 and `**Validation gap.**`. `active` needs a record's scoped `pass` result for its application.
-Migrate schema 3 when revised. Explain changes in the PR; regenerate with `python tools/techindex.py`.
+Explain changes in the PR; regenerate with `python tools/techindex.py`.
 
-## 5. Technique use (does the catalogue help?)
+## 5. Technique use
 games/<game>.md "## Technique use": one line per card or probe consulted,
 `- <card id | tools/probes/<x>.py>: used | helped | no help: <why> | corrected: <what>`.
 `python tools/learncheck.py --usage` counts distinct games separately from uses. Repeated use in one

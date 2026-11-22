@@ -1,0 +1,24 @@
+{
+ "id": "lesson.verifier-nextreg-read-not-port",
+ "kind": "pitfall",
+ "claim": "A verifier should not log the latch's IN as a port access: a NextREG read belongs to the NextREG model.",
+ "evidence": [
+  {
+   "game": "games/cyclone.md",
+   "text": "The latch's IN (0x253B) comes from the NextREG model (NextState.sel) instead of being logged as a port access.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "verifier",
+  "NextREG",
+  "port access",
+  "latch",
+  "IN 0x253B",
+  "model"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

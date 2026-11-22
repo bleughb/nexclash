@@ -1,0 +1,24 @@
+{
+ "id": "lesson.packed-loader-snapshot-stream-map",
+ "kind": "method",
+ "claim": "A loader snapshot holding the game packed takes its hook sites through a map of the packed stream's literal bytes, so the game unpacks with hooks in place.",
+ "evidence": [
+  {
+   "game": "games/flying_shark.md",
+   "text": "The snapshot stops at the loader's PAUSE 0 with the game packed; sites go in the stream's literal bytes (stream_map).",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "packed",
+  "loader",
+  "stream map",
+  "literal bytes",
+  "unpack",
+  "hook sites"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

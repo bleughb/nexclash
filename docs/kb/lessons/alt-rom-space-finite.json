@@ -1,0 +1,35 @@
+{
+ "id": "lesson.alt-rom-space-finite",
+ "kind": "pitfall",
+ "claim": "Alt ROM space is finite: call shared latch routines instead of inline macros when full, move state-page-only code to RAM, and check the size after every assemble.",
+ "evidence": [
+  {
+   "game": "games/commando.md",
+   "text": "With a full alt ROM one latch routine pair is called instead of macros inline (7 sites, 25 bytes); the alt ROM had 36 bytes left.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/jetpac.md",
+   "text": "Alt ROM block ends at 0x3CFF with 1 byte left; the extra 13 bytes would not fit.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/lunar_jetman.md",
+   "text": "State-page-only code moved to RAM, keeping the ROM at 914 bytes; check the size after every assemble.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "alt ROM",
+  "space",
+  "latch",
+  "macro",
+  "size",
+  "assemble",
+  "speed latch"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

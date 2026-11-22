@@ -1,0 +1,24 @@
+{
+ "id": "lesson.multi-event-tape-bank-hook",
+ "kind": "method",
+ "claim": "When a game loads several events from tape with its own loader, embed all events in banks and use a small hook that copies the chosen event instead of reading tape.",
+ "evidence": [
+  {
+   "game": "games/winter_sports.md",
+   "text": "Menu code reads each event with its own loader, using a 22-byte pseudo-header unlike the standard 19-byte header; the plain NEX holds events in banks 12-26 with a 127-byte hook; played on hardware.",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "design",
+ "words": [
+  "multi-load",
+  "tape events",
+  "bank embed",
+  "hook",
+  "pseudo-header",
+  "menu"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

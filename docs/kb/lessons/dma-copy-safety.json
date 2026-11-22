@@ -1,0 +1,25 @@
+{
+ "id": "lesson.dma-copy-safety",
+ "kind": "method",
+ "claim": "Select a DMA path only where capability and hardware-IM2 gates allow it, and make the CPU-only and unknown-core fallbacks pass the same ABI and negative controls.",
+ "evidence": [
+  {
+   "game": "games/gunfright.md",
+   "text": "DMA selected only where the capability and hardware-IM2 gate allows; CPU-only and older or unknown-core paths pass the same ABI and negative controls; 1,728 DMA gate/fallback cases.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "DMA",
+  "fallback",
+  "capability gate",
+  "hardware IM2",
+  "ABI",
+  "negative control",
+  "CPU-only"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

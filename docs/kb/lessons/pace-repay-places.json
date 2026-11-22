@@ -1,0 +1,46 @@
+{
+ "id": "lesson.pace-repay-places",
+ "kind": "fact",
+ "claim": "Added hook time can be repaid only where the original wastes some: a delay the game pads with, a fixed-length uncontended copy, the game's own long routine at 28 MHz, or a plot after the game's sync.",
+ "evidence": [
+  {
+   "game": "games/solomons_key.md",
+   "text": "The game pads each pass with (10 - figures) delay calls; repaying to the T-state gave +0.1% against +2.1% without.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/quazatron.md",
+   "text": "The update delay scales with droid count and vanishes at 6 or more blocks, so hook time must be repaid.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/scooby_doo.md",
+   "text": "Pace was won by running the game's own 21 ms scroll at 28 MHz (down to 4 ms).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/starquake.md",
+   "text": "Every plot follows the game's own sync (a HALT); added time near the frame's end went past the sync.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/page_pharaoh.md",
+   "text": "A game that waits for FRAMES needs no limiter round its plots.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "card": "patch.pace-limiter",
+ "words": [
+  "pace",
+  "repay",
+  "delay",
+  "debt",
+  "28 MHz",
+  "scroll",
+  "limiter"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

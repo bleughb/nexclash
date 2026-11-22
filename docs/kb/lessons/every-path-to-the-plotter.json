@@ -1,0 +1,29 @@
+{
+ "id": "lesson.every-path-to-the-plotter",
+ "kind": "pitfall",
+ "claim": "Before hooking a plotter, find all its callers and every writer of the undo pointer, since a second call site can reach it past the hook.",
+ "evidence": [
+  {
+   "game": "games/prince_of_the_yolkfolk.md",
+   "text": "A mirrored copy of the player is drawn through the same plotter by other call sites and a switched undo buffer.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/el_capitan_trueno.md",
+   "text": "The dragon energy bar is drawn by 0x8A0C through 0x82E4, past the figure hook, so it stays in the ULA.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "callers",
+  "plotter",
+  "second call site",
+  "mirrored copy",
+  "undo pointer",
+  "hook entry"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

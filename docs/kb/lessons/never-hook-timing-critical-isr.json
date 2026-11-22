@@ -1,0 +1,31 @@
+{
+ "id": "lesson.never-hook-timing-critical-isr",
+ "kind": "pitfall",
+ "claim": "Do not hook an ISR-called routine that is timing-critical (such as beeper music), and keep EXX / EX AF,AF' parity even inside an ISR hook because the handler restores registers by set.",
+ "evidence": [
+  {
+   "game": "games/treasure_island_dizzy.md",
+   "text": "Title-screen ISR 63328 plays beeper music (timing-critical: never hooked).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/spellbound_dizzy.md",
+   "text": "EXX / EX AF,AF' parity must stay even (the ISR restores registers by set).",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "when": [
+  "exec.isr_must_run_on_time"
+ ],
+ "words": [
+  "ISR hook",
+  "beeper music",
+  "EXX parity",
+  "timing-critical",
+  "handler"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

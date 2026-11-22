@@ -1,0 +1,41 @@
+{
+ "id": "lesson.displaced-loop-entries",
+ "kind": "pitfall",
+ "claim": "Entry-only checks of a patched routine miss loops that branch into displaced bytes; keep small whole loops in immutable trampolines or put the patch ahead of every back edge, and check through return.",
+ "evidence": [
+  {
+   "game": "games/head_over_heels.md",
+   "text": "Keep small whole loops in immutable trampolines, or move the patch ahead of every back edge; check original and patched routines through return and run the native room.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/monty_is_innocent.md",
+   "text": "In the fast C replay an interior of a patched entry hit once means an interrupt between its first instructions.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/highway_encounter.md",
+   "text": "The verifier must permit reached displaced interiors, not arbitrary interior jumps.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/lode_runner.md",
+   "text": "A game may call inside a routine: the gold's XOR enters 0x984A, not 0x983E; the tile model in verify found it at the first gold.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "card": "detect.routine-removal",
+ "words": [
+  "displaced bytes",
+  "loop",
+  "trampoline",
+  "interior entry",
+  "verifier",
+  "back edge",
+  "hook site"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

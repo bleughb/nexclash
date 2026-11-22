@@ -1,0 +1,24 @@
+{
+ "id": "lesson.pace-window-wrap-line-only",
+ "kind": "pitfall",
+ "claim": "A pace window that reads line and frame serial needs them in step at the wrap; a window under a frame can use the line wrap alone.",
+ "evidence": [
+  {
+   "game": "games/nodes_of_yesod.md",
+   "text": "pace_now's frame count and line wrap are not in step, so windows (all under a frame) use the line wrap alone and the serial only to say an interrupt came.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "pace",
+  "frame serial",
+  "line wrap",
+  "window",
+  "interrupt",
+  "limiter"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

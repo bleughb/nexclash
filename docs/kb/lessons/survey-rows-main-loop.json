@@ -1,0 +1,23 @@
+{
+ "id": "lesson.survey-rows-main-loop",
+ "kind": "pitfall",
+ "claim": "A survey row whose maximum T per call exceeds a frame is probably the main loop mis-attributed, not a drawing routine.",
+ "evidence": [
+  {
+   "game": "games/trap_door.md",
+   "text": "Survey row 43925 (0xAB95) 'called from top', max 21,457,175 T: main loop mis-attributed.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "survey",
+  "T per call",
+  "main loop",
+  "misattributed",
+  "routine row"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

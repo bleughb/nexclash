@@ -1,0 +1,35 @@
+{
+ "id": "lesson.shared-graphics-colour-identity",
+ "kind": "pitfall",
+ "claim": "Actors can share source bytes, so a colour map keyed on source address paints one actor on another; key colours to actor identity and check source identity, not only raw bytes.",
+ "evidence": [
+  {
+   "game": "games/gunfright.md",
+   "text": "Sheriff and bandits share bodies and legs, so a badge painted on one appears on the other; the fix uses the IX actor type with per-actor maps.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/heartland.md",
+   "text": "A record's frame number is not what is in the shared shift buffer at the plot: key colours to the bytes drawn.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/herbert.md",
+   "text": "A painted cache must check source identity as well as raw bytes, since another object with identical graphics can have different paint.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "design",
+ "card": "patch.runtime-colour-map",
+ "words": [
+  "colour map",
+  "shared graphics",
+  "actor identity",
+  "painting",
+  "source address",
+  "cache"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

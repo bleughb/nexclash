@@ -1,0 +1,30 @@
+{
+ "id": "lesson.equivalence-extremely-close",
+ "kind": "owner-rule",
+ "claim": "Gameplay must be extremely close to the original, not identical; keep exact matching where cheap, accept differences nothing reads, and name what consumes each preserved item.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Skipping the copier with recorded LD A,R values kept game RAM equal on levels 1-4 and 6: exact R, interrupt and copier-RAM preservation turned out unneeded.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/r_type.md",
+   "text": "Project equivalence is 'extremely close': the original game runs unchanged as the logic.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "equivalence",
+  "extremely close",
+  "exact match",
+  "R register",
+  "relax gates",
+  "consumer",
+  "1:1"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

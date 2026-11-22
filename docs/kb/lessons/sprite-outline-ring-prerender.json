@@ -1,0 +1,24 @@
+{
+ "id": "lesson.sprite-outline-ring-prerender",
+ "kind": "fact",
+ "claim": "A border drawn inside a figure's own cells cannot outline a figure that fills them; pre-render the outline one pixel bigger on every side as sprite patterns.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "Figure registry notes outlines pre-rendered one pixel bigger (pages 88-95); an earlier answer was all see-through figures with no outlines.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "outline",
+  "border",
+  "pre-render",
+  "ring",
+  "sprite",
+  "pixel bigger"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,25 @@
+{
+ "id": "lesson.snapshot-inert-engine-copy",
+ "kind": "pitfall",
+ "claim": "A snapshot taken in a BASIC loader shows only an inert source copy of the engine; pre-run the recording to the first frame where the engine is live, stopping before hardware detection.",
+ "evidence": [
+  {
+   "game": "games/spellbound_dizzy.md",
+   "text": "PC in ROM (PAUSE 0 before USR); the engine is found only as an inert copy; pre-run finishes any LDIR and stops before the Kempston detect.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "snapshot",
+  "loader",
+  "inert copy",
+  "prerun",
+  "LDIR",
+  "Kempston",
+  "engine live"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

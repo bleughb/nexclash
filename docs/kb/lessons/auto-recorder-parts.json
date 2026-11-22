@@ -1,0 +1,25 @@
+{
+ "id": "lesson.auto-recorder-parts",
+ "kind": "pitfall",
+ "claim": "The toolkit's automatic recorder writes parts from reloaded states; replay loses sync at the first part's end and parts cannot be joined, so use an explorer that plays on from the current state.",
+ "evidence": [
+  {
+   "game": "games/olli_and_lissa_3.md",
+   "text": "Automatic recordings in parts lose sync at the first part's end; an explorer that plays on from the current state gave one unbroken, replaying recording.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "recorder",
+  "recording",
+  "parts",
+  "explorer",
+  "desync",
+  "replay",
+  "rzx"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

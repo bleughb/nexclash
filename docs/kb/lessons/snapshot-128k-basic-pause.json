@@ -1,0 +1,33 @@
+{
+ "id": "lesson.snapshot-128k-basic-pause",
+ "kind": "method",
+ "claim": "A 128K snapshot paused in BASIC can be stepped to its USR with a key held, or started at the USR address; check PC, the stack and PROG before believing the game needs ROM.",
+ "evidence": [
+  {
+   "game": "games/pac_mania.md",
+   "text": "The PAUSE/USR path runs through the 128 editor and the 0x5B00 ROM-switching code, which NEXLOAD overwrites; the snapshot stops at PC 0x1F3D.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/three_weeks.md",
+   "text": "Stepped with a key held to PC 0x6C00; the .nex starts there and 39 bytes go in SIT1.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "facts": {
+  "machine": "128K"
+ },
+ "words": [
+  "128K",
+  "BASIC",
+  "PAUSE",
+  "USR",
+  "snapshot",
+  "entry point",
+  "SIT1"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

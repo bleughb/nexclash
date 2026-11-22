@@ -1,0 +1,42 @@
+{
+ "id": "lesson.add-virtual-read-only-where-data-shows",
+ "kind": "method",
+ "claim": "Add a virtual read of figure pixels only where the game's logic reads them; where boxes overwrite the player it would be wrong.",
+ "evidence": [
+  {
+   "game": "games/treasure_island_dizzy.md",
+   "text": "Bubbles read Dizzy's pixels: dedicated bubble virtual read; 7,436 bubble tests (340 Dizzy-dependent) identical.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/dizzy_ultimate_cartoon_adventure.md",
+   "text": "Collision reads ULA ^ objects ^ Dizzy through a virtual read; hooks compute the original's new byte from the virtual old one.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/fantasy_world_dizzy.md",
+   "text": "No game logic reads the player's pixels: no virtual read, since boxes overwrite the player.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/magicland_dizzy.md",
+   "text": "Original leaves ghost pixels; nothing else reads that buffer, so no virtual read is needed.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "when": [
+  "screen.gameplay_reads_figure_pixels"
+ ],
+ "words": [
+  "virtual read",
+  "collision",
+  "pixel test",
+  "bubbles",
+  "screen reader",
+  "ghost pixels"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

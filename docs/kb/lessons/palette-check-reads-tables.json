@@ -1,0 +1,29 @@
+{
+ "id": "lesson.palette-check-reads-tables",
+ "kind": "pitfall",
+ "claim": "A palette check that reads tables does not show what is drawn, so check the indices actually drawn, and replay the boot's NEXTREG writes against the painted map rather than comparing fixed colours as symbols.",
+ "evidence": [
+  {
+   "game": "games/alien_8.md",
+   "text": "The never-drawn default entries were flagged: default figures take entries 64 + ink, so check drawn indices before claiming a shade is seen.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/cookie.md",
+   "text": "palette_wrong replays the boot's NEXTREG writes against the painted map, since fixed colours compared only as symbols missed the real RGB.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "palette_check",
+  "palette_wrong",
+  "NEXTREG",
+  "drawn indices",
+  "RGB",
+  "palette"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

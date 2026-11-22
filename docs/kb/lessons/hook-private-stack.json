@@ -1,0 +1,29 @@
+{
+ "id": "lesson.hook-private-stack",
+ "kind": "method",
+ "claim": "Give hooks a private stack in the mapped hook page, or make them stackless, so dead game-stack bytes do not differ in whole-RAM comparisons.",
+ "evidence": [
+  {
+   "game": "games/gunfright.md",
+   "text": "A private stack inside the mapped hook page removes dead game-stack residue; full 48K native comparison then needs no stack exclusions.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/ikari_warriors.md",
+   "text": "A hook that CALLs on the game's stack changes dead bytes visible in lockstep; the hide hooks were made stackless.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "stack",
+  "hook",
+  "dead bytes",
+  "lockstep",
+  "comparison",
+  "private stack"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

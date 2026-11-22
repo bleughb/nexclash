@@ -1,0 +1,50 @@
+{
+ "id": "lesson.published-build-steps-in-engine",
+ "kind": "pitfall",
+ "claim": "Build steps that run outside the engine (start-state derivation, loading-screen step, recolour, byte transplant) are not reproducible, so move each into the engine's auto build.",
+ "evidence": [
+  {
+   "game": "games/commando.md",
+   "text": "The derivation (clean_start) and the screen (loading_nex) now run in auto.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/atic_atac.md",
+   "text": "The v1.3 patch was engine output plus v1.0 Enhanced store and screen bank via delta scripts; moved into the engine.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/smash_tv.md",
+   "text": "Start state and loading screen were steps outside the engine; to48, has_trainer_prompt and loading_nex now run in auto.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/starquake.md",
+   "text": "The approved .nex came from a script after the engine (mkload.py); importing it needs the step in the engine.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/rambo.md",
+   "text": "The approved build had two steps outside the engine, moved from the run folder.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/game_over.md",
+   "text": "The constant for a build without sets (83) was above the real top (75), so main's default differed.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "engine",
+  "auto",
+  "loading screen",
+  "post-step",
+  "reproducible",
+  "published build",
+  "MD5"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

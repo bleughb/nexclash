@@ -1,0 +1,28 @@
+{
+ "id": "lesson.windows-dis-py-shadows-stdlib",
+ "kind": "pitfall",
+ "claim": "A scratch file named dis.py in the working folder shadows the standard library and breaks imports such as PIL's PNG support.",
+ "evidence": [
+  {
+   "game": "games/mad_mix_2.md",
+   "text": "A helper named dis.py in the working folder shadows the standard library's and breaks PIL's PNG import.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/castle_master.md",
+   "text": "A helper named dis.py shadows the stdlib dis (3 times).",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "dis.py",
+  "shadow stdlib",
+  "PIL",
+  "import",
+  "working folder"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

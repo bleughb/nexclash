@@ -1,0 +1,51 @@
+{
+ "id": "lesson.archive-poke-translation",
+ "kind": "pitfall",
+ "claim": "Archive POKs cannot be imported blindly: check each against the disassembly, translate addresses, and test every one per release.",
+ "evidence": [
+  {
+   "game": "games/flying_shark.md",
+   "text": "One .pok entry is an address in the packed snapshot; the rest are live addresses the unpack overwrites; translated through the stream map.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/gryzor.md",
+   "text": "The .pok's [L1] lines name another release's addresses (data or mid-instruction here); only some work, proven on the simulator.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/cobra.md",
+   "text": "Infinite Lives also pokes 34925, a graphics pointer; the single-poke trainer is used.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/sabre_wulf.md",
+   "text": "Of 16 trainers, See Ending and Paralyzed Enemies freeze the game; Immunity still loses lives.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/highway_encounter.md",
+   "text": "The archive POK has overlapping immunity variants at 40905.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/beyond_the_ice_palace.md",
+   "text": "The POK labelled 128K has 48K addresses; translated by matching instructions.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "POK",
+  "trainer",
+  "cheat",
+  "infinite lives",
+  "import-pok",
+  "relocation",
+  "release",
+  "archive"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

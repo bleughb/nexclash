@@ -1,0 +1,30 @@
+{
+ "id": "lesson.invisible-bitmap-ink-equals-paper",
+ "kind": "pitfall",
+ "claim": "Original INK=PAPER or black attributes can hide intact or stale bitmap bytes, so a colour layer must reproduce that visibility change and checks must compare visible colours, not bitmap bytes alone.",
+ "evidence": [
+  {
+   "game": "games/highway_encounter.md",
+   "text": "INK=PAPER can hide an intact bitmap; matching bitmap bytes alone does not prove the ending screen.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/inferno.md",
+   "text": "Black attributes hide stale bitmap bytes; compare visible colours while retaining original bytes.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "card": "detect.buffer-layout-producer",
+ "words": [
+  "INK=PAPER",
+  "attributes",
+  "hidden bitmap",
+  "visible colour",
+  "colour layer",
+  "stale bytes"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

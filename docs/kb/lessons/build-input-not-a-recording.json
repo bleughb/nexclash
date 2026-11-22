@@ -1,0 +1,28 @@
+{
+ "id": "lesson.build-input-not-a-recording",
+ "kind": "fact",
+ "claim": "For tape-reading games the record's snapshot is the emulator start state and tapes are alternative input sets; every set must rebuild the same outputs.",
+ "evidence": [
+  {
+   "game": "games/new_zealand_story.md",
+   "text": "Start state is the record's snapshot (128K game loaded from Side A); built from its tape sets; Side B .tzx supplies world block 37; the published .nxc accepts the same releases.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "facts": {
+  "machine": "128K"
+ },
+ "words": [
+  "tape",
+  "tzx",
+  "record",
+  "tape set",
+  "start state",
+  "nxc",
+  "loading screen"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

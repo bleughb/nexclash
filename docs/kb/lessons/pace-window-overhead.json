@@ -1,0 +1,49 @@
+{
+ "id": "lesson.pace-window-overhead",
+ "kind": "pitfall",
+ "claim": "A pace window's own overhead at 28 MHz is scaled by K like the work inside it, so count it as debt or a constant or the target drifts.",
+ "evidence": [
+  {
+   "game": "games/ruff_and_reddy.md",
+   "text": "A nested debt reading at each of up to six plots added about a line of error each, scaled by K (37 lines of target); one reading at the end of the pass fixed it.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/quazatron.md",
+   "text": "About 100 nested hooks in a scroll strip add 2% unless counted as a constant (C_LIB).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/renegade.md",
+   "text": "The window's own hook time goes to the debt by W_PASS and W_FIX, as K would scale it.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/abu_simbel.md",
+   "text": "Pattern work is debt, including the window's own 28 MHz overhead.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/r_type.md",
+   "text": "Broad timer windows counted wrapper work as original producer time and regressed pace.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "when": [
+  "hook.faster_than_original"
+ ],
+ "card": "patch.pace-limiter",
+ "words": [
+  "pace",
+  "window",
+  "overhead",
+  "28 MHz",
+  "debt",
+  "K",
+  "nested hooks"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

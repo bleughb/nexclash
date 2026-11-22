@@ -1,0 +1,26 @@
+{
+ "id": "lesson.replace-display-not-recognise",
+ "kind": "failed-approach",
+ "claim": "Re-identifying every 8x8 cell of the original's drawn buffer cost about 93% of the CPU and gave no hardware scrolling; keep the original logic hidden, draw scenery on Layer 2 and choose sprites by graphic.",
+ "limit": "One game (R-Type); the 93% figure is as stated in the notes, not re-measured.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "The cell-recognition route with identity caches could not give hardware scrolling and its per-update identity work cost about 93% of the CPU; it was parked for the hybrid display (original logic runs, Layer 2 plus sprites own the display).",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "hybrid",
+  "Layer 2 scroll",
+  "sprites by graphic",
+  "pixel recognition",
+  "hardware scroll",
+  "cell recognition",
+  "sprite"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

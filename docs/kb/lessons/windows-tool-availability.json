@@ -1,0 +1,24 @@
+{
+ "id": "lesson.windows-tool-availability",
+ "kind": "pitfall",
+ "claim": "On Windows the pinned assembler and zx0 packer may be missing; check they exist before trusting selftest, since .nxc test failures without zx0 are environmental.",
+ "evidence": [
+  {
+   "game": "sessions",
+   "text": "Pinned sjasmplus ships only for Linux; a local 1.24.0 reproduced hook bytes; zx0 binary matched the pin; without zx0, 17 of 20 selftest --tools failures were .nxc tests.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "sjasmplus",
+  "zx0",
+  "Windows",
+  "selftest --tools",
+  "nxc",
+  "pinned"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

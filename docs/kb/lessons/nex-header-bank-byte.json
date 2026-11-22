@@ -1,0 +1,23 @@
+{
+ "id": "lesson.nex-header-bank-byte",
+ "kind": "pitfall",
+ "claim": "The converter leaves NEX header byte 8 at 0, so a build that adds banks above 47 must set it.",
+ "evidence": [
+  {
+   "game": "games/3d_stock_car_championship.md",
+   "text": "The engine sets it in auto() for a build that adds banks above 47; the converter leaves it at 0.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "NEX header",
+  "byte 8",
+  "banks above 47",
+  "converter",
+  "auto"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

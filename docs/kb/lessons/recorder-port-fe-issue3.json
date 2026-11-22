@@ -1,0 +1,25 @@
+{
+ "id": "lesson.recorder-port-fe-issue3",
+ "kind": "pitfall",
+ "claim": "A recorder that returns 0xFF on port FE makes a game that compares whole port values ignore every key, with no warning; use an Issue 3 style recorder and check that scripted keys visibly move the player.",
+ "evidence": [
+  {
+   "game": "games/abu_simbel.md",
+   "text": "record returned 0xFF on port FE and the game ignored every key; recordings made with an Issue 3 rule fixed it. JNext gives bit 6 = 0 and both builds move; a real Next's EAR input is unchecked.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "recorder",
+  "port FE",
+  "0xFF",
+  "Issue 3",
+  "keys ignored",
+  "floating bus",
+  "record"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

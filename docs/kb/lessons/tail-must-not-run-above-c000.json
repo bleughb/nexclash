@@ -1,0 +1,29 @@
+{
+ "id": "lesson.tail-must-not-run-above-c000",
+ "kind": "pitfall",
+ "claim": "A start-up tail at 0xC000 or above vanishes when its own OUT to 0x7FFD maps the game's bank back there; pick a tail site below it that is write-first over the whole recording.",
+ "evidence": [
+  {
+   "game": "games/el_capitan_trueno.md",
+   "text": "Default tail put below SP at 0xFF97 vanished; choose_tail_addr refuses above 0xC000 only for 128K; nextboot.check caught it; fix --tail 0xA6C9 (write-first over the whole RZX).",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/rainbow_islands.md",
+   "text": "128K start-up tail must end below 0xC000 (its 7FFD write remaps C000-FFFF); tail at 0x9F00.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "toolkit",
+ "words": [
+  "tail",
+  "0xC000",
+  "7FFD",
+  "start-up tail",
+  "boot check",
+  "nextboot"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

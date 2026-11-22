@@ -1,0 +1,24 @@
+{
+ "id": "lesson.ddma-core-version-gating",
+ "kind": "owner-rule",
+ "claim": "Every new game needs a DMA and core 3.03.00 DDMA review with a no-blitter fallback; builds on plain zxnDMA predating the rule have the review open.",
+ "evidence": [
+  {
+   "game": "games/chase_hq.md",
+   "text": "Enhanced uses plain zxnDMA; no core 3.03.00 DDMA or blitter path evaluated (pilot predates the rule); the review (docs/DDMA.md) is open.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "zxnDDMA",
+  "blitter",
+  "core 3.03.00",
+  "DDMA review",
+  "zxnDMA",
+  "fallback"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

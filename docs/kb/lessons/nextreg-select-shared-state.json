@@ -1,0 +1,51 @@
+{
+ "id": "lesson.nextreg-select-shared-state",
+ "kind": "pitfall",
+ "claim": "An interrupt between a hook's OUT 0x243B and IN 0x253B leaves another NextREG selected, so the main line reads the wrong register; do the pair with interrupts off or have every interrupt reselect NR 7.",
+ "limit": "A lockstep verifier must model NextREG or it answers IN 0x253B with game input.",
+ "evidence": [
+  {
+   "game": "games/into_the_eagles_nest.md",
+   "text": "HLIB_SPEED_IN latched a line number as the clock. Fix: pace held in every interrupt and NR 7 selected again before it returns.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/silkworm.md",
+   "text": "Same race showed as a lone 175 ms update once in about 1,500; found via pace tables. The replay now checks the latched clock.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/new_zealand_story.md",
+   "text": "An interrupt left NR 0x53 selected and its page was latched as the speed, so the game ran at 28 MHz until reset.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/head_over_heels.md",
+   "text": "The mutation selector is now latched inside the entry DI window; boundary injection caught the old version while register/R and RAM still matched.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/knight_tyme.md",
+   "text": "The lockstep verifier fed port reads from the recording, so IN 0x253B returned a game input; it now answers 0x253B from its NextREG model.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/castle_master.md",
+   "text": "The race check m3b_race covers MMU register reads under DI.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "platform",
+ "words": [
+  "NextREG",
+  "0x243B",
+  "0x253B",
+  "interrupt",
+  "speed latch",
+  "select port",
+  "DI"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

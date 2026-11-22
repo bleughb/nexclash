@@ -1,0 +1,36 @@
+{
+ "id": "lesson.interrupts-taken-is-a-pace",
+ "kind": "pitfall",
+ "claim": "A hook that holds interrupts off can lose interrupts while update pace stays in range, so game clock and music run slow; read 'interrupts taken' beside update pace.",
+ "evidence": [
+  {
+   "game": "games/silkworm.md",
+   "text": "A stack wipe under DI lost 6% of the interrupts; interrupts on between rows fixed it.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/rainbow_z80n.md",
+   "text": "A turbo limiter running the game frame with interrupts off loses the interrupt a long frame spans; recovered from raster wraps and credited to the limiter (verify, 9 unit cases, control; not on hardware).",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "facts": {
+  "interrupts": "off"
+ },
+ "when": [
+  "exec.isr_must_run_on_time"
+ ],
+ "card": "patch.isr-deferral",
+ "words": [
+  "interrupts taken",
+  "DI",
+  "pace",
+  "lost interrupts",
+  "music",
+  "limiter"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

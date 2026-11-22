@@ -1,0 +1,29 @@
+{
+ "id": "lesson.simpool-copy-results",
+ "kind": "pitfall",
+ "claim": "A simulator from simpool.machine is shared per slot name: copy result registers and memory before the slot is reused, and give runs that must coexist different slot names.",
+ "evidence": [
+  {
+   "game": "games/nemesis_the_warlock.md",
+   "text": "Original and patched runs shared slot 'p'; the second reset the first, giving a false 'memory differs'.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/bruce_lee.md",
+   "text": "Copy result registers and memory before reusing a simulator pool slot.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "simpool",
+  "simulator",
+  "slot",
+  "verifier",
+  "copy",
+  "false result"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

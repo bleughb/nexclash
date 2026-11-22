@@ -1,0 +1,23 @@
+{
+ "id": "lesson.mid-routine-entries-hook-state",
+ "kind": "pitfall",
+ "claim": "When other routines enter a set-up past its start, the hook cannot tell whose figure it is from IX alone: the game's own entry must mark the draw, and an event that starts mid-draw must be given what earlier hooks left.",
+ "evidence": [
+  {
+   "game": "games/tranz_am.md",
+   "text": "The game's own entry marks a draw (a byte in hook RAM); the draw hook places sprites only for a marked draw; an unmarked one changes nothing.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "mid-routine entry",
+  "mark",
+  "IX",
+  "hook state",
+  "draw hook"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

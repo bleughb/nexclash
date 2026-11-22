@@ -1,0 +1,24 @@
+{
+ "id": "lesson.sjasmplus-condition-code-names",
+ "kind": "pitfall",
+ "claim": "Do not name a routine or label after a Z80 condition code or mnemonic; sjasmplus refuses it.",
+ "evidence": [
+  {
+   "game": "games/nemesis_the_warlock.md",
+   "text": "'po' is a Z80 condition code (call po = parity odd): sjasmplus refused the routine name; renamed pout.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "sjasmplus",
+  "condition code",
+  "po",
+  "reserved name",
+  "label",
+  "assembler"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

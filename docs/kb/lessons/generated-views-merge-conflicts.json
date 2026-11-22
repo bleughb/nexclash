@@ -1,0 +1,25 @@
+{
+ "id": "lesson.generated-views-merge-conflicts",
+ "kind": "method",
+ "claim": "Generated status and verification views conflict on every parallel merge; rebuild them from the evidence records instead of hand-editing, and merge one pull request at a time.",
+ "evidence": [
+  {
+   "game": "sessions",
+   "text": "Parallel game pull requests conflicted in the generated status and verification files; recipe used for nine PRs: merge main, take main's copy, rerun the views tools and doccheck, merge one at a time.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "merge conflict",
+  "generated files",
+  "STATUS",
+  "VERIFICATION",
+  "records views",
+  "doccheck",
+  "rebuild"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

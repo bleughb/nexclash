@@ -1,0 +1,50 @@
+{
+ "id": "lesson.pace-averages-hide-scene-types",
+ "kind": "pitfall",
+ "claim": "Whole-run pace averages hide scene-specific costs, so measure rooms, transitions and actor modes separately and report slow updates, drift and largest excursion as separate numbers.",
+ "evidence": [
+  {
+   "game": "games/dizzy_ultimate_cartoon_adventure.md",
+   "text": "Opening-room timings missed a room-transition penalty; bench the original recording's room starts separately.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/booty.md",
+   "text": "A room at 28 MHz needs its original time back: fit over all rooms, then wait at the game's clock.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/gunfright.md",
+   "text": "A fixture starting in a duel or busy-looking death is not a sustained live scene; split windows by actor type or mode.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/knight_lore.md",
+   "text": "A room entry costs about 0.2 s more than the original before the limiter repays it.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/herbert.md",
+   "text": "A rare per-update water strip invokes 22 direct glyph hooks in one room; measure every room.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/olli_and_lissa_3.md",
+   "text": "A steady 0.07% drift was counted as 13 frames ahead; steady drift and bursts are two numbers.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "pace",
+  "average",
+  "room transition",
+  "per room",
+  "drift",
+  "scene types",
+  "audit"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

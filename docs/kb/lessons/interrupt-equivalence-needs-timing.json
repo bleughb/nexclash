@@ -1,0 +1,28 @@
+{
+ "id": "lesson.interrupt-equivalence-needs-timing",
+ "kind": "pitfall",
+ "claim": "Injection checks alone can miss a stack race: also count original handler entries against hardware acknowledgements and re-run the failing input, because equal counts do not prove equal timing.",
+ "evidence": [
+  {
+   "game": "games/head_over_heels.md",
+   "text": "Injection checks missed the native stack race; a 25.132 ms gap needed a separate per-row poll even with matching counts.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "when": [
+  "exec.isr_must_run_on_time"
+ ],
+ "card": "patch.isr-deferral",
+ "words": [
+  "interrupt",
+  "acknowledgement",
+  "handler entries",
+  "timing",
+  "stack race",
+  "per-row poll"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

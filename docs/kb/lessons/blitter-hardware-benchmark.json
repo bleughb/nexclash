@@ -1,0 +1,27 @@
+{
+ "id": "lesson.blitter-hardware-benchmark",
+ "kind": "fact",
+ "claim": "Measured on a 192x64 block, DDMA constant fill (0.07 us a byte) beat CPU PUSH fill (0.20); dithered fills cannot use it, a pattern-row copy is no faster than PUSH, and per-row jobs lose.",
+ "limit": "Hardware is assumed equal to CSpect in the notes; JNext 1.3.0 has no DDMA.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "CSpect 4.5.9, 192x64 block, us a byte: LDIR 0.76, zxnDMA 0.18-0.21, DDMA 2D copy 0.18, PUSH fill 0.20, DDMA constant fill 0.07; dither rules constant fill out; only the view copy gains.",
+   "shown_on": "cspect"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "platform",
+ "words": [
+  "blitter",
+  "DMA",
+  "LDIR",
+  "PUSH fill",
+  "benchmark",
+  "CSpect",
+  "constant fill",
+  "zxnDDMA"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

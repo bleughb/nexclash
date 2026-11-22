@@ -1,0 +1,30 @@
+{
+ "id": "lesson.nxc-tape-patch-recipe",
+ "kind": "method",
+ "claim": "Where auto cannot make an NXC patch, give each build option its own byte so each variant is a valid menu toggle, use --start and --tape-bank for tape games, and rebuild every option byte for byte from the patch and tape.",
+ "evidence": [
+  {
+   "game": "games/cisco_heat.md",
+   "text": "One byte per build option (25 fps 2 bytes, smooth 1, car 1), verified per variant; --tape-bank 8,9,11; build_screen points at the tape's screen; each variant's MD5 rebuilt from the tape and the loader run on the Z80 harness.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/3d_stock_car_championship.md",
+   "text": "This repo's packager could not make an option needing more memory (SET3) until nexclash/nxc.py was re-vendored.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "NXC",
+  "tape",
+  "toggle",
+  "tape-bank",
+  "build_screen",
+  "variants",
+  "SET3"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

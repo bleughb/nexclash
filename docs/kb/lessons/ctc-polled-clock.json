@@ -1,0 +1,24 @@
+{
+ "id": "lesson.ctc-polled-clock",
+ "kind": "method",
+ "claim": "CTC channel 3 with 32 T ticks can serve as a polled clock for T-exact waits.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "CTC ch 3 polled with 32 T ticks places beeper OUTs at original T and the limiter at the original time; model OUT -24..+56 T.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "CTC",
+  "channel 3",
+  "polled clock",
+  "T-states",
+  "timer",
+  "32 T tick"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,29 @@
+{
+ "id": "lesson.sites-found-by-bytes",
+ "kind": "method",
+ "claim": "The same plotter in another game is found by its bytes with addresses left out, and hook addresses then move game by game.",
+ "evidence": [
+  {
+   "game": "games/pssst.md",
+   "text": "The same plotter as a published game's is found by its bytes with the addresses left out.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/that_sinking_feeling.md",
+   "text": "AGD build addresses differ between games; hook sites were found by the routine's bytes.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "site search",
+  "bytes",
+  "address map",
+  "port engine",
+  "hook sites",
+  "AGD"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

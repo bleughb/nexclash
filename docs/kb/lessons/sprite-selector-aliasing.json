@@ -1,0 +1,29 @@
+{
+ "id": "lesson.sprite-selector-aliasing",
+ "kind": "pitfall",
+ "claim": "NextReg 0x34 and port 0x303B/0x57 use separate sprite selectors; a model that aliases them approves builds that show stale copies or echoes.",
+ "evidence": [
+  {
+   "game": "games/herbert.md",
+   "text": "A simulator that aliases them falsely approves stale copies; explicit port selection and a broken-selector negative now cover it.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/heartland.md",
+   "text": "hooklib.NextModel let NextReg 0x34 set the attribute port's sprite (real machine only with lockstep on): a build relying on it passed every check and showed echoes; sprite 0 now chosen via 0x303B.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "emulator",
+ "words": [
+  "sprite selector",
+  "port 57",
+  "NextReg 0x34",
+  "NextModel",
+  "lockstep",
+  "echo"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

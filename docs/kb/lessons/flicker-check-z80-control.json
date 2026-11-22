@@ -1,0 +1,25 @@
+{
+ "id": "lesson.flicker-check-z80-control",
+ "kind": "pitfall",
+ "claim": "The flicker check can read zero transients from a .z80 control because its screen is not in the run's bank 5 VRAM file; use a plain .nex as the control.",
+ "evidence": [
+  {
+   "game": "games/cobra.md",
+   "text": "With a .z80 control the original's attribute transients read 0 (its screen is not in that run's bank 5 VRAM file) although it flashes the same cells.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "emulator",
+ "words": [
+  "flicker",
+  "control",
+  "z80",
+  "attribute transients",
+  "bank 5",
+  "VRAM",
+  "nex"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

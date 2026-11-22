@@ -1,0 +1,30 @@
+{
+ "id": "lesson.fuse-autosave-in-rzx",
+ "kind": "pitfall",
+ "claim": "RZX files recorded with Fuse autosave supposedly off can still hold autosave snapshots; count and strip them before replay.",
+ "evidence": [
+  {
+   "game": "games/everyones_a_wally.md",
+   "text": "Recording had 11 autosave snapshots stripped before use (15,225 frames).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/rainbow_islands.md",
+   "text": "Notes ask for recordings with autosave off from 'Record from snapshot' and use stripped recordings for all work.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "Fuse",
+  "autosave",
+  "RZX",
+  "strip",
+  "snapshot",
+  "desync",
+  "record from snapshot"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

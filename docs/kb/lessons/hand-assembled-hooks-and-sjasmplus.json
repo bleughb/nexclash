@@ -1,0 +1,24 @@
+{
+ "id": "lesson.hand-assembled-hooks-and-sjasmplus",
+ "kind": "pitfall",
+ "claim": "In sjasmplus, ld a,(EXPR) assembles as a memory read even when EXPR is a constant; use an EQU.",
+ "evidence": [
+  {
+   "game": "games/atic_atac.md",
+   "text": "ld a,(EXPR) is a memory read even for a constant EXPR: use an EQU.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "sjasmplus",
+  "ld a",
+  "EXPR",
+  "EQU",
+  "memory read",
+  "assembler"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

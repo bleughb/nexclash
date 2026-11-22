@@ -1,0 +1,23 @@
+{
+ "id": "lesson.address-map-matches-following-code",
+ "kind": "pitfall",
+ "claim": "An address map matches code that follows, not code that was inserted: check every after-the-call address is call site + 3 in the new game.",
+ "evidence": [
+  {
+   "game": "games/stormbringer.md",
+   "text": "A return address taken from a window match landed 7 bytes late.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "address map",
+  "return address",
+  "call site",
+  "port engine",
+  "inserted code"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

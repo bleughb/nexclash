@@ -1,0 +1,24 @@
+{
+ "id": "lesson.sprite-order-and-layers",
+ "kind": "fact",
+ "claim": "With NextReg $15 bit 6 = 0 the higher sprite number draws on top, so objects meant to sit behind others need lower numbers; layer order is global, not per object.",
+ "evidence": [
+  {
+   "game": "games/rainbow_islands.md",
+   "text": "NextReg $15 bit 6 = 0 (reset value, never set): the higher sprite number is drawn over the lower; up to 116 sprites in all seen.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "words": [
+  "sprite order",
+  "NextReg 0x15",
+  "priority",
+  "depth",
+  "sprite number",
+  "layer order"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,24 @@
+{
+ "id": "lesson.main-loop-28mhz-isr-3mhz",
+ "kind": "method",
+ "claim": "When the beeper routines run only from the interrupt handler, run game logic at 28 MHz and drop to 3.5 MHz for the original handler, which keeps pitch and timing; first check which routines the handler calls.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "Speed: 28 MHz from the level draw to the next Layer 2 off; title, scores and name entry run at 3.5 MHz for busy-loop timing; the native ISR (all beeper sound) always runs at 3.5 MHz.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "28 MHz",
+  "3.5 MHz",
+  "ISR",
+  "beeper",
+  "speed switch",
+  "pitch"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

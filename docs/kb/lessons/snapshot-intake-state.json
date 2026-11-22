@@ -1,0 +1,43 @@
+{
+ "id": "lesson.snapshot-intake-state",
+ "kind": "pitfall",
+ "claim": "Check what a snapshot really holds at intake: archive labels can be wrong, empty banks show the game's limit, and a dump saved mid-routine may leave no tail place.",
+ "evidence": [
+  {
+   "game": "games/atom_ant.md",
+   "text": "The archive's 48K-128K label is true only of the tape; the .z80 is a 48K dump with no music, and the tape's last block loads only on a 128K machine.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/altered_beast.md",
+   "text": "Banks 3, 4, 6 are empty and bank 7 nearly so: check which banks are zero at intake; a multiload game on a snapshot is one level.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/fantasy_world_dizzy.md",
+   "text": "A 128K dump saved mid-routine (SP inside the plotter's data) leaves no tail place; an alternate dump saved at the title was used.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/gauntlet.md",
+   "text": "A block snapshot starts at the rewind tape prompt.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "facts": {
+  "machine": "128K"
+ },
+ "words": [
+  "snapshot",
+  "128K",
+  "banks",
+  "intake",
+  "tail",
+  "tape prompt",
+  "label"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}
