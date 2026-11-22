@@ -133,11 +133,11 @@
   },
   "enhanced": {
    "file": "silkworm_enhanced.nex",
-   "md5": "39489b1b91cc147325a08682e1727e6d"
+   "md5": "b90dbd935048c4d63f4f0ae18778b244"
   },
   "enhanced_loading": {
    "file": "silkworm_enhanced_loading.nex",
-   "md5": "10956537b3e843f11dc911a6f09d6676"
+   "md5": "48fc71b1f87b360ec497e8d787f7f522"
   }
  },
  "repro": [],
