@@ -30,7 +30,9 @@
   "asm/jetpac_v11_hooks.asm",
   "asm/jetpac_v11_tables.asm"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"
@@ -150,7 +152,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "8163679cd401837e",
-   "nexclash/hooklib.py": "41b4e53c9a89032c",
+   "nexclash/hooklib.py": "0bda486825c673e8",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/jetpac.py": "45c94da9f459d514",
@@ -186,7 +188,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "8163679cd401837e",
-   "nexclash/hooklib.py": "41b4e53c9a89032c",
+   "nexclash/hooklib.py": "0bda486825c673e8",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/jetpac.py": "45c94da9f459d514",

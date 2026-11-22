@@ -45,7 +45,9 @@
   "docs/profiles/altered_beast.json",
   "asm/altered_beast_hooks.asm"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"
