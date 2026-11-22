@@ -15,15 +15,23 @@ FIGS    EQU 42030               ; five records, 13 bytes each
 NFIG    EQU 5
 GFX     EQU 0x6000              ; frame images, 32 bytes each
 
-        MACRO HK_IN
-        push af
+        MACRO HK_IN                     ; the caller's speed (NR 7 bits 1:0) kept on the stack (alt ROM: no RAM latch;
+        push af                         ; card patch.restore-speed), then 28 MHz
         push bc
         push de
         push hl
+        ld bc,0x243B
+        ld a,7
+        out (c),a
+        inc b
+        in a,(c)
+        and 3
+        push af
         nextreg 0x07,3
         ENDM
         MACRO HK_OUT
-        nextreg 0x07,0
+        pop af
+        nextreg 0x07,a                  ; the caller's speed back
         pop hl
         pop de
         pop bc
@@ -46,7 +54,12 @@ neg_fig: call show1
         cp NFIG
         jr nz,fg_loop
         pop ix
-        HK_OUT
+        pop af                  ; HK_OUT, written out for the negative control's label
+neg_spd: nextreg 0x07,a
+        pop hl
+        pop de
+        pop bc
+        pop af
         ret
 
 ; ---- 34894 LD HL,16384 -> JP e_cls: the clear-screen routine ---------------------------------------------------
