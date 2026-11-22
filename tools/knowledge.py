@@ -52,6 +52,7 @@ TAG = re.compile(r'\[(card|doc|tool|backlog|probe|kb|local|deferred|none)\b:?\s*
 USE = re.compile(r'([\w./-]+):\s*(used|helped|no help|corrected)\b:?\s*(.*)')
 RISKS = 'docs/risks.json'
 LESSONS = 'docs/kb/lessons.json'
+ORIGINS = ('notes', 'sessions')        # a shared lesson no games/<game>.md holds: maintainers' notes / working sessions
 TERM = re.compile(r'\b(?:0x[0-9A-Fa-f]{4}|(?=[0-9]*[A-F])[0-9A-F]{4}|[A-Za-z]+_[A-Za-z_]+|[A-Z][A-Z0-9]{3,}|[A-Z][a-z]+[A-Z]\w*)\b')
 
 
@@ -368,9 +369,11 @@ def check():
         if not re.fullmatch(r'lesson\.[a-z0-9-]+', x.get('id') or '') or x['id'] in ids:
             fail.append('%s: id must be unique lesson.<name>' % where)
         ids.add(x.get('id'))
-        for k in ('title', 'text', 'sources', 'words'):
+        for k in ('title', 'text', 'words'):
             if not x.get(k):
                 fail.append('%s needs %s' % (where, k))
+        if not x.get('sources') and x.get('origin') not in ORIGINS:
+            fail.append('%s needs sources, or origin (%s) when no game file holds it' % (where, ' | '.join(ORIGINS)))
         if x.get('level') not in LEVELS:
             fail.append('%s: level %r (one of %s)' % (where, x.get('level'), ', '.join(LEVELS)))
         for p in x.get('when', []):
@@ -487,7 +490,7 @@ def main(argv):
         sh, own = find(words, shared(), [r for r in rows() if r['type'] == 'lesson'])
         for x in sh:
             print('%s  %s (%s; %s)%s\n    %s' % (x['id'], x['title'], x['level'], ', '.join(
-                os.path.basename(s)[:-3] for s in x['sources']), '  card ' + x['card'] if x.get('card') else '', x['text']))
+                os.path.basename(s)[:-3] for s in x.get('sources') or []) or x.get('origin'), '  card ' + x['card'] if x.get('card') else '', x['text']))
         for r in own[:top]:
             print('%s  %s' % (r['doc'], r['text'][:300]))
         more = ' (first %d: -n N for more)' % top if len(own) > top else ''
