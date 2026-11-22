@@ -62,10 +62,33 @@ def selftest_flags():
 
 
 @functools.lru_cache(maxsize=None)
-def _tree(path):
-    """The module's syntax tree, parsed once per run (module_names, engine_contract, auto_contract and copied_pins all
-    walk the same files; Codex review P3). Read only: callers never change it."""
-    return ast.parse(open(path, encoding='utf-8').read())
+def _facts(path):
+    """What the checks read from a module, parsed once per run and kept small (every module's syntax tree held for
+    the run peaked at ~520 MiB; Codex review): top-level names, each top-level function's call names, the 32-hex
+    string literals. SyntaxError for a file that does not parse."""
+    t = ast.parse(open(path, encoding='utf-8').read())
+    names, calls = set(), {}
+    for n in t.body:
+        if isinstance(n, (ast.FunctionDef, ast.ClassDef)):
+            names.add(n.name)
+            if isinstance(n, ast.FunctionDef):
+                calls[n.name] = frozenset(getattr(c.func, 'id', None) or getattr(c.func, 'attr', None) or ''
+                                          for c in ast.walk(n) if isinstance(c, ast.Call))
+        elif isinstance(n, ast.Assign):
+            names.update(x.id for x in n.targets if isinstance(x, ast.Name))
+        elif isinstance(n, (ast.Import, ast.ImportFrom)):
+            names.update((a.asname or a.name).split('.')[0] for a in n.names)
+    md5s = frozenset(n.value for n in ast.walk(t) if isinstance(n, ast.Constant) and isinstance(n.value, str)
+                     and re.fullmatch(r'[0-9a-f]{32}', n.value))
+    return {'names': frozenset(names), 'calls': calls, 'md5s': md5s}
+
+
+@functools.lru_cache(maxsize=None)
+def _engines():
+    """nexclash/engines.py's ENGINES table (read, not imported): ((module, detector), ...)."""
+    t = ast.parse(open(os.path.join(ROOT, 'nexclash', 'engines.py'), encoding='utf-8').read())
+    table = next(n.value for n in t.body if isinstance(n, ast.Assign) and getattr(n.targets[0], 'id', '') == 'ENGINES')
+    return tuple((e.elts[0].value, e.elts[1].value) for e in table.elts)
 
 
 @functools.lru_cache(maxsize=None)
@@ -73,18 +96,9 @@ def module_names():
     defs = {}
     for p in glob.glob(os.path.join(ROOT, 'nexclash', '*.py')) + glob.glob(os.path.join(ROOT, 'tools', '*.py')):
         try:
-            t = _tree(p)
+            defs[os.path.splitext(os.path.basename(p))[0]] = set(_facts(p)['names'])
         except SyntaxError:
             continue
-        names = set()
-        for n in t.body:
-            if isinstance(n, (ast.FunctionDef, ast.ClassDef)):
-                names.add(n.name)
-            elif isinstance(n, ast.Assign):
-                names.update(x.id for x in n.targets if isinstance(x, ast.Name))
-            elif isinstance(n, (ast.Import, ast.ImportFrom)):
-                names.update((a.asname or a.name).split('.')[0] for a in n.names)
-        defs[os.path.splitext(os.path.basename(p))[0]] = names
     return defs
 
 
@@ -103,12 +117,9 @@ CONTRACT = ('auto', 'verify', 'unit_tests', 'load_profile', 'CMP')     # docs/EN
 
 def engine_contract():
     """docs/ENGINE_CONTRACT.md REQUIRED names in every module of nexclash/engines.py (read, not imported)."""
-    t = _tree(os.path.join(ROOT, 'nexclash', 'engines.py'))
-    table = next(n.value for n in t.body if isinstance(n, ast.Assign) and getattr(n.targets[0], 'id', '') == 'ENGINES')
     out = collections.defaultdict(list)
     defs = module_names()                                # once: it parses every module (was once per engine, 90 s)
-    for e in table.elts:
-        mod, det = e.elts[0].value, e.elts[1].value
+    for mod, det in _engines():
         names = defs.get(mod, set())
         miss = [x for x in (det,) + CONTRACT if x not in names]
         if miss:
@@ -131,21 +142,14 @@ def auto_contract():
     """docs/ENGINE_CONTRACT.md auto(): it runs the unit tests and the negative controls (a call whose name has
     'unit' / 'neg', in auto or one call deep), and an engine replaying through simrun.play_rzx defines on_desync
     (without it a lost sync is a warning and the run passes on the frames before it)."""
-    t = _tree(os.path.join(ROOT, 'nexclash', 'engines.py'))
-    table = next(n.value for n in t.body if isinstance(n, ast.Assign) and getattr(n.targets[0], 'id', '') == 'ENGINES')
     out = collections.defaultdict(list)
-
-    def calls(fn):
-        return {getattr(n.func, 'id', None) or getattr(n.func, 'attr', None) or '' for n in ast.walk(fn)
-                if isinstance(n, ast.Call)}
-    for mod in sorted({e.elts[0].value for e in table.elts}):
+    for mod in sorted({m for m, _ in _engines()}):
         src = open(os.path.join(ROOT, 'nexclash', mod + '.py'), encoding='utf-8').read()
-        tree = _tree(os.path.join(ROOT, 'nexclash', mod + '.py'))
-        defs = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}
-        c = calls(defs['auto']) if 'auto' in defs else set()
+        calls = _facts(os.path.join(ROOT, 'nexclash', mod + '.py'))['calls']     # top-level function -> its call names
+        c = set(calls.get('auto', ()))
         for name in list(c):
-            if name in defs and name != 'auto':
-                c |= calls(defs[name])
+            if name in calls and name != 'auto':
+                c |= calls[name]
         ok = any('unit' in x.lower() for x in c) and any('neg' in x.lower() for x in c)
         if not ok and mod not in AUTO_LEGACY:
             out['engine contract: auto() must run unit_tests and the negative controls'].append('nexclash/%s.py' % mod)
@@ -166,14 +170,10 @@ SHARED_MD5 = {'cc822d044ec89ffcffbfb3a122f4d088': 'the emu256 256-colour palette
 
 def copied_pins():
     """Every 32-hex string literal in the engine modules: one owned by two engines (not SHARED_MD5) fails."""
-    t = _tree(os.path.join(ROOT, 'nexclash', 'engines.py'))
-    table = next(n.value for n in t.body if isinstance(n, ast.Assign) and getattr(n.targets[0], 'id', '') == 'ENGINES')
     where = collections.defaultdict(set)
-    for mod in sorted({e.elts[0].value for e in table.elts}):
-        tree = _tree(os.path.join(ROOT, 'nexclash', mod + '.py'))
-        for n in ast.walk(tree):
-            if isinstance(n, ast.Constant) and isinstance(n.value, str) and re.fullmatch(r'[0-9a-f]{32}', n.value):
-                where[n.value].add(mod)
+    for mod in sorted({m for m, _ in _engines()}):
+        for v in _facts(os.path.join(ROOT, 'nexclash', mod + '.py'))['md5s']:
+            where[v].add(mod)
     out = collections.defaultdict(list)
     for v, mods in sorted(where.items()):
         if len(mods) > 1 and v not in SHARED_MD5:
