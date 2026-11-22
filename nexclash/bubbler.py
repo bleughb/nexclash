@@ -178,7 +178,10 @@ class EnhancedPatch(Patch):
         palette=[]
         for i,rgb in enumerate(self.art['palette']):
             r,g,b=[(v*7+127)//255 for v in rgb]
-            palette.extend([0xE3,0]if i==255 else[(r<<5)|(g<<2)|(b>>1),b&1])
+            v=(r<<5)|(g<<2)|(b>>1)
+            # 0xE3 is Layer 2's transparent colour (NextReg 0x14): a real Next compares the RGB, not the index, so an
+            # opaque colour that maps to it shows the ULA through (Tom's #3, the right border); bright magenta -> 0xE7
+            palette.extend([0xE3,0]if i==255 else[0xE7 if v==0xE3 else v,b&1])
         self.stub_extra=bytes.fromhex(h['setup'])+bytes(palette)
         self.site_rows={int(k):v for k,v in profile['sites'].items()}
         self.sites=[(a,bytes(peek(a+i)for i in range(row['size'])),
