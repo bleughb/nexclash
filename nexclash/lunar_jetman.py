@@ -144,7 +144,7 @@ def _shape(ink, Wd, Hd, outline=True):
     return out
 
 
-def fig_image(m, p):
+def fig_image(m, p, outline=True):
     """32 x 32 image (outline margin 1): graphic rows bottom first, 2 bytes per row."""
     H = m[p]
     ink = set()
@@ -155,10 +155,10 @@ def fig_image(m, p):
             for i in range(8):
                 if b & (0x80 >> i):
                     ink.add((1 + 8 * j + i, r))
-    return _shape(ink, 32, 32), H
+    return _shape(ink, 32, 32, outline), H
 
 
-def truck_image(m, p):
+def truck_image(m, p, outline=True):
     """80 x 32 image: W bytes x H rows, bottom row first; bottom 16 rows bright white, rest bright cyan."""
     W, H = m[p], m[p + 1]
     ink = {}
@@ -169,7 +169,7 @@ def truck_image(m, p):
             for i in range(8):
                 if b & (0x80 >> i):
                     ink[(1 + 8 * j + i, r)] = 15 if k < 16 else 13
-    sh = _shape(set(ink), 80, 32)
+    sh = _shape(set(ink), 80, 32, outline)
     out = {}
     for q, c in sh.items():
         out[q] = ink[q] if c == 1 else (8 if c == 2 else 8)     # fill black; outline black (white figure)
@@ -189,7 +189,7 @@ def patterns(img, cols, rows):
     return bytes(out)
 
 
-def build_data(m):
+def build_data(m, outline=True):
     """-> (state page, {page: bytes}, info)"""
     figs, trucks = graphic_lists(m)
     pages = {}
@@ -210,13 +210,13 @@ def build_data(m):
         idx[p & 0x1FFF] = k + 1
     pages[IDX_PAGE] = idx
     for k, p in enumerate(figs):
-        img, H = fig_image(m, p)
+        img, H = fig_image(m, p, outline)
         img = {q: c for q, c in img.items()}
         pat = patterns(img, 2, 2)
         pg = FP0 + k // 16
         pages.setdefault(pg, bytearray(8192))[(k % 16) * 512:(k % 16) * 512 + 512] = pat
     for k, p in enumerate(trucks):
-        img, W, H = truck_image(m, p)
+        img, W, H = truck_image(m, p, outline)
         pat = patterns(img, 5, 2)
         pg = TP0 + k // 6
         pages.setdefault(pg, bytearray(8192))[(k % 6) * 1280:(k % 6) * 1280 + 1280] = pat
@@ -308,8 +308,9 @@ def colour_offset(attr):
 class LunarJetmanPatch:
     name = 'Lunar Jetman figures -> hardware sprites (altrom hooks, stores NOP)'
 
-    def __init__(self, prof=None, enhanced=False, encrypted=False, j256=None):
+    def __init__(self, prof=None, enhanced=False, encrypted=False, j256=None, outline=False):
         self.enhanced = enhanced
+        self.outline = outline
         self.j256 = j256 or J256
         self.encrypted = encrypted
         self.prof = prof or load_profile()
@@ -373,7 +374,7 @@ class LunarJetmanPatch:
         if any(ram[TAIL_ADDR - 0x4000:TAIL_ADDR - 0x4000 + self.max_tail]):
             raise ValueError('printer buffer 0x5B00-0x5B7F is not empty')
         m0 = bytes(0x4000) + bytes(ram)
-        self.state, self.pages, self.info = build_data_enh(m0, self.j256) if self.enhanced else build_data(m0)
+        self.state, self.pages, self.info = build_data_enh(m0, self.j256, self.outline) if self.enhanced else build_data(m0, self.outline)
         st = bytearray(self.state)
         if any(st[STCODE:STCODE + len(self.stcode)]) or STCODE + len(self.stcode) > WHERE:
             raise ValueError('state page code does not fit at 0x%04X' % STCODE)
@@ -591,6 +592,18 @@ def build(z80, out, name, say=print):
             ld = f[:-4] + '_loading.nex'
             open(ld, 'wb').write(loading_nex(open(f, 'rb').read(), open(scr, 'rb').read()))
             say('Loading   : %s  %s  (the tape\'s screen held by bank 34 until a key or 5 s)' % (os.path.basename(ld), md5(ld)))
+        # the "Outline" toggle (off by default: the base build has none): the same build with the one-pixel black
+        # outline in the images (the .nxc's --toggle "Outline=NEX", with or without the colour set)
+        po = LunarJetmanPatch(enhanced=enh, encrypted=True, j256=j256, outline=True)
+        fo = os.path.join(out, '%s_%s_outline.nex' % (name, tag))
+        convert(z80, fo, patch=po, quiet=True)
+        bad = check(fo, z80, patch=po, tail=(0x5B00, 0x5B80))
+        ok = ok and not bad
+        say('%-10s: %s  %s  boot %s' % ((tag + ' outline').capitalize(), os.path.basename(fo), md5(fo), 'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:300]))
+        if os.path.exists(scr):
+            ld = fo[:-4] + '_loading.nex'
+            open(ld, 'wb').write(loading_nex(open(fo, 'rb').read(), open(scr, 'rb').read()))
+            say('Loading   : %s  %s' % (os.path.basename(ld), md5(ld)))
     return ok, s0, j256
 
 
@@ -944,9 +957,9 @@ def _no_white_edge(out, sh, repl):
     return out
 
 
-def fig_image_enh(m, p, temps, fam):
+def fig_image_enh(m, p, temps, fam, outline=True):
     ink = _fig_ink(m, p)
-    sh = _shape(ink, 32, 32)
+    sh = _shape(ink, 32, 32, outline)
     f = fam.get(p, (LGREY, LGREY, DGREY, CYAN, YELLOW))
     if p in JETMAN or f == 'jetman':
         col, repl = _paint_jetman(ink, sh, temps), LGREY
@@ -979,7 +992,7 @@ def _wheels(ink, H):
     return [((c[0] + c[-1]) / 2, H - 4.5, (c[-1] - c[0]) / 2 + 2.5, 6.0) for c in cl if c[-1] - c[0] >= 8]
 
 
-def truck_image_enh(m, p):
+def truck_image_enh(m, p, outline=True):
     W, H = m[p], m[p + 1]
     ink = set()
     for k in range(H):
@@ -989,7 +1002,7 @@ def truck_image_enh(m, p):
             for i in range(8):
                 if b & (0x80 >> i):
                     ink.add((1 + 8 * j + i, r))
-    sh = _shape(ink, 80, 32)
+    sh = _shape(ink, 80, 32, outline)
     wh = _wheels(ink, H) if H == 27 else []          # the 22 rover frames (not its debris)
     out = {}
     for (x, y), c in sh.items():
@@ -1026,19 +1039,19 @@ def palette_enh():
     return bytes(pal)
 
 
-def build_data_enh(m, path=None):
-    st, pages, info = build_data(m)
+def build_data_enh(m, path=None, outline=True):
+    st, pages, info = build_data(m, outline)
     temps = jet_templates(m, path)
     fam = families(m)
     figs, trucks = info['figs'], info['trucks']
     dpages = pages
     pages = {k: bytearray(v) for k, v in pages.items()}
     for k, p in enumerate(figs):
-        pat = patterns(fig_image_enh(m, p, temps, fam), 2, 2)
+        pat = patterns(fig_image_enh(m, p, temps, fam, outline), 2, 2)
         pg = FP0 + k // 16
         pages[pg][(k % 16) * 512:(k % 16) * 512 + 512] = pat
     for k, p in enumerate(trucks):
-        pat = patterns(truck_image_enh(m, p), 5, 2)
+        pat = patterns(truck_image_enh(m, p, outline), 5, 2)
         pg = TP0 + k // 6
         pages[pg][(k % 6) * 1280:(k % 6) * 1280 + 1280] = pat
     for pg in pages:            # the same opaque pixels as the default images, nibble for nibble
