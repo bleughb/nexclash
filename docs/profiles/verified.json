@@ -227,6 +227,14 @@
     "sprites": "0a9357198747b9db78648c36b8bb25a4"
    }
   },
+  "0244e9b61aa18d6a9f1e77d102da1ea9": {
+   "game": "Finders Keepers",
+   "doc": "finders_keepers.md",
+   "nex": {
+    "plain": "b434bc905a813514567d3cbd38dbe670",
+    "sprites": "ba99b0cb1058987d0ab4549eac9ce46e"
+   }
+  },
   "c545645a8688f24428492937125fbfcd": {
    "game": "Flying Shark",
    "doc": "flying_shark.md",
