@@ -45,7 +45,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Midnight Resistance (128K) (midnight_resistance): `midnight_resistance.nex` 6d489652889fcfbadb7980c4fe92806e, `midnight_resistance_sprites.nex` f28fbbc0e861c5aebcfd47b9de583837; verified 2026-11-21
 - Smash TV (smash_tv): `smash_tv.nex` 68b2f357221f36338d7ec704b15560b4, `smash_tv_sprites.nex` af7a59f22315e03299bda91758fbe20e; verified 2026-11-20
 - Target Renegade (128K) (target_renegade): `target_renegade.nex` 452e75d8ba20171f9a4a3dc6f7b451d6, `target_renegade_sprites.nex` d8e3e19f2d92cad896b4931fa0c9162a; verified 2026-11-20
-- Jetpac (jetpac): `jetpac.nex` abbbaae6b77a27b8b89d272d33d32327, `jetpac_sprites.nex` e45b0d5549ead9dd610f3fffa326636e; verified 2026-11-20
+- Jetpac (jetpac): `jetpac.nex` abbbaae6b77a27b8b89d272d33d32327, `jetpac_sprites.nex` cd416e6392e44423646e2f78ce849269; verified 2026-11-22
 - Lode Runner (lode_runner): `lode_runner.nex` 96b073771a9f712f37f3ff97f2dafb44, `lode_runner_sprites.nex` 49a1719bdf70d5db3da4eaf4c0d66b34; verified 2026-11-20
 - Match Day (match_day): `match_day.nex` 7241054fac66f2752c4f7375de91a874, `match_day_sprites.nex` f7a8e6ad4f2e8c7ff7c9f3e37c955cfc; verified 2026-11-05
 - Cyclone (cyclone): `cyclone.nex` 0497202d81162430984beb99d2903794, `cyclone_sprites.nex` 75110dbddf06df41baad6f8d3ca81905; verified 2026-11-20

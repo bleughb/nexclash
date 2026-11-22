@@ -677,9 +677,13 @@ def _t_iff(code, syms):
 # the stack forms existed; the back-catalogue speed fix takes each off this list. A new engine is never added here.
 SPEED_LEGACY = {
     'atic_atac_hooks.asm', 'atic_atac_v14_hooks.asm', 'cauldron_hooks.asm', 'gauntlet_hooks.asm', 'incredible_shrinking_fireman_hooks-add-GPT6_ASTRA.asm',
-    'inferno_hooks.asm', 'jetpac_hooks.asm', 'matchday_hooks.asm', 'matchday_v21_hooks.asm', 'new_zealand_story_hooks.asm',
+    'inferno_hooks.asm', 'matchday_hooks.asm', 'matchday_v21_hooks.asm', 'new_zealand_story_hooks.asm',
     'rainbow_hooks.asm', 'rainbow_z80n_hooks.asm', 'robin_of_the_wood_hooks.asm', 'trueno_hooks.asm', 'wally_hooks.asm',
     'altered_beast_hooks.asm', 'jsw_hooks.asm'}       # the last two: published 2026-11-21, landed in main after the audit
+# Shipped in jattree/nxc (fix these): altered_beast, atic_atac_v14, gauntlet, jsw, matchday_v21, new_zealand_story,
+# rainbow_z80n, robin_of_the_wood. Not shipped (frozen earlier versions or no patch; their outputs stay): atic_atac,
+# cauldron (v1.1 ships, own hooks), incredible_shrinking_fireman GPT6 (OPUS ships), inferno, matchday (v21 ships),
+# rainbow (z80n ships), trueno, wally (wally2 ships, keeps the speed).
 _SPEED_RE = re.compile(r'^\s*(?:[A-Za-z_.][\w.]*:?)?\s*nextreg\s+(?:0x0?7|\$0?7|7|07h)\s*,\s*([^\s;]+)', re.I)
 
 
