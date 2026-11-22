@@ -1,0 +1,28 @@
+{
+ "id": "lesson.copper-wait-line-equality",
+ "kind": "pitfall",
+ "claim": "A Copper WAIT matches its line only for equality (the position is at-or-past), so a WAIT for a line the beam has passed holds until the next frame; and the Copper counts the left border of line n + 1 as line n.",
+ "limit": "From the book, not measured here. The last position a WAIT can reach is h = 55 on a 456-dot line and 54 on a 448-dot line.",
+ "evidence": [
+  {
+   "game": "reference",
+   "source": "I. Novak, Unraveling the ZX Spectrum Next, Vol 1 (2026; core 3.03.03), chapter 18",
+   "text": "The Copper's horizontal count starts 12 dots before the display area and its line number moves on there, so dot 408 of line 99 is the left edge of line 100's border; a list whose WAITs are out of line order stalls for a frame.",
+   "shown_on": "documentation"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "words": [
+  "copper",
+  "WAIT",
+  "line",
+  "equality",
+  "border",
+  "raster",
+  "stall",
+  "order"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}
