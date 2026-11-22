@@ -18,6 +18,7 @@ import os
 
 ROM_ORG = 0x386E
 ALT_PAGE = 24
+RECORDING_PC = 0xA279                          # aufmonty.rzx's snapshot
 TAIL_ADDR, TAIL_MAX = 0x5C7C, 224             # the recording's start: write-first there (scan); 0x5B7C on is the room map
 
 
@@ -29,7 +30,11 @@ def tail_for(snap):
     if k is not None and k < NFIG - 1 and 41645 <= snap.pc < 42030:
         a = COMP + 72 * (k + 1)
         return a, COMP + 72 * NFIG - a
-    return TAIL_ADDR, TAIL_MAX
+    if snap.pc == RECORDING_PC:                 # the recording's start: 0x5C7C is write-first there (scan, ROM paths)
+        return TAIL_ADDR, TAIL_MAX
+    raise ValueError('no proven place for the start-up tail in this snapshot (PC 0x%04X): 0x5B7C on is the live room '
+                     'map and the composite cells are read by the renderer; take the snapshot inside the figure loop '
+                     'before figure 4, or name a write-first range from scan' % snap.pc)
 FIGS, NFIG, GFX = 42030, 5, 0x6000
 COMP = 33285                                   # composite cells: figure i at COMP + 72 i
 DRAW_WRITES = (41853, 41866, 41879, 41896, 41909)   # the drawers' ORed stores into the composite cells
@@ -357,6 +362,9 @@ def verify(patch, rzx_path, stop=None, progress=None, collect=0):
             h.reset()
             c['segments'] += 1
 
+        def on_desync(h, *a):
+            h.fail('replay desynchronised', a[:2])
+
         def on_frame(h, n):
             h.frame = n
             if progress and n % 2000 == 0:
@@ -553,8 +561,19 @@ def auto(a, z80, name, out, say):
     say('Engine    : auf_wiedersehen_monty (composite figures, sprites as an overlay, painter store off)')
     ok, patch = build(z80, out, name, say)
     for r in list(a.rzx or []):
-        c, ex = verify(patch, r, stop=getattr(a, 'quick', None))
+        c, ex, states = verify(patch, r, stop=getattr(a, 'quick', None), collect=8)
         fails = {k: v for k, v in c.items() if k.endswith('!')}
+        if not c['figure checks']:
+            fails['no figure loop reached: nothing verified'] = 1
+        u = unit_tests(patch, states)
+        fails.update({k: v for k, v in u.items() if k.endswith('FAIL!')})
+        missed = [name for name, q in negative_patches(patch)
+                  if not ({k for k, v in verify(q, r, stop=min(getattr(a, 'quick', None) or 1500, 1500))[0].items() if k.endswith('!')}
+                          or any(k.endswith('FAIL!') for k in unit_tests(q, states[:2])))]
+        if missed:
+            fails['negative controls not caught: %s' % ', '.join(missed)] = len(missed)
+        say('Units     : %s; negative controls: %d of %d caught' % (
+            ', '.join('%s %d' % (k, v) for k, v in sorted(u.items()) if not k.startswith('  ')), len(negative_patches(patch)) - len(missed), len(negative_patches(patch))))
         ok = ok and not fails
         say('Verify    : %s  %d frames, %d segments, %d figure loops, %d screen clears, %d room draws, %d figure checks, '
             '%d figure pixels covered; %d attribute bytes not painted -> %s' % (
