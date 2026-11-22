@@ -1,13 +1,16 @@
 # Monty is Innocent (Gremlin Graphics, 1985, 48K) - new engine
 
+Techniques: `detect.gameplay-screen-readers`, `detect.graphics-record-layout`, `patch.xor-overlay-keep-ula`, `patch.whole-altrom-image`, `patch.restore-speed`
+
 ## Next session
 Stage 3 (prove + deliver) done 2026-11-22; Stage 4 (hardware + colour rounds) next. First release = clash fix
 (figures as sprites in the game's own colours, the guard painter off) + checked cheats. Inputs (local, not in the
 repo): rzxarchive montyinnocent.rzx (6,241 frames, 128K machine, the 48K game), its snapshot extracted; the release
 targets TOSEC "Monty is Innocent (1985)(Gremlin Graphics Software).z80" (48K, the game running; same code). Survey:
 803dad54 scratchpad innocent/survey/. Release: jattree/nxc patch 1.0 (sprite build MD5
-d0db334343c56eda63414a5615e4250e), pushed when the owner's quick test passes. Open: a longer recording (later
-rooms, the gun, a guard caught), an evidence record once the reference files are staged, a board run of this build.
+d0db334343c56eda63414a5615e4250e), pushed when the owner's quick test passes. Evidence record docs/records/monty_is_innocent.json
+(verified + stamped 2026-11-22; reference files to be added to specnext). Open: a longer recording (later rooms, the
+gun, a guard caught), a board run of this build.
 
 ## Observed engine (static reading + probes)
 - One XOR plotter 0xD52E (54574): the previous image at the old place ((24960) image, (24958) x, (24959) y; y 195 =
@@ -49,6 +52,13 @@ collision test, 54804) -> RET.
   a patched entry hit once means an interrupt between its first instructions; accept sequence and interrupt returns.
 - [local: negative controls] a broken hook can run away in the event simulator: event() reports it as a failure.
 - [local: this game's player is not Monty] check who a figure is (render its images) before naming it in player-facing notes.
+
+## Friction
+- reuse: [local: the evidence record staged from the scratchpad (TOSEC snapshot, rzxarchive recording, archive .pok)]
+- retries: [local: the record's first rebuild gave the output MD5s; they were written in and the views regenerated before the stamp]
+- environment: [local: the reference files are not yet in specnext; the record was verified from a scratch reference folder]
+- hand-rolled: [none: the record was written with the records module's own checks and selftest]
+- scratch: [none: the staging script stays in the session's scratchpad]
 
 ## Technique use
 - detect.gameplay-screen-readers: helped: `scan --writers` showed only the plotter reads figure pixels.
