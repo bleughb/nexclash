@@ -632,15 +632,15 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         # room, Olli's first steps) cost their tiles once: the game falls a frame or two behind and makes it up over the
         # next seconds. The limits: 3 frames in any 10 seconds (0.6%), 0.2% over the recording
         dr = box.get('drift', [])           # (the hooks' and the original's time between the plays: the game's own
-        j = 0                               # code between them takes the same in both)
-        for i in range(len(dr)):            # the most the game gains or loses over any 10 seconds of the hooks' time
-            while dr[i][0] - dr[j][0] > WINDOW_T:
-                j += 1
-            off = int(dr[i][1] - dr[j][1])
-            c['most T the game is ever behind the original'] = max(c['most T the game is ever behind the original'], off)
-            c['most T the game is ever ahead of the original'] = max(c['most T the game is ever ahead of the original'], -off)
+        from .hooklib import drift_extremes                 # rolling min / max over any 10 seconds (Codex T4)
+        rise, fall = drift_extremes([(a, b) for a, b in dr], WINDOW_T) if dr else (0, 0)
+        c['most T the game is ever behind the original'] = max(c['most T the game is ever behind the original'], int(rise))
+        c['most T the game is ever ahead of the original'] = max(c['most T the game is ever ahead of the original'], int(fall))
+        full = stop is None or c['frames'] < stop           # the 0.2% endpoint is the whole recording's claim: a prefix
+        if not full:                                        # can end with cold drawing still owed (diagnostic only)
+            c['prefix: hooks less the original, T'] = int(c['T hooks'] - box['orig_t'])
         if max(c['most T the game is ever behind the original'], c['most T the game is ever ahead of the original']) > 3 * LINES * T_LINE \
-                or abs(c['T hooks'] - box['orig_t']) > 0.002 * fc * LINES * T_LINE:
+                or (full and abs(c['T hooks'] - box['orig_t']) > 0.002 * fc * LINES * T_LINE):
             fail('the hooks do not take the original\'s time', (c['most T the game is ever behind the original'],
                                                                  c['most T the game is ever ahead of the original'], c['T hooks'], box['orig_t']))
     ex['hook time less the original, T (site, rows, bytes): mean, least, most, calls'] = sorted(
@@ -846,6 +846,8 @@ def negative_patches(patch):
             ('the adder\'s time is not waited out', _code_patch(patch, 'fig_end.n_t', b'\x21\x00\x00'))]
 
 
+NEG_TIMING = {'the adder\'s time is not waited out'}
+NEG_TIMING_FAIL = 'the hooks do not take the original\'s time!'
 NEG_UNIT = {'the ninth bit of x is not set'}        # (no figure reaches the right edge in the first frames: its unit case)
 NEG_FRAMES = 1500
 
@@ -918,7 +920,10 @@ def auto(a, z80, name, out, say):
                 cc = unit_tests(q, states)
             else:
                 cc, _, _ = verify(q, r0, stop=min(quick or NEG_FRAMES, NEG_FRAMES))
-            if not any(k.endswith('!') for k in cc):
+            hit = [k for k in cc if k.endswith('!') and (k != NEG_TIMING_FAIL or nm in NEG_TIMING)]
+            if nm in NEG_TIMING:
+                hit = [k for k in hit if k == NEG_TIMING_FAIL]     # the timing negative must fail on timing
+            if not hit:                                         # (a timing failure credits no other negative)
                 missed.append(nm)
         ok = ok and not missed
         say('Negative  : %d broken builds (%s), %d detected%s' % (len(negs), os.path.basename(r0), len(negs) - len(missed),

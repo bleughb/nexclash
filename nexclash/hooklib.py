@@ -675,6 +675,42 @@ def _t_iff(code, syms):
     return c
 
 
+def drift_extremes(samples, window):
+    """samples: (time, drift) in time order; -> (most the drift rises, most it falls) between two samples at most
+    `window` apart. A rolling minimum / maximum: comparing each sample with the window's oldest alone missed a
+    0, +2, -2, 0 swing of 4 (Codex review T4)."""
+    lo, hi = collections.deque(), collections.deque()
+    rise = fall = j = 0
+    for i, (t_i, d_i) in enumerate(samples):
+        while t_i - samples[j][0] > window:
+            j += 1
+        while lo and samples[lo[-1]][1] >= d_i:
+            lo.pop()
+        lo.append(i)
+        while hi and samples[hi[-1]][1] <= d_i:
+            hi.pop()
+        hi.append(i)
+        while lo[0] < j:
+            lo.popleft()
+        while hi[0] < j:
+            hi.popleft()
+        rise = max(rise, d_i - samples[lo[0]][1])
+        fall = max(fall, samples[hi[0]][1] - d_i)
+    return rise, fall
+
+
+def drift_selfcheck():
+    """-> failures"""
+    bad = []
+    if drift_extremes([(0, 0), (1, 2), (2, -2), (3, 0)], 10) != (2, 4):
+        bad.append('drift 0, +2, -2, 0: rise 2, fall 4')
+    if drift_extremes([(0, 0), (5, 9), (20, 0)], 10) != (9, 0):      # 5 -> 20 is 15 apart: not one window
+        bad.append('drift: a pair further apart than the window does not count')
+    if drift_extremes([(0, 0), (100, 3)], 10) != (0, 0):
+        bad.append('drift: two samples a window apart are never compared')
+    return bad
+
+
 # Hook files whose NEXTREG 7 writes a fixed speed (the player's F8 choice lost on the way out), published before
 # the stack forms existed; the back-catalogue speed fix takes each off this list. A new engine is never added here.
 SPEED_LEGACY = {
