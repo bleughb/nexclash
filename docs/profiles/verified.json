@@ -456,6 +456,14 @@
     "sprites": "a776f3429f34364eb7263a1cde03b1c8"
    }
   },
+  "0acdc707ef4cf3b4aaf94316bd0f285c": {
+   "game": "Monty on the Run",
+   "doc": "monty_on_the_run.md",
+   "nex": {
+    "plain": "86c30493dbd683b5076dfa43098180bb",
+    "sprites": "7fdb25d99b58c4413042f4b7a7f919c8"
+   }
+  },
   "facf9b90032759b7012abd91602b4b45": {
    "game": "Movie",
    "doc": "movie.md",
