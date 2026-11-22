@@ -42,14 +42,24 @@
   "winter_sports_common",
   "winter_sports_dh",
   "winter_sports_dh_test",
-  "winter_sports_paint"
+  "winter_sports_paint",
+  "winter_sports_pace",
+  "winter_sports_bobsled",
+  "winter_sports_ice_hockey",
+  "winter_sports_speed_skating",
+  "winter_sports_biathlon"
  ],
  "own_modules": [
   "winter_sports",
   "winter_sports_common",
   "winter_sports_dh",
   "winter_sports_dh_test",
-  "winter_sports_paint"
+  "winter_sports_paint",
+  "winter_sports_pace",
+  "winter_sports_bobsled",
+  "winter_sports_ice_hockey",
+  "winter_sports_speed_skating",
+  "winter_sports_biathlon"
  ],
  "data": [
   "docs/profiles/winter_sports.json"
@@ -74,17 +84,17 @@
   },
   "sprites": {
    "file": "winter_sports_sprites.nex",
-   "md5": "d82f72275356f65762ef0aca56fd65bd"
+   "md5": "eab9ae6fc1ba2e5184b57a7796140cd7"
   }
  },
  "repro": [],
  "status": {
   "title": "Winter Sports",
   "engine_col": "winter_sports (winter_sports.md)",
-  "build": "plain: all six events in one .nex; default (sprites): Downhill/Slalom/Giant Slalom on Layer 2 in the ORIGINAL 16 colours per pixel, even 25-updates/s pace, drawing at 28 MHz in the blank; .nxc: colour set Enhanced (painted scenery), toggle Original pace",
-  "software": "Rebuild byte-exact from either tape set; simulator differential per event, Downhill hybrid vs original (scroll model 581/581 updates, poles 401/412 state-matched), hook unit tests + negative controls; JNext: all six events play, Downhill/Slalom/Giant Slalom painted",
-  "hardware": "plain and the first sprites build (painted) played OK (user, 2026-11-22); the new default (original colours, even pace), Enhanced and Original pace: not yet on hardware",
-  "next": "events 1-5 as plugins (BANK_PLAN); hardware round for the new Downhill default"
+  "build": "plain: all six events in one .nex. Default: Downhill/Slalom/Giant Slalom per pixel in the ORIGINAL 16 colours, even pace; Ice Hockey, Speed Skating, Bobsled, Biathlon tear-free 28 MHz draw at the original's speed; Ski Jumping plain. .nxc: colour set Enhanced (Downhill painted scenery), toggle Original pace, build_screen=253 (the tape's loading screen from ENTER; jattree/nxc PR 9)",
+  "software": "Rebuild byte-exact from either tape set; simulator differential per event (Downhill scroll model 581/581; pace within 6% for the others), wrapper transparency, negative controls, hook unit tests; JNext: Downhill/Slalom/Giant Slalom and Bobsled checked",
+  "hardware": "plain and the first (painted) Downhill build played OK (user); the new default / Enhanced / Original pace builds and events 1,3,4,5: not yet on hardware",
+  "next": "hardware round; Ski Jumping (jump control not found: the jump ends GAME OVER without the right key); per-pixel / Enhanced work for events 1-5"
  },
  "feasibility": {
   "pacing": {

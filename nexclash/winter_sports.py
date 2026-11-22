@@ -187,9 +187,10 @@ class Patch:
     setup_call = 0xD000
     hook_page_data = b''
 
-    def __init__(self, scr, events, hybrid=False, enhanced=False, original_pace=False):
+    def __init__(self, scr, events, hybrid=False, enhanced=False, original_pace=False, loading=True):
         assert len(scr) == 6912 and len(events) == 6 and all(len(x) == EVENT_LEN for x in events)
         self.scr, self.hybrid, self.enhanced, self.original_pace = scr, hybrid, enhanced, original_pace
+        self.loading = loading                      # False for the builds an .nxc holds: the loader shows the tape's screen from ENTER, so no 5.2 s hold here
         self.tape_events = list(events)             # as on the tape
         events = list(events)
         self.l2 = {}
@@ -204,7 +205,7 @@ class Patch:
         blob = b''.join(x + bytes(40960 - len(x)) for x in events)
         self.extra_banks = {EVENT_BANK0 + i: blob[i * 16384:(i + 1) * 16384] for i in range(15)}
         self.extra_banks.update(self.l2)
-        self.stub_extra = asm_setup()
+        self.stub_extra = asm_setup() if loading else bytes([0xC9])
         self.hook = asm_hook(hybrid)
 
     def apply(self, snap):
@@ -215,20 +216,25 @@ class Patch:
         menu_scr = bytes(b5[:6912])
         for a, d in memory_patches(self.hybrid):
             b5[a - 0x4000:a - 0x4000 + len(d)] = d
-        b5[0:6912] = self.scr                 # the loading screen is what the game memory shows first
+        if self.loading:
+            b5[0:6912] = self.scr             # the loading screen is what the game memory shows first
         snap.banks[5] = bytes(b5)
-        self.extra_banks[SCR_BANK] = menu_scr + bytes(16384 - 6912)
+        if self.loading:
+            self.extra_banks[SCR_BANK] = menu_scr + bytes(16384 - 6912)
 
 
-def build(z80, tape_files, out, say=print, hybrid=False, enhanced=False, original_pace=False):
+def build(z80, tape_files, out, say=print, hybrid=False, enhanced=False, original_pace=False, loading=True):
     """The .nex -> (path, patch). hybrid = the converted events (default: the original 16 colours, even pace); enhanced = their extended colours (the
     colour set); original_pace = the free-running pace back (the toggle). The NEX header gets the ULA loading screen (flags 0x82: no palette)."""
     scr, ev = blocks(tape_files)
-    p = Patch(scr, ev, hybrid, enhanced, original_pace)
+    p = Patch(scr, ev, hybrid, enhanced, original_pace, loading)
     z80tonex.convert(z80, out, patch=p, quiet=True)
     d = bytearray(open(out, 'rb').read())
-    d[10] = 0x82
-    open(out, 'wb').write(bytes(d[:512]) + scr + bytes(d[512:]))
+    if loading:
+        d[10] = 0x82
+        open(out, 'wb').write(bytes(d[:512]) + scr + bytes(d[512:]))
+    else:
+        open(out, 'wb').write(bytes(d))
     say('%-10s: %s (%d bytes, hook %d bytes at 0x%04X, loading screen %d frames)'
         % ('Sprites' if hybrid else 'Plain', os.path.basename(out), os.path.getsize(out), len(p.hook), HOOK, WAIT_FRAMES))
     return out, p
@@ -455,6 +461,7 @@ def auto(a, z80, name, out, say):
         built = {}
         for tag, kw in OUTPUTS:
             built[tag] = build(z80, tapes, os.path.join(out, '%s_%s.nex' % (name, tag)), say, **kw)
+            build(z80, tapes, os.path.join(out, '%s_nxc_%s.nex' % (name, tag)), lambda *_: None, loading=False, **kw)   # what the .nxc holds: no 5.2 s hold
     except ValueError as e:
         say('Refused   : %s' % e)
         say('Result    : FAILED')
@@ -500,15 +507,36 @@ def make_nxc(a, z80, tapes, out, name, say):
     from . import nxc, nxcout
     nxc.ZX0_DIR = nxcout.zx0_dir()
     dst = os.path.join(out, name + '.nxc')
-    path = lambda tag: os.path.join(out, '%s_%s.nex' % (name, tag))
+    path = lambda tag: os.path.join(out, '%s_nxc_%s.nex' % (name, tag))     # the builds WITHOUT the 5.2 s loading hold: the loader shows the tape's screen from ENTER (build_screen)
     argv = ['make', path('sprites'), tapes[0], '--start', z80, '-o', dst, '--title', 'Winter Sports', '--patch-version', '1.0',
             '--colours', 'Enhanced=' + path('enhanced'), '--toggle', 'Original pace=' + path('origpace')]
     who, _where = nxcout.patch_by(a)
     if who:
         argv += ['--patch-by', who]
     nxcout._run(nxc, argv)
-    f = open(dst, 'rb').read()
     game = open(tapes[0], 'rb').read()
+    tool = os.environ.get('NXC_BUILD_SCREEN_TOOL')           # jattree/nxc tools/nxc.py with `build_screen` (PR 9): the loader shows the tape's SCREEN$ from ENTER
+    if tool and os.path.exists(tool):
+        import subprocess
+        off, p_ = None, 0
+        while p_ < len(game):                                  # the offset of the 6,912-byte screen in the tape file
+            n = game[p_] | game[p_ + 1] << 8
+            if n == 6914 and game[p_ + 2] == 0xFF:
+                off = p_ + 3
+                break
+            p_ += 2 + n
+        if off is None:
+            raise ValueError('no SCREEN$ block in the tape')
+        tmp = dst + '.tmp'
+        subprocess.run([sys.executable, tool, 'set', dst, tapes[0], 'build_screen', str(off), '-o', tmp], check=True, capture_output=True)
+        os.replace(tmp, dst)
+        say('            build_screen=%d: the loader shows the tape loading screen from ENTER' % off)
+    f = open(dst, 'rb').read()
+    if tool and os.path.exists(tool):                         # read back with the same tool that wrote build_screen
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('nxc_bs', tool)
+        nxc = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(nxc)
     for colours, toggles, tag in ((None, (), 'sprites'), ('Enhanced', (), 'enhanced'), (None, ('Original pace',), 'origpace'),
                                   ('Enhanced', ('Original pace',), 'enhanced_origpace')):
         if nxc.apply(f, game=game, colours=colours, toggles=list(toggles)) != open(path(tag), 'rb').read():
