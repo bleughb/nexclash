@@ -37,10 +37,11 @@ class PaceEvent:
 
     BANKS = ()
 
-    def __init__(self, name, index, sites, wrap_at, var_at, menu_key, keys, frames=1500, pre_frames=2300, notes=''):
+    def __init__(self, name, index, sites, wrap_at, var_at, menu_key, keys, frames=1500, pre_frames=2300, notes='', prefix=None):
         self.__name__ = name
         self.INDEX, self.sites, self.wrap_at, self.var_at = index, sites, wrap_at, var_at     # wrappers at wrap_at + SPACING * i, the mode byte at var_at
         self.menu_key, self.keys, self.frames, self.pre_frames, self.notes = menu_key, keys, frames, pre_frames, notes
+        self.prefix = prefix                              # the key script up to the run when the event's menu needs more than K, QAOP, S
 
     # ------------------------------------------------------------------ the build
     def wrappers(self, bad=None):
@@ -76,6 +77,8 @@ class PaceEvent:
 
     # ------------------------------------------------------------------ the tests
     def flow(self):
+        if self.prefix is not None:
+            return [(20, 28, self.menu_key)] + list(self.prefix) + list(self.keys)
         return [(20, 28, self.menu_key), (1600, 1630, 'K'), (1700, 1730, 'Q'), (1770, 1800, 'A'), (1840, 1870, 'O'), (1910, 1940, 'P'),
                 (2000, 2060, 'S')] + list(self.keys)
 
