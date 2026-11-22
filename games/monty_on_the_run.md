@@ -1,10 +1,14 @@
 # Monty on the Run (Gremlin Graphics, 1985) - new engine
 
+Techniques: `detect.gameplay-screen-readers`, `patch.xor-overlay-keep-ula`, `patch.whole-altrom-image`, `patch.restore-speed`
+
 ## Next session
-Stage 1 (design) in progress, 2026-11-21 night. Jon asked for the Monty Mole series after the overnight list; first
-release = clash fix (figures as sprites, the attribute painter skipped for them) + checked cheats. Inputs (local, not
-in the repo): rzxarchive montyontherun.rzx (61,198 frames, 20 min), its snapshot extracted as motr_start.z80 (48K,
-PC 0xAAC5, IM 1, DI). Survey: 803dad54 scratchpad motr/survey/ (first 15,000 frames; GATE OK).
+Stage 3 (prove + deliver) done 2026-11-22; Stage 4 (hardware + colour rounds) next. First release = clash fix
+(figures as sprites, the attribute painter skipped for them) + checked cheats. Inputs (local, not in the repo):
+rzxarchive montyontherun.rzx (61,198 frames, 20 min); the record's snapshot is TOSEC "Monty on the Run
+(1985)(Gremlin Graphics Software).z80" (48K, same code). Record docs/records/monty_on_the_run.json, verified and
+stamped (sprite build 7fdb25d9). Open: reference files to specnext; republish the nxc patch (hook bytes changed by
+the speed fix) after the owner's quick test; owner play.
 
 ## Observed engine (static reading, motr_start.z80)
 - Enemy figures: 46207 (0xB47F) draws up to 4 slots. New positions at 46963 (x, y per slot), old at 46971, records at
@@ -42,7 +46,27 @@ PC 0xAAC5, IM 1, DI). Survey: 803dad54 scratchpad motr/survey/ (first 15,000 fra
 - Known differences: where the lift block slides an enemy, the original then XORs its old image where it no longer
   is (scrambled pixels); the sprite shows the enemy. Where another figure's XOR overlaps, the sprite is in front.
 
-## Plan
-Sprites for the figures each plotter draws, the attribute painter skipped for those cells, the XOR plots kept off the
-ULA (no screen reads depend on them). Template: the Finders Keepers engine (wt-finders_keepers: e_pt / e_rm / e_cl
-hooks, verifier with per-hook events, figure truth layers, unit tests, negatives).
+## Results
+- Whole recording, 61,198 frames: IDENTICAL. 28,680 enemy draws, 28,425 Monty draws, 157 rooms, 57,105 figure
+  checks, 13.7M sprite pixels; 32,790 attribute bytes not painted. Units: Monty 200, enemy 200, menu, new game and
+  room hooks 8 each, at the four CPU speeds; negative controls 10 of 10 (incl. a hook left at 28 MHz).
+- Tang board (hov2-p1r2, automap on, leftover sprites): loads, reaches the menu.
+
+## Lessons
+- [local: the card already covers it] every hook left NR 7 at 3.5 MHz; HK_IN keeps the caller's speed on the stack
+  (card patch.restore-speed), the verifier fails an event that leaves another speed.
+- [local: negative controls] auto now runs the unit cases and every negative control, and fails a desynchronised
+  replay or a run with no figure coverage.
+
+## Friction
+- reuse: [local: Finders Keepers' engine shape (hooks, events, truth layers, units, negatives) followed]
+- retries: [local: the review's speed finding needed a hook and verifier change; re-verified on the whole recording]
+- environment: [local: reference files staged from the scratchpad; not yet in specnext]
+- hand-rolled: [none: the record was written with the records module's checks and selftest]
+- scratch: [none: the staging script stays in the session's scratchpad]
+
+## Technique use
+- detect.gameplay-screen-readers: helped: the survey showed no collision reads of screen pixels.
+- patch.xor-overlay-keep-ula: used: both XOR plotters kept, two sprites per figure.
+- patch.whole-altrom-image: used: hooks at 0x386E in the 48K ROM image.
+- patch.restore-speed: used: the caller's NR 7 kept and put back.
