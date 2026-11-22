@@ -85,6 +85,13 @@ attract mode (hi-scores, credits, menu) and the smoke pass (dirty start, intro, 
 - [local: a verifier's model against the real buffer finds what the eye misses] The plot model is compared with the game's own buffer every game frame: it found the level-end curtain, an effect that writes attributes outside the plotters, and the 8-bit attribute address glitch.
 - [local: JNext boot-state tests from a mid-game snapshot] A cheat-run state saved as .z80 and built as a test .nex put the boss on screen in JNext in seconds, which key presses alone would not reach.
 
+## Friction
+- reuse: [local: the pilot's Altered Beast engine ported as it was, plus INT_SITES]
+- retries: [local: the crash was found on the Tang board, not in any simulator: interrupt length is a hardware-only fact (BRIEFING A1)]
+- environment: [local: the engine sat uncommitted in a worktree 155 commits behind main; carried onto main and re-stamped there]
+- hand-rolled: [none: the interrupt-length check was a board test, recorded in the notes]
+- scratch: [none: nothing added to tools/]
+
 ## Technique use
 - detect.gameplay-screen-readers: helped: no reader of the screen after the first blit, so the ULA may differ.
 - detect.tracked-unit: helped: one plot call draws a whole figure or its second part.
