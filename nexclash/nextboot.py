@@ -551,6 +551,31 @@ def regblock_overlap(patch, regs):
 NEXTZXOS_NR0A = 0x11        # NextReg $0A as NextZXOS v2.10 leaves it for a .nex: DivMMC automap on (Tang board, 2026-11-20)
 
 
+def nexload_check(nex, z80):
+    """The build booted to the snapshot's PC twice, with the printer buffer as NEXLOAD leaves it and without:
+    -> (failures, warnings). A failure: the snapshot's stack is in 0x5B00-0x5BFF and its top 16 bytes (or up to
+    0x5C00) do not survive NEXLOAD (Jet Set Willy, Robin of the Wood: the first RET leaves the game). A warning:
+    other snapshot bytes there lost to NEXLOAD (harmless only if the game writes them before reading them), or a
+    stack there with a start the boot model does not follow. keep_printer_buffer (z80tonex) puts them back."""
+    s = zt.Z80Snapshot(z80)
+    want = bytes(s.read(a) for a in range(0x5B00, 0x5C00))
+    stack = 0x5B00 <= s.sp < 0x5C00
+    try:
+        m0, m1 = boot(nex, s.pc)['mem'], boot(nex, s.pc, nexload=True)['mem']
+        plain, nl = bytes(m0[a] for a in range(0x5B00, 0x5C00)), bytes(m1[a] for a in range(0x5B00, 0x5C00))
+    except (ValueError, RuntimeError, KeyError) as e:
+        return [], (['stack at 0x%04X in the printer buffer and the start not followed (%s): prove NEXLOAD keeps it'
+                     % (s.sp, str(e)[:60])] if stack else [])
+    lost = [i for i in range(256) if nl[i] != want[i] and plain[i] == want[i]]
+    top = range(s.sp - 0x5B00, min(256, s.sp - 0x5B00 + 16)) if stack else range(0)
+    hit = [i for i in lost if i in top]
+    fails = ['the stack at 0x%04X is in the printer buffer and NEXLOAD overwrites %d of its top bytes: '
+             'keep_printer_buffer' % (s.sp, len(hit))] if hit else []
+    warns = ['%d snapshot bytes in 0x5B00-0x5BFF lost to NEXLOAD (fine only if the game writes them first)'
+             % len(lost)] if lost and not hit else []
+    return fails, warns
+
+
 def automap_check(nex):
     """A finished .nex booted to its game with NextReg $0A as NextZXOS leaves it: automap must be off by then, and
     the automap code's page (the entry bank's lower half) must not be where the game sees it. -> problems."""

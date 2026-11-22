@@ -171,12 +171,13 @@ def _record_pin(z80, a):
     return rec
 
 
-def finish_outputs(paths, since=None):
+def finish_outputs(paths, since=None, z80=None):
     """Last step of every build: each .nex starts with DivMMC automap off (z80tonex.automap_off), then is booted from
     NextReg $0A as NextZXOS leaves it (nextboot.automap_check). paths: files or folders (their own .nex files);
-    since: only files written at or after this time (a folder may hold older builds)."""
+    since: only files written at or after this time (a folder may hold older builds). z80: the snapshot they were
+    built from: each is also booted with the printer buffer as NEXLOAD leaves it (nextboot.nexload_check)."""
     from nexclash import nextboot
-    done, unmodelled = [], []
+    done, unmodelled, notes = [], [], []
     for p in paths:
         for f in ([os.path.join(p, n) for n in sorted(os.listdir(p)) if n.endswith('.nex')] if os.path.isdir(p)
                   else [p] if os.path.isfile(p) else []):
@@ -193,10 +194,17 @@ def finish_outputs(paths, since=None):
                 bad = []
             if bad:
                 raise ValueError('%s: %s' % (f, '; '.join(bad)))
+            if z80 and str(z80).lower().endswith('.z80'):
+                fails, warns = nextboot.nexload_check(f, z80)
+                if fails:
+                    raise ValueError('%s: %s' % (f, '; '.join(fails)))
+                notes += ['%s: %s' % (os.path.basename(f), w) for w in warns]
             done.append(os.path.basename(f))
     if done:
         print('Automap   : DivMMC automap off at start, booted from $0A = 0x11: %d build(s)%s' % (
             len(done), '; boot not followed for %s' % ', '.join(unmodelled) if unmodelled else ''))
+    for n in notes:
+        print('NEXLOAD   : %s' % n)
 
 
 def cmd_auto(a):
@@ -205,7 +213,7 @@ def cmd_auto(a):
     r = _cmd_auto(a)
     if r is not False:
         name = os.path.splitext(os.path.basename(a.z80))[0]
-        finish_outputs([a.out or os.path.join(os.path.dirname(os.path.abspath(a.z80)), name + '_nexclash')], started)
+        finish_outputs([a.out or os.path.join(os.path.dirname(os.path.abspath(a.z80)), name + '_nexclash')], started, a.z80)
     return r
 
 
