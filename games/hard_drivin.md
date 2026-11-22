@@ -1,13 +1,20 @@
 # Hard Drivin' (Domark / Binary Design, 1989; 128K tape)
 
 ## Next session
-Stage: 2 (build)             State: route chosen 2026-11-22 (Decision); feasibility recorded; build not started
+Stage: 2 (build)             State: M2 prototype (hd2) passes unit tests; pace in JNext within 0.16 % of the original
 Inputs: C:\1NEXT\harddrivin_work: hard_drivin.z80 (snapshot 0 of hard_drivin.rzx), hard_drivin.rzx (MD5 c649e04c, 22,116 frames), in\hd.tap (MD5 02e1f96c), in\hd.tzx (61f7d04c), in\hd.dsk ([a], 43a6bc4c). Game data: never in this repo.
 Branch: add-hard-drivin (worktree C:\1NEXT\nexclash-hd)    Commit: see git log
-Checks: survey (15,001 frames), plain .nex boots in JNext to the options menu (MD5 5b37afa4, --tail 0x6C00)
+Prototype (local, not in the repo yet): C:\1NEXT\harddrivin_work: hd2.asm (hooks), hd_build.py (128K patch over
+  nexclash.z80tonex), hd_next.py + simram.py (host Next model), hd_unit.py (differential unit test), jlog.py (JNext
+  pace log vs jn\jl_plain), jrun.py (screenshots)
+Checks: `py -3 hd_unit.py --prefix hd2 [--cal]` PASS 0 (11 states, both paths); jlog 4,000 frames: 178 updates,
+  start-time drift -4 frames vs plain, 182 in-between views
 Pending user answers: none
-Start with: "## Design"; find the matrix builder (writers of 43362-43399), then the pace window (games/castle_master.md M3a, asm/lib/hlib_pace.asm)
-Open: sound in play; EI points in the loop; the CALL at 0xA402 (time-out path, not in the recording)
+Start with: verify over the RZX (game RAM + registers per update), mutants for the scratch-page / camera restore,
+  then move the prototype into an engine module + tests, then a hardware build for the user (K differs on hardware:
+  calibrated at run time)
+Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); sub-unit angle interpolation; copy K
+  calibrated separately (uses the render's K now); the CALL at 0xA402 (time-out path, not in the recording)
 
 ## Facts
 - Tape (.tap = .tzx data): BASIC `HD 128K`, code 100 bytes at 30000, 5,000 at 32960, 200 at 43616, BASIC `-`, then one 41,400-byte block at 24000. Single load, no multiload.
@@ -60,5 +67,31 @@ Open: sound in play; EI points in the loop; the CALL at 0xA402 (time-out path, n
 - Verify: RZX replay, game RAM + registers (R excepted per patch.preserve-r decision) = original at every
   update; pace per update vs the original (verify.update-locked-pace); mutants for the save / restore.
 
+## Build (stage 2, hd2 as built)
+- Sites (original bytes checked): 0x9E54 CALL render -> t_render, 0x9E6B CALL copy -> t_copy, 0xD6FE CALL 0xD77D
+  (unconditional, ~100 a render, gaps under 340k T) -> t_tick (the line clock's tick inside the 28 MHz render).
+- Hook code: page 36 (bank 18) in MMU slot 1 during hooks; trampolines at 0x3870 in an alt ROM (bank 12, Sinclair's
+  ROM 1 + trampolines; 0xFF there); exit by NEXTREG 0x51,0xFF + RET from the ROM side. Own stacks 0x3FFE / 0x3D80.
+- Render facts: the matrix builder is 0xD1A5 (called by the render at 0x9EC2; orientation 43339-41, sin/cos
+  0x95AB). The render is a pure function of camera + world (a re-render with the previous camera gives the previous
+  view; time repeats within 0.015 %). It POPs ROM bytes as data (SP pages 0x00-0x16) and never executes the ROM.
+  No DI / EI / HALT / IM in it. Two update paths never return (JP 0x9E12): 28 MHz only inside the hooks.
+- Sound in play: per-update AY writes 0xEA60-0xEB20 (bank 3, called from 0x9E7E), outside the hooks; no
+  interrupts in play, so no tempo to hold inside the window. Other render callers (0x6A32, 0xF652, 0xF752) stay plain.
+- Per update: the real render first (genuine pages, original SP, planted return), slots 4-7 DMA-copied to scratch
+  pages 38-41, in-between views rendered there with the camera interpolated (fraction = display time / window),
+  each copied by the game's own copy when the beam is in lines 128-262 (no tear). Window target L = K x the real
+  render's 28 MHz lines; debt carries (signed wait goal, cap 1,200 lines). Copy target = K x the copy's lines.
+- K calibration at run time (updates 1, 3, 5, then every 16): slots 2-7 copied to scratch pages (43-44 for 2-3),
+  a RAM copy of the ROM (page 42) in slot 0, tick site restored there; the render runs again at 3.5 MHz with IM 2
+  through its own table (handler on its own stack counts frames, repairs the 2 pushed bytes from genuine memory,
+  resumes by EI + JP). K = cal lines (minus 400 T a frame for the handler) / 28 MHz lines; samples outside 4-10
+  dropped. K = the latest sample: an average of samples lagged the scene's own K changes.
+- JNext measurements (1.3.0): K 6.17-6.28 depending on the scene (contention share); hardware ratios in
+  TECHNIQUES are 6.6-7.0, hence run-time calibration. Pace vs plain, 178 updates: average of samples every 64:
+  -18 frames; every 16: -13; latest sample every 64: -9; latest sample every 16: -4 (0.16 %), 182 in-between views
+  (2-4 a moving update). No in-between views while the camera is still (e.g. stopped after a crash): by design.
+
 ## Stage log
 - 2026-11-22: stage 0 (intake) + stage 1 (route choice, feasibility), ~50 tool calls, 1 user round.
+- 2026-11-23: stage 2 build: hd1 (fixed K) then hd2 (run-time K); unit tests pass; JNext pace within 0.16 %.
