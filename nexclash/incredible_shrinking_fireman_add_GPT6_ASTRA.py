@@ -16,7 +16,7 @@ Figures (games/incredible_shrinking_fireman-add-GPT6_ASTRA.md):
 Colour-map keys: G + graphics-byte address + source ink; D + address for diamonds; default colour = the ink the game gives the figure
 (fireman: white; enemies: their room's bright ink).
 """
-# Capture adapted from add-OPUS; runtime/verifier adapted from fireman.py.
+# Capture adapted from add-OPUS; runtime/verifier adapted from fireman.py (removed 2026-11-22, unreachable: git show b522f34:nexclash/fireman.py).
 import collections
 import json
 import os
