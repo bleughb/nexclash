@@ -40,6 +40,17 @@ def fix(palette, fmt, keep=(), transparent=0xE3, to=0xE7):
     return [to if i in bad else v for i, v in enumerate(palette)]
 
 
+def spec256_pairs(rgb):
+    """A Spec256 set's palette (0xRRGGBB ints) as NR $44 pairs, rounded to RGB333 as Python's round() does: entry 255
+    is the transparent colour (0xE3, 1), any other entry that lands on 0xE3 moves to 0xE7 (Jilly's Farm and Page
+    Pharaoh Enhanced; Codex review D3: they held this verbatim)."""
+    out = bytearray()
+    for i, c in enumerate(rgb):
+        r3, g3, b3 = (round(((c >> s) & 255) * 7 / 255) for s in (16, 8, 0))
+        out += bytes((0xE3, 1) if i == 255 else (r3 << 5 | g3 << 2 | b3 >> 1, b3 & 1))
+    return fix(bytes(out), 'pairs', keep=(255,))
+
+
 def check(palette, fmt, what, keep=(), transparent=0xE3):
     """Refuse a palette with an opaque entry equal to the transparency (it would show as see-through)."""
     bad = collisions(palette, fmt, keep, transparent)
