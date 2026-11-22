@@ -1,10 +1,10 @@
 # Elite (Braben / Bell, Firebird 1985; Russian 128K hack) - engine: none yet
 
 ## Next session
-Stage: 0 done (all five recordings surveyed in full), 1 next (design)   State: intake 2026-11-22, no design asked yet
+Stage: 0 done (all five recordings surveyed in full), 1 next (design)   State: stage 1 feasibility 2026-11-22; design question asked, answer pending
 Inputs: specnext/reference/elite/ (tape, 5 RZX, 5 extracted .z80)    Branch: add-elite    Commit: see git log
 Checks: full surveys of all five RZX (7.5k-68.6k frames); tape not run in an emulator
-Pending user answers: stage-1 design question (nothing asked yet)
+Pending user answers: stage-1 design question (A / B / C in ## Design question)
 Start with: feasibility (PLAYBOOK 3d): cost of 32702/32717 (back-buffer copy) and 32739 (line plot), tail place, then the design question
 Read: PLAYBOOK stage 1, 3d (unknown engine: feasibility first); ## Findings below
 Open: see Findings
@@ -59,6 +59,21 @@ Which parts overlap each other is not compared.
 - Which unreached call sites are figure plotters (cost --at / disassembly); whether another recording is needed.
 - Run Elite.tap in an emulator to confirm it matches the snapshots (loader is BASIC + `USR 28672`, packed 40801-byte block at 24648; the bytes differ from snapshot RAM, so it is packed).
 - Stage-1 design question and feasibility (3d).
+
+## Feasibility (stage 1, 2026-11-22; measured from the five surveys, basis in brackets)
+- Pacing [observed]: one screen update (buffer copy 32702) per ~10 frames, so ~5 fps, set by the game's own CPU work
+  (line drawing of ships, planet circles, scanner), not by a frame wait. Interrupts are accepted in ~2/3 of frames. Whether
+  game logic or sound depends on the interrupt count is [unknown]: card detect.pacing-structure / detect.routine-removal not run.
+- Colour clash [observed]: practically none to remove (mono viewport; HUD bars and icons only). The toolkit's default
+  "every figure a sprite" has no figures here: ships are line drawings into a 128 x 256 buffer, hundreds of line segments.
+- Tail / memory [observed]: 5.5 KB of 0x4000-0xBFFF untouched, largest span 456 bytes; bank 0 at 0xC000 is the game's buffer
+  (128K paging locked). Hook state would go to a Next page in a slot the ISR never touches (card in decision table 4).
+- Not measured: T per frame in the line plotters (cost --at 32739 / 41450), the scanner and HUD writers, a safe tail place.
+
+## Design question (stage 1, open: answer pending)
+Options put to the user: (A) plain, ULA unchanged, + Next speed (28 MHz) if pacing allows; (B) A + fix the few clash
+cells (HUD bars, condition light, planet / sun icon); (C) B + redraw the viewport on Layer 2 so ships / lines get colour
+(a new line-renderer engine; changes what the user sees).
 
 ## Hardware checklist
 None yet (no build).
